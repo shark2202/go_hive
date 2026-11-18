@@ -13,7 +13,7 @@
 | R5 | 安全 | 路径穿越/命令注入/密钥落盘/日志脱敏审查；`govulncheck` 无高危 | **人工审查完成**：14 类加固 + `SECURITY_REVIEW.md`；在线 CVE 扫描因无外网未做（已声明） |
 | R6 | 可靠性 | 超时、并发、资源回收、崩溃恢复有测试；无已知数据损坏路径 | **已完成**：故障注入 5 项全 PASS，修 11 处真实缺陷，`-race` 全仓通过 |
 | R7 | 可观测 | `--version`、`/api/health`、结构化日志、诊断包 | 已有前三项 |
-| R8 | 质量证据 | `make ci` + smoke + e2e + 跨平台 + parity + QA/QC 报告 | 已具备；3,163 测试、prod parity 789 refs 校验 |
+| R8 | 质量证据 | `make ci` + smoke + e2e + 跨平台 + parity + QA/QC 报告 | **QC 8/8 PASS**（`qc_check.py --full --smoke`）：4,160 测试、4,357 parity 引用 0 失效、prod 830 条 0 missing、六平台产物、cgo 0、smoke 13/13 |
 | R9 | 发布流程 | tag、release notes、CI release job、制品上传 | **已完成**：`release.yml` 5 job（meta/frontend/build×6/package/publish），语法与 shell 片段实跑校验 |
 | R10 | 真实集成验证 | 关键模块至少各有一条真实凭据的端到端记录 | **阻塞：需外部凭据** |
 
