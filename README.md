@@ -118,7 +118,7 @@ P0 是**可运行切片**，不是 Python 全量对等。以下能力已在当�
 
 缺 key 时 `POST /api/sessions` 仍返回可列出的会话，但 `POST /api/sessions/{id}/chat` 返回 `503 {"error":"No LLM configured for this session"}`，不伪造投递成功。
 
-**明确延期（P0 不含）**：216 条 Python 路由的完整对等、集成工具（`tools/src/aden_tools` 104 模块 / 324 文件 / 811 action，本期只做优先子集）、Sentinel、browser 工具、React dashboard（只有存在 `frontend/dist` 时才提供静态资源，仓库未附带该构建产物）、queen/colony 多 worker 编排闭环。
+**明确延期（P0 不含）**：216 条 Python 路由的完整对等、集成工具（`tools/src/aden_tools` 104 模块 / 324 文件 / 865 action，本期只做优先子集，见 `INTEGRATION_BACKLOG.md`）、Sentinel、browser 工具、React dashboard（只有存在 `frontend/dist` 时才提供静态资源，仓库未附带该构建产物）、queen/colony 多 worker 编排闭环。
 
 **门禁状态（P0 集成后实测，PASS）**：`make ci` 退出码 0——`fmt-check`、`vet`、`test`、`cross`（darwin/linux/windows × amd64/arm64）与 `parity` 全部通过；parity **2,238/2,238 已注解、0 missing**，`check_parity_targets` **2,045 refs、0 missing files/tests、55 shorthand/prose**。`go test -tags e2e -count=1 ./e2e/...` 与其 `-race` 版本均 ok；凭据门禁用真实二进制 + 假上游验证 `Authorization: Bearer test-key`；`dist/hive-darwin-arm64 --version` 输出 `hive 1.0.14-go.1`，健康检查/启动就绪、创建会话 201、无 key 时 chat 返回 503。
 
@@ -144,7 +144,7 @@ P0 是**可运行切片**，不是 Python 全量对等。以下能力已在当�
 | `internal/orchestrator`、`internal/playbook` | 已完成 | 数据缓冲、输出校验、行提取 |
 | `internal/ratelimit`、`internal/triggers`、`internal/eventbus` | 已完成 | SQLite 限流、触发器、事件总线 |
 | `internal/tasks`、`internal/mcpregistry` | 已完成 | 任务/提醒、MCP 安装/解析/健康检查 |
-| `internal/tools` | 进行中 | 注册表/执行器/MCP 客户端与连接池；`internal/tools/builtin` 提供 P0 的 `read_file`/`write_file`/`terminal_exec`；集成工具（104 模块 / 811 action）本期交付框架与优先子集，其余登记缺口 |
+| `internal/tools` | 进行中 | 注册表/执行器/MCP 客户端与连接池；`internal/tools/builtin` 提供 P0 的 `read_file`/`write_file`/`terminal_exec`；集成工具（104 模块 / 865 action）本期交付框架与优先子集，其余登记缺口 |
 | `internal/maintenance` | 已完成 | 三档 janitor + `hive janitor run/status` CLI 入口 |
 | `internal/sessionreport` | 已完成 | 凭据脱敏 tar.gz、`user_report.json` 标记、SHA-256 与 manifest |
 | `internal/server` | 进行中 | P0 会话切片：`POST /api/sessions/{id}/chat`、`GET /api/sessions/{id}/events`（会话事件 SSE）、`ChatRuntime`（agent loop + 持久化 transcript）；另有 `GET /api/discover`、`DELETE /api/agents`、`PATCH /api/agents/metadata`、`POST /api/credentials/check-agent`、`POST /api/sessions`（普通 + fork-into-new-colony）、`GET /api/sessions/{id}/live_tools`、历史 worker、配置/LLM/元信息路由、`GET /api/sessions` 实时会话列表、`GET/DELETE /api/sessions/{id}`（live/loading/cold/404 四分支 + `entry_points`）、`GET /api/sessions/{id}/stats`、`GET /api/sessions/{id}/triggers`、`GET /api/sessions/{id}/events/history` 游标分页、`POST /api/sessions/{id}/report-bundle`（凭据脱敏诊断包） |
