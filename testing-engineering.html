@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenHive 1.0.14 测试工程总览</title>
+<style>
+  :root {
+    --bg: #f6f8fb;
+    --surface: #ffffff;
+    --surface-2: #eef4fb;
+    --ink: #101b2a;
+    --ink-2: #41536a;
+    --muted: #78899e;
+    --line: #d9e3ef;
+    --accent: #1f6db3;
+    --accent-2: #3d8fd1;
+    --accent-ink: #0c3a63;
+    --green: #18794e;
+    --green-bg: #e5f6ec;
+    --blue: #1d5f9e;
+    --blue-bg: #e8f2fb;
+    --red: #a83a32;
+    --red-bg: #fbeae8;
+    --gray-bg: #edf1f6;
+    --gray-ink: #5f6f82;
+    --shadow: 0 1px 2px rgba(16, 27, 42, 0.05), 0 8px 24px rgba(16, 27, 42, 0.06);
+    --radius: 14px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d131b;
+      --surface: #151e29;
+      --surface-2: #1b2735;
+      --ink: #e7eef7;
+      --ink-2: #b4c3d5;
+      --muted: #8496ab;
+      --line: #2a3848;
+      --accent: #5aa6e6;
+      --accent-2: #7dbcf0;
+      --accent-ink: #cfe6fb;
+      --green: #6fd79b;
+      --green-bg: #16301f;
+      --blue: #8dc3f5;
+      --blue-bg: #152a3d;
+      --red: #f19a92;
+      --red-bg: #3a1c19;
+      --gray-bg: #222e3c;
+      --gray-ink: #a9b8c9;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15.5px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--gray-bg);
+    color: var(--ink);
+    border-radius: 6px;
+  }
+  code { padding: 0.12em 0.38em; }
+  pre {
+    padding: 14px 16px;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; }
+
+  .wrap { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+
+  .hero {
+    background:
+      radial-gradient(900px 380px at 10% -10%, rgba(61, 143, 209, 0.25), transparent 60%),
+      radial-gradient(700px 320px at 92% 0%, rgba(31, 109, 179, 0.14), transparent 55%),
+      var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 64px 0 40px;
+  }
+  .eyebrow {
+    margin: 0 0 10px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    max-width: 880px;
+    margin: 16px 0 0;
+    font-size: 17px;
+    color: var(--ink-2);
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-top: 28px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .stat b { display: block; font-size: 24px; line-height: 1.2; letter-spacing: -0.02em; }
+  .stat span { font-size: 12.5px; color: var(--muted); }
+  .meta { margin: 18px 0 0; font-size: 12.5px; color: var(--muted); }
+
+  .toc {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: 0 auto;
+    padding: 12px 0;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .toc-inner {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .toc a {
+    font-size: 13px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .toc a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+  .search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+  .search input {
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    width: 200px;
+  }
+  .search span { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+  main { padding: 34px 0 20px; }
+  .section { margin-bottom: 46px; }
+  .section-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  h2 {
+    margin: 0;
+    font-size: 25px;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+  }
+  .section-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .section-desc { margin: 4px 0 18px; color: var(--ink-2); max-width: 940px; }
+  h3.sub { margin: 26px 0 10px; font-size: 17px; letter-spacing: -0.01em; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 14px;
+  }
+  .feature {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: opacity 0.15s ease;
+  }
+  .feature.wide { grid-column: 1 / -1; }
+  .feature-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .feature h3 { margin: 0; font-size: 16px; letter-spacing: -0.01em; }
+  .feature p { margin: 0; color: var(--ink-2); }
+  .feature ul { margin: 2px 0 0; padding-left: 19px; color: var(--ink-2); }
+  .feature li { margin: 3px 0; }
+  .feature li::marker { color: var(--accent); }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .b-ship { color: var(--green); background: var(--green-bg); }
+  .b-opt { color: var(--blue); background: var(--blue-bg); }
+  .b-no { color: var(--gray-ink); background: var(--gray-bg); }
+  .b-risk { color: var(--red); background: var(--red-bg); }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); font-size: 14px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--surface-2); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-2); }
+  tr:last-child td { border-bottom: 0; }
+  td code { white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--surface-2);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 18px;
+    margin: 16px 0;
+    color: var(--ink-2);
+  }
+  .callout strong { color: var(--ink); }
+  .callout.warn { border-left-color: var(--red); background: var(--red-bg); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) {
+    .two-col { grid-template-columns: 1fr; }
+    .search { margin-left: 0; width: 100%; }
+    .search input { width: 100%; }
+    .hero { padding-top: 40px; }
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 26px 0 46px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .top-btn {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--accent);
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    display: none;
+  }
+  .top-btn.show { display: block; }
+  .hidden { display: none !important; }
+  @media print {
+    .toc, .top-btn, .search { display: none !important; }
+    body { background: #fff; color: #000; font-size: 10.5pt; }
+    .feature, .stat, .table-wrap { box-shadow: none; break-inside: avoid; }
+    a { color: #000; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">aden-hive/hive · v1.0.14 · commit c6c2cdcf</p>
+    <h1>OpenHive 测试工程总览</h1>
+    <p class="lede">
+      这套测试工程的体量与生产代码相当：三大 Python 套件合计 358 个测试模块、5,888 个
+      <code>test_</code> 函数、约 11.3 万行测试代码；另有 36 个前端测试文件（218 个用例）、
+      两条需要真实模型的 E2E/Live 链路，以及一条把 wheel 装进干净虚拟环境再运行的发布验证。
+      本页把「测了什么、怎么测、在哪里跑、哪里没跑」一次列清。
+    </p>
+    <div class="stats">
+      <div class="stat"><b>358</b><span>Python 测试模块</span></div>
+      <div class="stat"><b>5,888</b><span>test_ 函数</span></div>
+      <div class="stat"><b>113k</b><span>测试代码行</span></div>
+      <div class="stat"><b>36 / 218</b><span>前端测试文件 / 用例</span></div>
+      <div class="stat"><b>5</b><span>CI Job</span></div>
+      <div class="stat"><b>2</b><span>CI 平台（Linux / Windows）</span></div>
+    </div>
+    <p class="meta">
+      统计时间 2026-11-17 · 基于当前工作区实测（<code>find</code> / <code>grep</code> / <code>wc -l</code>）·
+      本页为自包含 HTML，无外部依赖，可直接浏览器打开或打印。
+    </p>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap toc-inner">
+    <a href="#snapshot">数据快照</a>
+    <a href="#layers">分层与目录</a>
+    <a href="#infra">基础设施</a>
+    <a href="#python">Python 测试面</a>
+    <a href="#frontend">前端测试</a>
+    <a href="#e2e">E2E 与 Live</a>
+    <a href="#ci">CI 与命令</a>
+    <a href="#assessment">评价与缺口</a>
+    <a href="#reproduce">口径与复现</a>
+    <div class="search">
+      <input id="filter" type="search" placeholder="筛选，例如 live、coverage、worker" aria-label="筛选测试内容" />
+      <span id="count"></span>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- 1 数据快照 -->
+  <section class="section" id="snapshot" data-section>
+    <div class="section-head"><span class="section-num">01</span><h2>数据快照与统计口径</h2></div>
+    <p class="section-desc">
+      先给结论：这是一个「测试量与生产代码同量级」的仓库。函数数量与
+      <code>go_hive/09-engineering.md</code> 记录的 5,891 几乎一致，说明主套件规模稳定；
+      文件数与行数因统计范围不同略有出入，下面把口径写清楚。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>维度</th><th class="num">实测值</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Python 测试模块（主套件）</td><td class="num">358</td><td><code>core/tests</code> 166 + <code>core/framework/*/tests</code> 46 + <code>tools/tests</code> 146</td></tr>
+          <tr><td><code>test_</code> 函数（主套件）</td><td class="num">5,888</td><td>按 <code>def test_</code> / <code>async def test_</code> 计数，不含参数化展开</td></tr>
+          <tr><td>测试代码行（主套件）</td><td class="num">113,033</td><td>含注释与空行：50,732 + 12,942 + 49,359</td></tr>
+          <tr><td>全仓测试脚本</td><td class="num">382</td><td>再加 <code>tools/src</code> 集成内联测试 8、<code>scripts</code> 2、技能脚本 10、手动浏览器脚本 4</td></tr>
+          <tr><td>异步测试</td><td class="num">1,190</td><td>约占主套件 <code>test_</code> 函数的 20%，与 Agent 循环的全异步实现相匹配</td></tr>
+          <tr><td><code>parametrize</code></td><td class="num">137</td><td>参数化用例，典型用于 E2E 场景、工具矩阵和路由表</td></tr>
+          <tr><td>Mock / patch 引用</td><td class="num">≈1,900</td><td>行级统计，说明单测大量依赖对内部边界的替换</td></tr>
+          <tr><td>Conftest 中的 fixture</td><td class="num">17</td><td>8 个 <code>conftest.py</code>，fixture 数量相对克制，更多用工厂函数</td></tr>
+          <tr><td>前端测试文件 / 用例</td><td class="num">36 / 218</td><td>227 个 <code>.ts/.tsx</code> 源文件，Vitest + Testing Library + jsdom</td></tr>
+          <tr><td>CI Job</td><td class="num">5</td><td><code>lint</code>、<code>test</code>、<code>test-tools</code>、<code>package</code>、<code>validate</code></td></tr>
+          <tr><td>覆盖率门槛</td><td class="num">0</td><td>仓库中没有 coverage 配置，CI 也不采集覆盖率</td></tr>
+          <tr><td>静态类型检查（CI）</td><td class="num">0</td><td>dev 依赖已声明 <code>ty&gt;=0.0.13</code>，但没有配置、也没有 CI 步骤</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <strong>与旧文档的交叉验证。</strong>
+      <code>09-engineering.md</code> 记录「约 392 个测试文件、5,891 个 <code>test_</code> 函数、约 10 万行」。
+      本次实测主套件为 358 个模块、5,888 个函数、11.3 万行，函数数几乎完全对齐；
+      文件数差异来自是否把集成目录内联测试、技能脚本、手动脚本计入，行数差异则来自统计时点与是否含辅助文件。
+      因此可以认为：<strong>主测试面没有缩水，文档结论仍然成立。</strong>
+    </div>
+  </section>
+
+  <!-- 2 分层 -->
+  <section class="section" id="layers" data-section>
+    <div class="section-head"><span class="section-num">02</span><h2>测试分层与目录地图</h2></div>
+    <p class="section-desc">
+      三层主力：跨模块集成测试、与代码同目录的框架单测、工具与集成的 mock 测试。
+      再往外是前端、E2E、Live、脚本与技能脚本。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>层</th><th>位置</th><th class="num">模块</th><th class="num">行数</th><th class="num">test_ 函数</th><th>主要内容</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>跨模块集成</strong></td>
+            <td><code>core/tests/</code></td><td class="num">166</td><td class="num">50,732</td><td class="num">2,413</td>
+            <td>会话、Agent 循环、Colony/Worker、存储、MCP、技能、Sentinel、路由、SSE、触发器</td>
+          </tr>
+          <tr>
+            <td><strong>框架单元</strong></td>
+            <td><code>core/framework/*/tests/</code></td><td class="num">46</td><td class="num">12,942</td><td class="num">570</td>
+            <td>与实现同目录；server 路由占 30 个文件，tasks、queen、credentials、runtime 等各 1–6 个</td>
+          </tr>
+          <tr>
+            <td><strong>工具与集成</strong></td>
+            <td><code>tools/tests/</code></td><td class="num">146</td><td class="num">49,359</td><td class="num">2,905</td>
+            <td>106 个按工具拆分的测试文件 + 浏览器桥、终端、记忆、凭证、图表、健康检查</td>
+          </tr>
+          <tr>
+            <td>集成目录内联</td>
+            <td><code>tools/src/aden_tools/tools/*/tests/</code></td><td class="num">8</td><td class="num">—</td><td class="num">—</td>
+            <td>7 个集成目录自带测试（Attio、Google Docs、Google Sheets、HubSpot、Intercom、Linear、Pushover）</td>
+          </tr>
+          <tr>
+            <td>E2E</td>
+            <td><code>core/tests/e2e/</code></td><td class="num">2</td><td class="num">2,050</td><td class="num">2</td>
+            <td>Queen 多轮场景 + LongMemEval 记忆基准；全部标记 <code>live</code></td>
+          </tr>
+          <tr>
+            <td>Live</td>
+            <td><code>core/tests/live/</code></td><td class="num">1</td><td class="num">420</td><td class="num">—</td>
+            <td>真实模型与真实凭证下的缓存优化验证</td>
+          </tr>
+          <tr>
+            <td>前端</td>
+            <td><code>core/frontend/src/**/*.test.*</code></td><td class="num">36</td><td class="num">—</td><td class="num">218 用例</td>
+            <td>组件、hooks、领域逻辑、页面</td>
+          </tr>
+          <tr>
+            <td>脚本</td>
+            <td><code>scripts/</code>、<code>scripts/*.test.ts</code></td><td class="num">3</td><td class="num">—</td><td class="num">—</td>
+            <td><code>test_check_requirements.py</code>、<code>test_init_package.py</code>、<code>auto-close-duplicates.test.ts</code>（Bun）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">框架单测的目录分布</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>目录</th><th class="num">测试模块</th><th>重点</th></tr></thead>
+        <tbody>
+          <tr><td><code>core/framework/server/tests</code></td><td class="num">30</td><td>HTTP API、Queen 工具、Colony 导入、Claude Code Queen、路由契约</td></tr>
+          <tr><td><code>core/framework/tasks/tests</code></td><td class="num">6</td><td>任务存储、提醒、任务工具</td></tr>
+          <tr><td><code>core/framework/agents/queen/tests</code></td><td class="num">2</td><td>Queen 加载、mock runner</td></tr>
+          <tr><td><code>core/framework/agent_loop/tests</code></td><td class="num">1</td><td>循环内部单元</td></tr>
+          <tr><td><code>core/framework/credentials/tests</code> 与 <code>credentials/aden/tests</code></td><td class="num">2</td><td>凭证存储、Aden 同步</td></tr>
+          <tr><td><code>core/framework/global_db/tests</code></td><td class="num">1</td><td>全局数据库</td></tr>
+          <tr><td><code>core/framework/runtime/tests</code></td><td class="num">1</td><td>运行时</td></tr>
+          <tr><td><code>core/framework/tools/tests</code></td><td class="num">0</td><td>目录存在但没有测试文件</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <strong>一个结构特征。</strong>
+      <code>core/tests</code> 几乎是扁平的：166 个测试模块平铺在根目录，只有 <code>e2e/</code> 与
+      <code>live/</code> 两个子目录。这让「按文件名找测试」很快，但当模块增长到数百个时，
+      主题边界只能靠命名约定维持。
+    </div>
+  </section>
+
+  <!-- 3 基础设施 -->
+  <section class="section" id="infra" data-section>
+    <div class="section-head"><span class="section-num">03</span><h2>测试基础设施</h2></div>
+    <p class="section-desc">
+      最值得看的是隔离、mock 与标记机制：它们决定了测试能否在开发者机器、CI 和真实模型之间安全切换。
+    </p>
+
+    <div class="grid">
+      <article class="feature wide">
+        <div class="feature-head"><h3>导入前隔离 <code>HIVE_HOME</code></h3><span class="badge b-ship">关键设计</span></div>
+        <p><code>core/conftest.py</code> 在任何 Hive 模块导入之前，把 <code>HIVE_HOME</code> 指向一个临时目录，并在进程退出时删除。注释记录了一次真实事故：测试曾覆盖用户真实 <code>~/.hive</code> 的凭证密钥，因为 <code>litellm</code> 导入时调用了 <code>load_dotenv()</code>，把仓库 <code>.env</code> 里的真实 <code>HIVE_HOME</code> 带了进来。</p>
+        <ul>
+          <li>隔离发生在 import 阶段，因此所有「导入时计算路径」的模块都落在一次性目录</li>
+          <li><code>atexit</code> 清理，避免临时目录堆积</li>
+          <li>这是测试工程里少见的「把事故写进注释」的做法，可审计、可追溯</li>
+        </ul>
+      </article>
+
+      <article class="feature">
+        <div class="feature-head"><h3>每测试隔离与 Live 反转</h3><span class="badge b-ship">autouse</span></div>
+        <p>父级 conftest 为每个测试准备独立的 Hive home；<code>core/tests/live/conftest.py</code> 则通过 <code>monkeypatch.undo()</code> 主动撤销隔离，让 Live 测试读取开发者真实的 <code>configuration.json</code>、凭证与模型，与桌面应用完全一致。</p>
+      </article>
+
+      <article class="feature">
+        <div class="feature-head"><h3>确定性 Mock 模型</h3><span class="badge b-ship">单元</span></div>
+        <p><code>MockLLMProvider</code> 根据期望的 JSON 结构生成占位响应，用于无 API key 的结构校验与循环测试；<code>AgentLoader.load(..., mock_mode=True)</code> 走同一能力。注意：代码里没有 <code>MOCK_MODE=1</code> 这个环境变量，旧文档的写法已过时。</p>
+      </article>
+
+      <article class="feature">
+        <div class="feature-head"><h3>live 标记</h3><span class="badge b-ship">默认关闭</span></div>
+        <p><code>core</code> 与 <code>tools</code> 的 pytest 配置都写了 <code>addopts = "-m 'not live'"</code>，并注册了 <code>live</code> 标记。除非显式 <code>-m live</code> 或清空 addopts，否则真实 API 测试不会运行。</p>
+      </article>
+
+      <article class="feature">
+        <div class="feature-head"><h3>异步与并行</h3><span class="badge b-ship">pytest-asyncio</span></div>
+        <p><code>core</code> 使用 <code>pytest-asyncio&gt;=0.23</code>；<code>tools</code> 设置 <code>asyncio_mode = "auto"</code>。两边都声明 <code>pytest-xdist</code>，CI 本身不加 <code>-n</code>，但 LongMemEval 文档示例使用 <code>-n 4</code> 并行跑题。</p>
+      </article>
+
+      <article class="feature wide">
+        <div class="feature-head"><h3>框架内的「目标驱动测试」子系统</h3><span class="badge b-opt">产品能力</span></div>
+        <p><code>core/framework/testing/</code> 不是 pytest 辅助包，而是一套面向 Agent 的测试框架：根据 <code>success_criteria</code> 与约束生成测试，用 pytest 子进程 + xdist 执行，做错误分类，并提供 <code>LLMJudge</code> 语义评判、人工审批 CLI 与 MCP 工具。</p>
+        <ul>
+          <li>组成：<code>Test</code> / <code>TestResult</code> / <code>TestStorage</code> / <code>ErrorCategorizer</code> / <code>LLMJudge</code> / <code>approval_cli</code> / <code>debug_tool</code></li>
+          <li>CLI：<code>python -m framework test-run | test-debug | test-list</code></li>
+          <li>因为模块名是 <code>test_*.py</code>，它被 CI 的 <code>--ignore=framework/testing</code> 排除，避免把库代码当测试收集</li>
+        </ul>
+      </article>
+    </div>
+
+    <h3 class="sub">关键配置一览</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>配置</th><th>值</th><th>作用</th></tr></thead>
+        <tbody>
+          <tr><td><code>core</code> pytest addopts</td><td><code>-m 'not live'</code></td><td>默认跳过真实 API 测试</td></tr>
+          <tr><td><code>core</code> markers</td><td><code>live</code></td><td>标记需要凭证、CI 不跑的测试</td></tr>
+          <tr><td><code>tools</code> pytest testpaths</td><td><code>["tests"]</code></td><td>只收集 <code>tools/tests</code>，<code>tools/src/**/tests</code> 不会被默认收集</td></tr>
+          <tr><td><code>tools</code> asyncio_mode</td><td><code>auto</code></td><td>异步测试不需要逐个加 <code>@pytest.mark.asyncio</code></td></tr>
+          <tr><td>CI 框架测试</td><td><code>pytest framework/ --ignore=framework/testing</code></td><td>只收与代码同目录的单测，排除 testing 库本身</td></tr>
+          <tr><td>CI 核心测试</td><td><code>pytest tests/ --ignore=tests/dummy_agents</code></td><td><code>dummy_agents</code> 目录当前不存在，这是一条「历史遗留的空忽略」</td></tr>
+          <tr><td>前端</td><td><code>vitest run</code></td><td>jsdom、globals、<code>src/test/setup.ts</code>；include 为 <code>src/**/*.{test,spec}.{ts,tsx}</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 4 Python 测试面 -->
+  <section class="section" id="python" data-section>
+    <div class="section-head"><span class="section-num">04</span><h2>Python 测试面：测了什么</h2></div>
+    <p class="section-desc">
+      主套件的覆盖面很宽，基本沿着运行时对象展开。下面按「核心循环、服务端、协调层、存储、技能、记忆、工具」逐块列出代表文件。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>子系统</th><th>代表测试</th><th>覆盖点</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Agent 循环</strong></td>
+            <td><code>test_event_loop_node.py</code>（3,079 行）、<code>test_node_conversation.py</code>（2,571 行）、<code>test_adaptive_tool_budget.py</code>、<code>test_compaction_sweep.py</code>、<code>test_stream_stall.py</code>、<code>test_two_llm_calls.py</code></td>
+            <td>回合、压缩、预算、停顿检测、流式事件、视觉回退、工具执行隔离</td>
+          </tr>
+          <tr>
+            <td><strong>LLM 层</strong></td>
+            <td><code>test_litellm_provider.py</code>（1,986 行）、<code>test_litellm_streaming.py</code>、<code>test_capabilities.py</code>、<code>test_model_catalog.py</code></td>
+            <td>供应商适配、流式、能力探测、模型目录</td>
+          </tr>
+          <tr>
+            <td><strong>Colony / Worker</strong></td>
+            <td><code>test_colony_*.py</code>（10 个）、<code>test_run_worker_tool.py</code>（1,217 行）、<code>test_run_parallel_workers_tool.py</code>、<code>test_playbook_*.py</code>、<code>test_worker_*.py</code>（11 个）</td>
+            <td>调度、并行、reap 超时、fork、种子、Worker 定义、工具分层、Tracker 传播</td>
+          </tr>
+          <tr>
+            <td><strong>存储 / Tracker</strong></td>
+            <td><code>test_storage.py</code>、<code>test_tracker_db.py</code>、<code>test_tracker_tools.py</code>、<code>test_colony_db.py</code>、<code>framework/global_db/tests</code></td>
+            <td>原子写、SQLite、表与行、导入导出、全局库</td>
+          </tr>
+          <tr>
+            <td><strong>服务端 / SSE</strong></td>
+            <td><code>framework/server/tests</code>（30 个）、<code>test_event_bus.py</code>（1,392 行）、<code>test_sse_worker_filter.py</code>、<code>test_stream_events.py</code>、<code>test_routes_*.py</code></td>
+            <td>API 契约、事件总线、SSE 重连、路由注册、错误中间件</td>
+          </tr>
+          <tr>
+            <td><strong>技能</strong></td>
+            <td><code>test_skill_*.py</code>（20 个）</td>
+            <td>解析、发现、安装、审批、信任、覆盖、热重载、作用域、工具门控</td>
+          </tr>
+          <tr>
+            <td><strong>记忆 / Soul</strong></td>
+            <td><code>test_queen_memory.py</code>（878 行）、<code>test_memory_timeline_recall.py</code>、<code>test_soul*.py</code>、<code>tools/tests/test_memory_*.py</code></td>
+            <td>记忆文件、召回、时间线、Soul 反思与探针</td>
+          </tr>
+          <tr>
+            <td><strong>MCP</strong></td>
+            <td><code>test_mcp_*.py</code>（10 个）、<code>test_mcp_registry_cli.py</code>（1,325 行）</td>
+            <td>客户端、连接管理、超时、stdio 退出、注册表、CLI、错误映射</td>
+          </tr>
+          <tr>
+            <td><strong>Sentinel</strong></td>
+            <td><code>test_sentinel_*.py</code>（8 个）</td>
+            <td>分类器、升级、通知、停泊、路由、存储、令牌</td>
+          </tr>
+          <tr>
+            <td><strong>触发器 / 提醒</strong></td>
+            <td><code>test_missed_triggers*.py</code>、<code>test_trigger_*.py</code>、<code>test_reminder_e2e.py</code></td>
+            <td>cron/interval、错过触发、持久化、注入 Queen</td>
+          </tr>
+          <tr>
+            <td><strong>安全边界</strong></td>
+            <td><code>test_path_traversal_fix.py</code>、<code>test_safe_eval.py</code>（638 行）、<code>test_command_guard.py</code>、<code>test_tool_input_coercer.py</code></td>
+            <td>路径穿越、表达式求值、命令守卫、工具输入强制转换</td>
+          </tr>
+          <tr>
+            <td><strong>测试框架自身</strong></td>
+            <td><code>test_testing_framework.py</code>、<code>test_llm_judge.py</code></td>
+            <td>目标驱动测试、LLM 评判、结果存储</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">最大的几个测试文件</h3>
+    <div class="two-col">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>core/tests</th><th class="num">行</th></tr></thead>
+          <tbody>
+            <tr><td><code>test_event_loop_node.py</code></td><td class="num">3,079</td></tr>
+            <tr><td><code>test_node_conversation.py</code></td><td class="num">2,571</td></tr>
+            <tr><td><code>test_litellm_provider.py</code></td><td class="num">1,986</td></tr>
+            <tr><td><code>test_event_bus.py</code></td><td class="num">1,392</td></tr>
+            <tr><td><code>test_mcp_registry_cli.py</code></td><td class="num">1,325</td></tr>
+            <tr><td><code>test_run_worker_tool.py</code></td><td class="num">1,217</td></tr>
+            <tr><td><code>test_mcp_registry.py</code></td><td class="num">1,214</td></tr>
+            <tr><td><code>test_tool_registry.py</code></td><td class="num">1,092</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>framework 与 tools</th><th class="num">行</th></tr></thead>
+          <tbody>
+            <tr><td><code>framework/server/tests/test_api.py</code></td><td class="num">1,128</td></tr>
+            <tr><td><code>framework/server/tests/test_colonies_import.py</code></td><td class="num">1,052</td></tr>
+            <tr><td><code>framework/credentials/aden/tests/test_aden_sync.py</code></td><td class="num">865</td></tr>
+            <tr><td><code>framework/tasks/tests/test_reminders.py</code></td><td class="num">754</td></tr>
+            <tr><td><code>tools/tests/tools/test_freshdesk_tool.py</code></td><td class="num">1,771</td></tr>
+            <tr><td><code>tools/tests/tools/test_stripe_tool.py</code></td><td class="num">1,663</td></tr>
+            <tr><td><code>tools/tests/tools/test_calendar_tool.py</code></td><td class="num">1,394</td></tr>
+            <tr><td><code>tools/tests/test_browser_tools_comprehensive.py</code></td><td class="num">1,174</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3 class="sub">工具测试的形态</h3>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>106 个按工具拆分的文件</h3><span class="badge b-ship">mock 为主</span></div>
+        <p><code>tools/tests/tools/</code> 下有 106 个 <code>test_*_tool.py</code>，覆盖 GitHub、Slack、Gmail、Stripe、Notion、Freshdesk、Cloudflare 等。它们通常通过 mock 替换 HTTP 层，断言请求构造、分页、错误映射与返回结构，不依赖真实凭证。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>浏览器桥与终端</h3><span class="badge b-ship">行为级</span></div>
+        <p>浏览器侧有生命周期、多连接、RPC allowlist、资料冲突、清理阶段、发现流程等测试；终端侧有执行、后台 job、PTY、ripgrep、搜索、安全、shell 配置等测试。它们更接近行为级，而不是纯 mock。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>图表与健康检查</h3><span class="badge b-opt">Playwright</span></div>
+        <p><code>test_chart_tools_smoke.py</code> 通过 Playwright 无头 Chromium 渲染 ECharts/Mermaid；CI 因此需要执行 <code>playwright install chromium</code>。<code>test_health_checks.py</code> 与 <code>test_live_health_checks.py</code> 分离了 mock 与真实外部依赖。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>7 个集成目录的自带测试</h3><span class="badge b-risk">默认不收集</span></div>
+        <p><code>tools/src/aden_tools/tools/*/tests/</code> 有 7 个目录、8 个测试文件，但 <code>tools/pyproject.toml</code> 的 <code>testpaths = ["tests"]</code> 只指向 <code>tools/tests</code>。除非显式传入路径，这些测试不会进入默认收集。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 5 前端 -->
+  <section class="section" id="frontend" data-section>
+    <div class="section-head"><span class="section-num">05</span><h2>前端测试</h2></div>
+    <p class="section-desc">
+      技术栈是 Vitest 4 + Testing Library + jsdom；测试与实现相邻。领域逻辑放 <code>src/lib/</code> 并用单测覆盖，
+      组件则针对排序、锚点、开关、滚动窗口等具体行为做测试。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>区域</th><th class="num">测试文件</th><th>代表</th><th>覆盖点</th></tr></thead>
+        <tbody>
+          <tr><td><code>src/lib/</code></td><td class="num">11</td><td><code>chat-helpers.test.ts</code>、<code>colony-registry.*.test.ts</code>、<code>graphUtils.test.ts</code>、<code>schedule.test.ts</code>、<code>session-load.conformance.test.ts</code></td><td>消息去重、Queen 排序、agent slug、图工具、日程解析、会话恢复</td></tr>
+          <tr><td><code>src/components/</code></td><td class="num">20</td><td><code>ChatPanel.order/ revealOptions / thinkingTurns / workerAnchor</code>、<code>ModelPicker</code>、<code>SkillInstallConsent</code>、<code>RuntimeLogsDrawer</code>、<code>QueenSoulSection</code></td><td>消息排序、锚点滚动、思考轮次、模型选择、审批、日志抽屉、Soul 编辑</td></tr>
+          <tr><td><code>src/pages/</code></td><td class="num">3</td><td><code>queen-profile.test.tsx</code>、<code>models.test.tsx</code>、<code>claude-code-queen.test.tsx</code></td><td>页面级加载与交互</td></tr>
+          <tr><td><code>src/context/</code></td><td class="num">1</td><td><code>ColonyWorkersContext.poll.test.tsx</code></td><td>Worker 轮询</td></tr>
+          <tr><td><code>src/App</code></td><td class="num">1</td><td><code>App.colonySwitch.test.tsx</code></td><td>Colony 切换</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <strong>最明显的 CI 缺口：前端测试没有在 CI 中运行。</strong>
+      <code>core/frontend/package.json</code> 有 <code>"test": "vitest run"</code>，仓库里也有 36 个测试文件、218 个用例，
+      但 <code>.github/workflows/ci.yml</code> 的 <code>package</code> job 只执行 <code>npm ci</code> 与
+      <code>npm run build</code>。<code>npm run build</code> 会先跑 <code>tsc</code>，所以有类型检查，
+      但<strong>没有一个测试用例被 CI 执行</strong>。这是低成本、高收益的改进点。
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>项</th><th>配置</th></tr></thead>
+        <tbody>
+          <tr><td>框架</td><td><code>vitest</code> + <code>@testing-library/react</code> + <code>@testing-library/user-event</code> + <code>jsdom</code></td></tr>
+          <tr><td>环境</td><td><code>environment: "jsdom"</code>、<code>globals: true</code></td></tr>
+          <tr><td>setup</td><td><code>./src/test/setup.ts</code>；布局模拟（<code>scrollHeight</code>、<code>ResizeObserver</code>）由 <code>src/test/layout.ts</code> 逐测试安装</td></tr>
+          <tr><td>include</td><td><code>src/**/*.{test,spec}.{ts,tsx}</code></td></tr>
+          <tr><td>别名</td><td><code>@</code> → <code>./src</code></td></tr>
+          <tr><td>版本常量</td><td><code>__APP_VERSION__</code> 在测试中固定为 <code>"test"</code></td></tr>
+          <tr><td>运行</td><td><code>cd core/frontend &amp;&amp; npm test</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6 E2E 与 Live -->
+  <section class="section" id="e2e" data-section>
+    <div class="section-head"><span class="section-num">06</span><h2>E2E 与 Live：真实模型链路</h2></div>
+    <p class="section-desc">
+      这些测试存在、可运行、且刻意不进 CI。它们用真实模型、真实凭证，甚至真实 <code>~/.hive</code>，
+      验证「整条链路」而不是「单个组件」。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>套件</th><th>文件</th><th class="num">规模</th><th>标记</th><th>运行方式</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Queen 多轮 E2E</strong></td>
+            <td><code>core/tests/e2e/test_queen_e2e.py</code> + <code>specs.py</code>（355 行）+ <code>synthetic.py</code>（297 行）+ <code>conftest.py</code>（314 行）</td>
+            <td class="num">20 行测试<br/>971 行夹具</td>
+            <td><code>live</code> + <code>asyncio</code></td>
+            <td><code>cd core &amp;&amp; uv run pytest tests/e2e -m live -v</code></td>
+          </tr>
+          <tr>
+            <td><strong>LongMemEval</strong></td>
+            <td><code>core/tests/e2e/test_longmemeval.py</code> + <code>longmemeval.py</code>（789 行）</td>
+            <td class="num">95 + 789 行</td>
+            <td><code>live</code> + <code>asyncio</code></td>
+            <td><code>HIVE_LME_QUESTIONS=all uv run pytest tests/e2e/test_longmemeval.py -m live -n 4</code></td>
+          </tr>
+          <tr>
+            <td><strong>缓存优化 Live</strong></td>
+            <td><code>core/tests/live/test_cache_optimization_live.py</code> + <code>conftest.py</code>（126 行）</td>
+            <td class="num">420 行</td>
+            <td><code>live</code></td>
+            <td>读取真实 <code>~/.hive/configuration.json</code>，无模型时跳过</td>
+          </tr>
+          <tr>
+            <td><strong>工具健康检查 Live</strong></td>
+            <td><code>tools/tests/test_live_health_checks.py</code></td>
+            <td class="num">4 个 live 标记</td>
+            <td><code>live</code></td>
+            <td><code>cd tools &amp;&amp; uv run pytest -m live -s -o "addopts="</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>Queen E2E 是「规格驱动」的</h3><span class="badge b-ship">spec-driven</span></div>
+        <p>测试本身只有 20 行：对 <code>SPECS</code> 里的每个场景做参数化，运行 Queen 的多轮对话，断言回合数并调用 <code>spec.check(run)</code>。真正的场景、夹具与断言在 <code>specs.py</code>、<code>synthetic.py</code>、<code>conftest.py</code> 里，因此加场景不需要改测试函数。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Live 夹具刻意「不用测试替身」</h3><span class="badge b-ship">真实组件</span></div>
+        <p><code>core/tests/live/conftest.py</code> 明确说明：使用与桌面应用相同的 <code>AgentLoop</code>、<code>NodeContext</code>、<code>NodeConversation</code>、<code>LiteLLMProvider</code>、<code>EventBus</code>、<code>FileConversationStore</code>，唯一差别是用户回合来自 Python 列表、工作目录是 <code>tmp_path</code>。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>LongMemEval 可恢复、可换判官</h3><span class="badge b-opt">基准</span></div>
+        <p>环境变量控制题量（<code>HIVE_LME_QUESTIONS</code>）、断点续跑（<code>HIVE_LME_RESUME</code>）、时间线开关（<code>HIVE_LME_TIMELINE</code>）、判官模型与 API（<code>HIVE_LME_JUDGE_MODEL</code> 等）。失败但已产生的回答会保留并标记为未评分，便于之后 <code>rejudge</code>。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>为什么都不在 CI</h3><span class="badge b-no">按设计</span></div>
+        <p>两边 pytest 配置默认 <code>-m 'not live'</code>，CI 没有注入真实 API key 的步骤，也没有 nightly 工作流。好处是 CI 稳定、无外部依赖；代价是这两条最有价值的端到端链路只能靠维护者手动跑。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 7 CI -->
+  <section class="section" id="ci" data-section>
+    <div class="section-head"><span class="section-num">07</span><h2>CI、Lint 与本地命令</h2></div>
+    <p class="section-desc">
+      <code>.github/workflows/ci.yml</code> 五个 job。最有价值的是双平台测试与「干净虚拟环境安装后再运行」的打包验证。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Job</th><th>平台</th><th>实际执行的命令</th><th>验证什么</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>lint</code></td><td>Ubuntu</td>
+            <td><code>ruff check core/ tools/</code><br/><code>ruff format --check core/ tools/</code></td>
+            <td>风格与格式；不跑类型检查</td>
+          </tr>
+          <tr>
+            <td><code>test</code></td><td>Ubuntu + Windows</td>
+            <td><code>uv sync</code><br/><code>pytest tests/ -v --ignore=tests/dummy_agents</code><br/><code>pytest framework/ -v --ignore=framework/testing</code></td>
+            <td>跨模块集成 + 与代码同目录的框架单测；<code>live</code> 默认被 addopts 排除</td>
+          </tr>
+          <tr>
+            <td><code>test-tools</code></td><td>Ubuntu 24.04 + Windows</td>
+            <td><code>uv sync --extra dev</code><br/><code>scripts/ensure_ripgrep.py --install</code><br/><code>playwright install chromium</code><br/><code>pytest tests/ -v</code></td>
+            <td>工具与集成 mock 测试、浏览器桥、终端、图表渲染</td>
+          </tr>
+          <tr>
+            <td><code>package</code></td><td>Ubuntu</td>
+            <td><code>npm ci &amp;&amp; npm run build</code><br/><code>uv build --package aden-hive</code><br/><code>uv build --package aden-tools</code><br/>干净 venv 安装 <code>aden-hive[tools]</code><br/><code>python -I scripts/check_installed_package.py</code></td>
+            <td>Dashboard 打包、两个 wheel、脱离 workspace 后能否作为完整应用运行</td>
+          </tr>
+          <tr>
+            <td><code>validate</code></td><td>Ubuntu</td>
+            <td>若 <code>exports/*/agent.json</code> 存在，则逐个 <code>json.load</code> 校验</td>
+            <td>导出 Agent 的结构合法性；<code>needs: [lint, test, test-tools]</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <strong>值得肯定的细节。</strong>
+      <code>test-tools</code> 固定使用 <code>ubuntu-24.04</code> 而不是 <code>ubuntu-latest</code>，
+      注释说明在 ubuntu-26.04 上 <code>playwright install chromium</code> 会失败。这是务实、可追溯的工程处理。
+      <code>package</code> job 的「构建 → 干净环境安装 → 运行检查脚本」也是很多项目缺失的一环。
+    </div>
+
+    <h3 class="sub">本地命令</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>命令</th><th>作用</th><th>备注</th></tr></thead>
+        <tbody>
+          <tr><td><code>make test</code></td><td>core 集成测试 + tools 测试（忽略 <code>tests/tools</code>）</td><td>不包含每个工具的 wrapper 测试；不跑 live</td></tr>
+          <tr><td><code>make test-tools</code></td><td><code>cd tools &amp;&amp; pytest</code></td><td>包含 <code>tests/tools</code> 下 106 个工具 wrapper，mock 即可运行</td></tr>
+          <tr><td><code>make test-live</code></td><td><code>pytest -m live -s -o "addopts="</code></td><td>需要真实凭证；只覆盖 tools 侧</td></tr>
+          <tr><td><code>make test-all</code></td><td>core + tools + live</td><td>本地全量；仍不含前端</td></tr>
+          <tr><td><code>make check</code></td><td>Ruff check + format check</td><td>CI 等价；不改文件</td></tr>
+          <tr><td><code>make lint</code></td><td>Ruff check --fix + format</td><td>本地自动修复</td></tr>
+          <tr><td><code>make install-hooks</code></td><td>安装 pre-commit</td><td>Ruff <code>v0.15.0</code>，core/tools 分开作用域</td></tr>
+          <tr><td><code>cd core/frontend &amp;&amp; npm test</code></td><td>Vitest run</td><td>CI 未调用</td></tr>
+          <tr><td><code>bun test scripts/auto-close-duplicates</code></td><td>脚本单测</td><td>由 <code>auto-close-duplicates.yml</code> 运行，不在 <code>ci.yml</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">其他工作流</h3>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3><code>release.yml</code></h3><span class="badge b-ship">tag</span></div>
+        <p>推送 <code>v*</code> tag 时在 <code>core</code> 跑一次 <code>pytest tests/ -v</code>，然后创建 GitHub Release。只覆盖 core 测试，不跑 tools、前端或打包验证。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>PR 流程门禁</h3><span class="badge b-opt">流程</span></div>
+        <p><code>pr-requirements.yml</code> 要求 PR 关联 issue 且有 assignee；<code>pr-requirements-enforce.yml</code> 24 小时后关闭不合规 PR；另有 backfill 与 <code>/pr-check</code> 命令。<code>auto-close-duplicates.yml</code> 用 Bun 跑脚本测试。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>静态检查的现状</h3><span class="badge b-risk">缺口</span></div>
+        <p>Python 只有 Ruff（lint + format），没有 mypy/pyright，也没有把 dev 依赖里的 <code>ty</code> 接进 CI 或 pre-commit。前端在 <code>npm run build</code> 时跑 <code>tsc</code>，所以前端有类型检查，Python 没有。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>覆盖率</h3><span class="badge b-risk">未采集</span></div>
+        <p>仓库内没有 <code>coverage</code> / <code>pytest-cov</code> 配置，CI 也不生成报告。测试很多，但「哪些路径没被覆盖」不可见，无法用趋势判断新增代码的质量。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 8 评价 -->
+  <section class="section" id="assessment" data-section>
+    <div class="section-head"><span class="section-num">08</span><h2>评价：强项、缺口与风险</h2></div>
+    <p class="section-desc">
+      总体判断：测试工程是這個仓库的强项，尤其是隔离设计、真实链路测试与打包验证；
+      主要短板集中在「已有的测试没有全部进 CI」和「缺少覆盖率与 Python 类型检查」。
+    </p>
+
+    <h3 class="sub">强项</h3>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>体量与分层都真实</h3><span class="badge b-ship">强</span></div>
+        <p>三大套件 113k 行、5,888 个函数，与 135k 行的生产代码同量级；跨模块集成、同目录单测、工具 mock 测试分层清楚，定位测试的成本低。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>隔离设计有事故记忆</h3><span class="badge b-ship">强</span></div>
+        <p><code>HIVE_HOME</code> 在 import 前重定向，并有真实事故注释。对一个会写凭证、Sentinel 密钥和运行时 ID 的系统，这比多写几百个断言更有价值。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Live 测试用真实组件</h3><span class="badge b-ship">强</span></div>
+        <p>明确拒绝 test-only 子类与上下文捷径，使用与桌面应用相同的 AgentLoop、Provider、EventBus。这让 Live 结果更可信，也更容易解释「测试通过但线上失败」的差异。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>端到端记忆评测</h3><span class="badge b-ship">少见</span></div>
+        <p>LongMemEval 不只是检索组件测试，而是通过真实存储、真实 Queen 回答、官方 judge 评分，并主动披露「读完整历史更高」「偏好类最弱」等失败模式。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>工具测试覆盖广</h3><span class="badge b-ship">广</span></div>
+        <p>106 个按工具拆分的测试文件，覆盖 104 个集成目录中的大部分；浏览器桥、终端、凭证、图表、健康检查都有独立测试。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>双平台 + 安装后验证</h3><span class="badge b-ship">扎实</span></div>
+        <p>Linux 与 Windows 同时跑 core 与 tools；打包 job 在干净 venv 里安装 wheel 并运行检查脚本，能抓到「workspace 能跑、装出来不能跑」的问题。</p>
+      </article>
+    </div>
+
+    <h3 class="sub">缺口与风险</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>问题</th><th>证据</th><th>影响</th><th>优先级</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>前端测试不进 CI</strong></td>
+            <td><code>ci.yml</code> 的 <code>package</code> job 只 <code>npm run build</code>；全仓没有 <code>npm test</code> / <code>vitest</code> 步骤</td>
+            <td>36 个文件、218 个用例长期不执行，回归不会被发现</td>
+            <td><span class="badge b-risk">高</span></td>
+          </tr>
+          <tr>
+            <td><strong>无覆盖率</strong></td>
+            <td>没有 <code>pytest-cov</code> / coverage 配置或报告</td>
+            <td>不知道哪些路径空白；无法看趋势；重构时缺少客观信号</td>
+            <td><span class="badge b-risk">高</span></td>
+          </tr>
+          <tr>
+            <td><strong>Python 无类型检查</strong></td>
+            <td>dev 依赖有 <code>ty&gt;=0.0.13</code>，但无 <code>[tool.ty]</code> 配置、无 CI/pre-commit 步骤</td>
+            <td>135k 行动态代码，接口漂移只能靠测试或运行期发现</td>
+            <td><span class="badge b-risk">高</span></td>
+          </tr>
+          <tr>
+            <td><strong>E2E / Live 只能手动跑</strong></td>
+            <td>默认 <code>-m 'not live'</code>；无 nightly 工作流</td>
+            <td>最有价值的整链路验证可能长期不被执行</td>
+            <td><span class="badge b-opt">中高</span></td>
+          </tr>
+          <tr>
+            <td><strong>集成目录测试默认不收集</strong></td>
+            <td><code>tools/pyproject.toml</code>：<code>testpaths = ["tests"]</code>；<code>tools/src/**/tests</code> 有 8 个文件</td>
+            <td>这些测试既不进 CI，也不进默认本地运行，容易腐烂</td>
+            <td><span class="badge b-opt">中</span></td>
+          </tr>
+          <tr>
+            <td><strong>Makefile 默认漏掉工具 wrapper</strong></td>
+            <td><code>make test</code> 在 tools 侧 <code>--ignore=tests/tools</code></td>
+            <td>开发者以为跑了全量，实际漏掉 106 个工具测试；需记住 <code>make test-tools</code></td>
+            <td><span class="badge b-opt">中</span></td>
+          </tr>
+          <tr>
+            <td><strong>死忽略</strong></td>
+            <td><code>--ignore=tests/dummy_agents</code>，但该目录不存在</td>
+            <td>无害，但会让读者误以为有一组被排除的测试</td>
+            <td><span class="badge b-no">低</span></td>
+          </tr>
+          <tr>
+            <td><strong>巨型测试文件</strong></td>
+            <td><code>test_event_loop_node.py</code> 3,079 行、<code>test_node_conversation.py</code> 2,571 行</td>
+            <td>与巨型生产文件同构，定位、并行与重构成本高</td>
+            <td><span class="badge b-opt">中</span></td>
+          </tr>
+          <tr>
+            <td><strong>mock 耦合较深</strong></td>
+            <td>约 1,900 行 mock/patch 引用；大量断言依赖具体文案与常量</td>
+            <td>重构时容易大面积失败；测试可能锁死实现细节而非行为</td>
+            <td><span class="badge b-opt">中</span></td>
+          </tr>
+          <tr>
+            <td><strong>没有工具描述快照</strong></td>
+            <td>未见对工具名、首行描述或提示词做快照测试</td>
+            <td>工具描述是 prompt 的一部分，改动可能悄悄改变模型行为</td>
+            <td><span class="badge b-opt">中</span></td>
+          </tr>
+          <tr>
+            <td><strong>前端缺 E2E</strong></td>
+            <td>Playwright 仅用于图表渲染；<code>core/tests/e2e</code> 是 Python 侧</td>
+            <td>「创建会话 → 发消息 → 收到回复 → 建 Colony」没有浏览器级冒烟</td>
+            <td><span class="badge b-opt">中</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">测试有效性矩阵</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>产品面</th><th>覆盖强度</th><th>依据</th></tr></thead>
+        <tbody>
+          <tr><td>Agent 循环 / 上下文压缩 / 预算</td><td><span class="badge b-ship">高</span></td><td>最大的几个测试文件都在这里，且覆盖停顿、流式、视觉回退</td></tr>
+          <tr><td>存储 / Tracker / 恢复</td><td><span class="badge b-ship">高</span></td><td>storage、tracker、colony_db、global_db 均有独立测试</td></tr>
+          <tr><td>Colony / Worker / Playbook</td><td><span class="badge b-ship">高</span></td><td>28 个文件名含 colony/worker/playbook/tracker/sentinel/trigger 的测试</td></tr>
+          <tr><td>HTTP 路由 / SSE</td><td><span class="badge b-ship">高</span></td><td>framework/server 30 个测试文件，另有 event_bus 与 sse 专项</td></tr>
+          <tr><td>技能体系</td><td><span class="badge b-ship">高</span></td><td>20 个 <code>test_skill_*</code>，覆盖解析到信任到审批</td></tr>
+          <tr><td>记忆 / 召回</td><td><span class="badge b-opt">中高</span></td><td>单测 + LongMemEval 端到端；但基准不进 CI</td></tr>
+          <tr><td>工具与集成</td><td><span class="badge b-opt">中</span></td><td>106 个 wrapper 以 mock 为主；104 个集成的真实行为无法在 CI 验证</td></tr>
+          <tr><td>浏览器桥</td><td><span class="badge b-opt">中</span></td><td>生命周期、RPC、清理、发现均有测试；依赖用户 Chrome 的真实路径难覆盖</td></tr>
+          <tr><td>打包产物</td><td><span class="badge b-ship">高</span></td><td>干净 venv 安装并运行 <code>check_installed_package.py</code></td></tr>
+          <tr><td>前端交互</td><td><span class="badge b-opt">中低</span></td><td>36 个文件、218 个用例，但 CI 不跑，且无浏览器 E2E</td></tr>
+          <tr><td>Live 行为</td><td><span class="badge b-opt">中</span></td><td>套件存在且真实，但默认关闭、无定时任务</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 9 建议与复现 -->
+  <section class="section" id="reproduce" data-section>
+    <div class="section-head"><span class="section-num">09</span><h2>改进建议与统计复现</h2></div>
+    <p class="section-desc">
+      建议按「成本低、收益快」排序，前三条基本是配置级改动。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th class="num">#</th><th>建议</th><th>具体做法</th><th>预期收益</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="num">1</td>
+            <td><strong>把前端测试接进 CI</strong></td>
+            <td>在 <code>package</code> job 的 <code>npm run build</code> 前加 <code>npm test</code>；或新增一个轻量 <code>test-frontend</code> job 复用 npm 缓存</td>
+            <td>立即让 218 个已有用例生效，成本几乎为零</td>
+          </tr>
+          <tr>
+            <td class="num">2</td>
+            <td><strong>先让覆盖率「可见」</strong></td>
+            <td><code>pytest-cov</code> 生成 XML/HTML 上传为 artifact；前端用 <code>vitest --coverage</code>。先不设门槛，观察趋势</td>
+            <td>找到空白路径，为后续重构提供客观依据</td>
+          </tr>
+          <tr>
+            <td class="num">3</td>
+            <td><strong>启用 <code>ty</code> 或移除它</strong></td>
+            <td>从 <code>framework/llm</code>、<code>framework/storage</code>、<code>hive</code> 等边界清晰的模块开始，先 report-only；或在确认不用后删掉 dev 依赖</td>
+            <td>避免「声明了类型检查器但从不运行」的误导</td>
+          </tr>
+          <tr>
+            <td class="num">4</td>
+            <td><strong>加一条 nightly Live/E2E</strong></td>
+            <td>用 repository secrets 提供模型 key，跑一个小规模 <code>-m live</code> 子集与 Queen E2E；失败只通知、不阻塞 PR</td>
+            <td>让整链路测试真正持续执行，而不是靠记忆</td>
+          </tr>
+          <tr>
+            <td class="num">5</td>
+            <td><strong>修复测试收集范围</strong></td>
+            <td>把 <code>tools/src/**/tests</code> 移入 <code>tools/tests</code>，或在 <code>testpaths</code> 中加入；同时让 <code>make test</code> 不再忽略 <code>tests/tools</code></td>
+            <td>消除「测试存在但从不运行」的盲区</td>
+          </tr>
+          <tr>
+            <td class="num">6</td>
+            <td><strong>删除死忽略</strong></td>
+            <td>去掉 <code>--ignore=tests/dummy_agents</code>，或恢复该目录并说明用途</td>
+            <td>减少读者误解</td>
+          </tr>
+          <tr>
+            <td class="num">7</td>
+            <td><strong>加工具描述快照测试</strong></td>
+            <td>对工具名、首行描述、类别与 eager/searchable 分层生成快照；变更需显式更新</td>
+            <td>把「prompt 影响」纳入 CI，防止无意改动改变模型行为</td>
+          </tr>
+          <tr>
+            <td class="num">8</td>
+            <td><strong>拆分巨型测试文件</strong></td>
+            <td>随 <code>agent_loop.py</code> 的拆分同步拆 <code>test_event_loop_node.py</code>，按 <code>TurnRunner</code>、<code>ToolExecutor</code>、<code>CompactionController</code> 对齐</td>
+            <td>降低定位与并行成本，减少重构冲突</td>
+          </tr>
+          <tr>
+            <td class="num">9</td>
+            <td><strong>补浏览器冒烟</strong></td>
+            <td>用 Playwright 跑「创建会话 → 发消息 → 收到回复 → 建 Colony」一条链路</td>
+            <td>覆盖前后端契约，补上前端 E2E 空白</td>
+          </tr>
+          <tr>
+            <td class="num">10</td>
+            <td><strong>对 mock 密集区做行为化改造</strong></td>
+            <td>优先把断言从「内部调用次数/具体文案」转向「输入输出与可观察状态」</td>
+            <td>降低重构时的大面积误报</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">统计数据如何得到</h3>
+    <pre><code># 三大套件的测试模块数
+find core/tests -name 'test_*.py' | wc -l            # 166
+find core/framework -name 'test_*.py' | wc -l        # 46
+find tools/tests -name 'test_*.py' | wc -l           # 146
+
+# 行数
+find core/tests -name '*.py' -exec cat {} + | wc -l            # 50,732
+find core/framework -name 'test_*.py' -exec cat {} + | wc -l   # 12,942
+find tools/tests -name '*.py' -exec cat {} + | wc -l           # 49,359
+
+# test_ 函数
+grep -rhE '^\s*(async )?def test_' core/tests --include='*.py' | wc -l      # 2,413
+grep -rhE '^\s*(async )?def test_' core/framework --include='test_*.py' | wc -l  # 570
+grep -rhE '^\s*(async )?def test_' tools/tests --include='*.py' | wc -l     # 2,905
+
+# 前端
+find core/frontend/src -name '*.test.ts' -o -name '*.test.tsx' | wc -l      # 36
+grep -rhoE '\b(it|test)\(' core/frontend/src --include='*.test.ts*' | wc -l # 218
+
+# CI 是否跑前端测试
+grep -rn 'npm test\|vitest' .github/workflows/                              # 无输出</code></pre>
+
+    <div class="callout">
+      <strong>口径说明。</strong>
+      函数数按源码中的 <code>def test_</code> 计数，不使用 pytest 收集结果，因此参数化用例只算一个函数；
+      行数含注释与空行，仅用于量级比较；文件数按文件名统计，不含 <code>conftest.py</code>、夹具模块与 <code>__init__.py</code>。
+      统计时间 2026-11-17，版本 1.0.14，最新提交 <code>c6c2cdcf</code>；未跟踪的 <code>go_hive/</code> 不计入。
+    </div>
+
+    <div class="callout">
+      <strong>资料来源。</strong>
+      <code>go_hive/09-engineering.md</code>、<code>Makefile</code>、<code>.pre-commit-config.yaml</code>、
+      <code>core/pyproject.toml</code>、<code>tools/pyproject.toml</code>、<code>core/conftest.py</code>、
+      <code>core/tests/conftest.py</code>、<code>core/tests/e2e/</code>、<code>core/tests/live/</code>、
+      <code>core/frontend/vitest.config.ts</code>、<code>.github/workflows/ci.yml</code>、<code>release.yml</code>
+      与各测试目录的实测统计。具体行为以当前代码为准。
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    OpenHive 测试工程总览 · 生成于 2026-11-17 · Apache License 2.0 ·
+    页面自包含，无外部依赖。
+  </div>
+</footer>
+
+<button class="top-btn" id="topBtn" title="返回顶部" aria-label="返回顶部">↑</button>
+
+<script>
+(function () {
+  var input = document.getElementById('filter');
+  var count = document.getElementById('count');
+  var features = Array.prototype.slice.call(document.querySelectorAll('.feature'));
+  var sections = Array.prototype.slice.call(document.querySelectorAll('[data-section]'));
+
+  function applyFilter() {
+    var q = (input.value || '').trim().toLowerCase();
+    var shown = 0;
+    features.forEach(function (el) {
+      var match = !q || el.textContent.toLowerCase().indexOf(q) !== -1;
+      el.classList.toggle('hidden', !match);
+      if (match) shown++;
+    });
+    sections.forEach(function (sec) {
+      var any = sec.querySelector('.feature:not(.hidden)');
+      sec.classList.toggle('hidden', !!q && !any);
+    });
+    count.textContent = q ? shown + ' 项' : '';
+  }
+  input.addEventListener('input', applyFilter);
+
+  var topBtn = document.getElementById('topBtn');
+  window.addEventListener('scroll', function () {
+    topBtn.classList.toggle('show', window.scrollY > 600);
+  }, { passive: true });
+  topBtn.addEventListener('click', function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+})();
+</script>
+</body>
+</html>

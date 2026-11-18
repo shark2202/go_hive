@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenHive 1.0.14 功能特性总览</title>
+<style>
+  :root {
+    --bg: #fbf7ef;
+    --surface: #ffffff;
+    --surface-2: #fff5dc;
+    --ink: #221a0f;
+    --ink-2: #5b4c37;
+    --muted: #8a7a60;
+    --line: #e9dcc3;
+    --accent: #e08a00;
+    --accent-2: #ffb100;
+    --accent-ink: #5a3400;
+    --green: #1a7f4b;
+    --green-bg: #e7f6ec;
+    --blue: #1d5f9e;
+    --blue-bg: #e8f2fb;
+    --gray-bg: #efeae0;
+    --gray-ink: #6b5f4c;
+    --shadow: 0 1px 2px rgba(70, 45, 5, 0.06), 0 8px 24px rgba(70, 45, 5, 0.07);
+    --radius: 14px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14110c;
+      --surface: #1e1a13;
+      --surface-2: #2a2216;
+      --ink: #f4ecdd;
+      --ink-2: #cdbfa6;
+      --muted: #9c8d73;
+      --line: #3a3124;
+      --accent: #ffb100;
+      --accent-2: #ffc94d;
+      --accent-ink: #2a1b00;
+      --green: #6fd79b;
+      --green-bg: #16301f;
+      --blue: #8dc3f5;
+      --blue-bg: #152a3d;
+      --gray-bg: #2b251c;
+      --gray-ink: #b3a58a;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15.5px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--gray-bg);
+    color: var(--ink);
+    border-radius: 6px;
+  }
+  code { padding: 0.12em 0.38em; }
+  pre {
+    padding: 14px 16px;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; }
+
+  .wrap { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+
+  .hero {
+    background:
+      radial-gradient(900px 380px at 8% -10%, rgba(255, 177, 0, 0.28), transparent 60%),
+      radial-gradient(700px 320px at 95% 0%, rgba(224, 138, 0, 0.16), transparent 55%),
+      var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 64px 0 40px;
+  }
+  .eyebrow {
+    margin: 0 0 10px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    max-width: 850px;
+    margin: 16px 0 0;
+    font-size: 17px;
+    color: var(--ink-2);
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 28px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .stat b { display: block; font-size: 24px; line-height: 1.2; letter-spacing: -0.02em; }
+  .stat span { font-size: 12.5px; color: var(--muted); }
+  .meta { margin: 18px 0 0; font-size: 12.5px; color: var(--muted); }
+
+  .toc {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: 0 auto;
+    padding: 12px 0;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .toc-inner {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .toc a {
+    font-size: 13px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .toc a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+  .search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+  .search input {
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    width: 190px;
+  }
+  .search span { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+  main { padding: 34px 0 20px; }
+  .section { margin-bottom: 46px; }
+  .section-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  h2 {
+    margin: 0;
+    font-size: 25px;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+  }
+  .section-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .section-desc { margin: 4px 0 18px; color: var(--ink-2); max-width: 900px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+  }
+  .feature {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .feature.wide { grid-column: 1 / -1; }
+  .feature-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .feature h3 { margin: 0; font-size: 16px; letter-spacing: -0.01em; }
+  .feature p { margin: 0; color: var(--ink-2); }
+  .feature ul { margin: 2px 0 0; padding-left: 19px; color: var(--ink-2); }
+  .feature li { margin: 2px 0; }
+  .feature li::marker { color: var(--accent); }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .b-ship { color: var(--green); background: var(--green-bg); }
+  .b-opt { color: var(--blue); background: var(--blue-bg); }
+  .b-no { color: var(--gray-ink); background: var(--gray-bg); }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); font-size: 14px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--surface-2); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-2); }
+  tr:last-child td { border-bottom: 0; }
+  td code { white-space: nowrap; }
+
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--surface-2);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 18px;
+    margin: 16px 0;
+    color: var(--ink-2);
+  }
+  .callout strong { color: var(--ink); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) {
+    .two-col { grid-template-columns: 1fr; }
+    .search { margin-left: 0; width: 100%; }
+    .search input { width: 100%; }
+    .hero { padding-top: 40px; }
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 26px 0 46px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .top-btn {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--accent);
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    display: none;
+  }
+  .top-btn.show { display: block; }
+  .hidden { display: none !important; }
+  @media print {
+    .toc, .top-btn, .search { display: none !important; }
+    body { background: #fff; color: #000; font-size: 11pt; }
+    .feature, .stat, .table-wrap { box-shadow: none; break-inside: avoid; }
+    a { color: #000; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">aden-hive/hive · v1.0.14 · Apache-2.0</p>
+    <h1>OpenHive 功能特性总览</h1>
+    <p class="lede">
+      一个面向真实业务工作的开源 AI Agent 集群运行时。你描述目标，长期存在的 Queen 先自己做一遍，
+      把方法沉淀为 Skill，再把剩余工作分发给任意多个并行 Worker；所有结果写入共享 SQLite Tracker，
+      可查询、可审计、可断点续跑。
+    </p>
+    <div class="stats">
+      <div class="stat"><b>1.0.14</b><span>当前版本</span></div>
+      <div class="stat"><b>13</b><span>Queen 人格（默认启用 6 个）</span></div>
+      <div class="stat"><b>104</b><span>内置集成目录</span></div>
+      <div class="stat"><b>12 + 8</b><span>default / preset 技能</span></div>
+      <div class="stat"><b>88.4%</b><span>LongMemEval-S 记忆得分</span></div>
+      <div class="stat"><b>1 进程</b><span>默认 127.0.0.1:8787</span></div>
+    </div>
+    <p class="meta">
+      基于当前工作区代码与文档（README、docs/、go_hive/ 源码分析）整理 · 2026-11-17 ·
+      本页为自包含 HTML，直接浏览器打开即可。
+    </p>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap toc-inner">
+    <a href="#overview">定位与核心</a>
+    <a href="#runtime">集群运行时</a>
+    <a href="#queens">Queen 与交互</a>
+    <a href="#memory">记忆</a>
+    <a href="#skills">技能</a>
+    <a href="#tools">工具与集成</a>
+    <a href="#models">模型</a>
+    <a href="#reliability">可靠性</a>
+    <a href="#ui">界面与 API</a>
+    <a href="#install">安装</a>
+    <a href="#limits">边界</a>
+    <div class="search">
+      <input id="filter" type="search" placeholder="筛选功能，例如 MCP、记忆、worker" aria-label="筛选功能" />
+      <span id="count"></span>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- 1 定位 -->
+  <section class="section" id="overview" data-section>
+    <div class="section-head"><span class="section-num">01</span><h2>定位与核心机制</h2></div>
+    <p class="section-desc">
+      全系统只有一个执行原语：Agent 循环。Queen 是它，每个 Worker 也是它的克隆。
+      编排发生在运行时，是一次工具调用，而不是预先画好的图。
+    </p>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>单一执行原语</h3><span class="badge b-ship">V1</span></div>
+        <p>没有节点、没有边、没有数据缓冲区。持久化、上下文压缩、预算、停顿检测、断点恢复都内置在这一个循环里，因此 Queen、Worker、独立 Agent 自动共享同一套可靠性能力。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Queen（女王）</h3><span class="badge b-ship">V1</span></div>
+        <p>面向用户的长期 Agent，拥有对话、计划、记忆和 Colony。可以是 13 个内置人格之一，也可以自己创建。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Colony（集群）</h3><span class="badge b-ship">V1</span></div>
+        <p>自包含目录：Queen、Worker 规格、Tracker、技能、触发器都在其中。是部署、备份与移植的单位，可作为 tar 包导入。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Worker（工蜂）</h3><span class="badge b-ship">V1</span></div>
+        <p>Queen 的 Agent 循环克隆：一个任务、更窄的工具集、严格预算、无长期记忆。不能派发其他 Worker，也不直接与用户对话。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Tracker（共享账本）</h3><span class="badge b-ship">V1</span></div>
+        <p>每个 Colony 一个 SQLite 文件，是「做完什么、还剩什么」的唯一事实来源。Worker 逐行 upsert，Queen 用只读 SQL 验收。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>先执行、再系统化</h3><span class="badge b-ship">V1</span></div>
+        <p>Independent 阶段先当普通 Agent 做事；任务呈现并行、周期或长时特征时，Queen 调用 <code>suggest_colony</code> 提议建群，用户确认后进入 Colony 阶段，先试点（pilot）再沉淀方法。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 2 运行时 -->
+  <section class="section" id="runtime" data-section>
+    <div class="section-head"><span class="section-num">02</span><h2>集群编排与运行时</h2></div>
+    <p class="section-desc">
+      扇出、并发控制、超时、恢复、触发器与人在回路，全部围绕 Tracker 和一次工具调用展开。
+    </p>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>run_worker 并行扇出</h3><span class="badge b-ship">V1</span></div>
+        <p>一次调用提交多个任务并立即返回，Queen 可以继续和用户对话或继续派活。Worker 报告作为新回合回到 Queen 的对话。</p>
+        <ul>
+          <li>默认同时运行 4 个（<code>HIVE_MAX_CONCURRENT_WORKERS</code> 可覆盖），其余排队</li>
+          <li>软超时默认 600 秒：要求 Workers 立刻汇报</li>
+          <li>硬超时 = min(max(软超时 × 4, 软超时 + 600), 3600) 秒</li>
+          <li>被停止的 Worker 可用 <code>resume_worker_ids</code> 从保存的对话恢复</li>
+        </ul>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Worker 预算与宽限回合</h3><span class="badge b-ship">V1</span></div>
+        <p>默认 3 个工作回合 + 1 个宽限回合；宽限回合只允许汇报类工具，确保 Worker 耗尽预算也能交回结果。</p>
+        <ul>
+          <li>工具调用预算 30，硬上限 90，生命周期上限 200</li>
+          <li>Runner 可覆盖迭代数、宽限数、预算、上下文上限，并有上下界校验</li>
+          <li>Worker 阻塞时写 Tracker 并 <code>report_to_parent</code>，或通过 <code>escalate</code> 升级，而不是无限绕路</li>
+        </ul>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Tracker 数据流与写权限</h3><span class="badge b-ship">V1</span></div>
+        <p>Queen 建表（DDL）并声明 Worker 可写列（<code>tracker_register_writable</code>），Worker 用 <code>tracker_upsert</code> 写入，Queen 用 <code>tracker_query</code> 只读验收。</p>
+        <ul>
+          <li>没有 Colony Binding 的 Tracker 调用会被拒绝，而不是猜路径</li>
+          <li>WAL 模式支持一写多读，契合「Worker 写、Queen 读」</li>
+          <li>「剩余工作」永远是一次新鲜查询，崩溃不丢进度</li>
+        </ul>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>run_playbook 方法重放</h3><span class="badge b-ship">V1</span></div>
+        <p>把验证过的方法批量套用到 Tracker 的每一行，默认 8 个 Worker 并发，最多 32。Playbook 本身不拥有持久状态，重跑即续跑。</p>
+        <ul>
+          <li>重试与指数退避、限速车道（lane）、多轮收敛（converge）</li>
+          <li>断路器防止系统性故障下无限重试</li>
+          <li>死信列表单独列出持续失败的行</li>
+        </ul>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Task Plan 持久计划</h3><span class="badge b-ship">V1</span></div>
+        <p>Queen 的执行步骤保存在会话目录 <code>tasks.json</code>，独立于 Worker 生命周期。工具包括 <code>task_create</code>、<code>task_update</code>、<code>task_list</code>、<code>task_get</code>，前端显示为 Action Plan 面板。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>触发器：Colony 自己醒来</h3><span class="badge b-ship">V1</span></div>
+        <p>Queen 用 <code>set_trigger</code> 写入触发器，支持三种类型：</p>
+        <ul>
+          <li><strong>cron</strong>：基于 croniter 的定时表达式</li>
+          <li><strong>interval</strong>：固定分钟间隔</li>
+          <li><strong>webhook</strong>：内置 webhook 服务器接收外部事件</li>
+        </ul>
+        <p>Colony 重新加载时会计算离线期间错过多少次 tick，并报告给 Queen。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>事件总线与报告回流</h3><span class="badge b-ship">V1</span></div>
+        <p>运行时内部状态与外部可观测性的唯一通道：<code>SUBAGENT_REPORT</code> 回到 Queen 成为新回合，客户端事件通过 SSE 实时推送到浏览器。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Reminder Hub 长会话提醒</h3><span class="badge b-ship">V1</span></div>
+        <p>在固定时点向上下文注入短提醒，让长会话保持连贯：Tracker 快照、正在运行的 Worker、可并行的提示、相关历史会话、可加载的工具与技能。这些是软约束，硬约束在工具层与预算层。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Sentinel 哨兵</h3><span class="badge b-opt">可选</span></div>
+        <p>按 Colony 开启。Queen 停泊时，分类器根据现场决定：推她继续（nudge）、标记完成（done）、或升级给人类（escalate）。</p>
+        <ul>
+          <li>升级渠道：Hive inbox、Telegram、Slack</li>
+          <li>用户回复后 Queen 自动恢复</li>
+          <li>检测到用户就在界面前时避免打扰</li>
+        </ul>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Colony 导入</h3><span class="badge b-ship">V1</span></div>
+        <p>通过 <code>POST /api/colonies/import</code> 从 tar 归档导入 Colony，便于迁移、分享和备份。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>两阶段生命周期</h3><span class="badge b-ship">V1</span></div>
+        <p>Queen 在 <code>independent</code> 与 <code>colony</code> 两个阶段之间切换：前者用普通工具并判断是否建群，后者获得 <code>run_worker</code>、Tracker、<code>write_skill</code>、<code>run_playbook</code>、<code>set_trigger</code>。切换需要用户在 Create Colony 对话框确认。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>会话分支</h3><span class="badge b-ship">V1</span></div>
+        <p>会话可以 fork 成新分支，也可以从源会话 fork 为 Colony；支持重命名、停止、快照与附件下载。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 3 Queens -->
+  <section class="section" id="queens" data-section>
+    <div class="section-head"><span class="section-num">03</span><h2>Queen 与交互</h2></div>
+    <p class="section-desc">
+      人格、提问、计划、提示词库与自我叙事，构成 Queen 面向人的工作界面。
+    </p>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>13 个内置人格</h3><span class="badge b-ship">V1</span></div>
+        <p>默认启用 6 个：Growth、RevOps、Content、Lead Generation、Outbound、Brand &amp; Design。其余可在 Org Chart 雇佣，也可以创建自己的 Queen。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Org Chart 组织架构</h3><span class="badge b-ship">V1</span></div>
+        <p>雇佣或移除 Queen，查看岗位目录（Position Catalog），并管理每个 Queen 的人格、模型、Soul 与工具配置。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>ask_user 带选项提问</h3><span class="badge b-ship">V1</span></div>
+        <p>Queen 可以停下来向用户提问，并给出可选项；前端提供 QuestionWidget / MultiQuestionWidget。提问期间会话停泊，用户回答后继续。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>可见的任务计划</h3><span class="badge b-ship">V1</span></div>
+        <p>Queen 的 Action Plan 在聊天界面实时显示，用户可以看见她要做什么、做到哪一步。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Prompt Library</h3><span class="badge b-ship">V1</span></div>
+        <p>内置提示词库，每个提示词可以直接发送给为它设计的 Queen，省去每次重新描述任务。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Soul 自我叙事</h3><span class="badge b-ship">V1</span></div>
+        <p>每个 Queen 维护一份第一人称的「她成为了谁」记录，每天根据聊天反思一次；修改需要用户逐条批准。区别于记忆（关于用户与业务的事实），Soul 是 Queen 自身价值观与风格的演化。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Queen 档案页</h3><span class="badge b-ship">V1</span></div>
+        <p>集中查看和编辑 Queen 的人格、模型（queen_llm）、Soul、工具类别与技能。前端还提供 Claude Code 作为 Queen 的只读视图。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>新手引导</h3><span class="badge b-ship">V1</span></div>
+        <p>Dashboard 内置 Tutorial Overlay 与 Colony 演示步骤，引导新用户完成第一次任务。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 4 记忆 -->
+  <section class="section" id="memory" data-section>
+    <div class="section-head"><span class="section-num">04</span><h2>记忆系统</h2></div>
+    <p class="section-desc">
+      纯文件、无向量数据库，三层作用域；召回便宜、可失败、不阻塞。另有端到端 LongMemEval 评测与公开的失败模式。
+    </p>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>三层记忆目录</h3><span class="badge b-ship">V1</span></div>
+        <p>全部是 Markdown 文件，可带 YAML frontmatter（name、type、description）：</p>
+        <ul>
+          <li><code>~/.hive/memories/global/</code>：所有 Queen 与 Colony 共享</li>
+          <li><code>~/.hive/memories/colonies/&lt;name&gt;/</code>：某个 Colony 的上下文</li>
+          <li><code>~/.hive/memories/agents/queens/&lt;name&gt;/</code>：某个 Queen 自己的经验</li>
+        </ul>
+        <p>每个目录最多 200 个文件，单文件最多 4 KB；全局记忆分为 profile、preference、environment、feedback 四类。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Reflection 反思写记忆</h3><span class="badge b-ship">V1</span></div>
+        <p>每隔若干回合，Queen 把值得长期保留的结论写成增量 Markdown 文件，而不是重写一份大记忆。带冷却机制，避免每次模型调用都反思。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Recall 自动召回</h3><span class="badge b-ship">V1</span></div>
+        <p>每回合开始前扫描记忆目录，读取 frontmatter 与前 30 行生成清单，用一次结构化 LLM 调用选出最多 5 个最相关记忆注入系统提示。只看当前查询字符串，任何错误都返回空列表，绝不阻塞主对话。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>历史对话召回</h3><span class="badge b-ship">V1</span></div>
+        <p>每回合前最多注入 6 段相关历史会话摘要（带日期），来源是按关键词检索的会话索引。Queen 也可以主动调用 <code>search_messages</code> 搜索消息。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Timeline 时间线</h3><span class="badge b-opt">可选</span></div>
+        <p>由 <code>memory_timeline</code> 开关控制，默认关闭。从用户消息中抽取事件、事实与计划，解析「昨天」「上周」等相对日期，存为 <code>timeline.jsonl</code>，通过 <code>search_timeline</code> 查询，回答「什么时候」「多少次」这类问题。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Memory Library</h3><span class="badge b-ship">V1</span></div>
+        <p>Dashboard 中的记忆库页面，提供记忆的查看与文件级管理 API（<code>/api/memories</code>、<code>/api/memories/file</code>）。</p>
+      </article>
+      <article class="feature wide">
+        <div class="feature-head"><h3>LongMemEval 基准</h3><span class="badge b-ship">V1</span></div>
+        <p>端到端通过真实 Hive 存储与真实 Queen 回答，官方 judge 评分，回答模型 <code>gpt-6.1-sol</code>。同时公开了「同一模型读完整历史」的上界与各类失败模式。</p>
+        <div class="table-wrap" style="margin-top:8px">
+          <table>
+            <thead><tr><th>配置</th><th>LongMemEval-S（约 115k tokens）</th><th>LongMemEval-M（约 1.1M tokens）</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Hive V1</strong></td><td><strong>88.4%</strong></td><td><strong>82.0%</strong></td></tr>
+              <tr><td>同一模型读完整历史</td><td>96.8%</td><td>装不进上下文</td></tr>
+              <tr><td>同一模型只读含答案的会话</td><td>97.6%</td><td>97.8%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:10px">公开的弱项：偏好类问题（S 63.3%、M 30.0%）、「助手说过什么」（约 77–79%）、跨会话计数与合并。历史能完整放进上下文时，直接读仍然更准。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 5 技能 -->
+  <section class="section" id="skills" data-section>
+    <div class="section-head"><span class="section-num">05</span><h2>技能体系</h2></div>
+    <p class="section-desc">
+      采用开放的 Agent Skills 格式；Queen 在方法验证后自己写技能，Worker 随即加载。技能来源受信任门控与审批保护。
+    </p>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>SKILL.md 开放格式</h3><span class="badge b-ship">V1</span></div>
+        <p>一个技能是一个目录，核心文件 <code>SKILL.md</code>，由 YAML frontmatter + Markdown 正文组成。字段包括 name、description、license、compatibility、metadata、allowed_tools、visibility。解析宽松，能修复常见 YAML 错误。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>五种作用域</h3><span class="badge b-ship">V1</span></div>
+        <ul>
+          <li>framework/default：所有 Agent 可见</li>
+          <li>preset：预设场景</li>
+          <li>queen：某个 Queen 的所有会话与 Colony</li>
+          <li>colony：该 Colony 的 Worker</li>
+          <li>global：所有 Queen 与 Colony（需用户批准）</li>
+        </ul>
+        <p>内置 12 个 default 技能 + 8 个 preset 技能。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>write_skill 写技能</h3><span class="badge b-ship">V1</span></div>
+        <p>Queen 独自面对用户时也能写技能。默认作用域为 colony（有 Colony 时）或 queen；global 不会直接写入，而是生成安装请求并在聊天页展示名称、描述、文件、正文与覆盖警告，用户批准后才落盘。请求持久化，重启后仍在；不覆盖用户手写技能。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>技能信任门控</h3><span class="badge b-ship">V1</span></div>
+        <p>framework 与 user 作用域始终可信；来自不受信仓库的 project 技能在进入系统提示前需要明确同意。信任仓库记录在 <code>~/.hive/trusted_repos.json</code>；CI/无头环境可用 <code>HIVE_TRUST_PROJECT_SKILLS</code> 显式绕过。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>技能注册表</h3><span class="badge b-opt">有则用之</span></div>
+        <p>从 GitHub 拉取社区技能索引，缓存 1 小时；任何失败都优雅降级为空结果，不阻塞使用。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>技能与工具门控</h3><span class="badge b-ship">V1</span></div>
+        <p>技能可声明所需工具类别；未满足时工具可能被隐藏或提示。与工具的 eager/searchable 分层配合，控制上下文体积与能力边界。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Skills Library</h3><span class="badge b-ship">V1</span></div>
+        <p>Dashboard 技能库统一管理所有技能，支持上传、查看、启用/停用与安装审批；MCP Tools 标签页同时管理工具白名单。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 6 工具 -->
+  <section class="section" id="tools" data-section>
+    <div class="section-head"><span class="section-num">06</span><h2>工具与集成</h2></div>
+    <p class="section-desc">
+      三类工具来源：进程内内置工具、外部 MCP 服务器、驱动你自己 Chrome 的浏览器桥。另有 104 个集成目录与统一凭证管理。
+    </p>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>进程内内置工具</h3><span class="badge b-ship">V1</span></div>
+        <p>启动时不需要任何工具服务器或子进程：</p>
+        <ul>
+          <li><strong>terminal-tools</strong>：shell 命令、后台 job、ripgrep 搜索、glob</li>
+          <li><strong>files-tools</strong>：读、写、编辑文件与搜索</li>
+          <li><strong>chart-tools</strong>：ECharts、Mermaid（Playwright 渲染）</li>
+          <li><strong>memory-tools</strong>：会话搜索、recall</li>
+          <li><strong>hive_tools</strong>：附件、PDF、网页抓取、CSV、图片生成</li>
+        </ul>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>104 个集成目录</h3><span class="badge b-ship">V1</span></div>
+        <p>覆盖协作沟通、CRM/销售、营销内容、工程 DevOps、数据库、财务电商、Google/Microsoft、搜索研究、安全扫描、文件媒体与可观测性。</p>
+        <p>代表：Slack、Discord、Telegram、HubSpot、Salesforce、GitHub、GitLab、Jira、Linear、PostgreSQL、Snowflake、BigQuery、Stripe、Shopify、Notion、Exa、SerpAPI、Langfuse 等。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>MCP 工具模式</h3><span class="badge b-ship">V1</span></div>
+        <p><code>hive mcp add</code> 注册的服务器，其工具加入与内置工具相同的允许列表，schema 随每次模型调用发送。模型直接可见、调用简单，但工具多时 prompt 会膨胀。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>MCP CLI 模式</h3><span class="badge b-ship">V1</span></div>
+        <p><code>--as-cli</code> 让服务器不出现在工具列表，只留一行说明；Agent 通过终端调用 <code>hive mcp run &lt;server&gt;</code>，由 mcp2cli 把 MCP 工具转成命令行。环境变量与 headers 通过环境传递，不暴露在命令行。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>工具分层：eager / searchable</h3><span class="badge b-ship">V1</span></div>
+        <p>允许的工具分为两层：eager 层的完整 schema 随每次请求发送；searchable 层只在清单里出现一行，Agent 用 <code>search_tools("select:a,b")</code> 或自由文本查询后提升为 eager。搜索是确定性的（名称 + 描述 token 重叠打分，最多返回 5 个），不额外调用模型。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>工具类别与白名单</h3><span class="badge b-ship">V1</span></div>
+        <p>每个 Queen 的 YAML 档案声明默认工具类别；一个工具可属于多个类别。支持 per-queen、per-colony 允许列表，Worker 有独立的常开类别集合，可在 <code>configuration.json</code> 覆盖。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>浏览器桥</h3><span class="badge b-ship">V1</span></div>
+        <p>Hive Browser Bridge Chrome 扩展让 Agent 在你自己已登录的浏览器里工作，无需为每个 SaaS 配置 API Key。</p>
+        <ul>
+          <li>通过 <code>hive-browser</code> CLI 驱动</li>
+          <li>每个 Worker 获得独立 tab group，互不干扰</li>
+          <li>桥接进程默认端口 14829，状态端口 14830（兼容旧版 9230）</li>
+          <li><code>browser_setup</code> 工具让浏览器可发现、可门控</li>
+        </ul>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>图片与视觉</h3><span class="badge b-ship">V1</span></div>
+        <p>支持视觉的模型直接接收截图与附件；API 不支持在 tool result 里带图时，图片被搬到下一条用户消息。纯文本模型通过 vision fallback 模型生成描述，并做裁剪区域映射。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>加密凭证库</h3><span class="badge b-ship">V1</span></div>
+        <p>凭证存放在 <code>~/.hive/credentials/</code>，Fernet 加密，由 <code>HIVE_CREDENTIAL_KEY</code> 控制。脚本可用 <code>hive-cred token &lt;provider&gt;</code> 按需取短期令牌，避免明文落盘；HubSpot 与 Zoho 支持 OAuth2 刷新。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>凭证表单直写</h3><span class="badge b-ship">V1</span></div>
+        <p>工具缺凭证时，前端弹出独立表单；凭证通过专用 POST 端点直接写入加密存储，不经过事件流或对话内容。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>Tool Library</h3><span class="badge b-ship">V1</span></div>
+        <p>Dashboard 工具目录展示可用工具与集成，配合类别、允许列表与 MCP 管理。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>独立 MCP Server</h3><span class="badge b-ship">V1</span></div>
+        <p><code>tools/mcp_server.py</code> 可把集成库作为独立 MCP 服务器暴露给 IDE 等外部客户端。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 7 模型 -->
+  <section class="section" id="models" data-section>
+    <div class="section-head"><span class="section-num">07</span><h2>模型与供应商</h2></div>
+    <p class="section-desc">
+      基于 LiteLLM，理论上支持其覆盖的所有供应商；Queen 与 Worker 可以使用不同模型。
+    </p>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>广泛的供应商支持</h3><span class="badge b-ship">V1</span></div>
+        <p>OpenAI、Anthropic、Google Gemini、Groq、Cerebras、OpenRouter、Hive LLM，以及任意 OpenAI 兼容端点（Ollama、vLLM、LM Studio、网关、Magpie）。另有原生 AnthropicProvider、AntigravityProvider 与 MockLLMProvider。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>编码订阅</h3><span class="badge b-ship">V1</span></div>
+        <p>可直接使用已有编码订阅：Claude Code、OpenAI Codex、Kimi Code、MiniMax、Z.AI、Antigravity，无需另买 API Key。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>本地模型</h3><span class="badge b-ship">V1</span></div>
+        <p>通过 Ollama 运行本地模型，无需任何 Key；quickstart 中可直接选择。也支持其他 OpenAI 兼容的本地推理服务。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>按角色分配模型</h3><span class="badge b-ship">V1</span></div>
+        <p>Queen 与 Worker 可使用不同模型（<code>worker_llm</code>），每个 Queen 也可以有自己的模型（<code>queen_llm</code>）。模型目录由 <code>model_catalog.json</code> 提供。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>视觉回退</h3><span class="badge b-ship">V1</span></div>
+        <p>纯文本模型可以通过视觉回退模型「看」图片，并保留裁剪区域到原图的映射。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>模型与端点管理页</h3><span class="badge b-ship">V1</span></div>
+        <p>Dashboard 的 Models 页面集中配置模型槽位（slot）与端点，对应 <code>/api/models/overview</code>、<code>/api/models/slots/{slot}</code>、<code>/api/models/endpoints/{name}</code>。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>用量计量</h3><span class="badge b-ship">V1</span></div>
+        <p>每次模型调用都有用量计量，便于观察消耗。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 8 可靠性 -->
+  <section class="section" id="reliability" data-section>
+    <div class="section-head"><span class="section-num">08</span><h2>可靠性与运维</h2></div>
+    <p class="section-desc">
+      长时间运行、崩溃恢复、上下文控制与成本边界，都放在同一个 Agent 循环里。
+    </p>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>状态落盘与断点恢复</h3><span class="badge b-ship">V1</span></div>
+        <p>每个 Agent 把状态写到磁盘；遇到提问、停止、错误或崩溃后，从保存的游标与对话恢复，而不是从头开始。会话冷启动依赖「写穿 + 原子写 + 游标」。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>上下文压缩</h3><span class="badge b-ship">V1</span></div>
+        <p>长会话自动压缩；大的工具结果溢写到文件，而不是灌进上下文窗口。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>卡住与死循环检测</h3><span class="badge b-ship">V1</span></div>
+        <p>停顿检测（stall check）与 doom-loop 检测会捕捉「说要做却没做」或反复绕圈的回合并介入。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>预算与并发上限</h3><span class="badge b-ship">V1</span></div>
+        <p>每回合与每次运行都有工具调用预算；Worker 有硬停止；同时运行的 Worker 数量有上限，避免失控与成本爆炸。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>软超时与硬超时看门狗</h3><span class="badge b-ship">V1</span></div>
+        <p>先软超时要求汇报，再硬超时强制停止；显式报告优先于硬停止，被停止的 Worker 可以恢复。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>阻塞隔离</h3><span class="badge b-ship">V1</span></div>
+        <p>服务端为阻塞型处理器单独建立 32 线程池（<code>HIVE_REQUEST_EXECUTOR_MAX</code>），避免 Queen 的阻塞工具调用拖垮 Colony UI。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>健康检查</h3><span class="badge b-ship">V1</span></div>
+        <p>提供 <code>/api/health</code>、<code>/api/health/resources</code>、<code>/api/startup-status</code> 等端点，用于判断服务与资源状态。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>运行日志抽屉</h3><span class="badge b-ship">V1</span></div>
+        <p>Dashboard 内嵌 Runtime Logs Drawer，通过 <code>/api/logs/*</code> 查看运行时日志，并有 DebugPanel 与连通性横幅。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>维护端点</h3><span class="badge b-ship">V1</span></div>
+        <p><code>/api/maintenance/*</code> 提供维护操作，便于清理与诊断。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>数据本地化</h3><span class="badge b-ship">V1</span></div>
+        <p>会话、Colony、Tracker、记忆都是 <code>~/.hive</code>（或 <code>HIVE_HOME</code>）下的普通文件；没有外部数据库依赖，便于备份、审计与迁移。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 9 界面与 API -->
+  <section class="section" id="ui" data-section>
+    <div class="section-head"><span class="section-num">09</span><h2>界面、API 与接入</h2></div>
+    <p class="section-desc">
+      一个进程、一个端口：前端静态资源、REST API、SSE 流与 webhook 全部由同一个服务提供。
+    </p>
+    <div class="grid">
+      <article class="feature wide">
+        <div class="feature-head"><h3>Dashboard 页面</h3><span class="badge b-ship">V1</span></div>
+        <div class="table-wrap" style="margin-top:10px">
+          <table>
+            <thead><tr><th>页面</th><th>作用</th></tr></thead>
+            <tbody>
+              <tr><td>Home</td><td>Queen 与 Colony 的蜂巢地图；输入任务并选择 Queen</td></tr>
+              <tr><td>Queen DM</td><td>与 Queen 的直接对话</td></tr>
+              <tr><td>Colony Chat</td><td>Colony 会话、Worker 并行执行与 Tracker 数据视图</td></tr>
+              <tr><td>Queen Profile</td><td>人格、模型、Soul、工具与技能配置</td></tr>
+              <tr><td>Org Chart</td><td>雇佣/移除 Queen，查看岗位目录</td></tr>
+              <tr><td>Skills Library</td><td>技能管理、上传与安装审批；MCP Tools 白名单</td></tr>
+              <tr><td>Prompt Library</td><td>预置提示词，直接发送给对应 Queen</td></tr>
+              <tr><td>Memory Library</td><td>记忆文件查看与管理</td></tr>
+              <tr><td>Credentials</td><td>凭证与 OAuth 管理</td></tr>
+              <tr><td>Models</td><td>模型槽位与端点配置</td></tr>
+              <tr><td>Tool Library</td><td>工具与集成目录</td></tr>
+              <tr><td>Claude Code Queen</td><td>将 Claude Code 作为 Queen 的只读视图</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>REST API</h3><span class="badge b-ship">V1</span></div>
+        <p>会话创建/恢复/停止/分支/重命名、聊天、取消回合、在场状态、Worker 列表与实时流、Tracker 表与行查询、Queen 档案、记忆、技能、任务、模型、配置、凭证、MCP、Sentinel、维护与日志。默认监听 <code>127.0.0.1:8787</code>。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>SSE 实时流</h3><span class="badge b-ship">V1</span></div>
+        <p>模型文本与推理增量、工具调用开始/结束、Worker 报告、任务进度、输入请求与提交、凭证表单请求、建群建议、技能安装审批，都通过 SSE 推送到前端；断线后可重连。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>聊天应用渠道</h3><span class="badge b-opt">可选包</span></div>
+        <p>服务端提供 channels 接入层，可通过可选包把 Slack、Telegram 等聊天应用接到 Queen；Sentinel 也使用这些渠道做升级通知。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>单端口部署</h3><span class="badge b-ship">V1</span></div>
+        <p>前端构建产物打进 Python wheel，从 PyPI 安装后运行 <code>hive open</code> 即可，不需要单独部署 Node 或前端服务器。Webhook 服务器与 SPA 回退也由同一进程处理。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>CLI</h3><span class="badge b-ship">V1</span></div>
+        <p>常用命令：<code>hive open</code> 打开 Dashboard，<code>hive run</code> 运行 Agent，<code>hive mcp add|install|run</code> 管理 MCP，<code>hive-cred token</code> 取短期凭证，<code>hive-browser</code> 驱动浏览器桥。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>作为库使用</h3><span class="badge b-ship">V1</span></div>
+        <p>安装 <code>aden-hive</code> 后可以从 <code>hive</code> 包导入 AgentLoop、LiteLLMProvider、EventBus 等，在自己的项目里复用循环、模型层与事件总线。也可依赖 <code>aden-tools</code> 单独使用工具库。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- 10 安装 -->
+  <section class="section" id="install" data-section>
+    <div class="section-head"><span class="section-num">10</span><h2>安装与启动</h2></div>
+    <p class="section-desc">
+      前置条件：Python 3.11+（推荐 3.12/3.13）、Node.js 20+、git。quickstart 会自动安装缺失的 uv 与 ripgrep，并询问是否安装 Node。
+    </p>
+    <div class="two-col">
+      <article class="feature">
+        <div class="feature-head"><h3>从源码安装（推荐）</h3><span class="badge b-ship">V1</span></div>
+        <pre><code>git clone https://github.com/aden-hive/hive.git
+cd hive
+./quickstart.sh          # macOS / Linux
+.\quickstart.ps1         # Windows PowerShell 5.1+</code></pre>
+        <p>quickstart 会建立统一的 Python 虚拟环境，把 API Key 加密存到 <code>~/.hive</code>，让你选择模型，构建 Dashboard 并打开 <code>http://127.0.0.1:8787</code>。之后在仓库目录运行 <code>./hive open</code>。</p>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>从 PyPI 安装</h3><span class="badge b-ship">V1</span></div>
+        <pre><code>pip install "aden-hive[tools]"
+hive open</code></pre>
+        <p>适合不克隆仓库的用法。注意：仓库本身是 uv workspace，在仓库根执行 <code>pip install -e .</code> 只会装到无法运行的占位包，所以克隆仓库时务必走 quickstart。</p>
+      </article>
+    </div>
+    <article class="feature wide" style="margin-top:14px">
+      <div class="feature-head"><h3>可选的模型来源</h3><span class="badge b-ship">V1</span></div>
+      <ul>
+        <li>API Key：Anthropic、OpenAI、Google Gemini、Groq、Cerebras、OpenRouter</li>
+        <li>已有编码订阅：Claude Code、OpenAI Codex、Kimi Code、MiniMax、Z.AI、Antigravity</li>
+        <li>Hive LLM</li>
+        <li>本地模型：Ollama，无需任何 Key</li>
+      </ul>
+      <p>验证安装：<code>uv run python -c "import framework; import aden_tools; print('ok')"</code>。当前工作区若没有 <code>.venv</code>，说明 quickstart 尚未运行过，此时 <code>./hive open</code> 会提示先执行 quickstart。</p>
+    </article>
+  </section>
+
+  <!-- 11 边界 -->
+  <section class="section" id="limits" data-section>
+    <div class="section-head"><span class="section-num">11</span><h2>边界、尚不支持与已退役</h2></div>
+    <p class="section-desc">
+      以下内容来自 docs/roadmap.md，用于区分「已经能用」与「还没做」。
+    </p>
+    <div class="grid">
+      <article class="feature">
+        <div class="feature-head"><h3>尚未支持</h3><span class="badge b-no">Roadmap</span></div>
+        <ul>
+          <li><strong>美元支出上限</strong>：每次模型调用有计量，但还不能按金额中止运行</li>
+          <li><strong>企业密钥管理</strong>：暂无 Vault、AWS/GCP/Azure Secret Manager 后端</li>
+          <li><strong>Docker 镜像</strong>：官方安装方式是克隆 + quickstart 或 PyPI</li>
+          <li><strong>语义记忆检索</strong>：recall 与 search_messages 仍是关键词匹配，没有 embedding 检索</li>
+          <li><strong>JavaScript/TypeScript SDK</strong></li>
+        </ul>
+      </article>
+      <article class="feature">
+        <div class="feature-head"><h3>V1 已退役</h3><span class="badge b-no">已移除</span></div>
+        <ul>
+          <li>图执行器（节点、边、共享数据缓冲区）：由 Agent 循环、<code>run_worker</code> 与 Tracker 取代</li>
+          <li>终端 UI：改用 Web Dashboard</li>
+          <li>随包启动的 MCP 子进程（包括 gcu-tools）：内置工具改为进程内运行，浏览器走 <code>hive-browser</code></li>
+          <li>自动 Queen 路由：现在由用户选择 Queen</li>
+          <li>示例 Agent 模板与凭证测试器</li>
+        </ul>
+      </article>
+      <article class="feature wide">
+        <div class="feature-head"><h3>它适合谁，不适合谁</h3><span class="badge b-no">适用边界</span></div>
+        <p><strong>适合：</strong>大量同质工作单元（线索、账户、工单、仓库、文档）需要并行且每次做法一致；任务要跑数小时或按计划运行并能扛住重启；结果需要检查、查询、审计；人必须保留关键决策权。</p>
+        <p><strong>不适合：</strong>单次提示或一次性脚本，用普通 Agent 更简单。</p>
+      </article>
+    </div>
+    <div class="callout">
+      <strong>资料来源。</strong>README.md、docs/roadmap.md、docs/getting-started.md、docs/tools.md、
+      docs/memory-benchmark.md，以及 go_hive/ 下的十篇源码分析（版本 1.0.14，最新提交 c6c2cdcf）。
+      本页只列能力，不构成性能或安全承诺；具体行为以当前代码为准。
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    OpenHive 功能特性总览 · 生成于 2026-11-17 · Apache License 2.0 ·
+    页面自包含，无外部依赖。
+  </div>
+</footer>
+
+<button class="top-btn" id="topBtn" title="返回顶部" aria-label="返回顶部">↑</button>
+
+<script>
+(function () {
+  var input = document.getElementById('filter');
+  var count = document.getElementById('count');
+  var features = Array.prototype.slice.call(document.querySelectorAll('.feature'));
+  var sections = Array.prototype.slice.call(document.querySelectorAll('[data-section]'));
+
+  function applyFilter() {
+    var q = (input.value || '').trim().toLowerCase();
+    var shown = 0;
+    features.forEach(function (el) {
+      var match = !q || el.textContent.toLowerCase().indexOf(q) !== -1;
+      el.classList.toggle('hidden', !match);
+      if (match) shown++;
+    });
+    sections.forEach(function (sec) {
+      var any = sec.querySelector('.feature:not(.hidden)');
+      sec.classList.toggle('hidden', !!q && !any);
+    });
+    count.textContent = q ? shown + ' 项' : '';
+  }
+  input.addEventListener('input', applyFilter);
+
+  var topBtn = document.getElementById('topBtn');
+  window.addEventListener('scroll', function () {
+    topBtn.classList.toggle('show', window.scrollY > 600);
+  }, { passive: true });
+  topBtn.addEventListener('click', function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+})();
+</script>
+</body>
+</html>
