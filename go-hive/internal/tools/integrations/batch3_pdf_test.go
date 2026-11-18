@@ -37,7 +37,7 @@ func (t *batch3RewriteTransport) RoundTrip(request *http.Request) (*http.Respons
 
 // batch3TestRegistry builds the batch-3 registry with a public-result DNS
 // stub and, when serverURL is set, a transport that reaches the fake server.
-func batch3DocTestRegistry(t *testing.T, serverURL string, opts ...batch3Option) *Registry {
+func batch3TestRegistry(t *testing.T, serverURL string, opts ...batch3Option) *Registry {
 	t.Helper()
 	options := []batch3Option{withBatch3Resolver(func(ctx context.Context, host string) ([]string, error) {
 		return []string{"93.184.216.34"}, nil
@@ -184,7 +184,7 @@ func TestBatch3PDFReadLocalTextPDF(t *testing.T) {
 	path := batch3WritePDFFixture(t,
 		[]string{"First page text", "Second page text"},
 		map[string]string{"Title": "Fixture Title", "Author": "Fixture Author"})
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 
 	result := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": path})
 	if _, failed := result["error"]; failed {
@@ -219,7 +219,7 @@ func TestBatch3PDFReadLocalTextPDF(t *testing.T) {
 // Parity: tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_truncation_flag_for_page_range
 func TestBatch3PDFReadPageRangeTruncation(t *testing.T) {
 	path := batch3WritePDFFixture(t, []string{"p1", "p2", "p3", "p4", "p5"}, nil)
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 
 	result := batch3Execute(t, registry, "pdf_read", map[string]any{
 		"file_path": path,
@@ -244,7 +244,7 @@ func TestBatch3PDFReadPageRangeTruncation(t *testing.T) {
 // Parity: tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_pages_parameter_accepted
 func TestBatch3PDFReadPageSpecForms(t *testing.T) {
 	path := batch3WritePDFFixture(t, []string{"a", "b", "c", "d", "e"}, nil)
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 	cases := map[string]int{"all": 5, "2": 1, "2-4": 3, "1,3,5": 3}
 	for spec, want := range cases {
 		result := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": path, "pages": spec})
@@ -265,7 +265,7 @@ func TestBatch3PDFReadPageSpecForms(t *testing.T) {
 func TestBatch3PDFReadLongPageNoVisionFlag(t *testing.T) {
 	long := strings.Repeat("lorem ipsum ", 50)
 	path := batch3WritePDFFixture(t, []string{long}, nil)
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 
 	result := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": path})
 	if _, failed := result["error"]; failed {
@@ -284,7 +284,7 @@ func TestBatch3PDFReadLongPageNoVisionFlag(t *testing.T) {
 // error, while still carrying needs_vision_pages / next_step / terminal_hint.
 func TestBatch3PDFReadScannedReturnsExplicitError(t *testing.T) {
 	path := batch3WritePDFFixture(t, []string{"", ""}, nil)
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 
 	result := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": path})
 	message, _ := result["error"].(string)
@@ -312,7 +312,7 @@ func TestBatch3PDFReadEncryptedReturnsExplicitError(t *testing.T) {
 	if err := os.WriteFile(path, batch3PDFFixture(t, []string{"secret"}, nil, true), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 
 	result := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": path})
 	message, _ := result["error"].(string)
@@ -329,7 +329,7 @@ func TestBatch3PDFReadEncryptedReturnsExplicitError(t *testing.T) {
 
 // Parity: tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_read_pdf_file_not_found, tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_read_pdf_invalid_extension, tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_read_pdf_directory
 func TestBatch3PDFReadLocalPathErrors(t *testing.T) {
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 	dir := t.TempDir()
 
 	missing := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": filepath.Join(dir, "missing.pdf")})
@@ -354,7 +354,7 @@ func TestBatch3PDFReadLocalPathErrors(t *testing.T) {
 
 // Parity: tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_neither_file_path_nor_files_errors, tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_both_file_path_and_files_errors, tools/tests/tools/test_pdf_read_tool.py::TestPdfReadMultiFile::test_files_too_many_errors
 func TestBatch3PDFReadArgumentValidation(t *testing.T) {
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 	path := batch3WritePDFFixture(t, []string{"text"}, nil)
 
 	neither := batch3Execute(t, registry, "pdf_read", map[string]any{})
@@ -381,7 +381,7 @@ func TestBatch3PDFReadArgumentValidation(t *testing.T) {
 func TestBatch3PDFReadMultipleFiles(t *testing.T) {
 	first := batch3WritePDFFixture(t, []string{"alpha"}, nil)
 	second := batch3WritePDFFixture(t, []string{"beta"}, nil)
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 
 	result := batch3Execute(t, registry, "pdf_read", map[string]any{"files": []string{first, second}})
 	pdfs, ok := result["pdfs"].([]any)
@@ -406,7 +406,7 @@ func TestBatch3PDFReadURLDownload(t *testing.T) {
 		_, _ = w.Write(fixture)
 	}))
 	defer server.Close()
-	registry := batch3DocTestRegistry(t, server.URL)
+	registry := batch3TestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": "https://example.com/doc.pdf"})
 	if _, failed := result["error"]; failed {
@@ -435,7 +435,7 @@ func TestBatch3PDFReadURLRejectsNonPDFAndHTTPErrors(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	registry := batch3DocTestRegistry(t, server.URL)
+	registry := batch3TestRegistry(t, server.URL)
 
 	wrongType := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": "https://example.com/wrong-type"})
 	if !strings.Contains(fmt.Sprint(wrongType["error"]), "Content-Type") {
@@ -450,7 +450,7 @@ func TestBatch3PDFReadURLRejectsNonPDFAndHTTPErrors(t *testing.T) {
 
 // Parity: tools/tests/tools/test_pdf_read_tool.py::TestPdfReadUrlSupport::test_ssrf_localhost_rejected, tools/tests/tools/test_pdf_read_tool.py::TestPdfReadUrlSupport::test_ssrf_link_local_rejected, tools/tests/tools/test_pdf_read_tool.py::TestPdfReadUrlSupport::test_ssrf_rfc1918_rejected
 func TestBatch3PDFReadURLRejectsPrivateHosts(t *testing.T) {
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 	for _, target := range []string{
 		"http://127.0.0.1/doc.pdf",
 		"http://169.254.169.254/doc.pdf",
@@ -489,7 +489,7 @@ func TestBatch3PDFReadURLRejectsDNSPrivateAndRedirectTargets(t *testing.T) {
 // Parity: tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_max_pages_clamped_low, tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_max_pages_clamped_high
 func TestBatch3PDFReadMaxPagesClamped(t *testing.T) {
 	path := batch3WritePDFFixture(t, []string{"one", "two", "three"}, nil)
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 
 	low := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": path, "max_pages": 0})
 	if low["pages_extracted"] != 1 {
@@ -513,7 +513,7 @@ func TestBatch3PDFReadFallsBackToObjectScan(t *testing.T) {
 	if err := os.WriteFile(path, fixture[:cut], 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	registry := batch3DocTestRegistry(t, "")
+	registry := batch3TestRegistry(t, "")
 
 	result := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": path})
 	if _, failed := result["error"]; failed {
