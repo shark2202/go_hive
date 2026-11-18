@@ -181,6 +181,8 @@ func TestSearchTimelineColonyScopeCoversOverseerQueens(t *testing.T) {
 	}
 }
 
+// Parity-exempt: no Python test covers search_timeline's pattern_invalid
+// branch; this mirrors the re.compile guard in memory_tools/timeline.py.
 func TestSearchTimelineRejectsInvalidPattern(t *testing.T) {
 	home := searchHome(t)
 	seedWeddings(t, home)
@@ -191,6 +193,8 @@ func TestSearchTimelineRejectsInvalidPattern(t *testing.T) {
 	}
 }
 
+// Parity-exempt: no Python test covers search_timeline's filter_invalid
+// branch; this mirrors tool.py::_parse_iso before timeline.search runs.
 func TestSearchTimelineRejectsInvalidFilter(t *testing.T) {
 	home := searchHome(t)
 	seedWeddings(t, home)
@@ -201,6 +205,8 @@ func TestSearchTimelineRejectsInvalidFilter(t *testing.T) {
 	}
 }
 
+// Parity-exempt: the [1, 300] clamp lives in the tool wrapper (timeline.py::
+// register_search_timeline) and has no dedicated Python test.
 func TestSearchTimelineClampsMaxResults(t *testing.T) {
 	home := searchHome(t)
 	seedWeddings(t, home)
@@ -214,6 +220,8 @@ func TestSearchTimelineClampsMaxResults(t *testing.T) {
 	}
 }
 
+// Parity-exempt: no Python test feeds malformed timeline.jsonl lines; this
+// mirrors timeline.search's per-line ValueError skip.
 func TestSearchTimelineSkipsMalformedLines(t *testing.T) {
 	home := searchHome(t)
 	dir := filepath.Join(home, "queens", "queen_timeline", "sessions", "session_20230901_100000_ffff0001")
