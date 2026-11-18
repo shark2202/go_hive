@@ -232,7 +232,7 @@ func TestReplacingFieldsKeepsTheFileReadableAndASnapshot(t *testing.T) {
 	traits := "<voice>  \nShort lines.\nNo exclamation marks.  \n</voice>\n"
 
 	recorder, body := doSessionJSON(t, mux, http.MethodPut, "/api/queen/queen_x/persona",
-		`{"persona":{"core_traits":`+mustJSON(t, traits)+`,"hidden_background":null}}`)
+		`{"persona":{"core_traits":`+mustJSONString(t, traits)+`,"hidden_background":null}}`)
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
@@ -267,7 +267,9 @@ func TestReplacingFieldsKeepsTheFileReadableAndASnapshot(t *testing.T) {
 	}
 }
 
-func mustJSON(t *testing.T, value any) string {
+// mustJSONString marshals value for embedding in a JSON string literal.
+// Distinct from routes_colonies_test.go's mustJSON, which returns []byte.
+func mustJSONString(t *testing.T, value any) string {
 	t.Helper()
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -387,7 +389,7 @@ func TestTheDashboardSetsAndClearsHerModelAndHerSessionsFollow(t *testing.T) {
 		t.Fatalf("before = %#v", before)
 	}
 	own := map[string]any{"provider": "openai", "model": "archivist-1", "api_base": "https://models.invalid/v1", "api_key": "sk-own"}
-	recorder, setBody := doSessionJSON(t, mux, http.MethodPut, "/api/queen/queen_growth/llm", `{"section":`+mustJSON(t, own)+`}`)
+	recorder, setBody := doSessionJSON(t, mux, http.MethodPut, "/api/queen/queen_growth/llm", `{"section":`+mustJSONString(t, own)+`}`)
 	if recorder.Code != http.StatusOK || setBody["sessions_switched"] != float64(1) {
 		t.Fatalf("set status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}

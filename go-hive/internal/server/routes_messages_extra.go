@@ -23,7 +23,10 @@ const (
 	defaultColonyName = "new_colony"
 )
 
-var colonyNamePattern = regexp.MustCompile(`^[a-z0-9_]+$`)
+// colonyNamePatternExtra is the slug validator owned by the message routes;
+// named with the Extra suffix so it does not collide with the colony-name
+// error message constant declared in routes_colonies.go.
+var colonyNamePatternExtra = regexp.MustCompile(`^[a-z0-9_]+$`)
 
 var colonyNameInvalidRuns = regexp.MustCompile(`[^a-z0-9]+`)
 
@@ -362,7 +365,7 @@ func sanitizeColonyName(raw string) string {
 		slug = slug[:64]
 	}
 	slug = strings.Trim(slug, "_")
-	if slug == "" || !colonyNamePattern.MatchString(slug) {
+	if slug == "" || !colonyNamePatternExtra.MatchString(slug) {
 		return defaultColonyName
 	}
 	return slug
