@@ -35,7 +35,7 @@
 | E | colonies / colony tools / execution 12 条 | `server/routes_colonies.py`、`routes_colony_tools.py`、`routes_execution.py` | `internal/server/routes_colonies*.go` |
 | F | workers / models / app 级路由 / events 15 条 | `server/routes_workers.py`、`routes_models.py`、`app.py`、`routes_events.py` | `internal/server/routes_workers*.go` |
 | G | tasks / prompts / messages / memories / sessions 残余 9 条 | 同名 `routes_*.py` | `internal/server/routes_*_extra.go` |
-| H | 集成工具（`tools/src/aden_tools`：104 模块 / 324 文件 / 811 action） | `tools/src/aden_tools/**`、`framework/host/colony_tools_config.py` | `internal/tools/integrations/` 新包（本期交付框架 + ≥20 模块 / ≥150 action） |
+| H | 集成工具（`tools/src/aden_tools`：104 模块 / 324 文件 / 865 action） | `tools/src/aden_tools/**`、`framework/host/colony_tools_config.py` | `internal/tools/integrations/` 新包（本期交付框架 + ≥20 模块 / ≥150 action） |
 | I | Sentinel 引擎 | `framework/sentinel/**`（8 模块，2,090 行） | `internal/sentinel/` 新包 |
 | J | Colony 多 worker 编排闭环 | `framework/host/**`、`framework/agents/**`、`runtime/` | `internal/colony`、`internal/host` 扩展 |
 

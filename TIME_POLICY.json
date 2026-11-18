@@ -1,0 +1,18 @@
+{
+  "_target_note": "独立时间治理策略：约束与调节，不是记账",
+  "deadline": "2026-11-19 18:00",
+  "internal_freeze": "2026-11-19 16:00",
+  "scope_freeze": "2026-11-19 12:00",
+  "lane_budget_h": 1.5,
+  "lane_hard_stop_h": 2.5,
+  "wave_budget_multiplier": 2.0,
+  "decision_latency_cap_min": 20,
+  "dirty_wait_cap_min": 25,
+  "stop_rules": {
+    "overrun_cut": "任一 wave 实际耗时 > 2× 预算 → 冻结该 wave 未完成项，转 backlog",
+    "progress_floor": "任一阶段进度落后计划 > 40% → 削减该阶段范围，不延期封版",
+    "waiting_breach": "worktree 脏且 25 分钟无提交 → 视为卡死，由协调者 stop 并改派",
+    "decision_breach": "lane 提交到合并 > 20 分钟 → 协调者必须当轮合并，不得积压",
+    "hard_freeze": "11-19 16:00 后只允许修缺陷，任何功能请求进 backlog"
+  }
+}
