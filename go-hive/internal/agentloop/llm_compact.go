@@ -110,7 +110,7 @@ func llmCompactSystemMessage(preserveUserMessages bool) string {
 		"constraints, and account/identity preferences verbatim."
 }
 
-// Parity: compaction.py _llm_compact_split. The left half summarises without
+// Parity: framework/agent_loop/internals/compaction.py::_llm_compact_split. The left half summarises without
 func llmCompactSplit(ctx context.Context, completer llm.Completer, messages []Message, accumulator map[string]any, depth int, opts LlmCompactOptions, charLimit int, maxContextTokens int) (string, error) {
 	mid := len(messages) / 2
 	if mid < 1 {
@@ -152,7 +152,7 @@ func llmCompactSplit(ctx context.Context, completer llm.Completer, messages []Me
 	return halves[0].summary + "\n\n" + halves[1].summary, nil
 }
 
-// Parity: compaction.py build_llm_compaction_prompt.
+// Parity: framework/agent_loop/internals/compaction.py::build_llm_compaction_prompt.
 func BuildLlmCompactionPrompt(spec *AgentSpec, accumulator map[string]any, formattedMessages string, maxContextTokens int, preserveUserMessages bool) string {
 	ctxLines := make([]string, 0, 5)
 	if spec != nil {

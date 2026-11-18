@@ -9,7 +9,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/llm"
 )
 
-// Parity: internals/synthetic_tools.py ask_user_prompt.
+// Parity: framework/agent_loop/internals/synthetic_tools.py ask_user_prompt.
 const askUserPrompt = `Use this tool when you need to ask the user questions during execution. Reach for it when:
 
 - The task is ambiguous and the user needs to choose an approach
@@ -50,7 +50,7 @@ var (
 	reRawSetOutputValue = regexp.MustCompile(`"value"\s*:\s*"`)
 )
 
-// Parity: internals/synthetic_tools.py sanitize_ask_user_inputs.
+// Parity: framework/agent_loop/internals/synthetic_tools.py sanitize_ask_user_inputs.
 func SanitizeAskUserInputs(rawQuestion, rawOptions any) (string, []string) {
 	_ = rawOptions
 	if rawQuestion == nil {
@@ -90,7 +90,7 @@ func SanitizeAskUserInputs(rawQuestion, rawOptions any) (string, []string) {
 	return q, recovered
 }
 
-// Parity: internals/synthetic_tools.py build_ask_user_tool.
+// Parity: framework/agent_loop/internals/synthetic_tools.py build_ask_user_tool.
 func BuildAskUserTool() llm.ToolDef {
 	return llm.ToolDef{
 		Name:        "ask_user",
@@ -138,7 +138,7 @@ func BuildAskUserTool() llm.ToolDef {
 	}
 }
 
-// Parity: internals/synthetic_tools.py build_collect_result_tool.
+// Parity: framework/agent_loop/internals/synthetic_tools.py build_collect_result_tool.
 func BuildCollectResultTool() llm.ToolDef {
 	return llm.ToolDef{
 		Name: "collect_result",
@@ -170,7 +170,7 @@ func BuildCollectResultTool() llm.ToolDef {
 	}
 }
 
-// Parity: internals/synthetic_tools.py build_suggest_colony_tool.
+// Parity: framework/agent_loop/internals/synthetic_tools.py build_suggest_colony_tool.
 func BuildSuggestColonyTool() llm.ToolDef {
 	return llm.ToolDef{
 		Name: "suggest_colony",
@@ -211,7 +211,7 @@ func BuildSuggestColonyTool() llm.ToolDef {
 	}
 }
 
-// Parity: internals/synthetic_tools.py build_set_output_tool.
+// Parity: framework/agent_loop/internals/synthetic_tools.py build_set_output_tool.
 func BuildSetOutputTool(outputKeys []string) *llm.ToolDef {
 	if len(outputKeys) == 0 {
 		return nil
@@ -249,7 +249,7 @@ func BuildSetOutputTool(outputKeys []string) *llm.ToolDef {
 	}
 }
 
-// Parity: internals/synthetic_tools.py build_escalate_tool.
+// Parity: framework/agent_loop/internals/synthetic_tools.py build_escalate_tool.
 func BuildEscalateTool() llm.ToolDef {
 	return llm.ToolDef{
 		Name: "escalate",
@@ -275,7 +275,7 @@ func BuildEscalateTool() llm.ToolDef {
 	}
 }
 
-// Parity: internals/synthetic_tools.py build_report_to_parent_tool.
+// Parity: framework/agent_loop/internals/synthetic_tools.py build_report_to_parent_tool.
 func BuildReportToParentTool(reportSchema map[string]any) llm.ToolDef {
 	var dataParam map[string]any
 	required := []string{"status", "summary"}
@@ -321,7 +321,7 @@ func BuildReportToParentTool(reportSchema map[string]any) llm.ToolDef {
 	}
 }
 
-// Parity: internals/synthetic_tools.py handle_report_to_parent.
+// Parity: framework/agent_loop/internals/synthetic_tools.py handle_report_to_parent.
 func HandleReportToParent(toolInput map[string]any) ToolResult {
 	status := strings.ToLower(strings.TrimSpace(anyString(toolInput["status"], "success")))
 	switch status {
@@ -351,7 +351,7 @@ func HandleReportToParent(toolInput map[string]any) ToolResult {
 	}
 }
 
-// Parity: internals/synthetic_tools.py handle_set_output.
+// Parity: framework/agent_loop/internals/synthetic_tools.py handle_set_output.
 func HandleSetOutput(toolInput map[string]any, outputKeys []string) ToolResult {
 	key := anyString(toolInput["key"], "")
 	value := anyString(toolInput["value"], "")
@@ -394,7 +394,7 @@ func HandleSetOutput(toolInput map[string]any, outputKeys []string) ToolResult {
 	}
 }
 
-// Parity: internals/synthetic_tools.py SYNTHETIC_PHASE_TOOL_BUILDERS.
+// Parity: framework/agent_loop/internals/synthetic_tools.py SYNTHETIC_PHASE_TOOL_BUILDERS.
 var SyntheticPhaseToolBuilders = map[string]func() llm.ToolDef{
 	"suggest_colony": BuildSuggestColonyTool,
 }

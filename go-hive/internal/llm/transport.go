@@ -13,8 +13,7 @@ import (
 	"time"
 )
 
-// Parity: core/framework/llm/litellm.py::_default_api_base_for_model,
-// core/framework/llm/litellm.py::rewrite_proxy_model
+// Parity: core/framework/llm/litellm.py::LiteLLMProvider._default_api_base_for_model, core/framework/llm/litellm.py::rewrite_proxy_model
 const (
 	OpenAIAPIBase    = "https://api.openai.com/v1"
 	AnthropicAPIBase = "https://api.anthropic.com"
@@ -525,8 +524,7 @@ type anthropicMessagePayload struct {
 	Usage      *anthropicUsagePayload         `json:"usage"`
 }
 
-// Parity: core/framework/llm/anthropic.py::AnthropicProvider,
-// core/framework/llm/litellm.py::rewrite_proxy_model
+// Parity: core/framework/llm/anthropic.py::AnthropicProvider, core/framework/llm/litellm.py::rewrite_proxy_model
 func (p *Provider) anthropicMessagesCompletion(ctx context.Context, kwargs map[string]any, model, apiBase, apiKey string) (CompletionResponse, error) {
 	body, err := anthropicRequestBody(kwargs, model)
 	if err != nil {

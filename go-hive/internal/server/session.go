@@ -310,7 +310,9 @@ func (s *Session) RecordPendingEscalation(requestID string, entry map[string]any
 	s.pendingMu.Unlock()
 }
 
-// Parity: framework/server/queen_orchestrator.py::_make_colony_pivot_sink
+// Parity: framework/server/queen_orchestrator.py::_make_pivot_payload_sink (sets
+// session.pending_colony_pivot, which this accessor surface reads and clears;
+// framework/server/routes_sessions.py::handle_dismiss_colony_pivot clears it too)
 func (s *Session) PendingColonyPivot() any {
 	s.pivotMu.Lock()
 	defer s.pivotMu.Unlock()

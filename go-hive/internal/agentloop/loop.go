@@ -17,15 +17,15 @@ type LoopConfig struct {
 	MaxIterations        int
 	MaxContextTokens     int
 	ToolWaitLimitSeconds float64
-	// Parity: framework/agent_loop/internals/types.py grace_iterations.
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.grace_iterations.
 	GraceIterations int
-	// Parity: framework/agent_loop/internals/types.py tool_call_budget.
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_call_budget.
 	ToolCallBudget int
-	// Parity: framework/agent_loop/internals/types.py tool_call_hard_multiple.
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_call_hard_multiple.
 	ToolCallHardMultiple int
 	// Parity: framework/agent_loop/internals/types.py
 	ToolCallLifetimeBudget int
-	// Parity: framework/agent_loop/internals/types.py judge_every_n_turns.
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.judge_every_n_turns.
 	JudgeEveryNTurns int
 	// Parity: framework/agent_loop/internals/types.py
 	SessionIdleNudgeSeconds float64
@@ -35,13 +35,13 @@ type LoopConfig struct {
 	SessionIdleNudgeAwaitingSeconds float64
 	// Parity: framework/agent_loop/internals/types.py
 	SessionIdleNudgeBrokenSeconds float64
-	// Parity: framework/agent_loop/internals/types.py continue_nudge_enabled.
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.continue_nudge_enabled.
 	ContinueNudgeEnabled bool
 	// Parity: framework/agent_loop/internals/types.py
 	ContinueNudgeMaxPerTurn int
 	// Parity: framework/agent_loop/internals/types.py
 	ToolCallTimeoutSeconds float64
-	// Parity: framework/agent_loop/internals/types.py tool_timeout_overrides.
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_timeout_overrides.
 	ToolTimeoutOverrides map[string]float64
 }
 

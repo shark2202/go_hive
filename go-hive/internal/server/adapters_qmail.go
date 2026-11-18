@@ -121,7 +121,7 @@ func (a *QueenMailAdapter) SendFromConversation(ref, toQueen, message string) (m
 // Deliver hands a letter to a Hive queen's session with writer, opening or
 // resuming that thread when it isn't live.
 //
-// Parity: framework/server/queen_mail.py::_send_to_hive_queen
+// Parity: framework/server/queen_mail.py::QueenMail._send_to_hive_queen
 func (a *QueenMailAdapter) Deliver(ctx context.Context, toQueen, writer, fromRef string, letter qmail.Letter) (string, error) {
 	if a == nil || a.manager == nil {
 		return "", qmailError(toQueen + " can't take letters now")
@@ -164,7 +164,7 @@ func (a *QueenMailAdapter) Deliver(ctx context.Context, toQueen, writer, fromRef
 // DeliverReply hands a reply into the writer's session (resuming it when it
 // stopped), so the queen whose letter is answered wakes with it.
 //
-// Parity: framework/server/queen_mail.py::_reachable
+// Parity: framework/server/queen_mail.py::QueenMail._reachable
 func (a *QueenMailAdapter) DeliverReply(ctx context.Context, replyTo, queenID, writer string, letter qmail.Letter) (string, error) {
 	if a == nil || a.manager == nil || replyTo == "" {
 		return "", qmailError("the conversation is unreachable")
@@ -199,7 +199,7 @@ func (a *QueenMailAdapter) DeliverReply(ctx context.Context, replyTo, queenID, w
 // threadOf finds the session writer already has with toQueen: channel
 // "queens", peer writer, the newest id first.
 //
-// Parity: framework/server/queen_mail.py::_thread_of
+// Parity: framework/server/queen_mail.py::QueenMail._thread_of
 func (a *QueenMailAdapter) threadOf(toQueen, writer string) (string, bool) {
 	for _, sessionsDir := range a.threadDirs(toQueen) {
 		entries, err := os.ReadDir(sessionsDir)

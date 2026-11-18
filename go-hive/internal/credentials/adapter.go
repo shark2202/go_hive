@@ -1,6 +1,6 @@
 package credentials
 
-// Parity: aden_tools/credentials/store_adapter.py::CredentialStoreAdapter
+// Parity: tools/src/aden_tools/credentials/store_adapter.py::CredentialStoreAdapter
 
 import "fmt"
 

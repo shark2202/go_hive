@@ -193,7 +193,7 @@ func (h *ReminderHub) FireEnergized(point ReminderPoint, agentCtx *ReminderAgent
 	return block, block != "" && energized
 }
 
-// Parity: reminders.py wrap_reminder.
+// Parity: framework/agent_loop/reminders.py::wrap_reminder.
 func WrapReminder(bodies []string) string {
 	trimmed := make([]string, 0, len(bodies))
 	for _, body := range bodies {
