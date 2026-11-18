@@ -13,7 +13,7 @@ func localRegistry(t *testing.T, root string) *Registry {
 	return New(WithRoots(root))
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/csv_tool/csv_tool.py::csv_write
+// Parity: tools/tests/tools/test_csv_tool.py::TestCsvWrite::test_write_new_csv, tools/tests/tools/test_csv_tool.py::TestCsvRead::test_read_with_limit_and_offset, tools/tests/tools/test_csv_tool.py::TestCsvAppend::test_append_to_existing_csv, tools/tests/tools/test_csv_tool.py::TestCsvInfo::test_get_info_basic_csv
 func TestCSVWriteReadAppendInfo(t *testing.T) {
 	root := t.TempDir()
 	registry := localRegistry(t, root)
@@ -81,7 +81,7 @@ func TestCSVWriteReadAppendInfo(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/csv_tool/csv_tool.py::csv_read
+// Parity: tools/tests/tools/test_csv_tool.py::TestCsvRead::test_path_traversal_blocked, tools/tests/tools/test_csv_tool.py::TestCsvRead::test_non_csv_extension, tools/tests/tools/test_csv_tool.py::TestCsvRead::test_file_not_found, tools/tests/tools/test_csv_tool.py::TestCsvRead::test_empty_csv_file
 func TestCSVErrorsAndSandbox(t *testing.T) {
 	root := t.TempDir()
 	registry := localRegistry(t, root)
@@ -126,7 +126,7 @@ func TestCSVErrorsAndSandbox(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/risk_scorer/risk_scorer.py::risk_score
+// Parity: tools/tests/tools/test_risk_scorer.py::TestFullScoring::test_headers_results_only, tools/tests/tools/test_risk_scorer.py::TestTopRisks::test_top_risks_generated
 func TestRiskScoreGradesAndFindings(t *testing.T) {
 	registry := New()
 
@@ -165,7 +165,7 @@ func TestRiskScoreGradesAndFindings(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/risk_scorer/risk_scorer.py::_score_category
+// Parity: tools/tests/tools/test_risk_scorer.py::TestScoreCategory::test_missing_values_half_credit
 func TestRiskScoreMissingDataGivesHalfCredit(t *testing.T) {
 	registry := New()
 	result, err := registry.Execute(context.Background(), "risk_score", map[string]any{
@@ -183,7 +183,7 @@ func TestRiskScoreMissingDataGivesHalfCredit(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/time_tool/time_tool.py::get_current_time
+// Parity: tools/tests/tools/test_time_tool.py::TestGetCurrentTime::test_returns_required_fields, tools/tests/tools/test_time_tool.py::TestGetCurrentTime::test_asia_timezone, tools/tests/tools/test_time_tool.py::TestGetCurrentTime::test_datetime_is_iso_format
 func TestTimeToolFields(t *testing.T) {
 	registry := New()
 	result, err := registry.Execute(context.Background(), "get_current_time", map[string]any{"timezone": "Asia/Kolkata"})

@@ -119,7 +119,9 @@ var restModules = []restModule{
 	{tool: "airtable", token: "pat_fake"},
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/stripe_tool/stripe_tool.py::stripe_create_customer
+// Parity-exempt: upstream has no equivalent registry-wide sweep; each action's shape is
+// covered per tool in tools/tests/tools/test_*_tool.py -- this test pins that every
+// declarative action executes through the Go registry.
 func TestEveryDeclarativeActionExecutes(t *testing.T) {
 	registry := New()
 	for _, module := range restModules {
@@ -169,7 +171,7 @@ func TestEveryDeclarativeActionExecutes(t *testing.T) {
 	_ = registry
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/stripe_tool/stripe_tool.py::stripe_get_customer
+// Parity: tools/tests/tools/test_stripe_tool.py::TestStripeClientCustomers::test_get_customer, tools/tests/tools/test_stripe_tool.py::TestStripeClientCustomers::test_create_customer
 func TestStripeRequestShape(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `{"id":"cus_1","object":"customer"}`
@@ -211,7 +213,7 @@ func TestStripeRequestShape(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/slack_tool/slack_tool.py::slack_send_message
+// Parity: tools/tests/tools/test_slack_tool.py::TestSlackSendMessage::test_send_message_success
 func TestSlackRequestShape(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `{"ok":true,"channel":"C1","ts":"1.2"}`
@@ -246,7 +248,7 @@ func TestSlackRequestShape(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/github_tool/github_tool.py::github_get_issue
+// Parity: tools/tests/tools/test_github_tool.py::TestGitHubClient::test_headers, tools/tests/tools/test_github_tool.py::TestGitHubIssues::test_get_issue_success
 func TestGitHubRequestShape(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `{"id":7,"number":7}`
@@ -273,7 +275,7 @@ func TestGitHubRequestShape(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/telegram_tool/telegram_tool.py::telegram_send_message
+// Parity: tools/tests/tools/test_telegram_tool.py::TestTelegramClient::test_base_url, tools/tests/tools/test_telegram_tool.py::TestTelegramClient::test_send_message
 func TestTelegramTokenInPathAndUnwrap(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `{"ok":true,"result":{"message_id":42}}`
@@ -298,7 +300,9 @@ func TestTelegramTokenInPathAndUnwrap(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/trello_tool/trello_tool.py::trello_create_card
+// Parity-exempt: upstream only validates trello_create_card arguments
+// (test_create_card_requires_name, test_create_card_desc_too_long); the key/token
+// query auth and the POST /cards shape are pinned here only.
 func TestTrelloQueryAuth(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `{"id":"card1"}`
@@ -325,7 +329,7 @@ func TestTrelloQueryAuth(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/airtable_tool/airtable_tool.py::airtable_list_records
+// Parity: tools/tests/tools/test_airtable_tool.py::TestAirtableListRecords::test_successful_list, tools/tests/tools/test_airtable_tool.py::TestAirtableListRecords::test_pagination
 func TestAirtableRequestShape(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `{"records":[]}`
@@ -353,7 +357,7 @@ func TestAirtableRequestShape(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/stripe_tool/stripe_tool.py::stripe_create_customer
+// Parity: tools/tests/tools/test_stripe_tool.py::TestToolRegistration::test_no_credentials_returns_error
 func TestCredentialMissingIsValueError(t *testing.T) {
 	registry := New()
 	result, err := registry.Execute(context.Background(), "stripe", map[string]any{
@@ -371,7 +375,7 @@ func TestCredentialMissingIsValueError(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/github_tool/github_tool.py::_sanitize_error_message
+// Parity: tools/tests/tools/test_github_tool.py::TestGitHubClient::test_handle_response_401, tools/tests/tools/test_stripe_tool.py::TestToolRegistration::test_stripe_error_is_caught
 func TestProviderErrorMapping(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 401, `{"message":"Bad credentials"}`

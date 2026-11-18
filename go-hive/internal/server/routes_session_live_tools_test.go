@@ -1,6 +1,7 @@
 package server
 
-// Parity: framework/server/routes_sessions.py::handle_session_live_tools
+// Parity: tests/test_live_tools_endpoint.py::test_actual_is_eager_plus_ask_user_not_the_registry
+// File-level anchor: each test below cites its own upstream case.
 
 import (
 	"net/http"

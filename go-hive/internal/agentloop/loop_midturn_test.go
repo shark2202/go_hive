@@ -15,7 +15,9 @@ type scriptedResponse struct {
 	toolCalls []llm.ToolCall
 }
 
-// Parity: core/tests/test_midturn_input.py::_ScriptedLLM
+// Parity-exempt: upstream has no standalone test for this helper; it mirrors _ScriptedLLM
+// from core/tests/test_midturn_input.py, used by
+// test_a_message_sent_while_a_tool_runs_is_read_on_the_next_call and its siblings.
 type scriptedCompleter struct {
 	scenarios   []scriptedResponse
 	duringFirst func()
@@ -127,7 +129,9 @@ func TestAMessageSentWhileAToolRunsIsReadOnTheNextCall(t *testing.T) {
 	}
 }
 
-// Parity: core/tests/test_midturn_input.py's fire_reminder override (it only
+// Parity-exempt: upstream has no standalone test for this helper; it mirrors the
+// fire_reminder override inside
+// core/tests/test_midturn_input.py::test_a_message_mid_turn_gets_the_context_a_turns_first_message_gets.
 type recordingPointSource struct {
 	point ReminderPoint
 
