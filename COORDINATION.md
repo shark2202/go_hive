@@ -41,6 +41,7 @@
 
 ## 5. SOP（每个 lane 的执行顺序）
 
+0. **从当前绿色基线派生**：Coordinator 先把 main 跑到 `make ci` 绿并提交，再 `git worktree add -b lane/<x> <path> HEAD`。禁止从旧提交派生——本轮已三次出现 lane 基于修复前提交、各自重复修同一处冲突的情况。
 1. `cd /Users/mac/hive/.wt/lane-<x>/go_hive/go-hive`
 2. 读上游 Python 实现与对应测试，列出行为清单（含错误分支、空值、越界、序列化字段顺序）。
 3. 先写测试（`_test.go`），每条打 `// Parity: core/framework/...py::test_name`；上游无对应用例才用 `// Parity-exempt: 理由`。
