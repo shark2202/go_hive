@@ -63,6 +63,9 @@ type batch3Deps struct {
 	sleep     func(context.Context, time.Duration) error
 	publicURL func(*url.URL) bool
 	baseURL   string
+	// scrapeResolver is the DNS lookup used by web_scrape's SSRF guard.
+	// Declared here because batch-3 shares one deps struct across its tools.
+	scrapeResolver batch3Resolver
 }
 
 type batch3Option func(*batch3Deps)
@@ -103,6 +106,9 @@ func defaultBatch3Deps() batch3Deps {
 		getenv: os.Getenv,
 		now:    time.Now,
 		sleep:  batch3Sleep,
+		scrapeResolver: func(ctx context.Context, host string) ([]string, error) {
+			return net.DefaultResolver.LookupHost(ctx, host)
+		},
 	}
 }
 
