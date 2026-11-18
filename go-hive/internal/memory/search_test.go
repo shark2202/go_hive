@@ -498,6 +498,8 @@ func TestSearchMessagesTrimsTurnToCaps(t *testing.T) {
 	}
 }
 
+// Parity-exempt: no Python test covers the filter_invalid branch; this mirrors
+// memory_tools/tool.py::_parse_iso returning {"error": "filter_invalid"}.
 func TestSearchMessagesRejectsInvalidFilter(t *testing.T) {
 	home := searchHome(t)
 	buildSearchTestSession(t, home, "queen_x", "session_20260501_100000_aaaa")
@@ -509,6 +511,7 @@ func TestSearchMessagesRejectsInvalidFilter(t *testing.T) {
 	}
 }
 
+// Parity: tools/tests/test_memory_tools.py::test_sync_emits_one_cache_file_per_in_scope_message
 func TestSearchSessionMessagesOrdinals(t *testing.T) {
 	home := searchHome(t)
 	dir := writeSearchQueenSession(t, home, "queen_x", "session_20260501_100000_aaaa", []map[string]any{
@@ -540,6 +543,8 @@ func TestSearchSessionMessagesOrdinals(t *testing.T) {
 	}
 }
 
+// Parity-exempt: no Python test feeds malformed events.jsonl lines; this
+// mirrors the per-line JSONDecodeError skip in memory_tools/index.py::sync_session.
 func TestSearchSessionMessagesSkipsMalformedLines(t *testing.T) {
 	home := searchHome(t)
 	dir := filepath.Join(home, "queens", "queen_x", "sessions", "session_20260501_100000_aaaa")
