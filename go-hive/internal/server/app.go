@@ -3,10 +3,13 @@ package server
 // Parity: framework/server/app.py::create_app
 
 import (
+	"bytes"
 	"crypto/subtle"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
@@ -19,6 +22,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/aden-hive/hive-go/internal/server/uiembed"
 	"github.com/aden-hive/hive-go/internal/tasks"
 )
 
@@ -63,8 +67,13 @@ type App struct {
 	handler http.Handler
 	deps    AppDeps
 	distDir string
-	token   string
-	logger  *log.Logger
+	// distFS and distFiles serve the in-binary dashboard of embed_ui builds.
+	// They stay nil in builds without the tag and whenever an on-disk dist
+	// directory is available (disk keeps precedence for development).
+	distFS    fs.FS
+	distFiles http.Handler
+	token     string
+	logger    *log.Logger
 
 	executorMu  sync.Mutex
 	executorMax int
@@ -86,6 +95,14 @@ func NewApp(deps AppDeps) *App {
 		app.distDir = FrontendDistDir()
 	}
 	app.distDir = resolveDistDir(app.distDir)
+	// Embedded assets are the fallback for a standalone binary: a checkout
+	// with a built frontend keeps serving it from disk.
+	if app.distDir == "" {
+		if assets, ok := uiembed.Assets(); ok {
+			app.distFS = assets
+			app.distFiles = http.FileServer(http.FS(assets))
+		}
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", app.handleHealth)
@@ -193,7 +210,7 @@ func NewApp(deps AppDeps) *App {
 	// and transcripts 404, exactly as upstream does when the feature is off.
 	RegisterClaudeCodeQueenRoutes(mux, ClaudeCodeQueenRouteDeps{})
 
-	if app.distDir != "" {
+	if app.HasFrontend() {
 		mux.HandleFunc("GET /", app.handleSPA)
 	}
 
@@ -211,6 +228,12 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) DistDir() string {
 	return a.distDir
+}
+
+// HasFrontend reports whether NewApp found a dashboard to serve, either on
+// disk or embedded in an embed_ui build.
+func (a *App) HasFrontend() bool {
+	return a.distDir != "" || a.distFS != nil
 }
 
 // Parity: framework/server/app.py::handle_health
@@ -488,6 +511,10 @@ func packageSourceDir() string {
 
 // Parity: framework/server/app.py::_setup_static_serving
 func (a *App) handleSPA(w http.ResponseWriter, r *http.Request) {
+	if a.distFS != nil {
+		a.handleEmbeddedSPA(w, r)
+		return
+	}
 	relative := strings.TrimPrefix(r.URL.Path, "/")
 	candidate := filepath.Join(a.distDir, filepath.FromSlash(relative))
 	if resolved, err := filepath.EvalSymlinks(candidate); err == nil {
@@ -498,6 +525,25 @@ func (a *App) handleSPA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.ServeFile(w, r, filepath.Join(a.distDir, "index.html"))
+}
+
+// handleEmbeddedSPA serves the in-binary dashboard with the same fallback
+// contract as the disk path: existing regular files are served as-is, every
+// other path (including client-side routes) returns index.html.
+func (a *App) handleEmbeddedSPA(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+	if name != "" {
+		if info, err := fs.Stat(a.distFS, name); err == nil && info.Mode().IsRegular() {
+			a.distFiles.ServeHTTP(w, r)
+			return
+		}
+	}
+	index, err := fs.ReadFile(a.distFS, "index.html")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(index))
 }
 
 func pathWithin(path, dir string) bool {
