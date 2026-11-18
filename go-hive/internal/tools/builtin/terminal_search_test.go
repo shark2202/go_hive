@@ -393,3 +393,80 @@ func TestTerminalStreamPathsFiltersBeforeCap(t *testing.T) {
 		t.Fatalf("truncated=%v timedOut=%v", truncated, timedOut)
 	}
 }
+
+// Parity: tools/tests/test_terminal_tools_search.py::test_rg_native_context_and_gitignore
+func TestTerminalRGNativeContextAndGitignore(t *testing.T) {
+	terminalTestRequireRipgrep(t)
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	terminalTestWrite(t, dir, ".gitignore", "ignored.txt\n")
+	terminalTestWrite(t, dir, "ignored.txt", "needle\n")
+	terminalTestWrite(t, dir, "visible.txt", "before\nneedle\nafter\n")
+
+	tb := New(dir)
+	result := terminalTestSearchTool(t, tb, ToolTerminalRG, map[string]any{
+		"pattern": "needle",
+		"path":    dir,
+		"context": 1,
+	})
+	if result["total"].(float64) != 1 {
+		t.Fatalf("total = %v, want 1 (%v)", result["total"], result["matches"])
+	}
+	match := result["matches"].([]any)[0].(map[string]any)
+	if !strings.HasSuffix(match["path"].(string), "visible.txt") {
+		t.Fatalf("match path = %v, want visible.txt (.gitignore must be honored)", match["path"])
+	}
+	contextLines, _ := result["context"].([]any)
+	if len(contextLines) != 2 {
+		t.Fatalf("context = %v, want 2 entries", contextLines)
+	}
+	first := contextLines[0].(map[string]any)
+	second := contextLines[1].(map[string]any)
+	if first["line"].(float64) != 1 || first["text"] != "before" || second["line"].(float64) != 3 || second["text"] != "after" {
+		t.Fatalf("context = %v, want [(1,before),(3,after)]", contextLines)
+	}
+}
+
+// Parity: tools/tests/test_terminal_tools_search.py::test_glob_path_segments_braces_and_recursion
+func TestTerminalGlobSegmentsBracesRecursion(t *testing.T) {
+	for _, fallback := range []bool{false, true} {
+		if !fallback {
+			terminalTestRequireRipgrep(t)
+		} else {
+			t.Setenv("HIVE_RIPGREP_PATH", filepath.Join(t.TempDir(), "missing-rg"))
+		}
+		dir := t.TempDir()
+		for _, name := range []string{"src/a.py", "src/deep/b.py", "src/deep/b.ts", "src/deep/c.txt", "other/a.py"} {
+			terminalTestWrite(t, dir, name, "x")
+		}
+		tb := New(dir)
+		braced := terminalTestSearchTool(t, tb, ToolTerminalGlob, map[string]any{
+			"pattern": "src/**/*.{py,ts}",
+			"path":    dir,
+		})
+		got := make(map[string]bool)
+		for _, entry := range braced["paths"].([]any) {
+			rel, err := filepath.Rel(dir, entry.(string))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got[filepath.ToSlash(rel)] = true
+		}
+		if len(got) != 3 || !got["src/a.py"] || !got["src/deep/b.py"] || !got["src/deep/b.ts"] {
+			t.Fatalf("fallback=%v braced paths = %v", fallback, got)
+		}
+		single := terminalTestSearchTool(t, tb, ToolTerminalGlob, map[string]any{
+			"pattern": "src/*.py",
+			"path":    dir,
+		})
+		if single["count"].(float64) != 1 {
+			t.Fatalf("fallback=%v src/*.py count = %v (%v)", fallback, single["count"], single["paths"])
+		}
+		rel, _ := filepath.Rel(dir, single["paths"].([]any)[0].(string))
+		if filepath.ToSlash(rel) != "src/a.py" {
+			t.Fatalf("fallback=%v src/*.py = %v", fallback, rel)
+		}
+	}
+}
