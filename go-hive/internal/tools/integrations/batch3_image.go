@@ -53,10 +53,10 @@ const (
 	batch3ImageDownloadTimeout = 30 * time.Second
 )
 
-// batch3Deps carries the injectable side effects shared by the batch-3 tools.
+// batch3MediaDeps carries the injectable side effects shared by the batch-3 tools.
 // Tests point the HTTP client at an httptest server and replace the clock and
 // sleep so retries stay fast.
-type batch3Deps struct {
+type batch3MediaDeps struct {
 	http      *http.Client
 	getenv    func(string) string
 	now       func() time.Time
@@ -65,41 +65,41 @@ type batch3Deps struct {
 	baseURL   string
 }
 
-type batch3Option func(*batch3Deps)
+type batch3MediaOption func(*batch3MediaDeps)
 
 // withBatch3HTTPClient swaps the transport used by both tools.
-func withBatch3HTTPClient(client *http.Client) batch3Option {
-	return func(deps *batch3Deps) { deps.http = client }
+func withBatch3HTTPClient(client *http.Client) batch3MediaOption {
+	return func(deps *batch3MediaDeps) { deps.http = client }
 }
 
 // withBatch3Getenv overrides environment lookup (credential tests).
-func withBatch3Getenv(fn func(string) string) batch3Option {
-	return func(deps *batch3Deps) { deps.getenv = fn }
+func withBatch3Getenv(fn func(string) string) batch3MediaOption {
+	return func(deps *batch3MediaDeps) { deps.getenv = fn }
 }
 
 // withBatch3Clock overrides the clock used for artifact filenames.
-func withBatch3Clock(now func() time.Time) batch3Option {
-	return func(deps *batch3Deps) { deps.now = now }
+func withBatch3Clock(now func() time.Time) batch3MediaOption {
+	return func(deps *batch3MediaDeps) { deps.now = now }
 }
 
 // withBatch3Sleep swaps the retry backoff used by web_search.
-func withBatch3Sleep(sleep func(context.Context, time.Duration) error) batch3Option {
-	return func(deps *batch3Deps) { deps.sleep = sleep }
+func withBatch3Sleep(sleep func(context.Context, time.Duration) error) batch3MediaOption {
+	return func(deps *batch3MediaDeps) { deps.sleep = sleep }
 }
 
 // withBatch3PublicURL swaps the reference-image SSRF check (tests that serve
 // reference images from loopback).
-func withBatch3PublicURL(check func(*url.URL) bool) batch3Option {
-	return func(deps *batch3Deps) { deps.publicURL = check }
+func withBatch3PublicURL(check func(*url.URL) bool) batch3MediaOption {
+	return func(deps *batch3MediaDeps) { deps.publicURL = check }
 }
 
 // withBatch3BaseURL points every batch-3 module at one fake upstream.
-func withBatch3BaseURL(base string) batch3Option {
-	return func(deps *batch3Deps) { deps.baseURL = strings.TrimRight(base, "/") }
+func withBatch3BaseURL(base string) batch3MediaOption {
+	return func(deps *batch3MediaDeps) { deps.baseURL = strings.TrimRight(base, "/") }
 }
 
-func defaultBatch3Deps() batch3Deps {
-	return batch3Deps{
+func defaultBatch3MediaDeps() batch3MediaDeps {
+	return batch3MediaDeps{
 		getenv: os.Getenv,
 		now:    time.Now,
 		sleep:  batch3Sleep,
@@ -142,8 +142,8 @@ func InstallBatch3Media(target *tools.ToolRegistry) int {
 // newBatch3MediaRegistry builds a registry containing only the batch-3
 // tools, with a Runtime wired the same way as New() so transports, base URLs
 // and credentials stay injectable.
-func newBatch3MediaRegistry(opts ...batch3Option) *Registry {
-	deps := defaultBatch3Deps()
+func newBatch3MediaRegistry(opts ...batch3MediaOption) *Registry {
+	deps := defaultBatch3MediaDeps()
 	for _, opt := range opts {
 		opt(&deps)
 	}
@@ -282,7 +282,7 @@ func batch3ImageTool() *Tool {
 
 // imageGenerate posts one generation/edit request to the Hive image proxy and
 // saves every returned image under the tool-artifact directory.
-func imageGenerate(ctx context.Context, rt *Runtime, input map[string]any, deps batch3Deps) (any, error) {
+func imageGenerate(ctx context.Context, rt *Runtime, input map[string]any, deps batch3MediaDeps) (any, error) {
 	token := strings.TrimSpace(batch3Env(rt, "HIVE_API_KEY"))
 	if token == "" {
 		// The Hive proxy bills generation to the user's credits and is the
@@ -598,7 +598,7 @@ func batch3ExpandHome(path string) string {
 
 // batch3LoadReference turns one local path or http(s) URL into base64 plus its
 // decoded byte length, applying the upstream size and SSRF limits.
-func batch3LoadReference(ctx context.Context, rt *Runtime, deps batch3Deps, source string) (string, int, error) {
+func batch3LoadReference(ctx context.Context, rt *Runtime, deps batch3MediaDeps, source string) (string, int, error) {
 	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
 		return batch3DownloadReference(ctx, rt, deps, source)
 	}
@@ -618,7 +618,7 @@ func batch3LoadReference(ctx context.Context, rt *Runtime, deps batch3Deps, sour
 }
 
 // batch3DownloadReference fetches a reference image URL after the SSRF guard.
-func batch3DownloadReference(ctx context.Context, rt *Runtime, deps batch3Deps, source string) (string, int, error) {
+func batch3DownloadReference(ctx context.Context, rt *Runtime, deps batch3MediaDeps, source string) (string, int, error) {
 	parsed, err := url.Parse(source)
 	if err != nil || parsed.Hostname() == "" {
 		return "", 0, fmt.Errorf("Blocked non-public or unresolvable image URL: %s", source)

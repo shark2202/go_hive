@@ -32,11 +32,11 @@ func batch3TinyPNGBytes(t *testing.T) []byte {
 	return raw
 }
 
-// batch3TestRegistry points both batch-3 tools at one fake upstream, injects
+// batch3MediaTestRegistry points both batch-3 tools at one fake upstream, injects
 // the HTTP client, credentials and clock, and keeps retry backoff at zero.
-func batch3TestRegistry(t *testing.T, server *httptest.Server, env map[string]string, opts ...batch3Option) *Registry {
+func batch3MediaTestRegistry(t *testing.T, server *httptest.Server, env map[string]string, opts ...batch3MediaOption) *Registry {
 	t.Helper()
-	base := []batch3Option{
+	base := []batch3MediaOption{
 		withBatch3HTTPClient(server.Client()),
 		withBatch3BaseURL(server.URL),
 		withBatch3Getenv(func(name string) string { return env[name] }),
@@ -112,7 +112,7 @@ func TestBatch3ImageMissingTokenReturns503(t *testing.T) {
 		_, _ = w.Write([]byte(`{"data":[{"b64_json":"` + batch3TinyPNGBase64 + `"}]}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, map[string]string{
+	registry := batch3MediaTestRegistry(t, server, map[string]string{
 		"HIVE_STORAGE_PATH": t.TempDir(),
 	})
 
@@ -147,7 +147,7 @@ func TestBatch3ImageGenerationSavesFile(t *testing.T) {
 		})
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, map[string]string{
+	registry := batch3MediaTestRegistry(t, server, map[string]string{
 		"HIVE_API_KEY":      "stream-token",
 		"HIVE_STORAGE_PATH": storage,
 	})
@@ -219,7 +219,7 @@ func TestBatch3ImageClampsInputs(t *testing.T) {
 		_, _ = w.Write([]byte(`{"data":[{"b64_json":"` + batch3TinyPNGBase64 + `"}]}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, map[string]string{
+	registry := batch3MediaTestRegistry(t, server, map[string]string{
 		"HIVE_API_KEY":      "stream-token",
 		"HIVE_STORAGE_PATH": t.TempDir(),
 	})
@@ -263,7 +263,7 @@ func TestBatch3ImageReferenceFileSentAsBase64(t *testing.T) {
 		_, _ = w.Write([]byte(`{"data":[{"b64_json":"` + batch3TinyPNGBase64 + `"}]}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, map[string]string{
+	registry := batch3MediaTestRegistry(t, server, map[string]string{
 		"HIVE_API_KEY":      "stream-token",
 		"HIVE_STORAGE_PATH": t.TempDir(),
 	})
@@ -287,7 +287,7 @@ func TestBatch3ImageTooManyReferenceImages(t *testing.T) {
 		t.Errorf("proxy should not be called")
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, map[string]string{
+	registry := batch3MediaTestRegistry(t, server, map[string]string{
 		"HIVE_API_KEY":      "stream-token",
 		"HIVE_STORAGE_PATH": t.TempDir(),
 	})
@@ -318,7 +318,7 @@ func TestBatch3ImageURLReferenceFetched(t *testing.T) {
 		_, _ = w.Write([]byte(`{"data":[{"b64_json":"` + batch3TinyPNGBase64 + `"}]}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, map[string]string{
+	registry := batch3MediaTestRegistry(t, server, map[string]string{
 		"HIVE_API_KEY":      "stream-token",
 		"HIVE_STORAGE_PATH": t.TempDir(),
 	})
@@ -357,7 +357,7 @@ func TestBatch3ImageErrorStatusMapping(t *testing.T) {
 				_, _ = w.Write([]byte(`{"error":{"message":"boom"}}`))
 			}))
 			defer server.Close()
-			registry := batch3TestRegistry(t, server, map[string]string{
+			registry := batch3MediaTestRegistry(t, server, map[string]string{
 				"HIVE_API_KEY":      "stream-token",
 				"HIVE_STORAGE_PATH": t.TempDir(),
 			})
@@ -383,7 +383,7 @@ func TestBatch3ImageTimeoutMapsToError(t *testing.T) {
 	defer server.Close()
 	fast := server.Client()
 	fast.Timeout = 10 * time.Millisecond
-	registry := batch3TestRegistry(t, server, map[string]string{
+	registry := batch3MediaTestRegistry(t, server, map[string]string{
 		"HIVE_API_KEY":      "stream-token",
 		"HIVE_STORAGE_PATH": t.TempDir(),
 	}, withBatch3HTTPClient(fast))
@@ -444,7 +444,7 @@ func TestBatch3ImageMalformedProxyResponses(t *testing.T) {
 				_, _ = w.Write([]byte(testCase.payload))
 			}))
 			defer server.Close()
-			registry := batch3TestRegistry(t, server, map[string]string{
+			registry := batch3MediaTestRegistry(t, server, map[string]string{
 				"HIVE_API_KEY":      "stream-token",
 				"HIVE_STORAGE_PATH": t.TempDir(),
 			})
@@ -472,7 +472,7 @@ func TestBatch3ImageBlocksNonPublicReferenceURL(t *testing.T) {
 		_, _ = w.Write([]byte(`{"data":[{"b64_json":"` + batch3TinyPNGBase64 + `"}]}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, map[string]string{
+	registry := batch3MediaTestRegistry(t, server, map[string]string{
 		"HIVE_API_KEY":      "stream-token",
 		"HIVE_STORAGE_PATH": t.TempDir(),
 	}, withBatch3PublicURL(nil))
