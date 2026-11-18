@@ -24,7 +24,7 @@
 | C1 门禁结果 | `make ci` 0 退出码 | `make ci` |
 | C2 测试真实性 | parity 引用 100% 可解析；豁免抽样可辩护 | `scripts/qc_check.py` + 独立复核 |
 | C3 运行时行为 | 13 项 HTTP 断言全 PASS | `scripts/smoke.sh` |
-| C4 制品完整性 | 六平台二进制、静态链接、版本号；`hive-embed` 存在且磁盘 dist 存在（UI 可分发性） | `dist/` + `file` + `--version` |
+| C4 制品完整性 | 六平台二进制、静态链接、版本号；磁盘 dist 存在且 `embed_ui.sh` 可构建（UI 可分发性） | `dist/` + `file` + `--version` |
 | C5 约束合规 | cgo 0、离线可构建 | `grep 'import "C"'`、`GOPROXY=off` |
 | C6 文档一致性 | 四份文档的口径数字一致（865/680 等） | `scripts/qc_check.py` |
 | C7 回归趋势 | 路由/测试数不低于检查点台账峰值 | `ledger.csv` + 看门狗 |
