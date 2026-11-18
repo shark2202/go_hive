@@ -20,7 +20,7 @@ func TestBatch3WebSearchNoCredentials(t *testing.T) {
 		t.Errorf("no provider should be called without credentials")
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(nil))
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(nil))
 
 	result := batch3Run(t, registry, "web_search", map[string]any{"query": "test query"})
 	if message, _ := result["error"].(string); message != "No search credentials configured" {
@@ -84,7 +84,7 @@ func TestBatch3WebSearchBrave(t *testing.T) {
 		})
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(map[string]string{
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(map[string]string{
 		"BRAVE_SEARCH_API_KEY": "test-key",
 	}))
 
@@ -124,7 +124,7 @@ func TestBatch3WebSearchGoogle(t *testing.T) {
 		})
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(map[string]string{
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(map[string]string{
 		"GOOGLE_API_KEY": "test-key",
 		"GOOGLE_CSE_ID":  "test-cse-id",
 	}))
@@ -166,7 +166,7 @@ func TestBatch3WebSearchAutoPrefersBrave(t *testing.T) {
 		_, _ = w.Write([]byte(`{"items":[{"title":"Google","link":"https://example.com/g","snippet":"g"}]}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(map[string]string{
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(map[string]string{
 		"BRAVE_SEARCH_API_KEY": "test-key",
 		"GOOGLE_API_KEY":       "test-google-key",
 		"GOOGLE_CSE_ID":        "test-cse-id",
@@ -195,7 +195,7 @@ func TestBatch3WebSearchAutoFallsBackToGoogle(t *testing.T) {
 		_, _ = w.Write([]byte(`{"items":[{"title":"Google","link":"https://example.com/g","snippet":"g"}]}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(map[string]string{
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(map[string]string{
 		"GOOGLE_API_KEY": "test-google-key",
 		"GOOGLE_CSE_ID":  "test-cse-id",
 	}))
@@ -216,7 +216,7 @@ func TestBatch3WebSearchDefaultProviderIsAuto(t *testing.T) {
 		_, _ = w.Write([]byte(`{"web":{"results":[]}}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(map[string]string{
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(map[string]string{
 		"BRAVE_SEARCH_API_KEY": "test-key",
 	}))
 	result := batch3Run(t, registry, "web_search", map[string]any{"query": "test"})
@@ -234,7 +234,7 @@ func TestBatch3WebSearchCustomParams(t *testing.T) {
 		_, _ = w.Write([]byte(`{"items":[]}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(map[string]string{
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(map[string]string{
 		"GOOGLE_API_KEY": "test-key",
 		"GOOGLE_CSE_ID":  "test-cse-id",
 	}))
@@ -255,7 +255,7 @@ func TestBatch3WebSearchNumResults(t *testing.T) {
 		_, _ = w.Write([]byte(`{"web":{"results":[]}}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(map[string]string{
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(map[string]string{
 		"BRAVE_SEARCH_API_KEY": "test-key",
 	}))
 	result := batch3Run(t, registry, "web_search", map[string]any{"query": "test", "num_results": 5})
@@ -281,7 +281,7 @@ func TestBatch3WebSearchRateLimitRetries(t *testing.T) {
 		_, _ = w.Write([]byte(`{"web":{"results":[{"title":"Bee","url":"https://example.com/bee","description":"b"}]}}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(map[string]string{
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(map[string]string{
 		"BRAVE_SEARCH_API_KEY": "test-key",
 	}))
 
@@ -303,7 +303,7 @@ func TestBatch3WebSearchRateLimitExhausted(t *testing.T) {
 		_, _ = w.Write([]byte(`{"error":"slow down"}`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(map[string]string{
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(map[string]string{
 		"GOOGLE_API_KEY": "test-key",
 		"GOOGLE_CSE_ID":  "test-cse-id",
 	}))
@@ -338,7 +338,7 @@ func TestBatch3WebSearchProviderErrors(t *testing.T) {
 				_, _ = w.Write([]byte(`{"error":"boom"}`))
 			}))
 			defer server.Close()
-			registry := batch3TestRegistry(t, server, testCase.env)
+			registry := batch3MediaTestRegistry(t, server, testCase.env)
 			result := batch3Run(t, registry, "web_search", map[string]any{
 				"query": "test", "provider": testCase.provider,
 			})
@@ -361,7 +361,7 @@ func TestBatch3WebSearchTimeout(t *testing.T) {
 	defer server.Close()
 	fast := server.Client()
 	fast.Timeout = 10 * time.Millisecond
-	registry := batch3TestRegistry(t, server, batch3SearchEnv(map[string]string{
+	registry := batch3MediaTestRegistry(t, server, batch3SearchEnv(map[string]string{
 		"BRAVE_SEARCH_API_KEY": "test-key",
 	}), withBatch3HTTPClient(fast))
 	result := batch3Run(t, registry, "web_search", map[string]any{"query": "test"})
