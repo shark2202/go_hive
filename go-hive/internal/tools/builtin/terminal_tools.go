@@ -26,6 +26,8 @@ type terminalToolHandler func(t *Toolbox, ctx context.Context, input map[string]
 // terminalToolHandlers is the single registration point for the terminal tool
 // surface.
 var terminalToolHandlers = map[string]terminalToolHandler{
+	ToolTerminalRG:        (*Toolbox).terminalRG,
+	ToolTerminalGlob:      (*Toolbox).terminalGlob,
 	ToolTerminalOutputGet: (*Toolbox).terminalOutputGet,
 	ToolTerminalJobStart:  (*Toolbox).terminalJobStart,
 	ToolTerminalJobLogs:   (*Toolbox).terminalJobLogs,
