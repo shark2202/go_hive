@@ -77,6 +77,61 @@ func TestCreateSessionWithoutBodyForwardsNils(t *testing.T) {
 	}
 }
 
+// Parity-exempt: Go glue for the traversal guard on a caller-supplied
+// session_id; the Python route forwards it unchanged, the Go runtime roots the
+// session transcript on it, so separators and dot segments must be refused.
+func TestCreateSessionRejectsTraversalSessionID(t *testing.T) {
+	called := false
+	deps := SessionRouteDeps{
+		Home: createSessionHome(t),
+		CreateSession: func(params CreateSessionParams) (*Session, error) {
+			called = true
+			return &Session{ID: "s1", LoadedAt: 1000000.0}, nil
+		},
+	}
+	for _, bad := range []string{"../escape", "../../etc/passwd", "a/b", `a\\b`, "..", "."} {
+		body := `{"session_id":"` + bad + `"}`
+		status, data := createSessionRequest(t, deps, body)
+		if status != http.StatusBadRequest {
+			t.Fatalf("session_id %q: status = %d, want 400 (body %#v)", bad, status, data)
+		}
+		if called {
+			t.Fatalf("session_id %q reached CreateSession", bad)
+		}
+	}
+	status, _ := createSessionRequest(t, deps, `{"session_id":"my-custom-session"}`)
+	if status != http.StatusCreated || !called {
+		t.Fatalf("safe custom id: status = %d, called = %v", status, called)
+	}
+}
+
+// Parity-exempt: Go-only path guard; colony_id and source_session_id are used
+// as directory segments by the runtime/fork hooks.
+func TestCreateSessionRejectsTraversalColonyAndSourceIDs(t *testing.T) {
+	called := false
+	deps := SessionRouteDeps{
+		Home: createSessionHome(t),
+		CreateSession: func(params CreateSessionParams) (*Session, error) {
+			called = true
+			return &Session{ID: "s1", LoadedAt: 1000000.0}, nil
+		},
+	}
+	for _, body := range []string{
+		`{"colony_id":"../escape"}`,
+		`{"colony_id":"a/b"}`,
+		`{"source_session_id":"../escape"}`,
+		`{"source_session_id":"a/b"}`,
+	} {
+		status, data := createSessionRequest(t, deps, body)
+		if status != http.StatusBadRequest {
+			t.Fatalf("%s: status = %d, want 400 (body %#v)", body, status, data)
+		}
+		if called {
+			t.Fatalf("%s reached CreateSession", body)
+		}
+	}
+}
+
 // Parity-exempt: Go glue for the invalid-body branches of handle_create_session
 // (Python raises json.JSONDecodeError / rejects non-dicts identically).
 func TestCreateSessionRejectsInvalidBodies(t *testing.T) {
@@ -454,6 +509,59 @@ func TestCreateSessionForkBranch(t *testing.T) {
 		status, data := createSessionRequest(t, deps, `{"colony_id":"Bad-Slug","source_session_id":"src"}`)
 		if status != http.StatusBadRequest {
 			t.Fatalf("status = %d, want 400", status)
+		}
+		if data["error"] != "colony_id must be lowercase alphanumeric with underscores" {
+			t.Fatalf("error = %#v", data["error"])
+		}
+	})
+
+	t.Run("traversal slug is refused before vacate", func(t *testing.T) {
+		vacated := false
+		deps := SessionRouteDeps{
+			Home: createSessionHome(t),
+			VacateSoftDeleted: func(string) error {
+				vacated = true
+				return nil
+			},
+			CreateColonyFromSource: func(CreateColonyFromSourceParams) (*Session, error) {
+				t.Fatalf("fork hook must not run for a traversal slug")
+				return nil, nil
+			},
+		}
+		for _, slug := range []string{"../escape", "a/b", `a\\b`} {
+			body := `{"colony_id":"` + slug + `","source_session_id":"src"}`
+			status, data := createSessionRequest(t, deps, body)
+			if status != http.StatusBadRequest {
+				t.Fatalf("colony_id %q: status = %d, want 400 (body %#v)", slug, status, data)
+			}
+			if data["error"] != "colony_id must be lowercase alphanumeric with underscores" {
+				t.Fatalf("colony_id %q: error = %#v", slug, data["error"])
+			}
+		}
+		if vacated {
+			t.Fatalf("vacate ran for a traversal slug")
+		}
+	})
+
+	t.Run("deduped slug is revalidated", func(t *testing.T) {
+		home := createSessionHome(t)
+		dir := filepath.Join(home.ColoniesDir(), "  abc  ")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "metadata.json"), []byte(`{}`), 0o644); err != nil {
+			t.Fatalf("write metadata: %v", err)
+		}
+		deps := SessionRouteDeps{
+			Home: home,
+			CreateColonyFromSource: func(CreateColonyFromSourceParams) (*Session, error) {
+				t.Fatalf("fork hook must not run for a slug that only passes before dedupe")
+				return nil, nil
+			},
+		}
+		status, data := createSessionRequest(t, deps, `{"colony_id":"  abc  ","source_session_id":"src"}`)
+		if status != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400 (body %#v)", status, data)
 		}
 		if data["error"] != "colony_id must be lowercase alphanumeric with underscores" {
 			t.Fatalf("error = %#v", data["error"])

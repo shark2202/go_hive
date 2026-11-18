@@ -32,6 +32,21 @@ func TestSessionIDAndTraversal(t *testing.T) {
 	}
 }
 
+// Parity-exempt: custom session ids are accepted by POST /api/sessions; this
+// pins the segment rule that keeps them from escaping the session tree.
+func TestValidSegmentAllowsCustomIDsButRejectsTraversal(t *testing.T) {
+	for _, id := range []string{"my-custom-session", "session_20260206_143022_abcd1234", "UPPER-case_1"} {
+		if !ValidSegment(id) {
+			t.Fatalf("ValidSegment(%q) = false, want true", id)
+		}
+	}
+	for _, id := range []string{"", ".", "..", "../escape", `..\escape`, "a/b", "a\\b", "a\x00b"} {
+		if ValidSegment(id) {
+			t.Fatalf("ValidSegment(%q) = true, want false", id)
+		}
+	}
+}
+
 // Parity: core/tests/test_path_traversal_fix.py::TestPathTraversalWithActualFiles::test_save_and_load_roundtrip
 func TestStateRoundTrip(t *testing.T) {
 	s := NewStore(filepath.Join(t.TempDir(), "sessions"))
