@@ -702,7 +702,7 @@ type terminalGlobResult struct {
 	Truncated       bool     `json:"truncated"`
 	TimedOut        bool     `json:"timed_out"`
 	ExpandedPattern string   `json:"expanded_pattern"`
-	Stderr          string   `json:"stderr,omitempty"`
+	Stderr          string   `json:"stderr"`
 	Command         []string `json:"command"`
 }
 

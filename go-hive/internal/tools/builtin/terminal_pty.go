@@ -577,6 +577,11 @@ func (t *Toolbox) terminalPTYRun(ctx context.Context, input map[string]any) (Res
 		}{BytesSent: sent}), nil
 	}
 	expect, _ := stringArg(input, "expect")
+	if expect != "" {
+		if _, err := regexp.Compile(expect); err != nil {
+			return terminalErr("invalid expect regex: %v", err), nil
+		}
+	}
 	result, err := session.run(command, expect, timeout)
 	if err != nil {
 		var busy terminalPTYBusyError
