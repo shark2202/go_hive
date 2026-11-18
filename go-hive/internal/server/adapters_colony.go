@@ -1,19 +1,15 @@
 package server
 
-// Adapters projecting *colony.ColonyRuntime onto the read surfaces the wave-1
-// route tables expect (ColonyWorkerReadSurface, LiveWorkerRuntime).
+// Adapters projecting *colony.ColonyRuntime onto the two read surfaces the
+// wave-1 route tables consume (ColonyWorkerReadSurface, LiveWorkerRuntime).
 //
-// internal/colony exports neither a worker list, nor the runtime storage path,
-// nor a colony-level tool catalog. Everything below is assembled from what the
-// runtime does export — WorkerToolTiering (the worker ids), GetWorker,
-// Worker.Info/Result/ExplicitReport and AgentContext.AvailableTools — so the
-// routes report live state instead of invented rows. A value the runtime cannot
-// answer stays unknown (nil/""), and the handlers keep their explicit
-// 404/503/404-not-known paths rather than a fabricated success.
+// colony cannot return the server package's view structs (the dependency runs
+// server→colony only), so the five methods whose signatures differ — ListWorkers,
+// Worker, Tools and the two live-worker reads — copy fields here. Everything
+// else (ColonyID, StoragePath, Skills, StopLiveWorker, StopAllLiveWorkers)
+// matches exactly and is forwarded.
 
 import (
-	"sort"
-
 	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/skills"
 )
@@ -25,27 +21,15 @@ type colonyWorkerSurface struct {
 	runtime *colony.ColonyRuntime
 }
 
-// colonyRuntimeSource lets a session's colony wrapper expose the underlying
-// runtime without the server package reaching into colony internals.
-type colonyRuntimeSource interface {
-	ColonyRuntime() *colony.ColonyRuntime
-}
-
 // sessionColonyRuntime returns the session's live colony runtime, or nil when
 // the session has none loaded (the routes then fall back to disk state).
-// *colony.ColonyRuntime does not satisfy the server's ColonyRuntime interface
-// (it has no InjectInput), so sessions either expose it through the
-// ColonyRuntime() accessor or the app supplies it through AppDeps.
+// *colony.ColonyRuntime satisfies the server's ColonyRuntime interface, so a
+// loaded colony can be held directly.
 func sessionColonyRuntime(session *Session) *colony.ColonyRuntime {
 	if session == nil || session.Colony == nil {
 		return nil
 	}
-	if source, ok := session.Colony.(colonyRuntimeSource); ok {
-		if runtime := source.ColonyRuntime(); runtime != nil {
-			return runtime
-		}
-	}
-	runtime, _ := any(session.Colony).(*colony.ColonyRuntime)
+	runtime, _ := session.Colony.(*colony.ColonyRuntime)
 	return runtime
 }
 
@@ -63,143 +47,75 @@ func liveWorkerRuntimeFor(runtime *colony.ColonyRuntime) LiveWorkerRuntime {
 	return colonyLiveWorkers{runtime: runtime}
 }
 
-func (s colonyWorkerSurface) workerIDs() []string {
-	if s.runtime == nil {
-		return nil
-	}
-	// WorkerToolTiering walks the runtime's private worker registry and is the
-	// only exported enumeration of worker ids.
-	tiering := s.runtime.WorkerToolTiering()
-	ids := make([]string, 0, len(tiering))
-	for _, entry := range tiering {
-		if entry.WorkerID != "" {
-			ids = append(ids, entry.WorkerID)
-		}
-	}
-	sort.Strings(ids)
-	return ids
-}
-
 func (s colonyWorkerSurface) ListWorkers() []WorkerInfoView {
-	views := make([]WorkerInfoView, 0)
-	for _, id := range s.workerIDs() {
-		worker := s.runtime.GetWorker(id)
-		if worker == nil {
-			continue
-		}
-		views = append(views, colonyWorkerInfoView(worker))
+	listed := s.runtime.ListWorkers()
+	views := make([]WorkerInfoView, 0, len(listed))
+	for _, info := range listed {
+		views = append(views, colonyWorkerInfoView(info))
 	}
 	return views
 }
 
 func (s colonyWorkerSurface) Worker(workerID string) (WorkerInfoView, WorkerBatchView, bool) {
-	if s.runtime == nil {
+	info, ok := s.runtime.Worker(workerID)
+	if !ok {
 		return WorkerInfoView{}, WorkerBatchView{}, false
 	}
-	worker := s.runtime.GetWorker(workerID)
-	if worker == nil {
-		return WorkerInfoView{}, WorkerBatchView{}, false
-	}
-	view := colonyWorkerInfoView(worker)
+	view := colonyWorkerInfoView(info)
 	return view, view.Batch, true
 }
 
-func (s colonyWorkerSurface) ColonyID() string {
-	if s.runtime == nil {
-		return ""
-	}
-	info := s.runtime.GetStats()
-	if colonyID, ok := info["colony_id"].(string); ok {
-		return colonyID
-	}
-	return ""
-}
+func (s colonyWorkerSurface) ColonyID() string { return s.runtime.ColonyID() }
 
-// StoragePath is unknown: the runtime keeps its storage root private, so the
-// routes fall back to the session's queen directory.
-func (s colonyWorkerSurface) StoragePath() string { return "" }
+func (s colonyWorkerSurface) StoragePath() string { return s.runtime.StoragePath() }
 
-// Skills is unknown: the runtime exposes no parsed-skill catalog and no storage
-// path to scan, so the route answers with the skills it knows (none) rather
-// than a guess.
-func (s colonyWorkerSurface) Skills() ([]*skills.ParsedSkill, bool) { return nil, false }
+func (s colonyWorkerSurface) Skills() ([]*skills.ParsedSkill, bool) { return s.runtime.Skills() }
 
-// Tools projects the live worker tool sets. Before the first worker starts the
-// colony holds no loaded tool list, so the answer is empty — matching what the
-// runtime has actually materialized.
 func (s colonyWorkerSurface) Tools() ([]ColonyTool, map[string]string) {
-	if s.runtime == nil {
-		return nil, nil
+	listed, providers := s.runtime.Tools()
+	tools := make([]ColonyTool, 0, len(listed))
+	for _, tool := range listed {
+		tools = append(tools, ColonyTool{Name: tool.Name, Description: tool.Description})
 	}
-	seen := map[string]struct{}{}
-	names := make([]string, 0)
-	descriptions := map[string]string{}
-	for _, id := range s.workerIDs() {
-		worker := s.runtime.GetWorker(id)
-		if worker == nil || worker.Context == nil {
-			continue
-		}
-		for _, def := range worker.Context.AvailableTools {
-			if def.Name == "" {
-				continue
-			}
-			descriptions[def.Name] = def.Description
-			if _, present := seen[def.Name]; present {
-				continue
-			}
-			seen[def.Name] = struct{}{}
-			names = append(names, def.Name)
-		}
-	}
-	sort.Strings(names)
-	tools := make([]ColonyTool, 0, len(names))
-	for _, name := range names {
-		tools = append(tools, ColonyTool{Name: name, Description: descriptions[name]})
-	}
-	return tools, nil
+	return tools, providers
 }
 
-func colonyWorkerInfoView(worker *colony.Worker) WorkerInfoView {
-	info := worker.Info()
+// colonyWorkerInfoView copies a colony.WorkerInfo into the route's view type.
+func colonyWorkerInfoView(info colony.WorkerInfo) WorkerInfoView {
 	view := WorkerInfoView{
-		ID:        info.WorkerID,
-		Task:      info.Task,
-		Status:    worker.Status(),
-		StartedAt: info.StartedAt,
+		ID:          info.WorkerID,
+		Task:        info.Task,
+		Status:      info.Status,
+		StartedAt:   info.StartedAt,
+		ProfileName: info.ProfileName,
 		Batch: WorkerBatchView{
 			BatchID:    info.BatchID,
 			BatchIndex: info.Index,
 			BatchSize:  info.Size,
+			WorkerSeq:  info.WorkerSeq,
 		},
 	}
-	if worker.Context != nil {
-		view.ProfileName = worker.Context.AgentSpec.Name
-	}
-	if view.Status.Done() {
-		view.Result = colonyWorkerResultView(worker)
+	if result := info.Result; result != nil {
+		view.Result = &WorkerResultView{
+			Status:          result.ReportStatus,
+			Summary:         result.Summary,
+			Error:           result.Error,
+			TokensUsed:      tokensUsedFromData(result.Data),
+			DurationSeconds: result.DurationSeconds,
+			ToolCallsUsed:   result.ToolCallsUsed,
+			BudgetLimited:   result.BudgetLimited,
+		}
 	}
 	return view
 }
 
-func colonyWorkerResultView(worker *colony.Worker) *WorkerResultView {
-	result := worker.Result()
-	view := &WorkerResultView{
-		Status:        string(result.Status),
-		Error:         result.Error,
-		ToolCallsUsed: result.ToolCallsUsed,
-		BudgetLimited: result.BudgetLimited,
+// tokensUsedFromData reads the token count worker reports carry in their data
+// payload; the colony result has no dedicated field for it.
+func tokensUsedFromData(data map[string]any) int {
+	if tokens, ok := numberFromAny(data["tokens_used"]); ok {
+		return int(tokens)
 	}
-	if summary, ok := result.Output["summary"].(string); ok {
-		view.Summary = summary
-	}
-	if tokens, ok := numberFromAny(result.Output["tokens_used"]); ok {
-		view.TokensUsed = int(tokens)
-	}
-	started, finished := worker.StartedAt(), worker.FinishedAt()
-	if !started.IsZero() && !finished.IsZero() {
-		view.DurationSeconds = finished.Sub(started).Seconds()
-	}
-	return view
+	return 0
 }
 
 // colonyLiveWorkers adapts one live colony runtime to the SSE worker registry.
@@ -208,99 +124,42 @@ type colonyLiveWorkers struct {
 }
 
 func (s colonyLiveWorkers) LiveWorkers() []LiveWorkerSnapshot {
-	snapshots := make([]LiveWorkerSnapshot, 0)
-	ids := colonyWorkerSurface{runtime: s.runtime}.workerIDs()
-	for _, id := range ids {
-		worker := s.runtime.GetWorker(id)
-		if worker == nil {
-			continue
-		}
-		snapshots = append(snapshots, colonyLiveWorkerSnapshot(worker))
+	listed := s.runtime.LiveWorkers()
+	snapshots := make([]LiveWorkerSnapshot, 0, len(listed))
+	for _, state := range listed {
+		snapshots = append(snapshots, colonyLiveWorkerSnapshot(state))
 	}
 	return snapshots
 }
 
 func (s colonyLiveWorkers) LiveWorker(workerID string) (LiveWorkerSnapshot, bool) {
-	if s.runtime == nil {
+	state, ok := s.runtime.LiveWorker(workerID)
+	if !ok {
 		return LiveWorkerSnapshot{}, false
 	}
-	worker := s.runtime.GetWorker(workerID)
-	if worker == nil {
-		return LiveWorkerSnapshot{}, false
-	}
-	return colonyLiveWorkerSnapshot(worker), true
+	return colonyLiveWorkerSnapshot(state), true
 }
 
 func (s colonyLiveWorkers) StopLiveWorker(workerID string) (map[string]any, error) {
-	if s.runtime == nil {
-		return nil, nil
-	}
-	worker := s.runtime.GetWorker(workerID)
-	if worker == nil {
-		return map[string]any{"reason": "Worker not found"}, nil
-	}
-	status := worker.Status()
-	if !s.runtime.StopWorker(workerID) {
-		return map[string]any{
-			"reason":    "Worker already terminated",
-			"worker_id": workerID,
-			"status":    string(status),
-		}, nil
-	}
-	return map[string]any{"worker_id": workerID, "status": string(status)}, nil
+	return s.runtime.StopLiveWorker(workerID)
 }
 
 func (s colonyLiveWorkers) StopAllLiveWorkers() map[string]any {
-	stopped := []string{}
-	queuedCancelled := []string{}
-	timedOut := []string{}
-	if s.runtime != nil {
-		ids := colonyWorkerSurface{runtime: s.runtime}.workerIDs()
-		for _, id := range ids {
-			worker := s.runtime.GetWorker(id)
-			if worker == nil || !worker.IsActive() {
-				continue
-			}
-			if !s.runtime.StopWorker(id) {
-				timedOut = append(timedOut, id)
-				continue
-			}
-			if worker.Status() == colony.WorkerQueued {
-				queuedCancelled = append(queuedCancelled, id)
-				continue
-			}
-			stopped = append(stopped, id)
-		}
-	}
-	return map[string]any{
-		"stopped":          stopped,
-		"stopped_count":    len(stopped),
-		"queued_cancelled": queuedCancelled,
-		"timed_out":        timedOut,
-		"errors":           nil,
-	}
+	return s.runtime.StopAllLiveWorkers()
 }
 
-func colonyLiveWorkerSnapshot(worker *colony.Worker) LiveWorkerSnapshot {
-	snapshot := LiveWorkerSnapshot{
-		ID:             worker.ID,
-		Task:           worker.Task,
-		Status:         string(worker.Status()),
-		IsActive:       worker.IsActive(),
-		ExplicitReport: worker.ExplicitReport(),
+// colonyLiveWorkerSnapshot copies a colony.LiveWorkerState into the route's view.
+func colonyLiveWorkerSnapshot(state colony.LiveWorkerState) LiveWorkerSnapshot {
+	return LiveWorkerSnapshot{
+		ID:             state.ID,
+		Task:           state.Task,
+		Status:         state.Status,
+		IsActive:       state.IsActive,
+		StartedAt:      state.StartedAt,
+		ExplicitReport: state.ExplicitReport,
+		ResultStatus:   state.ResultStatus,
+		ResultSummary:  state.ResultSummary,
 	}
-	if started := worker.StartedAt(); !started.IsZero() {
-		snapshot.StartedAt = float64(started.UnixNano()) / 1e9
-	}
-	if status := worker.Status(); status.Done() {
-		result := worker.Result()
-		statusText := string(result.Status)
-		snapshot.ResultStatus = &statusText
-		if summary, ok := result.Output["summary"].(string); ok {
-			snapshot.ResultSummary = &summary
-		}
-	}
-	return snapshot
 }
 
 // numberFromAny converts the JSON-ish numbers a worker report carries.

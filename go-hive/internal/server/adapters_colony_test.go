@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/colony"
@@ -19,51 +18,50 @@ var (
 )
 
 // Parity-exempt: adapter mapping guard. The colony route tables read
-// WorkerInfoView/LiveWorkerSnapshot rows, so the projection from a live worker
-// must carry status, result and batch data rather than zero values.
-func TestColonyWorkerViewProjectsLiveWorker(t *testing.T) {
-	worker := colony.NewWorker("w-1", "summarize the tickets", "colony:c1")
-	worker.BatchID = "batch-1"
-	worker.BatchIndex = 2
-	worker.BatchSize = 4
-	started := time.Now().Add(-90 * time.Second)
-	worker.MarkStarted(started)
-	worker.Finish(colony.WorkerCompleted, colony.WorkerResult{
-		WorkerID:      "w-1",
-		Status:        colony.WorkerCompleted,
-		Output:        map[string]any{"summary": "done", "tokens_used": float64(1234)},
-		ToolCallsUsed: 7,
-	})
+// WorkerInfoView rows, so the projection from a live runtime row must carry
+// status, result and batch data rather than zero values.
+func TestColonyWorkerViewProjectsWorkerInfo(t *testing.T) {
+	errorText := ""
+	info := colony.WorkerInfo{
+		WorkerID:    "w-1",
+		Task:        "summarize the tickets",
+		Status:      colony.WorkerCompleted,
+		BatchID:     "batch-1",
+		Index:       2,
+		Size:        4,
+		WorkerSeq:   7,
+		StartedAt:   1700000000.5,
+		ProfileName: "researcher",
+		Result: &colony.WorkerResult{
+			WorkerID:        "w-1",
+			Status:          colony.WorkerCompleted,
+			ReportStatus:    "success",
+			Summary:         "done",
+			Data:            map[string]any{"tokens_used": float64(1234)},
+			Error:           &errorText,
+			ToolCallsUsed:   7,
+			DurationSeconds: 90,
+		},
+	}
 
-	view := colonyWorkerInfoView(worker)
+	view := colonyWorkerInfoView(info)
 	if view.ID != "w-1" || view.Task != "summarize the tickets" {
 		t.Fatalf("view identity = %#v", view)
 	}
-	if view.Status != colony.WorkerCompleted {
-		t.Fatalf("status = %q, want %q", view.Status, colony.WorkerCompleted)
+	if view.Status != colony.WorkerCompleted || view.ProfileName != "researcher" {
+		t.Fatalf("status/profile = %q/%q", view.Status, view.ProfileName)
 	}
-	if view.Batch.BatchID != "batch-1" || view.Batch.BatchIndex != 2 || view.Batch.BatchSize != 4 {
+	if view.Batch.BatchID != "batch-1" || view.Batch.BatchIndex != 2 ||
+		view.Batch.BatchSize != 4 || view.Batch.WorkerSeq != 7 {
 		t.Fatalf("batch = %#v", view.Batch)
 	}
 	if view.Result == nil {
 		t.Fatal("completed worker has no result view")
 	}
-	if view.Result.Summary != "done" || view.Result.TokensUsed != 1234 || view.Result.ToolCallsUsed != 7 {
+	if view.Result.Status != "success" || view.Result.Summary != "done" ||
+		view.Result.TokensUsed != 1234 || view.Result.ToolCallsUsed != 7 ||
+		view.Result.DurationSeconds != 90 {
 		t.Fatalf("result = %#v", view.Result)
-	}
-	if view.Result.DurationSeconds <= 0 {
-		t.Fatalf("duration = %v, want > 0", view.Result.DurationSeconds)
-	}
-
-	snapshot := colonyLiveWorkerSnapshot(worker)
-	if snapshot.Status != string(colony.WorkerCompleted) || snapshot.IsActive {
-		t.Fatalf("snapshot = %#v", snapshot)
-	}
-	if snapshot.ResultStatus == nil || *snapshot.ResultStatus != string(colony.WorkerCompleted) {
-		t.Fatalf("result status = %#v", snapshot.ResultStatus)
-	}
-	if snapshot.StartedAt <= 0 {
-		t.Fatalf("started_at = %v, want epoch seconds", snapshot.StartedAt)
 	}
 }
 
@@ -84,6 +82,9 @@ func TestColonyAdaptersReportEmptyRuntime(t *testing.T) {
 	}
 	if surface.ColonyID() != "colony-c1" {
 		t.Fatalf("colony id = %q", surface.ColonyID())
+	}
+	if surface.StoragePath() == "" {
+		t.Fatal("storage path = \"\", want the runtime storage root")
 	}
 
 	live := colonyLiveWorkers{runtime: runtime}
