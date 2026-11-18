@@ -3,6 +3,7 @@ package colony
 // Parity: framework/host/worker.py
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -62,14 +63,18 @@ type Worker struct {
 	// Parity: framework/host/worker.py::Worker.budget_pinned
 	BudgetPinned bool
 
-	mu        sync.Mutex
-	status    WorkerStatus
-	report    map[string]any
-	result    WorkerResult
-	startedAt time.Time
-	agentLoop *agentloop.AgentLoop
-	done      chan struct{}
-	doneOnce  sync.Once
+	mu            sync.Mutex
+	status        WorkerStatus
+	report        map[string]any
+	result        WorkerResult
+	startedAt     time.Time
+	finishedAt    time.Time
+	finished      bool
+	stopRequested bool
+	cancel        context.CancelFunc
+	agentLoop     *agentloop.AgentLoop
+	done          chan struct{}
+	doneOnce      sync.Once
 }
 
 func NewWorker(id, task, streamID string) *Worker {
@@ -104,6 +109,12 @@ func (w *Worker) StartedAt() time.Time {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return w.startedAt
+}
+
+func (w *Worker) FinishedAt() time.Time {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.finishedAt
 }
 
 // Parity: framework/host/worker.py::Worker.is_active
@@ -149,13 +160,67 @@ func (w *Worker) Result() WorkerResult {
 }
 
 func (w *Worker) Finish(status WorkerStatus, result WorkerResult) {
+	w.finishOnce(status, result, nil)
+}
+
+// finishOnce records the terminal result exactly once. A worker can be
+// stopped from outside (StopWorker) and also unwind from its own loop; the
+// first terminal transition wins so status and the done channel cannot
+// disagree. after runs once the result is visible but before done closes, so
+// terminal reports are published before waiters observe completion.
+func (w *Worker) finishOnce(status WorkerStatus, result WorkerResult, after func()) bool {
 	w.mu.Lock()
+	if w.finished {
+		w.mu.Unlock()
+		return false
+	}
+	w.finished = true
 	w.status = status
+	w.finishedAt = time.Now()
 	result.WorkerID = w.ID
 	result.Status = status
 	w.result = result
 	w.mu.Unlock()
+	if after != nil {
+		after()
+	}
 	w.doneOnce.Do(func() { close(w.done) })
+	return true
+}
+
+// beginRun promotes a queued worker to running. It refuses when the worker
+// was stopped while waiting for a concurrency slot, or when the run context
+// is already cancelled.
+func (w *Worker) beginRun(ctx context.Context) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.finished || w.stopRequested {
+		return false
+	}
+	if ctx != nil && ctx.Err() != nil {
+		return false
+	}
+	w.status = WorkerRunning
+	w.startedAt = time.Now()
+	return true
+}
+
+func (w *Worker) setCancel(cancel context.CancelFunc) {
+	w.mu.Lock()
+	w.cancel = cancel
+	w.mu.Unlock()
+}
+
+// requestStop flips the stop flag and hands back the worker's cancel func.
+// The gated run goroutine owns the terminal transition and report.
+func (w *Worker) requestStop() (context.CancelFunc, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.finished {
+		return nil, false
+	}
+	w.stopRequested = true
+	return w.cancel, true
 }
 
 func (w *Worker) Done() <-chan struct{} { return w.done }
