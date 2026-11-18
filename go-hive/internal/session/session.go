@@ -3,6 +3,7 @@ package session
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -289,11 +290,27 @@ func (c *ConversationStore) AddPart(seq int, data map[string]any) error {
 }
 
 func (c *ConversationStore) NextSeq() (int, error) {
-	parts, err := c.ReadParts()
+	dir := filepath.Join(c.base, "parts")
+	entries, err := os.ReadDir(dir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
 		return 0, err
 	}
-	return len(parts), nil
+	// The next seq follows the highest part on disk, not the number of parts:
+	// compaction deletes parts and a corrupt part is skipped on read, so both
+	// would otherwise hand out a seq that already exists.
+	maxSeq := -1
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		if seq, ok := ParsePartSeq(e.Name()); ok && seq > maxSeq {
+			maxSeq = seq
+		}
+	}
+	return maxSeq + 1, nil
 }
 
 func (c *ConversationStore) ReadParts() ([]map[string]any, error) {
@@ -332,12 +349,27 @@ func (c *ConversationStore) WriteMeta(data map[string]any) error {
 	return atomicfs.WriteJSON(filepath.Join(c.base, "meta.json"), data, 0o644)
 }
 
+// readDerivedJSON reads a derived (rebuildable) JSON file. A file that exists
+// but does not decode is treated as absent: callers fall back to defaults
+// instead of failing the whole session on a truncated cursor/meta write.
+func readDerivedJSON(path string, v any) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if err := json.Unmarshal(data, v); err != nil {
+		// Corrupt derived state (truncated write, bad type) reads as absent.
+		return nil
+	}
+	return nil
+}
+
 func (c *ConversationStore) ReadMeta() (map[string]any, error) {
 	var m map[string]any
-	if err := atomicfs.ReadJSON(filepath.Join(c.base, "meta.json"), &m); err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
+	if err := readDerivedJSON(filepath.Join(c.base, "meta.json"), &m); err != nil {
 		return nil, err
 	}
 	return m, nil
@@ -349,10 +381,7 @@ func (c *ConversationStore) WriteCursor(cur Cursor) error {
 
 func (c *ConversationStore) ReadCursor() (Cursor, error) {
 	var cur Cursor
-	if err := atomicfs.ReadJSON(filepath.Join(c.base, "cursor.json"), &cur); err != nil {
-		if os.IsNotExist(err) {
-			return Cursor{}, nil
-		}
+	if err := readDerivedJSON(filepath.Join(c.base, "cursor.json"), &cur); err != nil {
 		return Cursor{}, err
 	}
 	return cur, nil

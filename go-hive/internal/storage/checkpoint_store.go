@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -64,6 +66,15 @@ func (s *CheckpointStore) LoadCheckpoint(checkpointID string) *schemas.Checkpoin
 }
 
 func (s *CheckpointStore) LoadIndex() (*schemas.CheckpointIndex, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.loadIndexLocked()
+}
+
+// loadIndexLocked is LoadIndex for callers that already hold s.mu. A corrupt
+// index.json is rebuilt from the cp_*.json files: the index is derived state,
+// and returning nil would let the next save overwrite every prior entry.
+func (s *CheckpointStore) loadIndexLocked() (*schemas.CheckpointIndex, error) {
 	if _, err := os.Stat(s.IndexPath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
@@ -72,9 +83,44 @@ func (s *CheckpointStore) LoadIndex() (*schemas.CheckpointIndex, error) {
 	}
 	var index schemas.CheckpointIndex
 	if err := readJSONFile(s.IndexPath, &index); err != nil {
-		return nil, nil
+		return s.rebuildIndexLocked()
 	}
 	return &index, nil
+}
+
+func (s *CheckpointStore) rebuildIndexLocked() (*schemas.CheckpointIndex, error) {
+	entries, err := os.ReadDir(s.CheckpointsDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || name == "index.json" || strings.HasPrefix(name, ".") || !strings.HasSuffix(name, ".json") {
+			continue
+		}
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	index := &schemas.CheckpointIndex{Checkpoints: []schemas.CheckpointSummary{}}
+	for _, name := range names {
+		var cp schemas.Checkpoint
+		if err := readJSONFile(filepath.Join(s.CheckpointsDir, name), &cp); err != nil {
+			continue
+		}
+		if index.SessionID == "" {
+			index.SessionID = cp.SessionID
+		}
+		index.AddCheckpoint(cp)
+	}
+	if err := atomicfs.WriteJSON(s.IndexPath, index, 0o644); err != nil {
+		return nil, err
+	}
+	return index, nil
 }
 
 func (s *CheckpointStore) ListCheckpoints(checkpointType string, isClean *bool) ([]schemas.CheckpointSummary, error) {
@@ -143,7 +189,7 @@ func (s *CheckpointStore) CheckpointExists(checkpointID string) bool {
 }
 
 func (s *CheckpointStore) updateIndexAdd(checkpoint *schemas.Checkpoint) error {
-	index, _ := s.LoadIndex()
+	index, _ := s.loadIndexLocked()
 	if index == nil {
 		index = &schemas.CheckpointIndex{SessionID: checkpoint.SessionID, Checkpoints: []schemas.CheckpointSummary{}}
 	}
@@ -155,7 +201,7 @@ func (s *CheckpointStore) updateIndexAdd(checkpoint *schemas.Checkpoint) error {
 }
 
 func (s *CheckpointStore) updateIndexRemove(checkpointID string) {
-	index, _ := s.LoadIndex()
+	index, _ := s.loadIndexLocked()
 	if index == nil {
 		return
 	}

@@ -166,7 +166,11 @@ func ExecuteTool(ctx context.Context, executor ContextualExecutor, tc ToolCallEv
 
 	toolUse := ToolUse{ID: tc.ToolUseID, Name: tc.ToolName, Input: tc.ToolInput}
 	pool := SharedToolPool()
-	poolCtx := context.WithValue(ctx, poolNameKey{}, pool.Name())
+	// The derived context is cancelled when this call gives up on the tool.
+	// Without it a timed-out executor keeps running (and keeps holding its
+	// pool slot) until its own internal deadline, which may be minutes.
+	poolCtx, cancel := context.WithCancel(context.WithValue(ctx, poolNameKey{}, pool.Name()))
+	defer cancel()
 
 	type outcome struct {
 		result ToolResult
@@ -181,8 +185,13 @@ func ExecuteTool(ctx context.Context, executor ContextualExecutor, tc ToolCallEv
 	}()
 
 	if timeout <= 0 {
-		out := <-done
-		return out.result, out.err
+		select {
+		case out := <-done:
+			return out.result, out.err
+		case <-ctx.Done():
+			cancel()
+			return cancelledResult(tc, ctx.Err()), nil
+		}
 	}
 
 	timer := time.NewTimer(timeout)
@@ -190,8 +199,21 @@ func ExecuteTool(ctx context.Context, executor ContextualExecutor, tc ToolCallEv
 	select {
 	case out := <-done:
 		return out.result, out.err
+	case <-ctx.Done():
+		cancel()
+		return cancelledResult(tc, ctx.Err()), nil
 	case <-timer.C:
+		cancel()
 		return timeoutResult(executor, tc, timeout), nil
+	}
+}
+
+// cancelledResult reports a tool call abandoned because its context ended.
+func cancelledResult(tc ToolCallEvent, cause error) ToolResult {
+	return ToolResult{
+		ToolUseID: tc.ToolUseID,
+		Content:   fmt.Sprintf("Tool '%s' was cancelled: %v", tc.ToolName, cause),
+		IsError:   true,
 	}
 }
 

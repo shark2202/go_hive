@@ -1238,6 +1238,16 @@ func RestoreConversation(store ConversationStore, phaseID, runID *string) (*Node
 		return nil, err
 	}
 
+	// Track the highest persisted sequence before any phase/run filtering.
+	// A stale cursor (or one written by another writer sharing this store)
+	// must never hand out a seq that already has a part file.
+	maxPartSeq := -1
+	for _, part := range parts {
+		if seq := intOr(part["seq"], -1); seq > maxPartSeq {
+			maxPartSeq = seq
+		}
+	}
+
 	if phaseID != nil && *phaseID != "" {
 		filtered := []map[string]any{}
 		allUnphased := len(parts) > 0
@@ -1277,11 +1287,14 @@ func RestoreConversation(store ConversationStore, phaseID, runID *string) (*Node
 	if err != nil {
 		return nil, err
 	}
-	if nextSeq := GetCursorNextSeq(cursor); nextSeq != nil {
-		conv.nextSeq = *nextSeq
-	} else if len(conv.messages) > 0 {
-		conv.nextSeq = conv.messages[len(conv.messages)-1].Seq + 1
+	nextSeq := 0
+	if cursorNext := GetCursorNextSeq(cursor); cursorNext != nil && *cursorNext > nextSeq {
+		nextSeq = *cursorNext
 	}
+	if maxPartSeq+1 > nextSeq {
+		nextSeq = maxPartSeq + 1
+	}
+	conv.nextSeq = nextSeq
 
 	partials, err := store.ReadAllPartials()
 	if err != nil {
