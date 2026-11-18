@@ -1,7 +1,7 @@
 # 外部集成清单（按优先级）
 
 > 生成：`uv run --no-project python` 扫描 `tools/src/aden_tools/tools/*`，action 数按 `@mcp.tool` 统计。
-> 已实现 20 个模块 / 184 action；未实现 **84 个模块**。下表只列未实现项。
+> **本文件是 2026-11-19 00:20 的规划快照**（当时已实现 20 个模块）。截至 3,652 测试时已实现约 50 个模块；下表仍作为「剩余待办池」使用，实际完成状态以 `RELEASE_PLAN.md` 的 R1 与各 `InstallBatch*` 注册为准。
 
 ## P0 · 默认角色必备（每个 queen 的 default_tool_categories 里就有）
 
