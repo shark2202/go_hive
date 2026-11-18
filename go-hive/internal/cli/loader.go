@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/agents"
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	colonyhost "github.com/aden-hive/hive-go/internal/host"
@@ -380,10 +381,20 @@ func (r *Runner) buildColonyHost(colonyPath, colonyID string, home hivehome.Home
 		fmt.Fprintf(r.Stdout, "Warning: colony runtime unavailable for %s: %v\n", colonyID, err)
 		return nil
 	}
+	// The worker the session runs is the one the colony defines on disk. A
+	// colony with no worker config cannot be a real worker, so it keeps its
+	// cold record instead of running a synthetic prompt.
+	spec, err := agents.LoadAgentSpec(colonyPath)
+	if err != nil {
+		fmt.Fprintf(r.Stdout, "Warning: colony runtime unavailable for %s: %v\n", colonyID, err)
+		return nil
+	}
+	fields := spec.HostFields()
 	toolbox := builtin.New(colonyPath)
 	built, err := colonyhost.New(colonyhost.Config{
 		ColonyID:    colonyID,
-		AgentSpec:   agentloop.NewAgentSpec(colonyID, colonyID, "Colony "+colonyID),
+		AgentSpec:   fields.AgentSpec,
+		Goal:        fields.Goal,
 		StoragePath: colonyPath,
 		LLM:         provider,
 		Tools:       toolbox.Defs(),
