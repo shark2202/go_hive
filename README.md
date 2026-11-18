@@ -105,10 +105,18 @@ CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test ./...
 | `make vet` | `go vet ./...` |
 | `make fmt-check` | `gofmt -l .`，有输出即失败 |
 | `make build` | `go build ./...`；有 main 包时产出 `dist/hive` |
+| `make embed-ui` | 构建前端并嵌入单二进制（`-tags embed_ui`，产出 `dist/hive-embed`） |
 | `make cross` | 六平台交叉编译（无 main 包时只验证可编译） |
 | `make race` | `go test -race ./...`（较慢，未纳入 CI 必须项） |
 | `make parity` | 调用 `scripts/check_parity.sh` |
 | `make ci` | 依次执行 fmt-check、vet、test、cross、parity |
+
+`make embed-ui` 走 `scripts/embed_ui.sh`：`go:embed` 不能引用包目录之外的
+`core/frontend/dist`，脚本先把它复制到 `internal/server/uiembed/dist`，再以
+`-tags embed_ui` 编译 `./cmd/hive`。两个 dist 都是 gitignore 的构建产物；脚本在
+`dist/index.html` 缺失时会先执行 npm 构建，也可用 `FRONTEND_DIST` 指向预构建
+产物、`SKIP_FRONTEND_BUILD=1` 禁止 npm。不带 tag 的 `make build` 行为不变，
+仍只从磁盘发现 dashboard；带 tag 的二进制在没有磁盘 dist 时使用内嵌副本。
 
 ### P0 可运行范围（2026-11-18）
 

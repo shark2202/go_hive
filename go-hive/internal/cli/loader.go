@@ -314,7 +314,7 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	hiveserver.MarkBootReady("Server ready")
 
 	dashboardURL := fmt.Sprintf("http://%s:%d", host, port)
-	hasFrontend := hiveserver.FrontendDistDir() != ""
+	hasFrontend := app.HasFrontend()
 
 	liveMu.Lock()
 	liveCount, queenOnly := 0, 0

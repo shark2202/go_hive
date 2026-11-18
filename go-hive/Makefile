@@ -12,6 +12,7 @@
 #   make vet        go vet
 #   make fmt-check  gofmt 检查（不修改文件）
 #   make build      编译全部包；若 cmd/ 下存在 main 包则产出二进制
+#   make embed-ui   构建前端并把 dist 嵌入单二进制（-tags embed_ui）
 #   make cross      CGO_ENABLED=0 交叉编译 6 个平台到 dist/
 #   make parity          每个 Test 必须带 // Parity: 或 // Parity-exempt:
 #   make parity-targets  // Parity: 引用的 Python 测试必须真实存在
@@ -32,7 +33,7 @@ PY_ROOT   ?= ../../core
 OFFLINE    = CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod
 PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
 
-.PHONY: all test test-v vet fmt-check build cross parity parity-targets ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets ci clean help
 
 all: ci
 
@@ -43,6 +44,7 @@ help:
 	@echo "  make vet         go vet ./..."
 	@echo "  make fmt-check   gofmt -l 检查，非空即失败"
 	@echo "  make build       go build ./...，有 cmd 入口时产出 dist/hive"
+	@echo "  make embed-ui    构建前端（必要时 npm）并嵌入单二进制 dist/hive-embed"
 	@echo "  make cross       交叉编译 6 平台到 dist/"
 	@echo "  make parity      校验每个 Test 的 // Parity: 注解"
 	@echo "  make parity-targets 校验注解引用的 Python 测试真实存在"
@@ -76,6 +78,13 @@ build:
 		echo "build: ./cmd 下暂无 main 包，仅完成全部包的编译验证"; \
 	fi
 
+# 单二进制带 dashboard：先把 frontend/dist 复制到 embed 包内（go:embed 不能
+# 引用包目录之外的路径），再以 -tags embed_ui 编译。dist 是 gitignore 的
+# 构建产物，脚本会在缺失时先运行 npm ci/build；预构建的 dist 可用
+# FRONTEND_DIST 指定，跳过 npm 可用 SKIP_FRONTEND_BUILD=1。
+embed-ui:
+	@bash ../scripts/embed_ui.sh
+
 cross:
 	@mkdir -p $(DIST)
 	@set -e; \
@@ -107,4 +116,4 @@ race:
 ci: fmt-check vet test cross parity parity-targets
 
 clean:
-	rm -rf $(DIST)
+	rm -rf $(DIST) internal/server/uiembed/dist
