@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/agents"
+	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/tasks"
@@ -49,9 +50,13 @@ type AppDeps struct {
 
 	CreateSession          func(CreateSessionParams) (*Session, error)
 	CreateColonyFromSource func(CreateColonyFromSourceParams) (*Session, error)
-	VacateSoftDeleted      func(colonyID string) error
-	ConnectedProviders     func() []string
-	AgentRoots             *agents.AllowedRoots
+	// ColonyRuntimeFor resolves the live colony runtime behind a session for
+	// the worker/sentinel read surfaces. Nil falls back to inspecting
+	// Session.Colony itself.
+	ColonyRuntimeFor   func(*Session) *colony.ColonyRuntime
+	VacateSoftDeleted  func(colonyID string) error
+	ConnectedProviders func() []string
+	AgentRoots         *agents.AllowedRoots
 }
 
 type App struct {
@@ -127,6 +132,66 @@ func NewApp(deps AppDeps) *App {
 	RegisterModelRoutes(mux, ModelRouteDeps{Home: deps.Home, Manager: deps.Manager})
 	tasks.RegisterTaskRoutes(mux)
 
+	// Wave 1 route tables that read live runtime state. The colony adapters
+	// project *colony.ColonyRuntime onto the worker read surfaces; a session
+	// without one keeps the routes' explicit fallbacks (on-disk workers, 503
+	// "No active colony", 404 unknown session).
+	colonyRuntimeFor := func(session *Session) *colony.ColonyRuntime {
+		if deps.ColonyRuntimeFor != nil {
+			if runtime := deps.ColonyRuntimeFor(session); runtime != nil {
+				return runtime
+			}
+		}
+		return sessionColonyRuntime(session)
+	}
+	RegisterColonyWorkerRoutes(mux, ColonyWorkerDeps{
+		Manager: deps.Manager,
+		Home:    deps.Home,
+		Runtime: func(session *Session) ColonyWorkerReadSurface {
+			return colonyWorkerReadSurfaceFor(colonyRuntimeFor(session))
+		},
+	})
+	RegisterWorkerRoutes(mux, WorkerRouteDeps{
+		Manager: deps.Manager,
+		Runtime: func(session *Session) LiveWorkerRuntime {
+			return liveWorkerRuntimeFor(colonyRuntimeFor(session))
+		},
+	})
+	RegisterSentinelRoutes(mux, SentinelRouteDeps{
+		Home:     deps.Home,
+		Store:    newSentinelStoreAdapter(deps.Home.Root),
+		Notifier: newSentinelNotifierAdapter(),
+	})
+	RegisterExecutionRoutes(mux, ExecutionRouteDeps{
+		Manager: deps.Manager,
+		Home:    deps.Home,
+	})
+	RegisterColonyRoutes(mux, ColonyRouteDeps{
+		Home:    deps.Home,
+		Manager: deps.Manager,
+		Reveal:  deps.Reveal,
+	})
+	RegisterColonyToolRoutes(mux, ColonyToolsDeps{
+		Home:    deps.Home,
+		Manager: deps.Manager,
+	})
+	RegisterQueenRoutes(mux, QueenRouteDeps{
+		Home:          deps.Home,
+		Manager:       deps.Manager,
+		CreateSession: queenCreateSessionAdapter(deps.CreateSession),
+	})
+	RegisterQueenToolRoutes(mux, QueenToolRouteDeps{
+		Home:    deps.Home,
+		Manager: deps.Manager,
+	})
+	// The queen-mail runtime (delivery, depth accounting) has not been ported,
+	// so every request answers the route's own 401 unauthorized rather than a
+	// fabricated delivery.
+	RegisterQueenMailRoutes(mux, QueenMailRouteDeps{})
+	// Claude Code queens are off in this build: the list reports `queens: []`
+	// and transcripts 404, exactly as upstream does when the feature is off.
+	RegisterClaudeCodeQueenRoutes(mux, ClaudeCodeQueenRouteDeps{})
+
 	if app.distDir != "" {
 		mux.HandleFunc("GET /", app.handleSPA)
 	}
@@ -179,6 +244,29 @@ func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 // Parity: framework/server/app.py::handle_startup_status
 func (a *App) handleStartupStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, BootStatus())
+}
+
+// queenCreateSessionAdapter bridges the queen route hook to the session-create
+// hook the CLI wires: the queen table passes loosely typed prompt/phase values,
+// the create hook takes typed pointers.
+func queenCreateSessionAdapter(create func(CreateSessionParams) (*Session, error)) func(QueenSessionCreateParams) (*Session, error) {
+	if create == nil {
+		return nil
+	}
+	return func(params QueenSessionCreateParams) (*Session, error) {
+		out := CreateSessionParams{
+			ColonyID:        params.ColonyID,
+			QueenResumeFrom: params.QueenResumeFrom,
+			QueenName:       params.QueenName,
+		}
+		if prompt, ok := params.InitialPrompt.(string); ok && prompt != "" {
+			out.InitialPrompt = &prompt
+		}
+		if phase, ok := params.InitialPhase.(string); ok && phase != "" {
+			out.InitialPhase = &phase
+		}
+		return create(out)
+	}
 }
 
 // processStartTS is the /api/maintenance uptime source: the process start as
