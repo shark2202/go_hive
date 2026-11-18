@@ -13,3 +13,4 @@ time,routes_go,routes_py,tests,tool_go,tool_dirs,parity_missing,note
 2026-11-19 00:41,157,141,3024,42,104,0,wave4 全合并：3024 测试、2636 refs
 2026-11-19 00:54,157,141,3077,46,104,0,w5/int5 装配 + w5/mod(notion/linear) 合并：3077 测试，smoke PASS
 2026-11-19 01:16,157,141,3111,46,104,0,w5 七分支合并：3111 测试、prod parity 789 refs 已校验
+2026-11-19 01:23,157,141,3163,50,104,0,w5/sec + w6/fix3 合并：3163 测试，main 复绿
