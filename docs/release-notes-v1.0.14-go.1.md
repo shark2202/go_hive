@@ -81,10 +81,10 @@ Expand-Archive hive-1.0.14-go.1-windows-amd64.zip -DestinationPath hive
 每个归档根部包含：
 
 ```text
-hive[.exe]  LICENSE  NOTICE  README.md  SHA256SUMS
+hive[.exe]  LICENSE  NOTICE  THIRD_PARTY_NOTICES.md  README.md  SHA256SUMS
 ```
 
-`LICENSE` 是仓库根 `LICENSE` 的逐字节副本（SHA-256 实测一致）；`NOTICE` 由 `release.sh` 在仓库没有 `NOTICE` 文件时生成最小归属声明；包内 `SHA256SUMS` 覆盖二进制与三份文档。
+`LICENSE` 是仓库根 `LICENSE` 的逐字节副本（SHA-256 实测一致）；`NOTICE` 与 `THIRD_PARTY_NOTICES.md` 均为仓库内正式文件，随归档分发；包内 `SHA256SUMS` 覆盖二进制与四份文档。
 
 ## 3. 升级
 
