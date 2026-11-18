@@ -1,0 +1,3 @@
+# 运行时产物（由常驻看门狗/记录器生成，不入库）
+watchdog.log
+.watchdog_state

@@ -62,7 +62,7 @@
 
 - **Plan**：Coordinator 按缺口表派工，明确所有权与验收。
 - **Do**：lane 并行，worktree 隔离，独立提交。
-- **Check**：合并后 Coordinator 跑 `make ci`；另派 Verifier lane 只读复核 parity 注解是否指向真实上游用例；每个 wave 边界跑 `uv run --no-project python go_hive/scripts/pace.py` 记录实测步调（lane-hour 产能、ETA、EVM），作为下一波派工量的依据。
+- **Check**：合并后 Coordinator 跑 `make ci`；每个 wave 边界跑 `scripts/qa_audit.py`（过程合规）、`scripts/qc_check.py --smoke`（结果检验）与 `scripts/timegov.py`（六维裁决），三项全绿才算该 wave 关闭；独立复核 agent 只读抽检 parity 注解是否指向真实上游用例。
 - **Act**：门禁失败打回原 lane；系统性偏差（例如序列化字段顺序）写回本章程，禁止各 lane 各自发明。
 
 ## 7. 升级规则

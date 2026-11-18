@@ -69,6 +69,8 @@
 
 - **检查点节奏**：每个 wave 边界 + 每 2 小时一次，执行 `checkpoint.sh` 写入台账。
 - **步调核算**：每个 wave 边界执行 `uv run --no-project python go_hive/scripts/pace.py`，输出实测产能（lane-hour）、单位产出（行/路由/测试 per lane-hour）、各维度 ETA 与 EVM（EV/PV/SPI）。计划校准只依据该核算结果，不依据感觉。
+- **独立时间记账**：常驻 `scripts/timegov_record.sh` 每 5 分钟写 `TIME_EVENTS.csv`；`scripts/timegov.py` 依 `TIME_POLICY.json` 对六维（目标完成时间/执行预算/阶段进度/等待时间/决策延迟/停止时点）出裁决到 `TIME_REPORT.md`。任何 BREACH 必须在当轮处理，不得带入下一 wave。
+- **独立看门狗**：常驻 `scripts/watchdog_loop.sh`，路由/测试数下降、出现 cgo、worktree 长时间脏即写 `ALERTS.md`。
 - **产能口径**：并行阶段墙钟会低估投入，一律以 lane-hour（并发 lane 数 × 墙钟小时）为分母；路由与测试在合并时跳变，按波次记账而非连续速率。
 - **台账指标**：Go 路由数 / 上游路由数、测试数、集成工具文件数、parity missing、备注。
 - **lane 时间盒**：软 90 分钟、硬 150 分钟。超硬时限由 Coordinator `steer` 或 `stop`，未完成部分转 wave 2 或砍。

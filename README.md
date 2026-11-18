@@ -40,12 +40,30 @@ go_hive/
 ├── 13-cross-platform-and-purego.md
 ├── 14-quality-assurance.md
 ├── 15-test-parity-matrix.md   # 测试对等矩阵（快照）
+├── COORDINATION.md            # 蜂群章程（RASCI / 所有权 / SOP / PDCA）
+├── GOVERNANCE.md              # 目标治理 · 质量门禁 · 时间治理
+├── QA_PLAN.md                 # 全流程质量保障（QA 过程 + QC 结果）
+├── DELIVERY.md                # 交付报告（已验证 / 未验证 / 缺口）
+├── INTEGRATION_BACKLOG.md     # 未实现集成按 P0–P4 分层
+├── INTEGRATION_MAP.md         # 装配地图（注册函数 / 依赖 / 冲突约束）
+├── ledger.csv                 # 检查点台账
+├── TIME_LEDGER.csv            # 计划 vs 实际（里程碑）
+├── TIME_EVENTS.csv            # 独立时间记录器的原始采样
+├── TIME_POLICY.json           # 时间治理策略（预算/上限/停止规则）
+├── TIME_REPORT.md             # 六维裁决报告
+├── QA_REPORT.md / QC_REPORT.md
+├── watchdog.log / ALERTS.md   # 看门狗日志与告警
 ├── scripts/
 │   ├── check_parity.sh        # parity 注解门禁
 │   ├── checkpoint.sh          # 检查点台账（路由/测试/工具/parity 计数）
 │   ├── pace.py                # 步调核算（lane-hour 产能、ETA、EVM）
 │   ├── smoke.sh               # G3 集成冒烟（真二进制 + 真 HTTP，13 项断言）
-│   └── watchdog.sh            # 进度巡检
+│   ├── qa_audit.py            # QA 过程审计（SOP 合规 / 共享文件越界）
+│   ├── qc_check.py            # QC 结果检验（制品 / cgo / 口径 / 回归）
+│   ├── timegov.py             # 时间治理六维裁决
+│   ├── timegov_record.sh      # 独立时间记录器（常驻）
+│   ├── watchdog_loop.sh       # 独立看门狗（常驻，异常告警）
+│   └── watchdog.sh            # 单次状态快照
 ├── .github/workflows/go.yml   # CI（评审后并入根 .github）
 └── go-hive/
     ├── go.mod
