@@ -44,6 +44,7 @@ go_hive/
 │   ├── check_parity.sh        # parity 注解门禁
 │   ├── checkpoint.sh          # 检查点台账（路由/测试/工具/parity 计数）
 │   ├── pace.py                # 步调核算（lane-hour 产能、ETA、EVM）
+│   ├── smoke.sh               # G3 集成冒烟（真二进制 + 真 HTTP，13 项断言）
 │   └── watchdog.sh            # 进度巡检
 ├── .github/workflows/go.yml   # CI（评审后并入根 .github）
 └── go-hive/
