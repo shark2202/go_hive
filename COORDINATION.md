@@ -45,6 +45,7 @@
 2. 读上游 Python 实现与对应测试，列出行为清单（含错误分支、空值、越界、序列化字段顺序）。
 3. 先写测试（`_test.go`），每条打 `// Parity: core/framework/...py::test_name`；上游无对应用例才用 `// Parity-exempt: 理由`。
 4. 实现到测试通过。不改共享文件，不加依赖，不写除门禁注解外的注释。
+   **包级标识符必须带 lane/scope 前缀**（如 `colonyWorkerPattern`、`mustJSONString`）：多个 lane 在同一包内声明同名变量会导致合并后 `redeclared in this block`，而单 lane 自检永远发现不了。`//go:build` 互斥的 OS 变体文件同名属正常，不算冲突。
 5. 门禁（在本 worktree 内）：
    ```
    CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go build ./...
@@ -52,7 +53,8 @@
    gofmt -l .
    bash ../../scripts/check_parity.sh   # 仓库根 scripts/check_parity.sh
    ```
-6. `git add <自己的文件> && git commit`，消息 `feat(<scope>): <范围> 对等移植`。
+6. **每完成一个文件就 `git add <该文件> && git commit`**，不要攒到任务结束：本轮 10 个 lane 中有 5 个在 turn 结束时未提交，文件留在 worktree 里，只能由 Coordinator 代提交。
+   消息格式 `feat(<scope>): <范围> 对等移植`。
 7. 返回结构化结果：覆盖的路由/工具清单、测试数、门禁输出、未解 blocker。
 
 ## 6. PDCA 节奏
