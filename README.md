@@ -42,6 +42,8 @@ go_hive/
 ├── 15-test-parity-matrix.md   # 测试对等矩阵（快照）
 ├── scripts/
 │   ├── check_parity.sh        # parity 注解门禁
+│   ├── checkpoint.sh          # 检查点台账（路由/测试/工具/parity 计数）
+│   ├── pace.py                # 步调核算（lane-hour 产能、ETA、EVM）
 │   └── watchdog.sh            # 进度巡检
 ├── .github/workflows/go.yml   # CI（评审后并入根 .github）
 └── go-hive/
