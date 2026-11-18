@@ -7,7 +7,7 @@
   "lane_hard_stop_h": 2.5,
   "wave_budget_multiplier": 2.0,
   "decision_latency_cap_min": 20,
-  "dirty_wait_cap_min": 25,
+  "dirty_wait_cap_min": 45,
   "stop_rules": {
     "overrun_cut": "任一 wave 实际耗时 > 2× 预算 → 冻结该 wave 未完成项，转 backlog",
     "progress_floor": "任一阶段进度落后计划 > 40% → 削减该阶段范围，不延期封版",

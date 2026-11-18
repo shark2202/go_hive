@@ -90,8 +90,17 @@ for wt in wt_list:
     n = len(git("-C", wt, "status", "--short").splitlines())
     if n == 0:
         continue
-    ts = git("-C", wt, "log", "-1", "--format=%ct")
-    idle = (now.timestamp() - int(ts)) / 60 if ts.isdigit() else 0
+    # 活跃度以「最近一次文件改动」为准，而不是最后一次提交：
+    # lane 在读上游/跑构建时尚未提交，用提交时间会误判为停滞。
+    newest = 0.0
+    for p in Path(wt).rglob("*"):
+        if ".git" in p.parts or not p.is_file():
+            continue
+        try:
+            newest = max(newest, p.stat().st_mtime)
+        except OSError:
+            continue
+    idle = (now.timestamp() - newest) / 60 if newest else 0
     waits.append((Path(wt).name, n, idle))
 wait_max = max((w[2] for w in waits), default=0)
 wait_state = "BREACH" if wait_max > POLICY["dirty_wait_cap_min"] else ("WARN" if waits else "OK")
