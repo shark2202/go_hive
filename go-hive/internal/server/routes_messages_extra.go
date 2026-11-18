@@ -23,7 +23,10 @@ const (
 	defaultColonyName = "new_colony"
 )
 
-var colonyNamePattern = regexp.MustCompile(`^[a-z0-9_]+$`)
+// sanitizedColonySlugPattern keeps lane-e's message constant in routes_colonies.go and
+// lane-g's matcher apart: the merge of both lanes declared colonyNamePattern
+// twice, which does not compile.
+var sanitizedColonySlugPattern = regexp.MustCompile(`^[a-z0-9_]+$`)
 
 var colonyNameInvalidRuns = regexp.MustCompile(`[^a-z0-9]+`)
 
@@ -362,7 +365,7 @@ func sanitizeColonyName(raw string) string {
 		slug = slug[:64]
 	}
 	slug = strings.Trim(slug, "_")
-	if slug == "" || !colonyNamePattern.MatchString(slug) {
+	if slug == "" || !sanitizedColonySlugPattern.MatchString(slug) {
 		return defaultColonyName
 	}
 	return slug
