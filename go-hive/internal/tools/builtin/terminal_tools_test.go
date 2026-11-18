@@ -64,7 +64,7 @@ func TestTerminalToolsPrefixedAndDispatched(t *testing.T) {
 	}
 }
 
-// Parity: tools/tests/test_terminal_tools_search.py::test_rg_finds_pattern
+// Parity: tools/tests/test_terminal_tools_smoke.py::test_register_terminal_tools_lands_all_ten
 func TestTerminalToolRequiredParameters(t *testing.T) {
 	required := map[string]string{
 		ToolTerminalRG:        "pattern",

@@ -183,7 +183,7 @@ func TestTerminalPTYUnknownSession(t *testing.T) {
 	}
 }
 
-// Parity: tools/tests/test_terminal_tools_pty.py::test_open_close_basic
+// Parity-exempt: Go-only PTY registry cap assertion; Python enforces the same cap in _PtyRegistry.add without a dedicated test.
 func TestTerminalPTYRegistryCap(t *testing.T) {
 	t.Setenv("TERMINAL_TOOLS_MAX_PTY", "1")
 	registry := newTerminalPTYRegistry()

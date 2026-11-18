@@ -248,7 +248,7 @@ func TestTerminalJobCapabilities(t *testing.T) {
 	}
 }
 
-// Parity: tools/tests/test_terminal_tools_jobs.py::test_start_logs_wait_basic
+// Parity: tools/src/terminal_tools/jobs/manager.py::JobManager
 func TestTerminalJobStdinAndClose(t *testing.T) {
 	tb := New(t.TempDir())
 	started := terminalTestJobTool(t, tb, ToolTerminalJobStart, map[string]any{
@@ -298,7 +298,7 @@ func TestTerminalJobUnsupportedAction(t *testing.T) {
 	}
 }
 
-// Parity: tools/tests/test_terminal_tools_jobs.py::test_unknown_job_id
+// Parity-exempt: Go-only concurrent-job cap assertion; Python enforces the same cap in JobManager.start without a dedicated test.
 func TestTerminalJobCap(t *testing.T) {
 	manager := &terminalJobManager{maxJobs: 1, ringBytes: 64 * 1024, jobs: make(map[string]*terminalJobRecord)}
 	first, err := manager.start("sleep 1", []string{"sleep", "1"}, terminalShellDirect, t.TempDir(), terminalSanitizedEnv(nil), false, "")
