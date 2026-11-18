@@ -30,20 +30,16 @@ const batch3BrowserUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleW
 
 type batch3Resolver func(ctx context.Context, host string) ([]string, error)
 
-type batch3Deps struct {
-	scrapeResolver batch3Resolver
-}
-
-type batch3Option func(*batch3Deps)
-
+// withBatch3Resolver swaps the DNS lookup used by web_scrape's SSRF guard.
 func withBatch3Resolver(resolver batch3Resolver) batch3Option {
 	return func(deps *batch3Deps) { deps.scrapeResolver = resolver }
 }
 
-func defaultBatch3Deps() batch3Deps {
-	return batch3Deps{scrapeResolver: func(ctx context.Context, host string) ([]string, error) {
+// batch3DefaultScrapeResolver is the production resolver for web_scrape.
+func batch3DefaultScrapeResolver() batch3Resolver {
+	return func(ctx context.Context, host string) ([]string, error) {
 		return net.DefaultResolver.LookupHost(ctx, host)
-	}}
+	}
 }
 
 var batch3ScrapeTool = &Tool{

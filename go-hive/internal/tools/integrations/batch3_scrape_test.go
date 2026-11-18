@@ -63,7 +63,7 @@ func TestBatch3WebScrapeStaticArticle(t *testing.T) {
 		<footer>Footer text</footer>
 		</body></html>`
 	server := batch3HTMLServer(t, html)
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "https://example.com/page"})
 	if _, failed := result["error"]; failed {
@@ -121,7 +121,7 @@ func TestBatch3WebScrapeLinks(t *testing.T) {
 		<a href="/empty">   </a>
 	</article></body></html>`
 	server := batch3HTMLServer(t, html)
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{
 		"url":           "https://example.com/blog/post",
@@ -162,7 +162,7 @@ func TestBatch3WebScrapeSelector(t *testing.T) {
 	html := `<html><body><div class="outside">Outside text</div>
 		<div class="content"><p>Content here</p></div></body></html>`
 	server := batch3HTMLServer(t, html)
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{
 		"url":      "https://example.com/page",
@@ -193,7 +193,7 @@ func TestBatch3WebScrapeNonHTMLSkipped(t *testing.T) {
 		_, _ = w.Write([]byte("%PDF-1.4"))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "https://example.com/file.pdf"})
 	if result["skipped"] != true {
@@ -211,7 +211,7 @@ func TestBatch3WebScrapeHTTPError(t *testing.T) {
 		http.NotFound(w, r)
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "https://example.com/missing"})
 	if result["error"] != "HTTP 404: Failed to fetch URL" {
@@ -226,7 +226,7 @@ func TestBatch3WebScrapeHTTPError(t *testing.T) {
 func TestBatch3WebScrapeURLSchemePrefixed(t *testing.T) {
 	batch3ScrapeEnv(t)
 	server := batch3HTMLServer(t, `<html><body><p>Hello world</p></body></html>`)
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "example.com/page"})
 	if _, failed := result["error"]; failed {
@@ -246,7 +246,7 @@ func TestBatch3WebScrapePageTypeListing(t *testing.T) {
 		<article><h2>Post 3</h2></article>
 	</body></html>`
 	server := batch3HTMLServer(t, html)
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "https://example.com/blog"})
 	if result["page_type"] != "listing" {
@@ -259,7 +259,7 @@ func TestBatch3WebScrapePersistsFullBody(t *testing.T) {
 	batch3ScrapeEnv(t)
 	payload := strings.Repeat("a", 5000)
 	server := batch3HTMLServer(t, "<html><body>"+payload+"</body></html>")
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "https://example.com/big"})
 	if _, failed := result["error"]; failed {
@@ -284,7 +284,7 @@ func TestBatch3WebScrapeRequiresBrowserForJSShell(t *testing.T) {
 		<noscript>You need to enable JavaScript to run this app.</noscript>
 	</body></html>`
 	server := batch3HTMLServer(t, html)
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "https://example.com/app"})
 	if result["requires_browser"] != true {
@@ -304,7 +304,7 @@ func TestBatch3WebScrapeRequiresBrowserForJSShell(t *testing.T) {
 func TestBatch3WebScrapeEmptyPageErrors(t *testing.T) {
 	batch3ScrapeEnv(t)
 	server := batch3HTMLServer(t, `<html><body>   </body></html>`)
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "https://example.com/blank"})
 	if result["error"] == nil {
@@ -330,7 +330,7 @@ func TestBatch3WebScrapeRobotsTxt(t *testing.T) {
 		_, _ = w.Write([]byte(`<html><body><p>Content</p></body></html>`))
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	blocked := batch3Execute(t, registry, "web_scrape", map[string]any{
 		"url":                "https://example.com/private/page",
@@ -359,7 +359,7 @@ func TestBatch3WebScrapeRobotsTxt(t *testing.T) {
 
 // Parity: tools/tests/tools/test_web_scrape_tool.py::TestWebScrapeSSRF::test_blocks_internal_targets
 func TestBatch3WebScrapeBlocksInternalTargets(t *testing.T) {
-	registry := batch3TestRegistry(t, "")
+	registry := batch3DocTestRegistry(t, "")
 	for _, target := range []string{
 		"http://192.168.1.1/admin",
 		"http://127.0.0.1/secret",
@@ -419,7 +419,7 @@ func TestBatch3WebScrapeBlocksInternalRedirect(t *testing.T) {
 		http.Redirect(w, r, "http://127.0.0.1/secret", http.StatusFound)
 	}))
 	defer server.Close()
-	registry := batch3TestRegistry(t, server.URL)
+	registry := batch3DocTestRegistry(t, server.URL)
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "https://example.com/redirect"})
 	if result["blocked_by_ssrf_protection"] != true {

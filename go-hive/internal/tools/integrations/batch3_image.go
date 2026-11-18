@@ -63,6 +63,9 @@ type batch3Deps struct {
 	sleep     func(context.Context, time.Duration) error
 	publicURL func(*url.URL) bool
 	baseURL   string
+	// scrapeResolver is used by web_scrape; it shares this dependency surface
+	// because the batch-3 tools are built by one registry constructor.
+	scrapeResolver batch3Resolver
 }
 
 type batch3Option func(*batch3Deps)
@@ -100,9 +103,10 @@ func withBatch3BaseURL(base string) batch3Option {
 
 func defaultBatch3Deps() batch3Deps {
 	return batch3Deps{
-		getenv: os.Getenv,
-		now:    time.Now,
-		sleep:  batch3Sleep,
+		getenv:         os.Getenv,
+		now:            time.Now,
+		sleep:          batch3Sleep,
+		scrapeResolver: batch3DefaultScrapeResolver(),
 	}
 }
 
