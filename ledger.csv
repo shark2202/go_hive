@@ -6,3 +6,4 @@ time,routes_go,routes_py,tests,tool_go,tool_dirs,parity_missing,note
 2026-11-18 20:53,156,141,2697,19,104,0,G4 复核：2124 注记全量 100% 命中；614 豁免中 25 条待修正（已派 parityfix）
 2026-11-18 20:57,157,141,2706,19,104,0,wave2/gap 合并：compact-and-fork + supersession，冲突取已修复命名
 2026-11-18 20:58,157,141,2715,19,104,0,wave2/adapt 合并：colony/host 运行时导出
+2026-11-18 21:02,157,141,2715,19,104,0,parity 修正合并：36 处注解、41 条真实引用、伪称清零（抽样 5 条+3 条豁免复核为真）
