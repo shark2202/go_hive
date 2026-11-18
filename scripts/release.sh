@@ -237,9 +237,18 @@ full license text.
 EOF
 	fi
 
+	# 第三方依赖与许可证清单（R4）：仓库有就随包分发，没有则明确跳过
+	extra_files=""
+	if [ -f "$module_dir/THIRD_PARTY_NOTICES.md" ]; then
+		cp "$module_dir/THIRD_PARTY_NOTICES.md" "$pkg_dir/THIRD_PARTY_NOTICES.md"
+		extra_files="THIRD_PARTY_NOTICES.md"
+	else
+		log "WARN: THIRD_PARTY_NOTICES.md missing; archive will not carry a dependency licence list"
+	fi
+
 	(
 		cd "$pkg_dir"
-		sha256_write "$bin_name" LICENSE NOTICE README.md > SHA256SUMS
+		sha256_write "$bin_name" LICENSE NOTICE README.md $extra_files > SHA256SUMS
 	)
 	if ! ( cd "$pkg_dir" && sha256_check SHA256SUMS >/dev/null ); then
 		die "internal SHA256SUMS verification failed for $os/$arch"
@@ -247,10 +256,10 @@ EOF
 
 	if [ "$os" = "windows" ]; then
 		archive_name="hive-$version-$os-$arch.zip"
-		( cd "$pkg_dir" && zip -q -X "$release_dir/$archive_name" "$bin_name" LICENSE NOTICE README.md SHA256SUMS )
+		( cd "$pkg_dir" && zip -q -X "$release_dir/$archive_name" "$bin_name" LICENSE NOTICE README.md SHA256SUMS $extra_files )
 	else
 		archive_name="hive-$version-$os-$arch.tar.gz"
-		tar -czf "$release_dir/$archive_name" -C "$pkg_dir" "$bin_name" LICENSE NOTICE README.md SHA256SUMS
+		tar -czf "$release_dir/$archive_name" -C "$pkg_dir" "$bin_name" LICENSE NOTICE README.md SHA256SUMS $extra_files
 	fi
 	[ -s "$release_dir/$archive_name" ] || die "archive not created: $archive_name"
 	printf '%s\n' "$archive_name" >> "$work_dir/archives.txt"
