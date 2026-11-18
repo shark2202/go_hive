@@ -20,6 +20,7 @@ import (
 )
 
 type sessionToolCatalogue struct {
+	root         string
 	toolbox      *builtin.Toolbox
 	builtinNames map[string]struct{}
 	registry     *tools.ToolRegistry
@@ -52,6 +53,7 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 	}
 
 	catalogue := &sessionToolCatalogue{
+		root:         root,
 		toolbox:      toolbox,
 		builtinNames: map[string]struct{}{},
 		registry:     registry,
@@ -109,16 +111,19 @@ var sessionIntegrationInstallers = []struct {
 	{"batch7-lane7", integrations.InstallBatch7Lane7},
 	{"batch7-lane8", integrations.InstallBatch7Lane8},
 	{"batch7-lane9", integrations.InstallBatch7Lane9},
+	{"batch8-final", integrations.InstallBatch8Final},
 }
 
-// networkScannerTools are the batch-2 tools that send probe traffic at
-// third-party hosts. They are registered and then dropped unless
+// networkScannerTools are the tools that send probe traffic at third-party
+// hosts. They are registered and then dropped unless
 // hiveserver.NetworkScannersEnabled says otherwise.
 var networkScannerTools = []string{
 	"port_scan",
 	"dns_security_scan",
 	"ssl_tls_scan",
 	"http_headers_scan",
+	"subdomain_enumerate",
+	"tech_stack_detect",
 }
 
 // installIntegrationBatches publishes every ported batch into registry and
@@ -148,6 +153,12 @@ func (c *sessionToolCatalogue) Defs() []llm.ToolDef { return c.defs }
 
 // Execute runs one tool call, dispatching builtins to their sandbox and
 // integration tools to the registry executor.
+//
+// attach_file needs the session working directory, which upstream passes as a
+// hidden CONTEXT_PARAM; sessionToolContext injects it here (never in the schema).
+// Attachments get their chip copies published against c.root before the result
+// is handed to the text-only chat runtime, so a publish failure surfaces as a
+// tool error instead of a silent "attached" claim.
 func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input map[string]any) (string, bool, error) {
 	if _, ok := c.builtinNames[name]; ok {
 		result, err := c.toolbox.Execute(ctx, name, input)
@@ -156,9 +167,36 @@ func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input m
 		}
 		return result.Content, result.IsError, nil
 	}
-	result, err := c.registry.GetExecutor().Execute(ctx, tools.ToolUse{Name: name, Input: input})
+	result, err := c.registry.GetExecutor().Execute(ctx, tools.ToolUse{
+		Name:  name,
+		Input: c.sessionToolContext(name, input),
+	})
 	if err != nil {
 		return "", false, err
 	}
-	return result.Content, result.IsError, nil
+	content, isError := result.Content, result.IsError
+	if len(result.Attachments) > 0 {
+		content, isError = integrations.PublishAttachFileResult(content, result.Attachments, c.root)
+	}
+	return content, isError, nil
+}
+
+// sessionToolContext injects the per-session values attach_file resolves
+// against (the caller's working directory and the storage root). Inputs the
+// model already supplied win, and the caller's map is never mutated.
+func (c *sessionToolCatalogue) sessionToolContext(name string, input map[string]any) map[string]any {
+	if name != "attach_file" || c.root == "" {
+		return input
+	}
+	merged := make(map[string]any, len(input)+2)
+	for key, value := range input {
+		merged[key] = value
+	}
+	if _, ok := merged["session_cwd"]; !ok {
+		merged["session_cwd"] = c.root
+	}
+	if _, ok := merged["storage_path"]; !ok {
+		merged["storage_path"] = c.root
+	}
+	return merged
 }
