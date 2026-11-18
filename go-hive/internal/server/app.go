@@ -163,8 +163,9 @@ func NewApp(deps AppDeps) *App {
 		Notifier: newSentinelNotifierAdapter(),
 	})
 	RegisterExecutionRoutes(mux, ExecutionRouteDeps{
-		Manager: deps.Manager,
-		Home:    deps.Home,
+		Manager:       deps.Manager,
+		Home:          deps.Home,
+		CreateSession: deps.CreateSession,
 	})
 	RegisterColonyRoutes(mux, ColonyRouteDeps{
 		Home:    deps.Home,

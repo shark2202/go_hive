@@ -22,8 +22,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	colonyhost "github.com/aden-hive/hive-go/internal/host"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/queen"
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
@@ -247,6 +249,11 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 
 	manager := hiveserver.NewSessionManager()
 
+	home, err := r.home()
+	if err != nil {
+		fmt.Fprintf(r.Stdout, "Warning: cannot resolve HIVE_HOME: %v\n", err)
+	}
+
 	var liveMu sync.Mutex
 	live := make([]*hiveserver.Session, 0)
 
@@ -266,16 +273,15 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 		record.ColonyID = colonyID
 		record.WorkerPath = colonyPath
 		record.LoadedAt = float64(time.Now().UnixNano()) / 1e9
+		// The live runtime behind the session: colony spawn/run/SSE entry.
+		// Nil when no provider is configured, in which case the worker and
+		// colony routes keep their on-disk fallbacks.
+		record.Colony = r.buildColonyHost(colonyPath, colonyID, home, args.str("model"))
 		manager.AddSession(record)
 		liveMu.Lock()
 		live = append(live, record)
 		liveMu.Unlock()
 		fmt.Fprintf(r.Stdout, "Loaded colony: %s → session %s\n", colonyID, sessionID)
-	}
-
-	home, err := r.home()
-	if err != nil {
-		fmt.Fprintf(r.Stdout, "Warning: cannot resolve HIVE_HOME: %v\n", err)
 	}
 
 	app := hiveserver.NewApp(hiveserver.AppDeps{
@@ -364,6 +370,38 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	}
 }
 
+// buildColonyHost constructs the live colony runtime a `serve --colony`
+// session holds (colony spawn/run/SSE entry). It returns nil when no provider
+// is configured: a host without an LLM could never run a worker, so the
+// session keeps its cold record and the runtime routes fall back to disk.
+func (r *Runner) buildColonyHost(colonyPath, colonyID string, home hivehome.Home, model string) hiveserver.ColonyRuntime {
+	provider, err := resolveChatProvider(home, model)
+	if err != nil {
+		fmt.Fprintf(r.Stdout, "Warning: colony runtime unavailable for %s: %v\n", colonyID, err)
+		return nil
+	}
+	toolbox := builtin.New(colonyPath)
+	built, err := colonyhost.New(colonyhost.Config{
+		ColonyID:    colonyID,
+		AgentSpec:   agentloop.NewAgentSpec(colonyID, colonyID, "Colony "+colonyID),
+		StoragePath: colonyPath,
+		LLM:         provider,
+		Tools:       toolbox.Defs(),
+		ToolExecutor: func(request agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
+			result, execErr := toolbox.Execute(context.Background(), request.Name, request.Input)
+			if execErr != nil {
+				return agentloop.ToolResult{}, execErr
+			}
+			return agentloop.ToolResult{Content: result.Content, IsError: result.IsError}, nil
+		},
+	})
+	if err != nil {
+		fmt.Fprintf(r.Stdout, "Warning: colony runtime unavailable for %s: %v\n", colonyID, err)
+		return nil
+	}
+	return built
+}
+
 // createChatSession is the standard (non-colony) POST /api/sessions branch:
 // it builds a live queen session with a real provider, tool box, agent loop and
 // on-disk transcript. The session is registered before the initial prompt is
@@ -419,17 +457,12 @@ func (r *Runner) createChatSession(
 	} else {
 		toolbox := builtin.New("")
 		sessionDir := filepath.Join(home.QueensDir(), "default", "sessions", sessionID)
+		tools := newSessionToolCatalogue(sessionDir, toolbox)
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
-			LLM:   provider,
-			Tools: toolbox.Defs(),
-			Execute: func(ctx context.Context, name string, input map[string]any) (string, bool, error) {
-				result, err := toolbox.Execute(ctx, name, input)
-				if err != nil {
-					return "", false, err
-				}
-				return result.Content, result.IsError, nil
-			},
-			Root: sessionDir,
+			LLM:     provider,
+			Tools:   tools.Defs(),
+			Execute: tools.Execute,
+			Root:    sessionDir,
 		})
 		if err != nil {
 			fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, err)

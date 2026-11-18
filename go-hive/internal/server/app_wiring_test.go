@@ -43,6 +43,8 @@ func assertRoutesNotMissing(t *testing.T, app *App, cases []struct{ method, path
 	}
 }
 
+// Parity-exempt: assembly guard. Every table wired into NewApp must answer on
+// its own prefix instead of falling through to the mux.
 func TestWiredRouteTablesAreReachable(t *testing.T) {
 	app := newAppForTest(t, AppDeps{Home: hivehome.Home{Root: t.TempDir()}})
 	assertRoutesNotMissing(t, app, []struct{ method, path string }{
