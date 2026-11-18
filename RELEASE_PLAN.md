@@ -6,7 +6,7 @@
 
 | # | 面 | 判据 | 现状 |
 | --- | --- | --- | --- |
-| R1 | 功能完整性 | 104/104 集成模块、原生工具齐全，或发布支持矩阵并明示缺口 | 约 90/104 模块已并（≈860/865 action）；剩余清单由 `w8-wireall` 生成 `REMAINING_MODULES.md` |
+| R1 | 功能完整性 | 104/104 集成模块、原生工具齐全，或发布支持矩阵并明示缺口 | **99/104 模块（851/865 action）已接入会话表**；剩 3 模块/3 action（attach_file、subdomain_enumerator、tech_stack_detector）在 `w9-final3`；清单见 `REMAINING_MODULES.md` |
 | R2 | 分发形态 | 六平台归档 + SHA256 + 安装脚本；单二进制自带 UI | **已完成**：`release.sh` 实测产出 6 归档 + SHA256SUMS，`install.sh` 校验/拒装均验证；`hive-embed` 实测 `/`、深链、assets 200 |
 | R3 | 文档 | 用户 README、快速开始、配置参考、支持矩阵、变更日志 | **已完成**：`docs/` 四份合并，命令均实跑取证 |
 | R4 | 许可合规 | Apache-2.0 LICENSE、NOTICE、第三方依赖与许可证清单 | **已完成**：LICENSE 逐字节副本 + NOTICE + THIRD_PARTY（28 Go / 27 前端直接依赖） |
