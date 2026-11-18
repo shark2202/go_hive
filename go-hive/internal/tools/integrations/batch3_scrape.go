@@ -30,18 +30,18 @@ const batch3BrowserUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleW
 
 type batch3Resolver func(ctx context.Context, host string) ([]string, error)
 
-type batch3Deps struct {
+type batch3ScrapeDeps struct {
 	scrapeResolver batch3Resolver
 }
 
-type batch3Option func(*batch3Deps)
+type batch3ScrapeOption func(*batch3ScrapeDeps)
 
-func withBatch3Resolver(resolver batch3Resolver) batch3Option {
-	return func(deps *batch3Deps) { deps.scrapeResolver = resolver }
+func withBatch3Resolver(resolver batch3Resolver) batch3ScrapeOption {
+	return func(deps *batch3ScrapeDeps) { deps.scrapeResolver = resolver }
 }
 
-func defaultBatch3Deps() batch3Deps {
-	return batch3Deps{scrapeResolver: func(ctx context.Context, host string) ([]string, error) {
+func defaultBatch3ScrapeDeps() batch3ScrapeDeps {
+	return batch3ScrapeDeps{scrapeResolver: func(ctx context.Context, host string) ([]string, error) {
 		return net.DefaultResolver.LookupHost(ctx, host)
 	}}
 }
@@ -312,7 +312,7 @@ func batch3CheckURLTarget(ctx context.Context, target string, resolver batch3Res
 		return ""
 	}
 	if resolver == nil {
-		resolver = defaultBatch3Deps().scrapeResolver
+		resolver = defaultBatch3ScrapeDeps().scrapeResolver
 	}
 	lookupCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
