@@ -68,6 +68,8 @@
 ## 4. 时间治理：检查点与止损
 
 - **检查点节奏**：每个 wave 边界 + 每 2 小时一次，执行 `checkpoint.sh` 写入台账。
+- **步调核算**：每个 wave 边界执行 `uv run --no-project python go_hive/scripts/pace.py`，输出实测产能（lane-hour）、单位产出（行/路由/测试 per lane-hour）、各维度 ETA 与 EVM（EV/PV/SPI）。计划校准只依据该核算结果，不依据感觉。
+- **产能口径**：并行阶段墙钟会低估投入，一律以 lane-hour（并发 lane 数 × 墙钟小时）为分母；路由与测试在合并时跳变，按波次记账而非连续速率。
 - **台账指标**：Go 路由数 / 上游路由数、测试数、集成工具文件数、parity missing、备注。
 - **lane 时间盒**：软 90 分钟、硬 150 分钟。超硬时限由 Coordinator `steer` 或 `stop`，未完成部分转 wave 2 或砍。
 - **止损线**：

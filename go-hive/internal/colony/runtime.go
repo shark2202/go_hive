@@ -16,6 +16,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/schemas"
+	"github.com/aden-hive/hive-go/internal/skills"
 	"github.com/aden-hive/hive-go/internal/tools"
 	"github.com/aden-hive/hive-go/internal/tracker"
 )
@@ -52,6 +53,18 @@ type RuntimeOptions struct {
 	// Extra workers stay QUEUED until a slot opens. <=0 uses the colony
 	// default (HIVE_MAX_CONCURRENT_WORKERS, 4).
 	MaxConcurrentWorkers int
+
+	// WorkerLLM is the completer workers call. Nil falls back to LLM (the Go
+	// port does not split queen/worker models by default; upstream resolves
+	// worker_llm separately).
+	WorkerLLM llm.Completer
+	// SkillsProvider supplies the colony's skill catalog for the read surface
+	// (GET /colony/skills). Nil reports "catalog unavailable", matching
+	// upstream's absent skills_manager.
+	SkillsProvider func() ([]*skills.ParsedSkill, bool)
+	// ToolProviderMap attributes tool names to providers for the tools read
+	// surface (upstream ColonyRuntime._tool_provider_map).
+	ToolProviderMap map[string]string
 }
 
 type SpawnOptions struct {
@@ -65,6 +78,9 @@ type BatchTask struct {
 	// Data is forwarded to the worker as AgentContext.InputData. It is
 	// where per-task payloads (row batches, URLs, account ids) belong.
 	Data map[string]any
+	// ProfileName tags the worker with the colony worker profile it was
+	// dispatched from; empty for legacy / single-template colonies.
+	ProfileName string
 }
 
 type SpawnBatchOptions struct {
@@ -79,6 +95,8 @@ type WorkerBuildOptions struct {
 	SpawnTools   []llm.ToolDef
 	PreloadTools []string
 	InputData    map[string]any
+	// ProfileName tags the worker with its colony worker profile.
+	ProfileName string
 }
 
 type SeedMessage struct {
@@ -102,6 +120,13 @@ type ColonyRuntime struct {
 	toolsMu         sync.RWMutex
 	enabledMCPTools []string
 	mcpToolNamesAll map[string]struct{}
+
+	workerLLM       llm.Completer
+	skillsProvider  func() ([]*skills.ParsedSkill, bool)
+	toolProviderMap map[string]string
+	// dispatchBlocked stops queued workers from starting during a stop sweep
+	// (and, when a caller holds it, until UnblockDispatch). Guarded by mu.
+	dispatchBlocked bool
 
 	mu       sync.Mutex
 	workers  map[string]*Worker
@@ -156,6 +181,14 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 		runtime.mcpToolNamesAll = make(map[string]struct{}, len(opts.MCPToolNames))
 		for name := range opts.MCPToolNames {
 			runtime.mcpToolNamesAll[name] = struct{}{}
+		}
+	}
+	runtime.workerLLM = opts.WorkerLLM
+	runtime.skillsProvider = opts.SkillsProvider
+	if opts.ToolProviderMap != nil {
+		runtime.toolProviderMap = make(map[string]string, len(opts.ToolProviderMap))
+		for name, provider := range opts.ToolProviderMap {
+			runtime.toolProviderMap[name] = provider
 		}
 	}
 	return runtime
@@ -294,6 +327,7 @@ func (r *ColonyRuntime) BuildWorker(opts WorkerBuildOptions) *Worker {
 		spawnTools = r.applyToolAllowlist(r.tools)
 	}
 	worker := NewWorker(opts.WorkerID, opts.Task, streamID)
+	worker.ProfileName = opts.ProfileName
 	worker.Context = r.buildWorkerContext(worker, r.agentSpec, spawnTools, storage, opts.PreloadTools)
 	if opts.InputData != nil {
 		worker.Context.InputData = opts.InputData
@@ -449,6 +483,10 @@ func (r *ColonyRuntime) SpawnBatch(ctx context.Context, tasks []BatchTask) ([]st
 
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.spawn_batch (worker
 func (r *ColonyRuntime) SpawnBatchWithOptions(ctx context.Context, tasks []BatchTask, opts SpawnBatchOptions) ([]string, error) {
+	// A fresh spawn is a new work request (a resumed queen turn), so it
+	// re-opens dispatch after a stop sweep. The block exists to keep workers
+	// from starting *into* a sweep, not to gate the next turn.
+	r.UnblockDispatch()
 	runCtx := r.runtimeContext(ctx)
 	batchID := ""
 	if len(tasks) > 1 {
@@ -481,10 +519,11 @@ func (r *ColonyRuntime) spawnBatchOn(runCtx context.Context, tasks []BatchTask, 
 	workers := make([]*Worker, 0, len(tasks))
 	for index, task := range tasks {
 		worker := r.BuildWorker(WorkerBuildOptions{
-			WorkerID:  ids[index],
-			Task:      task.Task,
-			StreamID:  task.StreamID,
-			InputData: task.Data,
+			WorkerID:    ids[index],
+			Task:        task.Task,
+			StreamID:    task.StreamID,
+			InputData:   task.Data,
+			ProfileName: task.ProfileName,
 		})
 		worker.BatchID = batchID
 		worker.BatchIndex = index
@@ -687,6 +726,10 @@ func (r *ColonyRuntime) runGatedWorker(ctx context.Context, worker *Worker) {
 		return
 	}
 	defer r.releaseWorkerSlot()
+	if r.DispatchBlocked() {
+		r.finishWorkerStopped(worker, "Worker was not started — colony dispatch is blocked.")
+		return
+	}
 	if !worker.beginRun(ctx) {
 		r.finishWorkerStopped(worker, "Worker was stopped before it started.")
 		return
@@ -843,8 +886,10 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 func (r *ColonyRuntime) publishReport(worker *Worker, finalText string) {
 	payload := worker.reportPayload()
 	payload["colony_id"] = r.streamID
-	payload["summary"] = reportSummary(worker, finalText)
+	summary := reportSummary(worker, finalText)
+	payload["summary"] = summary
 	payload["task"] = worker.Task
+	worker.setResultSummary(summary)
 	if worker.BatchID != "" {
 		payload["batch_id"] = worker.BatchID
 		payload["batch_index"] = worker.BatchIndex

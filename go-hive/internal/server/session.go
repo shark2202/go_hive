@@ -63,6 +63,14 @@ type Session struct {
 	ColonySpawned   bool
 	SpawnedColonyID string
 
+	// SupersededBy is the successor session id once this session has been
+	// forked away from; /chat locks it. ForkKickoffPending marks a freshly
+	// forked session whose synthetic kickoff turn must not fork again — the
+	// first genuine user message clears it. Mirrors the Session dataclass
+	// fields in framework/server/session_manager.py.
+	SupersededBy       string
+	ForkKickoffPending bool
+
 	QueenResumeFrom string
 	QueenDir        string
 	QueenName       string
