@@ -37,14 +37,23 @@
 **工具**
 
 - 内建：`read_file`、`write_file`、`terminal_exec`（沙箱根为进程 cwd；默认 60s、上限 600s；每路输出 256 KiB）。
-- 集成：10 个模块 / 165 个 action 接入聊天会话（account_info、airtable、csv、github、risk_score、slack、stripe、telegram、time、trello）。
-- 另行移植但**未接入**会话目录：batch2 10 个模块 / 19 个 action（arxiv、duckduckgo、wikipedia、openmeteo、yahoo finance、youtube transcript、dns/http/tls/port 扫描），batch3 3 个模块 / 8 个 action（excel、pdf_read、web_scrape）。
+- 集成：23 个安装器把 **102 个模块 / 854 个 action** 接入聊天会话目录（首个 10 模块 / 165 action 来自 `integrations.New` 的声明式 catalog，其余由 batch2–batch8 安装器注册）；另有 `internal/senders` 提供 1 个模块 / 9 个 action，受 `email_senders` 开关控制，默认关闭。合计 **103 个模块 / 863 个 action**（模块面 102+1/104）。
+- 有意排除 2 个依赖 DuckDB 的 SQL action（`csv_sql`、`excel_sql`），调用时明确返回未知 action。
+- 默认关闭的探测类工具：`port_scan`、`dns_security_scan`、`ssl_tls_scan`、`http_headers_scan`、`subdomain_enumerate`、`tech_stack_detect`，由 `HIVE_NETWORK_SCANNERS` 或 `hive.config.json: network_scanners` 开启；默认会话目录实测 96 个集成工具（103 − 6 扫描器 − senders）。
+- `attach_file`：本地文件转 attachment chip + 文本预览；图片生成 `ImageContent`，但 `serve` 的 chat runtime 只传文本，PDF 无 `file` 块，结果 JSON 的 `inline` 字段如实标注（多模态只到工具结果层）。
 - MCP 客户端（stdio/http/sse/unix）、连接池、注册表与 `hive mcp` 14 个子命令。
 
 **子系统**
 
 - `internal/hivehome`、`session`、`storage`、`credentials`（Fernet、四种存储、OAuth2、模板）、`skills`、`memory`、`tracker`、`agentloop`、`agents`、`colony`、`orchestrator`、`playbook`、`ratelimit`、`triggers`、`eventbus`、`tasks`、`mcpregistry`、`maintenance`（三档 janitor）、`sessionreport`、`attachments`、`sentinel`、`qmail`、`charts`。
 - 离线、无 cgo 构建：`CGO_ENABLED=0`，SQLite 使用 `modernc.org/sqlite`，六个平台交叉编译。
+
+**打包与分发**
+
+- `scripts/release.sh` 产出六平台归档（darwin/linux `tar.gz`、windows `zip`）与发布级 `SHA256SUMS`；包内另带 `hive[.exe] LICENSE NOTICE README.md SHA256SUMS`。
+- 默认以 `-tags embed_ui` 构建：`scripts/embed_ui.sh` 先构建/暂存 `core/frontend/dist`，dashboard 因此内嵌在单二进制里，`serve` 打印 `Dashboard:` 行并直接提供 `/`。前端不可用时会退回普通二进制并明确告警。
+- `install.sh` 按平台选归档、强制校验发布级与包内 `SHA256SUMS`、安装到 `~/.local/bin`。
+- 本次归档的大小与 SHA-256 见 `release-notes-v1.0.14-go.1.md`。
 
 ### 变更
 
@@ -56,31 +65,46 @@
 
 | 项 | 命令 | 结果 |
 | --- | --- | --- |
-| 构建 | `make build`（`CGO_ENABLED=0 GOPROXY=off`） | 通过，`dist/hive` |
-| 版本 | `./dist/hive --version` | `hive 1.0.14-go.1` |
-| 单元/包测试 | `go test ./...` | 全部 `ok`，退出码 0 |
-| 六平台交叉编译 | `make cross` | 6/6 通过 |
+| 构建 | `make ci`（`CGO_ENABLED=0 GOPROXY=off`） | 退出码 0；gofmt OK；vet 无输出 |
+| 版本 | `./dist/hive --version`（发布包解压后同） | `hive 1.0.14-go.1` |
+| 单元/包测试 | `go test ./...` | 4,158 条执行：4,154 pass / 4 skip / 0 fail；37 包 `ok`，6 包无测试文件 |
+| 测试声明数 | `bash scripts/check_parity.sh .` | 4,160（含 `e2e` 构建标签下的 2 条） |
+| E2E | `go test -tags e2e -count=1 ./e2e/...` | `ok …/e2e 3.247s` |
+| 六平台交叉编译 | `make cross` + `scripts/release.sh` | 6/6 通过 |
 | cgo | `grep -rn 'import "C"' --include='*.go' .` | 0 |
-| parity 注解 | `check_parity.sh` | 3024/3024，0 missing |
-| parity 引用 | `check_parity_targets.sh` | 2636 refs，0 missing，134 shorthand/prose |
+| parity 注解 | `check_parity.sh` | 4160/4160，0 missing |
+| parity 引用 | `check_parity_targets.sh` | 4,357 refs（3,527 test + 830 prod），0 missing |
+| 发布归档 | `scripts/release.sh` | 6 归档 + `SHA256SUMS`；`shasum -a 256 -c` 全部 OK |
+| 发布包运行 | 解压 `hive-1.0.14-go.1-darwin-arm64.tar.gz` | `--version` 正确；`/`、`/sessions`、`/favicon.png` 均 200 |
 | 文档流程 | `quickstart.md` | 构建、serve、健康检查、创建会话、无 key 503、两种协议（假上游）、SSE、停止均实跑 |
 
-`go test -tags e2e ./e2e/...` 不在本次文档验证的执行范围内；仓库的交付记录称其通过，本文不重复声称。
+`go test -tags e2e ./e2e/...` 在本次发布验证中执行：`ok github.com/aden-hive/hive-go/e2e 3.247s`。它用 `httptest` + 脚本化 completer，不访问网络。
 
 ### 已知缺口
 
-1. **集成工具**：81 个 backlog 模块未移植；已移植的 27 个 action（batch2 + batch3）没有接入会话工具目录；全部集成只对假上游验证，没有真实第三方调用。
-2. **Colony**：`serve --colony` 能加载并注册会话，但多 worker 编排闭环没有用真实模型跑过。
-3. **Queen mail**：路由已挂载，`serve` 未注入后端。
-4. **Claude Code queens**：运行时未接入。
-5. **Browser 工具**：未移植。
-6. **Dashboard**：仓库不附带 `frontend/dist`；`serve` 只提供 API。
-7. **逐 token 模型流**：没有；SSE 只发会话事件。
-8. **Sentinel**：引擎单测通过，未接真实 Telegram/Slack。
-9. **平台**：只有 darwin/arm64 跑过测试；Windows 的原子替换、信号、PTY 行为未验证。
-10. **安全**：没有在线 CVE 扫描（无 `govulncheck`/OSV/nancy）；依赖版本锁定、无 cgo、无运行时下载。
-11. **持久化兼容**：未验证与 Python 版共用同一个 `HIVE_HOME`；建议给 Go 版独立目录。
+1. **集成工具**：覆盖 102+1/104 个模块、863/865 个 action；`csv_sql`、`excel_sql` 因 DuckDB 依赖有意排除。全部集成只对假上游验证，没有真实第三方调用（R10 阻塞）。
+2. **`attach_file` 多模态**：图片/PDF 只到 attachment chip 与文本预览；`serve` 的 chat runtime 只传文本，模型看不到图片或 PDF 字节。
+3. **Colony**：`serve --colony` 能加载并注册会话，但多 worker 编排闭环没有用真实模型跑过。
+4. **Queen mail**：路由已挂载，`serve` 未注入后端。
+5. **Claude Code queens**：运行时未接入。
+6. **Browser 工具**：未移植。
+7. **Dashboard**：发布包内嵌 dashboard；源码树不附带 `frontend/dist`，需要 `scripts/embed_ui.sh`（或 `make embed-ui`）现场构建。
+8. **逐 token 模型流**：没有；SSE 只发会话事件。
+9. **Sentinel**：引擎单测通过，未接真实 Telegram/Slack。
+10. **平台**：只有 darwin/arm64 跑过测试；Windows 的原子替换、信号、PTY 行为未验证。
+11. **安全**：没有在线 CVE 扫描（无 `govulncheck`/OSV/nancy）；依赖版本锁定、无 cgo、无运行时下载。
+12. **默认关闭**：6 个网络扫描器需 `HIVE_NETWORK_SCANNERS`，`senders` 需 `HIVE_EMAIL_SENDERS`；不设置时它们不在会话目录里。
+13. **持久化兼容**：未验证与 Python 版共用同一个 `HIVE_HOME`；建议给 Go 版独立目录。
 
 ### 升级说明
 
 这是第一个 Go 移植版本，没有从更早 Go 版本升级的迁移路径。`HIVE_HOME` 默认仍是 `~/.hive`；如果本机已有 Python 版数据，建议显式设置独立的 `HIVE_HOME` 再启动，避免两套实现互相覆盖。
+
+从发布归档安装：
+
+```bash
+bash go_hive/install.sh --from go_hive/go-hive/dist/release
+hive --version
+```
+
+或手工解压任意平台归档（包内自带 `SHA256SUMS`），把 `hive`（Windows 为 `hive.exe`）放到 `PATH`。升级时用同一条 `install.sh` 覆盖安装即可；发布包不读写旧 Go 二进制，`HIVE_HOME` 下的会话与凭据格式未变。
