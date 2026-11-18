@@ -1,0 +1,27 @@
+Go Hive
+=======
+
+Go Hive (go_hive/go-hive) is a pure-Go rewrite of OpenHive.
+
+Upstream project : OpenHive (aden-hive/hive)
+Upstream source  : https://github.com/aden-hive/hive
+Upstream license : Apache License, Version 2.0
+Copyright        : Copyright 2024 Aden
+
+This distribution contains a Go implementation that ports the behaviour of
+the upstream Python runtime (reference: aden-hive / aden-tools 1.0.14,
+commit c6c2cdcf). The Go sources are new or substantially rewritten rather
+than a line-by-line copy, so this NOTICE records the derivation explicitly.
+
+The upstream copyright notice above and the Apache License 2.0 terms in the
+root LICENSE file are retained unchanged. Nothing in this NOTICE modifies,
+supersedes or removes any upstream copyright notice or license term.
+
+The root LICENSE file covers this repository. The Go module in
+go_hive/go-hive carries the same Apache-2.0 license in its own LICENSE file
+(an identical copy, verified by SHA-256).
+
+Third-party components and the licenses they are distributed under are
+listed in THIRD_PARTY_NOTICES.md at the repository root. That file records
+license names, roles and source links only; it does not reproduce third-party
+license texts.
