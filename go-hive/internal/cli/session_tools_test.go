@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/aden-hive/hive-go/internal/tools"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 )
 
@@ -109,5 +110,61 @@ func TestSessionToolCatalogueInstallsWaveFourModules(t *testing.T) {
 	t.Setenv("HIVE_EMAIL_SENDERS", "1")
 	if _, ok := names()["senders"]; !ok {
 		t.Fatal("senders missing from the catalogue while email_senders is on")
+	}
+}
+
+// Parity-exempt: assembly guard. Every installer in the wiring table must put
+// its whole tool set into one session catalogue, and the installed counter must
+// match the registry so a silent overwrite cannot hide a collision.
+func TestSessionToolCatalogueInstallsEveryBatch(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("HIVE_NETWORK_SCANNERS", "1")
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+
+	for _, entry := range sessionIntegrationInstallers {
+		probe := tools.NewToolRegistry()
+		if count := entry.install(probe); count == 0 {
+			t.Fatalf("%s installed no tools", entry.name)
+		}
+		for _, name := range probe.RegisteredNames() {
+			if !catalogue.registry.HasTool(name) {
+				t.Fatalf("%s: tool %q never reached the session catalogue", entry.name, name)
+			}
+		}
+	}
+
+	if got, want := catalogue.installed, len(catalogue.registry.RegisteredNames()); got != want {
+		t.Fatalf("installed counter = %d, registry holds %d tools (an installer overwrote another?)", got, want)
+	}
+}
+
+// Parity-exempt: assembly guard. The network scanners are opt-in: they must be
+// absent by default and present once HIVE_NETWORK_SCANNERS is set, while the
+// rest of batch 2 stays installed either way.
+func TestSessionToolCatalogueKeepsNetworkScannersOffByDefault(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("HIVE_NETWORK_SCANNERS", "")
+
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+	for _, name := range networkScannerTools {
+		if catalogue.registry.HasTool(name) {
+			t.Fatalf("scanner %q registered while the opt-in is off", name)
+		}
+	}
+	for _, name := range []string{"arxiv", "duckduckgo", "search_wikipedia", "openmeteo", "yahoo_finance", "youtube_transcript"} {
+		if !catalogue.registry.HasTool(name) {
+			t.Fatalf("batch-2 tool %q missing while scanners are off", name)
+		}
+	}
+	if got, want := catalogue.installed, len(catalogue.registry.RegisteredNames()); got != want {
+		t.Fatalf("installed counter = %d, registry holds %d tools", got, want)
+	}
+
+	t.Setenv("HIVE_NETWORK_SCANNERS", "1")
+	catalogue = newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+	for _, name := range networkScannerTools {
+		if !catalogue.registry.HasTool(name) {
+			t.Fatalf("scanner %q missing while the opt-in is on", name)
+		}
 	}
 }

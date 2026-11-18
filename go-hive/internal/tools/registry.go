@@ -151,6 +151,24 @@ func (r *ToolRegistry) Register(name string, tool Tool, executor ToolExecutor) {
 	r.tools[name] = RegisteredTool{Tool: tool, Executor: executor}
 }
 
+// Unregister removes a tool and its executor. It is a no-op for unknown names
+// and keeps registration order for the remaining tools, so callers can drop
+// opt-in tools from a catalogue after a bulk Register.
+func (r *ToolRegistry) Unregister(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, exists := r.tools[name]; !exists {
+		return
+	}
+	delete(r.tools, name)
+	for i, existing := range r.toolOrder {
+		if existing == name {
+			r.toolOrder = append(r.toolOrder[:i], r.toolOrder[i+1:]...)
+			break
+		}
+	}
+}
+
 func (r *ToolRegistry) GetTools() map[string]Tool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

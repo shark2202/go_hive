@@ -31,14 +31,18 @@ type sessionToolCatalogue struct {
 // and merges their definitions with the builtin ones. A name collision keeps
 // the builtin: it is the more restricted, sandboxed implementation.
 //
-// The batch-3 modules (pdf_read/web_scrape, excel) and the email senders are
-// hand-written ports without a declarative catalog entry, so Install() never
-// sees them; each one registers into the same registry here.
+// Two groups register here: the declarative catalog (integrations.New, which
+// covers the hand-written first batch) and every ported batch installer in
+// sessionIntegrationInstallers. A new batch is one line in that table;
+// install_references_test.go fails when an exported installer is left out.
+//
+// The network scanners keep their own opt-in: they probe third-party hosts, so
+// they are dropped from the registry unless HIVE_NETWORK_SCANNERS (or the
+// network_scanners key in hive.config.json) turns them on.
 func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehome.Home) *sessionToolCatalogue {
 	registry := tools.NewToolRegistry()
 	installed := integrations.New(integrations.WithRoots(root)).Install(registry)
-	installed += integrations.InstallBatch3Doc(registry)
-	installed += integrations.InstallBatch3Excel(registry)
+	installed += installIntegrationBatches(registry, home)
 	if senders, err := hiveserver.RegisterSenderTools(registry, home); err != nil {
 		// A broken sender store costs the senders tool, not the whole
 		// catalogue; the feature gate itself returns (0, nil).
@@ -72,6 +76,71 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 		})
 	}
 	return catalogue
+}
+
+// sessionIntegrationInstallers lists every ported batch installer with the
+// label used for its commit/lane. Order matters only for readability: the
+// batches register disjoint tool names (verified by the session catalogue
+// test), so a collision would be a port bug rather than a precedence rule.
+var sessionIntegrationInstallers = []struct {
+	name    string
+	install func(*tools.ToolRegistry) int
+}{
+	{"batch2", integrations.InstallBatch2},
+	{"batch3-doc", integrations.InstallBatch3Doc},
+	{"batch3-excel", integrations.InstallBatch3Excel},
+	{"batch3-media", integrations.InstallBatch3Media},
+	{"batch4", integrations.InstallBatch4},
+	{"batch5-lane1", integrations.InstallBatch5Lane1},
+	{"batch5-lane2", integrations.InstallBatch5Lane2},
+	{"batch5-lane3", integrations.InstallBatch5Lane3},
+	{"batch5-lane4", integrations.InstallBatch5Lane4},
+	{"batch6-lane1", integrations.InstallBatch6Lane1},
+	{"batch6-lane2", integrations.InstallBatch6Lane2},
+	{"batch6-lane3", integrations.InstallBatch6Lane3},
+	{"batch6-lane4", integrations.InstallBatch6Lane4},
+	// Lane 5 predates the Install prefix; keep its published name.
+	{"batch7-lane5", integrations.Batch7Lane5Install},
+	{"batch7-lane1", integrations.InstallBatch7Lane1},
+	{"batch7-lane2", integrations.InstallBatch7Lane2},
+	{"batch7-lane3", integrations.InstallBatch7Lane3},
+	{"batch7-lane4", integrations.InstallBatch7Lane4},
+	{"batch7-lane6", integrations.InstallBatch7Lane6},
+	{"batch7-lane7", integrations.InstallBatch7Lane7},
+	{"batch7-lane8", integrations.InstallBatch7Lane8},
+	{"batch7-lane9", integrations.InstallBatch7Lane9},
+}
+
+// networkScannerTools are the batch-2 tools that send probe traffic at
+// third-party hosts. They are registered and then dropped unless
+// hiveserver.NetworkScannersEnabled says otherwise.
+var networkScannerTools = []string{
+	"port_scan",
+	"dns_security_scan",
+	"ssl_tls_scan",
+	"http_headers_scan",
+}
+
+// installIntegrationBatches publishes every ported batch into registry and
+// returns the number of tools left registered. The scanner filter runs after
+// the batch install so the opt-in stays a catalogue concern and every installer
+// keeps one behaviour.
+func installIntegrationBatches(registry *tools.ToolRegistry, home hivehome.Home) int {
+	installed := 0
+	for _, installer := range sessionIntegrationInstallers {
+		installed += installer.install(registry)
+	}
+	if hiveserver.NetworkScannersEnabled(home) {
+		return installed
+	}
+	for _, name := range networkScannerTools {
+		if !registry.HasTool(name) {
+			continue
+		}
+		registry.Unregister(name)
+		installed--
+	}
+	return installed
 }
 
 // Defs returns the tool definitions advertised to the model.

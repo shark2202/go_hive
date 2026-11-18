@@ -58,6 +58,19 @@ func EmailSendersEnabled(home hivehome.Home) bool {
 	return boolConfigFlag(home, "email_senders", false)
 }
 
+// NetworkScannersEnabled gates the four network-probing tools ported in batch
+// 2 (port_scan, dns_security_scan, ssl_tls_scan, http_headers_scan). They stay
+// off by default because they send probe traffic at third-party hosts; the
+// switch mirrors the email-sender opt-in (env first, then hive.config.json)
+// but is deliberately absent from FeatureKeys: it is an operator setting, not
+// a UI toggle.
+func NetworkScannersEnabled(home hivehome.Home) bool {
+	if value, ok := envFeatureFlag("HIVE_NETWORK_SCANNERS"); ok {
+		return value
+	}
+	return boolConfigFlag(home, "network_scanners", false)
+}
+
 // Parity: framework/config.py::get_memory_timeline_enabled
 func MemoryTimelineEnabled(home hivehome.Home) bool {
 	if value, ok := envFeatureFlag("HIVE_MEMORY_TIMELINE"); ok {
