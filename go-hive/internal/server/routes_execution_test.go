@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+	"unicode/utf8"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/eventbus"
@@ -335,7 +337,7 @@ func TestMarkColonySpawnedWritesMeta(t *testing.T) {
 func TestExecutionRoutesRejectUnknownSession(t *testing.T) {
 	deps, _ := executionDeps(t)
 	mux := executionMux(deps)
-	for _, route := range []string{"queen-context", "record-message", "cancel-queen", "presence", "mark-colony-spawned"} {
+	for _, route := range []string{"queen-context", "record-message", "cancel-queen", "presence", "mark-colony-spawned", "compact-and-fork"} {
 		recorder, body := serveColonyRequest(mux, colonyRequest(t, http.MethodPost, "/api/sessions/ghost/"+route, map[string]any{"message": "x", "colony_id": "x"}))
 		if recorder.Code != http.StatusNotFound {
 			t.Fatalf("%s = %d, want 404", route, recorder.Code)
@@ -347,5 +349,285 @@ func TestExecutionRoutesRejectUnknownSession(t *testing.T) {
 		if body["error"] != expected {
 			t.Fatalf("%s error = %v", route, body["error"])
 		}
+	}
+}
+
+// seedForkQueenSession writes a queen session transcript (and the conversation
+// meta.json a restore needs) under <home>/queens/<queen>/sessions/<id>.
+func seedForkQueenSession(t *testing.T, home hivehome.Home, queenName, sessionID string, parts ...map[string]any) string {
+	t.Helper()
+	dir := home.QueenSessionDir(queenName, sessionID)
+	store := agentloop.NewFileConversationStore(filepath.Join(dir, "conversations"))
+	for _, part := range parts {
+		seq, _ := part["seq"].(int)
+		if err := store.WritePart(seq, part); err != nil {
+			t.Fatalf("seed part %d: %v", seq, err)
+		}
+	}
+	if err := store.WriteCursor(map[string]any{"next_seq": len(parts)}); err != nil {
+		t.Fatalf("seed cursor: %v", err)
+	}
+	if err := store.WriteMeta(map[string]any{"system_prompt": "", "max_context_tokens": 180000}); err != nil {
+		t.Fatalf("seed meta: %v", err)
+	}
+	return dir
+}
+
+// Parity: framework/server/routes_execution.py::handle_compact_and_fork
+func TestCompactAndForkCompactsIntoFreshSession(t *testing.T) {
+	deps, home := executionDeps(t)
+	const sourceID = "session_20260101_000000_src00001"
+	const forkID = "session_20260101_000000_fork0002"
+
+	sourceDir := seedForkQueenSession(t, home, "queen_test", sourceID,
+		map[string]any{"seq": 0, "role": agentloop.RoleUser, "content": "first question"},
+		map[string]any{"seq": 1, "role": "assistant", "content": "first answer"},
+	)
+
+	model := &fakeChatLLM{}
+	source := NewSession(sourceID, eventbus.NewEventBus())
+	source.QueenName = "queen_test"
+	source.LLM = model
+	source.QueenExecutor = &QueenExecutor{}
+	deps.Manager.AddSession(source)
+	deps.GenerateSessionID = func(time.Time) (string, error) { return forkID, nil }
+
+	var got CreateSessionParams
+	deps.CreateSession = func(params CreateSessionParams) (*Session, error) {
+		got = params
+		return NewSession(*params.SessionID, eventbus.NewEventBus()), nil
+	}
+
+	recorder, body := serveColonyRequest(executionMux(deps),
+		httptest.NewRequest(http.MethodPost, "/api/sessions/"+sourceID+"/compact-and-fork", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", recorder.Code, recorder.Body.String())
+	}
+	if body["new_session_id"] != forkID || body["compacted_from"] != sourceID || body["queen_id"] != "queen_test" {
+		t.Fatalf("body = %v", body)
+	}
+	if body["messages_compacted"] != float64(2) {
+		t.Fatalf("messages_compacted = %#v, want 2", body["messages_compacted"])
+	}
+	if _, ok := body["task_ids"].([]any); !ok {
+		t.Fatalf("task_ids = %#v, want an empty array", body["task_ids"])
+	}
+
+	if got.SessionID == nil || *got.SessionID != forkID {
+		t.Fatalf("SessionID = %v, want %q", got.SessionID, forkID)
+	}
+	if got.QueenResumeFrom == nil || *got.QueenResumeFrom != forkID {
+		t.Fatalf("QueenResumeFrom = %v, want %q", got.QueenResumeFrom, forkID)
+	}
+	if got.QueenName == nil || *got.QueenName != "queen_test" {
+		t.Fatalf("QueenName = %v, want queen_test", got.QueenName)
+	}
+	if got.InitialPhase == nil || *got.InitialPhase != "independent" {
+		t.Fatalf("InitialPhase = %v, want independent", got.InitialPhase)
+	}
+	if got.InitialPrompt != nil {
+		t.Fatalf("InitialPrompt = %v, want nil (the HTTP path keeps restore semantics)", *got.InitialPrompt)
+	}
+
+	// The fresh dir holds only the summary; the source transcript is untouched.
+	destConvs := filepath.Join(home.QueenSessionDir("queen_test", forkID), "conversations")
+	destStore := agentloop.NewFileConversationStore(destConvs)
+	destParts, err := destStore.ReadParts()
+	if err != nil || len(destParts) != 1 {
+		t.Fatalf("dest parts = %v, err %v", destParts, err)
+	}
+	summary, _ := destParts[0]["content"].(string)
+	if destParts[0]["role"] != agentloop.RoleUser || destParts[0]["seq"] != float64(0) {
+		t.Fatalf("summary part = %v", destParts[0])
+	}
+	// fakeChatLLM echoes the last user message, which for compaction is the
+	// summary prompt: proof the LLM path ran rather than a hand-built summary.
+	if !strings.Contains(summary, "CONVERSATION MESSAGES:") {
+		t.Fatalf("summary = %q, want the compaction prompt echoed back", summary)
+	}
+	if body["summary_chars"] != float64(utf8.RuneCountInString(summary)) {
+		t.Fatalf("summary_chars = %#v, want %d", body["summary_chars"], utf8.RuneCountInString(summary))
+	}
+	cursor, _ := destStore.ReadCursor()
+	if next := agentloop.GetCursorNextSeq(cursor); next == nil || *next != 1 {
+		t.Fatalf("cursor = %v, want next_seq 1", cursor)
+	}
+	storeMeta, _ := destStore.ReadMeta()
+	if storeMeta["system_prompt"] != "" || storeMeta["max_context_tokens"] != float64(forkContextTokens) {
+		t.Fatalf("conversation meta = %v", storeMeta)
+	}
+	if model.requestCount() != 1 {
+		t.Fatalf("llm requests = %d, want 1", model.requestCount())
+	}
+
+	sourceParts, err := agentloop.NewFileConversationStore(filepath.Join(sourceDir, "conversations")).ReadParts()
+	if err != nil || len(sourceParts) != 2 {
+		t.Fatalf("source parts = %v, err %v (the fork must not rewrite the source)", sourceParts, err)
+	}
+
+	meta, err := readJSONObject(filepath.Join(home.QueenSessionDir("queen_test", forkID), "meta.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta["queen_id"] != "queen_test" || meta["compacted_from"] != sourceID {
+		t.Fatalf("meta = %v", meta)
+	}
+	numeric := false
+	switch value := meta["created_at"].(type) {
+	case float64:
+		numeric = true
+	case json.Number:
+		_, err := value.Float64()
+		numeric = err == nil
+	}
+	if !numeric {
+		t.Fatalf("created_at = %#v, want an epoch float", meta["created_at"])
+	}
+	if timestamp, _ := meta["compacted_at"].(string); !strings.HasSuffix(timestamp, "+00:00") {
+		t.Fatalf("compacted_at = %q", meta["compacted_at"])
+	}
+}
+
+// Parity: framework/server/routes_execution.py::handle_compact_and_fork
+func TestCompactAndForkMissingQueenDir404(t *testing.T) {
+	deps, _ := executionDeps(t)
+	session := &Session{ID: "session_20260101_000000_nodir001", QueenExecutor: &QueenExecutor{}}
+	deps.Manager.AddSession(session)
+
+	recorder, body := serveColonyRequest(executionMux(deps),
+		httptest.NewRequest(http.MethodPost, "/api/sessions/"+session.ID+"/compact-and-fork", nil))
+	if recorder.Code != http.StatusNotFound || body["error"] != "queen session directory not found" {
+		t.Fatalf("status = %d body = %v, want 404 queen session directory not found", recorder.Code, body)
+	}
+}
+
+// Parity: framework/server/routes_execution.py::handle_compact_and_fork
+func TestCompactAndForkUnstampedQueen503(t *testing.T) {
+	deps, home := executionDeps(t)
+	sessionID := "session_20260101_000000_stamp001"
+	seedForkQueenSession(t, home, "default", sessionID,
+		map[string]any{"seq": 0, "role": agentloop.RoleUser, "content": "hi"},
+	)
+	deps.Manager.AddSession(&Session{ID: sessionID, QueenExecutor: &QueenExecutor{}})
+
+	recorder, body := serveColonyRequest(executionMux(deps),
+		httptest.NewRequest(http.MethodPost, "/api/sessions/"+sessionID+"/compact-and-fork", nil))
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d body = %v, want 503", recorder.Code, body)
+	}
+	if message, _ := body["error"].(string); !strings.Contains(message, "queen context not yet stamped") {
+		t.Fatalf("error = %q, want the unstamped-context message", message)
+	}
+
+	// No runtime at all is the other 503 branch.
+	const noRuntimeID = "session_20260101_000000_stamp002"
+	seedForkQueenSession(t, home, "default", noRuntimeID,
+		map[string]any{"seq": 0, "role": agentloop.RoleUser, "content": "hi"},
+	)
+	deps.Manager.AddSession(&Session{ID: noRuntimeID})
+	notRunningRecorder, notRunningBody := serveColonyRequest(executionMux(deps),
+		httptest.NewRequest(http.MethodPost, "/api/sessions/"+noRuntimeID+"/compact-and-fork", nil))
+	if notRunningRecorder.Code != http.StatusServiceUnavailable || notRunningBody["error"] != "queen is not running" {
+		t.Fatalf("status = %d body = %v, want 503 queen is not running", notRunningRecorder.Code, notRunningBody)
+	}
+}
+
+// Parity: framework/server/routes_execution.py::handle_compact_and_fork
+func TestCompactAndForkEmptyConversation400(t *testing.T) {
+	deps, home := executionDeps(t)
+	sessionID := "session_20260101_000000_empty001"
+	if err := os.MkdirAll(home.QueenSessionDir("default", sessionID), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	session := NewSession(sessionID, eventbus.NewEventBus())
+	session.LLM = &fakeChatLLM{}
+	session.QueenExecutor = &QueenExecutor{}
+	deps.Manager.AddSession(session)
+
+	recorder, body := serveColonyRequest(executionMux(deps),
+		httptest.NewRequest(http.MethodPost, "/api/sessions/"+sessionID+"/compact-and-fork", nil))
+	if recorder.Code != http.StatusBadRequest || body["error"] != "queen conversation is empty -- nothing to compact" {
+		t.Fatalf("status = %d body = %v, want 400 empty conversation", recorder.Code, body)
+	}
+}
+
+// Parity: framework/server/routes_execution.py::handle_compact_and_fork
+func TestCompactAndForkRefusesWithoutSessionFactory(t *testing.T) {
+	deps, home := executionDeps(t)
+	sessionID := "session_20260101_000000_nowire01"
+	seedForkQueenSession(t, home, "default", sessionID,
+		map[string]any{"seq": 0, "role": agentloop.RoleUser, "content": "hi"},
+	)
+	session := NewSession(sessionID, eventbus.NewEventBus())
+	session.LLM = &fakeChatLLM{}
+	session.QueenExecutor = &QueenExecutor{}
+	deps.Manager.AddSession(session)
+	deps.GenerateSessionID = func(time.Time) (string, error) { return "session_20260101_000000_nowire02", nil }
+
+	recorder, body := serveColonyRequest(executionMux(deps),
+		httptest.NewRequest(http.MethodPost, "/api/sessions/"+sessionID+"/compact-and-fork", nil))
+	// Reporting success here would hand the UI a session nobody can resume.
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d body = %v, want 503", recorder.Code, body)
+	}
+	if message, _ := body["error"].(string); !strings.Contains(message, "not wired") {
+		t.Fatalf("error = %q, want the missing-factory explanation", message)
+	}
+	if deps.Manager.SessionCount() != 1 {
+		t.Fatalf("sessions = %d, want only the source session", deps.Manager.SessionCount())
+	}
+}
+
+// Parity: framework/server/routes_execution.py::handle_compact_and_fork
+func TestCompactAndForkRejectsMismatchedFactorySession(t *testing.T) {
+	deps, home := executionDeps(t)
+	sessionID := "session_20260101_000000_wrong001"
+	const forkID = "session_20260101_000000_wrong002"
+	seedForkQueenSession(t, home, "default", sessionID,
+		map[string]any{"seq": 0, "role": agentloop.RoleUser, "content": "hi"},
+	)
+	session := NewSession(sessionID, eventbus.NewEventBus())
+	session.LLM = &fakeChatLLM{}
+	session.QueenExecutor = &QueenExecutor{}
+	deps.Manager.AddSession(session)
+	deps.GenerateSessionID = func(time.Time) (string, error) { return forkID, nil }
+	deps.CreateSession = func(CreateSessionParams) (*Session, error) {
+		return NewSession("session_20260101_000000_wrong003", eventbus.NewEventBus()), nil
+	}
+
+	recorder, body := serveColonyRequest(executionMux(deps),
+		httptest.NewRequest(http.MethodPost, "/api/sessions/"+sessionID+"/compact-and-fork", nil))
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d body = %v, want 500", recorder.Code, body)
+	}
+	if message, _ := body["error"].(string); !strings.Contains(message, "orphaned") {
+		t.Fatalf("error = %q, want the orphaned-summary explanation", message)
+	}
+}
+
+// Parity: framework/server/routes_execution.py::handle_compact_and_fork
+func TestCompactAndForkRejectsDirCollision(t *testing.T) {
+	deps, home := executionDeps(t)
+	sessionID := "session_20260101_000000_coll0001"
+	const forkID = "session_20260101_000000_coll0002"
+	seedForkQueenSession(t, home, "default", sessionID,
+		map[string]any{"seq": 0, "role": agentloop.RoleUser, "content": "hi"},
+	)
+	if err := os.MkdirAll(home.QueenSessionDir("default", forkID), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	session := NewSession(sessionID, eventbus.NewEventBus())
+	session.LLM = &fakeChatLLM{}
+	session.QueenExecutor = &QueenExecutor{}
+	deps.Manager.AddSession(session)
+	deps.GenerateSessionID = func(time.Time) (string, error) { return forkID, nil }
+
+	recorder, body := serveColonyRequest(executionMux(deps),
+		httptest.NewRequest(http.MethodPost, "/api/sessions/"+sessionID+"/compact-and-fork", nil))
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d body = %v, want 500", recorder.Code, body)
+	}
+	if message, _ := body["error"].(string); !strings.Contains(message, "new session dir collision") {
+		t.Fatalf("error = %q, want the collision message", message)
 	}
 }

@@ -76,6 +76,26 @@ func handleSessionChat(w http.ResponseWriter, r *http.Request, deps ChatRouteDep
 		return
 	}
 
+	// Sessions forked away are retired: the conversation continues in the
+	// successor session. Lock the old one so a stale tab cannot write to a
+	// session that is being stopped.
+	if session.SupersededBy != "" {
+		writeJSON(w, http.StatusConflict, map[string]any{
+			"error":         "session_locked",
+			"reason":        "superseded",
+			"superseded_by": session.SupersededBy,
+			"message":       "This session has been forked into a fresh one. Continue in the successor session.",
+		})
+		return
+	}
+
+	// A genuine user message re-arms new_session on a freshly-forked session:
+	// the kickoff turn is over, and any pivot the user makes from here is a
+	// real one the queen may legitimately fork on.
+	if session.ForkKickoffPending {
+		session.ForkKickoffPending = false
+	}
+
 	var body struct {
 		Message string `json:"message"`
 	}

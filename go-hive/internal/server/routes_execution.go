@@ -5,21 +5,27 @@ package server
 // Parity: framework/server/routes_execution.py::handle_cancel_queen
 // Parity: framework/server/routes_execution.py::handle_session_presence
 // Parity: framework/server/routes_execution.py::handle_mark_colony_spawned
+// Parity: framework/server/routes_execution.py::handle_compact_and_fork
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/aden-hive/hive-go/internal/llm"
+	sessionstore "github.com/aden-hive/hive-go/internal/session"
 )
 
 type ExecutionRouteDeps struct {
@@ -27,6 +33,16 @@ type ExecutionRouteDeps struct {
 	Home        hivehome.Home
 	ReviveQueen func(*Session) error
 	CancelWait  time.Duration
+
+	// CreateSession starts the live session a compact-and-fork lands in. It is
+	// the Go stand-in for manager.create_session(queen_resume_from=...): the
+	// server package has no session factory of its own. Nil means this build
+	// has no factory wired, and the route answers 503 instead of reporting a
+	// fork nobody can resume.
+	CreateSession func(CreateSessionParams) (*Session, error)
+
+	// GenerateSessionID mints the fork target's id; tests pin it.
+	GenerateSessionID func(time.Time) (string, error)
 }
 
 func RegisterExecutionRoutes(mux *http.ServeMux, deps ExecutionRouteDeps) {
@@ -44,6 +60,9 @@ func RegisterExecutionRoutes(mux *http.ServeMux, deps ExecutionRouteDeps) {
 	})
 	mux.HandleFunc("POST /api/sessions/{session_id}/mark-colony-spawned", func(w http.ResponseWriter, r *http.Request) {
 		handleMarkColonySpawned(w, r, deps)
+	})
+	mux.HandleFunc("POST /api/sessions/{session_id}/compact-and-fork", func(w http.ResponseWriter, r *http.Request) {
+		handleCompactAndFork(w, r, deps)
 	})
 }
 
@@ -404,4 +423,244 @@ func handleMarkColonySpawned(w http.ResponseWriter, r *http.Request, deps Execut
 		"colony_spawned":    true,
 		"spawned_colony_id": colonyID,
 	})
+}
+
+// forkContextTokens is the queen window upstream falls back to when the loop
+// config carries no max_context_tokens (_queen_window_tokens). The Go chat
+// runtime keeps that value in unexported conversation options, so the fallback
+// is the window size reachable from here.
+const forkContextTokens = 180_000
+
+// ForkSessionError mirrors routes_execution.ForkSessionError: a fork failure
+// carrying the HTTP status the route answers with.
+type ForkSessionError struct {
+	Message string
+	Status  int
+}
+
+func (e *ForkSessionError) Error() string { return e.Message }
+
+func handleCompactAndFork(w http.ResponseWriter, r *http.Request, deps ExecutionRouteDeps) {
+	session, ok := resolveExecutionSession(w, r, deps)
+	if !ok {
+		return
+	}
+	result, forkErr := forkQueenSessionForSplit(session, deps)
+	if forkErr != nil {
+		writeJSON(w, forkErr.Status, map[string]any{"error": forkErr.Message})
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+// forkQueenSessionForSplit is the HTTP (no tasks) mode of upstream's
+// fork_queen_session_for_split: carry the old conversation across as an
+// LLM-compacted summary in a fresh session dir, then start a session on it.
+// The old session stays alive; the response carries the successor id.
+func forkQueenSessionForSplit(session *Session, deps ExecutionRouteDeps) (map[string]any, *ForkSessionError) {
+	queenDir := session.QueenDir
+	if queenDir == "" && deps.Home.Root != "" {
+		if found, err := FindQueenSessionDir(deps.Home, session.ID); err == nil {
+			queenDir = found
+		}
+	}
+	if queenDir == "" || !entryIsDir(queenDir) {
+		return nil, &ForkSessionError{Message: "queen session directory not found", Status: http.StatusNotFound}
+	}
+	if deps.Home.Root == "" {
+		return nil, &ForkSessionError{Message: "hive home is not configured", Status: http.StatusInternalServerError}
+	}
+
+	// Compaction needs a stamped queen context with an LLM. Go keeps that on
+	// Session.LLM; a session with no runtime has nothing to compact with.
+	if session.Chat == nil && session.QueenExecutor == nil {
+		return nil, &ForkSessionError{Message: "queen is not running", Status: http.StatusServiceUnavailable}
+	}
+	completer, _ := session.LLM.(llm.Completer)
+	if completer == nil {
+		return nil, &ForkSessionError{
+			Message: "queen context not yet stamped (no LLM available for compaction). Send a message to the queen and retry.",
+			Status:  http.StatusServiceUnavailable,
+		}
+	}
+
+	queenName := session.QueenName
+	if queenName == "" {
+		queenName = "default"
+	}
+	generate := deps.GenerateSessionID
+	if generate == nil {
+		generate = sessionstore.NewStore("").GenerateID
+	}
+	newSessionID, err := generate(time.Now())
+	if err != nil {
+		return nil, &ForkSessionError{
+			Message: "failed to generate forked session id: " + err.Error(),
+			Status:  http.StatusInternalServerError,
+		}
+	}
+	newDir := deps.Home.QueenSessionDir(queenName, newSessionID)
+	if pathExists(newDir) {
+		// Same-second collision would clobber another session.
+		return nil, &ForkSessionError{
+			Message: "new session dir collision: " + newDir,
+			Status:  http.StatusInternalServerError,
+		}
+	}
+	if err := os.MkdirAll(filepath.Dir(newDir), 0o755); err != nil {
+		return nil, &ForkSessionError{
+			Message: "failed to create forked session dir: " + err.Error(),
+			Status:  http.StatusInternalServerError,
+		}
+	}
+	// exist_ok=False upstream: the leaf must be created by this request.
+	if err := os.Mkdir(newDir, 0o755); err != nil {
+		return nil, &ForkSessionError{
+			Message: "failed to create forked session dir: " + err.Error(),
+			Status:  http.StatusInternalServerError,
+		}
+	}
+
+	summary, err := compactQueenConversationInto(queenDir, newDir, completer, forkContextTokens)
+	if err != nil {
+		return nil, &ForkSessionError{
+			Message: "compaction failed: " + err.Error(),
+			Status:  http.StatusInternalServerError,
+		}
+	}
+	if summary == nil {
+		return nil, &ForkSessionError{
+			Message: "queen conversation is empty -- nothing to compact",
+			Status:  http.StatusBadRequest,
+		}
+	}
+
+	// Provenance only, no old-session state. A failed write is logged rather
+	// than fatal: the summary is already on disk (upstream warns here too).
+	newMeta := map[string]any{
+		"queen_id":       queenName,
+		"compacted_from": session.ID,
+		"created_at":     float64(time.Now().UnixNano()) / 1e9,
+		"compacted_at":   pythonISOFormat(time.Now().UTC()),
+	}
+	if rendered, marshalErr := json.Marshal(newMeta); marshalErr == nil {
+		if writeErr := os.WriteFile(filepath.Join(newDir, "meta.json"), rendered, 0o644); writeErr != nil {
+			log.Printf("fork_queen_session: failed to write new meta.json: %v", writeErr)
+		}
+	}
+
+	// Upstream delegates this to manager.create_session. Without the factory
+	// the fork would leave a compacted directory no session ever resumes, so
+	// the route refuses instead of reporting a fork that cannot be used.
+	if deps.CreateSession == nil {
+		return nil, &ForkSessionError{
+			Message: "forked session creation is not wired on this server: no session factory is configured for the new session",
+			Status:  http.StatusServiceUnavailable,
+		}
+	}
+	independentPhase := "independent"
+	created, err := deps.CreateSession(CreateSessionParams{
+		// Upstream passes session_id=None and resumes from the new dir; the Go
+		// factory keys the session directory off SessionID, so pin the id the
+		// summary was written under.
+		SessionID:       &newSessionID,
+		QueenResumeFrom: &newSessionID,
+		QueenName:       &queenName,
+		InitialPhase:    &independentPhase,
+	})
+	if err != nil {
+		return nil, &ForkSessionError{
+			Message: "failed to start forked session: " + err.Error(),
+			Status:  http.StatusInternalServerError,
+		}
+	}
+	if created == nil {
+		return nil, &ForkSessionError{
+			Message: "failed to start forked session: session factory returned no session",
+			Status:  http.StatusInternalServerError,
+		}
+	}
+	if created.ID != "" && created.ID != newSessionID {
+		return nil, &ForkSessionError{
+			Message: "failed to start forked session: session factory opened '" + created.ID +
+				"', expected '" + newSessionID + "'; the compacted summary would be orphaned",
+			Status: http.StatusInternalServerError,
+		}
+	}
+
+	return map[string]any{
+		"new_session_id":     newSessionID,
+		"queen_id":           queenName,
+		"compacted_from":     session.ID,
+		"summary_chars":      summary.Chars,
+		"messages_compacted": summary.Messages,
+		"task_ids":           []string{},
+	}, nil
+}
+
+type compactionSummary struct {
+	Messages int
+	Chars    int
+}
+
+// compactQueenConversationInto mirrors _compact_queen_conversation_in_place
+// with dest_dir set: the source transcript is left untouched and the fresh
+// session gets only the summary. nil, nil means "nothing to compact".
+func compactQueenConversationInto(queenDir, destDir string, completer llm.Completer, maxContextTokens int) (*compactionSummary, error) {
+	sourceConvs := filepath.Join(queenDir, "conversations")
+	if !entryIsDir(sourceConvs) {
+		return nil, nil
+	}
+	parts, err := agentloop.NewFileConversationStore(sourceConvs).ReadParts()
+	if err != nil {
+		return nil, err
+	}
+	messages := make([]agentloop.Message, 0, len(parts))
+	for _, part := range parts {
+		// Python's Message.from_storage_dict raises on malformed parts and the
+		// caller skips them; the Go reader is lenient, so screen the required
+		// fields here instead of compacting a half-built message.
+		if _, ok := part["role"].(string); !ok {
+			log.Printf("compact_in_place: skipping malformed part %v", part)
+			continue
+		}
+		if _, ok := part["content"].(string); !ok {
+			log.Printf("compact_in_place: skipping malformed part %v", part)
+			continue
+		}
+		messages = append(messages, agentloop.MessageFromStorageDict(part))
+	}
+	if len(messages) == 0 {
+		return nil, nil
+	}
+
+	summary, err := agentloop.LlmCompact(context.Background(), completer, messages, agentloop.LlmCompactOptions{
+		MaxContextTokens:     maxContextTokens,
+		PreserveUserMessages: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	destConvs := filepath.Join(destDir, "conversations")
+	if err := os.MkdirAll(destConvs, 0o755); err != nil {
+		return nil, err
+	}
+	destStore := agentloop.NewFileConversationStore(destConvs)
+	defer destStore.Close()
+
+	summaryMsg := agentloop.Message{Seq: 0, Role: agentloop.RoleUser, Content: summary}
+	if err := destStore.WritePart(0, summaryMsg.ToStorageDict()); err != nil {
+		return nil, err
+	}
+	if err := destStore.WriteCursor(map[string]any{"next_seq": 1}); err != nil {
+		return nil, err
+	}
+	if err := destStore.WriteMeta(map[string]any{
+		"system_prompt":      "",
+		"max_context_tokens": maxContextTokens,
+	}); err != nil {
+		return nil, err
+	}
+	return &compactionSummary{Messages: len(messages), Chars: utf8.RuneCountInString(summary)}, nil
 }
