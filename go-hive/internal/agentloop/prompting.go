@@ -28,7 +28,7 @@ type PromptOverrides struct {
 	MemoryPrompt *string
 }
 
-// Parity: prompting.py stamp_prompt_datetime. The Python version uses
+// Parity: framework/agent_loop/prompting.py stamp_prompt_datetime. The Python version uses
 func StampPromptDatetime(prompt string) string {
 	local := time.Now()
 	stamp := "Current date: " + local.Format("2006-01-02 MST (UTC-0700)")
@@ -38,7 +38,7 @@ func StampPromptDatetime(prompt string) string {
 	return prompt + "\n\n" + stamp
 }
 
-// Parity: prompting.py build_binding_prompt.
+// Parity: framework/agent_loop/prompting.py build_binding_prompt.
 func BuildBindingPrompt(binding *ColonyBinding) string {
 	if binding == nil || binding.TrackerDB == "" {
 		return ""
@@ -49,7 +49,7 @@ func BuildBindingPrompt(binding *ColonyBinding) string {
 		"DB, e.g. bulk-loading rows from other files.)"
 }
 
-// Parity: internals/synthetic_tools.py build_structured_output_instruction.
+// Parity: framework/agent_loop/internals/synthetic_tools.py build_structured_output_instruction.
 func BuildStructuredOutputInstruction(reportSchema map[string]any) string {
 	if len(reportSchema) == 0 {
 		return ""
@@ -67,7 +67,7 @@ func BuildStructuredOutputInstruction(reportSchema map[string]any) string {
 		"</structured_output>"
 }
 
-// Parity: prompting.py build_prompt_spec.
+// Parity: framework/agent_loop/prompting.py build_prompt_spec.
 func BuildPromptSpec(ctx *AgentContext, overrides PromptOverrides) PromptSpec {
 	if ctx == nil {
 		return PromptSpec{AgentType: "event_loop"}
@@ -135,7 +135,7 @@ func BuildPromptSpec(ctx *AgentContext, overrides PromptOverrides) PromptSpec {
 	}
 }
 
-// Parity: prompting.py build_system_prompt_static (sections after the first
+// Parity: framework/agent_loop/prompting.py build_system_prompt_static (sections after the first
 func BuildSystemPromptStatic(spec PromptSpec) string {
 	parts := []string{}
 	if spec.IdentityPrompt != "" {
@@ -165,7 +165,7 @@ func BuildSystemPromptStatic(spec PromptSpec) string {
 	return joinWithNewline(parts)
 }
 
-// Parity: prompting.py build_system_prompt_dynamic_suffix.
+// Parity: framework/agent_loop/prompting.py build_system_prompt_dynamic_suffix.
 func BuildSystemPromptDynamicSuffix(spec PromptSpec) string {
 	parts := []string{}
 	if spec.Narrative != "" {
@@ -174,7 +174,7 @@ func BuildSystemPromptDynamicSuffix(spec PromptSpec) string {
 	return joinWithNewline(parts)
 }
 
-// Parity: prompting.py build_system_prompt.
+// Parity: framework/agent_loop/prompting.py build_system_prompt.
 func BuildSystemPrompt(spec PromptSpec) string {
 	static := BuildSystemPromptStatic(spec)
 	suffix := BuildSystemPromptDynamicSuffix(spec)

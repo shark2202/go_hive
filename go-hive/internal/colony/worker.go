@@ -361,7 +361,7 @@ func (w *Worker) LoopBudgetLimited() bool {
 	return false
 }
 
-// Parity: framework/host/worker.py::_config["tool_call_lifetime_budget"]
+// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_call_lifetime_budget
 func (w *Worker) EffectiveBudget() int {
 	if loop := w.AgentLoop(); loop != nil {
 		return loop.LifetimeBudget()
@@ -379,7 +379,8 @@ func (w *Worker) TrackerResolver() tracker.Resolver {
 	}
 }
 
-// Parity: framework/host/worker.py::Worker._publish_report (SUBAGENT_REPORT
+// Parity: framework/host/worker.py::Worker._emit_terminal_events (SUBAGENT_REPORT
+// payload; see also Worker.record_explicit_report)
 func (w *Worker) reportPayload() map[string]any {
 	payload := map[string]any{
 		"worker_id": w.ID,

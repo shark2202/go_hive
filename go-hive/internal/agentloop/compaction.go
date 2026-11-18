@@ -67,7 +67,7 @@ func envPositiveIntPtr(name string, fallback int) *int {
 	return &value
 }
 
-// Parity: compaction.py truncate_oversized_user_messages.
+// Parity: framework/agent_loop/internals/compaction.py::truncate_oversized_user_messages.
 func TruncateOversizedUserMessages(c *NodeConversation) int {
 	truncated := 0
 	for i, msg := range c.messages {
@@ -101,7 +101,7 @@ func TruncateOversizedUserMessages(c *NodeConversation) int {
 	return truncated
 }
 
-// Parity: compaction.py microcompact(conversation, keep_recent=...).
+// Parity: framework/agent_loop/internals/compaction.py::microcompact (keep_recent argument).
 func Microcompact(c *NodeConversation) int {
 	return MicrocompactWithKeepRecent(c, MicrocompactKeepRecent)
 }
@@ -178,7 +178,7 @@ func MicrocompactWithKeepRecent(c *NodeConversation, keepRecent int) int {
 	return cleared
 }
 
-// Parity: compaction.py _find_tool_name_for_result.
+// Parity: framework/agent_loop/internals/compaction.py::_find_tool_name_for_result.
 func findToolNameForResult(messages []Message, toolMsg Message) string {
 	if toolMsg.ToolUseID == nil {
 		return ""
@@ -199,7 +199,7 @@ func findToolNameForResult(messages []Message, toolMsg Message) string {
 	return ""
 }
 
-// Parity: compaction.py strip_images_from_messages.
+// Parity: framework/agent_loop/internals/compaction.py::strip_images_from_messages.
 func StripImagesFromMessages(messages []Message) []Message {
 	out := make([]Message, 0, len(messages))
 	for _, msg := range messages {
@@ -224,7 +224,7 @@ func StripImagesFromMessages(messages []Message) []Message {
 	return out
 }
 
-// Parity: compaction.py format_messages_for_summary.
+// Parity: framework/agent_loop/internals/compaction.py::format_messages_for_summary.
 func FormatMessagesForSummary(messages []Message) string {
 	lines := make([]string, 0, len(messages))
 	for _, m := range messages {
@@ -258,7 +258,7 @@ func FormatMessagesForSummary(messages []Message) string {
 	return strings.Join(lines, "\n\n")
 }
 
-// Parity: compaction.py compaction_target_chars.
+// Parity: framework/agent_loop/internals/compaction.py::compaction_target_chars.
 func CompactionTargetChars(formattedChars, maxContextTokens int) int {
 	halfWindow := (maxContextTokens / 2) * 4
 	halfInput := formattedChars / 2
@@ -271,7 +271,7 @@ func CompactionTargetChars(formattedChars, maxContextTokens int) int {
 	return halfInput
 }
 
-// Parity: compaction.py llm_compact_char_limit.
+// Parity: framework/agent_loop/internals/compaction.py::llm_compact_char_limit.
 func LLMCompactCharLimit(maxContextTokens int) int {
 	limit := (maxContextTokens * 4) / 3
 	if limit < 20_000 {
@@ -280,7 +280,7 @@ func LLMCompactCharLimit(maxContextTokens int) int {
 	return limit
 }
 
-// Parity: compaction.py build_message_inventory.
+// Parity: framework/agent_loop/internals/compaction.py::build_message_inventory.
 func BuildMessageInventory(c *NodeConversation) []map[string]any {
 	messages := c.messages
 	inventory := make([]map[string]any, 0, len(messages))

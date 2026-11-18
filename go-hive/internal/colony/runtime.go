@@ -694,7 +694,8 @@ func (r *ColonyRuntime) buildContext(worker *Worker, spec agentloop.AgentSpec) *
 	return ctx
 }
 
-// Parity: framework/agent_loop/agent_loop.py report_to_parent gating
+// Parity: framework/agent_loop/agent_loop.py::AgentLoop._reports_to_parent (worker
+// stream_id gate for build_report_to_parent_tool)
 func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 	tools := append([]llm.ToolDef(nil), r.tools...)
 	if strings.HasPrefix(worker.StreamID, "worker:") {
