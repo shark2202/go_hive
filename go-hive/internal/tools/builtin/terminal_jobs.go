@@ -757,24 +757,6 @@ func (c terminalJobCapabilities) signalSemantics(action string) string {
 	return ""
 }
 
-func terminalSignalForAction(action string) (syscall.Signal, bool) {
-	switch action {
-	case "signal_int":
-		return syscall.SIGINT, true
-	case "signal_term":
-		return syscall.SIGTERM, true
-	case "signal_kill":
-		return syscall.SIGKILL, true
-	case "signal_hup":
-		return syscall.SIGHUP, true
-	case "signal_usr1":
-		return syscall.SIGUSR1, true
-	case "signal_usr2":
-		return syscall.SIGUSR2, true
-	}
-	return 0, false
-}
-
 // terminalJobManage implements terminal_job_manage: capabilities, list,
 // signals and stdin behind one action argument.
 func (t *Toolbox) terminalJobManage(ctx context.Context, input map[string]any) (Result, error) {

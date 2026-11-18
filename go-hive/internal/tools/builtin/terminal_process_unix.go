@@ -62,6 +62,25 @@ func terminalExitCode(state *os.ProcessState) int {
 	return state.ExitCode()
 }
 
+// terminalSignalForAction maps a manage action onto its POSIX signal.
+func terminalSignalForAction(action string) (syscall.Signal, bool) {
+	switch action {
+	case "signal_int":
+		return syscall.SIGINT, true
+	case "signal_term":
+		return syscall.SIGTERM, true
+	case "signal_kill":
+		return syscall.SIGKILL, true
+	case "signal_hup":
+		return syscall.SIGHUP, true
+	case "signal_usr1":
+		return syscall.SIGUSR1, true
+	case "signal_usr2":
+		return syscall.SIGUSR2, true
+	}
+	return 0, false
+}
+
 func terminalIsSignaledExit(code int) bool {
 	switch -code {
 	case int(syscall.SIGINT), int(syscall.SIGTERM), int(syscall.SIGKILL), int(syscall.SIGHUP), int(syscall.SIGUSR1), int(syscall.SIGUSR2):

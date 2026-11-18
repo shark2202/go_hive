@@ -34,4 +34,14 @@ func terminalExitCode(state *os.ProcessState) int {
 	return state.ExitCode()
 }
 
+// terminalSignalForAction maps a manage action onto a Windows signal; both
+// stop verbs terminate the process tree.
+func terminalSignalForAction(action string) (syscall.Signal, bool) {
+	switch action {
+	case "signal_term", "signal_kill":
+		return syscall.SIGTERM, true
+	}
+	return 0, false
+}
+
 func terminalIsSignaledExit(code int) bool { return false }

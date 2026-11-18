@@ -32,6 +32,9 @@ var terminalToolHandlers = map[string]terminalToolHandler{
 	ToolTerminalJobStart:  (*Toolbox).terminalJobStart,
 	ToolTerminalJobLogs:   (*Toolbox).terminalJobLogs,
 	ToolTerminalJobManage: (*Toolbox).terminalJobManage,
+	ToolTerminalPTYOpen:   (*Toolbox).terminalPTYOpen,
+	ToolTerminalPTYRun:    (*Toolbox).terminalPTYRun,
+	ToolTerminalPTYClose:  (*Toolbox).terminalPTYClose,
 }
 
 // executeTerminalTool dispatches a terminal tool, or reports the same
