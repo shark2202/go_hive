@@ -16,6 +16,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/schemas"
+	"github.com/aden-hive/hive-go/internal/skills"
 )
 
 const DefaultColonyID = "colony"
@@ -42,6 +43,13 @@ type Config struct {
 	// MaxConcurrentWorkers caps parallel worker execution for every run.
 	// <=0 uses the colony default.
 	MaxConcurrentWorkers int
+
+	// WorkerLLM, when set, is the completer workers use; nil shares LLM.
+	WorkerLLM llm.Completer
+	// SkillsProvider supplies the colony skill catalog for the read routes.
+	SkillsProvider func() ([]*skills.ParsedSkill, bool)
+	// ToolProviderMap attributes tool names to providers for the tools route.
+	ToolProviderMap map[string]string
 }
 
 // Host owns a single colony runtime and the runs spawned through it.
@@ -84,6 +92,9 @@ func New(cfg Config) (*Host, error) {
 		WorkerKeepSet:        cfg.WorkerKeepSet,
 		AdaptiveToolBudget:   cfg.AdaptiveToolBudget,
 		MaxConcurrentWorkers: cfg.MaxConcurrentWorkers,
+		WorkerLLM:            cfg.WorkerLLM,
+		SkillsProvider:       cfg.SkillsProvider,
+		ToolProviderMap:      cfg.ToolProviderMap,
 	})
 	return &Host{
 		cfg:     cfg,
