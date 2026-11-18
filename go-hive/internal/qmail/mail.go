@@ -351,6 +351,12 @@ func (m *Mail) Flush(ctx context.Context) (int, error) {
 		if letter.Kind != KindMessage {
 			continue
 		}
+		// The letter landed but the queue acknowledgement did not; repair the
+		// bookkeeping instead of handing the target the same letter twice.
+		if letter.State == StateDelivered {
+			_ = m.queue.Ack(letter.ID)
+			continue
+		}
 		if !m.reserve(letter.From) {
 			if firstErr == nil {
 				firstErr = &Error{Message: "You've sent " + strconv.Itoa(m.config.DailyLimit) +

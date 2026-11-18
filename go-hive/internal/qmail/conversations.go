@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
@@ -169,6 +170,9 @@ func (c *ClaudeStore) Find(ref string) (*Conversation, bool) {
 func (c *ClaudeStore) CauseOf(ref string) *Cause {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if queenID := QueenIDOfRef(ref); queenID != "" {
+		c.loadLocked(queenID)
+	}
 	conversation, ok := c.conversations[ref]
 	if !ok || conversation.Cause == nil {
 		return nil
@@ -267,7 +271,8 @@ func (c *ClaudeStore) Pending(queenID string) []Letter {
 	}
 	var letters []Letter
 	seen := map[string]bool{}
-	for _, line := range splitLines(string(data)) {
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSuffix(line, "\r")
 		if line == "" || seen[line] {
 			continue
 		}
@@ -298,26 +303,4 @@ func (c *ClaudeStore) Conversations(queenID string) []*Conversation {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].SessionID > out[j].SessionID })
 	return out
-}
-
-func splitLines(text string) []string {
-	var out []string
-	start := 0
-	for index := 0; index < len(text); index++ {
-		if text[index] == '\n' {
-			out = append(out, trimCarriage(text[start:index]))
-			start = index + 1
-		}
-	}
-	if start < len(text) {
-		out = append(out, trimCarriage(text[start:]))
-	}
-	return out
-}
-
-func trimCarriage(line string) string {
-	if len(line) > 0 && line[len(line)-1] == '\r' {
-		return line[:len(line)-1]
-	}
-	return line
 }
