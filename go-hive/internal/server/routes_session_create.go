@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/aden-hive/hive-go/internal/queen"
+	"github.com/aden-hive/hive-go/internal/session"
 )
 
 var validInitialPhases = []string{"colony", "independent"}
@@ -23,6 +24,19 @@ var legacyPhaseAliases = map[string]string{
 }
 
 var colonySlugPattern = regexp.MustCompile(`^[a-z0-9_]+$`)
+
+// invalidForkSlug mirrors the slug check in _create_colony_from_source:
+// (colony_id or "").strip() must match ^[a-z0-9_]+$.
+func invalidForkSlug(colonyID string) bool {
+	return !colonySlugPattern.MatchString(strings.TrimSpace(colonyID))
+}
+
+// writeForkSlugError emits the _ColonyForkError body upstream raises (400).
+func writeForkSlugError(w http.ResponseWriter) {
+	writeJSON(w, http.StatusBadRequest, map[string]any{
+		"error": "colony_id must be lowercase alphanumeric with underscores",
+	})
+}
 
 // CreateSessionParams mirrors the keyword arguments handle_create_session
 // forwards to SessionManager.create_session. Nil means Python's None.
@@ -119,6 +133,22 @@ func handleCreateSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 	queenName := bodyString(body, "queen_name")
 	sourceSessionID := bodyString(body, "source_session_id")
 
+	// Custom session ids are accepted, but they become one path segment under
+	// the session tree. Separators and dot segments would let a request root a
+	// runtime (and write its transcript) outside that tree.
+	if sessionID != nil && !session.ValidSegment(strings.TrimSpace(*sessionID)) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid session_id"})
+		return
+	}
+	if queenResumeFrom != nil && !session.ValidSegment(strings.TrimSpace(*queenResumeFrom)) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid queen_resume_from"})
+		return
+	}
+	if sourceSessionID != nil && !session.ValidSegment(strings.TrimSpace(*sourceSessionID)) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid source_session_id"})
+		return
+	}
+
 	// Python's normalize_legacy_phase does a dict.get(value, value); a list or
 	// dict is unhashable and raises TypeError, which the error middleware turns
 	// into a plain 500.
@@ -180,6 +210,14 @@ func handleCreateSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 	// the name is parked aside first, and a live colony on the name forces a
 	// deduplicated slug so the fork always lands somewhere new.
 	if colonyValue != "" && sourceValue != "" {
+		// Upstream validates this slug inside _create_colony_from_source, after
+		// the vacate/dedupe steps. Check it before those steps too, so a
+		// path-unsafe slug never reaches the filesystem; the 400 body is the
+		// one upstream returns for the same input.
+		if invalidForkSlug(colonyValue) {
+			writeForkSlugError(w)
+			return
+		}
 		if deps.VacateSoftDeleted != nil {
 			if err := deps.VacateSoftDeleted(colonyValue); err != nil {
 				writeJSON(w, http.StatusInternalServerError, map[string]any{
@@ -191,10 +229,9 @@ func handleCreateSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 		if colonyMetadataExists(deps.Home, colonyValue) {
 			colonyValue = deduplicateColonyID(deps.Home, colonyValue)
 		}
-		if !colonySlugPattern.MatchString(strings.TrimSpace(colonyValue)) {
-			writeJSON(w, http.StatusBadRequest, map[string]any{
-				"error": "colony_id must be lowercase alphanumeric with underscores",
-			})
+		// Upstream re-checks the deduplicated value (cn = colony_id.strip()).
+		if invalidForkSlug(colonyValue) {
+			writeForkSlugError(w)
 			return
 		}
 
@@ -231,6 +268,15 @@ func handleCreateSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 			return
 		}
 		writeJSON(w, http.StatusCreated, sessionToLiveDict(session))
+		return
+	}
+
+	// Go-only guard: upstream forwards colony_id to create_session untouched,
+	// where it becomes a directory segment under the colonies root. Refuse
+	// separators and dot segments without narrowing the naming policy upstream
+	// allows (hyphens, dots, mixed case all still pass through).
+	if colonyID != nil && *colonyID != "" && !session.ValidSegment(*colonyID) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid colony_id"})
 		return
 	}
 

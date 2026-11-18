@@ -177,8 +177,30 @@ type NotificationsConfig struct {
 	ClassifyAfterSeconds *float64       `json:"classify_after_seconds,omitempty"`
 }
 
+// validColonyStoreID keeps a colony id, which becomes a directory name, to one
+// segment. Store callers include configs and escalation records, so the guard
+// lives at the path builder rather than only at the HTTP route.
+func validColonyStoreID(id string) bool {
+	if id == "" || len(id) > 128 {
+		return false
+	}
+	if id == "." || id == ".." {
+		return false
+	}
+	for _, ch := range id {
+		if (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 // NotificationsConfigPath returns the colony's notifications.json path.
 func (s *Store) NotificationsConfigPath(colonyID string) string {
+	if !validColonyStoreID(colonyID) {
+		return filepath.Join(s.ColoniesDir, "__invalid__", notificationsFilename)
+	}
 	return filepath.Join(s.ColoniesDir, colonyID, notificationsFilename)
 }
 
@@ -442,6 +464,9 @@ func EscalationRecordFromDict(data map[string]any) (*EscalationRecord, error) {
 
 // EscalationsDir returns the colony's escalation-record directory.
 func (s *Store) EscalationsDir(colonyID string) string {
+	if !validColonyStoreID(colonyID) {
+		return filepath.Join(s.ColoniesDir, "__invalid__", escalationsDirName)
+	}
 	return filepath.Join(s.ColoniesDir, colonyID, escalationsDirName)
 }
 

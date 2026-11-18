@@ -3,6 +3,7 @@ package sentinel
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -64,6 +65,21 @@ func newTestNotifier(t *testing.T, env map[string]string, responses ...fakeRespo
 	notifier := NewHTTPNotifier(client)
 	notifier.Getenv = func(name string) string { return env[name] }
 	return notifier, client
+}
+
+// Parity-exempt: Go-only log/error hygiene; a transport failure carries the
+// request URL, and Telegram's URL contains the bot token.
+func TestNotifierRedactsTokenFromTransportErrors(t *testing.T) {
+	token := "123456:AAH-secret-token"
+	notifier, _ := newTestNotifier(t, map[string]string{"TELEGRAM_BOT_TOKEN": token},
+		fakeResponse{err: errors.New("Post https://api.telegram.org/bot" + token + "/sendMessage: dial tcp: failed")})
+	result := notifier.Send(context.Background(), "telegram", map[string]any{"chat_id": "9"}, "hello", nil, nil)
+	if result.OK {
+		t.Fatalf("result = %#v, want failure", result)
+	}
+	if strings.Contains(result.Error, token) || !strings.Contains(result.Error, "[REDACTED]") {
+		t.Fatalf("token leaked in error: %q", result.Error)
+	}
 }
 
 // Parity: core/framework/sentinel/notifier.py, core/tests/test_sentinel_notifier.py::test_telegram_send_threads_reply

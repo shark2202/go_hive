@@ -77,7 +77,60 @@ func MaybeShowInstallNotice() {
 	}
 }
 
+// ValidSkillName reports whether name can be used as one directory name under
+// the skills root. Registry entries and --name are caller-controlled, so a
+// separator or dot segment must not reach filepath.Join.
+func ValidSkillName(name string) bool {
+	if name == "" || len(name) > 128 {
+		return false
+	}
+	if name == "." || name == ".." {
+		return false
+	}
+	return !strings.ContainsAny(name, "/\\\x00")
+}
+
+// resolveInstallSource confines the optional --subdir inside the clone. A
+// symlinked subdirectory is resolved and re-checked so it cannot point at, for
+// example, /etc and be copied into the skills tree.
+func resolveInstallSource(tmpDir, subdirectory string) (string, error) {
+	if subdirectory == "" {
+		return tmpDir, nil
+	}
+	subdirectory = strings.TrimSpace(subdirectory)
+	if subdirectory == "" || filepath.IsAbs(subdirectory) {
+		return "", fmt.Errorf("invalid skill subdirectory %q", subdirectory)
+	}
+	source := filepath.Join(tmpDir, filepath.FromSlash(subdirectory))
+	rel, err := filepath.Rel(tmpDir, source)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("skill subdirectory escapes the clone: %q", subdirectory)
+	}
+	resolved, err := filepath.EvalSymlinks(source)
+	if err != nil {
+		// The SKILL.md existence check reports a more useful error.
+		return source, nil
+	}
+	rootResolved, err := filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		rootResolved = tmpDir
+	}
+	rel, err = filepath.Rel(rootResolved, resolved)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("skill subdirectory escapes the clone: %q", subdirectory)
+	}
+	return resolved, nil
+}
+
 func InstallFromGit(gitURL, skillName, subdirectory, version, targetDir string) (string, error) {
+	if !ValidSkillName(skillName) {
+		return "", NewSkillError(
+			SkillActivationFailed,
+			fmt.Sprintf("Cannot install '%s'", skillName),
+			"The skill name must be a single path segment (no '/', '\\', NUL, '.' or '..').",
+			"Choose a safe --name and retry.",
+		)
+	}
 	if _, err := lookPath("git"); err != nil {
 		return "", NewSkillError(
 			SkillActivationFailed,
@@ -114,9 +167,9 @@ func InstallFromGit(gitURL, skillName, subdirectory, version, targetDir string) 
 		return "", installFailure(skillName, gitURL, err)
 	}
 
-	sourceDir := tmpDir
-	if subdirectory != "" {
-		sourceDir = filepath.Join(tmpDir, subdirectory)
+	sourceDir, err := resolveInstallSource(tmpDir, subdirectory)
+	if err != nil {
+		return "", installFailure(skillName, gitURL, err)
 	}
 	if _, err := os.Stat(filepath.Join(sourceDir, "SKILL.md")); err != nil {
 		label := subdirectory
@@ -162,6 +215,14 @@ func InstallFromRegistry(registryEntry map[string]any, targetDir, version string
 }
 
 func RemoveInstalledSkill(name, skillsDir string) (bool, error) {
+	if !ValidSkillName(name) {
+		return false, NewSkillError(
+			SkillActivationFailed,
+			fmt.Sprintf("Invalid skill name '%s'", name),
+			"The skill name must be a single path segment (no '/', '\\', NUL, '.' or '..').",
+			"Pass the installed skill's directory name.",
+		)
+	}
 	baseDir := skillsDir
 	if baseDir == "" {
 		baseDir = UserSkillsDir()
@@ -182,6 +243,14 @@ func RemoveInstalledSkill(name, skillsDir string) (bool, error) {
 }
 
 func ForkSkill(source *ParsedSkill, newName, targetDir string) (string, error) {
+	if !ValidSkillName(newName) {
+		return "", NewSkillError(
+			SkillActivationFailed,
+			fmt.Sprintf("Invalid fork name '%s'", newName),
+			"The skill name must be a single path segment (no '/', '\\', NUL, '.' or '..').",
+			"Choose a safe --name and retry.",
+		)
+	}
 	dest := filepath.Join(targetDir, newName)
 	if _, err := os.Stat(dest); err == nil {
 		return "", NewSkillError(
@@ -240,12 +309,34 @@ func registryEntryString(entry map[string]any, key string) string {
 	return pyStr(value)
 }
 
-func gitCloneShallow(gitURL, target, version string) error {
+// gitCloneArgv builds the clone argv. The `--` separator stops a repository
+// URL (or a branch value) starting with '-' from being parsed as a git option
+// such as --upload-pack, which would execute a command.
+func gitCloneArgv(gitURL, target, version string) ([]string, error) {
+	if gitURL == "" || strings.HasPrefix(strings.TrimSpace(gitURL), "-") || strings.ContainsRune(gitURL, 0) {
+		return nil, fmt.Errorf("invalid git URL %q", gitURL)
+	}
+	if strings.HasPrefix(strings.TrimSpace(version), "-") || strings.ContainsRune(version, 0) {
+		return nil, fmt.Errorf("invalid git ref %q", version)
+	}
 	args := []string{"clone", "--depth=1"}
 	if version != "" {
 		args = append(args, "--branch", version)
 	}
-	args = append(args, gitURL, target)
+	args = append(args, "--", gitURL, target)
+	return args, nil
+}
+
+func gitCloneShallow(gitURL, target, version string) error {
+	args, err := gitCloneArgv(gitURL, target, version)
+	if err != nil {
+		return NewSkillError(
+			SkillActivationFailed,
+			fmt.Sprintf("git clone rejected for %s", gitURL),
+			err.Error(),
+			"Use a repository URL or path that does not begin with '-'.",
+		)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), cloneInstallTimeout)
 	defer cancel()
@@ -255,7 +346,7 @@ func gitCloneShallow(gitURL, target, version string) error {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if ctx.Err() == context.DeadlineExceeded {
 		return NewSkillError(
 			SkillActivationFailed,

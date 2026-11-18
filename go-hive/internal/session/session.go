@@ -118,8 +118,22 @@ func (s *Store) GenerateID(now time.Time) (string, error) {
 
 func ValidID(id string) bool { return sessionIDPattern.MatchString(id) }
 
+// ValidSegment reports whether id may be used as a single session-tree path
+// segment. Generated ids match ValidID, but callers may also submit a custom
+// id (POST /api/sessions accepts one), so separators, dot segments and NUL are
+// refused before any filesystem join.
+func ValidSegment(id string) bool {
+	if id == "" || len(id) > 255 {
+		return false
+	}
+	if id == "." || id == ".." {
+		return false
+	}
+	return !strings.ContainsAny(id, "/\\\x00")
+}
+
 func (s *Store) Dir(id string) (string, error) {
-	if id == "" || strings.ContainsAny(id, `/\`) || id == "." || id == ".." {
+	if !ValidSegment(id) {
 		return "", fmt.Errorf("invalid session id %q", id)
 	}
 	dir := filepath.Join(s.base, id)

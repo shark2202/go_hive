@@ -3,6 +3,7 @@ package qmail
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,9 +36,25 @@ func (s *Store) QueueFile() string { return filepath.Join(s.MailDir(), "queue.js
 // AuditFile is queens/mail.jsonl, the log every hop is a line of.
 func (s *Store) AuditFile() string { return filepath.Join(s.queensDir, "mail.jsonl") }
 
+// validLetterID keeps a letter id (which becomes a filename) to one segment.
+// The queue file is local state, but a tampered id must not reach outside the
+// letters directory.
+func validLetterID(id string) bool {
+	if id == "" || len(id) > 128 {
+		return false
+	}
+	if id == "." || id == ".." {
+		return false
+	}
+	return !strings.ContainsAny(id, "/\\\x00")
+}
+
 // Save writes one letter, replacing any earlier copy (delivery fills in the
 // session it landed in after the first save).
 func (s *Store) Save(letter Letter) error {
+	if !validLetterID(letter.ID) {
+		return fmt.Errorf("invalid letter id %q", letter.ID)
+	}
 	if err := os.MkdirAll(s.LettersDir(), 0o755); err != nil {
 		return err
 	}
@@ -50,6 +67,9 @@ func (s *Store) Save(letter Letter) error {
 
 // Load reads one letter back.
 func (s *Store) Load(id string) (Letter, bool) {
+	if !validLetterID(id) {
+		return Letter{}, false
+	}
 	data, err := os.ReadFile(filepath.Join(s.LettersDir(), id+".json"))
 	if err != nil {
 		return Letter{}, false
@@ -174,7 +194,7 @@ func writeFileAtomic(path string, data []byte) error {
 		os.Remove(tempPath)
 		return err
 	}
-	if err := temp.Chmod(0o644); err != nil {
+	if err := temp.Chmod(0o600); err != nil {
 		temp.Close()
 		os.Remove(tempPath)
 		return err

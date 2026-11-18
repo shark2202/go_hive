@@ -201,6 +201,16 @@ func (n *HTTPNotifier) postJSON(ctx context.Context, url string, payload any, he
 	return httpJSONResponse{Status: resp.StatusCode, Data: data}, nil
 }
 
+// redactSecret keeps a provider token out of logs and user-visible errors.
+// net/http wraps failures in *url.Error, whose Error() includes the request
+// URL — and Telegram puts the bot token in the URL path.
+func redactSecret(text, secret string) string {
+	if secret == "" {
+		return text
+	}
+	return strings.ReplaceAll(text, secret, "[REDACTED]")
+}
+
 func (n *HTTPNotifier) sendTelegram(ctx context.Context, target map[string]any, text string, threadRef map[string]any) NotifierResult {
 	token := n.TelegramToken()
 	if token == "" {
@@ -218,8 +228,9 @@ func (n *HTTPNotifier) sendTelegram(ctx context.Context, target map[string]any, 
 	}
 	response, err := n.postJSON(ctx, fmt.Sprintf("%s/bot%s/sendMessage", n.telegramBase(), token), payload, nil)
 	if err != nil {
-		log.Printf("sentinel: telegram send failed: %v", err)
-		return NotifierResult{Error: err.Error()}
+		message := redactSecret(err.Error(), token)
+		log.Printf("sentinel: telegram send failed: %s", message)
+		return NotifierResult{Error: message}
 	}
 	if ok, _ := response.Data["ok"].(bool); !ok {
 		description := "telegram error"
@@ -256,8 +267,9 @@ func (n *HTTPNotifier) sendSlack(ctx context.Context, target map[string]any, tex
 		"Authorization": "Bearer " + token,
 	})
 	if err != nil {
-		log.Printf("sentinel: slack send failed: %v", err)
-		return NotifierResult{Error: err.Error()}
+		message := redactSecret(err.Error(), token)
+		log.Printf("sentinel: slack send failed: %s", message)
+		return NotifierResult{Error: message}
 	}
 	if ok, _ := response.Data["ok"].(bool); !ok {
 		message := "slack error"
@@ -304,8 +316,9 @@ func (n *HTTPNotifier) sendHive(ctx context.Context, body string, meta map[strin
 		"Authorization": "Bearer " + jwt,
 	})
 	if err != nil {
-		log.Printf("sentinel: hive send failed: %v", err)
-		return NotifierResult{Error: err.Error()}
+		message := redactSecret(err.Error(), jwt)
+		log.Printf("sentinel: hive send failed: %s", message)
+		return NotifierResult{Error: message}
 	}
 	if response.Status >= 300 {
 		return NotifierResult{Error: fmt.Sprintf("hive ingest HTTP %d", response.Status)}

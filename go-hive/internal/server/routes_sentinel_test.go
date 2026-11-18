@@ -113,6 +113,24 @@ func sentinelTestMux(t *testing.T, store SentinelStore, notifier SentinelNotifie
 	return mux
 }
 
+// Parity-exempt: Go-only hardening; colony ids become directory names, so
+// anything outside [a-z0-9_] is refused before the store is touched.
+func TestSentinelRejectsInvalidColonyID(t *testing.T) {
+	home := hivehome.Home{Root: t.TempDir()}
+	mux := http.NewServeMux()
+	RegisterSentinelRoutes(mux, SentinelRouteDeps{Home: home, Store: &fakeSentinelStore{}})
+	for _, path := range []string{
+		"/api/colony/Bad/notifications",
+		"/api/colony/a-b/notifications",
+		"/api/colony/a.b/notifications",
+	} {
+		recorder, _ := doSessionJSON(t, mux, http.MethodGet, path, "")
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("%s: status = %d, want 400", path, recorder.Code)
+		}
+	}
+}
+
 // Parity: core/tests/test_sentinel_routes.py::test_get_notifications_default
 func TestSentinelGetNotificationsDefault(t *testing.T) {
 	store := &fakeSentinelStore{}

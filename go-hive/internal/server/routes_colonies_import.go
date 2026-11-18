@@ -329,8 +329,14 @@ func handleInitUpload(w http.ResponseWriter, r *http.Request, deps ColonyRouteDe
 		nameOverride = &text
 	}
 
-	if err := os.MkdirAll(deps.stagingDir(), 0o755); err != nil {
+	if err := os.MkdirAll(deps.stagingDir(), 0o700); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not create staging directory: " + err.Error()})
+		return
+	}
+	// A staged colony archive can contain session data; keep the directory and
+	// the data file private even if the directory pre-existed.
+	if err := os.Chmod(deps.stagingDir(), 0o700); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not secure staging directory: " + err.Error()})
 		return
 	}
 	deps.gcStaleUploads()
@@ -361,7 +367,7 @@ func handleInitUpload(w http.ResponseWriter, r *http.Request, deps ColonyRouteDe
 		return
 	}
 	dataPath, metaPath := deps.uploadPaths(uploadID)
-	file, err := os.OpenFile(dataPath, os.O_CREATE|os.O_WRONLY, 0o644)
+	file, err := os.OpenFile(dataPath, os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		_ = os.Remove(metaPath)
 		writeJSON(w, http.StatusInternalServerError, map[string]any{
@@ -369,6 +375,7 @@ func handleInitUpload(w http.ResponseWriter, r *http.Request, deps ColonyRouteDe
 		})
 		return
 	}
+	_ = file.Chmod(0o600)
 	_ = file.Close()
 	writeJSON(w, http.StatusCreated, map[string]any{"upload_id": uploadID, "received": 0})
 }
@@ -473,11 +480,12 @@ func handleChunkUpload(w http.ResponseWriter, r *http.Request, deps ColonyRouteD
 		return
 	}
 
-	file, openErr := os.OpenFile(dataPath, os.O_RDWR, 0o644)
+	file, openErr := os.OpenFile(dataPath, os.O_RDWR, 0o600)
 	if openErr != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": openErr.Error()})
 		return
 	}
+	_ = file.Chmod(0o600)
 	if info.Size() > meta.ReceivedBytes {
 		if err := file.Truncate(meta.ReceivedBytes); err != nil {
 			file.Close()

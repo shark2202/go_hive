@@ -59,8 +59,22 @@ func NewClaudeStore(home hivehome.Home) *ClaudeStore {
 	}
 }
 
+// validClaudeQueenID keeps a configured queen id to one directory segment.
+func validClaudeQueenID(id string) bool {
+	if id == "" || len(id) > 128 {
+		return false
+	}
+	if id == "." || id == ".." {
+		return false
+	}
+	return !strings.ContainsAny(id, "/\\\x00")
+}
+
 // Home is one queen's Claude Code folder: HIVE_HOME/claude_code/<queen id>.
 func (c *ClaudeStore) Home(queenID string) string {
+	if !validClaudeQueenID(queenID) {
+		return filepath.Join(c.home.Root, "claude_code", "__invalid__")
+	}
 	return filepath.Join(c.home.Root, "claude_code", queenID)
 }
 
@@ -277,6 +291,9 @@ func (c *ClaudeStore) Pending(queenID string) []Letter {
 			continue
 		}
 		seen[line] = true
+		if !validLetterID(line) {
+			continue
+		}
 		raw, err := os.ReadFile(filepath.Join(c.Inbox(queenID), line+".json"))
 		if err != nil {
 			continue

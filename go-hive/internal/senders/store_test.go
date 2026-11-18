@@ -55,6 +55,11 @@ func TestStoreCreatesAndReloadsSenders(t *testing.T) {
 	if info.Mode().Perm() != 0o600 {
 		t.Fatalf("senders.json perm = %o, want 600 (it holds passwords)", info.Mode().Perm())
 	}
+	if info, err := os.Stat(dir); err != nil {
+		t.Fatal(err)
+	} else if info.Mode().Perm() != 0o700 {
+		t.Fatalf("senders dir perm = %o, want 700", info.Mode().Perm())
+	}
 }
 
 // Parity-exempt: SenderRegistry.get resolves by id then case-insensitive name;

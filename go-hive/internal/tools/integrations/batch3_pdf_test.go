@@ -464,6 +464,28 @@ func TestBatch3PDFReadURLRejectsPrivateHosts(t *testing.T) {
 	}
 }
 
+// Parity-exempt: Go-only SSRF hardening; the Python tool checks only literal
+// host strings, so DNS-resolved private hosts and redirects are new coverage.
+func TestBatch3PDFReadURLRejectsDNSPrivateAndRedirectTargets(t *testing.T) {
+	privateRegistry := batch3TestRegistry(t, "", withBatch3Resolver(func(ctx context.Context, host string) ([]string, error) {
+		return []string{"10.0.0.7"}, nil
+	}))
+	result := batch3Execute(t, privateRegistry, "pdf_read", map[string]any{"file_path": "https://internal.example/doc.pdf"})
+	if result["blocked_by_ssrf_protection"] != true {
+		t.Fatalf("DNS-private host not blocked: %v", result)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "http://169.254.169.254/latest/meta-data", http.StatusFound)
+	}))
+	defer server.Close()
+	redirectRegistry := batch3TestRegistry(t, server.URL)
+	result = batch3Execute(t, redirectRegistry, "pdf_read", map[string]any{"file_path": "https://example.com/start.pdf"})
+	if result["blocked_by_ssrf_protection"] != true {
+		t.Fatalf("redirect to link-local not blocked: %v", result)
+	}
+}
+
 // Parity: tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_max_pages_clamped_low, tools/tests/tools/test_pdf_read_tool.py::TestPdfReadTool::test_max_pages_clamped_high
 func TestBatch3PDFReadMaxPagesClamped(t *testing.T) {
 	path := batch3WritePDFFixture(t, []string{"one", "two", "three"}, nil)

@@ -114,8 +114,14 @@ func (s *EncryptedFileStorage) BasePath() string { return s.basePath }
 
 func (s *EncryptedFileStorage) ensureDirs() error {
 	for _, sub := range []string{"credentials", "metadata"} {
-		if err := os.MkdirAll(filepath.Join(s.basePath, sub), 0o755); err != nil {
-			return fmt.Errorf("mkdir %s: %w", filepath.Join(s.basePath, sub), err)
+		dir := filepath.Join(s.basePath, sub)
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			return fmt.Errorf("mkdir %s: %w", dir, err)
+		}
+		// MkdirAll leaves an existing directory's mode alone; the store holds
+		// encrypted credentials and their metadata, so tighten it explicitly.
+		if err := os.Chmod(dir, 0o700); err != nil {
+			return fmt.Errorf("chmod %s: %w", dir, err)
 		}
 	}
 	return nil
@@ -297,7 +303,7 @@ func (s *EncryptedFileStorage) writeIndex(index IndexEnvelope) error {
 	if index.Credentials == nil {
 		index.Credentials = map[string]IndexEntry{}
 	}
-	return atomicfs.WriteJSON(s.indexPath(), index, 0o644)
+	return atomicfs.WriteJSON(s.indexPath(), index, 0o600)
 }
 
 func (s *EncryptedFileStorage) indexUpsert(credential *CredentialObject) error {

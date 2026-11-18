@@ -49,6 +49,40 @@ func TestVerifyRejectsWrongID(t *testing.T) {
 	}
 }
 
+// Parity-exempt: Go-only filesystem hardening; the secret is 0600 and a
+// planted symlink must not be written through.
+func TestSecretFileIsPrivateAndRefusesSymlink(t *testing.T) {
+	dir := t.TempDir()
+	tokens := &TokenManager{SecretPath: filepath.Join(dir, secretFilename)}
+	_ = tokens.MakeToken("esc_perm")
+	info, err := os.Stat(tokens.SecretPath)
+	if err != nil {
+		t.Fatalf("stat secret: %v", err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("secret mode = %o, want 600", perm)
+	}
+
+	target := filepath.Join(dir, "target.txt")
+	if err := os.WriteFile(target, []byte("unchanged"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	linkDir := t.TempDir()
+	link := filepath.Join(linkDir, secretFilename)
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	linked := &TokenManager{SecretPath: link}
+	_ = linked.MakeToken("esc_link")
+	data, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "unchanged" {
+		t.Fatalf("secret was written through a symlink: %q", data)
+	}
+}
+
 // Parity: core/framework/sentinel/token.py, core/tests/test_sentinel_token.py::test_verify_rejects_tampered_token
 func TestVerifyRejectsTamperedToken(t *testing.T) {
 	tokens := testTokens(t)

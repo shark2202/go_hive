@@ -4,6 +4,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -25,12 +26,21 @@ func handleReportSessionBundle(w http.ResponseWriter, r *http.Request, deps Sess
 			storageSessionID = session.ID
 		}
 	}
+	if !validSessionDirID(storageSessionID) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid session id"})
+		return
+	}
 
 	folder := ""
 	if session != nil && session.QueenDir != "" {
 		folder = session.QueenDir
 	} else {
-		folder, _ = FindQueenSessionDir(deps.Home, storageSessionID)
+		var findErr error
+		folder, findErr = FindQueenSessionDir(deps.Home, storageSessionID)
+		if findErr != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid session id"})
+			return
+		}
 	}
 	if !pathExists(folder) {
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": "session folder not found"})
@@ -38,8 +48,11 @@ func handleReportSessionBundle(w http.ResponseWriter, r *http.Request, deps Sess
 	}
 
 	body := map[string]any{}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		body = map[string]any{}
+	if data, readErr := readLimitedBody(r, maxJSONBodyBytes); errors.Is(readErr, errBodyTooLarge) {
+		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": "Request body too large"})
+		return
+	} else if readErr == nil && len(data) > 0 {
+		_ = json.Unmarshal(data, &body)
 	}
 	description := pyStrOrEmpty(body["description"])
 	severity := pyStrOrEmpty(body["severity"])
@@ -63,15 +76,19 @@ func handleReportSessionBundle(w http.ResponseWriter, r *http.Request, deps Sess
 		return
 	}
 
-	reportsDir := filepath.Join(os.TempDir(), "hive-session-reports")
-	if err := os.MkdirAll(reportsDir, 0o755); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+	// The bundle carries conversation transcripts. Keep it in a private
+	// (0700) sibling directory rather than a predictable world-readable
+	// /tmp/hive-session-reports path another local user could pre-create or
+	// read.
+	reportsDir, err := os.MkdirTemp(os.TempDir(), "hive-session-reports-")
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not create report directory"})
 		return
 	}
 	filename := fmt.Sprintf("report_%s_%s.tar.gz",
 		time.Now().Format("20060102_150405"), storageSessionID)
 	bundlePath := filepath.Join(reportsDir, filename)
-	if err := os.WriteFile(bundlePath, bundle, 0o644); err != nil {
+	if err := os.WriteFile(bundlePath, bundle, 0o600); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}

@@ -145,6 +145,9 @@ func WriteUserReportMarker(sessionDir, description, severity string) (UserReport
 
 func BuildSessionReportBundle(sessionDir, sessionID, description, severity string, marker *UserReportMarker) ([]byte, BundleStats, error) {
 	stats := BundleStats{OmittedPaths: []string{}}
+	if !validArchiveSessionID(sessionID) {
+		return nil, stats, fmt.Errorf("invalid session id %q", sessionID)
+	}
 	var uncompressed bytes.Buffer
 	gzipWriter, err := gzip.NewWriterLevel(&uncompressed, gzip.BestCompression)
 	if err != nil {
@@ -250,6 +253,18 @@ func Sha256Hex(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// validArchiveSessionID keeps a caller-supplied id from shaping an archive
+// member name (it prefixes every entry in the bundle).
+func validArchiveSessionID(sessionID string) bool {
+	if sessionID == "" || len(sessionID) > 255 {
+		return false
+	}
+	if sessionID == "." || sessionID == ".." {
+		return false
+	}
+	return !strings.ContainsAny(sessionID, "/\\\x00")
+}
+
 func collectSessionFiles(sessionDir string) ([]string, error) {
 	var files []string
 	err := filepath.WalkDir(sessionDir, func(path string, entry os.DirEntry, walkErr error) error {
@@ -259,7 +274,9 @@ func collectSessionFiles(sessionDir string) ([]string, error) {
 		if entry.IsDir() {
 			return nil
 		}
-		info, statErr := os.Stat(path)
+		// Info() reports the link itself, not its target: a symlink planted in
+		// the session dir must not pull an outside file into the bundle.
+		info, statErr := entry.Info()
 		if statErr != nil || !info.Mode().IsRegular() {
 			return nil
 		}

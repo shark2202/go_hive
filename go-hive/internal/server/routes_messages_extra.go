@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"sort"
@@ -77,7 +76,7 @@ func readOptionalJSONObject(r *http.Request) (map[string]any, error) {
 	if r.Body == nil {
 		return body, nil
 	}
-	data, err := io.ReadAll(r.Body)
+	data, err := readLimitedBody(r, maxJSONBodyBytes)
 	if err != nil {
 		return nil, err
 	}

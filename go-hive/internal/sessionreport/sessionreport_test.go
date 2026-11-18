@@ -300,6 +300,47 @@ func TestSha256HexMatchesKnownVector(t *testing.T) {
 	}
 }
 
+// Parity-exempt: no upstream test; a symlink inside the session dir must not
+// pull an outside file into a bundle the user is about to upload.
+func TestBuildSessionReportBundleSkipsSymlinkedFiles(t *testing.T) {
+	sessionDir := t.TempDir()
+	outside := filepath.Join(t.TempDir(), "secret.txt")
+	if err := os.WriteFile(outside, []byte("outside-secret"), 0o600); err != nil {
+		t.Fatalf("write outside: %v", err)
+	}
+	writeTestFile(t, sessionDir, "notes.md", "inside")
+	if err := os.Symlink(outside, filepath.Join(sessionDir, "leak.txt")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	bundle, stats, err := BuildSessionReportBundle(sessionDir, "session_sym", "", "low", nil)
+	if err != nil {
+		t.Fatalf("build bundle: %v", err)
+	}
+	if stats.Files != 1 || stats.TextFiles != 1 {
+		t.Fatalf("stats = %+v, want only the regular file", stats)
+	}
+	entries := readTarGz(t, bundle)
+	if _, ok := entries["session_session_sym/leak.txt"]; ok {
+		t.Fatal("symlink target was packed into the bundle")
+	}
+	if _, ok := entries["session_session_sym/notes.md"]; !ok {
+		t.Fatal("regular file missing from bundle")
+	}
+}
+
+// Parity-exempt: no upstream test; the id prefixes every archive member, so a
+// value that can step out of the archive must be refused.
+func TestBuildSessionReportBundleRejectsUnsafeSessionID(t *testing.T) {
+	sessionDir := t.TempDir()
+	writeTestFile(t, sessionDir, "notes.md", "inside")
+	for _, bad := range []string{"", ".", "..", "../escape", "a/b", "a\\b", "a\x00b"} {
+		if _, _, err := BuildSessionReportBundle(sessionDir, bad, "", "low", nil); err == nil {
+			t.Fatalf("BuildSessionReportBundle accepted session id %q", bad)
+		}
+	}
+}
+
 func writeTestFile(t *testing.T, root, rel, content string) {
 	t.Helper()
 	path := filepath.Join(root, filepath.FromSlash(rel))

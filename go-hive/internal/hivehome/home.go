@@ -65,9 +65,20 @@ func (h Home) EnsureDirs() error {
 		h.EventLogsDir(),
 		h.ToolArtifactsDir(),
 	}
+	private := map[string]bool{h.CredentialsDir(): true, h.SecretsDir(): true}
 	for _, d := range dirs {
-		if err := os.MkdirAll(d, 0o755); err != nil {
+		mode := os.FileMode(0o755)
+		if private[d] {
+			mode = 0o700
+		}
+		if err := os.MkdirAll(d, mode); err != nil {
 			return fmt.Errorf("mkdir %s: %w", d, err)
+		}
+		if private[d] {
+			// Tighten a directory created by an older build at 0755.
+			if err := os.Chmod(d, mode); err != nil {
+				return fmt.Errorf("chmod %s: %w", d, err)
+			}
 		}
 	}
 	return nil

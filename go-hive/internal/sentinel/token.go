@@ -112,6 +112,11 @@ func (m *TokenManager) loadOrCreateSecret() []byte {
 	if _, err := rand.Read(secret); err != nil {
 		panic("sentinel: crypto/rand unavailable: " + err.Error())
 	}
+	if info, statErr := os.Lstat(path); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
+		log.Printf("sentinel: refusing to write through symlink at %s; using ephemeral secret", path)
+		m.cached = secret
+		return secret
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		log.Printf("sentinel: could not persist secret; using ephemeral: %v", err)
 	} else {

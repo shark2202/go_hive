@@ -58,6 +58,9 @@ func (d ColonyToolsDeps) colonyMetadataPath(colonyID string) string {
 }
 
 func (d ColonyToolsDeps) colonyExists(colonyID string) bool {
+	if validateColonyName(colonyID) != "" {
+		return false
+	}
 	if d.colonyGuard != nil {
 		return d.colonyGuard(colonyID)
 	}

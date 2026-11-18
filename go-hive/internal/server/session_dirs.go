@@ -1,12 +1,25 @@
 package server
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
 )
+
+// validSessionDirID rejects ids that would step outside the sessions tree.
+// Generated ids are safe, but callers also pass ids from request bodies.
+func validSessionDirID(sessionID string) bool {
+	if sessionID == "" || len(sessionID) > 255 {
+		return false
+	}
+	if sessionID == "." || sessionID == ".." {
+		return false
+	}
+	return !strings.ContainsAny(sessionID, "/\\\x00")
+}
 
 // Parity: framework/server/session_manager.py::_colony_id_for_session_dir
 func ColonyIDForSessionDir(sessionDir string) (string, bool) {
@@ -25,6 +38,9 @@ func ColonyIDForSessionDir(sessionDir string) (string, bool) {
 
 // Parity: framework/server/session_manager.py::_iter_queen_session_dirs
 func IterQueenSessionDirs(home hivehome.Home, sessionID string) ([]string, error) {
+	if !validSessionDirID(sessionID) {
+		return nil, fmt.Errorf("invalid session id %q", sessionID)
+	}
 	var out []string
 	err := forEachQueenSessionDir(home, sessionID, func(dir string) bool {
 		out = append(out, dir)
@@ -38,6 +54,9 @@ func IterQueenSessionDirs(home hivehome.Home, sessionID string) ([]string, error
 
 // Parity: framework/server/session_manager.py::_find_queen_session_dir
 func FindQueenSessionDir(home hivehome.Home, sessionID string) (string, error) {
+	if !validSessionDirID(sessionID) {
+		return "", fmt.Errorf("invalid session id %q", sessionID)
+	}
 	var first string
 	err := forEachQueenSessionDir(home, sessionID, func(dir string) bool {
 		first = dir

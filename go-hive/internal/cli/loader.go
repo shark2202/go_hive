@@ -241,10 +241,29 @@ func (r *Runner) cmdOpen(args *parsedArgs) int {
 	return r.Serve(args)
 }
 
+// isLoopbackListenHost reports whether binding host only exposes the server on
+// the loopback interface. An empty host means all interfaces to net.Listen.
+func isLoopbackListenHost(host string) bool {
+	host = strings.TrimSpace(strings.Trim(host, "[]"))
+	if host == "" {
+		return false
+	}
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
 // Parity: framework/loader/cli.py::cmd_serve (the run_server body)
 func (r *Runner) defaultServe(args *parsedArgs) int {
 	host := args.str("host")
 	port := args.intValue("port")
+	if !isLoopbackListenHost(host) && strings.TrimSpace(os.Getenv("HIVE_DESKTOP_TOKEN")) == "" {
+		fmt.Fprintln(r.Stdout, "Refusing to bind a non-loopback host without HIVE_DESKTOP_TOKEN. "+
+			"Set the token (desktop auth) before exposing the API on the network.")
+		return 1
+	}
 	_ = os.Setenv("HIVE_RUNTIME_PORT", strconv.Itoa(port))
 	runtimeOwnerPID()
 
@@ -308,7 +327,12 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 		fmt.Fprintf(r.Stdout, "Error: %v\n", err)
 		return 1
 	}
-	server := &http.Server{Handler: app.Handler()}
+	server := &http.Server{
+		Handler:           app.Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- server.Serve(listener) }()
 	hiveserver.MarkBootReady("Server ready")
@@ -429,7 +453,10 @@ func (r *Runner) createChatSession(
 ) (*hiveserver.Session, error) {
 	sessionID := ""
 	if params.SessionID != nil {
-		sessionID = *params.SessionID
+		sessionID = strings.TrimSpace(*params.SessionID)
+		if !hivesession.ValidSegment(sessionID) {
+			return nil, &hiveserver.SessionCreateValueError{Message: "invalid session_id"}
+		}
 	}
 	if sessionID == "" {
 		generated, err := hivesession.NewStore("").GenerateID(time.Now())

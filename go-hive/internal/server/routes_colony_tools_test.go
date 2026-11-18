@@ -51,6 +51,22 @@ func colonyToolsMux(deps ColonyToolsDeps) *http.ServeMux {
 	return mux
 }
 
+// Parity-exempt: Go-only path guard; colony tools paths must stay under
+// HIVE_HOME/colonies even when metadata exists outside it.
+func TestColonyToolsRejectsTraversalColonyID(t *testing.T) {
+	deps, home := colonyToolsDeps(t)
+	outside := filepath.Join(home.Root, "escape")
+	if err := os.MkdirAll(outside, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(outside, "metadata.json"), []byte(`{"colony_id":"escape"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if deps.colonyExists("../escape") {
+		t.Fatal("colonyExists accepted a traversal colony id")
+	}
+}
+
 // Parity: framework/server/tests/test_colony_tools.py::test_get_tools_default_allow
 func TestGetToolsDefaultAllow(t *testing.T) {
 	deps, home := colonyToolsDeps(t)
