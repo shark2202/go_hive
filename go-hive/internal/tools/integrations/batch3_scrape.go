@@ -43,7 +43,7 @@ func withBatch3Resolver(resolver batch3Resolver) batch3ScrapeOption {
 func defaultBatch3ScrapeDeps() batch3ScrapeDeps {
 	return batch3ScrapeDeps{scrapeResolver: func(ctx context.Context, host string) ([]string, error) {
 		return net.DefaultResolver.LookupHost(ctx, host)
-	}}
+	}
 }
 
 var batch3ScrapeTool = &Tool{
