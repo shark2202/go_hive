@@ -23,14 +23,22 @@ type colonyWorkerSurface struct {
 
 // sessionColonyRuntime returns the session's live colony runtime, or nil when
 // the session has none loaded (the routes then fall back to disk state).
-// *colony.ColonyRuntime satisfies the server's ColonyRuntime interface, so a
-// loaded colony can be held directly.
+//
+// The assembly layer holds a *host.Host on Session.Colony and exposes the
+// runtime through Runtime(); a session loaded by a test or an alternate
+// loader holds the *colony.ColonyRuntime directly. Both shapes resolve here so
+// the live worker routes never silently fall back to disk in a real process.
 func sessionColonyRuntime(session *Session) *colony.ColonyRuntime {
 	if session == nil || session.Colony == nil {
 		return nil
 	}
-	runtime, _ := session.Colony.(*colony.ColonyRuntime)
-	return runtime
+	switch held := session.Colony.(type) {
+	case *colony.ColonyRuntime:
+		return held
+	case interface{ Runtime() *colony.ColonyRuntime }:
+		return held.Runtime()
+	}
+	return nil
 }
 
 func colonyWorkerReadSurfaceFor(runtime *colony.ColonyRuntime) ColonyWorkerReadSurface {
