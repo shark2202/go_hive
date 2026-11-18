@@ -187,19 +187,19 @@ func (c *batch5PGConfig) applyParams(get func(string) string) {
 
 func (c *batch5PGConfig) applyDefaults() {
 	if c.Host == "" {
-		c.Host = firstNonEmpty(os.Getenv("PGHOST"), "localhost")
+		c.Host = lane2FirstNonEmpty(os.Getenv("PGHOST"), "localhost")
 	}
 	if c.Port == "" {
-		c.Port = firstNonEmpty(os.Getenv("PGPORT"), "5432")
+		c.Port = lane2FirstNonEmpty(os.Getenv("PGPORT"), "5432")
 	}
 	if c.User == "" {
-		c.User = firstNonEmpty(os.Getenv("PGUSER"), os.Getenv("USER"), "postgres")
+		c.User = lane2FirstNonEmpty(os.Getenv("PGUSER"), os.Getenv("USER"), "postgres")
 	}
 	if c.Password == "" {
 		c.Password = os.Getenv("PGPASSWORD")
 	}
 	if c.Database == "" {
-		c.Database = firstNonEmpty(os.Getenv("PGDATABASE"), c.User)
+		c.Database = lane2FirstNonEmpty(os.Getenv("PGDATABASE"), c.User)
 	}
 	if c.SSLMode == "" {
 		c.SSLMode = "prefer"
@@ -209,7 +209,7 @@ func (c *batch5PGConfig) applyDefaults() {
 	}
 }
 
-func firstNonEmpty(values ...string) string {
+func lane2FirstNonEmpty(values ...string) string {
 	for _, value := range values {
 		if strings.TrimSpace(value) != "" {
 			return value

@@ -131,8 +131,8 @@ func batch5Lane3CalFormatEvent(item map[string]any) map[string]any {
 	event := map[string]any{
 		"id":          item["id"],
 		"summary":     summary,
-		"start":       firstNonEmpty(start["dateTime"], start["date"]),
-		"end":         firstNonEmpty(end["dateTime"], end["date"]),
+		"start":       lane3FirstNonEmpty(start["dateTime"], start["date"]),
+		"end":         lane3FirstNonEmpty(end["dateTime"], end["date"]),
 		"location":    item["location"],
 		"status":      item["status"],
 		"html_link":   item["htmlLink"],
@@ -150,7 +150,7 @@ func batch5Lane3CalFormatEvent(item map[string]any) map[string]any {
 }
 
 // firstNonEmpty mirrors `x.get("dateTime") or x.get("date")`.
-func firstNonEmpty(values ...any) any {
+func lane3FirstNonEmpty(values ...any) any {
 	for _, value := range values {
 		switch typed := value.(type) {
 		case nil:
@@ -184,8 +184,8 @@ func batch5Lane3CalAvailabilityEvent(item map[string]any) map[string]any {
 	}
 	return map[string]any{
 		"summary":      summary,
-		"start":        firstNonEmpty(start["dateTime"], start["date"]),
-		"end":          firstNonEmpty(end["dateTime"], end["date"]),
+		"start":        lane3FirstNonEmpty(start["dateTime"], start["date"]),
+		"end":          lane3FirstNonEmpty(end["dateTime"], end["date"]),
 		"status":       status,
 		"transparency": transparency,
 	}
