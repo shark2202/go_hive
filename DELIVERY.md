@@ -1,74 +1,74 @@
-# 交付报告（2026-11-18 21:12）
+# 交付报告（2026-11-19 02:50）
 
-> 口径：`GOVERNANCE.md` §1.2 冻结的「19 日候选发布版」定义。
-> 截止本报告，距 11-19 18:00 尚有约 20.8 小时。
+> 口径：`RELEASE_PLAN.md` 的 G6 商业发布标准（R1–R10）。
+> 代码快照：tag `v1.0.14-go.1`（提交 `d1111162`），工作树干净。
 
 ## 1. 结论
 
 | 判定 | 结果 |
 | --- | --- |
-| 按 19 日冻结口径（路由可达 + 引擎可跑 + UI 可用 + 门禁全绿） | **达成，提前约 20.8 小时** |
-| 按「上游全量能力 + 全部真实验证」 | **未达成**：集成工具 20/104 模块，其余 627 action 未移植；部分运行态后端未接入 |
+| R1–R9（功能/分发/文档/许可/安全/可靠性/可观测/质量证据/发布流程） | **满足**（R5 以人工审查 + 离线依赖清单达成，在线 CVE 扫描缺口已声明） |
+| R10（真实第三方集成验证） | **未满足，阻塞于凭据**；已作为「未验证」写入支持矩阵 |
+| 总判定 | **可对外发布的候选版**；「全部集成已真实验证」不成立 |
 
 ## 2. 已验证证据（可复现）
 
 | 项 | 结果 | 复现命令 |
 | --- | --- | --- |
-| 全量门禁 | 退出码 0；gofmt / vet / test / cross / parity / parity-targets 全过 | `cd go_hive/go-hive && make ci` |
-| 测试 | **2,755** 个，全部带 parity 注解或豁免 | 同上 |
-| parity 引用 | **2,436** 条，0 失效文件、0 失效测试 | `make parity-targets` |
+| 全量门禁 | 退出码 0（fmt/vet/test/cross/parity/parity-targets） | `cd go_hive/go-hive && make ci` |
+| 测试 | **4,160**（全部带 parity 注解或豁免） | 同上 |
+| parity 引用 | **4,357** 条，0 失效文件 / 0 失效测试；含生产代码 **830** 条 0 失效符号 | `make parity-targets` |
+| QC 全量 | **8/8 PASS**（含重跑 make ci 与冒烟） | `uv run --no-project python go_hive/scripts/qc_check.py --full --smoke` |
 | 集成冒烟 | **13/13 PASS**（真二进制 + 真 HTTP） | `bash go_hive/scripts/smoke.sh` |
-| E2E | ok（`-tags e2e`） | `go test -tags e2e ./e2e/...` |
-| 六平台产物 | darwin/linux/windows × amd64/arm64，静态链接 | `make cross` |
+| 发布包 | 6 归档 + SHA256SUMS，`shasum -c` 全 OK | `bash go_hive/scripts/release.sh` |
+| 归档可用性 | 解压 darwin-arm64 → `--version` 正确，`/`、`/api/health`、`/assets/*` 全 200 | 见 §5 |
 | cgo | `import "C"` 计数 **0** | `grep -rn 'import "C"' --include=*.go .` |
 | 版本 | `hive 1.0.14-go.1` | `./dist/hive --version` |
-
-冒烟实测：`/api/health` 200、`/` 200、SPA 深路由 200、创建会话 201、无 key `chat` 503、未知会话 404、`workers` 200、SSE 200。
 
 ## 3. 覆盖面
 
 | 子系统 | 交付内容 |
 | --- | --- |
-| HTTP 路由 | 194 条 method+path 实现；`NewApp` 注册 113 条 pattern（integrator 扫描 88 条非 404） |
-| 集成工具 | 20 模块 / **184 action**（第一批 165 + 第二批 19，数量由测试断言钉住） |
-| Sentinel | 8 模块移植（manager/classifier/escalation/listeners/notifier/identity/store/token），100 测试 |
-| Colony | spawn → 多 worker（并发上限/排队晋升）→ 汇总 → 终态；`internal/host` facade；事件对外可见 |
-| 前端 | React 构建产物 14 MB / 1,000 文件，`/` 返回真实页面（**磁盘服务，未嵌入二进制**） |
-| CLI | serve/open/queen/colony/session/chat/skill/debugger/mcp/janitor |
+| 集成模块 | **102 integrations + senders = 103/104**（`file_system_toolkits` 非工具模块），**863/865 action**；23 个安装器全部接入会话工具表，并有「Install\* 必被引用」守护测试 |
+| HTTP 路由 | 194 条 method+path；`NewApp` 注册 113 条 pattern |
+| Sentinel | 8 模块移植，100 测试 |
+| Colony | spawn → 多 worker（并发上限/排队晋升）→ 汇总 → 终态；agent-spec 解析器已接入 |
+| 前端 | React 构建产物 embed 进 `hive-embed`，单二进制自带 dashboard（实测 `/`、深链、assets 200） |
+| 分发 | 六平台归档 + SHA256SUMS + `install.sh`（篡改拒装已验证） |
+| 文档 | quickstart / configuration / support-matrix / CHANGELOG / release-notes / 检查单 |
+| 许可 | LICENSE（Apache-2.0 逐字节）+ NOTICE + THIRD_PARTY_NOTICES（随归档分发） |
 
-## 4. 未完成与未验证（逐条登记）
+## 4. 未满足与已声明差异
 
-### 4.1 功能缺口（上游有能力、Go 没有）
-1. 集成工具 **84 个模块 / 约 680 个 action** 未移植（其中 74 个模块需第三方凭据），逐项清单见 `INTEGRATION_BACKLOG.md`。
-2. Queen mail 后端未移植：路由已挂载，`QueenMail` 为 nil，请求统一 401。
-3. Claude Code queens 运行时未移植：列表返回空、transcript 404（与上游关闭态一致，但关闭即不可用）。
-4. Colony 缺 agent-spec 解析器（全仓无 `LoadAgentSpec`），`serve --colony` 的实时 worker 注册表在无 key 环境恒为空。
-5. 逐 token 模型流式未对等（只有会话事件 SSE）。
+### 4.1 R10：真实第三方验证（阻塞）
+- 863 个 action 只有 `httptest`/假上游证据；**没有任何一次真实厂商调用**。
+- 需要你提供至少几类凭据（如 Slack/Notion/Jira/Stripe/Google）才能把该列从「未验证」改为「已验证」。
 
-### 4.2 已实现但未真实验证
-1. 184 个 action 只对假上游（`httptest`）验证，**没有一次真实第三方调用**；没有凭据就没有证据。
-2. Colony 闭环只有包级测试与注入的假 LLM，未跑过真实模型的多 worker 任务。
-3. Sentinel 引擎单测通过，未接入真实 Telegram/Slack（Socket 传输是可注入 seam）。
-4. 113 条 pattern 里的 88 条「非 404」是 integrator 自测，未逐条独立复核（本次 G3 独立复核的是 13 条关键路径）。
+### 4.2 结构性差异（非遗漏，已声明）
+1. `attach_file` 的多模态只到工具结果层：`ToolResult.Attachments` 与 `ImageContent` 已实现，但 `serve` 的 chat runtime 只把文本传给模型。
+2. `csv_sql` / `excel_sql` 依赖 DuckDB，明确返回未知 action，不做 stub。
+3. `account` 别名参数在多个模块保留但不生效（单凭据运行时）。
+4. 六个网络扫描器默认关闭，需 `HIVE_NETWORK_SCANNERS=1` 或配置开启。
+5. 在线 CVE 扫描未做（`govulncheck` 因无外网不可安装），依赖清单与离线构建证据在 `DEPENDENCIES.md`。
 
-### 4.3 明确延期（顺延 11-25）
-发布打包（tar/zip/安装脚本）、文档定稿、前端 `go:embed`、完整回归矩阵。
+## 5. 发布包与验收
 
-## 5. 对等度评估
-
-- **引用层**：2,436 条 parity 引用全量校验 100% 命中，可作为「测试来自上游」的证据。
-- **路由层**：Go 路径数 194 > 上游 141（超集），但这只证明「路径存在」，不证明每个 handler 的边界语义都对等——后者只在测试覆盖到的分支成立。
-- **工具层**：20/104 模块，按 action 计 184/865（AST 口径）；剩余 680 个 action 的优先级见 `INTEGRATION_BACKLOG.md`。
-- **结论**：作为**候选发布版**可用；作为**完整复刻**不成立。
-
-## 6. 复现与移交
-
-```bash
-cd /Users/mac/hive/go_hive/go-hive
-make ci                      # 全量门禁
-bash ../scripts/smoke.sh     # G3 冒烟（13 项）
-uv run --no-project python ../scripts/pace.py   # 步调核算
+```
+go_hive/go-hive/dist/release/
+  hive-1.0.14-go.1-darwin-amd64.tar.gz   13.5 MB
+  hive-1.0.14-go.1-darwin-arm64.tar.gz   12.9 MB
+  hive-1.0.14-go.1-linux-amd64.tar.gz    13.5 MB
+  hive-1.0.14-go.1-linux-arm64.tar.gz    12.6 MB
+  hive-1.0.14-go.1-windows-amd64.zip     13.6 MB
+  hive-1.0.14-go.1-windows-arm64.zip     12.6 MB
+  SHA256SUMS
 ```
 
-产物：`dist/hive`（本机）、`dist/hive-{darwin,linux,windows}-{amd64,arm64}`。
-前端资产：`go_hive/go-hive/frontend/dist`（14 MB，gitignored，需随包分发或在 11-25 前改为 embed）。
+归档根目录：`hive[.exe]  LICENSE  NOTICE  THIRD_PARTY_NOTICES.md  README.md  SHA256SUMS`。
+独立验收（解压后直接运行）：`--version` = `hive 1.0.14-go.1`；`serve` 后 `/` 200、`/api/health` 200、`/assets/index-*.js` 200。
+
+## 6. 未做（需发布权限或外部条件）
+
+1. **tag 已打但未推送**：`v1.0.14-go.1` 指向 `d1111162`；`git push origin v1.0.14-go.1` 会触发 `release.yml` 上传 Release。
+2. 代码签名/公证（macOS notarization、Windows Authenticode）未做，需证书。
+3. R10 真实凭据验证。
