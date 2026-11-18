@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""QA 过程审计：检查各 lane 分支是否遵守 SOP。只读。"""
+"""QA 过程审计：按合并提交回溯每个 lane 实际带入了什么。只读。
+
+v2 修正：合并后 `main..branch` 恒为空，v1 因此永远报 0（审计已证伪）。
+改为逐条 merge commit 用 `^1..sha` 取差集，归属到被合并的分支。
+"""
 import re
 import subprocess
 from pathlib import Path
@@ -7,47 +11,47 @@ from pathlib import Path
 ROOT = Path("/Users/mac/hive")
 OUT = ROOT / "go_hive/QA_REPORT.md"
 SHARED = ("internal/server/app.go", "go.mod", "Makefile", "internal/tools/registry.go")
-PARITY = re.compile(r"//\s*Parity(-exempt)?:")
+INTEGRATOR = ("merge wave3/int", "merge w4/int", "merge fix/integration")
 
 
 def git(*a):
     return subprocess.run(["git", "-C", str(ROOT), *a], capture_output=True, text=True).stdout
 
 
-branches = [b.strip() for b in git("for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines()
-            if b.strip().startswith(("lane/", "wave", "w4/", "fix/"))]
+merges = []
+for line in git("log", "--merges", "--format=%H|%s", "-80").splitlines():
+    sha, _, subject = line.partition("|")
+    if sha:
+        merges.append((sha, subject))
 
 rows = []
-for b in branches:
-    commits = [l for l in git("log", "--format=%H", f"main..{b}").splitlines() if l]
-    changed = [l for l in git("diff", "--name-only", f"main...{b}").splitlines() if l]
-    tests = [l for l in git("diff", "-U0", f"main...{b}").splitlines()
-             if l.startswith("+func Test")]
-    # 新增测试前 3 行是否带 parity 注解（近似）
-    diff = git("diff", f"main...{b}")
-    added = [l[1:] for l in diff.splitlines() if l.startswith("+//")]
-    annotated = len([l for l in added if PARITY.search(l)])
-    shared_hits = [f for f in changed if any(f.endswith(s) for s in SHARED)]
-    rows.append((b, len(commits), len(changed), len(tests), annotated, shared_hits))
+for sha, subject in merges:
+    diff = git("diff", f"{sha}^1", sha)
+    files = [l for l in git("diff", "--name-only", f"{sha}^1", sha).splitlines() if l]
+    tests = [l for l in diff.splitlines() if l.startswith("+func Test")]
+    notes = [l for l in diff.splitlines() if re.match(r"\+//\s*Parity", l)]
+    shared = [f for f in files if any(f.endswith(s) for s in SHARED)]
+    rows.append((subject[:44], len(files), len(tests), len(notes), shared))
 
-lines = ["# QA 过程审计", "", "| 分支 | 提交 | 变更文件 | 新增测试 | parity 注解行 | 触碰共享文件 | 结论 |",
-         "| --- | ---: | ---: | ---: | ---: | --- | --- |"]
+lines = ["# QA 过程审计（v2：按合并提交回溯）", "",
+         "| 合并 | 文件 | 新增测试 | parity 注解 | 共享文件 | 结论 |",
+         "| --- | ---: | ---: | ---: | --- | --- |"]
 violations = 0
-for b, c, f, t, a, shared in rows:
+for subject, files, tests, notes, shared in rows:
     verdict = "OK"
-    if t and a < t:
-        verdict = "WARN：测试数 > 注解行"
-    if shared:
-        verdict = "VIOLATION：改了共享文件"
+    if shared and not any(k in subject for k in INTEGRATOR):
+        verdict = "VIOLATION：非 integrator 改共享文件"
         violations += 1
-    lines.append(f"| `{b}` | {c} | {f} | {t} | {a} | {', '.join(shared) or '-'} | {verdict} |")
+    elif tests and notes < tests:
+        verdict = f"WARN：注解 {notes} < 测试 {tests}（以 make ci 为准）"
+    lines.append(f"| {subject} | {files} | {tests} | {notes} | {', '.join(shared) or '-'} | {verdict} |")
 
 lines += ["", "## 结论", "",
-          f"- 分支 {len(rows)} 个；共享文件违规 {violations} 个。",
-          "- 共享文件（app.go / go.mod / Makefile / registry.go）只允许 integrator 分支改；其余分支出现即视为越界。",
-          "- 「parity 注解行 < 新增测试数」只作为线索，最终以 `make ci` 的 parity 门禁为准（它要求逐测试注解）。"]
+          f"- 合并 {len(rows)} 个；共享文件越界 {violations} 个。",
+          "- 共享文件只允许 integrator 合并改；其余出现即越界。",
+          "- 「注解 < 测试」只是线索；硬门禁是 `make ci` 里的 check_parity（逐测试必须注解）。"]
 OUT.write_text("\n".join(lines) + "\n")
 print("\n".join(lines[:6]))
 print("...")
-print("\n".join(lines[-4:]))
+print("\n".join(lines[-3:]))
 print("written:", OUT)
