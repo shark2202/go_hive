@@ -54,7 +54,7 @@ func batch3WebSearchTool() *Tool {
 }
 
 // webSearch dispatches one query to the selected provider.
-func webSearch(ctx context.Context, rt *Runtime, input map[string]any, deps batch3Deps) (any, error) {
+func webSearch(ctx context.Context, rt *Runtime, input map[string]any, deps batch3MediaDeps) (any, error) {
 	query := stringArg(input, "query")
 	if query == "" || utf8.RuneCountInString(query) > batch3SearchMaxQuery {
 		return map[string]any{"error": "Query must be 1-500 characters"}, nil
@@ -111,7 +111,7 @@ func webSearch(ctx context.Context, rt *Runtime, input map[string]any, deps batc
 }
 
 // batch3SearchBrave runs one Brave Search API query.
-func batch3SearchBrave(ctx context.Context, rt *Runtime, deps batch3Deps, query string, numResults int, country, apiKey string) (any, error) {
+func batch3SearchBrave(ctx context.Context, rt *Runtime, deps batch3MediaDeps, query string, numResults int, country, apiKey string) (any, error) {
 	params := url.Values{}
 	params.Set("q", query)
 	count := numResults
@@ -176,7 +176,7 @@ func batch3SearchBrave(ctx context.Context, rt *Runtime, deps batch3Deps, query 
 }
 
 // batch3SearchGoogle runs one Google Custom Search JSON API query.
-func batch3SearchGoogle(ctx context.Context, rt *Runtime, deps batch3Deps, query string, numResults int, country, language, apiKey, cseID string) (any, error) {
+func batch3SearchGoogle(ctx context.Context, rt *Runtime, deps batch3MediaDeps, query string, numResults int, country, language, apiKey, cseID string) (any, error) {
 	params := url.Values{}
 	params.Set("key", apiKey)
 	params.Set("cx", cseID)
@@ -239,7 +239,7 @@ func batch3SearchGoogle(ctx context.Context, rt *Runtime, deps batch3Deps, query
 
 // batch3SearchGet performs one GET with the upstream 429 retry ladder
 // (1s, 2s, 4s) and returns the parsed body plus the HTTP status.
-func batch3SearchGet(ctx context.Context, rt *Runtime, deps batch3Deps, target string, headers map[string]string) (map[string]any, int, error) {
+func batch3SearchGet(ctx context.Context, rt *Runtime, deps batch3MediaDeps, target string, headers map[string]string) (map[string]any, int, error) {
 	client := batch3HTTPClient(rt, batch3SearchTimeout)
 	requestCtx, cancel := context.WithTimeout(ctx, batch3SearchTimeout)
 	defer cancel()
