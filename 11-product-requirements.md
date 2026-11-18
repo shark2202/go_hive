@@ -42,7 +42,7 @@
 | 事件总线 | `internal/eventbus` | 9 / 2,249 | 113 | 113 | 已完成 |
 | 任务/提醒 | `internal/tasks` | 13 / 3,310 | 128 | 128 | 已完成（存储/作用域/提醒/工具/路由） |
 | MCP 注册表 | `internal/mcpregistry` | 8 / 3,934 | 160 | 160 | 已完成（安装/解析/健康检查/版本/CLI 模式/mcp2cli 桥） |
-| 工具 | `internal/tools`、`internal/tools/mcp` | 14 / 5,986 | 148 | 148 | 进行中（注册表/执行器（专属池、上下文传播、超时探测策略）/参数转换/分层 keep-set 不变量/MCP 注册与批加载/MCP 客户端传输 stdio·http·unix·sse/MCP 连接池（按服务器名复用、refcount、并发 latch、健康检查、重连、清理）；`internal/tools/builtin` 提供 P0 的 `read_file`/`write_file`/`terminal_exec`（cwd 沙箱、越界与符号链接拒绝、原子写、进程组超时）；104 个集成工具与浏览器桥未开始，`internal/tools/mcp` 目录仍为空） |
+| 工具 | `internal/tools`、`internal/tools/mcp` | 14 / 5,986 | 148 | 148 | 进行中（注册表/执行器（专属池、上下文传播、超时探测策略）/参数转换/分层 keep-set 不变量/MCP 注册与批加载/MCP 客户端传输 stdio·http·unix·sse/MCP 连接池（按服务器名复用、refcount、并发 latch、健康检查、重连、清理）；`internal/tools/builtin` 提供 P0 的 `read_file`/`write_file`/`terminal_exec`（cwd 沙箱、越界与符号链接拒绝、原子写、进程组超时）；104 个集成模块（811 action）与浏览器桥未开始，本期只交付框架与优先子集，`internal/tools/mcp` 目录仍为空） |
 | 附件工具 | `internal/attachments` | 1 / 157 | 5 | 5 | 已完成（文件名净化与去重后缀、二进制/UTF-8 文本探测、MIME 允许清单） |
 | 保留策略 | `internal/maintenance` | 8 / 2,432 | 42 | 42 | 已完成（三档 janitor + `hive janitor run/status` CLI 入口） |
 | 运行时健康 | `internal/runtimehealth` | 1 / 124 | 3 | 3 | 已完成（网络错误标记分类、上游健康生命周期、降级原因 240 字符截断） |
