@@ -48,6 +48,10 @@ type RuntimeOptions struct {
 	MCPToolNames       map[string]struct{}
 	WorkerKeepSet      func() map[string]struct{}
 	AdaptiveToolBudget *bool
+	// MaxConcurrentWorkers caps how many spawned workers execute at once.
+	// Extra workers stay QUEUED until a slot opens. <=0 uses the colony
+	// default (HIVE_MAX_CONCURRENT_WORKERS, 4).
+	MaxConcurrentWorkers int
 }
 
 type SpawnOptions struct {
@@ -58,6 +62,9 @@ type SpawnOptions struct {
 type BatchTask struct {
 	Task     string
 	StreamID string
+	// Data is forwarded to the worker as AgentContext.InputData. It is
+	// where per-task payloads (row batches, URLs, account ids) belong.
+	Data map[string]any
 }
 
 type SpawnBatchOptions struct {
@@ -106,6 +113,9 @@ type ColonyRuntime struct {
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
 
+	maxConcurrent int
+	workerSlots   chan struct{}
+
 	adaptiveEnabled bool
 
 	budgetMu         sync.Mutex
@@ -120,17 +130,23 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 	if storage == "" {
 		storage = "."
 	}
+	maxConcurrent := opts.MaxConcurrentWorkers
+	if maxConcurrent <= 0 {
+		maxConcurrent = DefaultMaxConcurrentWorkers
+	}
 	runtime := &ColonyRuntime{
-		agentSpec:   opts.AgentSpec,
-		goal:        opts.Goal,
-		storagePath: storage,
-		llm:         opts.LLM,
-		tools:       append([]llm.ToolDef(nil), opts.Tools...),
-		toolExec:    opts.ToolExecutor,
-		bus:         opts.EventBus,
-		streamID:    opts.StreamID,
-		keepSet:     opts.WorkerKeepSet,
-		workers:     map[string]*Worker{},
+		agentSpec:     opts.AgentSpec,
+		goal:          opts.Goal,
+		storagePath:   storage,
+		llm:           opts.LLM,
+		tools:         append([]llm.ToolDef(nil), opts.Tools...),
+		toolExec:      opts.ToolExecutor,
+		bus:           opts.EventBus,
+		streamID:      opts.StreamID,
+		keepSet:       opts.WorkerKeepSet,
+		workers:       map[string]*Worker{},
+		maxConcurrent: maxConcurrent,
+		workerSlots:   make(chan struct{}, maxConcurrent),
 	}
 	runtime.adaptiveEnabled = DefaultAdaptiveToolBudget
 	if opts.AdaptiveToolBudget != nil {
@@ -172,9 +188,13 @@ func (r *ColonyRuntime) GetStats() map[string]any {
 	running := r.running
 	total := len(r.workers)
 	active := 0
+	queued := 0
 	for _, worker := range r.workers {
 		if worker.IsActive() {
 			active++
+		}
+		if worker.Status() == WorkerQueued {
+			queued++
 		}
 	}
 	r.mu.Unlock()
@@ -184,13 +204,15 @@ func (r *ColonyRuntime) GetStats() map[string]any {
 		eventBusStats = r.bus.GetStats()
 	}
 	return map[string]any{
-		"running":              running,
-		"colony_id":            r.streamID,
-		"active_workers":       active,
-		"total_workers":        total,
-		"triggers":             0,
-		"event_bus":            eventBusStats,
-		"adaptive_tool_budget": r.AdaptiveToolBudgetStats(),
+		"running":                running,
+		"colony_id":              r.streamID,
+		"active_workers":         active,
+		"queued_workers":         queued,
+		"max_concurrent_workers": r.maxConcurrent,
+		"total_workers":          total,
+		"triggers":               0,
+		"event_bus":              eventBusStats,
+		"adaptive_tool_budget":   r.AdaptiveToolBudgetStats(),
 	}
 }
 
@@ -427,6 +449,19 @@ func (r *ColonyRuntime) SpawnBatch(ctx context.Context, tasks []BatchTask) ([]st
 
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.spawn_batch (worker
 func (r *ColonyRuntime) SpawnBatchWithOptions(ctx context.Context, tasks []BatchTask, opts SpawnBatchOptions) ([]string, error) {
+	runCtx := r.runtimeContext(ctx)
+	batchID := ""
+	if len(tasks) > 1 {
+		batchID = r.newID("batch")
+	}
+	return r.spawnBatchOn(runCtx, tasks, opts, batchID)
+}
+
+// spawnBatchOn registers and starts one goroutine per task. Every worker gets
+// its own context so a single run/worker can be stopped without touching its
+// siblings. Admission is gated by workerSlots: workers beyond the colony cap
+// stay QUEUED until a running peer releases its slot.
+func (r *ColonyRuntime) spawnBatchOn(runCtx context.Context, tasks []BatchTask, opts SpawnBatchOptions, batchID string) ([]string, error) {
 	cfg, err := BuildWorkerLoopConfig(opts.LoopConfigOverrides)
 	if err != nil {
 		return nil, err
@@ -436,11 +471,6 @@ func (r *ColonyRuntime) SpawnBatchWithOptions(ctx context.Context, tasks []Batch
 		pinned = true
 	}
 
-	runCtx := r.runtimeContext(ctx)
-	batchID := ""
-	if len(tasks) > 1 {
-		batchID = r.newID("batch")
-	}
 	ids := make([]string, 0, len(tasks))
 	r.mu.Lock()
 	for range tasks {
@@ -451,9 +481,10 @@ func (r *ColonyRuntime) SpawnBatchWithOptions(ctx context.Context, tasks []Batch
 	workers := make([]*Worker, 0, len(tasks))
 	for index, task := range tasks {
 		worker := r.BuildWorker(WorkerBuildOptions{
-			WorkerID: ids[index],
-			Task:     task.Task,
-			StreamID: task.StreamID,
+			WorkerID:  ids[index],
+			Task:      task.Task,
+			StreamID:  task.StreamID,
+			InputData: task.Data,
 		})
 		worker.BatchID = batchID
 		worker.BatchIndex = index
@@ -473,10 +504,13 @@ func (r *ColonyRuntime) SpawnBatchWithOptions(ctx context.Context, tasks []Batch
 
 	for _, worker := range workers {
 		worker := worker
+		workerCtx, cancel := context.WithCancel(runCtx)
+		worker.setCancel(cancel)
 		r.wg.Add(1)
 		go func() {
 			defer r.wg.Done()
-			r.runWorker(runCtx, worker)
+			defer cancel()
+			r.runGatedWorker(workerCtx, worker)
 		}()
 	}
 	return ids, nil
@@ -643,12 +677,79 @@ func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallReque
 	}
 }
 
+// runGatedWorker is the admission point for spawned workers. It blocks on the
+// colony-wide concurrency gate, then hands off to the agent loop. A worker
+// stopped while queued never starts but still reaches a terminal state and
+// publishes a report, so batch counters and SSE consumers never wait forever.
+func (r *ColonyRuntime) runGatedWorker(ctx context.Context, worker *Worker) {
+	if !r.acquireWorkerSlot(ctx) {
+		r.finishWorkerStopped(worker, "Worker was stopped before it started — the colony stopped while it was queued.")
+		return
+	}
+	defer r.releaseWorkerSlot()
+	if !worker.beginRun(ctx) {
+		r.finishWorkerStopped(worker, "Worker was stopped before it started.")
+		return
+	}
+	r.runWorker(ctx, worker)
+}
+
+func (r *ColonyRuntime) acquireWorkerSlot(ctx context.Context) bool {
+	if r.workerSlots == nil {
+		return true
+	}
+	select {
+	case r.workerSlots <- struct{}{}:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func (r *ColonyRuntime) releaseWorkerSlot() {
+	if r.workerSlots == nil {
+		return
+	}
+	<-r.workerSlots
+}
+
+func (r *ColonyRuntime) finishWorkerStopped(worker *Worker, summary string) {
+	// A report that landed just before cancellation is more informative than
+	// the stop marker — preserve it instead of masking a delivered result.
+	if worker.ExplicitReport() != nil {
+		worker.finishOnce(WorkerCompleted, r.workerTerminalResult(worker, map[string]any{}, nil), func() {
+			r.publishReport(worker, summary)
+		})
+		return
+	}
+	errorText := summary
+	worker.finishOnce(WorkerStopped, WorkerResult{Output: map[string]any{}, Error: &errorText}, func() {
+		r.publishStopped(worker, summary)
+	})
+}
+
+// StopWorker stops one live or queued worker. Running workers unwind through
+// their own context; queued workers wake from the admission gate and publish a
+// stopped report. Returns false when the worker is unknown or already terminal.
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.stop_worker
+func (r *ColonyRuntime) StopWorker(id string) bool {
+	worker := r.GetWorker(id)
+	if worker == nil {
+		return false
+	}
+	cancel, active := worker.requestStop()
+	if !active {
+		return false
+	}
+	if cancel != nil {
+		cancel()
+	}
+	return true
+}
+
 func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
-	worker.SetStatus(WorkerRunning)
-	worker.MarkStarted(time.Now())
 	if err := ctx.Err(); err != nil {
-		errorText := err.Error()
-		worker.Finish(WorkerStopped, WorkerResult{Error: &errorText})
+		r.finishWorkerStopped(worker, "Worker was stopped before it started.")
 		return
 	}
 
@@ -669,8 +770,9 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 		built, err := BuildWorkerLoopConfig(worker.loopOverrides)
 		if err != nil {
 			errorText := err.Error()
-			worker.Finish(WorkerFailed, WorkerResult{Error: &errorText, Output: map[string]any{}})
-			r.publishFailed(worker, errorText)
+			worker.finishOnce(WorkerFailed, WorkerResult{Error: &errorText, Output: map[string]any{}}, func() {
+				r.publishFailed(worker, errorText)
+			})
 			return
 		}
 		cfg = &built
@@ -686,17 +788,19 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 
 	if err != nil {
 		if ctx.Err() != nil {
-			worker.Finish(WorkerStopped, r.workerTerminalResult(worker, nil, nil))
+			r.finishWorkerStopped(worker, "Worker was cancelled before completion.")
 			return
 		}
 		errorText := err.Error()
-		worker.Finish(WorkerFailed, r.workerTerminalResult(worker, map[string]any{}, &errorText))
-		r.publishFailed(worker, errorText)
+		worker.finishOnce(WorkerFailed, r.workerTerminalResult(worker, map[string]any{}, &errorText), func() {
+			r.publishFailed(worker, errorText)
+		})
 		return
 	}
 
-	worker.Finish(WorkerCompleted, r.workerTerminalResult(worker, map[string]any{"text": turn.FinalText}, nil))
-	r.publishReport(worker, turn.FinalText)
+	worker.finishOnce(WorkerCompleted, r.workerTerminalResult(worker, map[string]any{"text": turn.FinalText}, nil), func() {
+		r.publishReport(worker, turn.FinalText)
+	})
 }
 
 // Parity: framework/host/worker.py::Worker._build_result (telemetry)
@@ -738,6 +842,7 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 
 func (r *ColonyRuntime) publishReport(worker *Worker, finalText string) {
 	payload := worker.reportPayload()
+	payload["colony_id"] = r.streamID
 	payload["summary"] = reportSummary(worker, finalText)
 	payload["task"] = worker.Task
 	if worker.BatchID != "" {
@@ -781,6 +886,24 @@ func (r *ColonyRuntime) publishFailed(worker *Worker, errorText string) {
 		}
 		r.bus.EmitExecutionFailed(worker.StreamID, executionID, errorText, nil, nil)
 	}
+}
+
+func (r *ColonyRuntime) publishStopped(worker *Worker, summary string) {
+	payload := map[string]any{
+		"worker_id": worker.ID,
+		"colony_id": r.streamID,
+		"task":      worker.Task,
+		"status":    "stopped",
+		"summary":   summary,
+		"data":      map[string]any{},
+		"error":     nil,
+	}
+	if worker.BatchID != "" {
+		payload["batch_id"] = worker.BatchID
+		payload["batch_index"] = worker.BatchIndex
+		payload["batch_size"] = worker.BatchSize
+	}
+	r.publishEvent(worker, payload)
 }
 
 func (r *ColonyRuntime) publishEvent(worker *Worker, payload map[string]any) {
