@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 )
 
@@ -16,7 +17,7 @@ import (
 // stay intact (builtins through the sandbox, integrations through the registry).
 func TestSessionToolCatalogueInstallsIntegrations(t *testing.T) {
 	root := t.TempDir()
-	catalogue := newSessionToolCatalogue(root, builtin.New(root))
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	if catalogue.installed == 0 {
 		t.Fatal("no integration tools installed")
 	}
@@ -78,5 +79,35 @@ func TestSessionToolCatalogueInstallsIntegrations(t *testing.T) {
 	}
 	if _, ok := payload["error"]; !ok {
 		t.Fatalf("%s: error payload has no error field: %v", name, payload)
+	}
+}
+
+// Parity-exempt: assembly guard. The wave-4 hand-written modules register on
+// the same catalogue as the catalog-backed integrations, and the senders tool
+// follows its feature gate instead of being always-on.
+func TestSessionToolCatalogueInstallsWaveFourModules(t *testing.T) {
+	root := t.TempDir()
+	home := hivehome.Home{Root: root}
+	names := func() map[string]struct{} {
+		defined := map[string]struct{}{}
+		for _, def := range newSessionToolCatalogue(root, builtin.New(root), home).Defs() {
+			defined[def.Name] = struct{}{}
+		}
+		return defined
+	}
+
+	got := names()
+	for _, name := range []string{"pdf_read", "web_scrape", "excel"} {
+		if _, ok := got[name]; !ok {
+			t.Fatalf("batch-3 tool %q missing from the catalogue", name)
+		}
+	}
+	if _, ok := got["senders"]; ok {
+		t.Fatal("senders registered while email_senders is off")
+	}
+
+	t.Setenv("HIVE_EMAIL_SENDERS", "1")
+	if _, ok := names()["senders"]; !ok {
+		t.Fatal("senders missing from the catalogue while email_senders is on")
 	}
 }

@@ -8,7 +8,33 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/colony"
+	"github.com/aden-hive/hive-go/internal/eventbus"
+	colonyhost "github.com/aden-hive/hive-go/internal/host"
 )
+
+// The real assembly layer puts a *host.Host on Session.Colony; the adapter
+// resolves it through Runtime() rather than a direct type assertion.
+var _ interface {
+	Runtime() *colony.ColonyRuntime
+} = (*colonyhost.Host)(nil)
+
+// hostedColonyRuntime mirrors *host.Host's shape: it is the session's
+// ColonyRuntime and exposes the live colony through Runtime().
+type hostedColonyRuntime struct {
+	runtime *colony.ColonyRuntime
+}
+
+func (h hostedColonyRuntime) StreamID() string { return h.runtime.StreamID() }
+
+func (h hostedColonyRuntime) SubscribeToEvents(eventTypes []eventbus.EventType, handler eventbus.EventHandler, opts ...eventbus.SubscribeOption) (string, error) {
+	return h.runtime.SubscribeToEvents(eventTypes, handler, opts...)
+}
+
+func (h hostedColonyRuntime) InjectInput(workerID, content string) error {
+	return h.runtime.InjectInput(workerID, content)
+}
+
+func (h hostedColonyRuntime) Runtime() *colony.ColonyRuntime { return h.runtime }
 
 var (
 	_ ColonyWorkerReadSurface = colonyWorkerSurface{}
@@ -62,6 +88,39 @@ func TestColonyWorkerViewProjectsWorkerInfo(t *testing.T) {
 		view.Result.TokensUsed != 1234 || view.Result.ToolCallsUsed != 7 ||
 		view.Result.DurationSeconds != 90 {
 		t.Fatalf("result = %#v", view.Result)
+	}
+}
+
+// Parity-exempt: adapter contract. Session.Colony holds a host wrapper in the
+// real process, so the live runtime lookup must unwrap Runtime() instead of
+// returning nil and falling back to disk for a running colony.
+func TestSessionColonyRuntimeUnwrapsHost(t *testing.T) {
+	runtime := colony.NewColonyRuntime(colony.RuntimeOptions{
+		AgentSpec:   agentloop.AgentSpec{ID: "test-agent", Name: "tester"},
+		StoragePath: t.TempDir(),
+		StreamID:    "colony-hosted",
+	})
+	session := NewSession("session-hosted", eventbus.NewEventBus())
+	session.Colony = hostedColonyRuntime{runtime: runtime}
+
+	got := sessionColonyRuntime(session)
+	if got != runtime {
+		t.Fatalf("sessionColonyRuntime = %p, want the hosted runtime %p", got, runtime)
+	}
+	if runtime == nil {
+		t.Fatal("test runtime is nil")
+	}
+
+	// A session holding the runtime directly keeps working.
+	direct := NewSession("session-direct", eventbus.NewEventBus())
+	direct.Colony = runtime
+	if got := sessionColonyRuntime(direct); got != runtime {
+		t.Fatalf("direct runtime = %p, want %p", got, runtime)
+	}
+
+	// No colony at all stays nil so the routes take their disk fallback.
+	if got := sessionColonyRuntime(NewSession("session-empty", eventbus.NewEventBus())); got != nil {
+		t.Fatalf("empty session runtime = %p, want nil", got)
 	}
 }
 

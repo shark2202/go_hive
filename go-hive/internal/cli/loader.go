@@ -468,7 +468,7 @@ func (r *Runner) createChatSession(
 	} else {
 		toolbox := builtin.New("")
 		sessionDir := filepath.Join(home.QueensDir(), "default", "sessions", sessionID)
-		tools := newSessionToolCatalogue(sessionDir, toolbox)
+		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 			LLM:     provider,
 			Tools:   tools.Defs(),

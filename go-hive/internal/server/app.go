@@ -202,10 +202,16 @@ func NewApp(deps AppDeps) *App {
 		Home:    deps.Home,
 		Manager: deps.Manager,
 	})
-	// The queen-mail runtime (delivery, depth accounting) has not been ported,
-	// so every request answers the route's own 401 unauthorized rather than a
-	// fabricated delivery.
-	RegisterQueenMailRoutes(mux, QueenMailRouteDeps{})
+	// Queen mail runs on the ported qmail backend: tokens, inboxes, queue and
+	// delivery through the same session-create hook as the queen routes. With
+	// the feature off the adapter keeps the routes' own 401 contract.
+	RegisterQueenMailRoutes(mux, QueenMailRouteDeps{
+		QueenMail: NewQueenMailAdapter(QueenMailAdapterOptions{
+			Home:          deps.Home,
+			Manager:       deps.Manager,
+			CreateSession: deps.CreateSession,
+		}),
+	})
 	// Claude Code queens are off in this build: the list reports `queens: []`
 	// and transcripts 404, exactly as upstream does when the feature is off.
 	RegisterClaudeCodeQueenRoutes(mux, ClaudeCodeQueenRouteDeps{})
