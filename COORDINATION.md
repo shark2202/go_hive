@@ -43,6 +43,7 @@
 
 0. **从当前绿色基线派生**：Coordinator 先把 main 跑到 `make ci` 绿并提交，再 `git worktree add -b lane/<x> <path> HEAD`。禁止从旧提交派生——本轮已三次出现 lane 基于修复前提交、各自重复修同一处冲突的情况。
 0b. **只合并门禁绿的分支**：合并前必须看到该 lane 自己跑过 `make ci` 且退出码 0。禁止合并仍在运行、尚未自检的中间提交——本轮 w4/t2 的中间提交带进 7 个未注解测试，直接让 main 变红。
+0c. **合并后必须核对文件数**：`git merge` 后立刻 `git show --stat HEAD`，若显示 0 文件变更即视为失败——说明该分支根本没有提交（本轮 w4/img 的就发生在 worktree 里，导致“合并成功”但文件不在 main）。此时要回到 worktree 提交再合。
 1. `cd /Users/mac/hive/.wt/lane-<x>/go_hive/go-hive`
 2. 读上游 Python 实现与对应测试，列出行为清单（含错误分支、空值、越界、序列化字段顺序）。
 3. 先写测试（`_test.go`），每条打 `// Parity: core/framework/...py::test_name`；上游无对应用例才用 `// Parity-exempt: 理由`。
