@@ -6,15 +6,15 @@
 
 | # | 面 | 判据 | 现状 |
 | --- | --- | --- | --- |
-| R1 | 功能完整性 | 104/104 集成模块、原生工具齐全，或发布支持矩阵并明示缺口 | 26/104 模块（约 203/865 action），缺口见 `INTEGRATION_BACKLOG.md` |
-| R2 | 分发形态 | 六平台归档 + SHA256 + 安装脚本；单二进制自带 UI | 六平台可编译；`hive-embed` 已实测 `/`、深链、assets 全 200；**打包/校验和/install.sh 未做（w5-pkg 在跑）** |
-| R3 | 文档 | 用户 README、快速开始、配置参考、支持矩阵、变更日志 | 只有开发向 README |
-| R4 | 许可合规 | Apache-2.0 LICENSE、NOTICE、第三方依赖与许可证清单 | 上游为 Apache-2.0；Go 侧未放 LICENSE/NOTICE |
-| R5 | 安全 | 路径穿越/命令注入/密钥落盘/日志脱敏审查；`govulncheck` 无高危 | 未做 |
-| R6 | 可靠性 | 超时、并发、资源回收、崩溃恢复有测试；无已知数据损坏路径 | 部分覆盖 |
+| R1 | 功能完整性 | 104/104 集成模块、原生工具齐全，或发布支持矩阵并明示缺口 | 28/104 模块已并；P1 全量 + P2 约 150 action 在 wave 6 在途 |
+| R2 | 分发形态 | 六平台归档 + SHA256 + 安装脚本；单二进制自带 UI | **已完成**：`release.sh` 实测产出 6 归档 + SHA256SUMS，`install.sh` 校验/拒装均验证；`hive-embed` 实测 `/`、深链、assets 200 |
+| R3 | 文档 | 用户 README、快速开始、配置参考、支持矩阵、变更日志 | **已完成**：`docs/` 四份合并，命令均实跑取证 |
+| R4 | 许可合规 | Apache-2.0 LICENSE、NOTICE、第三方依赖与许可证清单 | **已完成**：LICENSE 逐字节副本 + NOTICE + THIRD_PARTY（28 Go / 27 前端直接依赖） |
+| R5 | 安全 | 路径穿越/命令注入/密钥落盘/日志脱敏审查；`govulncheck` 无高危 | **人工审查完成**：14 类加固 + `SECURITY_REVIEW.md`；在线 CVE 扫描因无外网未做（已声明） |
+| R6 | 可靠性 | 超时、并发、资源回收、崩溃恢复有测试；无已知数据损坏路径 | **已完成**：故障注入 5 项全 PASS，修 11 处真实缺陷，`-race` 全仓通过 |
 | R7 | 可观测 | `--version`、`/api/health`、结构化日志、诊断包 | 已有前三项 |
-| R8 | 质量证据 | `make ci` + smoke + e2e + 跨平台 + parity + QA/QC 报告 | 已具备（RC 级别） |
-| R9 | 发布流程 | tag、release notes、CI release job、制品上传 | 未做 |
+| R8 | 质量证据 | `make ci` + smoke + e2e + 跨平台 + parity + QA/QC 报告 | 已具备；3,163 测试、prod parity 789 refs 校验 |
+| R9 | 发布流程 | tag、release notes、CI release job、制品上传 | **已完成**：`release.yml` 5 job（meta/frontend/build×6/package/publish），语法与 shell 片段实跑校验 |
 | R10 | 真实集成验证 | 关键模块至少各有一条真实凭据的端到端记录 | **阻塞：需外部凭据** |
 
 ## 2. 剩余 wave 划分
