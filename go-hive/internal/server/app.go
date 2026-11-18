@@ -17,6 +17,8 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/agents"
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/aden-hive/hive-go/internal/tasks"
 )
 
 const runtimeLogsPath = "/api/runtime-logs"
@@ -61,10 +63,12 @@ type App struct {
 
 	executorMu  sync.Mutex
 	executorMax int
+
+	processStart float64
 }
 
 func NewApp(deps AppDeps) *App {
-	app := &App{deps: deps, logger: deps.Logger}
+	app := &App{deps: deps, logger: deps.Logger, processStart: float64(time.Now().UnixNano()) / 1e9}
 	if app.logger == nil {
 		app.logger = log.Default()
 	}
@@ -99,6 +103,30 @@ func NewApp(deps AppDeps) *App {
 		Roots:   deps.AgentRoots,
 	})
 	RegisterChatRoutes(mux, ChatRouteDeps{Manager: deps.Manager})
+
+	// Wave 1 route tables that only need the home directory, the session
+	// manager and the process clock. Each seam that is not implemented yet
+	// answers with an explicit failure inside its handler (no empty 200s).
+	RegisterCredentialRoutes(mux, CredentialRouteDeps{
+		Home:  deps.Home,
+		Specs: credentialSpecsFromCatalog,
+	})
+	RegisterSoulRoutes(mux, SoulRouteDeps{Home: deps.Home})
+	RegisterChannelRoutes(mux, ChannelRouteDeps{Home: deps.Home})
+	RegisterPromptRoutes(mux, PromptRouteDeps{Home: deps.Home})
+	RegisterMemoryRoutes(mux, MemoryRouteDeps{Home: deps.Home})
+	RegisterMessageRoutes(mux, MessageRouteDeps{Home: deps.Home})
+	RegisterMCPRoutes(mux, MCPRouteDeps{Home: deps.Home})
+	RegisterMaintenanceRoutes(mux, MaintenanceRouteDeps{
+		Home:           deps.Home,
+		Manager:        deps.Manager,
+		ProcessStartTS: app.processStartTS,
+	})
+	RegisterEventRoutes(mux, EventRouteDeps{})
+	RegisterAppExtraRoutes(mux, AppExtraRouteDeps{})
+	RegisterModelRoutes(mux, ModelRouteDeps{Home: deps.Home, Manager: deps.Manager})
+	tasks.RegisterTaskRoutes(mux)
+
 	if app.distDir != "" {
 		mux.HandleFunc("GET /", app.handleSPA)
 	}
@@ -151,6 +179,51 @@ func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 // Parity: framework/server/app.py::handle_startup_status
 func (a *App) handleStartupStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, BootStatus())
+}
+
+// processStartTS is the /api/maintenance uptime source: the process start as
+// Unix seconds, captured when the app was constructed.
+func (a *App) processStartTS() *float64 {
+	started := a.processStart
+	return &started
+}
+
+// credentialSpecsFromCatalog derives the settings credential rows from the
+// embedded model catalog: one row per provider that ships an API-key env var.
+// The catalogue is the same source /api/models/overview reads, so a provider
+// listed there always has a matching credential row.
+func credentialSpecsFromCatalog() []CredentialSpecView {
+	catalog, err := llm.LoadModelCatalog()
+	if err != nil {
+		return nil
+	}
+	envByProvider := map[string]string{}
+	for _, presetID := range catalog.PresetOrder {
+		preset := catalog.Presets[presetID]
+		if preset == nil || preset.Provider == "" || !preset.HasAPIKeyEnvVar || preset.APIKeyEnvVar == "" {
+			continue
+		}
+		if _, present := envByProvider[preset.Provider]; !present {
+			envByProvider[preset.Provider] = preset.APIKeyEnvVar
+		}
+	}
+	specs := make([]CredentialSpecView, 0, len(envByProvider))
+	for _, provider := range catalog.ProviderOrder {
+		envVar := envByProvider[provider]
+		if envVar == "" {
+			continue
+		}
+		specs = append(specs, CredentialSpecView{
+			Name:                  provider,
+			CredentialID:          provider,
+			EnvVar:                envVar,
+			Description:           "API key for " + provider,
+			DirectAPIKeySupported: true,
+			CredentialKey:         "api_key",
+			AdenProviderName:      provider,
+		})
+	}
+	return specs
 }
 
 func (a *App) requestExecutorMax() int {
