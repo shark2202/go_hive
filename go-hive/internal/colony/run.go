@@ -221,6 +221,7 @@ func (r *ColonyRuntime) SpawnRun(ctx context.Context, tasks []BatchTask, opts Ru
 	if len(tasks) == 0 {
 		return nil, fmt.Errorf("colony: run requires at least one task")
 	}
+	r.UnblockDispatch()
 	baseCtx := r.runtimeContext(ctx)
 	runCtx, cancel := context.WithCancel(baseCtx)
 	if ctx != nil {
