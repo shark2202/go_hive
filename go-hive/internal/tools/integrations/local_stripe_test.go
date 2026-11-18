@@ -7,8 +7,7 @@ import (
 	"testing"
 )
 
-// Parity-exempt: upstream has no Python test; behavior ported from
-// tools/src/aden_tools/tools/stripe_tool/stripe_tool.py::get_subscription_status
+// Parity: tools/tests/tools/test_stripe_tool.py::TestStripeClientSubscriptions::test_get_subscription_status_active, tools/tests/tools/test_stripe_tool.py::TestStripeClientSubscriptions::test_list_subscriptions
 func TestStripeSubscriptionStatus(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `{"data":[{"id":"sub_1","status":"active"}],"has_more":false}`
@@ -34,8 +33,7 @@ func TestStripeSubscriptionStatus(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from
-// tools/src/aden_tools/tools/stripe_tool/stripe_tool.py::cancel_subscription
+// Parity: tools/tests/tools/test_stripe_tool.py::TestStripeClientSubscriptions::test_cancel_subscription_at_period_end, tools/tests/tools/test_stripe_tool.py::TestStripeClientSubscriptions::test_cancel_subscription_immediately
 func TestStripeCancelSubscriptionBranches(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `{"id":"sub_1","cancel_at_period_end":true}`

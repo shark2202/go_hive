@@ -243,7 +243,8 @@ func TestRenameOntoLiveNameStillConflicts(t *testing.T) {
 	}
 }
 
-// Parity-exempt: 上游 rename 路由无 Python 测试；此用例钉住「先停会话再移动目录」。
+// Parity: framework/server/tests/test_colony_rename_soft_deleted.py::test_rename_onto_soft_deleted_name_succeeds
+// Go-only assertion: sessions bound to the old colony dir are stopped before the move.
 func TestRenameStopsSessionsUnderOldColony(t *testing.T) {
 	deps, home := colonyTestDeps(t)
 	makeRouteColony(t, home, "keep", false)

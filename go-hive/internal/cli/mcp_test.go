@@ -27,7 +27,8 @@ func newMCPRunner(t *testing.T) (*Runner, *bytes.Buffer, *bytes.Buffer) {
 	return runner, &stdout, &stderr
 }
 
-// Parity-exempt: tests/test_cli_entry_point.py::test_hive_help predates the mcp
+// Parity-exempt: test_cli_entry_point.py::test_hive_help predates the mcp subcommand and
+// asserts only serve/queen/colony/session/chat; pinning "mcp" in root help is Go-only.
 func TestRootHelpListsMCP(t *testing.T) {
 	code, stdout, _ := runCLI(t, "--help")
 	if code != 0 {

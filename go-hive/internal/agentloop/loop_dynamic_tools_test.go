@@ -8,7 +8,9 @@ import (
 	"github.com/aden-hive/hive-go/internal/llm"
 )
 
-// Parity: core/tests/test_dynamic_tool_refresh_midturn.py::_phase_state
+// Parity-exempt: upstream has no standalone test for this helper; it mirrors _phase_state()
+// from core/tests/test_dynamic_tool_refresh_midturn.py, used by
+// test_search_tools_load_reaches_model_same_turn_loop and test_refresh_dynamic_tools_in_place_and_guarded.
 type fakePhaseState struct {
 	mu         sync.Mutex
 	eager      []llm.ToolDef

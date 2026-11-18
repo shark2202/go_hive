@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/slack_tool/slack_tool.py::slack_send_dm
+// Parity: tools/tests/tools/test_slack_tool.py::TestSlackSendDM::test_send_dm_success
 func TestSlackSendDMTwoStep(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		if strings.HasSuffix(r.URL.Path, "conversations.open") {
@@ -39,7 +39,7 @@ func TestSlackSendDMTwoStep(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/slack_tool/slack_tool.py::slack_upload_file
+// Parity: tools/tests/tools/test_slack_tool.py::TestSlackUploadFile::test_upload_file_success
 func TestSlackUploadFileThreeStep(t *testing.T) {
 	var provider *fakeProvider
 	provider = newFakeProvider(t, func(r *http.Request) (int, string) {
@@ -79,7 +79,8 @@ func TestSlackUploadFileThreeStep(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/slack_tool/slack_tool.py::slack_trigger_workflow
+// Parity-exempt: upstream has no slack_trigger_workflow test; the webhook POST and the
+// invalid-payload branch are pinned here only.
 func TestSlackTriggerWorkflowWebhook(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `ok`
@@ -113,7 +114,7 @@ func TestSlackTriggerWorkflowWebhook(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/github_tool/github_tool.py::github_list_repos
+// Parity: tools/tests/tools/test_github_tool.py::TestGitHubClient::test_list_repos, tools/tests/tools/test_github_tool.py::TestGitHubClient::test_list_repos_authenticated_user
 func TestGitHubListReposBranches(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `[]`
@@ -142,7 +143,8 @@ func TestGitHubListReposBranches(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/github_tool/github_tool.py::github_list_workflow_runs
+// Parity-exempt: upstream has no github_list_workflow_runs test; the workflow-runs path
+// is pinned here only.
 func TestGitHubWorkflowRunsBranch(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `{"workflow_runs":[]}`
@@ -162,7 +164,7 @@ func TestGitHubWorkflowRunsBranch(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from tools/src/aden_tools/tools/slack_tool/slack_tool.py::slack_send_message
+// Parity: tools/tests/tools/test_slack_tool.py::TestSlackSendMessage::test_send_message_channel_not_found
 func TestSlackErrorEnvelope(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `{"ok":false,"error":"channel_not_found"}`

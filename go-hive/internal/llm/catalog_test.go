@@ -6,7 +6,8 @@ import (
 	"testing"
 )
 
-// Parity: core/framework/llm/model_catalog.py
+// Parity: core/tests/test_model_catalog.py::test_default_models_exist_in_each_provider_catalogue
+// File-level anchor: the helpers below mirror the fixture shapes of that test module.
 
 func mustDefaultModels(t *testing.T) map[string]string {
 	t.Helper()

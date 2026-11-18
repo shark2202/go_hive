@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-// Parity-exempt: upstream has no Python test; behavior ported from
-// tools/src/aden_tools/tools/slack_tool/slack_tool.py::get_messages_for_analysis
-// and ::get_conversation_context.
+// Parity-exempt: upstream covers slack_get_conversation_context only
+// (test_slack_tool.py::TestSlackGetConversationContext::test_get_conversation_context_success);
+// slack_get_messages_for_analysis has no upstream test, so the composite is pinned here.
 func TestSlackAnalysisComposites(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		if strings.HasSuffix(r.URL.Path, "users.info") {
@@ -46,8 +46,8 @@ func TestSlackAnalysisComposites(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream has no Python test; behavior ported from
-// tools/src/aden_tools/tools/github_tool/github_tool.py::github_get_user_emails.
+// Parity-exempt: upstream has no github_get_user_emails test; the /user/emails path is
+// pinned here only.
 func TestGitHubUserEmails(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
 		return 200, `[{"email":"a@example.com","primary":true}]`

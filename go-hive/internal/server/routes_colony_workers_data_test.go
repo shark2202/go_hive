@@ -110,8 +110,9 @@ func TestListTablesOKWhenNoDB(t *testing.T) {
 	}
 }
 
-// Parity-exempt: no upstream test drives the tracker overview read; pins the
-// columns/primary_key/row_count contract of GET /data/tables.
+// Parity-exempt: upstream drives GET /data/tables only through
+// test_list_tables_times_out_to_503 and test_list_tables_ok_when_no_db (503 timeout and
+// empty-db branches); the columns/primary_key/row_count overview contract is Go-only.
 func TestListTablesOverview(t *testing.T) {
 	deps, home := colonyDataTestDeps(t)
 	dbPath := seedColonyTracker(t, home, "c1")
@@ -164,8 +165,9 @@ func TestListTablesOverview(t *testing.T) {
 	}
 }
 
-// Parity-exempt: no upstream test drives row pagination; pins limit/offset
-// clamping, ORDER BY and the grid envelope of GET /data/tables/{table}/rows.
+// Parity-exempt: upstream drives GET /data/tables/{table}/rows only through
+// test_table_rows_times_out_to_503 (503 timeout branch); limit/offset clamping, ORDER BY
+// and the grid envelope are Go-only.
 func TestTableRowsPaginationAndOrder(t *testing.T) {
 	deps, home := colonyDataTestDeps(t)
 	dbPath := seedColonyTracker(t, home, "c1")

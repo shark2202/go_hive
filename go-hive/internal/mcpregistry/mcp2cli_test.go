@@ -164,7 +164,7 @@ func TestPromptNamesEachServerAndHowToRunIt(t *testing.T) {
 	}
 }
 
-// Parity-exempt: test_the_queen_prompt_carries_the_block exercises
+// Parity: core/tests/test_mcp_cli.py::test_the_prompt_names_each_server_and_how_to_run_it
 func TestRegistryPromptIsEmptyWithoutCLIServers(t *testing.T) {
 	block := CLIServersPrompt(nil)
 	if block != "" {
@@ -261,7 +261,8 @@ func TestRunNamesUnknownServer(t *testing.T) {
 	}
 }
 
-// Parity-exempt: test_the_routes_add_a_server_in_cli_mode_and_switch_it is an
+// Parity: core/tests/test_mcp_cli.py::test_the_routes_add_a_server_in_cli_mode_and_switch_it
+// The upstream case switches cli->tools through the HTTP routes; this one drives Registry.SetMode directly.
 func TestModeRoundTripOnInstalledServer(t *testing.T) {
 	registry := newDefaultRegistry(t)
 	addCLIServer(t, registry, "comfy", "cli")

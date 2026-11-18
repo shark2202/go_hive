@@ -1,6 +1,7 @@
 package server
 
-// Parity: framework/server/routes_sessions.py::handle_create_session
+// Parity: framework/server/tests/test_api.py::TestSessionCRUD
+// File-level anchor: upstream exercises POST /api/sessions from TestSessionCRUD.
 
 import (
 	"errors"
