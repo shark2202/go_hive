@@ -11,3 +11,4 @@ time,routes_go,routes_py,tests,tool_go,tool_dirs,parity_missing,note
 2026-11-18 21:11,157,141,2755,36,104,0,RC 达成：2755 测试、194 路径、20 模块/184 action、G3 13/13
 2026-11-19 00:27,157,141,2771,36,104,0,w4/t1 首批合并：terminal_output/ring/json，981 行
 2026-11-19 00:41,157,141,3024,42,104,0,wave4 全合并：3024 测试、2636 refs
+2026-11-19 00:54,157,141,3077,46,104,0,w5/int5 装配 + w5/mod(notion/linear) 合并：3077 测试，smoke PASS
