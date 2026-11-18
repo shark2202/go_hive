@@ -8,8 +8,12 @@ package cli
 
 import (
 	"context"
+	"fmt"
+	"os"
 
+	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
+	hiveserver "github.com/aden-hive/hive-go/internal/server"
 	"github.com/aden-hive/hive-go/internal/tools"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 	"github.com/aden-hive/hive-go/internal/tools/integrations"
@@ -26,9 +30,22 @@ type sessionToolCatalogue struct {
 // newSessionToolCatalogue installs the integration tools for one session root
 // and merges their definitions with the builtin ones. A name collision keeps
 // the builtin: it is the more restricted, sandboxed implementation.
-func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox) *sessionToolCatalogue {
+//
+// The batch-3 modules (pdf_read/web_scrape, excel) and the email senders are
+// hand-written ports without a declarative catalog entry, so Install() never
+// sees them; each one registers into the same registry here.
+func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehome.Home) *sessionToolCatalogue {
 	registry := tools.NewToolRegistry()
 	installed := integrations.New(integrations.WithRoots(root)).Install(registry)
+	installed += integrations.InstallBatch3Doc(registry)
+	installed += integrations.InstallBatch3Excel(registry)
+	if senders, err := hiveserver.RegisterSenderTools(registry, home); err != nil {
+		// A broken sender store costs the senders tool, not the whole
+		// catalogue; the feature gate itself returns (0, nil).
+		fmt.Fprintf(os.Stderr, "Warning: email sender tools unavailable: %v\n", err)
+	} else {
+		installed += senders
+	}
 
 	catalogue := &sessionToolCatalogue{
 		toolbox:      toolbox,
