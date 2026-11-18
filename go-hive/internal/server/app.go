@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -370,8 +371,48 @@ func (a *App) accessLog(next http.Handler) http.Handler {
 			slowMark = " SLOW"
 		}
 		a.logger.Printf("[access] %s %s -> %d (%.0fms)%s",
-			r.Method, r.URL.RequestURI(), status, elapsed.Seconds()*1000, slowMark)
+			r.Method, redactedRequestURI(r.URL), status, elapsed.Seconds()*1000, slowMark)
 	})
+}
+
+// sensitiveQueryKeys are the query names whose values are credentials or
+// one-time codes. The access log keeps the shape of the request (useful for
+// debugging) but never the secret itself.
+func sensitiveQueryKey(name string) bool {
+	name = strings.ToLower(name)
+	switch name {
+	case "token", "access_token", "refresh_token", "id_token", "code", "key",
+		"api_key", "apikey", "secret", "client_secret", "password", "signature",
+		"sig", "auth", "jwt":
+		return true
+	}
+	return strings.HasSuffix(name, "_token") || strings.HasSuffix(name, "_secret") || strings.HasSuffix(name, "_key") ||
+		strings.HasSuffix(name, "-token") || strings.HasSuffix(name, "-secret") || strings.HasSuffix(name, "-key")
+}
+
+// redactedRequestURI renders the request URI with sensitive query values
+// replaced, so provider callbacks and webhook secrets do not land in logs.
+func redactedRequestURI(u *url.URL) string {
+	if u == nil {
+		return ""
+	}
+	if u.RawQuery == "" {
+		return u.RequestURI()
+	}
+	query := u.Query()
+	redacted := false
+	for name := range query {
+		if sensitiveQueryKey(name) {
+			query.Set(name, "REDACTED")
+			redacted = true
+		}
+	}
+	if !redacted {
+		return u.RequestURI()
+	}
+	copy := *u
+	copy.RawQuery = query.Encode()
+	return copy.RequestURI()
 }
 
 // Parity: framework/server/app.py::desktop_auth_middleware

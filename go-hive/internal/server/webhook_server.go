@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -86,7 +87,13 @@ func (s *webhookServer) Start() error {
 	} else {
 		s.actualPort = s.port
 	}
-	s.server = &http.Server{Handler: mux}
+	s.server = &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
 	s.running = true
 	go func() {
 		_ = s.server.Serve(listener)
@@ -138,9 +145,13 @@ func (s *webhookServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	body, err := readLimitedBody(r, maxWebhookBodyBytes)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Failed to read request body"})
+		status := http.StatusBadRequest
+		if errors.Is(err, errBodyTooLarge) {
+			status = http.StatusRequestEntityTooLarge
+		}
+		writeJSON(w, status, map[string]any{"error": "Failed to read request body"})
 		return
 	}
 

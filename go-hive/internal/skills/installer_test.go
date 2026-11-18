@@ -97,6 +97,89 @@ func TestInstallFromGitCopiesSkillDirToTarget(t *testing.T) {
 	}
 }
 
+// Parity-exempt: no upstream test; caller-controlled skill names and --subdir
+// must not reach paths outside the skills root / clone.
+func TestSkillInstallPathsCannotEscape(t *testing.T) {
+	base := t.TempDir()
+	skillsDir := filepath.Join(base, "skills")
+	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	victim := filepath.Join(base, "victim")
+	marker := filepath.Join(victim, "keep.txt")
+	if err := os.MkdirAll(victim, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(marker, []byte("keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := RemoveInstalledSkill("../victim", skillsDir); err == nil {
+		t.Fatal("RemoveInstalledSkill accepted a traversal name")
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("traversal name removed the victim: %v", err)
+	}
+	if _, err := InstallFromGit("https://example.com/skill.git", "../escape", "", "", skillsDir); err == nil {
+		t.Fatal("InstallFromGit accepted a traversal name")
+	}
+	source := makeTestParsedSkill(skillsDir, "src")
+	if _, err := ForkSkill(source, "../fork", skillsDir); err == nil {
+		t.Fatal("ForkSkill accepted a traversal name")
+	}
+}
+
+// Parity-exempt: no upstream test; --subdir must resolve inside the clone.
+func TestSkillInstallSubdirectoryStaysInsideClone(t *testing.T) {
+	base := t.TempDir()
+	clone := filepath.Join(base, "clone")
+	outside := filepath.Join(base, "outside")
+	for _, dir := range []string{clone, outside} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(outside, "SKILL.md"), []byte("---\nname: evil\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, sub := range []string{"../outside", "nested/../../outside", outside} {
+		if _, err := resolveInstallSource(clone, sub); err == nil {
+			t.Fatalf("resolveInstallSource accepted %q", sub)
+		}
+	}
+	if err := os.Symlink(outside, filepath.Join(clone, "link")); err == nil {
+		if _, err := resolveInstallSource(clone, "link"); err == nil {
+			t.Fatal("resolveInstallSource followed a symlink out of the clone")
+		}
+	}
+	if got, err := resolveInstallSource(clone, "nested/skill"); err != nil {
+		t.Fatalf("safe subdirectory rejected: %v", err)
+	} else if got != filepath.Join(clone, "nested", "skill") {
+		t.Fatalf("resolved = %q", got)
+	}
+}
+
+// Parity-exempt: no upstream test; git must not parse a caller-controlled URL
+// or ref as an option (--upload-pack executes a command).
+func TestGitCloneArgvSeparatesOptions(t *testing.T) {
+	args, err := gitCloneArgv("https://example.com/skill.git", "/tmp/dst", "v1.2.3")
+	if err != nil {
+		t.Fatalf("gitCloneArgv: %v", err)
+	}
+	if len(args) < 6 || args[len(args)-3] != "--" {
+		t.Fatalf("args = %#v, want -- before repo", args)
+	}
+	if args[len(args)-2] != "https://example.com/skill.git" || args[len(args)-1] != "/tmp/dst" {
+		t.Fatalf("args = %#v", args)
+	}
+	if _, err := gitCloneArgv("--upload-pack=touch /tmp/pwn", "/tmp/dst", ""); err == nil {
+		t.Fatal("gitCloneArgv accepted a URL starting with '-'")
+	}
+	if _, err := gitCloneArgv("https://example.com/skill.git", "/tmp/dst", "--upload-pack=touch /tmp/pwn"); err == nil {
+		t.Fatal("gitCloneArgv accepted a ref starting with '-'")
+	}
+}
+
 // Parity: tests/test_skill_installer.py::test_raises_when_git_not_found
 func TestInstallFromGitRaisesWhenGitNotFound(t *testing.T) {
 	saveInstallHooks(t)

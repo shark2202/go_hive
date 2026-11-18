@@ -57,6 +57,10 @@ func (s *Store) persist(rows []Sender) error {
 	if err := os.MkdirAll(s.dir, 0o700); err != nil {
 		return fmt.Errorf("create senders dir: %w", err)
 	}
+	// The file holds mailbox passwords; tighten a pre-existing directory too.
+	if err := os.Chmod(s.dir, 0o700); err != nil {
+		return fmt.Errorf("chmod senders dir: %w", err)
+	}
 	data, err := json.MarshalIndent(senderFile{Version: 1, Senders: rows}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode senders: %w", err)

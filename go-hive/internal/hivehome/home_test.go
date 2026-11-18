@@ -25,6 +25,15 @@ func TestResolveEnvOverride(t *testing.T) {
 			t.Fatalf("missing %s: %v", p, err)
 		}
 	}
+	for _, p := range []string{h.CredentialsDir(), h.SecretsDir()} {
+		info, err := os.Stat(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if perm := info.Mode().Perm(); perm != 0o700 {
+			t.Fatalf("%s mode = %o, want 700", p, perm)
+		}
+	}
 	col := h.Colony("alpha")
 	want := filepath.Join(dir, "colonies", "alpha", "tracker", "tracker.db")
 	if col.TrackerDB != want {

@@ -163,7 +163,23 @@ func CurrentTitle(queenID string, onDiskTitle any) any {
 	return shipped
 }
 
+// ValidQueenID reports whether id can be used as one queen directory name.
+// Queen ids arrive from URL path values and request bodies; a separator or dot
+// segment must never be joined under the queens root.
+func ValidQueenID(id string) bool {
+	if id == "" || len(id) > 128 {
+		return false
+	}
+	if id == "." || id == ".." {
+		return false
+	}
+	return !strings.ContainsAny(id, "/\\\x00")
+}
+
 func QueenHasAvatar(queensDir, queenID string) bool {
+	if !ValidQueenID(queenID) {
+		return false
+	}
 	dir := filepath.Join(queensDir, queenID)
 	info, err := os.Stat(dir)
 	if err != nil || !info.IsDir() {
@@ -290,6 +306,9 @@ func KnownQueens(queensDir string) []map[string]any {
 }
 
 func LoadQueenProfile(queensDir, queenID string) (map[string]any, error) {
+	if !ValidQueenID(queenID) {
+		return nil, &ProfileNotFoundError{ID: queenID}
+	}
 	profilePath := filepath.Join(queensDir, queenID, "profile.yaml")
 	if _, err := os.Stat(profilePath); err != nil {
 		materialized, ok := materializeDefaultQueen(queensDir, queenID)

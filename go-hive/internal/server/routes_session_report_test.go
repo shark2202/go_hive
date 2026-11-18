@@ -74,6 +74,16 @@ func TestReportBundleRouteWritesMarkerAndScrubbedArchive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read bundle: %v", err)
 	}
+	if info, err := os.Stat(bundlePath); err != nil {
+		t.Fatalf("stat bundle: %v", err)
+	} else if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("bundle mode = %o, want 600", perm)
+	}
+	if info, err := os.Stat(filepath.Dir(bundlePath)); err != nil {
+		t.Fatalf("stat bundle dir: %v", err)
+	} else if perm := info.Mode().Perm(); perm != 0o700 {
+		t.Fatalf("bundle dir mode = %o, want 700", perm)
+	}
 	if body["size"] != float64(len(stored)) {
 		t.Fatalf("size = %#v, file = %d", body["size"], len(stored))
 	}

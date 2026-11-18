@@ -334,6 +334,32 @@ func TestCompositeStorage(t *testing.T) {
 	}
 }
 
+// Parity-exempt: Go-only filesystem hardening; the encrypted store and its
+// metadata index are private to the user.
+func TestEncryptedStorageUsesPrivateModes(t *testing.T) {
+	storage := newEncryptedStorage(t)
+	cred := NewCredentialObject("perm_test")
+	cred.Keys.Set(NewCredentialKey("api_key", "value"))
+	if err := storage.Save(cred); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	checks := map[string]os.FileMode{
+		filepath.Join(storage.BasePath(), "credentials"): 0o700,
+		filepath.Join(storage.BasePath(), "metadata"):    0o700,
+		storage.credPath("perm_test"):                    0o600,
+		storage.indexPath():                              0o600,
+	}
+	for path, want := range checks {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat %s: %v", path, err)
+		}
+		if perm := info.Mode().Perm(); perm != want {
+			t.Fatalf("%s mode = %o, want %o", path, perm, want)
+		}
+	}
+}
+
 func sliceContains(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {

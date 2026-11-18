@@ -299,6 +299,30 @@ func TestResolveIsIdempotent(t *testing.T) {
 	}
 }
 
+// Parity-exempt: Go-only hardening; a colony id that becomes the path builder
+// must not be able to step out of the colonies root.
+func TestStoreRejectsTraversalColonyID(t *testing.T) {
+	store := newTestStore(t, nil)
+	for _, bad := range []string{"../escape", "..", ".", "a/b", `a\\b`, "UPPER"} {
+		if validColonyStoreID(bad) {
+			t.Fatalf("validColonyStoreID(%q) = true, want false", bad)
+		}
+		path := store.NotificationsConfigPath(bad)
+		rel, err := filepath.Rel(store.ColoniesDir, path)
+		if err != nil || rel == ".." || rel == "." || len(rel) >= 3 && rel[:3] == ".."+string(filepath.Separator) {
+			t.Fatalf("NotificationsConfigPath(%q) escaped: %q", bad, path)
+		}
+		escalations := store.EscalationsDir(bad)
+		rel, err = filepath.Rel(store.ColoniesDir, escalations)
+		if err != nil || rel == ".." || len(rel) >= 3 && rel[:3] == ".."+string(filepath.Separator) {
+			t.Fatalf("EscalationsDir(%q) escaped: %q", bad, escalations)
+		}
+	}
+	if got := store.NotificationsConfigPath("c1"); got != filepath.Join(store.ColoniesDir, "c1", notificationsFilename) {
+		t.Fatalf("valid path = %q", got)
+	}
+}
+
 // Parity: core/framework/sentinel/store.py, core/tests/test_sentinel_store.py::test_resolve_missing_returns_false
 func TestResolveMissingReturnsFalse(t *testing.T) {
 	store := newTestStore(t, nil)

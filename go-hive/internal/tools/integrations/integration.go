@@ -139,6 +139,9 @@ func (t *Tool) Description() string {
 type Runtime struct {
 	// HTTP is used by REST actions and network scanners. Never nil after New.
 	HTTP *httpClient
+	// ResolveHost resolves a URL host for SSRF checks. Nil uses the system
+	// resolver; tests inject a stub so no network is touched.
+	ResolveHost func(context.Context, string) ([]string, error)
 	// Now supplies timestamps; defaults to time.Now.
 	Now func() time.Time
 	// Roots are the only directories file-backed tools may touch.

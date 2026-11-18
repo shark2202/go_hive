@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/aden-hive/hive-go/internal/queen"
 )
 
 const queenMaxAvatarBytes = 2 * 1024 * 1024
@@ -33,6 +35,10 @@ func queenAvatarExt(contentType string) string {
 // Parity: framework/server/routes_queens.py::handle_upload_avatar
 func handleQueenUploadAvatar(w http.ResponseWriter, r *http.Request, deps QueenRouteDeps) {
 	queenID := r.PathValue("queen_id")
+	if !queen.ValidQueenID(queenID) {
+		queenNotFound(w, queenID)
+		return
+	}
 	queenDir := filepath.Join(deps.queensDir(), queenID)
 	if _, err := os.Stat(filepath.Join(queenDir, "profile.yaml")); err != nil {
 		queenNotFound(w, queenID)
@@ -109,6 +115,10 @@ func handleQueenUploadAvatar(w http.ResponseWriter, r *http.Request, deps QueenR
 // Parity: framework/server/routes_queens.py::handle_get_avatar
 func handleQueenGetAvatar(w http.ResponseWriter, r *http.Request, deps QueenRouteDeps) {
 	queenID := r.PathValue("queen_id")
+	if !queen.ValidQueenID(queenID) {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "No avatar found"})
+		return
+	}
 	queenDir := filepath.Join(deps.queensDir(), queenID)
 	for _, entry := range queenAvatarExtensions {
 		avatarPath := filepath.Join(queenDir, "avatar"+entry.Ext)
@@ -132,6 +142,10 @@ func handleQueenGetAvatar(w http.ResponseWriter, r *http.Request, deps QueenRout
 // Parity: framework/server/routes_queens.py::handle_delete_avatar
 func handleQueenDeleteAvatar(w http.ResponseWriter, r *http.Request, deps QueenRouteDeps) {
 	queenID := r.PathValue("queen_id")
+	if !queen.ValidQueenID(queenID) {
+		writeJSON(w, http.StatusOK, map[string]any{"has_avatar": false})
+		return
+	}
 	queenDir := filepath.Join(deps.queensDir(), queenID)
 	if info, err := os.Stat(queenDir); err == nil && info.IsDir() {
 		if matches, err := filepath.Glob(filepath.Join(queenDir, "avatar.*")); err == nil {

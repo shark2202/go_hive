@@ -192,6 +192,10 @@ func sentinelOptionalString(value string) *string {
 
 func handleGetNotifications(w http.ResponseWriter, r *http.Request, deps SentinelRouteDeps) {
 	colonyID := r.PathValue("colony_id")
+	if validateColonyName(colonyID) != "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid colony_id"})
+		return
+	}
 	if sentinelColonyMissing(deps.Home, colonyID) {
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": fmt.Sprintf("Colony '%s' not found", colonyID)})
 		return
@@ -206,6 +210,10 @@ func handleGetNotifications(w http.ResponseWriter, r *http.Request, deps Sentine
 
 func handlePutNotifications(w http.ResponseWriter, r *http.Request, deps SentinelRouteDeps) {
 	colonyID := r.PathValue("colony_id")
+	if validateColonyName(colonyID) != "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid colony_id"})
+		return
+	}
 	if sentinelColonyMissing(deps.Home, colonyID) {
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": fmt.Sprintf("Colony '%s' not found", colonyID)})
 		return
@@ -291,6 +299,10 @@ func handlePutNotifications(w http.ResponseWriter, r *http.Request, deps Sentine
 
 func handleTestNotification(w http.ResponseWriter, r *http.Request, deps SentinelRouteDeps) {
 	colonyID := r.PathValue("colony_id")
+	if validateColonyName(colonyID) != "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid colony_id"})
+		return
+	}
 	if sentinelColonyMissing(deps.Home, colonyID) {
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": fmt.Sprintf("Colony '%s' not found", colonyID)})
 		return

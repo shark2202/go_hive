@@ -3,8 +3,32 @@ package qmail
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/aden-hive/hive-go/internal/hivehome"
 )
+
+// Parity-exempt: letter ids are Go-side filenames; a tampered queue/inbox line
+// must not read or write outside the letters directory.
+func TestStoreRejectsTraversalLetterID(t *testing.T) {
+	root := t.TempDir()
+	store := NewStore(filepath.Join(root, "queens"))
+	if err := store.Save(Letter{ID: "../escape", Text: "x"}); err == nil {
+		t.Fatal("Save accepted a traversal letter id")
+	}
+	if _, ok := store.Load("../../etc/passwd"); ok {
+		t.Fatal("Load accepted a traversal letter id")
+	}
+	if got := validLetterID("hop_0123456789ab"); !got {
+		t.Fatal("generated hop id rejected")
+	}
+	claude := NewClaudeStore(hivehome.Home{Root: root})
+	home := claude.Home("../../escape")
+	if !strings.HasPrefix(home, filepath.Join(root, "claude_code")+string(filepath.Separator)) {
+		t.Fatalf("ClaudeStore.Home escaped: %q", home)
+	}
+}
 
 // Parity-exempt: durable letter storage and queue replay are Go-side
 // mechanisms; the Python server keeps letters in queen sessions instead.
@@ -36,6 +60,11 @@ func TestStoreRoundTripsAndQueueSurvivesRestart(t *testing.T) {
 	loaded, ok := store.Load(letter.ID)
 	if !ok || loaded.Text != "Hello" || loaded.FromName != "Ava" {
 		t.Fatalf("loaded = %#v, ok = %v", loaded, ok)
+	}
+	if info, err := os.Stat(filepath.Join(store.LettersDir(), letter.ID+".json")); err != nil {
+		t.Fatal(err)
+	} else if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("letter mode = %o, want 600", perm)
 	}
 
 	letter.State = StateDelivered

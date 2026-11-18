@@ -57,6 +57,65 @@ func attachmentSession(t *testing.T, home hivehome.Home, queen, sessionID string
 	return manager, dir
 }
 
+// Parity-exempt: Go-only symlink hardening; the attachment route serves files
+// from the session tree, and a planted symlink must not expose its target.
+func TestSessionAttachmentDoesNotFollowSymlink(t *testing.T) {
+	home, err := hivehome.ResolveAt(t.TempDir())
+	if err != nil {
+		t.Fatalf("resolve home: %v", err)
+	}
+	sessionID := "session_20261118_090000_bbbb0002"
+	manager, queenDir := attachmentSession(t, home, "queen_x", sessionID)
+	attachmentsDir := filepath.Join(queenDir, "data", "attachments")
+	mkdirTestDir(t, attachmentsDir)
+	outside := filepath.Join(t.TempDir(), "secret.txt")
+	if err := os.WriteFile(outside, []byte("TOP_SECRET"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(attachmentsDir, "leak.txt")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	mux := sessionRoutesMux(SessionRouteDeps{Home: home, Manager: manager})
+	request := httptest.NewRequest(http.MethodGet, "/api/sessions/"+sessionID+"/attachment/leak.txt", nil)
+	recorder := httptest.NewRecorder()
+	mux.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "TOP_SECRET") {
+		t.Fatal("attachment route served a symlink target")
+	}
+}
+
+// Parity-exempt: Go-only symlink hardening; upload must not create through a
+// pre-planted symlink in the attachments directory.
+func TestUploadAttachmentDoesNotFollowSymlink(t *testing.T) {
+	home, err := hivehome.ResolveAt(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessionID := "session_20261118_090000_cccc0003"
+	manager, queenDir := attachmentSession(t, home, "queen_x", sessionID)
+	attachmentsDir := filepath.Join(queenDir, "data", "attachments")
+	mkdirTestDir(t, attachmentsDir)
+	if err := os.Symlink(filepath.Join(t.TempDir(), "outside.txt"), filepath.Join(attachmentsDir, "evil.txt")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	mux := sessionRoutesMux(SessionRouteDeps{Home: home, Manager: manager})
+	recorder, body := uploadAttachment(t, mux, sessionID, "file", "evil.txt", "text/plain", []byte("payload"))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if body["filename"] == "evil.txt" {
+		t.Fatal("upload reused the symlink name")
+	}
+	if _, err := os.Lstat(filepath.Join(attachmentsDir, "evil.txt")); err != nil {
+		t.Fatalf("symlink disappeared: %v", err)
+	}
+}
+
 // Parity-exempt: framework/server/routes_sessions.py::handle_upload_attachment
 func TestUploadAttachmentStoresAndServesBack(t *testing.T) {
 	home, err := hivehome.ResolveAt(t.TempDir())

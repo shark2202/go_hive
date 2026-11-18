@@ -152,6 +152,8 @@ func bytesContainsNUL(sample []byte) bool {
 }
 
 func pathExists(path string) bool {
-	_, err := os.Stat(path)
+	// Treat a symlink (including a broken one) as existing so an attachment
+	// name is never chosen for a link that O_EXCL would then follow.
+	_, err := os.Lstat(path)
 	return err == nil
 }

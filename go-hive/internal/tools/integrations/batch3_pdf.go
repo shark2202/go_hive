@@ -73,10 +73,11 @@ func newBatch3Registry(opts ...batch3Option) *Registry {
 		opt(&deps)
 	}
 	runtime := &Runtime{
-		HTTP:    newHTTPClient(nil),
-		Now:     time.Now,
-		Modules: map[string]*ModuleConfig{},
-		Getenv:  os.Getenv,
+		HTTP:        newHTTPClient(nil),
+		Now:         time.Now,
+		Modules:     map[string]*ModuleConfig{},
+		Getenv:      os.Getenv,
+		ResolveHost: deps.scrapeResolver,
 	}
 	registry := &Registry{
 		runtime: runtime,
@@ -443,13 +444,46 @@ func pdfDownload(ctx context.Context, rt *Runtime, target string, maxBytes int) 
 	if pdfIsPrivateURL(target) {
 		return nil, map[string]any{"error": "URL refused (private/loopback host): " + target}
 	}
+	if block := batch3CheckURLTarget(ctx, target, rt.ResolveHost); block != "" {
+		return nil, map[string]any{
+			"error":                      "URL refused (SSRF protection): " + block,
+			"blocked_by_ssrf_protection": true,
+			"url":                        target,
+		}
+	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
 		return nil, map[string]any{"error": "Failed to download PDF: " + err.Error()}
 	}
 	request.Header.Set("User-Agent", "AdenBot/1.0 (PDF Reader)")
-	response, err := rt.HTTP.Do(request)
+	client := &http.Client{Timeout: 30 * time.Second}
+	if rt.HTTP != nil && rt.HTTP.inner != nil {
+		clone := *rt.HTTP.inner
+		client = &clone
+	}
+	previousRedirect := client.CheckRedirect
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 5 {
+			return errors.New("too many redirects")
+		}
+		if block := batch3CheckURLTarget(req.Context(), req.URL.String(), rt.ResolveHost); block != "" {
+			return &batch3SSRFError{url: req.URL.String(), message: block}
+		}
+		if previousRedirect != nil {
+			return previousRedirect(req, via)
+		}
+		return nil
+	}
+	response, err := client.Do(request)
 	if err != nil {
+		var blocked *batch3SSRFError
+		if errors.As(err, &blocked) {
+			return nil, map[string]any{
+				"error":                      "URL refused (SSRF protection): " + blocked.Error(),
+				"blocked_by_ssrf_protection": true,
+				"url":                        blocked.url,
+			}
+		}
 		if ctx.Err() != nil || errTimeout(err) {
 			return nil, map[string]any{"error": "PDF download timed out"}
 		}

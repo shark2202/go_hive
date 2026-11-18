@@ -46,6 +46,28 @@ func TestNoQueenCarriesPresetSkillDefaults(t *testing.T) {
 	}
 }
 
+// Parity-exempt: no upstream test; a queen id from a URL/body must not escape
+// the queens root when LoadQueenProfile builds profile.yaml's path.
+func TestLoadQueenProfileRejectsTraversalID(t *testing.T) {
+	base := t.TempDir()
+	outside := filepath.Join(base, "outside")
+	if err := os.MkdirAll(outside, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(outside, "profile.yaml"), []byte("name: leak\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	queensDir := filepath.Join(base, "queens")
+	if _, err := LoadQueenProfile(queensDir, "../outside"); err == nil {
+		t.Fatal("LoadQueenProfile accepted a traversal id")
+	}
+	for _, id := range []string{"", ".", "..", "a/b", `a\\b`, "a\x00b"} {
+		if ValidQueenID(id) {
+			t.Fatalf("ValidQueenID(%q) = true, want false", id)
+		}
+	}
+}
+
 // Parity: framework/agents/queen/tests/test_queen_profiles_defaults.py::test_default_tools_for_known_and_unknown
 func TestDefaultToolsForKnownAndUnknown(t *testing.T) {
 	if tools := DefaultToolsFor("queen_outbound"); !containsString(tools, "charts") {

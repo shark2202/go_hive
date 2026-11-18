@@ -22,13 +22,9 @@ import (
 )
 
 func decodeJSONValue(r *http.Request) (any, error) {
-	var data []byte
-	if r.Body != nil {
-		var err error
-		data, err = io.ReadAll(r.Body)
-		if err != nil {
-			return nil, err
-		}
+	data, err := readLimitedBody(r, maxJSONBodyBytes)
+	if err != nil {
+		return nil, err
 	}
 	return decodeJSONBytes(data)
 }
@@ -119,6 +115,10 @@ func handleActiveColonySession(w http.ResponseWriter, r *http.Request, deps Sess
 
 func handleDeleteHistorySession(w http.ResponseWriter, r *http.Request, deps SessionRouteDeps) {
 	sessionID := r.PathValue("session_id")
+	if !validSessionDirID(sessionID) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid session id"})
+		return
+	}
 
 	if deps.Manager != nil && deps.Manager.GetSession(sessionID) != nil {
 		deps.Manager.StopSession(sessionID)
@@ -126,6 +126,12 @@ func handleDeleteHistorySession(w http.ResponseWriter, r *http.Request, deps Ses
 
 	queenSessionDir, err := FindQueenSessionDir(deps.Home, sessionID)
 	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid session id"})
+		return
+	}
+	if queenSessionDir == "" {
+		// No queen folder: target the default location, but only after the
+		// segment check above made the join safe.
 		queenSessionDir = filepath.Join(deps.Home.QueensDir(), "default", "sessions", sessionID)
 	}
 	if info, statErr := os.Stat(queenSessionDir); statErr == nil && info.IsDir() {
@@ -183,6 +189,10 @@ func handleSetSessionTitle(w http.ResponseWriter, r *http.Request, deps SessionR
 
 func handleRevealSession(w http.ResponseWriter, r *http.Request, deps SessionRouteDeps) {
 	sessionID := r.PathValue("session_id")
+	if !validSessionDirID(sessionID) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid session id"})
+		return
+	}
 
 	var folder string
 	var live *Session
@@ -194,6 +204,10 @@ func handleRevealSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 		if live.QueenResumeFrom != "" {
 			storageID = live.QueenResumeFrom
 		}
+		if !validSessionDirID(storageID) {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid session id"})
+			return
+		}
 		queenName := live.QueenName
 		if queenName == "" {
 			queenName = "default"
@@ -202,12 +216,18 @@ func handleRevealSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 	} else {
 		found, err := FindQueenSessionDir(deps.Home, sessionID)
 		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid session id"})
+			return
+		}
+		if found == "" {
+			// FindQueenSessionDir found no queen folder; create the default one.
+			// sessionID is validated above, so this join cannot escape the tree.
 			found = filepath.Join(deps.Home.QueensDir(), "default", "sessions", sessionID)
 		}
 		folder = found
 	}
 
-	if err := os.MkdirAll(folder, 0o777); err != nil {
+	if err := os.MkdirAll(folder, 0o755); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
 		return
 	}

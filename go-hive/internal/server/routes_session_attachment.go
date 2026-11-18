@@ -6,6 +6,7 @@ package server
 import (
 	"bufio"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -86,10 +87,15 @@ func handleSessionAttachment(w http.ResponseWriter, r *http.Request, deps Sessio
 
 	sessionDirs, err := IterQueenSessionDirs(deps.Home, sessionID)
 	if err != nil {
-		sessionDirs = nil
+		writePlainText(w, http.StatusBadRequest, "Invalid session id")
+		return
 	}
 	if len(sessionDirs) == 0 {
-		fallback, _ := FindQueenSessionDir(deps.Home, sessionID)
+		fallback, fallbackErr := FindQueenSessionDir(deps.Home, sessionID)
+		if fallbackErr != nil || fallback == "" {
+			writePlainText(w, http.StatusNotFound, "Attachment not found")
+			return
+		}
 		sessionDirs = []string{fallback}
 	}
 
@@ -150,7 +156,11 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request, deps Session
 		if resumeID == "" {
 			resumeID = sessionID
 		}
-		queenDir, _ = FindQueenSessionDir(deps.Home, resumeID)
+		queenDir, resumeErr := FindQueenSessionDir(deps.Home, resumeID)
+		if resumeErr != nil || queenDir == "" {
+			writeJSON(w, http.StatusNotFound, map[string]any{"error": "session not found"})
+			return
+		}
 	}
 
 	attachmentsDir := filepath.Join(queenDir, "data", "attachments")
@@ -159,6 +169,7 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request, deps Session
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxAttachmentUploadBytes)
 	reader, err := r.MultipartReader()
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "expected a 'file' field"})
@@ -196,7 +207,12 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request, deps Session
 	filename := attachments.DisambiguateFilename(attachmentsDir, base)
 	storedPath := filepath.Join(attachmentsDir, filename)
 
-	destination, err := os.Create(storedPath)
+	destination, err := os.OpenFile(storedPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if errors.Is(err, os.ErrExist) {
+		filename = attachments.DisambiguateFilename(attachmentsDir, base)
+		storedPath = filepath.Join(attachmentsDir, filename)
+		destination, err = os.OpenFile(storedPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	}
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not save attachment"})
 		return
@@ -204,6 +220,12 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request, deps Session
 	_, copyErr := io.Copy(destination, part)
 	closeErr := destination.Close()
 	if copyErr != nil || closeErr != nil {
+		_ = os.Remove(storedPath)
+		var tooLarge *http.MaxBytesError
+		if errors.As(copyErr, &tooLarge) {
+			writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": "attachment too large"})
+			return
+		}
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not save attachment"})
 		return
 	}
@@ -258,7 +280,8 @@ func colonyRootForSessionDir(sessionDir string) string {
 }
 
 func regularFile(path string) bool {
-	info, err := os.Stat(path)
+	// Lstat, not Stat: an attachment symlink must not serve its target.
+	info, err := os.Lstat(path)
 	return err == nil && info.Mode().IsRegular()
 }
 

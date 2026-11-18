@@ -327,6 +327,57 @@ func TestDeleteHistorySessionRemovesDirAndStopsLiveSession(t *testing.T) {
 	}
 }
 
+// Parity-exempt: Go-only path guard; reveal must not create/open a folder
+// outside HIVE_HOME/queens when the session id contains traversal.
+func TestRevealSessionRejectsTraversalID(t *testing.T) {
+	home, err := hivehome.ResolveAt(t.TempDir())
+	if err != nil {
+		t.Fatalf("resolve home: %v", err)
+	}
+	opened := ""
+	request := httptest.NewRequest(http.MethodPost, "/api/sessions/escape/reveal", nil)
+	request.SetPathValue("session_id", "../escape")
+	recorder := httptest.NewRecorder()
+	handleRevealSession(recorder, request, SessionRouteDeps{
+		Home:   home,
+		Reveal: func(path string) error { opened = path; return nil },
+	})
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if opened != "" {
+		t.Fatalf("reveal opened %q", opened)
+	}
+	if _, err := os.Stat(filepath.Join(home.QueensDir(), "default", "escape")); err == nil {
+		t.Fatal("traversal session directory was created")
+	}
+}
+
+// Parity-exempt: Go-only path guard; delete must not rmtree a directory
+// outside HIVE_HOME/queens when the session id contains traversal.
+func TestDeleteHistorySessionRejectsTraversalID(t *testing.T) {
+	home, err := hivehome.ResolveAt(t.TempDir())
+	if err != nil {
+		t.Fatalf("resolve home: %v", err)
+	}
+	victim := filepath.Join(home.QueensDir(), "default", "victim")
+	mkdirTestDir(t, victim)
+	if err := os.WriteFile(filepath.Join(victim, "keep.txt"), []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodDelete, "/api/sessions/history/escape", nil)
+	request.SetPathValue("session_id", "../victim")
+	recorder := httptest.NewRecorder()
+	handleDeleteHistorySession(recorder, request, SessionRouteDeps{Home: home})
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if _, err := os.Stat(filepath.Join(victim, "keep.txt")); err != nil {
+		t.Fatalf("traversal delete removed the victim directory: %v", err)
+	}
+}
+
 // Parity-exempt: Go 边界覆盖；上游 reveal 路由无独立测试。
 func TestRevealSessionCreatesFolderAndOpensIt(t *testing.T) {
 	home, err := hivehome.ResolveAt(t.TempDir())
