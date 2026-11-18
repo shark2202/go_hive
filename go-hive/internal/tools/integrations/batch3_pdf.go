@@ -67,8 +67,8 @@ func InstallBatch3Doc(target *tools.ToolRegistry) int {
 
 // newBatch3Registry builds a registry containing only the batch-3 tools. The
 // scrape-side dependencies stay injectable so tests never touch the network.
-func newBatch3Registry(opts ...batch3Option) *Registry {
-	deps := defaultBatch3Deps()
+func newBatch3Registry(opts ...batch3ScrapeOption) *Registry {
+	deps := defaultBatch3ScrapeDeps()
 	for _, opt := range opts {
 		opt(&deps)
 	}
