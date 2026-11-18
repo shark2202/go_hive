@@ -85,7 +85,7 @@ verdicts.append(("阶段进度", progress_state,
 waits = []
 wt_list = [ln.split()[1] for ln in git("worktree", "list", "--porcelain").splitlines() if ln.startswith("worktree ")]
 for wt in wt_list:
-    if not any(k in wt for k in ("/w4-", "/w5-", "/lane-", "/wave")):
+    if not any(k in wt for k in ("/w4-", "/w5-", "/w6-", "/w7-", "/lane-", "/wave")):
         continue
     n = len(git("-C", wt, "status", "--short").splitlines())
     if n == 0:
