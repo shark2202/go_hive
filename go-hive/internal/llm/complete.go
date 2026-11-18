@@ -153,6 +153,9 @@ func (p *Provider) completionWithRetry(ctx context.Context, kwargs map[string]an
 	}
 
 	for attempt := 0; attempt <= retries; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return CompletionResponse{}, err
+		}
 		response, err := p.Call(ctx, kwargs)
 		if err != nil {
 			if !IsRateLimitError(err) {
@@ -160,6 +163,11 @@ func (p *Provider) completionWithRetry(ctx context.Context, kwargs map[string]an
 			}
 			if attempt == retries {
 				return CompletionResponse{}, err
+			}
+			// A cancelled caller must not sit through the retry backoff; the
+			// sleep is not interruptible and can last RateLimitMaxDelay.
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return CompletionResponse{}, ctxErr
 			}
 			p.sleepFor(ComputeRetryDelay(attempt, err, RetryPolicy{Jitter: true}))
 			continue
@@ -176,6 +184,9 @@ func (p *Provider) completionWithRetry(ctx context.Context, kwargs map[string]an
 		}
 		if attempt >= emptyCap {
 			return response, nil
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return CompletionResponse{}, ctxErr
 		}
 		p.sleepFor(ComputeRetryDelay(attempt, nil, RetryPolicy{}))
 	}

@@ -236,17 +236,18 @@ func handleRecordUserMessage(w http.ResponseWriter, r *http.Request, deps Execut
 	nextSeq := 0
 	if existing := agentloop.GetCursorNextSeq(cursor); existing != nil {
 		nextSeq = *existing
-	} else {
-		parts, _ := store.ReadParts()
-		maxSeq := -1
-		for _, part := range parts {
-			if seq, ok := pythonIntLoose(part["seq"]); ok && int(seq) > maxSeq {
-				maxSeq = int(seq)
-			}
+	}
+	// Never hand out a seq that already has a part: the cursor can be stale
+	// (crash before its write landed) or shared with another writer.
+	parts, _ := store.ReadParts()
+	maxSeq := -1
+	for _, part := range parts {
+		if seq, ok := pythonIntLoose(part["seq"]); ok && int(seq) > maxSeq {
+			maxSeq = int(seq)
 		}
-		if len(parts) > 0 {
-			nextSeq = maxSeq + 1
-		}
+	}
+	if maxSeq+1 > nextSeq {
+		nextSeq = maxSeq + 1
 	}
 
 	msg := agentloop.Message{Seq: nextSeq, Role: agentloop.RoleUser, Content: message, IsClientInput: true}

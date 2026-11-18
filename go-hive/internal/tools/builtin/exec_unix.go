@@ -19,11 +19,20 @@ func killProcessGroup(cmd *exec.Cmd) error {
 	if cmd.Process == nil {
 		return nil
 	}
-	pgid, err := syscall.Getpgid(cmd.Process.Pid)
-	if err != nil {
+	pid := cmd.Process.Pid
+	// Setpgid makes the child the leader of its own group, so its pgid is the
+	// pid at start. Kill that group directly: syscall.Getpgid(pid) fails once
+	// the leader has exited, which is exactly the case where a background
+	// child still holds the stdout/stderr pipes and keeps Wait blocked.
+	err := syscall.Kill(-pid, syscall.SIGKILL)
+	if err == nil || err == syscall.ESRCH {
+		return nil
+	}
+	pgid, getErr := syscall.Getpgid(pid)
+	if getErr != nil {
 		return processKill(cmd)
 	}
-	if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
+	if killErr := syscall.Kill(-pgid, syscall.SIGKILL); killErr != nil {
 		return processKill(cmd)
 	}
 	return nil

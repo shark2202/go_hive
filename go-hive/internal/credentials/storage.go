@@ -62,6 +62,11 @@ type EncryptedFileStorage struct {
 	basePath string
 	keyEnv   string
 	fernet   *Fernet
+
+	// indexMu serialises index read-modify-write cycles. The index is a
+	// single file rebased on every credential save; without it concurrent
+	// saves lose each other's entries.
+	indexMu sync.Mutex
 }
 
 func NewEncryptedFileStorage(basePath, encryptionKey string) (*EncryptedFileStorage, error) {
@@ -99,7 +104,9 @@ func NewEncryptedFileStorageWithOptions(basePath, encryptionKey, keyEnvVar strin
 	}
 	s.fernet = f
 
-	_ = s.maybeRebuildIndex()
+	if err := s.maybeRebuildIndex(); err != nil {
+		return nil, fmt.Errorf("prepare credentials index: %w", err)
+	}
 	return s, nil
 }
 
@@ -139,7 +146,9 @@ func (s *EncryptedFileStorage) Save(credential *CredentialObject) error {
 	if err := atomicfs.WriteFile(s.credPath(credential.ID), []byte(token), 0o600); err != nil {
 		return fmt.Errorf("write credential %q: %w", credential.ID, err)
 	}
-	s.indexUpsert(credential)
+	if err := s.indexUpsert(credential); err != nil {
+		return fmt.Errorf("update credentials index for %q: %w", credential.ID, err)
+	}
 	return nil
 }
 
@@ -177,7 +186,11 @@ func (s *EncryptedFileStorage) Delete(credentialID string) (bool, error) {
 	if err := os.Remove(path); err != nil {
 		return false, err
 	}
-	s.indexRemove(credentialID)
+	if err := s.indexRemove(credentialID); err != nil {
+		// The .enc file is gone; report the index failure so callers know the
+		// listing is stale instead of silently returning a ghost entry.
+		return true, fmt.Errorf("update credentials index for %q: %w", credentialID, err)
+	}
 	return true, nil
 }
 
@@ -206,12 +219,26 @@ func (s *EncryptedFileStorage) Exists(credentialID string) (bool, error) {
 }
 
 func (s *EncryptedFileStorage) readIndex() (IndexEnvelope, error) {
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
+	return s.readIndexLocked()
+}
+
+// readIndexLocked loads metadata/index.json. A corrupt (truncated, half
+// written) index is a derived-artifact failure: rebuild it from the encrypted
+// credential files instead of reporting "no credentials" and letting the next
+// save overwrite every other entry.
+func (s *EncryptedFileStorage) readIndexLocked() (IndexEnvelope, error) {
 	var index IndexEnvelope
 	if err := atomicfs.ReadJSON(s.indexPath(), &index); err != nil {
 		if os.IsNotExist(err) {
 			return IndexEnvelope{Version: IndexVersion, Credentials: map[string]IndexEntry{}}, nil
 		}
-		return IndexEnvelope{Version: IndexVersion, Credentials: map[string]IndexEntry{}}, nil
+		rebuilt, rebuildErr := s.rebuildIndexLocked()
+		if rebuildErr != nil {
+			return IndexEnvelope{}, fmt.Errorf("read credentials index (%v) and rebuild failed: %w", err, rebuildErr)
+		}
+		return rebuilt, nil
 	}
 	if index.Credentials == nil {
 		index.Credentials = map[string]IndexEntry{}
@@ -273,48 +300,62 @@ func (s *EncryptedFileStorage) writeIndex(index IndexEnvelope) error {
 	return atomicfs.WriteJSON(s.indexPath(), index, 0o644)
 }
 
-func (s *EncryptedFileStorage) indexUpsert(credential *CredentialObject) {
-	index, err := s.readIndex()
+func (s *EncryptedFileStorage) indexUpsert(credential *CredentialObject) error {
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
+	index, err := s.readIndexLocked()
 	if err != nil {
-		return
+		return err
 	}
 	if index.Version != IndexVersion {
-		_ = s.rebuildIndex()
-		return
+		_, err := s.rebuildIndexLocked()
+		return err
 	}
 	index.Credentials[credential.ID] = indexEntryFor(credential)
-	_ = s.writeIndex(index)
+	return s.writeIndex(index)
 }
 
-func (s *EncryptedFileStorage) indexRemove(credentialID string) {
-	index, err := s.readIndex()
+func (s *EncryptedFileStorage) indexRemove(credentialID string) error {
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
+	index, err := s.readIndexLocked()
 	if err != nil {
-		return
+		return err
 	}
 	if index.Version != IndexVersion {
-		_ = s.rebuildIndex()
-		return
+		_, err := s.rebuildIndexLocked()
+		return err
 	}
 	delete(index.Credentials, credentialID)
-	_ = s.writeIndex(index)
+	return s.writeIndex(index)
 }
 
 func (s *EncryptedFileStorage) maybeRebuildIndex() error {
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
 	path := s.indexPath()
 	var index IndexEnvelope
 	if err := atomicfs.ReadJSON(path, &index); err == nil && index.Version == IndexVersion {
 		return nil
 	}
-	return s.rebuildIndex()
+	_, err := s.rebuildIndexLocked()
+	return err
 }
 
 func (s *EncryptedFileStorage) rebuildIndex() error {
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
+	_, err := s.rebuildIndexLocked()
+	return err
+}
+
+func (s *EncryptedFileStorage) rebuildIndexLocked() (IndexEnvelope, error) {
 	entries, err := os.ReadDir(filepath.Join(s.basePath, "credentials"))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return IndexEnvelope{Version: IndexVersion, Credentials: map[string]IndexEntry{}}, nil
 		}
-		return err
+		return IndexEnvelope{}, err
 	}
 	names := make([]string, 0, len(entries))
 	for _, entry := range entries {
@@ -324,7 +365,7 @@ func (s *EncryptedFileStorage) rebuildIndex() error {
 	}
 	sort.Strings(names)
 
-	out := IndexEnvelope{Credentials: map[string]IndexEntry{}}
+	out := IndexEnvelope{Version: IndexVersion, Credentials: map[string]IndexEntry{}}
 	for _, name := range names {
 		id := strings.TrimSuffix(name, ".enc")
 		credential, err := s.Load(id)
@@ -333,7 +374,10 @@ func (s *EncryptedFileStorage) rebuildIndex() error {
 		}
 		out.Credentials[credential.ID] = indexEntryFor(credential)
 	}
-	return s.writeIndex(out)
+	if err := s.writeIndex(out); err != nil {
+		return out, err
+	}
+	return out, nil
 }
 
 var ErrEnvStorageReadOnlySave = errors.New("EnvVarStorage is read-only. Set environment variables externally or use EncryptedFileStorage.")
