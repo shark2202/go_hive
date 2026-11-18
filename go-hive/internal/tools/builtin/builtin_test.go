@@ -29,8 +29,8 @@ func toolDef(t *testing.T, name string) bool {
 // through files_server.py and terminal_exec through terminal_tools/exec.py.
 func TestDefsExposeP0Tools(t *testing.T) {
 	defs := Defs()
-	if len(defs) != 3 {
-		t.Fatalf("Defs() = %d tools, want 3", len(defs))
+	if len(defs) != 12 {
+		t.Fatalf("Defs() = %d tools, want 12 (3 P0 + 9 terminal)", len(defs))
 	}
 	for _, name := range []string{ToolReadFile, ToolWriteFile, ToolTerminalExec} {
 		if !toolDef(t, name) {

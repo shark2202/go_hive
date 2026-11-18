@@ -83,7 +83,7 @@ func TestTerminalOutputStoreEvictsLeastRecentlyUsed(t *testing.T) {
 	}
 }
 
-// Parity: tools/tests/test_terminal_tools_lifecycle.py::test_finishes_before_deadline
+// Parity: tools/src/terminal_tools/common/output_store.py::OutputStore
 func TestTerminalOutputGetToolEnvelope(t *testing.T) {
 	handle := terminalOutputs.Put([]byte("abcdef"))
 	tb := New(t.TempDir())

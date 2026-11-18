@@ -100,11 +100,11 @@ func (t *Toolbox) Execute(ctx context.Context, name string, input map[string]any
 	case ToolTerminalExec:
 		return t.terminalExec(ctx, input)
 	}
-	return Result{}, fmt.Errorf("builtin: unknown tool %q", name)
+	return t.executeTerminalTool(ctx, name, input)
 }
 
 func defs() []llm.ToolDef {
-	return []llm.ToolDef{
+	return append([]llm.ToolDef{
 		{
 			Name: ToolReadFile,
 			Description: "Read a UTF-8 text file from the workspace and return it as numbered lines. " +
@@ -169,7 +169,7 @@ func defs() []llm.ToolDef {
 				"required": []string{"command"},
 			},
 		},
-	}
+	}, terminalToolDefs()...)
 }
 
 // fail builds an expected tool failure that the model sees as content.
