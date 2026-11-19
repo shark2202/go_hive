@@ -49,6 +49,9 @@ type AppDeps struct {
 	Reveal       func(string) error
 	Colony       ColonyLifecycle
 	Config       ConfigRouteDeps
+	// Reminders is the process-wide reminder hub runtime shared by the HTTP
+	// routes and chat sessions. Nil builds a fresh one for this app.
+	Reminders *ReminderRuntime
 	FrontendDist string
 	DesktopToken *string
 	Logger       *log.Logger
@@ -156,6 +159,11 @@ func NewApp(deps AppDeps) *App {
 	RegisterAppExtraRoutes(mux, AppExtraRouteDeps{})
 	RegisterModelRoutes(mux, ModelRouteDeps{Home: deps.Home, Manager: deps.Manager})
 	RegisterTaskRoutes(mux, TaskRouteDeps{Store: tasks.NewTaskStore(deps.Home.Root)})
+	reminders := deps.Reminders
+	if reminders == nil {
+		reminders = NewReminderRuntime()
+	}
+	RegisterReminderRoutes(mux, ReminderRouteDeps{Runtime: reminders})
 
 	// Wave 1 route tables that read live runtime state. The colony adapters
 	// project *colony.ColonyRuntime onto the worker read surfaces; a session

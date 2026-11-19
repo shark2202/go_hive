@@ -36,6 +36,11 @@ import (
 
 var goos = runtime.GOOS
 
+// serveReminders is the process-wide reminder runtime for `hive serve`: one
+// instance feeds both the HTTP routes and each chat session's turn hook, so a
+// reminder generated during a turn is visible to the next polling request.
+var serveReminders *hiveserver.ReminderRuntime
+
 var reservedJSONStems = map[string]bool{
 	"agent":         true,
 	"flowchart":     true,
@@ -268,6 +273,7 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	runtimeOwnerPID()
 
 	manager := hiveserver.NewSessionManager()
+	serveReminders = hiveserver.NewReminderRuntime()
 
 	home, err := r.home()
 	if err != nil {
@@ -309,6 +315,7 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	}
 
 	app := hiveserver.NewApp(hiveserver.AppDeps{
+		Reminders: serveReminders,
 		Sessions: func() []hiveserver.FeatureSession {
 			liveMu.Lock()
 			defer liveMu.Unlock()
@@ -519,6 +526,7 @@ func (r *Runner) createChatSession(
 			SessionID: sessionID,
 			QueenName: record.QueenName,
 			HomeRoot:  home.Root,
+			Reminders: serveReminders,
 		})
 		if err != nil {
 			fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, err)

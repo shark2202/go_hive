@@ -72,6 +72,9 @@ type ChatRuntimeDeps struct {
 	// HomeRoot is HIVE_HOME. When set, the runtime recalls global + queen
 	// memory each turn and schedules memory reflection after turns.
 	HomeRoot string
+	// Reminders is the per-session reminder hub shared with the HTTP routes.
+	// Nil disables reminder generation for this runtime.
+	Reminders *ReminderRuntime
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
@@ -95,6 +98,10 @@ type ChatRuntime struct {
 	// lastRecall is the block injected last turn; recall is re-injected only
 	// when its content changes (same guard as the upstream _last_injected_recall).
 	lastRecall string
+	reminders  *ReminderRuntime
+	// turnTools collects the tool names one turn called, feeding the reminder
+	// hub's post_tool_use / stop observations.
+	turnTools []string
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -129,6 +136,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		store:     store,
 		bus:       deps.Bus,
 		sessionID: deps.SessionID,
+		reminders: deps.Reminders,
 		ctx:       ctx,
 		cancel:    cancel,
 		wake:      make(chan struct{}, 1),
@@ -325,6 +333,7 @@ func (r *ChatRuntime) runTurn(message string) {
 	}
 
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
+	r.turnTools = nil
 	if _, err := r.conv.AddUserMessage("["+stamp+"] "+message, agentloop.UserMessageOptions{
 		IsClientInput: true,
 	}); err != nil {
@@ -333,6 +342,7 @@ func (r *ChatRuntime) runTurn(message string) {
 		return
 	}
 	r.injectRecall(message, stamp)
+	r.injectReminders(stamp)
 	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.deps.Tools)
 	if err != nil {
 		// A cancelled turn (session teardown) is not a failure worth
@@ -350,6 +360,10 @@ func (r *ChatRuntime) runTurn(message string) {
 		return
 	}
 	emitter.executionCompleted(result.InnerTurns)
+	// Parity: framework/agent_loop/reminder_hub.py::observe_turn
+	if r.reminders != nil && r.sessionID != "" {
+		r.reminders.TurnComplete(r.sessionID, r.turnTools)
+	}
 	// Parity: core/framework/agents/queen/reflection_agent.py::subscribe_reflection_triggers
 	if r.reflection != nil {
 		r.reflection.OnTurnDone(r.ctx, "queen", "turn_done")
@@ -537,6 +551,22 @@ func (r *ChatRuntime) injectRecall(query, stamp string) {
 	_, _ = r.conv.AddUserMessage("["+stamp+"] [External event] "+reminder, agentloop.UserMessageOptions{})
 }
 
+// injectReminders drains the session's pending reminders into this turn as a
+// system-reminder, after the user message and beside recall. The hub decides
+// when a reminder exists; the runtime only delivers it.
+//
+// Parity: framework/agent_loop/reminder_hub.py::take_pending
+func (r *ChatRuntime) injectReminders(stamp string) {
+	if r.reminders == nil || r.sessionID == "" {
+		return
+	}
+	block := r.reminders.TakeBlock(r.sessionID)
+	if block == "" {
+		return
+	}
+	_, _ = r.conv.AddUserMessage("["+stamp+"] [External event] "+block, agentloop.UserMessageOptions{})
+}
+
 func (r *ChatRuntime) setLastError(err error) {
 	r.mu.Lock()
 	r.lastErr = err
@@ -544,6 +574,9 @@ func (r *ChatRuntime) setLastError(err error) {
 }
 
 func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
+	if r.reminders != nil {
+		r.turnTools = append(r.turnTools, req.Name)
+	}
 	if r.deps.Execute == nil {
 		return agentloop.ToolResult{
 			Content: fmt.Sprintf("No executor registered for tool '%s'", req.Name),
