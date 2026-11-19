@@ -113,6 +113,12 @@ func (h *Host) SubscribeToEvents(eventTypes []eventbus.EventType, handler eventb
 	return h.runtime.SubscribeToEvents(eventTypes, handler, opts...)
 }
 
+// EventBus is the colony bus this host publishes on. Session runtimes compare
+// it against their own bus before mirroring events.
+func (h *Host) EventBus() *eventbus.EventBus {
+	return h.bus
+}
+
 // InjectInput queues a client message for a running worker.
 func (h *Host) InjectInput(workerID, content string) error {
 	return h.runtime.InjectInput(workerID, content)

@@ -490,6 +490,18 @@ func FormatWorkerReport(data map[string]any, batchRemaining int) string {
 //
 // Parity: framework/server/queen_orchestrator.py::_on_worker_report (subscribe)
 func SubscribeQueenReports(runtime *ColonyRuntime, sink func(string)) (func(), error) {
+	if sink == nil {
+		return SubscribeQueenReportsWithWorker(runtime, nil)
+	}
+	return SubscribeQueenReportsWithWorker(runtime, func(_ string, report string) {
+		sink(report)
+	})
+}
+
+// SubscribeQueenReportsWithWorker is SubscribeQueenReports with the reporting
+// worker's id, so a caller can route the same report to the persistent
+// overseer without echoing the overseer's own report back to itself.
+func SubscribeQueenReportsWithWorker(runtime *ColonyRuntime, sink func(workerID, report string)) (func(), error) {
 	noop := func() {}
 	if runtime == nil || sink == nil {
 		return noop, nil
@@ -512,7 +524,7 @@ func SubscribeQueenReports(runtime *ColonyRuntime, sink func(string)) (func(), e
 				return
 			}
 			remaining := runtime.BatchRemaining(stringValue(data["batch_id"]), workerID)
-			sink(FormatWorkerReport(data, remaining))
+			sink(workerID, FormatWorkerReport(data, remaining))
 		},
 	)
 	if err != nil {

@@ -854,7 +854,7 @@ func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 // Parity: framework/loader/agent_loader.py::AgentLoader.load (the config's
 // tools list becomes the worker node's declared tool set)
 func (r *ColonyRuntime) baseWorkerTools() []llm.ToolDef {
-	base := selectWorkerDeclaredTools(r.applyToolAllowlist(r.tools), r.declaredTools, r.agentSpec.Tools)
+	base := selectWorkerDeclaredTools(r.applyToolAllowlist(r.tools), r.applyToolAllowlist(r.declaredTools), r.agentSpec.Tools)
 	// run_playbook is the queen's batch driver; a worker must not recurse into
 	// a converge loop of its own. The session catalogue also feeds the colony's
 	// declared-tool pool, so filter the name even when worker.json asks for it.
@@ -923,6 +923,7 @@ func (r *ColonyRuntime) runGatedWorker(ctx context.Context, worker *Worker) {
 		r.finishWorkerStopped(worker, "Worker was stopped before it started.")
 		return
 	}
+	r.publishStarted(worker)
 	r.runWorker(ctx, worker)
 }
 
@@ -1021,15 +1022,14 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 		}
 		cfg = &built
 	}
-	loop := &agentloop.AgentLoop{
-		ToolExecutor: r.executorFor(worker),
-		Config:       *cfg,
-	}
+	tools := r.workerTools(worker)
+	loop, stopHub := r.newWorkerAgentLoop(worker, *cfg, tools)
+	defer stopHub()
 	loop.ConfigureJudge(worker.Context.AgentSpec, r.workerCompleter(), r.bus)
 	worker.SetAgentLoop(loop)
 	r.ApplyAdaptiveBudget(worker)
 
-	turn, err := loop.ExecuteTurn(ctx, worker.Context, conv, r.workerTools(worker))
+	turn, err := loop.ExecuteTurn(ctx, worker.Context, conv, tools)
 
 	if err != nil {
 		if ctx.Err() != nil {

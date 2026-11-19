@@ -233,7 +233,12 @@ func TestWorkerTranscriptPersistedToDisk(t *testing.T) {
 	if worker == nil {
 		t.Fatal("spawned worker is not registered")
 	}
-	if !eventually(t, 5*time.Second, func() bool { return worker.Status().Done() }) {
+	// Done closes after the terminal artefacts are written; Status() flips a
+	// few instructions earlier (finishOnce sets it before its after callback),
+	// which made this assertion race the events.jsonl write.
+	select {
+	case <-worker.Done():
+	case <-time.After(5 * time.Second):
 		t.Fatalf("worker status = %s, want a terminal state", worker.Status())
 	}
 

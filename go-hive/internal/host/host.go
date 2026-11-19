@@ -83,6 +83,13 @@ func New(cfg Config) (*Host, error) {
 	if bus == nil {
 		bus = eventbus.NewEventBus()
 	}
+	// Resolve the MCP capability boundary once per host: the process loader
+	// names the MCP surface, and the colony's tools.json supplies the enabled
+	// subset. Without the name set the runtime cannot gate anything.
+	mcpToolNames := cfg.MCPToolNames
+	if mcpToolNames == nil {
+		mcpToolNames = discoveredMCPToolNames()
+	}
 	runtime := colony.NewColonyRuntime(colony.RuntimeOptions{
 		AgentSpec:            cfg.AgentSpec,
 		Goal:                 cfg.Goal,
@@ -93,7 +100,7 @@ func New(cfg Config) (*Host, error) {
 		ToolExecutor:         cfg.ToolExecutor,
 		EventBus:             bus,
 		StreamID:             cfg.ColonyID,
-		MCPToolNames:         cfg.MCPToolNames,
+		MCPToolNames:         mcpToolNames,
 		WorkerKeepSet:        cfg.WorkerKeepSet,
 		AdaptiveToolBudget:   cfg.AdaptiveToolBudget,
 		MaxConcurrentWorkers: cfg.MaxConcurrentWorkers,
@@ -101,6 +108,9 @@ func New(cfg Config) (*Host, error) {
 		SkillsProvider:       cfg.SkillsProvider,
 		ToolProviderMap:      cfg.ToolProviderMap,
 	})
+	if enabled, present := readColonyToolsAllowlist(cfg.StoragePath); present {
+		runtime.SetToolAllowlist(enabled, mcpToolNames)
+	}
 	return &Host{
 		cfg:     cfg,
 		runtime: runtime,

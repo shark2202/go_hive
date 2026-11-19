@@ -329,3 +329,41 @@ func (h *ReminderHub) PendingLen() int {
 	defer h.pendingMu.Unlock()
 	return len(h.pending)
 }
+
+// PendingReminders returns a copy of the parked queue without draining it.
+// Read-only consumers (the REST reminder mirror) use this instead of
+// TakePending so the loop still receives the reminders it parked.
+func (h *ReminderHub) PendingReminders() []Reminder {
+	h.pendingMu.Lock()
+	defer h.pendingMu.Unlock()
+	if len(h.pending) == 0 {
+		return nil
+	}
+	return append([]Reminder(nil), h.pending...)
+}
+
+// RegisteredSourceNames lists every source registered on the hub (bound or
+// not), in registration order. Diagnostics and wiring tests use it to prove a
+// hub actually carries the task/idle sources it claims to.
+func (h *ReminderHub) RegisteredSourceNames() []string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	out := make([]string, 0, len(h.sources))
+	for _, source := range h.sources {
+		out = append(out, source.Name())
+	}
+	return out
+}
+
+// ActiveSourceNames lists the sources Bind selected for the current agent
+// context, in registration order. Before a Bind the registered list is the
+// active list (ReminderHub.consultedLocked semantics).
+func (h *ReminderHub) ActiveSourceNames() []string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	out := make([]string, 0, len(h.consultedLocked()))
+	for _, source := range h.consultedLocked() {
+		out = append(out, source.Name())
+	}
+	return out
+}
