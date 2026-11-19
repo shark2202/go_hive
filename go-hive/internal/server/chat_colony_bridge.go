@@ -185,11 +185,7 @@ func (r *ChatRuntime) deliverToOverseer(message string) bool {
 // loop acts on the message — the overseer — while the chat runtime remains the
 // session's front end (transcript, event bus, ask_user surface).
 func (r *ChatRuntime) relayClientInputToOverseer(message string) bool {
-	block := r.relaySkillsCatalogBlock()
-	payload := message
-	if block != "" {
-		payload = block + "\n\n" + message
-	}
+	payload, block := r.relayPayloadWithCatalog(message)
 	if !r.deliverToOverseer(payload) {
 		return false
 	}
@@ -274,8 +270,13 @@ func (r *ChatRuntime) forwardToOverseer(content string) {
 	if runtime == nil || runtime.OverseerID() == "" {
 		return
 	}
-	if err := runtime.InjectOverseer(content); err != nil {
+	payload, block := r.relayPayloadWithCatalog(content)
+	if err := runtime.InjectOverseer(payload); err != nil {
 		log.Printf("chat runtime %s: overseer input dropped: %v", r.sessionID, err)
+		return
+	}
+	if block != "" {
+		r.markRelayCatalogSent(block)
 	}
 }
 
@@ -294,7 +295,14 @@ func (r *ChatRuntime) relayWorkerReportToOverseer(report string) bool {
 	if !r.overseerRelayActive() {
 		return false
 	}
-	return r.deliverToOverseer(report)
+	payload, block := r.relayPayloadWithCatalog(report)
+	if !r.deliverToOverseer(payload) {
+		return false
+	}
+	if block != "" {
+		r.markRelayCatalogSent(block)
+	}
+	return true
 }
 
 // relayTriggerToOverseer hands a framework trigger to the overseer when it owns
@@ -303,7 +311,25 @@ func (r *ChatRuntime) relayTriggerToOverseer(event agentloop.TriggerEvent) bool 
 	if !r.overseerRelayActive() {
 		return false
 	}
-	return r.deliverToOverseer(triggerBlockForOverseer(event))
+	payload, block := r.relayPayloadWithCatalog(triggerBlockForOverseer(event))
+	if !r.deliverToOverseer(payload) {
+		return false
+	}
+	if block != "" {
+		r.markRelayCatalogSent(block)
+	}
+	return true
+}
+
+// relayPayloadWithCatalog prepends the one-shot skills catalog block to the
+// first execution input the overseer receives, whichever kind it is (client
+// message, worker report or trigger).
+func (r *ChatRuntime) relayPayloadWithCatalog(content string) (string, string) {
+	block := r.relaySkillsCatalogBlock()
+	if block == "" {
+		return content, ""
+	}
+	return block + "\n\n" + content, block
 }
 
 // forwardTriggerToOverseer sends the same framework trigger the chat queen
