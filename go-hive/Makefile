@@ -114,7 +114,7 @@ parity-targets:
 # 纯 stdlib，无外网也能跑。
 WIRING_CHECK ?= ../scripts/wiring_check.py
 wiring-check:
-	@python3 $(WIRING_CHECK) .
+	@python3 $(WIRING_CHECK) --root .
 
 # 校验 internal/credentials/specs_gen.go 与上游 Python 注册表一致。
 # 需要 uv 和同级 tools/ 树；缺失时跳过（与 parity-targets 的 PY_ROOT 约定一致）。
