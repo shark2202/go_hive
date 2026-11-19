@@ -124,6 +124,13 @@ type AgentLoop struct {
 	ToolExecutor ToolExecutor
 	Hub          *ReminderHub
 
+	// Judge evaluates each turn against AgentSpec.SuccessCriteria. Nil (the
+	// default) disables judge evaluation.
+	Judge Judge
+	// JudgeEvents receives one verdict event per evaluation. Nil disables
+	// event publication.
+	JudgeEvents JudgeEventWriter
+
 	now func() time.Time
 
 	mu      sync.Mutex
@@ -577,6 +584,22 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		if len(toolCalls) == 0 {
 			result.FinalText = completion.Content
 			result.InnerTurns = inner + 1
+			if l.shouldJudge(agentCtx, inner, true, false) {
+				verdict := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, result.ToolResults, inner)
+				switch verdict.Action {
+				case JudgeAccept:
+					return result, nil
+				case JudgeEscalate:
+					result.Success = false
+					return result, fmt.Errorf("agent loop: judge escalated: %s", verdict.Feedback)
+				default:
+					if err := injectJudgeFeedback(conv, verdict); err != nil {
+						result.Success = false
+						return result, err
+					}
+					continue
+				}
+			}
 			return result, nil
 		}
 
@@ -600,6 +623,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		toolCallCount := 0
 		limitHit := false
 		lifetimeLimitHit := false
+		toolFailure := false
 		var graceSkippedIdx []int
 		var deferredIdx []int
 
@@ -636,6 +660,9 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 				agentCtx.Observer.ToolCallStarted(call)
 			}
 			results[i] = l.executeTool(ctx, agentCtx, call)
+			if results[i].IsError {
+				toolFailure = true
+			}
 			if agentCtx.Observer != nil {
 				agentCtx.Observer.ToolCallCompleted(call, results[i])
 			}
@@ -709,6 +736,26 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		if agentCtx.StopAfterToolBatch != nil && agentCtx.StopAfterToolBatch() {
 			result.InnerTurns = inner + 1
 			return result, nil
+		}
+
+		if l.shouldJudge(agentCtx, inner, false, toolFailure) {
+			verdict := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, records, inner)
+			switch verdict.Action {
+			case JudgeAccept:
+				result.FinalText = completion.Content
+				result.InnerTurns = inner + 1
+				return result, nil
+			case JudgeEscalate:
+				result.Success = false
+				result.FinalText = completion.Content
+				result.InnerTurns = inner + 1
+				return result, fmt.Errorf("agent loop: judge escalated: %s", verdict.Feedback)
+			default:
+				if err := injectJudgeFeedback(conv, verdict); err != nil {
+					result.Success = false
+					return result, err
+				}
+			}
 		}
 
 		if _, err := l.injectQueuedInput(reminderCtx, conv); err != nil {
