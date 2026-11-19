@@ -211,8 +211,11 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	runtime.streamLLM = newChatStreamingCompleter(deps.LLM)
 	// A session that has not run a turn is parked at turn_done: without this
 	// the idle ticker would auto-start an untouched session after the
-	// between-turns budget.
-	runtime.setParkState(agentloop.ParkReasonTurnDone, true)
+	// between-turns budget. A persisted pending_input (an unanswered ask_user
+	// question, or a broken turn) restores the wait instead of forgetting it.
+	if !runtime.restoreParkState() {
+		runtime.setParkState(agentloop.ParkReasonTurnDone, true)
+	}
 	runtime.queenName = strings.TrimSpace(deps.QueenName)
 	if runtime.queenName == "" {
 		runtime.queenName = "default"
@@ -1061,25 +1064,36 @@ func chatToolsWithAskUser(tools []llm.ToolDef) []llm.ToolDef {
 //
 // Parity: framework/server/queen_orchestrator.py::_queen_identity_hook
 // Parity: framework/agents/queen/queen_profiles.py::format_queen_identity_prompt
+// Parity: framework/tools/queen_lifecycle_tools.py::QueenPhaseState.get_static_prompt
 func chatQueenIdentityPrompt(homeRoot, queenName string) string {
-	if homeRoot == "" {
-		return chatIdentityPrompt
-	}
-	profile, err := queen.LoadQueenProfile(hivehome.Home{Root: homeRoot}.QueensDir(), queenName)
-	if err != nil {
-		// The shared "default" queen ships no profile; that is expected. A
-		// named queen that cannot load is worth one diagnostic line.
-		if queenName != "default" {
-			log.Printf("chat queen %s: profile unavailable, using the generic identity: %v", queenName, err)
+	identity := chatIdentityPrompt
+	if homeRoot != "" {
+		profile, err := queen.LoadQueenProfile(hivehome.Home{Root: homeRoot}.QueensDir(), queenName)
+		if err != nil {
+			// The shared "default" queen ships no profile; that is expected. A
+			// named queen that cannot load is worth one diagnostic line.
+			if queenName != "default" {
+				log.Printf("chat queen %s: profile unavailable, using the generic identity: %v", queenName, err)
+			}
+		} else {
+			maxExamples := 0
+			if prompt := strings.TrimSpace(queen.FormatQueenIdentityPrompt(profile, &maxExamples)); prompt != "" {
+				identity = prompt
+			}
 		}
-		return chatIdentityPrompt
 	}
-	maxExamples := 0
-	prompt := strings.TrimSpace(queen.FormatQueenIdentityPrompt(profile, &maxExamples))
-	if prompt == "" {
-		return chatIdentityPrompt
+	// Her soul rides the static prompt right under her identity, as upstream:
+	// identity + soul + base prompt. It is not a per-turn reminder because it
+	// changes at most once a day and belongs in the cached prefix.
+	//
+	// Parity: core/framework/agents/queen/soul.py::prompt_for
+	if homeRoot != "" {
+		home := hivehome.Home{Root: homeRoot}
+		if soulPrompt := soul.PromptFor(HiveConfig(home), home.QueensDir(), queenName); soulPrompt != "" {
+			identity = identity + "\n\n" + soulPrompt
+		}
 	}
-	return prompt
+	return identity
 }
 
 // executeAskUser records the question the turn is parking on and announces it
@@ -1096,6 +1110,9 @@ func (r *ChatRuntime) executeAskUser(input map[string]any) agentloop.ToolResult 
 	r.mu.Lock()
 	r.pendingQuestions = questions
 	r.mu.Unlock()
+	// Persist immediately: if the process dies before the turn's end checkpoint,
+	// the question is still the wait a restarted session must re-enter.
+	r.persistParkState()
 	if r.bus != nil {
 		executionID := r.agentCtx.ExecutionID
 		parkReason := string(agentloop.ParkReasonAskUser)
@@ -1227,6 +1244,7 @@ func (r *ChatRuntime) clearPendingQuestions() {
 	r.mu.Lock()
 	r.pendingQuestions = nil
 	r.mu.Unlock()
+	r.clearParkPendingInput()
 }
 
 // sedimentSoul writes a finished reflection's durable conclusions into this

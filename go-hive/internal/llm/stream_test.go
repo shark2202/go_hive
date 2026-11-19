@@ -366,21 +366,11 @@ func TestProviderStreamHonoursContextCancel(t *testing.T) {
 
 // Parity: core/tests/test_litellm_provider.py::TestMiniMaxStreamFallback::test_stream_uses_nonstream_fallback_for_minimax
 func TestProviderStreamUnsupportedTransports(t *testing.T) {
-	minimax := NewHTTPProvider(ProviderOptions{Model: "minimax/minimax-m2", APIKey: "k", APIBase: "http://127.0.0.1:1"})
+	// MiniMax chunks are known to break the upstream parser, so the provider
+	// deliberately stays on the non-streaming path and reports it up front.
+	// Anthropic messages streaming is covered by stream_anthropic_test.go.
+	minimax := NewHTTPProvider(ProviderOptions{Model: "minimax/minimax-m2", APIKey: "test-key", APIBase: "http://127.0.0.1:1"})
 	if _, err := minimax.ACompleteStream(context.Background(), CompletionRequest{}, nil); !errors.Is(err, ErrStreamingUnsupported) {
 		t.Fatalf("minimax error = %v, want ErrStreamingUnsupported", err)
-	}
-
-	anthropic := NewHTTPProvider(ProviderOptions{Model: "claude-haiku-4-5", APIKey: "k", APIBase: "http://127.0.0.1:1"})
-	if _, err := anthropic.ACompleteStream(context.Background(), CompletionRequest{}, nil); !errors.Is(err, ErrStreamingUnsupported) {
-		t.Fatalf("anthropic model error = %v, want ErrStreamingUnsupported", err)
-	}
-
-	provider, err := NewAnthropicProvider("test-key", "claude-haiku-4-5-20251001")
-	if err != nil {
-		t.Fatalf("NewAnthropicProvider: %v", err)
-	}
-	if _, err := provider.ACompleteStream(context.Background(), CompletionRequest{}, nil); !errors.Is(err, ErrStreamingUnsupported) {
-		t.Fatalf("AnthropicProvider error = %v, want ErrStreamingUnsupported", err)
 	}
 }

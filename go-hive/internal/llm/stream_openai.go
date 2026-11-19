@@ -52,16 +52,6 @@ func (p *Provider) ACompleteStream(ctx context.Context, req CompletionRequest, e
 	if model == "" {
 		model = p.Model
 	}
-	// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream — Anthropic
-	// speaks a different wire protocol, and MiniMax chunks are known to break
-	// the upstream stream parser; both go through the non-streaming path there.
-	if usesAnthropicMessagesAPI(model) {
-		return Completion{}, fmt.Errorf("%w: anthropic messages transport (%s)", ErrStreamingUnsupported, model)
-	}
-	if IsMinimaxModel(model) {
-		return Completion{}, fmt.Errorf("%w: minimax uses the non-streaming transport (%s)", ErrStreamingUnsupported, model)
-	}
-
 	apiBase := transportString(kwargs["api_base"])
 	if apiBase == "" {
 		apiBase = p.APIBase
@@ -70,6 +60,17 @@ func (p *Provider) ACompleteStream(ctx context.Context, req CompletionRequest, e
 	if apiKey == "" {
 		apiKey = p.APIKey
 	}
+	// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream — Anthropic
+	// (and the Anthropic-compatible kimi/hive proxies) speaks the Messages SSE
+	// protocol, which has its own parser. MiniMax chunks are known to break
+	// the upstream stream parser, so it stays on the non-streaming path there.
+	if usesAnthropicMessagesAPI(model) {
+		return p.anthropicMessagesStream(ctx, req, kwargs, model, apiBase, apiKey, emit)
+	}
+	if IsMinimaxModel(model) {
+		return Completion{}, fmt.Errorf("%w: minimax uses the non-streaming transport (%s)", ErrStreamingUnsupported, model)
+	}
+
 	return p.openAIChatCompletionStream(ctx, req, kwargs, model, apiBase, apiKey, emit)
 }
 
@@ -108,7 +109,7 @@ func (p *Provider) openAIChatCompletionStream(
 		if err := p.paceRequest(ctx); err != nil {
 			return Completion{}, err
 		}
-		response, err := p.doOpenAIStreamRequest(ctx, endpoint, headers, encoded)
+		response, err := p.doStreamRequest(ctx, openAIStreamLabel, endpoint, headers, encoded)
 		if err != nil {
 			return Completion{}, err
 		}
@@ -146,20 +147,20 @@ func (p *Provider) openAIChatCompletionStream(
 			emit(StreamErrorEvent{Error: err.Error()})
 			return Completion{}, err
 		}
-		emitOpenAIStreamTail(result, emit)
+		emitStreamTail(result, emit)
 		return result.completion, nil
 	}
 }
 
-// doOpenAIStreamRequest sends the streaming request. The timeout context is
-// released when the caller closes the body, so a long generation is bounded by
+// doStreamRequest sends a streaming request. The timeout context is released
+// when the caller closes the body, so a long generation is bounded by
 // DefaultHTTPTimeout rather than by the time to first byte.
-func (p *Provider) doOpenAIStreamRequest(ctx context.Context, endpoint string, headers map[string]string, encoded []byte) (*http.Response, error) {
+func (p *Provider) doStreamRequest(ctx context.Context, label, endpoint string, headers map[string]string, encoded []byte) (*http.Response, error) {
 	requestCtx, cancel := context.WithTimeout(ctx, DefaultHTTPTimeout)
 	request, err := http.NewRequestWithContext(requestCtx, http.MethodPost, endpoint, bytes.NewReader(encoded))
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("llm: build %s request: %w", openAIStreamLabel, err)
+		return nil, fmt.Errorf("llm: build %s request: %w", label, err)
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "text/event-stream")
@@ -170,7 +171,7 @@ func (p *Provider) doOpenAIStreamRequest(ctx context.Context, endpoint string, h
 	response, err := httpCompletionClient.Do(request)
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("llm: %s request failed: %w", openAIStreamLabel, err)
+		return nil, fmt.Errorf("llm: %s request failed: %w", label, err)
 	}
 	response.Body = &cancelOnClose{ReadCloser: response.Body, cancel: cancel}
 	return response, nil
@@ -245,23 +246,22 @@ func (p *Provider) streamingNonStreamFallback(ctx context.Context, req Completio
 	return completion, nil
 }
 
-// openAIStreamResult is the parsed stream: the assembled completion plus the
-// per-call tool inputs (needed by ToolCallEvent) and whether a finish frame
-// arrived.
-type openAIStreamResult struct {
+// streamResult is the parsed stream: the assembled completion plus the
+// per-call tool inputs (needed by ToolCallEvent).
+type streamResult struct {
 	completion Completion
 	toolInputs []map[string]any
 }
 
 // empty reports a stream that produced neither text, tool calls nor a
 // non-length stop reason — the shape upstream retries.
-func (r openAIStreamResult) empty() bool {
+func (r streamResult) empty() bool {
 	return r.completion.Content == "" &&
 		len(r.completion.ToolCalls) == 0 &&
 		r.completion.StopReason != "length"
 }
 
-func emitOpenAIStreamTail(result openAIStreamResult, emit func(StreamEvent)) {
+func emitStreamTail(result streamResult, emit func(StreamEvent)) {
 	for i, call := range result.completion.ToolCalls {
 		input := map[string]any{}
 		if i < len(result.toolInputs) && result.toolInputs[i] != nil {
@@ -285,7 +285,7 @@ func emitOpenAIStreamTail(result openAIStreamResult, emit func(StreamEvent)) {
 
 // consumeOpenAIStreamResponse accepts either a real SSE body or a plain
 // completion JSON from a gateway that ignored `stream:true`.
-func (p *Provider) consumeOpenAIStreamResponse(ctx context.Context, response *http.Response, requestedModel string, emit func(StreamEvent)) (openAIStreamResult, error) {
+func (p *Provider) consumeOpenAIStreamResponse(ctx context.Context, response *http.Response, requestedModel string, emit func(StreamEvent)) (streamResult, error) {
 	defer response.Body.Close()
 
 	contentType := strings.ToLower(response.Header.Get("Content-Type"))
@@ -295,7 +295,7 @@ func (p *Provider) consumeOpenAIStreamResponse(ctx context.Context, response *ht
 
 	raw, err := io.ReadAll(io.LimitReader(response.Body, maxCompletionBodyBytes))
 	if err != nil {
-		return openAIStreamResult{}, fmt.Errorf("llm: read %s response: %w", openAIStreamLabel, err)
+		return streamResult{}, fmt.Errorf("llm: read %s response: %w", openAIStreamLabel, err)
 	}
 	// Some proxies label the SSE body application/octet-stream; trust the
 	// payload shape over the header.
@@ -309,12 +309,12 @@ func (p *Provider) consumeOpenAIStreamResponse(ctx context.Context, response *ht
 		if len(detail) > 200 {
 			detail = detail[:200]
 		}
-		return openAIStreamResult{}, fmt.Errorf(
+		return streamResult{}, fmt.Errorf(
 			"llm: %s response is not server-sent events (content-type %q, body %q)",
 			openAIStreamLabel, response.Header.Get("Content-Type"), detail)
 	}
 	completion := p.completionFromResponse(payload.toCompletionResponse(requestedModel))
-	result := openAIStreamResult{completion: completion}
+	result := streamResult{completion: completion}
 	// The gateway ignored streaming: there are no increments to forward, so the
 	// whole answer is one honest delta.
 	if completion.Content != "" {
@@ -335,7 +335,7 @@ func (p *Provider) consumeOpenAIStreamResponse(ctx context.Context, response *ht
 // parseOpenAIStream reads SSE frames. Only `data:` fields are meaningful for
 // the OpenAI wire format; comments (keep-alives), `event:` and `id:` are
 // ignored. Multi-line data fields are joined as the SSE spec requires.
-func (p *Provider) parseOpenAIStream(ctx context.Context, reader io.Reader, requestedModel string, emit func(StreamEvent)) (openAIStreamResult, error) {
+func (p *Provider) parseOpenAIStream(ctx context.Context, reader io.Reader, requestedModel string, emit func(StreamEvent)) (streamResult, error) {
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxSSEEventBytes)
 
@@ -347,7 +347,7 @@ func (p *Provider) parseOpenAIStream(ctx context.Context, reader io.Reader, requ
 		usage       *Usage
 		tools       = map[int]*openAIStreamToolAccumulator{}
 		lastToolIdx = -1
-		result      = openAIStreamResult{}
+		result      = streamResult{}
 	)
 
 	flush := func() error {

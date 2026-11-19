@@ -546,19 +546,7 @@ func (p *Provider) anthropicMessagesCompletion(ctx context.Context, kwargs map[s
 	}
 	base := resolveCompletionAPIBase(model, apiBase)
 
-	headers := extraHeadersFromKwargs(kwargs)
-	headers["anthropic-version"] = AnthropicVersion
-	if apiKey != "" {
-		oauth := strings.HasPrefix(apiKey, anthropicOAuthPrefix)
-		bearer := oauth || p.HiveProxyAuth || apiBaseNeedsBearerAuth(base)
-		if bearer {
-			if _, ok := headers["Authorization"]; !ok {
-				headers["Authorization"] = "Bearer " + apiKey
-			}
-		} else if _, ok := headers["x-api-key"]; !ok {
-			headers["x-api-key"] = apiKey
-		}
-	}
+	headers := anthropicRequestHeaders(p, kwargs, base, apiKey)
 
 	var payload anthropicMessagePayload
 	if err := postJSON(ctx, "anthropic", anthropicMessagesEndpoint(base), headers, body, &payload); err != nil {

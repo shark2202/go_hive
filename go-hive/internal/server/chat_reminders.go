@@ -194,6 +194,7 @@ func (r *ChatRuntime) setParkState(reason agentloop.ParkReason, awaiting bool) {
 	r.parkReason = reason
 	r.parkMu.Unlock()
 	r.awaiting.Store(awaiting)
+	r.persistParkState()
 }
 
 // openIdleTasks is the idle nudge's view of the session task list. Archived

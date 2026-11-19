@@ -34,9 +34,14 @@ type StreamCompleter interface {
 	ACompleteStream(ctx context.Context, req CompletionRequest, emit func(StreamEvent)) (Completion, error)
 }
 
-// ACompleteStream lets an AnthropicProvider be used where a StreamCompleter is
-// expected without pretending to stream: the Anthropic Messages transport is
-// not implemented here yet, and callers fall back to AComplete.
-func (a *AnthropicProvider) ACompleteStream(context.Context, CompletionRequest, func(StreamEvent)) (Completion, error) {
-	return Completion{}, fmt.Errorf("%w: anthropic messages transport", ErrStreamingUnsupported)
+// ACompleteStream lets an AnthropicProvider stream through its underlying
+// Messages transport. The provider's own model/base decide routing, so an
+// Anthropic-compatible proxy streams exactly like the public API.
+//
+// Parity: core/framework/llm/anthropic.py::AnthropicProvider.acomplete
+func (a *AnthropicProvider) ACompleteStream(ctx context.Context, req CompletionRequest, emit func(StreamEvent)) (Completion, error) {
+	if a == nil || a.Provider == nil {
+		return Completion{}, fmt.Errorf("llm: anthropic provider is not initialised")
+	}
+	return a.Provider.ACompleteStream(ctx, req, emit)
 }
