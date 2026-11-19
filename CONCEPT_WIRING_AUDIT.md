@@ -14,7 +14,7 @@
 | colony | 1 | 2 | 8 |
 | coordination | 1 | 1 | 7 |
 | goals_outcome | 0 | 1 | 7 |
-| improvement | 0 | 0 | 0 |
+| improvement | 3 | 0 | 5 |
 | queen | 0 | 0 | 0 |
 | the_loop | 0 | 0 | 0 |
 | worker_agent | 0 | 0 | 0 |
@@ -75,4 +75,22 @@
 | 未达标信号驱动改进（missed criterion / 空 tracker 列） | 无：无 criteria 评估、无 tracker 写入 | 否 | 未接 |
 
 **小结**：`Goal` 的数据模型与加载路径存在，但成功标准、约束、上下文都没有进入 prompt，也没有任何 judge 读取它们；loop 里连 judge 调用点都不存在。goals_outcome 在 Go 运行时实质上是「只解析、不执行」。
+
+## 4. improvement — colony 如何变好
+
+概念主张：四条 in-band 改进机制——会话内 reflexion（含 judge retry 反馈）、跨会话的作用域记忆（反射写入 + recall 召回 + 过往对话召回）、学到的 skills（`write_skill` → `skills/` → worker 目录），以及把 pilot 固化成 playbook（确定性 runner、重试/退避/死信、按 tracker 现状 resume）。
+
+| 机制 | 实现位置（file:line） | 是否有生产调用链（从 internal/cli / internal/server 入口） | 状态 |
+| --- | --- | --- | --- |
+| Reflexion 第一层：工具结果/错误回注，下一轮自我修正 | `internal/agentloop/loop.go:699`（`conv.AddToolResult`，含 `IsError`）、`internal/agentloop/conversation.go`（工具结果进入上下文） | 是。`ChatRuntime.runTurn`（`chat_runtime.go:327`）→ `AgentLoop.ExecuteTurn`，每批工具结果都写回 conversation | 已接 |
+| Reflexion 第二层：judge retry 的 critique 回注 | 无实现；`internal/agentloop` 无 judge 调用点（见 goals_outcome） | 否 | 未接 |
+| 跨会话记忆：冷却门控的 reflection 写入 global / per-queen markdown | `internal/server/chat_runtime.go:151-160`（构造 `memory.ReflectionScheduler`）、`:344-347`（每轮 `OnTurnDone`）、`internal/memory/reflection.go:838-875`（每 6 轮 short、每 4 次 reflection 一次 long）、`:658-727`（`RunUnifiedShort/LongReflection`） | 是。`hive serve` → `createChatSession` → `NewChatRuntime`（`deps.HomeRoot` 非空时）→ `runTurn` 成功后 `OnTurnDone(ctx,"queen","turn_done")` | 已接（仅 Queen 聊天会话；worker/colony 无 reflection） |
+| 跨会话记忆：recall selector 在后续会话召回相关笔记 | `internal/server/chat_runtime.go:496-529`（`injectRecall`）、`internal/memory/recall.go:174`（`BuildScopedRecallBlocks`）、`internal/memory/reflection.go:775`（调度器 scope 目录） | 是。每条用户消息后、`ExecuteTurn` 前以 `<system-reminder>` 注入；内容不变时去重（`lastRecall`） | 已接 |
+| 过往对话召回：每轮最多 6 条 dated excerpts；`search_messages` 可搜历史 | `internal/memory/search.go:534`（`SearchMessages`）、`:678`（envelope）、`internal/memory/search_timeline.go:63`；工具名只在 `internal/tools/tier_defaults.go:69-70` 的允许名单里 | 否。`SearchMessages`/`SearchTimeline` 无生产调用者；会话工具表不含 `search_messages`/`search_timeline`；`chat_runtime` 只注入 memory recall，不注入历史对话摘要 | 未接 |
+| 学到的 skills：`write_skill` 写进 colony `skills/`，worker 目录按需加载 | `internal/skills/skill_writer.go:169`（`WriteSkill`）、`internal/skills/manager.go:48`（`NewSkillsManager`/catalog）、`internal/agentloop/skill_resources.go:11`（skill 文件读取拦截） | 否。`WriteSkill` 与 `NewSkillsManager` 零生产调用；没有 `write_skill`/`skill_view` 工具注册；`AgentContext.SkillDirs`（`types.go:144`）在 chat/colony 上下文里从未赋值；`SkillsCatalogPrompt` 字段从未生成 | 未接 |
+| Playbook：确定性 runner 收敛剩余批次（重试/退避/死信） | `internal/playbook/runner.go:190`（`NewPlaybookRun`）、`:404-416`（`Converge`/`DeadLetter`）、`internal/playbook/rows.go:268-283`（`run_playbook` 等工具名清单） | 否。`internal/playbook` 在 `internal/`、`cmd/` 中零 import；`run_playbook`/`get_playbook_status`/`stop_playbook` 只在名字清单里，没有工具定义/执行器/路由 | 未接 |
+| Playbook 的 resume by construction（以 tracker 现状决定剩余工作） | `internal/playbook/rows.go`（`QueryRows`）、`internal/colony/colony_db.go:19-27`（`playbook_runs` 表）；tracker 写入未接 | 否。playbook 无入口；tracker 写路径也未接（见 coordination） | 未接 |
+
+**小结**：improvement 真正生效的只有「工具错误回注 + Queen 的记忆 reflection/recall」；judge retry、历史对话召回、learned skills、playbook 四条全部未接。改进闭环目前只覆盖「记住」，不覆盖「评估 → 重试」和「把成功固化成可复用流程」。
+
 
