@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -42,6 +43,13 @@ type Provider struct {
 	APIBase string
 
 	Call CompletionCall
+
+	// Gate paces one outbound HTTP attempt against the process's configured
+	// call limits (rate_limits.llm.* in hive.config.json). Nil means
+	// unlimited; NewHTTPProvider installs ratelimit.AcquireLLMRequest, which
+	// is a no-op until an llm bucket is configured. A provider driven through
+	// a scripted Call (tests, embeddings) is never paced.
+	Gate func(ctx context.Context) error
 
 	ExtraKwargs map[string]any
 

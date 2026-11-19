@@ -105,6 +105,9 @@ func (p *Provider) openAIChatCompletionStream(
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return Completion{}, ctxErr
 		}
+		if err := p.paceRequest(ctx); err != nil {
+			return Completion{}, err
+		}
 		response, err := p.doOpenAIStreamRequest(ctx, endpoint, headers, encoded)
 		if err != nil {
 			return Completion{}, err

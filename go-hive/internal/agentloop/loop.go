@@ -42,7 +42,18 @@ type LoopConfig struct {
 	// Parity: framework/agent_loop/internals/types.py
 	ToolCallTimeoutSeconds float64
 	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_timeout_overrides.
+	// ToolTimeoutOverrides maps a tool-name prefix to its timeout.
 	ToolTimeoutOverrides map[string]float64
+	// ToolCallGate paces each tool execution against the configured call
+	// limits (rate_limits.tools.* in hive.config.json). NewAgentLoop installs
+	// the process-wide limiter when this is nil; it is a no-op until a bucket
+	// is configured. A non-nil no-op disables pacing for a loop.
+	ToolCallGate func(ctx context.Context, toolName string) error
+	// SessionCostLimitUSD is the optional hard cap on cumulative session
+	// spend. Zero (the default) disables it. Once the loop's recorded spend
+	// reaches the cap, the next ExecuteTurn returns *SessionCostLimitError
+	// before any model call.
+	SessionCostLimitUSD float64
 	// ParallelReadOnlyTools runs a tool batch concurrently when every call in
 	// it is explicitly marked ConcurrencySafe (llm.ToolDef.ConcurrencySafe).
 	// DefaultLoopConfig enables it, matching upstream; an unsafe or unmarked
@@ -69,6 +80,9 @@ func DefaultLoopConfig() LoopConfig {
 		ContinueNudgeMaxPerTurn:         3,
 		ToolCallTimeoutSeconds:          60.0,
 		ToolTimeoutOverrides:            map[string]float64{"browser_": 180.0},
+		// Spend cap: opt-in, read from HIVE_SESSION_COST_LIMIT_USD once per
+		// config build. Unset means 0 (disabled), matching the shipped default.
+		SessionCostLimitUSD: SessionCostLimitFromEnv(),
 		// Match upstream: safe (explicitly marked) tools may run together.
 		// The loop still keeps a batch sequential when any call is unmarked.
 		ParallelReadOnlyTools: true,
@@ -153,6 +167,7 @@ type AgentLoop struct {
 
 	stateMu             sync.Mutex
 	toolCallsUsed       int
+	sessionCostUSD      float64
 	counters            map[string]int
 	inGrace             bool
 	graceStartIteration *int
@@ -160,6 +175,9 @@ type AgentLoop struct {
 }
 
 func NewAgentLoop(config LoopConfig, executor ToolExecutor) *AgentLoop {
+	if config.ToolCallGate == nil {
+		config.ToolCallGate = defaultToolCallGate
+	}
 	return &AgentLoop{
 		Config:       config,
 		ToolExecutor: executor,
@@ -501,6 +519,12 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 	if agentCtx.LLM == nil {
 		return TurnResult{Success: false}, fmt.Errorf("agent loop: nil LLM")
 	}
+	// Spend cap: refuse the turn before any model call. The check is at the
+	// turn boundary so the previous turn's work is already persisted.
+	if spent, limit, exceeded := l.sessionCostLimitExceeded(); exceeded {
+		l.bumpBy(sessionCostBlockedCounter, 1)
+		return TurnResult{Success: false}, &SessionCostLimitError{SpentUSD: spent, LimitUSD: limit}
+	}
 	reminderCtx := NewReminderAgentContext(agentCtx)
 	l.bindReminders(reminderCtx)
 	// A new turn is a new attempt: a repetition streak from the previous turn
@@ -607,6 +631,9 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		if err != nil {
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 		}
+		// Record spend as soon as the completion lands so the hard cap sees
+		// it even when the turn later fails or is cancelled.
+		l.AddSessionCost(completion.CostUSD)
 		// Parity: framework/agent_loop/agent_loop.py::_publish_text_delta +
 		// _publish_llm_turn_complete. The Go transport is non-streaming, so the
 		// complete assistant message is published as one snapshot instead of
@@ -961,6 +988,11 @@ func (l *AgentLoop) executeTool(ctx context.Context, agentCtx *AgentContext, req
 		if result, ok := InterceptSkillFileRead(req.Name, req.Input, agentCtx.SkillDirs); ok {
 			return result
 		}
+	}
+	// Pace every real execution (skill-file reads above are local and free).
+	// A rejection becomes a retryable result; the tool never runs.
+	if result, blocked := l.paceToolCall(ctx, req.Name); blocked {
+		return result
 	}
 	if req.Name == "terminal_job_logs" && truthy(req.Input["wait_until_exit"]) {
 		return l.waitForJob(ctx, req)

@@ -13,6 +13,7 @@ import (
 type scriptedResponse struct {
 	content   string
 	toolCalls []llm.ToolCall
+	costUSD   float64
 }
 
 // Parity-exempt: upstream has no standalone test for this helper; it mirrors _ScriptedLLM
@@ -40,7 +41,7 @@ func (s *scriptedCompleter) AComplete(_ context.Context, req llm.CompletionReque
 		index = len(s.scenarios) - 1
 	}
 	scenario := s.scenarios[index]
-	return llm.Completion{Content: scenario.content, ToolCalls: scenario.toolCalls, Model: "mock"}, nil
+	return llm.Completion{Content: scenario.content, ToolCalls: scenario.toolCalls, Model: "mock", CostUSD: scenario.costUSD}, nil
 }
 
 func (s *scriptedCompleter) ModelName() string { return "mock" }

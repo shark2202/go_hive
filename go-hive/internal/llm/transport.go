@@ -11,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/aden-hive/hive-go/internal/ratelimit"
 )
 
 // Parity: core/framework/llm/litellm.py::LiteLLMProvider._default_api_base_for_model, core/framework/llm/litellm.py::rewrite_proxy_model
@@ -38,7 +40,23 @@ var httpCompletionClient = &http.Client{}
 func NewHTTPProvider(opts ProviderOptions) *Provider {
 	provider := NewProvider(opts)
 	provider.Call = provider.httpCompletion
+	// Every real HTTP provider is paced by the hive-configured call limiter.
+	// It stays a no-op until the rate_limits section configures an llm bucket.
+	provider.Gate = ratelimit.AcquireLLMRequest
 	return provider
+}
+
+// paceRequest applies the configured outbound call limit. A provider built
+// without a gate (NewProvider, a scripted Call) is unlimited.
+//
+// Parity-exempt: Go-only execution of the rate_limits section. Upstream's
+// RateLimitStage lives in its request pipeline and the Python LLM client is
+// not paced.
+func (p *Provider) paceRequest(ctx context.Context) error {
+	if p == nil || p.Gate == nil {
+		return nil
+	}
+	return p.Gate(ctx)
 }
 
 // AComplete lets *Provider satisfy Completer so the agent loop can drive any
@@ -64,6 +82,9 @@ func (p *Provider) AComplete(ctx context.Context, req CompletionRequest) (Comple
 // httpCompletion dispatches a completion over HTTP, choosing the wire protocol
 // from the model family the same way litellm routes provider prefixes.
 func (p *Provider) httpCompletion(ctx context.Context, kwargs map[string]any) (CompletionResponse, error) {
+	if err := p.paceRequest(ctx); err != nil {
+		return CompletionResponse{}, err
+	}
 	model := transportString(kwargs["model"])
 	if model == "" {
 		model = p.Model

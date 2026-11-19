@@ -106,6 +106,15 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 		}
 		catalogue.defs = append(catalogue.defs, def)
 	}
+	// memory_timeline is the browse-by-day view over the same timeline data,
+	// gated by the same feature flag. It takes no pattern, so the queen can
+	// look at what happened lately without inventing a search term.
+	for _, def := range memoryTimelineToolDefs(home) {
+		if _, taken := catalogue.builtinNames[def.Name]; taken {
+			continue
+		}
+		catalogue.defs = append(catalogue.defs, def)
+	}
 	// Credential status: a read-only availability view. It is session-scoped
 	// like the search tools and intentionally exposes no write path.
 	if _, taken := catalogue.builtinNames[CredentialStatusToolName]; !taken {
@@ -262,6 +271,11 @@ func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input m
 	// Past-session search runs against this session's queen directory; the
 	// catalogue carries the root, the memory package does the reading.
 	if content, isError, handled := c.executeSearchTool(name, input); handled {
+		return content, isError, nil
+	}
+	// memory_timeline browses the same past-session timeline by day; its
+	// feature flag and scope resolution match search_timeline.
+	if content, isError, handled := c.executeMemoryTimelineTool(name, input); handled {
 		return content, isError, nil
 	}
 	// Credential status is a metadata-only read of the host's credential
