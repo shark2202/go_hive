@@ -7,7 +7,7 @@
 
 | 判定 | 结果 |
 | --- | --- |
-| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：审计基线 `c444c192`：概念 **64 / 13 / 3**、八层 **61 / 9 / 0**；1.0.22 闭合 goals_outcome 3 条与 4 项部分，计数待下次审计刷新。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go-native playbook、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺（1.0.21 后）：MiniMax 流式（其 chunk 破坏解析，保持非流式回退，已测试锁定）；Python playbook 不可执行；81 个第三方凭据模块未验证。1.0.18 补检索/doom-loop/worker tasks/playbook 控制；1.0.19 补并行只读、预算软提醒、`credential_status`；1.0.20 补 rate limit、会话花费硬上限、`memory_timeline`；1.0.21 补 Anthropic 流式、park 落盘 resume、soul 进 persona；1.0.22 补目标评估闭环、约束进 prompt、改进信号、excerpts 注入、timeline 写入、spillover、search_tools。半截项已于 1.0.17 收口（overseer 输入源、MCP 白名单、colony 事件桥 UI、worker reminder hub、REST reminders 镜像）|
+| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：审计基线 `6723ab78`：概念 **71 已接 / 9 部分 / 0 未接**、八层 **63 / 7 / 0**。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go-native playbook、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺（1.0.21 后）：MiniMax 流式（其 chunk 破坏解析，保持非流式回退，已测试锁定）；Python playbook 不可执行；81 个第三方凭据模块未验证。1.0.18 补检索/doom-loop/worker tasks/playbook 控制；1.0.19 补并行只读、预算软提醒、`credential_status`；1.0.20 补 rate limit、会话花费硬上限、`memory_timeline`；1.0.21 补 Anthropic 流式、park 落盘 resume、soul 进 persona；1.0.22 补目标评估闭环、约束进 prompt、改进信号、excerpts 注入、timeline 写入、spillover、search_tools。半截项已于 1.0.17 收口（overseer 输入源、MCP 白名单、colony 事件桥 UI、worker reminder hub、REST reminders 镜像）|
 | R2 分发形态 | 满足：六平台归档 + SHA256SUMS + 安装脚本，解压即用 |
 | R3 用户文档 | 部分满足：快速开始/配置/支持矩阵齐备，但支持矩阵明确标注 81 个需凭据模块「未验证」 |
 | R4 许可 | 满足：Apache-2.0 LICENSE + NOTICE |

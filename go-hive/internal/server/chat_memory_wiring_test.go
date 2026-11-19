@@ -279,12 +279,30 @@ func TestChatRuntimeWritesTimelineAfterTurn(t *testing.T) {
 	waitForAssistantParts(t, runtime, 1)
 	waitForFile(t, filepath.Join(liveRoot, memory.TimelineFile))
 
-	result, toolErr := memory.SearchTimeline(homeRoot, memory.ScopeRef{
-		Scope: memory.SearchScopeQueens,
-		Owner: "queen_tl",
-	}, memory.SearchTimelineOptions{Pattern: "Rex"})
+	// The timeline writer runs after the turn, so file existence can lead the
+	// flushed content; poll the reader briefly instead of racing one read.
+	var result *memory.SearchTimelineResult
+	var toolErr *memory.ToolError
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		result, toolErr = memory.SearchTimeline(homeRoot, memory.ScopeRef{
+			Scope: memory.SearchScopeQueens,
+			Owner: "queen_tl",
+		}, memory.SearchTimelineOptions{Pattern: "Rex"})
+		if toolErr == nil && result != nil && result.Total > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	_ = runtime.Close() // stop the writer before t.TempDir cleanup removes files
 	if toolErr != nil {
 		t.Fatalf("SearchTimeline: %v", toolErr)
+	}
+	if result == nil {
+		t.Fatalf("SearchTimeline: no result")
 	}
 	if result.Total != 1 {
 		t.Fatalf("timeline items = %d, want 1: %+v", result.Total, result.Items)
