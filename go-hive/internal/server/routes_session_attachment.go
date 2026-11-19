@@ -101,26 +101,16 @@ func handleSessionAttachment(w http.ResponseWriter, r *http.Request, deps Sessio
 
 	filepathFound := ""
 	for _, sessionDir := range sessionDirs {
-		for _, candidateDir := range attachmentCandidateDirs(sessionDir) {
-			candidate := filepath.Join(candidateDir, filename)
-			if regularFile(candidate) {
-				filepathFound = candidate
-				break
-			}
-		}
-		if filepathFound != "" {
+		if resolved, ok := findAttachmentFile(deps.Home.Root, sessionDir, filename); ok {
+			filepathFound = resolved
 			break
 		}
 	}
 
 	if filepathFound == "" && deps.Manager != nil {
 		if live := deps.Manager.GetSession(sessionID); live != nil && live.QueenDir != "" {
-			for _, candidateDir := range attachmentCandidateDirs(live.QueenDir) {
-				candidate := filepath.Join(candidateDir, filename)
-				if regularFile(candidate) {
-					filepathFound = candidate
-					break
-				}
+			if resolved, ok := findAttachmentFile(deps.Home.Root, live.QueenDir, filename); ok {
+				filepathFound = resolved
 			}
 		}
 	}
@@ -163,11 +153,28 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request, deps Session
 		}
 	}
 
-	attachmentsDir := filepath.Join(queenDir, "data", "attachments")
-	if err := os.MkdirAll(attachmentsDir, 0o755); err != nil {
+	// The session tree is the only place a stored attachment may land.
+	// os.Root refuses to traverse a symlink that leaves the resolved queen
+	// directory, so a symlinked data/ or attachments/ can no longer redirect
+	// the write outside HIVE_HOME.
+	storageRoot, ok := resolveAttachmentStorageRoot(deps.Home.Root, queenDir)
+	if !ok {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not create attachment directory"})
 		return
 	}
+	root, err := os.OpenRoot(storageRoot)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not create attachment directory"})
+		return
+	}
+	defer root.Close()
+
+	const attachmentsRel = "data/attachments"
+	if err := root.MkdirAll(attachmentsRel, 0o755); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not create attachment directory"})
+		return
+	}
+	attachmentsDir := filepath.Join(storageRoot, attachmentsRel)
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxAttachmentUploadBytes)
 	reader, err := r.MultipartReader()
@@ -205,13 +212,13 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request, deps Session
 
 	base := attachments.SanitizeBasename(originalName, ext, "upload")
 	filename := attachments.DisambiguateFilename(attachmentsDir, base)
-	storedPath := filepath.Join(attachmentsDir, filename)
+	storedRel := filepath.Join(attachmentsRel, filename)
 
-	destination, err := os.OpenFile(storedPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	destination, err := root.OpenFile(storedRel, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if errors.Is(err, os.ErrExist) {
 		filename = attachments.DisambiguateFilename(attachmentsDir, base)
-		storedPath = filepath.Join(attachmentsDir, filename)
-		destination, err = os.OpenFile(storedPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+		storedRel = filepath.Join(attachmentsRel, filename)
+		destination, err = root.OpenFile(storedRel, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	}
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not save attachment"})
@@ -220,7 +227,7 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request, deps Session
 	_, copyErr := io.Copy(destination, part)
 	closeErr := destination.Close()
 	if copyErr != nil || closeErr != nil {
-		_ = os.Remove(storedPath)
+		_ = root.Remove(storedRel)
 		var tooLarge *http.MaxBytesError
 		if errors.As(copyErr, &tooLarge) {
 			writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": "attachment too large"})
@@ -235,10 +242,12 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request, deps Session
 	case ext == ".pdf":
 		_ = largePDFThresholdBytes
 	case ext == ".csv":
-		extractedText = csvPreview(storedPath, originalName)
+		extractedText = withStoredAttachment(root, storedRel, func(content io.Reader) string {
+			return csvPreview(content, originalName)
+		})
 	default:
 		if _, textShaped := attachments.TextExtToMIME[ext]; textShaped && ext != ".svg" {
-			extractedText = textPreview(storedPath)
+			extractedText = withStoredAttachment(root, storedRel, textPreview)
 		}
 	}
 
@@ -279,20 +288,85 @@ func colonyRootForSessionDir(sessionDir string) string {
 	}
 }
 
-func regularFile(path string) bool {
-	// Lstat, not Stat: an attachment symlink must not serve its target.
-	info, err := os.Lstat(path)
-	return err == nil && info.Mode().IsRegular()
+// findAttachmentFile resolves filename under every candidate directory of one
+// session tree and returns the first regular file that stays inside HIVE_HOME.
+func findAttachmentFile(homeRoot, sessionDir, filename string) (string, bool) {
+	for _, candidateDir := range attachmentCandidateDirs(sessionDir) {
+		if resolved, ok := resolveAttachmentRead(homeRoot, candidateDir, filename); ok {
+			return resolved, true
+		}
+	}
+	return "", false
 }
 
-func csvPreview(path, originalName string) string {
-	file, err := os.Open(path)
+// resolveAttachmentRead returns the on-disk path to serve, or false when the
+// file is missing, is not a regular file, or resolves outside HIVE_HOME.
+// Resolving the directory (not just the final component) is what stops a
+// symlinked data/ or attachments/ directory from redirecting the read.
+// Parity-exempt: Go-only symlink hardening; the Python reference serves the
+// joined path directly, so no upstream assertion covers this.
+func resolveAttachmentRead(homeRoot, dir, filename string) (string, bool) {
+	resolvedDir, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", false
+	}
+	if !withinHomeRoot(homeRoot, resolvedDir) {
+		return "", false
+	}
+	resolved := filepath.Join(resolvedDir, filename)
+	// Lstat, not Stat: an attachment symlink must not serve its target, even
+	// when that target stays inside the home.
+	info, err := os.Lstat(resolved)
+	if err != nil || !info.Mode().IsRegular() {
+		return "", false
+	}
+	return resolved, true
+}
+
+// resolveAttachmentStorageRoot resolves a session directory and reports
+// whether it stays inside HIVE_HOME. The resolved path anchors os.Root on a
+// real directory, so the later creation of data/attachments cannot start from
+// a symlink chain that already left the tree.
+// Parity-exempt: Go-only symlink hardening.
+func resolveAttachmentStorageRoot(homeRoot, dir string) (string, bool) {
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", false
+	}
+	if !withinHomeRoot(homeRoot, resolved) {
+		return "", false
+	}
+	return resolved, true
+}
+
+// withinHomeRoot reports whether path stays inside the configured HIVE_HOME.
+// Both sides are resolved so a symlinked home (macOS /var, for instance) does
+// not reject every in-tree path. An unset home leaves no boundary to enforce.
+func withinHomeRoot(homeRoot, path string) bool {
+	if homeRoot == "" {
+		return true
+	}
+	base, err := filepath.EvalSymlinks(homeRoot)
+	if err != nil {
+		base = filepath.Clean(homeRoot)
+	}
+	return pathWithin(path, base)
+}
+
+// withStoredAttachment reopens a just-written attachment through the same
+// os.Root handle, so the preview cannot read a file outside the session tree
+// even if the stored path is swapped for a symlink mid-request.
+func withStoredAttachment(root *os.Root, rel string, read func(io.Reader) string) string {
+	file, err := root.Open(rel)
 	if err != nil {
 		return ""
 	}
 	defer file.Close()
+	return read(file)
+}
 
-	reader := csv.NewReader(bufio.NewReader(file))
+func csvPreview(content io.Reader, originalName string) string {
+	reader := csv.NewReader(bufio.NewReader(content))
 	reader.FieldsPerRecord = -1
 	reader.LazyQuotes = true
 
@@ -343,14 +417,8 @@ func csvPreview(path, originalName string) string {
 	return strings.Join(lines, "\n")
 }
 
-func textPreview(path string) string {
-	file, err := os.Open(path)
-	if err != nil {
-		return ""
-	}
-	defer file.Close()
-
-	buffered := bufio.NewReader(file)
+func textPreview(content io.Reader) string {
+	buffered := bufio.NewReader(content)
 	var builder strings.Builder
 	read := 0
 	for read < textPreviewCapChars+1 {
