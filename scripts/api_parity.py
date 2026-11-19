@@ -252,6 +252,16 @@ def array_at(payload: object, dotted: str) -> list | None:
     return current if isinstance(current, list) else None
 
 
+def array_container(path: str) -> str:
+    """Array path behind a shape key.
+
+    ``events[].data`` -> ``events``; ``specs[].tools[]`` -> ``specs[].tools``.
+    Empty string when the key does not describe an array element.
+    """
+    index = path.rfind("[]")
+    return path[:index] if index >= 0 else ""
+
+
 def compare_shapes(py: object, go: object, ignore_prefixes: set[str] | None = None) -> ShapeDiff:
     ignored = ignore_prefixes or set()
     py_shape = shape_of(py)
@@ -262,13 +272,13 @@ def compare_shapes(py: object, go: object, ignore_prefixes: set[str] | None = No
     diff = ShapeDiff()
     for key in sorted(set(py_shape) - set(go_shape)):
         # An empty array carries no element shape; that is missing data, not a
-        # contract difference (e.g. a spec whose tools list is empty on Go).
-        container = key.rsplit("[]", 1)[0] if key.endswith("[]") else ""
+        # contract difference (e.g. Go returns events: [] after a turn).
+        container = array_container(key)
         if container and array_at(go, container) == []:
             continue
         diff.missing_in_go.append(f"{key} ({py_shape[key]})")
     for key in sorted(set(go_shape) - set(py_shape)):
-        container = key.rsplit("[]", 1)[0] if key.endswith("[]") else ""
+        container = array_container(key)
         if container and array_at(py, container) == []:
             continue
         diff.extra_in_go.append(f"{key} ({go_shape[key]})")

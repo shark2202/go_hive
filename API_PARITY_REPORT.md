@@ -1,14 +1,14 @@
 # Go hive vs Python hive — API 行为对比报告
 
-- 生成时间：2026-11-19T10:05:13+08:00
+- 生成时间：2026-11-19T10:07:27+08:00
 - 仓库：`/Users/mac/hive/.wt/w14-api-parity`
-- 分支 / 提交：`w14/api-parity` / `475b720c`
-- Python hive：`hive 1.0.14`，端口 `57286`，HIVE_HOME `/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-parity-857/python-home`
-- Go hive：`hive 1.0.14-go.1`，端口 `57287`，HIVE_HOME `/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-parity-857/go-home`
+- 分支 / 提交：`w14/api-parity` / `b7404b97`
+- Python hive：`hive 1.0.14`，端口 `58078`，HIVE_HOME `/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-parity-45510/python-home`
+- Go hive：`hive 1.0.14-go.1`，端口 `58079`，HIVE_HOME `/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-parity-45510/go-home`
 - LLM：provider=`openai` model=`deepseek-flash-1017` api_base=`https://token.tokenbroad.com/v1` key_env=`BROADTOKEN_API_KEY`
-- 启动耗时：Python 3.56s / Go 0.28s
+- 启动耗时：Python 2.55s / Go 0.27s
 
-**端点对比：9/16 PASS，7 FAIL。**
+**端点对比：9/17 PASS，8 FAIL。**
 **流程对比：FAIL**（3/5 项通过）
 
 > 对比规则：状态码必须相同；JSON 键集合与类型（递归，数组取前 3 个元素）必须相同；
@@ -32,9 +32,10 @@
 | 11 | `/api/sessions` | POST | 201/201 | **FAIL** | 4 |
 | 12 | `/api/sessions` | GET | 200/200 | **FAIL** | 2 |
 | 13 | `/api/sessions/{id}` | GET | 200/200 | **FAIL** | 4 |
-| 14 | `/api/sessions/{id}/snapshot` | GET | 200/200 | **FAIL** | 6 |
-| 15 | `/api/sessions/{id}/stats` | GET | 200/200 | **FAIL** | 29 |
-| 16 | `/api/sessions/{id}/tasks` | GET | 404/404 | **PASS** | 0 |
+| 14 | `/api/sessions/{id}/events/history` | GET | 200/200 | **FAIL** | 18 |
+| 15 | `/api/sessions/{id}/snapshot` | GET | 200/200 | **FAIL** | 6 |
+| 16 | `/api/sessions/{id}/stats` | GET | 200/200 | **FAIL** | 29 |
+| 17 | `/api/sessions/{id}/tasks` | GET | 404/404 | **PASS** | 0 |
 
 ## 端点明细
 
@@ -116,15 +117,15 @@ Go：`<non-JSON or empty>`
 - 状态码：Python `201` / Go `201`
 - 类型不一致（2）：queen_id: python=string go=null; queen_name: python=string go=null
 - ✓ 两边都创建成功 (201) — python=201 go=201
-- ✓ 响应都带 session_id — python='session_20261119_100418_13357781' go='session_20261119_100420_3cc8171b'
+- ✓ 响应都带 session_id — python='session_20261119_100634_92b6e343' go='session_20261119_100635_9bb6fb4f'
 - ✗ queen 身份已绑定 (queen_id 非空) — python='queen_growth' go=None
 - ✗ queen_phase 相同 — python='independent' go='planning'
 
 <details><summary>响应摘要</summary>
 
-Python：`{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "goal": "", "has_worker": false, "loaded_at": 1795053858.9897149, "node_count": 0, "queen_id": "queen_growth", "queen_name": "Steve Jobs",…`
+Python：`{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "goal": "", "has_worker": false, "loaded_at": 1795053994.058719, "node_count": 0, "queen_id": "queen_growth", "queen_name": "Steve Jobs", …`
 
-Go：`{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "goal": "", "has_worker": false, "loaded_at": 1795053860.664143, "node_count": 0, "queen_id": null, "queen_name": null, "queen_phase": "pl…`
+Go：`{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "goal": "", "has_worker": false, "loaded_at": 1795053995.147253, "node_count": 0, "queen_id": null, "queen_name": null, "queen_phase": "pl…`
 
 </details>
 
@@ -136,9 +137,9 @@ Go：`{"agent_path": "", "colony_id": null, "colony_spawned": false, "descriptio
 
 <details><summary>响应摘要</summary>
 
-Python：`{"sessions": [{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "goal": "", "has_worker": false, "loaded_at": 1795053858.9897149, "node_count": 0, "queen_id": "queen_growth", "queen_name":…`
+Python：`{"sessions": [{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "goal": "", "has_worker": false, "loaded_at": 1795053994.058719, "node_count": 0, "queen_id": "queen_growth", "queen_name": …`
 
-Go：`{"sessions": [{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "goal": "", "has_worker": false, "loaded_at": 1795053860.664143, "node_count": 0, "queen_id": null, "queen_name": null, "que…`
+Go：`{"sessions": [{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "goal": "", "has_worker": false, "loaded_at": 1795053995.147253, "node_count": 0, "queen_id": null, "queen_name": null, "que…`
 
 </details>
 
@@ -146,19 +147,34 @@ Go：`{"sessions": [{"agent_path": "", "colony_id": null, "colony_spawned": fals
 
 - 状态码：Python `200` / Go `200`
 - 类型不一致（2）：queen_id: python=string go=null; queen_name: python=string go=null
-- ✓ session_id 回显正确 — python='session_20261119_100418_13357781' go='session_20261119_100420_3cc8171b'
+- ✓ session_id 回显正确 — python='session_20261119_100634_92b6e343' go='session_20261119_100635_9bb6fb4f'
 - ✗ queen_phase 相同 — python='independent' go='planning'
 - ✗ queen_id 相同 — python='queen_growth' go=None
 
 <details><summary>响应摘要</summary>
 
-Python：`{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "entry_points": [], "goal": "", "has_worker": false, "loaded_at": 1795053858.9897149, "node_count": 0, "queen_id": "queen_growth", "queen_…`
+Python：`{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "entry_points": [], "goal": "", "has_worker": false, "loaded_at": 1795053994.058719, "node_count": 0, "queen_id": "queen_growth", "queen_n…`
 
-Go：`{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "entry_points": [], "goal": "", "has_worker": false, "loaded_at": 1795053860.664143, "node_count": 0, "queen_id": null, "queen_name": null…`
+Go：`{"agent_path": "", "colony_id": null, "colony_spawned": false, "description": "", "entry_points": [], "goal": "", "has_worker": false, "loaded_at": 1795053995.147253, "node_count": 0, "queen_id": null, "queen_name": null…`
 
 </details>
 
-### 14. GET `/api/sessions/{id}/snapshot` — FAIL
+### 14. GET `/api/sessions/{id}/events/history` — FAIL
+
+- 状态码：Python `200` / Go `200`
+- 仅 Python 有的字段（17）：`events[].colony_id (null)`, `events[].correlation_id (null)`, `events[].data (object)`, `events[].data.detail (string)`, `events[].data.max_iterations (number)`, `events[].data.meta (object)`, `events[].data.meta.point (string)`, `events[].data.name (string)`, `events[].data.queen_id (string)`, `events[].data.source (string)`, `events[].data.title (string)`, `events[].execution_id (string)` … 共 17 个
+- ✗ 历史事件非空（turn 之后） — python total=18 go total=0
+- ✓ events 都是数组
+
+<details><summary>响应摘要</summary>
+
+Python：`{"events": [{"colony_id": null, "correlation_id": null, "data": {"name": "Steve Jobs", "queen_id": "queen_growth", "title": "Head of Growth"}, "execution_id": null, "node_id": null, "seq": 1, "stream_id": "queen", "times…`
+
+Go：`{"events": [], "has_more_older": false, "limit": 500, "returned": 0, "session_id": "session_20261119_100635_9bb6fb4f", "start_index": 0, "start_offset": 0, "total": 0, "truncated": false}`
+
+</details>
+
+### 15. GET `/api/sessions/{id}/snapshot` — FAIL
 
 - 状态码：Python `200` / Go `200`
 - 类型不一致（4）：activity: python=string go=null; last_event_seq: python=number go=null; park_reason: python=string go=null; queen_busy_reason: python=string go=null
@@ -167,13 +183,13 @@ Go：`{"agent_path": "", "colony_id": null, "colony_spawned": false, "descriptio
 
 <details><summary>响应摘要</summary>
 
-Python：`{"activity": "awaiting_user", "awaiting_input": true, "current_execution_id": null, "current_tool_calls": [], "interrupt_cause": null, "interrupted": false, "is_executing": false, "last_event_at": "2026-11-19T10:04:27.06…`
+Python：`{"activity": "awaiting_user", "awaiting_input": true, "current_execution_id": null, "current_tool_calls": [], "interrupt_cause": null, "interrupted": false, "is_executing": false, "last_event_at": "2026-11-19T10:06:41.02…`
 
-Go：`{"activity": null, "awaiting_input": false, "current_execution_id": null, "current_tool_calls": [], "interrupt_cause": null, "interrupted": false, "is_executing": false, "last_event_at": "2026-11-19T10:04:21.697376", "la…`
+Go：`{"activity": null, "awaiting_input": false, "current_execution_id": null, "current_tool_calls": [], "interrupt_cause": null, "interrupted": false, "is_executing": false, "last_event_at": "2026-11-19T10:06:36.165437", "la…`
 
 </details>
 
-### 15. GET `/api/sessions/{id}/stats` — FAIL
+### 16. GET `/api/sessions/{id}/stats` — FAIL
 
 - 状态码：Python `200` / Go `200`
 - 仅 Python 有的字段（28）：`active_workers (number)`, `adaptive_tool_budget (object)`, `adaptive_tool_budget.enabled (bool)`, `adaptive_tool_budget.nominal (null)`, `adaptive_tool_budget.samples (number)`, `colony_id (string)`, `event_bus (object)`, `event_bus.events_by_type (object)`, `event_bus.events_by_type.client_input_committed (number)`, `event_bus.events_by_type.client_input_received (number)`, `event_bus.events_by_type.client_input_requested (number)`, `event_bus.events_by_type.client_output_delta (number)` … 共 28 个
@@ -181,13 +197,13 @@ Go：`{"activity": null, "awaiting_input": false, "current_execution_id": null, 
 
 <details><summary>响应摘要</summary>
 
-Python：`{"active_workers": 0, "adaptive_tool_budget": {"enabled": true, "nominal": null, "samples": 0}, "colony_id": "session_20261119_100418_13357781", "event_bus": {"events_by_type": {"client_input_committed": 1, "client_input…`
+Python：`{"active_workers": 0, "adaptive_tool_budget": {"enabled": true, "nominal": null, "samples": 0}, "colony_id": "session_20261119_100634_92b6e343", "event_bus": {"events_by_type": {"client_input_committed": 1, "client_input…`
 
 Go：`{}`
 
 </details>
 
-### 16. GET `/api/sessions/{id}/tasks` — PASS
+### 17. GET `/api/sessions/{id}/tasks` — PASS
 
 - 状态码：Python `404` / Go `404`
 - 备注：两边都返回 404（该会话尚无任务列表），属预期一致
@@ -204,18 +220,18 @@ Go：`{}`
 - ✓ chat 都返回 200 — python=200 go=200
 - ✓ 两边都落盘了 assistant part — python=True go=True
 - ✓ assistant 回复包含 PARITY_OK — python='PARITY_OK' go='PARITY_OK'
-- ✗ SSE 事件类型集合相同 — python=['client_input_committed', 'client_input_received', 'client_input_requested', 'client_output_delta', 'client_reasoning', 'context_usage_updated', 'llm_reasoning_delta', 'llm_turn_complete', 'loop_state_changed', 'node_loop_iteration', 'session_snapshot', 'session_title_updated'] go=['client_input_received']
+- ✗ SSE 事件类型集合相同 — python=['client_input_committed', 'client_input_received', 'client_input_requested', 'client_output_delta', 'client_reasoning', 'context_usage_updated', 'llm_reasoning_delta', 'llm_turn_complete', 'loop_state_changed', 'node_loop_iteration', 'node_loop_started', 'session_snapshot', 'session_title_updated'] go=['client_input_received']
 - ✗ SSE 帧都带 event: 名称（或都不带） — python event 名称 0 个，go 1 个
 
 ### SSE（各订阅 10 秒）
 
-**Python 事件 type 序列（去重保序）：** `session_snapshot → client_input_received → llm_reasoning_delta → client_reasoning → client_output_delta → llm_turn_complete → client_input_committed → node_loop_iteration → context_usage_updated → client_input_requested → loop_state_changed → session_title_updated`
+**Python 事件 type 序列（去重保序）：** `session_snapshot → node_loop_started → node_loop_iteration → context_usage_updated → client_input_received → llm_reasoning_delta → client_reasoning → client_output_delta → llm_turn_complete → client_input_committed → session_title_updated → client_input_requested → loop_state_changed`
 
 **Go 事件 type 序列（去重保序）：** `client_input_received`
 
-- 帧数：Python 61 / Go 1
+- 帧数：Python 50 / Go 1
 - SSE `event:` 名称：Python `[]` / Go `['client_input_received']`
-- 仅 Python 有的事件类型：`['client_input_committed', 'client_input_requested', 'client_output_delta', 'client_reasoning', 'context_usage_updated', 'llm_reasoning_delta', 'llm_turn_complete', 'loop_state_changed', 'node_loop_iteration', 'session_snapshot', 'session_title_updated']`
+- 仅 Python 有的事件类型：`['client_input_committed', 'client_input_requested', 'client_output_delta', 'client_reasoning', 'context_usage_updated', 'llm_reasoning_delta', 'llm_turn_complete', 'loop_state_changed', 'node_loop_iteration', 'node_loop_started', 'session_snapshot', 'session_title_updated']`
 - 仅 Go 有的事件类型：`[]`
 
 ## 场景对比：重启后打开已不在内存的会话
@@ -224,27 +240,27 @@ Go：`{}`
 
 | 指标 | Python | Go |
 |------|--------|----|
-| 重启耗时 | 3.05s | 0.25s |
+| 重启耗时 | 2.28s | 0.26s |
 | GET `/api/sessions/{旧 id}` | 200 | 200 |
 | 旧会话出现在 `/api/sessions` 列表 | False | False |
 | `/events` 首次状态码 | 404 | 404 |
 | `/events` 状态码集合 | [404] | [404] |
 | 10 秒内 POST `/api/sessions` 次数 | ≥30（达上限） | ≥30（达上限） |
 | POST 状态码集合 | [201] | [201] |
-| POST 耗时 min/中位/max | 122.7/132.8/986.3ms | 0.8/1.2/10.0ms |
+| POST 耗时 min/中位/max | 110.7/117.7/833.2ms | 0.9/1.2/49.7ms |
 | 按中位耗时折算的创建速率 | ≈8/s | ≈833/s |
 
 > POST 计数上限 30 次：达到上限的一侧记 `≥30`，真实速率看折算值。
 
-**结论：** 两边一致：重启后旧 session id 的 `/events` 都返回 404（会话详情 `GET /api/sessions/{id}` 两边都能从磁盘回退返回 200/200），因此前端重试风暴不是 Go 独有，上游同样触发。差别在放大器：POST /api/sessions 中位耗时 Python 132.8ms（122.7–986.3ms）、Go 1.2ms（0.8–10.0ms），约 111×，同样的重试循环在 Go 上 10 秒内至少产生 30 次创建请求（达到测量上限）。
+**结论：** 两边一致：重启后旧 session id 的 `/events` 都返回 404（会话详情 `GET /api/sessions/{id}` 两边都能从磁盘回退返回 200/200），因此前端重试风暴不是 Go 独有，上游同样触发。差别在放大器：POST /api/sessions 中位耗时 Python 117.7ms（110.7–833.2ms）、Go 1.2ms（0.9–49.7ms），约 98×，同样的重试循环在 Go 上 10 秒内至少产生 30 次创建请求（达到测量上限）。
 
 ## 最重要的 5 个差异
 
 1. GET /api/skills 状态码不一致：Python 200 / Go 404
-2. SSE 事件序列：Go 少发 client_input_committed, client_input_requested, client_output_delta, client_reasoning, context_usage_updated, llm_reasoning_delta, llm_turn_complete, loop_state_changed 等 11 种事件类型
+2. SSE 事件序列：Go 少发 client_input_committed, client_input_requested, client_output_delta, client_reasoning, context_usage_updated, llm_reasoning_delta, llm_turn_complete, loop_state_changed 等 12 种事件类型
 3. GET /api/sessions/{id}/stats — stats 都非空：python keys=['active_workers', 'adaptive_tool_budget', 'colony_id', 'event_bus', 'running', 'total_workers'] go keys=[]
-4. GET /api/credentials/specs — specs 数量相同：python=115 go=4
-5. POST /api/sessions — queen 身份已绑定 (queen_id 非空)：python='queen_growth' go=None
+4. GET /api/sessions/{id}/events/history — 历史事件非空（turn 之后）：python total=18 go total=0
+5. GET /api/credentials/specs — specs 数量相同：python=115 go=4
 
 ## 复现
 
