@@ -68,6 +68,53 @@ func TestReminderRoutesMirrorSessionHubReadOnly(t *testing.T) {
 	}
 }
 
+// Parity-exempt: Go-only REST mirror. Pins the production source of truth: a
+// live ChatRuntime's own hub wins over the legacy ReminderRuntime fallback,
+// even when that fallback still holds reminders.
+func TestReminderRoutesPreferLiveChatHubOverFallbackRuntime(t *testing.T) {
+	chat, err := NewChatRuntime(ChatRuntimeDeps{
+		LLM:       &fakeChatLLM{},
+		Root:      t.TempDir(),
+		SessionID: "s-live-source",
+	})
+	if err != nil {
+		t.Fatalf("NewChatRuntime: %v", err)
+	}
+	t.Cleanup(func() { _ = chat.Close() })
+
+	chat.hub.Post(agentloop.Reminder{
+		Body:   "LIVE-HUB-MARKER",
+		Source: "skills_catalog",
+	})
+
+	fallback := NewReminderRuntime()
+	state := fallback.session("s-live-source")
+	state.mu.Lock()
+	state.pending = []ReminderView{{ID: 99, Source: "fallback", Body: "FALLBACK-DECOY"}}
+	state.mu.Unlock()
+
+	mux := http.NewServeMux()
+	RegisterReminderRoutes(mux, ReminderRouteDeps{Runtime: fallback})
+
+	status, body, _ := reminderGET(t, mux, "/api/sessions/s-live-source/reminders")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want 200", status)
+	}
+	items := reminderItems(t, body)
+	if len(items) != 1 || items[0]["body"] != "LIVE-HUB-MARKER" {
+		t.Fatalf("reminders = %#v, want the live chat hub item only", items)
+	}
+	if body["mirror"] != true {
+		t.Fatalf("mirror = %#v, want true for a live chat session", body["mirror"])
+	}
+	if body["pending"] != float64(1) {
+		t.Fatalf("pending = %#v, want 1", body["pending"])
+	}
+	if got := chat.hub.PendingLen(); got != 1 {
+		t.Fatalf("chat hub pending after GET = %d, want 1 (REST must not drain)", got)
+	}
+}
+
 // Parity-exempt: Go-only REST mirror behaviour for a session that has no live
 // chat runtime yet (cold session / no provider).
 func TestReminderRoutesNoHubReturnsEmptyWithoutError(t *testing.T) {

@@ -4,9 +4,10 @@ package server
 //
 // The loop owns the ReminderHub; this file registers the sources the queen
 // session needs (task snapshots/drift, the colony parallel nudge, active
-// workers, the deferred-tool manifest, the skills catalog, and the temporal
-// idle nudge), fills the ReminderAgentContext providers from the session's own
-// stores, and starts the hub's ticker with a lifecycle bound to ChatRuntime.
+// workers, the tracker snapshot, the deferred-tool manifest, the skills
+// catalog, and the temporal idle nudge), fills the ReminderAgentContext
+// providers from the session's own stores, and starts the hub's ticker with a
+// lifecycle bound to ChatRuntime.
 //
 // Parity: framework/agent_loop/agent_loop.py::AgentLoop.__init__
 // Parity: framework/server/queen_orchestrator.py (queen agent context wiring)
@@ -33,6 +34,7 @@ func (r *ChatRuntime) configureReminderProviders() {
 	}
 	r.agentCtx.OpenTasksProvider = r.openIdleTasks
 	r.agentCtx.SessionGoalProvider = r.sessionGoal
+	r.agentCtx.ColonyBindingProvider = r.colonyBinding
 	if r.deps.SkillsCatalog != nil {
 		r.agentCtx.QueenSkillsCatalogProvider = r.deps.SkillsCatalog
 	} else {
@@ -43,7 +45,20 @@ func (r *ChatRuntime) configureReminderProviders() {
 	// The colony-phase gate reads the tools the current turn advertises:
 	// run_worker is filtered out while no colony is bound, so the parallel
 	// nudge cannot fire for a plain chat session.
-	r.agentCtx.DynamicToolsProvider = func() []llm.ToolDef { return r.toolsForTurn() }
+	if tier := newChatToolTier(r.deps.Root, r.toolsForTurn); tier != nil {
+		// MCP tools are advertised by name only until search_tools loads
+		// them; this is what gives the searchable-tools reminder content.
+		r.agentCtx.ToolTierState = tier.statePtr()
+		r.agentCtx.SearchableToolsProvider = tier.searchableTools
+		r.agentCtx.LoadedToolNamesProvider = tier.loadedToolNames
+		r.agentCtx.DynamicToolsProvider = tier.toolDefs
+	} else {
+		// No MCP loader means no deferred schemas today; still expose the
+		// provider so the chat context has the same shape as a tiered queen.
+		r.agentCtx.SearchableToolsProvider = func() []agentloop.Tool { return nil }
+		r.agentCtx.LoadedToolNamesProvider = func() []string { return nil }
+		r.agentCtx.DynamicToolsProvider = func() []llm.ToolDef { return r.toolsForTurn() }
+	}
 	r.agentCtx.ActiveWorkersProvider = r.activeWorkers
 	r.agentCtx.ColonyStatsProvider = r.colonyStats
 	r.setColonyBinding()
@@ -70,6 +85,7 @@ func (r *ChatRuntime) configureReminders(override *agentloop.IdleNudgeConfig) {
 	hub.Register(&taskReminderSourceAdapter{inner: tasks.NewTaskReminderSource()})
 	hub.Register(agentloop.NewColonyParallelNudgeSource())
 	hub.Register(agentloop.NewActiveWorkersReminderSource())
+	hub.Register(agentloop.NewTrackerSnapshotReminderSource())
 	hub.Register(agentloop.NewSearchableToolsReminderSource())
 	hub.Register(agentloop.NewSkillsCatalogReminderSource())
 	hub.Register(r.idleSource)
@@ -195,6 +211,26 @@ func (r *ChatRuntime) setParkState(reason agentloop.ParkReason, awaiting bool) {
 	r.parkMu.Unlock()
 	r.awaiting.Store(awaiting)
 	r.persistParkState()
+}
+
+// colonyBinding resolves the tracker binding of the session's bound colony for
+// the tracker-snapshot reminder. No colony (or a colony whose tracker has not
+// been provisioned yet) returns nil, so the source self-skips.
+//
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::_resolve_binding
+func (r *ChatRuntime) colonyBinding() *agentloop.ColonyBinding {
+	if r == nil {
+		return nil
+	}
+	runtime := r.boundColonyRuntime()
+	if runtime == nil {
+		return nil
+	}
+	binding := runtime.TrackerBinding()
+	if binding == nil || binding.TrackerDB == "" {
+		return nil
+	}
+	return &agentloop.ColonyBinding{TrackerDB: binding.TrackerDB}
 }
 
 // openIdleTasks is the idle nudge's view of the session task list. Archived
