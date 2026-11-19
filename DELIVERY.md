@@ -40,8 +40,8 @@
 | 项 | 结果 | 复现命令 |
 | --- | --- | --- |
 | 全量门禁 | 退出码 0（fmt/vet/test/cross/parity/parity-targets/wiring-check） | `cd go_hive/go-hive && make ci` |
-| 测试 | **4,256**（全部带 parity 注解或豁免） | 同上 |
-| parity 引用 | **4,489** 条，0 失效文件 / 0 失效测试；含生产代码 **898** 条 0 失效符号 | `make parity-targets` |
+| 测试 | **4,313**（全部带 parity 注解或豁免） | 同上 |
+| parity 引用 | **4,582** 条，0 失效文件 / 0 失效测试；含生产代码 **943** 条 0 失效符号 | `make parity-targets` |
 | QC 全量 | **8/8 PASS**（含重跑 make ci 与冒烟） | `uv run --no-project python go_hive/scripts/qc_check.py --full --smoke` |
 | 集成冒烟 | **13/13 PASS**（真二进制 + 真 HTTP） | `bash go_hive/scripts/smoke.sh` |
 | 发布包 | 6 归档 + SHA256SUMS，`shasum -c` 全 OK | `bash go_hive/scripts/release.sh` |
