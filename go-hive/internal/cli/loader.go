@@ -543,20 +543,15 @@ func (r *Runner) createSessionWithRuntime(
 	prebuilt *colonyhost.Host,
 	prebuiltPath string,
 ) (*hiveserver.Session, error) {
-	sessionID := ""
-	if params.SessionID != nil {
-		sessionID = strings.TrimSpace(*params.SessionID)
-		if !hivesession.ValidSegment(sessionID) {
-			return nil, &hiveserver.SessionCreateValueError{Message: "invalid session_id"}
-		}
+	// Resolve the id, queen scope and any resume target together: a resume is
+	// only valid inside the queen it would write under, and the id it adopts
+	// is the one /events and /chat already address.
+	identity, err := planChatSession(params, home)
+	if err != nil {
+		return nil, err
 	}
-	if sessionID == "" {
-		generated, err := hivesession.NewStore("").GenerateID(time.Now())
-		if err != nil {
-			return nil, err
-		}
-		sessionID = generated
-	}
+	sessionID := identity.SessionID
+	queenScope := identity.QueenScope
 	hiveserver.ReportBootStage("Preparing queen session", sessionID)
 
 	record := hiveserver.NewSession(sessionID, eventbus.NewEventBus())
@@ -567,15 +562,12 @@ func (r *Runner) createSessionWithRuntime(
 	if params.QueenName != nil {
 		record.QueenName = *params.QueenName
 	}
-	// The transcript tree and the memory scope share one queen identifier: a
-	// queen_growth session keeps its conversation under
-	// queens/queen_growth/sessions and recalls queen_growth's memories. An
-	// unbound session belongs to the shared "default" queen. queen_name comes
-	// from request bodies and queen routes, so reject a name that would step
-	// outside the queen tree rather than joining it raw.
-	queenScope := chatSessionQueenScope(record.QueenName)
-	if !hivesession.ValidSegment(queenScope) {
-		return nil, &hiveserver.SessionCreateValueError{Message: "invalid queen_name"}
+	// The persisted session a resume reopened; empty for a fresh create.
+	record.QueenResumeFrom = identity.ResumeFrom
+	// A resume retry must reuse the runtime already holding the session
+	// instead of building a second one on the same transcript.
+	if existing, resumeErr := resumeLiveSession(manager, identity, params.InitialPrompt); resumeErr != nil || existing != nil {
+		return existing, resumeErr
 	}
 
 	requestedModel := ""
@@ -597,6 +589,10 @@ func (r *Runner) createSessionWithRuntime(
 	} else {
 		toolbox := builtin.New("")
 		sessionDir := chatSessionDir(home, queenScope, sessionID)
+		if identity.ResumedDir != "" {
+			// Continue the transcript where the persisted session left it.
+			sessionDir = identity.ResumedDir
+		}
 		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 			LLM:       provider,
