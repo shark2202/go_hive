@@ -12,11 +12,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
+	"github.com/aden-hive/hive-go/internal/skills"
 	"github.com/aden-hive/hive-go/internal/tools"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 	"github.com/aden-hive/hive-go/internal/tools/integrations"
@@ -25,6 +28,7 @@ import (
 
 type sessionToolCatalogue struct {
 	root         string
+	home         hivehome.Home
 	toolbox      *builtin.Toolbox
 	builtinNames map[string]struct{}
 	taskTools    *taskToolSet
@@ -65,6 +69,7 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 
 	catalogue := &sessionToolCatalogue{
 		root:         root,
+		home:         home,
 		toolbox:      toolbox,
 		builtinNames: map[string]struct{}{},
 		taskTools:    newTaskToolSet(root, home),
@@ -80,6 +85,24 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 			continue
 		}
 		catalogue.defs = append(catalogue.defs, def)
+	}
+	// Skill tools: write_skill authors into the bound colony's skills/ folder
+	// (or the queen's own), skill_view/list_skills read the same catalog. They
+	// stay advertised without a colony because the catalogue is built before
+	// the colony attaches; write_skill(scope='colony') and the executor return
+	// an actionable no-colony error, and the default scope falls back to queen.
+	for _, def := range skills.AgentToolDefs() {
+		if _, taken := catalogue.builtinNames[def.Name]; taken {
+			continue
+		}
+		catalogue.defs = append(catalogue.defs, def)
+	}
+	// run_playbook is the colony-bound queen's fan-out tool. Like run_worker it
+	// dispatches through the live runtime bound per turn; unlike run_worker it
+	// is filtered at execution time (not from defs) because the same catalogue
+	// also feeds the colony's declared-tool pool.
+	if _, taken := catalogue.builtinNames[colony.RunPlaybookToolName]; !taken {
+		catalogue.defs = append(catalogue.defs, colony.RunPlaybookToolDef())
 	}
 	// run_worker is a queen lifecycle tool, not an integration: it dispatches
 	// through the live colony runtime the session binds (see
@@ -224,6 +247,14 @@ func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input m
 	// The colony runtime travels on the context (ChatRuntime binds it per
 	// call), so this executor stays valid even though the catalogue is built
 	// before a session's colony host exists.
+	if name == skills.WriteSkillToolName || name == skills.SkillViewToolName || name == skills.ListSkillsToolName {
+		content, isError, _ := skills.ExecuteAgentTool(name, input, c.skillToolDirs(ctx))
+		return content, isError, nil
+	}
+	if name == colony.RunPlaybookToolName {
+		content, isError := colony.RunPlaybook(ctx, colony.RunWorkerSpawnerFromContext(ctx), input)
+		return content, isError, nil
+	}
 	if name == colony.RunWorkerToolName {
 		content, isError := colony.RunWorker(ctx, colony.RunWorkerSpawnerFromContext(ctx), input)
 		return content, isError, nil
@@ -278,4 +309,42 @@ func (c *sessionToolCatalogue) sessionToolContext(name string, input map[string]
 		merged["storage_path"] = c.root
 	}
 	return merged
+}
+
+// skillToolDirs resolves the on-disk scope for a skill tool call: the bound
+// colony from the per-turn context (the catalogue is built before the binding
+// exists) and the queen home derived from this session's directory. skill_view
+// searches the colony directory first — that is the catalog a worker actually
+// sees — then the queen's own skills.
+func (c *sessionToolCatalogue) skillToolDirs(ctx context.Context) skills.ToolDirs {
+	dirs := skills.ToolDirs{SessionDir: c.root}
+	if c.home.Root != "" {
+		queenID := queenScopeFromSessionRoot(c.home, c.root)
+		dirs.QueenID = queenID
+		dirs.QueenDir = c.home.QueenDir(queenID)
+	}
+	if binding := colony.TrackerBindingFromContext(ctx); binding != nil {
+		dirs.ColonyDir = binding.Dir
+	}
+	return dirs
+}
+
+// queenScopeFromSessionRoot recovers the queen a chat session belongs to from
+// its on-disk tree (…/queens/<queen>/sessions/<id>). A catalogue built for a
+// non-standard root (tests, a colony path) falls back to the shared "default"
+// queen, which is the same identity the loader uses for queen_name="".
+func queenScopeFromSessionRoot(home hivehome.Home, root string) string {
+	rel, err := filepath.Rel(home.QueensDir(), filepath.Clean(root))
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return "default"
+	}
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	if len(parts) == 0 {
+		return "default"
+	}
+	queen := strings.TrimSpace(parts[0])
+	if queen == "" || queen == "." || queen == ".." || strings.ContainsAny(queen, `/\`) {
+		return "default"
+	}
+	return queen
 }
