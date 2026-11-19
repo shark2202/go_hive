@@ -7,11 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/aden-hive/hive-go/internal/memory"
 )
 
 // chatIdentityPrompt is the system prompt a chat session's queen starts with.
@@ -43,6 +46,12 @@ type ChatRuntimeDeps struct {
 	Execute func(ctx context.Context, name string, input map[string]any) (content string, isError bool, err error)
 	Store   agentloop.ConversationStore
 	Root    string
+	// QueenName scopes recalled memory and reflection to this queen. Empty
+	// means the shared "default" queen.
+	QueenName string
+	// HomeRoot is HIVE_HOME. When set, the runtime recalls global + queen
+	// memory each turn and schedules memory reflection after turns.
+	HomeRoot string
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
@@ -54,6 +63,14 @@ type ChatRuntime struct {
 	agentCtx *agentloop.AgentContext
 	conv     *agentloop.NodeConversation
 	store    agentloop.ConversationStore
+
+	queenName       string
+	globalMemoryDir string
+	queenMemoryDir  string
+	reflection      *memory.ReflectionScheduler
+	// lastRecall is the block injected last turn; recall is re-injected only
+	// when its content changes (same guard as the upstream _last_injected_recall).
+	lastRecall string
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -90,6 +107,31 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		cancel: cancel,
 		wake:   make(chan struct{}, 1),
 		done:   make(chan struct{}),
+	}
+	runtime.queenName = strings.TrimSpace(deps.QueenName)
+	if runtime.queenName == "" {
+		runtime.queenName = "default"
+	}
+	// Parity: core/framework/server/queen_orchestrator.py::initialize_memory_scopes
+	// Memory scopes only exist under a HIVE_HOME; without one the runtime keeps
+	// its pre-memory behaviour (no recall, no reflection) instead of guessing.
+	if deps.HomeRoot != "" {
+		runtime.globalMemoryDir = memory.GlobalMemoryDir(deps.HomeRoot)
+		runtime.queenMemoryDir = memory.QueenMemoryDir(deps.HomeRoot, runtime.queenName)
+		_ = memory.InitMemoryDir(runtime.globalMemoryDir)
+		_ = memory.InitMemoryDir(runtime.queenMemoryDir)
+		// Parity: core/framework/agents/queen/reflection_agent.py::subscribe_reflection_triggers
+		if deps.Root != "" {
+			runtime.reflection = &memory.ReflectionScheduler{
+				SessionDir: deps.Root,
+				LLM:        deps.LLM,
+				GlobalDir:  runtime.globalMemoryDir,
+				QueenDir:   runtime.queenMemoryDir,
+				QueenID:    runtime.queenName,
+				Config:     func() memory.ReflectionConfig { return chatMemoryReflectionConfig(deps.HomeRoot) },
+			}
+			runtime.reflection.InitializeReflectionState()
+		}
 	}
 
 	agentCtx := &agentloop.AgentContext{
@@ -214,8 +256,10 @@ func (r *ChatRuntime) run() {
 }
 
 // runTurn mirrors the upstream drain: the user message joins the conversation
-// stamped with its arrival time, then the loop runs until the model stops
-// calling tools.
+// stamped with its arrival time, per-queen recall rides along as a
+// <system-reminder>, then the loop runs until the model stops calling tools.
+//
+// Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
 func (r *ChatRuntime) runTurn(message string) {
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
 	if _, err := r.conv.AddUserMessage("["+stamp+"] "+message, agentloop.UserMessageOptions{
@@ -224,6 +268,7 @@ func (r *ChatRuntime) runTurn(message string) {
 		r.setLastError(err)
 		return
 	}
+	r.injectRecall(message, stamp)
 	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.deps.Tools)
 	if err != nil {
 		r.setLastError(err)
@@ -233,7 +278,54 @@ func (r *ChatRuntime) runTurn(message string) {
 		r.setLastError(errors.New("server: chat turn did not complete"))
 		return
 	}
+	// Parity: core/framework/agents/queen/reflection_agent.py::subscribe_reflection_triggers
+	if r.reflection != nil {
+		r.reflection.OnTurnDone(r.ctx, "queen", "turn_done")
+	}
 	r.setLastError(nil)
+}
+
+// injectRecall appends the global + queen-scoped recall blocks to the current
+// turn as a <system-reminder>, after the user message and before the model
+// reads the conversation. Upstream delivers the same block through
+// AgentLoop.inject_event(wake=False), which the drain writes as a non-client
+// "[stamp] [External event] ..." user message — not into the system prompt, so
+// the cached history prefix stays byte-stable.
+//
+// Parity: core/framework/server/queen_orchestrator.py::_inject_recall_if_changed
+func (r *ChatRuntime) injectRecall(query, stamp string) {
+	if r.globalMemoryDir == "" {
+		return
+	}
+	globalBlock, queenBlock := memory.BuildScopedRecallBlocks(
+		r.ctx,
+		query,
+		r.deps.LLM,
+		r.globalMemoryDir,
+		r.queenMemoryDir,
+		r.queenName,
+		3,
+		3,
+		llm.ResolveAuxMaxTokens(0),
+	)
+	parts := make([]string, 0, 2)
+	if globalBlock != "" {
+		parts = append(parts, globalBlock)
+	}
+	if queenBlock != "" {
+		parts = append(parts, queenBlock)
+	}
+	block := strings.Join(parts, "\n\n")
+	if block == "" || block == r.lastRecall {
+		return
+	}
+	r.lastRecall = block
+	reminder := "<system-reminder>\nRecalled memories relevant to the latest " +
+		"user message (supersedes earlier recall reminders):\n\n" +
+		block + "\n</system-reminder>"
+	// Recall is context, never a reason to fail a turn: a write error leaves
+	// the conversation as it was and the turn runs without the reminder.
+	_, _ = r.conv.AddUserMessage("["+stamp+"] [External event] "+reminder, agentloop.UserMessageOptions{})
 }
 
 func (r *ChatRuntime) setLastError(err error) {
@@ -254,4 +346,26 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 		return agentloop.ToolResult{Content: err.Error(), IsError: true}, nil
 	}
 	return agentloop.ToolResult{Content: content, IsError: isError}, nil
+}
+
+// chatMemoryReflectionConfig reads the memory_reflection section of
+// configuration.json, falling back to the same defaults as upstream.
+//
+// Parity: framework/config.py::get_memory_reflection_config
+func chatMemoryReflectionConfig(homeRoot string) memory.ReflectionConfig {
+	cfg := memory.DefaultReflectionConfig()
+	section, _ := HiveConfig(hivehome.Home{Root: homeRoot})["memory_reflection"].(map[string]any)
+	positive := func(key string, fallback int) int {
+		value, ok := toFloat(section[key])
+		if !ok || value < 1 || value != float64(int(value)) {
+			return fallback
+		}
+		return int(value)
+	}
+	cfg.EveryTurns = positive("every_turns", cfg.EveryTurns)
+	cfg.LongEvery = positive("long_every", cfg.LongEvery)
+	if model, ok := section["model"].(string); ok && (model == "main" || model == "worker") {
+		cfg.Model = model
+	}
+	return cfg
 }
