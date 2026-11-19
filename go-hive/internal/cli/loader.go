@@ -286,6 +286,17 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	// tool registry) is built so saved credentials are live from the start.
 	hiveserver.SyncCredentialEnv(home)
 
+	// Sentinel is process-wide: it owns the parked-queen ladder for every
+	// colony-queen chat session built below (nudge / done / escalate) and the
+	// outbound delivery drain. Without it the escalation source's gate never
+	// opens and no park is ever classified. Start it before any session so
+	// NewChatRuntime sees the manager when it registers its reminder sources.
+	sentinelManager := hiveserver.NewSentinelManager(home.Root, manager)
+	defer sentinelManager.Stop()
+	if startErr := sentinelManager.Start(context.Background()); startErr != nil {
+		fmt.Fprintf(r.Stdout, "Warning: sentinel unavailable: %v\n", startErr)
+	}
+
 	var liveMu sync.Mutex
 	live := make([]*hiveserver.Session, 0)
 	lifecycle := r.newColonyLifecycle(manager, &liveMu, &live, home, args.str("model"))
@@ -317,6 +328,11 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 			if _, startErr := built.StartOverseer(context.Background(), queenOverseerSpec(home, queenName), nil); startErr != nil {
 				fmt.Fprintf(r.Stdout, "Warning: colony overseer unavailable for %s: %v\n", colonyID, startErr)
 			}
+		}
+		// Rebuild the colony's triggers.json runtime: enabled timers and
+		// webhook routes survive a restart without the user re-activating them.
+		if loaded, started := hiveserver.RestoreSessionTriggers(record); loaded > 0 {
+			fmt.Fprintf(r.Stdout, "Restored %d trigger(s) (%d running) for %s\n", loaded, started, colonyID)
 		}
 		manager.AddSession(record)
 		liveMu.Lock()
@@ -608,6 +624,12 @@ func (r *Runner) createSessionWithRuntime(
 			runtime = built
 			record.Chat = built
 			record.LLM = provider
+			// The session's queen executor is the chat runtime: timer and
+			// webhook triggers reach the queen through it (queenNode →
+			// InjectTrigger), which is the assignment the audit found missing.
+			record.QueenExecutor = &hiveserver.QueenExecutor{
+				NodeRegistry: map[string]hiveserver.QueenNode{"queen": built},
+			}
 		}
 	}
 
@@ -640,6 +662,15 @@ func (r *Runner) createSessionWithRuntime(
 		}
 		record.Colony = built
 		record.WorkerPath = colonyPath
+	}
+
+	// A colony-bound session rebuilds its triggers.json runtime before it is
+	// registered: enabled timers and webhook routes survive a restart, and the
+	// queen executor above is already in place for the first fire.
+	if record.WorkerPath != "" {
+		if loaded, started := hiveserver.RestoreSessionTriggers(record); loaded > 0 {
+			fmt.Fprintf(r.Stdout, "Restored %d trigger(s) (%d running) for %s\n", loaded, started, record.ID)
+		}
 	}
 
 	manager.AddSession(record)
@@ -744,6 +775,9 @@ func (l *colonyLifecycle) UnloadColony(sessionID string) bool {
 	if session == nil || session.Colony == nil {
 		return false
 	}
+	// A trigger belongs to the colony: without it, a timer reading the old
+	// WorkerPath would keep firing at a queen whose colony is gone.
+	session.StopAllTriggers()
 	stopColonyRuntime(session.Colony)
 	session.Colony = nil
 	session.ColonyID = ""
@@ -782,6 +816,9 @@ func (l *colonyLifecycle) attach(session *hiveserver.Session, colonyID, model st
 	session.ColonyID = colonyID
 	session.WorkerPath = colonyPath
 	l.persistAgentMeta(session, colonyID, colonyPath)
+	if loaded, started := hiveserver.RestoreSessionTriggers(session); loaded > 0 {
+		fmt.Fprintf(l.out, "Restored %d trigger(s) (%d running) for %s\n", loaded, started, colonyID)
+	}
 	return nil
 }
 
