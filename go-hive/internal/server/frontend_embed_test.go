@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,7 +35,7 @@ func TestEmbeddedStaticServingAndIndexFallback(t *testing.T) {
 		t.Fatalf("asset content-type = %q", got)
 	}
 
-	for _, target := range []string{"/", "/colonies/colony_a", "/assets/missing.js"} {
+	for _, target := range []string{"/", "/colonies/colony_a"} {
 		recorder = httptest.NewRecorder()
 		app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, target, nil))
 		if recorder.Code != http.StatusOK {
@@ -46,6 +47,27 @@ func TestEmbeddedStaticServingAndIndexFallback(t *testing.T) {
 		if got := recorder.Header().Get("Content-Type"); !strings.Contains(got, "text/html") {
 			t.Fatalf("%s content-type = %q", target, got)
 		}
+	}
+
+	for _, target := range []string{"/assets/missing.js", "/api/nonexistent"} {
+		recorder = httptest.NewRecorder()
+		app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, target, nil))
+		if recorder.Code != http.StatusNotFound {
+			t.Fatalf("%s status = %d, want 404", target, recorder.Code)
+		}
+		if recorder.Body.String() == index {
+			t.Fatalf("%s fell back to the index page", target)
+		}
+	}
+
+	recorder = httptest.NewRecorder()
+	app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/nonexistent", nil))
+	var body map[string]any
+	if err := json.NewDecoder(recorder.Body).Decode(&body); err != nil {
+		t.Fatalf("decode API 404 body: %v", err)
+	}
+	if body["error"] != "not found" {
+		t.Fatalf("API 404 body = %#v, want error=not found", body)
 	}
 }
 
