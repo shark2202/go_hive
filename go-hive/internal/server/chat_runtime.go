@@ -19,6 +19,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/memory"
+	"github.com/aden-hive/hive-go/internal/queen"
 )
 
 // chatStreamID and chatNodeID are the upstream queen identifiers: the
@@ -29,10 +30,9 @@ const (
 	chatNodeID   = "queen"
 )
 
-// chatIdentityPrompt is the system prompt a chat session's queen starts with.
-// The upstream queen prompt is composed from a full queen profile; P0 chat
-// sessions have no profile selection yet, so the identity is the shared shape
-// the loop and prompt builder expect rather than a roleplay persona.
+// chatIdentityPrompt is the fallback identity for a chat session whose queen
+// has no profile on disk (the shared "default" queen). A bound queen gets the
+// formatted profile persona instead — see chatQueenIdentityPrompt.
 const chatIdentityPrompt = "You are a queen agent in Hive, working directly with the" +
 	" user in an interactive chat session. Answer the user, and use the available" +
 	" tools when they help. Prefer doing the work over describing it. Be concise."
@@ -86,6 +86,9 @@ type ChatRuntime struct {
 	agentCtx *agentloop.AgentContext
 	conv     *agentloop.NodeConversation
 	store    agentloop.ConversationStore
+	// tools is deps.Tools plus the ask_user synthetic the queen calls when she
+	// needs a decision from the user.
+	tools []llm.ToolDef
 
 	bus       *eventbus.EventBus
 	sessionID string
@@ -110,6 +113,9 @@ type ChatRuntime struct {
 	queue   []string
 	closed  bool
 	lastErr error
+	// pendingQuestions is the ask_user question the current turn parked on.
+	// It survives until the next user message (the answer) starts a turn.
+	pendingQuestions []map[string]any
 
 	wake chan struct{}
 	done chan struct{}
@@ -137,6 +143,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		bus:       deps.Bus,
 		sessionID: deps.SessionID,
 		reminders: deps.Reminders,
+		tools:     chatToolsWithAskUser(deps.Tools),
 		ctx:       ctx,
 		cancel:    cancel,
 		wake:      make(chan struct{}, 1),
@@ -176,8 +183,8 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 			AgentType: "event_loop",
 		},
 		LLM:            deps.LLM,
-		AvailableTools: deps.Tools,
-		IdentityPrompt: chatIdentityPrompt,
+		AvailableTools: runtime.tools,
+		IdentityPrompt: chatQueenIdentityPrompt(deps.HomeRoot, runtime.queenName),
 		InputData:      map[string]any{},
 		StreamID:       "queen",
 		MaxTokens:      8192,
@@ -334,6 +341,9 @@ func (r *ChatRuntime) runTurn(message string) {
 
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
 	r.turnTools = nil
+	// The next user message answers any outstanding ask_user: clear the park
+	// before this turn can record a new question.
+	r.clearPendingQuestions()
 	if _, err := r.conv.AddUserMessage("["+stamp+"] "+message, agentloop.UserMessageOptions{
 		IsClientInput: true,
 	}); err != nil {
@@ -343,7 +353,7 @@ func (r *ChatRuntime) runTurn(message string) {
 	}
 	r.injectRecall(message, stamp)
 	r.injectReminders(stamp)
-	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.deps.Tools)
+	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.tools)
 	if err != nil {
 		// A cancelled turn (session teardown) is not a failure worth
 		// broadcasting: the runtime is going away, not the model failing.
@@ -359,7 +369,14 @@ func (r *ChatRuntime) runTurn(message string) {
 		r.setLastError(err)
 		return
 	}
-	emitter.executionCompleted(result.InnerTurns)
+	// Parity: framework/agent_loop/agent_loop.py::_await_user_input — a turn
+	// that asked the user a question parks on ask_user, not turn_done, so the
+	// snapshot and idle nudge treat it as an external wait.
+	parkReason := string(agentloop.ParkReasonTurnDone)
+	if r.hasPendingQuestions() {
+		parkReason = string(agentloop.ParkReasonAskUser)
+	}
+	emitter.executionCompleted(result.InnerTurns, parkReason)
 	// Parity: framework/agent_loop/reminders.py::observe_turn
 	if r.reminders != nil && r.sessionID != "" {
 		r.reminders.TurnComplete(r.sessionID, r.turnTools)
@@ -484,13 +501,17 @@ func (e *chatTurnEmitter) ToolCallCompleted(call agentloop.ToolCallRequest, resu
 // executionCompleted closes a successful turn. loop_state_changed lands last:
 // the dashboard clears its "Working…" spinner on it (and on
 // execution_completed), and the snapshot then reports idle instead of busy.
-func (e *chatTurnEmitter) executionCompleted(iterations int) {
+// parkReason distinguishes a plain end-of-turn from a turn that parked on an
+// ask_user question.
+func (e *chatTurnEmitter) executionCompleted(iterations int, parkReason string) {
 	if e == nil {
 		return
 	}
+	if parkReason == "" {
+		parkReason = string(agentloop.ParkReasonTurnDone)
+	}
 	e.bus.EmitNodeLoopCompleted(e.streamID, e.nodeID, iterations, &e.executionID)
-	turnDone := "turn_done"
-	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "awaiting_user", &e.executionID, &turnDone, nil, nil)
+	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "awaiting_user", &e.executionID, &parkReason, nil, nil)
 	e.bus.EmitExecutionCompleted(e.streamID, e.executionID,
 		map[string]any{"status": "completed"}, nil, nil)
 }
@@ -577,6 +598,9 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 	if r.reminders != nil {
 		r.turnTools = append(r.turnTools, req.Name)
 	}
+	if req.Name == "ask_user" {
+		return r.executeAskUser(req.Input), nil
+	}
 	if r.deps.Execute == nil {
 		return agentloop.ToolResult{
 			Content: fmt.Sprintf("No executor registered for tool '%s'", req.Name),
@@ -588,6 +612,198 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 		return agentloop.ToolResult{Content: err.Error(), IsError: true}, nil
 	}
 	return agentloop.ToolResult{Content: content, IsError: isError}, nil
+}
+
+// chatToolsWithAskUser returns the session's tool list plus the ask_user
+// synthetic. The queen's loop is the only client-facing stream, so she always
+// gets the question tool — even a session with no integration tools.
+//
+// Parity: framework/agent_loop/internals/synthetic_tools.py::build_ask_user_tool
+func chatToolsWithAskUser(tools []llm.ToolDef) []llm.ToolDef {
+	for _, tool := range tools {
+		if tool.Name == "ask_user" {
+			return tools
+		}
+	}
+	out := make([]llm.ToolDef, 0, len(tools)+1)
+	out = append(out, tools...)
+	out = append(out, agentloop.BuildAskUserTool())
+	return out
+}
+
+// chatQueenIdentityPrompt resolves the session queen's persona from her
+// profile. Upstream formats the live identity with max_examples=0 so the
+// roleplay examples stay out of the system prompt; a queen with no profile on
+// disk (the shared "default" queen) keeps the generic chat identity.
+//
+// Parity: framework/server/queen_orchestrator.py::_queen_identity_hook
+// Parity: framework/agents/queen/queen_profiles.py::format_queen_identity_prompt
+func chatQueenIdentityPrompt(homeRoot, queenName string) string {
+	if homeRoot == "" {
+		return chatIdentityPrompt
+	}
+	profile, err := queen.LoadQueenProfile(hivehome.Home{Root: homeRoot}.QueensDir(), queenName)
+	if err != nil {
+		// The shared "default" queen ships no profile; that is expected. A
+		// named queen that cannot load is worth one diagnostic line.
+		if queenName != "default" {
+			log.Printf("chat queen %s: profile unavailable, using the generic identity: %v", queenName, err)
+		}
+		return chatIdentityPrompt
+	}
+	maxExamples := 0
+	prompt := strings.TrimSpace(queen.FormatQueenIdentityPrompt(profile, &maxExamples))
+	if prompt == "" {
+		return chatIdentityPrompt
+	}
+	return prompt
+}
+
+// executeAskUser records the question the turn is parking on and announces it
+// on the session bus. The next user message is the answer: runTurn clears the
+// pending state when it starts, and the turn that produced the question ends
+// parked on ask_user.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+func (r *ChatRuntime) executeAskUser(input map[string]any) agentloop.ToolResult {
+	questions, problem := normalizeAskUserQuestions(input)
+	if problem != "" {
+		return agentloop.ToolResult{Content: problem, IsError: true}
+	}
+	r.mu.Lock()
+	r.pendingQuestions = questions
+	r.mu.Unlock()
+	if r.bus != nil {
+		executionID := r.agentCtx.ExecutionID
+		parkReason := string(agentloop.ParkReasonAskUser)
+		r.bus.EmitClientInputRequested(chatStreamID, chatNodeID, &executionID, questions, &parkReason)
+	}
+	return agentloop.ToolResult{Content: "Waiting for user input..."}
+}
+
+// normalizeAskUserQuestions applies the same self-healing the upstream
+// ask_user branch does: coalesce each question to {id, prompt, options?},
+// recover options a model crammed into the prompt, and drop option lists too
+// short to be a real choice.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+// Parity: framework/agent_loop/internals/synthetic_tools.py::sanitize_ask_user_inputs
+func normalizeAskUserQuestions(input map[string]any) ([]map[string]any, string) {
+	const missingQuestions = "ERROR: ask_user requires a non-empty 'questions' array. " +
+		"Each entry must have {id, prompt, options?}. Example: " +
+		`{"questions": [{"id": "q1", "prompt": "What now?", "options": ["A", "B"]}]}`
+	raw, ok := input["questions"]
+	if !ok || raw == nil {
+		return nil, missingQuestions
+	}
+	var entries []any
+	switch typed := raw.(type) {
+	case []any:
+		entries = typed
+	case []map[string]any:
+		entries = make([]any, len(typed))
+		for i, entry := range typed {
+			entries[i] = entry
+		}
+	default:
+		return nil, missingQuestions
+	}
+	if len(entries) == 0 {
+		return nil, missingQuestions
+	}
+
+	questions := make([]map[string]any, 0, len(entries))
+	for i, entry := range entries {
+		question, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		id := ""
+		if rawID, present := question["id"]; present && rawID != nil {
+			id = strings.TrimSpace(stringValue(rawID))
+			if id == "" {
+				id = fmt.Sprint(rawID)
+			}
+		}
+		if id == "" {
+			id = fmt.Sprintf("q%d", i+1)
+		}
+		rawPrompt := question["prompt"]
+		if rawPrompt == nil {
+			rawPrompt = question["question"]
+		}
+		prompt, recovered := agentloop.SanitizeAskUserInputs(rawPrompt, question["options"])
+		options := askUserOptions(question["options"])
+		if len(options) == 0 {
+			options = recovered
+		}
+		if len(options) < 2 {
+			options = nil
+		}
+		out := map[string]any{"id": id, "prompt": prompt}
+		if len(options) > 0 {
+			out["options"] = options
+		}
+		questions = append(questions, out)
+	}
+	if len(questions) == 0 {
+		return nil, "ERROR: no valid question objects in 'questions'. " +
+			"Each entry must be an object with 'id' and 'prompt'."
+	}
+	return questions, ""
+}
+
+// askUserOptions flattens the option shapes models emit into plain strings.
+func askUserOptions(raw any) []string {
+	var items []any
+	switch typed := raw.(type) {
+	case []any:
+		items = typed
+	case []string:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if text := strings.TrimSpace(item); text != "" {
+				out = append(out, text)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		text := ""
+		switch typed := item.(type) {
+		case string:
+			text = typed
+		case map[string]any:
+			for _, key := range []string{"label", "value", "text", "name"} {
+				if candidate := strings.TrimSpace(stringValue(typed[key])); candidate != "" {
+					text = candidate
+					break
+				}
+			}
+		case nil:
+		default:
+			text = fmt.Sprint(typed)
+		}
+		if text = strings.TrimSpace(text); text != "" {
+			out = append(out, text)
+		}
+	}
+	return out
+}
+
+func (r *ChatRuntime) hasPendingQuestions() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.pendingQuestions) > 0
+}
+
+func (r *ChatRuntime) clearPendingQuestions() {
+	r.mu.Lock()
+	r.pendingQuestions = nil
+	r.mu.Unlock()
 }
 
 // chatMemoryReflectionConfig reads the memory_reflection section of
