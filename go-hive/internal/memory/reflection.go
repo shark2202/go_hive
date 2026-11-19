@@ -346,6 +346,83 @@ type LoopResult struct {
 	LastText     string
 }
 
+// ReflectionConclusion is one durable learning a reflection persisted into a
+// memory file, in the shape the soul sediment reads back.
+type ReflectionConclusion struct {
+	Scope    string
+	Filename string
+	Text     string
+}
+
+// MaxReflectionConclusions caps how many of a reflection's changed files the
+// soul sediment considers: a soul is small, and a pass that rewrites twenty
+// files should not flood it.
+const MaxReflectionConclusions = 3
+
+// ConclusionsFromReflection reads back the memory files a successful
+// reflection changed and returns their one-line conclusions: the frontmatter
+// description, or the first body line when there is none. Deleted, unreadable
+// and out-of-scope files are skipped — a conclusion needs something to rest on.
+//
+// Parity-exempt: the upstream reflection writes memory only; this read-back is
+// the Go port's seam for sedimenting a pass into the queen's soul.
+func ConclusionsFromReflection(result LoopResult, dirs []ScopeDir) []ReflectionConclusion {
+	if !result.Success || len(result.ChangedFiles) == 0 {
+		return nil
+	}
+	out := make([]ReflectionConclusion, 0, MaxReflectionConclusions)
+	seen := map[string]struct{}{}
+	for _, changed := range result.ChangedFiles {
+		if len(out) >= MaxReflectionConclusions {
+			break
+		}
+		scope, filename, found := strings.Cut(changed, ":")
+		if !found || filename == "" {
+			continue
+		}
+		dir := dirForScope(dirs, scope)
+		if dir == "" {
+			continue
+		}
+		path, err := SafeMemoryPath(filename, dir)
+		if err != nil {
+			continue
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		text := memoryConclusionText(string(data))
+		if text == "" {
+			continue
+		}
+		key := strings.Join(strings.Fields(text), " ")
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, ReflectionConclusion{Scope: scope, Filename: filename, Text: text})
+	}
+	return out
+}
+
+// memoryConclusionText prefers the file's description (the one-line, specific
+// summary every memory file carries) and falls back to its first body line.
+func memoryConclusionText(content string) string {
+	if description := strings.TrimSpace(ParseFrontmatter(content)["description"]); description != "" {
+		return description
+	}
+	body := frontmatterRe.ReplaceAllString(content, "")
+	for _, line := range strings.Split(body, "\n") {
+		line = strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), ">-*"))
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		return line
+	}
+	return ""
+}
+
 const ReflectionMaxTurns = 5
 
 var ReflectionTokenBudget = func() int { return 8192 }
@@ -818,6 +895,11 @@ type ReflectionScheduler struct {
 	Short  func(ctx context.Context) LoopResult
 	Long   func(ctx context.Context) LoopResult
 
+	// OnReflect, when set, receives every successful pass after it finishes.
+	// The chat runtime uses it to sediment a pass's conclusions into the
+	// queen's soul; a failed pass never reaches it.
+	OnReflect func(LoopResult)
+
 	mu          sync.Mutex
 	turns       int
 	reflections int
@@ -903,6 +985,31 @@ func (s *ReflectionScheduler) long(ctx context.Context) LoopResult {
 	return RunUnifiedLongReflection(ctx, s.LLM, s.GlobalDir, s.QueenDir, s.QueenID)
 }
 
+// publishReflection hands one finished pass to the OnReflect hook. Only a
+// successful pass has conclusions to sediment.
+func (s *ReflectionScheduler) publishReflection(result LoopResult) {
+	if s.OnReflect == nil || !result.Success {
+		return
+	}
+	s.OnReflect(result)
+}
+
+// shortPass runs the short loop and publishes its result. Every scheduled
+// short pass goes through it, so the hook sees exactly the passes that wrote
+// memory.
+func (s *ReflectionScheduler) shortPass(ctx context.Context) LoopResult {
+	result := s.short(ctx)
+	s.publishReflection(result)
+	return result
+}
+
+// longPass is shortPass's counterpart for the housekeeping pass.
+func (s *ReflectionScheduler) longPass(ctx context.Context) LoopResult {
+	result := s.long(ctx)
+	s.publishReflection(result)
+	return result
+}
+
 func (s *ReflectionScheduler) runWithErrorCapture(ctx context.Context, fn func(context.Context) LoopResult, contextName string) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
@@ -953,9 +1060,9 @@ func (s *ReflectionScheduler) OnTurnDone(ctx context.Context, streamID, parkReas
 	s.mu.Unlock()
 
 	s.launch(runCtx, func() {
-		s.runWithErrorCapture(runCtx, s.short, "unified short reflection")
+		s.runWithErrorCapture(runCtx, s.shortPass, "unified short reflection")
 		if isLong {
-			s.runWithErrorCapture(runCtx, s.long, "unified long reflection")
+			s.runWithErrorCapture(runCtx, s.longPass, "unified long reflection")
 		}
 	})
 }
@@ -975,7 +1082,7 @@ func (s *ReflectionScheduler) OnCompaction(ctx context.Context, streamID string)
 	s.mu.Unlock()
 
 	s.launch(runCtx, func() {
-		s.runWithErrorCapture(runCtx, s.long, "unified compaction reflection")
+		s.runWithErrorCapture(runCtx, s.longPass, "unified compaction reflection")
 	})
 }
 
@@ -1002,7 +1109,7 @@ func (s *ReflectionScheduler) Close(grace time.Duration) {
 		drained := s.waitForIdle(grace)
 		if drained && s.canReflect() {
 			ctx, stop := context.WithTimeout(context.Background(), grace)
-			s.runWithErrorCapture(ctx, s.short, "shutdown reflection")
+			s.runWithErrorCapture(ctx, s.shortPass, "shutdown reflection")
 			stop()
 		}
 		if cancel != nil {
