@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
@@ -73,20 +74,27 @@ type ChatRuntimeDeps struct {
 	// HomeRoot is HIVE_HOME. When set, the runtime recalls global + queen
 	// memory each turn and schedules memory reflection after turns.
 	HomeRoot string
-	// Reminders is the per-session reminder hub shared with the HTTP routes.
-	// Nil disables reminder generation for this runtime.
-	Reminders *ReminderRuntime
+	// IdleNudge overrides the idle-nudge budgets the session hub starts with.
+	// Nil uses the loop's session_idle_nudge_* defaults.
+	IdleNudge *agentloop.IdleNudgeConfig
+	// SkillsCatalog supplies the queen's rendered skills catalog for the
+	// skills reminder. Nil (or an empty return) keeps that source silent.
+	SkillsCatalog func() string
 	// Colony is the session's live colony runtime. When set (at construction
 	// or later through Session.BindChatColony), the queen gains run_worker and
 	// every worker report arrives as a [WORKER_REPORT] user turn.
 	Colony ColonyRuntime
 }
 
-// chatTurnRequest is one queued turn: a real client message, or an external
-// event (a worker report) the runtime delivers as a non-client user message.
+// chatTurnRequest is one queued turn: a real client message, an external
+// event (a worker report) the runtime delivers as a non-client user message,
+// or a temporal reminder the hub parked while the session was idle.
 type chatTurnRequest struct {
 	message     string
 	clientInput bool
+	// reminderWake is a message-less turn that only drains reminders the hub
+	// parked (idle nudge). It never answers a pending ask_user question.
+	reminderWake bool
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
@@ -113,10 +121,20 @@ type ChatRuntime struct {
 	// lastRecall is the block injected last turn; recall is re-injected only
 	// when its content changes (same guard as the upstream _last_injected_recall).
 	lastRecall string
-	reminders  *ReminderRuntime
-	// turnTools collects the tool names one turn called, feeding the reminder
-	// hub's post_tool_use / stop observations.
-	turnTools []string
+	// hub is the loop's reminder hub (one per session). Sources are registered
+	// once at construction; the temporal idle ticker is started there and
+	// stopped by Close.
+	hub        *agentloop.ReminderHub
+	idleSource *agentloop.IdleNudgeSource
+
+	// Reminder signals: the ticker reads these through reminderSignals so the
+	// idle nudge sees the same park/idle state the upstream loop publishes.
+	lastProgress atomic.Int64
+	turnActive   atomic.Bool
+	firstEvent   atomic.Bool
+	awaiting     atomic.Bool
+	parkMu       sync.Mutex
+	parkReason   agentloop.ParkReason
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -160,13 +178,17 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		store:     store,
 		bus:       deps.Bus,
 		sessionID: deps.SessionID,
-		reminders: deps.Reminders,
 		tools:     chatToolsWithAskUser(deps.Tools),
 		ctx:       ctx,
 		cancel:    cancel,
 		wake:      make(chan struct{}, 1),
 		done:      make(chan struct{}),
 	}
+	runtime.markProgress()
+	// A session that has not run a turn is parked at turn_done: without this
+	// the idle ticker would auto-start an untouched session after the
+	// between-turns budget.
+	runtime.setParkState(agentloop.ParkReasonTurnDone, true)
 	runtime.queenName = strings.TrimSpace(deps.QueenName)
 	if runtime.queenName == "" {
 		runtime.queenName = "default"
@@ -229,6 +251,10 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	if deps.Colony != nil {
 		runtime.BindColony(deps.Colony)
 	}
+	// Register the per-session reminder sources and start the hub's idle
+	// ticker; Close stops it with the rest of the session.
+	runtime.configureReminderProviders()
+	runtime.configureReminders(deps.IdleNudge)
 
 	if namer, ok := deps.LLM.(llm.ModelNamer); ok {
 		runtime.model = namer.ModelName()
@@ -330,6 +356,11 @@ func (r *ChatRuntime) Close() error {
 
 	r.cancel()
 	<-r.done
+	// The reminder ticker is owned by the session: stop it before tearing the
+	// conversation down so it cannot park (or wake) anything afterwards.
+	if r.hub != nil {
+		r.hub.Stop()
+	}
 	// Parity: core/framework/server/session_manager.py::SessionManager.stop_session
 	// Teardown cancels the queen's reflection triggers and runs the final
 	// reflection: reflections run on the scheduler's own context, so this
@@ -359,6 +390,12 @@ func (r *ChatRuntime) run() {
 			}
 			select {
 			case <-r.wake:
+				// A temporal reminder (idle nudge) may have parked while the
+				// worker slept. Run it as an energized, message-less turn so
+				// the model acts on it instead of leaving it unread.
+				if r.hub != nil && r.hub.PendingLen() > 0 {
+					r.runTurn(chatTurnRequest{reminderWake: true})
+				}
 				continue
 			case <-r.ctx.Done():
 				return
@@ -375,11 +412,16 @@ func (r *ChatRuntime) run() {
 // stamped with its arrival time, per-queen recall rides along as a
 // <system-reminder>, then the loop runs until the model stops calling tools.
 // Each step is mirrored onto the session event bus with the upstream
-// agent-loop event names so the dashboard follows the turn live.
+// agent-loop event names so the dashboard follows the turn live. A
+// reminderWake turn has no user message: it drains a reminder the idle ticker
+// parked and runs the model so the agent acts on it.
 //
 // Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
 func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	message := request.message
+	if request.reminderWake {
+		message = "Reminder"
+	}
 	executionID := newChatExecutionID()
 	emitter := r.newTurnEmitter(executionID)
 	if emitter != nil {
@@ -390,36 +432,63 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	}
 
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
-	r.turnTools = nil
+	r.markTurnStart()
+	defer r.markTurnEnd()
 	// A real user message answers any outstanding ask_user: clear the park
 	// before this turn can record a new question. An external report is not
 	// an answer, so it leaves the parked question in place.
 	if request.clientInput {
 		r.clearPendingQuestions()
+		// Parity: framework/agent_loop/agent_loop.py::inject_event — a real
+		// user message re-arms the idle nudge's per-variant caps.
+		if r.idleSource != nil {
+			r.idleSource.Reset()
+		}
 	}
-	stamped := "[" + stamp + "] " + message
-	if !request.clientInput {
-		stamped = "[" + stamp + "] [External event] " + message
-	}
-	if _, err := r.conv.AddUserMessage(stamped, agentloop.UserMessageOptions{
-		IsClientInput: request.clientInput,
-	}); err != nil {
-		emitter.executionFailed(err)
-		r.setLastError(err)
-		return
+	if request.reminderWake {
+		if !r.injectHubReminders() {
+			emitter.executionCompleted(0, string(agentloop.ParkReasonTurnDone))
+			r.setParkState(agentloop.ParkReasonTurnDone, true)
+			return
+		}
+	} else {
+		// Parity: framework/agent_loop/agent_loop.py::execute — SESSION_START
+		// fires before the first user message so the situational frame
+		// precedes the request.
+		if r.conv.MessageCount() == 0 {
+			r.fireReminderPoint(agentloop.SESSION_START, message, nil)
+		}
+		// Parity: framework/agent_loop/agent_loop.py::_drain_injection_queue
+		// — USER_PROMPT_SUBMIT fires before the queued user message is added.
+		r.fireReminderPoint(agentloop.USER_PROMPT_SUBMIT, message, nil)
+		stamped := "[" + stamp + "] " + message
+		if !request.clientInput {
+			stamped = "[" + stamp + "] [External event] " + message
+		}
+		if _, err := r.conv.AddUserMessage(stamped, agentloop.UserMessageOptions{
+			IsClientInput: request.clientInput,
+		}); err != nil {
+			emitter.executionFailed(err)
+			r.setParkState(agentloop.ParkReasonUnknown, true)
+			r.setLastError(err)
+			return
+		}
+		// The ticker may have parked a reminder while the session waited for
+		// this message; drain it into the turn before the model reads it.
+		r.injectHubReminders()
 	}
 	// Recall is a user-input step upstream; an external worker report must not
 	// consume (or re-query) the queen's memory. Reminders still ride along.
 	if request.clientInput {
 		r.injectRecall(message, stamp)
 	}
-	r.injectReminders(stamp)
 	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.toolsForTurn())
 	if err != nil {
 		// A cancelled turn (session teardown) is not a failure worth
 		// broadcasting: the runtime is going away, not the model failing.
 		if r.ctx.Err() == nil {
 			emitter.executionFailed(err)
+			r.setParkState(agentloop.ParkReasonLLMError, true)
 		}
 		r.setLastError(err)
 		return
@@ -427,21 +496,24 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	if !result.Success {
 		err := errors.New("server: chat turn did not complete")
 		emitter.executionFailed(err)
+		r.setParkState(agentloop.ParkReasonUnknown, true)
 		r.setLastError(err)
 		return
 	}
 	// Parity: framework/agent_loop/agent_loop.py::_await_user_input — a turn
 	// that asked the user a question parks on ask_user, not turn_done, so the
 	// snapshot and idle nudge treat it as an external wait.
-	parkReason := string(agentloop.ParkReasonTurnDone)
+	parkReason := agentloop.ParkReasonTurnDone
 	if r.hasPendingQuestions() {
-		parkReason = string(agentloop.ParkReasonAskUser)
+		parkReason = agentloop.ParkReasonAskUser
 	}
-	emitter.executionCompleted(result.InnerTurns, parkReason)
-	// Parity: framework/agent_loop/reminders.py::observe_turn
-	if r.reminders != nil && r.sessionID != "" {
-		r.reminders.TurnComplete(r.sessionID, r.turnTools)
+	emitter.executionCompleted(result.InnerTurns, string(parkReason))
+	// Parity: framework/agent_loop/agent_loop.py::execute — STOP fires after a
+	// text-only turn (no tool result can carry a tail).
+	if len(result.ToolResults) == 0 {
+		r.fireReminderPoint(agentloop.STOP, "", nil)
 	}
+	r.setParkState(parkReason, true)
 	// Parity: core/framework/agents/queen/reflection_agent.py::subscribe_reflection_triggers
 	if r.reflection != nil {
 		r.reflection.OnTurnDone(r.ctx, "queen", "turn_done")
@@ -633,20 +705,31 @@ func (r *ChatRuntime) injectRecall(query, stamp string) {
 	_, _ = r.conv.AddUserMessage("["+stamp+"] [External event] "+reminder, agentloop.UserMessageOptions{})
 }
 
-// injectReminders drains the session's pending reminders into this turn as a
-// system-reminder, after the user message and beside recall. The hub decides
-// when a reminder exists; the runtime only delivers it.
+// injectHubReminders drains reminders the hub parked (the idle ticker) into the
+// conversation as <system-reminder> blocks. It runs on the turn goroutine, so
+// conversation writes never race the loop.
 //
-// Parity: framework/agent_loop/reminders.py::take_pending
-func (r *ChatRuntime) injectReminders(stamp string) {
-	if r.reminders == nil || r.sessionID == "" {
-		return
+// Parity: framework/agent_loop/agent_loop.py::_drain_reminder_hub
+func (r *ChatRuntime) injectHubReminders() bool {
+	if r == nil || r.hub == nil || r.conv == nil {
+		return false
 	}
-	block := r.reminders.TakeBlock(r.sessionID)
-	if block == "" {
-		return
+	items := r.hub.TakePending()
+	if len(items) == 0 {
+		return false
 	}
-	_, _ = r.conv.AddUserMessage("["+stamp+"] [External event] "+block, agentloop.UserMessageOptions{})
+	injected := false
+	for _, item := range items {
+		block := agentloop.WrapReminder([]string{item.Body})
+		if block == "" {
+			continue
+		}
+		if _, err := r.conv.AddUserMessage(block, agentloop.UserMessageOptions{IsSystemReminder: true}); err != nil {
+			continue
+		}
+		injected = true
+	}
+	return injected
 }
 
 func (r *ChatRuntime) setLastError(err error) {
@@ -656,9 +739,9 @@ func (r *ChatRuntime) setLastError(err error) {
 }
 
 func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
-	if r.reminders != nil {
-		r.turnTools = append(r.turnTools, req.Name)
-	}
+	// A completed tool call is forward progress: feed the idle clock so the
+	// ticker does not nudge a session that is actively working.
+	r.markProgress()
 	if req.Name == "ask_user" {
 		return r.executeAskUser(req.Input), nil
 	}
@@ -732,6 +815,7 @@ func (r *ChatRuntime) BindColony(runtime ColonyRuntime) {
 	}
 	r.colonyRuntime = concrete
 	if concrete == nil {
+		r.setBoundColonyID(nil)
 		return
 	}
 	unsubscribe, err := colony.SubscribeQueenReports(concrete, func(report string) {
@@ -741,9 +825,25 @@ func (r *ChatRuntime) BindColony(runtime ColonyRuntime) {
 	})
 	if err != nil {
 		log.Printf("chat runtime %s: worker report subscription unavailable: %v", r.sessionID, err)
+		r.setBoundColonyID(concrete)
 		return
 	}
 	r.colonyUnsub = unsubscribe
+	r.setBoundColonyID(concrete)
+}
+
+// setBoundColonyID refreshes the reminder context's colony id. The caller
+// holds colonyMu, so this must not call boundColonyRuntime.
+func (r *ChatRuntime) setBoundColonyID(runtime *colony.ColonyRuntime) {
+	if r == nil || r.agentCtx == nil {
+		return
+	}
+	if runtime == nil || runtime.StreamID() == "" {
+		r.agentCtx.ColonyID = nil
+		return
+	}
+	colonyID := runtime.StreamID()
+	r.agentCtx.ColonyID = &colonyID
 }
 
 // boundColonyRuntime returns the concrete colony runtime whose workers this
