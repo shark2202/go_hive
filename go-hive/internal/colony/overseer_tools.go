@@ -113,6 +113,11 @@ func (r *ColonyRuntime) overseerToolDefs() []llm.ToolDef {
 	defs := appendMissingToolDefs(r.applyToolAllowlist(r.tools), trackerToolDefs("queen")...)
 	defs = appendMissingToolDefs(defs, RunWorkerToolDef())
 	defs = appendMissingToolDefs(defs, r.overseerTasks.Defs()...)
+	// The overseer is the colony's client-facing lead: when it needs a
+	// decision it asks in the same conversation the session front end
+	// renders, so it advertises the same synthetic question tool a chat queen
+	// gets. Its answer arrives as an injected client input.
+	defs = appendMissingToolDefs(defs, agentloop.BuildAskUserTool())
 	return defs
 }
 
@@ -140,6 +145,9 @@ func (r *ColonyRuntime) executeOverseerTool(registry *tracker.Registry, req agen
 	if req.Name == RunWorkerToolName {
 		content, isError := RunWorker(r.spawnContext(), r, req.Input)
 		return agentloop.ToolResult{Content: content, IsError: isError}, true
+	}
+	if req.Name == "ask_user" {
+		return r.askOverseerUser(req.Input), true
 	}
 	if r.overseerTasks.Has(req.Name) {
 		content, isError, err := r.overseerTasks.Execute(req.Name, req.Input)

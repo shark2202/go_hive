@@ -90,6 +90,129 @@ func SanitizeAskUserInputs(rawQuestion, rawOptions any) (string, []string) {
 	return q, recovered
 }
 
+// AskUserWaitingContent is what an ask_user call returns to the model: the turn
+// parks on the user, so the answer is pending rather than failed. Shared by the
+// chat queen and the colony's persistent overseer, which ask in the same
+// conversation the session front end renders.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+const AskUserWaitingContent = "Waiting for user input..."
+
+// NormalizeAskUserQuestions coalesces the model's ask_user input into the
+// {id, prompt, options?} shape a parked turn records: it applies the same
+// self-healing upstream does — recover options the model crammed into the
+// prompt, default a missing id, and drop option lists too short to be a real
+// choice. A non-empty second return is the actionable error text.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+// Parity: framework/agent_loop/internals/synthetic_tools.py::sanitize_ask_user_inputs
+func NormalizeAskUserQuestions(input map[string]any) ([]map[string]any, string) {
+	const missingQuestions = "ERROR: ask_user requires a non-empty 'questions' array. " +
+		"Each entry must have {id, prompt, options?}. Example: " +
+		`{"questions": [{"id": "q1", "prompt": "What now?", "options": ["A", "B"]}]}`
+	raw, ok := input["questions"]
+	if !ok || raw == nil {
+		return nil, missingQuestions
+	}
+	var entries []any
+	switch typed := raw.(type) {
+	case []any:
+		entries = typed
+	case []map[string]any:
+		entries = make([]any, len(typed))
+		for i, entry := range typed {
+			entries[i] = entry
+		}
+	default:
+		return nil, missingQuestions
+	}
+	if len(entries) == 0 {
+		return nil, missingQuestions
+	}
+
+	questions := make([]map[string]any, 0, len(entries))
+	for i, entry := range entries {
+		question, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		id := ""
+		if rawID, present := question["id"]; present && rawID != nil {
+			id = strings.TrimSpace(anyString(rawID, ""))
+			if id == "" {
+				id = fmt.Sprint(rawID)
+			}
+		}
+		if id == "" {
+			id = fmt.Sprintf("q%d", i+1)
+		}
+		rawPrompt := question["prompt"]
+		if rawPrompt == nil {
+			rawPrompt = question["question"]
+		}
+		prompt, recovered := SanitizeAskUserInputs(rawPrompt, question["options"])
+		options := askUserOptionStrings(question["options"])
+		if len(options) == 0 {
+			options = recovered
+		}
+		if len(options) < 2 {
+			options = nil
+		}
+		out := map[string]any{"id": id, "prompt": prompt}
+		if len(options) > 0 {
+			out["options"] = options
+		}
+		questions = append(questions, out)
+	}
+	if len(questions) == 0 {
+		return nil, "ERROR: no valid question objects in 'questions'. " +
+			"Each entry must be an object with 'id' and 'prompt'."
+	}
+	return questions, ""
+}
+
+// askUserOptionStrings flattens the option shapes models emit into plain
+// strings (upstream passes plain choices; a model sometimes wraps them).
+func askUserOptionStrings(raw any) []string {
+	var items []any
+	switch typed := raw.(type) {
+	case []any:
+		items = typed
+	case []string:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if text := strings.TrimSpace(item); text != "" {
+				out = append(out, text)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		text := ""
+		switch typed := item.(type) {
+		case string:
+			text = typed
+		case map[string]any:
+			for _, key := range []string{"label", "value", "text", "name"} {
+				if candidate := strings.TrimSpace(anyString(typed[key], "")); candidate != "" {
+					text = candidate
+					break
+				}
+			}
+		case nil:
+		default:
+			text = fmt.Sprint(typed)
+		}
+		if text = strings.TrimSpace(text); text != "" {
+			out = append(out, text)
+		}
+	}
+	return out
+}
+
 // Parity: framework/agent_loop/internals/synthetic_tools.py build_ask_user_tool.
 func BuildAskUserTool() llm.ToolDef {
 	return llm.ToolDef{

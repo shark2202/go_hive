@@ -72,7 +72,9 @@ func (r *ChatRuntime) startTimeline() {
 	r.timelineEnabled = true
 	sessionsDir := filepath.Dir(r.deps.Root)
 	live := filepath.Base(r.deps.Root)
+	r.timelineWG.Add(1)
 	go func() {
+		defer r.timelineWG.Done()
 		_, _ = memory.BackfillTimelines(r.ctx, r.deps.LLM, sessionsDir, memory.BackfillOptions{
 			Limit:       10,
 			Exclude:     map[string]struct{}{live: {}},
@@ -103,7 +105,9 @@ func (r *ChatRuntime) timelineAfterTurn() {
 	r.lastTimelineRun = time.Now()
 	r.timelineMu.Unlock()
 	sessionDir := r.deps.Root
+	r.timelineWG.Add(1)
 	go func() {
+		defer r.timelineWG.Done()
 		_, _ = memory.UpdateSessionTimeline(r.ctx, r.deps.LLM, sessionDir)
 	}()
 }

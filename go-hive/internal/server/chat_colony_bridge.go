@@ -72,14 +72,28 @@ func (r *ChatRuntime) syncColonyEventBridge(runtime ColonyRuntime) {
 	if runtime == nil || r.bus == nil {
 		return
 	}
-	// A caller that already shares the session bus needs no mirror.
+	// A caller that already shares the session bus needs no mirror. It still
+	// needs the park observer: an overseer ask_user must reach the chat
+	// runtime's pending state (and the session cursor) on either bus.
+	sharedBus := false
 	if holder, ok := runtime.(interface{ EventBus() *eventbus.EventBus }); ok {
-		if holder.EventBus() == r.bus {
-			return
-		}
+		sharedBus = holder.EventBus() == r.bus
+	}
+	eventTypes := colonyBridgeEventTypes
+	if sharedBus {
+		eventTypes = []eventbus.EventType{eventbus.EventClientInputRequested}
 	}
 	var subscriptionID string
-	subID, err := runtime.SubscribeToEvents(colonyBridgeEventTypes, func(event *eventbus.AgentEvent) {
+	subID, err := runtime.SubscribeToEvents(eventTypes, func(event *eventbus.AgentEvent) {
+		// The overseer asks in the same conversation the chat front end
+		// renders, so its question is recorded on the session's pending_input
+		// before the client sees the mirrored event: both halves then park on
+		// one durable record, and a restart restores that wait instead of
+		// silently continuing the last turn.
+		r.applyOverseerAskUser(event)
+		if sharedBus {
+			return
+		}
 		mirrored := mirrorColonyEvent(event, runtime.StreamID())
 		if mirrored == nil {
 			return
@@ -180,18 +194,42 @@ func (r *ChatRuntime) deliverToOverseer(message string) bool {
 	return true
 }
 
+// deliverAnswerToOverseer is the client-message variant of deliverToOverseer:
+// the injected message answers whatever the overseer was parked on, so the
+// colony clears its half of the shared park in the same call.
+func (r *ChatRuntime) deliverAnswerToOverseer(message string) bool {
+	if r == nil || strings.TrimSpace(message) == "" {
+		return false
+	}
+	runtime := r.boundColonyRuntime()
+	if runtime == nil || runtime.OverseerID() == "" {
+		return false
+	}
+	if err := runtime.AnswerOverseer(message); err != nil {
+		log.Printf("chat runtime %s: overseer answer relay unavailable: %v", r.sessionID, err)
+		return false
+	}
+	return true
+}
+
 // relayClientInputToOverseer is the bound-session client path: the user message
 // becomes an overseer turn and the chat queen's own loop stays out of it. One
 // loop acts on the message — the overseer — while the chat runtime remains the
 // session's front end (transcript, event bus, ask_user surface).
 func (r *ChatRuntime) relayClientInputToOverseer(message string) bool {
 	payload, block := r.relayPayloadWithCatalog(message)
-	if !r.deliverToOverseer(payload) {
+	if !r.deliverAnswerToOverseer(payload) {
 		return false
 	}
 	if block != "" {
 		r.markRelayCatalogSent(block)
 	}
+	// The client message answers whatever either half was parked on: drop the
+	// shared pending_input record (and the in-memory question) before the
+	// turn's own checkpoint rewrites it as turn_done. One answer resolves both
+	// conversations, so neither asks the same question again.
+	r.clearPendingQuestions()
+	r.clearPendingCredentialForm()
 	// The session is busy even though the chat loop is not: re-arm the idle
 	// nudge and close any open Sentinel escalation the way a client turn does.
 	if r.idleSource != nil {
@@ -255,6 +293,39 @@ func (r *ChatRuntime) recordRelayedClientTurn(message string) {
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
 	if _, err := r.conv.AddUserMessage("["+stamp+"] "+message, agentloop.UserMessageOptions{IsClientInput: true}); err != nil {
 		log.Printf("chat runtime %s: relayed user turn not recorded: %v", r.sessionID, err)
+	}
+}
+
+// recordOverseerTerminal archives the overseer's own terminal report in the
+// session transcript without running the chat queen. The report is not an
+// execution input — the overseer's reply already reached the front end as the
+// mirrored client stream — so a model turn here would be a second answer to a
+// report the user just saw.
+//
+// Parity-exempt: Go-side front-end record. Upstream's _on_worker_report turns
+// every report into a queen turn; this port skips that turn because the
+// overseer and the chat queen are two conversations over one client surface,
+// so the second turn is a duplicate, not a response.
+func (r *ChatRuntime) recordOverseerTerminal(report string) error {
+	if r == nil {
+		return ErrChatRuntimeNoLLM
+	}
+	if strings.TrimSpace(report) == "" {
+		return nil
+	}
+	return r.enqueueTurn(chatTurnRequest{message: report, recordOnly: true, external: true})
+}
+
+// recordExternalTurn appends an "[External event]" turn to the transcript
+// without running the model. It runs on the runtime's queue goroutine (the
+// conversation's only writer), so archiving a report never races a turn.
+func (r *ChatRuntime) recordExternalTurn(message string) {
+	if r == nil || r.conv == nil {
+		return
+	}
+	stamp := time.Now().Format("2006-01-02 15:04 MST")
+	if _, err := r.conv.AddUserMessage("["+stamp+"] [External event] "+message, agentloop.UserMessageOptions{}); err != nil {
+		log.Printf("chat runtime %s: external turn not recorded: %v", r.sessionID, err)
 	}
 }
 

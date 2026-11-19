@@ -63,6 +63,9 @@ func (r *ColonyRuntime) OverseerID() string {
 // user turn. It is the colony-side input path the session layer uses for
 // triggers and worker reports; a colony without a live overseer returns an
 // error instead of silently dropping the input.
+//
+// A report or trigger is new input, not an answer, so it leaves a parked
+// ask_user question in place. Client answers go through AnswerOverseer.
 func (r *ColonyRuntime) InjectOverseer(content string) error {
 	if r == nil {
 		return errors.New("colony: nil colony runtime")
@@ -76,6 +79,21 @@ func (r *ColonyRuntime) InjectOverseer(content string) error {
 	if !overseer.Inject(content) {
 		return fmt.Errorf("colony: overseer %q is not accepting input", overseer.ID)
 	}
+	return nil
+}
+
+// AnswerOverseer delivers a client message to the persistent overseer and
+// clears the question it was parked on. It is the answer half of the shared
+// park: the chat runtime clears the session cursor's pending_input in the same
+// step, so the question is resolved for both conversations at once.
+//
+// Parity: framework/agent_loop/agent_loop.py::_await_user_input (the wait
+// returns and its stash is cleared by the user's message)
+func (r *ColonyRuntime) AnswerOverseer(content string) error {
+	if err := r.InjectOverseer(content); err != nil {
+		return err
+	}
+	r.clearOverseerQuestions()
 	return nil
 }
 

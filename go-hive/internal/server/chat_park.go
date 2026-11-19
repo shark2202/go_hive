@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/eventbus"
 )
 
 const (
@@ -47,6 +48,8 @@ func (r *ChatRuntime) persistParkState() {
 		reason = agentloop.ParkReasonUnknown
 	}
 
+	r.parkStoreMu.Lock()
+	defer r.parkStoreMu.Unlock()
 	cursor, err := r.store.ReadCursor()
 	if err != nil {
 		log.Printf("chat runtime %s: read cursor for park state: %v", r.sessionID, err)
@@ -90,6 +93,8 @@ func (r *ChatRuntime) clearParkPendingInput() {
 	if r == nil || r.store == nil {
 		return
 	}
+	r.parkStoreMu.Lock()
+	defer r.parkStoreMu.Unlock()
 	cursor, err := r.store.ReadCursor()
 	if err != nil {
 		log.Printf("chat runtime %s: read cursor to clear park state: %v", r.sessionID, err)
@@ -148,6 +153,35 @@ func (r *ChatRuntime) restoreParkState() bool {
 		reason = agentloop.ParkReasonAskUser
 	}
 	r.setParkState(reason, true)
+	return true
+}
+
+// applyOverseerAskUser records the question the colony's persistent overseer
+// parked on. The overseer publishes client_input_requested on the colony bus
+// (stream "overseer"); the session bridge mirrors it onto the session bus and
+// calls this first, so both halves of the pair read and write one durable
+// pending_input record in the session cursor instead of each keeping its own.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
+func (r *ChatRuntime) applyOverseerAskUser(event *eventbus.AgentEvent) bool {
+	if r == nil || event == nil || event.Type != eventbus.EventClientInputRequested {
+		return false
+	}
+	if event.StreamID != overseerStreamID || event.Data == nil {
+		return false
+	}
+	questions := parkQuestionsFromCursor(event.Data["questions"])
+	if len(questions) == 0 {
+		return false
+	}
+	r.mu.Lock()
+	r.pendingQuestions = questions
+	// A question asked in the conversation supersedes a stale credential
+	// form: the user is answering the overseer, not filling in a form.
+	r.pendingCredentialForm = nil
+	r.mu.Unlock()
+	r.setParkState(agentloop.ParkReasonAskUser, true)
 	return true
 }
 

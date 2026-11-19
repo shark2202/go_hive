@@ -103,7 +103,11 @@ type chatTurnRequest struct {
 	// recordOnly appends the user turn to the transcript without running the
 	// model. It is how a message relayed to the colony overseer still lands
 	// in the session history: the queue keeps the conversation single-writer.
+	// external marks a record the front end did not author (the overseer's own
+	// terminal report): it is stored as an "[External event]" turn instead of
+	// a client input, and still runs no model turn.
 	recordOnly bool
+	external   bool
 	// reminderWake is a message-less turn that only drains reminders the hub
 	// parked (idle nudge). It never answers a pending ask_user question.
 	reminderWake bool
@@ -149,6 +153,10 @@ type ChatRuntime struct {
 	timelineEnabled bool
 	timelineMu      sync.Mutex
 	lastTimelineRun time.Time
+	// timelineWG tracks the timeline writers (startup backfill and the
+	// after-turn extractor). Close waits on it: a write that outlives the
+	// runtime races the session directory's removal on fork/stop.
+	timelineWG sync.WaitGroup
 	// relayCatalogSent records that the skills catalog rode along with the
 	// first client message relayed to the colony overseer. The overseer owns
 	// execution there, so the chat loop's reminder hub never runs for it; the
@@ -180,6 +188,11 @@ type ChatRuntime struct {
 	awaiting     atomic.Bool
 	parkMu       sync.Mutex
 	parkReason   agentloop.ParkReason
+	// parkStoreMu serialises the read-modify-write of the conversation
+	// cursor's pending_input record. The queue goroutine and the colony event
+	// bridge both persist park state, and an unguarded RMW would drop one
+	// side's write.
+	parkStoreMu sync.Mutex
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -495,6 +508,10 @@ func (r *ChatRuntime) Close() error {
 
 	r.cancel()
 	<-r.done
+	// The timeline writers run on their own goroutines and write into the
+	// session directory. Waiting here keeps Close's promise that nothing writes
+	// after it returns (fork/stop then remove that directory).
+	r.timelineWG.Wait()
 	// The reminder ticker is owned by the session: stop it before tearing the
 	// conversation down so it cannot park (or wake) anything afterwards.
 	if r.hub != nil {
@@ -564,6 +581,10 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	if request.recordOnly {
 		// A message the overseer executed: append the user turn so the
 		// transcript keeps the ask, without running the chat queen again.
+		if request.external {
+			r.recordExternalTurn(request.message)
+			return
+		}
 		r.recordRelayedClientTurn(request.message)
 		return
 	}
@@ -1112,9 +1133,14 @@ func (r *ChatRuntime) bindColony(concrete *colony.ColonyRuntime) bool {
 		// Reports never fail a session: a closed runtime (queen session
 		// torn down while a worker finished) simply drops the turn.
 		if overseerID := concrete.OverseerID(); overseerID != "" && workerID == overseerID {
-			// The overseer's own report is for the front end: it is the only
-			// consumer that is not the overseer itself.
-			_ = r.InjectWorkerReport(report)
+			// The overseer's own terminal report is front-end bookkeeping, not
+			// an execution input: its reply already reached the session as the
+			// mirrored client stream, and it speaks in the same conversation the
+			// user is reading. Waking the chat queen here ran a second model
+			// turn to answer a report the user had just seen — the "extra
+			// turn" from the second conversation. Record it for scroll-back
+			// only; no loop runs.
+			_ = r.recordOverseerTerminal(report)
 			return
 		}
 		// With a live overseer the report is its input: one loop acts on it,
@@ -1267,117 +1293,15 @@ func (r *ChatRuntime) executeAskUser(input map[string]any) agentloop.ToolResult 
 	return agentloop.ToolResult{Content: "Waiting for user input..."}
 }
 
-// normalizeAskUserQuestions applies the same self-healing the upstream
-// ask_user branch does: coalesce each question to {id, prompt, options?},
-// recover options a model crammed into the prompt, and drop option lists too
-// short to be a real choice.
+// normalizeAskUserQuestions is the chat runtime's seam over the shared
+// normaliser: the chat queen and the colony's persistent overseer must park on
+// the exact same question shape, so the shaping lives in agentloop and both
+// callers use it.
 //
 // Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
 // Parity: framework/agent_loop/internals/synthetic_tools.py::sanitize_ask_user_inputs
 func normalizeAskUserQuestions(input map[string]any) ([]map[string]any, string) {
-	const missingQuestions = "ERROR: ask_user requires a non-empty 'questions' array. " +
-		"Each entry must have {id, prompt, options?}. Example: " +
-		`{"questions": [{"id": "q1", "prompt": "What now?", "options": ["A", "B"]}]}`
-	raw, ok := input["questions"]
-	if !ok || raw == nil {
-		return nil, missingQuestions
-	}
-	var entries []any
-	switch typed := raw.(type) {
-	case []any:
-		entries = typed
-	case []map[string]any:
-		entries = make([]any, len(typed))
-		for i, entry := range typed {
-			entries[i] = entry
-		}
-	default:
-		return nil, missingQuestions
-	}
-	if len(entries) == 0 {
-		return nil, missingQuestions
-	}
-
-	questions := make([]map[string]any, 0, len(entries))
-	for i, entry := range entries {
-		question, ok := entry.(map[string]any)
-		if !ok {
-			continue
-		}
-		id := ""
-		if rawID, present := question["id"]; present && rawID != nil {
-			id = strings.TrimSpace(stringValue(rawID))
-			if id == "" {
-				id = fmt.Sprint(rawID)
-			}
-		}
-		if id == "" {
-			id = fmt.Sprintf("q%d", i+1)
-		}
-		rawPrompt := question["prompt"]
-		if rawPrompt == nil {
-			rawPrompt = question["question"]
-		}
-		prompt, recovered := agentloop.SanitizeAskUserInputs(rawPrompt, question["options"])
-		options := askUserOptions(question["options"])
-		if len(options) == 0 {
-			options = recovered
-		}
-		if len(options) < 2 {
-			options = nil
-		}
-		out := map[string]any{"id": id, "prompt": prompt}
-		if len(options) > 0 {
-			out["options"] = options
-		}
-		questions = append(questions, out)
-	}
-	if len(questions) == 0 {
-		return nil, "ERROR: no valid question objects in 'questions'. " +
-			"Each entry must be an object with 'id' and 'prompt'."
-	}
-	return questions, ""
-}
-
-// askUserOptions flattens the option shapes models emit into plain strings.
-func askUserOptions(raw any) []string {
-	var items []any
-	switch typed := raw.(type) {
-	case []any:
-		items = typed
-	case []string:
-		out := make([]string, 0, len(typed))
-		for _, item := range typed {
-			if text := strings.TrimSpace(item); text != "" {
-				out = append(out, text)
-			}
-		}
-		return out
-	default:
-		return nil
-	}
-	out := make([]string, 0, len(items))
-	for _, item := range items {
-		text := ""
-		switch typed := item.(type) {
-		case string:
-			text = typed
-		case map[string]any:
-			for _, key := range []string{"label", "value", "text", "name"} {
-				if candidate := strings.TrimSpace(stringValue(typed[key])); candidate != "" {
-					text = candidate
-					break
-				}
-			}
-		case nil:
-		default:
-			text = fmt.Sprint(typed)
-		}
-		if text = strings.TrimSpace(text); text != "" {
-			out = append(out, text)
-		}
-	}
-	return out
+	return agentloop.NormalizeAskUserQuestions(input)
 }
 
 func (r *ChatRuntime) hasPendingQuestions() bool {
