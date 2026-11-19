@@ -25,12 +25,12 @@
 
 | 归档 | 字节 | SHA-256 |
 | --- | ---: | --- |
-| `hive-1.0.19-go.1-darwin-amd64.tar.gz` | 14,243,789 | `d4750473…d85185e` |
-| `hive-1.0.19-go.1-darwin-arm64.tar.gz` | 13,495,284 | `25e8ca6e…71b127c` |
-| `hive-1.0.19-go.1-linux-amd64.tar.gz` | 14,222,309 | `c2c2a6c1…7c5a86f` |
-| `hive-1.0.19-go.1-linux-arm64.tar.gz` | 13,201,779 | `f1ede551…6d3a58e` |
-| `hive-1.0.19-go.1-windows-amd64.zip` | 14,318,525 | `43e27735…a1678e0` |
-| `hive-1.0.19-go.1-windows-arm64.zip` | 13,201,540 | `240d4e90…c311b8a` |
+| `hive-1.0.19-go.1-darwin-amd64.tar.gz` | 14,246,972 | `93e79b7a…5789184` |
+| `hive-1.0.19-go.1-darwin-arm64.tar.gz` | 13,506,897 | `3653dabf…6bc6e13` |
+| `hive-1.0.19-go.1-linux-amd64.tar.gz` | 14,229,387 | `60a580ac…261e8e8` |
+| `hive-1.0.19-go.1-linux-arm64.tar.gz` | 13,200,376 | `53c6535a…f577fda` |
+| `hive-1.0.19-go.1-windows-amd64.zip` | 14,328,480 | `d16d490d…05e2dcf` |
+| `hive-1.0.19-go.1-windows-arm64.zip` | 13,204,897 | `28eaeaa7…2b1bdf9` |
 | `SHA256SUMS` | — | 上述六项 |
 
 完整哈希见 `go_hive/go-hive/dist/release/SHA256SUMS` 与发布说明 §4.2。
