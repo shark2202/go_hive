@@ -2,6 +2,40 @@
 
 本文件记录 Go 移植（`github.com/aden-hive/hive-go`）的版本内容。上游 Python 版本的发布说明在仓库根目录的 [`CHANGELOG.md`](../../CHANGELOG.md)。
 
+## 1.0.15-go.1 — 2026-11-19
+
+对应上游 `aden-hive` / `aden-tools` 1.0.14（提交 `c6c2cdcf`）。本版是 `1.0.14-go.1` 之后的行为对齐与安全修复版本，安装与升级无需迁移。
+
+### 新增
+
+- 会话事件链：`execution_started/completed/failed`、`loop_state_changed`、`node_loop_started/iteration/completed`、`client_output_delta`、`llm_turn_complete`、`tool_call_started/completed`；SSE 首帧 `session_snapshot`。
+- queen 人格注入（`queens/<id>/profile.yaml` → 系统提示词，缺失时回退通用提示）。
+- `ask_user` 工具与会话停车：`awaiting_user` + `client_input_requested`，回答后恢复同一轮。
+- queen 记忆注入：每轮 global + queen 两块 `<system-reminder>` recall，两 queen 互不可见。
+- `queen_resume_from`：复用旧会话 id 与目录（上游 `session_manager.py` 语义），重启后旧 id 不再 404。
+- 任务工具：`task_create / task_update / task_list / task_get`。
+- colony 生命周期接线：`CreateColonyFromSource` 注入、`Host.StartOverseer` 生产入口、colony 缺失 404、启动失败 5xx。
+- `agentloop.Judge`：`SuccessCriteria` 触发、`ACCEPT/RETRY/ESCALATE`、verdict 事件（chat 会话暂无成功标准来源）。
+- `GET /api/sessions/{id}/stats` 对齐上游 7 个顶层键 + `event_bus.events_by_type` 展开，colony 统计逐字段合并且保留额外键。
+
+### 修复
+
+- 附件读 symlink 逃逸：`EvalSymlinks` + `HIVE_HOME` 边界校验，拒绝时不回显路径。
+- 附件写 symlink 逃逸：以 queen 目录为锚 `os.OpenRoot` 逐段校验，失败只回通用错误。
+- `/api` 点段路径：含 `..`（含 `%2e`）的 API 请求在 `ServeMux` 前 400，堵住 307 跳出 API 面。
+- 任务请求体限流：`http.MaxBytesReader` + 读满 body，超限 413。
+- 会话停止时同时停止 colony 宿主，避免 overseer/worker 泄漏。
+- `/api/*` 未注册路径返回 JSON 404，不再回退 `index.html`。
+
+### 质量
+
+| 项 | 结果 |
+| --- | --- |
+| 测试声明数（parity 口径） | 4,256 |
+| `check_parity.sh` | 4256/4256，0 missing |
+| `check_parity_targets.sh` | 4,489 refs（3,591 test + 898 prod），0 missing |
+| 七道门禁 | 全部退出码 0 |
+
 ## 1.0.14-go.1 — 2026-11-19
 
 对应上游 `aden-hive` / `aden-tools` 1.0.14（提交 `c6c2cdcf`）。版本号规则：`<上游版本>-go.<移植修订号>`；`go.1` 是第一个可运行的 Go 移植版本。
