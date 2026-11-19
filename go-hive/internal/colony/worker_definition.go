@@ -148,6 +148,7 @@ type WorkerMetaInput struct {
 	WorkerName          string
 	SourceSessionID     string
 	Task                *string
+	SuccessCriteria     []string
 	ToolNames           []string
 	SkillsCatalogPrompt string
 	ProtocolsPrompt     string
@@ -173,7 +174,7 @@ func BuildMeta(in WorkerMetaInput) map[string]any {
 		"input_data":  in.InputData,
 		"goal": map[string]any{
 			"description":      WorkerTask(in.Task),
-			"success_criteria": []any{},
+			"success_criteria": workerSuccessCriteria(in.SuccessCriteria),
 			"constraints":      []any{},
 		},
 		"system_prompt":         BuildSystemPrompt(in.Task),
@@ -199,5 +200,19 @@ func BuildMeta(in WorkerMetaInput) map[string]any {
 func copyStrings(values []string) []string {
 	out := make([]string, len(values))
 	copy(out, values)
+	return out
+}
+
+// workerSuccessCriteria serializes the worker goal's criteria list in the
+// []any shape BuildMeta has always written (an absent list stays []any{}).
+//
+// Parity-exempt: upstream worker goals are created with success_criteria=[],
+// so the list shape is fixed; carrying a caller-supplied list is a Go-side
+// extension used by user-authored colony definitions.
+func workerSuccessCriteria(values []string) []any {
+	out := make([]any, 0, len(values))
+	for _, value := range values {
+		out = append(out, value)
+	}
 	return out
 }

@@ -737,6 +737,18 @@ func (r *ColonyRuntime) buildContext(worker *Worker, spec agentloop.AgentSpec) *
 	return ctx
 }
 
+// workerCompleter is the completer a worker and its judge use: the colony's
+// worker model when configured, otherwise the colony completer.
+func (r *ColonyRuntime) workerCompleter() llm.Completer {
+	if r == nil {
+		return nil
+	}
+	if r.workerLLM != nil {
+		return r.workerLLM
+	}
+	return r.llm
+}
+
 // Parity: framework/agent_loop/agent_loop.py::AgentLoop._reports_to_parent (worker
 // stream_id gate for build_report_to_parent_tool)
 func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
@@ -883,6 +895,7 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 		ToolExecutor: r.executorFor(worker),
 		Config:       *cfg,
 	}
+	loop.ConfigureJudge(worker.Context.AgentSpec, r.workerCompleter(), r.bus)
 	worker.SetAgentLoop(loop)
 	r.ApplyAdaptiveBudget(worker)
 
@@ -934,6 +947,7 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 		ToolExecutor: r.executorFor(worker),
 		Config:       agentloop.DefaultLoopConfig(),
 	}
+	loop.ConfigureJudge(worker.Context.AgentSpec, r.workerCompleter(), r.bus)
 	if err := ctx.Err(); err == nil {
 		_, _ = loop.ExecuteTurn(ctx, worker.Context, worker.conversation, r.workerTools(worker))
 	}
