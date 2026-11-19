@@ -2,6 +2,8 @@ package agentloop
 
 import (
 	"context"
+	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -96,6 +98,101 @@ func TestDoomLoopDetectorReset(t *testing.T) {
 	strict.Observe("read_file", map[string]any{"path": "a.txt"})
 	if warning := strict.Observe("read_file", map[string]any{"path": "a.txt"}); warning == "" {
 		t.Fatal("Threshold=2 did not warn on the second identical call")
+	}
+}
+
+// Parity-exempt: upstream only has the judge-based stall check; this pins the
+// deterministic park the port adds. Past the park threshold the turn stops with
+// ParkReasonDoomLoop instead of returning to the model for another repetition.
+func TestDoomLoopParksTheTurnAtTheParkThreshold(t *testing.T) {
+	const path = `{"path":"status.txt"}`
+	scenarios := make([]scriptedResponse, 0, DefaultDoomLoopParkThreshold+1)
+	for i := 0; i < DefaultDoomLoopParkThreshold+1; i++ {
+		scenarios = append(scenarios, scriptedResponse{toolCalls: []llm.ToolCall{
+			{ID: "call_" + strconv.Itoa(i), Name: "read_file", Arguments: path},
+		}})
+	}
+	scenarios = append(scenarios, scriptedResponse{content: "unreachable"})
+	completer := &scriptedCompleter{scenarios: scenarios}
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 12}, successToolExecutor)
+	var reasons []ParkReason
+	var details []string
+	loop.ParkSink = func(reason ParkReason, detail string) {
+		reasons = append(reasons, reason)
+		details = append(details, detail)
+	}
+	ctx := judgeTestContext(completer, nil, "read_file")
+
+	result, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("system"), nil)
+	var parked *DoomLoopParkedError
+	if !errors.As(err, &parked) {
+		t.Fatalf("ExecuteTurn error = %v (%T), want *DoomLoopParkedError", err, err)
+	}
+	if parked.Tool != "read_file" || parked.Streak != DefaultDoomLoopParkThreshold {
+		t.Fatalf("parked call = %q streak %d, want read_file/%d",
+			parked.Tool, parked.Streak, DefaultDoomLoopParkThreshold)
+	}
+	if parked.ParkReason() != ParkReasonDoomLoop {
+		t.Fatalf("ParkReason() = %q, want doom_loop", parked.ParkReason())
+	}
+	if result.Success {
+		t.Fatal("parked turn reports Success = true")
+	}
+	if result.ParkReason == nil || *result.ParkReason != ParkReasonDoomLoop {
+		t.Fatalf("TurnResult.ParkReason = %v, want doom_loop", result.ParkReason)
+	}
+	if got := loop.Counter("doom_loop_parked"); got != 1 {
+		t.Fatalf("stats[doom_loop_parked] = %d, want 1", got)
+	}
+	if len(reasons) != 1 || reasons[0] != ParkReasonDoomLoop {
+		t.Fatalf("ParkSink saw %v, want exactly one doom_loop park", reasons)
+	}
+	if len(details) != 1 || !strings.Contains(details[0], "read_file") {
+		t.Fatalf("park detail = %v, want the repeating call named", details)
+	}
+	// The loop stopped: the model was asked exactly once per repetition, and the
+	// scenario after the park threshold was never consumed.
+	if got := completer.callCount(); got != DefaultDoomLoopParkThreshold {
+		t.Fatalf("model calls = %d, want %d (the park stops the turn)", got, DefaultDoomLoopParkThreshold)
+	}
+	if result.InnerTurns != DefaultDoomLoopParkThreshold {
+		t.Fatalf("InnerTurns = %d, want %d", result.InnerTurns, DefaultDoomLoopParkThreshold)
+	}
+	// The advisory still rides the tool result where the streak tripped it, so
+	// the transcript explains the repetition before the turn stops.
+	advisories := 0
+	for _, record := range result.ToolResults {
+		if strings.Contains(record.Content, "identical arguments") {
+			advisories++
+		}
+	}
+	if advisories != 1 {
+		t.Fatalf("doom-loop advisory appeared on %d tool results, want exactly 1", advisories)
+	}
+}
+
+// Parity-exempt: a detector configured with a strict warning threshold must not
+// park at or before the warning — the advisory is the model's one chance to
+// change course, so the park sits strictly after it.
+func TestDoomLoopParkThresholdNeverSitsBelowTheWarning(t *testing.T) {
+	detector := &DoomLoopDetector{Threshold: DefaultDoomLoopParkThreshold, ParkThreshold: 2}
+	call := map[string]any{"path": "a.txt"}
+	for i := 1; i < DefaultDoomLoopParkThreshold; i++ {
+		detector.Observe("read_file", call)
+		if detector.ShouldPark() {
+			t.Fatalf("parked at streak %d, before the warning threshold", i)
+		}
+	}
+	detector.Observe("read_file", call)
+	if !detector.Active() {
+		t.Fatalf("streak %d is not active", detector.Streak())
+	}
+	if detector.ShouldPark() {
+		t.Fatalf("parked at streak %d, the same call that warned", detector.Streak())
+	}
+	detector.Observe("read_file", call)
+	if !detector.ShouldPark() {
+		t.Fatalf("streak %d did not park the call after the warning", detector.Streak())
 	}
 }
 

@@ -27,6 +27,12 @@ import (
 // certain for a deterministic tool, and leaves room for one retry.
 const DefaultDoomLoopThreshold = 3
 
+// DefaultDoomLoopParkThreshold is the streak at which the loop stops warning
+// and parks the turn with ParkReasonDoomLoop. Five identical consecutive calls
+// with identical arguments is past any retry/polling story: the model has
+// stopped reacting to the result it already has.
+const DefaultDoomLoopParkThreshold = 5
+
 // DoomLoopReminder is the advisory appended to the tool result. It names the
 // call and the streak so the model can see the repetition, and says what to do
 // instead of repeating it.
@@ -50,9 +56,14 @@ func ToolCallFingerprint(name string, input map[string]any) string {
 }
 
 // DoomLoopDetector tracks consecutive identical tool calls. The zero value is
-// ready: Threshold 0 means DefaultDoomLoopThreshold.
+// ready: Threshold 0 means DefaultDoomLoopThreshold, ParkThreshold 0 means
+// DefaultDoomLoopParkThreshold.
 type DoomLoopDetector struct {
 	Threshold int
+	// ParkThreshold is the streak at which the loop parks the turn instead of
+	// only warning. It must be above Threshold (a check cannot park before it
+	// warns); 0 selects DefaultDoomLoopParkThreshold.
+	ParkThreshold int
 
 	mu          sync.Mutex
 	fingerprint string
@@ -73,6 +84,22 @@ func (d *DoomLoopDetector) threshold() int {
 		return d.Threshold
 	}
 	return DefaultDoomLoopThreshold
+}
+
+// parkThreshold is the streak at which ShouldPark flips. It never sits below
+// the warning threshold: parking without the advisory first would remove the
+// model's one chance to change approach.
+func (d *DoomLoopDetector) parkThreshold() int {
+	if d == nil {
+		return DefaultDoomLoopParkThreshold
+	}
+	if d.ParkThreshold > 0 && d.ParkThreshold > d.threshold() {
+		return d.ParkThreshold
+	}
+	if DefaultDoomLoopParkThreshold > d.threshold() {
+		return DefaultDoomLoopParkThreshold
+	}
+	return d.threshold() + 1
 }
 
 // Observe records one tool call. It returns the reminder body the first time a
@@ -144,6 +171,39 @@ func (d *DoomLoopDetector) Active() bool {
 	defer d.mu.Unlock()
 	return d.streak >= d.threshold()
 }
+
+// ShouldPark reports whether the current streak has reached the park
+// threshold. The turn loop checks it after firing the advisory: past this
+// point the repetition is no longer a warning, it is a stuck turn.
+func (d *DoomLoopDetector) ShouldPark() bool {
+	if d == nil {
+		return false
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.streak >= d.parkThreshold()
+}
+
+// DoomLoopParkedError is the turn-loop error that ends a turn parked on a
+// repeated identical tool call. It carries the repeating call and the streak
+// so the publisher (execution_failed) and the worker failure report name the
+// loop instead of a generic "did not complete".
+type DoomLoopParkedError struct {
+	Tool   string
+	Streak int
+}
+
+func (e *DoomLoopParkedError) Error() string {
+	if e == nil {
+		return "agent loop: parked on a repeated tool call"
+	}
+	return fmt.Sprintf(
+		"agent loop: parked on a doom loop — `%s` ran %d times in a row with identical arguments and the same result",
+		e.Tool, e.Streak)
+}
+
+// ParkReason names the park this error produced.
+func (e *DoomLoopParkedError) ParkReason() ParkReason { return ParkReasonDoomLoop }
 
 func formatDoomLoopReminder(name string, streak int) string {
 	return fmt.Sprintf(DoomLoopReminder, name, streak)

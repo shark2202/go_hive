@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
@@ -209,6 +210,89 @@ func TestACorrectionIsJudgedWithTheTurnItCorrects(t *testing.T) {
 	}
 	if got := states[1]["tools_called_this_turn"]; !reflect.DeepEqual(got, []string{}) {
 		t.Fatalf("tools_called_this_turn = %#v, want []", got)
+	}
+}
+
+// Parity-exempt: the port publishes the stall on the session bus (upstream only
+// reminded the queen); this pins the observable signal the dashboard sees.
+func TestAStalledTurnPublishesANodeStalledEvent(t *testing.T) {
+	bus, _, _, handle := watchStallCheck(t, 0.95, true)
+	events := make(chan *eventbus.AgentEvent, 4)
+	bus.Subscribe([]eventbus.EventType{eventbus.EventNodeStalled}, func(event *eventbus.AgentEvent) {
+		events <- event
+	})
+
+	stalledTurn(t, bus, handle)
+
+	select {
+	case event := <-events:
+		if event.StreamID != "queen" {
+			t.Fatalf("stream = %q, want queen", event.StreamID)
+		}
+		if got := event.Data["reason"]; got != "stall_check" {
+			t.Fatalf("reason = %v, want stall_check", got)
+		}
+		if got := event.Data["probability"]; got != 0.95 {
+			t.Fatalf("probability = %v, want 0.95", got)
+		}
+		if got := event.Data["threshold"]; got != 0.5 {
+			t.Fatalf("threshold = %v, want 0.5", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("a stalled turn published no node_stalled event")
+	}
+}
+
+// Parity-exempt: a turn the judge clears must stay silent on the bus; the stall
+// signal is only worth anything if it does not fire on healthy turns.
+func TestAHealthyTurnPublishesNoStallEvent(t *testing.T) {
+	bus, _, _, handle := watchStallCheck(t, 0.05, true)
+	events := make(chan *eventbus.AgentEvent, 1)
+	bus.Subscribe([]eventbus.EventType{eventbus.EventNodeStalled}, func(event *eventbus.AgentEvent) {
+		events <- event
+	})
+
+	stalledTurn(t, bus, handle)
+
+	select {
+	case event := <-events:
+		t.Fatalf("healthy turn published %v", event.Data)
+	case <-time.After(100 * time.Millisecond):
+	}
+}
+
+// Parity-exempt: this port's chat emitter publishes the turn-end park as
+// loop_state_changed(awaiting_user, park_reason=turn_done) rather than
+// client_input_requested; the subscription must accept that shape or the check
+// would stay structurally inert in a chat session.
+func TestThePortTurnEndShapeReachesTheStallCheck(t *testing.T) {
+	bus, node, judge, handle := watchStallCheck(t, 0.95, true)
+
+	publishQueen(t, bus, eventbus.EventClientInputReceived, map[string]any{"content": "[Owner(1)]: draw something nice"})
+	publishQueen(t, bus, eventbus.EventClientOutputDelta, map[string]any{"snapshot": "On it, drawing one now."})
+	publishQueen(t, bus, eventbus.EventLoopStateChanged, map[string]any{
+		"activity":    "awaiting_user",
+		"park_reason": "turn_done",
+	})
+	handle.Wait()
+
+	if got := len(judge.recorded()); got != 1 {
+		t.Fatalf("judge asked %d times, want once", got)
+	}
+	if got := node.callCount(); got != 1 {
+		t.Fatalf("queen reminded %d times, want once", got)
+	}
+
+	// An ask_user park is an external wait, not a finished turn: no judge.
+	publishQueen(t, bus, eventbus.EventClientInputReceived, map[string]any{"content": "which one?"})
+	publishQueen(t, bus, eventbus.EventClientOutputDelta, map[string]any{"snapshot": "Pick one and I'll draw it."})
+	publishQueen(t, bus, eventbus.EventLoopStateChanged, map[string]any{
+		"activity":    "awaiting_user",
+		"park_reason": "ask_user",
+	})
+	handle.Wait()
+	if got := len(judge.recorded()); got != 1 {
+		t.Fatalf("judge asked %d times after an ask_user park, want 1", got)
 	}
 }
 

@@ -118,6 +118,17 @@ func SubscribeStallCheck(bus *eventbus.EventBus, home hivehome.Home, queenNode f
 		if node == nil {
 			return
 		}
+		// A stall is observable on the session bus, not only in the conversation
+		// and the log: the dashboard and the event history would otherwise show
+		// a queen that keeps talking instead of acting as a normal turn.
+		event := eventbus.NewAgentEvent(eventbus.EventNodeStalled, "queen")
+		event.NodeID = eventbus.StrPtr("queen")
+		event.Data = map[string]any{
+			"reason":      "stall_check",
+			"probability": p,
+			"threshold":   threshold,
+		}
+		s.bus.Publish(event)
 		log.Printf("stall check: p=%.2f >= %.2f, reminding the queen to do the work she talked about", p, threshold)
 		if err := node.InjectEvent(StallReminder, false); err != nil {
 			log.Printf("stall check: remind the queen: %v", err)
@@ -129,6 +140,25 @@ func SubscribeStallCheck(bus *eventbus.EventBus, home hivehome.Home, queenNode f
 			return
 		}
 		mu.Lock()
+		// endTurn runs the judge for the turn that just ended. Two event shapes
+		// land here: upstream parks with client_input_requested(turn_done), while
+		// this port's chat emitter parks with loop_state_changed(awaiting_user,
+		// park_reason=turn_done). Both mean "the queen yields the turn now", so a
+		// subscription that ignored either one would be structurally inert.
+		endTurn := func() {
+			if turn.judged || turn.user == "" || strings.TrimFunc(turn.reply, pySpace) == "" || agentloop.IsVisibleError(turn.reply) {
+				return
+			}
+			turn.judged = true
+			user, reasoning, reply := turn.user, turn.reasoning, turn.reply
+			tools := append([]string{}, turn.tools...)
+			previous := turn.previous
+			s.waiters.Add(1)
+			go func() {
+				defer s.waiters.Done()
+				check(user, reasoning, reply, tools, previous)
+			}()
+		}
 		switch event.Type {
 		case eventbus.EventClientInputReceived:
 			if strings.TrimFunc(turn.reply, pySpace) != "" {
@@ -151,22 +181,15 @@ func SubscribeStallCheck(bus *eventbus.EventBus, home hivehome.Home, queenNode f
 			turn.reasoning = ""
 			turn.reply = ""
 		case eventbus.EventClientInputRequested:
-			reason, _ := event.Data["park_reason"].(string)
-			if reason != "turn_done" {
+			if pyStrOr(event.Data["park_reason"], "") != "turn_done" {
 				break
 			}
-			if turn.judged || turn.user == "" || strings.TrimFunc(turn.reply, pySpace) == "" || agentloop.IsVisibleError(turn.reply) {
+			endTurn()
+		case eventbus.EventLoopStateChanged:
+			if pyStrOr(event.Data["park_reason"], "") != "turn_done" {
 				break
 			}
-			turn.judged = true
-			user, reasoning, reply := turn.user, turn.reasoning, turn.reply
-			tools := append([]string{}, turn.tools...)
-			previous := turn.previous
-			s.waiters.Add(1)
-			go func() {
-				defer s.waiters.Done()
-				check(user, reasoning, reply, tools, previous)
-			}()
+			endTurn()
 		}
 		mu.Unlock()
 	}
@@ -177,6 +200,7 @@ func SubscribeStallCheck(bus *eventbus.EventBus, home hivehome.Home, queenNode f
 		eventbus.EventClientOutputDelta,
 		eventbus.EventToolCallStarted,
 		eventbus.EventClientInputRequested,
+		eventbus.EventLoopStateChanged,
 	}, onEvent)}
 	return s
 }
