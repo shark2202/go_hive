@@ -113,6 +113,10 @@ type ChatRuntime struct {
 	bus       *eventbus.EventBus
 	sessionID string
 	model     string
+	// streamLLM is non-nil when the configured provider can stream. It wraps
+	// deps.LLM for the agent loop and publishes per-frame client_output_delta
+	// events; auxiliary callers keep using deps.LLM directly.
+	streamLLM *chatStreamingCompleter
 
 	queenName       string
 	globalMemoryDir string
@@ -185,6 +189,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		done:      make(chan struct{}),
 	}
 	runtime.markProgress()
+	runtime.streamLLM = newChatStreamingCompleter(deps.LLM)
 	// A session that has not run a turn is parked at turn_done: without this
 	// the idle ticker would auto-start an untouched session after the
 	// between-turns budget.
@@ -215,6 +220,10 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		}
 	}
 
+	loopLLM := deps.LLM
+	if runtime.streamLLM != nil {
+		loopLLM = runtime.streamLLM
+	}
 	agentCtx := &agentloop.AgentContext{
 		AgentID: "queen",
 		AgentSpec: agentloop.AgentSpec{
@@ -222,7 +231,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 			Name:      "Queen",
 			AgentType: "event_loop",
 		},
-		LLM:            deps.LLM,
+		LLM:            loopLLM,
 		AvailableTools: runtime.tools,
 		IdentityPrompt: chatQueenIdentityPrompt(deps.HomeRoot, runtime.queenName),
 		InputData:      map[string]any{},
@@ -430,6 +439,13 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		r.agentCtx.Observer = emitter
 		defer func() { r.agentCtx.Observer = nil }()
 	}
+	// A streaming provider publishes its text as frames while the loop's LLM
+	// call is in flight. Without a live bus there is no consumer, so the
+	// non-streaming path stays in charge.
+	if r.streamLLM != nil && emitter != nil {
+		r.streamLLM.beginTurn(r.conv.SystemPrompt(), emitter.StreamTextDelta)
+		defer r.streamLLM.endTurn()
+	}
 
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
 	r.markTurnStart()
@@ -545,6 +561,10 @@ type chatTurnEmitter struct {
 	executionID   string
 	model         string
 	maxIterations int
+	// stream links the emitter to the streaming adapter so the loop's
+	// end-of-call AssistantText does not republish text that already went out
+	// frame by frame.
+	stream *chatStreamingCompleter
 }
 
 func (r *ChatRuntime) newTurnEmitter(executionID string) *chatTurnEmitter {
@@ -562,6 +582,7 @@ func (r *ChatRuntime) newTurnEmitter(executionID string) *chatTurnEmitter {
 		executionID:   executionID,
 		model:         r.model,
 		maxIterations: maxIterations,
+		stream:        r.streamLLM,
 	}
 }
 
@@ -586,12 +607,30 @@ func (e *chatTurnEmitter) IterationStarted(iteration int) {
 	if e == nil {
 		return
 	}
+	if e.stream != nil {
+		e.stream.noteIteration(iteration)
+	}
 	e.bus.EmitNodeLoopIteration(e.streamID, e.nodeID, iteration, &e.executionID, nil)
 }
 
 // Parity: framework/agent_loop/internals/event_publishing.py::publish_text_delta
 // (queen streams publish client_output_delta, not llm_text_delta)
 func (e *chatTurnEmitter) AssistantText(content, snapshot string, iteration int) {
+	if e == nil {
+		return
+	}
+	// The streaming adapter already published this iteration's text frame by
+	// frame; republishing the full message would duplicate the bubble.
+	if e.stream != nil && e.stream.textStreamed(iteration) {
+		return
+	}
+	e.StreamTextDelta(content, snapshot, iteration)
+}
+
+// StreamTextDelta publishes one text frame. It is the sink the streaming
+// adapter calls for each upstream increment (Content is that increment and
+// Snapshot the accumulated answer).
+func (e *chatTurnEmitter) StreamTextDelta(content, snapshot string, iteration int) {
 	if e == nil {
 		return
 	}
