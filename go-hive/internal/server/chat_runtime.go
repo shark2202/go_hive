@@ -360,7 +360,7 @@ func (r *ChatRuntime) runTurn(message string) {
 		return
 	}
 	emitter.executionCompleted(result.InnerTurns)
-	// Parity: framework/agent_loop/reminder_hub.py::observe_turn
+	// Parity: framework/agent_loop/reminders.py::observe_turn
 	if r.reminders != nil && r.sessionID != "" {
 		r.reminders.TurnComplete(r.sessionID, r.turnTools)
 	}
@@ -555,7 +555,7 @@ func (r *ChatRuntime) injectRecall(query, stamp string) {
 // system-reminder, after the user message and beside recall. The hub decides
 // when a reminder exists; the runtime only delivers it.
 //
-// Parity: framework/agent_loop/reminder_hub.py::take_pending
+// Parity: framework/agent_loop/reminders.py::take_pending
 func (r *ChatRuntime) injectReminders(stamp string) {
 	if r.reminders == nil || r.sessionID == "" {
 		return

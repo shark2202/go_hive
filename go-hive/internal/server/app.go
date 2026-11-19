@@ -51,7 +51,7 @@ type AppDeps struct {
 	Config       ConfigRouteDeps
 	// Reminders is the process-wide reminder hub runtime shared by the HTTP
 	// routes and chat sessions. Nil builds a fresh one for this app.
-	Reminders *ReminderRuntime
+	Reminders    *ReminderRuntime
 	FrontendDist string
 	DesktopToken *string
 	Logger       *log.Logger
