@@ -11,10 +11,11 @@ INTERVAL="${1:-300}"
 [ -f "$REPORT" ] || printf '# Watchdog 汇报（每 5 分钟）\n\n' > "$REPORT"
 
 while true; do
+  cycle_start=$(date +%s)
   ts=$(date '+%Y-%m-%d %H:%M:%S')
   health=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:8788/api/health 2>/dev/null || echo "000")
   head=$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo "?")
-  dirty=$(git -C "$REPO" status --short 2>/dev/null | grep -v '^??' | wc -l | tr -d ' ')
+  dirty=$(git -C "$REPO" status --short --untracked-files=no 2>/dev/null | wc -l | tr -d ' ')
   worktrees=$(git -C "$REPO" worktree list 2>/dev/null | wc -l | tr -d ' ')
   servers=$(pgrep -f "hive-embed serve" | wc -l | tr -d ' ')
   lanes=$(pgrep -f "delegate_task\|subagent" >/dev/null 2>&1 && echo "?" || echo "-")
@@ -38,5 +39,10 @@ while true; do
     echo
   } >> "$REPORT"
 
-  sleep "$INTERVAL"
+  # 固定节拍：本轮工作耗时从睡眠里扣掉，避免每轮漂移几十秒。
+  now=$(date +%s)
+  elapsed=$((now - cycle_start))
+  remaining=$((INTERVAL - elapsed))
+  [ "$remaining" -lt 1 ] && remaining=1
+  sleep "$remaining"
 done
