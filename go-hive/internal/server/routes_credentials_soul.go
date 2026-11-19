@@ -75,6 +75,17 @@ func (rt *SoulRoutes) soulView(queenID string, cfg *soulstore.SoulConfig) map[st
 	current := soulstore.Load(queensDir, queenID)
 	proposal := soulstore.PendingProposal(queensDir, queenID)
 	state := loadSoulState(queensDir, queenID)
+	lastRun, lastResult := state["last_run"], state["last_result"]
+	// Compatibility read: the Go port runs no chat-reading soul reflection, so
+	// state.json stays empty and the sediment's bookkeeping is the only record
+	// of the last automatic write. Only missing keys are filled, so a real
+	// state.json still wins.
+	if lastRun == nil {
+		if sediment := soulstore.LoadSedimentState(queensDir, queenID); sediment != nil && sediment.LastRun != "" {
+			lastRun = sediment.LastRun
+			lastResult = fmt.Sprintf("%d from memory reflection", sediment.LastAdded)
+		}
+	}
 
 	sections := make([]any, 0, len(cfg.Sections))
 	for _, section := range cfg.Sections {
@@ -124,8 +135,8 @@ func (rt *SoulRoutes) soulView(queenID string, cfg *soulstore.SoulConfig) map[st
 		"reflecting":  rt.isReflecting(queenID),
 		"probes":      0,
 		"probing":     false,
-		"last_run":    state["last_run"],
-		"last_result": state["last_result"],
+		"last_run":    lastRun,
+		"last_result": lastResult,
 	}
 }
 
