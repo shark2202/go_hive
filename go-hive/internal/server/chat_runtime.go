@@ -95,6 +95,10 @@ type ChatRuntimeDeps struct {
 type chatTurnRequest struct {
 	message     string
 	clientInput bool
+	// recordOnly appends the user turn to the transcript without running the
+	// model. It is how a message relayed to the colony overseer still lands
+	// in the session history: the queue keeps the conversation single-writer.
+	recordOnly bool
 	// reminderWake is a message-less turn that only drains reminders the hub
 	// parked (idle nudge). It never answers a pending ask_user question.
 	reminderWake bool
@@ -145,6 +149,10 @@ type ChatRuntime struct {
 	// stopped by Close.
 	hub        *agentloop.ReminderHub
 	idleSource *agentloop.IdleNudgeSource
+	// toolTier is the session's MCP tool split (nil when the session has no
+	// MCP tools). The queen tool-library routes rebuild it through
+	// ApplyQueenMCPToolAllowlist, so the next turn advertises the new surface.
+	toolTier *chatToolTier
 	// unregisterReminders removes this runtime's hub from the REST reminder
 	// mirror when the session closes.
 	unregisterReminders func()
@@ -326,10 +334,20 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 }
 
 // Deliver queues a user message and wakes the worker. It never blocks on a
-// running turn: turns are serialized by the queue, not by the caller.
+// running turn: turns are serialized by the queue, not by the caller. On a
+// colony-bound session with a live overseer the message is relayed to it
+// instead: the overseer is the session's executor and the chat queen its front
+// end, so exactly one loop acts on the user's request.
 func (r *ChatRuntime) Deliver(message string) error {
 	if r == nil {
 		return ErrChatRuntimeNoLLM
+	}
+	if r.relayClientInputToOverseer(message) {
+		// The overseer owns the turn; the session transcript still records the
+		// ask. The record rides the queue so the conversation keeps a single
+		// writer, and a closed runtime only loses the record, not the relay.
+		_ = r.enqueueTurn(chatTurnRequest{message: message, clientInput: true, recordOnly: true})
+		return nil
 	}
 	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true})
 }
@@ -381,6 +399,11 @@ func (r *ChatRuntime) InjectTrigger(event agentloop.TriggerEvent) error {
 		return ErrChatRuntimeNoLLM
 	}
 	pending := event
+	// A live overseer owns the session's turns: the trigger goes to it alone,
+	// so the chat queen does not answer the same tick a second time.
+	if r.relayTriggerToOverseer(pending) {
+		return nil
+	}
 	if err := r.enqueueTurn(chatTurnRequest{trigger: &pending}); err != nil {
 		return err
 	}
@@ -516,6 +539,12 @@ func (r *ChatRuntime) run() {
 //
 // Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
 func (r *ChatRuntime) runTurn(request chatTurnRequest) {
+	if request.recordOnly {
+		// A message the overseer executed: append the user turn so the
+		// transcript keeps the ask, without running the chat queen again.
+		r.recordRelayedClientTurn(request.message)
+		return
+	}
 	message := request.message
 	if request.reminderWake {
 		message = "Reminder"
@@ -998,6 +1027,17 @@ func (r *ChatRuntime) bindColony(concrete *colony.ColonyRuntime) bool {
 	unsubscribe, err := colony.SubscribeQueenReportsWithWorker(concrete, func(workerID, report string) {
 		// Reports never fail a session: a closed runtime (queen session
 		// torn down while a worker finished) simply drops the turn.
+		if overseerID := concrete.OverseerID(); overseerID != "" && workerID == overseerID {
+			// The overseer's own report is for the front end: it is the only
+			// consumer that is not the overseer itself.
+			_ = r.InjectWorkerReport(report)
+			return
+		}
+		// With a live overseer the report is its input: one loop acts on it,
+		// and the chat queen stays the session's front end.
+		if r.relayWorkerReportToOverseer(report) {
+			return
+		}
 		_ = r.InjectWorkerReport(report)
 		// The persistent overseer is the colony's own lead: give it the same
 		// report (except its own) so it is not a tool surface without input.

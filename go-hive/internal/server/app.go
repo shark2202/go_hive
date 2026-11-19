@@ -218,6 +218,10 @@ func NewApp(deps AppDeps) *App {
 	RegisterQueenToolRoutes(mux, QueenToolRouteDeps{
 		Home:    deps.Home,
 		Manager: deps.Manager,
+		// A live session's MCP tier is rebuilt when the Tool Library saves a
+		// new allowlist; a session with no phase state or no MCP tools
+		// reports no refresh instead of a fabricated count.
+		RefreshSessionTools: RefreshQueenToolAllowlist,
 	})
 	// Queen mail runs on the ported qmail backend: tokens, inboxes, queue and
 	// delivery through the same session-create hook as the queen routes. With

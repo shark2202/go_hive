@@ -35,6 +35,13 @@ type chatToolTier struct {
 
 	signature string
 	loaded    bool
+	// allowlist is the per-queen MCP allowlist (nil = allow every MCP tool;
+	// a non-nil empty list allows none), the same gate
+	// QueenPhaseState.enabled_mcp_tools applies upstream.
+	allowlist []string
+	// dirty forces the next refresh to rebuild even when the catalogue is
+	// unchanged, which is what an allowlist update needs.
+	dirty bool
 }
 
 // newChatToolTier returns nil when the process has no MCP loader: without
@@ -78,6 +85,46 @@ func (c *chatToolTier) statePtr() *tools.ToolTierState {
 	return c.state
 }
 
+// setAllowlist applies the per-queen MCP allowlist and rebuilds the split in
+// place, so the next turn advertises the refreshed surface. It reports whether
+// a live tier was updated; a session with no MCP tools has nothing to gate.
+func (c *chatToolTier) setAllowlist(names []string) bool {
+	if c == nil {
+		return false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if names == nil {
+		c.allowlist = nil
+	} else {
+		c.allowlist = append([]string{}, names...)
+	}
+	if c.state == nil {
+		return false
+	}
+	c.dirty = true
+	c.refreshLocked()
+	return true
+}
+
+// allowsMCPTool reports whether the allowlist admits one advertised tool. The
+// allowlist carries the registry's tool names (as the Tool Library shows them);
+// a namespaced MCP name (mcp__server__tool) matches on its trailing segment.
+func (c *chatToolTier) allowsMCPTool(name string) bool {
+	if c.allowlist == nil {
+		return true
+	}
+	for _, allowed := range c.allowlist {
+		if allowed == name {
+			return true
+		}
+		if allowed != "" && strings.HasSuffix(name, "__"+allowed) {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *chatToolTier) refreshLocked() {
 	if c == nil || c.state == nil {
 		return
@@ -90,6 +137,11 @@ func (c *chatToolTier) refreshLocked() {
 	names := make([]string, 0, len(defs))
 	for _, def := range defs {
 		if def.Name == "" {
+			continue
+		}
+		if isMCPTool(def.Name, mcpNames) && !c.allowsMCPTool(def.Name) {
+			// The queen's tool-library allowlist excludes this MCP tool: it is
+			// neither eager nor searchable this turn.
 			continue
 		}
 		pool = append(pool, tools.Tool{
@@ -105,9 +157,10 @@ func (c *chatToolTier) refreshLocked() {
 		eager[def.Name] = struct{}{}
 	}
 	signature := strings.Join(names, "\n")
-	if c.loaded && signature == c.signature {
+	if c.loaded && signature == c.signature && !c.dirty {
 		return
 	}
+	c.dirty = false
 	previous := append([]string(nil), c.state.LoadedToolNames...)
 	c.state.Pool = pool
 	c.state.AlwaysEnabledNames = eager
@@ -214,4 +267,55 @@ func isNamespacedMCPTool(name string) bool {
 	rest := strings.TrimPrefix(name, prefix)
 	parts := strings.SplitN(rest, "__", 2)
 	return len(parts) == 2 && parts[0] != "" && parts[1] != ""
+}
+
+// ApplyQueenMCPToolAllowlist applies the per-queen MCP allowlist to this
+// session's live tool tier. enabled mirrors the PATCH body: nil allows every
+// MCP tool, a string list is authoritative (empty means none). False means the
+// session has no tiered MCP surface, so nothing was rebuilt.
+func (r *ChatRuntime) ApplyQueenMCPToolAllowlist(enabled any) bool {
+	if r == nil {
+		return false
+	}
+	names, ok := parseMCPToolAllowlist(enabled)
+	if !ok {
+		return false
+	}
+	tier := r.toolTier
+	if tier == nil {
+		return false
+	}
+	return tier.setAllowlist(names)
+}
+
+// RefreshQueenToolAllowlist is the QueenToolRouteDeps.RefreshSessionTools hook:
+// it applies a new allowlist to one live session and reports whether that
+// session's advertised surface was actually rebuilt.
+func RefreshQueenToolAllowlist(session *Session, enabled any) bool {
+	if session == nil || session.Chat == nil {
+		return false
+	}
+	return session.Chat.ApplyQueenMCPToolAllowlist(enabled)
+}
+
+// parseMCPToolAllowlist normalises the PATCH body value: nil is allow-all,
+// []string/[]any of strings is the authoritative list.
+func parseMCPToolAllowlist(enabled any) ([]string, bool) {
+	switch value := enabled.(type) {
+	case nil:
+		return nil, true
+	case []string:
+		return value, true
+	case []any:
+		out := make([]string, 0, len(value))
+		for _, item := range value {
+			name, ok := item.(string)
+			if !ok {
+				return nil, false
+			}
+			out = append(out, name)
+		}
+		return out, true
+	}
+	return nil, false
 }

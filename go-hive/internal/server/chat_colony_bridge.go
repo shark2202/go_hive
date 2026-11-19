@@ -21,7 +21,9 @@ import (
 
 // colonyBridgeEventTypes are the colony event types worth mirroring onto the
 // session bus. They are the existing agent-event lifecycle types; no new
-// telemetry shape is introduced.
+// telemetry shape is introduced. The client-IO types carry the persistent
+// overseer's replies and questions: the overseer is a queen-stage worker
+// (stream "overseer"), which the dashboard's session pane would otherwise drop.
 var colonyBridgeEventTypes = []eventbus.EventType{
 	eventbus.EventExecutionStarted,
 	eventbus.EventExecutionCompleted,
@@ -29,7 +31,15 @@ var colonyBridgeEventTypes = []eventbus.EventType{
 	eventbus.EventWorkerCompleted,
 	eventbus.EventWorkerFailed,
 	eventbus.EventSubagentReport,
+	eventbus.EventClientOutputDelta,
+	eventbus.EventClientReasoning,
+	eventbus.EventClientInputRequested,
+	eventbus.EventLoopStateChanged,
 }
+
+// overseerStreamID is the stream the colony's persistent overseer publishes
+// under (colony_runtime.start_overseer: stream_id="overseer").
+const overseerStreamID = "overseer"
 
 // colonyEventUnsubscriber is implemented by the concrete colony runtime; the
 // server interface stays narrow enough for stubs in tests.
@@ -70,16 +80,11 @@ func (r *ChatRuntime) syncColonyEventBridge(runtime ColonyRuntime) {
 	}
 	var subscriptionID string
 	subID, err := runtime.SubscribeToEvents(colonyBridgeEventTypes, func(event *eventbus.AgentEvent) {
-		if event == nil {
+		mirrored := mirrorColonyEvent(event, runtime.StreamID())
+		if mirrored == nil {
 			return
 		}
-		clone := event.Clone()
-		clone.Data = cloneEventData(event.Data)
-		if clone.ColonyID == nil {
-			colonyID := runtime.StreamID()
-			clone.ColonyID = &colonyID
-		}
-		r.bus.Publish(clone)
+		r.bus.Publish(mirrored)
 	})
 	if err != nil {
 		log.Printf("chat runtime %s: colony event bridge unavailable: %v", r.sessionID, err)
@@ -105,10 +110,112 @@ func cloneEventData(data map[string]any) map[string]any {
 	return out
 }
 
+// isClientIOEvent reports whether an event type carries client-facing model
+// output or a question for the user.
+func isClientIOEvent(eventType eventbus.EventType) bool {
+	switch eventType {
+	case eventbus.EventClientOutputDelta, eventbus.EventClientReasoning, eventbus.EventClientInputRequested:
+		return true
+	}
+	return false
+}
+
+// isOverseerSessionEvent reports whether an overseer event belongs to the
+// session's client-facing turn (text, questions, and the turn boundaries the
+// dashboard's stream state follows).
+func isOverseerSessionEvent(eventType eventbus.EventType) bool {
+	switch eventType {
+	case eventbus.EventExecutionStarted, eventbus.EventExecutionCompleted, eventbus.EventExecutionFailed, eventbus.EventLoopStateChanged:
+		return true
+	}
+	return isClientIOEvent(eventType)
+}
+
+// mirrorColonyEvent builds the session-bus copy of a colony event, or nil when
+// the event must not be mirrored. The persistent overseer's client-facing events
+// are re-stamped onto the session's queen stream: the overseer executes the work
+// and the chat session is its front end, so its reply has to arrive where the
+// dashboard renders the queen. Lifecycle and report events keep their stream.
+func mirrorColonyEvent(event *eventbus.AgentEvent, streamID string) *eventbus.AgentEvent {
+	if event == nil {
+		return nil
+	}
+	if isClientIOEvent(event.Type) && event.StreamID != overseerStreamID {
+		// Only the overseer is presented through the session's queen stream;
+		// any other worker's client IO is not this session's reply.
+		return nil
+	}
+	clone := event.Clone()
+	clone.Data = cloneEventData(event.Data)
+	if clone.ColonyID == nil && streamID != "" {
+		colonyID := streamID
+		clone.ColonyID = &colonyID
+	}
+	if isOverseerSessionEvent(clone.Type) && clone.StreamID == overseerStreamID {
+		if clone.Data == nil {
+			clone.Data = map[string]any{}
+		}
+		clone.Data["relayed_from"] = overseerStreamID
+		clone.StreamID = chatStreamID
+		clone.NodeID = eventbus.StrPtr(chatNodeID)
+	}
+	return clone
+}
+
+// deliverToOverseer hands a client message to the colony's persistent overseer
+// and reports whether it was accepted. A colony with no live overseer keeps the
+// chat queen as the executor, so delivery never silently drops a message.
+func (r *ChatRuntime) deliverToOverseer(message string) bool {
+	if r == nil || strings.TrimSpace(message) == "" {
+		return false
+	}
+	runtime := r.boundColonyRuntime()
+	if runtime == nil || runtime.OverseerID() == "" {
+		return false
+	}
+	if err := runtime.InjectOverseer(message); err != nil {
+		log.Printf("chat runtime %s: overseer relay unavailable: %v", r.sessionID, err)
+		return false
+	}
+	return true
+}
+
+// relayClientInputToOverseer is the bound-session client path: the user message
+// becomes an overseer turn and the chat queen's own loop stays out of it. One
+// loop acts on the message — the overseer — while the chat runtime remains the
+// session's front end (transcript, event bus, ask_user surface).
+func (r *ChatRuntime) relayClientInputToOverseer(message string) bool {
+	if !r.deliverToOverseer(message) {
+		return false
+	}
+	// The session is busy even though the chat loop is not: re-arm the idle
+	// nudge and close any open Sentinel escalation the way a client turn does.
+	if r.idleSource != nil {
+		r.idleSource.Reset()
+	}
+	r.notifySentinelLocalResume()
+	r.markProgress()
+	r.setParkState(agentloop.ParkReasonTurnDone, true)
+	return true
+}
+
+// recordRelayedClientTurn appends a relayed user turn to the transcript. It
+// runs on the runtime's queue goroutine (the conversation's only writer), so a
+// relayed message never races a running turn.
+func (r *ChatRuntime) recordRelayedClientTurn(message string) {
+	if r == nil || r.conv == nil {
+		return
+	}
+	stamp := time.Now().Format("2006-01-02 15:04 MST")
+	if _, err := r.conv.AddUserMessage("["+stamp+"] "+message, agentloop.UserMessageOptions{IsClientInput: true}); err != nil {
+		log.Printf("chat runtime %s: relayed user turn not recorded: %v", r.sessionID, err)
+	}
+}
+
 // forwardToOverseer delivers a report or trigger to the colony's persistent
-// overseer when one is running. It is deliberately best-effort: the chat queen
-// still owns the user-facing turn, and a stopping colony must not turn a
-// forwarded input into a failed report.
+// overseer when one is running. It is the fallback path used when the overseer
+// does not own the session's turns; it is deliberately best-effort so a
+// stopping colony never turns a forwarded input into a failed report.
 func (r *ChatRuntime) forwardToOverseer(content string) {
 	if r == nil || strings.TrimSpace(content) == "" {
 		return
@@ -122,23 +229,54 @@ func (r *ChatRuntime) forwardToOverseer(content string) {
 	}
 }
 
+// overseerRelayActive reports whether a live overseer owns this session's
+// turns. When it does, the chat runtime is the session's front end and every
+// execution input (client message, worker report, framework trigger) goes to
+// the overseer instead of a second chat-queen loop.
+func (r *ChatRuntime) overseerRelayActive() bool {
+	runtime := r.boundColonyRuntime()
+	return runtime != nil && runtime.OverseerID() != ""
+}
+
+// relayWorkerReportToOverseer hands a worker report to the overseer when it owns
+// the turns. False keeps the chat queen's own report turn.
+func (r *ChatRuntime) relayWorkerReportToOverseer(report string) bool {
+	if !r.overseerRelayActive() {
+		return false
+	}
+	return r.deliverToOverseer(report)
+}
+
+// relayTriggerToOverseer hands a framework trigger to the overseer when it owns
+// the turns. False keeps the chat queen's own trigger turn.
+func (r *ChatRuntime) relayTriggerToOverseer(event agentloop.TriggerEvent) bool {
+	if !r.overseerRelayActive() {
+		return false
+	}
+	return r.deliverToOverseer(triggerBlockForOverseer(event))
+}
+
 // forwardTriggerToOverseer sends the same framework trigger the chat queen
 // received. formatTriggerTurn renders the upstream shared block; its leading
 // timestamp line is dropped because ColonyRuntime.InjectOverseer stamps the
 // injected turn itself.
 func (r *ChatRuntime) forwardTriggerToOverseer(event agentloop.TriggerEvent) {
+	r.forwardToOverseer(triggerBlockForOverseer(event))
+}
+
+func triggerBlockForOverseer(event agentloop.TriggerEvent) string {
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
 	block := formatTriggerTurn(event, stamp)
 	if index := strings.Index(block, "\n"); index >= 0 {
-		block = block[index+1:]
+		return block[index+1:]
 	}
-	r.forwardToOverseer(block)
+	return block
 }
 
-// submitToOverseer is the shared report path: the chat queen still receives
-// the [WORKER_REPORT] turn, and a different worker's report is also injected
-// into the overseer. The overseer's own report is skipped to avoid an echo
-// loop.
+// submitWorkerReportToOverseer is the shared report path used when no overseer
+// owns the session's turns: the chat queen still receives the [WORKER_REPORT]
+// turn, and a different worker's report is also injected into the overseer. The
+// overseer's own report is skipped to avoid an echo loop.
 func (r *ChatRuntime) submitWorkerReportToOverseer(workerID, report string) {
 	runtime := r.boundColonyRuntime()
 	if runtime == nil || workerID == "" {

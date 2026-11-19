@@ -143,6 +143,7 @@ func resumeLiveSession(
 	manager *hiveserver.SessionManager,
 	plan chatSessionPlan,
 	initialPrompt *string,
+	initialPhase *string,
 ) (*hiveserver.Session, error) {
 	if manager == nil || plan.ResumedDir == "" {
 		return nil, nil
@@ -155,6 +156,11 @@ func resumeLiveSession(
 		return nil, &hiveserver.SessionCreateValueError{
 			Message: fmt.Sprintf("Session '%s' already exists", plan.SessionID),
 		}
+	}
+	// An explicit initial_phase on a resume retry moves the live session, the
+	// same way the freshly built record would have been stamped below.
+	if initialPhase != nil && strings.TrimSpace(*initialPhase) != "" {
+		hiveserver.ApplyQueenPhase(existing, *initialPhase)
 	}
 	if initialPrompt != nil && strings.TrimSpace(*initialPrompt) != "" && existing.Chat != nil {
 		if err := existing.Chat.Deliver(*initialPrompt); err != nil {

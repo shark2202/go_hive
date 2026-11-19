@@ -46,6 +46,7 @@ func (r *ChatRuntime) configureReminderProviders() {
 	// run_worker is filtered out while no colony is bound, so the parallel
 	// nudge cannot fire for a plain chat session.
 	if tier := newChatToolTier(r.deps.Root, r.toolsForTurn); tier != nil {
+		r.toolTier = tier
 		// MCP tools are advertised by name only until search_tools loads
 		// them; this is what gives the searchable-tools reminder content.
 		r.agentCtx.ToolTierState = tier.statePtr()
