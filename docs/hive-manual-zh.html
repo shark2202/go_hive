@@ -1,0 +1,2212 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hive 中文使用手册 · 从入门到高级</title>
+<meta name="description" content="OpenHive（Python 版）中文使用手册：安装、第一个任务、Colony、定时任务、Skills、Memory、MCP、CLI、API 与排错。全部截图来自真实本地部署。">
+<style>
+/* ---------- tokens ---------- */
+:root{
+  --paper:#f7f3ea;
+  --paper-2:#f1eadb;
+  --surface:#fffdf8;
+  --surface-2:#fbf7ee;
+  --ink:#1d1913;
+  --ink-2:#3d352a;
+  --muted:#6d6355;
+  --faint:#948a7a;
+  --line:#e3dac9;
+  --line-strong:#d3c6ae;
+  --amber:#b45309;
+  --amber-strong:#92400e;
+  --amber-bright:#f59e0b;
+  --amber-soft:#fdf0d8;
+  --amber-softer:#fff8ea;
+  --green:#3f6212;
+  --green-soft:#eef4e2;
+  --red:#b91c1c;
+  --red-soft:#fdeceb;
+  --blue:#1d4ed8;
+  --blue-soft:#eef2ff;
+  --code-bg:#201b15;
+  --code-ink:#f5ead8;
+  --code-line:#3b3024;
+  --shadow:0 16px 40px rgba(74,52,18,.09);
+  --shadow-sm:0 4px 14px rgba(74,52,18,.07);
+  --radius:16px;
+  --radius-sm:11px;
+  --sidebar:304px;
+  --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua","Songti SC","Noto Serif SC",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+}
+html[data-theme="dark"]{
+  --paper:#14110d;
+  --paper-2:#1a160f;
+  --surface:#1e1a14;
+  --surface-2:#241f17;
+  --ink:#f4ecdd;
+  --ink-2:#d8cdb9;
+  --muted:#b0a38e;
+  --faint:#8d806c;
+  --line:#392f23;
+  --line-strong:#4b3d2c;
+  --amber:#fbbf24;
+  --amber-strong:#fcd34d;
+  --amber-bright:#f59e0b;
+  --amber-soft:#3a2a15;
+  --amber-softer:#2b2113;
+  --green:#a3c46a;
+  --green-soft:#26301a;
+  --red:#f87171;
+  --red-soft:#3a1d1c;
+  --blue:#93b4ff;
+  --blue-soft:#1c2540;
+  --code-bg:#0e0c09;
+  --code-ink:#f0e4d2;
+  --code-line:#2c241a;
+  --shadow:0 18px 44px rgba(0,0,0,.38);
+  --shadow-sm:0 4px 16px rgba(0,0,0,.3);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15.5px;
+  line-height:1.78;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+::selection{background:var(--amber-soft);color:var(--ink)}
+a{color:var(--amber-strong);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+img{max-width:100%}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:4px}
+
+/* ---------- shell ---------- */
+.skip{position:fixed;left:14px;top:-60px;z-index:200;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;transition:top .2s}
+.skip:focus{top:14px}
+.progress{position:fixed;left:0;top:0;height:3px;width:0;background:linear-gradient(90deg,var(--amber-bright),var(--amber));z-index:120;transition:width .08s linear}
+.shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);min-height:100vh}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;overflow:auto;
+  background:var(--surface-2);
+  border-right:1px solid var(--line);
+  padding:22px 16px 40px;
+  scrollbar-width:thin;
+}
+.brand{display:flex;align-items:center;gap:11px;padding:2px 6px 16px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.brand .hex{width:34px;height:34px;flex:none;color:var(--amber)}
+.brand b{display:block;font-family:var(--serif);font-size:17px;letter-spacing:.01em;line-height:1.2}
+.brand span{display:block;font-size:10.5px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.toc-search{position:relative;margin:0 2px 16px}
+.toc-search input{
+  width:100%;padding:9px 12px 9px 34px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);font-size:12.5px;
+}
+.toc-search input::placeholder{color:var(--faint)}
+.toc-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--faint)}
+.toc{font-size:13px}
+.toc .part{
+  margin:18px 8px 7px;font-size:10px;font-weight:700;letter-spacing:.16em;
+  color:var(--faint);text-transform:uppercase;
+}
+.toc a{
+  display:flex;gap:9px;align-items:baseline;padding:6px 9px;margin:1px 0;
+  color:var(--ink-2);border-radius:8px;line-height:1.45;
+}
+.toc a .n{font-family:var(--mono);font-size:10.5px;color:var(--faint);min-width:18px}
+.toc a:hover{background:var(--amber-softer);text-decoration:none;color:var(--ink)}
+.toc a.active{background:var(--amber-soft);color:var(--amber-strong);font-weight:600}
+.toc a.active .n{color:var(--amber-strong)}
+.toc .hidden{display:none}
+.sidebar-foot{margin-top:22px;padding:12px 9px 0;border-top:1px solid var(--line);font-size:11px;color:var(--faint);line-height:1.6}
+.theme-toggle{
+  display:flex;align-items:center;gap:8px;width:100%;margin-top:12px;
+  padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);
+  cursor:pointer;font-size:12px;color:var(--muted);
+}
+.theme-toggle:hover{color:var(--ink);border-color:var(--line-strong)}
+
+/* ---------- main ---------- */
+.main{min-width:0}
+.wrap{max-width:960px;margin:0 auto;padding:40px 46px 130px}
+.mobilebar{display:none}
+.hero{
+  position:relative;overflow:hidden;
+  border:1px solid var(--line);border-radius:22px;
+  background:
+    radial-gradient(820px 300px at 12% -10%, rgba(245,158,11,.14), transparent 62%),
+    radial-gradient(620px 280px at 100% 0%, rgba(180,83,9,.09), transparent 60%),
+    var(--surface);
+  box-shadow:var(--shadow);
+  padding:34px 40px 30px;
+  margin-bottom:26px;
+}
+.hero .eyebrow{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface);font-size:11.5px;color:var(--muted);
+}
+.chip.live{border-color:rgba(63,98,18,.28);background:var(--green-soft);color:var(--green)}
+.chip.amber{border-color:rgba(180,83,9,.25);background:var(--amber-soft);color:var(--amber-strong)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+.hero h1{
+  font-family:var(--serif);font-weight:600;font-size:clamp(29px,3.6vw,43px);
+  line-height:1.16;letter-spacing:-.015em;margin:0 0 12px;
+}
+.hero h1 em{font-style:normal;color:var(--amber-strong)}
+.hero .lede{font-size:15.5px;line-height:1.72;color:var(--ink-2);max-width:680px;margin:0 0 20px}
+.hero-actions{display:flex;flex-wrap:wrap;gap:9px}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:10px;
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);
+  font-size:12.5px;font-weight:600;
+}
+.btn:hover{text-decoration:none;border-color:var(--amber);color:var(--amber-strong)}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:#fff}
+.btn.primary:hover{background:var(--amber-strong);color:#fff}
+.hero-note{
+  margin-top:20px;padding-top:14px;border-top:1px dashed var(--line-strong);
+  font-size:12.5px;color:var(--ink-2);display:flex;gap:9px;align-items:flex-start;
+}
+.hero-note svg{flex:none;width:15px;height:15px;margin-top:3px;color:var(--amber)}
+
+/* ---------- sections ---------- */
+section{scroll-margin-top:86px}
+.sec{padding:26px 0 10px;border-top:1px solid var(--line);margin-top:34px}
+.sec:first-of-type{border-top:0;margin-top:0}
+.sec-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px}
+.sec-num{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;
+  min-width:36px;height:36px;padding:0 7px;border-radius:10px;
+  background:var(--amber-soft);color:var(--amber-strong);
+  font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.02em;
+  border:1px solid rgba(180,83,9,.18);margin-top:3px;
+}
+.sec h2{
+  font-family:var(--serif);font-size:clamp(24px,2.8vw,32px);line-height:1.25;
+  letter-spacing:-.01em;margin:0;font-weight:600;
+}
+.sec .sub{color:var(--muted);font-size:14px;margin:3px 0 0}
+h3{font-size:17px;line-height:1.4;margin:30px 0 10px;font-weight:700;letter-spacing:-.005em}
+h4{font-size:14px;margin:20px 0 6px;font-weight:700;color:var(--ink-2)}
+p{margin:10px 0}
+ul,ol{padding-left:1.35em;margin:10px 0}
+li{margin:5px 0}
+strong{font-weight:700}
+.small{font-size:12.5px;color:var(--muted)}
+.mono{font-family:var(--mono);font-size:.92em}
+.kbd{
+  display:inline-block;padding:1px 6px;border:1px solid var(--line-strong);border-bottom-width:2px;
+  border-radius:5px;background:var(--surface);font-family:var(--mono);font-size:11.5px;
+}
+
+/* ---------- figures ---------- */
+figure.shot{
+  margin:26px 0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+  background:var(--surface);box-shadow:var(--shadow-sm);
+}
+figure.shot img{display:block;width:100%;height:auto;cursor:zoom-in;background:#fff}
+figure.shot figcaption{
+  display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;
+  padding:11px 14px;border-top:1px solid var(--line);
+  background:var(--surface-2);font-size:12.5px;color:var(--muted);line-height:1.55;
+}
+figure.shot figcaption b{color:var(--ink-2);font-weight:700;flex:none}
+.zoom-hint{font-size:10.5px;color:var(--faint);margin-left:auto;flex:none}
+
+/* ---------- callouts ---------- */
+.callout{
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;
+  padding:14px 16px;border-radius:12px;border:1px solid var(--line);
+  background:var(--surface-2);margin:20px 0;
+}
+.callout .tag{
+  font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  padding:3px 7px;border-radius:5px;height:fit-content;margin-top:2px;white-space:nowrap;
+}
+.callout p{margin:0}
+.callout p + p{margin-top:7px}
+.callout.tip{background:var(--green-soft);border-color:rgba(63,98,18,.22)}
+.callout.tip .tag{background:rgba(63,98,18,.14);color:var(--green)}
+.callout.note{background:var(--blue-soft);border-color:rgba(29,78,216,.18)}
+.callout.note .tag{background:rgba(29,78,216,.12);color:var(--blue)}
+.callout.warn{background:var(--amber-soft);border-color:rgba(180,83,9,.22)}
+.callout.warn .tag{background:rgba(180,83,9,.14);color:var(--amber-strong)}
+.callout.danger{background:var(--red-soft);border-color:rgba(185,28,28,.2)}
+.callout.danger .tag{background:rgba(185,28,28,.12);color:var(--red)}
+
+/* ---------- cards ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:13px;margin:18px 0}
+.card{
+  border:1px solid var(--line);border-radius:13px;padding:15px 16px;background:var(--surface);
+  box-shadow:var(--shadow-sm);
+}
+.card .k{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--amber-strong);text-transform:uppercase}
+.card h4{margin:5px 0 5px;font-size:15px}
+.card p{margin:0;font-size:13px;color:var(--muted);line-height:1.65}
+.card.flat{box-shadow:none;background:var(--surface-2)}
+
+/* ---------- steps ---------- */
+.steps{counter-reset:step;margin:20px 0}
+.step{position:relative;padding:0 0 22px 50px;border-left:1px solid var(--line);margin-left:17px}
+.step:last-child{border-left-color:transparent;padding-bottom:0}
+.step::before{
+  counter-increment:step;content:counter(step);
+  position:absolute;left:-18px;top:-2px;width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1px solid var(--line-strong);
+  font-family:var(--mono);font-size:13px;font-weight:700;color:var(--amber-strong);
+}
+.step h4{margin:2px 0 6px;font-size:15.5px;color:var(--ink)}
+.step p{margin:5px 0;color:var(--ink-2)}
+.step .small{margin-top:4px}
+
+/* ---------- tables ---------- */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:18px 0;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px;line-height:1.6}
+th,td{padding:9px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--surface-2);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td code,th code{white-space:nowrap}
+tbody tr:hover{background:var(--amber-softer)}
+
+/* ---------- code ---------- */
+.code{
+  position:relative;margin:16px 0;border-radius:12px;overflow:hidden;
+  background:var(--code-bg);color:var(--code-ink);border:1px solid var(--code-line);
+}
+.code .bar{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:rgba(255,255,255,.04);border-bottom:1px solid var(--code-line);
+  font-family:var(--mono);font-size:10.5px;color:#c9b99f;letter-spacing:.04em;
+}
+.code .bar .lights{display:flex;gap:5px;margin-right:4px}
+.code .bar i{width:8px;height:8px;border-radius:50%;background:#5b4a36;display:block}
+.code .bar i:nth-child(1){background:#b45309}
+.code .bar i:nth-child(2){background:#a16207}
+.code .bar i:nth-child(3){background:#4d7c0f}
+.code .copy{
+  margin-left:auto;border:1px solid #4a3d2d;background:transparent;color:#e7d8c2;
+  border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;
+}
+.code .copy:hover{background:rgba(255,255,255,.07)}
+.code pre{margin:0;padding:14px 17px 16px;overflow:auto;font-family:var(--mono);font-size:12.7px;line-height:1.68;tab-size:2}
+.code code{font-family:inherit}
+code.inline{
+  font-family:var(--mono);font-size:.9em;background:var(--amber-softer);
+  border:1px solid var(--line);border-radius:5px;padding:1px 5px;
+  white-space:normal;overflow-wrap:anywhere;
+}
+
+/* ---------- misc ---------- */
+.lead{font-size:16px;color:var(--ink-2);line-height:1.8}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.grid2>*{min-width:0}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+.checklist{list-style:none;padding-left:0}
+.checklist li{padding-left:26px;position:relative}
+.checklist li::before{content:"✓";position:absolute;left:0;top:0;color:var(--green);font-weight:800}
+.crosslist{list-style:none;padding-left:0}
+.crosslist li{padding-left:26px;position:relative}
+.crosslist li::before{content:"×";position:absolute;left:0;top:0;color:var(--red);font-weight:800}
+.pill-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+.pill{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--amber-soft);color:var(--amber-strong);border:1px solid rgba(180,83,9,.15)}
+.two-col-list{columns:2;column-gap:28px}
+@media(max-width:700px){.two-col-list{columns:1}}
+.anchor-link{opacity:0;margin-left:8px;font-size:.7em;color:var(--faint);text-decoration:none}
+h2:hover .anchor-link,h3:hover .anchor-link{opacity:1}
+.section-end{height:1px;background:transparent;margin:10px 0}
+
+/* ---------- lightbox ---------- */
+dialog.lightbox{
+  border:0;padding:0;background:transparent;max-width:96vw;max-height:96vh;
+}
+dialog.lightbox::backdrop{background:rgba(10,8,5,.82);backdrop-filter:blur(3px)}
+dialog.lightbox img{display:block;max-width:94vw;max-height:92vh;border-radius:10px;box-shadow:0 30px 90px rgba(0,0,0,.5)}
+dialog.lightbox .close{
+  position:fixed;top:18px;right:20px;border:1px solid rgba(255,255,255,.3);
+  background:rgba(0,0,0,.45);color:#fff;border-radius:50%;width:38px;height:38px;cursor:pointer;font-size:18px;
+}
+
+/* ---------- footer ---------- */
+footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+footer .row{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between}
+.top-btn{
+  position:fixed;right:22px;bottom:22px;width:40px;height:40px;border-radius:50%;
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--muted);
+  box-shadow:var(--shadow-sm);cursor:pointer;display:none;align-items:center;justify-content:center;z-index:90;
+}
+.top-btn.show{display:flex}
+
+/* ---------- responsive ---------- */
+@media(max-width:1060px){
+  :root{--sidebar:270px}
+  .wrap{padding:44px 30px 110px}
+}
+@media(max-width:900px){
+  .shell{display:block}
+  .sidebar{
+    position:fixed;left:0;top:0;bottom:0;width:min(86vw,330px);z-index:110;
+    transform:translateX(-102%);transition:transform .22s ease;box-shadow:var(--shadow);
+  }
+  .sidebar.open{transform:translateX(0)}
+  .mobilebar{
+    display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;
+    padding:10px 14px;background:color-mix(in srgb,var(--paper) 88%,transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+  }
+  .mobilebar button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 9px;cursor:pointer}
+  .mobilebar .t{font-family:var(--serif);font-size:14px;font-weight:600;margin-left:2px}
+  .wrap{padding:28px 18px 100px}
+  .hero{padding:30px 22px 26px;border-radius:18px}
+  .hero .lede{font-size:15.5px}
+  .zoom-hint{display:none}
+  .step,.steps,.code,.table-wrap,figure.shot{min-width:0;max-width:100%}
+  .code pre{white-space:pre-wrap;overflow-wrap:anywhere}
+  .sec-head{gap:10px}
+  .sec-num{min-width:32px;height:32px;font-size:11px}
+  .two-col-list{columns:1}
+  .top-btn{right:14px;bottom:14px}
+}
+@media print{
+  .sidebar,.mobilebar,.progress,.top-btn,.code .copy,.theme-toggle{display:none!important}
+  .shell{display:block}
+  .wrap{max-width:none;padding:0}
+  .hero{box-shadow:none}
+  figure.shot{break-inside:avoid;box-shadow:none}
+  .callout,.card,.table-wrap{break-inside:avoid}
+  body{background:#fff;color:#000;font-size:11pt}
+  a{color:#000;text-decoration:underline}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar" aria-label="目录">
+    <div class="brand">
+      <svg class="hex" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <path d="M20 3.2 34 11.2v17.6L20 36.8 6 28.8V11.2L20 3.2Z" stroke="currentColor" stroke-width="2.2"/>
+        <path d="M20 11.2 27 15.2v8l-7 4-7-4v-8l7-4Z" fill="currentColor" opacity=".18"/>
+        <circle cx="20" cy="19.2" r="2.4" fill="currentColor"/>
+      </svg>
+      <div><b>Hive 中文手册</b><span>OpenHive · V1</span></div>
+    </div>
+    <div class="toc-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+      <input id="tocSearch" type="search" placeholder="搜索章节…" autocomplete="off" aria-label="搜索章节">
+    </div>
+    <nav class="toc" id="toc">
+      <div class="part">开始</div>
+      <a href="#howto"><span class="n">00</span>这本手册怎么用</a>
+      <a href="#what"><span class="n">01</span>认识 Hive</a>
+      <a href="#install"><span class="n">02</span>安装与启动</a>
+      <a href="#first-task"><span class="n">03</span>第一个任务</a>
+      <a href="#first-colony"><span class="n">04</span>第一个 Colony</a>
+      <a href="#map"><span class="n">05</span>界面地图</a>
+      <a href="#schedule"><span class="n">06</span>让 Colony 定时跑</a>
+      <div class="part">进阶</div>
+      <a href="#brief"><span class="n">07</span>写好任务简报</a>
+      <a href="#queens"><span class="n">08</span>管理 Queen</a>
+      <a href="#colony"><span class="n">09</span>看懂 Colony</a>
+      <a href="#skills"><span class="n">10</span>Skills</a>
+      <a href="#memory"><span class="n">11</span>Memory</a>
+      <a href="#tools"><span class="n">12</span>Tools 与 MCP</a>
+      <a href="#credentials"><span class="n">13</span>Credentials</a>
+      <a href="#sentinel"><span class="n">14</span>Sentinel</a>
+      <div class="part">高级</div>
+      <a href="#cli"><span class="n">15</span>CLI 全命令</a>
+      <a href="#config"><span class="n">16</span>配置文件</a>
+      <a href="#workspace"><span class="n">17</span>工作目录与 Git</a>
+      <a href="#api"><span class="n">18</span>REST 与 SSE API</a>
+      <a href="#data"><span class="n">19</span>数据、备份与迁移</a>
+      <a href="#cost"><span class="n">20</span>成本与安全</a>
+      <a href="#gohive"><span class="n">21</span>go_hive 附录</a>
+      <div class="part">排错 · 速查</div>
+      <a href="#trouble"><span class="n">22</span>故障排查</a>
+      <a href="#cheat"><span class="n">23</span>术语与速查</a>
+      <a href="#links"><span class="n">24</span>学习路径与链接</a>
+    </nav>
+    <div class="sidebar-foot">
+      基于真实本地部署 · v1.0.14<br>
+      截图时间：2026-11-19<br>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="切换深色/浅色主题">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <span id="themeLabel">切换到深色</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="mobilebar">
+      <button id="menuBtn" aria-label="打开目录">☰</button>
+      <span class="t">Hive 中文手册</span>
+    </div>
+
+    <div class="wrap">
+      <header class="hero">
+        <div class="eyebrow">
+          <span class="chip live"><span class="dot"></span>实机截图 · 真实模型会话</span>
+          <span class="chip amber">Python 版 V1 / v1.0.14</span>
+          <span class="chip">入门 → 进阶 → 高级</span>
+        </div>
+        <h1>从写下第一句话，<br>到让一个 <em>Colony</em> 自己跑起来</h1>
+        <p class="lede">
+          这是一本可以照着做的手册。你不需要先理解 agent 框架、图编排或 MCP，
+          只要会描述你要的结果，剩下的交给 Queen。手册里的每一张界面图，都来自本机真实部署，
+          不是示意图。
+        </p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#install">10 分钟开始</a>
+          <a class="btn" href="#what">先理解 4 个概念</a>
+          <a class="btn" href="#cheat">直接查命令</a>
+        </div>
+        <div class="hero-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+          <span><b>阅读前提：</b>网上和仓库里有些旧教程仍在讲 <code class="inline">hive run</code>、图编排（nodes/edges）和终端 TUI。这些在 V1 已退役。请以本手册和 <code class="inline">hive --help</code> 为准，避坑清单见 <a href="#trouble">§22</a>。</span>
+        </div>
+      </header>
+
+      <!-- ================= 00 ================= -->
+      <section class="sec" id="howto">
+        <div class="sec-head">
+          <span class="sec-num">00</span>
+          <div><h2>这本手册怎么用<a class="anchor-link" href="#howto">#</a></h2>
+          <p class="sub">别从头读到尾。按你现在的状态选一条路。</p></div>
+        </div>
+        <div class="cards">
+          <div class="card">
+            <div class="k">第一次用</div>
+            <h4>我在门口，想先跑起来</h4>
+            <p>读 §02 → §03 → §04，跟着截图做一遍：装好、发出第一个任务、建第一个 Colony。大约 20 分钟。</p>
+          </div>
+          <div class="card">
+            <div class="k">已经能跑</div>
+            <h4>我想让它稳定干活</h4>
+            <p>读 §07 → §14：任务简报、Queen 管理、Colony 监控、Skills、Memory、MCP、定时与 Sentinel。</p>
+          </div>
+          <div class="card">
+            <div class="k">要接系统</div>
+            <h4>我要改配置 / 接 API</h4>
+            <p>读 §15 → §21：CLI、configuration.json、工作目录、REST/SSE、备份、成本安全、go_hive 差异。</p>
+          </div>
+        </div>
+
+        <h3>书里的约定</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>写法</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td><b>Home（首页）</b></td><td>界面上的英文标签保持原样，括号里是中文解释。你照着点即可。</td></tr>
+              <tr><td><code class="inline">~/.hive</code></td><td>Hive 的数据目录，默认在用户主目录下；可用环境变量 <code class="inline">HIVE_HOME</code> 改。</td></tr>
+              <tr><td><code class="inline">/api/…</code></td><td>本地 HTTP API 路径，默认地址 <code class="inline">http://127.0.0.1:8787</code>。</td></tr>
+              <tr><td>提示框</td><td><b>提示</b>是省时间的技巧；<b>注意</b>是容易忽略的约束；<b>坑</b>是会让你以为坏了的行为。</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout warn">
+          <span class="tag">版本警告</span>
+          <div>
+            <p><code class="inline">docs/getting-started.md</code> 里仍有 <code class="inline">hive run</code>、<code class="inline">exports/</code> 建 agent、<code class="inline">core/framework/tui/</code> 的写法；<code class="inline">docs/agent_runtime.md</code> 仍在讲 <code class="inline">AdenTUI</code>。这些是旧版本遗留。当前 V1 的真实入口是 <b>Queen + Colony + Web Dashboard</b>，终端界面已退役（<code class="inline">docs/roadmap.md</code> 的 “Retired in V1”）。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 01 ================= -->
+      <section class="sec" id="what">
+        <div class="sec-head">
+          <span class="sec-num">01</span>
+          <div><h2>认识 Hive：一个 Queen，一群 Worker，一个账本<a class="anchor-link" href="#what">#</a></h2>
+          <p class="sub">先建立正确的心智模型，比记按钮重要。</p></div>
+        </div>
+        <p class="lead">
+          你告诉 Hive 一个结果（“把这 5 个产品在 Hacker News 的发布情况查清楚，做成表”）。
+          Hive 不会让你先去画工作流图；它把任务交给一个有角色、有记忆的 <b>Queen</b>。
+          她先自己做一遍，摸清方法，然后把重复的部分拆给多个 <b>Worker</b> 并行做，
+          结果写进一个共享的 <b>Tracker</b>。你随时能看到进度、纠正方向、检查结果。
+        </p>
+
+        <div class="cards">
+          <div class="card">
+            <div class="k">Queen</div>
+            <h4>女王：你对话的那个人</h4>
+            <p>长期存在的 agent，有身份（Growth、RevOps、Content…）、自己的记忆和工具。她负责理解目标、做试点、拆活、验收。</p>
+          </div>
+          <div class="card">
+            <div class="k">Colony</div>
+            <h4>殖民地：一个可部署的工作单元</h4>
+            <p>一个目录，装着 Queen、多个 Worker、Tracker、任务计划、Skills 和定时器。可以打包搬走，也可以按计划自己醒来。</p>
+          </div>
+          <div class="card">
+            <div class="k">Worker</div>
+            <h4>工蜂：一次只做一件事</h4>
+            <p>Queen 的克隆，任务单一、预算更紧、没有长期记忆、不能提问也不能再派活。做完必须回报。</p>
+          </div>
+          <div class="card">
+            <div class="k">Tracker</div>
+            <h4>账本：完成的唯一真相</h4>
+            <p>每个 Colony 一个 SQLite。Queen 定表结构和可写列，Worker 一行一行 upsert，Queen 用 SQL 验收。</p>
+          </div>
+        </div>
+
+        <figure class="shot">
+          <img src="manual-assets/02-home.png" alt="Hive 首页：左侧 Queen 列表，中间任务输入框，下方蜂巢地图" loading="eager">
+          <figcaption><b>图 1</b> 首页。左侧是 6 位默认 Queen；中间是你写任务的地方；下方 HIVE MAP 显示每位 Queen 及其 Colony。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <h3>它和“普通聊天机器人”差在哪</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>场景</th><th>普通 Chat</th><th>Hive</th></tr></thead>
+            <tbody>
+              <tr><td>一个一次性问题</td><td>合适</td><td>也能做，但没必要建 Colony</td></tr>
+              <tr><td>200 条线索，同一套流程</td><td>你复制粘贴 200 次</td><td>Queen 做一条，写成 Skill + Playbook，剩下交给 Worker 并行</td></tr>
+              <tr><td>跑几个小时 / 每天定时</td><td>页面关了就停</td><td>状态落盘、触发器唤醒、崩溃可恢复</td></tr>
+              <tr><td>要查“做到哪了”</td><td>翻聊天记录</td><td>直接查 Tracker 的行</td></tr>
+              <tr><td>决策需要你拍板</td><td>你不知道它卡住了</td><td>Queen 停车提问；Sentinel 可把问题发到 Telegram / Slack</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout note">
+          <span class="tag">核心机制</span>
+          <div><p>Hive 只有 <b>一种执行原语：agent loop</b>。Queen 是一个 loop，Worker 是同一个 loop 的克隆，只是任务更窄、工具更少、预算更紧。所以崩溃恢复、上下文压缩、用量计量、卡死检测只实现一次，每个 agent 都继承。</p></div>
+        </div>
+
+        <h3>什么时候值得用 Colony</h3>
+        <div class="grid2">
+          <div>
+            <h4>适合</h4>
+            <ul class="checklist">
+              <li>有很多<b>结构相似的单位</b>：线索、账户、工单、仓库、文档。</li>
+              <li>要<b>并行</b>做，而且每次做法要一致。</li>
+              <li>要跑<b>几小时或按计划</b>，重启后不能从头再来。</li>
+              <li>结果要能<b>查、审、导出</b>，不只是读一段话。</li>
+              <li>关键决策仍然要<b>人来拍板</b>。</li>
+            </ul>
+          </div>
+          <div>
+            <h4>不必用</h4>
+            <ul class="crosslist">
+              <li>只有一句 prompt、一次回答。</li>
+              <li>一次性脚本，5 分钟跑完。</li>
+              <li>你还没想清楚“完成”的标准。</li>
+              <li>没有可重复的单位，只有一件独特的大活。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 02 ================= -->
+      <section class="sec" id="install">
+        <div class="sec-head">
+          <span class="sec-num">02</span>
+          <div><h2>安装与第一次启动<a class="anchor-link" href="#install">#</a></h2>
+          <p class="sub">官方推荐 quickstart；已经有 Python 环境的人也可以从 PyPI 装。</p></div>
+        </div>
+
+        <h3>你需要什么</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>依赖</th><th>要求</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>Python</td><td>3.11+（推荐 3.12 / 3.13）</td><td>quickstart 会建一个独立的 uv 环境</td></tr>
+              <tr><td>Node.js</td><td>20+</td><td>构建 Web Dashboard</td></tr>
+              <tr><td>git</td><td>任意近期版本</td><td>拉仓库、装 skill</td></tr>
+              <tr><td>uv / ripgrep</td><td>可选</td><td>缺失时 quickstart 会尝试自动安装</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>路线 A：从仓库安装（推荐）</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>macOS / Linux<button class="copy" type="button">复制</button></div>
+          <pre><code>git clone https://github.com/aden-hive/hive.git
+cd hive
+./quickstart.sh</code></pre>
+        </div>
+        <div class="code" data-lang="powershell">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>Windows PowerShell<button class="copy" type="button">复制</button></div>
+          <pre><code>git clone https://github.com/aden-hive/hive.git
+cd hive
+.\quickstart.ps1</code></pre>
+        </div>
+        <p>quickstart 会做这些事：</p>
+        <ul>
+          <li>建一个覆盖整个 workspace 的 Python 环境；</li>
+          <li>把模型 API Key <b>加密</b>存到 <code class="inline">~/.hive</code>；</li>
+          <li>问你用哪个模型（或订阅、Ollama）；</li>
+          <li>构建前端；</li>
+          <li>启动服务并打开 <code class="inline">http://127.0.0.1:8787</code>。</li>
+        </ul>
+
+        <h3>路线 B：从 PyPI 安装</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code>pip install "aden-hive[tools]"
+hive open</code></pre>
+        </div>
+        <div class="callout warn">
+          <span class="tag">注意</span>
+          <div><p>在仓库根目录执行 <code class="inline">pip install -e .</code> 装到的是一个占位包，跑不起来。仓库场景请用 quickstart；独立安装用上面的 <code class="inline">aden-hive[tools]</code>。</p></div>
+        </div>
+
+        <h3>第一次打开</h3>
+        <p>首次进入会看到欢迎对话框。它带一个 5 步的新手引导；你可以走完，也可以直接 <b>Skip tour</b>。跳过不影响任何功能。</p>
+        <figure class="shot">
+          <img src="manual-assets/01-onboarding.png" alt="首次启动的 Welcome to Hive 对话框" loading="lazy">
+          <figcaption><b>图 2</b> 首次启动的欢迎对话框。背景已经能看到 6 位默认 Queen 和空白的 Colony 列表。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <h3>确认服务在跑</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code>curl -s http://127.0.0.1:8787/api/health
+# {"status": "ok", "sessions": 0, ...}</code></pre>
+        </div>
+        <p>日常启动只需要：</p>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code>cd hive
+hive open            # 启动服务并打开浏览器
+# 或
+hive serve --port 8787
+hive serve --open    # 等价于 open</code></pre>
+        </div>
+        <p class="small">停止：在运行 <code class="inline">hive serve</code> 的终端按 <span class="kbd">Ctrl</span>+<span class="kbd">C</span>。服务默认只监听 <code class="inline">127.0.0.1</code>，本机以外访问不到。</p>
+
+        <h3>模型怎么配</h3>
+        <p>装完之后，<b>Models</b> 页面是模型的总开关。它把模型分成几个槽位：</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>槽位</th><th>作用</th><th>建议</th></tr></thead>
+            <tbody>
+              <tr><td><b>Main model</b></td><td>所有 Queen 默认用它思考</td><td>选你预算内最强的通用模型</td></tr>
+              <tr><td><b>Workers</b></td><td>Colony 派出的 Worker 用</td><td>可以选更便宜的模型；不设则跟 Main 一样</td></tr>
+              <tr><td><b>Vision fallback</b></td><td>给看不了图的模型描述图片</td><td>主模型不支持视觉时再设</td></tr>
+              <tr><td><b>Judge</b></td><td>回答是/否问题（卡死判断等）</td><td>高级项，默认不设也能跑</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="shot">
+          <img src="manual-assets/14-models.png" alt="Models 页面：Main model 为 deepseek-flash-1017，Workers 跟随主模型，另有 Vision fallback 和 Judge" loading="lazy">
+          <figcaption><b>图 3</b> Models 页面。实机把 Main model 设为 <code class="inline">deepseek-flash-1017</code>，Workers 跟随主模型；Vision fallback 和 Judge 留空。下方是 Endpoints 和 API Keys。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <div class="callout tip">
+          <span class="tag">省事做法</span>
+          <div><p>如果你已经在环境变量里放了密钥（比如 <code class="inline">ANTHROPIC_API_KEY</code>、<code class="inline">OPENAI_API_KEY</code>），Hive 能直接用；也可以在 <code class="inline">configuration.json</code> 里写 <code class="inline">api_key_env_var</code>，避免把密钥写进文件。详见 §16。</p></div>
+        </div>
+
+        <div class="callout warn">
+          <span class="tag">订阅登录</span>
+          <div><p>Claude Code、Codex、Kimi Code 等“订阅登录”可以被 Hive 检测并用于主模型。但把订阅计划无人值守地跑在其他 agent 后面，可能违反计划条款，账号可能被限流或关闭。官方支持的路径是 API Key；用订阅请自担风险。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 03 ================= -->
+      <section class="sec" id="first-task">
+        <div class="sec-head">
+          <span class="sec-num">03</span>
+          <div><h2>第一个任务：从一句话到真实回答<a class="anchor-link" href="#first-task">#</a></h2>
+          <p class="sub">这一段照着截图做，5 分钟能走完。</p></div>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <h4>在首页写下任务</h4>
+            <p>输入框提示是 <b>“Describe a task for the hive…”</b>。用自然语言写清结果，不用写给 AI 的咒语。示例：</p>
+            <div class="code" data-lang="text">
+              <div class="bar"><span class="lights"><i></i><i></i><i></i></span>任务示例<button class="copy" type="button">复制</button></div>
+              <pre><code>用三句话介绍你能帮我做什么，并举三个适合你的业务场景。</code></pre>
+            </div>
+            <p class="small">这是本手册实机用过的任务；你也可以换成自己行业里的一件真事。</p>
+          </div>
+
+          <div class="step">
+            <h4>选择 Queen</h4>
+            <p>点发送后，Hive 不会用分类器猜，而是弹出 <b>“Who do you want to talk to?”</b>，让你选。默认 6 位：Growth、RevOps、Content、Lead Generation、Outbound、Brand &amp; Design。</p>
+            <figure class="shot">
+              <img src="manual-assets/03-queen-picker.png" alt="选择 Queen 的对话框，列出六位 Queen 及角色" loading="lazy">
+              <figcaption><b>图 4</b> Queen 选择器。手工输入的任务都会先到这里；从 Prompt Library 部署的提示词则直接去它对应的 Queen。<span class="zoom-hint">点击放大</span></figcaption>
+            </figure>
+          </div>
+
+          <div class="step">
+            <h4>在对话里等她的回答</h4>
+            <p>进入 Queen 的 DM 后，你会看到用户消息、模型思考（<b>Thought</b>，默认折叠）、工具调用标签，然后是正式回答。回答过程中可以 <b>Stop</b>；也可以继续排队消息，或点 <b>Steer</b> 立刻插话改变方向。</p>
+            <figure class="shot">
+              <img src="manual-assets/05-queen-chat.png" alt="Steve Jobs（Head of Growth）的真实中文回答，包含三句话介绍和三个业务场景" loading="lazy">
+              <figcaption><b>图 5</b> 实机中 Steve Jobs（Head of Growth）的回答。她是按人格设定说话的，不是通用客服口吻。注意右上角的 <b>Action Plan</b> 和 <b>Start Colony</b>。<span class="zoom-hint">点击放大</span></figcaption>
+            </figure>
+          </div>
+
+          <div class="step">
+            <h4>看懂这几个按钮</h4>
+            <ul>
+              <li><b>Action Plan</b>：她的任务计划，右侧栏也能看到；会随进展更新，重启后还在。</li>
+              <li><b>Start Colony</b>：把当前这件活升级成一个 Colony；你也可以等她在判断需要并行时主动提议。</li>
+              <li><b>Queue a message</b>：她正在干活时，消息默认排队；点 <b>Steer</b> 才是立即插入当前回合。</li>
+              <li><b>Sessions</b>：同一 Queen 的多个对话；每个会话独立保存，可切换历史。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout tip">
+          <span class="tag">判断标准</span>
+          <div><p>如果她开始问“你有多少条数据 / 要不要并行 / 输出成表还是文档”，说明这活已经具备 Colony 的形状。别急着说“都可以”，先把范围、数据位置、交付形式说清，能省掉一半返工。</p></div>
+        </div>
+
+        <h3>她问你问题时，长什么样</h3>
+        <p>当决策需要你拍板，Queen 会停车，弹出一张多问题卡片：每题有预设选项，也允许自由输入；全部答完后点 <b>Submit All</b>，她继续。Worker 不会直接问你，只有 Queen 会。</p>
+        <figure class="shot">
+          <img src="manual-assets/10-queen-questions.png" alt="Queen 提出的 4 个问题卡片，包含选项和自由输入" loading="lazy">
+          <figcaption><b>图 6</b> 实机中 Growth Queen 一次性问了 4 个问题：业务阶段、最卡的环节、手上有什么数据、要什么交付物。卡片可滚动，答完统一提交。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+      </section>
+
+      <!-- ================= 04 ================= -->
+      <section class="sec" id="first-colony">
+        <div class="sec-head">
+          <span class="sec-num">04</span>
+          <div><h2>第一个 Colony：把一条活变成一条产线<a class="anchor-link" href="#first-colony">#</a></h2>
+          <p class="sub">两种入口：Queen 提议，或你直接建。</p></div>
+        </div>
+
+        <h3>入口 A：Queen 提议，你确认</h3>
+        <p>她在对话里判断“这需要并行 / 需要定时 / 会跑很久”，会给出一个 Colony 提案。只有你确认后才会真正落盘，不会背着你 fork。确认后对话会切到 Colony 页面，她进入 colony 阶段。</p>
+
+        <h3>入口 B：侧边栏直接创建</h3>
+        <p>点侧边栏 <b>COLONIES</b> 旁的 <b>+</b>，填三样东西：</p>
+        <figure class="shot">
+          <img src="manual-assets/06-create-colony.png" alt="Create Colony 对话框：选择 Queen、Colony 名称、可选目标" loading="lazy">
+          <figcaption><b>图 7</b> Create Colony。先点一位 Queen（不点的话 Create 是灰的），再填名称；目标可以留空。名称会被规范化成目录名。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>字段</th><th>怎么填</th><th>注意</th></tr></thead>
+            <tbody>
+              <tr><td><b>Queen Bee</b></td><td>选谁当这个 Colony 的负责人</td><td>必须选；决定人格、模型和工具集</td></tr>
+              <tr><td><b>Colony Name</b></td><td>短、英文、能当目录名</td><td>实机输入 <code class="inline">growth-lab</code>，落盘为 <code class="inline">growth_lab</code></td></tr>
+              <tr><td><b>Goal</b>（可选）</td><td>这个 Colony 要持续追求的结果</td><td>建议写；它会成为 Queen 的长期目标</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Colony 页面长什么样</h3>
+        <figure class="shot">
+          <img src="manual-assets/07-colony.png" alt="Growth Lab Colony 页面：中间对话与多问题卡片，右侧 Data/Plan/Automations/Workers 四个标签" loading="lazy">
+          <figcaption><b>图 8</b> 实机的 Growth Lab。中间还是你和 Queen 的对话；右侧是 Colony 的四个工作面板：<b>Data</b>（Tracker）、<b>Plan</b>（任务计划）、<b>Automations</b>（Sentinel + 定时）、<b>Workers</b>（工蜂）。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <div class="cards">
+          <div class="card flat">
+            <div class="k">Data</div>
+            <h4>Tracker 表格</h4>
+            <p>Queen 建表，Worker 写行。UI 里可以浏览表、筛选、看单条记录；Queen 用 SQL 验收。</p>
+          </div>
+          <div class="card flat">
+            <div class="k">Plan</div>
+            <h4>任务计划</h4>
+            <p>Queen 的 to-do，持久化、可编辑。它记“打算做什么”，Tracker 记“已经做成了什么”。</p>
+          </div>
+          <div class="card flat">
+            <div class="k">Automations</div>
+            <h4>无人值守</h4>
+            <p>Sentinel 在你离开时盯住停车的 Queen；定时器让 Colony 按 cron / interval 自己醒来。</p>
+          </div>
+          <div class="card flat">
+            <div class="k">Workers</div>
+            <h4>并行工蜂</h4>
+            <p>看谁在跑、跑了多久、属于哪个批次；可以停单个，也可以全部停。</p>
+          </div>
+        </div>
+
+        <div class="callout note">
+          <span class="tag">磁盘上是什么</span>
+          <div><p>Colony 是一个自包含目录：<code class="inline">~/.hive/colonies/&lt;name&gt;/</code>。里面有 <code class="inline">metadata.json</code>、<code class="inline">worker.json</code>、<code class="inline">tracker/tracker.db</code>、<code class="inline">skills/</code>、<code class="inline">triggers.json</code>，以及 Queen 和 Worker 的会话状态。<b>Open colony folder</b> 可以直接在文件管理器里打开它。</p></div>
+        </div>
+
+        <p class="small">实机里，Growth Lab 创建后 Queen 先要了 4 个澄清问题，然后才会开表、派工。这很正常：她宁可先问清楚，也不愿拿“最佳实践”糊一份清单。</p>
+      </section>
+
+      <!-- ================= 05 ================= -->
+      <section class="sec" id="map">
+        <div class="sec-head">
+          <span class="sec-num">05</span>
+          <div><h2>界面地图：想做什么，去哪里<a class="anchor-link" href="#map">#</a></h2>
+          <p class="sub">整个产品只有几个面，认清之后不会迷路。</p></div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>你想做的事</th><th>去哪里</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>发一个新任务</td><td><b>New Chat</b> / 首页输入框</td><td>提交后选 Queen</td></tr>
+              <tr><td>继续和某位 Queen 聊</td><td>侧边栏 <b>QUEEN BEES</b> → 点她</td><td>每个 Queen 有多个会话</td></tr>
+              <tr><td>看/管理所有 Colony</td><td>侧边栏 <b>COLONIES</b></td><td><b>+</b> 直接新建</td></tr>
+              <tr><td>招聘/调整 Queen</td><td>侧边栏 <b>Org Chart</b></td><td>拖拽汇报关系、打开 Leader Catalog</td></tr>
+              <tr><td>换模型 / 加端点</td><td>Configuration → <b>Models</b></td><td>主模型、Worker、Vision、Judge</td></tr>
+              <tr><td>加第三方 API Key</td><td>Configuration → <b>Credentials</b></td><td>312 个 API Key 提供商 + 告警通道</td></tr>
+              <tr><td>管理 Skill / MCP</td><td>Configuration → <b>Skills</b></td><td>Skills 与 MCP Tools 两个页签</td></tr>
+              <tr><td>看/改长期记忆</td><td>Configuration → <b>Memory</b></td><td>Global / Queens 两个范围</td></tr>
+              <tr><td>用现成提示词</td><td>头像 → <b>Prompt Library</b></td><td>可一键部署到对应 Queen</td></tr>
+              <tr><td>主题、密度、开发者选项</td><td>头像 → <b>Profile &amp; settings</b></td><td>Settings 弹窗</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Org Chart：组织不是装饰</h3>
+        <p>Org Chart 把“谁向谁汇报、谁负责哪个 Colony”画出来。新人默认 6 位，点 <b>Leader Catalog</b> 可以雇佣其余角色，或新建一个职位。点某位 Queen 的卡片进入她的档案。</p>
+        <figure class="shot">
+          <img src="manual-assets/12-org-chart.png" alt="Org Chart：CEO 下挂 6 位 Queen，Growth 名下有 Growth Lab Colony" loading="lazy">
+          <figcaption><b>图 9</b> 实机 Org Chart。6 位 Queen 直接向 You（CEO / Founder）汇报；Growth Lab 作为标签挂在 Steve Jobs 名下。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <h3>Queen 档案：六个面</h3>
+        <p>点进任一 Queen，会看到她的 dossier（档案）。左边是统计（记忆数、聊天数、模型），右边是六个部分：</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>部分</th><th>是什么</th><th>你能做什么</th></tr></thead>
+            <tbody>
+              <tr><td><b>Persona</b></td><td>她是谁：人格、背景、行为准则</td><td>整段编辑，或按章节改</td></tr>
+              <tr><td><b>Soul</b></td><td>她“变成了谁”：自己写的自我认知</td><td>审阅每日提案、手改、恢复历史版本</td></tr>
+              <tr><td><b>Mind</b></td><td>她用哪个模型思考</td><td>单独给她换模型（不影响别人）</td></tr>
+              <tr><td><b>Memory</b></td><td>她跨会话记住的笔记</td><td>查看、编辑、删除</td></tr>
+              <tr><td><b>Craft</b></td><td>她能用的 Skills 和 Tools</td><td>按 Queen 配置工具集</td></tr>
+              <tr><td><b>Colonies</b></td><td>她负责的 Colony</td><td>跳转、打开</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="shot">
+          <img src="manual-assets/13-queen-profile.png" alt="Steve Jobs 的 Queen 档案：Persona、Soul、Mind、Memory、Craft、Colonies 六个部分" loading="lazy">
+          <figcaption><b>图 10</b> 实机的 Queen 档案。顶部能看到她的模型是 <code class="inline">deepseek-flash-1017</code>，下面是她的人格文本。Soul 是每日从聊天中反思写成的。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <h3>Settings：不需要一开始就动</h3>
+        <p>头像菜单里的 <b>Profile &amp; settings</b> 有五个区：Profile（显示名、主题、密度、动效）、AI Model、Rate Limits、Walkthrough、Developer。Developer 里有调试信息；Rate Limits 用于社交平台工具的限额，不是模型费用。</p>
+        <figure class="shot">
+          <img src="manual-assets/19-settings.png" alt="Settings 弹窗：Profile、AI Model、Rate Limits、Walkthrough、Developer" loading="lazy">
+          <figcaption><b>图 11</b> Settings。日常最常用的是 <b>Theme / Density</b>；模型设置在 Models 页更完整。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <div class="callout warn">
+          <span class="tag">不要找 TUI</span>
+          <div><p>当前版本没有终端 TUI。早期的 Textual 三栏界面已从代码中删除，roadmap 把 “The terminal UI” 列在 <b>Retired in V1</b>，并建议使用 <code class="inline">hive open</code> 的 Web Dashboard。终端里能做的只有命令（§15），不是交互界面。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 06 ================= -->
+      <section class="sec" id="schedule">
+        <div class="sec-head">
+          <span class="sec-num">06</span>
+          <div><h2>让 Colony 定时跑：Triggers + Sentinel<a class="anchor-link" href="#schedule">#</a></h2>
+          <p class="sub">“我不在的时候，它也能自己干活。”</p></div>
+        </div>
+
+        <p>打开任一 Colony，右侧 <b>Automations</b> 标签。这里有两块：Sentinel（停车时盯住 Queen）和定时任务（按计划唤醒 Colony）。</p>
+        <figure class="shot">
+          <img src="manual-assets/08-colony-automations.png" alt="Automations 标签：Sentinel is watching 和 Put this colony on a schedule" loading="lazy">
+          <figcaption><b>图 12</b> Automations。默认 Sentinel 已经“在看”，阻塞时会发到 Hive Inbox；下方是定时任务的入口。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <h3>建一个定时任务</h3>
+        <div class="steps">
+          <div class="step">
+            <h4>点 Create schedule</h4>
+            <p>弹出 <b>New schedule</b>，填名称、触发方式、时间、任务文本。任务文本是每次触发时 Queen 收到的指令，要写成可独立执行的一句话。</p>
+            <figure class="shot">
+              <img src="manual-assets/09-schedule-modal.png" alt="New schedule 弹窗：名称、Daily/Interval/Weekly/Advanced、时间、任务" loading="lazy">
+              <figcaption><b>图 13</b> 新建定时任务。四个模式：Daily、Interval、Weekly、Advanced（自定义 cron）。右下角会实时算下一次触发。<span class="zoom-hint">点击放大</span></figcaption>
+            </figure>
+          </div>
+          <div class="step">
+            <h4>选触发方式</h4>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>模式</th><th>适合</th><th>注意</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Daily</b></td><td>每天固定时间，如早报</td><td>按你的本地时区显示</td></tr>
+                  <tr><td><b>Weekly</b></td><td>工作日/每周几</td><td>可多选星期</td></tr>
+                  <tr><td><b>Interval</b></td><td>每 N 分钟 / 小时巡检</td><td>从创建后不久开始算</td></tr>
+                  <tr><td><b>Advanced</b></td><td>任意 5 段 cron</td><td><b>cron 按 UTC 解析</b>，界面会换算成本地时间预览</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="step">
+            <h4>创建后看卡片</h4>
+            <p>任务会立刻出现在 Automations 里，显示名称、计划、<b>active</b> 状态和下一次倒计时。实机用 cron <code class="inline">0 9 * * *</code> 创建，UTC 09:00 在东八区显示为 <b>Daily at 5PM</b>，下次在 5 小时后。</p>
+            <figure class="shot">
+              <img src="manual-assets/11-schedule-created.png" alt="已创建的 morning-growth-check 定时任务卡片，显示 Daily at 5PM、active、next in 5h" loading="lazy">
+              <figcaption><b>图 14</b> 创建后的卡片。这个例子正好说明 cron 的 UTC 语义：写 <code class="inline">0 9 * * *</code>，本地看到的是 17:00。<span class="zoom-hint">点击放大</span></figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="callout danger">
+          <span class="tag">三个硬约束</span>
+          <div>
+            <p><b>1. 服务必须一直运行。</b>触发器是 <code class="inline">hive serve</code> 进程里的 asyncio 任务，不是系统 cron；终端关了、服务停了，就不会触发。</p>
+            <p><b>2. Colony 会话必须在运行中的服务里加载。</b>触发只会注入到已加载的 Queen 会话；冷会话不会被自动拉起。</p>
+            <p><b>3. 错过的时间点不会自动补跑。</b>当前 Python 实现在下次加载时会把错过的 tick 静默跳过（并推进 <code class="inline">last_fired_at</code>），另有 <code class="inline">/colony/resolve_missed</code> 接口供 UI 选择 fire_latest / skip / reschedule。不要把它当“保证送达”的调度器。</p>
+          </div>
+        </div>
+
+        <h3>手动触发与排障</h3>
+        <p>API 提供 <code class="inline">POST /api/sessions/{id}/triggers/{trigger_id}/run</code>，可以强制立即跑一次；<code class="inline">activate</code> / <code class="inline">deactivate</code> 控制启停。UI 的卡片会显示 active 和 next-fire。若卡片一直倒计时但从不触发，先检查服务日志里有没有 <code class="inline">Timer trigger … tick failed</code>，再确认 Colony 会话仍在（§22）。</p>
+
+        <h3>Sentinel：停车时把你叫回来</h3>
+        <p>Queen 需要你拍板时会停车（loop 被持久化到磁盘，等几天也行）。Sentinel 是可选的看护者：Queen 一停，分类器判断该 nudge 她继续、标记完成，还是升级给你。默认发到 Hive Inbox；在 Automations → <b>Manage Sentinel</b> 里可以接 Telegram 或 Slack，并设置“阻塞多久后升级”。你回复后，答案被注入，Queen 从停下的地方继续。</p>
+        <div class="callout tip">
+          <span class="tag">建议</span>
+          <div><p>先只开 Hive Inbox 跑一天，确认它不会为琐事打扰你；再接 Telegram/Slack。连接 bot 的 token 存在加密凭据库里，不在配置文件里。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 07 ================= -->
+      <section class="sec" id="brief">
+        <div class="sec-head">
+          <span class="sec-num">07</span>
+          <div><h2>写好任务简报：决定成败的一半<a class="anchor-link" href="#brief">#</a></h2>
+          <p class="sub">Queen 很能干，但她不能替你想清楚要什么。</p></div>
+        </div>
+
+        <p>不要写“帮我做增长”。写清楚下面七件事，Queen 的输出质量会立刻不同：</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>要素</th><th>问自己</th><th>示例</th></tr></thead>
+            <tbody>
+              <tr><td><b>结果</b></td><td>完成后我应该拿到什么？</td><td>一张 5 行的对比表 + 一段结论</td></tr>
+              <tr><td><b>范围</b></td><td>包括什么，不包括什么？</td><td>只查原始发布帖，不算顺带提及</td></tr>
+              <tr><td><b>输入</b></td><td>数据在哪？格式是什么？</td><td>CSV 在 <code class="inline">/data/leads.csv</code>；或“我可以给你看 dashboard”</td></tr>
+              <tr><td><b>约束</b></td><td>时间、预算、合规、不能碰的东西</td><td>不要给未验证的线索发邮件；只用公开数据</td></tr>
+              <tr><td><b>交付形式</b></td><td>表、文档、图表、还是直接改文件？</td><td>先给表，再给一页纸结论</td></tr>
+              <tr><td><b>验收标准</b></td><td>什么算“对”？</td><td>每一行都有来源链接；缺数据的行标 not found，不写 0</td></tr>
+              <tr><td><b>停止条件</b></td><td>什么情况下不要继续烧钱？</td><td>同一来源连续失败 3 次就停，报给我</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <h4>差的写法</h4>
+            <div class="code" data-lang="text">
+              <div class="bar"><span class="lights"><i></i><i></i><i></i></span>反例<button class="copy" type="button">复制</button></div>
+              <pre><code>帮我研究一下这几个产品，写个报告。</code></pre>
+            </div>
+            <p class="small">范围、数量、来源、格式、验收全是空白。Queen 只能猜，最后你会得到一份“看起来很努力”的泛泛之谈。</p>
+          </div>
+          <div>
+            <h4>好的写法</h4>
+            <div class="code" data-lang="text">
+              <div class="bar"><span class="lights"><i></i><i></i><i></i></span>正例<button class="copy" type="button">复制</button></div>
+              <pre><code>研究这 5 个产品在 Hacker News 的发布情况：
+- 只算 Show HN / Launch HN / YC 官方发布，不算顺带提及
+- 每个产品给：标题、日期、点数、评论数、链接
+- 用 HN API 核对数字；找不到就标 not found，不要填 0
+- 最后给一张对比表和三条结论
+- 同一产品连续 3 次请求失败就停下告诉我</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <h3>让 Queen 先做试点，再放大</h3>
+        <p>Colony 的正确节奏是 <b>execute first, then systematize</b>：</p>
+        <div class="steps">
+          <div class="step"><h4>先做一条</h4><p>让她自己完成一个单位（一条线索、一个产品、一份文档），把方法和坑摸清。</p></div>
+          <div class="step"><h4>把方法写成 Skill / Playbook</h4><p>试点成功后，让她把步骤固化。之后每个 Worker 都按同一套方法做，结果才可比。</p></div>
+          <div class="step"><h4>再 fan out</h4><p>用 <code class="inline">run_worker</code> / <code class="inline">run_playbook</code> 并行；每个 Worker 写 Tracker，Queen 用 SQL 验收。</p></div>
+        </div>
+
+        <div class="callout note">
+          <span class="tag">一句话原则</span>
+          <div><p>如果你不能用三句话说清“什么算完成”，先别建 Colony。先用 Queen 的普通对话把问题想清楚，再升级。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 08 ================= -->
+      <section class="sec" id="queens">
+        <div class="sec-head">
+          <span class="sec-num">08</span>
+          <div><h2>管理 Queen：人格、模型、记忆、工具<a class="anchor-link" href="#queens">#</a></h2>
+          <p class="sub">Queen 不是通用调度器，她是一个有岗位的负责人。</p></div>
+        </div>
+
+        <p>默认 6 位在岗：Growth、RevOps、Content、Lead Generation、Outbound、Brand &amp; Design。Org Chart 的 <b>Leader Catalog</b> 里还有 Finance、Legal、Talent、Operations、Product Strategy、Technology、Market Research 等角色，可以按需雇佣；也可以新建一个自定义职位。</p>
+
+        <h3>给她换模型</h3>
+        <p>进入她的档案 → <b>Mind</b>，从同一个模型列表里选。她的运行中会话会在下一次模型调用时切换；她的上下文窗口跟着她的模型走。主模型变更不会影响已经单独设了模型的 Queen。</p>
+
+        <h3>她的记忆与人格</h3>
+        <ul>
+          <li><b>Persona</b>：你写的“她是谁”。修改会影响之后所有对话。</li>
+          <li><b>Memory</b>：她从对话里反思出来的长期笔记；可查看、编辑、删除。</li>
+          <li><b>Soul</b>：她每天从聊天里读自己、用第一人称写的“我变成了谁”。默认 <b>review</b> 模式，提案等你批准；也可以设 <b>auto</b>。</li>
+        </ul>
+        <p class="small">Soul 的配置在 <code class="inline">configuration.json</code> 的 <code class="inline">soul</code> 段：每日几点反思、最多改几条、每个部分的字符上限、证据要求（比如“必须引用两个不同的人/会话”）。详见 §16。</p>
+
+        <h3>给她配工具和技能</h3>
+        <p>Queen 档案 → <b>Craft</b>，或 Configuration → <b>Skills</b> 里选 “Configuring: 某位 Queen”。工具可以按 Queen 授权；Colony 还可以有自己的允许列表，Worker 继承更窄的一组。</p>
+
+        <h3>Queen 之间写信（Queen Mail）</h3>
+        <p>开启 <code class="inline">queen_mail</code> 后，Queen 获得 <code class="inline">list_queens</code> 和 <code class="inline">message_queen</code>：她可以给另一位 Queen 写信，对方在自己的一个专门会话里收到，回复会唤醒写信人。默认关闭；可以限制参与者、每日封数与链深度。</p>
+        <p>还可以把一位 Queen 配成 <b>Claude Code queen</b>：她不是 Hive 的 loop，而是真正的 Claude Code 进程，在指定目录里跑，通过 queen mail 参与。她的 <code class="inline">cwd</code> 是 Hive 里唯一能“绑定任意目录”的入口，详见 §17。</p>
+
+        <div class="callout warn">
+          <span class="tag">Decommission</span>
+          <div><p>档案里的 <b>Decommission</b> 会让这位 Queen 退出在岗列表；不是删除数据。她的会话、记忆和 Colony 仍在磁盘上。想彻底清理，用 <code class="inline">hive janitor</code> 或手动处理目录（先备份）。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 09 ================= -->
+      <section class="sec" id="colony">
+        <div class="sec-head">
+          <span class="sec-num">09</span>
+          <div><h2>看懂 Colony：Data、Plan、Workers<a class="anchor-link" href="#colony">#</a></h2>
+          <p class="sub">不要只读聊天记录。真正的进度在 Tracker 里。</p></div>
+        </div>
+
+        <h3>Data：共享账本</h3>
+        <p>每个 Colony 一个 SQLite：<code class="inline">~/.hive/colonies/&lt;name&gt;/tracker/tracker.db</code>。Queen 建表并声明 Worker 可以写哪些列；Worker 每个工作单位 upsert 一行；Queen 用 SQL 查询验收。UI 的 Data 标签是这张表的表格视图，可以浏览、筛选、看单条记录。</p>
+        <div class="code" data-lang="sql">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>Tracker 的典型结构（示意）<button class="copy" type="button">复制</button></div>
+          <pre><code>-- Queen 建的表，Worker 只能写允许的列
+CREATE TABLE products (
+  id            TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  launch_date   TEXT,
+  points        INTEGER,
+  comments      INTEGER,
+  url           TEXT,
+  status        TEXT,          -- done / not_found / blocked
+  notes         TEXT
+);
+
+-- Queen 验收：还有多少没做？
+SELECT status, COUNT(*) FROM products GROUP BY status;</code></pre>
+        </div>
+        <p class="small">实际表结构由 Queen 按任务决定，不一定是这个形状。重要的是：<b>结果是一行行数据，不是一段散文</b>，所以可以查、可以审、可以重跑。</p>
+
+        <h3>Plan：她打算做什么</h3>
+        <p>Plan 是持久的文件型任务列表，会随会话重启保留。它和 Tracker 的分工：Plan 记 <b>意图</b>（要做什么），Tracker 记 <b>事实</b>（做成了什么）。你可以在右侧 Plan 面板里直接改，也可以在对话里让她调整。</p>
+
+        <h3>Workers：并行执行者</h3>
+        <p>Workers 面板把活动中的和历史的工蜂分开，按批次分组。每个 Worker 有自己的任务、预算和工具子集；默认同时最多 4 个（超出排队）。你可以停单个，也可以全部停；Worker 的终态报告会以 <code class="inline">[WORKER_REPORT]</code> 回到 Queen 的对话。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>现象</th><th>先看哪里</th><th>动作</th></tr></thead>
+            <tbody>
+              <tr><td>一直“在跑”但 Data 不增长</td><td>Workers → 选中该 Worker</td><td>看它卡在哪个工具；必要时停掉，让 Queen 重派</td></tr>
+              <tr><td>结果有缺口</td><td>Data → 筛选空/异常行</td><td>让 Queen 只重跑这些行，而不是全部重来</td></tr>
+              <tr><td>同一行被反复改</td><td>Data → 记录详情</td><td>检查 Worker 是否越权/重复认领；收窄任务范围</td></tr>
+              <tr><td>Queen 停车不动</td><td>对话 / Sentinel</td><td>回答她的问题；或让 Sentinel 升级给你</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>怎么问“做到哪了”</h3>
+        <p>最有效的方式不是让她复述，而是让她查：</p>
+        <div class="code" data-lang="text">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>给 Queen 的话<button class="copy" type="button">复制</button></div>
+          <pre><code>查一下 tracker：按 status 分组给我数量；把 blocked 的行列出来，
+说明每行为什么卡住；不要重跑已经 done 的行。</code></pre>
+        </div>
+        <p>她会用 SQL 查，然后把结果和下一步动作一起给你。这比“进度如何”有效得多。</p>
+
+        <div class="callout tip">
+          <span class="tag">验收</span>
+          <div><p>要求她“逐行给来源链接”，并在 Data 里抽查 2–3 行。Hive 的强项是过程可审计；不要把它退回成“读一段总结就信”。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 10 ================= -->
+      <section class="sec" id="skills">
+        <div class="sec-head">
+          <span class="sec-num">10</span>
+          <div><h2>Skills：把一次成功变成每次都能复用<a class="anchor-link" href="#skills">#</a></h2>
+          <p class="sub">Agent Skills 开放格式；Claude Code / Cursor 的 skill 可以直接用。</p></div>
+        </div>
+
+        <p>Skill 是一个带 <code class="inline">SKILL.md</code> 的文件夹，教 agent 怎么做一类任务。它按需加载：会话开始时只看到“名称 + 描述”的目录，判断相关时才读全文，再按需读脚本/参考资料。这让几百个 skill 也不会撑爆上下文。</p>
+
+        <figure class="shot">
+          <img src="manual-assets/16-skills.png" alt="Skills 页面搜索 growth-experiment-brief 的结果" loading="lazy">
+          <figcaption><b>图 15</b> 实机 Skills 页。搜索我们放进 <code class="inline">~/.hive/skills/</code> 的 <code class="inline">growth-experiment-brief</code>；卡片显示描述和 “Used by 1 queen”。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <h3>放在哪里</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>范围</th><th>路径</th><th>用途</th></tr></thead>
+            <tbody>
+              <tr><td>项目（Hive）</td><td><code class="inline">&lt;project&gt;/.hive/skills/</code></td><td>只属于这个仓库</td></tr>
+              <tr><td>项目（跨客户端）</td><td><code class="inline">&lt;project&gt;/.agents/skills/</code></td><td>Claude Code / Cursor 等共用</td></tr>
+              <tr><td>用户（Hive）</td><td><code class="inline">~/.hive/skills/</code></td><td>个人所有项目可用</td></tr>
+              <tr><td>用户（跨客户端）</td><td><code class="inline">~/.agents/skills/</code></td><td>本机所有兼容工具可见</td></tr>
+              <tr><td>框架内置</td><td>随 Hive 发布</td><td>操作协议类 skill</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>一个最小可用 Skill</h3>
+        <div class="code" data-lang="markdown">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>~/.hive/skills/growth-experiment-brief/SKILL.md<button class="copy" type="button">复制</button></div>
+          <pre><code>---
+name: growth-experiment-brief
+description: Turn a growth bottleneck into a prioritized experiment brief. Use when a colony plans or reviews growth experiments.
+---
+
+# Growth Experiment Brief
+
+## When to use
+Use this when a bottleneck has to become a testable experiment.
+
+## Steps
+1. State the bottleneck and the metric it shows up in.
+2. Write the hypothesis: change X for Y, metric Z moves by N% in D days, because …
+3. Name the primary metric, guardrail metric, and minimum detectable effect.
+4. Estimate sample size and run time; shrink scope, not rigor.
+5. Define the stop rule before launch.
+6. Record one row in the colony tracker: owner, status, metric, decision.
+
+## Output
+A one-page brief: bottleneck, hypothesis, design, metrics, sample size, stop rule.</code></pre>
+        </div>
+        <p class="small">描述（description）决定 agent 会不会在正确的时候想起它。写清“做什么 + 什么时候用”，不要写“帮助处理 XX”。</p>
+
+        <h3>CLI 管理</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code>hive skill list                         # 按范围列出所有 skill
+hive skill init my-skill                # 生成 SKILL.md 模板
+hive skill validate ~/.hive/skills/my-skill/SKILL.md
+hive skill install deep-research        # 从 registry 安装
+hive skill install --from https://github.com/org/repo.git --version v1
+hive skill trust /path/to/project       # 永久信任该仓库的项目级 skill
+hive skill doctor                       # 健康检查：可解析、脚本可执行、工具可用</code></pre>
+        </div>
+
+        <div class="callout warn">
+          <span class="tag">信任门禁</span>
+          <div><p>项目级 skill 来自你 clone 的仓库，可能往系统提示里注入指令。首次加载会要求你确认：仅本次 / 永久 / 拒绝。用户级和框架级 skill 始终受信。CI 里可用 <code class="inline">HIVE_TRUST_PROJECT_SKILLS=1</code> 跳过交互，但只在你信任仓库时这么做。</p></div>
+        </div>
+
+        <h3>让 Queen 自己写 Skill</h3>
+        <p>试点成功后，直接说：“把刚才这套方法写成 skill，放到这个 Colony 的 skills 目录，下一次让 Worker 按它做。” 她写出的 skill 会出现在 Colony 的技能目录里，后续 Worker 能直接加载。技能不是文档摆设，它是让并行结果保持一致的关键。</p>
+      </section>
+
+      <!-- ================= 11 ================= -->
+      <section class="sec" id="memory">
+        <div class="sec-head">
+          <span class="sec-num">11</span>
+          <div><h2>Memory：她记得你，但你可以检查<a class="anchor-link" href="#memory">#</a></h2>
+          <p class="sub">不是向量数据库，是你可以打开读的 markdown。</p></div>
+        </div>
+
+        <p>Queen 的记忆按范围分：<b>global</b>（关于你和业务的通用背景）、<b>per-queen</b>（她自己的笔记）、<b>per-colony</b>（某个 Colony 的上下文）。每轮对话前，Hive 会把相关的记忆和最多几段过去对话的摘录放到她眼前；她也可以主动用 <code class="inline">search_messages</code> 搜索历史。</p>
+
+        <figure class="shot">
+          <img src="manual-assets/17-memory.png" alt="Memory 页面：Global 范围内的 company-profile 记忆" loading="lazy">
+          <figcaption><b>图 16</b> 实机 Memory 页。Global 下有一条 <code class="inline">company-profile</code>，记着产品、目标客户、当前重点和交付偏好。你可以直接编辑或删除。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <h3>记忆是怎么写的</h3>
+        <p>不是每句话都写。Queen 每几次回复做一次反思（默认每 6 次），读回最近对话，更新 memory 文件；每几次反思再做一次整理（合并、去重）。压缩上下文和会话结束时也会触发一次。频率和使用的模型在 <code class="inline">configuration.json</code> 的 <code class="inline">memory_reflection</code> 里配。</p>
+
+        <h3>三种“记得”</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>类型</th><th>怎么用</th><th>在哪看</th></tr></thead>
+            <tbody>
+              <tr><td>长期笔记</td><td>每轮注入相关片段</td><td>Memory 页面 / <code class="inline">~/.hive/memories/</code></td></tr>
+              <tr><td>过去的对话</td><td>每轮自动放最多 6 段相关摘录；也可 <code class="inline">search_messages</code></td><td>会话历史 / Memory</td></tr>
+              <tr><td>时间线（可选）</td><td>你说过的事件、事实、计划，按日期检索；<code class="inline">search_timeline</code></td><td>需要开启 <code class="inline">memory_timeline</code> 标志</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout tip">
+          <span class="tag">实用习惯</span>
+          <div><p>第一次合作时，主动给她一段“公司/产品/客户/交付偏好”的背景，让她写进 global memory。后面每个 Queen、每个 Colony 都会受益。发现记忆过时，直接在 Memory 页面改，不要指望她自动忘掉。</p></div>
+        </div>
+
+        <div class="callout note">
+          <span class="tag">隐私</span>
+          <div><p>记忆、会话、Tracker 都是本机文件，位置在 <code class="inline">~/.hive</code>。没有云端同步（除非你显式接了云推送钩子）。备份和迁移见 §19。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 12 ================= -->
+      <section class="sec" id="tools">
+        <div class="sec-head">
+          <span class="sec-num">12</span>
+          <div><h2>Tools 与 MCP：她的手和脚<a class="anchor-link" href="#tools">#</a></h2>
+          <p class="sub">内置工具在进程内跑；外部能力通过 MCP 接入。</p></div>
+        </div>
+
+        <h3>内置工具</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>组</th><th>工具</th><th>用途</th></tr></thead>
+            <tbody>
+              <tr><td><code class="inline">terminal-tools</code></td><td><code class="inline">terminal_exec</code>、后台任务、PTY、<code class="inline">terminal_rg</code>、<code class="inline">terminal_glob</code></td><td>跑命令、搜索代码、长任务</td></tr>
+              <tr><td><code class="inline">files-tools</code></td><td><code class="inline">read_file</code>、<code class="inline">write_file</code>、<code class="inline">edit_file</code>、<code class="inline">search_files</code></td><td>读写工作区文件</td></tr>
+              <tr><td><code class="inline">chart-tools</code></td><td><code class="inline">chart_render</code></td><td>ECharts / Mermaid 转 PNG</td></tr>
+              <tr><td><code class="inline">memory-tools</code></td><td><code class="inline">search_messages</code>、<code class="inline">search_timeline</code></td><td>搜历史对话与时间线</td></tr>
+              <tr><td><code class="inline">hive_tools</code></td><td><code class="inline">attach_file</code>、<code class="inline">pdf_read</code>、<code class="inline">web_scrape</code>、<code class="inline">get_current_time</code>、<code class="inline">image_generate</code>、<code class="inline">csv_*</code> 等</td><td>附件、PDF、网页、时间、图片、CSV</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>浏览器不是内置工具，而是通过 <code class="inline">terminal_exec</code> 调用 <code class="inline">hive-browser</code> CLI；配合 Hive Browser Bridge 扩展，agent 可以在你自己的 Chrome 里操作，每个 Worker 有独立标签组。Colony 页右下角的 <b>Connect browser</b> 会引导安装扩展。</p>
+
+        <h3>接入 MCP Server</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code>hive mcp add                       # 交互式注册本地/远程 server
+hive mcp install &lt;name&gt;            # 从 registry 安装
+hive mcp list                      # 已安装的 server 和状态
+hive mcp health                    # 连通性检查
+hive mcp disable &lt;name&gt;            # 暂不加载（不删除）
+hive mcp mode &lt;name&gt; cli           # 改成“终端里用”，不把工具塞进模型上下文
+hive mcp run &lt;name&gt; --list         # 以命令方式列出它的工具</code></pre>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>传输</th><th>例子</th><th>备注</th></tr></thead>
+            <tbody>
+              <tr><td>stdio</td><td><code class="inline">hive mcp add --name fs -- uvx server-filesystem /path</code></td><td>本地子进程；<code class="inline">--</code> 后的参数可以带 <code class="inline">-</code></td></tr>
+              <tr><td>http / sse</td><td><code class="inline">--transport http --url http://…</code></td><td>远程 server</td></tr>
+              <tr><td>unix</td><td><code class="inline">--socket-path …</code></td><td>本机 socket</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>as-cli：工具太多的 server 这样接</h3>
+        <p>一个 39 个工具的 server 会往每次模型调用里塞上万 token 的 schema。用 <code class="inline">--as-cli</code> 注册后，它的工具不进工具列表；agent 只看到一行说明，需要时用 <code class="inline">terminal_exec</code> 调 <code class="inline">hive mcp run</code>，底层是 mcp2cli 把工具变成命令。示例：</p>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code>hive mcp add --name comfy --transport stdio --as-cli \
+  --description "ComfyUI on this PC: run workflows, generate images" \
+  --env COMFYUI_URL=http://127.0.0.1:8000 \
+  -- uvx --from comfy-mcp --with "comfy-cli&gt;=1.14.0" comfy-mcp
+
+hive mcp run comfy --list
+hive mcp run comfy run-workflow --workflow-path /abs/wf.json --wait</code></pre>
+        </div>
+
+        <h3>允许列表</h3>
+        <p>工具不是接了就全开。Tool Library 可以按 <b>Queen</b> 和 <b>Colony</b> 配允许列表；Worker 继承 Colony 的更窄集合。给一个 Queen 开 GitHub 写权限之前，先想清楚她能读到什么、能改什么。</p>
+      </section>
+
+      <!-- ================= 13 ================= -->
+      <section class="sec" id="credentials">
+        <div class="sec-head">
+          <span class="sec-num">13</span>
+          <div><h2>Credentials：密钥、OAuth 与告警通道<a class="anchor-link" href="#credentials">#</a></h2>
+          <p class="sub">一个加密库，所有 provider 和集成共用。</p></div>
+        </div>
+
+        <p>Credentials 页面分两块：<b>Built-in Connections</b>（Telegram / Slack 这类告警通道）和 <b>API Keys</b>（各家 provider 与业务集成）。实机是 <b>0 active · 314 available</b>，因为还没连任何外部账号；其中 312 个是 API Key provider，2 个是内置连接。</p>
+
+        <figure class="shot">
+          <img src="manual-assets/15-credentials.png" alt="Credentials 页面：Built-in Connections（Telegram/Slack）与 API Keys 列表" loading="lazy">
+          <figcaption><b>图 17</b> 实机 Credentials。上面是告警通道，下面是 312 个 API Key provider；点 <b>+ Add account</b> 填 key，OAuth 类会走授权流程。<span class="zoom-hint">点击放大</span></figcaption>
+        </figure>
+
+        <h3>三种放密钥的方式</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>方式</th><th>适合</th><th>注意</th></tr></thead>
+            <tbody>
+              <tr><td>Credentials 页面</td><td>日常使用</td><td>加密存在 <code class="inline">~/.hive/credentials</code>；需要 <code class="inline">HIVE_CREDENTIAL_KEY</code></td></tr>
+              <tr><td>环境变量</td><td>CI / 临时</td><td>如 <code class="inline">ANTHROPIC_API_KEY</code>、<code class="inline">OPENAI_API_KEY</code>；不要写进仓库</td></tr>
+              <tr><td><code class="inline">configuration.json</code> 的 <code class="inline">api_key_env_var</code></td><td>自定义网关 / 私有端点</td><td>文件里只有变量名，没有密钥本身</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout warn">
+          <span class="tag">安全</span>
+          <div><p>不要把 key 发给 Queen 让她“记一下”。她写下的任何内容都可能进入会话、记忆或日志。用 Credentials 页面或环境变量；<code class="inline">read_file</code> 对凭据目录有拒绝列表，但最稳妥的是根本不把密钥放进工作区。</p></div>
+        </div>
+
+        <h3>告警通道与工具凭据是分开的</h3>
+        <p>Telegram / Slack 的 bot token 用于 <b>Sentinel 通知</b>，不会自动给 Queen 开 Slack/Telegram 工具权限。反过来，给 Queen 开 Slack 工具是另一套 OAuth/凭据。别把“能给你发告警”和“能以你的身份发消息”混为一谈。</p>
+      </section>
+
+      <!-- ================= 14 ================= -->
+      <section class="sec" id="sentinel">
+        <div class="sec-head">
+          <span class="sec-num">14</span>
+          <div><h2>Sentinel：无人值守时的最后一层<a class="anchor-link" href="#sentinel">#</a></h2>
+          <p class="sub">它不是另一个 agent，是一个看护流程。</p></div>
+        </div>
+
+        <p>Sentinel 按 Colony 开关。Queen 停车（提问、被阻塞、结束回合）时，分类器判断三种结果：</p>
+        <div class="cards">
+          <div class="card flat"><div class="k">Nudge</div><h4>推她一把</h4><p>她只是犹豫或漏了一步，Sentinel 给一个提醒让她继续。</p></div>
+          <div class="card flat"><div class="k">Done</div><h4>标记完成</h4><p>工作已经结束，不需要打扰你。</p></div>
+          <div class="card flat"><div class="k">Escalate</div><h4>升级给你</h4><p>真的需要人拍板，发到 Hive Inbox / Telegram / Slack。</p></div>
+        </div>
+
+        <h3>怎么开</h3>
+        <ol>
+          <li>Colony → <b>Automations</b> → <b>Manage Sentinel</b>。</li>
+          <li>先确认目的地在 Hive Inbox 能收到；需要手机提醒就接 Telegram 或 Slack（填 bot token，点验证，检测 chat/channel）。</li>
+          <li>设置“阻塞多久后升级”。太短会被琐事打扰，太长会真的卡住。</li>
+          <li>保存并启用。Queen 停车后，你会在选定渠道收到一条消息；直接回复即可把答案注入，她继续。</li>
+        </ol>
+
+        <div class="callout danger">
+          <span class="tag">权限边界</span>
+          <div><p>如果 Queen 能通过聊天应用接收陌生人的消息，再配合 Claude Code queen 的 <code class="inline">bypassPermissions</code> 或 Bash，陌生人就离“在你的机器上执行命令”只有几条消息的距离。用 <code class="inline">queens</code>、<code class="inline">max_depth</code>、<code class="inline">daily_limit</code> 限制谁能找到她，以及她一天能说多少。</p></div>
+        </div>
+
+        <p class="small">Sentinel 的价值在“异常升级”，不是“全自动”。把常规路径做成 Skill/Playbook，把例外留给它和你。</p>
+      </section>
+
+      <!-- ================= end of advanced sections ================= -->
+
+      <!-- ================= 15 ================= -->
+      <section class="sec" id="cli">
+        <div class="sec-head">
+          <span class="sec-num">15</span>
+          <div><h2>CLI 全命令：不用打开浏览器的那些事<a class="anchor-link" href="#cli">#</a></h2>
+          <p class="sub">常用就五条，其余是排障和运维。</p></div>
+        </div>
+
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>顶层命令<button class="copy" type="button">复制</button></div>
+          <pre><code>hive --help
+# serve   open   queen   colony   session   chat
+# skill   debugger   mcp   janitor</code></pre>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>命令</th><th>做什么</th><th>常用示例</th></tr></thead>
+            <tbody>
+              <tr><td><code class="inline">hive serve</code></td><td>启动 REST + SSE 服务</td><td><code class="inline">hive serve --port 8787 --open</code></td></tr>
+              <tr><td><code class="inline">hive open</code></td><td>启动并打开 Dashboard</td><td><code class="inline">hive open</code></td></tr>
+              <tr><td><code class="inline">hive queen</code></td><td>列出/查看 Queen 与会话</td><td><code class="inline">hive queen list</code> / <code class="inline">hive queen show queen_growth</code></td></tr>
+              <tr><td><code class="inline">hive colony</code></td><td>列出/查看/删除 Colony</td><td><code class="inline">hive colony list</code> / <code class="inline">hive colony info growth_lab</code></td></tr>
+              <tr><td><code class="inline">hive session</code></td><td>列出/停止会话</td><td><code class="inline">hive session list --cold</code> / <code class="inline">hive session stop &lt;id&gt;</code></td></tr>
+              <tr><td><code class="inline">hive chat</code></td><td>向运行中的会话发一条消息</td><td><code class="inline">hive chat &lt;session_id&gt; "继续"</code></td></tr>
+              <tr><td><code class="inline">hive skill</code></td><td>安装/校验/信任/搜索 skill</td><td><code class="inline">hive skill list</code> / <code class="inline">hive skill install …</code></td></tr>
+              <tr><td><code class="inline">hive mcp</code></td><td>管理 MCP server</td><td><code class="inline">hive mcp add</code> / <code class="inline">hive mcp health</code></td></tr>
+              <tr><td><code class="inline">hive janitor</code></td><td>清理旧日志/冷会话/Worker transcript</td><td><code class="inline">hive janitor run</code>（默认 dry-run）</td></tr>
+              <tr><td><code class="inline">hive debugger</code></td><td>浏览 LLM 调试日志</td><td><code class="inline">hive debugger</code> / <code class="inline">--output report.html</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>常用组合</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code># 1) 后台常驻（任选一种进程管理器）
+tmux new -s hive 'hive serve --port 8787'
+# 或
+nohup hive serve --port 8787 &gt; ~/.hive/serve.log 2&gt;&amp;1 &amp;
+
+# 2) 看服务健康
+curl -s http://127.0.0.1:8787/api/health
+
+# 3) 列出所有会话（含冷会话）
+hive session list --cold
+
+# 4) 给正在跑的会话补一句话
+hive chat session_20261119_114236_89aae2c6 "先停一下，把已完成的行汇总给我"
+
+# 5) 清理前先看报告
+hive janitor status
+hive janitor run                 # dry-run
+hive janitor run --execute       # 真正删除/归档（会先归档）</code></pre>
+        </div>
+
+        <div class="callout warn">
+          <span class="tag">进程管理</span>
+          <div><p>Hive 没有内置的 daemon / service 管理。要长期运行，用自己的进程管理器（tmux、systemd user unit、launchd、Windows 服务包装器）。无论哪种，都要保证 <code class="inline">HIVE_HOME</code> 和凭据密钥环境变量在服务进程里可见，并且工作目录固定。</p></div>
+        </div>
+
+        <h3>从仓库运行</h3>
+        <p>在仓库根目录，二选一：</p>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code>uv run hive --help        # 不激活环境，直接用 workspace 的 hive
+# 或者
+source .venv/bin/activate
+hive --help</code></pre>
+        </div>
+      </section>
+
+      <!-- ================= 16 ================= -->
+      <section class="sec" id="config">
+        <div class="sec-head">
+          <span class="sec-num">16</span>
+          <div><h2>配置文件：把默认行为调成你的<a class="anchor-link" href="#config">#</a></h2>
+          <p class="sub">一个 JSON，加上少量环境变量。</p></div>
+        </div>
+
+        <p>主配置在 <code class="inline">~/.hive/configuration.json</code>（或 <code class="inline">$HIVE_HOME/configuration.json</code>）。大部分字段可以在 Models / Queen 档案页面改；直接编辑文件也可以，但改完建议重启 <code class="inline">hive serve</code>，避免运行中的缓存不一致。</p>
+
+        <div class="code" data-lang="json">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>~/.hive/configuration.json（注释版，不是合法 JSON）<button class="copy" type="button">复制</button></div>
+          <pre><code>{
+  "llm": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-5-20250929",
+    "max_tokens": 8192,
+    "max_context_tokens": 200000,
+    "api_key_env_var": "ANTHROPIC_API_KEY"
+  },
+
+  // 可选：Worker 用更便宜的模型；不写则跟随主模型
+  "worker_llm": {
+    "provider": "openai",
+    "model": "gpt-4.1-mini",
+    "api_key_env_var": "OPENAI_API_KEY"
+  },
+
+  // 可选：给看不了图的模型做视觉兜底
+  "vision_fallback": {
+    "provider": "openai",
+    "model": "gpt-4.1-mini",
+    "api_key_env_var": "OPENAI_API_KEY"
+  },
+
+  // 可选：某位 Queen 单独用模型
+  "queen_llm": {
+    "queen_growth": {
+      "provider": "openai",
+      "model": "deepseek-flash",
+      "api_base": "https://api.deepseek.com/v1",
+      "api_key": "sk-...",
+      "extra_body": { "thinking": { "type": "disabled" } }
+    }
+  },
+
+  // 可选：OpenAI-compatible 端点（Ollama / vLLM / LM Studio / Magpie）
+  "model_endpoints": {
+    "ollama": { "api_base": "http://localhost:11434/v1" },
+    "magpie": { "api_base": "http://127.0.0.1:3425/v1" }
+  },
+
+  // Queen 多久写一次记忆
+  "memory_reflection": {
+    "every_turns": 6,
+    "long_every": 4,
+    "model": "main"
+  },
+
+  // Queen 的 Soul（自我认知）每日反思
+  "soul": {
+    "queens": {
+      "queen_growth": {
+        "enabled": true,
+        "mode": "review",
+        "hour": 4,
+        "sections": [
+          { "key": "now", "title": "Now", "limit": 300, "max_age_days": 14 },
+          { "key": "people", "title": "Me and them", "limit": 800, "evidence": 2 }
+        ]
+      }
+    }
+  },
+
+  // Queen 互相写信；可附 Claude Code queen
+  "queen_mail": {
+    "enabled": true,
+    "queens": ["queen_growth", "queen_sales"],
+    "daily_limit": 100,
+    "max_depth": 8,
+    "claude_code": {
+      "queen_claude": {
+        "name": "Claude",
+        "api_key": "sk-ant-...",
+        "cwd": "/Users/you/code/my-repo",
+        "permission_mode": "acceptEdits",
+        "allowed_tools": ["Bash(git:*)", "Read", "Edit"],
+        "timeout_minutes": 30
+      }
+    }
+  }
+}</code></pre>
+        </div>
+
+        <div class="callout warn">
+          <span class="tag">JSON 不能有注释</span>
+          <div><p>上面为了讲解加了 <code class="inline">//</code> 注释；真实文件必须是严格 JSON。复制时删掉注释，或只用页面配置。</p></div>
+        </div>
+
+        <h3>关键字段速查</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>字段</th><th>作用</th><th>默认 / 注意</th></tr></thead>
+            <tbody>
+              <tr><td><code class="inline">llm</code></td><td>主模型</td><td>必填；支持 LiteLLM provider 或 OpenAI-compatible</td></tr>
+              <tr><td><code class="inline">worker_llm</code></td><td>Worker 模型</td><td>不设则跟随主模型</td></tr>
+              <tr><td><code class="inline">vision_fallback</code></td><td>视觉兜底</td><td>主模型无视觉时使用</td></tr>
+              <tr><td><code class="inline">queen_llm</code></td><td>按 Queen 覆盖模型</td><td>key 是 Queen id，如 <code class="inline">queen_growth</code></td></tr>
+              <tr><td><code class="inline">extra_body</code></td><td>原样塞进请求体</td><td>如 DeepSeek 的 thinking / reasoning_effort</td></tr>
+              <tr><td><code class="inline">model_endpoints</code></td><td>OpenAI-compatible 端点</td><td>地址以 <code class="inline">/v1</code> 结尾</td></tr>
+              <tr><td><code class="inline">memory_reflection</code></td><td>记忆反思频率/模型</td><td>每 6 次回复、每 4 次整理</td></tr>
+              <tr><td><code class="inline">soul</code></td><td>每日自我认知更新</td><td>默认 review，提案等你批</td></tr>
+              <tr><td><code class="inline">queen_mail</code></td><td>Queen 间通信 / Claude Code queen</td><td>默认关闭；注意 <code class="inline">cwd</code> 和权限</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>环境变量</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>变量</th><th>用途</th></tr></thead>
+            <tbody>
+              <tr><td><code class="inline">HIVE_HOME</code></td><td>数据根目录，默认 <code class="inline">~/.hive</code></td></tr>
+              <tr><td><code class="inline">HIVE_CREDENTIAL_KEY</code></td><td>凭据库的 Fernet 加密密钥；换机器/换环境时必须一致</td></tr>
+              <tr><td><code class="inline">ANTHROPIC_API_KEY</code> / <code class="inline">OPENAI_API_KEY</code> / <code class="inline">OPENROUTER_API_KEY</code> / <code class="inline">HIVE_API_KEY</code></td><td>模型密钥；也可用 <code class="inline">api_key_env_var</code> 指向自定义变量</td></tr>
+              <tr><td><code class="inline">BRAVE_SEARCH_API_KEY</code> / <code class="inline">EXA_API_KEY</code></td><td>网页搜索工具</td></tr>
+              <tr><td><code class="inline">HIVE_MAX_CONCURRENT_WORKERS</code></td><td>若你的版本读取该变量，可控制并发上限；以实际构建为准</td></tr>
+              <tr><td><code class="inline">HIVE_ENABLE_LLM_LOGS</code></td><td>开启本地 LLM 调试日志，供 <code class="inline">hive debugger</code> 查看</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout tip">
+          <span class="tag">换机器</span>
+          <div><p>只复制 <code class="inline">configuration.json</code> 不够。<code class="inline">HIVE_CREDENTIAL_KEY</code> 必须一起搬，否则加密凭据解不开；模型 key 若在环境变量里，也要在新机器上重新设置。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 17 ================= -->
+      <section class="sec" id="workspace">
+        <div class="sec-head">
+          <span class="sec-num">17</span>
+          <div><h2>工作目录与 Git：Hive 在这里和 coding harness 不同<a class="anchor-link" href="#workspace">#</a></h2>
+          <p class="sub">先看清限制，再决定怎么接你的仓库。</p></div>
+        </div>
+
+        <p>Claude Code、Codex CLI、Pi 这类工具是“进程即会话”：你 <code class="inline">cd</code> 到项目里启动，工作目录就是进程 cwd；Codex 还提供 <code class="inline">--cd/-C</code>，Claude Code 提供 <code class="inline">--add-dir</code> / <code class="inline">/cd</code>。Hive 是常驻 Web 服务 + 多个会话，<b>普通 Queen 会话没有“工作目录”这个可设置字段</b>。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>能力</th><th>Python Hive</th><th>go_hive</th></tr></thead>
+            <tbody>
+              <tr><td>会话级工作目录</td><td>没有；工具默认用会话目录</td><td>没有；queen 工具根 = 启动 cwd，Colony = Colony 目录</td></tr>
+              <tr><td>任意绝对路径读写</td><td>可以（凭据目录等 deny-list 除外）</td><td>文件工具受限在 sandbox root；terminal 可到任意路径</td></tr>
+              <tr><td>内置 git 工具</td><td>没有；只能用 terminal 跑 <code class="inline">git</code></td><td>没有；同上</td></tr>
+              <tr><td>绑定任意目录</td><td>只有 Claude Code queen 的 <code class="inline">cwd</code></td><td>不支持</td></tr>
+              <tr><td>Agent/Colony 目录</td><td>支持（受允许根限制）</td><td>支持（同一套允许根）</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Python 版：工具默认在哪</h3>
+        <p>每次会话，框架把 <code class="inline">session_cwd</code> 设为该会话的目录，并强制注入给声明了这个参数的工具；模型不能覆盖它。DM 会话在 <code class="inline">~/.hive/queens/&lt;queen&gt;/sessions/&lt;id&gt;/</code>，Colony Queen 在 <code class="inline">~/.hive/colonies/&lt;colony&gt;/queens/&lt;queen&gt;/sessions/&lt;id&gt;/</code>。文件工具对绝对路径是放行的（只挡凭据目录等），所以你可以让它直接处理某个仓库：</p>
+        <div class="code" data-lang="text">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>给 Queen 的话<button class="copy" type="button">复制</button></div>
+          <pre><code>这个仓库在 /Users/me/code/my-repo。
+先读 README 和 package.json，再运行测试；
+所有改动都留在这个目录里，不要碰其他路径。
+需要 git 操作时用 terminal_exec 执行，并在提交前把 diff 给我看。</code></pre>
+        </div>
+        <p>这不是“绑定”，是指路。会话的默认相对路径仍然在会话目录里，所以要么给绝对路径，要么在命令里 <code class="inline">cd</code>。</p>
+
+        <h3>唯一真正的目录绑定：Claude Code queen</h3>
+        <p>在 <code class="inline">queen_mail.claude_code.&lt;id&gt;</code> 里设 <code class="inline">cwd</code>，Hive 每轮用这个目录启动真正的 Claude Code 进程；<code class="inline">add_dirs</code> 追加目录，<code class="inline">allowed_tools</code> 里放开 <code class="inline">Bash(git:*)</code> 就能跑 git。她通过 queen mail 参与，不是普通聊天会话；UI 只能只读查看她的 transcript。</p>
+        <div class="code" data-lang="json">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>configuration.json 片段<button class="copy" type="button">复制</button></div>
+          <pre><code>"queen_mail": {
+  "enabled": true,
+  "claude_code": {
+    "queen_claude": {
+      "name": "Claude",
+      "api_key": "sk-ant-...",
+      "cwd": "/Users/me/code/my-repo",
+      "permission_mode": "acceptEdits",
+      "allowed_tools": ["Read", "Edit", "Bash(git:*)", "Bash(npm:*)"],
+      "add_dirs": ["/Users/me/code/shared-lib"],
+      "timeout_minutes": 30
+    }
+  }
+}</code></pre>
+        </div>
+        <div class="callout danger">
+          <span class="tag">权限</span>
+          <div><p><code class="inline">permission_mode: "bypassPermissions"</code> 会让 Claude Code 几乎不受限制。再加上 Queen 能接收外部消息，就等于把 shell 暴露给能给她写信的人。默认用 <code class="inline">default</code> 或 <code class="inline">acceptEdits</code>，只放开必需的 <code class="inline">allowed_tools</code>。</p></div>
+        </div>
+
+        <h3>今天想让它做仓库工作，怎么做</h3>
+        <ol>
+          <li><b>Python 版</b>：给绝对路径，要求用 <code class="inline">terminal_exec</code> 跑 <code class="inline">git status / diff / commit</code>；先让它读仓库说明和测试命令。</li>
+          <li><b>go_hive</b>：从仓库根目录启动 <code class="inline">hive serve</code>，Queen 会话的文件工具根就是该目录；或者 <code class="inline">serve --colony &lt;colony-dir&gt;</code>，根是 Colony 目录。</li>
+          <li><b>要稳定的目录绑定 + git 自动化</b>：用 Python 版的 Claude Code queen，配 <code class="inline">cwd</code> 与 allowlist；这是目前唯一的一等公民实现。</li>
+        </ol>
+
+        <div class="callout note">
+          <span class="tag">没有 git 工具</span>
+          <div><p>Hive 两边都没有 <code class="inline">git_status / git_diff / git_commit</code> 之类的内置工具。Git 只有三种用法：terminal 里跑 <code class="inline">git</code>；<code class="inline">hive skill install --from &lt;git-url&gt;</code> 安装 skill；GitHub 远程 API 集成（需要凭据，和本地仓库是两回事）。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 18 ================= -->
+      <section class="sec" id="api">
+        <div class="sec-head">
+          <span class="sec-num">18</span>
+          <div><h2>REST 与 SSE API：把 Hive 接进你的系统<a class="anchor-link" href="#api">#</a></h2>
+          <p class="sub">本地无鉴权；只绑 127.0.0.1 时是安全的默认。</p></div>
+        </div>
+
+        <p>服务默认 <code class="inline">http://127.0.0.1:8787</code>。前端就是这套 API 的消费者，所以能力基本都在。下面是最小集。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>方法 / 路径</th><th>作用</th></tr></thead>
+            <tbody>
+              <tr><td><code class="inline">GET /api/health</code></td><td>健康检查；返回会话数、资源状态</td></tr>
+              <tr><td><code class="inline">POST /api/sessions</code></td><td>创建会话；body 支持 <code class="inline">colony_id</code>、<code class="inline">queen_name</code>、<code class="inline">initial_prompt</code>、<code class="inline">model</code> 等</td></tr>
+              <tr><td><code class="inline">POST /api/sessions/{id}/chat</code></td><td>发消息；body <code class="inline">{"message": "…", "images": [...]}</code></td></tr>
+              <tr><td><code class="inline">GET /api/sessions/{id}/events</code></td><td>SSE 事件流；<code class="inline">?types=</code> 过滤</td></tr>
+              <tr><td><code class="inline">GET /api/sessions/{id}/triggers</code></td><td>列出触发器（含 next-fire、火计数）</td></tr>
+              <tr><td><code class="inline">POST /api/sessions/{id}/triggers</code></td><td>创建定时触发器</td></tr>
+              <tr><td><code class="inline">POST …/triggers/{tid}/run</code></td><td>立即跑一次</td></tr>
+              <tr><td><code class="inline">POST …/triggers/{tid}/activate</code> / <code class="inline">deactivate</code></td><td>启停</td></tr>
+              <tr><td><code class="inline">POST /api/sessions/{id}/colony/resolve_missed</code></td><td>处理错过的触发：<code class="inline">fire_latest / skip / reschedule</code></td></tr>
+              <tr><td><code class="inline">POST /api/colonies/import</code></td><td>multipart 上传 Colony tar 包，解压到 HIVE_HOME</td></tr>
+              <tr><td><code class="inline">GET/POST /api/memories…</code></td><td>列出/创建/编辑记忆文件</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>一次完整调用</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code>BASE=http://127.0.0.1:8787
+
+# 1) 创建一位 Growth Queen 的会话
+curl -s -X POST "$BASE/api/sessions" \
+  -H 'Content-Type: application/json' \
+  -d '{"queen_name":"queen_growth","initial_prompt":"先给我一份本周增长实验的检查清单"}'
+
+# 2) 发一条消息（把 SESSION 换成返回里的 session_id）
+SESSION=session_20261119_114236_89aae2c6
+curl -s -X POST "$BASE/api/sessions/$SESSION/chat" \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"只保留能在两周内跑完的实验。"}'
+
+# 3) 跟 SSE（另开一个终端；-N 关闭缓冲）
+curl -N "$BASE/api/sessions/$SESSION/events"</code></pre>
+        </div>
+
+        <h3>创建一个定时任务（等价于 UI）</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code>curl -s -X POST "$BASE/api/sessions/$SESSION/triggers" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "morning-growth-check",
+    "task": "检查 tracker 中的实验进度，汇总未完成项，并给出今天优先推进的一件事。",
+    "trigger_type": "timer",
+    "trigger_config": {"cron": "0 9 * * *"}
+  }'</code></pre>
+        </div>
+        <p class="small">cron 按 UTC 解析；<code class="inline">0 9 * * *</code> 在东八区是 17:00。创建成功会返回 <code class="inline">trigger_id</code>（如 <code class="inline">user-morning-growth-check</code>），并发布 <code class="inline">TRIGGER_ACTIVATED</code> 事件。</p>
+
+        <h3>错误码</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>状态</th><th>常见原因</th><th>处理</th></tr></thead>
+            <tbody>
+              <tr><td>400</td><td>body 字段缺失/类型不对；cron 非法</td><td>看返回的 <code class="inline">error</code></td></tr>
+              <tr><td>404</td><td>session / trigger 不存在</td><td>先 <code class="inline">hive session list --cold</code></td></tr>
+              <tr><td>409</td><td>会话正在加载/已 fork；手动 run 时 Queen 未就绪</td><td>等加载完；或先加载 Colony</td></tr>
+              <tr><td>503</td><td>会话没有可用模型（Chat 为 nil）</td><td>检查 Models / key，见 §22</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout danger">
+          <span class="tag">不要直接暴露</span>
+          <div><p>API 没有登录层。默认只绑 <code class="inline">127.0.0.1</code> 是安全边界；把 <code class="inline">--host 0.0.0.0</code> 开到公网，等于把 agent 的工具执行能力暴露给能访问该端口的人。远程访问请放在 VPN / 反向代理鉴权之后。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 19 ================= -->
+      <section class="sec" id="data">
+        <div class="sec-head">
+          <span class="sec-num">19</span>
+          <div><h2>数据、备份与迁移：一切都在一个目录里<a class="anchor-link" href="#data">#</a></h2>
+          <p class="sub">这是 Hive 最好运维的一点：没有外部数据库。</p></div>
+        </div>
+
+        <div class="code" data-lang="text">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>~/.hive 目录（节选）<button class="copy" type="button">复制</button></div>
+          <pre><code>~/.hive/
+├── configuration.json          # 全局模型/反思/mail/soul 配置
+├── credentials/                # 加密凭据库（需要 HIVE_CREDENTIAL_KEY）
+├── queens/
+│   └── queen_growth/
+│       ├── profile.yaml        # 人格与角色
+│       ├── soul/               # 自我认知、历史版本、提案
+│       ├── skills/             # 她的私有 skill
+│       └── sessions/&lt;id&gt;/      # 会话 meta、events、conversations、compaction
+├── colonies/
+│   └── growth_lab/
+│       ├── metadata.json
+│       ├── worker.json
+│       ├── tracker/tracker.db  # 共享账本（+ wal/shm）
+│       ├── skills/
+│       ├── triggers.json
+│       ├── queens/…/sessions/  # Queen 作为 overseer 的会话
+│       └── workers/&lt;session&gt;/  # Worker 运行状态
+├── memories/                   # global / queens / colonies 作用域
+├── skills/                     # 用户级 skill
+├── logs/ · event_logs/ · llm_logs/ · debug_logs/
+└── cache/                      # MCP 缓存等</code></pre>
+        </div>
+
+        <h3>备份</h3>
+        <ol>
+          <li>停掉 <code class="inline">hive serve</code>（至少确保没有正在写的会话）。</li>
+          <li>复制整个 <code class="inline">~/.hive</code>，或只复制你要的 <code class="inline">colonies/&lt;name&gt;</code>。</li>
+          <li>把 <code class="inline">HIVE_CREDENTIAL_KEY</code> 单独安全保存；没有它，凭据库等于损坏。</li>
+        </ol>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code># 停服务后
+tar -czf hive-backup-$(date +%Y%m%d).tar.gz -C ~ .hive
+# 只备份一个 Colony
+tar -czf growth-lab.tar.gz -C ~/.hive/colonies growth_lab</code></pre>
+        </div>
+
+        <h3>迁移一个 Colony 到另一台机器</h3>
+        <p>Colony 是自包含目录。打包后，通过 <code class="inline">POST /api/colonies/import</code>（multipart 上传）导入，或在服务停止时直接解压到新机器的 <code class="inline">~/.hive/colonies/</code>。Tracker、Skills、触发器定义都在里面；模型 key 不在，需要在新机器重新配置。</p>
+
+        <div class="callout warn">
+          <span class="tag">SQLite</span>
+          <div><p>不要在 <code class="inline">hive serve</code> 正在写 Tracker 时用其他进程直接改 <code class="inline">tracker.db</code>。它带 WAL；并发写可能锁住或损坏。要查数据，用只读连接或 UI 的 Data 页；要改，让 Queen 通过工具改。</p></div>
+        </div>
+
+        <h3>清理与日志</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>命令 / 位置</th><th>用途</th></tr></thead>
+            <tbody>
+              <tr><td><code class="inline">hive janitor status</code></td><td>看上一次清理报告</td></tr>
+              <tr><td><code class="inline">hive janitor run</code></td><td>dry-run：只报告将清理什么</td></tr>
+              <tr><td><code class="inline">hive janitor run --execute</code></td><td>归档后删除旧日志、已完成 Worker transcript、冷会话膨胀</td></tr>
+              <tr><td><code class="inline">~/.hive/logs/</code></td><td>服务日志（访问、错误）</td></tr>
+              <tr><td><code class="inline">~/.hive/event_logs/</code></td><td>事件总线日志</td></tr>
+              <tr><td><code class="inline">~/.hive/llm_logs/</code></td><td><code class="inline">hive debugger</code> 读取的 LLM 调试日志（需开启）</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= 20 ================= -->
+      <section class="sec" id="cost">
+        <div class="sec-head">
+          <span class="sec-num">20</span>
+          <div><h2>成本与安全：把油门和刹车都装上<a class="anchor-link" href="#cost">#</a></h2>
+          <p class="sub">Hive 给你计量和硬预算，但不替你设美元上限。</p></div>
+        </div>
+
+        <h3>成本控制</h3>
+        <ul>
+          <li><b>每个 Worker 有硬预算</b>：回合数、工具调用数都有上限，卡住的 Worker 会自己停。</li>
+          <li><b>并发有上限</b>：默认同时 4 个 Worker，其余排队。任务再大也不会瞬间打满。</li>
+          <li><b>Worker 可以用更便宜的模型</b>：在 Models 页单独设 <code class="inline">worker_llm</code>，Queen 仍用强模型。</li>
+          <li><b>每次模型调用都计量</b>：用量在会话/运行记录里可见。</li>
+          <li><b>没有美元止损</b>：roadmap 明确说还没有按金额中止的 <code class="inline">cost_guard</code>。要控成本，靠模型选择、任务范围、并发和人工巡检。</li>
+        </ul>
+
+        <h3>安全清单</h3>
+        <ul class="checklist">
+          <li>默认只监听 <code class="inline">127.0.0.1</code>；不要把无鉴权的 API 开到公网。</li>
+          <li>API Key 放加密凭据库或环境变量；不写进仓库、不贴进对话。</li>
+          <li>项目级 Skill 首次加载要确认；不信任的仓库不要用 <code class="inline">HIVE_TRUST_PROJECT_SKILLS=1</code> 一把梭。</li>
+          <li>按 Queen / Colony 配工具允许列表；写权限（邮件、CRM、GitHub）单独授权。</li>
+          <li>Claude Code queen 不要随便给 <code class="inline">bypassPermissions</code> 和裸 <code class="inline">Bash</code>。</li>
+          <li>把网页抓取结果当不可信输入：里面可能藏着让 agent 执行命令的提示词。敏感操作要人工确认。</li>
+          <li>定期跑 <code class="inline">hive janitor</code>，避免旧 transcript 和日志无限增长。</li>
+        </ul>
+
+        <div class="callout note">
+          <span class="tag">威胁模型</span>
+          <div><p>Hive 的 agent 有真实的 shell 和文件能力。最大的风险不是模型“变坏”，而是它被网页、邮件、聊天消息里的内容诱导，去执行了你没授权的动作。把工具权限收窄、把外部输入当敌意、把关键步骤留给人确认，比换一个“更安全的模型”有效。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 21 ================= -->
+      <section class="sec" id="gohive">
+        <div class="sec-head">
+          <span class="sec-num">21</span>
+          <div><h2>附录：go_hive（Go 移植版）现在能做什么<a class="anchor-link" href="#gohive">#</a></h2>
+          <p class="sub">如果你在评估纯 Go 版本，先把预期放对。</p></div>
+        </div>
+
+        <p><code class="inline">./go_hive/go-hive</code> 是 Python 版的纯 Go 复刻，模块在 <code class="inline">go_hive/go-hive</code>。它已经有可运行的 <b>serve + 会话创建 + chat + SSE + 内置工具</b> 切片，但 colony 运行时和触发器生产链路没有闭合。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>能力</th><th>状态</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td><code class="inline">hive serve</code> / <code class="inline">hive chat</code></td><td>可用</td><td>P0 会话切片：创建会话、POST chat、SSE 事件、持久化 transcript</td></tr>
+              <tr><td>Web Dashboard</td><td>可用</td><td>前端已 vendor 到 <code class="inline">frontend/</code>，由 Go 服务托管</td></tr>
+              <tr><td>CLI 命令集</td><td>基本对齐</td><td>serve / open / queen / colony / session / chat / skill / mcp / janitor / debugger</td></tr>
+              <tr><td>触发器（cron / interval / webhook）</td><td><b>未接线</b></td><td>数据结构、cron 解析、REST 路由、定时循环和单测都在；但生产代码从不给 <code class="inline">Session.QueenExecutor</code> 赋值，也没有 <code class="inline">InjectTrigger</code> 实现，tick 只会更新倒计时，不会真正注入；<code class="inline">triggers.json</code> 启动时也不恢复</td></tr>
+              <tr><td>提醒中枢 ticker</td><td><b>未接线</b></td><td><code class="inline">Hub.Start</code> 生产零调用；idle nudge 等 source 未注册</td></tr>
+              <tr><td>Colony 运行时（worker 调度）</td><td>部分</td><td>代码和单测在，生产入口（Host.Start / SpawnBatch）没有调用者</td></tr>
+              <tr><td>终端 TUI</td><td>没有</td><td>与 Python 版一样，只有 CLI</td></tr>
+              <tr><td>工作目录绑定</td><td>没有</td><td>Queen 工具根 = 启动 cwd；Colony 会话 = Colony 目录；无 session 级字段</td></tr>
+              <tr><td>Claude Code queen</td><td>没有</td><td><code class="inline">qmail</code> 只保留 ID/Name/Title，没有 cwd 和执行桥</td></tr>
+              <tr><td>内置 git 工具</td><td>没有</td><td>与 Python 版相同，只能 terminal 跑 git</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>自己构建 / 运行</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code>cd go_hive/go-hive
+CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go build ./cmd/hive
+./hive serve --port 8788</code></pre>
+        </div>
+        <p class="small">Go 模块不依赖 cgo；SQLite 用 modernc.org/sqlite。完整门禁是 <code class="inline">make ci</code>（fmt / vet / test / cross / parity）。</p>
+
+        <div class="callout warn">
+          <span class="tag">结论</span>
+          <div><p>现在要把 Hive 用于真实工作，选 <b>Python 版</b>。go_hive 适合作为移植/性能/单二进制分发的评估对象；在触发器、Colony 运行时和工作目录这些关键能力接线之前，不能把它当等价替代。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 22 ================= -->
+      <section class="sec" id="trouble">
+        <div class="sec-head">
+          <span class="sec-num">22</span>
+          <div><h2>故障排查：先看这 12 个症状<a class="anchor-link" href="#trouble">#</a></h2>
+          <p class="sub">大部分“坏了”其实是模型没配、会话没加载或旧文档误导。</p></div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>症状</th><th>最可能的原因</th><th>处理</th></tr></thead>
+            <tbody>
+              <tr><td><code class="inline">hive: command not found</code></td><td>没进环境 / 没装</td><td>仓库里用 <code class="inline">uv run hive …</code>；或激活 <code class="inline">.venv</code>；或按 §02 安装</td></tr>
+              <tr><td>Dashboard 打开是空白</td><td>前端没构建 / 静态资源缺失</td><td>重跑 quickstart，或 <code class="inline">npm run frontend:build</code></td></tr>
+              <tr><td>发消息返回 503</td><td>会话没有模型（Chat 为 nil）</td><td>Models 页配主模型；检查 key / <code class="inline">api_key_env_var</code>；重启 serve</td></tr>
+              <tr><td>401 / 403</td><td>key 错、过期、provider 不匹配</td><td>Credentials 里重填；确认 <code class="inline">api_base</code> 与 provider 匹配</td></tr>
+              <tr><td>429</td><td>provider 限流</td><td>降并发、换 worker 模型、等额度恢复</td></tr>
+              <tr><td>Queen 一直“思考”</td><td>模型慢 / 工具卡住 / 网络</td><td>看 Workers 或 DebugPanel；必要时 Stop；查 <code class="inline">~/.hive/logs</code></td></tr>
+              <tr><td>定时任务不触发</td><td>服务没常驻 / Colony 会话没加载 / cron 时区错</td><td>确认 <code class="inline">hive serve</code> 在跑；打开 Colony；cron 按 UTC 换算；看 trigger 的 next-fire</td></tr>
+              <tr><td>错过的时间点没补跑</td><td>当前实现会静默跳过 missed tick</td><td>用 <code class="inline">/colony/resolve_missed</code> 或 UI 的 missed 流程；不要依赖自动补跑</td></tr>
+              <tr><td>Skill 不加载</td><td>项目级 skill 未信任 / 目录不在扫描路径</td><td><code class="inline">hive skill list</code> 看范围；<code class="inline">hive skill trust</code>；确认 SKILL.md 合法</td></tr>
+              <tr><td>MCP 工具看不到</td><td>server 没启动 / 工具被允许列表挡住 / 用了 as-cli</td><td><code class="inline">hive mcp health</code>；Tool Library 检查 allowlist；as-cli 用 <code class="inline">hive mcp run</code></td></tr>
+              <tr><td>端口被占用</td><td>已有另一个 serve</td><td><code class="inline">lsof -i :8787</code>；换 <code class="inline">--port</code> 或先停旧的</td></tr>
+              <tr><td>磁盘越来越大</td><td>日志 / transcript / 冷会话</td><td><code class="inline">hive janitor status</code> → <code class="inline">run</code> → <code class="inline">run --execute</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>诊断三件套</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>终端<button class="copy" type="button">复制</button></div>
+          <pre><code># 1) 服务是否健康、有几个会话
+curl -s http://127.0.0.1:8787/api/health | python3 -m json.tool
+
+# 2) 最近的错误日志
+tail -n 100 ~/.hive/logs/*.log
+
+# 3) 这个会话/触发器到底在不在
+curl -s http://127.0.0.1:8787/api/sessions/&lt;SESSION&gt;/triggers | python3 -m json.tool</code></pre>
+        </div>
+
+        <h3>旧文档避坑</h3>
+        <ul>
+          <li><code class="inline">hive run &lt;agent&gt;</code> 不存在；用 <code class="inline">hive open</code> 在 Web 里发任务。</li>
+          <li><code class="inline">agent.json</code> 的 nodes/edges / graph executor 是 V1 前的独立 agent 格式，不是 Colony 的运行方式。</li>
+          <li><code class="inline">core/framework/tui/</code> 已删除；没有 TUI 模式。</li>
+          <li>自动 Queen 路由（LLM 分类）已退役；现在由你选 Queen。</li>
+          <li><code class="inline">~/.hive/agents/queens/</code> 是旧布局；当前是 <code class="inline">~/.hive/queens/&lt;id&gt;/</code>。</li>
+        </ul>
+
+        <div class="callout tip">
+          <span class="tag">提问模板</span>
+          <div><p>去 Discord / GitHub 提问时，附上：Hive 版本（<code class="inline">hive --version</code>）、系统、复现步骤、<code class="inline">/api/health</code> 输出、相关日志的最后 30 行。不要贴 API Key 或完整会话内容。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 23 ================= -->
+      <section class="sec" id="cheat">
+        <div class="sec-head">
+          <span class="sec-num">23</span>
+          <div><h2>术语与速查<a class="anchor-link" href="#cheat">#</a></h2>
+          <p class="sub">贴在手边的一页。</p></div>
+        </div>
+
+        <h3>术语</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>词</th><th>一句话</th></tr></thead>
+            <tbody>
+              <tr><td><b>Queen</b></td><td>你对话的长期 agent，有角色、记忆、工具，负责理解目标和验收。</td></tr>
+              <tr><td><b>Colony</b></td><td>一个自包含的工作单元目录：Queen + Worker + Tracker + Plan + Skills + Triggers。</td></tr>
+              <tr><td><b>Worker</b></td><td>Queen 的克隆，一次一个任务，无长期记忆、不能提问、必须回报。</td></tr>
+              <tr><td><b>Tracker</b></td><td>Colony 的共享 SQLite 账本，一行一个工作单位。</td></tr>
+              <tr><td><b>Playbook</b></td><td>把一套验证过的方法跑在多行上，带重试、退避、限流、死信。</td></tr>
+              <tr><td><b>Skill</b></td><td>教 agent 一类任务怎么做；按需加载的 SKILL.md 文件夹。</td></tr>
+              <tr><td><b>Trigger</b></td><td>定时/事件唤醒器；timer（cron/interval）或 webhook。</td></tr>
+              <tr><td><b>Sentinel</b></td><td>可选的停车看护：nudge / done / escalate 给你。</td></tr>
+              <tr><td><b>Soul</b></td><td>Queen 自己写的“我变成了谁”，每日反思更新。</td></tr>
+              <tr><td><b>Queen Mail</b></td><td>Queen 之间互相写信的机制，可包含 Claude Code queen。</td></tr>
+              <tr><td><b>MCP</b></td><td>Model Context Protocol；外部工具 server 的统一接入方式。</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>路径</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>路径</th><th>内容</th></tr></thead>
+            <tbody>
+              <tr><td><code class="inline">~/.hive/configuration.json</code></td><td>全局配置</td></tr>
+              <tr><td><code class="inline">~/.hive/queens/&lt;id&gt;/</code></td><td>Queen 人格、Soul、Skills、DM 会话</td></tr>
+              <tr><td><code class="inline">~/.hive/colonies/&lt;name&gt;/</code></td><td>Colony 全部内容</td></tr>
+              <tr><td><code class="inline">~/.hive/colonies/&lt;name&gt;/tracker/tracker.db</code></td><td>共享账本</td></tr>
+              <tr><td><code class="inline">~/.hive/memories/</code></td><td>全局 / Queen / Colony 记忆</td></tr>
+              <tr><td><code class="inline">~/.hive/skills/</code></td><td>用户级 skill</td></tr>
+              <tr><td><code class="inline">~/.hive/credentials/</code></td><td>加密凭据库</td></tr>
+              <tr><td><code class="inline">~/.hive/logs/</code> · <code class="inline">event_logs/</code> · <code class="inline">llm_logs/</code></td><td>日志</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>命令</h3>
+        <div class="code" data-lang="bash">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span>最常用<button class="copy" type="button">复制</button></div>
+          <pre><code>hive open                          # 启动 + 打开 Dashboard
+hive serve --port 8787             # 只启动服务
+hive session list --cold           # 所有会话
+hive session stop &lt;id&gt;             # 停一个会话
+hive chat &lt;id&gt; "message"           # 给运行中的会话发消息
+hive queen list                    # 所有 Queen
+hive colony list                   # 所有 Colony
+hive colony info &lt;name&gt;            # Colony 详情
+hive skill list                    # 所有 skill
+hive mcp health                    # MCP 连通性
+hive janitor status                # 清理报告
+hive debugger                      # 浏览 LLM 日志</code></pre>
+        </div>
+
+        <h3>三条决策规则</h3>
+        <div class="cards">
+          <div class="card"><div class="k">任务</div><h4>能一句话说清？</h4><p>能 → 直接和 Queen 聊；不能 → 先聊清楚，再考虑 Colony。</p></div>
+          <div class="card"><div class="k">并行</div><h4>有 5 个以上同构单位？</h4><p>有 → 让 Queen 先做一条、写 Skill、再 fan out；没有 → 她一个人做更快。</p></div>
+          <div class="card"><div class="k">无人值守</div><h4>需要它在你不看时继续？</h4><p>需要 → 打开 Sentinel + 定时；同时接受“服务必须常驻、错过不补”的约束。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 24 ================= -->
+      <section class="sec" id="links">
+        <div class="sec-head">
+          <span class="sec-num">24</span>
+          <div><h2>学习路径与官方链接<a class="anchor-link" href="#links">#</a></h2>
+          <p class="sub">下一步该读什么、点哪里。</p></div>
+        </div>
+
+        <h3>三条路径</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>你现在</th><th>接下来 30 分钟</th><th>接下来 90 分钟</th></tr></thead>
+            <tbody>
+              <tr><td>刚装好</td><td>§03 发一个任务；§04 建一个 Colony；回答她的问题</td><td>§06 建一个每日定时；§07 用七要素重写任务；观察一次 Worker 并行</td></tr>
+              <tr><td>能跑通</td><td>§08 给 Queen 配模型；§10 写一个自己的 Skill</td><td>§13 接一个真实 API；§12 接一个 MCP；§14 开 Sentinel</td></tr>
+              <tr><td>要接系统</td><td>§16 改 configuration；§18 调 API</td><td>§19 做备份/迁移；§20 收权限；§21 评估 go_hive</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>官方资料</h3>
+        <ul>
+          <li><a href="https://github.com/aden-hive/hive">GitHub · aden-hive/hive</a></li>
+          <li><a href="https://github.com/aden-hive/hive/blob/main/README.md">README（英文，功能总览）</a></li>
+          <li><a href="https://github.com/aden-hive/hive/tree/main/docs">docs/（配置、工具、架构、key concepts）</a></li>
+          <li><a href="https://github.com/aden-hive/hive/blob/main/docs/configuration.md">docs/configuration.md（模型、端点、Queen Mail、Soul）</a></li>
+          <li><a href="https://github.com/aden-hive/hive/blob/main/docs/tools.md">docs/tools.md（内置工具与 MCP）</a></li>
+          <li><a href="https://github.com/aden-hive/hive/blob/main/docs/roadmap.md">docs/roadmap.md（V1 已交付 / 已退役 / 仍未做）</a></li>
+          <li><a href="https://discord.com/invite/MXE49hrKDk">Discord（提问与讨论）</a></li>
+        </ul>
+
+        <h3>如果你只记三件事</h3>
+        <div class="cards">
+          <div class="card"><div class="k">01</div><h4>Queen 是入口，不是搜索框</h4><p>给她结果、范围、验收标准，她会先做一条再放大；不要一上来就“帮我研究一下”。</p></div>
+          <div class="card"><div class="k">02</div><h4>进度在 Tracker，不在聊天里</h4><p>看 Data、让她用 SQL 查；不要靠滚动聊天记录判断做到哪了。</p></div>
+          <div class="card"><div class="k">03</div><h4>定时不是系统 cron</h4><p>服务要常驻、会话要加载、错过不补；把它当“应用内闹钟”，不是“保证送达的调度器”。</p></div>
+        </div>
+
+        <div class="callout note">
+          <span class="tag">版本</span>
+          <div><p>本手册对应 OpenHive <b>v1.0.14</b>（2026-11-19 实机）。Hive 迭代很快；如果某个按钮位置变了，以界面为准，整体模型（Queen / Colony / Worker / Tracker）不会变。</p></div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="row">
+          <span>Hive 中文使用手册 · 基于 OpenHive v1.0.14 实机部署</span>
+          <span>截图与示例：2026-11-19 · macOS · Python 3.14 / uv</span>
+        </div>
+        <p class="small" style="margin-top:10px">本手册是社区整理，不是官方文档；界面与行为以你安装的版本为准。官方文档见 <a href="https://github.com/aden-hive/hive/tree/main/docs">github.com/aden-hive/hive/docs</a>。</p>
+      </footer>
+    </div>
+  </main>
+</div>
+
+<dialog class="lightbox" id="lightbox">
+  <button class="close" type="button" aria-label="关闭">×</button>
+  <img alt="">
+</dialog>
+
+<button class="top-btn" id="topBtn" type="button" aria-label="回到顶部">↑</button>
+
+<script>
+/* theme */
+(function(){
+  const root=document.documentElement;
+  const saved=localStorage.getItem('hive-manual-theme');
+  const prefer=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initial=saved||(prefer?'dark':'light');
+  root.setAttribute('data-theme',initial);
+  const btn=document.getElementById('themeToggle');
+  const label=document.getElementById('themeLabel');
+  function sync(){label.textContent=root.getAttribute('data-theme')==='dark'?'切换到浅色':'切换到深色';}
+  sync();
+  btn&&btn.addEventListener('click',()=>{
+    const next=root.getAttribute('data-theme')==='dark'?'light':'dark';
+    root.setAttribute('data-theme',next);
+    localStorage.setItem('hive-manual-theme',next);
+    sync();
+  });
+})();
+
+/* mobile menu */
+(function(){
+  const sidebar=document.getElementById('sidebar');
+  const btn=document.getElementById('menuBtn');
+  btn&&btn.addEventListener('click',()=>sidebar.classList.toggle('open'));
+  sidebar&&sidebar.addEventListener('click',e=>{
+    if(e.target.closest('a')&&window.innerWidth<=900) sidebar.classList.remove('open');
+  });
+})();
+
+/* TOC search */
+(function(){
+  const input=document.getElementById('tocSearch');
+  const links=[...document.querySelectorAll('#toc a')];
+  input&&input.addEventListener('input',()=>{
+    const q=input.value.trim().toLowerCase();
+    links.forEach(a=>{
+      const hit=!q||a.textContent.toLowerCase().includes(q)||(a.dataset.kw||'').includes(q);
+      a.classList.toggle('hidden',!hit);
+    });
+    document.querySelectorAll('#toc .part').forEach(p=>{
+      let n=p.nextElementSibling, any=false;
+      while(n&&!n.classList.contains('part')){
+        if(n.tagName==='A'&&!n.classList.contains('hidden')) any=true;
+        n=n.nextElementSibling;
+      }
+      p.style.display=any?'':'none';
+    });
+  });
+})();
+
+/* scroll spy */
+(function(){
+  const links=[...document.querySelectorAll('#toc a')];
+  const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+  const sections=[...document.querySelectorAll('section[id]')];
+  if(!('IntersectionObserver'in window)) return;
+  const io=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(a=>a.classList.remove('active'));
+        const a=map.get(en.target.id);
+        if(a){a.classList.add('active');}
+      }
+    });
+  },{rootMargin:'-18% 0px -70% 0px',threshold:0});
+  sections.forEach(s=>io.observe(s));
+})();
+
+/* progress + top button */
+(function(){
+  const bar=document.getElementById('progress');
+  const top=document.getElementById('topBtn');
+  function onScroll(){
+    const h=document.documentElement;
+    const max=h.scrollHeight-h.clientHeight;
+    const p=max>0?Math.min(1,Math.max(0,h.scrollTop/max)):0;
+    bar.style.width=(p*100)+'%';
+    top.classList.toggle('show',h.scrollTop>600);
+  }
+  document.addEventListener('scroll',onScroll,{passive:true});
+  window.addEventListener('resize',onScroll);
+  onScroll();
+  top&&top.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+})();
+
+/* copy buttons */
+(function(){
+  document.querySelectorAll('.code .copy').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const code=btn.closest('.code').querySelector('pre code');
+      const text=code?code.innerText:'';
+      try{
+        await navigator.clipboard.writeText(text);
+        btn.textContent='已复制';
+      }catch(e){
+        const ta=document.createElement('textarea');
+        ta.value=text;document.body.appendChild(ta);ta.select();
+        try{document.execCommand('copy');btn.textContent='已复制';}catch(_){btn.textContent='复制失败';}
+        ta.remove();
+      }
+      setTimeout(()=>btn.textContent='复制',1600);
+    });
+  });
+})();
+
+/* lightbox */
+(function(){
+  const dlg=document.getElementById('lightbox');
+  const img=dlg.querySelector('img');
+  document.querySelectorAll('figure.shot img').forEach(src=>{
+    src.addEventListener('click',()=>{
+      img.src=src.src;img.alt=src.alt;
+      if(dlg.showModal) dlg.showModal(); else window.open(src.src,'_blank');
+    });
+  });
+  dlg.addEventListener('click',e=>{
+    if(e.target===dlg||e.target.classList.contains('close')) dlg.close();
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&dlg.open) dlg.close();
+  });
+})();
+</script>
+</body>
+</html>

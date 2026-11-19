@@ -2,6 +2,31 @@
 
 本文件记录 Go 移植（`github.com/aden-hive/hive-go`）的版本内容。上游 Python 版本的发布说明在仓库根目录的 [`CHANGELOG.md`](../../CHANGELOG.md)。
 
+## 1.0.16-go.1 — 2026-11-19
+
+对应上游 `aden-hive` / `aden-tools` 1.0.14（`c6c2cdcf`）。本版补齐 runtime spine 的方法层、自治层、沉淀层与能力边界，并修复 worker 身份与工具声明。
+
+### 新增
+- `run_worker` 闭环与 `[WORKER_REPORT]`（含 `duration_seconds`/`output_file`），worker 转录落盘与 `resume_worker_ids`。
+- overseer 工具面（`run_worker`/tracker/task）与 `serve --colony` 可对话会话。
+- `write_skill`/`skill_view`/`list_skills`；`run_playbook`（Go 原生 JSON；Python 脚本明确 unsupported）。
+- `QueenExecutor`/`InjectTrigger`：timer/webhook 唤醒与 `triggers.json` 重启恢复。
+- Sentinel 停车分类与升级落盘。
+- reflection 后 soul 自动沉淀。
+- MCP 启动装载：`mcp__<server>__<tool>` 注册进会话与 worker。
+- 看门狗异常告警（六类 + macOS 通知 + 去抖）。
+
+### 修复
+- fork 的 `worker.json` 不再写 Queen persona；`worker.json.tools` 真实生效。
+- 看门狗状态文件共用、变量名多字节、误报 dirty 三类问题。
+
+### 质量
+| 项 | 结果 |
+| --- | --- |
+| 测试 | 4,395（4395/4395 注解） |
+| parity 引用 | 4,645（3,674 test + 971 prod），0 missing |
+| 门禁 / QC / 冒烟 | 7/7、8/8、13/13 |
+
 ## 1.0.15-go.1 — 2026-11-19
 
 对应上游 `aden-hive` / `aden-tools` 1.0.14（提交 `c6c2cdcf`）。本版是 `1.0.14-go.1` 之后的行为对齐与安全修复版本，安装与升级无需迁移。

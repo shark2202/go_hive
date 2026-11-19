@@ -1,7 +1,7 @@
 # 交付报告（2026-11-19 13:50）
 
 > 口径：`RELEASE_PLAN.md` 的 G6 商业发布标准（R1–R10）。
-> 代码快照：主线 `c3880106`（tag `v1.0.15-go.1` 为 11:35 的发布快照，此后已补 `run_worker`、tracker、提醒中枢、judge、真流式）。
+> 代码快照：主线 `c3880106`（tag `v1.0.16-go.1` 为 11:35 的发布快照，此后已补 `run_worker`、tracker、提醒中枢、judge、真流式）。
 
 ## 1. 结论
 
@@ -14,7 +14,7 @@
 | R5 安全 | 部分满足：已修 3 个真实漏洞（附件读写 symlink 逃逸、任务体无限流、`/api` 点段 307），但**未做在线漏洞库比对**（`govulncheck` 装不上） |
 | R6 可靠性 | 满足：`-race` 全绿、故障注入与并发修复已合入 |
 | R7 可观测 | 满足：会话事件链、SSE、`/stats` 字段对齐、诊断包 |
-| R8 质量证据 | 满足：七道门禁、4,313 测试、QC 8/8、smoke 13/13、六平台归档校验 |
+| R8 质量证据 | 满足：七道门禁、4,395 测试、QC 8/8、smoke 13/13、六平台归档校验 |
 | R9 发布流程 | 满足：版本、CHANGELOG、发布说明、tag、归档 |
 | R10 真实第三方集成 | 不适用（用户决定 2026-11-19）：本阶段不提供第三方凭据，以支持矩阵「未验证」声明代替 |
 | **总判定** | **可运行的移植快照（试用版），不是「完整复刻交付」**。工程发布条件（构建/测试/打包/安全修复）成立；行为对齐条件（概念机制生产可达）不成立 |
@@ -40,14 +40,14 @@
 | 项 | 结果 | 复现命令 |
 | --- | --- | --- |
 | 全量门禁 | 退出码 0（fmt/vet/test/cross/parity/parity-targets/wiring-check） | `cd go_hive/go-hive && make ci` |
-| 测试 | **4,313**（全部带 parity 注解或豁免） | 同上 |
-| parity 引用 | **4,582** 条，0 失效文件 / 0 失效测试；含生产代码 **943** 条 0 失效符号 | `make parity-targets` |
+| 测试 | **4,395**（全部带 parity 注解或豁免） | 同上 |
+| parity 引用 | **4,645** 条，0 失效文件 / 0 失效测试；含生产代码 **971** 条 0 失效符号 | `make parity-targets` |
 | QC 全量 | **8/8 PASS**（含重跑 make ci 与冒烟） | `uv run --no-project python go_hive/scripts/qc_check.py --full --smoke` |
 | 集成冒烟 | **13/13 PASS**（真二进制 + 真 HTTP） | `bash go_hive/scripts/smoke.sh` |
 | 发布包 | 6 归档 + SHA256SUMS，`shasum -c` 全 OK | `bash go_hive/scripts/release.sh` |
 | 归档可用性 | 解压 darwin-arm64 → `--version` 正确，`/`、`/api/health`、`/assets/*` 全 200 | 见 §5 |
 | cgo | `import "C"` 计数 **0** | `grep -rn 'import "C"' --include=*.go .` |
-| 版本 | `hive 1.0.15-go.1` | `./dist/hive --version` |
+| 版本 | `hive 1.0.16-go.1` | `./dist/hive --version` |
 
 ## 3. 覆盖面
 
@@ -80,20 +80,20 @@
 
 ```
 go_hive/go-hive/dist/release/
-  hive-1.0.15-go.1-darwin-amd64.tar.gz   13.8 MB
-  hive-1.0.15-go.1-darwin-arm64.tar.gz   13.0 MB
-  hive-1.0.15-go.1-linux-amd64.tar.gz    13.8 MB
-  hive-1.0.15-go.1-linux-arm64.tar.gz    12.8 MB
-  hive-1.0.15-go.1-windows-amd64.zip     13.8 MB
-  hive-1.0.15-go.1-windows-arm64.zip     12.8 MB
+  hive-1.0.16-go.1-darwin-amd64.tar.gz   13.8 MB
+  hive-1.0.16-go.1-darwin-arm64.tar.gz   13.0 MB
+  hive-1.0.16-go.1-linux-amd64.tar.gz    13.8 MB
+  hive-1.0.16-go.1-linux-arm64.tar.gz    12.8 MB
+  hive-1.0.16-go.1-windows-amd64.zip     13.8 MB
+  hive-1.0.16-go.1-windows-arm64.zip     12.8 MB
   SHA256SUMS
 ```
 
 归档根目录：`hive[.exe]  LICENSE  NOTICE  THIRD_PARTY_NOTICES.md  README.md  SHA256SUMS`。
-独立验收（解压后直接运行）：`--version` = `hive 1.0.15-go.1`；`serve` 后 `/` 200、`/api/health` 200、`/assets/index-*.js` 200。
+独立验收（解压后直接运行）：`--version` = `hive 1.0.16-go.1`；`serve` 后 `/` 200、`/api/health` 200、`/assets/index-*.js` 200。
 
 ## 6. 未做（需发布权限或外部条件）
 
-1. **tag 已打但未推送**：`v1.0.15-go.1` 指向 `d1111162`；`git push origin v1.0.15-go.1` 会触发 `release.yml` 上传 Release。
+1. **tag 已打但未推送**：`v1.0.16-go.1` 指向 `d1111162`；`git push origin v1.0.16-go.1` 会触发 `release.yml` 上传 Release。
 2. 代码签名/公证（macOS notarization、Windows Authenticode）未做，需证书。
 3. R10 按决定不验证：以支持矩阵「未验证」声明为准，不写成可用。
