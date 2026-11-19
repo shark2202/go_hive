@@ -3,7 +3,10 @@ package server
 // Parity: core/framework/server/routes_tasks.py::register_routes
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
+	"io"
 	"math"
 	"net/http"
 
@@ -89,19 +92,32 @@ func handleGetTaskList(store *tasks.TaskStore, w http.ResponseWriter, r *http.Re
 }
 
 // readTaskJSONBody is the best-effort JSON body upstream reads: an
-// empty/malformed body (or a non-object) is treated as {}.
-func readTaskJSONBody(r *http.Request) map[string]any {
-	if r.Body == nil {
-		return map[string]any{}
+// empty/malformed body (or a non-object) is treated as {}. A body over the
+// shared JSON cap is refused instead of buffered, so the task routes answer
+// 413 like the other JSON routes rather than accepting unbounded input.
+func readTaskJSONBody(w http.ResponseWriter, r *http.Request) (map[string]any, error) {
+	if r == nil || r.Body == nil {
+		return map[string]any{}, nil
+	}
+	capped := http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
+	data, err := io.ReadAll(capped)
+	if err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			return nil, errBodyTooLarge
+		}
+		// A broken stream is as good as an empty body, matching the previous
+		// best-effort decode.
+		return map[string]any{}, nil
 	}
 	var parsed any
-	if err := json.NewDecoder(r.Body).Decode(&parsed); err != nil {
-		return map[string]any{}
+	if err := json.NewDecoder(bytes.NewReader(data)).Decode(&parsed); err != nil {
+		return map[string]any{}, nil
 	}
 	if m, ok := parsed.(map[string]any); ok {
-		return m
+		return m, nil
 	}
-	return map[string]any{}
+	return map[string]any{}, nil
 }
 
 // taskIDList mirrors Python's isinstance(i, int) over a JSON array: whole
@@ -136,7 +152,14 @@ func handleUnarchiveTaskList(store *tasks.TaskStore, w http.ResponseWriter, r *h
 		return
 	}
 
-	body := readTaskJSONBody(r)
+	body, err := readTaskJSONBody(w, r)
+	if errors.Is(err, errBodyTooLarge) {
+		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{
+			"error":      "Request body too large",
+			"session_id": raw,
+		})
+		return
+	}
 	taskIDs, ok := taskIDList(body["task_ids"])
 	if !ok {
 		writeJSON(w, http.StatusBadRequest, map[string]any{
