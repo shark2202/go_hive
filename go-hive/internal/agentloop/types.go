@@ -158,6 +158,13 @@ type AgentContext struct {
 	QueenSkillsCatalogProvider any
 	LoadedToolNamesProvider    any
 
+	// Reminder providers the server session runtime fills from its own stores.
+	// They are funnelled into ReminderAgentContext by NewReminderAgentContext;
+	// nil means "no data" and the matching reminder source self-skips.
+	OpenTasksProvider         func() []IdleTask
+	SessionGoalProvider       func() string
+	SentinelAutopilotProvider func() bool
+
 	ToolTierState any
 
 	StopAfterToolBatch func() bool
