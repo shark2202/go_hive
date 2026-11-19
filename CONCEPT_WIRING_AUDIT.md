@@ -17,7 +17,7 @@
 | improvement | 3 | 0 | 5 |
 | queen | 3 | 1 | 7 |
 | the_loop | 6 | 2 | 6 |
-| worker_agent | 0 | 0 | 0 |
+| worker_agent | 0 | 0 | 9 |
 
 ---
 
@@ -136,6 +136,25 @@
 | 框架注入提醒保持连贯 | `internal/agentloop/reminder_hub.go`、`loop.go:459,683,736` | 否。Hub 无 source 注册（见 coordination） | 未接 |
 
 **小结**：the_loop 的骨架（单 primitive、工具结果回注、迭代上限、cursor 持久化、usage 计量、手动 compact-and-fork）是真实运行的；但「流式」「并行只读工具」「judge」「stall/doom-loop」「park/resume」「自动压缩」「提醒」都不存在或不可达。概念文档描述的是完整上游 loop，Go 版目前是同步、无 judge、无停车的简化循环。
+
+## 7. worker_agent — 短命的并行克隆
+
+概念主张：worker 是 Queen loop 的克隆，带 worker prompt、Queen 工具的子集、更紧的预算、一个任务注入；专注/短命/fail-fast，不能升级、不能再委派；终态 `report_to_parent(status, summary, data)` → Queen 收到 `[WORKER_REPORT]`；有 grace iteration；通过 tracker / 自己的 task list / colony skills 共享；会话可崩溃恢复，`run_worker(resume_worker_ids=…)` 可续跑；大量工作以 headless 方式运行。
+
+| 机制 | 实现位置（file:line） | 是否有生产调用链（从 internal/cli / internal/server 入口） | 状态 |
+| --- | --- | --- | --- |
+| worker 是 Queen loop 的克隆（同一 `AgentLoop`） | `internal/colony/runtime.go:794-838`（`runWorker` 新建 `agentloop.AgentLoop`）、`internal/colony/worker.go`（`Worker` 状态/报告） | 否。`ColonyRuntime.SpawnBatch`（`runtime.go:480`）/`SpawnRun`（`run.go:220`）/`Host.Run`（`host.go:163`）无生产调用者；`serve --colony` 只构造 host（`cli/loader.go:406-444`） | 未接 |
+| worker prompt（聚焦、无升级、无委派、fail-fast 错误分类）真正注入 | `internal/colony/worker_definition.go:39`（`WorkerSystemPrompt`）、`:113`（`BuildSystemPrompt`）、`:94-96`（Transient/Structural 规则） | 否。`runWorker` 用 `systemPromptFor(spec)`（`runtime.go:677-681`），即磁盘 worker.json 的 `system_prompt`；`BuildSystemPrompt` 只被 `BuildMeta`（`worker_definition.go:179`）引用，而 `BuildMeta` 也零调用 | 未接：详细 worker 规则从未进入模型上下文 |
+| 工具子集 + 更紧预算（30/轮、硬停 90、200 终身、3+1 轮） | `internal/colony/runtime.go:699-705`（`workerTools`）、`:345-375`（keep set + tier gating）、`internal/colony/worker_loop_config.go:14-22`（默认值）、`:46`（`BuildWorkerLoopConfig`） | 否。工具与配置只在 colony runtime 内使用；该 runtime 无生产运行入口 | 未接 |
+| `report_to_parent(status, summary, data)` 终态工具 | `internal/agentloop/synthetic_tools.go:279-323`（`BuildReportToParentTool`，status enum/summary/data schema）、`internal/colony/runtime.go:702`（加入 worker 工具表）、`:709-711`（执行器记录 report） | 否。只有 colony worker 路径会加此工具；会话工具表不含；`HandleReportToParent`（`synthetic_tools.go:325`）也无调用者 | 未接 |
+| worker 报告 → Queen 的 `[WORKER_REPORT]` 回合 | `internal/colony/runtime.go:955-963`（发 `EventSubagentReport`）、`internal/eventbus/event_type.go:115` | 否。没有消费者把 worker report 写回 Queen conversation；`queen_orchestrator.go` 只处理 escalation | 未接 |
+| Grace iteration：预算耗尽后仅 `report_to_parent`/`task_update`/`tracker_upsert` 可执行 | `internal/agentloop/loop.go:600-615`、`internal/agentloop/types.go:88-92`（`graceTerminalTools`）、`worker_loop_config.go:15,47` | 否（生产）。loop 代码在，但唯一 `grace_iterations=1` 的 worker 路径无入口 | 未接 |
+| 结果共享：tracker / 自己的 task list / colony skills | tracker `internal/tracker/tools.go:808`；tasks `internal/tasks/register.go:5`；skills `internal/skills/skill_writer.go:169` | 否。三套工具都未装配到 worker 工具表（`worker_definition.go:75` 的提示反而声称有 task tools / tracker tools） | 未接 |
+| 会话崩溃恢复 + `run_worker(resume_worker_ids=…)` 续跑 | `internal/colony/resume.go:11-69`（会话目录探测）、`internal/colony/runtime.go:480`（SpawnBatch 无 resume 参数） | 否。`resume.go` 的函数零调用；没有 `run_worker` 工具，也没有 resume 参数/路由 | 未接 |
+| headless 运行 + Sentinel 升级人工 | `internal/sentinel/manager.go:99`、`internal/sentinel/escalation_source.go:70` | 否。没有 headless 入口（只有 `hive serve`），Sentinel manager 零生产调用 | 未接 |
+
+**小结**：worker_agent 在 Go 运行时没有任何生产路径——worker 的 loop、prompt、工具子集、预算、`report_to_parent`、grace、tracker/task/skills 共享、resume、headless 全部只存在于 `internal/colony` 的代码里，而 colony 运行本身没有被 `internal/cli`/`internal/server` 启动。worker_agent.md 描述的能力在当前 Go 服务里不可用。
+
 
 
 
