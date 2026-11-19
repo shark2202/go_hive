@@ -285,6 +285,13 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	// tool registry) is built so saved credentials are live from the start.
 	hiveserver.SyncCredentialEnv(home)
 
+	// MCP servers configured for this home are connected before any session
+	// exists: every catalogue built afterwards (queen chat, colony worker
+	// pool) starts with their namespace-prefixed tools. Unreachable servers
+	// degrade to a warning and stay visible in GET /api/mcp/servers.
+	stopMCP := r.startMCPRuntime(home)
+	defer stopMCP()
+
 	// Sentinel is process-wide: it owns the parked-queen ladder for every
 	// colony-queen chat session built below (nudge / done / escalate) and the
 	// outbound delivery drain. Without it the escalation source's gate never
@@ -440,6 +447,7 @@ func (r *Runner) newColonyHost(colonyPath, colonyID string, home hivehome.Home, 
 	fields := spec.HostFields()
 	toolbox := builtin.New(colonyPath)
 	baseTools, declaredTools, executeTool := colonyWorkerToolSurface(colonyPath, toolbox, home)
+	baseTools = withMCPWorkerTools(baseTools, declaredTools)
 	return colonyhost.New(colonyhost.Config{
 		ColonyID:    colonyID,
 		AgentSpec:   fields.AgentSpec,
