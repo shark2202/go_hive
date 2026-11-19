@@ -77,6 +77,10 @@ func SerializeRecord(rec *TaskRecord) map[string]any {
 	if rec.Owner != nil {
 		owner = *rec.Owner
 	}
+	blocksCopy := make([]int, len(blocks))
+	copy(blocksCopy, blocks)
+	blockedByCopy := make([]int, len(blockedBy))
+	copy(blockedByCopy, blockedBy)
 	return map[string]any{
 		"id":          rec.ID,
 		"subject":     rec.Subject,
@@ -84,8 +88,8 @@ func SerializeRecord(rec *TaskRecord) map[string]any {
 		"active_form": activeForm,
 		"owner":       owner,
 		"status":      string(rec.Status),
-		"blocks":      append([]int(nil), blocks...),
-		"blocked_by":  append([]int(nil), blockedBy...),
+		"blocks":      blocksCopy,
+		"blocked_by":  blockedByCopy,
 		"metadata":    CloneMap(metadata),
 		"created_at":  rec.CreatedAt,
 		"updated_at":  rec.UpdatedAt,
