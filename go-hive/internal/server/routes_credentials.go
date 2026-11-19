@@ -46,22 +46,28 @@ type CredentialRouteDeps struct {
 	Resync                 func() error
 	ValidateKey            func(providerID, apiKey string) (map[string]any, error)
 	PublishCredentialEvent func(connected bool, credentialID, provider string)
+	// SyncEnv mirrors saved credentials into the process environment after a
+	// write or resync. Nil installs the store-backed default, which is armed
+	// only when the caller supplied Home.
+	SyncEnv func()
 }
 
 type CredentialRoutes struct {
 	deps      CredentialRouteDeps
+	homeGiven bool
 	storeOnce sync.Once
 	store     credentialRouteStore
 	storeErr  error
 }
 
 func RegisterCredentialRoutes(mux *http.ServeMux, deps CredentialRouteDeps) {
+	homeGiven := deps.Home.Root != ""
 	if deps.Home.Root == "" {
 		if home, err := hivehome.Resolve(); err == nil {
 			deps.Home = home
 		}
 	}
-	routes := &CredentialRoutes{deps: deps}
+	routes := &CredentialRoutes{deps: deps, homeGiven: homeGiven}
 	mux.HandleFunc("GET /api/credentials/specs", routes.handleListSpecs)
 	mux.HandleFunc("GET /api/credentials/oauth-status", routes.handleOAuthStatus)
 	mux.HandleFunc("POST /api/credentials/resync", routes.handleResync)
@@ -88,6 +94,63 @@ func (rt *CredentialRoutes) specViews() []CredentialSpecView {
 		return nil
 	}
 	return rt.deps.Specs()
+}
+
+// CredentialEnvBindings projects the settings spec rows onto the credential
+// store → environment mapping used by the process-wide env sync.
+func CredentialEnvBindings(specs []CredentialSpecView) []credentials.EnvBinding {
+	bindings := make([]credentials.EnvBinding, 0, len(specs))
+	seen := map[string]bool{}
+	for _, spec := range specs {
+		envVar := strings.TrimSpace(spec.EnvVar)
+		credentialID := strings.TrimSpace(spec.CredentialID)
+		if credentialID == "" {
+			credentialID = strings.TrimSpace(spec.Name)
+		}
+		if envVar == "" || credentialID == "" || seen[envVar] {
+			continue
+		}
+		seen[envVar] = true
+		bindings = append(bindings, credentials.EnvBinding{
+			CredentialID:  credentialID,
+			EnvVar:        envVar,
+			CredentialKey: spec.CredentialKey,
+		})
+	}
+	return bindings
+}
+
+// SyncCredentialEnv exports every saved credential into the process
+// environment under the env names the settings page advertises. Serve calls
+// it once at startup; the credential routes call it again after a successful
+// save or resync so a new key takes effect without a restart.
+func SyncCredentialEnv(home hivehome.Home) credentials.EnvSyncResult {
+	if home.Root == "" {
+		return credentials.EnvSyncResult{}
+	}
+	return credentials.SyncEnvFromStore(
+		home.CredentialsDir(),
+		CredentialEnvBindings(credentialSpecsFromCatalog()),
+	)
+}
+
+// syncEnv runs the post-write env refresh. Tests and alternate callers can
+// replace it through CredentialRouteDeps.SyncEnv; the default only runs when
+// the caller supplied Home, so route tests that use in-memory stores never
+// touch a real credential directory.
+func (rt *CredentialRoutes) syncEnv() {
+	if rt.deps.SyncEnv != nil {
+		rt.deps.SyncEnv()
+		return
+	}
+	if !rt.homeGiven {
+		return
+	}
+	specs := rt.specViews()
+	if len(specs) == 0 {
+		return
+	}
+	credentials.SyncEnvFromStore(rt.deps.Home.CredentialsDir(), CredentialEnvBindings(specs))
 }
 
 func (rt *CredentialRoutes) adenKeyPresent() bool {
@@ -335,6 +398,7 @@ func (rt *CredentialRoutes) handleSaveCredential(w http.ResponseWriter, r *http.
 			return
 		}
 		rt.publishCredential(true, credentials.AdenCredentialID)
+		rt.syncEnv()
 		writeJSON(w, http.StatusCreated, map[string]any{"saved": credentials.AdenCredentialID})
 		return
 	}
@@ -360,6 +424,7 @@ func (rt *CredentialRoutes) handleSaveCredential(w http.ResponseWriter, r *http.
 		return
 	}
 	rt.publishCredential(true, credentialID)
+	rt.syncEnv()
 	writeJSON(w, http.StatusCreated, map[string]any{"saved": credentialID})
 }
 
@@ -501,6 +566,7 @@ func (rt *CredentialRoutes) handleResync(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	rt.publishCredential(true, "<aden_resync>")
+	rt.syncEnv()
 	writeJSON(w, http.StatusOK, map[string]any{
 		"synced":               true,
 		"accounts_by_provider": rt.accountsByProvider(),

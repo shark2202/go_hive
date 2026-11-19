@@ -657,3 +657,112 @@ func TestCredentialRoutesPublishesProviderEvents(t *testing.T) {
 		t.Fatalf("delete event = %#v", events[1])
 	}
 }
+
+// Parity-exempt: the Go-only env bridge must run after a dashboard save; no upstream HTTP test asserts process-environment updates.
+func TestCredentialRoutesSaveRefreshesProcessEnv(t *testing.T) {
+	calls := 0
+	mux := credentialRouteTestMux(CredentialRouteDeps{
+		Store:   &credentialRouteTestStore{},
+		SyncEnv: func() { calls++ },
+	})
+	recorder, _ := doSessionJSON(t, mux, http.MethodPost, "/api/credentials",
+		`{"credential_id":"brave_search","keys":{"api_key":"sk-test"}}`)
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if calls != 1 {
+		t.Fatalf("env sync calls = %d, want 1", calls)
+	}
+}
+
+// Parity-exempt: resync pulls fresh account tokens, so the Go-only env bridge runs again; no upstream HTTP test asserts it.
+func TestCredentialRoutesResyncRefreshesProcessEnv(t *testing.T) {
+	t.Setenv(credentials.AdenEnvVar, "aden-key")
+	resynced, syncs := 0, 0
+	mux := credentialRouteTestMux(CredentialRouteDeps{
+		Store:   credentials.ForTesting(nil),
+		Resync:  func() error { resynced++; return nil },
+		SyncEnv: func() { syncs++ },
+	})
+	recorder, body := doSessionJSON(t, mux, http.MethodPost, "/api/credentials/resync", "")
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if body["synced"] != true {
+		t.Fatalf("synced = %v", body["synced"])
+	}
+	if resynced != 1 || syncs != 1 {
+		t.Fatalf("resynced = %d, env syncs = %d", resynced, syncs)
+	}
+}
+
+// Parity-exempt: end-to-end dashboard save path — the saved key must be readable through the env var tools call.
+func TestCredentialRoutesSaveInjectsProcessEnv(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	key, err := credentials.GenerateFernetKey()
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	t.Setenv(credentials.CredentialKeyEnvVar, key)
+	t.Setenv("HIVE_TEST_DASHBOARD_KEY", "")
+
+	specs := []CredentialSpecView{{
+		Name:                  "brave_search",
+		CredentialID:          "brave_search",
+		EnvVar:                "HIVE_TEST_DASHBOARD_KEY",
+		DirectAPIKeySupported: true,
+		CredentialKey:         "api_key",
+	}}
+	mux := credentialRouteTestMux(CredentialRouteDeps{
+		Home:  hivehome.Home{Root: home},
+		Specs: func() []CredentialSpecView { return specs },
+	})
+	recorder, _ := doSessionJSON(t, mux, http.MethodPost, "/api/credentials",
+		`{"credential_id":"brave_search","keys":{"api_key":"sk-dashboard"}}`)
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if got := os.Getenv("HIVE_TEST_DASHBOARD_KEY"); got != "sk-dashboard" {
+		t.Fatalf("env = %q, want the key saved from the dashboard", got)
+	}
+}
+
+// Parity-exempt: serve startup exports the catalog providers' saved keys before tools are built; no upstream Go startup test exists.
+func TestSyncCredentialEnvExportsCatalogProviderKey(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	key, err := credentials.GenerateFernetKey()
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	t.Setenv(credentials.CredentialKeyEnvVar, key)
+
+	specs := credentialSpecsFromCatalog()
+	if len(specs) == 0 {
+		t.Skip("model catalog has no API-key providers")
+	}
+	spec := specs[0]
+	if spec.EnvVar == "" || spec.CredentialID == "" {
+		t.Fatalf("catalog spec = %#v", spec)
+	}
+	t.Setenv(spec.EnvVar, "")
+
+	storage, err := credentials.NewEncryptedFileStorage(filepath.Join(home, "credentials"), key)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	credential := credentials.NewCredentialObject(spec.CredentialID)
+	credential.Keys.Set(credentials.NewCredentialKey("api_key", "sk-catalog-saved"))
+	if err := storage.Save(credential); err != nil {
+		t.Fatalf("save credential: %v", err)
+	}
+
+	result := SyncCredentialEnv(hivehome.Home{Root: home})
+	if got := os.Getenv(spec.EnvVar); got != "sk-catalog-saved" {
+		t.Fatalf("%s = %q, want the saved key", spec.EnvVar, got)
+	}
+	if len(result.Injected) != 1 || result.Injected[0] != spec.EnvVar {
+		t.Fatalf("injected = %#v", result.Injected)
+	}
+}
