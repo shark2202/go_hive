@@ -4,14 +4,26 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/llm"
+)
+
+// chatStreamID and chatNodeID are the upstream queen identifiers: the
+// dashboard's session SSE channel only treats a stream as client-facing when
+// it is the queen stream.
+const (
+	chatStreamID = "queen"
+	chatNodeID   = "queen"
 )
 
 // chatIdentityPrompt is the system prompt a chat session's queen starts with.
@@ -43,6 +55,14 @@ type ChatRuntimeDeps struct {
 	Execute func(ctx context.Context, name string, input map[string]any) (content string, isError bool, err error)
 	Store   agentloop.ConversationStore
 	Root    string
+	// Bus is the session's event bus. When set, the runtime mirrors the
+	// upstream agent loop's emissions (execution / loop lifecycle, assistant
+	// text, tool calls, per-LLM-call usage) so the dashboard's session SSE
+	// channel and /events/history can follow the turn instead of hanging on
+	// "Working…" until the next reload.
+	Bus *eventbus.EventBus
+	// SessionID scopes published execution ids and the session event log.
+	SessionID string
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
@@ -54,6 +74,10 @@ type ChatRuntime struct {
 	agentCtx *agentloop.AgentContext
 	conv     *agentloop.NodeConversation
 	store    agentloop.ConversationStore
+
+	bus       *eventbus.EventBus
+	sessionID string
+	model     string
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -84,12 +108,14 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	runtime := &ChatRuntime{
-		deps:   deps,
-		store:  store,
-		ctx:    ctx,
-		cancel: cancel,
-		wake:   make(chan struct{}, 1),
-		done:   make(chan struct{}),
+		deps:      deps,
+		store:     store,
+		bus:       deps.Bus,
+		sessionID: deps.SessionID,
+		ctx:       ctx,
+		cancel:    cancel,
+		wake:      make(chan struct{}, 1),
+		done:      make(chan struct{}),
 	}
 
 	agentCtx := &agentloop.AgentContext{
@@ -125,6 +151,19 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	runtime.agentCtx = agentCtx
 	runtime.conv = conv
 	runtime.loop = agentloop.NewAgentLoop(agentloop.DefaultLoopConfig(), runtime.executeTool)
+
+	if namer, ok := deps.LLM.(llm.ModelNamer); ok {
+		runtime.model = namer.ModelName()
+	}
+	// The dashboard's /events/history reads <session dir>/events.jsonl — the
+	// same file the bus appends every published event to. Wiring it here keeps
+	// the live SSE channel and the reload history consistent.
+	if runtime.bus != nil && deps.Root != "" {
+		if err := runtime.bus.SetSessionLog(filepath.Join(deps.Root, "events.jsonl"), 0); err != nil {
+			log.Printf("chat runtime %s: session event log unavailable: %v", deps.SessionID, err)
+		}
+	}
+
 	go runtime.run()
 	return runtime, nil
 }
@@ -183,6 +222,10 @@ func (r *ChatRuntime) Close() error {
 
 	r.cancel()
 	<-r.done
+	if r.bus != nil {
+		// Flushes any pending delta snapshots and releases the session log fd.
+		r.bus.CloseSessionLog()
+	}
 	if r.store == nil {
 		return nil
 	}
@@ -215,25 +258,181 @@ func (r *ChatRuntime) run() {
 
 // runTurn mirrors the upstream drain: the user message joins the conversation
 // stamped with its arrival time, then the loop runs until the model stops
-// calling tools.
+// calling tools. Each step is mirrored onto the session event bus with the
+// upstream agent-loop event names so the dashboard follows the turn live.
 func (r *ChatRuntime) runTurn(message string) {
+	executionID := newChatExecutionID()
+	emitter := r.newTurnEmitter(executionID)
+	if emitter != nil {
+		emitter.executionStarted(message)
+		r.agentCtx.ExecutionID = executionID
+		r.agentCtx.Observer = emitter
+		defer func() { r.agentCtx.Observer = nil }()
+	}
+
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
 	if _, err := r.conv.AddUserMessage("["+stamp+"] "+message, agentloop.UserMessageOptions{
 		IsClientInput: true,
 	}); err != nil {
+		emitter.executionFailed(err)
 		r.setLastError(err)
 		return
 	}
 	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.deps.Tools)
 	if err != nil {
+		// A cancelled turn (session teardown) is not a failure worth
+		// broadcasting: the runtime is going away, not the model failing.
+		if r.ctx.Err() == nil {
+			emitter.executionFailed(err)
+		}
 		r.setLastError(err)
 		return
 	}
 	if !result.Success {
-		r.setLastError(errors.New("server: chat turn did not complete"))
+		err := errors.New("server: chat turn did not complete")
+		emitter.executionFailed(err)
+		r.setLastError(err)
 		return
 	}
+	emitter.executionCompleted(result.InnerTurns)
 	r.setLastError(nil)
+}
+
+// newChatExecutionID returns the per-turn execution id the loop and the
+// published events carry. Parity: framework/host/execution_manager.py uses a
+// fresh uuid per queen execution.
+func newChatExecutionID() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return fmt.Sprintf("exec-%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b[:])
+}
+
+// chatTurnEmitter publishes one turn's progress onto the session bus using
+// the upstream event names and payload shapes. Nil-receiver methods are
+// no-ops so a session without a bus pays no branching cost at each call site.
+//
+// Parity: framework/agent_loop/internals/event_publishing.py
+// Parity: framework/host/execution_manager.py::_run_execution
+type chatTurnEmitter struct {
+	bus           *eventbus.EventBus
+	streamID      string
+	nodeID        string
+	executionID   string
+	model         string
+	maxIterations int
+}
+
+func (r *ChatRuntime) newTurnEmitter(executionID string) *chatTurnEmitter {
+	if r == nil || r.bus == nil {
+		return nil
+	}
+	maxIterations := 0
+	if r.loop != nil {
+		maxIterations = r.loop.Config.MaxIterations
+	}
+	return &chatTurnEmitter{
+		bus:           r.bus,
+		streamID:      chatStreamID,
+		nodeID:        chatNodeID,
+		executionID:   executionID,
+		model:         r.model,
+		maxIterations: maxIterations,
+	}
+}
+
+// executionStarted opens the turn: execution_started, an EXECUTING loop state
+// (the snapshot derives is_executing from it), and the loop-started boundary.
+func (e *chatTurnEmitter) executionStarted(message string) {
+	if e == nil {
+		return
+	}
+	e.bus.EmitExecutionStarted(e.streamID, e.executionID,
+		map[string]any{"message": message}, nil, nil)
+	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "executing", &e.executionID, nil, nil, nil)
+	maxIterations := e.maxIterations
+	if maxIterations <= 0 {
+		maxIterations = agentloop.DefaultLoopConfig().MaxIterations
+	}
+	e.bus.EmitNodeLoopStarted(e.streamID, e.nodeID, &e.executionID, &maxIterations)
+}
+
+// Parity: framework/agent_loop/agent_loop.py::_publish_iteration
+func (e *chatTurnEmitter) IterationStarted(iteration int) {
+	if e == nil {
+		return
+	}
+	e.bus.EmitNodeLoopIteration(e.streamID, e.nodeID, iteration, &e.executionID, nil)
+}
+
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_text_delta
+// (queen streams publish client_output_delta, not llm_text_delta)
+func (e *chatTurnEmitter) AssistantText(content, snapshot string, iteration int) {
+	if e == nil {
+		return
+	}
+	e.bus.EmitClientOutputDelta(e.streamID, e.nodeID, content, snapshot, &e.executionID, &iteration, 0)
+}
+
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_llm_turn_complete
+func (e *chatTurnEmitter) LLMTurnComplete(completion llm.Completion, iteration int) {
+	if e == nil {
+		return
+	}
+	model := completion.Model
+	if model == "" {
+		model = e.model
+	}
+	e.bus.EmitLLMTurnComplete(e.streamID, e.nodeID,
+		completion.StopReason, model,
+		completion.InputTokens, completion.OutputTokens,
+		completion.CachedTokens, completion.CacheCreationTokens,
+		completion.CostUSD, nil,
+		&e.executionID, &iteration, nil, nil, nil, nil)
+}
+
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_tool_started
+func (e *chatTurnEmitter) ToolCallStarted(call agentloop.ToolCallRequest) {
+	if e == nil {
+		return
+	}
+	e.bus.EmitToolCallStarted(e.streamID, e.nodeID, call.ID, call.Name, call.Input, &e.executionID)
+}
+
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_tool_completed
+func (e *chatTurnEmitter) ToolCallCompleted(call agentloop.ToolCallRequest, result agentloop.ToolResult) {
+	if e == nil {
+		return
+	}
+	e.bus.EmitToolCallCompleted(e.streamID, e.nodeID, call.ID, call.Name, result.Content, result.IsError, &e.executionID)
+}
+
+// executionCompleted closes a successful turn. loop_state_changed lands last:
+// the dashboard clears its "Working…" spinner on it (and on
+// execution_completed), and the snapshot then reports idle instead of busy.
+func (e *chatTurnEmitter) executionCompleted(iterations int) {
+	if e == nil {
+		return
+	}
+	e.bus.EmitNodeLoopCompleted(e.streamID, e.nodeID, iterations, &e.executionID)
+	turnDone := "turn_done"
+	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "awaiting_user", &e.executionID, &turnDone, nil, nil)
+	e.bus.EmitExecutionCompleted(e.streamID, e.executionID,
+		map[string]any{"status": "completed"}, nil, nil)
+}
+
+// executionFailed makes a broken turn visible: execution_failed carries the
+// error text (the dashboard renders it as a system bubble from history) and
+// the loop state drops out of EXECUTING so the spinner stops.
+func (e *chatTurnEmitter) executionFailed(err error) {
+	if e == nil || err == nil {
+		return
+	}
+	message := err.Error()
+	parkReason := "llm_error"
+	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "interrupted", &e.executionID, &parkReason, nil, nil)
+	e.bus.EmitExecutionFailed(e.streamID, e.executionID, message, nil, nil)
 }
 
 func (r *ChatRuntime) setLastError(err error) {

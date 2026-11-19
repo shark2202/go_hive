@@ -163,6 +163,31 @@ type AgentContext struct {
 	StopAfterToolBatch func() bool
 
 	PivotPayloadSink any
+
+	// Observer receives live turn progress so a host can mirror the loop's
+	// upstream EventBus emissions without this package importing the bus.
+	Observer LoopObserver
+}
+
+// LoopObserver receives live progress from ExecuteTurn. The server's chat
+// runtime implements it to publish the same events the upstream agent loop
+// emits (text, tool calls, per-LLM-call usage) while the turn is running.
+//
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_text_delta
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_llm_turn_complete
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_tool_started
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_tool_completed
+type LoopObserver interface {
+	// IterationStarted fires once per inner turn, right before the LLM call.
+	IterationStarted(iteration int)
+	// LLMTurnComplete fires after each successful LLM call with its usage.
+	LLMTurnComplete(completion llm.Completion, iteration int)
+	// AssistantText fires for each assistant message the model produced.
+	AssistantText(content, snapshot string, iteration int)
+	// ToolCallStarted fires immediately before a tool executes.
+	ToolCallStarted(call ToolCallRequest)
+	// ToolCallCompleted fires with the result the tool returned.
+	ToolCallCompleted(call ToolCallRequest, result ToolResult)
 }
 
 type CurrentToolNamer interface {

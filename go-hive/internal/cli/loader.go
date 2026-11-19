@@ -501,10 +501,12 @@ func (r *Runner) createChatSession(
 		sessionDir := filepath.Join(home.QueensDir(), "default", "sessions", sessionID)
 		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
-			LLM:     provider,
-			Tools:   tools.Defs(),
-			Execute: tools.Execute,
-			Root:    sessionDir,
+			LLM:       provider,
+			Tools:     tools.Defs(),
+			Execute:   tools.Execute,
+			Root:      sessionDir,
+			Bus:       record.EventBus,
+			SessionID: sessionID,
 		})
 		if err != nil {
 			fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, err)

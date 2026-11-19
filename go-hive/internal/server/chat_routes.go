@@ -203,6 +203,19 @@ func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps Chat
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
+	// Parity: framework/server/routes_events.py::handle_events — a fresh
+	// subscriber always gets a synthesized session_snapshot as the first
+	// frame, so the dashboard rehydrates "queen busy / awaiting input" before
+	// any live event and never starts from a stale spinner.
+	snapshot := eventbus.ComputeSessionSnapshot(session.EventBus)
+	snapshotEvent := eventbus.NewAgentEvent(eventbus.EventSessionSnapshot, chatStreamID)
+	snapshotEvent.NodeID = eventbus.StrPtr(chatNodeID)
+	if executionID, ok := snapshot["current_execution_id"].(string); ok && executionID != "" {
+		snapshotEvent.ExecutionID = eventbus.StrPtr(executionID)
+	}
+	snapshotEvent.Data = snapshot
+	queue <- snapshotEvent.ToDict()
+
 	heartbeat := time.NewTicker(sessionEventsHeartbeatInterval)
 	defer heartbeat.Stop()
 	for {
