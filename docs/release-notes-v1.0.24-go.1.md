@@ -10,7 +10,7 @@
 - **预载会话 SkillsCatalog**：`serve --colony` 预加载会话与标准会话同源注入技能目录。
 - **doom-loop park reason**：chat 失败分支保留 `doom_loop`，事件、park 状态与 `pending_input` 一致。
 - **judge criteria**：chat Queen 可从 colony goal 继承标准并 `ConfigureJudge`；overseer 无 spec 时继承 goal criteria。
-- **Queen 两阶段**：`InitialPhase` 落 `meta.json`，重启可恢复；`GET /api/queen/{id}/tools` 有 phase，PATCH 刷新真正作用于会话工具集。
+- **Queen 两阶段**：`InitialPhase` 落 `meta.json`，重启可恢复；phase 在 `GET /api/sessions/{id}`（`queen_phase`）与 `GET /api/sessions/{id}/tools`（`phase`）可见，PATCH 刷新真正作用于会话工具集。
 - **Queen/overseer 桥接**：绑定 colony 且有 live overseer 时，客户端消息、worker report、trigger 只进 overseer；overseer 回复经 session bridge 以 queen stream 呈现；chat Queen 保留为前端。首次中继随消息带 skills 目录。
 
 ## 质量
