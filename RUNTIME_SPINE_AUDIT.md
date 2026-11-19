@@ -1,6 +1,7 @@
 # Go 运行时 × Runtime Spine 八层接线审计
 
 - 审计基线：`4daf4222db49e1013e4543c808d67128342f3750`（`docs: R1 更新为 48/10/22 并记录新发现缺陷`，2026-11-19 14:04 CST）
+- 更新：worker 身份与声明工具两行已按 `193ace3d`（`al-worker-identity`）修正，其余行仍以基线为准
 - 审计日期：2026-11-19
 - 审计对象：`docs/key_concepts/runtime_spine.md` 的八层栈；Go 模块根为 `go_hive/go-hive/`
 - 分层依据说明：`runtime_spine.md` 在审计基线提交中尚未入库（`git status` 为 `??`），本审计按工作区现有文本核对八层定义，不把该文件计入本次提交。
@@ -82,10 +83,10 @@
 | Queen 用 `run_worker` 运行时扩展 | `internal/colony/queen_tools.go:75/203`；`internal/cli/session_tools.go:88/227`；`internal/server/chat_runtime.go:807/824` | 会话工具表常驻 `run_worker`；`toolsForTurn` 在未绑 colony 时过滤；绑定后 `SpawnBatchWithOptions` 并启动软/硬超时看门狗 | 已接 | L | 只有带 `ChatRuntime` 的 chat 会话；`serve --colony` 预载会话不可用；`resume_worker_ids` 显式不支持 |
 | Worker 是同一 loop + 终态报告 | `internal/colony/runtime.go:864/902/959`；`internal/colony/queen_tools.go:457`；`internal/server/chat_runtime.go:841` | `spawnBatchOn` → `runGatedWorker` → `runWorker` → `publishReport` → `SUBAGENT_REPORT` → `[WORKER_REPORT]` | 已接 | L | 报告缺 `duration_seconds`；overseer 报告被跳过；预载 colony 无 chat runtime 时无人消费 |
 | Colony overseer 是 client-facing Queen | `internal/colony/runtime.go:931-956`；`internal/cli/loader.go:464/494` | `StartOverseer` → `runOverseer` → 跑一轮 `ExecuteTurn` 后 `<-ctx.Done()` | 未接 | C | 工具面只有 builtin；无 `run_worker`/tracker/task；不消费 chat 输入；不共享 chat Queen 的对话 |
-| Worker 是“聚焦克隆”：worker prompt + 配置的工具子集 | `internal/colony/worker_definition.go:39/113`；`internal/cli/loader.go:962`；`internal/colony/runtime.go:754` | fork 写 `worker.json.system_prompt`；`runWorker` 用 `systemPromptFor(spec)` | 未接 | C | fork 把 Queen persona 写进 worker prompt；`worker_definition.BuildSystemPrompt` 零调用；`worker.json.tools` 不参与；worker 拿全量 builtin |
+| Worker 是“聚焦克隆”：worker prompt + 配置的工具子集 | `internal/colony/worker_definition.go:39/113`；`internal/cli/colony_worker_definition.go`；`internal/colony/runtime.go` | fork 写 `worker.json.system_prompt`（`BuildSystemPrompt`）；`runWorker` 用 `systemPromptFor(spec)`；`selectWorkerDeclaredTools` 应用 `worker.json.tools` | 已接 | L | `193ace3d` 修复：不再写 Queen persona，声明工具按分类展开并执行；仍缺 `loop_config`/`identity_prompt`/skills 字段 |
 | Worker 崩溃恢复 / `resume_worker_ids` 续跑 | `internal/colony/queen_tools.go:224`；`internal/colony/runtime.go:874`；`internal/colony/resume.go:11-69` | `resume_worker_ids` 直接返回 unsupported | 未接 | — | worker 转录不落盘；`resume.go` 三函数零生产调用 |
 
-**小结**：colony 从“能加载、能起一个空转 Queen”变成“chat Queen 能在绑定的 colony 里 fan-out”。`run_worker`、worker 报告都真正接通。但 colony 自己的 overseer 仍是影子 Queen；`serve --colony` 预载会话没有 chat runtime；fork 出来的 worker 还带着 Queen 的人格和全量 builtin。组织层完成的是“可派的 chat Queen”，不是“colony 自己的 Queen”。
+**小结**：colony 从“能加载、能起一个空转 Queen”变成“chat Queen 能在绑定的 colony 里 fan-out”。`run_worker`、worker 报告、worker 身份与声明工具都真正接通（`193ace3d`）。但 colony 自己的 overseer 仍是影子 Queen；`serve --colony` 预载会话没有 chat runtime。组织层完成的是“可派的 chat Queen”，不是“colony 自己的 Queen”。
 
 ---
 
@@ -190,7 +191,7 @@
 | 机制 | 实现位置（file:line） | 生产调用链 | 状态 | 证据 | 缺口 |
 | --- | --- | --- | --- | --- | --- |
 | Chat 会话工具目录 | `internal/cli/session_tools.go:54-130`；`internal/server/chat_runtime.go:785/918` | `newSessionToolCatalogue` → builtin + 23 个 integration installer + senders + task + `run_worker` + tracker + `ask_user` | 已接 | L | 工具数量大；名称冲突保留 builtin；扫描器默认关闭 |
-| Worker 工具面 | `internal/colony/runtime.go:754`；`internal/cli/loader.go:464`；`internal/colony/worker_definition.go:9` | `workerTools` = `r.tools`（builtin）+ tracker + `report_to_parent` | 部分 | C | 只有 builtin；`worker.json.tools` 完全不参与；没有 integration/MCP；worker 的“Queen 工具子集”没有实现 |
+| Worker 工具面 | `internal/colony/runtime.go`；`internal/cli/colony_worker_definition.go`；`internal/colony/worker_definition.go:9` | `workerTools` = builtin + tracker + `report_to_parent` + `worker.json.tools` 展开项 | 已接 | L | `193ace3d` 后声明工具生效；仍无 MCP 工具，未声明的 integration 不下发 |
 | Colony overseer 工具面 | `internal/colony/runtime.go:754/931`；`internal/cli/loader.go:464` | overseer 走 `workerTools`，stream 非 `worker:` 前缀 | 未接 | C | 无 `run_worker`/tracker/task；只有 builtin，仍是影子 Queen |
 | MCP 服务器配置管理 | `internal/server/routes_mcp.go:61-90`；`internal/server/app.go:157` | `GET/POST/DELETE /api/mcp/servers*` → `mcpregistry.NewAtHome` | 已接 | C | 只管理配置文件、健康检查；不会把 MCP 工具装进任何会话 |
 | MCP 客户端 / 工具装载 | `internal/tools/mcp_registry.go:138`（`LoadMCPConfig`）；`internal/tools/mcp_client.go:65`（`NewMCPClient`）；`internal/tools/registry.go:128` | 无 | 未接 | — | 生产零调用 `LoadMCPConfig` / `NewMCPClient`；`mcpManager` 只在测试赋值；`sessionToolCatalogue` 从不配置 MCP |
