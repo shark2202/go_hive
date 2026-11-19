@@ -137,6 +137,9 @@ type ChatRuntime struct {
 	// stopped by Close.
 	hub        *agentloop.ReminderHub
 	idleSource *agentloop.IdleNudgeSource
+	// unregisterReminders removes this runtime's hub from the REST reminder
+	// mirror when the session closes.
+	unregisterReminders func()
 	// sentinelSource is the parked-queen ladder (nudge / done / escalate)
 	// registered on the hub when a process-wide Sentinel manager exists.
 	sentinelSource *sentinel.EscalationSource
@@ -163,6 +166,12 @@ type ChatRuntime struct {
 	colonyMu      sync.Mutex
 	colonyRuntime *colony.ColonyRuntime
 	colonyUnsub   func()
+	// colonyBridgeUnsub mirrors the bound colony's lifecycle events onto the
+	// session bus; colonyBridgeStream guards against re-subscribing the same
+	// runtime on every session lookup.
+	colonyBridgeUnsub  func()
+	colonyBridgeStream string
+	bridgeMu           sync.Mutex
 	// pendingQuestions is the ask_user question the current turn parked on.
 	// It survives until the next user message (the answer) starts a turn.
 	pendingQuestions []map[string]any
@@ -280,6 +289,9 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	// be polled. The autopilot gate it sets is read by that same binding.
 	runtime.configureSentinel()
 	runtime.configureReminders(deps.IdleNudge)
+	// Publish the session's loop hub for the REST reminder mirror. The mirror
+	// is read-only; the loop remains the only consumer that drains it.
+	runtime.unregisterReminders = registerSessionReminderHub(runtime.sessionID, runtime.hub)
 
 	if namer, ok := deps.LLM.(llm.ModelNamer); ok {
 		runtime.model = namer.ModelName()
@@ -353,7 +365,13 @@ func (r *ChatRuntime) InjectTrigger(event agentloop.TriggerEvent) error {
 		return ErrChatRuntimeNoLLM
 	}
 	pending := event
-	return r.enqueueTurn(chatTurnRequest{trigger: &pending})
+	if err := r.enqueueTurn(chatTurnRequest{trigger: &pending}); err != nil {
+		return err
+	}
+	// The colony's persistent overseer is the second lead for a bound colony;
+	// give it the same trigger so it is not a Queen with no input source.
+	r.forwardTriggerToOverseer(pending)
+	return nil
 }
 
 func (r *ChatRuntime) enqueueTurn(request chatTurnRequest) error {
@@ -412,6 +430,7 @@ func (r *ChatRuntime) Close() error {
 	}
 	r.colonyRuntime = nil
 	r.colonyMu.Unlock()
+	r.syncColonyEventBridge(nil)
 
 	r.cancel()
 	<-r.done
@@ -419,6 +438,10 @@ func (r *ChatRuntime) Close() error {
 	// conversation down so it cannot park (or wake) anything afterwards.
 	if r.hub != nil {
 		r.hub.Stop()
+	}
+	if r.unregisterReminders != nil {
+		r.unregisterReminders()
+		r.unregisterReminders = nil
 	}
 	// Parity: core/framework/server/session_manager.py::SessionManager.stop_session
 	// Teardown cancels the queen's reflection triggers and runs the final
@@ -856,6 +879,9 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 	if req.Name == "ask_user" {
 		return r.executeAskUser(req.Input), nil
 	}
+	if r.mcpToolBlocked(req.Name) {
+		return mcpToolRefusal(req.Name), nil
+	}
 	if r.deps.Execute == nil {
 		return agentloop.ToolResult{
 			Content: fmt.Sprintf("No executor registered for tool '%s'", req.Name),
@@ -877,8 +903,9 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 // Parity: framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools
 // (the run_worker tool only reaches a colony-phase registry)
 func (r *ChatRuntime) toolsForTurn() []llm.ToolDef {
-	if r.boundColonyRuntime() != nil {
-		return r.tools
+	runtime := r.boundColonyRuntime()
+	if runtime != nil {
+		return filterToolsByColonyAllowlist(runtime, r.tools)
 	}
 	out := make([]llm.ToolDef, 0, len(r.tools))
 	for _, def := range r.tools {
@@ -914,7 +941,11 @@ func (r *ChatRuntime) BindColony(runtime ColonyRuntime) {
 	if r == nil {
 		return
 	}
-	if changed := r.bindColony(colonyRuntimeOf(runtime)); changed {
+	changed := r.bindColony(colonyRuntimeOf(runtime))
+	// Mirror worker lifecycle events onto the session bus even when the
+	// concrete runtime is unchanged (a session lookup re-invokes BindColony).
+	r.syncColonyEventBridge(runtime)
+	if changed {
 		// The hub filters sources by the bound colony when it binds, so a late
 		// attach (create-with-colony, load_colony, fork) must re-bind or the
 		// colony-gated sources — parallel nudge, active workers, Sentinel
@@ -939,10 +970,13 @@ func (r *ChatRuntime) bindColony(concrete *colony.ColonyRuntime) bool {
 		r.setBoundColonyID(nil)
 		return true
 	}
-	unsubscribe, err := colony.SubscribeQueenReports(concrete, func(report string) {
+	unsubscribe, err := colony.SubscribeQueenReportsWithWorker(concrete, func(workerID, report string) {
 		// Reports never fail a session: a closed runtime (queen session
 		// torn down while a worker finished) simply drops the turn.
 		_ = r.InjectWorkerReport(report)
+		// The persistent overseer is the colony's own lead: give it the same
+		// report (except its own) so it is not a tool surface without input.
+		r.submitWorkerReportToOverseer(workerID, report)
 	})
 	if err != nil {
 		log.Printf("chat runtime %s: worker report subscription unavailable: %v", r.sessionID, err)

@@ -28,6 +28,55 @@ import (
 	"github.com/aden-hive/hive-go/internal/tasks"
 )
 
+// liveReminderHubs is the read-only mirror of the per-session loop hubs.
+// ChatRuntime registers its hub here at construction and removes it on Close,
+// so the REST surface reports the same queue the agent loop drains instead of
+// the retired standalone ReminderRuntime state.
+var liveReminderHubs sync.Map // sessionID -> *agentloop.ReminderHub
+
+// registerSessionReminderHub publishes a session's live loop hub to the REST
+// mirror. The returned function removes exactly this hub (a newer runtime for
+// the same session id wins).
+func registerSessionReminderHub(sessionID string, hub *agentloop.ReminderHub) func() {
+	if sessionID == "" || hub == nil {
+		return func() {}
+	}
+	liveReminderHubs.Store(sessionID, hub)
+	return func() {
+		liveReminderHubs.CompareAndDelete(sessionID, hub)
+	}
+}
+
+func liveSessionReminderHub(sessionID string) *agentloop.ReminderHub {
+	if sessionID == "" {
+		return nil
+	}
+	value, ok := liveReminderHubs.Load(sessionID)
+	if !ok {
+		return nil
+	}
+	hub, _ := value.(*agentloop.ReminderHub)
+	return hub
+}
+
+// reminderViewsFromHub converts the loop hub's pending queue into API records.
+// IDs are positional: the mirror is read-only, so a stable id only needs to
+// distinguish entries within one response.
+func reminderViewsFromHub(items []agentloop.Reminder) []ReminderView {
+	out := make([]ReminderView, 0, len(items))
+	now := time.Now().Unix()
+	for index, item := range items {
+		out = append(out, ReminderView{
+			ID:        int64(index + 1),
+			Source:    item.Source,
+			Body:      item.Body,
+			CreatedAt: now,
+			Meta:      item.Meta,
+		})
+	}
+	return out
+}
+
 // ReminderView is one queued reminder as the HTTP surface exposes it. Body is
 // the bare source body (parity with Reminder.body); the hub wrapper, when one
 // was requested, rides the response's "block" field instead.
@@ -318,6 +367,27 @@ func handleGetSessionReminders(runtime *ReminderRuntime, w http.ResponseWriter, 
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "session_id required"})
 		return
 	}
+	// A live chat session owns the authoritative queue: mirror its loop hub
+	// without draining, so the same reminders still reach the model on the
+	// next turn. This path ignores ?drain because a read-only mirror must not
+	// steal the loop's pending reminders.
+	if hub := liveSessionReminderHub(sessionID); hub != nil {
+		items := reminderViewsFromHub(hub.PendingReminders())
+		sources := hub.ActiveSourceNames()
+		body := map[string]any{
+			"session_id": sessionID,
+			"reminders":  items,
+			"pending":    len(items),
+			"active":     len(sources) > 0,
+			"sources":    sources,
+			"mirror":     true,
+		}
+		if block := remindersBlock(items); block != "" {
+			body["block"] = block
+		}
+		writeJSON(w, http.StatusOK, body)
+		return
+	}
 	drain := true
 	switch strings.ToLower(r.URL.Query().Get("drain")) {
 	case "0", "false", "no":
@@ -333,6 +403,8 @@ func handleGetSessionReminders(runtime *ReminderRuntime, w http.ResponseWriter, 
 	body := map[string]any{
 		"session_id": sessionID,
 		"reminders":  items,
+		"pending":    len(items),
+		"active":     false,
 	}
 	if block := remindersBlock(items); block != "" {
 		body["block"] = block
@@ -346,8 +418,14 @@ func handleDismissSessionReminders(runtime *ReminderRuntime, w http.ResponseWrit
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "session_id required"})
 		return
 	}
+	cleared := 0
+	if hub := liveSessionReminderHub(sessionID); hub != nil {
+		cleared = len(hub.TakePending())
+	} else {
+		cleared = runtime.Dismiss(sessionID)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"session_id": sessionID,
-		"cleared":    runtime.Dismiss(sessionID),
+		"cleared":    cleared,
 	})
 }
