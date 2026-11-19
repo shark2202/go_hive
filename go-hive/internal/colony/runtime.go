@@ -1094,7 +1094,20 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 	worker.SetAgentLoop(loop)
 	r.ApplyAdaptiveBudget(worker)
 
+	// Publish the worker's live turn progress on the colony bus. The session
+	// bridge re-stamps text/tool/token events onto the session stream with
+	// relayed_from=<worker id>, so the worker is visible while it runs.
+	previousObserver := worker.Context.Observer
+	if r.bus != nil {
+		executionID := worker.Context.ExecutionID
+		if executionID == "" {
+			executionID = worker.ID
+		}
+		worker.Context.Observer = newWorkerEmitter(r.bus, worker.StreamID, executionID)
+	}
+
 	turn, err := loop.ExecuteTurn(ctx, worker.Context, conv, tools)
+	worker.Context.Observer = previousObserver
 
 	if err != nil {
 		if ctx.Err() != nil {

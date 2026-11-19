@@ -35,6 +35,9 @@ var colonyBridgeEventTypes = []eventbus.EventType{
 	eventbus.EventClientReasoning,
 	eventbus.EventClientInputRequested,
 	eventbus.EventLoopStateChanged,
+	eventbus.EventToolCallStarted,
+	eventbus.EventToolCallCompleted,
+	eventbus.EventLLMTurnComplete,
 }
 
 // overseerStreamID is the stream the colony's persistent overseer publishes
@@ -80,6 +83,10 @@ func (r *ChatRuntime) syncColonyEventBridge(runtime ColonyRuntime) {
 	}
 	var subscriptionID string
 	subID, err := runtime.SubscribeToEvents(colonyBridgeEventTypes, func(event *eventbus.AgentEvent) {
+		// An overseer tool result can be the credential miss that has to park
+		// the session. Consume it before mirroring, which deliberately drops
+		// the overseer's own tool/token events.
+		r.parkOverseerCredentialForm(event)
 		mirrored := mirrorColonyEvent(event, runtime.StreamID())
 		if mirrored == nil {
 			return
@@ -120,9 +127,21 @@ func isClientIOEvent(eventType eventbus.EventType) bool {
 	return false
 }
 
+// isWorkerProgressEvent reports whether an event type is live turn progress
+// (text, tool activity, token usage) rather than a lifecycle boundary. Those
+// are the events a worker publishes under its own stream and the session pane
+// would otherwise filter out as worker noise.
+func isWorkerProgressEvent(eventType eventbus.EventType) bool {
+	switch eventType {
+	case eventbus.EventToolCallStarted, eventbus.EventToolCallCompleted, eventbus.EventLLMTurnComplete:
+		return true
+	}
+	return isClientIOEvent(eventType)
+}
+
 // isOverseerSessionEvent reports whether an overseer event belongs to the
-// session's client-facing turn (text, questions, and the turn boundaries the
-// dashboard's stream state follows).
+// session's client-facing turn (text, questions, tool-independent turn
+// boundaries the dashboard's stream state follows).
 func isOverseerSessionEvent(eventType eventbus.EventType) bool {
 	switch eventType {
 	case eventbus.EventExecutionStarted, eventbus.EventExecutionCompleted, eventbus.EventExecutionFailed, eventbus.EventLoopStateChanged:
@@ -135,14 +154,14 @@ func isOverseerSessionEvent(eventType eventbus.EventType) bool {
 // the event must not be mirrored. The persistent overseer's client-facing events
 // are re-stamped onto the session's queen stream: the overseer executes the work
 // and the chat session is its front end, so its reply has to arrive where the
-// dashboard renders the queen. Lifecycle and report events keep their stream.
+// dashboard renders the queen. A spawned worker's live progress is re-stamped
+// the same way but keeps its identity in relayed_from=<worker id>; the session
+// SSE filter drops a worker's text/tool/token events, so this relay is what
+// makes a running worker visible. Lifecycle and report events keep their
+// stream, and an event already carrying relayed_from is a mirror and is never
+// mirrored again.
 func mirrorColonyEvent(event *eventbus.AgentEvent, streamID string) *eventbus.AgentEvent {
 	if event == nil {
-		return nil
-	}
-	if isClientIOEvent(event.Type) && event.StreamID != overseerStreamID {
-		// Only the overseer is presented through the session's queen stream;
-		// any other worker's client IO is not this session's reply.
 		return nil
 	}
 	clone := event.Clone()
@@ -151,15 +170,80 @@ func mirrorColonyEvent(event *eventbus.AgentEvent, streamID string) *eventbus.Ag
 		colonyID := streamID
 		clone.ColonyID = &colonyID
 	}
-	if isOverseerSessionEvent(clone.Type) && clone.StreamID == overseerStreamID {
+	if clone.StreamID == overseerStreamID {
+		if !isOverseerSessionEvent(clone.Type) {
+			if isWorkerProgressEvent(clone.Type) {
+				// The overseer's own tool/token events are already represented
+				// by its client-facing turn; re-mirroring them would duplicate
+				// the queen's stream.
+				return nil
+			}
+			return clone
+		}
 		if clone.Data == nil {
 			clone.Data = map[string]any{}
 		}
 		clone.Data["relayed_from"] = overseerStreamID
 		clone.StreamID = chatStreamID
 		clone.NodeID = eventbus.StrPtr(chatNodeID)
+		return clone
 	}
+	if !isWorkerProgressEvent(clone.Type) {
+		return clone
+	}
+	if clone.StreamID == chatStreamID || clone.StreamID == "" {
+		return nil
+	}
+	if clone.Data != nil {
+		if _, relayed := clone.Data["relayed_from"]; relayed {
+			return nil
+		}
+	}
+	if !eventbus.IsWorkerStream(clone.StreamID) {
+		// Only the overseer and a colony worker feed the session pane; any
+		// other stream's live progress has no session identity to relay.
+		return nil
+	}
+	if clone.Data == nil {
+		clone.Data = map[string]any{}
+	}
+	clone.Data["relayed_from"] = workerIDFromStream(clone.StreamID)
+	clone.StreamID = chatStreamID
+	clone.NodeID = eventbus.StrPtr(chatNodeID)
 	return clone
+}
+
+// workerIDFromStream turns "worker:<id>" into the worker id the relay stamp
+// names; the bare singular "worker" tag has no id and stays "worker".
+func workerIDFromStream(streamID string) string {
+	if id := strings.TrimPrefix(streamID, "worker:"); id != streamID && id != "" {
+		return id
+	}
+	return "worker"
+}
+
+// parkOverseerCredentialForm is the overseer execution path's credential-form
+// producer. The chat loop notices a missing-credential tool result inside its
+// own turn; the overseer runs outside that loop, so its completed tool event is
+// the only signal. The park, its persisted pending_input and the client event
+// are the same ones the chat path produces, which is what
+// POST /api/sessions/{id}/credential-form consumes.
+//
+// Parity: framework/agent_loop/internals/credential_tool.py::validate_collect_input
+// Parity: framework/agent_loop/agent_loop.py::_await_user_input (credential_form branch)
+func (r *ChatRuntime) parkOverseerCredentialForm(event *eventbus.AgentEvent) {
+	if r == nil || event == nil || event.Type != eventbus.EventToolCallCompleted {
+		return
+	}
+	if event.StreamID != overseerStreamID || event.Data == nil {
+		return
+	}
+	toolName, _ := event.Data["tool_name"].(string)
+	content, _ := event.Data["result"].(string)
+	if toolName == "" || content == "" {
+		return
+	}
+	_, _ = r.parkForMissingCredential(toolName, content)
 }
 
 // deliverToOverseer hands a client message to the colony's persistent overseer

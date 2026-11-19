@@ -72,8 +72,20 @@ func (e *overseerEmitter) AssistantText(content, snapshot string, iteration int)
 // budget the session does not own.
 func (e *overseerEmitter) LLMTurnComplete(llm.Completion, int) {}
 
-// Tool events stay off the session stream: the overseer's tool pills are a
-// colony-view concern, and a tool call carries no client-facing text.
-func (e *overseerEmitter) ToolCallStarted(agentloop.ToolCallRequest) {}
+// Tool events publish the overseer's tool activity on the colony bus. The
+// session bridge consumes the completed result as the credential-miss signal
+// (it does not re-mirror the overseer's own tool pills onto the session
+// stream); a colony viewer still sees them.
+func (e *overseerEmitter) ToolCallStarted(call agentloop.ToolCallRequest) {
+	if e == nil || e.bus == nil {
+		return
+	}
+	e.bus.EmitToolCallStarted(e.streamID, e.streamID, call.ID, call.Name, call.Input, &e.executionID)
+}
 
-func (e *overseerEmitter) ToolCallCompleted(agentloop.ToolCallRequest, agentloop.ToolResult) {}
+func (e *overseerEmitter) ToolCallCompleted(call agentloop.ToolCallRequest, result agentloop.ToolResult) {
+	if e == nil || e.bus == nil {
+		return
+	}
+	e.bus.EmitToolCallCompleted(e.streamID, e.streamID, call.ID, call.Name, result.Content, result.IsError, &e.executionID)
+}
