@@ -49,7 +49,12 @@ while true; do
   ts=$(date '+%Y-%m-%d %H:%M:%S')
   health=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:8788/api/health 2>/dev/null || echo "000")
   head=$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo "?")
-  dirty=$(git -C "$REPO" status --short --untracked-files=no 2>/dev/null | wc -l | tr -d ' ')
+  dirty_total=$(git -C "$REPO" status --short --untracked-files=no 2>/dev/null | wc -l | tr -d ' ')
+  # 只统计我们改动区（go_hive/），并排除遥测文件，避免台账/报告自身触发告警
+  dirty=$(git -C "$REPO" status --short --untracked-files=no 2>/dev/null \
+    | grep -E '^ M go_hive/' \
+    | grep -vE 'go_hive/(TIME_EVENTS\.csv|WATCHDOG_REPORT\.md|QC_REPORT\.md|\.watchdog_state)' \
+    | wc -l | tr -d ' ')
   worktrees=$(git -C "$REPO" worktree list 2>/dev/null | wc -l | tr -d ' ')
   servers=$(pgrep -f "hive-embed serve" | wc -l | tr -d ' ')
   last_gate=$(ls -t /tmp/[knmprwstx]*_targets.log 2>/dev/null | head -1)
@@ -66,14 +71,14 @@ while true; do
     fi
   fi
 
-  summary="[watchdog $ts] health=$health HEAD=$head dirty=$dirty worktrees=$worktrees serve=$servers ledger_age=${ledger_age}s gate=\"$gate_line\""
+  summary="[watchdog $ts] health=$health HEAD=$head dirty_hive=$dirty total=$dirty_total worktrees=$worktrees serve=$servers ledger_age=${ledger_age}s gate=\"$gate_line\""
   echo "$summary"
 
   {
     echo "## $ts"
     echo "- health: $health"
     echo "- HEAD: $head"
-    echo "- dirty(tracked): $dirty"
+    echo "- dirty(tracked): hive=$dirty total=$dirty_total"
     echo "- worktrees: $worktrees"
     echo "- hive serve 进程: $servers"
     echo "- 最近门禁: $gate_line"
@@ -84,7 +89,7 @@ while true; do
   [ "$health" != "200" ] && alert health "health=$health（期望 200，端口 8788）"
   [ "$servers" -eq 0 ] 2>/dev/null && alert serve "hive-embed serve 进程为 0"
   case "$gate_line" in *FAIL*|*MISSING*) alert gate "最近门禁异常：$gate_line" ;; esac
-  [ "$dirty" -ge 8 ] 2>/dev/null && alert dirty "主线 tracked 改动 $dirty 个，可能混入未预期变更"
+  [ "$dirty" -ge 3 ] 2>/dev/null && alert dirty "go_hive 区有 $dirty 个未提交改动（total=$dirty_total），检查是否有 lane 写进主线"
   if [ "$ledger_age" != "?" ] && [ "$ledger_age" -gt 900 ] 2>/dev/null; then
     alert ledger "时间台账超过 $((ledger_age / 60)) 分钟未更新（timegov 可能挂了）"
   fi
