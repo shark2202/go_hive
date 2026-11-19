@@ -81,10 +81,19 @@ type BatchTask struct {
 	// ProfileName tags the worker with the colony worker profile it was
 	// dispatched from; empty for legacy / single-template colonies.
 	ProfileName string
+	// Goal is the plain-language title the dashboard shows for the worker.
+	// It is metadata only: the worker never sees it.
+	Goal string
+	// PreloadTools promotes the named tools into the worker's eager set at
+	// spawn, skipping its search_tools round trip. Unknown names are ignored.
+	PreloadTools []string
 }
 
 type SpawnBatchOptions struct {
 	LoopConfigOverrides map[string]any
+	// BatchID correlates the workers (and their reports) with the queen's
+	// run_worker call. Empty lets the runtime mint one for multi-task batches.
+	BatchID string
 }
 
 type WorkerBuildOptions struct {
@@ -198,6 +207,15 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 func (r *ColonyRuntime) Goal() *schemas.Goal { return r.goal }
 
 func (r *ColonyRuntime) StreamID() string { return r.streamID }
+
+// MaxConcurrentWorkers reports the colony's worker admission cap. run_worker
+// echoes it so the queen can tell running-now from queued peers.
+func (r *ColonyRuntime) MaxConcurrentWorkers() int {
+	if r == nil {
+		return 0
+	}
+	return r.maxConcurrent
+}
 
 // Parity: framework/server/routes_sessions.py::_active_worker_count
 func (r *ColonyRuntime) ActiveWorkerCount() int {
@@ -488,8 +506,8 @@ func (r *ColonyRuntime) SpawnBatchWithOptions(ctx context.Context, tasks []Batch
 	// from starting *into* a sweep, not to gate the next turn.
 	r.UnblockDispatch()
 	runCtx := r.runtimeContext(ctx)
-	batchID := ""
-	if len(tasks) > 1 {
+	batchID := strings.TrimSpace(opts.BatchID)
+	if batchID == "" && len(tasks) > 1 {
 		batchID = r.newID("batch")
 	}
 	return r.spawnBatchOn(runCtx, tasks, opts, batchID)
@@ -519,12 +537,14 @@ func (r *ColonyRuntime) spawnBatchOn(runCtx context.Context, tasks []BatchTask, 
 	workers := make([]*Worker, 0, len(tasks))
 	for index, task := range tasks {
 		worker := r.BuildWorker(WorkerBuildOptions{
-			WorkerID:    ids[index],
-			Task:        task.Task,
-			StreamID:    task.StreamID,
-			InputData:   task.Data,
-			ProfileName: task.ProfileName,
+			WorkerID:     ids[index],
+			Task:         task.Task,
+			StreamID:     task.StreamID,
+			InputData:    task.Data,
+			ProfileName:  task.ProfileName,
+			PreloadTools: task.PreloadTools,
 		})
+		worker.Goal = task.Goal
 		worker.BatchID = batchID
 		worker.BatchIndex = index
 		worker.BatchSize = len(tasks)

@@ -46,6 +46,7 @@ type WorkerResult struct {
 type WorkerInfo struct {
 	WorkerID  string
 	Task      string
+	Goal      string
 	Status    WorkerStatus
 	StreamID  string
 	BatchID   string
@@ -67,6 +68,9 @@ type Worker struct {
 	Task       string
 	StreamID   string
 	Persistent bool
+	// Goal is the plain-language title the dashboard shows for this worker.
+	// Metadata only: it is never part of the worker's prompt.
+	Goal string
 
 	Context *agentloop.AgentContext
 
@@ -424,7 +428,6 @@ func (w *Worker) Info() WorkerInfo {
 	workerSeq := w.WorkerSeq
 	result := w.result
 	w.mu.Unlock()
-
 	startedSeconds := 0.0
 	if !startedAt.IsZero() {
 		startedSeconds = float64(startedAt.UnixNano()) / 1e9
@@ -432,6 +435,7 @@ func (w *Worker) Info() WorkerInfo {
 	info := WorkerInfo{
 		WorkerID:    w.ID,
 		Task:        w.Task,
+		Goal:        w.Goal,
 		Status:      status,
 		StreamID:    w.StreamID,
 		BatchID:     w.BatchID,
