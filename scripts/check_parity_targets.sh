@@ -27,7 +27,23 @@
 set -u
 
 GO_ROOT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
-PY_ROOT="${2:-/Users/mac/hive/core}"
+# 上游 Python 仓库位置：显式参数 > HIVE_UPSTREAM_ROOT > 常见相对位置 > 旧默认路径。
+# 独立仓库克隆时不再依赖写死的绝对路径。
+if [ -n "${2:-}" ] && [ -d "${2}/tests" ]; then
+  PY_ROOT="$2"
+elif [ -n "${HIVE_UPSTREAM_ROOT:-}" ] && [ -d "$HIVE_UPSTREAM_ROOT/tests" ]; then
+  PY_ROOT="$HIVE_UPSTREAM_ROOT"
+else
+  PY_ROOT=""
+  for candidate in "$GO_ROOT/../../core" "$GO_ROOT/../core" "$GO_ROOT/../../../core" "${2:-}" "/Users/mac/hive/core"; do
+    [ -n "$candidate" ] || continue
+    if [ -d "$candidate/tests" ]; then
+      PY_ROOT="$(cd "$candidate" && pwd)"
+      break
+    fi
+  done
+  [ -n "$PY_ROOT" ] || PY_ROOT="${2:-/Users/mac/hive/core}"
+fi
 
 if [ ! -d "$PY_ROOT/tests" ]; then
   echo "check_parity_targets: SKIP — python root not found at $PY_ROOT"
