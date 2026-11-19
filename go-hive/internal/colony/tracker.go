@@ -107,7 +107,9 @@ func trackerToolDefs(role string) []llm.ToolDef {
 // the append happens here rather than mutating r.tools; the base surface goes
 // through the declared-tool merge because this is a worker-only list.
 func (r *ColonyRuntime) workerToolDefs() []llm.ToolDef {
-	return appendMissingToolDefs(r.baseWorkerTools(), trackerToolDefs("worker")...)
+	out := appendMissingToolDefs(r.baseWorkerTools(), trackerToolDefs("worker")...)
+	// Task tools are every worker's own plan (upstream worker_definition.py).
+	return appendMissingToolDefs(out, workerTaskToolDefs()...)
 }
 
 // workerTrackerRegistry binds the worker role tools to the worker's own

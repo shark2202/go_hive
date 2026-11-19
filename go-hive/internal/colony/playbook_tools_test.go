@@ -144,7 +144,7 @@ func TestRunPlaybookToolDefParametersMatchUpstream(t *testing.T) {
 		t.Fatalf("name = %q", def.Name)
 	}
 	properties, _ := def.Parameters["properties"].(map[string]any)
-	want := []string{"playbook", "playbook_name", "playbook_path", "args"}
+	want := []string{"playbook", "playbook_name", "playbook_path", "args", "action", "run_id"}
 	if len(properties) != len(want) {
 		t.Fatalf("parameters = %v, want %v", properties, want)
 	}

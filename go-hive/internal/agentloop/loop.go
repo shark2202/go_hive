@@ -131,6 +131,10 @@ type AgentLoop struct {
 	// event publication.
 	JudgeEvents JudgeEventWriter
 
+	// DoomLoop watches for identical consecutive tool calls and returns one
+	// advisory reminder per streak. It never interrupts the turn.
+	DoomLoop *DoomLoopDetector
+
 	now func() time.Time
 
 	mu      sync.Mutex
@@ -148,7 +152,12 @@ type AgentLoop struct {
 }
 
 func NewAgentLoop(config LoopConfig, executor ToolExecutor) *AgentLoop {
-	return &AgentLoop{Config: config, ToolExecutor: executor, Hub: NewReminderHub()}
+	return &AgentLoop{
+		Config:       config,
+		ToolExecutor: executor,
+		Hub:          NewReminderHub(),
+		DoomLoop:     NewDoomLoopDetector(),
+	}
 }
 
 func (l *AgentLoop) clock() time.Time {
@@ -486,6 +495,9 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 	}
 	reminderCtx := NewReminderAgentContext(agentCtx)
 	l.bindReminders(reminderCtx)
+	// A new turn is a new attempt: a repetition streak from the previous turn
+	// says nothing about this one.
+	l.DoomLoop.Reset()
 
 	l.mu.Lock()
 	l.unread = false
@@ -642,7 +654,6 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		l.mu.Unlock()
 
 		results := make([]ToolResult, len(toolCalls))
-		records := make([]ToolCallRecord, 0, len(toolCalls))
 
 		softInterval := l.Config.ToolCallBudget
 		hardLimit := 0
@@ -654,6 +665,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		limitHit := false
 		lifetimeLimitHit := false
 		toolFailure := false
+		doomLoopReminder := ""
 		var graceSkippedIdx []int
 		var deferredIdx []int
 
@@ -693,16 +705,16 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 			if results[i].IsError {
 				toolFailure = true
 			}
+			// Parity-exempt: deterministic doom-loop guard. Upstream's stall
+			// check is judge-based; this is the no-model half (same call, same
+			// arguments, same result) and it only appends a reminder.
+			if warning := l.DoomLoop.Observe(call.Name, call.Input); warning != "" {
+				doomLoopReminder = warning
+				l.bumpBy("doom_loop_warned", 1)
+			}
 			if agentCtx.Observer != nil {
 				agentCtx.Observer.ToolCallCompleted(call, results[i])
 			}
-			records = append(records, ToolCallRecord{
-				ToolUseID: tc.ID,
-				ToolName:  tc.Name,
-				ToolInput: call.Input,
-				Content:   results[i].Content,
-				IsError:   results[i].IsError,
-			})
 		}
 
 		if len(graceSkippedIdx) > 0 {
@@ -724,42 +736,20 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 			l.injectToolBudgetStop(reminderCtx, conv, len(deferredIdx), lifetimeBudget, hardLimit, lifetimeLimitHit, names)
 		}
 
-		records = records[:0]
-		for i, tc := range toolCalls {
-			records = append(records, ToolCallRecord{
-				ToolUseID: tc.ID,
-				ToolName:  tc.Name,
-				ToolInput: parseToolInput(tc.Arguments),
-				Content:   results[i].Content,
-				IsError:   results[i].IsError,
-			})
-		}
-
 		tail := ""
 		if l.Hub != nil {
 			tail = l.Hub.Fire(POST_TOOL_USE, reminderCtx, names, "")
 		}
-		targetID := ""
-		if tail != "" {
-			for i := len(toolCalls) - 1; i >= 0; i-- {
-				if toolCalls[i].Name != "ask_user" && toolCalls[i].Name != "escalate" {
-					targetID = toolCalls[i].ID
-					break
-				}
+		if doomLoopReminder != "" {
+			if tail == "" {
+				tail = doomLoopReminder
+			} else {
+				tail = tail + "\n\n" + doomLoopReminder
 			}
 		}
-		for i, tc := range toolCalls {
-			stored := results[i].Content
-			if tail != "" && tc.ID == targetID {
-				stored = stored + "\n\n" + tail
-			}
-			if _, err := conv.AddToolResult(tc.ID, stored, ToolResultOptions{
-				IsError:        results[i].IsError,
-				IsSkillContent: results[i].IsSkillContent,
-			}); err != nil {
-				return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
-			}
-			records[i].Content = stored
+		records, err := l.storeToolBatch(conv, toolCalls, results, tail)
+		if err != nil {
+			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 		}
 		result.ToolResults = append(result.ToolResults, records...)
 
@@ -1262,4 +1252,44 @@ func modelName(agentCtx *AgentContext) string {
 		return *agentCtx.AgentSpec.Model
 	}
 	return ""
+}
+
+// storeToolBatch rebuilds the per-call records for a finished tool batch and
+// adds every result to the conversation, appending the reminder tail to the
+// last non-parking call. Extracted from ExecuteTurn so the turn body stays
+// within the repo's function-size budget.
+func (l *AgentLoop) storeToolBatch(conv *NodeConversation, toolCalls []llm.ToolCall, results []ToolResult, tail string) ([]ToolCallRecord, error) {
+	records := make([]ToolCallRecord, 0, len(toolCalls))
+	for i, tc := range toolCalls {
+		records = append(records, ToolCallRecord{
+			ToolUseID: tc.ID,
+			ToolName:  tc.Name,
+			ToolInput: parseToolInput(tc.Arguments),
+			Content:   results[i].Content,
+			IsError:   results[i].IsError,
+		})
+	}
+	targetID := ""
+	if tail != "" {
+		for i := len(toolCalls) - 1; i >= 0; i-- {
+			if toolCalls[i].Name != "ask_user" && toolCalls[i].Name != "escalate" {
+				targetID = toolCalls[i].ID
+				break
+			}
+		}
+	}
+	for i, tc := range toolCalls {
+		stored := results[i].Content
+		if tail != "" && tc.ID == targetID {
+			stored = stored + "\n\n" + tail
+		}
+		if _, err := conv.AddToolResult(tc.ID, stored, ToolResultOptions{
+			IsError:        results[i].IsError,
+			IsSkillContent: results[i].IsSkillContent,
+		}); err != nil {
+			return records, err
+		}
+		records[i].Content = stored
+	}
+	return records, nil
 }

@@ -97,6 +97,15 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 		}
 		catalogue.defs = append(catalogue.defs, def)
 	}
+	// History search: search_messages / search_timeline read every past session
+	// of this session's own queen. Scope comes from c.root, never from model
+	// input, so the tools cannot read another queen's (or colony's) tree.
+	for _, def := range searchToolDefs(home) {
+		if _, taken := catalogue.builtinNames[def.Name]; taken {
+			continue
+		}
+		catalogue.defs = append(catalogue.defs, def)
+	}
 	// run_playbook is the colony-bound queen's fan-out tool. Like run_worker it
 	// dispatches through the live runtime bound per turn; unlike run_worker it
 	// is filtered at execution time (not from defs) because the same catalogue
@@ -243,6 +252,11 @@ func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input m
 	}
 	if c.taskTools.Has(name) {
 		return c.taskTools.Execute(name, input)
+	}
+	// Past-session search runs against this session's queen directory; the
+	// catalogue carries the root, the memory package does the reading.
+	if content, isError, handled := c.executeSearchTool(name, input); handled {
+		return content, isError, nil
 	}
 	// The colony runtime travels on the context (ChatRuntime binds it per
 	// call), so this executor stays valid even though the catalogue is built

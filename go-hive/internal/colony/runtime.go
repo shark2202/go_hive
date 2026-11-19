@@ -439,6 +439,14 @@ func (r *ColonyRuntime) buildWorkerContext(worker *Worker, spec agentloop.AgentS
 			tier.AlwaysEnabledNames[name] = struct{}{}
 		}
 	}
+	// A worker's own task plan is part of its orientation surface too: making
+	// it search before it can create its first task would cost a round trip
+	// for the tool upstream ships eager on every worker.
+	for _, name := range workerTaskNames() {
+		if _, ok := registered[name]; ok {
+			tier.AlwaysEnabledNames[name] = struct{}{}
+		}
+	}
 	tier.RestoreLoadedTools(tier.LoadPersistedTools(), registered)
 	tier.Rebuild()
 	if len(preload) > 0 {
@@ -840,6 +848,9 @@ func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 	// queen-only pair stays out.
 	tools = appendMissingToolDefs(tools, trackerToolDefs("worker")...)
 	tools = appendMissingToolDefs(tools, agentloop.BuildReportToParentTool(r.agentSpec.ReportSchema))
+	// Every worker keeps its own task list: task_create/update/list/get is how
+	// it decomposes the assignment it was handed.
+	tools = appendMissingToolDefs(tools, workerTaskToolDefs()...)
 	// Workers read skills (the queen authors them); skill_view/list_skills
 	// complement the SkillDirs view_file interceptor so a skill is reachable
 	// without guessing its filesystem path.
@@ -867,6 +878,16 @@ func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallReque
 	if strings.HasPrefix(worker.StreamID, "worker:") {
 		trackerRegistry = r.workerTrackerRegistry(worker)
 	}
+	// Task tools act on the worker's own plan, so the binding is per worker:
+	// its own directory, its own list.
+	var taskTools *workerTaskToolSet
+	if worker.ID != "" && !worker.Persistent {
+		workerDir := worker.StoragePath
+		if workerDir == "" {
+			workerDir = r.workerStorage(worker.ID)
+		}
+		taskTools = newWorkerTaskToolSet(workerDir, worker.ID)
+	}
 	if worker.Persistent {
 		// The overseer's tracker tools are the queen table over the colony's
 		// shared ledger; its run_worker dispatches through this runtime.
@@ -888,6 +909,12 @@ func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallReque
 			if result, ok := r.executeTrackerTool(trackerRegistry, req); ok {
 				return result, nil
 			}
+		}
+		// The worker's own task plan. A successful call is a normal result
+		// carrying success=false for a rejected operation, so is_error stays
+		// false, exactly like the queen's session task tools.
+		if content, isError, handled := taskTools.Execute(req.Name, req.Input); handled {
+			return agentloop.ToolResult{Content: content, IsError: isError}, nil
 		}
 		// Skill reads are filesystem reads scoped to the colony's skills/
 		// folder; the worker's own dirs are the only authority (never the

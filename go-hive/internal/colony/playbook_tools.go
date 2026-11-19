@@ -99,7 +99,12 @@ func RunPlaybookToolDef() llm.ToolDef {
 			"profile, skill, retries, backoff (exp|linear), timeout_seconds, max_rounds (default 1), " +
 			"chunk, circuit_breaker.\n\n" +
 			"The Go port runs the loop synchronously and returns the final result (no background " +
-			"[PLAYBOOK_COMPLETE] notification). Run logs go to the colony's colony.db playbook_runs table.",
+			"[PLAYBOOK_COMPLETE] notification). Run logs go to the colony's colony.db playbook_runs table.\n\n" +
+			"CONTROL: `action` (default 'run') selects what the call does. action='status' lists the runs " +
+			"executing right now in this colony plus the recent history from colony.db — use it before " +
+			"re-running something that may still be in flight. action='stop' cancels one run by `run_id`: " +
+			"no further rows are dispatched, rows already done stay done, and re-running the playbook " +
+			"resumes the gap.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -118,6 +123,16 @@ func RunPlaybookToolDef() llm.ToolDef {
 				"args": map[string]any{
 					"type":        "object",
 					"description": "Optional JSON object passed to the native playbook entrypoint.",
+				},
+				"action": map[string]any{
+					"type": "string",
+					"enum": []string{"run", "status", "stop"},
+					"description": "'run' (default) executes a playbook. 'status' lists in-flight runs of this colony " +
+						"and the recent history from colony.db. 'stop' cancels the run named by `run_id`.",
+				},
+				"run_id": map[string]any{
+					"type":        "string",
+					"description": "The run to stop (only with action='stop'), as returned by an earlier run_playbook or listed by action='status'.",
 				},
 			},
 		},
@@ -145,6 +160,23 @@ func RunPlaybook(ctx context.Context, spawner RunWorkerSpawner, input map[string
 		return jsonPayload(map[string]any{
 			"error": "run_playbook: the bound colony has no tracker binding yet. Start the colony (which " +
 				"provisions tracker.db) before running a playbook.",
+		}, true)
+	}
+
+	// Control actions act on the binding, so they resolve after it and before
+	// any playbook script is read.
+	switch action := strings.ToLower(strings.TrimSpace(stringValue(input["action"]))); action {
+	case "", "run":
+		// fall through to the run path below
+	case "status":
+		return jsonPayload(playbookStatusPayload(binding, intFromAny(input["limit"])), false)
+	case "stop":
+		payload, isError := playbookStopPayload(binding, stringValue(input["run_id"]))
+		return jsonPayload(payload, isError)
+	default:
+		return jsonPayload(map[string]any{
+			"status": "failed",
+			"error":  "run_playbook: action=" + action + " is not supported; use 'run', 'status' or 'stop'.",
 		}, true)
 	}
 
@@ -194,8 +226,34 @@ func RunPlaybook(ctx context.Context, spawner RunWorkerSpawner, input map[string
 		RunID:          runID,
 		ConcurrencyCap: intPointer(runtime.MaxConcurrentWorkers()),
 	})
-	out, runErr := run.Execute(ctx, native, input["args"])
+	// The run is reachable by run_id for action="status"/"stop" while it
+	// executes, and its context is what stop cancels.
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	registerPlaybookRun(&playbookRunHandle{
+		runID:     runID,
+		name:      spec.Name,
+		colonyDir: binding.Dir,
+		started:   time.Now(),
+		cancel:    cancel,
+	})
+	defer unregisterPlaybookRun(runID)
+
+	out, runErr := run.Execute(runCtx, native, input["args"])
+	stopped := playbookRunWasStopped(runID)
+	if stopped && runErr == nil {
+		// The cancel may land between two ctx checks, so a run can finish
+		// without error; the record still has to say it was stopped.
+		runErr = errPlaybookStopped
+	}
 	logDB := recordPlaybookRun(binding, runID, spec.Name, out, runErr)
+	if stopped {
+		// A stop is an outcome, not a failure: the queen asked for it.
+		payload := playbookRunInfo(runID, spec.Name, savedPath, dispatchedCount(out))
+		payload["log_db"] = logDB
+		payload["playbook_path"] = savedPath
+		return jsonPayload(payload, false)
+	}
 	if runErr != nil {
 		concise, full := playbook.ErrorDetail(runErr)
 		return jsonPayload(map[string]any{
