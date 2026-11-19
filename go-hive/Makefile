@@ -110,6 +110,12 @@ parity:
 parity-targets:
 	@bash $(PARITY_TARGETS) . "$(PY_ROOT)"
 
+# 接线守护：关键运行时调用点（内存注入、事件日志、会话工具安装）缺失即失败。
+# 纯 stdlib，无外网也能跑。
+WIRING_CHECK ?= ../scripts/wiring_check.py
+wiring-check:
+	@python3 $(WIRING_CHECK) .
+
 # 校验 internal/credentials/specs_gen.go 与上游 Python 注册表一致。
 # 需要 uv 和同级 tools/ 树；缺失时跳过（与 parity-targets 的 PY_ROOT 约定一致）。
 specs-check:
@@ -122,7 +128,7 @@ specs-check:
 race:
 	$(OFFLINE) $(GO) test -race ./...
 
-ci: fmt-check vet test cross parity parity-targets
+ci: fmt-check vet test cross parity parity-targets wiring-check
 
 clean:
 	rm -rf $(DIST) internal/server/uiembed/dist
