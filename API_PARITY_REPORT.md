@@ -315,3 +315,20 @@ uv run python go_hive/scripts/api_parity.py
 ```
 
 脚本每次自行挑选空闲端口、创建临时 HIVE_HOME、拉起两侧 serve，结束后清理（`--keep` 可保留）。
+
+---
+
+## 复验（2026-11-19 10:37，main @ e5f7c2fa 之后的二进制）
+
+本报告初稿的 Go 侧运行的是 w13/w15 合并**之前**的二进制，因此有两条结论已过时。用当前 main 重建后实测：
+
+| 报告结论 | 复验结果 | 判定 |
+| --- | --- | --- |
+| `/api/skills` Go 404 | 当前 **200** | ❌ 过时（路由已注册） |
+| `ChatRuntime` 不碰 `EventBus`、`SetSessionLog` 无调用点、无 `events.jsonl` | 当前 `events.jsonl` 落盘 10 行，`/events/history` 10 条、9 种类型 | ❌ 过时（w13 已修） |
+| `POST /api/sessions` 的 `queen_id/queen_name = null` | 复现，仍为 null | ✅ 成立 |
+| `/api/sessions/{id}/stats` 返回 `{}` | 复现 | ✅ 成立 |
+| SSE 帧数远少于 Python（105 帧 / 13 类） | 复现：Go 单轮 10 帧、`client_output_delta` 仅 1 次（整段文本一次发），Python 按 token 流式 | ✅ 成立（流式粒度差异） |
+| 重启后旧 session id 无法自愈、前端持续风暴 | 未复验（需重启服务），代码路径 `internal/cli/loader.go:461` 仍每次新铸 id | ⚠️ 待复验，代码形态未变 |
+
+**据此更新的修复优先级**：`queen_name/queen_id` 与 `resume` 是 P0（影响会话归属与风暴），`stats` 与流式 delta 是 P1（影响可观测与打字机效果）。
