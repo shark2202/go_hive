@@ -1,19 +1,19 @@
 # Go 运行时 × Key Concepts 接线审计
 
-- 审计基线：`c444c192`（`docs(qc): 1.0.21 终检 8/8 与产物表`，Go 1.0.21）
-- 上一版基线：`4b6f1cf4`（61 已接 / 9 部分 / 10 未接，80 行）
-- 更早基线：`ed457d75`（48 已接 / 10 部分 / 22 未接，80 行）
+- 审计基线：`6723ab78`（`release: 1.0.22-go.1（目标闭环/excerpts/timeline/spillover/search_tools）`，Go 1.0.22；该提交相对 `55766ced` 只改版本号与交付文档，代码面一致）
+- 上一版基线：`c444c192`（`docs(qc): 1.0.21 终检 8/8 与产物表`；64 已接 / 13 部分 / 3 未接，80 行）
+- 更早基线：`4b6f1cf4`（61 已接 / 9 部分 / 10 未接，80 行）；`ed457d75`（48 已接 / 10 部分 / 22 未接，80 行）
 - 审计日期：2026-11-19
-- 本轮增量：复核 `4b6f1cf4..c444c192` 内落地的接线，覆盖 1.0.18–1.0.21（会话检索、doom-loop、worker task、playbook 控制；并行只读、预算软提醒、`credential_status`；限速、会话花费上限、`memory_timeline`；Anthropic 流式、park 落盘、soul 进 persona），并补核 1.0.16–1.0.17 的 worker reminder hub、colony→session 事件桥、MCP 白名单、overseer 输入与 REST reminder 镜像。
+- 本轮增量：复核 `c444c192..6723ab78` 内落地的 1.0.22 接线——goal 闭环（加权成功标准执行、约束/Context 进 worker prompt、未达标→改进信号）、每轮 6 条过往对话 excerpts 注入、memory timeline 写入侧（启动回填 + 每轮更新）、超大工具结果 spillover、worker `search_tools` 工具分层。
 - 审计对象：`docs/key_concepts/` 下 7 篇（colony、coordination、goals_outcome、improvement、queen、the_loop、worker_agent）
 - 判定口径（严格）：
   - **已接**＝从 `cmd/hive` → `internal/cli` 或 `internal/server` 的 HTTP 路由 / 会话工具 / agent loop 真实可达，且在生产路径上生效；仅测试调用、仅枚举、仅提示文案不算。机制本身是为某类 agent 设计的（如 worker 专用工具），该类 agent 在生产可达即算已接。
   - **部分**＝有真实入口但只实现了一半（只读不写、只内存不落盘、只覆盖一个阶段），或一个合并行里两种机制只有一种生效。
   - **未接**＝代码存在但生产入口走不到（死代码 / 仅测试 / 只有枚举与名字）。
 - 证据口径：
-  - `L`＝交付侧既有 live 实测，出处 `go_hive/docs/support-matrix.md`（本轮只读审计未重跑）。该表早于 1.0.16–1.0.21，**不覆盖** skill 工具、run_playbook、trigger/Sentinel、MCP 白名单、soul、会话检索、并行只读、park 落盘等新增项。
+  - `L`＝交付侧既有 live 实测，出处 `go_hive/docs/support-matrix.md`（本轮只读审计未重跑）。该表随 1.0.22 只更新了版本号与测试计数，**仍不覆盖** skill 工具、run_playbook、trigger/Sentinel、MCP 白名单、soul、会话检索、并行只读、park 落盘，以及本轮的 goal 执行、excerpts、timeline 写入、spillover、`search_tools`。
   - `C`＝本轮从 `cmd/hive` → CLI/server 路由逐段静态追踪，并用 `go build ./...` 验证可编译；测试本身不计入接线判定。
-- 说明：只读审计，不改产品代码、不改测试、不改 `go.mod`。行号以 `c444c192` 为准；Go 模块根为 `go_hive/go-hive/`。
+- 说明：只读审计，不改产品代码、不改测试、不改 `go.mod`。行号以 `6723ab78` 为准（代码行号与 `55766ced` 相同）；Go 模块根为 `go_hive/go-hive/`。
 
 ## 汇总
 
@@ -21,12 +21,12 @@
 | --- | ---: | ---: | ---: | ---: |
 | colony | 10 | 2 | 0 | 12 |
 | coordination | 10 | 1 | 0 | 11 |
-| goals_outcome | 6 | 1 | 3 | 10 |
-| improvement | 7 | 1 | 0 | 8 |
-| queen | 9 | 4 | 0 | 13 |
+| goals_outcome | 10 | 0 | 0 | 10 |
+| improvement | 8 | 0 | 0 | 8 |
+| queen | 11 | 2 | 0 | 13 |
 | the_loop | 11 | 4 | 0 | 15 |
 | worker_agent | 11 | 0 | 0 | 11 |
-| **合计** | **64** | **13** | **3** | **80** |
+| **合计** | **71** | **9** | **0** | **80** |
 
 ---
 
@@ -77,18 +77,18 @@
 
 | 机制 | 实现位置（file:line） | 生产调用链 | 状态 | 证据 | 缺口 |
 | --- | --- | --- | --- | --- | --- |
-| 从 agent 定义加载结构化 `Goal` | `internal/agents/agent_spec.go:439`、`internal/host/host.go:28`、`internal/colony/runtime.go:240`（`Goal()`） | `hive serve --colony` / load / fork → `newColonyHost` → `LoadAgentSpec` → `Host.Config.Goal` → `RuntimeOptions.Goal` | 部分 | C | runtime 只保存不消费；`Goal()` 仍无生产调用者（只有测试）；`Goal.Description/Context/Constraints` 不进 prompt；chat Queen 根本没有 Goal。 |
-| 成功标准带权重、可度量（`output_contains` / `output_equals` / `llm_judge` / `custom`） | `internal/schemas/goal.go:142`（`IsSuccess`）、`:201`（`Validate`） | 无 | 未接 | — | `IsSuccess` 零调用；没有代码按 `Metric` 执行检查；judge 只读自然语言 `AgentSpec.SuccessCriteria`，不读加权标准。 |
-| 约束（hard=MUST / soft=SHOULD）与 Context 写入 agent prompt | `internal/schemas/goal.go:157`（`ToPromptContext`）、`internal/agentloop/types.go:109`（`GoalContext`）、`internal/agentloop/loop.go:460` | 无 | 未接 | — | `ToPromptContext` 零调用；`AgentContext.GoalContext` 生产代码从未赋值，`BuildInitialMessage` 里的拼接永不命中。 |
-| success_criteria → `AgentSpec` 编译 | `internal/agents/agent_spec.go:439-441`、`internal/agentloop/criteria.go:12`、`internal/agentloop/judge.go:92`（`ConfigureJudge`） | `LoadAgentSpec` 把 node-level 字符串或 goal 列表编译成 `AgentSpec.SuccessCriteria`；worker/overseer 构造 loop 后 `ConfigureJudge` 据此决定是否建 judge | 已接 | C | chat Queen 没有 criteria 来源；worker.json 的 `goal.success_criteria` 列表是可用的 Go 侧扩展。 |
-| loop judge：每轮评估 accept / retry / escalate | `internal/agentloop/judge.go:109`（`shouldJudge`）、`:127`（`evaluateJudge`）、`internal/agentloop/loop.go:618`、`:772` | worker/overseer 构造 loop → `ConfigureJudge`（`colony/runtime.go:1028`、`:1080`）；criteria 非空时在自然停止/工具失败/每 N 轮评估 | 已接 | C | 只有 colony worker 路径有 criteria；chat Queen 无 criteria 也无 `ConfigureJudge`；overseer 的 `queenOverseerSpec` 无 criteria，实际不评估。 |
+| 从 agent 定义加载结构化 `Goal` | `internal/agents/agent_spec.go:439`、`internal/host/host.go:28`、`internal/colony/runtime.go:244`（`Goal()`）、`:827`（`buildContext` 写 `GoalContext`）、`:1104`（worker 完成时评估） | `hive serve --colony` / load / fork → `newColonyHost` → `LoadAgentSpec` → `Host.Config.Goal` → `RuntimeOptions.Goal` → `r.goal`；worker 侧两处消费：系统提示（`runtime.go:1044` → `goal_outcome.go:33`）与完成时评估（`goal_outcome.go:74`） | 已接 | C | `Goal()` 访问器本身仍无生产调用者（只有测试）；chat Queen 没有 Goal；persistent overseer 的 goal context 被显式置空（`runtime.go:827` 的 `!worker.Persistent`）。 |
+| 成功标准带权重、可度量（`output_contains` / `output_equals` / `llm_judge` / `custom`） | `internal/agentloop/goal_eval.go:144`（`EvaluateGoal`）、`:181`（`weightedMetFraction`）、`:197`（逐条 metric）、`internal/schemas/goal.go:142`（`IsSuccess`）；调用 `internal/colony/goal_outcome.go:74/90`、`internal/colony/runtime.go:1104` | `run_worker` → `runWorker` 完成 → `evaluateWorkerGoal` → `agentloop.EvaluateGoal(ctx, r.goal, output, judge, request)`：逐条跑 metric、写回 `Met`、用 `Goal.IsSuccess()`（加权 ≥90%）定成败；结果进 `WorkerResult.goal_evaluation`、`result.json` 的 `data`、`[WORKER_REPORT]` 的 `<data>` 与 `goal_progress` 事件（`eventbus/emit.go:82`） | 已接 | C | `custom` 与未知 metric 明确 `supported:false`（不当作达标）；`llm_judge` 与默认 `success_rate` 需 judge，worker 路径经 `ConfigureJudge` 有；chat Queen 无 Goal，不评估。 |
+| 约束（hard=MUST / soft=SHOULD）与 Context 写入 agent prompt | `internal/schemas/goal.go:157`（`ToPromptContext`）、`internal/agentloop/types.go:109`（`GoalContext`）、`internal/agentloop/loop.go:513`（首条消息追加 `Goal:`）；赋值 `internal/colony/runtime.go:827-828`，渲染 `internal/colony/goal_outcome.go:33`（`workerSystemPrompt`） | `runWorker` → `workerSystemPrompt(worker, spec)` 把 `Goal.ToPromptContext()` 追加进 worker 系统提示（`runtime.go:1044`）；`buildContext` 同时写 `ctx.GoalContext`，空转录时首条用户消息再带一份（`loop.go:513`） | 已接 | C | 只进 worker：overseer 的 goal context 被显式置空，chat Queen 无 Goal；约束只是 prompt 文本，`EmitConstraintViolation`（`eventbus/emit.go:91`）仍无生产者，没有运行期校验。 |
+| success_criteria → `AgentSpec` 编译 | `internal/agents/agent_spec.go:439-441`、`internal/agentloop/criteria.go:12/37`（`GoalCriteriaText`）、`internal/agentloop/judge.go:92`（`ConfigureJudge`） | `LoadAgentSpec` 把 node-level 字符串或 goal 列表编译成 `AgentSpec.SuccessCriteria`；worker 构造 loop 后 `ConfigureJudge`（`colony/runtime.go:1078`）；spec 没带 criteria 时用 goal 的 criterion 描述回填（`runtime.go:1073-1077`），overseer 走 `:1146` | 已接 | C | chat Queen 没有 criteria 来源；`GoalCriteriaText` 只取 `Description`，权重与 metric 不参与 judge 文本（metric 由 `EvaluateGoal` 单独执行）。 |
+| loop judge：每轮评估 accept / retry / escalate | `internal/agentloop/judge.go:109`（`shouldJudge`）、`:127`（`evaluateJudge`）、`internal/agentloop/loop.go:618`、`:772` | worker 构造 loop → `ConfigureJudge`（`colony/runtime.go:1078`）；overseer `:1146` 但 spec 无 criteria；criteria 非空时在自然停止/工具失败/每 N 轮评估 | 已接 | C | 只有 colony worker 路径有 criteria（可来自 goal）；chat Queen 无 criteria 也无 `ConfigureJudge`；overseer 的 `queenOverseerSpec` 无 criteria，实际不评估。 |
 | retry 反馈回注会话 | `internal/agentloop/judge.go:198`（`injectJudgeFeedback`）、`internal/agentloop/loop.go:626`、`:784` | RETRY → 写一条 `[Judge feedback]` user message，下一轮继续 | 已接 | C | 依赖上一条；chat Queen 无 judge 即无 RETRY。 |
 | judge 小流水线（输出键检查 → 自定义 judge / LLM 质量检查） | `internal/agentloop/llm_judge.go:36` / `:57`、`internal/llmjudge/judge.go:111`、`internal/eventbus/emit.go:363` | `ConfigureJudge` → adapter → `llmjudge.Evaluate`；verdict 通过 bus 发 `judge_verdict` | 已接 | C | 只在 colony worker 路径；`hive skill eval` 仍用同一 `llmjudge` 但不同入口。 |
 | 会话式结果：Queen 把消息转成任务计划 | `internal/tasks/session_tools.go:747`、`internal/cli/task_tools.go:47`、`internal/cli/session_tools.go:75` | 同 coordination 任务计划 | 已接 | C | — |
 | 会话式结果：以 tracker 列作为 "done" 并用 SQL 校验 | `internal/tracker/tools.go:156/633`、`internal/cli/session_tools.go:265` | Queen 可 `tracker_sql`/`tracker_query`；worker `tracker_upsert` 推进状态；`run_playbook` 也以 `pending_sql` 选未完成行 | 已接 | L | 框架不强制判定 "done"；是否查询/校验由模型自行发起。 |
-| 未达标信号驱动改进（missed criterion / 空 tracker 列） | 无 | 无 | 未接 | — | judge RETRY 只回注文本，未映射成 improvement 信号；空 tracker 列无检测。 |
+| 未达标信号驱动改进（missed criterion / 空 tracker 列） | `internal/colony/improvement.go:124`（`RecordImprovementSignal`）、`:151`（`improvement_signal` 事件）、`:197`（`recordGoalImprovementSignals`）、`:238`（judge RETRY/ESCALATE）、`:260`（`detectEmptyTrackerColumns`）；调用 `internal/colony/runtime.go:1081-1083`（`OnJudgeVerdict`）、`:1106`；落盘 `<colony>/improvement/signals.jsonl` | `runWorker` 完成 → 未达标/不支持的 criterion 逐条写 `signals.jsonl` 并发布 colony bus `kind=improvement_signal`；judge RETRY/ESCALATE 经 `loop.OnJudgeVerdict` 同路；注册过但零行的 tracker 表产生 `empty_tracker`；同一批信号并入 `publishReport` 的 `<data>`，随 `[WORKER_REPORT]` 到 Queen | 已接 | C | 信号只写不读：`ImprovementSignals()` 无调用者，也没有 REST/CLI 读面（release notes 已记为"尚无自动再派工消费者"）；`improvement_signal` 是 custom 事件，不在 `colonyBridgeEventTypes` 镜像清单内，UI 看不到。 |
 
-**小结**：执行侧完整（criteria → judge → retry → tracker/playbook 收敛），声明侧仍空：结构化 `Goal` 的权重/约束/Context 不消费，chat Queen 没有 criteria 来源。"目标驱动"主要发生在 worker，不在 Queen。
+**小结**：goals_outcome 本轮从 6/1/3 变为 10/0/0。worker 侧把结构化 `Goal` 真正跑完：加权标准在完成时逐条执行（`EvaluateGoal` → `IsSuccess`），`[MUST]`/`[SHOULD]` 约束与 Context 进系统提示，未达标 criterion 与 judge RETRY 变成可读的改进信号并随 `[WORKER_REPORT]` 回到 Queen。剩余边界不是接线而是作用域：chat Queen 没有 Goal，约束没有运行期校验，改进信号还没有自动消费者。
 
 ## 4. improvement — colony 如何变好
 
@@ -100,12 +100,12 @@
 | Reflexion 第二层：judge retry 的 critique 回注 | `internal/agentloop/judge.go:198`、`internal/agentloop/loop.go:626/784` | colony worker（带 criteria）RETRY → `[Judge feedback]` user message | 已接 | C | 只覆盖 colony worker；chat Queen 无 judge。 |
 | 跨会话记忆：冷却门控的 reflection 写入 global / per-queen markdown | `internal/server/chat_runtime.go:221-231`（`ReflectionScheduler`）、`:607`（`OnTurnDone` 调用点）；`internal/memory/reflection.go:1026` | `hive serve` → `createSessionWithRuntime` → `NewChatRuntime`（`HomeRoot` 非空）→ `runTurn` 成功后 `OnTurnDone(ctx,"queen","turn_done")` | 已接 | C | 仅 chat Queen；worker/colony 无 reflection。 |
 | 跨会话记忆：recall selector 在后续会话召回相关笔记 | `internal/server/chat_runtime.go:784`（`injectRecall`）；`internal/memory/recall.go:174` | 每条用户消息后、`ExecuteTurn` 前以 `<system-reminder>` 注入；内容不变时用 `lastRecall` 去重 | 已接 | C | — |
-| 过往对话召回：每轮最多 6 条 dated excerpts；`search_messages` 可搜历史 | `internal/cli/session_tools_search.go:43`（`searchToolDefs`）、`:168`（`executeSearchTool`）、`internal/cli/session_tools.go:103`（入会话工具表）；`internal/memory/search.go:534`（`SearchMessages`）、`:678`（envelope）、`internal/memory/search_timeline.go:63` | 会话创建 → `newSessionToolCatalogue` 常驻 `search_messages`；`search_timeline` 在 `memory_timeline` flag 打开时追加；执行按会话 queen 目录解析 scope（不从模型输入取） → `memory.SearchMessages` 读全部历史会话 | 部分 | C | 工具侧已通；但 `chat_runtime` 仍不主动注入"每轮 6 条 dated excerpts"，召回仍靠模型主动调用。 |
+| 过往对话召回：每轮最多 6 条 dated excerpts；`search_messages` 可搜历史 | 工具侧 `internal/cli/session_tools_search.go:43`（`searchToolDefs`）、`:168`（`executeSearchTool`）、`internal/cli/session_tools.go:103`（入会话工具表）；注入侧 `internal/memory/past_conversations.go:222`（`RecallPastConversations`）、`:477`（`RenderPastConversationExcerpts`）、`:511`（`PastConversationRecallBlock`）、`internal/server/chat_memory_wiring.go:31`（`injectPastConversationRecall`）、调用点 `internal/server/chat_runtime.go:607` | 每条 client 用户消息在 `ExecuteTurn` 前：`injectRecall` 之后追加一段 `<system-reminder>`，BM25 + 中文切分取 `PastRecallTopK=6`（`past_conversations.go:13`）条带日期摘录，`lastPastRecall` 去重；`search_messages` 仍常驻会话工具表 | 已接 | C | 只在 chat Queen 的 client 输入轮注入（worker 报告/trigger 不触发）；`HIVE_PAST_RECALL_TIMEOUT` 默认 3s，超时即放弃；excerpts 与 `search_messages` 各自独立召回。 |
 | 学到的 skills：`write_skill` 写进 colony `skills/`，worker 目录按需加载 | `internal/skills/agent_tools.go:54/178`、`internal/skills/skill_writer.go:169`、`internal/cli/session_tools.go:94/250`、`internal/colony/runtime.go:404`、`internal/colony/skills_surface.go:40` | Queen 调 `write_skill(scope='colony')` → `<colony>/skills/<name>/SKILL.md`；worker spawn 时拿到 `SkillDirs` + `SkillsCatalogPrompt` + `skill_view`/`list_skills`；`GET .../colony/skills` 读同一目录 | 已接 | C | 只在 spawn 时快照；没有自动"从成功中提炼 skill"的触发器，仍靠模型主动写。 |
 | Playbook：确定性 runner 收敛剩余批次（重试/退避/死信） | `internal/colony/playbook_tools.go:129`（`RunPlaybook`）、`internal/playbook/runner.go:190`（`NewPlaybookRun`）、`:423`（`Converge`）、`:37-56`（`DeadLetter`） | chat Queen 会话工具表含 `run_playbook`（`cli/session_tools.go:104`）；绑定 colony 后 → `RunPlaybook` → 解析 JSON playbook → `playbook.NewPlaybookRun` → 按 `pending_sql` 查行、并发派 worker、重试/退避/死信、同步返回 | 已接 | C | 只支持 native JSON playbook；`.play.py` 明确 `status='unsupported'` 且不派任何 worker（`playbook_tools.go:235`）；同步执行，长批次会占住一轮工具调用；`action='status'/'stop'` 提供在飞运行查看与取消（`playbook_control.go:120/157`）。 |
 | Playbook 的 resume by construction（以 tracker 现状决定剩余工作） | `internal/playbook/rows.go`（`QueryRows`）、`internal/colony/playbook_tools.go:178-185`（inline 落盘）、`:198`（`recordPlaybookRun`） | 每次 `run_playbook(playbook_name=…)` 重新查 `pending_sql`，已 done 行自然退出；run log 写 colony.db 的 `playbook_runs` | 已接 | C | 有 `action='status'`（在飞 + 历史）与 `action='stop'`（按 `run_id` 取消，已 done 行保留）；没有后台 [PLAYBOOK_COMPLETE] 通知，resume 仍靠重跑。 |
 
-**小结**：improvement 从"记住 + 重试"扩展到"记住 + 重试 + 固化"：skill 写读闭环、Go-native playbook 与 `search_messages` 会话检索都接上了。仍缺"每轮自动 dated excerpts"的召回，也没有自动提炼 skill/playbook 的触发器——固化仍靠 Queen 主动发起。
+**小结**：improvement 从"记住 + 重试"扩展到"记住 + 重试 + 固化 + 主动召回"：skill 写读闭环、Go-native playbook、`search_messages`，以及每轮自动的 6 条过往对话 excerpts 都接上了。仍缺自动提炼 skill/playbook 的触发器——固化仍靠 Queen 主动发起。
 
 ## 5. queen — 常驻的客户面向 lead
 
@@ -119,15 +119,15 @@
 | 两个阶段：Independent → Colony | `internal/server/routes_session_create.go:155-172`、`:212-252`、`internal/server/session.go:50`（`PhaseState`） | `POST /api/sessions` 可 fork；但 `createSessionWithRuntime` 不消费 `InitialPhase`，`PhaseState` 恒 nil（全仓无赋值） | 部分 | C | phase 状态没有落点；`GET /api/queen/{id}/tools` 在 `PhaseState == nil` 时直接 404（`routes_queens_tools.go:581`）。 |
 | Queen 的持久会话与历史恢复 | `internal/server/chat_runtime.go:255`、`internal/agentloop/conversation.go:1126`、`:1213`、`internal/cli/loader_session_resume.go:38` | `NewChatRuntime` 从会话目录恢复 parts；`queen_resume_from` 复用旧 id 与旧目录 | 已接 | C | colony-bound 会话仍不走 `queen_resume_from`（`loader_session_resume.go:73`）。 |
 | Queen 的 per-queen 记忆：reflection 写入 + recall 召回 | `internal/server/chat_runtime.go:221/607/784`；`internal/memory/memory.go`、`recall.go:174` | 同 improvement 3/4 | 已接 | C | — |
-| Queen 的过往对话召回：每轮 6 条 dated excerpts + `search_messages` | `internal/cli/session_tools_search.go:43/168`、`internal/cli/session_tools.go:103`；`internal/memory/search.go:534`、`search_timeline.go:63` | 会话工具表常驻 `search_messages`（scope 来自会话目录）；`search_timeline` 受 `memory_timeline` flag 门控 | 部分 | C | 工具已通；每轮自动 dated excerpts 仍未注入。 |
-| `memory_timeline` flag 打开后生成/召回事件时间线 | `internal/cli/memory_timeline.go:42`（`memoryTimelineToolDefs`）、`:104`（`executeMemoryTimelineTool`）、`internal/cli/session_tools.go:112`；`internal/memory/timeline.go:616`、`:491`、`:528`、`:645` | flag（env `HIVE_MEMORY_TIMELINE` 或 `hive.config.json`）打开后，`memory_timeline` 作为按天浏览工具进入会话表，`search_timeline` 也一并广告；两者读 `memory.SearchTimeline` | 部分 | C | 读/浏览侧已接；`ExtractTimeline`/`UpdateSessionTimeline`/`BackfillTimelines`/`SubscribeTimelineTriggers` 仍零生产调用，时间线没有写入者，工具通常读到空。 |
+| Queen 的过往对话召回：每轮 6 条 dated excerpts + `search_messages` | 工具侧 `internal/cli/session_tools_search.go:43/168`、`internal/cli/session_tools.go:103`；注入侧 `internal/memory/past_conversations.go:222/477/511`、`internal/server/chat_memory_wiring.go:31`、调用点 `internal/server/chat_runtime.go:607` | 同 improvement 过往对话召回：每条 client 消息后自动注入最多 6 条带日期摘录（`PastRecallTopK`），`search_messages` 常驻（scope 来自会话 queen 目录） | 已接 | C | 只在 client 输入轮；worker 报告/trigger 不触发；excerpts 与工具检索互不替代。 |
+| `memory_timeline` flag 打开后生成/召回事件时间线 | 读侧 `internal/cli/memory_timeline.go:42`（`memoryTimelineToolDefs`）、`:104`（`executeMemoryTimelineTool`）、`internal/cli/session_tools.go:112`；写侧 `internal/server/chat_memory_wiring.go:59`（`startTimeline`）/`:89`（`timelineAfterTurn`）、`internal/memory/timeline.go:426`（`ExtractTimeline`）、`:491`（`UpdateSessionTimeline`）、`:528`（`BackfillTimelines`）；调用点 `internal/server/chat_runtime.go:303`（构造）/`:645`（每轮后） | flag（env `HIVE_MEMORY_TIMELINE` 或 `hive.config.json`）打开后：`NewChatRuntime` 启动回填（近 10 个会话、排除当前、并发 2），每轮完成 `TimelinePending` 有新增就后台 `UpdateSessionTimeline` 写 `<sessionDir>/timeline.jsonl` + `timeline_meta.json`（单条受 `HIVE_TIMELINE_COOLDOWN`≈300s 冷却，≥3 条立即跑）；`memory_timeline`/`search_timeline` 照旧读 `memory.SearchTimeline` | 已接 | C | `SubscribeTimelineTriggers`（`timeline.go:645`）本身仍零调用——写入由等价的 `startTimeline` + `timelineAfterTurn` 承担（release notes 同口径）；只在 chat Queen、session 有 LLM 且 flag 打开时生效；worker/overseer 不写。 |
 | Queen 拥有任务计划（计划可见、可编辑、跨 reload） | `internal/tasks/session_tools.go:747`、`internal/server/routes_tasks.go:39` | 同 coordination 任务计划 | 已接 | C | — |
 | Queen 拥有 tracker（建 schema、派活、SQL 校验） | `internal/tracker/tools.go:1030`、`internal/cli/session_tools.go:118-137`、`internal/colony/tracker.go:180` | 会话工具表常驻 4 个 tracker 工具；绑定 colony 后按 runtime binding 执行；无绑定返回 `ErrNoBinding` | 已接 | L | 未绑 colony 时工具仍可见但不可用。 |
 | 提问停车（`ask_user`） | `internal/agentloop/synthetic_tools.go:94`、`internal/server/chat_runtime.go:1019/1057/1068` | chat 会话工具表始终追加 `ask_user`；executor 记录 `pendingQuestions` 并发 `client_input_requested(park_reason=ask_user)`；本轮结束快照为 parked | 已接 | C | 停车状态经 `pending_input` 落盘（`chat_park.go:29`），重启后恢复；凭据等待未实现。 |
 | Sentinel：停车后 nudge / 升级 inbox/Telegram/Slack 并恢复 | `internal/server/sentinel_runtime.go:41/107`、`internal/sentinel/manager.go:174/230` | `serve` 启动 manager；每个 colony-bound chat runtime 注册 escalation source；parked 时分类并 nudge/升级；live 会话回复经 `InjectEvent` 回到 Queen | 已接 | C | 需要 colony 通知配置打开 Sentinel；dead session 不能冷恢复；闭环未 live 实测。 |
 | Queen 与 colony overseer 是同一个 lead | `internal/cli/loader.go:484`（`queenOverseerSpec`）、`internal/colony/runtime.go:1061`（`runOverseer`）、`internal/colony/overseer_tools.go:112`、`internal/server/chat_colony_bridge.go:112`（`forwardToOverseer`）、`internal/colony/session_bridge.go:66`（`InjectOverseer`） | load/fork/`serve --colony` → `StartOverseer` 起持久 worker（`overseer:<colony>`）；chat runtime 绑定 colony 后，worker 报告（`chat_runtime.go:982`）与 framework trigger（`:376`）经 `InjectOverseer` 投递进 overseer | 部分 | C | 已有报告与 trigger 输入源，但仍没有"客户端用户消息 → overseer"的投递路径；它与 chat Queen 不共享对话/计划/tracker 视图。客户端实际对话的仍是另一个 chat Queen。 |
 
-**小结**：Queen 的 persona、绑定会话、持久/恢复、记忆、任务计划、`ask_user`、tracker、Sentinel 都接通；`run_worker` 与 `run_playbook` 让她能派活和跑批次；soul 现在叠加进她的 identity prompt。残留断点从"Queen 不会派活"变成"colony 里有两个 Queen"：overseer 已能收到 worker 报告与 trigger，但没有客户端消息入口，chat Queen 有输入但不在 overseer 的对话里。
+**小结**：Queen 的 persona、绑定会话、持久/恢复、记忆、任务计划、`ask_user`、tracker、Sentinel 都接通；`run_worker` 与 `run_playbook` 让她能派活和跑批次；soul 叠加进她的 identity prompt；过往对话从"模型主动搜"变成"每轮自动 6 条摘录 + 工具可搜"，memory timeline 也在 flag 打开后有了写入者（启动回填 + 每轮更新）。残留断点仍是结构性的：colony 里有两个 Queen——overseer 能收 worker 报告与 trigger，但没有客户端消息入口，chat Queen 有输入但不在 overseer 的对话里。
 
 ## 6. the_loop — 唯一的执行原语
 
@@ -147,11 +147,11 @@
 | 迭代上限与干净停止 | `internal/agentloop/loop.go:797`、`internal/server/chat_runtime.go:479` | `MaxIterations=50` 时 `runTurn` 走 `executionFailed` | 已接 | C | — |
 | 崩溃恢复：cursor 持久化 + 会话恢复 | `internal/agentloop/conversation.go:1126`（`persist`）、`:1213`（`RestoreConversation`）、`internal/server/chat_runtime.go:255`；worker 侧 `colony/worker_transcript.go:40`、`resume_workers.go:38` | chat 每条消息落盘并更新 cursor；`NewChatRuntime` 恢复 parts；worker transcript 落盘且可用 `resume_worker_ids` 续跑 | 已接 | C | colony-bound chat 会话仍不走 `queen_resume_from`。 |
 | park / resume：等待人类回答或凭据后从磁盘继续 | `internal/server/chat_park.go:29`（落盘）、`:81`（清除）、`:108`（恢复）；`internal/server/chat_runtime.go:216/1115/1247`、`:824`（`injectHubReminders`）；`internal/agentloop/park_reason.go` | `ask_user` 停车 → `cursor.json` 的 `pending_input` 落盘；`NewChatRuntime` 恢复等待；下一条用户消息或 trigger 清除标记后继续 | 部分 | C | 人类回答的落盘/恢复已接；`credential_form` 停车仍无生产者，overseer 的 park 状态也仍只在内存。 |
-| 上下文压缩：自动检测并压缩；超大工具结果落盘可搜 | `internal/agentloop/loop.go:320`（`compactConversationIfNeeded`）、`internal/agentloop/conversation.go:736`（`NeedsCompaction`）、`:931`（`Compact`）、`internal/agentloop/llm_compact.go:22`；手动路由 `routes_execution.go:444` → `:638` | 每轮 LLM 调用前检查 `NeedsCompaction()` → `LlmCompact` → `conv.Compact`，并触发 PRE/POST_COMPACT；另有 `POST /api/sessions/{id}/compact-and-fork` | 部分 | C | 自动压缩已接；spillover 仍没有生成者（`SpilloverPath`/`ExtractSpilloverFilename` 只读不写），超长工具结果不会自动落盘。 |
+| 上下文压缩：自动检测并压缩；超大工具结果落盘可搜 | `internal/agentloop/loop.go:320`（`compactConversationIfNeeded`）、`internal/agentloop/conversation.go:736`（`NeedsCompaction`）、`:931`（`Compact`）、`internal/agentloop/llm_compact.go:22`；spillover `internal/agentloop/tool_result_spillover.go:73`（`truncateToolResult`）、`:117`（`applyToolResultSpillover`）、配置 `loop.go:60-69`（`MaxToolResultChars`/`SpilloverDir`）；手动路由 `routes_execution.go:444` → `:638` | 每轮 LLM 调用前检查 `NeedsCompaction()` → `LlmCompact` → `conv.Compact`，并触发 PRE/POST_COMPACT；每次工具返回经 `applyToolResultSpillover`（`loop.go:1011/1021/1023`）：超过 `MaxToolResultChars`（默认 30k）的非错误结果写 `<root>/data/<tool>_<n>.txt`，消息改为带 `Full result at:` 的 5000 字符预览并置 `SpilloverPath`；chat 侧由 `chatLoopConfig` 注入 `SpilloverDir`（`internal/server/chat_memory_wiring.go:17-21`、`chat_runtime.go:291`） | 部分 | C | 自动压缩已接；spillover 只有 chat 生产路径——worker 的 `BuildWorkerLoopConfig` 不设 `SpilloverDir`（`colony/worker_loop_config.go:46` 只继承默认 30k 上限），worker 超长结果仍原样进上下文，不落盘（release notes 同口径）。 |
 | 每次 LLM 调用计量（tokens/cost）与工具预算上限 | `internal/agentloop/loop.go:595`（`LLMTurnComplete`）、`internal/server/chat_runtime.go:713`（emit usage）、`loop.go:625-760`（soft/hard/lifetime 预算） | 每次调用发 `llm_turn_complete`（input/output/cached/cost）；工具计数与 defer 在 loop 内执行 | 已接 | C | — |
 | 框架注入提醒保持连贯 | `internal/agentloop/reminder_hub.go`、`internal/server/chat_reminders.go:54`、`internal/server/chat_runtime.go:824` | 同 coordination 提醒 | 已接 | C | `STREAM_STALLED` 未注册；REST reminder surface 已镜像 live hub（`routes_reminders.go:374`），与 chat hub 同源。 |
 
-**小结**：the_loop 骨架完整：流式（含 Anthropic Messages SSE）、并行只读工具、judge、grace、压缩、计量、提醒都真实运行；worker transcript 落盘补上了崩溃恢复的一大块。硬缺口只剩 stall 检测（doom-loop 已是 advisory，不打断 turn），park 的凭据等待与 spillover 生产者仍是半截。
+**小结**：the_loop 骨架完整：流式（含 Anthropic Messages SSE）、并行只读工具、judge、grace、压缩、计量、提醒都真实运行；worker transcript 落盘补上了崩溃恢复的一大块，chat 侧 spillover 也补上了"超大工具结果落盘"的生产者。硬缺口只剩 stall 检测（doom-loop 已是 advisory，不打断 turn）、park 的凭据等待，以及 spillover 尚未覆盖 worker。
 
 ## 7. worker_agent — 短命的并行克隆
 
@@ -203,8 +203,14 @@
 | MCP 启动装载 | **已接（新）** | `cli/mcp_loader.go:66/102/131` + `tools/mcp_bootstrap.go:66` + `registry.go:150`；每个新 catalogue 自动 attach。 |
 | MCP 工具白名单 | **已接（新）** | `host/host.go:89-112` 把进程发现的名字集并入 runtime；`applyToolAllowlist`（`colony/runtime.go:321`）按 `tools.json` 过滤；chat 侧 `filterToolsByColonyAllowlist` 同源。未配置白名单时不过滤（预期）。 |
 | Soul 沉淀 | **已接（新）** | `chat_runtime.go:229`（`OnReflect`）+ `:1259`（`sedimentSoul`）+ `soul/sediment.go`；soul 已进 chat Queen 的 identity prompt（`:1085-1095`），overseer spec 不读 soul。 |
-| `search_messages` / `search_timeline` | **部分** | 工具已入会话表并可执行（`cli/session_tools_search.go:43/168`、`session_tools.go:103`）；但"每轮 6 条 dated excerpts"仍不注入。 |
-| `memory_timeline` 浏览工具 | **部分** | `cli/memory_timeline.go:42/104` 读侧已接；timeline 提取/回填/订阅仍零生产调用。 |
+| `search_messages` / `search_timeline` | **已接（新）** | 工具已入会话表并可执行（`cli/session_tools_search.go:43/168`、`session_tools.go:103`）；"每轮 6 条 dated excerpts" 已由 `server/chat_memory_wiring.go:31` + `chat_runtime.go:607` 自动注入。 |
+| `memory_timeline` 浏览工具 | **已接（新）** | 读侧 `cli/memory_timeline.go:42/104`；写侧 `server/chat_memory_wiring.go:59/89` + `chat_runtime.go:303/645` 承担启动回填与每轮更新；`SubscribeTimelineTriggers` 本身仍零调用（等价实现）。 |
+| goal 加权成功标准执行（`EvaluateGoal`） | **已接（新）** | `agentloop/goal_eval.go:144` + `colony/goal_outcome.go:74/90` + `runtime.go:1104`；结果进 `WorkerResult.goal_evaluation`、`result.json` 的 `data`、worker 报告与 `goal_progress`；`custom`/未知 metric 标 unsupported。 |
+| Goal 约束 / Context 进 worker prompt | **已接（新）** | `colony/runtime.go:827-828` + `goal_outcome.go:33`（系统提示）+ `agentloop/loop.go:513`（首条消息）；overseer 显式置空，chat Queen 无 Goal。 |
+| 未达标 → 改进信号 | **已接（新）** | `colony/improvement.go:124/197/238/260` + `runtime.go:1081/1106`；写 `signals.jsonl`、发 `improvement_signal` 事件、并入报告；尚无读取者。 |
+| 每轮 6 条过往对话 excerpts | **已接（新）** | `memory/past_conversations.go:13/222/477/511` + `server/chat_memory_wiring.go:31` + `chat_runtime.go:607`。 |
+| 工具结果 spillover（超大结果落盘） | **部分（新）** | `agentloop/tool_result_spillover.go:73/117` + `loop.go:1011/1021/1023`；只有 chat 注入 `SpilloverDir`（`chat_memory_wiring.go:17-21`），worker 未配置。 |
+| worker `search_tools` / 工具分层 | **已接（新）** | `agentloop/search_tools.go:49/66` + `loop.go:577/633/1011`；worker 的 `ToolTierState`（`colony/runtime.go:413-476`）非空即暴露 `search_tools`，searchable 工具在 dispatch 前被拒。 |
 | `stall_check` / doom-loop | **部分** | doom-loop 检测已接（`agentloop/doom_loop.go:81`、`loop.go:932/786`，advisory）；`SubscribeStallCheck` 仍零调用。 |
 | 并行只读工具 | **已接（新）** | `loop.go:61/88/878`：`ParallelReadOnlyTools` 默认开，整批 `ConcurrencySafe` 才并发。 |
 | 预算执行（Queen 软检查点 / 会话花费上限） | **部分** | 会话花费硬上限已执行（`session_cost.go:38/53/86`、`loop.go:524`）；Queen `ToolCallBudget=0`，软检查点代码存在但不触发；`max_cost_per_run` 仍无执行者。 |
@@ -215,10 +221,10 @@
 
 ## 9. 总体结论
 
-- **真正接通的**：chat Queen 的完整 loop（同步/流式，Anthropic 走 Messages SSE）、`run_worker` + worker spawn + worker 身份/声明工具 + worker 自带 task list + `[WORKER_REPORT]`（带 duration/output_file）、worker transcript 落盘与 `resume_worker_ids`、tracker 建库/binding/读写、提醒中枢（6+1 source + ticker + 主要注入点 + worker 侧 hub + REST 镜像）、judge（colony worker + criteria）、自动压缩、任务计划、persona/记忆/恢复、colony load/unload/fork、`serve --colony` 预载 chat、`ask_user` + park 落盘、triggers 唤醒与恢复、Sentinel 停车分类、skill 读写工具、Go-native `run_playbook`（含 status/stop）、MCP 启动装载与白名单、soul 沉淀并进 persona、会话检索三工具、并行只读工具、doom-loop advisory、`credential_status`、LLM/工具限速、会话花费硬上限。
+- **真正接通的**：chat Queen 的完整 loop（同步/流式，Anthropic 走 Messages SSE）、`run_worker` + worker spawn + worker 身份/声明工具 + worker 自带 task list + `[WORKER_REPORT]`（带 duration/output_file）、worker transcript 落盘与 `resume_worker_ids`、goal 闭环（加权标准执行 + 约束/Context 进 prompt + 未达标→改进信号）、tracker 建库/binding/读写、提醒中枢（6+1 source + ticker + 主要注入点 + worker 侧 hub + REST 镜像）、judge（colony worker + criteria，可由 goal 回填）、自动压缩、chat 侧 spillover、任务计划、persona/记忆/恢复、每轮 6 条过往对话 excerpts、memory timeline 写入（flag 门控，启动回填 + 每轮更新）、colony load/unload/fork、`serve --colony` 预载 chat、`ask_user` + park 落盘、triggers 唤醒与恢复、Sentinel 停车分类、skill 读写工具、Go-native `run_playbook`（含 status/stop）、MCP 启动装载与白名单、soul 沉淀并进 persona、会话检索三工具、并行只读工具、doom-loop advisory、worker `search_tools`/工具分层、`credential_status`、LLM/工具限速、会话花费硬上限。
 - **最大的结构性断点**：colony 里有两个 Queen。overseer 现在有 `run_worker`/queen tracker/task 工具、持久 transcript，并能收到 worker 报告与 trigger；但仍没有"客户端用户消息 → overseer"的投递路径，客户端对话的是另建的 chat Queen。两者不共享对话、计划或视图。
-- **worker 的能力边界**：身份、预算、grace、report、tracker、skills、task list、resume 都对了；工具面仍是"builtin + 声明项"而不是严格 Queen 子集，运行中新增 skill 不可见，task list 自用不汇总。
-- **"代码在但没接"的典型**：`stall_check`（`SubscribeStallCheck` 零订阅）、`credential_form` 停车、`ExtractTimeline`/`BackfillTimelines`/`SubscribeTimelineTriggers`（时间线只有读侧工具）、`InstallWorkerEscalationRouting`（worker 升级到 session 的路由零调用）、spillover 生产者。
+- **worker 的能力边界**：身份、预算、grace、report、tracker、skills、task list、resume 都对了；工具面是 "builtin + 声明项"，`search_tools` 分层已能按需加载 gateable 工具；运行中新增 skill 不可见，task list 自用不汇总，worker 侧 spillover 未配置。
+- **"代码在但没接"的典型**：`stall_check`（`SubscribeStallCheck` 零订阅）、`credential_form` 停车、`SubscribeTimelineTriggers`（写入已由等价实现承担，该函数本身仍零调用）、`ImprovementSignals` 读侧（`signals.jsonl` 只写不读，无自动再派工消费者）、`InstallWorkerEscalationRouting`（worker 升级到 session 的路由零调用）、worker 侧 spillover（`SpilloverDir` 未配置）。
 - **口径提醒**：本审计只回答"代码能否从生产入口走到、走到了是否生效"，不评价上游 Python 的行为；`L` 只表示交付侧有实测记录且未重跑，本轮所有新接线均为 `C`。
 
 ## 10. 上一轮差异（历史存档：`4b6f1cf4` 相对 `ed457d75`）
@@ -287,9 +293,11 @@
 | worker 自己的 task list | 无 task 工具 | 仍无 |
 | §8 的 MCP 白名单 | （上一版未单列） | 新发现：装载已接，白名单未生效 |
 
-## 11. 本轮变更记录（1.0.16–1.0.21，基线 `c444c192`）
+## 11. 上一轮变更记录（历史存档：1.0.16–1.0.21，基线 `c444c192`）
 
-本轮把两版之间落地的接线逐条对到代码，结论为 **64 已接 / 13 部分 / 3 未接（80 行）**。状态变化 7 条，另有 3 条状态不变但缺口收窄。
+> 本节保留 `c444c192` 版的迁移记录，不再代表当前状态；当前状态见汇总表与 §12。
+
+该版把两版之间落地的接线逐条对到代码，结论为 **64 已接 / 13 部分 / 3 未接（80 行）**。状态变化 7 条，另有 3 条状态不变但缺口收窄。
 
 ### 11.1 未接 → 已接（3 条）
 
@@ -333,3 +341,42 @@
 | overseer 的用户消息入口 | 代码中没有 HTTP/总线路由把客户端消息投给 overseer，保留"部分"；未发现隐藏入口。 |
 | `credential_form` 停车 | `ParkReasonCredentialForm` 只有枚举与 idle-nudge 分支，无生产者；保留"部分"。 |
 | `max_cost_per_run` | 仍是 `internal/schemas/agent_config.go:326` 的 schema 字段，运行期上限走 `HIVE_SESSION_COST_LIMIT_USD`；两者未打通，标注"部分"。 |
+
+## 12. 本轮变更记录（1.0.22，基线 `6723ab78`）
+
+本版计数 **71 已接 / 9 部分 / 0 未接（80 行）**，相对 `c444c192` 的 64/13/3 是 **+7 已接、-4 部分、-3 未接**。状态变化 7 条（未接→已接 3、部分→已接 4），另有 3 条状态不变但缺口改写。行集不变。
+
+### 12.1 未接 → 已接（3 条）
+
+| # | 条目 | 依据（file:line @ 6723ab78） |
+| --- | --- | --- |
+| 1 | goals_outcome：成功标准带权重、可度量 | `agentloop/goal_eval.go:144`（`EvaluateGoal`）、`:181`（`weightedMetFraction`）、`:197`（逐条 metric）；`schemas/goal.go:142`（`IsSuccess`）定加权阈值；调用 `colony/goal_outcome.go:74/90` + `colony/runtime.go:1104`（`runWorker` 完成路径）。结果进 `WorkerResult.goal_evaluation`、`result.json` 的 `data`、`[WORKER_REPORT]` 的 `<data>` 与 `goal_progress` 事件（`eventbus/emit.go:82`）。`custom`/未知 metric 标 unsupported，不当作达标。 |
+| 2 | goals_outcome：约束（hard/soft）与 Context 写入 prompt | `schemas/goal.go:157`（`ToPromptContext`）；`colony/runtime.go:827-828`（`buildContext` 写 `GoalContext`）；`colony/goal_outcome.go:33`（`workerSystemPrompt` 追加进系统提示，调用点 `runtime.go:1044`）；`agentloop/loop.go:513`（空转录时首条消息再带一份）。overseer 的 goal context 被 `!worker.Persistent` 显式置空。 |
+| 3 | goals_outcome：未达标信号驱动改进 | `colony/improvement.go:124`（写 `signals.jsonl`）、`:151`（`kind=improvement_signal` custom 事件）、`:197`（未达标 criterion）、`:238`（judge RETRY/ESCALATE）、`:260`（空 tracker 表）；调用 `colony/runtime.go:1081`（`OnJudgeVerdict`）、`:1106`（`recordGoalImprovementSignals`）；信号并入 `publishReport` 的 `<data>`。 |
+
+### 12.2 部分 → 已接（4 条）
+
+| # | 条目 | 依据 / 收口的部分 |
+| --- | --- | --- |
+| 1 | goals_outcome：从 agent 定义加载结构化 `Goal` | `colony/runtime.go:244`（`Goal()`）+ `:827`（prompt）+ `:1104`（完成评估）；runtime 不再"只保存不消费"。`Goal()` 访问器本身仍只有测试调用。 |
+| 2 | improvement：过往对话召回（每轮 6 条 dated excerpts） | `memory/past_conversations.go:222/477/511` + `server/chat_memory_wiring.go:31` + 调用点 `chat_runtime.go:607`；`PastRecallTopK=6`（`past_conversations.go:13`），`lastPastRecall` 去重。 |
+| 3 | queen：Queen 的过往对话召回 | 同 2；`search_messages` 仍常驻会话工具表。 |
+| 4 | queen：`memory_timeline` flag | 写侧 `server/chat_memory_wiring.go:59`（`startTimeline`，启动回填 10 个会话）/`:89`（`timelineAfterTurn`），调用点 `chat_runtime.go:303/645`，写 `<sessionDir>/timeline.jsonl` + meta；`memory/timeline.go:426/491/528` 三条提取/更新/回填函数不再零调用。 |
+
+### 12.3 状态不变、缺口改写（3 条）
+
+| 条目 | 旧缺口 | 当前缺口 |
+| --- | --- | --- |
+| the_loop：上下文压缩 / spillover（部分） | spillover 无生产者，超长结果不落盘 | 生产者已接（`tool_result_spillover.go:73/117`、`loop.go:1011/1021/1023`，默认 30k），但只有 chat 注入 `SpilloverDir`（`chat_memory_wiring.go:17-21`）；`BuildWorkerLoopConfig` 不设该目录，worker 仍不落盘。 |
+| the_loop：judge（部分） | 只有 worker 的 `AgentSpec.SuccessCriteria` 能触发 judge | spec 无 criteria 时改由 goal 的 criterion 描述回填（`colony/runtime.go:1073-1077`、`criteria.go:37`）；chat Queen 与 overseer 仍不评估。 |
+| worker_agent：工具子集 + 更紧预算（已接） | 工具面是 builtin + 声明项，gateable 工具没有加载入口 | 分层闭合：`ToolTierState` 非空时 loop 自动广告 `search_tools`（`agentloop/search_tools.go:49`、`loop.go:577`），promote 后下一轮 `RefreshDynamicTools`（`loop.go:633`）可见，未加载工具在 dispatch 前被拒（`search_tools.go:66/85`）。worker 侧仍不落盘 spillover。 |
+
+### 12.4 备注 / 待验证
+
+| 事项 | 说明 |
+| --- | --- |
+| 验证方式 | `go build ./...` 通过；新增单测通过：`go test ./internal/agentloop`（`-run` 过滤 Goal / Spillover / SearchTools）、`go test ./internal/colony`（Goal / Improvement / SearchTools）。`TestChatRuntimeWritesTimelineAfterTurn` 在整组 `-run` 下出现过一次 `TempDir RemoveAll` 竞态（异步 timeline 写入未及收尾），单独连跑 3 次均通过，记为测试侧 flake，不影响接线判定。 |
+| `SubscribeTimelineTriggers` | `memory/timeline.go:645` 本身仍零调用；写入由等价的 `startTimeline` + `timelineAfterTurn` 承担（release notes 同口径）。已在行内注明，不计为缺陷。 |
+| `signals.jsonl` 读侧 | `ImprovementSignals()` 无调用者，无 REST/CLI 读面；信号的实际消费是 `[WORKER_REPORT]` 的 `<data>`。release notes 亦记"尚无自动再派工消费者"。 |
+| worker spillover | worker 的 `LoopConfig` 继承 30k 上限但 `SpilloverDir` 为空，`truncateToolResult` 直接返回原结果；这是"部分"而非"未接"的原因。 |
+| live 证据 | 本轮新增能力均无交付侧 live 记录，全部标 `C`；support-matrix 1.0.22 只更新版本与测试计数。 |
