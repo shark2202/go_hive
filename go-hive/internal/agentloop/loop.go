@@ -43,6 +43,11 @@ type LoopConfig struct {
 	ToolCallTimeoutSeconds float64
 	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_timeout_overrides.
 	ToolTimeoutOverrides map[string]float64
+	// ParallelReadOnlyTools runs a tool batch concurrently when every call in
+	// it is explicitly marked ConcurrencySafe (llm.ToolDef.ConcurrencySafe).
+	// DefaultLoopConfig enables it, matching upstream; an unsafe or unmarked
+	// call keeps the whole batch sequential either way.
+	ParallelReadOnlyTools bool
 }
 
 // Parity: framework/agent_loop/internals/types.py LoopConfig defaults.
@@ -64,6 +69,9 @@ func DefaultLoopConfig() LoopConfig {
 		ContinueNudgeMaxPerTurn:         3,
 		ToolCallTimeoutSeconds:          60.0,
 		ToolTimeoutOverrides:            map[string]float64{"browser_": 180.0},
+		// Match upstream: safe (explicitly marked) tools may run together.
+		// The loop still keeps a batch sequential when any call is unmarked.
+		ParallelReadOnlyTools: true,
 	}
 }
 
@@ -530,6 +538,9 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 	limit := l.maxIterations()
 	graceIterations := l.Config.GraceIterations
 	totalIterations := limit + graceIterations
+	// softBudgetReminders tracks how many soft checkpoints this turn-loop has
+	// already emitted; each new budget multiple escalates by one.
+	softBudgetReminders := 0
 
 	for inner := 0; inner < totalIterations; inner++ {
 		if err := ctx.Err(); err != nil {
@@ -668,6 +679,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		doomLoopReminder := ""
 		var graceSkippedIdx []int
 		var deferredIdx []int
+		pending := make([]pendingToolCall, 0, len(toolCalls))
 
 		for i, tc := range toolCalls {
 			call := ToolCallRequest{ID: tc.ID, Name: tc.Name, Input: parseToolInput(tc.Arguments)}
@@ -696,26 +708,18 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 			l.toolCallsUsed++
 			l.stateMu.Unlock()
 
-			// Parity: framework/agent_loop/agent_loop.py::_publish_tool_started +
-			// _publish_tool_completed.
+			// Parity: framework/agent_loop/agent_loop.py::_publish_tool_started.
+			// Started events fire in call order even when the batch below runs
+			// concurrently; completed events follow the same order.
 			if agentCtx.Observer != nil {
 				agentCtx.Observer.ToolCallStarted(call)
 			}
-			results[i] = l.executeTool(ctx, agentCtx, call)
-			if results[i].IsError {
-				toolFailure = true
-			}
-			// Parity-exempt: deterministic doom-loop guard. Upstream's stall
-			// check is judge-based; this is the no-model half (same call, same
-			// arguments, same result) and it only appends a reminder.
-			if warning := l.DoomLoop.Observe(call.Name, call.Input); warning != "" {
-				doomLoopReminder = warning
-				l.bumpBy("doom_loop_warned", 1)
-			}
-			if agentCtx.Observer != nil {
-				agentCtx.Observer.ToolCallCompleted(call, results[i])
-			}
+			pending = append(pending, pendingToolCall{index: i, call: call})
 		}
+
+		l.executeToolBatch(ctx, agentCtx, pending, results, tools)
+
+		toolFailure, doomLoopReminder = l.observeToolBatch(agentCtx, pending, results)
 
 		if len(graceSkippedIdx) > 0 {
 			l.bumpBy("grace_iteration_skipped", len(graceSkippedIdx))
@@ -739,6 +743,18 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		tail := ""
 		if l.Hub != nil {
 			tail = l.Hub.Fire(POST_TOOL_USE, reminderCtx, names, "")
+		}
+		// Parity: framework/agent_loop/agent_loop.py::_render_tool_budget_checkpoint
+		// (the soft checkpoint rides the batch tail and never defers work).
+		var checkpoint string
+		checkpoint, softBudgetReminders = l.softBudgetCheckpointBlock(
+			reminderCtx, names, toolCallCount, softInterval, hardLimit, softBudgetReminders)
+		if checkpoint != "" {
+			if tail == "" {
+				tail = checkpoint
+			} else {
+				tail = tail + "\n\n" + checkpoint
+			}
 		}
 		if doomLoopReminder != "" {
 			if tail == "" {
@@ -811,6 +827,132 @@ func (l *AgentLoop) injectToolBudgetStop(reminderCtx *ReminderAgentContext, conv
 		return
 	}
 	_, _ = conv.AddUserMessage(block, UserMessageOptions{IsSystemReminder: true})
+}
+
+// pendingToolCall is one call admitted to execute this iteration. index keeps
+// the call's position in the batch so results and events stay in call order.
+type pendingToolCall struct {
+	index int
+	call  ToolCallRequest
+}
+
+// executeToolBatch runs the admitted calls. A batch goes concurrent only when
+// the config opts in AND every call is explicitly marked ConcurrencySafe;
+// otherwise it stays sequential. results is written by index, never appended,
+// so concurrent writes cannot reorder the batch.
+//
+// Parity-exempt: upstream splits tool calls into a concurrent safe batch and
+// a serial batch; this Go port keeps the batch together and only goes
+// concurrent when every call is explicitly marked safe.
+func (l *AgentLoop) executeToolBatch(ctx context.Context, agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult, tools []llm.ToolDef) {
+	if len(pending) == 0 {
+		return
+	}
+	if !l.Config.ParallelReadOnlyTools || len(pending) < 2 || !allToolsConcurrencySafe(pending, tools) {
+		for _, item := range pending {
+			results[item.index] = l.executeTool(ctx, agentCtx, item.call)
+		}
+		return
+	}
+	var wg sync.WaitGroup
+	for _, item := range pending {
+		wg.Add(1)
+		go func(item pendingToolCall) {
+			defer wg.Done()
+			results[item.index] = l.executeTool(ctx, agentCtx, item.call)
+		}(item)
+	}
+	wg.Wait()
+}
+
+// allToolsConcurrencySafe reports whether every pending call names a tool the
+// batch was advertised with as ConcurrencySafe. An unadvertised name is not
+// safe: the model cannot mark a tool safe by asking for it.
+func allToolsConcurrencySafe(pending []pendingToolCall, tools []llm.ToolDef) bool {
+	if len(tools) == 0 {
+		return false
+	}
+	safe := make(map[string]struct{}, len(tools))
+	for _, def := range tools {
+		if def.ConcurrencySafe {
+			safe[def.Name] = struct{}{}
+		}
+	}
+	for _, item := range pending {
+		if _, ok := safe[item.call.Name]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// observeToolBatch consumes a finished batch in call order: it flags failures,
+// runs the deterministic doom-loop guard, and publishes completed events. Doing
+// this after the batch (rather than inside each goroutine) keeps event and
+// reminder order stable even when executeToolBatch ran concurrently.
+func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult) (bool, string) {
+	toolFailure := false
+	doomLoopReminder := ""
+	for _, item := range pending {
+		if results[item.index].IsError {
+			toolFailure = true
+		}
+		// Parity-exempt: deterministic doom-loop guard. Upstream's stall
+		// check is judge-based; this is the no-model half (same call, same
+		// arguments, same result) and it only appends a reminder.
+		if warning := l.DoomLoop.Observe(item.call.Name, item.call.Input); warning != "" {
+			doomLoopReminder = warning
+			l.bumpBy("doom_loop_warned", 1)
+		}
+		if agentCtx.Observer != nil {
+			agentCtx.Observer.ToolCallCompleted(item.call, results[item.index])
+		}
+	}
+	return toolFailure, doomLoopReminder
+}
+
+// softBudgetCheckpointBlock returns one soft checkpoint block when the running
+// tool-call count has crossed a new budget multiple below the hard stop, plus
+// the new emitted count. `crossed` is capped at hard_multiple - 1 so the soft
+// checkpoint never doubles up with the hard-stop advisory.
+//
+// Parity: framework/agent_loop/agent_loop.py::_render_tool_budget_checkpoint
+func (l *AgentLoop) softBudgetCheckpointBlock(reminderCtx *ReminderAgentContext, names []string, count, softInterval, hardLimit, emitted int) (string, int) {
+	if softInterval <= 0 || hardLimit <= 0 {
+		return "", emitted
+	}
+	crossed := count / softInterval
+	if maxCrossed := maxInt(1, l.Config.ToolCallHardMultiple) - 1; crossed > maxCrossed {
+		crossed = maxCrossed
+	}
+	if crossed <= emitted {
+		return "", emitted
+	}
+	l.bumpBy("tool_budget_soft_reminder", 1)
+	bodies := []string{renderToolBudgetCheckpoint(count, hardLimit)}
+	if l.Hub != nil {
+		for _, reminder := range l.Hub.Collect(TOOL_BUDGET_CHECKPOINT, reminderCtx, names, "") {
+			if reminder.Body != "" {
+				bodies = append(bodies, reminder.Body)
+			}
+		}
+	}
+	return WrapReminder(bodies), crossed
+}
+
+// Parity: framework/agent_loop/agent_loop.py::_render_tool_budget_checkpoint
+func renderToolBudgetCheckpoint(count, hardLimit int) string {
+	return fmt.Sprintf(
+		"Tool-call checkpoint: you've made %d tool calls in this stretch "+
+			"without yielding the turn (hard stop at %d).\n\n"+
+			"This is a checkpoint, not a stop. If you're deliberately working a "+
+			"long, multi-step mission and you know where you are, keep going.\n\n"+
+			"But take one honest beat first. If you've been repeating similar "+
+			"calls, retrying a failing approach, or have lost the thread: "+
+			"step back and either (a) try a genuinely different approach, or "+
+			"(b) if you've hit real difficulty, pause and escalate instead of "+
+			"grinding on.",
+		count, hardLimit)
 }
 
 // Parity: AgentLoop._execute_tool (the non-background, non-preflight subset).

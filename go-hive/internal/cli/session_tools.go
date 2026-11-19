@@ -106,6 +106,11 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 		}
 		catalogue.defs = append(catalogue.defs, def)
 	}
+	// Credential status: a read-only availability view. It is session-scoped
+	// like the search tools and intentionally exposes no write path.
+	if _, taken := catalogue.builtinNames[CredentialStatusToolName]; !taken {
+		catalogue.defs = append(catalogue.defs, credentialStatusToolDef())
+	}
 	// run_playbook is the colony-bound queen's fan-out tool. Like run_worker it
 	// dispatches through the live runtime bound per turn; unlike run_worker it
 	// is filtered at execution time (not from defs) because the same catalogue
@@ -154,9 +159,10 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 			continue
 		}
 		catalogue.defs = append(catalogue.defs, llm.ToolDef{
-			Name:        tool.Name,
-			Description: tool.Description,
-			Parameters:  tool.Parameters,
+			Name:            tool.Name,
+			Description:     tool.Description,
+			Parameters:      tool.Parameters,
+			ConcurrencySafe: tool.ConcurrencySafe,
 		})
 	}
 	return catalogue
@@ -257,6 +263,11 @@ func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input m
 	// catalogue carries the root, the memory package does the reading.
 	if content, isError, handled := c.executeSearchTool(name, input); handled {
 		return content, isError, nil
+	}
+	// Credential status is a metadata-only read of the host's credential
+	// store; it never decrypts a key.
+	if name == CredentialStatusToolName {
+		return executeCredentialStatusTool()
 	}
 	// The colony runtime travels on the context (ChatRuntime binds it per
 	// call), so this executor stays valid even though the catalogue is built
