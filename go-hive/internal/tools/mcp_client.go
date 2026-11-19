@@ -21,7 +21,28 @@ var mcpConnectReadyTimeout = 10 * time.Second
 
 var mcpCallResultTimeout = mcpCallTimeoutFromEnv()
 
-func MCPCallResultTimeout() time.Duration { return mcpCallResultTimeout }
+// mcpCallResultTimeoutOverride carries the serve-owned config value
+// (configuration.json mcp.timeout_seconds). Zero keeps the env/default value, so
+// an untouched config still honours HIVE_MCP_CALL_RESULT_TIMEOUT.
+var mcpCallResultTimeoutOverride atomic.Int64
+
+// SetMCPCallResultTimeout overrides the tools/call result timeout for the whole
+// process. serve calls it once while reading the MCP config, before any client
+// connects; a non-positive duration is ignored so a bad config cannot make MCP
+// calls fail instantly.
+func SetMCPCallResultTimeout(timeout time.Duration) {
+	if timeout <= 0 {
+		return
+	}
+	mcpCallResultTimeoutOverride.Store(int64(timeout))
+}
+
+func MCPCallResultTimeout() time.Duration {
+	if override := mcpCallResultTimeoutOverride.Load(); override > 0 {
+		return time.Duration(override)
+	}
+	return mcpCallResultTimeout
+}
 
 func mcpCallTimeoutFromEnv() time.Duration {
 	raw := os.Getenv("HIVE_MCP_CALL_RESULT_TIMEOUT")
@@ -836,7 +857,7 @@ func (c *stdioMCPClient) rpc(method string, params map[string]any) (json.RawMess
 		return nil, err
 	}
 
-	timer := time.NewTimer(mcpCallResultTimeout)
+	timer := time.NewTimer(MCPCallResultTimeout())
 	defer timer.Stop()
 	select {
 	case resp := <-ch:
@@ -852,7 +873,7 @@ func (c *stdioMCPClient) rpc(method string, params map[string]any) (json.RawMess
 		c.mu.Unlock()
 		return nil, &mcpTransportClosedError{msg: fmt.Sprintf(
 			"MCP call exceeded %s and was abandoned (transport closed): server=%s",
-			mcpCallResultTimeout, c.config.Name)}
+			MCPCallResultTimeout(), c.config.Name)}
 	}
 }
 
