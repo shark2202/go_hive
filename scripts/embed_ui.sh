@@ -4,7 +4,7 @@
 # go:embed cannot reference files outside its package directory, so this
 # script stages the frontend build at
 # go_hive/go-hive/internal/server/uiembed/dist and then compiles ./cmd/hive
-# with -tags embed_ui. Both the staged tree and core/frontend/dist are
+# with -tags embed_ui. Both the staged tree and the frontend dist/ are
 # gitignored build outputs.
 #
 # Usage (from go_hive/go-hive or the repository root):
@@ -12,7 +12,8 @@
 #   make -C go_hive/go-hive embed-ui     same, through the Makefile
 #
 # Environment:
-#   FRONTEND_DIR          frontend source dir (default: <repo>/core/frontend)
+#   FRONTEND_DIR          frontend source dir (default: <go_hive>/frontend
+#                         when it has package.json, else <repo>/core/frontend)
 #   FRONTEND_DIST         prebuilt dashboard dir (default: $FRONTEND_DIR/dist)
 #   SKIP_FRONTEND_BUILD=1 fail instead of running npm when dist/index.html is missing
 #   OUT                   output binary (default: go_hive/go-hive/dist/hive-embed)
@@ -25,7 +26,13 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 go_hive_dir="$(cd "$script_dir/../go-hive" && pwd)"
 repo_root="$(cd "$script_dir/../.." && pwd)"
 
-frontend_dir="${FRONTEND_DIR:-$repo_root/core/frontend}"
+# Prefer the vendored frontend so a standalone go_hive checkout can build the
+# UI; fall back to the monorepo copy when the vendored tree is absent.
+default_frontend_dir="$go_hive_dir/frontend"
+if [ ! -f "$default_frontend_dir/package.json" ]; then
+	default_frontend_dir="$repo_root/core/frontend"
+fi
+frontend_dir="${FRONTEND_DIR:-$default_frontend_dir}"
 frontend_dist="${FRONTEND_DIST:-$frontend_dir/dist}"
 stage_dir="$go_hive_dir/internal/server/uiembed/dist"
 out="${OUT:-$go_hive_dir/dist/hive-embed}"
