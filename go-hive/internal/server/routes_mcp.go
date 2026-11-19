@@ -89,6 +89,9 @@ func RegisterMCPRoutes(mux *http.ServeMux, deps MCPRouteDeps) {
 	mux.HandleFunc("POST /api/mcp/servers/{name}/mode", func(w http.ResponseWriter, r *http.Request) {
 		handleSetMCPMode(w, r, deps)
 	})
+	mux.HandleFunc("POST /api/mcp/reload", func(w http.ResponseWriter, r *http.Request) {
+		handleReloadMCP(w, r, deps)
+	})
 }
 
 func mcpRegistryFor(deps MCPRouteDeps) (MCPRegistryAPI, error) {
@@ -223,7 +226,139 @@ func handleListMCPServers(w http.ResponseWriter, r *http.Request, deps MCPRouteD
 		servers = append(servers, row)
 	}
 	servers = append(servers, registryRows...)
+	servers = mcpApplyRuntimeStatus(servers)
 	writeJSON(w, http.StatusOK, map[string]any{"servers": servers})
+}
+
+// mcpApplyRuntimeStatus merges the serve loader's connection snapshot into the
+// registry listing. The registry only knows what is configured on disk; the
+// loader knows what actually connected at boot and how many tools it fetched,
+// which is what the dashboard needs to show a server as live.
+//
+// A connected server the registry does not list (for example one declared only
+// in configuration.json) is appended so a pinned server is never invisible.
+func mcpApplyRuntimeStatus(rows []map[string]any) []map[string]any {
+	attacher := tools.ProcessMCP()
+	if attacher == nil {
+		return rows
+	}
+	statuses := attacher.Status()
+	if len(statuses) == 0 {
+		return rows
+	}
+	byName := make(map[string]tools.MCPServerStatus, len(statuses))
+	order := make([]string, 0, len(statuses))
+	for _, status := range statuses {
+		byName[status.Name] = status
+		order = append(order, status.Name)
+	}
+	listed := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		name, _ := row["name"].(string)
+		status, ok := byName[name]
+		if !ok {
+			continue
+		}
+		if source, _ := row["source"].(string); source == "built-in" {
+			continue
+		}
+		listed[name] = struct{}{}
+		row["connected"] = status.Connected
+		if status.Connected {
+			row["tool_count"] = status.Tools
+			if len(status.ToolNames) > 0 {
+				row["tool_names"] = mcpStringAny(status.ToolNames)
+			}
+			continue
+		}
+		if status.Error != "" {
+			row["last_error"] = status.Error
+		}
+	}
+	for _, name := range order {
+		if _, ok := listed[name]; ok {
+			continue
+		}
+		status := byName[name]
+		row := map[string]any{
+			"name":                 status.Name,
+			"source":               "local",
+			"transport":            status.Transport,
+			"mode":                 "tools",
+			"description":          "",
+			"enabled":              status.Enabled,
+			"connected":            status.Connected,
+			"tool_count":           status.Tools,
+			"last_health_status":   nil,
+			"last_error":           nil,
+			"last_health_check_at": nil,
+		}
+		if !status.Connected && status.Error != "" {
+			row["last_error"] = status.Error
+		}
+		if len(status.ToolNames) > 0 {
+			row["tool_names"] = mcpStringAny(status.ToolNames)
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+func mcpStringAny(values []string) []any {
+	out := make([]any, 0, len(values))
+	for _, value := range values {
+		out = append(out, value)
+	}
+	return out
+}
+
+// handleReloadMCP re-reads the MCP configuration and reconnects the pool without
+// restarting serve. Sessions already running pick the new server set up on their
+// next tool call (the registry re-attaches when the loader generation changes).
+//
+// Parity-exempt: upstream has no manual reload route — its loader reads the MCP
+// config once at process start, so a reload there means a restart.
+func handleReloadMCP(w http.ResponseWriter, r *http.Request, deps MCPRouteDeps) {
+	attacher := tools.ProcessMCP()
+	if attacher == nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"reloaded": false,
+			"servers":  []any{},
+			"hint":     "MCP is not configured for this server process; add a server under /api/mcp/servers.",
+		})
+		return
+	}
+	if err := attacher.Reload(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error(), "reloaded": false})
+		return
+	}
+	statuses := attacher.Status()
+	rows := make([]any, 0, len(statuses))
+	for _, status := range statuses {
+		rows = append(rows, map[string]any{
+			"name":        status.Name,
+			"transport":   status.Transport,
+			"enabled":     status.Enabled,
+			"connected":   status.Connected,
+			"tool_count":  status.Tools,
+			"tool_names":  mcpStringAny(status.ToolNames),
+			"last_error":  mcpNullableError(status.Error),
+			"source":      "local",
+			"description": "",
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"reloaded": true,
+		"servers":  rows,
+		"hint":     "Running sessions pick the reloaded servers up on their next tool call.",
+	})
+}
+
+func mcpNullableError(message string) any {
+	if message == "" {
+		return nil
+	}
+	return message
 }
 
 // mcpStringList coerces a JSON array into []string the way the Python route's
