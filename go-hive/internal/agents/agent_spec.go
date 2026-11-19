@@ -224,28 +224,89 @@ func loadAgentSpecAt(dir string) (*WorkerSpec, error) {
 // Both JSON and YAML configs decode into it; unknown keys are ignored, and the
 // fields upstream reads with .get() keep their Python defaults when absent.
 type workerSpecConfig struct {
-	Name               string          `json:"name" yaml:"name"`
-	Description        *string         `json:"description" yaml:"description"`
-	SystemPrompt       *string         `json:"system_prompt" yaml:"system_prompt"`
-	IdentityPrompt     string          `json:"identity_prompt" yaml:"identity_prompt"`
-	AgentType          string          `json:"agent_type" yaml:"agent_type"`
-	NodeType           string          `json:"node_type" yaml:"node_type"`
-	Model              *string         `json:"model" yaml:"model"`
-	InputKeys          []string        `json:"input_keys" yaml:"input_keys"`
-	OutputKeys         []string        `json:"output_keys" yaml:"output_keys"`
-	NullableOutputKeys []string        `json:"nullable_output_keys" yaml:"nullable_output_keys"`
-	ReportSchema       map[string]any  `json:"report_schema" yaml:"report_schema"`
-	Tools              workerSpecTools `json:"tools" yaml:"tools"`
-	Goal               workerSpecGoal  `json:"goal" yaml:"goal"`
-	LoopConfig         map[string]any  `json:"loop_config" yaml:"loop_config"`
-	MaxTokens          *int            `json:"max_tokens" yaml:"max_tokens"`
-	ConversationMode   string          `json:"conversation_mode" yaml:"conversation_mode"`
-	MaxRetries         *int            `json:"max_retries" yaml:"max_retries"`
-	RetryOn            []string        `json:"retry_on" yaml:"retry_on"`
-	MaxNodeVisits      *int            `json:"max_node_visits" yaml:"max_node_visits"`
-	ClientFacing       bool            `json:"client_facing" yaml:"client_facing"`
-	SuccessCriteria    *string         `json:"success_criteria" yaml:"success_criteria"`
-	SkipJudge          bool            `json:"skip_judge" yaml:"skip_judge"`
+	Name               string             `json:"name" yaml:"name"`
+	Description        *string            `json:"description" yaml:"description"`
+	SystemPrompt       *string            `json:"system_prompt" yaml:"system_prompt"`
+	IdentityPrompt     string             `json:"identity_prompt" yaml:"identity_prompt"`
+	AgentType          string             `json:"agent_type" yaml:"agent_type"`
+	NodeType           string             `json:"node_type" yaml:"node_type"`
+	Model              *string            `json:"model" yaml:"model"`
+	InputKeys          []string           `json:"input_keys" yaml:"input_keys"`
+	OutputKeys         []string           `json:"output_keys" yaml:"output_keys"`
+	NullableOutputKeys []string           `json:"nullable_output_keys" yaml:"nullable_output_keys"`
+	ReportSchema       map[string]any     `json:"report_schema" yaml:"report_schema"`
+	Tools              workerSpecTools    `json:"tools" yaml:"tools"`
+	Goal               workerSpecGoal     `json:"goal" yaml:"goal"`
+	LoopConfig         map[string]any     `json:"loop_config" yaml:"loop_config"`
+	MaxTokens          *int               `json:"max_tokens" yaml:"max_tokens"`
+	ConversationMode   string             `json:"conversation_mode" yaml:"conversation_mode"`
+	MaxRetries         *int               `json:"max_retries" yaml:"max_retries"`
+	RetryOn            []string           `json:"retry_on" yaml:"retry_on"`
+	MaxNodeVisits      *int               `json:"max_node_visits" yaml:"max_node_visits"`
+	ClientFacing       bool               `json:"client_facing" yaml:"client_facing"`
+	SuccessCriteria    workerSpecCriteria `json:"success_criteria" yaml:"success_criteria"`
+	SkipJudge          bool               `json:"skip_judge" yaml:"skip_judge"`
+}
+
+// workerSpecCriteria accepts both shapes success_criteria appears in on disk: a
+// natural-language paragraph (the node-level form upstream AgentSpec carries)
+// and a list (the goal-level form). The list is compiled to one criterion per
+// line, the same paragraph the goal declares, so the judge reads every
+// criterion.
+type workerSpecCriteria struct {
+	Text string
+	List []string
+}
+
+func (c *workerSpecCriteria) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if bytes.Equal(trimmed, []byte("null")) {
+		return nil
+	}
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		var list []string
+		if err := json.Unmarshal(trimmed, &list); err != nil {
+			return err
+		}
+		c.List = list
+		return nil
+	}
+	var text string
+	if err := json.Unmarshal(trimmed, &text); err != nil {
+		return err
+	}
+	c.Text = text
+	return nil
+}
+
+func (c *workerSpecCriteria) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind == yaml.SequenceNode {
+		var list []string
+		if err := node.Decode(&list); err != nil {
+			return err
+		}
+		c.List = list
+		return nil
+	}
+	if node.Kind == yaml.ScalarNode && node.Tag == "!!null" {
+		return nil
+	}
+	var text string
+	if err := node.Decode(&text); err != nil {
+		return err
+	}
+	c.Text = text
+	return nil
+}
+
+// paragraph returns the criteria text the spec carries, or nil when the config
+// declares none.
+func (c workerSpecCriteria) paragraph() *string {
+	if strings.TrimSpace(c.Text) != "" {
+		text := c.Text
+		return &text
+	}
+	return agentloop.SuccessCriteriaText(c.List)
 }
 
 // workerSpecGoal mirrors the goal block upstream reads as a dict: the
@@ -372,6 +433,14 @@ func buildWorkerSpec(dir, configPath string, config *workerSpecConfig) *WorkerSp
 	}
 	identityPrompt := config.IdentityPrompt
 
+	// A node-level success_criteria string wins verbatim; otherwise the goal's
+	// criteria list compiles to the paragraph AgentSpec carries. No declared
+	// criteria leaves the field nil so the loop never constructs a judge.
+	successCriteria := config.SuccessCriteria.paragraph()
+	if successCriteria == nil {
+		successCriteria = agentloop.SuccessCriteriaText(config.Goal.SuccessCriteria)
+	}
+
 	spec := agentloop.AgentSpec{
 		ID:                 workerName,
 		Name:               pythonTitle(strings.ReplaceAll(workerName, "_", " ")),
@@ -388,7 +457,7 @@ func buildWorkerSpec(dir, configPath string, config *workerSpecConfig) *WorkerSp
 		RetryOn:            workerSpecStrings(config.RetryOn),
 		MaxRetries:         maxRetries,
 		ClientFacing:       config.ClientFacing,
-		SuccessCriteria:    config.SuccessCriteria,
+		SuccessCriteria:    successCriteria,
 		SkipJudge:          config.SkipJudge,
 	}
 	if config.MaxNodeVisits != nil {
