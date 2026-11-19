@@ -273,6 +273,10 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Warning: cannot resolve HIVE_HOME: %v\n", err)
 	}
+	// The dashboard stores keys in the encrypted credential store while the
+	// ported tools read os.Getenv. Export the store before the app (and any
+	// tool registry) is built so saved credentials are live from the start.
+	hiveserver.SyncCredentialEnv(home)
 
 	var liveMu sync.Mutex
 	live := make([]*hiveserver.Session, 0)
