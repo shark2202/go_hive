@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import type { QueenProfileSummary } from "@/types/colony";
 import type { QueenLiveness } from "@/hooks/use-live-sessions";
 import QueenAvatar from "./QueenAvatar";
+import { useI18n } from "@/i18n";
 
 interface SidebarQueenItemProps {
   queen: QueenProfileSummary;
@@ -15,6 +16,7 @@ interface SidebarQueenItemProps {
 }
 
 export default function SidebarQueenItem({ queen, isActive, liveness }: SidebarQueenItemProps) {
+  const { t } = useI18n();
   // Bottom-right presence dot: executing/active gets a pulsing green
   // dot; interrupted gets a steady amber dot. The "parked" state is
   // communicated by the colony status dot colour — no separate badge.
@@ -26,19 +28,19 @@ export default function SidebarQueenItem({ queen, isActive, liveness }: SidebarQ
     // stream stall, or crash. Amber, steady (a problem, not presence).
     dotColor = "bg-amber-500";
     title = liveness.interrupt_cause
-      ? `Interrupted: ${liveness.interrupt_cause}`
-      : "Interrupted";
+      ? t("Interrupted: {cause}", { cause: liveness.interrupt_cause })
+      : t("Interrupted");
   } else if (liveness?.is_executing) {
     dotColor = "bg-emerald-500";
     dotPulse = true;
     title = liveness.current_tool_name
-      ? `Running: ${liveness.current_tool_name}`
+      ? t("Running: {tool}", { tool: liveness.current_tool_name })
       : liveness.queen_busy_reason === "llm"
-        ? "Thinking…"
-        : "Working";
+        ? t("Thinking…")
+        : t("Working");
   } else if (isActive) {
     dotColor = "bg-emerald-500";
-    title = "Working";
+    title = t("Working");
   }
 
   return (
