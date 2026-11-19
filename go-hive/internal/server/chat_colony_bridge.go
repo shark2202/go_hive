@@ -185,8 +185,16 @@ func (r *ChatRuntime) deliverToOverseer(message string) bool {
 // loop acts on the message — the overseer — while the chat runtime remains the
 // session's front end (transcript, event bus, ask_user surface).
 func (r *ChatRuntime) relayClientInputToOverseer(message string) bool {
-	if !r.deliverToOverseer(message) {
+	block := r.relaySkillsCatalogBlock()
+	payload := message
+	if block != "" {
+		payload = block + "\n\n" + message
+	}
+	if !r.deliverToOverseer(payload) {
 		return false
+	}
+	if block != "" {
+		r.markRelayCatalogSent(block)
 	}
 	// The session is busy even though the chat loop is not: re-arm the idle
 	// nudge and close any open Sentinel escalation the way a client turn does.
@@ -197,6 +205,48 @@ func (r *ChatRuntime) relayClientInputToOverseer(message string) bool {
 	r.markProgress()
 	r.setParkState(agentloop.ParkReasonTurnDone, true)
 	return true
+}
+
+// relaySkillsCatalogBlock renders the queen's skills catalog once, for the
+// first client message relayed to the overseer. The reminder hub that normally
+// injects it belongs to the chat loop; when the overseer executes, the catalog
+// has to ride with the relayed input or it never reaches the model at all.
+func (r *ChatRuntime) relaySkillsCatalogBlock() string {
+	if r == nil || r.agentCtx == nil || r.agentCtx.QueenSkillsCatalogProvider == nil {
+		return ""
+	}
+	provider, ok := r.agentCtx.QueenSkillsCatalogProvider.(func() string)
+	if !ok || provider == nil {
+		return ""
+	}
+	r.relayCatalogMu.Lock()
+	sent := r.relayCatalogSent
+	r.relayCatalogMu.Unlock()
+	if sent {
+		return ""
+	}
+	catalog := strings.TrimSpace(provider())
+	if catalog == "" {
+		return ""
+	}
+	return "<system-reminder>\nAvailable skills catalog:\n" + catalog + "\n</system-reminder>"
+}
+
+func (r *ChatRuntime) markRelayCatalogSent(block string) {
+	r.relayCatalogMu.Lock()
+	r.relayCatalogSent = true
+	r.lastRelayBlock = block
+	r.relayCatalogMu.Unlock()
+}
+
+// takeRelayCatalogBlock returns (once) the catalog that rode with the relayed
+// message, so the transcript records what the overseer was actually given.
+func (r *ChatRuntime) takeRelayCatalogBlock() string {
+	r.relayCatalogMu.Lock()
+	block := r.lastRelayBlock
+	r.lastRelayBlock = ""
+	r.relayCatalogMu.Unlock()
+	return block
 }
 
 // recordRelayedClientTurn appends a relayed user turn to the transcript. It

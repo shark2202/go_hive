@@ -149,6 +149,13 @@ type ChatRuntime struct {
 	timelineEnabled bool
 	timelineMu      sync.Mutex
 	lastTimelineRun time.Time
+	// relayCatalogSent records that the skills catalog rode along with the
+	// first client message relayed to the colony overseer. The overseer owns
+	// execution there, so the chat loop's reminder hub never runs for it; the
+	// catalog has to travel with the relayed input instead.
+	relayCatalogMu   sync.Mutex
+	relayCatalogSent bool
+	lastRelayBlock   string
 	// hub is the loop's reminder hub (one per session). Sources are registered
 	// once at construction; the temporal idle ticker is started there and
 	// stopped by Close.
@@ -357,7 +364,11 @@ func (r *ChatRuntime) Deliver(message string) error {
 		// The overseer owns the turn; the session transcript still records the
 		// ask. The record rides the queue so the conversation keeps a single
 		// writer, and a closed runtime only loses the record, not the relay.
-		_ = r.enqueueTurn(chatTurnRequest{message: message, clientInput: true, recordOnly: true})
+		recorded := message
+		if block := r.takeRelayCatalogBlock(); block != "" {
+			recorded = block + "\n\n" + message
+		}
+		_ = r.enqueueTurn(chatTurnRequest{message: recorded, clientInput: true, recordOnly: true})
 		return nil
 	}
 	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true})
