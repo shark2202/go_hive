@@ -237,8 +237,38 @@ func NewApp(deps AppDeps) *App {
 		mux.HandleFunc("GET /", app.handleSPA)
 	}
 
-	app.handler = app.accessLog(app.desktopAuth(app.noCacheAPI(app.errorRecovery(mux))))
+	app.handler = app.accessLog(app.desktopAuth(app.noCacheAPI(app.rejectDotSegmentsAPI(app.errorRecovery(mux)))))
 	return app
+}
+
+// rejectDotSegmentsAPI answers JSON 400 for any /api/ path carrying a ".."
+// segment. Without it Go's ServeMux cleans the path first and replies 307 to
+// the cleaned (non-API) URL, so per-route traversal guards never run and a
+// client can be redirected out of the API surface.
+func (a *App) rejectDotSegmentsAPI(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			candidate := r.URL.Path
+			if r.URL.RawPath != "" {
+				candidate = r.URL.RawPath
+			}
+			if containsDotSegment(candidate) {
+				writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid path"})
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func containsDotSegment(path string) bool {
+	lowered := strings.ToLower(strings.ReplaceAll(path, "%2e", "."))
+	for _, segment := range strings.Split(lowered, "/") {
+		if segment == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *App) Handler() http.Handler {
