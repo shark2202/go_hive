@@ -32,7 +32,6 @@ import (
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/queen"
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	hivesession "github.com/aden-hive/hive-go/internal/session"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 )
 
@@ -302,43 +301,7 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	lifecycle := r.newColonyLifecycle(manager, &liveMu, &live, home, args.str("model"))
 
 	for _, colonyArg := range args.list("colony") {
-		colonyPath, ok := r.resolveColonyPath(colonyArg)
-		if !ok {
-			fmt.Fprintf(r.Stdout, "Colony not found: %s\n", colonyArg)
-			continue
-		}
-		colonyID := filepath.Base(colonyPath)
-		sessionID, err := hivesession.NewStore("").GenerateID(time.Now())
-		if err != nil {
-			fmt.Fprintf(r.Stdout, "Error loading colony %s: %v\n", colonyArg, err)
-			continue
-		}
-		record := hiveserver.NewSession(sessionID, eventbus.NewEventBus())
-		record.ColonyID = colonyID
-		record.WorkerPath = colonyPath
-		record.LoadedAt = float64(time.Now().UnixNano()) / 1e9
-		// The live runtime behind the session: colony spawn/run/SSE entry.
-		// Nil when no provider is configured, in which case the worker and
-		// colony routes keep their on-disk fallbacks.
-		record.Colony = r.buildColonyHost(colonyPath, colonyID, home, args.str("model"))
-		if built, ok := record.Colony.(*colonyhost.Host); ok {
-			// A preloaded colony is live from boot: its overseer starts here
-			// rather than waiting for a load_colony round trip.
-			queenName := colonyQueenName(home, colonyID)
-			if _, startErr := built.StartOverseer(context.Background(), queenOverseerSpec(home, queenName), nil); startErr != nil {
-				fmt.Fprintf(r.Stdout, "Warning: colony overseer unavailable for %s: %v\n", colonyID, startErr)
-			}
-		}
-		// Rebuild the colony's triggers.json runtime: enabled timers and
-		// webhook routes survive a restart without the user re-activating them.
-		if loaded, started := hiveserver.RestoreSessionTriggers(record); loaded > 0 {
-			fmt.Fprintf(r.Stdout, "Restored %d trigger(s) (%d running) for %s\n", loaded, started, colonyID)
-		}
-		manager.AddSession(record)
-		liveMu.Lock()
-		live = append(live, record)
-		liveMu.Unlock()
-		fmt.Fprintf(r.Stdout, "Loaded colony: %s → session %s\n", colonyID, sessionID)
+		r.loadPreloadedColonySession(colonyArg, manager, &liveMu, &live, home, args.str("model"))
 	}
 
 	app := hiveserver.NewApp(hiveserver.AppDeps{
@@ -435,6 +398,11 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	}
 }
 
+// loadPreloadedColonySession builds and registers the live session behind one
+// `serve --colony <path>` argument; see loader_preloaded_session.go.
+// attachPreloadedChatRuntime lives there too, keeping this file inside the
+// repository's frozen size budget.
+
 // buildColonyHost constructs and starts the live colony runtime a
 // `serve --colony` session holds (colony spawn/run/SSE entry). It returns nil
 // when no provider is configured: a host without an LLM could never run a
@@ -458,7 +426,7 @@ func (r *Runner) buildColonyHost(colonyPath, colonyID string, home hivehome.Home
 // colony lifecycle can report the failure instead of degrading to a cold
 // session.
 func (r *Runner) newColonyHost(colonyPath, colonyID string, home hivehome.Home, model string) (*colonyhost.Host, error) {
-	provider, err := resolveChatProvider(home, model)
+	provider, err := chatProviderFactory(home, model)
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +562,7 @@ func (r *Runner) createSessionWithRuntime(
 	}
 
 	var runtime *hiveserver.ChatRuntime
-	provider, providerErr := resolveChatProvider(home, requestedModel)
+	provider, providerErr := chatProviderFactory(home, requestedModel)
 	if providerErr != nil {
 		// Credentials are missing for a remote model: keep the session
 		// listable but leave Chat nil so POST /chat answers 503 rather than
@@ -1062,6 +1030,14 @@ var chatProviderEnvVars = map[string]string{
 	"hive":       "HIVE_API_KEY",
 	"zai":        "ZAI_API_KEY",
 	"xai":        "XAI_API_KEY",
+}
+
+// chatProviderFactory builds the completion transport for a live session. It
+// is a package variable so a test can substitute a scripted completer without
+// standing up an HTTP endpoint; production always resolves the configured
+// provider.
+var chatProviderFactory = func(home hivehome.Home, model string) (llm.Completer, error) {
+	return resolveChatProvider(home, model)
 }
 
 // resolveChatProvider builds the HTTP transport for a new session, resolving
