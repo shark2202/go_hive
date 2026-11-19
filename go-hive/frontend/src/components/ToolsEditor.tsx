@@ -19,6 +19,7 @@ function openCredentialsPage() {
 }
 import { useGlobalEvents } from "@/hooks/use-sse";
 import { isVisibleTool } from "@/lib/visible-tools";
+import { useI18n } from "@/i18n";
 
 /** Shape every Tools section (Queen / Colony) shares. */
 export interface ToolsSnapshot {
@@ -282,6 +283,7 @@ function ToolRow({
   onToggle?: (next: boolean) => void;
   onConnect?: () => void;
 }) {
+  const { t } = useI18n();
   // Credentialed tool whose OAuth provider isn't authorized: keep the
   // checkbox visible (and "checked" so the user understands the tool
   // *would* fire once connected) but locked, and surface an inline
@@ -307,7 +309,7 @@ function ToolRow({
           }
           title={
             needsAuth
-              ? `Connect ${providerLabel(provider!)} to enable this tool`
+              ? t("Connect {provider} to enable this tool", { provider: providerLabel(provider!) })
               : undefined
           }
         />
@@ -334,7 +336,7 @@ function ToolRow({
           className="flex-shrink-0 mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border/60 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/40"
         >
           <ExternalLink className="w-3 h-3" />
-          Connect {providerLabel(provider!)}
+          {t("Connect {provider}", { provider: providerLabel(provider!) })}
         </button>
       )}
     </div>
@@ -439,6 +441,7 @@ export default function ToolsEditor({
   saveAllowlist,
   resetToRoleDefault,
 }: ToolsEditorProps) {
+  const { t } = useI18n();
   const [data, setData] = useState<ToolsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -500,7 +503,7 @@ export default function ToolsEditor({
         }
       } catch (e) {
         if (!silent) {
-          setError((e as Error)?.message || "Failed to load tools");
+          setError((e as Error)?.message || t("Failed to load tools"));
         }
       } finally {
         if (!silent) setLoading(false);
@@ -527,7 +530,7 @@ export default function ToolsEditor({
       })
       .catch((e) => {
         if (cancelled) return;
-        setError((e as Error)?.message || "Failed to load tools");
+        setError((e as Error)?.message || t("Failed to load tools"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -535,7 +538,7 @@ export default function ToolsEditor({
     return () => {
       cancelled = true;
     };
-  }, [subjectKey, fetchSnapshot]);
+  }, [subjectKey, fetchSnapshot, t]);
 
   // F1 — subscribe to the global SSE bus so credential connect /
   // disconnect, catalog refreshes, and sibling-tab edits trigger a
@@ -766,7 +769,7 @@ export default function ToolsEditor({
       const extra = err.body?.unknown
         ? ` (${err.body.unknown.join(", ")})`
         : "";
-      setSaveError((err.body?.error || "Save failed") + extra);
+      setSaveError((err.body?.error || t("Save failed")) + extra);
     } finally {
       setSaving(false);
     }
@@ -781,7 +784,7 @@ export default function ToolsEditor({
       applyResult(result, true);
     } catch (e: unknown) {
       const err = e as { body?: { error?: string } };
-      setSaveError(err.body?.error || "Reset failed");
+      setSaveError(err.body?.error || t("Reset failed"));
     } finally {
       setSaving(false);
     }
@@ -791,7 +794,7 @@ export default function ToolsEditor({
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
         <Loader2 className="w-3 h-3 animate-spin" />
-        Loading tools…
+        {t("Loading tools…")}
       </div>
     );
   }
@@ -800,7 +803,7 @@ export default function ToolsEditor({
     return (
       <div className="flex items-start gap-2 text-xs text-destructive py-3">
         <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-        <span>{error || "Could not load tools"}</span>
+        <span>{error || t("Could not load tools")}</span>
       </div>
     );
   }
@@ -829,11 +832,10 @@ export default function ToolsEditor({
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-          <Wrench className="w-3 h-3" /> {title}
+          <Wrench className="w-3 h-3" /> {t(title)}
         </h4>
         <span className="text-[11px] text-muted-foreground">
-          {alwaysOnCount} always on · {searchableEnabled}/{searchableTotal}{" "}
-          searchable
+          {t("{always} always on · {enabled}/{total} searchable", { always: alwaysOnCount, enabled: searchableEnabled, total: searchableTotal })}
         </span>
       </div>
 
@@ -848,7 +850,7 @@ export default function ToolsEditor({
         <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground mb-3 px-2 py-1.5 rounded bg-muted/30">
           <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
           <span>
-            Catalog is unavailable. Start a session once to populate the tool list.
+            {t("Catalog is unavailable. Start a session once to populate the tool list.")}
           </span>
         </div>
       )}
@@ -859,24 +861,10 @@ export default function ToolsEditor({
       {disconnectedProvidersSummary.size > 0 && (
         <div className="flex items-center justify-between gap-2 mb-3 px-2.5 py-2 rounded-md border border-border/50 bg-muted/20">
           <div className="text-[11px] text-muted-foreground leading-relaxed">
-            <span className="font-medium text-foreground">
-              {Array.from(disconnectedProvidersSummary.keys())
-                .map(providerLabel)
-                .join(", ")}
-            </span>{" "}
-            not connected —{" "}
-            {Array.from(disconnectedProvidersSummary.values()).reduce(
-              (a, b) => a + b,
-              0,
-            )}{" "}
-            tool
-            {Array.from(disconnectedProvidersSummary.values()).reduce(
-              (a, b) => a + b,
-              0,
-            ) === 1
-              ? ""
-              : "s"}{" "}
-            unavailable until you authorize.
+            {t("{providers} not connected — {count} tools unavailable until you authorize.", {
+              providers: Array.from(disconnectedProvidersSummary.keys()).map(providerLabel).join(", "),
+              count: Array.from(disconnectedProvidersSummary.values()).reduce((a, b) => a + b, 0),
+            })}
           </div>
           <button
             type="button"
@@ -884,7 +872,7 @@ export default function ToolsEditor({
             className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-background text-[11px] font-medium text-foreground hover:bg-muted/40"
           >
             <ExternalLink className="w-3 h-3" />
-            Connect
+            {t("Connect")}
           </button>
         </div>
       )}
@@ -892,14 +880,14 @@ export default function ToolsEditor({
       {/* ===== Tier 1: Always enabled (loaded up front, locked) ===== */}
       <SectionHeader
         icon={<Lock className="w-3 h-3 text-muted-foreground" />}
-        title="Built-in capabilities"
-        count={`${alwaysOnCount} tools`}
-        blurb="The agent always has these built-in capabilities — they're on by default and can't be turned off."
+        title={t("Built-in capabilities")}
+        count={t("{count} tools", { count: alwaysOnCount })}
+        blurb={t("The agent always has these built-in capabilities — they're on by default and can't be turned off.")}
       />
 
       {(data.lifecycle.length > 0 || data.synthetic.length > 0) && (
         <CollapsibleGroup
-          title="System & control"
+          title={t("System & control")}
           count={data.lifecycle.length + data.synthetic.length}
           expanded={!!expanded["__system"]}
           onToggle={() =>
@@ -935,7 +923,7 @@ export default function ToolsEditor({
       {alwaysEnabledGroups.map((group) => (
         <CollapsibleGroup
           key={group.key}
-          title={group.title}
+          title={t(group.title)}
           count={group.tools.length}
           expanded={!!expanded[group.key]}
           onToggle={() =>
@@ -961,9 +949,9 @@ export default function ToolsEditor({
       {searchableGroups.length > 0 && (
         <SectionHeader
           icon={<Wrench className="w-3 h-3 text-muted-foreground" />}
-          title="Searchable"
-          count={`${searchableEnabled}/${searchableTotal} available`}
-          blurb="Shown to the agent by name only; it loads the full tool with search_tools when a task needs one. Turn a tool off to hide it from the agent entirely."
+          title={t("Searchable")}
+          count={t("{enabled}/{total} available", { enabled: searchableEnabled, total: searchableTotal })}
+          blurb={t("Shown to the agent by name only; it loads the full tool with search_tools when a task needs one. Turn a tool off to hide it from the agent entirely.")}
         />
       )}
 
@@ -1003,7 +991,7 @@ export default function ToolsEditor({
         return (
           <CollapsibleGroup
             key={group.key}
-            title={group.title}
+            title={t(group.title)}
             count={group.tools.length}
             badge={`${enabledInGroup}/${group.tools.length}`}
             expanded={!!expanded[group.key]}
@@ -1029,7 +1017,7 @@ export default function ToolsEditor({
                   className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border/60 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  Connect {providerLabel(groupConnectProvider)}
+                  {t("Connect {provider}", { provider: providerLabel(groupConnectProvider) })}
                 </button>
               ) : null
             }
@@ -1075,24 +1063,24 @@ export default function ToolsEditor({
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-          {saving ? "Saving…" : "Save"}
+          {saving ? t("Saving…") : t("Save")}
         </button>
         <button
           onClick={handleCancel}
           disabled={!dirty || saving}
           className="px-3 py-1.5 rounded-md border border-border/60 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Cancel
+          {t("Cancel")}
         </button>
 
         {/* Status */}
         {savedRecently && !dirty && (
           <span className="text-[11px] text-green-500 flex items-center gap-1">
-            <Check className="w-3 h-3" /> Saved
+            <Check className="w-3 h-3" /> {t("Saved")}
           </span>
         )}
         {dirty && !saving && (
-          <span className="text-[11px] text-amber-500">Unsaved changes</span>
+          <span className="text-[11px] text-amber-500">{t("Unsaved changes")}</span>
         )}
 
         {/* Quick actions */}
@@ -1102,7 +1090,7 @@ export default function ToolsEditor({
             disabled={saving || draftAllowed === null}
             className="px-3 py-1.5 rounded-md border border-border/60 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Allow all
+            {t("Allow all")}
           </button>
           {resetToRoleDefault && (
             <button
@@ -1110,12 +1098,12 @@ export default function ToolsEditor({
               disabled={saving || !!data.is_role_default}
               title={
                 data.is_role_default
-                  ? "Already using the recommended tools for this role"
-                  : "Restore the recommended tools for this role"
+                  ? t("Already using the recommended tools for this role")
+                  : t("Restore the recommended tools for this role")
               }
               className="px-3 py-1.5 rounded-md border border-border/60 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Reset to recommended
+              {t("Reset to recommended")}
             </button>
           )}
         </div>

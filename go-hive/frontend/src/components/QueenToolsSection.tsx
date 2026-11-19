@@ -1,8 +1,10 @@
 import { useCallback } from "react";
 import { queensApi } from "@/api/queens";
 import ToolsEditor from "./ToolsEditor";
+import { useI18n } from "@/i18n";
 
 export default function QueenToolsSection({ queenId }: { queenId: string }) {
+  const { t } = useI18n();
   const fetchSnapshot = useCallback(
     () => queensApi.getTools(queenId),
     [queenId],
@@ -18,7 +20,7 @@ export default function QueenToolsSection({ queenId }: { queenId: string }) {
   return (
     <ToolsEditor
       subjectKey={`queen:${queenId}`}
-      title="Tools"
+      title={t("Tools")}
       fetchSnapshot={fetchSnapshot}
       saveAllowlist={saveAllowlist}
       resetToRoleDefault={resetToRoleDefault}

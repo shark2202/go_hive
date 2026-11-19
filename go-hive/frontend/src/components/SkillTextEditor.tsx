@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useSkillIndex } from "@/hooks/use-skill-index";
 import { formatUseSkillTags, shortSkillLabel, type SkillCapsule } from "@/data/skill-capsules";
+import { useI18n } from "@/i18n";
 
 /**
  * A contenteditable message composer that renders inline
@@ -206,6 +207,7 @@ export const SkillTextEditor = forwardRef<SkillTextEditorHandle, SkillTextEditor
     },
     ref,
   ) {
+    const { t } = useI18n();
     const editorRef = useRef<HTMLDivElement | null>(null);
     const lastValueRef = useRef<string>("");
     const lastSigRef = useRef<string>("");
@@ -276,11 +278,11 @@ export const SkillTextEditor = forwardRef<SkillTextEditorHandle, SkillTextEditor
       x.contentEditable = "false";
       x.tabIndex = -1;
       x.textContent = "×";
-      x.setAttribute("aria-label", `Remove ${label}`);
+      x.setAttribute("aria-label", t("Remove {name}", { name: label }));
       x.className = "ml-1 cursor-pointer align-baseline leading-none opacity-40 hover:opacity-100";
       span.appendChild(x);
       return span;
-    }, []);
+    }, [t]);
 
     const renderToDom = useCallback(
       (text: string) => {
@@ -369,16 +371,16 @@ export const SkillTextEditor = forwardRef<SkillTextEditorHandle, SkillTextEditor
       el.childNodes.forEach(walk);
       // Indirect through a typed const so TS doesn't narrow `target` to `null`
       // (it can't see the mutation inside the `walk` closure).
-      const t = target as CaretTarget | null;
+      const caretTarget = target as CaretTarget | null;
       const r = document.createRange();
-      if (!t) {
+      if (!caretTarget) {
         r.selectNodeContents(el);
         r.collapse(false);
-      } else if (t.kind === "before") {
-        r.setStartBefore(t.before);
+      } else if (caretTarget.kind === "before") {
+        r.setStartBefore(caretTarget.before);
         r.collapse(true);
       } else {
-        r.setStart(t.node, t.offset);
+        r.setStart(caretTarget.node, caretTarget.offset);
         r.collapse(true);
       }
       sel.removeAllRanges();
@@ -956,11 +958,11 @@ export const SkillTextEditor = forwardRef<SkillTextEditorHandle, SkillTextEditor
                     setPhEdit(null);
                   }
                 }}
-                placeholder={`Enter ${phEdit.label}`}
+                placeholder={t("Enter {label}", { label: phEdit.label })}
                 className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <p className="mt-1.5 px-0.5 text-[10px] text-muted-foreground/70">
-                Enter to save · saved for next time
+                {t("Enter to save · saved for next time")}
               </p>
             </div>
           </>
