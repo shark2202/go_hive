@@ -15,6 +15,7 @@ import { agentSlug, slugToColonyId } from "@/lib/colony-registry";
 import { coloniesApi } from "@/api/colonies";
 import { deriveColonyStatus, describeColonyStatus, STATUS_DOT_CLASS } from "@/lib/colony-status";
 import { Tooltip } from "@/components/Tooltip";
+import { useI18n } from "@/i18n";
 
 interface SidebarColonyItemProps {
   colony: Colony;
@@ -27,6 +28,7 @@ export default function SidebarColonyItem({ colony, liveness }: SidebarColonyIte
   const { deleteColony, refresh } = useColony();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   // When checked, the colony's tracked data is permanently removed from
@@ -114,7 +116,7 @@ export default function SidebarColonyItem({ colony, liveness }: SidebarColonyIte
       setRenaming(false);
       setRenameValue("");
     } catch (err) {
-      setRenameError(err instanceof Error ? err.message : "Failed to rename");
+      setRenameError(err instanceof Error ? err.message : t("Failed to rename"));
     } finally {
       setRenameSaving(false);
     }
@@ -210,11 +212,11 @@ export default function SidebarColonyItem({ colony, liveness }: SidebarColonyIte
 
           {onWorkspace && (
             <span
-              title="Running on cloud computer"
+              title={t("Running on cloud computer")}
               className="flex-shrink-0 inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider font-semibold px-1 py-px rounded bg-primary/15 text-primary"
             >
               <Cloud className="w-2.5 h-2.5" />
-              Cloud
+              {t("Cloud")}
             </span>
           )}
 
@@ -243,14 +245,14 @@ export default function SidebarColonyItem({ colony, liveness }: SidebarColonyIte
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-[11.5px] text-foreground/80 hover:bg-sidebar-item-hover hover:text-foreground transition-colors"
               >
                 <Pencil className="w-3 h-3" />
-                Rename
+                {t("Rename")}
               </button>
               <button
                 onClick={handleDeleteClick}
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-[11.5px] text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <Trash2 className="w-3 h-3" />
-                Delete colony
+                {t("Delete colony")}
               </button>
             </div>
           )}
@@ -271,22 +273,23 @@ export default function SidebarColonyItem({ colony, liveness }: SidebarColonyIte
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">
-                  Delete colony
+                  {t("Delete colony")}
                 </h3>
               </div>
             </div>
 
             <p className="text-sm text-foreground/80">
-              Are you sure you want to delete <span className="font-medium text-foreground">{colony.name}</span>?{" "}
+              {t("Are you sure you want to delete")}{" "}
+              <span className="font-medium text-foreground">{colony.name}</span>?{" "}
               {purgeData
-                ? "This agent and all its tracked data will be permanently deleted."
-                : "This agent will be removed from your colonies."}
+                ? t("This agent and all its tracked data will be permanently deleted.")
+                : t("This agent will be removed from your colonies.")}
             </p>
 
             {onWorkspace && (
               <p className="text-xs text-foreground/60 flex items-start gap-1.5">
                 <Cloud className="w-3 h-3 mt-0.5 flex-shrink-0 text-primary" />
-                This colony also runs on your cloud computer — it will be removed there too.
+                {t("This colony also runs on your cloud computer — it will be removed there too.")}
               </p>
             )}
 
@@ -298,7 +301,7 @@ export default function SidebarColonyItem({ colony, liveness }: SidebarColonyIte
                 className="mt-0.5 accent-destructive"
               />
               <span className="text-xs text-foreground/70">
-                I want to completely remove the data tracked in this colony
+                {t("I want to completely remove the data tracked in this colony")}
               </span>
             </label>
 
@@ -307,13 +310,13 @@ export default function SidebarColonyItem({ colony, liveness }: SidebarColonyIte
                 onClick={() => setShowDeleteModal(false)}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-foreground/70 hover:bg-muted/50 transition-colors"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 onClick={handleConfirmDelete}
                 className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors"
               >
-                Delete
+                {t("Delete")}
               </button>
             </div>
           </div>

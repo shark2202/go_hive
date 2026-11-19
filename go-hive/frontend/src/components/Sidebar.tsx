@@ -40,6 +40,8 @@ import { deriveColonyStatus, describeColonyStatus, STATUS_DOT_CLASS } from "@/li
 import { useTutorial } from "./Tutorial/TutorialOverlay";
 import { DEMO_COLONY_TITLE } from "./Tutorial/demoColony";
 import { RollingNumber } from "./fx/RollingNumber";
+import { useI18n } from "@/i18n";
+import LocaleSwitcher from "@/i18n/LocaleSwitcher";
 
 function CollapsedColonyAvatar({
   colony,
@@ -82,6 +84,7 @@ function CollapsedQueenAvatar({
   liveness?: ReturnType<typeof useLiveSessions>["byQueen"] extends Map<string, infer T> ? T : never;
 }) {
   const { queenAvatarVersion, queenHasAvatar } = useColony();
+  const { t } = useI18n();
   const version = queenAvatarVersion(queen.id);
   const [hasAvatar, setHasAvatar] = useState(() => queenHasAvatar(queen.id));
   const url = apiUrl(`/queen/${queen.id}/avatar?v=${version}`);
@@ -94,14 +97,14 @@ function CollapsedQueenAvatar({
     // Not moving and not a deliberate end-of-turn — amber, steady.
     dotColor = "bg-amber-500";
     title = liveness.interrupt_cause
-      ? `${queen.name} — interrupted (${liveness.interrupt_cause})`
-      : `${queen.name} — interrupted`;
+      ? `${queen.name} — ${t("interrupted ({cause})", { cause: liveness.interrupt_cause })}`
+      : `${queen.name} — ${t("interrupted")}`;
   } else if (liveness?.is_executing) {
     dotColor = "bg-emerald-500";
     dotPulse = true;
     title = liveness.current_tool_name
-      ? `${queen.name} — running ${liveness.current_tool_name}`
-      : `${queen.name} — working`;
+      ? `${queen.name} — ${t("running {tool}", { tool: liveness.current_tool_name })}`
+      : `${queen.name} — ${t("working")}`;
   } else if (isActive) {
     dotColor = "bg-emerald-500";
   }
@@ -147,6 +150,7 @@ function CollapsedQueenAvatar({
 
 export default function Sidebar() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { colonies, queens, queenProfiles, sidebarCollapsed, setSidebarCollapsed, refresh } = useColony();
   const { me } = useMe();
   // Decommissioned queens vanish from the sidebar entirely; users
@@ -307,7 +311,7 @@ export default function Sidebar() {
           </button>
           <button
             onClick={() => setSidebarCollapsed(false)}
-            title="Expand sidebar"
+            title={t("Expand sidebar")}
             className="absolute -right-2.5 top-1/2 -translate-y-1/2 z-40 w-5 h-5 rounded-full bg-background border border-border shadow-sm flex items-center justify-center text-sidebar-muted hover:text-foreground hover:bg-sidebar-item-hover transition-colors"
           >
             <ChevronRight className="w-3 h-3" />
@@ -316,33 +320,33 @@ export default function Sidebar() {
 
         {/* Nav icons */}
         <div className="flex flex-col items-center py-3 gap-1 border-b border-border/60">
-          <button onClick={() => navigate("/")} title="New Chat"
+          <button onClick={() => navigate("/")} title={t("New Chat")}
             className="w-8 h-8 rounded-md flex items-center justify-center text-foreground/60 hover:text-foreground hover:bg-sidebar-item-hover transition-colors">
             <MessageSquarePlus className="w-4 h-4" />
           </button>
-          <button onClick={() => navigate("/org-chart")} title="Org Chart"
+          <button onClick={() => navigate("/org-chart")} title={t("Org Chart")}
             className="w-8 h-8 rounded-md flex items-center justify-center text-foreground/60 hover:text-foreground hover:bg-sidebar-item-hover transition-colors">
             <Network className="w-4 h-4" />
           </button>
-          <button onClick={() => setLibraryExpanded((v) => !v)} title="Configuration"
+          <button onClick={() => setLibraryExpanded((v) => !v)} title={t("Configuration")}
             className="w-8 h-8 rounded-md flex items-center justify-center text-foreground/60 hover:text-foreground hover:bg-sidebar-item-hover transition-colors">
             <Settings className="w-4 h-4" />
           </button>
           {libraryExpanded && (
             <>
-              <button onClick={() => navigate("/models")} title="Models"
+              <button onClick={() => navigate("/models")} title={t("Models")}
                 className="w-6 h-6 rounded-md flex items-center justify-center text-foreground/50 hover:text-foreground hover:bg-sidebar-item-hover transition-colors">
                 <Cpu className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => navigate("/credentials")} title="Credentials"
+              <button onClick={() => navigate("/credentials")} title={t("Credentials")}
                 className="w-6 h-6 rounded-md flex items-center justify-center text-foreground/50 hover:text-foreground hover:bg-sidebar-item-hover transition-colors">
                 <KeyRound className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => navigate("/skills-library")} title="Skills"
+              <button onClick={() => navigate("/skills-library")} title={t("Skills")}
                 className="w-6 h-6 rounded-md flex items-center justify-center text-foreground/50 hover:text-foreground hover:bg-sidebar-item-hover transition-colors">
                 <Library className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => navigate("/memory-library")} title="Memory"
+              <button onClick={() => navigate("/memory-library")} title={t("Memory")}
                 className="w-6 h-6 rounded-md flex items-center justify-center text-foreground/50 hover:text-foreground hover:bg-sidebar-item-hover transition-colors">
                 <Brain className="w-3.5 h-3.5" />
               </button>
@@ -401,7 +405,7 @@ export default function Sidebar() {
         <button
           onClick={() => setSidebarCollapsed(true)}
           className="p-1 rounded-md text-sidebar-muted hover:text-foreground hover:bg-sidebar-item-hover transition-colors"
-          title="Collapse sidebar"
+          title={t("Collapse sidebar")}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -414,21 +418,21 @@ export default function Sidebar() {
           className="flex items-center gap-2 px-3 py-[5px] rounded-md text-[12.5px] text-foreground/65 hover:bg-sidebar-item-hover hover:text-foreground transition-all duration-150"
         >
           <MessageSquarePlus className="w-[15px] h-[15px] opacity-70" />
-          <span>New Chat</span>
+          <span>{t("New Chat")}</span>
         </button>
         <button
           onClick={() => navigate("/org-chart")}
           className="flex items-center gap-2 px-3 py-[5px] rounded-md text-[12.5px] text-foreground/65 hover:bg-sidebar-item-hover hover:text-foreground transition-all duration-150"
         >
           <Network className="w-[15px] h-[15px] opacity-70" />
-          <span>Org Chart</span>
+          <span>{t("Org Chart")}</span>
         </button>
         <button
           onClick={() => setLibraryExpanded((v) => !v)}
           className="flex items-center gap-2 px-3 py-[5px] rounded-md text-[12.5px] text-foreground/65 hover:bg-sidebar-item-hover hover:text-foreground transition-all duration-150"
         >
           <Settings className="w-[15px] h-[15px] opacity-70" />
-          <span className="flex-1 text-left">Configuration</span>
+          <span className="flex-1 text-left">{t("Configuration")}</span>
           <ChevronDown
             className={`w-3 h-3 opacity-50 transition-transform duration-200 ${
               libraryExpanded ? "" : "-rotate-90"
@@ -442,28 +446,28 @@ export default function Sidebar() {
               className="flex items-center gap-2 px-2.5 py-[4px] rounded-md text-[12px] text-foreground/55 hover:bg-sidebar-item-hover hover:text-foreground transition-all duration-150"
             >
               <Cpu className="w-3.5 h-3.5 opacity-60" />
-              <span>Models</span>
+              <span>{t("Models")}</span>
             </button>
             <button
               onClick={() => navigate("/credentials")}
               className="flex items-center gap-2 px-2.5 py-[4px] rounded-md text-[12px] text-foreground/55 hover:bg-sidebar-item-hover hover:text-foreground transition-all duration-150"
             >
               <KeyRound className="w-3.5 h-3.5 opacity-60" />
-              <span>Credentials</span>
+              <span>{t("Credentials")}</span>
             </button>
             <button
               onClick={() => navigate("/skills-library")}
               className="flex items-center gap-2 px-2.5 py-[4px] rounded-md text-[12px] text-foreground/55 hover:bg-sidebar-item-hover hover:text-foreground transition-all duration-150"
             >
               <Library className="w-3.5 h-3.5 opacity-60" />
-              <span>Skills</span>
+              <span>{t("Skills")}</span>
             </button>
             <button
               onClick={() => navigate("/memory-library")}
               className="flex items-center gap-2 px-2.5 py-[4px] rounded-md text-[12px] text-foreground/55 hover:bg-sidebar-item-hover hover:text-foreground transition-all duration-150"
             >
               <Brain className="w-3.5 h-3.5 opacity-60" />
-              <span>Memory</span>
+              <span>{t("Memory")}</span>
             </button>
           </div>
         )}
@@ -480,7 +484,7 @@ export default function Sidebar() {
               <ChevronDown
                 className={`w-3 h-3 transition-transform ${coloniesExpanded ? "" : "-rotate-90"}`}
               />
-              <span>Colonies</span>
+              <span>{t("Colonies")}</span>
               {colonies.length > 0 && (
                 <span className="text-[10px] bg-sidebar-item-hover rounded-full px-1.5 py-0.5 font-medium">
                   <RollingNumber value={colonies.length} />
@@ -491,7 +495,7 @@ export default function Sidebar() {
             <button
               onClick={() => setCreateColonyOpen(true)}
               className="p-0.5 rounded text-sidebar-section-text hover:text-foreground hover:bg-sidebar-item-hover transition-colors"
-              title="Create colony"
+              title={t("Create colony")}
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -519,7 +523,7 @@ export default function Sidebar() {
                   ))}
                   {colonies.length === 0 && (
                     <p className="px-5 py-2 text-xs text-sidebar-muted">
-                      No colonies yet
+                      {t("No colonies yet")}
                     </p>
                   )}
                 </>
@@ -537,7 +541,7 @@ export default function Sidebar() {
             <ChevronDown
               className={`w-3 h-3 transition-transform ${queensExpanded ? "" : "-rotate-90"}`}
             />
-            <span>Queen Bees</span>
+            <span>{t("Queen Bees")}</span>
             <span aria-hidden className="fx-ruler flex-1 ml-1" />
           </button>
           {queensExpanded && (
@@ -552,7 +556,7 @@ export default function Sidebar() {
               ))}
               {sortedQueenProfiles.length === 0 && (
                 <p className="px-5 py-2 text-xs text-sidebar-muted">
-                  Loading queens...
+                  {t("Loading queens...")}
                 </p>
               )}
             </div>
@@ -560,20 +564,23 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="px-4 py-2 border-t border-border/60 text-[10.5px] font-mono tracking-tight">
-        {update ? (
-          <button
-            type="button"
-            onClick={() => window.open(update.downloadUrl, "_blank", "noopener")}
-            title={`Update available — download OpenHive v${update.latest}`}
-            className="flex items-center gap-1 text-primary hover:underline"
-          >
-            <Download className="w-3 h-3 shrink-0" />
-            <span>v{update.latest.split("-")[0]} is now available</span>
-          </button>
-        ) : (
-          <span className="text-sidebar-muted/70">v{__APP_VERSION__}</span>
-        )}
+      <div className="px-4 py-2 border-t border-border/60 flex items-center justify-between gap-2 text-[10.5px] font-mono tracking-tight">
+        <div className="min-w-0">
+          {update ? (
+            <button
+              type="button"
+              onClick={() => window.open(update.downloadUrl, "_blank", "noopener")}
+              title={t("Update available — download OpenHive v{version}", { version: update.latest })}
+              className="flex items-center gap-1 text-primary hover:underline"
+            >
+              <Download className="w-3 h-3 shrink-0" />
+              <span>{t("v{version} is now available", { version: update.latest.split("-")[0] })}</span>
+            </button>
+          ) : (
+            <span className="text-sidebar-muted/70">v{__APP_VERSION__}</span>
+          )}
+        </div>
+        <LocaleSwitcher className="shrink-0" />
       </div>
     </aside>
 
@@ -583,7 +590,7 @@ export default function Sidebar() {
         <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => !creatingColony && setCreateColonyOpen(false)} />
         <div className="fx-panel-in relative bg-card border border-border/60 rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Create Colony</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t("Create Colony")}</h2>
             <button onClick={() => setCreateColonyOpen(false)} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50">
               <X className="w-4 h-4" />
             </button>
@@ -591,7 +598,7 @@ export default function Sidebar() {
 
           <div className="space-y-3">
             <div>
-              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Queen Bee <span className="text-primary">*</span></label>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">{t("Queen Bee")} <span className="text-primary">*</span></label>
               <div className="grid grid-cols-2 gap-1.5 max-h-[156px] overflow-y-auto pr-1">
                 {orderQueens(visibleQueenProfiles, Object.keys(me?.preferences?.queens ?? {})).map((q) => (
                   <button key={q.id} onClick={() => setNewColonyQueen(q.id)}
@@ -611,17 +618,17 @@ export default function Sidebar() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Colony Name <span className="text-primary">*</span></label>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">{t("Colony Name")} <span className="text-primary">*</span></label>
               <input type="text" value={newColonyName}
                 onChange={(e) => setNewColonyName(e.target.value.toLowerCase().replace(/[^a-z0-9_]+/g, "_"))}
-                placeholder="e.g. research team" autoFocus
+                placeholder={t("e.g. research team")} autoFocus
                 className="w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary" />
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Goal <span className="text-muted-foreground/40">(optional)</span></label>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">{t("Goal")} <span className="text-muted-foreground/40">{t("(optional)")}</span></label>
               <textarea value={newColonyGoal} onChange={(e) => setNewColonyGoal(e.target.value)}
-                placeholder="Describe what this colony should work on" rows={3}
+                placeholder={t("Describe what this colony should work on")} rows={3}
                 className="w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
             </div>
           </div>
@@ -630,11 +637,11 @@ export default function Sidebar() {
             <button onClick={() => { setCreateColonyOpen(false); setNewColonyQueen(""); setNewColonyName(""); setNewColonyGoal(""); }}
               disabled={creatingColony}
               className="px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50">
-              Cancel
+              {t("Cancel")}
             </button>
             <button onClick={handleCreateColony} disabled={creatingColony || !newColonyName.trim() || !newColonyQueen}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-              {creatingColony ? <><Loader2 className="w-3 h-3 animate-spin" /> Creating...</> : "Create"}
+              {creatingColony ? <><Loader2 className="w-3 h-3 animate-spin" /> {t("Creating...")}</> : t("Create")}
             </button>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { ModelProvider } from "./context/ModelContext";
 import { RuntimeProvider } from "./context/RuntimeContext";
 import { ConfigurationGate } from "./context/ConfigurationGate";
 import { LiveSessionsProvider } from "./hooks/use-live-sessions";
+import { I18nProvider } from "./i18n";
 import App from "./App";
 
 // Typography: Geist (UI) + Geist Mono (code/labels), variable weights.
@@ -17,23 +18,26 @@ import "./index.css";
 // subscription, analytics, update-required) are stripped in the OSS web build:
 // the runtime is served same-origin and owns its own HIVE_HOME, so there is no
 // sign-in step.
-//   1. RuntimeProvider     — reports the runtime as ready (served alongside us).
-//   2. ConfigurationGate   — waits for the runtime to listen (never for model
+//   1. I18nProvider        — locale for the whole UI (localStorage + <html lang>).
+//   2. RuntimeProvider     — reports the runtime as ready (served alongside us).
+//   3. ConfigurationGate   — waits for the runtime to listen (never for model
 //                            setup: chats link to the model settings instead).
-//   3. ModelProvider       — fetches the runtime's LLM catalogue.
-//   4. App                 — the main product tree.
+//   4. ModelProvider       — fetches the runtime's LLM catalogue.
+//   5. App                 — the main product tree.
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <ThemeProvider>
-    <HashRouter>
-      <RuntimeProvider>
-        <LiveSessionsProvider>
-          <ConfigurationGate>
-            <ModelProvider>
-              <App />
-            </ModelProvider>
-          </ConfigurationGate>
-        </LiveSessionsProvider>
-      </RuntimeProvider>
-    </HashRouter>
+    <I18nProvider>
+      <HashRouter>
+        <RuntimeProvider>
+          <LiveSessionsProvider>
+            <ConfigurationGate>
+              <ModelProvider>
+                <App />
+              </ModelProvider>
+            </ConfigurationGate>
+          </LiveSessionsProvider>
+        </RuntimeProvider>
+      </HashRouter>
+    </I18nProvider>
   </ThemeProvider>,
 );

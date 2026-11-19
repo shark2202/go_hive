@@ -13,6 +13,7 @@ import {
 import SettingsModal from "@/components/SettingsModal";
 import { onOpenSettings, type SettingsSection } from "@/lib/settings-events";
 import ColonySettingsModal from "@/components/ColonySettingsModal";
+import { useI18n } from "@/i18n";
 
 /** OpenHive video tutorials — opens in the user's browser. */
 const TUTORIAL_PLAYLIST_URL = "https://www.youtube.com/@adenhive";
@@ -31,6 +32,7 @@ function UserMenu({
   avatarVersion: number;
   userHasAvatar: boolean;
 }) {
+  const { t } = useI18n();
   const [hasAvatar, setHasAvatar] = useState(userHasAvatar);
   const [menuOpen, setMenuOpen] = useState(false);
   const url = apiUrl(`/config/profile/avatar?v=${avatarVersion}`);
@@ -43,7 +45,7 @@ function UserMenu({
       <button
         onClick={() => setMenuOpen((o) => !o)}
         className="relative w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center hover:bg-primary/25 transition-colors overflow-hidden"
-        title="Account"
+        title={t("Account")}
       >
         {hasAvatar ? (
           <img src={url} alt="" className="w-full h-full object-cover" onError={() => setHasAvatar(false)} />
@@ -64,7 +66,7 @@ function UserMenu({
               className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-muted/60 transition-colors"
             >
               <Settings className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="flex-1 text-left">Profile &amp; settings</span>
+              <span className="flex-1 text-left">{t("Profile & settings")}</span>
             </button>
             <button
               onClick={() => {
@@ -74,9 +76,9 @@ function UserMenu({
               className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-muted/60 transition-colors"
             >
               <GraduationCap className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="flex-1 text-left">Tutorial</span>
+              <span className="flex-1 text-left">{t("Tutorial")}</span>
               <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary">
-                New
+                {t("New")}
               </span>
             </button>
           </div>
@@ -89,6 +91,7 @@ function UserMenu({
 export default function AppHeader() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { colonies, queens, queenProfiles, userProfile, userAvatarVersion, userHasAvatar } = useColony();
   const { actions, leftActions } = useHeaderActions();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -168,7 +171,7 @@ export default function AppHeader() {
               <button
                 onClick={() => navigate(`/queen/${queenIdForProfile}/profile`)}
                 className="flex items-center gap-2 rounded-md px-1.5 -mx-1.5 py-0.5 hover:bg-muted/60 transition-colors"
-                title={`View ${title}'s profile`}
+                title={t("View {name}'s profile", { name: title })}
               >
                 {queenHeaderContent}
               </button>
@@ -176,7 +179,7 @@ export default function AppHeader() {
               <button
                 onClick={() => setColonySettingsOpen(true)}
                 className="flex items-center gap-2 rounded-md px-1.5 -mx-1.5 py-0.5 hover:bg-muted/60 transition-colors"
-                title="View colony settings"
+                title={t("View colony settings")}
               >
                 {queenHeaderContent}
               </button>
