@@ -522,6 +522,11 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		l.unread = false
 		l.mu.Unlock()
 
+		// Parity: framework/agent_loop/agent_loop.py::_publish_iteration
+		if agentCtx.Observer != nil {
+			agentCtx.Observer.IterationStarted(inner + 1)
+		}
+
 		tools = l.RefreshDynamicTools(agentCtx, tools)
 
 		messages := conv.ToLLMMessages(model)
@@ -541,6 +546,16 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		completion, err := agentCtx.LLM.AComplete(ctx, request)
 		if err != nil {
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
+		}
+		// Parity: framework/agent_loop/agent_loop.py::_publish_text_delta +
+		// _publish_llm_turn_complete. The Go transport is non-streaming, so the
+		// complete assistant message is published as one snapshot instead of
+		// per-chunk deltas; the event shape is unchanged.
+		if agentCtx.Observer != nil {
+			if completion.Content != "" {
+				agentCtx.Observer.AssistantText(completion.Content, completion.Content, inner+1)
+			}
+			agentCtx.Observer.LLMTurnComplete(completion, inner+1)
 		}
 
 		toolCalls := completion.ToolCalls
@@ -615,7 +630,15 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 			l.toolCallsUsed++
 			l.stateMu.Unlock()
 
+			// Parity: framework/agent_loop/agent_loop.py::_publish_tool_started +
+			// _publish_tool_completed.
+			if agentCtx.Observer != nil {
+				agentCtx.Observer.ToolCallStarted(call)
+			}
 			results[i] = l.executeTool(ctx, agentCtx, call)
+			if agentCtx.Observer != nil {
+				agentCtx.Observer.ToolCallCompleted(call, results[i])
+			}
 			records = append(records, ToolCallRecord{
 				ToolUseID: tc.ID,
 				ToolName:  tc.Name,
