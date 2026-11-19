@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/tools"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
@@ -166,5 +167,97 @@ func TestSessionToolCatalogueKeepsNetworkScannersOffByDefault(t *testing.T) {
 		if !catalogue.registry.HasTool(name) {
 			t.Fatalf("scanner %q missing while the opt-in is on", name)
 		}
+	}
+}
+
+// fakeRunWorkerSpawner is the fake colony wire the run_worker executor talks
+// to: it records the batch and returns stub worker ids.
+type fakeRunWorkerSpawner struct {
+	tasks []colony.BatchTask
+	opts  colony.SpawnBatchOptions
+	ids   []string
+}
+
+func (f *fakeRunWorkerSpawner) SpawnBatchWithOptions(_ context.Context, tasks []colony.BatchTask, opts colony.SpawnBatchOptions) ([]string, error) {
+	f.tasks = append([]colony.BatchTask(nil), tasks...)
+	f.opts = opts
+	f.ids = make([]string, 0, len(tasks))
+	for index := range tasks {
+		f.ids = append(f.ids, "worker:"+string(rune('a'+index)))
+	}
+	return f.ids, nil
+}
+
+func (f *fakeRunWorkerSpawner) GetWorker(string) *colony.Worker { return nil }
+
+func (f *fakeRunWorkerSpawner) MaxConcurrentWorkers() int { return 4 }
+
+// Parity-exempt: assembly guard. The queen catalogue must advertise run_worker
+// next to the builtins and integrations; the chat runtime decides per turn
+// whether a bound colony makes it callable.
+func TestSessionToolCatalogueAdvertisesRunWorker(t *testing.T) {
+	root := t.TempDir()
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+	found := false
+	for _, def := range catalogue.Defs() {
+		if def.Name == colony.RunWorkerToolName {
+			found = true
+			if def.Parameters["type"] != "object" {
+				t.Fatalf("run_worker parameters = %#v", def.Parameters)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("run_worker missing from the session catalogue defs")
+	}
+	if catalogue.registry.HasTool(colony.RunWorkerToolName) {
+		t.Fatalf("run_worker should be a catalogue tool, not an integration registry tool")
+	}
+}
+
+// Parity: tests/test_run_worker_tool.py::test_run_worker_returns_error_when_no_colony
+func TestSessionToolCatalogueRunWorkerRejectsWithoutColony(t *testing.T) {
+	root := t.TempDir()
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+	content, isError, err := catalogue.Execute(context.Background(), colony.RunWorkerToolName, map[string]any{
+		"tasks": []any{map[string]any{"task": "do a thing"}},
+	})
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if !isError {
+		t.Fatalf("run_worker without a colony reported success: %s", content)
+	}
+	if !strings.Contains(content, "No colony is bound") {
+		t.Fatalf("error = %q, want an actionable no-colony message", content)
+	}
+}
+
+// Parity: tests/test_run_worker_tool.py::test_run_worker_tool_returns_immediately_and_emits_reports
+func TestSessionToolCatalogueRunWorkerDispatchesBoundColony(t *testing.T) {
+	root := t.TempDir()
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+	spawner := &fakeRunWorkerSpawner{}
+	ctx := colony.WithRunWorkerSpawner(context.Background(), spawner)
+
+	content, isError, err := catalogue.Execute(ctx, colony.RunWorkerToolName, map[string]any{
+		"tasks":   []any{map[string]any{"task": "slice one"}, map[string]any{"task": "slice two"}},
+		"timeout": 15,
+	})
+	if err != nil || isError {
+		t.Fatalf("Execute: err=%v isError=%v content=%s", err, isError, content)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(content), &payload); err != nil {
+		t.Fatalf("payload is not JSON: %v", err)
+	}
+	if payload["status"] != "started" || payload["worker_count"] != float64(2) {
+		t.Fatalf("payload = %#v", payload)
+	}
+	if len(spawner.tasks) != 2 || spawner.tasks[0].Task != "slice one" {
+		t.Fatalf("spawned tasks = %#v", spawner.tasks)
+	}
+	if spawner.opts.BatchID == "" {
+		t.Fatal("run_worker did not hand the colony a batch id")
 	}
 }

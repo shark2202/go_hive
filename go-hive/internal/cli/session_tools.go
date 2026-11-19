@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
@@ -72,6 +73,13 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 			continue
 		}
 		catalogue.defs = append(catalogue.defs, def)
+	}
+	// run_worker is a queen lifecycle tool, not an integration: it dispatches
+	// through the live colony runtime the session binds (see
+	// ChatRuntime.BindColony) and is filtered out of turns while no colony is
+	// bound, matching upstream's colony-phase tool surface.
+	if _, taken := catalogue.builtinNames[colony.RunWorkerToolName]; !taken {
+		catalogue.defs = append(catalogue.defs, colony.RunWorkerToolDef())
 	}
 	for _, name := range registry.RegisteredNames() {
 		if _, taken := catalogue.builtinNames[name]; taken {
@@ -180,6 +188,13 @@ func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input m
 	}
 	if c.taskTools.Has(name) {
 		return c.taskTools.Execute(name, input)
+	}
+	// The colony runtime travels on the context (ChatRuntime binds it per
+	// call), so this executor stays valid even though the catalogue is built
+	// before a session's colony host exists.
+	if name == colony.RunWorkerToolName {
+		content, isError := colony.RunWorker(ctx, colony.RunWorkerSpawnerFromContext(ctx), input)
+		return content, isError, nil
 	}
 	result, err := c.registry.GetExecutor().Execute(ctx, tools.ToolUse{
 		Name:  name,
