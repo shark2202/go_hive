@@ -39,8 +39,11 @@ type CredentialSpecView struct {
 }
 
 type CredentialRouteDeps struct {
-	Home                   hivehome.Home
-	Store                  credentialRouteStore
+	Home  hivehome.Home
+	Store credentialRouteStore
+	// Manager resolves the live session behind a credential-form submission.
+	// Nil leaves the credential-form route answering 404 (no session surface).
+	Manager                *SessionManager
 	Specs                  func() []CredentialSpecView
 	SpecsStore             func() credentialRouteStore
 	Accounts               func() map[string][]map[string]any
@@ -75,6 +78,10 @@ func RegisterCredentialRoutes(mux *http.ServeMux, deps CredentialRouteDeps) {
 	mux.HandleFunc("POST /api/credentials/validate-key", routes.handleValidateKey)
 	mux.HandleFunc("GET /api/credentials", routes.handleListCredentials)
 	mux.HandleFunc("POST /api/credentials", routes.handleSaveCredential)
+	// The secure form the agent opened (pending_input reason credential_form)
+	// is answered on the session it belongs to; the handler stores the values
+	// and resumes the parked loop with a non-secret confirmation.
+	mux.HandleFunc("POST /api/sessions/{session_id}/credential-form", routes.handleCredentialForm)
 	mux.HandleFunc("GET /api/credentials/{credential_id}", routes.handleGetCredential)
 	mux.HandleFunc("DELETE /api/credentials/{credential_id}", routes.handleDeleteCredential)
 }

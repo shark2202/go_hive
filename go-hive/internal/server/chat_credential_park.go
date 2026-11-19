@@ -70,6 +70,30 @@ func (r *ChatRuntime) parkForMissingCredential(toolName, content string) (string
 	return content + "\n\n" + credentialFormWaitingReply, true
 }
 
+// PendingCredentialForm returns a copy of the secure form this session is
+// parked on, or nil when no credential_form wait is active. It is the read
+// side of the submission entry: the route only accepts a submission that
+// answers the wait the runtime actually persisted.
+func (r *ChatRuntime) PendingCredentialForm() map[string]any {
+	if r == nil {
+		return nil
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return cloneParkForm(r.pendingCredentialForm)
+}
+
+// ClearCredentialFormPark ends the credential wait once the submitted values
+// have reached the encrypted store. It drops the in-memory form and the
+// persisted pending_input marker before the resume turn runs, so a crash
+// between the save and the resume cannot re-enter the same wait.
+func (r *ChatRuntime) ClearCredentialFormPark() {
+	if r == nil {
+		return
+	}
+	r.clearPendingCredentialForm()
+}
+
 // missingCredentialResult reports whether a tool result is an error payload
 // carrying the missing-credential marker the integration modules emit. The
 // error-shape guard keeps unrelated prose (a file the agent read) from opening

@@ -1153,7 +1153,18 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 		ToolExecutor: r.executorFor(worker),
 		Config:       agentloop.DefaultLoopConfig(),
 	}
-	loop.ConfigureJudge(worker.Context.AgentSpec, r.workerCompleter(), r.judgeEventWriter())
+	// The overseer is the colony's lead: when the queen spec carries no
+	// criteria of its own it inherits the colony goal's, exactly like a
+	// worker. With neither, ConfigureJudge leaves the judge off (no extra
+	// model call on the overseer's turn).
+	judgeSpec := worker.Context.AgentSpec
+	if !agentloop.HasSuccessCriteria(judgeSpec) {
+		if goalCriteria := agentloop.GoalCriteriaText(r.goal); goalCriteria != nil {
+			judgeSpec.SuccessCriteria = goalCriteria
+			worker.Context.AgentSpec.SuccessCriteria = goalCriteria
+		}
+	}
+	loop.ConfigureJudge(judgeSpec, r.workerCompleter(), r.judgeEventWriter())
 	// Worker.Inject routes new input through this loop, so an overseer that
 	// sits between turns still wakes on the next message.
 	worker.SetAgentLoop(loop)

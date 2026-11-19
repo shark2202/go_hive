@@ -146,8 +146,9 @@ func NewApp(deps AppDeps) *App {
 	// manager and the process clock. Each seam that is not implemented yet
 	// answers with an explicit failure inside its handler (no empty 200s).
 	RegisterCredentialRoutes(mux, CredentialRouteDeps{
-		Home:  deps.Home,
-		Specs: credentialSpecsFromRegistry,
+		Home:    deps.Home,
+		Manager: deps.Manager,
+		Specs:   credentialSpecsFromRegistry,
 	})
 	RegisterSoulRoutes(mux, SoulRouteDeps{Home: deps.Home})
 	RegisterChannelRoutes(mux, ChannelRouteDeps{Home: deps.Home})

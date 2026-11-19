@@ -186,7 +186,13 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, home hiv
 		SessionID: record.ID,
 		QueenName: record.QueenName,
 		HomeRoot:  home.Root,
-		Colony:    record.Colony,
+		// The preloaded path must announce the same queen skills catalog a
+		// created session does: without it the skills_catalog reminder source
+		// stays silent for the whole `serve --colony` session.
+		//
+		// Parity: core/framework/server/queen_orchestrator.py::create_queen
+		SkillsCatalog: queenSkillsCatalogProvider(home, chatSessionQueenScope(record.QueenName)),
+		Colony:        record.Colony,
 	})
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", record.ID, err)

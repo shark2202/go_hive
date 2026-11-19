@@ -82,6 +82,11 @@ type ChatRuntimeDeps struct {
 	// SkillsCatalog supplies the queen's rendered skills catalog for the
 	// skills reminder. Nil (or an empty return) keeps that source silent.
 	SkillsCatalog func() string
+	// SuccessCriteria is the optional success-criteria paragraph the loop
+	// judge evaluates each turn against. Nil (or blank) keeps the judge off,
+	// so a plain chat turn costs no extra model call. A colony-bound session
+	// that arrives without it inherits the colony goal's criteria on bind.
+	SuccessCriteria *string
 	// Colony is the session's live colony runtime. When set (at construction
 	// or later through Session.BindChatColony), the queen gains run_worker and
 	// every worker report arrives as a [WORKER_REPORT] user turn.
@@ -266,6 +271,9 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 			ID:        "queen",
 			Name:      "Queen",
 			AgentType: "event_loop",
+			// The judge only evaluates a spec that carries criteria; a plain
+			// chat session leaves this nil and its loop Judge stays nil.
+			SuccessCriteria: deps.SuccessCriteria,
 		},
 		LLM:            loopLLM,
 		AvailableTools: runtime.tools,
@@ -293,6 +301,9 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	runtime.agentCtx = agentCtx
 	runtime.conv = conv
 	runtime.loop = agentloop.NewAgentLoop(chatLoopConfig(deps.Root), runtime.executeTool)
+	// A session with configured criteria evaluates its turns; without them the
+	// judge stays nil and the turn costs exactly one model call.
+	runtime.configureCriteriaJudge()
 	if deps.Colony != nil {
 		runtime.BindColony(deps.Colony)
 	}
@@ -596,7 +607,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 			IsClientInput: request.clientInput,
 			IsTrigger:     request.trigger != nil,
 		}); err != nil {
-			emitter.executionFailed(err)
+			emitter.executionFailed(err, agentloop.ParkReasonUnknown)
 			r.setParkState(agentloop.ParkReasonUnknown, true)
 			r.setLastError(err)
 			return
@@ -616,16 +627,21 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		// A cancelled turn (session teardown) is not a failure worth
 		// broadcasting: the runtime is going away, not the model failing.
 		if r.ctx.Err() == nil {
-			emitter.executionFailed(err)
-			r.setParkState(agentloop.ParkReasonLLMError, true)
+			// A loop-raised park (the deterministic doom loop) outranks the
+			// generic failure reason: the event and the runtime park state must
+			// name the same reason the TurnResult carries.
+			parkReason := turnFailureParkReason(result, agentloop.ParkReasonLLMError)
+			emitter.executionFailed(err, parkReason)
+			r.setParkState(parkReason, true)
 		}
 		r.setLastError(err)
 		return
 	}
 	if !result.Success {
 		err := errors.New("server: chat turn did not complete")
-		emitter.executionFailed(err)
-		r.setParkState(agentloop.ParkReasonUnknown, true)
+		parkReason := turnFailureParkReason(result, agentloop.ParkReasonUnknown)
+		emitter.executionFailed(err, parkReason)
+		r.setParkState(parkReason, true)
 		r.setLastError(err)
 		return
 	}
@@ -649,6 +665,19 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	}
 	r.timelineAfterTurn()
 	r.setLastError(nil)
+}
+
+// turnFailureParkReason keeps a loop-raised park on a failed turn. The loop's
+// TurnResult.ParkReason is set when the guard itself stopped the turn (the
+// deterministic doom loop); a turn that merely errored leaves it nil and the
+// caller's generic reason applies. Returning the carried reason keeps the
+// published loop_state_changed, the persisted pending_input, and the
+// TurnResult naming the same park.
+func turnFailureParkReason(result agentloop.TurnResult, fallback agentloop.ParkReason) agentloop.ParkReason {
+	if result.ParkReason != nil && *result.ParkReason != "" {
+		return *result.ParkReason
+	}
+	return fallback
 }
 
 // newChatExecutionID returns the per-turn execution id the loop and the
@@ -804,14 +833,19 @@ func (e *chatTurnEmitter) executionCompleted(iterations int, parkReason string) 
 
 // executionFailed makes a broken turn visible: execution_failed carries the
 // error text (the dashboard renders it as a system bubble from history) and
-// the loop state drops out of EXECUTING so the spinner stops.
-func (e *chatTurnEmitter) executionFailed(err error) {
+// the loop state drops out of EXECUTING so the spinner stops. The park reason
+// is the one the TurnResult carries when the loop raised its own park (a doom
+// loop); an ordinary error defaults to llm_error.
+func (e *chatTurnEmitter) executionFailed(err error, parkReason agentloop.ParkReason) {
 	if e == nil || err == nil {
 		return
 	}
+	if parkReason == "" {
+		parkReason = agentloop.ParkReasonLLMError
+	}
 	message := err.Error()
-	parkReason := "llm_error"
-	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "interrupted", &e.executionID, &parkReason, nil, nil)
+	reason := string(parkReason)
+	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "interrupted", &e.executionID, &reason, nil, nil)
 	e.bus.EmitExecutionFailed(e.streamID, e.executionID, message, nil, nil)
 }
 
@@ -979,6 +1013,42 @@ func (r *ChatRuntime) BindColony(runtime ColonyRuntime) {
 	}
 }
 
+// configureCriteriaJudge arms the loop judge for a chat session whose
+// AgentSpec carries success criteria. No criteria (or no completer) leaves the
+// judge off, so an ordinary chat turn still costs exactly one model call.
+//
+// Parity: framework/agent_loop/internals/judge_pipeline.py::judge_turn
+func (r *ChatRuntime) configureCriteriaJudge() bool {
+	if r == nil || r.loop == nil || r.agentCtx == nil {
+		return false
+	}
+	return r.loop.ConfigureJudge(r.agentCtx.AgentSpec, r.deps.LLM, r.bus)
+}
+
+// inheritColonyCriteria gives a colony-bound queen the colony goal's criteria
+// when the session arrived without any of its own. A plain chat session has no
+// goal and keeps its judge off; a session created with a colony inherits the
+// criteria its workers are judged against, so the queen's turn is evaluated
+// the same way.
+//
+// Parity-exempt: Go-only inheritance seam. Upstream's queen spec carries an
+// empty success_criteria list; this port derives the paragraph from the
+// colony goal for a session bound to one.
+func (r *ChatRuntime) inheritColonyCriteria(concrete *colony.ColonyRuntime) {
+	if r == nil || r.agentCtx == nil || concrete == nil {
+		return
+	}
+	if agentloop.HasSuccessCriteria(r.agentCtx.AgentSpec) {
+		return
+	}
+	criteria := agentloop.GoalCriteriaText(concrete.Goal())
+	if criteria == nil {
+		return
+	}
+	r.agentCtx.AgentSpec.SuccessCriteria = criteria
+	r.configureCriteriaJudge()
+}
+
 // bindColony stores the concrete runtime and reports whether it changed.
 func (r *ChatRuntime) bindColony(concrete *colony.ColonyRuntime) bool {
 	r.colonyMu.Lock()
@@ -991,6 +1061,9 @@ func (r *ChatRuntime) bindColony(concrete *colony.ColonyRuntime) bool {
 		r.colonyUnsub = nil
 	}
 	r.colonyRuntime = concrete
+	// The binding is the first point a create-with-colony session can see its
+	// goal, so the judge is armed here rather than waiting for a load pass.
+	r.inheritColonyCriteria(concrete)
 	if concrete == nil {
 		r.setBoundColonyID(nil)
 		return true
