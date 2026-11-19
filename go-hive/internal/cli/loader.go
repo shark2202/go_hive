@@ -603,7 +603,6 @@ func (r *Runner) createSessionWithRuntime(
 			SessionID: sessionID,
 			QueenName: record.QueenName,
 			HomeRoot:  home.Root,
-			Reminders: serveReminders,
 		})
 		if err != nil {
 			fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, err)
