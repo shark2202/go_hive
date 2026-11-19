@@ -115,12 +115,27 @@ func SavedPlaybookNames(playbooksDir string) []string {
 	if err != nil {
 		return []string{}
 	}
+	seen := map[string]struct{}{}
 	out := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		name := entry.Name()
-		if entry.Type().IsRegular() && strings.HasSuffix(name, ".play.py") {
-			out = append(out, strings.TrimSuffix(name, ".play.py"))
+		if !entry.Type().IsRegular() {
+			continue
 		}
+		var base string
+		switch {
+		case strings.HasSuffix(name, ".play.py"):
+			base = strings.TrimSuffix(name, ".play.py")
+		case strings.HasSuffix(name, ".play.json"):
+			base = strings.TrimSuffix(name, ".play.json")
+		default:
+			continue
+		}
+		if _, dup := seen[base]; dup {
+			continue
+		}
+		seen[base] = struct{}{}
+		out = append(out, base)
 	}
 	sort.Strings(out)
 	return out
@@ -153,9 +168,17 @@ func ResolveScript(playbook, playbookPath, playbookName *string, playbooksDir st
 		return string(data), p, nil
 	}
 	if truthyStringPtr(playbookName) {
-		p := filepath.Join(playbooksDir, SanitizeName(*playbookName)+".play.py")
-		info, statErr := os.Stat(p)
-		if statErr != nil || info.IsDir() {
+		base := filepath.Join(playbooksDir, SanitizeName(*playbookName))
+		var p string
+		for _, candidate := range []string{base + ".play.json", base + ".play.py"} {
+			info, statErr := os.Stat(candidate)
+			if statErr != nil || info.IsDir() {
+				continue
+			}
+			p = candidate
+			break
+		}
+		if p == "" {
 			saved := SavedPlaybookNames(playbooksDir)
 			list := "(none yet)"
 			if len(saved) > 0 {

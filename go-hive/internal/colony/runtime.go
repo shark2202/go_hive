@@ -211,6 +211,13 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 	}
 	runtime.workerLLM = opts.WorkerLLM
 	runtime.skillsProvider = opts.SkillsProvider
+	if runtime.skillsProvider == nil {
+		// No host passed a provider, but a colony that owns a skills/ folder
+		// still has a catalog: read it straight off disk so the colony skills
+		// route and the worker prompt agree (upstream's SkillsManager loads
+		// the same-scope folder on demand).
+		runtime.skillsProvider = runtime.colonySkills
+	}
 	if opts.Binding != nil {
 		copied := *opts.Binding
 		runtime.trackerBinding = &copied
@@ -363,7 +370,7 @@ func (r *ColonyRuntime) BuildWorker(opts WorkerBuildOptions) *Worker {
 	}
 	spawnTools := opts.SpawnTools
 	if spawnTools == nil {
-		spawnTools = r.workerToolDefs()
+		spawnTools = appendMissingToolDefs(r.workerToolDefs(), skills.SkillViewToolDef(), skills.ListSkillsToolDef())
 	}
 	worker := NewWorker(opts.WorkerID, opts.Task, streamID)
 	worker.ProfileName = opts.ProfileName
@@ -384,10 +391,21 @@ func (r *ColonyRuntime) BuildWorker(opts WorkerBuildOptions) *Worker {
 func (r *ColonyRuntime) buildWorkerContext(worker *Worker, spec agentloop.AgentSpec, spawnTools []llm.ToolDef, storage string, preload []string) *agentloop.AgentContext {
 	ctx := r.buildContext(worker, spec)
 	ctx.AvailableTools = append([]llm.ToolDef(nil), spawnTools...)
+	// Colony skills are both discoverable (catalog prompt) and readable
+	// (SkillDirs turns view_file in the skill folder into skill content).
+	// write_skill's colony scope writes to exactly this folder.
+	if skillDirs := r.workerSkillDirs(); len(skillDirs) > 0 {
+		ctx.SkillDirs = skillDirs
+		ctx.SkillsCatalogPrompt = r.workerSkillsCatalogPrompt()
+	}
 
 	keepSet := r.workerKeepSet()
 	if len(keepSet) == 0 {
 		return ctx
+	}
+	alwaysEnabled := make(map[string]struct{}, len(keepSet)+2)
+	for name := range keepSet {
+		alwaysEnabled[name] = struct{}{}
 	}
 
 	pool := make([]tools.Tool, 0, len(spawnTools))
@@ -402,9 +420,17 @@ func (r *ColonyRuntime) buildWorkerContext(worker *Worker, spec agentloop.AgentS
 	}
 	tier := &tools.ToolTierState{
 		Pool:               pool,
-		AlwaysEnabledNames: keepSet,
+		AlwaysEnabledNames: alwaysEnabled,
 		GateableNames:      r.gateableNames(),
 		PersistPath:        filepath.Join(storage, "tool_tiers.json"),
+	}
+	// Skill reads are part of the worker's core orientation surface: keep them
+	// eager whenever the spawn pool carries them, so a task naming a skill does
+	// not cost a search_tools round first.
+	for _, name := range []string{skills.SkillViewToolName, skills.ListSkillsToolName} {
+		if _, ok := registered[name]; ok {
+			tier.AlwaysEnabledNames[name] = struct{}{}
+		}
 	}
 	tier.RestoreLoadedTools(tier.LoadPersistedTools(), registered)
 	tier.Rebuild()
@@ -770,6 +796,10 @@ func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 	// queen-only pair stays out.
 	tools = appendMissingToolDefs(tools, trackerToolDefs("worker")...)
 	tools = appendMissingToolDefs(tools, agentloop.BuildReportToParentTool(r.agentSpec.ReportSchema))
+	// Workers read skills (the queen authors them); skill_view/list_skills
+	// complement the SkillDirs view_file interceptor so a skill is reachable
+	// without guessing its filesystem path.
+	tools = appendMissingToolDefs(tools, skills.SkillViewToolDef(), skills.ListSkillsToolDef())
 	return tools
 }
 
@@ -780,7 +810,11 @@ func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 // Parity: framework/loader/agent_loader.py::AgentLoader.load (the config's
 // tools list becomes the worker node's declared tool set)
 func (r *ColonyRuntime) baseWorkerTools() []llm.ToolDef {
-	return selectWorkerDeclaredTools(r.applyToolAllowlist(r.tools), r.declaredTools, r.agentSpec.Tools)
+	base := selectWorkerDeclaredTools(r.applyToolAllowlist(r.tools), r.declaredTools, r.agentSpec.Tools)
+	// run_playbook is the queen's batch driver; a worker must not recurse into
+	// a converge loop of its own. The session catalogue also feeds the colony's
+	// declared-tool pool, so filter the name even when worker.json asks for it.
+	return withoutTool(base, RunPlaybookToolName)
 }
 
 func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
@@ -799,6 +833,15 @@ func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallReque
 			if result, ok := r.executeTrackerTool(trackerRegistry, req); ok {
 				return result, nil
 			}
+		}
+		// Skill reads are filesystem reads scoped to the colony's skills/
+		// folder; the worker's own dirs are the only authority (never the
+		// queen's private skill tree).
+		if content, isError, handled := skills.ExecuteAgentTool(req.Name, req.Input, skills.ToolDirs{
+			ColonyDir:  r.storagePath,
+			SessionDir: r.storagePath,
+		}); handled {
+			return agentloop.ToolResult{Content: content, IsError: isError}, nil
 		}
 		if r.toolExec != nil {
 			return r.toolExec(req)

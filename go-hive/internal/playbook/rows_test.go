@@ -82,6 +82,26 @@ func TestExtractScriptWithoutRowsIsNone(t *testing.T) {
 	}
 }
 
+// Parity-exempt: the saved-playbook library in this port can hold native JSON
+// playbooks as well as Python-era .play.py files, so the name listing must see
+// both (de-duplicated by stem).
+func TestSavedPlaybookNamesIncludeBothExtensions(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"alpha.play.py", "beta.play.json", "alpha.play.json", "notes.txt"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("{}"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	names := SavedPlaybookNames(dir)
+	if len(names) != 2 || names[0] != "alpha" || names[1] != "beta" {
+		t.Fatalf("SavedPlaybookNames = %v, want [alpha beta]", names)
+	}
+	script, path, err := ResolveScript(nil, nil, strPtr("beta"), dir)
+	if err != nil || script != "{}" || path != filepath.Join(dir, "beta.play.json") {
+		t.Fatalf("ResolveScript(beta) = (%q, %q, %v)", script, path, err)
+	}
+}
+
 // Parity: core/tests/test_playbook_tools.py::test_error_detail_surfaces_original_cause
 func TestErrorDetailSurfacesOriginalCause(t *testing.T) {
 	colony := newFakeColony()
