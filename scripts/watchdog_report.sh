@@ -101,7 +101,7 @@ while true; do
     state_set last_head "$head"
     state_set last_head_at "$now"
   elif [ -n "$last_head_at" ] && [ $((now - last_head_at)) -gt 2700 ] && [ "$worktrees" -gt 0 ]; then
-    alert stall "HEAD 已 $(( (now - last_head_at) / 60 )) 分钟未变（worktrees=$worktrees），可能停滞"
+    alert stall "HEAD 已 $(( (now - last_head_at) / 60 )) 分钟未变（worktrees=${worktrees}），可能停滞"
   fi
 
   # 固定节拍：本轮工作耗时从睡眠里扣掉，避免每轮漂移。
