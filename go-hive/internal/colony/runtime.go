@@ -173,6 +173,10 @@ type ColonyRuntime struct {
 	budgetApplied    int
 	budgetAppliedSet bool
 	budgetMaxSuccess int
+
+	// overseerTasks is the persistent overseer's own session task list. It
+	// lives under the colony directory so the colony stays one portable unit.
+	overseerTasks *overseerTaskSet
 }
 
 func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
@@ -211,6 +215,7 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 	}
 	runtime.workerLLM = opts.WorkerLLM
 	runtime.skillsProvider = opts.SkillsProvider
+	runtime.overseerTasks = newOverseerTaskSet(storage)
 	if runtime.skillsProvider == nil {
 		// No host passed a provider, but a colony that owns a skills/ folder
 		// still has a catalog: read it straight off disk so the colony skills
@@ -374,6 +379,8 @@ func (r *ColonyRuntime) BuildWorker(opts WorkerBuildOptions) *Worker {
 	}
 	worker := NewWorker(opts.WorkerID, opts.Task, streamID)
 	worker.ProfileName = opts.ProfileName
+	worker.StoragePath = storage
+	worker.OutputFile = filepath.Join(storage, workerConversationsDir)
 	worker.Context = r.buildWorkerContext(worker, r.agentSpec, spawnTools, storage, opts.PreloadTools)
 	if opts.InputData != nil {
 		worker.Context.InputData = opts.InputData
@@ -608,6 +615,9 @@ func (r *ColonyRuntime) spawnBatchOn(runCtx context.Context, tasks []BatchTask, 
 		workerConfig := cfg
 		worker.loopConfig = &workerConfig
 		worker.BudgetPinned = pinned
+		// Lineage breadcrumb: resume needs the original task/profile, and the
+		// colony id is the cross-colony guard a later resume checks.
+		r.writeWorkerMeta(worker)
 		workers = append(workers, worker)
 	}
 
@@ -618,17 +628,23 @@ func (r *ColonyRuntime) spawnBatchOn(runCtx context.Context, tasks []BatchTask, 
 	r.mu.Unlock()
 
 	for _, worker := range workers {
-		worker := worker
-		workerCtx, cancel := context.WithCancel(runCtx)
-		worker.setCancel(cancel)
-		r.wg.Add(1)
-		go func() {
-			defer r.wg.Done()
-			defer cancel()
-			r.runGatedWorker(workerCtx, worker)
-		}()
+		r.startWorker(runCtx, worker)
 	}
 	return ids, nil
+}
+
+// startWorker launches one worker under the colony's admission gate. Every
+// worker gets its own context so a single run/worker can be stopped without
+// touching its siblings; resumed workers enter through the same path.
+func (r *ColonyRuntime) startWorker(runCtx context.Context, worker *Worker) {
+	workerCtx, cancel := context.WithCancel(runCtx)
+	worker.setCancel(cancel)
+	r.wg.Add(1)
+	go func() {
+		defer r.wg.Done()
+		defer cancel()
+		r.runGatedWorker(workerCtx, worker)
+	}()
 }
 
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.wait_for_worker_reports
@@ -686,15 +702,30 @@ func (r *ColonyRuntime) StartOverseer(ctx context.Context, queenSpec agentloop.A
 	worker := NewWorker(id, "", "overseer")
 	worker.Persistent = true
 	worker.BudgetPinned = true
+	worker.StoragePath = r.storagePath
+	worker.OutputFile = filepath.Join(r.storagePath, workerConversationsDir)
 	worker.Context = r.buildContext(worker, queenSpec)
-	conv := agentloop.NewNodeConversation(systemPromptFor(queenSpec))
-	for _, message := range seedConversation {
-		content := message.Content
-		if message.Role == "assistant" {
-			_, _ = conv.AddAssistantMessage(content, nil, agentloop.AssistantMessageOptions{})
-			continue
+	// The overseer's conversation lives at the colony root (upstream keeps it
+	// at <colony>/conversations, not under a worker directory). A restarted
+	// colony reloads that transcript; only a fresh colony replays the seed.
+	store := agentloop.NewFileConversationStore(filepath.Join(r.storagePath, workerConversationsDir))
+	conv, restored, err := restoreWorkerConversation(store)
+	if err != nil || conv == nil {
+		conv = agentloop.NewNodeConversationWithOptions(agentloop.ConversationOptions{
+			SystemPrompt: systemPromptFor(queenSpec),
+			Store:        store,
+		})
+		restored = false
+	}
+	if !restored {
+		for _, message := range seedConversation {
+			content := message.Content
+			if message.Role == "assistant" {
+				_, _ = conv.AddAssistantMessage(content, nil, agentloop.AssistantMessageOptions{})
+				continue
+			}
+			_, _ = conv.AddUserMessage(content, agentloop.UserMessageOptions{})
 		}
-		_, _ = conv.AddUserMessage(content, agentloop.UserMessageOptions{})
 	}
 	worker.conversation = conv
 	r.overseer = worker
@@ -746,8 +777,15 @@ func (r *ColonyRuntime) newID(prefix string) string {
 }
 
 func (r *ColonyRuntime) newIDLocked(prefix string) string {
-	r.nextID++
-	return fmt.Sprintf("%s_%d", prefix, r.nextID)
+	for {
+		r.nextID++
+		id := fmt.Sprintf("%s_%d", prefix, r.nextID)
+		// A resumed worker brings an id from an earlier run; a fresh spawn in
+		// the same process must not mint the same one.
+		if _, taken := r.workers[id]; !taken {
+			return id
+		}
+	}
 }
 
 func systemPromptFor(spec agentloop.AgentSpec) string {
@@ -785,6 +823,12 @@ func (r *ColonyRuntime) workerCompleter() llm.Completer {
 // Parity: framework/agent_loop/agent_loop.py::AgentLoop._reports_to_parent (worker
 // stream_id gate for build_report_to_parent_tool)
 func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
+	// The persistent overseer is the colony's own Queen: it runs with the
+	// dispatch/state tools a chat Queen gets (run_worker, the queen tracker
+	// table, its task list) instead of the worker surface.
+	if worker.Persistent {
+		return r.overseerToolDefs()
+	}
 	if !strings.HasPrefix(worker.StreamID, "worker:") {
 		return r.applyToolAllowlist(r.tools)
 	}
@@ -819,13 +863,24 @@ func (r *ColonyRuntime) baseWorkerTools() []llm.ToolDef {
 
 func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
 	var trackerRegistry *tracker.Registry
+	var overseerTracker *tracker.Registry
 	if strings.HasPrefix(worker.StreamID, "worker:") {
 		trackerRegistry = r.workerTrackerRegistry(worker)
+	}
+	if worker.Persistent {
+		// The overseer's tracker tools are the queen table over the colony's
+		// shared ledger; its run_worker dispatches through this runtime.
+		overseerTracker = r.overseerTrackerRegistry()
 	}
 	return func(req agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
 		if req.Name == "report_to_parent" && strings.HasPrefix(worker.StreamID, "worker:") {
 			worker.RecordExplicitReport(req.Input)
 			return agentloop.ToolResult{Content: "Report delivered to the overseer."}, nil
+		}
+		if worker.Persistent {
+			if result, ok := r.executeOverseerTool(overseerTracker, req); ok {
+				return result, nil
+			}
 		}
 		// Tracker tools own their own registry: the worker's binding comes
 		// from input_data, so the call targets the colony's shared ledger.
@@ -934,11 +989,23 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 	if worker.Context == nil {
 		worker.Context = r.buildWorkerContext(worker, spec, r.workerToolDefs(), r.workerStorage(worker.ID), nil)
 	}
-	conv := agentloop.NewNodeConversation(systemPromptFor(spec))
-	if worker.Task != "" {
-		_, _ = conv.AddUserMessage(worker.Task, agentloop.UserMessageOptions{})
-	} else {
-		_, _ = conv.AddUserMessage("Hello", agentloop.UserMessageOptions{})
+	// The worker's transcript is persisted before the first LLM call, so a
+	// worker stopped mid-run can be resumed from exactly where it stopped.
+	// A fresh worker owns an empty store: stray parts from a previous process
+	// that reused this id must not leak into its conversation.
+	conv := worker.conversation
+	if conv == nil {
+		store := r.workerConversationStore(worker.ID)
+		_ = store.Destroy()
+		conv = agentloop.NewNodeConversationWithOptions(agentloop.ConversationOptions{
+			SystemPrompt: systemPromptFor(spec),
+			Store:        store,
+		})
+		if worker.Task != "" {
+			_, _ = conv.AddUserMessage(worker.Task, agentloop.UserMessageOptions{})
+		} else {
+			_, _ = conv.AddUserMessage("Hello", agentloop.UserMessageOptions{})
+		}
 	}
 	worker.conversation = conv
 
@@ -1011,12 +1078,41 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 		Config:       agentloop.DefaultLoopConfig(),
 	}
 	loop.ConfigureJudge(worker.Context.AgentSpec, r.workerCompleter(), r.bus)
-	if err := ctx.Err(); err == nil {
+	// Worker.Inject routes new input through this loop, so an overseer that
+	// sits between turns still wakes on the next message.
+	worker.SetAgentLoop(loop)
+
+	// First turn: reply to whatever the colony seeded (the boot greeting the
+	// previous single-turn overseer emitted). Afterwards the overseer is a
+	// persistent Queen that waits for injected messages and answers each one.
+	if ctx.Err() == nil {
 		_, _ = loop.ExecuteTurn(ctx, worker.Context, worker.conversation, r.workerTools(worker))
 	}
-
-	<-ctx.Done()
-	worker.Finish(WorkerStopped, WorkerResult{Output: map[string]any{}})
+	for ctx.Err() == nil {
+		select {
+		case <-ctx.Done():
+		case <-worker.wakeCh():
+		}
+		if ctx.Err() != nil {
+			break
+		}
+		pending := worker.takePendingInput()
+		if len(pending) == 0 {
+			continue
+		}
+		for _, text := range pending {
+			// Same framing the loop gives a client injection, so the model
+			// reads the overseer's messages exactly like the queen's.
+			stamped := fmt.Sprintf("[%s] %s", time.Now().Format("2006-01-02 15:04 MST"), text)
+			if _, err := worker.conversation.AddUserMessage(stamped, agentloop.UserMessageOptions{IsClientInput: true}); err != nil {
+				break
+			}
+		}
+		_, _ = loop.ExecuteTurn(ctx, worker.Context, worker.conversation, r.workerTools(worker))
+	}
+	worker.finishOnce(WorkerStopped, WorkerResult{Output: map[string]any{}}, func() {
+		r.publishStopped(worker, "Overseer stopped with the colony.")
+	})
 }
 
 func (r *ColonyRuntime) publishReport(worker *Worker, finalText string) {
@@ -1032,6 +1128,7 @@ func (r *ColonyRuntime) publishReport(worker *Worker, finalText string) {
 		payload["batch_size"] = worker.BatchSize
 	}
 	r.maybeAdaptColonyBudget(payload)
+	r.recordWorkerTerminal(worker, payload)
 	r.publishEvent(worker, payload)
 
 	if r.bus != nil {
@@ -1045,19 +1142,21 @@ func (r *ColonyRuntime) publishReport(worker *Worker, finalText string) {
 
 func (r *ColonyRuntime) publishFailed(worker *Worker, errorText string) {
 	payload := map[string]any{
-		"worker_id": worker.ID,
-		"colony_id": r.streamID,
-		"task":      worker.Task,
-		"status":    "failed",
-		"summary":   "Worker crashed: " + errorText,
-		"data":      map[string]any{},
-		"error":     errorText,
+		"worker_id":        worker.ID,
+		"colony_id":        r.streamID,
+		"task":             worker.Task,
+		"status":           "failed",
+		"summary":          "Worker crashed: " + errorText,
+		"data":             map[string]any{},
+		"error":            errorText,
+		"duration_seconds": worker.Result().DurationSeconds,
 	}
 	if worker.BatchID != "" {
 		payload["batch_id"] = worker.BatchID
 		payload["batch_index"] = worker.BatchIndex
 		payload["batch_size"] = worker.BatchSize
 	}
+	r.recordWorkerTerminal(worker, payload)
 	r.publishEvent(worker, payload)
 
 	if r.bus != nil {
@@ -1071,20 +1170,31 @@ func (r *ColonyRuntime) publishFailed(worker *Worker, errorText string) {
 
 func (r *ColonyRuntime) publishStopped(worker *Worker, summary string) {
 	payload := map[string]any{
-		"worker_id": worker.ID,
-		"colony_id": r.streamID,
-		"task":      worker.Task,
-		"status":    "stopped",
-		"summary":   summary,
-		"data":      map[string]any{},
-		"error":     nil,
+		"worker_id":        worker.ID,
+		"colony_id":        r.streamID,
+		"task":             worker.Task,
+		"status":           "stopped",
+		"summary":          summary,
+		"data":             map[string]any{},
+		"error":            nil,
+		"duration_seconds": worker.Result().DurationSeconds,
 	}
 	if worker.BatchID != "" {
 		payload["batch_id"] = worker.BatchID
 		payload["batch_index"] = worker.BatchIndex
 		payload["batch_size"] = worker.BatchSize
 	}
+	r.recordWorkerTerminal(worker, payload)
 	r.publishEvent(worker, payload)
+}
+
+// recordWorkerTerminal persists the terminal report beside the transcript
+// (result.json + one events.jsonl line). Every terminal path — success,
+// failure, stop — goes through here, so a later resume or audit finds the same
+// payload the queen received.
+func (r *ColonyRuntime) recordWorkerTerminal(worker *Worker, payload map[string]any) {
+	r.persistWorkerResult(worker, payload)
+	r.appendWorkerEvent(worker, payload)
 }
 
 func (r *ColonyRuntime) publishEvent(worker *Worker, payload map[string]any) {
