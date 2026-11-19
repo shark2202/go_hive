@@ -338,3 +338,80 @@ func TestJudgeRunsOnToolFailure(t *testing.T) {
 		t.Fatalf("first judge request = %#v, want the failed tool result", first)
 	}
 }
+
+// Parity-exempt: ConfigureJudge is the Go production wiring entry point;
+// upstream constructs the Level 2 judge inline in judge_turn and always has an
+// LLM in NodeContext.
+func TestConfigureJudgeWiresAdapterOnlyWithCriteria(t *testing.T) {
+	criteria := "the report names every risk"
+	completer := &scriptedCompleter{scenarios: []scriptedResponse{
+		{content: "final report"},
+		{content: `{"passes": true, "explanation": "criteria met"}`},
+	}}
+	events := &recordingJudgeEvents{}
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 3}, nil)
+
+	withoutCriteria := judgeTestContext(completer, nil)
+	if loop.ConfigureJudge(withoutCriteria.AgentSpec, completer, events) {
+		t.Fatal("ConfigureJudge = true without criteria, want false")
+	}
+	if loop.Judge != nil {
+		t.Fatalf("Judge = %#v, want nil without criteria", loop.Judge)
+	}
+	if loop.ConfigureJudge(withoutCriteria.AgentSpec, nil, events) {
+		t.Fatal("ConfigureJudge = true without a completer, want false")
+	}
+
+	agentCtx := judgeTestContext(completer, &criteria)
+	if !loop.ConfigureJudge(agentCtx.AgentSpec, completer, events) {
+		t.Fatal("ConfigureJudge = false with criteria and a completer")
+	}
+	result, err := loop.ExecuteTurn(context.Background(), agentCtx, NewNodeConversation("system"), nil)
+	if err != nil {
+		t.Fatalf("ExecuteTurn: %v", err)
+	}
+	if !result.Success || result.FinalText != "final report" {
+		t.Fatalf("result = %#v", result)
+	}
+	if completer.callCount() != 2 {
+		t.Fatalf("LLM calls = %d, want the turn plus one judge call", completer.callCount())
+	}
+	if events.count() != 1 {
+		t.Fatalf("judge events = %d, want 1", events.count())
+	}
+	if event := events.events[0]; event.action != string(JudgeAccept) || event.judgeType != "custom" {
+		t.Fatalf("event = %#v", event)
+	}
+}
+
+// Parity: core/framework/agent_loop/internals/event_publishing.py::publish_judge_verdict
+func TestJudgeVerdictEventCarriesUpstreamFields(t *testing.T) {
+	criteria := "the report exists"
+	feedback := strings.Repeat("feedback ", 30)
+	completer := &scriptedCompleter{scenarios: []scriptedResponse{{content: "done"}}}
+	judge := &recordingJudge{verdicts: []JudgeVerdict{{Action: JudgeAccept, Feedback: feedback}}}
+	events := &recordingJudgeEvents{}
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 3}, nil)
+	loop.Judge = judge
+	loop.JudgeEvents = events
+
+	if _, err := loop.ExecuteTurn(context.Background(), judgeTestContext(completer, &criteria), NewNodeConversation("system"), nil); err != nil {
+		t.Fatalf("ExecuteTurn: %v", err)
+	}
+	if events.count() != 1 {
+		t.Fatalf("judge events = %d, want 1", events.count())
+	}
+	event := events.events[0]
+	if event.streamID != "judge" || event.nodeID != "agent" {
+		t.Fatalf("event stream/node = %q/%q, want judge/agent", event.streamID, event.nodeID)
+	}
+	if event.action != string(JudgeAccept) || event.judgeType != "custom" || event.iteration != 0 {
+		t.Fatalf("event = %#v", event)
+	}
+	if event.executionID == nil || *event.executionID != "exec-1" {
+		t.Fatalf("event execution id = %v", event.executionID)
+	}
+	if got := len([]rune(event.feedback)); got != 200 {
+		t.Fatalf("event feedback length = %d, want the upstream 200-char preview", got)
+	}
+}

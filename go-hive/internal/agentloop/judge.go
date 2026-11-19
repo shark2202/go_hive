@@ -5,6 +5,8 @@ package agentloop
 import (
 	"context"
 	"strings"
+
+	"github.com/aden-hive/hive-go/internal/llm"
 )
 
 // JudgeAction is the verdict an evaluator returns for a turn.
@@ -69,6 +71,35 @@ func successCriteria(spec AgentSpec) string {
 
 func hasSuccessCriteria(spec AgentSpec) bool {
 	return strings.TrimSpace(successCriteria(spec)) != ""
+}
+
+// HasSuccessCriteria reports whether the spec declares non-blank success
+// criteria. Callers use it to decide whether a judge is worth constructing:
+// no criteria means no evaluation and no extra LLM call.
+//
+// Parity: framework/agent_loop/internals/judge_pipeline.py::judge_turn
+func HasSuccessCriteria(spec AgentSpec) bool {
+	return hasSuccessCriteria(spec)
+}
+
+// ConfigureJudge wires the default LLM judge for a spec that declares success
+// criteria. It is the production entry point: a chat session (no criteria) or
+// a nil completer leaves the loop's judge disabled, so the turn costs no extra
+// LLM call. An already configured judge is left untouched.
+//
+// Parity: framework/agent_loop/internals/judge_pipeline.py::judge_turn (Level 2
+// conversation judge) and framework/testing/llm_judge.py::LLMJudge.evaluate
+func (l *AgentLoop) ConfigureJudge(spec AgentSpec, completer llm.Completer, events JudgeEventWriter) bool {
+	if l == nil || completer == nil || spec.SkipJudge || !hasSuccessCriteria(spec) {
+		return false
+	}
+	if l.Judge == nil {
+		l.Judge = NewLLMJudgeAdapterFromCompleter(completer)
+	}
+	if l.JudgeEvents == nil {
+		l.JudgeEvents = events
+	}
+	return true
 }
 
 // shouldJudge reports whether this iteration owes a judge evaluation.
@@ -148,11 +179,13 @@ func (l *AgentLoop) emitJudgeVerdict(agentCtx *AgentContext, verdict JudgeVerdic
 	if nodeID == "" {
 		nodeID = agentCtx.AgentSpec.ID
 	}
+	// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop publishes the
+	// first 200 characters of the feedback as the event preview.
 	l.JudgeEvents.EmitJudgeVerdict(
 		agentCtx.StreamID,
 		nodeID,
 		string(verdict.Action),
-		verdict.Feedback,
+		truncateRunes(verdict.Feedback, 200),
 		"custom",
 		iteration,
 		executionID,
