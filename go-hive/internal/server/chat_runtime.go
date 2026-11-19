@@ -23,6 +23,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/memory"
 	"github.com/aden-hive/hive-go/internal/queen"
 	"github.com/aden-hive/hive-go/internal/sentinel"
+	"github.com/aden-hive/hive-go/internal/soul"
 )
 
 // chatStreamID and chatNodeID are the upstream queen identifiers: the
@@ -224,6 +225,8 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 				QueenDir:   runtime.queenMemoryDir,
 				QueenID:    runtime.queenName,
 				Config:     func() memory.ReflectionConfig { return chatMemoryReflectionConfig(deps.HomeRoot) },
+				// A finished pass sediments its conclusions into her soul.
+				OnReflect: runtime.sedimentSoul,
 			}
 			runtime.reflection.InitializeReflectionState()
 		}
@@ -1190,6 +1193,42 @@ func (r *ChatRuntime) clearPendingQuestions() {
 	r.mu.Lock()
 	r.pendingQuestions = nil
 	r.mu.Unlock()
+}
+
+// sedimentSoul writes a finished reflection's durable conclusions into this
+// queen's soul. Only the queen scope is read: global memories are shared by
+// every queen, and a soul is one queen's own record. Nothing is written when
+// the pass changed no memory, when she has no soul configured, or when her
+// soul already carries every conclusion.
+//
+// Parity-exempt: Go-only sediment seam. Upstream revises a soul in its own
+// daily chat-reading reflection (framework/agents/queen/soul_reflection.py);
+// the Go port has no such pass and rides the memory reflection instead.
+func (r *ChatRuntime) sedimentSoul(result memory.LoopResult) {
+	if r == nil || r.deps.HomeRoot == "" || r.queenName == "" {
+		return
+	}
+	home := hivehome.Home{Root: r.deps.HomeRoot}
+	cfg := soul.GetSoulConfig(HiveConfig(home), r.queenName)
+	if cfg == nil {
+		return
+	}
+	conclusions := memory.ConclusionsFromReflection(result, []memory.ScopeDir{{Scope: "queen", Dir: r.queenMemoryDir}})
+	if len(conclusions) == 0 {
+		return
+	}
+	items := make([]soul.SedimentConclusion, 0, len(conclusions))
+	for _, conclusion := range conclusions {
+		items = append(items, soul.SedimentConclusion{Text: conclusion.Text, Source: conclusion.Filename})
+	}
+	if _, err := soul.Sediment(soul.SedimentOptions{
+		QueensDir:   home.QueensDir(),
+		QueenID:     r.queenName,
+		Config:      cfg,
+		Conclusions: items,
+	}); err != nil {
+		log.Printf("chat runtime %s: soul sediment skipped: %v", r.sessionID, err)
+	}
 }
 
 // chatMemoryReflectionConfig reads the memory_reflection section of
