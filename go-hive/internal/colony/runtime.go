@@ -179,6 +179,13 @@ type ColonyRuntime struct {
 	// lives under the colony directory so the colony stays one portable unit.
 	overseerTasks *overseerTaskSet
 
+	// overseerQuestions is the question the persistent overseer parked on with
+	// ask_user. It is the colony's runtime half of the shared park: the chat
+	// runtime persists the same question as pending_input in the session
+	// cursor, and the answer clears both. Guarded by mu.
+	overseerQuestions []map[string]any
+	overseerParkedAt  time.Time
+
 	// improvementSeq keeps signal ids unique within the process.
 	improvementSeq atomic.Int64
 }
@@ -1204,7 +1211,7 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 			// broadcasting to the session front end.
 			err = nil
 		}
-		emitter.end(err)
+		emitter.end(err, r.overseerTurnParkReason(err))
 		worker.Context.Observer = previous
 	}
 	if ctx.Err() == nil {

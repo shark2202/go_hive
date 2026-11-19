@@ -40,17 +40,25 @@ func (e *overseerEmitter) begin() {
 	e.bus.EmitLoopStateChanged(e.streamID, e.streamID, "executing", &e.executionID, nil, nil, nil)
 }
 
-// end closes the turn. A failed turn reports execution_failed so the session
-// does not keep a spinner forever.
-func (e *overseerEmitter) end(err error) {
+// end closes the turn. It publishes the same awaiting_user loop state the chat
+// emitter does, so the session snapshot reports why the turn yielded — an
+// ask_user park, or an ordinary turn_done — instead of leaving the last
+// "executing" state to age into a false stall. A failed turn reports
+// execution_failed so the session does not keep a spinner forever.
+func (e *overseerEmitter) end(err error, parkReason agentloop.ParkReason) {
 	if e == nil || e.bus == nil {
 		return
 	}
 	if err != nil {
 		e.bus.EmitExecutionFailed(e.streamID, e.executionID, err.Error(), nil, nil)
-	} else {
-		e.bus.EmitExecutionCompleted(e.streamID, e.executionID, nil, nil, nil)
+		return
 	}
+	if parkReason == "" {
+		parkReason = agentloop.ParkReasonTurnDone
+	}
+	reason := string(parkReason)
+	e.bus.EmitLoopStateChanged(e.streamID, e.streamID, "awaiting_user", &e.executionID, &reason, nil, nil)
+	e.bus.EmitExecutionCompleted(e.streamID, e.executionID, nil, nil, nil)
 }
 
 // IterationStarted is not published: the chat queen's emitter only announces
