@@ -22,6 +22,7 @@ import { useQueensAuthorizationPrompt } from "@/context/QueensAuthorizationPromp
 import { getProviderLogo } from "@/data/providerLogos";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { Switch } from "./Switch";
+import { useI18n } from "@/i18n";
 
 type Channel = "telegram" | "slack";
 
@@ -67,6 +68,7 @@ function destinationLabel(cfg: SentinelConfig | null): string | null {
  * it survives a restart.
  */
 export function SentinelSection({ colonyName }: { colonyName: string | null }) {
+  const { t } = useI18n();
   const [cfg, setCfg] = useState<SentinelConfig | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -128,12 +130,12 @@ export function SentinelSection({ colonyName }: { colonyName: string | null }) {
           </div>
         )}
         <h3 className="text-sm font-semibold text-foreground mb-1.5">
-          {on ? "Sentinel is watching" : "Get pinged when this colony needs you"}
+          {on ? t("Sentinel is watching") : t("Get pinged when this colony needs you")}
         </h3>
         <p className="text-[11.5px] text-muted-foreground leading-relaxed mb-4 max-w-[260px]">
           {on && label
-            ? `Pinging you on ${label} when it hits a real blocker. Reply from anywhere to keep it going.`
-            : "Get pinged when this colony hits a real blocker, and reply to keep it going. Spurious “shall I continue?” pauses are auto-resumed."}
+            ? t("Pinging you on {destination} when it hits a real blocker. Reply from anywhere to keep it going.", { destination: label })
+            : t("Get pinged when this colony hits a real blocker, and reply to keep it going. Spurious “shall I continue?” pauses are auto-resumed.")}
         </p>
         {on ? (
           <button
@@ -142,7 +144,7 @@ export function SentinelSection({ colonyName }: { colonyName: string | null }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-emerald-500/20 text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 hover:border-emerald-500/30 transition-colors"
           >
             <Bell className="w-3 h-3" />
-            Manage Sentinel
+            {t("Manage Sentinel")}
           </button>
         ) : (
           <button
@@ -151,7 +153,7 @@ export function SentinelSection({ colonyName }: { colonyName: string | null }) {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
           >
             <Bell className="w-3.5 h-3.5" />
-            Set up Sentinel
+            {t("Set up Sentinel")}
           </button>
         )}
       </div>
@@ -183,6 +185,7 @@ function SentinelSetupModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // "alerts" is the parent screen (channel → on/off → interval). "messaging"
@@ -266,7 +269,7 @@ function SentinelSetupModal({
         setTgChatId(c.channel === "telegram" ? (c.target?.chat_id ?? "") : "");
         setSlChannel(c.channel === "slack" ? (c.target?.channel ?? "") : "");
       })
-      .catch((e) => setError(e?.message ?? "Failed to load Sentinel config"))
+      .catch((e) => setError(e?.message ?? t("Failed to load Sentinel config")))
       .finally(() => setLoading(false));
   }, [colonyName]);
 
@@ -286,7 +289,7 @@ function SentinelSetupModal({
       await credentialsApi.save("telegram", { bot_token: tgToken.trim() });
       const v = await sentinelApi.validateTelegram(tgToken.trim());
       if (!v.ok) {
-        setError(v.error ?? "Invalid bot token");
+        setError(v.error ?? t("Invalid bot token"));
         return;
       }
       setTgConnectedAs(v.bot_username ? `@${v.bot_username}` : (v.bot_name ?? "bot"));
@@ -306,7 +309,7 @@ function SentinelSetupModal({
     try {
       const r = await sentinelApi.detectTelegramChat();
       if (!r.ok) {
-        setTgDetectMsg(r.error ?? "No message detected yet.");
+        setTgDetectMsg(r.error ?? t("No message detected yet."));
         return;
       }
       if (r.chat_id) setTgChatId(r.chat_id);
@@ -316,7 +319,7 @@ function SentinelSetupModal({
           prev.includes(r.sender_id as string) ? prev : [...prev, r.sender_id as string],
         );
       }
-      setTgDetectMsg(`Found ${r.chat_title ?? r.chat_id}.`);
+      setTgDetectMsg(t("Found {target}.", { target: r.chat_title ?? r.chat_id ?? "" }));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -337,7 +340,7 @@ function SentinelSetupModal({
       await credentialsApi.save("slack_app", { access_token: slAppToken.trim() });
       const v = await sentinelApi.validateSlack(slBotToken.trim());
       if (!v.ok) {
-        setError(v.error ?? "Invalid Slack token");
+        setError(v.error ?? t("Invalid Slack token"));
         return;
       }
       setSlConnectedTeam(v.team ?? "workspace");
@@ -419,7 +422,7 @@ function SentinelSetupModal({
     setTestState({ kind: "busy" });
     try {
       const r = await sentinelApi.test(colonyName, { channel, target });
-      setTestState(r.ok ? { kind: "ok" } : { kind: "err", msg: r.error ?? "Failed" });
+      setTestState(r.ok ? { kind: "ok" } : { kind: "err", msg: r.error ?? t("Failed") });
     } catch (e) {
       setTestState({ kind: "err", msg: e instanceof Error ? e.message : String(e) });
     }
@@ -437,7 +440,7 @@ function SentinelSetupModal({
                 <Bell className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-foreground">Set up Sentinel</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t("Set up Sentinel")}</h2>
               </div>
             </div>
             <button
@@ -463,7 +466,7 @@ function SentinelSetupModal({
                       onClick={() => setView("alerts")}
                       className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground mb-3"
                     >
-                      <ChevronLeft className="w-3.5 h-3.5" /> Back to alerts
+                      <ChevronLeft className="w-3.5 h-3.5" /> {t("Back to alerts")}
                     </button>
                     <div className="flex items-center gap-2 mb-3">
                       <ChannelLogo provider={channel} size={18} />
@@ -512,7 +515,7 @@ function SentinelSetupModal({
                     {/* Allowlist */}
                     <div className="mt-4">
                       <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                        Allowed repliers
+                        {t("Allowed repliers")}
                       </label>
                       <input
                         type="text"
@@ -526,13 +529,12 @@ function SentinelSetupModal({
                           )
                         }
                         placeholder={
-                          channel === "telegram" ? "Telegram user IDs" : "Slack user IDs"
+                          channel === "telegram" ? t("Telegram user IDs") : t("Slack user IDs")
                         }
                         className="w-full rounded-md border border-border/60 bg-background/60 px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary/50"
                       />
                       <p className="text-[10px] text-muted-foreground mt-1">
-                        Only these senders can drive the colony. Auto-filled when you
-                        detect your Telegram chat.
+                        {t("Only these senders can drive the colony. Auto-filled when you detect your Telegram chat.")}
                       </p>
                     </div>
                   </>
@@ -540,7 +542,7 @@ function SentinelSetupModal({
                   <>
                     {/* 1 — Channel (the prerequisite) */}
                     <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                      Channel
+                      {t("Channel")}
                     </label>
                     {canEnable ? (
                       <div className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-muted/20 p-3">
@@ -562,14 +564,14 @@ function SentinelSetupModal({
                             onClick={() => openMessaging()}
                             className="px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10 rounded-md"
                           >
-                            Edit
+                            {t("Edit")}
                           </button>
                           <button
                             type="button"
                             onClick={removeChannel}
                             className="px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive/10 rounded-md"
                           >
-                            Delete
+                            {t("Delete")}
                           </button>
                         </div>
                       </div>
@@ -591,11 +593,11 @@ function SentinelSetupModal({
                               </span>
                               {credsReady ? (
                                 <span className="text-[10px] text-emerald-500 flex items-center gap-0.5">
-                                  <Check className="w-2.5 h-2.5" /> Connected
+                                  <Check className="w-2.5 h-2.5" /> {t("Connected")}
                                 </span>
                               ) : (
                                 <span className="text-[10px] text-muted-foreground">
-                                  Set up
+                                  {t("Set up")}
                                 </span>
                               )}
                             </button>
@@ -619,12 +621,10 @@ function SentinelSetupModal({
                         <Sparkles className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                         <span className="min-w-0">
                           <span className="block text-[11px] font-semibold text-foreground">
-                            Set this up with the agent
+                            {t("Set this up with the agent")}
                           </span>
                           <span className="block text-[10.5px] text-muted-foreground leading-relaxed mt-0.5">
-                            Your colony's agent drives the browser to set up Slack or
-                            Telegram — creating the app/bot, storing tokens, picking
-                            the channel, and turning Sentinel on for you.
+                            {t("Your colony's agent drives the browser to set up Slack or Telegram — creating the app/bot, storing tokens, picking the channel, and turning Sentinel on for you.")}
                           </span>
                         </span>
                       </button>
@@ -638,12 +638,12 @@ function SentinelSetupModal({
                             canEnable ? "text-foreground" : "text-muted-foreground"
                           }`}
                         >
-                          Turn on Sentinel
+                          {t("Turn on Sentinel")}
                         </p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                           {canEnable
-                            ? "Watch this colony and ping you when it stalls."
-                            : "Set up a channel above first."}
+                            ? t("Watch this colony and ping you when it stalls.")
+                            : t("Set up a channel above first.")}
                         </p>
                       </div>
                       <Switch
@@ -660,7 +660,7 @@ function SentinelSetupModal({
                       }`}
                     >
                       <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                        Alert me if stuck for
+                        {t("Alert me if stuck for")}
                       </label>
                       <select
                         value={escalateAfterMin ?? ""}
@@ -672,11 +672,11 @@ function SentinelSetupModal({
                         }
                         className="w-full rounded-md border border-border/60 bg-background/60 px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary/50 disabled:cursor-not-allowed"
                       >
-                        <option value="">15 minutes (default)</option>
-                        <option value={1}>1 minute</option>
-                        <option value={5}>5 minutes</option>
-                        <option value={30}>30 minutes</option>
-                        <option value={60}>1 hour</option>
+                        <option value="">{t("15 minutes (default)")}</option>
+                        <option value={1}>{t("1 minute")}</option>
+                        <option value={5}>{t("5 minutes")}</option>
+                        <option value={30}>{t("30 minutes")}</option>
+                        <option value={60}>{t("1 hour")}</option>
                       </select>
                     </div>
                   </>
@@ -705,7 +705,7 @@ function SentinelSetupModal({
                   onClick={doneMessaging}
                   className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors"
                 >
-                  Done
+                  {t("Done")}
                 </button>
               </div>
             ) : (
@@ -723,7 +723,7 @@ function SentinelSetupModal({
                       ) : (
                         <Send className="w-3 h-3" />
                       )}
-                      Send test
+                      {t("Send test")}
                       {testState.kind === "ok" && (
                         <span className="text-emerald-500">✓</span>
                       )}
@@ -736,7 +736,7 @@ function SentinelSetupModal({
                     onClick={onClose}
                     className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-colors"
                   >
-                    Cancel
+                    {t("Cancel")}
                   </button>
                   <button
                     type="button"
@@ -745,7 +745,7 @@ function SentinelSetupModal({
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50"
                   >
                     {saving && <Loader2 className="w-3 h-3 animate-spin" />}
-                    {saving ? "Saving…" : "Save"}
+                    {saving ? t("Saving…") : t("Save")}
                   </button>
                 </div>
               </div>
@@ -784,6 +784,7 @@ function TelegramConnect(props: {
    *  fallback. */
   onAgentSetup?: (() => void) | null;
 }) {
+  const { t } = useI18n();
   const connected = props.configured || !!props.connectedAs;
   const [reconfig, setReconfig] = useState(false);
   const showForm = !connected || reconfig;
@@ -798,27 +799,25 @@ function TelegramConnect(props: {
           <Sparkles className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
           <span className="min-w-0">
             <span className="block text-[11px] font-semibold text-foreground">
-              Set this up with the agent
+              {t("Set this up with the agent")}
             </span>
             <span className="block text-[10.5px] text-muted-foreground leading-relaxed mt-0.5">
-              Your colony's agent drives the browser to create the Telegram bot via
-              @BotFather, store its token, and detect your chat. Or do it manually
-              below.
+              {t("Your colony's agent drives the browser to create the Telegram bot via @BotFather, store its token, and detect your chat. Or do it manually below.")}
             </span>
           </span>
         </button>
       )}
-      <Step n={1} title="Connect a bot" done={connected} required>
+      <Step n={1} title={t("Connect a bot")} done={connected} required>
         {!showForm ? (
           <p className="text-[11px] text-emerald-500 flex items-center gap-1">
-            <Check className="w-3 h-3" /> Bot connected
+            <Check className="w-3 h-3" /> {t("Bot connected")}
             {props.connectedAs ? ` (${props.connectedAs})` : ""}.
             <button
               type="button"
               onClick={() => setReconfig(true)}
               className="ml-1 text-muted-foreground hover:text-foreground underline"
             >
-              Reconnect
+              {t("Reconnect")}
             </button>
           </p>
         ) : (
@@ -828,27 +827,24 @@ function TelegramConnect(props: {
               onClick={() => openExternal("https://t.me/BotFather")}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors"
             >
-              Open @BotFather <ExternalLink className="w-3 h-3" />
+              {t("Open @BotFather")} <ExternalLink className="w-3 h-3" />
             </button>
             <ol className="mt-2.5 space-y-1.5 text-[11px] text-muted-foreground leading-relaxed list-decimal pl-4">
               <li>
-                In the @BotFather chat, send{" "}
-                <code className="text-foreground">/newbot</code> and follow the
-                prompts (pick a name, then a username ending in{" "}
-                <code className="text-foreground">bot</code>).
+                {t("In the @BotFather chat, send")}{" "}
+                <code className="text-foreground">/newbot</code> {t("and follow the prompts (pick a name, then a username ending in")}{" "}
+                <code className="text-foreground">bot</code>{t(").")}
               </li>
               <li>
-                It replies with an{" "}
-                <span className="text-foreground">HTTP API token</span> — copy it
-                and paste below.
+                {t("It replies with an")}{" "}
+                <span className="text-foreground">{t("HTTP API token")}</span> {t("— copy it and paste below.")}
               </li>
             </ol>
             <p className="mt-2 text-[10.5px] text-muted-foreground">
-              New to Telegram bots?{" "}
+              {t("New to Telegram bots?")}{" "}
               <Lnk href="https://core.telegram.org/bots/features#botfather">
-                Telegram's bot guide
+                {t("Telegram's bot guide")}
               </Lnk>
-              .
             </p>
             <div className="flex gap-2 mt-2">
               <input
@@ -865,29 +861,28 @@ function TelegramConnect(props: {
                 className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md disabled:opacity-50"
               >
                 {props.busy && <Loader2 className="w-3 h-3 animate-spin" />}
-                Connect
+                {t("Connect")}
               </button>
             </div>
             {props.showRequired && !connected && (
               <p className="text-[11px] text-destructive mt-1">
-                Connect your bot to continue.
+                {t("Connect your bot to continue.")}
               </p>
             )}
           </>
         )}
       </Step>
 
-      <Step n={2} title="Pick where to ping you" done={!!props.chatId} required>
+      <Step n={2} title={t("Pick where to ping you")} done={!!props.chatId} required>
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Open your bot in Telegram and send it any message, then click Detect —
-          we'll fill in your chat automatically.
+          {t("Open your bot in Telegram and send it any message, then click Detect — we'll fill in your chat automatically.")}
         </p>
         <div className="flex gap-2 mt-2">
           <input
             type="text"
             value={props.chatId}
             onChange={(e) => props.setChatId(e.target.value)}
-            placeholder="chat id"
+            placeholder={t("chat id")}
             className={`flex-1 rounded-md border bg-background/60 px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary/50 ${
               props.showRequired && !props.chatId.trim()
                 ? "border-destructive"
@@ -900,11 +895,11 @@ function TelegramConnect(props: {
             disabled={props.busy || !props.configured}
             className="px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30 rounded-md disabled:opacity-50"
           >
-            Detect
+            {t("Detect")}
           </button>
         </div>
         {props.showRequired && !props.chatId.trim() ? (
-          <p className="text-[11px] text-destructive mt-1">This field is required.</p>
+          <p className="text-[11px] text-destructive mt-1">{t("This field is required.")}</p>
         ) : props.chatLabel ? (
           <p className="text-[11px] text-emerald-500 mt-1">{props.chatLabel}</p>
         ) : props.detectMsg ? (
@@ -936,6 +931,7 @@ function SlackConnect(props: {
    *  mounted to receive the prompt — the manual steps are the fallback. */
   onAgentSetup?: (() => void) | null;
 }) {
+  const { t } = useI18n();
   const connected = props.configured || !!props.connectedTeam;
   const [reconfig, setReconfig] = useState(false);
   const showForm = !connected || reconfig;
@@ -950,27 +946,24 @@ function SlackConnect(props: {
           <Sparkles className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
           <span className="min-w-0">
             <span className="block text-[11px] font-semibold text-foreground">
-              Set this up with the agent
+              {t("Set this up with the agent")}
             </span>
             <span className="block text-[10.5px] text-muted-foreground leading-relaxed mt-0.5">
-              Your colony's agent drives the browser to create the Slack app,
-              store its tokens, and point Sentinel at a channel for you. Or do it
-              manually below.
+              {t("Your colony's agent drives the browser to create the Slack app, store its tokens, and point Sentinel at a channel for you. Or do it manually below.")}
             </span>
           </span>
         </button>
       )}
-      <Step n={1} title="Connect a Slack app" done={connected} required>
+      <Step n={1} title={t("Connect a Slack app")} done={connected} required>
         {!showForm ? (
           <p className="text-[11px] text-emerald-500 flex items-center gap-1">
-            <Check className="w-3 h-3" /> Connected
-            {props.connectedTeam ? ` to ${props.connectedTeam}` : ""}.
+            <Check className="w-3 h-3" /> {props.connectedTeam ? t("Connected to {team}.", { team: props.connectedTeam }) : t("Connected")}
             <button
               type="button"
               onClick={() => setReconfig(true)}
               className="ml-1 text-muted-foreground hover:text-foreground underline"
             >
-              Reconnect
+              {t("Reconnect")}
             </button>
           </p>
         ) : (
@@ -980,58 +973,56 @@ function SlackConnect(props: {
               onClick={() => openExternal("https://api.slack.com/apps")}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors"
             >
-              Open Slack apps dashboard <ExternalLink className="w-3 h-3" />
+              {t("Open Slack apps dashboard")} <ExternalLink className="w-3 h-3" />
             </button>
             <ol className="mt-2.5 space-y-1.5 text-[11px] text-muted-foreground leading-relaxed list-decimal pl-4">
               <li>
-                Click <span className="text-foreground">Create New App → From scratch</span>,
-                name it, and pick your workspace.
+                {t("Click")} <span className="text-foreground">{t("Create New App → From scratch")}</span>{t(", name it, and pick your workspace.")}
               </li>
               <li>
-                In <span className="text-foreground">Basic Information →</span>{" "}
+                {t("In")} <span className="text-foreground">{t("Basic Information →")}</span>{" "}
                 <Lnk href="https://docs.slack.dev/authentication/tokens#app-level">
-                  App-Level Tokens
+                  {t("App-Level Tokens")}
                 </Lnk>
-                , generate a token with{" "}
-                <code className="text-foreground">connections:write</code> and copy it (
-                <code className="text-foreground">xapp-…</code>).
+                {t(", generate a token with")}{" "}
+                <code className="text-foreground">connections:write</code> {t("and copy it")} (<code className="text-foreground">xapp-…</code>{t(").")})
               </li>
               <li>
-                Open{" "}
+                {t("Open")}{" "}
                 <Lnk href="https://api.slack.com/scopes/chat:write">
-                  OAuth &amp; Permissions
+                  {t("OAuth & Permissions")}
                 </Lnk>{" "}
-                → under <span className="text-foreground">Bot Token Scopes</span> add{" "}
+                {t("→ under")} <span className="text-foreground">{t("Bot Token Scopes")}</span> {t("add")}{" "}
                 <code className="text-foreground">chat:write</code>.
               </li>
               <li>
-                Hit <span className="text-foreground">Install to Workspace</span>, then copy the{" "}
+                {t("Hit")} <span className="text-foreground">{t("Install to Workspace")}</span>{t(", then copy the")}{" "}
                 <Lnk href="https://docs.slack.dev/authentication/tokens#bot">
-                  Bot User OAuth Token
+                  {t("Bot User OAuth Token")}
                 </Lnk>{" "}
-                (<code className="text-foreground">xoxb-…</code>) — paste it below.
+                (<code className="text-foreground">xoxb-…</code>) {t("— paste it below.")}
               </li>
               <li>
-                Turn on{" "}
-                <Lnk href="https://api.slack.com/apis/socket-mode">Socket Mode</Lnk>.
+                {t("Turn on")}{" "}
+                <Lnk href="https://api.slack.com/apis/socket-mode">{t("Socket Mode")}</Lnk>.
               </li>
             </ol>
             <p className="mt-2 text-[10.5px] text-muted-foreground">
-              Prefer a full walkthrough?{" "}
-              <Lnk href="https://api.slack.com/quickstart">Slack's quickstart guide</Lnk>.
+              {t("Prefer a full walkthrough?")}{" "}
+              <Lnk href="https://api.slack.com/quickstart">{t("Slack's quickstart guide")}</Lnk>
             </p>
             <input
               type="password"
               value={props.botToken}
               onChange={(e) => props.setBotToken(e.target.value)}
-              placeholder="Bot token (xoxb-…)"
+              placeholder={t("Bot token (xoxb-…)")}
               className="w-full mt-2 rounded-md border border-border/60 bg-background/60 px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary/50"
             />
             <input
               type="password"
               value={props.appToken}
               onChange={(e) => props.setAppToken(e.target.value)}
-              placeholder="App-level token (xapp-…)"
+              placeholder={t("App-level token (xapp-…)")}
               className="w-full mt-2 rounded-md border border-border/60 bg-background/60 px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary/50"
             />
             <button
@@ -1041,22 +1032,20 @@ function SlackConnect(props: {
               className="flex items-center gap-1 mt-2 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md disabled:opacity-50"
             >
               {props.busy && <Loader2 className="w-3 h-3 animate-spin" />}
-              Connect
+              {t("Connect")}
             </button>
             {props.showRequired && !connected && (
               <p className="text-[11px] text-destructive mt-1">
-                Connect your Slack app to continue.
+                {t("Connect your Slack app to continue.")}
               </p>
             )}
           </>
         )}
       </Step>
 
-      <Step n={2} title="Pick a channel" done={!!props.channelId} required>
+      <Step n={2} title={t("Pick a channel")} done={!!props.channelId} required>
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Invite the bot to a channel, then paste its channel ID (in Slack:
-          channel name → right-click → Copy link; the ID is the last path
-          segment, e.g. <code className="text-foreground">C0123ABC</code>).
+          {t("Invite the bot to a channel, then paste its channel ID (in Slack: channel name → right-click → Copy link; the ID is the last path segment, e.g.")} <code className="text-foreground">C0123ABC</code>{t(").")}
         </p>
         <input
           type="text"
@@ -1070,7 +1059,7 @@ function SlackConnect(props: {
           }`}
         />
         {props.showRequired && !props.channelId.trim() && (
-          <p className="text-[11px] text-destructive mt-1">This field is required.</p>
+          <p className="text-[11px] text-destructive mt-1">{t("This field is required.")}</p>
         )}
       </Step>
     </div>
@@ -1091,6 +1080,7 @@ function Step({
   required?: boolean;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-lg border border-border/40 bg-muted/20 p-3">
       <div className="flex items-center gap-2 mb-1.5">
@@ -1104,9 +1094,9 @@ function Step({
           {done ? <Check className="w-2.5 h-2.5" /> : n}
         </span>
         <span className="text-[11px] font-semibold text-foreground">
-          {title}
+          {t(title)}
           {required && !done && (
-            <span className="text-destructive ml-0.5" aria-label="required">
+            <span className="text-destructive ml-0.5" aria-label={t("required")}>
               *
             </span>
           )}

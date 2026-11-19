@@ -48,6 +48,7 @@ import { coloniesApi } from "@/api/colonies";
 import { SentinelSection } from "./SentinelSection";
 import type { AgentEvent } from "@/api/types";
 import { useSSE } from "@/hooks/use-sse";
+import { useI18n } from "@/i18n";
 import { cronToLabel } from "@/lib/graphUtils";
 import type { GraphNode } from "@/components/graph-types";
 import {
@@ -130,6 +131,7 @@ export default function ColonyPanel({
   sessionId,
   colonyName,
 }: ColonyPanelProps) {
+  const { t } = useI18n();
   const { focusWorkerId, getTabForColony, setTabForColony, requestQueenPrompt } =
     useColonyWorkers();
   // "Pushed to a cloud computer" was a cloud feature (removed). Every colony
@@ -235,26 +237,26 @@ export default function ColonyPanel({
         <TabButton
           active={tab === "data"}
           onClick={() => setTab("data")}
-          label="Data"
-          tip="The data agent collects for you"
+          label={t("Data")}
+          tip={t("The data agent collects for you")}
         />
         <TabButton
           active={tab === "overview"}
           onClick={() => setTab("overview")}
-          label="Plan"
-          tip="The queen's task list for this colony"
+          label={t("Plan")}
+          tip={t("The queen's task list for this colony")}
         />
         <TabButton
           active={tab === "automations"}
           onClick={() => setTab("automations")}
-          label="Automations"
-          tip="Advanced configuration to keep it running without you"
+          label={t("Automations")}
+          tip={t("Advanced configuration to keep it running without you")}
         />
         <TabButton
           active={tab === "workers"}
           onClick={() => setTab("workers")}
-          label="Workers"
-          tip="Advanced details of what each worker is doing right now"
+          label={t("Workers")}
+          tip={t("Advanced details of what each worker is doing right now")}
         />
       </div>
 
@@ -300,17 +302,17 @@ export default function ColonyPanel({
                     ? "text-muted-foreground/40 cursor-not-allowed pointer-events-none"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
-                title={onCloud ? undefined : "Open the colony folder in the OS file manager"}
+                title={onCloud ? undefined : t("Open the colony folder in the OS file manager")}
               >
                 <FolderOpen className="w-3.5 h-3.5" />
-                Open colony folder
+                {t("Open colony folder")}
               </button>
               {onCloud && (
                 <span
                   role="tooltip"
                   className="pointer-events-none absolute left-0 bottom-full mb-1.5 z-20 w-52 whitespace-normal leading-snug rounded border border-border/60 bg-card px-2 py-1.5 text-[10px] font-medium text-foreground opacity-0 invisible group-hover/reveal:opacity-100 group-hover/reveal:visible shadow-sm"
                 >
-                  This colony runs on a cloud computer — its folder isn't on this machine.
+                  {t("This colony runs on a cloud computer — its folder isn't on this machine.")}
                 </span>
               )}
             </span>
@@ -357,6 +359,7 @@ function TabButton({
    *  find out. */
   tip: string;
 }) {
+  const { t } = useI18n();
   return (
     // `atCursor` (portalled) rather than the default trigger-anchored box: the
     // tab bar is `overflow-x-auto`, which clips BOTH axes, so an absolutely
@@ -380,6 +383,7 @@ function TabButton({
 // ── Skills tab ─────────────────────────────────────────────────────────
 
 function SkillsTab({ sessionId }: { sessionId: string }) {
+  const { t } = useI18n();
   const [skills, setSkills] = useState<ColonySkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -390,7 +394,7 @@ function SkillsTab({ sessionId }: { sessionId: string }) {
     colonyWorkersApi
       .listSkills(sessionId)
       .then((r) => setSkills(r.skills))
-      .catch((e) => setError(e?.message ?? "Failed to load skills"))
+      .catch((e) => setError(e?.message ?? t("Failed to load skills")))
       .finally(() => setLoading(false));
   }, [sessionId]);
 
@@ -415,7 +419,7 @@ function SkillsTab({ sessionId }: { sessionId: string }) {
   }, [skills]);
 
   return (
-    <TabShell loading={loading} error={error} onRefresh={refresh} empty={skills.length === 0 ? "No skills loaded." : null}>
+    <TabShell loading={loading} error={error} onRefresh={refresh} empty={skills.length === 0 ? t("No skills loaded.") : null}>
       <div className="flex flex-col gap-3">
         {groups.map((g) => (
           <SkillGroup key={g.key} label={g.label} items={g.items} defaultOpen={g.defaultOpen} />
@@ -439,6 +443,7 @@ function CollapsibleGroup({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const { t } = useI18n();
   return (
     <section>
       <button
@@ -446,7 +451,7 @@ function CollapsibleGroup({
         className="w-full flex items-center gap-1.5 mb-1.5 text-[11px] uppercase tracking-wide font-semibold text-muted-foreground hover:text-foreground"
       >
         {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-        <span>{label}</span>
+        <span>{t(label)}</span>
         <span className="text-muted-foreground/60">({count})</span>
       </button>
       {open && <ul className="flex flex-col gap-1.5">{children}</ul>}
@@ -485,6 +490,7 @@ function SkillGroup({
 // ── Tools tab ──────────────────────────────────────────────────────────
 
 function ToolsTab({ sessionId }: { sessionId: string }) {
+  const { t } = useI18n();
   const [tools, setTools] = useState<ColonyTool[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -495,7 +501,7 @@ function ToolsTab({ sessionId }: { sessionId: string }) {
     colonyWorkersApi
       .listTools(sessionId)
       .then((r) => setTools(r.tools))
-      .catch((e) => setError(e?.message ?? "Failed to load tools"))
+      .catch((e) => setError(e?.message ?? t("Failed to load tools")))
       .finally(() => setLoading(false));
   }, [sessionId]);
 
@@ -506,7 +512,7 @@ function ToolsTab({ sessionId }: { sessionId: string }) {
   const groups = useMemo(() => groupTools(tools), [tools]);
 
   return (
-    <TabShell loading={loading} error={error} onRefresh={refresh} empty={tools.length === 0 ? "No tools configured." : null}>
+    <TabShell loading={loading} error={error} onRefresh={refresh} empty={tools.length === 0 ? t("No tools configured.") : null}>
       <div className="flex flex-col gap-3">
         {groups.map((g) => (
           <ToolGroup key={g.key} label={g.label} items={g.items} />
@@ -741,13 +747,14 @@ function useWorkerToolProgress(
 // ── Overview tab ───────────────────────────────────────────────────────
 
 function OverviewTab({ sessionId }: { sessionId: string }) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col h-full">
       {/* Queen's session task list — the single source of tasks now that
           colony-template lists are gone. The History + Update plan controls
           live in the drawer footer (next to "Open colony folder"), not here. */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <TaskListPanel sessionId={sessionId} title="Tasks" variant="embedded" />
+        <TaskListPanel sessionId={sessionId} title={t("Tasks")} variant="embedded" />
       </div>
     </div>
   );
@@ -762,6 +769,7 @@ function WorkersTab({
   sessionId: string;
   colonyName: string | null;
 }) {
+  const { t } = useI18n();
   const [workers, setWorkers] = useState<WorkerSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -811,7 +819,7 @@ function WorkersTab({
     colonyWorkersApi
       .list(sessionId)
       .then((r) => commitWorkers(r.workers))
-      .catch((e) => setError(e?.message ?? "Failed to load workers"))
+      .catch((e) => setError(e?.message ?? t("Failed to load workers")))
       .finally(() => setLoading(false));
   }, [sessionId, commitWorkers]);
 
@@ -1008,7 +1016,7 @@ function WorkersTab({
               className="text-[10px] px-2 py-0.5 rounded border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50 transition-colors"
               title={`Stop ${activeCount} active worker${activeCount === 1 ? "" : "s"}`}
             >
-              {stoppingAll ? "Stopping…" : `Stop all (${activeCount})`}
+              {stoppingAll ? t("Stopping…") : t("Stop all ({count})", { count: activeCount })}
             </button>
           )}
         </div>
@@ -1110,11 +1118,12 @@ function EmptyState({
 }
 
 function WorkersEmptyState() {
+  const { t } = useI18n();
   return (
     <EmptyState
       icon={<Users className="w-4 h-4" />}
-      title="No workers spawned yet"
-      body="Workers are background subagents your queen spawns to handle work at scale — queen stays responsive while workers execute."
+      title={t("No workers spawned yet")}
+      body={t("Workers are background subagents your queen spawns to handle work at scale — queen stays responsive while workers execute.")}
     />
   );
 }
@@ -1138,6 +1147,7 @@ const WorkerCard = memo(function WorkerCard({
   onStop: () => void;
   toolProgress: ToolProgress | undefined;
 }) {
+  const { t } = useI18n();
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const toolCount = toolProgress?.tools.length ?? 0;
   const doneCount = toolProgress?.tools.filter((t) => t.done).length ?? 0;
@@ -1205,10 +1215,10 @@ const WorkerCard = memo(function WorkerCard({
               <ListChecks className="w-3 h-3 flex-shrink-0" />
               <span className="tabular-nums">
                 {w.task_summary?.completed ?? 0}/{w.task_summary?.total ?? 0}{" "}
-                tasks
+                {t("tasks")}
               </span>
               {(w.task_summary?.in_progress ?? 0) > 0 && (
-                <span className="text-primary ml-0.5">(running)</span>
+                <span className="text-primary ml-0.5">{t("(running)")}</span>
               )}
             </div>
           </div>
@@ -1226,10 +1236,10 @@ const WorkerCard = memo(function WorkerCard({
             >
               <Wrench className="w-3 h-3 flex-shrink-0" />
               <span className="tabular-nums">
-                {doneCount}/{toolCount} tools
+                {t("{done}/{total} tools", { done: doneCount, total: toolCount })}
               </span>
               {!toolProgress?.allDone && (
-                <span className="text-primary ml-0.5">(running)</span>
+                <span className="text-primary ml-0.5">{t("(running)")}</span>
               )}
               <span className="ml-auto">
                 {toolsExpanded ? (
@@ -1264,10 +1274,10 @@ const WorkerCard = memo(function WorkerCard({
               }}
               disabled={stoppingId === w.worker_id}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-destructive/40 text-destructive text-[10px] hover:bg-destructive/10 disabled:opacity-50 transition-colors"
-              title="Stop this worker"
+              title={t("Stop this worker")}
             >
               <Square className="w-2.5 h-2.5" />
-              {stoppingId === w.worker_id ? "Stopping…" : "Stop"}
+              {stoppingId === w.worker_id ? t("Stopping…") : t("Stop")}
             </button>
           </div>
         )}
@@ -1280,6 +1290,7 @@ const WorkerCard = memo(function WorkerCard({
 // ── Triggers tab ───────────────────────────────────────────────────────
 
 function TriggersTab({ sessionId }: { sessionId: string }) {
+  const { t } = useI18n();
   const { triggers } = useColonyWorkers();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -1304,7 +1315,7 @@ function TriggersTab({ sessionId }: { sessionId: string }) {
       onClick={() => setShowCreate(true)}
       disabled={!sessionId}
       className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium bg-primary/15 text-primary hover:bg-primary/25 border border-primary/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      title="Create a new schedule"
+      title={t("Create a new schedule")}
     >
       <Plus className="w-3 h-3" />
       New
@@ -1346,11 +1357,12 @@ function TriggersTab({ sessionId }: { sessionId: string }) {
  *  primary call-to-action that opens the same Create-schedule popup as the
  *  header "New" button. */
 function TriggersEmptyState({ onCreate }: { onCreate: () => void }) {
+  const { t } = useI18n();
   return (
     <EmptyState
       icon={<Clock className="w-4 h-4" />}
-      title="Put this colony on a schedule"
-      body="Run this colony automatically — every day, on specific weekdays, or at a set interval. You choose the time; it fires on its own."
+      title={t("Put this colony on a schedule")}
+      body={t("Run this colony automatically — every day, on specific weekdays, or at a set interval. You choose the time; it fires on its own.")}
     >
       <button
         type="button"
@@ -1358,7 +1370,7 @@ function TriggersEmptyState({ onCreate }: { onCreate: () => void }) {
         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
       >
         <Plus className="w-3.5 h-3.5" />
-        Create schedule
+        {t("Create schedule")}
       </button>
     </EmptyState>
   );
@@ -1549,6 +1561,7 @@ function TriggerDetail({
   trigger: GraphNode;
   onBack: () => void;
 }) {
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [runBusy, setRunBusy] = useState(false);
   const [runNotice, setRunNotice] = useState<string | null>(null);
@@ -1592,7 +1605,7 @@ function TriggerDetail({
     setRunNotice(null);
     try {
       await sessionsApi.runTrigger(sessionId, triggerId);
-      setRunNotice("Trigger fired");
+      setRunNotice(t("Trigger fired"));
       // Clear the notice after a few seconds so it doesn't linger.
       setTimeout(() => setRunNotice(null), 3000);
     } catch (err) {
@@ -1626,7 +1639,7 @@ function TriggerDetail({
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-3"
       >
         <ArrowLeft className="w-3 h-3" />
-        All triggers
+        {t("All triggers")}
       </button>
 
       <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 mb-3">
@@ -1663,13 +1676,13 @@ function TriggerDetail({
       </div>
 
       {schedule && (
-        <Section label="Schedule">
+        <Section label={t("Schedule")}>
           <p className="text-xs text-foreground">{schedule}</p>
         </Section>
       )}
 
       {isActive && remainingSec != null && remainingSec > 0 && (
-        <Section label="Next fire">
+        <Section label={t("Next fire")}>
           <p className="text-xs text-foreground italic">in {formatCountdown(remainingSec)}</p>
           {firesAtMs != null && (
             <p className="text-[10px] text-muted-foreground mt-1">
@@ -1680,7 +1693,7 @@ function TriggerDetail({
       )}
 
       {(fireCount != null && fireCount > 0) || lastFiredAgo ? (
-        <Section label="Last fire">
+        <Section label={t("Last fire")}>
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-xs text-foreground">{lastFiredAgo ?? "—"}</span>
             {fireCount != null && fireCount > 0 && (
@@ -1696,7 +1709,7 @@ function TriggerDetail({
       ) : null}
 
       {displayEntries.length > 0 && (
-        <Section label="Config">
+        <Section label={t("Config")}>
           <div className="space-y-1">
             {displayEntries.map(([k, v]) => (
               <div key={k} className="flex items-start justify-between gap-3 text-[11px]">
@@ -1720,7 +1733,7 @@ function TriggerDetail({
         type="button"
         onClick={handleForceRun}
         disabled={runBusy || !sessionId}
-        title="Fire this trigger once, bypassing the schedule"
+        title={t("Fire this trigger once, bypassing the schedule")}
         className="w-full flex items-center justify-center gap-1.5 px-3 py-2 mb-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/30"
       >
         {runBusy ? (
@@ -1728,7 +1741,7 @@ function TriggerDetail({
         ) : (
           <Zap className="w-3.5 h-3.5" />
         )}
-        {runBusy ? "Firing…" : "Force Run"}
+        {runBusy ? t("Firing…") : t("Force Run")}
       </button>
       <button
         type="button"
@@ -1747,17 +1760,18 @@ function TriggerDetail({
         ) : (
           <Play className="w-3.5 h-3.5" />
         )}
-        {busy ? "Working…" : isActive ? "Stop trigger" : "Start trigger"}
+        {busy ? t("Working…") : isActive ? t("Stop trigger") : t("Start trigger")}
       </button>
     </div>
   );
 }
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  const { t } = useI18n();
   return (
     <div className="mb-3">
       <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
-        {label}
+        {t(label)}
       </p>
       <div className="rounded-lg border border-border/30 bg-background/60 px-3 py-2.5">
         {children}
@@ -1769,11 +1783,12 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 // ── Data tab (airtable-style view of tracker.db tables) ──────────────
 
 function DataEmptyState() {
+  const { t } = useI18n();
   return (
     <EmptyState
       icon={<Database className="w-4 h-4" />}
-      title="No data recorded yet"
-      body="Queen manages a tracker table inside colony to track the progress."
+      title={t("No data recorded yet")}
+      body={t("Queen manages a tracker table inside colony to track the progress.")}
     />
   );
 }
@@ -1818,6 +1833,7 @@ function applyTabOrder(tables: TableOverview[], order: string[]): TableOverview[
 }
 
 function DataTab({ colonyName }: { colonyName: string | null }) {
+  const { t } = useI18n();
   const [tables, setTables] = useState<TableOverview[]>([]);
   // Seed the last-viewed table from storage (DataTab is keyed by colony, so
   // this initializer re-runs per colony). Validated against the live table
@@ -2027,7 +2043,7 @@ function DataTab({ colonyName }: { colonyName: string | null }) {
         .catch((e) => {
           // Only surface errors on user-initiated loads; silent polls
           // stay quiet and the next tick retries.
-          if (!opts.silent) setTablesError(e?.message ?? "Failed to load tables");
+          if (!opts.silent) setTablesError(e?.message ?? t("Failed to load tables"));
         })
         .finally(() => {
           if (!opts.silent) setLoadingTables(false);
@@ -2249,10 +2265,10 @@ function DataTab({ colonyName }: { colonyName: string | null }) {
       const csv = rows.length ? `${header}\r\n${body}` : header;
       const res = saveCsv(csv, `${colonyName}-${selected}`);
       if (!res.ok && !res.cancelled) {
-        setDownloadError(res.error ?? "Download failed");
+        setDownloadError(res.error ?? t("Download failed"));
       }
     } catch (e) {
-      setDownloadError(e instanceof Error ? e.message : "Download failed");
+      setDownloadError(e instanceof Error ? e.message : t("Download failed"));
     } finally {
       setDownloading(false);
     }
@@ -2386,7 +2402,7 @@ function DataTab({ colonyName }: { colonyName: string | null }) {
                 onClick={handleDownload}
                 disabled={downloading || !selected}
                 title={`Download "${selected ?? ""}" as CSV`}
-                aria-label="Download table as CSV"
+                aria-label={t("Download table as CSV")}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors disabled:opacity-40"
               >
                 {downloading ? (
@@ -2397,8 +2413,8 @@ function DataTab({ colonyName }: { colonyName: string | null }) {
               </button>
               <button
                 onClick={() => setFullscreen((f) => !f)}
-                title={fullscreen ? "Exit expanded view (Esc)" : "Expand view"}
-                aria-label={fullscreen ? "Exit expanded view" : "Expand view"}
+                title={fullscreen ? t("Exit expanded view (Esc)") : t("Expand view")}
+                aria-label={fullscreen ? t("Exit expanded view") : t("Expand view")}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
               >
                 {fullscreen ? (
@@ -2545,6 +2561,7 @@ function TableView({
   highlights: { pk: Record<string, CellValue>; ts: number }[];
   onAnyEdit: () => void;
 }) {
+  const { t } = useI18n();
   const [data, setData] = useState<TableRowsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -2585,7 +2602,7 @@ function TableView({
           if (myId !== reqIdRef.current) return;
           // Silent polls swallow errors; the next tick retries. User-
           // initiated loads surface so the operator sees the failure.
-          if (!opts.silent) setError(e?.message ?? "Failed to load rows");
+          if (!opts.silent) setError(e?.message ?? t("Failed to load rows"));
         })
         .finally(() => {
           if (!opts.silent && myId === reqIdRef.current) setLoading(false);
@@ -2723,7 +2740,7 @@ function TableView({
         optionsEditable={false}
         highlightKeys={highlightKeys}
         loading={loading}
-        emptyMessage="Table is empty."
+        emptyMessage={t("Table is empty.")}
       />
       <div className="flex flex-shrink-0 items-center justify-between text-[10px] text-muted-foreground">
         <span className="flex items-center gap-1.5">
@@ -2783,6 +2800,7 @@ function WorkerDetail({
   workerLabel: string | undefined;
   onBack: () => void;
 }) {
+  const { t } = useI18n();
   const [detail, setDetail] = useState<WorkerDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -2802,7 +2820,7 @@ function WorkerDetail({
         if (!cancelled) setDetail(r.worker);
       })
       .catch((e) => {
-        if (!cancelled) setError(e?.message ?? "Failed to load worker");
+        if (!cancelled) setError(e?.message ?? t("Failed to load worker"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -2823,7 +2841,7 @@ function WorkerDetail({
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-3"
       >
         <ArrowLeft className="w-3 h-3" />
-        All workers
+        {t("All workers")}
       </button>
 
       <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 mb-3">
@@ -2900,6 +2918,7 @@ function WorkerTaskList({
   workerId: string;
   colonyName: string | null;
 }) {
+  const { t } = useI18n();
   // Workers' session_id == their worker_id (ColonyRuntime.spawn). The SSE
   // events for the worker's task list ride on the colony's bus, which we
   // subscribe to via the queen's session id (already streaming in this view).
@@ -2908,7 +2927,7 @@ function WorkerTaskList({
     <TaskListPanel
       sessionId={workerId}
       eventSessionId={queenSessionId ?? undefined}
-      title="Worker session"
+      title={t("Worker session")}
       variant="embedded"
       hideWhenEmpty
     />
@@ -2927,6 +2946,7 @@ function WorkerTranscript({
   sessionId: string;
   workerId: string;
 }) {
+  const { t } = useI18n();
   const [messages, setMessages] = useState<WorkerMessage[]>([]);
   const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -2944,7 +2964,7 @@ function WorkerTranscript({
         setTruncated(r.truncated);
       })
       .catch((e) => {
-        if (!cancelled) setError(e?.message ?? "Failed to load transcript");
+        if (!cancelled) setError(e?.message ?? t("Failed to load transcript"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -2958,7 +2978,7 @@ function WorkerTranscript({
     return (
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-1 py-2">
         <Loader2 className="w-3 h-3 animate-spin" />
-        Loading transcript…
+        {t("Loading transcript…")}
       </div>
     );
   }
@@ -2968,7 +2988,7 @@ function WorkerTranscript({
   if (messages.length === 0) {
     return (
       <p className="text-xs text-muted-foreground px-1 py-2">
-        No conversation recorded for this worker.
+        {t("No conversation recorded for this worker.")}
       </p>
     );
   }
@@ -2989,6 +3009,7 @@ function WorkerTranscript({
 /** One transcript row. Tool-result messages render as a collapsed
  *  disclosure; user / assistant messages render as bordered cards. */
 function TranscriptMessage({ msg }: { msg: WorkerMessage }) {
+  const { t } = useI18n();
   if (msg.role === "tool") {
     return <TranscriptToolResult content={msg.content} />;
   }
@@ -3002,7 +3023,7 @@ function TranscriptMessage({ msg }: { msg: WorkerMessage }) {
       }`}
     >
       <div className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground mb-0.5">
-        {isUser ? "User" : "Assistant"}
+        {isUser ? t("User") : t("Assistant")}
       </div>
       {msg.content && (
         <p className="text-xs text-foreground/85 whitespace-pre-wrap break-words">
@@ -3034,6 +3055,7 @@ function TranscriptMessage({ msg }: { msg: WorkerMessage }) {
 /** Collapsed tool-result disclosure — tool output is verbose, so it
  *  stays folded behind a one-line preview until clicked. */
 function TranscriptToolResult({ content }: { content: string }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const firstLine = content.split("\n", 1)[0];
   return (
@@ -3048,7 +3070,7 @@ function TranscriptToolResult({ content }: { content: string }) {
         ) : (
           <ChevronRight className="w-3 h-3 flex-shrink-0" />
         )}
-        <span className="font-medium flex-shrink-0">Tool result</span>
+        <span className="font-medium flex-shrink-0">{t("Tool result")}</span>
         {!open && (
           <span className="truncate font-mono text-foreground/45">
             {firstLine}
@@ -3075,6 +3097,7 @@ function CapabilitiesModal({
   sessionId: string;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   if (!open) return null;
   return (
     <>
@@ -3091,17 +3114,17 @@ function CapabilitiesModal({
               </div>
               <div>
                 <h2 className="text-sm font-semibold text-foreground">
-                  Colony capabilities
+                  {t("Colony capabilities")}
                 </h2>
                 <p className="text-[11px] text-muted-foreground">
-                  Skills and tools shared by every worker in this colony.
+                  {t("Skills and tools shared by every worker in this colony.")}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
               className="p-1.5 rounded-md hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
-              title="Close"
+              title={t("Close")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -3109,11 +3132,11 @@ function CapabilitiesModal({
 
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-5 pt-3 pb-1 text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
-              Skills
+              {t("Skills")}
             </div>
             <SkillsTab sessionId={sessionId} />
             <div className="px-5 pt-2 pb-1 text-[10px] uppercase tracking-wide font-semibold text-muted-foreground border-t border-border/60 mt-2">
-              Tools
+              {t("Tools")}
             </div>
             <ToolsTab sessionId={sessionId} />
           </div>
@@ -3142,6 +3165,7 @@ function TabShell({
   headerRight?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const showHeader = onRefresh != null || headerRight != null;
   return (
     <div className="px-4 py-3">
@@ -3152,7 +3176,7 @@ function TabShell({
             <button
               onClick={onRefresh}
               className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-              title="Refresh"
+              title={t("Refresh")}
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
