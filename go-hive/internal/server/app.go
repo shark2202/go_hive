@@ -108,7 +108,14 @@ func NewApp(deps AppDeps) *App {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", app.handleHealth)
 	mux.HandleFunc("GET /api/startup-status", app.handleStartupStatus)
-	RegisterConfigRoutes(mux, deps.Config)
+	// Config routes read/write <HIVE_HOME>/configuration.json. AppDeps.Config is
+	// optional, so fall back to the app home instead of leaving Home zero-valued
+	// (an empty Home resolves to "configuration.json" relative to the cwd).
+	configDeps := deps.Config
+	if configDeps.Home.Root == "" {
+		configDeps.Home = deps.Home
+	}
+	RegisterConfigRoutes(mux, configDeps)
 	RegisterSessionRoutes(mux, SessionRouteDeps{
 		LiveSessions:           deps.LiveSessions,
 		Manager:                deps.Manager,
