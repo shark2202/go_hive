@@ -148,8 +148,8 @@ func RunWorkerToolDef() llm.ToolDef {
 					"items": map[string]any{"type": "string"},
 					"description": "RESUME mode (mutually exclusive with 'tasks'). worker_ids of " +
 						"workers that stopped before reporting. Each is reloaded from its saved " +
-						"conversation and continues from where it left off. This port reports a " +
-						"clear unsupported-mode error instead of silently spawning fresh workers.",
+						"conversation and continues from where it left off. An id with no saved " +
+						"transcript is reported back per id instead of being re-spawned.",
 					"minItems": 1,
 				},
 				"guidance": map[string]any{
@@ -193,19 +193,39 @@ const runWorkerDescription = "Fan out a batch of tasks to parallel workers and R
 // whether that payload is a tool error, matching the catalogue's
 // (content, isError) contract.
 //
+// Two modes, mutually exclusive: tasks (spawn a fresh batch) and
+// resume_worker_ids (rebuild stopped workers over their saved transcripts).
+// A spawner that cannot resume still reports resume as unsupported instead of
+// silently spawning fresh workers.
+//
 // Differences from upstream, stated explicitly instead of silently dropped:
-//   - resume mode is not implemented by the Go colony runtime, so it returns a
-//     clear error rather than pretending to resume;
 //   - the tracker-registry preflight is not enforced (the Go port's workers do
-//     not depend on a shared tracker DB for coordination);
-//   - returned breadcrumbs omit output_file (the port keeps worker transcripts
-//     in memory, not at a per-worker output path).
+//     not depend on a shared tracker DB for coordination).
 func RunWorker(ctx context.Context, spawner RunWorkerSpawner, input map[string]any) (string, bool) {
 	if spawner == nil {
 		return jsonPayload(map[string]any{
 			"error": "No colony is bound to this session. run_worker needs a live colony " +
 				"runtime — create a colony (or load one) before dispatching workers.",
 		}, true)
+	}
+
+	// Dispatch limits apply to both modes: a resume is a run_worker call too,
+	// with the same soft/hard deadline watch and loop overrides.
+	soft := RunWorkerDefaultSoftTimeout
+	if seconds, ok := floatInput(input["timeout"]); ok && seconds > 0 {
+		soft = time.Duration(seconds * float64(time.Second))
+	}
+	hard := computeHardTimeout(soft)
+	overrides := map[string]any{}
+	if value, ok := intInput(input["max_iterations"]); ok {
+		overrides["max_iterations"] = value
+	}
+	if value, ok := intInput(input["tool_call_lifetime_budget"]); ok {
+		overrides["tool_call_lifetime_budget"] = value
+	}
+	var loopOverrides map[string]any
+	if len(overrides) > 0 {
+		loopOverrides = overrides
 	}
 
 	resumeIDs, hasResume := stringSliceInput(input["resume_worker_ids"])
@@ -220,12 +240,43 @@ func RunWorker(ctx context.Context, spawner RunWorkerSpawner, input map[string]a
 				"error": "resume_worker_ids must be a non-empty list of worker_id strings",
 			}, true)
 		}
+		resumer, ok := spawner.(WorkerResumer)
+		if !ok {
+			return jsonPayload(map[string]any{
+				"error": "run_worker resume mode is not supported by this colony runtime: it has " +
+					"no saved worker conversations. Re-dispatch the unfinished units as new tasks instead.",
+				"requested_worker_ids": resumeIDs,
+			}, true)
+		}
+		batchID := newRunWorkerBatchID()
+		resumed, failures := resumer.ResumeWorkers(ctx, resumeIDs,
+			stringValue(input["guidance"]), loopOverrides, batchID)
+		if len(resumed) == 0 {
+			return jsonPayload(map[string]any{
+				"error": "none of the requested workers could be resumed from disk — resume is " +
+					"unsupported for a worker with no saved transcript, or one that is still " +
+					"running; re-dispatch them as new tasks",
+				"failures": failures,
+			}, true)
+		}
+		if watcher, ok := spawner.(interface {
+			WatchBatchTimeouts(workerIDs []string, soft, hard time.Duration)
+		}); ok {
+			watcher.WatchBatchTimeouts(resumed, soft, hard)
+		}
 		return jsonPayload(map[string]any{
-			"error": "run_worker resume mode is not supported by this build: the Go colony " +
-				"runtime does not persist worker conversations. Re-dispatch the unfinished units " +
-				"as new tasks instead.",
-			"requested_worker_ids": resumeIDs,
-		}, true)
+			"status":               "resumed",
+			"batch_id":             batchID,
+			"worker_count":         len(resumed),
+			"worker_ids":           resumed,
+			"resumed_count":        len(resumed),
+			"failures":             failures,
+			"soft_timeout_seconds": soft.Seconds(),
+			"hard_timeout_seconds": hard.Seconds(),
+			"message": fmt.Sprintf(
+				"Resumed %d worker(s) from their saved conversation; each continues where it "+
+					"stopped and emits one [WORKER_REPORT] when it terminates.", len(resumed)),
+		}, false)
 	}
 
 	specs := taskSpecs(input["tasks"])
@@ -270,24 +321,6 @@ func RunWorker(ctx context.Context, spawner RunWorkerSpawner, input map[string]a
 		}
 		tasks = append(tasks, task)
 	}
-
-	overrides := map[string]any{}
-	if value, ok := intInput(input["max_iterations"]); ok {
-		overrides["max_iterations"] = value
-	}
-	if value, ok := intInput(input["tool_call_lifetime_budget"]); ok {
-		overrides["tool_call_lifetime_budget"] = value
-	}
-	var loopOverrides map[string]any
-	if len(overrides) > 0 {
-		loopOverrides = overrides
-	}
-
-	soft := RunWorkerDefaultSoftTimeout
-	if seconds, ok := floatInput(input["timeout"]); ok && seconds > 0 {
-		soft = time.Duration(seconds * float64(time.Second))
-	}
-	hard := computeHardTimeout(soft)
 
 	batchID := newRunWorkerBatchID()
 	workerIDs, err := spawner.SpawnBatchWithOptions(ctx, tasks, SpawnBatchOptions{
@@ -450,8 +483,10 @@ func FormatWorkerReport(data map[string]any, batchRemaining int) string {
 
 // SubscribeQueenReports forwards every worker terminal report on the colony
 // bus to sink as a formatted [WORKER_REPORT] block. It returns an unsubscribe
-// function; a nil runtime or sink yields a no-op. The queen's own stream and
-// the persistent overseer are skipped, matching the upstream handler.
+// function; a nil runtime or sink yields a no-op. The queen's own stream is
+// skipped, matching the upstream handler; the persistent overseer's report is
+// NOT skipped (its stream id is "overseer", and upstream only filters
+// stream_id == "queen").
 //
 // Parity: framework/server/queen_orchestrator.py::_on_worker_report (subscribe)
 func SubscribeQueenReports(runtime *ColonyRuntime, sink func(string)) (func(), error) {
@@ -474,9 +509,6 @@ func SubscribeQueenReports(runtime *ColonyRuntime, sink func(string)) (func(), e
 				workerID = *event.NodeID
 			}
 			if workerID == "" {
-				return
-			}
-			if worker := runtime.GetWorker(workerID); worker != nil && worker.IsPersistent() {
 				return
 			}
 			remaining := runtime.BatchRemaining(stringValue(data["batch_id"]), workerID)
