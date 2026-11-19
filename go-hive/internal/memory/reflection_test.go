@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/aden-hive/hive-go/internal/llm"
 )
@@ -243,6 +245,247 @@ func TestSubscribeReflectionTriggersRunsHousekeepingForBothScopes(t *testing.T) 
 	}
 	if longCalls != 1 {
 		t.Fatalf("long reflections = %d, want 1", longCalls)
+	}
+}
+
+// Parity: tests/test_queen_memory.py::test_subscribe_reflection_triggers_runs_housekeeping_for_both_scopes
+func TestReflectionSchedulerWritesQueenMemoryInBackground(t *testing.T) {
+	resetMemoryState(t)
+	sessionDir := filepath.Join(t.TempDir(), "session")
+	seedConversation(t, sessionDir, 2)
+	globalDir, queenDir := t.TempDir(), t.TempDir()
+
+	fake := &fakeCompleter{responses: []llm.Completion{
+		callsCompletion(toolCall("tc_1", "write_memory_file", map[string]any{
+			"scope":    "queen",
+			"filename": "queen-turn-learnings.md",
+			"content": "---\nname: queen-turn-learnings\n" +
+				"type: preference\n" +
+				"description: How this queen should answer\n" +
+				"---\nPrefer implementation-first answers.",
+		})),
+		textCompletion("done"),
+	}}
+	scheduler := &ReflectionScheduler{
+		SessionDir: sessionDir,
+		LLM:        fake,
+		GlobalDir:  globalDir,
+		QueenDir:   queenDir,
+		QueenID:    "queen_technology",
+		Config:     func() ReflectionConfig { return ReflectionConfig{EveryTurns: 1, LongEvery: 4} },
+	}
+
+	// The trigger returns immediately; Close drains the background pass.
+	scheduler.OnTurnDone(context.Background(), "queen", "turn_done")
+	scheduler.Close(time.Second)
+
+	if _, err := os.Stat(filepath.Join(queenDir, "queen-turn-learnings.md")); err != nil {
+		t.Fatalf("queen memory missing after turn_done: %v", err)
+	}
+	if files := ScanMemoryFiles(globalDir); len(files) != 0 {
+		t.Fatalf("reflection wrote outside the queen scope: %v", files)
+	}
+	if got := len(fake.calls()); got == 0 {
+		t.Fatal("reflection never called the model")
+	}
+}
+
+// Parity: tests/test_queen_memory.py::test_short_reflection
+func TestReflectionSchedulerUpdatesExistingQueenMemory(t *testing.T) {
+	resetMemoryState(t)
+	sessionDir := filepath.Join(t.TempDir(), "session")
+	seedConversation(t, sessionDir, 2)
+	globalDir, queenDir := t.TempDir(), t.TempDir()
+
+	write := func(id, body string) llm.Completion {
+		return callsCompletion(toolCall(id, "write_memory_file", map[string]any{
+			"scope":    "queen",
+			"filename": "queen-style.md",
+			"content": "---\nname: queen-style\ntype: preference\n" +
+				"description: How this queen should answer\n---\n" + body,
+		}))
+	}
+	fake := &fakeCompleter{responses: []llm.Completion{
+		write("tc_1", "First pass body."), textCompletion("done"),
+		write("tc_2", "Updated after the second turn."), textCompletion("done"),
+	}}
+	scheduler := &ReflectionScheduler{
+		SessionDir: sessionDir,
+		LLM:        fake,
+		GlobalDir:  globalDir,
+		QueenDir:   queenDir,
+		QueenID:    "queen_technology",
+		Config:     func() ReflectionConfig { return ReflectionConfig{EveryTurns: 1, LongEvery: 4} },
+		Spawn:      func(work func()) { work() },
+	}
+	memoryPath := filepath.Join(queenDir, "queen-style.md")
+
+	scheduler.OnTurnDone(context.Background(), "queen", "turn_done")
+	first, err := os.ReadFile(memoryPath)
+	if err != nil {
+		t.Fatalf("queen memory missing: %v", err)
+	}
+	if !strings.Contains(string(first), "First pass body.") {
+		t.Fatalf("first pass = %q", string(first))
+	}
+
+	writePart(t, sessionDir, 2, "user", "message 2")
+	scheduler.OnTurnDone(context.Background(), "queen", "turn_done")
+	second, err := os.ReadFile(memoryPath)
+	if err != nil {
+		t.Fatalf("queen memory disappeared: %v", err)
+	}
+	if !strings.Contains(string(second), "Updated after the second turn.") {
+		t.Fatalf("updated pass = %q", string(second))
+	}
+	if files := ScanMemoryFiles(queenDir); len(files) != 1 {
+		t.Fatalf("update created duplicate files: %v", files)
+	}
+}
+
+// Parity: tests/test_queen_memory.py::test_subscribe_reflection_triggers_runs_housekeeping_for_both_scopes
+func TestReflectionSchedulerLongPassEveryLongEvery(t *testing.T) {
+	resetMemoryState(t)
+	sessionDir := filepath.Join(t.TempDir(), "session")
+	seedConversation(t, sessionDir, 2)
+	globalDir, queenDir := t.TempDir(), t.TempDir()
+
+	write := func(id, filename string) llm.Completion {
+		return callsCompletion(toolCall(id, "write_memory_file", map[string]any{
+			"scope":    "queen",
+			"filename": filename,
+			"content": "---\nname: " + strings.TrimSuffix(filename, ".md") + "\n" +
+				"type: preference\ndescription: reflected memory\n---\nbody",
+		}))
+	}
+	fake := &fakeCompleter{responses: []llm.Completion{
+		write("tc_1", "first-turn.md"), textCompletion("short 1 done"),
+		write("tc_2", "second-turn.md"), textCompletion("short 2 done"),
+		write("tc_3", "long-pass.md"), textCompletion("housekeeping done"),
+	}}
+	scheduler := &ReflectionScheduler{
+		SessionDir: sessionDir,
+		LLM:        fake,
+		GlobalDir:  globalDir,
+		QueenDir:   queenDir,
+		QueenID:    "queen_technology",
+		Config:     func() ReflectionConfig { return ReflectionConfig{EveryTurns: 1, LongEvery: 2} },
+		Spawn:      func(work func()) { work() },
+	}
+
+	scheduler.OnTurnDone(context.Background(), "queen", "turn_done")
+	if _, err := os.Stat(filepath.Join(queenDir, "first-turn.md")); err != nil {
+		t.Fatalf("first short reflection missing: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(queenDir, "long-pass.md")); err == nil {
+		t.Fatal("long reflection ran on the first reflection")
+	}
+
+	writePart(t, sessionDir, 2, "user", "message 2")
+
+	scheduler.OnTurnDone(context.Background(), "queen", "turn_done")
+	if _, err := os.Stat(filepath.Join(queenDir, "second-turn.md")); err != nil {
+		t.Fatalf("second short reflection missing: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(queenDir, "long-pass.md")); err != nil {
+		t.Fatalf("long reflection missing on the second reflection: %v", err)
+	}
+
+	// The long pass is handed a manifest of both scopes, queen included.
+	sawQueenScope := false
+	for _, request := range fake.calls() {
+		if !strings.Contains(request.System, "periodic housekeeping pass") {
+			continue
+		}
+		user := request.Messages[0].Content
+		if strings.Contains(user, "## Scope: global") &&
+			strings.Contains(user, "## Scope: queen (queen_technology)") {
+			sawQueenScope = true
+		}
+	}
+	if !sawQueenScope {
+		t.Fatal("long reflection prompt did not cover the queen scope")
+	}
+}
+
+// Parity-exempt: upstream falls back to its ambient home directory; the Go
+// scheduler stays silent when neither scope has a directory (Go-only guard).
+func TestReflectionSchedulerWithoutMemoryDirsDoesNotReflect(t *testing.T) {
+	resetMemoryState(t)
+	sessionDir := filepath.Join(t.TempDir(), "session")
+	seedConversation(t, sessionDir, 2)
+	fake := &fakeCompleter{}
+	scheduler := &ReflectionScheduler{
+		SessionDir: sessionDir,
+		LLM:        fake,
+		Config:     func() ReflectionConfig { return ReflectionConfig{EveryTurns: 1, LongEvery: 1} },
+	}
+
+	scheduler.OnTurnDone(context.Background(), "queen", "turn_done")
+	scheduler.Close(time.Second)
+
+	if got := len(fake.calls()); got != 0 {
+		t.Fatalf("reflection ran without a memory scope: %d model calls", got)
+	}
+	if _, err := os.Stat(filepath.Join(sessionDir, ".reflection_error.txt")); err == nil {
+		t.Fatal("missing memory dirs surfaced as a reflection error")
+	}
+}
+
+// Parity-exempt: upstream keeps reflection fire-and-forget; draining it on
+// teardown and running it on a scheduler-owned context is a Go lifecycle guard.
+func TestReflectionSchedulerCloseDrainsInFlightReflection(t *testing.T) {
+	var calls, sawCancelled int32
+	started := make(chan struct{})
+	release := make(chan struct{})
+	short := func(ctx context.Context) LoopResult {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			close(started)
+			<-release
+		}
+		if ctx.Err() != nil {
+			atomic.StoreInt32(&sawCancelled, 1)
+		}
+		return LoopResult{Success: true}
+	}
+	scheduler := &ReflectionScheduler{
+		Config: func() ReflectionConfig { return ReflectionConfig{EveryTurns: 1, LongEvery: 2} },
+		Short:  short,
+	}
+
+	// A turn context that is already cancelled must not abort the reflection.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	scheduler.OnTurnDone(ctx, "queen", "turn_done")
+	<-started
+
+	closed := make(chan struct{})
+	go func() {
+		scheduler.Close(2 * time.Second)
+		close(closed)
+	}()
+	select {
+	case <-closed:
+		t.Fatal("Close returned while a reflection was still running")
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(release)
+	select {
+	case <-closed:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Close did not return after the reflection finished")
+	}
+
+	if atomic.LoadInt32(&sawCancelled) != 0 {
+		t.Fatal("reflection ran on the cancelled turn context")
+	}
+	if got := atomic.LoadInt32(&calls); got != 2 {
+		t.Fatalf("short reflections = %d, want 2 (trigger + teardown)", got)
+	}
+	// A closed scheduler accepts no further triggers.
+	scheduler.OnTurnDone(context.Background(), "queen", "turn_done")
+	if got := atomic.LoadInt32(&calls); got != 2 {
+		t.Fatalf("reflection ran after Close: %d calls", got)
 	}
 }
 

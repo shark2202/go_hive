@@ -607,6 +607,18 @@ func runShortReflectionWithPrompt(
 	systemPrompt string,
 	queenID string,
 ) LoopResult {
+	// A scope without a directory has nowhere to write; drop it instead of
+	// letting SafeMemoryPath resolve against the working directory.
+	usable := make([]ScopeDir, 0, len(dirs))
+	for _, d := range dirs {
+		if d.Dir != "" {
+			usable = append(usable, d)
+		}
+	}
+	if len(usable) == 0 {
+		return LoopResult{}
+	}
+	dirs = usable
 	messages := ReadConversationParts(sessionDir)
 	if len(messages) == 0 {
 		return LoopResult{}
@@ -695,6 +707,9 @@ func RunLongReflection(ctx context.Context, completer llm.Completer, memoryDir, 
 	if memoryDir == "" {
 		memoryDir = defaultGlobalMemoryDir()
 	}
+	if memoryDir == "" {
+		return LoopResult{}
+	}
 	files := ScanMemoryFiles(memoryDir)
 	if len(files) == 0 {
 		return LoopResult{}
@@ -715,11 +730,17 @@ func RunUnifiedLongReflection(
 	if globalDir == "" {
 		globalDir = defaultGlobalMemoryDir()
 	}
-	dirs := []ScopeDir{{Scope: "global", Dir: globalDir}}
+	dirs := make([]ScopeDir, 0, 2)
+	if globalDir != "" {
+		dirs = append(dirs, ScopeDir{Scope: "global", Dir: globalDir})
+	}
 	promptQueenID := ""
 	if queenDir != "" && queenID != "" {
 		dirs = append(dirs, ScopeDir{Scope: "queen", Dir: queenDir})
 		promptQueenID = queenID
+	}
+	if len(dirs) == 0 {
+		return LoopResult{}
 	}
 	userMsg := "## Current memory manifest across scopes\n\n" +
 		FormatMultiScopeManifest(dirs, promptQueenID) + "\n\nTimestamp: " + ReflectionTimestamp()
@@ -772,6 +793,19 @@ func DefaultReflectionConfig() ReflectionConfig {
 	return ReflectionConfig{EveryTurns: 6, LongEvery: 4, Model: "main"}
 }
 
+// ReflectionCloseGrace bounds how long a scheduler Close waits for in-flight
+// reflection work (and for the teardown reflection) so a hung model can never
+// stall a session teardown.
+const ReflectionCloseGrace = 2 * time.Second
+
+// ReflectionScheduler triggers the memory reflection loops from queen turn
+// events. Work runs in the background, tracked by a WaitGroup so Close can
+// drain it. The scheduler owns the context the loops run on: a reflection
+// must outlive the turn that triggered it, otherwise a turn or session
+// context cancelled right after the turn aborts it half-way through a memory
+// write.
+//
+// Parity: core/framework/agents/queen/reflection_agent.py::subscribe_reflection_triggers
 type ReflectionScheduler struct {
 	SessionDir string
 	LLM        llm.Completer
@@ -788,6 +822,11 @@ type ReflectionScheduler struct {
 	turns       int
 	reflections int
 	running     bool
+	closed      bool
+	ctx         context.Context
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
+	closeOnce   sync.Once
 }
 
 func (s *ReflectionScheduler) config() ReflectionConfig {
@@ -804,12 +843,50 @@ func (s *ReflectionScheduler) config() ReflectionConfig {
 	return cfg
 }
 
+// hasMemoryScope reports whether there is anywhere to write memories. Without
+// a scope the scheduler stays silent instead of falling back to an ambient
+// home directory or the working directory.
+func (s *ReflectionScheduler) hasMemoryScope() bool {
+	return s.GlobalDir != "" || (s.QueenDir != "" && s.QueenID != "")
+}
+
+// canReflect is hasMemoryScope plus the injected-work escape hatch: a
+// scheduler whose Short/Long are supplied by a caller owns no directories of
+// its own and decides for itself whether to run.
+func (s *ReflectionScheduler) canReflect() bool {
+	return s.hasMemoryScope() || s.Short != nil || s.Long != nil
+}
+
+// lifetime returns the scheduler-owned context reflection work runs on.
+// Callers hold s.mu; Close is the only thing that cancels it.
+func (s *ReflectionScheduler) lifetime() context.Context {
+	if s.ctx == nil {
+		s.ctx, s.cancel = context.WithCancel(context.Background())
+	}
+	return s.ctx
+}
+
 func (s *ReflectionScheduler) spawn(work func()) {
 	if s.Spawn != nil {
 		s.Spawn(work)
 		return
 	}
 	go work()
+}
+
+// launch runs one reflection unit in the background. The caller has already
+// registered it with the WaitGroup under s.mu, so Close can never race with
+// the Add; the running flag is cleared when the unit finishes.
+func (s *ReflectionScheduler) launch(ctx context.Context, work func()) {
+	s.spawn(func() {
+		defer s.wg.Done()
+		defer func() {
+			s.mu.Lock()
+			s.running = false
+			s.mu.Unlock()
+		}()
+		work()
+	})
 }
 
 func (s *ReflectionScheduler) short(ctx context.Context) LoopResult {
@@ -835,6 +912,10 @@ func (s *ReflectionScheduler) runWithErrorCapture(ctx context.Context, fn func(c
 	fn(ctx)
 }
 
+// OnTurnDone counts a finished queen turn and, every EveryTurns of them,
+// runs a short reflection in the background; every LongEvery reflections it
+// follows with a long housekeeping pass. park reasons other than a completed
+// turn never count, and a reflection already in flight skips the trigger.
 func (s *ReflectionScheduler) OnTurnDone(ctx context.Context, streamID, parkReason string) {
 	if streamID != "queen" {
 		return
@@ -842,11 +923,19 @@ func (s *ReflectionScheduler) OnTurnDone(ctx context.Context, streamID, parkReas
 	if parkReason != "turn_done" && parkReason != "ask_user" {
 		return
 	}
+	if !s.canReflect() {
+		return
+	}
+	// Config reads configuration.json; keep that I/O off the counter lock.
+	cfg := s.config()
 
 	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return
+	}
 	s.turns++
 	turns := s.turns
-	cfg := s.config()
 	if turns%cfg.EveryTurns != 0 {
 		s.mu.Unlock()
 		return
@@ -859,41 +948,83 @@ func (s *ReflectionScheduler) OnTurnDone(ctx context.Context, streamID, parkReas
 	reflections := s.reflections
 	isLong := reflections%cfg.LongEvery == 0
 	s.running = true
+	runCtx := s.lifetime()
+	s.wg.Add(1)
 	s.mu.Unlock()
 
-	s.spawn(func() {
-		defer func() {
-			s.mu.Lock()
-			s.running = false
-			s.mu.Unlock()
-		}()
-		s.runWithErrorCapture(ctx, s.short, "unified short reflection")
+	s.launch(runCtx, func() {
+		s.runWithErrorCapture(runCtx, s.short, "unified short reflection")
 		if isLong {
-			s.runWithErrorCapture(ctx, s.long, "unified long reflection")
+			s.runWithErrorCapture(runCtx, s.long, "unified long reflection")
 		}
 	})
 }
 
 func (s *ReflectionScheduler) OnCompaction(ctx context.Context, streamID string) {
-	if streamID != "queen" {
+	if streamID != "queen" || !s.canReflect() {
 		return
 	}
 	s.mu.Lock()
-	if s.running {
+	if s.closed || s.running {
 		s.mu.Unlock()
 		return
 	}
 	s.running = true
+	runCtx := s.lifetime()
+	s.wg.Add(1)
 	s.mu.Unlock()
 
-	s.spawn(func() {
-		defer func() {
-			s.mu.Lock()
-			s.running = false
-			s.mu.Unlock()
-		}()
-		s.runWithErrorCapture(ctx, s.long, "unified compaction reflection")
+	s.launch(runCtx, func() {
+		s.runWithErrorCapture(runCtx, s.long, "unified compaction reflection")
 	})
+}
+
+// Close is the teardown path: stop accepting triggers, wait up to grace for
+// an in-flight reflection to finish, then run one final short reflection so
+// the turns since the last pass are persisted before the session disappears.
+//
+// Parity: framework/server/session_manager.py::SessionManager.stop_session
+func (s *ReflectionScheduler) Close(grace time.Duration) {
+	if s == nil {
+		return
+	}
+	if grace <= 0 {
+		grace = ReflectionCloseGrace
+	}
+	s.closeOnce.Do(func() {
+		s.mu.Lock()
+		s.closed = true
+		cancel := s.cancel
+		s.mu.Unlock()
+
+		// Run the final pass only when nothing is still writing: a reflection
+		// that outlived the grace window must not overlap another one.
+		drained := s.waitForIdle(grace)
+		if drained && s.canReflect() {
+			ctx, stop := context.WithTimeout(context.Background(), grace)
+			s.runWithErrorCapture(ctx, s.short, "shutdown reflection")
+			stop()
+		}
+		if cancel != nil {
+			cancel()
+		}
+	})
+}
+
+// waitForIdle waits for tracked reflection work, giving up after grace so a
+// stuck model cannot hold a teardown open indefinitely.
+func (s *ReflectionScheduler) waitForIdle(grace time.Duration) bool {
+	done := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return true
+	case <-time.After(grace):
+		return false
+	}
 }
 
 func (s *ReflectionScheduler) InitializeReflectionState() {
