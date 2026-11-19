@@ -21,9 +21,10 @@ func (f *overseerTestLLM) AComplete(ctx context.Context, req llm.CompletionReque
 // Parity: tests/test_colony_runtime_overseer.py::test_start_overseer_creates_persistent_worker
 func TestHostStartOverseerStartsRuntimeFirst(t *testing.T) {
 	built, err := New(Config{
-		ColonyID:  "colony_a",
-		AgentSpec: agentloop.AgentSpec{ID: "worker", Name: "worker", AgentType: "event_loop"},
-		LLM:       &overseerTestLLM{},
+		ColonyID:    "colony_a",
+		AgentSpec:   agentloop.AgentSpec{ID: "worker", Name: "worker", AgentType: "event_loop"},
+		StoragePath: t.TempDir(),
+		LLM:         &overseerTestLLM{},
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
