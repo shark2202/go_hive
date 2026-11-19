@@ -295,6 +295,37 @@ func (s *Session) PopActiveWebhookSub(id string) string {
 	return subID
 }
 
+// StopAllTriggers cancels every timer and webhook route the session owns and
+// drops its trigger state. Session teardown and colony unload call it so a
+// trigger cannot fire into a runtime that is already gone.
+func (s *Session) StopAllTriggers() {
+	if s == nil {
+		return
+	}
+	s.triggerMu.Lock()
+	timers := s.ActiveTimerTasks
+	s.ActiveTimerTasks = nil
+	subs := s.ActiveWebhookSubs
+	s.ActiveWebhookSubs = nil
+	server := s.WebhookServer
+	s.WebhookServer = nil
+	s.ActiveTriggers = nil
+	s.NextFireTimes = nil
+	s.triggerMu.Unlock()
+
+	for _, timer := range timers {
+		timer.Stop()
+	}
+	if s.EventBus != nil {
+		for _, subID := range subs {
+			s.EventBus.Unsubscribe(subID)
+		}
+	}
+	if stopper, ok := server.(interface{ Stop() error }); ok {
+		_ = stopper.Stop()
+	}
+}
+
 func (s *Session) PendingCount() int {
 	s.pendingMu.Lock()
 	defer s.pendingMu.Unlock()
@@ -460,6 +491,10 @@ func (m *SessionManager) StopSession(sessionID string) bool {
 
 	// Stop the session's worker before unwiring its subscriptions so an
 	// in-flight turn cannot publish into a session that is being torn down.
+	// Triggers go first: a timer that fires mid-teardown would otherwise try
+	// to inject into a closed runtime.
+	session.StopAllTriggers()
+	session.QueenExecutor = nil
 	if session.Chat != nil {
 		if err := session.Chat.Close(); err != nil {
 			log.Printf("stop session %s: closing chat runtime: %v", sessionID, err)

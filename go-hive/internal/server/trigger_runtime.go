@@ -9,6 +9,7 @@ package server
 // Parity: framework/tools/queen_lifecycle_tools.py::_start_trigger_webhook
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -206,6 +207,130 @@ func saveTriggerToAgent(session *Session, triggerID string, def *triggers.Trigge
 		return err
 	}
 	return nil
+}
+
+// RestoreSessionTriggers rebuilds a session's trigger runtime from the
+// colony's triggers.json. Every persisted definition is hydrated; the ones
+// flagged enabled get their timer (or webhook route) started again, so a
+// trigger survives a server restart without the user re-activating it. Missed
+// timer ticks are stamped instead of replayed — a colony must not auto-start
+// work just because the process was down. Returns (loaded, started).
+//
+// Parity: framework/server/session_manager.py::load_colony
+func RestoreSessionTriggers(session *Session) (int, int) {
+	if session == nil || session.WorkerPath == "" {
+		return 0, 0
+	}
+	entries := triggers.ReadAgentTriggersJSON(session.WorkerPath)
+	if len(entries) == 0 {
+		return 0, 0
+	}
+
+	loaded := 0
+	pending := make([]triggers.TriggerDefinition, 0, len(entries))
+	for _, entry := range entries {
+		triggerID := stringValue(entry["id"])
+		triggerType := stringValue(entry["trigger_type"])
+		if triggerID == "" || (triggerType != "timer" && triggerType != "webhook") {
+			continue
+		}
+		// A missing "enabled" key means the trigger was registered without an
+		// explicit choice; default to true (every persisted trigger runs unless
+		// someone flipped the advanced toggle).
+		enabled := true
+		if raw, present := entry["enabled"]; present {
+			enabled = pyTruthy(raw)
+		}
+		def := triggers.TriggerDefinition{
+			ID:            triggerID,
+			TriggerType:   triggerType,
+			TriggerConfig: mapDefault(entry["trigger_config"]),
+			Description:   stringValue(entry["name"]),
+			Task:          stringValue(entry["task"]),
+			Enabled:       enabled,
+		}
+		if def.Description == "" {
+			def.Description = triggerID
+		}
+		if last, ok := entry["last_fired_at"].(string); ok && last != "" {
+			def.LastFiredAt = &last
+		}
+		if next, ok := entry["next_due_at"].(string); ok && next != "" {
+			def.NextDueAt = &next
+		}
+		session.PutTrigger(def)
+		loaded++
+		if enabled {
+			pending = append(pending, def)
+		}
+	}
+
+	// Silently skip missed ticks: stamping last_fired_at = now keeps the gap
+	// from resurfacing on the next reopen (same as upstream load_colony).
+	if missed := triggers.ComputeMissed(entries, time.Now().UTC()); len(missed) > 0 {
+		stamp := triggers.FormatISO(time.Now().UTC())
+		for _, item := range missed {
+			def, ok := session.LookupTrigger(item.TriggerID)
+			if !ok {
+				continue
+			}
+			def.LastFiredAt = &stamp
+			session.PutTrigger(def)
+			_ = saveTriggerToAgent(session, item.TriggerID, &def)
+		}
+		log.Printf("Skipped %d missed trigger(s) on load for %s", len(missed), session.WorkerPath)
+	}
+
+	started := 0
+	for index := range pending {
+		def := pending[index]
+		if session.IsTriggerActive(def.ID) {
+			continue
+		}
+		var err error
+		switch def.TriggerType {
+		case "timer":
+			err = StartTriggerTimer(session, def.ID, &def)
+		case "webhook":
+			err = StartTriggerWebhook(session, def.ID, &def)
+		}
+		if err != nil {
+			log.Printf("Failed to auto-start trigger '%s' from %s: %v", def.ID, session.WorkerPath, err)
+			continue
+		}
+		session.ActivateTrigger(def.ID)
+		started++
+	}
+
+	if loaded > 0 && session.ID != "" {
+		PersistActiveTriggers(session, session.ID)
+	}
+	return loaded, started
+}
+
+// formatTriggerTurn renders a trigger event as the user message the queen
+// reads. Multiple triggers merge into one batch upstream; this runtime queues
+// one turn per event, so the block is the single-trigger shape.
+//
+// Parity: framework/agent_loop/internals/cursor_persistence.py::drain_trigger_queue
+func formatTriggerTurn(event agentloop.TriggerEvent, stamp string) string {
+	task := stringValue(event.Payload["task"])
+	taskLine := ""
+	if strings.TrimSpace(task) != "" {
+		taskLine = "\nTask: " + task
+	}
+	payload := "{}"
+	if event.Payload != nil {
+		var buffer bytes.Buffer
+		encoder := json.NewEncoder(&buffer)
+		encoder.SetEscapeHTML(false)
+		if err := encoder.Encode(event.Payload); err == nil {
+			payload = strings.TrimSuffix(buffer.String(), "\n")
+		}
+	}
+	return "[" + stamp + "]\n" +
+		fmt.Sprintf("[TRIGGER: %s/%s]", event.TriggerType, event.SourceID) +
+		taskLine + "\n" + payload
 }
 
 var missedTriggerDecisions = map[string]struct{}{

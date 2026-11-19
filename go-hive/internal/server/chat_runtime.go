@@ -22,6 +22,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/memory"
 	"github.com/aden-hive/hive-go/internal/queen"
+	"github.com/aden-hive/hive-go/internal/sentinel"
 )
 
 // chatStreamID and chatNodeID are the upstream queen identifiers: the
@@ -88,13 +89,18 @@ type ChatRuntimeDeps struct {
 
 // chatTurnRequest is one queued turn: a real client message, an external
 // event (a worker report) the runtime delivers as a non-client user message,
-// or a temporal reminder the hub parked while the session was idle.
+// a temporal reminder the hub parked while the session was idle, or a
+// framework trigger (timer tick / webhook hit).
 type chatTurnRequest struct {
 	message     string
 	clientInput bool
 	// reminderWake is a message-less turn that only drains reminders the hub
 	// parked (idle nudge). It never answers a pending ask_user question.
 	reminderWake bool
+	// trigger is the framework TriggerEvent that woke this turn. Its payload
+	// frames the user message; the event itself is never counted as client
+	// input.
+	trigger *agentloop.TriggerEvent
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
@@ -130,6 +136,9 @@ type ChatRuntime struct {
 	// stopped by Close.
 	hub        *agentloop.ReminderHub
 	idleSource *agentloop.IdleNudgeSource
+	// sentinelSource is the parked-queen ladder (nudge / done / escalate)
+	// registered on the hub when a process-wide Sentinel manager exists.
+	sentinelSource *sentinel.EscalationSource
 
 	// Reminder signals: the ticker reads these through reminderSignals so the
 	// idle nudge sees the same park/idle state the upstream loop publishes.
@@ -263,6 +272,10 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	// Register the per-session reminder sources and start the hub's idle
 	// ticker; Close stops it with the rest of the session.
 	runtime.configureReminderProviders()
+	// Sentinel registers before the hub binds its agent context: binding
+	// filters the consulted sources, so a source added afterwards would never
+	// be polled. The autopilot gate it sets is read by that same binding.
+	runtime.configureSentinel()
 	runtime.configureReminders(deps.IdleNudge)
 
 	if namer, ok := deps.LLM.(llm.ModelNamer); ok {
@@ -304,6 +317,40 @@ func (r *ChatRuntime) InjectWorkerReport(report string) error {
 		return nil
 	}
 	return r.enqueueTurn(chatTurnRequest{message: report, clientInput: false})
+}
+
+// InjectEvent queues content as the queen's next turn. A client input is a
+// real user message; anything else is delivered as an "[External event]" user
+// turn and never counted as a real user message. This is the QueenNode seam
+// the session's trigger timers and the Sentinel manager resume path call.
+//
+// Parity: framework/agent_loop/agent_loop.py::inject_event
+func (r *ChatRuntime) InjectEvent(content string, isClientInput bool) error {
+	if r == nil {
+		return ErrChatRuntimeNoLLM
+	}
+	if strings.TrimSpace(content) == "" {
+		return nil
+	}
+	if isClientInput {
+		return r.Deliver(content)
+	}
+	return r.enqueueTurn(chatTurnRequest{message: content, clientInput: false})
+}
+
+// InjectTrigger queues a framework trigger (timer tick or webhook hit) as the
+// queen's next turn. Triggers are delivered as their own user message, tagged
+// is_trigger so the dashboard renders a banner instead of the raw block; they
+// are never counted as client input.
+//
+// Parity: framework/agent_loop/agent_loop.py::inject_trigger
+// Parity: framework/agent_loop/internals/cursor_persistence.py::drain_trigger_queue
+func (r *ChatRuntime) InjectTrigger(event agentloop.TriggerEvent) error {
+	if r == nil {
+		return ErrChatRuntimeNoLLM
+	}
+	pending := event
+	return r.enqueueTurn(chatTurnRequest{trigger: &pending})
 }
 
 func (r *ChatRuntime) enqueueTurn(request chatTurnRequest) error {
@@ -448,18 +495,30 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	}
 
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
+	if request.trigger != nil {
+		// A trigger is delivered as upstream's drained trigger batch: the
+		// block carries its own timestamp, so it is inserted verbatim rather
+		// than taking the "[stamp] [External event]" prefix.
+		message = formatTriggerTurn(*request.trigger, stamp)
+	}
 	r.markTurnStart()
 	defer r.markTurnEnd()
-	// A real user message answers any outstanding ask_user: clear the park
-	// before this turn can record a new question. An external report is not
-	// an answer, so it leaves the parked question in place.
-	if request.clientInput {
+	// A real user message or a trigger answers any outstanding ask_user park:
+	// both unblock the pending-input wait upstream (`_await_user_input` clears
+	// its stash when the wait returns), so clear it before this turn can
+	// record a new question. An external report is not an answer, so it
+	// leaves the parked question in place.
+	if request.clientInput || request.trigger != nil {
 		r.clearPendingQuestions()
+	}
+	if request.clientInput {
 		// Parity: framework/agent_loop/agent_loop.py::inject_event — a real
-		// user message re-arms the idle nudge's per-variant caps.
+		// user message re-arms the idle nudge's per-variant caps and closes an
+		// open Sentinel escalation for this session.
 		if r.idleSource != nil {
 			r.idleSource.Reset()
 		}
+		r.notifySentinelLocalResume()
 	}
 	if request.reminderWake {
 		if !r.injectHubReminders() {
@@ -476,13 +535,23 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		}
 		// Parity: framework/agent_loop/agent_loop.py::_drain_injection_queue
 		// — USER_PROMPT_SUBMIT fires before the queued user message is added.
-		r.fireReminderPoint(agentloop.USER_PROMPT_SUBMIT, message, nil)
+		// A trigger is drained separately upstream, so it never fires this
+		// point (there is no user prompt to frame).
+		if request.trigger == nil {
+			r.fireReminderPoint(agentloop.USER_PROMPT_SUBMIT, message, nil)
+		}
 		stamped := "[" + stamp + "] " + message
-		if !request.clientInput {
+		switch {
+		case request.trigger != nil:
+			// formatTriggerTurn already stamped the block, matching the
+			// upstream drain which inserts the batch verbatim.
+			stamped = message
+		case !request.clientInput:
 			stamped = "[" + stamp + "] [External event] " + message
 		}
 		if _, err := r.conv.AddUserMessage(stamped, agentloop.UserMessageOptions{
 			IsClientInput: request.clientInput,
+			IsTrigger:     request.trigger != nil,
 		}); err != nil {
 			emitter.executionFailed(err)
 			r.setParkState(agentloop.ParkReasonUnknown, true)
@@ -842,11 +911,21 @@ func (r *ChatRuntime) BindColony(runtime ColonyRuntime) {
 	if r == nil {
 		return
 	}
-	concrete := colonyRuntimeOf(runtime)
+	if changed := r.bindColony(colonyRuntimeOf(runtime)); changed {
+		// The hub filters sources by the bound colony when it binds, so a late
+		// attach (create-with-colony, load_colony, fork) must re-bind or the
+		// colony-gated sources — parallel nudge, active workers, Sentinel
+		// autopilot — would never be consulted.
+		r.rebindReminderContext()
+	}
+}
+
+// bindColony stores the concrete runtime and reports whether it changed.
+func (r *ChatRuntime) bindColony(concrete *colony.ColonyRuntime) bool {
 	r.colonyMu.Lock()
 	defer r.colonyMu.Unlock()
 	if r.colonyRuntime == concrete {
-		return
+		return false
 	}
 	if r.colonyUnsub != nil {
 		r.colonyUnsub()
@@ -855,7 +934,7 @@ func (r *ChatRuntime) BindColony(runtime ColonyRuntime) {
 	r.colonyRuntime = concrete
 	if concrete == nil {
 		r.setBoundColonyID(nil)
-		return
+		return true
 	}
 	unsubscribe, err := colony.SubscribeQueenReports(concrete, func(report string) {
 		// Reports never fail a session: a closed runtime (queen session
@@ -865,10 +944,21 @@ func (r *ChatRuntime) BindColony(runtime ColonyRuntime) {
 	if err != nil {
 		log.Printf("chat runtime %s: worker report subscription unavailable: %v", r.sessionID, err)
 		r.setBoundColonyID(concrete)
-		return
+		return true
 	}
 	r.colonyUnsub = unsubscribe
 	r.setBoundColonyID(concrete)
+	return true
+}
+
+// rebindReminderContext re-filters the hub's active sources against the live
+// agent context. It runs after the colony binding changes; without it a source
+// whose AppliesTo is colony-gated would stay excluded from the bound list.
+func (r *ChatRuntime) rebindReminderContext() {
+	if r == nil || r.hub == nil || r.agentCtx == nil {
+		return
+	}
+	r.hub.Bind(agentloop.NewReminderAgentContext(r.agentCtx))
 }
 
 // setBoundColonyID refreshes the reminder context's colony id. The caller
