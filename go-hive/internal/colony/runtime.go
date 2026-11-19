@@ -509,13 +509,18 @@ func (r *ColonyRuntime) Start(ctx context.Context) error {
 		return fmt.Errorf("start colony %q: provision tracker.db: %w", r.streamID, err)
 	}
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	if r.started {
+		r.mu.Unlock()
 		return nil
 	}
 	r.ctx, r.cancel = context.WithCancel(ctx)
 	r.started = true
 	r.running = true
+	r.mu.Unlock()
+	// Restart recovery runs after the runtime is marked started (the workers it
+	// rebuilds use runtimeContext) but before the caller starts the overseer,
+	// so a resumed worker is already queued when the colony comes up.
+	r.ResumeInFlightWorkers(r.ctx)
 	return nil
 }
 
@@ -649,6 +654,10 @@ func (r *ColonyRuntime) spawnBatchOn(runCtx context.Context, tasks []BatchTask, 
 // worker gets its own context so a single run/worker can be stopped without
 // touching its siblings; resumed workers enter through the same path.
 func (r *ColonyRuntime) startWorker(runCtx context.Context, worker *Worker) {
+	// Every worker enters the run-state record here, including a resumed one
+	// whose meta predates the record: the restarted colony must see it as
+	// in flight until it reaches a terminal status.
+	r.writeWorkerRunState(worker, string(WorkerQueued))
 	workerCtx, cancel := context.WithCancel(runCtx)
 	worker.setCancel(cancel)
 	r.wg.Add(1)
@@ -965,6 +974,7 @@ func (r *ColonyRuntime) runGatedWorker(ctx context.Context, worker *Worker) {
 		r.finishWorkerStopped(worker, "Worker was stopped before it started.")
 		return
 	}
+	r.writeWorkerRunState(worker, string(WorkerRunning))
 	r.publishStarted(worker)
 	r.runWorker(ctx, worker)
 }
@@ -1271,6 +1281,9 @@ func (r *ColonyRuntime) publishStopped(worker *Worker, summary string) {
 // failure, stop — goes through here, so a later resume or audit finds the same
 // payload the queen received.
 func (r *ColonyRuntime) recordWorkerTerminal(worker *Worker, payload map[string]any) {
+	// Terminal first, so a restart between the report and the artefact writes
+	// never sees the worker as in flight and resumes finished work.
+	r.writeWorkerRunState(worker, workerStateFromReport(stringValue(payload["status"])))
 	r.persistWorkerResult(worker, payload)
 	r.appendWorkerEvent(worker, payload)
 }

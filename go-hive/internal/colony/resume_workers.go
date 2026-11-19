@@ -46,67 +46,80 @@ func (r *ColonyRuntime) ResumeWorkers(ctx context.Context, ids []string, guidanc
 		if workerID == "" {
 			continue
 		}
-		if existing := r.GetWorker(workerID); existing != nil && existing.IsActive() {
-			failures = append(failures, workerResumeError(workerID,
-				fmt.Sprintf("it is still active (%s); a running worker cannot be resumed", existing.Status())))
-			continue
-		}
-		workerDir := r.workerStorage(workerID)
-		store := r.workerConversationStore(workerID)
-		conv, ok, err := restoreWorkerConversation(store)
+		worker, err := r.resumeWorkerOverTranscript(workerID, guidance, loopOverrides, batchID, 0, len(ids))
 		if err != nil {
 			failures = append(failures, workerResumeError(workerID, err.Error()))
 			continue
 		}
-		if !ok {
-			failures = append(failures, workerResumeError(workerID, "it has no saved conversation to resume"))
-			continue
-		}
-		meta := readWorkerMeta(workerDir)
-		if colonyID := stringValue(meta["colony_id"]); colonyID != "" && colonyID != r.streamID {
-			failures = append(failures, workerResumeError(workerID,
-				fmt.Sprintf("it belongs to colony %q, not %q", colonyID, r.streamID)))
-			continue
-		}
-
-		task := stringValue(meta["task"])
-		worker := r.BuildWorker(WorkerBuildOptions{
-			WorkerID:    workerID,
-			Task:        task,
-			InputData:   r.workerInputData(nil, workerID, task),
-			ProfileName: stringValue(meta["profile_name"]),
-		})
-		worker.conversation = conv
-		worker.resumed = true
-		// A resumed worker is exempt from adaptive clamping: its cursor
-		// restores the cumulative tool-call count, so a colony-norm clamp
-		// below that would flip it straight into grace. Upstream pins it.
-		worker.BudgetPinned = true
-		worker.BatchID = batchID
-		worker.BatchSize = len(ids)
-		if worker.Goal = stringValue(meta["goal"]); worker.Goal == "" {
-			worker.Goal = task
-		}
-		cfg, cfgErr := BuildWorkerLoopConfig(loopOverrides)
-		if cfgErr != nil {
-			failures = append(failures, workerResumeError(workerID, cfgErr.Error()))
-			continue
-		}
-		worker.loopConfig = &cfg
-		worker.loopOverrides = loopOverrides
-
-		// Optional steering turn from the queen, read as the worker's latest
-		// user message when the loop re-enters (upstream injects the same
-		// "[Resume guidance from the queen]" framing).
-		if text := strings.TrimSpace(guidance); text != "" {
-			_, _ = conv.AddUserMessage("[Resume guidance from the queen]: "+text, agentloop.UserMessageOptions{})
-		}
-
-		r.mu.Lock()
-		r.workers[workerID] = worker
-		r.mu.Unlock()
 		r.startWorker(r.runtimeContext(ctx), worker)
 		resumed = append(resumed, workerID)
 	}
 	return resumed, failures
+}
+
+// resumeWorkerOverTranscript rebuilds one worker over its saved transcript and
+// registers it, but does not start it: the caller owns the run context (a
+// queen-requested resume starts it immediately; a restart recovery starts it
+// on the colony's own context). An error means "this id cannot be resumed" and
+// names the reason.
+//
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.resume_worker
+func (r *ColonyRuntime) resumeWorkerOverTranscript(workerID, guidance string, loopOverrides map[string]any, batchID string, batchIndex, batchSize int) (*Worker, error) {
+	if r == nil {
+		return nil, fmt.Errorf("no colony runtime")
+	}
+	if existing := r.GetWorker(workerID); existing != nil && existing.IsActive() {
+		return nil, fmt.Errorf("it is still active (%s); a running worker cannot be resumed", existing.Status())
+	}
+	workerDir := r.workerStorage(workerID)
+	store := r.workerConversationStore(workerID)
+	conv, ok, err := restoreWorkerConversation(store)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, fmt.Errorf("it has no saved conversation to resume")
+	}
+	meta := readWorkerMeta(workerDir)
+	if colonyID := stringValue(meta["colony_id"]); colonyID != "" && colonyID != r.streamID {
+		return nil, fmt.Errorf("it belongs to colony %q, not %q", colonyID, r.streamID)
+	}
+
+	task := stringValue(meta["task"])
+	worker := r.BuildWorker(WorkerBuildOptions{
+		WorkerID:    workerID,
+		Task:        task,
+		InputData:   r.workerInputData(nil, workerID, task),
+		ProfileName: stringValue(meta["profile_name"]),
+	})
+	worker.conversation = conv
+	worker.resumed = true
+	// A resumed worker is exempt from adaptive clamping: its cursor restores
+	// the cumulative tool-call count, so a colony-norm clamp below that would
+	// flip it straight into grace. Upstream pins it.
+	worker.BudgetPinned = true
+	worker.BatchID = batchID
+	worker.BatchIndex = batchIndex
+	worker.BatchSize = batchSize
+	if worker.Goal = stringValue(meta["goal"]); worker.Goal == "" {
+		worker.Goal = task
+	}
+	cfg, cfgErr := BuildWorkerLoopConfig(loopOverrides)
+	if cfgErr != nil {
+		return nil, cfgErr
+	}
+	worker.loopConfig = &cfg
+	worker.loopOverrides = loopOverrides
+
+	// Optional steering turn from the queen, read as the worker's latest user
+	// message when the loop re-enters (upstream injects the same
+	// "[Resume guidance from the queen]" framing).
+	if text := strings.TrimSpace(guidance); text != "" {
+		_, _ = conv.AddUserMessage("[Resume guidance from the queen]: "+text, agentloop.UserMessageOptions{})
+	}
+
+	r.mu.Lock()
+	r.workers[workerID] = worker
+	r.mu.Unlock()
+	return worker, nil
 }

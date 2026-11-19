@@ -13,6 +13,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/agents"
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	triggers_store "github.com/aden-hive/hive-go/internal/triggers"
 )
 
 func makeRouteColony(t *testing.T, home hivehome.Home, name string, deleted bool) {
@@ -323,6 +324,56 @@ func TestScaffoldColonyCreatesMinimalFiles(t *testing.T) {
 	invalidRecorder, _ := serveColonyRequest(mux, httptest.NewRequest(http.MethodPost, "/api/colonies/Bad/scaffold", nil))
 	if invalidRecorder.Code != http.StatusBadRequest {
 		t.Fatalf("invalid status = %d", invalidRecorder.Code)
+	}
+}
+
+// Parity: framework/server/session_manager.py::_ensure_minimal_colony
+func TestScaffoldColonyCreatesDurableLayout(t *testing.T) {
+	deps, home := colonyTestDeps(t)
+	mux := colonyMux(deps)
+	recorder, _ := serveColonyRequest(mux, colonyRequest(t, http.MethodPost, "/api/colonies/full_layout/scaffold", map[string]any{}))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d", recorder.Code)
+	}
+	colonyDir := filepath.Join(home.ColoniesDir(), "full_layout")
+	for _, dir := range []string{"skills", "runs"} {
+		info, err := os.Stat(filepath.Join(colonyDir, dir))
+		if err != nil || !info.IsDir() {
+			t.Fatalf("scaffold did not create %s/: %v", dir, err)
+		}
+	}
+	triggersData, err := os.ReadFile(filepath.Join(colonyDir, "triggers.json"))
+	if err != nil {
+		t.Fatalf("scaffold did not create triggers.json: %v", err)
+	}
+	var triggers any
+	if err := json.Unmarshal(triggersData, &triggers); err != nil {
+		t.Fatalf("triggers.json is not JSON: %v", err)
+	}
+	if list, ok := triggers.([]any); !ok || len(list) != 0 {
+		t.Fatalf("triggers.json = %#v, want []", triggers)
+	}
+
+	// A second scaffold is idempotent: existing skill files and trigger
+	// definitions are never overwritten.
+	skillPath := filepath.Join(colonyDir, "skills", "keep_me.md")
+	if err := os.WriteFile(skillPath, []byte("---\nname: keep_me\n---\nbody\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	savedTrigger := []map[string]any{{"id": "timer_1", "trigger_type": "timer", "enabled": true}}
+	if err := triggers_store.WriteAgentTriggersJSON(colonyDir, savedTrigger); err != nil {
+		t.Fatal(err)
+	}
+	recorder, _ = serveColonyRequest(mux, colonyRequest(t, http.MethodPost, "/api/colonies/full_layout/scaffold", map[string]any{}))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("second scaffold status = %d", recorder.Code)
+	}
+	if _, err := os.Stat(skillPath); err != nil {
+		t.Fatalf("scaffold removed an existing skill: %v", err)
+	}
+	kept := triggers_store.ReadAgentTriggersJSON(colonyDir)
+	if len(kept) != 1 || kept[0]["id"] != "timer_1" {
+		t.Fatalf("scaffold overwrote triggers.json: %#v", kept)
 	}
 }
 

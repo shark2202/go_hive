@@ -35,9 +35,12 @@ func (r *ChatRuntime) persistParkState() {
 	r.parkMu.Unlock()
 	r.mu.Lock()
 	questions := cloneParkQuestions(r.pendingQuestions)
+	credentialForm := cloneParkForm(r.pendingCredentialForm)
 	r.mu.Unlock()
 
-	if len(questions) > 0 {
+	if credentialForm != nil {
+		reason = agentloop.ParkReasonCredentialForm
+	} else if len(questions) > 0 {
 		reason = agentloop.ParkReasonAskUser
 	}
 	if reason == "" {
@@ -55,6 +58,11 @@ func (r *ChatRuntime) persistParkState() {
 	pending := map[string]any{
 		"reason":              string(reason),
 		"emit_client_request": true,
+	}
+	if credentialForm != nil {
+		pending["credential_form"] = credentialForm
+	} else {
+		pending["credential_form"] = nil
 	}
 	if len(questions) > 0 {
 		entries := make([]any, 0, len(questions))
@@ -129,10 +137,14 @@ func (r *ChatRuntime) restoreParkState() bool {
 		return false
 	}
 	questions := parkQuestionsFromCursor(pending["questions"])
+	credentialForm := parkFormFromCursor(pending["credential_form"])
 	r.mu.Lock()
 	r.pendingQuestions = questions
+	r.pendingCredentialForm = credentialForm
 	r.mu.Unlock()
-	if len(questions) > 0 {
+	if credentialForm != nil {
+		reason = agentloop.ParkReasonCredentialForm
+	} else if len(questions) > 0 {
 		reason = agentloop.ParkReasonAskUser
 	}
 	r.setParkState(reason, true)
@@ -187,4 +199,60 @@ func cloneParkQuestion(question map[string]any) map[string]any {
 		copied[key] = value
 	}
 	return copied
+}
+
+// cloneParkForm deep-copies the credential form payload (its fields list is a
+// slice of maps, so a shallow copy would share mutable state with the event).
+func cloneParkForm(form map[string]any) map[string]any {
+	if len(form) == 0 {
+		return nil
+	}
+	copied := make(map[string]any, len(form))
+	for key, value := range form {
+		copied[key] = value
+	}
+	if fields := cloneParkFieldList(form["fields"]); fields != nil {
+		copied["fields"] = fields
+	}
+	return copied
+}
+
+// cloneParkFieldList normalises the field specs carried by an in-memory form
+// or a decoded cursor entry into []any of independent maps.
+func cloneParkFieldList(raw any) []any {
+	var items []any
+	switch typed := raw.(type) {
+	case []any:
+		items = typed
+	case []map[string]any:
+		items = make([]any, 0, len(typed))
+		for _, item := range typed {
+			items = append(items, item)
+		}
+	default:
+		return nil
+	}
+	out := make([]any, 0, len(items))
+	for _, item := range items {
+		object, ok := item.(map[string]any)
+		if !ok {
+			out = append(out, item)
+			continue
+		}
+		entry := make(map[string]any, len(object))
+		for key, value := range object {
+			entry[key] = value
+		}
+		out = append(out, entry)
+	}
+	return out
+}
+
+// parkFormFromCursor reads the credential form a parked turn waits on.
+func parkFormFromCursor(raw any) map[string]any {
+	form, ok := raw.(map[string]any)
+	if !ok || len(form) == 0 {
+		return nil
+	}
+	return cloneParkForm(form)
 }
