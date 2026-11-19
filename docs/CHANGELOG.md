@@ -2,6 +2,10 @@
 
 本文件记录 Go 移植（`github.com/aden-hive/hive-go`）的版本内容。上游 Python 版本的发布说明在仓库根目录的 [`CHANGELOG.md`](../../CHANGELOG.md)。
 
+## 1.0.25-go.1 — 2026-11-20
+
+worker 进度镜像、overseer credential park、共享 park/ask_user、overseer 提问到客户端；timeline 竞态修复。测试 4,561、引用 4,840。
+
 ## 1.0.24-go.1 — 2026-11-19
 
 credential 提交、预载 SkillsCatalog、doom park reason、judge criteria；Queen 两阶段落盘与 overseer 桥接。测试 4,551、引用 4,798。

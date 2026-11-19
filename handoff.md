@@ -18,7 +18,7 @@ Go 版 hive 已能**用真模型跑通对话**（UI 与 API 都验证过），�
 | 凭据目录 | `/api/credentials/specs` 123 条（118 上游 + 4 模型 + 1 Aden），113 条带 `tool_modules`；UI 显示 `0 active · 314 available` |
 | 凭据保存即生效 | 保存后 `env sync injected/refreshed`，无需重启 |
 | 门禁 | `fmt-check/vet/test/cross/parity` 全 0；测试 **4,183**；parity refs **4,396**，0 missing |
-| 发布包 | `dist/release/` 7 个文件（6 归档 + SHA256SUMS），tag `v1.0.24-go.1`（当前）；`v1.0.15-go.1` 为上一快照 |
+| 发布包 | `dist/release/` 7 个文件（6 归档 + SHA256SUMS），tag `v1.0.25-go.1`（当前）；`v1.0.15-go.1` 为上一快照 |
 
 ## 3. 本次会话修复的缺陷（已合并）
 
