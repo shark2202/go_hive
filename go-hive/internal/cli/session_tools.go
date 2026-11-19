@@ -9,6 +9,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/tools"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 	"github.com/aden-hive/hive-go/internal/tools/integrations"
+	"github.com/aden-hive/hive-go/internal/tracker"
 )
 
 type sessionToolCatalogue struct {
@@ -27,6 +29,11 @@ type sessionToolCatalogue struct {
 	builtinNames map[string]struct{}
 	taskTools    *taskToolSet
 	registry     *tools.ToolRegistry
+	// trackerTools is the queen-role tracker table. The binding is resolved
+	// per call from the session's bound colony, because the catalogue is
+	// built before the colony attaches (same reason run_worker resolves its
+	// spawner per call).
+	trackerTools *tracker.Registry
 	defs         []llm.ToolDef
 	installed    int
 }
@@ -80,6 +87,31 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 	// bound, matching upstream's colony-phase tool surface.
 	if _, taken := catalogue.builtinNames[colony.RunWorkerToolName]; !taken {
 		catalogue.defs = append(catalogue.defs, colony.RunWorkerToolDef())
+	}
+	// Tracker tools: the queen gets the full table (tracker_sql,
+	// tracker_register_writable, tracker_upsert, tracker_query), matching
+	// upstream queen_orchestrator's register_tracker_tools(queen_registry).
+	// Workers are handled by the colony runtime with role="worker".
+	queenTracker := tracker.NewRegistry(nil)
+	if err := tracker.RegisterTrackerTools(queenTracker, "queen"); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: tracker tools unavailable: %v\n", err)
+	} else {
+		catalogue.trackerTools = queenTracker
+		for _, name := range queenTracker.Names() {
+			tool, ok := queenTracker.Get(name)
+			if !ok {
+				continue
+			}
+			if _, taken := catalogue.builtinNames[name]; taken {
+				continue
+			}
+			catalogue.defs = append(catalogue.defs, llm.ToolDef{
+				Name:            tool.Name,
+				Description:     tool.Description,
+				Parameters:      tool.Parameters,
+				ConcurrencySafe: tool.ConcurrencySafe,
+			})
+		}
 	}
 	for _, name := range registry.RegisteredNames() {
 		if _, taken := catalogue.builtinNames[name]; taken {
@@ -195,6 +227,24 @@ func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input m
 	if name == colony.RunWorkerToolName {
 		content, isError := colony.RunWorker(ctx, colony.RunWorkerSpawnerFromContext(ctx), input)
 		return content, isError, nil
+	}
+	// Tracker tools resolve their binding per call: the catalogue is built
+	// before a colony attaches, so the session's bound runtime is the only
+	// source of truth for which tracker.db this turn writes.
+	if c.trackerTools != nil {
+		if _, registered := c.trackerTools.Get(name); registered {
+			binding := colony.TrackerBindingFromContext(ctx)
+			if binding == nil {
+				return tracker.ErrNoBinding.Error(), true, nil
+			}
+			result, _ := c.trackerTools.WithResolver(tracker.StaticResolver(binding)).Execute(name, input)
+			payload, err := json.Marshal(result)
+			if err != nil {
+				return "tracker tool result could not be encoded: " + err.Error(), true, nil
+			}
+			success, _ := result["success"].(bool)
+			return string(payload), !success, nil
+		}
 	}
 	result, err := c.registry.GetExecutor().Execute(ctx, tools.ToolUse{
 		Name:  name,
