@@ -15,7 +15,7 @@
 | coordination | 1 | 1 | 7 |
 | goals_outcome | 0 | 1 | 7 |
 | improvement | 3 | 0 | 5 |
-| queen | 0 | 0 | 0 |
+| queen | 3 | 1 | 7 |
 | the_loop | 0 | 0 | 0 |
 | worker_agent | 0 | 0 | 0 |
 
@@ -92,5 +92,26 @@
 | Playbook 的 resume by construction（以 tracker 现状决定剩余工作） | `internal/playbook/rows.go`（`QueryRows`）、`internal/colony/colony_db.go:19-27`（`playbook_runs` 表）；tracker 写入未接 | 否。playbook 无入口；tracker 写路径也未接（见 coordination） | 未接 |
 
 **小结**：improvement 真正生效的只有「工具错误回注 + Queen 的记忆 reflection/recall」；judge retry、历史对话召回、learned skills、playbook 四条全部未接。改进闭环目前只覆盖「记住」，不覆盖「评估 → 重试」和「把成功固化成可复用流程」。
+
+## 5. queen — 常驻的客户面向 lead
+
+概念主张：Queen 是身份化 persona（13 个 YAML）而非通用 coordinator；她拥有会话、计划、tracker；带作用域记忆（global + per-queen）；两个阶段（independent → colony）；提问时停车、Sentinel 兜底。
+
+| 机制 | 实现位置（file:line） | 是否有生产调用链（从 internal/cli / internal/server 入口） | 状态 |
+| --- | --- | --- | --- |
+| 13 个 Queen persona（YAML profile，含 traits/background/behavior） | `internal/queen/queen_defaults/*.yaml`（13 个文件）、`internal/queen/profiles.go:41`（`DefaultQueens`）、`internal/server/routes_queens.go:1006`（`GET /api/queen/profiles`） | 是。`hive serve` 注册 Queen 路由（`app.go:198-201`），profile 列表/详情/创建/改名/删除都读写 YAML 目录 | 已接（仅 profile 数据面） |
+| persona 注入 Queen 的 system prompt | `internal/queen/identity.go:85`（`FormatQueenIdentityPrompt`） | 否。该函数全仓零调用；`chat_runtime.go:36-38` 的 `chatIdentityPrompt` 是通用常量，`chat_runtime.go:172` 直接使用；`QueenName` 只用于记忆作用域 | 未接：Queen 的“人设”没有进入模型上下文 |
+| 选择一个 Queen 并开一个绑定会话 | `internal/server/routes_queens_sessions.go:85`（`handleQueenSession`）、`:54`（`queenCreateBoundSession` → `deps.CreateSession`）、`internal/cli/loader.go:450-530`（`createChatSession`） | 部分。路由能把 `QueenName` 传进 `CreateSession`，会话记录与记忆按 queen 命名；但会话目录硬编码 `QueensDir()/"default"/sessions`（`loader.go:501`），`InitialPhase` 未消费，`PhaseState` 始终为 nil（`session.go:50`）。另有已退役的 classifier 路由 `POST /api/messages/classify`（`routes_messages_extra.go:66`）仍注册，但运行时未调用 | 部分：能开“某个 Queen 的聊天”，但不是概念里的 persona/phase 绑定 |
+| 两个阶段：Independent → Colony | `internal/server/routes_session_create.go:166-177`（接收 `initial_phase`）、`routes_session_create.go:238`（colony fork 需要 `CreateColonyFromSource`） | 否。`initial_phase` 进入 `CreateSessionParams` 后被 `createChatSession` 忽略；colony fork seam 未注入（`cli/loader.go:311-328`） | 未接 |
+| Queen 的持久会话与历史恢复 | `internal/server/chat_runtime.go:179`（`RestoreConversation`）、`internal/agentloop/conversation.go:1213`、`internal/agentloop/store.go` | 是。`NewChatRuntime` 从会话目录恢复 parts；每轮新增消息落盘 | 已接 |
+| Queen 的 per-queen 记忆：reflection 写入 + recall 召回（w15） | `internal/server/chat_runtime.go:144-160`（`GlobalMemoryDir`/`QueenMemoryDir`）、`:496-529`（`injectRecall`）、`internal/memory/memory.go:19,27`、`internal/memory/recall.go:174` | 是。`HomeRoot` 非空即启用；reflection 每 6 轮 short、每 4 次 reflection 一次 long（`memory/reflection.go:838-875`）；recall 每轮注入并在内容不变时去重 | 已接 |
+| Queen 的过往对话召回：每轮 6 条 dated excerpts + `search_messages` | `internal/memory/search.go:534`（`SearchMessages`）、`internal/memory/search_timeline.go:63`；工具名只在 `tools/tier_defaults.go:69-70` | 否。`SearchMessages`/`SearchTimeline` 无生产调用者；会话工具表无 `search_messages`/`search_timeline`；`chat_runtime` 不注入历史对话摘要 | 未接 |
+| `memory_timeline` flag 打开后生成/召回事件时间线 | `internal/memory/timeline.go:616`（`MemoryTimelineEnabled`）、`:491`（`UpdateSessionTimeline`）、`:528`（`BackfillTimelines`）、`:645`（`SubscribeTimelineTriggers`） | 否（除 flag 展示）。flag 只在 `server/config_features.go:74-79` 读出并出现在 `/api/config`；timeline 的提取/回填/订阅函数零生产调用 | 未接 |
+| Queen 拥有任务计划（计划可见、可编辑、跨 reload） | `internal/tasks/store.go:155`、`internal/server/routes_tasks.go:36-43`（只读/维护路由） | 否（创建/更新）。见 coordination：`RegisterTaskTools` 零调用，会话无 task 工具 | 未接 |
+| Queen 拥有 tracker（建 schema、派活、SQL 校验） | `internal/tracker/tools.go:808`（`BuildTrackerTools`）、`internal/server/routes_colony_workers_data.go:134`（只读） | 否。写工具未装配，会话/worker 工具表都不含 `tracker_*` | 未接 |
+| 提问停车 + Sentinel 升级 | `internal/agentloop/synthetic_tools.go:94`（`BuildAskUserTool`）、`internal/sentinel/manager.go:99` | 否。`ask_user` 未进入 tool list；Sentinel manager 无生产调用 | 未接 |
+
+**小结**：Queen 真正接通的只有「会话持久化 + per-queen 记忆 + profile 数据管理」。persona 注入、过往对话召回、timeline、任务计划、tracker、停车/Sentinel 全部未接；`initial_phase` 与 colony fork 也不生效。运行时的 Queen 仍是一个通用聊天 agent，只是记忆按 `queen_name` 分了目录。
+
 
 
