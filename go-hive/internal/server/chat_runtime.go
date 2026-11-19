@@ -249,7 +249,9 @@ func (r *ChatRuntime) Transcript() ([]map[string]any, error) {
 	return r.store.ReadParts()
 }
 
-// Close stops the worker, cancels the in-flight turn, and releases the store.
+// Close stops the worker, cancels the in-flight turn, drains any background
+// memory reflection (with a final pass so the last turns are persisted), and
+// releases the store.
 func (r *ChatRuntime) Close() error {
 	if r == nil {
 		return nil
@@ -264,6 +266,13 @@ func (r *ChatRuntime) Close() error {
 
 	r.cancel()
 	<-r.done
+	// Parity: core/framework/server/session_manager.py::SessionManager.stop_session
+	// Teardown cancels the queen's reflection triggers and runs the final
+	// reflection: reflections run on the scheduler's own context, so this
+	// waits for one already in flight instead of aborting it mid-write.
+	if r.reflection != nil {
+		r.reflection.Close(memory.ReflectionCloseGrace)
+	}
 	if r.bus != nil {
 		// Flushes any pending delta snapshots and releases the session log fd.
 		r.bus.CloseSessionLog()
