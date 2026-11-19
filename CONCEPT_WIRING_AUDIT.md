@@ -16,8 +16,9 @@
 | goals_outcome | 0 | 1 | 7 |
 | improvement | 3 | 0 | 5 |
 | queen | 3 | 1 | 7 |
-| the_loop | 6 | 2 | 6 |
+| the_loop | 6 | 2 | 7 |
 | worker_agent | 0 | 0 | 9 |
+| **合计** | **14** | **7** | **50** |
 
 ---
 
@@ -154,6 +155,73 @@
 | headless 运行 + Sentinel 升级人工 | `internal/sentinel/manager.go:99`、`internal/sentinel/escalation_source.go:70` | 否。没有 headless 入口（只有 `hive serve`），Sentinel manager 零生产调用 | 未接 |
 
 **小结**：worker_agent 在 Go 运行时没有任何生产路径——worker 的 loop、prompt、工具子集、预算、`report_to_parent`、grace、tracker/task/skills 共享、resume、headless 全部只存在于 `internal/colony` 的代码里，而 colony 运行本身没有被 `internal/cli`/`internal/server` 启动。worker_agent.md 描述的能力在当前 Go 服务里不可用。
+
+## 8. 已知可疑项核实
+
+| 可疑项 | 核实结果 |
+| --- | --- |
+| playbook 零调用 | **属实**。`internal/playbook` 在 `internal/`、`cmd/` 中零 import；`run_playbook`/`get_playbook_status`/`stop_playbook` 只出现在 `internal/playbook/rows.go:268-283` 的名字清单里，没有工具定义、执行器或路由。 |
+| memory.ReflectionLoop/RunShort/Long 零调用 | **已变化（w15 合入后）**。`ReflectionScheduler`（`internal/memory/reflection.go:838-875`）经 `internal/server/chat_runtime.go:344-347` 每轮触发，调用 `RunUnifiedShortReflection`/`RunUnifiedLongReflection`（`reflection.go:658,694` 的 unified 变体，内部走 `ReflectionLoop`）。直接导出的 `RunShortReflection`/`RunLongReflection` 仍无外部调用，但不是主路径。 |
+| tasks/reminders 零调用 | **属实**。`tasks.RegisterTaskTools`（`internal/tasks/register.go:5`）、`tasks.BuildColonyTemplateTools`（`colony_tools.go:201`）、`tasks.NewTaskReminderSource`（`reminders.go:440`）均零生产调用；会话工具表无 task 工具；提醒 Hub 无 source 注册。 |
+| SuccessCriteria 未进 loop judge | **属实，且更严重**。`internal/agentloop` 没有 judge 实现：`JudgeEveryNTurns`（`loop.go:29,58`）与 `SkipJudge`（`types.go:59`）只声明不读取；`Goal.ToPromptContext`（`schemas/goal.go:157`）零调用；`SuccessCriteria *string` 只在 `llm_compact.go:163` 被拼进压缩提示。 |
+| 会话工具表无 skill 工具 | **属实**。`internal/cli/session_tools.go:43-80` 只装 builtin（`read_file`/`write_file`/`terminal_*`）+ integrations；也没有 task/tracker/memory-search 工具。 |
+| queen memory 未注入 | **已变化（w15）**。`chat_runtime.go:496-529`（`injectRecall`）在每条用户消息后注入 global+queen `<system-reminder>`；`chat_runtime.go:151-160` 建立 `memory.ReflectionScheduler`，`runTurn` 成功后 `OnTurnDone`（`chat_runtime.go:344-347`）。注意：会话目录仍硬编码在 `QueensDir()/"default"/sessions`（`cli/loader.go:501`），只有记忆目录按 `QueenName` 分。 |
+
+## 9. P0–P3 接线清单
+
+优先级定义：P0＝不接则概念的主流程完全无法发生；P1＝主流程可见但关键能力缺失；P2＝体验/规模问题；P3＝一致性与清理。
+
+### P0（核心流程阻断）
+
+| # | 条目 | 接哪一行 | 前置条件 |
+| --- | --- | --- | --- |
+| P0-1 | Queen persona 注入 system prompt | `internal/server/chat_runtime.go:163-176`：`IdentityPrompt: chatIdentityPrompt` 改为 `queen.FormatQueenIdentityPrompt(profile, nil)` | 用 `deps.QueenName` + `queen.LoadQueenProfile(hivehome.Home{Root: deps.HomeRoot}.QueensDir(), name)`；默认 profile 会自动 materialize（`queen/profiles.go:308-334`）。`QueenName` 已从 session-create 路由传入。 |
+| P0-2 | `ask_user` 工具可用，并让 Queen 的提问以 `client_input_requested` 结束一轮 | `internal/server/chat_runtime.go:171`（`AvailableTools` 追加 `agentloop.BuildAskUserTool()`）＋ `:537-549`（`executeTool` 加 `ask_user` 分支） | 需要一个最小 parking 状态：executor 记录 pending question、发 `EmitClientInputRequested`；下一条 `Deliver` 视为回答。完整版还需把 `ParkReasonAskUser` 持久化（`agentloop/park_reason.go:16`）。 |
+| P0-3 | 任务计划工具进会话（`task_create/task_update/task_list/task_get`） | `internal/cli/session_tools.go:62-65`（defs 追加）＋ `:162-169`（Execute 分派）＋ `internal/server/chat_runtime.go:327` 前后 `tasks.SetExecContext(ExecContext{SessionID: ..., AgentID: "queen"})` | 适配 `tasks.Registry`（`internal/tasks/tool_registry.go:17`）到 `llm.ToolDef`/`tools.ToolRegistry`；用 `tasks.NewTaskStore(home.Root)`（`app.go:158` 已是这个 root）。 |
+| P0-4 | colony 生命周期真正可加载/启动 | `internal/cli/loader.go:311-328`（`AppDeps` 注入 `Colony` 与 `CreateColonyFromSource`） | 实现 `ColonyLifecycle`（`routes_session_colony.go:30-33`）：`LoadColony` 构造 session、`host.New` + `Host.Start`、写 seed conversation；`session.QueenExecutor` 必须赋值（见 P0-5）。 |
+| P0-5 | Queen 能发起 fan-out，并把 worker 报告注入回 Queen | fan-out：`internal/cli/session_tools.go:62-65` 注册 `run_worker`，执行器调 `ColonyRuntime.SpawnBatch`（`internal/colony/runtime.go:480`）；报告：`internal/server/queen_orchestrator.go:19` 扩展订阅 `EventSubagentReport` 并 `queenNode.InjectEvent("[WORKER_REPORT] …")` | P0-4；`QueenExecutor` 在生产代码中赋值（当前只在测试里，`internal/server/session.go:18-26`）；`QueenNode` 适配 `ChatRuntime.Deliver`（`chat_runtime.go:215`）。 |
+| P0-6 | 最小 judge：按 success criteria accept/retry/escalate | `internal/agentloop/loop.go:574-579`（`len(toolCalls)==0` 返回前插入 judge） | 定义 `Judge` 接口并注入 `AgentLoop`（当前 `AgentLoop` 无 judge 字段，`loop.go:120-145`）；criteria 来源：`AgentSpec.SuccessCriteria`（`types.go:58`，字符串）或 `schemas.Goal.SuccessCriteria`；retry 用 `conv.AddUserMessage` 注入 critique。LLM 评估可复用 `internal/llmjudge`。 |
+
+### P1（关键能力缺失）
+
+| # | 条目 | 接哪一行 | 前置条件 |
+| --- | --- | --- | --- |
+| P1-1 | tracker 读写工具进 worker 工具表 | `internal/colony/runtime.go:699-705`（追加 `tracker.BuildTrackerTools(worker.TrackerResolver)` 的 defs）＋ `:707-717`（执行器分支） | P0-4/5；spawn 时把 `binding` 写入 `task.Data`（`runtime.go:521-540`），并在 `runtime.go:417-430` 建 tracker 库；`Worker.TrackerResolver` 已存在（`colony/worker.go:373`）。 |
+| P1-2 | skills：`write_skill` / `skill_view` + catalog prompt | `internal/cli/session_tools.go:62-65` 注册技能工具；`internal/server/chat_runtime.go:163-176` 设置 `SkillsCatalogPrompt` / `SkillDirs` | 实例化 `skills.NewSkillsManager`（`manager.go:48`，当前零生产调用）；确定 colony/session 的 `skills/` 根目录；`skills.WriteSkill`（`skill_writer.go:169`）做目标目录校验。 |
+| P1-3 | 提醒中枢真正有 source 并启动 | `internal/agentloop/loop.go:144`（`NewAgentLoop` 后 `Hub.Register`）或 `internal/server/chat_runtime.go:195` | 注册 `tasks.NewTaskReminderSource()`、`agentloop.NewIdleNudgeSource(...)`、`NewColonyParallelNudgeSource()`、`NewSearchableToolsReminderSource()`；提供 `ReminderAgentContext` 的 `OpenTasksProvider`/`QueenSkillsCatalogProvider`；调用 `Hub.Start`（`reminder_hub.go:235`，当前零调用）。 |
+| P1-4 | 过往对话 recall：每轮 6 条 excerpts + `search_messages` 工具 | `internal/server/chat_runtime.go:326`（`injectRecall` 后追加 conversation excerpts）＋ `session_tools.go:62-65` 注册 `search_messages` | `memory.SearchMessages`（`search.go:534`）已有实现，需按 `sessionID` 定位 `QueensDir()/<queen>/sessions` 与 colony session 目录；工具 envelope 用 `SearchMessagesEnvelope`（`search.go:678`）。 |
+| P1-5 | Sentinel 真正运行（停车分类/升级） | `internal/cli/loader.go:311-328`（boot 时 `sentinel.NewManager` 并 Start）；`internal/server/stall_check.go:79` 也需订阅 | P0-2（停车）与 P0-5（Queen node）；通知配置读 `sentinel` store（`adapters_sentinel.go:28`）与 `NewHTTPNotifier`（`notifier.go:80`）。 |
+| P1-6 | playbook 工具 + runner 接入 | `internal/cli/session_tools.go:62-65` 注册 `run_playbook/get_playbook_status/stop_playbook/list_playbook_runs`；执行器调 `internal/playbook/runner.go:190`（`NewPlaybookRun`） | P1-1（tracker 读写）；需要 DispatchOne 适配 `ColonyRuntime.SpawnBatch`；playbook 运行记录写 `internal/colony/colony_db.go:19-27`。 |
+| P1-7 | loop 内自动 compaction | `internal/agentloop/loop.go:546`（`AComplete` 前检查 `conv.NeedsCompaction()`） | 用 `LlmCompact`（`llm_compact.go:22`）+ `conv.Compact`（`conversation.go:931`）；压缩后调用 `ReflectionScheduler.OnCompaction`（`reflection.go:877`，当前零调用）。 |
+| P1-8 | triggers 在 boot 时恢复并真正定时 | `internal/cli/loader.go:311-328`（启动时扫描 `triggers.json` 并 `StartTriggerTimer`） | P0-4/P0-5：`StartTriggerTimer`（`trigger_runtime.go:291`）依赖 `session.QueenExecutor`；`triggers.ReadAgentTriggersJSON`（`triggers_store.go:20`）已有。 |
+
+### P2（体验与规模）
+
+| # | 条目 | 接哪一行 | 前置条件 |
+| --- | --- | --- | --- |
+| P2-1 | LLM 流式输出 | `internal/agentloop/loop.go:546`：把 `AComplete` 换成流式调用并逐块 `Observer.AssistantText` | `internal/llm` 需要 Stream 接口的正式实现；tool call 增量拼装。 |
+| P2-2 | 只读工具并行执行 | `internal/agentloop/loop.go:603-641`：按工具并发属性分组，read-only 组并发 | 工具元数据要标注 `safe_for_concurrency`；`ToolExecutor` 需并发安全。 |
+| P2-3 | colony scaffold 补齐 `tracker/`、`skills/`、`triggers.json`、任务计划 | `internal/server/routes_colonies.go:440-465`（`ensureMinimalColony`） | 无；注意不要覆盖已有 colony 内容。 |
+| P2-4 | colony 重启恢复 / load-unload / resume | `internal/host/host.go:120`（`Start`）、`internal/colony/resume.go:11`、`internal/server/routes_session_colony.go:55,170` | P0-4；需要把 `Host` 的 runs 持久化（目前 `host.go` 只有内存 map）。 |
+| P2-5 | worker prompt 真正注入 + headless 运行 | `internal/colony/runtime.go:804`：worker 用 `colony.BuildSystemPrompt(&task)` 而非 `systemPromptFor(spec)` | P0-4；`BuildSystemPrompt`（`worker_definition.go:113`）已存在；headless 需要一个不带 HTTP 的 `colony run` 命令。 |
+| P2-6 | `memory_timeline` flag 真正生效 | `internal/server/chat_runtime.go:151` 附近调用 `memory.SubscribeTimelineTriggers`（`timeline.go:645`） | flag 已通过 `config_features.go:74-79` 暴露；需要传 completer 与 sessions dir。 |
+
+### P3（一致性/清理）
+
+| # | 条目 | 接哪一行 | 前置条件 |
+| --- | --- | --- | --- |
+| P3-1 | 会话目录按 Queen 分（当前硬编码 `default`） | `internal/cli/loader.go:501`：`filepath.Join(home.QueensDir(), "default", "sessions", sessionID)` 改为 `queenName`（空则 default） | 需要迁移已有 `queens/default/sessions` 数据，或读取时回退旧路径。 |
+| P3-2 | 已退役的 Queen classifier 路由对齐文档 | `internal/server/routes_messages_extra.go:66`（`POST /api/messages/classify` / `classify-colony`） | 决定保留（作为显式 API）还是移除并更新 `docs/key_concepts/queen.md`。 |
+| P3-3 | 概念文档与 Go 运行时能力对齐 | `docs/key_concepts/*.md` | 本审计结论；至少在 the_loop/worker_agent/colony 标注 “Go runtime 当前未实现 streaming/parallel/judge/colony run”。 |
+| P3-4 | compaction 状态钩子接入手动压缩路径 | `internal/server/routes_execution.go:444`（`handleCompactAndFork`）调用 `MarkInProgress/MarkDone/MarkFailed`（`compaction_status.go:26-52`） | 当前只有启动恢复时的 `MarkFailed`（`compaction_status.go:131`）；`MarkDone` 等零调用。 |
+| P3-5 | 每次运行的成本/用量持久台账 | `internal/server/chat_runtime.go:429-443`（emit usage）后追加 `usage` 记录 | 需要确定台账格式/路径（当前只有事件总线与 `llm_turn_complete` 事件，无汇总表）。 |
+
+## 10. 总体结论
+
+- **真正接通的**：聊天会话的 agent loop（同步、非流式）、会话 transcript SSE + `events.jsonl`、会话持久化/cursor 恢复、per-queen memory reflection/recall（w15）、colony 的磁盘目录与 tar 导入、Queen profile 数据 CRUD、tracker 只读 UI、手动 `compact-and-fork`。
+- **最大的断点**：colony/worker 运行时没有任何生产入口（`Host.Spawn/Run`、`ColonyRuntime.SpawnBatch`、`StartOverseer` 均为测试或死代码），因此 colony、worker、tracker 写、playbook、skills、任务计划、triggers、Sentinel 这一整条链路在运行的服务里不可用。
+- **口径提醒**：本审计只回答“代码能否从生产入口走到、走到了是否生效”，不评价上游 Python 的行为；标注 `已接` 的行也可能与概念文档的细节有偏差（如 Queen 的 30/50 软检查点、worker 详细 prompt）。
+
 
 
 
