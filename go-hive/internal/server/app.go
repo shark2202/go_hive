@@ -564,7 +564,17 @@ func packageSourceDir() string {
 }
 
 // Parity: framework/server/app.py::_setup_static_serving
+//
+// The SPA catch-all is the last route, so it also sees requests no handler
+// claimed. Two guards keep a missing endpoint from masquerading as a success:
+// an unregistered /api/* path returns a JSON 404 instead of the index page,
+// and an asset-shaped path (one with a file extension) that is missing returns
+// a plain 404 instead of HTML that the browser would try to parse as JS/CSS.
 func (a *App) handleSPA(w http.ResponseWriter, r *http.Request) {
+	if isAPIPath(r.URL.Path) {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "not found"})
+		return
+	}
 	if a.distFS != nil {
 		a.handleEmbeddedSPA(w, r)
 		return
@@ -578,12 +588,16 @@ func (a *App) handleSPA(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, candidate)
 		return
 	}
+	if isAssetPath(r.URL.Path) {
+		http.NotFound(w, r)
+		return
+	}
 	http.ServeFile(w, r, filepath.Join(a.distDir, "index.html"))
 }
 
 // handleEmbeddedSPA serves the in-binary dashboard with the same fallback
-// contract as the disk path: existing regular files are served as-is, every
-// other path (including client-side routes) returns index.html.
+// contract as the disk path: existing regular files are served as-is, missing
+// assets 404, and every other path (client-side routes) returns index.html.
 func (a *App) handleEmbeddedSPA(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
 	if name != "" {
@@ -592,12 +606,30 @@ func (a *App) handleEmbeddedSPA(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if isAssetPath(r.URL.Path) {
+		http.NotFound(w, r)
+		return
+	}
 	index, err := fs.ReadFile(a.distFS, "index.html")
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(index))
+}
+
+// isAPIPath reports whether p belongs to the JSON API namespace. A path that
+// reaches the SPA catch-all under /api/ is unregistered: answering it with
+// index.html would report a missing route as a successful page.
+func isAPIPath(p string) bool {
+	return strings.HasPrefix(p, "/api/")
+}
+
+// isAssetPath reports whether the final URL segment names a file. A missing
+// asset must 404; returning index.html would hide the breakage behind a 200
+// and feed the browser HTML where it expects a script or stylesheet.
+func isAssetPath(p string) bool {
+	return path.Ext(p) != ""
 }
 
 func pathWithin(path, dir string) bool {

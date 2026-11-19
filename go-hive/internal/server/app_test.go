@@ -110,33 +110,36 @@ func TestHealthCountsLiveColonies(t *testing.T) {
 	}
 }
 
-// Parity: framework/server/tests/test_api.py::TestErrorMiddleware::test_unknown_api_route_falls_back_to_frontend
-func TestUnknownAPIRouteFallsBackToFrontend(t *testing.T) {
-	dist := filepath.Join(t.TempDir(), "frontend", "dist")
-	if err := os.MkdirAll(dist, 0o755); err != nil {
-		t.Fatalf("mkdir dist: %v", err)
-	}
+// Parity-exempt: deliberately diverges from
+// framework/server/tests/test_api.py::TestErrorMiddleware::test_unknown_api_route_falls_back_to_frontend,
+// which pins the old 200 + index.html fallback that hid unregistered endpoints.
+func TestUnknownAPIRouteReturnsJSON404(t *testing.T) {
+	dist := t.TempDir()
 	index := "<!doctype html><title>Hive</title>"
 	if err := os.WriteFile(filepath.Join(dist, "index.html"), []byte(index), 0o644); err != nil {
 		t.Fatalf("write index: %v", err)
 	}
-	t.Chdir(filepath.Dir(filepath.Dir(dist)))
+	app := newAppForTest(t, AppDeps{FrontendDist: dist})
 
-	app := NewApp(AppDeps{DesktopToken: new(string), Logger: discardLogger()})
-	if app.DistDir() == "" {
-		t.Fatal("frontend dist was not discovered from cwd")
-	}
-
-	recorder := httptest.NewRecorder()
-	app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/nonexistent", nil))
-	if recorder.Code != 200 {
-		t.Fatalf("status = %d, want 200", recorder.Code)
-	}
-	if got := recorder.Header().Get("Cache-Control"); got != "no-store" {
-		t.Fatalf("Cache-Control = %q, want no-store", got)
-	}
-	if recorder.Body.String() != index {
-		t.Fatalf("body = %q, want the index page", recorder.Body.String())
+	for _, target := range []string{"/api/nonexistent", "/api/colonies/ghost"} {
+		recorder := httptest.NewRecorder()
+		app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, target, nil))
+		if recorder.Code != http.StatusNotFound {
+			t.Fatalf("%s status = %d, want 404", target, recorder.Code)
+		}
+		if got := recorder.Header().Get("Content-Type"); !strings.Contains(got, "application/json") {
+			t.Fatalf("%s content-type = %q, want application/json", target, got)
+		}
+		if got := recorder.Header().Get("Cache-Control"); got != "no-store" {
+			t.Fatalf("%s Cache-Control = %q, want no-store", target, got)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(recorder.Body).Decode(&body); err != nil {
+			t.Fatalf("%s decode body: %v", target, err)
+		}
+		if body["error"] != "not found" {
+			t.Fatalf("%s body = %#v, want error=not found", target, body)
+		}
 	}
 }
 
@@ -168,13 +171,24 @@ func TestStaticServingAndIndexFallback(t *testing.T) {
 		t.Fatalf("asset Cache-Control = %q, want empty (only /api/ is no-store)", got)
 	}
 
-	recorder = httptest.NewRecorder()
-	app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/colonies/colony_a", nil))
-	if recorder.Code != 200 {
-		t.Fatalf("fallback status = %d, want 200", recorder.Code)
+	for _, target := range []string{"/", "/colonies/colony_a"} {
+		recorder = httptest.NewRecorder()
+		app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, target, nil))
+		if recorder.Code != 200 {
+			t.Fatalf("%s status = %d, want 200", target, recorder.Code)
+		}
+		if recorder.Body.String() != index {
+			t.Fatalf("%s body = %q, want the index page", target, recorder.Body.String())
+		}
 	}
-	if recorder.Body.String() != index {
-		t.Fatalf("fallback body = %q", recorder.Body.String())
+
+	recorder = httptest.NewRecorder()
+	app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/assets/missing.js", nil))
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("missing asset status = %d, want 404", recorder.Code)
+	}
+	if recorder.Body.String() == index {
+		t.Fatal("missing asset fell back to the index page")
 	}
 }
 
