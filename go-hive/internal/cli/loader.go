@@ -479,6 +479,16 @@ func (r *Runner) createChatSession(
 	if params.QueenName != nil {
 		record.QueenName = *params.QueenName
 	}
+	// The transcript tree and the memory scope share one queen identifier: a
+	// queen_growth session keeps its conversation under
+	// queens/queen_growth/sessions and recalls queen_growth's memories. An
+	// unbound session belongs to the shared "default" queen. queen_name comes
+	// from request bodies and queen routes, so reject a name that would step
+	// outside the queen tree rather than joining it raw.
+	queenScope := chatSessionQueenScope(record.QueenName)
+	if !hivesession.ValidSegment(queenScope) {
+		return nil, &hiveserver.SessionCreateValueError{Message: "invalid queen_name"}
+	}
 
 	requestedModel := ""
 	if params.Model != nil {
@@ -498,7 +508,7 @@ func (r *Runner) createChatSession(
 		fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, providerErr)
 	} else {
 		toolbox := builtin.New("")
-		sessionDir := filepath.Join(home.QueensDir(), "default", "sessions", sessionID)
+		sessionDir := chatSessionDir(home, queenScope, sessionID)
 		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 			LLM:       provider,
@@ -531,6 +541,45 @@ func (r *Runner) createChatSession(
 	}
 	hiveserver.MarkBootReady("Queen ready")
 	return record, nil
+}
+
+// chatSessionQueenScope is the queen a chat session belongs to, on disk and in
+// memory: the requested queen, or the shared "default" queen when the session
+// has none. ChatRuntime resolves its memory scope from the same identifier, so
+// a session's transcript never lives under a different queen than the memories
+// recalled beside it.
+//
+// Parity: framework/server/session_manager.py::_queen_session_dir
+func chatSessionQueenScope(queenName string) string {
+	queen := strings.TrimSpace(queenName)
+	if queen == "" {
+		return "default"
+	}
+	return queen
+}
+
+// chatSessionDir resolves a session's on-disk tree as
+// queens/<queen>/sessions/<session_id>. A session that only exists under the
+// legacy queens/default/sessions/<session_id> tree (written before sessions
+// were queen-scoped) keeps that location, so resuming an old session reads its
+// transcript instead of starting a blank copy under the queen that now owns it.
+//
+// Parity: framework/server/session_manager.py::_find_queen_session_dir
+func chatSessionDir(home hivehome.Home, queenName, sessionID string) string {
+	target := home.QueenSessionDir(queenName, sessionID)
+	if isSessionDir(target) {
+		return target
+	}
+	legacy := home.QueenSessionDir("default", sessionID)
+	if queenName != "default" && isSessionDir(legacy) {
+		return legacy
+	}
+	return target
+}
+
+func isSessionDir(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
 }
 
 // chatProviderEnvVars mirrors the provider/env mapping the HTTP routes use for
