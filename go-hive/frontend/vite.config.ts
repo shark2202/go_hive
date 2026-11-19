@@ -4,12 +4,21 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// The dashboard ships inside Hive, so it shows Hive's version: the one in
-// core/pyproject.toml (aden-hive), not this package.json's, which is never released.
-// This tree is also vendored at go_hive/go-hive/frontend, where core/pyproject.toml
-// sits three levels up; a standalone go_hive checkout has neither, so the last
-// resort is this package's own version.
+// The dashboard ships inside Hive, so it shows Hive's version. When the tree is
+// the Go port (go_hive/go-hive/frontend), read internal/version/version.go so the
+// sidebar matches `hive --version`; otherwise fall back to the upstream
+// core/pyproject.toml version, then this package's own version.
+// HIVE_APP_VERSION overrides everything for scripted builds.
 const HIVE_VERSION = (() => {
+  const override = process.env.HIVE_APP_VERSION?.trim();
+  if (override) return override;
+  try {
+    const goVersion = readFileSync(path.resolve(__dirname, "../internal/version/version.go"), "utf8");
+    const match = goVersion.match(/const\s+Version\s*=\s*"([^"]+)"/);
+    if (match) return match[1];
+  } catch {
+    // Not the Go tree; keep looking.
+  }
   const candidates = [
     path.resolve(__dirname, "../pyproject.toml"), // core/frontend layout
     path.resolve(__dirname, "../../../core/pyproject.toml"), // vendored layout
