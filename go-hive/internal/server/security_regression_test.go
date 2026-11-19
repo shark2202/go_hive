@@ -18,6 +18,7 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/credentials"
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/aden-hive/hive-go/internal/tasks"
 )
 
 // securityTestHome builds an isolated HIVE_HOME plus a sibling directory that
@@ -253,7 +254,7 @@ func TestSessionCreateRejectsInvalidAndOversizedJSON(t *testing.T) {
 // defect instead of being fixed in this lane.
 func TestTaskUnarchiveRejectsOversizedJSON(t *testing.T) {
 	mux := http.NewServeMux()
-	RegisterTaskRoutes(mux, TaskRouteDeps{})
+	RegisterTaskRoutes(mux, TaskRouteDeps{Store: tasks.NewTaskStore(t.TempDir())})
 
 	// Valid JSON plus trailing whitespace: a capped reader rejects it before
 	// decoding, while json.Decoder alone accepts the 8 MiB payload.
