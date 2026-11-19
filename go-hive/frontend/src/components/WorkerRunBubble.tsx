@@ -3,6 +3,7 @@ import { Cpu } from "lucide-react";
 import type { ChatMessage } from "@/components/ChatPanel";
 import { useColonyWorkers } from "@/context/ColonyWorkersContext";
 import { workerIdFromStreamId } from "@/lib/chat-helpers";
+import { useI18n } from "@/i18n";
 
 const workerColor = "hsl(220,60%,55%)";
 
@@ -55,9 +56,9 @@ function parseToolStatus(content: string): { name: string; done: boolean }[] {
  * preview ends up looking like confetti. We just want the plain
  * prose, one line, truncated.
  */
-function stripMarkdownToPreview(s: string, maxLen = 200): string {
+function stripMarkdownToPreview(s: string, maxLen = 200, codeLabel = "[code]"): string {
   const cleaned = s
-    .replace(/```[\s\S]*?```/g, " [code] ") // fenced code blocks
+    .replace(/```[\s\S]*?```/g, ` ${codeLabel} `) // fenced code blocks
     .replace(/`([^`]+)`/g, "$1") // inline code — keep the text, drop the backticks
     .replace(/\*\*([^*]+)\*\*/g, "$1") // bold
     .replace(/\*([^*]+)\*/g, "$1") // italic
@@ -87,6 +88,7 @@ function stripMarkdownToPreview(s: string, maxLen = 200): string {
  */
 const WorkerRunBubble = memo(
   function WorkerRunBubble({ group, label }: WorkerRunBubbleProps) {
+    const { t } = useI18n();
     const { openColonyWorkers, workers } = useColonyWorkers();
 
     // Derive the colony worker id from the first message that carries
@@ -174,9 +176,9 @@ const WorkerRunBubble = memo(
     const taskSummary = workerRecord?.task_summary ?? null;
     const progressLabel =
       taskSummary && taskSummary.total > 0
-        ? `${taskSummary.completed}/${taskSummary.total} tasks`
+        ? t("{done}/{total} tasks", { done: taskSummary.completed, total: taskSummary.total })
         : toolCount > 0
-          ? `${doneCount}/${toolCount} tools`
+          ? t("{done}/{total} tools", { done: doneCount, total: toolCount })
           : null;
 
     return (
@@ -185,8 +187,8 @@ const WorkerRunBubble = memo(
         <button
           type="button"
           onClick={openPanel}
-          aria-label="Open worker session"
-          title="Open worker session"
+          aria-label={t("Open worker session")}
+          title={t("Open worker session")}
           className="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center mt-1 transition-opacity hover:opacity-80 cursor-pointer"
           style={{
             backgroundColor: `${workerColor}18`,
@@ -202,13 +204,13 @@ const WorkerRunBubble = memo(
             type="button"
             onClick={openPanel}
             className="w-full flex items-center gap-2 mb-1 text-left cursor-pointer"
-            title="Open worker session"
+            title={t("Open worker session")}
           >
             <span
               className="font-medium text-xs"
               style={{ color: workerColor }}
             >
-              Worker
+              {t("Worker")}
             </span>
             {label && (
               <span className="text-[10px] font-mono text-muted-foreground/80 tabular-nums">
@@ -218,7 +220,7 @@ const WorkerRunBubble = memo(
             <span
               className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${pillClass}`}
             >
-              {runPhase}
+              {t(runPhase)}
             </span>
             {progressLabel && (
               <span className="text-[10px] text-muted-foreground tabular-nums">
@@ -242,11 +244,11 @@ const WorkerRunBubble = memo(
             <div className="px-4 py-3 space-y-2">
               {headText ? (
                 <div className="text-sm text-muted-foreground truncate">
-                  {stripMarkdownToPreview(headText)}
+                  {stripMarkdownToPreview(headText, 200, t("[code]"))}
                 </div>
               ) : toolCount === 0 ? (
                 <div className="text-xs text-muted-foreground/60 italic">
-                  {"waiting for first action…"}
+                  {t("waiting for first action…")}
                 </div>
               ) : null}
 
@@ -263,7 +265,7 @@ const WorkerRunBubble = memo(
 
               {showTail && (
                 <div className="text-sm text-foreground/85 truncate">
-                  {stripMarkdownToPreview(tailText)}
+                  {stripMarkdownToPreview(tailText, 200, t("[code]"))}
                 </div>
               )}
             </div>

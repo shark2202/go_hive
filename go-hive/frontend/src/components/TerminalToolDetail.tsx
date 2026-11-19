@@ -10,6 +10,9 @@
  */
 
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { useI18n } from "@/i18n";
+
+type TFunction = (key: string, vars?: Record<string, string | number>) => string;
 
 export interface TerminalToolEntry {
   name: string;
@@ -80,15 +83,15 @@ function pickBody(r: Record<string, unknown>): string {
   return String(r.data ?? r.output ?? r.error ?? "");
 }
 
-function summarize(entry: TerminalToolEntry): Summary {
-  if (!entry.done) return { meta: "running…", body: "", empty: true };
+function summarize(entry: TerminalToolEntry, t: TFunction): Summary {
+  if (!entry.done) return { meta: t("running…"), body: "", empty: true };
 
   const result = entry.result;
-  if (result == null) return { meta: "no result", body: "", empty: true };
+  if (result == null) return { meta: t("no result"), body: "", empty: true };
   if (typeof result === "string") {
     const lines = result.split("\n").length;
     return {
-      meta: `${lines} ${lines === 1 ? "line" : "lines"}`,
+      meta: lines === 1 ? t("{count} line", { count: lines }) : t("{count} lines", { count: lines }),
       body: result,
       empty: result.length === 0,
     };
@@ -101,22 +104,28 @@ function summarize(entry: TerminalToolEntry): Summary {
   const exit = typeof r.exit_code === "number" ? r.exit_code : undefined;
 
   const parts: string[] = [];
-  if (body) parts.push(`${lineCount} ${lineCount === 1 ? "line" : "lines"}`);
+  if (body) {
+    parts.push(
+      lineCount === 1
+        ? t("{count} line", { count: lineCount })
+        : t("{count} lines", { count: lineCount }),
+    );
+  }
   if (runtimeMs !== undefined) {
     parts.push(runtimeMs < 1000 ? `${runtimeMs}ms` : `${(runtimeMs / 1000).toFixed(1)}s`);
   }
-  if (exit !== undefined && exit !== 0) parts.push(`exit ${exit}`);
-  if (r.status === "running") parts.push("running");
-  if (r.status === "exited" && exit !== undefined) parts.push(`exit ${exit}`);
-  if (r.timed_out) parts.push("timed out");
-  if (r.auto_backgrounded) parts.push("auto-backgrounded");
+  if (exit !== undefined && exit !== 0) parts.push(t("exit {code}", { code: exit }));
+  if (r.status === "running") parts.push(t("running"));
+  if (r.status === "exited" && exit !== undefined) parts.push(t("exit {code}", { code: exit }));
+  if (r.timed_out) parts.push(t("timed out"));
+  if (r.auto_backgrounded) parts.push(t("auto-backgrounded"));
 
   const handle = typeof r.output_handle === "string" ? r.output_handle : null;
   const truncBytes =
     Number(r.stdout_truncated_bytes ?? 0) + Number(r.stderr_truncated_bytes ?? 0);
 
   return {
-    meta: parts.join(" · ") || "done",
+    meta: parts.join(" · ") || t("done"),
     warning: typeof r.warning === "string" && r.warning ? r.warning : undefined,
     body,
     empty: !body,
@@ -126,8 +135,9 @@ function summarize(entry: TerminalToolEntry): Summary {
 }
 
 export default function TerminalToolDetail({ entry }: { entry: TerminalToolEntry }) {
+  const { t } = useI18n();
   const cmd = commandLine(entry.name, asObj(entry.args));
-  const s = summarize(entry);
+  const s = summarize(entry, t);
   const running = !entry.done;
 
   return (
@@ -163,7 +173,7 @@ export default function TerminalToolDetail({ entry }: { entry: TerminalToolEntry
         <div className="rounded-md bg-muted/55 border border-border/60 font-mono text-[12px] leading-[1.55] text-foreground/85 overflow-hidden">
           <div className="max-h-[260px] overflow-y-auto p-2.5">
             {s.empty ? (
-              <span className="italic text-muted-foreground">no output</span>
+              <span className="italic text-muted-foreground">{t("no output")}</span>
             ) : (
               <pre className="whitespace-pre-wrap break-words m-0">{s.body}</pre>
             )}

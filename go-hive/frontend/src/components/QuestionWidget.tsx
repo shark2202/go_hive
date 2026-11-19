@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, MessageCircleQuestion, X } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 export interface QuestionWidgetProps {
   /** The question text shown to the user */
@@ -19,6 +20,7 @@ export interface QuestionWidgetProps {
 }
 
 export default function QuestionWidget({ question, options, onSubmit, onDismiss, inline = false }: QuestionWidgetProps) {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<number | null>(null);
   const [customText, setCustomText] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -137,7 +139,7 @@ export default function QuestionWidget({ question, options, onSubmit, onDismiss,
               setSelected(otherIndex);
               setCustomText(e.target.value);
             }}
-            placeholder="Type a custom response..."
+            placeholder={t("Type a custom response...")}
             className={`w-full px-4 py-2.5 rounded-lg border border-dashed text-sm transition-colors bg-transparent placeholder:text-muted-foreground focus:outline-none ${
               isOtherSelected
                 ? "border-primary bg-primary/10 text-foreground"
@@ -154,7 +156,7 @@ export default function QuestionWidget({ question, options, onSubmit, onDismiss,
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <Send className="w-3.5 h-3.5" />
-            Submit
+            {t("Submit")}
           </button>
         </div>
       </div>

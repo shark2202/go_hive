@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { ExternalLink, FileText, ImageOff } from "lucide-react";
 import type { ImageContent } from "@/components/ChatPanel";
+import { useI18n } from "@/i18n";
 import {
   attachmentLabel,
   attachmentTone,
@@ -118,6 +119,7 @@ function ImageTile({
 }) {
   const url = img.image_url.url;
   const src = sessionId ? resolveAttachmentUrl(url, sessionId) : url;
+  const { t } = useI18n();
   // An unresolved `hive-attachment://` ref can't load until the session id
   // arrives (mid-reload); keep showing the loading state until then.
   const resolvable = !src.startsWith("hive-attachment://");
@@ -134,12 +136,16 @@ function ImageTile({
       onClick={onOpen}
       disabled={!onOpen}
       title={name.original || name.label}
-      aria-label={more > 0 ? `${name.label}, and ${more} more` : name.label}
+      aria-label={
+        more > 0
+          ? t("{name}, and {count} more", { name: name.label, count: more })
+          : name.label
+      }
     >
       {state === "error" ? (
         <span className="hive-att-missing">
           <ImageOff className="w-4 h-4" />
-          <span>Unavailable</span>
+          <span>{t("Unavailable")}</span>
         </span>
       ) : (
         resolvable && (
@@ -171,6 +177,7 @@ function ImageTile({
 }
 
 function FileCard({ img, sessionId }: { img: ImageContent; sessionId?: string }) {
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const url = img.image_url.url;
   const href = sessionId ? resolveAttachmentUrl(url, sessionId) : url;
@@ -180,12 +187,12 @@ function FileCard({ img, sessionId }: { img: ImageContent; sessionId?: string })
 
   const open = () => {
     if (!openable) {
-      setError("Still loading — try again in a moment");
+      setError(t("Still loading — try again in a moment"));
       return;
     }
     setError(null);
     const res = openAttachmentInBrowser(href);
-    if (res.ok === false) setError(res.error || "Couldn't open file");
+    if (res.ok === false) setError(res.error || t("Couldn't open file"));
   };
 
   const meta = [ext.toUpperCase(), img._byteSize !== undefined ? formatBytes(img._byteSize) : null]

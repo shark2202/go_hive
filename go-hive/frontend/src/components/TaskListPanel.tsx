@@ -40,6 +40,7 @@ import { RollingNumber } from "@/components/fx/RollingNumber";
 import { TickProgress } from "@/components/fx/TickProgress";
 import { tasksApi, type TaskRecord } from "@/api/tasks";
 import { executionApi } from "@/api/execution";
+import { useI18n } from "@/i18n";
 
 /** Prompt sent to the queen when the user hits "Update plan". It lands in
  *  the conversation as a visible user message, phrased as a natural
@@ -137,6 +138,7 @@ function TaskListPanelInner({
   showActionControls,
   sendPrompt,
 }: TaskListPanelProps) {
+  const { t } = useI18n();
   const { tasks, loading, error, goal } = useTaskList();
   const ordered = orderedVisibleTasks(tasks);
   // Progress reads as done/total. In-progress/total showed a finished plan as
@@ -152,7 +154,7 @@ function TaskListPanelInner({
     return null;
   }
 
-  const headerLabel = title ?? "Tasks";
+  const headerLabel = title ?? t("Tasks");
   // The History + Update plan controls: a live, re-plannable queen session
   // (the rail Action Plan, or an embedded overview that opts in) — never
   // worker embedded views or historical plans — and only once the list
@@ -205,7 +207,7 @@ function TaskListPanelInner({
             type="button"
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground flex-shrink-0"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -214,9 +216,9 @@ function TaskListPanelInner({
 
       <div className="flex-1 min-h-0 overflow-y-auto p-2">
         {loading ? (
-          <p className="text-xs text-muted-foreground p-2">Loading…</p>
+          <p className="text-xs text-muted-foreground p-2">{t("Loading…")}</p>
         ) : error ? (
-          <p className="text-xs text-destructive p-2">Error: {error}</p>
+          <p className="text-xs text-destructive p-2">{t("Error: {error}", { error })}</p>
         ) : totalVisible === 0 ? (
           <TasksEmptyState />
         ) : (
@@ -253,6 +255,7 @@ export function ActionPlanControls({
   sessionId: string;
   sendPrompt?: (text: string) => void;
 }) {
+  const { t } = useI18n();
   const { tasks } = useTaskList();
   const batches = useMemo(() => archivedBatches(tasks), [tasks]);
   const archivedCount = useMemo(
@@ -338,11 +341,11 @@ export function ActionPlanControls({
           type="button"
           onClick={() => setHistoryOpen(true)}
           className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-          title="View archived tasks"
+          title={t("View archived tasks")}
         >
           <History className="w-3.5 h-3.5 flex-shrink-0" />
           <span className="hidden @sm:inline whitespace-nowrap">
-            History <span className="tabular-nums">({archivedCount})</span>
+            {t("History")} <span className="tabular-nums">({archivedCount})</span>
           </span>
         </button>
       ) : null}
@@ -352,14 +355,14 @@ export function ActionPlanControls({
           onClick={handleClearCompleted}
           disabled={clearing}
           className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-          title="Archive all completed tasks — moves them out of the active plan into History (restorable)"
+          title={t("Archive all completed tasks — moves them out of the active plan into History (restorable)")}
         >
           {clearing ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
             <CheckCheck className="w-3.5 h-3.5" />
           )}
-          Clear done
+          {t("Clear done")}
           <span className="tabular-nums">({completedCount})</span>
         </button>
       ) : null}
@@ -370,8 +373,8 @@ export function ActionPlanControls({
         className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
         title={
           updating
-            ? "Asking the queen to refresh the plan…"
-            : "Ask the queen to review the plan — complete finished work, archive done/stale tasks, and list what's next"
+            ? t("Asking the queen to refresh the plan…")
+            : t("Ask the queen to review the plan — complete finished work, archive done/stale tasks, and list what's next")
         }
       >
         {updating ? (
@@ -379,7 +382,7 @@ export function ActionPlanControls({
         ) : (
           <Archive className="w-3.5 h-3.5 flex-shrink-0" />
         )}
-        <span className="hidden @sm:inline whitespace-nowrap">Update plan</span>
+        <span className="hidden @sm:inline whitespace-nowrap">{t("Update plan")}</span>
       </button>
       <button
         type="button"
@@ -388,8 +391,8 @@ export function ActionPlanControls({
         className="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
         title={
           distilling
-            ? "Asking the queen to distill a prompt…"
-            : "Ask the queen to produce a reusable prompt for her current tasks, aggregating all feedback learned from the colony's users so far"
+            ? t("Asking the queen to distill a prompt…")
+            : t("Ask the queen to produce a reusable prompt for her current tasks, aggregating all feedback learned from the colony's users so far")
         }
       >
         {distilling ? (
@@ -397,7 +400,7 @@ export function ActionPlanControls({
         ) : (
           <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
         )}
-        <span className="hidden @sm:inline whitespace-nowrap">Distill prompt</span>
+        <span className="hidden @sm:inline whitespace-nowrap">{t("Distill prompt")}</span>
       </button>
 
       {historyOpen ? (
@@ -480,6 +483,7 @@ function ArchiveHistoryModal({
   batches: ArchivedBatch[];
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const totalTasks = batches.reduce((n, b) => n + b.tasks.length, 0);
   const handleRemove = (batch: ArchivedBatch) => {
     // Optimism isn't needed: the per-task `task_updated` events flip these
@@ -498,16 +502,18 @@ function ArchiveHistoryModal({
                 <History className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-foreground">Archived tasks</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t("Archived tasks")}</h2>
                 <p className="text-[11px] text-muted-foreground">
-                  {totalTasks} archived task{totalTasks === 1 ? "" : "s"}, grouped by goal.
+                  {totalTasks === 1
+                    ? t("{count} archived task, grouped by goal.", { count: totalTasks })
+                    : t("{count} archived tasks, grouped by goal.", { count: totalTasks })}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
               className="p-1.5 rounded-md hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
-              title="Close"
+              title={t("Close")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -516,7 +522,7 @@ function ArchiveHistoryModal({
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-3">
             {batches.length === 0 ? (
               <p className="text-[11.5px] text-muted-foreground italic py-6 text-center">
-                Nothing archived yet. Use “Update plan” to archive completed tasks.
+                {t("Nothing archived yet. Use “Update plan” to archive completed tasks.")}
               </p>
             ) : (
               <div className="space-y-2">
@@ -539,6 +545,7 @@ function ArchiveBatchRow({
   batch: ArchivedBatch;
   onRemove: () => void;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const date = new Date(batch.archivedAt * 1000).toLocaleString();
 
@@ -557,7 +564,7 @@ function ArchiveBatchRow({
           )}
           <div className="flex-1 min-w-0">
             <div className="text-xs font-medium truncate" title={batch.goal ?? date}>
-              {batch.goal ?? "Untitled plan"}
+              {batch.goal ?? t("Untitled plan")}
             </div>
             <div className="text-[10px] text-muted-foreground truncate">{date}</div>
           </div>
@@ -569,7 +576,7 @@ function ArchiveBatchRow({
           type="button"
           onClick={onRemove}
           className="p-1 rounded text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
-          title="Remove from history (restores these tasks to the plan)"
+          title={t("Remove from history (restores these tasks to the plan)")}
         >
           <Trash2 className="h-3 w-3" />
         </button>
@@ -602,16 +609,17 @@ function ArchiveBatchRow({
 }
 
 function TasksEmptyState() {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col items-center text-center px-2 py-10">
       <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-3">
         <ListTodo className="w-4 h-4" />
       </div>
       <h3 className="text-sm font-semibold text-foreground mb-1.5">
-        No tasks yet
+        {t("No tasks yet")}
       </h3>
       <p className="text-[11.5px] text-muted-foreground leading-relaxed max-w-[260px]">
-        The agent will create them as it plans.
+        {t("The agent will create them as it plans.")}
       </p>
     </div>
   );
@@ -629,6 +637,7 @@ function OrderedTaskList({
   tasks: TaskRecord[];
   sessionId?: string;
 }) {
+  const { t } = useI18n();
   const ordered = orderedVisibleTasks(tasks);
   // No live session id -> historical plan: render rows static (no spinners
   // or ticking timers).
@@ -649,7 +658,7 @@ function OrderedTaskList({
   };
 
   if (ordered.length === 0) {
-    return <p className="text-[11px] text-muted-foreground px-2 py-1 italic">No tasks.</p>;
+    return <p className="text-[11px] text-muted-foreground px-2 py-1 italic">{t("No tasks.")}</p>;
   }
 
   return (
@@ -694,6 +703,7 @@ function PreviousSessionsSection({
 }: {
   previousSessions: PreviousSessionInfo[];
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   // sessionId -> plan (tasks + goal). `null` once fetched if the
   // session has no task list on disk (404) or the fetch failed.
@@ -738,17 +748,17 @@ function PreviousSessionsSection({
         className="flex items-center gap-1 text-xs font-medium text-muted-foreground px-2 py-1 hover:text-foreground"
       >
         {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        <span>Previous sessions</span>
+        <span>{t("Previous sessions")}</span>
         {withPlan.length > 0 ? (
           <span className="tabular-nums">({withPlan.length})</span>
         ) : null}
       </button>
       {open ? (
         !settled && withPlan.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground px-2 py-1">Loading…</p>
+          <p className="text-[11px] text-muted-foreground px-2 py-1">{t("Loading…")}</p>
         ) : withPlan.length === 0 ? (
           <p className="text-[11px] text-muted-foreground px-2 py-1 italic">
-            No previous action plans.
+            {t("No previous action plans.")}
           </p>
         ) : (
           <div className="space-y-1 mt-1">

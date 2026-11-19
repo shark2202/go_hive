@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRuntimeLogs } from "@/hooks/use-runtime-logs";
 import { useShowRuntimeLogs } from "@/hooks/use-show-runtime-logs";
+import { useI18n } from "@/i18n";
 
 /**
  * Floating bottom-right drawer that displays the last 500 lines of the Hive
@@ -9,6 +10,7 @@ import { useShowRuntimeLogs } from "@/hooks/use-show-runtime-logs";
  * or error.
  */
 export default function RuntimeLogsDrawer() {
+  const { t } = useI18n();
   const [visible] = useShowRuntimeLogs();
   const { logs, clear } = useRuntimeLogs(visible);
   const [open, setOpen] = useState(false);
@@ -40,7 +42,7 @@ export default function RuntimeLogsDrawer() {
         <div className="w-[720px] max-w-[90vw] h-80 flex flex-col rounded-md border border-border bg-zinc-950 text-zinc-100 shadow-xl">
           <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-1.5">
             <div className="text-xs font-medium text-zinc-300">
-              Runtime logs{" "}
+              {t("Runtime logs")}{" "}
               <span className="text-zinc-500">({logs.length})</span>
             </div>
             <div className="flex items-center gap-2">
@@ -51,20 +53,20 @@ export default function RuntimeLogsDrawer() {
                   onChange={(e) => setAutoScroll(e.target.checked)}
                   className="accent-zinc-400"
                 />
-                auto-scroll
+                {t("auto-scroll")}
               </label>
               <button
                 type="button"
                 onClick={clear}
                 className="rounded px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               >
-                Clear
+                {t("Clear")}
               </button>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 className="rounded px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                aria-label="Close runtime logs"
+                aria-label={t("Close runtime logs")}
               >
                 ✕
               </button>
@@ -76,7 +78,7 @@ export default function RuntimeLogsDrawer() {
             className="flex-1 overflow-y-auto px-3 py-2 font-mono text-[11px] leading-[1.35] whitespace-pre-wrap"
           >
             {logs.length === 0 ? (
-              <div className="text-zinc-500 italic">(no output yet)</div>
+              <div className="text-zinc-500 italic">{t("(no output yet)")}</div>
             ) : (
               logs.map((entry) => (
                 <div
@@ -108,7 +110,7 @@ export default function RuntimeLogsDrawer() {
                 : "bg-zinc-400"
           }`}
         />
-        Runtime logs{logs.length > 0 && ` · ${logs.length}`}
+        {t("Runtime logs")}{logs.length > 0 && ` · ${logs.length}`}
       </button>
     </div>
   );

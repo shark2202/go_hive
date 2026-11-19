@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AlertTriangle, ChevronRight } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 // The runtime's text for a failed model call (AgentLoop's visible_error).
 const MODEL_ERROR = /^\s*\[Error: LLM call failed: ([\s\S]*?)(?:\. Please try again\.)?\]\s*$/;
@@ -22,6 +23,7 @@ export function parseModelError(content: string): ModelError | null {
 /** A failed model call in the chat: what went wrong in a sentence, the way to
  *  the model settings, and the raw error folded away. */
 export default function ModelErrorCard({ error }: { error: ModelError }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     // Flat: it sits inside the queen's message bubble, which already frames it.
@@ -32,9 +34,9 @@ export default function ModelErrorCard({ error }: { error: ModelError }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-foreground">
-            <span className="font-medium">The model couldn't reply.</span>{" "}
+            <span className="font-medium">{t("The model couldn't reply.")}</span>{" "}
             <span className="text-muted-foreground">
-              {error.keyProblem ? "Its API key is missing or was rejected." : "The provider returned an error."}
+              {error.keyProblem ? t("Its API key is missing or was rejected.") : t("The provider returned an error.")}
             </span>
           </p>
           <div className="mt-1.5 flex items-center gap-4">
@@ -43,7 +45,7 @@ export default function ModelErrorCard({ error }: { error: ModelError }) {
               onClick={() => (window.location.hash = "#/models")}
               className="font-medium text-primary underline-offset-2 hover:underline"
             >
-              {error.keyProblem ? "Set up a model →" : "Model settings →"}
+              {error.keyProblem ? t("Set up a model →") : t("Model settings →")}
             </button>
             <button
               type="button"
@@ -52,7 +54,7 @@ export default function ModelErrorCard({ error }: { error: ModelError }) {
               className="inline-flex items-center gap-0.5 text-muted-foreground hover:text-foreground"
             >
               <ChevronRight className={`h-3 w-3 transition-transform ${open ? "rotate-90" : ""}`} />
-              Details
+              {t("Details")}
             </button>
           </div>
           {open && (

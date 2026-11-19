@@ -35,6 +35,7 @@ import {
   Brain,
 } from "lucide-react";
 import { ReportModal } from "@/components/SessionReportAction";
+import { useI18n } from "@/i18n";
 import MessageAttachments from "@/components/MessageAttachments";
 import {
   attachmentLabel,
@@ -69,7 +70,10 @@ import {
   type SkillTextEditorHandle,
 } from "@/components/SkillTextEditor";
 
+type TFunction = (key: string, vars?: Record<string, string | number>) => string;
+
 function CopyBtn({ text }: { text: string }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -79,7 +83,7 @@ function CopyBtn({ text }: { text: string }) {
         setTimeout(() => setCopied(false), 1500);
       }}
       className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/40 transition-all duration-150"
-      title="Copy as formatted text (Docs, Slack, email)"
+      title={t("Copy as formatted text (Docs, Slack, email)")}
     >
       {copied ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
     </button>
@@ -87,6 +91,7 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 function CopyBtnStatic({ text }: { text: string }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -96,7 +101,7 @@ function CopyBtnStatic({ text }: { text: string }) {
         setTimeout(() => setCopied(false), 1500);
       }}
       className="p-1 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/40 transition-all duration-150"
-      title="Copy as formatted text (Docs, Slack, email)"
+      title={t("Copy as formatted text (Docs, Slack, email)")}
     >
       {copied ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
     </button>
@@ -137,6 +142,7 @@ function deriveDownloadSlug(text: string, fallbackTitle: string): string {
 }
 
 function DownloadPdfBtn({ text, title }: { text: string; title: string }) {
+  const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const handleClick = async () => {
     if (saving || !text.trim()) return;
@@ -163,7 +169,7 @@ function DownloadPdfBtn({ text, title }: { text: string; title: string }) {
       onClick={handleClick}
       disabled={saving}
       className="p-1 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/40 transition-all duration-150 disabled:opacity-50"
-      title="Download as PDF"
+      title={t("Download as PDF")}
     >
       <Download className="w-3 h-3" />
     </button>
@@ -189,6 +195,7 @@ function FeedbackBtns({
    *  action row (e.g. *after* the download button). */
   onStatusChange?: (status: Exclude<FeedbackStatus, "idle">) => void;
 }) {
+  const { t } = useI18n();
   const [vote, setVote] = useState<Vote | null>(initialVote ?? null);
   // After a down-vote lands, offer to send diagnostics; the modal mounts on confirm.
   const [askDiag, setAskDiag] = useState(false);
@@ -221,7 +228,7 @@ function FeedbackBtns({
             ? "text-primary bg-primary/10"
             : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/40"
         }`}
-        title="Good response"
+        title={t("Good response")}
       >
         <ThumbsUp className="w-3 h-3" />
       </button>
@@ -232,30 +239,30 @@ function FeedbackBtns({
             ? "text-destructive bg-destructive/10"
             : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/40"
         }`}
-        title="Poor response"
+        title={t("Poor response")}
       >
         <ThumbsDown className="w-3 h-3" />
       </button>
       {askDiag && sessionId && (
         <span className="flex items-center gap-1.5 ml-1.5 text-[11px] text-muted-foreground">
-          Send diagnostics to help us fix this?
+          {t("Send diagnostics to help us fix this?")}
           <button
             onClick={() => { setAskDiag(false); setDiagOpen(true); }}
             className="text-primary font-medium hover:underline"
           >
-            Send
+            {t("Send")}
           </button>
           <button onClick={() => setAskDiag(false)} className="hover:underline">
-            No thanks
+            {t("No thanks")}
           </button>
         </span>
       )}
       {diagOpen && sessionId && (
         <ReportModal
           sessionId={sessionId}
-          title="Send diagnostic data"
-          subtitle="Helps us debug this response — sends this session's data."
-          initialDescription="Flagged via 👎 on a response."
+          title={t("Send diagnostic data")}
+          subtitle={t("Helps us debug this response — sends this session's data.")}
+          initialDescription={t("Flagged via 👎 on a response.")}
           onClose={() => setDiagOpen(false)}
         />
       )}
@@ -289,6 +296,7 @@ function QueenMessageActions({
   /** Fork the conversation into a new session that ends with this reply. */
   onBranch?: () => void;
 }) {
+  const { t } = useI18n();
   const [status, setStatus] = useState<FeedbackStatus>("idle");
   return (
     <div className="flex items-center gap-0.5 mt-1">
@@ -298,7 +306,7 @@ function QueenMessageActions({
           type="button"
           onClick={onBranch}
           className="p-1 rounded-md text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/40 transition-colors"
-          title="Branch from here — continue in a new session that ends at this reply"
+          title={t("Branch from here — continue in a new session that ends at this reply")}
         >
           <GitBranch className="w-3 h-3" />
         </button>
@@ -311,7 +319,7 @@ function QueenMessageActions({
       />
       <DownloadPdfBtn
         text={content}
-        title={queenTitle ? `${queenTitle} response` : "Queen response"}
+        title={queenTitle ? t("{title} response", { title: queenTitle }) : t("Queen response")}
       />
       <FeedbackStatusMessage status={status} onClear={() => setStatus("idle")} />
     </div>
@@ -327,20 +335,21 @@ function FeedbackStatusMessage({
   status: FeedbackStatus;
   onClear: () => void;
 }) {
+  const { t } = useI18n();
   useEffect(() => {
     if (status === "idle") return;
-    const t = setTimeout(onClear, 4000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onClear, 4000);
+    return () => clearTimeout(timer);
   }, [status, onClear]);
 
   if (status === "idle") return null;
 
   const message =
     status === "saved"
-      ? "Thank you, we've logged this for future answer improvement"
+      ? t("Thank you, we've logged this for future answer improvement")
       : status === "cleared"
-        ? "Feedback cleared."
-        : "Couldn't save feedback — please try again.";
+        ? t("Feedback cleared.")
+        : t("Couldn't save feedback — please try again.");
   const tone = status === "error" ? "text-destructive" : "text-muted-foreground";
 
   return (
@@ -476,11 +485,12 @@ function AttachmentChip({
   /** Per-image credit cost (generated images) — rendered as a small badge. */
   credits?: number;
 }) {
+  const { t } = useI18n();
   const [openError, setOpenError] = useState<string | null>(null);
   const isImage = isImageAttachment(url) && url !== "file-pending" && url !== "file-uploaded";
   const showThumbPreview = isImage && url.startsWith("data:image/");
   const name = attachmentLabel(fileName);
-  const displayName = fileName ? name.label : isImage ? "Image" : "Document";
+  const displayName = fileName ? name.label : isImage ? t("Image") : t("Document");
   const sizeText = byteSize !== undefined ? formatBytes(byteSize) : undefined;
   // Resolve canonical hive-attachment:// refs to fetchable route URLs.
   // For data: URIs and already-resolved API URLs this is a pass-through.
@@ -507,7 +517,7 @@ function AttachmentChip({
       setOpenError(null);
       const res = openAttachmentInBrowser(fetchableUrl);
       if (res.ok === false) {
-        setOpenError(res.error || "Couldn't open file");
+        setOpenError(res.error || t("Couldn't open file"));
         console.error("[openAttachment] failed", res.error, fetchableUrl);
       }
       return;
@@ -516,7 +526,7 @@ function AttachmentChip({
     // non-image with no other target: surface it rather than silently
     // no-op'ing into the image lightbox.
     if (!isImage && fetchableUrl.startsWith("hive-attachment://")) {
-      setOpenError("Still loading — try again in a moment");
+      setOpenError(t("Still loading — try again in a moment"));
       return;
     }
     if (onClick) onClick();
@@ -579,9 +589,9 @@ function AttachmentChip({
         {credits !== undefined && credits > 0 && (
           <span
             className="text-[10px] leading-tight font-medium text-amber-600 dark:text-amber-400"
-            title="Credits used to generate this image"
+            title={t("Credits used to generate this image")}
           >
-            ≈ {credits >= 1 ? Math.round(credits) : credits.toFixed(2)} credits
+            {t("≈ {count} credits", { count: credits >= 1 ? Math.round(credits) : credits.toFixed(2) })}
           </span>
         )}
         {openError && (
@@ -614,6 +624,7 @@ function GeneratedImageCard({
   sessionId?: string;
   onClick?: () => void;
 }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   // Resolve canonical hive-attachment:// refs to fetchable URLs (same as the
   // chip). Until sessionId is known the ref can't load — show a spinner.
@@ -634,12 +645,12 @@ function GeneratedImageCard({
         type="button"
         onClick={onClick}
         className="block w-full cursor-zoom-in"
-        title="View full size"
+        title={t("View full size")}
       >
         {isResolvable ? (
           <img
             src={fetchableUrl}
-            alt={fileName || "Generated image"}
+            alt={fileName || t("Generated image")}
             className="w-full max-h-60 object-cover bg-muted"
             onError={(e) => {
               e.currentTarget.style.display = "none";
@@ -655,14 +666,14 @@ function GeneratedImageCard({
         <div className="flex items-center gap-1.5 min-w-0">
           <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" />
           <span className="text-[11px] font-medium text-foreground/90 truncate">
-            Generated image
+            {t("Generated image")}
           </span>
           {credits !== undefined && credits > 0 && (
             <span
               className="text-[10px] font-medium text-amber-600 dark:text-amber-400 whitespace-nowrap"
-              title="Credits this image cost"
+              title={t("Credits this image cost")}
             >
-              · {credits >= 1 ? Math.round(credits) : credits.toFixed(2)} credits
+              {t("· {count} credits", { count: credits >= 1 ? Math.round(credits) : credits.toFixed(2) })}
             </span>
           )}
         </div>
@@ -677,7 +688,7 @@ function GeneratedImageCard({
               });
             })}
             className={iconBtn}
-            title="Copy image to clipboard"
+            title={t("Copy image to clipboard")}
           >
             {copied ? (
               <Check className="w-3.5 h-3.5 text-primary" />
@@ -690,7 +701,7 @@ function GeneratedImageCard({
               saveAttachmentAsDownload(fetchableUrl, fileName);
             })}
             className={iconBtn}
-            title="Save as…"
+            title={t("Save as…")}
           >
             <Download className="w-3.5 h-3.5" />
           </button>
@@ -699,7 +710,7 @@ function GeneratedImageCard({
               openAttachmentInBrowser(fetchableUrl);
             })}
             className={iconBtn}
-            title="Open with default app"
+            title={t("Open with default app")}
           >
             <ExternalLink className="w-3.5 h-3.5" />
           </button>
@@ -726,7 +737,7 @@ function classifyAttachment(file: File): AttachmentKind {
 }
 
 /** Returns null if the file is acceptable, or a human-readable error string. */
-function checkAttachmentSize(file: File, kind: AttachmentKind): string | null {
+function checkAttachmentSize(file: File, kind: AttachmentKind, t: TFunction): string | null {
   const cap =
     kind === "pdf"
       ? UPLOAD_LIMITS.pdfMaxBytes
@@ -738,7 +749,12 @@ function checkAttachmentSize(file: File, kind: AttachmentKind): string | null {
             ? UPLOAD_LIMITS.imageMaxBytes
             : UPLOAD_LIMITS.fileMaxBytes;
   if (file.size > cap) {
-    return `${file.name} is ${formatBytes(file.size)} — ${kind.toUpperCase()} limit is ${formatBytes(cap)}.`;
+    return t("{name} is {size} — {kind} limit is {cap}.", {
+      name: file.name,
+      size: formatBytes(file.size),
+      kind: kind.toUpperCase(),
+      cap: formatBytes(cap),
+    });
   }
   return null;
 }
@@ -1015,8 +1031,8 @@ interface ChatPanelProps {
 const queenColor = "hsl(30,73%,47%)";
 const workerColor = "hsl(220,60%,55%)";
 
-function queenPhaseLabel(phase?: QueenPhase, title?: string): string {
-  return title || phase || "independent";
+function queenPhaseLabel(t: TFunction, phase?: QueenPhase, title?: string): string {
+  return title || (phase ? t(phase) : t("independent"));
 }
 
 function queenPhaseBadgeClass(_phase?: QueenPhase): string {
@@ -1215,6 +1231,7 @@ function formatTimeOfDay(ms: number): string {
 /** Per-call timing line shown inside the expanded panel for non-
  * terminal tools (terminal_* uses TerminalToolDetail with stdout). */
 function GenericCallDetail({ entry }: { entry: ToolEntryLike }) {
+  const { t } = useI18n();
   const status = entryStatus(entry);
   const interrupted = status === "interrupted";
   const started = entry.startedAt;
@@ -1229,9 +1246,9 @@ function GenericCallDetail({ entry }: { entry: ToolEntryLike }) {
       </span>
       {started !== undefined && <span>{formatTimeOfDay(started)}</span>}
       {duration && <span className="text-muted-foreground/70">· {duration}</span>}
-      {interrupted && <span className="italic text-muted-foreground/70">· interrupted</span>}
+      {interrupted && <span className="italic text-muted-foreground/70">· {t("interrupted")}</span>}
       {started === undefined && !interrupted && (
-        <span className="italic text-muted-foreground/70">no timing</span>
+        <span className="italic text-muted-foreground/70">{t("no timing")}</span>
       )}
     </div>
   );
@@ -1335,6 +1352,7 @@ function humanizeColony(c: MigrationCandidate): string {
  *  full block on completion — collapsed by default so it never crowds the
  *  conversation, but present so a long native think doesn't look like a hang. */
 export function ReasoningRow({ content }: { content: string }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const trimmed = content.trim();
   if (!trimmed) return null;
@@ -1347,7 +1365,7 @@ export function ReasoningRow({ content }: { content: string }) {
         className="flex items-center gap-1.5 text-muted-foreground/70 hover:text-muted-foreground transition-colors"
       >
         <Brain className="w-3.5 h-3.5 shrink-0" />
-        <span className="italic">{open ? "Thinking" : preview}</span>
+        <span className="italic">{open ? t("Thinking") : preview}</span>
         <ChevronRight
           className={`w-3 h-3 shrink-0 transition-transform ${open ? "rotate-90" : ""}`}
         />
@@ -1447,6 +1465,7 @@ function ActivityBlock({
   live: boolean;
   onQuickReply?: (text: string) => void;
 }) {
+  const { t } = useI18n();
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
   const open = userOpen ?? live;
   const steps = activitySteps(messages);
@@ -1465,8 +1484,12 @@ function ActivityBlock({
   const lastToolsKey = [...steps].reverse().find((s) => s.kind === "tools")?.key;
 
   const summary = [
-    thoughts.length > 1 ? `Thought ${thoughts.length}×` : "Thought",
-    toolCount > 0 ? `${toolCount} ${toolCount === 1 ? "tool" : "tools"}` : null,
+    thoughts.length > 1 ? t("Thought {count}×", { count: thoughts.length }) : t("Thought"),
+    toolCount > 0
+      ? toolCount === 1
+        ? t("{count} tool", { count: toolCount })
+        : t("{count} tools", { count: toolCount })
+      : null,
     workedFor,
   ]
     .filter(Boolean)
@@ -1483,7 +1506,7 @@ function ActivityBlock({
         <Brain className="w-3.5 h-3.5 shrink-0" />
         {live ? (
           <span className="queen-debate-line hive-activity-live">
-            {latestThought?.kind === "thought" ? latestThought.text.split("\n")[0] : "Thinking…"}
+            {latestThought?.kind === "thought" ? latestThought.text.split("\n")[0] : t("Thinking…")}
           </span>
         ) : (
           <span className="hive-activity-summary">{summary}</span>
@@ -1514,6 +1537,7 @@ function ActivityBlock({
 
 /** A thought in the activity timeline: a few lines, the rest on demand. */
 function ThoughtText({ text }: { text: string }) {
+  const { t } = useI18n();
   const [full, setFull] = useState(false);
   const long = text.length > 280 || text.split("\n").length > 4;
   return (
@@ -1521,7 +1545,7 @@ function ThoughtText({ text }: { text: string }) {
       <p className={full || !long ? undefined : "line-clamp-4"}>{text}</p>
       {long && (
         <button type="button" onClick={() => setFull((v) => !v)} className="hive-activity-more">
-          {full ? "Show less" : "Show all"}
+          {full ? t("Show less") : t("Show all")}
         </button>
       )}
     </div>
@@ -1538,6 +1562,7 @@ export function ToolActivityRow({
    *  older reveal cards from re-asking a question already answered. */
   onQuickReply?: (text: string) => void;
 }) {
+  const { t } = useI18n();
   let tools: ToolEntryLike[] = [];
   try {
     tools = JSON.parse(content).tools ?? [];
@@ -1596,10 +1621,10 @@ export function ToolActivityRow({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[13px] font-medium leading-tight text-foreground">
-                Open CRM
+                {t("Open CRM")}
               </span>
               <span className="block text-[11px] leading-tight text-muted-foreground">
-                View the pipeline and contacts
+                {t("View the pipeline and contacts")}
               </span>
             </span>
             <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -1637,6 +1662,7 @@ function MigrationOptions({
   candidates: MigrationCandidate[];
   onQuickReply: (text: string) => void;
 }) {
+  const { t } = useI18n();
   // Answered once, gone — a question already answered must stop looking askable.
   const [answered, setAnswered] = useState(false);
   if (answered) return null;
@@ -1650,7 +1676,7 @@ function MigrationOptions({
     <div className="pl-10">
       <div className="max-w-sm space-y-1.5">
         <p className="text-[11px] text-muted-foreground">
-          Bring in leads you already have?
+          {t("Bring in leads you already have?")}
         </p>
         <div className="flex flex-wrap gap-1.5">
           {candidates.map((c) => (
@@ -1663,7 +1689,7 @@ function MigrationOptions({
               }
               className="rounded-md border border-border/60 bg-card px-2.5 py-1.5 text-[12px] text-foreground hover:border-primary/40 hover:bg-accent/40 transition-colors"
             >
-              Import {c.row_count.toLocaleString()} from{" "}
+              {t("Import {count} from", { count: c.row_count.toLocaleString() })}{" "}
               <span className="font-medium">{humanizeColony(c)}</span>
             </button>
           ))}
@@ -1671,7 +1697,7 @@ function MigrationOptions({
             onClick={() => pick("Don't import anything for now.")}
             className="rounded-md px-2.5 py-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
           >
-            Not now
+            {t("Not now")}
           </button>
         </div>
       </div>
@@ -1861,6 +1887,7 @@ function InlineAskUserBubble({
   queenProfileId?: string | null;
   onImageClick?: (images: ImageContent[], index: number, sessionId?: string) => void;
 }) {
+  const { t } = useI18n();
   const [state, setState] = useState<"pending" | "submitted" | "dismissed">(
     "pending",
   );
@@ -1908,9 +1935,9 @@ function InlineAskUserBubble({
       : undefined;
   const handleAvatarClick = handleQueenClick ?? handleWorkerClick;
   const avatarTitle = handleQueenClick
-    ? `View ${msg.agent}'s profile`
+    ? t("View {name}'s profile", { name: msg.agent })
     : handleWorkerClick
-      ? "Open worker in colony sidebar"
+      ? t("Open worker in colony sidebar")
       : undefined;
 
   const handleSubmit = (answers: Record<string, string>) => {
@@ -1962,7 +1989,7 @@ function InlineAskUserBubble({
             const badgeClass = isQueen
               ? queenPhaseBadgeClass(effectivePhase)
               : "bg-muted text-muted-foreground";
-            const label = isQueen ? queenPhaseLabel(effectivePhase, queenTitle) : "Worker";
+            const label = isQueen ? queenPhaseLabel(t, effectivePhase, queenTitle) : t("Worker");
             return (
               <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${badgeClass}`}>
                 {label}
@@ -2000,6 +2027,7 @@ function InheritedBlock({
   content: string;
   renderMessage: (msg: ChatMessage) => React.ReactNode;
 }) {
+  const { t } = useI18n();
   // Default to collapsed — the colony's own conversation is what the
   // user navigated for; the inherited DM transcript is one click away.
   const [open, setOpen] = useState(false);
@@ -2030,17 +2058,19 @@ function InheritedBlock({
         className="w-full flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/30 hover:bg-muted/50 px-3 py-2 rounded-md border border-border/40 transition-colors"
       >
         <span className="font-medium">
-          {open ? "▼" : "▶"} Inherited from previous queen DM
+          {open ? "▼" : "▶"} {t("Inherited from previous queen DM")}
         </span>
         <span className="text-muted-foreground/70">
-          ({count} message{count === 1 ? "" : "s"})
+          {count === 1
+            ? t("({count} message)", { count })
+            : t("({count} messages)", { count })}
         </span>
       </button>
       {open ? (
         <div className="mt-2 pl-3 border-l-2 border-border/40 space-y-2">
           {messages.length === 0 ? (
             <div className="text-[11px] text-muted-foreground italic px-2 py-1">
-              {preview || "No messages preserved."}
+              {preview || t("No messages preserved.")}
             </div>
           ) : (
             messages.map((m) => (
@@ -2144,6 +2174,7 @@ const MessageBubble = memo(
     /** Pre-loaded vote for this message; hydrates FeedbackBtns. */
     initialVote?: Vote | null;
   }) {
+    const { t } = useI18n();
     const isUser = msg.type === "user";
     const isQueen = msg.role === "queen";
     const color = getColor(msg.agent, msg.role);
@@ -2209,7 +2240,7 @@ const MessageBubble = memo(
       } catch {
         // Fall through to plain text
       }
-      const label = parsed.name || parsed.trigger_id || "trigger";
+      const label = parsed.name || parsed.trigger_id || t("trigger");
       const kind = parsed.trigger_type || "timer";
       const task = (parsed.task || "").trim();
       const fireCount = parsed.fire_count;
@@ -2221,7 +2252,7 @@ const MessageBubble = memo(
                 <Zap className="w-3 h-3" />
               </span>
               <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">
-                {kind === "webhook" ? "Webhook" : "Scheduler"} fired
+                {kind === "webhook" ? t("Webhook fired") : t("Scheduler fired")}
               </span>
               <span className="text-[11px] text-foreground font-mono truncate">{label}</span>
               {fireCount != null && fireCount > 0 && (
@@ -2258,9 +2289,9 @@ const MessageBubble = memo(
       const colonyId = parsed.colony_id || "";
       const href = parsed.href || (colonyId ? `/colony/${colonyId}` : "");
       const skillLabel = parsed.skill_name
-        ? ` · skill: ${parsed.skill_name}`
+        ? t(" · skill: {name}", { name: parsed.skill_name })
         : "";
-      const isNewLabel = parsed.is_new === false ? " (updated)" : " (new)";
+      const isNewLabel = parsed.is_new === false ? t(" (updated)") : t(" (new)");
       return (
         <div className="flex justify-center py-2">
           <Link
@@ -2274,7 +2305,7 @@ const MessageBubble = memo(
           >
             <span>🏛️</span>
             <span>
-              Colony <strong>{colonyId}</strong>{isNewLabel} ready{skillLabel} — open
+              {t("Colony")} <strong>{colonyId}</strong>{isNewLabel}{t(" ready")}{skillLabel}{t(" — open")}
             </span>
           </Link>
         </div>
@@ -2360,7 +2391,7 @@ const MessageBubble = memo(
                 {msg.queued && (
                   <span className="inline-flex items-center gap-1">
                     <span className="w-1 h-1 rounded-full bg-amber-400 animate-pulse" />
-                    queued
+                    {t("queued")}
                   </span>
                 )}
                 {msg.createdAt && <span>{formatMessageTime(msg.createdAt)}</span>}
@@ -2373,7 +2404,7 @@ const MessageBubble = memo(
               <button
                 onClick={() => onRetry(stripSystemReminders(msg.content))}
                 className="p-1 rounded-md text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/40 transition-all duration-150"
-                title="Retry this message"
+                title={t("Retry this message")}
               >
                 <RotateCcw className="w-3 h-3" />
               </button>
@@ -2382,7 +2413,7 @@ const MessageBubble = memo(
               <button
                 onClick={() => onEdit(stripSystemReminders(msg.content))}
                 className="p-1 rounded-md text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/40 transition-all duration-150"
-                title="Edit in composer"
+                title={t("Edit in composer")}
               >
                 <Pencil className="w-3 h-3" />
               </button>
@@ -2391,7 +2422,7 @@ const MessageBubble = memo(
               <button
                 onClick={() => onBranch(msg)}
                 className="p-1 rounded-md text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/40 transition-all duration-150"
-                title="Edit in a new branch — continue from just before this message"
+                title={t("Edit in a new branch — continue from just before this message")}
               >
                 <GitBranch className="w-3 h-3" />
               </button>
@@ -2404,10 +2435,10 @@ const MessageBubble = memo(
                   type="button"
                   onClick={() => onSteer(msg.id)}
                   className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 hover:bg-amber-500/25 border border-amber-500/30 transition-colors"
-                  title="Send now — influence the current turn after the next tool call"
+                  title={t("Send now — influence the current turn after the next tool call")}
                 >
                   <Zap className="w-3 h-3" />
-                  Steer
+                  {t("Steer")}
                 </button>
               )}
               {onCancelQueued && (
@@ -2415,10 +2446,10 @@ const MessageBubble = memo(
                   type="button"
                   onClick={() => onCancelQueued(msg.id)}
                   className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground hover:bg-muted border border-border transition-colors"
-                  title="Remove this queued message"
+                  title={t("Remove this queued message")}
                 >
                   <X className="w-3 h-3" />
-                  Cancel
+                  {t("Cancel")}
                 </button>
               )}
             </div>
@@ -2436,9 +2467,9 @@ const MessageBubble = memo(
         : undefined;
     const handleAvatarClick = handleQueenClick ?? handleWorkerClick;
     const avatarTitle = handleQueenClick
-      ? `View ${msg.agent}'s profile`
+      ? t("View {name}'s profile", { name: msg.agent })
       : handleWorkerClick
-        ? "Open worker in colony sidebar"
+        ? t("Open worker in colony sidebar")
         : undefined;
 
     return (
@@ -2478,7 +2509,7 @@ const MessageBubble = memo(
                     : "bg-muted text-muted-foreground"
                 }`}
               >
-                {isQueen ? queenPhaseLabel(msg.phase ?? queenPhase, queenTitle) : "Worker"}
+                {isQueen ? queenPhaseLabel(t, msg.phase ?? queenPhase, queenTitle) : t("Worker")}
               </span>
             )}
             {isQueen && isQueenBusy && (
@@ -2659,6 +2690,7 @@ export default function ChatPanel({
   sseState = "live",
   lastEventAt,
 }: ChatPanelProps) {
+  const { t } = useI18n();
   // Unique per chat: agentPath already distinguishes colonies, while every
   // queen DM shares the constant activeThread "queen-dm" so the queen id
   // disambiguates those. Drives the per-thread draft store below.
@@ -3809,7 +3841,7 @@ export default function ChatPanel({
           const msg = err instanceof Error ? err.message : String(err);
           console.error("[ChatPanel] file upload failed:", err);
           uploadErrors.push(
-            `${f._fileName || "file"}: upload failed — ${msg}`,
+            t("{name}: upload failed — {error}", { name: f._fileName || "file", error: msg }),
           );
         } finally {
           // Remove ONE matching entry (not all) so duplicate filenames in
@@ -3905,20 +3937,26 @@ export default function ChatPanel({
 
     for (const file of files) {
       const kind = classifyAttachment(file);
-      const sizeError = checkAttachmentSize(file, kind);
+      const sizeError = checkAttachmentSize(file, kind, t);
       if (sizeError) {
         errors.push(sizeError);
         continue;
       }
       if (runningCount + 1 > UPLOAD_LIMITS.maxAttachments) {
         errors.push(
-          `${file.name}: max ${UPLOAD_LIMITS.maxAttachments} attachments per message.`,
+          t("{name}: max {count} attachments per message.", {
+            name: file.name,
+            count: UPLOAD_LIMITS.maxAttachments,
+          }),
         );
         continue;
       }
       if (runningBytes + file.size > UPLOAD_LIMITS.maxTotalBytes) {
         errors.push(
-          `${file.name}: combined attachment size would exceed ${formatBytes(UPLOAD_LIMITS.maxTotalBytes)}.`,
+          t("{name}: combined attachment size would exceed {size}.", {
+            name: file.name,
+            size: formatBytes(UPLOAD_LIMITS.maxTotalBytes),
+          }),
         );
         continue;
       }
@@ -4027,19 +4065,19 @@ export default function ChatPanel({
   let livenessPill: { label: string; className: string } | null = null;
   if (sseState === "reconnecting") {
     livenessPill = {
-      label: "Reconnecting…",
+      label: t("Reconnecting…"),
       className: "text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-200/60",
     };
   } else if (sseState === "closed") {
     livenessPill = {
-      label: "Stream closed",
+      label: t("Stream closed"),
       className: "text-muted-foreground bg-muted/50 border-border",
     };
   } else if (isBusy && lastEventAt) {
     const ageS = Math.floor((Date.now() - lastEventAt) / 1000);
     if (ageS >= 30) {
       livenessPill = {
-        label: `No activity for ${ageS}s`,
+        label: t("No activity for {seconds}s", { seconds: ageS }),
         className: "text-orange-600 bg-orange-50 dark:bg-orange-950/40 border-orange-200/60",
       };
     } else if (ageS >= 10) {
@@ -4047,7 +4085,7 @@ export default function ChatPanel({
       // long screenshots or LLM TTFT — distinguishes "thinking" from
       // "frozen".
       livenessPill = {
-        label: `Working… ${ageS}s`,
+        label: t("Working… {seconds}s", { seconds: ageS }),
         className: "text-muted-foreground bg-muted/50 border-border",
       };
     }
@@ -4058,12 +4096,12 @@ export default function ChatPanel({
       {/* Compact sub-header */}
       <div className="px-5 pt-4 pb-2 flex items-center gap-2">
         <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
-          Conversation
+          {t("Conversation")}
         </p>
         {livenessPill && (
           <span
             className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${livenessPill.className}`}
-            title="Connection / queen liveness"
+            title={t("Connection / queen liveness")}
           >
             {livenessPill.label}
           </span>
@@ -4095,7 +4133,7 @@ export default function ChatPanel({
                 setSearchQuery("");
               }
             }}
-            placeholder="Find in conversation…"
+            placeholder={t("Find in conversation…")}
             className="w-48 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none px-1"
           />
           <span className="text-[10px] font-mono text-muted-foreground/70 px-1 select-none">
@@ -4114,7 +4152,7 @@ export default function ChatPanel({
             }}
             disabled={searchMatchedIds.length === 0}
             className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Previous match (Shift+Enter)"
+            title={t("Previous match (Shift+Enter)")}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="3,7 6,4 9,7" /></svg>
           </button>
@@ -4125,7 +4163,7 @@ export default function ChatPanel({
             }}
             disabled={searchMatchedIds.length === 0}
             className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Next match (Enter)"
+            title={t("Next match (Enter)")}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="3,5 6,8 9,5" /></svg>
           </button>
@@ -4135,7 +4173,7 @@ export default function ChatPanel({
               setSearchQuery("");
             }}
             className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            title="Close (Esc)"
+            title={t("Close (Esc)")}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="3" x2="9" y2="9" /><line x1="9" y1="3" x2="3" y2="9" /></svg>
           </button>
@@ -4152,7 +4190,7 @@ export default function ChatPanel({
             is loaded. Sits at the very top, above the history transcript. */}
         {hasMoreOlder && (
           <div className="flex justify-center py-2 text-[10px] text-muted-foreground/60 select-none">
-            Loading older messages…
+            {t("Loading older messages…")}
           </div>
         )}
 
@@ -4434,10 +4472,10 @@ export default function ChatPanel({
             scrollToLatest("smooth");
           }}
           className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background border border-border shadow-md text-xs text-foreground hover:bg-muted transition-colors"
-          aria-label="Jump to latest message"
+          aria-label={t("Jump to latest message")}
         >
           <ArrowDown className="w-3.5 h-3.5" />
-          Jump to latest
+          {t("Jump to latest")}
         </button>
       )}
       </div>
@@ -4448,15 +4486,14 @@ export default function ChatPanel({
         <div className="p-4 border-t border-border/50 bg-muted/20">
           <div className="flex flex-col items-center gap-2 text-center">
             <p className="text-xs text-muted-foreground max-w-md">
-              This conversation spawned colony{" "}
+              {t("This conversation spawned colony")}{" "}
               {spawnedColonyName ? (
                 <strong className="text-foreground">{spawnedColonyName}</strong>
               ) : (
-                "a colony"
+                t("a colony")
               )}
-              . To keep chatting with{" "}
-              {queenDisplayName || "this queen"}, compact this session and start
-              a fresh one.
+              {t(". To keep chatting with")}{" "}
+              {queenDisplayName || t("this queen")}{t(", compact this session and start a fresh one.")}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <button
@@ -4472,12 +4509,12 @@ export default function ChatPanel({
                 {compactingAndForking ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Compacting…</span>
+                    <span>{t("Compacting…")}</span>
                   </>
                 ) : (
                   <span>
-                    Compact & start new session
-                    {queenDisplayName ? ` with ${queenDisplayName}` : ""}
+                    {t("Compact & start new session")}
+                    {queenDisplayName ? t(" with {name}", { name: queenDisplayName }) : ""}
                   </span>
                 )}
               </button>
@@ -4491,12 +4528,12 @@ export default function ChatPanel({
                   {startingNewSession ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Starting…</span>
+                      <span>{t("Starting…")}</span>
                     </>
                   ) : (
                     <span>
-                      Start new session
-                      {queenDisplayName ? ` with ${queenDisplayName}` : ""}
+                      {t("Start new session")}
+                      {queenDisplayName ? t(" with {name}", { name: queenDisplayName }) : ""}
                     </span>
                   )}
                 </button>
@@ -4542,10 +4579,10 @@ export default function ChatPanel({
             <div className="absolute inset-2 z-10 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/60 bg-background/85 backdrop-blur-sm pointer-events-none">
               <Paperclip className="w-5 h-5 text-primary" />
               <span className="text-sm font-medium text-primary">
-                Drop to attach
+                {t("Drop to attach")}
               </span>
               <span className="text-xs text-muted-foreground">
-                Images, PDF, or CSV
+                {t("Images, PDF, or CSV")}
               </span>
             </div>
           )}
@@ -4586,7 +4623,7 @@ export default function ChatPanel({
                 type="button"
                 onClick={() => setUploadError(null)}
                 className="flex-shrink-0 opacity-70 hover:opacity-100"
-                aria-label="Dismiss"
+                aria-label={t("Dismiss")}
               >
                 <X className="w-3 h-3" />
               </button>
@@ -4606,7 +4643,7 @@ export default function ChatPanel({
               disabled={disabled}
               onClick={() => fileInputRef.current?.click()}
               className="flex-shrink-0 p-1 rounded-md text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
-              title="Attach a file (image, PDF, CSV, or text)"
+              title={t("Attach a file (image, PDF, CSV, or text)")}
             >
               <Paperclip className="w-4 h-4" />
             </button>
@@ -4637,14 +4674,14 @@ export default function ChatPanel({
                 }}
                 placeholder={
                   disabled
-                    ? "Connecting to agent..."
+                    ? t("Connecting to agent...")
                     : paymentLocked
-                      ? "Subscribe to start chatting..."
+                      ? t("Subscribe to start chatting...")
                       : sendLocked
-                        ? "Type ahead — send unlocks once the queen is ready..."
+                        ? t("Type ahead — send unlocks once the queen is ready...")
                         : isBusy
-                          ? "Queue a message — or click Steer to inject now..."
-                          : "Message Queen Bee..."
+                          ? t("Queue a message — or click Steer to inject now...")
+                          : t("Message Queen Bee...")
                 }
               />
             </div>
@@ -4652,7 +4689,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={onCancel}
-                title="Stop all colony activity"
+                title={t("Stop all colony activity")}
                 className="p-2 rounded-lg bg-red-500/15 text-red-400 border border-red-500/40 hover:bg-red-500/25 transition-colors"
               >
                 <Square className="w-4 h-4" />
@@ -4662,7 +4699,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={onPaymentLockedSend}
-                title="Subscribe to send. Click to view your plan."
+                title={t("Subscribe to send. Click to view your plan.")}
                 className="p-2 rounded-lg bg-muted text-muted-foreground border border-border/60 hover:bg-muted/70 transition-colors"
               >
                 <Lock className="w-4 h-4" />
@@ -4678,12 +4715,14 @@ export default function ChatPanel({
                 }
                 title={
                   sendLocked
-                    ? "Hold tight — the queen is starting up. Send unlocks once she's ready."
+                    ? t("Hold tight — the queen is starting up. Send unlocks once she's ready.")
                     : uploadingFiles.length > 0
-                      ? `Uploading ${uploadingFiles.length} file${uploadingFiles.length === 1 ? "" : "s"}…`
+                      ? uploadingFiles.length === 1
+                        ? t("Uploading {count} file…", { count: uploadingFiles.length })
+                        : t("Uploading {count} files…", { count: uploadingFiles.length })
                       : isBusy
-                        ? "Queue message — sent after the current turn, or click Steer on the bubble to send now"
-                        : "Send"
+                        ? t("Queue message — sent after the current turn, or click Steer on the bubble to send now")
+                        : t("Send")
                 }
                 className={`p-2 rounded-lg disabled:opacity-30 hover:opacity-90 transition-opacity ${
                   isBusy
@@ -4740,6 +4779,7 @@ function ImageCarouselModal({
   const [index, setIndex] = useState(initialIndex);
   const [zoom, setZoom] = useState(1);
   const [copied, setCopied] = useState(false);
+  const { t } = useI18n();
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
@@ -4820,7 +4860,7 @@ function ImageCarouselModal({
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40">
           <span className="flex items-center gap-2 min-w-0 text-xs text-muted-foreground">
             <span className="truncate font-medium text-foreground" title={current._fileName}>
-              {current._fileName ? attachmentLabel(current._fileName).label : isFile ? "File preview" : "Image preview"}
+              {current._fileName ? attachmentLabel(current._fileName).label : isFile ? t("File preview") : t("Image preview")}
             </span>
             {images.length > 1 && (
               <span className="flex-shrink-0 font-mono text-[10.5px] tabular-nums">
@@ -4841,7 +4881,7 @@ function ImageCarouselModal({
                     });
                   }}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  title="Copy image to clipboard"
+                  title={t("Copy image to clipboard")}
                 >
                   {copied ? (
                     <Check className="w-4 h-4 text-primary" />
@@ -4854,7 +4894,7 @@ function ImageCarouselModal({
                     saveAttachmentAsDownload(displayUrl, current._fileName);
                   }}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  title="Save as…"
+                  title={t("Save as…")}
                 >
                   <Download className="w-4 h-4" />
                 </button>
@@ -4863,7 +4903,7 @@ function ImageCarouselModal({
                     openAttachmentInBrowser(displayUrl);
                   }}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  title="Open with default app"
+                  title={t("Open with default app")}
                 >
                   <ExternalLink className="w-4 h-4" />
                 </button>
@@ -4875,7 +4915,7 @@ function ImageCarouselModal({
                 <button
                   onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  title="Zoom out (−)"
+                  title={t("Zoom out (−)")}
                 >
                   <ZoomOut className="w-4 h-4" />
                 </button>
@@ -4885,14 +4925,14 @@ function ImageCarouselModal({
                 <button
                   onClick={() => setZoom((z) => Math.min(5, z + 0.25))}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  title="Zoom in (+)"
+                  title={t("Zoom in (+)")}
                 >
                   <ZoomIn className="w-4 h-4" />
                 </button>
                 <button
                   onClick={resetView}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  title="Reset (0)"
+                  title={t("Reset (0)")}
                 >
                   <RotateCw className="w-3.5 h-3.5" />
                 </button>
@@ -4937,7 +4977,7 @@ function ImageCarouselModal({
           >
             <img
               src={displayUrl}
-              alt={`Image ${index + 1}`}
+              alt={t("Image {index}", { index: index + 1 })}
               draggable={false}
               className="select-none"
               style={{

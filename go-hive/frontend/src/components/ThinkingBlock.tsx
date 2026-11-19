@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import MarkdownContent from "./MarkdownContent";
+import { useI18n } from "@/i18n";
 
 interface ThinkingBlockProps {
   content: string;
@@ -8,6 +9,7 @@ interface ThinkingBlockProps {
 }
 
 export default function ThinkingBlock({ content, defaultExpanded = false }: ThinkingBlockProps) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
@@ -19,7 +21,7 @@ export default function ThinkingBlock({ content, defaultExpanded = false }: Thin
         {expanded
           ? <ChevronDown className="w-3 h-3 shrink-0" />
           : <ChevronRight className="w-3 h-3 shrink-0" />}
-        <span className="font-medium">Thinking</span>
+        <span className="font-medium">{t("Thinking")}</span>
       </button>
       {expanded && (
         <div className="px-2.5 pb-2 text-xs text-muted-foreground border-t border-border/15">

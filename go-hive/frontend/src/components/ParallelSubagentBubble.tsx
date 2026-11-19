@@ -4,6 +4,7 @@ import type { ChatMessage, ContextUsageEntry } from "@/components/ChatPanel";
 import MarkdownContent from "@/components/MarkdownContent";
 import { cssVar } from "@/lib/graphUtils";
 import { useColonyWorkers } from "@/context/ColonyWorkersContext";
+import { useI18n } from "@/i18n";
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -168,6 +169,7 @@ function MuxPane({
 }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
+  const { t } = useI18n();
   const color = colorForIndex(index);
   const pct = group.contextUsage?.usagePct ?? 0;
 
@@ -284,7 +286,7 @@ function MuxPane({
             <MarkdownContent content={latestContent} />
           </div>
         ) : (
-          <span style={{ color: mux.waitingText }}>waiting...</span>
+          <span style={{ color: mux.waitingText }}>{t("waiting...")}</span>
         )}
         {/* Blinking cursor — hidden when finished */}
         {!isFinished && (
@@ -315,6 +317,7 @@ function MuxPane({
 
 const ParallelSubagentBubble = memo(
   function ParallelSubagentBubble({ groups }: ParallelSubagentBubbleProps) {
+    const { t } = useI18n();
     const [expanded, setExpanded] = useState(false);
     const [zoomedIdx, setZoomedIdx] = useState<number | null>(null);
     const mux = useMuxColors();
@@ -378,8 +381,8 @@ const ParallelSubagentBubble = memo(
         <button
           type="button"
           onClick={() => openColonyWorkers()}
-          aria-label="Open colony sidebar"
-          title="Open colony sidebar"
+          aria-label={t("Open colony sidebar")}
+          title={t("Open colony sidebar")}
           className="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center mt-1 transition-opacity hover:opacity-80 cursor-pointer"
           style={{
             backgroundColor: `${workerColor}18`,
@@ -393,10 +396,12 @@ const ParallelSubagentBubble = memo(
           {/* Header */}
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-xs" style={{ color: workerColor }}>
-              {groups.length === 1 ? "Sub-agent" : "Parallel Agents"}
+              {groups.length === 1 ? t("Sub-agent") : t("Parallel Agents")}
             </span>
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
-              {activeCount > 0 ? `${activeCount} running` : `${groups.length} done`}
+              {activeCount > 0
+                ? t("{count} running", { count: activeCount })
+                : t("{count} done", { count: groups.length })}
             </span>
             <button
               onClick={() => {
@@ -404,7 +409,7 @@ const ParallelSubagentBubble = memo(
                 setZoomedIdx(null);
               }}
               className="ml-auto text-muted-foreground/60 hover:text-muted-foreground transition-colors p-0.5 rounded"
-              title={expanded ? "Collapse" : "Expand"}
+              title={expanded ? t("Collapse") : t("Expand")}
             >
               {expanded ? (
                 <ChevronUp className="w-3.5 h-3.5" />

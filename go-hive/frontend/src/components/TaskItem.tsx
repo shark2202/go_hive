@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Archive, Check, Circle, Hourglass, Loader2, Square, CheckSquare } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 import { type TaskRecord, type TaskStatus } from "@/api/tasks";
 import { isTaskIdle } from "@/context/TaskListContext";
@@ -14,20 +15,27 @@ interface TaskItemProps {
   readOnly?: boolean;
 }
 
-const STATUS_ICON: Record<TaskStatus, JSX.Element> = {
-  in_progress: (
-    <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" aria-label="in progress" />
-  ),
-  pending: <Square className="h-3.5 w-3.5 text-muted-foreground/60" aria-label="pending" />,
-  completed: <CheckSquare className="h-3.5 w-3.5 text-emerald-600" aria-label="completed" />,
-  // Abandoned: the sweep job swept this stale in_progress task because the
-  // queen never circled back. Same dim look as the client-side "idle" state.
-  abandoned: <Square className="h-3.5 w-3.5 text-muted-foreground/40" aria-label="abandoned" />,
-  // Archived: the user cleared the plan. Only ever rendered inside the
-  // collapsed "Archived" group (read-only), so this icon is the resting
-  // look for a parked row.
-  archived: <Archive className="h-3.5 w-3.5 text-muted-foreground/50" aria-label="archived" />,
-};
+type TFunction = (key: string, vars?: Record<string, string | number>) => string;
+
+function statusIcon(status: TaskStatus, t: TFunction): JSX.Element {
+  switch (status) {
+    case "in_progress":
+      return <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" aria-label={t("in progress")} />;
+    case "pending":
+      return <Square className="h-3.5 w-3.5 text-muted-foreground/60" aria-label={t("pending")} />;
+    case "completed":
+      return <CheckSquare className="h-3.5 w-3.5 text-emerald-600" aria-label={t("completed")} />;
+    // Abandoned: the sweep job swept this stale in_progress task because the
+    // queen never circled back. Same dim look as the client-side "idle" state.
+    case "abandoned":
+      return <Square className="h-3.5 w-3.5 text-muted-foreground/40" aria-label={t("abandoned")} />;
+    // Archived: the user cleared the plan. Only ever rendered inside the
+    // collapsed "Archived" group (read-only), so this icon is the resting
+    // look for a parked row.
+    case "archived":
+      return <Archive className="h-3.5 w-3.5 text-muted-foreground/50" aria-label={t("archived")} />;
+  }
+}
 
 function elapsedSince(ts: number): string {
   const now = Date.now() / 1000;
@@ -43,6 +51,7 @@ export default function TaskItem({
   onJumpToBlocker,
   readOnly = false,
 }: TaskItemProps) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const isBlocked = task.status === "pending" && unresolvedBlockers.length > 0;
   // Two sources of "this row is stale": the server has flipped status to
@@ -70,14 +79,14 @@ export default function TaskItem({
           {isBlocked ? (
             <Hourglass
               className="h-3.5 w-3.5 text-muted-foreground/70"
-              aria-label="waiting on dependency"
+              aria-label={t("waiting on dependency")}
             />
           ) : idle ? (
-            <Square className="h-3.5 w-3.5 text-muted-foreground/40" aria-label="idle" />
+            <Square className="h-3.5 w-3.5 text-muted-foreground/40" aria-label={t("idle")} />
           ) : staleInProgress ? (
-            <Square className="h-3.5 w-3.5 text-muted-foreground/60" aria-label="unfinished" />
+            <Square className="h-3.5 w-3.5 text-muted-foreground/60" aria-label={t("unfinished")} />
           ) : (
-            STATUS_ICON[task.status]
+            statusIcon(task.status, t)
           )}
         </span>
         <span className="flex-1 min-w-0">
@@ -93,10 +102,10 @@ export default function TaskItem({
           </span>
           <span className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
             {elapsed ? <span>{elapsed}</span> : null}
-            {idle ? <span className="italic">idle</span> : null}
+            {idle ? <span className="italic">{t("idle")}</span> : null}
             {unresolvedBlockers.length > 0 ? (
               <span>
-                blocked by{" "}
+                {t("blocked by")}{" "}
                 {unresolvedBlockers.map((b, idx) => (
                   <span key={b}>
                     <button
@@ -128,7 +137,7 @@ export default function TaskItem({
             </pre>
           ) : null}
           <p className="text-[10px]">
-            updated {new Date(task.updated_at * 1000).toLocaleString()}
+            {t("updated {date}", { date: new Date(task.updated_at * 1000).toLocaleString() })}
           </p>
         </div>
       ) : null}

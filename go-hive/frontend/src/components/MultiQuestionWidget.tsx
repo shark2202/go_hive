@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, MessageCircleQuestion, X } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 export interface QuestionItem {
   id: string;
@@ -20,6 +21,7 @@ export interface MultiQuestionWidgetProps {
 }
 
 export default function MultiQuestionWidget({ questions, onSubmit, onDismiss, inline = false }: MultiQuestionWidgetProps) {
+  const { t } = useI18n();
   // Per-question state: selected index (null = nothing, options.length = "Other")
   const [selections, setSelections] = useState<(number | null)[]>(
     () => questions.map(() => null),
@@ -87,10 +89,10 @@ export default function MultiQuestionWidget({ questions, onSubmit, onDismiss, in
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground">
-              {questions.length} questions
+              {t("{count} questions", { count: questions.length })}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              {answeredCount}/{questions.length} answered
+              {t("{answered}/{total} answered", { answered: answeredCount, total: questions.length })}
             </p>
           </div>
           {onDismiss && (
@@ -166,7 +168,7 @@ export default function MultiQuestionWidget({ questions, onSubmit, onDismiss, in
                           return next;
                         });
                       }}
-                      placeholder="Type a custom response..."
+                      placeholder={t("Type a custom response...")}
                       className={`w-full px-4 py-2 rounded-lg border border-dashed text-sm transition-colors bg-transparent placeholder:text-muted-foreground focus:outline-none ${
                         isOtherSelected
                           ? "border-primary bg-primary/10 text-foreground"
@@ -197,7 +199,7 @@ export default function MultiQuestionWidget({ questions, onSubmit, onDismiss, in
                         return next;
                       });
                     }}
-                    placeholder="Type your answer..."
+                    placeholder={t("Type your answer...")}
                     className="w-full px-4 py-2 rounded-lg border text-sm transition-colors bg-transparent placeholder:text-muted-foreground focus:outline-none border-border text-foreground hover:border-primary/40 focus:border-primary"
                   />
                 )}
@@ -214,7 +216,7 @@ export default function MultiQuestionWidget({ questions, onSubmit, onDismiss, in
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <Send className="w-3.5 h-3.5" />
-            Submit All
+            {t("Submit All")}
           </button>
         </div>
       </div>

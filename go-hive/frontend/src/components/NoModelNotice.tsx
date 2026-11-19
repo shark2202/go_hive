@@ -1,5 +1,6 @@
 import { Cpu } from "lucide-react";
 import { useModelOptional } from "@/context/ModelContext";
+import { useI18n } from "@/i18n";
 
 /**
  * Sits above a chat's composer while no AI model is set up: the queen can't
@@ -7,6 +8,7 @@ import { useModelOptional } from "@/context/ModelContext";
  * Renders nothing while the model config is loading, or once a model works.
  */
 export default function NoModelNotice() {
+  const { t } = useI18n();
   const model = useModelOptional();
   if (!model || model.loading || model.hasApiKey) return null;
   return (
@@ -18,14 +20,15 @@ export default function NoModelNotice() {
         <Cpu className="h-3.5 w-3.5" />
       </span>
       <span className="min-w-0 text-muted-foreground">
-        <span className="font-medium text-foreground">No AI model yet.</span> Connect one and your queens can reply.
+        <span className="font-medium text-foreground">{t("No AI model yet.")}</span>{" "}
+        {t("Connect one and your queens can reply.")}
       </span>
       <button
         type="button"
         onClick={() => (window.location.hash = "#/models")}
         className="ml-auto shrink-0 font-medium text-primary underline-offset-2 hover:underline"
       >
-        Set up a model →
+        {t("Set up a model →")}
       </button>
     </div>
   );
