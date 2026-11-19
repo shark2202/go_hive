@@ -875,9 +875,7 @@ func (l *colonyLifecycle) CreateColonyFromSource(params hiveserver.CreateColonyF
 }
 
 func stopColonyRuntime(runtime hiveserver.ColonyRuntime) {
-	if stopper, ok := runtime.(interface{ Stop() }); ok {
-		stopper.Stop()
-	}
+	hiveserver.StopColonyRuntime(runtime)
 }
 
 // persistAgentMeta mirrors load_colony's meta.json stamp (agent_name /

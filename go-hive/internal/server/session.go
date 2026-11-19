@@ -417,6 +417,19 @@ func (m *SessionManager) SessionCount() int {
 	return len(m.sessions)
 }
 
+// StopColonyRuntime stops a colony host when the concrete runtime exposes
+// Stop(). The read-only ColonyRuntime seam used by routes deliberately omits
+// lifecycle methods, so both the session teardown and the CLI unload path
+// share this single probe instead of duplicating the assertion.
+func StopColonyRuntime(runtime ColonyRuntime) {
+	if runtime == nil {
+		return
+	}
+	if stopper, ok := runtime.(interface{ Stop() }); ok {
+		stopper.Stop()
+	}
+}
+
 // Parity: framework/server/session_manager.py::SessionManager.stop_session
 func (m *SessionManager) StopSession(sessionID string) bool {
 	m.mu.Lock()
@@ -448,9 +461,7 @@ func (m *SessionManager) StopSession(sessionID string) bool {
 	// exit. The concrete runtimes expose Stop(); the read-only seam does not,
 	// so probe for it instead of widening ColonyRuntime for every caller.
 	if session.Colony != nil {
-		if stopper, ok := session.Colony.(interface{ Stop() }); ok {
-			stopper.Stop()
-		}
+		StopColonyRuntime(session.Colony)
 		session.Colony = nil
 	}
 
