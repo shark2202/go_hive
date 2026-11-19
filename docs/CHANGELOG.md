@@ -2,6 +2,10 @@
 
 本文件记录 Go 移植（`github.com/aden-hive/hive-go`）的版本内容。上游 Python 版本的发布说明在仓库根目录的 [`CHANGELOG.md`](../../CHANGELOG.md)。
 
+## 1.0.18-go.1 — 2026-11-19
+
+1.0.17 补丁：search_messages/search_timeline、doom-loop 检测、worker task list、run_playbook status/stop；测试 4,422、引用 4,657。
+
 ## 1.0.17-go.1 — 2026-11-19
 
 1.0.16 的补丁版：colony 事件桥 UI、overseer 输入源、MCP 白名单、worker reminder hub、REST reminders 镜像；测试 4,406、parity 引用 4,647。
