@@ -191,7 +191,7 @@ Windows 已知未验证点：
 在 `go_hive/go-hive/` 下：
 
 ```bash
-make ci    # fmt-check + vet + test + cross + parity + parity-targets
+make ci    # fmt-check + vet + test + cross + parity + parity-targets + wiring-check
 CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -tags e2e -count=1 ./e2e/...
 ```
 

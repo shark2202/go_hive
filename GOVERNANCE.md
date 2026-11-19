@@ -55,7 +55,7 @@
 | 门 | 内容 | 失败处理 |
 | --- | --- | --- |
 | G1 lane 自检 | `go build`、包测试、`gofmt -l`、parity 注解完整 | lane 内修复，不计返工 |
-| G2 合并门禁 | 全量 `make ci`（fmt/vet/test/cross/parity/parity-targets） | 打回原 lane，仅一次；二次失败即砍范围 |
+| G2 合并门禁 | 全量 `make ci`（fmt/vet/test/cross/parity/parity-targets/wiring-check） | 打回原 lane，仅一次；二次失败即砍范围 |
 | G3 集成门禁 | `-tags e2e` 全绿；`bash go_hive/scripts/smoke.sh` 全项 PASS（health 200 / create 201 / 无 key chat 503 / `/` 200 / SSE 200 / 未知会话 404） | integrator 修复 |
 | G4 复核门禁 | verifier 只读抽查 ≥10% parity 注解是否指向真实上游用例 | 造假注解整 lane 回退 |
 | G5 发布门禁 | 六平台交叉编译、`--version`、无 cgo（`grep -r 'import "C"'` 为 0） | 阻断发布 |
