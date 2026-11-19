@@ -183,6 +183,10 @@ type ChatRuntime struct {
 	// pendingQuestions is the ask_user question the current turn parked on.
 	// It survives until the next user message (the answer) starts a turn.
 	pendingQuestions []map[string]any
+	// pendingCredentialForm is the secure form the current turn parked on after
+	// a tool reported a missing credential (upstream: credentials(collect)).
+	// It survives until the next user message/trigger, like pendingQuestions.
+	pendingCredentialForm map[string]any
 
 	wake chan struct{}
 	done chan struct{}
@@ -548,6 +552,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	// leaves the parked question in place.
 	if request.clientInput || request.trigger != nil {
 		r.clearPendingQuestions()
+		r.clearPendingCredentialForm()
 	}
 	if request.clientInput {
 		// Parity: framework/agent_loop/agent_loop.py::inject_event — a real
@@ -628,8 +633,8 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	// that asked the user a question parks on ask_user, not turn_done, so the
 	// snapshot and idle nudge treat it as an external wait.
 	parkReason := agentloop.ParkReasonTurnDone
-	if r.hasPendingQuestions() {
-		parkReason = agentloop.ParkReasonAskUser
+	if pending := r.pendingParkReason(); pending != "" {
+		parkReason = pending
 	}
 	emitter.executionCompleted(result.InnerTurns, string(parkReason))
 	// Parity: framework/agent_loop/agent_loop.py::execute — STOP fires after a
@@ -905,6 +910,12 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 	content, isError, err := r.deps.Execute(r.toolExecuteContext(), req.Name, req.Input)
 	if err != nil {
 		return agentloop.ToolResult{Content: err.Error(), IsError: true}, nil
+	}
+	// A missing-credential failure is not a dead end: park the turn on a secure
+	// credential form so the user can supply the key (upstream's
+	// credentials(collect) park), rather than only reporting an error.
+	if annotated, parked := r.parkForMissingCredential(req.Name, content); parked {
+		content = annotated
 	}
 	return agentloop.ToolResult{Content: content, IsError: isError}, nil
 }
@@ -1251,11 +1262,44 @@ func (r *ChatRuntime) hasPendingQuestions() bool {
 	return len(r.pendingQuestions) > 0
 }
 
+// pendingParkReason classifies the wait the finished turn parked on: a
+// credential form (credential_form) outranks an ask_user question, and an
+// empty string means an ordinary turn_done. Both are external waits, so the
+// idle nudge must not re-engage them.
+//
+// Parity: framework/agent_loop/reminders.py::ParkReason
+func (r *ChatRuntime) pendingParkReason() agentloop.ParkReason {
+	if r == nil {
+		return ""
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.pendingCredentialForm != nil {
+		return agentloop.ParkReasonCredentialForm
+	}
+	if len(r.pendingQuestions) > 0 {
+		return agentloop.ParkReasonAskUser
+	}
+	return ""
+}
+
 func (r *ChatRuntime) clearPendingQuestions() {
 	r.mu.Lock()
 	r.pendingQuestions = nil
 	r.mu.Unlock()
 	r.clearParkPendingInput()
+}
+
+// clearPendingCredentialForm drops a parked credential form once a real user
+// message or trigger answers it (the same unblocking the ask_user park gets).
+func (r *ChatRuntime) clearPendingCredentialForm() {
+	r.mu.Lock()
+	had := r.pendingCredentialForm != nil
+	r.pendingCredentialForm = nil
+	r.mu.Unlock()
+	if had {
+		r.clearParkPendingInput()
+	}
 }
 
 // sedimentSoul writes a finished reflection's durable conclusions into this

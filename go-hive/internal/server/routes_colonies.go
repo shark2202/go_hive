@@ -469,7 +469,9 @@ func ensureMinimalColony(home hivehome.Home, colonyID, queenName string) error {
 			return err
 		}
 	}
-	return nil
+	// A scaffolded colony is complete on disk: skills/, runs/ and an empty
+	// triggers.json exist before any session opens it.
+	return ensureColonyScaffold(colonyDir)
 }
 
 // humanizeSlug mirrors framework/utils/text.py::humanize_slug, including

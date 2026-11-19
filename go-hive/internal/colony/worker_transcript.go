@@ -81,6 +81,10 @@ func (r *ColonyRuntime) writeWorkerMeta(worker *Worker) {
 	}
 	path := filepath.Join(r.workerStorage(worker.ID), workerMetaFile)
 	writeJSONFile(path, meta)
+	// The run-state record is what a restarted colony scans: mark the worker
+	// queued before its goroutine can start, then running/terminal as it moves.
+	// A fresh id must not inherit the previous process's resume bookkeeping.
+	r.resetWorkerRunState(worker, string(WorkerQueued))
 }
 
 // readWorkerMeta returns the spawn breadcrumb, or an empty map when it is

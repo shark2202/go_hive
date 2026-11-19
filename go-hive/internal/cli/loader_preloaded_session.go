@@ -8,10 +8,13 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/aden-hive/hive-go/internal/atomicfs"
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	colonyhost "github.com/aden-hive/hive-go/internal/host"
@@ -44,14 +47,20 @@ func (r *Runner) loadPreloadedColonySession(
 		return nil
 	}
 	colonyID := filepath.Base(colonyPath)
-	sessionID, err := hivesession.NewStore("").GenerateID(time.Now())
-	if err != nil {
-		fmt.Fprintf(r.Stdout, "Error loading colony %s: %v\n", colonyArg, err)
+	// A colony restarted here resumes its own queen session (queen_resume_from)
+	// instead of minting a new id on every boot: the previous transcript and
+	// the triggers/judgement history stay attached to the same session.
+	sessionID, sessionDir, resumed := resolvePreloadedColonySession(home, colonyID, "default")
+	if sessionID == "" {
+		fmt.Fprintf(r.Stdout, "Error loading colony %s: could not resolve a session id\n", colonyArg)
 		return nil
 	}
 	record := hiveserver.NewSession(sessionID, eventbus.NewEventBus())
 	record.ColonyID = colonyID
 	record.WorkerPath = colonyPath
+	if resumed {
+		record.QueenResumeFrom = sessionID
+	}
 	record.LoadedAt = float64(time.Now().UnixNano()) / 1e9
 	// The live runtime behind the session: colony spawn/run/SSE entry.
 	// Nil when no provider is configured, in which case the worker and
@@ -68,7 +77,7 @@ func (r *Runner) loadPreloadedColonySession(
 	// Chat/trigger/dispatch runtime for the preloaded session. It must exist
 	// before triggers are restored: a restored timer's first fire needs the
 	// session's queen executor.
-	r.attachPreloadedChatRuntime(record, home, model)
+	r.attachPreloadedChatRuntime(record, home, model, sessionDir)
 	// Rebuild the colony's triggers.json runtime: enabled timers and
 	// webhook routes survive a restart without the user re-activating them.
 	if loaded, started := hiveserver.RestoreSessionTriggers(record); loaded > 0 {
@@ -82,13 +91,79 @@ func (r *Runner) loadPreloadedColonySession(
 	return record
 }
 
+// resolvePreloadedColonySession picks the session a preloaded colony boots
+// under. A colony records the id of its queen session in metadata.json
+// (queen_session_id). When that session's directory still exists, the loader
+// adopts the id — the same queen_resume_from path a created session takes — so
+// a restart continues the conversation instead of stranding the old transcript
+// under an id nothing addresses. The colony's own tree is checked first (the
+// upstream layout); the queen-scoped tree this loader has always written is the
+// fallback. Otherwise a fresh id is minted, its directory created, and the id
+// saved for the next boot.
+//
+// Parity: framework/server/session_manager.py::_create_session_for_existing_colony
+// Parity: framework/server/session_manager.py::_queen_session_dir
+func resolvePreloadedColonySession(home hivehome.Home, colonyID, queenScope string) (sessionID, sessionDir string, resumed bool) {
+	queenScope = chatSessionQueenScope(queenScope)
+	if recorded := preloadedColonySessionID(home, colonyID); recorded != "" &&
+		hivesession.ValidSegment(recorded) {
+		candidates := []string{
+			home.ColonyQueenSessionDir(colonyID, queenScope, recorded),
+			chatSessionDir(home, queenScope, recorded),
+		}
+		for _, candidate := range candidates {
+			if isSessionDir(candidate) && sessionDirQueenMatches(candidate, queenScope) {
+				return recorded, candidate, true
+			}
+		}
+	}
+	generated, err := hivesession.NewStore("").GenerateID(time.Now())
+	if err != nil {
+		return "", "", false
+	}
+	dir := chatSessionDir(home, queenScope, generated)
+	// Materialise the directory now: an empty-but-existing session is still the
+	// colony's session, and the next boot must find it and reuse this id.
+	_ = os.MkdirAll(dir, 0o755)
+	persistPreloadedColonySessionID(home, colonyID, queenScope, generated)
+	return generated, dir, false
+}
+
+func preloadedColonySessionID(home hivehome.Home, colonyID string) string {
+	meta, ok := readJSONObject(filepath.Join(home.ColoniesDir(), colonyID, "metadata.json"))
+	if !ok {
+		return ""
+	}
+	raw, _ := meta["queen_session_id"].(string)
+	return strings.TrimSpace(raw)
+}
+
+// persistPreloadedColonySessionID records the colony's queen session id (and
+// the queen scope it lives under) without disturbing the rest of metadata.json.
+// Best effort: a failed write only costs a fresh id on the next boot.
+func persistPreloadedColonySessionID(home hivehome.Home, colonyID, queenScope, sessionID string) {
+	path := filepath.Join(home.ColoniesDir(), colonyID, "metadata.json")
+	meta, ok := readJSONObject(path)
+	if !ok || meta == nil {
+		meta = map[string]any{}
+	}
+	meta["queen_session_id"] = sessionID
+	if _, present := meta["queen_name"]; !present && queenScope != "default" {
+		meta["queen_name"] = queenScope
+	}
+	_ = atomicfs.WriteJSON(path, meta, 0o644)
+}
+
 // attachPreloadedChatRuntime arms a preloaded colony session with the same
 // Queen runtime a POST /api/sessions create builds: builtin + integration +
 // task + tracker + run_worker tools over a per-session transcript, bound to the
 // session's colony so run_worker dispatches and worker reports arrive. Without
 // a usable provider the session keeps Chat nil and POST /chat keeps its 503,
 // mirroring createSessionWithRuntime's degradation.
-func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, home hivehome.Home, model string) {
+//
+// sessionDir is the colony-scoped session directory the loader resolved; a
+// resumed session continues the transcript already in it.
+func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, home hivehome.Home, model, sessionDir string) {
 	if record == nil || record.Colony == nil {
 		return
 	}
@@ -97,7 +172,9 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, home hiv
 		fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", record.ID, err)
 		return
 	}
-	sessionDir := chatSessionDir(home, chatSessionQueenScope(record.QueenName), record.ID)
+	if sessionDir == "" {
+		sessionDir = chatSessionDir(home, chatSessionQueenScope(record.QueenName), record.ID)
+	}
 	toolbox := builtin.New("")
 	tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 	built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
