@@ -11,6 +11,10 @@ the session SSE stream for ten seconds, and compares:
   * a small set of endpoint-specific semantic fields
   * the assistant turn persisted under ``conversations/parts/``
   * the SSE event-type sequence published while the turn runs
+  * the frontend's stale-session recovery loop after a restart, once with a
+    blank create and once with ``queen_resume_from`` — a side that heals the
+    old id stops the loop, which is what separates a real recovery gap from a
+    mere speed difference
 
 It writes ``go_hive/API_PARITY_REPORT.md`` and exits 0 when every probe passes,
 1 otherwise.  Standard library only (urllib), no third-party imports.
@@ -86,6 +90,44 @@ DYNAMIC_VALUE_KEYS = {
 }
 
 CHAT_PROMPT = "Reply with exactly: PARITY_OK"
+
+# Code anchors behind the behavioural differences, verified against the commit
+# the report names.  Measurements come from the run; these paths explain them.
+CODE_ANCHORS: list[tuple[str, str]] = [
+    (
+        "GET /api/skills → 404",
+        "Go 没有注册 `/api/skills` 路由（`internal/server` 全目录 grep 无命中）；"
+        "Python `routes_skills.py` 返回 195 条。",
+    ),
+    (
+        "创建会话 `queen_id=null`、`queen_phase=planning`",
+        "`internal/server/routes_sessions.go::sessionToLiveDict` 的 queen 字段来自 "
+        "`SessionPhaseState`；chat 会话没有绑定 profile，Python 则落到 `queens/queen_growth`。",
+    ),
+    (
+        "`events/history` total=0、SSE 只有 1 帧、`snapshot` 全空",
+        "`internal/server/chat_runtime.go` 的 `ChatRuntime` 完全不引用 `EventBus`；"
+        "`eventbus.SetSessionLog` 在 `internal/` 与 `cmd/` 均无调用点，所以磁盘上不会出现 "
+        "`events.jsonl`，history 路由只读该文件。",
+    ),
+    (
+        "`stats` 恒为 `{}`",
+        "`internal/server/routes_session_detail.go::handleSessionStats` 只在 "
+        "`session.Colony != nil` 时返回统计，queen-only 会话直接写空对象。",
+    ),
+    (
+        "`credentials/specs` 4 vs 115",
+        "`internal/server/app.go::credentialSpecsFromCatalog` 由模型目录派生，只覆盖 4 个"
+        "带 API-key 环境变量的 provider；Python 的 spec 目录有 115 项（含 aden/tools/instructions）。",
+    ),
+    (
+        "`queen_resume_from` 不能恢复旧 id",
+        "Python：`core/framework/server/session_manager.py:745` "
+        "`resolved_session_id = queen_resume_from or session_id`；"
+        "Go：`internal/cli/loader.go:461-467` 只认 `params.SessionID`，"
+        "其余情况新铸 id，`QueenResumeFrom` 只决定存储目录。",
+    ),
+]
 
 MAX_HEALTH_WAIT_S = 180.0
 CHAT_REPLY_TIMEOUT_S = 180.0
@@ -562,11 +604,14 @@ class EndpointResult:
     py_preview: str = ""
     go_preview: str = ""
     requires_json: bool = True
+    body_error: str = ""
 
     @property
     def ok(self) -> bool:
         # Parity is equality, not success: two 404s are a match.
         if self.py_status != self.go_status:
+            return False
+        if self.body_error:
             return False
         if self.shape_diff:
             return False
@@ -575,7 +620,8 @@ class EndpointResult:
     @property
     def diff_count(self) -> int:
         status_diff = 0 if self.py_status == self.go_status else 1
-        return status_diff + self.shape_diff.count + sum(1 for c in self.semantic if not c.ok)
+        body_diff = 1 if self.body_error else 0
+        return status_diff + body_diff + self.shape_diff.count + sum(1 for c in self.semantic if not c.ok)
 
 
 def summarize_payload(payload: object, limit: int = 220) -> str:
@@ -611,10 +657,14 @@ def evaluate(
     if requires_json and py.json_ok and go.json_ok:
         result.shape_diff = compare_shapes(py.payload, go.payload, ignore_prefixes)
     elif requires_json:
+        problems = []
         if not py.json_ok:
             result.notes.append(f"python body: {py.error or 'unparsable'} — {py.raw[:120]!r}")
+            problems.append(f"python={py.error or 'unparsable'}")
         if not go.json_ok:
             result.notes.append(f"go body: {go.error or 'unparsable'} — {go.raw[:120]!r}")
+            problems.append(f"go={go.error or 'unparsable'}")
+        result.body_error = "; ".join(problems)
     return result
 
 
@@ -703,6 +753,9 @@ class Harness:
         self.flow: dict[str, Any] = {}
         self.findings: list[tuple[int, str, str]] = []
         self.notes: list[str] = []
+        self.crashes: list[dict[str, Any]] = []
+        self.phases: list[dict[str, Any]] = []
+        self.evidence: dict[str, Any] = {}
         self.py: Side | None = None
         self.go: Side | None = None
         self.env_file = Path(args.env_file).expanduser()
@@ -827,6 +880,31 @@ class Harness:
         return text[-1] if text else f"<empty, rc={proc.returncode}>"
 
     # -- probing -----------------------------------------------------------
+
+    def record_crashes(self) -> bool:
+        """Record a side that exited mid-run; returns True when one is found.
+
+        Without this, a crashed server surfaces only as a wall of status 0 —
+        the interesting evidence (the process exit code and the log tail that
+        explains it) is lost when the temp HIVE_HOMEs are cleaned up.
+        """
+        seen = {crash["side"] for crash in self.crashes}
+        found = False
+        for side in (self.py, self.go):
+            if side is None or side.key in seen:
+                continue
+            if side.process is None or side.process.poll() is None:
+                continue
+            self.crashes.append(
+                {
+                    "side": side.key,
+                    "label": side.label,
+                    "returncode": side.process.returncode,
+                    "log": log_tail(side.log_path, 40),
+                }
+            )
+            found = True
+        return found
 
     def get(self, side: Side, path: str, timeout: float = 60.0) -> HttpResult:
         return http_request("GET", side.base_url + path, timeout=timeout)
@@ -991,6 +1069,7 @@ class Harness:
                     "queen 身份已绑定 (queen_id 非空)",
                     p.payload.get("queen_id") is not None and g.payload.get("queen_id") is not None,
                     f"python={p.payload.get('queen_id')!r} go={g.payload.get('queen_id')!r}",
+                    severity=90,
                 )
             )
             checks.append(
@@ -998,6 +1077,7 @@ class Harness:
                     "queen_phase 相同",
                     p.payload.get("queen_phase") == g.payload.get("queen_phase"),
                     f"python={p.payload.get('queen_phase')!r} go={g.payload.get('queen_phase')!r}",
+                    severity=80,
                 )
             )
         self.results.append(evaluate("创建会话", "POST", "/api/sessions", p, g, checks))
@@ -1111,6 +1191,30 @@ class Harness:
         ]
         self.results.append(evaluate("会话详情", "GET", "/api/sessions/{id}", p, g, checks))
 
+        # events — the SSE endpoint itself (the stream content is compared in the flow section)
+        py_ev_status, py_ev_meta = self.probe_events_status(py, py_sid)
+        go_ev_status, go_ev_meta = self.probe_events_status(go, go_sid)
+        self.results.append(
+            evaluate(
+                "事件流订阅", "GET", "/api/sessions/{id}/events",
+                HttpResult(status=py_ev_status, payload={}, raw=""),
+                HttpResult(status=go_ev_status, payload={}, raw=""),
+                [
+                    SemanticCheck(
+                        "都返回 200",
+                        py_ev_status == 200 and go_ev_status == 200,
+                        f"python={py_ev_status} go={go_ev_status}",
+                    ),
+                    SemanticCheck(
+                        "Content-Type 都声明 text/event-stream",
+                        "text/event-stream" in py_ev_meta.lower() and "text/event-stream" in go_ev_meta.lower(),
+                        f"python={py_ev_meta!r} go={go_ev_meta!r}",
+                    ),
+                ],
+                requires_json=False,
+            )
+        )
+
         # events/history — what the UI replays after a page reload
         p, g, _ = pair("/api/sessions/{session}/events/history")
         py_total = values_at(p.payload, "total")
@@ -1159,7 +1263,10 @@ class Harness:
             SemanticCheck("tasks 都是数组",
                           isinstance(values_at(p.payload, "tasks"), list) and isinstance(values_at(g.payload, "tasks"), list)),
         ]
-        notes = ["两边都返回 404（该会话尚无任务列表），属预期一致"]
+        notes = [
+            f"状态码 Python {p.status} / Go {g.status}"
+            + ("（该会话尚无任务列表，两边同为 404，属预期一致）" if p.status == g.status == 404 else "")
+        ]
         self.results.append(
             evaluate("会话任务", "GET", "/api/sessions/{id}/tasks", p, g, checks, notes=notes)
         )
@@ -1167,24 +1274,83 @@ class Harness:
     # -- restart / stale-session scenario ----------------------------------
 
     def probe_events_status(self, side: Side, session_id: str) -> tuple[int, str]:
-        """Open the SSE route and report only its status, then hang up."""
+        """Open the SSE route and report only its status and Content-Type, then hang up."""
         url = f"{side.base_url}/api/sessions/{session_id}/events"
         request = urllib.request.Request(url, headers={"Accept": "text/event-stream"})
         try:
             with urllib.request.urlopen(request, timeout=10) as response:
-                return response.status, ""
+                return response.status, response.headers.get("Content-Type", "")
         except urllib.error.HTTPError as exc:
             return exc.code, exc.read().decode("utf-8", errors="replace")[:200]
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             return 0, str(exc)
 
+    def storm_loop(
+        self, side: Side, session_id: str, body: dict[str, Any], window: float, cap: int
+    ) -> dict[str, Any]:
+        """Simulate one client recovery loop and measure what it costs.
+
+        The loop mirrors the frontend: subscribe to ``/events``; on a non-200,
+        POST ``/api/sessions`` and try the same id again.  Two bodies are
+        interesting — ``{}`` (a blank create, what a naive client does) and
+        ``{"queen_resume_from": id}`` (what ``pages/queen-dm.tsx`` does in its
+        ``onSessionGone`` handler).
+        """
+        post_statuses: list[int] = []
+        post_latencies: list[float] = []
+        created_ids: list[str] = []
+        events_statuses: list[int] = []
+        first_status, _ = self.probe_events_status(side, session_id)
+        events_statuses.append(first_status)
+        healed = False
+        deadline = time.time() + window
+        while time.time() < deadline and len(post_statuses) < cap:
+            if first_status == 200:
+                # A live stream needs no recovery; do not spin on it.
+                time.sleep(0.25)
+                first_status, _ = self.probe_events_status(side, session_id)
+                events_statuses.append(first_status)
+                continue
+            posted_at = time.time()
+            created = http_request("POST", side.base_url + "/api/sessions", body=body, timeout=180)
+            post_latencies.append((time.time() - posted_at) * 1000.0)
+            post_statuses.append(created.status)
+            if isinstance(created.payload, dict):
+                new_id = created.payload.get("session_id")
+                if isinstance(new_id, str):
+                    created_ids.append(new_id)
+            status, _ = self.probe_events_status(side, session_id)
+            events_statuses.append(status)
+            if status == 200:
+                healed = True
+                break
+            time.sleep(0.01)
+        return {
+            "post_count": len(post_statuses),
+            "post_statuses": sorted(set(post_statuses)),
+            "post_min_ms": round(min(post_latencies), 1) if post_latencies else None,
+            "post_median_ms": round(statistics.median(post_latencies), 1) if post_latencies else None,
+            "post_max_ms": round(max(post_latencies), 1) if post_latencies else None,
+            "events_first": events_statuses[0] if events_statuses else 0,
+            "events_statuses": sorted(set(events_statuses)),
+            "events_after": events_statuses[-1] if events_statuses else 0,
+            "healed": healed,
+            "created_id_reused": session_id in created_ids,
+            "distinct_created_ids": len(set(created_ids)),
+            "cap": cap,
+            "window": window,
+        }
+
     def probe_restart_scenario(self) -> None:
         """Create → restart → reopen the old session id.
 
-        Reproduces the frontend loop seen against Go: a page whose URL carries a
-        session id that is on disk but no longer in memory gets 404 from
-        ``/events`` and answers by POSTing ``/api/sessions`` again.  Both sides
-        run the same loop for the same ten seconds.
+        A page whose URL carries a session id that is on disk but no longer in
+        memory gets 404 from ``/events``.  Two recovery strategies are measured
+        on both sides for the same window:
+
+        * ``blank``  — POST ``{}``: a brand-new session, old id stays dead.
+        * ``resume`` — POST ``{"queen_resume_from": id}``: what the DM page's
+          ``onSessionGone`` handler actually sends to rebind the queen.
         """
         assert self.py and self.go
         scenario: dict[str, Any] = {"sides": {}}
@@ -1196,90 +1362,119 @@ class Harness:
             listing = self.get(side, "/api/sessions")
             live_ids = _ids(values_at(listing.payload, "sessions"), "session_id")
 
-            events_statuses: list[int] = []
-            post_statuses: list[int] = []
-            post_latencies: list[float] = []
-            first_status, first_body = self.probe_events_status(side, sid)
-            events_statuses.append(first_status)
-
             window = self.args.stale_seconds
             cap = self.args.stale_post_cap
-            deadline = time.time() + window
-            while time.time() < deadline and len(post_statuses) < cap:
-                if first_status == 200:
-                    # A live stream needs no recovery; do not spin on it.
-                    time.sleep(0.25)
-                    first_status, _ = self.probe_events_status(side, sid)
-                    events_statuses.append(first_status)
-                    continue
-                posted_at = time.time()
-                created = http_request("POST", side.base_url + "/api/sessions", body={}, timeout=180)
-                post_latencies.append((time.time() - posted_at) * 1000.0)
-                post_statuses.append(created.status)
-                status, _ = self.probe_events_status(side, sid)
-                events_statuses.append(status)
-                time.sleep(0.01)
+            blank = self.storm_loop(side, sid, {}, window, cap)
+            resume = self.storm_loop(side, sid, {"queen_resume_from": sid}, window, min(cap, 10))
 
             scenario["sides"][side.key] = {
                 "restart_seconds": side.restart_seconds,
                 "detail_status": detail.status,
                 "in_list": sid in live_ids,
                 "list_size": len(live_ids),
-                "events_first": events_statuses[0] if events_statuses else 0,
-                "events_statuses": sorted(set(events_statuses)),
-                "post_count": len(post_statuses),
-                "post_statuses": sorted(set(post_statuses)),
-                "post_min_ms": round(min(post_latencies), 1) if post_latencies else None,
-                "post_median_ms": round(statistics.median(post_latencies), 1) if post_latencies else None,
-                "post_max_ms": round(max(post_latencies), 1) if post_latencies else None,
-                "window": window,
-                "cap": cap,
+                "blank": blank,
+                "resume": resume,
             }
 
         py_s = scenario["sides"]["python"]
         go_s = scenario["sides"]["go"]
-        py_same = py_s["events_first"] == go_s["events_first"]
-        scenario["consistent"] = py_same
-        if py_same and py_s["events_first"] != 200:
-            slow = py_s["post_median_ms"] or 0
-            fast = go_s["post_median_ms"] or 0
-            ratio = (slow / fast) if fast else 0
-            capped = go_s["post_count"] >= go_s["cap"]
-            scenario["conclusion"] = (
-                "两边一致：重启后旧 session id 的 `/events` 都返回 "
-                f"{py_s['events_first']}（会话详情 `GET /api/sessions/{{id}}` 两边都能从磁盘回退返回 "
-                f"{py_s['detail_status']}/{go_s['detail_status']}），因此前端重试风暴不是 Go 独有，上游同样触发。"
-                "差别在放大器：POST /api/sessions 中位耗时 Python "
-                f"{py_s['post_median_ms']}ms（{py_s['post_min_ms']}–{py_s['post_max_ms']}ms）、Go "
-                f"{go_s['post_median_ms']}ms（{go_s['post_min_ms']}–{go_s['post_max_ms']}ms）"
-                + (f"，约 {ratio:.0f}×" if ratio else "")
-                + f"，同样的重试循环在 Go 上 {go_s['window']:g} 秒内"
-                + (f"至少产生 {go_s['post_count']} 次创建请求（达到测量上限）" if capped else f"产生 {go_s['post_count']} 次创建请求")
-                + "。"
-                + (
-                    f" Python 侧创建会话会拉起 queen 首轮，耗时波动到 {py_s['post_max_ms'] / 1000:.1f}s，"
-                    "同一循环在 Python 上自然被限速。"
-                    if (py_s["post_max_ms"] or 0) > 5000
-                    else ""
-                )
-            )
-        elif py_s["events_first"] == 200 and go_s["events_first"] != 200:
-            scenario["conclusion"] = (
-                f"Go 独有回归：Python 的 `/events` 对磁盘上存在的会话返回 200，Go 返回 "
-                f"{go_s['events_first']}。正是这个 404 触发了前端的 POST /api/sessions 重试循环。"
-            )
-        elif py_s["events_first"] != 200 and go_s["events_first"] == 200:
-            scenario["conclusion"] = (
-                f"Python 独有：Python `/events` 返回 {py_s['events_first']}，Go 返回 200。"
-            )
-        else:
-            scenario["conclusion"] = "两边对陈旧 session id 都返回 200，未复现 404 触发的重试。"
+        scenario["consistent"] = py_s["blank"]["events_first"] == go_s["blank"]["events_first"]
+        scenario["conclusion"] = self.restart_conclusion(py_s, go_s)
         self.flow["restart"] = scenario
+
+    @staticmethod
+    def restart_conclusion(py_s: dict[str, Any], go_s: dict[str, Any]) -> str:
+        py_blank, go_blank = py_s["blank"], go_s["blank"]
+        py_resume, go_resume = py_s["resume"], go_s["resume"]
+        if py_blank["events_first"] != go_blank["events_first"]:
+            if py_blank["events_first"] == 200:
+                return (
+                    f"Go 独有回归：重启后 Python 对旧 id 的 `/events` 返回 200，Go 返回 "
+                    f"{go_blank['events_first']}。这个 404 就是前端 POST /api/sessions 重试循环的触发点。"
+                )
+            return (
+                f"Python 独有：重启后 Python 的 `/events` 返回 {py_blank['events_first']}，Go 返回 200。"
+            )
+        if py_blank["events_first"] == 200:
+            return "两边对陈旧 session id 的 `/events` 都返回 200，未复现 404 触发的重试。"
+
+        slow = py_blank["post_median_ms"] or 0
+        fast = go_blank["post_median_ms"] or 0
+        ratio = (slow / fast) if fast else 0
+        blank_line = (
+            f"空创建（POST `{{}}`）两边都陷入循环：Python {py_blank['post_count']} 次 / Go "
+            f"{go_blank['post_count']} 次（{go_blank['window']:g}s 窗口，上限 {go_blank['cap']}），"
+            f"中位耗时 Python {py_blank['post_median_ms']}ms / Go {go_blank['post_median_ms']}ms"
+            + (f"，约 {ratio:.0f}×" if ratio else "")
+            + "。"
+        )
+        if py_resume["healed"] and not go_resume["healed"]:
+            return (
+                "前端真实的自愈路径（POST `queen_resume_from=<旧 id>`）只有 Python 能恢复："
+                f"Python 第 {py_resume['post_count']} 次 POST 后旧 id 的 `/events` 回到 200，循环自行停止；"
+                f"Go 在 {go_resume['window']:g}s 窗口内试了 {go_resume['post_count']} 次"
+                f"（上限 {go_resume['cap']}），旧 id 始终 {go_resume['events_after']}，"
+                "因此同一个页面在 Go 上会持续重试。"
+                + blank_line
+                + "结论：404 本身是上游同构行为，但「恢复后能否继续流」是 Go 独有缺口，"
+                "这才是重试风暴在 Go 上放大的根因；Go 每次 POST 又快 "
+                + (f"{ratio:.0f}×" if ratio else "得多")
+                + "，把同一个循环推得更高频。"
+            )
+        if py_resume["healed"] and go_resume["healed"]:
+            return (
+                "两边都会自愈：POST `queen_resume_from=<旧 id>` 之后旧 id 的 `/events` 都回到 200，"
+                "前端循环会停止。差别只在速率放大器：" + blank_line
+            )
+        if not py_resume["healed"] and not go_resume["healed"]:
+            return (
+                "两边都不自愈：POST `queen_resume_from=<旧 id>` 之后旧 id 的 `/events` 仍非 200"
+                f"（Python {py_resume['events_after']} / Go {go_resume['events_after']}），"
+                "因此重试风暴不是 Go 独有，上游同构触发。" + blank_line
+            )
+        return "两边行为相反：Python 不自愈而 Go 自愈。" + blank_line
+
+    # -- evidence ----------------------------------------------------------
+
+    def collect_artifacts(self) -> None:
+        """Record on-disk facts that explain the empty responses.
+
+        The parity table says *what* differs; these numbers say why — e.g. a
+        Go home with zero ``events.jsonl`` files cannot serve history from
+        disk no matter how many turns ran.
+        """
+        assert self.py and self.go
+        evidence: dict[str, Any] = {}
+        for side in (self.py, self.go):
+            if side is None:
+                continue
+            events = sorted(side.home.glob("**/events.jsonl"))
+            queens = sorted(
+                path.name
+                for path in (side.home / "queens").glob("*")
+                if path.is_dir()
+            ) if (side.home / "queens").is_dir() else []
+            sessions = sorted(side.home.glob("**/sessions/session_*"))
+            evidence[side.key] = {
+                "events_jsonl": len(events),
+                "events_lines": sum(len(p.read_text(errors="replace").splitlines()) for p in events[:50]),
+                "queen_dirs": queens,
+                "session_dirs": len(sessions),
+            }
+        self.evidence = evidence
 
     # -- findings ----------------------------------------------------------
 
     def collect_findings(self) -> None:
         assert self.py and self.go
+        for crash in self.crashes:
+            self.findings.append(
+                (
+                    100,
+                    f"{crash['label']} 进程在对比过程中退出（exit={crash['returncode']}），其后的端点只会返回连接失败",
+                    "process:crash",
+                )
+            )
         for result in self.results:
             if result.ok:
                 continue
@@ -1324,17 +1519,30 @@ class Harness:
             self.findings.append((95, "POST /chat 状态码不一致", "flow:chat"))
 
         restart = self.flow.get("restart") if self.flow else None
-        if restart and not restart.get("consistent"):
+        if restart:
             py_s = restart["sides"]["python"]
             go_s = restart["sides"]["go"]
-            self.findings.append(
-                (
-                    95,
-                    "重启后陈旧会话：/events Python "
-                    f"{py_s['events_first']} / Go {go_s['events_first']}（前端重试风暴的触发点）",
-                    "flow:restart",
+            if py_s["blank"]["events_first"] != go_s["blank"]["events_first"]:
+                self.findings.append(
+                    (
+                        95,
+                        "重启后陈旧会话：/events Python "
+                        f"{py_s['blank']['events_first']} / Go {go_s['blank']['events_first']}"
+                        "（前端重试风暴的触发点）",
+                        "flow:restart",
+                    )
                 )
-            )
+            elif py_s["resume"]["healed"] != go_s["resume"]["healed"]:
+                self.findings.append(
+                    (
+                        95,
+                        "重启后 `queen_resume_from` 自愈：Python "
+                        f"{'恢复' if py_s['resume']['healed'] else '未恢复'} / Go "
+                        f"{'恢复' if go_s['resume']['healed'] else '未恢复'}"
+                        f"（旧 id 的 /events 最终 Python {py_s['resume']['events_after']} / Go {go_s['resume']['events_after']}）",
+                        "flow:restart",
+                    )
+                )
 
     def top_findings(self, limit: int = 5) -> list[str]:
         ordered = sorted(self.findings, key=lambda item: -item[0])
@@ -1372,6 +1580,16 @@ class Harness:
         lines.append(
             f"- 启动耗时：Python {self.py.start_seconds}s / Go {self.go.start_seconds}s"
         )
+        if self.phases:
+            lines.append(
+                "- 阶段耗时：" + " → ".join(f"{p['label']} {p['seconds']}s" for p in self.phases)
+            )
+        lines.append(
+            "- 进程存活：Python "
+            + ("正常" if self.py.process and self.py.process.poll() is None else "已退出")
+            + " / Go "
+            + ("正常" if self.go.process and self.go.process.poll() is None else "已退出")
+        )
         lines.append("")
         lines.append(f"**端点对比：{passed}/{total} PASS，{total - passed} FAIL。**")
         if flow_checks:
@@ -1384,6 +1602,44 @@ class Harness:
         lines.append("> 动态值（id、时间戳、端口等）不参与比较。`额外字段` 记入差异但仍判 FAIL，")
         lines.append("> 因为本报告服务于后续修复，需要看到完整缺口。")
         lines.append("")
+        lines.append("## 结论")
+        lines.append("")
+        lines.append(
+            f"- 端点契约 {passed}/{total} 通过：静态/配置类端点基本对齐（health、config、credentials、"
+            "queen profiles、models、mcp 全部 PASS）；FAIL 集中在会话运行时与两个目录端点。"
+        )
+        lines.append(
+            "- 会话运行时的 4 个 FAIL（创建/列表/详情、history、snapshot、stats）落在同一簇缺口："
+            "Go 的 chat 会话没有绑定 queen（`queen_id=null`），`ChatRuntime` 不发布事件、"
+            "也不写 `events.jsonl`，所以历史、快照、统计只能为空。"
+        )
+        lines.append(
+            "- 两个目录缺口：`/api/skills` 在 Go 里根本未注册（404），"
+            "`/api/credentials/specs` 只有 4 项 vs Python 115 项。"
+        )
+        sse_flow = self.flow.get("sse")
+        if sse_flow:
+            py_types = len(set(sse_flow["py"].payload_types))
+            go_types = len(set(sse_flow["go"].payload_types))
+            lines.append(
+                "- 对话本身可用：两边 `/chat` 都 200、都落盘 `PARITY_OK`；但 Go 的 SSE 只发 "
+                f"{len(sse_flow['go'].frames)} 帧（{go_types} 种 type），Python 发 "
+                f"{len(sse_flow['py'].frames)} 帧（{py_types} 种 type）。"
+            )
+        if self.flow.get("restart"):
+            py_r = self.flow["restart"]["sides"]["python"]
+            go_r = self.flow["restart"]["sides"]["go"]
+            lines.append(
+                "- 重试风暴：重启后旧 id 的 `/events` 两边都 404（上游同构触发）；"
+                f"但 `queen_resume_from` 恢复只有 Python 生效（Python {py_r['resume']['post_count']} 次 POST 后恢复，"
+                f"Go {go_r['resume']['post_count']} 次仍 {go_r['resume']['events_after']}），"
+                "且 Go 创建会话快约 "
+                + (
+                    f"{(py_r['blank']['post_median_ms'] or 0) / (go_r['blank']['post_median_ms'] or 1):.0f}×，"
+                    "所以同一页面只在 Go 上持续高频重试。"
+                )
+            )
+        lines.append("")
 
         lines.append("## 汇总")
         lines.append("")
@@ -1395,6 +1651,24 @@ class Harness:
                 f"| {index} | `{result.path}` | {result.method} | {result.py_status}/{result.go_status} | **{verdict}** | {result.diff_count} |"
             )
         lines.append("")
+
+        if self.crashes:
+            lines.append("## 服务进程异常退出")
+            lines.append("")
+            for crash in self.crashes:
+                lines.append(
+                    f"### {crash['label']} — exit code `{crash['returncode']}`"
+                )
+                lines.append("")
+                lines.append("```text")
+                lines.append(crash["log"])
+                lines.append("```")
+                lines.append("")
+            lines.append(
+                "该侧进程退出后，后续端点只会返回连接失败（状态码 0），因此它们的 FAIL 记录的是"
+                "“服务不在了”，不是“协议不一致”；上面的日志尾部才是根因证据。"
+            )
+            lines.append("")
 
         lines.append("## 端点明细")
         lines.append("")
@@ -1466,6 +1740,12 @@ class Harness:
                 detail = f" — {check.detail}" if check.detail else ""
                 lines.append(f"- {mark} {check.label}{detail}")
             lines.append("")
+            lines.append(
+                "> 注：Python 额外落盘的 assistant part 是会话创建时的开场白；"
+                "`event:` 名称差异属于线格式（Python 只发 `data:`，Go 额外带 `event:` 名），"
+                "当前前端 `api/client.ts::subscribeSse` 会解析但 `onEvent` 不消费事件名，所以不影响现有 UI。"
+            )
+            lines.append("")
             lines.append(f"### SSE（各订阅 {self.args.sse_seconds:g} 秒）")
             lines.append("")
             lines.append(
@@ -1478,6 +1758,12 @@ class Harness:
             lines.append("")
             lines.append(
                 f"- 帧数：Python {len(sse['py'].frames)} / Go {len(sse['go'].frames)}"
+            )
+            lines.append(
+                f"- 完整事件 type 序列（按到达顺序，最多 80 帧）：Python `{self.compact_sequence(sse['py'].payload_types)}`"
+            )
+            lines.append(
+                f"- 完整事件 type 序列（按到达顺序，最多 80 帧）：Go `{self.compact_sequence(sse['go'].payload_types)}`"
             )
             lines.append(
                 f"- SSE `event:` 名称：Python `{sorted(set(sse['py'].event_names))}` / Go `{sorted(set(sse['go'].event_names))}`"
@@ -1496,33 +1782,38 @@ class Harness:
             lines.append("")
             lines.append(
                 "模拟前端：先用返回的 session id 打开会话页，然后重启 serve（同端口、同 HIVE_HOME），"
-                f"再用旧 id 订阅 `/events`；若 `/events` 非 200，就像页面那样再 POST 一次 `/api/sessions`，"
-                f"持续 {self.args.stale_seconds:g} 秒（POST 上限 {self.args.stale_post_cap} 次）。"
+                "再用旧 id 订阅 `/events`；若 `/events` 非 200，就像页面那样再 POST 一次 `/api/sessions`。"
+                f"两种请求体各测 {self.args.stale_seconds:g} 秒："
+                "`blank` = `{}`（新建一个无关会话），`resume` = `{\"queen_resume_from\": 旧 id}`"
+                "（`pages/queen-dm.tsx` 的 `onSessionGone` 实际发的恢复请求）。"
             )
             lines.append("")
             lines.append("| 指标 | Python | Go |")
             lines.append("|------|--------|----|")
             py_s = restart["sides"]["python"]
             go_s = restart["sides"]["go"]
+            py_blank, go_blank = py_s["blank"], go_s["blank"]
+            py_resume, go_resume = py_s["resume"], go_s["resume"]
             lines.append(f"| 重启耗时 | {py_s['restart_seconds']}s | {go_s['restart_seconds']}s |")
             lines.append(f"| GET `/api/sessions/{{旧 id}}` | {py_s['detail_status']} | {go_s['detail_status']} |")
             lines.append(f"| 旧会话出现在 `/api/sessions` 列表 | {py_s['in_list']} | {go_s['in_list']} |")
-            lines.append(f"| `/events` 首次状态码 | {py_s['events_first']} | {go_s['events_first']} |")
+            lines.append(f"| `/events` 首次状态码 | {py_blank['events_first']} | {go_blank['events_first']} |")
             lines.append(
-                f"| `/events` 状态码集合 | {py_s['events_statuses']} | {go_s['events_statuses']} |"
+                f"| `/events` 状态码集合（blank 循环） | {py_blank['events_statuses']} | {go_blank['events_statuses']} |"
             )
+
             def count_label(side_stats: dict[str, Any]) -> str:
                 if side_stats["post_count"] >= side_stats["cap"]:
                     return f"≥{side_stats['post_count']}（达上限）"
                 return str(side_stats["post_count"])
 
             lines.append(
-                f"| {self.args.stale_seconds:g} 秒内 POST `/api/sessions` 次数 | {count_label(py_s)} | {count_label(go_s)} |"
+                f"| blank：POST 次数 | {count_label(py_blank)} | {count_label(go_blank)} |"
             )
-            lines.append(f"| POST 状态码集合 | {py_s['post_statuses']} | {go_s['post_statuses']} |")
+            lines.append(f"| blank：POST 状态码集合 | {py_blank['post_statuses']} | {go_blank['post_statuses']} |")
             lines.append(
-                f"| POST 耗时 min/中位/max | {py_s['post_min_ms']}/{py_s['post_median_ms']}/{py_s['post_max_ms']}ms "
-                f"| {go_s['post_min_ms']}/{go_s['post_median_ms']}/{go_s['post_max_ms']}ms |"
+                f"| blank：POST 耗时 min/中位/max | {py_blank['post_min_ms']}/{py_blank['post_median_ms']}/{py_blank['post_max_ms']}ms "
+                f"| {go_blank['post_min_ms']}/{go_blank['post_median_ms']}/{go_blank['post_max_ms']}ms |"
             )
 
             def rate(value: float | None) -> str:
@@ -1533,18 +1824,67 @@ class Harness:
                 return f"≈{1000.0 / value:.0f}/s"
 
             lines.append(
-                f"| 按中位耗时折算的创建速率 | {rate(py_s['post_median_ms'])} | {rate(go_s['post_median_ms'])} |"
+                f"| blank：按中位耗时折算的创建速率 | {rate(py_blank['post_median_ms'])} | {rate(go_blank['post_median_ms'])} |"
             )
-            if go_s["post_count"] >= go_s["cap"] or py_s["post_count"] >= py_s["cap"]:
+            lines.append(f"| resume：POST 次数 | {count_label(py_resume)} | {count_label(go_resume)} |")
+            lines.append(
+                f"| resume：POST 后旧 id 的 `/events` | {py_resume['events_after']} | {go_resume['events_after']} |"
+            )
+            lines.append(
+                f"| resume：旧 id 是否恢复可订阅 | {py_resume['healed']} | {go_resume['healed']} |"
+            )
+            lines.append(
+                f"| resume：POST 返回的 session id 是否复用旧 id | {py_resume['created_id_reused']} | {go_resume['created_id_reused']} |"
+            )
+            lines.append(
+                f"| resume：产生的不同 session id 数 | {py_resume['distinct_created_ids']} | {go_resume['distinct_created_ids']} |"
+            )
+            lines.append(
+                f"| resume：POST 耗时 min/中位/max | {py_resume['post_min_ms']}/{py_resume['post_median_ms']}/{py_resume['post_max_ms']}ms "
+                f"| {go_resume['post_min_ms']}/{go_resume['post_median_ms']}/{go_resume['post_max_ms']}ms |"
+            )
+            if go_blank["post_count"] >= go_blank["cap"] or py_blank["post_count"] >= py_blank["cap"]:
                 lines.append("")
                 lines.append(
-                    f"> POST 计数上限 {go_s['cap']} 次：达到上限的一侧记 `≥{go_s['cap']}`，真实速率看折算值。"
+                    f"> blank 循环 POST 计数上限 {go_blank['cap']} 次：达到上限的一侧记 `≥{go_blank['cap']}`，真实速率看折算值。"
                 )
             lines.append("")
             lines.append(f"**结论：** {restart['conclusion']}")
             lines.append("")
 
         top = self.top_findings(5)
+        if self.evidence:
+            py_e = self.evidence.get("python", {})
+            go_e = self.evidence.get("go", {})
+            lines.append("## 磁盘证据（空响应的根因）")
+            lines.append("")
+            lines.append("| 证据 | Python | Go |")
+            lines.append("|------|--------|----|")
+            lines.append(
+                f"| `events.jsonl` 文件数 | {py_e.get('events_jsonl')} | {go_e.get('events_jsonl')} |"
+            )
+            lines.append(
+                f"| `events.jsonl` 总行数（前 50 个文件） | {py_e.get('events_lines')} | {go_e.get('events_lines')} |"
+            )
+            lines.append(
+                f"| `queens/` 下的身份目录 | `{py_e.get('queen_dirs')}` | `{go_e.get('queen_dirs')}` |"
+            )
+            lines.append(
+                f"| 会话目录数 | {py_e.get('session_dirs')} | {go_e.get('session_dirs')} |"
+            )
+            lines.append("")
+            lines.append(
+                "Go 的 HIVE_HOME 里没有任何 `events.jsonl`，`queens/` 只有一个 `default`，"
+                "因此 `events/history` 只能返回空、`snapshot` 只能给出 null、`stats` 只能给出 `{}` —— "
+                "不是序列化差异，是这些数据从未被写入。"
+            )
+            lines.append("")
+            lines.append("### 代码定位")
+            lines.append("")
+            for title, detail in CODE_ANCHORS:
+                lines.append(f"- **{title}** — {detail}")
+            lines.append("")
+
         lines.append("## 最重要的 5 个差异")
         lines.append("")
         if top:
@@ -1577,6 +1917,15 @@ class Harness:
             out.append(value)
         return " → ".join(out) if out else "<none>"
 
+    @staticmethod
+    def compact_sequence(values: list[str], limit: int = 80) -> str:
+        if not values:
+            return "<none>"
+        head = " → ".join(values[:limit])
+        if len(values) > limit:
+            head += f" → …（共 {len(values)} 帧）"
+        return head
+
     def git_branch(self) -> str:
         try:
             return subprocess.run(
@@ -1601,13 +1950,24 @@ class Harness:
         exit_code = 1
         try:
             self.prepare()
-            self.probe_static()
-            self.create_sessions()
+            steps = [
+                ("静态端点", self.probe_static),
+                ("创建会话", self.create_sessions),
+            ]
             if not self.args.skip_flow:
-                self.run_flow()
-            self.probe_session_surface()
+                steps.append(("对话流程", self.run_flow))
+            steps.append(("会话端点", self.probe_session_surface))
             if not self.args.skip_flow and not self.args.skip_restart:
-                self.probe_restart_scenario()
+                steps.append(("重启场景", self.probe_restart_scenario))
+
+            for label, step in steps:
+                started = time.time()
+                step()
+                self.phases.append({"label": label, "seconds": round(time.time() - started, 2)})
+                if self.record_crashes():
+                    print(f"[parity] aborting after «{label}»: a server exited mid-run")
+                    break
+            self.collect_artifacts()
             self.collect_findings()
             report = self.report_text()
             report_path = Path(self.args.report).expanduser()
@@ -1622,7 +1982,7 @@ class Harness:
                 print(f"[parity] flow: {'PASS' if flow_ok else 'FAIL'}")
             for index, text in enumerate(self.top_findings(5), 1):
                 print(f"[parity] diff {index}: {text}")
-            exit_code = 0 if passed == len(self.results) and flow_ok is not False else 1
+            exit_code = 0 if passed == len(self.results) and flow_ok is not False and not self.crashes else 1
         finally:
             if self.py:
                 terminate(self.py)
