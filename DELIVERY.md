@@ -7,7 +7,7 @@
 
 | 判定 | 结果 |
 | --- | --- |
-| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：审计基线 `ab5c3dc7`：概念 **80 已接 / 0 部分 / 0 未接**、八层 **70 / 0 / 0**。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go-native playbook、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺（1.0.25 后）：Queen 与 overseer 仍是两份 conversation（共享 pending/park 与 cursor，回复不写回 chat transcript）；纯进程重启后前端 modal 重现依赖 events.jsonl 回放（前端冻结未验证）；MiniMax 流式（上游 chunk 限制）；Python playbook 不可执行；81 个第三方凭据模块未验证。
+| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：审计基线 `80ea8567`：概念 **80 已接 / 0 部分 / 0 未接**、八层 **70 / 0 / 0**。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go-native playbook、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺（1.0.25 后）：Queen 与 overseer 仍是两份 conversation（共享 pending/park 与 cursor，回复不写回 chat transcript）；纯进程重启后前端 modal 重现依赖 events.jsonl 回放（前端冻结未验证）；MiniMax 流式（上游 chunk 限制）；Python playbook 不可执行；81 个第三方凭据模块未验证。
 | R2 分发形态 | 满足：六平台归档 + SHA256SUMS + 安装脚本，解压即用 |
 | R3 用户文档 | 部分满足：快速开始/配置/支持矩阵齐备，但支持矩阵明确标注 81 个需凭据模块「未验证」 |
 | R4 许可 | 满足：Apache-2.0 LICENSE + NOTICE |
