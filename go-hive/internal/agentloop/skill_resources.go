@@ -11,6 +11,7 @@ type ToolResult struct {
 	Content        string
 	IsError        bool
 	IsSkillContent bool
+	SpilloverPath  string
 }
 
 type SkillFileReadInterceptor struct {

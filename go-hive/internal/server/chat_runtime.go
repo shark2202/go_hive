@@ -132,6 +132,14 @@ type ChatRuntime struct {
 	// lastRecall is the block injected last turn; recall is re-injected only
 	// when its content changes (same guard as the upstream _last_injected_recall).
 	lastRecall string
+	// lastPastRecall is the past-conversation excerpt block injected last
+	// turn; the same content is not repeated on the next message.
+	lastPastRecall string
+	// timelineEnabled is set when the memory_timeline feature is on for this
+	// home; timelineAfterTurn then extracts new user turns in the background.
+	timelineEnabled bool
+	timelineMu      sync.Mutex
+	lastTimelineRun time.Time
 	// hub is the loop's reminder hub (one per session). Sources are registered
 	// once at construction; the temporal idle ticker is started there and
 	// stopped by Close.
@@ -280,7 +288,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 
 	runtime.agentCtx = agentCtx
 	runtime.conv = conv
-	runtime.loop = agentloop.NewAgentLoop(agentloop.DefaultLoopConfig(), runtime.executeTool)
+	runtime.loop = agentloop.NewAgentLoop(chatLoopConfig(deps.Root), runtime.executeTool)
 	if deps.Colony != nil {
 		runtime.BindColony(deps.Colony)
 	}
@@ -292,6 +300,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	// be polled. The autopilot gate it sets is read by that same binding.
 	runtime.configureSentinel()
 	runtime.configureReminders(deps.IdleNudge)
+	runtime.startTimeline()
 	// Publish the session's loop hub for the REST reminder mirror. The mirror
 	// is read-only; the loop remains the only consumer that drains it.
 	runtime.unregisterReminders = registerSessionReminderHub(runtime.sessionID, runtime.hub)
@@ -595,6 +604,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	// consume (or re-query) the queen's memory. Reminders still ride along.
 	if request.clientInput {
 		r.injectRecall(message, stamp)
+		r.injectPastConversationRecall(message, stamp)
 	}
 	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.toolsForTurn())
 	if err != nil {
@@ -632,6 +642,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	if r.reflection != nil {
 		r.reflection.OnTurnDone(r.ctx, "queen", "turn_done")
 	}
+	r.timelineAfterTurn()
 	r.setLastError(nil)
 }
 

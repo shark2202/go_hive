@@ -59,6 +59,14 @@ type LoopConfig struct {
 	// DefaultLoopConfig enables it, matching upstream; an unsafe or unmarked
 	// call keeps the whole batch sequential either way.
 	ParallelReadOnlyTools bool
+	// MaxToolResultChars caps the LLM-visible tool result. A result above it is
+	// replaced with a preview while the full payload is written to
+	// SpilloverDir. Zero disables the cap.
+	MaxToolResultChars int
+	// SpilloverDir, when set, stores an oversized non-error tool result on disk
+	// under a monotonic filename; the model-visible result then cites the file
+	// so the full payload can be read back.
+	SpilloverDir string
 }
 
 // Parity: framework/agent_loop/internals/types.py LoopConfig defaults.
@@ -86,6 +94,7 @@ func DefaultLoopConfig() LoopConfig {
 		// Match upstream: safe (explicitly marked) tools may run together.
 		// The loop still keeps a batch sequential when any call is unmarked.
 		ParallelReadOnlyTools: true,
+		MaxToolResultChars:    30_000,
 	}
 }
 
@@ -172,18 +181,23 @@ type AgentLoop struct {
 	inGrace             bool
 	graceStartIteration *int
 	graceAnnounced      bool
+
+	spillMu      sync.Mutex
+	spillCounter int
 }
 
 func NewAgentLoop(config LoopConfig, executor ToolExecutor) *AgentLoop {
 	if config.ToolCallGate == nil {
 		config.ToolCallGate = defaultToolCallGate
 	}
-	return &AgentLoop{
+	loop := &AgentLoop{
 		Config:       config,
 		ToolExecutor: executor,
 		Hub:          NewReminderHub(),
 		DoomLoop:     NewDoomLoopDetector(),
 	}
+	loop.spillCounter = restoreSpillCounter(config.SpilloverDir)
+	return loop
 }
 
 func (l *AgentLoop) clock() time.Time {
@@ -556,6 +570,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 	if tools == nil {
 		tools = append([]llm.ToolDef(nil), agentCtx.AvailableTools...)
 	}
+	tools = l.ensureSearchToolsTool(agentCtx, tools)
 
 	model := modelName(agentCtx)
 	result := TurnResult{Success: true}
@@ -989,15 +1004,19 @@ func (l *AgentLoop) executeTool(ctx context.Context, agentCtx *AgentContext, req
 			return result
 		}
 	}
-	// Pace every real execution (skill-file reads above are local and free).
+	if result, handled := l.executeTieredTool(agentCtx, req); handled {
+		return result
+	}
+	// Pace every real execution (skill-file reads and the local tool-tier
+	// loader above are local and free).
 	// A rejection becomes a retryable result; the tool never runs.
 	if result, blocked := l.paceToolCall(ctx, req.Name); blocked {
 		return result
 	}
 	if req.Name == "terminal_job_logs" && truthy(req.Input["wait_until_exit"]) {
-		return l.waitForJob(ctx, req)
+		return l.applyToolResultSpillover(l.waitForJob(ctx, req), req.Name)
 	}
-	return l.callExecutor(ctx, req)
+	return l.applyToolResultSpillover(l.callExecutor(ctx, req), req.Name)
 }
 
 // Parity: AgentLoop._resolve_tool_timeout.
@@ -1457,10 +1476,15 @@ func (l *AgentLoop) storeToolBatch(conv *NodeConversation, toolCalls []llm.ToolC
 		if tail != "" && tc.ID == targetID {
 			stored = stored + "\n\n" + tail
 		}
-		if _, err := conv.AddToolResult(tc.ID, stored, ToolResultOptions{
+		opts := ToolResultOptions{
 			IsError:        results[i].IsError,
 			IsSkillContent: results[i].IsSkillContent,
-		}); err != nil {
+		}
+		if results[i].SpilloverPath != "" {
+			spillover := results[i].SpilloverPath
+			opts.SpilloverPath = &spillover
+		}
+		if _, err := conv.AddToolResult(tc.ID, stored, opts); err != nil {
 			return records, err
 		}
 		records[i].Content = stored
