@@ -1,10 +1,11 @@
 package cli
 
-// Per-session tool catalogue: the builtin workspace tools plus every ported
-// integration installed into one tools.ToolRegistry. The registry is the
-// process's integration entry point (internal/tools/integrations.Install); the
-// builtins keep executing through builtin.Toolbox so their sandbox root, error
-// flag and output limits are unchanged.
+// Per-session tool catalogue: the builtin workspace tools, the session task
+// tools, and every ported integration installed into one tools.ToolRegistry.
+// The registry is the process's integration entry point
+// (internal/tools/integrations.Install); the builtins keep executing through
+// builtin.Toolbox so their sandbox root, error flag and output limits are
+// unchanged, and the task tools execute against the session's own task list.
 
 import (
 	"context"
@@ -23,6 +24,7 @@ type sessionToolCatalogue struct {
 	root         string
 	toolbox      *builtin.Toolbox
 	builtinNames map[string]struct{}
+	taskTools    *taskToolSet
 	registry     *tools.ToolRegistry
 	defs         []llm.ToolDef
 	installed    int
@@ -32,10 +34,11 @@ type sessionToolCatalogue struct {
 // and merges their definitions with the builtin ones. A name collision keeps
 // the builtin: it is the more restricted, sandboxed implementation.
 //
-// Two groups register here: the declarative catalog (integrations.New, which
-// covers the hand-written first batch) and every ported batch installer in
-// sessionIntegrationInstallers. A new batch is one line in that table;
-// install_references_test.go fails when an exported installer is left out.
+// Three groups register here: the session task tools bound to root's directory,
+// the declarative catalog (integrations.New, which covers the hand-written
+// first batch) and every ported batch installer in sessionIntegrationInstallers.
+// A new batch is one line in that table; install_references_test.go fails when
+// an exported installer is left out.
 //
 // The network scanners keep their own opt-in: they probe third-party hosts, so
 // they are dropped from the registry unless HIVE_NETWORK_SCANNERS (or the
@@ -56,11 +59,18 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 		root:         root,
 		toolbox:      toolbox,
 		builtinNames: map[string]struct{}{},
+		taskTools:    newTaskToolSet(root, home),
 		registry:     registry,
 		installed:    installed,
 	}
 	for _, def := range toolbox.Defs() {
 		catalogue.builtinNames[def.Name] = struct{}{}
+		catalogue.defs = append(catalogue.defs, def)
+	}
+	for _, def := range catalogue.taskTools.Defs() {
+		if _, taken := catalogue.builtinNames[def.Name]; taken {
+			continue
+		}
 		catalogue.defs = append(catalogue.defs, def)
 	}
 	for _, name := range registry.RegisteredNames() {
@@ -151,8 +161,9 @@ func installIntegrationBatches(registry *tools.ToolRegistry, home hivehome.Home)
 // Defs returns the tool definitions advertised to the model.
 func (c *sessionToolCatalogue) Defs() []llm.ToolDef { return c.defs }
 
-// Execute runs one tool call, dispatching builtins to their sandbox and
-// integration tools to the registry executor.
+// Execute runs one tool call, dispatching builtins to their sandbox, session
+// task tools to the session's task list, and integration tools to the registry
+// executor.
 //
 // attach_file needs the session working directory, which upstream passes as a
 // hidden CONTEXT_PARAM; sessionToolContext injects it here (never in the schema).
@@ -166,6 +177,9 @@ func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input m
 			return "", false, err
 		}
 		return result.Content, result.IsError, nil
+	}
+	if c.taskTools.Has(name) {
+		return c.taskTools.Execute(name, input)
 	}
 	result, err := c.registry.GetExecutor().Execute(ctx, tools.ToolUse{
 		Name:  name,
