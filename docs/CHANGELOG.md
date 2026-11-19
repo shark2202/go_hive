@@ -2,6 +2,10 @@
 
 本文件记录 Go 移植（`github.com/aden-hive/hive-go`）的版本内容。上游 Python 版本的发布说明在仓库根目录的 [`CHANGELOG.md`](../../CHANGELOG.md)。
 
+## 1.0.17-go.1 — 2026-11-19
+
+1.0.16 的补丁版：colony 事件桥 UI、overseer 输入源、MCP 白名单、worker reminder hub、REST reminders 镜像；测试 4,406、parity 引用 4,647。
+
 ## 1.0.16-go.1 — 2026-11-19
 
 对应上游 `aden-hive` / `aden-tools` 1.0.14（`c6c2cdcf`）。本版补齐 runtime spine 的方法层、自治层、沉淀层与能力边界，并修复 worker 身份与工具声明。

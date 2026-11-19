@@ -37,7 +37,7 @@
 ## 4. 发布包结构（目标）
 
 ```
-hive-1.0.16-go.1-darwin-arm64.tar.gz
+hive-1.0.17-go.1-darwin-arm64.tar.gz
   ├── hive                 # 单二进制（含 UI）
   ├── LICENSE
   ├── NOTICE
