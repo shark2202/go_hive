@@ -109,8 +109,14 @@ Respond with JSON: {"passes": true/false, "explanation": "..."}`,
 
 // Parity: framework/testing/llm_judge.py::LLMJudge.evaluate
 func (j *Judge) Evaluate(constraint, sourceDocument, summary, criteria string) map[string]any {
+	return j.EvaluateContext(context.Background(), constraint, sourceDocument, summary, criteria)
+}
+
+// EvaluateContext is Evaluate with a caller-supplied context, so a slow judge
+// call can be cancelled with the turn that requested it.
+func (j *Judge) EvaluateContext(ctx context.Context, constraint, sourceDocument, summary, criteria string) map[string]any {
 	prompt := buildPrompt(constraint, sourceDocument, summary, criteria)
-	result, err := j.evaluate(context.Background(), prompt)
+	result, err := j.evaluate(ctx, prompt)
 	if err != nil {
 		return map[string]any{
 			"passes":      false,
