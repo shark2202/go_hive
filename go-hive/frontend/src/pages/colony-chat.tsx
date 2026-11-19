@@ -33,6 +33,7 @@ import {
 } from "@/lib/colony-session-restore";
 import { cronToLabel } from "@/lib/graphUtils";
 import { api, ApiError } from "@/api/client";
+import { useI18n } from "@/i18n";
 import { useColony } from "@/context/ColonyContext";
 import { useHeaderActions } from "@/context/HeaderActionsContext";
 import SessionReportAction from "@/components/SessionReportAction";
@@ -257,6 +258,7 @@ function defaultAgentState(): AgentState {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function ColonyChat() {
+  const { t } = useI18n();
   const { colonyId } = useParams<{ colonyId: string }>();
   const location = useLocation();
   const { colonies, queenProfiles, markVisited, refresh: refreshColonies } = useColony();
@@ -420,11 +422,11 @@ export default function ColonyChat() {
     setActions(
       <>
         {agentState.sessionId && (
-          <Tooltip label="Colony panel">
+          <Tooltip label={t("Colony panel")}>
             <button
               onClick={() => toggleColonyWorkers()}
               className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors flex-shrink-0"
-              aria-label="Show or hide the colony panel"
+              aria-label={t("Show or hide the colony panel")}
             >
               <Component className="w-4 h-4" />
             </button>
@@ -2207,7 +2209,7 @@ export default function ColonyChat() {
     }
     const sid = agentState.sessionId;
     if (!sid) {
-      setPivotError("No session id — cannot create colony.");
+      setPivotError(t("No session id — cannot create colony."));
       return;
     }
     setPivotError(null);
@@ -2237,7 +2239,7 @@ export default function ColonyChat() {
         state: pivotGoal ? { initialGoal: pivotGoal } : undefined,
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to create colony";
+      const msg = e instanceof Error ? e.message : t("Failed to create colony");
       setPivotError(msg);
       setPivotSubmitting(false);
     }
@@ -2287,7 +2289,7 @@ export default function ColonyChat() {
   if (!colony && !isNewChat && !agentState.loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Colony not found: {colonyId}</p>
+        <p className="text-sm text-muted-foreground">{t("Colony not found: {id}", { id: colonyId ?? "" })}</p>
       </div>
     );
   }
@@ -2305,7 +2307,7 @@ export default function ColonyChat() {
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm">
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm">Connecting to agent...</span>
+                <span className="text-sm">{t("Connecting to agent...")}</span>
               </div>
             </div>
           )}
@@ -2314,7 +2316,7 @@ export default function ColonyChat() {
           {!agentState.loading && agentState.ready && !agentState.queenReady && (
             <div className="absolute top-0 left-0 right-0 z-10 px-4 py-2 bg-background border-b border-primary/20 flex items-center gap-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-primary/60" />
-              <span className="text-xs text-primary/80">Connecting to {queenInfo.name}...</span>
+              <span className="text-xs text-primary/80">{t("Connecting to {name}...", { name: queenInfo.name })}</span>
             </div>
           )}
 
@@ -2326,13 +2328,13 @@ export default function ColonyChat() {
               <div className="absolute top-0 left-0 right-0 z-10 px-4 py-2 bg-background border-b border-amber-500/30 flex items-center gap-2">
                 <KeyRound className="w-4 h-4 text-amber-600" />
                 <span className="text-xs text-amber-700">
-                  Missing credentials — configure them to continue
+                  {t("Missing credentials — configure them to continue")}
                 </span>
                 <button
                   onClick={() => setCredentialsOpen(true)}
                   className="ml-auto text-xs font-medium text-primary hover:underline"
                 >
-                  Open Credentials
+                  {t("Open Credentials")}
                 </button>
                 <button
                   onClick={() => setDismissedBanner(agentState.error!)}
@@ -2345,7 +2347,7 @@ export default function ColonyChat() {
               <div className="absolute top-0 left-0 right-0 z-10 px-4 py-2 bg-background border-b border-destructive/30 flex items-center gap-2">
                 <WifiOff className="w-4 h-4 text-destructive" />
                 <span className="text-xs text-destructive">
-                  Backend unavailable: {agentState.error}
+                  {t("Backend unavailable: {error}", { error: agentState.error })}
                 </span>
                 <button
                   onClick={() => setDismissedBanner(agentState.error!)}
@@ -2444,18 +2446,18 @@ export default function ColonyChat() {
           <div className="relative flex w-full max-w-lg h-[min(560px,88vh)] flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-2xl">
             <div className="px-6 pt-5 pb-3 space-y-1">
               <h2 className="text-sm font-semibold text-foreground">
-                Spawn a new colony for this work?
+                {t("Spawn a new colony for this work?")}
               </h2>
               <p className="text-[11px] text-muted-foreground">
-                This colony's queen has identified the latest request as off-goal for this colony and wants to spawn a fresh sibling colony for it. This colony stays alive and untouched; the new colony's queen takes over the off-goal work.
+                {t("This colony's queen has identified the latest request as off-goal for this colony and wants to spawn a fresh sibling colony for it. This colony stays alive and untouched; the new colony's queen takes over the off-goal work.")}
               </p>
             </div>
             <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-3">
               {pivotPopup.goal && (
                 <div>
                   <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                    New colony's goal{" "}
-                    <span className="text-muted-foreground/40">(authored by the queen)</span>
+                    {t("New colony's goal")}{" "}
+                    <span className="text-muted-foreground/40">{t("(authored by the queen)")}</span>
                   </label>
                   <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-sm text-foreground whitespace-pre-wrap">
                     {pivotPopup.goal}
@@ -2464,8 +2466,8 @@ export default function ColonyChat() {
               )}
               <div>
                 <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                  Colony name{" "}
-                  <span className="text-muted-foreground/40">(you choose — slug)</span>
+                  {t("Colony name")}{" "}
+                  <span className="text-muted-foreground/40">{t("(you choose — slug)")}</span>
                 </label>
                 <input
                   type="text"
@@ -2475,7 +2477,7 @@ export default function ColonyChat() {
                       e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
                     )
                   }
-                  placeholder="e.g. uber_eats_research"
+                  placeholder={t("e.g. uber_eats_research")}
                   className="w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
                   autoFocus
                 />
@@ -2483,8 +2485,8 @@ export default function ColonyChat() {
               {pivotPopup.handoff && (
                 <div>
                   <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                    Handover to new colony's queen{" "}
-                    <span className="text-muted-foreground/40">(authored by the queen, read-only)</span>
+                    {t("Handover to new colony's queen")}{" "}
+                    <span className="text-muted-foreground/40">{t("(authored by the queen, read-only)")}</span>
                   </label>
                   <div className="max-h-48 overflow-y-auto rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-[12px] text-foreground whitespace-pre-wrap leading-relaxed">
                     {pivotPopup.handoff}
@@ -2494,8 +2496,8 @@ export default function ColonyChat() {
               {typeof pivotPopup.taskCount === "number" && pivotPopup.taskCount > 0 && (
                 <p className="text-[11px] text-muted-foreground">
                   {pivotPopup.taskCount === 1
-                    ? "1 task will be seeded in the new colony."
-                    : `${pivotPopup.taskCount} tasks will be seeded in the new colony.`}
+                    ? t("1 task will be seeded in the new colony.")
+                    : t("{n} tasks will be seeded in the new colony.", { n: pivotPopup.taskCount })}
                 </p>
               )}
             </div>
@@ -2510,14 +2512,14 @@ export default function ColonyChat() {
                 disabled={pivotSubmitting}
                 className="px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
               >
-                Dismiss
+                {t("Dismiss")}
               </button>
               <button
                 onClick={handlePivotConfirm}
                 disabled={!pivotColonyName.trim() || pivotSubmitting}
                 className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
-                {pivotSubmitting ? "Creating…" : "Create Colony"}
+                {pivotSubmitting ? t("Creating…") : t("Create Colony")}
               </button>
             </div>
           </div>

@@ -47,6 +47,7 @@ import { useMe, canMakeLLMCalls } from "@/lib/me";
 import { useSessionUsage } from "@/context/SessionUsageContext";
 import { getQueenForAgent, slugToColonyId } from "@/lib/colony-registry";
 import { userStorage } from "@/lib/userStorage";
+import { useI18n } from "@/i18n";
 import {
   clearComposerHandoff,
   peekComposerHandoff,
@@ -97,6 +98,7 @@ const clearNoCreditMsgs = (queenId: string): void =>
   userStorage.remove(noCreditMsgsKey(queenId));
 
 export default function QueenDM() {
+  const { t } = useI18n();
   const { queenId } = useParams<{ queenId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -2667,7 +2669,7 @@ export default function QueenDM() {
         state: initialGoal ? { initialGoal } : undefined,
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to create colony";
+      const msg = e instanceof Error ? e.message : t("Failed to create colony");
       setCloneError(msg);
       setCloneSubmitting(false);
     }
@@ -2787,7 +2789,7 @@ export default function QueenDM() {
   if (!queenId) {
     return (
       <div className="flex items-center justify-center h-full bg-background">
-        <p className="text-sm text-muted-foreground">No queen selected.</p>
+        <p className="text-sm text-muted-foreground">{t("No queen selected.")}</p>
       </div>
     );
   }
@@ -2878,8 +2880,8 @@ export default function QueenDM() {
                 disabled={!sessionId}
                 title={
                   actionPlanOpen
-                    ? "Hide the Action Plan panel"
-                    : "Show the Action Plan panel"
+                    ? t("Hide the Action Plan panel")
+                    : t("Show the Action Plan panel")
                 }
                 className={
                   "flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors disabled:opacity-40 " +
@@ -2889,7 +2891,7 @@ export default function QueenDM() {
                 }
               >
                 <ListTodo className="w-3 h-3" />
-                Action Plan
+                {t("Action Plan")}
               </button>
               <button
                 onClick={() => setCloneDialogOpen(true)}
@@ -2897,7 +2899,7 @@ export default function QueenDM() {
                 className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors disabled:opacity-40"
               >
                 <Plus className="w-3 h-3" />
-                Start Colony
+                {t("Start Colony")}
               </button>
             </div>
           }
@@ -2940,21 +2942,21 @@ export default function QueenDM() {
             <div className="px-6 pt-5 pb-3 space-y-1">
               <h2 className="text-sm font-semibold text-foreground">
                 {cloneSuggestion?.sourcePhase === "colony"
-                  ? "Spawn a new colony for this work?"
+                  ? t("Spawn a new colony for this work?")
                   : cloneSuggestion
-                  ? `Create colony '${cloneSuggestion.colonyName}'?`
-                  : "Set Up a Colony"}
+                  ? t("Create colony '{name}'?", { name: cloneSuggestion.colonyName })
+                  : t("Set Up a Colony")}
               </h2>
               <p className="text-[11px] text-muted-foreground">
                 {cloneSuggestion?.sourcePhase === "colony"
-                  ? "The current colony's queen has identified this work as off-goal for this colony and wants to spawn a fresh sibling colony for it. The current colony stays alive and untouched."
+                  ? t("The current colony's queen has identified this work as off-goal for this colony and wants to spawn a fresh sibling colony for it. The current colony stays alive and untouched.")
                   : cloneSuggestion
-                  ? "The queen suggested creating a colony for this work. Confirm the name (you can edit) and create — this chat will be compacted into the new colony's queen seed."
-                  : "Confirm the name and any optional brief. The new colony's queen picks up from a compacted copy of this conversation."}
+                  ? t("The queen suggested creating a colony for this work. Confirm the name (you can edit) and create — this chat will be compacted into the new colony's queen seed.")
+                  : t("Confirm the name and any optional brief. The new colony's queen picks up from a compacted copy of this conversation.")}
               </p>
               {cloneSuggestion?.reason && (
                 <p className="mt-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-[11px] text-foreground">
-                  <span className="font-medium">Queen's reason: </span>
+                  <span className="font-medium">{t("Queen's reason: ")}</span>
                   {cloneSuggestion.reason}
                 </p>
               )}
@@ -2963,7 +2965,7 @@ export default function QueenDM() {
               {cloneSuggestion?.sourcePhase === "colony" && cloneSuggestion?.goal && (
                 <div>
                   <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                    New colony's goal <span className="text-muted-foreground/40">(authored by the queen)</span>
+                    {t("New colony's goal")} <span className="text-muted-foreground/40">{t("(authored by the queen)")}</span>
                   </label>
                   <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-sm text-foreground whitespace-pre-wrap">
                     {cloneSuggestion.goal}
@@ -2972,9 +2974,9 @@ export default function QueenDM() {
               )}
               <div>
                 <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                  Colony name
+                  {t("Colony name")}
                   {cloneSuggestion?.sourcePhase === "colony" && (
-                    <span className="text-muted-foreground/40"> (you choose — slug)</span>
+                    <span className="text-muted-foreground/40"> {t("(you choose — slug)")}</span>
                   )}
                 </label>
                 <input
@@ -2987,8 +2989,8 @@ export default function QueenDM() {
                   }
                   placeholder={
                     cloneSuggestion?.sourcePhase === "colony"
-                      ? "e.g. uber_eats_research"
-                      : "e.g. research_team"
+                      ? t("e.g. uber_eats_research")
+                      : t("e.g. research_team")
                   }
                   className="w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
                   autoFocus
@@ -2999,8 +3001,8 @@ export default function QueenDM() {
                   {cloneSuggestion?.handoff && (
                     <div>
                       <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                        Handover to new colony's queen
-                        <span className="text-muted-foreground/40"> (authored by the queen, read-only)</span>
+                        {t("Handover to new colony's queen")}
+                        <span className="text-muted-foreground/40"> {t("(authored by the queen, read-only)")}</span>
                       </label>
                       <div className="max-h-48 overflow-y-auto rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-[12px] text-foreground whitespace-pre-wrap leading-relaxed">
                         {cloneSuggestion.handoff}
@@ -3010,8 +3012,8 @@ export default function QueenDM() {
                   {typeof cloneSuggestion?.taskCount === "number" && cloneSuggestion.taskCount > 0 && (
                     <p className="text-[11px] text-muted-foreground">
                       {cloneSuggestion.taskCount === 1
-                        ? "1 task will be seeded in the new colony."
-                        : `${cloneSuggestion.taskCount} tasks will be seeded in the new colony.`}
+                        ? t("1 task will be seeded in the new colony.")
+                        : t("{n} tasks will be seeded in the new colony.", { n: cloneSuggestion.taskCount })}
                     </p>
                   )}
                 </>
@@ -3019,24 +3021,24 @@ export default function QueenDM() {
                 <>
                   <div>
                     <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                      Goal <span className="text-muted-foreground/40">(optional)</span>
+                      {t("Goal")} <span className="text-muted-foreground/40">{t("(optional)")}</span>
                     </label>
                     <textarea
                       value={cloneGoal}
                       onChange={(e) => setCloneGoal(e.target.value)}
-                      placeholder="Describe what this colony should work on"
+                      placeholder={t("Describe what this colony should work on")}
                       rows={3}
                       className="w-full resize-none rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                   <div>
                     <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                      Knowledge to hand over <span className="text-muted-foreground/40">(optional)</span>
+                      {t("Knowledge to hand over")} <span className="text-muted-foreground/40">{t("(optional)")}</span>
                     </label>
                     <textarea
                       value={cloneHandover}
                       onChange={(e) => setCloneHandover(e.target.value)}
-                      placeholder="Anything the new colony queen should know from this chat — decisions, constraints, who to contact, etc."
+                      placeholder={t("Anything the new colony queen should know from this chat — decisions, constraints, who to contact, etc.")}
                       rows={4}
                       className="w-full resize-none rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
                     />
@@ -3055,14 +3057,14 @@ export default function QueenDM() {
                 disabled={cloneSubmitting}
                 className="px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
               >
-                {cloneSuggestion ? "Dismiss" : "Cancel"}
+                {cloneSuggestion ? t("Dismiss") : t("Cancel")}
               </button>
               <button
                 onClick={handleColonySpawn}
                 disabled={!cloneColonyName.trim() || cloneSubmitting}
                 className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
-                {cloneSubmitting ? "Creating…" : "Create Colony"}
+                {cloneSubmitting ? t("Creating…") : t("Create Colony")}
               </button>
             </div>
           </div>
@@ -3077,7 +3079,7 @@ export default function QueenDM() {
       {actionPlanOpen && sessionId && (
         <TaskListPanel
           variant="rail"
-          title="Action Plan"
+          title={t("Action Plan")}
           sessionId={sessionId}
           previousSessions={previousSessionPlans}
           onClose={() => setActionPlanOpen(false)}

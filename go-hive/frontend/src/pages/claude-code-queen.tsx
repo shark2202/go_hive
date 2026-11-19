@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { AlertCircle, ArrowLeft, Loader2, RefreshCw, SquareTerminal, TriangleAlert, Wrench } from "lucide-react";
 import { claudeCodeQueensApi, type ClaudeCodeQueen, type TranscriptEntry } from "@/api/claudeCodeQueens";
+import { useI18n } from "@/i18n";
 
 /**
  * A queen run by Claude Code, seen from Hive: the queens she writes with, and what was said and
@@ -17,10 +18,11 @@ function when(iso: string | null): string {
 }
 
 function Entry({ entry }: { entry: TranscriptEntry }) {
+  const { t } = useI18n();
   if (entry.kind === "letter") {
     return (
       <div className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Handed to her · {when(entry.at)}</div>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("Handed to her · {when}", { when: when(entry.at) })}</div>
         <div className="text-sm whitespace-pre-wrap break-words">{entry.text}</div>
       </div>
     );
@@ -45,12 +47,13 @@ function Entry({ entry }: { entry: TranscriptEntry }) {
         entry.error ? "border-destructive/40 text-destructive" : "border-border/50 text-muted-foreground"
       }`}
     >
-      {entry.text || "(no output)"}
+      {entry.text || t("(no output)")}
     </pre>
   );
 }
 
 export default function ClaudeCodeQueenPage() {
+  const { t } = useI18n();
   const { queenId = "" } = useParams<{ queenId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -101,7 +104,7 @@ export default function ClaudeCodeQueenPage() {
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-6 py-4 border-b border-border/60 flex items-center gap-3">
         <button onClick={back} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-3.5 h-3.5" /> Back
+          <ArrowLeft className="w-3.5 h-3.5" /> {t("Back")}
         </button>
         <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
           <SquareTerminal className="w-4.5 h-4.5" />
@@ -110,15 +113,15 @@ export default function ClaudeCodeQueenPage() {
           <h2 className="text-lg font-semibold leading-tight">{queen?.name ?? queenId}</h2>
           <div className="text-xs text-muted-foreground">
             {queen
-              ? `${queen.title} · ${queen.auth === "subscription" ? "subscription" : "API key"} · ${queen.permission_mode}${
+              ? `${queen.title} · ${queen.auth === "subscription" ? t("subscription") : t("API key")} · ${queen.permission_mode}${
                   queen.model ? ` · ${queen.model}` : ""
-                } · read only`
+                } · ${t("read only")}`
               : " "}
           </div>
         </div>
         <button
           onClick={() => void load()}
-          title="Refresh"
+          title={t("Refresh")}
           className="ml-auto p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
         >
           <RefreshCw className="w-4 h-4" />
@@ -135,9 +138,9 @@ export default function ClaudeCodeQueenPage() {
         <div role="note" className="mx-6 mt-3 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
           <TriangleAlert className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" />
           <span>
-            She runs on a Claude subscription signed in on this computer. Running a plan unattended for other agents may
-            break its terms, and the account may be limited or closed: that is at your own risk. An Anthropic API key is the
-            supported way.
+            {t(
+              "She runs on a Claude subscription signed in on this computer. Running a plan unattended for other agents may break its terms, and the account may be limited or closed: that is at your own risk. An Anthropic API key is the supported way.",
+            )}
           </span>
         </div>
       )}
@@ -148,14 +151,14 @@ export default function ClaudeCodeQueenPage() {
         </div>
       ) : queen === null ? (
         <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-          No queen {queenId} runs on Claude Code here (queen_mail.claude_code in configuration.json).
+          {t("No queen {id} runs on Claude Code here (queen_mail.claude_code in configuration.json).", { id: queenId })}
         </div>
       ) : (
         <div className="flex-1 flex overflow-hidden">
           <aside className="w-64 shrink-0 border-r border-border/60 overflow-y-auto p-2">
-            <div className="px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">Conversations</div>
+            <div className="px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">{t("Conversations")}</div>
             {queen.conversations.length === 0 && (
-              <div className="px-2 py-1 text-xs text-muted-foreground">No queen has written to her yet.</div>
+              <div className="px-2 py-1 text-xs text-muted-foreground">{t("No queen has written to her yet.")}</div>
             )}
             {queen.conversations.map((c) => (
               <button
@@ -167,10 +170,10 @@ export default function ClaudeCodeQueenPage() {
               >
                 <div className="flex items-center gap-1.5 text-sm font-medium">
                   {c.peer_name}
-                  {c.running && <span className="w-2 h-2 rounded-full bg-emerald-500" title="She is working on it now" />}
+                  {c.running && <span className="w-2 h-2 rounded-full bg-emerald-500" title={t("She is working on it now")} />}
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  {c.letters} {c.letters === 1 ? "letter" : "letters"} · {when(c.last_at)}
+                  {c.letters === 1 ? t("{n} letter", { n: c.letters }) : t("{n} letters", { n: c.letters })} · {when(c.last_at)}
                 </div>
               </button>
             ))}
@@ -178,11 +181,14 @@ export default function ClaudeCodeQueenPage() {
           <section className="flex-1 overflow-y-auto px-6 py-4">
             {open && (
               <div className="text-xs text-muted-foreground mb-3">
-                With {open.peer_name} ({open.peer}) · what she ends each turn with goes back to {open.peer_name}
+                {t("With {peer} ({peerId}) · what she ends each turn with goes back to {peer}", {
+                  peer: open.peer_name,
+                  peerId: open.peer,
+                })}
               </div>
             )}
             {entries === null ? null : entries.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Nothing recorded yet.</div>
+              <div className="text-sm text-muted-foreground">{t("Nothing recorded yet.")}</div>
             ) : (
               <div className="flex flex-col gap-2.5 max-w-3xl">
                 {entries.map((entry, i) => (

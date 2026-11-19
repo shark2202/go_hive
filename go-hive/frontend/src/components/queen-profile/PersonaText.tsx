@@ -3,6 +3,7 @@ import { AlertCircle, Check, FileText, Loader2, Pencil } from "lucide-react";
 import { ApiError } from "@/api/client";
 import { isFullMotion } from "@/lib/motion";
 import { chapterLabel, isUntitled, joinChapters, outline, parseChapters, readingBody, withBody, type Entry } from "./persona-chapters";
+import { useI18n } from "@/i18n";
 
 /**
  * Her persona text (profile.yaml `core_traits`), read in the chapters it is written in. A chapter is
@@ -23,6 +24,7 @@ function withEmphasis(text: string): ReactNode[] {
 
 /** A chapter's text, folded when it runs past a few lines as laid out, with a way to read all of it. */
 function Folded({ text }: { text: string }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [overflows, setOverflows] = useState(false);
@@ -43,7 +45,7 @@ function Folded({ text }: { text: string }) {
       </div>
       {(overflows || open) && (
         <button className="qp-chapter-more" onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? "Fold it" : `Read all · ${text.length.toLocaleString()} characters`}
+          {open ? t("Fold it") : t("Read all · {count} characters", { count: text.length.toLocaleString() })}
         </button>
       )}
     </>
@@ -63,6 +65,7 @@ function TextEditor({
   onSave: (text: string) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +76,7 @@ function TextEditor({
       // On success the editor closes; only a failure leaves it open to try again.
       await onSave(draft);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Couldn't save her persona");
+      setError(e instanceof ApiError ? e.message : t("Couldn't save her persona"));
       setSaving(false);
     }
   };
@@ -98,14 +101,14 @@ function TextEditor({
         }}
       />
       <div className="qp-edit-foot">
-        <span className="qp-hint">{draft.length.toLocaleString()} characters · Ctrl+Enter saves · Esc cancels</span>
+        <span className="qp-hint">{t("{count} characters · Ctrl+Enter saves · Esc cancels", { count: draft.length.toLocaleString() })}</span>
         <div>
           <button className="qp-btn" data-tone="quiet" data-size="sm" onClick={onCancel} disabled={saving}>
-            Cancel
+            {t("Cancel")}
           </button>
           <button className="qp-btn" data-tone="primary" data-size="sm" onClick={() => void save()} disabled={saving || draft === initial}>
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            Save
+            {t("Save")}
           </button>
         </div>
       </div>
@@ -119,6 +122,7 @@ function TextEditor({
 }
 
 export default function PersonaText({ text, onSave }: { text: string; onSave: (text: string) => Promise<void> }) {
+  const { t } = useI18n();
   const chapters = useMemo(() => parseChapters(text), [text]);
   const items = useMemo(() => outline(chapters), [chapters]);
   const entries = useMemo(
@@ -140,7 +144,7 @@ export default function PersonaText({ text, onSave }: { text: string; onSave: (t
       <TextEditor
         page
         initial={text}
-        label="Her whole persona text"
+        label={t("Her whole persona text")}
         onSave={async (next) => {
           await onSave(next);
           setEditing(null);
@@ -152,9 +156,9 @@ export default function PersonaText({ text, onSave }: { text: string; onSave: (t
   if (!text.trim()) {
     return (
       <div className="qp-empty flex flex-wrap items-center justify-between gap-3">
-        <span>She has no persona text yet: nothing tells her who she is.</span>
+        <span>{t("She has no persona text yet: nothing tells her who she is.")}</span>
         <button className="qp-btn" data-size="sm" onClick={() => setEditing("all")}>
-          <Pencil className="w-3.5 h-3.5" /> Write it
+          <Pencil className="w-3.5 h-3.5" /> {t("Write it")}
         </button>
       </div>
     );
@@ -172,7 +176,7 @@ export default function PersonaText({ text, onSave }: { text: string; onSave: (t
     const body = readingBody(chapter);
     const tag = chapter.kind === "block" && <span className="qp-chapter-tag">&lt;{chapter.tag}&gt;</span>;
     const edit = (
-      <button className="qp-icon-btn" onClick={() => setEditing(index)} title="Edit this chapter" aria-label={`Edit “${name}”`}>
+      <button className="qp-icon-btn" onClick={() => setEditing(index)} title={t("Edit this chapter")} aria-label={t("Edit “{name}”", { name })}>
         <Pencil className="w-3.5 h-3.5" />
       </button>
     );
@@ -183,7 +187,7 @@ export default function PersonaText({ text, onSave }: { text: string; onSave: (t
             <h3 className="qp-chapter-title">{name}</h3>
             {tag}
           </header>
-          <TextEditor initial={chapter.body} label={`“${name}”, as written`} onSave={(next) => saveChapter(index, next)} onCancel={() => setEditing(null)} />
+          <TextEditor initial={chapter.body} label={t("“{name}”, as written", { name })} onSave={(next) => saveChapter(index, next)} onCancel={() => setEditing(null)} />
         </article>
       );
     }
@@ -221,14 +225,16 @@ export default function PersonaText({ text, onSave }: { text: string; onSave: (t
     <>
       <div className="qp-toolbar">
         <span className="qp-meta">
-          {entries.length} {entries.length === 1 ? "chapter" : "chapters"} · {text.length.toLocaleString()} characters
+          {entries.length === 1
+            ? t("{n} chapter · {count} characters", { n: entries.length, count: text.length.toLocaleString() })
+            : t("{n} chapters · {count} characters", { n: entries.length, count: text.length.toLocaleString() })}
         </span>
         <button className="qp-btn" data-size="sm" onClick={() => setEditing("all")}>
-          <FileText className="w-3.5 h-3.5" /> Edit the whole text
+          <FileText className="w-3.5 h-3.5" /> {t("Edit the whole text")}
         </button>
       </div>
       {entries.length > 1 && (
-        <nav className="qp-contents" aria-label="Chapters">
+        <nav className="qp-contents" aria-label={t("Chapters")}>
           {entries.map(({ chapter, index, n }) => (
             <button key={index} onClick={() => scrollToId(chapterId(index))} title={chapterLabel(chapter)}>
               <span className="qp-contents-n">{String(n).padStart(2, "0")}</span>

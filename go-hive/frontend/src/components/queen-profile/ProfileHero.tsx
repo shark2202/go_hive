@@ -7,6 +7,7 @@ import { compressImage } from "@/lib/image-utils";
 import { ScrambleText } from "@/components/fx/ScrambleText";
 import QueenPortraitGlyph from "@/components/QueenPortraitGlyph";
 import HoneycombAura from "./HoneycombAura";
+import { useI18n } from "@/i18n";
 
 /**
  * The top of a queen's profile: her portrait in a honeycomb cell, her name and title (editable in
@@ -17,6 +18,7 @@ export type HeroStat = { label: string; value: ReactNode; note?: string; mono?: 
 
 /** Her uploaded picture, if any, and how to change it. */
 export function useQueenAvatar(queenId: string) {
+  const { t } = useI18n();
   const { queenAvatarVersion, queenHasAvatar, bumpQueenAvatar } = useColony();
   const version = queenAvatarVersion(queenId);
   const listed = queenHasAvatar(queenId);
@@ -36,7 +38,7 @@ export function useQueenAvatar(queenId: string) {
       // Every other picture of her (sidebar, chats, org chart) loads again.
       bumpQueenAvatar(queenId);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : kind === "upload" ? "Couldn't upload the picture" : "Couldn't remove the picture");
+      setError(e instanceof ApiError ? e.message : kind === "upload" ? t("Couldn't upload the picture") : t("Couldn't remove the picture"));
     } finally {
       setBusy(null);
     }
@@ -109,6 +111,7 @@ export default function ProfileHero({
   onBack,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const { t } = useI18n();
   const [draft, setDraft] = useState<{ name: string; title: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +124,7 @@ export default function ProfileHero({
       setDraft(null);
       setError(null);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Couldn't save her name");
+      setError(e instanceof ApiError ? e.message : t("Couldn't save her name"));
     } finally {
       setSaving(false);
     }
@@ -137,7 +140,7 @@ export default function ProfileHero({
       <div className="qp-hero-bar">
         <button className="qp-back" onClick={onBack}>
           <ArrowLeft className="w-3.5 h-3.5" />
-          Back
+          {t("Back")}
         </button>
       </div>
       <div className="qp-hero-inner">
@@ -156,11 +159,11 @@ export default function ProfileHero({
                 <span className="qp-portrait-initial">{name.charAt(0)}</span>
               )}
               <div className="qp-portrait-tools">
-                <button onClick={() => fileRef.current?.click()} disabled={avatar.busy !== null} title="Change her picture" aria-label="Change her picture">
+                <button onClick={() => fileRef.current?.click()} disabled={avatar.busy !== null} title={t("Change her picture")} aria-label={t("Change her picture")}>
                   {avatar.busy === "upload" ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
                 </button>
                 {avatar.url && (
-                  <button onClick={avatar.remove} disabled={avatar.busy !== null} data-danger title="Remove her picture" aria-label="Remove her picture">
+                  <button onClick={avatar.remove} disabled={avatar.busy !== null} data-danger title={t("Remove her picture")} aria-label={t("Remove her picture")}>
                     {avatar.busy === "delete" ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
                   </button>
                 )}
@@ -189,7 +192,7 @@ export default function ProfileHero({
 
         <div className="qp-identity">
           <p className="qp-eyebrow qp-reveal" style={{ "--i": 1 } as CSSProperties}>
-            <ScrambleText text="Queen dossier" />
+            <ScrambleText text={t("Queen dossier")} />
             <span className="qp-eyebrow-id">// {queenId}</span>
             <span className="fx-ruler" aria-hidden />
           </p>
@@ -197,7 +200,7 @@ export default function ProfileHero({
           {draft ? (
             <div>
               <input
-                aria-label="Her name"
+                aria-label={t("Her name")}
                 className="qp-name-input"
                 value={draft.name}
                 autoFocus
@@ -205,7 +208,7 @@ export default function ProfileHero({
                 onKeyDown={onKey}
               />
               <input
-                aria-label="Her title"
+                aria-label={t("Her title")}
                 className="qp-title-input"
                 value={draft.title}
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
@@ -214,10 +217,10 @@ export default function ProfileHero({
               <div className="qp-actions">
                 <button className="qp-btn" data-tone="primary" data-size="sm" onClick={() => void save()} disabled={saving || !draft.name.trim() || !draft.title.trim()}>
                   {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                  Save
+                  {t("Save")}
                 </button>
                 <button className="qp-btn" data-tone="quiet" data-size="sm" onClick={() => setDraft(null)} disabled={saving}>
-                  Cancel
+                  {t("Cancel")}
                 </button>
               </div>
             </div>
@@ -225,7 +228,7 @@ export default function ProfileHero({
             <>
               <div className="qp-name-row">
                 <h1 className="qp-name">{name}</h1>
-                <button className="qp-icon-btn" onClick={() => setDraft({ name, title })} title="Edit her name and title" aria-label="Edit her name and title">
+                <button className="qp-icon-btn" onClick={() => setDraft({ name, title })} title={t("Edit her name and title")} aria-label={t("Edit her name and title")}>
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -243,7 +246,7 @@ export default function ProfileHero({
           )}
 
           {epigraph && !draft && (
-            <button className="qp-epigraph qp-reveal" style={{ "--i": 3 } as CSSProperties} onClick={onEpigraph} title="Read her soul">
+            <button className="qp-epigraph qp-reveal" style={{ "--i": 3 } as CSSProperties} onClick={onEpigraph} title={t("Read her soul")}>
               <span className="qp-epigraph-text">“{epigraph.text}”</span>
               <span className="qp-epigraph-by block">— {epigraph.by}</span>
             </button>
@@ -251,10 +254,10 @@ export default function ProfileHero({
 
           {retired ? (
             <div className="qp-retired qp-reveal" style={{ "--i": 4 } as CSSProperties}>
-              <span>Decommissioned: hidden from your sidebar, colonies and pickers.</span>
+              <span>{t("Decommissioned: hidden from your sidebar, colonies and pickers.")}</span>
               <button className="qp-btn" data-size="sm" onClick={() => onRetire(false)} disabled={retiring}>
                 {retiring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
-                Hire back
+                {t("Hire back")}
               </button>
             </div>
           ) : (
@@ -262,15 +265,15 @@ export default function ProfileHero({
               <div className="qp-actions qp-reveal" style={{ "--i": 4 } as CSSProperties}>
                 <button className="qp-btn" data-tone="primary" onClick={onMessage}>
                   <MessageSquare className="w-4 h-4" />
-                  Message
+                  {t("Message")}
                 </button>
                 <button className="qp-btn" onClick={onNewColony}>
                   <Plus className="w-4 h-4" />
-                  New colony
+                  {t("New colony")}
                 </button>
                 <button className="qp-btn" data-tone="danger" onClick={() => onRetire(true)} disabled={retiring}>
                   {retiring ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserMinus className="w-4 h-4" />}
-                  Decommission
+                  {t("Decommission")}
                 </button>
               </div>
             )

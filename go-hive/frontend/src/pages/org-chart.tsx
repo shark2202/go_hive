@@ -18,6 +18,7 @@ import { orderQueens } from "@/lib/colony-registry";
 import { useLiveSessions } from "@/hooks/use-live-sessions";
 import { deriveColonyStatus, describeColonyStatus, STATUS_DOT_CLASS, STATUS_LABEL, STATUS_TEXT_CLASS } from "@/lib/colony-status";
 import { Tooltip } from "@/components/Tooltip";
+import { useI18n } from "@/i18n";
 
 const COLONY_ICONS: Record<string, LucideIcon> = {
   component: Component, rocket: Rocket, globe: Globe, mail: Mail,
@@ -98,14 +99,17 @@ function ColonyDetailPanel({ colony, queenName, onClose, onIconChange }: {
 }) {
   const navigate = useNavigate();
   const { byColony } = useLiveSessions();
+  const { t } = useI18n();
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
 
   const formatDate = (iso: string | null) => {
     if (!iso) return "—";
     try {
       const d = new Date(iso);
-      return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
-        + " at " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+      return t("{date} at {time}", {
+        date: d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }),
+        time: d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }),
+      });
     } catch { return "—"; }
   };
 
@@ -114,12 +118,12 @@ function ColonyDetailPanel({ colony, queenName, onClose, onIconChange }: {
     try {
       const diff = Date.now() - new Date(iso).getTime();
       const mins = Math.floor(diff / 60000);
-      if (mins < 1) return "just now";
-      if (mins < 60) return `${mins}m ago`;
+      if (mins < 1) return t("just now");
+      if (mins < 60) return t("{n}m ago", { n: mins });
       const hrs = Math.floor(mins / 60);
-      if (hrs < 24) return `${hrs}h ago`;
+      if (hrs < 24) return t("{n}h ago", { n: hrs });
       const days = Math.floor(hrs / 24);
-      return `${days}d ago`;
+      return t("{n}d ago", { n: days });
     } catch { return null; }
   };
 
@@ -138,7 +142,7 @@ function ColonyDetailPanel({ colony, queenName, onClose, onIconChange }: {
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/60">
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <Component className="w-4 h-4 text-primary" />
-          Colony Details
+          {t("Colony Details")}
         </div>
         <button onClick={onClose} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60">
           <X className="w-4 h-4" />
@@ -152,13 +156,13 @@ function ColonyDetailPanel({ colony, queenName, onClose, onIconChange }: {
             <button
               onClick={() => setIconPickerOpen(!iconPickerOpen)}
               className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 hover:bg-primary/20 transition-colors"
-              title="Change icon"
+              title={t("Change icon")}
             >
               <CurrentIcon className="w-6 h-6 text-primary" />
             </button>
             {iconPickerOpen && (
               <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-card border border-border/60 rounded-lg shadow-xl z-20 p-2 w-[200px]">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Choose icon</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{t("Choose icon")}</p>
                 <div className="grid grid-cols-4 gap-1">
                   {COLONY_ICON_KEYS.map((key) => {
                     const Icon = COLONY_ICONS[key];
@@ -174,7 +178,7 @@ function ColonyDetailPanel({ colony, queenName, onClose, onIconChange }: {
             )}
           </div>
           <h3 className="text-base font-semibold text-foreground">{colony.name}</h3>
-          {queenName && <p className="text-xs text-muted-foreground mt-0.5">Managed by {queenName}</p>}
+          {queenName && <p className="text-xs text-muted-foreground mt-0.5">{t("Managed by {name}", { name: queenName })}</p>}
         </div>
 
         {/* Go to colony */}
@@ -182,14 +186,14 @@ function ColonyDetailPanel({ colony, queenName, onClose, onIconChange }: {
           onClick={() => navigate(`/colony/${colony.id}`)}
           className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 mb-6"
         >
-          Open Colony
+          {t("Open Colony")}
           <ArrowRight className="w-4 h-4" />
         </button>
 
         {/* Metadata */}
         <div className="space-y-4">
           <div>
-            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Start Date</h4>
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{t("Start Date")}</h4>
             <div className="flex items-center gap-2 text-sm text-foreground">
               <Calendar className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
               {formatDate(colony.createdAt)}
@@ -197,15 +201,15 @@ function ColonyDetailPanel({ colony, queenName, onClose, onIconChange }: {
           </div>
 
           <div>
-            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Project Goal</h4>
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{t("Project Goal")}</h4>
             <div className="flex items-start gap-2 text-sm text-foreground/80 min-w-0">
               <Target className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <p className="leading-relaxed break-words min-w-0">{colony.task || colony.description || "No goal specified"}</p>
+              <p className="leading-relaxed break-words min-w-0">{colony.task || colony.description || t("No goal specified")}</p>
             </div>
           </div>
 
           <div>
-            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Current Status</h4>
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{t("Current Status")}</h4>
             <div className="flex items-center gap-2 text-sm">
               <Activity className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
               {(() => {
@@ -225,7 +229,7 @@ function ColonyDetailPanel({ colony, queenName, onClose, onIconChange }: {
 
           {colony.lastActive && (
             <div>
-              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Last Active</h4>
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{t("Last Active")}</h4>
               <div className="flex items-center gap-2 text-sm text-foreground">
                 <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                 {formatRelative(colony.lastActive) || formatDate(colony.lastActive)}
@@ -234,15 +238,15 @@ function ColonyDetailPanel({ colony, queenName, onClose, onIconChange }: {
           )}
 
           <div>
-            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Stats</h4>
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{t("Stats")}</h4>
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-lg bg-muted/30 px-3 py-2 text-center">
                 <p className="text-lg font-semibold text-foreground">{colony.sessionCount}</p>
-                <p className="text-[10px] text-muted-foreground">Sessions</p>
+                <p className="text-[10px] text-muted-foreground">{t("Sessions")}</p>
               </div>
               <div className="rounded-lg bg-muted/30 px-3 py-2 text-center">
                 <p className="text-lg font-semibold text-foreground">{colony.runCount}</p>
-                <p className="text-[10px] text-muted-foreground">Runs</p>
+                <p className="text-[10px] text-muted-foreground">{t("Runs")}</p>
               </div>
             </div>
           </div>
@@ -293,13 +297,14 @@ function QueenCard({
   onCardMouseDown: (e: React.MouseEvent) => void;
   onSelectColony: (colony: Colony) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col items-center w-full">
       {/* Queen card — drag handle. Fixed height so all cards align. */}
       <div
         onMouseDown={onCardMouseDown}
         data-tour="tour-queen-card"
-        title={decommissioned ? "Decommissioned" : "Drag to move · click to open"}
+        title={decommissioned ? t("Decommissioned") : t("Drag to move · click to open")}
         className={`group flex flex-col items-center justify-center rounded-xl border bg-card p-4 w-full h-[8.125rem] text-center select-none ${
           dragging
             ? "cursor-grabbing shadow-xl ring-2 ring-primary/40"
@@ -317,7 +322,7 @@ function QueenCard({
           {queen.name}
         </span>
         <span className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
-          {decommissioned ? "Decommissioned" : queen.title}
+          {decommissioned ? t("Decommissioned") : queen.title}
         </span>
       </div>
 
@@ -348,11 +353,12 @@ function ClaudeCodeCard({
   onCardMouseDown: (e: React.MouseEvent) => void;
 }) {
   const working = queen.conversations.some((c) => c.running);
+  const { t } = useI18n();
   return (
     <div className="flex flex-col items-center w-full">
       <div
         onMouseDown={onCardMouseDown}
-        title="Run by Claude Code · drag to move · click to see her conversations"
+        title={t("Run by Claude Code · drag to move · click to see her conversations")}
         className={`group flex flex-col items-center justify-center rounded-xl border border-dashed bg-card p-4 w-full h-[8.125rem] text-center select-none ${
           dragging ? "cursor-grabbing shadow-xl ring-2 ring-primary/40" : "cursor-grab transition-all duration-200"
         } border-border/80 hover:border-primary/30 hover:bg-primary/[0.03]`}
@@ -362,7 +368,7 @@ function ClaudeCodeCard({
             <SquareTerminal className="w-5 h-5" />
           </div>
           {working && (
-            <span className="absolute -right-0.5 -top-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-card" title="Working now" />
+            <span className="absolute -right-0.5 -top-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-card" title={t("Working now")} />
           )}
         </div>
         <span className="text-[13px] font-semibold tracking-[-0.01em] line-clamp-1 text-foreground group-hover:text-primary transition-colors">
@@ -371,11 +377,13 @@ function ClaudeCodeCard({
         <span className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{queen.title}</span>
       </div>
       <div className="mt-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-        Claude Code · {queen.conversations.length} {queen.conversations.length === 1 ? "chat" : "chats"}
+        {queen.conversations.length === 1
+          ? t("Claude Code · {n} chat", { n: queen.conversations.length })
+          : t("Claude Code · {n} chats", { n: queen.conversations.length })}
       </div>
       {queen.auth === "subscription" && (
-        <div className="text-[10px] text-amber-600" title="Runs on a Claude subscription: at your own risk">
-          subscription · at your own risk
+        <div className="text-[10px] text-amber-600" title={t("Runs on a Claude subscription: at your own risk")}>
+          {t("subscription · at your own risk")}
         </div>
       )}
     </div>
@@ -387,6 +395,7 @@ function ClaudeCodeCard({
 // Fixed left-to-right order for queen cards
 export default function OrgChart() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { queenProfiles: unsortedQueenProfiles, colonies, userProfile, userAvatarVersion, userHasAvatar } = useColony();
   const { me } = useMe();
   const setQueenPosition = useSetQueenPosition();
@@ -589,10 +598,10 @@ export default function OrgChart() {
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <Network className="w-5 h-5 text-primary" />
-              Org Chart
+              {t("Org Chart")}
             </h2>
             <span className="text-xs text-muted-foreground">
-              {cardIds.length} queens &middot; {colonies.length} colonies
+              {t("{n} queens · {m} colonies", { n: cardIds.length, m: colonies.length })}
             </span>
           </div>
         </div>
@@ -657,10 +666,10 @@ export default function OrgChart() {
             >
               <UserAvatar initials={initials} avatarVersion={userAvatarVersion} userHasAvatar={userHasAvatar} />
               <div className="font-semibold text-sm text-foreground">
-                {userProfile.displayName || "You"}
+                {userProfile.displayName || t("You")}
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                CEO / Founder
+                {t("CEO / Founder")}
               </div>
             </div>
 
@@ -715,7 +724,7 @@ export default function OrgChart() {
           {showDecommissioned && (
             <div className="w-[66rem] max-w-[90vw] max-h-[60vh] overflow-y-auto rounded-xl border border-border/60 bg-card shadow-xl p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3">
-                Positions &middot; add or remove one, hire its lead, or re-enable one that&apos;s decommissioned
+                {t("Positions · add or remove one, hire its lead, or re-enable one that's decommissioned")}
               </div>
               <PositionCatalog />
             </div>
@@ -724,16 +733,16 @@ export default function OrgChart() {
             <button
               onClick={undoSnapshot ? handleUndoReset : handleResetPositions}
               disabled={!undoSnapshot && !hasCustomPositions}
-              title={undoSnapshot ? "Undo the reset and restore positions" : "Reset queen positions to the default layout"}
+              title={undoSnapshot ? t("Undo the reset and restore positions") : t("Reset queen positions to the default layout")}
               className="w-32 text-center px-3 py-1.5 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground shadow-md hover:text-foreground hover:border-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:border-border/60"
             >
-              {undoSnapshot ? "Undo" : "Reset"}
+              {undoSnapshot ? t("Undo") : t("Reset")}
             </button>
             <button
               onClick={() => setShowDecommissioned((v) => !v)}
               className="w-32 text-center px-3 py-1.5 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground shadow-md hover:text-foreground hover:border-primary/30 transition-colors"
             >
-              Leader Catalog
+              {t("Leader Catalog")}
             </button>
           </div>
         </div>

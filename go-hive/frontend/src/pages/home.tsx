@@ -32,6 +32,7 @@ import { RollingNumber } from "@/components/fx/RollingNumber";
 import { ScrambleText } from "@/components/fx/ScrambleText";
 import { useLiveSessions } from "@/hooks/use-live-sessions";
 import { isFullMotion } from "@/lib/motion";
+import { useI18n } from "@/i18n";
 
 // Ordering for community sections, matching the Prompt Library's default sort:
 // most copied first, newest (higher id) breaking ties. Static/custom items with
@@ -80,6 +81,7 @@ function deriveColonyName(text: string): string {
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { userProfile, queenProfiles, colonies, refresh } = useColony();
   const { me } = useMe();
   const [inputValue, setInputValue] = useState("");
@@ -204,7 +206,7 @@ export default function Home() {
     }
   };
 
-  const displayName = userProfile.displayName || "there";
+  const displayName = userProfile.displayName;
 
   // Telemetry for the status line above the greeting.
   const { byQueen } = useLiveSessions();
@@ -444,26 +446,28 @@ export default function Home() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-3 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/80">
             <HiveLogo size={11} className="text-primary" />
-            <ScrambleText text="OpenHive // Queen network" />
+            <ScrambleText text={t("OpenHive // Queen network")} />
             <span aria-hidden className="fx-ruler w-10" />
             <span>
-              <RollingNumber value={deployQueens.length} /> {deployQueens.length === 1 ? "queen" : "queens"}
+              <RollingNumber value={deployQueens.length} /> {deployQueens.length === 1 ? t("queen") : t("queens")}
             </span>
             <span aria-hidden className="text-primary/60">·</span>
             <span>
-              <RollingNumber value={colonies.length} /> {colonies.length === 1 ? "colony" : "colonies"}
+              <RollingNumber value={colonies.length} /> {colonies.length === 1 ? t("colony") : t("colonies")}
             </span>
             <span aria-hidden className="text-primary/60">·</span>
             <span className={workingQueens > 0 ? "text-primary" : undefined}>
-              <RollingNumber value={workingQueens} /> working
+              <RollingNumber value={workingQueens} /> {t("working")}
             </span>
             <span aria-hidden className="fx-caret" />
           </div>
           <Decrypt as="h1" className="block text-2xl font-bold text-foreground mb-2" delayMs={120}>
-            Hey {displayName}, what can I help you with?
+            {displayName
+              ? t("Hey {name}, what can I help you with?", { name: displayName })
+              : t("Hey there, what can I help you with?")}
           </Decrypt>
           <Decrypt as="p" className="block text-sm text-muted-foreground" delayMs={260}>
-            Describe a task and I'll deploy an agent to handle it
+            {t("Describe a task and I'll deploy an agent to handle it")}
           </Decrypt>
         </div>
 
@@ -476,7 +480,7 @@ export default function Home() {
               value={inputValue}
               onChange={handleInputChange}
               onSubmit={() => startQueenSession(inputValue)}
-              placeholder="Describe a task for the hive...  (type / to add a skill)"
+              placeholder={t("Describe a task for the hive...  (type / to add a skill)")}
               suggestionPlacement="down"
               maxHeightPx={320}
               className="px-5 py-4 pr-12 text-sm text-foreground"
@@ -505,7 +509,7 @@ export default function Home() {
       <div className="w-full max-w-6xl flex-1 min-h-0 flex flex-col relative z-20">
         <div
           className="rounded-xl overflow-y-auto flex-1 min-h-0 -mx-2 px-2"
-          aria-label="Prompt library"
+          aria-label={t("Prompt library")}
           onScroll={handleLibraryScroll}
         >
           {deployQueens.length > 0 && (
@@ -518,13 +522,13 @@ export default function Home() {
               section.visibleItems.length === 0 ? null : (
                 <div key={section.id} className="mb-5">
                   <div className="sticky top-0 z-10 bg-background/90 backdrop-blur py-1.5 flex items-center justify-between text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    <span>{section.name}</span>
+                    <span>{t(section.name)}</span>
                     {section.id === "_community" && (
                       <button
                         onClick={() => navigate("/prompt-library")}
                         className="font-medium normal-case tracking-normal text-muted-foreground/70 hover:text-foreground transition-colors"
                       >
-                        View all →
+                        {t("View all →")}
                       </button>
                     )}
                   </div>
@@ -555,7 +559,7 @@ export default function Home() {
             ))}
             {visibleCount < totalPrompts && (
               <div className="py-3 text-[10px] text-muted-foreground/60 text-center">
-                Scroll for more ({totalPrompts - visibleCount} remaining)
+                {t("Scroll for more ({n} remaining)", { n: totalPrompts - visibleCount })}
               </div>
             )}
           </div>
@@ -574,10 +578,10 @@ export default function Home() {
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="text-sm font-semibold text-foreground mb-1">
-              Who do you want to talk to?
+              {t("Who do you want to talk to?")}
             </div>
             <div className="text-[11px] text-muted-foreground mb-3">
-              Your message is sent to the queen you pick.
+              {t("Your message is sent to the queen you pick.")}
             </div>
             <div className="fx-cascade max-h-[50vh] overflow-y-auto flex flex-col gap-1.5">
               {deployQueens.map((q) => (
@@ -603,8 +607,7 @@ export default function Home() {
               ))}
               {deployQueens.length === 0 && (
                 <div className="text-[11px] text-muted-foreground">
-                  No active queens — enable one in the Org Chart&apos;s leader
-                  catalog.
+                  {t("No active queens — enable one in the Org Chart's leader catalog.")}
                 </div>
               )}
             </div>
