@@ -7,7 +7,7 @@
 
 | 判定 | 结果 |
 | --- | --- |
-| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：概念审计 **61 已接 / 9 部分 / 10 未接**，八层 spine **50 / 10 / 10**（基线 `4b6f1cf4`）。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go-native playbook、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺：`search_messages`/`search_timeline`、`stall_check`、并行只读工具、预算软检查点与花费上限、Anthropic 流式、park 落盘+resume、memory timeline、worker task list、agent 可调用 credentials、rate limit 执行、soul 进 persona。半截项已于 1.0.17 收口（overseer 输入源、MCP 白名单、colony 事件桥 UI、worker reminder hub、REST reminders 镜像）；仍半截：playbook 无 status/stop |
+| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：概念审计 **61 已接 / 9 部分 / 10 未接**，八层 spine **50 / 10 / 10**（基线 `4b6f1cf4`）。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go-native playbook、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺（1.0.18 后）：并行只读工具、预算软检查点与花费上限、Anthropic 流式、park 落盘+resume、memory timeline、agent 可调用 credentials、rate limit 执行、soul 进 persona。1.0.18 已补：`search_messages`/`search_timeline`、doom-loop 检测、worker task list、`run_playbook` status/stop。半截项已于 1.0.17 收口（overseer 输入源、MCP 白名单、colony 事件桥 UI、worker reminder hub、REST reminders 镜像）|
 | R2 分发形态 | 满足：六平台归档 + SHA256SUMS + 安装脚本，解压即用 |
 | R3 用户文档 | 部分满足：快速开始/配置/支持矩阵齐备，但支持矩阵明确标注 81 个需凭据模块「未验证」 |
 | R4 许可 | 满足：Apache-2.0 LICENSE + NOTICE |
