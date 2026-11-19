@@ -49,6 +49,11 @@ type RuntimeOptions struct {
 	MCPToolNames       map[string]struct{}
 	WorkerKeepSet      func() map[string]struct{}
 	AdaptiveToolBudget *bool
+	// DeclaredTools is the optional tool pool a worker definition's "tools"
+	// list selects from (integration/MCP tools the caller resolved). A worker
+	// only receives pool entries it declares; an empty declaration keeps the
+	// colony's default worker surface. Nil is the same as empty.
+	DeclaredTools []llm.ToolDef
 	// MaxConcurrentWorkers caps how many spawned workers execute at once.
 	// Extra workers stay QUEUED until a slot opens. <=0 uses the colony
 	// default (HIVE_MAX_CONCURRENT_WORKERS, 4).
@@ -120,15 +125,16 @@ type SeedMessage struct {
 
 // Parity: framework/host/colony_runtime.py::ColonyRuntime (orchestration subset)
 type ColonyRuntime struct {
-	agentSpec   agentloop.AgentSpec
-	goal        *schemas.Goal
-	storagePath string
-	llm         llm.Completer
-	tools       []llm.ToolDef
-	toolExec    func(agentloop.ToolCallRequest) (agentloop.ToolResult, error)
-	bus         *eventbus.EventBus
-	streamID    string
-	keepSet     func() map[string]struct{}
+	agentSpec     agentloop.AgentSpec
+	goal          *schemas.Goal
+	storagePath   string
+	llm           llm.Completer
+	tools         []llm.ToolDef
+	declaredTools []llm.ToolDef
+	toolExec      func(agentloop.ToolCallRequest) (agentloop.ToolResult, error)
+	bus           *eventbus.EventBus
+	streamID      string
+	keepSet       func() map[string]struct{}
 
 	toolsMu         sync.RWMutex
 	enabledMCPTools []string
@@ -184,6 +190,7 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 		storagePath:   storage,
 		llm:           opts.LLM,
 		tools:         append([]llm.ToolDef(nil), opts.Tools...),
+		declaredTools: append([]llm.ToolDef(nil), opts.DeclaredTools...),
 		toolExec:      opts.ToolExecutor,
 		bus:           opts.EventBus,
 		streamID:      opts.StreamID,
@@ -752,15 +759,28 @@ func (r *ColonyRuntime) workerCompleter() llm.Completer {
 // Parity: framework/agent_loop/agent_loop.py::AgentLoop._reports_to_parent (worker
 // stream_id gate for build_report_to_parent_tool)
 func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
-	tools := r.applyToolAllowlist(r.tools)
-	if strings.HasPrefix(worker.StreamID, "worker:") {
-		// Workers get the worker-role tracker table: tracker_upsert is their
-		// durable progress channel and tracker_query their read surface. The
-		// queen-only pair stays out.
-		tools = append(tools, trackerToolDefs("worker")...)
-		tools = append(tools, agentloop.BuildReportToParentTool(r.agentSpec.ReportSchema))
+	if !strings.HasPrefix(worker.StreamID, "worker:") {
+		return r.applyToolAllowlist(r.tools)
 	}
+	// worker.json's declared tool set selects the worker's optional tools
+	// (integration/MCP); the overseer keeps the colony surface untouched.
+	tools := r.baseWorkerTools()
+	// Workers get the worker-role tracker table: tracker_upsert is their
+	// durable progress channel and tracker_query their read surface. The
+	// queen-only pair stays out.
+	tools = appendMissingToolDefs(tools, trackerToolDefs("worker")...)
+	tools = appendMissingToolDefs(tools, agentloop.BuildReportToParentTool(r.agentSpec.ReportSchema))
 	return tools
+}
+
+// baseWorkerTools is the surface every worker starts from: the colony's
+// configured tools after the MCP allowlist, merged with the tools the worker
+// definition declares (worker.json "tools").
+//
+// Parity: framework/loader/agent_loader.py::AgentLoader.load (the config's
+// tools list becomes the worker node's declared tool set)
+func (r *ColonyRuntime) baseWorkerTools() []llm.ToolDef {
+	return selectWorkerDeclaredTools(r.applyToolAllowlist(r.tools), r.declaredTools, r.agentSpec.Tools)
 }
 
 func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallRequest) (agentloop.ToolResult, error) {

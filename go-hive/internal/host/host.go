@@ -31,6 +31,10 @@ type Config struct {
 	LLM          llm.Completer
 	Tools        []llm.ToolDef
 	ToolExecutor func(agentloop.ToolCallRequest) (agentloop.ToolResult, error)
+	// DeclaredTools is the optional tool pool colony workers select from via
+	// their worker definition's "tools" list (integration/MCP tools). Nil
+	// leaves workers on the base tool surface.
+	DeclaredTools []llm.ToolDef
 
 	// EventBus is optional; when nil the host creates one it owns.
 	EventBus *eventbus.EventBus
@@ -85,6 +89,7 @@ func New(cfg Config) (*Host, error) {
 		StoragePath:          cfg.StoragePath,
 		LLM:                  cfg.LLM,
 		Tools:                cfg.Tools,
+		DeclaredTools:        cfg.DeclaredTools,
 		ToolExecutor:         cfg.ToolExecutor,
 		EventBus:             bus,
 		StreamID:             cfg.ColonyID,

@@ -104,20 +104,10 @@ func trackerToolDefs(role string) []llm.ToolDef {
 
 // workerToolDefs is the colony's tool surface plus the tracker tools every
 // worker needs. The queen's tool list (r.tools) is shared by the overseer, so
-// the append happens here rather than mutating r.tools.
+// the append happens here rather than mutating r.tools; the base surface goes
+// through the declared-tool merge because this is a worker-only list.
 func (r *ColonyRuntime) workerToolDefs() []llm.ToolDef {
-	defs := r.applyToolAllowlist(r.tools)
-	seen := make(map[string]struct{}, len(defs))
-	for _, def := range defs {
-		seen[def.Name] = struct{}{}
-	}
-	for _, def := range trackerToolDefs("worker") {
-		if _, taken := seen[def.Name]; taken {
-			continue
-		}
-		defs = append(defs, def)
-	}
-	return defs
+	return appendMissingToolDefs(r.baseWorkerTools(), trackerToolDefs("worker")...)
 }
 
 // workerTrackerRegistry binds the worker role tools to the worker's own
