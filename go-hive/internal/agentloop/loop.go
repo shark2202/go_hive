@@ -1298,6 +1298,7 @@ func NewReminderAgentContext(agentCtx *AgentContext) *ReminderAgentContext {
 		OpenTasksProvider:          agentCtx.OpenTasksProvider,
 		SessionGoalProvider:        agentCtx.SessionGoalProvider,
 		SentinelAutopilotProvider:  agentCtx.SentinelAutopilotProvider,
+		ColonyBindingProvider:      agentCtx.ColonyBindingProvider,
 		ActiveWorkersProvider:      activeWorkersFrom(agentCtx.ActiveWorkersProvider),
 		ColonyStatsProvider:        colonyStatsFrom(agentCtx.ColonyStatsProvider),
 	}

@@ -37,11 +37,6 @@ import (
 
 var goos = runtime.GOOS
 
-// serveReminders is the process-wide reminder runtime for `hive serve`: one
-// instance feeds both the HTTP routes and each chat session's turn hook, so a
-// reminder generated during a turn is visible to the next polling request.
-var serveReminders *hiveserver.ReminderRuntime
-
 var reservedJSONStems = map[string]bool{
 	"agent":         true,
 	"flowchart":     true,
@@ -274,7 +269,6 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	runtimeOwnerPID()
 
 	manager := hiveserver.NewSessionManager()
-	serveReminders = hiveserver.NewReminderRuntime()
 
 	home, err := r.home()
 	if err != nil {
@@ -312,7 +306,6 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	}
 
 	app := hiveserver.NewApp(hiveserver.AppDeps{
-		Reminders: serveReminders,
 		Sessions: func() []hiveserver.FeatureSession {
 			liveMu.Lock()
 			defer liveMu.Unlock()
@@ -585,14 +578,15 @@ func (r *Runner) createSessionWithRuntime(
 		}
 		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
-			LLM:       provider,
-			Tools:     tools.Defs(),
-			Execute:   tools.Execute,
-			Root:      sessionDir,
-			Bus:       record.EventBus,
-			SessionID: sessionID,
-			QueenName: record.QueenName,
-			HomeRoot:  home.Root,
+			LLM:           provider,
+			Tools:         tools.Defs(),
+			Execute:       tools.Execute,
+			Root:          sessionDir,
+			Bus:           record.EventBus,
+			SessionID:     sessionID,
+			QueenName:     record.QueenName,
+			HomeRoot:      home.Root,
+			SkillsCatalog: queenSkillsCatalogProvider(home, queenScope),
 		})
 		if err != nil {
 			fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, err)

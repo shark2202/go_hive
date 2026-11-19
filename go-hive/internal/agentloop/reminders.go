@@ -32,6 +32,11 @@ type ReminderAgentContext struct {
 	OpenTasksProvider          func() []IdleTask
 	SessionGoalProvider        func() string
 	SentinelAutopilotProvider  func() bool
+	// ColonyBindingProvider resolves the session's live colony tracker
+	// binding, or nil when no colony is attached. The tracker-snapshot
+	// source self-skips on nil; a late colony attach is re-bound through
+	// ReminderHub.Bind.
+	ColonyBindingProvider func() *ColonyBinding
 	// ActiveWorkersProvider lists the colony workers still in flight.
 	// Nil (or an empty list) means the active-workers reminder self-skips.
 	ActiveWorkersProvider func() []ActiveWorker

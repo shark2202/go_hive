@@ -12,6 +12,8 @@ import (
 	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/tasks"
+	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/aden-hive/hive-go/internal/tracker"
 )
 
 // recordingChatLLM answers each call from a fixed script and records the
@@ -306,7 +308,8 @@ func TestChatRuntimeReminderProvidersEmptyWithoutData(t *testing.T) {
 	ctx := agentloop.NewReminderAgentContext(runtime.agentCtx)
 	if ctx.OpenTasksProvider == nil || ctx.SessionGoalProvider == nil ||
 		ctx.ActiveWorkersProvider == nil || ctx.ColonyStatsProvider == nil ||
-		ctx.QueenSkillsCatalogProvider == nil {
+		ctx.QueenSkillsCatalogProvider == nil || ctx.ColonyBindingProvider == nil ||
+		ctx.SearchableToolsProvider == nil || ctx.LoadedToolNamesProvider == nil {
 		t.Fatal("reminder providers were not filled")
 	}
 	if tasks := ctx.OpenTasksProvider(); len(tasks) != 0 {
@@ -344,5 +347,235 @@ func TestChatRuntimeNoReminderWithoutData(t *testing.T) {
 	waitForAssistantParts(t, runtime, 1)
 	if got := chatAllText(model.request(0).Messages); strings.Contains(got, "<system-reminder>") {
 		t.Fatalf("a dataless session injected a reminder:\n%s", got)
+	}
+}
+
+// Parity: tests/test_tool_skill_reminders.py::TestSearchableToolsReminder::test_lists_searchable_tools_with_contract
+// Parity: framework/tools/tool_tiers.py::ToolTierState.get_searchable_tools
+func TestChatRuntimeSearchableToolsManifestFromMCPTier(t *testing.T) {
+	installFakeAttacher(t, &fakeMCPAttacher{statuses: []tools.MCPServerStatus{{
+		Name:      "github",
+		Connected: true,
+		ToolNames: []string{"search"},
+	}}})
+
+	searchableName := tools.NamespacedMCPToolName(tools.MCPToolNamespace, "github", "search")
+	model := &recordingChatLLM{responses: []llm.Completion{
+		{ToolCalls: []llm.ToolCall{{
+			ID:        "call_search",
+			Name:      "search_tools",
+			Arguments: `{"query":"select:` + searchableName + `"}`,
+		}}},
+		{Content: "loaded", Model: "scripted-chat"},
+	}}
+	runtime, err := NewChatRuntime(ChatRuntimeDeps{
+		LLM: model,
+		Tools: []llm.ToolDef{
+			{Name: "read_file", Description: "read a file"},
+			{Name: searchableName, Description: "search GitHub"},
+		},
+		Execute:   func(context.Context, string, map[string]any) (string, bool, error) { return "ok", false, nil },
+		Root:      t.TempDir(),
+		SessionID: "reminder-searchable",
+	})
+	if err != nil {
+		t.Fatalf("NewChatRuntime: %v", err)
+	}
+	defer func() { _ = runtime.Close() }()
+
+	ctx := agentloop.NewReminderAgentContext(runtime.agentCtx)
+	if ctx.SearchableToolsProvider == nil {
+		t.Fatal("chat session did not expose a searchable tools provider")
+	}
+	names := make([]string, 0, len(ctx.SearchableToolsProvider()))
+	for _, tool := range ctx.SearchableToolsProvider() {
+		names = append(names, tool.Name)
+	}
+	if len(names) != 1 || names[0] != searchableName {
+		t.Fatalf("searchable tools = %v, want [%s]", names, searchableName)
+	}
+
+	if err := runtime.Deliver("hello"); err != nil {
+		t.Fatalf("Deliver: %v", err)
+	}
+	waitForAssistantParts(t, runtime, 1)
+	first := chatAllText(model.request(0).Messages)
+	for _, want := range []string{
+		"The following tools are available but their schemas are NOT loaded",
+		"search_tools",
+		searchableName,
+	} {
+		if !strings.Contains(first, want) {
+			t.Fatalf("first request missing %q:\n%s", want, first)
+		}
+	}
+	// The deferred schema itself must not be advertised until search_tools
+	// loads it; search_tools carries the name instead.
+	advertised := model.request(0).Tools
+	for _, def := range advertised {
+		if def.Name == searchableName {
+			t.Fatalf("deferred MCP tool %q was advertised directly", searchableName)
+		}
+	}
+	foundSearchTools := false
+	for _, def := range advertised {
+		if def.Name == "search_tools" {
+			foundSearchTools = true
+		}
+	}
+	if !foundSearchTools {
+		t.Fatal("tiered chat request did not advertise search_tools")
+	}
+
+	waitForCondition(t, "search_tools to promote the deferred schema", func() bool {
+		return model.callCount() >= 2
+	})
+	loaded := false
+	for _, def := range model.request(1).Tools {
+		if def.Name == searchableName {
+			loaded = true
+		}
+	}
+	if !loaded {
+		t.Fatalf("promoted MCP tool %q was not advertised on the next call", searchableName)
+	}
+}
+
+// Parity-exempt: Go catalogue fallback. A namespaced MCP tool is enough to
+// build the tier even when the process loader is not installed (embedded hosts
+// and tests assemble the catalogue directly).
+func TestChatRuntimeSearchableToolsFromNamespacedCatalogue(t *testing.T) {
+	previous := tools.ProcessMCP()
+	tools.SetProcessMCP(nil)
+	t.Cleanup(func() { tools.SetProcessMCP(previous) })
+
+	searchableName := tools.NamespacedMCPToolName(tools.MCPToolNamespace, "local", "lookup")
+	runtime, err := NewChatRuntime(ChatRuntimeDeps{
+		LLM: &recordingChatLLM{responses: []llm.Completion{{Content: "ok", Model: "scripted-chat"}}},
+		Tools: []llm.ToolDef{
+			{Name: "read_file"},
+			{Name: searchableName},
+		},
+		Execute:   func(context.Context, string, map[string]any) (string, bool, error) { return "ok", false, nil },
+		Root:      t.TempDir(),
+		SessionID: "reminder-namespaced",
+	})
+	if err != nil {
+		t.Fatalf("NewChatRuntime: %v", err)
+	}
+	defer func() { _ = runtime.Close() }()
+
+	ctx := agentloop.NewReminderAgentContext(runtime.agentCtx)
+	if ctx.SearchableToolsProvider == nil {
+		t.Fatal("namespaced catalogue did not expose a searchable tools provider")
+	}
+	names := make([]string, 0, 1)
+	for _, tool := range ctx.SearchableToolsProvider() {
+		names = append(names, tool.Name)
+	}
+	if len(names) != 1 || names[0] != searchableName {
+		t.Fatalf("searchable tools = %v, want [%s]", names, searchableName)
+	}
+}
+
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::TrackerSnapshotReminderSource.render
+func TestChatRuntimeTrackerSnapshotFromBoundColony(t *testing.T) {
+	colonyDir := t.TempDir()
+	dbPath, err := tracker.EnsureTrackerDB(colonyDir)
+	if err != nil {
+		t.Fatalf("EnsureTrackerDB: %v", err)
+	}
+	if _, err := tracker.ExecuteSQL(dbPath, "CREATE TABLE jobs (id INTEGER PRIMARY KEY, done INTEGER)", 1); err != nil {
+		t.Fatalf("create jobs: %v", err)
+	}
+	if _, err := tracker.ExecuteSQL(dbPath, "INSERT INTO jobs (done) VALUES (1)", 1); err != nil {
+		t.Fatalf("insert job: %v", err)
+	}
+	bound := colony.NewColonyRuntime(colony.RuntimeOptions{
+		StreamID:    "colony-tracker",
+		StoragePath: colonyDir,
+		Binding: &tracker.Binding{
+			Name:      "colony-tracker",
+			Dir:       colonyDir,
+			TrackerDB: dbPath,
+		},
+	})
+
+	toolCall := func(id string) llm.Completion {
+		return llm.Completion{ToolCalls: []llm.ToolCall{{
+			ID: id, Name: "read_file", Arguments: `{"path":"notes.txt"}`,
+		}}}
+	}
+	model := &recordingChatLLM{responses: []llm.Completion{
+		toolCall("call_read_1"), {Content: "one"},
+		toolCall("call_read_2"), {Content: "two"},
+		toolCall("call_read_3"), {Content: "three"},
+	}}
+	runtime := newReminderChatRuntime(t, t.TempDir(), "reminder-tracker", model,
+		[]llm.ToolDef{{Name: "read_file"}}, nil, bound)
+	defer func() { _ = runtime.Close() }()
+
+	found := false
+	for _, name := range runtime.hub.ActiveSourceNames() {
+		if name == "tracker_snapshot" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("tracker_snapshot source not active on the chat hub: %v", runtime.hub.ActiveSourceNames())
+	}
+
+	for turn := 1; turn <= 3; turn++ {
+		if err := runtime.Deliver("continue"); err != nil {
+			t.Fatalf("Deliver turn %d: %v", turn, err)
+		}
+		wantCalls := turn * 2
+		waitForCondition(t, "the scripted tool turn to finish", func() bool {
+			return model.callCount() >= wantCalls
+		})
+	}
+
+	seen := false
+	for index := 0; index < model.callCount(); index++ {
+		text := chatAllText(model.request(index).Messages)
+		if strings.Contains(text, "Tracker state right now:") && strings.Contains(text, "jobs: 1 row") {
+			seen = true
+		}
+	}
+	if !seen {
+		t.Fatalf("tracker snapshot never reached the model; calls=%d", model.callCount())
+	}
+}
+
+// Parity-exempt: Go session-runtime gate; a chat session with no colony must
+// not fire the tracker snapshot even after the first-fire tool-turn threshold.
+func TestChatRuntimeTrackerSnapshotGatedWithoutColony(t *testing.T) {
+	toolCall := func(id string) llm.Completion {
+		return llm.Completion{ToolCalls: []llm.ToolCall{{
+			ID: id, Name: "read_file", Arguments: `{}`,
+		}}}
+	}
+	model := &recordingChatLLM{responses: []llm.Completion{
+		toolCall("call_read_1"), {Content: "one"},
+		toolCall("call_read_2"), {Content: "two"},
+		toolCall("call_read_3"), {Content: "three"},
+	}}
+	runtime := newReminderChatRuntime(t, t.TempDir(), "reminder-tracker-none", model,
+		[]llm.ToolDef{{Name: "read_file"}}, nil, nil)
+	defer func() { _ = runtime.Close() }()
+
+	for turn := 1; turn <= 3; turn++ {
+		if err := runtime.Deliver("continue"); err != nil {
+			t.Fatalf("Deliver turn %d: %v", turn, err)
+		}
+		wantCalls := turn * 2
+		waitForCondition(t, "the scripted tool turn to finish", func() bool {
+			return model.callCount() >= wantCalls
+		})
+	}
+	for index := 0; index < model.callCount(); index++ {
+		if text := chatAllText(model.request(index).Messages); strings.Contains(text, "Tracker state right now:") {
+			t.Fatalf("tracker snapshot fired without a bound colony:\n%s", text)
+		}
 	}
 }
