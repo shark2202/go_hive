@@ -180,6 +180,17 @@ func TestCreateColonyFromSourceMarksSourceAndStartsOverseer(t *testing.T) {
 	if !strings.Contains(string(workerData), `"description": "Colony forked"`) {
 		t.Fatalf("forked worker.json = %s", workerData)
 	}
+	var forked map[string]any
+	if err := json.Unmarshal(workerData, &forked); err != nil {
+		t.Fatalf("decode forked worker.json: %v", err)
+	}
+	forkedPrompt, _ := forked["system_prompt"].(string)
+	if !strings.Contains(forkedPrompt, "focused worker agent") {
+		t.Fatalf("forked worker.json system_prompt is not the worker identity: %q", forkedPrompt)
+	}
+	if strings.Contains(forkedPrompt, "queen_alpha") || strings.Contains(forkedPrompt, "You are the queen") {
+		t.Fatalf("forked worker.json still carries the queen persona: %q", forkedPrompt)
+	}
 }
 
 // Parity: tests/test_colony_runtime_overseer.py::test_start_overseer_creates_persistent_worker

@@ -455,20 +455,18 @@ func (r *Runner) newColonyHost(colonyPath, colonyID string, home hivehome.Home, 
 	}
 	fields := spec.HostFields()
 	toolbox := builtin.New(colonyPath)
+	baseTools, declaredTools, executeTool := colonyWorkerToolSurface(colonyPath, toolbox, home)
 	return colonyhost.New(colonyhost.Config{
 		ColonyID:    colonyID,
 		AgentSpec:   fields.AgentSpec,
 		Goal:        fields.Goal,
 		StoragePath: colonyPath,
 		LLM:         provider,
-		Tools:       toolbox.Defs(),
-		ToolExecutor: func(request agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
-			result, execErr := toolbox.Execute(context.Background(), request.Name, request.Input)
-			if execErr != nil {
-				return agentloop.ToolResult{}, execErr
-			}
-			return agentloop.ToolResult{Content: result.Content, IsError: result.IsError}, nil
-		},
+		Tools:       baseTools,
+		// worker.json's "tools" list selects from this pool at worker start,
+		// so a colony that declares an integration tool actually gets it.
+		DeclaredTools: declaredTools,
+		ToolExecutor:  executeTool,
 	})
 }
 
@@ -832,7 +830,7 @@ func (l *colonyLifecycle) CreateColonyFromSource(params hiveserver.CreateColonyF
 
 	// 1. The colony exists on disk before any runtime does: a failed start
 	//    removes the directory again, so a 503 never leaves a half-colony.
-	if err := writeColonyFromSession(l.home, colonyPath, colonyID, queenName, params); err != nil {
+	if err := writeColonyFromSession(colonyPath, colonyID, queenName, params); err != nil {
 		return nil, &hiveserver.ColonyForkError{Message: "failed to create colony: " + err.Error(), Status: http.StatusInternalServerError}
 	}
 	built, buildErr := l.build(colonyPath, colonyID, model)
@@ -931,52 +929,6 @@ func persistSessionColonySpawn(session *hiveserver.Session, colonyID string) err
 	session.ColonySpawned = true
 	session.SpawnedColonyID = colonyID
 	return nil
-}
-
-// writeColonyFromSession writes the colony directory the fork resumes from:
-// metadata.json plus a worker.json carrying the queen persona as the worker
-// prompt, and the user's handoff goal when the dialog supplied one.
-func writeColonyFromSession(home hivehome.Home, colonyPath, colonyID, queenName string, params hiveserver.CreateColonyFromSourceParams) error {
-	if err := os.MkdirAll(colonyPath, 0o755); err != nil {
-		return err
-	}
-	meta := map[string]any{
-		"name":              colonyID,
-		"created_at":        float64(time.Now().UnixNano()) / 1e9,
-		"source_session_id": params.SourceSessionID,
-	}
-	if queenName != "" {
-		meta["queen_name"] = queenName
-	}
-	if err := atomicfs.WriteJSON(filepath.Join(colonyPath, "metadata.json"), meta, 0o644); err != nil {
-		return err
-	}
-
-	goal := "Work on tasks for colony " + colonyID
-	if params.InitialPrompt != nil && strings.TrimSpace(*params.InitialPrompt) != "" {
-		goal = strings.TrimSpace(*params.InitialPrompt)
-	}
-	worker := map[string]any{
-		"name":          humanizeColonyName(colonyID),
-		"description":   "Colony " + colonyID,
-		"system_prompt": *queenOverseerSpec(home, queenName).SystemPrompt,
-		"tools":         colonyToolsFor(queenName),
-		"goal":          map[string]any{"description": goal},
-	}
-	if queenName != "" {
-		worker["queen_name"] = queenName
-	}
-	return atomicfs.WriteJSON(filepath.Join(colonyPath, "worker.json"), worker, 0o644)
-}
-
-// colonyToolsFor is the tool list the forked worker config carries: the bound
-// queen's default tools, or an empty list (never null) when the colony has no
-// queen binding.
-func colonyToolsFor(queenName string) []string {
-	if tools := queen.DefaultToolsFor(queenName); len(tools) > 0 {
-		return tools
-	}
-	return []string{}
 }
 
 // colonyQueenName reads the queen bound to a colony from its metadata, falling
