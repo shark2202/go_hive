@@ -390,6 +390,9 @@ func (m *SessionManager) AddSession(session *Session) {
 	}
 	m.sessions[session.ID] = session
 	m.mu.Unlock()
+	// A session created with a colony already attached (the colony fork path)
+	// binds its queen before the first turn can call run_worker.
+	session.BindChatColony()
 }
 
 // Parity: framework/server/session_manager.py::SessionManager.list_sessions
@@ -407,8 +410,15 @@ func (m *SessionManager) ListSessions() []*Session {
 
 func (m *SessionManager) GetSession(id string) *Session {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.sessions[id]
+	session := m.sessions[id]
+	m.mu.Unlock()
+	// load_colony attaches a colony to a session that is already registered;
+	// binding on lookup keeps the queen's tool surface and report path in step
+	// with the live colony without a separate callback.
+	if session != nil {
+		session.BindChatColony()
+	}
+	return session
 }
 
 func (m *SessionManager) SessionCount() int {

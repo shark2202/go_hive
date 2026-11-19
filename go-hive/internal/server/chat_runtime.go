@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
@@ -75,6 +76,17 @@ type ChatRuntimeDeps struct {
 	// Reminders is the per-session reminder hub shared with the HTTP routes.
 	// Nil disables reminder generation for this runtime.
 	Reminders *ReminderRuntime
+	// Colony is the session's live colony runtime. When set (at construction
+	// or later through Session.BindChatColony), the queen gains run_worker and
+	// every worker report arrives as a [WORKER_REPORT] user turn.
+	Colony ColonyRuntime
+}
+
+// chatTurnRequest is one queued turn: a real client message, or an external
+// event (a worker report) the runtime delivers as a non-client user message.
+type chatTurnRequest struct {
+	message     string
+	clientInput bool
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
@@ -110,9 +122,15 @@ type ChatRuntime struct {
 	cancel context.CancelFunc
 
 	mu      sync.Mutex
-	queue   []string
+	queue   []chatTurnRequest
 	closed  bool
 	lastErr error
+
+	// colonyMu guards the session colony binding. The binding is late: the
+	// chat runtime is built before a session's colony host is attached.
+	colonyMu      sync.Mutex
+	colonyRuntime *colony.ColonyRuntime
+	colonyUnsub   func()
 	// pendingQuestions is the ask_user question the current turn parked on.
 	// It survives until the next user message (the answer) starts a turn.
 	pendingQuestions []map[string]any
@@ -208,6 +226,9 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	runtime.agentCtx = agentCtx
 	runtime.conv = conv
 	runtime.loop = agentloop.NewAgentLoop(agentloop.DefaultLoopConfig(), runtime.executeTool)
+	if deps.Colony != nil {
+		runtime.BindColony(deps.Colony)
+	}
 
 	if namer, ok := deps.LLM.(llm.ModelNamer); ok {
 		runtime.model = namer.ModelName()
@@ -231,12 +252,32 @@ func (r *ChatRuntime) Deliver(message string) error {
 	if r == nil {
 		return ErrChatRuntimeNoLLM
 	}
+	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true})
+}
+
+// InjectWorkerReport queues a worker's [WORKER_REPORT] block as the queen's
+// next turn. It is delivered as a non-client ("[External event]") user message,
+// exactly like the upstream AgentLoop.inject_event(notification) the worker
+// report handler calls, and never counted as a real user message.
+//
+// Parity: framework/server/queen_orchestrator.py::_on_worker_report (inject_event)
+func (r *ChatRuntime) InjectWorkerReport(report string) error {
+	if r == nil {
+		return ErrChatRuntimeNoLLM
+	}
+	if strings.TrimSpace(report) == "" {
+		return nil
+	}
+	return r.enqueueTurn(chatTurnRequest{message: report, clientInput: false})
+}
+
+func (r *ChatRuntime) enqueueTurn(request chatTurnRequest) error {
 	r.mu.Lock()
 	if r.closed {
 		r.mu.Unlock()
 		return ErrChatRuntimeClosed
 	}
-	r.queue = append(r.queue, message)
+	r.queue = append(r.queue, request)
 	r.mu.Unlock()
 	select {
 	case r.wake <- struct{}{}:
@@ -278,6 +319,14 @@ func (r *ChatRuntime) Close() error {
 	}
 	r.closed = true
 	r.mu.Unlock()
+
+	r.colonyMu.Lock()
+	if r.colonyUnsub != nil {
+		r.colonyUnsub()
+		r.colonyUnsub = nil
+	}
+	r.colonyRuntime = nil
+	r.colonyMu.Unlock()
 
 	r.cancel()
 	<-r.done
@@ -329,7 +378,8 @@ func (r *ChatRuntime) run() {
 // agent-loop event names so the dashboard follows the turn live.
 //
 // Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
-func (r *ChatRuntime) runTurn(message string) {
+func (r *ChatRuntime) runTurn(request chatTurnRequest) {
+	message := request.message
 	executionID := newChatExecutionID()
 	emitter := r.newTurnEmitter(executionID)
 	if emitter != nil {
@@ -341,19 +391,30 @@ func (r *ChatRuntime) runTurn(message string) {
 
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
 	r.turnTools = nil
-	// The next user message answers any outstanding ask_user: clear the park
-	// before this turn can record a new question.
-	r.clearPendingQuestions()
-	if _, err := r.conv.AddUserMessage("["+stamp+"] "+message, agentloop.UserMessageOptions{
-		IsClientInput: true,
+	// A real user message answers any outstanding ask_user: clear the park
+	// before this turn can record a new question. An external report is not
+	// an answer, so it leaves the parked question in place.
+	if request.clientInput {
+		r.clearPendingQuestions()
+	}
+	stamped := "[" + stamp + "] " + message
+	if !request.clientInput {
+		stamped = "[" + stamp + "] [External event] " + message
+	}
+	if _, err := r.conv.AddUserMessage(stamped, agentloop.UserMessageOptions{
+		IsClientInput: request.clientInput,
 	}); err != nil {
 		emitter.executionFailed(err)
 		r.setLastError(err)
 		return
 	}
-	r.injectRecall(message, stamp)
+	// Recall is a user-input step upstream; an external worker report must not
+	// consume (or re-query) the queen's memory. Reminders still ride along.
+	if request.clientInput {
+		r.injectRecall(message, stamp)
+	}
 	r.injectReminders(stamp)
-	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.tools)
+	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.toolsForTurn())
 	if err != nil {
 		// A cancelled turn (session teardown) is not a failure worth
 		// broadcasting: the runtime is going away, not the model failing.
@@ -607,11 +668,107 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 			IsError: true,
 		}, nil
 	}
-	content, isError, err := r.deps.Execute(r.ctx, req.Name, req.Input)
+	content, isError, err := r.deps.Execute(r.toolExecuteContext(), req.Name, req.Input)
 	if err != nil {
 		return agentloop.ToolResult{Content: err.Error(), IsError: true}, nil
 	}
 	return agentloop.ToolResult{Content: content, IsError: isError}, nil
+}
+
+// toolsForTurn advertises the session tools for one turn. run_worker is
+// colony-gated: without a bound colony the queen does not see the def at all
+// (a direct call still returns an actionable no-colony error from the
+// executor).
+//
+// Parity: framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools
+// (the run_worker tool only reaches a colony-phase registry)
+func (r *ChatRuntime) toolsForTurn() []llm.ToolDef {
+	if r.boundColonyRuntime() != nil {
+		return r.tools
+	}
+	out := make([]llm.ToolDef, 0, len(r.tools))
+	for _, def := range r.tools {
+		if def.Name == colony.RunWorkerToolName {
+			continue
+		}
+		out = append(out, def)
+	}
+	return out
+}
+
+// toolExecuteContext carries the bound colony down to the catalogue's
+// run_worker executor. The catalogue is built before the binding exists, so
+// the runtime is resolved per call rather than captured at construction.
+func (r *ChatRuntime) toolExecuteContext() context.Context {
+	// Workers belong to the colony, not to this chat turn: drop the runtime's
+	// cancellation so a session teardown does not kill in-flight work the
+	// colony still owns. The colony's own Stop() remains the lifecycle owner.
+	ctx := context.WithoutCancel(r.ctx)
+	if runtime := r.boundColonyRuntime(); runtime != nil {
+		return colony.WithRunWorkerSpawner(ctx, runtime)
+	}
+	return ctx
+}
+
+// BindColony attaches (or clears) this session's colony runtime. Attaching
+// subscribes the queen to the colony's SUBAGENT_REPORT events, which arrive as
+// [WORKER_REPORT] turns; detaching unsubscribes. It is idempotent and safe to
+// call from session lookup paths.
+//
+// Parity: framework/server/queen_orchestrator.py::_on_worker_report (subscribe)
+func (r *ChatRuntime) BindColony(runtime ColonyRuntime) {
+	if r == nil {
+		return
+	}
+	concrete := colonyRuntimeOf(runtime)
+	r.colonyMu.Lock()
+	defer r.colonyMu.Unlock()
+	if r.colonyRuntime == concrete {
+		return
+	}
+	if r.colonyUnsub != nil {
+		r.colonyUnsub()
+		r.colonyUnsub = nil
+	}
+	r.colonyRuntime = concrete
+	if concrete == nil {
+		return
+	}
+	unsubscribe, err := colony.SubscribeQueenReports(concrete, func(report string) {
+		// Reports never fail a session: a closed runtime (queen session
+		// torn down while a worker finished) simply drops the turn.
+		_ = r.InjectWorkerReport(report)
+	})
+	if err != nil {
+		log.Printf("chat runtime %s: worker report subscription unavailable: %v", r.sessionID, err)
+		return
+	}
+	r.colonyUnsub = unsubscribe
+}
+
+// boundColonyRuntime returns the concrete colony runtime whose workers this
+// queen can dispatch, or nil when no colony is attached.
+func (r *ChatRuntime) boundColonyRuntime() *colony.ColonyRuntime {
+	if r == nil {
+		return nil
+	}
+	r.colonyMu.Lock()
+	defer r.colonyMu.Unlock()
+	return r.colonyRuntime
+}
+
+// colonyRuntimeOf unwraps the session ColonyRuntime seam: the CLI's colony
+// host exposes Runtime(), and tests may pass the concrete runtime directly.
+func colonyRuntimeOf(runtime ColonyRuntime) *colony.ColonyRuntime {
+	switch typed := runtime.(type) {
+	case nil:
+		return nil
+	case *colony.ColonyRuntime:
+		return typed
+	case interface{ Runtime() *colony.ColonyRuntime }:
+		return typed.Runtime()
+	}
+	return nil
 }
 
 // chatToolsWithAskUser returns the session's tool list plus the ask_user
