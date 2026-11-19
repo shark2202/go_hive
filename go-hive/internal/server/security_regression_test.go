@@ -134,12 +134,45 @@ func TestAttachmentSymlinkedParentCannotEscapeHome(t *testing.T) {
 	mux.ServeHTTP(recorder, request)
 
 	if strings.Contains(recorder.Body.String(), marker) {
-		t.Skipf("SECURITY DEFECT (recorded, fix in a follow-up lane): "+
-			"handleSessionAttachment follows a symlinked parent directory; GET /api/sessions/%s/attachment/leak.txt served %q from outside HIVE_HOME",
+		t.Fatalf("handleSessionAttachment followed a symlinked parent directory; GET /api/sessions/%s/attachment/leak.txt served %q from outside HIVE_HOME",
 			sessionID, marker)
 	}
 	if recorder.Code == http.StatusOK {
 		t.Fatalf("symlinked parent was served as 200 without the marker")
+	}
+}
+
+// Parity-exempt: Go-only symlink hardening. The escape checks must not decay
+// into "reject every symlink": a directory link that stays inside the hive
+// home is still part of the session tree and has to keep serving, and the
+// plain symlink-free layout has to keep storing uploads.
+func TestAttachmentSymlinkedParentInsideHomeStillServes(t *testing.T) {
+	home, _ := securityTestHome(t)
+	sessionID := "session_20261119_090000_dd440004"
+	manager, queenDir := attachmentSession(t, home, "queen_sec", sessionID)
+
+	// Mirrors the legacy layouts that put attachments under <session>/attachments
+	// while the new one writes <session>/data/attachments.
+	inner := filepath.Join(queenDir, "shared")
+	securityWriteFile(t, filepath.Join(inner, "notes.txt"), "IN_TREE_OK")
+	if err := os.Symlink(inner, filepath.Join(queenDir, "attachments")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	mux := sessionRoutesMux(SessionRouteDeps{Home: home, Manager: manager})
+	recorder := httptest.NewRecorder()
+	mux.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/sessions/"+sessionID+"/attachment/notes.txt", nil))
+	if recorder.Code != http.StatusOK || recorder.Body.String() != "IN_TREE_OK" {
+		t.Fatalf("in-tree symlinked parent = %d %q, want 200 IN_TREE_OK", recorder.Code, recorder.Body.String())
+	}
+
+	response, body := uploadAttachment(t, mux, sessionID, "file", "plain.txt", "text/plain", []byte("PLAIN_OK"))
+	if response.Code != http.StatusOK || body["filename"] != "plain.txt" {
+		t.Fatalf("plain upload = %d %#v", response.Code, body)
+	}
+	stored := filepath.Join(queenDir, "data", "attachments", "plain.txt")
+	if saved, err := os.ReadFile(stored); err != nil || string(saved) != "PLAIN_OK" {
+		t.Fatalf("plain upload stored = %q, %v", saved, err)
 	}
 }
 
@@ -159,17 +192,32 @@ func TestUploadAttachmentSymlinkedDirCannotWriteOutsideHome(t *testing.T) {
 
 	mux := sessionRoutesMux(SessionRouteDeps{Home: home, Manager: manager})
 	recorder, body := uploadAttachment(t, mux, sessionID, "file", "escape.txt", "text/plain", []byte("payload"))
-	if recorder.Code != http.StatusOK {
+	// Whatever the route answers, no byte may land in the symlink target.
+	entries, readErr := os.ReadDir(outsideAttachments)
+	if readErr != nil {
+		t.Fatalf("read symlink target: %v", readErr)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("handleUploadAttachment wrote %d file(s) through a symlinked attachments directory; %q landed outside HIVE_HOME at %s",
+			len(entries), entries[0].Name(), outsideAttachments)
+	}
+	// Refusing the unsafe directory is the expected fix; storing inside the
+	// session tree would be acceptable too. A 200 that stored nothing is not.
+	switch recorder.Code {
+	case http.StatusOK:
+		name, _ := body["filename"].(string)
+		if name == "" {
+			t.Fatalf("upload response has no filename: %#v", body)
+		}
+		if _, err := os.Lstat(filepath.Join(queenDir, "data", "attachments", name)); err != nil {
+			t.Fatalf("upload reported 200 but stored %q nowhere in the session tree: %v", name, err)
+		}
+	case http.StatusBadRequest, http.StatusForbidden, http.StatusConflict, http.StatusInternalServerError:
+		if strings.Contains(recorder.Body.String(), outsideAttachments) {
+			t.Fatalf("refusal leaked the resolved path: %s", recorder.Body.String())
+		}
+	default:
 		t.Fatalf("upload status = %d body = %s", recorder.Code, recorder.Body.String())
-	}
-	name, _ := body["filename"].(string)
-	if name == "" {
-		t.Fatalf("upload response has no filename: %#v", body)
-	}
-	if _, err := os.Lstat(filepath.Join(outsideAttachments, name)); err == nil {
-		t.Skipf("SECURITY DEFECT (recorded, fix in a follow-up lane): "+
-			"handleUploadAttachment writes through a symlinked attachments directory; %q landed outside HIVE_HOME at %s",
-			name, filepath.Join(outsideAttachments, name))
 	}
 }
 
@@ -263,8 +311,7 @@ func TestTaskUnarchiveRejectsOversizedJSON(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	mux.ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusBadRequest && recorder.Code != http.StatusRequestEntityTooLarge {
-		t.Skipf("SECURITY DEFECT (recorded, fix in a follow-up lane): "+
-			"readTaskJSONBody decodes an unbounded request body; an oversized POST returned %d instead of 400/413", recorder.Code)
+		t.Fatalf("readTaskJSONBody decodes an unbounded request body; an oversized POST returned %d instead of 400/413", recorder.Code)
 	}
 }
 
