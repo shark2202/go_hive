@@ -343,12 +343,31 @@ func TestChatRuntimeStartupBackfillsTimelines(t *testing.T) {
 	t.Cleanup(func() { _ = runtime.Close() })
 
 	waitForFile(t, filepath.Join(olderDir, memory.TimelineFile))
-	result, toolErr := memory.SearchTimeline(homeRoot, memory.ScopeRef{
-		Scope: memory.SearchScopeQueens,
-		Owner: "queen_tl",
-	}, memory.SearchTimelineOptions{Pattern: "Rex"})
+
+	// Backfill runs in a goroutine, so the file can appear before its content
+	// is readable; poll briefly and close the runtime before TempDir cleanup.
+	var result *memory.SearchTimelineResult
+	var toolErr *memory.ToolError
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		result, toolErr = memory.SearchTimeline(homeRoot, memory.ScopeRef{
+			Scope: memory.SearchScopeQueens,
+			Owner: "queen_tl",
+		}, memory.SearchTimelineOptions{Pattern: "Rex"})
+		if toolErr == nil && result != nil && result.Total > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	_ = runtime.Close()
 	if toolErr != nil {
 		t.Fatalf("SearchTimeline: %v", toolErr)
+	}
+	if result == nil {
+		t.Fatalf("SearchTimeline: no result")
 	}
 	if result.Total != 1 || result.Items[0].Session != older {
 		t.Fatalf("backfilled items = %+v, want the older session", result.Items)
