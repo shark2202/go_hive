@@ -139,7 +139,7 @@ func NewApp(deps AppDeps) *App {
 	// answers with an explicit failure inside its handler (no empty 200s).
 	RegisterCredentialRoutes(mux, CredentialRouteDeps{
 		Home:  deps.Home,
-		Specs: credentialSpecsFromCatalog,
+		Specs: credentialSpecsFromRegistry,
 	})
 	RegisterSoulRoutes(mux, SoulRouteDeps{Home: deps.Home})
 	RegisterChannelRoutes(mux, ChannelRouteDeps{Home: deps.Home})

@@ -33,7 +33,7 @@ PY_ROOT   ?= ../../core
 OFFLINE    = CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod
 PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check ci clean help
 
 all: ci
 
@@ -109,6 +109,15 @@ parity:
 
 parity-targets:
 	@bash $(PARITY_TARGETS) . "$(PY_ROOT)"
+
+# 校验 internal/credentials/specs_gen.go 与上游 Python 注册表一致。
+# 需要 uv 和同级 tools/ 树；缺失时跳过（与 parity-targets 的 PY_ROOT 约定一致）。
+specs-check:
+	@if command -v uv >/dev/null 2>&1 && [ -d ../../tools/src/aden_tools/credentials ]; then \
+		cd .. && uv run --no-project python scripts/gen_credential_specs.py --check; \
+	else \
+		echo "specs-check: SKIP — uv 或 ../../tools/src/aden_tools/credentials 不可用"; \
+	fi
 
 race:
 	$(OFFLINE) $(GO) test -race ./...

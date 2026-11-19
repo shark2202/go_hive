@@ -30,6 +30,7 @@ type CredentialSpecView struct {
 	HelpURL               string
 	APIKeyInstructions    string
 	Tools                 []string
+	ToolModules           []string
 	AdenSupported         bool
 	DirectAPIKeySupported bool
 	CredentialKey         string
@@ -77,6 +78,12 @@ func (rt *CredentialRoutes) credentialStore() (credentialRouteStore, error) {
 		return rt.deps.Store, nil
 	}
 	rt.storeOnce.Do(func() {
+		// Pick up a persisted key file before the encrypted storage resolves its
+		// Fernet key; otherwise a fresh process generates a throwaway key and the
+		// credential it just wrote becomes unreadable on the next request.
+		//
+		// Parity: framework/server/routes_credentials.py::handle_list_specs
+		_, _ = credentials.LoadCredentialKey()
 		store, err := credentials.WithEncryptedStorage(rt.deps.Home.CredentialsDir())
 		rt.store, rt.storeErr = store, err
 	})
@@ -99,6 +106,13 @@ func (rt *CredentialRoutes) specsStore(specs []CredentialSpecView) credentialRou
 	if rt.deps.SpecsStore != nil {
 		return rt.deps.SpecsStore()
 	}
+	// The reference handler calls ensure_credential_key_env() before building
+	// the store, so a key persisted on disk is visible to availability. Without
+	// this the encrypted fallback below is skipped whenever the caller did not
+	// export HIVE_CREDENTIAL_KEY itself.
+	//
+	// Parity: framework/server/routes_credentials.py::handle_list_specs
+	_, _ = credentials.LoadCredentialKey()
 	envMapping := map[string]string{}
 	for _, spec := range specs {
 		credID := spec.CredentialID
@@ -434,6 +448,10 @@ func (rt *CredentialRoutes) handleListSpecs(w http.ResponseWriter, r *http.Reque
 		if tools == nil {
 			tools = []string{}
 		}
+		toolModules := spec.ToolModules
+		if toolModules == nil {
+			toolModules = []string{}
+		}
 		rows = append(rows, map[string]any{
 			"credential_name":          spec.Name,
 			"credential_id":            credentialID,
@@ -442,6 +460,7 @@ func (rt *CredentialRoutes) handleListSpecs(w http.ResponseWriter, r *http.Reque
 			"help_url":                 spec.HelpURL,
 			"api_key_instructions":     spec.APIKeyInstructions,
 			"tools":                    tools,
+			"tool_modules":             toolModules,
 			"aden_supported":           spec.AdenSupported,
 			"direct_api_key_supported": spec.DirectAPIKeySupported,
 			"credential_key":           spec.CredentialKey,
@@ -459,11 +478,13 @@ func (rt *CredentialRoutes) handleListSpecs(w http.ResponseWriter, r *http.Reque
 			"help_url":                 "https://hive.adenhq.com/",
 			"api_key_instructions":     "1. Go to hive.adenhq.com\n2. Open Settings > Developers\n3. Copy your API key",
 			"tools":                    []string{},
+			"tool_modules":             []string{},
 			"aden_supported":           true,
 			"direct_api_key_supported": true,
 			"credential_key":           "api_key",
 			"credential_group":         "",
 			"available":                hasAdenKey,
+			"accounts":                 []map[string]any{},
 		}
 		rows = append([]any{synthetic}, rows...)
 	}
