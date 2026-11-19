@@ -32,6 +32,29 @@ type ReminderAgentContext struct {
 	OpenTasksProvider          func() []IdleTask
 	SessionGoalProvider        func() string
 	SentinelAutopilotProvider  func() bool
+	// ActiveWorkersProvider lists the colony workers still in flight.
+	// Nil (or an empty list) means the active-workers reminder self-skips.
+	ActiveWorkersProvider func() []ActiveWorker
+	// ColonyStatsProvider reports the colony's active/total worker counts for
+	// snapshots. Nil reports an empty colony.
+	ColonyStatsProvider func() ColonyStats
+}
+
+// ActiveWorker is one in-flight colony worker as the reminder sources read it.
+//
+// Parity: framework/agent_loop/active_workers_reminder.py::_list_active_workers
+type ActiveWorker struct {
+	ID     string
+	Status string
+	Task   string
+}
+
+// ColonyStats is the worker count snapshot the colony reminder sources read.
+//
+// Parity: framework/agent_loop/colony_worker_snapshot_reminder.py
+type ColonyStats struct {
+	Active int
+	Total  int
 }
 
 // Parity: framework/tasks/models.py TaskRecord (only the idle-nudge fields).
