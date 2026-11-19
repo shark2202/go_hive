@@ -65,6 +65,10 @@ type RuntimeOptions struct {
 	// ToolProviderMap attributes tool names to providers for the tools read
 	// surface (upstream ColonyRuntime._tool_provider_map).
 	ToolProviderMap map[string]string
+	// Binding is the colony's tracker binding. Hosts that already resolved
+	// one (fork flow, tests) pass it here; otherwise the runtime derives it
+	// from StoragePath when that path is a materialised colony directory.
+	Binding *tracker.Binding
 }
 
 type SpawnOptions struct {
@@ -152,6 +156,12 @@ type ColonyRuntime struct {
 
 	adaptiveEnabled bool
 
+	// trackerBinding is the colony's shared ledger binding. It is resolved at
+	// Start/spawn (or injected through RuntimeOptions.Binding) and read by
+	// every worker's InputData and tracker tool call.
+	trackerMu      sync.Mutex
+	trackerBinding *tracker.Binding
+
 	budgetMu         sync.Mutex
 	budgetSamples    []int
 	budgetApplied    int
@@ -194,6 +204,10 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 	}
 	runtime.workerLLM = opts.WorkerLLM
 	runtime.skillsProvider = opts.SkillsProvider
+	if opts.Binding != nil {
+		copied := *opts.Binding
+		runtime.trackerBinding = &copied
+	}
 	if opts.ToolProviderMap != nil {
 		runtime.toolProviderMap = make(map[string]string, len(opts.ToolProviderMap))
 		for name, provider := range opts.ToolProviderMap {
@@ -342,7 +356,7 @@ func (r *ColonyRuntime) BuildWorker(opts WorkerBuildOptions) *Worker {
 	}
 	spawnTools := opts.SpawnTools
 	if spawnTools == nil {
-		spawnTools = r.applyToolAllowlist(r.tools)
+		spawnTools = r.workerToolDefs()
 	}
 	worker := NewWorker(opts.WorkerID, opts.Task, streamID)
 	worker.ProfileName = opts.ProfileName
@@ -436,6 +450,12 @@ func (r *ColonyRuntime) Start(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	// The colony's ledger exists before any worker can be spawned: upstream
+	// provisions tracker.db in the fork flow, and run_worker refuses to fan
+	// out without it.
+	if err := r.provisionTracker(); err != nil {
+		return fmt.Errorf("start colony %q: provision tracker.db: %w", r.streamID, err)
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.started {
@@ -505,6 +525,9 @@ func (r *ColonyRuntime) SpawnBatchWithOptions(ctx context.Context, tasks []Batch
 	// re-opens dispatch after a stop sweep. The block exists to keep workers
 	// from starting *into* a sweep, not to gate the next turn.
 	r.UnblockDispatch()
+	if err := r.provisionTracker(); err != nil {
+		return nil, fmt.Errorf("spawn in colony %q: provision tracker.db: %w", r.streamID, err)
+	}
 	runCtx := r.runtimeContext(ctx)
 	batchID := strings.TrimSpace(opts.BatchID)
 	if batchID == "" && len(tasks) > 1 {
@@ -540,7 +563,7 @@ func (r *ColonyRuntime) spawnBatchOn(runCtx context.Context, tasks []BatchTask, 
 			WorkerID:     ids[index],
 			Task:         task.Task,
 			StreamID:     task.StreamID,
-			InputData:    task.Data,
+			InputData:    r.workerInputData(task.Data, ids[index], task.Task),
 			ProfileName:  task.ProfileName,
 			PreloadTools: task.PreloadTools,
 		})
@@ -717,18 +740,33 @@ func (r *ColonyRuntime) buildContext(worker *Worker, spec agentloop.AgentSpec) *
 // Parity: framework/agent_loop/agent_loop.py::AgentLoop._reports_to_parent (worker
 // stream_id gate for build_report_to_parent_tool)
 func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
-	tools := append([]llm.ToolDef(nil), r.tools...)
+	tools := r.applyToolAllowlist(r.tools)
 	if strings.HasPrefix(worker.StreamID, "worker:") {
+		// Workers get the worker-role tracker table: tracker_upsert is their
+		// durable progress channel and tracker_query their read surface. The
+		// queen-only pair stays out.
+		tools = append(tools, trackerToolDefs("worker")...)
 		tools = append(tools, agentloop.BuildReportToParentTool(r.agentSpec.ReportSchema))
 	}
 	return tools
 }
 
 func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
+	var trackerRegistry *tracker.Registry
+	if strings.HasPrefix(worker.StreamID, "worker:") {
+		trackerRegistry = r.workerTrackerRegistry(worker)
+	}
 	return func(req agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
 		if req.Name == "report_to_parent" && strings.HasPrefix(worker.StreamID, "worker:") {
 			worker.RecordExplicitReport(req.Input)
 			return agentloop.ToolResult{Content: "Report delivered to the overseer."}, nil
+		}
+		// Tracker tools own their own registry: the worker's binding comes
+		// from input_data, so the call targets the colony's shared ledger.
+		if trackerRegistry != nil {
+			if result, ok := r.executeTrackerTool(trackerRegistry, req); ok {
+				return result, nil
+			}
 		}
 		if r.toolExec != nil {
 			return r.toolExec(req)
@@ -819,7 +857,7 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 
 	spec := r.agentSpec
 	if worker.Context == nil {
-		worker.Context = r.buildWorkerContext(worker, spec, r.applyToolAllowlist(r.tools), r.workerStorage(worker.ID), nil)
+		worker.Context = r.buildWorkerContext(worker, spec, r.workerToolDefs(), r.workerStorage(worker.ID), nil)
 	}
 	conv := agentloop.NewNodeConversation(systemPromptFor(spec))
 	if worker.Task != "" {
