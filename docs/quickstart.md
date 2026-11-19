@@ -1,6 +1,6 @@
 # 快速开始
 
-> 版本：`hive 1.0.20-go.1`（Go 模块 `github.com/aden-hive/hive-go`）
+> 版本：`hive 1.0.21-go.1`（Go 模块 `github.com/aden-hive/hive-go`）
 > 验证环境：macOS 26.7.1（darwin/arm64）、Go 1.26.5、`CGO_ENABLED=0`。
 > 本页每一条命令都在一个临时 `HIVE_HOME` 下实际执行过；输出为实测摘录，不是示例值。
 
@@ -44,7 +44,7 @@ building ./cmd/...
 ```
 
 ```text
-hive 1.0.20-go.1
+hive 1.0.21-go.1
 ```
 
 同目录下的 `dist/hive-cred` 是独立凭据入口（本文不展开，见 `configuration.md`）：
