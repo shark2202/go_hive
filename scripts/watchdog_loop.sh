@@ -21,6 +21,7 @@ alert() {
 }
 
 while true; do
+  cycle_start="$(date +%s)"
   ts="$(date '+%Y-%m-%d %H:%M')"
   head="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null)"
   routes=$(grep -rhoE '"(GET|POST|PUT|DELETE|PATCH) /[^"]*"' "$MOD/internal/server" --include=*.go --exclude='*_test.go' 2>/dev/null | sort -u | wc -l | tr -d ' ')
@@ -29,7 +30,7 @@ while true; do
   dirtywt=0
   for w in "$ROOT"/.wt/*/; do
     [ -d "$w/.git" ] || [ -f "$w/.git" ] || continue
-    n=$(git -C "$w" status --short 2>/dev/null | wc -l | tr -d ' ')
+    n=$(git -C "$w" status --short --untracked-files=no 2>/dev/null | wc -l | tr -d ' ')
     [ "$n" -gt 0 ] && dirtywt=$((dirtywt+1))
   done
   cgo=$(grep -rl 'import "C"' "$MOD" --include=*.go 2>/dev/null | wc -l | tr -d ' ')
@@ -44,5 +45,9 @@ while true; do
 
   PREV_ROUTES=$routes; PREV_TESTS=$tests; PREV_HEAD=$head
   printf 'PREV_ROUTES=%s\nPREV_TESTS=%s\nPREV_HEAD=%s\n' "$PREV_ROUTES" "$PREV_TESTS" "$PREV_HEAD" > "$STATE"
-  sleep "$INTERVAL"
+  now="$(date +%s)"
+  elapsed=$((now - cycle_start))
+  remaining=$((INTERVAL - elapsed))
+  [ "$remaining" -lt 1 ] && remaining=1
+  sleep "$remaining"
 done

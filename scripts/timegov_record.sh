@@ -10,6 +10,7 @@ INTERVAL="${1:-300}"
 [ -f "$OUT" ] || echo "ts,head,routes,tests,dirty_worktrees,open_lanes" > "$OUT"
 
 while true; do
+  cycle_start="$(date +%s)"
   ts="$(date '+%Y-%m-%d %H:%M:%S')"
   head="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null)"
   routes=$(grep -rhoE '"(GET|POST|PUT|DELETE|PATCH) /[^"]*"' "$MOD/internal/server" --include=*.go --exclude='*_test.go' 2>/dev/null | sort -u | wc -l | tr -d ' ')
@@ -17,9 +18,14 @@ while true; do
   dirty=0
   for w in "$ROOT"/.wt/*/; do
     [ -d "$w" ] || continue
-    n=$(git -C "$w" status --short 2>/dev/null | wc -l | tr -d ' ')
+    n=$(git -C "$w" status --short --untracked-files=no 2>/dev/null | wc -l | tr -d ' ')
     [ "$n" -gt 0 ] && dirty=$((dirty+1))
   done
   echo "$ts,$head,$routes,$tests,$dirty," >> "$OUT"
-  sleep "$INTERVAL"
+  # 固定节拍：采样耗时从睡眠里扣掉，否则 73 个 worktree 的扫描会让“5 分钟”漂成十几分钟。
+  now="$(date +%s)"
+  elapsed=$((now - cycle_start))
+  remaining=$((INTERVAL - elapsed))
+  [ "$remaining" -lt 1 ] && remaining=1
+  sleep "$remaining"
 done
