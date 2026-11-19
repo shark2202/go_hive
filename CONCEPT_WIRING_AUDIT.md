@@ -13,7 +13,7 @@
 | --- | --- | --- | --- |
 | colony | 1 | 2 | 8 |
 | coordination | 1 | 1 | 7 |
-| goals_outcome | 0 | 0 | 0 |
+| goals_outcome | 0 | 1 | 7 |
 | improvement | 0 | 0 | 0 |
 | queen | 0 | 0 | 0 |
 | the_loop | 0 | 0 | 0 |
@@ -58,3 +58,21 @@
 | Sentinel：停车时分类、nudge 或升级到 inbox/Telegram/Slack | `internal/sentinel/manager.go:99`（`NewManager`）、`internal/sentinel/classifier.go`、`internal/sentinel/listeners.go`、`internal/sentinel/escalation_source.go:70` | 否。只有通知配置/凭据校验路由（`routes_sentinel.go:104-122`）与 store/notifier 适配器（`adapters_sentinel.go:28,62`）；`sentinel.NewManager` 零生产调用，classifier/listener/escalation source 从不运行 | 未接 |
 
 **小结**：coordination 四个底座里只有「聊天 transcript 事件总线」真正生效；tracker 只有读侧、任务计划与提醒中枢完全没接、worker 报告没有回路。人机协同（ask_user/Sentinel）完全未接。
+
+## 3. goals_outcome — 目标与结果驱动
+
+概念主张：用可度量的成功标准、硬/软约束和上下文声明结果；结构化 `Goal` 的成功标准成为 loop judge 的判据；judge 可 accept/retry/escalate，retry 反馈回注；会话式结果则落到任务计划与 tracker 列上校验。
+
+| 机制 | 实现位置（file:line） | 是否有生产调用链（从 internal/cli / internal/server 入口） | 状态 |
+| --- | --- | --- | --- |
+| 从 agent 定义加载结构化 `Goal` | `internal/agents/agent_spec.go:402-430`（`goal := &schemas.Goal{...}`，成功标准/约束逐条映射）、`internal/host/host.go:28,84`、`internal/colony/runtime.go:198`（`Goal()` getter） | 部分。`hive serve --colony` → `buildColonyHost`（`cli/loader.go:406-444`）→ `agents.LoadAgentSpec` 会加载 Goal 并传入 runtime；但 runtime 只保存不消费，且 colony host 本身没有运行入口 | 部分：数据能加载，行为未生效 |
+| 成功标准带权重、可度量（`output_contains` / `llm_judge` / `custom`） | `internal/schemas/goal.go:29-46`（`SuccessCriterion` + `Validate`）、`:142-155`（`IsSuccess` 加权 90% 判定）、`internal/agents/agent_spec.go:52`（worker 标准固定 `llm_judge`） | 否。`IsSuccess` 无调用者；没有任何代码按 `Metric` 执行 `output_contains`/`output_equals`/`custom`；`llm_judge` 只在 `hive skill eval` 的测试评定里用（`internal/cli/skill.go:1269`），不在 agent 执行路径 | 未接 |
+| 约束（hard=MUST / soft=SHOULD）与 Context 写入 agent prompt | `internal/schemas/goal.go:157-190`（`Goal.ToPromptContext` 生成 `## Constraints` / `[MUST]` / `## Context`） | 否。`ToPromptContext` 全仓零调用；`AgentContext.GoalContext`（`internal/agentloop/types.go:109`）只在 `BuildInitialMessage` 里被读（`loop.go:423-424`），生产代码从未给它赋值 | 未接 |
+| loop judge：每轮评估 accept / retry / escalate | `internal/agentloop/loop.go:28-29,58`（只有 `JudgeEveryNTurns` 配置字段与默认值 1）；`internal/agentloop/types.go:58-59`（`SuccessCriteria *string`、`SkipJudge`） | 否。`JudgeEveryNTurns`、`SkipJudge` 均无执行点；`loop.go` 的 `ExecuteTurn` 在模型不再调用工具时直接返回成功（`loop.go:574-579`），没有 judge 调用 | 未接 |
+| retry 反馈回注会话 | 无实现；概念中的 `agent_loop/internals/judge_pipeline.py` 在 Go 侧不存在对应包 | 否 | 未接 |
+| judge 小流水线（输出键检查 → 自定义 judge / LLM 质量检查） | `internal/llmjudge/judge.go:111`（`Evaluate`）、`internal/server/judge.go:36`（`AskJudge`） | 部分/否。`llmjudge` 只被 `hive skill eval` 使用（`cli/skill.go:1269-1325`）；`AskJudge` 只被 `stall_check.go:101` 用于 stall 判定，不评估 Goal | 未接（就 Goal 判定而言） |
+| 会话式结果：Queen 把消息转成任务计划，并以 tracker 列作为 “done” | 任务：`internal/tasks/session_tools.go`、tracker：`internal/tracker/tools.go:808`（均未装配到会话工具表） | 否。会话工具表只有 builtin + integrations（`internal/cli/session_tools.go:43-80`） | 未接 |
+| 未达标信号驱动改进（missed criterion / 空 tracker 列） | 无：无 criteria 评估、无 tracker 写入 | 否 | 未接 |
+
+**小结**：`Goal` 的数据模型与加载路径存在，但成功标准、约束、上下文都没有进入 prompt，也没有任何 judge 读取它们；loop 里连 judge 调用点都不存在。goals_outcome 在 Go 运行时实质上是「只解析、不执行」。
+
