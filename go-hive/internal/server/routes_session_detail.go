@@ -188,6 +188,9 @@ func handleStopSession(w http.ResponseWriter, r *http.Request, deps SessionRoute
 		sessionNotFound(w, sessionID)
 		return
 	}
+	if deps.OnSessionStopped != nil {
+		deps.OnSessionStopped(sessionID)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"session_id": sessionID,
 		"stopped":    true,

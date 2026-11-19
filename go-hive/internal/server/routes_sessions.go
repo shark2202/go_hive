@@ -35,6 +35,10 @@ type SessionRouteDeps struct {
 	VacateSoftDeleted func(colonyID string) error
 	// ConnectedProviders feeds the live-tools panel's provider list.
 	ConnectedProviders func() []string
+
+	// OnSessionStopped releases per-session side state (reminder hub and
+	// queue) after the manager stopped the session. Nil is a no-op.
+	OnSessionStopped func(sessionID string)
 }
 
 func RegisterSessionRoutes(mux *http.ServeMux, deps SessionRouteDeps) {

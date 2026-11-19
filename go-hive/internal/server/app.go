@@ -119,6 +119,10 @@ func NewApp(deps AppDeps) *App {
 		configDeps.Home = deps.Home
 	}
 	RegisterConfigRoutes(mux, configDeps)
+	reminders := deps.Reminders
+	if reminders == nil {
+		reminders = NewReminderRuntime()
+	}
 	RegisterSessionRoutes(mux, SessionRouteDeps{
 		LiveSessions:           deps.LiveSessions,
 		Manager:                deps.Manager,
@@ -129,6 +133,7 @@ func NewApp(deps AppDeps) *App {
 		CreateColonyFromSource: deps.CreateColonyFromSource,
 		VacateSoftDeleted:      deps.VacateSoftDeleted,
 		ConnectedProviders:     deps.ConnectedProviders,
+		OnSessionStopped:       reminders.DropSession,
 	})
 	RegisterAgentRoutes(mux, AgentRouteDeps{
 		Manager: deps.Manager,
@@ -159,10 +164,6 @@ func NewApp(deps AppDeps) *App {
 	RegisterAppExtraRoutes(mux, AppExtraRouteDeps{})
 	RegisterModelRoutes(mux, ModelRouteDeps{Home: deps.Home, Manager: deps.Manager})
 	RegisterTaskRoutes(mux, TaskRouteDeps{Store: tasks.NewTaskStore(deps.Home.Root)})
-	reminders := deps.Reminders
-	if reminders == nil {
-		reminders = NewReminderRuntime()
-	}
 	RegisterReminderRoutes(mux, ReminderRouteDeps{Runtime: reminders})
 
 	// Wave 1 route tables that read live runtime state. The colony adapters
