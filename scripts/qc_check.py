@@ -7,12 +7,23 @@
 """
 import argparse
 import re
+import socket
 import subprocess
 from pathlib import Path
 
 ROOT = Path("/Users/mac/hive")
 MOD = ROOT / "go_hive/go-hive"
 OUT = ROOT / "go_hive/QC_REPORT.md"
+
+
+def free_port() -> int:
+    """Pick an ephemeral port so the smoke run never collides with a service
+    someone else already bound (8801 is a common dev port)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
 
 
 def run(cmd, cwd=MOD, timeout=600):
@@ -81,7 +92,8 @@ def main():
         checks.append(("C1 make ci", code == 0, (out.strip().splitlines() or [""])[-1][:120]))
 
     if args.smoke:
-        code, out = run(["bash", "../scripts/smoke.sh", "8801"], timeout=300)
+        smoke_port = free_port()
+        code, out = run(["bash", "../scripts/smoke.sh", str(smoke_port)], timeout=300)
         checks.append(("C3 运行时冒烟", code == 0, (out.strip().splitlines() or [""])[-2][:120]))
 
     ok = sum(1 for _, v, _ in checks if v)
