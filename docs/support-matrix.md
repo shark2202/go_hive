@@ -26,7 +26,11 @@
 | 会话事件 SSE | 已实现 | 实测 `client_input_received`，20s 心跳 |
 | OpenAI-compatible 传输 | 已实现 | 实测（本地假上游）：`/chat/completions` + Bearer |
 | Anthropic Messages 传输 | 已实现 | 实测（本地假上游）：`/v1/messages` + `x-api-key` |
-| 逐 token 模型流 | 未实现 | 只有会话事件 SSE；无 `stream` 增量转发 |
+| 逐 token 模型流 | 已实现（OpenAI-compatible） | 实测 live SSE 单轮 12 帧增量；Anthropic/MiniMax 明确 unsupported 并回退非流式 |
+| `run_worker` 并行 worker | 已实现 | 实测 queen 派 worker → worker 执行 → `[WORKER_REPORT]` 回传；`resume_worker_ids` 未实现 |
+| tracker 共享账本 | 已实现 | 实测 colony 建库、worker 注入 binding、`tracker_*` 建表/upsert/query |
+| 提醒中枢 | 已实现 | idle / task / parallel 等 source 注册并随会话启停 |
+| judge（success_criteria） | 已实现 | colony worker 带 criteria 时评估并发布 `judge_verdict`；chat 会话无 criteria 不评估 |
 | 内建工具 `read_file` / `write_file` / `terminal_exec` | 已实现，未在文档中触发 | 单测覆盖；本次假模型未发工具调用 |
 | 集成工具（会话可用） | 已实现 | 23 个安装器 102 模块 / 854 action，加 senders 1 模块 / 9 action，合计 **103 模块 / 863 action**；会话目录实测 103 个集成工具（扫描器与 senders 打开时） |
 | 集成工具（默认关闭） | 已实现，默认关闭 | 6 个网络扫描器 + senders；见 §2.4，实测默认目录 96 个工具 |
