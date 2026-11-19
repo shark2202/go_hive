@@ -1,6 +1,6 @@
 # 支持矩阵
 
-> 版本：`hive 1.0.14-go.1`
+> 版本：`hive 1.0.15-go.1`
 > 快照：2026-11-19，分支 `w9/release` 工作树（发布包构建快照）。
 > 状态定义：
 > - **已实现**：代码存在，且本次文档验证或仓库测试实际跑过；
@@ -15,7 +15,7 @@
 | 能力 | 状态 | 证据 |
 | --- | --- | --- |
 | 构建（无 cgo、离线） | 已实现 | `make build`、`make ci` 实测；`CGO_ENABLED=0 GOPROXY=off` |
-| `hive --version` | 已实现 | 实测（发布包解压后）`hive 1.0.14-go.1` |
+| `hive --version` | 已实现 | 实测（发布包解压后）`hive 1.0.15-go.1` |
 | `hive serve` + `/api/health` | 已实现 | 实测默认 `127.0.0.1:8787`；发布包实测 `--port 8797` 健康检查 200 |
 | 创建会话 `POST /api/sessions` | 已实现 | 实测 201，返回 `session_id` |
 | 会话投递 `POST /api/sessions/{id}/chat` | 已实现 | 实测 200；无 key 时 503；未知会话 404；空消息 400 |
@@ -139,12 +139,12 @@ P0 逐项：
 
 | GOOS | GOARCH | 编译 | 测试执行 | 归档 |
 | --- | --- | --- | --- | --- |
-| darwin | amd64 | 通过 | 未执行 | `hive-1.0.14-go.1-darwin-amd64.tar.gz` |
-| darwin | arm64 | 通过 | **本机全量通过** | `hive-1.0.14-go.1-darwin-arm64.tar.gz` |
-| linux | amd64 | 通过 | 未执行 | `hive-1.0.14-go.1-linux-amd64.tar.gz` |
-| linux | arm64 | 通过 | 未执行 | `hive-1.0.14-go.1-linux-arm64.tar.gz` |
-| windows | amd64 | 通过 | 未执行 | `hive-1.0.14-go.1-windows-amd64.zip` |
-| windows | arm64 | 通过 | 未执行 | `hive-1.0.14-go.1-windows-arm64.zip` |
+| darwin | amd64 | 通过 | 未执行 | `hive-1.0.15-go.1-darwin-amd64.tar.gz` |
+| darwin | arm64 | 通过 | **本机全量通过** | `hive-1.0.15-go.1-darwin-arm64.tar.gz` |
+| linux | amd64 | 通过 | 未执行 | `hive-1.0.15-go.1-linux-amd64.tar.gz` |
+| linux | arm64 | 通过 | 未执行 | `hive-1.0.15-go.1-linux-arm64.tar.gz` |
+| windows | amd64 | 通过 | 未执行 | `hive-1.0.15-go.1-windows-amd64.zip` |
+| windows | arm64 | 通过 | 未执行 | `hive-1.0.15-go.1-windows-arm64.zip` |
 
 「编译通过」只证明能为该目标生成二进制；**测试只在 darwin/arm64 本机跑过**。CI 定义（`.github/workflows/go.yml`）包含 Ubuntu 上的 `make ci` 与六目标交叉编译，`release.yml` 负责打包，但本次没有运行 GitHub Actions。
 
@@ -210,7 +210,7 @@ CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -tags e2e -count=
 
 这些数字是**本工作树**的实测值，与 `STATUS.md` 中的 2,238/2,045 等历史快照不同（文档快照时间不同）。
 
-发布包本身另有一轮验证（`hive --version`、`shasum -a 256 -c SHA256SUMS`、解压 darwin-arm64 后 `/` 200）记录在 `release-notes-v1.0.14-go.1.md`。
+发布包本身另有一轮验证（`hive --version`、`shasum -a 256 -c SHA256SUMS`、解压 darwin-arm64 后 `/` 200）记录在 `release-notes-v1.0.15-go.1.md`。
 
 ## 7. 复现
 
@@ -240,4 +240,4 @@ bash go_hive/install.sh --from go_hive/go-hive/dist/release
 hive --version && hive serve
 ```
 
-`quickstart.md` 有完整的分步流程与无 key 行为；`configuration.md` 有模型、凭据与 colony 配置的解析优先级；`release-notes-v1.0.14-go.1.md` 有发布包清单与升级说明。
+`quickstart.md` 有完整的分步流程与无 key 行为；`configuration.md` 有模型、凭据与 colony 配置的解析优先级；`release-notes-v1.0.15-go.1.md` 有发布包清单与升级说明。

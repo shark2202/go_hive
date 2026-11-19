@@ -1,4 +1,6 @@
 # Go Hive 复刻状态面板（看门狗）
+> 历史快照：本文件的版本与测试数字固定于当时；当前口径见 `docs/support-matrix.md` 与 `docs/release-notes-v1.0.15-go.1.md`。
+
 
 更新时间：2026-11-18（P0 可运行切片集成后；整树 `make ci` 退出码 0）
 维护方式：每个里程碑更新；每 5 分钟由看门狗任务读取本文件 + `scripts/watchdog.sh` 的实时快照并汇报。

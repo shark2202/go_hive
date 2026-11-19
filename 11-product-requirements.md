@@ -1,4 +1,6 @@
 # 11 · 功能需求清单
+> 历史快照：本文件的版本与测试数字固定于当时；当前口径见 `docs/support-matrix.md` 与 `docs/release-notes-v1.0.15-go.1.md`。
+
 
 > 状态快照：2026-11-18（P0 可运行切片集成后；`make ci` 退出码 0，parity 2,238/2,238、2,045 refs、0 missing）。
 > 代码在 `go_hive/go-hive/`，Python 参考在 `core/`。
