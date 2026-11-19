@@ -86,7 +86,7 @@ go mod download
 # 离线测试（Makefile 已内置离线环境变量）
 make test
 
-# 完整门禁：fmt-check + vet + test + cross + parity
+# 完整门禁：fmt-check + vet + test + cross + parity + parity-targets + wiring-check
 make ci
 ```
 

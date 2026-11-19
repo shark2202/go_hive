@@ -16,7 +16,7 @@
   - 三条波次均已并入 19:19 的整树 `make ci` 复跑，独立 verifier 对最终快照统一复核。
 - **P0 可运行切片（2026-11-18 晚，后于上述基线）**：`hive serve` 装配真实 `ChatRuntime`；新增 `internal/llm/transport.go`、`internal/tools/builtin`、`internal/server/chat_runtime.go`/`chat_routes.go`、`e2e/p0_chat_test.go`。该批改动后整树 `make ci` 实测退出码 0：2,238/2,238 parity 注解、2,045 refs（0 missing）、55 shorthand/prose；E2E 与其 `-race` 均通过。
 - **明确延期（2026-11-19 18:00 前不承诺）**：colony/worker 编排闭环、104 个集成工具、sentinel、browser/前端资源路由、`internal/platform` 终端层。这些在 `14`/`15` 文档按缺口登记，不虚报为「已完成」。
-- **每轮固定收尾（缺一不可）**：六道门禁（fmt/vet/test/cross/parity/parity-targets）→ 刷新 `STATUS.md`、`11`、`14`、`15`、`README.md`、`00` 的实测计数 → 交独立 verifier 复核 → 回填 PASS/FAIL 与 `Command run:` 证据。未拿到 PASS 的包一律在本文标记「验证待跑」，不得写成已完成。
+- **每轮固定收尾（缺一不可）**：七道门禁（fmt/vet/test/cross/parity/parity-targets/wiring-check）→ 刷新 `STATUS.md`、`11`、`14`、`15`、`README.md`、`00` 的实测计数 → 交独立 verifier 复核 → 回填 PASS/FAIL 与 `Command run:` 证据。未拿到 PASS 的包一律在本文标记「验证待跑」，不得写成已完成。
 - **交付口径**：18:00 前交付的是一个**门禁全绿、可离线构建、会话域读写路由基本闭环**的 Go 移植快照，附一份逐项列明「已交付 / 已延期 / 已知差异」的清单；不以「全部完成」表述任何未验证部分。
 
 ## 1. 目标
