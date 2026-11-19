@@ -1,20 +1,20 @@
-# 交付报告（2026-11-19 11:35）
+# 交付报告（2026-11-19 13:50）
 
 > 口径：`RELEASE_PLAN.md` 的 G6 商业发布标准（R1–R10）。
-> 代码快照：tag `v1.0.15-go.1`（提交 `6fc791a0`），工作树干净。
+> 代码快照：主线 `c3880106`（tag `v1.0.15-go.1` 为 11:35 的发布快照，此后已补 `run_worker`、tracker、提醒中枢、judge、真流式）。
 
 ## 1. 结论
 
 | 判定 | 结果 |
 | --- | --- |
-| R1 功能完整（与上游行为对齐） | **不满足**：7 个核心概念的 71 条机制中，审计基线为 14 已接 / 7 部分 / 50 未接（`CONCEPT_WIRING_AUDIT.md`，基线 `e5f7c2fa`；此后 `ask_user`、任务工具、colony 生命周期、人格、记忆已补，但 `worker_agent`、`goals_outcome`、`run_worker`、tracker 写路径、提醒中枢、Sentinel 仍未接）；token 级流式缺失 |
+| R1 功能完整（与上游行为对齐） | **不满足**：按 `af55d368` 重审为 25 已接 / 12 部分 / 42 未接；此后已补 `run_worker` + worker 回报、tracker 写路径、提醒中枢、judge、OpenAI-compatible 真流式。仍未接：Sentinel、`write_skill`、triggers 恢复与 `QueenExecutor`、playbook 运行时、`resume_worker_ids`、Anthropic 流式；需按当前 HEAD 再重审 |
 | R2 分发形态 | 满足：六平台归档 + SHA256SUMS + 安装脚本，解压即用 |
 | R3 用户文档 | 部分满足：快速开始/配置/支持矩阵齐备，但支持矩阵明确标注 81 个需凭据模块「未验证」 |
 | R4 许可 | 满足：Apache-2.0 LICENSE + NOTICE |
 | R5 安全 | 部分满足：已修 3 个真实漏洞（附件读写 symlink 逃逸、任务体无限流、`/api` 点段 307），但**未做在线漏洞库比对**（`govulncheck` 装不上） |
 | R6 可靠性 | 满足：`-race` 全绿、故障注入与并发修复已合入 |
 | R7 可观测 | 满足：会话事件链、SSE、`/stats` 字段对齐、诊断包 |
-| R8 质量证据 | 满足：七道门禁、4,256 测试、QC 8/8、smoke 13/13、六平台归档校验 |
+| R8 质量证据 | 满足：七道门禁、4,313 测试、QC 8/8、smoke 13/13、六平台归档校验 |
 | R9 发布流程 | 满足：版本、CHANGELOG、发布说明、tag、归档 |
 | R10 真实第三方集成 | 不适用（用户决定 2026-11-19）：本阶段不提供第三方凭据，以支持矩阵「未验证」声明代替 |
 | **总判定** | **可运行的移植快照（试用版），不是「完整复刻交付」**。工程发布条件（构建/测试/打包/安全修复）成立；行为对齐条件（概念机制生产可达）不成立 |
@@ -25,13 +25,13 @@
 
 | 概念 | 状态 | 生产缺口 |
 | --- | --- | --- |
-| queen | 可用 | 多 worker 编排、per-queen 工具白名单缺失 |
-| colony | 部分 | 无 `run_worker` 工具；tracker 工具未注册；scaffold 不建 `tracker/`、`skills/`、`triggers.json`；定时唤醒与重启恢复未接 |
-| worker_agent | 未接 | `SpawnBatch/Spawn` 无生产入口，只有 overseer 单 worker |
-| coordination | 部分 | tracker 写路径、提醒中枢（idle/task/parallel 全空）、Sentinel 均未接 |
-| goals_outcome | 未接 | judge 已实现，chat 会话无 `SuccessCriteria` 来源，从不触发 |
+| queen | 可用 | 已有 `run_worker` 按需扩 worker；剩 per-queen 工具白名单、playbook 运行时 |
+| colony | 部分 | `run_worker` 与 tracker 已接；scaffold 不建 `tracker/`、`skills/`、`triggers.json`；定时唤醒与重启恢复未接 |
+| worker_agent | 部分 | `run_worker → SpawnBatch` 生产可达并回传 `[WORKER_REPORT]`；剩 `resume_worker_ids`、worker 转录在内存、overseer 工具面无 `run_worker` |
+| coordination | 部分 | tracker 写路径、提醒中枢（idle/task/parallel）已接；剩 Sentinel、park/resume 完整语义 |
+| goals_outcome | 部分 | judge 对带 `success_criteria` 的 worker 生效并发布 `judge_verdict`；chat 无 criteria，playbook 判定未接 |
 | improvement | 部分 | 技能写入（`WriteSkill`）、instinct/lessons 沉淀未接 |
-| the_loop | 可用（核心） | 提醒注入、token 级流式、judge 阶段缺失 |
+| the_loop | 可用 | 真流式、提醒注入、judge 阶段已接；剩 playbook 循环与触发恢复 |
 | 集成工具 | 未验证 | 81 个需第三方凭据的模块无真实调用；仅 26 个免凭据模块离线验证 |
 
 
