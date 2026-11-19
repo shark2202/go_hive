@@ -72,9 +72,24 @@ type Worker struct {
 	// Metadata only: it is never part of the worker's prompt.
 	Goal string
 
+	// StoragePath is the worker's on-disk home (<colony>/workers/<id>).
+	// OutputFile is the transcript path a report points the queen at.
+	StoragePath string
+	OutputFile  string
+
 	Context *agentloop.AgentContext
 
 	conversation *agentloop.NodeConversation
+	// resumed marks a worker rebuilt over a saved transcript: its loop
+	// continues the persisted conversation instead of rendering the fresh
+	// task message.
+	resumed bool
+	// wake carries "new input arrived" to the persistent (overseer) run loop.
+	// Non-persistent workers still write it; nobody reads their channel.
+	wake chan struct{}
+	// pendingInput holds text injected into a persistent worker between turns;
+	// the run loop renders each item as the next user message.
+	pendingInput []string
 
 	BatchID    string
 	BatchIndex int
@@ -114,6 +129,7 @@ func NewWorker(id, task, streamID string) *Worker {
 		StreamID: streamID,
 		status:   WorkerQueued,
 		done:     make(chan struct{}),
+		wake:     make(chan struct{}, 1),
 	}
 }
 
@@ -274,12 +290,54 @@ func (w *Worker) Inject(content string) bool {
 	if content == "" || !w.IsActive() {
 		return false
 	}
+	// A persistent worker (the overseer) is between turns most of the time,
+	// and AgentLoop drains injected input only after a tool batch. Buffer the
+	// text for the run loop instead, which renders it as the next user turn.
+	if w.Persistent {
+		w.mu.Lock()
+		w.pendingInput = append(w.pendingInput, content)
+		w.mu.Unlock()
+		w.signalWake()
+		return true
+	}
 	loop := w.AgentLoop()
 	if loop == nil {
 		return false
 	}
 	loop.InjectEvent(content, true, nil)
+	w.signalWake()
 	return true
+}
+
+// takePendingInput drains text injected while the persistent run loop was
+// between turns. The caller renders each item as a user message.
+func (w *Worker) takePendingInput() []string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if len(w.pendingInput) == 0 {
+		return nil
+	}
+	out := w.pendingInput
+	w.pendingInput = nil
+	return out
+}
+
+func (w *Worker) signalWake() {
+	select {
+	case w.wakeCh() <- struct{}{}:
+	default:
+	}
+}
+
+// wakeCh is the run loop's "new input" signal. A zero Worker built by hand in
+// a test still gets a channel rather than a nil receive.
+func (w *Worker) wakeCh() chan struct{} {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.wake == nil {
+		w.wake = make(chan struct{}, 1)
+	}
+	return w.wake
 }
 
 // setResultSummary fills the terminal result summary once the published
@@ -397,6 +455,12 @@ func (w *Worker) reportPayload() map[string]any {
 	payload["budget_limited"] = result.BudgetLimited
 	payload["budget_pinned"] = w.BudgetPinned
 	payload["tool_call_lifetime_budget"] = w.EffectiveBudget()
+	// duration_seconds is the upstream report field the queen's formatter
+	// renders; it rides every terminal report (success, failed, stopped).
+	payload["duration_seconds"] = result.DurationSeconds
+	if w.OutputFile != "" {
+		payload["output_file"] = w.OutputFile
+	}
 	if report := w.ExplicitReport(); report != nil {
 		if status, ok := report["status"].(string); ok && status != "" {
 			payload["status"] = status
