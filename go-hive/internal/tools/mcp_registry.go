@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -24,6 +25,10 @@ type MCPServerSpec struct {
 	Headers     map[string]string `json:"headers"`
 	SocketPath  string            `json:"socket_path"`
 	Description string            `json:"description"`
+	// Enabled is the config-file switch (configuration.json / installed.json).
+	// Nil means "not stated", which loads the server, matching every config
+	// written before the field existed.
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type mcpGateSnapshot struct {
@@ -43,6 +48,11 @@ type RegisterMCPServerOptions struct {
 	PreserveExistingTools *bool
 	ToolCap               *int
 	LogCollisions         bool
+	// ToolNamespace prefixes every registered tool with
+	// "<namespace>__<server>__<tool>". Empty keeps the server's own names,
+	// which is what the legacy config-file loader and the upstream registry
+	// parity tests expect.
+	ToolNamespace string
 }
 
 type LoadRegistryOptions struct {
@@ -51,6 +61,7 @@ type LoadRegistryOptions struct {
 	MaxTools              *int
 	LogCollisions         bool
 	EssentialServers      map[string]struct{}
+	ToolNamespace         string
 }
 
 var gateCredSnapshotFn func() *mcpGateSnapshot
@@ -257,6 +268,16 @@ func (r *ToolRegistry) LoadRegistryServers(serverList []MCPServerSpec, opts Load
 		}
 		_, isEssential := essential[name]
 
+		if spec.Enabled != nil && !*spec.Enabled {
+			record(ServerResolution{
+				Server:        name,
+				Status:        "skipped",
+				ToolsLoaded:   0,
+				SkippedReason: strPtr("disabled in config"),
+			})
+			continue
+		}
+
 		var remaining *int
 		if opts.MaxTools != nil && !isEssential {
 			rem := *opts.MaxTools - toolsAdded
@@ -272,7 +293,7 @@ func (r *ToolRegistry) LoadRegistryServers(serverList []MCPServerSpec, opts Load
 			remaining = &rem
 		}
 
-		success, loaded, errMsg := r.registerMCPServerWithRetry(spec, preserve, remaining, opts.LogCollisions)
+		success, loaded, errMsg := r.registerMCPServerWithRetry(spec, preserve, remaining, opts.LogCollisions, opts.ToolNamespace)
 		toolsAdded += loaded
 		res := ServerResolution{Server: name, ToolsLoaded: loaded}
 		if success {
@@ -289,7 +310,7 @@ func (r *ToolRegistry) LoadRegistryServers(serverList []MCPServerSpec, opts Load
 	return results
 }
 
-func (r *ToolRegistry) registerMCPServerWithRetry(spec MCPServerSpec, preserve bool, toolCap *int, logCollisions bool) (bool, int, string) {
+func (r *ToolRegistry) registerMCPServerWithRetry(spec MCPServerSpec, preserve bool, toolCap *int, logCollisions bool, namespace string) (bool, int, string) {
 	name := spec.Name
 	if name == "" {
 		name = "unknown"
@@ -302,6 +323,7 @@ func (r *ToolRegistry) registerMCPServerWithRetry(spec MCPServerSpec, preserve b
 			PreserveExistingTools: &preserve,
 			ToolCap:               toolCap,
 			LogCollisions:         logCollisions,
+			ToolNamespace:         namespace,
 		})
 		if count > 0 {
 			return true, count, ""
@@ -419,24 +441,30 @@ func (r *ToolRegistry) registerMCPServerInner(spec MCPServerSpec, opts RegisterM
 	count := 0
 	admittedNames := []string{}
 	for _, mcpTool := range client.ListTools() {
-		originServer := r.findMCPOriginServerForTool(mcpTool.Name)
+		remoteName := mcpTool.Name
+		registeredName := remoteName
+		if opts.ToolNamespace != "" {
+			registeredName = NamespacedMCPToolName(opts.ToolNamespace, serverName, remoteName)
+		}
+		originServer := r.findMCPOriginServerForTool(registeredName)
 		catalogShadowed := preserve && originServer != "" && originServer != serverName
-		if libraryAdmit(mcpTool.Name) && !hasName(serverCatalogNames, mcpTool.Name) && !catalogShadowed {
+		if libraryAdmit(remoteName) && !hasName(serverCatalogNames, registeredName) && !catalogShadowed {
 			r.mcpFullCatalog[serverName] = append(r.mcpFullCatalog[serverName], map[string]any{
-				"name":         mcpTool.Name,
+				"name":         registeredName,
+				"server_tool":  remoteName,
 				"description":  mcpTool.Description,
 				"input_schema": mcpTool.InputSchema,
-				"provider":     providerValue(toolProviderMap, mcpTool.Name),
+				"provider":     providerValue(toolProviderMap, remoteName),
 			})
-			serverCatalogNames[mcpTool.Name] = struct{}{}
+			serverCatalogNames[registeredName] = struct{}{}
 		}
-		if !admit(mcpTool.Name) {
+		if !admit(remoteName) {
 			continue
 		}
 		if opts.ToolCap != nil && count >= *opts.ToolCap {
 			break
 		}
-		if preserve && r.HasTool(mcpTool.Name) {
+		if preserve && r.HasTool(registeredName) {
 			if opts.LogCollisions {
 				origin := originServer
 				if origin == "" {
@@ -444,20 +472,21 @@ func (r *ToolRegistry) registerMCPServerInner(spec MCPServerSpec, opts RegisterM
 				}
 				if origin != serverName {
 					r.logWarning(fmt.Sprintf(
-						"MCP tool '%s' from '%s' shadowed by '%s' (loaded first)",
-						mcpTool.Name, serverName, origin))
+						"MCP tool '%s' (server tool '%s') from '%s' shadowed by '%s' (loaded first)",
+						registeredName, remoteName, serverName, origin))
 				}
 			}
 			continue
 		}
 
 		tool := r.ConvertMCPToolToFrameworkTool(mcpTool)
+		tool.Name = registeredName
 		params := schemaParams(mcpTool.InputSchema)
-		r.Register(mcpTool.Name, tool, r.makeMCPExecutor(client, mcpTool.Name, params))
-		r.mcpToolNames[mcpTool.Name] = struct{}{}
-		r.mcpToolClients[mcpTool.Name] = client
-		r.mcpServerTools[serverName][mcpTool.Name] = struct{}{}
-		admittedNames = append(admittedNames, mcpTool.Name)
+		r.Register(registeredName, tool, r.makeMCPExecutor(client, registeredName, remoteName, params))
+		r.mcpToolNames[registeredName] = struct{}{}
+		r.mcpToolClients[registeredName] = client
+		r.mcpServerTools[serverName][registeredName] = struct{}{}
+		admittedNames = append(admittedNames, registeredName)
 		count++
 	}
 
@@ -512,10 +541,37 @@ func (r *ToolRegistry) findMCPOriginServerForTool(toolName string) string {
 	return ""
 }
 
-func (r *ToolRegistry) makeMCPExecutor(client MCPClient, toolName string, toolParams map[string]struct{}) ToolExecutor {
+// NamespacedMCPToolName is the registry name an MCP tool is exposed under. The
+// server name is part of the name so two servers can never claim the same
+// registry key, and the prefix keeps MCP tools out of builtin/integration
+// territory (a remote tool called "read_file" becomes "mcp__srv__read_file"
+// and cannot shadow the sandboxed builtin).
+//
+// Characters a tool call cannot carry (the model's name field is a plain
+// identifier) are folded to "_", so a server or tool name with spaces, dots or
+// slashes still produces a callable name.
+func NamespacedMCPToolName(namespace, server, toolName string) string {
+	clean := func(value, fallback string) string {
+		value = mcpToolNameUnsafe.ReplaceAllString(strings.TrimSpace(value), "_")
+		value = strings.Trim(value, "_")
+		if value == "" {
+			return fallback
+		}
+		return value
+	}
+	return clean(namespace, MCPToolNamespace) + "__" + clean(server, "server") + "__" + clean(toolName, "tool")
+}
+
+// MCPToolNamespace is the default prefix for MCP tools registered into a
+// session catalogue.
+const MCPToolNamespace = "mcp"
+
+var mcpToolNameUnsafe = regexp.MustCompile(`[^A-Za-z0-9_]+`)
+
+func (r *ToolRegistry) makeMCPExecutor(client MCPClient, toolName, remoteName string, toolParams map[string]struct{}) ToolExecutor {
 	return func(inputs map[string]any) (any, error) {
 		merged := r.prepareCallInputs(inputs, toolParams, nil)
-		result, err := client.CallTool(toolName, merged)
+		result, err := client.CallTool(remoteName, merged)
 		if err != nil {
 			inputsStr := truncateInputs(inputs)
 			r.emit(LogRecord{
@@ -957,6 +1013,17 @@ func (r *ToolRegistry) ReloadRegistryMCPServersAfterResync() {
 }
 
 func (r *ToolRegistry) ResyncMCPServersIfNeeded(force bool) bool {
+	// A serve-owned loader bumps its generation on every reload. Re-attaching
+	// here is what makes a manual reload reach registries that are already
+	// serving turns: the next tool call through this registry picks the new
+	// server set up without restarting the session.
+	if attacher := ProcessMCP(); attacher != nil && r.mcpAttached && r.mcpAttachGen != attacher.Generation() {
+		r.dropMCPServers("before MCP reload")
+		r.attachMCPFrom(attacher)
+		r.logInfo("MCP servers re-attached after reload", nil)
+		r.logRegistrySnapshot("after mcp reload")
+		return true
+	}
 	if len(r.mcpClients) == 0 || !r.hasMCPConfigPath {
 		return false
 	}
@@ -983,7 +1050,24 @@ func (r *ToolRegistry) ResyncMCPServersIfNeeded(force bool) bool {
 	}
 	r.logInfo(reason+" — resyncing MCP servers", nil)
 
-	r.CleanupMCPClients("during resync")
+	r.dropMCPServers("during resync")
+
+	r.LoadMCPConfig(r.mcpConfigPath)
+	if r.hasMCPRegistry {
+		r.ReloadRegistryMCPServersAfterResync()
+	}
+
+	r.logInfo("MCP server resync complete", nil)
+	r.logRegistrySnapshot("after resync_mcp_servers_if_needed")
+	return true
+}
+
+// dropMCPServers tears down every loaded MCP server: pool references are
+// released, tools unregistered, per-server bookkeeping reset, and the in-process
+// harness groups restored to their saved records (they are registered only
+// once and must survive a reload).
+func (r *ToolRegistry) dropMCPServers(context string) {
+	r.CleanupMCPClients(context)
 
 	for name := range r.mcpToolNames {
 		r.removeTool(name)
@@ -992,6 +1076,7 @@ func (r *ToolRegistry) ResyncMCPServersIfNeeded(force bool) bool {
 	r.mcpServerTools = map[string]map[string]struct{}{}
 	r.mcpFullCatalog = map[string][]map[string]any{}
 	r.mcpServerOrder = nil
+	r.mcpToolClients = map[string]MCPClient{}
 	for _, group := range r.harnessGroupOrder {
 		record, ok := r.harnessGroups[group]
 		if !ok {
@@ -1004,15 +1089,6 @@ func (r *ToolRegistry) ResyncMCPServersIfNeeded(force bool) bool {
 		r.mcpFullCatalog[group] = append([]map[string]any(nil), record.catalog...)
 		r.mcpServerOrder = append(r.mcpServerOrder, group)
 	}
-
-	r.LoadMCPConfig(r.mcpConfigPath)
-	if r.hasMCPRegistry {
-		r.ReloadRegistryMCPServersAfterResync()
-	}
-
-	r.logInfo("MCP server resync complete", nil)
-	r.logRegistrySnapshot("after resync_mcp_servers_if_needed")
-	return true
 }
 
 func sameStringSet(a, b map[string]struct{}) bool {

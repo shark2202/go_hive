@@ -107,6 +107,8 @@ type ToolRegistry struct {
 	mcpFullCatalog    map[string][]map[string]any
 	mcpToolClients    map[string]MCPClient
 	mcpExtraEnv       map[string]string
+	mcpAttached       bool
+	mcpAttachGen      int64
 	identityEnvFn     func() map[string]string
 	mcpRegistryPath   string
 	hasMCPRegistry    bool
@@ -126,7 +128,7 @@ type ToolRegistry struct {
 }
 
 func NewToolRegistry() *ToolRegistry {
-	return &ToolRegistry{
+	registry := &ToolRegistry{
 		tools:             map[string]RegisteredTool{},
 		sessionContext:    map[string]any{},
 		mcpClientServers:  map[int]string{},
@@ -140,6 +142,19 @@ func NewToolRegistry() *ToolRegistry {
 		harnessGroups:     map[string]*harnessGroupRecord{},
 		providerIndex:     map[string]map[string]struct{}{},
 	}
+	// A registry built while `hive serve` owns an MCP loader starts with the
+	// servers that loader connected at boot. Session catalogues (queen chat,
+	// colony worker pool) all go through this constructor, so the loaded
+	// servers reach both surfaces without either assembly file knowing about
+	// MCP.
+	attachProcessMCP(registry)
+	return registry
+}
+
+// SetMCPConnectionManager wires the connection pool MCP clients are acquired
+// from. Nil keeps the per-registry client factory (the default outside serve).
+func (r *ToolRegistry) SetMCPConnectionManager(manager MCPConnectionManager) {
+	r.mcpManager = manager
 }
 
 func (r *ToolRegistry) Register(name string, tool Tool, executor ToolExecutor) {
