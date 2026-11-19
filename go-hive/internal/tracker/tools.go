@@ -682,6 +682,9 @@ var QueenOnlyTrackerTools = map[string]bool{
 type Registry struct {
 	tools   map[string]Tool
 	resolve Resolver
+	// role is the registration role ("queen" or "worker") so a per-call
+	// rebind keeps the same tool surface. Empty means no role filter.
+	role string
 }
 
 func NewRegistry(resolve Resolver) *Registry {
@@ -691,6 +694,13 @@ func NewRegistry(resolve Resolver) *Registry {
 	return &Registry{tools: map[string]Tool{}, resolve: resolve}
 }
 
+// StaticResolver always yields b. It is how a binding resolved per call (the
+// queen's session colony, a worker's input_data) is handed to the tracker
+// tools without rebuilding their argument plumbing by hand.
+func StaticResolver(b *Binding) Resolver {
+	return func() (*Binding, error) { return b, nil }
+}
+
 func (r *Registry) Register(tool Tool) {
 	r.tools[tool.Name] = tool
 }
@@ -698,6 +708,34 @@ func (r *Registry) Register(tool Tool) {
 func (r *Registry) Get(name string) (Tool, bool) {
 	tool, ok := r.tools[name]
 	return tool, ok
+}
+
+// Execute runs one registered tool. ok is false when name is not in the
+// table, so a caller can fall through to its own executor instead of
+// mistaking an unknown tool for a failed call.
+func (r *Registry) Execute(name string, inputs map[string]any) (map[string]any, bool) {
+	if r == nil {
+		return nil, false
+	}
+	tool, ok := r.tools[name]
+	if !ok {
+		return nil, false
+	}
+	return tool.Execute(inputs), true
+}
+
+// WithResolver rebuilds the same role-filtered table against another binding
+// resolver. The tool closures capture the resolver, so a per-call binding
+// (queen session colony, worker input_data) requires a rebuilt table rather
+// than a mutated one.
+func (r *Registry) WithResolver(resolve Resolver) *Registry {
+	out := NewRegistry(resolve)
+	if r == nil {
+		return out
+	}
+	out.role = r.role
+	registerTrackerTools(out)
+	return out
 }
 
 func (r *Registry) Names() []string {
@@ -993,8 +1031,17 @@ func RegisterTrackerTools(reg *Registry, role string) error {
 	if role != "queen" && role != "worker" {
 		return fmt.Errorf("role must be 'queen' or 'worker', got %s", strconv.Quote(role))
 	}
+	reg.role = role
+	registerTrackerTools(reg)
+	return nil
+}
+
+// registerTrackerTools fills reg according to its role. It is the shared body
+// of RegisterTrackerTools and Registry.WithResolver so a rebind cannot drift
+// from the original role filter.
+func registerTrackerTools(reg *Registry) {
 	for _, tool := range BuildTrackerTools(reg.Resolve) {
-		if role == "worker" {
+		if reg.role == "worker" {
 			if QueenOnlyTrackerTools[tool.Name] {
 				continue
 			}
@@ -1008,5 +1055,4 @@ func RegisterTrackerTools(reg *Registry, role string) error {
 		}
 		reg.Register(tool)
 	}
-	return nil
 }
