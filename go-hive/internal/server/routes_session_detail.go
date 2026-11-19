@@ -205,15 +205,16 @@ func handleSessionStats(w http.ResponseWriter, r *http.Request, deps SessionRout
 		return
 	}
 
-	stats := map[string]any{}
+	// Upstream answers colony.get_stats() verbatim. A session whose colony has
+	// not spawned still owes the client the same field set, so the session
+	// baseline is rendered first and colony values overlay it field-by-field.
+	var colonyStats map[string]any
 	if session.Colony != nil {
 		if provider, ok := session.Colony.(colonyStatsProvider); ok {
-			if provided := provider.GetStats(); provided != nil {
-				stats = provided
-			}
+			colonyStats = provider.GetStats()
 		}
 	}
-	writeJSON(w, http.StatusOK, stats)
+	writeJSON(w, http.StatusOK, buildSessionStats(session, colonyStats))
 }
 
 func handleListTriggers(w http.ResponseWriter, r *http.Request, deps SessionRouteDeps) {
