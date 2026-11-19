@@ -7,7 +7,7 @@
 
 | 判定 | 结果 |
 | --- | --- |
-| R1 功能完整（与上游行为对齐） | **不满足**：按 `ed457d75` 重审为 **48 已接 / 10 部分 / 22 未接**（80 行）。已接含 `run_worker`、tracker、提醒中枢、judge、OpenAI-compatible 真流式；未接：Sentinel、`write_skill`、triggers/`QueenExecutor`、playbook runner、`resume_worker_ids`、`search_messages`/`stall_check`/并行只读工具。已知缺陷：overseer 工具面缺 `run_worker`/tracker/task；`serve --colony` 预载会话无 ChatRuntime；fork 的 `worker.json` 把 Queen persona 写成 worker system prompt；`worker.json.tools` 未应用 |
+| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：概念审计 **61 已接 / 9 部分 / 10 未接**，八层 spine **50 / 10 / 10**（基线 `4b6f1cf4`）。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go-native playbook、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺：`search_messages`/`search_timeline`、`stall_check`、并行只读工具、预算软检查点与花费上限、Anthropic 流式、park 落盘+resume、memory timeline、worker task list、agent 可调用 credentials、rate limit 执行、soul 进 persona。半截项：overseer 无输入源、MCP 白名单、colony 事件未桥 UI、worker 无 reminder hub、REST reminders 恒空、playbook 无 status/stop |
 | R2 分发形态 | 满足：六平台归档 + SHA256SUMS + 安装脚本，解压即用 |
 | R3 用户文档 | 部分满足：快速开始/配置/支持矩阵齐备，但支持矩阵明确标注 81 个需凭据模块「未验证」 |
 | R4 许可 | 满足：Apache-2.0 LICENSE + NOTICE |
