@@ -80,14 +80,7 @@ func (a *AnthropicProvider) AComplete(ctx context.Context, req CompletionRequest
 	if a == nil || a.Provider == nil {
 		return Completion{}, errors.New("llm: anthropic provider is not initialised")
 	}
-	system := req.System
-	if req.SystemDynamicSuffix != "" {
-		if system == "" {
-			system = req.SystemDynamicSuffix
-		} else {
-			system = system + "\n\n" + req.SystemDynamicSuffix
-		}
-	}
+	system := MergedSystemPrompt(req.System, req.SystemDynamicSuffix)
 	return a.Provider.Complete(ctx, ChatMessagesToMaps(req.Messages), CompleteOptions{
 		System:    system,
 		Tools:     req.Tools,

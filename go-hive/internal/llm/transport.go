@@ -52,14 +52,7 @@ func (p *Provider) AComplete(ctx context.Context, req CompletionRequest) (Comple
 	if p.Call == nil {
 		return Completion{}, errors.New("llm: provider has no completion transport")
 	}
-	system := req.System
-	if req.SystemDynamicSuffix != "" {
-		if system == "" {
-			system = req.SystemDynamicSuffix
-		} else {
-			system = system + "\n\n" + req.SystemDynamicSuffix
-		}
-	}
+	system := MergedSystemPrompt(req.System, req.SystemDynamicSuffix)
 	return p.Complete(ctx, ChatMessagesToMaps(req.Messages), CompleteOptions{
 		System:    system,
 		Tools:     req.Tools,

@@ -55,6 +55,19 @@ func (p *Provider) Complete(ctx context.Context, messages []map[string]any, opts
 		return Completion{}, errors.New("llm: provider has no completion transport")
 	}
 
+	response, err := p.completionWithRetry(ctx, p.buildCompletionKwargs(messages, opts), opts.MaxRetries)
+	if err != nil {
+		return Completion{}, err
+	}
+	return p.completionFromResponse(response), nil
+}
+
+// buildCompletionKwargs assembles the OpenAI-compatible request payload shared
+// by the non-streaming and streaming transports, so both send the same model,
+// messages, tools and sampling parameters.
+//
+// Parity: core/framework/llm/litellm.py::LiteLLMProvider.complete
+func (p *Provider) buildCompletionKwargs(messages []map[string]any, opts CompleteOptions) map[string]any {
 	maxTokens := opts.MaxTokens
 	if maxTokens <= 0 {
 		maxTokens = ResolveAuxMaxTokens(0)
@@ -113,12 +126,24 @@ func (p *Provider) Complete(ctx context.Context, messages []map[string]any, opts
 	if len(opts.ResponseFormat) > 0 {
 		kwargs["response_format"] = opts.ResponseFormat
 	}
+	return kwargs
+}
 
-	response, err := p.completionWithRetry(ctx, kwargs, opts.MaxRetries)
-	if err != nil {
-		return Completion{}, err
-	}
+// completionRequestKwargs renders a CompletionRequest into the same payload
+// Complete sends. The streaming transport calls it directly instead of going
+// through Complete, which owns the retry loop.
+func (p *Provider) completionRequestKwargs(req CompletionRequest) map[string]any {
+	return p.buildCompletionKwargs(ChatMessagesToMaps(req.Messages), CompleteOptions{
+		System:    MergedSystemPrompt(req.System, req.SystemDynamicSuffix),
+		Tools:     req.Tools,
+		MaxTokens: req.MaxTokens,
+		JSONMode:  req.JSONMode,
+	})
+}
 
+// completionFromResponse folds a decoded upstream response into the Completion
+// the agent loop consumes. Both transports return the same shape.
+func (p *Provider) completionFromResponse(response CompletionResponse) Completion {
 	cachedTokens, cacheCreationTokens := ExtractCacheTokens(response.Usage)
 	completion := Completion{
 		Content:             response.Content,
@@ -136,7 +161,7 @@ func (p *Provider) Complete(ctx context.Context, messages []map[string]any, opts
 	if completion.Model == "" {
 		completion.Model = p.Model
 	}
-	return completion, nil
+	return completion
 }
 
 func (p *Provider) completionWithRetry(ctx context.Context, kwargs map[string]any, maxRetries *int) (CompletionResponse, error) {

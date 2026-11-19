@@ -150,6 +150,22 @@ func ModelSupportsCacheControl(model string) bool {
 	return false
 }
 
+// MergedSystemPrompt folds the per-turn dynamic suffix into the static system
+// prompt. Both the streaming and the non-streaming completion paths use it so
+// the two transports send byte-identical system text.
+//
+// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+// (system + system_dynamic_suffix)
+func MergedSystemPrompt(system, dynamicSuffix string) string {
+	if dynamicSuffix == "" {
+		return system
+	}
+	if system == "" {
+		return dynamicSuffix
+	}
+	return system + "\n\n" + dynamicSuffix
+}
+
 func BuildSystemMessage(system, dynamicSuffix, model string) map[string]any {
 	if system == "" && dynamicSuffix == "" {
 		return nil
