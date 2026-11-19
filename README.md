@@ -146,7 +146,7 @@ P0 是**可运行切片**，不是 Python 全量对等。以下能力已在当�
 
 **明确延期（P0 不含）**：216 条 Python 路由的完整对等、集成工具（`tools/src/aden_tools` 104 模块 / 324 文件 / 865 action，本期只做优先子集，见 `INTEGRATION_BACKLOG.md`）、Sentinel、browser 工具、React dashboard（只有存在 `frontend/dist` 时才提供静态资源，仓库未附带该构建产物）、queen/colony 多 worker 编排闭环。
 
-**门禁状态（1.0.21-go.1 实测，PASS）**：七道门禁 `fmt-check`、`vet`、`test`、`cross`、`parity`、`parity-targets`、`wiring-check` 全部退出码 0；测试 **4,468**、parity **4468/4468**、引用 **4,681**（3,691 test + 990 prod）0 missing；e2e `ok`、smoke **13/13**、QC **8/8**。发布包解压后 `hive --version` = `hive 1.0.21-go.1`，六平台归档 + `SHA256SUMS` 全部校验通过。完整证据见 `docs/support-matrix.md`。
+**门禁状态（1.0.22-go.1 实测，PASS）**：七道门禁 `fmt-check`、`vet`、`test`、`cross`、`parity`、`parity-targets`、`wiring-check` 全部退出码 0；测试 **4,495**、parity **4495/4495**、引用 **4,713**（3,705 test + 1,008 prod）0 missing；e2e `ok`、smoke **13/13**、QC **8/8**。发布包解压后 `hive --version` = `hive 1.0.22-go.1`，六平台归档 + `SHA256SUMS` 全部校验通过。完整证据见 `docs/support-matrix.md`。
 
 ## 5. 当前实现状态
 
