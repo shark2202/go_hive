@@ -2,6 +2,7 @@ package agentloop
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -54,6 +55,80 @@ func TestToolBudgetSoftCheckpointFiresBeforeHardStop(t *testing.T) {
 	}
 	if got := loop.Counter("tool_budget_soft_reminder"); got != 1 {
 		t.Fatalf("soft reminder counter = %d, want 1", got)
+	}
+}
+
+// Parity-exempt: upstream derives the hard stop only from
+// tool_call_hard_multiple; the audit pins the port's queen at 30 soft / 50 hard,
+// which needs the explicit cap this test locks.
+func TestQueenLoopBudgetIsThirtySoftFiftyHard(t *testing.T) {
+	cfg := DefaultLoopConfig()
+	if cfg.ToolCallBudget != 30 || cfg.ToolCallHardLimit != 50 {
+		t.Fatalf("queen defaults = budget %d hard %d, want 30/50",
+			cfg.ToolCallBudget, cfg.ToolCallHardLimit)
+	}
+	queen := NewAgentLoop(cfg, nil)
+	if soft, hard := queen.toolBudgetLimits(); soft != 30 || hard != 50 {
+		t.Fatalf("queen limits = %d/%d, want 30/50", soft, hard)
+	}
+	// The worker profile clears the explicit cap so its multiple rule wins
+	// (30*3=90) — the two roles must not collapse into one budget.
+	worker := NewAgentLoop(LoopConfig{ToolCallBudget: 30, ToolCallHardMultiple: 3}, nil)
+	if soft, hard := worker.toolBudgetLimits(); soft != 30 || hard != 90 {
+		t.Fatalf("worker limits = %d/%d, want 30/90", soft, hard)
+	}
+	pinned := NewAgentLoop(LoopConfig{ToolCallBudget: 30, ToolCallHardMultiple: 3, ToolCallHardLimit: 50}, nil)
+	if _, hard := pinned.toolBudgetLimits(); hard != 50 {
+		t.Fatalf("explicit hard limit ignored: %d, want 50", hard)
+	}
+	off := NewAgentLoop(LoopConfig{}, nil)
+	if soft, hard := off.toolBudgetLimits(); soft != 0 || hard != 0 {
+		t.Fatalf("budget 0 limits = %d/%d, want 0/0", soft, hard)
+	}
+}
+
+// Parity-exempt: the end-to-end half of the queen profile — the soft checkpoint
+// must actually fire at 30 and the hard stop must defer past 50, which is what
+// the audit called "永不触发" before the budget was set.
+func TestQueenBudgetCheckpointsAtThirtyAndStopsAtFifty(t *testing.T) {
+	calls := make([]llm.ToolCall, 0, 51)
+	for i := 0; i < 51; i++ {
+		calls = append(calls, llm.ToolCall{
+			ID:        fmt.Sprintf("call_%d", i),
+			Name:      "read_file",
+			Arguments: fmt.Sprintf(`{"path":"%d"}`, i),
+		})
+	}
+	completer := &scriptedCompleter{scenarios: []scriptedResponse{
+		{toolCalls: calls},
+		{content: "done"},
+	}}
+	loop := NewAgentLoop(DefaultLoopConfig(), successToolExecutor)
+	ctx := midturnAgentContext(completer, "read_file")
+	conv := NewNodeConversation("You are a test assistant.")
+
+	result, err := loop.ExecuteTurn(context.Background(), ctx, conv, nil)
+	if err != nil {
+		t.Fatalf("ExecuteTurn: %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("turn did not succeed: %+v", result)
+	}
+	if got := loop.Counter("tool_budget_soft_reminder"); got != 1 {
+		t.Fatalf("soft checkpoint counter = %d, want 1 at the 30-call mark", got)
+	}
+	if got := loop.Counter("tool_budget_deferred"); got != 1 {
+		t.Fatalf("deferred counter = %d, want 1 (the 51st call is past the hard stop)", got)
+	}
+	if len(result.ToolResults) != 51 {
+		t.Fatalf("tool results = %d, want 51", len(result.ToolResults))
+	}
+	next := allText(completer.request(1).Messages)
+	if !strings.Contains(next, "Tool-call checkpoint") || !strings.Contains(next, "hard stop at 50") {
+		t.Fatalf("queen checkpoint missing or names the wrong hard stop:\n%s", next)
+	}
+	if !strings.Contains(result.ToolResults[50].Content, "hard stop") {
+		t.Fatalf("51st call was not deferred: %q", result.ToolResults[50].Content)
 	}
 }
 

@@ -4,11 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
 var AllowedWorkerLoopOverrides = []string{
@@ -50,6 +54,15 @@ func BuildWorkerLoopConfig(overrides map[string]any) (agentloop.LoopConfig, erro
 	cfg.ToolCallBudget = DefaultWorkerLoopConfig["tool_call_budget"]
 	cfg.ToolCallHardMultiple = DefaultWorkerLoopConfig["tool_call_hard_multiple"]
 	cfg.ToolCallLifetimeBudget = DefaultWorkerLoopConfig["tool_call_lifetime_budget"]
+	// The worker hard stop is the multiple rule's 30*3=90, not the queen's
+	// explicit 50: clear the default's pinned limit so the worker profile keeps
+	// its documented 30/90 budget (audit: worker 30/90, queen 30/50).
+	cfg.ToolCallHardLimit = 0
+	// Without a spillover directory the loop keeps an oversized tool result in
+	// the context verbatim; a worker has the smallest context in the system, so
+	// it gives up first. Point every worker loop at its own directory under the
+	// hive home (restored by restoreSpillCounter, so a resume cannot overwrite).
+	cfg.SpilloverDir = workerSpilloverDir()
 
 	keys := make([]string, 0, len(overrides))
 	for key := range overrides {
@@ -92,6 +105,27 @@ func BuildWorkerLoopConfig(overrides map[string]any) (agentloop.LoopConfig, erro
 func isAllowedWorkerLoopOverride(key string) bool {
 	_, ok := workerLoopOverrideBounds[key]
 	return ok
+}
+
+// workerSpillSeq disambiguates two loops built in the same process tick.
+var workerSpillSeq atomic.Uint64
+
+// workerSpilloverDir is the directory a worker loop writes oversized tool
+// results to: one per config build, so two concurrent workers never race on the
+// same monotonic spill filename. It lives under the hive home's cache so the
+// spill file cited in the transcript survives a process restart. An unresolvable
+// home leaves the field empty, which keeps the pre-fix behaviour (no spill)
+// rather than writing somewhere arbitrary.
+//
+// Parity-exempt: upstream has no per-worker spill directory; the Go port's
+// spillover producer needs one and the audit pins worker results as its gap.
+func workerSpilloverDir() string {
+	home, err := hivehome.Resolve()
+	if err != nil || home.Root == "" {
+		return ""
+	}
+	name := fmt.Sprintf("%d-%d", os.Getpid(), workerSpillSeq.Add(1))
+	return filepath.Join(home.CacheDir(), "worker-tool-results", name)
 }
 
 func pyInt(value any) (n int, typeName string, ok bool) {

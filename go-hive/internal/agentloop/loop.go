@@ -23,6 +23,11 @@ type LoopConfig struct {
 	ToolCallBudget int
 	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_call_hard_multiple.
 	ToolCallHardMultiple int
+	// ToolCallHardLimit, when > 0, is the absolute per-turn-loop hard stop. It
+	// overrides ToolCallBudget*ToolCallHardMultiple so a role profile can pin an
+	// exact cap (the queen's 30 soft / 50 hard, the audit's numbers); zero keeps
+	// the upstream multiple rule. Ignored when ToolCallBudget is 0.
+	ToolCallHardLimit int
 	// Parity: framework/agent_loop/internals/types.py
 	ToolCallLifetimeBudget int
 	// Parity: framework/agent_loop/internals/types.py::LoopConfig.judge_every_n_turns.
@@ -72,11 +77,17 @@ type LoopConfig struct {
 // Parity: framework/agent_loop/internals/types.py LoopConfig defaults.
 func DefaultLoopConfig() LoopConfig {
 	return LoopConfig{
-		MaxIterations:                   50,
-		MaxContextTokens:                180_000,
-		ToolWaitLimitSeconds:            600,
-		GraceIterations:                 0,
-		ToolCallBudget:                  0,
+		MaxIterations:        50,
+		MaxContextTokens:     180_000,
+		ToolWaitLimitSeconds: 600,
+		GraceIterations:      0,
+		// The queen profile: a soft checkpoint every 30 tool calls in one
+		// turn-loop, a hard stop at 50. Upstream's queen runs the neutral
+		// 0/unbounded default, so this is the port's fix for the audit gap
+		// ("Queen 30/50 软检查点"): without it softBudgetCheckpointBlock never
+		// fires in a chat session. Worker profiles override both fields.
+		ToolCallBudget:                  30,
+		ToolCallHardLimit:               50,
 		ToolCallHardMultiple:            5,
 		ToolCallLifetimeBudget:          0,
 		JudgeEveryNTurns:                1,
@@ -121,6 +132,10 @@ type TurnResult struct {
 	InnerTurns    int
 	ToolResults   []ToolCallRecord
 	ToolCallsUsed int
+	// ParkReason is the park the loop raised on its own, when it did: a
+	// deterministic doom loop stops the turn instead of returning to the model.
+	// Nil means the turn ended on a model answer or an ordinary error.
+	ParkReason *ParkReason
 }
 
 // Parity: framework/agent_loop/agent_loop.py _GRACE_TERMINAL_TOOLS,
@@ -169,6 +184,12 @@ type AgentLoop struct {
 	// DoomLoop watches for identical consecutive tool calls and returns one
 	// advisory reminder per streak. It never interrupts the turn.
 	DoomLoop *DoomLoopDetector
+
+	// ParkSink, when set, observes every park the loop raises itself (a doom
+	// loop past its park threshold) with the reason and a one-line detail. The
+	// server wires it to the session event bus so the park is published instead
+	// of ending in a log line. Nil is a no-op.
+	ParkSink func(reason ParkReason, detail string)
 
 	now func() time.Time
 
@@ -712,17 +733,11 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 		results := make([]ToolResult, len(toolCalls))
 
-		softInterval := l.Config.ToolCallBudget
-		hardLimit := 0
-		if softInterval > 0 {
-			hardLimit = softInterval * maxInt(1, l.Config.ToolCallHardMultiple)
-		}
+		softInterval, hardLimit := l.toolBudgetLimits()
 
 		toolCallCount := 0
 		limitHit := false
 		lifetimeLimitHit := false
-		toolFailure := false
-		doomLoopReminder := ""
 		var graceSkippedIdx []int
 		var deferredIdx []int
 		pending := make([]pendingToolCall, 0, len(toolCalls))
@@ -765,7 +780,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 		l.executeToolBatch(ctx, agentCtx, pending, results, tools)
 
-		toolFailure, doomLoopReminder = l.observeToolBatch(agentCtx, pending, results)
+		toolFailure, doomLoopReminder, doomPark := l.observeToolBatch(agentCtx, pending, results)
 
 		if len(graceSkippedIdx) > 0 {
 			l.bumpBy("grace_iteration_skipped", len(graceSkippedIdx))
@@ -814,6 +829,13 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 		}
 		result.ToolResults = append(result.ToolResults, records...)
+
+		// A deterministic doom loop stops the turn here: the model has re-issued
+		// the same call past the park threshold, so the park replaces another
+		// advisory-only reminder.
+		if doomPark.parked {
+			return l.parkOnDoomLoop(result, inner, completion, doomPark)
+		}
 
 		if agentCtx.StopAfterToolBatch != nil && agentCtx.StopAfterToolBatch() {
 			result.InnerTurns = inner + 1
@@ -936,69 +958,29 @@ func allToolsConcurrencySafe(pending []pendingToolCall, tools []llm.ToolDef) boo
 // runs the deterministic doom-loop guard, and publishes completed events. Doing
 // this after the batch (rather than inside each goroutine) keeps event and
 // reminder order stable even when executeToolBatch ran concurrently.
-func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult) (bool, string) {
+func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult) (bool, string, doomLoopPark) {
 	toolFailure := false
 	doomLoopReminder := ""
+	park := doomLoopPark{}
 	for _, item := range pending {
 		if results[item.index].IsError {
 			toolFailure = true
 		}
 		// Parity-exempt: deterministic doom-loop guard. Upstream's stall
 		// check is judge-based; this is the no-model half (same call, same
-		// arguments, same result) and it only appends a reminder.
+		// arguments, same result) and it appends a reminder before it parks.
 		if warning := l.DoomLoop.Observe(item.call.Name, item.call.Input); warning != "" {
 			doomLoopReminder = warning
 			l.bumpBy("doom_loop_warned", 1)
+		}
+		if !park.parked && l.DoomLoop.ShouldPark() {
+			park = doomLoopPark{tool: item.call.Name, streak: l.DoomLoop.Streak(), parked: true}
 		}
 		if agentCtx.Observer != nil {
 			agentCtx.Observer.ToolCallCompleted(item.call, results[item.index])
 		}
 	}
-	return toolFailure, doomLoopReminder
-}
-
-// softBudgetCheckpointBlock returns one soft checkpoint block when the running
-// tool-call count has crossed a new budget multiple below the hard stop, plus
-// the new emitted count. `crossed` is capped at hard_multiple - 1 so the soft
-// checkpoint never doubles up with the hard-stop advisory.
-//
-// Parity: framework/agent_loop/agent_loop.py::_render_tool_budget_checkpoint
-func (l *AgentLoop) softBudgetCheckpointBlock(reminderCtx *ReminderAgentContext, names []string, count, softInterval, hardLimit, emitted int) (string, int) {
-	if softInterval <= 0 || hardLimit <= 0 {
-		return "", emitted
-	}
-	crossed := count / softInterval
-	if maxCrossed := maxInt(1, l.Config.ToolCallHardMultiple) - 1; crossed > maxCrossed {
-		crossed = maxCrossed
-	}
-	if crossed <= emitted {
-		return "", emitted
-	}
-	l.bumpBy("tool_budget_soft_reminder", 1)
-	bodies := []string{renderToolBudgetCheckpoint(count, hardLimit)}
-	if l.Hub != nil {
-		for _, reminder := range l.Hub.Collect(TOOL_BUDGET_CHECKPOINT, reminderCtx, names, "") {
-			if reminder.Body != "" {
-				bodies = append(bodies, reminder.Body)
-			}
-		}
-	}
-	return WrapReminder(bodies), crossed
-}
-
-// Parity: framework/agent_loop/agent_loop.py::_render_tool_budget_checkpoint
-func renderToolBudgetCheckpoint(count, hardLimit int) string {
-	return fmt.Sprintf(
-		"Tool-call checkpoint: you've made %d tool calls in this stretch "+
-			"without yielding the turn (hard stop at %d).\n\n"+
-			"This is a checkpoint, not a stop. If you're deliberately working a "+
-			"long, multi-step mission and you know where you are, keep going.\n\n"+
-			"But take one honest beat first. If you've been repeating similar "+
-			"calls, retrying a failing approach, or have lost the thread: "+
-			"step back and either (a) try a genuinely different approach, or "+
-			"(b) if you've hit real difficulty, pause and escalate instead of "+
-			"grinding on.",
-		count, hardLimit)
+	return toolFailure, doomLoopReminder, park
 }
 
 // Parity: AgentLoop._execute_tool (the non-background, non-preflight subset).

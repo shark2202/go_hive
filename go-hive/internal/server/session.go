@@ -424,6 +424,12 @@ func (m *SessionManager) AddSession(session *Session) {
 	// A session created with a colony already attached (the colony fork path)
 	// binds its queen before the first turn can call run_worker.
 	session.BindChatColony()
+	// Arm the loop-level guards once per session: the stall-check subscription
+	// and the doom-loop park sink. Both are no-ops without a bus or a home, and
+	// startLoopGuards is idempotent for the repeated session lookups below.
+	if session.Chat != nil {
+		session.Chat.startLoopGuards()
+	}
 }
 
 // Parity: framework/server/session_manager.py::SessionManager.list_sessions
@@ -496,9 +502,14 @@ func (m *SessionManager) StopSession(sessionID string) bool {
 	session.StopAllTriggers()
 	session.QueenExecutor = nil
 	if session.Chat != nil {
-		if err := session.Chat.Close(); err != nil {
+		chat := session.Chat
+		if err := chat.Close(); err != nil {
 			log.Printf("stop session %s: closing chat runtime: %v", sessionID, err)
 		}
+		// Guards come down after the runtime is quiescent: clearing the park
+		// sink while the turn goroutine is still running would be a data race,
+		// and Close has already waited for it to exit.
+		chat.stopLoopGuards()
 		session.Chat = nil
 	}
 	// A colony host holds an overseer goroutine and worker runtimes; tearing

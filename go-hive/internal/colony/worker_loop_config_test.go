@@ -1,14 +1,19 @@
 package colony
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/aden-hive/hive-go/internal/llm"
 )
 
 // Parity: tests/test_loop_config_overrides.py::test_no_overrides_returns_worker_profile
@@ -259,7 +264,106 @@ func containsString(haystack []string, needle string) bool {
 	return false
 }
 
+// Parity-exempt: the audit pins worker spillover as the Go port's gap (upstream
+// spills inside the loop but has no per-worker directory contract). This locks
+// the directory BuildWorkerLoopConfig now provides and the 30/90 budget split.
+func TestBuildWorkerLoopConfigSetsWorkerSpilloverDir(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv(hivehome.EnvHome, home)
+
+	cfg, err := BuildWorkerLoopConfig(map[string]any{})
+	if err != nil {
+		t.Fatalf("BuildWorkerLoopConfig error: %v", err)
+	}
+	if cfg.SpilloverDir == "" {
+		t.Fatal("worker SpilloverDir is empty: oversized results would stay in context")
+	}
+	wantPrefix := filepath.Join(home, "cache", "worker-tool-results")
+	if !strings.HasPrefix(cfg.SpilloverDir, wantPrefix) {
+		t.Fatalf("SpilloverDir = %q, want it under %q", cfg.SpilloverDir, wantPrefix)
+	}
+	other, err := BuildWorkerLoopConfig(nil)
+	if err != nil {
+		t.Fatalf("BuildWorkerLoopConfig(nil) error: %v", err)
+	}
+	if other.SpilloverDir == cfg.SpilloverDir {
+		t.Fatalf("two workers share the spill directory %q", cfg.SpilloverDir)
+	}
+
+	// The queen's explicit hard cap must not leak into the worker profile: the
+	// worker keeps its documented 30 soft / 90 hard budget.
+	if cfg.ToolCallHardLimit != 0 {
+		t.Fatalf("worker ToolCallHardLimit = %d, want 0 (multiple rule)", cfg.ToolCallHardLimit)
+	}
+	if cfg.ToolCallBudget != 30 || cfg.ToolCallHardMultiple != 3 {
+		t.Fatalf("worker budget = %d x %d, want 30 x 3", cfg.ToolCallBudget, cfg.ToolCallHardMultiple)
+	}
+}
+
+// Parity-exempt: end-to-end worker spill — a result over MaxToolResultChars is
+// written to the worker's spill directory and the tool message cites the path.
+func TestWorkerLoopSpillsOversizedToolResults(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv(hivehome.EnvHome, home)
+	cfg, err := BuildWorkerLoopConfig(nil)
+	if err != nil {
+		t.Fatalf("BuildWorkerLoopConfig error: %v", err)
+	}
+	payload := strings.Repeat("z", cfg.MaxToolResultChars+1000)
+	model := newScriptedLLM(
+		scriptedResponse{
+			ToolCalls:  []llm.ToolCall{{ID: "c1", Name: "big_tool", Arguments: `{}`}},
+			StopReason: "tool_calls",
+		},
+		textResponse("done"),
+	)
+	executor := func(req agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
+		if req.Name == "big_tool" {
+			return agentloop.ToolResult{Content: payload}, nil
+		}
+		return agentloop.ToolResult{Content: "ok"}, nil
+	}
+	ctx := &agentloop.AgentContext{
+		AgentID:        "worker-1",
+		AgentSpec:      agentloop.NewAgentSpec("worker", "Worker", "spill"),
+		LLM:            model,
+		AvailableTools: []llm.ToolDef{{Name: "big_tool", Parameters: map[string]any{"type": "object"}}},
+		StreamID:       "worker_1",
+	}
+	conv := agentloop.NewNodeConversation("You are a worker.")
+	loop := agentloop.NewAgentLoop(cfg, executor)
+	if _, err := loop.ExecuteTurn(context.Background(), ctx, conv, nil); err != nil {
+		t.Fatalf("ExecuteTurn: %v", err)
+	}
+
+	entries, err := os.ReadDir(cfg.SpilloverDir)
+	if err != nil {
+		t.Fatalf("ReadDir(%s): %v", cfg.SpilloverDir, err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("spill files = %v, want exactly one under %s", entries, cfg.SpilloverDir)
+	}
+	path := filepath.Join(cfg.SpilloverDir, entries[0].Name())
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile spill: %v", err)
+	}
+	if len(data) != len(payload) {
+		t.Fatalf("spill file carries %d bytes, want %d", len(data), len(payload))
+	}
+	cited := false
+	for _, message := range conv.Messages() {
+		if message.Role == agentloop.RoleTool && strings.Contains(message.Content, "Full result at: ") {
+			cited = true
+		}
+	}
+	if !cited {
+		t.Fatal("no tool message cites the spill file")
+	}
+}
+
 // Parity-exempt: Go-specific contract for JSON-decoded overrides. Python
+// decoder yields json.Number, which the override path must accept as int.
 func TestBuildWorkerLoopConfigAcceptsJSONNumbers(t *testing.T) {
 	var decoded map[string]any
 	decoder := json.NewDecoder(strings.NewReader(`{"max_iterations": 9, "tool_call_budget": 12}`))
