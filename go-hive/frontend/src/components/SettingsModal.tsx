@@ -16,6 +16,7 @@ import { useShowRuntimeLogs } from "@/hooks/use-show-runtime-logs";
 import McpServersPanel from "./McpServersPanel";
 import { Switch } from "./Switch";
 import type { MotionPref } from "@/lib/motion";
+import { useI18n } from "@/i18n";
 
 const MOTION_LABELS: Record<MotionPref, string> = {
   system: "System",
@@ -30,11 +31,12 @@ interface SettingsModalProps {
 }
 
 function ValidationBadge({ state }: { state: "validating" | { valid: boolean | null; message: string } | undefined }) {
-  if (!state) return <StatusText icon={<Check className="w-3 h-3" />} color="green">Connected</StatusText>;
-  if (state === "validating") return <StatusText icon={<Loader2 className="w-3 h-3 animate-spin" />} color="muted">Verifying...</StatusText>;
-  if (state.valid === false) return <StatusText icon={<AlertCircle className="w-3 h-3" />} color="red" title={state.message}>Invalid key</StatusText>;
-  if (state.valid === true) return <StatusText icon={<Check className="w-3 h-3" />} color="green">Verified</StatusText>;
-  return <StatusText icon={<Check className="w-3 h-3" />} color="green">Connected</StatusText>;
+  const { t } = useI18n();
+  if (!state) return <StatusText icon={<Check className="w-3 h-3" />} color="green">{t("Connected")}</StatusText>;
+  if (state === "validating") return <StatusText icon={<Loader2 className="w-3 h-3 animate-spin" />} color="muted">{t("Verifying...")}</StatusText>;
+  if (state.valid === false) return <StatusText icon={<AlertCircle className="w-3 h-3" />} color="red" title={state.message}>{t("Invalid key")}</StatusText>;
+  if (state.valid === true) return <StatusText icon={<Check className="w-3 h-3" />} color="green">{t("Verified")}</StatusText>;
+  return <StatusText icon={<Check className="w-3 h-3" />} color="green">{t("Connected")}</StatusText>;
 }
 
 function StatusText({ icon, color, title, children }: { icon: React.ReactNode; color: "green" | "red" | "muted"; title?: string; children: React.ReactNode }) {
@@ -43,6 +45,7 @@ function StatusText({ icon, color, title, children }: { icon: React.ReactNode; c
 }
 
 export default function SettingsModal({ open, onClose, initialSection }: SettingsModalProps) {
+  const { t } = useI18n();
   const { userProfile, setUserProfile, userAvatarVersion, bumpUserAvatar, userHasAvatar } = useColony();
   const { theme, setTheme, density, setDensity, motion, setMotion } = useTheme();
   const { me, refresh: refreshMe } = useMe();
@@ -165,7 +168,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
     setNameError(null);
 
     if (trimmedName && (trimmedName.length < 1 || trimmedName.length > 120)) {
-      setNameError("Name must be 1–120 characters.");
+      setNameError(t("Name must be 1–120 characters."));
       return;
     }
 
@@ -175,7 +178,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
       await configApi.setProfile(trimmedName, trimmedAbout);
     } catch {
       setSavingName(false);
-      setNameError("Could not update profile.");
+      setNameError(t("Could not update profile."));
       return;
     }
     setSavingName(false);
@@ -208,7 +211,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
   const activeSubInfo = activeSubscription ? subscriptions.find((s) => s.id === activeSubscription) : null;
   const providerForModels = activeSubInfo?.provider || currentProvider;
   const modelsForLabel = availableModels[providerForModels] || [];
-  const currentModelLabel = modelsForLabel.find((m) => m.id === currentModel)?.label || currentModel || "Not configured";
+  const currentModelLabel = modelsForLabel.find((m) => m.id === currentModel)?.label || currentModel || t("Not configured");
 
   // A configured api_base means the runtime talks to a custom
   // OpenAI-compatible endpoint — naming it after the protocol provider
@@ -225,7 +228,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
   const currentProviderName = activeSubscription
     ? (subscriptions.find((s) => s.id === activeSubscription)?.name || currentProvider)
     : customHost
-      ? `Custom endpoint (${customHost})`
+      ? t("Custom endpoint ({host})", { host: customHost })
       : (LLM_PROVIDERS.find((p) => p.id === currentProvider)?.name || currentProvider);
 
   const selectableProviders = LLM_PROVIDERS.filter(
@@ -239,47 +242,47 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
       <div className="relative bg-card border border-border/60 rounded-xl shadow-2xl w-full max-w-[680px] h-[500px] max-h-[80vh] flex overflow-hidden">
         {/* Sidebar */}
         <div className="w-[156px] flex-shrink-0 border-r border-border/40 py-4 px-2 flex flex-col gap-4">
-          <h2 className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em] px-2.5">Settings</h2>
+          <h2 className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em] px-2.5">{t("Settings")}</h2>
           <div className="flex flex-col gap-0.5">
-            <p className="text-[9.5px] font-semibold text-muted-foreground/50 uppercase tracking-wider px-2.5 mb-0.5">Account</p>
+            <p className="text-[9.5px] font-semibold text-muted-foreground/50 uppercase tracking-wider px-2.5 mb-0.5">{t("Account")}</p>
             <button
               onClick={() => setActiveSection("profile")}
               className={`text-left text-xs px-2.5 py-1.5 rounded-md transition-colors ${activeSection === "profile" ? "bg-primary/15 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"}`}
             >
-              Profile
+              {t("Profile")}
             </button>
           </div>
           <div className="flex flex-col gap-0.5">
-            <p className="text-[9.5px] font-semibold text-muted-foreground/50 uppercase tracking-wider px-2.5 mb-0.5">System</p>
+            <p className="text-[9.5px] font-semibold text-muted-foreground/50 uppercase tracking-wider px-2.5 mb-0.5">{t("System")}</p>
             <button
               onClick={() => setActiveSection("byok")}
               className={`text-left text-xs px-2.5 py-1.5 rounded-md transition-colors ${activeSection === "byok" ? "bg-primary/15 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"}`}
             >
-              AI Model
+              {t("AI Model")}
             </button>
             <button
               onClick={() => setActiveSection("rate-limits")}
               className={`text-left text-xs px-2.5 py-1.5 rounded-md transition-colors ${activeSection === "rate-limits" ? "bg-primary/15 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"}`}
             >
-              Rate Limits
+              {t("Rate Limits")}
             </button>
           </div>
           <div className="flex flex-col gap-0.5">
-            <p className="text-[9.5px] font-semibold text-muted-foreground/50 uppercase tracking-wider px-2.5 mb-0.5">Help</p>
+            <p className="text-[9.5px] font-semibold text-muted-foreground/50 uppercase tracking-wider px-2.5 mb-0.5">{t("Help")}</p>
             <button
               onClick={() => setActiveSection("help")}
               className={`text-left text-xs px-2.5 py-1.5 rounded-md transition-colors ${activeSection === "help" ? "bg-primary/15 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"}`}
             >
-              Walkthrough
+              {t("Walkthrough")}
             </button>
           </div>
           <div className="flex flex-col gap-0.5">
-            <p className="text-[9.5px] font-semibold text-muted-foreground/50 uppercase tracking-wider px-2.5 mb-0.5">Advanced</p>
+            <p className="text-[9.5px] font-semibold text-muted-foreground/50 uppercase tracking-wider px-2.5 mb-0.5">{t("Advanced")}</p>
             <button
               onClick={() => setActiveSection("developer")}
               className={`text-left text-xs px-2.5 py-1.5 rounded-md transition-colors ${activeSection === "developer" ? "bg-primary/15 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"}`}
             >
-              Developer
+              {t("Developer")}
             </button>
           </div>
         </div>
@@ -294,15 +297,15 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
             {activeSection === "profile" && (
               <>
                 <div>
-                  <h3 className="text-base font-semibold text-foreground">Profile</h3>
+                  <h3 className="text-base font-semibold text-foreground">{t("Profile")}</h3>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    How you appear in Hive, plus your plan, workspace, and account.
+                    {t("How you appear in Hive, plus your plan, workspace, and account.")}
                   </p>
                 </div>
 
                 <div>
                   <label className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider mb-1.5 block">
-                    Display name <span className="text-primary normal-case">*</span>
+                    {t("Display name")} <span className="text-primary normal-case">*</span>
                   </label>
                   <div className="flex items-center gap-2.5">
                     <div className="relative group flex-shrink-0">
@@ -317,7 +320,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                         onClick={() => avatarInputRef.current?.click()}
                         disabled={uploadingAvatar}
                         className="absolute inset-0 w-9 h-9 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer"
-                        title="Change photo"
+                        title={t("Change photo")}
                       >
                         {uploadingAvatar ? <Loader2 className="w-3 h-3 text-white animate-spin" /> : <Camera className="w-3 h-3 text-white" />}
                       </button>
@@ -325,7 +328,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                     </div>
                     <input
                       type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="Display name"
+                      placeholder={t("Display name")}
                       maxLength={120}
                       disabled={savingName}
                       className="flex-1 h-8 bg-muted/30 border border-border/50 rounded-md px-2.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-60"
@@ -338,11 +341,11 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
 
                 <div>
                   <label className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider mb-1.5 block">
-                    About <span className="normal-case tracking-normal font-normal text-muted-foreground/60">— your queens remember this</span>
+                    {t("About")} <span className="normal-case tracking-normal font-normal text-muted-foreground/60">{t("— your queens remember this")}</span>
                   </label>
                   <textarea
                     value={about} onChange={(e) => setAbout(e.target.value)}
-                    placeholder="Your role, company, what you're working on" rows={3}
+                    placeholder={t("Your role, company, what you're working on")} rows={3}
                     className="w-full bg-muted/30 border border-border/50 rounded-md px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40 resize-none leading-relaxed"
                   />
                   {profileDirty && (
@@ -353,7 +356,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                         className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-60"
                       >
                         {savingName && <Loader2 className="w-3 h-3 animate-spin" />}
-                        Save
+                        {t("Save")}
                       </button>
                     </div>
                   )}
@@ -361,14 +364,14 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
 
                 <div className="rounded-md border border-border/50 bg-muted/10 px-2.5 py-2">
                   <p className="text-[9.5px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1">
-                    Appearance
+                    {t("Appearance")}
                   </p>
                   <div className="flex items-center justify-between px-2 py-1">
-                    <span className="text-[13px] text-foreground">Theme</span>
+                    <span className="text-[13px] text-foreground">{t("Theme")}</span>
                     <div className="relative" ref={themeDropdownRef}>
                       <button onClick={() => setThemeDropdownOpen(!themeDropdownOpen)}
                         className="flex items-center gap-1.5 h-7 bg-muted/30 border border-border/50 rounded-md px-2.5 text-xs text-foreground hover:bg-muted/40">
-                        {theme === "light" ? "Light" : "Dark"}
+                        {theme === "light" ? t("Light") : t("Dark")}
                         <ChevronDown className={`w-3 h-3 text-muted-foreground ${themeDropdownOpen ? "rotate-180" : ""}`} />
                       </button>
                       {themeDropdownOpen && (
@@ -377,7 +380,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                             <button key={option} onClick={() => { setTheme(option); setThemeDropdownOpen(false); }}
                               className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 ${theme === option ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted/30"}`}>
                               {theme === option ? <Check className="w-3 h-3 flex-shrink-0" /> : <span className="w-3" />}
-                              <span>{option === "light" ? "Light" : "Dark"}</span>
+                              <span>{option === "light" ? t("Light") : t("Dark")}</span>
                             </button>
                           ))}
                         </div>
@@ -386,11 +389,11 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                   </div>
 
                   <div className="flex items-center justify-between px-2 py-1">
-                    <span className="text-[13px] text-foreground">Density</span>
+                    <span className="text-[13px] text-foreground">{t("Density")}</span>
                     <div className="relative" ref={densityDropdownRef}>
                       <button onClick={() => setDensityDropdownOpen(!densityDropdownOpen)}
                         className="flex items-center gap-1.5 h-7 bg-muted/30 border border-border/50 rounded-md px-2.5 text-xs text-foreground hover:bg-muted/40">
-                        {density === "compact" ? "Compact" : "Spacious"}
+                        {density === "compact" ? t("Compact") : t("Spacious")}
                         <ChevronDown className={`w-3 h-3 text-muted-foreground ${densityDropdownOpen ? "rotate-180" : ""}`} />
                       </button>
                       {densityDropdownOpen && (
@@ -399,7 +402,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                             <button key={option} onClick={() => { setDensity(option); setDensityDropdownOpen(false); }}
                               className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 ${density === option ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted/30"}`}>
                               {density === option ? <Check className="w-3 h-3 flex-shrink-0" /> : <span className="w-3" />}
-                              <span>{option === "compact" ? "Compact" : "Spacious"}</span>
+                              <span>{option === "compact" ? t("Compact") : t("Spacious")}</span>
                             </button>
                           ))}
                         </div>
@@ -408,11 +411,11 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                   </div>
 
                   <div className="flex items-center justify-between px-2 py-1">
-                    <span className="text-[13px] text-foreground">Motion</span>
+                    <span className="text-[13px] text-foreground">{t("Motion")}</span>
                     <div className="relative" ref={motionDropdownRef}>
                       <button onClick={() => setMotionDropdownOpen(!motionDropdownOpen)}
                         className="flex items-center gap-1.5 h-7 bg-muted/30 border border-border/50 rounded-md px-2.5 text-xs text-foreground hover:bg-muted/40">
-                        {MOTION_LABELS[motion]}
+                        {t(MOTION_LABELS[motion])}
                         <ChevronDown className={`w-3 h-3 text-muted-foreground ${motionDropdownOpen ? "rotate-180" : ""}`} />
                       </button>
                       {motionDropdownOpen && (
@@ -421,7 +424,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                             <button key={option} onClick={() => { setMotion(option); setMotionDropdownOpen(false); }}
                               className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 ${motion === option ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted/30"}`}>
                               {motion === option ? <Check className="w-3 h-3 flex-shrink-0" /> : <span className="w-3" />}
-                              <span>{MOTION_LABELS[option]}</span>
+                              <span>{t(MOTION_LABELS[option])}</span>
                             </button>
                           ))}
                         </div>
@@ -436,10 +439,9 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
             {activeSection === "help" && (
               <>
                 <div>
-                  <h3 className="text-base font-semibold text-foreground">Walkthrough</h3>
+                  <h3 className="text-base font-semibold text-foreground">{t("Walkthrough")}</h3>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    Walk through the core Hive ideas in about a minute — queens, colonies,
-                    credentials, and the memory/skills/tools knobs that shape every queen.
+                    {t("Walk through the core Hive ideas in about a minute — queens, colonies, credentials, and the memory/skills/tools knobs that shape every queen.")}
                   </p>
                 </div>
                 <button
@@ -452,7 +454,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                   className="inline-flex items-center gap-2 self-start px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
                 >
                   <PlayCircle className="w-3.5 h-3.5" />
-                  Start walkthrough
+                  {t("Start walkthrough")}
                 </button>
               </>
             )}
@@ -460,17 +462,17 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
             {activeSection === "developer" && (
               <>
                 <div>
-                  <h3 className="text-base font-semibold text-foreground">Developer</h3>
+                  <h3 className="text-base font-semibold text-foreground">{t("Developer")}</h3>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    Tools for inspecting Hive's internals. Off by default.
+                    {t("Tools for inspecting Hive's internals. Off by default.")}
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between rounded-md border border-border/50 bg-muted/10 px-3 py-2.5">
                   <div className="min-w-0 pr-3">
-                    <p className="text-[12px] font-medium text-foreground">Runtime logs</p>
+                    <p className="text-[12px] font-medium text-foreground">{t("Runtime logs")}</p>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Show a floating drawer in the bottom-right with the Hive server's log (last 500 lines), updated every few seconds.
+                      {t("Show a floating drawer in the bottom-right with the Hive server's log (last 500 lines), updated every few seconds.")}
                     </p>
                   </div>
                   <Switch checked={showRuntimeLogs} onChange={setShowRuntimeLogs} />
@@ -478,10 +480,9 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
 
                 <div className="flex items-center justify-between rounded-md border border-border/50 bg-muted/10 px-3 py-2.5">
                   <div className="min-w-0 pr-3">
-                    <p className="text-[12px] font-medium text-foreground">Adaptive worker budgets</p>
+                    <p className="text-[12px] font-medium text-foreground">{t("Adaptive worker budgets")}</p>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Colonies learn a tool-call budget from their successful workers and wind down strugglers early.
-                      Applies to running colonies too; colonies with an explicit per-colony setting keep it.
+                      {t("Colonies learn a tool-call budget from their successful workers and wind down strugglers early. Applies to running colonies too; colonies with an explicit per-colony setting keep it.")}
                     </p>
                   </div>
                   <Switch
@@ -498,11 +499,9 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
 
                 <div className="flex items-center justify-between rounded-md border border-border/50 bg-muted/10 px-3 py-2.5">
                   <div className="min-w-0 pr-3">
-                    <p className="text-[12px] font-medium text-foreground">Stall check</p>
+                    <p className="text-[12px] font-medium text-foreground">{t("Stall check")}</p>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      When a queen ends a turn, a judge model checks whether she announced an action, or agreed to a
-                      change you asked for, and stopped without doing it, and if so reminds her once to do it. Applies
-                      to running sessions.
+                      {t("When a queen ends a turn, a judge model checks whether she announced an action, or agreed to a change you asked for, and stopped without doing it, and if so reminds her once to do it. Applies to running sessions.")}
                     </p>
                     {judgeSet === false && (
                       <button
@@ -510,7 +509,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                         onClick={() => setActiveSection("byok")}
                         className="mt-1 text-[11px] font-medium text-primary underline-offset-2 hover:underline"
                       >
-                        Needs a judge: set up AI Model → Judge →
+                        {t("Needs a judge: set up AI Model → Judge →")}
                       </button>
                     )}
                   </div>
@@ -529,20 +528,20 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
             {activeSection === "rate-limits" && (
               <>
                 <div>
-                  <h3 className="text-base font-semibold text-foreground">Rate Limits</h3>
+                  <h3 className="text-base font-semibold text-foreground">{t("Rate Limits")}</h3>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    Cap how many actions colonies can perform per platform to stay within safe usage thresholds.
+                    {t("Cap how many actions colonies can perform per platform to stay within safe usage thresholds.")}
                   </p>
                 </div>
 
                 {rateLimits === null ? (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground py-4">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading limits...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("Loading limits...")}
                   </div>
                 ) : rateLimits.length === 0 ? (
                   <div className="rounded-md border border-border/50 bg-muted/10 px-3 py-4 text-center">
                     <p className="text-xs text-muted-foreground">
-                      Could not load rate limits. Make sure the runtime is running.
+                      {t("Could not load rate limits. Make sure the runtime is running.")}
                     </p>
                   </div>
                 ) : (
@@ -579,7 +578,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                                       if (overCeiling) anyOver = true;
                                       return (
                                         <label key={w} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                                          <span className="capitalize">{w}</span>
+                                          <span className="capitalize">{t(w)}</span>
                                           <input
                                             type="number"
                                             min={1}
@@ -601,7 +600,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                                         {inputs}
                                         {anyOver && (
                                           <p className="w-full text-[10px] text-amber-500/90 mt-1">
-                                            Exceeding the recommended limit increases the risk of account restrictions or bans.
+                                            {t("Exceeding the recommended limit increases the risk of account restrictions or bans.")}
                                           </p>
                                         )}
                                       </>
@@ -620,7 +619,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                           onClick={() => setRateLimitDirty({})}
                           className="h-7 px-3 text-xs text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/30 transition-colors"
                         >
-                          Reset
+                          {t("Reset")}
                         </button>
                         <button
                           disabled={rateLimitSaving}
@@ -638,7 +637,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                           className="h-7 px-3 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-1.5"
                         >
                           {rateLimitSaving && <Loader2 className="w-3 h-3 animate-spin" />}
-                          Save
+                          {t("Save")}
                         </button>
                       </div>
                     )}
@@ -646,7 +645,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                       <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 flex gap-2">
                         <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                         <div className="text-[11px] text-amber-200/90 leading-relaxed">
-                          <p className="font-medium text-amber-400 mb-0.5">Values above recommended maximums</p>
+                          <p className="font-medium text-amber-400 mb-0.5">{t("Values above recommended maximums")}</p>
                           {rateLimitWarnings.map((w, i) => (
                             <p key={i}>{w}</p>
                           ))}
@@ -660,13 +659,12 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
 
             {activeSection === "byok" && (
               <div>
-                <h3 className="text-base font-semibold text-foreground">AI Model</h3>
+                <h3 className="text-base font-semibold text-foreground">{t("AI Model")}</h3>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  {currentModel ? `Currently using ${currentProviderName} · ${currentModelLabel}.` : "No model configured yet."}
+                  {currentModel ? t("Currently using {provider} · {model}.", { provider: currentProviderName, model: currentModelLabel }) : t("No model configured yet.")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                  Models now have a page of their own: the main model, the workers&apos; and the vision fallback, picked from searchable
-                  lists; API keys; endpoints such as Magpie and Ollama, listed live; and detected subscriptions.
+                  {t("Models now have a page of their own: the main model, the workers' and the vision fallback, picked from searchable lists; API keys; endpoints such as Magpie and Ollama, listed live; and detected subscriptions.")}
                 </p>
                 <button
                   type="button"
@@ -676,7 +674,7 @@ export default function SettingsModal({ open, onClose, initialSection }: Setting
                   }}
                   className="mt-4 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
                 >
-                  Open the Models page
+                  {t("Open the Models page")}
                 </button>
               </div>
             )}

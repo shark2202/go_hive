@@ -12,6 +12,7 @@ import {
 } from "@/data/skill-capsules";
 import { SkillCapsuleRow } from "@/components/SkillComposer";
 import { useSkillIndex } from "@/hooks/use-skill-index";
+import { useI18n } from "@/i18n";
 
 /**
  * Shared prompt card used by the Prompt Library page and the home page's
@@ -42,6 +43,7 @@ export function PromptCard({
   onCustomize,
   onDetail,
 }: PromptCardProps) {
+  const { t } = useI18n();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const isCustom = "custom" in prompt && prompt.custom;
   // onSelect wins when provided; otherwise fall back to Edit (custom)
@@ -128,7 +130,7 @@ export function PromptCard({
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <h3 className="text-[13px] font-medium text-foreground line-clamp-1">{prompt.title}</h3>
           {isCustom && (
-            <span className="flex-shrink-0 px-1 py-px rounded text-[9px] font-medium bg-muted/50 text-muted-foreground/70">My Prompt</span>
+            <span className="flex-shrink-0 px-1 py-px rounded text-[9px] font-medium bg-muted/50 text-muted-foreground/70">{t("My Prompt")}</span>
           )}
         </div>
         {!confirmingDelete && (isCustom || onDetail) && (
@@ -137,7 +139,7 @@ export function PromptCard({
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
                 className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Edit prompt"
+                title={t("Edit prompt")}
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
@@ -146,7 +148,7 @@ export function PromptCard({
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirmingDelete(true); }}
                 className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Delete prompt"
+                title={t("Delete prompt")}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -155,7 +157,7 @@ export function PromptCard({
               <button
                 onClick={(e) => { e.stopPropagation(); onDetail(); }}
                 className="p-1 rounded-md text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
-                title="View details and deploy"
+                title={t("View details and deploy")}
               >
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
@@ -167,18 +169,18 @@ export function PromptCard({
       <SkillCapsuleRow capsules={skillCapsules} size="xs" />
       {confirmingDelete && (
         <div className="mt-auto flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-1.5">
-          <span className="text-xs text-destructive flex-1 truncate">Delete this prompt?</span>
+          <span className="text-xs text-destructive flex-1 truncate">{t("Delete this prompt?")}</span>
           <button
             onClick={(e) => { e.stopPropagation(); setConfirmingDelete(false); }}
             className="px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleConfirmDelete(); }}
             className="px-2.5 py-1 rounded-md text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
           >
-            Delete
+            {t("Delete")}
           </button>
         </div>
       )}

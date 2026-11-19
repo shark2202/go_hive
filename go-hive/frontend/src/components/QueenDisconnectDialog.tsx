@@ -10,6 +10,7 @@ import {
 import { queensApi, type QueenToolsResponse } from "@/api/queens";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { getProviderLogo } from "@/data/providerLogos";
+import { useI18n } from "@/i18n";
 
 interface QueenRow {
   id: string;
@@ -78,6 +79,7 @@ export default function QueenDisconnectDialog({
   onConfirm,
   onClose,
 }: Props) {
+  const { t } = useI18n();
   const [rows, setRows] = useState<QueenRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -164,7 +166,7 @@ export default function QueenDisconnectDialog({
       // Leave the credential alive: a half-stripped set of queens plus a
       // deleted account is the one state we can't recover from here.
       setConfirmError(
-        `Couldn't update ${failures} of ${affected.length} queens. Nothing was removed — try again.`,
+        t("Couldn't update {failed} of {total} queens. Nothing was removed — try again.", { failed: failures, total: affected.length }),
       );
       setApplying(false);
       return;
@@ -184,7 +186,7 @@ export default function QueenDisconnectDialog({
     }
     setApplying(false);
     onClose();
-  }, [applying, affected, onConfirm, onClose]);
+  }, [applying, affected, onConfirm, onClose, t]);
 
   if (!open) return null;
 
@@ -205,15 +207,15 @@ export default function QueenDisconnectDialog({
               <div>
                 <h2 className="text-sm font-semibold text-foreground">
                   {onConfirm
-                    ? `Disconnect ${providerLabel}?`
-                    : `${providerLabel} disconnected`}
+                    ? t("Disconnect {provider}?", { provider: providerLabel })
+                    : t("{provider} disconnected", { provider: providerLabel })}
                 </h2>
                 <p className="text-[11px] text-muted-foreground">
                   {accountEmail
                     ? onConfirm
-                      ? `Removing access for ${accountEmail}`
-                      : `Access for ${accountEmail} was removed`
-                    : "Removing access"}
+                      ? t("Removing access for {email}", { email: accountEmail })
+                      : t("Access for {email} was removed", { email: accountEmail })
+                    : t("Removing access")}
                 </p>
               </div>
             </div>
@@ -237,7 +239,7 @@ export default function QueenDisconnectDialog({
             {!loading && loadError && (
               <div className="px-3 py-2 rounded-lg border border-destructive/20 bg-destructive/5 text-xs text-destructive flex items-center gap-2">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="break-words">Failed to load queens: {loadError}</span>
+                <span className="break-words">{t("Failed to load queens: {error}", { error: loadError })}</span>
               </div>
             )}
 
@@ -246,17 +248,14 @@ export default function QueenDisconnectDialog({
                 <p className="text-[11px] text-muted-foreground">
                   {onConfirm ? (
                     <>
-                      {providerLabel} tools will be removed from every queen
-                      that uses them, then we'll send you to Aden where the
-                      account is actually removed.
+                      {providerLabel} {t("tools will be removed from every queen that uses them, then we'll send you to Aden where the account is actually removed.")}
                     </>
                   ) : (
                     <>
-                      {providerLabel} tools will be removed from every queen
-                      that still lists them — the account is already gone.
+                      {providerLabel} {t("tools will be removed from every queen that still lists them — the account is already gone.")}
                     </>
                   )}{" "}
-                  They come back automatically if you reconnect later.
+                  {t("They come back automatically if you reconnect later.")}
                 </p>
 
                 {affected.length > 0 && (
@@ -266,17 +265,16 @@ export default function QueenDisconnectDialog({
                     </div>
                     <div className="text-xs text-foreground">
                       <span className="font-medium">
-                        {affected.length} queen{affected.length === 1 ? "" : "s"}
+                        {t("{count} queens", { count: affected.length })}
                       </span>{" "}
-                      will lose {providerLabel} tools
+                      {t("will lose {provider} tools", { provider: providerLabel })}
                     </div>
                   </div>
                 )}
 
                 {affected.length === 0 && (
                   <div className="mt-3 text-xs text-muted-foreground">
-                    No queens currently have {providerLabel} tools — safe to
-                    remove.
+                    {t("No queens currently have {provider} tools — safe to remove.", { provider: providerLabel })}
                   </div>
                 )}
               </>
@@ -297,7 +295,7 @@ export default function QueenDisconnectDialog({
                 disabled={applying}
                 className="px-3 py-1.5 rounded-md text-xs font-medium border border-border/60 text-muted-foreground hover:bg-muted/40 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 onClick={handleApply}
@@ -311,7 +309,7 @@ export default function QueenDisconnectDialog({
                 ) : (
                   <Trash2 className="w-3 h-3" />
                 )}
-                {onConfirm ? "Continue to Aden" : "Confirm"}
+                {onConfirm ? t("Continue to Aden") : t("Confirm")}
               </button>
             </div>
           </div>

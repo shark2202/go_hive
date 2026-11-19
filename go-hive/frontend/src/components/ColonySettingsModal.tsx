@@ -5,6 +5,7 @@ import { useColony } from "@/context/ColonyContext";
 import { agentSlug } from "@/lib/colony-registry";
 import type { Colony } from "@/types/colony";
 import QueenPortraitGlyph from "./QueenPortraitGlyph";
+import { useI18n } from "@/i18n";
 
 interface ColonySettingsModalProps {
   colony: Colony;
@@ -18,21 +19,21 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-function formatRelative(iso: string | null): string | null {
+function formatRelative(iso: string | null, tr: (key: string, vars?: Record<string, string | number>) => string): string | null {
   if (!iso) return null;
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return null;
-  const diff = Date.now() - t;
+  const stamp = new Date(iso).getTime();
+  if (Number.isNaN(stamp)) return null;
+  const diff = Date.now() - stamp;
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return tr("just now");
+  if (mins < 60) return tr("{count}m ago", { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return tr("{count}h ago", { count: hrs });
   const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return tr("{count}d ago", { count: days });
   const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
+  if (months < 12) return tr("{count}mo ago", { count: months });
+  return tr("{count}y ago", { count: Math.floor(months / 12) });
 }
 
 function formatBytes(bytes: number): string {
@@ -68,6 +69,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 }
 
 export default function ColonySettingsModal({ colony, onClose }: ColonySettingsModalProps) {
+  const { t } = useI18n();
   const { queenProfiles, queenAvatarVersion, queenHasAvatar } = useColony();
 
   const queen = useMemo(
@@ -117,7 +119,7 @@ export default function ColonySettingsModal({ colony, onClose }: ColonySettingsM
     </span>
   );
 
-  const createdRel = formatRelative(colony.createdAt);
+  const createdRel = formatRelative(colony.createdAt, t);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -127,7 +129,7 @@ export default function ColonySettingsModal({ colony, onClose }: ColonySettingsM
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/60 flex-shrink-0">
           <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Component className="w-4 h-4 text-primary" />
-            COLONY SETTINGS
+            {t("COLONY SETTINGS")}
           </div>
           <button
             onClick={onClose}
@@ -144,28 +146,28 @@ export default function ColonySettingsModal({ colony, onClose }: ColonySettingsM
             <h3 className="text-base font-semibold text-foreground">{colony.name}</h3>
             <div className="flex items-center gap-1.5 mt-1.5">
               <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-              <span className="text-xs text-muted-foreground">{status.label}</span>
+              <span className="text-xs text-muted-foreground">{t(status.label)}</span>
             </div>
           </div>
 
           {/* Goal */}
           <div className="mb-6">
-            <SectionHeader>Goal</SectionHeader>
+            <SectionHeader>{t("Goal")}</SectionHeader>
             <p className="text-sm text-foreground/80 leading-relaxed">
-              {goal || <span className="text-muted-foreground/50 italic">No goal recorded.</span>}
+              {goal || <span className="text-muted-foreground/50 italic">{t("No goal recorded.")}</span>}
             </p>
           </div>
 
           {/* Queen bee in charge */}
           <div className="mb-6">
-            <SectionHeader>Queen bee in charge</SectionHeader>
+            <SectionHeader>{t("Queen bee in charge")}</SectionHeader>
             <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/[0.04] px-3 py-2.5">
               <span className="relative w-9 h-9 flex-shrink-0">{queenAvatar}</span>
               <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">
-                  {queen?.name ?? colony.queenName ?? "Unassigned"}
+                  {queen?.name ?? colony.queenName ?? t("Unassigned")}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">{queen?.title ?? "Queen bee"}</p>
+                <p className="text-xs text-muted-foreground truncate">{queen?.title ?? t("Queen bee")}</p>
               </div>
               <Crown className="w-4 h-4 text-primary/60 ml-auto flex-shrink-0" />
             </div>
@@ -173,15 +175,15 @@ export default function ColonySettingsModal({ colony, onClose }: ColonySettingsM
 
           {/* Details */}
           <div>
-            <SectionHeader>Details</SectionHeader>
+            <SectionHeader>{t("Details")}</SectionHeader>
             <div className="rounded-lg border border-border/60 divide-y divide-border/60">
               <DetailRow
-                label="Created"
+                label={t("Created")}
                 value={createdRel ? `${formatDate(colony.createdAt)} · ${createdRel}` : formatDate(colony.createdAt)}
               />
-              <DetailRow label="Last active" value={formatRelative(colony.lastActive) ?? "—"} />
-              <DetailRow label="Sessions" value={colony.sessionCount.toLocaleString()} />
-              <DetailRow label="Runs" value={colony.runCount.toLocaleString()} />
+              <DetailRow label={t("Last active")} value={formatRelative(colony.lastActive, t) ?? "—"} />
+              <DetailRow label={t("Sessions")} value={colony.sessionCount.toLocaleString()} />
+              <DetailRow label={t("Runs")} value={colony.runCount.toLocaleString()} />
             </div>
           </div>
         </div>
