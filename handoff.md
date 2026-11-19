@@ -52,7 +52,7 @@ Go 版 hive 已能**用真模型跑通对话**（UI 与 API 都验证过），�
 | 分支 | 提交 | 内容 | 下一步 |
 | --- | --- | --- | --- |
 | `w14/api-parity` | `b7404b97` | `go_hive/scripts/api_parity.py` + `API_PARITY_REPORT.md` 草稿 | 跑完对比、出差异结论（含风暴场景） |
-| `w15/queen-memory` | `cf531ef9` | 每轮注入 queen 作用域 recall | 跑门禁后合并，验证两个 queen 隔离 |
+| `w15/queen-memory` | `cf531ef9` | 每轮注入 queen 作用域 recall（global + queen 两块、变化才注入、turn 后触发 reflection）；worktree 内门禁已绿：fmt/vet/test/cross/parity 全 0，parity refs 4,383 / 0 missing | **只需合并**，再验证两个 queen 互相不可见 |
 | `w16/concept-audit` | 无提交 | 概念接线审计 | 重新派，产出 `CONCEPT_WIRING_AUDIT.md` |
 
 > 合并前先数提交：`git log --oneline main..<branch> | wc -l`，为 0 就是没提交（已踩两次）。
