@@ -1,20 +1,20 @@
 # 交付报告（2026-11-19 17:40）
 
 > 口径：`RELEASE_PLAN.md` 的 G6 商业发布标准（R1–R10）。
-> 代码快照：tag `v1.0.19-go.1`。相对 1.0.15 已补 `run_worker`、tracker、提醒中枢、judge、真流式、方法层/自治层/沉淀层/MCP；1.0.17 收口五项半截，1.0.18 补检索、doom-loop、worker tasks、playbook 控制；1.0.19 补并行只读工具、预算软提醒、只读 credential_status。
+> 代码快照：tag `v1.0.20-go.1`。相对 1.0.15 已补 `run_worker`、tracker、提醒中枢、judge、真流式、方法层/自治层/沉淀层/MCP；1.0.17 收口五项半截，1.0.18 补检索、doom-loop、worker tasks、playbook 控制；1.0.19 补并行只读工具、预算软提醒、只读 credential_status。
 
 ## 1. 结论
 
 | 判定 | 结果 |
 | --- | --- |
-| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：概念审计 **61 已接 / 9 部分 / 10 未接**，八层 spine **50 / 10 / 10**（基线 `4b6f1cf4`）。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go-native playbook、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺（1.0.19 后）：会话花费上限的硬执行、Anthropic/MiniMax 流式、park 落盘+resume、memory timeline、rate limit 执行、soul 进 persona。1.0.18 已补：`search_messages`/`search_timeline`、doom-loop 检测、worker task list、`run_playbook` status/stop；1.0.19 已补并行只读工具、预算软提醒、只读 `credential_status`。半截项已于 1.0.17 收口（overseer 输入源、MCP 白名单、colony 事件桥 UI、worker reminder hub、REST reminders 镜像）|
+| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：概念审计 **61 已接 / 9 部分 / 10 未接**，八层 spine **50 / 10 / 10**（基线 `4b6f1cf4`）。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go-native playbook、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺（1.0.20 后）：Anthropic/MiniMax 流式、park 落盘+resume、soul 进 persona。1.0.18 补检索/doom-loop/worker tasks/playbook 控制；1.0.19 补并行只读、预算软提醒、`credential_status`；1.0.20 补 rate limit 执行、会话花费硬上限、`memory_timeline`。半截项已于 1.0.17 收口（overseer 输入源、MCP 白名单、colony 事件桥 UI、worker reminder hub、REST reminders 镜像）|
 | R2 分发形态 | 满足：六平台归档 + SHA256SUMS + 安装脚本，解压即用 |
 | R3 用户文档 | 部分满足：快速开始/配置/支持矩阵齐备，但支持矩阵明确标注 81 个需凭据模块「未验证」 |
 | R4 许可 | 满足：Apache-2.0 LICENSE + NOTICE |
 | R5 安全 | 部分满足：已修 3 个真实漏洞（附件读写 symlink 逃逸、任务体无限流、`/api` 点段 307），但**未做在线漏洞库比对**（`govulncheck` 装不上） |
 | R6 可靠性 | 满足：`-race` 全绿、故障注入与并发修复已合入 |
 | R7 可观测 | 满足：会话事件链、SSE、`/stats` 字段对齐、诊断包 |
-| R8 质量证据 | 满足：七道门禁、4,429 测试、QC 8/8、smoke 13/13、六平台归档校验 |
+| R8 质量证据 | 满足：七道门禁、4,460 测试、QC 8/8、smoke 13/13、六平台归档校验 |
 | R9 发布流程 | 满足：版本、CHANGELOG、发布说明、tag、归档 |
 | R10 真实第三方集成 | 不适用（用户决定 2026-11-19）：本阶段不提供第三方凭据，以支持矩阵「未验证」声明代替 |
 | **总判定** | **可运行的移植快照（试用版），不是「完整复刻交付」**。工程发布条件（构建/测试/打包/安全修复）成立；行为对齐条件（概念机制生产可达）不成立 |
@@ -40,14 +40,14 @@
 | 项 | 结果 | 复现命令 |
 | --- | --- | --- |
 | 全量门禁 | 退出码 0（fmt/vet/test/cross/parity/parity-targets/wiring-check） | `cd go_hive/go-hive && make ci` |
-| 测试 | **4,429**（全部带 parity 注解或豁免） | 同上 |
-| parity 引用 | **4,661** 条，0 失效文件 / 0 失效测试；含生产代码 **978** 条 0 失效符号 | `make parity-targets` |
+| 测试 | **4,460**（全部带 parity 注解或豁免） | 同上 |
+| parity 引用 | **4,664** 条，0 失效文件 / 0 失效测试；含生产代码 **979** 条 0 失效符号 | `make parity-targets` |
 | QC 全量 | **8/8 PASS**（含重跑 make ci 与冒烟） | `uv run --no-project python go_hive/scripts/qc_check.py --full --smoke` |
 | 集成冒烟 | **13/13 PASS**（真二进制 + 真 HTTP） | `bash go_hive/scripts/smoke.sh` |
 | 发布包 | 6 归档 + SHA256SUMS，`shasum -c` 全 OK | `bash go_hive/scripts/release.sh` |
 | 归档可用性 | 解压 darwin-arm64 → `--version` 正确，`/`、`/api/health`、`/assets/*` 全 200 | 见 §5 |
 | cgo | `import "C"` 计数 **0** | `grep -rn 'import "C"' --include=*.go .` |
-| 版本 | `hive 1.0.19-go.1` | `./dist/hive --version` |
+| 版本 | `hive 1.0.20-go.1` | `./dist/hive --version` |
 
 ## 3. 覆盖面
 
@@ -80,20 +80,20 @@
 
 ```
 go_hive/go-hive/dist/release/
-  hive-1.0.19-go.1-darwin-amd64.tar.gz   13.8 MB
-  hive-1.0.19-go.1-darwin-arm64.tar.gz   13.0 MB
-  hive-1.0.19-go.1-linux-amd64.tar.gz    13.8 MB
-  hive-1.0.19-go.1-linux-arm64.tar.gz    12.8 MB
-  hive-1.0.19-go.1-windows-amd64.zip     13.8 MB
-  hive-1.0.19-go.1-windows-arm64.zip     12.8 MB
+  hive-1.0.20-go.1-darwin-amd64.tar.gz   13.8 MB
+  hive-1.0.20-go.1-darwin-arm64.tar.gz   13.0 MB
+  hive-1.0.20-go.1-linux-amd64.tar.gz    13.8 MB
+  hive-1.0.20-go.1-linux-arm64.tar.gz    12.8 MB
+  hive-1.0.20-go.1-windows-amd64.zip     13.8 MB
+  hive-1.0.20-go.1-windows-arm64.zip     12.8 MB
   SHA256SUMS
 ```
 
 归档根目录：`hive[.exe]  LICENSE  NOTICE  THIRD_PARTY_NOTICES.md  README.md  SHA256SUMS`。
-独立验收（解压后直接运行）：`--version` = `hive 1.0.19-go.1`；`serve` 后 `/` 200、`/api/health` 200、`/assets/index-*.js` 200。
+独立验收（解压后直接运行）：`--version` = `hive 1.0.20-go.1`；`serve` 后 `/` 200、`/api/health` 200、`/assets/index-*.js` 200。
 
 ## 6. 未做（需发布权限或外部条件）
 
-1. **tag 已打但未推送**：`v1.0.19-go.1` 指向 `d1111162`；`git push origin v1.0.19-go.1` 会触发 `release.yml` 上传 Release。
+1. **tag 已打但未推送**：`v1.0.20-go.1` 指向 `d1111162`；`git push origin v1.0.20-go.1` 会触发 `release.yml` 上传 Release。
 2. 代码签名/公证（macOS notarization、Windows Authenticode）未做，需证书。
 3. R10 按决定不验证：以支持矩阵「未验证」声明为准，不写成可用。

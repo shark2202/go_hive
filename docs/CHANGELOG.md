@@ -2,6 +2,10 @@
 
 本文件记录 Go 移植（`github.com/aden-hive/hive-go`）的版本内容。上游 Python 版本的发布说明在仓库根目录的 [`CHANGELOG.md`](../../CHANGELOG.md)。
 
+## 1.0.20-go.1 — 2026-11-19
+
+1.0.19 补丁：rate limit 执行、会话花费硬上限、memory_timeline 工具，修复 soul 测试竞态；测试 4,460、引用 4,664。
+
 ## 1.0.19-go.1 — 2026-11-19
 
 1.0.18 补丁：并行只读工具、预算软提醒、只读 credential_status；测试 4,429、引用 4,661。

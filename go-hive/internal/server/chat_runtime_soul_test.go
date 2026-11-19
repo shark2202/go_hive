@@ -52,6 +52,9 @@ func TestChatRuntimeSedimentsReflectionIntoQueenSoul(t *testing.T) {
 	// The reflection writes the memory file first; the soul follows the pass.
 	waitForPath(t, filepath.Join(memory.QueenMemoryDir(homeRoot, "queen_technology"), "turn-learnings.md"), 5*time.Second)
 	waitForPath(t, filepath.Join(queenRoot, "soul", "soul.json"), 5*time.Second)
+	// sediment.json is written after soul.json in the same pass; waiting only on
+	// soul.json races the state write under full-suite load.
+	waitForPath(t, filepath.Join(queenRoot, "soul", soul.SedimentFile), 5*time.Second)
 
 	stored := soul.Load(filepath.Join(homeRoot, "queens"), "queen_technology")
 	if stored.Version != 1 {
