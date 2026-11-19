@@ -1,0 +1,215 @@
+package server
+
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
+// (the overseer receives the user's chat: session.colony_runtime.overseer.inject)
+
+import (
+	"context"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/colony"
+	"github.com/aden-hive/hive-go/internal/eventbus"
+)
+
+type relayedDelta struct {
+	stream       string
+	relayedFrom  string
+	snapshot     string
+	eventType    eventbus.EventType
+	executionSet bool
+}
+
+func startRelayColony(t *testing.T, provider *overseerRecordLLM) *colony.ColonyRuntime {
+	t.Helper()
+	runtime := colony.NewColonyRuntime(colony.RuntimeOptions{
+		AgentSpec:   agentloop.AgentSpec{ID: "worker", Name: "Worker", AgentType: "event_loop"},
+		LLM:         provider,
+		EventBus:    eventbus.NewEventBus(),
+		StreamID:    "colony_relay",
+		StoragePath: t.TempDir(),
+		ToolExecutor: func(agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
+			return agentloop.ToolResult{Content: "ok"}, nil
+		},
+	})
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatalf("colony Start: %v", err)
+	}
+	t.Cleanup(runtime.Stop)
+	return runtime
+}
+
+func relayQueenSpec() agentloop.AgentSpec {
+	prompt := "You are the queen of this test colony."
+	return agentloop.AgentSpec{ID: "queen", Name: "Queen", AgentType: "event_loop", SystemPrompt: &prompt}
+}
+
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
+// Parity: framework/server/routes_sessions.py::handle_session_chat (chat delivery)
+func TestChatRuntimeRelaysClientMessageToOverseer(t *testing.T) {
+	overseerProvider := &overseerRecordLLM{replies: []string{"idle", "the north field is clear"}}
+	colonyRuntime := startRelayColony(t, overseerProvider)
+	if _, err := colonyRuntime.StartOverseer(context.Background(), relayQueenSpec(), nil); err != nil {
+		t.Fatalf("StartOverseer: %v", err)
+	}
+	if !waitForServerCondition(2*time.Second, func() bool { return overseerProvider.callCount() >= 1 }) {
+		t.Fatal("overseer never ran its first turn")
+	}
+
+	sessionBus := eventbus.NewEventBus()
+	chatProvider := &fakeChatLLM{}
+	chatRuntime, err := NewChatRuntime(ChatRuntimeDeps{
+		LLM:       chatProvider,
+		Bus:       sessionBus,
+		Root:      t.TempDir(),
+		SessionID: "s-relay",
+	})
+	if err != nil {
+		t.Fatalf("NewChatRuntime: %v", err)
+	}
+	t.Cleanup(func() { _ = chatRuntime.Close() })
+	chatRuntime.BindColony(colonyHostStub{runtime: colonyRuntime})
+
+	var (
+		mu     sync.Mutex
+		deltas []relayedDelta
+	)
+	subscription := sessionBus.Subscribe([]eventbus.EventType{eventbus.EventClientOutputDelta}, func(event *eventbus.AgentEvent) {
+		if event == nil || event.Data == nil {
+			return
+		}
+		snapshot, _ := event.Data["snapshot"].(string)
+		relayed, _ := event.Data["relayed_from"].(string)
+		mu.Lock()
+		deltas = append(deltas, relayedDelta{stream: event.StreamID, relayedFrom: relayed, snapshot: snapshot, eventType: event.Type})
+		mu.Unlock()
+	})
+	t.Cleanup(func() { sessionBus.Unsubscribe(subscription) })
+
+	question := "what is the state of the north field?"
+	if err := chatRuntime.Deliver(question); err != nil {
+		t.Fatalf("Deliver: %v", err)
+	}
+
+	if !waitForServerCondition(3*time.Second, func() bool { return overseerProvider.sawUserText(question) }) {
+		t.Fatal("the client message never reached the colony overseer")
+	}
+	// One loop acts on the message: the chat queen must not run a duplicate turn.
+	if count := chatProvider.requestCount(); count != 0 {
+		t.Fatalf("chat queen ran %d turn(s) for a relayed message, want 0", count)
+	}
+	// The overseer's reply is mirrored onto the session bus as the queen's
+	// stream, which is the only stream the session pane renders.
+	if !waitForServerCondition(3*time.Second, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		for _, delta := range deltas {
+			if delta.stream == chatStreamID && delta.relayedFrom == overseerStreamID && strings.Contains(delta.snapshot, "north field is clear") {
+				return true
+			}
+		}
+		return false
+	}) {
+		mu.Lock()
+		defer mu.Unlock()
+		t.Fatalf("session-bus deltas = %#v, want the overseer reply on the queen stream", deltas)
+	}
+
+	// The user turn is recorded in the session transcript, client-input tagged,
+	// so a reload still shows what was asked. Close first: the transcript has a
+	// single writer (the runtime's queue goroutine).
+	if err := chatRuntime.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	messages := chatRuntime.conv.Messages()
+	if len(messages) == 0 {
+		t.Fatal("relayed user turn was not recorded in the session transcript")
+	}
+	last := messages[len(messages)-1]
+	if last.Role != agentloop.RoleUser || !last.IsClientInput || !strings.Contains(last.Content, question) {
+		t.Fatalf("recorded turn = %#v, want a client user turn containing the question", last)
+	}
+}
+
+// Parity: framework/server/queen_orchestrator.py::_on_worker_report
+// Parity: framework/agent_loop/agent_loop.py::inject_event
+func TestChatRuntimeRelayOwnsReportsAndTriggers(t *testing.T) {
+	overseerProvider := &overseerRecordLLM{replies: []string{"idle", "report noted", "tick handled"}}
+	colonyRuntime := startRelayColony(t, overseerProvider)
+	if _, err := colonyRuntime.StartOverseer(context.Background(), relayQueenSpec(), nil); err != nil {
+		t.Fatalf("StartOverseer: %v", err)
+	}
+	if !waitForServerCondition(2*time.Second, func() bool { return overseerProvider.callCount() >= 1 }) {
+		t.Fatal("overseer never ran its first turn")
+	}
+
+	chatProvider := &fakeChatLLM{}
+	chatRuntime, err := NewChatRuntime(ChatRuntimeDeps{
+		LLM:       chatProvider,
+		Root:      t.TempDir(),
+		SessionID: "s-relay-owns",
+	})
+	if err != nil {
+		t.Fatalf("NewChatRuntime: %v", err)
+	}
+	t.Cleanup(func() { _ = chatRuntime.Close() })
+	chatRuntime.BindColony(colonyHostStub{runtime: colonyRuntime})
+
+	report := eventbus.NewAgentEvent(eventbus.EventSubagentReport, "worker:1")
+	report.Data = map[string]any{
+		"worker_id":  "worker:1",
+		"batch_id":   "batch_1",
+		"batch_size": 1,
+		"status":     "success",
+		"summary":    "wrote two rows",
+		"task":       "fill rows",
+	}
+	colonyRuntime.EventBus().Publish(report)
+	if !waitForServerCondition(2*time.Second, func() bool { return overseerProvider.sawUserText("[WORKER_REPORT]") }) {
+		t.Fatal("the overseer never received the worker report")
+	}
+	trigger := agentloop.NewTriggerEvent("timer", "daily")
+	if err := chatRuntime.InjectTrigger(trigger); err != nil {
+		t.Fatalf("InjectTrigger: %v", err)
+	}
+	if !waitForServerCondition(2*time.Second, func() bool { return overseerProvider.sawUserText("[TRIGGER: timer/daily]") }) {
+		t.Fatal("the overseer never received the framework trigger")
+	}
+	// The chat queen owns no execution while the overseer is live: no second
+	// turn answers the same report/trigger.
+	if count := chatProvider.requestCount(); count != 0 {
+		t.Fatalf("chat queen ran %d turn(s) for relayed execution inputs, want 0", count)
+	}
+}
+
+// Parity: framework/server/routes_sessions.py::handle_session_chat (fallback)
+func TestChatRuntimeWithoutOverseerKeepsChatQueen(t *testing.T) {
+	overseerProvider := &overseerRecordLLM{replies: []string{"idle"}}
+	colonyRuntime := startRelayColony(t, overseerProvider)
+
+	chatProvider := &fakeChatLLM{}
+	chatRuntime, err := NewChatRuntime(ChatRuntimeDeps{
+		LLM:       chatProvider,
+		Root:      t.TempDir(),
+		SessionID: "s-no-overseer",
+	})
+	if err != nil {
+		t.Fatalf("NewChatRuntime: %v", err)
+	}
+	t.Cleanup(func() { _ = chatRuntime.Close() })
+	chatRuntime.BindColony(colonyHostStub{runtime: colonyRuntime})
+
+	question := "summarise the tracker"
+	if err := chatRuntime.Deliver(question); err != nil {
+		t.Fatalf("Deliver: %v", err)
+	}
+	if !waitForServerCondition(3*time.Second, func() bool { return chatProvider.requestCount() >= 1 }) {
+		t.Fatal("a colony without an overseer dropped the client message")
+	}
+	if overseerProvider.sawUserText(question) {
+		t.Fatal("a message was injected into a colony with no overseer")
+	}
+}

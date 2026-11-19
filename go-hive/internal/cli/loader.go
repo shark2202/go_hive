@@ -547,9 +547,30 @@ func (r *Runner) createSessionWithRuntime(
 	}
 	// The persisted session a resume reopened; empty for a fresh create.
 	record.QueenResumeFrom = identity.ResumeFrom
+	// The session's on-disk root: the phase state stamps meta.json here and
+	// the colony lifecycle (spawn lock, agent path) writes the same file.
+	// Without it those writes silently degraded to an in-memory flag.
+	sessionDir := chatSessionDir(home, queenScope, sessionID)
+	if identity.ResumedDir != "" {
+		sessionDir = identity.ResumedDir
+	}
+	record.QueenDir = sessionDir
+	// Phase cascade (initial_phase > meta.json["phase"] > bindings >
+	// independent) is resolved and stamped before any runtime is built, so a
+	// session whose provider is unavailable still records its phase.
+	phaseState := hiveserver.AttachSessionPhaseState(record, params.InitialPhase, sessionDir)
+	if phaseState != nil {
+		// The queen identity rides the phase state, as the upstream identity
+		// hook stamps it at session start.
+		if queenScope != "" && queenScope != "default" {
+			if profile, profileErr := queen.LoadQueenProfile(home.QueensDir(), queenScope); profileErr == nil {
+				phaseState.SetQueenIdentity(queenScope, profile)
+			}
+		}
+	}
 	// A resume retry must reuse the runtime already holding the session
 	// instead of building a second one on the same transcript.
-	if existing, resumeErr := resumeLiveSession(manager, identity, params.InitialPrompt); resumeErr != nil || existing != nil {
+	if existing, resumeErr := resumeLiveSession(manager, identity, params.InitialPrompt, params.InitialPhase); resumeErr != nil || existing != nil {
 		return existing, resumeErr
 	}
 
@@ -571,11 +592,6 @@ func (r *Runner) createSessionWithRuntime(
 		fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, providerErr)
 	} else {
 		toolbox := builtin.New("")
-		sessionDir := chatSessionDir(home, queenScope, sessionID)
-		if identity.ResumedDir != "" {
-			// Continue the transcript where the persisted session left it.
-			sessionDir = identity.ResumedDir
-		}
 		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 			LLM:           provider,
@@ -785,6 +801,9 @@ func (l *colonyLifecycle) attach(session *hiveserver.Session, colonyID, model st
 	session.Colony = built
 	session.ColonyID = colonyID
 	session.WorkerPath = colonyPath
+	// The bindings now say colony, so the phase follows: the session was
+	// independent (or had no phase yet) and load_colony is the transition.
+	hiveserver.ApplyQueenPhase(session, hiveserver.QueenPhaseColony)
 	l.persistAgentMeta(session, colonyID, colonyPath)
 	if loaded, started := hiveserver.RestoreSessionTriggers(session); loaded > 0 {
 		fmt.Fprintf(l.out, "Restored %d trigger(s) (%d running) for %s\n", loaded, started, colonyID)
@@ -856,6 +875,9 @@ func (l *colonyLifecycle) CreateColonyFromSource(params hiveserver.CreateColonyF
 		QueenName:     stringPtrIfNotEmpty(queenName),
 		Model:         params.Model,
 		InitialPrompt: params.InitialPrompt,
+		// Upstream forks with `initial_phase or "colony"`; the create cascade
+		// derives colony from the binding when the caller passes none.
+		InitialPhase: params.InitialPhase,
 	}, built, colonyPath)
 	if createErr != nil {
 		built.Stop()

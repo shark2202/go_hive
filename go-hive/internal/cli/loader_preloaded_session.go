@@ -58,6 +58,11 @@ func (r *Runner) loadPreloadedColonySession(
 	record := hiveserver.NewSession(sessionID, eventbus.NewEventBus())
 	record.ColonyID = colonyID
 	record.WorkerPath = colonyPath
+	// The resolved session root every meta.json writer uses.
+	record.QueenDir = sessionDir
+	// A preloaded colony is colony-bound on boot: the phase cascade restores
+	// the persisted answer (or stamps "colony" for a fresh directory).
+	hiveserver.AttachSessionPhaseState(record, nil, sessionDir)
 	if resumed {
 		record.QueenResumeFrom = sessionID
 	}

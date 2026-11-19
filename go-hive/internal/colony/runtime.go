@@ -1172,8 +1172,30 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 	// First turn: reply to whatever the colony seeded (the boot greeting the
 	// previous single-turn overseer emitted). Afterwards the overseer is a
 	// persistent Queen that waits for injected messages and answers each one.
+	turn := 0
+	// runTurn brackets one overseer turn with the client-facing execution
+	// events and attaches the text emitter, so the session that front-ends the
+	// colony sees the reply rather than a silent worker.
+	runTurn := func() {
+		if ctx.Err() != nil {
+			return
+		}
+		turn++
+		emitter := newOverseerEmitter(r.bus, worker.StreamID, fmt.Sprintf("%s_turn_%d", worker.ID, turn))
+		previous := worker.Context.Observer
+		worker.Context.Observer = emitter
+		emitter.begin()
+		_, err := loop.ExecuteTurn(ctx, worker.Context, worker.conversation, r.workerTools(worker))
+		if err != nil && ctx.Err() != nil {
+			// A cancelled turn is the colony stopping, not a failure worth
+			// broadcasting to the session front end.
+			err = nil
+		}
+		emitter.end(err)
+		worker.Context.Observer = previous
+	}
 	if ctx.Err() == nil {
-		_, _ = loop.ExecuteTurn(ctx, worker.Context, worker.conversation, r.workerTools(worker))
+		runTurn()
 	}
 	for ctx.Err() == nil {
 		select {
@@ -1195,7 +1217,7 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 				break
 			}
 		}
-		_, _ = loop.ExecuteTurn(ctx, worker.Context, worker.conversation, r.workerTools(worker))
+		runTurn()
 	}
 	worker.finishOnce(WorkerStopped, WorkerResult{Output: map[string]any{}}, func() {
 		r.publishStopped(worker, "Overseer stopped with the colony.")
