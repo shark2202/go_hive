@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/agents"
+	"github.com/aden-hive/hive-go/internal/atomicfs"
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	colonyhost "github.com/aden-hive/hive-go/internal/host"
@@ -286,6 +288,7 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 
 	var liveMu sync.Mutex
 	live := make([]*hiveserver.Session, 0)
+	lifecycle := r.newColonyLifecycle(manager, &liveMu, &live, home, args.str("model"))
 
 	for _, colonyArg := range args.list("colony") {
 		colonyPath, ok := r.resolveColonyPath(colonyArg)
@@ -307,6 +310,14 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 		// Nil when no provider is configured, in which case the worker and
 		// colony routes keep their on-disk fallbacks.
 		record.Colony = r.buildColonyHost(colonyPath, colonyID, home, args.str("model"))
+		if built, ok := record.Colony.(*colonyhost.Host); ok {
+			// A preloaded colony is live from boot: its overseer starts here
+			// rather than waiting for a load_colony round trip.
+			queenName := colonyQueenName(home, colonyID)
+			if _, startErr := built.StartOverseer(context.Background(), queenOverseerSpec(home, queenName), nil); startErr != nil {
+				fmt.Fprintf(r.Stdout, "Warning: colony overseer unavailable for %s: %v\n", colonyID, startErr)
+			}
+		}
 		manager.AddSession(record)
 		liveMu.Lock()
 		live = append(live, record)
@@ -325,9 +336,11 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 			}
 			return out
 		},
-		LiveSessions: manager.ListSessions,
-		Manager:      manager,
-		Home:         home,
+		LiveSessions:           manager.ListSessions,
+		Manager:                manager,
+		Home:                   home,
+		Colony:                 lifecycle,
+		CreateColonyFromSource: lifecycle.CreateColonyFromSource,
 		CreateSession: func(params hiveserver.CreateSessionParams) (*hiveserver.Session, error) {
 			return r.createChatSession(params, manager, &liveMu, &live, home, args.str("model"))
 		},
@@ -406,27 +419,43 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	}
 }
 
-// buildColonyHost constructs the live colony runtime a `serve --colony`
-// session holds (colony spawn/run/SSE entry). It returns nil when no provider
-// is configured: a host without an LLM could never run a worker, so the
-// session keeps its cold record and the runtime routes fall back to disk.
+// buildColonyHost constructs and starts the live colony runtime a
+// `serve --colony` session holds (colony spawn/run/SSE entry). It returns nil
+// when no provider is configured: a host without an LLM could never run a
+// worker, so the session keeps its cold record and the runtime routes fall back
+// to disk.
 func (r *Runner) buildColonyHost(colonyPath, colonyID string, home hivehome.Home, model string) hiveserver.ColonyRuntime {
-	provider, err := resolveChatProvider(home, model)
+	built, err := r.newColonyHost(colonyPath, colonyID, home, model)
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Warning: colony runtime unavailable for %s: %v\n", colonyID, err)
 		return nil
+	}
+	if err := built.Start(context.Background()); err != nil {
+		fmt.Fprintf(r.Stdout, "Warning: colony runtime unavailable for %s: %v\n", colonyID, err)
+		return nil
+	}
+	return built
+}
+
+// newColonyHost builds the colony runtime a serve session holds. Unlike
+// buildColonyHost it returns the reason a runtime could not be built, so the
+// colony lifecycle can report the failure instead of degrading to a cold
+// session.
+func (r *Runner) newColonyHost(colonyPath, colonyID string, home hivehome.Home, model string) (*colonyhost.Host, error) {
+	provider, err := resolveChatProvider(home, model)
+	if err != nil {
+		return nil, err
 	}
 	// The worker the session runs is the one the colony defines on disk. A
 	// colony with no worker config cannot be a real worker, so it keeps its
 	// cold record instead of running a synthetic prompt.
 	spec, err := agents.LoadAgentSpec(colonyPath)
 	if err != nil {
-		fmt.Fprintf(r.Stdout, "Warning: colony runtime unavailable for %s: %v\n", colonyID, err)
-		return nil
+		return nil, err
 	}
 	fields := spec.HostFields()
 	toolbox := builtin.New(colonyPath)
-	built, err := colonyhost.New(colonyhost.Config{
+	return colonyhost.New(colonyhost.Config{
 		ColonyID:    colonyID,
 		AgentSpec:   fields.AgentSpec,
 		Goal:        fields.Goal,
@@ -441,11 +470,46 @@ func (r *Runner) buildColonyHost(colonyPath, colonyID string, home hivehome.Home
 			return agentloop.ToolResult{Content: result.Content, IsError: result.IsError}, nil
 		},
 	})
-	if err != nil {
-		fmt.Fprintf(r.Stdout, "Warning: colony runtime unavailable for %s: %v\n", colonyID, err)
-		return nil
+}
+
+// startColonyHost arms a colony host and starts its client-facing overseer.
+// Every failure is returned to the caller: the colony lifecycle turns a nil
+// return into an HTTP 500/503 instead of leaving a session that looks loaded
+// but can never answer.
+func startColonyHost(ctx context.Context, built *colonyhost.Host, home hivehome.Home, queenName, colonyID string) error {
+	if err := built.Start(ctx); err != nil {
+		return fmt.Errorf("start colony runtime for %s: %w", colonyID, err)
 	}
-	return built
+	if _, err := built.StartOverseer(ctx, queenOverseerSpec(home, queenName), nil); err != nil {
+		built.Stop()
+		return fmt.Errorf("start colony overseer for %s: %w", colonyID, err)
+	}
+	return nil
+}
+
+// queenOverseerSpec is the identity the colony's persistent overseer runs
+// under: the bound queen's persona when a profile is readable, otherwise a
+// plain queen prompt so a colony without a materialised profile still has a
+// client-facing overseer.
+func queenOverseerSpec(home hivehome.Home, queenName string) agentloop.AgentSpec {
+	prompt := "You are the queen of this colony. Coordinate its workers and report progress to the user."
+	name := "Queen"
+	if queenID := strings.TrimSpace(queenName); queenID != "" {
+		name = queenID
+		if profile, err := queen.LoadQueenProfile(home.QueensDir(), queenID); err == nil {
+			if identity := strings.TrimSpace(queen.FormatQueenIdentityPrompt(profile, nil)); identity != "" {
+				prompt = identity
+			}
+		}
+	}
+	return agentloop.AgentSpec{
+		ID:               "queen",
+		Name:             name,
+		AgentType:        "event_loop",
+		ToolAccessPolicy: "explicit",
+		MaxRetries:       3,
+		SystemPrompt:     &prompt,
+	}
 }
 
 // createChatSession is the standard (non-colony) POST /api/sessions branch:
@@ -461,6 +525,23 @@ func (r *Runner) createChatSession(
 	live *[]*hiveserver.Session,
 	home hivehome.Home,
 	defaultModel string,
+) (*hiveserver.Session, error) {
+	return r.createSessionWithRuntime(params, manager, liveMu, live, home, defaultModel, nil, "")
+}
+
+// createSessionWithRuntime is createChatSession with an optional colony
+// runtime already built by the caller. The colony fork path builds and arms the
+// runtime before the session exists (so a start failure is a clean 503 with no
+// half-created session), then hands it here to avoid building it twice.
+func (r *Runner) createSessionWithRuntime(
+	params hiveserver.CreateSessionParams,
+	manager *hiveserver.SessionManager,
+	liveMu *sync.Mutex,
+	live *[]*hiveserver.Session,
+	home hivehome.Home,
+	defaultModel string,
+	prebuilt *colonyhost.Host,
+	prebuiltPath string,
 ) (*hiveserver.Session, error) {
 	sessionID := ""
 	if params.SessionID != nil {
@@ -537,6 +618,37 @@ func (r *Runner) createChatSession(
 		}
 	}
 
+	// A session bound to a colony carries that colony's live runtime, not
+	// just its id: arm the host (overseer included) before the session is
+	// registered. The fork path hands in a runtime it already started; a
+	// plain create-session with colony_id builds it here. Either way a
+	// missing colony is a 404 and a runtime that cannot start is a 500, so
+	// the create route reports the failure instead of returning a session
+	// that silently has no colony behind it.
+	switch {
+	case prebuilt != nil:
+		record.Colony = prebuilt
+		record.WorkerPath = prebuiltPath
+	case record.ColonyID != "":
+		colonyPath := home.ColonyDir(record.ColonyID)
+		info, statErr := os.Stat(colonyPath)
+		if statErr != nil || !info.IsDir() {
+			if statErr == nil {
+				statErr = fmt.Errorf("colony '%s' is not a directory", record.ColonyID)
+			}
+			return nil, &hiveserver.SessionCreateColonyNotFoundError{Err: statErr}
+		}
+		built, buildErr := r.newColonyHost(colonyPath, record.ColonyID, home, requestedModel)
+		if buildErr != nil {
+			return nil, fmt.Errorf("colony runtime unavailable for %s: %w", record.ColonyID, buildErr)
+		}
+		if startErr := startColonyHost(context.Background(), built, home, record.QueenName, record.ColonyID); startErr != nil {
+			return nil, startErr
+		}
+		record.Colony = built
+		record.WorkerPath = colonyPath
+	}
+
 	manager.AddSession(record)
 	liveMu.Lock()
 	*live = append(*live, record)
@@ -549,6 +661,365 @@ func (r *Runner) createChatSession(
 	}
 	hiveserver.MarkBootReady("Queen ready")
 	return record, nil
+}
+
+// colonyLifecycle is the loader's implementation of the server's colony
+// lifecycle seam. It owns the live colony hosts behind sessions: LoadColony
+// builds, starts and arms a colony runtime for an existing session, UnloadColony
+// stops it, and CreateColonyFromSource forks a queen session into a new colony
+// on disk before resuming it live. Every failure is returned as an error the
+// route maps to 4xx/5xx — a session never looks colony-backed while its runtime
+// is missing.
+type colonyLifecycle struct {
+	manager *hiveserver.SessionManager
+	home    hivehome.Home
+	model   string
+	out     io.Writer
+
+	// build is the host factory. It is a field so tests can substitute a
+	// runtime backed by a scripted completer; production points at
+	// Runner.newColonyHost.
+	build func(colonyPath, colonyID, model string) (*colonyhost.Host, error)
+
+	// createSession registers the colony session on an already-armed runtime.
+	// Field for the same reason as build: it closes over the runner's live
+	// session bookkeeping without those locks living on the lifecycle.
+	createSession func(params hiveserver.CreateSessionParams, built *colonyhost.Host, colonyPath string) (*hiveserver.Session, error)
+
+	// mu serialises load/unload/fork: a session's Colony field is read by
+	// concurrent HTTP handlers, so two lifecycle calls must not race to
+	// replace it.
+	mu sync.Mutex
+}
+
+var colonySlugPattern = regexp.MustCompile(`^[a-z0-9_]+$`)
+
+func (r *Runner) newColonyLifecycle(manager *hiveserver.SessionManager, liveMu *sync.Mutex, live *[]*hiveserver.Session, home hivehome.Home, model string) *colonyLifecycle {
+	out := r.Stdout
+	if out == nil {
+		out = io.Discard
+	}
+	return &colonyLifecycle{
+		manager: manager,
+		home:    home,
+		model:   model,
+		out:     out,
+		build: func(colonyPath, colonyID, model string) (*colonyhost.Host, error) {
+			return r.newColonyHost(colonyPath, colonyID, home, model)
+		},
+		createSession: func(params hiveserver.CreateSessionParams, built *colonyhost.Host, colonyPath string) (*hiveserver.Session, error) {
+			return r.createSessionWithRuntime(params, manager, liveMu, live, home, model, built, colonyPath)
+		},
+	}
+}
+
+func (l *colonyLifecycle) modelFor(model *string) string {
+	if model != nil && strings.TrimSpace(*model) != "" {
+		return strings.TrimSpace(*model)
+	}
+	return l.model
+}
+
+// LoadColony is the POST /api/sessions/{id}/colony branch: resolve the colony
+// on disk, start its runtime (overseer included) and bind it to the session.
+//
+// Parity: framework/server/session_manager.py::SessionManager.load_colony
+func (l *colonyLifecycle) LoadColony(sessionID, colonyID string, model *string) (*hiveserver.Session, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	session := l.manager.GetSession(sessionID)
+	if session == nil {
+		return nil, &hiveserver.ColonyLoadConflictError{Message: fmt.Sprintf("Session '%s' not found", sessionID)}
+	}
+	if err := l.attach(session, strings.TrimSpace(colonyID), l.modelFor(model)); err != nil {
+		return nil, err
+	}
+	return session, nil
+}
+
+// UnloadColony stops the session's colony runtime. False means the session had
+// no colony loaded, which the route reports as a 409 (or 404 for an unknown
+// session).
+//
+// Parity: framework/server/session_manager.py::SessionManager.unload_colony
+func (l *colonyLifecycle) UnloadColony(sessionID string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	session := l.manager.GetSession(sessionID)
+	if session == nil || session.Colony == nil {
+		return false
+	}
+	stopColonyRuntime(session.Colony)
+	session.Colony = nil
+	session.ColonyID = ""
+	session.WorkerPath = ""
+	return true
+}
+
+// attach builds and arms the colony runtime and stores it on the session. Any
+// failure aborts before the session is mutated, so a broken colony never
+// replaces a working binding.
+func (l *colonyLifecycle) attach(session *hiveserver.Session, colonyID, model string) error {
+	if colonyID == "" {
+		return &hiveserver.ColonyLoadConflictError{Message: "colony_id is required"}
+	}
+	colonyPath := l.home.ColonyDir(colonyID)
+	info, statErr := os.Stat(colonyPath)
+	if statErr != nil || !info.IsDir() {
+		if statErr == nil {
+			statErr = fmt.Errorf("colony '%s' is not a directory", colonyID)
+		}
+		return fmt.Errorf("colony not found: %s: %w", colonyID, statErr)
+	}
+	queenName := strings.TrimSpace(session.QueenName)
+	if queenName == "" {
+		queenName = colonyQueenName(l.home, colonyID)
+	}
+	built, buildErr := l.build(colonyPath, colonyID, model)
+	if buildErr != nil {
+		return fmt.Errorf("colony runtime unavailable for %s: %w", colonyID, buildErr)
+	}
+	if startErr := startColonyHost(context.Background(), built, l.home, queenName, colonyID); startErr != nil {
+		return startErr
+	}
+	stopColonyRuntime(session.Colony)
+	session.Colony = built
+	session.ColonyID = colonyID
+	session.WorkerPath = colonyPath
+	l.persistAgentMeta(session, colonyID, colonyPath)
+	return nil
+}
+
+// CreateColonyFromSource backs the "Create Colony" popup: fork the source
+// queen session into a new colony directory, lock the source so it cannot fork
+// again, then resume the colony as a live session.
+//
+// Parity: framework/server/routes_sessions.py::_create_colony_from_source
+func (l *colonyLifecycle) CreateColonyFromSource(params hiveserver.CreateColonyFromSourceParams) (*hiveserver.Session, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	colonyID := strings.TrimSpace(params.ColonyID)
+	if !colonySlugPattern.MatchString(colonyID) {
+		return nil, &hiveserver.ColonyForkError{
+			Message: "colony_id must be lowercase alphanumeric with underscores",
+			Status:  http.StatusBadRequest,
+		}
+	}
+	source := l.manager.GetSession(params.SourceSessionID)
+	if source == nil {
+		return nil, &hiveserver.ColonyForkError{
+			Message: fmt.Sprintf("source_session_id '%s' is not a live session", params.SourceSessionID),
+			Status:  http.StatusNotFound,
+		}
+	}
+	if source.ColonySpawned {
+		return nil, &hiveserver.ColonyForkError{
+			Message: "source session already spawned a colony — cannot fork again.",
+			Status:  http.StatusConflict,
+		}
+	}
+	colonyPath := l.home.ColonyDir(colonyID)
+	if _, statErr := os.Stat(colonyPath); statErr == nil {
+		return nil, &hiveserver.ColonyForkError{
+			Message: fmt.Sprintf("colony '%s' already exists", colonyID),
+			Status:  http.StatusConflict,
+		}
+	}
+
+	queenName := strings.TrimSpace(source.QueenName)
+	if params.QueenName != nil && strings.TrimSpace(*params.QueenName) != "" {
+		queenName = strings.TrimSpace(*params.QueenName)
+	}
+	model := l.modelFor(params.Model)
+
+	// 1. The colony exists on disk before any runtime does: a failed start
+	//    removes the directory again, so a 503 never leaves a half-colony.
+	if err := writeColonyFromSession(l.home, colonyPath, colonyID, queenName, params); err != nil {
+		return nil, &hiveserver.ColonyForkError{Message: "failed to create colony: " + err.Error(), Status: http.StatusInternalServerError}
+	}
+	built, buildErr := l.build(colonyPath, colonyID, model)
+	if buildErr != nil {
+		_ = os.RemoveAll(colonyPath)
+		return nil, &hiveserver.ColonyForkError{Message: "colony runtime unavailable: " + buildErr.Error(), Status: http.StatusServiceUnavailable}
+	}
+	if startErr := startColonyHost(context.Background(), built, l.home, queenName, colonyID); startErr != nil {
+		_ = os.RemoveAll(colonyPath)
+		return nil, &hiveserver.ColonyForkError{Message: startErr.Error(), Status: http.StatusServiceUnavailable}
+	}
+
+	// 2. Resume the colony live on the runtime already armed above.
+	session, createErr := l.createSession(hiveserver.CreateSessionParams{
+		ColonyID:      &colonyID,
+		QueenName:     stringPtrIfNotEmpty(queenName),
+		Model:         params.Model,
+		InitialPrompt: params.InitialPrompt,
+	}, built, colonyPath)
+	if createErr != nil {
+		built.Stop()
+		_ = os.RemoveAll(colonyPath)
+		return nil, &hiveserver.ColonyForkError{Message: "failed to start colony session: " + createErr.Error(), Status: http.StatusInternalServerError}
+	}
+
+	// 3. Lock the source session. Without this marker a second fork would be
+	//    accepted, so a persist failure tears the fork back down.
+	if lockErr := persistSessionColonySpawn(source, colonyID); lockErr != nil {
+		l.manager.StopSession(session.ID)
+		built.Stop()
+		_ = os.RemoveAll(colonyPath)
+		return nil, &hiveserver.ColonyForkError{Message: "failed to persist colony spawn lock: " + lockErr.Error(), Status: http.StatusInternalServerError}
+	}
+	return session, nil
+}
+
+func stopColonyRuntime(runtime hiveserver.ColonyRuntime) {
+	if stopper, ok := runtime.(interface{ Stop() }); ok {
+		stopper.Stop()
+	}
+}
+
+// persistAgentMeta mirrors load_colony's meta.json stamp (agent_name /
+// agent_path) so a cold restore discovers the session's colony. It is a
+// best-effort write, as upstream: the live binding above is the source of
+// truth for this process.
+func (l *colonyLifecycle) persistAgentMeta(session *hiveserver.Session, colonyID, colonyPath string) {
+	if session.QueenDir == "" {
+		return
+	}
+	metaPath := filepath.Join(session.QueenDir, "meta.json")
+	meta := map[string]any{}
+	if data, err := os.ReadFile(metaPath); err == nil {
+		decoded := map[string]any{}
+		if json.Unmarshal(data, &decoded) == nil {
+			meta = decoded
+		}
+	}
+	meta["agent_name"] = humanizeColonyName(colonyID)
+	meta["agent_path"] = colonyPath
+	if err := os.MkdirAll(filepath.Dir(metaPath), 0o755); err != nil {
+		fmt.Fprintf(l.out, "Warning: colony session meta unavailable for %s: %v\n", session.ID, err)
+		return
+	}
+	if err := atomicfs.WriteJSON(metaPath, meta, 0o644); err != nil {
+		fmt.Fprintf(l.out, "Warning: colony session meta unavailable for %s: %v\n", session.ID, err)
+	}
+}
+
+// persistSessionColonySpawn marks the source session as having spawned a
+// colony and, when the session root is known, persists the lock to meta.json
+// so a restart keeps refusing a second fork.
+//
+// Parity: framework/server/routes_execution.py::persist_colony_spawn_lock
+func persistSessionColonySpawn(session *hiveserver.Session, colonyID string) error {
+	if session.QueenDir == "" {
+		session.ColonySpawned = true
+		session.SpawnedColonyID = colonyID
+		return nil
+	}
+	metaPath := filepath.Join(session.QueenDir, "meta.json")
+	meta := map[string]any{}
+	if data, err := os.ReadFile(metaPath); err == nil {
+		decoded := map[string]any{}
+		if json.Unmarshal(data, &decoded) == nil {
+			meta = decoded
+		}
+	}
+	meta["colony_spawned"] = true
+	meta["spawned_colony_id"] = colonyID
+	meta["spawned_colony_at"] = time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
+	if err := os.MkdirAll(filepath.Dir(metaPath), 0o755); err != nil {
+		return err
+	}
+	if err := atomicfs.WriteJSON(metaPath, meta, 0o644); err != nil {
+		return err
+	}
+	session.ColonySpawned = true
+	session.SpawnedColonyID = colonyID
+	return nil
+}
+
+// writeColonyFromSession writes the colony directory the fork resumes from:
+// metadata.json plus a worker.json carrying the queen persona as the worker
+// prompt, and the user's handoff goal when the dialog supplied one.
+func writeColonyFromSession(home hivehome.Home, colonyPath, colonyID, queenName string, params hiveserver.CreateColonyFromSourceParams) error {
+	if err := os.MkdirAll(colonyPath, 0o755); err != nil {
+		return err
+	}
+	meta := map[string]any{
+		"name":              colonyID,
+		"created_at":        float64(time.Now().UnixNano()) / 1e9,
+		"source_session_id": params.SourceSessionID,
+	}
+	if queenName != "" {
+		meta["queen_name"] = queenName
+	}
+	if err := atomicfs.WriteJSON(filepath.Join(colonyPath, "metadata.json"), meta, 0o644); err != nil {
+		return err
+	}
+
+	goal := "Work on tasks for colony " + colonyID
+	if params.InitialPrompt != nil && strings.TrimSpace(*params.InitialPrompt) != "" {
+		goal = strings.TrimSpace(*params.InitialPrompt)
+	}
+	worker := map[string]any{
+		"name":          humanizeColonyName(colonyID),
+		"description":   "Colony " + colonyID,
+		"system_prompt": *queenOverseerSpec(home, queenName).SystemPrompt,
+		"tools":         colonyToolsFor(queenName),
+		"goal":          map[string]any{"description": goal},
+	}
+	if queenName != "" {
+		worker["queen_name"] = queenName
+	}
+	return atomicfs.WriteJSON(filepath.Join(colonyPath, "worker.json"), worker, 0o644)
+}
+
+// colonyToolsFor is the tool list the forked worker config carries: the bound
+// queen's default tools, or an empty list (never null) when the colony has no
+// queen binding.
+func colonyToolsFor(queenName string) []string {
+	if tools := queen.DefaultToolsFor(queenName); len(tools) > 0 {
+		return tools
+	}
+	return []string{}
+}
+
+// colonyQueenName reads the queen bound to a colony from its metadata, falling
+// back to the shared default queen when the colony has no binding.
+func colonyQueenName(home hivehome.Home, colonyID string) string {
+	data, err := os.ReadFile(filepath.Join(home.ColoniesDir(), colonyID, "metadata.json"))
+	if err != nil {
+		return ""
+	}
+	meta := map[string]any{}
+	if json.Unmarshal(data, &meta) != nil {
+		return ""
+	}
+	name, _ := meta["queen_name"].(string)
+	return strings.TrimSpace(name)
+}
+
+// humanizeColonyName turns a colony slug into the display name the fork writes
+// into worker.json (framework/utils/text.py::humanize_slug for the ASCII slugs
+// colony names are validated to).
+func humanizeColonyName(slug string) string {
+	words := strings.Split(strings.ReplaceAll(slug, "_", " "), " ")
+	for index, word := range words {
+		if word == "" {
+			continue
+		}
+		words[index] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+	}
+	return strings.Join(words, " ")
+}
+
+func stringPtrIfNotEmpty(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }
 
 // chatSessionQueenScope is the queen a chat session belongs to, on disk and in

@@ -130,6 +130,24 @@ func (h *Host) Start(ctx context.Context) error {
 	return nil
 }
 
+// StartOverseer starts the colony's client-facing overseer worker. The host
+// starts itself first so a caller never has to know the two-step order; this
+// is the production entry the serve assembly uses (upstream's
+// start_overseer requires an already-running ColonyRuntime).
+//
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
+func (h *Host) StartOverseer(ctx context.Context, queenSpec agentloop.AgentSpec, seed []colony.SeedMessage) (*colony.Worker, error) {
+	if err := h.ensureStarted(ctx); err != nil {
+		return nil, err
+	}
+	return h.runtime.StartOverseer(ctx, queenSpec, seed)
+}
+
+// OverseerRunning reports whether the colony has a started overseer.
+func (h *Host) OverseerRunning() bool {
+	return h.runtime.Overseer() != nil
+}
+
 // Stop cancels every run and worker owned by this host.
 func (h *Host) Stop() {
 	h.mu.Lock()
