@@ -89,3 +89,16 @@
 - 文档、注释、示例一律让位于代码与测试；
 - 任何 lane 返工超过一轮即降级为 blocker，由 Coordinator 改派或砍范围，不拖全局。
 
+
+## Wave 5 并行（2026-11-19 10:4x）
+
+文件独占（避免同包冲突）：
+
+| Lane | 独占文件 | 目标 |
+| --- | --- | --- |
+| `w17/spa-fallback` | `internal/server/app.go` | `/api/*` 未命中返回 404 JSON，不再落 SPA |
+| `w18/session-layout` | `internal/cli/loader.go` | 会话目录与 queen 记忆作用域一致，兼容旧 default 路径 |
+| `w19/reflexion` | `internal/server/chat_runtime.go` | 确保 reflection 真被执行并写入 queen 记忆 |
+| `w20/reminders` | 新增 `internal/server/routes_reminders.go` | reminder hub 生成与路由（app.go 由 integrator 接线） |
+
+规则：lane 不得改他人独占文件；新增路由只提供 `Register*`，装配由 integrator 统一做。合并顺序按「谁先绿谁先合」，每次合并后跑拆项门禁。
