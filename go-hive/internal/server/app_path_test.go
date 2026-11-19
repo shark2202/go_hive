@@ -1,5 +1,3 @@
-// Parity-exempt: Go 特有的 ServeMux 路径清洗行为（307 重定向出 API 面），
-// 上游 Python 无对应实现，无法映射到具体 Python 测试。
 package server
 
 import (
@@ -8,6 +6,8 @@ import (
 	"testing"
 )
 
+// Parity-exempt: Go 特有的 ServeMux 路径清洗（会把含 .. 的请求 307 重定向出 API 面），
+// 上游 Python 无对应中间件，无法映射到具体 Python 测试。
 func TestRejectDotSegmentsAPIMiddleware(t *testing.T) {
 	reached := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
