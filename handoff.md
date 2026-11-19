@@ -43,7 +43,7 @@ Go 版 hive 已能**用真模型跑通对话**（UI 与 API 都验证过），�
 - queen memory：`internal/memory/QueenMemoryDir` 只有端点用到，chat runtime 未注入（**w15 已提交首版 `cf531ef9`，待合并与验证**）
 
 ### P2
-- 真实第三方 API 一次未调用（863 action 只有假上游）；R10 阻塞于凭据
+- 真实第三方 API 一次未调用（863 action 只有假上游）；R10 按用户决定本阶段不验证，以支持矩阵声明代替
 - Linux/Windows 只交叉编译未执行；无签名/公证；release workflow 未真跑
 - `attach_file` 多模态只到工具结果层
 

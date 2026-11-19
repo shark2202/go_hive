@@ -17,7 +17,7 @@
 | R7 | 可观测 | `--version`、`/api/health`、结构化日志、诊断包 | **PASS** | `./hive --version`；`curl -sS localhost:PORT/api/health`；`curl -X POST .../api/sessions/<id>/report-bundle` | 前三项本次实测（`--version`、health 200、`[access] GET … -> 200 (0ms)`）；`report-bundle` 路由与测试存在（`internal/server/routes_session_report*`），本次未实调 |
 | R8 | 质量证据 | `make ci` + smoke + e2e + 跨平台 + parity + QA/QC 报告 | **PASS** | `make ci`；`go test -tags e2e -count=1 ./e2e/...`；`bash scripts/smoke.sh <port>`；`bash scripts/check_parity.sh .`；`bash scripts/check_parity_targets.sh . ../../core` | `make ci` 退出码 0；4,160 测试声明 / 4,158 执行（4,154 pass、4 skip、0 fail）；e2e `ok 3.247s`；交叉编译 6/6；parity 4160/4160；refs 4,357 0 missing；源码 smoke 11/13（dashboard 两探针因无 embed/dist 404），发布包等价探针 **13/13** |
 | R9 | 发布流程 | tag、release notes、CI release job、制品上传 | **部分** | `grep -n "^  [a-z-]*:" .github/workflows/release.yml`；`ls docs/release-notes-v1.0.14-go.1.md go-hive/dist/release` | `release.yml` 含 meta/frontend/build/package/publish 5 个 job；release notes 与本地制品齐；**未打 tag、未运行 CI、未上传制品**（需发布权限与远端） |
-| R10 | 真实集成验证 | 关键模块至少各有一条真实凭据的端到端记录 | **阻塞** | 需要第三方凭据；参考 `docs/release-notes-v1.0.14-go.1.md` §6 | 无任何真实第三方调用记录；全部集成仅对假上游验证 |
+| R10 | 真实集成验证 | 关键模块至少各有一条真实凭据的端到端记录 | **不适用（用户决定 2026-11-19）** | 本阶段不提供第三方工具凭据，仅提供 LLM 凭据；以支持矩阵的「未验证」声明为准 | 无任何真实第三方调用记录；全部集成仅对假上游验证 |
 
 ## 2. 发布产物
 
@@ -53,8 +53,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8797/    # 200
 | ~~R4 缺 `THIRD_PARTY` 依赖清单~~ | 已解决：`go_hive/go-hive/THIRD_PARTY_NOTICES.md` 存在，`release.sh` 已改为随归档分发 | — |
 | R5 无在线 CVE 扫描 | 依赖漏洞状态未知 | 已在支持矩阵 §5/§6 与发布说明 §5 明示；有外网时补 `govulncheck ./...` |
 | R9 未打 tag、未上传 | 制品只在本地 | 需发布权限后执行：`git tag v1.0.14-go.1 && git push origin v1.0.14-go.1`（触发 `release.yml`） |
-| R10 无真实凭据 | 集成工具只有假上游证据 | 二选一：拿到凭据补验，或维持支持矩阵中的「未验证」声明 |
+| R10 无真实凭据 | 集成工具只有假上游证据 | 已决定本阶段不验证（用户 2026-11-19）；发布时以支持矩阵「未验证」声明为准，不得写成可用 |
 
 ## 5. 结论
 
-**可作为 `1.0.14-go.1` 快照发布**：R1、R2、R3、R6、R7、R8 满足；R4、R5、R9 为部分满足且已在文档中明示；R10 阻塞于外部凭据，不作为本版发布声明的一部分。
+**可作为 `1.0.14-go.1` 快照发布**：R1、R2、R3、R6、R7、R8 满足；R4、R5、R9 为部分满足且已在文档中明示；R10 按用户决定本阶段不验证（以支持矩阵声明代替），不作为本版发布声明的一部分。

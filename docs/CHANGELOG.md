@@ -82,7 +82,7 @@
 
 ### 已知缺口
 
-1. **集成工具**：覆盖 102+1/104 个模块、863/865 个 action；`csv_sql`、`excel_sql` 因 DuckDB 依赖有意排除。全部集成只对假上游验证，没有真实第三方调用（R10 阻塞）。
+1. **集成工具**：覆盖 102+1/104 个模块、863/865 个 action；`csv_sql`、`excel_sql` 因 DuckDB 依赖有意排除。全部集成只对假上游验证，没有真实第三方调用（按用户决定本阶段不验证）。
 2. **`attach_file` 多模态**：图片/PDF 只到 attachment chip 与文本预览；`serve` 的 chat runtime 只传文本，模型看不到图片或 PDF 字节。
 3. **Colony**：`serve --colony` 能加载并注册会话，但多 worker 编排闭环没有用真实模型跑过。
 4. **Queen mail**：路由已挂载，`serve` 未注入后端。
