@@ -443,6 +443,16 @@ func (m *SessionManager) StopSession(sessionID string) bool {
 		}
 		session.Chat = nil
 	}
+	// A colony host holds an overseer goroutine and worker runtimes; tearing
+	// the session down without stopping it leaves them running until process
+	// exit. The concrete runtimes expose Stop(); the read-only seam does not,
+	// so probe for it instead of widening ColonyRuntime for every caller.
+	if session.Colony != nil {
+		if stopper, ok := session.Colony.(interface{ Stop() }); ok {
+			stopper.Stop()
+		}
+		session.Colony = nil
+	}
 
 	if session.WorkerHandoffSub != "" {
 		if session.EventBus != nil {
