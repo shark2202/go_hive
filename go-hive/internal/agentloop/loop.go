@@ -152,6 +152,10 @@ type AgentLoop struct {
 	// JudgeEvents receives one verdict event per evaluation. Nil disables
 	// event publication.
 	JudgeEvents JudgeEventWriter
+	// OnJudgeVerdict, when set, observes every normalized verdict after the
+	// event is published. The colony runtime uses it to turn RETRY/ESCALATE
+	// feedback into improvement signals; nil is a no-op.
+	OnJudgeVerdict func(verdict JudgeVerdict, iteration int)
 
 	// DoomLoop watches for identical consecutive tool calls and returns one
 	// advisory reminder per streak. It never interrupts the turn.

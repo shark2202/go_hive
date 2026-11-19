@@ -2,6 +2,7 @@ package agentloop
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/skills"
@@ -20,6 +21,10 @@ type PromptSpec struct {
 	AgentType               string
 	OutputKeys              []string
 	ReportSchemaInstruction string
+	// GoalPrompt is the colony goal block (criteria, MUST/SHOULD constraints,
+	// context). It is rendered into the static system prompt so the model
+	// reasons with the declared outcome on every turn.
+	GoalPrompt string
 }
 
 type PromptOverrides struct {
@@ -132,6 +137,7 @@ func BuildPromptSpec(ctx *AgentContext, overrides PromptOverrides) PromptSpec {
 		AgentType:               agentType,
 		OutputKeys:              outputKeys,
 		ReportSchemaInstruction: BuildStructuredOutputInstruction(ctx.AgentSpec.ReportSchema),
+		GoalPrompt:              strings.TrimSpace(ctx.GoalContext),
 	}
 }
 
@@ -158,6 +164,9 @@ func BuildSystemPromptStatic(spec PromptSpec) string {
 	}
 	if spec.FocusPrompt != "" {
 		parts = append(parts, "\n"+spec.FocusPrompt)
+	}
+	if spec.GoalPrompt != "" {
+		parts = append(parts, "\n"+spec.GoalPrompt)
 	}
 	if spec.ReportSchemaInstruction != "" {
 		parts = append(parts, "\n"+spec.ReportSchemaInstruction)

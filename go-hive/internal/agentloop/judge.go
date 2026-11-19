@@ -137,6 +137,9 @@ func (l *AgentLoop) evaluateJudge(ctx context.Context, agentCtx *AgentContext, c
 	verdict = normalizeJudgeVerdict(verdict, err)
 	l.bumpBy("judge_"+strings.ToLower(string(verdict.Action)), 1)
 	l.emitJudgeVerdict(agentCtx, verdict, iteration)
+	if l.OnJudgeVerdict != nil {
+		l.OnJudgeVerdict(verdict, iteration)
+	}
 	return verdict
 }
 

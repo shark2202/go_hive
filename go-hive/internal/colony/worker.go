@@ -40,6 +40,11 @@ type WorkerResult struct {
 	Data            map[string]any
 	ReportStatus    string
 	DurationSeconds float64
+	// GoalEvaluation is the executed verdict for the colony goal's weighted
+	// success criteria (nil when the colony declares none). It rides the
+	// terminal result so callers reading WorkerResult see the same outcome the
+	// queen received in the [WORKER_REPORT].
+	GoalEvaluation *agentloop.GoalEvaluation
 }
 
 // Parity: framework/host/worker.py::WorkerInfo
@@ -108,18 +113,22 @@ type Worker struct {
 	// Parity: framework/host/worker.py::Worker.budget_pinned
 	BudgetPinned bool
 
-	mu            sync.Mutex
-	status        WorkerStatus
-	report        map[string]any
-	result        WorkerResult
-	startedAt     time.Time
-	finishedAt    time.Time
-	finished      bool
-	stopRequested bool
-	cancel        context.CancelFunc
-	agentLoop     *agentloop.AgentLoop
-	done          chan struct{}
-	doneOnce      sync.Once
+	mu       sync.Mutex
+	status   WorkerStatus
+	report   map[string]any
+	result   WorkerResult
+	goalEval *agentloop.GoalEvaluation
+	// improvementSignals are the missed-criterion/judge-retry records this
+	// worker produced; the terminal report carries them.
+	improvementSignals []ImprovementSignal
+	startedAt          time.Time
+	finishedAt         time.Time
+	finished           bool
+	stopRequested      bool
+	cancel             context.CancelFunc
+	agentLoop          *agentloop.AgentLoop
+	done               chan struct{}
+	doneOnce           sync.Once
 }
 
 func NewWorker(id, task, streamID string) *Worker {
@@ -205,6 +214,23 @@ func (w *Worker) Result() WorkerResult {
 	return w.result
 }
 
+// SetGoalEvaluation records the executed goal-criteria verdict for this
+// worker. It is called before the terminal result is built so the outcome
+// rides result.json, GET /workers, and the [WORKER_REPORT] payload.
+func (w *Worker) SetGoalEvaluation(evaluation *agentloop.GoalEvaluation) {
+	w.mu.Lock()
+	w.goalEval = evaluation
+	w.mu.Unlock()
+}
+
+// GoalEvaluation returns the recorded goal-criteria verdict, or nil when the
+// colony declares no success criteria (or the worker never finished a turn).
+func (w *Worker) GoalEvaluation() *agentloop.GoalEvaluation {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.goalEval
+}
+
 func (w *Worker) Finish(status WorkerStatus, result WorkerResult) {
 	w.finishOnce(status, result, nil)
 }
@@ -264,6 +290,9 @@ func (w *Worker) completeResultLocked(result WorkerResult, status WorkerStatus) 
 	}
 	if result.ReportStatus == "" {
 		result.ReportStatus = status.reportStatus()
+	}
+	if result.GoalEvaluation == nil {
+		result.GoalEvaluation = w.goalEval
 	}
 	return result
 }

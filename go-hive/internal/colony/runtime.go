@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
@@ -177,6 +178,9 @@ type ColonyRuntime struct {
 	// overseerTasks is the persistent overseer's own session task list. It
 	// lives under the colony directory so the colony stays one portable unit.
 	overseerTasks *overseerTaskSet
+
+	// improvementSeq keeps signal ids unique within the process.
+	improvementSeq atomic.Int64
 }
 
 func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
@@ -812,6 +816,17 @@ func (r *ColonyRuntime) buildContext(worker *Worker, spec agentloop.AgentSpec) *
 		StreamID:  worker.StreamID,
 		ColonyID:  &colonyID,
 	}
+	// Workers carry the colony goal into their prompt: criteria, MUST/SHOULD
+	// constraints, and context. The persistent overseer keeps an empty goal
+	// context (upstream StartOverseer sets goal_context=""), so the worker
+	// goal never leaks into the queen's identity.
+	//
+	// Parity: framework/host/colony_runtime.py::ColonyRuntime._build_worker
+	// (goal_context=self._goal.to_prompt_context()); framework/host/
+	// colony_runtime.py::start_overseer (goal_context="").
+	if !worker.Persistent && r.goal != nil {
+		ctx.GoalContext = r.goal.ToPromptContext()
+	}
 	ctx.StopAfterToolBatch = func() bool { return worker.ExplicitReport() != nil }
 	return ctx
 }
@@ -1026,7 +1041,7 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 		store := r.workerConversationStore(worker.ID)
 		_ = store.Destroy()
 		conv = agentloop.NewNodeConversationWithOptions(agentloop.ConversationOptions{
-			SystemPrompt: systemPromptFor(spec),
+			SystemPrompt: r.workerSystemPrompt(worker, spec),
 			Store:        store,
 		})
 		if worker.Task != "" {
@@ -1052,7 +1067,20 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 	tools := r.workerTools(worker)
 	loop, stopHub := r.newWorkerAgentLoop(worker, *cfg, tools)
 	defer stopHub()
-	loop.ConfigureJudge(worker.Context.AgentSpec, r.workerCompleter(), r.bus)
+	// A goal that declares criteria but whose spec carries no compiled
+	// criteria paragraph still gets a judge: the criteria come from the goal.
+	judgeSpec := worker.Context.AgentSpec
+	if !agentloop.HasSuccessCriteria(judgeSpec) {
+		if goalCriteria := agentloop.GoalCriteriaText(r.goal); goalCriteria != nil {
+			judgeSpec.SuccessCriteria = goalCriteria
+		}
+	}
+	loop.ConfigureJudge(judgeSpec, r.workerCompleter(), r.judgeEventWriter())
+	// The judge's RETRY/ESCALATE verdict is the in-band miss the improvement
+	// loop consumes; record it as soon as the loop normalizes it.
+	loop.OnJudgeVerdict = func(verdict agentloop.JudgeVerdict, iteration int) {
+		r.recordJudgeImprovementSignal(worker, verdict, iteration)
+	}
 	worker.SetAgentLoop(loop)
 	r.ApplyAdaptiveBudget(worker)
 
@@ -1070,7 +1098,18 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 		return
 	}
 
-	worker.finishOnce(WorkerCompleted, r.workerTerminalResult(worker, map[string]any{"text": turn.FinalText}, nil), func() {
+	// Execute the goal's weighted success criteria against the worker's final
+	// output and turn misses into improvement signals. No declared criteria
+	// means no evaluation and no signal (nil is "nothing to execute").
+	evaluation := r.evaluateWorkerGoal(ctx, worker, loop, turn)
+	worker.SetGoalEvaluation(evaluation)
+	r.recordGoalImprovementSignals(worker, evaluation)
+
+	output := map[string]any{"text": turn.FinalText}
+	if evaluation != nil {
+		output["goal_evaluation"] = evaluation.Map()
+	}
+	worker.finishOnce(WorkerCompleted, r.workerTerminalResult(worker, output, nil), func() {
 		r.publishReport(worker, turn.FinalText)
 	})
 }
@@ -1104,7 +1143,7 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 		ToolExecutor: r.executorFor(worker),
 		Config:       agentloop.DefaultLoopConfig(),
 	}
-	loop.ConfigureJudge(worker.Context.AgentSpec, r.workerCompleter(), r.bus)
+	loop.ConfigureJudge(worker.Context.AgentSpec, r.workerCompleter(), r.judgeEventWriter())
 	// Worker.Inject routes new input through this loop, so an overseer that
 	// sits between turns still wakes on the next message.
 	worker.SetAgentLoop(loop)
@@ -1149,6 +1188,18 @@ func (r *ColonyRuntime) publishReport(worker *Worker, finalText string) {
 	payload["summary"] = summary
 	payload["task"] = worker.Task
 	worker.setResultSummary(summary)
+	// The executed goal verdict and the improvement signals it produced ride
+	// every terminal report, including the explicit-report path: a worker that
+	// reports success while a weighted criterion missed must show both.
+	if evaluation := worker.GoalEvaluation(); evaluation != nil {
+		payload["goal_evaluation"] = evaluation.Map()
+	}
+	if signals := worker.improvementSignalMaps(); len(signals) > 0 {
+		payload["improvement_signals"] = signals
+	}
+	if payload["goal_evaluation"] != nil || payload["improvement_signals"] != nil {
+		payload["data"] = mergeReportData(payload["data"], payload["goal_evaluation"], payload["improvement_signals"])
+	}
 	if worker.BatchID != "" {
 		payload["batch_id"] = worker.BatchID
 		payload["batch_index"] = worker.BatchIndex
