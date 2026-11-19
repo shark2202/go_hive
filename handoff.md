@@ -69,9 +69,10 @@ bash ../scripts/check_parity_targets.sh . ../../core
 /Users/mac/.hive-go/start.sh          # 前台；或放到后台终端
 # 浏览器：http://127.0.0.1:8788
 
-# 3) 治理/看门狗（重启后需重新拉起）
+# 3) 治理/看门狗（重启后需重新拉起；report 带异常告警 + macOS 通知）
 cd /Users/mac/hive
 nohup bash go_hive/scripts/watchdog_loop.sh 240 >/dev/null 2>&1 &
+nohup bash go_hive/scripts/watchdog_report.sh 300 >/dev/null 2>&1 &
 nohup bash go_hive/scripts/timegov_record.sh 300 >/dev/null 2>&1 &
 ```
 

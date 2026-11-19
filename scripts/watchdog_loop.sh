@@ -14,10 +14,18 @@ PREV_ROUTES=0; PREV_TESTS=0; PREV_HEAD=""
 [ -f "$STATE" ] && . "$STATE" 2>/dev/null || true
 [ -f "$ALERTS" ] || echo "# 看门狗告警" > "$ALERTS"
 
+notify() {
+  local msg="$1"
+  if command -v osascript >/dev/null 2>&1; then
+    osascript -e "display notification \"${msg//\"/\\\"}\" with title \"Hive 看门狗\"" >/dev/null 2>&1 || true
+  fi
+}
+
 alert() {
   local kind="$1" msg="$2"
   printf -- "- %s [%s] %s\n" "$(date '+%m-%d %H:%M')" "$kind" "$msg" >> "$ALERTS"
   echo "ALERT [$kind] $msg"
+  notify "$msg"
 }
 
 while true; do

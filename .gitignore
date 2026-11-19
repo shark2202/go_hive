@@ -3,3 +3,4 @@ watchdog.log
 .watchdog_state
 ALERTS.md
 WATCHDOG_REPORT.md
+.watchdog_report_state

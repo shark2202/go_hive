@@ -7,7 +7,7 @@ set -u
 
 REPO=/Users/mac/hive
 REPORT="$REPO/go_hive/WATCHDOG_REPORT.md"
-STATE="$REPO/go_hive/.watchdog_state"
+STATE="$REPO/go_hive/.watchdog_report_state"
 INTERVAL="${1:-300}"
 ALERT_COOLDOWN="${ALERT_COOLDOWN:-900}"
 
