@@ -23,6 +23,7 @@ import { useColony } from "@/context/ColonyContext";
 import { isQueenDecommissioned, useMe } from "@/lib/me";
 import { orderQueens } from "@/lib/colony-registry";
 import { QueenSelect } from "@/components/QueenSelect";
+import { useI18n } from "@/i18n";
 
 function MemoryCard({
   memory,
@@ -37,6 +38,7 @@ function MemoryCard({
   onSave: (content: string) => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(memory.content ?? "");
   const [saving, setSaving] = useState(false);
@@ -64,7 +66,7 @@ function MemoryCard({
       await onSave(draft);
       setEditing(false);
     } catch (e) {
-      setError((e as Error)?.message || "Failed to save");
+      setError((e as Error)?.message || t("Failed to save"));
     } finally {
       setSaving(false);
     }
@@ -81,7 +83,7 @@ function MemoryCard({
     try {
       await onDelete();
     } catch (e) {
-      setError((e as Error)?.message || "Failed to delete");
+      setError((e as Error)?.message || t("Failed to delete"));
     }
   };
 
@@ -139,7 +141,7 @@ function MemoryCard({
                 onChange={(e) => setDraft(e.target.value)}
                 rows={Math.min(20, Math.max(6, draft.split("\n").length + 1))}
                 className="w-full bg-muted/30 border border-border/50 rounded-md px-2.5 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40 resize-y leading-relaxed"
-                placeholder="Markdown content…"
+                placeholder={t("Markdown content…")}
                 autoFocus
               />
               {error && (
@@ -153,7 +155,7 @@ function MemoryCard({
                   disabled={saving}
                   className="px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   onClick={handleSave}
@@ -161,7 +163,7 @@ function MemoryCard({
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   {saving && <Loader2 className="w-3 h-3 animate-spin" />}
-                  Save
+                  {t("Save")}
                 </button>
               </div>
             </>
@@ -170,7 +172,7 @@ function MemoryCard({
               <pre className="text-[12px] font-sans text-foreground/90 leading-relaxed whitespace-pre-wrap break-words">
                 {memory.content || (
                   <span className="text-muted-foreground/60 italic">
-                    Empty memory
+                    {t("Empty memory")}
                   </span>
                 )}
               </pre>
@@ -178,19 +180,19 @@ function MemoryCard({
                 <div className="mt-3 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-1.5">
                   <AlertCircle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
                   <span className="text-xs text-destructive flex-1">
-                    Delete this memory?
+                    {t("Delete this memory?")}
                   </span>
                   <button
                     onClick={() => setConfirmingDelete(false)}
                     className="px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                   >
-                    Cancel
+                    {t("Cancel")}
                   </button>
                   <button
                     onClick={handleConfirmDelete}
                     className="px-2.5 py-1 rounded-md text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
                   >
-                    Delete
+                    {t("Delete")}
                   </button>
                 </div>
               ) : (
@@ -200,14 +202,14 @@ function MemoryCard({
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                   >
                     <Pencil className="w-3 h-3" />
-                    Edit
+                    {t("Edit")}
                   </button>
                   <button
                     onClick={() => setConfirmingDelete(true)}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                   >
                     <Trash2 className="w-3 h-3" />
-                    Delete
+                    {t("Delete")}
                   </button>
                 </div>
               )}
@@ -248,6 +250,7 @@ function TabButton({
 type MemoryTab = "global" | "queens";
 
 export default function MemoryLibrary() {
+  const { t } = useI18n();
   const { queenProfiles: unsortedQueens } = useColony();
   const { me } = useMe();
   const queenProfiles = useMemo(
@@ -297,7 +300,7 @@ export default function MemoryLibrary() {
       const resp = await memoriesApi.list();
       setAllMemories(resp.memories);
     } catch (e) {
-      setError((e as Error)?.message || "Failed to load memories");
+      setError((e as Error)?.message || t("Failed to load memories"));
       setAllMemories([]);
     } finally {
       setLoading(false);
@@ -348,7 +351,7 @@ export default function MemoryLibrary() {
         );
       } catch (e) {
         if (cancelled) return;
-        setError((e as Error)?.message || "Failed to load memory contents");
+        setError((e as Error)?.message || t("Failed to load memory contents"));
       }
     })();
     return () => {
@@ -376,10 +379,10 @@ export default function MemoryLibrary() {
           <div className="flex items-center gap-3">
             <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <Brain className="w-5 h-5 text-primary" />
-              Memory
+              {t("Memory")}
             </h2>
             <span className="text-xs text-muted-foreground">
-              Long-lived notes your queens reference each turn. Edit or remove them here.
+              {t("Long-lived notes your queens reference each turn. Edit or remove them here.")}
             </span>
           </div>
         </div>
@@ -389,14 +392,14 @@ export default function MemoryLibrary() {
             onClick={() => setTab("global")}
             icon={<Globe className="w-3.5 h-3.5" />}
           >
-            Global
+            {t("Global")}
           </TabButton>
           <TabButton
             active={tab === "queens"}
             onClick={() => setTab("queens")}
             icon={<Crown className="w-3.5 h-3.5" />}
           >
-            Queens
+            {t("Queens")}
           </TabButton>
         </div>
       </div>
@@ -406,10 +409,10 @@ export default function MemoryLibrary() {
           {tab === "queens" && (
             <div className="mb-4">
               <label className="block text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
-                Queen
+                {t("Queen")}
               </label>
               {queenProfiles.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No queens available.</p>
+                <p className="text-sm text-muted-foreground">{t("No queens available.")}</p>
               ) : (
                 <QueenSelect
                   queens={queenProfiles}
@@ -427,7 +430,7 @@ export default function MemoryLibrary() {
                 className="flex-1 min-w-[200px] max-w-[360px]"
                 value={search}
                 onChange={setSearch}
-                placeholder="Search memories…"
+                placeholder={t("Search memories…")}
               />
             </div>
 
@@ -447,12 +450,12 @@ export default function MemoryLibrary() {
                 <Brain className="w-8 h-8 text-muted-foreground/30 mb-3 mx-auto" />
                 <p className="text-sm text-foreground/80">
                   {search.trim()
-                    ? "No memories match your search."
+                    ? t("No memories match your search.")
                     : tab === "global"
-                      ? "No global memories yet."
+                      ? t("No global memories yet.")
                       : activeQueen
-                        ? `${activeQueen.name} hasn't recorded any memories yet.`
-                        : "Pick a queen to view their memories."}
+                        ? t("{name} hasn't recorded any memories yet.", { name: activeQueen.name })
+                        : t("Pick a queen to view their memories.")}
                 </p>
               </div>
             ) : (

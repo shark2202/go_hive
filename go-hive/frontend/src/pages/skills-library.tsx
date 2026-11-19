@@ -38,6 +38,7 @@ import {
   type SkillDetailResponse,
   type SkillRow,
 } from "@/api/skills";
+import { useI18n } from "@/i18n";
 
 type Tab = "skills" | "mcp";
 
@@ -65,6 +66,7 @@ function usesBrowser(skillName: string): boolean {
 }
 
 function BrowserBadge() {
+  const { t } = useI18n();
   return (
     <button
       type="button"
@@ -74,9 +76,9 @@ function BrowserBadge() {
         window.open(BROWSER_EXT_STORE_URL, "_blank", "noopener");
       }}
       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-500/10 text-sky-500 hover:bg-sky-500/20"
-      title="Controls the browser via the Hive browser bridge — click to connect"
+      title={t("Controls the browser via the Hive browser bridge — click to connect")}
     >
-      <Globe className="w-3 h-3" /> Browser
+      <Globe className="w-3 h-3" /> {t("Browser")}
     </button>
   );
 }
@@ -86,6 +88,7 @@ function BrowserBadge() {
 // ---------------------------------------------------------------------------
 
 export default function SkillsLibrary() {
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   // Deep-link target, e.g. from the queen profile panel's "Configure skills"
   // link: /skills-library?queen=<id> opens the Skills page with that queen
@@ -103,19 +106,19 @@ export default function SkillsLibrary() {
           <div className="flex items-center gap-3">
             <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <Library className="w-5 h-5 text-primary" />
-              Skills
+              {t("Skills")}
             </h2>
             <span className="text-xs text-muted-foreground">
-              Browse every skill; pick a queen to configure her kit.
+              {t("Browse every skill; pick a queen to configure her kit.")}
             </span>
           </div>
         </div>
         <div className="flex items-center gap-1">
           <TabButton active={tab === "skills"} onClick={() => setTab("skills")} icon={<BookOpen className="w-3.5 h-3.5" />}>
-            Skills
+            {t("Skills")}
           </TabButton>
           <TabButton active={tab === "mcp"} onClick={() => setTab("mcp")} icon={<Wrench className="w-3.5 h-3.5" />}>
-            MCP Tools
+            {t("MCP Tools")}
           </TabButton>
         </div>
       </div>
@@ -160,6 +163,7 @@ function TabButton({
 // ---------------------------------------------------------------------------
 
 function SkillsCatalog({ initialQueenId }: { initialQueenId?: string | null }) {
+  const { t } = useI18n();
   const { me } = useMe();
   const [queens, setQueens] = useState<Array<{ id: string; name: string; title: string }> | null>(
     null,
@@ -189,7 +193,7 @@ function SkillsCatalog({ initialQueenId }: { initialQueenId?: string | null }) {
     queensApi
       .list()
       .then((r) => setQueens(orderQueens(r.queens, Object.keys(me?.preferences?.queens ?? {}))))
-      .catch((e: Error) => setQueensError(e.message || "Failed to load queens"));
+      .catch((e: Error) => setQueensError(e.message || t("Failed to load queens")));
   }, []);
 
   // Apply a ?queen deep-link once queens are known (once only).
@@ -263,7 +267,7 @@ function SkillsCatalog({ initialQueenId }: { initialQueenId?: string | null }) {
 
   const remove = async (row: SkillRow) => {
     if (!context) return;
-    if (!window.confirm(`Delete skill '${row.name}'? This removes its files.`)) return;
+    if (!window.confirm(t("Delete skill '{name}'? This removes its files.", { name: row.name }))) return;
     try {
       await skillsApi.remove(context, row.name);
       await reload();
@@ -273,7 +277,7 @@ function SkillsCatalog({ initialQueenId }: { initialQueenId?: string | null }) {
   };
 
   if (queensError) return <ErrorBlock message={queensError} />;
-  if (queens === null) return <LoadingBlock label="Loading…" />;
+  if (queens === null) return <LoadingBlock label={t("Loading…")} />;
 
   return (
     <div className="px-6 py-5">
@@ -283,16 +287,16 @@ function SkillsCatalog({ initialQueenId }: { initialQueenId?: string | null }) {
           value={context}
           onChange={setContext}
           allowAll
-          allMeta="browse"
-          prefix="Configuring:"
-          meta={(id) => `${counts.get(id) ?? 0} skills`}
+          allMeta={t("browse")}
+          prefix={t("Configuring:")}
+          meta={(id) => t("{count} skills", { count: counts.get(id) ?? 0 })}
           buttonClassName="py-1.5 text-xs"
         />
         <SearchInput
           className="flex-1 min-w-[200px] max-w-[360px]"
           value={search}
           onChange={setSearch}
-          placeholder="Search skills…"
+          placeholder={t("Search skills…")}
         />
         <div className="flex-1" />
         {context && (
@@ -300,14 +304,14 @@ function SkillsCatalog({ initialQueenId }: { initialQueenId?: string | null }) {
             onClick={() => setCreateOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90"
           >
-            <Plus className="w-3.5 h-3.5" /> New
+            <Plus className="w-3.5 h-3.5" /> {t("New")}
           </button>
         )}
         <button
           onClick={() => setUploadOpen(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20"
         >
-          <Upload className="w-3.5 h-3.5" /> Upload
+          <Upload className="w-3.5 h-3.5" /> {t("Upload")}
         </button>
       </div>
 
@@ -317,8 +321,8 @@ function SkillsCatalog({ initialQueenId }: { initialQueenId?: string | null }) {
         <div className="flex items-center gap-1 mb-4">
           {(
             [
-              ["in", "Active"],
-              ["out", "Inactive"],
+              ["in", t("Active")],
+              ["out", t("Inactive")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -336,7 +340,7 @@ function SkillsCatalog({ initialQueenId }: { initialQueenId?: string | null }) {
         </div>
       )}
 
-      {loading && <LoadingBlock label="Loading skills…" />}
+      {loading && <LoadingBlock label={t("Loading skills…")} />}
       {error && (
         <div className="mb-4 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
@@ -344,7 +348,7 @@ function SkillsCatalog({ initialQueenId }: { initialQueenId?: string | null }) {
       )}
       {!loading && filtered.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          {context ? "No skills match your filter." : "No skills on this machine yet."}
+          {context ? t("No skills match your filter.") : t("No skills on this machine yet.")}
         </p>
       )}
 
@@ -402,6 +406,7 @@ function SkillCard({
   // actual toggle lives in the detail drawer, not on the card.
   configurable?: boolean;
 }) {
+  const { t } = useI18n();
   const { me } = useMe();
   // Colony-scoped skill config was removed, so only queens matter. Count only
   // active (non-decommissioned) queens the skill is visible on.
@@ -430,7 +435,7 @@ function SkillCard({
         {configurable && (
           <span
             aria-hidden
-            title={row.enabled ? "Active" : "Inactive"}
+            title={row.enabled ? t("Active") : t("Inactive")}
             className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
               row.enabled ? "bg-emerald-500" : "bg-muted-foreground/30"
             }`}
@@ -450,8 +455,8 @@ function SkillCard({
           <span className="text-[10px] text-muted-foreground">@{row.owner.id}</span>
         )}
         {!row.editable && (
-          <Lock className="w-3 h-3 text-muted-foreground/70" aria-label="Read-only">
-            <title>Read-only</title>
+          <Lock className="w-3 h-3 text-muted-foreground/70" aria-label={t("Read-only")}>
+            <title>{t("Read-only")}</title>
           </Lock>
         )}
       </div>
@@ -461,7 +466,7 @@ function SkillCard({
       <div className="flex items-center justify-between gap-2 mt-auto pt-2">
         {row.visible_to ? (
           <span className="text-[10px] text-muted-foreground">
-            Used by {activeQueenCount} {activeQueenCount === 1 ? "queen" : "queens"}
+            {t("Used by {count} queens", { count: activeQueenCount })}
           </span>
         ) : (
           <span />
@@ -473,7 +478,7 @@ function SkillCard({
               onRemove();
             }}
             className="p-1 -m-1 rounded-md text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-            title="Delete skill"
+            title={t("Delete skill")}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -498,6 +503,7 @@ function CreateSkillModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [body, setBody] = useState("");
@@ -509,7 +515,7 @@ function CreateSkillModal({
   const submit = async () => {
     setError(null);
     if (!name.trim() || !description.trim() || !body.trim()) {
-      setError("Name, description, and body are required.");
+      setError(t("Name, description, and body are required."));
       return;
     }
     setSaving(true);
@@ -532,7 +538,7 @@ function CreateSkillModal({
     }
   };
 
-  const label = `Queen: ${targetId}`;
+  const label = t("Queen: {id}", { id: targetId });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -540,8 +546,8 @@ function CreateSkillModal({
       <div className="relative bg-card border border-border/60 rounded-2xl shadow-2xl w-full max-w-[640px] p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">New Skill</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Scope: {label}</p>
+            <h3 className="text-lg font-semibold text-foreground">{t("New Skill")}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("Scope: {scope}", { scope: label })}</p>
           </div>
           <button
             onClick={onClose}
@@ -553,32 +559,32 @@ function CreateSkillModal({
         <div className="flex flex-col gap-4">
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">
-              Name <span className="text-primary">*</span>
+              {t("Name")} <span className="text-primary">*</span>
             </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value.toLowerCase())}
-              placeholder="e.g. vendor-api-protocol"
+              placeholder={t("e.g. vendor-api-protocol")}
               className="w-full bg-muted/30 border border-border/50 rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Lowercase letters, digits, hyphens, dots. Max 64 chars.
+              {t("Lowercase letters, digits, hyphens, dots. Max 64 chars.")}
             </p>
           </div>
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">
-              Description <span className="text-primary">*</span>
+              {t("Description")} <span className="text-primary">*</span>
             </label>
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="One-line summary shown in the catalog picker"
+              placeholder={t("One-line summary shown in the catalog picker")}
               className="w-full bg-muted/30 border border-border/50 rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
             />
           </div>
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">
-              Body (SKILL.md content) <span className="text-primary">*</span>
+              {t("Body (SKILL.md content)")} <span className="text-primary">*</span>
             </label>
             <textarea
               value={body}
@@ -598,14 +604,14 @@ function CreateSkillModal({
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               onClick={submit}
               disabled={saving}
               className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
             >
-              {saving ? "Saving…" : "Create"}
+              {saving ? t("Saving…") : t("Create")}
             </button>
           </div>
         </div>
@@ -627,6 +633,7 @@ function UploadSkillModal({
   onClose: () => void;
   onUploaded: () => void;
 }) {
+  const { t } = useI18n();
   const [file, setFile] = useState<File | null>(null);
   const [scopeKind, setScopeKind] = useState<"user" | "queen">("user");
   const [targetId, setTargetId] = useState<string>("");
@@ -653,7 +660,7 @@ function UploadSkillModal({
   const pickFile = (f: File | null | undefined) => {
     if (!f) return;
     if (!/\.(md|zip)$/i.test(f.name)) {
-      setError("Only .md or .zip files are supported.");
+      setError(t("Only .md or .zip files are supported."));
       return;
     }
     setError(null);
@@ -663,7 +670,7 @@ function UploadSkillModal({
 
   const submit = async (replace = false) => {
     if (!file) {
-      setError("Pick a .md or .zip file first.");
+      setError(t("Pick a .md or .zip file first."));
       return;
     }
     setError(null);
@@ -698,9 +705,9 @@ function UploadSkillModal({
       <div className="relative bg-card border border-border/60 rounded-2xl shadow-2xl w-full max-w-[520px] p-6">
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">Upload a skill</h3>
+            <h3 className="text-lg font-semibold text-foreground">{t("Upload a skill")}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Add a SKILL.md file or a zipped skill bundle to the library.
+              {t("Add a SKILL.md file or a zipped skill bundle to the library.")}
             </p>
           </div>
           <button
@@ -755,7 +762,7 @@ function UploadSkillModal({
                     if (inputRef.current) inputRef.current.value = "";
                   }}
                   className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
-                  title="Remove file"
+                  title={t("Remove file")}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -764,9 +771,9 @@ function UploadSkillModal({
               <div className="flex flex-col items-center gap-1.5 text-center">
                 <UploadCloud className="w-6 h-6 text-muted-foreground" />
                 <p className="text-sm text-foreground">
-                  Drop a file here, or <span className="text-primary font-medium">browse</span>
+                  {t("Drop a file here, or")} <span className="text-primary font-medium">{t("browse")}</span>
                 </p>
-                <p className="text-[11px] text-muted-foreground">SKILL.md or a .zip bundle</p>
+                <p className="text-[11px] text-muted-foreground">{t("SKILL.md or a .zip bundle")}</p>
               </div>
             )}
             <input
@@ -780,12 +787,12 @@ function UploadSkillModal({
 
           {/* Scope */}
           <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Add to</label>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">{t("Add to")}</label>
             <div className="inline-flex w-full rounded-lg border border-border/50 bg-muted/20 p-0.5">
               {(
                 [
-                  ["user", "All queens"],
-                  ["queen", "Specific queen"],
+                  ["user", t("All queens")],
+                  ["queen", t("Specific queen")],
                 ] as const
               ).map(([key, label]) => (
                 <button
@@ -816,8 +823,8 @@ function UploadSkillModal({
           {/* Options */}
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-foreground">Enable immediately</p>
-              <p className="text-[11px] text-muted-foreground">Turn the skill on right after upload.</p>
+              <p className="text-sm text-foreground">{t("Enable immediately")}</p>
+              <p className="text-[11px] text-muted-foreground">{t("Turn the skill on right after upload.")}</p>
             </div>
             <Switch checked={enabled} onChange={setEnabled} />
           </div>
@@ -835,7 +842,7 @@ function UploadSkillModal({
                 {conflict}
               </p>
               <p className="text-[11px] text-muted-foreground mt-1">
-                Replace the existing skill with this file? This overwrites its contents.
+                {t("Replace the existing skill with this file? This overwrites its contents.")}
               </p>
               <div className="flex justify-end gap-2 mt-3">
                 <button
@@ -843,14 +850,14 @@ function UploadSkillModal({
                   disabled={uploading}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 disabled:opacity-50"
                 >
-                  Keep existing
+                  {t("Keep existing")}
                 </button>
                 <button
                   onClick={() => submit(true)}
                   disabled={uploading}
                   className="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-medium hover:bg-amber-500/90 disabled:opacity-50"
                 >
-                  {uploading ? "Replacing…" : "Replace"}
+                  {uploading ? t("Replacing…") : t("Replace")}
                 </button>
               </div>
             </div>
@@ -860,14 +867,14 @@ function UploadSkillModal({
                 onClick={onClose}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 onClick={() => submit(false)}
                 disabled={uploading || !file}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
               >
-                {uploading ? "Uploading…" : "Upload"}
+                {uploading ? t("Uploading…") : t("Upload")}
               </button>
             </div>
           )}
@@ -895,6 +902,7 @@ function stripFrontmatter(text: string): string {
 // Clamp text to two lines with a "… more" toggle that only appears when the
 // text actually overflows (measured against the clamped height).
 function ClampedText({ text, className }: { text: string; className?: string }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLParagraphElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
@@ -921,7 +929,7 @@ function ClampedText({ text, className }: { text: string; className?: string }) 
           onClick={() => setExpanded((v) => !v)}
           className="mt-0.5 text-[11px] font-medium text-primary/80 hover:text-primary"
         >
-          {expanded ? "less" : "… more"}
+          {expanded ? t("less") : t("… more")}
         </button>
       )}
     </div>
@@ -945,6 +953,7 @@ function SkillDetailDrawer({
   row?: SkillRow;
   onChanged?: () => void;
 }) {
+  const { t } = useI18n();
   const [detail, setDetail] = useState<SkillDetailResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1071,7 +1080,7 @@ function SkillDetailDrawer({
             )}
             {canConfigure && (
               <p className="text-[11px] text-muted-foreground mt-1">
-                Configuring for queen <span className="text-foreground/70 font-medium">{queenId}</span>
+                {t("Configuring for queen")} <span className="text-foreground/70 font-medium">{queenId}</span>
               </p>
             )}
           </div>
@@ -1091,7 +1100,7 @@ function SkillDetailDrawer({
                 row.enabled ? "text-emerald-500" : "text-muted-foreground"
               }`}
             >
-              {row.enabled ? "Active" : "Inactive"}
+              {row.enabled ? t("Active") : t("Inactive")}
             </span>
             <div className="flex-1" />
             {canEdit && !editing && !renaming && (
@@ -1099,7 +1108,7 @@ function SkillDetailDrawer({
                 onClick={startEdit}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-muted/50 text-muted-foreground hover:bg-muted"
               >
-                <Pencil className="w-3.5 h-3.5" /> Edit
+                <Pencil className="w-3.5 h-3.5" /> {t("Edit")}
               </button>
             )}
             {canEdit && !editing && !renaming && (
@@ -1107,12 +1116,12 @@ function SkillDetailDrawer({
                 onClick={startRename}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-muted/50 text-muted-foreground hover:bg-muted"
               >
-                Rename
+                {t("Rename")}
               </button>
             )}
             {!row.editable && (
               <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Lock className="w-3 h-3" /> Read-only
+                <Lock className="w-3 h-3" /> {t("Read-only")}
               </span>
             )}
           </div>
@@ -1121,7 +1130,7 @@ function SkillDetailDrawer({
         {renaming && row && (
           <div className="mb-4 p-3 rounded-lg border border-border/40 bg-muted/20 space-y-2">
             <label className="block text-[11px] font-medium text-muted-foreground">
-              Rename skill
+              {t("Rename skill")}
             </label>
             <input
               value={newName}
@@ -1131,13 +1140,12 @@ function SkillDetailDrawer({
                 if (e.key === "Enter") submitRename();
                 if (e.key === "Escape") setRenaming(false);
               }}
-              placeholder="new-skill-name"
+              placeholder={t("new-skill-name")}
               className="w-full px-2.5 py-1.5 rounded-md bg-card border border-border/40 text-xs text-foreground focus:outline-none focus:border-primary/50"
             />
             <p className="flex items-start gap-1 text-[11px] text-amber-500/90">
               <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-              Renames only this queen's copy. The same skill on other queens keeps
-              its current name.
+              {t("Renames only this queen's copy. The same skill on other queens keeps its current name.")}
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -1145,29 +1153,29 @@ function SkillDetailDrawer({
                 disabled={saving}
                 className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
               >
-                {saving ? "Renaming…" : "Rename"}
+                {saving ? t("Renaming…") : t("Rename")}
               </button>
               <button
                 onClick={() => setRenaming(false)}
                 disabled={saving}
                 className="px-3 py-1.5 rounded-md bg-muted/50 text-muted-foreground text-xs font-medium hover:bg-muted disabled:opacity-50"
               >
-                Cancel
+                {t("Cancel")}
               </button>
             </div>
           </div>
         )}
 
-        {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {loading && <p className="text-sm text-muted-foreground">{t("Loading…")}</p>}
         {!loading && error && <ErrorBlock message={error} />}
         {!loading && !error && !detail && (
-          <EmptyBlock label="No details available for this skill." />
+          <EmptyBlock label={t("No details available for this skill.")} />
         )}
         {detail && (
           <div className="space-y-4">
             {!editing && detail.visibility && detail.visibility.length > 0 && (
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                <span>Visibility: {detail.visibility.join(", ")}</span>
+                <span>{t("Visibility: {list}", { list: detail.visibility.join(", ") })}</span>
               </div>
             )}
 
@@ -1175,7 +1183,7 @@ function SkillDetailDrawer({
               <div className="space-y-3">
                 <div>
                   <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                    Description
+                    {t("Description")}
                   </label>
                   <input
                     value={draftDesc}
@@ -1200,14 +1208,14 @@ function SkillDetailDrawer({
                     disabled={saving}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
                   >
-                    <Check className="w-3.5 h-3.5" /> {saving ? "Saving…" : "Save"}
+                    <Check className="w-3.5 h-3.5" /> {saving ? t("Saving…") : t("Save")}
                   </button>
                   <button
                     onClick={() => setEditing(false)}
                     disabled={saving}
                     className="px-3 py-1.5 rounded-md bg-muted/50 text-muted-foreground text-xs font-medium hover:bg-muted disabled:opacity-50"
                   >
-                    Cancel
+                    {t("Cancel")}
                   </button>
                 </div>
               </div>
@@ -1223,7 +1231,7 @@ function SkillDetailDrawer({
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      Markdown
+                      {t("Markdown")}
                     </button>
                     <button
                       onClick={() => setBodyView("raw")}
@@ -1233,7 +1241,7 @@ function SkillDetailDrawer({
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      Raw
+                      {t("Raw")}
                     </button>
                   </div>
                   <div className="flex items-center gap-1">
@@ -1244,14 +1252,14 @@ function SkillDetailDrawer({
                         window.setTimeout(() => setCopied(false), 1500);
                       }}
                       className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                      title="Copy skill body"
+                      title={t("Copy skill body")}
                     >
                       {copied ? (
                         <Check className="w-3 h-3 text-emerald-500" />
                       ) : (
                         <Copy className="w-3 h-3" />
                       )}
-                      {copied ? "Copied" : "Copy"}
+                      {copied ? t("Copied") : t("Copy")}
                     </button>
                     <button
                       onClick={() => setExpanded((v) => !v)}
@@ -1262,7 +1270,7 @@ function SkillDetailDrawer({
                       ) : (
                         <ChevronDown className="w-3 h-3" />
                       )}
-                      {expanded ? "Collapse" : "Expand"}
+                      {expanded ? t("Collapse") : t("Expand")}
                     </button>
                   </div>
                 </div>

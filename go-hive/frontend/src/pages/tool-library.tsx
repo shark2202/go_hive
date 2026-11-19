@@ -9,10 +9,12 @@ import { QueenSelect } from "@/components/QueenSelect";
 import ColonyToolsSection from "@/components/ColonyToolsSection";
 import McpServersPanel from "@/components/McpServersPanel";
 import { isQueenDecommissioned, useMe } from "@/lib/me";
+import { useI18n } from "@/i18n";
 
 type Tab = "queens" | "colonies" | "mcp";
 
 export default function ToolLibrary({ embedded = false }: { embedded?: boolean } = {}) {
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   // Deep-link target, e.g. from the queen profile panel's "Configure tools"
   // link: /skills-library?tab=mcp&queen=<id> lands on the Queens tab with that
@@ -31,20 +33,20 @@ export default function ToolLibrary({ embedded = false }: { embedded?: boolean }
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90"
       >
         <Plus className="w-3.5 h-3.5" />
-        Add MCP Server
+        {t("Add MCP Server")}
       </button>
     ) : null;
 
   const tabBar = (
     <div className="flex items-center gap-1">
       <TabButton active={tab === "queens"} onClick={() => setTab("queens")} icon={<Crown className="w-3.5 h-3.5" />}>
-        By Queen
+        {t("By Queen")}
       </TabButton>
       <TabButton active={tab === "colonies"} onClick={() => setTab("colonies")} icon={<Network className="w-3.5 h-3.5" />}>
-        By Colony
+        {t("By Colony")}
       </TabButton>
       <TabButton active={tab === "mcp"} onClick={() => setTab("mcp")} icon={<Server className="w-3.5 h-3.5" />}>
-        MCP Servers
+        {t("MCP Servers")}
       </TabButton>
     </div>
   );
@@ -63,10 +65,10 @@ export default function ToolLibrary({ embedded = false }: { embedded?: boolean }
                 className="text-base font-semibold text-foreground flex items-center gap-2"
               >
                 <Wrench className="w-5 h-5 text-primary" />
-                Agent Access
+                {t("Agent Access")}
               </h2>
               <span className="text-xs text-muted-foreground">
-                Choose the apps and capabilities each agent can use, and connect your own integrations.
+                {t("Choose the apps and capabilities each agent can use, and connect your own integrations.")}
               </span>
             </div>
             {addMcpButton}
@@ -74,7 +76,7 @@ export default function ToolLibrary({ embedded = false }: { embedded?: boolean }
         )}
         {embedded && (
           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-            Tool Access · who can use which tools
+            {t("Tool Access · who can use which tools")}
           </p>
         )}
         <div className="flex items-center justify-between gap-2">
@@ -125,6 +127,7 @@ function TabButton({
 // ----- Queens tab ---------------------------------------------------------
 
 function QueensTab({ initialQueenId }: { initialQueenId?: string | null }) {
+  const { t } = useI18n();
   const [queens, setQueens] = useState<Array<{ id: string; name: string; title: string }> | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -141,7 +144,7 @@ function QueensTab({ initialQueenId }: { initialQueenId?: string | null }) {
         const sorted = sortQueenProfiles(r.queens);
         setQueens(sorted);
       })
-      .catch((e: Error) => setError(e.message || "Failed to load queens"));
+      .catch((e: Error) => setError(e.message || t("Failed to load queens")));
   }, []);
 
   // Auto-select the first visible queen once available, and re-select if
@@ -161,15 +164,15 @@ function QueensTab({ initialQueenId }: { initialQueenId?: string | null }) {
   }, [visibleQueens, initialQueenId]);
 
   if (error) return <ErrorBlock message={error} />;
-  if (queens === null) return <LoadingBlock label="Loading queens…" />;
+  if (queens === null) return <LoadingBlock label={t("Loading queens…")} />;
   if (visibleQueens.length === 0)
-    return <EmptyBlock label="No queens yet. Create one to curate its tools." />;
+    return <EmptyBlock label={t("No queens yet. Create one to curate its tools.")} />;
 
   return (
     <div className="px-6 py-5">
       <div className="mb-4">
         <label className="block text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
-          Queen
+          {t("Queen")}
         </label>
         <QueenSelect
           queens={visibleQueens}
@@ -181,7 +184,7 @@ function QueensTab({ initialQueenId }: { initialQueenId?: string | null }) {
       {selected ? (
         <QueenToolsSection queenId={selected} />
       ) : (
-        <EmptyBlock label="Pick a queen to edit her tool allowlist." />
+        <EmptyBlock label={t("Pick a queen to edit her tool allowlist.")} />
       )}
     </div>
   );
@@ -190,6 +193,7 @@ function QueensTab({ initialQueenId }: { initialQueenId?: string | null }) {
 // ----- Colonies tab -------------------------------------------------------
 
 function ColoniesTab() {
+  const { t } = useI18n();
   const [colonies, setColonies] = useState<ColonySummary[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -202,7 +206,7 @@ function ColoniesTab() {
         if (r.colonies.length > 0)
           setSelected((prev) => prev ?? r.colonies[0].name);
       })
-      .catch((e: Error) => setError(e.message || "Failed to load colonies"));
+      .catch((e: Error) => setError(e.message || t("Failed to load colonies")));
   }, []);
 
   const sorted = useMemo(() => {
@@ -211,17 +215,17 @@ function ColoniesTab() {
   }, [colonies]);
 
   if (error) return <ErrorBlock message={error} />;
-  if (sorted === null) return <LoadingBlock label="Loading colonies…" />;
+  if (sorted === null) return <LoadingBlock label={t("Loading colonies…")} />;
   if (sorted.length === 0)
     return (
-      <EmptyBlock label="No colonies yet. Ask a queen to incubate one and its tools will show up here." />
+      <EmptyBlock label={t("No colonies yet. Ask a queen to incubate one and its tools will show up here.")} />
     );
 
   return (
     <div className="px-6 py-5">
       <div className="mb-4">
         <label className="block text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
-          Colony
+          {t("Colony")}
         </label>
         <select
           value={selected ?? ""}
@@ -238,7 +242,7 @@ function ColoniesTab() {
       {selected ? (
         <ColonyToolsSection colonyName={selected} />
       ) : (
-        <EmptyBlock label="Pick a colony to edit its tool allowlist." />
+        <EmptyBlock label={t("Pick a colony to edit its tool allowlist.")} />
       )}
     </div>
   );

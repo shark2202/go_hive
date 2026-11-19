@@ -19,6 +19,7 @@ import {
 } from "@/data/skill-capsules";
 import { SkillCapsuleChip, SkillCapsuleRow } from "@/components/SkillComposer";
 import { useSkillIndex } from "@/hooks/use-skill-index";
+import { useI18n } from "@/i18n";
 
 const PAGE_SIZE = 24;
 
@@ -46,6 +47,7 @@ function TagChip({
   onSelect?: () => void;
   onRemove?: () => void;
 }) {
+  const { t } = useI18n();
   const base =
     "inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[11px] font-medium";
   if (onSelect) {
@@ -69,7 +71,7 @@ function TagChip({
           type="button"
           onClick={onRemove}
           className="rounded-full hover:bg-primary/20 -mr-0.5 p-0.5"
-          aria-label={`Remove tag ${label}`}
+          aria-label={t("Remove tag {tag}", { tag: label })}
         >
           <X className="w-2.5 h-2.5" />
         </button>
@@ -102,6 +104,7 @@ function PromptCard({
   /** Live community copy count. Shown only when provided (community prompts). */
   copyCount?: number;
 }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -224,7 +227,7 @@ function PromptCard({
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <h3 className="text-[13px] font-medium text-foreground line-clamp-1">{prompt.title}</h3>
           {isCustom && (
-            <span className="flex-shrink-0 px-1 py-px rounded text-[9px] font-medium bg-muted/50 text-muted-foreground/70">My Prompt</span>
+            <span className="flex-shrink-0 px-1 py-px rounded text-[9px] font-medium bg-muted/50 text-muted-foreground/70">{t("My Prompt")}</span>
           )}
         </div>
         {isCustom && !confirmingDelete && (
@@ -234,7 +237,7 @@ function PromptCard({
                 onClick={handleSubmitToCommunity}
                 disabled={submitting}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-50"
-                title={submitted ? "Submitted — pending review" : "Submit prompt for review"}
+                title={submitted ? t("Submitted — pending review") : t("Submit prompt for review")}
               >
                 {submitted ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Upload className="w-3.5 h-3.5" />}
               </button>
@@ -243,7 +246,7 @@ function PromptCard({
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10"
-                title="Edit prompt"
+                title={t("Edit prompt")}
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
@@ -252,7 +255,7 @@ function PromptCard({
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirmingDelete(true); }}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                title="Delete prompt"
+                title={t("Delete prompt")}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -262,7 +265,7 @@ function PromptCard({
         {!isCustom && copyCount !== undefined && (
           <span
             className="flex-shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground/70 tabular-nums"
-            title={`Copied ${copyCount.toLocaleString()} ${copyCount === 1 ? "time" : "times"}`}
+            title={t("Copied {count} times", { count: copyCount.toLocaleString() })}
           >
             <Copy className="w-3 h-3" />
             {copyCount.toLocaleString()}
@@ -287,18 +290,18 @@ function PromptCard({
       )} */}
       {confirmingDelete ? (
         <div className="mt-auto flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-1.5">
-          <span className="text-xs text-destructive flex-1 truncate">Delete this prompt?</span>
+          <span className="text-xs text-destructive flex-1 truncate">{t("Delete this prompt?")}</span>
           <button
             onClick={(e) => { e.stopPropagation(); setConfirmingDelete(false); }}
             className="px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleConfirmDelete(); }}
             className="px-2.5 py-1 rounded-md text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
           >
-            Delete
+            {t("Delete")}
           </button>
         </div>
       ) : (
@@ -310,12 +313,12 @@ function PromptCard({
             {copied ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-500" />
-                Copied
+                {t("Copied")}
               </>
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5" />
-                Copy prompt
+                {t("Copy prompt")}
               </>
             )}
           </button>
@@ -323,10 +326,10 @@ function PromptCard({
             <button
               onClick={(e) => { e.stopPropagation(); onDeploy(); }}
               className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-primary/20 bg-primary/[0.04] py-1.5 text-xs font-medium text-primary hover:bg-primary/[0.08]"
-              title="Deploy as a new colony"
+              title={t("Deploy as a new colony")}
             >
               <Rocket className="w-3.5 h-3.5" />
-              Deploy
+              {t("Deploy")}
             </button>
           )}
         </div>
@@ -377,6 +380,7 @@ function PromptFormModal({
   /** Overrides the default submit button label. */
   submitLabel?: string;
 }) {
+  const { t } = useI18n();
   const editMode = !!initial;
   const [title, setTitle] = useState(initial?.title ?? "");
   const [category, setCategory] = useState(initial?.category ?? "");
@@ -476,7 +480,7 @@ function PromptFormModal({
       <div className="relative bg-card border border-border/60 rounded-2xl shadow-2xl w-full max-w-[650px] p-6">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-semibold text-foreground">
-            {heading ?? (editMode ? "Edit Prompt" : "Add Custom Prompt")}
+            {heading ?? (editMode ? t("Edit Prompt") : t("Add Custom Prompt"))}
           </h3>
           <button onClick={onClose} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50">
             <X className="w-4 h-4" />
@@ -485,16 +489,16 @@ function PromptFormModal({
 
         <div className="flex flex-col gap-4">
           <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Title <span className="text-primary">*</span></label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Weekly Report Generator"
+            <label className="text-sm font-medium text-foreground mb-1.5 block">{t("Title")} <span className="text-primary">*</span></label>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("e.g. Weekly Report Generator")}
               className="w-full bg-muted/30 border border-border/50 rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40" />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Category</label>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">{t("Category")}</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)}
               className="w-full bg-muted/30 border border-border/50 rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40">
-              <option value="">Custom</option>
+              <option value="">{t("Custom")}</option>
               {promptCategories.map((cat) => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
@@ -502,9 +506,9 @@ function PromptFormModal({
           </div>
 
           <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Prompt Content <span className="text-primary">*</span></label>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">{t("Prompt Content")} <span className="text-primary">*</span></label>
             <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={13}
-              placeholder="Enter your prompt..."
+              placeholder={t("Enter your prompt...")}
               className="w-full bg-muted/30 border border-border/50 rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40 resize-none" />
           </div>
 
@@ -512,7 +516,7 @@ function PromptFormModal({
             {/* Skills are picked by hand from the live skill library and saved
                 as the prompt's tags — no auto-detection. */}
             <div className="flex-1 min-w-0 max-w-[320px]">
-              <label className="text-[11px] font-medium text-muted-foreground/80 mb-1 block">Skills</label>
+              <label className="text-[11px] font-medium text-muted-foreground/80 mb-1 block">{t("Skills")}</label>
               <div className="flex flex-wrap items-center gap-1">
                 {selectedCapsules.map((c) => (
                   <SkillCapsuleChip
@@ -527,10 +531,10 @@ function PromptFormModal({
                     type="button"
                     onClick={() => setSkillPickerOpen((v) => !v)}
                     className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-border/60 text-muted-foreground hover:border-primary/50 hover:text-primary px-2 py-0.5 text-[11px] font-medium transition-colors"
-                    aria-label="Add a skill"
+                    aria-label={t("Add a skill")}
                   >
                     <Plus className="w-3 h-3" />
-                    <span>Add a skill</span>
+                    <span>{t("Add a skill")}</span>
                   </button>
                   {skillPickerOpen && (
                     <>
@@ -542,14 +546,14 @@ function PromptFormModal({
                             type="text"
                             value={skillQuery}
                             onChange={(e) => setSkillQuery(e.target.value)}
-                            placeholder="Search skills…"
+                            placeholder={t("Search skills…")}
                             className="w-full bg-muted/30 border border-border/50 rounded-md px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
                           />
                         </div>
                         <ul className="max-h-56 overflow-y-auto py-1">
                           {availableSkills.length === 0 ? (
                             <li className="px-3 py-2 text-[11px] text-muted-foreground/70">
-                              {liveSkills.length === 0 ? "Loading skills…" : "No matching skills"}
+                              {liveSkills.length === 0 ? t("Loading skills…") : t("No matching skills")}
                             </li>
                           ) : (
                             availableSkills.map((c) => (
@@ -572,10 +576,10 @@ function PromptFormModal({
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30">Cancel</button>
+              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30">{t("Cancel")}</button>
               <button onClick={handleSubmit} disabled={saving || !title.trim() || !content.trim()}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">
-                {saving ? "Saving…" : submitLabel ?? (editMode ? "Save changes" : "Add Prompt")}
+                {saving ? t("Saving…") : submitLabel ?? (editMode ? t("Save changes") : t("Add Prompt"))}
               </button>
             </div>
           </div>
@@ -607,16 +611,17 @@ function SortDropdown({
   value: SortKey;
   onChange: (next: SortKey) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="relative">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as SortKey)}
         className="appearance-none bg-muted/40 hover:bg-muted/60 border border-border/40 rounded-md pl-2.5 pr-7 py-1 text-[11px] font-medium text-foreground/80 focus:outline-none focus:ring-1 focus:ring-primary/40 cursor-pointer"
-        aria-label="Sort prompts"
+        aria-label={t("Sort prompts")}
       >
         {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
-          <option key={k} value={k}>{SORT_LABELS[k]}</option>
+          <option key={k} value={k}>{t(SORT_LABELS[k])}</option>
         ))}
       </select>
       <ChevronDown className="w-3 h-3 text-muted-foreground absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -640,6 +645,7 @@ function PromptSearch({
   skills: SkillCapsule[];
   loading?: boolean;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
@@ -676,18 +682,18 @@ function PromptSearch({
         value={value}
         onChange={onChange}
         loading={loading}
-        placeholder="Search prompts by title, skill, or content…"
+        placeholder={t("Search prompts by title, skill, or content…")}
         onFocus={() => setOpen(true)}
         onClick={() => setOpen(true)}
       />
       {open && skills.length > 0 && (
         <div className="absolute left-0 right-0 mt-1 z-30 rounded-lg border border-border/60 bg-popover shadow-lg overflow-hidden">
           <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border/40">
-            Filter by skill
+            {t("Filter by skill")}
           </div>
           {visibleSkills.length === 0 ? (
             <div className="px-3 py-3 text-xs text-muted-foreground/70">
-              No skills match "{value}".
+              {t("No skills match \"{query}\".", { query: value })}
             </div>
           ) : (
             <div className="flex flex-wrap gap-1.5 p-2 max-h-[180px] overflow-y-auto">
@@ -712,6 +718,7 @@ function PromptSearch({
 }
 
 export default function PromptLibrary() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { openCreateColony } = useCreateColony();
   const [searchQuery, setSearchQuery] = useState("");
@@ -725,8 +732,8 @@ export default function PromptLibrary() {
       return;
     }
     setIsSearching(true);
-    const t = setTimeout(() => setIsSearching(false), 250);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setIsSearching(false), 250);
+    return () => clearTimeout(timer);
   }, [searchQuery]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -973,16 +980,16 @@ export default function PromptLibrary() {
             <div className="flex items-baseline gap-3">
               <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-primary" />
-                Prompt Library
+                {t("Prompt Library")}
               </h2>
               <span className="text-xs text-muted-foreground">
-                {customCount > 0 ? `${customCount} custom · ` : ""}{communityPrompts.length} featured prompts
+                {customCount > 0 ? t("{count} custom · ", { count: customCount }) : ""}{t("{count} featured prompts", { count: communityPrompts.length })}
               </span>
             </div>
             <button onClick={() => setAddModalOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90">
               <Plus className="w-3.5 h-3.5" />
-              Add Prompt
+              {t("Add Prompt")}
             </button>
           </div>
 
@@ -1000,10 +1007,10 @@ export default function PromptLibrary() {
             <div className="flex flex-col items-center justify-center h-full text-center">
               <MessageCircle className="w-10 h-10 text-muted-foreground/30 mb-3" />
               <p className="text-sm text-muted-foreground">
-                {catalogLoading ? "Loading prompts…" : "No prompts found"}
+                {catalogLoading ? t("Loading prompts…") : t("No prompts found")}
               </p>
               {!catalogLoading && (
-                <p className="text-xs text-muted-foreground/60 mt-1">Try adjusting your search</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">{t("Try adjusting your search")}</p>
               )}
             </div>
           ) : (
@@ -1012,7 +1019,7 @@ export default function PromptLibrary() {
               {filteredCustom.length > 0 && (
                 <div className="mb-8">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Prompts</h3>
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("My Prompts")}</h3>
                     <SortDropdown value={myPromptsSort} onChange={setMyPromptsSort} />
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -1039,7 +1046,7 @@ export default function PromptLibrary() {
               {pagedBuiltIn.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Featured Prompts</h3>
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("Featured Prompts")}</h3>
                     <SortDropdown value={communitySort} onChange={setCommunitySort} />
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -1067,7 +1074,7 @@ export default function PromptLibrary() {
         {filteredBuiltIn.length > 0 && (
           <div className="px-6 py-3 border-t border-border/60">
             <span className="text-xs text-muted-foreground">
-              Showing {Math.min(visibleCount, filteredBuiltIn.length)} of {filteredBuiltIn.length}
+              {t("Showing {shown} of {total}", { shown: Math.min(visibleCount, filteredBuiltIn.length), total: filteredBuiltIn.length })}
             </span>
           </div>
         )}
@@ -1094,8 +1101,8 @@ export default function PromptLibrary() {
             ? { title: customizing.title, category: customizing.category, content: customizing.content }
             : null
         }
-        heading="Customize Prompt"
-        submitLabel="Save as my prompt"
+        heading={t("Customize Prompt")}
+        submitLabel={t("Save as my prompt")}
         onSave={handleAddPrompt}
       />
     </div>

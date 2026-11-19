@@ -42,6 +42,7 @@ import {
 } from "@/lib/visible-tools";
 import { useQueensAuthorizationPrompt } from "@/context/QueensAuthorizationPromptContext";
 import { useQueenDisconnectPrompt } from "@/context/QueenDisconnectPromptContext";
+import { useI18n } from "@/i18n";
 
 // Providers visible in the catalog but not yet connectable. Their tile
 // renders with a "Coming soon" badge and the Authorize button is
@@ -236,17 +237,18 @@ function PaginationBar({
   pageCount: number;
   onChange: (page: number) => void;
 }) {
+  const { t } = useI18n();
   if (pageCount <= 1) return null;
   const items = pageWindow(page + 1, pageCount);
   return (
-    <nav className="flex items-center justify-center gap-1" aria-label="API Keys pages">
+    <nav className="flex items-center justify-center gap-1" aria-label={t("API Keys pages")}>
       <button
         type="button"
         onClick={() => {
           if (page > 0) onChange(page - 1);
         }}
         aria-disabled={page === 0}
-        aria-label="Previous page"
+        aria-label={t("Previous page")}
         className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors ${
           page === 0
             ? "text-muted-foreground/40 cursor-not-allowed"
@@ -270,7 +272,7 @@ function PaginationBar({
             type="button"
             onClick={() => onChange(it - 1)}
             aria-current={it - 1 === page ? "page" : undefined}
-            aria-label={`Page ${it}`}
+            aria-label={t("Page {page}", { page: it })}
             className={`min-w-8 h-8 px-2 rounded-md text-xs font-medium transition-colors ${
               it - 1 === page
                 ? "bg-primary text-primary-foreground"
@@ -287,7 +289,7 @@ function PaginationBar({
           if (page < pageCount - 1) onChange(page + 1);
         }}
         aria-disabled={page === pageCount - 1}
-        aria-label="Next page"
+        aria-label={t("Next page")}
         className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors ${
           page === pageCount - 1
             ? "text-muted-foreground/40 cursor-not-allowed"
@@ -301,6 +303,7 @@ function PaginationBar({
 }
 
 export default function CredentialsPage() {
+  const { t } = useI18n();
   const { openPrompt: openQueensAuthorizationPrompt } =
     useQueensAuthorizationPrompt();
   const { openPrompt: openQueenDisconnectPrompt } = useQueenDisconnectPrompt();
@@ -431,7 +434,7 @@ export default function CredentialsPage() {
       setHasAdenKey(data.has_aden_key);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load credentials"
+        err instanceof Error ? err.message : t("Failed to load credentials")
       );
     } finally {
       setLoading(false);
@@ -475,7 +478,7 @@ export default function CredentialsPage() {
       setInputValue("");
       await fetchSpecs();
     } catch {
-      setError(`Failed to save ${spec.credential_name}`);
+      setError(t("Failed to save {name}", { name: spec.credential_name }));
     } finally {
       setSaving(false);
     }
@@ -488,7 +491,7 @@ export default function CredentialsPage() {
       setDeletingId(null);
       await fetchSpecs();
     } catch {
-      setError(`Failed to delete ${spec.credential_name}`);
+      setError(t("Failed to delete {name}", { name: spec.credential_name }));
     } finally {
       setSaving(false);
     }
@@ -502,7 +505,7 @@ export default function CredentialsPage() {
         await credentialsApi.deleteLocal(credentialId, alias);
         await fetchSpecs();
       } catch {
-        setError(`Failed to remove ${credentialId}/${alias}`);
+        setError(t("Failed to remove {target}", { target: `${credentialId}/${alias}` }));
       }
     },
     [fetchSpecs],
@@ -627,7 +630,7 @@ export default function CredentialsPage() {
               ...prev,
               currentAccounts: current,
               probing: false,
-              probeResult: "No new account yet",
+              probeResult: t("No new account yet"),
             };
           } else {
             nextModalState = {
@@ -662,7 +665,7 @@ export default function CredentialsPage() {
             : null;
         const message =
           errBody?.error ||
-          (err instanceof Error ? err.message : "Resync failed");
+          (err instanceof Error ? err.message : t("Resync failed"));
         setAuthorizeModal((prev) => {
           if (!prev) return prev;
           if (silent) {
@@ -688,12 +691,12 @@ export default function CredentialsPage() {
   // "No new account yet" message doesn't linger forever.
   useEffect(() => {
     if (!authorizeModal?.probeResult) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setAuthorizeModal((prev) =>
         prev && prev.probeResult ? { ...prev, probeResult: null } : prev
       );
     }, 2500);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [authorizeModal?.probeResult]);
 
   // When the modal is open and the user tabs back into Hive, opportunistically
@@ -862,12 +865,12 @@ export default function CredentialsPage() {
           ? "oauth"
           : "api";
     const statusLabel = isComingSoon
-      ? "Soon"
+      ? t("Soon")
       : isConnected
-        ? "Connected"
+        ? t("Connected")
         : primary.aden_supported
-          ? "OAuth"
-          : "API key";
+          ? t("OAuth")
+          : t("API key");
 
     const primaryAccount = accounts[0];
     const primaryEmail = primaryAccount?.identity?.email || "";
@@ -920,7 +923,7 @@ export default function CredentialsPage() {
             (RICH_DESCRIPTIONS or real backend specs) render here. */}
         {richDescription(primary) && (
           <p className="text-[10.5px] text-muted-foreground/80 mt-1.5 line-clamp-2 leading-snug">
-            {richDescription(primary)}
+            {t(richDescription(primary))}
           </p>
         )}
 
@@ -932,7 +935,7 @@ export default function CredentialsPage() {
           <div className="flex flex-col gap-1 mt-2">
             {accounts.map((acct) => {
               const email = acct.identity?.email || "";
-              const label = email || acct.alias || "connected";
+              const label = email || acct.alias || t("connected");
               return (
                 <div
                   key={`${acct.credential_id}:${acct.alias}`}
@@ -959,20 +962,20 @@ export default function CredentialsPage() {
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-destructive/30 bg-destructive/5">
               <AlertCircle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
               <span className="text-xs text-destructive flex-1">
-                Remove this credential?
+                {t("Remove this credential?")}
               </span>
               <button
                 onClick={() => handleDelete(primary)}
                 disabled={saving}
                 className="px-3 py-1 rounded-md text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 transition-colors"
               >
-                {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Remove"}
+                {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : t("Remove")}
               </button>
               <button
                 onClick={() => setDeletingId(null)}
                 className="px-2 py-1 rounded-md text-xs text-muted-foreground hover:bg-muted transition-colors"
               >
-                Cancel
+                {t("Cancel")}
               </button>
             </div>
           ) : isEditing ? (
@@ -996,7 +999,7 @@ export default function CredentialsPage() {
                           setInputValue("");
                         }
                       }}
-                      placeholder={`Paste ${spec.credential_name} key...`}
+                      placeholder={t("Paste {name} key...", { name: spec.credential_name })}
                       autoFocus
                       className="flex-1 px-3 py-1.5 rounded-md border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
                     />
@@ -1005,13 +1008,13 @@ export default function CredentialsPage() {
                       disabled={saving || !inputValue.trim()}
                       className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+                      {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : t("Save")}
                     </button>
                     <button
                       onClick={() => { setEditingId(null); setInputValue(""); }}
                       className="px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-muted transition-colors"
                     >
-                      Cancel
+                      {t("Cancel")}
                     </button>
                   </div>
                 </div>
@@ -1022,24 +1025,24 @@ export default function CredentialsPage() {
               <button
                 onClick={() => handleConnect(primary)}
                 disabled={isComingSoon}
-                title={isComingSoon ? "Coming soon" : undefined}
+                title={isComingSoon ? t("Coming soon") : undefined}
                 className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors disabled:text-muted-foreground disabled:cursor-not-allowed disabled:hover:text-muted-foreground"
               >
                 <Plus className="w-3 h-3" />
-                Add another account
+                {t("Add another account")}
               </button>
               <button
                 onClick={() => handleOAuthDisconnect(primary)}
                 disabled={isComingSoon}
                 title={
                   isComingSoon
-                    ? "Coming soon"
-                    : `Remove ${primary.credential_name} access`
+                    ? t("Coming soon")
+                    : t("Remove {name} access", { name: primary.credential_name })
                 }
                 className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-3 h-3" />
-                Remove
+                {t("Remove")}
               </button>
             </div>
           ) : isConnected && localAccounts.length > 0 ? (
@@ -1048,7 +1051,7 @@ export default function CredentialsPage() {
             <div className="flex flex-col gap-1.5">
               {localAccounts.map((acct) => {
                 const email = acct.identity?.email || "";
-                const label = email || acct.alias || "connected";
+                const label = email || acct.alias || t("connected");
                 const sub = email ? meaningfulAlias(acct.alias, email) : "";
                 return (
                   <div
@@ -1072,7 +1075,7 @@ export default function CredentialsPage() {
                       className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
                     >
                       <Trash2 className="w-3 h-3" />
-                      Remove
+                      {t("Remove")}
                     </button>
                   </div>
                 );
@@ -1091,7 +1094,7 @@ export default function CredentialsPage() {
                 className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
               >
                 <Plus className="w-3 h-3" />
-                Add another account
+                {t("Add another account")}
               </button>
             </div>
           ) : isConnected ? (
@@ -1105,7 +1108,7 @@ export default function CredentialsPage() {
                   onClick={() => { setEditingId(primary.credential_id); setInputValue(""); setDeletingId(null); }}
                   className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Update
+                  {t("Update")}
                 </button>
                 <button
                   onClick={() => {
@@ -1116,7 +1119,7 @@ export default function CredentialsPage() {
                   className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors"
                 >
                   <Trash2 className="w-3 h-3" />
-                  Remove
+                  {t("Remove")}
                 </button>
               </div>
             </div>
@@ -1142,17 +1145,17 @@ export default function CredentialsPage() {
                     !hasAdenKey &&
                     primary.credential_id !== "aden_api_key")
                 }
-                title={isComingSoon ? "Coming soon" : undefined}
+                title={isComingSoon ? t("Coming soon") : undefined}
                 className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors disabled:text-muted-foreground disabled:cursor-not-allowed"
               >
                 {primary.aden_supported ? (
                   <>
                     <ExternalLink className="w-3 h-3" />
-                    Authorize
+                    {t("Authorize")}
                   </>
                 ) : (
                   <>
-                    <span className="text-sm">+</span> Add account
+                    <span className="text-sm">+</span> {t("Add account")}
                     <span className="text-muted-foreground/50">›</span>
                   </>
                 )}
@@ -1172,7 +1175,7 @@ export default function CredentialsPage() {
                     className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Info className="w-3 h-3" />
-                    How to get key
+                    {t("How to get key")}
                   </button>
                 </div>
               )}
@@ -1193,11 +1196,11 @@ export default function CredentialsPage() {
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <KeyRound className="w-5 h-5 text-primary" />
-                Credentials
+                {t("Credentials")}
               </h2>
               {!loading && (
                 <span className="text-xs text-muted-foreground">
-                  {activeCount} active &middot; {totalCount} available
+                  {t("{active} active · {total} available", { active: activeCount, total: totalCount })}
                 </span>
               )}
             </div>
@@ -1207,7 +1210,7 @@ export default function CredentialsPage() {
               }`}
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Search credentials…"
+              placeholder={t("Search credentials…")}
             />
           </div>
         </div>
@@ -1239,16 +1242,16 @@ export default function CredentialsPage() {
                 <div className="flex items-center gap-2 mb-1.5">
                   <Link2 className="w-4 h-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold text-foreground">
-                    Built-in Connections
+                    {t("Built-in Connections")}
                   </h3>
                 </div>
                 <p className="text-[11.5px] text-muted-foreground/80 mb-4 leading-snug">
-                  Integrations and alert channels. Turn alerts on in a colony's{" "}
-                  <span className="text-foreground">Automations</span> tab.
+                  {t("Integrations and alert channels. Turn alerts on in a colony's")}{" "}
+                  <span className="text-foreground">{t("Automations")}</span> {t("tab.")}
                 </p>
                 {searchQuery.trim() && oauthGroups.length === 0 && !adenSpec ? (
                   <p className="text-sm text-muted-foreground py-4">
-                    No connectors match your search
+                    {t("No connectors match your search")}
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1280,7 +1283,7 @@ export default function CredentialsPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <KeyRound className="w-4 h-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold text-foreground">
-                    API Keys
+                    {t("API Keys")}
                   </h3>
                   <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
                     {apiKeyConnected}/{apiKeySpecs.length}
@@ -1291,25 +1294,25 @@ export default function CredentialsPage() {
                       setApiKeySort(e.target.value as "popularity" | "name");
                       setApiKeyPage(0);
                     }}
-                    aria-label="Sort API keys"
+                    aria-label={t("Sort API keys")}
                     className="ml-auto h-7 bg-muted/30 border border-border/50 rounded-md px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
                   >
-                    <option value="popularity">Most used</option>
-                    <option value="name">Name (A–Z)</option>
+                    <option value="popularity">{t("Most used")}</option>
+                    <option value="name">{t("Name (A–Z)")}</option>
                   </select>
                   <button
                     onClick={() => setAddModal({ locked: null })}
                     className="flex items-center justify-center gap-1.5 h-7 px-3 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    Add key
+                    {t("Add key")}
                   </button>
                 </div>
                 {sortedApiKeyGroups.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4">
                     {searchQuery
-                      ? "No API keys match your search"
-                      : "No API key credentials available"}
+                      ? t("No API keys match your search")
+                      : t("No API key credentials available")}
                   </p>
                 ) : (
                   <>
@@ -1327,12 +1330,11 @@ export default function CredentialsPage() {
                           onChange={goToApiKeyPage}
                         />
                         <p className="text-[11px] text-muted-foreground/70">
-                          Showing {apiKeyStart + 1}–
-                          {Math.min(
-                            apiKeyStart + API_KEYS_PAGE_SIZE,
-                            sortedApiKeyGroups.length,
-                          )}{" "}
-                          of {sortedApiKeyGroups.length}
+                          {t("Showing {from}–{to} of {total}", {
+                            from: apiKeyStart + 1,
+                            to: Math.min(apiKeyStart + API_KEYS_PAGE_SIZE, sortedApiKeyGroups.length),
+                            total: sortedApiKeyGroups.length,
+                          })}
                         </p>
                       </div>
                     )}
@@ -1389,7 +1391,7 @@ export default function CredentialsPage() {
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  Open docs
+                  {t("Open docs")}
                 </a>
               )}
             </div>
@@ -1408,10 +1410,10 @@ export default function CredentialsPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">
-                    Connect {authorizeModal.spec.credential_name}
+                    {t("Connect {name}", { name: authorizeModal.spec.credential_name })}
                   </h3>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Authorization happens on the Aden platform
+                    {t("Authorization happens on the Aden platform")}
                   </p>
                 </div>
               </div>
@@ -1436,12 +1438,12 @@ export default function CredentialsPage() {
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Detected {authorizeModal.spec.credential_name} accounts
+                        {t("Detected {name} accounts", { name: authorizeModal.spec.credential_name })}
                       </div>
                       {authorizeModal.probing ? (
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                           <Loader2 className="w-3 h-3 animate-spin" />
-                          Checking…
+                          {t("Checking…")}
                         </div>
                       ) : authorizeModal.probeResult ? (
                         <div className="text-[10px] text-muted-foreground">
@@ -1451,14 +1453,14 @@ export default function CredentialsPage() {
                     </div>
                     {rows.length === 0 ? (
                       <div className="text-xs text-muted-foreground italic px-3 py-2.5 rounded-lg border border-border/40 bg-muted/20">
-                        None yet
+                        {t("None yet")}
                       </div>
                     ) : (
                       <ul className="flex flex-col gap-1.5">
                         {rows.map((acct) => {
                           const isNew = !before.has(acct.alias);
                           const email = acct.identity?.email || "";
-                          const label = email || acct.alias || "connected";
+                          const label = email || acct.alias || t("connected");
                           const sub = email ? meaningfulAlias(acct.alias, email) : "";
                           return (
                             <li
@@ -1488,7 +1490,7 @@ export default function CredentialsPage() {
                               </div>
                               {isNew && (
                                 <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 flex-shrink-0">
-                                  New
+                                  {t("New")}
                                 </span>
                               )}
                             </li>
@@ -1503,23 +1505,20 @@ export default function CredentialsPage() {
               {authorizeModal.status === "waiting" && (
                 <>
                   <p className="text-xs text-muted-foreground mb-4">
-                    Finish signing in to{" "}
-                    {authorizeModal.spec.credential_name} in the Aden tab that
-                    just opened, then click <em>I&apos;ve authorized</em> to
-                    sync.
+                    {t("Finish signing in to {name} in the Aden tab that just opened, then click \"I've authorized\" to sync.", { name: authorizeModal.spec.credential_name })}
                   </p>
                   <div className="flex items-center gap-2 justify-end">
                     <button
                       onClick={() => setAuthorizeModal(null)}
                       className="px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-muted transition-colors"
                     >
-                      Cancel
+                      {t("Cancel")}
                     </button>
                     <button
                       onClick={() => runResyncCheck(false)}
                       className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                     >
-                      I&apos;ve authorized
+                      {t("I've authorized")}
                     </button>
                   </div>
                 </>
@@ -1528,7 +1527,7 @@ export default function CredentialsPage() {
               {authorizeModal.status === "checking" && (
                 <div className="flex items-center gap-3 py-4 text-xs text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Syncing from Aden…
+                  {t("Syncing from Aden…")}
                 </div>
               )}
 
@@ -1540,21 +1539,20 @@ export default function CredentialsPage() {
                     </div>
                   ) : null}
                   <p className="text-xs text-muted-foreground mb-4">
-                    No new account detected yet. Please finish the
-                    authentication step in the other tab, then retry.
+                    {t("No new account detected yet. Please finish the authentication step in the other tab, then retry.")}
                   </p>
                   <div className="flex items-center gap-2 justify-end">
                     <button
                       onClick={() => setAuthorizeModal(null)}
                       className="px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-muted transition-colors"
                     >
-                      Cancel
+                      {t("Cancel")}
                     </button>
                     <button
                       onClick={() => runResyncCheck(false)}
                       className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                     >
-                      Retry
+                      {t("Retry")}
                     </button>
                   </div>
                 </>
@@ -1567,7 +1565,7 @@ export default function CredentialsPage() {
                       <Check className="w-3 h-3 text-emerald-600" />
                     </div>
                     <span className="text-foreground">
-                      Connected as{" "}
+                      {t("Connected as")}{" "}
                       <strong>
                         {authorizeModal.newAccount.identity?.email ||
                           authorizeModal.newAccount.alias}
@@ -1587,7 +1585,7 @@ export default function CredentialsPage() {
                       className="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-600/90 transition-colors"
                     >
                       <Check className="w-3 h-3" />
-                      Finish
+                      {t("Finish")}
                     </button>
                   </div>
                 </>
