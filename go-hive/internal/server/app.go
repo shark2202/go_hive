@@ -148,7 +148,7 @@ func NewApp(deps AppDeps) *App {
 	RegisterEventRoutes(mux, EventRouteDeps{})
 	RegisterAppExtraRoutes(mux, AppExtraRouteDeps{})
 	RegisterModelRoutes(mux, ModelRouteDeps{Home: deps.Home, Manager: deps.Manager})
-	tasks.RegisterTaskRoutes(mux)
+	RegisterTaskRoutes(mux, TaskRouteDeps{Store: tasks.NewTaskStore(deps.Home.Root)})
 
 	// Wave 1 route tables that read live runtime state. The colony adapters
 	// project *colony.ColonyRuntime onto the worker read surfaces; a session
