@@ -1,7 +1,7 @@
-# 交付报告（2026-11-19 02:50）
+# 交付报告（2026-11-19 11:35）
 
 > 口径：`RELEASE_PLAN.md` 的 G6 商业发布标准（R1–R10）。
-> 代码快照：tag `v1.0.14-go.1`（提交 `d1111162`），工作树干净。
+> 代码快照：tag `v1.0.15-go.1`（提交 `6fc791a0`），工作树干净。
 
 ## 1. 结论
 
@@ -16,14 +16,14 @@
 | 项 | 结果 | 复现命令 |
 | --- | --- | --- |
 | 全量门禁 | 退出码 0（fmt/vet/test/cross/parity/parity-targets/wiring-check） | `cd go_hive/go-hive && make ci` |
-| 测试 | **4,160**（全部带 parity 注解或豁免） | 同上 |
-| parity 引用 | **4,357** 条，0 失效文件 / 0 失效测试；含生产代码 **830** 条 0 失效符号 | `make parity-targets` |
+| 测试 | **4,256**（全部带 parity 注解或豁免） | 同上 |
+| parity 引用 | **4,489** 条，0 失效文件 / 0 失效测试；含生产代码 **898** 条 0 失效符号 | `make parity-targets` |
 | QC 全量 | **8/8 PASS**（含重跑 make ci 与冒烟） | `uv run --no-project python go_hive/scripts/qc_check.py --full --smoke` |
 | 集成冒烟 | **13/13 PASS**（真二进制 + 真 HTTP） | `bash go_hive/scripts/smoke.sh` |
 | 发布包 | 6 归档 + SHA256SUMS，`shasum -c` 全 OK | `bash go_hive/scripts/release.sh` |
 | 归档可用性 | 解压 darwin-arm64 → `--version` 正确，`/`、`/api/health`、`/assets/*` 全 200 | 见 §5 |
 | cgo | `import "C"` 计数 **0** | `grep -rn 'import "C"' --include=*.go .` |
-| 版本 | `hive 1.0.14-go.1` | `./dist/hive --version` |
+| 版本 | `hive 1.0.15-go.1` | `./dist/hive --version` |
 
 ## 3. 覆盖面
 
@@ -56,20 +56,20 @@
 
 ```
 go_hive/go-hive/dist/release/
-  hive-1.0.14-go.1-darwin-amd64.tar.gz   13.5 MB
-  hive-1.0.14-go.1-darwin-arm64.tar.gz   12.9 MB
-  hive-1.0.14-go.1-linux-amd64.tar.gz    13.5 MB
-  hive-1.0.14-go.1-linux-arm64.tar.gz    12.6 MB
-  hive-1.0.14-go.1-windows-amd64.zip     13.6 MB
-  hive-1.0.14-go.1-windows-arm64.zip     12.6 MB
+  hive-1.0.15-go.1-darwin-amd64.tar.gz   13.8 MB
+  hive-1.0.15-go.1-darwin-arm64.tar.gz   13.0 MB
+  hive-1.0.15-go.1-linux-amd64.tar.gz    13.8 MB
+  hive-1.0.15-go.1-linux-arm64.tar.gz    12.8 MB
+  hive-1.0.15-go.1-windows-amd64.zip     13.8 MB
+  hive-1.0.15-go.1-windows-arm64.zip     12.8 MB
   SHA256SUMS
 ```
 
 归档根目录：`hive[.exe]  LICENSE  NOTICE  THIRD_PARTY_NOTICES.md  README.md  SHA256SUMS`。
-独立验收（解压后直接运行）：`--version` = `hive 1.0.14-go.1`；`serve` 后 `/` 200、`/api/health` 200、`/assets/index-*.js` 200。
+独立验收（解压后直接运行）：`--version` = `hive 1.0.15-go.1`；`serve` 后 `/` 200、`/api/health` 200、`/assets/index-*.js` 200。
 
 ## 6. 未做（需发布权限或外部条件）
 
-1. **tag 已打但未推送**：`v1.0.14-go.1` 指向 `d1111162`；`git push origin v1.0.14-go.1` 会触发 `release.yml` 上传 Release。
+1. **tag 已打但未推送**：`v1.0.15-go.1` 指向 `d1111162`；`git push origin v1.0.15-go.1` 会触发 `release.yml` 上传 Release。
 2. 代码签名/公证（macOS notarization、Windows Authenticode）未做，需证书。
 3. R10 按决定不验证：以支持矩阵「未验证」声明为准，不写成可用。

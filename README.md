@@ -146,7 +146,7 @@ P0 是**可运行切片**，不是 Python 全量对等。以下能力已在当�
 
 **明确延期（P0 不含）**：216 条 Python 路由的完整对等、集成工具（`tools/src/aden_tools` 104 模块 / 324 文件 / 865 action，本期只做优先子集，见 `INTEGRATION_BACKLOG.md`）、Sentinel、browser 工具、React dashboard（只有存在 `frontend/dist` 时才提供静态资源，仓库未附带该构建产物）、queen/colony 多 worker 编排闭环。
 
-**门禁状态（P0 集成后实测，PASS）**：`make ci` 退出码 0——`fmt-check`、`vet`、`test`、`cross`（darwin/linux/windows × amd64/arm64）与 `parity` 全部通过；parity **2,238/2,238 已注解、0 missing**，`check_parity_targets` **2,045 refs、0 missing files/tests、55 shorthand/prose**。`go test -tags e2e -count=1 ./e2e/...` 与其 `-race` 版本均 ok；凭据门禁用真实二进制 + 假上游验证 `Authorization: Bearer test-key`；`dist/hive-darwin-arm64 --version` 输出 `hive 1.0.14-go.1`，健康检查/启动就绪、创建会话 201、无 key 时 chat 返回 503。
+**门禁状态（1.0.15-go.1 实测，PASS）**：七道门禁 `fmt-check`、`vet`、`test`、`cross`、`parity`、`parity-targets`、`wiring-check` 全部退出码 0；测试 **4,256**、parity **4256/4256**、引用 **4,489**（3,591 test + 898 prod）0 missing；e2e `ok`、smoke **13/13**、QC **8/8**。发布包解压后 `hive --version` = `hive 1.0.15-go.1`，六平台归档 + `SHA256SUMS` 全部校验通过。完整证据见 `docs/support-matrix.md`。
 
 ## 5. 当前实现状态
 
