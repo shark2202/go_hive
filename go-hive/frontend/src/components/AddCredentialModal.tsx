@@ -2,6 +2,7 @@ import { useState } from "react";
 import { KeyRound, X, Loader2, Plus, Trash2, Shield, Eye, EyeOff, Check, AlertCircle } from "lucide-react";
 import { credentialsApi } from "@/api/credentials";
 import type { BYOKCredentialField } from "@/data/byokCatalog";
+import { useI18n } from "@/i18n";
 
 interface Props {
   open: boolean;
@@ -57,6 +58,7 @@ export default function AddCredentialModal({
   onSaved,
   lockedProvider,
 }: Props) {
+  const { t } = useI18n();
   const [providerId, setProviderId] = useState(lockedProvider?.credentialId ?? "");
   const [account, setAccount] = useState("default");
   const [fields, setFields] = useState<FieldRow[]>(() => seedFields(lockedProvider));
@@ -101,7 +103,7 @@ export default function AddCredentialModal({
       // Surface the health-check verdict (when the provider has a checker)
       // before closing, so a bad key is caught here instead of at run time.
       if (resp.valid === false) {
-        setResult({ valid: false, message: resp.message || "Key failed validation" });
+        setResult({ valid: false, message: resp.message || t("Key failed validation") });
         setSaving(false);
         return;
       }
@@ -112,7 +114,7 @@ export default function AddCredentialModal({
         e && typeof e === "object" && "body" in e
           ? (e as { body?: { error?: string } }).body
           : null;
-      setError(body?.error || (e instanceof Error ? e.message : "Failed to save credential"));
+      setError(body?.error || (e instanceof Error ? e.message : t("Failed to save credential")));
       setSaving(false);
     }
   };
@@ -130,10 +132,10 @@ export default function AddCredentialModal({
               </div>
               <div>
                 <h2 className="text-sm font-semibold text-foreground">
-                  {lockedProvider ? `Add ${lockedProvider.name} account` : "Add credential"}
+                  {lockedProvider ? t("Add {name} account", { name: lockedProvider.name }) : t("Add credential")}
                 </h2>
                 <p className="text-[11px] text-muted-foreground">
-                  Stored encrypted; usable by your agents.
+                  {t("Stored encrypted; usable by your agents.")}
                 </p>
               </div>
             </div>
@@ -150,7 +152,7 @@ export default function AddCredentialModal({
             {/* Provider */}
             <div>
               <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                Provider <span className="text-destructive">*</span>
+                {t("Provider")} <span className="text-destructive">*</span>
               </label>
               {lockedProvider ? (
                 <div className="px-3 py-2 rounded-md border border-border bg-muted/30 text-xs text-foreground">
@@ -168,7 +170,7 @@ export default function AddCredentialModal({
                         .replace(/^[^a-z0-9]+/, ""),
                     )
                   }
-                  placeholder="e.g. google, github, stripe"
+                  placeholder={t("e.g. google, github, stripe")}
                   autoFocus
                   className="w-full px-3 py-2 rounded-md border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
                 />
@@ -178,7 +180,7 @@ export default function AddCredentialModal({
             {/* Account alias */}
             <div>
               <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                Account name
+                {t("Account name")}
               </label>
               <input
                 value={account}
@@ -194,21 +196,21 @@ export default function AddCredentialModal({
                 className="w-full px-3 py-2 rounded-md border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
               />
               <p className="text-[10px] text-muted-foreground/70 mt-1">
-                Use distinct names (e.g. "work", "personal") to keep multiple accounts for one provider.
+                {t("Use distinct names (e.g. \"work\", \"personal\") to keep multiple accounts for one provider.")}
               </p>
             </div>
 
             {/* Key fields */}
             <div className="space-y-2">
               <label className="block text-[11px] font-medium text-muted-foreground">
-                Keys <span className="text-destructive">*</span>
+                {t("Keys")} <span className="text-destructive">*</span>
               </label>
               {fields.map((f) => (
                 <div key={f.id} className="flex items-center gap-1.5">
                   <input
                     value={f.name}
                     onChange={(e) => setFieldName(f.id, e.target.value)}
-                    placeholder="field"
+                    placeholder={t("field")}
                     className="w-28 px-2 py-1.5 rounded-md border border-border bg-background text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
                   />
                   <div className="relative flex-1 group">
@@ -216,14 +218,14 @@ export default function AddCredentialModal({
                       type={f.secret ? "password" : "text"}
                       value={f.value}
                       onChange={(e) => setFieldValue(f.id, e.target.value)}
-                      placeholder={f.placeholder || "value"}
+                      placeholder={f.placeholder || t("value")}
                       autoComplete={f.secret ? "new-password" : "off"}
                       className="w-full pl-2 pr-8 py-1.5 rounded-md border border-border bg-background text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
                     />
                     <button
                       type="button"
                       onClick={() => toggleSecret(f.id)}
-                      title={f.secret ? "Show value" : "Hide value"}
+                      title={f.secret ? t("Show value") : t("Hide value")}
                       className="absolute inset-y-0 right-0 flex items-center pr-2 text-muted-foreground hover:text-foreground transition-opacity opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100"
                     >
                       {f.secret ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -232,7 +234,7 @@ export default function AddCredentialModal({
                   <button
                     onClick={() => removeField(f.id)}
                     disabled={fields.length <= 1}
-                    title="Remove field"
+                    title={t("Remove field")}
                     className="p-1.5 rounded-md text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -244,7 +246,7 @@ export default function AddCredentialModal({
                 className="flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 transition-colors"
               >
                 <Plus className="w-3 h-3" />
-                Add field
+                {t("Add field")}
               </button>
             </div>
 
@@ -252,7 +254,7 @@ export default function AddCredentialModal({
             {result && result.valid === false && (
               <div className="flex items-start gap-2 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs text-amber-700 dark:text-amber-400">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                <span>{result.message} — saved anyway; you can update it below.</span>
+                <span>{t("{message} — saved anyway; you can update it below.", { message: String(result.message ?? "") })}</span>
               </div>
             )}
 
@@ -270,7 +272,7 @@ export default function AddCredentialModal({
               disabled={saving}
               className="px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
             >
-              {result?.valid === false ? "Done" : "Cancel"}
+              {result?.valid === false ? t("Done") : t("Cancel")}
             </button>
             <button
               onClick={save}
@@ -278,7 +280,7 @@ export default function AddCredentialModal({
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-              Save
+              {t("Save")}
             </button>
           </div>
         </div>

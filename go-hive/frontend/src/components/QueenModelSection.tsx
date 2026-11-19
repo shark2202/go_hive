@@ -5,6 +5,7 @@ import { configApi, type LlmSection } from "@/api/config";
 import { ApiError } from "@/api/client";
 import { modelsApi, type ModelChoice, type ModelsOverview } from "@/api/models";
 import ModelPicker from "@/components/ModelPicker";
+import { useI18n } from "@/i18n";
 
 /**
  * The queen's own model, stored under `queen_llm` in configuration.json. Without one she uses
@@ -26,6 +27,7 @@ function summary(s: LlmSection): string {
 }
 
 export default function QueenModelSection({ queenId, onChange }: { queenId: string; onChange?: (model: string) => void }) {
+  const { t } = useI18n();
   const [section, setSection] = useState<LlmSection | null>(null);
   const [defaultModel, setDefaultModel] = useState<string>("");
   const [library, setLibrary] = useState<Record<string, LlmSection>>({});
@@ -56,7 +58,7 @@ export default function QueenModelSection({ queenId, onChange }: { queenId: stri
       setLibrary(lib.library);
       setError(null);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Couldn't load her model");
+      setError(e instanceof ApiError ? e.message : t("Couldn't load her model"));
     } finally {
       setLoading(false);
     }
@@ -74,7 +76,7 @@ export default function QueenModelSection({ queenId, onChange }: { queenId: stri
       setText(null);
       setError(null);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Couldn't save her model");
+      setError(e instanceof ApiError ? e.message : t("Couldn't save her model"));
     } finally {
       setBusy(false);
     }
@@ -92,11 +94,11 @@ export default function QueenModelSection({ queenId, onChange }: { queenId: stri
     try {
       parsed = JSON.parse(text);
     } catch {
-      setError("Not valid JSON");
+      setError(t("Not valid JSON"));
       return;
     }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      setError("Must be a JSON object");
+      setError(t("Must be a JSON object"));
       return;
     }
     void save(parsed as LlmSection);
@@ -108,7 +110,7 @@ export default function QueenModelSection({ queenId, onChange }: { queenId: stri
     <div className="qp-card px-5 py-4 text-sm">
       {loading ? (
         <p className="qp-meta inline-flex items-center gap-2">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading…
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("Loading…")}
         </p>
       ) : (
         <>
@@ -121,11 +123,11 @@ export default function QueenModelSection({ queenId, onChange }: { queenId: stri
                 <p className="text-[14px] text-foreground break-words">{summary(section)}</p>
               ) : (
                 <p className="text-[14px] text-foreground break-words">
-                  Main model <span className="text-muted-foreground">· {defaultModel || "AI Model → LLM"}</span>
+                  {t("Main model")} <span className="text-muted-foreground">· {defaultModel || t("AI Model → LLM")}</span>
                 </p>
               )}
               <p className="mt-0.5 text-[12px] text-muted-foreground">
-                {section ? "Her own model. Her running chats use it now." : "She uses the main model from the Models page."}
+                {section ? t("Her own model. Her running chats use it now.") : t("She uses the main model from the Models page.")}
               </p>
             </div>
           </div>
@@ -134,10 +136,10 @@ export default function QueenModelSection({ queenId, onChange }: { queenId: stri
               <ModelPicker
                 overview={overview}
                 value={overview.queens.find((q) => q.id === queenId) ?? null}
-                placeholder="Use the main model"
+                placeholder={t("Use the main model")}
                 onPick={(choice) => pick(choice)}
                 onClear={() => pick(null)}
-                ariaLabel="Her model"
+                ariaLabel={t("Her model")}
               />
             </div>
           )}
@@ -146,19 +148,19 @@ export default function QueenModelSection({ queenId, onChange }: { queenId: stri
             onClick={() => setAdvanced((v) => !v)}
             className="mt-3 inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
           >
-            <ChevronRight className={`w-3.5 h-3.5 transition-transform ${advanced ? "rotate-90" : ""}`} /> Advanced
+            <ChevronRight className={`w-3.5 h-3.5 transition-transform ${advanced ? "rotate-90" : ""}`} /> {t("Advanced")}
           </button>
           {!advanced ? null : text === null ? (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {names.length > 0 && (
                 <select
-                  aria-label="Use a saved provider"
+                  aria-label={t("Use a saved provider")}
                   value=""
                   disabled={busy}
                   onChange={(e) => e.target.value && void save(library[e.target.value])}
                   className="qp-input !w-auto !py-1 text-[12px] text-muted-foreground"
                 >
-                  <option value="">Use a saved provider…</option>
+                  <option value="">{t("Use a saved provider…")}</option>
                   {names.map((n) => (
                     <option key={n} value={n}>
                       {n}
@@ -175,11 +177,11 @@ export default function QueenModelSection({ queenId, onChange }: { queenId: stri
                 className="qp-btn"
                 data-size="sm"
               >
-                {section ? "Edit" : "Set her own model"}
+                {section ? t("Edit") : t("Set her own model")}
               </button>
               {section && (
                 <button onClick={() => void save(null)} disabled={busy} className="qp-btn" data-tone="quiet" data-size="sm">
-                  Use the main model
+                  {t("Use the main model")}
                 </button>
               )}
               {busy && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
@@ -187,7 +189,7 @@ export default function QueenModelSection({ queenId, onChange }: { queenId: stri
           ) : (
             <div className="mt-4">
               <textarea
-                aria-label="Her model, as JSON"
+                aria-label={t("Her model, as JSON")}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 rows={8}
@@ -206,11 +208,11 @@ export default function QueenModelSection({ queenId, onChange }: { queenId: stri
                     data-tone="quiet"
                     data-size="sm"
                   >
-                    Cancel
+                    {t("Cancel")}
                   </button>
                   <button onClick={saveText} disabled={busy} className="qp-btn" data-tone="primary" data-size="sm">
                     {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                    Save
+                    {t("Save")}
                   </button>
                 </div>
               </div>

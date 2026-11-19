@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Shield, X, Loader2, KeyRound } from "lucide-react";
 import { credentialsApi, type AgentCredentialFormRequest } from "@/api/credentials";
+import { useI18n } from "@/i18n";
 
 interface Props {
   /** Session whose queen is parked waiting for this form. */
@@ -20,6 +21,7 @@ interface Props {
  * resumes the parked queen loop.
  */
 export default function AgentCredentialForm({ sessionId, request, onClose }: Props) {
+  const { t } = useI18n();
   const [values, setValues] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export default function AgentCredentialForm({ sessionId, request, onClose }: Pro
       });
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save credential");
+      setError(e instanceof Error ? e.message : t("Failed to save credential"));
       setSubmitting(false);
     }
   };
@@ -127,7 +129,7 @@ export default function AgentCredentialForm({ sessionId, request, onClose }: Pro
 
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/60 bg-muted/30 text-[11px] text-muted-foreground">
               <Shield className="w-3.5 h-3.5 flex-shrink-0 text-primary" />
-              <span>Stored encrypted. The agent never sees these values.</span>
+              <span>{t("Stored encrypted. The agent never sees these values.")}</span>
             </div>
 
             {error && (
@@ -144,7 +146,7 @@ export default function AgentCredentialForm({ sessionId, request, onClose }: Pro
               disabled={submitting}
               className="px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               onClick={submit}
@@ -152,7 +154,7 @@ export default function AgentCredentialForm({ sessionId, request, onClose }: Pro
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Save securely
+              {t("Save securely")}
             </button>
           </div>
         </div>

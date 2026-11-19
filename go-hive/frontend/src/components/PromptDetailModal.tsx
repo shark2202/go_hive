@@ -15,6 +15,7 @@ import { useSkillIndex } from "@/hooks/use-skill-index";
 import { SkillCapsuleChip } from "@/components/SkillComposer";
 import { SkillTextEditor, type SkillTextEditorHandle } from "@/components/SkillTextEditor";
 import { assetPreviewSrc, type PromptAsset } from "@/data/prompt-assets";
+import { useI18n } from "@/i18n";
 
 type PromptItem = Prompt | CustomPrompt;
 
@@ -59,6 +60,7 @@ export function PromptDetailModal({
   onClose: () => void;
   onDeploy: (args: DeployArgs) => Promise<boolean>;
 }) {
+  const { t } = useI18n();
   const { capsules: liveSkills } = useSkillIndex();
 
   // The prompt's hand-picked skills (custom `skills` column, else inline
@@ -152,10 +154,10 @@ export function PromptDetailModal({
     // load, which is what grows scrollWidth (and reveals the right arrow).
     updateGalleryNav();
     const raf = requestAnimationFrame(updateGalleryNav);
-    const t = setTimeout(updateGalleryNav, 250);
+    const timer = setTimeout(updateGalleryNav, 250);
     return () => {
       cancelAnimationFrame(raf);
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [assets.length, updateGalleryNav]);
   const scrollGallery = (dir: -1 | 1) => {
@@ -194,12 +196,12 @@ export function PromptDetailModal({
             <input
               value={colonyTitle}
               onChange={(e) => setColonyTitle(e.target.value)}
-              aria-label="Colony name"
-              placeholder="Colony name"
+              aria-label={t("Colony name")}
+              placeholder={t("Colony name")}
               className="w-full bg-transparent text-base font-semibold text-foreground outline-none rounded px-1 -mx-1 focus:bg-muted/40 placeholder:text-muted-foreground/50"
             />
             <p className="text-[11px] text-muted-foreground mt-0.5 px-1 -mx-1">
-              Deploys as colony <span className="font-mono text-foreground/70">{colonyName}</span>
+              {t("Deploys as colony")} <span className="font-mono text-foreground/70">{colonyName}</span>
             </p>
           </div>
           <button
@@ -218,7 +220,7 @@ export function PromptDetailModal({
                 <button
                   type="button"
                   onClick={() => scrollGallery(-1)}
-                  aria-label="Scroll left"
+                  aria-label={t("Scroll left")}
                   className="absolute left-1.5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-card/95 text-foreground shadow-md backdrop-blur transition-colors hover:bg-card"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -228,7 +230,7 @@ export function PromptDetailModal({
                 <button
                   type="button"
                   onClick={() => scrollGallery(1)}
-                  aria-label="Scroll right"
+                  aria-label={t("Scroll right")}
                   className="absolute right-1.5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-card/95 text-foreground shadow-md backdrop-blur transition-colors hover:bg-card"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -255,7 +257,7 @@ export function PromptDetailModal({
                     type="button"
                     onClick={() => setLightbox(a.url)}
                     className="group relative h-56 flex-shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted cursor-zoom-in"
-                    title="Click to expand"
+                    title={t("Click to expand")}
                   >
                     <img
                       src={assetPreviewSrc(a) || a.url}
@@ -275,7 +277,7 @@ export function PromptDetailModal({
           )}
           {skills.length > 0 && (
             <div>
-              <label className="block text-[11px] font-medium text-muted-foreground mb-1.5">Skills</label>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1.5">{t("Skills")}</label>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map((c) => (
                   <SkillCapsuleChip key={c.name} capsule={c} size="xs" />
@@ -285,7 +287,7 @@ export function PromptDetailModal({
           )}
 
           <div>
-            <label className="block text-[11px] font-medium text-muted-foreground mb-1.5">Goal</label>
+            <label className="block text-[11px] font-medium text-muted-foreground mb-1.5">{t("Goal")}</label>
             <div className="rounded-lg border border-border/60 bg-background px-3 py-2 focus-within:ring-1 focus-within:ring-primary">
               <SkillTextEditor
                 ref={goalRef}
@@ -300,7 +302,7 @@ export function PromptDetailModal({
 
           <div>
             <label className="block text-[11px] font-medium text-muted-foreground mb-1.5">
-              Queen Bee <span className="text-primary">*</span>
+              {t("Queen Bee")} <span className="text-primary">*</span>
             </label>
             <div className="grid grid-cols-2 gap-1.5 max-h-[156px] overflow-y-auto pr-1">
               {queens.map((q) => (
@@ -332,7 +334,7 @@ export function PromptDetailModal({
             disabled={deploying}
             className="px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-50"
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             onClick={handleDeploy}
@@ -341,11 +343,11 @@ export function PromptDetailModal({
           >
             {deploying ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Deploying…
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("Deploying…")}
               </>
             ) : (
               <>
-                <Rocket className="w-3.5 h-3.5" /> Deploy
+                <Rocket className="w-3.5 h-3.5" /> {t("Deploy")}
               </>
             )}
           </button>
@@ -366,7 +368,7 @@ export function PromptDetailModal({
           <button
             onClick={() => setLightbox(null)}
             className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X className="h-4 w-4" />
           </button>

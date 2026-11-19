@@ -20,23 +20,25 @@ import {
   type McpTransport,
   type AddMcpServerBody,
 } from "@/api/mcp";
+import { useI18n } from "@/i18n";
 
 type TransportKey = McpTransport;
 
 const TRANSPORT_OPTIONS: TransportKey[] = ["stdio", "http", "sse", "unix"];
 
-function healthBadge(server: McpServer) {
+function HealthBadge({ server }: { server: McpServer }) {
+  const { t } = useI18n();
   if (!server.enabled) {
     return (
       <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-        <CircleDashed className="w-3 h-3" /> Disabled
+        <CircleDashed className="w-3 h-3" /> {t("Disabled")}
       </span>
     );
   }
   if (server.last_health_status === "healthy") {
     return (
       <span className="flex items-center gap-1 text-[11px] text-green-500">
-        <CircleCheck className="w-3 h-3" /> Healthy
+        <CircleCheck className="w-3 h-3" /> {t("Healthy")}
       </span>
     );
   }
@@ -44,15 +46,15 @@ function healthBadge(server: McpServer) {
     return (
       <span
         className="flex items-center gap-1 text-[11px] text-red-400"
-        title={server.last_error || "Unhealthy"}
+        title={server.last_error || t("Unhealthy")}
       >
-        <CircleAlert className="w-3 h-3" /> Unhealthy
+        <CircleAlert className="w-3 h-3" /> {t("Unhealthy")}
       </span>
     );
   }
   return (
     <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-      <CircleDashed className="w-3 h-3" /> Unknown
+      <CircleDashed className="w-3 h-3" /> {t("Unknown")}
     </span>
   );
 }
@@ -132,6 +134,7 @@ function buildAddBody(form: AddFormState): AddMcpServerBody {
 }
 
 export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boolean; setAddOpen?: (v: boolean) => void } = {}) {
+  const { t } = useI18n();
   const [servers, setServers] = useState<McpServer[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -153,7 +156,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
       const { servers } = await mcpApi.listServers();
       setServers(servers);
     } catch (e: unknown) {
-      setError((e as Error)?.message || "Failed to load MCP servers");
+      setError((e as Error)?.message || t("Failed to load MCP servers"));
     } finally {
       setLoading(false);
     }
@@ -172,7 +175,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
       await mcpApi.setEnabled(server.name, !server.enabled);
       await refresh();
     } catch (e: unknown) {
-      setError((e as Error)?.message || "Toggle failed");
+      setError((e as Error)?.message || t("Toggle failed"));
     } finally {
       setBusy(server.name, false);
     }
@@ -185,21 +188,21 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
       await refresh();
     } catch (e: unknown) {
       const body = (e as { body?: { error?: string } }).body;
-      setError(body?.error || (e as Error)?.message || "Mode change failed");
+      setError(body?.error || (e as Error)?.message || t("Mode change failed"));
     } finally {
       setBusy(server.name, false);
     }
   };
 
   const handleRemove = async (server: McpServer) => {
-    if (!confirm(`Remove MCP server "${server.name}"?`)) return;
+    if (!confirm(t("Remove MCP server \"{name}\"?", { name: server.name }))) return;
     setBusy(server.name, true);
     try {
       await mcpApi.removeServer(server.name);
       await refresh();
     } catch (e: unknown) {
       const body = (e as { body?: { error?: string } }).body;
-      setError(body?.error || (e as Error)?.message || "Remove failed");
+      setError(body?.error || (e as Error)?.message || t("Remove failed"));
     } finally {
       setBusy(server.name, false);
     }
@@ -211,7 +214,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
       await mcpApi.checkHealth(server.name);
       await refresh();
     } catch (e: unknown) {
-      setError((e as Error)?.message || "Health check failed");
+      setError((e as Error)?.message || t("Health check failed"));
     } finally {
       setBusy(server.name, false);
     }
@@ -247,7 +250,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
       setSubmitError(
         [body?.error, body?.fix].filter(Boolean).join(" — ") ||
           (e as Error)?.message ||
-          "Add failed",
+          t("Add failed"),
       );
     } finally {
       setSubmitting(false);
@@ -278,14 +281,14 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
 
       {loading && !servers && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="w-3 h-3 animate-spin" /> Loading MCP servers…
+          <Loader2 className="w-3 h-3 animate-spin" /> {t("Loading MCP servers…")}
         </div>
       )}
 
       {servers && (
         <>
           {custom.length > 0 && (
-            <Section title="My Custom">
+            <Section title={t("My Custom")}>
               {custom.map((s) => (
                 <ServerRow
                   key={s.name}
@@ -300,10 +303,10 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
               ))}
             </Section>
           )}
-          <Section title="Built-in">
+          <Section title={t("Built-in")}>
             {builtIns.length === 0 ? (
               <p className="text-xs text-muted-foreground px-2 py-2">
-                No built-in servers registered.
+                {t("No built-in servers registered.")}
               </p>
             ) : (
               builtIns.map((s) => (
@@ -332,7 +335,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
           <div className="relative bg-card border border-border/60 rounded-xl shadow-2xl w-full max-w-lg p-5 space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">
-                Add MCP Server
+                {t("Add MCP Server")}
               </h3>
               <button
                 onClick={() => !submitting && setAdding(false)}
@@ -342,7 +345,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
               </button>
             </div>
 
-            <FieldRow label="Name *" hint="Unique identifier, e.g. my-search-tool">
+            <FieldRow label={t("Name *")} hint={t("Unique identifier, e.g. my-search-tool")}>
               <input
                 autoFocus
                 value={form.name}
@@ -357,7 +360,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
               />
             </FieldRow>
 
-            <FieldRow label="Transport *">
+            <FieldRow label={t("Transport *")}>
               <div className="flex gap-1">
                 {TRANSPORT_OPTIONS.map((t) => (
                   <button
@@ -378,8 +381,8 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
             {form.transport === "stdio" && (
               <>
                 <FieldRow
-                  label="Command *"
-                  hint="Executable that speaks MCP over stdin/stdout"
+                  label={t("Command *")}
+                  hint={t("Executable that speaks MCP over stdin/stdout")}
                 >
                   <input
                     value={form.command}
@@ -390,7 +393,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
                     className={inputCls}
                   />
                 </FieldRow>
-                <FieldRow label="Args (one per line)">
+                <FieldRow label={t("Args (one per line)")}>
                   <textarea
                     value={form.args}
                     onChange={(e) =>
@@ -401,7 +404,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
                     className={textareaCls}
                   />
                 </FieldRow>
-                <FieldRow label="Env (KEY=VALUE, one per line)">
+                <FieldRow label={t("Env (KEY=VALUE, one per line)")}>
                   <textarea
                     value={form.env}
                     onChange={(e) =>
@@ -412,7 +415,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
                     className={textareaCls}
                   />
                 </FieldRow>
-                <FieldRow label="Working directory">
+                <FieldRow label={t("Working directory")}>
                   <input
                     value={form.cwd}
                     onChange={(e) =>
@@ -427,7 +430,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
 
             {(form.transport === "http" || form.transport === "sse") && (
               <>
-                <FieldRow label="URL *">
+                <FieldRow label={t("URL *")}>
                   <input
                     value={form.url}
                     onChange={(e) =>
@@ -437,7 +440,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
                     className={inputCls}
                   />
                 </FieldRow>
-                <FieldRow label="Headers (KEY=VALUE, one per line)">
+                <FieldRow label={t("Headers (KEY=VALUE, one per line)")}>
                   <textarea
                     value={form.headers}
                     onChange={(e) =>
@@ -452,7 +455,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
             )}
 
             {form.transport === "unix" && (
-              <FieldRow label="Socket path *">
+              <FieldRow label={t("Socket path *")}>
                 <input
                   value={form.socketPath}
                   onChange={(e) =>
@@ -466,20 +469,19 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
 
             {CLI_TRANSPORTS.includes(form.transport) && (
               <FieldRow
-                label="Agents use it"
+                label={t("Agents use it")}
                 hint={
                   form.mode === "cli"
                     ? (
                         <>
-                          They run{" "}
+                          {t("They run")}{" "}
                           <code className="font-mono text-foreground/80">
                             hive mcp run {form.name || "<name>"} …
                           </code>{" "}
-                          in the terminal. Its tools stay out of every prompt until a command is
-                          used: best for servers with many tools.
+                          {t("in the terminal. Its tools stay out of every prompt until a command is used: best for servers with many tools.")}
                         </>
                       )
-                    : "Its tools load into every agent's tool list."
+                    : t("Its tools load into every agent's tool list.")
                 }
               >
                 <div className="flex gap-1">
@@ -493,20 +495,20 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
                           : "text-muted-foreground hover:text-foreground border-border/60 hover:bg-muted/30"
                       }`}
                     >
-                      {m === "tools" ? "As tools" : "From the terminal"}
+                      {m === "tools" ? t("As tools") : t("From the terminal")}
                     </button>
                   ))}
                 </div>
               </FieldRow>
             )}
 
-            <FieldRow label="Description">
+            <FieldRow label={t("Description")}>
               <input
                 value={form.description}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, description: e.target.value }))
                 }
-                placeholder="What this server does"
+                placeholder={t("What this server does")}
                 className={inputCls}
               />
             </FieldRow>
@@ -524,7 +526,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
                 disabled={submitting}
                 className="px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 onClick={handleSubmit}
@@ -536,7 +538,7 @@ export default function McpServersPanel({ addOpen, setAddOpen }: { addOpen?: boo
                 ) : (
                   <Check className="w-3 h-3" />
                 )}
-                {submitting ? "Adding…" : "Add"}
+                {submitting ? t("Adding…") : t("Add")}
               </button>
             </div>
           </div>
@@ -559,10 +561,11 @@ function FieldRow({
   hint?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div>
       <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-        {label}
+        {t(label)}
       </label>
       {children}
       {hint && (
@@ -579,10 +582,11 @@ function Section({
   title: string;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div>
       <p className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">
-        {title}
+        {t(title)}
       </p>
       <div className="flex flex-col gap-1">{children}</div>
     </div>
@@ -606,6 +610,7 @@ function ServerRow({
   onMode: () => void;
   isLocal?: boolean;
 }) {
+  const { t } = useI18n();
   // Package-baked servers live in the repo and aren't managed by
   // MCPRegistry, so toggling / removing / health-checking them would
   // fail against the backend. Show them as read-only.
@@ -626,25 +631,25 @@ function ServerRow({
           </span>
           {isBuiltIn && (
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground/80 bg-muted/40 px-1.5 py-0.5 rounded">
-              Built-in
+              {t("Built-in")}
             </span>
           )}
           {server.tool_count !== null && server.tool_count !== undefined && (
             <span className="text-[11px] text-muted-foreground">
-              {server.tool_count} {isCli ? "commands" : "tools"}
+              {isCli ? t("{count} commands", { count: server.tool_count }) : t("{count} tools", { count: server.tool_count })}
             </span>
           )}
           {isCli && (
             <span
               className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded"
-              title={`Agents run "hive mcp run ${server.name} …" in the terminal`}
+              title={t("Agents run \"hive mcp run {name} …\" in the terminal", { name: server.name })}
             >
               <SquareTerminal className="w-3 h-3" /> CLI
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
-          {!isBuiltIn && healthBadge(server)}
+          {!isBuiltIn && <HealthBadge server={server} />}
           {server.description && (
             <span className="text-xs text-muted-foreground truncate">
               {isBuiltIn ? server.description : `· ${server.description}`}
@@ -661,18 +666,18 @@ function ServerRow({
               className="px-2.5 py-1 rounded-md text-[11px] font-medium text-muted-foreground border border-border/60 hover:text-foreground hover:bg-muted/30 disabled:opacity-50"
               title={
                 isCli
-                  ? "Load its tools into agents' tool lists instead"
-                  : "Keep its tools out of prompts; agents run it from the terminal"
+                  ? t("Load its tools into agents' tool lists instead")
+                  : t("Keep its tools out of prompts; agents run it from the terminal")
               }
             >
-              {isCli ? "Use as tools" : "Use from terminal"}
+              {isCli ? t("Use as tools") : t("Use from terminal")}
             </button>
           )}
           <button
             onClick={onHealth}
             disabled={busy}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 disabled:opacity-50"
-            title="Health check"
+            title={t("Health check")}
           >
             {busy ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -689,7 +694,7 @@ function ServerRow({
                 : "bg-primary/15 text-primary border-primary/40 hover:bg-primary/25"
             }`}
           >
-            {server.enabled ? "Disable" : "Enable"}
+            {server.enabled ? t("Disable") : t("Enable")}
           </button>
         </>
       )}
@@ -698,7 +703,7 @@ function ServerRow({
           onClick={onRemove}
           disabled={busy}
           className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50"
-          title="Remove"
+          title={t("Remove")}
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>

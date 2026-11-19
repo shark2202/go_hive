@@ -8,6 +8,7 @@ import {
   type ScheduleForm,
   type ScheduleMode,
 } from "@/lib/schedule";
+import { useI18n } from "@/i18n";
 
 interface Props {
   sessionId: string;
@@ -52,18 +53,19 @@ function formatNext(ms: number): string {
   });
 }
 
-function relative(ms: number, now: number): string {
+function relative(ms: number, now: number, tr: (key: string, vars?: Record<string, string | number>) => string): string {
   const sec = Math.max(0, Math.round((ms - now) / 1000));
   const d = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
   const m = Math.floor((sec % 3600) / 60);
-  if (d > 0) return `in ${d}d ${h}h`;
-  if (h > 0) return `in ${h}h ${m}m`;
-  if (m > 0) return `in ${m}m`;
-  return "in under a minute";
+  if (d > 0) return tr("in {days}d {hours}h", { days: d, hours: h });
+  if (h > 0) return tr("in {hours}h {minutes}m", { hours: h, minutes: m });
+  if (m > 0) return tr("in {minutes}m", { minutes: m });
+  return tr("in under a minute");
 }
 
 export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: Props) {
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [task, setTask] = useState("");
   const [mode, setMode] = useState<ScheduleMode>("daily");
@@ -97,18 +99,18 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
     if ("interval_minutes" in config) {
       const min = config.interval_minutes;
       const label =
-        min >= 60 && min % 60 === 0 ? `Every ${min / 60}h` : `Every ${min}m`;
-      return { label, next: "First run starts shortly after creation." };
+        min >= 60 && min % 60 === 0 ? t("Every {count}h", { count: min / 60 }) : t("Every {count}m", { count: min });
+      return { label, next: t("First run starts shortly after creation.") };
     }
     const label = cronToLabel(config.cron);
     const nextMs = cronNextUtc(config.cron, Date.now());
     return {
       label,
       next: nextMs
-        ? `Next: ${formatNext(nextMs)} (${relative(nextMs, Date.now())})`
+        ? t("Next: {time} ({relative})", { time: formatNext(nextMs), relative: relative(nextMs, Date.now(), t) })
         : null,
     };
-  }, [config]);
+  }, [config, t]);
 
   const toggleWeekday = (dow: number) =>
     setWeekdays((prev) =>
@@ -150,9 +152,9 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
                 <CalendarClock className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-foreground">New schedule</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t("New schedule")}</h2>
                 <p className="text-[11px] text-muted-foreground">
-                  Run this colony automatically on a timer.
+                  {t("Run this colony automatically on a timer.")}
                 </p>
               </div>
             </div>
@@ -160,7 +162,7 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
               onClick={onClose}
               disabled={busy}
               className="p-1.5 rounded-md hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
-              title="Close"
+              title={t("Close")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -170,12 +172,12 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
             {/* Name */}
             <div>
-              <label className={labelCls}>Name</label>
+              <label className={labelCls}>{t("Name")}</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Morning inbox sweep"
+                placeholder={t("e.g. Morning inbox sweep")}
                 className={inputCls}
                 autoFocus
               />
@@ -183,7 +185,7 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
 
             {/* Schedule type */}
             <div>
-              <label className={labelCls}>Schedule</label>
+              <label className={labelCls}>{t("Schedule")}</label>
               <div className="flex gap-1 p-0.5 rounded-lg bg-muted/40 border border-border/40">
                 {MODES.map((m) => (
                   <button
@@ -196,7 +198,7 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                     }`}
                   >
-                    {m.label}
+                    {t(m.label)}
                   </button>
                 ))}
               </div>
@@ -205,7 +207,7 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
             {/* Per-mode controls */}
             {mode === "daily" && (
               <div>
-                <label className={labelCls}>Time (your local time)</label>
+                <label className={labelCls}>{t("Time (your local time)")}</label>
                 <input
                   type="time"
                   value={time}
@@ -217,7 +219,7 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
 
             {mode === "interval" && (
               <div>
-                <label className={labelCls}>Run every</label>
+                <label className={labelCls}>{t("Run every")}</label>
                 <div className="flex gap-2">
                   <input
                     type="number"
@@ -238,7 +240,7 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                         }`}
                       >
-                        {u}
+                        {t(u)}
                       </button>
                     ))}
                   </div>
@@ -249,13 +251,13 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
             {mode === "weekly" && (
               <div className="space-y-2.5">
                 <div>
-                  <label className={labelCls}>Days</label>
+                  <label className={labelCls}>{t("Days")}</label>
                   <div className="flex gap-1.5">
                     {WEEKDAYS.map((d) => (
                       <button
                         key={d.dow}
                         type="button"
-                        title={d.name}
+                        title={t(d.name)}
                         onClick={() => toggleWeekday(d.dow)}
                         className={`w-7 h-7 rounded-full text-[11px] font-semibold border transition-colors ${
                           weekdays.includes(d.dow)
@@ -279,13 +281,13 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
                         onClick={() => setWeekdays(p.days)}
                         className="text-[10px] px-2 py-0.5 rounded-full bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground border border-border/30 transition-colors"
                       >
-                        {p.label}
+                        {t(p.label)}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Time (your local time)</label>
+                  <label className={labelCls}>{t("Time (your local time)")}</label>
                   <input
                     type="time"
                     value={time}
@@ -298,7 +300,7 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
 
             {mode === "advanced" && (
               <div>
-                <label className={labelCls}>Cron expression (UTC)</label>
+                <label className={labelCls}>{t("Cron expression (UTC)")}</label>
                 <input
                   type="text"
                   value={cron}
@@ -308,23 +310,23 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
                   className={`${inputCls} font-mono`}
                 />
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  Five fields: minute hour day month weekday — interpreted in UTC.
+                  {t("Five fields: minute hour day month weekday — interpreted in UTC.")}
                 </p>
               </div>
             )}
 
             {/* Task */}
             <div>
-              <label className={labelCls}>Task</label>
+              <label className={labelCls}>{t("Task")}</label>
               <textarea
                 value={task}
                 onChange={(e) => setTask(e.target.value)}
-                placeholder="Describe what should happen each time this fires…"
+                placeholder={t("Describe what should happen each time this fires…")}
                 rows={3}
                 className={`${inputCls} resize-none`}
               />
               <p className="text-[10px] text-muted-foreground mt-1">
-                This instruction runs every time the schedule fires.
+                {t("This instruction runs every time the schedule fires.")}
               </p>
             </div>
 
@@ -343,10 +345,10 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
               ) : (
                 <p className="text-[11px] text-muted-foreground">
                   {mode === "weekly"
-                    ? "Pick at least one day to preview the schedule."
+                    ? t("Pick at least one day to preview the schedule.")
                     : mode === "advanced"
-                      ? "Enter a valid 5-field cron expression to preview."
-                      : "Complete the schedule to see a preview."}
+                      ? t("Enter a valid 5-field cron expression to preview.")
+                      : t("Complete the schedule to see a preview.")}
                 </p>
               )}
             </div>
@@ -366,7 +368,7 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
               disabled={busy}
               className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-colors disabled:opacity-40"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               onClick={handleCreate}
@@ -374,7 +376,7 @@ export default function CreateSchedulerModal({ sessionId, onClose, onCreated }: 
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {busy && <Loader2 className="w-3 h-3 animate-spin" />}
-              {busy ? "Creating…" : "Create schedule"}
+              {busy ? t("Creating…") : t("Create schedule")}
             </button>
           </div>
         </div>

@@ -11,6 +11,7 @@ import { Flag, X, Loader2, Check, AlertCircle } from "lucide-react";
 
 import { submitSessionReport, type Severity } from "@/api/sessionReport";
 import { Tooltip } from "@/components/Tooltip";
+import { useI18n } from "@/i18n";
 
 const SEVERITIES: { value: Severity; label: string }[] = [
   { value: "low", label: "Low" },
@@ -20,13 +21,14 @@ const SEVERITIES: { value: Severity; label: string }[] = [
 ];
 
 export default function SessionReportAction({ sessionId }: { sessionId: string }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Tooltip label="Report a problem">
+      <Tooltip label={t("Report a problem")}>
         <button
           onClick={() => setOpen(true)}
-          aria-label="Report a problem with this session"
+          aria-label={t("Report a problem with this session")}
           className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
         >
           <Flag className="w-4 h-4" />
@@ -50,6 +52,7 @@ export function ReportModal({
   title?: string;
   subtitle?: string;
 }) {
+  const { t } = useI18n();
   const [description, setDescription] = useState(initialDescription);
   const [severity, setSeverity] = useState<Severity>("medium");
   const [saveLocal, setSaveLocal] = useState(false);
@@ -67,7 +70,7 @@ export function ReportModal({
       const msg = e && typeof e === "object" && "body" in e
         ? ((e as { body?: { error?: string } }).body?.error ?? null)
         : null;
-      setError(msg || (e instanceof Error ? e.message : "Failed to submit report"));
+      setError(msg || (e instanceof Error ? e.message : t("Failed to submit report")));
     } finally {
       setBusy(false);
     }
@@ -88,8 +91,8 @@ export function ReportModal({
                 <Flag className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-                <p className="text-[11px] text-muted-foreground">{subtitle}</p>
+                <h2 className="text-sm font-semibold text-foreground">{t(title)}</h2>
+                <p className="text-[11px] text-muted-foreground">{t(subtitle)}</p>
               </div>
             </div>
             <button
@@ -106,48 +109,46 @@ export function ReportModal({
               <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto">
                 <Check className="w-5 h-5 text-emerald-500" />
               </div>
-              <p className="text-sm text-foreground">Thanks — your report was submitted.</p>
+              <p className="text-sm text-foreground">{t("Thanks — your report was submitted.")}</p>
               {done.savedTo && (
-                <p className="text-[11px] text-muted-foreground break-all">Saved a copy to {done.savedTo}</p>
+                <p className="text-[11px] text-muted-foreground break-all">{t("Saved a copy to {path}", { path: done.savedTo })}</p>
               )}
               <button className="text-xs px-4 py-1.5 rounded-md bg-primary text-primary-foreground" onClick={onClose}>
-                Close
+                {t("Close")}
               </button>
             </div>
           ) : (
             <div className="px-5 py-4 space-y-3">
               <div>
                 <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                  What went wrong?
+                  {t("What went wrong?")}
                 </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
-                  placeholder="Describe the problem (what you expected vs. what happened)…"
+                  placeholder={t("Describe the problem (what you expected vs. what happened)…")}
                   className="w-full bg-muted/30 border border-border/50 rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 resize-none"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-medium text-muted-foreground mb-1">Severity</label>
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">{t("Severity")}</label>
                 <select
                   value={severity}
                   onChange={(e) => setSeverity(e.target.value as Severity)}
                   className="w-full bg-muted/30 border border-border/50 rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
                 >
                   {SEVERITIES.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
+                    <option key={s.value} value={s.value}>{t(s.label)}</option>
                   ))}
                 </select>
               </div>
               <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                 <input type="checkbox" checked={saveLocal} onChange={(e) => setSaveLocal(e.target.checked)} />
-                Also save a copy of the report bundle to my computer
+                {t("Also save a copy of the report bundle to my computer")}
               </label>
               <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
-                The bundle includes this session's messages, tool activity, screenshots, and logs
-                for debugging. API keys and tokens are removed; everything else is kept. It uploads
-                securely to your team's storage.
+                {t("The bundle includes this session's messages, tool activity, screenshots, and logs for debugging. API keys and tokens are removed; everything else is kept. It uploads securely to your team's storage.")}
               </p>
               {error && (
                 <div className="flex items-start gap-2 text-[11px] text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
@@ -161,7 +162,7 @@ export function ReportModal({
                   disabled={busy}
                   className="text-xs px-4 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   onClick={submit}
@@ -169,7 +170,7 @@ export function ReportModal({
                   className="text-xs px-4 py-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  {busy ? "Submitting…" : "Submit report"}
+                  {busy ? t("Submitting…") : t("Submit report")}
                 </button>
               </div>
             </div>

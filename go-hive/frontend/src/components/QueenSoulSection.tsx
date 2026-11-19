@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, History, Loader2, Pencil, Sparkles } from "lucide-react";
 import { queensApi, type QueenSoul, type SoulEdit, type SoulItem, type SoulSectionView } from "@/api/queens";
 import { ApiError } from "@/api/client";
+import { useI18n } from "@/i18n";
 
 /**
  * The queen's soul: the short, first-person self-description she revises once a day from her chats
@@ -36,10 +37,10 @@ function fromLines(text: string): SoulItem[] {
 }
 
 /** How a section keeps its items, when that differs from the plain case. */
-function rules(section: SoulSectionView): string {
+function rules(section: SoulSectionView, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const parts = [];
-  if (section.max_age_days) parts.push(`Items last ${section.max_age_days} days`);
-  if (section.evidence > 1) parts.push(`Changes need ${section.evidence} sources`);
+  if (section.max_age_days) parts.push(t("Items last {days} days", { days: section.max_age_days }));
+  if (section.evidence > 1) parts.push(t("Changes need {count} sources", { count: section.evidence }));
   return parts.join(" · ");
 }
 
@@ -60,6 +61,7 @@ function Gauge({ used, limit }: { used: number; limit: number }) {
 }
 
 export default function QueenSoulSection({ queenId, onChange }: { queenId: string; onChange?: (soul: QueenSoul) => void }) {
+  const { t } = useI18n();
   const [soul, setSoul] = useState<QueenSoul | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -82,7 +84,7 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
       show(await queensApi.getSoul(queenId));
       setError(null);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Couldn't load her soul");
+      setError(e instanceof ApiError ? e.message : t("Couldn't load her soul"));
     }
   }, [queenId, show]);
   useEffect(() => {
@@ -132,14 +134,14 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
   if (soul === null) {
     return (
       <div className="qp-soul">
-        <div className="qp-card qp-soul-status">{errorLine || <span className="qp-meta inline-flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading…</span>}</div>
+        <div className="qp-card qp-soul-status">{errorLine || <span className="qp-meta inline-flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("Loading…")}</span>}</div>
       </div>
     );
   }
   if (!soul.enabled) {
     return (
       <div className="qp-empty">
-        She has no soul yet. Turn it on in configuration.json under <code>soul.queens.{queenId}</code>.
+        {t("She has no soul yet. Turn it on in configuration.json under soul.queens.{id}.", { id: queenId })}
       </div>
     );
   }
@@ -152,28 +154,28 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
     <div className="qp-soul">
       <div className="qp-card qp-soul-status">
         <div className="min-w-0">
-          <p className="qp-soul-version">{s.version ? `Version ${s.version}` : "Not written yet"}</p>
+          <p className="qp-soul-version">{s.version ? t("Version {version}", { version: s.version }) : t("Not written yet")}</p>
           <p className="qp-soul-line">
-            {s.mode === "review" ? "Her changes wait for your approval" : "Her changes apply at once"} · reflects daily after {s.hour}:00
-            {s.last_run ? ` · last ${s.last_run}: ${s.last_result ?? ""}` : ""}
+            {t(s.mode === "review" ? "Her changes wait for your approval" : "Her changes apply at once")} · {t("reflects daily after {hour}:00", { hour: s.hour })}
+            {s.last_run ? ` · ${t("last {date}: {result}", { date: s.last_run, result: s.last_result ?? "" })}` : ""}
           </p>
         </div>
         {draft === null && (
           <div className="qp-soul-actions">
             {s.reflecting && (
               <span className="qp-meta inline-flex items-center gap-1.5">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Reflecting…
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("Reflecting…")}
               </span>
             )}
             <button
               className="qp-btn"
               data-size="sm"
-              onClick={() => void start(() => queensApi.reflectSoul(queenId, s.version === 0), "Couldn't start the reflection")}
+              onClick={() => void start(() => queensApi.reflectSoul(queenId, s.version === 0), t("Couldn't start the reflection"))}
               disabled={busy || s.reflecting || proposal !== null}
-              title={proposal ? "Decide on the waiting changes first" : undefined}
+              title={proposal ? t("Decide on the waiting changes first") : undefined}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              {s.version === 0 ? "Write the first draft" : "Reflect now"}
+              {s.version === 0 ? t("Write the first draft") : t("Reflect now")}
             </button>
             <button
               className="qp-btn"
@@ -182,12 +184,12 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
               disabled={busy}
             >
               <Pencil className="w-3.5 h-3.5" />
-              Edit
+              {t("Edit")}
             </button>
             {s.history.length > 0 && (
               <button className="qp-btn" data-size="sm" data-tone={showHistory ? undefined : "quiet"} onClick={() => setShowHistory(!showHistory)} aria-expanded={showHistory}>
                 <History className="w-3.5 h-3.5" />
-                History
+                {t("History")}
               </button>
             )}
           </div>
@@ -196,9 +198,9 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
 
       {proposal && (
         <div className="qp-proposal">
-          <p className="qp-proposal-kicker">Waiting for you</p>
+          <p className="qp-proposal-kicker">{t("Waiting for you")}</p>
           <h3 className="qp-proposal-title">
-            {proposal.bootstrap ? "Her first draft" : "Her reflection"} · {proposal.edits.length} {proposal.edits.length === 1 ? "change" : "changes"}
+            {t(proposal.bootstrap ? "Her first draft" : "Her reflection")} · {t("{count} changes", { count: proposal.edits.length })}
           </h3>
           {proposal.summary && <p className="qp-proposal-summary">{proposal.summary}</p>}
           <ul className="qp-changes">
@@ -206,7 +208,7 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
               <li key={i} className="qp-change">
                 <input
                   type="checkbox"
-                  aria-label={`Apply change ${i + 1}`}
+                  aria-label={t("Apply change {number}", { number: i + 1 })}
                   checked={accepted.has(i)}
                   onChange={(e) => {
                     const next = new Set(accepted);
@@ -221,7 +223,7 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
                 <div className="min-w-0">
                   <p className="qp-change-where">
                     {titleOf(edit.section)}
-                    {edit.expired && " · too old"}
+                    {edit.expired && ` · ${t("too old")}`}
                   </p>
                   <p className="qp-change-text">
                     {edit.op !== "add" && <span className="qp-change-old">{edit.old}</span>}
@@ -241,32 +243,32 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
               className="qp-btn"
               data-tone="primary"
               data-size="sm"
-              onClick={() => void act(() => queensApi.decideSoulProposal(queenId, proposal.id, [...accepted].sort((a, b) => a - b)), "Couldn't apply the changes")}
+              onClick={() => void act(() => queensApi.decideSoulProposal(queenId, proposal.id, [...accepted].sort((a, b) => a - b)), t("Couldn't apply the changes"))}
               disabled={busy || accepted.size === 0}
             >
-              Apply selected <span className="opacity-70">({accepted.size})</span>
+              {t("Apply selected")} <span className="opacity-70">({accepted.size})</span>
             </button>
             <button
               className="qp-btn"
               data-size="sm"
-              onClick={() => void act(() => queensApi.decideSoulProposal(queenId, proposal.id, []), "Couldn't dismiss the proposal")}
+              onClick={() => void act(() => queensApi.decideSoulProposal(queenId, proposal.id, []), t("Couldn't dismiss the proposal"))}
               disabled={busy}
             >
-              Dismiss all
+              {t("Dismiss all")}
             </button>
             {s.probes > 0 && (
               <button
                 className="qp-btn"
                 data-size="sm"
-                onClick={() => void start(() => queensApi.probeSoulProposal(queenId, proposal.id), "Couldn't try her out")}
+                onClick={() => void start(() => queensApi.probeSoulProposal(queenId, proposal.id), t("Couldn't try her out"))}
                 disabled={busy || s.probing}
               >
                 {s.probing ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Trying her out…
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("Trying her out…")}
                   </>
                 ) : (
-                  `Try her with these changes (${s.probes} ${s.probes === 1 ? "question" : "questions"})`
+                  t(s.probes === 1 ? "Try her with these changes ({count} question)" : "Try her with these changes ({count} questions)", { count: s.probes })
                 )}
               </button>
             )}
@@ -276,14 +278,14 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
               {proposal.probes.map((p, i) => (
                 <div key={i}>
                   <p className="qp-probe-q">{p.q}</p>
-                  {p.anchor && <p className="qp-probe-anchor">Like her: {p.anchor}</p>}
+                  {p.anchor && <p className="qp-probe-anchor">{t("Like her: {anchor}", { anchor: p.anchor })}</p>}
                   <div className="qp-probe-pair">
                     <div>
-                      <span className="qp-probe-label">Now</span>
+                      <span className="qp-probe-label">{t("Now")}</span>
                       {p.before}
                     </div>
                     <div data-after>
-                      <span className="qp-probe-label">With the changes</span>
+                      <span className="qp-probe-label">{t("With the changes")}</span>
                       {p.after}
                     </div>
                   </div>
@@ -297,7 +299,7 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
       {draft === null ? (
         <div className="qp-soul-grid">
           {s.sections.map((section) => {
-            const note = rules(section);
+            const note = rules(section, t);
             return (
               <article key={section.key} className="qp-card qp-soul-card">
                 <header className="qp-soul-card-head">
@@ -307,7 +309,7 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
                 <Gauge used={section.used} limit={section.limit} />
                 {note && <p className="qp-soul-rules">{note}</p>}
                 {section.items.length === 0 ? (
-                  <p className="qp-soul-rules mt-3">Nothing here yet.</p>
+                  <p className="qp-soul-rules mt-3">{t("Nothing here yet.")}</p>
                 ) : (
                   <ul className="qp-soul-items">
                     {section.items.map((item, i) => (
@@ -324,7 +326,7 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
         </div>
       ) : (
         <div>
-          <p className="qp-hint mb-3">One item per line; start a line with YYYY-MM-DD to date it.</p>
+          <p className="qp-hint mb-3">{t("One item per line; start a line with YYYY-MM-DD to date it.")}</p>
           <div className="qp-soul-grid">
             {s.sections.map((section) => {
               const used = fromLines(draft[section.key] ?? "").reduce((n, i) => n + i.text.length, 0);
@@ -336,7 +338,7 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
                   </span>
                   <Gauge used={used} limit={section.limit} />
                   <textarea
-                    aria-label={`${section.title}, one item per line`}
+                    aria-label={t("{section}, one item per line", { section: section.title })}
                     value={draft[section.key] ?? ""}
                     onChange={(e) => setDraft({ ...draft, [section.key]: e.target.value })}
                     rows={Math.max(3, section.items.length + 2)}
@@ -350,7 +352,7 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
             <span />
             <div>
               <button className="qp-btn" data-tone="quiet" data-size="sm" onClick={() => setDraft(null)}>
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 className="qp-btn"
@@ -358,11 +360,11 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
                 data-size="sm"
                 onClick={async () => {
                   const sections = Object.fromEntries(s.sections.map((x) => [x.key, fromLines(draft[x.key] ?? "")]));
-                  if (await act(() => queensApi.setSoul(queenId, sections), "Couldn't save her soul")) setDraft(null);
+                  if (await act(() => queensApi.setSoul(queenId, sections), t("Couldn't save her soul"))) setDraft(null);
                 }}
                 disabled={busy}
               >
-                Save
+                {t("Save")}
               </button>
             </div>
           </div>
@@ -382,10 +384,10 @@ export default function QueenSoulSection({ queenId, onChange }: { queenId: strin
                 <button
                   className="qp-btn"
                   data-size="sm"
-                  onClick={() => void act(() => queensApi.rollbackSoul(queenId, v.version), "Couldn't restore that version")}
+                  onClick={() => void act(() => queensApi.rollbackSoul(queenId, v.version), t("Couldn't restore that version"))}
                   disabled={busy}
                 >
-                  Restore
+                  {t("Restore")}
                 </button>
               )}
             </li>

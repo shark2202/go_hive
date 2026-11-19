@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PartyPopper, X } from "lucide-react";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { getProviderLogo } from "@/data/providerLogos";
+import { useI18n } from "@/i18n";
 
 /** Render the provider icon/logo with a small chip background — same
  * style as CredentialsModal's CredIconInline (intentionally simple
@@ -31,6 +32,7 @@ export default function QueensAuthorizationDialog({
   accountEmail,
   onClose,
 }: Props) {
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const providerLabel = useMemo(() => {
@@ -75,16 +77,15 @@ export default function QueensAuthorizationDialog({
             </div>
 
             <h2 className="text-base font-semibold text-foreground">
-              {providerLabel} connected
+              {t("{provider} connected", { provider: providerLabel })}
             </h2>
             {accountEmail && (
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Authorized as {accountEmail}
+                {t("Authorized as {email}", { email: accountEmail })}
               </p>
             )}
             <p className="text-sm text-muted-foreground mt-3 max-w-xs">
-              All your queens now have access to the {providerLabel} tool suite.
-              You're ready to go.
+              {t("All your queens now have access to the {provider} tool suite. You're ready to go.", { provider: providerLabel })}
             </p>
           </div>
 
@@ -94,13 +95,13 @@ export default function QueensAuthorizationDialog({
               onClick={onClose}
               className="w-full px-3 py-2 rounded-md text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             >
-              Done
+              {t("Done")}
             </button>
             <button
               onClick={goToToolLibrary}
               className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
             >
-              Configure tools per queen
+              {t("Configure tools per queen")}
             </button>
           </div>
         </div>

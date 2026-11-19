@@ -3,6 +3,7 @@ import { KeyRound, Check, AlertCircle, X, Shield, Loader2, Trash2, ExternalLink,
 import { credentialsApi, type AgentCredentialRequirement } from "@/api/credentials";
 import { getProviderLogo } from "@/data/providerLogos";
 import { ProviderLogo } from "@/components/ProviderLogo";
+import { useI18n } from "@/i18n";
 
 function CredIconInline({ credId, size = 18 }: { credId: string; size?: number }) {
   const logo = getProviderLogo(credId);
@@ -103,6 +104,7 @@ export default function CredentialsModal({
   credentials: legacyCredentials,
   onToggleCredential,
 }: CredentialsModalProps) {
+  const { t } = useI18n();
   const [rows, setRows] = useState<CredentialRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,7 +139,7 @@ export default function CredentialsModal({
     } catch (err) {
       // Surface the error so the modal shows a meaningful message
       const message =
-        err instanceof Error ? err.message : "Failed to check credentials";
+        err instanceof Error ? err.message : t("Failed to check credentials");
       setError(message);
 
       // Fall back to legacy props or empty rows
@@ -204,7 +206,7 @@ export default function CredentialsModal({
           onCredentialChange?.();
           await fetchStatus();
         } catch {
-          setError(`Failed to save ${row.name}`);
+          setError(t("Failed to save {name}", { name: row.name }));
         } finally {
           setSaving(false);
         }
@@ -281,7 +283,7 @@ export default function CredentialsModal({
                 <KeyRound className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-foreground">Credentials</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t("Credentials")}</h2>
                 <p className="text-[11px] text-muted-foreground">{agentLabel}</p>
               </div>
             </div>
@@ -302,21 +304,21 @@ export default function CredentialsModal({
               {error && rows.length === 0 ? (
                 <>
                   <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="break-words">Failed to check credentials: {error}</span>
+                  <span className="break-words">{t("Failed to check credentials: {error}", { error })}</span>
                 </>
               ) : allRequiredMet ? (
                 <>
                   <Shield className="w-3.5 h-3.5" />
                   {rows.length === 0
-                    ? "No required credentials!"
-                    : `All required credentials connected (${connectedCount}/${rows.length} total)`}
+                    ? t("No required credentials!")
+                    : t("All required credentials connected ({connected}/{total} total)", { connected: connectedCount, total: rows.length })}
                 </>
               ) : (
                 <>
                   <AlertCircle className="w-3.5 h-3.5" />
-                  {missingCount > 0 && `${missingCount} missing`}
+                  {missingCount > 0 && t("{count} missing", { count: missingCount })}
                   {missingCount > 0 && invalidCount > 0 && ", "}
-                  {invalidCount > 0 && `${invalidCount} invalid`}
+                  {invalidCount > 0 && t("{count} invalid", { count: invalidCount })}
                 </>
               )}
             </div>
@@ -361,7 +363,7 @@ export default function CredentialsModal({
                                 ? "text-emerald-600/70 bg-emerald-500/10"
                                 : "text-amber-600/70 bg-amber-500/10"
                             }`}>
-                              Either
+                              {t("Either")}
                             </span>
                           ) : (
                             <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${
@@ -369,7 +371,7 @@ export default function CredentialsModal({
                                 ? "text-emerald-600/70 bg-emerald-500/10"
                                 : "text-destructive/70 bg-destructive/10"
                             }`}>
-                              Required
+                              {t("Required")}
                             </span>
                           )
                         )}
@@ -386,15 +388,15 @@ export default function CredentialsModal({
                             onClick={() => handleConnect(row)}
                             disabled={saving}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors"
-                            title={row.validationMessage || "Invalid — click to update"}
+                            title={row.validationMessage || t("Invalid — click to update")}
                           >
                             <AlertCircle className="w-3 h-3" />
-                            {row.adenSupported ? "Reconnect" : "Update Key"}
+                            {row.adenSupported ? t("Reconnect") : t("Update Key")}
                           </button>
                         ) : (
                           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary/10 text-primary">
                             <Check className="w-3 h-3" />
-                            Connected
+                            {t("Connected")}
                           </span>
                         )}
                         {(row.id === "aden_api_key" || !row.adenSupported) && (
@@ -406,7 +408,7 @@ export default function CredentialsModal({
                             }}
                             disabled={saving}
                             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                            title="Update key"
+                            title={t("Update key")}
                           >
                             <Pencil className="w-3 h-3" />
                           </button>
@@ -419,7 +421,7 @@ export default function CredentialsModal({
                             }}
                             disabled={saving}
                             className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            title="Delete credential"
+                            title={t("Delete credential")}
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -427,7 +429,7 @@ export default function CredentialsModal({
                       </div>
                     ) : row.adenSupported && !adenPlatformConnected && row.id !== "aden_api_key" ? (
                       <span className="text-[11px] text-muted-foreground italic flex-shrink-0">
-                        Connect Aden Platform key first
+                        {t("Connect Aden Platform key first")}
                       </span>
                     ) : (
                       <button
@@ -438,12 +440,12 @@ export default function CredentialsModal({
                         {row.adenSupported ? (
                           <>
                             <ExternalLink className="w-3 h-3" />
-                            Authorize
+                            {t("Authorize")}
                           </>
                         ) : (
                           <>
                             <KeyRound className="w-3 h-3" />
-                            Connect
+                            {t("Connect")}
                           </>
                         )}
                       </button>
@@ -455,7 +457,7 @@ export default function CredentialsModal({
                     <div className="mt-1.5 flex items-center gap-2 px-3 py-2 rounded-lg border border-destructive/30 bg-destructive/5">
                       <AlertCircle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
                       <span className="text-xs text-destructive flex-1">
-                        Permanently delete this API key?
+                        {t("Permanently delete this API key?")}
                       </span>
                       <button
                         onClick={() => {
@@ -465,13 +467,13 @@ export default function CredentialsModal({
                         disabled={saving}
                         className="px-3 py-1 rounded-md text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 transition-colors"
                       >
-                        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Delete"}
+                        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : t("Delete")}
                       </button>
                       <button
                         onClick={() => setDeletingId(null)}
                         className="px-2 py-1 rounded-md text-xs text-muted-foreground hover:bg-muted transition-colors"
                       >
-                        Cancel
+                        {t("Cancel")}
                       </button>
                     </div>
                   )}
@@ -487,7 +489,7 @@ export default function CredentialsModal({
                           if (e.key === "Enter") handleConnect(row);
                           if (e.key === "Escape") { setEditingId(null); setInputValue(""); }
                         }}
-                        placeholder={`${row.connected ? "Enter new" : "Paste your"} ${row.name} API key...`}
+                        placeholder={t("{action} {name} API key...", { action: row.connected ? t("Enter new") : t("Paste your"), name: row.name })}
                         autoFocus
                         className="flex-1 px-3 py-1.5 rounded-md border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
                       />
@@ -496,13 +498,13 @@ export default function CredentialsModal({
                         disabled={saving || !inputValue.trim()}
                         className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+                        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : t("Save")}
                       </button>
                       <button
                         onClick={() => { setEditingId(null); setInputValue(""); }}
                         className="px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-muted transition-colors"
                       >
-                        Cancel
+                        {t("Cancel")}
                       </button>
                     </div>
                   )}
@@ -523,7 +525,7 @@ export default function CredentialsModal({
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 }`}
               >
-                {allRequiredMet ? "Done" : missingCount > 0 ? "Connect required credentials to continue" : "Fix invalid credentials to continue"}
+                {allRequiredMet ? t("Done") : missingCount > 0 ? t("Connect required credentials to continue") : t("Fix invalid credentials to continue")}
               </button>
             </div>
           )}

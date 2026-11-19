@@ -15,6 +15,7 @@ import { credentialsApi } from "@/api/credentials";
 import { useQueensAuthorizationPrompt } from "@/context/QueensAuthorizationPromptContext";
 import { getProviderLogo } from "@/data/providerLogos";
 import { ProviderLogo } from "@/components/ProviderLogo";
+import { useI18n } from "@/i18n";
 
 type Channel = "telegram" | "slack";
 
@@ -89,6 +90,7 @@ export default function SentinelConnectorsSection({
   /** Re-fetch the status after a successful connect. */
   onReload: () => void;
 }) {
+  const { t } = useI18n();
   const [modal, setModal] = useState<Channel | null>(null);
 
   return (
@@ -122,14 +124,14 @@ export default function SentinelConnectorsSection({
                   aria-hidden
                 />
                 <span className={connected ? "text-emerald-600/90" : "text-muted-foreground/70"}>
-                  {connected ? "Connected" : "Alerts"}
+                  {connected ? t("Connected") : t("Alerts")}
                 </span>
               </span>
             </div>
 
             {/* Row 2 — description */}
             <p className="text-[10.5px] text-muted-foreground/80 mt-1.5 line-clamp-2 leading-snug [min-height:2lh]">
-              {c.blurb}
+              {t(c.blurb)}
             </p>
 
             <div className="flex-1" />
@@ -141,7 +143,7 @@ export default function SentinelConnectorsSection({
                 onClick={() => setModal(c.id)}
                 className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
               >
-                {connected ? "Reconnect" : "Connect"}
+                {connected ? t("Reconnect") : t("Connect")}
                 <span className="text-muted-foreground/50">›</span>
               </button>
             </div>
@@ -176,6 +178,7 @@ function ConnectModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useI18n();
   const { suppressNext } = useQueensAuthorizationPrompt();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -198,7 +201,7 @@ function ConnectModal({
       await credentialsApi.save("telegram", { bot_token: tgToken.trim() });
       const v = await sentinelApi.validateTelegram(tgToken.trim());
       if (!v.ok) {
-        setError(v.error ?? "Invalid bot token");
+        setError(v.error ?? t("Invalid bot token"));
         return;
       }
       setDoneLabel(v.bot_username ? `@${v.bot_username}` : (v.bot_name ?? "bot"));
@@ -224,7 +227,7 @@ function ConnectModal({
       await credentialsApi.save("slack_app", { access_token: slAppToken.trim() });
       const v = await sentinelApi.validateSlack(slBotToken.trim());
       if (!v.ok) {
-        setError(v.error ?? "Invalid Slack token");
+        setError(v.error ?? t("Invalid Slack token"));
         return;
       }
       setDoneLabel(v.team ?? "workspace");
@@ -253,7 +256,7 @@ function ConnectModal({
                 <ChannelLogo provider={channel} size={18} />
               </div>
               <h2 className="text-sm font-semibold text-foreground capitalize">
-                Connect {channel}
+                {t("Connect {channel}", { channel: channel === "slack" ? "Slack" : "Telegram" })}
               </h2>
             </div>
             <button
@@ -270,21 +273,17 @@ function ConnectModal({
               <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
                 <p className="text-xs text-foreground flex items-center gap-1.5">
                   <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                  Connected{channel === "slack" ? " to " : " as "}
-                  <strong>{doneLabel}</strong>.
+                  {t(channel === "slack" ? "Connected to {account}." : "Connected as {account}.", { account: doneLabel })}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
-                  Next, open a colony's <span className="text-foreground">Automations</span> tab,
-                  pick where to be pinged, and turn Sentinel on. The bot you just connected is
-                  shared across every colony.
+                  {t("Next, open a colony's")} <span className="text-foreground">{t("Automations")}</span> {t("tab, pick where to be pinged, and turn Sentinel on. The bot you just connected is shared across every colony.")}
                 </p>
               </div>
             ) : channel === "telegram" ? (
               <>
                 {connected && (
                   <p className="text-[11px] text-emerald-500 flex items-center gap-1">
-                    <Check className="w-3 h-3" /> A Telegram bot is already connected. Paste a
-                    new token below to replace it.
+                    <Check className="w-3 h-3" /> {t("A Telegram bot is already connected. Paste a new token below to replace it.")}
                   </p>
                 )}
                 <button
@@ -292,17 +291,15 @@ function ConnectModal({
                   onClick={() => openExternal("https://t.me/BotFather")}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors"
                 >
-                  Open @BotFather <ExternalLink className="w-3 h-3" />
+                  {t("Open @BotFather")} <ExternalLink className="w-3 h-3" />
                 </button>
                 <ol className="space-y-1.5 text-[11px] text-muted-foreground leading-relaxed list-decimal pl-4">
                   <li>
-                    In the @BotFather chat, send{" "}
-                    <code className="text-foreground">/newbot</code> and follow the prompts (a
-                    name, then a username ending in <code className="text-foreground">bot</code>).
+                    {t("In the @BotFather chat, send")}{" "}
+                    <code className="text-foreground">/newbot</code> {t("and follow the prompts (a name, then a username ending in")} <code className="text-foreground">bot</code>{t(").")}
                   </li>
                   <li>
-                    It replies with an <span className="text-foreground">HTTP API token</span> —
-                    copy it and paste below.
+                    {t("It replies with an")} <span className="text-foreground">{t("HTTP API token")}</span> {t("— copy it and paste below.")}
                   </li>
                 </ol>
                 <div className="flex gap-2">
@@ -321,7 +318,7 @@ function ConnectModal({
                     className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md disabled:opacity-50"
                   >
                     {busy && <Loader2 className="w-3 h-3 animate-spin" />}
-                    Connect
+                    {t("Connect")}
                   </button>
                 </div>
               </>
@@ -329,8 +326,7 @@ function ConnectModal({
               <>
                 {connected && (
                   <p className="text-[11px] text-emerald-500 flex items-center gap-1">
-                    <Check className="w-3 h-3" /> A Slack app is already connected. Paste new
-                    tokens below to replace it.
+                    <Check className="w-3 h-3" /> {t("A Slack app is already connected. Paste new tokens below to replace it.")}
                   </p>
                 )}
                 <button
@@ -338,40 +334,39 @@ function ConnectModal({
                   onClick={() => openExternal("https://api.slack.com/apps")}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors"
                 >
-                  Open Slack apps dashboard <ExternalLink className="w-3 h-3" />
+                  {t("Open Slack apps dashboard")} <ExternalLink className="w-3 h-3" />
                 </button>
                 <ol className="space-y-1.5 text-[11px] text-muted-foreground leading-relaxed list-decimal pl-4">
                   <li>
-                    Click <span className="text-foreground">Create New App → From scratch</span>,
-                    name it, and pick your workspace.
+                    {t("Click")} <span className="text-foreground">{t("Create New App → From scratch")}</span>{t(", name it, and pick your workspace.")}
                   </li>
                   <li>
-                    In <span className="text-foreground">Basic Information →</span>{" "}
+                    {t("In")} <span className="text-foreground">{t("Basic Information →")}</span>{" "}
                     <Lnk href="https://docs.slack.dev/authentication/tokens#app-level">
-                      App-Level Tokens
+                      {t("App-Level Tokens")}
                     </Lnk>
-                    , generate a token with <code className="text-foreground">connections:write</code>{" "}
-                    (<code className="text-foreground">xapp-…</code>).
+                    {t(", generate a token with")} <code className="text-foreground">connections:write</code>{" "}
+                    (<code className="text-foreground">xapp-…</code>{t(").")})
                   </li>
                   <li>
-                    Under{" "}
-                    <Lnk href="https://api.slack.com/scopes/chat:write">OAuth &amp; Permissions</Lnk>{" "}
-                    add the <code className="text-foreground">chat:write</code> bot scope.
+                    {t("Under")}{" "}
+                    <Lnk href="https://api.slack.com/scopes/chat:write">{t("OAuth & Permissions")}</Lnk>{" "}
+                    {t("add the")} <code className="text-foreground">chat:write</code> {t("bot scope.")}
                   </li>
                   <li>
-                    Hit <span className="text-foreground">Install to Workspace</span>, copy the{" "}
+                    {t("Hit")} <span className="text-foreground">{t("Install to Workspace")}</span>{t(", copy the")}{" "}
                     <Lnk href="https://docs.slack.dev/authentication/tokens#bot">
-                      Bot User OAuth Token
+                      {t("Bot User OAuth Token")}
                     </Lnk>{" "}
-                    (<code className="text-foreground">xoxb-…</code>), and turn on{" "}
-                    <Lnk href="https://api.slack.com/apis/socket-mode">Socket Mode</Lnk>.
+                    (<code className="text-foreground">xoxb-…</code>){t(", and turn on")}{" "}
+                    <Lnk href="https://api.slack.com/apis/socket-mode">{t("Socket Mode")}</Lnk>.
                   </li>
                 </ol>
                 <input
                   type="password"
                   value={slBotToken}
                   onChange={(e) => setSlBotToken(e.target.value)}
-                  placeholder="Bot token (xoxb-…)"
+                  placeholder={t("Bot token (xoxb-…)")}
                   autoComplete="new-password"
                   className="w-full rounded-md border border-border/60 bg-background/60 px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary/50"
                 />
@@ -379,7 +374,7 @@ function ConnectModal({
                   type="password"
                   value={slAppToken}
                   onChange={(e) => setSlAppToken(e.target.value)}
-                  placeholder="App-level token (xapp-…)"
+                  placeholder={t("App-level token (xapp-…)")}
                   autoComplete="new-password"
                   className="w-full rounded-md border border-border/60 bg-background/60 px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary/50"
                 />
@@ -390,7 +385,7 @@ function ConnectModal({
                   className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md disabled:opacity-50"
                 >
                   {busy && <Loader2 className="w-3 h-3 animate-spin" />}
-                  Connect
+                  {t("Connect")}
                 </button>
               </>
             )}
@@ -410,7 +405,7 @@ function ConnectModal({
               onClick={onClose}
               className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-colors"
             >
-              {doneLabel ? "Done" : "Cancel"}
+              {doneLabel ? t("Done") : t("Cancel")}
             </button>
           </div>
         </div>

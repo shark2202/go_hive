@@ -14,6 +14,7 @@ import { LLM_PROVIDERS } from "@/context/ModelContext";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { SearchInput } from "@/components/SearchInput";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n";
 
 /**
  * Pick a model for one slot: a searchable list, grouped by where models come from. Endpoints
@@ -75,6 +76,7 @@ interface Row {
 }
 
 export default function ModelPicker({ overview, value, placeholder, onPick, onClear, saved, onPickSaved, ariaLabel }: ModelPickerProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [query, setQuery] = useState("");
@@ -137,7 +139,7 @@ export default function ModelPicker({ overview, value, placeholder, onPick, onCl
             hint: contextLabel(m.max_context_tokens),
           }))
         : [];
-      const note = state === "loading" || state === undefined ? "Asking it for its models…" : !Array.isArray(state) ? state.error : undefined;
+      const note = state === "loading" || state === undefined ? t("Asking it for its models…") : !Array.isArray(state) ? state.error : undefined;
       const shown = rows.filter((r) => matches(r, title));
       if (shown.length || note) out.push({ key: `endpoint:${endpoint.name}`, title, note, rows: shown });
     }
@@ -156,7 +158,7 @@ export default function ModelPicker({ overview, value, placeholder, onPick, onCl
       if (rows.length) out.push({ key: `catalog:${provider.id}`, title, logo: provider.id, rows });
     }
     if (saved && onPickSaved) {
-      const title = "Saved setups";
+      const title = t("Saved setups");
       const rows = Object.entries(saved)
         .sort(([a], [b]) => a.localeCompare(b))
         .map<Row>(([name, s]) => ({
@@ -170,7 +172,7 @@ export default function ModelPicker({ overview, value, placeholder, onPick, onCl
       if (rows.length) out.unshift({ key: "saved", title, saved: true, rows });
     }
     return out;
-  }, [overview, reachable, live, query, saved, onPickSaved]);
+  }, [overview, reachable, live, query, saved, onPickSaved, t]);
 
   const savedName = saved ? savedSetupOf(value, saved) : null;
   const isCurrent = (choice: Row["choice"]) =>
@@ -236,7 +238,7 @@ export default function ModelPicker({ overview, value, placeholder, onPick, onCl
               <span className="block truncate text-sm text-foreground">{label.model}</span>
               <span className="block truncate text-[11px] text-muted-foreground">
                 {label.from}
-                {value?.max_context_tokens ? ` · ${contextLabel(value.max_context_tokens)} context` : ""}
+                {value?.max_context_tokens ? ` · ${t("{context} context", { context: contextLabel(value.max_context_tokens) ?? "" })}` : ""}
               </span>
             </>
           ) : (
@@ -261,7 +263,7 @@ export default function ModelPicker({ overview, value, placeholder, onPick, onCl
             className="z-50 flex flex-col rounded-lg border border-border/60 bg-card shadow-xl"
           >
             <div className="p-2 border-b border-border/50">
-              <SearchInput value={query} onChange={setQuery} placeholder="Search models" autoFocus />
+              <SearchInput value={query} onChange={setQuery} placeholder={t("Search models")} autoFocus />
             </div>
             <div className="overflow-y-auto p-1">
               {onClear && !query && (
@@ -301,8 +303,8 @@ export default function ModelPicker({ overview, value, placeholder, onPick, onCl
                         className="w-full flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-muted"
                       >
                         <span className="min-w-0 flex-1 truncate">{row.label}</span>
-                        {row.recommended && <Star className="w-3 h-3 shrink-0 text-amber-500" aria-label="Recommended" />}
-                        {row.vision && <Eye className="w-3 h-3 shrink-0 text-muted-foreground/70" aria-label="Sees images" />}
+                        {row.recommended && <Star className="w-3 h-3 shrink-0 text-amber-500" aria-label={t("Recommended")} />}
+                        {row.vision && <Eye className="w-3 h-3 shrink-0 text-muted-foreground/70" aria-label={t("Sees images")} />}
                         {row.hint && <span className="shrink-0 text-[11px] text-muted-foreground">{row.hint}</span>}
                         {current && <Check className="w-3.5 h-3.5 shrink-0 text-primary" />}
                       </button>
@@ -312,7 +314,7 @@ export default function ModelPicker({ overview, value, placeholder, onPick, onCl
               ))}
               {groups.length === 0 && (
                 <div className="px-2.5 py-3 text-sm text-muted-foreground">
-                  {query ? "No model matches." : "Nothing to pick yet: add a key or an endpoint under Providers."}
+                  {query ? t("No model matches.") : t("Nothing to pick yet: add a key or an endpoint under Providers.")}
                 </div>
               )}
             </div>

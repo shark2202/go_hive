@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertCircle, BookmarkPlus, KeyRound, Loader2, Pencil, Plus, X } from "lucide-react";
 import { configApi, type LlmRole, type LlmSection } from "@/api/config";
 import { ApiError } from "@/api/client";
+import { useI18n } from "@/i18n";
 
 /**
  * Verbatim editor over configuration.json's provider slots
@@ -82,6 +83,7 @@ export type ProviderConfig = ReturnType<typeof useProviderConfig>;
 
 /** Slots and saved setups as configuration.json holds them; `onSlotChanged` runs after a slot is written. */
 export function useProviderConfig(onSlotChanged: () => Promise<void>) {
+  const { t } = useI18n();
   const [sections, setSections] = useState<Record<LlmRole, LlmSection | null>>({
     llm: null,
     worker_llm: null,
@@ -110,7 +112,7 @@ export function useProviderConfig(onSlotChanged: () => Promise<void>) {
       setLibrary(lib.library);
       setLoadError(null);
     } catch (e) {
-      setLoadError(e instanceof ApiError ? e.message : "Failed to load config");
+      setLoadError(e instanceof ApiError ? e.message : t("Failed to load config"));
     } finally {
       setLoading(false);
     }
@@ -156,11 +158,11 @@ export function useProviderConfig(onSlotChanged: () => Promise<void>) {
     try {
       parsed = JSON.parse(editor.text);
     } catch (e) {
-      setEditorError(`Invalid JSON: ${e instanceof Error ? e.message : e}`);
+      setEditorError(t("Invalid JSON: {error}", { error: e instanceof Error ? e.message : String(e) }));
       return;
     }
     if (editor.kind === "library" && !editor.name.trim()) {
-      setEditorError("A name is required");
+      setEditorError(t("A name is required"));
       return;
     }
     setSaving(true);
@@ -190,7 +192,7 @@ export function useProviderConfig(onSlotChanged: () => Promise<void>) {
         setEditor(null);
       }
     } catch (e) {
-      setEditorError(e instanceof ApiError ? e.message : "Save failed");
+      setEditorError(e instanceof ApiError ? e.message : t("Save failed"));
     } finally {
       setSaving(false);
     }
@@ -205,7 +207,7 @@ export function useProviderConfig(onSlotChanged: () => Promise<void>) {
       setSections((prev) => ({ ...prev, [role]: null }));
       await onSlotChanged();
     } catch (e) {
-      setSlotError(e instanceof ApiError ? e.message : "Clear failed");
+      setSlotError(e instanceof ApiError ? e.message : t("Clear failed"));
     } finally {
       setBusyRole(null);
     }
@@ -224,7 +226,7 @@ export function useProviderConfig(onSlotChanged: () => Promise<void>) {
     try {
       await applySaved(name, role);
     } catch (e) {
-      setSlotError(e instanceof ApiError ? e.message : `Failed to apply "${name}"`);
+      setSlotError(e instanceof ApiError ? e.message : t("Failed to apply \"{name}\"", { name }));
     } finally {
       setBusyRole(null);
     }
@@ -241,7 +243,7 @@ export function useProviderConfig(onSlotChanged: () => Promise<void>) {
         return next;
       });
     } catch (e) {
-      setLibraryError(e instanceof ApiError ? e.message : "Delete failed");
+      setLibraryError(e instanceof ApiError ? e.message : t("Delete failed"));
     } finally {
       setBusyEntry(null);
     }
@@ -282,15 +284,17 @@ function ErrorText({ message }: { message: string | null }) {
 }
 
 function LoadingText() {
+  const { t } = useI18n();
   return (
     <p className="mt-2 text-[11px] text-muted-foreground inline-flex items-center gap-1">
-      <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+      <Loader2 className="w-3 h-3 animate-spin" /> {t("Loading…")}
     </p>
   );
 }
 
 /** Each slot as configuration.json writes it, with "Use saved…" to copy a saved setup in. */
 export function ProviderSlots({ cfg }: { cfg: ProviderConfig }) {
+  const { t } = useI18n();
   const { sections, libraryNames, busyRole, reload } = cfg;
   // The page's pickers write the same slots, so read them afresh each time this opens.
   useEffect(() => {
@@ -299,9 +303,9 @@ export function ProviderSlots({ cfg }: { cfg: ProviderConfig }) {
   return (
     <div className="rounded-lg border border-border/60 bg-card p-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[13px] font-semibold text-foreground">Provider Slots</span>
+        <span className="text-[13px] font-semibold text-foreground">{t("Provider Slots")}</span>
         <span className="text-[10.5px] text-muted-foreground">
-          configuration.json, verbatim — what you see is exactly what the file says
+          {t("configuration.json, verbatim — what you see is exactly what the file says")}
         </span>
       </div>
 
@@ -321,7 +325,7 @@ export function ProviderSlots({ cfg }: { cfg: ProviderConfig }) {
               >
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-semibold text-foreground">
-                    {ROLE_TITLE[role]}
+                    {t(ROLE_TITLE[role])}
                   </span>
                   {s ? (
                     <div className="text-[10.5px] text-muted-foreground truncate">
@@ -329,7 +333,7 @@ export function ProviderSlots({ cfg }: { cfg: ProviderConfig }) {
                     </div>
                   ) : (
                     <div className="text-[10.5px] text-muted-foreground/70">
-                      Not configured — {ROLE_HINT[role]}
+                      {t("Not configured — {hint}", { hint: t(ROLE_HINT[role]) })}
                     </div>
                   )}
                 </div>
@@ -342,10 +346,10 @@ export function ProviderSlots({ cfg }: { cfg: ProviderConfig }) {
                       onChange={(e) => {
                         if (e.target.value) void cfg.handleApply(e.target.value, role);
                       }}
-                      title="Load a saved setup into this slot"
+                      title={t("Load a saved setup into this slot")}
                       className="text-[10.5px] rounded-md border border-border/60 bg-background text-muted-foreground px-1 py-0.5 outline-none focus:border-primary/50 max-w-[7rem]"
                     >
-                      <option value="">Use saved…</option>
+                      <option value="">{t("Use saved…")}</option>
                       {libraryNames.map((n) => (
                         <option key={n} value={n}>
                           {n}
@@ -357,14 +361,14 @@ export function ProviderSlots({ cfg }: { cfg: ProviderConfig }) {
                     <>
                       <button
                         onClick={() => cfg.openLibraryEditor(null, s)}
-                        title="Save this slot's config as a saved setup"
+                        title={t("Save this slot's config as a saved setup")}
                         className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                       >
                         <BookmarkPlus className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => cfg.openEditor(role)}
-                        title={`Edit the ${role} section as JSON`}
+                        title={t("Edit the {role} section as JSON", { role })}
                         className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                       >
                         <Pencil className="w-3 h-3" />
@@ -373,7 +377,7 @@ export function ProviderSlots({ cfg }: { cfg: ProviderConfig }) {
                         <button
                           onClick={() => void cfg.handleClear(role)}
                           disabled={busy}
-                          title={`Clear ${role} — ${ROLE_HINT[role]}`}
+                          title={t("Clear {role} — {hint}", { role, hint: t(ROLE_HINT[role]) })}
                           className="p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                         >
                           <X className="w-3 h-3" />
@@ -385,7 +389,7 @@ export function ProviderSlots({ cfg }: { cfg: ProviderConfig }) {
                       onClick={() => cfg.openEditor(role)}
                       className="text-[11px] font-medium px-2 py-1 rounded-md border border-primary/30 text-primary hover:bg-primary/10 transition-colors inline-flex items-center gap-1"
                     >
-                      <Plus className="w-3 h-3" /> Configure
+                      <Plus className="w-3 h-3" /> {t("Configure")}
                     </button>
                   )}
                 </div>
@@ -402,6 +406,7 @@ export function ProviderSlots({ cfg }: { cfg: ProviderConfig }) {
 
 /** The provider library as cards like the page's endpoints and keys: name, model, address, and whether a key is kept. */
 export function SavedSetups({ cfg }: { cfg: ProviderConfig }) {
+  const { t } = useI18n();
   const { library, libraryNames, busyEntry } = cfg;
   if (cfg.loading) return <LoadingText />;
   return (
@@ -423,8 +428,8 @@ export function SavedSetups({ cfg }: { cfg: ProviderConfig }) {
                 <button
                   type="button"
                   onClick={() => cfg.openLibraryEditor(name, s)}
-                  title={`Edit saved setup "${name}"`}
-                  aria-label={`Edit ${name}`}
+                  title={t("Edit saved setup \"{name}\"", { name })}
+                  aria-label={t("Edit {name}", { name })}
                   className="p-1 text-muted-foreground hover:text-foreground"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -433,8 +438,8 @@ export function SavedSetups({ cfg }: { cfg: ProviderConfig }) {
                   type="button"
                   onClick={() => void cfg.handleDeleteEntry(name)}
                   disabled={busy}
-                  title={`Delete saved setup "${name}" (slots already using it keep their copy)`}
-                  aria-label={`Delete ${name}`}
+                  title={t("Delete saved setup \"{name}\" (slots already using it keep their copy)", { name })}
+                  aria-label={t("Delete {name}", { name })}
                   className="p-1 text-muted-foreground hover:text-destructive disabled:opacity-50"
                 >
                   {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
@@ -452,7 +457,7 @@ export function SavedSetups({ cfg }: { cfg: ProviderConfig }) {
         onClick={() => cfg.openLibraryEditor(null, cfg.sections.llm ?? TEMPLATE)}
         className="flex items-center gap-1.5 rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40"
       >
-        <Plus className="w-3.5 h-3.5" /> Add a saved setup
+        <Plus className="w-3.5 h-3.5" /> {t("Add a saved setup")}
       </button>
       <ErrorText message={cfg.loadError ?? cfg.libraryError} />
     </div>
@@ -461,6 +466,7 @@ export function SavedSetups({ cfg }: { cfg: ProviderConfig }) {
 
 /** The JSON editor over one slot or one saved setup; open while `cfg.editor` is set. */
 export function ProviderConfigEditor({ cfg }: { cfg: ProviderConfig }) {
+  const { t } = useI18n();
   const { editor, setEditor, editorError, saving } = cfg;
   if (!editor) return null;
   return (
@@ -474,21 +480,21 @@ export function ProviderConfigEditor({ cfg }: { cfg: ProviderConfig }) {
       >
         <div className="text-sm font-semibold text-foreground mb-0.5">
           {editor.kind === "role"
-            ? ROLE_TITLE[editor.role]
+            ? t(ROLE_TITLE[editor.role])
             : editor.originalName
-              ? `Saved setup: ${editor.originalName}`
-              : "New saved setup"}
+              ? t("Saved setup: {name}", { name: editor.originalName })
+              : t("New saved setup")}
         </div>
         <p className="text-[10.5px] text-muted-foreground mb-2">
           {editor.kind === "role"
-            ? `Saved verbatim to configuration.json » ${editor.role}. The api_key is health-checked against api_base before committing.`
-            : "Saved verbatim to configuration.json » provider_library. The key is health-checked when the config is applied to a slot."}
+            ? t("Saved verbatim to configuration.json » {role}. The api_key is health-checked against api_base before committing.", { role: editor.role })
+            : t("Saved verbatim to configuration.json » provider_library. The key is health-checked when the config is applied to a slot.")}
         </p>
         {editor.kind === "library" && (
           <input
             value={editor.name}
             onChange={(e) => setEditor({ ...editor, name: e.target.value })}
-            placeholder="Name (e.g. deepseek-prod, local-vllm)"
+            placeholder={t("Name (e.g. deepseek-prod, local-vllm)")}
             spellCheck={false}
             className="w-full mb-2 rounded-md border border-border/60 bg-background px-2.5 py-1.5 text-[11.5px] text-foreground outline-none focus:border-primary/50"
           />
@@ -506,7 +512,7 @@ export function ProviderConfigEditor({ cfg }: { cfg: ProviderConfig }) {
             onClick={() => setEditor(null)}
             className="text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-border/60 text-muted-foreground hover:text-foreground transition-colors"
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             onClick={() => void cfg.handleSave()}
@@ -514,7 +520,7 @@ export function ProviderConfigEditor({ cfg }: { cfg: ProviderConfig }) {
             className="text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-primary text-primary-foreground disabled:opacity-50 inline-flex items-center gap-1"
           >
             {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-            Save
+            {t("Save")}
           </button>
         </div>
       </div>

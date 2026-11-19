@@ -15,6 +15,7 @@ import {
   splitSkillMarkers,
   type SkillCapsule,
 } from "@/data/skill-capsules";
+import { useI18n } from "@/i18n";
 
 const MAX_SUGGESTIONS = 8;
 
@@ -248,6 +249,7 @@ export function SkillCapsuleChip({
   onRemove?: () => void;
   size?: "sm" | "xs";
 }) {
+  const { t } = useI18n();
   const pad = size === "xs" ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-[11px]";
   const shortLabel = shortSkillLabel(capsule.label);
   return (
@@ -265,7 +267,7 @@ export function SkillCapsuleChip({
             onRemove();
           }}
           className="ml-0.5 opacity-60 hover:opacity-100"
-          aria-label={`Remove ${capsule.label}`}
+          aria-label={t("Remove {name}", { name: capsule.label })}
         >
           <X className="h-2.5 w-2.5" />
         </button>
@@ -435,12 +437,13 @@ export function SkillSuggestionList({
   /** Open above the input ("up", default) or collapse downward ("down"). */
   placement?: "up" | "down";
 }) {
+  const { t } = useI18n();
   if (!composer.isOpen) return null;
   const pos = placement === "down" ? "top-full mt-2" : "bottom-full mb-2";
   return (
     <div className={`absolute ${pos} left-0 z-30 w-72 max-w-[90vw] rounded-xl border border-border bg-popover shadow-lg overflow-hidden`}>
       <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 border-b border-border/60">
-        Attach a skill
+        {t("Attach a skill")}
       </div>
       <ul className="max-h-64 overflow-y-auto py-1">
         {composer.suggestions.map((c, i) => {

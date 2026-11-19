@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Loader2, Package, X } from "lucide-react";
 import { skillsApi, type SkillInstallRequest } from "@/api/skills";
+import { useI18n } from "@/i18n";
 
 interface Props {
   /** The session whose queen asked. */
@@ -18,6 +19,7 @@ interface Props {
  * session opens.
  */
 export default function SkillInstallConsent({ sessionId, refreshKey }: Props) {
+  const { t } = useI18n();
   const [requests, setRequests] = useState<SkillInstallRequest[]>([]);
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
   const [deciding, setDeciding] = useState(false);
@@ -59,7 +61,7 @@ export default function SkillInstallConsent({ sessionId, refreshKey }: Props) {
       await skillsApi.decideInstallRequest(sessionId, request.id, decision);
       setRequests((prev) => prev.filter((r) => r.id !== request.id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't record your decision");
+      setError(e instanceof Error ? e.message : t("Couldn't record your decision"));
     } finally {
       setDeciding(false);
     }
@@ -76,7 +78,7 @@ export default function SkillInstallConsent({ sessionId, refreshKey }: Props) {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
           role="dialog"
-          aria-label="Add a skill to the shared library"
+          aria-label={t("Add a skill to the shared library")}
           className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col pointer-events-auto"
         >
           {/* Header */}
@@ -87,17 +89,17 @@ export default function SkillInstallConsent({ sessionId, refreshKey }: Props) {
               </div>
               <div>
                 <h2 className="text-sm font-semibold text-foreground">
-                  Add a skill to the shared library?
+                  {t("Add a skill to the shared library?")}
                 </h2>
                 <p className="text-[11px] text-muted-foreground">
                   {request.name}
-                  {waiting.length > 1 ? ` · 1 of ${waiting.length}` : ""}
+                  {waiting.length > 1 ? ` · ${t("1 of {count}", { count: waiting.length })}` : ""}
                 </p>
               </div>
             </div>
             <button
               onClick={close}
-              aria-label="Close"
+              aria-label={t("Close")}
               className="p-1.5 rounded-md hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-4 h-4" />
@@ -108,17 +110,15 @@ export default function SkillInstallConsent({ sessionId, refreshKey }: Props) {
           <div className="px-5 py-4 space-y-3 overflow-y-auto">
             <p className="text-xs text-foreground">{request.description}</p>
             <p className="text-xs text-muted-foreground">
-              The queen in this chat asks to share this skill with every queen
-              and colony. Declining keeps it out; either way she's told.
+              {t("The queen in this chat asks to share this skill with every queen and colony. Declining keeps it out; either way she's told.")}
             </p>
 
             {request.replaces && (
               <div className="flex items-start gap-2 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
                 <span>
-                  The shared library already has a skill named{" "}
-                  <span className="font-mono">{request.name}</span>. Installing
-                  replaces it.
+                  {t("The shared library already has a skill named")}{" "}
+                  <span className="font-mono">{request.name}</span>{t(". Installing replaces it.")}
                 </span>
               </div>
             )}
@@ -153,7 +153,7 @@ export default function SkillInstallConsent({ sessionId, refreshKey }: Props) {
               disabled={deciding}
               className="px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
             >
-              Decline
+              {t("Decline")}
             </button>
             <button
               onClick={() => decide("approve")}
@@ -161,7 +161,7 @@ export default function SkillInstallConsent({ sessionId, refreshKey }: Props) {
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {deciding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Install for everyone
+              {t("Install for everyone")}
             </button>
           </div>
         </div>
