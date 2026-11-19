@@ -1,10 +1,10 @@
 # Go 运行时 × Runtime Spine 八层接线审计
 
-- 审计基线：`ab5c3dc7`（`release: 1.0.24-go.1（接线收尾 + Queen 两阶段/overseer 桥）`，Go 1.0.24；相对 `d650199d` 合并 credential 提交、预载 catalog、doom reason、judge criteria、两阶段落盘与 overseer 消息桥）
-- 上一版基线：`d650199d`（`release: 1.0.23-go.1（提醒/持久性/loop 保护）`；67 已接 / 3 部分 / 0 未接，70 行）
-- 更早基线：`6723ab78`（63/7/0）；`c444c192`（61/9/0）；`4b6f1cf4`（50/10/10）；`4daf4222`（汇总表 30 已接 / 12 部分 / 28 未接；按行逐条重算为 32 / 11 / 27，见 §1 注）
-- 审计日期：2026-11-19
-- 本轮增量：复核 `d650199d..ab5c3dc7` 落地的 1.0.24 收尾——credential-form 提交（加密 store + 清 park + 恢复）、预载会话 `SkillsCatalog`、chat 失败分支保留 doom-loop park reason、chat Queen/overseer 继承 colony goal criteria、Queen 两阶段 phase 落 `meta.json` 并把 Tool Library 的 PATCH 接到 live 会话工具集、绑定 colony 的客户端消息/报告/trigger 单进 live overseer 且回复以 queen stream 呈现。
+- 审计基线：`80ea8567`（`release: 1.0.25-go.1（worker 镜像/共享 park/overseer 提问）`，Go 1.0.25；相对 `ab5c3dc7` 合并 worker 进度镜像、overseer 凭据 form park、chat/overseer 共享 pending park、overseer `ask_user`、终态报告记录化与 timeline 写者收口）
+- 上一版基线：`ab5c3dc7`（`release: 1.0.24-go.1（接线收尾 + Queen 两阶段/overseer 桥）`；70 已接 / 0 部分 / 0 未接，70 行）
+- 更早基线：`d650199d`（67/3/0）；`6723ab78`（63/7/0）；`c444c192`（61/9/0）；`4b6f1cf4`（50/10/10）；`4daf4222`（汇总表 30 已接 / 12 部分 / 28 未接；按行逐条重算为 32 / 11 / 27，见 §1 注）
+- 审计日期：2026-11-20
+- 本轮增量：复核 `ab5c3dc7..80ea8567` 落地的 1.0.25——worker 回合的 text/tool/token 事件经 `workerEmitter` 发 colony bus，session bridge 以 `relayed_from=<worker-id>` 重标进会话流并去重；overseer 的 `tool_call_completed` 缺凭据由 `parkOverseerCredentialForm` 生产 `credential_form` park；overseer `ask_user` 与 chat 共享 `cursor.json` 的 `pending_input`，回答 `Deliver → AnswerOverseer` 双清，cursor 读改写加 `parkStoreMu`；overseer 回合结束补 `loop_state_changed(awaiting_user)`；overseer 终态报告 `recordOnly+external` 不触发 chat 回合；timeline 后台写者纳入 WaitGroup，`Close` 等待。
 - 审计对象：`runtime_spine.md` 的八层栈；Go 模块根为 `go_hive/go-hive/`
 - 分层依据说明：`runtime_spine.md` 仍未入库，本审计与上一版一样按既有文本核对八层定义，不把该文件计入提交。
 - 判定口径（严格）：
@@ -13,9 +13,9 @@
   - **未接**＝代码存在但生产入口走不到（死代码 / 仅测试 / 只有类型、枚举或提示文案）。
   - 管理配置路由（MCP、Sentinel 通知、Soul 编辑）本身可达不等于其运行时机制已接；MCP 与 Sentinel 的运行时装配已在早前版本补齐，本轮仍按"运行时是否真的跑"判定，而不是按配置路由计分。
 - 证据口径：
-  - `L`＝交付侧既有 live 实测记录，出处 `go_hive/docs/support-matrix.md`（本轮只读审计，未重跑）。该表随 1.0.24 只更新版本号与测试计数，不覆盖 skill 工具、run_playbook、trigger/Sentinel、MCP 白名单、soul、检索、并行只读、park 落盘，以及本轮的 credential 提交、预载 catalog、doom park reason、judge criteria、两阶段 phase、overseer 中继。
+  - `L`＝交付侧既有 live 实测记录，出处 `go_hive/docs/support-matrix.md`（本轮只读审计，未重跑）。该表随 1.0.25 只更新版本号与测试计数，不覆盖 skill 工具、run_playbook、trigger/Sentinel、MCP 白名单、soul、检索、并行只读、park 落盘，以及本轮的 worker 进度镜像、overseer 凭据 form、共享 park、overseer `ask_user`、终态报告记录化与 timeline 写者收口。
   - `C`＝本轮从 `cmd/hive` 逐段静态追踪，并用 `go build ./...` 与聚焦测试复核；测试本身不计入接线判定。
-- 说明：只读审计，不改产品代码、不改测试、不改 `go.mod`。下表路径均相对 Go 模块根 `go_hive/go-hive/`；行号以 `ab5c3dc7` 为准；本轮改写的行号已复核，未改写行沿用上一版（以符号名为准）。
+- 说明：只读审计，不改产品代码、不改测试、不改 `go.mod`。下表路径均相对 Go 模块根 `go_hive/go-hive/`；行号以 `80ea8567` 为准；本轮改写的行号已复核，未改写行沿用上一版（以符号名为准）。
 
 ## 生产入口与追踪方法
 
@@ -51,9 +51,9 @@
 | 8. 能力边界（Tools / MCP / Credentials / Budgets） | 11 | 0 | 0 | 11 |
 | **合计** | **70** | **0** | **0** | **70** |
 
-注：`4b6f1cf4` 版按行级口径为 **50/10/10**；`c444c192` 版为 **61/9/0**；`6723ab78` 版为 **63/7/0**；`d650199d` 版为 **67/3/0**。本版为 **70/0/0**，相对 `d650199d` 是 **+3 已接、-3 部分**（第 1 层 judge、第 2 层 overseer、第 8 层凭据），未接仍为 0。
+注：`4b6f1cf4` 版按行级口径为 **50/10/10**；`c444c192` 版为 **61/9/0**；`6723ab78` 版为 **63/7/0**；`d650199d` 版为 **67/3/0**；`ab5c3dc7` 版为 **70/0/0**。本版（`80ea8567`）仍为 **70/0/0**，与 `ab5c3dc7` 相同，**0 条状态变化**；1.0.25 的四项能力都落在已有 substrate 行上。
 
-读法：这一轮补的是最后三个"部分"的收口，而不是新层。第 1 层把 chat/overseer 的 judge criteria 与 credential-form 提交接上，doom-loop park reason 不再被覆盖；第 2 层让 live overseer 成为唯一执行 lead，chat Queen 退为前端；第 8 层补上凭据表单的安全写回。剩余是已知差异（两份 conversation、catalog 作用域、MiniMax/Python playbook/81 模块），不再是接线断点。
+读法：这一轮不是补新层，而是把 1.0.24 留下的桥接/共享 park 行为缺口补完整。第 1 层把 overseer 执行路径的 credential form 生产接上，并共享 pending park；第 2 层让 overseer 的 `ask_user` 直达客户端、终态报告不再触发 chat 回合，chat 与 overseer 共享一条会话 cursor 的 ask 记录；第 4 层把 worker 的 text/tool/token 进度以 `relayed_from` 镜像进 SSE；第 8 层把同一 credential form 接到 overseer 工具结果。剩余是已知差异（两份 conversation、catalog 作用域、form 覆盖面、MiniMax/Python playbook/81 模块），不再是接线断点。
 
 ---
 
@@ -72,11 +72,11 @@
 | judge：accept / retry / escalate | `internal/agentloop/judge.go:92/109/127`；`internal/colony/runtime.go:1078`（worker）/`:1160-1167`（overseer）；`internal/server/chat_runtime.go:321/1061/1077-1089` | worker 构造 loop 后 `ConfigureJudge`；spec 无 criteria 时用 goal 的 criterion 描述回填（`runtime.go:1073-1077`、`criteria.go:37`）；overseer 无 spec criteria 时继承 colony goal（`:1160-1167`）；chat runtime 有 `ChatRuntimeDeps.SuccessCriteria` 或绑定 colony 的 goal 时 `ConfigureJudge`（`chat_runtime.go:321/1077-1089`）；RETRY 回注 `[Judge feedback]` 用户消息 | 已接 | C | plain chat（无 criteria、无 bound goal）仍 `Judge == nil`；绑定 colony 且有 live overseer 时 chat Queen 不执行 model turn，评估发生在 overseer 的 loop；`GoalCriteriaText` 只取描述，不取权重。 |
 | worker grace + 更紧预算 | `internal/colony/worker_definition.go:9`；`internal/colony/worker_loop_config.go:46`；`internal/agentloop/loop.go:529-556` | `run_worker` → `BuildWorkerLoopConfig` 应用 3 轮 + 1 grace / 每轮 30 / 硬停 90 / 终身 200；grace 轮只允许 terminal tools | 已接 | C | `task_update` 现在可达（worker 自带 task 工具），三项终态工具均可用 |
 | 崩溃恢复：transcript cursor + 会话恢复 | `internal/agentloop/conversation.go:1126/1213`；`internal/server/chat_runtime.go:255`；worker 侧 `colony/worker_transcript.go:40`、`resume_workers.go:38`、`worker_state.go:78/226`、`colony/runtime.go:523`；预载 `loader_preloaded_session.go:53/62` | chat 每条消息 `persist`；`NewChatRuntime` 恢复 parts；worker transcript/state 落盘，`ColonyRuntime.Start` 自动续跑崩溃时非终态 worker；预载会话按 `queen_resume_from` 复用旧 id | 已接 | C | 自动续跑只覆盖崩溃时 queued/running（completed/failed/stopped 不复活）；`POST /api/sessions` 带 colony_id 仍不走 `queen_resume_from`；自定义 report status 未归一为终态时会被当作可续跑（待验证）。 |
-| park / resume（`ask_user` 停车） | `internal/server/chat_park.go:29/89/116`；`internal/server/chat_runtime.go:228/1137/1286`、`:1078/1127/1141`；`internal/server/chat_credential_park.go:43/68/77/90`；`internal/server/routes_credentials_form.go:36`；`internal/agentloop/park_reason.go:16` | `ask_user` / 缺凭据 → `pendingQuestions`/`pendingCredentialForm` + `client_input_requested` / `client_credential_form_requested`；park 时把 `pending_input` 写进 `cursor.json`，`NewChatRuntime` 恢复等待，用户消息/trigger 清除；`POST /api/sessions/{id}/credential-form` 校验 pending form → 写加密 store → 同步 env → 清 park → `InjectEvent` 恢复（`cancelled` 只清 park） | 已接 | C | 人类回答与 credential_form 都能落盘/恢复；提交只服务 chat runtime 的 pending form（缺凭据工具错误的生产者），overseer 执行的会话不会产生该 form，overseer 的 park 状态也仍只在内存。 |
+| park / resume（`ask_user` 停车） | `internal/server/chat_park.go:30/92/121`；`internal/server/chat_runtime.go:261/1287/626`、`:1220/1277/1291`；`internal/server/chat_credential_park.go:43/77/90`；`internal/server/routes_credentials_form.go:36`；`internal/server/chat_colony_bridge.go:248`（overseer form producer）、`:303-316`（shared park 回答）；`internal/agentloop/park_reason.go:16` | `ask_user` / 缺凭据 → `pendingQuestions`/`pendingCredentialForm` + `client_input_requested` / `client_credential_form_requested`；park 时把 `pending_input` 写进 `cursor.json`，`NewChatRuntime` 恢复等待，用户消息/trigger 清除；`POST /api/sessions/{id}/credential-form` 校验 pending form → 写加密 store → 同步 env → 清 park → `InjectEvent` 恢复（`cancelled` 只清 park）。1.0.25 起 overseer 的 completed tool 事件也生产同一 form，overseer 的 `ask_user` 经 bridge 写同一 cursor，回答经 `Deliver → AnswerOverseer` 双清 | 已接 | C | chat 与 overseer 两条生产路径都已落盘/恢复；残余是 colony 侧 question 半份只在内存（`overseer_park.go:64`），且 form 只识别生成凭据 spec 表内的工具。 |
 | 自动上下文压缩 / 工具结果 spillover | `internal/agentloop/loop.go:320`（`compactConversationIfNeeded`）、`:224`（`restoreSpillCounter`）、`:60-74`（`MaxToolResultChars`/`SpilloverDir`）、`:1011/1021/1023`（每次工具返回经 spillover）；`internal/agentloop/conversation.go:736/931`；`internal/agentloop/llm_compact.go:22`；`internal/agentloop/tool_result_spillover.go:73/79/117`；`internal/server/chat_memory_wiring.go:17-21`；`internal/colony/worker_loop_config.go:65/122` | 每轮 LLM 调用前 `NeedsCompaction()` → `LlmCompact` → `conv.Compact`，触发 PRE/POST_COMPACT；非错误工具结果超过 30k 时写盘，消息替换为带 `Full result at:` 的 5000 字符预览并置 `SpilloverPath`；chat 写 `<session>/data`，worker 写 `cache/worker-tool-results/<pid-seq>` | 已接 | C | worker spill 目录由 `hivehome.Resolve()`（进程 `HIVE_HOME`）决定，不是 loader 的 `HomeRoot`；自定义 `Runner.HomeRoot` 下实际路径需实测（待验证）。 |
 | 每次 LLM 调用计量（tokens/cost） | `internal/agentloop/loop.go:595`；`internal/server/chat_runtime.go:713/721` | `LLMTurnComplete` → `chatTurnEmitter` → `llm_turn_complete`（input/output/cached/cost） | 已接 | C | — |
 
-**小结**：执行层骨架完整，流式（含 Anthropic SSE）、并行只读、工具回注、judge（worker + overseer + 有 criteria 的 chat Queen）、grace、压缩、计量都真实运行；worker transcript/运行态落盘让崩溃恢复覆盖 chat 与 colony，stall 已在 `AddSession` 订阅并发布 `node_stalled`，doom-loop 达到 5 次即停车并发 `node_tool_doom_loop`（park reason 不再被覆盖），Queen 30/50 与 worker spillover 也已生效；credential-form 提交补上加密写入、清 park 与恢复。剩余是作用域与已知边界：plain chat 无 judge、overseer 执行时 chat Queen 不跑 model turn、overseer park 不共享、MiniMax 非流式。
+**小结**：执行层骨架完整，流式（含 Anthropic SSE）、并行只读、工具回注、judge（worker + overseer + 有 criteria 的 chat Queen）、grace、压缩、计量都真实运行；worker transcript/运行态落盘让崩溃恢复覆盖 chat 与 colony，stall 已在 `AddSession` 订阅并发布 `node_stalled`，doom-loop 达到 5 次即停车并发 `node_tool_doom_loop`（park reason 不再被覆盖），Queen 30/50 与 worker spillover 也已生效；credential-form 提交补上加密写入、清 park 与恢复。1.0.25 又把 overseer 的凭据 form 生产、ask_user 与 chat 的共享 park 接上。剩余是作用域与已知边界：plain chat 无 judge、overseer 执行时 chat Queen 不跑 model turn、两份 conversation、colony 侧 question 半份不跨进程恢复、MiniMax 非流式。
 
 ---
 
@@ -92,12 +92,12 @@
 | `serve --colony` 启动即加载 runtime、overseer 与 chat | `internal/cli/loader.go:418/469`；`internal/cli/loader_preloaded_session.go:33/53/62/91/199` | `hive serve --colony <path>` → `resolvePreloadedColonySession`（metadata `queen_session_id`）→ host `Start` + `StartOverseer` → 有 provider 时 `ChatRuntime` + `QueenExecutor` → `RestoreSessionTriggers` → `AddSession` | 已接 | C | 旧 `L` 只覆盖加载；预载会话现在复用旧 id/转录（首次启动才新建），并注入 `SkillsCatalog`（`loader_preloaded_session.go:199`）；预载 `QueenName` 为空 → catalog 走 default queen scope；无 provider 时 `Chat` 为 nil，`POST /chat` 503 |
 | Queen chat 会话 + persona | `internal/cli/loader.go:536`；`internal/server/chat_runtime.go:164/1030` | `POST /api/sessions` → `createSessionWithRuntime` → `NewChatRuntime` → `IdentityPrompt` | 已接 | C | `default` queen 无 profile 时回退通用身份（预期） |
 | Queen 用 `run_worker` 运行时扩展 | `internal/colony/queen_tools.go:75/204`；`internal/cli/session_tools.go:111/258`；`internal/server/chat_runtime.go:879/896` | 会话工具表常驻 `run_worker`；`toolsForTurn` 在未绑 colony 时过滤；绑定后 `SpawnBatchWithOptions` 并启动软/硬超时看门狗 | 已接 | L | 预载 `serve --colony` 会话现在也可派活；`resume_worker_ids` 已实现（见 worker 行） |
-| Worker 是同一 loop + 终态报告 | `internal/colony/runtime.go:982/1118`；`internal/colony/queen_tools.go:492`；`internal/server/chat_runtime.go:315/942/1122` | `spawnBatchOn` → `runGatedWorker` → `runWorker` → `publishReport` → `SUBAGENT_REPORT` → 有 live overseer 时只投 overseer；overseer 自身报告回 chat 前端成 `[WORKER_REPORT]` | 已接 | L | 报告已有 duration/output_file；预载 colony 无 chat runtime 时无人消费；非 overseer worker 的 client IO/tool/token 不镜像 |
-| Colony overseer 是 client-facing Queen | `internal/colony/runtime.go:694/1137`；`internal/colony/overseer_tools.go:112`；`internal/cli/loader.go:484`；`internal/server/chat_colony_bridge.go:187/293/302`（`relayClientInputToOverseer`/报告/trigger）、`:139`（`mirrorColonyEvent`）；`internal/colony/session_bridge.go:66`（`InjectOverseer`）；`internal/colony/overseer_emitter.go:63` | `StartOverseer` → `runOverseer`：先跑一轮 seed，然后 `wakeCh` 醒来消费注入输入，用 `overseerToolDefs`（`run_worker` + queen tracker + task）；绑定 colony 的 chat runtime 把客户端消息、worker 报告与 trigger 都转投它；overseer 的文本/执行事件以 queen stream 镜像 | 已接 | C | 操作面已是单执行 lead；仍两份 conversation（overseer 回复不写回 chat transcript），chat 的 pending/park 不由 overseer 更新，overseer 无 `ask_user`；中继失败回退 chat Queen |
+| Worker 是同一 loop + 终态报告 | `internal/colony/runtime.go:982/1247`；`internal/colony/queen_tools.go:492/504`；`internal/server/chat_runtime.go:396/1060/1148` | `spawnBatchOn` → `runGatedWorker` → `runWorker` → `publishReport` → `SUBAGENT_REPORT` → 有 live overseer 时只投 overseer；overseer 自身终态报告以 `recordOnly+external` 记入 chat 转录（`chat_colony_bridge.go:393`），不再跑 chat 回合 | 已接 | L（报告）/ C（进度镜像） | 报告已有 duration/output_file；预载 colony 无 chat runtime 时无人消费；worker 的 text/tool/token 回合进度 1.0.25 起镜像到会话流（`colony/worker_emitter.go:24/40/49/62/69` + `chat_colony_bridge.go:205-227`），不再是不镜像。 |
+| Colony overseer 是 client-facing Queen | `internal/colony/runtime.go:694/1157`；`internal/colony/overseer_tools.go:112/120/149`；`internal/cli/loader.go:477`；`internal/server/chat_colony_bridge.go:303`（`relayClientInputToOverseer`）、`:449`（报告）、`:465`（trigger）、`:177`（`mirrorColonyEvent`）、`:248`（凭据 form）；`internal/colony/session_bridge.go:69`（`InjectOverseer`）、`:92`（`AnswerOverseer`）；`internal/colony/overseer_emitter.go:71` | `StartOverseer` → `runOverseer`：先跑一轮 seed，然后 `wakeCh` 醒来消费注入输入，用 `overseerToolDefs`（`run_worker` + queen tracker + task + `ask_user`）；绑定 colony 的 chat runtime 把客户端消息、worker 报告与 trigger 都转投它；overseer 的文本/执行事件以 queen stream 镜像，回合末发 `awaiting_user` | 已接 | C | 操作面已是单执行 lead；1.0.25 起 pending question/park 与 chat 共享（`ask_user` 写同一 cursor，回答双清），`ask_user` 已在工具面；仍两份 conversation（overseer 回复不写回 chat transcript），colony 侧 question 半份只在内存；中继失败回退 chat Queen |
 | Worker 是"聚焦克隆"：worker prompt + 配置的工具子集 | `internal/colony/worker_definition.go:39/113`；`internal/cli/colony_worker_definition.go:58/92`；`internal/colony/worker_tool_selection.go:28`；`internal/colony/runtime.go:856` | fork 写 worker `system_prompt` 与 `tools`；`runWorker` 用 `systemPromptFor(spec)`；`baseWorkerTools` 把声明项从 integration/MCP 池展开 | 已接 | L | builtin base 始终保留；空 `tools` 只剩 builtin；193ace3d 之前 fork 的旧 worker.json 仍是 Queen persona |
 | Worker 崩溃恢复 / `resume_worker_ids` 续跑 | `internal/colony/resume_workers.go:38`；`internal/colony/worker_state.go:78/226`；`internal/colony/worker_transcript.go:40`；`internal/colony/runtime.go:523`；`internal/colony/queen_tools.go:231-280` | transcript 落盘 `<colony>/workers/<id>/conversations`；运行态写 `runs/<id>.json` + `state.json`；`Start` 自动续跑崩溃时非终态 worker；`run_worker(resume_worker_ids=…)` → `ResumeWorkers` 恢复同一 conversation（可带 guidance）→ 继续 loop；逐 id 返回失败 | 已接 | C | 自动续跑只覆盖 queued/running（终态不复活）；活动中的 worker 拒绝手动 resume；无 meta.json 的旧 worker 不能 resume；resume 后预算 pinned，不做自适应收紧 |
 
-**小结**：组织层的"可部署、可加载、可派活、可恢复"都通了：scaffold 产出完整持久目录，`serve --colony` 既是真 colony 又是复用旧会话的真 chat session（并注入 skills catalog），worker 有身份、工具面、运行态与 resume。1.0.24 把 overseer 变成客户端消息/报告/trigger 的唯一执行 lead，chat Queen 退为前端；结构性残留是两份 conversation 与不共享的 pending/park，而不是输入断点。
+**小结**：组织层的"可部署、可加载、可派活、可恢复"都通了：scaffold 产出完整持久目录，`serve --colony` 既是真 colony 又是复用旧会话的真 chat session（并注入 skills catalog），worker 有身份、工具面、运行态与 resume。1.0.24 把 overseer 变成客户端消息/报告/trigger 的唯一执行 lead，chat Queen 退为前端；1.0.25 又共享 pending question/park 并补上 overseer 的 `ask_user` 与 worker 进度镜像；结构性残留是两份 conversation（回复不回写）与 colony 侧 question 半份不跨进程恢复。
 
 ---
 
@@ -129,15 +129,15 @@
 | 机制 | 实现位置（file:line） | 生产调用链 | 状态 | 证据 | 缺口 |
 | --- | --- | --- | --- | --- | --- |
 | 会话实时 transcript → SSE → UI | `internal/server/chat_runtime.go:629-709`；`internal/server/chat_routes.go:168`；`internal/eventbus/bus.go:154/415` | 每轮 emit execution / loop / assistant / tool / usage → session `EventBus` → `GET /api/sessions/{id}/events`；同时写 `events.jsonl` | 已接 | L | — |
-| Worker 终态报告 → Queen 的 `[WORKER_REPORT]` | `internal/colony/runtime.go:1118/1200`；`internal/colony/queen_tools.go:492/426`；`internal/server/chat_runtime.go:315/942` | 终态 `SUBAGENT_REPORT` → `FormatWorkerReport` → `InjectWorkerReport` → 下一轮以非 client user message 注入 | 已接 | L | 预载 colony 无 chat 时无人消费；报告同时转投 overseer（`chat_runtime.go:982`） |
-| Colony 事件 → 会话 / UI SSE | `internal/server/chat_colony_bridge.go:44`（`syncColonyEventBridge`）、`:72`（订阅并转投 session bus）；`internal/server/chat_runtime.go:950`（`BindColony` 挂桥） | 绑定 colony 的 chat runtime 订阅 colony bus 的 execution/worker/report 事件并 publish 到 session bus；UI 经 `GET /api/sessions/{id}/events` 看到 worker 生命周期 | 已接 | C | 没有独立的 `/api/colonies/{id}/events` 路由；只在有 chat 会话绑定时可见 |
+| Worker 终态报告 → Queen 的 `[WORKER_REPORT]` | `internal/colony/runtime.go:1247/1344`；`internal/colony/queen_tools.go:492/504/426`；`internal/server/chat_runtime.go:396/1060` | 终态 `SUBAGENT_REPORT` → `FormatWorkerReport` → 有 live overseer 时只投 overseer；overseer 自己的终态报告以 `recordOnly+external` 记入转录（`chat_colony_bridge.go:393`），不再以 chat 回合注入 | 已接 | L（报告）/ C（recordOnly 与进度镜像） | 预载 colony 无 chat 时无人消费；报告同时转投 overseer（`chat_runtime.go:1148`）；终态报告不再触发 chat 回合。 |
+| Colony 事件 → 会话 / UI SSE | `internal/server/chat_colony_bridge.go:57`（`syncColonyEventBridge`）、`:90`（订阅并转投 session bus）、`:177`（`mirrorColonyEvent`）；`internal/server/chat_runtime.go:1060`（`BindColony` 挂桥） | 绑定 colony 的 chat runtime 订阅 colony bus 的 execution/worker/report/client/tool/token 事件并 publish 到 session bus；worker 的 text/tool/token 以 `relayed_from=<worker-id>` 重标，已带标记的不重复（`:212-215`）；UI 经 `GET /api/sessions/{id}/events` 看到 worker 生命周期与进行中的回合 | 已接 | C | 没有独立的 `/api/colonies/{id}/events` 路由；只在有 chat 会话绑定时可见；worker 不发布 `client_reasoning`；overseer 自身 tool/token 不重镜像（`:187-194`）。 |
 | Reminder Hub：7 个 source 注册 + `Hub.Start` | `internal/server/chat_reminders.go:69/85-96`；`internal/agentloop/reminder_hub.go:235` | `NewChatRuntime` → register task / colony_parallel / active_workers / tracker_snapshot / searchable_tools / skills_catalog / idle + Sentinel escalation → `Bind` → `Hub.Start`（idle ticker） | 已接 | L | chat、worker、overseer 三个 loop 都有 Hub；worker/overseer 只注册 task + idle 两个 source，没有 chat 的 fleet/tracker/skills 源 |
 | Reminder 触发点 | `internal/server/chat_runtime.go:577/584/643`；`internal/agentloop/loop.go:355/414/579/806/887` | SESSION_START / USER_PROMPT_SUBMIT / POST_TOOL_USE / PRE_COMPACT / POST_COMPACT / STOP / IDLE_TICK / TOOL_BUDGET_CHECKPOINT | 已接 | C | `STREAM_STALLED` 没有 source 注册；chat 侧 `SESSION_START` 可能在 runtime 和 loop 各触发一次（重复注入风险） |
 | Reminder 内容供给（fleet / task / tools / skills / tracker） | `internal/server/chat_reminders.go:26-64/88-90`；`internal/agentloop/active_workers_reminder.go:27`；`internal/agentloop/colony_parallel_nudge.go:54`；`internal/agentloop/tool_skill_reminders.go:23`；`internal/agentloop/tracker_snapshot_reminder.go:105/135`；`internal/server/chat_tool_tiers.go:43/153`；`internal/cli/loader_reminders.go:26/30` | 注册 task、colony_parallel、active_workers、tracker_snapshot、searchable_tools、skills_catalog、idle；provider 从 live session 读；tracker provider 取 bound runtime 的 `TrackerBinding`，skills provider 从 queen 技能目录加载，searchable provider 从 chat MCP tier 取 | 已接 | C | 预载 `serve --colony` 已注入 `SkillsCatalog`（`loader_preloaded_session.go:199`），但固定 default queen scope；tracker source 只在绑定 colony 后触发；无 MCP 时 chat searchable tier 为 nil（无工具可搜，预期）；overseer 执行时 chat hub 的 skills source 不参与该次输入 |
 | Worker 侧提醒 | `internal/colony/worker_reminders.go:107`（`newWorkerAgentLoop`）、`:114`（`NewAgentLoop`）、`:120`（task source）、`:127`（idle nudge）、`:135`（`Hub.Start`） | `runWorker` → `newWorkerAgentLoop` 建 Hub；task 快照与 idle 提醒在工具批尾部/空闲时注入 worker 的 loop | 已接 | C | 只有 task + idle 两个 source；没有 fleet/skills/tracker 源 |
 | REST reminder surface 与 chat hub 一致 | `internal/server/routes_reminders.go:40`（`registerSessionReminderHub`）、`:374`（GET 镜像 live hub）、`:422`（DELETE 走 hub）；`internal/server/chat_runtime.go:310`（构造时注册） | `GET/DELETE /api/sessions/{id}/reminders` 优先读写同一 live hub；`ReminderRuntime` 只作为无 live session 的回退 | 已接 | C | 没有 live runtime 的会话（未加载/已关闭）仍读回退 runtime，可能为空 |
 
-**小结**：信号层的主路径（chat transcript SSE、worker 报告回 Queen、colony 生命周期 → session bus）是通的，且有 live 记录；Sentinel 也作为第 8 个 source 接进来了；worker/overseer 拿到自己的 hub，REST reminder surface 与 chat hub 同源。提醒内容补齐 tracker 快照、真实 skills catalog 与 chat 侧 searchable tools，预载会话也已注入 catalog；剩余只有 `STREAM_STALLED` 未注册、预载 catalog 固定 default scope，以及 overseer 执行时 chat hub 的 skills source 不参与该次输入。
+**小结**：信号层的主路径（chat transcript SSE、worker 报告回 Queen、colony 生命周期 → session bus）是通的，且有 live 记录；Sentinel 也作为第 8 个 source 接进来了；worker/overseer 拿到自己的 hub，REST reminder surface 与 chat hub 同源。提醒内容补齐 tracker 快照、真实 skills catalog 与 chat 侧 searchable tools，预载会话也已注入 catalog。1.0.25 又把 worker 的 text/tool/token 进度以 `relayed_from` 镜像进 SSE，并让 overseer 的 `ask_user` 走同一会话流；剩余只有 `STREAM_STALLED` 未注册、预载 catalog 固定 default scope，以及 overseer 执行时 chat hub 的 skills source 不参与该次输入。
 
 ---
 
@@ -203,17 +203,17 @@
 | --- | --- | --- | --- | --- | --- |
 | Chat 会话工具目录 | `internal/cli/session_tools.go:58-176`；`internal/server/chat_runtime.go:879/1019` | `newSessionToolCatalogue` → builtin + integration installer + senders + task + `run_worker` + `run_playbook` + tracker + skill 工具 + `search_messages`/`search_timeline` + `memory_timeline` + `credential_status` + `ask_user` | 已接 | L | 工具数量大；名称冲突保留 builtin；扫描器默认关闭 |
 | Worker 工具面 | `internal/colony/runtime.go:825/856`；`internal/colony/worker_tool_selection.go:28`；`internal/cli/colony_worker_definition.go:92`；`internal/colony/worker_task_tools.go:77` | worker = builtin base + `worker.json.tools` 从 integration/MCP 池展开 + tracker + `report_to_parent` + `skill_view`/`list_skills` + 4 个 task 工具 | 已接 | L | 不是严格 Queen 子集；空声明只有 builtin；未声明 integration 不下发 |
-| Colony overseer 工具面 | `internal/colony/overseer_tools.go:112`；`internal/colony/runtime.go:825` | `worker.Persistent` → `overseerToolDefs` = colony tools + queen tracker + `run_worker` + 4 个 task 工具 | 已接 | C | 没有 `skill_view`/`write_skill`/`run_playbook`/`ask_user`；客户端消息/报告/trigger 已可注入（`chat_colony_bridge.go:187/293/302`） |
+| Colony overseer 工具面 | `internal/colony/overseer_tools.go:112/120/149`；`internal/colony/runtime.go:825/869` | `worker.Persistent` → `overseerToolDefs` = colony tools + queen tracker + `run_worker` + 4 个 task 工具 + `ask_user`（`askOverseerUser`） | 已接 | C | 没有 `skill_view`/`write_skill`/`run_playbook`；客户端消息/报告/trigger 已可注入（`chat_colony_bridge.go:303/449/465`），`ask_user` 经 `client_input_requested(stream=overseer)` 到客户端（`colony/overseer_park.go:33/53`）。 |
 | MCP 服务器配置管理 | `internal/server/routes_mcp.go:61-92`；`internal/server/app.go:157` | `GET/POST/DELETE /api/mcp/servers*`、enable/disable/health/mode/reload → `mcpregistry.NewAtHome` | 已接 | C | 只管理配置文件与健康检查 |
 | MCP 客户端 / 工具装载 | `internal/cli/mcp_loader.go:66/102/131`；`internal/tools/mcp_bootstrap.go:66`；`internal/tools/registry.go:150`；`internal/tools/mcp_registry.go:224` | `serve` 启动 `startMCPRuntime` → `Reload`（读配置、连 pool）→ `SetProcessMCP`；每个 `NewToolRegistry` 自动 `attachProcessMCP` → `LoadRegistryServers` 命名空间注册 | 已接 | C | 连接失败的 server 退化为 warning；`/api/mcp/reload` 重连后新 registry 才 attach |
 | MCP 工具白名单 | `internal/host/host.go:89-112`（`discoveredMCPToolNames` + `SetToolAllowlist`）；`internal/colony/runtime.go:304/321`；`internal/server/chat_mcp_allowlist.go:42`；`internal/server/routes_colony_tools.go:528-530` | 建 host 时把进程发现的 MCP 名字集交给 runtime（`tools.json` 的 enabled 子集为白名单）；`applyToolAllowlist` 按名字过滤，chat 侧 `filterToolsByColonyAllowlist` 同源；PUT 路由更新 live runtime 的 enabled 集 | 已接 | C | 未配置 `tools.json` 白名单时 `enabled == nil`，不过滤（预期）；运行中 PUT 传 `nil` 名字集，依赖 host 已注入的名字集 |
 | 凭据存储 + 路由 + 环境同步 | `internal/server/routes_credentials.go:72-84/134`；`internal/cli/loader.go:286`；`internal/credentials/store.go:52` | `hive serve` 启动 `SyncCredentialEnv` → 集成工具从 `os.Getenv` 取值；`POST /api/sessions/{id}/credential-form` 写同一加密 store 后 `syncEnv` | 已接 | C | 只覆盖 env 型凭据；`get_account_info` 的 `AccountSource` 没有注入 |
-| Agent 凭据工具 | `internal/cli/session_tools_credentials.go:26/37`（`credential_status`）；`internal/cli/session_tools.go:120`（入表）；`internal/server/chat_credential_park.go:43/68/77/90`（缺凭据 → credential_form park）；`internal/server/routes_credentials_form.go:36`（提交） | 会话工具表常驻 `credential_status`：列出凭据名/env/配置方式，不返回值；工具因缺凭据失败时生产 form、发 `client_credential_form_requested`、写 `pending_input`；提交路由写加密 store、清 park 并恢复 | 已接 | C | 没有 agent 主动发起的 `credentials(collect)` 写工具，form 只在缺凭据工具错误时生产；overseer 执行会话不经过该生产者（待验证其它入口） |
+| Agent 凭据工具 | `internal/cli/session_tools_credentials.go:26/37`（`credential_status`）；`internal/cli/session_tools.go:120`（入表）；`internal/server/chat_credential_park.go:43`（chat 缺凭据 → credential_form park）；`internal/server/chat_colony_bridge.go:248`（overseer 缺凭据 → 同一 form）；`internal/server/routes_credentials_form.go:36`（提交） | 会话工具表常驻 `credential_status`：列出凭据名/env/配置方式，不返回值；工具因缺凭据失败时生产 form、发 `client_credential_form_requested`、写 `pending_input`；提交路由写加密 store、清 park 并恢复 | 已接 | C | 没有 agent 主动发起的 `credentials(collect)` 写工具；form 由缺凭据工具结果生产，chat 与 overseer 两条路径都已接（1.0.25）；只覆盖生成凭据 spec 表内的工具（`credentialSpecForTool`）。 |
 | Loop 预算（迭代 / 工具调用） | `internal/agentloop/loop.go:78-91`（默认 50 轮、soft 30/hard 50）；`internal/agentloop/loop_guards.go:18/36`；`internal/colony/worker_definition.go:9`；`internal/colony/worker_loop_config.go:50-65`；`internal/agentloop/session_cost.go:38/86` | chat Queen 用 `DefaultLoopConfig`（30 soft / 50 hard，`softBudgetCheckpointBlock` 在 30 触发）；worker 3+1 / 30 / 90 / 200，显式清 hard limit；会话花费上限由 `HIVE_SESSION_COST_LIMIT_USD` 播种，到额后拒绝下一轮 | 已接 | C | `max_cost_per_run` 仍只是 schema 字段；soft 检查点是单 turn-loop 内计数 |
 | 速率 / 配额限制执行时生效 | `internal/llm/transport.go:45`（`AcquireLLMRequest`）；`internal/agentloop/tool_rate_limit.go:23/33`；`internal/agentloop/loop.go:994`；`internal/ratelimit/call_limiter.go:396/404` | HTTP provider 每次请求走 LLM 桶；每批工具在 `executeToolBatch` 前按 `rate_limits.tools.*` 取桶，拒绝时回注可重试结果；未配置时 no-op | 已接 | C | 只按 `hive.config.json` 的 `rate_limits` 生效；默认无限流，本轮未做 live 压测 |
 | Worker 工具分层 / 搜索 | `internal/agentloop/search_tools.go:49`（`ensureSearchToolsTool`）、`:66`（`executeTieredTool`）、`:16`（`SearchToolsToolDef`）；`internal/agentloop/loop.go:577`（每轮广告）、`:633`（`RefreshDynamicTools`）、`:1011`（dispatch 前拦截）；`internal/colony/runtime.go:413-476`（`buildWorkerContext` 建 `ToolTierState` 与 `DynamicToolsProvider`）、`:349`（`gateableNames`）；`internal/server/chat_tool_tiers.go:43/91/153/276`（chat tier + allowlist）；`internal/tools/tiers.go:414/448`；`internal/tools/tier_defaults.go:163` | worker 的 `ToolTierState` 非空时，loop 自动把 `search_tools` 加进工具表；`search_tools` 在 loop 内执行（`tools.RunSearchTools` → `PromoteSearchedTools`），下一轮 `RefreshDynamicTools` 把 promote 的工具放出；未加载的 searchable 工具在 dispatch 前被拒；chat 侧也由 `newChatToolTier` 建同一分层；`PATCH /api/queen/{id}/tools` 经 `ApplyQueenMCPToolAllowlist` 重建会话的 tier | 已接 | C | 工具分层在 worker 与 chat 都生效；无 MCP 时 gateable 集合为空（全部 eager，预期）；预载会话也走 chat tier |
 
-**小结**：能力边界的"有工具"一面很强：chat Queen 有 builtin + integration + 声明项 + tracker + dispatch + 检索/凭据状态；MCP 在 serve 启动时连接、注册，并且 `tools.json` 白名单真的过滤；worker 与 chat 都拿到了 `search_tools` 分层，Queen 30/50 预算也生效。1.0.24 补上 credential-form 的安全写回（加密 store + 清 park + 恢复），并让 Tool Library 的 PATCH 重建会话 MCP tier；剩余是 form 只在缺凭据工具错误时生产、overseer 执行路径不经过该生产者。worker 侧 spillover 已配置，实际 home 路径待实测（第 1 层）。
+**小结**：能力边界的"有工具"一面很强：chat Queen 有 builtin + integration + 声明项 + tracker + dispatch + 检索/凭据状态；MCP 在 serve 启动时连接、注册，并且 `tools.json` 白名单真的过滤；worker 与 chat 都拿到了 `search_tools` 分层，Queen 30/50 预算也生效。1.0.24 补上 credential-form 的安全写回（加密 store + 清 park + 恢复），并让 Tool Library 的 PATCH 重建会话 MCP tier；1.0.25 让 overseer 执行路径也能生产同一 form，并把 `ask_user` 加入 overseer 工具面。剩余是 form 只识别 spec 表内工具、overseer 无 `write_skill`/`run_playbook`。worker 侧 spillover 已配置，实际 home 路径待实测（第 1 层）。
 
 ---
 
@@ -226,7 +226,7 @@
 | 组织方式 | 按 7 个概念页（colony / coordination / goals / improvement / queen / the_loop / worker_agent） | 按 8 层栈（执行 / 组织 / 状态 / 信号 / 方法 / 自治 / 沉淀 / 能力边界） |
 | 回答的问题 | 每个概念主张的机制是否存在、是否从生产入口可达 | 每一层的 substrate 是否真实承重；缺一层会堵住上面哪层 |
 | 判定颗粒 | 80 条行为/机制行，按概念归类 | 70 条 substrate 行，按层归类；同一机制只在其所属层计一次 |
-| 计数 | 80 已接 / 0 部分 / 0 未接（基线 `ab5c3dc7`） | 70 已接 / 0 部分 / 0 未接（基线 `ab5c3dc7`） |
+| 计数 | 80 已接 / 0 部分 / 0 未接（基线 `80ea8567`） | 70 已接 / 0 部分 / 0 未接（基线 `80ea8567`） |
 | 独有覆盖 | goals_outcome 的 judge/retry、improvement 的 reflexion、the_loop 的流式/压缩/计量等概念细节 | 第 5 层 Skill/Playbook、第 6 层 Trigger/Sentinel、第 7 层 Soul、第 8 层 MCP/Credentials/Budgets，以及层间依赖 |
 | 状态差异的原因 | 概念页按机制逐条判定，配置路由与运行时机制可能分开计分 | 本审计按层汇总，配置路由不算层已接；只有配置路由、运行时机制不运行的子系统降为部分或未接 |
 
@@ -246,8 +246,8 @@
 | --- | --- | --- |
 | Plan：`tasks.json` 的创建/更新/读取是否真在 queen 会话可用 | **已接（chat Queen + overseer + worker）** | `internal/cli/task_tools.go:47` + `internal/tasks/session_tools.go:747` + `internal/tasks/store.go:244`；overseer 用 `overseer_tools.go:51` 写在 `<colony>/_misc/overseer/tasks.json`；worker 用 `worker_task_tools.go:42` 写自己的目录。 |
 | Tracker：写路径、binding、queen/worker/overseer 工具 | **已接（live）** | `colony/tracker.go:61/137` + `binding.go:67` + `tracker/tools.go:1030` + `session_tools.go:118-137` + `runtime.go:849` + `overseer_tools.go:123`。 |
-| Event bus：worker 报告 → queen | **已接（live）** | `colony/runtime.go:1118/1200` → `queen_tools.go:492/426` → `chat_runtime.go:315/942`；有 live overseer 时只投 overseer（`:1122`），overseer 自身报告再回 chat 前端；报告作为非 client user turn 注入，带 duration/output_file。 |
-| Event bus：SSE → UI | **已接** | 会话 transcript SSE（`chat_routes.go:168` + `chat_runtime.go:629-709`）；colony 生命周期事件经 `chat_colony_bridge.go:44/72` 镜像到同一 session bus；overseer 文本/执行事件重盖成 queen stream（`:139`）。仍无独立的 `/api/colonies/{id}/events`。 |
+| Event bus：worker 报告 → queen | **已接（live）** | `colony/runtime.go:1247/1344` → `queen_tools.go:492/504/426` → `chat_runtime.go:396/1060`；有 live overseer 时只投 overseer（`:1148`），overseer 自身终态报告改 `recordOnly+external`（`chat_colony_bridge.go:393`）；报告作为非 client user turn 注入，带 duration/output_file。worker 的 text/tool/token 进度也已镜像（`worker_emitter.go:24/40/49/62/69`）。 |
+| Event bus：SSE → UI | **已接** | 会话 transcript SSE（`chat_routes.go:168` + `chat_runtime.go:629-709`）；colony 生命周期/报告/worker 进度经 `chat_colony_bridge.go:57/90/177` 镜像到同一 session bus；overseer 文本/执行事件重盖成 queen stream（`:177`），worker 进度带 `relayed_from=<worker-id>`（`:224`）。仍无独立的 `/api/colonies/{id}/events`。 |
 | Reminder hub：source 注册与触发点 | **已接（chat + worker + overseer）** | `chat_reminders.go:69/85-96` 注册 7 个 source + Sentinel source；`chat_runtime.go:577/584/643` + `loop.go:355/414/579/806/887` 覆盖主要点；worker/overseer 的 hub 在 `worker_reminders.go:114-135`。缺口：`STREAM_STALLED` 未注册、预载会话 catalog 走 default queen scope、无 MCP 时 chat searchable 数据为空。 |
 | 执行保护：stall / doom-loop / Queen 预算 | **已接（新）** | `session.go:431` → `chat_loop_guards.go:39/81` → `stall_check.go:79/124`（`node_stalled`）；`doom_loop.go:28-34/178` + `loop.go:837/976` + `loop_guards.go:109`（5 次停车 + `node_tool_doom_loop`）；chat 失败分支保留 `doom_loop`（`chat_runtime.go:673/682/716`）；`loop.go:78-91`（30/50）。 |
 | Colony scaffold / worker 持久运行态 | **已接（新）** | `colony_scaffold.go:31` 建 `skills/`、`runs/`、`triggers.json`；`worker_state.go:78/226` + `runtime.go:523` 落盘并自动续跑 queued/running；`loader_preloaded_session.go:53/62/199` 复用旧 queen 会话并注入 catalog（default scope）。缺口：fork 不建目录；POST colony_id 不 resume。 |
@@ -258,7 +258,7 @@
 | Memory：recall / reflection 是否每轮生效 | **已接（口径：reflection 非每轮）** | recall 每条 client 消息后都注入（`chat_runtime.go:784`），并追加每轮 6 条过往对话摘录（`chat_memory_wiring.go:31`、`chat_runtime.go:607`）；reflection 不是每轮，默认每 6 个完成 turn（`memory/reflection.go:1026` + `DefaultReflectionConfig`）；只有 chat Queen。 |
 | Goal：加权标准执行 / 约束进 prompt / 改进信号 | **已接（新）** | `agentloop/goal_eval.go:144` + `colony/goal_outcome.go:74/90` + `runtime.go:827/1104/1106` + `colony/improvement.go:124/197/238/260`；chat Queen 无 Goal，`signals.jsonl` 尚无读取者。 |
 | Soul：除 HTTP 读写路由外，reflection 是否会写 soul | **已接** | `chat_runtime.go:229/1259` + `soul/sediment.go`；HTTP `soul/reflect` 仍 503（`routes_credentials_soul.go:420`）；soul 已进 chat persona（`:1085-1095`），overseer 不读。 |
-| Tools / MCP / credentials / budgets | **已接（凭据表单已收口）** | chat/worker/overseer 工具面已接；MCP 装载与白名单已生效；worker 与 chat 的 `search_tools` 分层已闭合；Queen 30/50 已启用；`credential_status` 只读 + credential-form 生产/提交（`routes_credentials_form.go:36`）；LLM/工具限速与花费上限已执行。仍无 agent 主动发起的写凭据工具，form 只在缺凭据工具错误时生产。 |
+| Tools / MCP / credentials / budgets | **已接（凭据表单已收口）** | chat/worker/overseer 工具面已接（overseer 含 `ask_user`）；MCP 装载与白名单已生效；worker 与 chat 的 `search_tools` 分层已闭合；Queen 30/50 已启用；`credential_status` 只读 + credential-form 生产/提交（`routes_credentials_form.go:36`），生产路径含 chat（`chat_credential_park.go:43`）与 overseer（`chat_colony_bridge.go:248`）；LLM/工具限速与花费上限已执行。仍无 agent 主动发起的写凭据工具，form 只覆盖生成凭据 spec 表内的工具。 |
 
 ---
 
@@ -266,19 +266,19 @@
 
 ### 5.1 执行层已无接线缺口（第 1 层）
 
-并行只读工具、doom-loop 两级保护、stall 订阅、spillover 都已接；1.0.24 又补了两处：chat 失败分支用 `turnFailureParkReason` 保留 `doom_loop`（`chat_runtime.go:673/682/716`），事件、`loop_state_changed` 与 `pending_input` 三处一致；`POST /api/sessions/{id}/credential-form` 消费 credential_form park，写加密 store、清 park 并恢复（`routes_credentials_form.go:36/121/139/144`）。judge criteria 也覆盖了 overseer 与有 criteria 的 chat Queen（`colony/runtime.go:1160-1167`、`chat_runtime.go:1077-1089`）。**执行层不再有"部分"行；剩余是作用域边界，不是断点。**
+并行只读工具、doom-loop 两级保护、stall 订阅、spillover 都已接；1.0.24 又补了两处：chat 失败分支用 `turnFailureParkReason` 保留 `doom_loop`（`chat_runtime.go:673/682/716`），事件、`loop_state_changed` 与 `pending_input` 三处一致；`POST /api/sessions/{id}/credential-form` 消费 credential_form park，写加密 store、清 park 并恢复（`routes_credentials_form.go:36/121/139/144`）。judge criteria 也覆盖了 overseer 与有 criteria 的 chat Queen（`colony/runtime.go:1160-1167`、`chat_runtime.go:1077-1089`）。1.0.25 把 overseer 执行路径的凭据 form 生产（`chat_colony_bridge.go:248`）与 ask_user/共享 park（`chat_park.go:167`、`chat_colony_bridge.go:303-316`）接上。**执行层不再有"部分"行；剩余是作用域边界，不是断点。**
 
 ### 5.2 Colony 的 overseer 是唯一执行 lead，但仍有两份 conversation（第 2 层）
 
-overseer 现在有 `run_worker`、queen tracker、task 工具、持久 loop 与 transcript 恢复（`runtime.go:694/1137`、`overseer_tools.go:112`）；绑定 colony 的 chat runtime 把客户端消息、worker 报告与 trigger 都转投它（`chat_colony_bridge.go:187/293/302` → `session_bridge.go:66`），chat Queen 只记录用户 turn、不跑 model turn（`chat_runtime.go:359-372`）。overseer 的文本/执行事件经 `overseer_emitter.go` 发到 colony bus，再由 `mirrorColonyEvent` 重盖到 `chatStreamID`/`chatNodeID`（`chat_colony_bridge.go:139`），UI 以 queen stream 呈现；首条中继带 skills 目录（`:214`）。**操作面已经是单 lead；仍不是单状态：overseer 的回复不写回 chat transcript，chat 的 pending/park 不由 overseer 更新，overseer 没有 `ask_user`。**
+overseer 现在有 `run_worker`、queen tracker、task 工具、`ask_user`、持久 loop 与 transcript 恢复（`runtime.go:694/1157`、`overseer_tools.go:112/120`）；绑定 colony 的 chat runtime 把客户端消息、worker 报告与 trigger 都转投它（`chat_colony_bridge.go:303/449/465` → `session_bridge.go:69`），chat Queen 只记录用户 turn、不跑 model turn（`chat_runtime.go:372-388`）。overseer 的文本/执行事件经 `overseer_emitter.go` 发到 colony bus，再由 `mirrorColonyEvent` 重盖到 `chatStreamID`/`chatNodeID`（`chat_colony_bridge.go:177`），UI 以 queen stream 呈现；首条中继带 skills 目录（`:332-351`）。1.0.25 进一步把 pending question/park 共享：overseer 的 `ask_user` 经 bridge 写 chat 的 `pendingQuestions` 与 cursor（`chat_park.go:167`），回答 `Deliver → AnswerOverseer` 双清（`chat_colony_bridge.go:303-316`、`colony/session_bridge.go:92`），回合末发 `awaiting_user`（`colony/overseer_emitter.go:48-61`）。**操作面已经是单 lead，park 记录也已是单份；仍不是单 conversation：overseer 的回复不写回 chat transcript，colony 侧 question 半份只在内存。**
 
 ### 5.3 信号层只剩 `STREAM_STALLED` 与 catalog 作用域（第 4 层）
 
-chat transcript 的 SSE、worker 报告回 Queen、colony 生命周期 → session bus 都已接（`chat_colony_bridge.go:44/72`）；worker/overseer 也有自己的 reminder hub（`worker_reminders.go:114-135`），REST reminder surface 镜像同一 live hub（`routes_reminders.go:374`）。`tracker_snapshot` source 读 bound `tracker.db`（`tracker_snapshot_reminder.go:105/135`、`chat_reminders.go:88`），`skills_catalog` 由 loader 注入真实 provider（`loader.go:605`、`loader_reminders.go:26/30`），chat 用 `newChatToolTier` 提供 searchable tools（`chat_tool_tiers.go:43/153`）。预载 `serve --colony` 也已注入 `SkillsCatalog`（`loader_preloaded_session.go:199`），但固定 default queen scope。仍缺 `STREAM_STALLED` source；overseer 执行时 chat hub 的 skills source 不参与该次输入。
+chat transcript 的 SSE、worker 报告回 Queen、colony 生命周期 → session bus 都已接（`chat_colony_bridge.go:57/90`）；1.0.25 起 worker 的 text/tool/token 进度也以 `relayed_from=<worker-id>` 镜像进会话流（`:177/205-227`），工作不再只在 worker 自己的 conversation 里可见。worker/overseer 也有自己的 reminder hub（`worker_reminders.go:114-135`），REST reminder surface 镜像同一 live hub（`routes_reminders.go:374`）。`tracker_snapshot` source 读 bound `tracker.db`（`tracker_snapshot_reminder.go:105/135`、`chat_reminders.go:88`），`skills_catalog` 由 loader 注入真实 provider（`loader.go:605`、`loader_reminders.go:26/30`），chat 用 `newChatToolTier` 提供 searchable tools（`chat_tool_tiers.go:43/153`）。预载 `serve --colony` 也已注入 `SkillsCatalog`（`loader_preloaded_session.go:199`），但固定 default queen scope。仍缺 `STREAM_STALLED` source；overseer 执行时 chat hub 的 skills source 不参与该次输入。
 
 ### 5.4 能力边界凭据表单已收口（第 8 层）
 
-MCP 工具在 serve 启动时连上并注册，`MCPToolNames` 由 host 从进程发现的名字集注入，`applyToolAllowlist` 与 chat 侧过滤同源（`host.go:89-112`、`colony/runtime.go:321`、`chat_mcp_allowlist.go:42`）。LLM/工具限速与会话花费上限也已在执行点生效（`transport.go:45`、`tool_rate_limit.go:23/33`、`session_cost.go:38/86`）。worker 的 tool tiering 已闭合，chat 侧也由 `newChatToolTier` 建同一分层；Queen 的 30/50 软硬预算已启用（`loop.go:78-91`、`loop_guards.go:36`）；`PATCH /api/queen/{id}/tools` 现在会重建 live 会话的 MCP tier（`routes_queens_tools.go:575-584`、`chat_tool_tiers.go:91/276`）。凭据侧补上了 credential-form 提交（`routes_credentials_form.go:36`），但 form 仍只在 chat runtime 的缺凭据工具错误时生产，overseer 执行路径不经过该生产者。
+MCP 工具在 serve 启动时连上并注册，`MCPToolNames` 由 host 从进程发现的名字集注入，`applyToolAllowlist` 与 chat 侧过滤同源（`host.go:89-112`、`colony/runtime.go:321`、`chat_mcp_allowlist.go:42`）。LLM/工具限速与会话花费上限也已在执行点生效（`transport.go:45`、`tool_rate_limit.go:23/33`、`session_cost.go:38/86`）。worker 的 tool tiering 已闭合，chat 侧也由 `newChatToolTier` 建同一分层；Queen 的 30/50 软硬预算已启用（`loop.go:78-91`、`loop_guards.go:36`）；`PATCH /api/queen/{id}/tools` 现在会重建 live 会话的 MCP tier（`routes_queens_tools.go:575-584`、`chat_tool_tiers.go:91/276`）。凭据侧：credential-form 提交（`routes_credentials_form.go:36`）之外，1.0.25 让 overseer 的 completed tool 结果也能生产同一 form（`chat_colony_bridge.go:248`），chat 与 overseer 两条执行路径都覆盖；剩余是 form 只识别生成凭据 spec 表内的工具，且没有 agent 主动发起的 collect 工具。
 
 ### 5.5 沉淀层已通，timeline 只剩等价实现与作用域（第 7 层）
 
@@ -292,24 +292,24 @@ reflection 能把结论自动写进 soul（`chat_runtime.go:229/1259`），soul 
 
 | 层 | 缺了会堵住 | 当前 Go 状态 |
 | --- | --- | --- |
-| 1. 执行 | 上面 2–8 层全部失去执行体；没有 loop 就没有 agent 的一步 | 完整：stall 已订阅、doom-loop 5 次停车且 park reason 可读、Queen 30/50 与 worker spillover 已生效、credential-form 提交已接、judge criteria 覆盖 worker/overseer/有 criteria 的 chat |
-| 2. 组织 | 状态没有写者、信号没有生产者、方法/自治/沉淀没有作用对象 | chat Queen + `run_worker` + worker 身份/工具/task/resume/运行态自动续跑可用；goal 闭环在 worker 侧成立；scaffold 完整；live overseer 是客户端消息/报告/trigger 的唯一执行 lead；`serve --colony` 复用旧会话并注入 catalog；仍两份 conversation |
+| 1. 执行 | 上面 2–8 层全部失去执行体；没有 loop 就没有 agent 的一步 | 完整：stall 已订阅、doom-loop 5 次停车且 park reason 可读、Queen 30/50 与 worker spillover 已生效、credential-form 提交已接（chat + overseer 双生产者）、judge criteria 覆盖 worker/overseer/有 criteria 的 chat |
+| 2. 组织 | 状态没有写者、信号没有生产者、方法/自治/沉淀没有作用对象 | chat Queen + `run_worker` + worker 身份/工具/task/resume/运行态自动续跑可用；goal 闭环在 worker 侧成立；scaffold 完整；live overseer 是客户端消息/报告/trigger 的唯一执行 lead；`serve --colony` 复用旧会话并注入 catalog；pending/park 已共享，仍两份 conversation |
 | 3. 状态 | 并行工作失去共享事实；Queen 无法校验/恢复；playbook 没有未完成行可查 | Plan（chat + overseer + worker）与 Tracker（Queen/worker/overseer + REST）已接 |
-| 4. 信号 | worker 结果不回 Queen；UI 静默；长会话漂移、重复派活 | worker→Queen、colony→session SSE、worker reminder hub、REST 镜像都已接；提醒内容已补 tracker/skills/chat searchable；预载 catalog 固定 default scope；STREAM_STALLED 未注册 |
+| 4. 信号 | worker 结果不回 Queen；UI 静默；长会话漂移、重复派活 | worker→Queen、colony→session SSE、worker 回合进度镜像、worker reminder hub、REST 镜像都已接；提醒内容已补 tracker/skills/chat searchable；预载 catalog 固定 default scope；STREAM_STALLED 未注册 |
 | 5. 方法 | 一次性工作仍可做，但每个单元重复发现方法；批量只能逐行手工做 | 主路径全通：skill 写读 + Go-native playbook + run log/resume + status/stop |
 | 6. 自治 | colony 只能等人来唤醒；Queen 停车时没人知道 | 主路径全通：trigger timer/webhook/manual + 恢复（live overseer 时只投 overseer）；Sentinel 分类/升级；剩冷恢复 |
 | 7. 沉淀 | 每个会话从零开始；Queen 的人格不演化 | memory 已接（chat Queen），soul 自动写并进 chat persona；search 与每轮 excerpts 已接；timeline 读+写（flag 门控，`SubscribeTimelineTriggers` 用等价实现）；overseer 不读 soul |
-| 8. 能力边界 | agent 只能用 builtin；外部系统、凭据、限额无法按角色收放 | chat/worker/overseer 工具面已接；MCP 装载 + 白名单已生效；chat/worker `search_tools` 分层闭合；Queen 30/50 已启用；credential_status + credential-form 提交已接；Tool Library PATCH 重建会话 tier；仍无 agent 主动写凭据工具 |
+| 8. 能力边界 | agent 只能用 builtin；外部系统、凭据、限额无法按角色收放 | chat/worker/overseer 工具面已接（overseer 含 `ask_user`）；MCP 装载 + 白名单已生效；chat/worker `search_tools` 分层闭合；Queen 30/50 已启用；credential_status + credential-form 提交已接（chat + overseer 双生产者）；Tool Library PATCH 重建会话 tier；仍无 agent 主动写凭据工具 |
 
 按"修复收益 / 依赖顺序"排：
 
-1. **第 2 层（overseer/chat 状态合一）**：执行 lead 已唯一，剩下的高收益项是把 overseer 的回复与 pending/park 写回 session 状态（或明确声明 chat transcript 只是事件镜像），并决定 overseer 是否补 `ask_user`。
-2. **第 1/8 层（凭据生产路径）**：提交路由已有；让 overseer 执行的工具错误也能生产 credential_form，或补一个 agent 主动发起的 collect 工具。
+1. **第 2 层（两份 conversation 合一）**：执行 lead 已唯一，pending/park 已共享；剩下的高收益项是把 overseer 的回复写回 session transcript（或明确声明 chat transcript 只是事件镜像），并让 colony 侧 question 半份也能跨进程恢复。`ask_user` 已补，不再是待决策项。
+2. **第 1/8 层（凭据生产路径）**：chat 与 overseer 两条生产路径都已接；剩余是让 form 覆盖生成 spec 表外的工具（动态 MCP/自定义工具），或补一个 agent 主动发起的 collect 工具。
 3. **第 4 层（catalog 作用域 + STREAM_STALLED）**：把预载会话的 queen scope 从固定 `default` 改为 metadata/记录中的实际 queen；补 `STREAM_STALLED` source。
 4. **第 7 层（timeline 订阅 + 作用域）**：写入已由等价实现承担；补 `SubscribeTimelineTriggers` 或删除该函数，并让 worker/overseer 也能写。
 5. **生态边界**：MiniMax 流式、Python playbook、81 个第三方凭据模块属于已知差异，不是本轮接线项。
 
-一句话结论：**1.0.24 把最后六个"部分"收口：credential-form 提交、预载 catalog、doom park reason、judge criteria、Queen 两阶段、overseer 单执行 lead。70 行 substrate 现在是 70/0/0。剩下的不是"有没有机制"，而是"两份 conversation 是否要合一、catalog 作用域、凭据生产路径与生态验证"。**
+一句话结论：**1.0.25 把 overseer 桥接的四个行为缺口补上：worker 进度镜像、overseer 凭据 form、chat/overseer 共享 pending/park、overseer `ask_user`/`awaiting_user`；终态报告不再触发 chat 回合，timeline 写者收口。70 行 substrate 现在是 70/0/0。剩下的不是"有没有机制"，而是"两份 conversation 是否合一、catalog 作用域、form 覆盖面与生态验证"。**
 
 ## 7. 上一轮变更记录（历史存档：1.0.16–1.0.21，基线 `c444c192`）
 
@@ -474,3 +474,50 @@ reflection 能把结论自动写进 soul（`chat_runtime.go:229/1259`），soul 
 | 已知边界 | MiniMax 不流式；Python `.play.py` 不可执行；81 个第三方凭据模块未验证。 |
 | 验证方式 | `go build ./...` 通过；聚焦测试通过（`-count=1`）：`internal/server` 的 credential-form / doom-park / overseer-relay / criteria / phase-tool / allowlist 用例；`internal/cli` 的 phase 持久化/恢复/load-colony 与 preloaded catalog 用例；`internal/colony` 的 overseer judge 与 emitter 用例。 |
 | live 证据 | 本轮新增能力均无交付侧 live 记录，全部标 `C`；support-matrix 1.0.24 只更新版本与测试计数。 |
+
+## 11. 本轮变更记录（1.0.25，基线 `80ea8567`）
+
+本版计数 **70 已接 / 0 部分 / 0 未接（70 行）**，与 `ab5c3dc7` 的 70/0/0 相同：**0 条状态变化**；7 条状态不变、缺口改写（第 1 层 1、第 2 层 2、第 4 层 2、第 8 层 2）。行集不变。四项新能力都落在已有 substrate 行上，没有新增可计分行。
+
+### 11.1 桥接 / 共享 park 四项定级
+
+| # | 1.0.25 能力 | 定级 | 依据（file:line @ 80ea8567） |
+| --- | --- | --- | --- |
+| 1 | worker 回合进度镜像（text/tool/token） | **已接** | `colony/worker_emitter.go:24/40/49/62/69` 在 worker stream 发布；`colony/runtime.go:1104-1114` 在 `runWorker` 挂 observer；`server/chat_colony_bridge.go:148/177/205-227` 以 `relayed_from=<worker-id>` 重标并去重；overseer 自身 tool/token 不重镜像（`:187-194`）。测试 `TestWorkerTurnPublishesProgressEvents`、`TestColonyBridgeRelaysWorkerProgressWithOrigin`。 |
+| 2 | overseer 凭据 form park | **已接** | bridge 订阅 `tool_call_completed`（`server/chat_colony_bridge.go:90-109`），`:248-261` 对 `stream=overseer` 调 `parkForMissingCredential`（`chat_credential_park.go:43`），写 `pending_input(credential_form)` 并发 `client_credential_form_requested`；既有提交路由 `routes_credentials_form.go:36` 可消费并恢复。测试 `TestOverseerCredentialMissParksAndResumesThroughRoute`。 |
+| 3 | chat/overseer 共享 pending question/park | **已接（仍两份 conversation）** | `colony/overseer_park.go:33/53` 发 `client_input_requested(stream=overseer)`；`server/chat_park.go:167` 写入 chat 的 `pendingQuestions` 并由 `setParkState` 落 cursor；`server/chat_runtime.go:195` 的 `parkStoreMu` 串行化读改写；回答经 `server/chat_colony_bridge.go:303-316`（`Deliver → AnswerOverseer`）双清，`colony/session_bridge.go:92` 清 colony 半份。测试 `TestOverseerAskUserParksSessionAndAnswerRelays`、`TestOverseerAskUserParkSurvivesRestart`。残余：overseer 回复不写回 chat transcript；colony 侧 question 半份只在内存。 |
+| 4 | overseer `ask_user` + `awaiting_user` | **已接** | `colony/overseer_tools.go:112/120/149` 加入并分派 `ask_user`；`colony/overseer_park.go:91` 用 pending question 定 park reason；`colony/overseer_emitter.go:48-61` 回合末发 `loop_state_changed(awaiting_user, park_reason)` + `execution_completed`；快照读 `pending_questions`（`eventbus/snapshot.go:221`）。测试 `TestOverseerAskUserParksSessionAndAnswerRelays` 覆盖 `awaiting_input/ask_user` 与 `pending_questions`。 |
+
+### 11.2 状态不变、缺口改写（7 条）
+
+| 层 / 条目 | 旧缺口 | 当前缺口 |
+| --- | --- | --- |
+| 第 1 层：park / resume | overseer 执行会话不生产 form；overseer park 只在内存 | chat 与 overseer 两条 form 生产路径，同一 `pending_input`/提交路由；共享 `ask_user` park 与 `parkStoreMu`；残余是 colony 侧 question 半份只在内存、form 只识别 spec 表内工具。 |
+| 第 2 层：Worker 同一 loop + 终态报告 | 非 overseer worker 的 client IO/tool/token 不镜像 | 已镜像（`relayed_from`，去重）；overseer 终态报告改 `recordOnly+external`，不跑 chat 回合。 |
+| 第 2 层：Colony overseer | pending/park 不共享、无 `ask_user` | 已共享 cursor、已补 `ask_user`/`awaiting_user`；仍两份 conversation（回复不回写）、colony 侧 question 半份不跨进程恢复。 |
+| 第 4 层：Worker 终态报告 | overseer 自身终态报告会以 chat 回合注入 | 有 live overseer 时 worker 报告只投 overseer；overseer 自身报告 `recordOnly+external` 记入转录（`chat_colony_bridge.go:393`），不再触发 chat 回合。 |
+| 第 4 层：Colony 事件 → SSE | 只有生命周期事件；worker 进度不可见 | worker 的 text/tool/token 以 `relayed_from=<worker-id>` 镜像（`:205-227`）；worker 不发布 reasoning，overseer 自身 tool/token 不重镜像。 |
+| 第 8 层：Colony overseer 工具面 | 没有 `ask_user` | 已加 `ask_user`（`overseer_tools.go:120/149`）；仍无 `skill_view`/`write_skill`/`run_playbook`。 |
+| 第 8 层：Agent 凭据工具 | form 只在 chat runtime 的缺凭据工具错误时生产 | chat + overseer 两条路径都生产同一 form；仍无 agent 主动发起的 collect 工具，form 只覆盖生成凭据 spec 表内的工具。 |
+
+### 11.3 顺带收口（不计入行状态）
+
+| 事项 | 说明 |
+| --- | --- |
+| overseer 终态报告不触发 chat 回合 | `chat_runtime.go:1135-1145` 将 `overseerID` 的报告改走 `recordOverseerTerminal`；`chat_colony_bridge.go:393-401` 以 `recordOnly+external` 入队，`runTurn` 的 recordOnly 分支只写 `[External event]`（`chat_runtime.go:581-590`）。测试 `TestOverseerTerminalReportRunsNoChatTurn` 断言 chat LLM 调用为 0。 |
+| timeline 后台写者竞态 | `chat_runtime.go:156-159` 新增 `timelineWG`；`chat_memory_wiring.go:75/108` 的启动回填与每轮更新各 `Add(1)`/`Done()`；`Close` 在 `<-r.done` 之后 `Wait`（`chat_runtime.go:514`）。这是测试侧 flake 的修复，不改变接线判定。 |
+| shared bus 仍登记 park 观察者 | `chat_colony_bridge.go:78-88` 在共享 session bus 时只订阅 `client_input_requested`（不再整段跳过），保证 overseer 的 `ask_user` 仍能写 chat pending；credential form 观察只在非共享 bus 的 `tool_call_completed` 上，生产路径（colony 自建 bus）不受影响。 |
+
+### 11.4 备注 / 待验证
+
+| 事项 | 说明 |
+| --- | --- |
+| 两份 conversation | 共享的只是 pending question/park 与会话 cursor；`<colony>/conversations` 仍是 overseer 独立存储，回复不写回 chat transcript。`OverseerPendingQuestions`（`overseer_park.go:64`）不落盘，进程重启只恢复 cursor 的 chat 半份。 |
+| 前端 modal 重启重现 | 纯进程重启后前端 modal 是否重现，取决于前端对 `events.jsonl` 的回放；前端冻结，未验证。 |
+| colony worker 无 `ask_user` | `ask_user` 只加在 overseer 工具面；colony worker 的升级仍走既有 escalation 路径。 |
+| MiniMax 不流式 | 仍返回 `ErrStreamingUnsupported` 并回退非流式。 |
+| Python playbook 不可执行 | `.play.py` 仍明确 `unsupported`、0 派发；只有 Go-native JSON playbook 走 runner。 |
+| 81 个第三方凭据模块 | 仍未验证；form 的生产依赖 `credentials.GeneratedCredentialSpecs`（`credentialSpecForTool`），动态 MCP 工具不在表内时不弹 form。 |
+| overseer 凭据 form 的模型侧语义 | `parkOverseerCredentialForm` 消费已完成的 tool 事件，`parkForMissingCredential` 返回的等待文本不会回写 overseer 的 conversation（`chat_colony_bridge.go:260` 丢弃返回值）；模型可能在同一回合继续重试，实际等待依赖模型自行停手。提交与恢复有测试覆盖，模型重试行为待 live 验证。 |
+| live 证据 | 本轮新增能力均无交付侧 live 记录，全部标 `C`；support-matrix 1.0.25 只更新版本与测试计数，不覆盖 worker 进度镜像、overseer 凭据 form、共享 park、overseer `ask_user` 与终态报告记录化。 |
+| 验证方式 | `go build ./...` 通过；聚焦测试通过（`-count=1`）：`internal/colony` 的 `TestWorkerTurnPublishesProgressEvents`；`internal/server` 的 `TestColonyBridgeRelaysWorkerProgressWithOrigin`、`TestOverseerAskUserParksSessionAndAnswerRelays`、`TestOverseerAskUserParkSurvivesRestart`、`TestOverseerTerminalReportRunsNoChatTurn`、`TestOverseerCredentialMissParksAndResumesThroughRoute`、`TestChatRuntimeRelaysClientMessageToOverseer`、`TestChatRuntimeRelayOwnsReportsAndTriggers`、`TestChatRuntimeWritesTimelineAfterTurn`。 |
