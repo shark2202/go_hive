@@ -1,7 +1,7 @@
 # 发布检查单：hive 1.0.16-go.1
 
 > 出口标准定义见 `RELEASE_PLAN.md` §1（R1–R10）。
-> 检查对象：`w9/release` 工作树，2026-11-19 构建的 `hive 1.0.16-go.1`。
+> 检查对象：主线 `8518c2c8` 之后的 1.0.16 构建，2026-11-19 构建的 `hive 1.0.16-go.1`。
 > 状态口径：**PASS** = 判据满足且有本次可复现证据；**部分** = 有实现/部分证据但判据未完整满足；**阻塞** = 缺外部条件，代码无法补齐。
 
 ## 1. 逐项状态
@@ -25,12 +25,12 @@
 
 | 归档 | 字节 | SHA-256 |
 | --- | ---: | --- |
-| `hive-1.0.16-go.1-darwin-amd64.tar.gz` | 13,751,650 | `6875e57b…6eb61af` |
-| `hive-1.0.16-go.1-darwin-arm64.tar.gz` | 13,049,613 | `7dbf0c1c…a2ca635` |
-| `hive-1.0.16-go.1-linux-amd64.tar.gz` | 13,738,667 | `3ec150da…1efed78` |
-| `hive-1.0.16-go.1-linux-arm64.tar.gz` | 12,757,504 | `74d99bd2…ad5a15e` |
-| `hive-1.0.16-go.1-windows-amd64.zip` | 13,825,547 | `06f888b5…82b0e0f` |
-| `hive-1.0.16-go.1-windows-arm64.zip` | 12,755,276 | `c37ae40e…c0e5e15` |
+| `hive-1.0.16-go.1-darwin-amd64.tar.gz` | 14,176,022 | `f3b79d5c…9f881c0` |
+| `hive-1.0.16-go.1-darwin-arm64.tar.gz` | 13,440,190 | `7d8cbccf…fcc0419` |
+| `hive-1.0.16-go.1-linux-amd64.tar.gz` | 14,160,573 | `8e51b58f…5773272` |
+| `hive-1.0.16-go.1-linux-arm64.tar.gz` | 13,141,317 | `b7b8f7c5…df6072f` |
+| `hive-1.0.16-go.1-windows-amd64.zip` | 14,259,282 | `84f9dc8f…9bdf94c` |
+| `hive-1.0.16-go.1-windows-arm64.zip` | 13,144,990 | `dce8494c…6c75b32` |
 | `SHA256SUMS` | — | 上述六项 |
 
 完整哈希见 `go_hive/go-hive/dist/release/SHA256SUMS` 与发布说明 §4.2。
