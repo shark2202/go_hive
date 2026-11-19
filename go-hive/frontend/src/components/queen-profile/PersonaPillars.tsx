@@ -2,6 +2,7 @@ import { useState, type ComponentType } from "react";
 import { AlertCircle, Check, Compass, Drama, EyeOff, Loader2, Pencil, Plus, X, Zap } from "lucide-react";
 import { ApiError } from "@/api/client";
 import type { QueenPersona } from "@/api/queens";
+import { useI18n } from "@/i18n";
 
 /**
  * What lies under her persona text: the profile.yaml pillars her identity prompt is built from
@@ -51,6 +52,7 @@ export default function PersonaPillars({
   persona: QueenPersona;
   onSave: (fields: Partial<Record<keyof QueenPersona, unknown>>) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState<PillarKey | null>(null);
   const [fields, setFields] = useState<[string, string][]>([]);
   const [triggers, setTriggers] = useState<Trigger[]>([]);
@@ -90,7 +92,7 @@ export default function PersonaPillars({
       setEditing(null);
       setError(null);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Couldn't save");
+      setError(e instanceof ApiError ? e.message : t("Couldn't save"));
     } finally {
       setSaving(false);
     }
@@ -104,32 +106,32 @@ export default function PersonaPillars({
       {pillar.key === "behavior_triggers" ? (
         <div className="qp-triggers">
           <div className="qp-trigger-edit qp-field-label" aria-hidden>
-            <span>When</span>
-            <span>She</span>
+            <span>{t("When")}</span>
+            <span>{t("She")}</span>
           </div>
-          {triggers.map((t, i) => (
+          {triggers.map((tr, i) => (
             <div key={i} className="qp-trigger-edit">
               <input
                 className="qp-input"
-                aria-label={`Trigger ${i + 1}`}
-                value={t.trigger}
+                aria-label={t("Trigger {n}", { n: i + 1 })}
+                value={tr.trigger}
                 onChange={(e) => setTriggers(triggers.map((x, j) => (j === i ? { ...x, trigger: e.target.value } : x)))}
               />
               <textarea
                 className="qp-input"
-                aria-label={`Her reaction ${i + 1}`}
-                rows={rowsFor(t.reaction)}
-                value={t.reaction}
+                aria-label={t("Her reaction {n}", { n: i + 1 })}
+                rows={rowsFor(tr.reaction)}
+                value={tr.reaction}
                 onChange={(e) => setTriggers(triggers.map((x, j) => (j === i ? { ...x, reaction: e.target.value } : x)))}
               />
-              <button className="qp-icon-btn" aria-label={`Remove trigger ${i + 1}`} onClick={() => setTriggers(triggers.filter((_, j) => j !== i))}>
+              <button className="qp-icon-btn" aria-label={t("Remove trigger {n}", { n: i + 1 })} onClick={() => setTriggers(triggers.filter((_, j) => j !== i))}>
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
           <div>
             <button className="qp-add" onClick={() => setTriggers([...triggers, { trigger: "", reaction: "" }])}>
-              <Plus className="w-3.5 h-3.5" /> Add a trigger
+              <Plus className="w-3.5 h-3.5" /> {t("Add a trigger")}
             </button>
           </div>
         </div>
@@ -140,7 +142,7 @@ export default function PersonaPillars({
               <span className="qp-field-label">{label(key)}</span>
               <textarea
                 className="qp-input"
-                aria-label={`${pillar.title}: ${label(key)}`}
+                aria-label={`${t(pillar.title)}: ${label(key)}`}
                 rows={rowsFor(value)}
                 value={value}
                 onChange={(e) => setFields(fields.map((f, j) => (j === i ? [f[0], e.target.value] : f)))}
@@ -150,14 +152,14 @@ export default function PersonaPillars({
         </div>
       )}
       <div className="qp-edit-foot">
-        <span className="qp-hint">Empty fields are left out</span>
+        <span className="qp-hint">{t("Empty fields are left out")}</span>
         <div>
           <button className="qp-btn" data-tone="quiet" data-size="sm" onClick={() => setEditing(null)} disabled={saving}>
-            Cancel
+            {t("Cancel")}
           </button>
           <button className="qp-btn" data-tone="primary" data-size="sm" onClick={() => void save()} disabled={saving}>
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            Save
+            {t("Save")}
           </button>
         </div>
       </div>
@@ -207,14 +209,14 @@ export default function PersonaPillars({
                     <Icon className="w-4 h-4" />
                   </span>
                   <div className="min-w-0">
-                    <h4 className="qp-pillar-title">{pillar.title}</h4>
-                    <p className="qp-pillar-note">{pillar.note}</p>
+                    <h4 className="qp-pillar-title">{t(pillar.title)}</h4>
+                    <p className="qp-pillar-note">{t(pillar.note)}</p>
                   </div>
                 </header>
                 {isEditing ? editor(pillar) : view(pillar)}
                 {!isEditing && (
                   <div className="qp-chapter-tools">
-                    <button className="qp-icon-btn" onClick={() => open(pillar)} title={`Edit ${pillar.title.toLowerCase()}`} aria-label={`Edit ${pillar.title.toLowerCase()}`}>
+                    <button className="qp-icon-btn" onClick={() => open(pillar)} title={t("Edit {title}", { title: t(pillar.title).toLowerCase() })} aria-label={t("Edit {title}", { title: t(pillar.title).toLowerCase() })}>
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -228,7 +230,7 @@ export default function PersonaPillars({
         <div className="qp-add-row">
           {missing.map((pillar) => (
             <button key={pillar.key} className="qp-add" onClick={() => open(pillar)}>
-              <Plus className="w-3.5 h-3.5" /> {pillar.title}
+              <Plus className="w-3.5 h-3.5" /> {t(pillar.title)}
             </button>
           ))}
         </div>
