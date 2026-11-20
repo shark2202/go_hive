@@ -1,4 +1,4 @@
-# 交付报告（2026-11-20 01:00）
+# 交付报告（2026-11-20 09:10）
 
 > 口径：`RELEASE_PLAN.md` 的 G6 商业发布标准（R1–R10）。
 > 代码快照：tag `v1.0.26-go.1`。相对 1.0.15 已补 `run_worker`、tracker、提醒中枢、judge、真流式、方法层/自治层/沉淀层/MCP；1.0.17 收口五项半截，1.0.18 补检索、doom-loop、worker tasks、playbook 控制；1.0.19 补并行只读工具、预算软提醒、只读 credential_status。
