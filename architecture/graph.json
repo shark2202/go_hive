@@ -1,0 +1,2622 @@
+{
+  "schema_version": 1,
+  "module": "github.com/aden-hive/hive-go",
+  "generated_at_commit": "5a1cde61a121",
+  "generated_from": "architecture/model.yaml + go list -json ./...",
+  "stats": {
+    "packages": 44,
+    "package_edges": 124,
+    "capabilities": 12,
+    "capability_edges": 75,
+    "layers": 7,
+    "warnings": 2
+  },
+  "layers": [
+    {
+      "id": "entry",
+      "name": "入口层",
+      "depth": 0,
+      "description": "进程入口，只做 argv 解析与退出码转换，不含业务逻辑。",
+      "packages": [
+        "cmd/hive",
+        "cmd/hive-cred"
+      ],
+      "package_count": 2
+    },
+    {
+      "id": "assembly",
+      "name": "装配层",
+      "depth": 1,
+      "description": "组合根：读配置、构造 home / 工具注册表 / MCP runtime / 会话与 colony 运行时，再把命令路由到下游。",
+      "packages": [
+        "internal/cli"
+      ],
+      "package_count": 1
+    },
+    {
+      "id": "transport",
+      "name": "传输层",
+      "depth": 2,
+      "description": "HTTP + SSE 边界：路由、会话查找、请求校验、事件镜像；不含 agent 决策。",
+      "packages": [
+        "internal/runtimehealth",
+        "internal/server",
+        "internal/server/uiembed"
+      ],
+      "package_count": 3
+    },
+    {
+      "id": "orchestration",
+      "name": "编排层",
+      "depth": 3,
+      "description": "Queen / Colony / Worker 的生命周期与协调：派发、报告、计划、账本、触发器、看护。",
+      "packages": [
+        "internal/agents",
+        "internal/colony",
+        "internal/host",
+        "internal/playbook",
+        "internal/qmail",
+        "internal/queen",
+        "internal/sentinel",
+        "internal/session",
+        "internal/sessionreport",
+        "internal/tasks",
+        "internal/tracker",
+        "internal/triggers"
+      ],
+      "package_count": 12
+    },
+    {
+      "id": "runtime",
+      "name": "执行原语层",
+      "depth": 4,
+      "description": "唯一的执行原语 AgentLoop：一次 turn 内的模型调用、工具批处理、压缩、预算与停泊。",
+      "packages": [
+        "internal/agentloop",
+        "internal/llmjudge",
+        "internal/orchestrator"
+      ],
+      "package_count": 3
+    },
+    {
+      "id": "capability",
+      "name": "能力层",
+      "depth": 5,
+      "description": "可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。",
+      "packages": [
+        "internal/attachments",
+        "internal/charts",
+        "internal/credentials",
+        "internal/globaldb",
+        "internal/llm",
+        "internal/maintenance",
+        "internal/mcpregistry",
+        "internal/memory",
+        "internal/senders",
+        "internal/skills",
+        "internal/soul",
+        "internal/tools",
+        "internal/tools/builtin",
+        "internal/tools/integrations"
+      ],
+      "package_count": 14
+    },
+    {
+      "id": "foundation",
+      "name": "基础层",
+      "depth": 6,
+      "description": "无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。",
+      "packages": [
+        "internal/atomicfs",
+        "internal/eventbus",
+        "internal/hivehome",
+        "internal/platform",
+        "internal/quality",
+        "internal/ratelimit",
+        "internal/schemas",
+        "internal/storage",
+        "internal/version"
+      ],
+      "package_count": 9
+    }
+  ],
+  "nodes": [
+    {
+      "id": "pkg:cmd/hive",
+      "kind": "technical",
+      "package": "cmd/hive",
+      "layer": "entry",
+      "responsibility": "hive 主进程入口：把 argv 交给 internal/cli.Runner 并以返回码退出。",
+      "stability": "stable",
+      "entrypoint": true,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:cmd/hive-cred",
+      "kind": "technical",
+      "package": "cmd/hive-cred",
+      "layer": "entry",
+      "responsibility": "凭证 CLI 入口（hive-cred）：复用 internal/cli 的凭证子命令。",
+      "stability": "stable",
+      "entrypoint": true,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:internal/cli",
+      "kind": "technical",
+      "package": "internal/cli",
+      "layer": "assembly",
+      "responsibility": "装配根：解析命令与配置，构造 home、ToolRegistry、MCP runtime、ChatRuntime、ColonyRuntime，并注册 serve/chat/queen/colony/session/skill/mcp/janitor 子命令。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 23,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/runtimehealth",
+      "kind": "technical",
+      "package": "internal/runtimehealth",
+      "layer": "transport",
+      "responsibility": "进程与宿主机资源健康快照，供 /api/health/resources 使用。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/server",
+      "kind": "technical",
+      "package": "internal/server",
+      "layer": "transport",
+      "responsibility": "HTTP/SSE 传输层：路由注册、会话管理、ChatRuntime 的 turn 队列、colony/tracker/sentinel 适配器与事件桥。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 30,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/server/uiembed",
+      "kind": "technical",
+      "package": "internal/server/uiembed",
+      "layer": "transport",
+      "responsibility": "embed_ui 构建标签下的前端静态资源；未带标签时返回空，让服务端回退到磁盘目录。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/agents",
+      "kind": "technical",
+      "package": "internal/agents",
+      "layer": "orchestration",
+      "responsibility": "Agent 规格与发现：读取 agents 目录、worker 元数据与能力描述。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/colony",
+      "kind": "technical",
+      "package": "internal/colony",
+      "layer": "orchestration",
+      "responsibility": "Colony 运行时：worker 生命周期与并发闸门、run_worker 批量派发、report_to_parent 回报、playbook 驱动、目标验收与改进信号。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 11,
+      "dependents": 3
+    },
+    {
+      "id": "pkg:internal/host",
+      "kind": "technical",
+      "package": "internal/host",
+      "layer": "orchestration",
+      "responsibility": "Host 组合根：把 colony 运行时、事件总线与 run 注册表装成可 Start/Spawn 的宿主，供传输层调用。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 7,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/playbook",
+      "kind": "technical",
+      "package": "internal/playbook",
+      "layer": "orchestration",
+      "responsibility": "Playbook 定义与带并发上限的 lane 执行器。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/qmail",
+      "kind": "technical",
+      "package": "internal/qmail",
+      "layer": "orchestration",
+      "responsibility": "Queen 之间的信件存储、待投递队列与 queens/mail.jsonl 审计日志。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/queen",
+      "kind": "technical",
+      "package": "internal/queen",
+      "layer": "orchestration",
+      "responsibility": "Queen 档案与身份定义（queen_profiles 的 Go 移植）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 3
+    },
+    {
+      "id": "pkg:internal/sentinel",
+      "kind": "technical",
+      "package": "internal/sentinel",
+      "layer": "orchestration",
+      "responsibility": "Queen 停泊期的自治监督：nudge / escalate 判定、升级投递、入站回复路由与恢复。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 4,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/session",
+      "kind": "technical",
+      "package": "internal/session",
+      "layer": "orchestration",
+      "responsibility": "会话记录与磁盘布局：状态、transcript、游标、fork 与冷恢复。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 3,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/sessionreport",
+      "kind": "technical",
+      "package": "internal/sessionreport",
+      "layer": "orchestration",
+      "responsibility": "会话报告打包（report-bundle）：把会话、worker 与证据汇总成一份可交付摘要。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tasks",
+      "kind": "technical",
+      "package": "internal/tasks",
+      "layer": "orchestration",
+      "responsibility": "任务计划存储：tasks.json 的增删改查、归档与提醒状态。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 3,
+      "dependents": 3
+    },
+    {
+      "id": "pkg:internal/tracker",
+      "kind": "technical",
+      "package": "internal/tracker",
+      "layer": "orchestration",
+      "responsibility": "共享结果账本：SQLite(WAL) tracker.db 的表注册、行写入与查询。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 3
+    },
+    {
+      "id": "pkg:internal/triggers",
+      "kind": "technical",
+      "package": "internal/triggers",
+      "layer": "orchestration",
+      "responsibility": "触发器定义、cron 解析与 triggers.json 持久化。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/agentloop",
+      "kind": "technical",
+      "package": "internal/agentloop",
+      "layer": "runtime",
+      "responsibility": "唯一执行原语：一轮内的 LLM 调用、工具批处理与并发、压缩、预算/宽限、judge、提醒注入与停泊原因。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 6,
+      "dependents": 7
+    },
+    {
+      "id": "pkg:internal/llmjudge",
+      "kind": "technical",
+      "package": "internal/llmjudge",
+      "layer": "runtime",
+      "responsibility": "基于 LLM 的判定器适配：把成功标准与升级判定包装成可注入的 Judge。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/orchestrator",
+      "kind": "technical",
+      "package": "internal/orchestrator",
+      "layer": "runtime",
+      "responsibility": "Python 图编排时代遗留的 DataBuffer 原语（权限、幻觉内容校验）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "未接线：仓库内无调用方；本 port 以 run_worker 的扇出取代图编排。",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:internal/attachments",
+      "kind": "technical",
+      "package": "internal/attachments",
+      "layer": "capability",
+      "responsibility": "会话附件存取（上传、下载、类型与大小校验）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/charts",
+      "kind": "technical",
+      "package": "internal/charts",
+      "layer": "capability",
+      "responsibility": "chart_render 的纯 Go 渲染实现（SVG 生成 + 可选 PNG 栅格化）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "未接线：chart_render 尚未注册进 ToolRegistry。",
+      "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:internal/credentials",
+      "kind": "technical",
+      "package": "internal/credentials",
+      "layer": "capability",
+      "responsibility": "凭证规格与加密存储、OAuth 状态与表单校验。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 3
+    },
+    {
+      "id": "pkg:internal/globaldb",
+      "kind": "technical",
+      "package": "internal/globaldb",
+      "layer": "capability",
+      "responsibility": "全局数据表（CRM / global data）的 SQLite 访问。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/llm",
+      "kind": "technical",
+      "package": "internal/llm",
+      "layer": "capability",
+      "responsibility": "LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 3,
+      "dependents": 10
+    },
+    {
+      "id": "pkg:internal/maintenance",
+      "kind": "technical",
+      "package": "internal/maintenance",
+      "layer": "capability",
+      "responsibility": "Janitor：孤儿会话、缓存、工件与事件日志的清理规则与报告。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/mcpregistry",
+      "kind": "technical",
+      "package": "internal/mcpregistry",
+      "layer": "capability",
+      "responsibility": "MCP 服务器注册表 CLI 后端：索引、安装/启用、健康检查与清单渲染。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 4,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/memory",
+      "kind": "technical",
+      "package": "internal/memory",
+      "layer": "capability",
+      "responsibility": "Markdown 记忆文件：召回、写入、按天时间线与反思沉淀。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 3,
+      "dependents": 3
+    },
+    {
+      "id": "pkg:internal/senders",
+      "kind": "technical",
+      "package": "internal/senders",
+      "layer": "capability",
+      "responsibility": "出站消息发送：正文渲染、抑制列表、每发件人锁与发送日志。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/skills",
+      "kind": "technical",
+      "package": "internal/skills",
+      "layer": "capability",
+      "responsibility": "技能发现/安装/校验，以及 agent 侧的技能读取工具。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 3,
+      "dependents": 5
+    },
+    {
+      "id": "pkg:internal/soul",
+      "kind": "technical",
+      "package": "internal/soul",
+      "layer": "capability",
+      "responsibility": "Queen 的 soul：分区、字符上限、版本历史、提案与回滚。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools",
+      "kind": "technical",
+      "package": "internal/tools",
+      "layer": "capability",
+      "responsibility": "工具注册表：eager/searchable 分层、MCP 服务器加载与代理执行、结果规范化与溢出落盘。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 8
+    },
+    {
+      "id": "pkg:internal/tools/builtin",
+      "kind": "technical",
+      "package": "internal/tools/builtin",
+      "layer": "capability",
+      "responsibility": "内置工具实现：read_file / write_file / terminal_exec 等，刻意不依赖 server 与 agentloop。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations",
+      "kind": "technical",
+      "package": "internal/tools/integrations",
+      "layer": "capability",
+      "responsibility": "集成工具集：研究、天气、行情、媒体、网络扫描等外部系统的工具模块与参数 schema。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/atomicfs",
+      "kind": "technical",
+      "package": "internal/atomicfs",
+      "layer": "foundation",
+      "responsibility": "原子文件写入与目录替换，避免半写状态。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 15
+    },
+    {
+      "id": "pkg:internal/eventbus",
+      "kind": "technical",
+      "package": "internal/eventbus",
+      "layer": "foundation",
+      "responsibility": "进程内事件总线：AgentEvent、订阅分发、SSE 事件源与事件日志。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 5
+    },
+    {
+      "id": "pkg:internal/hivehome",
+      "kind": "technical",
+      "package": "internal/hivehome",
+      "layer": "foundation",
+      "responsibility": "~/.hive 目录布局解析与 ensure（queens/colonies/memories/credentials/...）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 15
+    },
+    {
+      "id": "pkg:internal/platform",
+      "kind": "technical",
+      "package": "internal/platform",
+      "layer": "foundation",
+      "responsibility": "平台差异：路径、进程与 shell 选择。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/quality",
+      "kind": "technical",
+      "package": "internal/quality",
+      "layer": "foundation",
+      "responsibility": "仓库静态质量门禁：分层 import 检查与文件大小检查，以 go test 形式运行。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:internal/ratelimit",
+      "kind": "technical",
+      "package": "internal/ratelimit",
+      "layer": "foundation",
+      "responsibility": "调用限速：LLM 请求与工具调用的桶式限流器（rate_limits 配置）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 3
+    },
+    {
+      "id": "pkg:internal/schemas",
+      "kind": "technical",
+      "package": "internal/schemas",
+      "layer": "foundation",
+      "responsibility": "跨包共享的数据结构与序列化约定（报告、计划、工具 schema）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 5
+    },
+    {
+      "id": "pkg:internal/storage",
+      "kind": "technical",
+      "package": "internal/storage",
+      "layer": "foundation",
+      "responsibility": "会话与检查点的文件存储（part JSON、cursor、index），写入走原子替换。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 3,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/version",
+      "kind": "technical",
+      "package": "internal/version",
+      "layer": "foundation",
+      "responsibility": "版本字符串与构建信息。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 2
+    },
+    {
+      "id": "cap:goal-outcome",
+      "capability": "goal-outcome",
+      "kind": "business",
+      "name": "目标与结果",
+      "business_outcome": "把客户的一句话目标变成可验收的结果：目标、加权成功标准、以及每轮结束时的验收判定。",
+      "actors": [
+        "客户",
+        "Queen",
+        "Worker",
+        "LLM judge"
+      ],
+      "modules": [
+        "internal/colony",
+        "internal/agentloop",
+        "internal/llmjudge",
+        "internal/schemas"
+      ],
+      "operates": [
+        "internal/colony"
+      ],
+      "entrypoints": [
+        "HTTP POST /api/colonies/{colony_id}/scaffold",
+        "tool run_worker(goal, tasks)",
+        "CLI hive colony info"
+      ],
+      "state_artifacts": [
+        "~/.hive/colonies/{colony}/worker.json（goal.description 与 goal.success_criteria）",
+        "worker 终止报告中的 goal_evaluation"
+      ],
+      "human_approval": "partial",
+      "maturity": "tested",
+      "limits": "成功标准由模型生成，不是形式化规格；未声明 criteria 时不做验收判定，空 tracker 表会单独记为 empty_tracker。"
+    },
+    {
+      "id": "cap:queen-triage",
+      "capability": "queen-triage",
+      "kind": "business",
+      "name": "Queen 分诊与对话",
+      "business_outcome": "用户消息在同一个会话内被理解、追问或分诊为直接回答、工具执行或派工，并以流式事件回放。",
+      "actors": [
+        "客户",
+        "Queen",
+        "Dashboard"
+      ],
+      "modules": [
+        "internal/server",
+        "internal/queen",
+        "internal/agentloop",
+        "internal/llm",
+        "internal/soul",
+        "internal/skills",
+        "internal/memory",
+        "internal/attachments"
+      ],
+      "operates": [
+        "internal/server",
+        "internal/cli"
+      ],
+      "entrypoints": [
+        "HTTP POST /api/sessions/{session_id}/chat",
+        "HTTP GET /api/sessions/{session_id}/events (SSE)",
+        "CLI hive chat",
+        "CLI hive serve"
+      ],
+      "state_artifacts": [
+        "~/.hive/queens/{queen}/sessions/{session}/（parts、cursor.json、meta.json）",
+        "~/.hive/queens/{queen}/soul/soul.json"
+      ],
+      "human_approval": "partial",
+      "maturity": "live",
+      "limits": "单会话单循环串行处理 turn；分诊依赖模型判断，没有确定性路由表；ask_user 与凭证表单会 park 到下一次用户输入。"
+    },
+    {
+      "id": "cap:colony-unit",
+      "capability": "colony-unit",
+      "kind": "business",
+      "name": "Colony 部署单元",
+      "business_outcome": "一次目标对应一个可暂停、可恢复的 colony 目录，绑定 queen、tracker 与 worker 池，使长任务不与单个会话同生共死。",
+      "actors": [
+        "Queen",
+        "运维/开发者",
+        "Dashboard"
+      ],
+      "modules": [
+        "internal/colony",
+        "internal/host",
+        "internal/session",
+        "internal/storage"
+      ],
+      "operates": [
+        "internal/server",
+        "internal/cli"
+      ],
+      "entrypoints": [
+        "HTTP POST /api/colonies/{colony_id}/scaffold",
+        "HTTP POST /api/sessions/{session_id}/colony（加载已有 colony）",
+        "CLI hive colony list|info|delete"
+      ],
+      "state_artifacts": [
+        "~/.hive/colonies/{colony}/{metadata.json, worker.json}",
+        "~/.hive/colonies/{colony}/{tracker/tracker.db, workers/, queens/, playbooks/}"
+      ],
+      "human_approval": "no",
+      "maturity": "tested",
+      "limits": "会话 spawn colony 后即锁定，必须 compact-and-fork 才能继续；一个 colony 一个 tracker 库，跨 colony 不共享账本。"
+    },
+    {
+      "id": "cap:worker-dispatch",
+      "capability": "worker-dispatch",
+      "kind": "business",
+      "name": "Worker 派发与回报",
+      "business_outcome": "Queen 一次 run_worker 提交 N 个任务立即返回，worker 在后台并行执行，每个以一条结构化 [WORKER_REPORT] 回合回报。",
+      "actors": [
+        "Queen",
+        "Worker",
+        "Dashboard"
+      ],
+      "modules": [
+        "internal/colony",
+        "internal/agentloop",
+        "internal/tools",
+        "internal/eventbus",
+        "internal/tasks"
+      ],
+      "operates": [
+        "internal/colony"
+      ],
+      "entrypoints": [
+        "tool run_worker",
+        "tool report_to_parent",
+        "HTTP GET /api/sessions/{session_id}/workers",
+        "HTTP POST /api/sessions/{session_id}/workers/stop-all"
+      ],
+      "state_artifacts": [
+        "~/.hive/colonies/{colony}/workers/{worker_id}/{worker.json, parts/}",
+        "会话中的一个 [WORKER_REPORT] 用户回合"
+      ],
+      "human_approval": "no",
+      "maturity": "tested",
+      "limits": "并发受 HIVE_MAX_CONCURRENT_WORKERS 闸门限制；worker 不能递归 run_playbook；stop 只保证不再启动，不回收已发起的上游调用。"
+    },
+    {
+      "id": "cap:skills-playbook",
+      "capability": "skills-playbook",
+      "kind": "business",
+      "name": "技能与 Playbook",
+      "business_outcome": "把可复用流程固化成技能与可执行 playbook，同一套动作可以批量派给多个 worker。",
+      "actors": [
+        "开发者",
+        "Queen",
+        "Worker"
+      ],
+      "modules": [
+        "internal/skills",
+        "internal/playbook",
+        "internal/colony",
+        "internal/tools"
+      ],
+      "operates": [
+        "internal/cli",
+        "internal/colony"
+      ],
+      "entrypoints": [
+        "CLI hive skill install|validate|test|trust",
+        "tool run_playbook",
+        "HTTP GET /api/sessions/{session_id}/colony/skills"
+      ],
+      "state_artifacts": [
+        "skills/{name}/SKILL.md",
+        "~/.hive/colonies/{colony}/playbooks/*.play.json",
+        "~/.hive/queens/{queen}/skills_overrides.json"
+      ],
+      "human_approval": "partial",
+      "maturity": "tested",
+      "limits": "技能是提示词加脚本，不是沙箱；playbook 并发受 HIVE_MAX_PLAYBOOK_CONCURRENCY 上限约束。"
+    },
+    {
+      "id": "cap:tools-credentials",
+      "capability": "tools-credentials",
+      "kind": "business",
+      "name": "工具与凭据边界",
+      "business_outcome": "模型只看见按 tier 过滤后的工具；外部系统的凭据在边界内注入，缺失时停下来等人填，而不是猜。",
+      "actors": [
+        "模型",
+        "客户",
+        "运维/开发者"
+      ],
+      "modules": [
+        "internal/tools",
+        "internal/tools/builtin",
+        "internal/tools/integrations",
+        "internal/mcpregistry",
+        "internal/credentials",
+        "internal/ratelimit",
+        "internal/llm"
+      ],
+      "operates": [
+        "internal/tools",
+        "internal/cli"
+      ],
+      "entrypoints": [
+        "CLI hive mcp install|list|doctor",
+        "HTTP GET|PUT /api/credentials",
+        "HTTP GET /api/mcp/servers",
+        "tool search_tools"
+      ],
+      "state_artifacts": [
+        "~/.hive/credentials/（规格与存储）",
+        "~/.hive/secrets/",
+        "~/.hive/mcp_registry/",
+        "~/.hive/configuration.json（rate_limits）"
+      ],
+      "human_approval": "yes",
+      "maturity": "live",
+      "limits": "没有 OS 级沙箱，MCP 子进程继承当前用户权限；未配置 rate_limits 时限速为无限；凭据缺失会 park 整个 turn。"
+    },
+    {
+      "id": "cap:memory-sediment",
+      "capability": "memory-sediment",
+      "kind": "business",
+      "name": "记忆与沉淀",
+      "business_outcome": "跨会话记住偏好与结论；Queen 把经历写进 soul，可审阅、可回滚，而不是每次从零开始。",
+      "actors": [
+        "Queen",
+        "客户",
+        "运维/开发者"
+      ],
+      "modules": [
+        "internal/memory",
+        "internal/soul",
+        "internal/server",
+        "internal/agentloop"
+      ],
+      "operates": [
+        "internal/server"
+      ],
+      "entrypoints": [
+        "HTTP GET|PUT /api/memories/file",
+        "HTTP POST /api/queen/{queen_id}/soul/reflect",
+        "HTTP POST /api/queen/{queen_id}/soul/proposals/{proposal_id}/decide"
+      ],
+      "state_artifacts": [
+        "~/.hive/memories/*.md",
+        "~/.hive/queens/{queen}/soul/{soul.json, history/v*.json, log.jsonl, proposals/*.json}"
+      ],
+      "human_approval": "partial",
+      "maturity": "tested",
+      "limits": "记忆是 Markdown + 提示注入，不是向量库；soul 有字符与条数上限，默认 review 模式下提案需人批准。"
+    },
+    {
+      "id": "cap:evidence-tracker",
+      "capability": "evidence-tracker",
+      "kind": "business",
+      "name": "Tracker、计划与证据",
+      "business_outcome": "每一行结果都可追溯：worker 写共享账本，Queen 查询账本，任务计划跨回合存活，报告可按会话打包。",
+      "actors": [
+        "Queen",
+        "Worker",
+        "客户"
+      ],
+      "modules": [
+        "internal/tracker",
+        "internal/tasks",
+        "internal/colony",
+        "internal/server",
+        "internal/sessionreport"
+      ],
+      "operates": [
+        "internal/tracker",
+        "internal/server"
+      ],
+      "entrypoints": [
+        "tool tracker_upsert|tracker_query|tracker_sql",
+        "tool task_create|task_update|task_list|task_get",
+        "HTTP GET /api/sessions/{session_id}/tasks",
+        "HTTP POST /api/sessions/{session_id}/report-bundle"
+      ],
+      "state_artifacts": [
+        "~/.hive/colonies/{colony}/tracker/tracker.db (SQLite WAL)",
+        "{session|worker}/tasks.json",
+        "{session}/reminder_state.json"
+      ],
+      "human_approval": "no",
+      "maturity": "tested",
+      "limits": "tracker 写入是 worker 的自愿行为，漏写只能从报告文本恢复；SQLite 单写者，跨进程并发写需靠 WAL 与重试。"
+    },
+    {
+      "id": "cap:triggers-sentinel",
+      "capability": "triggers-sentinel",
+      "kind": "business",
+      "name": "触发器与 Sentinel 自治",
+      "business_outcome": "定时或事件触发能自动唤醒会话；Queen 停泊但目标未完成时，由 Sentinel 决定继续推、升级给人还是不动。",
+      "actors": [
+        "客户",
+        "Queen",
+        "值班人"
+      ],
+      "modules": [
+        "internal/triggers",
+        "internal/sentinel",
+        "internal/server",
+        "internal/eventbus"
+      ],
+      "operates": [
+        "internal/server"
+      ],
+      "entrypoints": [
+        "HTTP POST /api/sessions/{session_id}/triggers",
+        "HTTP POST /api/sessions/{session_id}/triggers/{trigger_id}/run",
+        "HTTP PUT /api/config/sentinel",
+        "进程内 timer ticker"
+      ],
+      "state_artifacts": [
+        "{session}/triggers.json",
+        "~/.hive/colonies/{colony}/notifications.json",
+        "~/.hive/colonies/{colony}/escalations/"
+      ],
+      "human_approval": "partial",
+      "maturity": "tested",
+      "limits": "定时器只在服务进程存活时运行；错过的触发需要 resolve_missed 决策，不会自动补跑；escalate 依赖外部渠道可达。"
+    },
+    {
+      "id": "cap:notifications",
+      "capability": "notifications",
+      "kind": "business",
+      "name": "通知与提醒",
+      "business_outcome": "到点提醒、worker 报告与升级消息被送到人所在的渠道，并且有发送记录可查。",
+      "actors": [
+        "客户",
+        "值班人",
+        "Queen"
+      ],
+      "modules": [
+        "internal/agentloop",
+        "internal/server",
+        "internal/senders",
+        "internal/sentinel",
+        "internal/tasks"
+      ],
+      "operates": [
+        "internal/server"
+      ],
+      "entrypoints": [
+        "进程内 ReminderHub ticker",
+        "HTTP GET|DELETE /api/sessions/{session_id}/reminders",
+        "HTTP GET /api/colony/{colony_id}/notifications",
+        "HTTP POST /api/sentinel/telegram/detect-chat"
+      ],
+      "state_artifacts": [
+        "{session}/reminder_state.json",
+        "~/.hive/colonies/{colony}/notifications.json",
+        "senders 发送日志（sendlog）"
+      ],
+      "human_approval": "no",
+      "maturity": "tested",
+      "limits": "提醒依赖进程内 ticker，重启只恢复状态，不补发错过的时点；抑制列表会静默丢弃被抑制的收件人。"
+    },
+    {
+      "id": "cap:channels-dashboard",
+      "capability": "channels-dashboard",
+      "kind": "business",
+      "name": "渠道与仪表盘",
+      "business_outcome": "同一套会话既能从 Web Dashboard 看，也能从 CLI 或聊天渠道接入；状态与事件对操作者可见。",
+      "actors": [
+        "客户",
+        "值班人",
+        "Dashboard"
+      ],
+      "modules": [
+        "internal/server",
+        "internal/server/uiembed",
+        "internal/runtimehealth",
+        "internal/senders",
+        "internal/qmail"
+      ],
+      "operates": [
+        "internal/server",
+        "internal/cli"
+      ],
+      "entrypoints": [
+        "CLI hive serve",
+        "CLI hive open",
+        "HTTP GET /api/channels",
+        "HTTP GET /api/events/global (SSE)"
+      ],
+      "state_artifacts": [
+        "~/.hive/queens/{queen}/sessions/{session}/（元数据与事件）",
+        "~/.hive/event_logs/events.jsonl",
+        "~/.hive/colonies/{colony}/notifications.json"
+      ],
+      "human_approval": "no",
+      "maturity": "tested",
+      "limits": "渠道 webhook 需外网可达；embed_ui 需要构建标签，否则回退到磁盘前端产物。"
+    },
+    {
+      "id": "cap:release-quality",
+      "capability": "release-quality",
+      "kind": "business",
+      "name": "发布与质量门禁",
+      "business_outcome": "每次交付可验证：七门禁、架构漂移检查与发布清单都能在本地和 CI 复现，结论可签字。",
+      "actors": [
+        "开发者",
+        "评审人",
+        "CI"
+      ],
+      "modules": [
+        "internal/quality",
+        "internal/version"
+      ],
+      "operates": [
+        "internal/quality"
+      ],
+      "entrypoints": [
+        "make ci（fmt-check vet test cross parity parity-targets wiring-check）",
+        "python3 scripts/qc_check.py",
+        "go test ./internal/quality",
+        "python3 scripts/gen_arch.py --check"
+      ],
+      "state_artifacts": [
+        "go_hive/QC_REPORT.md",
+        "go_hive/RELEASE_CHECKLIST.md",
+        "go_hive/architecture/graph.json"
+      ],
+      "human_approval": "yes",
+      "maturity": "tested",
+      "limits": "门禁是仓库内脚本与 go test，不覆盖部署环境；架构漂移检查需手动或 CI 显式调用，不会自动阻断提交。"
+    }
+  ],
+  "edges": [
+    {
+      "from": "pkg:cmd/hive",
+      "to": "pkg:internal/cli",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:cmd/hive-cred",
+      "to": "pkg:internal/cli",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/llmjudge",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/ratelimit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/schemas",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/skills",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agents",
+      "to": "pkg:internal/agentloop",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agents",
+      "to": "pkg:internal/schemas",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/charts",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/agentloop",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/agents",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/colony",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/credentials",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/eventbus",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/host",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/llmjudge",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/maintenance",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/mcpregistry",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/memory",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/queen",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/server",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/session",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/skills",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/tasks",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/tools/builtin",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/tools/integrations",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/tracker",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/version",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/agentloop",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/eventbus",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/playbook",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/schemas",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/skills",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/tasks",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/tracker",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/credentials",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/credentials",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/host",
+      "to": "pkg:internal/agentloop",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/host",
+      "to": "pkg:internal/colony",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/host",
+      "to": "pkg:internal/eventbus",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/host",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/host",
+      "to": "pkg:internal/schemas",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/host",
+      "to": "pkg:internal/skills",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/host",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/llm",
+      "to": "pkg:internal/credentials",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/llm",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/llm",
+      "to": "pkg:internal/ratelimit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/llmjudge",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/maintenance",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/maintenance",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/mcpregistry",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/mcpregistry",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/mcpregistry",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/mcpregistry",
+      "to": "pkg:internal/version",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/memory",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/memory",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/memory",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/qmail",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/qmail",
+      "to": "pkg:internal/queen",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/ratelimit",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/senders",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/senders",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/sentinel",
+      "to": "pkg:internal/agentloop",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/sentinel",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/sentinel",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/sentinel",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/agentloop",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/agents",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/attachments",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/colony",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/credentials",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/eventbus",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/globaldb",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/maintenance",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/mcpregistry",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/memory",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/platform",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/qmail",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/queen",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/ratelimit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/runtimehealth",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/senders",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/sentinel",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/server/uiembed",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/session",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/sessionreport",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/skills",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/soul",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/storage",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/tasks",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/tracker",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/triggers",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/session",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/session",
+      "to": "pkg:internal/memory",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/session",
+      "to": "pkg:internal/storage",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/skills",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/skills",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/skills",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/storage",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/storage",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/storage",
+      "to": "pkg:internal/schemas",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tasks",
+      "to": "pkg:internal/agentloop",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tasks",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tasks",
+      "to": "pkg:internal/eventbus",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/builtin",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/builtin",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/attachments",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/triggers",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "cap:goal-outcome",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "cap:memory-sediment",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "cap:notifications",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "cap:queen-triage",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "cap:worker-dispatch",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/attachments",
+      "to": "cap:queen-triage",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "cap:colony-unit",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "cap:evidence-tracker",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "cap:goal-outcome",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "cap:skills-playbook",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "cap:worker-dispatch",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/credentials",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/eventbus",
+      "to": "cap:triggers-sentinel",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/eventbus",
+      "to": "cap:worker-dispatch",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/host",
+      "to": "cap:colony-unit",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/llm",
+      "to": "cap:queen-triage",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/llm",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/llmjudge",
+      "to": "cap:goal-outcome",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/mcpregistry",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/memory",
+      "to": "cap:memory-sediment",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/memory",
+      "to": "cap:queen-triage",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/playbook",
+      "to": "cap:skills-playbook",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/qmail",
+      "to": "cap:channels-dashboard",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/quality",
+      "to": "cap:release-quality",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/queen",
+      "to": "cap:queen-triage",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/ratelimit",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/runtimehealth",
+      "to": "cap:channels-dashboard",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/schemas",
+      "to": "cap:goal-outcome",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/senders",
+      "to": "cap:channels-dashboard",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/senders",
+      "to": "cap:notifications",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/sentinel",
+      "to": "cap:notifications",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/sentinel",
+      "to": "cap:triggers-sentinel",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "cap:channels-dashboard",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "cap:evidence-tracker",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "cap:memory-sediment",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "cap:notifications",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "cap:queen-triage",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "cap:triggers-sentinel",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/server/uiembed",
+      "to": "cap:channels-dashboard",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/session",
+      "to": "cap:colony-unit",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/sessionreport",
+      "to": "cap:evidence-tracker",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/skills",
+      "to": "cap:queen-triage",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/skills",
+      "to": "cap:skills-playbook",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/soul",
+      "to": "cap:memory-sediment",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/soul",
+      "to": "cap:queen-triage",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/storage",
+      "to": "cap:colony-unit",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/tasks",
+      "to": "cap:evidence-tracker",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/tasks",
+      "to": "cap:notifications",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/tasks",
+      "to": "cap:worker-dispatch",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/tools",
+      "to": "cap:skills-playbook",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/tools",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/tools",
+      "to": "cap:worker-dispatch",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/tools/builtin",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/tracker",
+      "to": "cap:evidence-tracker",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/triggers",
+      "to": "cap:triggers-sentinel",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/version",
+      "to": "cap:release-quality",
+      "kind": "realizes"
+    },
+    {
+      "from": "cap:channels-dashboard",
+      "to": "pkg:internal/cli",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:channels-dashboard",
+      "to": "pkg:internal/server",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:colony-unit",
+      "to": "pkg:internal/cli",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:colony-unit",
+      "to": "pkg:internal/server",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:evidence-tracker",
+      "to": "pkg:internal/server",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:evidence-tracker",
+      "to": "pkg:internal/tracker",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:goal-outcome",
+      "to": "pkg:internal/colony",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:memory-sediment",
+      "to": "pkg:internal/server",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:notifications",
+      "to": "pkg:internal/server",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:queen-triage",
+      "to": "pkg:internal/cli",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:queen-triage",
+      "to": "pkg:internal/server",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:release-quality",
+      "to": "pkg:internal/quality",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:skills-playbook",
+      "to": "pkg:internal/cli",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:skills-playbook",
+      "to": "pkg:internal/colony",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:tools-credentials",
+      "to": "pkg:internal/cli",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:tools-credentials",
+      "to": "pkg:internal/tools",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:triggers-sentinel",
+      "to": "pkg:internal/server",
+      "kind": "operates"
+    },
+    {
+      "from": "cap:worker-dispatch",
+      "to": "pkg:internal/colony",
+      "kind": "operates"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "cap:goal-outcome",
+      "capability": "goal-outcome",
+      "kind": "business",
+      "name": "目标与结果",
+      "business_outcome": "把客户的一句话目标变成可验收的结果：目标、加权成功标准、以及每轮结束时的验收判定。",
+      "actors": [
+        "客户",
+        "Queen",
+        "Worker",
+        "LLM judge"
+      ],
+      "modules": [
+        "internal/colony",
+        "internal/agentloop",
+        "internal/llmjudge",
+        "internal/schemas"
+      ],
+      "operates": [
+        "internal/colony"
+      ],
+      "entrypoints": [
+        "HTTP POST /api/colonies/{colony_id}/scaffold",
+        "tool run_worker(goal, tasks)",
+        "CLI hive colony info"
+      ],
+      "state_artifacts": [
+        "~/.hive/colonies/{colony}/worker.json（goal.description 与 goal.success_criteria）",
+        "worker 终止报告中的 goal_evaluation"
+      ],
+      "human_approval": "partial",
+      "maturity": "tested",
+      "limits": "成功标准由模型生成，不是形式化规格；未声明 criteria 时不做验收判定，空 tracker 表会单独记为 empty_tracker。"
+    },
+    {
+      "id": "cap:queen-triage",
+      "capability": "queen-triage",
+      "kind": "business",
+      "name": "Queen 分诊与对话",
+      "business_outcome": "用户消息在同一个会话内被理解、追问或分诊为直接回答、工具执行或派工，并以流式事件回放。",
+      "actors": [
+        "客户",
+        "Queen",
+        "Dashboard"
+      ],
+      "modules": [
+        "internal/server",
+        "internal/queen",
+        "internal/agentloop",
+        "internal/llm",
+        "internal/soul",
+        "internal/skills",
+        "internal/memory",
+        "internal/attachments"
+      ],
+      "operates": [
+        "internal/server",
+        "internal/cli"
+      ],
+      "entrypoints": [
+        "HTTP POST /api/sessions/{session_id}/chat",
+        "HTTP GET /api/sessions/{session_id}/events (SSE)",
+        "CLI hive chat",
+        "CLI hive serve"
+      ],
+      "state_artifacts": [
+        "~/.hive/queens/{queen}/sessions/{session}/（parts、cursor.json、meta.json）",
+        "~/.hive/queens/{queen}/soul/soul.json"
+      ],
+      "human_approval": "partial",
+      "maturity": "live",
+      "limits": "单会话单循环串行处理 turn；分诊依赖模型判断，没有确定性路由表；ask_user 与凭证表单会 park 到下一次用户输入。"
+    },
+    {
+      "id": "cap:colony-unit",
+      "capability": "colony-unit",
+      "kind": "business",
+      "name": "Colony 部署单元",
+      "business_outcome": "一次目标对应一个可暂停、可恢复的 colony 目录，绑定 queen、tracker 与 worker 池，使长任务不与单个会话同生共死。",
+      "actors": [
+        "Queen",
+        "运维/开发者",
+        "Dashboard"
+      ],
+      "modules": [
+        "internal/colony",
+        "internal/host",
+        "internal/session",
+        "internal/storage"
+      ],
+      "operates": [
+        "internal/server",
+        "internal/cli"
+      ],
+      "entrypoints": [
+        "HTTP POST /api/colonies/{colony_id}/scaffold",
+        "HTTP POST /api/sessions/{session_id}/colony（加载已有 colony）",
+        "CLI hive colony list|info|delete"
+      ],
+      "state_artifacts": [
+        "~/.hive/colonies/{colony}/{metadata.json, worker.json}",
+        "~/.hive/colonies/{colony}/{tracker/tracker.db, workers/, queens/, playbooks/}"
+      ],
+      "human_approval": "no",
+      "maturity": "tested",
+      "limits": "会话 spawn colony 后即锁定，必须 compact-and-fork 才能继续；一个 colony 一个 tracker 库，跨 colony 不共享账本。"
+    },
+    {
+      "id": "cap:worker-dispatch",
+      "capability": "worker-dispatch",
+      "kind": "business",
+      "name": "Worker 派发与回报",
+      "business_outcome": "Queen 一次 run_worker 提交 N 个任务立即返回，worker 在后台并行执行，每个以一条结构化 [WORKER_REPORT] 回合回报。",
+      "actors": [
+        "Queen",
+        "Worker",
+        "Dashboard"
+      ],
+      "modules": [
+        "internal/colony",
+        "internal/agentloop",
+        "internal/tools",
+        "internal/eventbus",
+        "internal/tasks"
+      ],
+      "operates": [
+        "internal/colony"
+      ],
+      "entrypoints": [
+        "tool run_worker",
+        "tool report_to_parent",
+        "HTTP GET /api/sessions/{session_id}/workers",
+        "HTTP POST /api/sessions/{session_id}/workers/stop-all"
+      ],
+      "state_artifacts": [
+        "~/.hive/colonies/{colony}/workers/{worker_id}/{worker.json, parts/}",
+        "会话中的一个 [WORKER_REPORT] 用户回合"
+      ],
+      "human_approval": "no",
+      "maturity": "tested",
+      "limits": "并发受 HIVE_MAX_CONCURRENT_WORKERS 闸门限制；worker 不能递归 run_playbook；stop 只保证不再启动，不回收已发起的上游调用。"
+    },
+    {
+      "id": "cap:skills-playbook",
+      "capability": "skills-playbook",
+      "kind": "business",
+      "name": "技能与 Playbook",
+      "business_outcome": "把可复用流程固化成技能与可执行 playbook，同一套动作可以批量派给多个 worker。",
+      "actors": [
+        "开发者",
+        "Queen",
+        "Worker"
+      ],
+      "modules": [
+        "internal/skills",
+        "internal/playbook",
+        "internal/colony",
+        "internal/tools"
+      ],
+      "operates": [
+        "internal/cli",
+        "internal/colony"
+      ],
+      "entrypoints": [
+        "CLI hive skill install|validate|test|trust",
+        "tool run_playbook",
+        "HTTP GET /api/sessions/{session_id}/colony/skills"
+      ],
+      "state_artifacts": [
+        "skills/{name}/SKILL.md",
+        "~/.hive/colonies/{colony}/playbooks/*.play.json",
+        "~/.hive/queens/{queen}/skills_overrides.json"
+      ],
+      "human_approval": "partial",
+      "maturity": "tested",
+      "limits": "技能是提示词加脚本，不是沙箱；playbook 并发受 HIVE_MAX_PLAYBOOK_CONCURRENCY 上限约束。"
+    },
+    {
+      "id": "cap:tools-credentials",
+      "capability": "tools-credentials",
+      "kind": "business",
+      "name": "工具与凭据边界",
+      "business_outcome": "模型只看见按 tier 过滤后的工具；外部系统的凭据在边界内注入，缺失时停下来等人填，而不是猜。",
+      "actors": [
+        "模型",
+        "客户",
+        "运维/开发者"
+      ],
+      "modules": [
+        "internal/tools",
+        "internal/tools/builtin",
+        "internal/tools/integrations",
+        "internal/mcpregistry",
+        "internal/credentials",
+        "internal/ratelimit",
+        "internal/llm"
+      ],
+      "operates": [
+        "internal/tools",
+        "internal/cli"
+      ],
+      "entrypoints": [
+        "CLI hive mcp install|list|doctor",
+        "HTTP GET|PUT /api/credentials",
+        "HTTP GET /api/mcp/servers",
+        "tool search_tools"
+      ],
+      "state_artifacts": [
+        "~/.hive/credentials/（规格与存储）",
+        "~/.hive/secrets/",
+        "~/.hive/mcp_registry/",
+        "~/.hive/configuration.json（rate_limits）"
+      ],
+      "human_approval": "yes",
+      "maturity": "live",
+      "limits": "没有 OS 级沙箱，MCP 子进程继承当前用户权限；未配置 rate_limits 时限速为无限；凭据缺失会 park 整个 turn。"
+    },
+    {
+      "id": "cap:memory-sediment",
+      "capability": "memory-sediment",
+      "kind": "business",
+      "name": "记忆与沉淀",
+      "business_outcome": "跨会话记住偏好与结论；Queen 把经历写进 soul，可审阅、可回滚，而不是每次从零开始。",
+      "actors": [
+        "Queen",
+        "客户",
+        "运维/开发者"
+      ],
+      "modules": [
+        "internal/memory",
+        "internal/soul",
+        "internal/server",
+        "internal/agentloop"
+      ],
+      "operates": [
+        "internal/server"
+      ],
+      "entrypoints": [
+        "HTTP GET|PUT /api/memories/file",
+        "HTTP POST /api/queen/{queen_id}/soul/reflect",
+        "HTTP POST /api/queen/{queen_id}/soul/proposals/{proposal_id}/decide"
+      ],
+      "state_artifacts": [
+        "~/.hive/memories/*.md",
+        "~/.hive/queens/{queen}/soul/{soul.json, history/v*.json, log.jsonl, proposals/*.json}"
+      ],
+      "human_approval": "partial",
+      "maturity": "tested",
+      "limits": "记忆是 Markdown + 提示注入，不是向量库；soul 有字符与条数上限，默认 review 模式下提案需人批准。"
+    },
+    {
+      "id": "cap:evidence-tracker",
+      "capability": "evidence-tracker",
+      "kind": "business",
+      "name": "Tracker、计划与证据",
+      "business_outcome": "每一行结果都可追溯：worker 写共享账本，Queen 查询账本，任务计划跨回合存活，报告可按会话打包。",
+      "actors": [
+        "Queen",
+        "Worker",
+        "客户"
+      ],
+      "modules": [
+        "internal/tracker",
+        "internal/tasks",
+        "internal/colony",
+        "internal/server",
+        "internal/sessionreport"
+      ],
+      "operates": [
+        "internal/tracker",
+        "internal/server"
+      ],
+      "entrypoints": [
+        "tool tracker_upsert|tracker_query|tracker_sql",
+        "tool task_create|task_update|task_list|task_get",
+        "HTTP GET /api/sessions/{session_id}/tasks",
+        "HTTP POST /api/sessions/{session_id}/report-bundle"
+      ],
+      "state_artifacts": [
+        "~/.hive/colonies/{colony}/tracker/tracker.db (SQLite WAL)",
+        "{session|worker}/tasks.json",
+        "{session}/reminder_state.json"
+      ],
+      "human_approval": "no",
+      "maturity": "tested",
+      "limits": "tracker 写入是 worker 的自愿行为，漏写只能从报告文本恢复；SQLite 单写者，跨进程并发写需靠 WAL 与重试。"
+    },
+    {
+      "id": "cap:triggers-sentinel",
+      "capability": "triggers-sentinel",
+      "kind": "business",
+      "name": "触发器与 Sentinel 自治",
+      "business_outcome": "定时或事件触发能自动唤醒会话；Queen 停泊但目标未完成时，由 Sentinel 决定继续推、升级给人还是不动。",
+      "actors": [
+        "客户",
+        "Queen",
+        "值班人"
+      ],
+      "modules": [
+        "internal/triggers",
+        "internal/sentinel",
+        "internal/server",
+        "internal/eventbus"
+      ],
+      "operates": [
+        "internal/server"
+      ],
+      "entrypoints": [
+        "HTTP POST /api/sessions/{session_id}/triggers",
+        "HTTP POST /api/sessions/{session_id}/triggers/{trigger_id}/run",
+        "HTTP PUT /api/config/sentinel",
+        "进程内 timer ticker"
+      ],
+      "state_artifacts": [
+        "{session}/triggers.json",
+        "~/.hive/colonies/{colony}/notifications.json",
+        "~/.hive/colonies/{colony}/escalations/"
+      ],
+      "human_approval": "partial",
+      "maturity": "tested",
+      "limits": "定时器只在服务进程存活时运行；错过的触发需要 resolve_missed 决策，不会自动补跑；escalate 依赖外部渠道可达。"
+    },
+    {
+      "id": "cap:notifications",
+      "capability": "notifications",
+      "kind": "business",
+      "name": "通知与提醒",
+      "business_outcome": "到点提醒、worker 报告与升级消息被送到人所在的渠道，并且有发送记录可查。",
+      "actors": [
+        "客户",
+        "值班人",
+        "Queen"
+      ],
+      "modules": [
+        "internal/agentloop",
+        "internal/server",
+        "internal/senders",
+        "internal/sentinel",
+        "internal/tasks"
+      ],
+      "operates": [
+        "internal/server"
+      ],
+      "entrypoints": [
+        "进程内 ReminderHub ticker",
+        "HTTP GET|DELETE /api/sessions/{session_id}/reminders",
+        "HTTP GET /api/colony/{colony_id}/notifications",
+        "HTTP POST /api/sentinel/telegram/detect-chat"
+      ],
+      "state_artifacts": [
+        "{session}/reminder_state.json",
+        "~/.hive/colonies/{colony}/notifications.json",
+        "senders 发送日志（sendlog）"
+      ],
+      "human_approval": "no",
+      "maturity": "tested",
+      "limits": "提醒依赖进程内 ticker，重启只恢复状态，不补发错过的时点；抑制列表会静默丢弃被抑制的收件人。"
+    },
+    {
+      "id": "cap:channels-dashboard",
+      "capability": "channels-dashboard",
+      "kind": "business",
+      "name": "渠道与仪表盘",
+      "business_outcome": "同一套会话既能从 Web Dashboard 看，也能从 CLI 或聊天渠道接入；状态与事件对操作者可见。",
+      "actors": [
+        "客户",
+        "值班人",
+        "Dashboard"
+      ],
+      "modules": [
+        "internal/server",
+        "internal/server/uiembed",
+        "internal/runtimehealth",
+        "internal/senders",
+        "internal/qmail"
+      ],
+      "operates": [
+        "internal/server",
+        "internal/cli"
+      ],
+      "entrypoints": [
+        "CLI hive serve",
+        "CLI hive open",
+        "HTTP GET /api/channels",
+        "HTTP GET /api/events/global (SSE)"
+      ],
+      "state_artifacts": [
+        "~/.hive/queens/{queen}/sessions/{session}/（元数据与事件）",
+        "~/.hive/event_logs/events.jsonl",
+        "~/.hive/colonies/{colony}/notifications.json"
+      ],
+      "human_approval": "no",
+      "maturity": "tested",
+      "limits": "渠道 webhook 需外网可达；embed_ui 需要构建标签，否则回退到磁盘前端产物。"
+    },
+    {
+      "id": "cap:release-quality",
+      "capability": "release-quality",
+      "kind": "business",
+      "name": "发布与质量门禁",
+      "business_outcome": "每次交付可验证：七门禁、架构漂移检查与发布清单都能在本地和 CI 复现，结论可签字。",
+      "actors": [
+        "开发者",
+        "评审人",
+        "CI"
+      ],
+      "modules": [
+        "internal/quality",
+        "internal/version"
+      ],
+      "operates": [
+        "internal/quality"
+      ],
+      "entrypoints": [
+        "make ci（fmt-check vet test cross parity parity-targets wiring-check）",
+        "python3 scripts/qc_check.py",
+        "go test ./internal/quality",
+        "python3 scripts/gen_arch.py --check"
+      ],
+      "state_artifacts": [
+        "go_hive/QC_REPORT.md",
+        "go_hive/RELEASE_CHECKLIST.md",
+        "go_hive/architecture/graph.json"
+      ],
+      "human_approval": "yes",
+      "maturity": "tested",
+      "limits": "门禁是仓库内脚本与 go test，不覆盖部署环境；架构漂移检查需手动或 CI 显式调用，不会自动阻断提交。"
+    }
+  ],
+  "business_flow": {
+    "title": "从客户目标到交付与改进",
+    "stages": [
+      {
+        "id": "intent",
+        "name": "客户目标",
+        "capabilities": [
+          "goal-outcome"
+        ]
+      },
+      {
+        "id": "orchestration",
+        "name": "Queen 编排",
+        "capabilities": [
+          "queen-triage",
+          "colony-unit",
+          "worker-dispatch"
+        ]
+      },
+      {
+        "id": "execution",
+        "name": "执行与支撑",
+        "capabilities": [
+          "skills-playbook",
+          "tools-credentials",
+          "memory-sediment"
+        ]
+      },
+      {
+        "id": "evidence",
+        "name": "证据与自治",
+        "capabilities": [
+          "evidence-tracker",
+          "triggers-sentinel",
+          "notifications"
+        ]
+      },
+      {
+        "id": "delivery",
+        "name": "交付与改进",
+        "capabilities": [
+          "channels-dashboard",
+          "release-quality"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "from": "goal-outcome",
+        "to": "queen-triage"
+      },
+      {
+        "from": "queen-triage",
+        "to": "colony-unit"
+      },
+      {
+        "from": "queen-triage",
+        "to": "memory-sediment"
+      },
+      {
+        "from": "colony-unit",
+        "to": "worker-dispatch"
+      },
+      {
+        "from": "worker-dispatch",
+        "to": "evidence-tracker"
+      },
+      {
+        "from": "worker-dispatch",
+        "to": "skills-playbook"
+      },
+      {
+        "from": "tools-credentials",
+        "to": "worker-dispatch"
+      },
+      {
+        "from": "triggers-sentinel",
+        "to": "queen-triage"
+      },
+      {
+        "from": "triggers-sentinel",
+        "to": "notifications"
+      },
+      {
+        "from": "evidence-tracker",
+        "to": "channels-dashboard"
+      },
+      {
+        "from": "notifications",
+        "to": "channels-dashboard"
+      },
+      {
+        "from": "evidence-tracker",
+        "to": "release-quality"
+      },
+      {
+        "from": "release-quality",
+        "to": "goal-outcome",
+        "dashed": true
+      }
+    ]
+  },
+  "warnings": [
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 internal/charts 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    },
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 internal/orchestrator 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    }
+  ]
+}
