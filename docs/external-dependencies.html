@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>go_hive 外部依赖清单 · hive 1.0.26-go.1</title>
+<style>
+:root{--bg:#0b1020;--panel:#131a2e;--ink:#e8ecf7;--muted:#9aa7c7;--line:#243055;--accent:#7aa2ff;--warn:#ffcc66;--ok:#6ee7a8;--bad:#ff8a8a}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#1b2a55 0%,var(--bg) 55%);color:var(--ink);font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:48px 24px 80px}
+header h1{font-size:34px;margin:0 0 8px;letter-spacing:.3px}
+header .sub{color:var(--muted);font-size:14px}
+.callout{margin:24px 0;padding:16px 18px;border-left:4px solid var(--accent);background:#121a31;border-radius:10px}
+.callout strong{color:#fff}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:28px 0 8px}
+.card{background:linear-gradient(180deg,#151e38,#121a30);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.card .v{font-size:26px;font-weight:700;margin-top:6px}
+.card .v small{font-size:13px;color:var(--muted);font-weight:500}
+.card .s{color:var(--muted);font-size:12px;margin-top:4px}
+nav.toc{margin:28px 0;padding:14px 18px;background:#101729;border:1px solid var(--line);border-radius:12px}
+nav.toc a{color:var(--accent);text-decoration:none;margin-right:14px;white-space:nowrap}
+h2{font-size:23px;margin:44px 0 10px;padding-top:12px;border-top:1px solid var(--line)}
+h3{font-size:17px;margin:26px 0 8px}
+.count{color:var(--muted);font-size:12px;font-weight:400;margin-left:8px}
+table{width:100%;border-collapse:collapse;background:#101728;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+th,td{padding:10px 12px;text-align:left;vertical-align:top;border-bottom:1px solid #1b2542}
+th{background:#16203a;color:#cfd8f5;font-weight:600;font-size:12.5px;letter-spacing:.03em}
+tr:last-child td{border-bottom:0}
+tr:hover td{background:#131d36}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:#0d1526;border:1px solid #223055;border-radius:5px;padding:1px 5px;color:#cfe0ff}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid;white-space:nowrap}
+.badge.warn{color:var(--warn);border-color:#5a4a1f;background:#2a2210}
+.badge.ok{color:var(--ok);border-color:#1f5a3e;background:#0f2a1f}
+.badge.info{color:#9fc0ff;border-color:#2b3f77;background:#111b33}
+.note{color:var(--muted);font-size:13px}
+ul{padding-left:20px} li{margin:6px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+footer{margin-top:60px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:18px}
+.tag{display:inline-block;font-size:11px;color:#9fc0ff;background:#111b33;border:1px solid #2b3f77;border-radius:6px;padding:2px 6px;margin-right:6px}
+</style>
+</head>
+<body><div class="wrap">
+<header>
+  <div class="tag">go_hive</div><div class="tag">hive 1.0.26-go.1</div><div class="tag">2026-11-20</div>
+  <h1>外部系统 / API 依赖清单</h1>
+  <div class="sub">来源：<code>internal/credentials/specs_gen.go</code>（上游 85 模块 / 118 条凭据，digest a7832ddc…）、<code>internal/llm</code>、<code>internal/tools/integrations</code>、<code>internal/senders</code>、<code>internal/server</code> 的真实代码路径。</div>
+</header>
+
+<div class="callout">
+  <strong>结论：运行期唯一硬依赖是 LLM API。</strong> 其余全部按需：SaaS 工具要凭据才可用，缺凭据时会停或不可见；无凭据 API 与扫描器可关；MCP 由用户自带。
+  当前 <strong>81 个需第三方凭据的模块未做真实凭据验证</strong>，支持矩阵按“未验证”发布，不得宣传为可用。
+</div>
+
+
+<div class="cards">
+  <div class="card"><div class="k">LLM 推理 API</div><div class="v">15</div><div class="s">唯一运行期硬依赖</div></div>
+  <div class="card"><div class="k">凭据型 SaaS</div><div class="v">77<small> 模块</small></div><div class="s">118 条凭据 · 未验证</div></div>
+  <div class="card"><div class="k">无凭据 API</div><div class="v">6 + 抓取</div><div class="s">arXiv / DDG / Wiki / 天气 / 行情 / 转录</div></div>
+  <div class="card"><div class="k">扫描器</div><div class="v">4</div><div class="s">默认关闭</div></div>
+  <div class="card"><div class="k">MCP</div><div class="v">0..N</div><div class="s">用户自带，stdio/HTTP</div></div>
+  <div class="card"><div class="k">SMTP/IMAP</div><div class="v">1 套</div><div class="s">发信/读信</div></div>
+</div>
+
+<nav class="toc">
+  <a href="#llm">① LLM</a><a href="#saas">② 凭据型 SaaS</a><a href="#keyless">③ 无凭据 API</a><a href="#mcp">④ MCP</a><a href="#mail">⑤ 邮件与通知</a><a href="#scan">⑥ 扫描器</a><a href="#local">⑦ 本地依赖</a><a href="#verify">⑧ 验证与风险</a><a href="#maint">⑨ 维护</a>
+</nav>
+
+<h2 id="llm">① LLM 推理 API（运行期必需）</h2>
+<table><thead><tr><th>Provider</th><th>默认端点</th><th>凭据</th><th>用途</th><th>状态</th></tr></thead><tbody>
+<tr><td><strong>OpenAI</strong></td><td><code>api.openai.com/v1</code></td><td><code>OPENAI_API_KEY</code></td><td>通用推理</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>Anthropic</strong></td><td><code>api.anthropic.com/v1</code></td><td><code>ANTHROPIC_API_KEY</code></td><td>推理 + Messages SSE 流式</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>Google Gemini</strong></td><td><code>generativelanguage.googleapis.com</code></td><td><code>GEMINI_API_KEY / GOOGLE_API_KEY</code></td><td>推理</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>DeepSeek</strong></td><td><code>api.deepseek.com/v1</code></td><td><code>DEEPSEEK_API_KEY</code></td><td>推理</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>Groq</strong></td><td><code>api.groq.com/openai/v1</code></td><td><code>GROQ_API_KEY</code></td><td>低延迟推理</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>Cerebras</strong></td><td><code>api.cerebras.ai/v1</code></td><td><code>CEREBRAS_API_KEY</code></td><td>低延迟推理</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>Together</strong></td><td><code>api.together.xyz/v1</code></td><td><code>TOGETHER_API_KEY</code></td><td>开源模型托管</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>Mistral</strong></td><td><code>api.mistral.ai/v1</code></td><td><code>MISTRAL_API_KEY</code></td><td>推理</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>xAI</strong></td><td><code>api.x.ai/v1</code></td><td><code>XAI_API_KEY</code></td><td>推理</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>Perplexity</strong></td><td><code>api.perplexity.ai/v1</code></td><td><code>PERPLEXITY_API_KEY</code></td><td>联网推理</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>MiniMax</strong></td><td><code>api.minimax.io/v1</code></td><td><code>MINIMAX_API_KEY</code></td><td>推理（不流式）</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>Kimi</strong></td><td><code>api.kimi.com/coding</code></td><td><code>KIMI_API_KEY</code></td><td>推理</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>OpenRouter</strong></td><td><code>openrouter.ai/api/v1</code></td><td><code>OPENROUTER_API_KEY</code></td><td>模型聚合</td><td><span class="badge info">需配置</span></td></tr>
+<tr><td><strong>本地推理</strong></td><td><code>127.0.0.1:11434 等</code></td><td><code>无</code></td><td>Ollama / vLLM / LM Studio / llama.cpp</td><td><span class="badge ok">可选</span></td></tr>
+<tr><td><strong>自定义兼容</strong></td><td><code>configuration.json llm.api_base</code></td><td><code>llm.api_key_env_var</code></td><td>私有网关/代理（当前本机 token.tokenbroad.com）</td><td><span class="badge ok">可选</span></td></tr>
+</tbody></table>
+<p class="note">为什么依赖：Queen 分诊、worker 执行、judge、上下文压缩、记忆抽取、soul 反思共用 <code>internal/llm</code>；没有可用 <code>llm</code> 配置时 <code>/api/sessions/{id}/chat</code> 直接 503。</p>
+
+<h2 id="saas">② 凭据型 SaaS API（77 个模块 / 118 条凭据）</h2>
+<p class="note">按业务域分组。每条都是外部 HTTP API；凭据缺失时工具不可用或触发 <code>credential_form</code> park。状态一律按“未验证”标注，除非支持矩阵另有记录。</p>
+<section class="cat"><h3>CRM / 销售 / 支持 <span class="count">13 个模块</span></h3><table><thead><tr><th>模块</th><th>凭据（环境变量）</th><th class="num">工具</th><th>用途</th><th>状态</th></tr></thead><tbody>
+<tr><td><code>apollo</code></td><td><code>APOLLO_API_KEY</code></td><td class="num">7</td><td>Apollo</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>attio</code></td><td><code>ATTIO_API_KEY</code></td><td class="num">15</td><td>Attio API key for CRM integration</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>hubspot</code></td><td><code>HUBSPOT_ACCESS_TOKEN</code></td><td class="num">15</td><td>HubSpot access token (Private App or OAuth2)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>pipedrive</code></td><td><code>PIPEDRIVE_API_TOKEN</code></td><td class="num">13</td><td>Pipedrive API token for CRM management (also set PIPEDRIVE_DOMAIN for custom domains)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>salesforce</code></td><td><code>SALESFORCE_ACCESS_TOKEN</code><br><code>SALESFORCE_INSTANCE_URL</code></td><td class="num">9</td><td>Salesforce OAuth2 Bearer access token</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>zoho_crm</code></td><td><code>ZOHO_CRM_ACCESS_TOKEN</code></td><td class="num">6</td><td>Zoho CRM OAuth access token (also set ZOHO_CRM_DOMAIN for non-US regions)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>intercom</code></td><td><code>INTERCOM_ACCESS_TOKEN</code></td><td class="num">11</td><td>Intercom access token (Settings &gt; Integrations &gt; Developer Hub &gt; Your App &gt; Authentication)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>lusha</code></td><td><code>LUSHA_API_KEY</code></td><td class="num">8</td><td>Lusha API key for B2B contact and company enrichment</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>calcom</code></td><td><code>CALCOM_API_KEY</code></td><td class="num">9</td><td>Cal</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>calendly</code></td><td><code>CALENDLY_PAT</code></td><td class="num">8</td><td>Calendly Personal Access Token</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>greenhouse</code></td><td><code>GREENHOUSE_API_TOKEN</code></td><td class="num">9</td><td>Greenhouse Harvest API token for ATS access</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>freshdesk</code></td><td><code>FRESHDESK_API_KEY</code><br><code>FRESHDESK_DOMAIN</code></td><td class="num">17</td><td>Freshdesk API key for ticket, contact, agent, and group management</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>zendesk</code></td><td><code>ZENDESK_EMAIL</code><br><code>ZENDESK_SUBDOMAIN</code><br><code>ZENDESK_API_TOKEN</code></td><td class="num">8</td><td>Zendesk agent email for API authentication</td><td><span class="badge warn">未验证</span></td></tr>
+</tbody></table></section><section class="cat"><h3>协作 / 项目 / 文档 <span class="count">15 个模块</span></h3><table><thead><tr><th>模块</th><th>凭据（环境变量）</th><th class="num">工具</th><th>用途</th><th>状态</th></tr></thead><tbody>
+<tr><td><code>slack</code></td><td><code>SLACK_BOT_TOKEN</code><br><code>SLACK_APP_TOKEN</code></td><td class="num">51</td><td>Slack Bot Token (starts with xoxb-)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>discord</code></td><td><code>DISCORD_BOT_TOKEN</code></td><td class="num">7</td><td>Discord Bot Token</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>telegram</code></td><td><code>TELEGRAM_BOT_TOKEN</code></td><td class="num">13</td><td>Telegram Bot Token from @BotFather</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>mattermost</code></td><td><code>MATTERMOST_ACCESS_TOKEN</code><br><code>MATTERMOST_URL</code></td><td class="num">7</td><td>Mattermost Personal Access Token</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>zoom</code></td><td><code>ZOOM_ACCESS_TOKEN</code></td><td class="num">9</td><td>Zoom Server-to-Server OAuth access token</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>asana</code></td><td><code>ASANA_ACCESS_TOKEN</code></td><td class="num">9</td><td>Asana personal access token for task and project management</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>jira</code></td><td><code>JIRA_DOMAIN</code><br><code>JIRA_EMAIL</code><br><code>JIRA_API_TOKEN</code></td><td class="num">9</td><td>Jira Cloud domain (e</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>linear</code></td><td><code>LINEAR_API_KEY</code></td><td class="num">21</td><td>Linear API key for issue tracking and project management</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>notion</code></td><td><code>NOTION_API_TOKEN</code></td><td class="num">13</td><td>Notion internal integration token</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>confluence</code></td><td><code>CONFLUENCE_DOMAIN</code><br><code>CONFLUENCE_EMAIL</code><br><code>CONFLUENCE_API_TOKEN</code></td><td class="num">8</td><td>Confluence domain (e</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>trello</code></td><td><code>TRELLO_API_KEY</code><br><code>TRELLO_API_TOKEN</code></td><td class="num">12</td><td>Trello API key (also set TRELLO_TOKEN for authentication)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>obsidian</code></td><td><code>OBSIDIAN_REST_API_KEY</code></td><td class="num">6</td><td>Obsidian Local REST API key (64-char hex, from plugin settings)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>n8n</code></td><td><code>N8N_API_KEY</code><br><code>N8N_BASE_URL</code></td><td class="num">6</td><td>n8n API key for workflow management</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>tines</code></td><td><code>TINES_API_KEY</code><br><code>TINES_DOMAIN</code></td><td class="num">5</td><td>Tines API key for authentication</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>microsoft_graph</code></td><td><code>MICROSOFT_GRAPH_ACCESS_TOKEN</code></td><td class="num">11</td><td>Microsoft Graph OAuth 2</td><td><span class="badge warn">未验证</span></td></tr>
+</tbody></table></section><section class="cat"><h3>工程 / 云 / 可观测 <span class="count">12 个模块</span></h3><table><thead><tr><th>模块</th><th>凭据（环境变量）</th><th class="num">工具</th><th>用途</th><th>状态</th></tr></thead><tbody>
+<tr><td><code>github</code></td><td><code>GITHUB_TOKEN</code></td><td class="num">19</td><td>GitHub Personal Access Token (classic)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>gitlab</code></td><td><code>GITLAB_TOKEN</code></td><td class="num">9</td><td>GitLab personal access token</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>vercel</code></td><td><code>VERCEL_TOKEN</code></td><td class="num">7</td><td>Vercel access token for deployment and project management</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>docker_hub</code></td><td><code>DOCKER_HUB_TOKEN</code></td><td class="num">7</td><td>Docker Hub personal access token (also set DOCKER_HUB_USERNAME for listing own repos)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>cloudflare</code></td><td><code>CLOUDFLARE_API_TOKEN</code></td><td class="num">54</td><td>Cloudflare API token (DNS/Zone Read-Write)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>terraform</code></td><td><code>TFC_TOKEN</code></td><td class="num">5</td><td>Terraform Cloud API token (User or Team token)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>pagerduty</code></td><td><code>PAGERDUTY_API_KEY</code><br><code>PAGERDUTY_FROM_EMAIL</code></td><td class="num">8</td><td>PagerDuty REST API key (account-level or user-level)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>prometheus</code></td><td><code>PROMETHEUS_BASE_URL</code></td><td class="num">2</td><td>Base URL of Prometheus server</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>langfuse</code></td><td><code>LANGFUSE_PUBLIC_KEY</code><br><code>LANGFUSE_SECRET_KEY</code></td><td class="num">6</td><td>Langfuse public key (starts with pk-lf-)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>wandb</code></td><td><code>WANDB_API_KEY</code></td><td class="num">6</td><td>Weights &amp; Biases API Key</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>huggingface</code></td><td><code>HUGGINGFACE_TOKEN</code></td><td class="num">9</td><td>HuggingFace API token for Hub access (models, datasets, spaces) and Inference API</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>pinecone</code></td><td><code>PINECONE_API_KEY</code></td><td class="num">9</td><td>API key for Pinecone vector database operations</td><td><span class="badge warn">未验证</span></td></tr>
+</tbody></table></section><section class="cat"><h3>数据 / 数据库 / 存储 <span class="count">13 个模块</span></h3><table><thead><tr><th>模块</th><th>凭据（环境变量）</th><th class="num">工具</th><th>用途</th><th>状态</th></tr></thead><tbody>
+<tr><td><code>postgres</code></td><td><code>DATABASE_URL</code></td><td class="num">8</td><td>PostgreSQL connection string (postgresql://user:pass@host:port/db)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>redis</code></td><td><code>REDIS_URL</code></td><td class="num">11</td><td>Redis connection URL (e</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>mongodb</code></td><td><code>MONGODB_API_KEY</code><br><code>MONGODB_DATA_SOURCE</code><br><code>MONGODB_DATA_API_URL</code></td><td class="num">6</td><td>MongoDB Atlas Data API key</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>supabase</code></td><td><code>SUPABASE_ANON_KEY</code></td><td class="num">7</td><td>Supabase anon/public API key (also requires SUPABASE_URL env var)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>snowflake</code></td><td><code>SNOWFLAKE_ACCOUNT</code><br><code>SNOWFLAKE_TOKEN</code></td><td class="num">3</td><td>Snowflake account identifier (e</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>bigquery</code></td><td><code>GOOGLE_APPLICATION_CREDENTIALS</code><br><code>BIGQUERY_PROJECT_ID</code></td><td class="num">2</td><td>Path to Google Cloud service account JSON file for BigQuery access</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>redshift</code></td><td><code>AWS_ACCESS_KEY_ID</code><br><code>AWS_SECRET_ACCESS_KEY</code></td><td class="num">5</td><td>AWS Access Key ID for Redshift Data API access</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>databricks</code></td><td><code>DATABRICKS_TOKEN</code></td><td class="num">8</td><td>Databricks personal access token (also requires DATABRICKS_HOST env var)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>azure_sql</code></td><td><code>AZURE_SQL_ACCESS_TOKEN</code><br><code>AZURE_SUBSCRIPTION_ID</code></td><td class="num">5</td><td>Azure Bearer token for SQL management API (scope: management</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>kafka</code></td><td><code>KAFKA_CLUSTER_ID</code><br><code>KAFKA_REST_URL</code></td><td class="num">6</td><td>Kafka cluster ID</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>aws_s3</code></td><td><code>AWS_ACCESS_KEY_ID</code><br><code>AWS_SECRET_ACCESS_KEY</code></td><td class="num">8</td><td>AWS Access Key ID for S3 API access</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>cloudinary</code></td><td><code>CLOUDINARY_CLOUD_NAME</code><br><code>CLOUDINARY_API_KEY</code><br><code>CLOUDINARY_API_SECRET</code></td><td class="num">8</td><td>Cloudinary cloud name from your dashboard</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>airtable</code></td><td><code>AIRTABLE_PAT</code></td><td class="num">9</td><td>Airtable Personal Access Token</td><td><span class="badge warn">未验证</span></td></tr>
+</tbody></table></section><section class="cat"><h3>搜索 / 营销 / 内容 <span class="count">13 个模块</span></h3><table><thead><tr><th>模块</th><th>凭据（环境变量）</th><th class="num">工具</th><th>用途</th><th>状态</th></tr></thead><tbody>
+<tr><td><code>search</code></td><td><code>BRAVE_SEARCH_API_KEY</code><br><code>EXA_API_KEY</code><br><code>GOOGLE_CSE_ID</code><br><code>GOOGLE_API_KEY</code></td><td class="num">1</td><td>API key for Brave Search</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>serpapi</code></td><td><code>SERPAPI_API_KEY</code></td><td class="num">8</td><td>API key for SerpAPI (Google Scholar &amp; Patents)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>similarweb</code></td><td><code>SIMILARWEB_API_KEY</code></td><td class="num">29</td><td>API key for SimilarWeb traffic and competitor insights</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>google_analytics</code></td><td><code>GOOGLE_APPLICATION_CREDENTIALS</code></td><td class="num">7</td><td>Path to Google Cloud service account JSON key with Analytics read access</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>google_search_console</code></td><td><code>GOOGLE_SEARCH_CONSOLE_TOKEN</code></td><td class="num">8</td><td>Google OAuth2 access token with Search Console scope</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>google_maps</code></td><td><code>GOOGLE_MAPS_API_KEY</code></td><td class="num">6</td><td>API key for Google Maps Platform (Geocoding, Directions, Places)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>gcp_vision</code></td><td><code>GOOGLE_CLOUD_VISION_API_KEY</code></td><td class="num">9</td><td>Google Cloud Vision API key for image analysis</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>reddit</code></td><td><code>REDDIT_CLIENT_ID</code><br><code>REDDIT_CLIENT_SECRET</code></td><td class="num">7</td><td>Reddit app client ID for OAuth2 authentication</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>twitter</code></td><td><code>X_BEARER_TOKEN</code></td><td class="num">7</td><td>X/Twitter API v2 Bearer Token (app-only, read access)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>x</code></td><td><code>X_ACCESS_TOKEN</code><br><code>X_ACCESS_TOKEN_SECRET</code><br><code>X_API_KEY</code><br><code>X_API_SECRET</code></td><td class="num">6</td><td>X (Twitter) User Access Token for OAuth 1</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>youtube</code></td><td><code>YOUTUBE_API_KEY</code></td><td class="num">8</td><td>Google API key with YouTube Data API v3 enabled</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>news</code></td><td><code>FINLIGHT_API_KEY</code><br><code>NEWSDATA_API_KEY</code></td><td class="num">1</td><td>API key for Finlight news sentiment analysis</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>apify</code></td><td><code>APIFY_API_TOKEN</code></td><td class="num">6</td><td>Apify API token for running web scraping actors and retrieving datasets</td><td><span class="badge warn">未验证</span></td></tr>
+</tbody></table></section><section class="cat"><h3>电商 / 财务 / 运营 <span class="count">7 个模块</span></h3><table><thead><tr><th>模块</th><th>凭据（环境变量）</th><th class="num">工具</th><th>用途</th><th>状态</th></tr></thead><tbody>
+<tr><td><code>stripe</code></td><td><code>STRIPE_API_KEY</code></td><td class="num">54</td><td>Stripe Secret API Key for authenticating all API requests</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>razorpay</code></td><td><code>RAZORPAY_API_KEY</code><br><code>RAZORPAY_API_SECRET</code></td><td class="num">6</td><td>Razorpay API Key ID (used with API Secret for HTTP Basic auth)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>shopify</code></td><td><code>SHOPIFY_ACCESS_TOKEN</code><br><code>SHOPIFY_STORE_NAME</code></td><td class="num">9</td><td>Shopify Admin API access token (starts with shpat_)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>quickbooks</code></td><td><code>QUICKBOOKS_REALM_ID</code><br><code>QUICKBOOKS_ACCESS_TOKEN</code></td><td class="num">8</td><td>QuickBooks company (realm) ID</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>plaid</code></td><td><code>PLAID_CLIENT_ID</code><br><code>PLAID_SECRET</code></td><td class="num">6</td><td>Plaid client ID for banking data access (also set PLAID_SECRET and optionally PLAID_ENV)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>powerbi</code></td><td><code>POWERBI_ACCESS_TOKEN</code></td><td class="num">5</td><td>Power BI OAuth2 access token for API access</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>sap</code></td><td><code>SAP_BASE_URL</code><br><code>SAP_PASSWORD</code><br><code>SAP_USERNAME</code></td><td class="num">5</td><td>SAP S/4HANA Cloud base URL (e</td><td><span class="badge warn">未验证</span></td></tr>
+</tbody></table></section><section class="cat"><h3>邮件 / 消息通道 <span class="count">4 个模块</span></h3><table><thead><tr><th>模块</th><th>凭据（环境变量）</th><th class="num">工具</th><th>用途</th><th>状态</th></tr></thead><tbody>
+<tr><td><code>email</code></td><td><code>GOOGLE_ACCESS_TOKEN</code><br><code>RESEND_API_KEY</code></td><td class="num">41</td><td>Google OAuth2 access token (via Aden) - used for Gmail, Calendar, Sheets, and Docs</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>twilio</code></td><td><code>TWILIO_ACCOUNT_SID</code><br><code>TWILIO_AUTH_TOKEN</code></td><td class="num">7</td><td>Twilio Account SID (starts with AC)</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>pushover</code></td><td><code>PUSHOVER_API_TOKEN</code></td><td class="num">7</td><td>Pushover application API token</td><td><span class="badge warn">未验证</span></td></tr>
+<tr><td><code>brevo</code></td><td><code>BREVO_API_KEY</code></td><td class="num">9</td><td>Brevo API key for transactional email, SMS, and contact management</td><td><span class="badge warn">未验证</span></td></tr>
+</tbody></table></section>
+
+<h2 id="keyless">③ 无凭据固定 API（默认可用，仍需出网）</h2>
+<table><thead><tr><th>模块</th><th>端点</th><th>用途</th><th>凭据</th><th>风险</th></tr></thead><tbody>
+<tr><td><code>arxiv</code></td><td><code>export.arxiv.org</code></td><td>论文检索与下载</td><td>无</td><td>只读</td></tr>
+<tr><td><code>duckduckgo</code></td><td><code>duckduckgo.com</code></td><td>网页/新闻/图片搜索</td><td>无</td><td>只读</td></tr>
+<tr><td><code>search_wikipedia</code></td><td><code>{lang}.wikipedia.org</code></td><td>百科摘要</td><td>无</td><td>只读</td></tr>
+<tr><td><code>openmeteo</code></td><td><code>api.open-meteo.com</code></td><td>天气实况/预报</td><td>无</td><td>只读</td></tr>
+<tr><td><code>yahoo_finance</code></td><td><code>query1.finance.yahoo.com</code></td><td>行情/财报/搜索</td><td>无</td><td>只读</td></tr>
+<tr><td><code>youtube_transcript</code></td><td><code>www.youtube.com</code></td><td>视频转录</td><td>无</td><td>只读</td></tr>
+<tr><td><code>web_fetch / scrape</code></td><td><code>任意 URL</code></td><td>抓取模型指定的网页</td><td>无</td><td>任意目标</td></tr>
+</tbody></table>
+
+<h2 id="mcp">④ MCP 服务器（可选，用户自带）</h2>
+<ul>
+  <li>配置：<code>~/.hive/mcp_registry/installed.json</code> + <code>configuration.json</code> 的 <code>mcp</code> 块</li>
+  <li>传输：<code>stdio</code>（子进程）或 HTTP/SSE；工具命名 <code>mcp__&lt;server&gt;__&lt;tool&gt;</code></li>
+  <li>为什么：把外部工具生态接进会话，而不写进内置 41 个工具</li>
+  <li>风险：stdio 服务器继承当前用户权限；未配置白名单时 MCP 工具默认可见</li>
+</ul>
+
+<h2 id="mail">⑤ 邮件与通知通道</h2>
+<table><thead><tr><th>通道</th><th>端点 / 主机</th><th>凭据</th><th>用途</th></tr></thead><tbody>
+<tr><td>SMTP 发送</td><td>SendGrid / Gmail / Office365 / Yahoo / Zoho / 通用 SMTP</td><td>发件账号</td><td>提醒、报告、升级邮件</td></tr>
+<tr><td>IMAP 读取</td><td>smtp→imap 主机映射（如 imap.gmail.com）</td><td>邮箱账号</td><td>收信/触发</td></tr>
+<tr><td>Telegram</td><td><code>api.telegram.org/bot{token}</code></td><td><code>TELEGRAM_BOT_TOKEN</code></td><td>Sentinel 升级/通知</td></tr>
+<tr><td>Slack / Discord / Mattermost</td><td>各自 API</td><td>Bot/Token</td><td>频道消息与读取</td></tr>
+<tr><td>Pushover / Twilio / Brevo / Resend</td><td>各自 API</td><td>API Key</td><td>推送 / 短信 / 事务邮件</td></tr>
+</tbody></table>
+
+<h2 id="scan">⑥ 网络扫描器（默认关闭）</h2>
+<p><code>dns_security_scan</code>、<code>port_scan</code>、<code>ssl_tls_scan</code>、<code>http_headers_scan</code> 主动探测目标。开关：<code>HIVE_NETWORK_SCANNERS=false</code>（默认）或 <code>hive.config.json: network_scanners</code>；关闭时不注册这 4 个工具。</p>
+
+<h2 id="local">⑦ 本地 / 系统依赖（部署必需，不是外部 API）</h2>
+<div class="grid2">
+<div>
+<table><thead><tr><th>依赖</th><th>用途</th></tr></thead><tbody>
+<tr><td>文件系统 <code>~/.hive/</code></td><td>queens / colonies / sessions / credentials / soul / tracker 全部状态；可用 <code>HIVE_HOME</code> 改根</td></tr>
+<tr><td>SQLite（modernc）</td><td>tracker、任务、凭据元数据；纯 Go，无 cgo</td></tr>
+<tr><td><code>HIVE_CREDENTIAL_KEY</code></td><td>凭据加密；丢失则已存凭据不可解</td></tr>
+<tr><td>进程 / 端口</td><td><code>hive serve</code>、MCP 子进程、工具执行；默认 127.0.0.1</td></tr>
+</tbody></table>
+</div>
+<div>
+<table><thead><tr><th>Go 直接依赖</th><th>为什么</th></tr></thead><tbody>
+<tr><td><code>modernc.org/sqlite</code></td><td>无 cgo 的 SQLite，六平台交叉编译</td></tr>
+<tr><td><code>purego</code></td><td>无 cgo 调用系统库（终端/系统能力）</td></tr>
+<tr><td><code>go-isatty</code></td><td>CLI 交互检测</td></tr>
+<tr><td><code>yaml.v3</code></td><td>配置与 playbook 解析</td></tr>
+<tr><td>前端</td><td>构建期内嵌，无 CDN 运行时依赖</td></tr>
+</tbody></table>
+</div>
+</div>
+
+<h2 id="verify">⑧ 验证状态与风险</h2>
+<ul>
+  <li><strong>已真实验证</strong>：LLM（DeepSeek 兼容网关）、MCP（1 个服务器 2 工具）、26 个免凭据模块、SMTP 仅单元测试（未真实发信）。</li>
+  <li><strong>未验证</strong>：77 个凭据型模块 / 118 条凭据；本阶段未提供第三方凭据。</li>
+  <li><strong>行为限制</strong>：MiniMax 不流式（chunk 破坏解析，已测试锁定回退）；Python playbook 不可执行；Queen/overseer 两份 conversation 存储。</li>
+  <li><strong>出网</strong>：任意 URL 抓取工具让目标不受限；扫描器默认关闭；MCP 无 OS 沙箱。</li>
+  <li><strong>密钥</strong>：凭据仅存本机加密库；HTTP 响应与日志不含明文，<code>credential_status</code> 只返回元数据。</li>
+</ul>
+
+<h2 id="maint">⑨ 维护方式</h2>
+<ul>
+  <li>凭据变化：<code>uv run --no-project python go_hive/scripts/gen_credential_specs.py</code> 重新生成 <code>specs_gen.go</code>，再更新本文与 MD 版。</li>
+  <li>端点变化：改 <code>internal/llm/keycheck.go</code>、<code>internal/tools/integrations/*registry*.go</code>、<code>internal/senders/sender.go</code>，同步本文件。</li>
+  <li>架构关系见 <code>docs/architecture/capability-tech-crosswalk.md</code> 的“工具与凭据边界”。</li>
+</ul>
+
+<footer>
+  生成：2026-11-20 · 数据源 <code>specs_gen.go</code> digest <code>a7832ddc4c69…</code> · 版本 <code>hive 1.0.26-go.1</code> · Markdown 版：<code>docs/external-dependencies.md</code>
+</footer>
+</div></body></html>

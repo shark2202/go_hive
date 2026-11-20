@@ -1,5 +1,6 @@
 # go_hive 外部依赖清单
 
+> 可视化版本：`docs/external-dependencies.html`（自包含 HTML，含截图 `docs/e2e-assets/external-deps-html.png`）
 > 版本：`hive 1.0.26-go.1`（`go_hive` 仓库）。生成日期 2026-11-20。
 > 凭据清单来源：`internal/credentials/specs_gen.go`（由上游 `tools/src/aden_tools/credentials` 生成，85 个模块 / 118 条凭据，digest `a7832ddc…`）。运行时端点来自 `internal/llm`、`internal/tools/integrations`、`internal/senders`、`internal/server` 的真实代码。
 
