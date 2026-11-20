@@ -76,15 +76,23 @@ func (r *ChatRuntime) syncColonyEventBridge(runtime ColonyRuntime) {
 		return
 	}
 	// A caller that already shares the session bus needs no mirror. It still
-	// needs the park observer: an overseer ask_user must reach the chat
-	// runtime's pending state (and the session cursor) on either bus.
+	// needs the park observer and the transcript recorder: an overseer
+	// ask_user must reach the chat runtime's pending state (and the session
+	// cursor) on either bus, and its reply must land in the transcript even
+	// when its live events are already on the session bus.
 	sharedBus := false
 	if holder, ok := runtime.(interface{ EventBus() *eventbus.EventBus }); ok {
 		sharedBus = holder.EventBus() == r.bus
 	}
 	eventTypes := colonyBridgeEventTypes
 	if sharedBus {
-		eventTypes = []eventbus.EventType{eventbus.EventClientInputRequested}
+		eventTypes = []eventbus.EventType{
+			eventbus.EventClientInputRequested,
+			eventbus.EventClientOutputDelta,
+			eventbus.EventToolCallStarted,
+			eventbus.EventExecutionCompleted,
+			eventbus.EventExecutionFailed,
+		}
 	}
 	var subscriptionID string
 	subID, err := runtime.SubscribeToEvents(eventTypes, func(event *eventbus.AgentEvent) {
@@ -92,6 +100,10 @@ func (r *ChatRuntime) syncColonyEventBridge(runtime ColonyRuntime) {
 		// the session. Consume it before mirroring, which deliberately drops
 		// the overseer's own tool/token events.
 		r.parkOverseerCredentialForm(event)
+		// The overseer's reply is turned into one assistant record per turn
+		// for the session transcript. A mirror is live-only; the transcript
+		// is what a restarted session rebuilds its history from.
+		r.observeOverseerTranscriptEvent(event)
 		// The overseer asks in the same conversation the chat front end
 		// renders, so its question is recorded on the session's pending_input
 		// before the client sees the mirrored event: both halves then park on

@@ -560,6 +560,18 @@ func (b *EventBus) writeSessionLogEventLocked(event *AgentEvent) error {
 		b.flushPendingSnapshotsLocked(StrPtr(event.StreamID), event.NodeID, event.ExecutionID)
 	}
 
+	// A turn can end without llm_turn_complete: the colony overseer publishes
+	// client_output_delta and then execution_completed, never per-call usage
+	// (the session does not own its token budget). Flush at the execution
+	// boundary so a reload's events.jsonl replay still contains the reply
+	// instead of leaving it buffered until the session closes.
+	//
+	// Parity-exempt: Go-side flush boundary. Upstream's overseer is a queen
+	// that publishes llm_turn_complete; this port's overseer emitter drops it.
+	if event.Type == EventExecutionCompleted || event.Type == EventExecutionFailed {
+		b.flushPendingSnapshotsLocked(StrPtr(event.StreamID), event.NodeID, event.ExecutionID)
+	}
+
 	line, err := marshalLine(event)
 	if err != nil {
 		return err

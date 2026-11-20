@@ -105,9 +105,12 @@ type chatTurnRequest struct {
 	// in the session history: the queue keeps the conversation single-writer.
 	// external marks a record the front end did not author (the overseer's own
 	// terminal report): it is stored as an "[External event]" turn instead of
-	// a client input, and still runs no model turn.
-	recordOnly bool
-	external   bool
+	// a client input, and still runs no model turn. externalAssistant records
+	// the message as the overseer's assistant reply instead of a user turn,
+	// so a restarted session rebuilds the reply it saw live.
+	recordOnly        bool
+	external          bool
+	externalAssistant bool
 	// reminderWake is a message-less turn that only drains reminders the hub
 	// parked (idle nudge). It never answers a pending ask_user question.
 	reminderWake bool
@@ -220,6 +223,11 @@ type ChatRuntime struct {
 	// a tool reported a missing credential (upstream: credentials(collect)).
 	// It survives until the next user message/trigger, like pendingQuestions.
 	pendingCredentialForm map[string]any
+	// overseerTranscript folds the colony overseer's client-facing reply
+	// frames into one assistant message per turn for the chat transcript.
+	// The overseer runs on the colony bus, so this bridge is the only path
+	// that can persist its reply in the session conversation.
+	overseerTranscript overseerTranscriptRecorder
 
 	wake chan struct{}
 	done chan struct{}
@@ -579,8 +587,13 @@ func (r *ChatRuntime) run() {
 // Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
 func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	if request.recordOnly {
-		// A message the overseer executed: append the user turn so the
-		// transcript keeps the ask, without running the chat queen again.
+		// A message the overseer executed: append the turn so the transcript
+		// keeps the ask, without running the chat queen again. The overseer's
+		// own reply is an assistant record, not a second user turn.
+		if request.externalAssistant {
+			r.recordExternalAssistant(request.message)
+			return
+		}
 		if request.external {
 			r.recordExternalTurn(request.message)
 			return
