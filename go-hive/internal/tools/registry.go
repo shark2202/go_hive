@@ -14,6 +14,21 @@ import (
 
 const VerifiedManifestTool = "__aden_verified_manifest"
 
+// AccountSource is the read-only credential view a session attaches to its
+// tool registry: the account list behind get_account_info, plus per-alias
+// secret resolution for account-aware integration actions. It is declared here
+// so a registry can carry it without importing the integration packages; the
+// session (internal/cli) installs the real credential store, and the
+// integration registry reads it per call.
+type AccountSource interface {
+	// Accounts lists the connected accounts, all of them when provider is "".
+	Accounts(provider string) []map[string]any
+	// AccountToken returns one named account's secret. ok is false when the
+	// provider has no such alias; callers then report their own auth error,
+	// matching upstream get_by_alias returning None.
+	AccountToken(provider, alias string) (string, bool)
+}
+
 type LogRecord struct {
 	Level   string
 	Message string
@@ -92,6 +107,11 @@ type ToolRegistry struct {
 	toolOrder []string
 
 	sessionContext map[string]any
+
+	// accountSource is the session's read-only credential view. It is set once
+	// while the catalogue is assembled and read per call by the integration
+	// registry (get_account_info and account-alias routing).
+	accountSource AccountSource
 
 	mcpClients        []*mcpClientRecord
 	mcpClientServers  map[int]string
@@ -220,6 +240,22 @@ func (r *ToolRegistry) SetSessionContext(values map[string]any) {
 	for k, v := range values {
 		r.sessionContext[k] = v
 	}
+}
+
+// SetAccountSource installs the session's read-only credential view. Tools
+// installed from an integrations registry read it on every call, so attaching
+// after assembly (or replacing it later) takes effect immediately. Nil clears.
+func (r *ToolRegistry) SetAccountSource(source AccountSource) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.accountSource = source
+}
+
+// AccountSource returns the installed credential view, nil when none is set.
+func (r *ToolRegistry) AccountSource() AccountSource {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.accountSource
 }
 
 func (r *ToolRegistry) SetMCPExtraEnv(env map[string]string) {

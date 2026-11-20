@@ -241,7 +241,7 @@ type batch5HubSpotClient struct {
 }
 
 func batch5NewHubSpotClient(ctx context.Context, rt *Runtime) (*batch5HubSpotClient, map[string]any) {
-	token := batch5Lane4ModuleToken(rt, "hubspot_tool")
+	token := batch5Lane4AccountToken(rt, "hubspot_tool", "hubspot")
 	if token == "" {
 		return nil, batch5HubSpotAuthError()
 	}

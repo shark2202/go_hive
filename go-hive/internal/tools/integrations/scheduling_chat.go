@@ -221,7 +221,7 @@ func batch7Lane8MissingURLError(moduleID string) map[string]any {
 // batch7Lane8RequireModule applies the upstream credential check ordering:
 // token first, then the required base URL.
 func batch7Lane8RequireModule(rt *Runtime, moduleID string) map[string]any {
-	if batch4ModuleToken(rt, moduleID) == "" {
+	if accountToken(rt, moduleID, batch7Lane8AccountProvider(moduleID)) == "" {
 		return batch7Lane8CredentialError(moduleID)
 	}
 	if batch7Lane8Base(rt, moduleID) == "" {
@@ -242,7 +242,7 @@ type batch7Lane8Response struct {
 // Transport failures are returned as error dicts; HTTP status mapping belongs
 // to batch7Lane8CheckResponse.
 func batch7Lane8Send(ctx context.Context, rt *Runtime, moduleID, method, path string, query url.Values, payload any) (*batch7Lane8Response, map[string]any) {
-	token := batch4ModuleToken(rt, moduleID)
+	token := accountToken(rt, moduleID, batch7Lane8AccountProvider(moduleID))
 	if token == "" {
 		return nil, batch7Lane8CredentialError(moduleID)
 	}

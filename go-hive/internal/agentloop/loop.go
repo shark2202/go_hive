@@ -122,6 +122,11 @@ type AgentLoop struct {
 	queenInputRequested bool
 	// queenInputRequestID is the request the park belongs to (diagnostics).
 	queenInputRequestID string
+	// doomLoopEscalated latches the one automatic doom-loop escalation this
+	// turn-loop may publish: the detector already warns once per streak, and
+	// the latch keeps a worker that thrashes through several streaks from
+	// flooding the queen's inbox. Reset at the next turn boundary.
+	doomLoopEscalated bool
 
 	stateMu             sync.Mutex
 	toolCallsUsed       int
@@ -448,6 +453,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 	l.mu.Lock()
 	l.unread = false
+	l.doomLoopEscalated = false
 	l.mu.Unlock()
 
 	if err := l.ensureInitialMessage(agentCtx, conv, reminderCtx); err != nil {
@@ -849,9 +855,15 @@ func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingTo
 		// Parity-exempt: deterministic doom-loop guard. Upstream's stall
 		// check is judge-based; this is the no-model half (same call, same
 		// arguments, same result) and it appends a reminder before it parks.
+		// The first detection of a streak is also upstream's automatic
+		// escalation producer (the one channel parallel workers keep): the
+		// loop tells the queen once, then keeps working.
 		if warning := l.DoomLoop.Observe(item.call.Name, item.call.Input); warning != "" {
 			doomLoopReminder = warning
 			l.bumpBy("doom_loop_warned", 1)
+			if notice := l.escalateDoomLoop(agentCtx, item.call.Name, l.DoomLoop.Streak()); notice != "" {
+				doomLoopReminder = doomLoopReminder + "\n\n" + notice
+			}
 		}
 		if !park.parked && l.DoomLoop.ShouldPark() {
 			park = doomLoopPark{tool: item.call.Name, streak: l.DoomLoop.Streak(), parked: true}
@@ -870,7 +882,7 @@ func (l *AgentLoop) executeTool(ctx context.Context, agentCtx *AgentContext, req
 			return result
 		}
 	}
-	if req.Name == "escalate" {
+	if req.Name == EscalateToolName {
 		return l.executeEscalateTool(agentCtx, req)
 	}
 	if result, handled := l.executeTieredTool(agentCtx, req); handled {

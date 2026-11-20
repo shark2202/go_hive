@@ -373,9 +373,16 @@ func BuildSetOutputTool(outputKeys []string) *llm.ToolDef {
 }
 
 // Parity: framework/agent_loop/internals/synthetic_tools.py build_escalate_tool.
+//
+// The escalate tool belongs to the legacy primary worker stream ("worker", no
+// colon). Upstream does not offer it to parallel workers (stream_id="worker:<id>");
+// this port spawns only the parallel shape, so colony.workerTools keeps it off
+// the surface and the dispatch gate refuses it there. The builder stays for the
+// legacy path (and the dispatch it feeds) so the port does not drop upstream
+// behaviour that a future legacy worker entry point would need.
 func BuildEscalateTool() llm.ToolDef {
 	return llm.ToolDef{
-		Name: "escalate",
+		Name: EscalateToolName,
 		Description: "Escalate to the queen when requesting user input, " +
 			"blocked by errors, missing " +
 			"credentials, or ambiguous constraints that require supervisor " +

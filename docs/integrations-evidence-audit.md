@@ -1,11 +1,11 @@
 # go_hive integrations 证据审计（摘要）
 
-- 生成：2026-11-21 01:28 CST · 基线 main `11a7c340` · worktree `.wt/integrations-evidence-audit`
+- 生成：2026-11-21 05:47 CST（修订） · 基线 main `db5c4c1b` · worktree `.wt/integrations-account-wiring`
 - 全量数据：`go_hive/docs/integrations-evidence-audit.json`；可视化：`go_hive/docs/integrations-evidence-audit.html`
 
 ## 结论
 
-- **A 12 / B 90 / C 1 / D 1 / E 0**（104 行 = 102 模块工具 + senders + browser_setup；actions 864 = 854 + 9 + 1）。
+- **A 12 / B 91 / C 0 / D 1 / E 0**（104 行 = 102 模块工具 + senders + browser_setup；actions 864 = 854 + 9 + 1）。
 - 结构完整性与上游对账：上游 103 模块 / 865 actions；Go 102 模块 / 854 actions + senders 9 = 863，唯一缺口是 **csv_sql / excel_sql**（DuckDB 依赖，有意排除）。impl/spec 覆盖 **854/854**。
 - **没有模块是 E（无实现/无测试）**；也**没有任何真实第三方 API 调用测试**（0 个 t.Skip、0 个真实凭据读取、0 个外网目标）——联网模块最高只能到 B。
 
@@ -14,19 +14,19 @@
 | 级别 | 数量 | 模块 |
 | --- | --- | --- |
 | A 真实可用已验证 | 12 | `attach_file`, `browser_setup`, `csv`, `excel`, `get_current_time`, `http_headers_scan`, `pdf_read`, `port_scan`, `risk_score`, `ssl_tls_scan`, `tech_stack_detect`, `web_scrape` |
-| B 代码完整+假服务测试 | 90 | 见 JSON/HTML（90 个） |
-| C 部分/未接线 | 1 | `get_account_info` |
+| B 代码完整+假服务测试 | 91 | 见 JSON/HTML（91 个） |
+| C 部分/未接线 | 0 | — |
 | D 排除/EOL | 1 | `mongodb` |
 | E 未验证 | 0 | — |
 
 ## 最严重缺口（按影响排序）
 
-1. **get_account_info（C）**：生产从未注入 `AccountSource`（`session_tools.go` 只传 `WithRoots`），该工具恒返回 `{"accounts":[],"message":"No credential store configured"}`；`internal/credentials.CredentialStoreAdapter` 存在但只服务 server 路由。
+1. ~~**get_account_info（C）**~~ **已修复（C → B，2026-11-21 修订）**：`newSessionToolCatalogue` 现在把真实凭据库作为 `AccountSource` 挂到共享 registry（`tools.ToolRegistry.SetAccountSource` → `credentials.CredentialStoreAdapter`，读 `home/credentials` 加密库 + local alias 账户），`get_account_info` 无凭据返回 `{"accounts":[],"count":0}`；有凭据 / 多账号 / provider 过滤三组测试 + 假服务端到端覆盖。
 2. **OAuth 刷新缺失（全包 0 处）**：20 个凭据条目（17 个工具）只接受静态 access token（`*_ACCESS_TOKEN`）；bigquery / google_analytics / google_search_console 可 SA JWT 换 token、reddit 可 client-credentials 取 token，但无刷新循环，token 过期即失败。
 3. **mongodb（D）**：依赖的 MongoDB Atlas Data API 2025-09 EOL，只有指向兼容替代（Delbridge/RESTHeart）时可用。
 4. **通用客户端无分页**：只有 bigquery 自动跟随 token；zoom/google_docs/gmail/google_maps/salesforce/stripe 透传；其余列表 action 单页返回。
 5. **无 multipart 文件上传**：slack 用 external upload URL + PUT 文本、graph 4MB simple PUT、cloudinary 只收 URL、s3 put 只收文本。
-6. **多账号 alias 未复刻**：hubspot/obsidian/notion/discord/mattermost/google workspace/support_ats 的 `account` 参数被忽略。
+6. ~~**多账号 alias 未复刻**~~ **已复刻（2026-11-21 修订）**：hubspot / notion / discord / mattermost / google docs·gmail·calendar 的 `account` 经同一凭据视图解析（`get_by_alias` 语义：别名优先、未知别名返回该工具 auth 错误）。仍不支持：`obsidian`（上游无 account 参数）、`google_sheets`（account 为框架 tracking 参数，工具忽略）、support/ATS 组 `intercom/zendesk/freshdesk/greenhouse`（上游无 account 参数；多值 bundle 仍按 env/单条存储）。
 7. **senders ESP 不投递**：`internal/senders` 9 actions feature-gated（HIVE_EMAIL_SENDERS 默认关），仅 SMTP 真实投递。
 
 ## A 类（真实可用已验证，12）
@@ -51,11 +51,11 @@
 ```bash
 # 全包测试
 cd go_hive/go-hive && go test ./internal/tools/integrations/ -count=1
-# -> ok github.com/aden-hive/hive-go/internal/tools/integrations 2.747s
+# -> ok github.com/aden-hive/hive-go/internal/tools/integrations 2.458s
 
 # 用例总数
 go test ./internal/tools/integrations/ -list 'Test.*' | grep -c '^Test'
-# -> 1230
+# -> 1245（另 internal/cli 会话接线测试 5 个：TestSessionAccount*）
 
 # 本地文件类（PDF/Excel/CSV/scrape）
 go test ./internal/tools/integrations/ -run 'TestBatch3PDFRead|TestBatch3Excel|TestCSV|TestBatch3WebScrape' -count=1 -v

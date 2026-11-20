@@ -87,7 +87,7 @@ type doomLoopPark struct {
 }
 
 func (p doomLoopPark) detail() string {
-	return fmt.Sprintf("`%s` called %d times in a row with identical arguments and the same result", p.tool, p.streak)
+	return doomLoopDescription(p.tool, p.streak)
 }
 
 // emitPark hands a loop-raised park to the configured sink (the server's

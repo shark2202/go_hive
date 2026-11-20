@@ -73,7 +73,10 @@ func TestEscalateParksUntilQueenGuidanceArrives(t *testing.T) {
 	loop := NewAgentLoop(LoopConfig{MaxIterations: 4}, func(req ToolCallRequest) (ToolResult, error) {
 		return ToolResult{Content: "unexpected tool " + req.Name}, nil
 	})
-	ctx := escalateAgentContext(completer, "worker:abc123")
+	// The legacy primary worker stream ("worker", no colon) is the shape
+	// upstream keeps the escalate tool for; parallel workers (worker:<id>) are
+	// refused (TestEscalateRefusedForParallelWorkerStream).
+	ctx := escalateAgentContext(completer, "worker")
 	ctx.EscalationSink = recorder.sink
 	conv := NewNodeConversation("You are a test worker.")
 
@@ -100,7 +103,7 @@ func TestEscalateParksUntilQueenGuidanceArrives(t *testing.T) {
 	if len(requests) != 1 {
 		t.Fatalf("escalation requests = %d, want 1", len(requests))
 	}
-	if requests[0].StreamID != "worker:abc123" || requests[0].ExecutionID != "exec_escalation" {
+	if requests[0].StreamID != "worker" || requests[0].ExecutionID != "exec_escalation" {
 		t.Fatalf("escalation request = %#v, want the worker stream and execution", requests[0])
 	}
 	if requests[0].Reason != "Credential wall" || requests[0].Context != "HTTP 401 calling the API" {
@@ -184,7 +187,7 @@ func TestEscalateWithoutSinkIsRefusedWithoutParking(t *testing.T) {
 	loop := NewAgentLoop(LoopConfig{MaxIterations: 3}, func(req ToolCallRequest) (ToolResult, error) {
 		return ToolResult{Content: "ok"}, nil
 	})
-	ctx := escalateAgentContext(completer, "worker:no-sink")
+	ctx := escalateAgentContext(completer, "worker")
 	conv := NewNodeConversation("You are a test worker.")
 
 	result, err := loop.ExecuteTurn(context.Background(), ctx, conv, nil)
@@ -213,7 +216,7 @@ func TestEscalateWindDownEmitsUnansweredEscalation(t *testing.T) {
 	loop := NewAgentLoop(LoopConfig{MaxIterations: 3}, func(req ToolCallRequest) (ToolResult, error) {
 		return ToolResult{Content: "ok"}, nil
 	})
-	ctx := escalateAgentContext(completer, "worker:parked")
+	ctx := escalateAgentContext(completer, "worker")
 	ctx.EscalationSink = recorder.sink
 	conv := NewNodeConversation("You are a test worker.")
 	runCtx, cancel := context.WithCancel(context.Background())
@@ -250,5 +253,40 @@ func TestEscalateWindDownEmitsUnansweredEscalation(t *testing.T) {
 	last := requests[len(requests)-1]
 	if last.Reason != "Blocked waiting for queen guidance - no input received" {
 		t.Fatalf("wind-down escalation reason = %q, want the upstream no-guidance text", last.Reason)
+	}
+}
+
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (the escalate tool
+// is gated off every parallel worker, stream_id="worker:<id>"). The port also
+// refuses the call at dispatch: a hallucinated escalate must not park a
+// fail-fast worker that has no queen waiting on it.
+func TestEscalateRefusedForParallelWorkerStream(t *testing.T) {
+	recorder := &escalationRecorder{requestID: "never"}
+	completer := &scriptedCompleter{scenarios: []scriptedResponse{
+		{toolCalls: []llm.ToolCall{escalateCall("c1", "help", "")}},
+		{content: "carried on"},
+	}}
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 3}, func(req ToolCallRequest) (ToolResult, error) {
+		return ToolResult{Content: "ok"}, nil
+	})
+	ctx := escalateAgentContext(completer, "worker:abc123")
+	ctx.EscalationSink = recorder.sink
+
+	result, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("You are a test worker."), nil)
+	if err != nil {
+		t.Fatalf("ExecuteTurn: %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("turn failed: %#v", result)
+	}
+	if requests := recorder.snapshot(); len(requests) != 0 {
+		t.Fatalf("parallel worker escalation requests = %#v, want none", requests)
+	}
+	if len(result.ToolResults) == 0 || !result.ToolResults[0].IsError ||
+		!strings.Contains(result.ToolResults[0].Content, "not available to colony workers") {
+		t.Fatalf("tool result = %#v, want the parallel-worker refusal", result.ToolResults)
+	}
+	if got := completer.callCount(); got != 2 {
+		t.Fatalf("model calls = %d, want 2 (the refusal must not park)", got)
 	}
 }

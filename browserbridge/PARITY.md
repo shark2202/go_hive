@@ -51,9 +51,9 @@ definitions for compatibility and are not the active path). The six remaining
 | 7 | `browser_activate_tab` | `(tab_id, profile=None)` | `{ok, tabId}` | active | 已移植 | Uses extension `tab.activate`. |
 | 8 | `browser_navigate` | `(url, tab_id=None, profile=None, wait_until="load", profile_display_name=None, browser_profile=None)` | `{ok, tabId, url, title, browser_profile, groupTabCount?, groupTabs?, tabsHint?}` | active | 已移植 | `tab_id` required; social profile-view rate-limit hook is enforced when enabled; group summary absent; `networkidle` is a 500 ms heuristic. |
 | 9 | `browser_reload` | `(tab_id=None, profile=None)` | `{ok, action:"reload", url}` | active | 已移植 | `tab_id` required; dialog-blocked reload surface absent. |
-| 10 | `browser_screenshot` | `(intent, tab_id=None, profile=None, full_page=False, selector=None, annotate=True)` | `list[TextContent(metadata JSON), ImageContent(image/jpeg)]`; spill variant adds `saved_to` | active | 已移植 | Go returns `{ok,data,mimeType,format}` JSON, no 800 px resize, annotation, or disk artifact. Verified against real Chrome. |
+| 10 | `browser_screenshot` | `(intent, tab_id=None, profile=None, full_page=False, selector=None, annotate=True)` | `list[TextContent(metadata JSON), ImageContent(image/jpeg)]`; spill variant adds `saved_to` | active | 已移植 | `format=jpeg&quality=75&max_width=800` asks Chrome for the 800px JPEG via `clip.scale` (browser-side resample; Skia vs PIL is an acknowledged, quantified approximation — see `docs/fixtures/browser-return-contract/README.md`); geometry fields (`imageWidth/physicalScale/capturedWidth/capturedHeight`) match upstream; the CLI spills `saved_to` + `_image`. Annotation draws the tracked last-interaction highlight as a page overlay (same geometry/label formula; fonts/alpha differ from PIL). |
 | 11 | `browser_shadow_query` | `(selector, tab_id=None, profile=None)` | `{ok, selector, tag, rect{x,y,w,h,cx,cy}, cssWidth, cssHeight, note}` | active | 已移植 | `>>>` piercing ported from `_SHADOW_QUERY_JS`; rect returned as viewport fractions plus `cssWidth`/`cssHeight`. Verified against real Chrome (`#host >>> .item` → `SPAN`). |
-| 12 | `browser_snapshot` | `(tab_id=None, profile=None, mode="default")` | `{ok, tabId, url, length, saved_to}` (tree spilled to file; errors pass through) | active | 已移植 | Go returns `{ok,tabId,url,tree,nodes}` inline; no artifact spill (`length`/`saved_to` absent, so CLI `page snapshot --head` has nothing to read), no refs, no href map, no DOM fallback. Exact diff list: `docs/browser-host.md` §6.1. |
+| 12 | `browser_snapshot` | `(tab_id=None, profile=None, mode="default")` | `{ok, tabId, url, length, saved_to}` (tree spilled to file; errors pass through) | active | 已移植 | Bridge renders `[ref=eN]` + `[href="…"]` (+ DOM-orphan link section), `_clean_inline_text_boxes`, DOM fallback (>50000 nodes / visible<10 && >500) and the pending-dialog gate; the CLI spills the tree and returns `{ok,tabId,url,length,saved_to}` so `page snapshot --head` reads real content. Sample tree is byte-identical to upstream (112 chars). |
 | 13 | `browser_console` | `(tab_id=None, profile=None, level=None)` | `{ok,message,suggestion}` stub upstream | active | 已移植 | Upstream is a stub; the Go handler returns the same three fields verbatim. Console rows still land in the telemetry JSONL via the `cdp_event` consumer. |
 | 14 | `browser_html` | `(tab_id=None, profile=None, selector=None)` | `{ok, tabId, selector, length, saved_to}` or `{ok,tabId,html,selector}` | active | 已移植 | Spills `outerHTML` to `<ArtifactDir>/browser_html_<ms>_tab<id>.html`; a selector that matches nothing returns `html:null`. |
 | 15 | `browser_interact` | `(action, tab_id=None, profile=None, selector=None, coordinate=None, start_selector=None, start_coordinate=None, text=None, clear_first=True, use_insert_text=True, modifiers=None, repeat=1, scroll_direction="down", scroll_amount=500, intent=None, full_page=False, annotate=True, region=None, duration=None, wait_for_selector=None, wait_for_text=None, timeout_ms=None, auto_snapshot_mode="simple", wait_after_ms=0)` | `list[TextContent, ImageContent?]` | active | 已移植 | All 13 actions. Parameter-relevance guard, fraction coordinates (`0..1`), `key` "+" modifier parsing, `repeat`, HTML5 drag synthesis, zoom `crop_box`, auto-snapshot (`default/simple/interactive/off`). Returns Go-native JSON instead of MCP content blocks, and coordinate actions carry no annotated image. |
@@ -121,19 +121,19 @@ included here). Signatures are copied from the upstream AST.
 | 36 | `type_text` | `(tab_id, selector, text, clear_first=True, delay_ms=1, timeout_ms=30000, use_insert_text=True)` | 已移植 | Pointer focus + `Input.insertText`/per-char. |
 | 37 | `press_key` | `(tab_id, key, selector=None, modifiers=None)` | 已移植 | Modifier mask + special-key map. |
 | 38 | `shadow_query` | `(tab_id, selector)` | 已移植 | `_shadowQuery` JS ported; `browser_shadow_query` converts the CSS-px rect to viewport fractions. |
-| 39 | `hover` | `(tab_id, selector, timeout_ms=30000)` | 已移植 | Shadow-piercing selector → `scrollIntoView` → `Input.dispatchMouseEvent mouseMoved`; no highlight overlay (rows 42–44 remain absent). |
+| 39 | `hover` | `(tab_id, selector, timeout_ms=30000)` | 已移植 | Shadow-piercing selector → `scrollIntoView` → `Input.dispatchMouseEvent mouseMoved`; rect recorded as the last-interaction highlight (visible page overlay still absent). |
 | 40 | `hover_coordinate` | `(tab_id, x, y)` | 已移植 | `mouseMoved` with `buttons:0` at CSS px. |
 | 41 | `press_key_at` | `(tab_id, x, y, key)` | 已移植 | Move-then-key so native hit-testing routes the event. |
-| 42 | `highlight_rect` | `(tab_id, x, y, w, h, label="", color=None, border_style="solid")` | 未移植 | No page overlay. |
-| 43 | `highlight_point` | `(tab_id, x, y, label="")` | 未移植 | No page overlay. |
-| 44 | `clear_highlight` | `(tab_id)` | 未移植 | No page overlay. |
+| 42 | `highlight_rect` | `(tab_id, x, y, w, h, label="", color=None, border_style="solid")` | 未移植 | The last-interaction *rect* is recorded for `browser_screenshot` annotation; the visible pulsing page overlay is still absent. |
+| 43 | `highlight_point` | `(tab_id, x, y, label="")` | 未移植 | Same: point recorded for screenshot annotation; no page overlay. |
+| 44 | `clear_highlight` | `(tab_id)` | 未移植 | Highlight state is dropped when the tab closes / navigates; no page overlay to remove. |
 | 45 | `scroll` | `(tab_id, direction="down", amount=500, selector=None)` | 已移植 | CDP wheel; upstream container heuristic/chunking absent. |
 | 46 | `select_option` | `(tab_id, selector, values)` | 已移植 | `selectOptions`: sets `selected`, dispatches `change`, reports `selected`/`options` and invalid values. |
 | 47 | `evaluate` | `(tab_id, script)` | 已移植 | Runtime.evaluate wrapper; no blocker/unnest extras. |
-| 48 | `snapshot` | `(tab_id, timeout_s=30.0, mode="default")` | 已移植 | Basic AX tree formatting; no refs, hrefs, DOM fallback, artifact, or inline-textbox cleaning. |
+| 48 | `snapshot` | `(tab_id, timeout_s=30.0, mode="default")` | 已移植 | refs (`[ref=eN]`), href map (`[href="…"]` + DOM-orphan section), DOM fallback (`_dom_snapshot`) and `_clean_inline_text_boxes`; pending-dialog gate returns `{ok:false, error, pending_dialog}` like the tool layer. |
 | 49 | `get_text` | `(tab_id, selector, timeout_ms=30000)` | 已移植 | `browser_get_text` polls `textContent`. |
 | 50 | `get_attribute` | `(tab_id, selector, attribute, timeout_ms=30000)` | 已移植 | `Bridge.GetAttribute` polls `getAttribute` until it exists (30 s default). No active upstream tool wrapper (dead method upstream too), reachable through the control RPC allowlist. |
-| 51 | `screenshot` | `(tab_id, full_page=False, selector=None, timeout_s=30.0, selector_timeout_ms=5000)` | 已移植 | Base64 PNG/JPEG; full-page clamp; no resize/annotation/artifact/geometry fields. |
+| 51 | `screenshot` | `(tab_id, full_page=False, selector=None, timeout_s=30.0, selector_timeout_ms=5000)` | 已移植 | Base64 PNG/JPEG capture plus the tool-layer shape when asked (`format=jpeg&quality=75&max_width=800` → browser-native 800px JPEG; `cssWidth/cssHeight/dpr/capturedWidth/capturedHeight/physicalScale/annotated/clip`). Resampling/encoding are browser-native (approximation vs PIL, quantified in the fixtures README). |
 | 52 | `screenshot_region` | `(tab_id, x0, y0, x1, y1, scale=2.0, timeout_s=30.0)` | 已移植 | `captureRegion` implements the clip maths for `browser_interact` `zoom` (JPEG, `crop_box`, `captureScale`); no resize to the 800 px output width. |
 | 53 | `wait_for_selector` | `(tab_id, selector, timeout_ms=5000)` | 已移植 | Polls `querySelector(...) !== null` with adaptive 50/200 ms sleeps. |
 | 54 | `wait_for_text` | `(tab_id, text, timeout_ms=5000)` | 已移植 | Polls `document.body.innerText.includes(text)`. |
@@ -171,8 +171,8 @@ included here). Signatures are copied from the upstream AST.
 | 26 | Upstream remaining HTTP surface (`POST /tabs/{id}/reveal`, `POST /shutdown`) | 已移植 | Reveal returns the extension payload (or `fallback:"activate"`); `/shutdown` answers 202 `{"ok":true,"message":"Bridge shutdown initiated."}` and invokes `Config.ShutdownRequest`, which the supervised binary wires to a graceful exit (exit 0 = intentional, so the supervisor does not respawn). |
 | 26b | Panel support endpoints (`GET /tabs`, `POST /contexts/close`) | 已移植 | Additive to the upstream HTTP API: `/tabs` returns the extension's unfiltered `tab.list` rows, `/contexts/close` implements the upstream body contract `{profile}` / `{all:true}` and returns `{"closed":[{profile,ok,status,…}]}`. They exist so the Go server's three panel proxies pass through real data instead of re-implementing the registry. |
 | 27 | RPC control plane (`bridge_rpc.py`) | 已移植 | `control.go` / `control_dispatch.go` serve `ws://127.0.0.1:14831/control` with the exact 46-name `RPC_METHODS` allowlist, `{rpc_id,method,args,params}` requests, per-request goroutines, `client_hello(owner_pid)`, `subscribe_notifications`, server-pushed `{type:"notify"}` frames, `active_client_count` / `runtime_alive`, and the 10 s zombie reaper. `status_payload` gains `listening.control_rpc`, `control_rpc_clients` and `runtime_alive`. |
-| 28 | Screenshot resize/annotate/artifact spill | 未移植 | Raw base64 only. HTML spill now exists (`browser_html`), screenshot spill does not. |
-| 29 | AX refs (`eN`) and shadow-piercing selectors | 未移植 | `>>>` piercing implemented for `browser_shadow_query` and `browser_interact` `hover`; snapshot refs (`eN`), href map and DOM-snapshot fallback still absent, and click/type still use plain `querySelector`. |
+| 28 | Screenshot resize/annotate/artifact spill | 已移植 | `max_width` → browser-native 800px JPEG (`clip.scale`); last-interaction highlights annotate via page overlay; the CLI spills the JPEG and returns `saved_to`/`_image`. Resampling/encoding vs PIL is the only approximation (quantified in `docs/fixtures/browser-return-contract/README.md`). |
+| 29 | AX refs (`eN`) and shadow-piercing selectors | 已移植 | Snapshot refs (`[ref=eN]`), href map + DOM-orphan link section, DOM-snapshot fallback and InlineTextBox cleaning are ported; click/type still use plain `querySelector` (no ref-based selector resolution yet). |
 | 30 | Native dialog handling | 已移植 | `browser_dialog_respond` → `Page.handleJavaScriptDialog`; tracked dialogs from `Page.javascriptDialogOpening/Closed`; verified `confirm()` accept in real Chrome. |
 | 31 | Real Chrome extension integration | 已移植 | `scripts/real_chrome_e2e.sh` loads the real 1.7.4 extension into Google Chrome 158 (throwaway profile, `cmd/chromeloader` + `Extensions.loadUnpacked`) and drives the full tool flow. Evidence in §10. |
 | 32 | Exact `networkidle` semantics | 未移植 | Approximated as `readyState=complete` + 500 ms. |
@@ -191,7 +191,7 @@ Upstream test files live in `tools/tests/`. Go equivalents are in this module.
 | `test_browser_cleanup_phase1.py` | Context close dead-letter, forward/ungrouped orphan reapers, group recycle, window affinity | `TestStaleSweepSoftPrunesAndReapsOrphanGroup`, `TestUngroupedOrphanReap`, window/recycle paths in `TestAdoptTabLazyGroupRecreateAfterSoftPrune`; dead-letter queue absent | 未移植 |
 | `test_browser_discovery.py` | `connected_profiles` RPC reachability, listing every connection | `TestHTTPAPI` / `GET /profiles` (not the RPC path) | 未移植 |
 | `test_browser_profile_conflict.py` | Explicit profile mismatch, reuse of binding, cold-start binding | partial: `no_browser_profile` + sole-connection fallback; no `browser_profile_conflict` binding guard | 未移植 |
-| `test_browser_tools_comprehensive.py` | 41 tool-level tests: context isolation, tab ops, navigate/click/type/drag/snapshot/screenshot/wait/evaluate/upload/dialog/JSON unnest | per-command tests in `commands_tools_test.go` + `commands_l3_test.go` (interact actions, select, get_text, html spill, shadow query, resize, upload direct/triggered, dialog respond, script resolve/run); JSON unnest and refs still absent | 未移植 |
+| `test_browser_tools_comprehensive.py` | 41 tool-level tests: context isolation, tab ops, navigate/click/type/drag/snapshot/screenshot/wait/evaluate/upload/dialog/JSON unnest | per-command tests in `commands_tools_test.go` + `commands_l3_test.go` + `commands_page_contract_test.go` (interact actions, select, get_text, html spill, shadow query, resize, upload direct/triggered, dialog respond, script resolve/run, snapshot refs/href/DOM fallback, screenshot 800px JPEG + annotation); JSON unnest still absent | 未移植 |
 
 ## 5. Summary counts
 
@@ -200,11 +200,13 @@ Upstream test files live in `tools/tests/`. Go equivalents are in this module.
 - `bridge.py` methods: 55 total — 51 已移植, 4 未移植, 0 未验证.
   (Remaining: `has_public_listeners`, `highlight_rect`, `highlight_point`,
   `clear_highlight`.)
-- Runtime features: 34 total — 31 已移植, 3 未移植, 0 未验证.
-  (Remaining: screenshot resize/annotate/spill, AX refs/`eN`, exact
-  `networkidle`.)
+- Runtime features: 34 total — 33 已移植, 1 未移植, 0 未验证.
+  (Remaining: exact `networkidle` semantics. Screenshot resize/annotate/spill
+  and AX refs/`eN` were ported in the 2026-11-21 return-contract round; the
+  remaining approximation there is the browser-native image codec, quantified
+  in `docs/fixtures/browser-return-contract/`.)
 - Upstream test files: 7 total — 3 已移植, 4 未移植, 0 未验证.
-- **Grand total: 129 rows — 112 已移植, 17 未移植, 0 未验证.**
+- **Grand total: 129 rows — 114 已移植, 15 未移植, 0 未验证.**
 
 Control-plane delta (vs the L3a 103/26): +9 已移植, −9 未移植 — reveal/shutdown
 HTTP, the RPC control plane, five former bridge methods (reveal, cdp_detach,
@@ -233,10 +235,12 @@ Wired:
 
 Still open (not available; no fallback):
 
-- Snapshot refs (`eN`), href map, DOM-snapshot fallback, screenshot
-  annotation/spill.
-- Page highlight overlays (`highlight_rect` / `highlight_point` /
-  `clear_highlight`) and `has_public_listeners`.
+- Visible page highlight overlays (`highlight_rect` / `highlight_point` /
+  `clear_highlight` inject a pulsing box upstream); the last-interaction
+  highlight is recorded for screenshot annotation only.
+- `has_public_listeners`.
+- Coordinate click/hover/key carry no annotated image in their own result
+  (upstream `_build_visual_response`).
 - `browser_close` / navigation still require an explicit `tab_id`; only the
   L3a tools resolve the context's active tab automatically.
 - The desktop panel's three Go-server routes (`/api/browser/contexts`,
@@ -315,8 +319,10 @@ browser_activate_tab(tab_id: int, profile: str | None = None) -> dict
 - Passing `go test ./...` proves the Go protocol implementation, not upstream
   behavioral equivalence for unlisted edge cases.
 - `browser_snapshot` / `browser_screenshot` / `browser_interact` return shapes
-  are Go-native JSON, not the upstream MCP content-block list; screenshots are
-  not resized/annotated and the coordinate-action visual response is absent.
+  are Go-native JSON, not the upstream MCP content-block list. Screenshots are
+  resized to 800px JPEG by the browser itself (approximation vs upstream's PIL
+  pass, quantified in `docs/fixtures/browser-return-contract/`), and the
+  coordinate-action visual response is still absent.
 - `browser_script` runs the skill script as a **child process** (default
   `uv run python`), not in-process: there is no `ctx.bridge` object, the script
   gets a JSON stdin envelope plus `HIVE_BRIDGE_*` env vars and is expected to

@@ -1,0 +1,3 @@
+- RootWebArea [ref=e1] "Doc"
+  - button [ref=e2] "Go"
+  - link [ref=e3] "Docs" [href="https://example.com/docs"]

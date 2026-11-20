@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# e2e_browser_panel.sh — R03/R04/R05 end-to-end probe.
+# e2e_browser_panel.sh — R01/R02/R03/R04/R05/R07 end-to-end probe.
 #
 # Builds the real browserbridge + hive + hive-browser binaries, starts a bridge
 # on throwaway ports with a fake extension speaking the real WebSocket protocol,
 # starts a real `hive serve` pointed at that bridge, and asserts:
 #
+#   R01  `hive-browser screenshot` spills the real 800px JPEG: saved_to on
+#        disk (JPEG magic, Pillow-decodable 800x450) + _image marker + the
+#        upstream metadata, with no inline base64.
+#   R02  `hive-browser page snapshot` spills the AX tree to saved_to, returns
+#        length, the tree carries [ref=eN] and [href="…"], and `--head` reads
+#        real content back.
 #   R03  GET /api/browser/status reports the running bridge (connected/healthy
 #        with an extension attached) instead of a hardcoded offline.
 #   R04  GET /api/browser/contexts and /api/browser/tabs return the upstream
@@ -14,6 +20,8 @@
 #   R05  CLI exit codes: screenshot without --intent reaches the bridge (0 when
 #        connected, 2 when there is no bridge — never 6), `help nosuchcmd` is 1,
 #        and a leading common flag (`--json status`) parses.
+#   R07  `hive-browser upload` with a missing file exits 4 (the bridge's
+#        "File not found", never the old local 6).
 #
 # Ports are overridable: BRIDGE_WS_PORT / BRIDGE_HTTP_PORT / BRIDGE_CONTROL_PORT
 # / SERVER_PORT. Zero network access; everything is local and torn down on exit.
@@ -172,6 +180,83 @@ code=$?
 set -e
 [ "$code" -eq 2 ] || fail "screenshot without a bridge exited $code, want 2 (not_connected)"
 pass "hive-browser screenshot with no bridge -> 2 (never 6)"
+
+echo "== R01: screenshot spills the real 800px JPEG =="
+set +e
+cli screenshot --tab 101 --json --bridge "http://127.0.0.1:$HTTP_PORT" >"$tmp/shot.json" 2>"$tmp/shot.err"
+code=$?
+set -e
+[ "$code" -eq 0 ] || fail "screenshot exited $code (stderr: $(cat "$tmp/shot.err"))"
+python3 - "$tmp/shot.json" <<'PY' || fail "R01 screenshot contract"
+import json, pathlib, sys
+body = json.loads(pathlib.Path(sys.argv[1]).read_text())
+assert "data" not in body, "inline base64 must be spilled"
+assert body["ok"] is True and body["imageType"] == "jpeg", body
+assert body["imageWidth"] == 800, body
+saved = pathlib.Path(body["saved_to"])
+assert saved.is_file(), saved
+raw = saved.read_bytes()
+assert raw[:3] == b"\xff\xd8\xff", raw[:3]
+assert body["size"] == len(raw), (body["size"], len(raw))
+assert saved.name.startswith("browser_screenshot_") and saved.name.endswith("_tab101.jpg"), saved.name
+image = body["_image"]
+assert image["path"] == str(saved) and image["mime"] == "image/jpeg", image
+assert "intent" in image and image["intent"] is None, image
+assert body["annotated"] is False, body
+assert "fractions 0..1" in body["scaleHint"], body
+PY
+uv run --offline --project "$root/tools" python - "$tmp/shot.json" <<'PY' || fail "R01 JPEG decode"
+import json, pathlib, sys
+from PIL import Image
+body = json.loads(pathlib.Path(sys.argv[1]).read_text())
+with Image.open(body["saved_to"]) as img:
+    assert img.format == "JPEG", img.format
+    assert img.size == (800, 450), img.size
+    assert body["imageWidth"] == img.width, (body["imageWidth"], img.size)
+PY
+pass "hive-browser screenshot -> 800x450 JPEG at saved_to + _image (no inline base64)"
+
+echo "== R02: snapshot refs/href + artifact + --head =="
+set +e
+cli page snapshot --tab 101 --json --bridge "http://127.0.0.1:$HTTP_PORT" >"$tmp/snap.json" 2>"$tmp/snap.err"
+code=$?
+set -e
+[ "$code" -eq 0 ] || fail "page snapshot exited $code (stderr: $(cat "$tmp/snap.err"))"
+python3 - "$tmp/snap.json" <<'PY' || fail "R02 snapshot contract"
+import json, pathlib, sys
+body = json.loads(pathlib.Path(sys.argv[1]).read_text())
+assert "tree" not in body and "nodes" not in body, body
+saved = pathlib.Path(body["saved_to"])
+assert saved.is_file(), saved
+text = saved.read_text()
+assert body["ok"] is True and body["length"] == len(text), (body["length"], len(text))
+assert saved.name.startswith("browser_snapshot_") and saved.name.endswith("_tab101.txt"), saved.name
+assert "[ref=e1]" in text, text
+assert "- button [ref=e2] \"Go\"" in text, text
+assert "[href=\"https://example.com/docs\"]" in text, text
+PY
+set +e
+cli page snapshot --tab 101 --head 40 --json --bridge "http://127.0.0.1:$HTTP_PORT" >"$tmp/snap-head.json" 2>/dev/null
+code=$?
+set -e
+[ "$code" -eq 0 ] || fail "page snapshot --head exited $code"
+python3 - "$tmp/snap.json" "$tmp/snap-head.json" <<'PY' || fail "R02 --head no-op"
+import json, pathlib, sys
+full = json.loads(pathlib.Path(sys.argv[1]).read_text())
+head = json.loads(pathlib.Path(sys.argv[2]).read_text())
+text = pathlib.Path(full["saved_to"]).read_text()
+assert head.get("head") == text[:40], (head.get("head"), text[:40])
+PY
+pass "hive-browser page snapshot -> saved_to + [ref=eN]/[href] + working --head"
+
+echo "== R07: upload missing file -> 4 (bridge-side, not local 6) =="
+set +e
+cli upload '#f' --file "$tmp/nope.txt" --tab 101 --json --bridge "http://127.0.0.1:$HTTP_PORT" >"$tmp/upload.json" 2>/dev/null
+code=$?
+set -e
+[ "$code" -eq 4 ] || fail "upload missing file exited $code, want 4 (not_found)"
+grep -q 'File not found' "$tmp/upload.json" || fail "upload body: $(cat "$tmp/upload.json")"
+pass "hive-browser upload missing file -> 4 File not found (never 6)"
 
 echo "ALL PASS"
 if [ "${E2E_DUMP:-}" = "1" ]; then

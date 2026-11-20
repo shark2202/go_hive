@@ -116,6 +116,14 @@ func batch5Lane4ModuleToken(rt *Runtime, moduleID string) string {
 	return strings.TrimSpace(token)
 }
 
+// batch5Lane4AccountToken resolves a lane-4 credential for the current call: an
+// account alias the action selected wins over the module's single token
+// (upstream `_get_token(account)` -> credentials.get_by_alias(provider,
+// account)).
+func batch5Lane4AccountToken(rt *Runtime, moduleID, provider string) string {
+	return accountToken(rt, moduleID, provider)
+}
+
 // batch5Lane4Get mirrors Python's dict.get: a present key wins even when null.
 func batch5Lane4Get(object map[string]any, key string, fallback any) any {
 	if value, present := object[key]; present {

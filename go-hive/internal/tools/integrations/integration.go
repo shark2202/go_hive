@@ -103,6 +103,15 @@ func (r *Registry) ActionCount() int {
 
 // Execute runs one tool action. Expected failures are values, not errors.
 func (r *Registry) Execute(ctx context.Context, toolName string, input map[string]any) (any, error) {
+	// Standalone callers (tests, adapters) carry no session view; the runtime's
+	// own WithAccountSource, if any, still applies inside execute.
+	return r.execute(ctx, nil, toolName, input)
+}
+
+// execute is Execute plus the session's credential view. The view travels
+// separately from the runtime because it is attached to the shared registry the
+// session owns (tools.ToolRegistry.SetAccountSource), not to this batch.
+func (r *Registry) execute(ctx context.Context, source AccountSource, toolName string, input map[string]any) (any, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -130,14 +139,27 @@ func (r *Registry) Execute(ctx context.Context, toolName string, input map[strin
 	if !ok {
 		return nil, fmt.Errorf("%w: %s.%s", ErrUnknownAction, toolName, actionName)
 	}
+	// The session's credential view (attached to the shared registry) applies to
+	// every call; an action that declares the upstream account selector also
+	// carries its alias into the credential lookup. Both travel on a per-call
+	// view, so the shared runtime is never mutated and the common path (no
+	// session view, no alias) stays allocation-free.
+	alias := ""
+	if _, declares := action.Params["account"]; declares {
+		alias = stringArg(input, "account")
+	}
+	rt := r.runtime
+	if source != nil || alias != "" {
+		rt = r.runtime.ForCall(source, alias)
+	}
 	if impl := r.impls[toolName][actionName]; impl != nil {
 		return integrationkit.Guard(func() (any, error) {
-			return impl(ctx, r.runtime, integrationkit.WithDefaults(action, input))
+			return impl(ctx, rt, integrationkit.WithDefaults(action, input))
 		})
 	}
 	if spec, ok := r.specs[toolName][actionName]; ok {
 		return integrationkit.Guard(func() (any, error) {
-			return r.runtime.CallREST(ctx, tool, action, spec, integrationkit.WithDefaults(action, input))
+			return rt.CallREST(ctx, tool, action, spec, integrationkit.WithDefaults(action, input))
 		})
 	}
 	// A catalog entry without an implementation is a port bug, not a model
@@ -167,7 +189,10 @@ func (r *Registry) Install(target *tools.ToolRegistry) int {
 			Parameters:      tool.Schema(),
 			ConcurrencySafe: false,
 		}, func(inputs map[string]any) (any, error) {
-			return r.Execute(context.Background(), toolName, inputs)
+			// The session attaches its credential view to the shared registry
+			// (SetAccountSource), so it is read per call: attaching after
+			// installation still reaches get_account_info and account routing.
+			return r.execute(context.Background(), target.AccountSource(), toolName, inputs)
 		})
 	}
 	return len(r.order)

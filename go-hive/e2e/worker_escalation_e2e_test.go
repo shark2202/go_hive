@@ -3,12 +3,14 @@
 package e2e
 
 // Worker escalation end-to-end: the real `hive serve` binary, a colony bound to
-// the session, and one worker that escalates a blocked question. The chain under
-// test is the one the parity audit found unwired:
+// the session, and one worker whose repeated tool call trips the deterministic
+// doom-loop detector. Parallel workers have no manual escalate tool (upstream
+// gates it to the legacy `worker` stream), so the doom-loop producer is the
+// production channel under test:
 //
-//	worker escalate tool -> ESCALATION_REQUESTED -> colony-scoped routing on the
-//	queen session -> list_worker_questions -> reply_to_worker -> worker resumes
-//	and reports.
+//	worker repeats one call -> ESCALATION_REQUESTED -> colony-scoped routing on
+//	the queen session -> list_worker_questions -> reply_to_worker -> worker
+//	resumes and reports.
 //
 // Only the models are scripted (e2e/escalationgw, a deterministic local
 // OpenAI-compatible gateway); everything else is the real runtime, real HTTP and
@@ -19,7 +21,9 @@ package e2e
 //	CGO_ENABLED=0 GOPROXY=off go test -tags e2e ./e2e -run TestWorkerEscalationEndToEnd -v -count=1
 //	HIVE_ESCALATION_E2E_OUT=/tmp/escalation-e2e go test -tags e2e ./e2e -run ... -v
 //
-// Parity: core/tests/test_session_manager_worker_handoff.py::test_worker_handoff_injects_addressed_request_into_queen
+// Parity: core/framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom
+// loop -> emit_escalation_requested)
+// Parity: core/tests/test_run_worker_tool.py::test_parallel_worker_stall_auto_fails_with_synthetic_report
 
 import (
 	"encoding/json"
@@ -42,6 +46,7 @@ const (
 	escalationE2EModel    = "escalation-e2e-model"
 	escalationE2EColonyID = "escalation_e2e"
 	escalationE2EUser     = "Dispatch a worker to query the ledger."
+	escalationDoomNotice  = "[SYSTEM] Escalated tool doom loop to queen for intervention."
 )
 
 func escalationE2EChildEnv(homeDir string) []string {
@@ -89,7 +94,7 @@ func writeEscalationColony(t *testing.T, homeDir string) string {
 	worker := map[string]any{
 		"name":          "ledger_worker",
 		"description":   "Queries the ledger database",
-		"system_prompt": "You are a focused ledger worker. Escalate when you are blocked; report when done.",
+		"system_prompt": "You are a focused ledger worker. Report when done; repeating a call does not unblock you.",
 		"tools":         []string{},
 		"goal":          map[string]any{"description": "Query the ledger database"},
 	}
@@ -203,7 +208,38 @@ func escalationE2ERecordRespondedWith(record escalationgw.Record, tool string) b
 	return false
 }
 
-// Parity: core/tests/test_session_manager_worker_handoff.py::test_worker_handoff_injects_addressed_request_into_queen
+// escalationE2ERecordToolArgs returns the arguments of the record's own first
+// tool call (its response, not its history), so the test can count the
+// identical calls that tripped the doom-loop detector.
+func escalationE2ERecordToolArgs(t *testing.T, record escalationgw.Record) (string, string) {
+	t.Helper()
+	var message map[string]any
+	if err := json.Unmarshal([]byte(record.Message), &message); err != nil {
+		return "", ""
+	}
+	calls, _ := message["tool_calls"].([]any)
+	if len(calls) == 0 {
+		return "", ""
+	}
+	call, _ := calls[0].(map[string]any)
+	function, _ := call["function"].(map[string]any)
+	name, _ := function["name"].(string)
+	arguments, _ := function["arguments"].(string)
+	return name, arguments
+}
+
+func countPartsContaining(parts []map[string]any, needle string) int {
+	count := 0
+	for _, part := range parts {
+		if content, _ := part["content"].(string); strings.Contains(content, needle) {
+			count++
+		}
+	}
+	return count
+}
+
+// Parity: core/framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom
+// loop -> emit_escalation_requested), then the session handoff chain.
 func TestWorkerEscalationEndToEnd(t *testing.T) {
 	binary := stallE2EBuild(t)
 
@@ -251,6 +287,7 @@ func TestWorkerEscalationEndToEnd(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(outDir, "server-output.txt"), []byte(logs.String()), 0o644); err != nil {
 			t.Errorf("write server log evidence: %v", err)
 		}
+		run.dumpModelRequests()
 	})
 	go func() {
 		_ = serverCmd.Wait()
@@ -295,27 +332,33 @@ func TestWorkerEscalationEndToEnd(t *testing.T) {
 		t.Fatalf("POST /chat = %d %s; logs:\n%s", status, raw, logs.String())
 	}
 
-	// 3. The worker escalates through the real tool.
-	escalating := run.waitForModelRequest("from the worker with the escalate tool", func(record escalationgw.Record) bool {
-		if record.Kind != escalationgw.KindWorker || !escalationE2ERecordRespondedWith(record, "escalate") {
-			return false
-		}
-		return true
+	// 3. The worker's surface has no manual escalate tool (parallel workers
+	// fail fast); its first calls are one identical task_list, which is what
+	// trips the deterministic detector.
+	repeating := run.waitForModelRequest("from the worker calling task_list", func(record escalationgw.Record) bool {
+		return record.Kind == escalationgw.KindWorker && escalationE2ERecordRespondedWith(record, "task_list")
 	})
-	if !containsString(escalating.Tools, "escalate") {
-		t.Fatalf("worker tool surface = %v, want escalate", escalating.Tools)
+	if containsString(repeating.Tools, "escalate") {
+		t.Fatalf("worker tool surface = %v, must not advertise escalate", repeating.Tools)
+	}
+	if !containsString(repeating.Tools, "report_to_parent") {
+		t.Fatalf("worker tool surface = %v, want report_to_parent", repeating.Tools)
 	}
 
-	// 4. The escalation reaches the queen as an addressed handoff.
+	// 4. The escalation reaches the queen as an addressed handoff, carrying the
+	// doom-loop reason.
 	handoff := run.waitForModelRequest("carrying [WORKER_ESCALATION] for the queen", func(record escalationgw.Record) bool {
 		return record.Kind == escalationgw.KindQueen && escalationE2ERequestCarries(t, record, "[WORKER_ESCALATION]")
 	})
+	if !escalationE2ERequestCarries(t, handoff, escalationgw.DefaultDoomLoopReason) {
+		t.Fatalf("the queen's handoff does not carry the doom-loop reason:\n%s", handoff.Body)
+	}
 	requestID := escalationRequestIDFromRecord(t, handoff)
 	if requestID == "" {
 		t.Fatalf("the queen's escalation turn carries no request_id:\n%s", handoff.Body)
 	}
 
-	// 5. The queen lists the pending question.
+	// 6. The queen lists the pending question.
 	listed := run.waitForModelRequest("where the queen calls list_worker_questions", func(record escalationgw.Record) bool {
 		return record.Kind == escalationgw.KindQueen && escalationE2ERecordRespondedWith(record, "list_worker_questions")
 	})
@@ -323,7 +366,7 @@ func TestWorkerEscalationEndToEnd(t *testing.T) {
 		t.Fatalf("list_worker_questions (seq %d) preceded the handoff (seq %d)", listed.Seq, handoff.Seq)
 	}
 
-	// 6. The queen answers it with reply_to_worker, using the request_id from
+	// 7. The queen answers it with reply_to_worker, using the request_id from
 	// the listed inbox.
 	replied := run.waitForModelRequest("where the queen calls reply_to_worker", func(record escalationgw.Record) bool {
 		return record.Kind == escalationgw.KindQueen && escalationE2ERecordRespondedWith(record, "reply_to_worker")
@@ -338,7 +381,7 @@ func TestWorkerEscalationEndToEnd(t *testing.T) {
 		t.Fatalf("reply_to_worker call does not carry the guidance text: %s", replied.Message)
 	}
 
-	// 7. The worker resumes with the queen's reply and reports.
+	// 8. The worker resumes with the queen's reply and reports.
 	resumed := run.waitForModelRequest("from the worker carrying [QUEEN_REPLY]", func(record escalationgw.Record) bool {
 		return record.Kind == escalationgw.KindWorker && escalationE2ERequestCarries(t, record, "[QUEEN_REPLY]")
 	})
@@ -349,7 +392,29 @@ func TestWorkerEscalationEndToEnd(t *testing.T) {
 		t.Fatalf("resumed worker turn did not report; tool calls = %v", resumed.ToolCalls)
 	}
 
-	// 8. The colony lead sees the worker's terminal report.
+	// 9a. Exactly one identical call per threshold step: three repeats tripped
+	// the detector (4+ would have parked the worker), and every call after the
+	// trip used different arguments.
+	identical, varied := 0, 0
+	for _, record := range gw.RequestsOfKind(escalationgw.KindWorker) {
+		name, arguments := escalationE2ERecordToolArgs(t, record)
+		if name != "task_list" {
+			continue
+		}
+		if arguments == "{}" {
+			identical++
+		} else {
+			varied++
+		}
+	}
+	if identical != 3 {
+		t.Fatalf("identical task_list calls = %d, want exactly 3 (the detector threshold)", identical)
+	}
+	if varied < 1 {
+		t.Fatal("the worker never changed arguments after the doom-loop escalation")
+	}
+
+	// 10. The colony lead sees the worker's terminal report.
 	run.waitForModelRequest("from the colony lead carrying [WORKER_REPORT]", func(record escalationgw.Record) bool {
 		if record.Kind != escalationgw.KindOverseer && record.Kind != escalationgw.KindQueen {
 			return false
@@ -357,19 +422,25 @@ func TestWorkerEscalationEndToEnd(t *testing.T) {
 		return escalationE2ERequestCarries(t, record, "[WORKER_REPORT]")
 	})
 
-	// 9. Durable evidence on disk: the handoff is a transcript record for the
-	// queen (so a restart rebuilds what the user saw), and the worker's own
-	// conversation holds both the escalation and the reply.
+	// 11. Durable evidence on disk: the handoff is a transcript record for the
+	// queen (so a restart rebuilds what the user saw), the worker's own
+	// conversation holds the escalation notice and the reply, and the notice
+	// appears exactly once (no duplicate/escalation storm).
 	parts := run.queenParts()
-	if !partsContain(parts, "", "[WORKER_ESCALATION]") {
-		t.Fatal("queen transcript does not record the worker escalation")
+	handoffs := countPartsContaining(parts, "[WORKER_ESCALATION]")
+	if handoffs != 1 {
+		t.Fatalf("queen transcript carries %d [WORKER_ESCALATION] records, want exactly 1", handoffs)
 	}
 	workerParts := run.workerParts()
 	if !partsContain(workerParts, "", "[QUEEN_REPLY] request_id="+requestID) {
 		t.Fatal("worker transcript does not record the queen's reply")
 	}
+	notices := countPartsContaining(workerParts, escalationDoomNotice)
+	if notices != 1 {
+		t.Fatalf("worker transcript carries %d doom-loop escalation notices, want exactly 1", notices)
+	}
 
-	run.writeEvidence(handoff, listed, replied, resumed, escalating)
+	run.writeEvidence(handoff, listed, replied, resumed, repeating)
 }
 
 func containsString(values []string, needle string) bool {
@@ -423,9 +494,23 @@ func escalationRequestIDFromRecord(t *testing.T, record escalationgw.Record) str
 	return ""
 }
 
+// dumpModelRequests writes the raw model traffic even when the test fails
+// before the chain completes, so a broken chain is diagnosable from the
+// evidence directory instead of only from the failure message.
+func (r *escalationE2ERun) dumpModelRequests() {
+	var requests strings.Builder
+	for _, record := range r.gw.Requests() {
+		fmt.Fprintf(&requests, "{\"seq\":%d,\"kind\":%q,\"tools\":%d,\"response\":%q,\"tool_calls\":%q,\"message\":%q}\n",
+			record.Seq, record.Kind, len(record.Tools), record.Response, strings.Join(record.ToolCalls, ","), record.Message)
+	}
+	if err := os.WriteFile(filepath.Join(r.outDir, "model-requests.jsonl"), []byte(requests.String()), 0o644); err != nil {
+		r.t.Errorf("write model-requests evidence: %v", err)
+	}
+}
+
 // writeEvidence dumps the chain's model traffic, both transcripts and a
 // human-readable summary.
-func (r *escalationE2ERun) writeEvidence(handoff, listed, replied, resumed, escalating escalationgw.Record) {
+func (r *escalationE2ERun) writeEvidence(handoff, listed, replied, resumed, repeating escalationgw.Record) {
 	writeFile := func(name string, data []byte) {
 		if err := os.WriteFile(filepath.Join(r.outDir, name), data, 0o644); err != nil {
 			r.t.Errorf("write evidence %s: %v", name, err)
@@ -435,7 +520,7 @@ func (r *escalationE2ERun) writeEvidence(handoff, listed, replied, resumed, esca
 	var summary, requests strings.Builder
 	fmt.Fprintf(&summary, "worker escalation e2e: session=%s colony=%s\n\n", r.session, escalationE2EColonyID)
 	fmt.Fprintf(&summary, "chain (model request seq):\n")
-	fmt.Fprintf(&summary, "  %d worker  escalate tool call\n", escalating.Seq)
+	fmt.Fprintf(&summary, "  %d worker  identical task_list x3 -> doom-loop escalation\n", repeating.Seq)
 	fmt.Fprintf(&summary, "  %d queen   [WORKER_ESCALATION] handoff\n", handoff.Seq)
 	fmt.Fprintf(&summary, "  %d queen   list_worker_questions\n", listed.Seq)
 	fmt.Fprintf(&summary, "  %d queen   reply_to_worker\n", replied.Seq)

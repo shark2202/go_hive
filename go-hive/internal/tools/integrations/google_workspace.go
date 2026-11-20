@@ -137,6 +137,15 @@ func batch5Lane3Token(rt *Runtime, moduleID string) string {
 	return strings.TrimSpace(token)
 }
 
+// batch5Lane3AccountToken resolves a Google module credential for the current
+// call: an account alias the action selected wins over the module's single
+// token (upstream `_get_token(account)` -> credentials.get_by_alias("google",
+// account)). Google Sheets is the one module that keeps batch5Lane3Token:
+// upstream treats its `account` parameter as a framework tracking value.
+func batch5Lane3AccountToken(rt *Runtime, moduleID string) string {
+	return accountToken(rt, moduleID, "google")
+}
+
 // batch5Lane3Base resolves a module base URL, honouring WithBaseURL.
 func batch5Lane3Base(rt *Runtime, moduleID string) string {
 	if rt == nil || rt.Modules == nil {
@@ -185,9 +194,15 @@ func batch5Lane3Do(ctx context.Context, rt *Runtime, moduleID, method, path stri
 	}
 	token := batch5Lane3Token(rt, moduleID)
 	// Drive calls belong to the Docs tool but live on another host; they reuse
-	// the Docs credential, like upstream's single client.
-	if moduleID == batch5Lane3DriveModule {
-		token = batch5Lane3Token(rt, batch5Lane3DocsModule)
+	// the Docs credential, like upstream's single client. Docs, Drive, Gmail and
+	// Calendar honour the `account` alias; Sheets keeps its single token because
+	// upstream's tool ignores the parameter.
+	switch moduleID {
+	case batch5Lane3DriveModule:
+		token = batch5Lane3AccountToken(rt, batch5Lane3DocsModule)
+	case batch5Lane3SheetsModule:
+	default:
+		token = batch5Lane3AccountToken(rt, moduleID)
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")

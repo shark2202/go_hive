@@ -11,30 +11,93 @@
     "tool_calls": [
       {
         "function": {
-          "arguments": "{\"context\":\"DATABASE_URL is unset for the ledger database\",\"reason\":\"Database credentials missing\"}",
-          "name": "escalate"
+          "arguments": "{}",
+          "name": "task_list"
         },
-        "id": "call_escalate",
+        "id": "call_repeat_1",
         "type": "function"
       }
     ]
   },
   {
-    "content": "Escalation requested to queen; waiting for guidance.",
+    "content": "{\"count\": 0, \"goal\": null, \"lines\": [], \"session_id\": \"worker_1\", \"success\": true, \"tasks\": []}",
     "role": "tool",
     "seq": 2,
-    "tool_use_id": "call_escalate"
-  },
-  {
-    "content": "[2026-11-21 01:24 CST] [QUEEN_REPLY] request_id=35d919b3716860d45782c3cbf099c9e2\nUse the staging database.",
-    "is_client_input": true,
-    "role": "user",
-    "seq": 3
+    "tool_use_id": "call_repeat_1"
   },
   {
     "content": "",
     "role": "assistant",
+    "seq": 3,
+    "tool_calls": [
+      {
+        "function": {
+          "arguments": "{}",
+          "name": "task_list"
+        },
+        "id": "call_repeat_2",
+        "type": "function"
+      }
+    ]
+  },
+  {
+    "content": "{\"count\": 0, \"goal\": null, \"lines\": [], \"session_id\": \"worker_1\", \"success\": true, \"tasks\": []}",
+    "role": "tool",
     "seq": 4,
+    "tool_use_id": "call_repeat_2"
+  },
+  {
+    "content": "",
+    "role": "assistant",
+    "seq": 5,
+    "tool_calls": [
+      {
+        "function": {
+          "arguments": "{}",
+          "name": "task_list"
+        },
+        "id": "call_repeat_3",
+        "type": "function"
+      }
+    ]
+  },
+  {
+    "content": "{\"count\": 0, \"goal\": null, \"lines\": [], \"session_id\": \"worker_1\", \"success\": true, \"tasks\": []}\n\n\u003csystem-reminder\u003e\nYou have now called `task_list` 3 times in a row with identical arguments, and each call returned the same thing. Repeating it will not change the result. Change approach: re-read the last result, try different arguments, use another tool, or tell the user what is blocking you. Don't mention this reminder.\n\u003c/system-reminder\u003e\n\n[SYSTEM] Escalated tool doom loop to queen for intervention.",
+    "role": "tool",
+    "seq": 6,
+    "tool_use_id": "call_repeat_3"
+  },
+  {
+    "content": "",
+    "role": "assistant",
+    "seq": 7,
+    "tool_calls": [
+      {
+        "function": {
+          "arguments": "{\"status\":\"pending\"}",
+          "name": "task_list"
+        },
+        "id": "call_after_trip_4",
+        "type": "function"
+      }
+    ]
+  },
+  {
+    "content": "[2026-11-21 05:51 CST] [QUEEN_REPLY] request_id=282790e3f722ea48fa90eb8b70d0caf0\nUse the staging database.",
+    "is_client_input": true,
+    "role": "user",
+    "seq": 8
+  },
+  {
+    "content": "{\"count\": 0, \"goal\": null, \"lines\": [], \"session_id\": \"worker_1\", \"success\": true, \"tasks\": []}",
+    "role": "tool",
+    "seq": 9,
+    "tool_use_id": "call_after_trip_4"
+  },
+  {
+    "content": "",
+    "role": "assistant",
+    "seq": 10,
     "tool_calls": [
       {
         "function": {
@@ -45,11 +108,5 @@
         "type": "function"
       }
     ]
-  },
-  {
-    "content": "Report delivered to the overseer.",
-    "role": "tool",
-    "seq": 5,
-    "tool_use_id": "call_report"
   }
 ]

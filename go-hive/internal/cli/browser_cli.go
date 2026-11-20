@@ -182,6 +182,9 @@ func (c *browserCLI) call(args *parsedArgs, typ string, params map[string]any, p
 	code := classifyBrowserResult(result)
 	if code == browserExitOK && post != nil {
 		post(args, result)
+		// Upstream classifies the op's FINAL result, after the spill layer has
+		// run, so a failed artifact write still exits non-zero. Re-classify.
+		code = classifyBrowserResult(result)
 	}
 	c.printResult(args, result, code)
 	return code

@@ -228,7 +228,7 @@ func TestBrowserClickAutoSnapshot(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing snapshot: %+v", m)
 	}
-	if snap["ok"] != true || !strings.Contains(snap["tree"].(string), `button "Go"`) {
+	if snap["ok"] != true || !strings.Contains(snap["tree"].(string), `button [ref=e2] "Go"`) {
 		t.Fatalf("snapshot=%+v", snap)
 	}
 	if f.countCDP("Accessibility.getFullAXTree") == 0 {
@@ -351,7 +351,7 @@ func TestBrowserSnapshotMode(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := mustMap(t, res)
-	if m["ok"] != true || !strings.Contains(m["tree"].(string), `button "Go"`) {
+	if m["ok"] != true || !strings.Contains(m["tree"].(string), `button [ref=e1] "Go"`) {
 		t.Fatalf("snapshot=%+v", m)
 	}
 	if m["nodes"].(int) != 1 {

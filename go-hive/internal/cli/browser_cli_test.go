@@ -7,6 +7,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -281,8 +282,8 @@ func TestBrowserCLIUsageErrors(t *testing.T) {
 }
 
 // TestBrowserCLIBadArgs pins the Go-internal validations that stay on exit 6
-// (upstream has no argparse equivalent: upload file existence,
-// evaluate/script handler checks, the Go-only `type` verb).
+// (upstream has no argparse equivalent: evaluate/script handler checks, the
+// Go-only `type` verb).
 //
 // Parity: tools/src/gcu/errors.py::EXIT_VALIDATION
 func TestBrowserCLIBadArgs(t *testing.T) {
@@ -290,7 +291,6 @@ func TestBrowserCLIBadArgs(t *testing.T) {
 	t.Setenv("HIVE_HOME", home)
 	server, last := fakeBridge(t, nil)
 	cases := [][]string{
-		{"upload", "#f", "--file", filepath.Join(home, "missing.txt")},
 		{"evaluate"},
 		{"script", "--skill", "x"},
 		{"script", "--skill", "x", "--script", "y", "--args", "not-json"},
@@ -305,6 +305,170 @@ func TestBrowserCLIBadArgs(t *testing.T) {
 		if got := last(); got.Type != "" {
 			t.Fatalf("%v: must not reach the bridge, but sent %q", argv, got.Type)
 		}
+	}
+}
+
+// TestBrowserCLIUploadMissingFileMatchesUpstream pins R07: a missing upload
+// file is NOT a local validation. The CLI forwards browser_upload and the
+// bridge answers `File not found: <p>` — classify_result maps that to exit 4
+// ("not found"), exactly like upstream's tool handler; without a known tab the
+// CLI answers exit 3 ("Browser not started") like upstream's context check.
+//
+// Parity: tools/src/gcu/cli_commands/interact.py::cmd_upload
+func TestBrowserCLIUploadMissingFileMatchesUpstream(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	missing := filepath.Join(home, "missing.txt")
+	server, last := fakeBridge(t, map[string]any{
+		"ok": true,
+		"result": map[string]any{
+			"ok": false, "error": "File not found: " + missing,
+		},
+	})
+
+	_, stderr, code := runBrowser(t, home, "upload", "#f", "--file", missing, "--tab", "7",
+		"--json", "--bridge", server.URL)
+	if code != browserExitNotFound {
+		t.Fatalf("exit = %d, want %d (stderr: %s)", code, browserExitNotFound, stderr)
+	}
+	if got := last(); got.Type != "browser_upload" {
+		t.Fatalf("bridge command = %q, want browser_upload (no local pre-check)", got.Type)
+	}
+
+	// No tab known for the profile: the CLI stops before the round trip with
+	// upstream's not-started code.
+	_, _, code = runBrowser(t, home, "upload", "#f", "--file", missing, "--json", "--bridge", server.URL)
+	if code != browserExitNotStarted {
+		t.Fatalf("tab-less exit = %d, want %d", code, browserExitNotStarted)
+	}
+}
+
+// TestBrowserCLIScreenshotSpillsArtifact pins R01 on the CLI layer: the
+// standalone screenshot writes the bridge's JPEG to
+// <artifactDir>/browser_screenshot_<ms>_tab<id>.jpg and returns the upstream
+// pointer contract (`saved_to`, `_image`, `size`, `imageType`) with the raw
+// base64 `data` dropped.
+//
+// Parity: tools/src/gcu/browser/tools/inspection.py::render_screenshot
+func TestBrowserCLIScreenshotSpillsArtifact(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	jpegBytes := []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 'J', 'F', 'I', 'F', 0x00, 0xFF, 0xD9}
+	server, last := fakeBridge(t, map[string]any{
+		"ok": true,
+		"result": map[string]any{
+			"ok": true, "tabId": 7, "url": "https://example.com/",
+			"data":     base64.StdEncoding.EncodeToString(jpegBytes),
+			"mimeType": "image/jpeg", "format": "jpeg",
+			"imageWidth": 800, "imageHeight": 500,
+			"cssWidth": 1600, "cssHeight": 1000,
+			"capturedWidth": 1600, "capturedHeight": 1000,
+			"fullPage": false, "devicePixelRatio": 1, "physicalScale": 2,
+			"annotated": false,
+		},
+	})
+
+	stdout, stderr, code := runBrowser(t, home, "screenshot", "--tab", "7", "--json", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("exit = %d (stderr: %s)", code, stderr)
+	}
+	got := last()
+	if got.Type != "browser_screenshot" {
+		t.Fatalf("bridge command = %q", got.Type)
+	}
+	// The CLI asks the bridge for the 800px JPEG payload upstream spills.
+	for key, want := range map[string]string{"format": "jpeg", "quality": "75", "max_width": "800"} {
+		if rendered := fmt.Sprintf("%v", got.Params[key]); rendered != want {
+			t.Fatalf("params[%s] = %s, want %s", key, rendered, want)
+		}
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(stdout), &payload); err != nil {
+		t.Fatalf("stdout is not JSON: %v (%s)", err, stdout)
+	}
+	if _, present := payload["data"]; present {
+		t.Fatalf("inline base64 data must not be printed: %v", payload)
+	}
+	path, _ := payload["saved_to"].(string)
+	if path == "" {
+		t.Fatalf("saved_to missing: %v", payload)
+	}
+	if !strings.Contains(filepath.Base(path), "browser_screenshot_") || !strings.HasSuffix(path, "_tab7.jpg") {
+		t.Fatalf("artifact name = %s", path)
+	}
+	written, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("artifact unreadable: %v", err)
+	}
+	if !bytes.Equal(written, jpegBytes) {
+		t.Fatalf("artifact bytes = %v", written)
+	}
+	if payload["size"] != float64(len(jpegBytes)) || payload["imageType"] != "jpeg" {
+		t.Fatalf("size/imageType = %v/%v", payload["size"], payload["imageType"])
+	}
+	image, ok := payload["_image"].(map[string]any)
+	if !ok {
+		t.Fatalf("_image missing: %v", payload)
+	}
+	if image["path"] != path || image["mime"] != "image/jpeg" {
+		t.Fatalf("_image = %v", image)
+	}
+	if intent, present := image["intent"]; !present || intent != nil {
+		t.Fatalf("_image.intent = %v (present=%v), want null", intent, present)
+	}
+	if hint, _ := payload["scaleHint"].(string); !strings.Contains(hint, "fractions 0..1") {
+		t.Fatalf("scaleHint = %q", hint)
+	}
+}
+
+// TestBrowserCLISnapshotSpillsArtifact pins R02 on the CLI layer: `page
+// snapshot` writes the AX tree to <artifactDir>/browser_snapshot_<ms>_tab<id>.txt
+// and returns {ok,tabId,url,length,saved_to} — no inline tree — so `--head`
+// reads real content instead of being a no-op.
+//
+// Parity: tools/src/gcu/browser/tools/inspection.py::browser_snapshot
+func TestBrowserCLISnapshotSpillsArtifact(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	tree := "- RootWebArea [ref=e1] \"Doc\"\n  - button [ref=e2] \"Go\" [href=\"https://example.com/go\"]\n"
+	server, _ := fakeBridge(t, map[string]any{
+		"ok": true,
+		"result": map[string]any{
+			"ok": true, "tabId": 7, "url": "https://example.com/",
+			"tree": tree, "nodes": 2,
+		},
+	})
+
+	stdout, stderr, code := runBrowser(t, home, "page", "snapshot", "--tab", "7", "--head", "24", "--json", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("exit = %d (stderr: %s)", code, stderr)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(stdout), &payload); err != nil {
+		t.Fatalf("stdout is not JSON: %v (%s)", err, stdout)
+	}
+	if _, present := payload["tree"]; present {
+		t.Fatalf("inline tree must not be printed: %v", payload)
+	}
+	if _, present := payload["nodes"]; present {
+		t.Fatalf("nodes key must be replaced by length: %v", payload)
+	}
+	path, _ := payload["saved_to"].(string)
+	if !strings.Contains(filepath.Base(path), "browser_snapshot_") || !strings.HasSuffix(path, "_tab7.txt") {
+		t.Fatalf("saved_to = %s", path)
+	}
+	written, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("artifact unreadable: %v", err)
+	}
+	if string(written) != tree {
+		t.Fatalf("artifact = %q, want %q", written, tree)
+	}
+	if payload["length"] != float64(len(tree)) {
+		t.Fatalf("length = %v, want %d", payload["length"], len(tree))
+	}
+	if head, _ := payload["head"].(string); head != tree[:24] {
+		t.Fatalf("head = %q, want %q (--head must read the artifact)", head, tree[:24])
 	}
 }
 

@@ -320,6 +320,20 @@ func cmdBrowserInteract(ctx context.Context, b *Bridge, profile string, params m
 		if hasSelector {
 			internal["selector"] = selector
 		}
+		// Same 800px JPEG + annotation contract the standalone verb uses
+		// (the CLI spill path sends these alongside action=screenshot).
+		if format, ok := paramString(params, "format"); ok {
+			internal["format"] = format
+		}
+		if quality := paramInt(params, "quality", 0); quality > 0 {
+			internal["quality"] = quality
+		}
+		if maxWidth := paramIntAny(params, 0, "max_width", "maxWidth"); maxWidth > 0 {
+			internal["max_width"] = maxWidth
+		}
+		if _, present := params["annotate"]; present {
+			internal["annotate"] = paramBool(params, "annotate", false)
+		}
 		res, err := cmdScreenshot(ctx, b, label, internal)
 		if err != nil {
 			return nil, err

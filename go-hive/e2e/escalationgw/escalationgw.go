@@ -7,8 +7,12 @@
 //   - the chat queen (tools include list_worker_questions): first turn asks
 //     run_worker; the [WORKER_ESCALATION] turn lists the question; the turn
 //     after that answers it with reply_to_worker; anything else is plain text.
-//   - a colony worker (tools include report_to_parent): first turn escalates,
-//     the turn that carries [QUEEN_REPLY] reports success.
+//   - a colony worker (tools include report_to_parent): its first three turns
+//     repeat one identical task_list call, tripping the deterministic doom-loop
+//     detector (the one worker escalation producer upstream keeps). After the
+//     trip it keeps alternating distinct calls, waiting for the queen's reply
+//     to be recorded, so the manual escalate tool is never needed; the turn
+//     that carries [QUEEN_REPLY] reports success.
 //   - everything else (title generation, overseer, memory reflection): plain
 //     text so those background turns end immediately.
 //
@@ -40,9 +44,9 @@ const (
 const (
 	// DefaultWorkerTask is the task the scripted queen dispatches.
 	DefaultWorkerTask = "query the ledger"
-	// DefaultEscalateReason / DefaultEscalateContext are the worker's question.
-	DefaultEscalateReason  = "Database credentials missing"
-	DefaultEscalateContext = "DATABASE_URL is unset for the ledger database"
+	// DefaultDoomLoopReason is what the deterministic detector reports when it
+	// escalates the worker's repeated call.
+	DefaultDoomLoopReason = "Tool doom loop detected"
 	// DefaultQueenGuidance is the reply the queen sends back.
 	DefaultQueenGuidance = "Use the staging database."
 	// DefaultWorkerReport is the worker's resumed terminal report.
@@ -66,16 +70,15 @@ type Record struct {
 
 // Options configures a Server.
 type Options struct {
-	Model                 string
-	WorkerTask            string
-	EscalateReason        string
-	EscalateContext       string
-	QueenGuidance         string
-	WorkerReport          string
-	WorkerReportStatus    string
-	QueenFinalReply       string
-	EscalationReplyLimit  int
-	DisableWorkerEscalate bool
+	Model              string
+	WorkerTask         string
+	QueenGuidance      string
+	WorkerReport       string
+	WorkerReportStatus string
+	QueenFinalReply    string
+	// WorkerRepeatCount is how many identical calls trip the deterministic
+	// doom-loop detector. 0 selects the production threshold (3).
+	WorkerRepeatCount int
 }
 
 // Server is an http.Handler plus its request recorder.
@@ -95,11 +98,8 @@ func New(opts Options) *Server {
 	if opts.WorkerTask == "" {
 		opts.WorkerTask = DefaultWorkerTask
 	}
-	if opts.EscalateReason == "" {
-		opts.EscalateReason = DefaultEscalateReason
-	}
-	if opts.EscalateContext == "" {
-		opts.EscalateContext = DefaultEscalateContext
+	if opts.WorkerRepeatCount <= 0 {
+		opts.WorkerRepeatCount = 3
 	}
 	if opts.QueenGuidance == "" {
 		opts.QueenGuidance = DefaultQueenGuidance
@@ -207,19 +207,39 @@ func (s *Server) decide(kind Kind, payload map[string]any) (string, []toolCall) 
 	text := conversationText(payload)
 	switch kind {
 	case KindWorker:
-		if !strings.Contains(text, "[QUEEN_REPLY]") {
+		if strings.Contains(text, "[QUEEN_REPLY]") {
 			arguments, _ := json.Marshal(map[string]any{
-				"reason":  s.opts.EscalateReason,
-				"context": s.opts.EscalateContext,
+				"status":  s.opts.WorkerReportStatus,
+				"summary": s.opts.WorkerReport,
+				"data":    map[string]any{"resumed": true},
 			})
-			return "", []toolCall{{ID: "call_escalate", Name: "escalate", Arguments: string(arguments)}}
+			return "", []toolCall{{ID: "call_report", Name: "report_to_parent", Arguments: string(arguments)}}
 		}
-		arguments, _ := json.Marshal(map[string]any{
-			"status":  s.opts.WorkerReportStatus,
-			"summary": s.opts.WorkerReport,
-			"data":    map[string]any{"resumed": true},
-		})
-		return "", []toolCall{{ID: "call_report", Name: "report_to_parent", Arguments: string(arguments)}}
+		// The first WorkerRepeatCount turns re-issue one identical call; the
+		// deterministic detector escalates on the last of them. After the trip
+		// the worker alternates distinct arguments so the streak resets and the
+		// deterministic park cannot fire before the queen answers.
+		repeats := strings.Count(text, "tool_call:task_list\n")
+		if repeats < s.opts.WorkerRepeatCount {
+			return "", []toolCall{{
+				// Unique per call: the conversation store keys tool results by
+				// id, so reusing one id would make the repeats invisible.
+				ID:        fmt.Sprintf("call_repeat_%d", repeats+1),
+				Name:      "task_list",
+				Arguments: `{}`,
+			}}
+		}
+		s.waitForQueenReply()
+		status := "pending"
+		if repeats%2 == 0 {
+			status = "done"
+		}
+		arguments, _ := json.Marshal(map[string]any{"status": status})
+		return "", []toolCall{{
+			ID:        fmt.Sprintf("call_after_trip_%d", repeats+1),
+			Name:      "task_list",
+			Arguments: string(arguments),
+		}}
 	case KindQueen:
 		if strings.Contains(text, "[WORKER_ESCALATION]") {
 			requestID := escalationRequestID(text)
@@ -254,6 +274,10 @@ func (s *Server) decide(kind Kind, payload map[string]any) (string, []toolCall) 
 				"task": s.opts.WorkerTask,
 				"goal": "Query the ledger",
 			}},
+			// The scripted worker trips the doom loop inside this budget and
+			// then keeps working while the queen answers; the production
+			// default (3 + 1 grace) is too tight for that chain.
+			"max_iterations": 60,
 		})
 		return "", []toolCall{{ID: "call_run_worker", Name: "run_worker", Arguments: string(arguments)}}
 	}
@@ -261,6 +285,37 @@ func (s *Server) decide(kind Kind, payload map[string]any) (string, []toolCall) 
 }
 
 var requestIDPattern = regexp.MustCompile(`request_id:\s*([0-9a-f]{8,})`)
+
+// waitForQueenReply blocks a post-trip worker call until the scripted queen has
+// answered it (its reply_to_worker call is recorded). The worker is then still
+// alive when the guidance lands; without the gate the worker's fast scripted
+// turns could exhaust its iteration budget before the queen's turn completes.
+// Bounded: a broken chain must fail the test's assertions, not hang the gateway.
+func (s *Server) waitForQueenReply() {
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		if s.queenReplied() {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+func (s *Server) queenReplied() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, record := range s.records {
+		if record.Kind != KindQueen {
+			continue
+		}
+		for _, name := range record.ToolCalls {
+			if name == "reply_to_worker" {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 func escalationRequestID(text string) string {
 	match := requestIDPattern.FindStringSubmatch(text)

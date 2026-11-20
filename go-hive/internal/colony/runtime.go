@@ -426,11 +426,15 @@ func (r *ColonyRuntime) buildWorkerContext(worker *Worker, spec agentloop.AgentS
 			return r.cachedSkillsCatalogPrompt()
 		}
 	}
-	// The worker's escalate tool publishes through the colony's bus: the queen
-	// session subscribes colony-scoped, records the request_id and surfaces the
-	// handoff; reply_to_worker then injects guidance back here.
+	// The worker's escalation channel is automatic: the tool doom-loop
+	// detector publishes through this sink (the worker itself has no escalate
+	// tool, matching upstream's parallel-worker surface). The queen session
+	// subscribes colony-scoped, records the request_id and surfaces the
+	// handoff; reply_to_worker then injects guidance back here if the worker
+	// is still alive.
 	//
-	// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (escalate)
+	// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom
+	// loop -> emit_escalation_requested)
 	ctx.EscalationSink = r.escalationSinkForWorker()
 
 	keepSet := r.workerKeepSet()
@@ -934,14 +938,18 @@ func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 	// queen-only pair stays out.
 	tools = appendMissingToolDefs(tools, trackerToolDefs("worker")...)
 	tools = appendMissingToolDefs(tools, agentloop.BuildReportToParentTool(r.agentSpec.ReportSchema))
-	// Workers can escalate to the queen instead of guessing: the escalate tool
-	// pauses this worker until reply_to_worker injects guidance. Upstream
-	// routes the same channel through the worker's escalate tool; this port's
-	// run_worker workers are the only worker kind it has, so the channel is
-	// advertised here (see docs/queen-lifecycle-tools.md, "未对齐项").
+	// Parallel workers fail fast, not escalate. Upstream 1.0.14 only ships the
+	// escalate tool to the legacy primary worker (stream_id="worker", no
+	// colon); a worker that reports to a parent (stream_id="worker:<id>", the
+	// run_worker shape) gets report_to_parent instead. Every colony worker this
+	// port spawns is the worker:<id> shape, so the escalate tool stays off the
+	// surface. A blocked worker surfaces the blocker in its report (status
+	// failed/partial); a tool doom loop is escalated automatically by the loop,
+	// which is the one worker escalation producer upstream leaves open.
 	//
-	// Parity: framework/agent_loop/internals/synthetic_tools.py::build_escalate_tool
-	tools = appendMissingToolDefs(tools, agentloop.BuildEscalateTool())
+	// Parity: framework/agent_loop/agent_loop.py::_execute_impl (tool surface
+	// gate: is_parallel_worker / _reports_to_parent)
+	tools = withoutTool(tools, agentloop.EscalateToolName)
 	// Every worker keeps its own task list: task_create/update/list/get is how
 	// it decomposes the assignment it was handed.
 	tools = appendMissingToolDefs(tools, workerTaskToolDefs()...)

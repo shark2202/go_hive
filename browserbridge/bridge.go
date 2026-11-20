@@ -180,6 +180,7 @@ type Bridge struct {
 	tabActions       map[int][]TabAction
 	tabSnapshots     map[int]map[string]any
 	tabBlockers      map[int][]Blocker
+	tabHighlights    map[int]map[string]any
 	pendingDialogs   map[int]map[string]any
 	hiveTabs         map[int]struct{}
 	orphanSeen       map[int]int
@@ -226,6 +227,7 @@ func New(cfg Config) *Bridge {
 		tabActions:       make(map[int][]TabAction),
 		tabSnapshots:     make(map[int]map[string]any),
 		tabBlockers:      make(map[int][]Blocker),
+		tabHighlights:    make(map[int]map[string]any),
 		pendingDialogs:   make(map[int]map[string]any),
 		hiveTabs:         make(map[int]struct{}),
 		orphanSeen:       make(map[int]int),

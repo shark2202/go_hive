@@ -349,32 +349,30 @@ canonical command 全部可达；supervisor 测试用测试二进制自身充当
 | CLI 自动 ensure 桥 | `errors.run` 里 `ensure_bridge_host_running()`，CLI 会拉起 `bridge_host` | **不拉** | 桥归 `hive serve` 管，避免 CLI 留下孤儿进程；桥没起时明确退出 2 并提示 `hive serve` |
 | `browser_setup`/`browser_status` 的 `connected_profiles` | 来自 `_connected_profiles` | 来自 Go 桥 `connectedProfiles` | 字段一致（label/is_default/starred/version/protocol_version） |
 | profile→tab 索引 | 桥侧 contexts + 客户端 `browser_contexts.json` 重水化 | 客户端 `browser_cli_state.json`（只存 tabId） | 桥侧 contexts 未持久化，CLI 用本地索引补足 tab 解析 |
-| 用法错误退出码 | argparse=2 | **已对齐**（2026-11-20） | 未知子命令/flag、缺必填参数、非法 choice/类型（`--action`、`--mode`、`--wait-until`、`--scroll-direction`、`--auto-snapshot-mode`、`--coordinate`/`--region`、`--duration`、`--timeout-s`、`tab_id`）一律 2，与上游 argparse 实测一致；Go 自己的本地校验仍为 6（见 §2 表） |
+| 用法错误退出码 | argparse=2 | **已对齐**（2026-11-20） | 未知子命令/flag、缺必填参数、非法 choice/类型（`--action`、`--mode`、`--wait-until`、`--scroll-direction`、`--auto-snapshot-mode`、`--coordinate`/`--region`、`--duration`、`--timeout-s`、`tab_id`）一律 2，与上游 argparse 实测一致；仍走本地 6 的只剩 evaluate/script 参数校验与 Go 自有 `type` 动词（见 §2 表）。upload 文件不存在自 2026-11-21 起走桥侧 `File not found` → 4（R07） |
 | `interact screenshot/zoom` 缺 intent | 工具层 `ok:false` → 1 | **已对齐**（2026-11-20） | 本地预检已移除：桥返回 `screenshot requires intent` / `zoom requires region`，分类为 1（真 Chrome 实测） |
 | 独立 `screenshot` 缺 `--intent` | `render_screenshot(intent=None)` → 连上时 0 | **已对齐**（2026-11-21） | 本地 `--intent` 预检与桥侧强制一并移除：连上 0 / 无桥 2 / 未开标签 3；`interact --action screenshot` 仍要求 intent（上一行） |
 | 父进程死亡后的桥寿命 | `_watch_parent`：桌面 PID 消失即退出（5s × 2 次确认） | **已对齐（实测 ≤2s）** | 桥新增 `-parent-check`（默认 400ms，2 次确认）监视 `HIVE_DESKTOP_PARENT_PID`，父死约 0.8s 退出；原空闲看门狗（10s 轮询 + 30s grace，约 30–40s）保留为兜底；serve 侧 `ensure()`/run 循环在 owner 死后不再复活（对应上游 `_run_supervisor` 的 parent watchdog） |
-| `--head` / `--no-annotate` | 上游工具侧处理 | `--head` 由 CLI 读 `saved_to` 文件取前 N 字符；`--no-annotate` 透传（Go 桥当前忽略注解开关） | 结果里仍给出 `saved_to`/`data` |
+| `--head` / `--no-annotate` | 上游工具侧处理 | **已对齐（2026-11-21）**：`--head` 读快照 artifact 的前 N 字符；`--no-annotate` 透传给桥（有高亮时注入 overlay，否则不加图） | 快照结果给 `saved_to`（无内联 `tree`）；截图结果给 `saved_to` + `_image` |
 | `hive-browser script` 技能解析 | skill 名 → 目录（skills 根注入） | 桥侧 `-skills` 未由 supervisor 注入 | 指定 `HIVE_BROWSERBRIDGE_ARGS="-skills <dir>"` 可补上 |
 | 发布归档成员 | hive-desktop 侧打包扩展 | 归档含 `hive`/`hive-cred`/`hive-browser`/`browserbridge`（1.0.26 起）；Chrome 扩展未随包，`chromeloader` 可从源码树侧载 | 见 §4 |
 
-### 6.1 快照/截图形状：未对齐项（精确差异）
+### 6.1 快照/截图形状（2026-11-21 修复后）
 
-快照与截图是上游工具层最重的两块「形状」差异，PARITY.md 行 12（MCP 工具）、
-行 133（bridge 方法）、行 175（运行特性）已记为「未移植」；本任务只做实测与列差异，
-不硬改。逐项对照：
+本节原记录的是未对齐差异；修复轮（分支 `browser-return-contract`）已把快照/截图的
+返回契约对齐到上游工具层，实测见审计页 §04.7 与
+`go_hive/docs/fixtures/browser-return-contract/`（Python 参考 / Go before-after 原始输出）。
 
-| 项 | 上游 Python | 本实现 | 影响 |
+| 项 | 上游 Python | 本实现 | 状态 |
 | --- | --- | --- | --- |
-| 快照返回 | 桥 `snapshot` 返回 `{ok,tabId,url,tree}`；工具层把 `tree` 落盘为 `<ArtifactDir>/browser_snapshot_<ms>_tab<id>.txt` 并返回 `{ok,tabId,url,length,saved_to}` | 桥 `browser_snapshot` 直接内联 `{ok,tabId,url,tree,nodes}` | 无 `length`/`saved_to`，不落盘 → CLI `page snapshot --head N` 因没有 `saved_to` 而**拿不到内容**（对快照是 no-op） |
-| 快照行格式 | `- link [ref=e1] "Home" [href="https://…"]`：交互角色（`refs.py::INTERACTIVE_ROLES`）或任何有 accessible name 的节点分配 `eN` ref；`link` 节点按名字顺序消费 `_collect_link_hrefs` 的 href 并标注 | `- link "Home"` | 无 `[ref=eN]`、无 `[href="…"]`；agent 无法按 ref 操作，链接 URL 需要额外 `evaluate` |
-| 快照补充段 | 末尾追加 `(links visible in DOM but not in accessibility tree):`，把 AX 树漏掉的可见 `<a href>` 也列出来（虚拟列表/LinkedIn 场景） | 无 | 可见但被 AX 标记 ignored 的链接不可见 |
-| AX 预处理/兜底 | `_clean_inline_text_boxes` 去掉冗余 InlineTextBox；>50000 节点或可见节点 <10 且 >500 时走 `_dom_snapshot`；快照前有 pending dialog 检查（返回 `pending_dialog` → 7） | 直接格式化 `Accessibility.getFullAXTree` | 大页面/对话框阻塞时上游有专门路径 |
-| 截图 | 800px 宽 JPEG(q75)（`_resize_and_annotate`）+ 可选 PIL 注解（高亮框）；CLI 落盘并给 `saved_to`/`_image` | 原始 `{ok,data,mimeType,format}` base64（默认 PNG） | 无缩放/注解/落盘；大图 base64 直接进 JSON |
-| 坐标动作图 | 坐标 click/hover/key 成功后追加一张注解截图（`_build_visual_response`，高亮落点） | 只回 JSON | agent 看不到落点，只能靠截图自查 |
+| 快照返回 | 桥 `snapshot` 返回 `{ok,tabId,url,tree}`；工具层把 `tree` 落盘为 `<ArtifactDir>/browser_snapshot_<ms>_tab<id>.txt` 并返回 `{ok,tabId,url,length,saved_to}` | CLI 侧同样落盘并返回 `{ok,tabId,url,length,saved_to}`（`--head` 从该文件读前 N 字符） | 已对齐（树文本逐字节相同） |
+| 快照行格式 | `- link [ref=e1] "Home" [href="https://…"]`：交互角色或任何有 accessible name 的节点分配 `eN` ref；`link` 节点按名字顺序消费 `_collect_link_hrefs` 的 href | 同：`[ref=eN]` + `[href="…"]`（含 DOM 漏掉链接的补充段） | 已对齐（单测 + 真桥 e2e） |
+| AX 预处理/兜底 | `_clean_inline_text_boxes`；>50000 节点或可见节点 <10 且 >500 时走 `_dom_snapshot`；快照前有 pending dialog 检查（返回 `pending_dialog` → 7） | 同；`cmdBrowserSnapshot` 三条路径齐备 | 已对齐（单测覆盖 fallback/dialog） |
+| 截图 | 800px 宽 JPEG(q75)（`_resize_and_annotate`）+ 可选注解（高亮框）；CLI 落盘并给 `saved_to`/`_image` | 桥以 `format=jpeg&quality=75&max_width=800` 让 Chrome 按 `clip.scale` 原生输出 800px JPEG；CLI 落盘 + `saved_to`/`_image`；点击/悬停/按键记录高亮，截图前注入同几何 overlay | 已对齐（字段逐 key 相同；编码为浏览器原生重采样，见 fixture README 的量化说明） |
+| 坐标动作图 | 坐标 click/hover/key 成功后追加一张注解截图（`_build_visual_response`，高亮落点） | 仍只回 JSON（高亮已被记录，供下一次 screenshot 注解） | 未对齐（保留残差 R15） |
 
-未在本任务内实现的原因：ref/href 需要完整 ref 子系统（`refs.py` 角色集、`_collect_link_hrefs`
-的 AccName 近似、按 ref 的 click/type 解析）与 DOM 兜底；注解图需要图像合成 + 字体渲染
-（上游用 Pillow），在「零新依赖」约束下无法等价实现。故按任务要求只列精确差异，不硬改。
+未实现的剩余项只有一个：坐标动作自动附带注解图。它依赖工具层把动作结果改写成
+content blocks，属交互动作的返回形状（不是截图动词本身），故单列为 R15。
 
 ## 7. 本 lane 的真机实测（2026-11-20）
 

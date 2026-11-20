@@ -1,0 +1,7 @@
+{
+  "nodes": 3,
+  "ok": true,
+  "tabId": 101,
+  "tree": "- RootWebArea \"Doc\"\n  - button \"Go\"\n  - link \"Docs\"",
+  "url": "https://example.com/"
+}

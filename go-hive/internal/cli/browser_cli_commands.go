@@ -318,11 +318,25 @@ func (c *browserCLI) interactCommand() *commandSpec {
 				params["full_page"] = true
 			}
 			params["annotate"] = !args.boolean("no_annotate")
+			// The interact screenshot action spills the same 800px JPEG the
+			// standalone verb does (upstream _blocks_to_cli_dict); ask the
+			// bridge for that payload when this action captures an image.
+			if action == "screenshot" {
+				params["format"] = "jpeg"
+				params["quality"] = 75
+				params["max_width"] = 800
+			}
 			if code := c.requireTab(args, params); code != browserExitOK {
 				return nil, code
 			}
 			return params, browserExitOK
-		}, nil)
+		}, func(args *parsedArgs, result map[string]any) {
+			intent, hasIntent := "", false
+			if args.wasProvided("intent") {
+				intent, hasIntent = args.str("intent"), true
+			}
+			c.spillImageResult(result, "browser_interact", intent, hasIntent)
+		})
 }
 
 func (c *browserCLI) selectCommand() *commandSpec {
@@ -361,15 +375,11 @@ func (c *browserCLI) uploadCommand() *commandSpec {
 				fmt.Fprintln(c.stderr, "hive-browser: --file is required (repeatable)")
 				return nil, browserExitUsage
 			}
-			for _, path := range files {
-				// Upstream reads the files in the handler and answers
-				// ok:false → exit 1; the Go CLI checks locally and keeps its
-				// own bad-args code (6), documented in browser-host.md.
-				if info, err := os.Stat(expandUser(path)); err != nil || info.IsDir() {
-					fmt.Fprintf(c.stderr, "hive-browser: file not found: %s\n", path)
-					return nil, browserExitBadArgs
-				}
-			}
+			// No local existence check: upstream reads the files in the tool
+			// handler AFTER the bridge/context/tab checks and answers
+			// ok:false "File not found: <p>", which classify_result maps to 4
+			// (or 3 for "Browser not started"). The bridge performs the same
+			// check in the same order, so pass straight through (R07).
 			params := map[string]any{
 				"selector":   args.str("selector"),
 				"file_paths": files,
@@ -405,6 +415,11 @@ func (c *browserCLI) screenshotCommand() *commandSpec {
 				"full_page":  args.boolean("full_page"),
 				"annotate":   !args.boolean("no_annotate"),
 				"timeout_ms": args.intValue("timeout_ms"),
+				// Upstream's CLI always spills the 800px JPEG (spill=True);
+				// ask the bridge for exactly that payload.
+				"format":    "jpeg",
+				"quality":   75,
+				"max_width": 800,
 			}
 			if args.wasProvided("intent") {
 				params["intent"] = args.str("intent")
@@ -416,7 +431,13 @@ func (c *browserCLI) screenshotCommand() *commandSpec {
 				return nil, code
 			}
 			return params, browserExitOK
-		}, nil)
+		}, func(args *parsedArgs, result map[string]any) {
+			intent, hasIntent := "", false
+			if args.wasProvided("intent") {
+				intent, hasIntent = args.str("intent"), true
+			}
+			c.spillImageResult(result, "browser_screenshot", intent, hasIntent)
+		})
 }
 
 func (c *browserCLI) evaluateCommand() *commandSpec {
@@ -708,7 +729,7 @@ func (c *browserCLI) pageCommand() *commandSpec {
 						return nil, code
 					}
 					return params, browserExitOK
-				}, c.spillHead),
+				}, c.snapshotResultPost),
 			c.leaf("hive-browser page text", "text content of an element",
 				[]argSpec{timeoutFlag(5000, "selector wait (ms)"), tab},
 				[]positionalSpec{{Dest: "selector", Required: true, Help: "CSS selector"}},

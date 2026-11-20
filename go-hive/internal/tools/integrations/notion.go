@@ -483,10 +483,18 @@ func batch4NotionImpls() map[string]ActionFunc {
 	}
 }
 
+// batch4AccountToken resolves a module credential for the current call. An
+// account alias the action selected wins over the module's single token, the
+// way upstream `_get_token(account)` calls credentials.get_by_alias(provider,
+// account) first.
+func batch4AccountToken(rt *Runtime, moduleID, provider string) string {
+	return accountToken(rt, moduleID, provider)
+}
+
 // batch4NotionRequest performs one Notion API call and maps HTTP failures to
 // the upstream error dicts.
 func batch4NotionRequest(ctx context.Context, rt *Runtime, method, path string, payload any) map[string]any {
-	token := batch4ModuleToken(rt, "notion_tool")
+	token := batch4AccountToken(rt, "notion_tool", "notion")
 	if token == "" {
 		return batch4NotionAuthError()
 	}

@@ -207,6 +207,7 @@ func (fakeAccounts) Accounts(provider string) []map[string]any {
 	all := []map[string]any{
 		{"account_id": "a1", "provider": "google", "email": "a@example.com"},
 		{"account_id": "a2", "provider": "github", "username": "alice"},
+		{"account_id": "a3", "provider": "google", "email": "b@example.com"},
 	}
 	if provider == "" {
 		return all
@@ -218,6 +219,16 @@ func (fakeAccounts) Accounts(provider string) []map[string]any {
 		}
 	}
 	return out
+}
+
+func (fakeAccounts) AccountToken(provider, alias string) (string, bool) {
+	tokens := map[string]string{
+		"google/a1":    "google-a1-token",
+		"google/a3":    "google-a3-token",
+		"github/alice": "github-alice-token",
+	}
+	token, ok := tokens[provider+"/"+alias]
+	return token, ok
 }
 
 // Parity-exempt: upstream has no Python test; behavior ported from
@@ -236,7 +247,7 @@ func TestAccountInfoSource(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if all.(map[string]any)["count"] != 2 {
+	if all.(map[string]any)["count"] != 3 {
 		t.Fatalf("all = %v", all)
 	}
 	filtered, err := registry.Execute(context.Background(), "get_account_info", map[string]any{"provider": "google"})
@@ -244,7 +255,52 @@ func TestAccountInfoSource(t *testing.T) {
 		t.Fatal(err)
 	}
 	accounts := filtered.(map[string]any)["accounts"].([]map[string]any)
-	if len(accounts) != 1 || accounts[0]["account_id"] != "a1" {
+	if len(accounts) != 2 || accounts[0]["account_id"] != "a1" || accounts[1]["account_id"] != "a3" {
 		t.Fatalf("filtered = %v", filtered)
+	}
+	if accountCount(t, filtered) != 2 {
+		t.Fatalf("filtered count = %v", filtered)
+	}
+}
+
+// accountCount reads the count field of a get_account_info payload.
+func accountCount(t *testing.T, payload any) int {
+	t.Helper()
+	object, ok := payload.(map[string]any)
+	if !ok {
+		t.Fatalf("payload = %T, want map", payload)
+	}
+	count, ok := object["count"].(int)
+	if !ok {
+		t.Fatalf("count = %v", object["count"])
+	}
+	return count
+}
+
+// Parity: tools/tests/tools/test_hubspot_tool.py::test_credential_store_account_alias
+func TestAccountTokenSelectsAlias(t *testing.T) {
+	source := fakeAccounts{}
+	if token, ok := source.AccountToken("google", "a3"); !ok || token != "google-a3-token" {
+		t.Fatalf("known alias = %q, %v", token, ok)
+	}
+	if _, ok := source.AccountToken("google", "missing"); ok {
+		t.Fatal("unknown alias resolved")
+	}
+
+	// The runtime view only resolves an alias when the action selected one.
+	rt := New(WithAccountSource(source)).Runtime()
+	if _, handled := rt.ResolveAccountToken("google"); handled {
+		t.Fatal("no alias selected but account resolution was handled")
+	}
+	call := rt.ForCall(nil, "a3")
+	token, handled := call.ResolveAccountToken("google")
+	if !handled || token != "google-a3-token" {
+		t.Fatalf("alias token = %q, %v", token, handled)
+	}
+	if _, handled := call.ResolveAccountToken(""); handled {
+		t.Fatal("empty provider resolved")
+	}
+	if token, handled := call.ResolveAccountToken("github"); !handled || token != "" {
+		t.Fatalf("unknown alias on github = %q, %v", token, handled)
 	}
 }

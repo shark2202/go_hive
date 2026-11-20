@@ -1,0 +1,103 @@
+{
+  "note": "measured with go_hive/scripts/e2e_browser_panel_fakeext.py (real bridge binary + real CLI; images rendered by Pillow)",
+  "before": {
+    "ref": "main db5c4c1b",
+    "screenshot": {
+      "rc": "screenshot rc=0",
+      "keys": [
+        "data",
+        "format",
+        "mimeType",
+        "ok",
+        "tabId"
+      ],
+      "data_chars": 8460,
+      "saved_to": null,
+      "imageType": null,
+      "imageWidth": null,
+      "mimeType": "image/png",
+      "size": null,
+      "_image": null
+    },
+    "snapshot": {
+      "rc": "snapshot rc=0",
+      "keys": [
+        "nodes",
+        "ok",
+        "tabId",
+        "tree",
+        "url"
+      ],
+      "tree_chars": 51,
+      "saved_to": null,
+      "length": null,
+      "head": null,
+      "nodes": 3,
+      "tree_head": "- RootWebArea \"Doc\"\n  - button \"Go\"\n  - link \"Docs\""
+    },
+    "upload": {
+      "rc": "upload rc=6",
+      "error": null,
+      "stderr": "hive-browser: file not found: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/brc-evidence/nope.txt"
+    }
+  },
+  "after": {
+    "ref": "branch browser-return-contract",
+    "screenshot": {
+      "rc": "screenshot rc=0",
+      "keys": [
+        "_image",
+        "annotated",
+        "capturedHeight",
+        "capturedWidth",
+        "crop_box",
+        "cssHeight",
+        "cssWidth",
+        "devicePixelRatio",
+        "fullPage",
+        "imageType",
+        "imageWidth",
+        "ok",
+        "physicalScale",
+        "saved_to",
+        "scaleHint",
+        "size",
+        "tabId",
+        "url"
+      ],
+      "data_chars": 0,
+      "saved_to": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/brc-evidence/after-home/cli/tool-artifacts/browser_screenshot_1795210631645_tab101.jpg",
+      "imageType": "jpeg",
+      "imageWidth": 800,
+      "mimeType": null,
+      "size": 18113,
+      "_image": {
+        "intent": null,
+        "mime": "image/jpeg",
+        "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/brc-evidence/after-home/cli/tool-artifacts/browser_screenshot_1795210631645_tab101.jpg"
+      }
+    },
+    "snapshot": {
+      "rc": "snapshot rc=0",
+      "keys": [
+        "head",
+        "length",
+        "ok",
+        "saved_to",
+        "tabId",
+        "url"
+      ],
+      "tree_chars": 0,
+      "saved_to": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/brc-evidence/after-home/cli/tool-artifacts/browser_snapshot_1795210631658_tab101.txt",
+      "length": 112,
+      "head": "- RootWebArea [ref=e1] \"Doc\"\n  - button [ref=e2] \"Go\"\n  - li",
+      "nodes": null,
+      "tree_head": null
+    },
+    "upload": {
+      "rc": "upload rc=4",
+      "error": "File not found: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/brc-evidence/nope.txt",
+      "stderr": null
+    }
+  }
+}

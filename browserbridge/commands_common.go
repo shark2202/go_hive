@@ -166,6 +166,10 @@ func (b *Bridge) hoverElement(ctx context.Context, conn *Connection, tabID int, 
 	}, 10*time.Second); err != nil {
 		return nil, err
 	}
+	b.setTabHighlight(tabID, map[string]any{
+		"x": rect.Left, "y": rect.Top, "w": rect.Width, "h": rect.Height,
+		"label": selector, "kind": "rect",
+	})
 	return map[string]any{
 		"ok": true, "action": "hover", "tabId": tabID, "selector": selector,
 		"x": rect.X, "y": rect.Y,
@@ -179,6 +183,10 @@ func (b *Bridge) hoverPoint(ctx context.Context, conn *Connection, tabID int, x,
 	}, 10*time.Second); err != nil {
 		return nil, err
 	}
+	b.setTabHighlight(tabID, map[string]any{
+		"x": x, "y": y, "w": 0.0, "h": 0.0,
+		"label": "hover (" + pyFloat(x) + "," + pyFloat(y) + ")", "kind": "point",
+	})
 	return map[string]any{
 		"ok": true, "action": "hover_coordinate", "tabId": tabID, "x": x, "y": y,
 	}, nil
@@ -215,6 +223,10 @@ func (b *Bridge) pressKeyAt(ctx context.Context, conn *Connection, tabID int, x,
 	}, 10*time.Second); err != nil {
 		return nil, err
 	}
+	b.setTabHighlight(tabID, map[string]any{
+		"x": x, "y": y, "w": 0.0, "h": 0.0,
+		"label": def.key + " (" + pyFloat(x) + "," + pyFloat(y) + ")", "kind": "point",
+	})
 	return map[string]any{
 		"ok": true, "action": "press_at", "tabId": tabID, "key": def.key, "x": x, "y": y,
 	}, nil

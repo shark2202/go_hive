@@ -184,6 +184,12 @@ func (d *DoomLoopDetector) ShouldPark() bool {
 	return d.streak >= d.parkThreshold()
 }
 
+// doomLoopDescription is the one-line identity of a repeated-call streak,
+// shared by the escalation context and the park detail.
+func doomLoopDescription(tool string, streak int) string {
+	return fmt.Sprintf("`%s` called %d times in a row with identical arguments and the same result", tool, streak)
+}
+
 // DoomLoopParkedError is the turn-loop error that ends a turn parked on a
 // repeated identical tool call. It carries the repeating call and the streak
 // so the publisher (execution_failed) and the worker failure report name the

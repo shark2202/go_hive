@@ -1,15 +1,22 @@
 package colony
 
-// Worker escalation channel, colony half: the worker tool surface advertises
-// escalate, the event carries the colony id and a request_id, and injected
-// guidance resumes the parked worker until it reports.
+// Worker escalation channel, colony half.
 //
-// Parity: core/tests/test_event_loop_node.py::test_escalate_available_for_worker_stream
+// Parallel workers have no escalate tool (upstream gates it to the legacy
+// `worker` stream): they report_to_parent and fail fast. The one worker
+// escalation producer upstream leaves open is the automatic tool doom-loop
+// detector, which publishes ESCALATION_REQUESTED with the colony id and a fresh
+// request_id; injected guidance resumes the worker while it is still alive.
+//
+// Parity: core/tests/test_run_worker_tool.py::test_parallel_worker_stall_auto_fails_with_synthetic_report
+// Parity: core/framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom
+// loop -> emit_escalation_requested)
 
 import (
 	"context"
-	"encoding/json"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,33 +25,26 @@ import (
 	"github.com/aden-hive/hive-go/internal/llm"
 )
 
-func escalateResponse(reason, contextText string) scriptedResponse {
-	arguments, _ := json.Marshal(map[string]any{"reason": reason, "context": contextText})
-	return scriptedResponse{
-		ToolCalls: []llm.ToolCall{{
-			ID:        "escalate_1",
-			Name:      "escalate",
-			Arguments: string(arguments),
-		}},
-		StopReason: "tool_calls",
-	}
-}
-
-// Parity: core/tests/test_event_loop_node.py::test_escalate_available_for_worker_stream
-func TestWorkerToolsAdvertiseEscalate(t *testing.T) {
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (tool surface gate:
+// escalate is not offered to parallel workers; report_to_parent is).
+func TestWorkerToolsExcludeEscalate(t *testing.T) {
 	provider := newScriptedLLM(textResponse("done"))
 	runtime := makeTestColony(t, provider, eventbus.NewEventBus())
 
 	worker := runtime.BuildWorker(WorkerBuildOptions{WorkerID: "w1", Task: "investigate"})
 	names := toolNames(runtime.workerTools(worker))
-	if !hasTool(names, "escalate") {
-		t.Fatalf("worker tools = %v, want escalate", names)
+	if hasTool(names, "escalate") {
+		t.Fatalf("worker tools = %v, want no escalate (parallel workers fail fast)", names)
+	}
+	if !hasTool(names, "report_to_parent") {
+		t.Fatalf("worker tools = %v, want report_to_parent", names)
 	}
 
 	overseer := runtime.BuildWorker(WorkerBuildOptions{WorkerID: "overseer:test_colony", Task: ""})
 	overseer.Persistent = true
-	if hasTool(toolNames(runtime.workerTools(overseer)), "escalate") {
-		t.Fatal("the persistent overseer must not be offered escalate")
+	overseerNames := toolNames(runtime.workerTools(overseer))
+	if hasTool(overseerNames, "escalate") || hasTool(overseerNames, "report_to_parent") {
+		t.Fatalf("overseer tools = %v, want neither escalate nor report_to_parent", overseerNames)
 	}
 }
 
@@ -86,86 +86,188 @@ func TestWorkerEscalationEventCarriesColonyAndRequestID(t *testing.T) {
 	}
 }
 
-// Parity-exempt: end-to-end worker half of the escalation channel (escalate ->
-// park -> inject_input -> report). Upstream's equivalent path is covered by the
-// session handoff tests plus the event-loop escalate assertions, not one test.
-func TestWorkerEscalationParksAndResumesWithInjectedGuidance(t *testing.T) {
-	provider := newScriptedLLM(
-		escalateResponse("Database credentials missing", "DATABASE_URL is unset"),
-		reportResponse("success", "Used the staging database and finished.", nil),
-	)
+// doomLoopWorkerLLM scripts one worker through a deterministic doom-loop
+// escalation: three identical calls trip the detector, then the fourth call
+// blocks until the test releases it. Blocking there gives the test a stable
+// window to inject the queen's guidance while the worker is still alive (the
+// deterministic park at five repeats would otherwise race the reply).
+type doomLoopWorkerLLM struct {
+	mu          sync.Mutex
+	calls       int
+	requests    []llm.CompletionRequest
+	releaseGate chan struct{}
+}
+
+func newDoomLoopWorkerLLM() *doomLoopWorkerLLM {
+	return &doomLoopWorkerLLM{releaseGate: make(chan struct{})}
+}
+
+func (m *doomLoopWorkerLLM) ModelName() string { return "doom-loop-worker" }
+
+func (m *doomLoopWorkerLLM) AComplete(ctx context.Context, req llm.CompletionRequest) (llm.Completion, error) {
+	m.mu.Lock()
+	m.calls++
+	call := m.calls
+	m.requests = append(m.requests, req)
+	m.mu.Unlock()
+
+	if messagesContain(req.Messages, "[QUEEN_REPLY]") {
+		return toolCompletion("report_after_reply", "report_to_parent",
+			`{"status":"success","summary":"Recovered with the queen's guidance.","data":{}}`), nil
+	}
+	if call <= 3 {
+		// Identical tool name and arguments: the deterministic detector trips
+		// on the third call, exactly where upstream escalates.
+		return toolCompletion("repeat_"+strconv.Itoa(call), "task_list", `{}`), nil
+	}
+	select {
+	case <-m.releaseGate:
+	case <-ctx.Done():
+		return llm.Completion{}, ctx.Err()
+	}
+	// A different call breaks the streak; the injected reply drains into the
+	// conversation before the next model call.
+	return toolCompletion("after_release", "task_list", `{"status":"pending"}`), nil
+}
+
+func (m *doomLoopWorkerLLM) callCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.calls
+}
+
+func (m *doomLoopWorkerLLM) lastRequest() llm.CompletionRequest {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if len(m.requests) == 0 {
+		return llm.CompletionRequest{}
+	}
+	return m.requests[len(m.requests)-1]
+}
+
+func (m *doomLoopWorkerLLM) released() bool {
+	select {
+	case <-m.releaseGate:
+		return true
+	default:
+		return false
+	}
+}
+
+func (m *doomLoopWorkerLLM) release() {
+	if !m.released() {
+		close(m.releaseGate)
+	}
+}
+
+func toolCompletion(id, name, arguments string) llm.Completion {
+	return llm.Completion{
+		ToolCalls:  []llm.ToolCall{{ID: id, Name: name, Arguments: arguments}},
+		StopReason: "tool_calls",
+	}
+}
+
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom
+// loop emits ESCALATION_REQUESTED once; the worker keeps running and an
+// injected reply resumes it).
+func TestWorkerDoomLoopEscalatesOnceAndResumesWithGuidance(t *testing.T) {
+	provider := newDoomLoopWorkerLLM()
 	bus := eventbus.NewEventBus()
 	runtime := makeTestColony(t, provider, bus)
 
-	escalations := make(chan *eventbus.AgentEvent, 1)
-	bus.Subscribe([]eventbus.EventType{eventbus.EventEscalationRequested}, func(event *eventbus.AgentEvent) {
-		select {
-		case escalations <- event:
-		default:
-		}
-	})
+	escalations := collectEvents(bus, eventbus.EventEscalationRequested)
 
-	ids, err := runtime.Spawn(context.Background(), "query the ledger", SpawnOptions{Count: 1})
+	// The default worker profile is 3 iterations + 1 grace: too short to trip
+	// the detector (3 calls) and then resume on a later call. Raise the budget
+	// for this scripted worker so the resume is observable.
+	ids, err := runtime.SpawnBatchWithOptions(context.Background(),
+		[]BatchTask{{Task: "query the ledger"}},
+		SpawnBatchOptions{LoopConfigOverrides: map[string]any{"max_iterations": 10}})
 	if err != nil {
 		t.Fatalf("Spawn: %v", err)
 	}
-	worker := runtime.GetWorker(ids[0])
+	workerID := ids[0]
+	worker := runtime.GetWorker(workerID)
 	if worker == nil {
 		t.Fatal("GetWorker returned nil for a spawned worker")
 	}
 
-	var event *eventbus.AgentEvent
-	select {
-	case event = <-escalations:
-	case <-time.After(5 * time.Second):
-		t.Fatal("worker never escalated")
+	// The escalation fires at the third identical call, while the worker is
+	// still alive; the fourth call then blocks on the test's gate.
+	if !eventually(t, 5*time.Second, func() bool { return escalations.count() > 0 }) {
+		t.Fatalf("worker never escalated; model calls = %d", provider.callCount())
 	}
-
-	// The escalation is addressable while the worker is parked: the worker is
-	// still active, and the model has not been called a second time.
-	if !worker.IsActive() {
-		t.Fatal("worker stopped instead of parking on the escalation")
+	if got := escalations.count(); got != 1 {
+		t.Fatalf("escalations = %d, want exactly 1 for the streak", got)
 	}
-	if got := provider.callCount(); got != 1 {
-		t.Fatalf("worker model calls while parked = %d, want 1", got)
+	event := escalations.snapshot()[0]
+	if event.ColonyID == nil || *event.ColonyID != "test_colony" {
+		t.Fatalf("escalation colony_id = %v, want test_colony", event.ColonyID)
 	}
-	first, ok := provider.firstCall()
-	if !ok || !hasTool(toolNames(first.Tools), "escalate") {
-		t.Fatalf("worker's tool surface = %v, want escalate", toolNames(first.Tools))
+	if event.Data["reason"] != "Tool doom loop detected" {
+		t.Fatalf("escalation reason = %v, want the upstream doom-loop reason", event.Data["reason"])
 	}
-
+	if !strings.Contains(stringValue(event.Data["context"]), "task_list") {
+		t.Fatalf("escalation context = %v, want the repeating call named", event.Data["context"])
+	}
 	requestID, _ := event.Data["request_id"].(string)
 	if requestID == "" {
 		t.Fatal("escalation event carries no request_id")
 	}
-	if err := runtime.InjectInput(worker.ID, "[QUEEN_REPLY] request_id="+requestID+"\nUse the staging database."); err != nil {
-		t.Fatalf("InjectInput: %v", err)
+	if !worker.IsActive() {
+		t.Fatal("worker stopped instead of continuing after the doom-loop escalation")
 	}
 
+	// Still one event after the worker replays several more turns.
+	if err := runtime.InjectInput(workerID, "[QUEEN_REPLY] request_id="+requestID+"\nTry a different query."); err != nil {
+		t.Fatalf("InjectInput: %v", err)
+	}
+	provider.release()
+
 	if !eventually(t, 5*time.Second, func() bool { return !worker.IsActive() }) {
-		t.Fatal("worker stayed parked after the queen's reply")
+		t.Fatal("worker did not terminate after the queen's reply")
 	}
 	report := worker.ExplicitReport()
 	if report == nil || report["status"] != "success" {
-		t.Fatalf("worker report = %#v, want the resumed success report", report)
+		t.Fatalf("worker report = %#v (status=%v, summary=%q), want the resumed success report",
+			report, worker.Status(), worker.Result().Summary)
 	}
-	if got := provider.callCount(); got != 2 {
-		t.Fatalf("worker model calls = %d, want 2 (resume after guidance)", got)
+	last := provider.lastRequest()
+	if !messagesContain(last.Messages, "[QUEEN_REPLY] request_id="+requestID) {
+		t.Fatalf("queen reply missing from the resumed worker call: %#v", last.Messages)
 	}
-	second := workerCallAt(t, provider, 1)
-	if !messagesContain(second.Messages, "[QUEEN_REPLY] request_id="+requestID) {
-		t.Fatalf("queen reply missing from the resumed worker call: %#v", second.Messages)
+	if got := escalations.count(); got != 1 {
+		t.Fatalf("escalations after resume = %d, want still 1 (no storm)", got)
 	}
 }
 
-func workerCallAt(t *testing.T, provider *scriptedLLM, index int) llm.CompletionRequest {
-	t.Helper()
-	provider.mu.Lock()
-	defer provider.mu.Unlock()
-	if index >= len(provider.calls) {
-		t.Fatalf("provider has %d calls, want at least %d", len(provider.calls), index+1)
+// Parity-exempt: the negative half — a worker whose calls keep changing has no
+// doom loop and must publish nothing.
+func TestWorkerWithoutRepeatedCallsPublishesNoEscalation(t *testing.T) {
+	provider := newScriptedLLM(
+		scriptedResponse{ToolCalls: []llm.ToolCall{{ID: "c1", Name: "task_list", Arguments: `{}`}}, StopReason: "tool_calls"},
+		scriptedResponse{ToolCalls: []llm.ToolCall{{ID: "c2", Name: "task_list", Arguments: `{"status":"pending"}`}}, StopReason: "tool_calls"},
+		scriptedResponse{ToolCalls: []llm.ToolCall{{ID: "c3", Name: "task_list", Arguments: `{"status":"done"}`}}, StopReason: "tool_calls"},
+		reportResponse("success", "Varied work, nothing repeated.", nil),
+	)
+	bus := eventbus.NewEventBus()
+	runtime := makeTestColony(t, provider, bus)
+	escalations := collectEvents(bus, eventbus.EventEscalationRequested)
+
+	ids, err := runtime.Spawn(context.Background(), "varied work", SpawnOptions{Count: 1})
+	if err != nil {
+		t.Fatalf("Spawn: %v", err)
 	}
-	return provider.calls[index]
+	worker := runtime.GetWorker(ids[0])
+	if !eventually(t, 5*time.Second, func() bool { return !worker.IsActive() }) {
+		t.Fatal("worker did not terminate")
+	}
+	if got := escalations.count(); got != 0 {
+		t.Fatalf("escalations = %d, want none without a repeated call: %#v", got, escalations.snapshot())
+	}
+	if report := worker.ExplicitReport(); report == nil || report["status"] != "success" {
+		t.Fatalf("worker report = %#v, want the scripted success report", report)
+	}
 }
 
 func agentEscalationRequest() agentloop.EscalationRequest {

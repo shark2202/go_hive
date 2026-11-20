@@ -60,7 +60,7 @@ func batch5Lane3GmailResponse(status int, raw []byte) map[string]any {
 }
 
 func batch5Lane3GmailCall(ctx context.Context, rt *Runtime, method, path string, query map[string]string, body any) (map[string]any, error) {
-	if batch5Lane3Token(rt, batch5Lane3GmailModule) == "" {
+	if batch5Lane3AccountToken(rt, batch5Lane3GmailModule) == "" {
 		return batch5Lane3GmailAuthError(), nil
 	}
 	status, raw, err := batch5Lane3Do(ctx, rt, batch5Lane3GmailModule, method, path, query, body)
@@ -314,7 +314,7 @@ func batch5Lane3GmailModifyMessage(ctx context.Context, rt *Runtime, input map[s
 	if messageID == "" {
 		return map[string]any{"error": "message_id is required"}, nil
 	}
-	if batch5Lane3Token(rt, batch5Lane3GmailModule) == "" {
+	if batch5Lane3AccountToken(rt, batch5Lane3GmailModule) == "" {
 		return batch5Lane3GmailAuthError(), nil
 	}
 	addLabels := batch5Lane3GmailEnsureList(input["add_labels"])
@@ -355,7 +355,7 @@ func batch5Lane3GmailBatchModifyMessages(ctx context.Context, rt *Runtime, input
 	if len(messageIDs) == 0 {
 		return map[string]any{"error": "message_ids list is required and must not be empty"}, nil
 	}
-	if batch5Lane3Token(rt, batch5Lane3GmailModule) == "" {
+	if batch5Lane3AccountToken(rt, batch5Lane3GmailModule) == "" {
 		return batch5Lane3GmailAuthError(), nil
 	}
 	addLabels := batch5Lane3GmailEnsureList(input["add_labels"])
@@ -447,7 +447,7 @@ func batch5Lane3GmailCreateDraft(ctx context.Context, rt *Runtime, input map[str
 	if htmlBody == "" {
 		return map[string]any{"error": "Email body (html) is required"}, nil
 	}
-	if batch5Lane3Token(rt, batch5Lane3GmailModule) == "" {
+	if batch5Lane3AccountToken(rt, batch5Lane3GmailModule) == "" {
 		return batch5Lane3GmailAuthError(), nil
 	}
 	to := stringArg(input, "to")
@@ -538,7 +538,7 @@ func batch5Lane3GmailGetSignature(ctx context.Context, rt *Runtime, input map[st
 		}
 		path += "/" + batch5Lane3Segments(sanitized)
 	}
-	if batch5Lane3Token(rt, batch5Lane3GmailModule) == "" {
+	if batch5Lane3AccountToken(rt, batch5Lane3GmailModule) == "" {
 		return batch5Lane3GmailAuthError(), nil
 	}
 	status, raw, err := batch5Lane3Do(ctx, rt, batch5Lane3GmailModule, http.MethodGet, path, nil, nil)

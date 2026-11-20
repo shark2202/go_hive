@@ -68,6 +68,11 @@ type sessionToolCatalogue struct {
 // Go-only opt-in.
 func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehome.Home) *sessionToolCatalogue {
 	registry := tools.NewToolRegistry()
+	// The session's credential view is what makes get_account_info real and what
+	// lets account-aware actions resolve an `account` alias. It is attached to
+	// the shared registry (not to any single batch runtime), and the registry is
+	// the process's integration entry point, so every installed batch reads it.
+	registry.SetAccountSource(newSessionAccountSource(home))
 	installed := integrations.New(integrations.WithRoots(root)).Install(registry)
 	installed += installIntegrationBatches(registry)
 	if senders, err := hiveserver.RegisterSenderTools(registry, home); err != nil {

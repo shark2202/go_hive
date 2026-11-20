@@ -49,20 +49,80 @@ type Runtime struct {
 	Now func() time.Time
 	// Roots are the only directories file-backed tools may touch.
 	Roots []string
-	// Accounts is the credential-store view used by get_account_info.
+	// Accounts is the credential-store view used by get_account_info and by
+	// account-aware actions. The session attaches its view per call (see
+	// tools.ToolRegistry.SetAccountSource); WithAccountSource pins one for
+	// tests and standalone registries.
 	Accounts AccountSource
 	// Modules holds per-module credential and endpoint configuration.
 	Modules map[string]*ModuleConfig
 	// Getenv resolves credentials; defaults to os.Getenv.
 	Getenv func(string) string
 
+	// callAccount is the account alias the action selected on this call. It is
+	// only set on the per-call copy returned by ForCall, never on the shared
+	// runtime, so concurrent calls cannot observe each other's selection.
+	callAccount string
+
 	mu      sync.RWMutex
 	clients map[string]*restClient
 }
 
-// AccountSource lists connected accounts for get_account_info.
+// AccountSource is the read-only credential view a runtime resolves accounts
+// through: the account list for get_account_info, and one secret per
+// (provider, alias) for account-aware actions. Upstream parity:
+// aden_tools CredentialStoreAdapter (get_all_account_info / get_by_alias).
+// It is declared here rather than imported from internal/tools so this package
+// keeps its standard-library-only boundary; the two interfaces are structural
+// and assign across each other.
 type AccountSource interface {
 	Accounts(provider string) []map[string]any
+	AccountToken(provider, alias string) (string, bool)
+}
+
+// ForCall returns the per-call view of the runtime: the session's credential
+// view when one is attached, and the account alias this action selected. The
+// copy shares the transport, module configs and clock, and starts with an
+// empty REST client cache, so concurrent calls never race on shared state.
+func (rt *Runtime) ForCall(source AccountSource, alias string) *Runtime {
+	if rt == nil {
+		return nil
+	}
+	call := &Runtime{
+		HTTP:        rt.HTTP,
+		ResolveHost: rt.ResolveHost,
+		Now:         rt.Now,
+		Roots:       rt.Roots,
+		Accounts:    rt.Accounts,
+		Modules:     rt.Modules,
+		Getenv:      rt.Getenv,
+	}
+	if source != nil {
+		call.Accounts = source
+	}
+	call.callAccount = strings.TrimSpace(alias)
+	return call
+}
+
+// ResolveAccountToken resolves the secret of the account this call selected.
+// handled reports whether an account was selected at all: false means the
+// caller falls back to the module's own credential; true with an empty token
+// means the alias did not resolve, and the caller reports its auth error like
+// upstream does when get_by_alias returns None.
+func (rt *Runtime) ResolveAccountToken(provider string) (string, bool) {
+	if rt == nil || rt.Accounts == nil {
+		return "", false
+	}
+	alias := strings.TrimSpace(rt.callAccount)
+	provider = strings.TrimSpace(provider)
+	if alias == "" || provider == "" {
+		return "", false
+	}
+	token, ok := rt.Accounts.AccountToken(provider, alias)
+	if !ok {
+		return "", true
+	}
+	return strings.TrimSpace(token), true
 }
 
 // Option mutates the Runtime during New.

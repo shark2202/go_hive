@@ -1,10 +1,10 @@
-worker escalation e2e: session=session_20261121_012414_093132a8 colony=escalation_e2e
+worker escalation e2e: session=session_20261121_055142_26037683 colony=escalation_e2e
 
 chain (model request seq):
-  3 worker  escalate tool call
-  5 queen   [WORKER_ESCALATION] handoff
-  5 queen   list_worker_questions
-  6 queen   reply_to_worker
-  7 worker  [QUEEN_REPLY] -> report_to_parent
+  3 worker  identical task_list x3 -> doom-loop escalation
+  7 queen   [WORKER_ESCALATION] handoff
+  7 queen   list_worker_questions
+  8 queen   reply_to_worker
+  11 worker  [QUEEN_REPLY] -> report_to_parent
 
-model requests: 2 queen, 3 overseer, 2 worker, 0 other
+model requests: 3 queen, 3 overseer, 5 worker, 0 other

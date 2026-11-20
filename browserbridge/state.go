@@ -166,7 +166,35 @@ func (b *Bridge) clearTabHealth(tabID int) {
 	b.stateMu.Lock()
 	delete(b.tabSnapshots, tabID)
 	delete(b.tabBlockers, tabID)
+	delete(b.tabHighlights, tabID)
 	b.stateMu.Unlock()
+}
+
+// setTabHighlight records the last interaction target so a later screenshot
+// can draw the same annotation upstream's PIL pass draws. Coordinates are CSS
+// px; kind is "rect" (selector action) or "point" (coordinate action).
+func (b *Bridge) setTabHighlight(tabID int, highlight map[string]any) {
+	if tabID <= 0 {
+		return
+	}
+	b.stateMu.Lock()
+	b.tabHighlights[tabID] = highlight
+	b.stateMu.Unlock()
+}
+
+// tabHighlight returns the last interaction highlight for one tab, if any.
+func (b *Bridge) tabHighlight(tabID int) map[string]any {
+	b.stateMu.Lock()
+	defer b.stateMu.Unlock()
+	h := b.tabHighlights[tabID]
+	if h == nil {
+		return nil
+	}
+	out := make(map[string]any, len(h))
+	for k, v := range h {
+		out[k] = v
+	}
+	return out
 }
 
 func (b *Bridge) setTabBlockers(tabID int, blockers []Blocker) {

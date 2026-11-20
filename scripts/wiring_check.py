@@ -121,26 +121,30 @@ WIRING: tuple[WiringPoint, ...] = (
     ),
     WiringPoint(
         path="internal/agentloop/loop.go",
-        description="Worker 升级通道：escalate 拦截与女王等待",
+        description="Worker 升级通道：escalate 拦截、doom-loop 自动升级与女王等待",
         requirements=(
             Requirement("escalate 拦截", r"l\.executeEscalateTool\(agentCtx, req\)"),
+            Requirement("doom-loop 自动升级", r"l\.escalateDoomLoop\(agentCtx,"),
+            Requirement("升级去重锁存", r"l\.doomLoopEscalated"),
             Requirement("停车等待调用", r"l\.settleQueenInputPark\(ctx, agentCtx\)"),
         ),
     ),
     WiringPoint(
         path="internal/agentloop/escalate.go",
-        description="Worker 升级通道：发事件、停车、唤醒",
+        description="Worker 升级通道：发事件、doom-loop 生产者、停车、唤醒",
         requirements=(
             Requirement("升级事件发出", r"agentCtx\.EscalationSink\("),
+            Requirement("doom-loop 升级事件", r"Reason:\s+\"Tool doom loop detected\""),
+            Requirement("并行 worker 拒绝文案", r"escalationParallelWorkerRefusalMessage"),
             Requirement("女王输入等待", r"l\.awaitInjectedInput\(ctx\)"),
             Requirement("收线重发", r"l\.emitUnansweredEscalation\(agentCtx\)"),
         ),
     ),
     WiringPoint(
         path="internal/colony/runtime.go",
-        description="Worker 升级通道：worker 工具面注册与 sink 接线",
+        description="Worker 升级通道：worker 工具面剔除 escalate 与 sink 接线",
         requirements=(
-            Requirement("escalate 工具注册", r"appendMissingToolDefs\(tools, agentloop\.BuildEscalateTool\(\)\)"),
+            Requirement("worker 工具面剔除 escalate", r"withoutTool\(tools, agentloop\.EscalateToolName\)"),
             Requirement("escalation sink 接线", r"ctx\.EscalationSink\s*=\s*\S"),
         ),
     ),

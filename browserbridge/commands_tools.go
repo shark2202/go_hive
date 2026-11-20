@@ -318,6 +318,19 @@ func cmdBrowserScreenshot(ctx context.Context, b *Bridge, profile string, params
 	if sel, ok := paramString(params, "selector"); ok {
 		internal["selector"] = sel
 	}
+	// Image-shaping params the CLI spill path sends (800px JPEG + annotation).
+	if format, ok := paramString(params, "format"); ok {
+		internal["format"] = format
+	}
+	if quality := paramInt(params, "quality", 0); quality > 0 {
+		internal["quality"] = quality
+	}
+	if maxWidth := paramIntAny(params, 0, "max_width", "maxWidth"); maxWidth > 0 {
+		internal["max_width"] = maxWidth
+	}
+	if _, present := params["annotate"]; present {
+		internal["annotate"] = paramBool(params, "annotate", false)
+	}
 	// `intent` is optional here: upstream's CLI path calls
 	// render_screenshot(intent=None) and only the retired MCP tool schema marked
 	// it required, so `hive-browser screenshot` without --intent still captures.

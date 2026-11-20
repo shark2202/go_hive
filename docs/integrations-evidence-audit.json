@@ -1,17 +1,18 @@
 {
-  "generated_at": "2026-11-21 01:28 CST",
+  "generated_at": "2026-11-21 05:47 CST",
   "baseline": {
-    "branch": "integrations-evidence-audit",
-    "commit": "11a7c3406d13d8dc6effb63c0ba1b118e848dda1",
-    "parent": "11a7c340"
+    "branch": "integrations-account-wiring",
+    "commit": "db5c4c1bf168823a993fefc36b0e356fdab67ca3",
+    "parent": "db5c4c1b",
+    "note": "修订：get_account_info 的 AccountSource 已接入默认会话；account 别名在 hubspot/notion/discord/mattermost/google docs 复刻。"
   },
   "scope": {
-    "package_files_nontest": 95,
+    "package_files_nontest": 96,
     "module_tools": 102,
     "module_actions": 854,
     "senders_actions": 9,
     "session_registry_names": 113,
-    "test_functions": 1230,
+    "test_functions": 1245,
     "upstream_modules": 103,
     "upstream_actions": 865,
     "excluded_actions": [
@@ -21,8 +22,8 @@
   },
   "grades": {
     "A": 12,
-    "B": 90,
-    "C": 1,
+    "B": 91,
+    "C": 0,
     "D": 1,
     "E": 0
   },
@@ -58,7 +59,7 @@
     },
     {
       "title": "多账号 / account 别名",
-      "detail": "hubspot、obsidian、notion、discord、mattermost、google workspace、support_ats 多值 bundle 均单凭据；schema 里的 account 参数被忽略（上游 CredentialStoreAdapter 别名未复刻）。"
+      "detail": "已复刻：hubspot、notion、discord、mattermost、google docs/gmail/calendar 的 account 别名走会话注入的凭据视图（CredentialStoreAdapter.get_by_alias 语义：先别名、无别名叫模块单凭据；未知别名返回该工具自己的 auth 错误，对应上游返回 None）。未支持：obsidian（上游无 account 参数）、google sheets（account 是上游框架 tracking 参数，_get_client() 忽略）、support/ATS 组 intercom/zendesk/freshdesk/greenhouse（上游无 account 参数，多值 bundle 仍按环境变量/单条存储凭据）。get_account_info 已接线：无凭据返回空列表 count 0。"
     },
     {
       "title": "二进制响应",
@@ -760,7 +761,8 @@
       "test_kind": "fake_httptest",
       "test_files": [
         "calendar_test.go",
-        "google_workspace_test.go"
+        "google_workspace_test.go",
+        "account_alias_test.go"
       ],
       "auth": {
         "kind": "bearer",
@@ -777,6 +779,7 @@
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
+        "account 别名：TestBatch5Lane3CalendarAccountAliasSelectsToken（account_alias_test.go，假服务断言 Authorization 为别名 token；上游 calendar_tool `_get_token(account)` -> get_by_alias(\"google\", account)）",
         "B: httptest 假服务，不是真实第三方 API",
         "sample tests: TestBatch5Lane3CalendarListEvents, TestBatch5Lane3CalendarListEventsValidatesLimit, TestBatch5Lane3CalendarGetEvent, TestBatch5Lane3CalendarCreateEvent, TestBatch5Lane3CalendarCreateEventWithAttendees",
         "tests: calendar_test.go, google_workspace_test.go",
@@ -1174,7 +1177,8 @@
       "base_url": "https://discord.com/api/v10",
       "test_kind": "fake_httptest",
       "test_files": [
-        "scheduling_chat_test.go"
+        "scheduling_chat_test.go",
+        "account_alias_test.go"
       ],
       "auth": {
         "kind": "custom",
@@ -1191,6 +1195,7 @@
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
+        "account 别名：TestBatch7Lane8DiscordAccountAliasSelectsToken, TestBatch7Lane8UnresolvedAccountAliasReportsAuthError（account_alias_test.go，假服务断言 Authorization 为别名 token）",
         "B: httptest 假服务，不是真实第三方 API",
         "sample tests: TestBatch7Lane8Catalog, TestBatch7Lane8Install, TestBatch7Lane8DiscordMissingCredentials, TestBatch7Lane8DiscordListGuilds, TestBatch7Lane8DiscordListChannels",
         "tests: scheduling_chat_test.go",
@@ -1544,7 +1549,9 @@
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
       },
-      "special_gaps": [],
+      "special_gaps": [
+        "上游无 account 参数；多值 bundle（zendesk: subdomain/email/api_token；freshdesk: domain/api_key）仍按环境变量或单条存储凭据"
+      ],
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
@@ -1574,29 +1581,28 @@
       "base_url": "",
       "test_kind": "fake_httptest",
       "test_files": [
-        "local_test.go"
+        "local_test.go",
+        "internal/cli/session_account_source_test.go"
       ],
       "auth": {
         "kind": "none",
-        "detail": "读取注入的 AccountSource（生产未注入）",
+        "detail": "会话注入只读凭据视图（tools.ToolRegistry.SetAccountSource -> credentials.CredentialStoreAdapter）",
         "oauth": "n/a",
-        "evidence": "local_account.go:15"
+        "evidence": "internal/cli/session_credentials.go"
       },
       "oauth_refresh": false,
       "pagination": {
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
       },
-      "special_gaps": [
-        "生产未注入 AccountSource → 恒为空"
-      ],
-      "grade": "C",
+      "special_gaps": [],
+      "grade": "B",
       "evidence": [
-        "C: 生产未接线：session_tools.go 只传 WithRoots，从未注入 AccountSource；运行时恒返回 {\"accounts\":[],\"message\":\"No credential store configured\"}。internal/credentials.CredentialStoreAdapter 存在但只被 server 路由使用。",
+        "B: 生产已接线：newSessionToolCatalogue 把真实凭据库作为 AccountSource 注入共享 registry（SetAccountSource -> CredentialStoreAdapter，读 home/credentials 加密库 + local alias 账户）；无凭据返回 {\"accounts\":[],\"count\":0}（不再是 \"No credential store configured\"），有凭据/多账号/过滤三组测试 + 假服务端到端（mattermost alias -> Authorization）覆盖。",
         "test_kind=fake_httptest",
-        "sample tests: TestAccountInfoSource",
-        "tests: local_test.go",
-        "files: local_account.go"
+        "sample tests: TestAccountInfoSource, TestAccountTokenSelectsAlias, TestSessionAccountInfoWithoutCredentials, TestSessionAccountInfoListsConnectedAccounts, TestSessionAccountInfoFiltersMultipleAccounts, TestSessionAccountAliasRoutesThroughSharedRegistry",
+        "tests: internal/tools/integrations/local_test.go, internal/cli/session_account_source_test.go",
+        "files: local_account.go, internal/cli/session_credentials.go"
       ]
     },
     {
@@ -1795,7 +1801,8 @@
       "test_kind": "fake_httptest",
       "test_files": [
         "gmail_test.go",
-        "google_workspace_test.go"
+        "google_workspace_test.go",
+        "account_alias_test.go"
       ],
       "auth": {
         "kind": "bearer",
@@ -1812,6 +1819,7 @@
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
+        "account 别名：TestBatch5Lane3GmailAccountAliasSelectsToken（account_alias_test.go，假服务断言 Authorization 为别名 token；上游 gmail_tool `_get_token(account)` -> get_by_alias(\"google\", account)）",
         "B: httptest 假服务，不是真实第三方 API",
         "sample tests: TestBatch5Lane3GmailListMessages, TestBatch5Lane3GmailListMessagesClampsLimit, TestBatch5Lane3GmailGetMessage, TestBatch5Lane3GmailGetMessageFullBody, TestBatch5Lane3GmailTrashMessage",
         "tests: gmail_test.go, google_workspace_test.go",
@@ -1907,7 +1915,8 @@
       "test_kind": "fake_httptest",
       "test_files": [
         "google_docs_test.go",
-        "google_workspace_test.go"
+        "google_workspace_test.go",
+        "account_alias_test.go"
       ],
       "auth": {
         "kind": "bearer",
@@ -1924,6 +1933,7 @@
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
+        "account 别名：TestBatch5Lane3GoogleDocsAccountAliasSelectsToken, TestBatch5Lane3GoogleDocsUnresolvedAccountAliasReportsAuthError（account_alias_test.go，假服务断言 Authorization 为别名 token）",
         "B: httptest 假服务，不是真实第三方 API",
         "sample tests: TestBatch5Lane3DocsCreateDocument, TestBatch5Lane3DocsGetDocument, TestBatch5Lane3DocsInsertTextAppends, TestBatch5Lane3DocsReplaceAllText, TestBatch5Lane3DocsInsertImage",
         "tests: google_docs_test.go, google_workspace_test.go",
@@ -2068,7 +2078,8 @@
       "test_kind": "fake_httptest",
       "test_files": [
         "google_sheets_test.go",
-        "google_workspace_test.go"
+        "google_workspace_test.go",
+        "account_alias_test.go"
       ],
       "auth": {
         "kind": "bearer",
@@ -2081,10 +2092,13 @@
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
       },
-      "special_gaps": [],
+      "special_gaps": [
+        "account 不支持：上游把 account 当框架 tracking 参数，_get_client() 不读它（单凭据）"
+      ],
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
+        "account 参数被忽略的行为由 TestBatch5Lane3GoogleSheetsIgnoresAccountAlias 固定。",
         "B: httptest 假服务，不是真实第三方 API",
         "sample tests: TestBatch5Lane3SheetsGetSpreadsheet, TestBatch5Lane3SheetsCreateSpreadsheet, TestBatch5Lane3SheetsGetValues, TestBatch5Lane3SheetsUpdateValues, TestBatch5Lane3SheetsAppendValues",
         "tests: google_sheets_test.go, google_workspace_test.go",
@@ -2134,7 +2148,9 @@
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
       },
-      "special_gaps": [],
+      "special_gaps": [
+        "上游无 account 参数（单凭据）"
+      ],
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
@@ -2227,7 +2243,8 @@
       "test_kind": "fake_httptest",
       "test_files": [
         "hubspot_obsidian_test.go",
-        "hubspot_test.go"
+        "hubspot_test.go",
+        "account_alias_test.go"
       ],
       "auth": {
         "kind": "bearer",
@@ -2240,12 +2257,11 @@
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
       },
-      "special_gaps": [
-        "account 别名被忽略（单凭据）"
-      ],
+      "special_gaps": [],
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
+        "account 别名：TestBatch5HubSpotAccountAliasSelectsToken, TestBatch5HubSpotUnresolvedAccountAliasReportsAuthError（account_alias_test.go，假服务断言 Authorization 为别名 token）",
         "B: httptest 假服务，不是真实第三方 API",
         "sample tests: TestBatch5HubSpotSearchContacts, TestBatch5HubSpotSearchClampsLimitAndOmitsEmptyQuery, TestBatch5HubSpotSearchCompanies, TestBatch5HubSpotSearchDeals, TestBatch5HubSpotGetContact",
         "tests: hubspot_obsidian_test.go, hubspot_test.go",
@@ -2397,7 +2413,9 @@
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
       },
-      "special_gaps": [],
+      "special_gaps": [
+        "上游无 account 参数（单凭据）"
+      ],
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
@@ -2709,7 +2727,8 @@
       "base_url": "",
       "test_kind": "fake_httptest",
       "test_files": [
-        "scheduling_chat_test.go"
+        "scheduling_chat_test.go",
+        "account_alias_test.go"
       ],
       "auth": {
         "kind": "bearer",
@@ -2726,6 +2745,7 @@
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
+        "account 别名：TestBatch7Lane8MattermostAccountAliasSelectsToken, TestBatch7Lane8UnresolvedAccountAliasReportsAuthError（account_alias_test.go，假服务断言 Authorization 为别名 token）",
         "B: httptest 假服务，不是真实第三方 API",
         "sample tests: TestBatch7Lane8Catalog, TestBatch7Lane8Install, TestBatch7Lane8MattermostMissingToken, TestBatch7Lane8MattermostMissingURL, TestBatch7Lane8MattermostListTeams",
         "tests: scheduling_chat_test.go",
@@ -2982,7 +3002,8 @@
       "base_url": "https://api.notion.com",
       "test_kind": "fake_httptest",
       "test_files": [
-        "notion_test.go"
+        "notion_test.go",
+        "account_alias_test.go"
       ],
       "auth": {
         "kind": "bearer",
@@ -2995,12 +3016,11 @@
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
       },
-      "special_gaps": [
-        "account 别名被忽略（单凭据）"
-      ],
+      "special_gaps": [],
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
+        "account 别名：TestBatch4NotionAccountAliasSelectsToken, TestBatch4NotionUnresolvedAccountAliasReportsAuthError（account_alias_test.go，假服务断言 Authorization 为别名 token）",
         "B: httptest 假服务，不是真实第三方 API",
         "sample tests: TestBatch4NotionSearch, TestBatch4NotionSearchInvalidFilterIgnored, TestBatch4NotionGetPage, TestBatch4NotionCreatePage, TestBatch4NotionCreatePageValidation",
         "tests: notion_test.go",
@@ -3036,7 +3056,8 @@
       "test_kind": "fake_httptest",
       "test_files": [
         "hubspot_obsidian_test.go",
-        "obsidian_test.go"
+        "obsidian_test.go",
+        "account_alias_test.go"
       ],
       "auth": {
         "kind": "bearer",
@@ -3050,11 +3071,12 @@
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
       },
       "special_gaps": [
-        "account 别名被忽略；TLS 校验按运行时配置"
+        "account 别名不支持：上游 obsidian_tool 无 account 参数（本地插件单一 API key）；TLS 校验按运行时配置"
       ],
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",
+        "account 参数被忽略的行为由 TestBatch5ObsidianIgnoresAccountAlias 固定（假服务断言仍是模块 token）。",
         "B: httptest 假服务，不是真实第三方 API",
         "sample tests: TestBatch5ObsidianReadNote, TestBatch5ObsidianReadNoteTextResponse, TestBatch5ObsidianReadNoteRequiresPath, TestBatch5ObsidianMissingCredentials, TestBatch5ObsidianWriteNote",
         "tests: hubspot_obsidian_test.go, obsidian_test.go",
@@ -5462,7 +5484,9 @@
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
       },
-      "special_gaps": [],
+      "special_gaps": [
+        "上游无 account 参数；多值 bundle（zendesk: subdomain/email/api_token；freshdesk: domain/api_key）仍按环境变量或单条存储凭据"
+      ],
       "grade": "B",
       "evidence": [
         "test_kind=fake_httptest",

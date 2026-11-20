@@ -1,0 +1,73 @@
+{
+  "screenshot": {
+    "keys": [
+      "_image",
+      "annotated",
+      "capturedHeight",
+      "capturedWidth",
+      "crop_box",
+      "cssHeight",
+      "cssWidth",
+      "devicePixelRatio",
+      "fullPage",
+      "imageType",
+      "imageWidth",
+      "ok",
+      "physicalScale",
+      "saved_to",
+      "scaleHint",
+      "size",
+      "tabId",
+      "url"
+    ],
+    "meta": {
+      "ok": true,
+      "tabId": 101,
+      "url": "https://example.com/",
+      "imageType": "jpeg",
+      "size": 2458,
+      "imageWidth": 800,
+      "cssWidth": 1280,
+      "cssHeight": 720,
+      "capturedWidth": 1280,
+      "capturedHeight": 720,
+      "fullPage": false,
+      "crop_box": null,
+      "devicePixelRatio": 1,
+      "physicalScale": 1.6,
+      "annotated": false,
+      "scaleHint": "Coordinates for click / hover / press are fractions 0..1 of the viewport. Read a target's proportional position off this image (e.g. '~35 % from the left, ~20 % from the top' \u2192 (0.35, 0.20)) and pass that as the coordinate to browser interact. shadow-query / focused_element.rect return fractions too."
+    },
+    "saved_to": "/private/tmp/brc-python-reference/py-storage/data/browser_screenshot_1795210671012_tab101.jpg",
+    "saved_name": "browser_screenshot_1795210671012_tab101.jpg",
+    "imageType": "jpeg",
+    "imageWidth": 800,
+    "size": 2458,
+    "_image": {
+      "path": "/private/tmp/brc-python-reference/py-storage/data/browser_screenshot_1795210671012_tab101.jpg",
+      "mime": "image/jpeg",
+      "intent": null
+    },
+    "annotated": false,
+    "decoded": {
+      "format": "JPEG",
+      "width": 800,
+      "height": 450
+    }
+  },
+  "snapshot": {
+    "tree": "- RootWebArea [ref=e1] \"Doc\"\n  - button [ref=e2] \"Go\"\n  - link [ref=e3] \"Docs\" [href=\"https://example.com/docs\"]",
+    "tree_chars": 112,
+    "tool_return": {
+      "ok": true,
+      "tabId": 101,
+      "url": "https://example.com/",
+      "length": 112,
+      "saved_to": "<writes browser_snapshot_<ms>_tab101.txt>"
+    }
+  },
+  "exit_codes": {
+    "file_not_found": 4,
+    "not_started": 3
+  }
+}

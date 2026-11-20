@@ -237,3 +237,128 @@ func TestLoopWarnsOnRepeatedToolCallWithoutStopping(t *testing.T) {
 		t.Fatalf("FinalText = %q, want the model's final answer", result.FinalText)
 	}
 }
+
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom
+// loop -> emit_escalation_requested with reason "Tool doom loop detected").
+// The port adds the deterministic park as the terminal bound, so the worker is
+// told once at the warning threshold and stopped at the park threshold.
+func TestDoomLoopEscalatesOnceThroughTheWorkerSink(t *testing.T) {
+	const path = `{"path":"status.txt"}`
+	scenarios := make([]scriptedResponse, 0, DefaultDoomLoopParkThreshold)
+	for i := 0; i < DefaultDoomLoopParkThreshold; i++ {
+		scenarios = append(scenarios, scriptedResponse{toolCalls: []llm.ToolCall{
+			{ID: "call_" + strconv.Itoa(i), Name: "read_file", Arguments: path},
+		}})
+	}
+	recorder := &escalationRecorder{requestID: "req-doom"}
+	completer := &scriptedCompleter{scenarios: scenarios}
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 10}, successToolExecutor)
+	ctx := judgeTestContext(completer, nil, "read_file")
+	ctx.StreamID = "worker:doom"
+	ctx.ExecutionID = "exec_doom"
+	ctx.EscalationSink = recorder.sink
+
+	result, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("system"), nil)
+	var parked *DoomLoopParkedError
+	if !errors.As(err, &parked) {
+		t.Fatalf("ExecuteTurn error = %v (%T), want *DoomLoopParkedError", err, err)
+	}
+
+	requests := recorder.snapshot()
+	if len(requests) != 1 {
+		t.Fatalf("escalation requests = %d, want exactly 1 (one per streak): %#v", len(requests), requests)
+	}
+	request := requests[0]
+	if request.StreamID != "worker:doom" || request.ExecutionID != "exec_doom" {
+		t.Fatalf("escalation request = %#v, want the worker stream and execution", request)
+	}
+	if request.Reason != "Tool doom loop detected" {
+		t.Fatalf("escalation reason = %q, want the upstream reason text", request.Reason)
+	}
+	if !strings.Contains(request.Context, "read_file") || !strings.Contains(request.Context, "3 times") {
+		t.Fatalf("escalation context = %q, want the repeating call and streak", request.Context)
+	}
+	if got := loop.Counter("doom_loop_escalated"); got != 1 {
+		t.Fatalf("stats[doom_loop_escalated] = %d, want 1", got)
+	}
+
+	// The model is told the queen was informed, exactly once, on the tool
+	// result that also carried the advisory.
+	notices := 0
+	for _, record := range result.ToolResults {
+		if strings.Contains(record.Content, doomLoopEscalationNotice) {
+			notices++
+		}
+	}
+	if notices != 1 {
+		t.Fatalf("escalation notice appeared on %d tool results, want exactly 1", notices)
+	}
+}
+
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom loop
+// only escalates when the fingerprint really repeats). A turn that keeps
+// changing its arguments must not publish anything.
+func TestDoomLoopWithoutRepetitionPublishesNoEscalation(t *testing.T) {
+	completer := &scriptedCompleter{scenarios: []scriptedResponse{
+		{toolCalls: []llm.ToolCall{{ID: "c1", Name: "read_file", Arguments: `{"path":"a.txt"}`}}},
+		{toolCalls: []llm.ToolCall{{ID: "c2", Name: "read_file", Arguments: `{"path":"b.txt"}`}}},
+		{toolCalls: []llm.ToolCall{{ID: "c3", Name: "read_file", Arguments: `{"path":"c.txt"}`}}},
+		{content: "all done"},
+	}}
+	recorder := &escalationRecorder{requestID: "never"}
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 8}, successToolExecutor)
+	ctx := judgeTestContext(completer, nil, "read_file")
+	ctx.StreamID = "worker:varied"
+	ctx.EscalationSink = recorder.sink
+
+	result, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("system"), nil)
+	if err != nil {
+		t.Fatalf("ExecuteTurn: %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("turn failed: %#v", result)
+	}
+	if requests := recorder.snapshot(); len(requests) != 0 {
+		t.Fatalf("escalation requests = %#v, want none without a repeated call", requests)
+	}
+	if got := loop.Counter("doom_loop_escalated"); got != 0 {
+		t.Fatalf("stats[doom_loop_escalated] = %d, want 0", got)
+	}
+}
+
+// Parity-exempt: the port latches the automatic escalation once per turn so a
+// worker that thrashes through several repeated-call streaks cannot flood the
+// queen's inbox. Upstream clears its fingerprint window after escalating and
+// can therefore escalate every streak; the latch is the anti-storm half.
+func TestDoomLoopEscalationIsAtMostOnePerTurn(t *testing.T) {
+	callA := llm.ToolCall{ID: "a", Name: "read_file", Arguments: `{"path":"a.txt"}`}
+	callB := llm.ToolCall{ID: "b", Name: "read_file", Arguments: `{"path":"b.txt"}`}
+	completer := &scriptedCompleter{scenarios: []scriptedResponse{
+		{toolCalls: []llm.ToolCall{callA}},
+		{toolCalls: []llm.ToolCall{callA}},
+		{toolCalls: []llm.ToolCall{callA}}, // streak 1 → escalation
+		{toolCalls: []llm.ToolCall{callB}}, // streak reset
+		{toolCalls: []llm.ToolCall{callB}},
+		{toolCalls: []llm.ToolCall{callB}}, // streak 2 → warning, latched
+		{content: "done"},
+	}}
+	recorder := &escalationRecorder{requestID: "req-one"}
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 10}, successToolExecutor)
+	ctx := judgeTestContext(completer, nil, "read_file")
+	ctx.StreamID = "worker:thrash"
+	ctx.EscalationSink = recorder.sink
+
+	result, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("system"), nil)
+	if err != nil {
+		t.Fatalf("ExecuteTurn: %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("turn failed: %#v", result)
+	}
+	if got := loop.DoomLoop.Warnings(); got != 2 {
+		t.Fatalf("warnings = %d, want 2 (two detected streaks)", got)
+	}
+	if requests := recorder.snapshot(); len(requests) != 1 {
+		t.Fatalf("escalation requests = %d, want 1 (the per-turn latch): %#v", len(requests), requests)
+	}
+}
