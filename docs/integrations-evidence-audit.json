@@ -42,12 +42,12 @@
   },
   "global_gaps": [
     {
-      "title": "OAuth refresh",
-      "detail": "全包 0 处 refresh_token/grant_type=refresh。20 个凭据条目（17 个工具）只接受静态 access token；bigquery / google_analytics / google_search_console 支持 service-account JWT 换 token，reddit 支持 client-credentials 取 token，但都没有刷新循环。"
+      "title": "OAuth refresh（2026-11-21 已实现通用刷新，部分凭据仍为静态）",
+      "detail": "已实现：integrationkit.TokenRefresher 提供标准 RFC 6749 §6 refresh_token 授权（POST form grant_type=refresh_token，过期前 5 分钟刷新，按 endpoint+client+refresh_token 缓存并并发去重，refresh_token 轮换后后续授权使用新值，失败返回 {error, error_code, help} 不静默；401 → 强制刷新 → 重试一次；只有静态 access token 且已知过期时报 no_refresh_token 并给出原变量名）。已接入 7 个模块：google 系（calendar/gmail/google_docs/google_sheets/email Gmail sender，GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN/TOKEN_URL + GOOGLE_ACCESS_TOKEN[_EXPIRES_AT]）、hubspot（HUBSPOT_*）、zoho_crm（ZOHO_CLIENT_ID/SECRET/REFRESH_TOKEN + ZOHO_ACCOUNTS_DOMAIN/ZOHO_REGION → token endpoint）。凭据库经 env sync 额外导出 client_id/client_secret/refresh_token/access_token expires_at（credentials.OAuthRefreshEnvBindings）。仍未接入：仅接受静态 access token 的 salesforce/microsoft_graph/powerbi/quickbooks/zoom/google_search_console/reddit(client-credentials 已单独实现)等 12 个条目——上游凭据规格未声明 client_id/secret/refresh_token，无法在不发明变量的前提下刷新；account 别名 token 为单值不可刷新；刷新结果只在本进程缓存，不写回凭据库。"
     },
     {
-      "title": "分页",
-      "detail": "integrationkit 的通用 REST 客户端没有分页原语；只有 bigquery 自动跟随 token，zoom/google_docs/gmail/google_maps/salesforce/stripe 做参数透传，其余列表 action 单页返回。"
+      "title": "分页（2026-11-21 通用客户端已支持声明式分页，覆盖 2 个模块）",
+      "detail": "通用 REST 客户端（integrationkit）新增 RestSpec.Pagination：items_path / next_cursor_path / cursor_param / max_pages（默认 10 页；光标缺失/为空/重复即停；路径支持点号嵌套；走完合并 items 并清除 next_cursor，不自动推断）。已接线：airtable_list_records（offset）、slack_list_channels / slack_list_users（response_metadata.next_cursor）。残余：github（Link 响应头分页）、stripe（starting_after=上页最后 id，非响应字段）、zoom/gmail/google_docs/google_maps/salesforce（参数透传）与 bigquery（自研 token 循环）未改为声明式；其余列表 action 本来就单页。"
     },
     {
       "title": "文件上传 / multipart",
@@ -155,8 +155,12 @@
       },
       "oauth_refresh": false,
       "pagination": {
-        "mode": "none",
-        "detail": "list_records 支持 maxRecords/offset 参数，无自动翻页"
+        "mode": "follow",
+        "detail": "通用客户端声明式分页：airtable_list_records 跟随 offset（items_path=records，next_cursor_path=offset，cursor_param=offset，max_pages 默认 10）",
+        "wiring": "integrationkit.RestSpec.Pagination；specs_providers.go::airtableSpecs",
+        "tests": [
+          "TestAirtableListRecordsFollowsOffsetPages"
+        ]
       },
       "special_gaps": [],
       "grade": "B",
@@ -770,7 +774,7 @@
         "oauth": "static_token",
         "evidence": "google_workspace.go:192"
       },
-      "oauth_refresh": false,
+      "oauth_refresh": true,
       "pagination": {
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
@@ -784,7 +788,35 @@
         "sample tests: TestBatch5Lane3CalendarListEvents, TestBatch5Lane3CalendarListEventsValidatesLimit, TestBatch5Lane3CalendarGetEvent, TestBatch5Lane3CalendarCreateEvent, TestBatch5Lane3CalendarCreateEventWithAttendees",
         "tests: calendar_test.go, google_workspace_test.go",
         "files: calendar.go, google_workspace.go"
-      ]
+      ],
+      "refresh": {
+        "mode": "oauth2_refresh_token",
+        "grant": "POST form grant_type=refresh_token（client_id/client_secret/refresh_token；Accept: application/json，表单响应可解析）",
+        "buffer": "过期前 5 分钟（upstream BaseOAuth2Provider.should_refresh 同值）",
+        "retry": "401 → 强制刷新 → 原请求重试一次；刷新失败不静默，返回 {\"error\":..., \"error_code\":..., \"help\":...}",
+        "env": [
+          "GOOGLE_ACCESS_TOKEN",
+          "GOOGLE_ACCESS_TOKEN_EXPIRES_AT",
+          "GOOGLE_CLIENT_ID",
+          "GOOGLE_CLIENT_SECRET",
+          "GOOGLE_REFRESH_TOKEN",
+          "GOOGLE_TOKEN_URL"
+        ],
+        "wiring": [
+          "internal/tools/integrationkit/oauth.go（TokenRefresher + Runtime.AccessToken/ResolveUnauthorized）",
+          "internal/tools/integrations/oauth.go（模块声明）",
+          "internal/credentials/oauth_refresh.go（凭据库→env 桥：client_id/client_secret/refresh_token/expires_at）"
+        ],
+        "tests": [
+          "TestOAuthRefreshExpiredTokenRefreshesBeforeCall",
+          "TestOAuthRefreshFailureIsAnExplicitError",
+          "TestOAuthRefreshStaticTokenExpiredNamesVariable",
+          "TestOAuthRefreshConcurrentCallsShareOneGrant",
+          "TestOAuthRefreshRetriesOnceAfterUnauthorized",
+          "TestOAuthRefreshUnauthorizedWithoutRefreshTokenNamesVariable"
+        ],
+        "residual": "account 别名的凭据是单 token（无刷新材料）；刷新后的 token 只在本进程缓存，不写回凭据库/env"
+      }
     },
     {
       "module": "calendly",
@@ -1377,7 +1409,7 @@
         "oauth": "static_token",
         "evidence": "email.go:204,234"
       },
-      "oauth_refresh": false,
+      "oauth_refresh": true,
       "pagination": {
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
@@ -1393,7 +1425,30 @@
         "sample tests: TestBatch7Lane9EmailResendSend, TestBatch7Lane9EmailResendOmitsEmptyCC, TestBatch7Lane9EmailResendCCAndBCC, TestBatch7Lane9EmailGmailSend, TestBatch7Lane9EmailGmailMissingCredentials",
         "tests: email_test.go",
         "files: email.go"
-      ]
+      ],
+      "refresh": {
+        "mode": "oauth2_refresh_token",
+        "grant": "POST form grant_type=refresh_token（client_id/client_secret/refresh_token；Accept: application/json，表单响应可解析）",
+        "buffer": "过期前 5 分钟（upstream BaseOAuth2Provider.should_refresh 同值）",
+        "retry": "仅调用前刷新（无 401 重试；Gmail sender 的 401 仍走原错误信封）",
+        "env": [
+          "GOOGLE_ACCESS_TOKEN",
+          "GOOGLE_ACCESS_TOKEN_EXPIRES_AT",
+          "GOOGLE_CLIENT_ID",
+          "GOOGLE_CLIENT_SECRET",
+          "GOOGLE_REFRESH_TOKEN",
+          "GOOGLE_TOKEN_URL"
+        ],
+        "wiring": [
+          "internal/tools/integrationkit/oauth.go（TokenRefresher + Runtime.AccessToken/ResolveUnauthorized）",
+          "internal/tools/integrations/oauth.go（模块声明）",
+          "internal/credentials/oauth_refresh.go（凭据库→env 桥：client_id/client_secret/refresh_token/expires_at）"
+        ],
+        "tests": [
+          "TestOAuthRefreshGmailSenderRefreshesBeforeSend"
+        ],
+        "residual": "Gmail sender 只做调用前刷新；401 仍返回 \"Gmail token expired or invalid\"（无重试）"
+      }
     },
     {
       "module": "exa_search",
@@ -1810,7 +1865,7 @@
         "oauth": "static_token",
         "evidence": "google_workspace.go:192"
       },
-      "oauth_refresh": false,
+      "oauth_refresh": true,
       "pagination": {
         "mode": "passthrough",
         "detail": "接受 page_token、返回 next_page_token"
@@ -1824,7 +1879,35 @@
         "sample tests: TestBatch5Lane3GmailListMessages, TestBatch5Lane3GmailListMessagesClampsLimit, TestBatch5Lane3GmailGetMessage, TestBatch5Lane3GmailGetMessageFullBody, TestBatch5Lane3GmailTrashMessage",
         "tests: gmail_test.go, google_workspace_test.go",
         "files: gmail.go, google_workspace.go"
-      ]
+      ],
+      "refresh": {
+        "mode": "oauth2_refresh_token",
+        "grant": "POST form grant_type=refresh_token（client_id/client_secret/refresh_token；Accept: application/json，表单响应可解析）",
+        "buffer": "过期前 5 分钟（upstream BaseOAuth2Provider.should_refresh 同值）",
+        "retry": "401 → 强制刷新 → 原请求重试一次；刷新失败不静默，返回 {\"error\":..., \"error_code\":..., \"help\":...}",
+        "env": [
+          "GOOGLE_ACCESS_TOKEN",
+          "GOOGLE_ACCESS_TOKEN_EXPIRES_AT",
+          "GOOGLE_CLIENT_ID",
+          "GOOGLE_CLIENT_SECRET",
+          "GOOGLE_REFRESH_TOKEN",
+          "GOOGLE_TOKEN_URL"
+        ],
+        "wiring": [
+          "internal/tools/integrationkit/oauth.go（TokenRefresher + Runtime.AccessToken/ResolveUnauthorized）",
+          "internal/tools/integrations/oauth.go（模块声明）",
+          "internal/credentials/oauth_refresh.go（凭据库→env 桥：client_id/client_secret/refresh_token/expires_at）"
+        ],
+        "tests": [
+          "TestOAuthRefreshExpiredTokenRefreshesBeforeCall",
+          "TestOAuthRefreshFailureIsAnExplicitError",
+          "TestOAuthRefreshStaticTokenExpiredNamesVariable",
+          "TestOAuthRefreshConcurrentCallsShareOneGrant",
+          "TestOAuthRefreshRetriesOnceAfterUnauthorized",
+          "TestOAuthRefreshUnauthorizedWithoutRefreshTokenNamesVariable"
+        ],
+        "residual": "account 别名的凭据是单 token（无刷新材料）；刷新后的 token 只在本进程缓存，不写回凭据库/env"
+      }
     },
     {
       "module": "google_analytics",
@@ -1924,7 +2007,7 @@
         "oauth": "static_token",
         "evidence": "google_workspace.go:192"
       },
-      "oauth_refresh": false,
+      "oauth_refresh": true,
       "pagination": {
         "mode": "passthrough",
         "detail": "comments 分页：接受 page_token、返回 next_page_token"
@@ -1938,7 +2021,35 @@
         "sample tests: TestBatch5Lane3DocsCreateDocument, TestBatch5Lane3DocsGetDocument, TestBatch5Lane3DocsInsertTextAppends, TestBatch5Lane3DocsReplaceAllText, TestBatch5Lane3DocsInsertImage",
         "tests: google_docs_test.go, google_workspace_test.go",
         "files: google_docs.go, google_workspace.go"
-      ]
+      ],
+      "refresh": {
+        "mode": "oauth2_refresh_token",
+        "grant": "POST form grant_type=refresh_token（client_id/client_secret/refresh_token；Accept: application/json，表单响应可解析）",
+        "buffer": "过期前 5 分钟（upstream BaseOAuth2Provider.should_refresh 同值）",
+        "retry": "401 → 强制刷新 → 原请求重试一次；刷新失败不静默，返回 {\"error\":..., \"error_code\":..., \"help\":...}",
+        "env": [
+          "GOOGLE_ACCESS_TOKEN",
+          "GOOGLE_ACCESS_TOKEN_EXPIRES_AT",
+          "GOOGLE_CLIENT_ID",
+          "GOOGLE_CLIENT_SECRET",
+          "GOOGLE_REFRESH_TOKEN",
+          "GOOGLE_TOKEN_URL"
+        ],
+        "wiring": [
+          "internal/tools/integrationkit/oauth.go（TokenRefresher + Runtime.AccessToken/ResolveUnauthorized）",
+          "internal/tools/integrations/oauth.go（模块声明）",
+          "internal/credentials/oauth_refresh.go（凭据库→env 桥：client_id/client_secret/refresh_token/expires_at）"
+        ],
+        "tests": [
+          "TestOAuthRefreshExpiredTokenRefreshesBeforeCall",
+          "TestOAuthRefreshFailureIsAnExplicitError",
+          "TestOAuthRefreshStaticTokenExpiredNamesVariable",
+          "TestOAuthRefreshConcurrentCallsShareOneGrant",
+          "TestOAuthRefreshRetriesOnceAfterUnauthorized",
+          "TestOAuthRefreshUnauthorizedWithoutRefreshTokenNamesVariable"
+        ],
+        "residual": "account 别名的凭据是单 token（无刷新材料）；刷新后的 token 只在本进程缓存，不写回凭据库/env"
+      }
     },
     {
       "module": "google_maps",
@@ -2087,7 +2198,7 @@
         "oauth": "static_token",
         "evidence": "google_workspace.go:192"
       },
-      "oauth_refresh": false,
+      "oauth_refresh": true,
       "pagination": {
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
@@ -2103,7 +2214,35 @@
         "sample tests: TestBatch5Lane3SheetsGetSpreadsheet, TestBatch5Lane3SheetsCreateSpreadsheet, TestBatch5Lane3SheetsGetValues, TestBatch5Lane3SheetsUpdateValues, TestBatch5Lane3SheetsAppendValues",
         "tests: google_sheets_test.go, google_workspace_test.go",
         "files: google_sheets.go, google_workspace.go"
-      ]
+      ],
+      "refresh": {
+        "mode": "oauth2_refresh_token",
+        "grant": "POST form grant_type=refresh_token（client_id/client_secret/refresh_token；Accept: application/json，表单响应可解析）",
+        "buffer": "过期前 5 分钟（upstream BaseOAuth2Provider.should_refresh 同值）",
+        "retry": "401 → 强制刷新 → 原请求重试一次；刷新失败不静默，返回 {\"error\":..., \"error_code\":..., \"help\":...}",
+        "env": [
+          "GOOGLE_ACCESS_TOKEN",
+          "GOOGLE_ACCESS_TOKEN_EXPIRES_AT",
+          "GOOGLE_CLIENT_ID",
+          "GOOGLE_CLIENT_SECRET",
+          "GOOGLE_REFRESH_TOKEN",
+          "GOOGLE_TOKEN_URL"
+        ],
+        "wiring": [
+          "internal/tools/integrationkit/oauth.go（TokenRefresher + Runtime.AccessToken/ResolveUnauthorized）",
+          "internal/tools/integrations/oauth.go（模块声明）",
+          "internal/credentials/oauth_refresh.go（凭据库→env 桥：client_id/client_secret/refresh_token/expires_at）"
+        ],
+        "tests": [
+          "TestOAuthRefreshExpiredTokenRefreshesBeforeCall",
+          "TestOAuthRefreshFailureIsAnExplicitError",
+          "TestOAuthRefreshStaticTokenExpiredNamesVariable",
+          "TestOAuthRefreshConcurrentCallsShareOneGrant",
+          "TestOAuthRefreshRetriesOnceAfterUnauthorized",
+          "TestOAuthRefreshUnauthorizedWithoutRefreshTokenNamesVariable"
+        ],
+        "residual": "account 别名的凭据是单 token（无刷新材料）；刷新后的 token 只在本进程缓存，不写回凭据库/env"
+      }
     },
     {
       "module": "greenhouse",
@@ -2252,7 +2391,7 @@
         "oauth": "static_token",
         "evidence": "hubspot.go:274"
       },
-      "oauth_refresh": false,
+      "oauth_refresh": true,
       "pagination": {
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
@@ -2266,7 +2405,30 @@
         "sample tests: TestBatch5HubSpotSearchContacts, TestBatch5HubSpotSearchClampsLimitAndOmitsEmptyQuery, TestBatch5HubSpotSearchCompanies, TestBatch5HubSpotSearchDeals, TestBatch5HubSpotGetContact",
         "tests: hubspot_obsidian_test.go, hubspot_test.go",
         "files: hubspot.go, hubspot_obsidian.go"
-      ]
+      ],
+      "refresh": {
+        "mode": "oauth2_refresh_token",
+        "grant": "POST form grant_type=refresh_token（client_id/client_secret/refresh_token；Accept: application/json，表单响应可解析）",
+        "buffer": "过期前 5 分钟（upstream BaseOAuth2Provider.should_refresh 同值）",
+        "retry": "401 → 强制刷新 → 原请求重试一次；刷新失败不静默，返回 {\"error\":..., \"error_code\":..., \"help\":...}",
+        "env": [
+          "HUBSPOT_ACCESS_TOKEN",
+          "HUBSPOT_ACCESS_TOKEN_EXPIRES_AT",
+          "HUBSPOT_CLIENT_ID",
+          "HUBSPOT_CLIENT_SECRET",
+          "HUBSPOT_REFRESH_TOKEN",
+          "HUBSPOT_TOKEN_URL"
+        ],
+        "wiring": [
+          "internal/tools/integrationkit/oauth.go（TokenRefresher + Runtime.AccessToken/ResolveUnauthorized）",
+          "internal/tools/integrations/oauth.go（模块声明）",
+          "internal/credentials/oauth_refresh.go（凭据库→env 桥：client_id/client_secret/refresh_token/expires_at）"
+        ],
+        "tests": [
+          "TestOAuthRefreshHubSpotRetriesAfterUnauthorized"
+        ],
+        "residual": "token endpoint 默认 https://api.hubapi.com/oauth/v1/token（upstream HUBSPOT_TOKEN_URL）"
+      }
     },
     {
       "module": "huggingface",
@@ -4368,8 +4530,13 @@
       },
       "oauth_refresh": false,
       "pagination": {
-        "mode": "none",
-        "detail": "cursor 参数存在但只透传，不自动翻页"
+        "mode": "follow（部分 action）",
+        "detail": "slack_list_channels / slack_list_users 跟随 response_metadata.next_cursor（cursor 请求参数）；其余列表 action 仍单页/透传",
+        "wiring": "integrationkit.RestSpec.Pagination；specs_slack.go::slackSpecs",
+        "tests": [
+          "TestSlackListChannelsFollowsCursor",
+          "TestSlackPaginationStopsAtMaxPages"
+        ]
       },
       "special_gaps": [
         "upload 走 external upload URL + PUT 文本内容；无 multipart",
@@ -5533,7 +5700,7 @@
         "oauth": "static_token",
         "evidence": "crm_common.go:277"
       },
-      "oauth_refresh": false,
+      "oauth_refresh": true,
       "pagination": {
         "mode": "none",
         "detail": "列表类 action 无分页参数/无自动翻页（通用客户端无分页）"
@@ -5546,7 +5713,31 @@
         "sample tests: TestBatch6ZohoListRecords, TestBatch6ZohoListRecordsRequiresModule, TestBatch6ZohoGetRecord, TestBatch6ZohoGetRecordNotFound, TestBatch6ZohoCreateRecord",
         "tests: pipedrive_test.go, zoho_crm_test.go",
         "files: zoho_crm.go, crm_common.go"
-      ]
+      ],
+      "refresh": {
+        "mode": "oauth2_refresh_token",
+        "grant": "POST form grant_type=refresh_token（client_id/client_secret/refresh_token；Accept: application/json，表单响应可解析）",
+        "buffer": "过期前 5 分钟（upstream BaseOAuth2Provider.should_refresh 同值）",
+        "retry": "401 → 强制刷新 → 原请求重试一次；刷新失败不静默，返回 {\"error\":..., \"error_code\":..., \"help\":...}",
+        "env": [
+          "ZOHO_CRM_ACCESS_TOKEN",
+          "ZOHO_CRM_ACCESS_TOKEN_EXPIRES_AT",
+          "ZOHO_CLIENT_ID",
+          "ZOHO_CLIENT_SECRET",
+          "ZOHO_REFRESH_TOKEN",
+          "ZOHO_TOKEN_URL",
+          "ZOHO_ACCOUNTS_DOMAIN / ZOHO_REGION（推导 token endpoint）"
+        ],
+        "wiring": [
+          "internal/tools/integrationkit/oauth.go（TokenRefresher + Runtime.AccessToken/ResolveUnauthorized）",
+          "internal/tools/integrations/oauth.go（模块声明）",
+          "internal/credentials/oauth_refresh.go（凭据库→env 桥：client_id/client_secret/refresh_token/expires_at）"
+        ],
+        "tests": [
+          "TestOAuthRefreshZohoMintsTokenFromRefreshTokenOnly"
+        ],
+        "residual": "api_domain/accounts-server 轮换元数据未写回（upstream ZohoOAuth2Provider.refresh 会存 api_domain）"
+      }
     },
     {
       "module": "zoom",
@@ -5699,5 +5890,51 @@
         "files: browser_setup.go"
       ]
     }
-  ]
+  ],
+  "revision": {
+    "generated_at": "2026-11-21 06:45 CST",
+    "branch": "oauth-refresh-pagination",
+    "base": "main 05f178e2",
+    "scope": "OAuth2 refresh_token 通用刷新 + 通用 REST 声明式分页",
+    "implemented": {
+      "oauth_refresh_modules": [
+        "calendar",
+        "email",
+        "gmail",
+        "google_docs",
+        "google_sheets",
+        "hubspot",
+        "zoho_crm"
+      ],
+      "pagination_modules": [
+        "airtable",
+        "slack"
+      ],
+      "primitives": [
+        "internal/tools/integrationkit/oauth.go",
+        "internal/tools/integrationkit/rest.go（Pagination + 401 重试）",
+        "internal/tools/integrations/oauth.go",
+        "internal/credentials/oauth_refresh.go（OAuthRefreshEnvBindings）"
+      ]
+    },
+    "tests": {
+      "new_test_functions": 17,
+      "files": [
+        "internal/tools/integrations/oauth_refresh_test.go",
+        "internal/tools/integrationkit/oauth_test.go",
+        "internal/credentials/oauth_refresh_test.go"
+      ],
+      "network": "0 外网调用：假 token endpoint + httptest 假 provider"
+    },
+    "notes": [
+      "HTML 视图（integrations-evidence-audit.html）未随本次修订重绘，仍是 05:47 快照；JSON 为权威数据。",
+      "本次未改动任何既有模块的既有行为；未配置 OAuth 变量时走原静态 token 路径（既有测试全绿）。"
+    ],
+    "remaining": [
+      "静态 access token 条目（salesforce/microsoft_graph/powerbi/quickbooks/zoom 等）无刷新契约",
+      "account 别名 token 不可刷新",
+      "github/stripe 等分页语义无法用当前声明式原语覆盖（响应头 / 末条 id 光标）",
+      "multipart 上传、webhook 验签（另见 global_gaps）"
+    ]
+  }
 }

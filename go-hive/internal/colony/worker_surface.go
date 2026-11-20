@@ -281,6 +281,21 @@ func (r *ColonyRuntime) WorkerLLM() any {
 	return r.llm
 }
 
+// LLM exposes the colony's own completer (the overseer's transport, shared
+// with workers when no worker_llm is configured). The queen-model route uses
+// it to follow a queen_llm write for her colony-bound sessions: upstream's
+// colony holds the session's provider by reference when worker_llm is unset,
+// so a queen reconfigure reaches it; this seam is the Go equivalent.
+//
+// Parity: framework/server/queen_models.py::apply (s.llm reconfigure reaches
+// the colony through the shared provider object)
+func (r *ColonyRuntime) LLM() any {
+	if r == nil {
+		return nil
+	}
+	return r.llm
+}
+
 // BoundWorkersForProfile lists the live workers dispatched from a worker
 // profile. routes_colonies_profiles.go duck-types this seam to refuse profile
 // deletion while workers still use it.

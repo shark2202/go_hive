@@ -55,7 +55,7 @@ func batch5Lane3SheetsResponse(status int, raw []byte) map[string]any {
 }
 
 func batch5Lane3SheetsCall(ctx context.Context, rt *Runtime, method, path string, query map[string]string, body any) (any, error) {
-	if batch5Lane3Token(rt, batch5Lane3SheetsModule) == "" {
+	if !batch5Lane3Credential(rt, batch5Lane3SheetsModule) {
 		return batch5Lane3SheetsAuthError(), nil
 	}
 	status, raw, err := batch5Lane3Do(ctx, rt, batch5Lane3SheetsModule, method, path, query, body)
@@ -114,7 +114,7 @@ func batch5Lane3SheetsGetValues(ctx context.Context, rt *Runtime, input map[stri
 }
 
 func batch5Lane3SheetsUpdateValues(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	if batch5Lane3Token(rt, batch5Lane3SheetsModule) == "" {
+	if !batch5Lane3Credential(rt, batch5Lane3SheetsModule) {
 		return batch5Lane3SheetsAuthError(), nil
 	}
 	values, failure := batch5Lane3SheetsValues(input)
@@ -128,7 +128,7 @@ func batch5Lane3SheetsUpdateValues(ctx context.Context, rt *Runtime, input map[s
 }
 
 func batch5Lane3SheetsAppendValues(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	if batch5Lane3Token(rt, batch5Lane3SheetsModule) == "" {
+	if !batch5Lane3Credential(rt, batch5Lane3SheetsModule) {
 		return batch5Lane3SheetsAuthError(), nil
 	}
 	values, failure := batch5Lane3SheetsValues(input)

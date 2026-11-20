@@ -105,6 +105,7 @@ func batch6Modules() map[string]*ModuleConfig {
 		"zoho_crm_tool": {
 			ID: "zoho_crm_tool", BaseURL: "",
 			EnvVars: []string{"ZOHO_CRM_ACCESS_TOKEN"},
+			OAuth:   batch6ZohoOAuth,
 		},
 		"attio_tool": {
 			ID: "attio_tool", BaseURL: "",
@@ -182,19 +183,6 @@ func batch6Base(rt *Runtime, moduleID string) string {
 	return ""
 }
 
-// batch6Token resolves the module credential.
-func batch6Token(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	token, _ := cfg.ResolvedToken(rt.Getenv)
-	return strings.TrimSpace(token)
-}
-
 // batch6AuthError is the upstream "credentials not configured" value.
 func batch6AuthError(moduleID string) map[string]any {
 	switch moduleID {
@@ -222,10 +210,15 @@ func batch6AuthError(moduleID string) map[string]any {
 }
 
 // batch6Send resolves credentials, applies provider auth and executes one
-// request. A non-nil value means the call never produced an HTTP response.
+// request. A non-nil value means the call never produced an HTTP response. A
+// module with an OAuth2 refresh source mints an access token when its static
+// one is expired, and a 401 retries once with a freshly minted token.
 func batch6Send(ctx context.Context, rt *Runtime, moduleID string, spec batch6Request) (batch6Response, map[string]any) {
 	var out batch6Response
-	token := batch6Token(rt, moduleID)
+	token, refreshable, problem := oauthModuleToken(ctx, rt, moduleID)
+	if problem != nil {
+		return out, problem
+	}
 	base := batch6Base(rt, moduleID)
 	// Salesforce and Pipedrive can be configured without a base URL, so the
 	// credential check runs first to keep the upstream error text.
@@ -233,82 +226,114 @@ func batch6Send(ctx context.Context, rt *Runtime, moduleID string, spec batch6Re
 		return out, batch6AuthError(moduleID)
 	}
 
-	query := url.Values{}
-	for name, values := range spec.Query {
-		for _, value := range values {
-			query.Add(name, value)
+	attempt := func(token string) (batch6Response, map[string]any) {
+		var page batch6Response
+		query := url.Values{}
+		for name, values := range spec.Query {
+			for _, value := range values {
+				query.Add(name, value)
+			}
 		}
-	}
-	if moduleID == "pipedrive_tool" {
-		query.Set("api_token", token)
-	}
-
-	target := spec.Path
-	if !strings.HasPrefix(target, "http://") && !strings.HasPrefix(target, "https://") {
-		target = base + target
-	}
-	if encoded := query.Encode(); encoded != "" {
-		if strings.Contains(target, "?") {
-			target += "&" + encoded
-		} else {
-			target += "?" + encoded
+		if moduleID == "pipedrive_tool" {
+			query.Set("api_token", token)
 		}
-	}
 
-	var reader io.Reader
-	if spec.Body != nil {
-		payload, err := json.Marshal(spec.Body)
+		target := spec.Path
+		if !strings.HasPrefix(target, "http://") && !strings.HasPrefix(target, "https://") {
+			target = base + target
+		}
+		if encoded := query.Encode(); encoded != "" {
+			if strings.Contains(target, "?") {
+				target += "&" + encoded
+			} else {
+				target += "?" + encoded
+			}
+		}
+
+		var reader io.Reader
+		if spec.Body != nil {
+			payload, err := json.Marshal(spec.Body)
+			if err != nil {
+				return page, map[string]any{"error": batch6RequestFailedPrefix(moduleID) + err.Error()}
+			}
+			reader = bytes.NewReader(payload)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, spec.Method, target, reader)
 		if err != nil {
-			return out, map[string]any{"error": batch6RequestFailedPrefix(moduleID) + err.Error()}
+			return page, map[string]any{"error": batch6RequestFailedPrefix(moduleID) + err.Error()}
 		}
-		reader = bytes.NewReader(payload)
+		if spec.Body != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		req.Header.Set("Accept", "application/json")
+		switch moduleID {
+		case "zoho_crm_tool":
+			req.Header.Set("Authorization", "Zoho-oauthtoken "+token)
+		case "pipedrive_tool":
+			// Pipedrive authenticates with the api_token query parameter only.
+		default:
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+
+		client := newHTTPClient(nil)
+		if rt != nil && rt.HTTP != nil {
+			client = rt.HTTP
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			if ctx != nil && ctx.Err() != nil {
+				return page, map[string]any{"error": batch6TimeoutMessage(moduleID)}
+			}
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return page, map[string]any{"error": batch6TimeoutMessage(moduleID)}
+			}
+			return page, map[string]any{"error": batch6NetworkPrefix(moduleID) + err.Error()}
+		}
+		defer resp.Body.Close()
+
+		raw, err := io.ReadAll(io.LimitReader(resp.Body, batch6MaxBody))
+		if err != nil {
+			return page, map[string]any{"error": batch6RequestFailedPrefix(moduleID) + err.Error()}
+		}
+		page.Status = resp.StatusCode
+		page.Method = spec.Method
+		page.Raw = raw
+		if len(raw) > 0 {
+			_ = json.Unmarshal(raw, &page.Parsed)
+		}
+		return page, nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, spec.Method, target, reader)
-	if err != nil {
-		return out, map[string]any{"error": batch6RequestFailedPrefix(moduleID) + err.Error()}
+	out, problem = attempt(token)
+	if problem != nil || out.Status != http.StatusUnauthorized || !refreshable {
+		return out, problem
 	}
-	if spec.Body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	resolution := rt.ResolveUnauthorized(ctx, moduleID, batch6DisplayName(moduleID))
+	if !resolution.Retry {
+		if resolution.Failure != nil {
+			return batch6Response{}, resolution.Failure
+		}
+		return out, nil
 	}
-	req.Header.Set("Accept", "application/json")
+	return attempt(resolution.Token)
+}
+
+// batch6DisplayName names the provider in refresh failure messages.
+func batch6DisplayName(moduleID string) string {
 	switch moduleID {
 	case "zoho_crm_tool":
-		req.Header.Set("Authorization", "Zoho-oauthtoken "+token)
+		return "Zoho CRM"
+	case "salesforce_tool":
+		return "Salesforce"
 	case "pipedrive_tool":
-		// Pipedrive authenticates with the api_token query parameter only.
+		return "Pipedrive"
+	case "attio_tool":
+		return "Attio"
 	default:
-		req.Header.Set("Authorization", "Bearer "+token)
+		return moduleID
 	}
-
-	client := newHTTPClient(nil)
-	if rt != nil && rt.HTTP != nil {
-		client = rt.HTTP
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		if ctx != nil && ctx.Err() != nil {
-			return out, map[string]any{"error": batch6TimeoutMessage(moduleID)}
-		}
-		var netErr net.Error
-		if errors.As(err, &netErr) && netErr.Timeout() {
-			return out, map[string]any{"error": batch6TimeoutMessage(moduleID)}
-		}
-		return out, map[string]any{"error": batch6NetworkPrefix(moduleID) + err.Error()}
-	}
-	defer resp.Body.Close()
-
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, batch6MaxBody))
-	if err != nil {
-		return out, map[string]any{"error": batch6RequestFailedPrefix(moduleID) + err.Error()}
-	}
-	out.Status = resp.StatusCode
-	out.Method = spec.Method
-	out.Raw = raw
-	if len(raw) > 0 {
-		_ = json.Unmarshal(raw, &out.Parsed)
-	}
-	return out, nil
 }
 
 // batch6TimeoutMessage mirrors each provider's timeout wording.

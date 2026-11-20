@@ -533,7 +533,10 @@ func (r *Runner) createSessionWithRuntime(
 			OnTurnStart:   onTurnStart,
 			// A text-only main model gets its tool images captioned by the
 			// vision_fallback slot; nil when there is none to use.
-			VisionCaptioner: visionCaptionerFor(home, provider),
+			VisionCaptioner: visionCaptionerFor(home),
+			// The queen's phase rides node_loop_iteration, as upstream's
+			// iteration_metadata_provider reports it.
+			Phase: func() string { return hiveserver.SessionPhaseLabel(record) },
 		})
 		if err != nil {
 			fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, err)
@@ -541,6 +544,12 @@ func (r *Runner) createSessionWithRuntime(
 			runtime = built
 			record.Chat = built
 			record.LLM = provider
+			// Session title: written by the worker model after the first
+			// finished turn, exactly as upstream's subscribe_title_trigger
+			// registers it on the session bus.
+			if record.EventBus != nil && record.QueenDir != "" {
+				record.TitleTrigger = hiveserver.SubscribeTitleTrigger(record.EventBus, record.QueenDir, provider)
+			}
 			// The session's queen executor is the chat runtime: timer and
 			// webhook triggers reach the queen through it (queenNode →
 			// InjectTrigger), which is the assignment the audit found missing.

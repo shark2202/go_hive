@@ -141,6 +141,39 @@ type RestSpec struct {
 	JoinLists []string
 	// Build optionally overrides the derived body/query payload.
 	Build func(input map[string]any) map[string]any
+	// Pagination follows the provider's cursor across pages and merges the
+	// result lists. Nil means the action returns exactly one page.
+	Pagination *PaginationSpec
+}
+
+// DefaultMaxPages caps a declarative pagination walk when the spec does not
+// set its own limit.
+const DefaultMaxPages = 10
+
+// PaginationSpec is declarative cursor pagination for one REST action: the
+// client follows NextCursorPath through the response payload, sending the
+// cursor back in CursorParam, and concatenates the ItemsPath arrays.
+//
+// Paths are dot-separated field names ("records", "response_metadata.
+// next_cursor"). The walk stops when the cursor is missing, empty, repeated,
+// or MaxPages pages have been read.
+type PaginationSpec struct {
+	// ItemsPath is the dot path to the page's item array.
+	ItemsPath string
+	// NextCursorPath is the dot path to the next-page cursor.
+	NextCursorPath string
+	// CursorParam is the request parameter carrying the cursor: query for
+	// GET/DELETE, body otherwise.
+	CursorParam string
+	// MaxPages caps the walk; 0 uses DefaultMaxPages.
+	MaxPages int
+}
+
+func (p *PaginationSpec) maxPages() int {
+	if p == nil || p.MaxPages <= 0 {
+		return DefaultMaxPages
+	}
+	return p.MaxPages
 }
 
 // WithDefaults fills omitted parameters from the catalog defaults so action

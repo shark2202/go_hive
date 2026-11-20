@@ -133,6 +133,13 @@ func CredentialEnvBindings(specs []CredentialSpecView) []credentials.EnvBinding 
 	return bindings
 }
 
+// allCredentialEnvBindings is the full mapping the process-wide sync uses: the
+// catalog bindings plus the OAuth2 refresh material for the providers whose
+// upstream credential is an OAuth2 token.
+func allCredentialEnvBindings(specs []CredentialSpecView) []credentials.EnvBinding {
+	return append(CredentialEnvBindings(specs), credentials.OAuthRefreshEnvBindings()...)
+}
+
 // SyncCredentialEnv exports every saved credential into the process
 // environment under the env names the settings page advertises. Serve calls
 // it once at startup; the credential routes call it again after a successful
@@ -143,7 +150,7 @@ func SyncCredentialEnv(home hivehome.Home) credentials.EnvSyncResult {
 	}
 	return credentials.SyncEnvFromStore(
 		home.CredentialsDir(),
-		CredentialEnvBindings(credentialSpecsFromCatalog()),
+		allCredentialEnvBindings(credentialSpecsFromCatalog()),
 	)
 }
 
@@ -163,7 +170,7 @@ func (rt *CredentialRoutes) syncEnv() {
 	if len(specs) == 0 {
 		return
 	}
-	credentials.SyncEnvFromStore(rt.deps.Home.CredentialsDir(), CredentialEnvBindings(specs))
+	credentials.SyncEnvFromStore(rt.deps.Home.CredentialsDir(), allCredentialEnvBindings(specs))
 }
 
 func (rt *CredentialRoutes) adenKeyPresent() bool {

@@ -153,12 +153,18 @@ func TestChatRuntimePublishesTurnEvents(t *testing.T) {
 	// boundary events, so every one of them must be present and ordered. The
 	// turn_done boundary announces client_input_requested before the awaiting
 	// loop state, as upstream's _await_user_input does on every park.
+	// client_input_committed marks the conversation seq the user message
+	// landed at, and context_usage_updated is the iteration_start readout —
+	// both land at the same points upstream emits them
+	// (_drain_injection_queue / publish_context_usage).
 	order := recorder.types()
 	wantOrder := []string{
 		"execution_started",
 		"loop_state_changed",
 		"node_loop_started",
+		"client_input_committed",
 		"node_loop_iteration",
+		"context_usage_updated",
 		"client_output_delta",
 		"llm_turn_complete",
 		"node_loop_completed",

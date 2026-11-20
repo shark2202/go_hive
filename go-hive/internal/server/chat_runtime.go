@@ -108,6 +108,10 @@ type ChatRuntimeDeps struct {
 	// accept image blocks (vision_fallback). Nil leaves images to the media
 	// gate, which tells the model an attachment was not delivered.
 	VisionCaptioner agentloop.VisionCaptioner
+	// Phase reports the queen's current phase ("independent" / "colony") for
+	// the node_loop_iteration payload, mirroring the upstream loop's
+	// iteration_metadata_provider. Nil leaves the iteration phase-less.
+	Phase func() string
 }
 
 // chatTurnRequest is one queued turn: a real client message, an external
@@ -145,6 +149,11 @@ type chatTurnRequest struct {
 	// execution/node-loop envelope — the session-start block already wrote the
 	// loop's iteration 0 announcement.
 	opening bool
+	// correlationID is the id published on the CLIENT_INPUT_RECEIVED event for
+	// a client message. The commit event upstream pairs with it is
+	// client_input_committed, which carries the same id so listeners can tell
+	// which message was committed where.
+	correlationID string
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
@@ -163,8 +172,13 @@ type ChatRuntime struct {
 	bus       *eventbus.EventBus
 	sessionID string
 	model     string
+	// pinnedLLM is the session provider pinned for the current turn. A
+	// model-slot PUT rebuilds the session's ProviderSlot in place; the pin
+	// keeps every iteration of an in-flight turn on the provider the turn
+	// started with, and the next turn resolves the replacement.
+	pinnedLLM llm.Completer
 	// streamLLM is non-nil when the configured provider can stream. It wraps
-	// deps.LLM for the agent loop and publishes per-frame client_output_delta
+	// pinnedLLM for the agent loop and publishes per-frame client_output_delta
 	// events; auxiliary callers keep using deps.LLM directly.
 	streamLLM *chatStreamingCompleter
 
@@ -288,7 +302,15 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		done:      make(chan struct{}),
 	}
 	runtime.markProgress()
-	runtime.streamLLM = newChatStreamingCompleter(deps.LLM)
+	// The session's transport may be a ProviderSlot (a model-slot PUT
+	// rebuilds it). Pin the current provider for the turn machinery: the
+	// agent loop reads agentCtx.LLM per iteration, so holding the slot there
+	// would let a PUT tear a running turn.
+	runtime.pinnedLLM = llm.ResolveCompleter(deps.LLM)
+	if runtime.pinnedLLM == nil {
+		runtime.pinnedLLM = deps.LLM
+	}
+	runtime.streamLLM = newChatStreamingCompleter(runtime.pinnedLLM)
 	// A session that has not run a turn is parked at turn_done: without this
 	// the idle ticker would auto-start an untouched session after the
 	// between-turns budget. A persisted pending_input (an unanswered ask_user
@@ -324,7 +346,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		}
 	}
 
-	loopLLM := deps.LLM
+	loopLLM := runtime.pinnedLLM
 	if runtime.streamLLM != nil {
 		loopLLM = runtime.streamLLM
 	}
@@ -433,6 +455,25 @@ func (r *ChatRuntime) Deliver(message string) error {
 		return nil
 	}
 	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true})
+}
+
+// DeliverClientInput is Deliver for the HTTP chat route: the correlation id
+// the handler published on CLIENT_INPUT_RECEIVED rides the turn so the
+// committed boundary can carry the same id, as upstream's deliver_to_queen →
+// _drain_injection_queue pair does.
+func (r *ChatRuntime) DeliverClientInput(message, correlationID string) error {
+	if r == nil {
+		return ErrChatRuntimeNoLLM
+	}
+	if r.relayClientInputToOverseer(message) {
+		recorded := message
+		if block := r.takeRelayCatalogBlock(); block != "" {
+			recorded = block + "\n\n" + message
+		}
+		_ = r.enqueueTurn(chatTurnRequest{message: recorded, clientInput: true, recordOnly: true, correlationID: correlationID})
+		return nil
+	}
+	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true, correlationID: correlationID})
 }
 
 // InjectQueenMail queues a letter or reply from another queen: it enters as a
@@ -662,6 +703,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		r.runOpeningTurn()
 		return
 	}
+	r.pinTurnProvider()
 	if request.recordOnly {
 		// A message the overseer executed: append the turn so the transcript
 		// keeps the ask, without running the chat queen again. The overseer's
@@ -758,14 +800,26 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		case !request.clientInput:
 			stamped = "[" + stamp + "] [External event] " + message
 		}
-		if _, err := r.conv.AddUserMessage(stamped, agentloop.UserMessageOptions{
+		committedMessage, err := r.conv.AddUserMessage(stamped, agentloop.UserMessageOptions{
 			IsClientInput: request.clientInput,
 			IsTrigger:     request.trigger != nil,
-		}); err != nil {
+		})
+		if err != nil {
 			emitter.executionFailed(err, agentloop.ParkReasonUnknown)
 			r.setParkState(agentloop.ParkReasonUnknown, true)
 			r.setLastError(err)
 			return
+		}
+		// A real client message announces the exact conversation seq it landed
+		// at, so the UI places the bubble where the conversation has it (the
+		// upstream CLIENT_INPUT_COMMITTED boundary; see emit docstring). An
+		// external report or trigger is not a client input and never emits it.
+		if request.clientInput && emitter != nil {
+			var correlation *string
+			if request.correlationID != "" {
+				correlation = &request.correlationID
+			}
+			r.bus.EmitClientInputCommitted(chatStreamID, chatNodeID, &executionID, committedMessage.Seq, correlation)
 		}
 		// The ticker may have parked a reminder while the session waited for
 		// this message; drain it into the turn before the model reads it.
@@ -846,6 +900,7 @@ func (r *ChatRuntime) StartOpeningTurn() {
 // user turn to add: the loop's SESSION_START reminder is the first message the
 // model reads, which is what gives a fresh session an opening reply upstream.
 func (r *ChatRuntime) runOpeningTurn() {
+	r.pinTurnProvider()
 	// Upstream runs the queen loop under the session id as the execution id;
 	// the turn carries no per-execution envelope, but the park events keep it.
 	executionID := r.sessionID
@@ -906,6 +961,39 @@ func (r *ChatRuntime) runOpeningTurn() {
 	}
 	r.timelineAfterTurn()
 	r.setLastError(nil)
+}
+
+// pinTurnProvider resolves the session's provider slot at the start of a turn.
+// A model-slot PUT rebuilds the slot in place; resolving here is what makes
+// the change "session-level": the turn that was already running kept its
+// pinned provider, and the first turn started afterwards runs on the rebuilt
+// one. The run goroutine is the only writer of agentCtx.LLM, so no lock is
+// needed beyond the slot's own.
+//
+// Parity: framework/server/queen_models.py::apply,
+// framework/server/routes_config.py::_hot_swap_sessions (the reconfigure half;
+// the pin keeps an in-flight turn on the provider it started with).
+func (r *ChatRuntime) pinTurnProvider() {
+	pinned := llm.ResolveCompleter(r.deps.LLM)
+	if pinned == nil || pinned == r.pinnedLLM {
+		return
+	}
+	r.pinnedLLM = pinned
+	r.streamLLM = newChatStreamingCompleter(pinned)
+	if r.streamLLM != nil && r.loop != nil {
+		ttft, interEvent := streamWatchdogBudgets(r.loop.Config)
+		r.streamLLM.setStreamWatchdog(ttft, interEvent)
+	}
+	var loopLLM llm.Completer = pinned
+	if r.streamLLM != nil {
+		loopLLM = r.streamLLM
+	}
+	r.agentCtx.LLM = loopLLM
+	if namer, ok := pinned.(llm.ModelNamer); ok {
+		r.model = namer.ModelName()
+	} else {
+		r.model = ""
+	}
 }
 
 // turnFailureParkReason keeps a loop-raised park on a failed turn. The loop's
@@ -1068,6 +1156,21 @@ func (r *ChatRuntime) toolsForTurn() []llm.ToolDef {
 		out = append(out, def)
 	}
 	return out
+}
+
+// turnContextUsage builds the per-iteration context readout the upstream loop
+// publishes on every iteration start (publish_context_usage with
+// trigger=iteration_start), using the same char-based projection as the
+// session-start block.
+func (r *ChatRuntime) turnContextUsage() map[string]any {
+	if r == nil || r.conv == nil {
+		return nil
+	}
+	maxContextTokens := 0
+	if r.loop != nil {
+		maxContextTokens = r.loop.Config.MaxContextTokens
+	}
+	return composeContextUsage(r.conv, maxContextTokens, r.toolsForTurn())
 }
 
 // toolExecuteContext carries the bound colony down to the catalogue's
@@ -1389,55 +1492,3 @@ func (r *ChatRuntime) clearPendingCredentialForm() {
 // the pass changed no memory, when she has no soul configured, or when her
 // soul already carries every conclusion.
 //
-// Parity-exempt: Go-only sediment seam. Upstream revises a soul in its own
-// daily chat-reading reflection (framework/agents/queen/soul_reflection.py);
-// the Go port now runs that daily pass too, and also rides the memory
-// reflection so a soul still updates between daily runs.
-func (r *ChatRuntime) sedimentSoul(result memory.LoopResult) {
-	if r == nil || r.deps.HomeRoot == "" || r.queenName == "" {
-		return
-	}
-	home := hivehome.Home{Root: r.deps.HomeRoot}
-	cfg := soul.GetSoulConfig(HiveConfig(home), r.queenName)
-	if cfg == nil {
-		return
-	}
-	conclusions := memory.ConclusionsFromReflection(result, []memory.ScopeDir{{Scope: "queen", Dir: r.queenMemoryDir}})
-	if len(conclusions) == 0 {
-		return
-	}
-	items := make([]soul.SedimentConclusion, 0, len(conclusions))
-	for _, conclusion := range conclusions {
-		items = append(items, soul.SedimentConclusion{Text: conclusion.Text, Source: conclusion.Filename})
-	}
-	if _, err := soul.Sediment(soul.SedimentOptions{
-		QueensDir:   home.QueensDir(),
-		QueenID:     r.queenName,
-		Config:      cfg,
-		Conclusions: items,
-	}); err != nil {
-		log.Printf("chat runtime %s: soul sediment skipped: %v", r.sessionID, err)
-	}
-}
-
-// chatMemoryReflectionConfig reads the memory_reflection section of
-// configuration.json, falling back to the same defaults as upstream.
-//
-// Parity: framework/config.py::get_memory_reflection_config
-func chatMemoryReflectionConfig(homeRoot string) memory.ReflectionConfig {
-	cfg := memory.DefaultReflectionConfig()
-	section, _ := HiveConfig(hivehome.Home{Root: homeRoot})["memory_reflection"].(map[string]any)
-	positive := func(key string, fallback int) int {
-		value, ok := toFloat(section[key])
-		if !ok || value < 1 || value != float64(int(value)) {
-			return fallback
-		}
-		return int(value)
-	}
-	cfg.EveryTurns = positive("every_turns", cfg.EveryTurns)
-	cfg.LongEvery = positive("long_every", cfg.LongEvery)
-	if model, ok := section["model"].(string); ok && (model == "main" || model == "worker") {
-		cfg.Model = model
-	}
-	return cfg
-}

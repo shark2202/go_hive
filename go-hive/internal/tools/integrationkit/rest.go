@@ -3,6 +3,7 @@ package integrationkit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,26 +37,111 @@ func (rt *Runtime) clientFor(moduleID string) *restClient {
 	return client
 }
 
-// callREST builds and executes one spec against the module endpoint.
+// callREST builds and executes one spec against the module endpoint. When the
+// spec declares pagination the walk is followed; when the provider answers 401
+// and the module has an OAuth2 refresh source, the request is retried once
+// with a freshly minted token.
 func (rt *Runtime) CallREST(ctx context.Context, tool *Tool, action Action, spec RestSpec, input map[string]any) (any, error) {
-	client := rt.clientFor(tool.ID)
-	token, missing := client.cfg.ResolvedToken(rt.Getenv)
-	if len(missing) > 0 {
-		return map[string]any{
-			"error": fmt.Sprintf("%s credentials not configured", tool.DisplayName),
-			"help":  "Set " + strings.Join(missing, " or ") + " environment variable, or configure the credential store.",
-		}, nil
-	}
 	for _, name := range action.Required {
 		if _, present := input[name]; present {
 			continue
 		}
 		return map[string]any{"error": fmt.Sprintf("%s is required", name)}, nil
 	}
+	if spec.Pagination != nil {
+		return rt.callRESTPages(ctx, tool, spec, input)
+	}
+	result, _, err := rt.callRESTOnce(ctx, tool, spec, input, false)
+	return result, err
+}
+
+// callRESTPages walks the provider cursor, concatenating the item arrays and
+// returning the first page's envelope with the merged list in place.
+func (rt *Runtime) callRESTPages(ctx context.Context, tool *Tool, spec RestSpec, input map[string]any) (any, error) {
+	pagination := spec.Pagination
+	current := input
+	var envelope map[string]any
+	var merged []any
+	seen := map[string]bool{}
+	for page := 1; ; page++ {
+		result, status, err := rt.callRESTStep(ctx, tool, spec, current)
+		if err != nil {
+			return nil, err
+		}
+		if status >= 400 {
+			return result, nil
+		}
+		object, ok := result.(map[string]any)
+		if !ok {
+			return result, nil
+		}
+		items, found := pathItems(object, pagination.ItemsPath)
+		if !found {
+			// The provider did not return the declared shape; surface the page
+			// untouched rather than inventing an empty list.
+			return result, nil
+		}
+		if envelope == nil {
+			envelope = object
+		}
+		merged = append(merged, items...)
+		next := strings.TrimSpace(scalarString(pathValue(object, pagination.NextCursorPath)))
+		if next == "" || pagination.CursorParam == "" || seen[next] || page >= pagination.maxPages() {
+			break
+		}
+		seen[next] = true
+		nextInput := make(map[string]any, len(input)+1)
+		for name, value := range input {
+			nextInput[name] = value
+		}
+		nextInput[pagination.CursorParam] = next
+		current = nextInput
+	}
+	setPathValue(envelope, pagination.ItemsPath, merged)
+	clearPathValue(envelope, pagination.NextCursorPath)
+	return envelope, nil
+}
+
+// callRESTStep performs one request and resolves a 401 through the module's
+// OAuth refresh source: either one retry with a fresh token or an explicit
+// value error naming the credential that cannot be refreshed.
+func (rt *Runtime) callRESTStep(ctx context.Context, tool *Tool, spec RestSpec, input map[string]any) (any, int, error) {
+	result, status, err := rt.callRESTOnce(ctx, tool, spec, input, false)
+	if err != nil || status != http.StatusUnauthorized || !rt.OAuthConfigured(tool.ID) {
+		return result, status, err
+	}
+	resolution := rt.ResolveUnauthorized(ctx, tool.ID, tool.DisplayName)
+	if !resolution.Retry {
+		if resolution.Failure != nil {
+			return resolution.Failure, status, nil
+		}
+		return result, status, nil
+	}
+	return rt.callRESTOnce(ctx, tool, spec, input, true)
+}
+
+// callRESTOnce is one pass over the spec with a token resolved either through
+// the cache (force false) or through a forced refresh (force true).
+func (rt *Runtime) callRESTOnce(ctx context.Context, tool *Tool, spec RestSpec, input map[string]any, force bool) (any, int, error) {
+	client := rt.clientFor(tool.ID)
+	token, missing, tokenErr := rt.restToken(ctx, client.cfg, force)
+	if tokenErr != nil {
+		var refreshErr *OAuthRefreshError
+		if errors.As(tokenErr, &refreshErr) {
+			return refreshErr.ValueError(), http.StatusUnauthorized, nil
+		}
+		return map[string]any{"error": tokenErr.Error()}, 0, nil
+	}
+	if len(missing) > 0 {
+		return map[string]any{
+			"error": fmt.Sprintf("%s credentials not configured", tool.DisplayName),
+			"help":  "Set " + strings.Join(missing, " or ") + " environment variable, or configure the credential store.",
+		}, 0, nil
+	}
 
 	path, consumed, err := fillPath(spec.Path, input)
 	if err != nil {
-		return map[string]any{"error": err.Error()}, nil
+		return map[string]any{"error": err.Error()}, 0, nil
 	}
 	query := url.Values{}
 	body := map[string]any{}
@@ -147,7 +233,7 @@ func (rt *Runtime) CallREST(ctx context.Context, tool *Tool, action Action, spec
 		} else {
 			payload, err := json.Marshal(body)
 			if err != nil {
-				return map[string]any{"error": "failed to encode request: " + err.Error()}, nil
+				return map[string]any{"error": "failed to encode request: " + err.Error()}, 0, nil
 			}
 			reader = strings.NewReader(string(payload))
 			contentType = "application/json"
@@ -156,7 +242,7 @@ func (rt *Runtime) CallREST(ctx context.Context, tool *Tool, action Action, spec
 
 	req, err := http.NewRequestWithContext(ctx, spec.Method, target, reader)
 	if err != nil {
-		return map[string]any{"error": "failed to build request: " + err.Error()}, nil
+		return map[string]any{"error": "failed to build request: " + err.Error()}, 0, nil
 	}
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
@@ -169,29 +255,104 @@ func (rt *Runtime) CallREST(ctx context.Context, tool *Tool, action Action, spec
 	resp, err := rt.HTTP.Do(req)
 	if err != nil {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, 0, ctx.Err()
 		}
-		return map[string]any{"error": "Network error: " + err.Error()}, nil
+		return map[string]any{"error": "Network error: " + err.Error()}, 0, nil
 	}
 	defer resp.Body.Close()
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 	if readErr != nil {
-		return map[string]any{"error": "Failed to read response: " + readErr.Error()}, nil
+		return map[string]any{"error": "Failed to read response: " + readErr.Error()}, resp.StatusCode, nil
 	}
 	parsed := any(nil)
 	if len(raw) > 0 {
 		_ = json.Unmarshal(raw, &parsed)
 	}
 	if resp.StatusCode >= 400 {
-		return providerError(tool, resp.StatusCode, parsed, raw), nil
+		return providerError(tool, resp.StatusCode, parsed, raw), resp.StatusCode, nil
 	}
 	if object, ok := parsed.(map[string]any); ok && tool.ID == "slack_tool" {
 		if success, present := object["ok"].(bool); present && !success {
 			code := fmt.Sprint(object["error"])
-			return map[string]any{"error": slackErrorMessage(code), "error_code": code}, nil
+			return map[string]any{"error": slackErrorMessage(code), "error_code": code}, resp.StatusCode, nil
 		}
 	}
-	return shapeResponse(spec, parsed, raw), nil
+	return shapeResponse(spec, parsed, raw), resp.StatusCode, nil
+}
+
+// restToken resolves the request token: the cached/static path normally, a
+// forced refresh for the 401 retry.
+func (rt *Runtime) restToken(ctx context.Context, cfg *ModuleConfig, force bool) (string, []string, error) {
+	if cfg == nil {
+		return "", nil, nil
+	}
+	if force {
+		token, err := rt.RefreshAccessToken(ctx, cfg.ID)
+		return token, nil, err
+	}
+	return rt.ModuleToken(ctx, cfg)
+}
+
+// pathValue walks a dot-separated path through decoded JSON.
+func pathValue(object map[string]any, path string) any {
+	if path == "" {
+		return object
+	}
+	var current any = object
+	for _, segment := range strings.Split(path, ".") {
+		container, ok := current.(map[string]any)
+		if !ok {
+			return nil
+		}
+		current, ok = container[segment]
+		if !ok {
+			return nil
+		}
+	}
+	return current
+}
+
+// pathItems reads the item array at path. found reports whether the path
+// resolved to a list (an empty list is found, a missing key is not).
+func pathItems(object map[string]any, path string) ([]any, bool) {
+	value := pathValue(object, path)
+	if value == nil {
+		return nil, false
+	}
+	items, ok := value.([]any)
+	return items, ok
+}
+
+// setPathValue replaces the value at a dot path inside a decoded payload.
+func setPathValue(object map[string]any, path string, value any) {
+	segments := strings.Split(path, ".")
+	current := object
+	for _, segment := range segments[:len(segments)-1] {
+		next, ok := current[segment].(map[string]any)
+		if !ok {
+			return
+		}
+		current = next
+	}
+	current[segments[len(segments)-1]] = value
+}
+
+// clearPathValue removes the leaf at a dot path, so a fully walked response no
+// longer advertises a next page.
+func clearPathValue(object map[string]any, path string) {
+	if path == "" {
+		return
+	}
+	segments := strings.Split(path, ".")
+	current := object
+	for _, segment := range segments[:len(segments)-1] {
+		next, ok := current[segment].(map[string]any)
+		if !ok {
+			return
+		}
+		current = next
+	}
+	delete(current, segments[len(segments)-1])
 }
 
 func wireName(spec RestSpec, name string) string {

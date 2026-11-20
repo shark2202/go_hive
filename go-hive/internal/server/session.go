@@ -111,6 +111,12 @@ type Session struct {
 
 	MemoryReflectionSubs []string
 
+	// TitleTrigger names the session's auto-title subscription (the worker
+	// model writes the title after the first finished turn). It is released
+	// when the session stops, matching upstream's use of the reflection-sub
+	// list for the same trigger.
+	TitleTrigger *TitleTrigger
+
 	SSEClientCount int
 
 	AvailableTriggerDefs  map[string]triggers.TriggerDefinition
@@ -617,6 +623,13 @@ func (m *SessionManager) StopSession(sessionID string) bool {
 		}
 	}
 	session.MemoryReflectionSubs = nil
+	if session.TitleTrigger != nil {
+		// Upstream drops the title trigger's ids at stop and lets a title
+		// generation already in flight finish on its own; Release keeps that
+		// non-blocking teardown.
+		session.TitleTrigger.Release()
+		session.TitleTrigger = nil
+	}
 
 	return true
 }

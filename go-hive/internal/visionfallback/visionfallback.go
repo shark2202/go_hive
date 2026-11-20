@@ -91,7 +91,18 @@ type Captioner struct {
 	MaxTokens int
 	// Timeout bounds one call; <=0 uses CaptionTimeout.
 	Timeout time.Duration
+	// Resolve, when set, resolves the live vision_fallback slot before every
+	// caption. Upstream reads configuration.json per caption call, so a slot
+	// PUT applies to the next tool image without a session rebuild.
+	Resolve Resolver
 }
+
+// Resolver returns the currently configured fallback transport, its model and
+// its caption budget. It reports ok=false when the slot is absent or unusable
+// (no provider, no resolvable key), in which case the captioner reports no
+// caption and the loop drops the images with the exhausted marker — the same
+// outcome upstream's per-call “caption_tool_image“ produces.
+type Resolver func() (provider llm.Completer, model string, maxTokens int, ok bool)
 
 // New returns a captioner for a configured slot, or nil when there is no slot
 // or no transport to reach it.
@@ -102,12 +113,42 @@ func New(provider llm.Completer, model string, maxTokens int) *Captioner {
 	return &Captioner{Provider: provider, Model: model, MaxTokens: maxTokens}
 }
 
+// NewResolver returns a captioner that re-resolves its slot per caption. It is
+// the live-session form: the session keeps one captioner and a model-slot PUT
+// is picked up by the next tool image.
+func NewResolver(resolve Resolver) *Captioner {
+	if resolve == nil {
+		return nil
+	}
+	return &Captioner{Resolve: resolve}
+}
+
+// resolve returns the transport and budget this caption must use.
+func (c *Captioner) resolve() (llm.Completer, int, bool) {
+	provider, model, maxTokens := c.Provider, c.Model, c.MaxTokens
+	if c.Resolve != nil {
+		var ok bool
+		provider, model, maxTokens, ok = c.Resolve()
+		if !ok {
+			return nil, 0, false
+		}
+	}
+	if provider == nil || strings.TrimSpace(model) == "" {
+		return nil, 0, false
+	}
+	return provider, maxTokens, true
+}
+
 // Caption asks the vision model to describe the images in service of intent.
 // It reports false on any failure — no provider, no deliverable image, empty
 // response, transport error or timeout — so the caller falls back to the
 // exhausted marker instead of failing the turn.
 func (c *Captioner) Caption(ctx context.Context, intent string, images []map[string]any) (string, bool) {
-	if c == nil || c.Provider == nil {
+	if c == nil {
+		return "", false
+	}
+	provider, configuredMaxTokens, ok := c.resolve()
+	if !ok {
 		return "", false
 	}
 	blocks := deliverableImageBlocks(images)
@@ -118,7 +159,7 @@ func (c *Captioner) Caption(ctx context.Context, intent string, images []map[str
 	parts = append(parts, map[string]any{"type": "text", "text": intent})
 	parts = append(parts, blocks...)
 
-	maxTokens := c.MaxTokens
+	maxTokens := configuredMaxTokens
 	if maxTokens <= 0 {
 		maxTokens = llm.AuxMaxTokens()
 	}
@@ -129,7 +170,7 @@ func (c *Captioner) Caption(ctx context.Context, intent string, images []map[str
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	response, err := c.Provider.AComplete(callCtx, llm.CompletionRequest{
+	response, err := provider.AComplete(callCtx, llm.CompletionRequest{
 		Messages:  []llm.ChatMessage{{Role: "user", Content: intent, ContentParts: parts}},
 		System:    systemPrompt,
 		MaxTokens: maxTokens,

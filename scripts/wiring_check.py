@@ -69,7 +69,10 @@ WIRING: tuple[WiringPoint, ...] = (
             Requirement("QueenName 字段", r"\bQueenName:\s*\S"),
             Requirement("HomeRoot 字段", r"\bHomeRoot:\s*\S"),
             Requirement("queen_llm 感知 provider 调用", r"queenAwareChatProvider\(home, requestedModel, queenScope\)"),
-            Requirement("VisionCaptioner 接线", r"VisionCaptioner:\s*visionCaptionerFor\(home, provider\)"),
+            # vision_fallback 现在逐次 caption 重读槽位（visionCaptionerFor 内的
+            # resolver 每次读 configuration.json），构造时不再需要会话 provider，
+            # 所以接线只剩 home 参数。
+            Requirement("VisionCaptioner 接线", r"VisionCaptioner:\s*visionCaptionerFor\(home\)"),
         ),
     ),
     WiringPoint(
@@ -98,7 +101,8 @@ WIRING: tuple[WiringPoint, ...] = (
         description="预载 colony 会话：queen 模型槽位与 vision captioner 接线",
         requirements=(
             Requirement("queen provider 构造", r"queenAwareChatProvider\(home, model, record\.QueenName\)"),
-            Requirement("VisionCaptioner 接线", r"VisionCaptioner:\s*visionCaptionerFor\(home, provider\)"),
+            # 同上：captioner 构造不再接收 provider，槽位在每次 caption 时解析。
+            Requirement("VisionCaptioner 接线", r"VisionCaptioner:\s*visionCaptionerFor\(home\)"),
         ),
     ),
     WiringPoint(

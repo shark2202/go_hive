@@ -193,6 +193,143 @@ func SectionAPIBase(section map[string]any) string {
 	return ""
 }
 
+// MainSlotAPIKey resolves the main llm slot's key lazily: the literal api_key,
+// the api_key_env_var (or the provider's environment variable), then
+// HIVE_API_KEY. Slot sections without a key of their own fall back here, as
+// upstream's get_api_key tail does.
+//
+// Parity: framework/config.py::get_api_key
+func MainSlotAPIKey(home hivehome.Home) func() string {
+	llmSection := configSection(home, "llm")
+	literal := strings.TrimSpace(pyStrOrEmpty(llmSection["api_key"]))
+	provider := strings.ToLower(strings.TrimSpace(pyStrOrEmpty(llmSection["provider"])))
+	if provider == "" || provider == "custom" {
+		provider = providerFromModelName(strings.TrimSpace(pyStrOrEmpty(llmSection["model"])))
+	}
+	envVar := strings.TrimSpace(pyStrOrEmpty(llmSection["api_key_env_var"]))
+	if envVar == "" {
+		envVar = slotProviderEnvVars[provider]
+	}
+	return func() string {
+		if literal != "" {
+			return literal
+		}
+		if envVar != "" {
+			if value := strings.TrimSpace(os.Getenv(envVar)); value != "" {
+				return value
+			}
+		}
+		return strings.TrimSpace(os.Getenv("HIVE_API_KEY"))
+	}
+}
+
+// slotProviderEnvVars is the slot-resolution provider table. It is separate
+// from providerEnvVars (which drives GET /api/config/llm's connected_providers
+// list and must stay upstream-shaped): it also carries the providers the CLI's
+// session builder knows but the connected list does not.
+var slotProviderEnvVars = map[string]string{
+	"anthropic":   "ANTHROPIC_API_KEY",
+	"openai":      "OPENAI_API_KEY",
+	"gemini":      "GEMINI_API_KEY",
+	"google":      "GOOGLE_API_KEY",
+	"minimax":     "MINIMAX_API_KEY",
+	"groq":        "GROQ_API_KEY",
+	"cerebras":    "CEREBRAS_API_KEY",
+	"openrouter":  "OPENROUTER_API_KEY",
+	"mistral":     "MISTRAL_API_KEY",
+	"together":    "TOGETHER_API_KEY",
+	"together_ai": "TOGETHER_API_KEY",
+	"deepseek":    "DEEPSEEK_API_KEY",
+	"kimi":        "KIMI_API_KEY",
+	"hive":        "HIVE_API_KEY",
+	"zai":         "ZAI_API_KEY",
+	"xai":         "XAI_API_KEY",
+}
+
+// providerFromModelName infers a provider from a model id when the section
+// names none (the CLI resolves sessions the same way).
+func providerFromModelName(model string) string {
+	lower := strings.ToLower(model)
+	if index := strings.Index(lower, "/"); index > 0 {
+		if _, known := slotProviderEnvVars[lower[:index]]; known {
+			return lower[:index]
+		}
+	}
+	switch {
+	case llm.IsAnthropicModel(lower):
+		return "anthropic"
+	case strings.HasPrefix(lower, "gemini-"):
+		return "gemini"
+	}
+	return "openai"
+}
+
+// SectionProvider builds the HTTP transport for one configured model section.
+// Key, base and extra-body resolution live here so the runtime rebuild path
+// and the session builder cannot drift.
+//
+// Parity: framework/server/queen_models.py::build
+func SectionProvider(home hivehome.Home, section map[string]any) *llm.Provider {
+	provider := llm.NewHTTPProvider(llm.ProviderOptions{
+		Model:   SectionModel(section),
+		APIKey:  SectionAPIKey(section, MainSlotAPIKey(home)),
+		APIBase: SectionAPIBase(section),
+	})
+	if extra := sectionExtraKwargs(section); extra != nil {
+		provider.ExtraKwargs = extra
+	}
+	return provider
+}
+
+// sectionExtraKwargs mirrors upstream's per-slot extra kwargs: num_ctx for an
+// ollama model, otherwise the section's extra_body (a provider's thinking
+// switch, reasoning_effort).
+func sectionExtraKwargs(section map[string]any) map[string]any {
+	if provider, _ := section["provider"].(string); strings.EqualFold(strings.TrimSpace(provider), "ollama") {
+		return map[string]any{"num_ctx": SectionNumCtx(section)}
+	}
+	if extra := SectionExtraBody(section); extra != nil {
+		return map[string]any{"extra_body": extra}
+	}
+	return nil
+}
+
+// ReconfigureSection rebuilds the provider behind a live session (or colony
+// worker slot) from a written model section: the model, key, base and
+// extra_body upstream's provider.reconfigure replaces. A holder without a
+// reconfigure seam reports false, so callers count only real switches.
+//
+// Parity: core/framework/llm/litellm.py::LiteLLMProvider.reconfigure
+func ReconfigureSection(holder any, home hivehome.Home, section map[string]any) bool {
+	reconfigurable, ok := holder.(interface {
+		Reconfigure(fullModel string, apiKey, apiBase *string, extraBody any)
+	})
+	if !ok || section == nil || !SectionConfigured(section) {
+		return false
+	}
+	key := SectionAPIKey(section, MainSlotAPIKey(home))
+	if key == "" {
+		// Nothing resolvable in the section: keep the live provider's key
+		// instead of stripping the Authorization header upstream's
+		// resolver-based provider would have kept.
+		if completer, ok := holder.(llm.Completer); ok {
+			if live, ok := llm.ResolveCompleter(completer).(*llm.Provider); ok {
+				key = live.APIKey
+			}
+		}
+	}
+	var apiKey *string
+	if key != "" {
+		apiKey = &key
+	}
+	var apiBase *string
+	if base := SectionAPIBase(section); base != "" {
+		apiBase = &base
+	}
+	reconfigurable.Reconfigure(SectionModel(section), apiKey, apiBase, section["extra_body"])
+	return true
+}
+
 // QueenLLMSection is a queen's own model section, or nil when she has none (or
 // it lacks a provider/model pair).
 //

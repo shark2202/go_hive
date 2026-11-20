@@ -102,12 +102,12 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 | `gcu_viewport_scale` | `server.GcuViewportScale` → `HIVE_BROWSER_VIEWPORT_SCALE` | 数字 0.1–1.0，默认 0.8；非数字/越界回落 0.8，显式 env 覆盖按 [0.1, 1.0] 夹取。桥在 `GET /status` 的 `viewport_scale` 与启动日志上报（实测 0.65 / 0.55 / 0.8）。上游 getter 自扩展化浏览器后无消费点，Go 只读并上报，不改截图/抓取几何 |
 | `turn_context` | `server.StartTurnContexts` | `turn_context.<name>.enabled` 为真时启动该已安装包，其文本作为 `<system-reminder>` 插在 queen 每回合用户消息之前；queen-only，单包 5s 超时，异常/启动失败跳过；默认无包 |
 | `loop` | `hiveconf.MaxToolResultChars`、chat/worker 循环配置 | `loop.max_tool_result_chars`：工具结果溢出阈值（int，默认 30000）；queen chat 循环与 colony worker 循环都读取（代码路径；`TestChatLoopConfigAppliesTheLoopSection`、`TestBuildWorkerLoopConfigAppliesLoopSection`） |
-| `worker_llm` / `vision_fallback` / `queen_llm` | `cli.queenAwareChatProvider`、`cli.workerChatProvider`、`cli.visionCaptionerFor` | 模型槽位，字段同 `llm`（`provider`/`model`/`api_key`/`api_base`/`api_key_env_var`/`extra_body`/`num_ctx`/`max_context_tokens`）。会话启动时读取：`queen_llm.<queen_id>` 选 queen 自己的模型（她的 colony 沿用），`worker_llm` 选 colony worker 专用模型，`vision_fallback` 为文本主模型提供工具图片描述；缺省或没有 `provider`+`model` 时回落到 `llm`（代码路径 + 测试） |
+| `worker_llm` / `vision_fallback` / `queen_llm` | `cli.queenAwareChatProvider`、`cli.workerChatProvider`、`cli.visionCaptionerFor`、`server.ReconfigureSection` | 模型槽位，字段同 `llm`（`provider`/`model`/`api_key`/`api_base`/`api_key_env_var`/`extra_body`/`num_ctx`/`max_context_tokens`）。热切换矩阵见 §3.8：`queen_llm.<queen_id>` 写入即重建该 queen 运行中会话的 provider（她的 colony 沿用）；`vision_fallback` 每次 caption 重新解析，写入即对下一张工具图片生效；`worker_llm` 按上游语义在下一个 colony/会话构建时生效。缺省或没有 `provider`+`model` 时回落到 `llm`（代码路径 + 测试） |
 | `worker_tools` | `cli.loader_colony_host` → `server.WorkerKeepSetFromConfig` | `worker_tools.always_enabled_categories`：worker eager 工具类别覆盖（`list[string]`）；空列表关闭 worker tiering，缺省用内置 keep-set；混合类型列表不视为覆盖（与上游一致） |
 | `mcp` | `cli.mcp_loader`、`internal/tools.MCPCallResultTimeout` | Go 扩展（Python 无此块）：`mcp.timeout_seconds` 是 MCP 调用超时的文件兜底；`HIVE_MCP_CALL_RESULT_TIMEOUT` 优先于它（env > file > 240s，`TestMCPCallResultTimeoutPrecedence`） |
 | `channels` | 无 | **不支持**：上游用 `hive.channels` entry-point 插件宿主；Go 端口没有插件宿主与渠道生命周期，`channels.<name>.enabled` 没有可门控的消费点（登记在 `contracts/config-support-ledger.json`） |
 
-`llm`、`worker_llm`、`vision_fallback`、`judge` 与 `queen_llm.<queen_id>` 是模型「槽位」，由设置接口写入。本版本运行时消费：`llm`（默认会话模型）、`judge`（judge 槽）、`queen_llm.<queen_id>`（会话启动时按 queen 选模型）、`worker_llm`（colony worker 专用模型）、`vision_fallback`（文本主模型的图片描述）。设置接口 `PUT` 写入后新会话生效；已运行会话只有主槽 `llm` 有热切换路径，其余槽位的原地切换未实现（`llm.Provider` 无 Reconfigure），需重建会话或重启 `serve`。
+`llm`、`worker_llm`、`vision_fallback`、`judge` 与 `queen_llm.<queen_id>` 是模型「槽位」，由设置接口写入。本版本运行时消费：`llm`（默认会话模型）、`judge`（judge 槽）、`queen_llm.<queen_id>`（会话启动按 queen 选模型，写后原地切换）、`worker_llm`（colony worker 专用模型）、`vision_fallback`（文本主模型的图片描述，逐次 caption 解析）。热切换矩阵见 §3.8：主槽 `llm` 与 `queen_llm.<id>` 写入即重建运行中会话的 transport，`vision_fallback` 写入即对下一张工具图片生效，`worker_llm` 与上游一致只对下一个 colony/会话生效；进行中的回合始终用旧 provider 跑完（回合级 pin）。
 
 `llm.antigravity_client_id` / `llm.antigravity_client_secret` 是**只读**项：Go 侧有读取点（`ANTIGRAVITY_CLIENT_ID` / `ANTIGRAVITY_CLIENT_SECRET` 环境变量优先，其次配置文件），但端口的 Antigravity 登录读预发的 access token（`antigravity-accounts.json`），没有 OAuth 刷新流程去消费 client id/secret。`llm.use_antigravity_subscription` / `llm.use_kimi_code_subscription` 也只有 REST 面，运行时订阅 token 分支未移植。
 
@@ -192,6 +192,30 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 2. 服务端打印 `Warning: chat runtime unavailable for <session_id>: no API key configured …`；
 3. 该会话的 `chat` 返回 503，而不是把消息丢进一个永远不工作的队列；
 4. 该会话只存在于内存：`hive session list` 能看到，服务重启后消失；没有 transcript 落盘，`hive session list --cold` 不会显示它。
+
+### 3.8 模型槽位热切换（PUT 后何时生效）
+
+`llm.Provider` 在构造后只读（请求在读它的字段，原地改字段会与在读请求竞态）。可替换面是 `internal/llm.ProviderSlot`：`Reconfigure(fullModel, apiKey, apiBase, extraBody)` 用**同一个** `NewHTTPProvider` 工厂重建 transport 并原子替换（不复制 provider 请求逻辑），会话（及 colony 的 worker 槽）持有 slot。`ChatRuntime` 在**每回合开始**把当前 provider pin 住，因此写入落在回合中间时：
+
+- 进行中的回合：继续用旧 provider 跑完（不撕裂，回合内迭代不会换模型）；
+- 下一回合：解析到重建后的 provider（新 model / api_base / api_key / extra_body）。
+
+| 槽位 | 写入接口 | 生效时机 |
+| --- | --- | --- |
+| `llm`（主槽） | `PUT /api/config/llm`、`PUT /api/config/llm-sections`(role=llm)、`PUT /api/models/slots/llm` | 写入即重建所有运行中会话（跳过有自己模型的 queen）及其 colony worker slot；下一回合生效 |
+| `queen_llm.<id>` | `PUT /api/queen/{id}/llm`、`PUT /api/models/slots/queen:<id>` | 写入即重建该 queen 运行中会话的 provider（`sessions_switched` 计数）；清空 section 则回主模型 |
+| `vision_fallback` | `PUT /api/config/llm-sections`、`PUT /api/models/slots/vision_fallback` | 每次 caption 重新读槽位：写入后下一张工具图片即用新 model/api_base，无需重建会话 |
+| `worker_llm` | `PUT /api/config/llm-sections`、`PUT /api/models/slots/worker_llm` | 与上游 `_write_role_section` 一致：**不改运行中会话**（`sessions_swapped: 0`），下一个 colony/会话构建的 worker 用新 provider |
+| `judge` | `PUT /api/config/llm-sections` | 每次判定新建 client，写入即生效 |
+
+写入返回体沿用上游形状：槽位接口 `{role, section, sessions_swapped}`，queen 路由 `{queen_id, section, sessions_switched}`；错误仍是 400 + `{"error": ...}`（缺 `model`、非法 role、queen 不存在、key 校验失败）。并发 PUT 由 `MutateHiveConfig` 的文件锁与 slot 的读写下串行化；不同会话并发写同一槽位各自重建自己的 transport。
+
+实测（`go_hive/scripts/e2e_config_hotswap.py`：真实 `serve` + 两个假 OpenAI 网关，网关记录每个请求的 model 与图片块；原始输出见 `docs/e2e-assets/config-hotswap/`）：
+
+- 改 `queen_llm.qa`：POST 前请求落在旧网关（`queen-old`）；`PUT /api/queen/qa/llm` 返回 `sessions_switched: 1`；下一回合请求落在新网关（`queen-new`），同一会话两轮都答出（3 个 assistant part），GET 回读等于写入的 section。
+- 改 `vision_fallback`（会话创建时该槽位还不存在）：下一张 `attach_file` 工具图片的 caption 请求落在新网关（`caption-new`，请求体带 `image_url`）。
+- 改 `worker_llm`：返回 `sessions_swapped: 0`；新建 colony 会话后其 worker 的请求落在新网关（`worker-new`），queen/overseer 仍用 queen 模型。
+- 单测：`internal/llm/hotswap_test.go`（重建/替换/并发，`-race`）、`internal/server/model_hotswap_test.go`（回合 pin、queen 路由、config 路由、`sessions_swapped` 语义）、`internal/colony/worker_model_slot_test.go`（worker 槽消费）、`internal/visionfallback/visionfallback_hotswap_test.go`（逐次解析）。
 
 ## 4. 凭据
 
@@ -356,5 +380,5 @@ Workers (1):
 | `HIVE_MAX_ITER` | 会话循环创建时读取（已运行会话不受影响） |
 | `HIVE_SPLIT_WORKER_EVENTS` | colony 启动时读取（重启 `serve` 后生效） |
 | `HIVE_STALL_CHECK` | 服务端每次判定时读取（`StallCheckEnabled` 每次调用都读） |
-| 设置接口（`PUT /api/config/...`） | 写入后新会话；主槽 `llm` 另有热切换路径，本文未实测。`worker_llm` / `vision_fallback` / `queen_llm` 的原地热切换不支持（`llm.Provider` 无 Reconfigure），需重建会话或重启 `serve` |
+| 设置接口（`PUT /api/config/...`） | 写入后新会话；主槽 `llm`/`queen_llm.<id>` 另有热切换路径并已实测（§3.8）：写入即重建运行中会话的 transport，下一回合生效；`vision_fallback` 逐次 caption 解析，写入即生效；`worker_llm` 与上游一致只对下一个 colony/会话生效。进行中的回合用旧 provider 跑完 |
 | colony 的 worker 定义 | 下次 spawn 时读取 |

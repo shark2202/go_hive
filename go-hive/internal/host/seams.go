@@ -109,6 +109,12 @@ func (h *Host) WorkerLLM() any {
 	return h.runtime.WorkerLLM()
 }
 
+// LLM exposes the colony's own completer (overseer transport) for the
+// queen-model reconfigure path.
+func (h *Host) LLM() any {
+	return h.runtime.LLM()
+}
+
 // BoundWorkersForProfile lists workers dispatched from a worker profile.
 func (h *Host) BoundWorkersForProfile(profileName string) []string {
 	return h.runtime.BoundWorkersForProfile(profileName)

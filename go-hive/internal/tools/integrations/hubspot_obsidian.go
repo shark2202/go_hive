@@ -69,6 +69,7 @@ func batch5Lane4Modules() map[string]*ModuleConfig {
 			ID:      "hubspot_tool",
 			BaseURL: "https://api.hubapi.com",
 			EnvVars: []string{"HUBSPOT_ACCESS_TOKEN"},
+			OAuth:   batch5Lane4HubSpotOAuth,
 		},
 		// The Obsidian base URL is instance-specific, so it stays empty here:
 		// WithBaseURL wins, then OBSIDIAN_REST_BASE_URL, then the plugin default.

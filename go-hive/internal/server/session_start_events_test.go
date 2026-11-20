@@ -287,10 +287,17 @@ func TestSessionOpeningEventsNotDuplicatedByFirstTurn(t *testing.T) {
 	if counts["execution_completed"] != 1 {
 		t.Fatalf("the first turn never completed; events = %v", eventTypes(events))
 	}
-	for _, opening := range []string{"queen_identity_selected", "reminder_injected", "context_usage_updated"} {
+	for _, opening := range []string{"queen_identity_selected", "reminder_injected"} {
 		if counts[opening] != 1 {
 			t.Fatalf("%s count = %d, want exactly the opening one (%v)", opening, counts[opening], eventTypes(events))
 		}
+	}
+	// context_usage_updated is not a once-per-session announcement: upstream
+	// publishes it on every iteration start (publish_context_usage with
+	// trigger=iteration_start), so the first user turn adds its own readout on
+	// top of the opening block's.
+	if counts["context_usage_updated"] != 2 {
+		t.Fatalf("context_usage_updated count = %d, want the opening one plus the turn's iteration readout (%v)", counts["context_usage_updated"], eventTypes(events))
 	}
 	if got := eventTypes(events)[:5]; strings.Join(got, ",") != strings.Join([]string{
 		"queen_identity_selected",

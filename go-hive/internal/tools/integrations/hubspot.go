@@ -231,31 +231,66 @@ func batch5HubSpotAuthError() map[string]any {
 	}
 }
 
+// batch5Lane4AccessToken resolves a lane-4 credential for the current call: an
+// account alias wins over the module token (upstream `_get_token(account)` ->
+// credentials.get_by_alias(provider, account)); without an alias the module
+// token is refreshed when its OAuth2 access token is near expiry.
+func batch5Lane4AccessToken(ctx context.Context, rt *Runtime, moduleID, provider string) (string, bool, map[string]any) {
+	if token, handled := rt.ResolveAccountToken(provider); handled {
+		return token, false, nil
+	}
+	return oauthModuleToken(ctx, rt, moduleID)
+}
+
 // batch5HubSpotClient mirrors upstream _HubSpotClient: one token and base URL
 // bound to a single action invocation.
 type batch5HubSpotClient struct {
-	ctx   context.Context
-	rt    *Runtime
-	base  string
-	token string
+	ctx         context.Context
+	rt          *Runtime
+	base        string
+	token       string
+	refreshable bool
 }
 
 func batch5NewHubSpotClient(ctx context.Context, rt *Runtime) (*batch5HubSpotClient, map[string]any) {
-	token := batch5Lane4AccountToken(rt, "hubspot_tool", "hubspot")
+	token, refreshable, problem := batch5Lane4AccessToken(ctx, rt, "hubspot_tool", "hubspot")
+	if problem != nil {
+		return nil, problem
+	}
 	if token == "" {
 		return nil, batch5HubSpotAuthError()
 	}
 	return &batch5HubSpotClient{
-		ctx:   ctx,
-		rt:    rt,
-		base:  batch5Lane4ModuleURL(rt, "hubspot_tool", "https://api.hubapi.com"),
-		token: token,
+		ctx:         ctx,
+		rt:          rt,
+		base:        batch5Lane4ModuleURL(rt, "hubspot_tool", "https://api.hubapi.com"),
+		token:       token,
+		refreshable: refreshable,
 	}, nil
 }
 
 // send performs one request and returns the response metadata plus the body.
-// Transport and request-construction failures become error dicts.
+// Transport and request-construction failures become error dicts. A 401 with a
+// refreshable token is retried once with a freshly minted access token.
 func (c *batch5HubSpotClient) send(method, path string, query url.Values, payload any) (*http.Response, []byte, map[string]any) {
+	resp, raw, problem := c.attempt(method, path, query, payload)
+	if resp == nil || problem != nil || resp.StatusCode != http.StatusUnauthorized || !c.refreshable {
+		return resp, raw, problem
+	}
+	resp.Body.Close()
+	resolution := c.rt.ResolveUnauthorized(c.ctx, "hubspot_tool", "HubSpot")
+	if !resolution.Retry {
+		if resolution.Failure != nil {
+			return nil, nil, resolution.Failure
+		}
+		return nil, nil, problem
+	}
+	c.token = resolution.Token
+	return c.attempt(method, path, query, payload)
+}
+
+// attempt is one authorized request against the HubSpot API.
+func (c *batch5HubSpotClient) attempt(method, path string, query url.Values, payload any) (*http.Response, []byte, map[string]any) {
 	var body io.Reader
 	if payload != nil {
 		encoded, err := json.Marshal(payload)

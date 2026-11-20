@@ -23,11 +23,25 @@
         {
           "file": "go_hive/go-hive/internal/cli/loader_colony_host.go",
           "contains": "queenAwareChatProvider(home, model, colonyQueenName(home, colonyID))"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/routes_queens.go",
+          "contains": "func applyQueenModelSection("
+        },
+        {
+          "file": "go_hive/go-hive/internal/llm/hotswap.go",
+          "contains": "func (s *ProviderSlot) Reconfigure("
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/chat_runtime.go",
+          "contains": "func (r *ChatRuntime) pinTurnProvider("
         }
       ],
       "tests": [
         "TestQueenAwareChatProviderUsesQueenSection",
-        "TestQueenLLMSectionRequiresProviderAndModel"
+        "TestQueenLLMSectionRequiresProviderAndModel",
+        "TestAQueenModelPutRebuildsHerRunningSessionsProvider",
+        "TestAModelSlotSwapPinsTheRunningTurnAndTheNextTurnUsesIt"
       ]
     },
     {
@@ -101,11 +115,16 @@
         {
           "file": "go_hive/go-hive/internal/agentloop/vision_caption.go",
           "contains": "l.VisionCaptioner.Caption(ctx, intent, result.ImageContent)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/visionfallback/visionfallback.go",
+          "contains": "func NewResolver("
         }
       ],
       "tests": [
         "TestTextOnlyModelGetsCaptionsInsteadOfImages",
-        "TestWorkerAndVisionSectionsResolve"
+        "TestWorkerAndVisionSectionsResolve",
+        "TestCaptionerResolvesTheSlotPerCaption"
       ]
     },
     {
@@ -173,10 +192,20 @@
         {
           "file": "go_hive/go-hive/internal/colony/runtime.go",
           "contains": "runtime.workerLLM = opts.WorkerLLM"
+        },
+        {
+          "file": "go_hive/go-hive/internal/colony/runtime.go",
+          "contains": "completer = r.workerCompleter()"
+        },
+        {
+          "file": "go_hive/go-hive/internal/llm/hotswap.go",
+          "contains": "func (s *ProviderSlot) Reconfigure("
         }
       ],
       "tests": [
-        "TestWorkerChatProviderUsesWorkerSection"
+        "TestWorkerChatProviderUsesWorkerSection",
+        "TestWorkersRunOnTheWorkerSlotAndTheOverseerKeepsTheColonyModel",
+        "TestAWorkerLLMWriteIsPickedUpByTheNextSession"
       ]
     },
     {
@@ -209,8 +238,8 @@
       "status": "wired",
       "anchors": [
         {
-          "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-          "contains": "func slotExtraKwargs("
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func sectionExtraKwargs("
         }
       ],
       "tests": [

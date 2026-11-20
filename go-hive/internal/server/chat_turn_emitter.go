@@ -46,6 +46,12 @@ type chatTurnEmitter struct {
 	// conv supplies the per-turn cache diagnostics (system prefix/suffix sha,
 	// request message count) llm_turn_complete carries upstream.
 	conv *agentloop.NodeConversation
+	// phase is the queen phase stamped on every node_loop_iteration, as the
+	// upstream loop's iteration_metadata_provider reports it.
+	phase func() string
+	// contextUsage builds the per-iteration context_usage_updated payload.
+	// Upstream publishes it on every iteration start; nil skips the readout.
+	contextUsage func() map[string]any
 }
 
 func (r *ChatRuntime) newTurnEmitter(executionID string) *chatTurnEmitter {
@@ -65,6 +71,8 @@ func (r *ChatRuntime) newTurnEmitter(executionID string) *chatTurnEmitter {
 		maxIterations: maxIterations,
 		stream:        r.streamLLM,
 		conv:          r.conv,
+		phase:         r.deps.Phase,
+		contextUsage:  r.turnContextUsage,
 	}
 }
 
@@ -88,12 +96,22 @@ func (e *chatTurnEmitter) executionStarted(message string) {
 }
 
 // Parity: framework/agent_loop/agent_loop.py::_publish_iteration
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_context_usage
 func (e *chatTurnEmitter) IterationStarted(iteration int) {
 	if e == nil {
 		return
 	}
 	if e.stream != nil {
 		e.stream.noteIteration(iteration)
+	}
+	// Upstream stamps every node_loop_iteration with the queen's phase (the
+	// loop's iteration_metadata_provider) and follows it with a context readout
+	// for the iteration that is about to run.
+	extra := map[string]any{}
+	if e.phase != nil {
+		if phase := e.phase(); phase != "" {
+			extra["phase"] = phase
+		}
 	}
 	if e.opening {
 		// The session-start block already carries iteration 0, so the first
@@ -104,10 +122,28 @@ func (e *chatTurnEmitter) IterationStarted(iteration int) {
 			return
 		}
 		rebased := iteration - 1
-		e.bus.EmitNodeLoopIteration(e.streamID, e.nodeID, rebased, &e.executionID, nil)
+		e.bus.EmitNodeLoopIteration(e.streamID, e.nodeID, rebased, &e.executionID, extra)
+		e.emitContextUsage()
 		return
 	}
-	e.bus.EmitNodeLoopIteration(e.streamID, e.nodeID, iteration, &e.executionID, nil)
+	e.bus.EmitNodeLoopIteration(e.streamID, e.nodeID, iteration, &e.executionID, extra)
+	e.emitContextUsage()
+}
+
+// emitContextUsage publishes the iteration_start context readout upstream's
+// loop emits before each LLM call.
+func (e *chatTurnEmitter) emitContextUsage() {
+	if e == nil || e.contextUsage == nil {
+		return
+	}
+	payload := e.contextUsage()
+	if payload == nil {
+		return
+	}
+	event := eventbus.NewAgentEvent(eventbus.EventContextUsageUpdated, e.streamID)
+	event.NodeID = eventbus.StrPtr(e.nodeID)
+	event.Data = payload
+	e.bus.Publish(event)
 }
 
 // Parity: framework/agent_loop/internals/event_publishing.py::publish_text_delta

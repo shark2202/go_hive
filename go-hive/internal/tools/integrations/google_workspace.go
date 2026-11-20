@@ -29,6 +29,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -105,15 +106,17 @@ func newBatch5Lane3Registry(opts ...Option) *Registry {
 }
 
 // batch5Lane3Modules declares the public endpoints and the credential variable
-// shared by all four modules. Tests override BaseURL with WithBaseURL.
+// shared by all four modules. Tests override BaseURL with WithBaseURL. The
+// three retrievable modules also declare the standard OAuth2 refresh-token
+// source; the sheet/docs drive entry reuses the docs credential.
 func batch5Lane3Modules() map[string]*ModuleConfig {
 	google := []string{"GOOGLE_ACCESS_TOKEN"}
 	return map[string]*ModuleConfig{
-		batch5Lane3SheetsModule: {ID: batch5Lane3SheetsModule, BaseURL: "https://sheets.googleapis.com", EnvVars: google},
-		batch5Lane3DocsModule:   {ID: batch5Lane3DocsModule, BaseURL: "https://docs.googleapis.com", EnvVars: google},
+		batch5Lane3SheetsModule: {ID: batch5Lane3SheetsModule, BaseURL: "https://sheets.googleapis.com", EnvVars: google, OAuth: batch5Lane3OAuth},
+		batch5Lane3DocsModule:   {ID: batch5Lane3DocsModule, BaseURL: "https://docs.googleapis.com", EnvVars: google, OAuth: batch5Lane3OAuth},
 		batch5Lane3DriveModule:  {ID: batch5Lane3DriveModule, BaseURL: "https://www.googleapis.com"},
-		batch5Lane3GmailModule:  {ID: batch5Lane3GmailModule, BaseURL: "https://gmail.googleapis.com", EnvVars: google},
-		batch5Lane3CalModule:    {ID: batch5Lane3CalModule, BaseURL: "https://www.googleapis.com", EnvVars: google},
+		batch5Lane3GmailModule:  {ID: batch5Lane3GmailModule, BaseURL: "https://gmail.googleapis.com", EnvVars: google, OAuth: batch5Lane3OAuth},
+		batch5Lane3CalModule:    {ID: batch5Lane3CalModule, BaseURL: "https://www.googleapis.com", EnvVars: google, OAuth: batch5Lane3OAuth},
 	}
 }
 
@@ -146,6 +149,48 @@ func batch5Lane3AccountToken(rt *Runtime, moduleID string) string {
 	return accountToken(rt, moduleID, "google")
 }
 
+// batch5Lane3AccountCredential reports whether an alias-aware Google module
+// has a usable credential: the selected account resolves, or the module has a
+// token or an OAuth2 refresh-token source that mints one.
+func batch5Lane3AccountCredential(rt *Runtime, moduleID string) bool {
+	if token, handled := rt.ResolveAccountToken("google"); handled {
+		return token != ""
+	}
+	return batch5Lane3Credential(rt, moduleID)
+}
+
+// batch5Lane3Credential reports whether a single-credential Google module has
+// a token or an OAuth2 refresh-token source.
+func batch5Lane3Credential(rt *Runtime, moduleID string) bool {
+	if rt.OAuthRefreshable(moduleID) {
+		return true
+	}
+	return batch5Lane3Token(rt, moduleID) != ""
+}
+
+// batch5Lane3ValueError carries an upstream-style value error through the
+// (status, body, error) transport signature so callers return it unchanged.
+type batch5Lane3ValueError struct{ dict map[string]any }
+
+func (e *batch5Lane3ValueError) Error() string {
+	return fmt.Sprint(e.dict["error"])
+}
+
+// batch5Lane3AccessToken resolves the token for one Google request, refreshing
+// an expired OAuth2 access token first. refreshable reports whether a 401 can
+// be retried with a freshly minted token.
+func batch5Lane3AccessToken(ctx context.Context, rt *Runtime, moduleID string, useAlias bool) (string, bool, map[string]any) {
+	if useAlias {
+		if token, handled := rt.ResolveAccountToken("google"); handled {
+			// An aliased store credential is a single token; the refresh
+			// material (client id/secret, refresh token) lives with the
+			// module's own credential, not the alias.
+			return token, false, nil
+		}
+	}
+	return oauthModuleToken(ctx, rt, moduleID)
+}
+
 // batch5Lane3Base resolves a module base URL, honouring WithBaseURL.
 func batch5Lane3Base(rt *Runtime, moduleID string) string {
 	if rt == nil || rt.Modules == nil {
@@ -171,6 +216,8 @@ func batch5Lane3Segments(segments ...string) string {
 
 // batch5Lane3Do sends one authorized request and returns status and body.
 // Transport failures are returned as errors for the caller's message mapping.
+// An expired OAuth2 token is refreshed before the request; a 401 retries once
+// with a freshly minted token.
 func batch5Lane3Do(ctx context.Context, rt *Runtime, moduleID, method, path string, query map[string]string, body any) (int, []byte, error) {
 	target := batch5Lane3Base(rt, moduleID) + path
 	if len(query) > 0 {
@@ -180,37 +227,65 @@ func batch5Lane3Do(ctx context.Context, rt *Runtime, moduleID, method, path stri
 		}
 		target += "?" + values.Encode()
 	}
-	var reader io.Reader
-	if body != nil {
-		encoded, err := json.Marshal(body)
-		if err != nil {
-			return 0, nil, err
-		}
-		reader = bytes.NewReader(encoded)
-	}
-	req, err := http.NewRequestWithContext(ctx, method, target, reader)
-	if err != nil {
-		return 0, nil, err
-	}
-	token := batch5Lane3Token(rt, moduleID)
 	// Drive calls belong to the Docs tool but live on another host; they reuse
 	// the Docs credential, like upstream's single client. Docs, Drive, Gmail and
 	// Calendar honour the `account` alias; Sheets keeps its single token because
 	// upstream's tool ignores the parameter.
+	credentialModule := moduleID
+	useAlias := true
 	switch moduleID {
 	case batch5Lane3DriveModule:
-		token = batch5Lane3AccountToken(rt, batch5Lane3DocsModule)
+		credentialModule = batch5Lane3DocsModule
 	case batch5Lane3SheetsModule:
-	default:
-		token = batch5Lane3AccountToken(rt, moduleID)
+		useAlias = false
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-
+	token, _, problem := batch5Lane3AccessToken(ctx, rt, credentialModule, useAlias)
+	if problem != nil {
+		return 0, nil, &batch5Lane3ValueError{dict: problem}
+	}
+	build := func(token string) (*http.Request, error) {
+		var reader io.Reader
+		if body != nil {
+			encoded, err := json.Marshal(body)
+			if err != nil {
+				return nil, err
+			}
+			reader = bytes.NewReader(encoded)
+		}
+		req, err := http.NewRequestWithContext(ctx, method, target, reader)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		return req, nil
+	}
+	req, err := build(token)
+	if err != nil {
+		return 0, nil, err
+	}
 	resp, err := batch4HTTP(rt).Do(req)
 	if err != nil {
 		return 0, nil, err
+	}
+	if token != "" && resp.StatusCode == http.StatusUnauthorized {
+		resolution := rt.ResolveUnauthorized(ctx, credentialModule, "Google")
+		switch {
+		case resolution.Retry:
+			resp.Body.Close()
+			req, err = build(resolution.Token)
+			if err != nil {
+				return 0, nil, err
+			}
+			resp, err = batch4HTTP(rt).Do(req)
+			if err != nil {
+				return 0, nil, err
+			}
+		case resolution.Failure != nil:
+			resp.Body.Close()
+			return 0, nil, &batch5Lane3ValueError{dict: resolution.Failure}
+		}
 	}
 	defer resp.Body.Close()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, batch5Lane3MaxBody))
@@ -223,6 +298,10 @@ func batch5Lane3Do(ctx context.Context, rt *Runtime, moduleID, method, path stri
 // batch5Lane3TransportError maps a transport failure onto the upstream
 // timeout/network error dicts.
 func batch5Lane3TransportError(ctx context.Context, err error) map[string]any {
+	var valueErr *batch5Lane3ValueError
+	if errors.As(err, &valueErr) {
+		return valueErr.dict
+	}
 	if batch4IsTimeout(ctx, err) {
 		return map[string]any{"error": "Request timed out"}
 	}

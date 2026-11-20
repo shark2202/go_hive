@@ -501,21 +501,29 @@ func swapMainModel(deps ModelRouteDeps, section map[string]any) int {
 	if deps.HotSwap != nil {
 		return deps.HotSwap(fullModel, apiKey, apiBase, extraBody)
 	}
-	return defaultModelHotSwap(deps, fullModel, apiKey, apiBase, extraBody)
+	return SwapMainModel(deps.Home, deps.Manager, fullModel, apiKey, apiBase, extraBody)
 }
 
-func defaultModelHotSwap(deps ModelRouteDeps, fullModel string, apiKey, apiBase *string, extraBody any) int {
-	if deps.Manager == nil {
+// SwapMainModel reconfigures every running session (and its colony worker
+// slot) onto a new main-model provider, skipping queens with a model of their
+// own. This is the shared walker behind PUT /api/models/slots/llm,
+// PUT /api/config/llm and PUT /api/config/llm-sections.
+//
+// Parity: framework/server/routes_config.py::_hot_swap_sessions
+func SwapMainModel(home hivehome.Home, manager *SessionManager, fullModel string, apiKey, apiBase *string, extraBody any) int {
+	if manager == nil {
 		return 0
 	}
 	ownQueens := map[string]struct{}{}
-	if sections, ok := HiveConfig(deps.Home)["queen_llm"].(map[string]any); ok {
-		for id := range sections {
-			ownQueens[id] = struct{}{}
+	if sections, ok := HiveConfig(home)["queen_llm"].(map[string]any); ok {
+		for id, raw := range sections {
+			if section, ok := raw.(map[string]any); ok && SectionConfigured(section) {
+				ownQueens[id] = struct{}{}
+			}
 		}
 	}
 	swapped := 0
-	for _, session := range deps.Manager.ListSessions() {
+	for _, session := range manager.ListSessions() {
 		if session == nil {
 			continue
 		}
@@ -560,14 +568,15 @@ func applyQueenModel(deps ModelRouteDeps, queenID string, section map[string]any
 			}
 			continue
 		}
-		fullModel := sectionFullModel(section)
-		apiKey := sectionAPIKey(deps, section)
-		var apiBase *string
-		if base := modelSectionString(section, "api_base"); base != "" {
-			apiBase = &base
-		}
-		if reconfigureModel(session.LLM, fullModel, apiKey, apiBase, section["extra_body"]) {
+		if ReconfigureSection(session.LLM, deps.Home, section) {
 			swapped++
+		}
+		// The colony's overseer transport is separate in Go; upstream's
+		// colony shares the session provider object when worker_llm is unset,
+		// so her new model has to reach it for a colony-bound session to
+		// switch at all.
+		if holder, ok := session.Colony.(interface{ LLM() any }); ok {
+			ReconfigureSection(holder.LLM(), deps.Home, section)
 		}
 	}
 	return swapped

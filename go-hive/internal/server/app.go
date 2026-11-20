@@ -105,6 +105,41 @@ type App struct {
 	processStart float64
 }
 
+// configRouteDeps resolves the seams the config routes need before they are
+// registered: the home fallback (an empty Home would resolve
+// "configuration.json" relative to the cwd) and the model-slot hot-swap
+// bridges. Model-slot writes must hot-swap running sessions when the writer
+// did not supply its own walker: the same reconfigure path the Models page
+// uses, so PUT /api/config/llm and PUT /api/config/llm-sections (role=llm)
+// stop being config-only.
+func configRouteDeps(deps AppDeps) ConfigRouteDeps {
+	configDeps := deps.Config
+	if configDeps.Home.Root == "" {
+		configDeps.Home = deps.Home
+	}
+	if deps.Manager == nil {
+		return configDeps
+	}
+	if configDeps.Role.HotSwap == nil {
+		configDeps.Role.HotSwap = func(fullModel, apiKey, apiBase string) int {
+			var key, base *string
+			if apiKey != "" {
+				key = &apiKey
+			}
+			if apiBase != "" {
+				base = &apiBase
+			}
+			return SwapMainModel(configDeps.Home, deps.Manager, fullModel, key, base, nil)
+		}
+	}
+	if configDeps.LLM.HotSwap == nil {
+		configDeps.LLM.HotSwap = func(fullModel string, apiKey, apiBase *string) int {
+			return SwapMainModel(configDeps.Home, deps.Manager, fullModel, apiKey, apiBase, nil)
+		}
+	}
+	return configDeps
+}
+
 func NewApp(deps AppDeps) *App {
 	app := &App{deps: deps, logger: deps.Logger, processStart: float64(time.Now().UnixNano()) / 1e9}
 	if app.logger == nil {
@@ -132,12 +167,10 @@ func NewApp(deps AppDeps) *App {
 	mux.HandleFunc("GET /api/health", app.handleHealth)
 	mux.HandleFunc("GET /api/startup-status", app.handleStartupStatus)
 	// Config routes read/write <HIVE_HOME>/configuration.json. AppDeps.Config is
-	// optional, so fall back to the app home instead of leaving Home zero-valued
-	// (an empty Home resolves to "configuration.json" relative to the cwd).
-	configDeps := deps.Config
-	if configDeps.Home.Root == "" {
-		configDeps.Home = deps.Home
-	}
+	// optional, so configRouteDeps falls back to the app home instead of
+	// leaving Home zero-valued (an empty Home resolves to "configuration.json"
+	// relative to the cwd) and wires the model-slot hot-swap bridges.
+	configDeps := configRouteDeps(deps)
 	RegisterConfigRoutes(mux, configDeps)
 	reminders := deps.Reminders
 	if reminders == nil {

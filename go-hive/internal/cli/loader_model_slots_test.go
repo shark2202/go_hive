@@ -8,6 +8,7 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
+	hiveserver "github.com/aden-hive/hive-go/internal/server"
 )
 
 // slotTestHome builds a temp hive home whose configuration.json holds the given
@@ -65,9 +66,15 @@ func TestQueenAwareChatProviderUsesQueenSection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("queenAwareChatProvider: %v", err)
 	}
-	queenProvider, ok := provider.(*llm.Provider)
+	// The session transport is a replaceable slot so a queen_llm PUT can
+	// rebuild it in place; the live provider is the slot's current one.
+	virtualSlot, ok := provider.(*llm.ProviderSlot)
 	if !ok {
-		t.Fatalf("provider type = %T", provider)
+		t.Fatalf("provider type = %T, want *llm.ProviderSlot", provider)
+	}
+	queenProvider, ok := llm.ResolveCompleter(virtualSlot).(*llm.Provider)
+	if !ok {
+		t.Fatalf("resolved provider type = %T", llm.ResolveCompleter(virtualSlot))
 	}
 	if got := queenProvider.ModelName(); got != "openai/gpt-queen" {
 		t.Fatalf("queen model = %q", got)
@@ -94,8 +101,8 @@ func TestQueenAwareChatProviderUsesQueenSection(t *testing.T) {
 		if err != nil {
 			t.Fatalf("queen %q: %v", queenID, err)
 		}
-		if provider != llm.Completer(mainProvider) {
-			t.Fatalf("queen %q did not fall back to the main provider", queenID)
+		if got := llm.ResolveCompleter(provider); got != llm.Completer(mainProvider) {
+			t.Fatalf("queen %q did not fall back to the main provider (%T)", queenID, got)
 		}
 	}
 }
@@ -123,9 +130,15 @@ func TestWorkerChatProviderUsesWorkerSection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("workerChatProvider: %v", err)
 	}
-	workerProvider, ok := provider.(*llm.Provider)
+	// The worker transport is a replaceable slot too, so the Models page's
+	// worker_llm write can rebuild the provider a new colony host hands to
+	// its workers.
+	if _, ok := provider.(*llm.ProviderSlot); !ok {
+		t.Fatalf("worker provider type = %T, want *llm.ProviderSlot", provider)
+	}
+	workerProvider, ok := llm.ResolveCompleter(provider).(*llm.Provider)
 	if !ok {
-		t.Fatalf("worker provider type = %T", provider)
+		t.Fatalf("resolved worker provider type = %T", llm.ResolveCompleter(provider))
 	}
 	if got := workerProvider.ModelName(); got != "groq/llama-worker" {
 		t.Fatalf("worker model = %q", got)
@@ -137,5 +150,41 @@ func TestWorkerChatProviderUsesWorkerSection(t *testing.T) {
 	// the main slot's key after it. With GROQ unset the main key applies.
 	if workerProvider.APIKey != "main-key" {
 		t.Fatalf("worker api key = %q, want the main key", workerProvider.APIKey)
+	}
+}
+
+// TestAWorkerLLMWriteIsPickedUpByTheNextSession pins the upstream worker_llm
+// write semantics: only the main llm slot hot-swaps running sessions
+// (routes_config._write_role_section), so a worker_llm write takes effect when
+// the next session's colony host is built — workerChatProvider is that path.
+//
+// Parity: core/tests/test_session_unified_colony_runtime.py::test_unified_colony_uses_configured_worker_llm
+func TestAWorkerLLMWriteIsPickedUpByTheNextSession(t *testing.T) {
+	home := slotTestHome(t, map[string]any{
+		"llm": map[string]any{"provider": "anthropic", "model": "claude-main", "api_key": "main-key"},
+	})
+	if provider, err := workerChatProvider(home); err != nil || provider != nil {
+		t.Fatalf("workerChatProvider before the write = (%v, %v), want (nil, nil)", provider, err)
+	}
+
+	section := map[string]any{"provider": "groq", "model": "worker-new", "api_base": "https://worker.example/v1"}
+	status, body := hiveserver.WriteRoleSection(home, "worker_llm", section, false, hiveserver.RoleWriteDeps{})
+	if status != 200 {
+		t.Fatalf("worker_llm write = %d/%#v", status, body)
+	}
+
+	provider, err := workerChatProvider(home)
+	if err != nil {
+		t.Fatalf("workerChatProvider: %v", err)
+	}
+	rebuilt, ok := llm.ResolveCompleter(provider).(*llm.Provider)
+	if !ok {
+		t.Fatalf("worker provider type = %T", llm.ResolveCompleter(provider))
+	}
+	if rebuilt.Model != "groq/worker-new" || rebuilt.APIBase != "https://worker.example/v1" {
+		t.Fatalf("next session's worker provider = %#v", rebuilt)
+	}
+	if rebuilt.APIKey != "main-key" {
+		t.Fatalf("worker key = %q, want the main slot fallback", rebuilt.APIKey)
 	}
 }

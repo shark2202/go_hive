@@ -11,17 +11,20 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
 // EnvBinding maps one saved credential onto the environment variable a tool
 // reads. CredentialKey names the key inside the credential; empty falls back
-// to the credential's primary key (api_key, access_token, ...).
+// to the credential's primary key (api_key, access_token, ...). ExpiryKey
+// names a key whose expiry timestamp is exported instead of its value.
 type EnvBinding struct {
 	CredentialID  string
 	EnvVar        string
 	CredentialKey string
+	ExpiryKey     string
 }
 
 // EnvSyncResult summarizes one synchronization pass. It deliberately carries
@@ -107,6 +110,9 @@ func SyncEnvFromStore(basePath string, bindings []EnvBinding) EnvSyncResult {
 			continue
 		}
 		value, ok := envValueFor(credential, binding.CredentialKey)
+		if binding.ExpiryKey != "" {
+			value, ok = envExpiryFor(credential, binding.ExpiryKey)
+		}
 		if !ok {
 			result.Missing = append(result.Missing, envVar)
 			continue
@@ -155,4 +161,15 @@ func envValueFor(credential *CredentialObject, preferred string) (string, bool) 
 		}
 	}
 	return "", false
+}
+
+// envExpiryFor exports the RFC3339 expiry of a key instead of its value. A key
+// without an expiry exports nothing: an unset *_EXPIRES_AT correctly means
+// "expiry unknown" to the OAuth2 refresher.
+func envExpiryFor(credential *CredentialObject, keyName string) (string, bool) {
+	key := credential.Keys.Get(keyName)
+	if key == nil || key.ExpiresAt == nil {
+		return "", false
+	}
+	return key.ExpiresAt.UTC().Format(time.RFC3339), true
 }

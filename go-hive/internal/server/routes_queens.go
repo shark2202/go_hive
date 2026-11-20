@@ -617,7 +617,13 @@ func handleQueenPutLLM(w http.ResponseWriter, r *http.Request, deps QueenRouteDe
 			if session.QueenName != queenID {
 				continue
 			}
-			if deps.ApplyQueenModel != nil && deps.ApplyQueenModel(session, queenID, deps.defaultModel()) {
+			if deps.ApplyQueenModel != nil {
+				if deps.ApplyQueenModel(session, queenID, deps.defaultModel()) {
+					switched++
+				}
+				continue
+			}
+			if applyQueenModelSection(deps.Home, session) {
 				switched++
 			}
 		}
@@ -633,6 +639,38 @@ func handleQueenPutLLM(w http.ResponseWriter, r *http.Request, deps QueenRouteDe
 		"section":           section,
 		"sessions_switched": 0,
 	})
+}
+
+// applyQueenModelSection mirrors queen_models.apply for one live session: her
+// own queen_llm section when she has one (the body was just written to
+// configuration.json), otherwise the main llm section she returns to. The
+// session's provider is rebuilt in place; the running turn keeps its pinned
+// provider and the next turn resolves the new one.
+//
+// Parity: framework/server/queen_models.py::apply
+func applyQueenModelSection(home hivehome.Home, session *Session) bool {
+	if session == nil || session.LLM == nil {
+		return false
+	}
+	section := QueenLLMSection(home, session.QueenName)
+	if section == nil {
+		main, _ := HiveConfig(home)["llm"].(map[string]any)
+		if main == nil {
+			return false
+		}
+		section = main
+	}
+	switched := ReconfigureSection(session.LLM, home, section)
+	// A colony-bound session executes through its colony's overseer, whose
+	// transport is separate in Go. Upstream shares the session's provider
+	// object with the colony when no worker_llm is set, so her new model must
+	// reach the colony too or the running session keeps the old one.
+	if holder, ok := session.Colony.(interface{ LLM() any }); ok {
+		if ReconfigureSection(holder.LLM(), home, section) {
+			switched = true
+		}
+	}
+	return switched
 }
 
 var queenPersonaTextFieldSet = map[string]bool{

@@ -231,7 +231,7 @@ CONFIG_KEYS: list[dict] = [
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
         ],
         "status": "go_partial",
-        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.",
+        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side.",
     },
     {
         "path": "worker_llm.model", "type": "string", "default": "inherit llm", "env": None,
@@ -240,7 +240,7 @@ CONFIG_KEYS: list[dict] = [
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
         ],
         "status": "go_partial",
-        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.",
+        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side.",
     },
     {
         "path": "worker_llm.api_key", "type": "string", "default": "inherit", "env": None,
@@ -249,7 +249,7 @@ CONFIG_KEYS: list[dict] = [
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
         ],
         "status": "go_partial",
-        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.",
+        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side.",
     },
     {
         "path": "worker_llm.api_base", "type": "string", "default": "inherit", "env": None,
@@ -258,7 +258,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/provider_library.go", "contains": "\"worker_llm\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
         ],
-        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.",
+        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side.",
     },
     {
         "path": "worker_llm.api_key_env_var", "type": "string", "default": None, "env": "name read from the file",
@@ -267,7 +267,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/provider_library.go", "contains": "\"worker_llm\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
         ],
-        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.",
+        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side.",
     },
     {
         "path": "worker_llm.max_tokens", "type": "int", "default": "inherit llm", "env": None,
@@ -276,7 +276,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/provider_library.go", "contains": "\"worker_llm\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
         ],
-        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.",
+        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side.",
     },
     {
         "path": "worker_llm.max_context_tokens", "type": "int", "default": "inherit llm", "env": None,
@@ -285,7 +285,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/provider_library.go", "contains": "\"worker_llm\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
         ],
-        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.",
+        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side.",
     },
     {
         "path": "worker_llm.endpoint", "type": "string", "default": None, "env": None,
@@ -294,7 +294,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/provider_library.go", "contains": "\"worker_llm\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
         ],
-        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.",
+        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side.",
     },
     {
         "path": "worker_llm.extra_body", "type": "object", "default": "inherit llm", "env": None,
@@ -303,7 +303,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/provider_library.go", "contains": "\"worker_llm\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
         ],
-        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.",
+        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side.",
     },
     {
         "path": "worker_llm.num_ctx", "type": "int", "default": 16384, "env": None,
@@ -312,7 +312,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/provider_library.go", "contains": "\"worker_llm\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
         ],
-        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.",
+        "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side.",
     },
 
     # ----- vision_fallback slot ------------------------------------------
@@ -323,7 +323,7 @@ CONFIG_KEYS: list[dict] = [
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func VisionFallbackSection("},
         ],
         "status": "go_partial",
-        "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
+        "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
     },
     {
         "path": "vision_fallback.model", "type": "string", "default": None, "env": None,
@@ -332,7 +332,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_models.go", "contains": "\"vision_fallback\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func VisionFallbackSection("},
         ],
-        "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
+        "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
     },
     {
         "path": "vision_fallback.api_key", "type": "string", "default": None, "env": None,
@@ -341,7 +341,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_models.go", "contains": "\"vision_fallback\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func VisionFallbackSection("},
         ],
-        "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
+        "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
     },
     {
         "path": "vision_fallback.api_base", "type": "string", "default": None, "env": None,
@@ -350,7 +350,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_models.go", "contains": "\"vision_fallback\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func VisionFallbackSection("},
         ],
-        "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
+        "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
     },
     {
         "path": "vision_fallback.api_key_env_var", "type": "string", "default": None, "env": "name read from the file",
@@ -359,7 +359,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_models.go", "contains": "\"vision_fallback\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func VisionFallbackSection("},
         ],
-        "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
+        "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
     },
     {
         "path": "vision_fallback.max_tokens", "type": "int", "default": "aux_max_tokens", "env": None,
@@ -368,7 +368,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_models.go", "contains": "\"vision_fallback\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func VisionFallbackSection("},
         ],
-        "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
+        "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
     },
     {
         "path": "vision_fallback.endpoint", "type": "string", "default": None, "env": None,
@@ -377,7 +377,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_models.go", "contains": "\"vision_fallback\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func VisionFallbackSection("},
         ],
-        "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
+        "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.",
     },
 
     # ----- queen_llm ------------------------------------------------------
@@ -389,7 +389,7 @@ CONFIG_KEYS: list[dict] = [
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func QueenLLMSection("},
         ],
         "status": "go_partial",
-        "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.",
+        "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance.",
     },
     {
         "path": "queen_llm.<queen_id>.model", "type": "string", "default": "inherit llm", "env": None,
@@ -398,7 +398,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_queens.go", "contains": "if strings.TrimSpace(queenStr(object[\"provider\"])) == \"\" || strings.TrimSpace(queenStr(object[\"model\"])) == \"\" {"},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func QueenLLMSection("},
         ],
-        "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.",
+        "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance.",
     },
     {
         "path": "queen_llm.<queen_id>.api_key", "type": "string", "default": "inherit llm", "env": None,
@@ -407,7 +407,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_queens.go", "contains": "queenStr(object[\"api_key\"])"},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func QueenLLMSection("},
         ],
-        "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.",
+        "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance.",
     },
     {
         "path": "queen_llm.<queen_id>.api_base", "type": "string", "default": "inherit llm", "env": None,
@@ -416,7 +416,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_queens.go", "contains": "apiBase := strings.TrimSpace(queenStr(object[\"api_base\"]))"},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func QueenLLMSection("},
         ],
-        "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.",
+        "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance.",
     },
     {
         "path": "queen_llm.<queen_id>.api_key_env_var", "type": "string", "default": None, "env": "name read from the file",
@@ -425,7 +425,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_queens.go", "contains": "if envName := queenStr(object[\"api_key_env_var\"]); envName != \"\" {"},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func QueenLLMSection("},
         ],
-        "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.",
+        "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance.",
     },
     {
         "path": "queen_llm.<queen_id>.max_context_tokens", "type": "int", "default": "inherit llm", "env": None,
@@ -434,7 +434,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_queens.go", "contains": "\"queen_llm\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func QueenLLMSection("},
         ],
-        "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.",
+        "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance.",
     },
     {
         "path": "queen_llm.<queen_id>.endpoint", "type": "string", "default": None, "env": None,
@@ -443,7 +443,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_queens.go", "contains": "\"queen_llm\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func QueenLLMSection("},
         ],
-        "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.",
+        "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance.",
     },
     {
         "path": "queen_llm.<queen_id>.extra_body", "type": "object", "default": None, "env": None,
@@ -452,7 +452,7 @@ CONFIG_KEYS: list[dict] = [
         "go": [{"file": "go_hive/go-hive/internal/server/routes_queens.go", "contains": "\"queen_llm\""},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func QueenLLMSection("},
         ],
-        "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.",
+        "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance.",
     },
 
     # ----- judge ----------------------------------------------------------
@@ -849,7 +849,7 @@ CONFIG_KEYS: list[dict] = [
     {
         "path": "loop.max_tool_result_chars", "type": "int", "default": 30000, "env": None,
         "py": [{"file": "core/framework/config.py", "contains": "loop = get_hive_config().get(\"loop\", {})"}],
-        "go": [{"file": "go_hive/go-hive/internal/agentloop/loop.go", "contains": "MaxToolResultChars:    30_000,"},
+        "go": [{"file": "go_hive/go-hive/internal/agentloop/loop_config.go", "contains": "MaxToolResultChars:    30_000,"},
                {"file": "go_hive/go-hive/internal/hiveconf/hiveconf.go", "contains": "func MaxToolResultChars("},
         ],
         "status": "aligned",

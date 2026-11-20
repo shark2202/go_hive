@@ -884,10 +884,20 @@ func systemPromptFor(spec agentloop.AgentSpec) string {
 
 func (r *ColonyRuntime) buildContext(worker *Worker, spec agentloop.AgentSpec) *agentloop.AgentContext {
 	colonyID := r.streamID
+	// Workers run on the dedicated worker model when one is configured
+	// (worker_llm); the persistent overseer is the colony's own Queen and
+	// keeps the colony completer. The split mirrors upstream, where a worker
+	// spawned through run_worker inherits the colony runtime's `_llm` — the
+	// provider SessionManager built from worker_llm (falling back to
+	// session.llm when the slot is unset).
+	completer := r.llm
+	if worker != nil && !worker.Persistent {
+		completer = r.workerCompleter()
+	}
 	ctx := &agentloop.AgentContext{
 		AgentID:   spec.ID,
 		AgentSpec: spec,
-		LLM:       r.llm,
+		LLM:       completer,
 		StreamID:  worker.StreamID,
 		ColonyID:  &colonyID,
 	}

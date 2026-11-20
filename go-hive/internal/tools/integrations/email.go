@@ -302,7 +302,10 @@ func batch7Lane9EmailSend(ctx context.Context, rt *Runtime, input map[string]any
 	}
 
 	if provider == "gmail" {
-		token := batch7Lane9ModuleToken(rt, "email_gmail_tool")
+		token, _, problem := oauthModuleToken(ctx, rt, "email_gmail_tool")
+		if problem != nil {
+			return problem, nil
+		}
 		if token == "" {
 			return batch7Lane9EmailGmailAuthError(), nil
 		}
@@ -384,7 +387,10 @@ func batch7Lane9EmailReply(ctx context.Context, rt *Runtime, input map[string]an
 	if htmlBody == "" {
 		return map[string]any{"error": "Reply body (html) is required"}, nil
 	}
-	token := batch7Lane9ModuleToken(rt, "email_gmail_tool")
+	token, _, problem := oauthModuleToken(ctx, rt, "email_gmail_tool")
+	if problem != nil {
+		return problem, nil
+	}
 	if token == "" {
 		return batch7Lane9EmailGmailAuthError(), nil
 	}

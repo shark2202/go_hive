@@ -58,6 +58,10 @@ type Runtime struct {
 	Modules map[string]*ModuleConfig
 	// Getenv resolves credentials; defaults to os.Getenv.
 	Getenv func(string) string
+	// Tokens refreshes OAuth2 access tokens for modules that declare OAuth
+	// on their ModuleConfig. Nil builds one lazily over HTTP; ForCall shares
+	// the same instance so the token cache spans calls.
+	Tokens *TokenRefresher
 
 	// callAccount is the account alias the action selected on this call. It is
 	// only set on the per-call copy returned by ForCall, never on the shared
@@ -96,6 +100,7 @@ func (rt *Runtime) ForCall(source AccountSource, alias string) *Runtime {
 		Accounts:    rt.Accounts,
 		Modules:     rt.Modules,
 		Getenv:      rt.Getenv,
+		Tokens:      rt.tokenRefresher(),
 	}
 	if source != nil {
 		call.Accounts = source
@@ -187,7 +192,12 @@ type ModuleConfig struct {
 	Headers      func(token string) map[string]string
 	Query        func(token string) map[string]string
 	Form         bool
-	token        string
+	// OAuth declares the module's standard OAuth2 refresh-token source.
+	// When it resolves non-nil, credential resolution mints a fresh access
+	// token instead of replaying a static value. Nil means the module's
+	// EnvVars hold a static token that cannot be refreshed.
+	OAuth func(getenv func(string) string) *OAuth2Refresh
+	token string
 }
 
 // ConfiguredToken reports the credential injected with WithCredential. It is

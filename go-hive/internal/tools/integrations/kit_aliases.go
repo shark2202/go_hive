@@ -13,15 +13,16 @@ import (
 )
 
 type (
-	Runtime       = integrationkit.Runtime
-	Option        = integrationkit.Option
-	AccountSource = integrationkit.AccountSource
-	ModuleConfig  = integrationkit.ModuleConfig
-	Tool          = integrationkit.Tool
-	Action        = integrationkit.Action
-	ActionFunc    = integrationkit.ActionFunc
-	RestSpec      = integrationkit.RestSpec
-	httpClient    = integrationkit.HTTPClient
+	Runtime        = integrationkit.Runtime
+	Option         = integrationkit.Option
+	AccountSource  = integrationkit.AccountSource
+	ModuleConfig   = integrationkit.ModuleConfig
+	Tool           = integrationkit.Tool
+	Action         = integrationkit.Action
+	ActionFunc     = integrationkit.ActionFunc
+	RestSpec       = integrationkit.RestSpec
+	PaginationSpec = integrationkit.PaginationSpec
+	httpClient     = integrationkit.HTTPClient
 )
 
 func newHTTPClient(client *http.Client) *httpClient { return integrationkit.NewHTTPClient(client) }
@@ -45,6 +46,9 @@ func WithAccountSource(source AccountSource) Option {
 }
 
 func WithGetenv(fn func(string) string) Option { return integrationkit.WithGetenv(fn) }
+
+// DefaultMaxPages is the declarative pagination walk cap.
+const DefaultMaxPages = integrationkit.DefaultMaxPages
 
 func stringArg(input map[string]any, name string) string {
 	return integrationkit.StringArg(input, name)

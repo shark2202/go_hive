@@ -120,6 +120,14 @@ func sessionStartQueenIdentity(session *Session) (string, string, string) {
 }
 
 func sessionStartPhase(session *Session) string {
+	return SessionPhaseLabel(session)
+}
+
+// SessionPhaseLabel reports the session's queen phase ("independent" /
+// "colony") for event payloads, matching the upstream phase state the loop's
+// iteration_metadata_provider reads. It is exported so the session loader can
+// hand the live chat runtime the same label.
+func SessionPhaseLabel(session *Session) string {
 	if phase, ok := session.PhaseState.(SessionPhaseState); ok && phase != nil {
 		if value := strings.TrimSpace(phase.Phase()); value != "" {
 			return value
@@ -149,18 +157,32 @@ func sessionStartMaxIterations(session *Session) int {
 // not be built (no provider credentials) has composed no request, so every
 // component is zero — the event still carries the full payload shape.
 func sessionStartContextUsage(session *Session) map[string]any {
+	var conv *agentloop.NodeConversation
+	var tools []llm.ToolDef
+	maxContextTokens := 0
+	if session.Chat != nil {
+		conv = session.Chat.conv
+		tools = session.Chat.toolsForTurn()
+		if session.Chat.loop != nil {
+			maxContextTokens = session.Chat.loop.Config.MaxContextTokens
+		}
+	}
+	return composeContextUsage(conv, maxContextTokens, tools)
+}
+
+// composeContextUsage is the shared char-based context projection: the
+// session-start block and every later iteration_start readout carry the same
+// payload shape.
+//
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_context_usage
+func composeContextUsage(conv *agentloop.NodeConversation, maxContextTokens int, tools []llm.ToolDef) map[string]any {
 	conversationChars, imageBlocks, systemChars, toolDefsChars := 0, 0, 0, 0
 	messageCount := 0
-	maxContextTokens := 0
-	if session.Chat != nil && session.Chat.conv != nil {
-		conv := session.Chat.conv
+	if conv != nil {
 		conversationChars, imageBlocks = conv.ConversationCharsAndImages()
 		systemChars = len(conv.SystemPrompt())
-		toolDefsChars = chatToolDefsChars(session.Chat.toolsForTurn())
+		toolDefsChars = chatToolDefsChars(tools)
 		messageCount = conv.MessageCount()
-	}
-	if session.Chat != nil && session.Chat.loop != nil {
-		maxContextTokens = session.Chat.loop.Config.MaxContextTokens
 	}
 	if maxContextTokens <= 0 {
 		maxContextTokens = agentloop.DefaultMaxContextTokens

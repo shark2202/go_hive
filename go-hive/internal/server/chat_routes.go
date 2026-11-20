@@ -120,10 +120,12 @@ func handleSessionChat(w http.ResponseWriter, r *http.Request, deps ChatRouteDep
 	}
 
 	// Publish before the turn starts so listeners (UI echo, memory recall)
-	// observe the message ahead of the model's first stream event.
-	publishClientInputReceived(session, body.Message)
+	// observe the message ahead of the model's first stream event. The
+	// correlation id rides into the runtime so the commit boundary carries the
+	// same id, as upstream's deliver_to_queen → inject_event pair does.
+	correlationID := publishClientInputReceived(session, body.Message)
 
-	if err := session.Chat.Deliver(body.Message); err != nil {
+	if err := session.Chat.DeliverClientInput(body.Message, correlationID); err != nil {
 		if errors.Is(err, ErrChatRuntimeClosed) {
 			writeJSON(w, http.StatusServiceUnavailable, map[string]any{
 				"error": "Session chat runtime is closed",
@@ -137,10 +139,11 @@ func handleSessionChat(w http.ResponseWriter, r *http.Request, deps ChatRouteDep
 }
 
 // publishClientInputReceived mirrors the upstream CLIENT_INPUT_RECEIVED emit,
-// which carries the echo the composer reconciles against.
-func publishClientInputReceived(session *Session, message string) {
+// which carries the echo the composer reconciles against. It returns the
+// correlation id so the runtime's CLIENT_INPUT_COMMITTED carries the same one.
+func publishClientInputReceived(session *Session, message string) string {
 	if session == nil || session.EventBus == nil {
-		return
+		return ""
 	}
 	executionID := session.ID
 	nodeID := "queen"
@@ -151,6 +154,7 @@ func publishClientInputReceived(session *Session, message string) {
 	event.CorrelationID = &correlationID
 	event.Data = map[string]any{"content": message, "image_count": 0}
 	session.EventBus.Publish(event)
+	return correlationID
 }
 
 func newChatCorrelationID() string {
@@ -184,6 +188,14 @@ func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps Chat
 	}
 
 	types := parseEventTypeFilter(r.URL.Query().Get("types"))
+	if len(types) == 0 {
+		// Upstream's handle_events falls back to DEFAULT_EVENT_TYPES when no
+		// ?types= filter is given: the session feed is a curated chat feed,
+		// not every bus event. Without this a Go subscriber saw events
+		// (identity, reminders, stall diagnostics) a Python subscriber never
+		// received live.
+		types = defaultSessionEventTypes
+	}
 	// Worker chatter is opt-in per worker, as upstream's _parse_watch: every
 	// worker's META events still pass (they render its bubble), but per-turn
 	// detail only reaches a client that asked to watch that worker.
@@ -236,7 +248,7 @@ func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps Chat
 	// exceptions are the visible-chat types mirrored in
 	// sessionEventsReplayTypes. An already-answered client_input_requested is
 	// suppressed so a resolved question never re-opens.
-	replaySessionEvents(session.EventBus, queue, watchAll, watched)
+	replaySessionEvents(session.EventBus, queue, types, watchAll, watched)
 
 	heartbeat := time.NewTicker(sessionEventsHeartbeatInterval)
 	defer heartbeat.Stop()
@@ -261,7 +273,6 @@ var sessionEventsReplayTypes = map[eventbus.EventType]struct{}{
 	eventbus.EventClientOutputDelta:    {},
 	eventbus.EventExecutionStarted:     {},
 	eventbus.EventExecutionCompleted:   {},
-	eventbus.EventExecutionFailed:      {},
 	eventbus.EventLLMTurnComplete:      {},
 	eventbus.EventToolCallStarted:      {},
 	eventbus.EventToolCallCompleted:    {},
@@ -281,11 +292,67 @@ var sessionEventsReplayTypes = map[eventbus.EventType]struct{}{
 	eventbus.EventSessionForked:        {},
 }
 
+// defaultSessionEventTypes mirrors routes_events.py::DEFAULT_EVENT_TYPES: the
+// curated chat feed a session subscriber receives when it passes no ?types=
+// filter. Keep this list in sync with the Python enum — the upstream set is
+// the contract (49 entries).
+var defaultSessionEventTypes = map[string]struct{}{
+	"session_snapshot":                 {},
+	"client_output_delta":              {},
+	"client_input_requested":           {},
+	"client_input_received":            {},
+	"client_input_committed":           {},
+	"llm_text_delta":                   {},
+	"llm_reasoning_delta":              {},
+	"client_reasoning":                 {},
+	"tool_call_started":                {},
+	"tool_call_completed":              {},
+	"execution_started":                {},
+	"execution_completed":              {},
+	"execution_failed":                 {},
+	"execution_paused":                 {},
+	"payment_required":                 {},
+	"node_loop_started":                {},
+	"node_loop_iteration":              {},
+	"node_loop_completed":              {},
+	"llm_turn_complete":                {},
+	"goal_progress":                    {},
+	"node_internal_output":             {},
+	"node_stalled":                     {},
+	"node_retry":                       {},
+	"node_tool_doom_loop":              {},
+	"loop_state_changed":               {},
+	"context_compaction_started":       {},
+	"context_compacted":                {},
+	"context_usage_updated":            {},
+	"worker_colony_loaded":             {},
+	"colony_created":                   {},
+	"colony_suggestion_requested":      {},
+	"credentials_required":             {},
+	"client_credential_form_requested": {},
+	"skill_install_requested":          {},
+	"skill_install_decided":            {},
+	"subagent_report":                  {},
+	"queen_phase_changed":              {},
+	"trigger_available":                {},
+	"trigger_activated":                {},
+	"trigger_deactivated":              {},
+	"trigger_fired":                    {},
+	"trigger_removed":                  {},
+	"trigger_updated":                  {},
+	"task_created":                     {},
+	"task_updated":                     {},
+	"task_deleted":                     {},
+	"task_list_reset":                  {},
+	"session_forked":                   {},
+	"session_title_updated":            {},
+}
+
 // replaySessionEvents queues the replayable slice of the bus history onto the
 // subscriber, oldest first. Worker per-turn chatter is suppressed for clients
 // that never asked to watch that worker (upstream's is_suppressed_for_client),
 // exactly as the live handler does.
-func replaySessionEvents(bus *eventbus.EventBus, queue chan map[string]any, watchAll bool, watched map[string]struct{}) {
+func replaySessionEvents(bus *eventbus.EventBus, queue chan map[string]any, types map[string]struct{}, watchAll bool, watched map[string]struct{}) {
 	if bus == nil {
 		return
 	}
@@ -302,6 +369,14 @@ func replaySessionEvents(bus *eventbus.EventBus, queue chan map[string]any, watc
 		}
 		if _, ok := sessionEventsReplayTypes[event.Type]; !ok {
 			continue
+		}
+		// Upstream intersects the replay set with the subscriber's filter
+		// (`_REPLAY_TYPES & event_type_values`): a client that asked for one
+		// type must not receive the visible-chat subset it did not ask for.
+		if len(types) > 0 {
+			if _, wanted := types[string(event.Type)]; !wanted {
+				continue
+			}
 		}
 		payload := event.ToDict()
 		if eventbus.IsSuppressedForClient(payload, watchAll, watched) {
@@ -329,9 +404,16 @@ func parseEventTypeFilter(raw string) map[string]struct{} {
 	out := map[string]struct{}{}
 	for _, part := range strings.Split(raw, ",") {
 		name := strings.TrimSpace(part)
-		if name != "" {
-			out[name] = struct{}{}
+		if name == "" {
+			continue
 		}
+		// Upstream warns and drops unknown names; a filter that resolves to
+		// nothing falls back to the default set at the call site, exactly like
+		// _parse_event_types' `result or DEFAULT_EVENT_TYPES`.
+		if _, known := eventbus.LookupEventType(name); !known {
+			continue
+		}
+		out[name] = struct{}{}
 	}
 	return out
 }

@@ -87,6 +87,10 @@ func trelloSpecs() map[string]RestSpec {
 
 func airtableSpecs() map[string]RestSpec {
 	return map[string]RestSpec{
+		// The Airtable API returns at most 100 records per call and reports a
+		// follow-up `offset`; the declarative walk makes list_records return
+		// the merged set (upstream surfaces has_more/offset for the model to
+		// continue; the Go client follows it directly).
 		"airtable_list_records": {
 			Method: http.MethodGet, Path: "/{base_id}/{table_name}",
 			Rename: map[string]string{
@@ -95,6 +99,11 @@ func airtableSpecs() map[string]RestSpec {
 				"sort_direction": "sort[0][direction]",
 				"max_records":    "maxRecords",
 				"fields":         "fields[]",
+			},
+			Pagination: &PaginationSpec{
+				ItemsPath:      "records",
+				NextCursorPath: "offset",
+				CursorParam:    "offset",
 			},
 		},
 		"airtable_get_record":      {Method: http.MethodGet, Path: "/{base_id}/{table_name}/{record_id}"},

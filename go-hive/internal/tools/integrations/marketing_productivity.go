@@ -168,6 +168,9 @@ func batch7Lane9Modules() map[string]*ModuleConfig {
 			ID:      "email_gmail_tool",
 			BaseURL: batch7Lane9GmailBase,
 			EnvVars: []string{"GOOGLE_ACCESS_TOKEN"},
+			// The Gmail sender shares upstream's `google` OAuth2 credential
+			// (credentials/email.py); expired tokens refresh before sending.
+			OAuth: batch5Lane3OAuth,
 		},
 	}
 }

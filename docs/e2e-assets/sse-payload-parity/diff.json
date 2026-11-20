@@ -1,0 +1,4792 @@
+{
+  "generated_at": "2026-11-21T06:49:52+08:00",
+  "reference": {
+    "version": "hive 1.0.14",
+    "session_id": "<session_id>"
+  },
+  "target": {
+    "version": "hive 1.0.26-go.1",
+    "session_id": "<session_id>"
+  },
+  "per_type": {
+    "client_input_committed": {
+      "live": {
+        "reference_count": 3,
+        "target_count": 3,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "seq"
+        ],
+        "target_keys": [
+          "seq"
+        ],
+        "reference_shapes": {
+          "seq": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "seq": [
+            "str"
+          ]
+        }
+      },
+      "replay": {
+        "reference_count": 3,
+        "target_count": 3,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "seq"
+        ],
+        "target_keys": [
+          "seq"
+        ],
+        "reference_shapes": {
+          "seq": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "seq": [
+            "str"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 3,
+        "target_count": 3,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "seq"
+        ],
+        "target_keys": [
+          "seq"
+        ],
+        "reference_shapes": {
+          "seq": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "seq": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "\"<correlation_id>\""
+          ],
+          "target": [
+            "\"<correlation_id>\""
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {}
+    },
+    "client_input_received": {
+      "live": {
+        "reference_count": 3,
+        "target_count": 3,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "content",
+          "image_count"
+        ],
+        "target_keys": [
+          "content",
+          "image_count"
+        ],
+        "reference_shapes": {
+          "content": [
+            "str"
+          ],
+          "image_count": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "content": [
+            "str"
+          ],
+          "image_count": [
+            "int"
+          ]
+        }
+      },
+      "replay": {
+        "reference_count": 3,
+        "target_count": 3,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "content",
+          "image_count"
+        ],
+        "target_keys": [
+          "content",
+          "image_count"
+        ],
+        "reference_shapes": {
+          "content": [
+            "str"
+          ],
+          "image_count": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "content": [
+            "str"
+          ],
+          "image_count": [
+            "int"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 3,
+        "target_count": 3,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "content",
+          "image_count"
+        ],
+        "target_keys": [
+          "content",
+          "image_count"
+        ],
+        "reference_shapes": {
+          "content": [
+            "str"
+          ],
+          "image_count": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "content": [
+            "str"
+          ],
+          "image_count": [
+            "int"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "\"<correlation_id>\""
+          ],
+          "target": [
+            "\"<correlation_id>\""
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {}
+    },
+    "client_input_requested": {
+      "live": {
+        "reference_count": 4,
+        "target_count": 4,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "park_reason",
+          "questions"
+        ],
+        "target_keys": [
+          "park_reason",
+          "questions"
+        ],
+        "reference_shapes": {
+          "park_reason": [
+            "str"
+          ],
+          "questions": [
+            "array"
+          ],
+          "questions[]": [
+            "object"
+          ],
+          "questions[].id": [
+            "str"
+          ],
+          "questions[].prompt": [
+            "str"
+          ],
+          "questions[].options": [
+            "array"
+          ],
+          "questions[].options[]": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "park_reason": [
+            "str"
+          ],
+          "questions": [
+            "array"
+          ],
+          "questions[]": [
+            "object"
+          ],
+          "questions[].id": [
+            "str"
+          ],
+          "questions[].options": [
+            "array"
+          ],
+          "questions[].options[]": [
+            "str"
+          ],
+          "questions[].prompt": [
+            "str"
+          ]
+        }
+      },
+      "replay": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "park_reason"
+        ],
+        "target_keys": [
+          "park_reason"
+        ],
+        "reference_shapes": {
+          "park_reason": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "park_reason": [
+            "str"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 4,
+        "target_count": 4,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "park_reason",
+          "questions"
+        ],
+        "target_keys": [
+          "park_reason",
+          "questions"
+        ],
+        "reference_shapes": {
+          "park_reason": [
+            "str"
+          ],
+          "questions": [
+            "array"
+          ],
+          "questions[]": [
+            "object"
+          ],
+          "questions[].id": [
+            "str"
+          ],
+          "questions[].prompt": [
+            "str"
+          ],
+          "questions[].options": [
+            "array"
+          ],
+          "questions[].options[]": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "park_reason": [
+            "str"
+          ],
+          "questions": [
+            "array"
+          ],
+          "questions[]": [
+            "object"
+          ],
+          "questions[].id": [
+            "str"
+          ],
+          "questions[].options": [
+            "array"
+          ],
+          "questions[].options[]": [
+            "str"
+          ],
+          "questions[].prompt": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {}
+    },
+    "client_output_delta": {
+      "live": {
+        "reference_count": 3,
+        "target_count": 4,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "content",
+          "inner_turn",
+          "iteration",
+          "snapshot"
+        ],
+        "target_keys": [
+          "content",
+          "inner_turn",
+          "iteration",
+          "snapshot"
+        ],
+        "reference_shapes": {
+          "content": [
+            "str"
+          ],
+          "snapshot": [
+            "str"
+          ],
+          "inner_turn": [
+            "int"
+          ],
+          "iteration": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "content": [
+            "str"
+          ],
+          "inner_turn": [
+            "int"
+          ],
+          "iteration": [
+            "int"
+          ],
+          "snapshot": [
+            "str"
+          ]
+        }
+      },
+      "replay": {
+        "reference_count": 3,
+        "target_count": 4,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "content",
+          "inner_turn",
+          "iteration",
+          "snapshot"
+        ],
+        "target_keys": [
+          "content",
+          "inner_turn",
+          "iteration",
+          "snapshot"
+        ],
+        "reference_shapes": {
+          "content": [
+            "str"
+          ],
+          "snapshot": [
+            "str"
+          ],
+          "inner_turn": [
+            "int"
+          ],
+          "iteration": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "content": [
+            "str"
+          ],
+          "inner_turn": [
+            "int"
+          ],
+          "iteration": [
+            "int"
+          ],
+          "snapshot": [
+            "str"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 3,
+        "target_count": 4,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "content",
+          "inner_turn",
+          "iteration",
+          "snapshot"
+        ],
+        "target_keys": [
+          "content",
+          "inner_turn",
+          "iteration",
+          "snapshot"
+        ],
+        "reference_shapes": {
+          "content": [
+            "str"
+          ],
+          "snapshot": [
+            "str"
+          ],
+          "inner_turn": [
+            "int"
+          ],
+          "iteration": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "content": [
+            "str"
+          ],
+          "inner_turn": [
+            "int"
+          ],
+          "iteration": [
+            "int"
+          ],
+          "snapshot": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {
+        "iteration": {
+          "reference": [
+            "0",
+            "1",
+            "3"
+          ],
+          "target": [
+            "0",
+            "1",
+            "2"
+          ]
+        }
+      }
+    },
+    "context_usage_updated": {
+      "live": {
+        "reference_count": 5,
+        "target_count": 4,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "breakdown",
+          "estimated_tokens",
+          "max_context_tokens",
+          "message_count",
+          "trigger",
+          "usage_pct",
+          "usage_ratio"
+        ],
+        "target_keys": [
+          "breakdown",
+          "estimated_tokens",
+          "max_context_tokens",
+          "message_count",
+          "trigger",
+          "usage_pct",
+          "usage_ratio"
+        ],
+        "reference_shapes": {
+          "usage_ratio": [
+            "float"
+          ],
+          "usage_pct": [
+            "int"
+          ],
+          "message_count": [
+            "int"
+          ],
+          "estimated_tokens": [
+            "int"
+          ],
+          "max_context_tokens": [
+            "int"
+          ],
+          "trigger": [
+            "str"
+          ],
+          "breakdown": [
+            "object"
+          ],
+          "breakdown.conversation_chars": [
+            "int"
+          ],
+          "breakdown.system_chars": [
+            "int"
+          ],
+          "breakdown.tool_defs_chars": [
+            "int"
+          ],
+          "breakdown.image_blocks": [
+            "int"
+          ],
+          "breakdown.image_tokens": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "breakdown": [
+            "object"
+          ],
+          "breakdown.conversation_chars": [
+            "int"
+          ],
+          "breakdown.image_blocks": [
+            "int"
+          ],
+          "breakdown.image_tokens": [
+            "int"
+          ],
+          "breakdown.system_chars": [
+            "int"
+          ],
+          "breakdown.tool_defs_chars": [
+            "int"
+          ],
+          "estimated_tokens": [
+            "int"
+          ],
+          "max_context_tokens": [
+            "int"
+          ],
+          "message_count": [
+            "int"
+          ],
+          "trigger": [
+            "str"
+          ],
+          "usage_pct": [
+            "int"
+          ],
+          "usage_ratio": [
+            "float"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 6,
+        "target_count": 5,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "breakdown",
+          "estimated_tokens",
+          "max_context_tokens",
+          "message_count",
+          "trigger",
+          "usage_pct",
+          "usage_ratio"
+        ],
+        "target_keys": [
+          "breakdown",
+          "estimated_tokens",
+          "max_context_tokens",
+          "message_count",
+          "trigger",
+          "usage_pct",
+          "usage_ratio"
+        ],
+        "reference_shapes": {
+          "usage_ratio": [
+            "float"
+          ],
+          "usage_pct": [
+            "int"
+          ],
+          "message_count": [
+            "int"
+          ],
+          "estimated_tokens": [
+            "int"
+          ],
+          "max_context_tokens": [
+            "int"
+          ],
+          "trigger": [
+            "str"
+          ],
+          "breakdown": [
+            "object"
+          ],
+          "breakdown.conversation_chars": [
+            "int"
+          ],
+          "breakdown.system_chars": [
+            "int"
+          ],
+          "breakdown.tool_defs_chars": [
+            "int"
+          ],
+          "breakdown.image_blocks": [
+            "int"
+          ],
+          "breakdown.image_tokens": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "breakdown": [
+            "object"
+          ],
+          "breakdown.conversation_chars": [
+            "int"
+          ],
+          "breakdown.image_blocks": [
+            "int"
+          ],
+          "breakdown.image_tokens": [
+            "int"
+          ],
+          "breakdown.system_chars": [
+            "int"
+          ],
+          "breakdown.tool_defs_chars": [
+            "int"
+          ],
+          "estimated_tokens": [
+            "int"
+          ],
+          "max_context_tokens": [
+            "int"
+          ],
+          "message_count": [
+            "int"
+          ],
+          "trigger": [
+            "str"
+          ],
+          "usage_pct": [
+            "int"
+          ],
+          "usage_ratio": [
+            "float"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {
+        "breakdown.conversation_chars": {
+          "reference": [
+            "27996",
+            "28056",
+            "28126",
+            "28268",
+            "28295"
+          ],
+          "target": [
+            "0",
+            "29031",
+            "29101",
+            "29243",
+            "29287"
+          ]
+        },
+        "breakdown.system_chars": {
+          "reference": [
+            "21584"
+          ],
+          "target": [
+            "62554"
+          ]
+        },
+        "breakdown.tool_defs_chars": {
+          "reference": [
+            "45171"
+          ],
+          "target": [
+            "52587"
+          ]
+        },
+        "estimated_tokens": {
+          "reference": [
+            "31583",
+            "31603",
+            "31627",
+            "31674",
+            "31683"
+          ],
+          "target": [
+            "38380",
+            "48057",
+            "48080",
+            "48128",
+            "48142"
+          ]
+        },
+        "message_count": {
+          "reference": [
+            "1",
+            "3",
+            "5",
+            "7",
+            "8"
+          ],
+          "target": [
+            "0",
+            "3",
+            "5",
+            "7",
+            "9"
+          ]
+        },
+        "trigger": {
+          "reference": [
+            "\"iteration_start\"",
+            "\"post_tool_call\"",
+            "\"post_tool_results\""
+          ],
+          "target": [
+            "\"iteration_start\""
+          ]
+        },
+        "usage_pct": {
+          "reference": [
+            "18"
+          ],
+          "target": [
+            "21",
+            "27"
+          ]
+        },
+        "usage_ratio": {
+          "reference": [
+            "0.1755",
+            "0.1756",
+            "0.1757",
+            "0.176"
+          ],
+          "target": [
+            "0.2132",
+            "0.267",
+            "0.2671",
+            "0.2674",
+            "0.2675"
+          ]
+        }
+      }
+    },
+    "execution_completed": {
+      "live": {
+        "reference_count": 0,
+        "target_count": 3,
+        "reference_present": false,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [
+          "output"
+        ],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [],
+        "target_keys": [
+          "output"
+        ],
+        "reference_shapes": {},
+        "target_shapes": {
+          "output": [
+            "object"
+          ],
+          "output.status": [
+            "str"
+          ]
+        }
+      },
+      "replay": {
+        "reference_count": 0,
+        "target_count": 3,
+        "reference_present": false,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [
+          "output"
+        ],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [],
+        "target_keys": [
+          "output"
+        ],
+        "reference_shapes": {},
+        "target_shapes": {
+          "output": [
+            "object"
+          ],
+          "output.status": [
+            "str"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 0,
+        "target_count": 3,
+        "reference_present": false,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [
+          "output"
+        ],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [],
+        "target_keys": [
+          "output"
+        ],
+        "reference_shapes": {},
+        "target_shapes": {
+          "output": [
+            "object"
+          ],
+          "output.status": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "stream_id": {
+          "reference": [],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": false
+        },
+        "node_id": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "execution_id": {
+          "reference": [],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": false
+        },
+        "colony_id": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "correlation_id": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "run_id": {
+          "reference": [],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": false
+        }
+      },
+      "history_value_diff": {
+        "output.status": {
+          "reference": [],
+          "target": [
+            "\"completed\""
+          ]
+        }
+      }
+    },
+    "execution_started": {
+      "live": {
+        "reference_count": 0,
+        "target_count": 3,
+        "reference_present": false,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [
+          "input"
+        ],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [],
+        "target_keys": [
+          "input"
+        ],
+        "reference_shapes": {},
+        "target_shapes": {
+          "input": [
+            "object"
+          ],
+          "input.message": [
+            "str"
+          ]
+        }
+      },
+      "replay": {
+        "reference_count": 0,
+        "target_count": 3,
+        "reference_present": false,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [
+          "input"
+        ],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [],
+        "target_keys": [
+          "input"
+        ],
+        "reference_shapes": {},
+        "target_shapes": {
+          "input": [
+            "object"
+          ],
+          "input.message": [
+            "str"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 0,
+        "target_count": 3,
+        "reference_present": false,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [
+          "input"
+        ],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [],
+        "target_keys": [
+          "input"
+        ],
+        "reference_shapes": {},
+        "target_shapes": {
+          "input": [
+            "object"
+          ],
+          "input.message": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "stream_id": {
+          "reference": [],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": false
+        },
+        "node_id": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "execution_id": {
+          "reference": [],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": false
+        },
+        "colony_id": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "correlation_id": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "run_id": {
+          "reference": [],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": false
+        }
+      },
+      "history_value_diff": {
+        "input.message": {
+          "reference": [],
+          "target": [
+            "\"ASK_ME payload parity question\"",
+            "\"blue\"",
+            "\"payload parity probe\""
+          ]
+        }
+      }
+    },
+    "judge_verdict": {
+      "history": {
+        "reference_count": 3,
+        "target_count": 0,
+        "reference_present": true,
+        "target_present": false,
+        "missing_in_target": [
+          "action",
+          "feedback",
+          "iteration",
+          "judge_type"
+        ],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "action",
+          "feedback",
+          "iteration",
+          "judge_type"
+        ],
+        "target_keys": [],
+        "reference_shapes": {
+          "action": [
+            "str"
+          ],
+          "feedback": [
+            "str"
+          ],
+          "judge_type": [
+            "str"
+          ],
+          "iteration": [
+            "int"
+          ]
+        },
+        "target_shapes": {}
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [],
+          "equal": false
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [],
+          "equal": false
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [],
+          "equal": false
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [],
+          "equal": false
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [],
+          "equal": false
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [],
+          "equal": false
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [],
+          "equal": false
+        }
+      },
+      "history_value_diff": {
+        "action": {
+          "reference": [
+            "\"RETRY\""
+          ],
+          "target": []
+        },
+        "feedback": {
+          "reference": [
+            "\"\""
+          ],
+          "target": []
+        },
+        "iteration": {
+          "reference": [
+            "0",
+            "1",
+            "2"
+          ],
+          "target": []
+        },
+        "judge_type": {
+          "reference": [
+            "\"implicit\""
+          ],
+          "target": []
+        }
+      }
+    },
+    "llm_turn_complete": {
+      "live": {
+        "reference_count": 4,
+        "target_count": 5,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [
+          "cost_usd"
+        ],
+        "type_details": {
+          "cost_usd": {
+            "reference": [
+              "float"
+            ],
+            "target": [
+              "int"
+            ]
+          }
+        },
+        "reference_keys": [
+          "cache_creation_tokens",
+          "cached_tokens",
+          "cost_usd",
+          "history_anchor_idx",
+          "input_tokens",
+          "iteration",
+          "message_count",
+          "model",
+          "output_tokens",
+          "stop_reason",
+          "system_prefix_sha",
+          "system_suffix_sha"
+        ],
+        "target_keys": [
+          "cache_creation_tokens",
+          "cached_tokens",
+          "cost_usd",
+          "history_anchor_idx",
+          "input_tokens",
+          "iteration",
+          "message_count",
+          "model",
+          "output_tokens",
+          "stop_reason",
+          "system_prefix_sha",
+          "system_suffix_sha"
+        ],
+        "reference_shapes": {
+          "stop_reason": [
+            "str"
+          ],
+          "model": [
+            "str"
+          ],
+          "input_tokens": [
+            "int"
+          ],
+          "output_tokens": [
+            "int"
+          ],
+          "cached_tokens": [
+            "int"
+          ],
+          "cache_creation_tokens": [
+            "int"
+          ],
+          "cost_usd": [
+            "float"
+          ],
+          "iteration": [
+            "int"
+          ],
+          "system_prefix_sha": [
+            "str"
+          ],
+          "system_suffix_sha": [
+            "str"
+          ],
+          "history_anchor_idx": [
+            "int"
+          ],
+          "message_count": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "cache_creation_tokens": [
+            "int"
+          ],
+          "cached_tokens": [
+            "int"
+          ],
+          "cost_usd": [
+            "int"
+          ],
+          "history_anchor_idx": [
+            "int"
+          ],
+          "input_tokens": [
+            "int"
+          ],
+          "iteration": [
+            "int"
+          ],
+          "message_count": [
+            "int"
+          ],
+          "model": [
+            "str"
+          ],
+          "output_tokens": [
+            "int"
+          ],
+          "stop_reason": [
+            "str"
+          ],
+          "system_prefix_sha": [
+            "str"
+          ],
+          "system_suffix_sha": [
+            "str"
+          ]
+        }
+      },
+      "replay": {
+        "reference_count": 4,
+        "target_count": 5,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [
+          "cost_usd"
+        ],
+        "type_details": {
+          "cost_usd": {
+            "reference": [
+              "float"
+            ],
+            "target": [
+              "int"
+            ]
+          }
+        },
+        "reference_keys": [
+          "cache_creation_tokens",
+          "cached_tokens",
+          "cost_usd",
+          "history_anchor_idx",
+          "input_tokens",
+          "iteration",
+          "message_count",
+          "model",
+          "output_tokens",
+          "stop_reason",
+          "system_prefix_sha",
+          "system_suffix_sha"
+        ],
+        "target_keys": [
+          "cache_creation_tokens",
+          "cached_tokens",
+          "cost_usd",
+          "history_anchor_idx",
+          "input_tokens",
+          "iteration",
+          "message_count",
+          "model",
+          "output_tokens",
+          "stop_reason",
+          "system_prefix_sha",
+          "system_suffix_sha"
+        ],
+        "reference_shapes": {
+          "stop_reason": [
+            "str"
+          ],
+          "model": [
+            "str"
+          ],
+          "input_tokens": [
+            "int"
+          ],
+          "output_tokens": [
+            "int"
+          ],
+          "cached_tokens": [
+            "int"
+          ],
+          "cache_creation_tokens": [
+            "int"
+          ],
+          "cost_usd": [
+            "float"
+          ],
+          "iteration": [
+            "int"
+          ],
+          "system_prefix_sha": [
+            "str"
+          ],
+          "system_suffix_sha": [
+            "str"
+          ],
+          "history_anchor_idx": [
+            "int"
+          ],
+          "message_count": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "cache_creation_tokens": [
+            "int"
+          ],
+          "cached_tokens": [
+            "int"
+          ],
+          "cost_usd": [
+            "int"
+          ],
+          "history_anchor_idx": [
+            "int"
+          ],
+          "input_tokens": [
+            "int"
+          ],
+          "iteration": [
+            "int"
+          ],
+          "message_count": [
+            "int"
+          ],
+          "model": [
+            "str"
+          ],
+          "output_tokens": [
+            "int"
+          ],
+          "stop_reason": [
+            "str"
+          ],
+          "system_prefix_sha": [
+            "str"
+          ],
+          "system_suffix_sha": [
+            "str"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 4,
+        "target_count": 5,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [
+          "cost_usd"
+        ],
+        "type_details": {
+          "cost_usd": {
+            "reference": [
+              "float"
+            ],
+            "target": [
+              "int"
+            ]
+          }
+        },
+        "reference_keys": [
+          "cache_creation_tokens",
+          "cached_tokens",
+          "cost_usd",
+          "history_anchor_idx",
+          "input_tokens",
+          "iteration",
+          "message_count",
+          "model",
+          "output_tokens",
+          "stop_reason",
+          "system_prefix_sha",
+          "system_suffix_sha"
+        ],
+        "target_keys": [
+          "cache_creation_tokens",
+          "cached_tokens",
+          "cost_usd",
+          "history_anchor_idx",
+          "input_tokens",
+          "iteration",
+          "message_count",
+          "model",
+          "output_tokens",
+          "stop_reason",
+          "system_prefix_sha",
+          "system_suffix_sha"
+        ],
+        "reference_shapes": {
+          "stop_reason": [
+            "str"
+          ],
+          "model": [
+            "str"
+          ],
+          "input_tokens": [
+            "int"
+          ],
+          "output_tokens": [
+            "int"
+          ],
+          "cached_tokens": [
+            "int"
+          ],
+          "cache_creation_tokens": [
+            "int"
+          ],
+          "cost_usd": [
+            "float"
+          ],
+          "iteration": [
+            "int"
+          ],
+          "system_prefix_sha": [
+            "str"
+          ],
+          "system_suffix_sha": [
+            "str"
+          ],
+          "history_anchor_idx": [
+            "int"
+          ],
+          "message_count": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "cache_creation_tokens": [
+            "int"
+          ],
+          "cached_tokens": [
+            "int"
+          ],
+          "cost_usd": [
+            "int"
+          ],
+          "history_anchor_idx": [
+            "int"
+          ],
+          "input_tokens": [
+            "int"
+          ],
+          "iteration": [
+            "int"
+          ],
+          "message_count": [
+            "int"
+          ],
+          "model": [
+            "str"
+          ],
+          "output_tokens": [
+            "int"
+          ],
+          "stop_reason": [
+            "str"
+          ],
+          "system_prefix_sha": [
+            "str"
+          ],
+          "system_suffix_sha": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {
+        "cost_usd": {
+          "reference": [
+            "0.0"
+          ],
+          "target": [
+            "0"
+          ]
+        },
+        "iteration": {
+          "reference": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "target": [
+            "0",
+            "1",
+            "2"
+          ]
+        },
+        "message_count": {
+          "reference": [
+            "1",
+            "3",
+            "5",
+            "8"
+          ],
+          "target": [
+            "1",
+            "3",
+            "5",
+            "7",
+            "9"
+          ]
+        },
+        "model": {
+          "reference": [
+            "\"openai/sse-parity-probe-model\""
+          ],
+          "target": [
+            "\"sse-parity-probe-model\""
+          ]
+        },
+        "system_prefix_sha": {
+          "reference": [
+            "\"692b774c98c7\""
+          ],
+          "target": [
+            "\"885285cb1ffe\""
+          ]
+        }
+      }
+    },
+    "loop_state_changed": {
+      "live": {
+        "reference_count": 6,
+        "target_count": 6,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "activity",
+          "interrupt_cause",
+          "park_reason",
+          "questions"
+        ],
+        "target_keys": [
+          "activity",
+          "interrupt_cause",
+          "park_reason",
+          "questions"
+        ],
+        "reference_shapes": {
+          "activity": [
+            "str"
+          ],
+          "park_reason": [
+            "null",
+            "str"
+          ],
+          "interrupt_cause": [
+            "null"
+          ],
+          "questions": [
+            "null"
+          ]
+        },
+        "target_shapes": {
+          "activity": [
+            "str"
+          ],
+          "interrupt_cause": [
+            "null"
+          ],
+          "park_reason": [
+            "null",
+            "str"
+          ],
+          "questions": [
+            "null"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 8,
+        "target_count": 7,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "activity",
+          "interrupt_cause",
+          "park_reason",
+          "questions"
+        ],
+        "target_keys": [
+          "activity",
+          "interrupt_cause",
+          "park_reason",
+          "questions"
+        ],
+        "reference_shapes": {
+          "activity": [
+            "str"
+          ],
+          "park_reason": [
+            "null",
+            "str"
+          ],
+          "interrupt_cause": [
+            "null"
+          ],
+          "questions": [
+            "null"
+          ]
+        },
+        "target_shapes": {
+          "activity": [
+            "str"
+          ],
+          "interrupt_cause": [
+            "null"
+          ],
+          "park_reason": [
+            "null",
+            "str"
+          ],
+          "questions": [
+            "null"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {}
+    },
+    "node_loop_completed": {
+      "live": {
+        "reference_count": 0,
+        "target_count": 3,
+        "reference_present": false,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [
+          "iterations"
+        ],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [],
+        "target_keys": [
+          "iterations"
+        ],
+        "reference_shapes": {},
+        "target_shapes": {
+          "iterations": [
+            "int"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 0,
+        "target_count": 3,
+        "reference_present": false,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [
+          "iterations"
+        ],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [],
+        "target_keys": [
+          "iterations"
+        ],
+        "reference_shapes": {},
+        "target_shapes": {
+          "iterations": [
+            "int"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "stream_id": {
+          "reference": [],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": false
+        },
+        "node_id": {
+          "reference": [],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": false
+        },
+        "execution_id": {
+          "reference": [],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": false
+        },
+        "colony_id": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "correlation_id": {
+          "reference": [],
+          "target": [
+            "null"
+          ],
+          "equal": false
+        },
+        "run_id": {
+          "reference": [],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": false
+        }
+      },
+      "history_value_diff": {
+        "iterations": {
+          "reference": [],
+          "target": [
+            "1",
+            "2"
+          ]
+        }
+      }
+    },
+    "node_loop_iteration": {
+      "live": {
+        "reference_count": 3,
+        "target_count": 4,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "iteration",
+          "phase"
+        ],
+        "target_keys": [
+          "iteration",
+          "phase"
+        ],
+        "reference_shapes": {
+          "iteration": [
+            "int"
+          ],
+          "phase": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "iteration": [
+            "int"
+          ],
+          "phase": [
+            "str"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 4,
+        "target_count": 5,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "iteration",
+          "phase"
+        ],
+        "target_keys": [
+          "iteration",
+          "phase"
+        ],
+        "reference_shapes": {
+          "iteration": [
+            "int"
+          ],
+          "phase": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "iteration": [
+            "int"
+          ],
+          "phase": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {
+        "iteration": {
+          "reference": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "target": [
+            "0",
+            "1",
+            "2"
+          ]
+        }
+      }
+    },
+    "node_loop_started": {
+      "live": {
+        "reference_count": 0,
+        "target_count": 3,
+        "reference_present": false,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [
+          "max_iterations"
+        ],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [],
+        "target_keys": [
+          "max_iterations"
+        ],
+        "reference_shapes": {},
+        "target_shapes": {
+          "max_iterations": [
+            "int"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 1,
+        "target_count": 4,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "max_iterations"
+        ],
+        "target_keys": [
+          "max_iterations"
+        ],
+        "reference_shapes": {
+          "max_iterations": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "max_iterations": [
+            "int"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {
+        "max_iterations": {
+          "reference": [
+            "999999"
+          ],
+          "target": [
+            "50"
+          ]
+        }
+      }
+    },
+    "queen_identity_selected": {
+      "history": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "name",
+          "queen_id",
+          "title"
+        ],
+        "target_keys": [
+          "name",
+          "queen_id",
+          "title"
+        ],
+        "reference_shapes": {
+          "queen_id": [
+            "str"
+          ],
+          "name": [
+            "str"
+          ],
+          "title": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "name": [
+            "str"
+          ],
+          "queen_id": [
+            "str"
+          ],
+          "title": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {}
+    },
+    "reminder_injected": {
+      "history": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "detail",
+          "meta",
+          "source"
+        ],
+        "target_keys": [
+          "detail",
+          "meta",
+          "source"
+        ],
+        "reference_shapes": {
+          "source": [
+            "str"
+          ],
+          "detail": [
+            "str"
+          ],
+          "meta": [
+            "object"
+          ],
+          "meta.point": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "detail": [
+            "str"
+          ],
+          "meta": [
+            "object"
+          ],
+          "meta.point": [
+            "str"
+          ],
+          "source": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {}
+    },
+    "session_snapshot": {
+      "live": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "activity",
+          "awaiting_input",
+          "current_execution_id",
+          "current_tool_calls",
+          "interrupt_cause",
+          "interrupted",
+          "is_executing",
+          "last_event_at",
+          "last_event_seq",
+          "last_queen_event_at",
+          "park_reason",
+          "pending_questions",
+          "queen_busy_reason",
+          "snapshot_seq"
+        ],
+        "target_keys": [
+          "activity",
+          "awaiting_input",
+          "current_execution_id",
+          "current_tool_calls",
+          "interrupt_cause",
+          "interrupted",
+          "is_executing",
+          "last_event_at",
+          "last_event_seq",
+          "last_queen_event_at",
+          "park_reason",
+          "pending_questions",
+          "queen_busy_reason",
+          "snapshot_seq"
+        ],
+        "reference_shapes": {
+          "snapshot_seq": [
+            "int"
+          ],
+          "activity": [
+            "str"
+          ],
+          "is_executing": [
+            "bool"
+          ],
+          "awaiting_input": [
+            "bool"
+          ],
+          "interrupted": [
+            "bool"
+          ],
+          "interrupt_cause": [
+            "null"
+          ],
+          "current_execution_id": [
+            "null"
+          ],
+          "current_tool_calls": [
+            "array"
+          ],
+          "queen_busy_reason": [
+            "str"
+          ],
+          "park_reason": [
+            "str"
+          ],
+          "pending_questions": [
+            "null"
+          ],
+          "last_event_seq": [
+            "int"
+          ],
+          "last_event_at": [
+            "str"
+          ],
+          "last_queen_event_at": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "activity": [
+            "str"
+          ],
+          "awaiting_input": [
+            "bool"
+          ],
+          "current_execution_id": [
+            "null"
+          ],
+          "current_tool_calls": [
+            "array"
+          ],
+          "interrupt_cause": [
+            "null"
+          ],
+          "interrupted": [
+            "bool"
+          ],
+          "is_executing": [
+            "bool"
+          ],
+          "last_event_at": [
+            "str"
+          ],
+          "last_event_seq": [
+            "int"
+          ],
+          "last_queen_event_at": [
+            "str"
+          ],
+          "park_reason": [
+            "str"
+          ],
+          "pending_questions": [
+            "null"
+          ],
+          "queen_busy_reason": [
+            "str"
+          ],
+          "snapshot_seq": [
+            "int"
+          ]
+        }
+      },
+      "replay": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "activity",
+          "awaiting_input",
+          "current_execution_id",
+          "current_tool_calls",
+          "interrupt_cause",
+          "interrupted",
+          "is_executing",
+          "last_event_at",
+          "last_event_seq",
+          "last_queen_event_at",
+          "park_reason",
+          "pending_questions",
+          "queen_busy_reason",
+          "snapshot_seq"
+        ],
+        "target_keys": [
+          "activity",
+          "awaiting_input",
+          "current_execution_id",
+          "current_tool_calls",
+          "interrupt_cause",
+          "interrupted",
+          "is_executing",
+          "last_event_at",
+          "last_event_seq",
+          "last_queen_event_at",
+          "park_reason",
+          "pending_questions",
+          "queen_busy_reason",
+          "snapshot_seq"
+        ],
+        "reference_shapes": {
+          "snapshot_seq": [
+            "int"
+          ],
+          "activity": [
+            "str"
+          ],
+          "is_executing": [
+            "bool"
+          ],
+          "awaiting_input": [
+            "bool"
+          ],
+          "interrupted": [
+            "bool"
+          ],
+          "interrupt_cause": [
+            "null"
+          ],
+          "current_execution_id": [
+            "null"
+          ],
+          "current_tool_calls": [
+            "array"
+          ],
+          "queen_busy_reason": [
+            "str"
+          ],
+          "park_reason": [
+            "str"
+          ],
+          "pending_questions": [
+            "null"
+          ],
+          "last_event_seq": [
+            "int"
+          ],
+          "last_event_at": [
+            "str"
+          ],
+          "last_queen_event_at": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "activity": [
+            "str"
+          ],
+          "awaiting_input": [
+            "bool"
+          ],
+          "current_execution_id": [
+            "null"
+          ],
+          "current_tool_calls": [
+            "array"
+          ],
+          "interrupt_cause": [
+            "null"
+          ],
+          "interrupted": [
+            "bool"
+          ],
+          "is_executing": [
+            "bool"
+          ],
+          "last_event_at": [
+            "str"
+          ],
+          "last_event_seq": [
+            "int"
+          ],
+          "last_queen_event_at": [
+            "str"
+          ],
+          "park_reason": [
+            "str"
+          ],
+          "pending_questions": [
+            "null"
+          ],
+          "queen_busy_reason": [
+            "str"
+          ],
+          "snapshot_seq": [
+            "int"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {}
+    },
+    "session_title_updated": {
+      "live": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "session_id",
+          "title"
+        ],
+        "target_keys": [
+          "session_id",
+          "title"
+        ],
+        "reference_shapes": {
+          "session_id": [
+            "str"
+          ],
+          "title": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "session_id": [
+            "str"
+          ],
+          "title": [
+            "str"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "session_id",
+          "title"
+        ],
+        "target_keys": [
+          "session_id",
+          "title"
+        ],
+        "reference_shapes": {
+          "session_id": [
+            "str"
+          ],
+          "title": [
+            "str"
+          ]
+        },
+        "target_shapes": {
+          "session_id": [
+            "str"
+          ],
+          "title": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {}
+    },
+    "tool_call_completed": {
+      "live": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "is_error",
+          "result",
+          "tool_index",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "target_keys": [
+          "is_error",
+          "result",
+          "tool_index",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "reference_shapes": {
+          "tool_use_id": [
+            "str"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "result": [
+            "str"
+          ],
+          "is_error": [
+            "bool"
+          ],
+          "tool_index": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "is_error": [
+            "bool"
+          ],
+          "result": [
+            "str"
+          ],
+          "tool_index": [
+            "int"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "tool_use_id": [
+            "str"
+          ]
+        }
+      },
+      "replay": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "is_error",
+          "result",
+          "tool_index",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "target_keys": [
+          "is_error",
+          "result",
+          "tool_index",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "reference_shapes": {
+          "tool_use_id": [
+            "str"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "result": [
+            "str"
+          ],
+          "is_error": [
+            "bool"
+          ],
+          "tool_index": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "is_error": [
+            "bool"
+          ],
+          "result": [
+            "str"
+          ],
+          "tool_index": [
+            "int"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "tool_use_id": [
+            "str"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "is_error",
+          "result",
+          "tool_index",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "target_keys": [
+          "is_error",
+          "result",
+          "tool_index",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "reference_shapes": {
+          "tool_use_id": [
+            "str"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "result": [
+            "str"
+          ],
+          "is_error": [
+            "bool"
+          ],
+          "tool_index": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "is_error": [
+            "bool"
+          ],
+          "result": [
+            "str"
+          ],
+          "tool_index": [
+            "int"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "tool_use_id": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {}
+    },
+    "tool_call_started": {
+      "live": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "tool_index",
+          "tool_input",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "target_keys": [
+          "tool_index",
+          "tool_input",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "reference_shapes": {
+          "tool_use_id": [
+            "str"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "tool_input": [
+            "object"
+          ],
+          "tool_input.questions": [
+            "array"
+          ],
+          "tool_input.questions[]": [
+            "object"
+          ],
+          "tool_input.questions[].id": [
+            "str"
+          ],
+          "tool_input.questions[].prompt": [
+            "str"
+          ],
+          "tool_input.questions[].options": [
+            "array"
+          ],
+          "tool_input.questions[].options[]": [
+            "str"
+          ],
+          "tool_index": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "tool_index": [
+            "int"
+          ],
+          "tool_input": [
+            "object"
+          ],
+          "tool_input.questions": [
+            "array"
+          ],
+          "tool_input.questions[]": [
+            "object"
+          ],
+          "tool_input.questions[].id": [
+            "str"
+          ],
+          "tool_input.questions[].options": [
+            "array"
+          ],
+          "tool_input.questions[].options[]": [
+            "str"
+          ],
+          "tool_input.questions[].prompt": [
+            "str"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "tool_use_id": [
+            "str"
+          ]
+        }
+      },
+      "replay": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "tool_index",
+          "tool_input",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "target_keys": [
+          "tool_index",
+          "tool_input",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "reference_shapes": {
+          "tool_use_id": [
+            "str"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "tool_input": [
+            "object"
+          ],
+          "tool_input.questions": [
+            "array"
+          ],
+          "tool_input.questions[]": [
+            "object"
+          ],
+          "tool_input.questions[].id": [
+            "str"
+          ],
+          "tool_input.questions[].prompt": [
+            "str"
+          ],
+          "tool_input.questions[].options": [
+            "array"
+          ],
+          "tool_input.questions[].options[]": [
+            "str"
+          ],
+          "tool_index": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "tool_index": [
+            "int"
+          ],
+          "tool_input": [
+            "object"
+          ],
+          "tool_input.questions": [
+            "array"
+          ],
+          "tool_input.questions[]": [
+            "object"
+          ],
+          "tool_input.questions[].id": [
+            "str"
+          ],
+          "tool_input.questions[].options": [
+            "array"
+          ],
+          "tool_input.questions[].options[]": [
+            "str"
+          ],
+          "tool_input.questions[].prompt": [
+            "str"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "tool_use_id": [
+            "str"
+          ]
+        }
+      },
+      "history": {
+        "reference_count": 1,
+        "target_count": 1,
+        "reference_present": true,
+        "target_present": true,
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {},
+        "reference_keys": [
+          "tool_index",
+          "tool_input",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "target_keys": [
+          "tool_index",
+          "tool_input",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "reference_shapes": {
+          "tool_use_id": [
+            "str"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "tool_input": [
+            "object"
+          ],
+          "tool_input.questions": [
+            "array"
+          ],
+          "tool_input.questions[]": [
+            "object"
+          ],
+          "tool_input.questions[].id": [
+            "str"
+          ],
+          "tool_input.questions[].prompt": [
+            "str"
+          ],
+          "tool_input.questions[].options": [
+            "array"
+          ],
+          "tool_input.questions[].options[]": [
+            "str"
+          ],
+          "tool_index": [
+            "int"
+          ]
+        },
+        "target_shapes": {
+          "tool_index": [
+            "int"
+          ],
+          "tool_input": [
+            "object"
+          ],
+          "tool_input.questions": [
+            "array"
+          ],
+          "tool_input.questions[]": [
+            "object"
+          ],
+          "tool_input.questions[].id": [
+            "str"
+          ],
+          "tool_input.questions[].options": [
+            "array"
+          ],
+          "tool_input.questions[].options[]": [
+            "str"
+          ],
+          "tool_input.questions[].prompt": [
+            "str"
+          ],
+          "tool_name": [
+            "str"
+          ],
+          "tool_use_id": [
+            "str"
+          ]
+        }
+      },
+      "envelope": {
+        "event": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "stream_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "node_id": {
+          "reference": [
+            "\"queen\""
+          ],
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
+        },
+        "execution_id": {
+          "reference": [
+            "\"<execution_id>\""
+          ],
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
+        },
+        "colony_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "correlation_id": {
+          "reference": [
+            "null"
+          ],
+          "target": [
+            "null"
+          ],
+          "equal": true
+        },
+        "run_id": {
+          "reference": [
+            "\"<absent>\""
+          ],
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
+        }
+      },
+      "history_value_diff": {}
+    }
+  },
+  "sequences": {
+    "live": {
+      "capture": "live",
+      "reference_count": 35,
+      "target_count": 49,
+      "reference_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "session_title_updated",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "tool_call_started",
+        "tool_call_completed",
+        "context_usage_updated",
+        "context_usage_updated",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed"
+      ],
+      "target_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "client_input_received",
+        "execution_started",
+        "loop_state_changed",
+        "node_loop_started",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "session_title_updated",
+        "node_loop_completed",
+        "client_input_requested",
+        "loop_state_changed",
+        "execution_completed",
+        "client_input_received",
+        "execution_started",
+        "loop_state_changed",
+        "node_loop_started",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "llm_turn_complete",
+        "tool_call_started",
+        "client_input_requested",
+        "tool_call_completed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "node_loop_completed",
+        "loop_state_changed",
+        "execution_completed",
+        "client_input_received",
+        "execution_started",
+        "loop_state_changed",
+        "node_loop_started",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "node_loop_completed",
+        "client_input_requested",
+        "loop_state_changed",
+        "execution_completed"
+      ],
+      "equal": false,
+      "ops": [
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "llm_turn_complete"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "client_input_requested"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_iteration"
+          ]
+        },
+        {
+          "op": "replace",
+          "reference": [
+            "context_usage_updated"
+          ],
+          "target": [
+            "client_output_delta"
+          ]
+        },
+        {
+          "op": "replace",
+          "reference": [
+            "client_input_requested"
+          ],
+          "target": [
+            "node_loop_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_completed"
+          ]
+        }
+      ]
+    },
+    "replay": {
+      "capture": "replay",
+      "reference_count": 17,
+      "target_count": 25,
+      "reference_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "tool_call_started",
+        "tool_call_completed",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested"
+      ],
+      "target_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "execution_started",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "execution_completed",
+        "client_input_received",
+        "execution_started",
+        "client_input_committed",
+        "llm_turn_complete",
+        "tool_call_started",
+        "tool_call_completed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "execution_completed",
+        "client_input_received",
+        "execution_started",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "execution_completed"
+      ],
+      "equal": false,
+      "ops": [
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "llm_turn_complete"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "client_output_delta"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_completed"
+          ]
+        }
+      ]
+    },
+    "history": {
+      "capture": "history",
+      "reference_count": 44,
+      "target_count": 54,
+      "reference_types": [
+        "queen_identity_selected",
+        "reminder_injected",
+        "node_loop_started",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "judge_verdict",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "session_title_updated",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "judge_verdict",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "tool_call_started",
+        "tool_call_completed",
+        "context_usage_updated",
+        "context_usage_updated",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "judge_verdict",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "loop_state_changed"
+      ],
+      "target_types": [
+        "queen_identity_selected",
+        "reminder_injected",
+        "node_loop_started",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "execution_started",
+        "loop_state_changed",
+        "node_loop_started",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "session_title_updated",
+        "node_loop_completed",
+        "client_input_requested",
+        "loop_state_changed",
+        "execution_completed",
+        "client_input_received",
+        "execution_started",
+        "loop_state_changed",
+        "node_loop_started",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "llm_turn_complete",
+        "tool_call_started",
+        "client_input_requested",
+        "tool_call_completed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "node_loop_completed",
+        "loop_state_changed",
+        "execution_completed",
+        "client_input_received",
+        "execution_started",
+        "loop_state_changed",
+        "node_loop_started",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "node_loop_completed",
+        "client_input_requested",
+        "loop_state_changed",
+        "execution_completed"
+      ],
+      "equal": false,
+      "ops": [
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_started"
+          ]
+        },
+        {
+          "op": "replace",
+          "reference": [
+            "judge_verdict"
+          ],
+          "target": [
+            "node_loop_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_started"
+          ]
+        },
+        {
+          "op": "replace",
+          "reference": [
+            "judge_verdict"
+          ],
+          "target": [
+            "node_loop_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "llm_turn_complete"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "client_input_requested"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_iteration"
+          ]
+        },
+        {
+          "op": "replace",
+          "reference": [
+            "context_usage_updated"
+          ],
+          "target": [
+            "client_output_delta"
+          ]
+        },
+        {
+          "op": "replace",
+          "reference": [
+            "client_input_requested"
+          ],
+          "target": [
+            "node_loop_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_started"
+          ]
+        },
+        {
+          "op": "replace",
+          "reference": [
+            "judge_verdict"
+          ],
+          "target": [
+            "node_loop_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_completed"
+          ]
+        },
+        {
+          "op": "replace",
+          "reference": [
+            "loop_state_changed"
+          ],
+          "target": [
+            "execution_completed"
+          ]
+        }
+      ]
+    },
+    "live_without_go_envelope": {
+      "capture": "live_without_go_envelope",
+      "reference_count": 35,
+      "target_count": 37,
+      "reference_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "session_title_updated",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "tool_call_started",
+        "tool_call_completed",
+        "context_usage_updated",
+        "context_usage_updated",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed"
+      ],
+      "target_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "session_title_updated",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "llm_turn_complete",
+        "tool_call_started",
+        "client_input_requested",
+        "tool_call_completed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed"
+      ],
+      "equal": false,
+      "ops": [
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "llm_turn_complete"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "client_input_requested"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_iteration"
+          ]
+        },
+        {
+          "op": "replace",
+          "reference": [
+            "context_usage_updated"
+          ],
+          "target": [
+            "client_output_delta"
+          ]
+        },
+        {
+          "op": "delete",
+          "reference": [
+            "client_input_requested"
+          ],
+          "target": []
+        }
+      ]
+    }
+  },
+  "replay": {
+    "reference_replayed_types": [
+      "client_output_delta",
+      "llm_turn_complete",
+      "client_input_received",
+      "client_input_committed",
+      "client_output_delta",
+      "llm_turn_complete",
+      "client_input_received",
+      "client_input_committed",
+      "tool_call_started",
+      "tool_call_completed",
+      "llm_turn_complete",
+      "client_input_received",
+      "client_input_committed",
+      "client_output_delta",
+      "llm_turn_complete",
+      "client_input_requested"
+    ],
+    "target_replayed_types": [
+      "client_output_delta",
+      "llm_turn_complete",
+      "client_input_received",
+      "execution_started",
+      "client_input_committed",
+      "client_output_delta",
+      "llm_turn_complete",
+      "execution_completed",
+      "client_input_received",
+      "execution_started",
+      "client_input_committed",
+      "llm_turn_complete",
+      "tool_call_started",
+      "tool_call_completed",
+      "client_output_delta",
+      "llm_turn_complete",
+      "execution_completed",
+      "client_input_received",
+      "execution_started",
+      "client_input_committed",
+      "client_output_delta",
+      "llm_turn_complete",
+      "client_input_requested",
+      "execution_completed"
+    ],
+    "same_replayed_multiset": false,
+    "same_replayed_multiset_without_go_envelope": false,
+    "multiset_delta_without_envelope": {
+      "client_output_delta": {
+        "reference": 3,
+        "target": 4
+      },
+      "llm_turn_complete": {
+        "reference": 4,
+        "target": 5
+      }
+    },
+    "reference_replay_order_matches_history": true,
+    "target_replay_order_matches_history": true,
+    "reference_first_frame": "session_snapshot",
+    "target_first_frame": "session_snapshot"
+  },
+  "live_type_sets": {
+    "reference": [
+      "client_input_committed",
+      "client_input_received",
+      "client_input_requested",
+      "client_output_delta",
+      "context_usage_updated",
+      "llm_turn_complete",
+      "loop_state_changed",
+      "node_loop_iteration",
+      "session_snapshot",
+      "session_title_updated",
+      "tool_call_completed",
+      "tool_call_started"
+    ],
+    "target": [
+      "client_input_committed",
+      "client_input_received",
+      "client_input_requested",
+      "client_output_delta",
+      "context_usage_updated",
+      "execution_completed",
+      "execution_started",
+      "llm_turn_complete",
+      "loop_state_changed",
+      "node_loop_completed",
+      "node_loop_iteration",
+      "node_loop_started",
+      "session_snapshot",
+      "session_title_updated",
+      "tool_call_completed",
+      "tool_call_started"
+    ]
+  },
+  "live_missing_in_target": [],
+  "live_extra_in_target": [
+    "execution_completed",
+    "execution_started",
+    "node_loop_completed",
+    "node_loop_started"
+  ],
+  "types_with_field_gaps": {
+    "execution_completed": {
+      "live": {
+        "missing_in_target": [],
+        "extra_in_target": [
+          "output"
+        ],
+        "type_mismatch": [],
+        "type_details": {}
+      },
+      "replay": {
+        "missing_in_target": [],
+        "extra_in_target": [
+          "output"
+        ],
+        "type_mismatch": [],
+        "type_details": {}
+      },
+      "history": {
+        "missing_in_target": [],
+        "extra_in_target": [
+          "output"
+        ],
+        "type_mismatch": [],
+        "type_details": {}
+      }
+    },
+    "execution_started": {
+      "live": {
+        "missing_in_target": [],
+        "extra_in_target": [
+          "input"
+        ],
+        "type_mismatch": [],
+        "type_details": {}
+      },
+      "replay": {
+        "missing_in_target": [],
+        "extra_in_target": [
+          "input"
+        ],
+        "type_mismatch": [],
+        "type_details": {}
+      },
+      "history": {
+        "missing_in_target": [],
+        "extra_in_target": [
+          "input"
+        ],
+        "type_mismatch": [],
+        "type_details": {}
+      }
+    },
+    "judge_verdict": {
+      "history": {
+        "missing_in_target": [
+          "action",
+          "feedback",
+          "iteration",
+          "judge_type"
+        ],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {}
+      }
+    },
+    "llm_turn_complete": {
+      "live": {
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [
+          "cost_usd"
+        ],
+        "type_details": {
+          "cost_usd": {
+            "reference": [
+              "float"
+            ],
+            "target": [
+              "int"
+            ]
+          }
+        }
+      },
+      "replay": {
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [
+          "cost_usd"
+        ],
+        "type_details": {
+          "cost_usd": {
+            "reference": [
+              "float"
+            ],
+            "target": [
+              "int"
+            ]
+          }
+        }
+      },
+      "history": {
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [
+          "cost_usd"
+        ],
+        "type_details": {
+          "cost_usd": {
+            "reference": [
+              "float"
+            ],
+            "target": [
+              "int"
+            ]
+          }
+        }
+      }
+    },
+    "node_loop_completed": {
+      "live": {
+        "missing_in_target": [],
+        "extra_in_target": [
+          "iterations"
+        ],
+        "type_mismatch": [],
+        "type_details": {}
+      },
+      "history": {
+        "missing_in_target": [],
+        "extra_in_target": [
+          "iterations"
+        ],
+        "type_mismatch": [],
+        "type_details": {}
+      }
+    },
+    "node_loop_started": {
+      "live": {
+        "missing_in_target": [],
+        "extra_in_target": [
+          "max_iterations"
+        ],
+        "type_mismatch": [],
+        "type_details": {}
+      },
+      "history": {
+        "missing_in_target": [],
+        "extra_in_target": [],
+        "type_mismatch": [],
+        "type_details": {}
+      }
+    }
+  }
+}

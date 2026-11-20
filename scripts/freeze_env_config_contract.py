@@ -1127,8 +1127,11 @@ def build_doc(env: dict, cfg: dict) -> str:
         "`worker_llm.*`（colony 专用 worker 模型）、`vision_fallback.*`（文本主模型下的工具图片描述）；并接入 "
         "`llm.aux_max_tokens`、`loop.max_tool_result_chars`、`worker_tools.always_enabled_categories`，"
         "修复 `mcp.timeout_seconds` 的优先级（env > file）。",
-        "- 仍未对齐的项各有明确残余（`go_partial` / `python_only`）：槽位模型的 PUT 热切换（`llm.Provider` 无 Reconfigure）与 "
-        "`worker_llm.max_tokens`（两侧都没有消费点）；`llm.antigravity_client_*` 是只读（读取点已有，端口没有 OAuth 刷新来消费它）；"
+        "- 本车道的后续（config-put-hotswitch）把模型槽位 PUT 做成了会话级热切换：`llm` 与 `queen_llm.<id>` 用 `ProviderSlot` 原地重建运行中会话的 transport（"
+        "回合级 pin：进行中回合用旧 provider 跑完，下一回合用新模型）；`vision_fallback` 逐次 caption 重读槽位，写入即对下一张工具图片生效；"
+        "`worker_llm` 与上游 `_write_role_section` 一致只对新会话/新 colony 生效。",
+        "- 仍未对齐的项各有明确残余（`go_partial` / `python_only`）：`worker_llm.max_tokens`（两侧都没有消费点）；"
+        "`llm.antigravity_client_*` 是只读（读取点已有，端口没有 OAuth 刷新来消费它）；"
         "`channels.<name>.enabled` 不支持（无渠道插件宿主）；`llm.use_*_subscription` 两个订阅分支未移植。"
         "逐项理由见 `contracts/config-support-ledger.json`。",
         "- 环境变量侧，Python 独有的生产开关（仍未接入）主要是 `HIVE_TRACKER_WORKER_TOOL_CALLS`、"

@@ -38,7 +38,7 @@ func batch5Lane3CalAuthError() map[string]any {
 // batch5Lane3CalCredentialError mirrors _check_credentials, which every
 // calendar action runs before validating its arguments.
 func batch5Lane3CalCredentialError(rt *Runtime) map[string]any {
-	if batch5Lane3AccountToken(rt, batch5Lane3CalModule) == "" {
+	if !batch5Lane3AccountCredential(rt, batch5Lane3CalModule) {
 		return batch5Lane3CalAuthError()
 	}
 	return nil
@@ -79,7 +79,7 @@ func batch5Lane3CalResponse(status int, raw []byte) map[string]any {
 }
 
 func batch5Lane3CalCall(ctx context.Context, rt *Runtime, method, path string, query map[string]string, body any) (any, error) {
-	if batch5Lane3AccountToken(rt, batch5Lane3CalModule) == "" {
+	if !batch5Lane3AccountCredential(rt, batch5Lane3CalModule) {
 		return batch5Lane3CalAuthError(), nil
 	}
 	status, raw, err := batch5Lane3Do(ctx, rt, batch5Lane3CalModule, method, path, query, body)

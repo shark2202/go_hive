@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/memory"
+	"github.com/aden-hive/hive-go/internal/soul"
 )
 
 // memoryTimelineStopFlushTimeout bounds the timeline flush Close runs after a
@@ -220,4 +222,57 @@ func (r *ChatRuntime) timelineAfterTurn() {
 		defer r.timelineWG.Done()
 		_, _ = memory.UpdateSessionTimeline(r.ctx, r.deps.LLM, sessionDir)
 	}()
+}
+
+// Parity-exempt: Go-only sediment seam. Upstream revises a soul in its own
+// daily chat-reading reflection (framework/agents/queen/soul_reflection.py);
+// the Go port now runs that daily pass too, and also rides the memory
+// reflection so a soul still updates between daily runs.
+func (r *ChatRuntime) sedimentSoul(result memory.LoopResult) {
+	if r == nil || r.deps.HomeRoot == "" || r.queenName == "" {
+		return
+	}
+	home := hivehome.Home{Root: r.deps.HomeRoot}
+	cfg := soul.GetSoulConfig(HiveConfig(home), r.queenName)
+	if cfg == nil {
+		return
+	}
+	conclusions := memory.ConclusionsFromReflection(result, []memory.ScopeDir{{Scope: "queen", Dir: r.queenMemoryDir}})
+	if len(conclusions) == 0 {
+		return
+	}
+	items := make([]soul.SedimentConclusion, 0, len(conclusions))
+	for _, conclusion := range conclusions {
+		items = append(items, soul.SedimentConclusion{Text: conclusion.Text, Source: conclusion.Filename})
+	}
+	if _, err := soul.Sediment(soul.SedimentOptions{
+		QueensDir:   home.QueensDir(),
+		QueenID:     r.queenName,
+		Config:      cfg,
+		Conclusions: items,
+	}); err != nil {
+		log.Printf("chat runtime %s: soul sediment skipped: %v", r.sessionID, err)
+	}
+}
+
+// chatMemoryReflectionConfig reads the memory_reflection section of
+// configuration.json, falling back to the same defaults as upstream.
+//
+// Parity: framework/config.py::get_memory_reflection_config
+func chatMemoryReflectionConfig(homeRoot string) memory.ReflectionConfig {
+	cfg := memory.DefaultReflectionConfig()
+	section, _ := HiveConfig(hivehome.Home{Root: homeRoot})["memory_reflection"].(map[string]any)
+	positive := func(key string, fallback int) int {
+		value, ok := toFloat(section[key])
+		if !ok || value < 1 || value != float64(int(value)) {
+			return fallback
+		}
+		return int(value)
+	}
+	cfg.EveryTurns = positive("every_turns", cfg.EveryTurns)
+	cfg.LongEvery = positive("long_every", cfg.LongEvery)
+	if model, ok := section["model"].(string); ok && (model == "main" || model == "worker") {
+		cfg.Model = model
+	}
+	return cfg
 }

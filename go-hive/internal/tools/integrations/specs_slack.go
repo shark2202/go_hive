@@ -5,19 +5,30 @@ import "net/http"
 // Slack's Web API is uniformly POST <base>/<method> with a JSON body; a
 // handful of actions compose multiple calls and live in slack_local.go.
 type slackRoute struct {
-	action   string
-	method   string
-	body     []string
-	rename   map[string]string
-	join     []string
-	builder  func(map[string]any) map[string]any
-	constant map[string]any
+	action     string
+	method     string
+	body       []string
+	rename     map[string]string
+	join       []string
+	builder    func(map[string]any) map[string]any
+	constant   map[string]any
+	pagination *PaginationSpec
 }
 
 func slackSpecs() map[string]RestSpec {
+	// conversations.list and users.list return at most one page plus a
+	// response_metadata.next_cursor; the declarative walk follows it so the
+	// list actions return every channel/user the bot can see.
+	slackCursor := func(items string) *PaginationSpec {
+		return &PaginationSpec{
+			ItemsPath:      items,
+			NextCursorPath: "response_metadata.next_cursor",
+			CursorParam:    "cursor",
+		}
+	}
 	routes := []slackRoute{
 		{action: "slack_send_message", method: "chat.postMessage"},
-		{action: "slack_list_channels", method: "conversations.list"},
+		{action: "slack_list_channels", method: "conversations.list", pagination: slackCursor("channels")},
 		{action: "slack_get_channel_history", method: "conversations.history"},
 		{action: "slack_add_reaction", method: "reactions.add", rename: map[string]string{"timestamp": "timestamp"}},
 		{action: "slack_get_user_info", method: "users.info", rename: map[string]string{"user_id": "user"}},
@@ -32,7 +43,7 @@ func slackSpecs() map[string]RestSpec {
 		},
 		{action: "slack_set_channel_topic", method: "conversations.setTopic"},
 		{action: "slack_remove_reaction", method: "reactions.remove"},
-		{action: "slack_list_users", method: "users.list"},
+		{action: "slack_list_users", method: "users.list", pagination: slackCursor("members")},
 		{action: "slack_search_messages", method: "search.messages"},
 		{action: "slack_get_thread_replies", method: "conversations.replies", rename: map[string]string{"thread_ts": "ts"}},
 		{action: "slack_pin_message", method: "pins.add"},
@@ -87,13 +98,14 @@ func slackSpecs() map[string]RestSpec {
 	specs := make(map[string]RestSpec, len(routes))
 	for _, route := range routes {
 		spec := RestSpec{
-			Method:    http.MethodPost,
-			Path:      "/" + route.method,
-			Body:      route.body,
-			Rename:    route.rename,
-			JoinLists: route.join,
-			Build:     route.builder,
-			Constants: route.constant,
+			Method:     http.MethodPost,
+			Path:       "/" + route.method,
+			Body:       route.body,
+			Rename:     route.rename,
+			JoinLists:  route.join,
+			Build:      route.builder,
+			Constants:  route.constant,
+			Pagination: route.pagination,
 		}
 		specs[route.action] = spec
 	}

@@ -45,15 +45,6 @@ func batch5Lane3DocsAuthError() map[string]any {
 	}
 }
 
-// batch5Lane3DocsToken resolves the Google credential for a Docs call: an
-// account alias the action selected wins over the module's single token
-// (upstream `_get_token(account)` -> credentials.get_by_alias("google",
-// account)). An unresolved alias yields "" so the caller returns the upstream
-// auth error, like upstream's get_by_alias returning None.
-func batch5Lane3DocsToken(rt *Runtime) string {
-	return batch5Lane3AccountToken(rt, batch5Lane3DocsModule)
-}
-
 // batch5Lane3DocsResponse mirrors _GoogleDocsClient._handle_response.
 func batch5Lane3DocsResponse(status int, raw []byte) map[string]any {
 	switch {
@@ -80,7 +71,7 @@ func batch5Lane3DocsResponse(status int, raw []byte) map[string]any {
 }
 
 func batch5Lane3DocsCall(ctx context.Context, rt *Runtime, method, path string, query map[string]string, body any) (any, error) {
-	if batch5Lane3DocsToken(rt) == "" {
+	if !batch5Lane3AccountCredential(rt, batch5Lane3DocsModule) {
 		return batch5Lane3DocsAuthError(), nil
 	}
 	status, raw, err := batch5Lane3Do(ctx, rt, batch5Lane3DocsModule, method, path, query, body)
@@ -93,7 +84,7 @@ func batch5Lane3DocsCall(ctx context.Context, rt *Runtime, method, path string, 
 // batch5Lane3DriveCall is the same request against the Drive host used for
 // comments and export.
 func batch5Lane3DriveCall(ctx context.Context, rt *Runtime, method, path string, query map[string]string, body any) (map[string]any, error) {
-	if batch5Lane3DocsToken(rt) == "" {
+	if !batch5Lane3AccountCredential(rt, batch5Lane3DocsModule) {
 		return batch5Lane3DocsAuthError(), nil
 	}
 	status, raw, err := batch5Lane3Do(ctx, rt, batch5Lane3DriveModule, method, path, query, body)
@@ -200,7 +191,7 @@ func batch5Lane3DocsInsertText(ctx context.Context, rt *Runtime, input map[strin
 }
 
 func batch5Lane3DocsReplaceAllText(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	if batch5Lane3DocsToken(rt) == "" {
+	if !batch5Lane3AccountCredential(rt, batch5Lane3DocsModule) {
 		return batch5Lane3DocsAuthError(), nil
 	}
 	documentID := stringArg(input, "document_id")
@@ -242,7 +233,7 @@ func batch5Lane3DocsReplaceAllText(ctx context.Context, rt *Runtime, input map[s
 }
 
 func batch5Lane3DocsInsertImage(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	if batch5Lane3DocsToken(rt) == "" {
+	if !batch5Lane3AccountCredential(rt, batch5Lane3DocsModule) {
 		return batch5Lane3DocsAuthError(), nil
 	}
 	imageURI := stringArg(input, "image_uri")
@@ -318,7 +309,7 @@ func batch5Lane3DocsFormatText(ctx context.Context, rt *Runtime, input map[strin
 }
 
 func batch5Lane3DocsBatchUpdate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	if batch5Lane3DocsToken(rt) == "" {
+	if !batch5Lane3AccountCredential(rt, batch5Lane3DocsModule) {
 		return batch5Lane3DocsAuthError(), nil
 	}
 	var requests any
@@ -404,7 +395,7 @@ func batch5Lane3DocsExportContent(ctx context.Context, rt *Runtime, input map[st
 	if mimeType == "" {
 		mimeType = "application/pdf"
 	}
-	if batch5Lane3DocsToken(rt) == "" {
+	if !batch5Lane3AccountCredential(rt, batch5Lane3DocsModule) {
 		return batch5Lane3DocsAuthError(), nil
 	}
 	status, raw, err := batch5Lane3Do(ctx, rt, batch5Lane3DriveModule, http.MethodGet,

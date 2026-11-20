@@ -141,6 +141,18 @@ func (t *TitleTrigger) Close() {
 	t.waiters.Wait()
 }
 
+// Release unsubscribes without waiting for an in-flight generation. Session
+// teardown uses it: upstream drops the trigger's subscription ids at stop and
+// lets a generation already running finish on its own.
+func (t *TitleTrigger) Release() {
+	if t == nil {
+		return
+	}
+	for _, id := range t.subscriptions {
+		t.bus.Unsubscribe(id)
+	}
+}
+
 func (t *TitleTrigger) onOutput(event *eventbus.AgentEvent) {
 	if event.StreamID != "queen" {
 		return

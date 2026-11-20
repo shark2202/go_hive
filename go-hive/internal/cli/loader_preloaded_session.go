@@ -213,7 +213,10 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 		Colony:        record.Colony,
 		OnTurnStart:   onTurnStart,
 		// Same vision-fallback captioning a created session gets.
-		VisionCaptioner: visionCaptionerFor(home, provider),
+		VisionCaptioner: visionCaptionerFor(home),
+		// The queen's phase rides node_loop_iteration, as upstream's
+		// iteration_metadata_provider reports it.
+		Phase: func() string { return hiveserver.SessionPhaseLabel(record) },
 	})
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", record.ID, err)
@@ -221,6 +224,12 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	}
 	record.Chat = built
 	record.LLM = provider
+	// Session title: written by the worker model after the first finished
+	// turn, exactly as upstream's subscribe_title_trigger registers it on the
+	// session bus.
+	if record.EventBus != nil && sessionDir != "" {
+		record.TitleTrigger = hiveserver.SubscribeTitleTrigger(record.EventBus, sessionDir, provider)
+	}
 	// The preloaded session's queen executor is its chat runtime, so trigger
 	// timers and webhooks reach the Queen exactly like a created session.
 	record.QueenExecutor = &hiveserver.QueenExecutor{

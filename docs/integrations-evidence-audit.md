@@ -1,6 +1,7 @@
 # go_hive integrations 证据审计（摘要）
 
 - 生成：2026-11-21 05:47 CST（修订） · 基线 main `db5c4c1b` · worktree `.wt/integrations-account-wiring`
+- 本次增量（2026-11-21）：`oauth-refresh-pagination` 车道补 OAuth2 refresh 与通用 REST 分页；`global_gaps[0..1]` 与 7 个模块的 `oauth_refresh`/`refresh`、2 个模块的 `pagination` 字段已更新，HTML 视图仍是 05:47 快照。
 - 全量数据：`go_hive/docs/integrations-evidence-audit.json`；可视化：`go_hive/docs/integrations-evidence-audit.html`
 
 ## 结论
@@ -22,9 +23,9 @@
 ## 最严重缺口（按影响排序）
 
 1. ~~**get_account_info（C）**~~ **已修复（C → B，2026-11-21 修订）**：`newSessionToolCatalogue` 现在把真实凭据库作为 `AccountSource` 挂到共享 registry（`tools.ToolRegistry.SetAccountSource` → `credentials.CredentialStoreAdapter`，读 `home/credentials` 加密库 + local alias 账户），`get_account_info` 无凭据返回 `{"accounts":[],"count":0}`；有凭据 / 多账号 / provider 过滤三组测试 + 假服务端到端覆盖。
-2. **OAuth 刷新缺失（全包 0 处）**：20 个凭据条目（17 个工具）只接受静态 access token（`*_ACCESS_TOKEN`）；bigquery / google_analytics / google_search_console 可 SA JWT 换 token、reddit 可 client-credentials 取 token，但无刷新循环，token 过期即失败。
+2. ~~**OAuth 刷新缺失（全包 0 处）**~~ **已实现通用刷新（2026-11-21 修订）**：`integrationkit.TokenRefresher` 提供标准 OAuth2 refresh_token 授权（POST form `grant_type=refresh_token`，过期前 5 分钟刷新，按 endpoint+client+refresh 缓存并并发去重，刷新失败返回 `{error, error_code, help}`，401 → 刷新 → 重试一次）。已接入 7 个模块：`calendar` / `gmail` / `google_docs` / `google_sheets` / `email`（Gmail sender）共用 `GOOGLE_*` 凭据，`hubspot` 用 `HUBSPOT_*`，`zoho_crm` 用 `ZOHO_*`；凭据库经 env sync 额外导出 client_id/client_secret/refresh_token/access_token 过期时间。仍未接入：只声明静态 access token 的 `salesforce` / `microsoft_graph` / `powerbi` / `quickbooks` / `zoom` / `google_search_console` 等条目（上游规格无 client_id/secret/refresh_token），以及 account 别名单 token。
 3. **mongodb（D）**：依赖的 MongoDB Atlas Data API 2025-09 EOL，只有指向兼容替代（Delbridge/RESTHeart）时可用。
-4. **通用客户端无分页**：只有 bigquery 自动跟随 token；zoom/google_docs/gmail/google_maps/salesforce/stripe 透传；其余列表 action 单页返回。
+4. ~~**通用客户端无分页**~~ **已实现声明式分页（2026-11-21 修订）**：`RestSpec.Pagination` 支持 `items_path` / `next_cursor_path` / `cursor_param` / `max_pages`（默认 10 页，空/重复光标即停，合并后清除 next_cursor）；已接线 `airtable_list_records`（offset）与 `slack_list_channels` / `slack_list_users`（`response_metadata.next_cursor`）。残余：github（Link 头）、stripe（starting_after=末条 id）、zoom/gmail/google_docs/google_maps/salesforce（透传）与 bigquery（自研循环）未改为声明式；其余列表 action 单页。
 5. **无 multipart 文件上传**：slack 用 external upload URL + PUT 文本、graph 4MB simple PUT、cloudinary 只收 URL、s3 put 只收文本。
 6. ~~**多账号 alias 未复刻**~~ **已复刻（2026-11-21 修订）**：hubspot / notion / discord / mattermost / google docs·gmail·calendar 的 `account` 经同一凭据视图解析（`get_by_alias` 语义：别名优先、未知别名返回该工具 auth 错误）。仍不支持：`obsidian`（上游无 account 参数）、`google_sheets`（account 为框架 tracking 参数，工具忽略）、support/ATS 组 `intercom/zendesk/freshdesk/greenhouse`（上游无 account 参数；多值 bundle 仍按 env/单条存储）。
 7. **senders ESP 不投递**：`internal/senders` 9 actions feature-gated（HIVE_EMAIL_SENDERS 默认关），仅 SMTP 真实投递。
