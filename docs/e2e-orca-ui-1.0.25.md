@@ -38,6 +38,10 @@ go_hive 的 hive-embed，版本 hive 1.0.25-go.1。
 2. **点击偶发失败**：`EN` 与 `Send` 各出现一次 `ok:false`，重试即成功（元素位置/动画时序），建议 E2E 里对关键点击做一次重试。
 3. `GET /api/sessions/{id}` 不返回 pending/park 字段，前端冷加载重现依赖 `events.jsonl` 回放；本次实测成立，但接口层面无直接断言点。
 
+## 截图
+
+- 会话回复与工具调用：`docs/e2e-assets/orca-ui-chat-1.0.26.png`（Orca 内置浏览器，2026-11-20 08:54）
+
 ## 复现命令（节选）
 
 ```bash
