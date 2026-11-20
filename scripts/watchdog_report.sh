@@ -85,12 +85,25 @@ while true; do
     echo
   } >> "$REPORT"
 
+  # ---- 休眠感知：机器 sleep 会让本轮与上轮间隔远超 INTERVAL，此时
+  # timegov/HEAD 的“陈旧”是休眠造成，不是故障；跳过本轮 stall/ledger 告警，
+  # 并把 HEAD 计时重置到唤醒时刻。短睡眠循环保证唤醒后尽快补采。
+  cycle_now=$(date +%s)
+  prev_cycle=$(state_get last_cycle_at)
+  sleep_gap=0
+  if [ -n "$prev_cycle" ] && [ $((cycle_now - prev_cycle)) -gt $((INTERVAL * 2)) ]; then
+    sleep_gap=1
+    echo "[watchdog $ts] wake gap $(( (cycle_now - prev_cycle) / 60 )) min — stall/ledger alerts skipped once"
+    state_set last_head_at "$cycle_now"
+  fi
+  state_set last_cycle_at "$cycle_now"
+
   # ---- 异常检测（每条告警 15 分钟内只响一次）----
   [ "$health" != "200" ] && alert health "health=${health}（期望 200，端口 8788）"
   [ "$servers" -eq 0 ] 2>/dev/null && alert serve "hive-embed serve 进程为 0"
   case "$gate_line" in *FAIL*|*MISSING*) alert gate "最近门禁异常：$gate_line" ;; esac
   [ "$dirty" -ge 3 ] 2>/dev/null && alert dirty "go_hive 区有 ${dirty} 个未提交改动（total=${dirty_total}），检查是否有 lane 写进主线"
-  if [ "$ledger_age" != "?" ] && [ "$ledger_age" -gt 900 ] 2>/dev/null; then
+  if [ "$sleep_gap" != 1 ] && [ "$ledger_age" != "?" ] && [ "$ledger_age" -gt 900 ] 2>/dev/null; then
     alert ledger "时间台账超过 $((ledger_age / 60)) 分钟未更新（timegov 可能挂了）"
   fi
   # HEAD 超过 45 分钟未动且还有工作树 → 可能整队停滞
@@ -105,9 +118,16 @@ while true; do
   fi
 
   # 固定节拍：本轮工作耗时从睡眠里扣掉，避免每轮漂移。
+  # 15 秒粒度累加：系统休眠会冻结一次 300s 的 sleep，唤醒后要等整周期；
+  # 短睡眠让下一轮采样在唤醒后尽快发生。
   now=$(date +%s)
   elapsed=$((now - cycle_start))
   remaining=$((INTERVAL - elapsed))
   [ "$remaining" -lt 1 ] && remaining=1
-  sleep "$remaining"
+  while [ "$remaining" -gt 0 ]; do
+    step=15
+    [ "$remaining" -lt "$step" ] && step="$remaining"
+    sleep "$step"
+    remaining=$((remaining - step))
+  done
 done

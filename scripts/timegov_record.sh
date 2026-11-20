@@ -23,9 +23,16 @@ while true; do
   done
   echo "$ts,$head,$routes,$tests,$dirty," >> "$OUT"
   # 固定节拍：采样耗时从睡眠里扣掉，否则 73 个 worktree 的扫描会让“5 分钟”漂成十几分钟。
+  # 用短睡眠累加而不是一次 sleep 300：系统休眠会冻结长睡眠，醒来后下一次采样
+  # 要等整整一个周期；15 秒粒度保证唤醒后立刻补采一行。
   now="$(date +%s)"
   elapsed=$((now - cycle_start))
   remaining=$((INTERVAL - elapsed))
   [ "$remaining" -lt 1 ] && remaining=1
-  sleep "$remaining"
+  while [ "$remaining" -gt 0 ]; do
+    step=15
+    [ "$remaining" -lt "$step" ] && step="$remaining"
+    sleep "$step"
+    remaining=$((remaining - step))
+  done
 done

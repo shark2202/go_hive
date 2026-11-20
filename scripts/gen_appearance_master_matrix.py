@@ -145,7 +145,7 @@ def render(reg: dict) -> str:
     # gap list grouped by priority
     prio_order = ["P0", "P1", "P2", "P3"]
     prio_titles = {
-        "P0": "P0 · 对外承诺最容易被依赖、当前有实测差异",
+        "P0": "P0 · 对外承诺最容易被依赖、需持续看守",
         "P1": "P1 · 机制/文案语义，行为差异的主要来源",
         "P2": "P2 · 协议/运维细节，静默坏的高发区",
         "P3": "P3 · 已对齐项的守护（防回归）",
@@ -232,9 +232,9 @@ def render(reg: dict) -> str:
 <div class="callout info">
 <b>逐点/逐工具：</b><a href="surface-tracking-matrix.html">surface-tracking-matrix.html</a>（接口外形 + 自动快照）· <a href="tool-parity-matrix.html">tool-parity-matrix.html</a>（103 模块逐条）· <a href="tool-consistency-audit.html">tool-consistency-audit.html</a> · <a href="tool-contract-diff.md">tool-contract-diff.md</a> · <a href="api-contract-diff.md">api-contract-diff.md</a> · <a href="env-config-contract-diff.md">env-config-contract-diff.md</a><br>
 <b>范围视角：</b><a href="alignment-dimensions.html">alignment-dimensions.html</a>（18 维）· <a href="module-interfaces.html">module-interfaces.html</a>（进程边界 + 不变量）· <a href="support-matrix.md">support-matrix.md</a>（能力状态 + 未验证清单）· <a href="platform-support.html">platform-support.html</a><br>
-<b>机制接线：</b><a href="../CONCEPT_WIRING_AUDIT.md">CONCEPT_WIRING_AUDIT.md</a>（80/0/0）· <a href="../RUNTIME_SPINE_AUDIT.md">RUNTIME_SPINE_AUDIT.md</a>（70/0/0）· <a href="browser-bridge.html">browser-bridge.html</a> · <a href="browser-host.md">browser-host.md</a> · <a href="memory-e2e.md">memory-e2e.md</a> · <a href="soul-daily-reflection.md">soul-daily-reflection.md</a><br>
+<b>机制接线：</b><a href="../CONCEPT_WIRING_AUDIT.md">CONCEPT_WIRING_AUDIT.md</a>（80/0/0）· <a href="../RUNTIME_SPINE_AUDIT.md">RUNTIME_SPINE_AUDIT.md</a>（70/0/0）· <a href="browser-bridge.html">browser-bridge.html</a> · <a href="browser-host.md">browser-host.md</a> · <a href="memory-e2e.md">memory-e2e.md</a> · <a href="soul-daily-reflection.md">soul-daily-reflection.md</a> · <a href="playbook-python.md">playbook-python.md</a> · <a href="worker-escalation-e2e.md">worker-escalation-e2e.md</a> · <a href="integrations-evidence-audit.html">integrations-evidence-audit.html</a><br>
 <b>契约产物：</b><a href="../contracts/api-routes.json">contracts/api-routes.json</a> · <a href="../contracts/api-responses/">contracts/api-responses/</a> · <a href="../contracts/api.proto">contracts/api.proto</a> · <a href="../contracts/tool-definitions.json">contracts/tool-definitions.json</a> · <a href="../contracts/builtin-skills.json">contracts/builtin-skills.json</a> · <a href="../contracts/env-vars.json">contracts/env-vars.json</a> · <a href="../contracts/config-keys.json">contracts/config-keys.json</a><br>
-<b>外部 lane（未合入本树）：</b><code>/Users/mac/hive/.wt/browser-surface-audit/go_hive/docs/browser-bridge-surface-audit.html</code>（Browser Bridge 13 维：已对齐 2 / 部分 10 / 未对齐 1，残差 R01–R14）
+<b>浏览器审计：</b><a href="browser-bridge-surface-audit.html">browser-bridge-surface-audit.html</a>（Browser Bridge 13 维：已对齐 3 / 部分 9 / 未对齐 1；R03/R04/R05 已修，残差 R01–R14 剩 9）
 </div>
 </section>
 
