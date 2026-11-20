@@ -10,10 +10,15 @@ for attempt in $(seq 1 24); do
   want=$(git -C "$SRC" rev-parse --short HEAD)
   echo "[$(date '+%F %T')] attempt $attempt want=$want" >> "$LOG"
   bash "$SRC/go_hive/scripts/publish_go_hive.sh" "$want" >> "$LOG" 2>&1
-  got=$(git -C "$PUB" log -1 --format=%s 2>/dev/null || true)
-  case "$got" in
-    *"$want"*) echo "[$(date '+%F %T')] published: $got" >> "$LOG"; exit 0 ;;
-  esac
+  # Verify against the REMOTE, not the local mirror: a local commit alone does
+  # not mean the push landed (GitHub times out intermittently here).
+  remote_sha=$(GIT_TERMINAL_PROMPT=0 git -C "$PUB" -c http.version=HTTP/1.1 ls-remote origin main 2>/dev/null | awk '{print $1}')
+  local_sha=$(git -C "$PUB" rev-parse HEAD 2>/dev/null || true)
+  if [ -n "$remote_sha" ] && [ "$remote_sha" = "$local_sha" ]; then
+    echo "[$(date '+%F %T')] published to remote: $local_sha" >> "$LOG"
+    exit 0
+  fi
+  echo "[$(date '+%F %T')] push not visible on remote (local=$local_sha remote=$remote_sha)" >> "$LOG"
   sleep 300
 done
 echo "[$(date '+%F %T')] gave up after 24 attempts" >> "$LOG"
