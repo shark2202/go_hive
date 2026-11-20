@@ -1,0 +1,99 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>go_hive 晨报 · 2026-11-21 09:00</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1360px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:1040px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g5{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:1100px){.g5{grid-template-columns:repeat(3,minmax(0,1fr))}} @media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3,.g4,.g5{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px} .missing{color:#f2a3a3}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff} .callout.ok{border-color:var(--ok);background:#0f1a13;color:#c8e8cf}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:900px){table{min-width:900px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style>
+</head><body><div class="wrap">
+<header><div class="eyebrow">GO_HIVE · MORNING REPORT</div>
+<h1>go_hive 晨报 · 2026-11-21 09:00</h1>
+<p class="lede">口径：只报实测；未跑过的写“未验证”。基线 Python Hive 1.0.14，Go hive 1.0.26-go.1。</p></header>
+<h1>go_hive 晨报 · 2026-11-21 09:00</h1>
+
+<div class="callout info">口径：只报实测。未跑过的写“未验证”，不把门禁绿当成已交付。</div>
+<div class="callout info">基线：Python Hive <code>1.0.14</code>（core <code>a756b1e5</code> / tools <code>68b6c230</code>）；Go <code>hive 1.0.26-go.1</code>。</div>
+<div class="callout info">当前 HEAD：<code>fcff0b71</code>（qc: wave9 合并后 5170 测试，8/8 PASS）</div>
+
+<h2>一、目标</h2>
+
+<p>纯 Go、无 cgo 的 go_hive 对齐 Hive 当前 commit，达到可对外商业发布标准：API、tool、内置 Skill、env、configuration.json、外观逐字/逐项一致，功能一致；复刻未完成前不新增功能。</p>
+
+<h2>二、进度和质量</h2>
+
+<h3>总览</h3>
+
+<ul><li>今日提交 <b>83</b> 个（00:01→07:44），合并 <b>24</b> 次；自 11-20 累计 <b>253</b> 个提交。</li>
+<li>测试 <b>2,755 → 5,170</b>（+2,415）；parity refs <b>5,508</b>，missing <b>0</b>。</li>
+<li>全量 CI 最新 <b>ci=0</b>；wiring <b>12 个文件 / 47 项</b>。</li>
+<li>QC 最新 <b>8/8 PASS</b>（5,170 测试、六平台九产物、四归档二进制、无 cgo、表面审计 strict）。</li>
+<li>服务：<code>127.0.0.1:8788</code> health 200；bridge 14830 运行。</li>
+</ul>
+<h3>已合并的关键能力（本轮）</h3>
+
+<div class="tablewrap"><table><thead><tr><th>面</th><th>结果</th><th>证据</th></tr></thead><tbody><tr><td>API 契约</td><td>14/14 端点 0 差异（missing/extra/type/count/semantic 全 0）</td><td><code>contracts/api-responses/diff.json</code></td></tr><tr><td>工具面</td><td>默认请求 144→35，Python 24 个 always-on 名称 24/24 命中</td><td><code>docs/tool-flat-surface.md</code></td></tr><tr><td>同名工具定义</td><td>desc 逐字 40/41；schema raw 32/41、归一 36/41</td><td><code>docs/tool-contract-diff.md</code></td></tr><tr><td>env</td><td>Python 89 / Go 100 / 共有 69 / Python 独有 20 / Go 独有 31</td><td><code>contracts/env-vars.json</code></td></tr><tr><td>configuration</td><td>134 键：aligned 99 / go_partial 29 / python_only 1 / go_only 4 / unread 1</td><td><code>contracts/config-keys.json</code></td></tr><tr><td>内置 Skill</td><td>20/20 skill、25/25 文件逐字节一致</td><td><code>contracts/builtin-skills.json</code></td></tr><tr><td>Python <code>.play.py</code></td><td>外部 python3 + stdio RPC；真实 LLM worker E2E PASS</td><td><code>docs/playbook.html</code></td></tr><tr><td>多模态</td><td>直接 API 与进程内 <code>attach_file</code> 两条链路都真实读图成功</td><td>会话 <code>session_20261121_012728_ea41d806</code></td></tr><tr><td>Browser 返回契约</td><td>截图 18 字段对齐（800×450 JPEG、saved_to、_image）；快照 artifact 与 Python 逐字节一致；upload 退出码 6→4</td><td><code>docs/browser-bridge-surface-audit.html</code></td></tr><tr><td>集成</td><td><code>get_account_info</code> C→B；7 个模块 account 别名；OAuth2 refresh 7 模块；airtable/slack 分页</td><td><code>docs/integrations-evidence-audit.html</code></td></tr><tr><td>Worker escalation</td><td>escalate → 收件箱 → reply → 继续；parallel worker 对齐 fail-fast；doom-loop 自动升级；text-only stall 3 回合自动失败</td><td><code>docs/worker-escalation-e2e.md</code></td></tr><tr><td>SSE</td><td>77/77 事件类型；补 committed/phase/context_usage/title；ask_user 回合 2→1 次模型调用</td><td><code>docs/sse-payload-parity.md</code></td></tr><tr><td>模型槽位</td><td>queen_llm/llm 写入即重建 transport；worker_llm 新会话生效；vision_fallback 每次重读</td><td><code>docs/e2e-assets/config-hotswap/</code></td></tr><tr><td>审查页</td><td>23 维外观矩阵、13 维 browser 审计、24 维 queen/worker/colony 审计、104 行集成分级</td><td><code>docs/appearance-master-matrix.html</code> 等</td></tr></tbody></table></div>
+
+<h3>不能宣称“完全一致”的部分</h3>
+
+<ul><li>API 14/14 是 stub LLM + 固定 fixture 口径；值级差异仍存在（<code>max_iterations</code> 999999 vs 50、订阅数、普通回合 execution 信封）。</li>
+<li>集成 104 行分级：<b>A 12 / B 91 / C 0 / D 1</b>（get_account_info 已 C→B）；B 类仍是“假服务验证，不是真实第三方 API”，OAuth 只覆盖 7 个模块，分页仅 2 个模块，multipart/入站 webhook 未做。</li>
+<li>Browser：R15（click/hover 不带注解图）、JPEG 编码字节级不等价。</li>
+<li>Worker：colony 的 <code>node_tool_doom_loop</code> 事件未移植；legacy <code>worker</code> 入口不存在。</li>
+<li>发布：GitHub Actions 未实际运行；Windows 未实机；LongMemEval 无分数；Sentinel 真实投递未验证。</li>
+</ul>
+<h2>三、时间和效率治理</h2>
+
+<ul><li>窗口：<b>00:01 → 07:44，7.72 小时</b>；平均 <b>10.8 提交/小时</b>、<b>3.1 次合并/小时</b>、<b>19.3 分钟一次合并</b>。</li>
+<li>测试增长：<b>313 测试/小时</b>（+2,415）。</li>
+<li>并行度：55 个 worktree；本夜主要批次 2–5 条 lane 并行，隔离 worktree + 单 lane 提交 + integrator 合并 + 合并后全量 CI/QC。</li>
+<li>治理发现与修复：</li>
+</ul><p>  - 宿主机 idle sleep 会冻结长 <code>sleep</code> 与子进程，导致 timegov/watchdog 假告警；已改 15 秒短睡眠、加休眠豁免、启动 <code>caffeinate</code>。</p>
+<p>  - 镜像重试脚本原先只看本地提交，push 失败也报成功；已改为 <code>git ls-remote</code> 远端校验。</p>
+<p>  - 合并冲突导致 <code>chat_runtime.go</code> 超行数（1546），已拆到 1494，无 waiver。</p>
+<ul><li>时间损耗：config-env-align 与 worker-escalation 各命中一次迭代上限，需补收尾 lane；已把“先提交再跑长门禁”写入后续 lane 约束。</li>
+</ul>
+<h2>四、问题和反馈</h2>
+
+<ul><li><b>公共镜像网络不稳定</b>：GitHub 443 间歇超时；当前 HEAD <code>fcff0b71</code> 的镜像重试循环仍在跑，最近一次成功快照是 <code>02f50a58</code>（远端 <code>29ac29d</code>）。</li>
+<li><b>9:00 自动投递未保证</b>：现有 cron 是 9:00 表面矩阵刷新，且 Hermes gateway 未运行；TUI 无实时投递通道。本报告已落盘，需你查看或配置消息平台。</li>
+<li><b>真实第三方集成未验证</b>：无凭据，B 类 91 个模块仍不能称生产可用。</li>
+<li><b>Browser 残余</b>：R15、JPEG 字节级差异；真实 Chrome 19 步 E2E 本轮未重跑。</li>
+<li><b>API 值级差异</b>：SSE 的 <code>client_input_requested</code>/<code>llm_turn_complete</code> 发射时机、<code>judge_verdict</code>、prompt 值级差异仍在文档中。</li>
+<li><b>配置热切换</b>：<code>worker_llm</code> 按上游只对新会话生效；<code>PUT</code> 原地热切换仍是 partial。</li>
+<li><b>未实机/未跑</b>：Windows、GitHub Actions release、Sentinel 真实投递、LongMemEval 分数。</li>
+</ul>
+<h2>五、9:00 后的建议顺序</h2>
+
+<ul><li>先把 <code>fcff0b71</code> 镜像推送成功并远端校验。</li>
+<li>若提供第三方凭据：优先验证 Stripe/HubSpot/Slack 三个高频集成，把 B 类中的真实调用证据补上。</li>
+<li>Browser R15 + 真实 Chrome 回归。</li>
+<li>colony <code>node_tool_doom_loop</code> 事件与 SSE 发射时机收敛。</li>
+<li>走一次真实 GitHub Actions release（tag + 制品上传），再做 Windows 实机。</li>
+</ul>
+<p>---</p>
+
+<p>生成：2026-11-21 07:45 CST · 数据源：git log、<code>make ci</code>、<code>qc_check.py</code>、<code>TIME_EVENTS.csv</code>、各审计页。</p>
+<footer>生成：2026-11-21 07:45 CST · 数据源：git log、make ci、qc_check.py、TIME_EVENTS.csv、各审计页 · Markdown 版：<a href="morning-report-2026-11-21.md">morning-report-2026-11-21.md</a></footer>
+</div></body></html>
