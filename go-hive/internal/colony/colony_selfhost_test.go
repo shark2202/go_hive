@@ -293,7 +293,7 @@ func TestWorkerReportCarriesDurationSeconds(t *testing.T) {
 
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.resume_worker
 func TestResumeWorkersContinuesSavedTranscript(t *testing.T) {
-	provider := newScriptedLLM(textResponse("first pass"), textResponse("second pass"))
+	provider := newScriptedLLM(reportResponse("success", "first pass", nil), reportResponse("success", "second pass", nil))
 	runtime := makeTestColony(t, provider, eventbus.NewEventBus())
 
 	ids, err := runtime.SpawnBatch(context.Background(), []BatchTask{{Task: "finish the ledger"}})

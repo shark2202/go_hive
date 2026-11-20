@@ -234,10 +234,11 @@ func TestChatRuntimeAnswerResumesFromAskUserPark(t *testing.T) {
 		t.Fatalf("snapshot pending_questions = %#v, want cleared", snapshot["pending_questions"])
 	}
 
-	// The answer reached the model as the next user turn.
+	// The answer reached the model as the next user turn. Exactly two calls in
+	// total: the ask turn (which parks without another call) and this answer.
 	requests := model.requestSnapshot()
-	if len(requests) < 2 {
-		t.Fatalf("model requests = %d, want the answer turn", len(requests))
+	if len(requests) != 2 {
+		t.Fatalf("model requests = %d, want the ask turn plus the answer turn", len(requests))
 	}
 	found := false
 	for _, message := range requests[len(requests)-1].Messages {

@@ -68,9 +68,16 @@ func TestEscalateParksUntilQueenGuidanceArrives(t *testing.T) {
 	recorder := &escalationRecorder{requestID: "req-abc"}
 	completer := &scriptedCompleter{scenarios: []scriptedResponse{
 		{toolCalls: []llm.ToolCall{escalateCall("c1", "Credential wall", "HTTP 401 calling the API")}},
-		{content: "Resumed with the queen's guidance."},
+		// The resumed turn reports: a text-only turn on a worker stream is a
+		// stall now, so a worker that is done must say so through the report.
+		{toolCalls: []llm.ToolCall{{ID: "report_1", Name: ReportToParentToolName, Arguments: `{"status":"success","summary":"Resumed with the queen's guidance."}`}}},
 	}}
+	reported := false
 	loop := NewAgentLoop(LoopConfig{MaxIterations: 4}, func(req ToolCallRequest) (ToolResult, error) {
+		if req.Name == ReportToParentToolName {
+			reported = true
+			return ToolResult{Content: "Report delivered to the overseer."}, nil
+		}
 		return ToolResult{Content: "unexpected tool " + req.Name}, nil
 	})
 	// The legacy primary worker stream ("worker", no colon) is the shape
@@ -78,6 +85,7 @@ func TestEscalateParksUntilQueenGuidanceArrives(t *testing.T) {
 	// refused (TestEscalateRefusedForParallelWorkerStream).
 	ctx := escalateAgentContext(completer, "worker")
 	ctx.EscalationSink = recorder.sink
+	ctx.StopAfterToolBatch = func() bool { return reported }
 	conv := NewNodeConversation("You are a test worker.")
 
 	type outcome struct {
@@ -123,8 +131,8 @@ func TestEscalateParksUntilQueenGuidanceArrives(t *testing.T) {
 		if out.err != nil {
 			t.Fatalf("ExecuteTurn: %v", out.err)
 		}
-		if !out.result.Success || out.result.FinalText != "Resumed with the queen's guidance." {
-			t.Fatalf("turn result = %#v, want the resumed answer", out.result)
+		if !out.result.Success || !reported {
+			t.Fatalf("turn result = %#v reported=%v, want the resumed report", out.result, reported)
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("ExecuteTurn stayed parked after the queen's reply")
@@ -264,20 +272,28 @@ func TestEscalateRefusedForParallelWorkerStream(t *testing.T) {
 	recorder := &escalationRecorder{requestID: "never"}
 	completer := &scriptedCompleter{scenarios: []scriptedResponse{
 		{toolCalls: []llm.ToolCall{escalateCall("c1", "help", "")}},
-		{content: "carried on"},
+		// The refused call must not park; the worker carries on and reports.
+		// (A text-only turn would now be a stall, not a completion.)
+		{toolCalls: []llm.ToolCall{{ID: "report_1", Name: ReportToParentToolName, Arguments: `{"status":"success","summary":"carried on"}`}}},
 	}}
+	reported := false
 	loop := NewAgentLoop(LoopConfig{MaxIterations: 3}, func(req ToolCallRequest) (ToolResult, error) {
+		if req.Name == ReportToParentToolName {
+			reported = true
+			return ToolResult{Content: "Report delivered to the overseer."}, nil
+		}
 		return ToolResult{Content: "ok"}, nil
 	})
 	ctx := escalateAgentContext(completer, "worker:abc123")
 	ctx.EscalationSink = recorder.sink
+	ctx.StopAfterToolBatch = func() bool { return reported }
 
 	result, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("You are a test worker."), nil)
 	if err != nil {
 		t.Fatalf("ExecuteTurn: %v", err)
 	}
-	if !result.Success {
-		t.Fatalf("turn failed: %#v", result)
+	if !result.Success || !reported {
+		t.Fatalf("turn result = %#v reported=%v, want a clean carry-on report", result, reported)
 	}
 	if requests := recorder.snapshot(); len(requests) != 0 {
 		t.Fatalf("parallel worker escalation requests = %#v, want none", requests)

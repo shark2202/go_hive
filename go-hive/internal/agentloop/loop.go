@@ -127,6 +127,10 @@ type AgentLoop struct {
 	// the latch keeps a worker that thrashes through several streaks from
 	// flooding the queen's inbox. Reset at the next turn boundary.
 	doomLoopEscalated bool
+	// workerTextOnlyStreak counts consecutive text-only worker turns in this
+	// turn-loop; any turn that issues a tool call resets it. Reset at the turn
+	// boundary so a parked/resumed worker starts a fresh grace window.
+	workerTextOnlyStreak int
 
 	stateMu             sync.Mutex
 	toolCallsUsed       int
@@ -450,6 +454,9 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 	// says nothing about this one, and neither does its escalation park.
 	l.DoomLoop.Reset()
 	l.clearQueenInputRequested()
+	// The worker stall grace window is per turn-loop: guidance that resumed a
+	// parked worker must not inherit the streak that parked it.
+	l.workerTextOnlyStreak = 0
 
 	l.mu.Lock()
 	l.unread = false
@@ -565,26 +572,21 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		}
 
 		if len(toolCalls) == 0 {
-			result.FinalText = completion.Content
-			result.InnerTurns = inner + 1
-			if l.shouldJudge(agentCtx, inner, true, false) {
-				verdict := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, result.ToolResults, inner)
-				switch verdict.Action {
-				case JudgeAccept:
-					return result, nil
-				case JudgeEscalate:
-					result.Success = false
-					return result, fmt.Errorf("agent loop: judge escalated: %s", verdict.Feedback)
-				default:
-					if err := injectJudgeFeedback(conv, verdict); err != nil {
-						result.Success = false
-						return result, err
-					}
-					continue
-				}
+			done, err := l.settleTextOnlyTurn(ctx, agentCtx, conv, reminderCtx, completion, inner, &result)
+			if err != nil {
+				result.Success = false
+				result.InnerTurns = inner + 1
+				return result, err
 			}
-			return result, nil
+			if done {
+				return result, nil
+			}
+			continue
 		}
+
+		// Any turn that issued tool calls is progress; it resets the worker's
+		// text-only streak (upstream resets on real_tool_results/outputs_set).
+		l.workerTextOnlyStreak = 0
 
 		injected, err := l.injectQueuedInput(reminderCtx, conv)
 		if err != nil {
@@ -700,7 +702,12 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 			return l.parkOnDoomLoop(result, inner, completion, doomPark)
 		}
 
-		if agentCtx.StopAfterToolBatch != nil && agentCtx.StopAfterToolBatch() {
+		// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop —
+		// the batch can end the turn before another model call
+		// (batchStopsTurn): a successful ask_user hands the park back to
+		// the host as upstream's user_input_requested does, and a worker's
+		// explicit report terminates the worker.
+		if batchStopsTurn(agentCtx, pending, results) {
 			result.InnerTurns = inner + 1
 			return result, nil
 		}
@@ -873,6 +880,34 @@ func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingTo
 		}
 	}
 	return toolFailure, doomLoopReminder, park
+}
+
+// batchAskedUser reports whether a finished tool batch successfully called
+// ask_user. Upstream raises its loop-local user_input_requested flag on a
+// successful call only: a malformed ask_user stays an ordinary tool error, so
+// the model gets the message and can correct itself within the same turn.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+func batchAskedUser(pending []pendingToolCall, results []ToolResult) bool {
+	for _, item := range pending {
+		if item.call.Name == AskUserToolName && !results[item.index].IsError {
+			return true
+		}
+	}
+	return false
+}
+
+// batchStopsTurn reports whether a finished tool batch ends the turn before
+// the next model call: a successful ask_user parks the host on the user's
+// answer (upstream's user_input_requested early return), and a worker's
+// explicit report terminates the worker.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+func batchStopsTurn(agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult) bool {
+	if batchAskedUser(pending, results) {
+		return true
+	}
+	return agentCtx.StopAfterToolBatch != nil && agentCtx.StopAfterToolBatch()
 }
 
 // Parity: AgentLoop._execute_tool (the non-background, non-preflight subset).

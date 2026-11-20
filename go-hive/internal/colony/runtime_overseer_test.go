@@ -44,6 +44,20 @@ func reportResponse(status, summary string, data map[string]any) scriptedRespons
 	}
 }
 
+// toolResponse scripts one non-terminal tool call. A turn that calls a tool is
+// "work": it resets the worker's text-only stall streak and lets the judge see
+// the turn (a text-only worker turn never reaches the judge).
+func toolResponse(id, name, arguments string) scriptedResponse {
+	return scriptedResponse{
+		ToolCalls: []llm.ToolCall{{
+			ID:        id,
+			Name:      name,
+			Arguments: arguments,
+		}},
+		StopReason: "tool_calls",
+	}
+}
+
 type scriptedLLM struct {
 	mu        sync.Mutex
 	scenarios []scriptedResponse

@@ -134,7 +134,7 @@ HIVE_ESCALATION_E2E_OUT=/tmp/escalation-e2e \
 | 未重复（参数持续变化） | 不产生升级事件 | 同 | 已对齐 |
 | 女王回复时 worker 仍存活 | `[QUEEN_REPLY]` 入会话，worker 继续 | `inject_input` 队列，worker 下一回合读取 | 已对齐（本 lane E2E 覆盖） |
 | 女王回复时 worker 已终止 | `reply_to_worker` 返回 `worker_not_active`，条目出队 | 注入失败即丢弃（同上） | 已对齐（server 测试覆盖） |
-| text-only 轮次耗尽 grace | 未实现上游的 `worker_escalation_grace_turns` 自动失败；worker 由迭代上限 + grace 报告收束 | 合成 `report_to_parent(failed)`，不升级 | **残余差异**（与 escalation 无关，见 §6） |
+| text-only 轮次耗尽 grace | 连续 `worker_escalation_grace_turns`（默认 2）个无工具轮次后，合成 `report_to_parent(status='failed', data={"auto_fail_reason":"stall_text_only"})` 并清理终止；不发 `ESCALATION_REQUESTED`、不同步等待、不继续消耗迭代预算 | 同（合成 failed 报告并终止） | 已对齐（本 lane 移植，见 §7） |
 
 ## 6. 残余与已知差异
 
@@ -144,8 +144,32 @@ HIVE_ESCALATION_E2E_OUT=/tmp/escalation-e2e \
    port 没有生产者形态；`escalate` 工具构建器、分发与停车/唤醒语义保留并由 loop 级测试覆盖。
 3. **`node_tool_doom_loop` 事件仍只覆盖 chat**：上游在检测点对所有流发该事件；本 port 的
    colony worker 目前不发（会话事件日志里不会出现），只有 `ESCALATION_REQUESTED`。属可观测性
-   残余，不影响本链路。
-4. **text-only stall 自动失败未移植**：见 §5 最后一行；这是 worker 行为矩阵中唯一与 escalation
-   无关的已知差异。
-5. **收件箱持久化口径**：与上游一致为内存字典；durable 的一半是 queen 转录里的
+   残余，不影响本链路。text-only stall 自动失败已移植（§7），这是 worker 行为矩阵中与
+   escalation 无关的最后一个已知差异。
+4. **收件箱持久化口径**：与上游一致为内存字典；durable 的一半是 queen 转录里的
    `[WORKER_ESCALATION]` 记录（本 E2E 已断言恰好 1 条）。
+
+## 7. text-only stall 自动失败（本 lane 移植）
+
+上游 `agent_loop.py` 6h worker stall 在本 port 落地：
+
+- **触发**：worker 回合没有任何工具调用（text-only；`set_output`/`ask_user` 在 port 的 worker
+  面不存在）。连续 `worker_escalation_grace_turns` 个这类回合被容忍，第 N+1 个触发处置。
+- **阈值**：`agentloop.LoopConfig.WorkerEscalationGraceTurns`，`DefaultLoopConfig()` 携带上游
+  默认 2（worker 建档 `BuildWorkerLoopConfig` 从该默认派生；未配置的零值同样回落 2）。
+  可配置为正整数（1 = 只容忍一个规划回合）。
+- **parallel worker（`worker:<id>`）**：合成
+  `report_to_parent(status='failed', summary="Auto-failed: N consecutive text-only turns …",
+  data={"auto_fail_reason":"stall_text_only"})`，通过与模型调用相同的执行器交付，worker 干净终止
+  （运行时状态 completed，报告 status=failed）；**不发 `ESCALATION_REQUESTED`、不同步等待**。
+  模型调用数上界 = grace+1，不再重试到迭代预算耗尽。
+- **legacy primary worker（`stream_id="worker"`）**：发 `ESCALATION_REQUESTED`
+  （reason=`Worker produced text-only turns without progress; auto-escalating`）并停泊等待
+  queen 指引；收到 `[QUEEN_REPLY]` 后清空 streak 继续（上游 3289 行同语义）。本 port 无该流的
+  生产者，语义由 loop 级测试覆盖。
+- **不误杀**：任何发出工具调用的回合都会重置 streak（上游 `real_tool_results or outputs_set`
+  同语义），女王/overseer/judge 流不走该策略。
+- **测试**：`internal/agentloop/worker_stall_test.go`（parity + 阈值/重置/legacy/流分类）、
+  `internal/colony/worker_stall_test.go`（真实 colony spawn：3 次调用后终止、报告 failed、
+  无 escalation 事件、有工具调用者不误杀；Parity:
+  `core/tests/test_run_worker_tool.py::test_parallel_worker_stall_auto_fails_with_synthetic_report`）。

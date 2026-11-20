@@ -98,6 +98,12 @@ func SanitizeAskUserInputs(rawQuestion, rawOptions any) (string, []string) {
 // Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
 const AskUserWaitingContent = "Waiting for user input..."
 
+// AskUserToolName is the synthetic tool a node calls to ask the user a
+// question; a successful call parks the turn on the answer.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+const AskUserToolName = "ask_user"
+
 // NormalizeAskUserQuestions coalesces the model's ask_user input into the
 // {id, prompt, options?} shape a parked turn records: it applies the same
 // self-healing upstream does — recover options the model crammed into the
@@ -216,7 +222,7 @@ func askUserOptionStrings(raw any) []string {
 // Parity: framework/agent_loop/internals/synthetic_tools.py build_ask_user_tool.
 func BuildAskUserTool() llm.ToolDef {
 	return llm.ToolDef{
-		Name:        "ask_user",
+		Name:        AskUserToolName,
 		Description: askUserPrompt,
 		Parameters: map[string]any{
 			"type": "object",

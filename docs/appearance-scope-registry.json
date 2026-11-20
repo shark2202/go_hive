@@ -408,12 +408,12 @@
         {
           "path": "go_hive/docs/sse-payload-parity.md",
           "kind": "measured",
-          "note": "双跑探针：create→message→ask_user→answer→replay→stop；逐类型字段矩阵 + 顺序 + replay 语义；本轮修 6 项、保留差异 5 项"
+          "note": "双跑探针：create→message→ask_user→answer→replay→stop；逐类型字段矩阵 + 顺序 + replay 语义；本轮修 7 项（含 ask_user 回合提前返回）、保留差异 4 项"
         },
         {
           "path": "go_hive/docs/e2e-assets/sse-payload-parity/summary.txt",
           "kind": "measured",
-          "note": "修复后 live 35/49 帧、replay 17/25、history 44/54；字段缺失 0（judge_verdict 与 Go-only envelope 归入保留差异）；replay 首帧两侧 session_snapshot，顺序均为 history 子序列"
+          "note": "修复后 live 35/45 帧、replay 17/23、history 44/50；剔除 Go-only envelope 后 replay 多重集一致（计数差为空）；字段缺失 0（judge_verdict 与 Go-only envelope 归入保留差异）；replay 首帧两侧 session_snapshot，顺序均为 history 子序列"
         },
         {
           "path": "go_hive/docs/e2e-assets/sse-payload-parity/diff.json",
@@ -432,13 +432,13 @@
         }
       ],
       "status": "partial",
-      "status_basis": "2026-11-21 双跑实测：同一剧本（创建→普通消息→ask_user→回答→重连 replay→停止）下，除 judge_verdict（参考独有）与 Go 每回合 execution/node-loop 信封（有意差异）外，所有被比较事件类型在 live/replay/history 三路的 data 键集合一致；唯一类型差是 llm_turn_complete.cost_usd 的 JSON 数字表示（float vs int）。仍保留：永久 loop vs 每回合 envelope（含 max_iterations 999999 vs 50、iteration 累计 vs 每回合）、ask_user 回合 Go 多一次模型调用、context_usage 触发粒度（参考 4 种 vs Go 1 种）、judge_verdict、prompt 值级差异。",
+      "status_basis": "2026-11-21 双跑实测：同一剧本（创建→普通消息→ask_user→回答→重连 replay→停止）下，除 judge_verdict（参考独有）与 Go 每回合 execution/node-loop 信封（有意差异）外，所有被比较事件类型在 live/replay/history 三路的 data 键集合一致；唯一类型差是 llm_turn_complete.cost_usd 的 JSON 数字表示（float vs int）。ask_user 回合提前返回已修：该回合模型调用 2→1，client_output_delta / llm_turn_complete 计数与参考一致（3/3、4/4），剔除 Go-only envelope 后 replay 多重集一致。仍保留：永久 loop vs 每回合 envelope（含 max_iterations 999999 vs 50、iteration 累计 vs 每回合）、context_usage 触发粒度（参考 4 种 vs Go 1 种）、judge_verdict、prompt 值级差异，以及 llm_turn_complete / client_input_requested 的发射时机（Go 非流式「完成即发」vs 参考迭代末）。",
       "contract_state": "test_annotated",
-      "measured_now": "双跑探针修复后：live 35/49 帧、replay 17/25 帧、history 44/54 条；逐类型字段缺失 0；replay 顺序两侧均为 history 子序列；已解决 client_input_committed / context_usage_updated / session_title_updated / node_loop_iteration.phase / 默认事件过滤 / replay 集合六项差异。",
+      "measured_now": "双跑探针修复后：live 35/45 帧、replay 17/23 帧、history 44/50 条；逐类型字段缺失 0；replay 顺序两侧均为 history 子序列；剔除 Go-only execution envelope 后 replay 多重集一致；ask_user 回合 2→1 次模型调用；已解决 client_input_committed / context_usage_updated / session_title_updated / node_loop_iteration.phase / 默认事件过滤 / replay 集合 / ask_user 额外调用七项差异。",
       "lane": "sse-events",
       "lane_state": "measured",
       "next": [
-        "ask_user 回合：Go 在工具返回后额外跑一次模型的差异（loop 提前返回语义），连同 context_usage 的 post_tool_call/post_tool_results 触发粒度一并修",
+        "context_usage 的 post_tool_call/post_tool_results 触发粒度（参考 4 种 vs Go 1 种），以及 llm_turn_complete/client_input_requested 的发射时机对齐（需改非流式传输的事件时序）",
         "把逐类型 payload 键集合 + 顺序冻结成 JSON 契约（当前为测试注解 + 双跑证据），纳入 sweep",
         "在 opt-in 探针之上补真实 provider 冒烟（内容不再由 stub 固定时的值级对照）"
       ],

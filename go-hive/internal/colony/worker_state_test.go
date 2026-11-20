@@ -49,7 +49,7 @@ func waitForRunStateStatus(runtime *ColonyRuntime, workerID, want string) map[st
 
 // Parity: framework/host/worker.py::WorkerStatus
 func TestWorkerRunStateTracksLifecycle(t *testing.T) {
-	runtime := makeTestColony(t, newScriptedLLM(textResponse("done")), eventbus.NewEventBus())
+	runtime := makeTestColony(t, newScriptedLLM(reportResponse("success", "done", nil)), eventbus.NewEventBus())
 	ids, err := runtime.SpawnBatch(context.Background(), []BatchTask{{Task: "record my state"}})
 	if err != nil {
 		t.Fatalf("SpawnBatch: %v", err)
@@ -93,7 +93,7 @@ func waitForRunStateFileStatus(path, want string) map[string]any {
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.resume_worker
 func TestStartResumesInFlightWorkerAfterRestart(t *testing.T) {
 	storage := t.TempDir()
-	firstProvider := newScriptedLLM(textResponse("first pass"))
+	firstProvider := newScriptedLLM(reportResponse("success", "first pass", nil))
 	first := NewColonyRuntime(durableRuntimeOptions(storage, firstProvider))
 	if err := first.Start(context.Background()); err != nil {
 		t.Fatalf("first Start: %v", err)
@@ -131,7 +131,7 @@ func TestStartResumesInFlightWorkerAfterRestart(t *testing.T) {
 		t.Fatalf("remove terminal result: %v", err)
 	}
 
-	secondProvider := newScriptedLLM(textResponse("second pass"))
+	secondProvider := newScriptedLLM(reportResponse("success", "second pass", nil))
 	second := NewColonyRuntime(durableRuntimeOptions(storage, secondProvider))
 	defer second.Stop()
 	if err := second.Start(context.Background()); err != nil {

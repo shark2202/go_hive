@@ -114,7 +114,7 @@ func TestChatRuntimeRunWorkerEndToEndDispatchAndReport(t *testing.T) {
 	bus := eventbus.NewEventBus()
 	colonyRuntime := colony.NewColonyRuntime(colony.RuntimeOptions{
 		AgentSpec:   agentloop.AgentSpec{ID: "worker", Name: "Worker", AgentType: "event_loop"},
-		LLM:         &fakeChatLLM{},
+		LLM:         reportingWorkerLLM{},
 		EventBus:    bus,
 		StreamID:    "colony_alpha",
 		StoragePath: t.TempDir(),
@@ -189,6 +189,23 @@ func queenToolNameSet(defs []llm.ToolDef) map[string]bool {
 		names[def.Name] = true
 	}
 	return names
+}
+
+// reportingWorkerLLM scripts the colony worker's model: a worker ends by
+// reporting, so a text-only answer would now be auto-failed as a stall.
+type reportingWorkerLLM struct{}
+
+func (reportingWorkerLLM) ModelName() string { return "reporting-worker" }
+
+func (reportingWorkerLLM) AComplete(context.Context, llm.CompletionRequest) (llm.Completion, error) {
+	return llm.Completion{
+		ToolCalls: []llm.ToolCall{{
+			ID:        "report_1",
+			Name:      "report_to_parent",
+			Arguments: `{"status":"success","summary":"wrote one row"}`,
+		}},
+		StopReason: "tool_calls",
+	}, nil
 }
 
 func waitForTranscriptContent(t *testing.T, runtime *ChatRuntime, needle string, timeout time.Duration) string {

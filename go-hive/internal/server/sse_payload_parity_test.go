@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/aden-hive/hive-go/internal/llm"
 )
 
 // upstreamDefaultSessionEventTypes is routes_events.py::DEFAULT_EVENT_TYPES
@@ -234,5 +235,55 @@ func TestChatTurnCarriesPhaseCommitAndContextUsage(t *testing.T) {
 	}
 	if lastUsage.ExecutionID != nil {
 		t.Fatalf("context_usage_updated execution_id = %v, want null", *lastUsage.ExecutionID)
+	}
+}
+
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+// Parity: tests/test_event_loop_node.py::test_client_input_requested_event_published
+// Parity: tests/test_event_loop_node.py::test_queen_ask_user_with_real_tools
+func TestAskUserTurnStopsAtTheQuestionWithoutAnotherModelCall(t *testing.T) {
+	model := &queenChatLLM{responses: []llm.Completion{
+		{ToolCalls: []llm.ToolCall{{
+			ID:        "ask-1",
+			Name:      "ask_user",
+			Arguments: `{"questions":[{"id":"next","prompt":"Which next?","options":["Ship it","Wait"]}]}`,
+		}}},
+		{Content: "never streamed"},
+	}}
+	runtime, recorder, _ := newQueenChatRuntime(t, model, "", "queen_technology")
+	if err := runtime.Deliver("start the work"); err != nil {
+		t.Fatalf("Deliver: %v", err)
+	}
+	waitForChatEvents(t, recorder, eventbus.EventExecutionCompleted, 1)
+
+	// Upstream's _run_turn_loop returns on user_input_requested: the ask turn
+	// is one model call, and the second scripted completion is never consumed.
+	if calls := len(model.requestSnapshot()); calls != 1 {
+		t.Fatalf("model calls in the ask_user turn = %d, want 1; frames: %v", calls, recorder.types())
+	}
+	if got := len(recorder.ofType(eventbus.EventLLMTurnComplete)); got != 1 {
+		t.Fatalf("llm_turn_complete count = %d, want 1 (no second iteration); frames: %v", got, recorder.types())
+	}
+	if got := len(recorder.ofType(eventbus.EventClientOutputDelta)); got != 0 {
+		t.Fatalf("client_output_delta count = %d, want 0: the ask turn has no text answer; frames: %v", got, recorder.types())
+	}
+	if got := len(recorder.ofType(eventbus.EventNodeLoopIteration)); got != 1 {
+		t.Fatalf("node_loop_iteration count = %d, want 1; frames: %v", got, recorder.types())
+	}
+	completed := recorder.ofType(eventbus.EventNodeLoopCompleted)
+	if len(completed) != 1 || completed[0].Data["iterations"] != 1 {
+		t.Fatalf("node_loop_completed = %#v, want one frame with iterations=1", completed)
+	}
+	// The question itself is the turn's park and is announced exactly once,
+	// with its options, before the awaiting_user boundary.
+	requested := recorder.ofType(eventbus.EventClientInputRequested)
+	if len(requested) != 1 {
+		t.Fatalf("client_input_requested count = %d, want 1; frames: %v", len(requested), recorder.types())
+	}
+	if requested[0].Data["park_reason"] != "ask_user" {
+		t.Fatalf("client_input_requested park_reason = %#v, want ask_user", requested[0].Data["park_reason"])
+	}
+	if questions, ok := requested[0].Data["questions"].([]map[string]any); !ok || len(questions) != 1 {
+		t.Fatalf("client_input_requested questions = %#v, want one question", requested[0].Data["questions"])
 	}
 }

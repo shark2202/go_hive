@@ -9,6 +9,16 @@ type LoopConfig struct {
 	ToolWaitLimitSeconds float64
 	// Parity: framework/agent_loop/internals/types.py::LoopConfig.grace_iterations.
 	GraceIterations int
+	// WorkerEscalationGraceTurns is the number of consecutive text-only turns
+	// (no tool calls) a worker may produce before the loop auto-fails it: a
+	// parallel worker gets a synthesized report_to_parent(status='failed') and
+	// terminates, the legacy primary worker escalates and parks. Zero (an
+	// unset field on a partially-built config) or a negative value falls back
+	// to DefaultWorkerEscalationGraceTurns (2, the upstream default); the
+	// minimum meaningful configured value is 1.
+	//
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.worker_escalation_grace_turns.
+	WorkerEscalationGraceTurns int
 	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_call_budget.
 	ToolCallBudget int
 	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_call_hard_multiple.
@@ -87,6 +97,9 @@ func DefaultLoopConfig() LoopConfig {
 		MaxContextTokens:     180_000,
 		ToolWaitLimitSeconds: 600,
 		GraceIterations:      0,
+		// Worker stall grace (upstream default): two text-only turns are
+		// tolerated, the third consecutive one auto-fails the worker.
+		WorkerEscalationGraceTurns: DefaultWorkerEscalationGraceTurns,
 		// The queen profile: a soft checkpoint every 30 tool calls in one
 		// turn-loop, a hard stop at 50. Upstream's queen runs the neutral
 		// 0/unbounded default, so this is the port's fix for the audit gap

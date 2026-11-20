@@ -54,7 +54,9 @@ func TestWorkerRunExecutesGoalCriteriaIntoResultAndReport(t *testing.T) {
 			{ID: "closing", Description: "closes with DONE", Metric: agentloop.GoalMetricOutputEquals, Target: "## Summary\nDONE", Weight: 0.4},
 		},
 	}
-	provider := newScriptedLLM(textResponse("## Summary\nwork is done"))
+	// A worker ends by reporting, not by prose: the criteria execute against
+	// the report summary (goalOutputText keeps the report as the result).
+	provider := newScriptedLLM(reportResponse("success", "## Summary\nwork is done", nil))
 	runtime := newGoalRuntime(t, testAgentSpec(), goal, provider, bus, "")
 
 	result, err := runtime.RunBatch(context.Background(), []BatchTask{{Task: "write it"}}, RunSpawnOptions{})
@@ -180,9 +182,11 @@ func TestWorkerJudgeRetryRecordsImprovementSignal(t *testing.T) {
 		},
 	}
 	provider := newScriptedLLM(
-		textResponse("draft"),
+		// A judged worker turn must be a work turn (a tool call); a text-only
+		// turn is a stall and never reaches the judge.
+		toolResponse("t1", "task_list", `{}`),
 		textResponse(`{"passes": false, "explanation": "missing citations"}`),
-		textResponse("final answer"),
+		toolResponse("t2", "task_list", `{}`),
 		textResponse(`{"passes": true, "explanation": "criteria met"}`),
 		// Goal-criteria execution asks the judge about the single criterion.
 		textResponse(`{"passes": true, "explanation": "delivered"}`),

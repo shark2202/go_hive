@@ -3,19 +3,19 @@
   "implementation": "python",
   "version": "hive 1.0.14",
   "session_id": "<session_id>",
-  "captured_at": "2026-11-21T06:41:52+08:00",
+  "captured_at": "2026-11-21T07:28:07+08:00",
   "responses": {
     "session_create": {
       "status": 201,
       "payload": {
-        "session_id": "session_20261121_064029_3cf46a67",
+        "session_id": "session_20261121_072643_d9e02bff",
         "colony_id": null,
         "has_worker": false,
         "agent_path": "",
         "description": "",
         "goal": "",
         "node_count": 0,
-        "loaded_at": 1795214429.443489,
+        "loaded_at": 1795217203.832108,
         "uptime_seconds": 0.8,
         "queen_phase": "independent",
         "queen_supports_images": true,
@@ -53,7 +53,7 @@
     "session_stop": {
       "status": 200,
       "payload": {
-        "session_id": "session_20261121_064029_3cf46a67",
+        "session_id": "session_20261121_072643_d9e02bff",
         "stopped": true
       },
       "error": ""
@@ -89,8 +89,8 @@
             "park_reason": "turn_done",
             "pending_questions": null,
             "last_event_seq": 8,
-            "last_event_at": "2026-11-21T06:40:30.395550",
-            "last_queen_event_at": "2026-11-21T06:40:30.395550"
+            "last_event_at": "2026-11-21T07:26:44.846408",
+            "last_queen_event_at": "2026-11-21T07:26:44.846408"
           }
         },
         {
@@ -802,8 +802,8 @@
             "park_reason": "turn_done",
             "pending_questions": null,
             "last_event_seq": 42,
-            "last_event_at": "2026-11-21T06:40:35.574233",
-            "last_queen_event_at": "2026-11-21T06:40:35.574233"
+            "last_event_at": "2026-11-21T07:26:49.994049",
+            "last_queen_event_at": "2026-11-21T07:26:49.994049"
           }
         },
         {
@@ -1153,8 +1153,8 @@
             "park_reason": "turn_done",
             "pending_questions": null,
             "last_event_seq": 42,
-            "last_event_at": "2026-11-21T06:40:35.574233",
-            "last_queen_event_at": "2026-11-21T06:40:35.574233"
+            "last_event_at": "2026-11-21T07:26:49.994049",
+            "last_queen_event_at": "2026-11-21T07:26:49.994049"
           }
         },
         {

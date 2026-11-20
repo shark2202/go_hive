@@ -37,7 +37,9 @@ func TestWorkerLoopRunsJudgeAndPublishesVerdict(t *testing.T) {
 	bus := eventbus.NewEventBus()
 	verdicts := collectEvents(bus, eventbus.EventJudgeVerdict)
 	provider := newScriptedLLM(
-		textResponse("draft"),
+		// A judged turn is a work turn: the tool call keeps it out of the
+		// text-only stall path so the judge sees it.
+		toolResponse("t1", "task_list", `{}`),
 		textResponse(`{"passes": true, "explanation": "criteria met"}`),
 	)
 	criteria := "the worker delivers a final answer"
@@ -80,7 +82,7 @@ func TestWorkerLoopRunsJudgeAndPublishesVerdict(t *testing.T) {
 func TestWorkerLoopWithoutCriteriaNeverCallsJudge(t *testing.T) {
 	bus := eventbus.NewEventBus()
 	verdicts := collectEvents(bus, eventbus.EventJudgeVerdict)
-	provider := newScriptedLLM(textResponse("draft"))
+	provider := newScriptedLLM(reportResponse("success", "draft", nil))
 	runtime := makeJudgeRuntime(t, testAgentSpec(), provider, bus)
 
 	result, err := runtime.RunBatch(context.Background(), []BatchTask{{Task: "no criteria"}}, RunSpawnOptions{})
