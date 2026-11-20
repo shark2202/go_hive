@@ -12,22 +12,23 @@
 ```text
 architecture/model.yaml ──┐
                           ├─→ scripts/gen_arch.py ─→ graph.json（机器读）
-go list -json ./...  ─────┘                       └─→ 4 张图/表（人读）
+go list -json ./...  ─────┘                       └─→ 5 张图/表 + contracts.md（人读）
 ```
 
 ## 目录
 
 | 文件 | 谁读 | 说明 |
 | --- | --- | --- |
-| `architecture/model.yaml` | 维护者 | **唯一手写源**：层、包职责、12 条业务能力、业务主链路 |
-| `architecture/graph.json` | AI agent / 工具 | 业务 + 技术的机器可读图（节点、边、能力、warnings） |
+| `architecture/model.yaml` | 维护者 | **唯一手写源**：层、包职责、12 条业务能力、业务主链路、接口契约与磁盘格式 |
+| `architecture/graph.json` | AI agent / 工具 | 业务 + 技术 + 契约的机器可读图（节点、边、能力、contracts、warnings） |
 | `docs/architecture/capability-map.mmd` | 人 | 业务能力关系图，标注人工审批点 |
 | `docs/architecture/capability-tech-crosswalk.md` | 人 + agent | 业务能力 ↔ 模块 ↔ 入口 ↔ 落盘证据 ↔ 成熟度 |
+| `docs/architecture/contracts.md` | 人 + agent | 七类契约明细 + 全量 HTTP 路由表 + EventType 表 + 磁盘格式表 |
 | `docs/architecture/dependency-map.mmd` | 人 | Mermaid 分层依赖图 |
 | `docs/architecture/dependency-map.dot` | 人 | Graphviz 版本，便于导出大图 |
 | `docs/architecture/MODULES.md` | 人 | 44 个包的模块表与分层检查结果 |
 
-> `capability-map.mmd`、`dependency-map.*`、`MODULES.md`、`capability-tech-crosswalk.md`、`graph.json` 都是生成物。改分层或能力请改 `model.yaml`，不要手改生成物。
+> `capability-map.mmd`、`dependency-map.*`、`MODULES.md`、`capability-tech-crosswalk.md`、`contracts.md`、`graph.json` 都是生成物。改分层、能力或契约请改 `model.yaml`，不要手改生成物。
 
 ---
 
@@ -246,11 +247,78 @@ flowchart TB
 
 ---
 
-# 四、三张关键序列图
+# 四、接口与契约与保障机制
+
+依赖图只回答“谁 import 谁”，不回答“跨过模块边界时靠什么稳定交互”。这一节补上后者：`architecture/model.yaml` 的 `contracts:` 把模块之间的交互写成 34 条契约，生成器把它们和代码里的路由注册、事件常量一起落成 [`contracts.md`](./contracts.md)。
+
+## 4.1 七类契约
+
+| kind | 约束什么 | 本仓库的例子 | 谁提供 → 谁消费 |
+| --- | --- | --- | --- |
+| `go-interface` | 进程内调用边界：接口方法、导出 API、回调签名 | `server.ColonyRuntime`、`llm.Completer` / `llm.StreamCompleter`、`agentloop.ToolExecutor` / `agentloop.Judge`、`eventbus.EventHandler`、`host.Host` | 包 → 包 |
+| `http` | 外部 REST 面：路径、方法、请求/响应形状、错误码 | `/api/sessions`、`/api/colonies`、`/api/queens`、`/api/credentials`、`/api/config`、`/api/mcp`、`/api/events`、`/api/global` 与 `/api/crm/grid` | `internal/server` → 前端 / CLI / 外部调用方 |
+| `sse` | 单向流式帧：event 名、data 形状、心跳与重连语义 | `/api/sessions/{id}/events`、`/api/events/global`、`/api/sessions/live`、`workers/stream`、`browser/status/stream` | `internal/server` + `internal/eventbus` → 前端 |
+| `event` | 进程内事件：统一信封、EventType 注册表、worker 报告 payload | `AgentEvent`、`EventType` / `AllEventTypes`、`subagent_report` | `internal/eventbus` / `internal/colony` → server / colony / agentloop / 前端 |
+| `disk` | 跨进程、跨重启的状态格式 | `worker.json`、`metadata.json`、`meta.json`、`cursor.json`、`triggers.json`、`soul.json`、`tracker.db` | 各模块 → 各模块 / CLI |
+| `tool-schema` | 模型可见的工具面：工具名、描述、`input_schema`、MCP 命名空间 | `llm.ToolDef` / `tools.Tool.Schema`、`mcp__<server>__<tool>` | `internal/tools` / `internal/llm` → agentloop / LLM / MCP server |
+| `cli` | 运维入口：子命令、参数、退出码、`--json` 输出 | `hive serve`、`hive chat`、`hive colony list\|info\|delete` | `internal/cli` → 运维 |
+
+契约的每条都记录 `providers`、`consumers`、`definition`（文件:符号）、`guarantee`、`failure_behavior`、`compatibility`、`enforcement`、`owner_layer`。`providers` / `consumers` 里的 `ext:` 前缀是外部消费面，不是仓库内的包。
+
+## 4.2 各自靠什么机制保障
+
+| 机制 | 具体是什么 | 覆盖什么 | 不覆盖什么 |
+| --- | --- | --- | --- |
+| Go 编译器 | 接口实现、结构体字段、import 类型检查 | `go-interface` 的签名；改方法/字段立刻编译失败 | 字符串协议：事件 `type`、JSON key、HTTP 路径 |
+| `go test ./...` + `go-hive/e2e/` | 单元、集成、端到端测试 | handler、colony 生命周期、session 恢复、SSE 帧 | 前端与 Go 的类型一致性；真实外部服务 |
+| 七门禁 `make ci` | `fmt-check vet test cross parity parity-targets wiring-check` | 格式、静态检查、测试、6 平台交叉编译、parity 注解、Python 目标存在、关键接线点 | 运行期行为、部署环境、并发竞争 |
+| `make race` | `go test -race`（单独目标，不在 `ci` 里） | 并发数据竞争 | 非并发逻辑 |
+| parity 注解 + `parity-targets` | 每个 `Test` 必须带 `// Parity:` 或 `// Parity-exempt:`，引用的 Python 测试必须真实存在 | 上游行为有对应测试；port 没漏测试 | 行为等价性本身——注解只证明“有对应”，不证明“等价” |
+| `wiring-check` | 静态扫描关键装配调用点（memory 注入、事件日志、会话工具安装） | 防止“编译通过但没接线”的静默退化 | 未列入 `WIRING` 的接线 |
+| `gen_arch.py --check` | 7 个生成物逐字节比较；路由表与事件表随代码更新 | 文档/图/契约清单与 `model.yaml` + 代码不漂移 | 契约文本的语义正确性；前端类型 |
+| `python3 -m py_compile scripts/gen_arch.py` | 生成器自身语法 | 生成器可执行 | 生成逻辑正确性 |
+
+`gen_arch.py --check` 的语义：用 `graph.json` 里记录的 commit 重新渲染，所以“提交生成物”本身不会造成假漂移；只有模型或代码真的变了才 exit 1。路由表从 `internal/server` 的 `mux.HandleFunc("METHOD /path", ...)` 提取，事件表从 `internal/eventbus/event_type.go` 提取，两者都不需要额外依赖。
+
+## 4.3 诚实的缺口
+
+下面这些交互**没有强约束**，不要因为 `contracts.md` 存在就假设它们被验证过：
+
+1. **`AgentEvent.Data` 是 `map[string]any`**：没有 schema，消费方按 key 做类型断言；字段缺失或类型错误不会编译失败，通常静默变成零值。事件信封的公共字段有类型，`data` 内部没有。
+2. **HTTP 请求体大量是自由 JSON**：很多 handler 解码到 `map[string]any` 或临时 struct，未知字段被忽略；没有 OpenAPI/JSON Schema，也没有生成客户端。错误形状只约定 `{error: ...}`，具体字段各接口不同。
+3. **前端 TS 类型不与 Go 共享**：`frontend/` 的类型是手写的，服务端改字段名只能靠测试或运行时发现；没有 codegen、没有前后端契约测试。
+4. **磁盘 JSON 无 schema 校验**：`worker.json`、`meta.json`、`triggers.json`、`soul.json` 读取时不做 JSON Schema 校验；损坏/截断普遍降级为空对象或空数组，错误可能被吞掉。只有 `tracker.db` 有版本号。
+5. **EventType 是字符串类型**：拼错一个事件名可以编译通过，发布方照发、订阅方收不到；`AllEventTypes` 是手工清单，新增常量不会自动进入清单。
+6. **HTTP 路由表是正则提取的**：只覆盖带方法前缀的 `mux.HandleFunc`；`webhook_server.go` 的独立 `/` 入口不在表内；handler 列是“闭包里第一个具名调用”的 best-effort，纯内联逻辑写 `(inline)`。它适合发现漂移，不适合当路由注册的唯一事实源。
+7. **CLI 的 `--json` 输出没有版本化**：字段形状靠命令实现与测试维持，没有 golden contract 覆盖所有子命令；`hive serve` 的退出码有约定，但输出文本不是稳定接口。
+8. **MCP 工具 schema 来自外部 server**：本地只做命名空间与参数透传，不校验远端 `inputSchema` 是否合法；MCP 子进程继承当前用户权限，没有 OS 级沙箱。
+9. **契约只覆盖 Go 内部与 HTTP/SSE/磁盘**：没有跨语言 IDL、没有消息队列、没有数据库外键级的跨模块约束；前端与外部调用方不在编译期检查范围内。
+10. **只有 tracker 有迁移机制**：`PRAGMA user_version=3` + bootstrap/backfill 是唯一的库级迁移；JSON 文件没有迁移框架，字段改名只能靠读旧写新或一次性脚本。
+
+## 4.4 变更规则
+
+- **默认加法兼容（additive）**：新增 HTTP 端点、响应字段、可选 JSON key、EventType、工具、MCP 工具、CLI flag 都可以直接加；消费方必须容忍未知字段。
+- **破坏性变更（breaking）**：删除/改名 HTTP 路径或方法、响应字段、事件字符串值、工具名、接口方法、磁盘 key，都算破坏性。需要：
+  1. 新接口/新路径/新事件类型并存，旧路径保留弃用期；
+  2. 磁盘/数据库写迁移（读旧写新、backfill、保留回滚路径）；
+  3. 同一个 PR 里更新 `model.yaml` 的 `contracts:`、生成物、受影响的前端与测试；
+  4. 在 PR 描述里写明弃用期与移除版本。
+- **版本化变更（versioned）**：`soul.json` 的 `version:int` 与 `tracker.db` 的 `PRAGMA user_version` 是仅有的两个显式版本号；升版本必须同时提供迁移与回滚说明，不能只改常量。
+- **提交前最低验证**：`make ci`（七门禁）+ `python3 scripts/gen_arch.py --check`；改并发路径再加 `make race`。架构文档漂移不是 CI 的默认阻断项，需要显式调用 `--check`。
+
+## 4.5 生成物与读法
+
+`contracts.md` 包含五块：按 kind 的汇总表、每条契约的明细、全量 HTTP 路由表（当前 198 条 method+path）、EventType 表（当前 77 个）、人工维护的磁盘格式表。`graph.json` 的 `contracts` 数组是同一份数据的机器可读版本，`stats` 里同时给出 `contracts` / `http_routes` / `event_types` 计数。
+
+改契约的流程：改 `model.yaml` 的 `contracts:` 或 `disk_formats:` → 在 `go_hive/` 下运行 `python3 scripts/gen_arch.py` → 提交 `model.yaml`、`graph.json` 与 `docs/architecture/contracts.md`。不要手改生成物。
+
+---
+
+# 五、三张关键序列图
 
 序列图是手工维护的"代码路径证据"，不是生成物；如果重构改了这些函数名或调用顺序，请在同一个 PR 里更新它们。
 
-## 4.1 一次 chat turn：HTTP → ChatRuntime → AgentLoop → LLM/工具
+## 5.1 一次 chat turn：HTTP → ChatRuntime → AgentLoop → LLM/工具
 
 ```mermaid
 sequenceDiagram
@@ -307,7 +375,7 @@ sequenceDiagram
 - 模型调用与工具调用是两条独立的限速路径（`AcquireLLMRequest` / `AcquireToolCall`），未配置时都是 no-op。
 - 纯文本回合直接结束；带工具的回合会循环到模型不再调用工具，或触发预算、doom-loop、judge 等护栏。
 
-## 4.2 `run_worker`：Queen 派发 → Colony 启动 → worker 回报
+## 5.2 `run_worker`：Queen 派发 → Colony 启动 → worker 回报
 
 ```mermaid
 sequenceDiagram
@@ -352,7 +420,7 @@ sequenceDiagram
 - 并发闸门在 `runGatedWorker`，超出上限的 worker 停在 `queued`，但最终仍会到达终态并发布报告。
 - `report_to_parent` 不是普通工具：`executorFor` 拦下它，只记录显式报告，然后让 loop 结束。
 
-## 4.3 MCP / 工具调用与限速：loader → registry → client → limiter
+## 5.3 MCP / 工具调用与限速：loader → registry → client → limiter
 
 ```mermaid
 sequenceDiagram
@@ -403,17 +471,18 @@ sequenceDiagram
 
 ---
 
-# 五、给 AI agent 的使用方式
+# 六、给 AI agent 的使用方式
 
-## 5.1 `graph.json` 的字段
+## 6.1 `graph.json` 的字段
 
 ```json
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "5a1cde61a121",
+  "generated_at_commit": "4c198a558dfd",
   "stats": {"packages": 44, "package_edges": 124, "capabilities": 12,
-            "capability_edges": 75, "layers": 7, "warnings": 2},
+            "capability_edges": 75, "layers": 7, "contracts": 34,
+            "http_routes": 198, "event_types": 77, "warnings": 2},
   "layers": [{"id": "transport", "name": "传输层", "depth": 2, "packages": ["internal/server"]}],
   "nodes": [
     {"id": "pkg:internal/server", "kind": "technical", "package": "internal/server",
@@ -429,6 +498,10 @@ sequenceDiagram
     {"from": "cap:queen-triage", "to": "pkg:internal/server", "kind": "operates"}
   ],
   "capabilities": [{"id": "cap:queen-triage", "capability": "queen-triage", "state_artifacts": ["..."]}],
+  "contracts": [{"id": "llm.Completer", "kind": "go-interface", "providers": ["internal/llm"],
+                 "consumers": ["internal/agentloop"], "definition": "internal/llm/llm.go:Completer",
+                 "guarantee": "...", "failure_behavior": "...", "compatibility": "breaking",
+                 "enforcement": ["compile", "test"], "owner_layer": "capability"}],
   "business_flow": {"stages": ["..."], "edges": ["..."]},
   "warnings": [{"code": "no_importer", "severity": "info", "message": "..."}]
 }
@@ -442,11 +515,13 @@ sequenceDiagram
 | `realizes` | 技术 → 业务 | 该模块实现了该能力 |
 | `operates` | 业务 → 技术 | 该能力在运行时通过这个入口/执行面/数据面提供 |
 
+`contracts[]` 是平铺的契约数组，不属于节点/边：它回答“跨模块边界靠什么交互”，不参与 import 图的分层检查。`stats` 里的 `http_routes` / `event_types` 是生成时从代码提取的计数，和 `contracts.md` 的表一致。
+
 `capabilities[]` 是业务节点的事实表；`nodes` 里 `kind=business` 的条目是它在图里的副本，两者 id 相同。
 
 `warnings[].code` 目前有：`reverse_dependency`（低层 import 高层）、`unmapped_package`（新包没登记）、`stale_mapping`（model 里有、代码里没了）、`unknown_capability_module`（能力引用了不存在的包）、`no_importer`（无内部导入方）、`unmapped_capability`（能力不在主链路里）。
 
-## 5.2 常用查询
+## 6.2 常用查询
 
 ```bash
 # 规模与健康度
@@ -481,16 +556,16 @@ jq -r '.capabilities[] | select(.capability=="evidence-tracker") | .state_artifa
   go_hive/architecture/graph.json
 ```
 
-## 5.3 改完之后
+## 6.3 改完之后
 
 ```bash
 cd go_hive
-python3 scripts/gen_arch.py           # 重新生成 6 个产物
+python3 scripts/gen_arch.py           # 重新生成 7 个产物
 python3 scripts/gen_arch.py --check   # 幂等检查：有差异 exit 1
 python3 -m py_compile scripts/gen_arch.py
 ```
 
-`--check` 的语义：用仓库内 `graph.json` 已经记录的 commit 重新渲染一遍，逐字节比较 6 个生成物。提交生成物本身不会造成假漂移；只有模型或代码真的变了才会 exit 1。适合放进 CI：
+`--check` 的语义：用仓库内 `graph.json` 已经记录的 commit 重新渲染一遍，逐字节比较 7 个生成物。提交生成物本身不会造成假漂移；只有模型或代码真的变了才会 exit 1。适合放进 CI：
 
 ```bash
 python3 go_hive/scripts/gen_arch.py --check || {
@@ -501,7 +576,7 @@ python3 go_hive/scripts/gen_arch.py --check || {
 
 ---
 
-# 六、维护规则
+# 七、维护规则
 
 ## 该改 `model.yaml` 的情形
 
@@ -512,6 +587,7 @@ python3 go_hive/scripts/gen_arch.py --check || {
 - **业务能力边界变化**：改 `capabilities[].modules` / `operates` / `entrypoints` / `state_artifacts`。
 - **审批点或成熟度变化**：改 `human_approval` / `maturity`，并在 PR 里说明证据（哪个测试、哪次冒烟）。
 - **主链路变化**：改 `business_flow.stages` / `edges`。
+- **契约变化**：改 `contracts[]`。新增/删除接口方法、HTTP 家族、SSE 帧、事件 payload、工具 schema、CLI 参数或磁盘格式时，同步改 `definition`、`guarantee`、`failure_behavior`、`compatibility`、`enforcement`。路由与 EventType 表是代码提取的，不需要手写；磁盘格式表改 `disk_formats[]`。
 
 ## 不需要改的情形
 
@@ -521,13 +597,15 @@ python3 go_hive/scripts/gen_arch.py --check || {
 
 ## 生成物纪律
 
-- 不要手改 `graph.json`、`*.mmd`、`*.dot`、`MODULES.md`、`capability-tech-crosswalk.md`；下一次生成会覆盖。
+- 不要手改 `graph.json`、`*.mmd`、`*.dot`、`MODULES.md`、`capability-tech-crosswalk.md`、`contracts.md`；下一次生成会覆盖。
 - README 与三张序列图是手写的，**改到对应代码路径时要一起改**；生成器不校验它们，这是这套图里唯一需要人盯的部分。
+- `contracts.md` 的 HTTP 路由表与 EventType 表由生成器从代码提取；契约明细与磁盘格式表来自 `model.yaml`。发现路由/事件表漏项时，先改提取器或缩小覆盖范围并在“覆盖边界”里写明，不要手改生成物。
 - `model.yaml` 只支持生成器实现的 YAML 子集：缩进映射、块序列、`[a, b]` 流式列表、双引号字符串；不支持锚点、多行块标量、制表符。报错会带行号。
 
 ## 已知限制
 
 - `internal/charts` 与 `internal/orchestrator` 没有任何内部导入方，属于未接线代码；生成器以 `no_importer` 列为 info，不阻断。
 - 12 条能力里只有 `queen-triage` 与 `tools-credentials` 有端到端证据（`go-hive/e2e/`），其余是单元/集成测试级，标为 `tested` 而不是 `live`。
-- 依赖图只表达编译期 import，不表达运行时的 goroutine、事件订阅或 HTTP 调用；那部分看序列图与 `capability-tech-crosswalk.md` 的入口列。
+- 依赖图只表达编译期 import，不表达运行时的 goroutine、事件订阅或 HTTP 调用；那部分看序列图与 `capability-tech-crosswalk.md` 的入口列，接口边界看 `contracts.md`。
+- 契约层的强约束只到 Go 编译器与测试为止：事件 `data`、HTTP 请求体、前端 TS 类型、磁盘 JSON 都没有 schema 校验，详见 4.3 节的缺口清单。
 - 业务能力的成熟度是**审计判断**，不是运行时指标；改了判断要有证据。

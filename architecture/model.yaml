@@ -392,6 +392,438 @@ capabilities:
     maturity: tested
     limits: "门禁是仓库内脚本与 go test，不覆盖部署环境；架构漂移检查需手动或 CI 显式调用，不会自动阻断提交。"
 
+# 接口与契约：模块之间靠什么约束交互。
+# kind 七类：go-interface / http / sse / event / disk / tool-schema / cli。
+# providers / consumers 可以是 packages 里的包名，也可以是 ext: 前缀的外部消费面
+# （ext:frontend、ext:operator、ext:mcp-server、ext:external-caller）。
+# compatibility: additive（只允许加法）| breaking（任何变更都要同步改消费方）|
+#                versioned（文件/库自带版本号，按版本迁移）。
+# enforcement 取值：compile / test / gate / checker。
+contracts:
+  # ---------------- go-interface ----------------
+  - id: "server.ColonyRuntime"
+    kind: "go-interface"
+    providers: ["internal/colony", "internal/host"]
+    consumers: ["internal/server"]
+    definition: "internal/server/session.go:ColonyRuntime（StreamID / SubscribeToEvents / InjectInput）"
+    guarantee: "传输层只通过这三个方法观察 colony 流、订阅其事件、向 worker 注入输入，不触达 *colony.ColonyRuntime 的内部字段。"
+    failure_behavior: "少实现一个方法即编译失败；SubscribeToEvents 返回错误时 HTTP 层按 500 结束该请求。"
+    compatibility: "breaking"
+    enforcement: ["compile", "test"]
+    owner_layer: "transport"
+
+  - id: "llm.Completer"
+    kind: "go-interface"
+    providers: ["internal/llm"]
+    consumers: ["internal/agentloop", "internal/colony", "internal/host", "internal/memory", "internal/server"]
+    definition: "internal/llm/llm.go:Completer（AComplete）"
+    guarantee: "所有非流式模型调用都走同一个 AComplete(ctx, CompletionRequest) → Completion；provider 选择、协议、鉴权、限速与重试封在 llm 内部，调用方不感知 Anthropic/OpenAI 差异。"
+    failure_behavior: "返回 error 表示没有完整回复；调用方不得把部分文本当完成结果持久化。"
+    compatibility: "breaking"
+    enforcement: ["compile", "test"]
+    owner_layer: "capability"
+
+  - id: "llm.StreamCompleter"
+    kind: "go-interface"
+    providers: ["internal/llm"]
+    consumers: ["internal/server"]
+    definition: "internal/llm/stream.go:StreamCompleter（ACompleteStream）"
+    guarantee: "支持流式的 provider 通过 emit 按线上顺序发 TextDelta / ToolCall / TextEnd / Finish；返回的 Completion 与非流式路径一致，可直接写历史。"
+    failure_behavior: "ErrStreamingUnsupported 或流中断时 server 回退到 Completer.AComplete；error 时不得把部分文本当最终回答。"
+    compatibility: "breaking"
+    enforcement: ["compile", "test"]
+    owner_layer: "capability"
+
+  - id: "agentloop.ToolExecutor"
+    kind: "go-interface"
+    providers: ["internal/colony", "internal/server", "internal/cli"]
+    consumers: ["internal/agentloop"]
+    definition: "internal/agentloop/loop.go:ToolExecutor（func(ToolCallRequest) (ToolResult, error)）"
+    guarantee: "循环只认这个函数：工具名解析、权限、限速、审计都在 executor 侧；循环负责批处理、并发安全分组与结果写回。"
+    failure_behavior: "executor 返回 error 时，循环把错误文本作为 is_error 工具结果回给模型，不终止整轮。"
+    compatibility: "breaking"
+    enforcement: ["compile", "test"]
+    owner_layer: "runtime"
+
+  - id: "agentloop.Judge"
+    kind: "go-interface"
+    providers: ["internal/agentloop"]
+    consumers: ["internal/agentloop", "internal/colony"]
+    definition: "internal/agentloop/judge.go:Judge（Evaluate）"
+    guarantee: "成功标准判定通过该接口注入；agentloop 提供 LLMJudgeAdapter（底层 llmjudge），colony 用它做 worker 目标验收。"
+    failure_behavior: "judge 返回 error 时归一化为 RETRY 并附反馈；无 judge 且声明了成功标准时判定为 unsupported，不计为 met，不假装通过。"
+    compatibility: "breaking"
+    enforcement: ["compile", "test"]
+    owner_layer: "runtime"
+
+  - id: "eventbus.EventHandler"
+    kind: "go-interface"
+    providers: ["internal/eventbus"]
+    consumers: ["internal/server", "internal/colony", "internal/host"]
+    definition: "internal/eventbus/bus.go:EventHandler / Subscribe"
+    guarantee: "订阅者按 EventType 集合与 stream/node/execution/colony 过滤接收 *AgentEvent；Bus 同步分发，返回订阅 ID 供退订。"
+    failure_behavior: "handler panic 被 recover 并记日志，不影响其他订阅者；handler 阻塞会拖慢同步发布，队列满的 SSE 桥会主动丢帧或断开。"
+    compatibility: "breaking"
+    enforcement: ["compile", "test"]
+    owner_layer: "foundation"
+
+  - id: "host.Host"
+    kind: "go-interface"
+    providers: ["internal/host"]
+    consumers: ["internal/cli"]
+    definition: "internal/host/host.go:Host（New / Start / Spawn / Run / Bus / Stats / Stop）"
+    guarantee: "把 colony runtime、event bus 与 run 注册表封装成可 Start/Spawn 的宿主；Spawn 非阻塞，Run 阻塞，进度经 Bus/Stats 读取。"
+    failure_behavior: "New 缺 LLM 或 AgentSpec.ID 返回 error；未 Start 时 Spawn/Run 先 ensureStarted；Stop 后由 Started() 反映状态。"
+    compatibility: "breaking"
+    enforcement: ["compile", "test"]
+    owner_layer: "orchestration"
+
+  # ---------------- http ----------------
+  - id: "http.sessions"
+    kind: "http"
+    providers: ["internal/server"]
+    consumers: ["ext:frontend", "internal/cli"]
+    definition: "internal/server/routes_sessions.go:RegisterSessionRoutes + chat/task/worker/reminder/attachment 路由"
+    guarantee: "会话 REST：创建/查询/fork/发送消息/任务/worker/提醒/触发器/报告；请求与响应为 JSON，错误统一 {error:...}；chat 接受后立即返回，输出走 SSE。"
+    failure_behavior: "未知 session 404；colony 已 spawn 或已 fork 409 session_locked；未配置 LLM 503；坏 JSON 400。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  - id: "http.colonies"
+    kind: "http"
+    providers: ["internal/server"]
+    consumers: ["ext:frontend"]
+    definition: "internal/server/routes_colonies.go:RegisterColonyRoutes + routes_colony_tools.go + routes_colony_workers_data.go"
+    guarantee: "colony 生命周期与数据面：scaffold/rename/delete/import、worker profiles、colony 数据表行查询与 PATCH；scaffold 幂等，不覆盖已有 triggers.json。"
+    failure_behavior: "不存在 404；非法 colony 名 400；导入分片缺 upload_id 404；重复 scaffold 保持原内容。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  - id: "http.queens"
+    kind: "http"
+    providers: ["internal/server"]
+    consumers: ["ext:frontend"]
+    definition: "internal/server/routes_queens.go:RegisterQueenRoutes + routes_queens_tools.go + routes_queens_claude_code.go + routes_queens_mail.go"
+    guarantee: "queen 档案、人格、头像、工具 allowlist、会话绑定与 queen 间信件；列表响应带 profiles/queens 键，单对象按 profile/overview 返回。"
+    failure_behavior: "未知 queen 404；非法 profile 400；删除/恢复是软删除标记，重复操作幂等。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  - id: "http.credentials"
+    kind: "http"
+    providers: ["internal/server"]
+    consumers: ["ext:frontend"]
+    definition: "internal/server/routes_credentials.go:RegisterCredentialRoutes + routes_credentials_specs.go + routes_credentials_form.go"
+    guarantee: "凭证 CRUD、规格列表、OAuth 状态、凭证表单提交；GET 只返回元数据，秘密值只写不读。"
+    failure_behavior: "未知凭证 404；缺字段 400；解密失败时单条 GET 返回 409 且 recoverable=true，列表把不可读 id 放进 unreadable_credentials，不泄漏秘密；表单提交会恢复被 park 的 turn。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  - id: "http.config"
+    kind: "http"
+    providers: ["internal/server"]
+    consumers: ["ext:frontend"]
+    definition: "internal/server/routes_config.go:RegisterConfigRoutes + routes_models.go"
+    guarantee: "configuration.json 的读写面：features / llm / rate-limits / profile / provider-library / sentinel / external-skills，以及只读 models 目录；写入以 JSON 合并 + 原子替换落盘。"
+    failure_behavior: "非法 JSON 或未知枚举 400；读取失败回退默认配置；写盘失败 500，内存状态不先行生效。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  - id: "http.mcp"
+    kind: "http"
+    providers: ["internal/server"]
+    consumers: ["ext:frontend"]
+    definition: "internal/server/routes_mcp.go:RegisterMCPRoutes"
+    guarantee: "MCP 服务器注册表 HTTP 面：list/add/delete/enable/disable/health/mode/reload；返回 server 视图，工具命名空间由 tools 层决定。"
+    failure_behavior: "未安装 server 404；健康检查失败在响应体标 ok=false 而非 5xx；reload 部分失败返回 500 且带 reloaded=false。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  - id: "http.events"
+    kind: "http"
+    providers: ["internal/server"]
+    consumers: ["ext:frontend", "ext:external-caller"]
+    definition: "internal/server/routes_events.go:RegisterEventRoutes"
+    guarantee: "全局事件入口：GET /api/events/global 是 SSE（见 sse.global-events）；POST /api/crm/changed 接受 {entities[], schema} 并广播 crm_changed。"
+    failure_behavior: "非 SSE 客户端 500；/api/crm/changed 的坏 JSON 被当空对象；未知实体丢弃；成功恒为 200 {ok:true}。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  - id: "http.global-data"
+    kind: "http"
+    providers: ["internal/server"]
+    consumers: ["ext:frontend"]
+    definition: "internal/server/routes_colony_workers_global.go（/api/global/* 与 /api/crm/grid/*）"
+    guarantee: "global data 与 CRM grid 的通用表读写：表名/实体名走路径，查询体为自由 JSON，行操作返回 rows/columns 等通用结构。"
+    failure_behavior: "未知表/实体 404；非法查询或未知列 400；SQLite 约束/写冲突由 handler 映射为 4xx 或 5xx，响应体带 error。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  # ---------------- sse ----------------
+  - id: "sse.session-events"
+    kind: "sse"
+    providers: ["internal/server", "internal/eventbus"]
+    consumers: ["ext:frontend"]
+    definition: "internal/server/chat_routes.go:handleSessionEventsStream（GET /api/sessions/{session_id}/events）"
+    guarantee: "每帧 event: <EventType> + data: <AgentEvent.ToDict()>；订阅时先发 event: session_snapshot；空闲发 ': heartbeat' 注释；?types=a,b 可过滤。"
+    failure_behavior: "非 Flusher 500；会话不存在 404；队列满时非阻塞丢帧，客户端靠 snapshot 与重连恢复。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  - id: "sse.global-events"
+    kind: "sse"
+    providers: ["internal/server", "internal/eventbus"]
+    consumers: ["ext:frontend"]
+    definition: "internal/server/routes_events.go:handleGlobalEvents（GET /api/events/global）"
+    guarantee: "只转发 5 类全局事件（credential connect/disconnect、tool catalog refresh、tools config、crm changed）；帧是 data-only（无 event 名），空闲发 ': keepalive'。"
+    failure_behavior: "非 Flusher 500；队列满即断开让客户端重连；globalEventTypes 是白名单，新增全局事件必须同步改它。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  - id: "sse.live-streams"
+    kind: "sse"
+    providers: ["internal/server", "internal/runtimehealth"]
+    consumers: ["ext:frontend"]
+    definition: "internal/server/routes_session_live.go:handleLiveSessionsStream + routes_workers.go:handleLiveWorkersStream + routes_app_extra.go:handleBrowserStatusStream"
+    guarantee: "轮询式 SSE：/api/sessions/live 与 /api/sessions/{id}/workers/stream 发 event: snapshot，/api/browser/status/stream 发 event: status；只有签名变化才推送，空闲发 keepalive 注释。"
+    failure_behavior: "非 Flusher 500；会话或运行时缺失返回 404/空快照；轮询无变化时不发帧。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "transport"
+
+  # ---------------- event ----------------
+  - id: "event.agent-event-envelope"
+    kind: "event"
+    providers: ["internal/eventbus"]
+    consumers: ["internal/server", "internal/colony", "internal/host", "internal/tasks", "internal/cli", "ext:frontend"]
+    definition: "internal/eventbus/event.go:AgentEvent / ToDict"
+    guarantee: "统一信封：type / stream_id / node_id / execution_id / data / timestamp / correlation_id / colony_id / seq，可选 run_id；timestamp 为本地 ISO8601（微秒可选）；落盘剥离 data.full_request。"
+    failure_behavior: "Data 为 nil 时 ToDict 归一为空 map；字段不做运行期类型校验，消费方按 map 断言，缺失即零值。"
+    compatibility: "additive"
+    enforcement: ["compile", "test", "checker"]
+    owner_layer: "foundation"
+
+  - id: "event.type-registry"
+    kind: "event"
+    providers: ["internal/eventbus"]
+    consumers: ["internal/server", "internal/colony", "internal/host", "internal/tasks", "internal/cli"]
+    definition: "internal/eventbus/event_type.go:EventType / AllEventTypes"
+    guarantee: "事件类型是字符串常量集合，AllEventTypes 是订阅与文档的唯一清单；新增类型必须同时加常量与清单。"
+    failure_behavior: "拼写错误不会编译失败（字符串类型）；未知类型仍可发布，订阅方收不到；改已有字符串值等于破坏订阅方。"
+    compatibility: "additive"
+    enforcement: ["compile", "test", "checker"]
+    owner_layer: "foundation"
+
+  - id: "event.worker-report"
+    kind: "event"
+    providers: ["internal/colony"]
+    consumers: ["internal/server", "ext:frontend"]
+    definition: "internal/colony/runtime.go:publishReport + internal/colony/worker.go:reportPayload"
+    guarantee: "worker 终态统一发 subagent_report：worker_id / colony_id / status / summary / task / data，可选 goal_evaluation、improvement_signals、batch_id/index/size、duration_seconds；ChatRuntime 将其转成 [WORKER_REPORT] 用户回合。"
+    failure_behavior: "缺 data 时补空 map；status 只认 success/partial/failed；报告发布无返回值，失败只记日志，不回滚 worker 终态。"
+    compatibility: "additive"
+    enforcement: ["test", "checker"]
+    owner_layer: "orchestration"
+
+  # ---------------- disk ----------------
+  - id: "disk.colony-worker-json"
+    kind: "disk"
+    providers: ["internal/server", "internal/colony"]
+    consumers: ["internal/agents", "internal/colony", "internal/cli"]
+    definition: "internal/server/routes_colonies.go:ensureMinimalColony（~/.hive/colonies/{colony}/worker.json）"
+    guarantee: "colony 的 worker 模板：name / description / tools[] / goal{description,success_criteria,constraints} / queen_name / loop_config；agents.LoadAgentSpec 按文件名排序取第一个 worker 配置。"
+    failure_behavior: "缺失时 scaffold 生成最小模板；JSON 损坏时 LoadAgentSpec 报错、colony 无法派工；未知字段忽略。"
+    compatibility: "additive"
+    enforcement: ["test"]
+    owner_layer: "orchestration"
+
+  - id: "disk.colony-metadata"
+    kind: "disk"
+    providers: ["internal/server"]
+    consumers: ["internal/server", "internal/host", "internal/cli"]
+    definition: "internal/server/routes_colonies.go:updateColonyMetadata（~/.hive/colonies/{colony}/metadata.json）"
+    guarantee: "colony 级元数据自由 map：name / created_at / queen_name / scaffolded / deleted / source_session；scaffold、rename、delete 都走原子写。"
+    failure_behavior: "缺失或坏 JSON 视为空 map；写入失败返回 500；deleted 是软删除标记，不立刻删目录。"
+    compatibility: "additive"
+    enforcement: ["test"]
+    owner_layer: "orchestration"
+
+  - id: "disk.worker-meta"
+    kind: "disk"
+    providers: ["internal/colony"]
+    consumers: ["internal/colony", "internal/server"]
+    definition: "internal/colony/worker_transcript.go:writeWorkerMeta（workers/{id}/meta.json）"
+    guarantee: "worker 重启所需的血缘：worker_id / colony_id / task / profile_name / goal / batch_id / batch_index / batch_size；与 conversations/、result.json、events.jsonl 同目录。"
+    failure_behavior: "缺失或坏 JSON 时 readWorkerMeta 返回空 map，resume 退化为按 parts 恢复；worker 目录无 parts 则不可 resume。"
+    compatibility: "additive"
+    enforcement: ["test"]
+    owner_layer: "orchestration"
+
+  - id: "disk.session-meta"
+    kind: "disk"
+    providers: ["internal/server", "internal/session"]
+    consumers: ["internal/server", "internal/session"]
+    definition: "internal/server/queen_phase_state.go:mergeSessionMeta（sessions/{id}/meta.json）"
+    guarantee: "会话级元数据：title / title_source、queen phase、colony_spawned / spawned_colony_id / spawned_colony_at；写入按 key 合并并原子替换。"
+    failure_behavior: "损坏时读为空，标题与 phase 回退默认；缺 colony_spawned 时按未 spawn 处理。"
+    compatibility: "additive"
+    enforcement: ["test"]
+    owner_layer: "orchestration"
+
+  - id: "disk.cursor-json"
+    kind: "disk"
+    providers: ["internal/agentloop", "internal/session", "internal/storage"]
+    consumers: ["internal/agentloop", "internal/session", "internal/storage", "internal/server"]
+    definition: "internal/session/session.go:Cursor / WriteCursor + internal/agentloop/store.go"
+    guarantee: "turn 游标：iteration / turn / accumulated_output / tool_calls / stall_repeat / last_fingerprint / pending_inputs / park_reason / updated_at，park 后可精确恢复。"
+    failure_behavior: "损坏或截断按不存在处理（readDerivedJSON），从 parts 重建；写失败只影响恢复精度，不影响当前 turn。"
+    compatibility: "additive"
+    enforcement: ["test"]
+    owner_layer: "orchestration"
+
+  - id: "disk.triggers-json"
+    kind: "disk"
+    providers: ["internal/triggers", "internal/server"]
+    consumers: ["internal/triggers", "internal/server"]
+    definition: "internal/triggers/triggers_store.go:ReadAgentTriggersJSON / WriteAgentTriggersJSON"
+    guarantee: "顶层数组，每项 TriggerDefinition：id / trigger_type / trigger_config / description / task / enabled / last_fired_at / next_due_at；按 id 覆盖写。"
+    failure_behavior: "文件缺失、坏 JSON、非数组一律读成空数组；写失败向上返回 error，调用方记日志。"
+    compatibility: "additive"
+    enforcement: ["test"]
+    owner_layer: "orchestration"
+
+  - id: "disk.soul-json"
+    kind: "disk"
+    providers: ["internal/soul"]
+    consumers: ["internal/soul", "internal/server"]
+    definition: "internal/soul/store.go:SoulFile / Save（~/.hive/queens/{queen}/soul/soul.json）"
+    guarantee: "Queen 自我认知：version / updated_at / sections{key:[Item]}；history/v{n}.json 保留版本，proposals/*.json 存待审提案；写前做分区字符上限校验。"
+    failure_behavior: "缺失时 Load 返回空 soul；越界 edit 被 Problems/ApplyEdits 拒绝并返回 SoulError；回滚按 version 读历史。"
+    compatibility: "versioned"
+    enforcement: ["test"]
+    owner_layer: "capability"
+
+  - id: "disk.tracker-db"
+    kind: "disk"
+    providers: ["internal/tracker"]
+    consumers: ["internal/colony", "internal/tracker", "internal/server"]
+    definition: "internal/tracker/tracker.go:EnsureTrackerDB / bootstrapSchema（~/.hive/colonies/{colony}/tracker/tracker.db）"
+    guarantee: "SQLite(WAL)：_tracker_registry 登记可写列/键/模式，_tracker_meta 存 schema_version，_tracker_changes 记录 insert/update；业务表由 queen 动态建。"
+    failure_behavior: "PRAGMA user_version 小于 SchemaVersion(3) 时执行 bootstrap + backfill；busy_timeout 5s，写冲突由工具层归一为 is_error。"
+    compatibility: "versioned"
+    enforcement: ["test"]
+    owner_layer: "orchestration"
+
+  # ---------------- tool-schema ----------------
+  - id: "tool-schema.tool-def"
+    kind: "tool-schema"
+    providers: ["internal/tools", "internal/llm", "internal/tools/integrations"]
+    consumers: ["internal/agentloop", "internal/llm"]
+    definition: "internal/llm/llm.go:ToolDef + internal/tools/tool.go:Tool.Schema"
+    guarantee: "工具对模型的唯一描述：name / description / input_schema(JSON Schema object) / produces_image / concurrency_safe；registry 的 Tool 转成 {name,description,input_schema} 进入 CompletionRequest.Tools。"
+    failure_behavior: "Parameters 为 nil 时补空 object schema；schema 不做本地校验，provider 可能 400；重名工具的取舍由 registry 加载规则决定。"
+    compatibility: "additive"
+    enforcement: ["compile", "test"]
+    owner_layer: "capability"
+
+  - id: "tool-schema.mcp-namespace"
+    kind: "tool-schema"
+    providers: ["internal/tools"]
+    consumers: ["internal/agentloop", "internal/server", "internal/colony"]
+    definition: "internal/tools/mcp_registry.go:NamespacedMCPToolName"
+    guarantee: "MCP 工具注册名固定 mcp__<server>__<tool>；server/tool 中非 [A-Za-z0-9_] 字符折叠为 _；命名空间阻止远端 read_file 覆盖内置工具。"
+    failure_behavior: "清洗后为空回退 server/tool；同名冲突按加载顺序 shadow 并记日志（preserve 模式跳过）；调用失败归一为 is_error 工具结果。"
+    compatibility: "additive"
+    enforcement: ["compile", "test"]
+    owner_layer: "capability"
+
+  # ---------------- cli ----------------
+  - id: "cli.serve"
+    kind: "cli"
+    providers: ["internal/cli", "internal/server"]
+    consumers: ["ext:operator"]
+    definition: "internal/cli/loader.go:serveCommand（hive serve / hive open）"
+    guarantee: "默认绑定 127.0.0.1:8787；支持 --host / --port / --colony(可重复) / --model / --open / --verbose / --debug；启动 HTTP+SSE 并阻塞到信号；退出码 0 正常、非 0 启动失败。"
+    failure_behavior: "端口占用或监听失败打印错误并返回非 0；非 loopback 且未设 HIVE_DESKTOP_TOKEN 时拒绝启动返回 1；SIGINT/SIGTERM 触发优雅停止。"
+    compatibility: "additive"
+    enforcement: ["test"]
+    owner_layer: "assembly"
+
+  - id: "cli.chat"
+    kind: "cli"
+    providers: ["internal/cli", "internal/server"]
+    consumers: ["ext:operator"]
+    definition: "internal/cli/loader.go:chatCommand + cmdChat"
+    guarantee: "hive chat <session_id> <message> [--server URL] 通过 HTTP POST /api/sessions/{id}/chat 投递，成功打印 SSE 跟踪地址；默认 server 为 http://127.0.0.1:8787。"
+    failure_behavior: "网络不可达或响应带 error 时打印错误并返回 1；409 session_locked 原样透出。"
+    compatibility: "additive"
+    enforcement: ["test"]
+    owner_layer: "assembly"
+
+  - id: "cli.colony"
+    kind: "cli"
+    providers: ["internal/cli", "internal/colony"]
+    consumers: ["ext:operator"]
+    definition: "internal/cli/loader.go:colonyCommands（hive colony list|info|delete）"
+    guarantee: "list 枚举 ~/.hive/colonies 下的 colony；info 读 metadata.json/worker.json；delete 删目录（--purge-storage 同时删 agents 存储，--yes 跳过确认）；--json 输出机器可读结构。"
+    failure_behavior: "不存在返回非 0 并打印 not found；delete 无 --yes 时交互确认；purge 失败返回非 0 并报告已删除/未删除部分。"
+    compatibility: "additive"
+    enforcement: ["test"]
+    owner_layer: "assembly"
+
+# 磁盘格式表（人工维护）：契约层 disk.* 的展开，补上路径、生产者/消费者、关键字段与迁移策略。
+disk_formats:
+  - path: "~/.hive/colonies/{colony}/worker.json"
+    producer: "internal/server（scaffold）"
+    consumer: "internal/agents、internal/colony、internal/cli"
+    key_fields: "name、description、tools[]、goal{description, success_criteria[], constraints[]}、queen_name、loop_config"
+    versioning: "无 schema 版本；解码按 map/结构体，未知字段忽略，新增字段属于加法兼容。"
+  - path: "~/.hive/colonies/{colony}/metadata.json"
+    producer: "internal/server"
+    consumer: "internal/server、internal/host、internal/cli"
+    key_fields: "name、created_at、queen_name、scaffolded、deleted、source_session_id"
+    versioning: "无 schema 版本；自由 map，缺失或坏 JSON 读成空 map。"
+  - path: "~/.hive/colonies/{colony}/workers/{worker_id}/meta.json"
+    producer: "internal/colony"
+    consumer: "internal/colony、internal/server"
+    key_fields: "worker_id、colony_id、task、profile_name、goal、batch_id、batch_index、batch_size"
+    versioning: "无 schema 版本；缺失时 resume 退化为按 conversations/parts 恢复。"
+  - path: "~/.hive/queens/{queen}/sessions/{session}/meta.json"
+    producer: "internal/server、internal/session"
+    consumer: "internal/server（adapters_qmail.go）、internal/session"
+    key_fields: "title、title_source、phase、colony_spawned、spawned_colony_id、spawned_colony_at"
+    versioning: "无 schema 版本；按 key 合并，未知字段保留，坏文件回退默认。"
+  - path: "…/sessions/{session}/conversations/cursor.json"
+    producer: "internal/agentloop、internal/session、internal/storage"
+    consumer: "internal/agentloop、internal/session、internal/storage、internal/server"
+    key_fields: "iteration、turn、accumulated_output、tool_calls、stall_repeat、last_fingerprint、pending_inputs[]、park_reason、updated_at"
+    versioning: "无 schema 版本；派生状态，损坏按不存在处理并从 parts 重建。"
+  - path: "{session|colony}/triggers.json"
+    producer: "internal/triggers、internal/server"
+    consumer: "internal/triggers、internal/server"
+    key_fields: "id、trigger_type、trigger_config、description、task、enabled、last_fired_at、next_due_at"
+    versioning: "顶层数组、无版本号；非数组/坏 JSON 读成空数组。"
+  - path: "~/.hive/queens/{queen}/soul/soul.json（+ history/v{n}.json、proposals/*.json）"
+    producer: "internal/soul"
+    consumer: "internal/soul、internal/server、internal/agentloop"
+    key_fields: "version、updated_at、sections{key:[Item]}；history 按 version 命名，proposal 带 base_version/edits/status"
+    versioning: "文件内 version:int 即版本号；回滚按 version 读 history，迁移需同时处理 history 目录。"
+  - path: "~/.hive/colonies/{colony}/tracker/tracker.db"
+    producer: "internal/tracker"
+    consumer: "internal/colony、internal/tracker、internal/server"
+    key_fields: "_tracker_registry(table_name, write_columns, key_columns, mode)、_tracker_meta(schema_version)、_tracker_changes；业务表由 queen 动态创建"
+    versioning: "PRAGMA user_version=3（SchemaVersion）；低于当前版本执行 bootstrap + backfill，只做加法迁移。"
+
 # 业务能力主链路：决定 capability-map.mmd 的泳道与箭头。
 business_flow:
   title: "从客户目标到交付与改进"

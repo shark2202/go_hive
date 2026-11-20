@@ -12,6 +12,7 @@
   docs/architecture/MODULES.md               模块表
   docs/architecture/capability-map.mmd       业务能力关系图
   docs/architecture/capability-tech-crosswalk.md  能力 ↔ 技术对照
+  docs/architecture/contracts.md             接口契约 + HTTP 路由表 + 事件类型表 + 磁盘格式表
 
 用法：
   python3 scripts/gen_arch.py            生成/覆盖产物
@@ -34,6 +35,38 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODEL_REL = "architecture/model.yaml"
 GRAPH_REL = "architecture/graph.json"
+
+CONTRACT_KINDS = (
+    "go-interface",
+    "http",
+    "sse",
+    "event",
+    "disk",
+    "tool-schema",
+    "cli",
+)
+CONTRACT_KIND_LABELS = {
+    "go-interface": "Go 接口 / 导出 API",
+    "http": "HTTP 路由族群",
+    "sse": "SSE 帧",
+    "event": "事件总线",
+    "disk": "磁盘格式",
+    "tool-schema": "工具 schema",
+    "cli": "CLI 命令",
+}
+COMPATIBILITY_VALUES = {"additive", "breaking", "versioned"}
+COMPATIBILITY_LABELS = {
+    "additive": "加法兼容",
+    "breaking": "破坏性变更",
+    "versioned": "版本化",
+}
+ENFORCEMENT_VALUES = {"compile", "test", "gate", "checker"}
+ENFORCEMENT_LABELS = {
+    "compile": "编译器 / 接口实现",
+    "test": "单元、集成或 e2e 测试",
+    "gate": "七门禁 / wiring-check / parity",
+    "checker": "gen_arch --check 防漂移",
+}
 
 LAYER_STYLES = {
     "entry": ("#eef2ff", "#4338ca"),
@@ -308,6 +341,68 @@ def validate_model(model: dict) -> None:
         if not cap["modules"]:
             raise ModelError(f"{cap['id']}: modules 不能为空")
 
+    contract_ids = set()
+    contracts = model.get("contracts")
+    if not isinstance(contracts, list) or not contracts:
+        raise ModelError("缺少 contracts 列表")
+    if len(contracts) < 15:
+        raise ModelError(f"contracts 至少需要 15 条，当前 {len(contracts)} 条")
+    covered_kinds = set()
+    for index, contract in enumerate(contracts):
+        if not isinstance(contract, dict):
+            raise ModelError(f"contracts[{index}] 应为映射")
+        required = (
+            "id", "kind", "providers", "consumers", "definition", "guarantee",
+            "failure_behavior", "compatibility", "enforcement", "owner_layer",
+        )
+        for key in required:
+            if key not in contract or contract[key] in (None, "", []):
+                raise ModelError(f"contracts[{index}] 缺少 {key}")
+        contract_id = str(contract["id"])
+        if contract_id in contract_ids:
+            raise ModelError(f"契约 id 重复: {contract_id}")
+        contract_ids.add(contract_id)
+        if contract["kind"] not in CONTRACT_KINDS:
+            raise ModelError(f"{contract_id}: kind 必须是 {list(CONTRACT_KINDS)}")
+        covered_kinds.add(contract["kind"])
+        for key in ("providers", "consumers"):
+            value = contract[key]
+            if not isinstance(value, list) or not value:
+                raise ModelError(f"{contract_id}: {key} 必须是非空列表")
+            for module in value:
+                if not isinstance(module, str) or not module.strip():
+                    raise ModelError(f"{contract_id}: {key} 含空值")
+                if not module.startswith("ext:") and module not in seen:
+                    raise ModelError(f"{contract_id}: {key} 引用了未登记的包 {module}")
+        if contract["compatibility"] not in COMPATIBILITY_VALUES:
+            raise ModelError(
+                f"{contract_id}: compatibility 必须是 {sorted(COMPATIBILITY_VALUES)}"
+            )
+        enforcement = contract["enforcement"]
+        if not isinstance(enforcement, list) or not enforcement:
+            raise ModelError(f"{contract_id}: enforcement 必须是非空列表")
+        for item in enforcement:
+            if item not in ENFORCEMENT_VALUES:
+                raise ModelError(
+                    f"{contract_id}: enforcement 含未知值 {item!r}，"
+                    f"允许 {sorted(ENFORCEMENT_VALUES)}"
+                )
+        if contract["owner_layer"] not in layers:
+            raise ModelError(f"{contract_id}: owner_layer 未知 {contract['owner_layer']}")
+    missing = [kind for kind in CONTRACT_KINDS if kind not in covered_kinds]
+    if missing:
+        raise ModelError(f"contracts 未覆盖契约类别: {missing}")
+
+    disk_formats = model.get("disk_formats")
+    if not isinstance(disk_formats, list) or not disk_formats:
+        raise ModelError("缺少 disk_formats 列表")
+    for index, row in enumerate(disk_formats):
+        if not isinstance(row, dict):
+            raise ModelError(f"disk_formats[{index}] 应为映射")
+        for key in ("path", "producer", "consumer", "key_fields", "versioning"):
+            if not row.get(key):
+                raise ModelError(f"disk_formats[{index}] 缺少 {key}")
+
     flow = model.get("business_flow")
     if not isinstance(flow, dict):
         raise ModelError("缺少 business_flow 段")
@@ -376,10 +471,115 @@ def head_commit(root: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 代码提取：HTTP 路由与 EventType
+# ---------------------------------------------------------------------------
+
+HTTP_ROUTE_RE = re.compile(r'mux\.HandleFunc\(\s*"([A-Z]+) ([^"]+)"\s*,\s*')
+EVENT_TYPE_RE = re.compile(r'([A-Za-z_][A-Za-z0-9_]*)\s+EventType\s*=\s*"([^"]+)"')
+HANDLER_CALL_RE = re.compile(r'([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)\s*\(')
+HANDLER_SKIP = {
+    "if", "for", "switch", "return", "func", "go", "defer", "range",
+    "writeJSON", "writeNamedSSEEvent", "http.Error", "fmt.Fprint", "fmt.Fprintf",
+}
+
+
+def _line_of(text: str, offset: int) -> int:
+    return text.count("\n", 0, offset) + 1
+
+
+def _route_handler_name(text: str, start: int) -> str:
+    """best-effort：取注册闭包里第一个具名调用，找不到就给 (inline)。
+
+    只用于生成可读的路由表，不参与门禁判断；因此比完整解析 Go AST 更宽松，
+    遇到纯内联逻辑就诚实写 (inline)。
+    """
+    head = text[start:start + 2000]
+    stripped = head.lstrip()
+    if stripped.startswith("func"):
+        brace = stripped.find("{")
+        body = stripped[brace + 1:brace + 1500] if brace >= 0 else stripped
+        calls = [match.group(1) for match in HANDLER_CALL_RE.finditer(body)]
+        for name in calls:
+            base = name.rsplit(".", 1)[-1]
+            if base.startswith("handle") and name not in HANDLER_SKIP:
+                return name
+        for name in calls:
+            if name not in HANDLER_SKIP:
+                return name
+        return "(inline)"
+    match = re.match(r'([A-Za-z_][A-Za-z0-9_.]*)', stripped)
+    return match.group(1) if match else "(inline)"
+
+
+def scan_http_routes(module_dir: Path) -> tuple:
+    """从 internal/server 的 mux.HandleFunc("METHOD /path", ...) 提取路由。
+
+    只覆盖标准库 ServeMux 的「方法 + 路径」式注册；webhook_server.go 里
+    独立的 mux.HandleFunc("/", ...)（无方法）不在统计内，notes 会说明。
+    """
+    server_dir = module_dir / "internal" / "server"
+    rows = []
+    notes = []
+    if not server_dir.is_dir():
+        return rows, [f"未找到 {server_dir}，HTTP 路由表未覆盖"]
+    for path in sorted(server_dir.rglob("*.go")):
+        if path.name.endswith("_test.go"):
+            continue
+        text = path.read_text(encoding="utf-8")
+        for match in HTTP_ROUTE_RE.finditer(text):
+            rows.append({
+                "method": match.group(1),
+                "path": match.group(2),
+                "handler": _route_handler_name(text, match.end()),
+                "source": f"{path.relative_to(module_dir).as_posix()}:{_line_of(text, match.start())}",
+            })
+    rows.sort(key=lambda row: (row["path"], row["method"], row["source"]))
+    unmatched = [
+        line.strip()
+        for path in sorted(server_dir.rglob("*.go"))
+        if not path.name.endswith("_test.go")
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if ".HandleFunc(" in line and not HTTP_ROUTE_RE.search(line)
+    ]
+    if unmatched:
+        notes.append(
+            "未被路由表覆盖的 HandleFunc 注册（无方法前缀或跨行写法）："
+            + "；".join(sorted(set(unmatched)))
+        )
+    return rows, notes
+
+
+def scan_event_types(module_dir: Path) -> tuple:
+    """从 internal/eventbus/event_type.go 提取 EventType 常量。"""
+    path = module_dir / "internal" / "eventbus" / "event_type.go"
+    if not path.is_file():
+        return [], [f"未找到 {path}，EventType 表未覆盖"]
+    rows = []
+    for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        code = raw.split("//", 1)[0]
+        match = EVENT_TYPE_RE.search(code)
+        if not match:
+            continue
+        rows.append({
+            "name": match.group(1),
+            "value": match.group(2),
+            "source": f"internal/eventbus/event_type.go:{lineno}",
+        })
+    return rows, []
+
+
+# ---------------------------------------------------------------------------
 # 构图
 # ---------------------------------------------------------------------------
 
-def build_graph(model: dict, go_packages: dict[str, dict], mod: str, commit: str) -> dict:
+def build_graph(
+    model: dict,
+    go_packages: dict,
+    mod: str,
+    commit: str,
+    http_routes: list,
+    event_types: list,
+) -> dict:
     layers = {layer["id"]: dict(layer) for layer in model["layers"]}
     warnings: list[dict] = []
 
@@ -562,23 +762,46 @@ def build_graph(model: dict, go_packages: dict[str, dict], mod: str, commit: str
             "package_count": len(members),
         })
 
+    contracts = []
+    for contract in model["contracts"]:
+        contracts.append({
+            "id": contract["id"],
+            "kind": contract["kind"],
+            "providers": list(contract["providers"]),
+            "consumers": list(contract["consumers"]),
+            "definition": contract["definition"],
+            "guarantee": contract["guarantee"],
+            "failure_behavior": contract["failure_behavior"],
+            "compatibility": contract["compatibility"],
+            "enforcement": list(contract["enforcement"]),
+            "owner_layer": contract["owner_layer"],
+        })
+    contracts.sort(key=lambda item: (CONTRACT_KINDS.index(item["kind"]), item["id"]))
+
     return {
         "schema_version": model["meta"].get("graph_schema_version", 1),
         "module": mod,
         "generated_at_commit": commit,
-        "generated_from": "architecture/model.yaml + go list -json ./...",
+        "generated_from": (
+            "architecture/model.yaml + go list -json ./... + "
+            "internal/server mux.HandleFunc + internal/eventbus event_type.go"
+        ),
         "stats": {
             "packages": len(nodes),
             "package_edges": sum(1 for edge in all_edges if edge["kind"] == "depends"),
             "capabilities": len(capabilities),
             "capability_edges": sum(1 for edge in all_edges if edge["kind"] in ("realizes", "operates")),
             "layers": len(layer_payload),
+            "contracts": len(contracts),
+            "http_routes": len(http_routes),
+            "event_types": len(event_types),
             "warnings": len(warnings),
         },
         "layers": layer_payload,
         "nodes": nodes + capabilities,
         "edges": all_edges,
         "capabilities": capabilities,
+        "contracts": contracts,
         "business_flow": model["business_flow"],
         "warnings": warnings,
     }
@@ -884,15 +1107,182 @@ def render_crosswalk_md(graph: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 渲染：接口与契约
+# ---------------------------------------------------------------------------
+
+def render_contracts_md(
+    graph: dict,
+    routes: list,
+    route_notes: list,
+    event_types: list,
+    event_notes: list,
+    disk_formats: list,
+) -> str:
+    contracts = graph["contracts"]
+    by_kind = {}
+    for contract in contracts:
+        by_kind.setdefault(contract["kind"], []).append(contract)
+
+    method_counts = {}
+    for route in routes:
+        method_counts[route["method"]] = method_counts.get(route["method"], 0) + 1
+
+    lines = [
+        "# 接口与契约（生成物，勿手改）",
+        "",
+        f"> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，"
+        f"加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `{graph['generated_at_commit']}`",
+        "> 契约是模块之间「靠什么约束交互」的清单：谁提供、谁消费、定义在哪、保证什么、失败怎么表现、"
+        "变更属于加法还是破坏、由什么机制强制。",
+        "> `providers` / `consumers` 里的 `ext:` 前缀表示外部消费面（前端、运维、MCP server、外部调用方），"
+        "不是仓库内的包。",
+        "",
+        "## 统计",
+        "",
+        "| 维度 | 数量 |",
+        "| --- | ---: |",
+        f"| 契约 | {len(contracts)} |",
+    ]
+    for kind in CONTRACT_KINDS:
+        lines.append(f"| 其中 {CONTRACT_KIND_LABELS[kind]}（`{kind}`） | {len(by_kind.get(kind, []))} |")
+    lines += [
+        f"| HTTP 路由（`internal/server`，method+path） | {len(routes)} |",
+        f"| EventType 常量 | {len(event_types)} |",
+        f"| 磁盘格式（人工维护） | {len(disk_formats)} |",
+        "",
+        "## 兼容规则口径",
+        "",
+        "| compatibility | 含义 | 允许的变更 |",
+        "| --- | --- | --- |",
+        "| `additive` | 加法兼容 | 新增端点、字段、事件类型、工具或可选 JSON key；消费方必须容忍未知字段。 |",
+        "| `breaking` | 破坏性 | 任何签名/路径/字段/字符串值的删除或改名都要同步改所有消费方；需要新接口或新版本，不能原地改。 |",
+        "| `versioned` | 版本化 | 文件或库自带版本号（soul.json `version`、tracker.db `PRAGMA user_version`），按版本迁移并保留回滚路径。 |",
+        "",
+        "## 按 kind 汇总",
+        "",
+        "| kind | 条数 | 提供方模块 | 消费方模块 | 强制手段 |",
+        "| --- | ---: | --- | --- | --- |",
+    ]
+    for kind in CONTRACT_KINDS:
+        members = by_kind.get(kind, [])
+        if not members:
+            continue
+        providers = sorted({module for item in members for module in item["providers"]})
+        consumers = sorted({module for item in members for module in item["consumers"]})
+        enforcement = sorted({token for item in members for token in item["enforcement"]})
+        lines.append(
+            f"| {CONTRACT_KIND_LABELS[kind]}（`{kind}`） | {len(members)} | "
+            f"{'、'.join(f'`{name}`' for name in providers)} | "
+            f"{'、'.join(f'`{name}`' for name in consumers)} | "
+            f"{'、'.join(ENFORCEMENT_LABELS[token] for token in enforcement if token in ENFORCEMENT_LABELS)} |"
+        )
+
+    lines += ["", "## 契约明细", ""]
+    for kind in CONTRACT_KINDS:
+        members = by_kind.get(kind, [])
+        if not members:
+            continue
+        lines += [f"### {CONTRACT_KIND_LABELS[kind]}（`{kind}`）", ""]
+        for contract in members:
+            lines += [
+                f"#### `{contract['id']}`",
+                "",
+                f"- **定义**：`{contract['definition']}`",
+                f"- **提供方**：{'、'.join(f'`{name}`' for name in contract['providers'])}",
+                f"- **消费方**：{'、'.join(f'`{name}`' for name in contract['consumers'])}",
+                f"- **保证**：{contract['guarantee']}",
+                f"- **失败行为**：{contract['failure_behavior']}",
+                f"- **兼容规则**：`{contract['compatibility']}`",
+                f"- **强制手段**：{'、'.join(ENFORCEMENT_LABELS[t] for t in contract['enforcement'] if t in ENFORCEMENT_LABELS)}",
+                f"- **所属层**：`{contract['owner_layer']}`",
+                "",
+            ]
+
+    lines += [
+        "## HTTP 路由表",
+        "",
+        "从 `internal/server` 的非测试文件里正则提取 "
+        "`mux.HandleFunc(\"METHOD /path\", handler)`：**只覆盖标准库 ServeMux 的「方法 + 路径」式注册**。"
+        "handler 列取注册闭包中第一个具名调用（优先 `handle*`），纯内联逻辑写 `(inline)`；"
+        "它只用于阅读，不作为门禁判断。`http.*` 契约是按治理职责划分的族群，不是互斥路由集合；"
+        "同一条路由可以同时属于一个族群与另一族群的语义边界，全量以本表为准。",
+        "",
+        f"共 **{len(routes)}** 条："
+        + "、".join(f"{method} {count}" for method, count in sorted(method_counts.items())),
+        "",
+        "| 方法 | 路径 | handler | 来源 |",
+        "| --- | --- | --- | --- |",
+    ]
+    for route in routes:
+        lines.append(
+            f"| {route['method']} | `{_md_cell(route['path'])}` | "
+            f"`{_md_cell(route['handler'])}` | `{route['source']}` |"
+        )
+    for note in route_notes:
+        lines += ["", f"> 覆盖说明：{note}"]
+
+    lines += [
+        "",
+        "## 事件类型表",
+        "",
+        "从 `internal/eventbus/event_type.go` 提取 `EventType = \"...\"` 常量。"
+        "事件是字符串类型，新增类型必须同时补常量与 `AllEventTypes`；改已有字符串值等于破坏订阅方。",
+        "",
+        f"共 **{len(event_types)}** 个 EventType。",
+        "",
+        "| 常量 | 值 | 来源 |",
+        "| --- | --- | --- |",
+    ]
+    for event in event_types:
+        lines.append(f"| `{event['name']}` | `{event['value']}` | `{event['source']}` |")
+    for note in event_notes:
+        lines += ["", f"> 覆盖说明：{note}"]
+
+    lines += [
+        "",
+        "## 磁盘格式表",
+        "",
+        "人工维护在 `architecture/model.yaml` 的 `disk_formats:`；契约层 `disk.*` 是它的逐条展开。"
+        "JSON 文件没有本地 schema 校验，读取方普遍把「缺失/坏 JSON」降级为空对象或空数组，"
+        "因此这里的版本/迁移策略是读代码得出的实际行为，不是生成器验证过的保证。",
+        "",
+        "| 路径 | 生产者 | 消费者 | 关键字段 | 版本 / 迁移策略 |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for row in disk_formats:
+        lines.append(
+            f"| `{_md_cell(row['path'])}` | {_md_cell(row['producer'])} | {_md_cell(row['consumer'])} | "
+            f"{_md_cell(row['key_fields'])} | {_md_cell(row['versioning'])} |"
+        )
+
+    lines += [
+        "",
+        "## 覆盖边界",
+        "",
+        f"- HTTP 路由表只统计带方法前缀的 `mux.HandleFunc`，共 {len(routes)} 条（含 `GET /` SPA 兜底）；"
+        "`internal/server/webhook_server.go` 里独立的 `mux.HandleFunc(\"/\", ...)` webhook 入口不在表内。",
+        "- SSE 端点没有单独一张表；它们的帧形状写在 `sse.*` 契约明细里，路由本身仍在 HTTP 路由表中。",
+        "- `contracts:` 是人工维护的治理视图，不是从代码自动推导的依赖图；"
+        "生成器只校验字段完整性、包名与类别，不能证明每条保证在运行期成立。",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+
+# ---------------------------------------------------------------------------
 # 产物清单与主流程
 # ---------------------------------------------------------------------------
 
-def render_all(root: Path, commit: str) -> dict[str, str]:
+def render_all(root: Path, commit: str) -> dict:
     model = load_model(root / MODEL_REL)
     validate_model(model)
-    go_packages = load_go_packages(root / model["meta"].get("module_dir", "go-hive"))
-    mod = module_path(root / model["meta"].get("module_dir", "go-hive"))
-    graph = build_graph(model, go_packages, mod, commit)
+    module_dir = root / model["meta"].get("module_dir", "go-hive")
+    go_packages = load_go_packages(module_dir)
+    mod = module_path(module_dir)
+    routes, route_notes = scan_http_routes(module_dir)
+    event_types, event_notes = scan_event_types(module_dir)
+    graph = build_graph(model, go_packages, mod, commit, routes, event_types)
     return {
         GRAPH_REL: json.dumps(graph, ensure_ascii=False, indent=2) + "\n",
         "docs/architecture/dependency-map.mmd": render_dependency_mmd(graph),
@@ -900,6 +1290,9 @@ def render_all(root: Path, commit: str) -> dict[str, str]:
         "docs/architecture/MODULES.md": render_modules_md(graph),
         "docs/architecture/capability-map.mmd": render_capability_mmd(graph),
         "docs/architecture/capability-tech-crosswalk.md": render_crosswalk_md(graph),
+        "docs/architecture/contracts.md": render_contracts_md(
+            graph, routes, route_notes, event_types, event_notes, model["disk_formats"]
+        ),
     }
 
 
