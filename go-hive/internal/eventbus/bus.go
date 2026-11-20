@@ -225,7 +225,10 @@ func (b *EventBus) Publish(event *AgentEvent) {
 	writeDebugEvent(event)
 
 	b.logMu.Lock()
-	if b.queenLog != nil {
+	// A worker event log is its own sink (HIVE_SPLIT_WORKER_EVENTS): worker
+	// chatter is written even when no queen session log is open, which is the
+	// normal state of a colony runtime's bus.
+	if b.queenLog != nil || b.workerLogResolver != nil {
 		functionalErr := b.writeSessionLogEventLocked(event)
 		if functionalErr != nil && !b.sessionLogWriteBroken {
 			b.sessionLogWriteBroken = true
@@ -519,7 +522,11 @@ var streamingDeltaTypes = map[EventType]struct{}{
 }
 
 func (b *EventBus) writeSessionLogEventLocked(event *AgentEvent) error {
-	if b.queenLog == nil {
+	// A worker log is a sink of its own: with HIVE_SPLIT_WORKER_EVENTS the
+	// bus writes a worker's chatter to <worker storage>/events.jsonl even when
+	// no queen session log is open (a colony bus has none). The snapshot
+	// buffering below is queen-log state, so it stays gated on that log.
+	if b.queenLog == nil && b.workerLogResolver == nil {
 		return nil
 	}
 

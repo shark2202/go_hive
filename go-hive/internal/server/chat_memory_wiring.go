@@ -1,7 +1,9 @@
 package server
 
 import (
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,16 +18,112 @@ import (
 // before teardown returns, hence the explicit bound.
 const memoryTimelineStopFlushTimeout = 30 * time.Second
 
-// chatLoopConfig is the queen loop's configuration: the defaults plus the
-// session-scoped spillover directory large tool results are written to.
+// chatLoopConfig is the queen loop's configuration: the defaults, the
+// session-scoped spillover directory large tool results are written to, the
+// global loop.max_tool_result_chars override, and — for a queen with a model of
+// her own — her max_context_tokens window.
 //
 // Parity: core/framework/server/queen_orchestrator.py::_queen_loop
-func chatLoopConfig(root string) agentloop.LoopConfig {
+func chatLoopConfig(root, homeRoot, queenID string) agentloop.LoopConfig {
 	config := agentloop.DefaultLoopConfig()
 	if root != "" {
 		config.SpilloverDir = filepath.Join(root, "data")
 	}
+	if homeRoot != "" {
+		if home, err := hivehome.ResolveAt(homeRoot); err == nil {
+			config.MaxToolResultChars = LoopMaxToolResultChars(home, config.MaxToolResultChars)
+			// A queen with her own section budgets by her model's window: a 32k
+			// local model must not run with the 180k queen default.
+			config.MaxContextTokens = QueenMaxContextTokens(home, queenID, config.MaxContextTokens)
+		}
+	}
+	// HIVE_MAX_ITER caps the queen's reply loop for single-reply chat
+	// deployments (upstream reads it in place of the 999_999 autonomous
+	// default). Only a positive integer counts; anything else keeps the
+	// configured default.
+	//
+	// Parity: core/framework/server/queen_orchestrator.py (HIVE_MAX_ITER)
+	if cap, ok := envPositiveInt("HIVE_MAX_ITER"); ok {
+		config.MaxIterations = cap
+	}
+	// The LLM stream watchdog and the continue-nudge cap are operator knobs
+	// upstream feeds from hive.config.json's `loop` section. The Go port keeps
+	// its config surface env-based, so the same knobs can be tightened without
+	// a rebuild (and end-to-end tests can use sub-second budgets).
+	if value, ok := envFloat("HIVE_LLM_STREAM_TTFT_TIMEOUT_SECONDS"); ok {
+		config.LLMStreamTTFTTimeoutSeconds = value
+	}
+	if value, ok := envFloat("HIVE_LLM_STREAM_INTER_EVENT_IDLE_SECONDS"); ok {
+		config.LLMStreamInterEventIdleSeconds = value
+		// The legacy alias defaults to the same 120s; keep it from overriding
+		// an explicit inter-event budget.
+		config.LLMStreamInactivityTimeoutSeconds = value
+	}
+	if value, ok := envIntValue("HIVE_CONTINUE_NUDGE_MAX_PER_TURN"); ok {
+		config.ContinueNudgeMaxPerTurn = value
+	}
+	if value, ok := envBool("HIVE_CONTINUE_NUDGE_ENABLED"); ok {
+		config.ContinueNudgeEnabled = value
+	}
 	return config
+}
+
+// envPositiveInt reads a positive integer environment variable. Unset, empty,
+// non-numeric and non-positive values all report absent.
+func envPositiveInt(name string) (int, bool) {
+	raw, ok := os.LookupEnv(name)
+	if !ok {
+		return 0, false
+	}
+	value, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || value <= 0 {
+		return 0, false
+	}
+	return value, true
+}
+
+// envFloat reads a positive float knob; an unset or malformed value leaves the
+// caller's default in place.
+func envFloat(name string) (float64, bool) {
+	raw, ok := os.LookupEnv(name)
+	if !ok {
+		return 0, false
+	}
+	value, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
+	if err != nil || value <= 0 {
+		return 0, false
+	}
+	return value, true
+}
+
+// envIntValue reads an int knob; zero is valid (it disables the feature), so
+// only an unset or malformed value is rejected.
+func envIntValue(name string) (int, bool) {
+	raw, ok := os.LookupEnv(name)
+	if !ok {
+		return 0, false
+	}
+	value, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || value < 0 {
+		return 0, false
+	}
+	return value, true
+}
+
+// envBool reads a boolean knob, accepting the spellings operators expect.
+func envBool(name string) (bool, bool) {
+	raw, ok := os.LookupEnv(name)
+	if !ok {
+		return false, false
+	}
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "1", "true", "yes", "on":
+		return true, true
+	case "0", "false", "no", "off":
+		return false, true
+	default:
+		return false, false
+	}
 }
 
 // injectPastConversationRecall appends the dated excerpts of earlier

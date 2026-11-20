@@ -99,6 +99,24 @@ func (l *AgentLoop) emitPark(reason ParkReason, detail string) {
 	l.ParkSink(reason, detail)
 }
 
+// announceGrace opens the grace phase with one reminder: the budget (or the
+// iteration limit) is spent, so the next turns are wind-down work. The
+// announcement happens once per turn-loop.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (grace reminder)
+func (l *AgentLoop) announceGrace(conv *NodeConversation, budgetExhausted bool) error {
+	l.graceAnnounced = true
+	l.bumpBy("grace_iteration_entered", 1)
+	body := graceReminderBody
+	if budgetExhausted {
+		l.bumpBy("tool_lifetime_budget_grace", 1)
+		body = toolBudgetGraceReminderBody
+	}
+	block := WrapReminder([]string{body})
+	_, err := conv.AddUserMessage(block, UserMessageOptions{IsSystemReminder: true})
+	return err
+}
+
 // parkOnDoomLoop ends the turn on a repeated identical tool call. The tool
 // results (including the advisory reminder where the streak tripped it) are
 // already stored, so the transcript explains the stop; the park is published

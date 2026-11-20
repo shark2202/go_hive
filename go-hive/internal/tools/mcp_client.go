@@ -19,17 +19,19 @@ import (
 
 var mcpConnectReadyTimeout = 10 * time.Second
 
-var mcpCallResultTimeout = mcpCallTimeoutFromEnv()
-
 // mcpCallResultTimeoutOverride carries the serve-owned config value
-// (configuration.json mcp.timeout_seconds). Zero keeps the env/default value, so
-// an untouched config still honours HIVE_MCP_CALL_RESULT_TIMEOUT.
+// (configuration.json mcp.timeout_seconds). Zero means "no file value".
 var mcpCallResultTimeoutOverride atomic.Int64
 
-// SetMCPCallResultTimeout overrides the tools/call result timeout for the whole
-// process. serve calls it once while reading the MCP config, before any client
-// connects; a non-positive duration is ignored so a bad config cannot make MCP
-// calls fail instantly.
+// mcpCallResultTimeoutDefault is the built-in ceiling used when neither the
+// environment nor configuration.json states a timeout.
+const mcpCallResultTimeoutDefault = 240 * time.Second
+
+// SetMCPCallResultTimeout records the configuration.json mcp.timeout_seconds
+// value for the whole process. serve calls it once while reading the MCP config,
+// before any client connects; a non-positive duration is ignored so a bad config
+// cannot make MCP calls fail instantly. The environment still outranks this
+// value: the precedence is env > file > 240s default.
 func SetMCPCallResultTimeout(timeout time.Duration) {
 	if timeout <= 0 {
 		return
@@ -37,23 +39,30 @@ func SetMCPCallResultTimeout(timeout time.Duration) {
 	mcpCallResultTimeoutOverride.Store(int64(timeout))
 }
 
+// MCPCallResultTimeout resolves the tools/call timeout with the general
+// configuration rule — env > configuration.json > built-in default. Python reads
+// HIVE_MCP_CALL_RESULT_TIMEOUT once at import; reading it per call here keeps a
+// long-lived process honest after an operator edits the environment of a reload.
 func MCPCallResultTimeout() time.Duration {
+	if timeout, ok := mcpTimeoutFromEnv(); ok {
+		return timeout
+	}
 	if override := mcpCallResultTimeoutOverride.Load(); override > 0 {
 		return time.Duration(override)
 	}
-	return mcpCallResultTimeout
+	return mcpCallResultTimeoutDefault
 }
 
-func mcpCallTimeoutFromEnv() time.Duration {
-	raw := os.Getenv("HIVE_MCP_CALL_RESULT_TIMEOUT")
+func mcpTimeoutFromEnv() (time.Duration, bool) {
+	raw := strings.TrimSpace(os.Getenv("HIVE_MCP_CALL_RESULT_TIMEOUT"))
 	if raw == "" {
-		return 240 * time.Second
+		return 0, false
 	}
 	secs, err := strconv.Atoi(raw)
 	if err != nil || secs <= 0 {
-		return 240 * time.Second
+		return 0, false
 	}
-	return time.Duration(secs) * time.Second
+	return time.Duration(secs) * time.Second, true
 }
 
 const mcpReconnectCooldown = 30 * time.Second

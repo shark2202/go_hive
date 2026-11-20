@@ -423,6 +423,76 @@ func hostOf(t *testing.T, rawURL string) string {
 	return parsed.Host
 }
 
+// TestBrowserStatusProbeTargetsBridgePort pins the address fix behind R03: the
+// status probe used to dial 9229 + 1 = 9230, which the Go bridge does not bind,
+// so a running bridge always reported offline. The probe order is now the
+// bridge's own status port (HIVE_BROWSERBRIDGE_HTTP or HIVE_BRIDGE_PORT + 1,
+// default 14830) with the legacy 9230 endpoint only as a fallback.
+//
+// Parity: framework/server/app.py::_probe_browser_bridge
+func TestBrowserStatusProbeTargetsBridgePort(t *testing.T) {
+	t.Setenv("HIVE_BROWSERBRIDGE_HTTP", "")
+	t.Setenv("HIVE_BRIDGE_PORT", "")
+	if got := defaultBridgeStatusAddrs(); len(got) != 2 || got[0] != "127.0.0.1:14830" || got[1] != "127.0.0.1:9230" {
+		t.Fatalf("default addrs = %v, want [127.0.0.1:14830 127.0.0.1:9230]", got)
+	}
+
+	t.Setenv("HIVE_BRIDGE_PORT", "17829")
+	if got := defaultBridgeStatusAddrs(); got[0] != "127.0.0.1:17830" {
+		t.Fatalf("HIVE_BRIDGE_PORT primary = %v", got)
+	}
+
+	t.Setenv("HIVE_BRIDGE_PORT", "9229")
+	if got := defaultBridgeStatusAddrs(); len(got) != 1 || got[0] != "127.0.0.1:9230" {
+		t.Fatalf("legacy base must dedupe to the 9230 fallback: %v", got)
+	}
+
+	t.Setenv("HIVE_BRIDGE_PORT", "")
+	t.Setenv("HIVE_BROWSERBRIDGE_HTTP", "127.0.0.1:19999")
+	if got := defaultBridgeStatusAddrs(); got[0] != "127.0.0.1:19999" {
+		t.Fatalf("HIVE_BROWSERBRIDGE_HTTP primary = %v", got)
+	}
+	t.Setenv("HIVE_BROWSERBRIDGE_HTTP", "http://127.0.0.1:19999")
+	if got := bridgeStatusHostPort("http://127.0.0.1:19999"); got != "127.0.0.1:19999" {
+		t.Fatalf("URL override = %q", got)
+	}
+}
+
+// TestBrowserStatusProbesFallbackWhenPrimarySilent pins the fallback: when the
+// primary endpoint has no bridge, the legacy 9230 endpoint is probed and its
+// real state is reported — status must never be hardcoded offline just because
+// the first address is silent.
+//
+// Parity: framework/server/app.py::_probe_browser_bridge
+func TestBrowserStatusProbesFallbackWhenPrimarySilent(t *testing.T) {
+	var probed []string
+	var contextsAddr string
+	deps := AppExtraRouteDeps{
+		StatusAddrs: func() []string { return []string{"127.0.0.1:1", "127.0.0.1:2"} },
+		ProbeStatus: func(addr string) map[string]any {
+			probed = append(probed, addr)
+			if addr == "127.0.0.1:1" {
+				return map[string]any{"bridge": false, "connected": false, "connections": []any{}}
+			}
+			return map[string]any{"bridge": true, "connected": true, "connections": []any{}}
+		},
+		ProbeContext: func(addr string) []map[string]any {
+			contextsAddr = addr
+			return nil
+		},
+	}
+	_, body := getAppExtraJSON(t, appExtraMux(deps), "/api/browser/status?session_id=session_a")
+	if len(probed) < 2 || probed[0] != "127.0.0.1:1" || probed[1] != "127.0.0.1:2" {
+		t.Fatalf("probe order = %v", probed)
+	}
+	if body["health"] != "healthy" || body["bridge"] != true || body["connected"] != true {
+		t.Fatalf("payload = %#v", body)
+	}
+	if contextsAddr != "127.0.0.1:2" {
+		t.Fatalf("contexts probe used %q, want the live endpoint", contextsAddr)
+	}
+}
+
 // Parity-exempt: no upstream test registers every new module on one mux; this
 // guards the Go-specific constraint that duplicate ServeMux patterns panic.
 func TestNewRouteModulesCoexistOnOneMux(t *testing.T) {

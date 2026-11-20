@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Playbook（.play.py）支持 · go_hive × Hive</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1360px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:1040px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g5{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:1100px){.g5{grid-template-columns:repeat(3,minmax(0,1fr))}} @media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3,.g4,.g5{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px} .missing{color:#f2a3a3}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff} .callout.ok{border-color:var(--ok);background:#0f1a13;color:#c8e8cf}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:900px){table{min-width:900px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style>
+</head><body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">GO_HIVE · PLAYBOOK RUNTIME</div>
+  <h1>Python Playbook（<code>.play.py</code>）支持</h1>
+  <p class="sub">go_hive 现在可以直接执行上游格式的 Python playbook：外部 <code>python3</code> 子进程 + stdio 行式 JSON-RPC，脚本字节不变，主二进制保持纯 Go / 无 cgo。<br>上游契约：<code>core/framework/host/playbook/runner.py</code>（<code>PlaybookRun</code>）、<code>core/framework/tools/playbook_tools.py</code>（<code>run_playbook</code>）。</p>
+  <div class="meta">
+    <span>状态：<span class="pill ok">已实现 + 本机真实 python3 实测</span></span>
+    <span>基线：Go <code>1.0.26-go.1</code> · Python hive <code>1.0.14</code></span>
+    <span>实测日期：2026-11-21 · Darwin arm64</span>
+    <span>实测解释器：3.9.6（系统 <code>python3</code>）、3.14.7（<code>HIVE_PYTHON</code>）</span>
+    <span>真实模型 E2E：<b>PASS</b>（deepseek-flash-1017，2026-11-21）</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#s1">01 结论</a><a href="#s2">02 运行架构</a><a href="#s3">03 解释器解析</a><a href="#s4">04 脚本契约</a><a href="#s5">05 解析与保存</a><a href="#s6">06 生命周期与安全</a><a href="#s7">07 与上游对表</a><a href="#s8">08 已知差异</a><a href="#s9">09 未验证项</a><a href="#s10">10 复现与排障</a><a href="#s11">11 相关文档</a>
+</nav>
+
+<section id="s1"><h2><span class="num">01</span>结论</h2>
+<div class="grid g4">
+  <div class="card"><div class="k">入口</div><div class="v">run_playbook · inline / path / saved</div><div class="d"><code>playbook</code> 正文、<code>playbook_path</code>、<code>playbook_name</code>（<code>playbooks/&lt;name&gt;.play.py</code>）三条入口都已接通。</div></div>
+  <div class="card"><div class="k">脚本契约</div><div class="v">与上游一致</div><div class="d"><code>meta</code> dict + <code>async def run(args)</code>；注入 <code>converge / worker / tracker_query / tracker_count / lane / deadletter / log / phase</code>。</div></div>
+  <div class="card"><div class="k">解释器</div><div class="v">外部 Python 3.8+</div><div class="d">按 <code>HIVE_PYTHON</code> → <code>python3</code> → <code>python</code> 解析；找不到时返回 <code>status="unsupported"</code>、<code>dispatched=0</code>，不假成功。</div></div>
+  <div class="card"><div class="k">实现边界</div><div class="v">不链接 libpython、零 cgo</div><div class="d">Python 只是按需启动的子进程；六平台交叉编译不受影响，无新 Go 依赖。</div></div>
+</div>
+<div class="callout info"><b>重要口径：</b>“已实现”指代码路径与本机真实 python3 测试通过（19 个桥用例 + 5 个工具层用例），<b>不等于所有宿主环境已验证</b>。未验证项见 <a href="#s9">09</a>：Windows 无 Python 行为、真实 LLM worker 经桥派发、超大结果、全 Python 版本矩阵。</div>
+</section>
+
+<section id="s2"><h2><span class="num">02</span>运行架构</h2>
+<pre>Queen / run_playbook tool (Go)
+  → RunPlaybook (internal/colony/playbook_tools.go)
+      → isPythonPlaybook? (.play.py / 非 JSON 正文)
+      → StartPythonPlaybook (internal/playbook/python.go)
+          → 解析解释器 (HIVE_PYTHON → python3 → python)
+          → 临时目录写内嵌 bootstrap.py
+          → exec python3 -u bootstrap.py
+          → 发送 init(script)     ──────────────┐
+          ← loaded(meta) / load_error          │ 行式 JSON-RPC
+          → 校验 meta concurrency（Go 侧策略）  │ stdin/stdout
+          → 发送 run(args, concurrency_cap)     │
+          ← {"id":N,"method":"query_rows"}      │
+          → 查 tracker → {"id":N,"result":rows} │
+          ← {"id":N,"method":"dispatch_one"}    │
+          → spawn 1 worker + 等报告             │
+          → {"id":N,"result":report}            │
+          ← result{meta,result,logs,deadletter,dispatched}
+      → 落盘 colony.db 的 playbook_runs</pre>
+<ul class="tight">
+  <li><b>只有两个可调用体跨进程</b>：<code>dispatch_one</code>（派一个 worker 并等终态报告）与 <code>query_rows</code>（tracker SELECT）。与上游 runner 注入面相同；<code>converge</code>、重试退避、lane、<code>deadletter</code>、<code>log</code>、<code>phase</code> 在 bootstrap 内实现。</li>
+  <li><b>RPC 并发</b>：Go 对每个 <code>dispatch_one</code> 请求开独立 goroutine，脚本侧 chunk / lane 并发是真正并行；响应按 <code>id</code> 关联。</li>
+  <li><b>stdout 专用</b>：bootstrap 把脚本 <code>sys.stdout</code> 指向 stderr，<code>print()</code> 不破坏协议；非 JSON 行明确报 <code>cannot parse interpreter output</code>。</li>
+  <li><b>一次性进程</b>：每次工具调用 = 一次 <code>python3</code> 子进程；<code>load</code>（编译 + 执行模块级代码 + 校验 <code>meta</code>/<code>run</code>）在 <code>loaded</code> 应答前完成，语法/契约错误在任何 worker 派发前返回。</li>
+</ul>
+</section>
+
+<section id="s3"><h2><span class="num">03</span>解释器解析</h2>
+<div class="tablewrap"><table><thead><tr><th>顺序</th><th>来源</th><th>行为</th></tr></thead><tbody>
+<tr><td>1</td><td><code>HIVE_PYTHON</code></td><td>显式覆盖；绝对路径或 PATH 上命令名。设置了但不可用直接报错，不静默回退。</td></tr>
+<tr><td>2</td><td><code>python3</code></td><td><code>exec.LookPath</code></td></tr>
+<tr><td>3</td><td><code>python</code></td><td>兼容只装 <code>python</code> 的环境</td></tr>
+</tbody></table></div>
+<ul class="tight">
+  <li>版本要求：bootstrap 检查 <code>sys.version_info &gt;= (3, 8)</code>；过旧返回 <code>PythonVersionError</code>，工具层按 <code>unsupported</code> 处理并给出原因。</li>
+  <li><code>HIVE_PYTHON</code> 是 <b>Go 部署扩展</b>，上游没有该变量；未设置时行为与“系统 python3”一致。</li>
+</ul>
+<pre>{
+  "status": "unsupported",
+  "error": "run_playbook: Python playbooks need an external Python 3.8+ interpreter, but none is available. ...",
+  "dispatched": 0
+}</pre>
+</section>
+
+<section id="s4"><h2><span class="num">04</span>脚本契约（与上游一致）</h2>
+<pre>meta = {"name": "fix-ci-failures", "description": "...", "concurrency": 4}
+
+async def run(args):
+    await converge(
+        pending=lambda: tracker_query("SELECT id, job FROM ci_failures WHERE status='open'"),
+        dispatch=lambda row, i: worker(
+            task=f"Reproduce and fix CI job {row['job']}",
+            data={"id": row["id"]},
+            retries=1,
+            backoff="exp",
+            timeout=600,
+        ),
+        max_rounds=3,
+    )
+    return {"remaining": tracker_count("SELECT id FROM ci_failures WHERE status='open'")}</pre>
+<div class="tablewrap"><table><thead><tr><th>Hook</th><th>语义</th><th>跨进程</th></tr></thead><tbody>
+<tr><td><code>converge(pending=, dispatch=, max_rounds=1, circuit_breaker=None, chunk=None)</code></td><td>每轮查 pending → 并发派发 → 再查；未解决行进入 deadletter</td><td>否（bootstrap 内）</td></tr>
+<tr><td><code>worker(task, *, profile, lane, skill, retries, backoff, timeout, schema, phase, data, goal)</code></td><td>派一个 worker 并等报告；仅生命周期失败重试；每次尝试计入 <code>dispatched</code></td><td><b>是</b>（<code>dispatch_one</code>）</td></tr>
+<tr><td><code>tracker_query(sql)</code> / <code>tracker_count(sql)</code></td><td>同步查询，返回行 dict 列表 / 行数</td><td><b>是</b>（<code>query_rows</code>）</td></tr>
+<tr><td><code>lane(name, *, concurrency=1, rate_per_min=None)</code></td><td>并发上限 + 启动速率门（<code>&ge; 60/rate_per_min</code> 秒一个）</td><td>否</td></tr>
+<tr><td><code>deadletter</code></td><td><code>.add(item)</code> / <code>.list()</code> / <code>.size</code> / <code>len()</code></td><td>否</td></tr>
+<tr><td><code>log(message)</code> / <code>phase(title)</code></td><td>运行日志与阶段</td><td>否</td></tr>
+</tbody></table></div>
+<pre>{
+  "meta": {"name": "...", "...": "..."},
+  "result": "&lt;run() 的返回值&gt;",
+  "logs": ["phase: ...", "round 1: ...", "..."],
+  "deadletter": [{"row": {...}, "reason": "unresolved after 1 round(s)"}],
+  "dispatched": 3
+}</pre>
+</section>
+
+<section id="s5"><h2><span class="num">05</span>解析与保存规则</h2>
+<div class="tablewrap"><table><thead><tr><th>输入</th><th>判定</th></tr></thead><tbody>
+<tr><td><code>playbook_path</code> 以 <code>.play.py</code> 结尾</td><td>Python（即使正文以 <code>{</code> 开头）</td></tr>
+<tr><td><code>playbook_path</code> 以 <code>.play.json</code> 结尾</td><td>原生 JSON（正文不合法也报 JSON 错误）</td></tr>
+<tr><td>inline <code>playbook</code> 正文是 JSON object</td><td>原生 JSON</td></tr>
+<tr><td>inline <code>playbook</code> 其它正文</td><td>Python</td></tr>
+<tr><td><code>playbook_name</code></td><td>先找 <code>playbooks/&lt;sanitized&gt;.play.json</code>，再找 <code>.play.py</code></td></tr>
+</tbody></table></div>
+<ul class="tight">
+  <li>inline Python 在 <code>load</code> 成功后按 <code>meta["name"]</code> 保存为 <code>&lt;colony&gt;/playbooks/&lt;sanitized&gt;.play.py</code>（与上游 <code>_persist_script</code> 一致），下一次 <code>run_playbook(playbook_name=…)</code> 即 resume：<code>done</code> 行不在 pending 查询里。</li>
+  <li>原生 JSON playbook 仍保存为 <code>.play.json</code>，两条路径互不影响。</li>
+</ul>
+</section>
+
+<section id="s6"><h2><span class="num">06</span>生命周期、取消与安全</h2>
+<ul class="tight">
+  <li><b>进程组</b>：<code>python3</code> 以独立进程组启动；run 结束/取消时先对进程组 <code>SIGTERM</code>，2s 后 <code>SIGKILL</code>，并 <code>Wait</code> 回收；脚本自己 fork 的子进程也在组里。</li>
+  <li><b>临时目录</b>：内嵌 bootstrap 写入 <code>os.MkdirTemp("", "hive-playbook-*")</code>，<code>Close</code> 时删除；<code>PYTHONDONTWRITEBYTECODE=1</code> 避免 <code>__pycache__</code>。</li>
+  <li><b>最小环境</b>：子进程只拿 <code>PATH</code>、<code>HOME</code>、locale、<code>TMPDIR</code> 等基础变量与解释器变量；不继承 <code>HIVE_*</code> 开关、provider API key 或凭据。</li>
+  <li><b>加载超时</b>：<code>load</code> 阶段最长 120s（模块级死循环兜底）；<code>run</code> 阶段没有人为总时限，靠 <code>action="stop"</code> / 会话取消终止。</li>
+  <li><b>信任模型</b>：与上游一致——playbook 是 Queen（可信作者）写的进程内代码，<code>exec</code>/子进程都不是安全沙箱；不要执行不可信来源的脚本。</li>
+  <li><b>协议失败</b>：非 JSON 输出、意外退出、无结果退出都返回 <code>PythonBridgeError</code>，附退出码与 stderr 尾部，不当作成功。</li>
+</ul>
+</section>
+
+<section id="s7"><h2><span class="num">07</span>与上游 runner 逐项对表</h2>
+<div class="tablewrap"><table><thead><tr><th>行为</th><th>上游 <code>runner.py</code></th><th>本实现</th><th>证据</th></tr></thead><tbody>
+<tr><td><code>meta</code> / <code>run</code> 校验</td><td><code>load()</code> 同步</td><td>bootstrap <code>load()</code> 同步，错误经 <code>load_error</code> 回传</td><td><code>TestPythonBridgeMissingMeta/MissingRun/SyntaxError</code></td></tr>
+<tr><td>converge 收敛 / 再查</td><td><code>converge()</code></td><td>bootstrap 同实现</td><td><code>TestPythonBridgeConvergesAllRows</code></td></tr>
+<tr><td>重试 + 退避</td><td><code>worker()</code> 内 <code>retries+1</code> 次</td><td>同</td><td><code>TestPythonBridgeRetryThenSucceed</code></td></tr>
+<tr><td>永久失败只死信一次</td><td><code>converge</code> 末尾统一 deadletter</td><td>同</td><td><code>TestPythonBridgePermanentFailureDeadLetteredOnce</code></td></tr>
+<tr><td>lane 并发 / 速率门</td><td><code>_RateGate</code> + <code>asyncio.Semaphore</code></td><td>同（bootstrap 移植）</td><td><code>TestPythonBridgeLaneLimitsConcurrency</code>、<code>RateGateSpacesDispatches</code></td></tr>
+<tr><td>chunk 默认 = cap</td><td><code>converge</code> 内</td><td>同</td><td><code>TestPythonBridgeChunkDefaultsToCap</code></td></tr>
+<tr><td>cap 警告文案</td><td><code>note: ... bounds this run</code></td><td>同</td><td><code>TestPythonBridgeWarnsWhenChunkExceedsCap</code></td></tr>
+<tr><td>返回值信封</td><td><code>run_loaded()</code></td><td>同</td><td>各测试断言 <code>meta/result/logs/deadletter/dispatched</code></td></tr>
+<tr><td>resume（重跑只做 gap）</td><td>tracker 为事实源</td><td>同</td><td><code>TestRunPlaybookSavedPythonNameResumes</code>、<code>TestPythonBridgeRerunIsResume</code></td></tr>
+<tr><td>根因 + playbook 行号</td><td><code>_error_detail</code></td><td>bootstrap 同实现（<code>&lt;playbook&gt;</code> 行号）</td><td><code>TestPythonBridgeRuntimeErrorSurfaces</code></td></tr>
+<tr><td><code>goal</code> 透传</td><td>设置才转发</td><td>同（未设置不出现）</td><td><code>TestPythonBridgeGoalPassesThrough</code></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s8"><h2><span class="num">08</span>已知差异（有意）</h2>
+<ol class="tight">
+  <li><b>同步工具调用</b>：本移植在工具调用内跑完整个收敛循环并直接返回结果/失败；上游先返回 <code>started</code> + <code>run_id</code>，后台完成后再注入 <code>[PLAYBOOK_COMPLETE]</code>。长批次会占住一轮工具调用；<code>action="status"</code> 看历史、<code>action="stop"</code> 可按 <code>run_id</code> 取消（取消后已 done 行保留，重跑即 resume）。</li>
+  <li><b>colony 并发上限不临时抬高</b>：上游在 run 期间把 colony <code>max_concurrent_workers</code> 抬到 <code>max(原值, meta concurrency)</code> 后恢复。Go admission 通道在 runtime 构造时固定；<code>meta["concurrency"]</code> 仍决定 chunk 默认值与 lane 警告，实际同时运行的 worker 数受 colony <code>max_concurrent_workers</code> 约束（超出排队）。与原生 JSON playbook 相同的现有边界。</li>
+  <li><b><code>schema</code> 未落到 worker spawn spec</b>：<code>BatchTask</code> 没有 <code>report_schema</code> 字段；worker 仍拿到原生 <code>report_to_parent</code> 面。上游会把 schema 注入 worker prompt/工具。</li>
+  <li><b>结果值 JSON 化</b>：非 JSON 类型（<code>datetime</code>、<code>set</code> 等）传输时用 <code>str()</code> 转换；上游快路径会因 <code>json.dumps</code> 失败报错。这里选择让 run 成功返回字符串化结果。</li>
+  <li><b><code>print()</code> 去 stderr</b>：防止破坏 RPC；上游 <code>print()</code> 直接进宿主 stdout，不进 <code>logs</code>。</li>
+</ol>
+</section>
+
+<section id="s9"><h2><span class="num">09</span>未验证项</h2>
+<ul class="tight">
+  <li><b>Windows 无 Python</b>：查找与 <code>HIVE_PYTHON</code> 逻辑已写好，但未在无 Python 的 Windows 上实跑；Windows 清理只用 <code>Process.Kill()</code>（无进程组语义），脚本 fork 的子进程可能残留。</li>
+  <li><b>任意第三方 import</b>：bootstrap 不做包枚举，脚本继承宿主 <code>python3</code> 的 <code>sys.path</code> / site-packages；未验证某个特定第三方包可用性。</li>
+  <li><b>其他模型 / provider</b>：真实模型 E2E 只跑了本机配置的 <code>deepseek-flash-1017</code>（OpenAI 兼容网关）；其他 provider 的工具调用格式未逐一验证。</li>
+  <li><b>超大结果 / 超长单行</b>：协议单行上限 32 MiB，未做压力测试。</li>
+  <li><b>Python 3.8/3.10/3.12 等全版本矩阵</b>：本机实测 3.9.6 与 3.14.7；bootstrap 只断言 <code>&gt;= 3.8</code>。</li>
+</ul>
+<div class="callout ok"><b>真实 LLM 端到端已跑通（2026-11-21）：</b><code>RunPlaybook → Python bridge → dispatch_one → colony worker → 真实 LLM → report_to_parent → bridge result</code>。本机 <code>HIVE_HOME=~/.hive-go</code>、模型 <code>deepseek-flash-1017</code>；真实模型返回 <code>tool_calls=[report_to_parent {"status":"success","summary":"REAL_LLM_E2E_OK","data":{"marker":"REAL_LLM_E2E_OK"}}]</code>，bridge 信封 <code>status=completed, dispatched=1, receipt={"marker":"REAL_LLM_E2E_OK"}</code>，测试 <b>PASS</b>。该测试 opt-in，默认 skip。同一模型也已独立验证多模态输入：512px 字母图返回「H，绿色」；playbook 目前没有自动把图像传给 worker 的入口。<br><b>进程内多模态链路（真实模型，2026-11-21）：</b>会话 <code>session_20261121_012728_ea41d806</code>，模型调用 <code>attach_file({"paths":["…/shot.png"]})</code>，工具结果 <code>inline=image_block</code>，下一轮输出「图片里是一个绿色的字母 **H**」。</div>
+</section>
+
+<section id="s10"><h2><span class="num">10</span>复现与排障</h2>
+<pre>cd go_hive/go-hive
+
+# 真实 python3 的桥测试（19 个用例）
+go test ./internal/playbook -run 'TestPython|TestResolvePython' -v -count=1
+
+# 工具层：inline / saved / load error / 无解释器（4 个新用例 + 原生回归）
+go test ./internal/colony -run 'TestRunPlaybook' -v -count=1
+
+# 无解释器行为（应 status=unsupported、dispatched=0）
+PATH= HIVE_PYTHON= go test ./internal/colony -run TestRunPlaybookPythonWithoutInterpreterIsUnsupported -v
+
+# 真实 LLM 端到端（opt-in；需 HIVE_HOME 配置与密钥）
+HIVE_HOME=~/.hive-go HIVE_REAL_LLM_E2E=1 \
+  go test ./internal/cli -run TestRealLLMPlaybookPythonWorkerE2E -v -count=1 -timeout 12m</pre>
+<div class="tablewrap"><table><thead><tr><th>现象</th><th>原因</th><th>处理</th></tr></thead><tbody>
+<tr><td><code>status="unsupported"</code>，error 含 no interpreter</td><td>PATH 与 <code>HIVE_PYTHON</code> 都找不到 Python</td><td>安装 Python 3.8+ 或设置 <code>HIVE_PYTHON</code></td></tr>
+<tr><td><code>playbook did not start — SyntaxError: ... (playbook line N)</code></td><td>脚本语法错误</td><td>修脚本第 N 行</td></tr>
+<tr><td><code>playbook did not start — PlaybookScriptError: ... meta dict</code></td><td>缺 <code>meta</code></td><td>补 <code>meta = {"name": ...}</code></td></tr>
+<tr><td><code>playbook failed — NameError: ... (playbook line N)</code></td><td><code>run()</code> 内运行时错误</td><td>修脚本；<code>traceback</code> 字段有完整栈</td></tr>
+<tr><td><code>Python 3.8+ required</code> / <code>PythonVersionError</code></td><td>解释器过旧</td><td>换 3.8+ 或设 <code>HIVE_PYTHON</code></td></tr>
+<tr><td><code>cannot parse interpreter output ...</code></td><td>解释器/脚本往 stdout 写了非协议内容</td><td>不要直接写 fd 1；用 <code>log()</code></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s11"><h2><span class="num">11</span>相关文档与源码</h2>
+<ul class="tight">
+  <li>源码：<code>internal/playbook/python.go</code>、内嵌 <code>internal/playbook/python_bootstrap.py</code>、<code>internal/colony/playbook_tools.go</code>、<code>internal/playbook/python_process_unix.go</code> / <code>python_process_windows.go</code></li>
+  <li>Markdown 版：<a href="playbook-python.md">playbook-python.md</a>（同内容，便于纯文本阅读）</li>
+  <li><a href="queen-worker-colony-parity-audit.html">Queen / Worker / Colony 核心概念对齐审计</a> — colony/playbook 维度</li>
+  <li><a href="tool-parity-matrix.html">工具追踪矩阵</a> — <code>run_playbook</code> 工具面</li>
+  <li><a href="alignment-dimensions.html">对齐维度总览</a> · <a href="support-matrix.md">support-matrix.md</a>（能力状态 + 未验证清单）</li>
+  <li>仓库根 <code>docs/playbook-spec.md</code> — 上游 playbook 契约（Python 版）</li>
+</ul>
+</section>
+
+<footer>生成：2026-11-21 · 基线 Go <code>hive 1.0.26-go.1</code> / Python hive <code>1.0.14</code> · 证据命令与测试名以本仓库当前提交为准 · 本页不是端到端可用性证明：未验证项见 <a href="#s9">09</a>。</footer>
+</div></body></html>

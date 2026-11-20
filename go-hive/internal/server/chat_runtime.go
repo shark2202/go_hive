@@ -104,6 +104,10 @@ type ChatRuntimeDeps struct {
 	// reminder-only wake). Queen mail uses it to start a new chain of letters,
 	// as upstream does when someone else speaks in the conversation.
 	OnTurnStart func()
+	// VisionCaptioner captions tool-result images when the main model cannot
+	// accept image blocks (vision_fallback). Nil leaves images to the media
+	// gate, which tells the model an attachment was not delivered.
+	VisionCaptioner agentloop.VisionCaptioner
 }
 
 // chatTurnRequest is one queued turn: a real client message, an external
@@ -359,7 +363,20 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 
 	runtime.agentCtx = agentCtx
 	runtime.conv = conv
-	runtime.loop = agentloop.NewAgentLoop(chatLoopConfig(deps.Root), runtime.executeTool)
+	runtime.loop = agentloop.NewAgentLoop(chatLoopConfig(deps.Root, deps.HomeRoot, runtime.queenName), runtime.executeTool)
+	// A text-only main model cannot see tool images: with vision_fallback
+	// configured, each image is captioned (viewport coordinates included) and
+	// dropped before the model sees the result.
+	runtime.loop.VisionCaptioner = deps.VisionCaptioner
+	// The streaming completer owns the LLM stream watchdog; its budgets come
+	// from the loop config (upstream wires them from the same LoopConfig).
+	if runtime.streamLLM != nil {
+		ttft, interEvent := streamWatchdogBudgets(runtime.loop.Config)
+		runtime.streamLLM.setStreamWatchdog(ttft, interEvent)
+	}
+	// A continue-nudge is a session event, not just a conversation write:
+	// publish the watchdog verdict, the nudge and the reminder-injected event.
+	runtime.loop.OnStreamStallNudge = runtime.emitStreamStallDiagnostics
 	// A session with configured criteria evaluates its turns; without them the
 	// judge stays nil and the turn costs exactly one model call.
 	runtime.configureCriteriaJudge()
@@ -936,7 +953,7 @@ func (r *ChatRuntime) injectRecall(query, stamp string) {
 		r.queenName,
 		3,
 		3,
-		llm.ResolveAuxMaxTokens(0),
+		llm.AuxMaxTokens(),
 	)
 	parts := make([]string, 0, 2)
 	if globalBlock != "" {

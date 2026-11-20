@@ -16,10 +16,14 @@ Queen 生命周期工具。Go 侧此前只有 `run_worker`（`internal/colony`�
 | `internal/server/queen_lifecycle_worker_status_full.go` | `get_worker_status` 的 tools / issues / progress 分节与 `focus='full'` JSON |
 | `internal/server/queen_lifecycle_workers.go` | `stop_worker`、`inject_message`、`update_worker_profile`、`list_browser_profiles` |
 | `internal/server/queen_lifecycle_questions.go` | `list_worker_questions`、`reply_to_worker`（+ Session 收件箱顺序/出队方法） |
+| `internal/server/queen_orchestrator.go` | `InstallWorkerEscalationRouting`（colony 作用域订阅 → 收件箱 + `[WORKER_ESCALATION]` 注入） |
+| `internal/server/session_chat_colony.go` | `BindChatColony` 幂等安装/卸载升级订阅（生产调用点；见 §2.1） |
+| `internal/agentloop/escalate.go` | `escalate` 工具执行：发事件、停车等女王、收线重发 |
+| `internal/colony/worker_escalation.go` | 事件生产：`ESCALATION_REQUESTED` 的 colony 戳 + `request_id` |
 | `internal/server/queen_lifecycle_triggers.go` | `set_trigger`、`list_triggers`、`remove_trigger` |
 | `internal/cli/session_tools_queen_lifecycle.go` | `enableQueenLifecycleTools`：把 10 个定义挂到会话 catalogue |
 | `internal/cli/loader.go` / `loader_preloaded_session.go` | 仅在 queen 聊天会话上启用（与 `enableQueenMailTools` 并列） |
-| `internal/server/session.go` | `PendingEscalations` 增加到达顺序（`pendingOrder`），`list_worker_questions` 按序输出 |
+| `internal/server/session.go` | `PendingEscalations` 到达顺序（`pendingOrder`）、`WorkerHandoffRuntime`（订阅所属总线） |
 
 工具面规则（对齐上游 `_QUEEN_INDEPENDENT_TOOLS` / `_QUEEN_COLONY_TOOLS`）：
 
@@ -44,10 +48,37 @@ Queen 生命周期工具。Go 侧此前只有 `run_worker`（`internal/colony`�
 | --- | --- |
 | worker 注册表 / 停止级联 | `internal/colony`：`WorkerList`、`GetWorker`、`InjectInput`、`StopWorkers`、`WaitForWorkerReports`、`ListWorkers` |
 | playbook 收敛循环取消 | `internal/playbook::StopPlaybooksForColony` |
-| worker 提问收件箱 | `server.Session.PendingEscalations`（`InstallWorkerEscalationRouting` 写入）、`PendingEscalation/TakePendingEscalation` |
+| worker 提问收件箱 | `server.Session.PendingEscalations`（生产由 `BindChatColony` 安装的 `InstallWorkerEscalationRouting` 写入）、`PendingEscalation/TakePendingEscalation` |
 | trigger 存储与运行期 | `server.Session` 的 `AvailableTriggerDefs`/`ActiveTriggers` + `trigger_runtime.go`（`StartTriggerTimer`、`StartTriggerWebhook`、`PersistActiveTriggers`、`saveTriggerToAgent`、`triggers.RemoveTriggerFromAgent`） |
 | worker profile 注册表 | `routes_colonies_profiles.go`：`listWorkerProfilesWithHome`、`upsertWorkerProfile`、`validateWorkerProfileName`（写 `colonies/<id>/metadata.json`） |
 | 浏览器桥探测 | `bridgeHTTPRequest` + `bridgeResponseBody`（与 `routes_app_extra.go` 的 app.py 探针同一实现） |
+
+### 2.1 Worker escalation 生产链路
+
+上游 `framework/server/queen_orchestrator.py` 在 queen 会话的 colony 阶段安装
+`install_worker_escalation_routing`。本移植此前只有工具与 handler、没有生产调用点，导致
+`list_worker_questions` / `reply_to_worker` 生产恒空。现在链路是：
+
+```text
+worker 模型调用 escalate（工具面由 colony.workerTools 注册）
+  → AgentLoop.executeEscalateTool：发 ESCALATION_REQUESTED（colony 戳 + request_id）→ 工具结果
+    "Escalation requested to queen; waiting for guidance." → 停车（judge 之前、下一次模型调用之前）
+  → ColonyRuntime.requestWorkerEscalation：总线发布（colony_id / node_id / execution_id / reason / context）
+  → Session.BindChatColony 安装的 colony 作用域订阅：写 Session.PendingEscalations（按到达顺序）
+    + 向 chat queen 注入 [WORKER_ESCALATION]（非 client input，转录落盘）
+  → queen 回合调用 list_worker_questions（读真实收件箱）
+  → queen 调用 reply_to_worker → ColonyRuntime.InjectInput(worker, "[QUEEN_REPLY] request_id=…\n…")
+  → 停车中的 loop 被唤醒，回复作为 client user 回合入会话，worker 继续（通常 report_to_parent 收尾）
+```
+
+- **安装/卸载**：`BindChatColony` 每次会话查找都会同步（幂等）；colony 卸载（`UnloadColony`）与
+  `StopSession` 会从**订阅所在总线**（colony 总线优先，session 总线兜底）退订。
+- **背压**：收件箱 ≥ `MaxPendingEscalations`（32）时自动回 worker
+  `[QUEEN_REPLY] queue_full …`，不让 worker 永久卡住（与上游一致）。
+- **收线重发**：停车期间运行被取消时，再发一条
+  `Blocked waiting for queen guidance - no input received` 的升级，问题不随 worker 消失。
+- **持久化口径**：收件箱与上游一样是**内存字典**（不落盘）；durable 的一半是 queen 转录里的
+  `[WORKER_ESCALATION]` 记录。真实端到端见 `worker-escalation-e2e.md`。
 
 ## 3. 工具、参数与返回形状
 
@@ -90,8 +121,13 @@ Queen 生命周期工具。Go 侧此前只有 `run_worker`（`internal/colony`�
 | 测试文件 | 覆盖 |
 | --- | --- |
 | `internal/server/queen_lifecycle_tools_test.go` | 定义/schema、colony 门控、`get_worker_status`（无 colony、空 colony、6 个 focus、冷却、未知 focus）、`inject_message`（无 colony/空闲/成功）、`stop_worker`（无运行期/成功/二次 no_active_workers）、worker questions 闭环（列出→回复→出队、未知 id、worker_not_active、缺 worker_id、无 colony、无收件箱） |
+| `internal/server/worker_handoff_test.go` | 注入形状（`[WORKER_ESCALATION]` 文本、非 client input、收件箱落条）、queen 流忽略、queen 不在线时回落 client input、Stop 退订 |
+| `internal/server/worker_escalation_chain_test.go` | 生产链路：真实 colony runtime + 脚本化 worker（escalate → 停车 → `InjectInput` 唤醒 → report）；`BindChatColony` 安装/卸载路由（卸载后事件不进 queen、不进收件箱） |
+| `internal/agentloop/escalate_test.go` | `escalate` 停车/唤醒与回复入会话、queen/judge/overseer 拒绝文案、无 sink 拒绝、收线重发 |
+| `internal/colony/worker_escalation_test.go` | worker 工具面含 `escalate`（overseer 不含）、事件带 colony 戳与 `request_id`、worker park→InjectInput→report |
 | `internal/server/queen_lifecycle_actions_test.go` | trigger CRUD（timer 激活/持久化/列出/移除 + 全部分支错误 + webhook 激活与取消订阅清理）、`update_worker_profile`（新增、局部更新保字段、空值清除、3 条错误）、`list_browser_profiles`（不可达 / 有 profile / 空 profile）、chat runtime 门控、取消上下文下 stop 仍生效 |
 | `internal/cli/session_tools_queen_lifecycle_test.go` | catalogue 注册（启用前不可见、启用后 10 个全在）、经 catalogue 执行、worker catalogue 不含 10 个工具 |
+| `e2e/worker_escalation_e2e_test.go`（`-tags e2e`） | 真实 `hive serve` + 真实 colony：worker escalate → queen `list_worker_questions` → `reply_to_worker` → worker 继续；证据落盘 `docs/e2e-assets/worker-escalation-e2e/` |
 
 Parity 注解：生产文件指向 `framework/tools/queen_lifecycle_tools.py::<symbol>`；测试指向
 `tests/test_trigger_fires_into_queen.py::test_colony_tools_include_monitoring_and_review`、
@@ -118,7 +154,13 @@ Parity 注解：生产文件指向 `framework/tools/queen_lifecycle_tools.py::<s
    仅在确实取消了定时器时为 `true`。webhook 订阅不在此列（与上游只暂停 cron 一致）。
 6. **`list_worker_questions` / `reply_to_worker`**：上游把两者从 phase 列表移除（worker 无升级
    通道），但仍注册在 queen 注册表；本 port 与上游注册面一致（常驻 queen 会话工具表），由
-   上游保留的 escalation 收件箱驱动，行为按 `reply_to_worker` 文档实现。
+   上游保留的 escalation 收件箱驱动，行为按 `reply_to_worker` 文档实现。收件箱的生产写入方是
+   `BindChatColony` 安装的 colony 作用域订阅（§2.1）；上游 1.0.14 里 `escalate` 工具只发给
+   legacy primary worker（`stream_id="worker"`），parallel worker（`worker:{id}`）按 BRD 走
+   fail-fast。本 port 的 `run_worker` worker 只有 `worker:{id}` 一种形态，因此**把同一通道发给
+   colony worker**（工具面差异；等待/继续语义与上游一致）：这是让收件箱在生产可用所必需，也是
+   与上游的一处**有意偏差**。收件箱本身与上游一样是内存字典（不落盘），重启后为空的语义相同；
+   queen 转录里的 `[WORKER_ESCALATION]` 记录是 durable 的一半。
 7. **overseer**：上游 overseer 拿到 queen 全量 `queen_tools`；本 port 的 overseer 运行在 colony
    运行时内，没有会话级工具状态，故本次不向其暴露这 10 个工具（不多给，也不给无法执行的工具）。
 8. **collector 差异**：上游 `stop_worker` 会用 `_suppress_report_inject_for` 抑制重复

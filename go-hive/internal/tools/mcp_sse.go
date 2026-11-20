@@ -440,7 +440,8 @@ func (s *realSSESession) rpc(method string, params map[string]any) (json.RawMess
 		return nil, err
 	}
 
-	timer := time.NewTimer(mcpCallResultTimeout)
+	timeout := MCPCallResultTimeout()
+	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	select {
 	case response := <-ch:
@@ -456,7 +457,7 @@ func (s *realSSESession) rpc(method string, params map[string]any) (json.RawMess
 		s.mu.Unlock()
 		return nil, &mcpTransportClosedError{msg: fmt.Sprintf(
 			"MCP call exceeded %s and was abandoned (transport closed): server=%s",
-			mcpCallResultTimeout, s.server)}
+			timeout, s.server)}
 	}
 }
 

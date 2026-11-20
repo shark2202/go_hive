@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aden-hive/hive-go/internal/playbook"
 	"github.com/aden-hive/hive-go/internal/tracker"
 )
 
@@ -167,15 +168,171 @@ func TestRunPlaybookRejectsWithoutColony(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream executes Python natively, so it has no
-// "Python is unsupported in the Go build" result to test against.
-func TestRunPlaybookPythonScriptIsUnsupported(t *testing.T) {
+// requirePlaybookPython skips (rather than fails) on hosts without an
+// interpreter; the recorded evidence runs against the machine's python3.
+func requirePlaybookPython(t *testing.T) {
+	t.Helper()
+	if _, err := playbook.ResolvePythonInterpreter(); err != nil {
+		t.Skipf("Python interpreter unavailable: %v", err)
+	}
+}
+
+// pythonJobsScript is the inline `.play.py` converge loop over the jobs table
+// the fake runtime provisions (one worker per undone row, goal per worker).
+func pythonJobsScript(name string) string {
+	return strings.Join([]string{
+		`meta = {"name": "` + name + `", "description": "one worker per pending job", "concurrency": 2}`,
+		"",
+		"async def run(args):",
+		"    await converge(",
+		`        pending=lambda: tracker_query("SELECT id, name FROM jobs WHERE done=0"),`,
+		"        dispatch=lambda row, i: worker(",
+		`            task=f"Process job {row['name']} (id {row['id']})",`,
+		`            data={"id": row["id"], "name": row["name"]},`,
+		`            goal=f"Processing {row['name']}"),`,
+		"        max_rounds=1)",
+		`    remaining = tracker_count("SELECT id FROM jobs WHERE done=0")`,
+		`    log(f"remaining={remaining}")`,
+		`    return {"remaining": remaining}`,
+	}, "\n") + "\n"
+}
+
+// Parity: core/tests/test_playbook_runner.py::test_converges_all_rows
+func TestRunPlaybookPythonScriptConverges(t *testing.T) {
+	requirePlaybookPython(t)
 	runtime := playbookTestRuntime(t, 2)
 	content, isError := RunPlaybook(context.Background(), runtime, map[string]any{
-		"playbook": "meta = {\"name\": \"legacy\"}\n\nasync def run(args):\n    return {}\n",
+		"playbook": pythonJobsScript("py-jobs"),
+	})
+	if isError {
+		t.Fatalf("Python playbook failed: %s", content)
+	}
+	payload := playbookPayload(t, content)
+	if payload["status"] != "completed" {
+		t.Fatalf("status = %v, want completed", payload["status"])
+	}
+	if payload["dispatched"] != float64(2) {
+		t.Fatalf("dispatched = %v, want 2", payload["dispatched"])
+	}
+	if payload["dead_lettered"] != float64(0) {
+		t.Fatalf("dead_lettered = %v, want 0", payload["dead_lettered"])
+	}
+	if payload["concurrency"] != float64(2) {
+		t.Fatalf("concurrency = %v, want meta's 2", payload["concurrency"])
+	}
+	if payload["playbook_name"] != "py-jobs" {
+		t.Fatalf("playbook_name = %v, want py-jobs", payload["playbook_name"])
+	}
+	if len(runtime.spawned) != 2 {
+		t.Fatalf("runtime spawned %d workers, want 2", len(runtime.spawned))
+	}
+	seenTasks := map[string]bool{}
+	for _, task := range runtime.spawned {
+		seenTasks[task.Task] = true
+		if task.Data["name"] == nil {
+			t.Fatalf("worker data = %#v", task.Data)
+		}
+	}
+	for _, want := range []string{"Process job job-1 (id 1)", "Process job job-2 (id 2)"} {
+		if !seenTasks[want] {
+			t.Fatalf("task %q missing from %v", want, seenTasks)
+		}
+	}
+	result, _ := payload["result"].(map[string]any)
+	if result["remaining"] != float64(0) {
+		t.Fatalf("result = %#v, want remaining 0", result)
+	}
+	// Inline Python is saved to the colony library as .play.py (upstream shape),
+	// so a re-run by name resumes without re-sending the script.
+	savedPath := filepath.Join(runtime.binding.Dir, "playbooks", "py-jobs.play.py")
+	if _, err := os.Stat(savedPath); err != nil {
+		t.Fatalf("inline Python playbook was not saved to %s: %v", savedPath, err)
+	}
+	if payload["playbook_path"] != savedPath {
+		t.Fatalf("playbook_path = %v, want %s", payload["playbook_path"], savedPath)
+	}
+	runs, err := ListPlaybookRuns(filepath.Join(runtime.binding.Dir, "colony.db"), 10)
+	if err != nil {
+		t.Fatalf("list run log: %v", err)
+	}
+	if len(runs) != 1 || runs[0].Status != "done" || runs[0].Dispatched != 2 {
+		t.Fatalf("run log = %#v", runs)
+	}
+}
+
+// Parity: core/tests/test_playbook_runner.py::test_rerun_is_resume
+func TestRunPlaybookSavedPythonNameResumes(t *testing.T) {
+	requirePlaybookPython(t)
+	runtime := playbookTestRuntime(t, 2)
+	pythonPath := filepath.Join(runtime.binding.Dir, "playbooks", "legacy.play.py")
+	if err := os.WriteFile(pythonPath, []byte(pythonJobsScript("legacy")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	first, firstErr := RunPlaybook(context.Background(), runtime, map[string]any{"playbook_name": "legacy"})
+	if firstErr {
+		t.Fatalf("saved Python playbook failed: %s", first)
+	}
+	firstPayload := playbookPayload(t, first)
+	if firstPayload["dispatched"] != float64(2) {
+		t.Fatalf("first dispatched = %v, want 2", firstPayload["dispatched"])
+	}
+	if firstPayload["playbook_path"] != pythonPath {
+		t.Fatalf("playbook_path = %v, want %s", firstPayload["playbook_path"], pythonPath)
+	}
+
+	// Re-running by name re-queries the tracker: done rows drop out, so no
+	// worker is dispatched (resume by construction).
+	second, secondErr := RunPlaybook(context.Background(), runtime, map[string]any{"playbook_name": "legacy"})
+	if secondErr {
+		t.Fatalf("resume run failed: %s", second)
+	}
+	secondPayload := playbookPayload(t, second)
+	if secondPayload["dispatched"] != float64(0) {
+		t.Fatalf("resume dispatched = %v, want 0", secondPayload["dispatched"])
+	}
+	if len(runtime.spawned) != 2 {
+		t.Fatalf("runtime spawned %d workers total, want 2", len(runtime.spawned))
+	}
+}
+
+// Parity: core/tests/test_playbook_runner.py::test_bad_script_missing_meta
+func TestRunPlaybookPythonLoadErrorDoesNotDispatch(t *testing.T) {
+	requirePlaybookPython(t)
+	runtime := playbookTestRuntime(t, 1)
+	content, isError := RunPlaybook(context.Background(), runtime, map[string]any{
+		"playbook": "async def run(args):\n    return {}\n",
 	})
 	if !isError {
-		t.Fatalf("Python playbook reported success: %s", content)
+		t.Fatalf("Python playbook without meta reported success: %s", content)
+	}
+	payload := playbookPayload(t, content)
+	if payload["status"] != "failed" {
+		t.Fatalf("status = %v, want failed", payload["status"])
+	}
+	if runID, _ := payload["run_id"].(string); runID == "" {
+		t.Fatalf("run_id missing from %v", payload)
+	}
+	message, _ := payload["error"].(string)
+	if !strings.Contains(message, "playbook did not start") || !strings.Contains(message, "meta") {
+		t.Fatalf("error = %q, want the load failure", message)
+	}
+	if len(runtime.spawned) != 0 {
+		t.Fatalf("load failure spawned %d workers", len(runtime.spawned))
+	}
+}
+
+// Parity-exempt: upstream executes Python in-process, so it has no
+// external-interpreter lookup to fail; this port must report `unsupported`
+// (with the reason) instead of faking a run.
+func TestRunPlaybookPythonWithoutInterpreterIsUnsupported(t *testing.T) {
+	t.Setenv("PATH", "")
+	t.Setenv("HIVE_PYTHON", "")
+	runtime := playbookTestRuntime(t, 1)
+	content, isError := RunPlaybook(context.Background(), runtime, map[string]any{
+		"playbook": "meta = {\"name\": \"x\"}\nasync def run(args):\n    return {}\n",
+	})
+	if !isError {
+		t.Fatalf("Python playbook without an interpreter reported success: %s", content)
 	}
 	payload := playbookPayload(t, content)
 	if payload["status"] != "unsupported" {
@@ -184,11 +341,12 @@ func TestRunPlaybookPythonScriptIsUnsupported(t *testing.T) {
 	if payload["dispatched"] != float64(0) {
 		t.Fatalf("dispatched = %v, want 0", payload["dispatched"])
 	}
-	if !strings.Contains(payload["error"].(string), "cannot execute Python") {
-		t.Fatalf("error = %q", payload["error"])
+	message, _ := payload["error"].(string)
+	if !strings.Contains(message, "Python") || !strings.Contains(message, "HIVE_PYTHON") {
+		t.Fatalf("error = %q, want the interpreter lookup detail", message)
 	}
 	if len(runtime.spawned) != 0 {
-		t.Fatalf("unsupported playbook spawned %d workers", len(runtime.spawned))
+		t.Fatal("missing-interpreter run dispatched workers")
 	}
 }
 
@@ -283,29 +441,5 @@ func TestRunPlaybookNativeResumesFromTracker(t *testing.T) {
 	}
 	if len(secondRuntime.spawned) != 1 {
 		t.Fatalf("resume spawned %d workers, want 1", len(secondRuntime.spawned))
-	}
-}
-
-// Parity-exempt: the Go build's saved-playbook lookup also accepts a Python
-// file so a Python-era library reports unsupported instead of "not found".
-func TestRunPlaybookSavedPythonNameIsUnsupported(t *testing.T) {
-	runtime := playbookTestRuntime(t, 1)
-	pythonPath := filepath.Join(runtime.binding.Dir, "playbooks", "legacy.play.py")
-	if err := os.WriteFile(pythonPath, []byte("meta = {'name': 'legacy'}\nasync def run(args):\n    return {}\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	content, isError := RunPlaybook(context.Background(), runtime, map[string]any{"playbook_name": "legacy"})
-	if !isError {
-		t.Fatalf("saved Python playbook reported success: %s", content)
-	}
-	payload := playbookPayload(t, content)
-	if payload["status"] != "unsupported" {
-		t.Fatalf("status = %v, want unsupported", payload["status"])
-	}
-	if payload["playbook_path"] != pythonPath {
-		t.Fatalf("playbook_path = %v, want %s", payload["playbook_path"], pythonPath)
-	}
-	if len(runtime.spawned) != 0 {
-		t.Fatal("saved Python playbook dispatched workers")
 	}
 }

@@ -68,8 +68,9 @@ func RunWorkerSpawnerFromContext(ctx context.Context) RunWorkerSpawner {
 
 // RunWorkerToolDef returns the run_worker tool definition. The parameter
 // schema mirrors the upstream Tool(...) declaration: tasks (spawn mode) and
-// resume_worker_ids (resume mode, currently unsupported by this port) are
-// mutually exclusive at execution time, so neither is marked required.
+// resume_worker_ids (resume mode: rebuild stopped workers over their saved
+// transcripts) are mutually exclusive at execution time, so neither is marked
+// required.
 //
 // Parity: framework/tools/queen_lifecycle_tools.py::_run_parallel_tool
 func RunWorkerToolDef() llm.ToolDef {

@@ -18,10 +18,10 @@
     "keys": 134,
     "sections": 20,
     "status_counts": {
-      "aligned": 96,
+      "aligned": 99,
       "go_only": 4,
-      "go_partial": 27,
-      "python_only": 6,
+      "go_partial": 29,
+      "python_only": 1,
       "unread": 1
     },
     "env_overrides": 27,
@@ -45,7 +45,7 @@
           ],
           "go": [],
           "status": "python_only",
-          "notes": "P2: optional-package channels (OneBot, etc.) are Python-only; Go has no channels.<name> runtime reader."
+          "notes": "unsupported: upstream starts optional channel packages installed through the hive.channels entry-point group; the Go port has no plugin host or channel lifecycle, so an enabled flag has nothing to gate. Recorded in contracts/config-support-ledger.json rather than silently ignored."
         }
       ]
     },
@@ -365,9 +365,15 @@
               "snippet": "if \"aux_max_tokens\" in llm:"
             }
           ],
-          "go": [],
-          "status": "python_only",
-          "notes": "P1: Go never reads llm.aux_max_tokens. internal/llm/complete.go has DefaultAuxMaxTokens=8192 but no configuration.json reader, so a user-pinned aux budget is ignored."
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 321,
+              "snippet": "func AuxMaxTokens(home hivehome.Home) int {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "both read the JSON int, else min(8192, llm.max_tokens). Wired: serve installs it process-wide with llm.SetAuxMaxTokens, and the recall/judge/sentinel/skill-test call sites read llm.AuxMaxTokens(). Pinned by TestConfiguredAuxMaxTokensReachesTheJudge."
         },
         {
           "path": "llm.endpoint",
@@ -535,9 +541,15 @@
               "snippet": "cfg_val = get_hive_config().get(\"llm\", {}).get(\"antigravity_client_id\")"
             }
           ],
-          "go": [],
-          "status": "python_only",
-          "notes": "Go has no configuration.json reader for the Antigravity OAuth client id (Python falls back to the public upstream constants)."
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 396,
+              "snippet": "func AntigravityClientID(home hivehome.Home) string {"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "reader only: ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id (no public-source fetch), tested by TestAntigravityClientCredentials. No request path consumes it: the port reads the pre-issued access token from antigravity-accounts.json and has no OAuth refresh to hand a client id to."
         },
         {
           "path": "llm.antigravity_client_secret",
@@ -551,9 +563,15 @@
               "snippet": "cfg_val = get_hive_config().get(\"llm\", {}).get(\"antigravity_client_secret\") or None"
             }
           ],
-          "go": [],
-          "status": "python_only",
-          "notes": "same as antigravity_client_id."
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 403,
+              "snippet": "func AntigravityClientSecret(home hivehome.Home) string {"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "reader only: ANTIGRAVITY_CLIENT_SECRET, then llm.antigravity_client_secret (no public-source fetch), tested by TestAntigravityClientCredentials. No request path consumes it: no OAuth refresh to hand a client secret to."
         }
       ]
     },
@@ -577,10 +595,15 @@
               "file": "go_hive/go-hive/internal/agentloop/loop.go",
               "line": 109,
               "snippet": "MaxToolResultChars:    30_000,"
+            },
+            {
+              "file": "go_hive/go-hive/internal/hiveconf/hiveconf.go",
+              "line": 81,
+              "snippet": "func MaxToolResultChars(home hivehome.Home, fallback int) int {"
             }
           ],
-          "status": "python_only",
-          "notes": "P1: Go has the 30_000 default but no configuration.json reader for the global `loop` section; a file override is ignored."
+          "status": "aligned",
+          "notes": "both read the JSON int and fall back to the call site's value (30_000 global default). Wired: hiveconf.MaxToolResultChars applies to the queen chat loop (chatLoopConfig) and to each colony worker loop (BuildWorkerLoopConfig), so a pinned threshold moves the spillover point."
         }
       ]
     },
@@ -596,7 +619,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/cli/mcp_config.go",
-              "line": 67,
+              "line": 68,
               "snippet": "Enabled        *bool           `json:\"enabled\"`"
             }
           ],
@@ -612,7 +635,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/cli/mcp_config.go",
-              "line": 68,
+              "line": 69,
               "snippet": "Namespace      string          `json:\"namespace\"`"
             }
           ],
@@ -628,17 +651,17 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/cli/mcp_config.go",
-              "line": 69,
+              "line": 70,
               "snippet": "TimeoutSeconds *float64        `json:\"timeout_seconds\"`"
             },
             {
               "file": "go_hive/go-hive/internal/cli/mcp_loader.go",
               "line": 148,
-              "snippet": "// configuration.json wins over HIVE_MCP_CALL_RESULT_TIMEOUT, which in"
+              "snippet": "// configuration.json is the fallback for HIVE_MCP_CALL_RESULT_TIMEOUT:"
             }
           ],
           "status": "go_only",
-          "notes": "priority REVERSED vs the general rule: file wins over env here (>0 only). This is the only configuration.json key in either tree with file > env."
+          "notes": "env > file > 240s default, the general rule: internal/tools.MCPCallResultTimeout resolves HIVE_MCP_CALL_RESULT_TIMEOUT first, then the file value. Was file > env until the config-env-align lane; the reversal is fixed and pinned by TestMCPCallResultTimeoutPrecedence."
         },
         {
           "path": "mcp.servers",
@@ -649,7 +672,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/cli/mcp_config.go",
-              "line": 70,
+              "line": 71,
               "snippet": "Servers        json.RawMessage `json:\"servers\"`"
             }
           ],
@@ -676,7 +699,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/chat_runtime.go",
-              "line": 1479,
+              "line": 1428,
               "snippet": "cfg.EveryTurns = positive(\"every_turns\", cfg.EveryTurns)"
             }
           ],
@@ -698,7 +721,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/chat_runtime.go",
-              "line": 1480,
+              "line": 1429,
               "snippet": "cfg.LongEvery = positive(\"long_every\", cfg.LongEvery)"
             }
           ],
@@ -720,7 +743,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/chat_runtime.go",
-              "line": 1481,
+              "line": 1430,
               "snippet": "if model, ok := section[\"model\"].(string); ok && (model == \"main\" || model == \"worker\") {"
             }
           ],
@@ -808,10 +831,15 @@
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
               "line": 526,
               "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 200,
+              "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "P1: Go reads queen_llm only for the REST endpoints; ApplyQueenModel has no production assignment, so a queen's own model is not honored at session start."
+          "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial."
         },
         {
           "path": "queen_llm.<queen_id>.model",
@@ -830,10 +858,15 @@
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
               "line": 564,
               "snippet": "if strings.TrimSpace(queenStr(object[\"provider\"])) == \"\" || strings.TrimSpace(queenStr(object[\"model\"])) == \"\" {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 200,
+              "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime wiring gap."
+          "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial."
         },
         {
           "path": "queen_llm.<queen_id>.api_key",
@@ -852,10 +885,15 @@
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
               "line": 569,
               "snippet": "apiKey := queenStr(object[\"api_key\"])"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 200,
+              "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime wiring gap."
+          "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial."
         },
         {
           "path": "queen_llm.<queen_id>.api_base",
@@ -874,10 +912,15 @@
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
               "line": 575,
               "snippet": "apiBase := strings.TrimSpace(queenStr(object[\"api_base\"]))"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 200,
+              "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime wiring gap."
+          "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial."
         },
         {
           "path": "queen_llm.<queen_id>.api_key_env_var",
@@ -896,10 +939,15 @@
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
               "line": 571,
               "snippet": "if envName := queenStr(object[\"api_key_env_var\"]); envName != \"\" {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 200,
+              "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime wiring gap."
+          "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial."
         },
         {
           "path": "queen_llm.<queen_id>.max_context_tokens",
@@ -918,10 +966,15 @@
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
               "line": 526,
               "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 200,
+              "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime wiring gap."
+          "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial."
         },
         {
           "path": "queen_llm.<queen_id>.endpoint",
@@ -940,10 +993,15 @@
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
               "line": 526,
               "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 200,
+              "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime wiring gap."
+          "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial."
         },
         {
           "path": "queen_llm.<queen_id>.extra_body",
@@ -962,10 +1020,15 @@
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
               "line": 526,
               "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 200,
+              "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime wiring gap."
+          "notes": "wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial."
         }
       ]
     },
@@ -2379,12 +2442,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/hive_config.go",
-              "line": 37,
+              "line": 21,
               "snippet": "if raw, ok := os.LookupEnv(\"HIVE_STALL_CHECK\"); ok {"
             },
             {
               "file": "go_hive/go-hive/internal/server/hive_config.go",
-              "line": 47,
+              "line": 31,
               "snippet": "return pyTruthy(HiveConfig(home)[\"stall_check\"])"
             }
           ],
@@ -2460,7 +2523,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/hive_config.go",
-              "line": 93,
+              "line": 77,
               "snippet": "scale, ok := pythonNumber(HiveConfig(home)[\"gcu_viewport_scale\"])"
             }
           ],
@@ -2691,10 +2754,15 @@
               "file": "go_hive/go-hive/internal/server/routes_models.go",
               "line": 28,
               "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 229,
+              "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "P1: slot is CRUD-only in Go; find_vision_fallback's caption chain is not ported (runtime never reads it)."
+          "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.model",
@@ -2713,10 +2781,15 @@
               "file": "go_hive/go-hive/internal/server/routes_models.go",
               "line": 28,
               "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 229,
+              "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime gap."
+          "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.api_key",
@@ -2735,10 +2808,15 @@
               "file": "go_hive/go-hive/internal/server/routes_models.go",
               "line": 28,
               "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 229,
+              "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime gap."
+          "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.api_base",
@@ -2757,10 +2835,15 @@
               "file": "go_hive/go-hive/internal/server/routes_models.go",
               "line": 28,
               "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 229,
+              "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime gap."
+          "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.api_key_env_var",
@@ -2779,10 +2862,15 @@
               "file": "go_hive/go-hive/internal/server/routes_models.go",
               "line": 28,
               "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 229,
+              "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime gap."
+          "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.max_tokens",
@@ -2801,10 +2889,15 @@
               "file": "go_hive/go-hive/internal/server/routes_models.go",
               "line": 28,
               "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 229,
+              "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime gap; 0/absent falls back to aux_max_tokens."
+          "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.endpoint",
@@ -2823,10 +2916,15 @@
               "file": "go_hive/go-hive/internal/server/routes_models.go",
               "line": 28,
               "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 229,
+              "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime gap."
+          "notes": "wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         }
       ]
     },
@@ -2860,10 +2958,15 @@
               "file": "go_hive/go-hive/internal/colony/runtime.go",
               "line": 65,
               "snippet": "// worker_llm separately)."
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 218,
+              "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "P1: Go exposes worker_llm through the REST slot API but never resolves it for the runtime (colony/runtime.go comment: the port does not split queen/worker models by default). Python's session_manager.build_worker_llm does."
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side."
         },
         {
           "path": "worker_llm.model",
@@ -2882,10 +2985,15 @@
               "file": "go_hive/go-hive/internal/server/provider_library.go",
               "line": 12,
               "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 218,
+              "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "same runtime gap as worker_llm.provider."
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side."
         },
         {
           "path": "worker_llm.api_key",
@@ -2904,10 +3012,15 @@
               "file": "go_hive/go-hive/internal/server/provider_library.go",
               "line": 12,
               "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 218,
+              "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "runtime not wired in Go."
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side."
         },
         {
           "path": "worker_llm.api_base",
@@ -2926,10 +3039,15 @@
               "file": "go_hive/go-hive/internal/server/provider_library.go",
               "line": 12,
               "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 218,
+              "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "runtime not wired in Go."
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side."
         },
         {
           "path": "worker_llm.api_key_env_var",
@@ -2948,10 +3066,15 @@
               "file": "go_hive/go-hive/internal/server/provider_library.go",
               "line": 12,
               "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 218,
+              "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "runtime not wired in Go."
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side."
         },
         {
           "path": "worker_llm.max_tokens",
@@ -2970,10 +3093,15 @@
               "file": "go_hive/go-hive/internal/server/provider_library.go",
               "line": 12,
               "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 218,
+              "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "runtime not wired in Go."
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side."
         },
         {
           "path": "worker_llm.max_context_tokens",
@@ -2992,10 +3120,15 @@
               "file": "go_hive/go-hive/internal/server/provider_library.go",
               "line": 12,
               "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 218,
+              "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "runtime not wired in Go."
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side."
         },
         {
           "path": "worker_llm.endpoint",
@@ -3014,10 +3147,15 @@
               "file": "go_hive/go-hive/internal/server/provider_library.go",
               "line": 12,
               "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 218,
+              "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "runtime not wired in Go."
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side."
         },
         {
           "path": "worker_llm.extra_body",
@@ -3036,10 +3174,15 @@
               "file": "go_hive/go-hive/internal/server/provider_library.go",
               "line": 12,
               "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 218,
+              "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "runtime not wired in Go."
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side."
         },
         {
           "path": "worker_llm.num_ctx",
@@ -3058,10 +3201,15 @@
               "file": "go_hive/go-hive/internal/server/provider_library.go",
               "line": 12,
               "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 218,
+              "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             }
           ],
           "status": "go_partial",
-          "notes": "runtime not wired in Go."
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side."
         }
       ]
     },
@@ -3080,9 +3228,15 @@
               "snippet": "override = get_hive_config().get(\"worker_tools\", {}).get(\"always_enabled_categories\")"
             }
           ],
-          "go": [],
-          "status": "python_only",
-          "notes": "P1: Go has no worker_tools reader; worker tool-tier overrides from configuration.json are not honored."
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 376,
+              "snippet": "func WorkerKeepSetFromConfig(home hivehome.Home) func() map[string]struct{} {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same list-of-strings rule as queen_tools: a mixed list is not an override. Wired: server.WorkerKeepSetFromConfig expands the categories and hands the colony runtime its WorkerKeepSet; an empty list turns worker tiering off, an absent key keeps the hardcoded default."
         }
       ]
     }
@@ -3180,8 +3334,8 @@
           "snippet": "except (json.JSONDecodeError, OSError) as e:"
         },
         {
-          "file": "go_hive/go-hive/internal/server/hive_config.go",
-          "line": 26,
+          "file": "go_hive/go-hive/internal/hiveconf/hiveconf.go",
+          "line": 37,
           "snippet": "if err := decoder.Decode(&out); err != nil || out == nil {"
         }
       ],
@@ -3249,12 +3403,17 @@
     },
     {
       "rule": "MCP call timeout",
-      "contract": "file > env (exception to the general rule): mcp.timeout_seconds wins over HIVE_MCP_CALL_RESULT_TIMEOUT",
+      "contract": "env > file > 240s default: HIVE_MCP_CALL_RESULT_TIMEOUT wins over mcp.timeout_seconds (the reversal was fixed in the config-env-align lane)",
       "evidence": [
         {
           "file": "go_hive/go-hive/internal/cli/mcp_loader.go",
           "line": 148,
-          "snippet": "// configuration.json wins over HIVE_MCP_CALL_RESULT_TIMEOUT, which in"
+          "snippet": "// configuration.json is the fallback for HIVE_MCP_CALL_RESULT_TIMEOUT:"
+        },
+        {
+          "file": "go_hive/go-hive/internal/tools/mcp_client.go",
+          "line": 46,
+          "snippet": "func MCPCallResultTimeout() time.Duration {"
         }
       ],
       "status": "go_only",

@@ -1213,7 +1213,7 @@ func (r *Runner) cmdSkillTest(args *parsedArgs) int {
 		"structural": structural,
 	}
 	overallFailed := 0
-	auxMaxTokens := llm.ResolveAuxMaxTokens(0)
+	auxMaxTokens := llm.AuxMaxTokens()
 
 	if hasInput && provider != nil {
 		raw := args.str("input_json")

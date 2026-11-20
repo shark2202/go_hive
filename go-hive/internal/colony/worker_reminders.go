@@ -99,6 +99,68 @@ func reminderToolsFromDefs(defs []llm.ToolDef) []agentloop.Tool {
 	return out
 }
 
+// reminderColonyBinding adapts the colony's tracker binding to the reminder
+// view: nil when the runtime has no tracker yet, so tracker-driven sources
+// self-skip instead of rendering an empty snapshot.
+//
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::_resolve_binding
+func (r *ColonyRuntime) reminderColonyBinding() *agentloop.ColonyBinding {
+	if r == nil {
+		return nil
+	}
+	binding := r.TrackerBinding()
+	if binding == nil || strings.TrimSpace(binding.TrackerDB) == "" {
+		return nil
+	}
+	return &agentloop.ColonyBinding{TrackerDB: binding.TrackerDB}
+}
+
+// activeWorkerReminders maps the colony's worker list onto the reminder view's
+// ActiveWorker rows, keeping only workers still in flight.
+func (r *ColonyRuntime) activeWorkerReminders() []agentloop.ActiveWorker {
+	out := []agentloop.ActiveWorker{}
+	if r == nil {
+		return out
+	}
+	for _, worker := range r.ListWorkers() {
+		if !worker.Status.IsActive() {
+			continue
+		}
+		out = append(out, agentloop.ActiveWorker{
+			ID:     worker.WorkerID,
+			Status: worker.Status.String(),
+			Task:   worker.Task,
+		})
+	}
+	return out
+}
+
+// reminderColonyStats reports the colony's active/total worker counts for the
+// fleet snapshot at tool-budget checkpoints.
+func (r *ColonyRuntime) reminderColonyStats() agentloop.ColonyStats {
+	if r == nil {
+		return agentloop.ColonyStats{}
+	}
+	stats := r.GetStats()
+	return agentloop.ColonyStats{
+		Active: intStatValue(stats["active_workers"]),
+		Total:  intStatValue(stats["total_workers"]),
+	}
+}
+
+func intStatValue(value any) int {
+	switch typed := value.(type) {
+	case int:
+		return typed
+	case int64:
+		return int(typed)
+	case float64:
+		return int(typed)
+	default:
+		return 0
+	}
+}
+
 // newWorkerAgentLoop builds a worker loop whose Hub carries the task reminder
 // and the idle nudge. The idle ticker is started here and stopped by the
 // returned cleanup; a parked reminder is drained back into the loop's input
@@ -118,6 +180,14 @@ func (r *ColonyRuntime) newWorkerAgentLoop(worker *Worker, cfg agentloop.LoopCon
 
 	hub := loop.Hub
 	hub.Register(&workerTaskReminderSource{inner: tasks.NewTaskReminderSource()})
+	// Worker-role tracker cadence (upstream WorkerTrackerSnapshotReminderSource:
+	// workers fill the queen's tables, so the nudge is cadence-driven and
+	// self-skips when the tracker has no rows).
+	hub.Register(agentloop.NewWorkerTrackerSnapshotReminderSource())
+	// The stream-stall source is registered on every loop upstream; a worker's
+	// completer may or may not stream today, but the registration matrix and
+	// the recovery path stay identical to the queen's.
+	hub.Register(agentloop.NewStreamStallSource(cfg.ContinueNudgeMaxPerTurn, cfg.ContinueNudgeEnabled))
 	idle := agentloop.NewIdleNudgeSource(agentloop.IdleNudgeConfig{
 		BudgetSeconds:         cfg.SessionIdleNudgeSeconds,
 		MaxNudges:             cfg.SessionIdleNudgeMaxPerSession,
@@ -131,6 +201,10 @@ func (r *ColonyRuntime) newWorkerAgentLoop(worker *Worker, cfg agentloop.LoopCon
 		ColonyID:       r.streamID,
 		AvailableTools: reminderToolsFromDefs(tools),
 	}
+	// The worker tracker nudge resolves the colony's tracker DB through the
+	// same binding the tracker tools write to. A runtime without a provisioned
+	// tracker returns nil, so the source self-skips.
+	reminderCtx.ColonyBindingProvider = r.reminderColonyBinding
 	hub.Bind(reminderCtx)
 	hub.Start(reminderCtx, func() *agentloop.LoopSignals {
 		return &agentloop.LoopSignals{

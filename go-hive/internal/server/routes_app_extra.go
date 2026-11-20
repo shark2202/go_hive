@@ -19,6 +19,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -26,13 +27,21 @@ import (
 )
 
 const (
-	defaultBridgePortBase = 9229
-	browserPongStaleMS    = 15000.0
-	browserDefaultPoll    = 3 * time.Second
-	browserDefaultQuiet   = 5
-	browserProbeTimeout   = 500 * time.Millisecond
-	browserContextsTime   = 1 * time.Second
-	browserRevealTime     = 2 * time.Second
+	// defaultBridgeWSBasePort is where the Go browser bridge dials its
+	// extension WebSocket (browserbridge.DefaultWSAddr); the status HTTP
+	// endpoint is one above it.
+	defaultBridgeWSBasePort = 14829
+	// legacyBridgeStatusPort is the status endpoint of the pre-port-move
+	// Python bridge (and of the Go bridge's legacy listener generation).
+	// Still probed as a fallback so a runtime on the legacy pair keeps
+	// reporting its real state.
+	legacyBridgeStatusPort = 9230
+	browserPongStaleMS     = 15000.0
+	browserDefaultPoll     = 3 * time.Second
+	browserDefaultQuiet    = 5
+	browserProbeTimeout    = 500 * time.Millisecond
+	browserContextsTime    = 1 * time.Second
+	browserRevealTime      = 2 * time.Second
 
 	resourceDefaultHistory = 120
 	resourceIntervalS      = 15.0
@@ -49,8 +58,13 @@ const (
 type AppExtraRouteDeps struct {
 	// Resources returns the resource-monitor snapshot. historyN nil means the
 	// whole buffer (upstream ?full=1); a pointer to 0 means snapshot only.
-	Resources    func(historyN *int) map[string]any
+	Resources func(historyN *int) map[string]any
+	// StatusAddr / StatusAddrs pin the bridge status endpoint. StatusAddrs is
+	// the probe order; StatusAddr (single address) is the test seam kept for
+	// the older cases. Both optional: nil resolves the environment's bridge
+	// address list.
 	StatusAddr   func() string
+	StatusAddrs  func() []string
 	ProbeStatus  func(addr string) map[string]any
 	ProbeContext func(addr string) []map[string]any
 	RevealTab    func(addr string, tabID int) map[string]any
@@ -59,11 +73,41 @@ type AppExtraRouteDeps struct {
 	KeepaliveTicks int
 }
 
-func (deps AppExtraRouteDeps) statusAddr() string {
-	if deps.StatusAddr != nil {
-		return deps.StatusAddr()
+// statusAddrs is the bridge-status probe order: the injected seam first, then
+// the environment (HIVE_BROWSERBRIDGE_HTTP, HIVE_BRIDGE_PORT base + 1, default
+// 14830), then the legacy 9230 endpoint.
+func (deps AppExtraRouteDeps) statusAddrs() []string {
+	if deps.StatusAddrs != nil {
+		if addrs := deps.StatusAddrs(); len(addrs) > 0 {
+			return addrs
+		}
 	}
-	return defaultBridgeStatusAddr()
+	if deps.StatusAddr != nil {
+		return []string{deps.StatusAddr()}
+	}
+	return defaultBridgeStatusAddrs()
+}
+
+// resolveBridgeStatus probes the candidate addresses in order and returns the
+// first one that answers with a live bridge plus that probe's payload. When no
+// candidate answers with a bridge, it returns the primary address and the
+// primary probe's payload (the classic {bridge:false} envelope).
+func (deps AppExtraRouteDeps) resolveBridgeStatus() (string, map[string]any) {
+	addrs := deps.statusAddrs()
+	var primary map[string]any
+	for _, addr := range addrs {
+		probe := deps.probeStatus(addr)
+		if pyTruthy(probe["bridge"]) {
+			return addr, probe
+		}
+		if primary == nil {
+			primary = probe
+		}
+	}
+	if primary == nil {
+		primary = map[string]any{"bridge": false, "connected": false, "connections": []any{}}
+	}
+	return addrs[0], primary
 }
 
 func (deps AppExtraRouteDeps) probeStatus(addr string) map[string]any {
@@ -175,7 +219,8 @@ func handleBrowserStatus(w http.ResponseWriter, r *http.Request, deps AppExtraRo
 
 // Parity: framework/server/app.py::_browser_status_payload
 func browserStatusPayload(deps AppExtraRouteDeps, sessionID string) map[string]any {
-	status := copyStringAny(deps.probeStatus(deps.statusAddr()))
+	addr, probe := deps.resolveBridgeStatus()
+	status := copyStringAny(probe)
 	pong, hasPong := numberValue(status["last_pong_age_ms"])
 	connected := pyTruthy(status["connected"])
 	bridge := pyTruthy(status["bridge"])
@@ -199,7 +244,7 @@ func browserStatusPayload(deps AppExtraRouteDeps, sessionID string) map[string]a
 	if sessionID != "" {
 		var active any
 		if connected {
-			active = activeTabForProfile(deps.probeContexts(deps.statusAddr()), sessionID)
+			active = activeTabForProfile(deps.probeContexts(addr), sessionID)
 		}
 		payload["active_tab"] = active
 	}
@@ -341,7 +386,14 @@ func handleBrowserTabReveal(w http.ResponseWriter, r *http.Request, deps AppExtr
 		})
 		return
 	}
-	writeJSON(w, http.StatusOK, deps.revealTab(deps.statusAddr(), tabID))
+	writeJSON(w, http.StatusOK, deps.revealTab(revealAddr(deps), tabID))
+}
+
+// revealAddr picks the same bridge endpoint the status route reports, so the
+// jump-to-tab button targets the runtime that is actually listening.
+func revealAddr(deps AppExtraRouteDeps) string {
+	addr, _ := deps.resolveBridgeStatus()
+	return addr
 }
 
 // Parity: framework/server/app.py::_probe_browser_bridge
@@ -437,14 +489,52 @@ func revealBrowserTab(addr string, tabID int) map[string]any {
 	return payload
 }
 
-func defaultBridgeStatusAddr() string {
-	port := defaultBridgePortBase
-	if raw := os.Getenv("HIVE_BRIDGE_PORT"); raw != "" {
-		if parsed, err := strconv.Atoi(strings.TrimSpace(raw)); err == nil {
-			port = parsed
-		}
+// defaultBridgeStatusAddrs resolves the bridge status probe order. The bridge
+// moved from the legacy 9229/9230 pair to 14829/14830, so probing 9230 alone
+// reported a running bridge as offline; the primary endpoint is the
+// supervisor's explicit override (HIVE_BROWSERBRIDGE_HTTP) or
+// HIVE_BRIDGE_PORT + 1 (default 14830, the port the Go bridge binds), and the
+// legacy 9230 endpoint stays as a fallback for a pre-port-move runtime.
+func defaultBridgeStatusAddrs() []string {
+	primary := ""
+	if raw := strings.TrimSpace(os.Getenv("HIVE_BROWSERBRIDGE_HTTP")); raw != "" {
+		primary = bridgeStatusHostPort(raw)
 	}
-	return net.JoinHostPort("127.0.0.1", strconv.Itoa(port+1))
+	if primary == "" {
+		port := defaultBridgeWSBasePort
+		if raw := strings.TrimSpace(os.Getenv("HIVE_BRIDGE_PORT")); raw != "" {
+			if parsed, err := strconv.Atoi(raw); err == nil {
+				port = parsed
+			}
+		}
+		primary = net.JoinHostPort("127.0.0.1", strconv.Itoa(port+1))
+	}
+	addrs := []string{primary}
+	if legacy := net.JoinHostPort("127.0.0.1", strconv.Itoa(legacyBridgeStatusPort)); legacy != primary {
+		addrs = append(addrs, legacy)
+	}
+	return addrs
+}
+
+// bridgeStatusHostPort normalises HIVE_BROWSERBRIDGE_HTTP ("host:port",
+// "http://host:port" or a URL) to a dialable host:port, or "" when there is no
+// host to dial.
+func bridgeStatusHostPort(raw string) string {
+	text := strings.TrimSpace(raw)
+	if strings.Contains(text, "://") {
+		parsed, err := url.Parse(text)
+		if err != nil || parsed.Host == "" {
+			return ""
+		}
+		return parsed.Host
+	}
+	if index := strings.IndexByte(text, '/'); index >= 0 {
+		text = text[:index]
+	}
+	if _, _, err := net.SplitHostPort(text); err != nil {
+		return ""
+	}
+	return text
 }
 
 // bridgeHTTPRequest speaks the bridge's HTTP/1.0-over-TCP contract and reads

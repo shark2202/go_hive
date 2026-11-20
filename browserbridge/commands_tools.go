@@ -318,8 +318,12 @@ func cmdBrowserScreenshot(ctx context.Context, b *Bridge, profile string, params
 	if sel, ok := paramString(params, "selector"); ok {
 		internal["selector"] = sel
 	}
-	if _, ok := paramString(params, "intent"); !ok {
-		return nil, badRequest("missing required parameter 'intent'")
+	// `intent` is optional here: upstream's CLI path calls
+	// render_screenshot(intent=None) and only the retired MCP tool schema marked
+	// it required, so `hive-browser screenshot` without --intent still captures.
+	// (interact --action screenshot keeps its own requirement, as upstream.)
+	if intent, ok := paramString(params, "intent"); ok {
+		internal["intent"] = intent
 	}
 	return cmdScreenshot(ctx, b, routeProfile(profile, params), internal)
 }

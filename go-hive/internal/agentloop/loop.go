@@ -13,103 +13,6 @@ import (
 	"github.com/aden-hive/hive-go/internal/llm"
 )
 
-// Parity: framework/agent_loop/agent_loop.py LoopConfig (defaults mirror
-type LoopConfig struct {
-	MaxIterations        int
-	MaxContextTokens     int
-	ToolWaitLimitSeconds float64
-	// Parity: framework/agent_loop/internals/types.py::LoopConfig.grace_iterations.
-	GraceIterations int
-	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_call_budget.
-	ToolCallBudget int
-	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_call_hard_multiple.
-	ToolCallHardMultiple int
-	// ToolCallHardLimit, when > 0, is the absolute per-turn-loop hard stop. It
-	// overrides ToolCallBudget*ToolCallHardMultiple so a role profile can pin an
-	// exact cap (the queen's 30 soft / 50 hard, the audit's numbers); zero keeps
-	// the upstream multiple rule. Ignored when ToolCallBudget is 0.
-	ToolCallHardLimit int
-	// Parity: framework/agent_loop/internals/types.py
-	ToolCallLifetimeBudget int
-	// Parity: framework/agent_loop/internals/types.py::LoopConfig.judge_every_n_turns.
-	JudgeEveryNTurns int
-	// Parity: framework/agent_loop/internals/types.py
-	SessionIdleNudgeSeconds float64
-	// Parity: framework/agent_loop/internals/types.py
-	SessionIdleNudgeMaxPerSession int
-	// Parity: framework/agent_loop/internals/types.py
-	SessionIdleNudgeAwaitingSeconds float64
-	// Parity: framework/agent_loop/internals/types.py
-	SessionIdleNudgeBrokenSeconds float64
-	// Parity: framework/agent_loop/internals/types.py::LoopConfig.continue_nudge_enabled.
-	ContinueNudgeEnabled bool
-	// Parity: framework/agent_loop/internals/types.py
-	ContinueNudgeMaxPerTurn int
-	// Parity: framework/agent_loop/internals/types.py
-	ToolCallTimeoutSeconds float64
-	// Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_timeout_overrides.
-	// ToolTimeoutOverrides maps a tool-name prefix to its timeout.
-	ToolTimeoutOverrides map[string]float64
-	// ToolCallGate paces each tool execution against the configured call
-	// limits (rate_limits.tools.* in hive.config.json). NewAgentLoop installs
-	// the process-wide limiter when this is nil; it is a no-op until a bucket
-	// is configured. A non-nil no-op disables pacing for a loop.
-	ToolCallGate func(ctx context.Context, toolName string) error
-	// SessionCostLimitUSD is the optional hard cap on cumulative session
-	// spend. Zero (the default) disables it. Once the loop's recorded spend
-	// reaches the cap, the next ExecuteTurn returns *SessionCostLimitError
-	// before any model call.
-	SessionCostLimitUSD float64
-	// ParallelReadOnlyTools runs a tool batch concurrently when every call in
-	// it is explicitly marked ConcurrencySafe (llm.ToolDef.ConcurrencySafe).
-	// DefaultLoopConfig enables it, matching upstream; an unsafe or unmarked
-	// call keeps the whole batch sequential either way.
-	ParallelReadOnlyTools bool
-	// MaxToolResultChars caps the LLM-visible tool result. A result above it is
-	// replaced with a preview while the full payload is written to
-	// SpilloverDir. Zero disables the cap.
-	MaxToolResultChars int
-	// SpilloverDir, when set, stores an oversized non-error tool result on disk
-	// under a monotonic filename; the model-visible result then cites the file
-	// so the full payload can be read back.
-	SpilloverDir string
-}
-
-// Parity: framework/agent_loop/internals/types.py LoopConfig defaults.
-func DefaultLoopConfig() LoopConfig {
-	return LoopConfig{
-		MaxIterations:        50,
-		MaxContextTokens:     180_000,
-		ToolWaitLimitSeconds: 600,
-		GraceIterations:      0,
-		// The queen profile: a soft checkpoint every 30 tool calls in one
-		// turn-loop, a hard stop at 50. Upstream's queen runs the neutral
-		// 0/unbounded default, so this is the port's fix for the audit gap
-		// ("Queen 30/50 软检查点"): without it softBudgetCheckpointBlock never
-		// fires in a chat session. Worker profiles override both fields.
-		ToolCallBudget:                  30,
-		ToolCallHardLimit:               50,
-		ToolCallHardMultiple:            5,
-		ToolCallLifetimeBudget:          0,
-		JudgeEveryNTurns:                1,
-		SessionIdleNudgeSeconds:         120.0,
-		SessionIdleNudgeMaxPerSession:   3,
-		SessionIdleNudgeAwaitingSeconds: 120.0,
-		SessionIdleNudgeBrokenSeconds:   30.0,
-		ContinueNudgeEnabled:            true,
-		ContinueNudgeMaxPerTurn:         3,
-		ToolCallTimeoutSeconds:          60.0,
-		ToolTimeoutOverrides:            map[string]float64{"browser_": 180.0},
-		// Spend cap: opt-in, read from HIVE_SESSION_COST_LIMIT_USD once per
-		// config build. Unset means 0 (disabled), matching the shipped default.
-		SessionCostLimitUSD: SessionCostLimitFromEnv(),
-		// Match upstream: safe (explicitly marked) tools may run together.
-		// The loop still keeps a batch sequential when any call is unmarked.
-		ParallelReadOnlyTools: true,
-		MaxToolResultChars:    30_000,
-	}
-}
-
 // Parity: framework/llm/provider.py ToolUse (id/name/input).
 type ToolCallRequest struct {
 	ID    string
@@ -182,9 +85,20 @@ type AgentLoop struct {
 	// feedback into improvement signals; nil is a no-op.
 	OnJudgeVerdict func(verdict JudgeVerdict, iteration int)
 
+	// OnStreamStallNudge, when set, observes every continue-nudge the loop
+	// injected after a stream watchdog trip. The chat runtime publishes the
+	// stream-level diagnostic events from it; nil is a no-op.
+	OnStreamStallNudge func(nudge StreamStallNudge)
+
 	// DoomLoop watches for identical consecutive tool calls and returns one
 	// advisory reminder per streak. It never interrupts the turn.
 	DoomLoop *DoomLoopDetector
+
+	// VisionCaptioner, when set, captions the image content of tool results for
+	// a main model that cannot accept image blocks: the caption (with viewport
+	// coordinates) replaces the images so the model can act on what the tool
+	// saw. Nil keeps images flowing to the model as before.
+	VisionCaptioner VisionCaptioner
 
 	// ParkSink, when set, observes every park the loop raises itself (a doom
 	// loop past its park threshold) with the reason and a one-line detail. The
@@ -199,6 +113,15 @@ type AgentLoop struct {
 	pending []string
 	unread  bool
 	bound   bool
+	// inputReady wakes a loop parked by an escalate call the moment guidance
+	// is injected; signalInputReady lazily creates it so a zero loop works.
+	inputReady chan struct{}
+	// queenInputRequested mirrors upstream's loop-local
+	// queen_input_requested: the last tool batch escalated and the turn must
+	// park before its next model call until the queen replies.
+	queenInputRequested bool
+	// queenInputRequestID is the request the park belongs to (diagnostics).
+	queenInputRequestID string
 
 	stateMu             sync.Mutex
 	toolCallsUsed       int
@@ -324,7 +247,6 @@ func (l *AgentLoop) bumpBy(key string, amount int) {
 // Parity: AgentLoop.inject_event. A client message with content also joins the
 func (l *AgentLoop) InjectEvent(content string, isClientInput bool, images []map[string]any) {
 	l.mu.Lock()
-	defer l.mu.Unlock()
 	if isClientInput && content != "" {
 		l.pending = append(l.pending, content)
 	}
@@ -333,6 +255,10 @@ func (l *AgentLoop) InjectEvent(content string, isClientInput bool, images []map
 		isClient: isClientInput,
 		images:   images,
 	})
+	l.mu.Unlock()
+	// Wake a loop parked on an escalation: the guidance it is waiting for just
+	// arrived. Non-blocking, so an unwatched signal never wedges a caller.
+	l.signalInputReady()
 }
 
 // Parity: AgentLoop._input_waiting.
@@ -428,82 +354,6 @@ func (l *AgentLoop) fireReminder(point ReminderPoint, agentCtx *ReminderAgentCon
 	return energized
 }
 
-// Parity: AgentLoop._DYNAMIC_REFRESH_SYNTHETIC_NAMES.
-var DynamicRefreshSyntheticNames = map[string]struct{}{
-	"ask_user":         {},
-	"credentials":      {},
-	"sentinel_setup":   {},
-	"escalate":         {},
-	"collect_result":   {},
-	"report_to_parent": {},
-	"search_tools":     {},
-}
-
-// Parity: AgentLoop._refresh_dynamic_tools. Returns the live list unchanged
-func (l *AgentLoop) RefreshDynamicTools(agentCtx *AgentContext, tools []llm.ToolDef) []llm.ToolDef {
-	if agentCtx == nil {
-		return tools
-	}
-	provided, ok := dynamicToolsFrom(agentCtx.DynamicToolsProvider)
-	if !ok {
-		return tools
-	}
-	providedNames := make(map[string]struct{}, len(provided))
-	for _, tool := range provided {
-		providedNames[tool.Name] = struct{}{}
-	}
-	out := make([]llm.ToolDef, 0, len(provided)+len(tools))
-	out = append(out, provided...)
-	for _, tool := range tools {
-		if _, synthetic := DynamicRefreshSyntheticNames[tool.Name]; !synthetic {
-			continue
-		}
-		if _, dup := providedNames[tool.Name]; dup {
-			continue
-		}
-		out = append(out, tool)
-	}
-	return out
-}
-
-func dynamicToolsFrom(provider any) ([]llm.ToolDef, bool) {
-	switch p := provider.(type) {
-	case nil:
-		return nil, false
-	case func() []llm.ToolDef:
-		return p(), true
-	case []llm.ToolDef:
-		return p, true
-	case func() []Tool:
-		return toolDefsFromReminderTools(p()), true
-	case []Tool:
-		return toolDefsFromReminderTools(p), true
-	case func() []string:
-		names := p()
-		out := make([]llm.ToolDef, 0, len(names))
-		for _, name := range names {
-			out = append(out, llm.ToolDef{Name: name})
-		}
-		return out, true
-	case []string:
-		out := make([]llm.ToolDef, 0, len(p))
-		for _, name := range p {
-			out = append(out, llm.ToolDef{Name: name})
-		}
-		return out, true
-	default:
-		return nil, false
-	}
-}
-
-func toolDefsFromReminderTools(tools []Tool) []llm.ToolDef {
-	out := make([]llm.ToolDef, 0, len(tools))
-	for _, tool := range tools {
-		out = append(out, llm.ToolDef{Name: tool.Name, Description: tool.Description})
-	}
-	return out
-}
-
 // Parity: AgentLoop._build_initial_message. Python preserves input_data
 func BuildInitialMessage(agentCtx *AgentContext) string {
 	if agentCtx == nil {
@@ -538,15 +388,39 @@ func BuildInitialMessage(agentCtx *AgentContext) string {
 	return strings.Join(parts, "\n")
 }
 
+// bindReminders binds the hub once per loop and resets per-turn source state
+// on every call — the loop invokes it at the start of each turn, which is where
+// upstream resets its stream-stall source.
 func (l *AgentLoop) bindReminders(agentCtx *ReminderAgentContext) {
 	l.mu.Lock()
 	already := l.bound
 	l.bound = true
 	l.mu.Unlock()
-	if already || l.Hub == nil {
+	if l.Hub == nil {
+		return
+	}
+	l.Hub.ResetTurn()
+	if already {
 		return
 	}
 	l.Hub.Bind(agentCtx)
+}
+
+// ensureInitialMessage fires SESSION_START and materialises the first user
+// message (the built task frame, or a bare Hello) on an empty transcript.
+func (l *AgentLoop) ensureInitialMessage(agentCtx *AgentContext, conv *NodeConversation, reminderCtx *ReminderAgentContext) error {
+	if conv.MessageCount() != 0 {
+		return nil
+	}
+	initial := BuildInitialMessage(agentCtx)
+	l.fireReminder(SESSION_START, reminderCtx, conv, initial)
+	if initial == "" {
+		initial = "Hello"
+	}
+	if _, err := conv.AddUserMessage(fmt.Sprintf("[%s] %s", l.stamp(), initial), UserMessageOptions{}); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Parity: AgentLoop.execute bringup + _run_turn_loop (single outer iteration).
@@ -568,29 +442,16 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 	reminderCtx := NewReminderAgentContext(agentCtx)
 	l.bindReminders(reminderCtx)
 	// A new turn is a new attempt: a repetition streak from the previous turn
-	// says nothing about this one.
+	// says nothing about this one, and neither does its escalation park.
 	l.DoomLoop.Reset()
+	l.clearQueenInputRequested()
 
 	l.mu.Lock()
 	l.unread = false
 	l.mu.Unlock()
 
-	if conv.MessageCount() == 0 {
-		initial := BuildInitialMessage(agentCtx)
-		l.fireReminder(SESSION_START, reminderCtx, conv, initial)
-		if initial != "" {
-			if _, err := conv.AddUserMessage(fmt.Sprintf("[%s] %s", l.stamp(), initial), UserMessageOptions{}); err != nil {
-				return TurnResult{Success: false}, err
-			}
-		}
-		if conv.MessageCount() == 0 {
-			if initial == "" {
-				initial = "Hello"
-			}
-			if _, err := conv.AddUserMessage(fmt.Sprintf("[%s] %s", l.stamp(), initial), UserMessageOptions{}); err != nil {
-				return TurnResult{Success: false}, err
-			}
-		}
+	if err := l.ensureInitialMessage(agentCtx, conv, reminderCtx); err != nil {
+		return TurnResult{Success: false}, err
 	}
 
 	if tools == nil {
@@ -630,15 +491,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		}
 
 		if inGrace && !l.graceAnnounced && !reportTerminated {
-			l.graceAnnounced = true
-			l.bumpBy("grace_iteration_entered", 1)
-			body := graceReminderBody
-			if budgetExhausted {
-				l.bumpBy("tool_lifetime_budget_grace", 1)
-				body = toolBudgetGraceReminderBody
-			}
-			block := WrapReminder([]string{body})
-			if _, err := conv.AddUserMessage(block, UserMessageOptions{IsSystemReminder: true}); err != nil {
+			if err := l.announceGrace(conv, budgetExhausted); err != nil {
 				return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 			}
 		}
@@ -654,12 +507,9 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 		tools = l.RefreshDynamicTools(agentCtx, tools)
 		l.compactConversationIfNeeded(ctx, agentCtx, conv, reminderCtx)
-		messages := conv.ToLLMMessages(model)
-		if len(messages) > 0 && messages[len(messages)-1]["role"] == "assistant" {
-			if _, err := conv.AddUserMessage("[Continue working on your current task.]", UserMessageOptions{}); err != nil {
-				return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
-			}
-			messages = conv.ToLLMMessages(model)
+		messages, err := l.llmMessages(conv, model)
+		if err != nil {
+			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 		}
 
 		request := llm.CompletionRequest{
@@ -670,6 +520,12 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		}
 		completion, err := agentCtx.LLM.AComplete(ctx, request)
 		if err != nil {
+			// A stalled stream is recoverable: nudge, then re-stream this same
+			// inner turn (upstream's continue-nudge recovery path).
+			if l.injectStreamStallNudge(err, reminderCtx, conv) {
+				inner--
+				continue
+			}
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 		}
 		// Record spend as soon as the completion lands so the hard cap sees
@@ -825,7 +681,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 				tail = tail + "\n\n" + doomLoopReminder
 			}
 		}
-		records, err := l.storeToolBatch(conv, toolCalls, results, tail)
+		records, err := l.storeToolBatch(ctx, agentCtx, conv, toolCalls, results, tail)
 		if err != nil {
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 		}
@@ -841,6 +697,14 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		if agentCtx.StopAfterToolBatch != nil && agentCtx.StopAfterToolBatch() {
 			result.InnerTurns = inner + 1
 			return result, nil
+		}
+
+		// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (6h''
+		// worker wait for queen guidance): a batch that escalated parks until
+		// the queen injects a reply; the reply drives the next turn.
+		if !l.settleQueenInputPark(ctx, agentCtx) {
+			result.Success = false
+			return result, ctx.Err()
 		}
 
 		if l.shouldJudge(agentCtx, inner, false, toolFailure) {
@@ -870,6 +734,21 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 	return TurnResult{Success: false, InnerTurns: totalIterations, ToolResults: result.ToolResults},
 		fmt.Errorf("agent loop: exceeded %d inner turns", limit)
+}
+
+// llmMessages renders the conversation for the next model call. A
+// conversation that already ends on an assistant message gets one continuation
+// nudge before it is rendered: the next call must not start on an assistant
+// turn.
+func (l *AgentLoop) llmMessages(conv *NodeConversation, model string) ([]map[string]any, error) {
+	messages := conv.ToLLMMessages(model)
+	if len(messages) > 0 && messages[len(messages)-1]["role"] == "assistant" {
+		if _, err := conv.AddUserMessage("[Continue working on your current task.]", UserMessageOptions{}); err != nil {
+			return nil, err
+		}
+		messages = conv.ToLLMMessages(model)
+	}
+	return messages, nil
 }
 
 // Parity: AgentLoop._run_turn_loop hard-stop advisory (tool_budget reminder).
@@ -990,6 +869,9 @@ func (l *AgentLoop) executeTool(ctx context.Context, agentCtx *AgentContext, req
 		if result, ok := InterceptSkillFileRead(req.Name, req.Input, agentCtx.SkillDirs); ok {
 			return result
 		}
+	}
+	if req.Name == "escalate" {
+		return l.executeEscalateTool(agentCtx, req)
 	}
 	if result, handled := l.executeTieredTool(agentCtx, req); handled {
 		return result
@@ -1167,20 +1049,6 @@ func truthy(value any) bool {
 	default:
 		return true
 	}
-}
-
-func parseToolInput(arguments string) map[string]any {
-	if strings.TrimSpace(arguments) == "" {
-		return map[string]any{}
-	}
-	var input map[string]any
-	if err := json.Unmarshal([]byte(arguments), &input); err != nil {
-		return map[string]any{}
-	}
-	if input == nil {
-		return map[string]any{}
-	}
-	return input
 }
 
 func toolCallDicts(calls []llm.ToolCall) []map[string]any {
@@ -1443,7 +1311,7 @@ func modelName(agentCtx *AgentContext) string {
 // adds every result to the conversation, appending the reminder tail to the
 // last non-parking call. Extracted from ExecuteTurn so the turn body stays
 // within the repo's function-size budget.
-func (l *AgentLoop) storeToolBatch(conv *NodeConversation, toolCalls []llm.ToolCall, results []ToolResult, tail string) ([]ToolCallRecord, error) {
+func (l *AgentLoop) storeToolBatch(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, toolCalls []llm.ToolCall, results []ToolResult, tail string) ([]ToolCallRecord, error) {
 	records := make([]ToolCallRecord, 0, len(toolCalls))
 	for i, tc := range toolCalls {
 		records = append(records, ToolCallRecord{
@@ -1463,6 +1331,10 @@ func (l *AgentLoop) storeToolBatch(conv *NodeConversation, toolCalls []llm.ToolC
 			}
 		}
 	}
+	// A text-only main model cannot receive image blocks: with a captioner
+	// configured its images are captioned and dropped, exactly as upstream's
+	// vision-fallback chain does.
+	captionImages := l.captionToolImagesEnabled(agentCtx)
 	for i, tc := range toolCalls {
 		stored := results[i].Content
 		if tail != "" && tc.ID == targetID {
@@ -1472,6 +1344,10 @@ func (l *AgentLoop) storeToolBatch(conv *NodeConversation, toolCalls []llm.ToolC
 			IsError:        results[i].IsError,
 			IsSkillContent: results[i].IsSkillContent,
 			ImageContent:   results[i].ImageContent,
+		}
+		if captionImages && len(results[i].ImageContent) > 0 {
+			stored = stored + "\n\n" + l.captionToolImages(ctx, conv, tc, results[i])
+			opts.ImageContent = nil
 		}
 		if results[i].SpilloverPath != "" {
 			spillover := results[i].SpilloverPath

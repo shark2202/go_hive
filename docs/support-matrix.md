@@ -9,6 +9,8 @@
 > - **未验证**：有代码/测试，但没有对真实外部系统跑过（没有凭据或没有环境）。
 >
 > 证据列里的 `实测` 指本次发布任务用真实二进制跑过；`测试` 指仓库内 Go 测试；`代码` 指只读了实现，没有运行。
+>
+> **2026-11-21 增量**：Python `.play.py` playbook 已从「unsupported」改为「已实现（需外部 python3）」——外部解释器 + stdio JSON-RPC，脚本字节不变；见 §1 对应行与 `docs/playbook-python.md`。
 
 ## 1. 总览
 
@@ -27,10 +29,14 @@
 | OpenAI-compatible 传输 | 已实现 | 实测（本地假上游）：`/chat/completions` + Bearer |
 | Anthropic Messages 传输 | 已实现 | 实测（本地假上游）：`/v1/messages` + `x-api-key` |
 | 逐 token 模型流 | 已实现（OpenAI-compatible） | 实测 live SSE 单轮 12 帧增量；Anthropic/MiniMax 明确 unsupported 并回退非流式 |
-| `run_worker` 并行 worker | 已实现 | 实测 queen 派 worker → worker 执行 → `[WORKER_REPORT]` 回传；`resume_worker_ids` 未实现 |
+| `run_worker` 并行 worker | 已实现 | 实测 queen 派 worker → worker 执行 → `[WORKER_REPORT]` 回传；`resume_worker_ids` 已实现（`internal/colony/worker_transcript.go`，按 worker 转录恢复；2026-11-21 按代码与本审计 GAP-11 更正旧口径） |
+| worker 升级通道（`escalate` → `list_worker_questions` → `reply_to_worker` → worker 继续） | 已实现 | 2026-11-21 真实 `hive serve` + 真实 colony（脚本化模型）E2E：worker 调 `escalate` → queen 会话收到 `[WORKER_ESCALATION]`（含 request_id）→ `list_worker_questions` 返回 `count=1` → `reply_to_worker` 返回 `delivered` → worker 收到 `[QUEEN_REPLY]` 后 `report_to_parent`。证据 `docs/e2e-assets/worker-escalation-e2e/escalation-chain/`，说明 `docs/worker-escalation-e2e.md` |
+| Playbook：Python `.play.py`（外部解释器） | 已实现（需外部 python3） | 2026-11-21 实测：`python3 3.9.6`（系统）与 `3.14.7`（`HIVE_PYTHON`）跑通 converge / 重试 + 退避 / lane 并发与速率门 / deadletter / resume；19 个真实解释器桥测试 + 5 个工具层用例通过（`go test ./internal/playbook ./internal/colony`）。解释器按 `HIVE_PYTHON` → `python3` → `python` 查找；缺失时 `status=unsupported`、0 派发。纯 Go 二进制、无 cgo、无新依赖。真实 LLM 端到端已跑通（`HIVE_REAL_LLM_E2E=1`，`TestRealLLMPlaybookPythonWorkerE2E`，模型 `deepseek-flash-1017`）。见 `docs/playbook-python.md`；未验证：Windows 无 Python、任意第三方 import、其他 provider |
+| Playbook：Go 原生 JSON | 已实现 | converge / 重试 / 退避 / 死信 / resume 有单测；同步执行；run log 写 `colony.db` 的 `playbook_runs` |
 | tracker 共享账本 | 已实现 | 实测 colony 建库、worker 注入 binding、`tracker_*` 建表/upsert/query |
-| 提醒中枢 | 已实现 | idle / task / parallel 等 source 注册并随会话启停 |
+| 提醒中枢 | 已实现 | source 注册矩阵与上游 13 个 source 对齐：chat hub（task / colony_parallel / active_workers / tracker_snapshot / colony_worker_snapshot / searchable_tools / skills_catalog / turn_context / idle / sentinel / stream_stall）、worker hub（task / worker_tracker_snapshot / idle / stream_stall）、overseer hub（colony_parallel / active_workers / tracker_snapshot / colony_worker_snapshot / stream_stall）。`STREAM_STALLED` 由流看门狗真实触发并重跑同一 turn（真实 ChatRuntime 会话测试）；worker tracker 提醒在真实 SpawnBatch worker 转录中验证；预载 colony 会话按 `metadata.json` 的 `queen_name` 解析 scope。残余与未实现项见 `docs/reminders-coverage.md` §7 |
 | 配置键 `turn_context` / `gcu_viewport_scale` | 已实现 | 实测 + 测试：`turn_context.<name>.enabled` 决定进程内注册的包是否启动并注入 queen 回合提示（queen-only、每包 5s 超时、异常跳过）；`gcu_viewport_scale`（0.1–1.0，默认 0.8）经 `server.GcuViewportScale` 注入 `HIVE_BROWSER_VIEWPORT_SCALE`，桥 `/status.viewport_scale` 实测 0.65 / 0.55（配置文件）/ 0.8（非法值回落）。上游 `get_gcu_viewport_scale` 自扩展化浏览器后无消费点，Go 侧只读并上报，不改截图/抓取几何 |
+| 模型槽位与配置契约（config-env-align） | 部分 | **已接通（代码 + 测试）**：`queen_llm.<id>.*`（会话启动按 queen 选模型，她的 colony 沿用同一 provider）、`worker_llm.*`（colony 专用 worker 模型）、`vision_fallback.*`（文本主模型的工具图片描述）、`llm.aux_max_tokens`、`loop.max_tool_result_chars`、`worker_tools.always_enabled_categories`、`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`，以及 `mcp.timeout_seconds` 优先级修复（env > file）。**只读/不支持**：`llm.antigravity_client_id` / `llm.antigravity_client_secret` 读取点已有但无消费路径（端口走预发 access token，无 OAuth 刷新）；`channels.<name>.enabled` 不支持（Go 无渠道插件宿主）；`HIVE_TRACKER_WORKER_TOOL_CALLS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_COMPACTION_DEBUG`、`HIVE_PLAYBOOK_FAST_GRACE` 等 Python 独有开关未支持（整表与理由见 `contracts/config-support-ledger.json`）。**partial**：`PUT /api/config/...` 对 `worker_llm`/`vision_fallback`/`queen_llm` 的原地热切换未实现（`llm.Provider` 无 Reconfigure），写入后需重建会话/重启。逐键契约与计数见 `docs/env-config-contract-diff.md` |
 | judge（success_criteria） | 已实现 | colony worker 带 criteria 时评估并发布 `judge_verdict`；chat 会话无 criteria 不评估 |
 | stall_check（停滞检查） | 已实现 | judge 槽在 queen 回合以 `turn_done` 结束后判定「宣称要做却停手」，命中则注入一次提醒（与上游一致，不发布事件；`node_stalled` 属 doom-loop）。2026-11-20 真实 `hive serve` + 脚本化 OpenAI 兼容网关 E2E：judge true → 提醒进入下一轮模型请求与会话转录；judge false → 不提醒；开关关闭 → 0 次 judge 调用（`docs/stall-check-e2e.md`，证据 `docs/e2e-assets/stall-check-e2e/`）。threshold 缺省 0.5、数字字符串同 `float()` 语义、非法值不提醒（单测钉住） |
 | 内建工具 `read_file` / `write_file` / `terminal_exec` | 已实现，未在文档中触发 | 单测覆盖；本次假模型未发工具调用 |
@@ -226,6 +232,14 @@ CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -tags e2e -count=
 | `make fmt-check vet cross parity parity-targets wiring-check` | 退出码 0：gofmt OK；vet 无输出；六目标交叉编译通过；parity `4898/4898`、0 missing；refs 5,183（3,939 test + 1,244 prod）0 missing；wiring_check 12/12 |
 | `make test`（全量） | 4,898 条声明；一轮全量通过，随后一轮复跑出现既有 `internal/server::TestOverseerAskUserParksSessionAndAnswerRelays` 时序 flake（`cursor pending_input after answer = <nil>`）；隔离 `-run TestOverseerAskUserParksSessionAndAnswerRelays -count=10` 通过 10/10，与本次 attach 改动无关，未修改该测试 |
 | 本次车道目标测试 | `internal/server` 6 条 attach 用例、`internal/llm` 3 条请求体用例、`internal/agentloop` 3 条门禁用例、`internal/cli` 1 条 worker 块透传用例、`internal/tools/integrations` attach 全组均通过 |
+
+2026-11-21（config-env-align 工作树）复跑：
+
+| 项 | 结果 |
+| --- | --- |
+| `make ci` | 退出码 0：gofmt OK；`go vet` 无输出；44 个包 `ok`、14 个包无测试文件、0 FAIL；六目标交叉编译通过；parity `5012/5012` 注解、0 missing；parity refs 5,328（4,007 test + 1,321 prod）、0 missing；wiring_check 7 个接线文件 / 30 项要求全部命中 |
+| 契约冻结自洽 | `freeze_env_config_contract.py --check` OK；`check_env_config_contract.py --strict` OK —— env：Python 89 / Go 100 / 共有 69 / Python 独有 20 / Go 独有 31；config：134 键（aligned 99 / go_partial 29 / python_only 1 / go_only 4 / unread 1） |
+| 文件规模门禁 | `internal/quality` 通过：`loader.go` 1849 行（≤1936）、`loop.go` 1486 行（拆分 vision caption 与 parseToolInput 后 ≤1500）、`conversation.go` 1535 行（≤1549 allowlist） |
 
 发布包本身另有一轮验证（`hive --version`、`shasum -a 256 -c SHA256SUMS`、解压 darwin-arm64 后 `/` 200）记录在 `release-notes-v1.0.26-go.1.md`。
 

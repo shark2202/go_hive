@@ -6,13 +6,16 @@ package colony
 // bookkeeping DB (colony.db).
 //
 // IMPORTANT — Python playbooks: upstream playbooks are Python scripts
-// (`.play.py`) executed in the host process. The Go port has no Python
-// interpreter and its runner takes a Go *playbook.Script, so a Python script
-// is loaded (or at least resolved) and then reported as UNSUPPORTED. It never
-// claims to have dispatched workers it did not dispatch.
+// (`.play.py`) executed in the host process. The Go port keeps its pure-Go
+// main binary and runs them on an external interpreter through
+// internal/playbook's stdio JSON-RPC bridge (python.go + the embedded
+// bootstrap): the same hooks and result envelope as upstream, with
+// dispatch_one/query_rows crossing into this colony runtime. A host without
+// Python 3.8+ gets an explicit `status=unsupported` and zero dispatches —
+// never a fake success.
 //
-// The supported form is a native JSON playbook — the Go runner equivalent of
-// the Python script's converge() call:
+// The other supported form is a native JSON playbook — the Go runner
+// equivalent of the Python script's converge() call:
 //
 //	{
 //	  "name": "fix-ci-failures",
@@ -38,6 +41,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -80,9 +84,14 @@ func RunPlaybookToolDef() llm.ToolDef {
 			"undone rows, dispatch workers, re-query, repeat. Use it when the goal has row shape; use " +
 			"run_worker for one-off heterogeneous tasks. Re-running is resume: rows already marked done drop " +
 			"out of the pending query, so a second run only does the gap.\n\n" +
-			"PYTHON IS NOT EXECUTABLE IN THIS BUILD. A `.play.py` script (inline, by path, or saved in the " +
-			"colony library) is resolved and then returned with status='unsupported' and ZERO workers " +
-			"dispatched. Do not retry it expecting a different result.\n\n" +
+			"PYTHON PLAYBOOKS: a `.play.py` script (inline, by path, or saved in the colony library) runs on " +
+			"an external Python 3.8+ interpreter found on the host PATH (`python3`, then `python`, or " +
+			"HIVE_PYTHON). The script sees the upstream hooks — converge / worker / tracker_query / " +
+			"tracker_count / lane / deadletter / log / phase — and returns the upstream envelope " +
+			"(meta/result/logs/deadletter/dispatched). If no interpreter is available the call returns " +
+			"status='unsupported' with zero workers dispatched; it never fakes a run. Scripts are trusted " +
+			"author code, as upstream. The run is synchronous in this port: the call returns when the " +
+			"convergence loop finishes or is stopped (no [PLAYBOOK_COMPLETE] callback).\n\n" +
 			"SUPPORTED FORM — native JSON playbook:\n" +
 			"{\"name\": \"...\", \"description\": \"...\", \"concurrency\": 4,\n" +
 			" \"pending_sql\": \"SELECT id, job FROM t WHERE done_at IS NULL\",\n" +
@@ -110,7 +119,7 @@ func RunPlaybookToolDef() llm.ToolDef {
 			"properties": map[string]any{
 				"playbook": map[string]any{
 					"type":        "string",
-					"description": "Inline playbook. This build supports native JSON; a Python script is returned as unsupported. Pass exactly one of playbook / playbook_name / playbook_path.",
+					"description": "Inline playbook: a Python script (saved as playbooks/<meta-name>.play.py) or native JSON (saved as .play.json). Pass exactly one of playbook / playbook_name / playbook_path.",
 				},
 				"playbook_name": map[string]any{
 					"type":        "string",
@@ -118,7 +127,7 @@ func RunPlaybookToolDef() llm.ToolDef {
 				},
 				"playbook_path": map[string]any{
 					"type":        "string",
-					"description": "Path to a playbook file on disk (native JSON or .play.py).",
+					"description": "Path to a playbook file on disk (a Python `.play.py` script or native JSON).",
 				},
 				"args": map[string]any{
 					"type":        "object",
@@ -190,15 +199,16 @@ func RunPlaybook(ctx context.Context, spawner RunWorkerSpawner, input map[string
 		return jsonPayload(map[string]any{"error": "run_playbook: " + err.Error()}, true)
 	}
 
+	if isPythonPlaybook(sourcePath, scriptText) {
+		return runPythonPlaybook(ctx, runtime, binding, input, scriptText, sourcePath)
+	}
+
 	spec, parseErr := parseNativePlaybook(scriptText)
 	if parseErr != nil {
-		if looksLikeJSONObject(scriptText) {
-			return jsonPayload(map[string]any{
-				"status": "failed",
-				"error":  "run_playbook: native playbook JSON is invalid: " + parseErr.Error(),
-			}, true)
-		}
-		return unsupportedPythonPayload(sourcePath, input, err)
+		return jsonPayload(map[string]any{
+			"status": "failed",
+			"error":  "run_playbook: native playbook JSON is invalid: " + parseErr.Error(),
+		}, true)
 	}
 
 	runID := newPlaybookRunID()
@@ -216,7 +226,7 @@ func RunPlaybook(ctx context.Context, spawner RunWorkerSpawner, input map[string
 		}
 	}
 
-	executor := &nativePlaybookExecutor{
+	executor := &workerDispatchExecutor{
 		runtime: runtime,
 		runID:   runID,
 	}
@@ -287,26 +297,157 @@ func RunPlaybook(ctx context.Context, spawner RunWorkerSpawner, input map[string
 	return jsonPayload(payload, false)
 }
 
-// unsupportedPythonPayload is the honest terminal answer for a Python script:
-// the file was resolved (the payload names it), but this build cannot execute
-// it and dispatched nothing.
-func unsupportedPythonPayload(sourcePath string, input map[string]any, resolveErr error) (string, bool) {
+// isPythonPlaybook decides which runner owns a resolved script. An explicit
+// extension wins; an inline body is Python unless it is a JSON object (the
+// native form). The JSON-object heuristic matches the previous native parse
+// split, so a malformed native playbook still reports a JSON error instead of
+// being shipped to the interpreter.
+func isPythonPlaybook(sourcePath, scriptText string) bool {
+	lower := strings.ToLower(strings.TrimSpace(sourcePath))
+	if strings.HasSuffix(lower, ".play.py") {
+		return true
+	}
+	if strings.HasSuffix(lower, ".play.json") {
+		return false
+	}
+	return !looksLikeJSONObject(scriptText)
+}
+
+// runPythonPlaybook executes the `.play.py` form: resolve the interpreter,
+// load the script synchronously (compile + exec + meta validation), persist an
+// inline script to the colony library, then drive the bridge's RPC hooks. The
+// payload mirrors the native path and upstream's fast-path result shape.
+func runPythonPlaybook(ctx context.Context, runtime playbookRuntime, binding *tracker.Binding, input map[string]any, scriptText, sourcePath string) (string, bool) {
+	runID := newPlaybookRunID()
+	executor := &workerDispatchExecutor{runtime: runtime, runID: runID}
+	handle, err := playbook.StartPythonPlaybook(ctx, scriptText, playbook.PythonOptions{
+		DispatchOne: executor.dispatchOne,
+		QueryRows:   queryRowsForBinding(binding),
+		RunID:       runID,
+	})
+	if err != nil {
+		if playbook.IsPythonUnavailable(err) {
+			return unsupportedPythonInterpreterPayload(err, input, sourcePath)
+		}
+		concise, full := playbook.ErrorDetail(err)
+		var scriptErr *playbook.PythonScriptError
+		if errors.As(err, &scriptErr) && scriptErr.Stage == "load" {
+			// Upstream: "playbook did not start — <root cause>" before any
+			// worker exists.
+			return jsonPayload(map[string]any{
+				"status":        "failed",
+				"run_id":        runID,
+				"error":         "run_playbook: playbook did not start — " + concise,
+				"traceback":     full,
+				"playbook_path": sourcePath,
+			}, true)
+		}
+		return jsonPayload(map[string]any{
+			"status":    "failed",
+			"run_id":    runID,
+			"error":     "run_playbook: " + concise,
+			"traceback": full,
+		}, true)
+	}
+	defer handle.Close()
+
+	meta := handle.Meta
+	name := strings.TrimSpace(stringValue(meta["name"]))
+	concurrency, concurrencyErr := playbook.ResolveConcurrency(meta)
+	if concurrencyErr != nil {
+		return jsonPayload(map[string]any{
+			"status": "failed",
+			"run_id": runID,
+			"error":  "run_playbook: " + concurrencyErr.Error(),
+		}, true)
+	}
+
+	// Persist an inline script so a later run_playbook(playbook_name=…)
+	// resumes from the tracker without re-sending it (upstream saves
+	// playbooks/<meta-name>.play.py; running from a path/name already lives
+	// there).
+	savedPath := sourcePath
+	if strings.TrimSpace(stringValue(input["playbook"])) != "" {
+		if path, ok := playbook.PersistScript(binding.Dir, name, scriptText); ok {
+			savedPath = path
+		}
+	}
+
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	registerPlaybookRun(&playbookRunHandle{
+		runID:     runID,
+		name:      name,
+		colonyDir: binding.Dir,
+		started:   time.Now(),
+		cancel:    cancel,
+	})
+	defer unregisterPlaybookRun(runID)
+
+	out, runErr := handle.Execute(runCtx, input["args"], concurrency)
+	stopped := playbookRunWasStopped(runID)
+	if stopped {
+		// Upstream records a stopped run as "stopped by stop_playbook"; the
+		// underlying context.Canceled is the mechanism, not the outcome.
+		runErr = errPlaybookStopped
+	}
+	logDB := recordPlaybookRun(binding, runID, name, out, runErr)
+	if stopped {
+		// A stop is an outcome, not a failure: the queen asked for it.
+		payload := playbookRunInfo(runID, name, savedPath, dispatchedCount(out))
+		payload["log_db"] = logDB
+		payload["playbook_path"] = savedPath
+		return jsonPayload(payload, false)
+	}
+	if runErr != nil {
+		concise, full := playbook.ErrorDetail(runErr)
+		return jsonPayload(map[string]any{
+			"status":        "failed",
+			"run_id":        runID,
+			"error":         "playbook failed — " + concise,
+			"traceback":     full,
+			"log_db":        logDB,
+			"playbook_name": name,
+			"playbook_path": savedPath,
+			"dispatched":    dispatchedCount(out),
+		}, true)
+	}
+
+	dead := deadLetterCount(out)
+	payload := map[string]any{
+		"status":        "completed",
+		"run_id":        runID,
+		"concurrency":   concurrency,
+		"dispatched":    dispatchedCount(out),
+		"dead_lettered": dead,
+		"result":        out["result"],
+		"log_db":        logDB,
+		"playbook_name": name,
+		"playbook_path": savedPath,
+	}
+	if dispatchedCount(out) == 0 {
+		payload["hint"] = "dispatched 0 workers. If the table is already converged this is correct; to " +
+			"continue later, re-run with run_playbook(playbook_name=…) — done rows are skipped."
+	}
+	return jsonPayload(payload, false)
+}
+
+// unsupportedPythonInterpreterPayload is the honest terminal answer when the
+// environment has no usable Python: the script is identified, nothing was
+// dispatched, and the reason names the lookup that failed.
+func unsupportedPythonInterpreterPayload(cause error, input map[string]any, sourcePath string) (string, bool) {
 	name := strings.TrimSpace(stringValue(input["playbook_name"]))
 	payload := map[string]any{
 		"status": "unsupported",
-		"error": "run_playbook: this Go build cannot execute Python playbooks. The runner is Go-native and " +
-			"there is no Python interpreter in the process, so no workers were dispatched and no success " +
-			"is being reported. Use the native JSON playbook form (see the tool description) or run the " +
-			"script on a Python Hive host.",
+		"error": "run_playbook: Python playbooks need an external Python 3.8+ interpreter, but none is " +
+			"available. Install Python 3 or set HIVE_PYTHON to the interpreter path; no workers were " +
+			"dispatched and no success is being reported. Detail: " + cause.Error(),
 		"playbook_name": name,
 		"playbook_path": sourcePath,
 		"dispatched":    0,
 	}
 	if sourcePath == "" && strings.TrimSpace(stringValue(input["playbook"])) != "" {
 		payload["playbook_path"] = "(inline script, not saved)"
-	}
-	if resolveErr != nil {
-		payload["error"] = "run_playbook: " + resolveErr.Error() + ". " + payload["error"].(string)
 	}
 	return jsonPayload(payload, true)
 }
@@ -490,16 +631,18 @@ func renderPlaybookTemplate(template string, row map[string]any) string {
 	return out
 }
 
-type nativePlaybookExecutor struct {
+type workerDispatchExecutor struct {
 	runtime playbookRuntime
 	runID   string
 }
 
 // dispatchOne spawns one size-1 batch and awaits its terminal report, exactly
-// like upstream's colony dispatch closure. Schema forwarding is absent because
-// the Go BatchTask has no report_schema field; the worker still receives its
-// native report_to_parent surface.
-func (e *nativePlaybookExecutor) dispatchOne(ctx context.Context, task string, opts playbook.DispatchOptions) (map[string]any, error) {
+// like upstream's colony dispatch closure. It serves both runners: the native
+// JSON path calls it through Hooks.Worker, and the Python bridge calls it
+// through the `dispatch_one` RPC (where the shim owns retry/backoff/lanes).
+// Schema forwarding is absent because the Go BatchTask has no report_schema
+// field; the worker still receives its native report_to_parent surface.
+func (e *workerDispatchExecutor) dispatchOne(ctx context.Context, task string, opts playbook.DispatchOptions) (map[string]any, error) {
 	goal := ""
 	if opts.Goal != nil {
 		goal = *opts.Goal
@@ -581,8 +724,8 @@ func resultColumns(raw any) []string {
 
 // resolvePlaybookScript accepts exactly one of inline / path / saved name.
 // Saved names prefer the native .play.json extension and fall back to
-// .play.py so a Python-era library is still discoverable (and reported as
-// unsupported, never silently ignored).
+// .play.py so a Python-era library still resolves (and now executes on the
+// external-interpreter path).
 func resolvePlaybookScript(inline, path, name, playbooksDir string) (script, sourcePath string, err error) {
 	given := 0
 	for _, value := range []string{inline, path, name} {

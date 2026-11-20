@@ -7,7 +7,7 @@
 
 | 判定 | 结果 |
 | --- | --- |
-| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：审计基线 `efb81858`：概念 **80 已接 / 0 部分 / 0 未接**、八层 **70 / 0 / 0**。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go-native playbook、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺（1.0.26 后）：Queen 与 overseer 仍是两份 conversation 存储（pending/park 与 transcript 可见性已补）；首次进入的 onboarding 弹层会拦截点击（需先 Begin）；MiniMax 流式（上游 chunk 限制）；Python playbook 不可执行；81 个第三方凭据模块未验证。
+| R1 功能完整（与上游行为对齐） | **不满足（但大幅收窄）**：审计基线 `efb81858`：概念 **80 已接 / 0 部分 / 0 未接**、八层 **70 / 0 / 0**。已接含 run_worker、tracker、提醒、judge、流式、skill 工具、Go 原生 playbook、Python `.play.py` playbook（外部 python3 + stdio RPC）、trigger 唤醒与恢复、Sentinel 停车分类、overseer 工具面、worker 转录/resume、soul 沉淀、MCP 装载。仍缺（1.0.26 后）：Queen 与 overseer 仍是两份 conversation 存储（pending/park 与 transcript 可见性已补）；首次进入的 onboarding 弹层会拦截点击（需先 Begin）；MiniMax 流式（上游 chunk 限制）；81 个第三方凭据模块未验证。 |
 | R2 分发形态 | 满足：六平台归档 + SHA256SUMS + 安装脚本，解压即用 |
 | R3 用户文档 | 部分满足：快速开始/配置/支持矩阵齐备，但支持矩阵明确标注 81 个需凭据模块「未验证」 |
 | R4 许可 | 满足：Apache-2.0 LICENSE + NOTICE |
@@ -25,13 +25,13 @@
 
 | 概念 | 状态 | 生产缺口 |
 | --- | --- | --- |
-| queen | 可用 | 已有 `run_worker` 按需扩 worker；剩 per-queen 工具白名单、playbook 运行时 |
+| queen | 可用 | 已有 `run_worker` 按需扩 worker；剩 per-queen 工具白名单、playbook 后台完成通知（同步 runner 已覆盖 Python/JSON 两形态） |
 | colony | 部分 | `run_worker` 与 tracker 已接；scaffold 不建 `tracker/`、`skills/`、`triggers.json`；定时唤醒与重启恢复未接 |
 | worker_agent | 部分 | `run_worker → SpawnBatch` 生产可达并回传 `[WORKER_REPORT]`；剩 `resume_worker_ids`、worker 转录在内存、overseer 工具面无 `run_worker` |
 | coordination | 部分 | tracker 写路径、提醒中枢（idle/task/parallel）已接；剩 Sentinel、park/resume 完整语义 |
 | goals_outcome | 部分 | judge 对带 `success_criteria` 的 worker 生效并发布 `judge_verdict`；chat 无 criteria，playbook 判定未接 |
 | improvement | 部分 | 技能写入（`WriteSkill`）、instinct/lessons 沉淀未接 |
-| the_loop | 可用 | 真流式、提醒注入、judge 阶段已接；剩 playbook 循环与触发恢复 |
+| the_loop | 可用 | 真流式、提醒注入、judge 阶段已接；剩 playbook 后台完成通知与触发恢复 |
 | 集成工具 | 未验证 | 81 个需第三方凭据的模块无真实调用；仅 26 个免凭据模块离线验证 |
 
 

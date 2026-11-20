@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/hiveconf"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
@@ -63,6 +64,17 @@ func BuildWorkerLoopConfig(overrides map[string]any) (agentloop.LoopConfig, erro
 	// it gives up first. Point every worker loop at its own directory under the
 	// hive home (restored by restoreSpillCounter, so a resume cannot overwrite).
 	cfg.SpilloverDir = workerSpilloverDir()
+	// The global loop.max_tool_result_chars pins the spillover threshold for
+	// every loop; a worker's own profile override (which never carried this
+	// field) is untouched, so the file value and the 30k default are the only
+	// sources.
+	if home, err := hivehome.Resolve(); err == nil && home.Root != "" {
+		cfg.MaxToolResultChars = hiveconf.MaxToolResultChars(home, cfg.MaxToolResultChars)
+		// worker_llm.max_context_tokens (or the worker model's catalog window)
+		// replaces the 180k queen default; an explicit per-worker loop_config
+		// override below still wins over it.
+		cfg.MaxContextTokens = hiveconf.WorkerMaxContextTokens(home, cfg.MaxContextTokens)
+	}
 
 	keys := make([]string, 0, len(overrides))
 	for key := range overrides {

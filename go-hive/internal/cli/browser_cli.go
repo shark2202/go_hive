@@ -87,24 +87,37 @@ func (c *browserCLI) rootCommand() *commandSpec {
 		Prog: "hive-browser",
 		Description: "Drive the Hive browser (Hive Browser Bridge extension) from the terminal. " +
 			"Replaces the retired browser_* MCP tools; agents invoke it with --json.",
+		// Upstream's argparse parent parser also accepts the shared flags
+		// *before* the subcommand (`hive-browser --json status`). argparse lets
+		// the subparser's own default win for a shared dest, so a leading value
+		// parses but does not override the leaf's. The Go parser mirrors that:
+		// group flags are accepted, leaf defaults stay in charge. --bridge is
+		// Go-only and stays leaf-level (no upstream counterpart to align).
+		Flags:       browserGroupFlags(),
 		Dest:        "command",
 		Subcommands: c.subcommands(),
 	}
 	return root
 }
 
-// commonFlags are the shared options every leaf accepts (upstream's argparse
-// `common` parent). They are declared per leaf because the shared parser does
-// not propagate parent values into a subcommand that also declares the flag;
-// `hive-browser status --json` (flag after the command) is the documented form.
-func browserCommonFlags() []argSpec {
+// browserGroupFlags are the shared flags the root accepts before a subcommand
+// (upstream's `common` parent parser: --json and --profile).
+func browserGroupFlags() []argSpec {
 	return []argSpec{
 		{Dest: "json", Long: "json", Kind: kindBool, Help: "machine output (agent mode)"},
 		{Dest: "profile", Long: "profile", Kind: kindString,
 			Help: "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"},
-		{Dest: "bridge", Long: "bridge", Kind: kindString,
-			Help: "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"},
 	}
+}
+
+// browserCommonFlags are the shared options every leaf accepts (upstream's
+// argparse `common` parent plus the Go-only bridge override). They are declared
+// per leaf because the shared parser does not propagate parent values into a
+// subcommand that also declares the flag; `hive-browser status --json` (flag
+// after the command) is the documented form.
+func browserCommonFlags() []argSpec {
+	return append(browserGroupFlags(), argSpec{Dest: "bridge", Long: "bridge", Kind: kindString,
+		Help: "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"})
 }
 
 // withCommon appends the shared flags to a leaf's own flags.

@@ -145,8 +145,9 @@ func (m *mcpRuntime) Reload() error {
 	m.namespace = settings.Namespace
 	m.mu.Unlock()
 	if settings.Timeout != nil {
-		// configuration.json wins over HIVE_MCP_CALL_RESULT_TIMEOUT, which in
-		// turn wins over the built-in 240s ceiling.
+		// configuration.json is the fallback for HIVE_MCP_CALL_RESULT_TIMEOUT:
+		// the environment wins, the file value next, then the built-in 240s
+		// ceiling (the general env > file > default rule).
 		tools.SetMCPCallResultTimeout(*settings.Timeout)
 	}
 

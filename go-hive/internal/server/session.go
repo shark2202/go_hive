@@ -91,7 +91,14 @@ type Session struct {
 
 	QueenExecutor *QueenExecutor
 
-	WorkerHandoffSub string
+	// WorkerHandoffSub is the live worker-escalation subscription id (the
+	// session's escalation inbox). WorkerHandoffRuntime is the runtime whose
+	// bus carries it: the colony prefers a colony-scoped subscription, so the
+	// id must be unsubscribed there, not on the session bus.
+	//
+	// Parity: framework/server/session_manager.py::Session.worker_handoff_sub
+	WorkerHandoffSub     string
+	WorkerHandoffRuntime ColonyRuntime
 
 	PendingEscalations map[string]map[string]any
 	// pendingOrder is the arrival order of PendingEscalations keys. Python
@@ -598,16 +605,10 @@ func (m *SessionManager) StopSession(sessionID string) bool {
 	// the session down without stopping it leaves them running until process
 	// exit. The concrete runtimes expose Stop(); the read-only seam does not,
 	// so probe for it instead of widening ColonyRuntime for every caller.
+	session.dropWorkerEscalationRouting()
 	if session.Colony != nil {
 		StopColonyRuntime(session.Colony)
 		session.Colony = nil
-	}
-
-	if session.WorkerHandoffSub != "" {
-		if session.EventBus != nil {
-			session.EventBus.Unsubscribe(session.WorkerHandoffSub)
-		}
-		session.WorkerHandoffSub = ""
 	}
 
 	if session.EventBus != nil {

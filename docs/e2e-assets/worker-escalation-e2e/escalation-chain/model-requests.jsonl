@@ -1,0 +1,7 @@
+{"seq":1,"kind":"overseer","tools":24,"response":"tool_calls:run_worker","tool_calls":"run_worker"}
+{"seq":2,"kind":"overseer","tools":24,"response":"Dispatched the worker.","tool_calls":""}
+{"seq":3,"kind":"worker","tools":25,"response":"tool_calls:escalate","tool_calls":"escalate"}
+{"seq":4,"kind":"overseer","tools":24,"response":"Dispatched the worker.","tool_calls":""}
+{"seq":5,"kind":"queen","tools":39,"response":"tool_calls:list_worker_questions","tool_calls":"list_worker_questions"}
+{"seq":6,"kind":"queen","tools":39,"response":"tool_calls:reply_to_worker","tool_calls":"reply_to_worker"}
+{"seq":7,"kind":"worker","tools":25,"response":"tool_calls:report_to_parent","tool_calls":"report_to_parent"}

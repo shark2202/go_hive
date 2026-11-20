@@ -14,6 +14,9 @@ type scriptedResponse struct {
 	content   string
 	toolCalls []llm.ToolCall
 	costUSD   float64
+	// err, when set, is returned instead of a completion — the scripted way to
+	// exercise the loop's error paths (e.g. a stream-stall recovery retry).
+	err error
 }
 
 // Parity-exempt: upstream has no standalone test for this helper; it mirrors _ScriptedLLM
@@ -41,6 +44,9 @@ func (s *scriptedCompleter) AComplete(_ context.Context, req llm.CompletionReque
 		index = len(s.scenarios) - 1
 	}
 	scenario := s.scenarios[index]
+	if scenario.err != nil {
+		return llm.Completion{}, scenario.err
+	}
 	return llm.Completion{Content: scenario.content, ToolCalls: scenario.toolCalls, Model: "mock", CostUSD: scenario.costUSD}, nil
 }
 

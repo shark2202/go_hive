@@ -30,6 +30,15 @@ type TemporalSource interface {
 	TickInterval() (float64, bool)
 }
 
+// TurnResetter is a source with per-turn state the loop must clear at the
+// start of every turn. The stream-stall source is the upstream case: its
+// per-turn nudge cap counts re-streams inside one turn, so the loop resets it
+// once per turn (framework/agent_loop/stream_stall.py::reset_turn, called by
+// agent_loop.py::_run_turn_loop).
+type TurnResetter interface {
+	ResetTurn()
+}
+
 type RichReminderSource interface {
 	RenderReminder(rctx ReminderContext) (*Reminder, bool)
 }
@@ -95,6 +104,25 @@ func (h *ReminderHub) ObserveTurn(toolNames []string) {
 			func() {
 				defer func() { _ = recover() }()
 				observer.ObserveTurn(toolNames)
+			}()
+		}
+	}
+}
+
+// ResetTurn clears the per-turn state of every consulted source that carries
+// any. Callers invoke it once per turn, before the first model call, so a
+// per-turn cap (the stream-stall nudge count) starts from zero each turn.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (the per-turn
+// `self._stream_stall_source.reset_turn()` call).
+func (h *ReminderHub) ResetTurn() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, source := range h.consultedLocked() {
+		if resetter, ok := source.(TurnResetter); ok {
+			func() {
+				defer func() { _ = recover() }()
+				resetter.ResetTurn()
 			}()
 		}
 	}

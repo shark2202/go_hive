@@ -67,7 +67,11 @@ func (c *browserCLI) helpCommand() *commandSpec {
 				found := findSubcommand(c.root, topic)
 				if found == nil {
 					fmt.Fprintf(c.stderr, "hive-browser: no such command %q — run `hive-browser help` for the full list\n", topic)
-					return browserExitBadArgs
+					// Upstream `_help` raises BrowserError outside `errors.run`
+					// (cli.py:main calls _help directly), so an unknown topic
+					// surfaces as an uncaught error: exit 1, not the argparse
+					// usage code.
+					return browserExitDomain
 				}
 				text = found.helpText()
 			}
@@ -393,16 +397,17 @@ func (c *browserCLI) screenshotCommand() *commandSpec {
 			timeoutFlag(5000, "selector wait (ms) when --selector is given"),
 			tabFlag(),
 		}, nil, "browser_screenshot", func(args *parsedArgs) (map[string]any, int) {
-			intent := strings.TrimSpace(args.str("intent"))
-			if intent == "" {
-				fmt.Fprintln(c.stderr, "hive-browser: --intent is required (one phrase naming the target and the action)")
-				return nil, browserExitBadArgs
-			}
+			// Upstream's standalone `screenshot` verb passes --intent straight
+			// to render_screenshot(intent=None), so omitting it still captures
+			// (exit 0 when connected); only the retired MCP tool schema made it
+			// mandatory. Match the CLI path here instead of pre-checking.
 			params := map[string]any{
-				"intent":     intent,
 				"full_page":  args.boolean("full_page"),
 				"annotate":   !args.boolean("no_annotate"),
 				"timeout_ms": args.intValue("timeout_ms"),
+			}
+			if args.wasProvided("intent") {
+				params["intent"] = args.str("intent")
 			}
 			if args.wasProvided("selector") {
 				params["selector"] = args.str("selector")

@@ -26,7 +26,8 @@ import (
 
 const (
 	// defaultMCPTimeout mirrors the client's built-in tools/call ceiling; it is
-	// only used when configuration.json states no timeout_seconds.
+	// the fallback both HIVE_MCP_CALL_RESULT_TIMEOUT and
+	// configuration.json's mcp.timeout_seconds override (env > file > this).
 	defaultMCPTimeout = 240 * time.Second
 	// mcpStartupBudget bounds how long serve waits for the configured servers to
 	// answer tools/list. A server that misses it is reported as unavailable and

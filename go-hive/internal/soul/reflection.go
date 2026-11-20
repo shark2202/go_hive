@@ -1068,7 +1068,7 @@ func reflectLocked(opts ReflectionOptions) (*Proposal, error) {
 
 	maxTokens := opts.MaxTokens
 	if maxTokens <= 0 {
-		maxTokens = llm.ResolveAuxMaxTokens(0)
+		maxTokens = llm.AuxMaxTokens()
 	}
 	system := reflectionSystem(name, identity, editBudget)
 	messages := []llm.ChatMessage{{Role: "user", Content: strings.Join(parts, "\n")}}

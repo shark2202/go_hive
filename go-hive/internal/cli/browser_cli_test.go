@@ -281,9 +281,8 @@ func TestBrowserCLIUsageErrors(t *testing.T) {
 }
 
 // TestBrowserCLIBadArgs pins the Go-internal validations that stay on exit 6
-// (upstream has no argparse equivalent: upload file existence, the standalone
-// screenshot verb's intent, evaluate/script handler checks, the Go-only `type`
-// verb).
+// (upstream has no argparse equivalent: upload file existence,
+// evaluate/script handler checks, the Go-only `type` verb).
 //
 // Parity: tools/src/gcu/errors.py::EXIT_VALIDATION
 func TestBrowserCLIBadArgs(t *testing.T) {
@@ -291,7 +290,6 @@ func TestBrowserCLIBadArgs(t *testing.T) {
 	t.Setenv("HIVE_HOME", home)
 	server, last := fakeBridge(t, nil)
 	cases := [][]string{
-		{"screenshot"}, // standalone verb keeps its local --intent requirement
 		{"upload", "#f", "--file", filepath.Join(home, "missing.txt")},
 		{"evaluate"},
 		{"script", "--skill", "x"},
@@ -471,7 +469,84 @@ func TestBrowserCLIHelp(t *testing.T) {
 		t.Fatalf("help tab exit = %d, output = %q", code, stdout)
 	}
 	_, stderr, code := runBrowser(t, "", "help", "nope")
-	if code != browserExitBadArgs || !strings.Contains(stderr, "no such command") {
+	// Upstream `_help` raises outside errors.run: an unknown topic exits 1
+	// (domain), not the argparse usage code and not the Go-internal 6.
+	if code != browserExitDomain || !strings.Contains(stderr, "no such command") {
 		t.Fatalf("help nope exit = %d, stderr = %q", code, stderr)
+	}
+}
+
+// TestBrowserCLIScreenshotWithoutIntent pins R05: the standalone `screenshot`
+// verb must not require --intent. Upstream passes intent=None through to
+// render_screenshot, so the command reaches the bridge and exits 0 when the
+// capture succeeds; only interact --action screenshot answers ok:false.
+//
+// Parity: tools/src/gcu/cli_commands/capture.py::cmd_screenshot
+func TestBrowserCLIScreenshotWithoutIntent(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	server, last := fakeBridge(t, map[string]any{"ok": true, "result": map[string]any{
+		"ok": true, "data": "aGVsbG8=", "mimeType": "image/png", "format": "png",
+	}})
+
+	stdout, stderr, code := runBrowser(t, home, "screenshot", "--tab", "7", "--json", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("exit = %d, want 0 (stdout: %s stderr: %s)", code, stdout, stderr)
+	}
+	got := last()
+	if got.Type != "browser_screenshot" {
+		t.Fatalf("command = %q, want browser_screenshot", got.Type)
+	}
+	if _, present := got.Params["intent"]; present {
+		t.Fatalf("CLI must not invent an intent: %v", got.Params)
+	}
+	if got.Params["full_page"] != false || got.Params["timeout_ms"] != float64(5000) {
+		t.Fatalf("params = %v", got.Params)
+	}
+
+	// --intent still flow through when given.
+	server, last = fakeBridge(t, map[string]any{"ok": true, "result": map[string]any{"ok": true}})
+	_, stderr, code = runBrowser(t, home, "screenshot", "--intent", "verify layout", "--tab", "7", "--json", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("intent exit = %d (stderr: %s)", code, stderr)
+	}
+	if got := last(); got.Params["intent"] != "verify layout" {
+		t.Fatalf("intent not forwarded: %v", got.Params)
+	}
+}
+
+// TestBrowserCLILeadingCommonFlags pins the upstream parent-parser placement:
+// `hive-browser --json status` parses (no usage error). argparse lets the
+// subparser's own default win for a shared dest, and the Go parser mirrors
+// that — the leading value does not override the leaf's, so the documented
+// agent form keeps --json after the command.
+//
+// Parity: tools/src/gcu/cli.py::_build_parser
+func TestBrowserCLILeadingCommonFlags(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	server, _ := fakeBridge(t, map[string]any{"ok": true, "result": map[string]any{"ok": true, "connected": false}})
+
+	stdout, stderr, code := runBrowser(t, home, "--json", "status", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("--json status exit = %d, want 0 (stderr: %s)", code, stderr)
+	}
+	if strings.HasPrefix(strings.TrimSpace(stdout), "{") {
+		t.Fatalf("leading --json must not override the leaf default (upstream prints the human form): %s", stdout)
+	}
+
+	stdout, stderr, code = runBrowser(t, home, "status", "--json", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("status --json exit = %d (stderr: %s)", code, stderr)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal([]byte(stdout), &decoded); err != nil {
+		t.Fatalf("trailing --json must still print JSON: %v (%s)", err, stdout)
+	}
+
+	// No subcommand after a leading flag is still the argparse usage error.
+	_, _, code = runBrowser(t, home, "--json")
+	if code != browserExitUsage {
+		t.Fatalf("bare --json exit = %d, want %d", code, browserExitUsage)
 	}
 }

@@ -113,12 +113,19 @@ func (r *ChatRuntime) configureReminders(override *agentloop.IdleNudgeConfig) {
 	hub.Register(agentloop.NewColonyParallelNudgeSource())
 	hub.Register(agentloop.NewActiveWorkersReminderSource())
 	hub.Register(agentloop.NewTrackerSnapshotReminderSource())
+	// Queen fleet snapshot at tool-budget checkpoints: the queen learning what
+	// the rest of the colony is doing while she grinds through her own tools.
+	hub.Register(agentloop.NewColonyWorkerSnapshotReminderSource())
 	hub.Register(agentloop.NewSearchableToolsReminderSource())
 	hub.Register(agentloop.NewSkillsCatalogReminderSource())
 	// Installed turn-context packages put their text ahead of each user turn;
 	// the source is silent until a session runtime wires a provider.
 	hub.Register(agentloop.NewTurnContextReminderSource())
 	hub.Register(r.idleSource)
+	// Stream-stall recovery: the streaming completer's watchdog reports a trip
+	// as a typed error, and the loop consults this source at STREAM_STALLED
+	// before re-streaming the same turn.
+	hub.Register(agentloop.NewStreamStallSource(r.loop.Config.ContinueNudgeMaxPerTurn, r.loop.Config.ContinueNudgeEnabled))
 
 	r.hub = hub
 	ctx := agentloop.NewReminderAgentContext(r.agentCtx)

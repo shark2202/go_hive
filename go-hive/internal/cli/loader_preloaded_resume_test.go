@@ -148,8 +148,15 @@ func TestPreloadedColonySessionRestartReusesID(t *testing.T) {
 		t.Fatalf("first preload is nil; output: %s", stdout.String())
 	}
 	firstID := first.ID
-	if _, err := os.Stat(chatSessionDir(home, "default", firstID)); err != nil {
-		t.Fatalf("first preload did not materialise its session dir: %v", err)
+	queenName := colonyQueenName(home, "honeycomb")
+	if queenName == "" {
+		t.Fatal("colony fixture has no queen_name; the preload must scope to the colony's queen")
+	}
+	if first.QueenName != queenName {
+		t.Fatalf("preloaded session queen = %q, want the colony's queen %q", first.QueenName, queenName)
+	}
+	if _, err := os.Stat(chatSessionDir(home, queenName, firstID)); err != nil {
+		t.Fatalf("first preload did not materialise its session dir under queen %q: %v", queenName, err)
 	}
 	// One real turn so the transcript the restart must continue exists.
 	if err := first.Chat.Deliver("remember the bees"); err != nil {

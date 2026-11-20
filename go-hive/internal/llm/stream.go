@@ -12,6 +12,29 @@ import (
 // non-streaming path instead of failing.
 var ErrStreamingUnsupported = errors.New("llm: streaming is not supported for this provider")
 
+// StreamStalledError reports a completion call whose stream watchdog tripped:
+// no event arrived inside the TTFT budget ("ttft"), or the stream went silent
+// after producing events ("inactive"). The two budgets mirror the upstream
+// agent loop's LLM stream watchdog; the loop turns this error into the
+// STREAM_STALLED reminder point instead of failing the turn outright.
+//
+// Parity: framework/agent_loop/stream_stall.py (the source consumes
+// LoopSignals.stall_reason / stall_elapsed; the watchdog that detects the
+// condition lives in agent_loop.py's _run_turn_loop).
+type StreamStalledError struct {
+	Reason         string
+	ElapsedSeconds float64
+	LimitSeconds   float64
+}
+
+func (e *StreamStalledError) Error() string {
+	reason := e.Reason
+	if reason == "" {
+		reason = "stalled"
+	}
+	return fmt.Sprintf("llm: stream %s for %.0fs (limit %.0fs)", reason, e.ElapsedSeconds, e.LimitSeconds)
+}
+
 // StreamCompleter is the streaming counterpart of Completer. A provider that
 // implements it can deliver a completion as incremental events while the
 // upstream is still generating.

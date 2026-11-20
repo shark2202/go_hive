@@ -426,6 +426,12 @@ func (r *ColonyRuntime) buildWorkerContext(worker *Worker, spec agentloop.AgentS
 			return r.cachedSkillsCatalogPrompt()
 		}
 	}
+	// The worker's escalate tool publishes through the colony's bus: the queen
+	// session subscribes colony-scoped, records the request_id and surfaces the
+	// handoff; reply_to_worker then injects guidance back here.
+	//
+	// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (escalate)
+	ctx.EscalationSink = r.escalationSinkForWorker()
 
 	keepSet := r.workerKeepSet()
 	if len(keepSet) == 0 {
@@ -534,11 +540,50 @@ func (r *ColonyRuntime) Start(ctx context.Context) error {
 	r.started = true
 	r.running = true
 	r.mu.Unlock()
+	// HIVE_SPLIT_WORKER_EVENTS moves a parallel worker's per-turn chatter out
+	// of the queen's event log and into <worker storage>/events.jsonl. Off by
+	// default (the dashboard must render worker bubbles from META alone before
+	// this is safe to turn on), exactly as upstream gates it.
+	//
+	// Parity: core/framework/host/colony_runtime.py::ColonyRuntime._install_worker_log_resolver
+	r.enableWorkerEventLogs()
 	// Restart recovery runs after the runtime is marked started (the workers it
 	// rebuilds use runtimeContext) but before the caller starts the overseer,
 	// so a resumed worker is already queued when the colony comes up.
 	r.ResumeInFlightWorkers(r.ctx)
 	return nil
+}
+
+// enableWorkerEventLogs installs the per-worker event-log resolver when
+// HIVE_SPLIT_WORKER_EVENTS opts in. Only "worker:<uuid>" streams have a
+// directory of their own; the bare "worker" tag used by single spawns falls
+// back to the queen's log.
+func (r *ColonyRuntime) enableWorkerEventLogs() {
+	if r.bus == nil || !splitWorkerEventsEnabled() {
+		return
+	}
+	r.bus.SetWorkerLogResolver(func(streamID string) (string, bool) {
+		if !strings.HasPrefix(streamID, "worker:") {
+			return "", false
+		}
+		workerID := strings.TrimSpace(streamID[len("worker:"):])
+		if workerID == "" {
+			return "", false
+		}
+		return filepath.Join(r.workerStorage(workerID), "events.jsonl"), true
+	})
+}
+
+// splitWorkerEventsEnabled reads HIVE_SPLIT_WORKER_EVENTS with upstream's
+// allow-list: only 1/true/yes (case-insensitive) enable the split.
+//
+// Parity: core/framework/host/colony_runtime.py (HIVE_SPLIT_WORKER_EVENTS)
+func splitWorkerEventsEnabled() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("HIVE_SPLIT_WORKER_EVENTS"))) {
+	case "1", "true", "yes":
+		return true
+	}
+	return false
 }
 
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.stop
@@ -889,6 +934,14 @@ func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 	// queen-only pair stays out.
 	tools = appendMissingToolDefs(tools, trackerToolDefs("worker")...)
 	tools = appendMissingToolDefs(tools, agentloop.BuildReportToParentTool(r.agentSpec.ReportSchema))
+	// Workers can escalate to the queen instead of guessing: the escalate tool
+	// pauses this worker until reply_to_worker injects guidance. Upstream
+	// routes the same channel through the worker's escalate tool; this port's
+	// run_worker workers are the only worker kind it has, so the channel is
+	// advertised here (see docs/queen-lifecycle-tools.md, "未对齐项").
+	//
+	// Parity: framework/agent_loop/internals/synthetic_tools.py::build_escalate_tool
+	tools = appendMissingToolDefs(tools, agentloop.BuildEscalateTool())
 	// Every worker keeps its own task list: task_create/update/list/get is how
 	// it decomposes the assignment it was handed.
 	tools = appendMissingToolDefs(tools, workerTaskToolDefs()...)
@@ -1179,10 +1232,14 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 		worker.Context = r.buildContext(worker, r.agentSpec)
 	}
 
-	loop := &agentloop.AgentLoop{
-		ToolExecutor: r.executorFor(worker),
-		Config:       agentloop.DefaultLoopConfig(),
-	}
+	// The overseer runs the same loop shape as a worker (hub + inferno guards
+	// included); upstream builds a full AgentLoop for it too.
+	loop := agentloop.NewAgentLoop(agentloop.DefaultLoopConfig(), r.executorFor(worker))
+	// The overseer is the colony's lead: give it the queen-role reminder
+	// sources its own loop was missing (fleet, tracker, parallel nudge,
+	// stream-stall). No ticker is started (see overseer_reminders.go).
+	stopReminders := r.startOverseerReminders(loop, worker, loop.Config, r.workerTools(worker))
+	defer stopReminders()
 	// The overseer is the colony's lead: when the queen spec carries no
 	// criteria of its own it inherits the colony goal's, exactly like a
 	// worker. With neither, ConfigureJudge leaves the judge off (no extra

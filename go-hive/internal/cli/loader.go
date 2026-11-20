@@ -23,8 +23,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/agents"
 	"github.com/aden-hive/hive-go/internal/atomicfs"
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
@@ -279,6 +277,11 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	// tool registry) is built so saved credentials are live from the start.
 	hiveserver.SyncCredentialEnv(home)
 
+	// llm.aux_max_tokens governs every small utility call the process makes
+	// (recall selection, sentinel classification, judge, skill tests); install
+	// it before any session or reminder source exists.
+	llm.SetAuxMaxTokens(hiveserver.AuxMaxTokens(home))
+
 	// MCP servers configured for this home are connected before any session
 	// exists: every catalogue built afterwards (queen chat, colony worker
 	// pool) starts with their namespace-prefixed tools. Unreachable servers
@@ -416,98 +419,6 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 // attachPreloadedChatRuntime lives there too, keeping this file inside the
 // repository's frozen size budget.
 
-// buildColonyHost constructs and starts the live colony runtime a
-// `serve --colony` session holds (colony spawn/run/SSE entry). It returns nil
-// when no provider is configured: a host without an LLM could never run a
-// worker, so the session keeps its cold record and the runtime routes fall back
-// to disk.
-func (r *Runner) buildColonyHost(colonyPath, colonyID string, home hivehome.Home, model string) hiveserver.ColonyRuntime {
-	built, err := r.newColonyHost(colonyPath, colonyID, home, model)
-	if err != nil {
-		fmt.Fprintf(r.Stdout, "Warning: colony runtime unavailable for %s: %v\n", colonyID, err)
-		return nil
-	}
-	if err := built.Start(context.Background()); err != nil {
-		fmt.Fprintf(r.Stdout, "Warning: colony runtime unavailable for %s: %v\n", colonyID, err)
-		return nil
-	}
-	return built
-}
-
-// newColonyHost builds the colony runtime a serve session holds. Unlike
-// buildColonyHost it returns the reason a runtime could not be built, so the
-// colony lifecycle can report the failure instead of degrading to a cold
-// session.
-func (r *Runner) newColonyHost(colonyPath, colonyID string, home hivehome.Home, model string) (*colonyhost.Host, error) {
-	provider, err := chatProviderFactory(home, model)
-	if err != nil {
-		return nil, err
-	}
-	// The worker the session runs is the one the colony defines on disk. A
-	// colony with no worker config cannot be a real worker, so it keeps its
-	// cold record instead of running a synthetic prompt.
-	spec, err := agents.LoadAgentSpec(colonyPath)
-	if err != nil {
-		return nil, err
-	}
-	fields := spec.HostFields()
-	toolbox := builtin.New(colonyPath)
-	baseTools, declaredTools, executeTool := colonyWorkerToolSurface(colonyPath, toolbox, home)
-	baseTools = withMCPWorkerTools(baseTools, declaredTools)
-	return colonyhost.New(colonyhost.Config{
-		ColonyID:    colonyID,
-		AgentSpec:   fields.AgentSpec,
-		Goal:        fields.Goal,
-		StoragePath: colonyPath,
-		LLM:         provider,
-		Tools:       baseTools,
-		// worker.json's "tools" list selects from this pool at worker start,
-		// so a colony that declares an integration tool actually gets it.
-		DeclaredTools: declaredTools,
-		ToolExecutor:  executeTool,
-	})
-}
-
-// startColonyHost arms a colony host and starts its client-facing overseer.
-// Every failure is returned to the caller: the colony lifecycle turns a nil
-// return into an HTTP 500/503 instead of leaving a session that looks loaded
-// but can never answer.
-func startColonyHost(ctx context.Context, built *colonyhost.Host, home hivehome.Home, queenName, colonyID string) error {
-	if err := built.Start(ctx); err != nil {
-		return fmt.Errorf("start colony runtime for %s: %w", colonyID, err)
-	}
-	if _, err := built.StartOverseer(ctx, queenOverseerSpec(home, queenName), nil); err != nil {
-		built.Stop()
-		return fmt.Errorf("start colony overseer for %s: %w", colonyID, err)
-	}
-	return nil
-}
-
-// queenOverseerSpec is the identity the colony's persistent overseer runs
-// under: the bound queen's persona when a profile is readable, otherwise a
-// plain queen prompt so a colony without a materialised profile still has a
-// client-facing overseer.
-func queenOverseerSpec(home hivehome.Home, queenName string) agentloop.AgentSpec {
-	prompt := "You are the queen of this colony. Coordinate its workers and report progress to the user."
-	name := "Queen"
-	if queenID := strings.TrimSpace(queenName); queenID != "" {
-		name = queenID
-		if profile, err := queen.LoadQueenProfile(home.QueensDir(), queenID); err == nil {
-			if identity := strings.TrimSpace(queen.FormatQueenIdentityPrompt(profile, nil)); identity != "" {
-				prompt = identity
-			}
-		}
-	}
-	return agentloop.AgentSpec{
-		ID:               "queen",
-		Name:             name,
-		AgentType:        "event_loop",
-		ToolAccessPolicy: "explicit",
-		MaxRetries:       3,
-		SystemPrompt:     &prompt,
-	}
-}
-
 // createChatSession is the standard (non-colony) POST /api/sessions branch:
 // it builds a live queen session with a real provider, tool box, agent loop and
 // on-disk transcript. The session is registered before the initial prompt is
@@ -598,7 +509,7 @@ func (r *Runner) createSessionWithRuntime(
 
 	skillsCatalog := liveSkillsCatalog(record, home, queenScope)
 	var runtime *hiveserver.ChatRuntime
-	provider, providerErr := chatProviderFactory(home, requestedModel)
+	provider, providerErr := queenAwareChatProvider(home, requestedModel, queenScope)
 	if providerErr != nil {
 		// Credentials are missing for a remote model: keep the session
 		// listable but leave Chat nil so POST /chat answers 503 rather than
@@ -620,6 +531,9 @@ func (r *Runner) createSessionWithRuntime(
 			HomeRoot:      home.Root,
 			SkillsCatalog: skillsCatalog.Catalog,
 			OnTurnStart:   onTurnStart,
+			// A text-only main model gets its tool images captioned by the
+			// vision_fallback slot; nil when there is none to use.
+			VisionCaptioner: visionCaptionerFor(home, provider),
 		})
 		if err != nil {
 			fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, err)
@@ -780,9 +694,7 @@ func (l *colonyLifecycle) UnloadColony(sessionID string) bool {
 	// WorkerPath would keep firing at a queen whose colony is gone.
 	session.StopAllTriggers()
 	stopColonyRuntime(session.Colony)
-	session.Colony = nil
-	session.ColonyID = ""
-	session.WorkerPath = ""
+	session.DetachColony()
 	return true
 }
 

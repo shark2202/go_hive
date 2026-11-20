@@ -1,0 +1,1167 @@
+{
+  "schema": "hive-appearance-scope-registry/1",
+  "generated_at": "2026-11-21T01:10:00+08:00",
+  "generated_by": "appearance-scope-master lane（只读审计 + 文档，未改产品代码/测试/依赖）",
+  "worktree": "/Users/mac/hive/.wt/appearance-scope-master",
+  "branch": "appearance-scope-master",
+  "base_commit": "dab983d4",
+  "baseline": {
+    "python": "hive 1.0.14（core 树当前 checkout）",
+    "go": "1.0.26-go.1",
+    "note": "两侧版本号不同属既定口径；本登记册以 Python 为 reference、go_hive 为 target 量化差异，不把 target 当基线。"
+  },
+  "definition": {
+    "what": "「外观」= 一个实现对外承诺、且调用方（模型、用户、脚本、外部进程）能观察或依赖的全部契约。它是可观测契约的总和，不是内部架构、不是 UI 像素、不是性能。",
+    "not": "不登记内部实现细节（锁粒度、数据结构、文件组织），除非它泄漏成可观察行为。"
+  },
+  "status_vocabulary": {
+    "measured_aligned": "已实测一致：本次或可复现的既有实测，两侧在同一条输入下产生同一可观察结果；无未解释差异。",
+    "partial": "部分对齐：主路径可达/存在，但有已量化或已命名的差异、缺口或未验证的边界。",
+    "contract_unverified": "有契约未验证：契约文件（schema/冻结产物/校验脚本）已存在，但没有对两侧实际行为跑过核对。",
+    "not_aligned": "未对齐：缺失或行为不成立。",
+    "unaudited": "未审计：没有可用的对照证据，也没进任何矩阵；两侧实现是否存在等价性未知。"
+  },
+  "contract_state_vocabulary": {
+    "frozen_contract": "有机器可读的冻结契约 / 校验脚本（可重放、可 gate）。",
+    "doc_only": "只有散文/HTML 文档或代码注释描述，没有可执行的契约产物。",
+    "test_annotated": "只有 parity 测试注解或单侧测试，没有跨实现契约。",
+    "none": "没有任何形式的对照契约。"
+  },
+  "dimensions": [
+    {
+      "id": "api-routes",
+      "name": "API 路由与响应",
+      "scope": "对外 HTTP 路由集合与注册方式、方法、状态码，以及响应体形状（键存在性、类型、嵌套、数组元素形状）。",
+      "reference": [
+        "core/framework/server/app.py",
+        "core/framework/server/routes_*.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/server/app.go",
+        "go_hive/go-hive/internal/server/routes_*.go"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/surface-audit.md",
+          "kind": "measured",
+          "note": "前端 160 去重路由 → Go 缺失 0；Python → Go 缺失 0；Go 多余 11（仅提示，不阻断）"
+        },
+        {
+          "path": "go_hive/docs/api-contract-diff.md",
+          "kind": "measured",
+          "note": "14 端点现场对比：7 PASS / 7 FAIL；missing_in_target=4、extra_in_target=2、type_mismatch=7、count_mismatch=9、semantic_failures=7"
+        },
+        {
+          "path": "go_hive/contracts/api-routes.json",
+          "kind": "contract",
+          "note": "路由面冻结：reference 217 / target 220，missing 2（effective 0）、extra 5、method_mismatch 1"
+        },
+        {
+          "path": "go_hive/contracts/api-responses/",
+          "kind": "contract",
+          "note": "14 端点 canonical JSON + shape + diff.json（易变值已占位化，保留键存在性）"
+        },
+        {
+          "path": "go_hive/docs/surface-matrix-snapshot.json",
+          "kind": "snapshot",
+          "note": "路由 exact 213；python_only 3 / go_only 7，含提取口径造成的假差（如 /api/runtime-logs 两侧同路径）"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "路由可达性已实测全绿（缺失 0/0）；响应体形状只有 7/14 PASS——queen 工具目录、skills、credentials/specs、events、events/history、snapshot、stats 仍有字段级差异。路由「全绿」不等于响应形状对齐。",
+      "contract_state": "frozen_contract",
+      "measured_now": null,
+      "lane": "api-response-shape",
+      "lane_state": "suggested",
+      "next": [
+        "按 contracts/api-responses/diff.json 逐端点收敛 7 个 FAIL 的字段形状与计数",
+        "未知路径 fallback 口径（Python SPA 200 HTML vs Go 404 JSON）定调并记录",
+        "统一路由提取口径，剔除「注册方式不同」造成的假 go_only（如 /api/runtime-logs）"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "wire-proto",
+      "name": "线上协议（proto 声明）",
+      "scope": "手写 api.proto 对两侧响应/请求字段的声明覆盖：消息、枚举、字段号、JSON kind 与声明类型的一致性。",
+      "reference": [
+        "go_hive/contracts/api.proto",
+        "go_hive/contracts/api-responses/shapes/reference/"
+      ],
+      "go": [
+        "go_hive/contracts/api.proto",
+        "go_hive/contracts/api-responses/shapes/target/"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/contracts/api-proto-check.json",
+          "kind": "contract",
+          "note": "41 消息 / 2 枚举 / 953 字段；errors=0、warnings=0、undeclared_reference=0、kind_mismatch=0"
+        },
+        {
+          "path": "go_hive/scripts/check_api_proto.py",
+          "kind": "checker",
+          "note": "零依赖校验器，遍历两侧 shape 走消息图，errors=1 退出"
+        }
+      ],
+      "status": "measured_aligned",
+      "status_basis": "本次重跑校验器：messages=41 / enums=2 / fields=953 / errors=0 / warnings=0，exit 0，产物字节不变。声明层两侧字段都能解析且类型匹配（Gate 覆盖此面的唯一实测全绿项）。",
+      "contract_state": "frozen_contract",
+      "measured_now": "本次重跑 `uv run python go_hive/scripts/check_api_proto.py`：41 消息 / 2 枚举 / 953 字段 / errors=0 / warnings=0 / exit 0。",
+      "lane": "proto-contract",
+      "lane_state": "suggested",
+      "next": [
+        "把 protoc 编译（真 proto3）纳入门禁，避免手写 spec 与标准 proto 语法漂移",
+        "新增响应字段时同步更新 shape 捕获，保持 undeclared_reference=0"
+      ],
+      "priority": "P3"
+    },
+    {
+      "id": "tools",
+      "name": "Tool 定义与输出",
+      "scope": "注册给模型的工具集合：name、description、input_schema（参数名/类型/required/可选性）、分组形态、工具调用结果（成功与失败路径）的可观察形状。",
+      "reference": [
+        "core/framework/tools/",
+        "LLM 首轮请求 tools[]（假网关截获）"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/tools/",
+        "go_hive/go-hive/internal/cli/session_tools.go"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/tool-contract-diff.md",
+          "kind": "measured",
+          "note": "同名 41；description 逐字一致 13/41；schema 逐字一致 8/41；仅 Python 13、仅 Go 103；参数 156/167；类型不一致 7、可选性不一致 11、required 不一致 7"
+        },
+        {
+          "path": "go_hive/docs/tool-consistency-audit.html",
+          "kind": "measured",
+          "note": "外观一致性审计页（另一 lane 产物，本树已合入）"
+        },
+        {
+          "path": "go_hive/contracts/tool-definitions.json",
+          "kind": "contract",
+          "note": "两侧工具定义冻结产物（521KB）"
+        },
+        {
+          "path": "go_hive/contracts/tool-capture-meta.json",
+          "kind": "contract",
+          "note": "抓取口径：同一假 OpenAI 网关、同一临时 HIVE_HOME"
+        },
+        {
+          "path": "go_hive/docs/tool-parity-matrix.html",
+          "kind": "measured",
+          "note": "103 模块逐条追踪矩阵"
+        },
+        {
+          "path": "go_hive/docs/surface-matrix-snapshot.json",
+          "kind": "snapshot",
+          "note": "模块 103/103、action 863/865、默认集成 137"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "模块与 action 覆盖已实测（103/103、863/865）；但同名工具的 description 只有 13/41 逐字一致、schema 只有 8/41，形态差异（Python 865 扁平 vs Go 103 分组+action）是既定分叉。工具输出/失败文案没有跨实现对照。",
+      "contract_state": "frozen_contract",
+      "measured_now": null,
+      "lane": "tool-schema",
+      "lane_state": "suggested",
+      "next": [
+        "逐条收敛同名工具 description/schema（优先模型高频工具）",
+        "为「分组工具 + action」形态写一份上游可读的口径说明，或在上游对齐扁平形态",
+        "补工具调用结果的 golden 对照（成功 + 失败路径各若干）"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "builtin-skills",
+      "name": "内置 Skill 资产字节",
+      "scope": "随二进制/包分发的内置 Skill 资产（_default_skills / _preset_skills 下的文件）逐字节一致性。不含发现根、安装流、override 语义（那些属磁盘契约与 skill 运行面）。",
+      "reference": [
+        "core/framework/skills/_default_skills/",
+        "core/framework/skills/_preset_skills/"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/skills/_default_skills/",
+        "go_hive/go-hive/internal/skills/_preset_skills/"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/contracts/builtin-skills.json",
+          "kind": "contract",
+          "note": "sha256 清单：25 文件 / 229,354 字节 / 20 个 skill"
+        },
+        {
+          "path": "go_hive/docs/skills-parity-report.json",
+          "kind": "measured",
+          "note": "skills 20 / files 25 / identical 25 / missing 0 / extra 0 / differing 0"
+        },
+        {
+          "path": "go_hive/scripts/gen_builtin_skills_manifest.py",
+          "kind": "checker",
+          "note": "清单生成器，可重放"
+        }
+      ],
+      "status": "measured_aligned",
+      "status_basis": "本次复算：按清单逐文件比对 sha256，25/25 与两侧文件三方一致；两侧目录文件数相等（_default_skills 13 + _preset_skills 12）。字节层面无差异。",
+      "contract_state": "frozen_contract",
+      "measured_now": "本次按 builtin-skills.json 复算 25/25 sha256：core/framework/skills ↔ go_hive/go-hive/internal/skills 字节一致；两侧文件数 13+12=25 相等。",
+      "lane": "skills-assets",
+      "lane_state": "suggested",
+      "next": [
+        "把清单校验接进 make ci（现在靠人工/脚本重放）",
+        "上游 skill 变更后重跑清单并回填 matrix 状态"
+      ],
+      "priority": "P3"
+    },
+    {
+      "id": "env-vars",
+      "name": "环境变量",
+      "scope": "两侧源码中真实读取的 HIVE_* 环境变量名字集合、默认值、读取点与语义（含只出现在字面量、无读取点的 literal_only 项）。",
+      "reference": [
+        "core/framework/",
+        "core/ 根启动脚本中的 os.environ 读取点"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/",
+        "go_hive/go-hive/cmd/"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/env-config-contract-diff.md",
+          "kind": "measured",
+          "note": "Python 89 / Go 100 / 共有 69；Python 独有 20、Go 独有 31（合并后复算；基线 622cc236 为 89/96/66/23/30）"
+        },
+        {
+          "path": "go_hive/contracts/env-vars.json",
+          "kind": "contract",
+          "note": "逐名给出两侧读取点/默认值/audit_membership，literal_only 单列"
+        },
+        {
+          "path": "go_hive/docs/env-surface-audit.json",
+          "kind": "measured",
+          "note": "已发布的 env 审计（基线 622cc236）"
+        },
+        {
+          "path": "go_hive/docs/environment-variables.html",
+          "kind": "doc",
+          "note": "面向使用者的环境变量说明页"
+        },
+        {
+          "path": "go_hive/scripts/check_env_config_contract.py",
+          "kind": "checker",
+          "note": "可重放校验（--check）"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "共有 69 个变量名字面一致；本车道把 HIVE_MAX_ITER / HIVE_SPLIT_WORKER_EVENTS / HIVE_PYTHON 接进 Go，network-scanners 车道移除了 HIVE_NETWORK_SCANNERS；Python 独有 20 个生产开关仍待逐项决策，「设了不生效」未逐项实测。",
+      "contract_state": "frozen_contract",
+      "measured_now": "2026-11-21 合并后复算：Python 89 / Go 100 / 共有 69 / Python 独有 20 / Go 独有 31；freeze --check 与 check_env_config_contract.py --strict 均 OK。",
+      "lane": "env-config-align",
+      "lane_state": "existing",
+      "next": [
+        "按 env-vars.json 的 Python 独有清单逐项决策：对齐 / 明确写为 Go 不适用",
+        "为高危开关（HIVE_MAX_ITER、HIVE_NO_FILE_LOG）补「设了有观测效果」的实测"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "config-json",
+      "name": "configuration.json 配置面",
+      "scope": "~/.hive/configuration.json 的键集合、section 结构、默认值、读写语义（GET/PUT/热切换）与运行时是否真的消费。",
+      "reference": [
+        "core/framework/config*",
+        "configuration.json 的 Python 读取点"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/config/",
+        "go_hive/go-hive/internal/server/routes_config*.go"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/env-config-contract-diff.md",
+          "kind": "measured",
+          "note": "134 键 / 20 section：aligned 99、go_partial 29、python_only 1、go_only 4、unread 1"
+        },
+        {
+          "path": "go_hive/contracts/config-keys.json",
+          "kind": "contract",
+          "note": "134 键契约冻结，逐键标注两侧读取点"
+        },
+        {
+          "path": "go_hive/docs/configuration.md",
+          "kind": "doc",
+          "note": "配置参考文档"
+        },
+        {
+          "path": "go_hive/docs/surface-tracking-matrix.html",
+          "kind": "measured",
+          "note": "曾报未读的 5 个配置键专项节"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "99/134 键对齐；模型槽位（queen_llm/worker_llm/vision_fallback）与 loop/worker_tools 限额已进生产路径；29 键 go_partial（含只读/无消费项），1 键 python_only（channels 插件宿主 Go 无）；PUT 原地热切换仍 partial。",
+      "contract_state": "frozen_contract",
+      "measured_now": "2026-11-21：queenAwareChatProvider/workerChatProvider/visionfallback 接线完成；mcp.timeout_seconds 修为 env > file；config-keys.json 134 键，strict OK。",
+      "lane": "config-env-align",
+      "lane_state": "existing",
+      "next": [
+        "按 config-keys.json 的 go_partial/unread 清单逐键接线或降级为只读展示",
+        "PUT 写入 → 重启 → 行为变化 的字段级实测"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "cli",
+      "name": "CLI 子命令 / flags / 退出码",
+      "scope": "命令行对外表面：顶级命令与子命令树、flags 名与默认值、位置参数、stdout/JSON 输出形状、退出码分类、交互提示。",
+      "reference": [
+        "core/framework/cli.py",
+        "core/framework/loader/cli.py",
+        "core/framework/skills/cli.py",
+        "core/framework/debugger/cli.py",
+        "core/framework/loader/mcp_registry_cli.py",
+        "core/framework/maintenance/cli.py",
+        "core/framework/trackerdb/errors.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/cli/cli.go",
+        "go_hive/go-hive/internal/cli/args.go",
+        "go_hive/go-hive/internal/cli/*_commands.go",
+        "go_hive/go-hive/internal/tracker/errors.go"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/alignment-dimensions.html",
+          "kind": "doc",
+          "note": "登记「10 个顶级命令完全一致；flags、默认值、输出格式、退出码、交互提示未逐项 diff」"
+        },
+        {
+          "path": "go_hive/go-hive/internal/tracker/errors.go",
+          "kind": "source",
+          "note": "退出码分类 0/1/2/3/4/5/6/7/9/10，文件头标注 Parity: framework/trackerdb/errors.py"
+        },
+        {
+          "path": "core/framework/trackerdb/errors.py",
+          "kind": "source",
+          "note": "两侧退出码常量逐值同名同义"
+        },
+        {
+          "path": "go_hive/go-hive/internal/cli/browser_cli_test.go",
+          "kind": "measured",
+          "note": "TestBrowserCLIExitCodes 把 browser CLI 退出码分类钉在测试里"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "顶级命令 10/10 同名（本次静态复算）；tracker 退出码分类两侧同源且 Go 有测试看守。但 flags 名集合只有 32 个共有（Python 独有 11、Go 独有 48，其中多数是 browser CLI 扩展），输出格式/交互提示/帮助文案没有逐项对照。",
+      "contract_state": "doc_only",
+      "measured_now": "本次静态提取：顶级命令 10/10 同名；flag 名集合 共有 32 / Python 独有 11（含 mcp 的 transport/url/socket-path 等）/ Go 独有 48（多为 hive-browser）；tracker 退出码 0,1,2,3,4,5,6,7,9,10 两侧逐值一致。",
+      "lane": "cli-surface",
+      "lane_state": "suggested",
+      "next": [
+        "逐命令 `--help` 递归 diff（flags/默认值/位置参数）并落一份 CLI 契约 json",
+        "每命令退出码矩阵实测（含失败路径），把 tracker 的看守扩到 loader/skill/mcp/janitor 子命令",
+        "stdout/JSON 输出形状抽若干命令做 golden 对照"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "sse",
+      "name": "SSE 事件类型与 payload",
+      "scope": "事件流的对外面：事件类型常量集合、事件名（SSE event: 字段）、data payload 字段、事件顺序与 replay/history 语义、流式粒度。",
+      "reference": [
+        "core/framework/host/event_bus.py（EventType）",
+        "core/framework/server/routes_events.py",
+        "core/framework/server/sse.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/eventbus/event_type.go",
+        "go_hive/go-hive/internal/server/routes_events.go",
+        "go_hive/go-hive/internal/server/routes_session_live.go"
+      ],
+      "evidence": [
+        {
+          "path": "core/framework/host/event_bus.py",
+          "kind": "source",
+          "note": "class EventType(StrEnum) 共 77 个成员"
+        },
+        {
+          "path": "go_hive/go-hive/internal/eventbus/event_type.go",
+          "kind": "source",
+          "note": "Go EventType 常量 62 个"
+        },
+        {
+          "path": "go_hive/docs/api-contract-diff.md",
+          "kind": "measured",
+          "note": "GET /api/sessions/{id}/events FAIL（7 处差异）、events/history FAIL（4 处）"
+        },
+        {
+          "path": "go_hive/docs/surface-tracking-matrix.html",
+          "kind": "doc",
+          "note": "登记「77 个事件类型常量未逐一对齐」为 P0 未纳入项"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "本次静态提取：Python 77 / Go 62 / 共有 62 / Python 独有 15 / Go 独有 0——Go 是子集，15 个事件类型（session_forked、session_snapshot、queen_phase_changed、reminder_injected、webhook_received、escalation_requested 等）在 Go 侧无定义。payload 字段、顺序、replay 语义、流式粒度均无逐项对照。",
+      "contract_state": "none",
+      "measured_now": "本次静态提取事件类型常量集合：Python 77 / Go 62 / 共有 62 / Python 独有 15 / Go 独有 0。",
+      "lane": "sse-events",
+      "lane_state": "suggested",
+      "next": [
+        "为 15 个 Python 独有事件类型定调：实现 / 明确不适用（写进支持矩阵）",
+        "冻结事件清单契约（type + 关键 payload 字段 + 顺序约束），纳入 sweep",
+        "同一场景双跑，diff SSE 序列（type/顺序/关键字段）"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "disk-contract",
+      "name": "磁盘契约（HIVE_HOME）",
+      "scope": "~/.hive 下所有可被 CLI/工具/迁移直接读取的文件与目录形状：meta.json、events.jsonl、conversations/parts、credentials（含 metadata/index.json）、tracker.db、skill overrides、colony 目录等（文件名、字段、schema 版本、编码）。",
+      "reference": [
+        "core/framework/storage/",
+        "core/framework/server/session_manager.py",
+        "core/framework/host/tracker_db.py",
+        "core/framework/credentials/"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/storage/",
+        "go_hive/go-hive/internal/session/",
+        "go_hive/go-hive/internal/tracker/",
+        "go_hive/go-hive/internal/credentials/"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/memory-e2e.md",
+          "kind": "measured",
+          "note": "真实双跑：transcript parts / events.jsonl / snapshot / stats 的 prompt 与 schema 13/13 PASS"
+        },
+        {
+          "path": "go_hive/docs/module-interfaces.html",
+          "kind": "doc",
+          "note": "§1.2 磁盘契约（HIVE_HOME）目录与不变量清单"
+        },
+        {
+          "path": "go_hive/docs/surface-tracking-matrix.html",
+          "kind": "doc",
+          "note": "登记磁盘契约为 P0 未追踪项"
+        },
+        {
+          "path": "go_hive/contracts/api-responses/",
+          "kind": "contract",
+          "note": "端点层 canonical JSON，可反推部分磁盘字段形状"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "文件名层面大面积重合（本次静态复算 52 个共有名），memory 链路的转录/事件文件有真实双跑证据；但 tracker.db schema、credentials metadata、meta.json 字段全集、conversations 形状没有逐项 diff，schema 版本/迁移等价性未验证。",
+      "contract_state": "doc_only",
+      "measured_now": "本次静态提取两侧引用的磁盘文件名集合：共有 52 / Python 独有 9 / Go 独有 15（仅文件名层面，未含字段与 schema）。",
+      "lane": "disk-contract",
+      "lane_state": "suggested",
+      "next": [
+        "冻结磁盘契约：目录树 + 每文件字段/类型 + schema_version，纳入 sweep",
+        "同场景双跑后 diff 目录树与 sqlite schema（tracker.db / colony.db）",
+        "凭据兼容（Fernet/加密载荷）与 metadata/index.json 形状对照"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "prompt-turn-context",
+      "name": "系统 Prompt / turn-context / 工具 guidance",
+      "scope": "同一输入下注入模型的所有文本：queen/worker 系统提示词、节点 prompt、turn_context 键注入文本、工具 guidance/提醒文案、召回注入块。",
+      "reference": [
+        "core/framework/orchestrator/prompting.py",
+        "core/framework/agent_loop/prompting.py",
+        "core/framework/server/turn_context.py",
+        "core/framework/agents/queen/"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/agentloop/prompting.go",
+        "go_hive/go-hive/internal/queen/",
+        "go_hive/go-hive/internal/memory/"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/memory-e2e.md",
+          "kind": "measured",
+          "note": "prompt/schema 13/13 PASS（timeline system prompt、单会话 prompt 块、recall system/user 格式、manifest）"
+        },
+        {
+          "path": "go_hive/docs/env-config-contract-diff.md",
+          "kind": "measured",
+          "note": "turn_context / gcu_viewport_scale 读取点已接通"
+        },
+        {
+          "path": "go_hive/docs/alignment-dimensions.html",
+          "kind": "doc",
+          "note": "登记「注入文本无对比」为未追踪项（P1）"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "记忆链路的 prompt 文本有 13/13 实测；turn_context 读取点已接通。queen 主系统提示词、节点 prompt、工具 guidance 全文没有对照，模型行为差异的主要来源仍属未审计区。",
+      "contract_state": "doc_only",
+      "measured_now": null,
+      "lane": "prompt-parity",
+      "lane_state": "suggested",
+      "next": [
+        "抓两侧同一会话首轮/次轮的完整请求体（system + messages），逐段 diff 并归档为 prompt 契约",
+        "turn_context 每键注入文本的对照（值 + 文案）",
+        "工具 guidance/提醒文案（tracker/reminder/nudge）对照"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "mcp",
+      "name": "MCP registry / transport / 命名空间",
+      "scope": "MCP 服务器注册（index/config/installed 文件 schema）、transport 枚举（stdio/sse/http）、工具命名空间（mcp__server__tool 形态）、reload 语义、白名单/启用面。",
+      "reference": [
+        "core/framework/loader/mcp_registry*.py",
+        "core/framework/server/routes_mcp.py",
+        "core/framework/loader/mcp_registry_cli.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/mcpregistry/",
+        "go_hive/go-hive/internal/tools/mcp_registry.go",
+        "go_hive/go-hive/internal/server/routes_mcp.go",
+        "go_hive/go-hive/internal/host/mcp_allowlist*.go"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/mcp-registry/config.schema.json",
+          "kind": "contract",
+          "note": "registry 文件 JSON Schema（index/installed 同）"
+        },
+        {
+          "path": "go_hive/scripts/validate_mcp_registry.py",
+          "kind": "checker",
+          "note": "按 schema 校验 registry 文件；exit 0 才通过"
+        },
+        {
+          "path": "go_hive/docs/module-interfaces.html",
+          "kind": "doc",
+          "note": "只登记 schema；命名空间/transport/reload 未纳入矩阵"
+        },
+        {
+          "path": "go_hive/go-hive/internal/tools/mcp_registry.go",
+          "kind": "source",
+          "note": "命名空间形如 nsrv__tool（server 名 + 双下划线 + 工具名）"
+        },
+        {
+          "path": "go_hive/go-hive/internal/host/mcp_allowlist_test.go",
+          "kind": "test",
+          "note": "Go 侧白名单/启用面有单测（enabled_mcp_tools）"
+        }
+      ],
+      "status": "contract_unverified",
+      "status_basis": "registry 文件有 JSON Schema + 校验脚本（契约存在），但没有对两侧实际注册表/命名空间/transport 枚举跑过跨实现核对；Python 侧的命名空间生成规则与 Go 的 nsrv__tool 拼接是否同形未验证。",
+      "contract_state": "frozen_contract",
+      "measured_now": null,
+      "lane": "mcp-surface",
+      "lane_state": "suggested",
+      "next": [
+        "两侧同注册表双跑：dump 工具全名集合 + transport 枚举，逐项 diff",
+        "reload 语义（mcp reload 路由）行为对照",
+        "把命名空间形态写进冻结契约，避免 agent 侧按错名字调用"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "errors",
+      "name": "错误分类 / 错误体 / 工具错误文案",
+      "scope": "HTTP 状态码选择、错误响应体形状（code/message/details 之类）、工具返回的错误文案与可重试语义、CLI 退出码分类。",
+      "reference": [
+        "core/framework/trackerdb/errors.py",
+        "core/framework/server/ 各路由的 HTTP 异常",
+        "工具错误文案"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/tracker/errors.go",
+        "go_hive/go-hive/internal/server/ 错误封装",
+        "go_hive/go-hive/internal/cli/cred.go"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/go-hive/internal/tracker/errors.go",
+          "kind": "source",
+          "note": "CLIError{Code,Message,ExitCode,Details} + 退出码常量，Parity 指向 framework/trackerdb/errors.py"
+        },
+        {
+          "path": "core/framework/trackerdb/errors.py",
+          "kind": "source",
+          "note": "EXIT_OK..EXIT_BUSY 与错误构造函数，两侧逐值同名"
+        },
+        {
+          "path": "go_hive/docs/api-contract-diff.md",
+          "kind": "measured",
+          "note": "14 端点探针覆盖状态码；Content-Type 差异（application/json; charset=utf-8 vs application/json）已记录"
+        },
+        {
+          "path": "go_hive/docs/surface-tracking-matrix.html",
+          "kind": "doc",
+          "note": "登记「无逐错误码表」为 P1 缺口"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "tracker 退出码/错误体两侧同源且 Go 有测试看守；HTTP 错误码只有端点探针间接覆盖，没有逐错误码表；工具错误文案（尤其失败路径）无对照。",
+      "contract_state": "doc_only",
+      "measured_now": "本次核对：tracker 退出码 0/1/2/3/4/5/6/7/9/10 与错误体字段（code/message/details, exit_code）两侧同源；Go 另有 TestBrowserCLIExitCodes 固定 browser CLI 分类。",
+      "lane": "error-taxonomy",
+      "lane_state": "suggested",
+      "next": [
+        "产出错误码表：HTTP 状态 × 错误体 code × CLI 退出码 × 工具错误文案，两侧逐项填",
+        "为每个端点补失败路径探针（400/403/404/409/500）"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "frontend",
+      "name": "前端路由 / i18n / 静态资源",
+      "scope": "内嵌 UI 的对外面：hash 路由表与深链、页面 title、i18n key 集合与语言切换、静态资源路径与 SPA fallback、上传下载（Content-Disposition/range/asset 404）。",
+      "reference": [
+        "core/frontend/src/",
+        "core/frontend/src/App.tsx"
+      ],
+      "go": [
+        "go_hive/go-hive/frontend/src/",
+        "go_hive/go-hive/frontend/src/i18n/"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/surface-matrix-snapshot.json",
+          "kind": "snapshot",
+          "note": "前端资源：共有 1106 路径 / Go 独有 10 / Python 独有 0 / 内容差异 63"
+        },
+        {
+          "path": "go_hive/docs/surface-audit.md",
+          "kind": "measured",
+          "note": "前端调用 → Go 路由缺失 0，说明路由级联通完整"
+        },
+        {
+          "path": "go_hive/docs/alignment-dimensions.html",
+          "kind": "doc",
+          "note": "明确「中文 i18n 是 Go 侧增量，不要求回灌上游」；UI 源码 63 文件差异（中文 i18n、版本号、字段类型）"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "资源路径集合基本重合（Python 独有 0）、前端调用无缺失路由；但 63 个文件内容不同，hash 路由表/title/i18n key/空态错误态没有逐项对照，静态资源与上传下载面（Content-Disposition、range、asset 404）未追踪。",
+      "contract_state": "doc_only",
+      "measured_now": null,
+      "lane": "frontend-surface",
+      "lane_state": "suggested",
+      "next": [
+        "冻结前端路由表（hash 路径 × 页面 × title），两侧 diff",
+        "i18n key 集合 diff（明确 Go 增量 key 白名单）",
+        "静态资源/附件下载面探针（Content-Disposition、range、404）"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "formats",
+      "name": "时间 / ID / 分页格式",
+      "scope": "跨接口与磁盘共享的格式约定：时间戳表示与精度/时区、事件 seq、session/colony/execution id 生成格式、排序与分页（limit/offset/cursor/before）元数据。",
+      "reference": [
+        "core/framework/host/event_bus.py",
+        "core/framework/server/session_manager.py",
+        "core/framework/tasks/models.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/eventbus/event.go",
+        "go_hive/go-hive/internal/session/session.go",
+        "go_hive/go-hive/internal/schemas/session_state.go"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/alignment-dimensions.html",
+          "kind": "doc",
+          "note": "登记「时间格式、SSE event 命名、排序/分页/游标、ID 生成格式」未验证（P2）"
+        },
+        {
+          "path": "go_hive/docs/api-contract-diff.md",
+          "kind": "measured",
+          "note": "7 处 type_mismatch / 9 处 count_mismatch，部分与时间与 id 字段表示相关"
+        },
+        {
+          "path": "go_hive/docs/memory-e2e.md",
+          "kind": "measured",
+          "note": "双跑中 timestamp/seq 语义随 transcript/events 对照通过"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "本次核对 session id 与事件时间戳两项同形；但端点层时间字段（created_at 等）、分页元数据、排序稳定性没有逐项对照，api-contract-diff 的 type/count 差异里仍有未归因项。",
+      "contract_state": "doc_only",
+      "measured_now": "本次核对：session id 生成两侧同形（session_%Y%m%d_%H%M%S_<8hex>）；AgentEvent 时间戳两侧同形（本地时间、微秒非零时补 6 位、无时区后缀）。",
+      "lane": "format-parity",
+      "lane_state": "suggested",
+      "next": [
+        "逐端点列出时间字段表示（float epoch / ISO / 精度）并 diff",
+        "分页契约：参数名、默认值、分页元数据字段、排序稳定性",
+        "id 格式清单（session/colony/execution/run/event seq）两侧对照"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "release",
+      "name": "发布产物 / 归档 / 安装",
+      "scope": "分发给用户的制品外观：归档成员（hive / hive-cred / hive-browser / browserbridge）、内层 SHA256SUMS、install.sh 行为、--version 输出、升级路径与平台覆盖。",
+      "reference": [
+        "core/pyproject.toml（hive / hive-cred console scripts）",
+        "docs/releases/"
+      ],
+      "go": [
+        "go_hive/scripts/release.sh",
+        "go_hive/install.sh",
+        "go_hive/scripts/verify_release_archive.sh",
+        "go_hive/RELEASE_CHECKLIST.md"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/RELEASE_CHECKLIST.md",
+          "kind": "measured",
+          "note": "本机实测：6 平台归档 + SHA256SUMS 全 OK；归档验收 13/13 PASS；install.sh 四二进制安装成功；--version = hive 1.0.26-go.1"
+        },
+        {
+          "path": "go_hive/docs/release-notes-v1.0.26-go.1.md",
+          "kind": "doc",
+          "note": "归档补齐 hive-browser/browserbridge（六平台，包内 SHA256SUMS 全覆盖）"
+        },
+        {
+          "path": "go_hive/scripts/verify_release_archive.sh",
+          "kind": "checker",
+          "note": "归档解包后实跑 hive serve → 拉起 browserbridge → hive-browser 可驱动 → SIGTERM 回收"
+        },
+        {
+          "path": "go_hive/docs/surface-tracking-matrix.html",
+          "kind": "doc",
+          "note": "曾登记「release 归档缺 browserbridge/hive-browser」为 P0 已知项，1.0.26 已修"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "归档成员/安装/版本输出有本机实测（13/13 PASS）；但 GitHub Actions 从未运行、未打 tag、未上传制品（R9），Windows 实机运行未验证，升级演练只声明「HIVE_HOME 格式未变」。",
+      "contract_state": "frozen_contract",
+      "measured_now": null,
+      "lane": "release-archive",
+      "lane_state": "existing",
+      "next": [
+        "走一次真实 CI release job（含 tag 与制品上传），把「workflow 已对齐」升级为实测",
+        "Windows 实机运行 checklist（PTY/路径/信号已知差异）",
+        "升级演练：旧 HIVE_HOME → 新二进制 → 会话/凭据可读"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "observability",
+      "name": "日志与可观测面",
+      "scope": "运维可观察面：日志级别/格式/落盘位置、runtime-logs 接口、health/resources、诊断包（report-bundle）、watchdog 告警。",
+      "reference": [
+        "core/framework/server/routes_logs.py",
+        "core/framework/observability/",
+        "core/framework/server/routes_maintenance.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/server/app.go（runtimeLogsPath）",
+        "go_hive/go-hive/internal/server/routes_app_extra.go",
+        "go_hive/scripts/watchdog*.sh"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/surface-tracking-matrix.html",
+          "kind": "doc",
+          "note": "登记日志级别/格式/文件位置/LLM 调试日志未追踪（P2）"
+        },
+        {
+          "path": "go_hive/RELEASE_CHECKLIST.md",
+          "kind": "measured",
+          "note": "R7 可观测：--version、health 200、结构化访问日志本次实测；report-bundle 路由存在但未实调"
+        },
+        {
+          "path": "go_hive/docs/support-matrix.md",
+          "kind": "doc",
+          "note": "能力状态与未验证清单"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "/api/runtime-logs 两侧同路径，health 与访问日志实测通过；但日志落盘位置/级别开关/格式没有对照（Python 有 hive-server.log、sentinel.log，Go 侧未见同路径），主动告警只有脚本、没有失败注入验证。",
+      "contract_state": "doc_only",
+      "measured_now": "本次核对：/api/runtime-logs 两侧同路径同语义（Python 经 register_routes 注册，surface_audit 记为 Go 多余属提取口径假差）；日志文件名集合 Python 独有 hive-server.log / sentinel.log / tool_logs.jsonl 等，Go 独有 browserbridge.log。",
+      "lane": "observability",
+      "lane_state": "suggested",
+      "next": [
+        "冻结日志面：文件路径、级别开关（HIVE_NO_FILE_LOG 等）、格式样例",
+        "故障注入 → 是否真的告警（watchdog 主动告警验证）",
+        "成本/延迟/队列指标口径（与 omh-ops-observability-card 类需求对齐）"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "scheduling",
+      "name": "调度 / 触发器 / playbook",
+      "scope": "定时与事件驱动的对外面：timer/webhook 触发器定义与触发语义、missed-fire 处理、playbook 文件格式（Python .play.py vs Go 原生 JSON）、按名重跑/恢复语义、并发上限。",
+      "reference": [
+        "core/framework/host/playbook/",
+        "core/framework/tools/playbook_tools.py",
+        "core/framework/host/triggers.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/playbook/",
+        "go_hive/go-hive/internal/colony/playbook_tools.go",
+        "go_hive/go-hive/internal/sentinel/"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/alignment-dimensions.html",
+          "kind": "doc",
+          "note": "登记「Python 脚本 playbook 明确 unsupported；missed-fire/webhook/恢复语义未验证」"
+        },
+        {
+          "path": "go_hive/docs/release-notes-v1.0.26-go.1.md",
+          "kind": "doc",
+          "note": "已知差异：Python playbook 不可执行"
+        },
+        {
+          "path": "go_hive/go-hive/internal/colony/playbook_tools.go",
+          "kind": "source",
+          "note": "Go 明确报 UNSUPPORTED、不假装派发；支持原生 JSON playbook（concurrency/pending_sql/task/retries/backoff/timeout/max_rounds）"
+        },
+        {
+          "path": "go_hive/go-hive/internal/playbook/rows.go",
+          "kind": "source",
+          "note": "PersistScript 写出 <name>.play.py，而文件头注释写 .play.json —— 扩展名与内容口径不一致（执行按内容探测，不影响按名重跑）"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "原生 JSON playbook 可跑且恢复语义按构造成立、并发上限两侧同默认（32/8）；但上游 Python 脚本 playbook 明确不支持（行为差异，非缺陷——但不能算对齐），missed-fire/webhook 触发、Sentinel 真实投递未验证，扩展名命名与文档不一致。",
+      "contract_state": "doc_only",
+      "measured_now": "本次核对：Go 不执行 .play.py（UNSUPPORTED，不虚报派发）；PersistScript 实际写 .play.py 而注释/文档写 .play.json；HIVE_MAX_PLAYBOOK_CONCURRENCY/HIVE_DEFAULT_PLAYBOOK_CONCURRENCY 两侧同默认 32/8，Go 额外把 <1 夹到 1。",
+      "lane": "scheduling-playbook",
+      "lane_state": "suggested",
+      "next": [
+        "定扩展名口径（.play.json vs .play.py）并统一代码/文档/迁移读取顺序",
+        "上游 playbook 样例逐条跑：能跑的跑通，不能跑的写进支持矩阵口径",
+        "missed-fire / webhook / 恢复语义场景测试 + Sentinel 真实投递验证"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "desktop",
+      "name": "桌面壳 / desktop mode",
+      "scope": "桌面分发形态的对外面：HIVE_DESKTOP_* 环境变量（mode/parent pid/theme/token）、父进程监视、桌面 token 鉴权语义、壳与 serve 的握手（若仓库外有壳实现）。",
+      "reference": [
+        "core/framework/credentials/key_storage.py（HIVE_DESKTOP_MODE 分支）",
+        "HIVE_DESKTOP_* 读取点"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/（HIVE_DESKTOP_* 读取点）",
+        "go_hive/SECURITY_REVIEW.md（非 loopback 必须配 token 的 fail-closed）"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/contracts/env-vars.json",
+          "kind": "contract",
+          "note": "HIVE_DESKTOP_MODE / PARENT_PID / THEME / TOKEN 四个变量已入 env 契约，两侧读取点已登记"
+        },
+        {
+          "path": "go_hive/SECURITY_REVIEW.md",
+          "kind": "doc",
+          "note": "桌面 token 缺省无鉴权、非 loopback fail-closed 的说明（R-06）"
+        }
+      ],
+      "status": "unaudited",
+      "status_basis": "仓库两侧都没有桌面壳实现（无 Electron/Tauri 工程），父进程监视与壳-服务握手无从对照；只有 4 个 HIVE_DESKTOP_* 变量随 env 维度被登记。此项没有任何等价性证据。",
+      "contract_state": "none",
+      "measured_now": "本次核对：两侧仓库均无桌面壳工程；HIVE_DESKTOP_* 4 个变量在 env 契约内（随 env 维度核对，不构成桌面面证据）。",
+      "lane": "desktop-mode",
+      "lane_state": "suggested",
+      "next": [
+        "明确桌面壳是否在范围内：若在，需要壳的源码或发布物清单才能审计",
+        "不在范围内则在支持矩阵显式写「桌面壳不在本仓库范围」，避免读者把 env 变量当成桌面面已对齐"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "migration",
+      "name": "迁移 / 兼容读取",
+      "scope": "旧 HIVE_HOME 结构的兼容：migrate_v2 / migrate_v3 / colony sessions 迁移的输入输出、幂等标记文件、schema_version 升级路径、旧版本读写同一目录的行为。",
+      "reference": [
+        "core/framework/storage/migrate_v2.py",
+        "core/framework/storage/migrate_v3.py",
+        "core/framework/storage/migrate_colony_sessions.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/storage/migrate_v2.go",
+        "go_hive/go-hive/internal/storage/migrate_v3.go",
+        "go_hive/go-hive/internal/storage/migrate_colony_sessions.go"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/support-matrix.md",
+          "kind": "doc",
+          "note": "未验证清单（迁移演练未列入实测）"
+        },
+        {
+          "path": "go_hive/RELEASE_CHECKLIST.md",
+          "kind": "doc",
+          "note": "升级口径只声明「发布包不读写旧 Go 二进制，HIVE_HOME 下会话与凭据格式未变」"
+        }
+      ],
+      "status": "unaudited",
+      "status_basis": "两侧都有 migrate_v2/v3 与 colony sessions 迁移实现、schema_version 均 1.1，但从没有人拿同一份旧 HIVE_HOME 跑两侧迁移并 diff 结果；幂等标记、字段补齐规则、失败回滚语义都无对照证据。",
+      "contract_state": "none",
+      "measured_now": "本次核对：两侧迁移模块一一对应（migrate_v2/v3/colony_sessions），schema_version 均 1.1（未做迁移前后目录树对照）。",
+      "lane": "migration-compat",
+      "lane_state": "suggested",
+      "next": [
+        "构造 v1/v2 旧 HIVE_HOME 夹具，两侧各跑一次迁移，diff 目录树 + 文件内容",
+        "把迁移结果纳入 sweep（旧夹具 + 期望树）",
+        "失败路径：半迁移中断后的可恢复性"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "limits",
+      "name": "限额（并发 / 预算 / 轮次）",
+      "scope": "影响可观察行为的限额：并发上限（playbook/worker/只读并行）、迭代与轮次上限、token/预算上限、结果长度截断阈值。",
+      "reference": [
+        "core/framework/tools/playbook_tools.py",
+        "core/framework/agent_loop/",
+        "configuration.json 中 llm/loop 相关键"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/playbook/rows.go",
+        "go_hive/go-hive/internal/colony/",
+        "go_hive/go-hive/internal/agentloop/"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/env-config-contract-diff.md",
+          "kind": "measured",
+          "note": "llm.aux_max_tokens、loop.max_tool_result_chars、worker_tools.always_enabled_categories 已有 Go 生产读取点（config-env-align lane）"
+        },
+        {
+          "path": "go_hive/docs/alignment-dimensions.html",
+          "kind": "doc",
+          "note": "登记「输出/并发上限」未追踪"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "playbook/worker 并发上限两侧同默认；llm.aux_max_tokens、loop.max_tool_result_chars、worker_tools.always_enabled_categories、HIVE_MAX_ITER 已接；PUT 热切换与「设了限额→观测截断」未逐项实测。",
+      "contract_state": "doc_only",
+      "measured_now": "2026-11-21：限额键在 Go 有 reader 并有 config-support-ledger 证明测试；HIVE_MAX_ITER 走 queen loop cap。",
+      "lane": "limits-budget",
+      "lane_state": "suggested",
+      "next": [
+        "限额清单：每项给出两侧默认值、读取点、越界行为，无读取点的要么接线要么显式声明不适用",
+        "补「设了限额 → 观测到截断/拒绝」的实测"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "browser-bridge",
+      "name": "Browser bridge（模型面 / 协议 / CLI / 返回契约）",
+      "scope": "浏览器宿主的全部可观察契约：模型可见工具面（browser_setup）、bridge 22 个 active 工具定义、WS 扩展协议、HTTP 14830 / control RPC 14831、hive-browser CLI、通知与面板注入、返回契约（截图/快照/artifact/ref）、错误与生命周期、安全边界。",
+      "reference": [
+        "tools/src/gcu/",
+        "core/framework/tools/browser_tools.py",
+        "tools/browserbridge/"
+      ],
+      "go": [
+        "go_hive/browserbridge/",
+        "go_hive/go-hive/internal/cli/browser_cli*.go",
+        "go_hive/go-hive/internal/server/routes_app_extra.go"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/browser-bridge.html",
+          "kind": "measured",
+          "note": "22/22 active 工具已移植；browser_setup 与上游 name/schema/description 逐字一致；扩展 1.7.4 / protocol 6；真实 Chrome 19 步 E2E"
+        },
+        {
+          "path": "go_hive/docs/browser-host.md",
+          "kind": "doc",
+          "note": "宿主部署边界与 supervisor 解析规则"
+        },
+        {
+          "path": "go_hive/docs/tool-parity-matrix.html",
+          "kind": "measured",
+          "note": "逐工具状态；残差为快照 ref/注解图形状与 CLI 退出码"
+        },
+        {
+          "path": "/Users/mac/hive/.wt/browser-surface-audit/go_hive/docs/browser-bridge-surface-audit.html",
+          "kind": "external_lane",
+          "note": "另一 lane（未合入本树）的 13 维外观审计：已对齐 2 / 部分 10 / 未对齐 1（返回契约）；残差 R01–R14"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "模型面与 control RPC 被外部 lane 判为已对齐；本树文档证明 22/22 active 工具与主服务接线有真机证据。但返回契约未对齐（Go 不做 800px JPEG 缩放/注解/落盘/_image 标记），快照 ref、CLI 退出码仍有形状缺口。",
+      "contract_state": "doc_only",
+      "measured_now": null,
+      "lane": "browser-surface-audit",
+      "lane_state": "existing",
+      "next": [
+        "合入另一 lane 的 browser-bridge-surface-audit.html 并回填本维状态",
+        "返回契约：截图/快照/artifact/ref 形状对齐或显式声明为 Go 简化口径",
+        "browser CLI 退出码分类与上游对齐"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "orchestration",
+      "name": "Queen / worker / colony 机制面",
+      "scope": "多 agent 编排的对外可观察机制：queen 身份与生命周期工具、worker 派发与镜像、colony 生命周期与 bookkeeping、park/ask_user/凭据回填、resume 语义、overseer 与 queen mail。",
+      "reference": [
+        "core/framework/host/worker.py",
+        "core/framework/host/colony_runtime.py",
+        "core/framework/tools/queen_lifecycle_tools.py",
+        "core/framework/server/queen_mail.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/colony/",
+        "go_hive/go-hive/internal/host/",
+        "go_hive/go-hive/internal/qmail/",
+        "go_hive/go-hive/internal/queen/"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/CONCEPT_WIRING_AUDIT.md",
+          "kind": "measured",
+          "note": "7 篇 key concepts × 80 行：80 已接 / 0 部分 / 0 未接（基线 efb81858，2026-11-20）"
+        },
+        {
+          "path": "go_hive/RUNTIME_SPINE_AUDIT.md",
+          "kind": "measured",
+          "note": "八层运行时脊：70 已接 / 0 部分 / 0 未接"
+        },
+        {
+          "path": "go_hive/docs/queen-lifecycle-tools.md",
+          "kind": "doc",
+          "note": "10 个 lifecycle 工具的移植记录"
+        },
+        {
+          "path": "go_hive/docs/claude-code-queen-runner.md",
+          "kind": "doc",
+          "note": "Claude Code queen 运行器移植（与真实模型联调待做）"
+        },
+        {
+          "path": "go_hive/docs/e2e-orca-ui-1.0.25.md",
+          "kind": "measured",
+          "note": "真实 LLM UI E2E 7/7（Orca 1.4.261）"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "接线审计全绿（80/0/0、70/0/0）只证明机制生产可达，不等于行为等价；resume_worker_ids、park/ask_user/凭据回填全链路、真实模型多 worker E2E、Claude Code queen 主动 message_queen 联调仍是开放项。",
+      "contract_state": "doc_only",
+      "measured_now": null,
+      "lane": "core-concepts-parity-audit",
+      "lane_state": "existing",
+      "next": [
+        "真实模型多 worker 端到端 + 故障注入（park/ask_user/凭据）",
+        "resume 语义对照（worker id 复用、终态报告记录）",
+        "Claude Code queen ↔ 常态 queen 互写联调"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "memory-soul",
+      "name": "Memory / Soul",
+      "scope": "记忆与人格面：timeline 写入与召回注入、past conversations、reflection、soul.json 编辑与每日读聊天反思、跨 queen/colony 作用域。",
+      "reference": [
+        "core/framework/agents/queen/",
+        "core/framework/memory/",
+        "core/framework/agents/queen/soul_reflection.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/memory/",
+        "go_hive/go-hive/internal/soul/"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/memory-e2e.md",
+          "kind": "measured",
+          "note": "真实双跑：Go e2e 3/3 PASS、Python 12 阶段断言 PASS、prompt/schema 13/13 PASS；修复 3 处实现差异"
+        },
+        {
+          "path": "go_hive/docs/soul-daily-reflection.md",
+          "kind": "measured",
+          "note": "soul 每日反思移植：14 例 parity 测试 + soulgw 真实 e2e 资产（复用既有 soul 模块，零新依赖）"
+        },
+        {
+          "path": "go_hive/docs/alignment-dimensions.html",
+          "kind": "doc",
+          "note": "登记 memory timeline 真实模型路径、reflection 未验证"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "memory 链路有迄今最强的证据（真实双跑 + prompt/schema 13/13）；soul 有 parity 测试与 e2e 资产，但真实模型路径与跨 queen/colony 作用域未联调，reflection 的生产行为未被真实模型驱动过。",
+      "contract_state": "test_annotated",
+      "measured_now": null,
+      "lane": "memory-soul",
+      "lane_state": "suggested",
+      "next": [
+        "真实模型驱动的 memory 召回/反思路径（非确定性网关 → 真实 provider）",
+        "跨 queen/colony 作用域的记忆可见性对照",
+        "把 memory e2e 纳入定时对比（golden trace）"
+      ],
+      "priority": "P2"
+    }
+  ],
+  "summary": {
+    "total": 23,
+    "by_status": {
+      "measured_aligned": 2,
+      "partial": 18,
+      "contract_unverified": 1,
+      "not_aligned": 0,
+      "unaudited": 2
+    },
+    "by_contract_state": {
+      "frozen_contract": 8,
+      "doc_only": 11,
+      "test_annotated": 1,
+      "none": 3
+    },
+    "measured_aligned_ids": [
+      "wire-proto",
+      "builtin-skills"
+    ],
+    "contract_unverified_ids": [
+      "mcp"
+    ],
+    "unaudited_ids": [
+      "desktop",
+      "migration"
+    ],
+    "frozen_contract_ids": [
+      "api-routes",
+      "wire-proto",
+      "tools",
+      "builtin-skills",
+      "env-vars",
+      "config-json",
+      "mcp",
+      "release"
+    ],
+    "doc_only_ids": [
+      "cli",
+      "disk-contract",
+      "prompt-turn-context",
+      "errors",
+      "frontend",
+      "formats",
+      "observability",
+      "scheduling",
+      "limits",
+      "browser-bridge",
+      "orchestration"
+    ],
+    "none_contract_ids": [
+      "sse",
+      "desktop",
+      "migration"
+    ]
+  },
+  "how_to_read": [
+    "status 回答「现在的等价性证据到哪一步」；contract_state 回答「有没有可执行契约可依赖」。两者独立：有冻结契约的维度也可能只到 partial（如 tools）。",
+    "measured_aligned 只代表本次/既有实测覆盖到的范围，不代表整维无差异；每个维度的 status_basis 写明覆盖边界。",
+    "「已有文档」不等于「已对齐」：doc_only 的 11 个维度全部只到 partial/unaudited。",
+    "go_hive/docs/appearance-master-matrix.html 是本文件的可读渲染 + 缺口清单；渲染脚本 go_hive/scripts/gen_appearance_master_matrix.py --check 校验一致性。"
+  ]
+}

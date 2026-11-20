@@ -1,35 +1,19 @@
 package server
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/aden-hive/hive-go/internal/hiveconf"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
 // Parity: framework/config.py::get_hive_config
 func HiveConfig(home hivehome.Home) map[string]any {
-	data, err := os.ReadFile(home.ConfigurationFile())
-	if err != nil {
-		return map[string]any{}
-	}
-	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
-	var out map[string]any
-	if err := decoder.Decode(&out); err != nil || out == nil {
-		return map[string]any{}
-	}
-	if err := decoder.Decode(new(any)); !errors.Is(err, io.EOF) {
-		return map[string]any{}
-	}
-	return out
+	return hiveconf.Load(home)
 }
 
 // Parity: framework/config.py::get_stall_check_enabled

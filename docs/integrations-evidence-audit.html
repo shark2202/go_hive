@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>go_hive integrations 证据审计</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1320px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:32px;line-height:1.2;margin:10px 0;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1000px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:22px 0 8px;color:#cfdae6}
+.sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g5{grid-template-columns:repeat(5,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:980px){.g5{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.g5,.g3,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:24px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere;word-break:break-word}
+pre{background:var(--code);border:1px solid #1e2937;border-radius:10px;padding:12px 14px;overflow-x:auto;font-size:12px;line-height:1.55;color:#d7e3f0}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+#filter{width:100%;margin:14px 0 6px;padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:14px;outline:none} #filter:focus{border-color:#3a5a80}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+</style></head><body><div class="wrap">
+<header>
+<div class="eyebrow">Hive · Integration Evidence Audit</div>
+<h1>go_hive integrations <span>真实可用性与证据分级审计</span></h1>
+<p class="lede">逐个审计 <code>internal/tools/integrations</code> 的 102 个模块工具（854 actions）+ <code>senders</code>（9 actions）+ 会话别名与 <code>browser_setup</code>：哪些真实可用（A）、哪些只是代码完整 + 假服务测试（B）、哪些有明确缺口。全部数字来自本机实测（AST 双侧扫描 + 运行时注册表 dump + 包内测试），未调用任何外部网络。</p>
+<div class="meta"><span>生成：<b>2026-11-21 01:28 CST</b></span><span>基线：<b>main 11a7c340</b></span><span>分支：<code>integrations-evidence-audit</code></span><span>方法：<b>AST 双侧对账 + 注册表 dump + 包测试实跑</b></span></div>
+<div class="toc"><a href="#summary">总览</a><a href="#rubric">分级口径</a><a href="#modules">模块明细</a><a href="#real">A 真实证据</a><a href="#fake">B 假服务口径</a><a href="#gaps">缺口清单</a><a href="#repro">复现命令</a><a href="#method">方法与边界</a></div>
+</header>
+
+<section id="summary"><h2><span class="num">00</span>总览</h2>
+<div class="grid g5">
+<div class="card"><div class="k">A 真实可用已验证</div><div class="v">12</div><div class="d">本地文件 / loopback socket / 纯本地计算</div></div>
+<div class="card"><div class="k">B 代码完整 + 假服务测试</div><div class="v">90</div><div class="d">httptest / 进程内协议假服务；未调真实第三方 API</div></div>
+<div class="card"><div class="k">C 部分 / 未接线</div><div class="v">1</div><div class="d">get_account_info：生产未注入 AccountSource</div></div>
+<div class="card"><div class="k">D 排除 / EOL</div><div class="v">1</div><div class="d">mongodb（Atlas Data API EOL）；另有 csv_sql / excel_sql 排除</div></div>
+<div class="card"><div class="k">E 未验证</div><div class="v">0</div><div class="d">无实现或无测试证据</div></div>
+</div>
+<div class="grid g3" style="margin-top:12px">
+<div class="card"><div class="k">集成模块工具</div><div class="v">102</div><div class="d">854 actions；impl 706 / spec 148（覆盖 854/854）</div></div>
+<div class="card"><div class="k">上游对账</div><div class="v">103 / 865</div><div class="d">上游 103 模块 865 actions（AST）；Go = 102+9（senders）= 863，仅差 csv_sql/excel_sql</div></div>
+<div class="card"><div class="k">测试规模</div><div class="v">1230</div><div class="d">integration 包顶层测试数；0 个 t.Skip / 0 个真实凭据环境变量</div></div>
+</div>
+<div class="callout info"><b>怎么读：</b>A 代表“实测过真实行为”；B 代表“代码完整、测试充分，但测试对象是假服务，不是真实 API”——B 不等于不可用，也不等于已验证。任何“有 impl”都被视为结构完整，而非真实可用。</div>
+</section>
+
+<section id="rubric"><h2><span class="num">01</span>分级口径（严格）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:70px">级别</th><th>判据</th></tr></thead><tbody>
+<tr><td><span class="pill ok">A</span></td><td>真实可用已验证：生产代码路径对真实本地资源（文件/loopback socket/纯计算）端到端实测并断言真实行为。</td></tr>
+<tr><td><span class="pill info">B</span></td><td>代码完整 + 假服务测试：请求构造/响应映射/鉴权头/错误映射有 httptest（或进程内协议假服务）覆盖，从未调用真实第三方 API。</td></tr>
+<tr><td><span class="pill warn">C</span></td><td>部分实现/未接线：action 有 impl 但生产路径缺失必要依赖（本表仅 get_account_info），或存在明确能力缺口。</td></tr>
+<tr><td><span class="pill bad">D</span></td><td>明确不支持/排除/依赖不可用：csv_sql/excel_sql、senders ESP、mongodb Atlas Data API（2025-09 EOL）。</td></tr>
+<tr><td><span class="pill bad">E</span></td><td>未验证：无实现或无任何测试证据（本次 0 个）。</td></tr>
+</tbody></table></div>
+<p class="sub">统计口径：模块行 = 102 个 integrations 包工具 + <code>senders</code> + <code>browser_setup</code>；action 列以 registry 中的 action 数为准（854 + 9 + 1 = 864）。csv/excel 的 10 个同名别名（<code>csv_append</code>, <code>csv_info</code>, <code>csv_read</code>, <code>csv_write</code>, <code>excel_append</code>, <code>excel_info</code>, <code>excel_read</code>, <code>excel_search</code>, <code>excel_sheet_list</code>, <code>excel_write</code>）委托同一实现，不单列。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">级别</th><th style="width:8%">数量</th><th>模块</th></tr></thead><tbody>
+<tr><td><span class="pill ok">A</span> A 真实可用已验证</td><td class="num">12</td><td>attach_file, browser_setup, csv, excel, get_current_time, http_headers_scan, pdf_read, port_scan, risk_score, ssl_tls_scan, tech_stack_detect, web_scrape</td></tr>
+<tr><td><span class="pill info">B</span> B 代码完整+假服务测试</td><td class="num">90</td><td>airtable, apify, apollo, arxiv, asana, attio, aws_s3, azure_sql, bigquery, brevo, calcom, calendar, calendly, cloudflare, cloudinary, confluence, databricks, discord, dns_security_scan, docker_hub, duckduckgo, email, email_senders (internal/senders), exa_search, freshdesk, github, gitlab, gmail, google_analytics, google_docs, google_maps, google_search_console, google_sheets, greenhouse, hubspot, huggingface, image_generate, intercom, jira, kafka, langfuse, linear, lusha, mattermost, microsoft_graph, n8n, news, notion, obsidian, openmeteo, pagerduty, pinecone, pipedrive, plaid, postgres, powerbi, prometheus, pushover, quickbooks, razorpay, reddit, redis, redshift, salesforce, sap, search_wikipedia, serpapi, shopify, similarweb, slack, snowflake, stripe, subdomain_enumerate, supabase, telegram, terraform, tines, trello, twilio, twitter, vercel, vision, wandb, web_search, yahoo_finance, youtube, youtube_transcript, zendesk, zoho_crm, zoom</td></tr>
+<tr><td><span class="pill warn">C</span> C 部分/未接线</td><td class="num">1</td><td>get_account_info</td></tr>
+<tr><td><span class="pill bad">D</span> D 排除/EOL</td><td class="num">1</td><td>mongodb</td></tr>
+<tr><td><span class="pill bad">E</span> E 未验证</td><td class="num">0</td><td>—</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="modules"><h2><span class="num">02</span>模块明细（104 行）</h2>
+<input id="filter" placeholder="过滤：模块 / 批次 / 级别（A/B/C/D/E）/ 鉴权 / 测试类型…">
+<div class="tablewrap"><table><thead><tr>
+<th style="width:13%">模块 / tool_id</th><th style="width:8%">批次</th><th style="width:6%">actions</th><th style="width:13%">测试类型 / 文件</th><th style="width:14%">鉴权</th><th style="width:7%">OAuth 刷新</th><th style="width:13%">分页</th><th style="width:5%">级别</th><th>模块级缺口</th>
+</tr></thead><tbody>
+<tr data-grade="B" data-search="airtable airtable airtable_tool core fake_httptest bearer b">
+<td><code>airtable</code><div class="small">airtable_tool</div></td>
+<td><span class="pill">core</span></td>
+<td class="num">9<div class="small">impl 0 · spec 9</div></td>
+<td>fake_httptest<div class="small">rest_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;AIRTABLE_PAT&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">list_records 支持 maxRecords/offset 参数，无自动翻页</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="apify apify apify_tool batch7-lane5 fake_httptest bearer b">
+<td><code>apify</code><div class="small">apify_tool</div></td>
+<td><span class="pill">batch7-lane5</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">enrichment_search_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;APIFY_API_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="apollo apollo apollo_tool batch7-lane5 fake_httptest api_key_header b">
+<td><code>apollo</code><div class="small">apollo_tool</div></td>
+<td><span class="pill">batch7-lane5</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">enrichment_search_test.go</div></td>
+<td>api_key_header<div class="small">X-Api-Key: &lt;APOLLO_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="arxiv arxiv arxiv_tool batch2 fake_httptest none b">
+<td><code>arxiv</code><div class="small">arxiv_tool</div></td>
+<td><span class="pill">batch2</span></td>
+<td class="num">2<div class="small">impl 2 · spec 0</div></td>
+<td>fake_httptest<div class="small">research_registry_test.go, research_web_test.go</div></td>
+<td>none<div class="small">公开 API（export.arxiv.org）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="asana asana asana_tool batch5-lane1 fake_httptest bearer b">
+<td><code>asana</code><div class="small">asana_tool</div></td>
+<td><span class="pill">batch5-lane1</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">asana_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;ASANA_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="A" data-search="attach_file attach_file attach_file_tool batch8-final local_files none a">
+<td><code>attach_file</code><div class="small">attach_file_tool</div></td>
+<td><span class="pill">batch8-final</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>local_files<div class="small">attach_file_test.go, tool_schema_p1_test.go</div></td>
+<td>none<div class="small">本地文件，无外部凭据</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="attio attio attio_tool batch6-lane1 fake_httptest bearer b">
+<td><code>attio</code><div class="small">attio_tool</div></td>
+<td><span class="pill">batch6-lane1</span></td>
+<td class="num">15<div class="small">impl 15 · spec 0</div></td>
+<td>fake_httptest<div class="small">attio_test.go, pipedrive_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;ATTIO_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="aws_s3 aws_s3 aws_s3_tool batch7-lane1 fake_httptest sigv4 b">
+<td><code>aws_s3</code><div class="small">aws_s3_tool</div></td>
+<td><span class="pill">batch7-lane1</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">devops_hosting_test.go</div></td>
+<td>sigv4<div class="small">AWS4-HMAC-SHA256（ACCESS_KEY/SECRET/REGION 进程内签名）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>put_object 只接受文本内容（上游同）；仅长期 IAM key，无 STS</td>
+</tr>
+<tr data-grade="B" data-search="azure_sql azure_sql azure_sql_tool batch6-lane4 fake_httptest bearer b">
+<td><code>azure_sql</code><div class="small">azure_sql_tool</div></td>
+<td><span class="pill">batch6-lane4</span></td>
+<td class="num">5<div class="small">impl 5 · spec 0</div></td>
+<td>fake_httptest<div class="small">azure_sql_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;AZURE_SQL_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="bigquery bigquery bigquery_tool batch6-lane4 fake_httptest bearer b">
+<td><code>bigquery</code><div class="small">bigquery_tool</div></td>
+<td><span class="pill">batch6-lane4</span></td>
+<td class="num">2<div class="small">impl 2 · spec 0</div></td>
+<td>fake_httptest<div class="small">bigquery_test.go</div></td>
+<td>bearer<div class="small">Bearer &lt;BIGQUERY_ACCESS_TOKEN&gt;，或 service-account JWT bearer 换 token</div></td>
+<td>service_account_mint</td>
+<td>follow<div class="small">query 结果与 table 列表都循环跟随 nextPageToken/pageToken（上限 20 页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>不读 gcloud ADC；需 SA JSON 或显式 token</td>
+</tr>
+<tr data-grade="B" data-search="brevo brevo brevo_tool batch7-lane8 fake_httptest api_key_header b">
+<td><code>brevo</code><div class="small">brevo_tool</div></td>
+<td><span class="pill">batch7-lane8</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">scheduling_chat_test.go</div></td>
+<td>api_key_header<div class="small">api-key: &lt;BREVO_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="calcom calcom calcom_tool batch7-lane8 fake_httptest api_key_query b">
+<td><code>calcom</code><div class="small">calcom_tool</div></td>
+<td><span class="pill">batch7-lane8</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">scheduling_chat_test.go</div></td>
+<td>api_key_query<div class="small">API key 作为 query 参数（上游无 Authorization 头）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="calendar calendar calendar_tool batch5-lane3 fake_httptest bearer b">
+<td><code>calendar</code><div class="small">calendar_tool</div></td>
+<td><span class="pill">batch5-lane3</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">calendar_test.go, google_workspace_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;GOOGLE_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="calendly calendly calendly_tool batch7-lane8 fake_httptest bearer b">
+<td><code>calendly</code><div class="small">calendly_tool</div></td>
+<td><span class="pill">batch7-lane8</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">scheduling_chat_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;CALENDLY_PAT&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="cloudflare cloudflare cloudflare_tool batch7-lane2 fake_httptest bearer b">
+<td><code>cloudflare</code><div class="small">cloudflare_tool</div></td>
+<td><span class="pill">batch7-lane2</span></td>
+<td class="num">54<div class="small">impl 54 · spec 0</div></td>
+<td>fake_httptest<div class="small">cloudflare_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;CLOUDFLARE_API_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="cloudinary cloudinary cloudinary_tool batch7-lane9 fake_httptest basic b">
+<td><code>cloudinary</code><div class="small">cloudinary_tool</div></td>
+<td><span class="pill">batch7-lane9</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">cloudinary_test.go</div></td>
+<td>basic<div class="small">Basic &lt;api_key:api_secret&gt; + SHA1 上传签名</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>上传只接受 URL（file_url），无本地文件 multipart</td>
+</tr>
+<tr data-grade="B" data-search="confluence confluence confluence_tool batch5-lane1 fake_httptest basic b">
+<td><code>confluence</code><div class="small">confluence_tool</div></td>
+<td><span class="pill">batch5-lane1</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">confluence_test.go</div></td>
+<td>basic<div class="small">Basic base64(email:api_token)</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>仅 Confluence Cloud REST v2；Basic（无 OAuth）</td>
+</tr>
+<tr data-grade="A" data-search="csv csv csv_tool core local_files none a">
+<td><code>csv</code><div class="small">csv_tool</div></td>
+<td><span class="pill">core</span></td>
+<td class="num">4<div class="small">impl 4 · spec 0</div></td>
+<td>local_files<div class="small">local_test.go, spreadsheet_aliases_test.go</div></td>
+<td>none<div class="small">本地文件</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>csv_sql 排除（DuckDB）</td>
+</tr>
+<tr data-grade="B" data-search="databricks databricks databricks_tool batch6-lane4 fake_httptest bearer b">
+<td><code>databricks</code><div class="small">databricks_tool</div></td>
+<td><span class="pill">batch6-lane4</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">databricks_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;DATABRICKS_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="discord discord discord_tool batch7-lane8 fake_httptest custom b">
+<td><code>discord</code><div class="small">discord_tool</div></td>
+<td><span class="pill">batch7-lane8</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">scheduling_chat_test.go</div></td>
+<td>custom<div class="small">Authorization: Bot &lt;DISCORD_BOT_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="dns_security_scan dns_security_scan dns_security_scanner batch2 fake_resolver none b">
+<td><code>dns_security_scan</code><div class="small">dns_security_scanner</div></td>
+<td><span class="pill">batch2</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>fake_resolver<div class="small">network_scanners_test.go, research_registry_test.go</div></td>
+<td>none<div class="small">公开 DNS 查询</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>测试只注入 fake resolver（生产用真实 DNS）</td>
+</tr>
+<tr data-grade="B" data-search="docker_hub docker_hub docker_hub_tool batch7-lane1 fake_httptest bearer b">
+<td><code>docker_hub</code><div class="small">docker_hub_tool</div></td>
+<td><span class="pill">batch7-lane1</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">devops_hosting_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;DOCKER_HUB_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="duckduckgo duckduckgo duckduckgo_tool batch2 fake_httptest none b">
+<td><code>duckduckgo</code><div class="small">duckduckgo_tool</div></td>
+<td><span class="pill">batch2</span></td>
+<td class="num">3<div class="small">impl 3 · spec 0</div></td>
+<td>fake_httptest<div class="small">research_registry_test.go, research_web_test.go</div></td>
+<td>none<div class="small">公开 HTML/JSON 接口</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="email email email_tool batch7-lane9 fake_httptest bearer b">
+<td><code>email</code><div class="small">email_tool</div></td>
+<td><span class="pill">batch7-lane9</span></td>
+<td class="num">2<div class="small">impl 2 · spec 0</div></td>
+<td>fake_httptest<div class="small">email_test.go</div></td>
+<td>bearer<div class="small">Resend: Bearer &lt;RESEND_API_KEY&gt;；Gmail: Bearer &lt;GOOGLE_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>Gmail 用 MIME multipart/alternative 进程内构造；仅 resend/gmail 两个 provider</td>
+</tr>
+<tr data-grade="B" data-search="exa_search exa_search exa_search_tool batch7-lane5 fake_httptest api_key_header b">
+<td><code>exa_search</code><div class="small">exa_search_tool</div></td>
+<td><span class="pill">batch7-lane5</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">enrichment_search_test.go</div></td>
+<td>api_key_header<div class="small">x-api-key: &lt;EXA_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="A" data-search="excel excel excel_tool batch3-excel local_files none a">
+<td><code>excel</code><div class="small">excel_tool</div></td>
+<td><span class="pill">batch3-excel</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>local_files<div class="small">excel_test.go, spreadsheet_aliases_test.go</div></td>
+<td>none<div class="small">本地文件</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>不计算公式（读缓存值，与 upstream data_only 一致）；excel_sql 排除（DuckDB）</td>
+</tr>
+<tr data-grade="B" data-search="freshdesk freshdesk freshdesk_tool batch6-lane2 fake_httptest basic b">
+<td><code>freshdesk</code><div class="small">freshdesk_tool</div></td>
+<td><span class="pill">batch6-lane2</span></td>
+<td class="num">17<div class="small">impl 17 · spec 0</div></td>
+<td>fake_httptest<div class="small">freshdesk_test.go</div></td>
+<td>basic<div class="small">Basic base64(api_key:X)</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="C" data-search="get_account_info get_account_info account_info_tool core fake_httptest none c">
+<td><code>get_account_info</code><div class="small">account_info_tool</div></td>
+<td><span class="pill">core</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>fake_httptest<div class="small">local_test.go</div></td>
+<td>none<div class="small">读取注入的 AccountSource（生产未注入）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill warn">C</span></td>
+<td>生产未注入 AccountSource → 恒为空</td>
+</tr>
+<tr data-grade="A" data-search="get_current_time get_current_time time_tool core pure_local none a">
+<td><code>get_current_time</code><div class="small">time_tool</div></td>
+<td><span class="pill">core</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>pure_local<div class="small">integration_test.go, local_test.go, research_registry_test.go</div></td>
+<td>none<div class="small">纯本地</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="github github github_tool core fake_httptest bearer b">
+<td><code>github</code><div class="small">github_tool</div></td>
+<td><span class="pill">core</span></td>
+<td class="num">19<div class="small">impl 3 · spec 16</div></td>
+<td>fake_httptest<div class="small">local_composite_test.go, local_slack_github_test.go, rest_test.go</div></td>
+<td>bearer<div class="small">Bearer + Accept + X-GitHub-Api-Version（moduleConfigs）</div></td>
+<td>—</td>
+<td>none<div class="small">per_page 参数；无 page/cursor 参数、无自动翻页</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="gitlab gitlab gitlab_tool batch7-lane1 fake_httptest bearer b">
+<td><code>gitlab</code><div class="small">gitlab_tool</div></td>
+<td><span class="pill">batch7-lane1</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">devops_hosting_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;GITLAB_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="gmail gmail gmail_tool batch5-lane3 fake_httptest bearer b">
+<td><code>gmail</code><div class="small">gmail_tool</div></td>
+<td><span class="pill">batch5-lane3</span></td>
+<td class="num">10<div class="small">impl 10 · spec 0</div></td>
+<td>fake_httptest<div class="small">gmail_test.go, google_workspace_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;GOOGLE_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>passthrough<div class="small">接受 page_token、返回 next_page_token</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="google_analytics google_analytics google_analytics_tool batch7-lane9 fake_httptest bearer b">
+<td><code>google_analytics</code><div class="small">google_analytics_tool</div></td>
+<td><span class="pill">batch7-lane9</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">google_analytics_test.go</div></td>
+<td>bearer<div class="small">Bearer &lt;GA_ACCESS_TOKEN|GOOGLE_ACCESS_TOKEN&gt;，或 SA JWT 换 token</div></td>
+<td>service_account_mint</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>不读 gcloud ADC；SA JSON 或显式 token；GA4 仅 read-only 报告</td>
+</tr>
+<tr data-grade="B" data-search="google_docs google_docs google_docs_tool batch5-lane3 fake_httptest bearer b">
+<td><code>google_docs</code><div class="small">google_docs_tool</div></td>
+<td><span class="pill">batch5-lane3</span></td>
+<td class="num">11<div class="small">impl 11 · spec 0</div></td>
+<td>fake_httptest<div class="small">google_docs_test.go, google_workspace_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;GOOGLE_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>passthrough<div class="small">comments 分页：接受 page_token、返回 next_page_token</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="google_maps google_maps google_maps_tool batch7-lane6 fake_httptest api_key_query b">
+<td><code>google_maps</code><div class="small">google_maps_tool</div></td>
+<td><span class="pill">batch7-lane6</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">web_intelligence_test.go</div></td>
+<td>api_key_query<div class="small">key=&lt;GOOGLE_MAPS_API_KEY&gt;</div></td>
+<td>—</td>
+<td>passthrough<div class="small">place textsearch 接受 pagetoken、返回 next_page_token</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="google_search_console google_search_console google_search_console_tool batch7-lane9 fake_httptest bearer b">
+<td><code>google_search_console</code><div class="small">google_search_console_tool</div></td>
+<td><span class="pill">batch7-lane9</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">google_analytics_test.go</div></td>
+<td>bearer<div class="small">Bearer &lt;GOOGLE_SEARCH_CONSOLE_TOKEN|GOOGLE_ACCESS_TOKEN&gt;，或 SA JWT</div></td>
+<td>service_account_mint</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>不读 gcloud ADC；两套 API root 共用一个凭据</td>
+</tr>
+<tr data-grade="B" data-search="google_sheets google_sheets google_sheets_tool batch5-lane3 fake_httptest bearer b">
+<td><code>google_sheets</code><div class="small">google_sheets_tool</div></td>
+<td><span class="pill">batch5-lane3</span></td>
+<td class="num">10<div class="small">impl 10 · spec 0</div></td>
+<td>fake_httptest<div class="small">google_sheets_test.go, google_workspace_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;GOOGLE_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="greenhouse greenhouse greenhouse_tool batch6-lane2 fake_httptest basic b">
+<td><code>greenhouse</code><div class="small">greenhouse_tool</div></td>
+<td><span class="pill">batch6-lane2</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">greenhouse_test.go</div></td>
+<td>basic<div class="small">Basic base64(token:)</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="A" data-search="http_headers_scan http_headers_scan http_headers_scanner batch2 local_socket none a">
+<td><code>http_headers_scan</code><div class="small">http_headers_scanner</div></td>
+<td><span class="pill">batch2</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>local_socket<div class="small">network_scanners_test.go, research_registry_test.go</div></td>
+<td>none<div class="small">公开 HTTP 探测</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="hubspot hubspot hubspot_tool batch5-lane4 fake_httptest bearer b">
+<td><code>hubspot</code><div class="small">hubspot_tool</div></td>
+<td><span class="pill">batch5-lane4</span></td>
+<td class="num">15<div class="small">impl 15 · spec 0</div></td>
+<td>fake_httptest<div class="small">hubspot_obsidian_test.go, hubspot_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;HUBSPOT_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>account 别名被忽略（单凭据）</td>
+</tr>
+<tr data-grade="B" data-search="huggingface huggingface huggingface_tool batch7-lane4 fake_httptest bearer b">
+<td><code>huggingface</code><div class="small">huggingface_tool</div></td>
+<td><span class="pill">batch7-lane4</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">ai_platform_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;HUGGINGFACE_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="image_generate image_generate image_gen_tool batch3-media fake_httptest bearer b">
+<td><code>image_generate</code><div class="small">image_gen_tool</div></td>
+<td><span class="pill">batch3-media</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>fake_httptest<div class="small">image_test.go, tool_schema_p1_test.go</div></td>
+<td>bearer<div class="small">Bearer &lt;HIVE_API_KEY&gt; 调 Hive LLM 代理</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>依赖 Hive LLM 代理（HIVE_API_KEY）；无本地 provider key</td>
+</tr>
+<tr data-grade="B" data-search="intercom intercom intercom_tool batch6-lane2 fake_httptest bearer b">
+<td><code>intercom</code><div class="small">intercom_tool</div></td>
+<td><span class="pill">batch6-lane2</span></td>
+<td class="num">11<div class="small">impl 11 · spec 0</div></td>
+<td>fake_httptest<div class="small">intercom_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;INTERCOM_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="jira jira jira_tool batch5-lane1 fake_httptest basic b">
+<td><code>jira</code><div class="small">jira_tool</div></td>
+<td><span class="pill">batch5-lane1</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">jira_test.go</div></td>
+<td>basic<div class="small">Basic base64(email:api_token)</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>仅 Jira Cloud REST v3；Basic（无 OAuth）</td>
+</tr>
+<tr data-grade="B" data-search="kafka kafka kafka_tool batch7-lane3 fake_httptest basic b">
+<td><code>kafka</code><div class="small">kafka_tool</div></td>
+<td><span class="pill">batch7-lane3</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">infra_automation_test.go</div></td>
+<td>basic<div class="small">Basic base64(user:password)（REST Proxy v3）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>仅 REST Proxy v3；无原生 broker/SASL/Schema Registry</td>
+</tr>
+<tr data-grade="B" data-search="langfuse langfuse langfuse_tool batch7-lane4 fake_httptest basic b">
+<td><code>langfuse</code><div class="small">langfuse_tool</div></td>
+<td><span class="pill">batch7-lane4</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">ai_platform_test.go</div></td>
+<td>basic<div class="small">Basic base64(public_key:secret_key)</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="linear linear linear_tool batch4 fake_httptest custom b">
+<td><code>linear</code><div class="small">linear_tool</div></td>
+<td><span class="pill">batch4</span></td>
+<td class="num">21<div class="small">impl 21 · spec 0</div></td>
+<td>fake_httptest<div class="small">linear_test.go</div></td>
+<td>custom<div class="small">Authorization: &lt;raw API key&gt;（无 Bearer 前缀）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="lusha lusha lusha_tool batch7-lane5 fake_httptest api_key_header b">
+<td><code>lusha</code><div class="small">lusha_tool</div></td>
+<td><span class="pill">batch7-lane5</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">enrichment_search_test.go</div></td>
+<td>api_key_header<div class="small">api_key: &lt;LUSHA_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="mattermost mattermost mattermost_tool batch7-lane8 fake_httptest bearer b">
+<td><code>mattermost</code><div class="small">mattermost_tool</div></td>
+<td><span class="pill">batch7-lane8</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">scheduling_chat_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;MATTERMOST_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="microsoft_graph microsoft_graph microsoft_graph_tool batch7-lane9 fake_httptest bearer b">
+<td><code>microsoft_graph</code><div class="small">microsoft_graph_tool</div></td>
+<td><span class="pill">batch7-lane9</span></td>
+<td class="num">11<div class="small">impl 11 · spec 0</div></td>
+<td>fake_httptest<div class="small">microsoft_graph_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;MICROSOFT_GRAPH_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>OneDrive 上传上限 4MB（simple upload，无 upload session）；下载按文本/base64 区分</td>
+</tr>
+<tr data-grade="D" data-search="mongodb mongodb mongodb_tool batch5-lane2 fake_httptest api_key_header d">
+<td><code>mongodb</code><div class="small">mongodb_tool</div></td>
+<td><span class="pill">batch5-lane2</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">mongodb_test.go</div></td>
+<td>api_key_header<div class="small">api-key: &lt;MONGODB_API_KEY&gt;（Atlas Data API）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill bad">D</span></td>
+<td>Atlas Data API 于 2025-09 EOL；需兼容替代端点；无自动重试/无事务</td>
+</tr>
+<tr data-grade="B" data-search="n8n n8n n8n_tool batch7-lane3 fake_httptest api_key_header b">
+<td><code>n8n</code><div class="small">n8n_tool</div></td>
+<td><span class="pill">batch7-lane3</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">infra_automation_test.go</div></td>
+<td>api_key_header<div class="small">X-N8N-API-KEY: &lt;N8N_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="news news news_tool batch7-lane6 fake_httptest api_key_query b">
+<td><code>news</code><div class="small">news_tool</div></td>
+<td><span class="pill">batch7-lane6</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">web_intelligence_test.go</div></td>
+<td>api_key_query<div class="small">apikey=&lt;NEWSDATA_API_KEY|FINLIGHT_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="notion notion notion_tool batch4 fake_httptest bearer b">
+<td><code>notion</code><div class="small">notion_tool</div></td>
+<td><span class="pill">batch4</span></td>
+<td class="num">13<div class="small">impl 13 · spec 0</div></td>
+<td>fake_httptest<div class="small">notion_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;NOTION_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>account 别名被忽略（单凭据）</td>
+</tr>
+<tr data-grade="B" data-search="obsidian obsidian obsidian_tool batch5-lane4 fake_httptest bearer b">
+<td><code>obsidian</code><div class="small">obsidian_tool</div></td>
+<td><span class="pill">batch5-lane4</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">hubspot_obsidian_test.go, obsidian_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;OBSIDIAN_API_KEY&gt;（本地 REST API）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>account 别名被忽略；TLS 校验按运行时配置</td>
+</tr>
+<tr data-grade="B" data-search="openmeteo openmeteo openmeteo_tool batch2 fake_httptest none b">
+<td><code>openmeteo</code><div class="small">openmeteo_tool</div></td>
+<td><span class="pill">batch2</span></td>
+<td class="num">2<div class="small">impl 2 · spec 0</div></td>
+<td>fake_httptest<div class="small">research_registry_test.go, research_web_test.go</div></td>
+<td>none<div class="small">公开 API</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="pagerduty pagerduty pagerduty_tool batch7-lane3 fake_httptest custom b">
+<td><code>pagerduty</code><div class="small">pagerduty_tool</div></td>
+<td><span class="pill">batch7-lane3</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">infra_automation_test.go</div></td>
+<td>custom<div class="small">Authorization: Token token=&lt;PAGERDUTY_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="A" data-search="pdf_read pdf_read pdf_read_tool batch3-doc local_files none a">
+<td><code>pdf_read</code><div class="small">pdf_read_tool</div></td>
+<td><span class="pill">batch3-doc</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>local_files<div class="small">pdf_test.go</div></td>
+<td>none<div class="small">本地文件</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>加密 PDF：不支持密码解密（显式报错）；扫描页依赖 vision/OCR 链路（needs_vision 标记）</td>
+</tr>
+<tr data-grade="B" data-search="pinecone pinecone pinecone_tool batch7-lane4 fake_httptest api_key_header b">
+<td><code>pinecone</code><div class="small">pinecone_tool</div></td>
+<td><span class="pill">batch7-lane4</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">ai_platform_test.go</div></td>
+<td>api_key_header<div class="small">Api-Key: &lt;PINECONE_API_KEY&gt; + X-Pinecone-Api-Version</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="pipedrive pipedrive pipedrive_tool batch6-lane1 fake_httptest api_key_query b">
+<td><code>pipedrive</code><div class="small">pipedrive_tool</div></td>
+<td><span class="pill">batch6-lane1</span></td>
+<td class="num">13<div class="small">impl 13 · spec 0</div></td>
+<td>fake_httptest<div class="small">pipedrive_test.go</div></td>
+<td>api_key_query<div class="small">api_token=&lt;PIPEDRIVE_API_TOKEN&gt; query 参数</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="plaid plaid plaid_tool batch6-lane3 fake_httptest custom b">
+<td><code>plaid</code><div class="small">plaid_tool</div></td>
+<td><span class="pill">batch6-lane3</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">finance_commerce_test.go, plaid_test.go</div></td>
+<td>custom<div class="small">client_id + secret 在 POST body；access_token per-call</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="A" data-search="port_scan port_scan port_scanner batch2 local_socket none a">
+<td><code>port_scan</code><div class="small">port_scanner</div></td>
+<td><span class="pill">batch2</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>local_socket<div class="small">network_scanners_test.go, research_registry_test.go</div></td>
+<td>none<div class="small">本地 TCP 探测</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="postgres postgres postgres_tool batch5-lane2 fake_protocol custom b">
+<td><code>postgres</code><div class="small">postgres_tool</div></td>
+<td><span class="pill">batch5-lane2</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_protocol<div class="small">databases_test.go, postgres_test.go</div></td>
+<td>custom<div class="small">DSN（user/password/host）；只读会话</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>无连接池；只读；auth 支持 trust/cleartext/MD5/SCRAM；参数按文本绑定</td>
+</tr>
+<tr data-grade="B" data-search="powerbi powerbi powerbi_tool batch6-lane4 fake_httptest bearer b">
+<td><code>powerbi</code><div class="small">powerbi_tool</div></td>
+<td><span class="pill">batch6-lane4</span></td>
+<td class="num">5<div class="small">impl 5 · spec 0</div></td>
+<td>fake_httptest<div class="small">powerbi_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;POWERBI_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>只读（上游同）</td>
+</tr>
+<tr data-grade="B" data-search="prometheus prometheus prometheus_tool batch7-lane3 fake_httptest bearer b">
+<td><code>prometheus</code><div class="small">prometheus_tool</div></td>
+<td><span class="pill">batch7-lane3</span></td>
+<td class="num">2<div class="small">impl 2 · spec 0</div></td>
+<td>fake_httptest<div class="small">infra_automation_test.go</div></td>
+<td>bearer<div class="small">Bearer 或 Basic（PROMETHEUS_USERNAME/PASSWORD）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="pushover pushover pushover_tool batch7-lane7 fake_httptest token_query b">
+<td><code>pushover</code><div class="small">pushover_tool</div></td>
+<td><span class="pill">batch7-lane7</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">social_media_test.go</div></td>
+<td>token_query<div class="small">token=&lt;PUSHOVER_APP_TOKEN&gt; form/query 字段</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="quickbooks quickbooks quickbooks_tool batch6-lane3 fake_httptest bearer b">
+<td><code>quickbooks</code><div class="small">quickbooks_tool</div></td>
+<td><span class="pill">batch6-lane3</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">finance_commerce_test.go, quickbooks_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;QUICKBOOKS_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="razorpay razorpay razorpay_tool batch6-lane3 fake_httptest basic b">
+<td><code>razorpay</code><div class="small">razorpay_tool</div></td>
+<td><span class="pill">batch6-lane3</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">finance_commerce_test.go, razorpay_test.go</div></td>
+<td>basic<div class="small">HTTP Basic key:secret</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="reddit reddit reddit_tool batch7-lane7 fake_httptest oauth b">
+<td><code>reddit</code><div class="small">reddit_tool</div></td>
+<td><span class="pill">batch7-lane7</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">social_media_test.go</div></td>
+<td>oauth<div class="small">OAuth2 client-credentials 换 token（REDDIT_CLIENT_ID/SECRET），后 Bearer</div></td>
+<td>client_credentials</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="redis redis redis_tool batch5-lane2 fake_protocol custom b">
+<td><code>redis</code><div class="small">redis_tool</div></td>
+<td><span class="pill">batch5-lane2</span></td>
+<td class="num">11<div class="small">impl 11 · spec 0</div></td>
+<td>fake_protocol<div class="small">databases_test.go, redis_test.go</div></td>
+<td>custom<div class="small">AUTH password 或 ACL user+password（URL）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>无连接池；RESP2；无 pub/sub 订阅（publish 支持）；无 cluster 重定向</td>
+</tr>
+<tr data-grade="B" data-search="redshift redshift redshift_tool batch6-lane4 fake_httptest sigv4 b">
+<td><code>redshift</code><div class="small">redshift_tool</div></td>
+<td><span class="pill">batch6-lane4</span></td>
+<td class="num">5<div class="small">impl 5 · spec 0</div></td>
+<td>fake_httptest<div class="small">redshift_test.go</div></td>
+<td>sigv4<div class="small">AWS4-HMAC-SHA256（仅长期 IAM key，无 STS）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>仅长期 IAM key（无 STS/session token）</td>
+</tr>
+<tr data-grade="A" data-search="risk_score risk_score risk_scorer core pure_local none a">
+<td><code>risk_score</code><div class="small">risk_scorer</div></td>
+<td><span class="pill">core</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>pure_local<div class="small">integration_test.go, local_test.go</div></td>
+<td>none<div class="small">纯本地</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="salesforce salesforce salesforce_tool batch6-lane1 fake_httptest bearer b">
+<td><code>salesforce</code><div class="small">salesforce_tool</div></td>
+<td><span class="pill">batch6-lane1</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">crm_common_test.go, pipedrive_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;SALESFORCE_ACCESS_TOKEN&gt; + SALESFORCE_INSTANCE_URL</div></td>
+<td>static_token</td>
+<td>passthrough<div class="small">SOQL 接受 next_records_url 并返回下一页 URL</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="sap sap sap_tool batch6-lane4 fake_httptest basic b">
+<td><code>sap</code><div class="small">sap_tool</div></td>
+<td><span class="pill">batch6-lane4</span></td>
+<td class="num">5<div class="small">impl 5 · spec 0</div></td>
+<td>fake_httptest<div class="small">sap_test.go</div></td>
+<td>basic<div class="small">Basic base64(user:password)</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>只读 OData V2；仅 BASIC</td>
+</tr>
+<tr data-grade="B" data-search="search_wikipedia search_wikipedia wikipedia_tool batch2 fake_httptest none b">
+<td><code>search_wikipedia</code><div class="small">wikipedia_tool</div></td>
+<td><span class="pill">batch2</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>fake_httptest<div class="small">research_registry_test.go, research_web_test.go, tool_schema_p1_test.go</div></td>
+<td>none<div class="small">公开 MediaWiki API</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="serpapi serpapi serpapi_tool batch7-lane5 fake_httptest api_key_query b">
+<td><code>serpapi</code><div class="small">serpapi_tool</div></td>
+<td><span class="pill">batch7-lane5</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">enrichment_search_test.go</div></td>
+<td>api_key_query<div class="small">api_key=&lt;SERPAPI_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="shopify shopify shopify_tool batch6-lane3 fake_httptest custom b">
+<td><code>shopify</code><div class="small">shopify_tool</div></td>
+<td><span class="pill">batch6-lane3</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">finance_commerce_test.go, shopify_test.go</div></td>
+<td>custom<div class="small">X-Shopify-Access-Token: &lt;SHOPIFY_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="similarweb similarweb similarweb_tool batch7-lane6 fake_httptest api_key_header b">
+<td><code>similarweb</code><div class="small">similarweb_tool</div></td>
+<td><span class="pill">batch7-lane6</span></td>
+<td class="num">29<div class="small">impl 29 · spec 0</div></td>
+<td>fake_httptest<div class="small">web_intelligence_test.go</div></td>
+<td>api_key_header<div class="small">api-key: &lt;SIMILARWEB_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="slack slack slack_tool core fake_httptest bearer b">
+<td><code>slack</code><div class="small">slack_tool</div></td>
+<td><span class="pill">core</span></td>
+<td class="num">51<div class="small">impl 5 · spec 46</div></td>
+<td>fake_httptest<div class="small">local_composite_test.go, local_slack_github_test.go, rest_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;SLACK_BOT_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">cursor 参数存在但只透传，不自动翻页</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>upload 走 external upload URL + PUT 文本内容；无 multipart；分页仅 cursor 透传</td>
+</tr>
+<tr data-grade="B" data-search="snowflake snowflake snowflake_tool batch6-lane4 fake_httptest bearer b">
+<td><code>snowflake</code><div class="small">snowflake_tool</div></td>
+<td><span class="pill">batch6-lane4</span></td>
+<td class="num">3<div class="small">impl 3 · spec 0</div></td>
+<td>fake_httptest<div class="small">snowflake_test.go</div></td>
+<td>bearer<div class="small">Bearer &lt;SNOWFLAKE_TOKEN&gt; + X-Snowflake-Authorization-Token-Type</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>仅 statements API；OAuth token 类型可调</td>
+</tr>
+<tr data-grade="A" data-search="ssl_tls_scan ssl_tls_scan ssl_tls_scanner batch2 local_socket none a">
+<td><code>ssl_tls_scan</code><div class="small">ssl_tls_scanner</div></td>
+<td><span class="pill">batch2</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>local_socket<div class="small">network_scanners_test.go, research_registry_test.go</div></td>
+<td>none<div class="small">公开 TLS 探测</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="stripe stripe stripe_tool core fake_httptest bearer b">
+<td><code>stripe</code><div class="small">stripe_tool</div></td>
+<td><span class="pill">core</span></td>
+<td class="num">54<div class="small">impl 2 · spec 54</div></td>
+<td>fake_httptest<div class="small">local_stripe_test.go, rest_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;STRIPE_API_KEY&gt;，application/x-www-form-urlencoded</div></td>
+<td>—</td>
+<td>passthrough<div class="small">列表响应带 has_more；不自动翻页</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="subdomain_enumerate subdomain_enumerate subdomain_enumerator batch8-final fake_httptest none b">
+<td><code>subdomain_enumerate</code><div class="small">subdomain_enumerator</div></td>
+<td><span class="pill">batch8-final</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>fake_httptest<div class="small">subdomain_test.go</div></td>
+<td>none<div class="small">公开 crt.sh</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="supabase supabase supabase_tool batch5-lane2 fake_httptest api_key_header b">
+<td><code>supabase</code><div class="small">supabase_tool</div></td>
+<td><span class="pill">batch5-lane2</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">supabase_test.go</div></td>
+<td>api_key_header<div class="small">apikey: &lt;SUPABASE_ANON_KEY&gt; + Authorization: Bearer &lt;key&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>仅 anon key；无 service-role</td>
+</tr>
+<tr data-grade="A" data-search="tech_stack_detect tech_stack_detect tech_stack_detector batch8-final local_socket none a">
+<td><code>tech_stack_detect</code><div class="small">tech_stack_detector</div></td>
+<td><span class="pill">batch8-final</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>local_socket<div class="small">tech_stack_test.go</div></td>
+<td>none<div class="small">公开 HTTP 指纹</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="telegram telegram telegram_tool core fake_httptest custom b">
+<td><code>telegram</code><div class="small">telegram_tool</div></td>
+<td><span class="pill">core</span></td>
+<td class="num">13<div class="small">impl 0 · spec 13</div></td>
+<td>fake_httptest<div class="small">rest_test.go</div></td>
+<td>custom<div class="small">token 在 URL path：/bot{TELEGRAM_BOT_TOKEN}/&lt;method&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="terraform terraform terraform_tool batch7-lane3 fake_httptest bearer b">
+<td><code>terraform</code><div class="small">terraform_tool</div></td>
+<td><span class="pill">batch7-lane3</span></td>
+<td class="num">5<div class="small">impl 5 · spec 0</div></td>
+<td>fake_httptest<div class="small">infra_automation_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;TFC_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>仅 TFC/TFE API v2；无 apply/discard/cancel（上游同）</td>
+</tr>
+<tr data-grade="B" data-search="tines tines tines_tool batch7-lane3 fake_httptest bearer b">
+<td><code>tines</code><div class="small">tines_tool</div></td>
+<td><span class="pill">batch7-lane3</span></td>
+<td class="num">5<div class="small">impl 5 · spec 0</div></td>
+<td>fake_httptest<div class="small">infra_automation_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;TINES_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>只读（上游同）</td>
+</tr>
+<tr data-grade="B" data-search="trello trello trello_tool core fake_httptest api_key_query b">
+<td><code>trello</code><div class="small">trello_tool</div></td>
+<td><span class="pill">core</span></td>
+<td class="num">12<div class="small">impl 0 · spec 12</div></td>
+<td>fake_httptest<div class="small">rest_test.go</div></td>
+<td>api_key_query<div class="small">query key + token（TRELLO_API_KEY/TRELLO_API_TOKEN）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="twilio twilio twilio_tool batch7-lane7 fake_httptest basic b">
+<td><code>twilio</code><div class="small">twilio_tool</div></td>
+<td><span class="pill">batch7-lane7</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">social_media_test.go</div></td>
+<td>basic<div class="small">HTTP Basic account_sid:auth_token（form body）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="twitter twitter twitter_tool batch7-lane7 fake_httptest bearer b">
+<td><code>twitter</code><div class="small">twitter_tool</div></td>
+<td><span class="pill">batch7-lane7</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">social_media_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;TWITTER_BEARER_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="vercel vercel vercel_tool batch7-lane1 fake_httptest bearer b">
+<td><code>vercel</code><div class="small">vercel_tool</div></td>
+<td><span class="pill">batch7-lane1</span></td>
+<td class="num">7<div class="small">impl 7 · spec 0</div></td>
+<td>fake_httptest<div class="small">devops_hosting_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;VERCEL_TOKEN&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="vision vision vision_tool batch7-lane4 fake_httptest api_key_query b">
+<td><code>vision</code><div class="small">vision_tool</div></td>
+<td><span class="pill">batch7-lane4</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">ai_platform_test.go</div></td>
+<td>api_key_query<div class="small">key=&lt;GOOGLE_CLOUD_VISION_API_KEY&gt; query 参数</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>Google Cloud Vision v1（key query）</td>
+</tr>
+<tr data-grade="B" data-search="wandb wandb wandb_tool batch7-lane4 fake_httptest bearer b">
+<td><code>wandb</code><div class="small">wandb_tool</div></td>
+<td><span class="pill">batch7-lane4</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">ai_platform_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;WANDB_API_KEY&gt;（GraphQL）</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="A" data-search="web_scrape web_scrape web_scrape_tool batch3-doc local_socket none a">
+<td><code>web_scrape</code><div class="small">web_scrape_tool</div></td>
+<td><span class="pill">batch3-doc</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>local_socket<div class="small">pdf_test.go, scrape_test.go, tool_schema_p1_test.go</div></td>
+<td>none<div class="small">无凭据；SSRF 守卫</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="web_search web_search web_search_tool batch3-media fake_httptest api_key_header b">
+<td><code>web_search</code><div class="small">web_search_tool</div></td>
+<td><span class="pill">batch3-media</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>fake_httptest<div class="small">image_test.go, tool_schema_p1_test.go, web_search_test.go</div></td>
+<td>api_key_header<div class="small">Brave: X-Subscription-Token；Google CSE: key= query</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="yahoo_finance yahoo_finance yahoo_finance_tool batch2 fake_httptest none b">
+<td><code>yahoo_finance</code><div class="small">yahoo_finance_tool</div></td>
+<td><span class="pill">batch2</span></td>
+<td class="num">5<div class="small">impl 5 · spec 0</div></td>
+<td>fake_httptest<div class="small">research_registry_test.go, yahoo_youtube_test.go</div></td>
+<td>none<div class="small">公开 API</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="youtube youtube youtube_tool batch7-lane7 fake_httptest api_key_query b">
+<td><code>youtube</code><div class="small">youtube_tool</div></td>
+<td><span class="pill">batch7-lane7</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">social_media_test.go</div></td>
+<td>api_key_query<div class="small">key=&lt;YOUTUBE_API_KEY&gt;</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="youtube_transcript youtube_transcript youtube_transcript_tool batch2 fake_httptest none b">
+<td><code>youtube_transcript</code><div class="small">youtube_transcript_tool</div></td>
+<td><span class="pill">batch2</span></td>
+<td class="num">2<div class="small">impl 2 · spec 0</div></td>
+<td>fake_httptest<div class="small">research_registry_test.go, yahoo_youtube_test.go</div></td>
+<td>none<div class="small">公开页面/接口</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="zendesk zendesk zendesk_tool batch6-lane2 fake_httptest basic b">
+<td><code>zendesk</code><div class="small">zendesk_tool</div></td>
+<td><span class="pill">batch6-lane2</span></td>
+<td class="num">8<div class="small">impl 8 · spec 0</div></td>
+<td>fake_httptest<div class="small">zendesk_test.go</div></td>
+<td>basic<div class="small">Basic base64(email/token:api_token)</div></td>
+<td>—</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="zoho_crm zoho_crm zoho_crm_tool batch6-lane1 fake_httptest custom b">
+<td><code>zoho_crm</code><div class="small">zoho_crm_tool</div></td>
+<td><span class="pill">batch6-lane1</span></td>
+<td class="num">6<div class="small">impl 6 · spec 0</div></td>
+<td>fake_httptest<div class="small">pipedrive_test.go, zoho_crm_test.go</div></td>
+<td>custom<div class="small">Authorization: Zoho-oauthtoken &lt;ZOHO_CRM_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>none<div class="small">列表类 action 无分页参数/无自动翻页（通用客户端无分页）</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="zoom zoom zoom_tool batch7-lane9 fake_httptest bearer b">
+<td><code>zoom</code><div class="small">zoom_tool</div></td>
+<td><span class="pill">batch7-lane9</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_httptest<div class="small">marketing_productivity_test.go</div></td>
+<td>bearer<div class="small">Authorization: Bearer &lt;ZOOM_ACCESS_TOKEN&gt;</div></td>
+<td>static_token</td>
+<td>passthrough<div class="small">page_size（上限 300）+ next_page_token 传进/传出</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>—</td>
+</tr>
+<tr data-grade="B" data-search="email_senders (internal/senders) senders senders_tool external fake_smtp custom b">
+<td><code>email_senders (internal/senders)</code><div class="small">senders_tool</div></td>
+<td><span class="pill">external</span></td>
+<td class="num">9<div class="small">impl 9 · spec 0</div></td>
+<td>fake_smtp<div class="small">internal/senders/mailer_test.go, internal/senders/engine_test.go</div></td>
+<td>custom<div class="small">SMTP username/password（sender pool）；ESP(google/hubspot/sendgrid/mailjet) 只建模不投递</div></td>
+<td>—</td>
+<td>none<div class="small">本地 sender store/发送日志</div></td>
+<td style="text-align:center"><span class="pill info">B</span></td>
+<td>只有 SMTP 有真实投递路径；SendGrid/Mailjet/Google/HubSpot 仅作为 sender 标签建模，无 ESP API 投递；feature gate HIVE_EMAIL_SENDERS 默认关</td>
+</tr>
+<tr data-grade="A" data-search="browser_setup browser_setup browser_setup external pure_local none a">
+<td><code>browser_setup</code><div class="small">browser_setup</div></td>
+<td><span class="pill">external</span></td>
+<td class="num">1<div class="small">impl 1 · spec 0</div></td>
+<td>pure_local<div class="small">browser_setup_test.go</div></td>
+<td>none<div class="small">静态命令面（无网络/无凭据）</div></td>
+<td>—</td>
+<td>none<div class="small">无</div></td>
+<td style="text-align:center"><span class="pill ok">A</span></td>
+<td>只返回 hive-browser CLI 命令面；真实浏览器能力在独立 browserbridge 进程</td>
+</tr>
+</tbody></table></div>
+</section>
+
+<section id="real"><h2><span class="num">03</span>A 类：真实证据（12）</h2>
+<p class="sub">以下模块的测试端到端跑生产代码路径，对真实本地资源断言真实行为；不是“有 impl”，也不是假 JSON。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">模块</th><th style="width:6%">actions</th><th style="width:40%">实测证据（测试名）</th><th>边界</th></tr></thead><tbody>
+<tr><td><code>attach_file</code></td><td class="num">1</td><td>TestBatch8AttachFileSinglePDF, TestBatch8AttachFileImageBlockOverCap, TestBatch8AttachFileBlockNoteNamesThePath, TestBatch8AttachFileSinglePNG, TestBatch8AttachFileJPGExtensions</td><td></td></tr>
+<tr><td><code>browser_setup</code></td><td class="num">1</td><td>TestBrowserSetupReturnsDiscoveryEnvelope, TestBrowserSetupRecordsBrowserGroup, TestInstallBrowserSetupIsIdempotent</td><td>只返回 hive-browser CLI 命令面；真实浏览器能力在独立 browserbridge 进程</td></tr>
+<tr><td><code>csv</code></td><td class="num">4</td><td>TestCSVWriteReadAppendInfo, TestCSVErrorsAndSandbox, TestSpreadsheetAliasesExposeUpstreamNames, TestSpreadsheetAliasesReuseCSVActions, TestSpreadsheetAliasesKeepErrorEnvelopes</td><td>csv_sql 排除（DuckDB）</td></tr>
+<tr><td><code>excel</code></td><td class="num">6</td><td>TestBatch3ExcelReadBasic, TestBatch3ExcelReadSpecificSheet, TestBatch3ExcelReadMissingSheet, TestBatch3ExcelReadLimitAndOffset, TestBatch3ExcelReadOffsetBeyondRows</td><td>不计算公式（读缓存值，与 upstream data_only 一致）</td></tr>
+<tr><td><code>get_current_time</code></td><td class="num">1</td><td>TestInstallIntoSharedRegistry, TestSingleActionToolDispatch, TestTimeToolFields, TestBatch2RegistryIsolation</td><td></td></tr>
+<tr><td><code>http_headers_scan</code></td><td class="num">1</td><td>TestBatch2HTTPHeadersScan, TestBatch2HTTPHeadersAutoPrefix, TestBatch2HTTPHeadersLeakyAndMissing, TestBatch2CatalogIntegrity, TestInstallBatch2</td><td></td></tr>
+<tr><td><code>pdf_read</code></td><td class="num">1</td><td>TestBatch3PDFReadLocalTextPDF, TestBatch3PDFReadPageRangeTruncation, TestBatch3PDFReadPageSpecForms, TestBatch3PDFReadLongPageNoVisionFlag, TestBatch3PDFReadScannedReturnsExplicitError</td><td>加密 PDF：不支持密码解密（显式报错）</td></tr>
+<tr><td><code>port_scan</code></td><td class="num">1</td><td>TestBatch2PortScan, TestBatch2PortScanRiskyExposures, TestBatch2PortScanTop100, TestBatch2PortScanValidation, TestBatch2CatalogIntegrity</td><td></td></tr>
+<tr><td><code>risk_score</code></td><td class="num">1</td><td>TestResultJSONRoundTrip, TestRiskScoreGradesAndFindings, TestRiskScoreMissingDataGivesHalfCredit</td><td></td></tr>
+<tr><td><code>ssl_tls_scan</code></td><td class="num">1</td><td>TestBatch2SSLTLSInjectedCertificate, TestBatch2SSLTLSWeakConfiguration, TestBatch2SSLTLSRefused, TestBatch2SSLTLSRealHandshake, TestBatch2CatalogIntegrity</td><td></td></tr>
+<tr><td><code>tech_stack_detect</code></td><td class="num">1</td><td>TestBatch8TechFullDetection, TestBatch8TechFrameworkFromHeader, TestBatch8TechGradeInputKeys, TestBatch8TechServerVersionExposed, TestBatch8TechConnectionError</td><td></td></tr>
+<tr><td><code>web_scrape</code></td><td class="num">1</td><td>TestBatch3WebScrapeStaticArticle, TestBatch3WebScrapeLinks, TestBatch3WebScrapeSelector, TestBatch3WebScrapeNonHTMLSkipped, TestBatch3WebScrapeHTTPError</td><td></td></tr>
+</tbody></table></div>
+<div class="callout"><b>无人能替它们作证的部分：</b>以上 A 类全部是本地资源。整个仓库<b>没有任何真实第三方 API 调用测试</b>（0 t.Skip、0 真实凭据读取、0 外网目标），所以 REST/SaaS 模块最高只能到 B。</div>
+</section>
+
+<section id="fake"><h2><span class="num">04</span>B 类：假服务口径与样例</h2>
+<p class="sub">B = 请求构造、响应映射、鉴权头、错误映射有 httptest（或进程内协议假服务）覆盖，但从未对真实第三方 API 调用。以下为覆盖方式样例（全部实跑 PASS，见 §06）。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">样例</th><th>测试如何假服务</th></tr></thead><tbody>
+<tr><td><code>salesforce</code>（crm_common_test.go）</td><td>httptest + recorder：断言 SOQL 分页跟随、Bearer 头、401/403/404 错误映射逐个 action</td></tr>
+<tr><td><code>stripe/slack/github/telegram/trello/airtable</code>（rest_test.go）</td><td>TestEveryDeclarativeActionExecutes 对每个 spec action 发请求并断言路径占位符全部填充；另有 RequestShape 单测断言表单编码/查询鉴权/路径 token</td></tr>
+<tr><td><code>similarweb</code>（29 actions）</td><td>表驱动逐 action 断言 method/path/api-key 头/查询参数/常量</td></tr>
+<tr><td><code>postgres/redis/mongodb/supabase</code></td><td>PG/Redis 用进程内协议假服务（真实 wire 客户端）；Mongo/Supabase 用 httptest 假 API</td></tr>
+<tr><td><code>postgres</code>（batch5PGTestServer）</td><td>假 PG 服务器支持 startup/MD5/SCRAM/simple query/扩展协议——仍是假服务，不是真实 PG</td></tr>
+<tr><td><code>senders</code>（internal/senders）</td><td>fake SMTP server；ESP（SendGrid/Mailjet/Google/HubSpot）只建模不投递</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>为什么不是 A：</b>这些测试的“上游”是测试进程内的假服务。它们证明请求构造与映射正确、错误路径正确，不证明真实服务可用（凭据、配额、真实 schema 漂移都未验证）。</div>
+</section>
+
+<section id="gaps"><h2><span class="num">05</span>缺口清单</h2>
+<h3>5.1 跨模块系统性缺口</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">缺口</th><th>事实与影响</th></tr></thead><tbody>
+<tr><td><b>OAuth refresh</b></td><td>全包 0 处 refresh_token/grant_type=refresh。20 个凭据条目（17 个工具）只接受静态 access token；bigquery / google_analytics / google_search_console 支持 service-account JWT 换 token，reddit 支持 client-credentials 取 token，但都没有刷新循环。</td></tr>
+<tr><td><b>分页</b></td><td>integrationkit 的通用 REST 客户端没有分页原语；只有 bigquery 自动跟随 token，zoom/google_docs/gmail/google_maps/salesforce/stripe 做参数透传，其余列表 action 单页返回。</td></tr>
+<tr><td><b>文件上传 / multipart</b></td><td>全包无 multipart.NewWriter：slack 用 external upload URL + PUT 文本，microsoft_graph 用 4MB simple PUT，cloudinary 只接受 file_url，aws_s3 put_object 只接受文本。</td></tr>
+<tr><td><b>webhook 验签</b></td><td>无入站 webhook 接收器，因此也没有 HMAC/验签实现（工具面全部是出站客户端）。</td></tr>
+<tr><td><b>多账号 / account 别名</b></td><td>hubspot、obsidian、notion、discord、mattermost、google workspace、support_ats 多值 bundle 均单凭据；schema 里的 account 参数被忽略（上游 CredentialStoreAdapter 别名未复刻）。</td></tr>
+<tr><td><b>二进制响应</b></td><td>只有 microsoft_graph 下载（文本/base64）与 attach_file 图片块；其它模块按 JSON 处理。</td></tr>
+<tr><td><b>测试真实性</b></td><td>integration 包 0 个 t.Skip、0 个真实凭据环境变量读取、0 个外网调用；全部联网模块只用 httptest 或进程内协议假服务。</td></tr>
+</tbody></table></div>
+<h3>5.2 C/D 级（逐项）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">模块</th><th style="width:6%">actions</th><th style="width:46%">证据</th><th>缺口</th></tr></thead><tbody>
+<tr><td><code>get_account_info</code></td><td class="num">1</td><td>TestAccountInfoSource</td><td>生产未注入 AccountSource → 恒为空</td></tr>
+<tr><td><code>mongodb</code></td><td class="num">6</td><td>TestBatch5Lane2MongoFind, TestBatch5Lane2MongoMissingCredentials, TestBatch5Lane2MongoValidation, TestBatch5Lane2MongoFindOne, TestBatch5Lane2MongoInsertOne</td><td>Atlas Data API 于 2025-09 EOL；需兼容替代端点</td></tr>
+</tbody></table></div>
+<h3>5.3 模块级特殊缺口（代码注释“Deliberate limits” + 扫描实测）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">模块</th><th>缺口</th></tr></thead><tbody>
+<tr><td><code>aws_s3</code> <span class="pill info">B</span></td><td>put_object 只接受文本内容（上游同）；仅长期 IAM key，无 STS</td></tr>
+<tr><td><code>bigquery</code> <span class="pill info">B</span></td><td>不读 gcloud ADC；需 SA JSON 或显式 token</td></tr>
+<tr><td><code>browser_setup</code> <span class="pill ok">A</span></td><td>只返回 hive-browser CLI 命令面；真实浏览器能力在独立 browserbridge 进程</td></tr>
+<tr><td><code>cloudinary</code> <span class="pill info">B</span></td><td>上传只接受 URL（file_url），无本地文件 multipart</td></tr>
+<tr><td><code>confluence</code> <span class="pill info">B</span></td><td>仅 Confluence Cloud REST v2；Basic（无 OAuth）</td></tr>
+<tr><td><code>csv</code> <span class="pill ok">A</span></td><td>csv_sql 排除（DuckDB）</td></tr>
+<tr><td><code>dns_security_scan</code> <span class="pill info">B</span></td><td>测试只注入 fake resolver（生产用真实 DNS）</td></tr>
+<tr><td><code>email</code> <span class="pill info">B</span></td><td>Gmail 用 MIME multipart/alternative 进程内构造；仅 resend/gmail 两个 provider</td></tr>
+<tr><td><code>email_senders (internal/senders)</code> <span class="pill info">B</span></td><td>只有 SMTP 有真实投递路径；SendGrid/Mailjet/Google/HubSpot 仅作为 sender 标签建模，无 ESP API 投递；feature gate HIVE_EMAIL_SENDERS 默认关</td></tr>
+<tr><td><code>excel</code> <span class="pill ok">A</span></td><td>不计算公式（读缓存值，与 upstream data_only 一致）；excel_sql 排除（DuckDB）</td></tr>
+<tr><td><code>get_account_info</code> <span class="pill warn">C</span></td><td>生产未注入 AccountSource → 恒为空</td></tr>
+<tr><td><code>google_analytics</code> <span class="pill info">B</span></td><td>不读 gcloud ADC；SA JSON 或显式 token；GA4 仅 read-only 报告</td></tr>
+<tr><td><code>google_search_console</code> <span class="pill info">B</span></td><td>不读 gcloud ADC；两套 API root 共用一个凭据</td></tr>
+<tr><td><code>hubspot</code> <span class="pill info">B</span></td><td>account 别名被忽略（单凭据）</td></tr>
+<tr><td><code>image_generate</code> <span class="pill info">B</span></td><td>依赖 Hive LLM 代理（HIVE_API_KEY）；无本地 provider key</td></tr>
+<tr><td><code>jira</code> <span class="pill info">B</span></td><td>仅 Jira Cloud REST v3；Basic（无 OAuth）</td></tr>
+<tr><td><code>kafka</code> <span class="pill info">B</span></td><td>仅 REST Proxy v3；无原生 broker/SASL/Schema Registry</td></tr>
+<tr><td><code>microsoft_graph</code> <span class="pill info">B</span></td><td>OneDrive 上传上限 4MB（simple upload，无 upload session）；下载按文本/base64 区分</td></tr>
+<tr><td><code>mongodb</code> <span class="pill bad">D</span></td><td>Atlas Data API 于 2025-09 EOL；需兼容替代端点；无自动重试/无事务</td></tr>
+<tr><td><code>notion</code> <span class="pill info">B</span></td><td>account 别名被忽略（单凭据）</td></tr>
+<tr><td><code>obsidian</code> <span class="pill info">B</span></td><td>account 别名被忽略；TLS 校验按运行时配置</td></tr>
+<tr><td><code>pdf_read</code> <span class="pill ok">A</span></td><td>加密 PDF：不支持密码解密（显式报错）；扫描页依赖 vision/OCR 链路（needs_vision 标记）</td></tr>
+<tr><td><code>postgres</code> <span class="pill info">B</span></td><td>无连接池；只读；auth 支持 trust/cleartext/MD5/SCRAM；参数按文本绑定</td></tr>
+<tr><td><code>powerbi</code> <span class="pill info">B</span></td><td>只读（上游同）</td></tr>
+<tr><td><code>redis</code> <span class="pill info">B</span></td><td>无连接池；RESP2；无 pub/sub 订阅（publish 支持）；无 cluster 重定向</td></tr>
+<tr><td><code>redshift</code> <span class="pill info">B</span></td><td>仅长期 IAM key（无 STS/session token）</td></tr>
+<tr><td><code>sap</code> <span class="pill info">B</span></td><td>只读 OData V2；仅 BASIC</td></tr>
+<tr><td><code>slack</code> <span class="pill info">B</span></td><td>upload 走 external upload URL + PUT 文本内容；无 multipart；分页仅 cursor 透传</td></tr>
+<tr><td><code>snowflake</code> <span class="pill info">B</span></td><td>仅 statements API；OAuth token 类型可调</td></tr>
+<tr><td><code>supabase</code> <span class="pill info">B</span></td><td>仅 anon key；无 service-role</td></tr>
+<tr><td><code>terraform</code> <span class="pill info">B</span></td><td>仅 TFC/TFE API v2；无 apply/discard/cancel（上游同）</td></tr>
+<tr><td><code>tines</code> <span class="pill info">B</span></td><td>只读（上游同）</td></tr>
+<tr><td><code>vision</code> <span class="pill info">B</span></td><td>Google Cloud Vision v1（key query）</td></tr>
+</tbody></table></div>
+<h3>5.4 已知排除项（单列）</h3>
+<ul>
+<li><b>csv_sql / excel_sql</b>：上游各少 1 个 action（DuckDB/cgo 依赖），catalog 有意排除，无 stub；替代路径 csv_read/excel_read + 调用方过滤。</li>
+<li><b>senders ESP 投递</b>：<code>internal/senders</code> 9 actions 已移植，feature gate <code>HIVE_EMAIL_SENDERS</code>（默认关）；只有 SMTP 有真实投递路径，SendGrid/Mailjet/Google/HubSpot 仅建模为 sender 标签。</li>
+<li><b>cloud-only 依赖</b>：<code>image_generate</code> 依赖 Hive LLM 代理（<code>HIVE_API_KEY</code> + <code>HIVE_LLM_BASE_URL</code>，默认 llm.open-hive.com）——无代理凭据时显式 503，不伪造图片。</li>
+<li><b>mongodb</b>：依赖的 Atlas Data API 2025-09 EOL，仅兼容替代端点可用（D 级）。</li>
+<li><b>webhook 验签</b>：无入站 webhook 接收面，天然无验签实现（不是遗漏，是工具面边界）。</li>
+</ul>
+</section>
+
+<section id="repro"><h2><span class="num">06</span>复现命令与实测结果</h2>
+<p class="sub">全部在本 worktree（<code>.wt/integrations-evidence-audit</code>，基线 11a7c340）实跑；不访问外网。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">项目</th><th>命令与结果</th></tr></thead><tbody>
+<tr><td><b>全包测试</b></td><td><code>cd go_hive/go-hive &amp;&amp; go test ./internal/tools/integrations/ -count=1</code><div class="small">ok github.com/aden-hive/hive-go/internal/tools/integrations 2.747s</div></td></tr>
+<tr><td><b>用例总数</b></td><td><code>go test ./internal/tools/integrations/ -list &#x27;Test.*&#x27; | grep -c &#x27;^Test&#x27;</code><div class="small">1230</div></td></tr>
+<tr><td><b>本地文件类（PDF/Excel/CSV/scrape）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch3PDFRead|TestBatch3Excel|TestCSV|TestBatch3WebScrape&#x27; -count=1 -v</code><div class="small">全 PASS；例：TestBatch3PDFReadLocalTextPDF、TestBatch3ExcelWriteNewFile、TestCSVWriteReadAppendInfo、TestBatch3WebScrapePersistsFullBody</div></td></tr>
+<tr><td><b>扫描器（真实 loopback socket/TLS）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch2PortScan|TestBatch2SSLTLS|TestBatch2HTTPHeaders|TestBatch2DNSSecurity&#x27; -count=1 -v</code><div class="small">14/14 PASS；含 TestBatch2SSLTLSRealHandshake、TestBatch2PortScan（net.Listen 127.0.0.1）</div></td></tr>
+<tr><td><b>本地协议假服务（PG/Redis/Mongo/Supabase）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch5Lane2Redis|TestBatch5Lane2Mongo|TestBatch5Lane2Supabase|TestBatch5PG&#x27; -count=1</code><div class="small">ok 0.285s（进程内假服务，非真实 PG/Redis）</div></td></tr>
+<tr><td><b>REST 假服务样例（Salesforce/CRM）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch6(Salesforce|Lane1)&#x27; -count=1 -v</code><div class="small">16 个顶层用例 PASS（含 401/403/404 错误映射与 Bearer 断言）</div></td></tr>
+<tr><td><b>声明式全量 sweep（stripe/slack/github/telegram/trello/airtable）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestEveryDeclarativeActionExecutes|TestStripeRequestShape|TestSlackRequestShape|TestGitHubRequestShape&#x27; -count=1 -v</code><div class="small">PASS；sweep 对 6 个模块的每个 spec action 都发请求并断言无未填充占位符</div></td></tr>
+<tr><td><b>富化/情报（retry、多 provider 回退）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch7Lane5|TestBatch7Lane6SimilarWeb&#x27; -count=1</code><div class="small">ok 0.326s</div></td></tr>
+<tr><td><b>邮件/Google/Notion/Linear</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch7Lane9Email|TestBatch5Lane3|TestBatch4Notion|TestBatch4Linear&#x27; -count=1 -v</code><div class="small">130 个顶层用例 PASS</div></td></tr>
+<tr><td><b>表格别名 + browser_setup（session 注册面）</b></td><td><code>go test ./internal/cli/ -run &#x27;TestSessionCatalogueRegistersSpreadsheetToolNames|TestSessionCatalogueBrowserSetupDispatch&#x27; -count=1 -v</code><div class="small">PASS；csv_*/excel_* 10 个别名与 browser_setup 均由 session catalogue 实测分发</div></td></tr>
+</tbody></table></div>
+<h3>注册表 dump 探针（临时，已删除；此处内联以便复现）</h3>
+<pre>// 临时探针（审计用，已删除）：放入 internal/tools/integrations/zz_audit_dump_test.go
+func TestZZAuditDump(t *testing.T) {
+    regs := []*Registry{New(), newBatch2Registry(), newBatch3Registry(), newBatch3ExcelRegistry(),
+        newBatch3MediaRegistry(), newBatch4Registry(), newBatch5Lane1Registry(), newBatch5Lane2Registry(),
+        newBatch5Lane3Registry(), newBatch5Lane4Registry(), newBatch6Lane1Registry(), newBatch6Lane2Registry(),
+        newBatch6Lane3Registry(), newBatch6Lane4Registry(), newBatch7Lane1Registry(), batch7Lane2NewRegistry(),
+        newBatch7Lane3Registry(), newBatch7Lane4Registry(), batch7Lane5NewRegistry(), newBatch7Lane6Registry(),
+        newBatch7Lane7Registry(), newBatch7Lane8Registry(), newBatch7Lane9Registry(), newBatch8FinalRegistry()}
+    // 对每个 registry 遍历 r.order / r.tools / r.specs / r.impls，dump tool→action→{has_impl,has_spec}
+    // 并把 Rt.Modules 的 EnvVars/BaseURL/Headers(token)/Query(token)/ResolveToken 探针结果写 JSON。
+}
+go test ./internal/tools/integrations/ -run TestZZAuditDump -count=1 -v
+// =&gt; tools=102 actions=854 with_impl=706 with_spec=150</pre>
+<h3>上游对账（AST 双侧）</h3>
+<pre>python3 - <<'EOF'
+# 上游：tools/src/aden_tools/tools/*/**.py 逐个 @mcp.tool def 计数 → 103 模块 / 865 action
+# Go：上面的注册表 dump → 102 模块 / 854 action（+ senders 9）
+# 逐 action 名对账：唯一差异 = csv_sql、excel_sql（有意排除）
+EOF</pre>
+</section>
+
+<section id="method"><h2><span class="num">07</span>方法与边界</h2>
+<ul>
+<li><b>取数</b>：① 临时 Go 测试遍历 24 个 registry 构造器 dump tool/action/impl/spec 与 ModuleConfig；② 上游 Python AST 扫描 @mcp.tool；③ 测试文件静态扫描（httptest / 127.0.0.1 / t.Skip / os.Getenv）；④ 全包与定向测试实跑。</li>
+<li><b>不猜</b>：action 数、impl/spec 覆盖、鉴权形态都落到 file:line；未实测的能力不写“可用”。</li>
+<li><b>边界</b>：本审计只覆盖 integrations 包 + senders 工具面；不含浏览器桥（另有 docs/browser-bridge.html）、内置 harness 工具、动态 MCP。</li>
+<li><b>快照</b>：结论绑定基线 <code>11a7c340</code>；基线之后的变更需重跑 §06 复现命令。</li>
+</ul>
+</section>
+
+<footer>go_hive · integrations evidence audit · 2026-11-21 01:28 CST · baseline main 11a7c340 · 数据：<code>integrations-evidence-audit.json</code> · 摘要：<code>integrations-evidence-audit.md</code></footer>
+</div>
+<script>
+const f = document.getElementById('filter');
+f.addEventListener('input', () => {
+  const q = f.value.trim().toLowerCase();
+  document.querySelectorAll('#modules tbody tr').forEach(tr => {
+    tr.style.display = (!q || tr.dataset.search.includes(q)) ? '' : 'none';
+  });
+});
+</script>
+</body></html>

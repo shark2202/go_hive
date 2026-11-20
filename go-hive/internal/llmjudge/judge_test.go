@@ -387,3 +387,31 @@ func TestProviderReuseAcrossJudges(t *testing.T) {
 		t.Fatalf("calls = %d, want 2", len(shared.calls))
 	}
 }
+
+// TestConfiguredAuxMaxTokensReachesTheJudge proves llm.aux_max_tokens is
+// consumed: the process-wide budget installed from configuration.json is what
+// the judge sends, not the built-in 8192.
+//
+// Parity: tests/test_llm_judge.py::TestLLMJudgeWithProvider::test_evaluate_passes_correct_arguments
+func TestConfiguredAuxMaxTokensReachesTheJudge(t *testing.T) {
+	previous := llm.AuxMaxTokens()
+	llm.SetAuxMaxTokens(2048)
+	t.Cleanup(func() { llm.SetAuxMaxTokens(previous) })
+
+	provider := newProvider(`{"passes": true, "explanation": "ok"}`)
+	New(provider).Evaluate("c", "d", "s", "cr")
+	if len(provider.calls) != 1 {
+		t.Fatalf("calls = %d, want 1", len(provider.calls))
+	}
+	if provider.calls[0].MaxTokens != 2048 {
+		t.Fatalf("max_tokens = %d, want the configured 2048", provider.calls[0].MaxTokens)
+	}
+
+	// Clearing the override restores the built-in cap.
+	llm.SetAuxMaxTokens(0)
+	provider = newProvider(`{"passes": true, "explanation": "ok"}`)
+	New(provider).Evaluate("c", "d", "s", "cr")
+	if provider.calls[0].MaxTokens != llm.DefaultAuxMaxTokens {
+		t.Fatalf("max_tokens = %d, want the default %d", provider.calls[0].MaxTokens, llm.DefaultAuxMaxTokens)
+	}
+}

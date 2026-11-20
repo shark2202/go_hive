@@ -376,11 +376,21 @@ func TestBrowserScreenshot(t *testing.T) {
 	}
 }
 
-func TestBrowserScreenshotRequiresIntent(t *testing.T) {
-	b, _ := newToolBridge(t)
-	_, err := b.Execute(context.Background(), "alpha", "browser_screenshot", map[string]any{"tab_id": 11})
-	if err == nil || AsError(err).Code != CodeBadRequest {
-		t.Fatalf("want bad_request, got %v", err)
+func TestBrowserScreenshotIntentOptional(t *testing.T) {
+	// Upstream's CLI path calls render_screenshot(intent=None), so a missing
+	// intent must still capture; the retired MCP tool schema was the only
+	// place that required it.
+	b, f := newToolBridge(t)
+	res, err := b.Execute(context.Background(), "alpha", "browser_screenshot", map[string]any{"tab_id": 11})
+	if err != nil {
+		t.Fatalf("screenshot without intent: %v", err)
+	}
+	m := mustMap(t, res)
+	if m["ok"] != true || m["data"] != "aGVsbG8=" {
+		t.Fatalf("screenshot=%+v", m)
+	}
+	if f.countCDP("Page.captureScreenshot") == 0 {
+		t.Fatal("captureScreenshot was not called")
 	}
 }
 

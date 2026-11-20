@@ -49,23 +49,56 @@ class WiringPoint:
 WIRING: tuple[WiringPoint, ...] = (
     WiringPoint(
         path="internal/server/chat_runtime.go",
-        description="Chat 运行时：每轮 recall 注入 + 会话事件日志",
+        description="Chat 运行时：每轮 recall 注入 + 会话事件日志 + vision 兜底",
         requirements=(
             Requirement("injectRecall 定义", r"func \(r \*ChatRuntime\) injectRecall\("),
             Requirement("injectRecall 调用点", r"\.injectRecall\("),
             Requirement("会话日志打开 SetSessionLog", r"SetSessionLog\("),
             Requirement("会话日志关闭 CloseSessionLog", r"CloseSessionLog\("),
+            Requirement("VisionCaptioner 字段", r"\bVisionCaptioner\s+agentloop\.VisionCaptioner\b"),
+            Requirement("VisionCaptioner 接线", r"runtime\.loop\.VisionCaptioner\s*=\s*deps\.VisionCaptioner"),
         ),
     ),
     WiringPoint(
         path="internal/cli/loader.go",
-        description="会话装配：ChatRuntimeDeps 的事件总线与会话身份",
+        description="会话装配：ChatRuntimeDeps 的事件总线、会话身份与 queen 模型槽位",
         requirements=(
             Requirement("NewChatRuntime 调用", r"NewChatRuntime\("),
             Requirement("Bus 字段", r"\bBus:\s*\S"),
             Requirement("SessionID 字段", r"\bSessionID:\s*\S"),
             Requirement("QueenName 字段", r"\bQueenName:\s*\S"),
             Requirement("HomeRoot 字段", r"\bHomeRoot:\s*\S"),
+            Requirement("queen_llm 感知 provider 调用", r"queenAwareChatProvider\(home, requestedModel, queenScope\)"),
+            Requirement("VisionCaptioner 接线", r"VisionCaptioner:\s*visionCaptionerFor\(home, provider\)"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/cli/loader_model_slots.go",
+        description="模型槽位装配：queen/worker/vision provider 的构造与 configuration.json 段读取",
+        requirements=(
+            Requirement("queenAwareChatProvider 定义", r"func queenAwareChatProvider\("),
+            Requirement("workerChatProvider 定义", r"func workerChatProvider\("),
+            Requirement("visionCaptionerFor 定义", r"func visionCaptionerFor\("),
+            Requirement("queen_llm 段读取", r"hiveserver\.QueenLLMSection\("),
+            Requirement("worker_llm 段读取", r"hiveserver\.WorkerLLMSection\("),
+            Requirement("vision_fallback 段读取", r"hiveserver\.VisionFallbackSection\("),
+        ),
+    ),
+    WiringPoint(
+        path="internal/cli/loader_colony_host.go",
+        description="colony 宿主：queen/worker 模型槽位与 worker 工具 keep-set 接线",
+        requirements=(
+            Requirement("queen provider 构造", r"queenAwareChatProvider\(home, model, colonyQueenName\(home, colonyID\)\)"),
+            Requirement("worker provider 构造", r"workerChatProvider\(home\)"),
+            Requirement("WorkerKeepSet 接线", r"WorkerKeepSet:\s*hiveserver\.WorkerKeepSetFromConfig\(home\)"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/cli/loader_preloaded_session.go",
+        description="预载 colony 会话：queen 模型槽位与 vision captioner 接线",
+        requirements=(
+            Requirement("queen provider 构造", r"queenAwareChatProvider\(home, model, record\.QueenName\)"),
+            Requirement("VisionCaptioner 接线", r"VisionCaptioner:\s*visionCaptionerFor\(home, provider\)"),
         ),
     ),
     WiringPoint(
@@ -84,6 +117,49 @@ WIRING: tuple[WiringPoint, ...] = (
             Requirement("turn context source 注册", r"NewTurnContextReminderSource\(\)"),
             Requirement("turn context provider 接线", r"agentCtx\.TurnContextProvider\s*="),
             Requirement("turn context 运行时启动", r"StartTurnContexts\("),
+        ),
+    ),
+    WiringPoint(
+        path="internal/agentloop/loop.go",
+        description="Worker 升级通道：escalate 拦截与女王等待",
+        requirements=(
+            Requirement("escalate 拦截", r"l\.executeEscalateTool\(agentCtx, req\)"),
+            Requirement("停车等待调用", r"l\.settleQueenInputPark\(ctx, agentCtx\)"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/agentloop/escalate.go",
+        description="Worker 升级通道：发事件、停车、唤醒",
+        requirements=(
+            Requirement("升级事件发出", r"agentCtx\.EscalationSink\("),
+            Requirement("女王输入等待", r"l\.awaitInjectedInput\(ctx\)"),
+            Requirement("收线重发", r"l\.emitUnansweredEscalation\(agentCtx\)"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/colony/runtime.go",
+        description="Worker 升级通道：worker 工具面注册与 sink 接线",
+        requirements=(
+            Requirement("escalate 工具注册", r"appendMissingToolDefs\(tools, agentloop\.BuildEscalateTool\(\)\)"),
+            Requirement("escalation sink 接线", r"ctx\.EscalationSink\s*=\s*\S"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/colony/worker_escalation.go",
+        description="Worker 升级通道：ESCALATION_REQUESTED 生产（colony 戳 + request_id）",
+        requirements=(
+            Requirement("escalation 事件类型", r"eventbus\.EventEscalationRequested"),
+            Requirement("colony_id 戳", r"\.ColonyID\s*=\s*&"),
+            Requirement("request_id 生产", r"\"request_id\":\s*requestID"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/server/session_chat_colony.go",
+        description="Worker 升级通道：会话侧生产安装/卸载",
+        requirements=(
+            Requirement("同步入口定义", r"func \(s \*Session\) syncWorkerEscalationRouting\("),
+            Requirement("安装调用", r"=\s*InstallWorkerEscalationRouting\(s\)"),
+            Requirement("卸载调用", r"\.Unsubscribe\(subID\)"),
         ),
     ),
 )
@@ -231,10 +307,16 @@ def self_test() -> int:
         pick = WIRING[0]
         (root / pick.path).write_text(
             "package stub\n\n"
+            "type runtimeDeps struct {\n"
+            "\tVisionCaptioner agentloop.VisionCaptioner\n"
+            "}\n\n"
             "func (r *ChatRuntime) injectRecall(query, stamp string) {}\n\n"
             "func f(r *ChatRuntime) {\n"
             '\tif err := r.bus.SetSessionLog("x", 0); err != nil {\n\t\treturn\n\t}\n'
-            "\tr.injectRecall(\"q\", \"s\")\n\tr.bus.CloseSessionLog()\n}\n",
+            '\tr.injectRecall("q", "s")\n\tr.bus.CloseSessionLog()\n}\n\n'
+            "func g(deps runtimeDeps, runtime *ChatRuntime) {\n"
+            "\truntime.loop.VisionCaptioner = deps.VisionCaptioner\n"
+            "}\n",
             encoding="utf-8",
         )
         first_point_missing = check_point(root, pick)

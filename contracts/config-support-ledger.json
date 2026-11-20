@@ -1,0 +1,513 @@
+{
+  "schema_version": 1,
+  "generated_by": "hand-maintained in the config-env-align lane; verified by internal/envcontract",
+  "doc": "go_hive/docs/env-config-contract-diff.md",
+  "note": "Every configuration.json key the frozen contract marks go_partial or python_only — plus the environment variables the alignment lane touched — appears here with a status. wired = the runtime reads it and a Go test proves the value takes effect; partial = some paths are wired, the reason names what is not; unsupported = no runtime consumer, the reason states why; go_extension/unread = the key is Go-only or read by nobody, so no action is owed. internal/envcontract::TestSupportLedgerCoversEveryGap checks that no non-aligned key is missing here, that wired anchors resolve in the tree, and that every wired entry names a test that exists.",
+  "keys": [
+    {
+      "path": "queen_llm.<queen_id>.provider",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func QueenLLMSection("
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+          "contains": "func queenAwareChatProvider("
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader.go",
+          "contains": "queenAwareChatProvider(home, requestedModel, queenScope)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader_colony_host.go",
+          "contains": "queenAwareChatProvider(home, model, colonyQueenName(home, colonyID))"
+        }
+      ],
+      "tests": [
+        "TestQueenAwareChatProviderUsesQueenSection",
+        "TestQueenLLMSectionRequiresProviderAndModel"
+      ]
+    },
+    {
+      "path": "queen_llm.<queen_id>.model",
+      "status": "wired",
+      "same_as": "queen_llm.<queen_id>.provider"
+    },
+    {
+      "path": "queen_llm.<queen_id>.api_key",
+      "status": "wired",
+      "same_as": "queen_llm.<queen_id>.provider"
+    },
+    {
+      "path": "queen_llm.<queen_id>.api_base",
+      "status": "wired",
+      "same_as": "queen_llm.<queen_id>.provider"
+    },
+    {
+      "path": "queen_llm.<queen_id>.endpoint",
+      "status": "wired",
+      "same_as": "queen_llm.<queen_id>.provider"
+    },
+    {
+      "path": "queen_llm.<queen_id>.extra_body",
+      "status": "wired",
+      "same_as": "queen_llm.<queen_id>.provider"
+    },
+    {
+      "path": "queen_llm.<queen_id>.api_key_env_var",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func SectionAPIKey("
+        }
+      ],
+      "tests": [
+        "TestSectionAPIKeyUsesTheProviderEnvVar",
+        "TestWorkerAndVisionSectionsResolve"
+      ]
+    },
+    {
+      "path": "queen_llm.<queen_id>.max_context_tokens",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func QueenMaxContextTokens("
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
+          "contains": "QueenMaxContextTokens(home, queenID, config.MaxContextTokens)"
+        }
+      ],
+      "tests": [
+        "TestChatLoopConfigAppliesTheLoopSection"
+      ]
+    },
+    {
+      "path": "vision_fallback.provider",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func VisionFallbackSection("
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+          "contains": "func visionCaptionerFor("
+        },
+        {
+          "file": "go_hive/go-hive/internal/agentloop/vision_caption.go",
+          "contains": "l.VisionCaptioner.Caption(ctx, intent, result.ImageContent)"
+        }
+      ],
+      "tests": [
+        "TestTextOnlyModelGetsCaptionsInsteadOfImages",
+        "TestWorkerAndVisionSectionsResolve"
+      ]
+    },
+    {
+      "path": "vision_fallback.model",
+      "status": "wired",
+      "same_as": "vision_fallback.provider"
+    },
+    {
+      "path": "vision_fallback.api_key",
+      "status": "wired",
+      "same_as": "vision_fallback.provider"
+    },
+    {
+      "path": "vision_fallback.api_base",
+      "status": "wired",
+      "same_as": "vision_fallback.provider"
+    },
+    {
+      "path": "vision_fallback.api_key_env_var",
+      "status": "wired",
+      "same_as": "vision_fallback.provider"
+    },
+    {
+      "path": "vision_fallback.endpoint",
+      "status": "wired",
+      "same_as": "vision_fallback.provider"
+    },
+    {
+      "path": "vision_fallback.max_tokens",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func VisionFallbackMaxTokens("
+        },
+        {
+          "file": "go_hive/go-hive/internal/visionfallback/visionfallback.go",
+          "contains": "if maxTokens <= 0 {"
+        }
+      ],
+      "tests": [
+        "TestCaptionCallsTheVisionModel"
+      ]
+    },
+    {
+      "path": "worker_llm.provider",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func WorkerLLMSection("
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+          "contains": "func workerChatProvider("
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader_colony_host.go",
+          "contains": "WorkerLLM: workerProvider"
+        },
+        {
+          "file": "go_hive/go-hive/internal/host/host.go",
+          "contains": "WorkerLLM:            cfg.WorkerLLM"
+        },
+        {
+          "file": "go_hive/go-hive/internal/colony/runtime.go",
+          "contains": "runtime.workerLLM = opts.WorkerLLM"
+        }
+      ],
+      "tests": [
+        "TestWorkerChatProviderUsesWorkerSection"
+      ]
+    },
+    {
+      "path": "worker_llm.model",
+      "status": "wired",
+      "same_as": "worker_llm.provider"
+    },
+    {
+      "path": "worker_llm.api_key",
+      "status": "wired",
+      "same_as": "worker_llm.provider"
+    },
+    {
+      "path": "worker_llm.api_base",
+      "status": "wired",
+      "same_as": "worker_llm.provider"
+    },
+    {
+      "path": "worker_llm.api_key_env_var",
+      "status": "wired",
+      "same_as": "worker_llm.provider"
+    },
+    {
+      "path": "worker_llm.endpoint",
+      "status": "wired",
+      "same_as": "worker_llm.provider"
+    },
+    {
+      "path": "worker_llm.extra_body",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+          "contains": "func slotExtraKwargs("
+        }
+      ],
+      "tests": [
+        "TestQueenAwareChatProviderUsesQueenSection"
+      ]
+    },
+    {
+      "path": "worker_llm.num_ctx",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func SectionNumCtx("
+        }
+      ],
+      "tests": [
+        "TestQueenAwareChatProviderUsesQueenSection"
+      ]
+    },
+    {
+      "path": "worker_llm.max_context_tokens",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/hiveconf/hiveconf.go",
+          "contains": "func WorkerMaxContextTokens("
+        },
+        {
+          "file": "go_hive/go-hive/internal/colony/worker_loop_config.go",
+          "contains": "hiveconf.WorkerMaxContextTokens(home, cfg.MaxContextTokens)"
+        }
+      ],
+      "tests": [
+        "TestBuildWorkerLoopConfigAppliesWorkerContextWindow"
+      ]
+    },
+    {
+      "path": "worker_llm.max_tokens",
+      "status": "unsupported",
+      "reason": "Reader implemented (SectionModel/LLMMaxTokens family) but there is no runtime consumer to give it to: upstream's get_worker_max_tokens has no call site either, so the worker's output budget comes from the provider request defaults on both sides."
+    },
+    {
+      "path": "llm.aux_max_tokens",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func AuxMaxTokens("
+        },
+        {
+          "file": "go_hive/go-hive/internal/llm/complete.go",
+          "contains": "func AuxMaxTokens() int {"
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader.go",
+          "contains": "llm.SetAuxMaxTokens(hiveserver.AuxMaxTokens(home))"
+        }
+      ],
+      "tests": [
+        "TestConfiguredAuxMaxTokensReachesTheJudge",
+        "TestAuxMaxTokensPrefersTheFileThenClampsToTheMainCap"
+      ]
+    },
+    {
+      "path": "loop.max_tool_result_chars",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/hiveconf/hiveconf.go",
+          "contains": "func MaxToolResultChars("
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
+          "contains": "LoopMaxToolResultChars(home, config.MaxToolResultChars)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/colony/worker_loop_config.go",
+          "contains": "hiveconf.MaxToolResultChars(home, cfg.MaxToolResultChars)"
+        }
+      ],
+      "tests": [
+        "TestChatLoopConfigAppliesTheLoopSection",
+        "TestBuildWorkerLoopConfigAppliesLoopSection"
+      ]
+    },
+    {
+      "path": "worker_tools.always_enabled_categories",
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func WorkerKeepSetFromConfig("
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader_colony_host.go",
+          "contains": "WorkerKeepSet: hiveserver.WorkerKeepSetFromConfig(home)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/colony/runtime.go",
+          "contains": "keepSet := r.workerKeepSet()"
+        }
+      ],
+      "tests": [
+        "TestWorkerToolsAlwaysEnabledCategories"
+      ]
+    },
+    {
+      "path": "llm.antigravity_client_id",
+      "status": "partial",
+      "reason": "Reader wired and tested (ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id, no public-source fetch) but no request path consumes it: the port's Antigravity login reads the pre-issued access token from antigravity-accounts.json and has no OAuth refresh call to hand a client id to.",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func AntigravityClientID("
+        }
+      ],
+      "tests": [
+        "TestAntigravityClientCredentials"
+      ]
+    },
+    {
+      "path": "llm.antigravity_client_secret",
+      "status": "partial",
+      "same_as": "llm.antigravity_client_id",
+      "reason": "Same as llm.antigravity_client_id: reader only, no OAuth refresh to consume it."
+    },
+    {
+      "path": "channels.<name>.enabled",
+      "status": "unsupported",
+      "reason": "Upstream starts optional channel packages installed through the hive.channels entry-point group; the Go port has no plugin host, no channel lifecycle (start/stop/state) and no entry-point discovery, so there is nothing for an enabled flag to gate. GET /api/channels keeps the upstream response shape from the states the process knows."
+    },
+    {
+      "path": "llm.use_kimi_code_subscription",
+      "status": "partial",
+      "reason": "Pre-existing go_partial: the REST surface lists and detects the subscription, but the runtime token path (Python's get_api_key subscription branch) is not ported. Unchanged by this lane; recorded so the gap is not silent."
+    },
+    {
+      "path": "llm.use_antigravity_subscription",
+      "status": "partial",
+      "reason": "Pre-existing go_partial: llm_config resolves an antigravity token for the REST surface, but Python's full provider branch (api_base=None plus token refresh) has no Go equivalent. Unchanged by this lane."
+    },
+    {
+      "path": "mcp.enabled",
+      "status": "go_extension",
+      "reason": "Go-only mcp block; no upstream counterpart to align with."
+    },
+    {
+      "path": "mcp.namespace",
+      "status": "go_extension",
+      "reason": "Go-only mcp block; no upstream counterpart."
+    },
+    {
+      "path": "mcp.timeout_seconds",
+      "status": "partial",
+      "reason": "Go-only key, and its documented file > env reversal was fixed by this lane: internal/tools.MCPCallResultTimeout now resolves env > file > 240s, pinned by TestMCPCallResultTimeoutPrecedence. Python has no mcp block, so there is no upstream side to compare against.",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/tools/mcp_client.go",
+          "contains": "func MCPCallResultTimeout() time.Duration {"
+        }
+      ],
+      "tests": [
+        "TestMCPCallResultTimeoutPrecedence"
+      ]
+    },
+    {
+      "path": "mcp.servers",
+      "status": "go_extension",
+      "reason": "Go-only mcp block; no upstream counterpart."
+    },
+    {
+      "path": "network_scanners",
+      "status": "go_extension",
+      "reason": "Go-only operator switch for the four network-probing tools."
+    },
+    {
+      "path": "created_at",
+      "status": "unread",
+      "reason": "Written by the installers and read by neither runtime; documented example only."
+    }
+  ],
+  "env_vars": [
+    {
+      "names": [
+        "HIVE_MAX_ITER"
+      ],
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
+          "contains": "envPositiveInt(\"HIVE_MAX_ITER\")"
+        }
+      ],
+      "tests": [
+        "TestHiveMaxIterCapsTheQueenLoop"
+      ]
+    },
+    {
+      "names": [
+        "HIVE_SPLIT_WORKER_EVENTS"
+      ],
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/colony/runtime.go",
+          "contains": "func splitWorkerEventsEnabled() bool {"
+        },
+        {
+          "file": "go_hive/go-hive/internal/colony/runtime.go",
+          "contains": "r.bus.SetWorkerLogResolver("
+        }
+      ],
+      "tests": [
+        "TestSplitWorkerEventsResolver",
+        "TestSplitWorkerEventsAllowList"
+      ]
+    },
+    {
+      "names": [
+        "HIVE_TRACKER_WORKER_TOOL_CALLS"
+      ],
+      "status": "unsupported",
+      "reason": "The cadence belongs to upstream's WorkerTrackerSnapshotReminderSource, which is not ported (Go has the queen-only TrackerSnapshotReminderSource). Nothing reads the variable, so it is a no-op rather than a silent half-implementation."
+    },
+    {
+      "names": [
+        "HIVE_HISTORY_READ_WORKERS"
+      ],
+      "status": "unsupported",
+      "reason": "Upstream sizes a shared thread pool that fans out many sessions' event-log tail reads for the UI. The port's /events/history reads one session's tail file synchronously, so there is no pool to size; a parallelism knob would be a configuration with no reader."
+    },
+    {
+      "names": [
+        "HIVE_NO_FILE_LOG"
+      ],
+      "status": "unsupported",
+      "reason": "The port writes no hive-server.log (process logs go to stderr), so there is no file handler to disable. Nothing reads the variable."
+    },
+    {
+      "names": [
+        "HIVE_COMPACTION_DEBUG"
+      ],
+      "status": "unsupported",
+      "reason": "No compaction debug-log writer: the port keeps the compaction summary in the conversation store and does not emit the upstream debug inventory. Reading the switch would only write an empty file."
+    },
+    {
+      "names": [
+        "HIVE_PLAYBOOK_FAST_GRACE"
+      ],
+      "status": "unsupported",
+      "reason": "The port's playbook runner is asynchronous end to end (runner + rows helpers); there is no synchronous fast path whose grace period this variable would tune."
+    },
+    {
+      "names": [
+        "HIVE_SENTINEL_LOG",
+        "HIVE_ENABLE_LLM_LOGS"
+      ],
+      "status": "unsupported",
+      "reason": "Debug logging switches for Python's logger configuration. The port has no file-based sentinel/LLM debug logger to switch (it publishes the same information as events/llm_logs under the session directory). Not silently accepted: the variables are recorded here as having no Go reader."
+    },
+    {
+      "names": [
+        "HIVE_RESOURCE_*"
+      ],
+      "status": "unsupported",
+      "reason": "Host-resource sampling and GCU memory-tracing knobs of the Python process (P3 diagnostics). The Go port samples neither host resources nor GCU memory in-process, so these names have no reader; the list above is the P3 remainder of the published audit, recorded so the absence is explicit rather than silent.",
+      "matches_wildcard": true
+    },
+    {
+      "names": [
+        "HIVE_BROWSERBRIDGE_ARGS",
+        "HIVE_BROWSERBRIDGE_BIN",
+        "HIVE_BROWSERBRIDGE_CONTROL",
+        "HIVE_BROWSERBRIDGE_HTTP",
+        "HIVE_BROWSER_BRIDGE",
+        "HIVE_BROWSER_VIEWPORT_SCALE"
+      ],
+      "status": "go_extension",
+      "reason": "Go-only browser-bridge surface (documented Go extension): the bridge process, its ports and the viewport-scale injection. No upstream counterpart, so no alignment is owed."
+    },
+    {
+      "names": [
+        "HIVE_MCP2CLI",
+        "HIVE_NETWORK_SCANNERS",
+        "HIVE_SESSION_COST_LIMIT_USD"
+      ],
+      "status": "go_extension",
+      "reason": "Go-only operator switches (mcp2cli mode selection, network-scanner opt-in, per-session cost ceiling); each is read by the port and has no upstream equivalent."
+    },
+    {
+      "names": [
+        "HIVE_GCU_MEMTRACE*",
+        "HIVE_GCU_SCREENSHOT_CONCURRENCY"
+      ],
+      "status": "unsupported",
+      "reason": "GCU memory-tracing and screenshot-concurrency knobs of the Python GCU process. The port's browser bridge runs as a separate Go process with its own concurrency control and does not sample GCU memory, so these names have no reader.",
+      "matches_wildcard": true
+    }
+  ]
+}

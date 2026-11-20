@@ -38,6 +38,9 @@ var TrackerQueenCooldownNoTable = envInt("HIVE_TRACKER_QUEEN_COOLDOWN_NO_TABLE",
 // Parity: framework/agent_loop/tracker_snapshot_reminder.py::QUEEN_COOLDOWN_WITH_TABLE
 var TrackerQueenCooldownWithTable = envInt("HIVE_TRACKER_QUEEN_COOLDOWN_WITH_TABLE", 20)
 
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::WORKER_CADENCE_TOOL_CALLS
+var TrackerWorkerCadenceToolCalls = envInt("HIVE_TRACKER_WORKER_TOOL_CALLS", 20)
+
 const (
 	// Parity: framework/agent_loop/tracker_snapshot_reminder.py::_MAX_TABLES
 	trackerSnapshotMaxTables = 10
@@ -160,6 +163,95 @@ func (s *TrackerSnapshotReminderSource) Render(rctx ReminderContext) (string, bo
 	s.hasFired = true
 	s.turnsSinceLastReminder = 0
 	return renderTrackerQueenBody(rows), true
+}
+
+// WorkerTrackerSnapshotReminderSource is the worker-only, in-colony tracker
+// nudge. Workers browse constantly, so there is no browser gate; instead the
+// source fires once every cadence of tool calls (counted independently of the
+// shared tool-budget checkpoint). Using a tracker tool resets the counter, and
+// an empty tracker produces no reminder — workers fill the queen's tables, they
+// do not create them.
+//
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::WorkerTrackerSnapshotReminderSource
+type WorkerTrackerSnapshotReminderSource struct {
+	cadenceToolCalls           int
+	toolCallsSinceLastReminder int
+}
+
+// NewWorkerTrackerSnapshotReminderSource builds the source with the upstream
+// default cadence (HIVE_TRACKER_WORKER_TOOL_CALLS, 20 tool calls).
+func NewWorkerTrackerSnapshotReminderSource() *WorkerTrackerSnapshotReminderSource {
+	return NewWorkerTrackerSnapshotReminderSourceWithCadence(TrackerWorkerCadenceToolCalls)
+}
+
+// NewWorkerTrackerSnapshotReminderSourceWithCadence builds the source with an
+// explicit tool-call cadence. Zero or negative keeps the upstream default.
+func NewWorkerTrackerSnapshotReminderSourceWithCadence(cadence int) *WorkerTrackerSnapshotReminderSource {
+	if cadence <= 0 {
+		cadence = TrackerWorkerCadenceToolCalls
+	}
+	return &WorkerTrackerSnapshotReminderSource{cadenceToolCalls: cadence}
+}
+
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::WorkerTrackerSnapshotReminderSource.name
+func (s *WorkerTrackerSnapshotReminderSource) Name() string { return "worker_tracker_snapshot" }
+
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::WorkerTrackerSnapshotReminderSource.points
+func (s *WorkerTrackerSnapshotReminderSource) Points() []ReminderPoint {
+	return []ReminderPoint{POST_TOOL_USE}
+}
+
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::WorkerTrackerSnapshotReminderSource.applies_to
+func (s *WorkerTrackerSnapshotReminderSource) AppliesTo(agentCtx *ReminderAgentContext) bool {
+	if agentCtx == nil || agentCtx.IsQueenStream {
+		return false
+	}
+	return agentCtx.ColonyBindingProvider != nil
+}
+
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::WorkerTrackerSnapshotReminderSource.observe_turn
+func (s *WorkerTrackerSnapshotReminderSource) ObserveTurn(toolNames []string) {
+	if usedTrackerTool(toolNames) {
+		s.toolCallsSinceLastReminder = 0
+		return
+	}
+	s.toolCallsSinceLastReminder += len(toolNames)
+}
+
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::WorkerTrackerSnapshotReminderSource.render
+func (s *WorkerTrackerSnapshotReminderSource) Render(rctx ReminderContext) (string, bool) {
+	if rctx.Point != POST_TOOL_USE {
+		return "", false
+	}
+	if s.toolCallsSinceLastReminder < s.cadenceToolCalls {
+		return "", false
+	}
+	binding := resolveTrackerBinding(rctx.AgentCtx)
+	if binding == nil || strings.TrimSpace(binding.TrackerDB) == "" {
+		return "", false
+	}
+	rows := snapshotTrackerTables(binding.TrackerDB)
+	if len(rows) == 0 {
+		// Don't consume the cadence until there is something to show: the
+		// worker upserts into the queen's tables, it doesn't create them.
+		return "", false
+	}
+	s.toolCallsSinceLastReminder = 0
+	return renderTrackerWorkerBody(rows), true
+}
+
+// Parity: framework/agent_loop/tracker_snapshot_reminder.py::_render_worker_body
+func renderTrackerWorkerBody(rows []trackerTableCount) string {
+	lines := []string{"Tracker state right now:"}
+	for _, row := range rows {
+		lines = append(lines, "  - "+row.name+": "+formatRowCount(row.count)+" row"+pluralSuffix(row.count))
+	}
+	lines = append(lines, "")
+	lines = append(lines,
+		"Before you continue, persist your progress so far via tracker_upsert. "+
+			"Older tool results that are not in the tracker can be lost. "+
+			"If you get stuck and can't finish the job, it is okay to report early and explain why you failed.")
+	return strings.Join(lines, "\n")
 }
 
 // Parity: framework/agent_loop/tracker_snapshot_reminder.py::_used_tracker_tool

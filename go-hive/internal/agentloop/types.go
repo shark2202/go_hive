@@ -171,6 +171,14 @@ type AgentContext struct {
 
 	PivotPayloadSink any
 
+	// EscalationSink publishes ESCALATION_REQUESTED when this node calls the
+	// synthetic escalate tool. The colony runtime wires its own bus here; nil
+	// means the stream has no escalation channel and the call is refused with
+	// the upstream error instead of being silently dropped.
+	//
+	// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (escalate)
+	EscalationSink EscalationSink
+
 	// Observer receives live turn progress so a host can mirror the loop's
 	// upstream EventBus emissions without this package importing the bus.
 	Observer LoopObserver

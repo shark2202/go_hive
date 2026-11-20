@@ -392,3 +392,79 @@ func TestBuildWorkerLoopConfigAcceptsJSONNumbers(t *testing.T) {
 		t.Errorf("error = %v, want a must-be-int error", err)
 	}
 }
+
+// TestBuildWorkerLoopConfigAppliesLoopSection pins loop.max_tool_result_chars:
+// the global spillover threshold reaches every worker loop, and an unset or
+// wrongly-typed value keeps the 30k default.
+//
+// Parity: core/tests/test_worker_definition.py::TestBuildLoopConfigDict::test_propagates_queen_values
+func TestBuildWorkerLoopConfigAppliesLoopSection(t *testing.T) {
+	home, err := hivehome.ResolveAt(filepath.Join(t.TempDir(), "hive"))
+	if err != nil {
+		t.Fatalf("resolve home: %v", err)
+	}
+	if err := os.MkdirAll(home.Root, 0o755); err != nil {
+		t.Fatalf("mkdir home: %v", err)
+	}
+	t.Setenv("HIVE_HOME", home.Root)
+	write := func(document string) {
+		t.Helper()
+		if err := os.WriteFile(home.ConfigurationFile(), []byte(document), 0o644); err != nil {
+			t.Fatalf("write configuration: %v", err)
+		}
+	}
+
+	write(`{"loop": {"max_tool_result_chars": 12345}}`)
+	cfg, err := BuildWorkerLoopConfig(map[string]any{})
+	if err != nil {
+		t.Fatalf("BuildWorkerLoopConfig error: %v", err)
+	}
+	if cfg.MaxToolResultChars != 12345 {
+		t.Fatalf("MaxToolResultChars = %d, want 12345", cfg.MaxToolResultChars)
+	}
+
+	write(`{"loop": {"max_tool_result_chars": 12345.5}}`)
+	cfg, err = BuildWorkerLoopConfig(map[string]any{})
+	if err != nil {
+		t.Fatalf("BuildWorkerLoopConfig error: %v", err)
+	}
+	if want := agentloop.DefaultLoopConfig().MaxToolResultChars; cfg.MaxToolResultChars != want {
+		t.Fatalf("float MaxToolResultChars = %d, want the default %d", cfg.MaxToolResultChars, want)
+	}
+}
+
+// TestBuildWorkerLoopConfigAppliesWorkerContextWindow pins
+// worker_llm.max_context_tokens: the worker's own window replaces the queen
+// default, and an explicit per-worker override still wins.
+//
+// Parity: core/tests/test_worker_definition.py::TestBuildLoopConfigDict::test_uses_defaults_when_queen_config_missing
+func TestBuildWorkerLoopConfigAppliesWorkerContextWindow(t *testing.T) {
+	home, err := hivehome.ResolveAt(filepath.Join(t.TempDir(), "hive"))
+	if err != nil {
+		t.Fatalf("resolve home: %v", err)
+	}
+	if err := os.MkdirAll(home.Root, 0o755); err != nil {
+		t.Fatalf("mkdir home: %v", err)
+	}
+	t.Setenv("HIVE_HOME", home.Root)
+	document := `{"worker_llm": {"provider": "groq", "model": "llama-worker", "max_context_tokens": 40000}}`
+	if err := os.WriteFile(home.ConfigurationFile(), []byte(document), 0o644); err != nil {
+		t.Fatalf("write configuration: %v", err)
+	}
+
+	cfg, err := BuildWorkerLoopConfig(map[string]any{})
+	if err != nil {
+		t.Fatalf("BuildWorkerLoopConfig error: %v", err)
+	}
+	if cfg.MaxContextTokens != 40000 {
+		t.Fatalf("MaxContextTokens = %d, want the worker section's 40000", cfg.MaxContextTokens)
+	}
+
+	cfg, err = BuildWorkerLoopConfig(map[string]any{"max_context_tokens": 12000})
+	if err != nil {
+		t.Fatalf("BuildWorkerLoopConfig error: %v", err)
+	}
+	if cfg.MaxContextTokens != 12000 {
+		t.Fatalf("override MaxContextTokens = %d, want 12000", cfg.MaxContextTokens)
+	}
+}

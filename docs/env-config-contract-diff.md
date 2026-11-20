@@ -7,33 +7,34 @@
 
 ## 0. 结论摘要
 
-- 环境变量清单沿用已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236），本次独立复算：Python **89** / Go **96** / 共有 **67**；Python 独有 **22**，Go 独有 **29**。数字与发布审计一致。
-- configuration.json：**134** 个键 / **20** 个 section；其中 `aligned` 96，`go_partial` 27，`python_only` 6，`go_only` 4，`unread` 1。
-- 最重的配置缺口都集中在“Go 有 REST/CRUD、运行时没接”：`worker_llm.*`、`vision_fallback.*`、`queen_llm.<id>.*` 三类槽位在 Go 侧只被读写端点使用，运行时不消费；`llm.aux_max_tokens`、`loop.max_tool_result_chars`、`worker_tools.always_enabled_categories` 则完全没有 reader。
-- 环境变量侧，Python 独有的生产开关主要是 `HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_TRACKER_WORKER_TOOL_CALLS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_COMPACTION_DEBUG`、`HIVE_PLAYBOOK_FAST_GRACE`；其余 Python 独有项是资源采样 / GCU memtrace / 日志等运维与调试面。
+- 环境变量清单以已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236）为基线，本次按同一口径独立复算：Python **89** / Go **100** / 共有 **69**；Python 独有 **20**，Go 独有 **31**。复算与「本车道期望」一致。与发布审计基线（Python 89 / Go 96 / 共有 66 / Python 独有 23 / Go 独有 30）相比，差额来自 2 个名字由 Python 独有转为共有：`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS` 由本车道新增 Go 读取点；Go 独有清单 30→31（新增 `HIVE_PYTHON`，移除 `HIVE_NETWORK_SCANNERS`）。
+- configuration.json：**134** 个键 / **20** 个 section；其中 `aligned` 99，`go_partial` 29，`python_only` 1，`go_only` 4，`unread` 1。
+- 本车道把其余三个模型槽位接进了运行时：`queen_llm.<id>.*`（会话启动时按 queen 选模型，她的 colony 沿用同一 provider）、`worker_llm.*`（colony 专用 worker 模型）、`vision_fallback.*`（文本主模型下的工具图片描述）；并接入 `llm.aux_max_tokens`、`loop.max_tool_result_chars`、`worker_tools.always_enabled_categories`，修复 `mcp.timeout_seconds` 的优先级（env > file）。
+- 仍未对齐的项各有明确残余（`go_partial` / `python_only`）：槽位模型的 PUT 热切换（`llm.Provider` 无 Reconfigure）与 `worker_llm.max_tokens`（两侧都没有消费点）；`llm.antigravity_client_*` 是只读（读取点已有，端口没有 OAuth 刷新来消费它）；`channels.<name>.enabled` 不支持（无渠道插件宿主）；`llm.use_*_subscription` 两个订阅分支未移植。逐项理由见 `contracts/config-support-ledger.json`。
+- 环境变量侧，Python 独有的生产开关（仍未接入）主要是 `HIVE_TRACKER_WORKER_TOOL_CALLS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_COMPACTION_DEBUG`、`HIVE_PLAYBOOK_FAST_GRACE`；其余 Python 独有项是 `HIVE_SENTINEL_LOG` / `HIVE_ENABLE_LLM_LOGS`、资源采样 / GCU memtrace 等运维与调试面；未支持项与理由整表见 `contracts/config-support-ledger.json`。
 
-## 1. 环境变量核对（采用既有审计，不复扫）
+## 1. 环境变量核对（采用既有审计清单，独立复算）
 
-审计口径：两侧源码中的带引号 `HIVE_*` 字面量，排除 tests/testdata/_test.go；Python 范围 `core/` + `tools/` + 根启动脚本，Go 范围 `go_hive/go-hive/{internal,cmd}`。本次用同一规则独立复算，结果逐项相等：
+审计口径：两侧源码中的带引号 `HIVE_*` 字面量，排除 tests/testdata/_test.go；Python 范围 `core/` + `tools/` + 根启动脚本，Go 范围 `go_hive/go-hive/{internal,cmd}`。本次用同一规则复算，并与「本车道期望」（基线 + 本车道已知变更）逐项核对：
 
-| 项 | 复算 | 发布审计 | 一致 |
-|---|---|---|---|
-| Python | 89 | 89 | ✅ |
-| Go | 96 | 96 | ✅ |
-| 共有 | 67 | 67 | ✅ |
-| Python 独有 | 22 | 22 | ✅ |
-| Go 独有 | 29 | 29 | ✅ |
+| 项 | 本次复算 | 本车道期望 | 发布审计基线 | 判定 |
+|---|---|---|---|---|
+| Python | 89 | 89 | 89 | ✅ |
+| Go | 100 | 100 | 96 → 100 | ✅ |
+| 共有 | 69 | 69 | 66 → 69 | ✅ |
+| Python 独有 | 20 | 20 | 23 → 20 | ✅ |
+| Go 独有 | 31 | 31 | 30 → 31 | ✅ |
 
 > `env-vars.json` 逐个名字给出两侧的读取点/默认值，并标注 `audit_membership`；只出现在字面量里、没有读取点的名字标为 `literal_only`，避免把 MCP env 字段名或注释当成读取面。
 
-逐名单比对（common / python_only / go_only）与发布审计：common 一致、python_only 一致、go_only 一致（published 'HIVE_RETENTION_' (trailing underscore) maps to 'HIVE_RETENTION_*'）。
+逐名单比对（相对发布审计）：common 不一致（新增 `HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`，移除 无）、python_only 不一致（减少 `HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`）、go_only 不一致（published 'HIVE_RETENTION_' (trailing underscore) maps to 'HIVE_RETENTION_*'）。
 
 ### 1.1 Python 独有：对齐建议清单
 
+- 本车道已接入并移出本清单：`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_PYTHON`（Go 读取点与测试见 `contracts/config-support-ledger.json`）。
+
 | 变量 | 优先级 | 作用 / 建议 |
 |---|---|---|
-| HIVE_MAX_ITER | P1 | caps queen reply-loop iterations for single-reply deployments |
-| HIVE_SPLIT_WORKER_EVENTS | P1 | splits worker event streams; affects transcript/event consumers |
 | HIVE_TRACKER_WORKER_TOOL_CALLS | P2 | tracker reminder cadence for worker tool calls |
 | HIVE_HISTORY_READ_WORKERS | P2 | parallelism for session history reads (default 8) |
 | HIVE_NO_FILE_LOG | P2 | turns off file logging; operators rely on it in containers |
@@ -60,7 +61,7 @@
 
 ## 2. configuration.json 逐键契约
 
-共 134 个键。状态定义见生成器数据文件头：`aligned` 两侧读取且类型/默认/语义一致；`go_partial` Go 只有 REST/CRUD 或部分路径；`python_only` Go 无读取；`go_only` Python 无对应键；`unread` 两侧都不读。
+共 134 个键。状态定义见生成器数据文件头：`aligned` 两侧读取且类型/默认/语义一致；`go_partial` Go 有该键（REST/CRUD 或部分路径）但运行时读取点缺失或未接线；`python_only` Go 无读取；`go_only` Python 无对应键；`unread` 两侧都不读。
 
 ### 2.1 `channels`
 
@@ -68,7 +69,7 @@
 |---|---|---|---|---|---|---|
 | `channels.<name>.enabled` | bool | false | — | `core/framework/server/channels.py:501` | — | python_only |
 
-- `channels.<name>.enabled`：P2: optional-package channels (OneBot, etc.) are Python-only; Go has no channels.<name> runtime reader.
+- `channels.<name>.enabled`：unsupported: upstream starts optional channel packages installed through the hive.channels entry-point group; the Go port has no plugin host or channel lifecycle, so an enabled flag has nothing to gate. Recorded in contracts/config-support-ledger.json rather than silently ignored.
 
 ### 2.2 `judge`
 
@@ -98,7 +99,7 @@
 | `llm.api_key_env_var` | string | null | name read from the file | `core/framework/config.py:852` | `go_hive/go-hive/internal/server/llm_config.go:458` | aligned |
 | `llm.max_tokens` | int | 8192 | — | `core/framework/config.py:584` | `go_hive/go-hive/internal/server/llm_config.go:399` | aligned |
 | `llm.max_context_tokens` | int | 32000 | — | `core/framework/config.py:574` | `go_hive/go-hive/internal/server/llm_config.go:400` | aligned |
-| `llm.aux_max_tokens` | int | min(8192, max_tokens) | — | `core/framework/config.py:700` | — | python_only |
+| `llm.aux_max_tokens` | int | min(8192, max_tokens) | — | `core/framework/config.py:700` | `go_hive/go-hive/internal/server/config_slots.go:321` | aligned |
 | `llm.endpoint` | string (endpoint name) | null | — | `core/framework/config.py:341` | `go_hive/go-hive/internal/server/llm_config.go:417` | aligned |
 | `llm.extra_body` | object | null | — | `core/framework/config.py:642` | `go_hive/go-hive/internal/llm/request_shape.go:180` | aligned |
 | `llm.num_ctx` | int | 16384 | — | `core/framework/config.py:1411` | `go_hive/go-hive/internal/llm/request_shape.go:178` | aligned |
@@ -106,8 +107,8 @@
 | `llm.use_codex_subscription` | bool | false | — | `core/framework/config.py:802` | `go_hive/go-hive/internal/llm/request_shape.go:163` | aligned |
 | `llm.use_kimi_code_subscription` | bool | false | — | `core/framework/config.py:814` | `go_hive/go-hive/internal/server/llm_config.go:80` | go_partial |
 | `llm.use_antigravity_subscription` | bool | false | — | `core/framework/config.py:826` | `go_hive/go-hive/internal/server/llm_config.go:210` | go_partial |
-| `llm.antigravity_client_id` | string | null | ANTIGRAVITY_CLIENT_ID | `core/framework/config.py:911` | — | python_only |
-| `llm.antigravity_client_secret` | string | null | ANTIGRAVITY_CLIENT_SECRET | `core/framework/config.py:935` | — | python_only |
+| `llm.antigravity_client_id` | string | null | ANTIGRAVITY_CLIENT_ID | `core/framework/config.py:911` | `go_hive/go-hive/internal/server/config_slots.go:396` | go_partial |
+| `llm.antigravity_client_secret` | string | null | ANTIGRAVITY_CLIENT_SECRET | `core/framework/config.py:935` | `go_hive/go-hive/internal/server/config_slots.go:403` | go_partial |
 
 - `llm.provider`：both require provider+model before the slot counts as configured; otherwise the main model falls back to the hardcoded default pair.
 - `llm.model`：openrouter/<id> prefix is stripped on both sides before the provider/model join.
@@ -117,7 +118,7 @@
 - `llm.api_key_env_var`：the env var named here is a fallback AFTER the credential store for Python's get_api_key; Go's llm_config hot-swap follows the same order.
 - `llm.max_tokens`：missing -> model catalog -> DEFAULT_MAX_TOKENS=8192. Go's chat runtime seeds 8192 and the model catalog the same way.
 - `llm.max_context_tokens`：missing -> catalog -> 32000 (DEFAULT_MAX_CONTEXT_TOKENS).
-- `llm.aux_max_tokens`：P1: Go never reads llm.aux_max_tokens. internal/llm/complete.go has DefaultAuxMaxTokens=8192 but no configuration.json reader, so a user-pinned aux budget is ignored.
+- `llm.aux_max_tokens`：both read the JSON int, else min(8192, llm.max_tokens). Wired: serve installs it process-wide with llm.SetAuxMaxTokens, and the recall/judge/sentinel/skill-test call sites read llm.AuxMaxTokens(). Pinned by TestConfiguredAuxMaxTokensReachesTheJudge.
 - `llm.endpoint`：named endpoint must exist in model_endpoints; its stored credential wins over ambient keys on both sides.
 - `llm.extra_body`：non-object/empty -> not sent; copied verbatim into every request body.
 - `llm.num_ctx`：only sent for provider=ollama on both sides.
@@ -125,38 +126,38 @@
 - `llm.use_codex_subscription`：adds ChatGPT backend headers (Authorization/User-Agent/ChatGPT-Account-Id) on both sides.
 - `llm.use_kimi_code_subscription`：P1: Go lists/detects the Kimi subscription in the REST surface; the runtime token path is not wired like Python's get_api_key branch.
 - `llm.use_antigravity_subscription`：P1: Go has an antigravity token resolver in llm_config; no equivalent of Python's full provider branch (api_base=None, token refresh).
-- `llm.antigravity_client_id`：Go has no configuration.json reader for the Antigravity OAuth client id (Python falls back to the public upstream constants).
-- `llm.antigravity_client_secret`：same as antigravity_client_id.
+- `llm.antigravity_client_id`：reader only: ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id (no public-source fetch), tested by TestAntigravityClientCredentials. No request path consumes it: the port reads the pre-issued access token from antigravity-accounts.json and has no OAuth refresh to hand a client id to.
+- `llm.antigravity_client_secret`：reader only: ANTIGRAVITY_CLIENT_SECRET, then llm.antigravity_client_secret (no public-source fetch), tested by TestAntigravityClientCredentials. No request path consumes it: no OAuth refresh to hand a client secret to.
 
 ### 2.4 `loop`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `loop.max_tool_result_chars` | int | 30000 | — | `core/framework/config.py:714` | `go_hive/go-hive/internal/agentloop/loop.go:109` | python_only |
+| `loop.max_tool_result_chars` | int | 30000 | — | `core/framework/config.py:714` | `go_hive/go-hive/internal/agentloop/loop.go:109` (+1) | aligned |
 
-- `loop.max_tool_result_chars`：P1: Go has the 30_000 default but no configuration.json reader for the global `loop` section; a file override is ignored.
+- `loop.max_tool_result_chars`：both read the JSON int and fall back to the call site's value (30_000 global default). Wired: hiveconf.MaxToolResultChars applies to the queen chat loop (chatLoopConfig) and to each colony worker loop (BuildWorkerLoopConfig), so a pinned threshold moves the spillover point.
 
 ### 2.5 `mcp`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `mcp.enabled` | bool | true | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:67` | go_only |
-| `mcp.namespace` | string | mcp__ | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:68` | go_only |
-| `mcp.timeout_seconds` | number | 240.0 | HIVE_MCP_CALL_RESULT_TIMEOUT | — | `go_hive/go-hive/internal/cli/mcp_config.go:69` (+1) | go_only |
-| `mcp.servers` | list \| object(name->spec) | [] | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:70` | go_only |
+| `mcp.enabled` | bool | true | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:68` | go_only |
+| `mcp.namespace` | string | mcp__ | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:69` | go_only |
+| `mcp.timeout_seconds` | number | 240.0 | HIVE_MCP_CALL_RESULT_TIMEOUT | — | `go_hive/go-hive/internal/cli/mcp_config.go:70` (+1) | go_only |
+| `mcp.servers` | list \| object(name->spec) | [] | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:71` | go_only |
 
 - `mcp.enabled`：Go reads an `mcp` block from configuration.json; Python's MCP servers come from .mcp.json / the registry. A Go extension, not an upstream key.
 - `mcp.namespace`：tool-name namespace; blank keeps the default.
-- `mcp.timeout_seconds`：priority REVERSED vs the general rule: file wins over env here (>0 only). This is the only configuration.json key in either tree with file > env.
+- `mcp.timeout_seconds`：env > file > 240s default, the general rule: internal/tools.MCPCallResultTimeout resolves HIVE_MCP_CALL_RESULT_TIMEOUT first, then the file value. Was file > env until the config-env-align lane; the reversal is fixed and pinned by TestMCPCallResultTimeoutPrecedence.
 - `mcp.servers`：accepts both the list and map shapes; a same-named registry entry is replaced by the file entry.
 
 ### 2.6 `memory_reflection`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `memory_reflection.every_turns` | int >= 1 | 6 | — | `core/framework/config.py:1023` | `go_hive/go-hive/internal/server/chat_runtime.go:1479` | aligned |
-| `memory_reflection.long_every` | int >= 1 | 4 | — | `core/framework/config.py:1025` | `go_hive/go-hive/internal/server/chat_runtime.go:1480` | aligned |
-| `memory_reflection.model` | "main" \| "worker" | main | — | `core/framework/config.py:1041` | `go_hive/go-hive/internal/server/chat_runtime.go:1481` | aligned |
+| `memory_reflection.every_turns` | int >= 1 | 6 | — | `core/framework/config.py:1023` | `go_hive/go-hive/internal/server/chat_runtime.go:1428` | aligned |
+| `memory_reflection.long_every` | int >= 1 | 4 | — | `core/framework/config.py:1025` | `go_hive/go-hive/internal/server/chat_runtime.go:1429` | aligned |
+| `memory_reflection.model` | "main" \| "worker" | main | — | `core/framework/config.py:1041` | `go_hive/go-hive/internal/server/chat_runtime.go:1430` | aligned |
 
 - `memory_reflection.every_turns`：int (bool rejected), >=1; invalid keeps 6.
 - `memory_reflection.long_every`：same validation as every_turns.
@@ -182,23 +183,23 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `queen_llm.<queen_id>.provider` | string | inherit llm | — | `core/framework/config.py:614` (+1) | `go_hive/go-hive/internal/server/routes_queens.go:526` | go_partial |
-| `queen_llm.<queen_id>.model` | string | inherit llm | — | `core/framework/config.py:624` | `go_hive/go-hive/internal/server/routes_queens.go:564` | go_partial |
-| `queen_llm.<queen_id>.api_key` | string | inherit llm | — | `core/framework/config.py:655` | `go_hive/go-hive/internal/server/routes_queens.go:569` | go_partial |
-| `queen_llm.<queen_id>.api_base` | string | inherit llm | — | `core/framework/config.py:671` | `go_hive/go-hive/internal/server/routes_queens.go:575` | go_partial |
-| `queen_llm.<queen_id>.api_key_env_var` | string | null | name read from the file | `core/framework/config.py:660` | `go_hive/go-hive/internal/server/routes_queens.go:571` | go_partial |
-| `queen_llm.<queen_id>.max_context_tokens` | int | inherit llm | — | `core/framework/config.py:684` | `go_hive/go-hive/internal/server/routes_queens.go:526` | go_partial |
-| `queen_llm.<queen_id>.endpoint` | string | null | — | `core/framework/config.py:652` | `go_hive/go-hive/internal/server/routes_queens.go:526` | go_partial |
-| `queen_llm.<queen_id>.extra_body` | object | null | — | `core/framework/config.py:642` | `go_hive/go-hive/internal/server/routes_queens.go:526` | go_partial |
+| `queen_llm.<queen_id>.provider` | string | inherit llm | — | `core/framework/config.py:614` (+1) | `go_hive/go-hive/internal/server/routes_queens.go:526` (+1) | go_partial |
+| `queen_llm.<queen_id>.model` | string | inherit llm | — | `core/framework/config.py:624` | `go_hive/go-hive/internal/server/routes_queens.go:564` (+1) | go_partial |
+| `queen_llm.<queen_id>.api_key` | string | inherit llm | — | `core/framework/config.py:655` | `go_hive/go-hive/internal/server/routes_queens.go:569` (+1) | go_partial |
+| `queen_llm.<queen_id>.api_base` | string | inherit llm | — | `core/framework/config.py:671` | `go_hive/go-hive/internal/server/routes_queens.go:575` (+1) | go_partial |
+| `queen_llm.<queen_id>.api_key_env_var` | string | null | name read from the file | `core/framework/config.py:660` | `go_hive/go-hive/internal/server/routes_queens.go:571` (+1) | go_partial |
+| `queen_llm.<queen_id>.max_context_tokens` | int | inherit llm | — | `core/framework/config.py:684` | `go_hive/go-hive/internal/server/routes_queens.go:526` (+1) | go_partial |
+| `queen_llm.<queen_id>.endpoint` | string | null | — | `core/framework/config.py:652` | `go_hive/go-hive/internal/server/routes_queens.go:526` (+1) | go_partial |
+| `queen_llm.<queen_id>.extra_body` | object | null | — | `core/framework/config.py:642` | `go_hive/go-hive/internal/server/routes_queens.go:526` (+1) | go_partial |
 
-- `queen_llm.<queen_id>.provider`：P1: Go reads queen_llm only for the REST endpoints; ApplyQueenModel has no production assignment, so a queen's own model is not honored at session start.
-- `queen_llm.<queen_id>.model`：same runtime wiring gap.
-- `queen_llm.<queen_id>.api_key`：same runtime wiring gap.
-- `queen_llm.<queen_id>.api_base`：same runtime wiring gap.
-- `queen_llm.<queen_id>.api_key_env_var`：same runtime wiring gap.
-- `queen_llm.<queen_id>.max_context_tokens`：same runtime wiring gap.
-- `queen_llm.<queen_id>.endpoint`：same runtime wiring gap.
-- `queen_llm.<queen_id>.extra_body`：same runtime wiring gap.
+- `queen_llm.<queen_id>.provider`：wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.model`：wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.api_key`：wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.api_base`：wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.api_key_env_var`：wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.max_context_tokens`：wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.endpoint`：wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.extra_body`：wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
 
 ### 2.10 `queen_mail`
 
@@ -354,10 +355,10 @@
 |---|---|---|---|---|---|---|
 | `adaptive_tool_budget` | bool | true | HIVE_ADAPTIVE_TOOL_BUDGET | `core/framework/config.py:963` (+1) | `go_hive/go-hive/internal/server/config_features.go:47` (+1) | aligned |
 | `email_senders` | bool | false | HIVE_EMAIL_SENDERS | `core/framework/config.py:992` (+1) | `go_hive/go-hive/internal/server/config_features.go:55` (+1) | aligned |
-| `stall_check` | bool | false | HIVE_STALL_CHECK | `core/framework/config.py:1009` (+1) | `go_hive/go-hive/internal/server/hive_config.go:37` (+1) | aligned |
+| `stall_check` | bool | false | HIVE_STALL_CHECK | `core/framework/config.py:1009` (+1) | `go_hive/go-hive/internal/server/hive_config.go:21` (+1) | aligned |
 | `memory_timeline` | bool | false | HIVE_MEMORY_TIMELINE | `core/framework/config.py:1310` (+1) | `go_hive/go-hive/internal/server/config_features.go:63` (+1) | aligned |
 | `gcu_enabled` | bool | true | — | `core/framework/config.py:945` | `go_hive/go-hive/internal/cli/browser_supervisor.go:118` | aligned |
-| `gcu_viewport_scale` | number (0.1-1.0) | 0.8 | — | `core/framework/config.py:1344` | `go_hive/go-hive/internal/server/hive_config.go:93` | aligned |
+| `gcu_viewport_scale` | number (0.1-1.0) | 0.8 | — | `core/framework/config.py:1344` | `go_hive/go-hive/internal/server/hive_config.go:77` | aligned |
 | `created_at` | string (ISO time) | null | — | `quickstart.sh:1048` | — | unread |
 | `external_skills` | list[string] | [] | — | `core/framework/skills/discovery.py:149` | `go_hive/go-hive/internal/skills/discovery.go:212` | aligned |
 | `rate_limits` | object (dotted platform.action.window) | built-in table | HIVE_RATE_<PLATFORM>_<ACTION>_<WINDOW> | `core/framework/rate_limiter.py:30` | `go_hive/go-hive/internal/ratelimit/rate_limiter.go:123` | aligned |
@@ -400,55 +401,55 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `vision_fallback.provider` | string | inherit llm | — | `core/framework/config.py:324` | `go_hive/go-hive/internal/server/routes_models.go:28` | go_partial |
-| `vision_fallback.model` | string | null | — | `core/framework/config.py:325` | `go_hive/go-hive/internal/server/routes_models.go:28` | go_partial |
-| `vision_fallback.api_key` | string | null | — | `core/framework/config.py:363` | `go_hive/go-hive/internal/server/routes_models.go:28` | go_partial |
-| `vision_fallback.api_base` | string | null | — | `core/framework/config.py:376` | `go_hive/go-hive/internal/server/routes_models.go:28` | go_partial |
-| `vision_fallback.api_key_env_var` | string | null | name read from the file | `core/framework/config.py:365` | `go_hive/go-hive/internal/server/routes_models.go:28` | go_partial |
-| `vision_fallback.max_tokens` | int | aux_max_tokens | — | `core/framework/agent_loop/internals/vision_fallback.py:329` | `go_hive/go-hive/internal/server/routes_models.go:28` | go_partial |
-| `vision_fallback.endpoint` | string | null | — | `core/framework/config.py:360` | `go_hive/go-hive/internal/server/routes_models.go:28` | go_partial |
+| `vision_fallback.provider` | string | inherit llm | — | `core/framework/config.py:324` | `go_hive/go-hive/internal/server/routes_models.go:28` (+1) | go_partial |
+| `vision_fallback.model` | string | null | — | `core/framework/config.py:325` | `go_hive/go-hive/internal/server/routes_models.go:28` (+1) | go_partial |
+| `vision_fallback.api_key` | string | null | — | `core/framework/config.py:363` | `go_hive/go-hive/internal/server/routes_models.go:28` (+1) | go_partial |
+| `vision_fallback.api_base` | string | null | — | `core/framework/config.py:376` | `go_hive/go-hive/internal/server/routes_models.go:28` (+1) | go_partial |
+| `vision_fallback.api_key_env_var` | string | null | name read from the file | `core/framework/config.py:365` | `go_hive/go-hive/internal/server/routes_models.go:28` (+1) | go_partial |
+| `vision_fallback.max_tokens` | int | aux_max_tokens | — | `core/framework/agent_loop/internals/vision_fallback.py:329` | `go_hive/go-hive/internal/server/routes_models.go:28` (+1) | go_partial |
+| `vision_fallback.endpoint` | string | null | — | `core/framework/config.py:360` | `go_hive/go-hive/internal/server/routes_models.go:28` (+1) | go_partial |
 
-- `vision_fallback.provider`：P1: slot is CRUD-only in Go; find_vision_fallback's caption chain is not ported (runtime never reads it).
-- `vision_fallback.model`：same runtime gap.
-- `vision_fallback.api_key`：same runtime gap.
-- `vision_fallback.api_base`：same runtime gap.
-- `vision_fallback.api_key_env_var`：same runtime gap.
-- `vision_fallback.max_tokens`：same runtime gap; 0/absent falls back to aux_max_tokens.
-- `vision_fallback.endpoint`：same runtime gap.
+- `vision_fallback.provider`：wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.model`：wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.api_key`：wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.api_base`：wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.api_key_env_var`：wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.max_tokens`：wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.endpoint`：wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
 
 ### 2.19 `worker_llm`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `worker_llm.provider` | string | inherit llm | — | `core/framework/config.py:301` (+1) | `go_hive/go-hive/internal/server/provider_library.go:12` (+1) | go_partial |
-| `worker_llm.model` | string | inherit llm | — | `core/framework/config.py:302` | `go_hive/go-hive/internal/server/provider_library.go:12` | go_partial |
-| `worker_llm.api_key` | string | inherit | — | `core/framework/config.py:398` | `go_hive/go-hive/internal/server/provider_library.go:12` | go_partial |
-| `worker_llm.api_base` | string | inherit | — | `core/framework/config.py:471` | `go_hive/go-hive/internal/server/provider_library.go:12` | go_partial |
-| `worker_llm.api_key_env_var` | string | null | name read from the file | `core/framework/config.py:448` | `go_hive/go-hive/internal/server/provider_library.go:12` | go_partial |
-| `worker_llm.max_tokens` | int | inherit llm | — | `core/framework/config.py:547` | `go_hive/go-hive/internal/server/provider_library.go:12` | go_partial |
-| `worker_llm.max_context_tokens` | int | inherit llm | — | `core/framework/config.py:566` | `go_hive/go-hive/internal/server/provider_library.go:12` | go_partial |
-| `worker_llm.endpoint` | string | null | — | `core/framework/config.py:393` | `go_hive/go-hive/internal/server/provider_library.go:12` | go_partial |
-| `worker_llm.extra_body` | object | inherit llm | — | `core/framework/config.py:512` | `go_hive/go-hive/internal/server/provider_library.go:12` | go_partial |
-| `worker_llm.num_ctx` | int | 16384 | — | `core/framework/config.py:511` | `go_hive/go-hive/internal/server/provider_library.go:12` | go_partial |
+| `worker_llm.provider` | string | inherit llm | — | `core/framework/config.py:301` (+1) | `go_hive/go-hive/internal/server/provider_library.go:12` (+2) | go_partial |
+| `worker_llm.model` | string | inherit llm | — | `core/framework/config.py:302` | `go_hive/go-hive/internal/server/provider_library.go:12` (+1) | go_partial |
+| `worker_llm.api_key` | string | inherit | — | `core/framework/config.py:398` | `go_hive/go-hive/internal/server/provider_library.go:12` (+1) | go_partial |
+| `worker_llm.api_base` | string | inherit | — | `core/framework/config.py:471` | `go_hive/go-hive/internal/server/provider_library.go:12` (+1) | go_partial |
+| `worker_llm.api_key_env_var` | string | null | name read from the file | `core/framework/config.py:448` | `go_hive/go-hive/internal/server/provider_library.go:12` (+1) | go_partial |
+| `worker_llm.max_tokens` | int | inherit llm | — | `core/framework/config.py:547` | `go_hive/go-hive/internal/server/provider_library.go:12` (+1) | go_partial |
+| `worker_llm.max_context_tokens` | int | inherit llm | — | `core/framework/config.py:566` | `go_hive/go-hive/internal/server/provider_library.go:12` (+1) | go_partial |
+| `worker_llm.endpoint` | string | null | — | `core/framework/config.py:393` | `go_hive/go-hive/internal/server/provider_library.go:12` (+1) | go_partial |
+| `worker_llm.extra_body` | object | inherit llm | — | `core/framework/config.py:512` | `go_hive/go-hive/internal/server/provider_library.go:12` (+1) | go_partial |
+| `worker_llm.num_ctx` | int | 16384 | — | `core/framework/config.py:511` | `go_hive/go-hive/internal/server/provider_library.go:12` (+1) | go_partial |
 
-- `worker_llm.provider`：P1: Go exposes worker_llm through the REST slot API but never resolves it for the runtime (colony/runtime.go comment: the port does not split queen/worker models by default). Python's session_manager.build_worker_llm does.
-- `worker_llm.model`：same runtime gap as worker_llm.provider.
-- `worker_llm.api_key`：runtime not wired in Go.
-- `worker_llm.api_base`：runtime not wired in Go.
-- `worker_llm.api_key_env_var`：runtime not wired in Go.
-- `worker_llm.max_tokens`：runtime not wired in Go.
-- `worker_llm.max_context_tokens`：runtime not wired in Go.
-- `worker_llm.endpoint`：runtime not wired in Go.
-- `worker_llm.extra_body`：runtime not wired in Go.
-- `worker_llm.num_ctx`：runtime not wired in Go.
+- `worker_llm.provider`：wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.model`：wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.api_key`：wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.api_base`：wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.api_key_env_var`：wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.max_tokens`：wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.max_context_tokens`：wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.endpoint`：wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.extra_body`：wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.num_ctx`：wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
 
 ### 2.20 `worker_tools`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `worker_tools.always_enabled_categories` | list[string] | null | — | `core/framework/agents/queen/queen_tools_defaults.py:462` | — | python_only |
+| `worker_tools.always_enabled_categories` | list[string] | null | — | `core/framework/agents/queen/queen_tools_defaults.py:462` | `go_hive/go-hive/internal/server/config_slots.go:376` | aligned |
 
-- `worker_tools.always_enabled_categories`：P1: Go has no worker_tools reader; worker tool-tier overrides from configuration.json are not honored.
+- `worker_tools.always_enabled_categories`：same list-of-strings rule as queen_tools: a mixed list is not an override. Wired: server.WorkerKeepSetFromConfig expands the categories and hands the colony runtime its WorkerKeepSet; an empty list turns worker tiering off, an absent key keeps the hardcoded default.
 
 ## 3. 优先级与边界
 
@@ -464,7 +465,7 @@
 | integer fields: invalid value | JSON: non-integer (bool/float/string) is ignored and the default/file value stays; env: invalid integer is ignored (Go) or warned+ignored (Python) | aligned |
 | bounded / non-negative fields | soul hour 0..23, every count >= 1, sentinel seconds >= 1, gcu viewport 0.1..1.0; out-of-range keeps the default (or clamps where the doc says clamp) | aligned |
 | credentials vs env | LLM key resolution: slot literal api_key -> named endpoint key -> subscription token -> credential store -> api_key_env_var -> main key | go_partial |
-| MCP call timeout | file > env (exception to the general rule): mcp.timeout_seconds wins over HIVE_MCP_CALL_RESULT_TIMEOUT | go_only |
+| MCP call timeout | env > file > 240s default: HIVE_MCP_CALL_RESULT_TIMEOUT wins over mcp.timeout_seconds (the reversal was fixed in the config-env-align lane) | go_only |
 
 **空串 / 非 bool / 越界 / 坏 JSON 的处理要点**
 
@@ -473,61 +474,58 @@
 - JSON 里类型不对的值：布尔开关要求 JSON bool（`1` 不算 true）；整数要求 JSON integer（`7.0`、`true`、字符串都被忽略）；section 不是对象时按空对象处理。
 - 坏 JSON / 文件不可读：两侧都按 `{}` 处理并走默认值（Python 记 warning）；都接受 UTF-8 BOM。
 - 越界：soul `hour` 0..23、各 count ≥1、sentinel seconds ≥1、`gcu_viewport_scale` 0.1..1.0；越界时 soul/gcu 回默认，sentinel 夹到下限。
-- **唯一的反向优先级**：Go 的 `mcp.timeout_seconds` 覆盖 `HIVE_MCP_CALL_RESULT_TIMEOUT`（file > env），与总体规则相反，已在 `config-keys.json` 标记 `go_only` 并注明。
+- **MCP 调用超时**：`HIVE_MCP_CALL_RESULT_TIMEOUT` > `mcp.timeout_seconds` > 240s 默认（env > file，符合总体规则）。Go 早期版本这里是 file > env 的反向优先级，已在本车道修复（`TestMCPCallResultTimeoutPrecedence` 钉住）；`mcp.*` 块是 Go 扩展，`config-keys.json` 标 `go_only`。
 
 ## 4. 差异清单
 
-### go_partial（27）
+### go_partial（29）
 
 - `llm.use_kimi_code_subscription` — P1: Go lists/detects the Kimi subscription in the REST surface; the runtime token path is not wired like Python's get_api_key branch.
 - `llm.use_antigravity_subscription` — P1: Go has an antigravity token resolver in llm_config; no equivalent of Python's full provider branch (api_base=None, token refresh).
-- `queen_llm.<queen_id>.provider` — P1: Go reads queen_llm only for the REST endpoints; ApplyQueenModel has no production assignment, so a queen's own model is not honored at session start.
-- `queen_llm.<queen_id>.model` — same runtime wiring gap.
-- `queen_llm.<queen_id>.api_key` — same runtime wiring gap.
-- `queen_llm.<queen_id>.api_base` — same runtime wiring gap.
-- `queen_llm.<queen_id>.api_key_env_var` — same runtime wiring gap.
-- `queen_llm.<queen_id>.max_context_tokens` — same runtime wiring gap.
-- `queen_llm.<queen_id>.endpoint` — same runtime wiring gap.
-- `queen_llm.<queen_id>.extra_body` — same runtime wiring gap.
-- `vision_fallback.provider` — P1: slot is CRUD-only in Go; find_vision_fallback's caption chain is not ported (runtime never reads it).
-- `vision_fallback.model` — same runtime gap.
-- `vision_fallback.api_key` — same runtime gap.
-- `vision_fallback.api_base` — same runtime gap.
-- `vision_fallback.api_key_env_var` — same runtime gap.
-- `vision_fallback.max_tokens` — same runtime gap; 0/absent falls back to aux_max_tokens.
-- `vision_fallback.endpoint` — same runtime gap.
-- `worker_llm.provider` — P1: Go exposes worker_llm through the REST slot API but never resolves it for the runtime (colony/runtime.go comment: the port does not split queen/worker models by default). Python's session_manager.build_worker_llm does.
-- `worker_llm.model` — same runtime gap as worker_llm.provider.
-- `worker_llm.api_key` — runtime not wired in Go.
-- `worker_llm.api_base` — runtime not wired in Go.
-- `worker_llm.api_key_env_var` — runtime not wired in Go.
-- `worker_llm.max_tokens` — runtime not wired in Go.
-- `worker_llm.max_context_tokens` — runtime not wired in Go.
-- `worker_llm.endpoint` — runtime not wired in Go.
-- `worker_llm.extra_body` — runtime not wired in Go.
-- `worker_llm.num_ctx` — runtime not wired in Go.
+- `llm.antigravity_client_id` — reader only: ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id (no public-source fetch), tested by TestAntigravityClientCredentials. No request path consumes it: the port reads the pre-issued access token from antigravity-accounts.json and has no OAuth refresh to hand a client id to.
+- `llm.antigravity_client_secret` — reader only: ANTIGRAVITY_CLIENT_SECRET, then llm.antigravity_client_secret (no public-source fetch), tested by TestAntigravityClientCredentials. No request path consumes it: no OAuth refresh to hand a client secret to.
+- `queen_llm.<queen_id>.provider` — wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.model` — wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.api_key` — wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.api_base` — wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.api_key_env_var` — wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.max_context_tokens` — wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.endpoint` — wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `queen_llm.<queen_id>.extra_body` — wired at session start: queenAwareChatProvider builds her provider from this section (and the colony host uses her model for her colony); max_context_tokens budgets her loop. Live in-place switch on PUT is still unsupported (llm.Provider has no Reconfigure), so status stays go_partial.
+- `vision_fallback.provider` — wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.model` — wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.api_key` — wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.api_base` — wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.api_key_env_var` — wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.max_tokens` — wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `vision_fallback.endpoint` — wired: visionCaptionerFor builds the caption model; for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
+- `worker_llm.provider` — wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.model` — wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.api_key` — wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.api_base` — wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.api_key_env_var` — wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.max_tokens` — wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.max_context_tokens` — wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.endpoint` — wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.extra_body` — wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
+- `worker_llm.num_ctx` — wired: workerChatProvider builds the colony's dedicated WorkerLLM; key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/slotExtraKwargs and max_context_tokens budgets the worker loop. max_tokens has no consumer on either side.
 
-### python_only（6）
+### python_only（1）
 
-- `channels.<name>.enabled` — P2: optional-package channels (OneBot, etc.) are Python-only; Go has no channels.<name> runtime reader.
-- `llm.aux_max_tokens` — P1: Go never reads llm.aux_max_tokens. internal/llm/complete.go has DefaultAuxMaxTokens=8192 but no configuration.json reader, so a user-pinned aux budget is ignored.
-- `llm.antigravity_client_id` — Go has no configuration.json reader for the Antigravity OAuth client id (Python falls back to the public upstream constants).
-- `llm.antigravity_client_secret` — same as antigravity_client_id.
-- `loop.max_tool_result_chars` — P1: Go has the 30_000 default but no configuration.json reader for the global `loop` section; a file override is ignored.
-- `worker_tools.always_enabled_categories` — P1: Go has no worker_tools reader; worker tool-tier overrides from configuration.json are not honored.
+- `channels.<name>.enabled` — unsupported: upstream starts optional channel packages installed through the hive.channels entry-point group; the Go port has no plugin host or channel lifecycle, so an enabled flag has nothing to gate. Recorded in contracts/config-support-ledger.json rather than silently ignored.
 
 ### go_only（4）
 
 - `mcp.enabled` — Go reads an `mcp` block from configuration.json; Python's MCP servers come from .mcp.json / the registry. A Go extension, not an upstream key.
 - `mcp.namespace` — tool-name namespace; blank keeps the default.
-- `mcp.timeout_seconds` — priority REVERSED vs the general rule: file wins over env here (>0 only). This is the only configuration.json key in either tree with file > env.
+- `mcp.timeout_seconds` — env > file > 240s default, the general rule: internal/tools.MCPCallResultTimeout resolves HIVE_MCP_CALL_RESULT_TIMEOUT first, then the file value. Was file > env until the config-env-align lane; the reversal is fixed and pinned by TestMCPCallResultTimeoutPrecedence.
 - `mcp.servers` — accepts both the list and map shapes; a same-named registry entry is replaced by the file entry.
 
 ### unread（1）
 
 - `created_at` — written by the installers, read by neither runtime. Documented example only.
 
-非 `aligned` 键合计 **38** 个，已全部列出（上表）。
+非 `aligned` 键合计 **35** 个，已全部列出（上表）。
 
 ## 5. 复现与门禁
 
@@ -546,4 +544,4 @@ Go 侧另有一个报告型测试 `internal/envcontract`（读取 `../../../cont
 - 本报告冻结的是**配置契约**，不是行为实现；`aligned` 表示两侧读取同一键且默认/类型/语义一致，不表示端到端行为已验证。
 - `go_partial` 的判定基于生产代码里是否存在读取点；REST/CRUD 端点存在不等于运行时消费。
 - 未覆盖：per-colony `notifications.json`、agent/worker 子配置文件、`.mcp.json`、前端 localStorage；这些不是全局 `configuration.json`。
-- 环境变量采用既有审计的清单；`env-vars.json` 里的读取点由扫描器补充，默认值/解析差异只对运行时相关变量做了人工核对。
+- 环境变量采用既有审计（622cc236）的清单为基线；本车道新增的 Go 读取点（`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_PYTHON`）已计入，network-scanners 车道移除的 Go 独有 `HIVE_NETWORK_SCANNERS` 也已反映。`env-vars.json` 里的读取点由扫描器补充，默认值/解析差异对运行时相关变量做了人工核对。

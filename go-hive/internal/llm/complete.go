@@ -4,11 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 )
 
 const (
 	DefaultAuxMaxTokens = 8192
+
+	// DefaultMaxTokens is upstream's DEFAULT_MAX_TOKENS: the output budget used
+	// when neither configuration.json nor the model catalog pins one.
+	//
+	// Parity: framework/config.py::DEFAULT_MAX_TOKENS
+	DefaultMaxTokens = 8192
 
 	RateLimitMaxRetries = 10
 
@@ -40,6 +47,37 @@ func ResolveAuxMaxTokens(configured int) int {
 		return DefaultAuxMaxTokens
 	}
 	return configured
+}
+
+// auxMaxTokensOverride carries the configured llm.aux_max_tokens for the
+// process. Zero means "not configured", which keeps the built-in cap.
+var auxMaxTokensOverride atomic.Int64
+
+// SetAuxMaxTokens installs the configured aux budget (llm.aux_max_tokens) for
+// every small utility call in the process. A non-positive value clears the
+// override, so an unconfigured home keeps the built-in cap.
+//
+// Parity: framework/config.py::get_aux_max_tokens (the reader itself lives in
+// internal/server.AuxMaxTokens; this is its process-wide carrier).
+func SetAuxMaxTokens(tokens int) {
+	if tokens <= 0 {
+		auxMaxTokensOverride.Store(0)
+		return
+	}
+	auxMaxTokensOverride.Store(int64(tokens))
+}
+
+// AuxMaxTokens is the effective output budget for a small utility call: the
+// configured llm.aux_max_tokens when set, else the built-in cap. Unlike
+// ResolveAuxMaxTokens it does not clamp a configured value — a user who pins
+// 16k for a thinking model means it.
+//
+// Parity: framework/config.py::get_aux_max_tokens
+func AuxMaxTokens() int {
+	if configured := auxMaxTokensOverride.Load(); configured > 0 {
+		return int(configured)
+	}
+	return ResolveAuxMaxTokens(0)
 }
 
 func IsRateLimitError(err error) bool {

@@ -9,48 +9,73 @@
   },
   "verification": {
     "rule": "quoted HIVE_* literals in production sources; tests/testdata/_test.go excluded; python = core/*.py + tools/*.py + root launcher scripts; go = go_hive/go-hive/{internal,cmd}/**/*.go",
-    "expected": {
+    "baseline": {
       "python": 89,
       "go": 96,
-      "common": 67,
-      "python_only": 22,
-      "go_only": 29
+      "common": 66,
+      "python_only": 23,
+      "go_only": 30
+    },
+    "expected": {
+      "python": 89,
+      "go": 100,
+      "common": 69,
+      "python_only": 20,
+      "go_only": 31
     },
     "reproduced": {
       "python": 89,
-      "go": 96,
-      "common": 67,
-      "python_only": 22,
-      "go_only": 29
+      "go": 100,
+      "common": 69,
+      "python_only": 20,
+      "go_only": 31
     },
     "counts_match": true,
     "published_lists_compared": {
       "file": "go_hive/docs/env-surface-audit.json",
+      "commit": "622cc236",
+      "baseline": {
+        "python": 89,
+        "go": 96,
+        "common": 66,
+        "python_only": 23,
+        "go_only": 30
+      },
       "counts": {
         "python": 89,
         "go": 96
       },
-      "common_equal": true,
-      "python_only_equal": true,
-      "go_only_equal": true,
+      "common_equal": false,
+      "python_only_equal": false,
+      "go_only_equal": false,
+      "common_gained": [
+        "HIVE_MAX_ITER",
+        "HIVE_SPLIT_WORKER_EVENTS"
+      ],
+      "common_lost": [],
+      "python_only_dropped": [
+        "HIVE_MAX_ITER",
+        "HIVE_SPLIT_WORKER_EVENTS"
+      ],
+      "python_only_added": [],
       "normalization": "published 'HIVE_RETENTION_' (trailing underscore) maps to 'HIVE_RETENTION_*'"
     }
   },
   "summary": {
     "python": 89,
-    "go": 96,
-    "common": 67,
-    "python_only": 22,
-    "go_only": 29,
+    "go": 100,
+    "common": 69,
+    "python_only": 20,
+    "go_only": 31,
     "status_counts": {
       "aligned": 56,
-      "go_only": 3,
-      "literal_only": 36,
-      "parse_differs": 2,
-      "python_only": 21
+      "go_only": 4,
+      "literal_only": 37,
+      "parse_differs": 4,
+      "python_only": 19
     },
     "python_read_sites": 138,
-    "go_read_sites": 79
+    "go_read_sites": 85
   },
   "inventory": {
     "common": [
@@ -83,6 +108,7 @@
       "HIVE_HOME",
       "HIVE_LLM_BASE_URL",
       "HIVE_MAX_CONCURRENT_WORKERS",
+      "HIVE_MAX_ITER",
       "HIVE_MAX_PLAYBOOK_CONCURRENCY",
       "HIVE_MAX_VERBATIM_CLIENT_MSGS",
       "HIVE_MCP_CALL_RESULT_TIMEOUT",
@@ -101,6 +127,7 @@
       "HIVE_RUNTIME_ID",
       "HIVE_RUNTIME_KIND",
       "HIVE_RUNTIME_PORT",
+      "HIVE_SPLIT_WORKER_EVENTS",
       "HIVE_STALL_CHECK",
       "HIVE_STORAGE_PATH",
       "HIVE_TASK_COMPLETED_CLEANUP",
@@ -133,7 +160,6 @@
       "HIVE_GCU_MEMTRACE_TOP",
       "HIVE_GCU_SCREENSHOT_CONCURRENCY",
       "HIVE_HISTORY_READ_WORKERS",
-      "HIVE_MAX_ITER",
       "HIVE_NO_FILE_LOG",
       "HIVE_PLAYBOOK_FAST_GRACE",
       "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
@@ -143,7 +169,6 @@
       "HIVE_RESOURCE_WARN_AVAIL_FRAC",
       "HIVE_RESOURCE_WARN_RENDERERS",
       "HIVE_SENTINEL_LOG",
-      "HIVE_SPLIT_WORKER_EVENTS",
       "HIVE_TRACKER_WORKER_TOOL_CALLS"
     ],
     "go_only": [
@@ -174,23 +199,13 @@
       "HIVE_LME_RESUME",
       "HIVE_LME_RUN_DIR",
       "HIVE_MCP2CLI",
+      "HIVE_PYTHON",
       "HIVE_RETENTION_*",
-      "HIVE_SESSION_COST_LIMIT_USD"
+      "HIVE_SESSION_COST_LIMIT_USD",
+      "HIVE_TOOL_SURFACE"
     ]
   },
   "recommendations": [
-    {
-      "name": "HIVE_MAX_ITER",
-      "priority": "P1",
-      "why": "caps queen reply-loop iterations for single-reply deployments",
-      "direction": "port to go"
-    },
-    {
-      "name": "HIVE_SPLIT_WORKER_EVENTS",
-      "priority": "P1",
-      "why": "splits worker event streams; affects transcript/event consumers",
-      "direction": "port to go"
-    },
     {
       "name": "HIVE_TRACKER_WORKER_TOOL_CALLS",
       "priority": "P2",
@@ -640,10 +655,18 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1127,
+            "line": 1039,
             "symbol": "resolveChatProvider",
             "parse": "string",
             "snippet": "apiKey = strings.TrimSpace(os.Getenv(\"HIVE_API_KEY\"))",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+            "line": 112,
+            "symbol": "mainSlotAPIKey",
+            "parse": "string",
+            "snippet": "return strings.TrimSpace(os.Getenv(\"HIVE_API_KEY\"))",
             "default": ""
           },
           {
@@ -667,7 +690,7 @@
         "test_reads": 2,
         "writes": [],
         "mentions": 17,
-        "comments": 1
+        "comments": 2
       }
     },
     {
@@ -857,15 +880,15 @@
           },
           {
             "file": "go_hive/go-hive/internal/server/routes_app_extra.go",
-            "line": 442,
-            "symbol": "defaultBridgeStatusAddr",
+            "line": 505,
+            "symbol": "defaultBridgeStatusAddrs",
             "parse": "string",
-            "snippet": "if raw := os.Getenv(\"HIVE_BRIDGE_PORT\"); raw != \"\" {",
+            "snippet": "if raw := strings.TrimSpace(os.Getenv(\"HIVE_BRIDGE_PORT\")); raw != \"\" {",
             "default": ""
           },
           {
             "file": "go_hive/go-hive/internal/server/routes_browser_panel.go",
-            "line": 67,
+            "line": 77,
             "symbol": "defaultBrowserPanelBase",
             "parse": "string",
             "snippet": "if raw := strings.TrimSpace(os.Getenv(\"HIVE_BRIDGE_PORT\")); raw != \"\" {",
@@ -873,10 +896,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 2,
+        "test_reads": 6,
         "writes": [],
-        "mentions": 4,
-        "comments": 4
+        "mentions": 5,
+        "comments": 7
       },
       "notes": "py int() raises at import on garbage; go parses per site and keeps the default. Per-site defaults (14829/9229) match upstream."
     },
@@ -962,8 +985,16 @@
       "go": {
         "prod_reads": [
           {
+            "file": "go_hive/go-hive/internal/server/routes_app_extra.go",
+            "line": 500,
+            "symbol": "defaultBridgeStatusAddrs",
+            "parse": "string",
+            "snippet": "if raw := strings.TrimSpace(os.Getenv(\"HIVE_BROWSERBRIDGE_HTTP\")); raw != \"\" {",
+            "default": ""
+          },
+          {
             "file": "go_hive/go-hive/internal/server/routes_browser_panel.go",
-            "line": 63,
+            "line": 73,
             "symbol": "defaultBrowserPanelBase",
             "parse": "string",
             "snippet": "if raw := strings.TrimSpace(os.Getenv(\"HIVE_BROWSERBRIDGE_HTTP\")); raw != \"\" {",
@@ -971,10 +1002,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 6,
+        "test_reads": 9,
         "writes": [],
-        "mentions": 7,
-        "comments": 3
+        "mentions": 9,
+        "comments": 7
       }
     },
     {
@@ -995,7 +1026,7 @@
         "dev_reads": [],
         "test_reads": 4,
         "writes": [],
-        "mentions": 4,
+        "mentions": 5,
         "comments": 0
       }
     },
@@ -1038,7 +1069,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/browser_cli.go",
-            "line": 227,
+            "line": 240,
             "symbol": "profile",
             "parse": "helper",
             "helper": "env",
@@ -1509,6 +1540,14 @@
             "default": ""
           },
           {
+            "file": "go_hive/go-hive/internal/server/config_slots.go",
+            "line": 169,
+            "symbol": "storedProviderKey",
+            "parse": "string",
+            "snippet": "if strings.TrimSpace(provider) == \"\" || os.Getenv(\"HIVE_CREDENTIAL_KEY\") == \"\" {",
+            "default": ""
+          },
+          {
             "file": "go_hive/go-hive/internal/server/llm_config.go",
             "line": 442,
             "symbol": "configuredAPIKeyPresent",
@@ -1529,7 +1568,7 @@
         "test_reads": 15,
         "writes": [],
         "mentions": 16,
-        "comments": 4
+        "comments": 5
       }
     },
     {
@@ -1589,7 +1628,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 5,
+        "mentions": 6,
         "comments": 0
       }
     },
@@ -1619,7 +1658,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/eventbus/bus.go",
-            "line": 703,
+            "line": 710,
             "symbol": "marshalLine",
             "parse": "string",
             "snippet": "debugEventsRaw = strings.TrimSpace(os.Getenv(\"HIVE_DEBUG_EVENTS\"))",
@@ -1661,7 +1700,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/playbook/rows.go",
-            "line": 229,
+            "line": 250,
             "symbol": "intEnv",
             "parse": "int",
             "helper": "intEnv",
@@ -1827,7 +1866,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1191,
+            "line": 1103,
             "symbol": "runtimeOwnerPID",
             "parse": "string",
             "snippet": "owner := os.Getenv(\"HIVE_DESKTOP_PARENT_PID\")",
@@ -1839,7 +1878,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1194,
+            "line": 1106,
             "scope": "runtime"
           }
         ],
@@ -1912,7 +1951,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 263,
+            "line": 261,
             "symbol": "defaultServe",
             "parse": "string",
             "snippet": "if !isLoopbackListenHost(host) && strings.TrimSpace(os.Getenv(\"HIVE_DESKTOP_TOKEN\")) == \"\" {",
@@ -2022,7 +2061,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 3,
+        "mentions": 4,
         "comments": 0
       }
     },
@@ -2386,7 +2425,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/browser_cli.go",
-            "line": 271,
+            "line": 284,
             "symbol": "statePath",
             "parse": "helper",
             "helper": "env",
@@ -2394,7 +2433,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/eventbus/bus.go",
-            "line": 718,
+            "line": 725,
             "symbol": "hiveHomeDir",
             "parse": "string",
             "snippet": "if home := strings.TrimSpace(os.Getenv(\"HIVE_HOME\")); home != \"\" {",
@@ -2418,10 +2457,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 29,
+        "test_reads": 33,
         "writes": [],
-        "mentions": 66,
-        "comments": 61
+        "mentions": 70,
+        "comments": 63
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -3130,9 +3169,9 @@
     },
     {
       "name": "HIVE_MAX_ITER",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "parse_differs",
+      "status_basis": "python parse=['string']; go parse=['int']",
       "python": {
         "prod_reads": [
           {
@@ -3150,13 +3189,23 @@
         "comments": 1
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
+            "line": 46,
+            "symbol": "chatLoopConfig",
+            "parse": "int",
+            "helper": "envPositiveInt",
+            "snippet": "if cap, ok := envPositiveInt(\"HIVE_MAX_ITER\"); ok {"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 2,
         "writes": [],
-        "mentions": 4,
-        "comments": 0
-      }
+        "mentions": 8,
+        "comments": 4
+      },
+      "notes": "py: int(raw) only when raw.isdigit(), else 999_999; go: envPositiveInt trims and requires > 0, else the configured loop default. Zero/negative/padded values differ."
     },
     {
       "name": "HIVE_MAX_PLAYBOOK_CONCURRENCY",
@@ -3185,7 +3234,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/playbook/rows.go",
-            "line": 228,
+            "line": 249,
             "symbol": "intEnv",
             "parse": "int",
             "helper": "intEnv",
@@ -3299,18 +3348,18 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/tools/mcp_client.go",
-            "line": 48,
-            "symbol": "mcpCallTimeoutFromEnv",
+            "line": 57,
+            "symbol": "mcpTimeoutFromEnv",
             "parse": "string",
-            "snippet": "raw := os.Getenv(\"HIVE_MCP_CALL_RESULT_TIMEOUT\")",
+            "snippet": "raw := strings.TrimSpace(os.Getenv(\"HIVE_MCP_CALL_RESULT_TIMEOUT\"))",
             "default": ""
           }
         ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 1,
         "writes": [],
-        "mentions": 8,
-        "comments": 2
+        "mentions": 9,
+        "comments": 4
       },
       "notes": "both default 240s; garbage/<=0 -> 240s."
     },
@@ -3551,6 +3600,37 @@
       }
     },
     {
+      "name": "HIVE_PYTHON",
+      "audit_membership": "go_only",
+      "status": "go_only",
+      "status_basis": "go has a read site, python has none",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/playbook/python.go",
+            "line": 131,
+            "symbol": "ResolvePythonInterpreter",
+            "parse": "string",
+            "snippet": "if override := strings.TrimSpace(os.Getenv(\"HIVE_PYTHON\")); override != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 5,
+        "writes": [],
+        "mentions": 13,
+        "comments": 3
+      }
+    },
+    {
       "name": "HIVE_QUEEN_ID",
       "audit_membership": "common",
       "status": "literal_only",
@@ -3767,7 +3847,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/app.go",
-            "line": 439,
+            "line": 451,
             "symbol": "requestExecutorMax",
             "parse": "string",
             "snippet": "if value := os.Getenv(\"HIVE_REQUEST_EXECUTOR_MAX\"); value != \"\" {",
@@ -4166,7 +4246,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 268,
+            "line": 266,
             "scope": "runtime"
           }
         ],
@@ -4200,7 +4280,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 2,
+        "mentions": 3,
         "comments": 0
       }
     },
@@ -4228,9 +4308,9 @@
     },
     {
       "name": "HIVE_SPLIT_WORKER_EVENTS",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "parse_differs",
+      "status_basis": "python parse=['bool_deny_list']; go parse=['string']",
       "python": {
         "prod_reads": [
           {
@@ -4250,13 +4330,23 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/colony/runtime.go",
+            "line": 576,
+            "symbol": "splitWorkerEventsEnabled",
+            "parse": "string",
+            "snippet": "switch strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_SPLIT_WORKER_EVENTS\"))) {",
+            "default": ""
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 4,
         "writes": [],
-        "mentions": 3,
-        "comments": 0
-      }
+        "mentions": 8,
+        "comments": 7
+      },
+      "notes": "both default off; only 1/true/yes (case-insensitive) enable the split; go trims surrounding whitespace, py does not."
     },
     {
       "name": "HIVE_STALL_CHECK",
@@ -4283,7 +4373,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/hive_config.go",
-            "line": 37,
+            "line": 21,
             "symbol": "StallCheckEnabled",
             "parse": "string",
             "snippet": "if raw, ok := os.LookupEnv(\"HIVE_STALL_CHECK\"); ok {",
@@ -4948,6 +5038,28 @@
         "comments": 0
       },
       "notes": "both default 64 and floor at 8."
+    },
+    {
+      "name": "HIVE_TOOL_SURFACE",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 2
+      }
     },
     {
       "name": "HIVE_TRACKER_QUEEN_COOLDOWN_NO_TABLE",

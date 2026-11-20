@@ -88,7 +88,7 @@ func (j *Judge) auxMaxTokens() int {
 	if j.AuxMaxTokens != nil {
 		return j.AuxMaxTokens()
 	}
-	return llm.ResolveAuxMaxTokens(0)
+	return llm.AuxMaxTokens()
 }
 
 func buildPrompt(constraint, sourceDocument, summary, criteria string) string {

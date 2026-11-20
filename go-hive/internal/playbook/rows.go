@@ -75,6 +75,27 @@ func ErrorDetail(err error) (concise, full string) {
 		}
 		return fmt.Sprintf("%s: %s%s", runtimeErr.Kind, runtimeErr.Message, where), full
 	}
+
+	// Python playbooks carry the upstream-shaped concise line (root cause +
+	// playbook line) and the child's full traceback.
+	var pythonErr *PythonScriptError
+	if errors.As(err, &pythonErr) {
+		concise = pythonErr.Error()
+		if strings.TrimSpace(pythonErr.Traceback) != "" {
+			full = pythonErr.Traceback
+		}
+		return concise, full
+	}
+	// Bridge failures are environment/protocol errors; keep stderr in the full
+	// text but out of the one-line summary the tool payload shows.
+	var bridgeErr *PythonBridgeError
+	if errors.As(err, &bridgeErr) {
+		concise = bridgeErr.Message
+		if bridgeErr.HasExit {
+			concise = fmt.Sprintf("%s (exit code %d)", concise, bridgeErr.ExitCode)
+		}
+		return concise, full
+	}
 	return fmt.Sprintf("%T: %v", err, err), full
 }
 

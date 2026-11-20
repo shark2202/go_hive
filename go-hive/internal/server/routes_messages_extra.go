@@ -186,7 +186,7 @@ func (deps MessageRouteDeps) auxMaxTokens() int {
 	if deps.AuxMaxTokens != nil {
 		return llm.ResolveAuxMaxTokens(deps.AuxMaxTokens())
 	}
-	return llm.ResolveAuxMaxTokens(0)
+	return llm.AuxMaxTokens()
 }
 
 func defaultQueenIDs() []string {

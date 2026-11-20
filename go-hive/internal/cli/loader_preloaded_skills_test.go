@@ -39,9 +39,13 @@ func TestPreloadedColonySessionInjectsSkillsCatalog(t *testing.T) {
 	colonyPath := writeColonySpecFixture(t, home, "honeycomb",
 		`{"name":"worker","description":"bee counter","system_prompt":"count bees carefully",`+
 			`"tools":["read_file"],"goal":{"description":"count the bees"}}`)
-	// writeQueenSkill lives in loader_reminders_test.go: the preloaded colony
-	// session runs under the default queen scope.
-	writeQueenSkill(t, home, "default", "preload-catalog-probe", "A probe skill.")
+	// The preloaded colony session belongs to the colony's recorded queen
+	// (metadata.json queen_name), matching upstream
+	// _create_session_for_existing_colony: her skills catalog is the queen
+	// scope's, and a default-scope skill must not leak into it.
+	// writeQueenSkill lives in loader_reminders_test.go.
+	writeQueenSkill(t, home, "default", "preload-default-scope-probe", "A default-scope probe skill.")
+	writeQueenSkill(t, home, "queen_alpha", "preload-catalog-probe", "A probe skill.")
 
 	provider := &preloadedCatalogLLM{}
 	previous := chatProviderFactory
@@ -78,6 +82,9 @@ func TestPreloadedColonySessionInjectsSkillsCatalog(t *testing.T) {
 		}
 		for _, part := range parts {
 			content, _ := part["content"].(string)
+			if strings.Contains(content, "<name>preload-default-scope-probe</name>") {
+				t.Fatalf("default-scope skill leaked into the preloaded colony's queen_alpha catalog: %s", content)
+			}
 			if strings.Contains(content, "<name>preload-catalog-probe</name>") {
 				return
 			}

@@ -263,7 +263,7 @@ func ClassifyPark(ctx context.Context, park ParkContext, completer llm.Completer
 	response, err := completer.AComplete(ctx, llm.CompletionRequest{
 		Messages:  []llm.ChatMessage{{Role: "user", Content: BuildClassifierPrompt(park)}},
 		System:    classifierSystemPrompt,
-		MaxTokens: llm.ResolveAuxMaxTokens(0),
+		MaxTokens: llm.AuxMaxTokens(),
 		JSONMode:  true,
 	})
 	if err != nil {

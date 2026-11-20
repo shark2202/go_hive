@@ -4,6 +4,7 @@
 - 上一版基线：`80ea8567`（`release: 1.0.25-go.1（worker 镜像/共享 park/overseer 提问）`；70 已接 / 0 部分 / 0 未接，70 行）
 - 更早基线：`ab5c3dc7`（70/0/0）；`d650199d`（67/3/0）；`6723ab78`（63/7/0）；`c444c192`（61/9/0）；`4b6f1cf4`（50/10/10）；`4daf4222`（汇总表 30 已接 / 12 部分 / 28 未接；按行逐条重算为 32 / 11 / 27，见 §1 注）
 - 审计日期：2026-11-20
+- 增量更正（2026-11-21，本基线之后的提交）：**Python `.play.py` playbook 已从「unsupported」改为「已实现（外部 python3 + stdio JSON-RPC）」**；§4 的方法层行与小结、§6 的待决策项已按新事实就地改写，其余行未重审。证据与未验证项见 `docs/playbook-python.md`。
 - 本轮增量：复核 `80ea8567..efb81858` 落地的 1.0.26——桥接把 overseer 每回合的 `client_output_delta` 按 `execution_id` 收束为一条 assistant 消息写回会话转录（`recordOnly+external`，`[overseer]` 标记；只落最终文本，重复完成去重，失败丢弃未完成文本，工具 preamble 不冒充；`execution_started` 重新武装被复用的 id）；`events.jsonl` 在 `execution_completed/failed` 冲刷缓冲的 delta 快照，刷新回放可见中继回复；另以 Orca 1.4.261 内置浏览器跑 7 个真实 LLM UI E2E（7/7 PASS，报告 `docs/e2e-orca-ui-1.0.25.md`，构建为 1.0.25）。
 - 审计对象：`runtime_spine.md` 的八层栈；Go 模块根为 `go_hive/go-hive/`
 - 分层依据说明：`runtime_spine.md` 仍未入库，本审计与上一版一样按既有文本核对八层定义，不把该文件计入提交。
@@ -53,7 +54,7 @@
 
 注：`4b6f1cf4` 版按行级口径为 **50/10/10**；`c444c192` 版为 **61/9/0**；`6723ab78` 版为 **63/7/0**；`d650199d` 版为 **67/3/0**；`ab5c3dc7` 起为 **70/0/0**。本版（`efb81858`）仍为 **70/0/0**，**0 条状态变化**；1.0.26 的转录回写与 `events.jsonl` flush 都落在已有 substrate 行上（2 条缺口改写，见 §12）。
 
-读法：1.0.25 把桥接/共享 park 缺口补完整（worker 进度镜像、overseer 凭据 form、共享 pending park、overseer `ask_user`）；1.0.26 再把 overseer 回复写回会话转录，并让 `events.jsonl` 在回合边界冲刷，刷新回放可见。剩余是已知差异（两份 conversation 存储、catalog 作用域、form 覆盖面、onboarding 弹层、MiniMax/Python playbook/81 模块），不再是接线断点。
+读法：1.0.25 把桥接/共享 park 缺口补完整（worker 进度镜像、overseer 凭据 form、共享 pending park、overseer `ask_user`）；1.0.26 再把 overseer 回复写回会话转录，并让 `events.jsonl` 在回合边界冲刷，刷新回放可见。剩余是已知差异（两份 conversation 存储、catalog 作用域、form 覆盖面、onboarding 弹层、MiniMax 流式、81 模块），不再是接线断点（Python playbook 已于 2026-11-21 补齐，见 `docs/playbook-python.md`）。
 
 ---
 
@@ -151,11 +152,11 @@
 | Agent 写技能 `write_skill` | `internal/skills/agent_tools.go:54/63/178`；`internal/cli/session_tools.go:94/250` | chat Queen 会话工具表常驻 `write_skill`；`ExecuteAgentTool` → `WriteSkill` 写 colony/queen/global 三个 scope | 已接 | C | overseer 工具面没有 `write_skill`；global scope 只把请求落到会话目录，不直接改共享库 |
 | Agent 读技能 `skill_view` / 技能目录加载 | `internal/skills/agent_tools.go:54/178`；`internal/agentloop/types.go:144`；`internal/agentloop/loop.go:828`；`internal/colony/runtime.go:404`；`internal/colony/skills_surface.go:40` | chat Queen 有 `skill_view`/`list_skills`；worker spawn 时拿到 `SkillDirs` + `SkillsCatalogPrompt`，`view_file` 在技能目录内被拦截成 skill 内容 | 已接 | C | 运行中 Queen 新写的 skill 要等 worker 下一批才可见 |
 | Colony `skills/` 目录生产写入 | `internal/server/colony_scaffold.go:31`；`internal/server/routes_colonies.go:440`；`internal/cli/colony_worker_definition.go:31`；`internal/skills/skill_writer.go:170` | scaffold 预建 `skills/`；fork 仍只写 `metadata.json`/`worker.json`；`write_skill(scope='colony')` → `MkdirAll(<colony>/skills)` → 写 `SKILL.md`；`GET /colony/skills` 从磁盘读 | 已接 | C | fork 树上的 `skills/` 靠首次写入懒建；没有"空目录即就绪"的显式初始化（scaffold 路径除外） |
-| Playbook runner（确定性批次、重试/退避/死信） | `internal/colony/playbook_tools.go:129`；`internal/playbook/runner.go:190/423`；`internal/playbook/rows.go:102/144` | `run_playbook` → `RunPlaybook` → `playbook.NewPlaybookRun` → 按 `pending_sql` 查行、并发派 worker、重试/退避/死信、同步返回 | 已接 | C | 只支持 native JSON；Python `.play.py` 返回 `status='unsupported'` 且 0 派发；同步执行 |
+| Playbook runner（确定性批次、重试/退避/死信） | `internal/colony/playbook_tools.go:129`；`internal/playbook/runner.go:190/423`；`internal/playbook/rows.go:102/144`；Python 路径 `internal/playbook/python.go` | `run_playbook` → `RunPlaybook` → 按 `pending_sql` 查行、并发派 worker、重试/退避/死信、同步返回；`.play.py` 经外部解释器跑同一套 hook（`docs/playbook-python.md`） | 已接 | C | 支持 native JSON 与 Python `.play.py`（无解释器时 `status='unsupported'`、0 派发）；同步执行 |
 | Agent Playbook 工具（`run_playbook` / status / stop） | `internal/cli/session_tools.go:104/254`；`internal/colony/playbook_tools.go:76/168`（`action` 分派）；`internal/colony/playbook_control.go:120/157` | 会话工具表注册 `run_playbook`；`action='status'` 列在飞 + 历史，`action='stop'` 按 `run_id` 取消；执行器调 `colony.RunPlaybook` | 已接 | C | 控制动作合并在同一工具参数里，没有独立工具名/路由；stop 只取消未派发行，已 done 行保留 |
 | Playbook run log / 按 tracker resume | `internal/colony/colony_db.go:78/107`；`internal/colony/playbook_tools.go:198`；`internal/playbook/rows.go` | 每次 run 写 `playbook_runs`；再次 `run_playbook(playbook_name=…)` 重查 `pending_sql`，done 行自然消失 | 已接 | C | 没有后台完成通知；单次 run 可用 `action='stop'` 取消，但"继续"仍靠重跑 `pending_sql` |
 
-**小结**：方法层从"八层里最空"变成"主路径全通"：Queen 能写/读 skill，worker 能加载，playbook 有真 runner、run log 与 status/stop，resume 靠 tracker 现状成立。边界是 Python playbook 明确不支持、playbook 同步执行、控制动作没有独立工具名。
+**小结**：方法层从"八层里最空"变成"主路径全通"：Queen 能写/读 skill，worker 能加载，playbook 有真 runner、run log 与 status/stop，Python `.play.py` 已可经外部解释器执行（2026-11-21），resume 靠 tracker 现状成立。边界是 playbook 后台完成通知与同步执行、控制动作没有独立工具名。
 
 ---
 
@@ -252,7 +253,7 @@
 | 执行保护：stall / doom-loop / Queen 预算 | **已接（新）** | `session.go:431` → `chat_loop_guards.go:39/81` → `stall_check.go:79/124`（提醒注入，不发事件）；`doom_loop.go:28-34/178` + `loop.go:837/976` + `loop_guards.go:109`（5 次停车 + `node_tool_doom_loop`）；chat 失败分支保留 `doom_loop`（`chat_runtime.go:673/682/716`）；`loop.go:78-91`（30/50）。 |
 | Colony scaffold / worker 持久运行态 | **已接（新）** | `colony_scaffold.go:31` 建 `skills/`、`runs/`、`triggers.json`；`worker_state.go:78/226` + `runtime.go:523` 落盘并自动续跑 queued/running；`loader_preloaded_session.go:53/62/199` 复用旧 queen 会话并注入 catalog（default scope）。缺口：fork 不建目录；POST colony_id 不 resume。 |
 | Skill：`write_skill` / `skill_view` 是否注册；写入是否生产可达 | **已接** | `skills/agent_tools.go:54/178` + `cli/session_tools.go:94/250` + `colony/runtime.go:404`；write/view/list 全通，worker 侧 `SkillDirs` 生效。 |
-| Playbook：`internal/playbook/runner.go` 是否有生产调用或 `run_playbook` 工具注册 | **已接（Go native，含 status/stop）** | `colony/playbook_tools.go:129/168` + `cli/session_tools.go:104/254` + `playbook.NewPlaybookRun` + `playbook_control.go:120/157`；Python `.play.py` 明确 unsupported，0 派发。 |
+| Playbook：`internal/playbook/runner.go` 是否有生产调用或 `run_playbook` 工具注册 | **已接（Go native + Python，含 status/stop）** | `colony/playbook_tools.go:129/168` + `cli/session_tools.go:104/254` + `playbook.NewPlaybookRun` + `playbook_control.go:120/157`；Python `.play.py` 经 `internal/playbook/python.go` 外部解释器执行；无解释器时 unsupported、0 派发。 |
 | Trigger：`StartTriggerTimer` 依赖的 `QueenExecutor` 是否有赋值；重启后 `triggers.json` 是否恢复 | **已接** | `loader.go:606` + `loader_preloaded_session.go:122` 赋值；`chat_runtime.go:351` 实现 `InjectTrigger`；`trigger_runtime.go:220` 恢复。普通 DM 会话不在 boot 重建。 |
 | Sentinel：`sentinel.NewManager` 是否有生产调用 | **已接** | `loader.go:300-304` + `sentinel_runtime.go:41`；manager.Start 打开 drain 与 listeners，chat runtime 注册 escalation source。 |
 | Memory：recall / reflection 是否每轮生效 | **已接（口径：reflection 非每轮）** | recall 每条 client 消息后都注入（`chat_runtime.go:784`），并追加每轮 6 条过往对话摘录（`chat_memory_wiring.go:31`、`chat_runtime.go:607`）；reflection 不是每轮，默认每 6 个完成 turn（`memory/reflection.go:1026` + `DefaultReflectionConfig`）；只有 chat Queen。 |
@@ -296,7 +297,7 @@ reflection 能把结论自动写进 soul（`chat_runtime.go:229/1259`），soul 
 | 2. 组织 | 状态没有写者、信号没有生产者、方法/自治/沉淀没有作用对象 | chat Queen + `run_worker` + worker 身份/工具/task/resume/运行态自动续跑可用；goal 闭环在 worker 侧成立；scaffold 完整；live overseer 是客户端消息/报告/trigger 的唯一执行 lead；`serve --colony` 复用旧会话并注入 catalog；pending/park 已共享、回复已回写 transcript，仍两份存储 |
 | 3. 状态 | 并行工作失去共享事实；Queen 无法校验/恢复；playbook 没有未完成行可查 | Plan（chat + overseer + worker）与 Tracker（Queen/worker/overseer + REST）已接 |
 | 4. 信号 | worker 结果不回 Queen；UI 静默；长会话漂移、重复派活 | worker→Queen、colony→session SSE、worker 回合进度镜像、worker reminder hub、REST 镜像都已接；提醒内容已补 tracker/skills/chat searchable；预载 catalog 固定 default scope；STREAM_STALLED 未注册 |
-| 5. 方法 | 一次性工作仍可做，但每个单元重复发现方法；批量只能逐行手工做 | 主路径全通：skill 写读 + Go-native playbook + run log/resume + status/stop |
+| 5. 方法 | 一次性工作仍可做，但每个单元重复发现方法；批量只能逐行手工做 | 主路径全通：skill 写读 + Go-native/Python playbook + run log/resume + status/stop |
 | 6. 自治 | colony 只能等人来唤醒；Queen 停车时没人知道 | 主路径全通：trigger timer/webhook/manual + 恢复（live overseer 时只投 overseer）；Sentinel 分类/升级；剩冷恢复 |
 | 7. 沉淀 | 每个会话从零开始；Queen 的人格不演化 | memory 已接（chat Queen），soul 自动写并进 chat persona；search 与每轮 excerpts 已接；timeline 读+写（flag 门控，`SubscribeTimelineTriggers` 用等价实现）；overseer 不读 soul |
 | 8. 能力边界 | agent 只能用 builtin；外部系统、凭据、限额无法按角色收放 | chat/worker/overseer 工具面已接（overseer 含 `ask_user`）；MCP 装载 + 白名单已生效；chat/worker `search_tools` 分层闭合；Queen 30/50 已启用；credential_status + credential-form 提交已接（chat + overseer 双生产者）；Tool Library PATCH 重建会话 tier；仍无 agent 主动写凭据工具 |
@@ -307,7 +308,7 @@ reflection 能把结论自动写进 soul（`chat_runtime.go:229/1259`），soul 
 2. **第 1/8 层（凭据生产路径）**：chat 与 overseer 两条生产路径都已接；剩余是让 form 覆盖生成 spec 表外的工具（动态 MCP/自定义工具），或补一个 agent 主动发起的 collect 工具。
 3. **第 4 层（catalog 作用域 + STREAM_STALLED）**：把预载会话的 queen scope 从固定 `default` 改为 metadata/记录中的实际 queen；补 `STREAM_STALLED` source。
 4. **第 7 层（timeline 订阅 + 作用域）**：写入已由等价实现承担；补 `SubscribeTimelineTriggers` 或删除该函数，并让 worker/overseer 也能写。
-5. **生态边界**：MiniMax 流式、Python playbook、81 个第三方凭据模块属于已知差异，不是本轮接线项。
+5. **生态边界**：MiniMax 流式与 81 个第三方凭据模块属于已知差异，不是本轮接线项（Python playbook 已于 2026-11-21 补齐，见 `docs/playbook-python.md`）。
 
 一句话结论：**1.0.26 把 overseer 回复写回会话转录（按 `execution_id` 收束为一条 `[overseer]` assistant 记录，重启可重建），并让 `events.jsonl` 在 `execution_completed/failed` 冲刷 delta 快照；Orca UI E2E 7/7 为前端交互与冷加载回放提供了 live 记录。70 行 substrate 仍是 70/0/0。剩下的不是"有没有机制"，而是"两份 conversation 存储是否合一、catalog 作用域、form 覆盖面、onboarding 弹层与生态验证"。**
 

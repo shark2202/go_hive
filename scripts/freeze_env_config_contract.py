@@ -723,7 +723,18 @@ def _read_versions(root: Path) -> tuple[str, str, str]:
 # Env contract: reproduce the published audit's counting rule
 # ---------------------------------------------------------------------------
 
-AUDIT_EXPECTED = {"python": 89, "go": 96, "common": 67, "python_only": 22, "go_only": 29}
+# The published audit (go_hive/docs/env-surface-audit.json @ 622cc236) is the
+# inventory baseline. AUDIT_BASELINE freezes its counts so the delta against the
+# current tree stays visible, and AUDIT_EXPECTED pins the expected post-lane
+# state: HIVE_MAX_ITER, HIVE_SPLIT_WORKER_EVENTS and HIVE_PYTHON gained Go
+# readers, HIVE_CRM_PRINCIPAL entered the Go tree between the audit commit and
+# this lane, and the network-scanners lane removed the Go-only
+# HIVE_NETWORK_SCANNERS switch — so Go 96→100, common 66→69,
+# python_only 23→20, go_only 30→31.
+AUDIT_BASELINE = {"python": 89, "go": 96, "common": 66, "python_only": 23, "go_only": 30}
+AUDIT_EXPECTED = {"python": 89, "go": 100, "common": 69, "python_only": 20, "go_only": 31}
+# Names the config-env-align lane gave Go readers to (relative to the baseline).
+LANE_ENV_PORTED = ("HIVE_MAX_ITER", "HIVE_SPLIT_WORKER_EVENTS", "HIVE_PYTHON")
 
 QUOTED_LITERAL = re.compile(r"[\"'](HIVE_[A-Z0-9_]+)[\"']")
 
@@ -797,6 +808,8 @@ def _env_side(agg: dict, name: str) -> dict:
 
 ENV_STATUS_NOTES = {
     "HIVE_HOME": "py: Path(expanduser), fallback ~/.hive; go: abs path, fallback ~/.hive. Go's abs conversion is the only behavioral delta.",
+    "HIVE_MAX_ITER": "py: int(raw) only when raw.isdigit(), else 999_999; go: envPositiveInt trims and requires > 0, else the configured loop default. Zero/negative/padded values differ.",
+    "HIVE_SPLIT_WORKER_EVENTS": "both default off; only 1/true/yes (case-insensitive) enable the split; go trims surrounding whitespace, py does not.",
     "HIVE_DESKTOP_MODE": "py bool() treats \"0\" as true; go compares the raw string with \"1\" where it gates. Parse parity gap.",
     "HIVE_RETENTION_*": "bool fields: (0,false,no,'') false; int fields: invalid ignored (Go) / warned+ignored (py). Empty bool env = false on both.",
     "HIVE_ADAPTIVE_TOOL_BUDGET": "env > configuration.json > true; empty env falls through to file.",
@@ -889,12 +902,21 @@ def build_env_manifest(root: Path, py_occ: list[dict], go_occ: list[dict]) -> di
         try:
             doc = json.loads(published.read_text(encoding="utf-8"))
             hl = doc.get("hive_literals", {})
+            pub_common = {norm(n) for n in hl.get("common", [])}
+            pub_python_only = {norm(n) for n in hl.get("python_only", [])}
+            pub_go_only = {norm(n) for n in hl.get("go_only", [])}
             published_compare = {
                 "file": "go_hive/docs/env-surface-audit.json",
+                "commit": "622cc236",
+                "baseline": AUDIT_BASELINE,
                 "counts": {k: hl.get(k) for k in ("python", "go")},
-                "common_equal": {norm(n) for n in hl.get("common", [])} == audit["common"],
-                "python_only_equal": {norm(n) for n in hl.get("python_only", [])} == audit["python_only"],
-                "go_only_equal": {norm(n) for n in hl.get("go_only", [])} == audit["go_only"],
+                "common_equal": pub_common == audit["common"],
+                "python_only_equal": pub_python_only == audit["python_only"],
+                "go_only_equal": pub_go_only == audit["go_only"],
+                "common_gained": sorted(audit["common"] - pub_common),
+                "common_lost": sorted(pub_common - audit["common"]),
+                "python_only_dropped": sorted(pub_python_only - audit["python_only"]),
+                "python_only_added": sorted(audit["python_only"] - pub_python_only),
                 "normalization": "published 'HIVE_RETENTION_' (trailing underscore) maps to 'HIVE_RETENTION_*'",
             }
         except (OSError, json.JSONDecodeError):
@@ -924,6 +946,7 @@ def build_env_manifest(root: Path, py_occ: list[dict], go_occ: list[dict]) -> di
                 "quoted HIVE_* literals in production sources; tests/testdata/_test.go excluded; "
                 "python = core/*.py + tools/*.py + root launcher scripts; go = go_hive/go-hive/{internal,cmd}/**/*.go"
             ),
+            "baseline": AUDIT_BASELINE,
             "expected": AUDIT_EXPECTED,
             "reproduced": counts,
             "counts_match": reproduced,
@@ -1049,6 +1072,38 @@ def _anchor(entries: list[dict]) -> str:
 
 def build_doc(env: dict, cfg: dict) -> str:
     s = env["verification"]
+    rep = s["reproduced"]
+    base = s.get("baseline") or {}
+    pc = s.get("published_lists_compared") or {}
+    gained = pc.get("common_gained") or []
+    lane = [n for n in gained if n in LANE_ENV_PORTED]
+    other = [n for n in gained if n not in LANE_ENV_PORTED]
+
+    def _names(items: list[str]) -> str:
+        return "、".join(f"`{n}`" for n in items) if items else "无"
+
+    def _baseline_cell(key: str) -> str:
+        cur, old = rep.get(key), base.get(key)
+        if cur is None:
+            return "—"
+        if old is None or old == cur:
+            return str(cur)
+        return f"{old} → {cur}"
+
+    def _verdict(key: str) -> str:
+        return "✅" if rep.get(key) == s["expected"].get(key) else "❌"
+
+    counts_note = "复算与「本车道期望」一致。" if s.get("counts_match") else "**复算与期望不一致，见验证块。**"
+    baseline_note = "与发布审计基线逐项一致。"
+    if gained:
+        baseline_note = (
+            f"与发布审计基线（Python {base['python']} / Go {base['go']} / 共有 {base['common']} / "
+            f"Python 独有 {base['python_only']} / Go 独有 {base['go_only']}）相比，"
+            f"差额来自 {len(gained)} 个名字由 Python 独有转为共有：{_names(lane)} 由本车道新增 Go 读取点"
+            + (f"，{_names(other)} 在审计提交之后、本车道之前已进入 Go 树" if other else "")
+            + f"；Go 独有清单 {AUDIT_BASELINE['go_only']}→{AUDIT_EXPECTED['go_only']}（新增 `HIVE_PYTHON`，移除 `HIVE_NETWORK_SCANNERS`）。"
+        )
+
     lines = [
         "# 环境变量与 configuration.json 契约差异（Python 基准 → go_hive）",
         "",
@@ -1059,56 +1114,63 @@ def build_doc(env: dict, cfg: dict) -> str:
         "",
         "## 0. 结论摘要",
         "",
-        f"- 环境变量清单沿用已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236），本次独立复算："
-        f"Python **{s['reproduced']['python']}** / Go **{s['reproduced']['go']}** / 共有 **{s['reproduced']['common']}**；"
-        f"Python 独有 **{s['reproduced']['python_only']}**，Go 独有 **{s['reproduced']['go_only']}**。"
-        + ("数字与发布审计一致。" if s["counts_match"] else "**与发布审计不一致，见验证块。**"),
+        f"- 环境变量清单以已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236）为基线，本次按同一口径独立复算："
+        f"Python **{rep['python']}** / Go **{rep['go']}** / 共有 **{rep['common']}**；"
+        f"Python 独有 **{rep['python_only']}**，Go 独有 **{rep['go_only']}**。{counts_note}{baseline_note}",
         f"- configuration.json：**{cfg['summary']['keys']}** 个键 / **{cfg['summary']['sections']}** 个 section；"
         f"其中 `aligned` {cfg['summary']['status_counts'].get('aligned', 0)}，"
         f"`go_partial` {cfg['summary']['status_counts'].get('go_partial', 0)}，"
         f"`python_only` {cfg['summary']['status_counts'].get('python_only', 0)}，"
         f"`go_only` {cfg['summary']['status_counts'].get('go_only', 0)}，"
         f"`unread` {cfg['summary']['status_counts'].get('unread', 0)}。",
-        "- 最重的配置缺口都集中在“Go 有 REST/CRUD、运行时没接”：`worker_llm.*`、`vision_fallback.*`、`queen_llm.<id>.*`"
-        " 三类槽位在 Go 侧只被读写端点使用，运行时不消费；`llm.aux_max_tokens`、`loop.max_tool_result_chars`、"
-        "`worker_tools.always_enabled_categories` 则完全没有 reader。",
-        "- 环境变量侧，Python 独有的生产开关主要是 `HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_TRACKER_WORKER_TOOL_CALLS`、"
+        "- 本车道把其余三个模型槽位接进了运行时：`queen_llm.<id>.*`（会话启动时按 queen 选模型，她的 colony 沿用同一 provider）、"
+        "`worker_llm.*`（colony 专用 worker 模型）、`vision_fallback.*`（文本主模型下的工具图片描述）；并接入 "
+        "`llm.aux_max_tokens`、`loop.max_tool_result_chars`、`worker_tools.always_enabled_categories`，"
+        "修复 `mcp.timeout_seconds` 的优先级（env > file）。",
+        "- 仍未对齐的项各有明确残余（`go_partial` / `python_only`）：槽位模型的 PUT 热切换（`llm.Provider` 无 Reconfigure）与 "
+        "`worker_llm.max_tokens`（两侧都没有消费点）；`llm.antigravity_client_*` 是只读（读取点已有，端口没有 OAuth 刷新来消费它）；"
+        "`channels.<name>.enabled` 不支持（无渠道插件宿主）；`llm.use_*_subscription` 两个订阅分支未移植。"
+        "逐项理由见 `contracts/config-support-ledger.json`。",
+        "- 环境变量侧，Python 独有的生产开关（仍未接入）主要是 `HIVE_TRACKER_WORKER_TOOL_CALLS`、"
         "`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_COMPACTION_DEBUG`、`HIVE_PLAYBOOK_FAST_GRACE`；"
-        "其余 Python 独有项是资源采样 / GCU memtrace / 日志等运维与调试面。",
+        "其余 Python 独有项是 `HIVE_SENTINEL_LOG` / `HIVE_ENABLE_LLM_LOGS`、资源采样 / GCU memtrace 等运维与调试面；"
+        "未支持项与理由整表见 `contracts/config-support-ledger.json`。",
         "",
-        "## 1. 环境变量核对（采用既有审计，不复扫）",
+        "## 1. 环境变量核对（采用既有审计清单，独立复算）",
         "",
         "审计口径：两侧源码中的带引号 `HIVE_*` 字面量，排除 tests/testdata/_test.go；"
         "Python 范围 `core/` + `tools/` + 根启动脚本，Go 范围 `go_hive/go-hive/{internal,cmd}`。"
-        "本次用同一规则独立复算，结果逐项相等：",
+        "本次用同一规则复算，并与「本车道期望」（基线 + 本车道已知变更）逐项核对：",
         "",
         _table(
             [
-                ["Python", str(s["reproduced"]["python"]), str(s["expected"]["python"]), "✅"],
-                ["Go", str(s["reproduced"]["go"]), str(s["expected"]["go"]), "✅"],
-                ["共有", str(s["reproduced"]["common"]), str(s["expected"]["common"]), "✅"],
-                ["Python 独有", str(s["reproduced"]["python_only"]), str(s["expected"]["python_only"]), "✅"],
-                ["Go 独有", str(s["reproduced"]["go_only"]), str(s["expected"]["go_only"]), "✅"],
+                ["Python", str(rep["python"]), str(s["expected"]["python"]), _baseline_cell("python"), _verdict("python")],
+                ["Go", str(rep["go"]), str(s["expected"]["go"]), _baseline_cell("go"), _verdict("go")],
+                ["共有", str(rep["common"]), str(s["expected"]["common"]), _baseline_cell("common"), _verdict("common")],
+                ["Python 独有", str(rep["python_only"]), str(s["expected"]["python_only"]), _baseline_cell("python_only"), _verdict("python_only")],
+                ["Go 独有", str(rep["go_only"]), str(s["expected"]["go_only"]), _baseline_cell("go_only"), _verdict("go_only")],
             ],
-            ["项", "复算", "发布审计", "一致"],
+            ["项", "本次复算", "本车道期望", "发布审计基线", "判定"],
         ),
         "",
         "> `env-vars.json` 逐个名字给出两侧的读取点/默认值，并标注 `audit_membership`；"
         "只出现在字面量里、没有读取点的名字标为 `literal_only`，避免把 MCP env 字段名或注释当成读取面。",
         "",
     ]
-    pc = env["verification"].get("published_lists_compared")
     if isinstance(pc, dict) and "common_equal" in pc:
         lines.append(
-            "逐名单比对（common / python_only / go_only）与发布审计："
-            f"common {'一致' if pc['common_equal'] else '不一致'}、"
-            f"python_only {'一致' if pc['python_only_equal'] else '不一致'}、"
+            "逐名单比对（相对发布审计）："
+            f"common {'一致' if pc['common_equal'] else '不一致'}（新增 {_names(pc.get('common_gained') or [])}，"
+            f"移除 {_names(pc.get('common_lost') or [])}）、"
+            f"python_only {'一致' if pc['python_only_equal'] else '不一致'}（减少 {_names(pc.get('python_only_dropped') or [])}）、"
             f"go_only {'一致' if pc['go_only_equal'] else '不一致'}"
             f"（{pc.get('normalization', '')}）。"
         )
         lines.append("")
     lines += [
         "### 1.1 Python 独有：对齐建议清单",
+        "",
+        f"- 本车道已接入并移出本清单：{_names(list(LANE_ENV_PORTED))}（Go 读取点与测试见 `contracts/config-support-ledger.json`）。",
         "",
         _table(
             [[r["name"], r["priority"], r["why"]] for r in env["recommendations"] if r["direction"] == "port to go"],
@@ -1125,7 +1187,7 @@ def build_doc(env: dict, cfg: dict) -> str:
         "## 2. configuration.json 逐键契约",
         "",
         f"共 {cfg['summary']['keys']} 个键。状态定义见生成器数据文件头："
-        "`aligned` 两侧读取且类型/默认/语义一致；`go_partial` Go 只有 REST/CRUD 或部分路径；"
+        "`aligned` 两侧读取且类型/默认/语义一致；`go_partial` Go 有该键（REST/CRUD 或部分路径）但运行时读取点缺失或未接线；"
         "`python_only` Go 无读取；`go_only` Python 无对应键；`unread` 两侧都不读。",
         "",
     ]
@@ -1176,8 +1238,9 @@ def build_doc(env: dict, cfg: dict) -> str:
         "- 坏 JSON / 文件不可读：两侧都按 `{}` 处理并走默认值（Python 记 warning）；都接受 UTF-8 BOM。",
         "- 越界：soul `hour` 0..23、各 count ≥1、sentinel seconds ≥1、`gcu_viewport_scale` 0.1..1.0；"
         "越界时 soul/gcu 回默认，sentinel 夹到下限。",
-        "- **唯一的反向优先级**：Go 的 `mcp.timeout_seconds` 覆盖 `HIVE_MCP_CALL_RESULT_TIMEOUT`（file > env），"
-        "与总体规则相反，已在 `config-keys.json` 标记 `go_only` 并注明。",
+        "- **MCP 调用超时**：`HIVE_MCP_CALL_RESULT_TIMEOUT` > `mcp.timeout_seconds` > 240s 默认（env > file，符合总体规则）。"
+        "Go 早期版本这里是 file > env 的反向优先级，已在本车道修复（`TestMCPCallResultTimeoutPrecedence` 钉住）；"
+        "`mcp.*` 块是 Go 扩展，`config-keys.json` 标 `go_only`。",
         "",
         "## 4. 差异清单",
         "",
@@ -1220,7 +1283,8 @@ def build_doc(env: dict, cfg: dict) -> str:
         "- 本报告冻结的是**配置契约**，不是行为实现；`aligned` 表示两侧读取同一键且默认/类型/语义一致，不表示端到端行为已验证。",
         "- `go_partial` 的判定基于生产代码里是否存在读取点；REST/CRUD 端点存在不等于运行时消费。",
         "- 未覆盖：per-colony `notifications.json`、agent/worker 子配置文件、`.mcp.json`、前端 localStorage；这些不是全局 `configuration.json`。",
-        "- 环境变量采用既有审计的清单；`env-vars.json` 里的读取点由扫描器补充，默认值/解析差异只对运行时相关变量做了人工核对。",
+        "- 环境变量采用既有审计（622cc236）的清单为基线；本车道新增的 Go 读取点（`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_PYTHON`）已计入，network-scanners 车道移除的 Go 独有 `HIVE_NETWORK_SCANNERS` 也已反映。"
+        "`env-vars.json` 里的读取点由扫描器补充，默认值/解析差异对运行时相关变量做了人工核对。",
         "",
     ]
     return "\n".join(lines)

@@ -83,6 +83,7 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 | `provider` | string | 选择凭据环境变量；空或 `custom` 时按模型名推断（3.2） |
 | `api_base` | string | 上游基址；空时按 provider/模型取默认值（3.3） |
 | `api_key_env_var` | string | 覆盖读取 key 的环境变量名（3.4） |
+| `aux_max_tokens` | int | 小工具调用（记忆召回筛选、judge/sentinel、技能自测等）的输出上限；缺省 `min(8192, max_tokens)` |
 
 ### 2.3 其他顶层键
 
@@ -100,8 +101,15 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 | `gcu_enabled` | `cli.browserBridgeRequested` | 布尔；`HIVE_BROWSER_BRIDGE` 环境变量优先，未设置时决定 serve 是否拉起 `browserbridge`（缺省开） |
 | `gcu_viewport_scale` | `server.GcuViewportScale` → `HIVE_BROWSER_VIEWPORT_SCALE` | 数字 0.1–1.0，默认 0.8；非数字/越界回落 0.8，显式 env 覆盖按 [0.1, 1.0] 夹取。桥在 `GET /status` 的 `viewport_scale` 与启动日志上报（实测 0.65 / 0.55 / 0.8）。上游 getter 自扩展化浏览器后无消费点，Go 只读并上报，不改截图/抓取几何 |
 | `turn_context` | `server.StartTurnContexts` | `turn_context.<name>.enabled` 为真时启动该已安装包，其文本作为 `<system-reminder>` 插在 queen 每回合用户消息之前；queen-only，单包 5s 超时，异常/启动失败跳过；默认无包 |
+| `loop` | `hiveconf.MaxToolResultChars`、chat/worker 循环配置 | `loop.max_tool_result_chars`：工具结果溢出阈值（int，默认 30000）；queen chat 循环与 colony worker 循环都读取（代码路径；`TestChatLoopConfigAppliesTheLoopSection`、`TestBuildWorkerLoopConfigAppliesLoopSection`） |
+| `worker_llm` / `vision_fallback` / `queen_llm` | `cli.queenAwareChatProvider`、`cli.workerChatProvider`、`cli.visionCaptionerFor` | 模型槽位，字段同 `llm`（`provider`/`model`/`api_key`/`api_base`/`api_key_env_var`/`extra_body`/`num_ctx`/`max_context_tokens`）。会话启动时读取：`queen_llm.<queen_id>` 选 queen 自己的模型（她的 colony 沿用），`worker_llm` 选 colony worker 专用模型，`vision_fallback` 为文本主模型提供工具图片描述；缺省或没有 `provider`+`model` 时回落到 `llm`（代码路径 + 测试） |
+| `worker_tools` | `cli.loader_colony_host` → `server.WorkerKeepSetFromConfig` | `worker_tools.always_enabled_categories`：worker eager 工具类别覆盖（`list[string]`）；空列表关闭 worker tiering，缺省用内置 keep-set；混合类型列表不视为覆盖（与上游一致） |
+| `mcp` | `cli.mcp_loader`、`internal/tools.MCPCallResultTimeout` | Go 扩展（Python 无此块）：`mcp.timeout_seconds` 是 MCP 调用超时的文件兜底；`HIVE_MCP_CALL_RESULT_TIMEOUT` 优先于它（env > file > 240s，`TestMCPCallResultTimeoutPrecedence`） |
+| `channels` | 无 | **不支持**：上游用 `hive.channels` entry-point 插件宿主；Go 端口没有插件宿主与渠道生命周期，`channels.<name>.enabled` 没有可门控的消费点（登记在 `contracts/config-support-ledger.json`） |
 
-`llm`、`worker_llm`、`vision_fallback`、`judge` 是四个模型「槽位」，由设置接口写入；本版本聊天会话只使用 `llm` 槽（代码路径）。
+`llm`、`worker_llm`、`vision_fallback`、`judge` 与 `queen_llm.<queen_id>` 是模型「槽位」，由设置接口写入。本版本运行时消费：`llm`（默认会话模型）、`judge`（judge 槽）、`queen_llm.<queen_id>`（会话启动时按 queen 选模型）、`worker_llm`（colony worker 专用模型）、`vision_fallback`（文本主模型的图片描述）。设置接口 `PUT` 写入后新会话生效；已运行会话只有主槽 `llm` 有热切换路径，其余槽位的原地切换未实现（`llm.Provider` 无 Reconfigure），需重建会话或重启 `serve`。
+
+`llm.antigravity_client_id` / `llm.antigravity_client_secret` 是**只读**项：Go 侧有读取点（`ANTIGRAVITY_CLIENT_ID` / `ANTIGRAVITY_CLIENT_SECRET` 环境变量优先，其次配置文件），但端口的 Antigravity 登录读预发的 access token（`antigravity-accounts.json`），没有 OAuth 刷新流程去消费 client id/secret。`llm.use_antigravity_subscription` / `llm.use_kimi_code_subscription` 也只有 REST 面，运行时订阅 token 分支未移植。
 
 ## 3. 模型与 provider 解析优先级
 
@@ -331,7 +339,9 @@ Workers (1):
 | `HIVE_REQUEST_EXECUTOR_MAX` | 请求执行器最大 worker 数（`/api/health` 的 `request_executor.max_workers`） | 代码路径 |
 | `HIVE_MAX_CONCURRENT_WORKERS` | colony 并发 worker 上限（默认 4） | 代码路径 |
 | `HIVE_STORAGE_PATH` | 集成工具的存储根（`web_scrape` 下载目录；同时作为 MCP 子进程的会话 cwd） | 代码路径 |
-| `HIVE_MCP_CALL_RESULT_TIMEOUT` | MCP 调用结果超时上限（240s） | 代码路径 |
+| `HIVE_MCP_CALL_RESULT_TIMEOUT` | MCP 调用结果超时上限（240s）；优先于 `mcp.timeout_seconds`（env > file） | 代码路径 + 测试 |
+| `HIVE_MAX_ITER` | 单回复聊天部署下 queen 回复循环上限（正整数；0/负数/非数字忽略） | 代码路径 + 测试 |
+| `HIVE_SPLIT_WORKER_EVENTS` | `1`/`true`/`yes` 时把并行 worker 的逐回合 chatter 拆到独立 `events.jsonl`（默认关） | 代码路径 + 测试 |
 | `HIVE_BASH_PATH` / `HIVE_RIPGREP_PATH` | 终端工具使用的 bash / ripgrep | 代码路径 |
 | `HIVE_REGISTRY_URL` | 技能注册表地址 | 代码路径 |
 
@@ -343,6 +353,8 @@ Workers (1):
 | --- | --- |
 | 环境变量（key、base） | 重启 `hive serve` 后，新建的会话 |
 | `configuration.json` 的 `llm` | 重启 `hive serve` 后，新建的会话 |
+| `HIVE_MAX_ITER` | 会话循环创建时读取（已运行会话不受影响） |
+| `HIVE_SPLIT_WORKER_EVENTS` | colony 启动时读取（重启 `serve` 后生效） |
 | `HIVE_STALL_CHECK` | 服务端每次判定时读取（`StallCheckEnabled` 每次调用都读） |
-| 设置接口（`PUT /api/config/...`） | 写入后新会话；主槽 `llm` 另有热切换路径，本文未实测 |
+| 设置接口（`PUT /api/config/...`） | 写入后新会话；主槽 `llm` 另有热切换路径，本文未实测。`worker_llm` / `vision_fallback` / `queen_llm` 的原地热切换不支持（`llm.Provider` 无 Reconfigure），需重建会话或重启 `serve` |
 | colony 的 worker 定义 | 下次 spawn 时读取 |

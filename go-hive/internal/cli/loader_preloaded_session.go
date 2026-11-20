@@ -47,10 +47,15 @@ func (r *Runner) loadPreloadedColonySession(
 		return nil
 	}
 	colonyID := filepath.Base(colonyPath)
+	// The colony's queen comes from its metadata (queen_name), exactly like
+	// upstream's _create_session_for_existing_colony, and scopes the session
+	// tree, memory and skills catalog. A colony without a recorded queen keeps
+	// the shared default queen.
+	queenName := colonyQueenName(home, colonyID)
 	// A colony restarted here resumes its own queen session (queen_resume_from)
 	// instead of minting a new id on every boot: the previous transcript and
 	// the triggers/judgement history stay attached to the same session.
-	sessionID, sessionDir, resumed := resolvePreloadedColonySession(home, colonyID, "default")
+	sessionID, sessionDir, resumed := resolvePreloadedColonySession(home, colonyID, queenName)
 	if sessionID == "" {
 		fmt.Fprintf(r.Stdout, "Error loading colony %s: could not resolve a session id\n", colonyArg)
 		return nil
@@ -58,6 +63,7 @@ func (r *Runner) loadPreloadedColonySession(
 	record := hiveserver.NewSession(sessionID, eventbus.NewEventBus())
 	record.ColonyID = colonyID
 	record.WorkerPath = colonyPath
+	record.QueenName = queenName
 	// The resolved session root every meta.json writer uses.
 	record.QueenDir = sessionDir
 	// A preloaded colony is colony-bound on boot: the phase cascade restores
@@ -172,7 +178,7 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	if record == nil || record.Colony == nil {
 		return
 	}
-	provider, err := chatProviderFactory(home, model)
+	provider, err := queenAwareChatProvider(home, model, record.QueenName)
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", record.ID, err)
 		return
@@ -206,6 +212,8 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 		SkillsCatalog: skillsCatalog.Catalog,
 		Colony:        record.Colony,
 		OnTurnStart:   onTurnStart,
+		// Same vision-fallback captioning a created session gets.
+		VisionCaptioner: visionCaptionerFor(home, provider),
 	})
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", record.ID, err)

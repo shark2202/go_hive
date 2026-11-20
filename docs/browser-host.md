@@ -98,13 +98,14 @@ defer stopBrowserBridge()
 
 | 路由 | 桥侧对应 | 行为 |
 | --- | --- | --- |
-| `GET /api/browser/contexts` | `GET /contexts` | 透传桥的响应体与状态码（真实 registry 快照） |
-| `GET /api/browser/tabs` | `GET /tabs`（本次新增） | 透传扩展可见的全部 tab；桥没有扩展连接时原样返回桥的 `503 not_connected` |
-| `POST /api/browser/contexts/close` | `POST /contexts/close`（本次新增） | 请求体 `{"profile": …}` 或 `{"all": true}` 原样转发，返回桥的 `{"closed":[…]}` |
-| 桥不可达 | — | 三条都回 **503** `{"available":false,"error":"not_connected","reason":…,<集合>: []}`；这是相对上游（200 + `available:false`）的有意偏差，见 §6 |
+| `GET /api/browser/contexts` | `GET /contexts` | 按上游 `handle_browser_contexts` 重塑：`{available,count,contexts:[{profile,group_id,name,tab_count,active_tab_id}]}` |
+| `GET /api/browser/tabs` | `GET /tabs` + `GET /contexts` | 按上游 `handle_browser_tabs` 重塑：`{available,count,live_count,discarded_count,hive_group_count,tabs:[{id,windowId,groupId,isHiveGroup,url,title,discarded,active,audible,pinned}]}`；`isHiveGroup` 由桥 registry 的 groupId 求交 |
+| `POST /api/browser/contexts/close` | `POST /contexts/close` | 请求体 `{"profile": …}` 或 `{"all": true}` 原样转发，返回 `{"closed":[…]}`；缺 profile 时透传桥的 400 `{"error":"profile (or all=true) is required"}` |
+| 桥不可达 / 桥未连扩展 | — | 三条都回 **200** `{"available":false,"reason":…,<集合>: []}`，与上游「browser tools 不可用」的 200 形状一致（2026-11-21 起，此前是 503 透传） |
 
 桥地址解析与 supervisor 共用同一约定：`HIVE_BROWSERBRIDGE_HTTP` → `HIVE_BRIDGE_PORT`+1
-（默认 14829+1 = `127.0.0.1:14830`）。
+（默认 14829+1 = `127.0.0.1:14830`）。面板 status 探针（`GET /api/browser/status[/stream]`、
+`POST /api/browser/tab/reveal`）同样先探 14830，再回落 legacy 9230。
 
 ## 3. `hive-browser` CLI
 
@@ -123,7 +124,7 @@ defer stopBrowserBridge()
 | `interact --action A […]` | `browser_interact` | `action` + `selector`/`coordinate`/`text`/`region`/`duration`/`wait_for_selector`/… |
 | `select <selector> --value V…` | `browser_select` | `selector`,`values` |
 | `upload <selector> --file F… [--trigger-selector S]` | `browser_upload` | `selector`,`file_paths`,`trigger_selector` |
-| `screenshot --intent I [--full-page] [--selector S]` | `browser_screenshot` | `intent`（桥强制要求）,`full_page`,`selector` |
+| `screenshot [--intent I] [--full-page] [--selector S]` | `browser_screenshot` | `intent`（可选）,`full_page`,`selector` |
 | `evaluate --js SRC\|@FILE\|-` | `browser_evaluate` | `script` |
 | `script --skill S --script P [--args JSON\|@file\|-] [--timeout-s F]` | `browser_script` | `skill`,`script`,`args`,`timeout_s` |
 | `click <selector> [--button B] [--double]` | `browser_click` | `selector`,`button`,`double_click` |
@@ -141,9 +142,11 @@ defer stopBrowserBridge()
 | `dialog respond accept\|dismiss [--prompt-text T]` | `browser_dialog_respond` | `action`,`prompt_text` |
 | `help [cmd]` | —（本地文本） | — |
 
-公共开关（写在子命令之后，如 `hive-browser status --json`）：`--json`、`--profile <session>`
+公共开关（写在子命令之后，如 `hive-browser status --json`；写在前面也接受，
+但前置值不生效——argparse 的叶子默认覆盖，上游 `hive-browser --json help` 同样输出文本）：
+`--json`、`--profile <session>`
 （默认取 `$HIVE_BROWSER_SESSION`，再退回 `default`）、`--bridge <base-url>`（默认
-`$HIVE_BROWSERBRIDGE_HTTP` 或 `http://127.0.0.1:14830`）。
+`$HIVE_BROWSERBRIDGE_HTTP` 或 `http://127.0.0.1:14830`；Go 自有开关，只在子命令之后）。
 
 ### 退出码（agent 的机器契约）
 
@@ -155,7 +158,7 @@ defer stopBrowserBridge()
 | 3 | not started | 该 profile 还没有标签页 → `run hive-browser open <url> first` |
 | 4 | not found | 元素/标签页不存在 |
 | 5 | ambiguous | 选择器多匹配、多 Chrome profile 未指定 |
-| 6 | bad args（Go 自己的本地校验） | 上传文件不存在、独立 `screenshot` 动词缺 `--intent`、`evaluate` 缺 `--js`、`script` 缺 `--skill/--script` 或 `--args` 非 JSON、Go 独有的 `click`/`type`/`press`/`scroll` 动词 |
+| 6 | bad args（Go 自己的本地校验） | 上传文件不存在、`evaluate` 缺 `--js`、`script` 缺 `--skill/--script` 或 `--args` 非 JSON、Go 独有的 `click`/`type`/`press`/`scroll` 动词 |
 | 7 | pending dialog | 结果带 `pending_dialog` → `hive-browser dialog respond` |
 | 8 | rate limited | 桥返回 `rate_limited`（社交平台浏览上限） |
 
@@ -166,7 +169,9 @@ defer stopBrowserBridge()
   与 `not_connected` 共用该值——上游同样共用）。Go 自己的本地校验（上表 6）保持不变。
 * `interact --action screenshot` 缺 `--intent` / `--action zoom` 缺 `--region` 不在本地预检，
   由桥返回 `ok:false` 后分类为 **1**（上游同路径：`_dispatch` → `classify_result`）。
-  独立 `screenshot` 动词的 `--intent` 仍是本地校验（6）。
+  独立 `screenshot` 动词的 `--intent` 同样可选（2026-11-21 起）：连上桥时 capture 成功退 **0**，
+  无桥 **2**、未开标签 **3**，与上游 `render_screenshot(intent=None)` 一致；桥侧
+  `browser_screenshot` 也接受缺省 intent。
 
 ### 会话/标签状态
 
@@ -329,18 +334,24 @@ canonical command 全部可达；supervisor 测试用测试二进制自身充当
 | 桥不可达 | kill 桥后 curl 三条路由 | 全部 **503** `{"available":false,"error":"not_connected","reason":"browser bridge not reachable at http://127.0.0.1:17830",…}` |
 | 桥在、无扩展 | 只重启桥（无扩展连接）再 curl | `/tabs` 原样透传桥的 503 `no browser extension is connected …`；`/contexts` 仍 200 空表 |
 
+> 2026-11-21 更新（R04）：上表 contexts/tabs 两行记录的是当时的透传行为。现在两条路由
+> 已按上游形状 reshape（无桥/未连扩展都是 200 `available:false`），close 的 400 与
+> `{"closed":[…]}` 不变。新的真桥 + fake 扩展实测见审计页 §04.2 与
+> `go_hive/scripts/e2e_browser_panel.sh`（`bash go_hive/scripts/e2e_browser_panel.sh`）。
+
 ## 6. 与上游 Python 的差异（未对齐项）
 
 | 项 | 上游 Python | 本实现 | 说明 |
 | --- | --- | --- | --- |
 | control RPC 14831 + `client_hello(owner_pid)` | 有；serve 持连接，桥零客户端时 30s 退出 | **已对齐** | 白名单 46 条与上游一致；空闲退出 + exit 0 停住/ensure() 重启（上游是 worker SIGTERM supervisor 的握手）；`/tabs/{id}/reveal`、`/shutdown` 同样对齐 |
 | notify 落到 agent 会话 | 上游把 notify 路由到 `inject_event`（queen 按 session.id、worker 按 worker.id） | **已对齐** | `SessionManager.DeliverBrowserNotify` 按同一顺序注入；真 `ChatRuntime`（fake LLM）测试证明文本作为 user 消息落进 transcript，worker 走 `ColonyRuntime.InjectInput`，无匹配只记录 |
-| 面板 3 路由 | `GET /api/browser/contexts`、`GET /api/browser/tabs`、`POST /api/browser/contexts/close`；无 bridge 时 200 + `available:false` | **已对齐（偏差：无 bridge 503）** | Go 主 mux 转发到 bridge 的 `/contexts`、`/tabs`、`/contexts/close`，透传响应与状态码；桥不可达统一 503 `not_connected`，见 §2.2 |
+| 面板 3 路由 | `GET /api/browser/contexts`、`GET /api/browser/tabs`、`POST /api/browser/contexts/close`；无 bridge 时 200 + `available:false` | **已对齐**（2026-11-21） | 三条路由按上游 `handle_browser_contexts`/`handle_browser_tabs`/`handle_close_browser_context` 逐字段 reshape，桥不可达/未连扩展统一 200 `available:false`；真桥 + 假扩展实测见审计页 §04.2 与 `go_hive/scripts/e2e_browser_panel.sh` |
 | CLI 自动 ensure 桥 | `errors.run` 里 `ensure_bridge_host_running()`，CLI 会拉起 `bridge_host` | **不拉** | 桥归 `hive serve` 管，避免 CLI 留下孤儿进程；桥没起时明确退出 2 并提示 `hive serve` |
 | `browser_setup`/`browser_status` 的 `connected_profiles` | 来自 `_connected_profiles` | 来自 Go 桥 `connectedProfiles` | 字段一致（label/is_default/starred/version/protocol_version） |
 | profile→tab 索引 | 桥侧 contexts + 客户端 `browser_contexts.json` 重水化 | 客户端 `browser_cli_state.json`（只存 tabId） | 桥侧 contexts 未持久化，CLI 用本地索引补足 tab 解析 |
 | 用法错误退出码 | argparse=2 | **已对齐**（2026-11-20） | 未知子命令/flag、缺必填参数、非法 choice/类型（`--action`、`--mode`、`--wait-until`、`--scroll-direction`、`--auto-snapshot-mode`、`--coordinate`/`--region`、`--duration`、`--timeout-s`、`tab_id`）一律 2，与上游 argparse 实测一致；Go 自己的本地校验仍为 6（见 §2 表） |
-| `interact screenshot/zoom` 缺 intent | 工具层 `ok:false` → 1 | **已对齐**（2026-11-20） | 本地预检已移除：桥返回 `screenshot requires intent` / `zoom requires region`，分类为 1（真 Chrome 实测）；独立 `screenshot` 动词仍保留本地 `--intent` 检查（6） |
+| `interact screenshot/zoom` 缺 intent | 工具层 `ok:false` → 1 | **已对齐**（2026-11-20） | 本地预检已移除：桥返回 `screenshot requires intent` / `zoom requires region`，分类为 1（真 Chrome 实测） |
+| 独立 `screenshot` 缺 `--intent` | `render_screenshot(intent=None)` → 连上时 0 | **已对齐**（2026-11-21） | 本地 `--intent` 预检与桥侧强制一并移除：连上 0 / 无桥 2 / 未开标签 3；`interact --action screenshot` 仍要求 intent（上一行） |
 | 父进程死亡后的桥寿命 | `_watch_parent`：桌面 PID 消失即退出（5s × 2 次确认） | **已对齐（实测 ≤2s）** | 桥新增 `-parent-check`（默认 400ms，2 次确认）监视 `HIVE_DESKTOP_PARENT_PID`，父死约 0.8s 退出；原空闲看门狗（10s 轮询 + 30s grace，约 30–40s）保留为兜底；serve 侧 `ensure()`/run 循环在 owner 死后不再复活（对应上游 `_run_supervisor` 的 parent watchdog） |
 | `--head` / `--no-annotate` | 上游工具侧处理 | `--head` 由 CLI 读 `saved_to` 文件取前 N 字符；`--no-annotate` 透传（Go 桥当前忽略注解开关） | 结果里仍给出 `saved_to`/`data` |
 | `hive-browser script` 技能解析 | skill 名 → 目录（skills 根注入） | 桥侧 `-skills` 未由 supervisor 注入 | 指定 `HIVE_BROWSERBRIDGE_ARGS="-skills <dir>"` 可补上 |

@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -157,6 +158,80 @@ func TestRunPlaybookStatusSeesLiveRunAndStopCancelsIt(t *testing.T) {
 	// Nothing is left registered once the run returns.
 	if rows := runningPlaybookRows(base.binding.Dir, time.Now()); len(rows) != 0 {
 		t.Fatalf("registry still holds %v", rows)
+	}
+}
+
+// Parity-exempt: process cleanup on stop is Go-specific (upstream cancels an
+// asyncio task); this port must cancel the run, kill the interpreter, and
+// record the stop like any other run.
+func TestRunPlaybookPythonRunStopKillsInterpreter(t *testing.T) {
+	requirePlaybookPython(t)
+	base := playbookTestRuntime(t, 3)
+	var (
+		mu          sync.Mutex
+		stopPayload map[string]any
+		liveRunID   string
+	)
+	script := strings.Join([]string{
+		`meta = {"name": "py-stop", "concurrency": 1}`,
+		"",
+		"async def run(args):",
+		"    await converge(",
+		`        pending=lambda: tracker_query("SELECT id, name FROM jobs WHERE done=0"),`,
+		`        dispatch=lambda row, i: worker(task=f"stop {row['id']}", data={"id": row["id"]}),`,
+		"        max_rounds=1)",
+		`    return {"remaining": tracker_count("SELECT id FROM jobs WHERE done=0")}`,
+	}, "\n") + "\n"
+	runtime := &stopHookRuntime{fakePlaybookRuntime: base}
+	runtime.onSpawn = func(runID string) {
+		mu.Lock()
+		liveRunID = runID
+		mu.Unlock()
+		stopped, isError := RunPlaybook(context.Background(), runtime, map[string]any{
+			"action": "stop", "run_id": runID,
+		})
+		if isError {
+			t.Errorf("stop during a Python run failed: %s", stopped)
+			return
+		}
+		mu.Lock()
+		stopPayload = playbookPayload(t, stopped)
+		mu.Unlock()
+	}
+
+	started := time.Now()
+	content, isError := RunPlaybook(context.Background(), runtime, map[string]any{"playbook": script})
+	elapsed := time.Since(started)
+	if isError {
+		t.Fatalf("stopped Python run reported a tool error: %s", content)
+	}
+	mu.Lock()
+	runID := liveRunID
+	stop := stopPayload
+	mu.Unlock()
+	if runID == "" {
+		t.Fatal("the Python run never reached the dispatch hook")
+	}
+	payload := playbookPayload(t, content)
+	if payload["status"] != "stopped" || payload["run_id"] != runID {
+		t.Fatalf("run payload = %v, want status=stopped run_id=%s", payload, runID)
+	}
+	if stop == nil || stop["status"] != "stopped" {
+		t.Fatalf("stop payload = %v", stop)
+	}
+	if elapsed > 20*time.Second {
+		t.Fatalf("cancellation took %v; the interpreter should die promptly", elapsed)
+	}
+
+	runs, err := ListPlaybookRuns(filepath.Join(base.binding.Dir, "colony.db"), 10)
+	if err != nil {
+		t.Fatalf("history: %v", err)
+	}
+	if len(runs) != 1 || runs[0].RunID != runID {
+		t.Fatalf("history = %+v, want one stopped run", runs)
+	}
+	if runs[0].Error == nil || !strings.Contains(*runs[0].Error, "stopped by stop_playbook") {
+		t.Fatalf("history error = %v", runs[0].Error)
 	}
 }
 
