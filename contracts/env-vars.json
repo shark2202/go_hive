@@ -12,16 +12,16 @@
     "expected": {
       "python": 89,
       "go": 96,
-      "common": 66,
-      "python_only": 23,
-      "go_only": 30
+      "common": 67,
+      "python_only": 22,
+      "go_only": 29
     },
     "reproduced": {
       "python": 89,
       "go": 96,
-      "common": 66,
-      "python_only": 23,
-      "go_only": 30
+      "common": 67,
+      "python_only": 22,
+      "go_only": 29
     },
     "counts_match": true,
     "published_lists_compared": {
@@ -39,18 +39,18 @@
   "summary": {
     "python": 89,
     "go": 96,
-    "common": 66,
-    "python_only": 23,
-    "go_only": 30,
+    "common": 67,
+    "python_only": 22,
+    "go_only": 29,
     "status_counts": {
       "aligned": 56,
-      "go_only": 4,
+      "go_only": 3,
       "literal_only": 36,
       "parse_differs": 2,
       "python_only": 21
     },
     "python_read_sites": 138,
-    "go_read_sites": 80
+    "go_read_sites": 79
   },
   "inventory": {
     "common": [
@@ -72,6 +72,7 @@
       "HIVE_COLONY_PARALLEL_MAX",
       "HIVE_CREDENTIAL_KEY",
       "HIVE_CRED_LOG",
+      "HIVE_CRM_PRINCIPAL",
       "HIVE_DEBUG_EVENTS",
       "HIVE_DEFAULT_PLAYBOOK_CONCURRENCY",
       "HIVE_DESKTOP_MODE",
@@ -124,7 +125,6 @@
     "python_only": [
       "HIVE_AGENT_NAME",
       "HIVE_COMPACTION_DEBUG",
-      "HIVE_CRM_PRINCIPAL",
       "HIVE_ENABLE_LLM_LOGS",
       "HIVE_GCU_MEMTRACE",
       "HIVE_GCU_MEMTRACE_FILE",
@@ -174,7 +174,6 @@
       "HIVE_LME_RESUME",
       "HIVE_LME_RUN_DIR",
       "HIVE_MCP2CLI",
-      "HIVE_NETWORK_SCANNERS",
       "HIVE_RETENTION_*",
       "HIVE_SESSION_COST_LIMIT_USD"
     ]
@@ -292,12 +291,6 @@
       "name": "HIVE_MCP2CLI",
       "priority": "document",
       "why": "native/external/auto mcp2cli selection (Go-only)",
-      "direction": "keep go-only, document as extension"
-    },
-    {
-      "name": "HIVE_NETWORK_SCANNERS",
-      "priority": "document",
-      "why": "operator opt-in for four scanning tools (Go-only)",
       "direction": "keep go-only, document as extension"
     },
     {
@@ -1535,7 +1528,7 @@
         "dev_reads": [],
         "test_reads": 15,
         "writes": [],
-        "mentions": 13,
+        "mentions": 16,
         "comments": 4
       }
     },
@@ -1580,7 +1573,7 @@
     },
     {
       "name": "HIVE_CRM_PRINCIPAL",
-      "audit_membership": "python_only",
+      "audit_membership": "common",
       "status": "literal_only",
       "status_basis": "name appears in production literals but no read site was found on either side",
       "python": {
@@ -1596,7 +1589,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 0,
+        "mentions": 5,
         "comments": 0
       }
     },
@@ -1937,7 +1930,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 6,
+        "mentions": 7,
         "comments": 0
       }
     },
@@ -1992,7 +1985,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/server/config_features.go",
-            "line": 88,
+            "line": 75,
             "scope": "runtime"
           }
         ],
@@ -2427,7 +2420,7 @@
         "dev_reads": [],
         "test_reads": 29,
         "writes": [],
-        "mentions": 58,
+        "mentions": 66,
         "comments": 61
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
@@ -3354,7 +3347,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/server/config_features.go",
-            "line": 76,
+            "line": 63,
             "symbol": "MemoryTimelineEnabled",
             "parse": "helper",
             "helper": "envFeatureFlag",
@@ -3362,7 +3355,7 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 12,
+        "test_reads": 13,
         "writes": [],
         "mentions": 8,
         "comments": 0
@@ -3410,37 +3403,6 @@
         "comments": 0
       },
       "notes": "default 6 on both (DefaultMicrocompactKeepRecent)."
-    },
-    {
-      "name": "HIVE_NETWORK_SCANNERS",
-      "audit_membership": "go_only",
-      "status": "go_only",
-      "status_basis": "go has a read site, python has none",
-      "python": {
-        "prod_reads": [],
-        "dev_reads": [],
-        "test_reads": 0,
-        "writes": [],
-        "mentions": 0,
-        "comments": 0
-      },
-      "go": {
-        "prod_reads": [
-          {
-            "file": "go_hive/go-hive/internal/server/config_features.go",
-            "line": 68,
-            "symbol": "NetworkScannersEnabled",
-            "parse": "helper",
-            "helper": "envFeatureFlag",
-            "snippet": "if value, ok := envFeatureFlag(\"HIVE_NETWORK_SCANNERS\"); ok {"
-          }
-        ],
-        "dev_reads": [],
-        "test_reads": 3,
-        "writes": [],
-        "mentions": 3,
-        "comments": 5
-      }
     },
     {
       "name": "HIVE_NO_FILE_LOG",
@@ -4208,7 +4170,7 @@
             "scope": "runtime"
           }
         ],
-        "mentions": 1,
+        "mentions": 2,
         "comments": 0
       }
     },

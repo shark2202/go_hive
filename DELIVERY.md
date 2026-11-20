@@ -73,7 +73,7 @@
 1. `attach_file` 的多模态只到工具结果层：`ToolResult.Attachments` 与 `ImageContent` 已实现，但 `serve` 的 chat runtime 只把文本传给模型。
 2. `csv_sql` / `excel_sql` 依赖 DuckDB，明确返回未知 action，不做 stub。
 3. `account` 别名参数在多个模块保留但不生效（单凭据运行时）。
-4. 六个网络扫描器默认关闭，需 `HIVE_NETWORK_SCANNERS=1` 或配置开启。
+4. 六个网络扫描器与 `risk_score` 默认注册（与上游一致）；会向模型指定的目标发探测流量，调用方只能扫描已获授权的目标。
 5. 在线 CVE 扫描未做（`govulncheck` 因无外网不可安装），依赖清单与离线构建证据在 `DEPENDENCIES.md`。
 
 ## 5. 发布包与验收

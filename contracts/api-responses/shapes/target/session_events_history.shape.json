@@ -8,7 +8,7 @@
     "events[].data.name": "string",
     "events[].data.queen_id": "string",
     "events[].data.title": "string",
-    "events[].execution_id": "null",
+    "events[].execution_id": "string",
     "events[].node_id": "string",
     "events[].seq": "number(float)",
     "events[].stream_id": "string",
@@ -33,6 +33,23 @@
     "events[].data.trigger": "string",
     "events[].data.usage_pct": "number(int)",
     "events[].data.usage_ratio": "number(float)",
+    "events[].data.content": "string",
+    "events[].data.inner_turn": "number(int)",
+    "events[].data.snapshot": "string",
+    "events[].data.cache_creation_tokens": "number(int)",
+    "events[].data.cached_tokens": "number(int)",
+    "events[].data.cost_usd": "number(int)",
+    "events[].data.history_anchor_idx": "number(int)",
+    "events[].data.input_tokens": "number(int)",
+    "events[].data.model": "string",
+    "events[].data.output_tokens": "number(int)",
+    "events[].data.stop_reason": "string",
+    "events[].data.system_prefix_sha": "string",
+    "events[].data.system_suffix_sha": "string",
+    "events[].data.park_reason": "string",
+    "events[].data.activity": "string",
+    "events[].data.interrupt_cause": "null",
+    "events[].data.questions": "null",
     "has_more_older": "boolean",
     "limit": "number(int)",
     "returned": "number(int)",
@@ -43,6 +60,6 @@
     "truncated": "boolean"
   },
   "counts": {
-    "events": 5
+    "events": 9
   }
 }

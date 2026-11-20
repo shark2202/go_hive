@@ -1,6 +1,6 @@
 package cli
 
-// Model-visible tool-contract parity for the 36 same-name core tools.
+// Model-visible tool-contract parity for the 42 same-name core tools.
 //
 // The Python reference (core/framework/tools/harness_tools.py groups plus the
 // aden_tools registries) publishes full docstrings as descriptions and richer
@@ -24,6 +24,7 @@ package cli
 // gap is explicit instead of silently rewritten.
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -53,7 +54,13 @@ type toolContractParityManifest struct {
 
 var toolContractParityOnce = sync.OnceValues(func() (*toolContractParityManifest, error) {
 	var manifest toolContractParityManifest
-	if err := json.Unmarshal(toolContractParityJSON, &manifest); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(toolContractParityJSON))
+	// UseNumber keeps the manifest's number spelling: the Python contract has
+	// `25.0` for attach_file/pdf_read's size cap, and decoding it into float64
+	// would re-marshal as `25`. The recheck compares the serialized request, so
+	// the literal has to survive the round trip.
+	decoder.UseNumber()
+	if err := decoder.Decode(&manifest); err != nil {
 		return nil, fmt.Errorf("tool contract parity manifest: %w", err)
 	}
 	return &manifest, nil
@@ -88,4 +95,31 @@ func applyToolContractParity(defs []llm.ToolDef) []llm.ToolDef {
 		}
 	}
 	return defs
+}
+
+// toolContractRawParameters returns one tool's frozen parameters decoded with
+// json.Number values. The API contract distinguishes upstream JSON number
+// literals (25.0 is a JSON float, 25 an int — see the contract's NV-02), and a
+// plain map[string]any decode collapses both into float64, which then marshals
+// back as an int literal. Number keeps the source spelling.
+func toolContractRawParameters(name string) (map[string]any, bool) {
+	var manifest struct {
+		Tools map[string]struct {
+			Parameters json.RawMessage `json:"parameters"`
+		} `json:"tools"`
+	}
+	if err := json.Unmarshal(toolContractParityJSON, &manifest); err != nil {
+		return nil, false
+	}
+	entry, ok := manifest.Tools[name]
+	if !ok || len(entry.Parameters) == 0 {
+		return nil, false
+	}
+	decoder := json.NewDecoder(bytes.NewReader(entry.Parameters))
+	decoder.UseNumber()
+	var params map[string]any
+	if err := decoder.Decode(&params); err != nil {
+		return nil, false
+	}
+	return params, true
 }

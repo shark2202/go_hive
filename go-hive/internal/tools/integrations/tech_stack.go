@@ -3,10 +3,10 @@
 //
 // Parity: tools/src/aden_tools/tools/tech_stack_detector/tech_stack_detector.py
 //
-// Network scanner: registered, then dropped from the session catalogue unless
-// HIVE_NETWORK_SCANNERS (or network_scanners in hive.config.json) is on. The
-// http.Client is injected through Runtime.HTTP, so tests run against a local
-// fake server and never touch the real network.
+// Network scanner: registered in the default session catalogue like the rest
+// of batch 2 (upstream aden_tools has no opt-in gate). The http.Client is
+// injected through Runtime.HTTP, so tests run against a local fake server and
+// never touch the real network.
 //
 // Declared differences from upstream:
 //   - Detection order and tables match upstream (server/CDN/JS/CMS/analytics,

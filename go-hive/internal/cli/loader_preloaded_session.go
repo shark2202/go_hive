@@ -190,7 +190,7 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	onTurnStart := enableQueenSessionTools(tools, manager, record.ID, record, home)
 	built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 		LLM:           provider,
-		Tools:         tools.Defs(),
+		Tools:         tools.ModelDefs(),
 		Execute:       tools.Execute,
 		ExecuteBlocks: tools.ExecuteBlocks,
 		Root:          sessionDir,

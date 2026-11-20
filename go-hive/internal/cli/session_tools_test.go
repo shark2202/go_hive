@@ -3,8 +3,12 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -192,7 +196,6 @@ func readSessionFile(t *testing.T, path string) string {
 // match the registry so a silent overwrite cannot hide a collision.
 func TestSessionToolCatalogueInstallsEveryBatch(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("HIVE_NETWORK_SCANNERS", "1")
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	for _, entry := range sessionIntegrationInstallers {
@@ -212,34 +215,145 @@ func TestSessionToolCatalogueInstallsEveryBatch(t *testing.T) {
 	}
 }
 
-// Parity-exempt: assembly guard. The network scanners are opt-in: they must be
-// absent by default and present once HIVE_NETWORK_SCANNERS is set, while the
-// rest of batch 2 stays installed either way.
-func TestSessionToolCatalogueKeepsNetworkScannersOffByDefault(t *testing.T) {
+// Parity: tools/src/aden_tools/tools/__init__.py::_register_verified
+// The seven security tools register unconditionally upstream; the Go session
+// catalogue must expose the same set. There is no Go-only opt-in any more, so
+// even the old "off" value of HIVE_NETWORK_SCANNERS must not change the
+// default surface.
+func TestSessionToolCatalogueRegistersSecurityScannersByDefault(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("HIVE_NETWORK_SCANNERS", "")
+	home := hivehome.Home{Root: root}
+	t.Setenv("HIVE_NETWORK_SCANNERS", "0")
 
-	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
-	for _, name := range networkScannerTools {
-		if catalogue.registry.HasTool(name) {
-			t.Fatalf("scanner %q registered while the opt-in is off", name)
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
+	// The Python registry's security group, verbatim:
+	// register_ssl_tls_scanner / register_http_headers_scanner /
+	// register_dns_security_scanner / register_port_scanner /
+	// register_tech_stack_detector / register_subdomain_enumerator /
+	// register_risk_scorer.
+	pythonSecurityTools := []string{
+		"ssl_tls_scan",
+		"http_headers_scan",
+		"dns_security_scan",
+		"port_scan",
+		"tech_stack_detect",
+		"subdomain_enumerate",
+		"risk_score",
+	}
+	defined := map[string]struct{}{}
+	for _, def := range catalogue.Defs() {
+		defined[def.Name] = struct{}{}
+	}
+	for _, name := range pythonSecurityTools {
+		if _, ok := defined[name]; !ok {
+			t.Fatalf("security tool %q missing from the default catalogue defs", name)
+		}
+		if !catalogue.registry.HasTool(name) {
+			t.Fatalf("security tool %q missing from the default registry", name)
 		}
 	}
 	for _, name := range []string{"arxiv", "duckduckgo", "search_wikipedia", "openmeteo", "yahoo_finance", "youtube_transcript"} {
 		if !catalogue.registry.HasTool(name) {
-			t.Fatalf("batch-2 tool %q missing while scanners are off", name)
+			t.Fatalf("batch-2 tool %q missing from the default catalogue", name)
 		}
 	}
 	if got, want := catalogue.installed, len(catalogue.registry.RegisteredNames()); got != want {
 		t.Fatalf("installed counter = %d, registry holds %d tools", got, want)
 	}
+}
 
-	t.Setenv("HIVE_NETWORK_SCANNERS", "1")
-	catalogue = newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
-	for _, name := range networkScannerTools {
-		if !catalogue.registry.HasTool(name) {
-			t.Fatalf("scanner %q missing while the opt-in is on", name)
+// Parity: tools/tests/tools/test_port_scanner.py::TestPortScanning
+// The default catalogue must be able to run a real scan. The target is a
+// listener bound to 127.0.0.1 — no public host is contacted.
+func TestSessionToolCataloguePortScanLocalhost(t *testing.T) {
+	root := t.TempDir()
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer listener.Close()
+	port := listener.Addr().(*net.TCPAddr).Port
+
+	content, isError, err := catalogue.Execute(context.Background(), "port_scan", map[string]any{
+		"hostname": "127.0.0.1",
+		"ports":    strconv.Itoa(port),
+		"timeout":  2.0,
+	})
+	if err != nil || isError {
+		t.Fatalf("port_scan: err=%v isError=%v content=%s", err, isError, content)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(content), &payload); err != nil {
+		t.Fatalf("port_scan output is not JSON: %v (%s)", err, content)
+	}
+	open, _ := payload["open_ports"].([]any)
+	if len(open) != 1 {
+		t.Fatalf("open_ports = %#v, want the local listener port", payload["open_ports"])
+	}
+	entry, _ := open[0].(map[string]any)
+	if got, ok := entry["port"].(float64); !ok || int(got) != port {
+		t.Fatalf("open port = %#v, want %d", entry["port"], port)
+	}
+}
+
+// Parity: tools/tests/tools/test_http_headers_scanner.py::TestSecurityHeaders
+// Real local call through the session catalogue for the HTTP-header scanner,
+// then the risk scorer consumes its output. Both targets are on 127.0.0.1.
+func TestSessionToolCatalogueHTTPHeadersScanLocalhost(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Strict-Transport-Security", "max-age=31536000")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'")
+		w.Header().Set("Permissions-Policy", "geolocation=()")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	root := t.TempDir()
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+	content, isError, err := catalogue.Execute(context.Background(), "http_headers_scan", map[string]any{
+		"url": server.URL,
+	})
+	if err != nil || isError {
+		t.Fatalf("http_headers_scan: err=%v isError=%v content=%s", err, isError, content)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(content), &payload); err != nil {
+		t.Fatalf("http_headers_scan output is not JSON: %v (%s)", err, content)
+	}
+	if payload["status_code"] != float64(http.StatusOK) {
+		t.Fatalf("status_code = %#v, want 200", payload["status_code"])
+	}
+	present, _ := payload["headers_present"].([]any)
+	found := false
+	for _, name := range present {
+		if name == "Strict-Transport-Security" {
+			found = true
 		}
+	}
+	if !found {
+		t.Fatalf("headers_present = %#v, want Strict-Transport-Security", payload["headers_present"])
+	}
+
+	riskContent, isError, err := catalogue.Execute(context.Background(), "risk_score", map[string]any{
+		"headers_results": content,
+	})
+	if err != nil || isError {
+		t.Fatalf("risk_score: err=%v isError=%v content=%s", err, isError, riskContent)
+	}
+	var risk map[string]any
+	if err := json.Unmarshal([]byte(riskContent), &risk); err != nil {
+		t.Fatalf("risk_score output is not JSON: %v (%s)", err, riskContent)
+	}
+	if _, ok := risk["overall_score"]; !ok {
+		t.Fatalf("risk_score payload = %#v", risk)
+	}
+	if _, ok := risk["overall_grade"]; !ok {
+		t.Fatalf("risk_score payload = %#v", risk)
 	}
 }
 

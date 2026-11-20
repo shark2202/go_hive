@@ -138,6 +138,45 @@ func TestDiscoverSkipsGitAndNodeModules(t *testing.T) {
 	}
 }
 
+// Parity-exempt: pins Python Path.is_dir() symlink-following (a symlinked skill
+// directory such as ~/.agents/skills/ego-browser must be discovered); no
+// upstream test covers the Go scanner.
+func TestDiscoverSymlinkedSkillDirectory(t *testing.T) {
+	root := t.TempDir()
+	skillsDir := filepath.Join(root, ".agents", "skills")
+	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	installed := writeDiscoverySkill(t, filepath.Join(root, "store"), "ego-browser", "Symlinked browser skill.")
+	if err := os.Symlink(installed, filepath.Join(skillsDir, "ego-browser")); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	// A symlink to a file must stay invisible: upstream only scans directories.
+	target := filepath.Join(root, "not-a-skill.md")
+	if err := os.WriteFile(target, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(skillsDir, "file-link")); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+
+	discovery := NewSkillDiscovery(DiscoveryConfig{
+		ProjectRoot:        root,
+		SkipUserScope:      true,
+		SkipFrameworkScope: true,
+	})
+	names := map[string]bool{}
+	for _, skill := range discovery.Discover() {
+		names[skill.Name] = true
+	}
+	if !names["ego-browser"] {
+		t.Fatalf("symlinked skill directory missing: %v", names)
+	}
+	if names["file-link"] {
+		t.Fatalf("symlink to a file must not be scanned: %v", names)
+	}
+}
+
 // Parity: tests/test_skill_discovery.py::TestSkillDiscovery::test_empty_scan
 func TestDiscoverEmptyScan(t *testing.T) {
 	discovery := NewSkillDiscovery(DiscoveryConfig{

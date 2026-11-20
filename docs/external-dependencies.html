@@ -51,7 +51,7 @@ footer{margin-top:60px;color:var(--muted);font-size:12px;border-top:1px solid va
 </header>
 
 <div class="callout">
-  <strong>结论：运行期唯一硬依赖是 LLM API。</strong> 其余全部按需：SaaS 工具要凭据才可用，缺凭据时会停或不可见；无凭据 API 与扫描器可关；MCP 由用户自带。
+  <strong>结论：运行期唯一硬依赖是 LLM API。</strong> 其余全部按需：SaaS 工具要凭据才可用，缺凭据时会停或不可见；无凭据 API 默认可调用，扫描器会向指定目标发探测流量；MCP 由用户自带。
   当前 <strong>81 个需第三方凭据的模块未做真实凭据验证</strong>，支持矩阵按“未验证”发布，不得宣传为可用。
 </div>
 
@@ -60,7 +60,7 @@ footer{margin-top:60px;color:var(--muted);font-size:12px;border-top:1px solid va
   <div class="card"><div class="k">LLM 推理 API</div><div class="v">15</div><div class="s">唯一运行期硬依赖</div></div>
   <div class="card"><div class="k">凭据型 SaaS</div><div class="v">77<small> 模块</small></div><div class="s">118 条凭据 · 未验证</div></div>
   <div class="card"><div class="k">无凭据 API</div><div class="v">6 + 抓取</div><div class="s">arXiv / DDG / Wiki / 天气 / 行情 / 转录</div></div>
-  <div class="card"><div class="k">扫描器</div><div class="v">4</div><div class="s">默认关闭</div></div>
+  <div class="card"><div class="k">扫描器</div><div class="v">7</div><div class="s">默认注册</div></div>
   <div class="card"><div class="k">MCP</div><div class="v">0..N</div><div class="s">用户自带，stdio/HTTP</div></div>
   <div class="card"><div class="k">SMTP/IMAP</div><div class="v">1 套</div><div class="s">发信/读信</div></div>
 </div>
@@ -205,8 +205,8 @@ footer{margin-top:60px;color:var(--muted);font-size:12px;border-top:1px solid va
 <tr><td>Pushover / Twilio / Brevo / Resend</td><td>各自 API</td><td>API Key</td><td>推送 / 短信 / 事务邮件</td></tr>
 </tbody></table>
 
-<h2 id="scan">⑥ 网络扫描器（默认关闭）</h2>
-<p><code>dns_security_scan</code>、<code>port_scan</code>、<code>ssl_tls_scan</code>、<code>http_headers_scan</code> 主动探测目标。开关：<code>HIVE_NETWORK_SCANNERS=false</code>（默认）或 <code>hive.config.json: network_scanners</code>；关闭时不注册这 4 个工具。</p>
+<h2 id="scan">⑥ 网络扫描器（默认注册）</h2>
+<p><code>ssl_tls_scan</code>、<code>http_headers_scan</code>、<code>dns_security_scan</code>、<code>port_scan</code>、<code>subdomain_enumerate</code>、<code>tech_stack_detect</code>（以及消费其输出的 <code>risk_score</code>）主动探测目标。与上游一致，默认注册、没有开关；会向模型指定的主机发 TCP/TLS/HTTP/DNS 流量，调用方只能扫描已获授权的目标。</p>
 
 <h2 id="local">⑦ 本地 / 系统依赖（部署必需，不是外部 API）</h2>
 <div class="grid2">
@@ -234,7 +234,7 @@ footer{margin-top:60px;color:var(--muted);font-size:12px;border-top:1px solid va
   <li><strong>已真实验证</strong>：LLM（DeepSeek 兼容网关）、MCP（1 个服务器 2 工具）、26 个免凭据模块、SMTP 仅单元测试（未真实发信）。</li>
   <li><strong>未验证</strong>：77 个凭据型模块 / 118 条凭据；本阶段未提供第三方凭据。</li>
   <li><strong>行为限制</strong>：MiniMax 不流式（chunk 破坏解析，已测试锁定回退）；Python playbook 不可执行；Queen/overseer 两份 conversation 存储。</li>
-  <li><strong>出网</strong>：任意 URL 抓取工具让目标不受限；扫描器默认关闭；MCP 无 OS 沙箱。</li>
+  <li><strong>出网</strong>：任意 URL 抓取工具让目标不受限；扫描器默认注册、会向指定目标探测（仅限已获授权目标）；MCP 无 OS 沙箱。</li>
   <li><strong>密钥</strong>：凭据仅存本机加密库；HTTP 响应与日志不含明文，<code>credential_status</code> 只返回元数据。</li>
 </ul>
 

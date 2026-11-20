@@ -6,32 +6,32 @@ package server
 import "github.com/aden-hive/hive-go/internal/credentials"
 
 // credentialSpecsFromRegistry is the /api/credentials/specs source. It serves
-// one row per credential declared by the upstream Python registry
-// (tools/src/aden_tools/credentials, 118 credential ids), then appends the
-// model-catalog providers that the registry does not cover so the settings page
-// can still configure LLM API keys from the same endpoint. Rows are keyed by
-// credential id, so a provider present in both sources is emitted once.
+// one row per credential in the upstream CREDENTIAL_SPECS dict — the exact set
+// the Python route iterates — plus the synthetic Aden Platform row that
+// handleListSpecs prepends. Rows are keyed by credential id.
+//
+// Unmerged credential modules (x.py) and the model-catalog providers stay out:
+// upstream's route never emits them, and the settings/models pages read their
+// LLM keys from /api/models/overview (the frozen contract has 115 rows here).
+// They remain in credentials.GeneratedCredentialSpecs for the credential store
+// and CLI lookup paths.
 func credentialSpecsFromRegistry() []CredentialSpecView {
 	generated := credentials.GeneratedCredentialSpecs
-	specs := make([]CredentialSpecView, 0, len(generated)+8)
+	specs := make([]CredentialSpecView, 0, len(generated))
 	seen := make(map[string]struct{}, len(generated))
 	for _, spec := range generated {
 		credentialID := spec.CredentialID
 		if credentialID == "" {
 			credentialID = spec.Name
 		}
+		if credentials.UnmergedCredentialID(credentialID) {
+			continue
+		}
 		if _, duplicate := seen[credentialID]; duplicate {
 			continue
 		}
 		seen[credentialID] = struct{}{}
 		specs = append(specs, credentialSpecViewFromRegistry(spec))
-	}
-	for _, spec := range credentialSpecsFromCatalog() {
-		if _, duplicate := seen[spec.CredentialID]; duplicate {
-			continue
-		}
-		seen[spec.CredentialID] = struct{}{}
-		specs = append(specs, spec)
 	}
 	return specs
 }
@@ -57,7 +57,6 @@ func credentialSpecViewFromRegistry(spec credentials.GeneratedCredentialSpec) Cr
 		HelpURL:               spec.HelpURL,
 		APIKeyInstructions:    spec.APIKeyInstructions,
 		Tools:                 spec.Tools,
-		ToolModules:           spec.ToolModules,
 		AdenSupported:         spec.AdenSupported,
 		DirectAPIKeySupported: spec.DirectAPIKeySupported,
 		CredentialKey:         credentialKey,

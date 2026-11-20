@@ -80,9 +80,18 @@ func InstallBrowserSetup(target *tools.ToolRegistry) int {
 // inputs.
 func browserSetupTool() tools.Tool {
 	return tools.Tool{
-		Name:            BrowserSetupToolName,
-		Description:     BrowserSetupDescription,
-		Parameters:      map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false},
+		Name:        BrowserSetupToolName,
+		Description: BrowserSetupDescription,
+		// required: [] mirrors the Python request layer, which always
+		// publishes the key (framework/llm/litellm.py::_tool_to_openai_format)
+		// even when nothing is required. The wire wrapper drops
+		// additionalProperties, exactly as upstream does.
+		Parameters: map[string]any{
+			"type":                 "object",
+			"properties":           map[string]any{},
+			"additionalProperties": false,
+			"required":             []string{},
+		},
 		ConcurrencySafe: true,
 	}
 }

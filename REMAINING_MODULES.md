@@ -63,7 +63,8 @@
 | **合计** | **102** | **854** |
 
 > 注：安装器之间无重名工具（`TestSessionToolCatalogueInstallsEveryBatch` 用「逐个安装后名字集合 ⊆ 会话目录」+「installed 计数等于 registry 大小」双重校验）。
-> `port_scan`/`dns_security_scan`/`ssl_tls_scan`/`http_headers_scan`/`subdomain_enumerate`/`tech_stack_detect` 六个网络扫描器具默认关闭，由 `HIVE_NETWORK_SCANNERS` 或 `hive.config.json: network_scanners` 开启。
+> `port_scan`/`dns_security_scan`/`ssl_tls_scan`/`http_headers_scan`/`subdomain_enumerate`/`tech_stack_detect` 六个网络扫描器与 `risk_score` 和上游一样默认注册进会话目录，无 Go 独有开关。
+> 它们会向模型指定的主机发探测流量（TCP/TLS/HTTP/DNS 查询），调用方只能扫描已获授权的目标。
 
 ## 6. 已知差异（非模块缺口）
 

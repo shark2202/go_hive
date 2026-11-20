@@ -246,13 +246,17 @@ func (d *SkillDiscovery) findSkillFiles(dir string, depth int) []string {
 
 	var results []string
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
 		if skipDirs[entry.Name()] {
 			continue
 		}
 		child := filepath.Join(dir, entry.Name())
+		// Stat (not DirEntry.IsDir) follows symlinks, matching Python's
+		// Path.is_dir(): a skill installed as a symlinked directory (e.g.
+		// ~/.agents/skills/ego-browser -> ...) must be discovered. A symlink
+		// that points at a file is skipped, as it is upstream.
+		if !isDir(child) {
+			continue
+		}
 		skillMD := filepath.Join(child, "SKILL.md")
 		if info, err := os.Stat(skillMD); err == nil && !info.IsDir() {
 			results = append(results, skillMD)

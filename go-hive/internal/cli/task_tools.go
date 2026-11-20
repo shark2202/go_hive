@@ -36,6 +36,8 @@ var taskToolExecutionMu sync.Mutex
 // from internal/tasks plus the session id their executors must act on.
 type taskToolSet struct {
 	sessionID string
+	store     *tasks.TaskStore
+	pivot     *tasks.PivotHandler
 	ordered   []tasks.Tool
 	byName    map[string]tasks.Tool
 }
@@ -62,16 +64,47 @@ func newTaskToolSet(root string, home hivehome.Home) *taskToolSet {
 	}
 
 	store := tasks.NewTaskStore(home.Root)
-	built := tasks.BuildSessionTools(store, nil)
-	set := &taskToolSet{
-		sessionID: sessionID,
-		ordered:   built,
-		byName:    make(map[string]tasks.Tool, len(built)),
-	}
-	for _, tool := range built {
-		set.byName[tool.Name] = tool
-	}
+	set := &taskToolSet{sessionID: sessionID, store: store}
+	set.rebuild(nil)
 	return set
+}
+
+// setPivot installs (or clears) the queen's pivot handler and rebuilds the
+// four tools. task_create gains the pivot field + handoff argument when a
+// handler is set; a worker catalogue stays with the two-argument version,
+// exactly like upstream's build_session_tools(pivot_handler=None).
+func (s *taskToolSet) setPivot(handler *tasks.PivotHandler) {
+	if s == nil || s.pivot == handler {
+		return
+	}
+	s.pivot = handler
+	s.rebuild(handler)
+}
+
+func (s *taskToolSet) rebuild(handler *tasks.PivotHandler) {
+	built := tasks.BuildSessionTools(s.store, handler)
+	s.ordered = built
+	s.byName = make(map[string]tasks.Tool, len(built))
+	for _, tool := range built {
+		s.byName[tool.Name] = tool
+	}
+}
+
+// createDef returns the task_create definition currently in force.
+func (s *taskToolSet) createDef() (llm.ToolDef, bool) {
+	if s == nil {
+		return llm.ToolDef{}, false
+	}
+	tool, ok := s.byName[tasks.TaskCreate]
+	if !ok {
+		return llm.ToolDef{}, false
+	}
+	return llm.ToolDef{
+		Name:            tool.Name,
+		Description:     tool.Description,
+		Parameters:      tool.Parameters,
+		ConcurrencySafe: tool.ConcurrencySafe,
+	}, true
 }
 
 // Defs returns the tool definitions advertised to the model.

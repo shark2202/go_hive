@@ -39,18 +39,20 @@ import (
 // when that log is still empty. A segment that already carries events belongs
 // to a resumed session or a restart of one that has run; upstream truncates
 // events.jsonl when the queen starts a fresh segment, while this port appends,
-// so the opening block is written only once per segment.
-func emitSessionStartEvents(session *Session) {
+// so the opening block is written only once per segment. It reports whether the
+// block was written, which is also the signal that this session's queen loop
+// has not run yet (a fresh create gets the opening model turn).
+func emitSessionStartEvents(session *Session) bool {
 	if session == nil || session.EventBus == nil || session.QueenDir == "" || session.ID == "" {
-		return
+		return false
 	}
 	eventsPath := filepath.Join(session.QueenDir, "events.jsonl")
 	if info, err := os.Stat(eventsPath); err == nil && info.Size() > 0 {
-		return
+		return false
 	}
 	if err := session.EventBus.SetSessionLog(eventsPath, 0); err != nil {
 		log.Printf("session %s: opening event log unavailable: %v", session.ID, err)
-		return
+		return false
 	}
 
 	// Upstream stamps the session id as the opening execution id: the queen's
@@ -92,6 +94,7 @@ func emitSessionStartEvents(session *Session) {
 	contextEvent.NodeID = eventbus.StrPtr(chatNodeID)
 	contextEvent.Data = sessionStartContextUsage(session)
 	session.EventBus.Publish(contextEvent)
+	return true
 }
 
 // sessionStartQueenIdentity reads the bound identity, falling back to the

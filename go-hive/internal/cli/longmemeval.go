@@ -112,7 +112,7 @@ func (r *LMERunner) Ask(ctx context.Context, req longmemeval.AskRequest) (longme
 	onTurnStart := enableQueenSessionTools(tools, manager, sessionID, record, home)
 	runtime, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 		LLM:           provider,
-		Tools:         tools.Defs(),
+		Tools:         tools.ModelDefs(),
 		Execute:       tools.Execute,
 		ExecuteBlocks: tools.ExecuteBlocks,
 		Root:          sessionDir,

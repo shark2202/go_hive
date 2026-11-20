@@ -695,15 +695,26 @@ func asMapSlice(value any) ([]map[string]any, bool) {
 	return nil, false
 }
 
+// ToolToOpenAIFormat wraps a tool definition in the OpenAI function schema.
+//
+// `required` is carried over exactly as the definition declares it: emitted when
+// the schema has the key (even as an empty list), absent otherwise. The Python
+// runtime's request shape keeps that distinction — pydantic omits the key when
+// nothing is required, while the MCP tool schemas (write_skill) publish
+// `required: []` — and the tool-contract recheck compares the request
+// byte-for-byte, so a synthesised empty list would be visible drift.
 func ToolToOpenAIFormat(tool ToolDef) map[string]any {
 	var properties any = map[string]any{}
-	var required any = []any{}
+	parameters := map[string]any{
+		"type":       "object",
+		"properties": properties,
+	}
 	if tool.Parameters != nil {
 		if value, ok := tool.Parameters["properties"]; ok && value != nil {
-			properties = value
+			parameters["properties"] = value
 		}
 		if value, ok := tool.Parameters["required"]; ok && value != nil {
-			required = value
+			parameters["required"] = value
 		}
 	}
 	return map[string]any{
@@ -711,11 +722,7 @@ func ToolToOpenAIFormat(tool ToolDef) map[string]any {
 		"function": map[string]any{
 			"name":        tool.Name,
 			"description": tool.Description,
-			"parameters": map[string]any{
-				"type":       "object",
-				"properties": properties,
-				"required":   required,
-			},
+			"parameters":  parameters,
 		},
 	}
 }

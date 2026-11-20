@@ -31,7 +31,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <header><div class="eyebrow">Hive · Browser Bridge</div><h1>Hive <span>Browser Bridge</span> — 设计、实现与使用</h1>
 <p class="lede">让 agent 驱动<b>你正在用的那一个 Chrome</b>，而不是每个 agent 各起一个无头浏览器：Chrome 扩展 + 本地 WebSocket 桥 + 每 agent 一个 tab group。本文覆盖设计动机、进程/端口架构、协议、代码地图、使用步骤、安全边界，以及 Go 移植的诚实现状。</p>
 <div class="meta"><span>生成：<b>2026-11-20 17:30 CST</b></span><span>扩展：<b>1.7.4 · protocol 6</b></span><span>端口：<b>14829 / 14830 / 14831</b>（legacy 9229 / 9230）</span><span>Go 模块：<b>github.com/aden-hive/hive-go/browserbridge</b></span></div>
-<div class="toc"><a href="#why">为什么</a><a href="#arch">架构</a><a href="#ports">端口与协议</a><a href="#lifecycle">命令生命周期</a><a href="#codemap">代码地图</a><a href="#usage">怎么用</a><a href="#health">健康与安全</a><a href="#goparity">Go 现状</a><a href="#repro">复现</a></div></header>
+<div class="toc"><a href="browser-bridge-surface-audit.html">外观审计（13 维）</a><a href="#why">为什么</a><a href="#arch">架构</a><a href="#ports">端口与协议</a><a href="#lifecycle">命令生命周期</a><a href="#codemap">代码地图</a><a href="#usage">怎么用</a><a href="#health">健康与安全</a><a href="#goparity">Go 现状</a><a href="#repro">复现</a></div></header>
 
 <section id="why"><h2><span class="num">00</span>为什么需要它</h2>
 <p class="sub">一句话：agent 需要操作真实网页，而“每个 agent 启动一个 Playwright Chrome”在真实账号场景里代价太高。Browser Bridge 用扩展把自动化接进用户已有的 Chrome。</p>

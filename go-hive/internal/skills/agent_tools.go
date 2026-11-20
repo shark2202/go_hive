@@ -55,52 +55,30 @@ func AgentToolDefs() []llm.ToolDef {
 	return []llm.ToolDef{WriteSkillToolDef(), SkillViewToolDef(), ListSkillsToolDef()}
 }
 
-// WriteSkillToolDef mirrors the upstream write_skill Tool declaration: the
-// same six parameters and the same "exactly one of inline / source_path" mode
-// split.
+// WriteSkillToolDef mirrors the upstream write_skill Tool declaration: the same
+// six parameters, the same "exactly one of inline / source_path" mode split,
+// and the same model-visible text (write_skill_contract.go is byte-exact
+// contract data). The port's scope caveats live in the executor's messages.
 //
 // Parity: framework/tools/queen_lifecycle_tools.py::write_skill_tool
 func WriteSkillToolDef() llm.ToolDef {
 	return llm.ToolDef{
-		Name: WriteSkillToolName,
-		Description: "Write or replace a skill in this colony or this queen's own skill library. " +
-			"This is the way to add a skill: do NOT write SKILL.md into a skills folder with the " +
-			"terminal or write_file, because a skill put there by hand is not loaded until a new " +
-			"session and skips validation.\n\n" +
-			"SCOPE (who sees it):\n" +
-			"  - 'colony' (default inside a colony): THIS colony's workers only. Write the shared " +
-			"protocol ONCE before fanning out workers, then point each worker at it by name in the " +
-			"task string. Workers spawned after this call see it; existing workers do not.\n" +
-			"  - 'queen' (default outside a colony): your own skills, read through skill_view/list_skills. " +
-			"In this port workers discover the colony scope only, so use scope='colony' for a protocol " +
-			"workers must load. A skill the user made in your skills cannot be replaced.\n" +
-			"  - 'global': the shared library every queen and colony reads. Nothing is installed: the " +
-			"request is stored as pending in this session, and the user approves or denies it. Do not " +
-			"wait for it; carry on.\n\n" +
-			"TWO MODES:\n" +
-			"  - Inline: pass skill_name + skill_description + skill_body (and optional skill_files).\n" +
-			"  - Copy: pass source_path pointing at an existing skill root directory (the one " +
-			"containing SKILL.md). The tool copies SKILL.md plus every UTF-8 file in that directory " +
-			"verbatim. Optionally pass skill_name to rename on copy; the other inline params are " +
-			"rejected in this mode.\n\n" +
-			"Replacing your own skill of the same name is fine — the latest content wins. The body " +
-			"should be a self-contained operating procedure: what the agent is doing, the exact " +
-			"tools/schema to use, the output format, what done looks like. Per-task specifics belong " +
-			"in the task string, not the skill.",
+		Name:        WriteSkillToolName,
+		Description: writeSkillDescription,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"skill_name": map[string]any{
 					"type":        "string",
-					"description": "Lowercase, hyphen-separated, ≤64 chars (e.g. 'competitor-research-protocol'). Required in inline mode; optional in source_path mode (renames the skill on copy).",
+					"description": writeSkillSkillNameDescription,
 				},
 				"skill_description": map[string]any{
 					"type":        "string",
-					"description": "One-line summary of what this skill teaches and when to use it. Required in inline mode; rejected in source_path mode.",
+					"description": writeSkillSummaryDescription,
 				},
 				"skill_body": map[string]any{
 					"type":        "string",
-					"description": "Markdown body of SKILL.md — the operational procedure the agent needs to run it unattended. Required in inline mode; rejected in source_path mode.",
+					"description": writeSkillSkillBodyDescription,
 				},
 				"skill_files": map[string]any{
 					"type": "array",
@@ -112,18 +90,22 @@ func WriteSkillToolDef() llm.ToolDef {
 						},
 						"required": []string{"path", "content"},
 					},
-					"description": "Optional supporting files (scripts, JSON refs). Each entry is {path, content} with path relative to the skill root. Inline mode only.",
+					"description": writeSkillSkillFilesDescription,
 				},
 				"source_path": map[string]any{
 					"type":        "string",
-					"description": "Absolute or '~'-prefixed path to an existing skill's root directory (containing SKILL.md). Copies the whole skill folder — SKILL.md plus every other UTF-8 file — into the chosen scope.",
+					"description": writeSkillSourcePathDescription,
 				},
 				"scope": map[string]any{
 					"type":        "string",
 					"enum":        []string{"queen", "colony", "global"},
-					"description": "Who sees the skill: 'colony' (this colony's workers), 'queen' (you and your colonies), or 'global' (everyone, after the user approves). Defaults to 'colony' inside a colony, 'queen' outside one.",
+					"description": writeSkillScopeDescription,
 				},
 			},
+			// The Python contract publishes the key with an empty list (MCP
+			// tool schemas materialize `required`); keeping it explicit is what
+			// makes the request shape byte-identical.
+			"required": []string{},
 		},
 	}
 }

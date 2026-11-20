@@ -62,6 +62,11 @@ type Session struct {
 	// case POST /chat reports 503 instead of pretending to deliver.
 	Chat *ChatRuntime
 
+	// QueenLoopFresh reports that AddSession wrote this segment's session-start
+	// block, i.e. the queen loop has never run here. A fresh create starts the
+	// opening iteration through the chat runtime; a resumed segment does not.
+	QueenLoopFresh bool
+
 	// LiveSkills is the session's reloadable skills catalog — the queen's
 	// SkillsManager, whose prompt the skills reminder announces each turn. The
 	// /api/skills reload fan-out rebuilds it so a skill that landed after this
@@ -482,7 +487,7 @@ func (m *SessionManager) AddSession(session *Session) {
 	// A session registering on an empty event segment gets the opening block
 	// upstream's queen writes at session start (identity, the session_start
 	// reminder, loop start, iteration 0 and the context readout).
-	emitSessionStartEvents(session)
+	session.QueenLoopFresh = emitSessionStartEvents(session)
 }
 
 // Parity: framework/server/session_manager.py::SessionManager.list_sessions

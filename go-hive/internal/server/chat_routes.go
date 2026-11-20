@@ -165,6 +165,12 @@ func newChatCorrelationID() string {
 // transcript tail attaches to: every bus event for the session, optionally
 // filtered by ?types=a,b. The subscription handler only enqueues (dropping on
 // backpressure) so a slow client cannot stall the publisher.
+//
+// A fresh subscriber first gets the synthesized session_snapshot, then the
+// buffered history upstream replays (the visible-chat subset — see
+// sessionEventsReplayTypes), oldest first. Frames are data-only: upstream
+// calls SSEResponse.send_event(data) without an event name, so the dashboard
+// consumes them through EventSource.onmessage.
 func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps ChatRouteDeps) {
 	session := chatSession(deps, r.PathValue("session_id"))
 	if session == nil || session.EventBus == nil {
@@ -178,6 +184,10 @@ func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps Chat
 	}
 
 	types := parseEventTypeFilter(r.URL.Query().Get("types"))
+	// Worker chatter is opt-in per worker, as upstream's _parse_watch: every
+	// worker's META events still pass (they render its bubble), but per-turn
+	// detail only reaches a client that asked to watch that worker.
+	watchAll, watched := eventbus.ParseWatch(r.URL.Query().Get("watch"))
 	queue := make(chan map[string]any, sessionEventsQueueSize)
 	subID := session.EventBus.Subscribe(eventbus.AllEventTypes, func(event *eventbus.AgentEvent) {
 		if event == nil {
@@ -188,8 +198,12 @@ func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps Chat
 				return
 			}
 		}
+		payload := event.ToDict()
+		if eventbus.IsSuppressedForClient(payload, watchAll, watched) {
+			return
+		}
 		select {
-		case queue <- event.ToDict():
+		case queue <- payload:
 		default:
 		}
 	})
@@ -216,6 +230,14 @@ func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps Chat
 	snapshotEvent.Data = snapshot
 	queue <- snapshotEvent.ToDict()
 
+	// Replay the buffered events that produce visible chat messages, oldest
+	// first, so a reconnect that lands after the opening turn still sees its
+	// output. Execution/node lifecycle is not replayed upstream either; the
+	// exceptions are the visible-chat types mirrored in
+	// sessionEventsReplayTypes. An already-answered client_input_requested is
+	// suppressed so a resolved question never re-opens.
+	replaySessionEvents(session.EventBus, queue, watchAll, watched)
+
 	heartbeat := time.NewTicker(sessionEventsHeartbeatInterval)
 	defer heartbeat.Stop()
 	for {
@@ -223,16 +245,79 @@ func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps Chat
 		case <-r.Context().Done():
 			return
 		case payload := <-queue:
-			encoded, err := json.Marshal(payload)
-			if err != nil {
-				continue
-			}
-			eventType, _ := payload["type"].(string)
-			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", eventType, encoded)
-			flusher.Flush()
+			writeSSEData(w, flusher, payload)
 		case <-heartbeat.C:
 			fmt.Fprint(w, ": heartbeat\n\n")
 			flusher.Flush()
+		}
+	}
+}
+
+// sessionEventsReplayTypes mirrors routes_events.py::_REPLAY_TYPES: the subset
+// of buffered history replayed to a (re)connecting client. Lifecycle events
+// are excluded upstream to avoid duplicate state transitions; trigger/task
+// events are included because they are idempotent state setters.
+var sessionEventsReplayTypes = map[eventbus.EventType]struct{}{
+	eventbus.EventClientOutputDelta:    {},
+	eventbus.EventExecutionStarted:     {},
+	eventbus.EventExecutionCompleted:   {},
+	eventbus.EventExecutionFailed:      {},
+	eventbus.EventLLMTurnComplete:      {},
+	eventbus.EventToolCallStarted:      {},
+	eventbus.EventToolCallCompleted:    {},
+	eventbus.EventClientInputRequested: {},
+	eventbus.EventClientInputReceived:  {},
+	eventbus.EventClientInputCommitted: {},
+	eventbus.EventTriggerAvailable:     {},
+	eventbus.EventTriggerActivated:     {},
+	eventbus.EventTriggerDeactivated:   {},
+	eventbus.EventTriggerFired:         {},
+	eventbus.EventTriggerRemoved:       {},
+	eventbus.EventTriggerUpdated:       {},
+	eventbus.EventTaskCreated:          {},
+	eventbus.EventTaskUpdated:          {},
+	eventbus.EventTaskDeleted:          {},
+	eventbus.EventTaskListReset:        {},
+	eventbus.EventSessionForked:        {},
+}
+
+// replaySessionEvents queues the replayable slice of the bus history onto the
+// subscriber, oldest first. Worker per-turn chatter is suppressed for clients
+// that never asked to watch that worker (upstream's is_suppressed_for_client),
+// exactly as the live handler does.
+func replaySessionEvents(bus *eventbus.EventBus, queue chan map[string]any, watchAll bool, watched map[string]struct{}) {
+	if bus == nil {
+		return
+	}
+	history := bus.GetHistory(eventbus.WithHistoryLimit(-1))
+	if len(history) == 0 {
+		return
+	}
+	resolved := eventbus.CollectResolvedRequestSeqs(bus)
+	// GetHistory returns newest first; replay walks chronologically.
+	for i := len(history) - 1; i >= 0; i-- {
+		event := history[i]
+		if event == nil {
+			continue
+		}
+		if _, ok := sessionEventsReplayTypes[event.Type]; !ok {
+			continue
+		}
+		payload := event.ToDict()
+		if eventbus.IsSuppressedForClient(payload, watchAll, watched) {
+			continue
+		}
+		if event.Type == eventbus.EventClientInputRequested {
+			if _, answered := resolved[event.Seq]; answered {
+				continue
+			}
+		}
+		select {
+		case queue <- payload:
+		default:
+			// Queue full: the client is behind; the snapshot already carried
+			// the state, and the live stream picks up from here.
+			return
 		}
 	}
 }

@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-20 23:3x CST",
+ "generated_at": "2026-11-21 00:43 CST",
  "method": "两侧源码 HIVE_* 字符串字面量（生产，排除 tests/testdata/_test.go）+ credentials spec 对照",
  "hive_literals": {
   "python": 89,
@@ -23,6 +23,7 @@
    "HIVE_COLONY_PARALLEL_MAX",
    "HIVE_CREDENTIAL_KEY",
    "HIVE_CRED_LOG",
+   "HIVE_CRM_PRINCIPAL",
    "HIVE_DEBUG_EVENTS",
    "HIVE_DEFAULT_PLAYBOOK_CONCURRENCY",
    "HIVE_DESKTOP_MODE",
@@ -75,7 +76,6 @@
   "python_only": [
    "HIVE_AGENT_NAME",
    "HIVE_COMPACTION_DEBUG",
-   "HIVE_CRM_PRINCIPAL",
    "HIVE_ENABLE_LLM_LOGS",
    "HIVE_GCU_MEMTRACE",
    "HIVE_GCU_MEMTRACE_FILE",
@@ -125,7 +125,6 @@
    "HIVE_LME_RESUME",
    "HIVE_LME_RUN_DIR",
    "HIVE_MCP2CLI",
-   "HIVE_NETWORK_SCANNERS",
    "HIVE_RETENTION_",
    "HIVE_SESSION_COST_LIMIT_USD"
   ]

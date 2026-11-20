@@ -310,108 +310,31 @@ func fileToolDefs() []llm.ToolDef {
 // terminalExecToolDef is terminal_exec's definition. session_cwd is declared
 // here so the host knows the tool accepts it; defs() strips it before the
 // model ever sees the schema.
+//
+// The model-visible shape is the Python runtime's pydantic output: no property
+// descriptions, nullable arguments as anyOf [<schema>, null] with default null,
+// and every declared default present. The per-parameter guidance the old Go
+// schema carried lives in the tool docstring's Args section (model-visible) and
+// in the trailing comments below (source-level).
 func terminalExecToolDef() llm.ToolDef {
 	return llm.ToolDef{
-		Name: ToolTerminalExec,
-		Description: "Run a shell command and capture its output." + "\n" +
-			"" + "\n" +
-			"Past auto_background_after_sec, the call auto-promotes to a background" + "\n" +
-			"job and returns immediately with `auto_backgrounded=True, job_id=...`" + "\n" +
-			"— poll with terminal_job_logs(job_id, since_offset=...) to read the rest." + "\n" +
-			"Set auto_background_after_sec=0 to force pure foreground (kill on" + "\n" +
-			"timeout_sec)." + "\n" +
-			"" + "\n" +
-			"The agent loop may first return a bg_* handle; use collect_result for" + "\n" +
-			"that handle, then terminal_job_logs for any job_id in the result." + "\n" +
-			"POSIX uses bash when shell=True; Windows selects Git Bash, PowerShell," + "\n" +
-			"then cmd. Read shell_kind before choosing platform-specific syntax." + "\n" +
-			"" + "\n" +
-			"Args:" + "\n" +
-			"    command: The command. With shell=False POSIX uses shlex splitting;" + "\n" +
-			"        shell syntax is detected automatically. Use shell=True for scripts." + "\n" +
-			"    cwd: Working directory. Defaults to the session workdir when" + "\n" +
-			"        omitted; pass an absolute path to override (loose default," + "\n" +
-			"        not a sandbox — you can point anywhere)." + "\n" +
-			"    env: Environment override (merged into a sanitized base — zsh" + "\n" +
-			"        dotfile vars are stripped)." + "\n" +
-			"    timeout_sec: Total deadline from command start, including background" + "\n" +
-			"        execution. Expiry terminates the process tree and reports" + "\n" +
-			"        timed_out=True. 0 means unlimited, requiring auto-promotion." + "\n" +
-			"    auto_background_after_sec: Inline budget. Past this, promote to" + "\n" +
-			"        a background job and return. 0 disables auto-promotion. The" + "\n" +
-			"        foreground wait must be finite and at most 220 seconds." + "\n" +
-			"    shell: True to use the platform shell. zsh refused." + "\n" +
-			"    stdin: Optional stdin payload (string)." + "\n" +
-			"    limits: Optional setrlimit caps. Keys: cpu_sec, rss_mb," + "\n" +
-			"        fsize_mb, nofile." + "\n" +
-			"    max_output_kb: Inline output cap. Overflow stashes to an" + "\n" +
-			"        output_handle for retrieval via terminal_output_get." + "\n" +
-			"" + "\n" +
-			"Returns the standard envelope: see `terminal-tools-foundations` skill.",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"command": map[string]any{
-					"type":        "string",
-					"description": "Shell command to run.",
-				},
-				"cwd": map[string]any{
-					"type":        []string{"string", "null"},
-					"description": "Working directory. Defaults to the session workdir when omitted.",
-					"default":     nil,
-				},
-				"env": map[string]any{
-					"type":                 []string{"object", "null"},
-					"additionalProperties": map[string]any{"type": "string"},
-					"description":          "Environment override merged into a sanitized base.",
-					"default":              nil,
-				},
-				"timeout_sec": map[string]any{
-					"type":        "integer",
-					"description": "Total deadline in seconds from command start; 0 means unlimited (requires auto-promotion).",
-					"default":     60,
-				},
-				"auto_background_after_sec": map[string]any{
-					"type":        "integer",
-					"description": "Inline budget in seconds; past it the call promotes to a background job. 0 disables promotion.",
-					"default":     30,
-				},
-				"shell": map[string]any{
-					"type":        "boolean",
-					"description": "Run through the platform shell instead of direct exec.",
-					"default":     false,
-				},
-				"stdin": map[string]any{
-					"type":        []string{"string", "null"},
-					"description": "Optional stdin payload.",
-					"default":     nil,
-				},
-				"limits": map[string]any{
-					"type":                 []string{"object", "null"},
-					"additionalProperties": map[string]any{"type": "integer"},
-					"description":          "Optional resource caps (cpu_sec, rss_mb, fsize_mb, nofile).",
-					"default":              nil,
-				},
-				"max_output_kb": map[string]any{
-					"type":        "integer",
-					"description": "Inline output cap in KB; overflow stashes the full output under output_handle.",
-					"default":     256,
-				},
-				// Framework-injected: declared so the host knows this tool
-				// accepts it, then stripped by tools.StripContextParams.
-				"session_cwd": map[string]any{
-					"type":        []string{"string", "null"},
-					"description": "Session workdir injected by the host.",
-					"default":     nil,
-				},
-				"crm_principal": map[string]any{
-					"type":        []string{"string", "null"},
-					"description": "Acting CRM principal forwarded as HIVE_CRM_PRINCIPAL.",
-					"default":     nil,
-				},
-			},
-			"required": []string{"command"},
-		},
+		Name:        ToolTerminalExec,
+		Description: TerminalExecDescription,
+		Parameters: pySchemaObject(map[string]any{
+			"command":                   pySchemaString(),                    // Shell command; shell=false POSIX uses shlex splitting.
+			"cwd":                       pyNullable(pySchemaString()),        // Working directory; default session workdir.
+			"env":                       pyNullable(pySchemaStringMap()),     // Environment override merged into a sanitized base.
+			"timeout_sec":               pyDefault(pySchemaInteger(), 60),    // Total deadline; 0 means unlimited (requires auto-promotion).
+			"auto_background_after_sec": pyDefault(pySchemaInteger(), 30),    // Inline budget; past it the call promotes to a background job.
+			"shell":                     pyDefault(pySchemaBoolean(), false), // Run through the platform shell; zsh refused.
+			"stdin":                     pyNullable(pySchemaString()),        // Optional stdin payload.
+			"limits":                    pyNullable(pySchemaIntMap()),        // setrlimit caps: cpu_sec, rss_mb, fsize_mb, nofile.
+			"max_output_kb":             pyDefault(pySchemaInteger(), 256),   // Inline cap; overflow stashes to output_handle.
+			"crm_principal":             pyNullable(pySchemaString()),        // Acting CRM principal (HIVE_CRM_PRINCIPAL).
+			// Framework-injected: declared so the host knows this tool
+			// accepts it, then stripped by tools.StripContextParams.
+			"session_cwd": pyNullable(pySchemaString()),
+		}, "command"),
 	}
 }
 

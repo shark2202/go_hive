@@ -8,7 +8,7 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-20T23:43:50+08:00",
+  "captured_at": "2026-11-21T00:58:55+08:00",
   "canonical": {
     "events": [
       {
@@ -78,15 +78,15 @@
             "conversation_chars": 0,
             "image_blocks": 0,
             "image_tokens": 0,
-            "system_chars": 71929,
-            "tool_defs_chars": 211538
+            "system_chars": 62554,
+            "tool_defs_chars": 52075
           },
-          "estimated_tokens": 94489,
+          "estimated_tokens": 38209,
           "max_context_tokens": 180000,
           "message_count": 0,
           "trigger": "iteration_start",
-          "usage_pct": 52,
-          "usage_ratio": 0.5249
+          "usage_pct": 21,
+          "usage_ratio": 0.2123
         },
         "execution_id": null,
         "node_id": "queen",
@@ -94,15 +94,84 @@
         "stream_id": "queen",
         "timestamp": "<timestamp>",
         "type": "context_usage_updated"
+      },
+      {
+        "colony_id": null,
+        "correlation_id": null,
+        "data": {
+          "content": "CONTRACT_OK",
+          "inner_turn": 0,
+          "iteration": 0,
+          "snapshot": "CONTRACT_OK"
+        },
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "seq": 0.0,
+        "stream_id": "queen",
+        "timestamp": "<timestamp>",
+        "type": "client_output_delta"
+      },
+      {
+        "colony_id": null,
+        "correlation_id": null,
+        "data": {
+          "cache_creation_tokens": 0,
+          "cached_tokens": 0,
+          "cost_usd": 0,
+          "history_anchor_idx": -1,
+          "input_tokens": 0,
+          "iteration": 0,
+          "message_count": 1,
+          "model": "contract-probe-model",
+          "output_tokens": 0,
+          "stop_reason": "stop",
+          "system_prefix_sha": "885285cb1ffe",
+          "system_suffix_sha": "e3b0c44298fc"
+        },
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "seq": 0.0,
+        "stream_id": "queen",
+        "timestamp": "<timestamp>",
+        "type": "llm_turn_complete"
+      },
+      {
+        "colony_id": null,
+        "correlation_id": null,
+        "data": {
+          "park_reason": "turn_done"
+        },
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "seq": 0.0,
+        "stream_id": "queen",
+        "timestamp": "<timestamp>",
+        "type": "client_input_requested"
+      },
+      {
+        "colony_id": null,
+        "correlation_id": null,
+        "data": {
+          "activity": "awaiting_user",
+          "interrupt_cause": null,
+          "park_reason": "turn_done",
+          "questions": null
+        },
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "seq": 0.0,
+        "stream_id": "queen",
+        "timestamp": "<timestamp>",
+        "type": "loop_state_changed"
       }
     ],
     "has_more_older": false,
     "limit": 500,
-    "returned": 5,
+    "returned": 9,
     "session_id": "<session_id>",
     "start_index": 1,
     "start_offset": 0,
-    "total": 5,
+    "total": 9,
     "truncated": false
   },
   "shape": {
@@ -113,7 +182,7 @@
     "events[].data.name": "string",
     "events[].data.queen_id": "string",
     "events[].data.title": "string",
-    "events[].execution_id": "null",
+    "events[].execution_id": "string",
     "events[].node_id": "string",
     "events[].seq": "number(float)",
     "events[].stream_id": "string",
@@ -138,6 +207,23 @@
     "events[].data.trigger": "string",
     "events[].data.usage_pct": "number(int)",
     "events[].data.usage_ratio": "number(float)",
+    "events[].data.content": "string",
+    "events[].data.inner_turn": "number(int)",
+    "events[].data.snapshot": "string",
+    "events[].data.cache_creation_tokens": "number(int)",
+    "events[].data.cached_tokens": "number(int)",
+    "events[].data.cost_usd": "number(int)",
+    "events[].data.history_anchor_idx": "number(int)",
+    "events[].data.input_tokens": "number(int)",
+    "events[].data.model": "string",
+    "events[].data.output_tokens": "number(int)",
+    "events[].data.stop_reason": "string",
+    "events[].data.system_prefix_sha": "string",
+    "events[].data.system_suffix_sha": "string",
+    "events[].data.park_reason": "string",
+    "events[].data.activity": "string",
+    "events[].data.interrupt_cause": "null",
+    "events[].data.questions": "null",
     "has_more_older": "boolean",
     "limit": "number(int)",
     "returned": "number(int)",
@@ -148,7 +234,7 @@
     "truncated": "boolean"
   },
   "counts": {
-    "events": 5
+    "events": 9
   },
   "notes": []
 }

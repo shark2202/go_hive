@@ -723,7 +723,7 @@ def _read_versions(root: Path) -> tuple[str, str, str]:
 # Env contract: reproduce the published audit's counting rule
 # ---------------------------------------------------------------------------
 
-AUDIT_EXPECTED = {"python": 89, "go": 96, "common": 66, "python_only": 23, "go_only": 30}
+AUDIT_EXPECTED = {"python": 89, "go": 96, "common": 67, "python_only": 22, "go_only": 29}
 
 QUOTED_LITERAL = re.compile(r"[\"'](HIVE_[A-Z0-9_]+)[\"']")
 

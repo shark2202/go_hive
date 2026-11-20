@@ -135,6 +135,12 @@ type chatTurnRequest struct {
 	// client message (so she sees who spoke) but does not start a new chain:
 	// the depth of the letter it answers continues.
 	fromQueenMail bool
+	// opening is the upstream queen loop's first iteration: a session starts
+	// its persistent loop immediately and runs one real model turn before any
+	// user message, then parks on turn_done. It carries no user turn and no
+	// execution/node-loop envelope — the session-start block already wrote the
+	// loop's iteration 0 announcement.
+	opening bool
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
@@ -203,8 +209,11 @@ type ChatRuntime struct {
 	turnActive   atomic.Bool
 	firstEvent   atomic.Bool
 	awaiting     atomic.Bool
-	parkMu       sync.Mutex
-	parkReason   agentloop.ParkReason
+	// openingStarted guards StartOpeningTurn so a session's first iteration is
+	// queued at most once.
+	openingStarted atomic.Bool
+	parkMu         sync.Mutex
+	parkReason     agentloop.ParkReason
 	// parkStoreMu serialises the read-modify-write of the conversation
 	// cursor's pending_input record. The queue goroutine and the colony event
 	// bridge both persist park state, and an unguarded RMW would drop one
@@ -632,6 +641,10 @@ func (r *ChatRuntime) run() {
 //
 // Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
 func (r *ChatRuntime) runTurn(request chatTurnRequest) {
+	if request.opening {
+		r.runOpeningTurn()
+		return
+	}
 	if request.recordOnly {
 		// A message the overseer executed: append the turn so the transcript
 		// keeps the ask, without running the chat queen again. The overseer's
@@ -792,6 +805,92 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	r.setLastError(nil)
 }
 
+// StartOpeningTurn runs the upstream queen loop's first iteration for a
+// freshly created session: before any user message, the loop announces itself,
+// runs one real model turn and parks on turn_done. The session-start block
+// (emitSessionStartEvents) supplies the loop's opening announcements; this
+// adds the LLM frames and the park boundary a subscriber sees as
+// session_snapshot -> client_output_delta -> llm_turn_complete ->
+// client_input_requested, exactly as the Python queen does on creation.
+//
+// It is idempotent and only ever queues once per runtime; resumed sessions
+// (logs already carrying events) never call it.
+func (r *ChatRuntime) StartOpeningTurn() {
+	if r == nil {
+		return
+	}
+	if r.openingStarted.Swap(true) {
+		return
+	}
+	_ = r.enqueueTurn(chatTurnRequest{opening: true})
+}
+
+// runOpeningTurn is runTurn for the message-less first iteration. It has no
+// user turn to add: the loop's SESSION_START reminder is the first message the
+// model reads, which is what gives a fresh session an opening reply upstream.
+func (r *ChatRuntime) runOpeningTurn() {
+	// Upstream runs the queen loop under the session id as the execution id;
+	// the turn carries no per-execution envelope, but the park events keep it.
+	executionID := r.sessionID
+	if executionID == "" {
+		executionID = newChatExecutionID()
+	}
+	emitter := r.newTurnEmitter(executionID)
+	if emitter != nil {
+		emitter.opening = true
+		r.agentCtx.ExecutionID = executionID
+		r.agentCtx.Observer = emitter
+		defer func() { r.agentCtx.Observer = nil }()
+	}
+	if r.streamLLM != nil && emitter != nil {
+		r.streamLLM.beginTurn(r.conv.SystemPrompt(), emitter.StreamTextDelta)
+		defer r.streamLLM.endTurn()
+	}
+
+	r.markTurnStart()
+	defer r.markTurnEnd()
+
+	// The loop's first iteration announces the session frame before reading
+	// the model; the event itself was written with the session-start block, so
+	// only the conversation reminder is injected here.
+	if r.conv.MessageCount() == 0 {
+		r.fireReminderPoint(agentloop.SESSION_START, "", nil)
+	}
+
+	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.toolsForTurn())
+	if err != nil {
+		if r.ctx.Err() == nil {
+			parkReason := turnFailureParkReason(result, agentloop.ParkReasonLLMError)
+			emitter.executionFailed(err, parkReason)
+			r.setParkState(parkReason, true)
+		}
+		r.setLastError(err)
+		return
+	}
+	if !result.Success {
+		err := errors.New("server: chat turn did not complete")
+		parkReason := turnFailureParkReason(result, agentloop.ParkReasonUnknown)
+		emitter.executionFailed(err, parkReason)
+		r.setParkState(parkReason, true)
+		r.setLastError(err)
+		return
+	}
+	parkReason := agentloop.ParkReasonTurnDone
+	if pending := r.pendingParkReason(); pending != "" {
+		parkReason = pending
+	}
+	emitter.executionCompleted(result.InnerTurns, string(parkReason))
+	if len(result.ToolResults) == 0 {
+		r.fireReminderPoint(agentloop.STOP, "", nil)
+	}
+	r.setParkState(parkReason, true)
+	if r.reflection != nil {
+		r.reflection.OnTurnDone(r.ctx, "queen", "turn_done")
+	}
+	r.timelineAfterTurn()
+	r.setLastError(nil)
+}
+
 // turnFailureParkReason keeps a loop-raised park on a failed turn. The loop's
 // TurnResult.ParkReason is set when the guard itself stopped the turn (the
 // deterministic doom loop); a turn that merely errored leaves it nil and the
@@ -814,164 +913,6 @@ func newChatExecutionID() string {
 		return fmt.Sprintf("exec-%d", time.Now().UnixNano())
 	}
 	return hex.EncodeToString(b[:])
-}
-
-// chatTurnEmitter publishes one turn's progress onto the session bus using
-// the upstream event names and payload shapes. Nil-receiver methods are
-// no-ops so a session without a bus pays no branching cost at each call site.
-//
-// Parity: framework/agent_loop/internals/event_publishing.py
-// Parity: framework/host/execution_manager.py::_run_execution
-type chatTurnEmitter struct {
-	bus           *eventbus.EventBus
-	streamID      string
-	nodeID        string
-	executionID   string
-	model         string
-	maxIterations int
-	// stream links the emitter to the streaming adapter so the loop's
-	// end-of-call AssistantText does not republish text that already went out
-	// frame by frame.
-	stream *chatStreamingCompleter
-}
-
-func (r *ChatRuntime) newTurnEmitter(executionID string) *chatTurnEmitter {
-	if r == nil || r.bus == nil {
-		return nil
-	}
-	maxIterations := 0
-	if r.loop != nil {
-		maxIterations = r.loop.Config.MaxIterations
-	}
-	return &chatTurnEmitter{
-		bus:           r.bus,
-		streamID:      chatStreamID,
-		nodeID:        chatNodeID,
-		executionID:   executionID,
-		model:         r.model,
-		maxIterations: maxIterations,
-		stream:        r.streamLLM,
-	}
-}
-
-// executionStarted opens the turn: execution_started, an EXECUTING loop state
-// (the snapshot derives is_executing from it), and the loop-started boundary.
-func (e *chatTurnEmitter) executionStarted(message string) {
-	if e == nil {
-		return
-	}
-	e.bus.EmitExecutionStarted(e.streamID, e.executionID,
-		map[string]any{"message": message}, nil, nil)
-	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "executing", &e.executionID, nil, nil, nil)
-	maxIterations := e.maxIterations
-	if maxIterations <= 0 {
-		maxIterations = agentloop.DefaultLoopConfig().MaxIterations
-	}
-	e.bus.EmitNodeLoopStarted(e.streamID, e.nodeID, &e.executionID, &maxIterations)
-}
-
-// Parity: framework/agent_loop/agent_loop.py::_publish_iteration
-func (e *chatTurnEmitter) IterationStarted(iteration int) {
-	if e == nil {
-		return
-	}
-	if e.stream != nil {
-		e.stream.noteIteration(iteration)
-	}
-	e.bus.EmitNodeLoopIteration(e.streamID, e.nodeID, iteration, &e.executionID, nil)
-}
-
-// Parity: framework/agent_loop/internals/event_publishing.py::publish_text_delta
-// (queen streams publish client_output_delta, not llm_text_delta)
-func (e *chatTurnEmitter) AssistantText(content, snapshot string, iteration int) {
-	if e == nil {
-		return
-	}
-	// The streaming adapter already published this iteration's text frame by
-	// frame; republishing the full message would duplicate the bubble.
-	if e.stream != nil && e.stream.textStreamed(iteration) {
-		return
-	}
-	e.StreamTextDelta(content, snapshot, iteration)
-}
-
-// StreamTextDelta publishes one text frame. It is the sink the streaming
-// adapter calls for each upstream increment (Content is that increment and
-// Snapshot the accumulated answer).
-func (e *chatTurnEmitter) StreamTextDelta(content, snapshot string, iteration int) {
-	if e == nil {
-		return
-	}
-	e.bus.EmitClientOutputDelta(e.streamID, e.nodeID, content, snapshot, &e.executionID, &iteration, 0)
-}
-
-// Parity: framework/agent_loop/internals/event_publishing.py::publish_llm_turn_complete
-func (e *chatTurnEmitter) LLMTurnComplete(completion llm.Completion, iteration int) {
-	if e == nil {
-		return
-	}
-	model := completion.Model
-	if model == "" {
-		model = e.model
-	}
-	e.bus.EmitLLMTurnComplete(e.streamID, e.nodeID,
-		completion.StopReason, model,
-		completion.InputTokens, completion.OutputTokens,
-		completion.CachedTokens, completion.CacheCreationTokens,
-		completion.CostUSD, nil,
-		&e.executionID, &iteration, nil, nil, nil, nil)
-}
-
-// Parity: framework/agent_loop/internals/event_publishing.py::publish_tool_started
-func (e *chatTurnEmitter) ToolCallStarted(call agentloop.ToolCallRequest) {
-	if e == nil {
-		return
-	}
-	e.bus.EmitToolCallStarted(e.streamID, e.nodeID, call.ID, call.Name, call.Input, &e.executionID)
-}
-
-// Parity: framework/agent_loop/internals/event_publishing.py::publish_tool_completed
-func (e *chatTurnEmitter) ToolCallCompleted(call agentloop.ToolCallRequest, result agentloop.ToolResult) {
-	if e == nil {
-		return
-	}
-	e.bus.EmitToolCallCompleted(e.streamID, e.nodeID, call.ID, call.Name, result.Content, result.IsError, &e.executionID)
-}
-
-// executionCompleted closes a successful turn. loop_state_changed lands last:
-// the dashboard clears its "Working…" spinner on it (and on
-// execution_completed), and the snapshot then reports idle instead of busy.
-// parkReason distinguishes a plain end-of-turn from a turn that parked on an
-// ask_user question.
-func (e *chatTurnEmitter) executionCompleted(iterations int, parkReason string) {
-	if e == nil {
-		return
-	}
-	if parkReason == "" {
-		parkReason = string(agentloop.ParkReasonTurnDone)
-	}
-	e.bus.EmitNodeLoopCompleted(e.streamID, e.nodeID, iterations, &e.executionID)
-	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "awaiting_user", &e.executionID, &parkReason, nil, nil)
-	e.bus.EmitExecutionCompleted(e.streamID, e.executionID,
-		map[string]any{"status": "completed"}, nil, nil)
-}
-
-// executionFailed makes a broken turn visible: execution_failed carries the
-// error text (the dashboard renders it as a system bubble from history) and
-// the loop state drops out of EXECUTING so the spinner stops. The park reason
-// is the one the TurnResult carries when the loop raised its own park (a doom
-// loop); an ordinary error defaults to llm_error.
-func (e *chatTurnEmitter) executionFailed(err error, parkReason agentloop.ParkReason) {
-	if e == nil || err == nil {
-		return
-	}
-	if parkReason == "" {
-		parkReason = agentloop.ParkReasonLLMError
-	}
-	message := err.Error()
-	reason := string(parkReason)
-	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "interrupted", &e.executionID, &reason, nil, nil)
-	e.bus.EmitExecutionFailed(e.streamID, e.executionID, message, nil, nil)
 }
 
 // injectRecall appends the global + queen-scoped recall blocks to the current

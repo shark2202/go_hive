@@ -43,24 +43,29 @@ func specRouteMux(specsStore func() credentialRouteStore) *http.ServeMux {
 }
 
 // TestCredentialSpecsRouteServesFullUpstreamRegistry is the regression guard for
-// the old four-LLM-only endpoint: every credential id the Python registry
-// declares must reach the JSON payload with the settings-row fields intact.
+// the old four-LLM-only endpoint: every credential id the Python CREDENTIAL_SPECS
+// dict serves must reach the JSON payload with the settings-row fields intact —
+// and nothing else. Unmerged registry modules (x.py) and model-catalog providers
+// are not part of the upstream route.
 //
-// Parity-exempt: the Python route serves CREDENTIAL_SPECS directly and has no
-// route-level test that enumerates the catalogue; the table itself is covered by
-// tools/tests/test_credential_registry.py.
+// Parity: framework/server/routes_credentials.py::handle_list_specs
 func TestCredentialSpecsRouteServesFullUpstreamRegistry(t *testing.T) {
 	byID := credentialSpecRouteRows(t, specRouteMux(func() credentialRouteStore {
 		return credentials.ForTesting(nil)
 	}))
 
-	if len(byID) < len(credentials.GeneratedCredentialSpecs) {
-		t.Fatalf("rows = %d, want at least %d", len(byID), len(credentials.GeneratedCredentialSpecs))
-	}
+	merged := 0
 	for _, spec := range credentials.GeneratedCredentialSpecs {
+		if credentials.UnmergedCredentialID(spec.CredentialID) {
+			continue
+		}
+		merged++
 		if _, present := byID[spec.CredentialID]; !present {
 			t.Fatalf("credential %q missing from /api/credentials/specs", spec.CredentialID)
 		}
+	}
+	if len(byID) != merged+1 { // + synthetic Aden Platform row
+		t.Fatalf("rows = %d, want %d (merged registry + synthetic Aden row)", len(byID), merged+1)
 	}
 
 	required := []string{
@@ -71,7 +76,6 @@ func TestCredentialSpecsRouteServesFullUpstreamRegistry(t *testing.T) {
 		"help_url",
 		"api_key_instructions",
 		"tools",
-		"tool_modules",
 		"aden_supported",
 		"direct_api_key_supported",
 		"credential_key",
@@ -84,6 +88,9 @@ func TestCredentialSpecsRouteServesFullUpstreamRegistry(t *testing.T) {
 			if _, present := row[key]; !present {
 				t.Fatalf("credential %q row missing %q: %#v", credentialID, key, row)
 			}
+		}
+		if _, present := row["tool_modules"]; present {
+			t.Fatalf("credential %q row carries the Go-only tool_modules field", credentialID)
 		}
 	}
 
@@ -103,19 +110,18 @@ func TestCredentialSpecsRouteServesFullUpstreamRegistry(t *testing.T) {
 	if github["available"] != false {
 		t.Fatalf("github available = %v, want false without a store entry", github["available"])
 	}
-	modules := credentialRouteJSONList(t, github["tool_modules"])
-	if len(modules) != 1 || modules[0] != "github_tool" {
-		t.Fatalf("github tool_modules = %#v", modules)
-	}
 	tools := credentialRouteJSONList(t, github["tools"])
 	if len(tools) != 19 {
 		t.Fatalf("github tools = %d, want 19", len(tools))
 	}
 
-	// A credential declared only by an unmerged upstream module (x.py) must
-	// still reach the route.
-	if row, present := byID["x_api_key"]; !present || row["env_var"] != "X_API_KEY" {
-		t.Fatalf("x_api_key row = %#v", row)
+	// An id declared only by an unmerged upstream module (x.py) is not part of
+	// the upstream CREDENTIAL_SPECS dict, so the route must not invent a row:
+	// the frozen contract has 115 rows and x_api_key is not one of them. The id
+	// stays in GeneratedCredentialSpecs for the credential store's lookup
+	// surfaces.
+	if _, present := byID["x_api_key"]; present {
+		t.Fatalf("x_api_key row must not be served: upstream CREDENTIAL_SPECS does not merge x.py")
 	}
 }
 
@@ -157,48 +163,34 @@ func TestCredentialSpecsRouteAvailabilityReadsEnv(t *testing.T) {
 	}
 }
 
-// TestCredentialSpecsRouteKeepsModelCatalogProviders pins the additive half of
-// the union: model-catalog providers (openai, minimax, kimi, hive) are not in
-// the upstream credential registry, and dropping them would remove LLM API-key
-// entry from the settings page.
+// TestCredentialSpecsRouteExcludesModelCatalogAndUnmergedModules pins the row
+// set to the upstream route: model-catalog providers (openai, minimax, kimi,
+// hive) configure their keys through /api/models/overview, and unmerged
+// credential modules (x.py) are not part of CREDENTIAL_SPECS — neither belongs
+// in this response. The frozen API contract has 115 rows here.
 //
-// Parity-exempt: the model catalog is a Go-port surface (/api/models/overview)
-// with no Python credential-spec counterpart.
-func TestCredentialSpecsRouteKeepsModelCatalogProviders(t *testing.T) {
+// Parity: framework/server/routes_credentials.py::handle_list_specs
+func TestCredentialSpecsRouteExcludesModelCatalogAndUnmergedModules(t *testing.T) {
 	catalogSpecs := credentialSpecsFromCatalog()
 	if len(catalogSpecs) == 0 {
 		t.Fatal("model catalog returned no credential specs")
-	}
-	generated := make(map[string]struct{}, len(credentials.GeneratedCredentialSpecs))
-	for _, spec := range credentials.GeneratedCredentialSpecs {
-		generated[spec.CredentialID] = struct{}{}
-	}
-	wantRows := len(credentials.GeneratedCredentialSpecs) + 1 // + synthetic Aden Platform row
-	for _, spec := range catalogSpecs {
-		if _, covered := generated[spec.CredentialID]; !covered {
-			wantRows++
-		}
 	}
 
 	byID := credentialSpecRouteRows(t, specRouteMux(func() credentialRouteStore {
 		return credentials.ForTesting(nil)
 	}))
-	if len(byID) != wantRows {
-		t.Fatalf("rows = %d, want %d (registry + model catalog + synthetic Aden row)", len(byID), wantRows)
-	}
-	if _, present := byID[credentials.AdenCredentialID]; !present {
-		t.Fatalf("synthetic %q row missing", credentials.AdenCredentialID)
-	}
+
 	for _, spec := range catalogSpecs {
-		row, present := byID[spec.CredentialID]
-		if !present {
-			t.Fatalf("model catalog provider %q missing from /api/credentials/specs", spec.CredentialID)
+		if _, present := byID[spec.CredentialID]; present {
+			t.Fatalf("model catalog provider %q leaked into /api/credentials/specs", spec.CredentialID)
 		}
-		if row["env_var"] != spec.EnvVar {
-			t.Fatalf("%s env_var = %v, want %v", spec.CredentialID, row["env_var"], spec.EnvVar)
+	}
+	for _, spec := range credentials.GeneratedCredentialSpecs {
+		if !credentials.UnmergedCredentialID(spec.CredentialID) {
+			continue
 		}
-		if row["direct_api_key_supported"] != true {
-			t.Fatalf("%s direct_api_key_supported = %v", spec.CredentialID, row["direct_api_key_supported"])
+		if _, present := byID[spec.CredentialID]; present {
+			t.Fatalf("unmerged module credential %q leaked into /api/credentials/specs", spec.CredentialID)
 		}
 	}
 }

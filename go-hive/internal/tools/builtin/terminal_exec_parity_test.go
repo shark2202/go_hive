@@ -14,8 +14,23 @@ import (
 )
 
 // schemaTypeLabel renders a JSON-schema type the way the upstream pydantic
-// generator spells it: a bare type or a union of type names.
+// generator spells it: a bare type or a union of type names. Optional fields in
+// the Python contract are `anyOf: [<schema>, {"type":"null"}]`, so the anyOf
+// branches are flattened into the same union spelling.
 func schemaTypeLabel(schema map[string]any) string {
+	if branches, ok := schema["anyOf"].([]any); ok {
+		parts := make([]string, 0, len(branches))
+		for _, branch := range branches {
+			node, ok := branch.(map[string]any)
+			if !ok {
+				continue
+			}
+			if label, ok := node["type"].(string); ok && label != "" {
+				parts = append(parts, label)
+			}
+		}
+		return strings.Join(parts, "|")
+	}
 	switch typed := schema["type"].(type) {
 	case string:
 		return typed
@@ -95,6 +110,14 @@ func TestTerminalExecModelVisibleSchemaMatchesUpstream(t *testing.T) {
 		schema := properties[name].(map[string]any)
 		if got := schema["default"]; got != want {
 			t.Fatalf("%s default = %#v, want %#v", name, got, want)
+		}
+	}
+	// The Python schema carries no per-property descriptions: the guidance is
+	// in the docstring's Args section. A description here would be model-visible
+	// drift, so keep the schema bare.
+	for name, raw := range properties {
+		if _, documented := raw.(map[string]any)["description"]; documented {
+			t.Fatalf("%s: property description must not be model-visible (Python has none)", name)
 		}
 	}
 	for _, nullable := range []string{"cwd", "env", "stdin", "limits", "crm_principal"} {

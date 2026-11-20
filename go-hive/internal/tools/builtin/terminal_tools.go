@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/aden-hive/hive-go/internal/llm"
@@ -51,11 +52,12 @@ func (t *Toolbox) executeTerminalTool(ctx context.Context, name string, input ma
 // terminalToolDefs returns the terminal-tools harness group in the stable
 // order the tool library expects: search, output, jobs, PTY.
 //
-// Schemas and descriptions mirror the model-visible surface generated from the
-// upstream docstrings (tools/src/terminal_tools). session_cwd is a framework
-// CONTEXT_PARAM: it is declared on the Python functions but stripped from the
-// LLM-facing schema, injected at execution time instead, so it must never
-// appear in Defs().
+// Schemas are the Python runtime's model-visible pydantic output, not a
+// hand-designed Go dialect (see pySchema* below). Descriptions come from
+// terminal_tool_descriptions.go, which is byte-exact contract data. session_cwd
+// is a framework CONTEXT_PARAM: declared on the Python functions, stripped from
+// the LLM-facing schema, injected at execution time — so it must never reach
+// Defs().
 func terminalToolDefs() []llm.ToolDef {
 	defs := terminalSearchToolDefs()
 	defs = append(defs, terminalJobToolDefs()...)
@@ -65,84 +67,33 @@ func terminalToolDefs() []llm.ToolDef {
 func terminalSearchToolDefs() []llm.ToolDef {
 	return []llm.ToolDef{
 		{
-			Name: ToolTerminalRG,
-			Description: "Run ripgrep on `path` for `pattern` — the content-search tool." + "\n" +
-				"" + "\n" +
-				"Use this for all content (regex) search, whether project code or raw" + "\n" +
-				"paths (system configs, /var/log, archive contents); it exposes the full" + "\n" +
-				"rg flag surface. Relative paths resolve against the session workdir." + "\n" +
-				"" + "\n" +
-				"Args:" + "\n" +
-				"    pattern: Regex pattern." + "\n" +
-				"    path: Directory or file to search. Relative paths resolve against" + "\n" +
-				"        the session workdir; default is the session workdir itself." + "\n" +
-				"    glob: Filename glob (e.g. \"*.py\")." + "\n" +
-				"    type_filter: rg filetype shortcut (e.g. \"py\", \"rust\", \"md\")." + "\n" +
-				"    ignore_case: Case-insensitive search." + "\n" +
-				"    context: Lines of context above and below each match." + "\n" +
-				"    max_count: Stop after N matches per file." + "\n" +
-				"    max_depth: Limit directory recursion depth." + "\n" +
-				"    hidden: Include hidden files (rg ignores them by default)." + "\n" +
-				"    no_ignore: Don't respect .gitignore." + "\n" +
-				"    extra_args: Raw flags to append (use sparingly — most needs are covered above)." + "\n" +
-				"    allow_fallback: If rg is missing, explicitly accept approximate Python" + "\n" +
-				"        search without .gitignore support and with Python regex syntax." + "\n" +
-				"        Context, extra_args, unknown filetypes and complex globs still" + "\n" +
-				"        require rg; unsupported parameters return an error without searching." + "\n" +
-				"" + "\n" +
-				"Returns: {matches: [...], context: [...], total, truncated, exit_code, stderr}." + "\n" +
-				"    Context entries have the same path/line/text shape as matches;" + "\n" +
-				"    total counts only matches. Missing rg returns ripgrep_required by default.",
-			Parameters: schemaObject(map[string]any{
-				"pattern":        schemaString("Regex pattern."),
-				"path":           schemaDefault(schemaString("Directory or file to search. Default is the session workdir."), "."),
-				"glob":           schemaNullableString(`Filename glob (e.g. "*.py").`),
-				"type_filter":    schemaNullableString(`rg filetype shortcut (e.g. "py", "rust", "md").`),
-				"ignore_case":    schemaDefault(schemaBoolean("Case-insensitive search."), false),
-				"context":        schemaDefault(schemaInteger("Lines of context above and below each match."), 0),
-				"max_count":      schemaNullableInt("Stop after N matches per file."),
-				"max_depth":      schemaNullableInt("Limit directory recursion depth."),
-				"hidden":         schemaDefault(schemaBoolean("Include hidden files (rg ignores them by default)."), false),
-				"no_ignore":      schemaDefault(schemaBoolean("Do not respect .gitignore."), false),
-				"extra_args":     schemaNullableStringList("Raw rg flags appended verbatim."),
-				"allow_fallback": schemaDefault(schemaBoolean("If rg is missing, accept an approximate search without .gitignore support."), false),
-				// Framework-injected CONTEXT_PARAM, stripped before the model
-				// sees the schema (tools.StripContextParams).
-				"session_cwd": schemaNullableString("Session workdir injected by the host; relative paths resolve against it."),
+			Name:        ToolTerminalRG,
+			Description: TerminalRgDescription,
+			Parameters: pySchemaObject(map[string]any{
+				"pattern":        pySchemaString(),                    // Regex pattern.
+				"path":           pyDefault(pySchemaString(), "."),    // Directory or file to search; default session workdir.
+				"glob":           pyNullable(pySchemaString()),        // Filename glob, e.g. "*.py".
+				"type_filter":    pyNullable(pySchemaString()),        // rg filetype shortcut, e.g. "py".
+				"ignore_case":    pyDefault(pySchemaBoolean(), false), // Case-insensitive search.
+				"context":        pyDefault(pySchemaInteger(), 0),     // Lines of context above and below each match.
+				"max_count":      pyNullable(pySchemaInteger()),       // Stop after N matches per file.
+				"max_depth":      pyNullable(pySchemaInteger()),       // Limit directory recursion depth.
+				"hidden":         pyDefault(pySchemaBoolean(), false), // Include hidden files.
+				"no_ignore":      pyDefault(pySchemaBoolean(), false), // Do not respect .gitignore.
+				"extra_args":     pyNullable(pySchemaStringList()),    // Raw rg flags appended verbatim.
+				"allow_fallback": pyDefault(pySchemaBoolean(), false), // Accept a Python-walk fallback when rg is missing.
+				"session_cwd":    pyNullable(pySchemaString()),        // CONTEXT_PARAM, stripped before the model.
 			}, "pattern"),
 		},
 		{
-			Name: ToolTerminalGlob,
-			Description: "Find files by name/glob under `path` — the Glob tool." + "\n" +
-				"" + "\n" +
-				"Use this to locate files by name, in the project tree or raw/arbitrary" + "\n" +
-				"paths (/var/log, /etc, archive contents). Relative paths resolve against" + "\n" +
-				"the session workdir. For mtime/size/type predicate queries, drop to" + "\n" +
-				"terminal_exec(\"find ...\") — see references/find_predicates.md." + "\n" +
-				"" + "\n" +
-				"Pattern handling (so bare stems Just Work):" + "\n" +
-				"    \"lk_scan_post_reactors\" -> matched as **/*lk_scan_post_reactors*" + "\n" +
-				"    \"*.py\"                  -> matched as **/*.py (recursive)" + "\n" +
-				"    \"src/**/*.py\"           -> used verbatim" + "\n" +
-				"The glob actually run is returned as `expanded_pattern`." + "\n" +
-				"" + "\n" +
-				"Args:" + "\n" +
-				"    pattern: Filename glob or bare substring." + "\n" +
-				"    path: Directory to search under. Relative paths resolve against the" + "\n" +
-				"        session workdir; default is the session workdir itself." + "\n" +
-				"    max_results: Cap on returned paths (search stops early at the cap)." + "\n" +
-				"    include_ignored: Include .gitignored / hidden / build-cache files." + "\n" +
-				"" + "\n" +
-				"Returns: {paths, count, truncated, timed_out, expanded_pattern, command}" + "\n" +
-				"    Without rg, returns fallback=\"python-walk\" and a note: the" + "\n" +
-				"    approximate filename walk does not honor .gitignore.",
-			Parameters: schemaObject(map[string]any{
-				"pattern":         schemaString("Filename glob or bare substring."),
-				"path":            schemaDefault(schemaString("Directory to search under. Default is the session workdir."), "."),
-				"max_results":     schemaDefault(schemaInteger("Cap on returned paths; the search stops early at the cap."), 1000),
-				"include_ignored": schemaDefault(schemaBoolean("Include .gitignored, hidden and build-cache files."), false),
-				// Framework-injected CONTEXT_PARAM (stripped before the model).
-				"session_cwd": schemaNullableString("Session workdir injected by the host; relative paths resolve against it."),
+			Name:        ToolTerminalGlob,
+			Description: TerminalGlobDescription,
+			Parameters: pySchemaObject(map[string]any{
+				"pattern":         pySchemaString(),                    // Filename glob or bare substring.
+				"path":            pyDefault(pySchemaString(), "."),    // Directory to search under; default session workdir.
+				"max_results":     pyDefault(pySchemaInteger(), 1000),  // Cap on returned paths; stops early at the cap.
+				"include_ignored": pyDefault(pySchemaBoolean(), false), // Include .gitignored, hidden and build-cache files.
+				"session_cwd":     pyNullable(pySchemaString()),        // CONTEXT_PARAM, stripped before the model.
 			}, "pattern"),
 		},
 	}
@@ -151,80 +102,49 @@ func terminalSearchToolDefs() []llm.ToolDef {
 func terminalJobToolDefs() []llm.ToolDef {
 	return []llm.ToolDef{
 		{
-			Name: ToolTerminalOutputGet,
-			Description: "Retrieve a slice of truncated output by handle. When a terminal tool reports more " +
-				`output than fits inline you get output_handle: "out_<hex>"; pass it here with successive ` +
-				"offsets to paginate. The full output is preserved for 5 minutes.",
-			Parameters: schemaObject(map[string]any{
-				"output_handle": schemaString("Handle from a prior tool envelope."),
-				"since_offset":  schemaInteger("Pass 0 first, then next_offset from the previous call."),
-				"max_kb":        schemaInteger("Max KB to return per call. Default 64."),
+			Name:        ToolTerminalOutputGet,
+			Description: TerminalOutputGetDescription,
+			Parameters: pySchemaObject(map[string]any{
+				"output_handle": pySchemaString(),                 // Handle from a prior tool envelope.
+				"since_offset":  pyDefault(pySchemaInteger(), 0),  // Pass 0 first, then next_offset.
+				"max_kb":        pyDefault(pySchemaInteger(), 64), // Max KB per call.
 			}, "output_handle"),
 		},
 		{
-			Name: ToolTerminalJobStart,
-			Description: "Spawn a background process. Returns a job_id you poll with terminal_job_logs." + "\n" +
-				"" + "\n" +
-				"Use this when work might run >1 minute, when you want to keep doing" + "\n" +
-				"other things while it runs, or when you need to stream logs as they" + "\n" +
-				"arrive. Jobs die when the terminal-tools server restarts — they are NOT" + "\n" +
-				"persistent across reboots." + "\n" +
-				"" + "\n" +
-				"Args:" + "\n" +
-				"    command: Shell command to run. With shell=False, pass argv via the" + "\n" +
-				"        command string and we'll split on whitespace; for complex" + "\n" +
-				"        quoting use shell=True with the selected platform's syntax." + "\n" +
-				"    cwd: Working directory. Defaults to the session workdir when" + "\n" +
-				"        omitted; pass an absolute path to override." + "\n" +
-				"    env: Environment override. Merged into a sanitized base env (with" + "\n" +
-				"        zsh dotfile vars stripped)." + "\n" +
-				"    merge_stderr: When True, stderr is interleaved into stdout in a" + "\n" +
-				"        single ring buffer. Convenient for log-shaped output where" + "\n" +
-				"        ordering matters." + "\n" +
-				"    shell: True to use the platform shell (POSIX bash; Windows Git Bash," + "\n" +
-				"        PowerShell, then cmd). Refuses zsh." + "\n" +
-				"    name: Optional human label surfaced in terminal_job_manage(action=\"list\")." + "\n" +
-				"    limits: Optional resource caps applied via setrlimit before exec." + "\n" +
-				"        Keys: cpu_sec, rss_mb, fsize_mb, nofile." + "\n" +
-				"" + "\n" +
-				"Returns: {job_id, pid, started_at}",
-			Parameters: schemaObject(map[string]any{
-				"command":       schemaString("Shell command to run. With shell=false it is split on whitespace; use shell=true for quoting."),
-				"cwd":           schemaNullableString("Working directory. Defaults to the session workdir."),
-				"env":           schemaNullableStringMap("Environment override merged into a sanitized base."),
-				"merge_stderr":  schemaDefault(schemaBoolean("Interleave stderr into stdout in a single buffer."), false),
-				"shell":         schemaDefault(schemaBoolean("Run through the platform shell (POSIX bash). zsh is refused."), false),
-				"name":          schemaNullableString("Human label surfaced by terminal_job_manage(action=\"list\")."),
-				"limits":        schemaNullableIntMap("Optional resource caps (cpu_sec, rss_mb, fsize_mb, nofile)."),
-				"crm_principal": schemaNullableString("Acting CRM principal forwarded to child processes as HIVE_CRM_PRINCIPAL."),
-				// Framework-injected CONTEXT_PARAM (stripped before the model).
-				"session_cwd": schemaNullableString("Session workdir injected by the host."),
+			Name:        ToolTerminalJobStart,
+			Description: TerminalJobStartDescription,
+			Parameters: pySchemaObject(map[string]any{
+				"command":       pySchemaString(),                    // Command to run; shell=false splits on whitespace.
+				"cwd":           pyNullable(pySchemaString()),        // Working directory; default session workdir.
+				"env":           pyNullable(pySchemaStringMap()),     // Environment override merged into a sanitized base.
+				"merge_stderr":  pyDefault(pySchemaBoolean(), false), // Interleave stderr into stdout in one buffer.
+				"shell":         pyDefault(pySchemaBoolean(), false), // Run through the platform shell; zsh is refused.
+				"name":          pyNullable(pySchemaString()),        // Human label for terminal_job_manage(list).
+				"limits":        pyNullable(pySchemaIntMap()),        // setrlimit caps: cpu_sec, rss_mb, fsize_mb, nofile.
+				"crm_principal": pyNullable(pySchemaString()),        // Acting CRM principal (HIVE_CRM_PRINCIPAL).
+				"session_cwd":   pyNullable(pySchemaString()),        // CONTEXT_PARAM, stripped before the model.
 			}, "command"),
 		},
 		{
-			Name: ToolTerminalJobLogs,
-			Description: "Read job output at an offset — one call covering read, status and wait. Track " +
-				"next_offset across calls so nothing replays. wait_until_exit=True blocks until the job " +
-				"exits or the wait times out, then returns the logs and final status.",
-			Parameters: schemaObject(map[string]any{
-				"job_id":           schemaString("From terminal_job_start, or auto-promoted from terminal_exec."),
-				"stream":           schemaString(`"stdout" | "stderr" | "merged". Use "merged" only for merged jobs.`),
-				"since_offset":     schemaInteger("Absolute byte offset to start reading from; pass next_offset afterwards."),
-				"max_bytes":        schemaInteger("Max bytes of decoded output to return inline. Default 64000."),
-				"wait_until_exit":  schemaBoolean("Wait for the job to exit before reading."),
-				"wait_timeout_sec": schemaNumber("Longest to wait in seconds (up to 600, capped at 45 per call)."),
-				"tail":             schemaBoolean("Ignore since_offset and return the last max_bytes."),
+			Name:        ToolTerminalJobLogs,
+			Description: TerminalJobLogsDescription,
+			Parameters: pySchemaObject(map[string]any{
+				"job_id":           pySchemaString(),                                  // From terminal_job_start or an auto-promoted exec.
+				"stream":           pyDefault(pySchemaString(), "stdout"),             // "stdout" | "stderr" | "merged".
+				"since_offset":     pyDefault(pySchemaInteger(), 0),                   // Absolute byte offset; pass next_offset afterwards.
+				"max_bytes":        pyDefault(pySchemaInteger(), 64000),               // Max decoded bytes returned inline.
+				"wait_until_exit":  pyDefault(pySchemaBoolean(), false),               // Block until the job exits (or the wait times out).
+				"wait_timeout_sec": pyDefault(pySchemaNumber(), json.Number("600.0")), // Longest wait in seconds (up to 600).
+				"tail":             pyDefault(pySchemaBoolean(), false),               // Ignore since_offset; return the last max_bytes.
 			}, "job_id"),
 		},
 		{
-			Name: ToolTerminalJobManage,
-			Description: "List jobs, send signals, or write to a job's stdin. The action argument picks the " +
-				"operation: capabilities, list, signal_term/signal_kill/signal_int/signal_hup/signal_usr1/" +
-				"signal_usr2, stdin or close_stdin. Call capabilities first to see what this platform supports.",
-			Parameters: schemaObject(map[string]any{
-				"action": schemaString("Operation: capabilities | list | signal_* | stdin | close_stdin."),
-				"job_id": schemaNullableString("Required for signals and stdin actions."),
-				"data":   schemaNullableString("Text to write for action=stdin."),
+			Name:        ToolTerminalJobManage,
+			Description: TerminalJobManageDescription,
+			Parameters: pySchemaObject(map[string]any{
+				"action": pySchemaString(),             // capabilities | list | signal_* | stdin | close_stdin.
+				"job_id": pyNullable(pySchemaString()), // Required for signals and stdin actions.
+				"data":   pyNullable(pySchemaString()), // Text to write for action=stdin.
 			}, "action"),
 		},
 	}
@@ -233,67 +153,54 @@ func terminalJobToolDefs() []llm.ToolDef {
 func terminalPTYToolDefs() []llm.ToolDef {
 	return []llm.ToolDef{
 		{
-			Name: ToolTerminalPTYOpen,
-			Description: "Open a persistent /bin/bash session in a PTY." + "\n" +
-				"" + "\n" +
-				"Use a session when you need state across calls — building env vars," + "\n" +
-				"navigating with cd, driving REPLs, or responding to interactive" + "\n" +
-				"prompts (sudo, ssh, mysql). For one-shot work, use terminal_exec" + "\n" +
-				"instead." + "\n" +
-				"" + "\n" +
-				"The session runs vanilla bash (--norc --noprofile) so dotfiles" + "\n" +
-				"don't surprise you. A unique PS1 sentinel is set so terminal_pty_run" + "\n" +
-				"can unambiguously detect command completion. macOS users: this" + "\n" +
-				"is /bin/bash, not zsh, by deliberate policy — explicit" + "\n" +
-				"shell=\"/bin/zsh\" overrides are rejected." + "\n" +
-				"" + "\n" +
-				"Args:" + "\n" +
-				"    cwd: Initial working directory. Defaults to the session workdir" + "\n" +
-				"        when omitted; pass an absolute path to override." + "\n" +
-				"    env: Environment override (zsh dotfile vars are stripped)." + "\n" +
-				"    cols, rows: Terminal size." + "\n" +
-				"    idle_timeout_sec: Drop the session after this many seconds idle." + "\n" +
-				"" + "\n" +
-				"Returns: {session_id, pid, shell}",
-			Parameters: schemaObject(map[string]any{
-				"cwd":              schemaNullableString("Initial working directory. Defaults to the session workdir."),
-				"env":              schemaNullableStringMap("Environment override merged into a sanitized base."),
-				"cols":             schemaDefault(schemaInteger("Terminal columns. Default 120."), 120),
-				"rows":             schemaDefault(schemaInteger("Terminal rows. Default 40."), 40),
-				"idle_timeout_sec": schemaDefault(schemaInteger("Drop the session after this many idle seconds. Default 1800."), 1800),
-				// Framework-injected CONTEXT_PARAM (stripped before the model).
-				"session_cwd": schemaNullableString("Session workdir injected by the host."),
+			Name:        ToolTerminalPTYOpen,
+			Description: TerminalPtyOpenDescription,
+			Parameters: pySchemaObject(map[string]any{
+				"cwd":              pyNullable(pySchemaString()),       // Initial working directory; default session workdir.
+				"env":              pyNullable(pySchemaStringMap()),    // Environment override merged into a sanitized base.
+				"cols":             pyDefault(pySchemaInteger(), 120),  // Terminal columns.
+				"rows":             pyDefault(pySchemaInteger(), 40),   // Terminal rows.
+				"idle_timeout_sec": pyDefault(pySchemaInteger(), 1800), // Drop the session after this many idle seconds.
+				"session_cwd":      pyNullable(pySchemaString()),       // CONTEXT_PARAM, stripped before the model.
 			}),
 		},
 		{
-			Name: ToolTerminalPTYRun,
-			Description: "Run a command in a PTY session, send raw input, or drain output. Default mode sends " +
-				"the command and waits for the prompt sentinel or the expect regex. raw_send=True writes " +
-				"without waiting (REPLs, sudo prompts, vim). read_only=True drains whatever is buffered.",
-			Parameters: schemaObject(map[string]any{
-				"session_id":  schemaString("From terminal_pty_open."),
-				"command":     schemaNullableString("Text to send. Omit only when read_only=True."),
-				"expect":      schemaNullableString("Regex to wait for instead of the default prompt sentinel."),
-				"raw_send":    schemaBoolean("Write without waiting for the prompt."),
-				"read_only":   schemaBoolean("Send nothing; drain the buffer."),
-				"timeout_sec": schemaNumber("Max wait in seconds. Default 60."),
+			Name:        ToolTerminalPTYRun,
+			Description: TerminalPtyRunDescription,
+			Parameters: pySchemaObject(map[string]any{
+				"session_id":  pySchemaString(),                                 // From terminal_pty_open.
+				"command":     pyNullable(pySchemaString()),                     // Text to send; omitted when read_only.
+				"expect":      pyNullable(pySchemaString()),                     // Regex to wait for instead of the prompt sentinel.
+				"raw_send":    pyDefault(pySchemaBoolean(), false),              // Write without waiting for the prompt.
+				"read_only":   pyDefault(pySchemaBoolean(), false),              // Send nothing; drain the buffer.
+				"timeout_sec": pyDefault(pySchemaNumber(), json.Number("60.0")), // Max wait in seconds.
 			}, "session_id"),
 		},
 		{
-			Name: ToolTerminalPTYClose,
-			Description: "Terminate a PTY session. Always close sessions you are done with — leaked sessions " +
-				"count against the per-host PTY cap.",
-			Parameters: schemaObject(map[string]any{
-				"session_id": schemaString("From terminal_pty_open."),
-				"force":      schemaBoolean("Skip the graceful exit and SIGTERM/SIGKILL the shell."),
+			Name:        ToolTerminalPTYClose,
+			Description: TerminalPtyCloseDescription,
+			Parameters: pySchemaObject(map[string]any{
+				"session_id": pySchemaString(),                    // From terminal_pty_open.
+				"force":      pyDefault(pySchemaBoolean(), false), // Skip graceful exit and SIGTERM/SIGKILL the shell.
 			}, "session_id"),
 		},
 	}
 }
 
-// schemaObject builds one JSON-schema object; required stays absent when
-// every property is optional, matching pydantic's generated schema.
-func schemaObject(properties map[string]any, required ...string) map[string]any {
+// The pySchema* builders produce the JSON Schema shape the Python runtime
+// advertises for these tools: pydantic's output. Concretely:
+//
+//   - no per-property description (pydantic field descriptions are absent in
+//     the upstream terminal tools; the semantics live in the tool docstring's
+//     Args section, which stays model-visible via Description);
+//   - a nullable argument is anyOf: [<non-null schema>, {"type": "null"}]
+//     with "default": null, not a single node with type ["X","null"];
+//   - every argument with a declared default carries it, so a model sees the
+//     same optionality upstream does.
+//
+// The Go source keeps one trailing comment per property as the internal
+// documentation, so nothing is lost by dropping it from the wire.
+func pySchemaObject(properties map[string]any, required ...string) map[string]any {
 	schema := map[string]any{"type": "object", "properties": properties}
 	if len(required) > 0 {
 		schema["required"] = required
@@ -301,58 +208,33 @@ func schemaObject(properties map[string]any, required ...string) map[string]any 
 	return schema
 }
 
-func schemaString(description string) map[string]any {
-	return map[string]any{"type": "string", "description": description}
+func pySchemaString() map[string]any  { return map[string]any{"type": "string"} }
+func pySchemaInteger() map[string]any { return map[string]any{"type": "integer"} }
+func pySchemaNumber() map[string]any  { return map[string]any{"type": "number"} }
+func pySchemaBoolean() map[string]any { return map[string]any{"type": "boolean"} }
+
+func pySchemaStringMap() map[string]any {
+	return map[string]any{"additionalProperties": map[string]any{"type": "string"}, "type": "object"}
 }
 
-func schemaInteger(description string) map[string]any {
-	return map[string]any{"type": "integer", "description": description}
+func pySchemaIntMap() map[string]any {
+	return map[string]any{"additionalProperties": map[string]any{"type": "integer"}, "type": "object"}
 }
 
-func schemaNumber(description string) map[string]any {
-	return map[string]any{"type": "number", "description": description}
+func pySchemaStringList() map[string]any {
+	return map[string]any{"items": map[string]any{"type": "string"}, "type": "array"}
 }
 
-func schemaBoolean(description string) map[string]any {
-	return map[string]any{"type": "boolean", "description": description}
-}
-
-func schemaNullableString(description string) map[string]any {
-	return map[string]any{"type": []string{"string", "null"}, "description": description, "default": nil}
-}
-
-func schemaNullableInt(description string) map[string]any {
-	return map[string]any{"type": []string{"integer", "null"}, "description": description, "default": nil}
-}
-
-func schemaNullableStringMap(description string) map[string]any {
+// pyNullable wraps a non-null schema the way pydantic emits an Optional.
+func pyNullable(inner map[string]any) map[string]any {
 	return map[string]any{
-		"type":                 []string{"object", "null"},
-		"additionalProperties": map[string]any{"type": "string"},
-		"description":          description,
-		"default":              nil,
+		"anyOf":   []any{inner, map[string]any{"type": "null"}},
+		"default": nil,
 	}
 }
 
-func schemaNullableIntMap(description string) map[string]any {
-	return map[string]any{
-		"type":                 []string{"object", "null"},
-		"additionalProperties": map[string]any{"type": "integer"},
-		"description":          description,
-		"default":              nil,
-	}
-}
-
-func schemaNullableStringList(description string) map[string]any {
-	return map[string]any{
-		"type":        []string{"array", "null"},
-		"items":       map[string]any{"type": "string"},
-		"description": description,
-		"default":     nil,
-	}
-}
-
-func schemaDefault(schema map[string]any, value any) map[string]any {
+// pyDefault attaches a declared default to a non-null schema.
+func pyDefault(schema map[string]any, value any) map[string]any {
 	schema["default"] = value
 	return schema
 }

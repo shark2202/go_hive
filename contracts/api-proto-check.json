@@ -3,7 +3,7 @@
   "proto": "go_hive/contracts/api.proto",
   "messages": 41,
   "enums": 2,
-  "checked_fields": 953,
+  "checked_fields": 1281,
   "summary": {
     "errors": 0,
     "warnings": 0,
@@ -5575,22 +5575,6 @@
     {
       "side": "target",
       "endpoint": "credentials_specs",
-      "field": "specs[].tool_modules",
-      "json_type": "array",
-      "proto": "repeated string",
-      "status": "ok"
-    },
-    {
-      "side": "target",
-      "endpoint": "credentials_specs",
-      "field": "specs[].tool_modules[]",
-      "json_type": "string",
-      "proto": "repeated string",
-      "status": "ok"
-    },
-    {
-      "side": "target",
-      "endpoint": "credentials_specs",
       "field": "specs[].tools",
       "json_type": "array",
       "proto": "repeated string",
@@ -6238,9 +6222,2650 @@
     {
       "side": "target",
       "endpoint": "queen_tools",
+      "field": "lifecycle[].description",
+      "json_type": "string",
+      "proto": "string",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "lifecycle[].editable",
+      "json_type": "boolean",
+      "proto": "bool",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "lifecycle[].name",
+      "json_type": "string",
+      "proto": "string",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
       "field": "mcp_servers",
       "json_type": "array",
       "proto": "repeated McpServerSummary",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].name",
+      "json_type": "string",
+      "proto": "string",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools",
+      "json_type": "array",
+      "proto": "repeated McpToolSummary",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].description",
+      "json_type": "string",
+      "proto": "string",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].enabled",
+      "json_type": "boolean",
+      "proto": "bool",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.action",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.action.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.allow_fallback",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.allow_fallback.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.allow_fallback.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.auto_background_after_sec",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.auto_background_after_sec.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.auto_background_after_sec.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.cols",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.cols.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.cols.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.columns",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.columns.items",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.columns.items.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.columns.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.command",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.command.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.command.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.command.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.command.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.content",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.content.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.content.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.context",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.context.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.context.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.context.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.crm_principal",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.crm_principal.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.crm_principal.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.crm_principal.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.cwd",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.cwd.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.cwd.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.cwd.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.data",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.data.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.data.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.data.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.dpi",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.dpi.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.dpi.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.env",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.env.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.env.anyOf[].additionalProperties",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.env.anyOf[].additionalProperties.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.env.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.env.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.expect",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.expect.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.expect.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.expect.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.extra_args",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.extra_args.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.extra_args.anyOf[].items",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.extra_args.anyOf[].items.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.extra_args.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.extra_args.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.file_glob",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.file_glob.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.file_glob.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.file_glob.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.file_path",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.file_path.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.file_path.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.file_path.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.files",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.files.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.files.anyOf[].items",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.files.anyOf[].items.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.files.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.files.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.force",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.force.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.force.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.glob",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.glob.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.glob.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.glob.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.hashline",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.hashline.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.hashline.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.hashline.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.height",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.height.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.height.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.hidden",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.hidden.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.hidden.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.idle_timeout_sec",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.idle_timeout_sec.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.idle_timeout_sec.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.ignore_case",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.ignore_case.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.ignore_case.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.include_ignored",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.include_ignored.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.include_ignored.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.include_links",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.include_links.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.include_links.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.include_metadata",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.include_metadata.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.include_metadata.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.job_id",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.job_id.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.job_id.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.job_id.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.job_id.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.kind",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.kind.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limit",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limit.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limit.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limit.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limit.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limit.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limits",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limits.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limits.anyOf[].additionalProperties",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limits.anyOf[].additionalProperties.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limits.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.limits.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_bytes",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_bytes.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_bytes.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_bytes_mb",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_bytes_mb.default",
+      "json_type": "number(float)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_bytes_mb.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_count",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_count.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_count.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_count.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_depth",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_depth.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_depth.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_depth.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_kb",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_kb.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_kb.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_output_kb",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_output_kb.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_output_kb.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_pages",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_pages.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_pages.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_results",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_results.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.max_results.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.merge_stderr",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.merge_stderr.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.merge_stderr.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.mode",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.mode.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.mode.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.mode.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.model",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.model.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.model.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.n",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.n.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.n.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.name",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.name.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.name.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.name.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.new_string",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.new_string.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.new_string.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.new_string.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.no_ignore",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.no_ignore.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.no_ignore.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.offset",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.offset.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.offset.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.offset.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.old_string",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.old_string.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.old_string.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.old_string.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_format",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_format.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_format.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_handle",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_handle.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_mode",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_mode.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_mode.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_mode.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_path",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_path.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_path.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.output_path.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.pages",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.pages.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.pages.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.pages.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.password",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.password.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.password.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.password.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.patch_text",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.patch_text.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.patch_text.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.patch_text.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.path",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.path.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.path.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.path.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.paths",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.paths.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.paths.anyOf[].items",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.paths.anyOf[].items.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.paths.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.pattern",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.pattern.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.pattern.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.prompt",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.prompt.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.provider",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.provider.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.provider.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.quality",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.quality.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.quality.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.query",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.query.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.raw_send",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.raw_send.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.raw_send.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.read_only",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.read_only.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.read_only.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.reference_images",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.reference_images.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.reference_images.anyOf[].items",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.reference_images.anyOf[].items.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.reference_images.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.reference_images.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.replace_all",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.replace_all.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.replace_all.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.replace_all.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.respect_robots_txt",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.respect_robots_txt.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.respect_robots_txt.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.rows",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.rows.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.rows.items",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.rows.items.additionalProperties",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.rows.items.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.rows.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.selector",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.selector.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.selector.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.selector.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.session_cwd",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.session_cwd.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.session_cwd.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.session_cwd.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.session_id",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.session_id.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.shell",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.shell.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.shell.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.since_offset",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.since_offset.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.since_offset.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.size",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.size.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.size.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.spec",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.stdin",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.stdin.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.stdin.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.stdin.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.stream",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.stream.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.stream.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.tail",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.tail.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.tail.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.target",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.target.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.target.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.target.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.task_id",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.task_id.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.task_id.description",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.task_id.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.timeout_sec",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.timeout_sec.default",
+      "json_type": "number(float)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.timeout_sec.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.timezone",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.timezone.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.timezone.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.title",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.title.default",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.title.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.type_filter",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.type_filter.anyOf",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.type_filter.anyOf[].type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.type_filter.default",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.url",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.url.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.wait_timeout_sec",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.wait_timeout_sec.default",
+      "json_type": "number(float)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.wait_timeout_sec.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.wait_until_exit",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.wait_until_exit.default",
+      "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.wait_until_exit.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.width",
+      "json_type": "object",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.width.default",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.properties.width.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.required",
+      "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.required[]",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].input_schema.type",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].name",
+      "json_type": "string",
+      "proto": "string",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].provider",
+      "json_type": "null",
+      "proto": "optional string",
+      "status": "ok",
+      "note": "null (unset)"
+    },
+    {
+      "side": "target",
+      "endpoint": "queen_tools",
+      "field": "mcp_servers[].tools[].provider_connected",
+      "json_type": "boolean",
+      "proto": "bool",
       "status": "ok"
     },
     {

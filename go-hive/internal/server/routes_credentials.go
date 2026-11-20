@@ -30,7 +30,6 @@ type CredentialSpecView struct {
 	HelpURL               string
 	APIKeyInstructions    string
 	Tools                 []string
-	ToolModules           []string
 	AdenSupported         bool
 	DirectAPIKeySupported bool
 	CredentialKey         string
@@ -520,10 +519,6 @@ func (rt *CredentialRoutes) handleListSpecs(w http.ResponseWriter, r *http.Reque
 		if tools == nil {
 			tools = []string{}
 		}
-		toolModules := spec.ToolModules
-		if toolModules == nil {
-			toolModules = []string{}
-		}
 		rows = append(rows, map[string]any{
 			"credential_name":          spec.Name,
 			"credential_id":            credentialID,
@@ -532,7 +527,6 @@ func (rt *CredentialRoutes) handleListSpecs(w http.ResponseWriter, r *http.Reque
 			"help_url":                 spec.HelpURL,
 			"api_key_instructions":     spec.APIKeyInstructions,
 			"tools":                    tools,
-			"tool_modules":             toolModules,
 			"aden_supported":           spec.AdenSupported,
 			"direct_api_key_supported": spec.DirectAPIKeySupported,
 			"credential_key":           spec.CredentialKey,
@@ -550,7 +544,6 @@ func (rt *CredentialRoutes) handleListSpecs(w http.ResponseWriter, r *http.Reque
 			"help_url":                 "https://hive.adenhq.com/",
 			"api_key_instructions":     "1. Go to hive.adenhq.com\n2. Open Settings > Developers\n3. Copy your API key",
 			"tools":                    []string{},
-			"tool_modules":             []string{},
 			"aden_supported":           true,
 			"direct_api_key_supported": true,
 			"credential_key":           "api_key",

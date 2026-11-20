@@ -33,7 +33,7 @@ PY_ROOT   ?= ../../core
 OFFLINE    = CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod
 PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check ci clean help
 
 all: ci
 
@@ -122,6 +122,15 @@ tool-contract-check:
 tool-contract-report:
 	@test -f "$(TOOL_CONTRACT)" || (echo "tool-contract-report: $(TOOL_CONTRACT) missing（先运行 scripts/freeze_tool_contract.py build）"; exit 1)
 	$(OFFLINE) $(GO) test ./internal/cli -run TestToolContractFreeze -v
+
+# 扁平默认工具面（tool_surface_flat.json）与冻结契约的漂移检查：重新抽取
+# contracts/tool-definitions.json 的默认三层并与内嵌产物逐字比对。
+tool-surface-check:
+	@if command -v uv >/dev/null 2>&1; then \
+		cd .. && uv run --no-project python scripts/gen_tool_surface_flat.py --check; \
+	else \
+		echo "tool-surface-check: SKIP — uv 不可用"; \
+	fi
 
 # 接线守护：关键运行时调用点（内存注入、事件日志、会话工具安装）缺失即失败。
 # 纯 stdlib，无外网也能跑。

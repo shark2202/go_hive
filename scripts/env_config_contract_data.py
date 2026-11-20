@@ -80,14 +80,6 @@ CONFIG_KEYS: list[dict] = [
         "notes": "out-of-range / non-number -> 0.8; Python's isinstance(True, int) quirk (true -> 1.0) is replicated in Go.",
     },
     {
-        "path": "network_scanners", "type": "bool", "default": False, "env": "HIVE_NETWORK_SCANNERS",
-        "py": [],
-        "go": [{"file": "go_hive/go-hive/internal/server/config_features.go", "contains": "if value, ok := envFeatureFlag(\"HIVE_NETWORK_SCANNERS\"); ok {"},
-               {"file": "go_hive/go-hive/internal/server/config_features.go", "contains": "return boolConfigFlag(home, \"network_scanners\", false)"}],
-        "status": "go_only",
-        "notes": "Go extension: gates the four network-probing tools. Python has no same-named switch (its default tool surface differs).",
-    },
-    {
         "path": "created_at", "type": "string (ISO time)", "default": None, "env": None,
         "py": [{"file": "quickstart.sh", "contains": "config[\"created_at\"] = created_at"}],
         "go": [],
@@ -941,7 +933,7 @@ BOUNDARY_RULES: list[dict] = [
             {"file": "go_hive/go-hive/internal/server/config_features.go", "contains": "if value, ok := envFeatureFlag(\"HIVE_ADAPTIVE_TOOL_BUDGET\"); ok {"},
         ],
         "status": "aligned",
-        "notes": "Holds for adaptive_tool_budget, email_senders, stall_check, memory_timeline, network_scanners and every HIVE_RETENTION_<FIELD>.",
+        "notes": "Holds for adaptive_tool_budget, email_senders, stall_check, memory_timeline and every HIVE_RETENTION_<FIELD>.",
     },
     {
         "rule": "empty env string",
@@ -1057,6 +1049,5 @@ ENV_GO_PRODUCTION_ONLY = [
     ("HIVE_BROWSER_BRIDGE", "documented Go bridge on/off switch"),
     ("HIVE_BROWSER_VIEWPORT_SCALE", "injected into the bridge from gcu_viewport_scale"),
     ("HIVE_MCP2CLI", "native/external/auto mcp2cli selection (Go-only)"),
-    ("HIVE_NETWORK_SCANNERS", "operator opt-in for four scanning tools (Go-only)"),
     ("HIVE_SESSION_COST_LIMIT_USD", "per-session cost ceiling (Go-only)"),
 ]

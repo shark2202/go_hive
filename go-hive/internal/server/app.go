@@ -78,6 +78,13 @@ type AppDeps struct {
 	// /api/queen-mail routes share one instance (limits, tokens, return
 	// addresses). Nil builds one here for tests and embedded servers.
 	QueenMail *QueenMailAdapter
+	// QueenToolCatalog / QueenLifecycleTools feed GET /api/queen/{id}/tools.
+	// The loader owns the per-session tool catalogue; these hooks project it
+	// (or the process-wide Tool Library catalog when no session is live) into
+	// the route's snapshot shape. Nil leaves the route reporting an empty,
+	// stale catalog rather than inventing tools.
+	QueenToolCatalog    func(queenID string, session *Session) map[string][]map[string]any
+	QueenLifecycleTools func(queenID string, session *Session) []map[string]any
 }
 
 type App struct {
@@ -239,6 +246,11 @@ func NewApp(deps AppDeps) *App {
 	RegisterQueenToolRoutes(mux, QueenToolRouteDeps{
 		Home:    deps.Home,
 		Manager: deps.Manager,
+		// The catalogue hook owns what the Tool Library sees: a live session's
+		// registry when one exists, else the process-wide harness catalog the
+		// loader built at boot (the same surface the queen sees).
+		MCPCatalog:     deps.QueenToolCatalog,
+		LifecycleTools: deps.QueenLifecycleTools,
 		// A live session's MCP tier is rebuilt when the Tool Library saves a
 		// new allowlist; a session with no phase state or no MCP tools
 		// reports no refresh instead of a fabricated count.

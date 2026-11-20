@@ -1,27 +1,27 @@
 {
   "schema": "hive-api-contract-diff/1",
-  "generated_at": "2026-11-20T23:43:50+08:00",
+  "generated_at": "2026-11-21T00:58:55+08:00",
   "direction": "reference(python) -> target(go_hive)",
-  "reference_id": "python@1b9c458a19244379ac65dabd4827addb891045ef",
-  "target_id": "go_hive@1b9c458a19244379ac65dabd4827addb891045ef",
+  "reference_id": "python@445494a3033c3036eaea044505b838d101257b56",
+  "target_id": "go_hive@445494a3033c3036eaea044505b838d101257b56",
   "reference": {
     "implementation": "python",
     "version": "hive 1.0.14",
-    "commit": "1b9c458a19244379ac65dabd4827addb891045ef",
+    "commit": "445494a3033c3036eaea044505b838d101257b56",
     "last_core_commit": "a756b1e51765bc75b0a40e362859452a0a54081b",
     "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd"
   },
   "target": {
     "implementation": "go_hive",
     "version": "hive 1.0.26-go.1",
-    "commit": "1b9c458a19244379ac65dabd4827addb891045ef"
+    "commit": "445494a3033c3036eaea044505b838d101257b56"
   },
   "probe": {
     "queen_id": "queen_growth",
     "llm": {
       "provider": "openai",
       "model": "contract-probe-model",
-      "api_base": "http://127.0.0.1:54335/v1",
+      "api_base": "http://127.0.0.1:59422/v1",
       "key_env": "HIVE_CONTRACT_PROBE_KEY",
       "note": "local OpenAI-compatible stub; deterministic kickoff turn, no vendor call, no network"
     },
@@ -29,13 +29,13 @@
   },
   "totals": {
     "endpoints": 14,
-    "pass": 7,
-    "fail": 7,
-    "missing_in_target": 4,
-    "extra_in_target": 2,
-    "type_mismatch": 7,
-    "count_mismatch": 9,
-    "semantic_failures": 7
+    "pass": 14,
+    "fail": 0,
+    "missing_in_target": 0,
+    "extra_in_target": 0,
+    "type_mismatch": 0,
+    "count_mismatch": 0,
+    "semantic_failures": 0
   },
   "endpoints": [
     {
@@ -97,37 +97,12 @@
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
       "target_content_type": "application/json",
-      "verdict": "FAIL",
-      "diff_count": 4,
+      "verdict": "PASS",
+      "diff_count": 0,
       "missing_in_target": [],
       "extra_in_target": [],
       "type_mismatch": [],
-      "count_mismatch": [
-        {
-          "field": "enabled_mcp_tools",
-          "proto": "repeated string",
-          "reference_type": "array[25]",
-          "target_type": "array[24]",
-          "json_normalizable": "no",
-          "note": "element count differs; only the element type is proto-verifiable"
-        },
-        {
-          "field": "lifecycle",
-          "proto": "repeated ToolSummary",
-          "reference_type": "array[16]",
-          "target_type": "array[0]",
-          "json_normalizable": "no",
-          "note": "element count differs; only the element type is proto-verifiable"
-        },
-        {
-          "field": "mcp_servers",
-          "proto": "repeated McpServerSummary",
-          "reference_type": "array[4]",
-          "target_type": "array[0]",
-          "json_normalizable": "no",
-          "note": "element count differs; only the element type is proto-verifiable"
-        }
-      ],
+      "count_mismatch": [],
       "semantic": [
         {
           "check": "queen_id equal",
@@ -136,8 +111,8 @@
         },
         {
           "check": "mcp server set equal",
-          "ok": false,
-          "detail": "reference=['chart-tools', 'files-tools', 'hive_tools', 'terminal-tools'] target=[]"
+          "ok": true,
+          "detail": "reference=['chart-tools', 'files-tools', 'hive_tools', 'terminal-tools'] target=['chart-tools', 'files-tools', 'hive_tools', 'terminal-tools']"
         }
       ],
       "notes": []
@@ -151,26 +126,17 @@
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
       "target_content_type": "application/json",
-      "verdict": "FAIL",
-      "diff_count": 2,
+      "verdict": "PASS",
+      "diff_count": 0,
       "missing_in_target": [],
       "extra_in_target": [],
       "type_mismatch": [],
-      "count_mismatch": [
-        {
-          "field": "skills",
-          "proto": "repeated SkillSummary",
-          "reference_type": "array[195]",
-          "target_type": "array[194]",
-          "json_normalizable": "no",
-          "note": "element count differs; only the element type is proto-verifiable"
-        }
-      ],
+      "count_mismatch": [],
       "semantic": [
         {
           "check": "skill name set equal",
-          "ok": false,
-          "detail": "reference=195 target=194 missing=['ego-browser'] extra=[]"
+          "ok": true,
+          "detail": "reference=195 target=195 missing=[] extra=[]"
         }
       ],
       "notes": []
@@ -247,43 +213,17 @@
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
       "target_content_type": "application/json",
-      "verdict": "FAIL",
-      "diff_count": 4,
+      "verdict": "PASS",
+      "diff_count": 0,
       "missing_in_target": [],
-      "extra_in_target": [
-        {
-          "field": "specs[].tool_modules",
-          "proto": "repeated string",
-          "reference_type": "absent",
-          "target_type": "array",
-          "json_normalizable": "yes",
-          "note": "target extension: additive field; drop it when projecting onto the reference contract"
-        },
-        {
-          "field": "specs[].tool_modules[]",
-          "proto": "repeated string",
-          "reference_type": "absent",
-          "target_type": "string",
-          "json_normalizable": "yes",
-          "note": "target extension: additive field; not part of the reference contract"
-        }
-      ],
+      "extra_in_target": [],
       "type_mismatch": [],
-      "count_mismatch": [
-        {
-          "field": "specs",
-          "proto": "repeated CredentialSpec",
-          "reference_type": "array[115]",
-          "target_type": "array[123]",
-          "json_normalizable": "no",
-          "note": "element count differs; only the element type is proto-verifiable"
-        }
-      ],
+      "count_mismatch": [],
       "semantic": [
         {
           "check": "credential_id set equal",
-          "ok": false,
-          "detail": "reference=115 target=123 missing=[] extra=['hive', 'kimi', 'minimax', 'openai', 'x_access_token', 'x_access_token_secret']"
+          "ok": true,
+          "detail": "reference=115 target=115 missing=[] extra=[]"
         }
       ],
       "notes": []
@@ -379,54 +319,12 @@
       "target_status": 200,
       "reference_content_type": "text/event-stream",
       "target_content_type": "text/event-stream",
-      "verdict": "FAIL",
-      "diff_count": 7,
+      "verdict": "PASS",
+      "diff_count": 0,
       "missing_in_target": [],
       "extra_in_target": [],
-      "type_mismatch": [
-        {
-          "field": "frames[].envelope.execution_id",
-          "proto": "optional string",
-          "reference_type": "string",
-          "target_type": "null",
-          "json_normalizable": "no",
-          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
-        },
-        {
-          "field": "frames[].event",
-          "proto": "optional string",
-          "reference_type": "null",
-          "target_type": "string",
-          "json_normalizable": "no",
-          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
-        }
-      ],
-      "count_mismatch": [
-        {
-          "field": "event_names",
-          "proto": "repeated string",
-          "reference_type": "array[0]",
-          "target_type": "array[1]",
-          "json_normalizable": "no",
-          "note": "element count differs; only the element type is proto-verifiable"
-        },
-        {
-          "field": "frames",
-          "proto": "repeated SseFrame",
-          "reference_type": "array[4]",
-          "target_type": "array[1]",
-          "json_normalizable": "no",
-          "note": "element count differs; only the element type is proto-verifiable"
-        },
-        {
-          "field": "payload_types",
-          "proto": "repeated string",
-          "reference_type": "array[4]",
-          "target_type": "array[1]",
-          "json_normalizable": "no",
-          "note": "element count differs; only the element type is proto-verifiable"
-        }
-      ],
+      "type_mismatch": [],
+      "count_mismatch": [],
       "semantic": [
         {
           "check": "content type is event-stream",
@@ -435,13 +333,13 @@
         },
         {
           "check": "payload type set equal",
-          "ok": false,
-          "detail": "reference=['client_input_requested', 'client_output_delta', 'llm_turn_complete', 'session_snapshot'] target=['session_snapshot']"
+          "ok": true,
+          "detail": "reference=['client_input_requested', 'client_output_delta', 'llm_turn_complete', 'session_snapshot'] target=['client_input_requested', 'client_output_delta', 'llm_turn_complete', 'session_snapshot']"
         },
         {
           "check": "SSE event: name presence equal",
-          "ok": false,
-          "detail": "reference=[] target=['session_snapshot']"
+          "ok": true,
+          "detail": "reference=[] target=[]"
         },
         {
           "check": "data keys equal for common frame types",
@@ -462,40 +360,22 @@
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
       "target_content_type": "application/json",
-      "verdict": "FAIL",
-      "diff_count": 4,
+      "verdict": "PASS",
+      "diff_count": 0,
       "missing_in_target": [],
       "extra_in_target": [],
-      "type_mismatch": [
-        {
-          "field": "events[].execution_id",
-          "proto": "optional string",
-          "reference_type": "string",
-          "target_type": "null",
-          "json_normalizable": "no",
-          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
-        }
-      ],
-      "count_mismatch": [
-        {
-          "field": "events",
-          "proto": "repeated EventEnvelope",
-          "reference_type": "array[9]",
-          "target_type": "array[5]",
-          "json_normalizable": "no",
-          "note": "element count differs; only the element type is proto-verifiable"
-        }
-      ],
+      "type_mismatch": [],
+      "count_mismatch": [],
       "semantic": [
         {
           "check": "event type sequence equal",
-          "ok": false,
-          "detail": "reference=['queen_identity_selected', 'reminder_injected', 'node_loop_started', 'node_loop_iteration', 'context_usage_updated', 'client_output_delta', 'llm_turn_complete', 'client_input_requested', 'loop_state_changed'] target=['queen_identity_selected', 'reminder_injected', 'node_loop_started', 'node_loop_iteration', 'context_usage_updated']"
+          "ok": true,
+          "detail": "reference=['queen_identity_selected', 'reminder_injected', 'node_loop_started', 'node_loop_iteration', 'context_usage_updated', 'client_output_delta', 'llm_turn_complete', 'client_input_requested', 'loop_state_changed'] target=['queen_identity_selected', 'reminder_injected', 'node_loop_started', 'node_loop_iteration', 'context_usage_updated', 'client_output_delta', 'llm_turn_complete', 'client_input_requested', 'loop_state_changed']"
         },
         {
           "check": "total equal",
-          "ok": false,
-          "detail": "reference=9 target=5"
+          "ok": true,
+          "detail": "reference=9 target=9"
         },
         {
           "check": "data keys equal for common event types",
@@ -516,44 +396,11 @@
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
       "target_content_type": "application/json",
-      "verdict": "FAIL",
-      "diff_count": 4,
+      "verdict": "PASS",
+      "diff_count": 0,
       "missing_in_target": [],
       "extra_in_target": [],
-      "type_mismatch": [
-        {
-          "field": "activity",
-          "proto": "optional string",
-          "reference_type": "string",
-          "target_type": "null",
-          "json_normalizable": "no",
-          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
-        },
-        {
-          "field": "last_event_seq",
-          "proto": "optional int64",
-          "reference_type": "number(float)",
-          "target_type": "null",
-          "json_normalizable": "no",
-          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
-        },
-        {
-          "field": "park_reason",
-          "proto": "optional string",
-          "reference_type": "string",
-          "target_type": "null",
-          "json_normalizable": "no",
-          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
-        },
-        {
-          "field": "queen_busy_reason",
-          "proto": "optional string",
-          "reference_type": "string",
-          "target_type": "null",
-          "json_normalizable": "no",
-          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
-        }
-      ],
+      "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
         {
@@ -573,42 +420,9 @@
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
       "target_content_type": "application/json",
-      "verdict": "FAIL",
-      "diff_count": 4,
-      "missing_in_target": [
-        {
-          "field": "event_bus.events_by_type.client_input_requested",
-          "proto": "map<string, int64>",
-          "reference_type": "number(int)",
-          "target_type": "absent",
-          "json_normalizable": "yes (presence)",
-          "note": "reference emits a field the target omits; proto optional captures absence, not a value"
-        },
-        {
-          "field": "event_bus.events_by_type.client_output_delta",
-          "proto": "map<string, int64>",
-          "reference_type": "number(int)",
-          "target_type": "absent",
-          "json_normalizable": "yes (presence)",
-          "note": "reference emits a field the target omits; proto optional captures absence, not a value"
-        },
-        {
-          "field": "event_bus.events_by_type.llm_turn_complete",
-          "proto": "map<string, int64>",
-          "reference_type": "number(int)",
-          "target_type": "absent",
-          "json_normalizable": "yes (presence)",
-          "note": "reference emits a field the target omits; proto optional captures absence, not a value"
-        },
-        {
-          "field": "event_bus.events_by_type.loop_state_changed",
-          "proto": "map<string, int64>",
-          "reference_type": "number(int)",
-          "target_type": "absent",
-          "json_normalizable": "yes (presence)",
-          "note": "reference emits a field the target omits; proto optional captures absence, not a value"
-        }
-      ],
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
       "extra_in_target": [],
       "type_mismatch": [],
       "count_mismatch": [],
@@ -629,9 +443,7 @@
           "detail": "reference=9 target=1"
         }
       ],
-      "notes": [
-        "event_bus.events_by_type 是 map<string, int64>：键名即事件类型，缺失的键等价于 target 少发对应事件类型。"
-      ]
+      "notes": []
     }
   ],
   "non_verbatim": [

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Browser Bridge 外观审计 — Python Hive ⇄ go_hive</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:900px){.g3,.g4{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3,.g4,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.card.ok .v{color:var(--ok)} .card.warn .v{color:var(--warn)} .card.bad .v{color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px} .missing{color:#f2a3a3}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:900px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Browser Bridge · Surface Audit</div><h1>Browser Bridge <span>外观审计</span> — Python Hive ⇄ go_hive</h1>
+<p class="lede">先定义「外观」再逐维核对：只看模型、用户和外部进程能观察到的契约——工具面、协议、HTTP/RPC、CLI、通知、返回形状、错误与退出码、生命周期、安全边界与文档口径；不看内部实现细节。结论按维度给出，<b>不允许用「整体已对齐」覆盖输出与 CLI 差异</b>。</p>
+<div class="meta"><span>生成：<b>2026-11-21 00:45 CST</b></span><span>基线：<b>main dab983d4</b>（工作树 <code>browser-surface-audit</code>）</span><span>扩展：<b>1.7.4 · protocol 6</b></span><span>对照：<b>Python</b> <code>tools/src/gcu</code> + <code>core/framework</code> · <b>Go</b> <code>go_hive/browserbridge</code> + <code>go-hive</code></span></div>
+<div class="toc"><a href="#scope">范围与判定</a><a href="#overview">总览</a><a href="#dims">13 维逐项</a><a href="#residual">残差</a><a href="#repro">复现</a><a href="#verdict">结论</a></div></header>
+
+<section id="scope"><h2><span class="num">00</span>「外观」的范围与判定口径</h2>
+<p>这里把「外观」定义为：<b>一个实现对外承诺、且调用方可以观察或依赖的全部契约</b>。它不等于内部架构，也不是 UI 像素；判定以「同一条输入在两边是否产生同一种可观察结果」为准。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:6%">#</th><th style="width:22%">维度</th><th style="width:40%">范围（本次核对什么）</th><th>判定口径</th></tr></thead><tbody>
+<tr><td>01</td><td>模型可见工具面</td><td>运行时注册给 LLM 的 browser 工具名、schema、描述、payload</td><td>名字/参数/描述/返回承诺是否同一套</td></tr>
+<tr><td>02</td><td>Bridge 22 active 工具定义</td><td>上游 33 个 <code>@mcp.tool</code> 中注册的 22 个：name、参数、描述、语义</td><td>22 个名字是否都有实现；参数与关键语义是否等价</td></tr>
+<tr><td>03</td><td>WS 扩展协议</td><td>URL/path、hello、protocol 版本、帧类型、心跳、同 label 顶替</td><td>扩展无需改动即可连两边</td></tr>
+<tr><td>04</td><td>HTTP 14830 API</td><td><code>/health</code> <code>/status</code> <code>/profiles</code> <code>/command</code> <code>/contexts</code> <code>/tabs</code> <code>/contexts/close</code> 等全部路由与字段</td><td>路由集合、状态码、JSON 字段形状</td></tr>
+<tr><td>05</td><td>control RPC 14831</td><td>46 方法白名单、<code>client_hello</code>、notify、帧形状、reaper</td><td>旧 CLI/工具进程不改即可连</td></tr>
+<tr><td>06</td><td>CLI <code>hive-browser</code></td><td>命令树、参数位置、退出码、<code>--json</code> 输出</td><td>agent 脚本按同一契约执行</td></tr>
+<tr><td>07</td><td>通知与面板</td><td>adopt/release notify、serve 注入、<code>/api/browser</code> 路由</td><td>同一次接管在两边产生同一条消息/同一份面板数据</td></tr>
+<tr><td>08</td><td>返回契约</td><td>MCP content blocks vs Go JSON、截图/快照/artifact/refs</td><td>模型实际拿到什么（图、文件指针、ref）</td></tr>
+<tr><td>09</td><td>错误与超时语义</td><td>错误码、HTTP 状态、默认超时、退出码分类</td><td>同一失败在两边同一类、同一码</td></tr>
+<tr><td>10</td><td>生命周期</td><td>父进程监视、空闲退出、supervisor、CLI ensure</td><td>父死/空闲时两边行为可预期且可解释</td></tr>
+<tr><td>11</td><td>安全边界</td><td>loopback、多 profile、CDP 隔离、鉴权</td><td>攻击面与隔离单位一致</td></tr>
+<tr><td>12</td><td>真实 Chrome 验证</td><td>是否有脚本化真机证据、覆盖到哪些面</td><td>证据可复现、非 fake-extension</td></tr>
+<tr><td>13</td><td>文档口径</td><td>三份文档对两边行为的描述</td><td>文档不与代码/实测冲突</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>不在本次范围：</b>bridge 内部数据结构、锁粒度实现（除非影响可观察并发语义）、UI 像素、性能基准、Windows/Linux 行为。真实 Chrome 19 步 E2E <b>不重跑</b>，引用既有证据；只对其覆盖不到或证据缺失的维度做本地实测。</div>
+</section>
+
+<section id="overview"><h2><span class="num">01</span>总览</h2>
+<div class="grid g4" style="margin:14px 0">
+<div class="card"><div class="k">维度</div><div class="v">13</div><div class="d">模型面 1 · 协议 3 · CLI/通知 2 · 契约/语义 4 · 安全/证据/文档 3</div></div>
+<div class="card ok"><div class="k">可宣布对齐</div><div class="v">2</div><div class="d">模型可见工具面 · control RPC 14831</div></div>
+<div class="card warn"><div class="k">部分对齐</div><div class="v">10</div><div class="d">名字/主路径在，形状、边界或证据有缺口</div></div>
+<div class="card bad"><div class="k">未对齐</div><div class="v">1</div><div class="d">返回契约（截图/快照/artifact/refs）</div></div>
+</div>
+<div class="grid g3" style="margin:14px 0">
+<div class="card"><div class="k">工具名覆盖</div><div class="v">22 / 22</div><div class="d">22 个 active 工具名在 Go 全部有 handler；Go 另有 5 个 legacy 类命令，合计 27 canonical commands。</div></div>
+<div class="card"><div class="k">control RPC</div><div class="v">46 / 46</div><div class="d">白名单、帧形状、<code>client_hello</code>、notify、reaper 均对齐；证据为本模块 <code>go test -race</code> 与上游对照。</div></div>
+<div class="card bad"><div class="k">模型实际拿到的截图</div><div class="v">raw base64</div><div class="d">Go 不做 800px/JPEG/注解/落盘，也不产生 <code>_image</code> 标记；Python 是 800px JPEG + <code>saved_to</code> + 下一轮自动挂图。</div></div>
+</div>
+<p class="sub">判定统计：<span class="pill ok">已对齐 2</span> <span class="pill warn">部分对齐 10</span> <span class="pill bad">未对齐 1</span> <span class="pill info">未验证 0</span>。共 14 条残差（R01–R14），其中 3 条高、3 条中高、5 条中、3 条低。</p>
+</section>
+
+<section id="dims"><h2><span class="num">02</span>13 维逐项核对</h2>
+<p class="sub">「Python 参考」= 当前工作树 <code>tools/src/gcu</code> + <code>core/framework</code> 的代码事实；「Go 当前」= <code>go_hive/browserbridge</code> + <code>go-hive</code> 的代码与实测。证据给到文件:行，实测命令统一放在 §03。</p>
+
+<h3>2.1 模型可见工具面 <span class="pill ok">已对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:30%">Python 参考行为</th><th style="width:28%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
+<tr><td>注册的工具</td><td>只有 <code>browser_setup</code>（无参数、只读、queen/worker 同一套）：<code>core/framework/tools/browser_tools.py:83-95</code>；22 个 <code>browser_*</code> MCP 工具已从 Hive 退役（同文件 1-16 行注释；<code>queen_tools_defaults.py:243</code>）。</td><td>同样只有 <code>browser_setup</code>：<code>go-hive/internal/tools/integrations/browser_setup.go:81-88</code>，由 <code>internal/cli/session_tools.go:267</code> 安装；<code>grep 'Name: "browser_'</code> 在 go-hive 无其它命中。</td><td><code>grep -rn 'browser_setup' go_hive/go-hive --include=*.go</code>；两边的 name/schema/description 字符串逐字一致。</td></tr>
+<tr><td>payload</td><td><code>{ok,cli,how,first_step,commands,coordinates,screenshots,exit_codes}</code>（<code>browser_tools.py:58-78</code>）。</td><td>同 8 个字段（<code>browser_setup.go:92-111</code>）。</td><td>字段与文案一致。<b>但</b> <code>screenshots</code> 文案承诺的 <code>saved_to</code> + 自动挂载在 Go 不成立（见 D08 / R12）。</td></tr>
+<tr><td>退役口径</td><td>Hive 运行时不再挂 gcu MCP；gcu 包仍可独立注册 22 个 active 工具（<code>tools/src/gcu/server.py:337</code>）。</td><td>Go 从来没有 MCP 工具层；22 个名字只作为 bridge command / CLI 动词存在。</td><td>所以「22 个工具」在两边都不是模型面；模型面比较只到 <code>browser_setup</code> 这一层。</td></tr>
+</tbody></table></div>
+
+<h3>2.2 Bridge 22 active 工具定义（name/参数/描述） <span class="pill warn">部分对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:32%">Python 参考行为</th><th style="width:28%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
+<tr><td>数量与名字</td><td>33 个定义；22 个 active（lifecycle 3 / tabs 4 / navigation 2 / inspection 5 / interact 2 / advanced 5 / script 1）；11 个 legacy 在 <code>interactions.py</code>，未被 <code>register_tools()</code> 导入。</td><td>27 个 canonical commands：22 个 active 全覆盖 + 5 个 legacy 类（<code>click</code>/<code>type</code>/<code>type_focused</code>/<code>press</code>/<code>scroll</code>）。</td><td>脚本核对：<code>python active=22</code>、<code>active missing in go=[]</code>；<code>canonicalCommands</code> 见 <code>commands.go:61-70</code>。PARITY §1 行 20 把 <code>browser_type_focused</code> 标成 active，实际它在 <code>interactions.py</code>（legacy）——文档笔误，不影响实现。</td></tr>
+<tr><td>参数</td><td>22 个工具的完整签名（<code>PARITY.md:248-303</code>）。<code>browser_close(tab_id=None)</code>、<code>browser_navigate(tab_id=None)</code>、<code>browser_reload(tab_id=None)</code> 可省略 tab；<code>browser_tabs</code> 返回 <code>activeTabId</code>；<code>browser_open/navigate</code> 带 group 摘要。</td><td><code>browser_close</code>/<code>browser_navigate</code>/<code>browser_reload</code> 强制 <code>tab_id</code>（错误文本明说 active-tab 未移植）；<code>browser_tabs</code> 固定 <code>activeTabId:null</code>；<code>browser_open/navigate</code> 无 group 摘要字段。</td><td><code>commands_tools.go:112-125</code>（close）、<code>:142-150</code>（navigate）、<code>:340-352</code>（reload）、<code>:14-33</code>（tabs）。</td></tr>
+<tr><td>描述</td><td>每个工具都有 <code>*_DOC</code> / <code>*_PARAMS</code> 文案，是模型看到的 schema 描述。</td><td>没有 tool schema 层；对外的描述只有 CLI help（<code>hive-browser help &lt;cmd&gt;</code>）。</td><td>「描述」这一列在 Go 侧不可比；CLI help 覆盖了命令用途，但没有参数级 JSON schema。</td></tr>
+<tr><td>语义</td><td><code>browser_interact</code> 13 个 action；坐标是 0..1 视口分数；自动快照 <code>default/simple/interactive/off</code>。</td><td>13 个 action 全部实现；参数相关性守卫、分数坐标、修饰键、HTML5 drag、zoom crop、auto-snapshot 均在。</td><td>语义主路径对齐；返回形状见 D08。PARITY §1 行 15 与真实 Chrome 19 步证据一致。</td></tr>
+</tbody></table></div>
+
+<h3>2.3 WS 扩展协议（URL / handshake / protocol 版本 / 帧类型 / 心跳） <span class="pill warn">部分对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:30%">Python 参考行为</th><th style="width:28%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
+<tr><td>URL / 端口</td><td><code>ws://127.0.0.1:14829/bridge</code>；legacy <code>9229</code>；错误路径 404。</td><td>同 URL/path；legacy 9229 默认启用、可空串禁用。</td><td><code>bridge.py:53,963-1031</code>；<code>bridge.go:20-35,257-330</code>。</td></tr>
+<tr><td>hello</td><td><code>{type:"hello", version, protocolVersion, extensionId, profileLabel}</code>；缺 label 时 protocol&lt;5 用 <code>default</code>，否则 <code>profile-&lt;id8&gt;</code>；同 label 顶替旧连接，close <b>4002</b>。</td><td>字段与 fallback 同；同 label 顶替 close 4002；旧 pending 以 <code>connection_lost</code> 失败。</td><td><code>bridge.py:1653-1680</code>；<code>bridge.go:506-598</code>。逐字一致。</td></tr>
+<tr><td>protocol 版本</td><td>最低 1（<code>_MIN_EXTENSION_PROTOCOL_VERSION</code>），扩展当前 6（<code>background.js:76</code>）。</td><td>最低 1（<code>minProtocolVersion</code>）。</td><td>低于最低只告警、不拒绝——两边一致。</td></tr>
+<tr><td>帧</td><td>请求 <code>{id,type,...params}</code> → <code>{id,result|error}</code>；事件 <code>cdp_event</code>/<code>tab_event</code>/<code>tab_group_event</code>；应用层 ping/pong。</td><td>同；事件消费进 health/viewport/console/dialog 缓存。</td><td><code>bridge.go:500-555</code>；<code>events_consume.go</code>；真实 Chrome 19 步已覆盖。</td></tr>
+<tr><td>心跳</td><td>应用层 5s 发 ping / 12s 超时；<b>WS 层 20s ping / 20s timeout</b>。</td><td>应用层 5s/12s；<b>不跑 WS 层 ping ticker</b>（PARITY §3 #8 已记）。</td><td><code>bridge.py:75-78,991-996</code>；<code>bridge.go:31-33</code>；<code>connection.go:89-105</code>。</td></tr>
+<tr><td>帧上限</td><td><code>max_size=50 MiB</code>（AX 树/截图）。</td><td>默认 <b>16 MiB</b>，可配置。</td><td><code>bridge.py:990</code>；<code>bridge.go:126-127</code>；<code>ws/ws.go:37</code>。<b>未在 19 步 E2E 覆盖</b>：大 AX 树/整页截图可能先撞 16 MiB 上限。</td></tr>
+<tr><td>扩展源码</td><td><code>tools/browser-extension/</code>，1.7.4 / protocol 6。</td><td><code>go_hive/browserbridge/extension/</code> 逐字节复制（仅多 LICENSE / SOURCE.md）。</td><td><code>diff -rq</code> 只报这两个文件；<code>SOURCE.md</code> 记录来源与日期。</td></tr>
+</tbody></table></div>
+
+<h3>2.4 HTTP 14830 API <span class="pill warn">部分对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:30%">Python 参考行为</th><th style="width:28%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
+<tr><td>路由集合</td><td>GET <code>/status</code> <code>/profiles</code> <code>/contexts</code> <code>/tabs/{id}/health</code> <code>/tabs/{id}/actions</code>；POST <code>/profiles/default</code> <code>/contexts/{profile}/adopt-tab</code> <code>/tabs/{id}/reveal</code> <code>/tabs/{id}/release</code> <code>/shutdown</code>；OPTIONS。<b>没有</b> <code>/health</code>、<code>/command</code>、<code>/tabs</code>、<code>/contexts/close</code>。</td><td>Python 的 10 条全有，<b>另加</b> <code>GET /health</code>、<code>POST /command</code>、<code>GET /tabs</code>、<code>POST /contexts/close</code>；HTTP 层 <code>localOnly</code> 拒绝非 loopback 对端。</td><td><code>bridge.py:1284-1618</code>；<code>httpapi.go:14-186</code>。<b>Go 是超集</b>：这 4 条是 additive，不是缺失。browser-bridge.html 把 <code>/health</code>、<code>/command</code> 写成两边的公共 API，是文档口径问题（D13）。</td></tr>
+<tr><td><code>/status</code> 形状</td><td><code>bridge,port,connected,connections[],uptime_ms,bridge_version,runtime_version,system_blocker,runtime_alive,listening,control_rpc_clients,bind_errors</code>；connections 每项 8 字段。</td><td>核心字段同名；<b>多</b> <code>tabs</code>、<code>tabs_total</code>、<code>profiles</code>、<code>capabilities</code>、<code>viewport_scale</code>，connections 多 <code>tabs</code>；<b>缺</b> <code>bridge_version</code>、<code>runtime_version</code>、<code>bind_errors</code>。</td><td><code>bridge.py:1214-1280</code>；<code>status.go:28-51</code>；实测 14830 返回见 §03。缺的三个字段是 side panel 的连接栏文案来源，Go 下会渲染空值。</td></tr>
+<tr><td><code>/profiles</code></td><td><code>{ok,profiles:[{label,extension_id,version,protocol_version,connected_since_ms,is_default,starred}]}</code>。</td><td>同字段 + <code>tabs</code> 计数。</td><td><code>bridge.py:1329-1353</code>；<code>status.go:165-186</code>。additive，兼容。</td></tr>
+<tr><td>legacy 9230</td><td>桥同时监听 9229（WS）与 <b>9230</b>（HTTP status）。</td><td><b>只监听 9229 WS，没有 9230</b>。</td><td><code>bridge.py:1029-1031</code>；<code>bridge.go:317-330</code>。这直接导致 Go server 的 <code>/api/browser/status</code> 默认探针落空（见 D07 / R03）。</td></tr>
+<tr><td><code>/command</code></td><td>不存在。</td><td>接受 27 个 <code>browser_*</code> 命令 + 13 个 bridge 控制命令（<code>create_context</code> … <code>list_pending_dialogs</code>）。</td><td><code>commands.go:61-70</code>；<code>commands_control.go:12-26</code>。Go CLI 的传输层；Python CLI 走 14831 RPC。</td></tr>
+</tbody></table></div>
+
+<h3>2.5 control RPC 14831（46 方法 / client_hello / notify） <span class="pill ok">已对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:32%">Python 参考行为</th><th style="width:30%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
+<tr><td>端口与帧</td><td><code>BRIDGE_PORT+2 = 14831</code>；请求 <code>{rpc_id,method,args,params}</code>；响应 <code>{rpc_id,ok,result|error}</code>；notify <code>{type:"notify",profile,text,...extra}</code>。</td><td>同端口、同请求/响应/notify 帧；每请求一个 goroutine，慢调用不阻塞。</td><td><code>bridge_rpc.py:68,105-180,311-340</code>；<code>control.go:6-18,389-420</code>。</td></tr>
+<tr><td>白名单</td><td>46 个名字（含 <code>client_hello</code>、<code>subscribe_notifications</code>），非反射。</td><td>同一 46 名单；未知方法 <code>unknown_method</code>。</td><td><code>TestRPCAllowlistCoversDispatch</code> 断言 46 条且每条都有 dispatcher；<code>PARITY.md:376-388</code>。</td></tr>
+<tr><td>身份与回收</td><td><code>client_hello(pid)</code> 登记 owner；30s identify grace；10s reaper；<code>active_client_count</code>。</td><td>同；<code>status_payload</code> 暴露 <code>control_rpc_clients</code>/<code>runtime_alive</code>；zombie reaper 同样 10s。</td><td><code>control_test.go</code> 的 hello/notify/并发/reaper 用例；<code>PARITY.md:447-469</code>。</td></tr>
+<tr><td>差异</td><td colspan="3">未发现形状差异。唯一保留：本次没有用旧版 Python CLI 对 Go 14831 做交叉连接实测；证据是 Go 单测 + 上游源码对照。</td></tr>
+</tbody></table></div>
+
+<h3>2.6 CLI <code>hive-browser</code>（命令 / 参数 / 退出码 / 输出） <span class="pill warn">部分对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:30%">Python 参考行为</th><th style="width:30%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
+<tr><td>命令树</td><td>16 个顶层命令：help/setup/status/stop/open/navigate/reload/interact/select/upload/screenshot/evaluate/script/tab/page/dialog。</td><td>21 个顶层命令：Python 的 16 个 + <code>click</code>/<code>type</code>/<code>type-focused</code>/<code>press</code>/<code>scroll</code>（5 个 legacy 桥动词）。</td><td><code>hive-browser help</code> 输出；<code>browser_cli_commands.go:27-51</code>。Go 的 <code>tab</code> 有 list/close/activate，<code>page</code> 有 html/snapshot/text/shadow-query/console/resize，<code>dialog</code> 有 respond——与 Python 一致。</td></tr>
+<tr><td>公共参数</td><td><code>--json</code>、<code>--profile</code> 在 <b>父 parser</b> 上，放在子命令前后都接受。<b>没有</b> <code>--bridge</code>。</td><td><code>--json</code>、<code>--profile</code>、<b><code>--bridge</code></b> 都挂在叶子上：<code>hive-browser --json status</code> → exit 2 <code>unrecognized arguments</code>；必须 <code>status --json</code>。</td><td><code>cli.py:101-104</code>；<code>browser_cli.go:100-107</code>；实测见 §03。<b>agent 把公共开关写在前面会被 Go 拒绝</b>，这是实质参数面差异。</td></tr>
+<tr><td>退出码</td><td>0/1/2/3/4/5/6/7/8，定义见 <code>errors.py:28-36</code>；实测：无参数 2、未知子命令 2、缺必填 2、非法 choice 2、<code>help nosuchcmd</code> <b>1</b>。</td><td>同一张表；实测：无参数 2、未知子命令 2、缺必填 2、非法 choice 2、<code>help nosuchcmd</code> <b>6</b>。</td><td>见 §03 表。两个具体分歧：<code>help nosuchcmd</code>（6 vs 1）、独立 <code>screenshot</code> 缺 <code>--intent</code>（6 vs 0）、upload 文件不存在（6 vs 4/3）。</td></tr>
+<tr><td>输出</td><td><code>--json</code> 输出工具结果 dict；screenshot 强制 JSON 并返回 <code>saved_to</code> + <code>_image</code>；snapshot 返回 <code>length</code>+<code>saved_to</code>。</td><td><code>--json</code> 输出桥结果 dict（Go-native）；screenshot 的 <code>data</code> 是原始 base64，无 <code>saved_to</code>/<code>_image</code>；snapshot 内联 <code>tree</code>/<code>nodes</code>。</td><td><code>inspection.py:505-515</code>；<code>browser_cli_client.go:205-262</code>；<code>browser_cli_commands.go:764-790</code>。输出差异的根因在 D08。</td></tr>
+</tbody></table></div>
+
+<h3>2.7 通知与面板（adopt/release notify、serve 注入、<code>/api/browser</code> 3 路由） <span class="pill warn">部分对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:30%">Python 参考行为</th><th style="width:28%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
+<tr><td>notify 文本</td><td><code>_format_user_tab_message</code> → <code>The user handed "&lt;title&gt;" (tab #N) over to you.</code>；release 对应 detached 文案。</td><td>同样的文本构造；action <code>handed-over</code>/<code>detached</code>。</td><td><code>bridge.py:321-331,3157-3172</code>；<code>handover.go:26-36</code>；真实 bridge 联调日志见 <code>docs/browser-host.md</code> §5.3。</td></tr>
+<tr><td>推送通道</td><td>14831 notify → serve <code>_on_notify</code>：先按 <code>session.id</code> 找 queen，再按 worker id 走 <code>colony.inject_input</code>；无匹配只记日志。</td><td>14831 notify → <code>DeliverBrowserNotify</code>：同一顺序，queen <code>InjectEvent</code>，worker <code>InjectInput</code>；无匹配记日志。</td><td><code>loader/cli.py:324-420</code>；<code>go-hive/internal/server/browser_notify.go:23-53</code>。语义对齐。</td></tr>
+<tr><td>serve 注入</td><td><code>HIVE_BROWSER_SESSION</code> + <code>HIVE_BROWSER_PROFILE_DISPLAY_NAME</code> 注入 terminal 子进程。</td><td>同两个变量，在 <code>mcp_registry.go:653-656</code> 注入。</td><td>字段名一致；未发现差异。</td></tr>
+<tr><td>面板 3 路由</td><td><code>GET /api/browser/contexts</code> 返回 <code>{available,count,contexts}</code>；<code>GET /api/browser/tabs</code> 返回 <code>{available,count,live_count,discarded_count,hive_group_count,tabs:[enriched]}</code>，每行带 <code>isHiveGroup</code>；无桥时 <b>200</b> + <code>available:false</code>。</td><td>3 条路由都在，但<b>透传桥</b>：<code>/contexts</code> → <code>{ok,contexts}</code>；<code>/tabs</code> → <code>{ok,tabs:[扩展原始行]}</code>；无桥时 <b>503</b> <code>{available:false,error:not_connected,...}</code>。</td><td><code>routes_workers.py:275-379</code>；<code>routes_browser_panel.go:81-149</code>；实测 8788 见 §03。缺 <code>available/count/live_count/discarded_count/hive_group_count/isHiveGroup</code>，503 vs 200 是已文档化偏差，<b>字段缺失没有文档化</b>。</td></tr>
+<tr><td>面板 status</td><td><code>GET /api/browser/status[/stream]</code> 探 9230；Python 桥同时监听 9230，所以可用。</td><td>同一实现（<code>defaultBridgeStatusAddr</code> = 9229+1 = 9230），但 Go 桥不监听 9230，实测 <code>{"bridge":false,"health":"offline"}</code>，而 14830 <code>/status</code> 是 running。</td><td><code>routes_app_extra.go:440-448</code>；<code>bridge.go:317-330</code>；<code>curl :8788/api/browser/status</code>。严重：状态徽章恒 offline。</td></tr>
+</tbody></table></div>
+
+<h3>2.8 返回契约（MCP content blocks vs Go JSON、截图/快照/artifact/refs） <span class="pill bad">未对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:30%">Python 参考行为</th><th style="width:28%">Go 当前行为</th><th>证据 / 影响</th></tr></thead><tbody>
+<tr><td>截图</td><td>800px 宽 JPEG(q75)，PIL 注解高亮；返回 <code>[TextContent(metadata), ImageContent(image/jpeg)]</code>；CLI 模式落盘 <code>&lt;ArtifactDir&gt;/browser_screenshot_&lt;ms&gt;_tab&lt;id&gt;.jpg</code>，返回 <code>saved_to</code> + <code>_image</code>，框架下一轮自动挂图。</td><td>原始 base64 + <code>{ok,tabId,data,mimeType,format}</code>；默认 PNG；不缩放/不注解/不落盘；CLI 不产生 <code>saved_to</code>/<code>_image</code>，框架无标记可 inline。</td><td><code>inspection.py:134-256,505-515</code>；<code>tool_registry.py:81-110</code>；<code>commands_page.go:721-726</code>；<code>commands_tools.go:309-324</code>。<b>模型看不到图</b>，且大图 base64 直接进上下文。</td></tr>
+<tr><td>快照</td><td>桥返回 <code>tree</code>；工具层落盘 <code>browser_snapshot_&lt;ms&gt;_tab&lt;id&gt;.txt</code>，返回 <code>{ok,tabId,url,length,saved_to}</code>；行内 <code>[ref=eN]</code>、<code>[href="…"]</code>；>50000 节点或可见&lt;10 且 &gt;500 走 DOM fallback；快照前查 pending dialog。</td><td>内联 <code>{ok,tabId,url,tree,nodes}</code>；无 <code>length</code>/<code>saved_to</code>，无 refs/href，无 DOM fallback；默认 2000 节点截断。</td><td><code>inspection.py:751-826</code>；<code>bridge.py:5421-5475</code>；<code>refs.py:108-139</code>；<code>commands_page.go:533-570</code>。<b>CLI <code>page snapshot --head</code> 无 <code>saved_to</code> 可读 = no-op</b>；agent 不能按 ref 操作。</td></tr>
+<tr><td>坐标动作图</td><td>坐标 click/hover/key 成功后追加一张注解截图（<code>_build_visual_response</code>），高亮落点。</td><td>只回 JSON，无图。</td><td><code>interact.py:180-205</code>（调用点 871/885/944）。agent 只能靠额外 screenshot 自查。</td></tr>
+<tr><td>HTML / artifact</td><td><code>browser_html</code> 落盘 <code>browser_html_&lt;ms&gt;_tab&lt;id&gt;.html</code>，返回 <code>length</code>/<code>saved_to</code>。</td><td><b>已对齐</b>：同样落盘并返回 <code>length</code>/<code>saved_to</code>。</td><td><code>commands_read.go:53-98</code>；真实 Chrome 19 步 step 13 已验证。</td></tr>
+<tr><td>其他工具</td><td>text/snapshot/click/type 等返回 dict；截图类才有多模态块。</td><td>全部 dict（Go-native JSON）。</td><td>对非图像工具，形状差异主要在 snapshot/interact 的附加字段（见残差）。</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>这是唯一一条「未对齐」维度。</b>截图与快照是 agent 感知页面的主通道；Go 现在把「看图」和「按 ref 精确操作」两条能力同时丢了。不能用「22/22 工具已移植」掩盖：名字对齐不等于返回契约对齐。</div>
+
+<h3>2.9 错误与超时语义 <span class="pill warn">部分对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:32%">Python 参考行为</th><th style="width:28%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
+<tr><td>默认超时</td><td>桥 <code>_send</code> 默认 <b>30s</b>；工具层整体预算 60s；<code>snapshot</code> 30s；<code>wait_for_selector/text</code> 5s。</td><td><code>CommandTimeout</code> 默认 <b>30s</b>；snapshot 30s；等待 5s。</td><td><code>bridge.py:2043,2093,5421</code>；<code>bridge.go:30,114-115</code>。主路径一致。</td></tr>
+<tr><td>错误码</td><td><code>BridgeError(code, retryable)</code>；17 个词表（<code>not_connected</code>、<code>bad_request</code>、<code>timeout</code>、<code>conflict</code>、<code>rate_limited</code>、<code>cdp_error</code> …）。</td><td>同一 17 个码（<code>errors.go:12-28</code>）；HTTP 状态映射见 <code>httpapi.go</code>。</td><td>词表一致；<code>retryable</code> 标志保留。</td></tr>
+<tr><td>退出码分类</td><td><code>classify_result</code> 按 error 文本片段：not started→3、not found→4、ambiguous→5、rate_limited→8，其余→1。</td><td><code>classifyBrowserResult</code> 同样的片段表 + 结构化 <code>classifyBrowserError</code>：<code>bad_request</code>/<code>unknown_command</code>/<code>no_browser_profile</code> → <b>6</b>；<code>timeout</code>/<code>connection_lost</code>/… → 1。</td><td><code>errors.py:71-108</code>；<code>browser_cli_client.go:133-204</code>。<b>结构化 bad_request 在 Go 是 6，上游按结果文本走会落到 1</b>；本地预检与桥错误的边界因此不完全同构。</td></tr>
+<tr><td>pending dialog</td><td>结果带 <code>pending_dialog</code> → 7；snapshot 前检查。</td><td>同 → 7；<code>Page.javascriptDialogOpening/Closed</code> 跟踪。</td><td>真实 Chrome step 17 已验证 confirm accept。</td></tr>
+</tbody></table></div>
+
+<h3>2.10 生命周期 / 父进程 / 空闲退出 <span class="pill warn">部分对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:30%">Python 参考行为</th><th style="width:30%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
+<tr><td>空闲退出</td><td>10s 轮询 + 30s grace；无 RPC 客户端且无 desktop parent → SIGTERM supervisor。</td><td>同样 10s/30s；exit 0（intentional），supervisor 停住；<code>-no-idle-exit</code> 可关。</td><td><code>bridge_host.py:209-286</code>；<code>cmd/browserbridge/main.go:46-75,126-167</code>。阈值一致，退出机制不同。</td></tr>
+<tr><td>父进程死亡</td><td><code>_watch_parent</code>：5s 间隔 × 2 次确认（≈5–10s）。</td><td><code>-parent-check</code> 默认 400ms × 2 次确认；实测 <b>783–866ms</b>；serve 场景 815ms 且不复活。</td><td><code>bridge_host.py:64-65,171-200</code>；<code>main.go:175-215</code>；<code>browser-host.md</code> §7.1。<b>是更快，不是同值</b>：文档写「已对齐（≤2s）」容易被读成等价。</td></tr>
+<tr><td>supervisor / ensure</td><td><code>bridge_host --supervise</code>；CLI <code>errors.run</code> 里 <code>ensure_bridge_host_running()</code> 会自动拉起桥。</td><td><code>hive serve</code> 内的 browser supervisor 自动拉起/回收；CLI <b>不</b>自动 ensure（设计选择，避免孤儿）。</td><td><code>loader/cli.py:214</code>；<code>browser_supervisor.go</code>；<code>browser-host.md</code> §6「CLI 自动 ensure 桥 = 不拉」。差异已文档化。</td></tr>
+<tr><td>legacy 监听</td><td>9229 + 9230。</td><td>只有 9229。</td><td>见 D04；这是 9230 探针问题的根因之一。</td></tr>
+</tbody></table></div>
+
+<h3>2.11 安全边界（loopback / 多 profile / CDP 隔离） <span class="pill warn">部分对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:30%">Python 参考行为</th><th style="width:30%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
+<tr><td>监听面</td><td>WS/HTTP/control 全部绑 <code>127.0.0.1</code>；无鉴权/TLS。</td><td>同；HTTP 另加 <code>localOnly</code> 拒绝非 loopback peer。</td><td><code>bridge.py:963-1031</code>；<code>httpapi.go:288-306</code>。Go 更严，additive。</td></tr>
+<tr><td>多 profile</td><td>同 label 顶替旧连接（4002）；tab/group 路由到 owning profile；starred default。</td><td>同；<code>connection.go</code> 与 <code>state.go</code> 维护 label→conn、tab→owner。</td><td>19 步 E2E 只覆盖单 profile；多 profile 只有 fake-extension 测试（PARITY §8 明示）。</td></tr>
+<tr><td>CDP 隔离</td><td><b>每个 tab 一把 asyncio.Lock</b>，串行化同 tab 的 CDP 命令，防止两个 agent 交错 attach/detach（<code>bridge.py:648-651,2045-2056,2211</code>）。</td><td><b>没有 per-tab 锁</b>：只有 window affinity 的 <code>windowLocks</code>（<code>state.go:360</code>）；<code>cdp.go:12-60</code> 直接 <code>conn.Call</code>。</td><td>代码级差异，未做并发实测。两个 agent 误打同一 tab 时，Go 的 attach/cdp/detach 可能交错；Python 不会。归入 R09。</td></tr>
+<tr><td>公共监听检测</td><td><code>has_public_listeners()</code> 可判断是否被暴露。</td><td>未移植（有意：只做本机）。</td><td>PARITY §2 行 4 标 未移植。安全默认不变，但缺少自检能力。</td></tr>
+</tbody></table></div>
+
+<h3>2.12 真实 Chrome 验证 <span class="pill warn">部分对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">项</th><th style="width:34%">Python 参考</th><th style="width:28%">Go 当前</th><th>证据</th></tr></thead><tbody>
+<tr><td>脚本化 E2E</td><td>仓库内<b>没有</b>真 Chrome 脚本；<code>tools/tests/</code> 是 fake extension / 单元级。</td><td><code>go_hive/browserbridge/scripts/real_chrome_e2e.sh</code>：构建 → fixture → 桥 → chromeloader 装真扩展 → 19 步 → 证据目录。</td><td>脚本 339 行；<code>PARITY.md</code> §10；Chrome 158.0.8127.37 + 扩展 1.7.4。</td></tr>
+<tr><td>覆盖范围</td><td>上游历史验证不可在本仓库复现。</td><td>19 步全 <code>ok:true</code>：status/open/navigate/interact(click/type/key/scroll/zoom)/select/get_text/resize/shadow_query/upload/html/screenshot/snapshot/console/dialog/script/context/stop；29 条断言 PASS。</td><td>截图为 PNG 53KB，解码后可看到输入值、下拉选择、上传文件名与 shadow 文本。</td></tr>
+<tr><td>未覆盖</td><td>—</td><td>多 profile 同时连接、hand-over、full-page 截图、sweep/rate limit 全路径仍只有 fake-extension 证据；单 macOS 主机。</td><td><code>PARITY.md</code> §8 明示，未夸大。</td></tr>
+</tbody></table></div>
+<p class="sub">判定说明：这一维不是「行为差异」，而是「证据不对称」。Go 的真机证据强于上游仓库内可复现证据，但覆盖面仍有限，故记部分对齐而不是已对齐。</p>
+
+<h3>2.13 文档口径 <span class="pill warn">部分对齐</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">文档</th><th style="width:42%">写了什么</th><th>与代码/实测的冲突</th></tr></thead><tbody>
+<tr><td><code>docs/browser-bridge.html</code></td><td>§02 把 <code>/health</code>、<code>/command</code> 列进 14830 公共 API；§5.4 用 <code>curl /command</code> 当调试入口；§07 说 active 工具与主服务接线已验证、残差为「快照 ref/注解图、CLI 退出码」；footer 同口径。</td><td>Python 桥没有 <code>/health</code>、<code>/command</code>、<code>/tabs</code>、<code>/contexts/close</code>（<code>bridge.py:1320-1608</code>），这些是 Go additive；残差清单漏了帧上限、面板形状、9230 探针、flag 位置、并发锁。</td></tr>
+<tr><td><code>browserbridge/PARITY.md</code></td><td>§1 行 20 把 <code>browser_type_focused</code> 标为 active；§1 开头又说 11 个 legacy 全在 <code>interactions.py</code>（含该名字）。</td><td>自相矛盾。实际 active=22（不含 type_focused），它属于 legacy 未注册；Go 仍实现了它（27 canonical 之一），所以实现覆盖不受影响，但表格口径错。</td></tr>
+<tr><td><code>docs/browser-host.md</code></td><td>§6：「control RPC 已对齐」「notify 已对齐」「面板 3 路由 已对齐（偏差：无 bridge 503）」「父死 ≤2s 已对齐」。</td><td>面板 3 路由的字段形状（available/count/enrichment）没有提；父死是「更快」不是「同值」；其余两条成立。</td></tr>
+<tr><td>本次新页</td><td>只描述 2026-11-21 的代码与实测；不改旧页结论，只在旧页顶部加入口。</td><td>—</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="residual"><h2><span class="num">03</span>残差清单（按影响排序）</h2>
+<p class="sub">严重度：高 = 模型能力/用户可见状态直接缺失；中高 = 契约形状或退出码可被 agent 观测；中 = 边界/并发/大响应；低 = 口径与文案。每条都给「Python / Go / 证据」，修复不在本次范围。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:6%">#</th><th style="width:7%">级别</th><th style="width:15%">差异</th><th style="width:36%">Python 行为 → Go 行为</th><th>证据</th></tr></thead><tbody>
+<tr><td>R01</td><td><span class="pill bad">高</span></td><td>截图返回契约断裂</td><td>800px JPEG(q75) + PIL 注解 + <code>saved_to</code> + <code>_image</code> 自动挂下一轮 → 原始 base64（默认 PNG）、无缩放/注解/落盘/标记，模型看不到图。</td><td><code>inspection.py:134-256,505-515</code>；<code>tool_registry.py:81-110</code>；<code>commands_page.go:721-726</code>；<code>commands_tools.go:309-324</code>。</td></tr>
+<tr><td>R02</td><td><span class="pill bad">高</span></td><td>快照 refs/href/DOM fallback/artifact</td><td><code>length</code>+<code>saved_to</code>、<code>[ref=eN]</code>、<code>[href=…]</code>、DOM fallback、dialog 前置检查 → 内联 <code>tree/nodes</code>，无 artifact、无 refs、无 href、无 fallback；<code>page snapshot --head</code> 变 no-op。</td><td><code>inspection.py:751-826</code>；<code>bridge.py:5448-5475</code>；<code>refs.py:108-139</code>；<code>commands_page.go:533-570</code>。</td></tr>
+<tr><td>R03</td><td><span class="pill bad">高</span></td><td>面板 status 恒 offline</td><td>Python 桥同时监听 9230，server 探 9230 得到真实状态 → Go 桥不监听 9230，server 仍探 9230；实测 <code>bridge:false, health:"offline"</code>，而 14830 <code>/status</code> 正常。</td><td><code>routes_app_extra.go:440-448</code>；<code>bridge.py:1029-1031</code>；<code>curl :8788/api/browser/status</code>（§04）。</td></tr>
+<tr><td>R04</td><td><span class="pill warn">中高</span></td><td>面板 3 路由形状</td><td><code>{available,count,contexts}</code> / <code>{available,count,live_count,discarded_count,hive_group_count,tabs[isHiveGroup]}</code>，无桥 200 → Go 透传 <code>{ok,contexts}</code> / <code>{ok,tabs}</code>，无桥 503；缺 5 个计数字段与 <code>isHiveGroup</code> 富化。</td><td><code>routes_workers.py:275-379</code>；<code>routes_browser_panel.go:81-149</code>；实测 8788 <code>/api/browser/contexts</code>。</td></tr>
+<tr><td>R05</td><td><span class="pill warn">中高</span></td><td>独立 <code>screenshot</code> 缺 <code>--intent</code></td><td>上游 <code>--intent</code> 可选，缺省仍执行（连上时 exit 0）→ Go 本地强制，exit 6。注意：<code>interact --action screenshot</code> 缺 intent 两边都是 1（桥返回 ok:false），不要混为一谈。</td><td><code>cli.py:201-204</code>；<code>render_screenshot(intent: str|None)</code> <code>inspection.py:348</code>；<code>browser_cli_commands.go:397-400</code>。</td></tr>
+<tr><td>R06</td><td><span class="pill warn">中高</span></td><td><code>help nosuchcmd</code></td><td>上游 <code>_help</code> 抛 <code>BrowserError</code>，<code>run()</code> 只捕获该类型外的路径导致 traceback，exit <b>1</b> → Go 本地 help 校验，exit <b>6</b>。</td><td><code>cli.py:330,371</code>；<code>errors.py:147-166</code>；实测（§04）。<code>browser_cli_commands.go</code> help 分支。</td></tr>
+<tr><td>R07</td><td><span class="pill warn">中</span></td><td>upload 文件不存在</td><td>上游在「已连桥 + 有 context」时返回 <code>File not found</code> → classify <b>4</b>；无 context 时先返回 <code>Browser not started</code> → <b>3</b> → Go 在调用桥前就检查文件，exit <b>6</b>。<b>不是 1</b>（任务给的 6 vs 1 需更正为 6 vs 4/3）。</td><td><code>interact.py:208-213</code>；<code>errors.py:67-68,102-103</code>；<code>browser_cli_client.go</code> 的本地 <code>os.Stat</code>；实测 exit 6。</td></tr>
+<tr><td>R08</td><td><span class="pill warn">中</span></td><td>公共 flag 位置</td><td>上游父 parser 接受 <code>--json status</code> 与 <code>status --json</code> → Go 只在叶子注册，<code>--json status</code> 报 <code>unrecognized arguments</code>，exit 2。</td><td><code>cli.py:101-104</code>；<code>browser_cli.go:100-107</code>；实测（§04）。</td></tr>
+<tr><td>R09</td><td><span class="pill warn">中</span></td><td>同 tab CDP 并发无锁</td><td>上游每个 tab 一把 <code>asyncio.Lock</code>，串行 attach/cdp/detach → Go 无 per-tab 锁（只有 window affinity），并发 agent 可能交错。</td><td><code>bridge.py:648-651,2045-2056,2211</code>；<code>cdp.go:12-60</code>；<code>state.go:360</code>。代码级，未并发实测。</td></tr>
+<tr><td>R10</td><td><span class="pill warn">中</span></td><td>WS 帧上限</td><td>50 MiB → 16 MiB。大 AX 树或整页截图可能先撞上限；19 步 E2E 的页面很小，未覆盖。</td><td><code>bridge.py:990</code>；<code>bridge.go:126-127</code>；<code>ws/ws.go:37</code>。</td></tr>
+<tr><td>R11</td><td><span class="pill warn">中</span></td><td><code>/status</code> 字段集</td><td>缺 <code>bridge_version</code>/<code>runtime_version</code>/<code>bind_errors</code>（side panel 连接栏文案来源）→ 另多 <code>tabs/tabs_total/profiles/capabilities/viewport_scale</code>，connections 多 <code>tabs</code>。</td><td><code>bridge.py:1240-1280</code>；<code>status.go:28-51</code>；<code>browser-bridge.html</code> 的端口表未提。</td></tr>
+<tr><td>R12</td><td><span class="pill info">低</span></td><td>模型文案承诺不成立</td><td><code>browser_setup.payload.screenshots</code> 说「保存 JPEG 并自动挂到下一轮」；Go 复制了同一段文案，但 CLI 不产生 <code>saved_to</code>，行为与文案不符。</td><td><code>browser_tools.py:71-75</code>；<code>browser_setup.go:106-110</code>；CLI 输出见 R01。</td></tr>
+<tr><td>R13</td><td><span class="pill info">低</span></td><td>父死时延口径</td><td>上游 5s × 2 确认（≈5–10s）→ Go 400ms × 2（0.78–0.87s）。行为更快、可用，但「已对齐（≤2s）」应写成「有意加速」。退出机制也不同（SIGTERM supervisor vs exit 0 park）。</td><td><code>bridge_host.py:64-65</code>；<code>main.go:183</code>；<code>browser-host.md</code> §7.1。</td></tr>
+<tr><td>R14</td><td><span class="pill info">低</span></td><td>CLI 增量与文档漂移</td><td>Go CLI 多 5 个 legacy 动词 + <code>--bridge</code>；根 help 不列 <code>--json</code>。文档把 <code>/health</code>、<code>/command</code> 当公共 API；PARITY 行 20 把 type_focused 标 active；面板「已对齐」未提形状差异。</td><td><code>browser_cli_commands.go:27-51</code>；<code>browser-bridge.html:101,189-196</code>；<code>PARITY.md:64,198-207</code>；<code>browser-host.md:336-345</code>。</td></tr>
+</tbody></table></div>
+<p class="sub">统计：高 3（R01–R03）· 中高 3（R04–R06）· 中 5（R07–R11）· 低 3（R12–R14）。</p>
+</section>
+
+<section id="repro"><h2><span class="num">04</span>复现命令与实测输出</h2>
+<h3>4.1 当前桥与面板（本机，Go 进程）</h3>
+<pre># 14830 是 Go browserbridge（pid 42824，父进程是 dist/hive-embed serve :8788）
+curl -s http://127.0.0.1:14830/status
+{"bridge":"running","port":14829,"connected":false,"connections":[],"uptime_ms":2621241,
+ "tabs":{},"tabs_total":0,"profiles":[],
+ "listening":{"ws":true,"status":true,"control_rpc":true,"legacy_ws":true},
+ "capabilities":["browser_activate_tab","browser_click", … 27 个 …],
+ "system_blocker":null,"control_rpc_clients":1,"runtime_alive":true,"viewport_scale":0.8}
+
+curl -s http://127.0.0.1:14830/health
+{"connected":false,"connections":0,"ok":true,"status":"ok","uptime_ms":2625986}
+
+# 面板：contexts 透传桥的 {ok,contexts}；tabs 无扩展时 503
+curl -s http://127.0.0.1:8788/api/browser/contexts
+{"contexts":[],"ok":true}
+curl -s -w ' [%{http_code}]' http://127.0.0.1:8788/api/browser/tabs
+{"code":"not_connected","error":"no browser extension is connected — install/enable the Hive Browser Bridge extension and open Chrome","ok":false,"tabs":[]} [503]
+
+# status 探针默认 9229+1=9230，而 Go 桥不监听 9230 → 恒 offline
+curl -s http://127.0.0.1:8788/api/browser/status
+{"bridge":false,"connected":false,"connections":[],"health":"offline"}
+curl -s -N http://127.0.0.1:8788/api/browser/status/stream | head -2
+event: status
+data: {"bridge":false,"connected":false,"connections":[],"health":"offline"}</pre>
+<p class="sub">注：14830 的 <code>/health</code> 是 Go additive；Python 桥不实现它。上面的 <code>/health</code> 200 只证明 Go 侧健康，不证明面板探针地址正确。</p>
+
+<h3>4.2 CLI 退出码对照（本机实测）</h3>
+<pre># Go 侧（/tmp/bba/hive-browser，dab983d4 构建）
+for c in "" "help" "bogus" "screenshot" "help nosuchcmd" "upload #f" "interact" \
+         "interact --action screenshot --coordinate 0.1" "status --json" \
+         "page snapshot --mode nope" "tab close abc"; do
+  ./hive-browser $c >/dev/null 2>&1; printf 'rc=%-3s | %s\n' "$?" "$c"; done
+
+rc=2   | (无参数)
+rc=0   | help
+rc=2   | bogus
+rc=6   | screenshot                      &lt;-- 上游缺 --intent 是 0（连上时）
+rc=6   | help nosuchcmd                  &lt;-- 上游是 1（traceback）
+rc=2   | upload #f                       (缺 --file)
+rc=6   | upload #f --file /tmp/nope.txt  &lt;-- 上游已连桥时有 context 是 4
+rc=2   | interact                        (缺 --action)
+rc=2   | interact --action screenshot --coordinate 0.1
+rc=2   | status --json                   (本机无扩展；参数本身合法)
+rc=2   | page snapshot --mode nope
+rc=2   | tab close abc
+
+# 公共 flag 位置
+./hive-browser --json status      -&gt; rc=2  unrecognized arguments: --json
+./hive-browser --profile x status -&gt; rc=2  unrecognized arguments: --profile
+./hive-browser status --json      -&gt; rc=2  (解析通过，无扩展)
+
+# Python 侧（同一工作树）
+PYTHONPATH=tools/src uv run --project tools python -m gcu.cli help nosuchcmd
+-&gt; BrowserError traceback, rc=1
+PYTHONPATH=tools/src uv run --project tools python -m gcu.cli --json status
+-&gt; 解析通过，rc=2 (not_connected)
+PYTHONPATH=tools/src uv run --project tools python -m gcu.cli screenshot
+-&gt; 走到桥，rc=2 (not_connected)；说明 --intent 不是本地必填</pre>
+
+<h3>4.3 工具名覆盖（脚本核对）</h3>
+<pre>python3 - &lt;&lt;'PY'
+import re, pathlib
+base = pathlib.Path("tools/src/gcu/browser/tools")
+py = {}
+for f in ["advanced.py","inspection.py","interact.py","lifecycle.py",
+          "navigation.py","script.py","tabs.py"]:
+    for m in re.finditer(r"async def (browser_\w+)\(", (base/f).read_text()):
+        py[m.group(1)] = f
+go = re.findall(r'"(browser_\w+)"',
+    re.search(r"var canonicalCommands = \[\]string\{(.*?)\n\}", 
+              pathlib.Path("go_hive/browserbridge/commands.go").read_text(), re.S).group(1))
+print("active", len(py), "legacy", len(re.findall(r"async def (browser_\w+)\(",
+      (base/"interactions.py").read_text())), "go", len(go))
+print("missing in go", [t for t in py if t not in go])
+print("go extras", sorted(t for t in go if t not in py))
+PY
+active 22 legacy 11 go 27
+missing in go []
+go extras ['browser_click', 'browser_press', 'browser_scroll',
+           'browser_type', 'browser_type_focused']</pre>
+
+<h3>4.4 常量与契约证据（源码行）</h3>
+<pre># WS / 心跳 / 帧上限
+tools/src/gcu/browser/bridge.py:75-78   _WS_PING_INTERVAL_S=20, _APP_PING_INTERVAL_S=5/12
+tools/src/gcu/browser/bridge.py:990     max_size=50*1024*1024
+go_hive/browserbridge/bridge.go:31-33   defaultPingInterval=5s, defaultPongTimeout=12s
+go_hive/browserbridge/bridge.go:126-127 MaxMessageSize=16&lt;&lt;20
+go_hive/browserbridge/connection.go:89  startHeartbeat (app-level only)
+
+# 截图/快照
+tools/src/gcu/browser/tools/inspection.py:84   _SCREENSHOT_WIDTH=800
+tools/src/gcu/browser/tools/inspection.py:505-515  saved_to + _image
+tools/src/gcu/browser/tools/inspection.py:751-826  snapshot artifact
+tools/src/gcu/browser/bridge.py:5449-5475          50000 / visible&lt;10 &amp;&amp; &gt;500 fallback
+go_hive/browserbridge/commands_page.go:721-726    raw base64 + mimeType
+go_hive/browserbridge/commands_page.go:533-570    inline tree/nodes
+
+# 面板探针 / legacy 监听
+go_hive/go-hive/internal/server/routes_app_extra.go:440-448  default 9229+1
+tools/src/gcu/browser/bridge.py:1029-1031                   legacy status 9230
+go_hive/browserbridge/bridge.go:317-330                     legacy WS only
+
+# 并发锁
+tools/src/gcu/browser/bridge.py:648-651  _tab_locks
+go_hive/browserbridge/state.go:360       windowLock (no per-tab lock)</pre>
+
+<h3>4.5 19 步真实 Chrome 证据（引用，不重跑）</h3>
+<pre>go_hive/browserbridge/scripts/real_chrome_e2e.sh
+# 2026-11-20 结果：29 assertions all ok
+# PASS: all steps succeeded against real Chrome (Google Chrome 158.0.8127.37)
+# 证据目录：cmd-*.json / screenshot.png / bridge.log / chrome-ready.json / artifact.html
+# 覆盖：status → open → navigate → interact(click/type/key/scroll/zoom)
+#       → select → get_text → resize → shadow_query → upload → html
+#       → screenshot → snapshot → console → dialog → script
+#       → create_context → status → stop
+# 未覆盖：多 profile、hand-over、full-page、sweep/rate-limit 全路径（PARITY §8）</pre>
+
+<h3>4.6 本页校验</h3>
+<pre># HTML 解析 + 本地链接检查（写入后执行）
+python3 - &lt;&lt;'PY'
+from html.parser import HTMLParser
+from pathlib import Path
+import re
+p = Path("go_hive/docs/browser-bridge-surface-audit.html")
+class P(HTMLParser):
+    def __init__(self): super().__init__(); self.links=[]; self.ids=set()
+    def handle_starttag(self, tag, attrs):
+        d = dict(attrs)
+        if tag == "a" and d.get("href"): self.links.append(d["href"])
+        if d.get("id"): self.ids.add(d["id"])
+html = p.read_text(); parser = P(); parser.feed(html)
+missing = [h for h in parser.links if h.startswith("#") and h[1:] not in parser.ids]
+files = [h for h in parser.links if not h.startswith(("#","http"))]
+print("parsed ok; anchors:", len(parser.ids), "links:", len(parser.links),
+      "missing anchors:", missing,
+      "missing local files:", [f for f in files if not (p.parent/f).exists()])
+PY</pre>
+</section>
+
+<section id="verdict"><h2><span class="num">05</span>结论：哪些维度可以宣布对齐，哪些不能</h2>
+<div class="callout bad"><b>总口径：不能写「Browser Bridge 已整体对齐」。</b>22/22 active 工具名与 46/46 control RPC 能对上，但返回契约（D08）未对齐，且 CLI、面板、/status、帧上限、并发隔离存在可观察差异。任何「整体已对齐」的表述都会掩盖这些差异。</div>
+<div class="tablewrap"><table><thead><tr><th style="width:8%">维度</th><th style="width:18%">结论</th><th>可以怎么写 / 不能怎么写</th></tr></thead><tbody>
+<tr><td>D01</td><td><span class="pill ok">可宣布对齐</span></td><td>可以写：「模型可见 browser 工具面在两边都只有 <code>browser_setup</code>，name/schema/description 一致」。<b>限定</b>：只到工具定义层；其 payload 的截图承诺在 Go 不成立（R12）。</td></tr>
+<tr><td>D02</td><td><span class="pill warn">部分</span></td><td>可以写：「22/22 active 工具名都有 Go handler，13 个 interact action 全实现」。不能写「工具定义已完全对齐」——参数默认值、activeTabId、group 摘要、描述层都不同。</td></tr>
+<tr><td>D03</td><td><span class="pill warn">部分</span></td><td>可以写：「扩展无需改动即可连两边；hello/帧/应用层心跳/4002 顶替一致」。不能写「协议完全等价」——WS ping、帧上限 50MiB vs 16MiB 不同。</td></tr>
+<tr><td>D04</td><td><span class="pill warn">部分</span></td><td>可以写：「14830 是超集：Python 的 10 条全有，Go 加 4 条」。不能写「HTTP API 已对齐」——/status 字段集不同、无 9230、/command /health 是 Go-only。</td></tr>
+<tr><td>D05</td><td><span class="pill ok">可宣布对齐</span></td><td>可以写：「14831 的 46 个 RPC 方法、帧形状、client_hello、notify、reaper 与上游一致（fake-extension + 单测证据）」。不能写「已用旧版 Python CLI 交叉实测」——没做。</td></tr>
+<tr><td>D06</td><td><span class="pill warn">部分</span></td><td>可以写：「命令树覆盖 22 个 active 工具，另加 5 个 legacy 动词」。不能写「CLI 契约一致」——3 个退出码分歧、flag 位置更严、输出形状不同。</td></tr>
+<tr><td>D07</td><td><span class="pill warn">部分</span></td><td>可以写：「adopt/release notify 文本、14831 推送、serve 注入与上游一致」。不能写「面板已对齐」——3 条路由字段缺失/503、status 恒 offline。</td></tr>
+<tr><td>D08</td><td><span class="pill bad">不可宣布</span></td><td>只能写：「截图/快照返回契约未对齐：无缩放/注解/artifact/_image，无 refs/href/DOM fallback，坐标动作无图」。这是当前最大缺口。</td></tr>
+<tr><td>D09</td><td><span class="pill warn">部分</span></td><td>可以写：「默认 30s、17 个错误码、pending dialog→7 一致」。不能写「错误语义完全一致」——结构化 bad_request 在 Go 映射 6，上游落到 1。</td></tr>
+<tr><td>D10</td><td><span class="pill warn">部分</span></td><td>可以写：「空闲 10s/30s、exit 0 语义一致；父死 0.8s 比上游 5–10s 更快」。不能写「父死时序已对齐」——是更快，不是同值。</td></tr>
+<tr><td>D11</td><td><span class="pill warn">部分</span></td><td>可以写：「全部 loopback、无鉴权/TLS、同 label 4002、多 profile 路由一致」。不能写「隔离等价」——Python 有 per-tab CDP 锁，Go 没有；<code>has_public_listeners</code> 未移植。</td></tr>
+<tr><td>D12</td><td><span class="pill warn">部分</span></td><td>可以写：「Go 有可复现的真 Chrome 19 步证据；上游仓库内没有同等级脚本」。不能写「两边都经过真机验证」——证据不对称，且 Go 只覆盖单 profile/单主机。</td></tr>
+<tr><td>D13</td><td><span class="pill warn">部分</span></td><td>可以写：「文档总体准确，但有 5 处口径漂移（/health /command 归属、面板形状、type_focused active、父死 ≤2s、残差清单过窄）」。不能写「文档已同步」。</td></tr>
+</tbody></table></div>
+<h3>可以拍板的范围</h3>
+<ul>
+<li><b>可以宣布对齐：</b>D01 模型可见工具面（仅定义层）、D05 control RPC 14831（仅协议与单测证据）。</li>
+<li><b>不能宣布对齐：</b>D08 返回契约（明确未对齐）；D02/D03/D04/D06/D07/D09/D10/D11/D12/D13 均为部分对齐，需带限定词。</li>
+<li><b>对外一句话：</b>「22/22 active 工具与 46/46 control RPC 已移植；截图/快照返回契约、面板数据形状、3 个 CLI 退出码、WS 帧上限与 per-tab CDP 隔离仍未对齐——不能称为整体对齐。」</li>
+</ul>
+<div class="callout info"><b>修复优先级（若要继续）：</b>R01/R02（截图与快照返回契约）→ R03/R04（面板 status 与字段）→ R05–R08（CLI 退出码/参数）→ R09/R10（并发与帧上限）。R11–R14 是文档与低风险项，可随修复一起收口。</div>
+</section>
+
+<footer>生成：2026-11-21 00:45 CST · 基线 <code>dab983d4</code>（分支 <code>browser-surface-audit</code>）· 方法：源码逐行对照 + 本机 CLI/HTTP 实测 + 引用既有真实 Chrome 19 步证据（未重跑）· 相关：<a href="browser-bridge.html">browser-bridge.html</a> · <a href="browser-host.md">browser-host.md</a> · <code>go_hive/browserbridge/PARITY.md</code> · 说明：本文只做审计，不改行为、零新依赖；残差修复不在本次范围。</footer>
+</div></body></html>

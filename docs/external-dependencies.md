@@ -12,7 +12,7 @@
 | 凭据型 SaaS API | **77 个源模块 / 118 条凭据** | 是 | 否 | 按需；缺凭据时工具不可用或 park 等填表 |
 | 无凭据固定 API | 6 | 否 | 否 | arXiv、DuckDuckGo、Wikipedia、Open-Meteo、Yahoo Finance、YouTube 转录 |
 | 任意 Web 抓取 | 1 | 否 | 否 | 模型给 URL 即抓，外呼目标不受限 |
-| 网络扫描器（4） | 4 | 否 | 否 | DNS/端口/TLS/HTTP 头；**默认关闭**（`HIVE_NETWORK_SCANNERS=false`） |
+| 网络扫描器（7） | 7 | 否 | 否 | DNS/端口/TLS/HTTP 头/子域/技术栈 + `risk_score`；**默认注册**（与上游一致），会向模型指定的目标发探测流量 |
 | MCP 服务器 | 0..N | 视服务器 | 否 | 用户自行安装；stdio 子进程或 HTTP/SSE |
 | SMTP / IMAP | 1 套 | 是 | 否 | 发信走 SMTP；读信按服务商 IMAP 主机 |
 | 本地运行时 | — | 否 | **是** | 文件系统、SQLite、进程、localhost HTTP/SSE |
@@ -174,10 +174,10 @@
 
 另有一个**任意 URL 抓取/抓站**工具：目标由模型决定，出网白名单只能在网络层做。
 
-## 6. 网络扫描器（默认关闭）
+## 6. 网络扫描器（默认注册）
 
-`dns_security_scan`、`port_scan`、`ssl_tls_scan`、`http_headers_scan` 会对目标域名/IP 主动探测。
-开关：`HIVE_NETWORK_SCANNERS=false`（默认）/ `hive.config.json: network_scanners`。关闭时不注册这 4 个工具。
+`ssl_tls_scan`、`http_headers_scan`、`dns_security_scan`、`port_scan`、`subdomain_enumerate`、`tech_stack_detect`（以及消费其输出的 `risk_score`）会对目标域名/IP 主动探测，上游与 Go 都默认注册、没有开关。
+它们会向模型指定的主机发 TCP/TLS/HTTP/DNS 流量，调用方只能扫描已获授权的目标；不需要时可从会话工具面按需收窄（当前没有 Go 独有开关，与上游一致）。
 
 ## 7. 邮件与通知通道
 

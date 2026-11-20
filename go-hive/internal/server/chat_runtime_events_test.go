@@ -150,7 +150,9 @@ func TestChatRuntimePublishesTurnEvents(t *testing.T) {
 	}
 
 	// The dashboard leaves "Working…" only on the loop-lifecycle / execution
-	// boundary events, so every one of them must be present and ordered.
+	// boundary events, so every one of them must be present and ordered. The
+	// turn_done boundary announces client_input_requested before the awaiting
+	// loop state, as upstream's _await_user_input does on every park.
 	order := recorder.types()
 	wantOrder := []string{
 		"execution_started",
@@ -160,6 +162,7 @@ func TestChatRuntimePublishesTurnEvents(t *testing.T) {
 		"client_output_delta",
 		"llm_turn_complete",
 		"node_loop_completed",
+		"client_input_requested",
 		"loop_state_changed",
 		"execution_completed",
 	}
@@ -392,36 +395,44 @@ func TestChatSessionEventsStreamAndHistory(t *testing.T) {
 
 	// First frame: the rehydrating session snapshot (idle before the turn),
 	// then the text delta, then the terminal execution event that clears the
-	// Working… state.
-	name, data := readEventFrame(t, reader)
-	if name != "session_snapshot" {
-		t.Fatalf("first SSE event = %q, want session_snapshot", name)
+	// Working… state. Frames are data-only (upstream sends no event: name), so
+	// the type rides the payload.
+	snapshotName, data := readEventFrame(t, reader)
+	if snapshotName != "" {
+		t.Fatalf("first SSE event name = %q, want data-only frame", snapshotName)
 	}
 	var snapshotFrame map[string]any
 	if err := json.Unmarshal([]byte(data), &snapshotFrame); err != nil {
 		t.Fatalf("decode snapshot frame: %v", err)
+	}
+	if snapshotFrame["type"] != "session_snapshot" {
+		t.Fatalf("first SSE frame type = %#v, want session_snapshot", snapshotFrame["type"])
 	}
 	snapshotData, _ := snapshotFrame["data"].(map[string]any)
 	if snapshotData["is_executing"] != false {
 		t.Fatalf("pre-turn snapshot = %#v, want is_executing false", snapshotData)
 	}
 
-	name, data = readEventFrame(t, reader)
-	if name != "client_output_delta" {
-		t.Fatalf("second SSE event = %q, want client_output_delta", name)
-	}
+	_, data = readEventFrame(t, reader)
 	var delta map[string]any
 	if err := json.Unmarshal([]byte(data), &delta); err != nil {
 		t.Fatalf("decode delta frame: %v", err)
+	}
+	if delta["type"] != "client_output_delta" {
+		t.Fatalf("second SSE frame type = %#v, want client_output_delta", delta["type"])
 	}
 	payload, _ := delta["data"].(map[string]any)
 	if payload["content"] != "done" {
 		t.Fatalf("delta payload = %#v, want the assistant text", payload)
 	}
 
-	name, data = readEventFrame(t, reader)
-	if name != "execution_completed" {
-		t.Fatalf("third SSE event = %q, want execution_completed", name)
+	_, data = readEventFrame(t, reader)
+	var terminal map[string]any
+	if err := json.Unmarshal([]byte(data), &terminal); err != nil {
+		t.Fatalf("decode terminal frame: %v", err)
+	}
+	if terminal["type"] != "execution_completed" {
+		t.Fatalf("third SSE frame type = %#v, want execution_completed", terminal["type"])
 	}
 
 	// /events/history reads the same events.jsonl the bus wrote during the

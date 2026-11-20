@@ -421,6 +421,7 @@ func (p *Provider) parseOpenAIStream(ctx context.Context, reader io.Reader, requ
 		return nil
 	}
 
+scan:
 	for scanner.Scan() {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return result, ctxErr
@@ -434,6 +435,13 @@ func (p *Provider) parseOpenAIStream(ctx context.Context, reader io.Reader, requ
 		case strings.HasPrefix(line, "data:"):
 			payload := strings.TrimPrefix(line, "data:")
 			payload = strings.TrimPrefix(payload, " ")
+			// The [DONE] sentinel terminates the stream by SSE contract. Do
+			// not wait for the transport to close: OpenAI-compatible proxies
+			// (and simple local stubs) keep the connection alive after it,
+			// and the Python client stops reading here too.
+			if strings.TrimSpace(payload) == "[DONE]" {
+				break scan
+			}
 			dataLines = append(dataLines, payload)
 		}
 	}

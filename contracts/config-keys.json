@@ -15,16 +15,16 @@
   "method": "curated per-key table (go_hive/scripts/env_config_contract_data.py) whose reader anchors are resolved and validated against the checked-out source; line numbers are recomputed, a missing anchor is a hard failure. Types/defaults/invalid-value rules were read from both implementations.",
   "scope_note": "Covers configuration.json keys read by either runtime. Per-colony notifications.json (sentinel_enabled/channel/target/allowlist/thread) and agent/worker sidecars are separate files and out of scope. The Go-only `mcp` block is included and marked go_only.",
   "summary": {
-    "keys": 135,
+    "keys": 134,
     "sections": 20,
     "status_counts": {
       "aligned": 96,
-      "go_only": 5,
+      "go_only": 4,
       "go_partial": 27,
       "python_only": 6,
       "unread": 1
     },
-    "env_overrides": 28,
+    "env_overrides": 27,
     "boundary_rules": 9
   },
   "sections": [
@@ -2411,12 +2411,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_features.go",
-              "line": 76,
+              "line": 63,
               "snippet": "if value, ok := envFeatureFlag(\"HIVE_MEMORY_TIMELINE\"); ok {"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_features.go",
-              "line": 79,
+              "line": 66,
               "snippet": "return boolConfigFlag(home, \"memory_timeline\", false)"
             }
           ],
@@ -2466,27 +2466,6 @@
           ],
           "status": "aligned",
           "notes": "out-of-range / non-number -> 0.8; Python's isinstance(True, int) quirk (true -> 1.0) is replicated in Go."
-        },
-        {
-          "path": "network_scanners",
-          "type": "bool",
-          "default": false,
-          "env_override": "HIVE_NETWORK_SCANNERS",
-          "python": [],
-          "go": [
-            {
-              "file": "go_hive/go-hive/internal/server/config_features.go",
-              "line": 68,
-              "snippet": "if value, ok := envFeatureFlag(\"HIVE_NETWORK_SCANNERS\"); ok {"
-            },
-            {
-              "file": "go_hive/go-hive/internal/server/config_features.go",
-              "line": 71,
-              "snippet": "return boolConfigFlag(home, \"network_scanners\", false)"
-            }
-          ],
-          "status": "go_only",
-          "notes": "Go extension: gates the four network-probing tools. Python has no same-named switch (its default tool surface differs)."
         },
         {
           "path": "created_at",
@@ -3125,7 +3104,7 @@
         }
       ],
       "status": "aligned",
-      "notes": "Holds for adaptive_tool_budget, email_senders, stall_check, memory_timeline, network_scanners and every HIVE_RETENTION_<FIELD>."
+      "notes": "Holds for adaptive_tool_budget, email_senders, stall_check, memory_timeline and every HIVE_RETENTION_<FIELD>."
     },
     {
       "rule": "empty env string",

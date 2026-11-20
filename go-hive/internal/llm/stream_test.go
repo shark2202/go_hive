@@ -374,3 +374,49 @@ func TestProviderStreamUnsupportedTransports(t *testing.T) {
 		t.Fatalf("minimax error = %v, want ErrStreamingUnsupported", err)
 	}
 }
+
+// Parity-exempt: the Python client (litellm over httpx) stops reading at the
+// [DONE] sentinel; this pins the same contract against a proxy that keeps the
+// SSE socket open after it.
+func TestProviderStreamStopsAtDoneSentinel(t *testing.T) {
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "text/event-stream")
+		writer.WriteHeader(http.StatusOK)
+		writeSSEFrame(t, writer, `data: {"id":"c1","model":"gpt-4o-mini","choices":[{"index":0,"delta":{"role":"assistant","content":"done"},"finish_reason":"stop"}]}`)
+		writeSSEFrame(t, writer, "data: [DONE]")
+		// A non-compliant gateway can leave the connection open after the
+		// sentinel; the client must not block waiting for EOF.
+		select {
+		case <-release:
+		case <-request.Context().Done():
+		}
+	}))
+	defer server.Close()
+	defer close(release)
+
+	provider := NewHTTPProvider(ProviderOptions{Model: "gpt-4o-mini", APIKey: "test-key", APIBase: server.URL})
+	type streamOutcome struct {
+		completion Completion
+		err        error
+	}
+	outcome := make(chan streamOutcome, 1)
+	go func() {
+		completion, err := provider.ACompleteStream(context.Background(),
+			CompletionRequest{Messages: []ChatMessage{{Role: "user", Content: "hi"}}},
+			func(StreamEvent) {})
+		outcome <- streamOutcome{completion: completion, err: err}
+	}()
+
+	select {
+	case got := <-outcome:
+		if got.err != nil {
+			t.Fatalf("ACompleteStream: %v", got.err)
+		}
+		if got.completion.Content != "done" {
+			t.Fatalf("completion = %#v, want the streamed answer", got.completion)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("ACompleteStream blocked after [DONE]; it must terminate at the sentinel")
+	}
+}

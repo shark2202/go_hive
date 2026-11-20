@@ -3,10 +3,10 @@
 //
 // Parity: tools/src/aden_tools/tools/subdomain_enumerator/subdomain_enumerator.py
 //
-// Network scanner: like the batch-2 scanners it is registered and then dropped
-// from the session catalogue unless HIVE_NETWORK_SCANNERS (or network_scanners
-// in hive.config.json) is on. The HTTP client and crt.sh base URL are injected
-// through Runtime/ModuleConfig, so tests never touch the real network.
+// Network scanner: registered in the default session catalogue like the rest
+// of batch 2 (upstream aden_tools has no opt-in gate). The HTTP client and
+// crt.sh base URL are injected through Runtime/ModuleConfig, so tests never
+// touch the real network.
 //
 // Difference from upstream: cookie-free, no credentials, and the endpoint is a
 // module base URL instead of a hard-coded constant (so a fake server can stand

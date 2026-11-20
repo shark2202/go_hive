@@ -8,7 +8,7 @@
   "version": "hive 1.0.14",
   "status": 200,
   "content_type": "application/json; charset=utf-8",
-  "captured_at": "2026-11-20T23:43:50+08:00",
+  "captured_at": "2026-11-21T00:58:55+08:00",
   "canonical": {
     "events": [
       {
@@ -75,18 +75,18 @@
         "correlation_id": null,
         "data": {
           "breakdown": {
-            "conversation_chars": 28002,
+            "conversation_chars": 27858,
             "image_blocks": 0,
             "image_tokens": 0,
             "system_chars": 21584,
             "tool_defs_chars": 45171
           },
-          "estimated_tokens": 31585,
+          "estimated_tokens": 31537,
           "max_context_tokens": 180000,
           "message_count": 1,
           "trigger": "iteration_start",
           "usage_pct": 18,
-          "usage_ratio": 0.1755
+          "usage_ratio": 0.1752
         },
         "execution_id": null,
         "node_id": "queen",

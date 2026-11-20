@@ -8,32 +8,30 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "text/event-stream",
-  "captured_at": "2026-11-20T23:43:50+08:00",
+  "captured_at": "2026-11-21T00:58:55+08:00",
   "canonical": {
     "content_type": "text/event-stream",
-    "event_names": [
-      "session_snapshot"
-    ],
-    "frame_count": 1,
+    "event_names": [],
+    "frame_count": 4,
     "frames": [
       {
         "envelope": {
           "colony_id": null,
           "correlation_id": null,
           "data": {
-            "activity": null,
-            "awaiting_input": false,
+            "activity": "awaiting_user",
+            "awaiting_input": true,
             "current_execution_id": null,
             "current_tool_calls": [],
             "interrupt_cause": null,
             "interrupted": false,
             "is_executing": false,
             "last_event_at": "<last_event_at>",
-            "last_event_seq": null,
+            "last_event_seq": 0.0,
             "last_queen_event_at": "<last_queen_event_at>",
-            "park_reason": null,
+            "park_reason": "turn_done",
             "pending_questions": null,
-            "queen_busy_reason": null,
+            "queen_busy_reason": "awaiting_input",
             "snapshot_seq": 0.0
           },
           "execution_id": null,
@@ -43,26 +41,96 @@
           "timestamp": "<timestamp>",
           "type": "session_snapshot"
         },
-        "event": "session_snapshot",
+        "event": null,
         "seq": 0.0,
         "type": "session_snapshot"
+      },
+      {
+        "envelope": {
+          "colony_id": null,
+          "correlation_id": null,
+          "data": {
+            "content": "CONTRACT_OK",
+            "inner_turn": 0,
+            "iteration": 0,
+            "snapshot": "CONTRACT_OK"
+          },
+          "execution_id": "<execution_id>",
+          "node_id": "queen",
+          "seq": 0.0,
+          "stream_id": "queen",
+          "timestamp": "<timestamp>",
+          "type": "client_output_delta"
+        },
+        "event": null,
+        "seq": 0.0,
+        "type": "client_output_delta"
+      },
+      {
+        "envelope": {
+          "colony_id": null,
+          "correlation_id": null,
+          "data": {
+            "cache_creation_tokens": 0,
+            "cached_tokens": 0,
+            "cost_usd": 0,
+            "history_anchor_idx": -1,
+            "input_tokens": 0,
+            "iteration": 0,
+            "message_count": 1,
+            "model": "contract-probe-model",
+            "output_tokens": 0,
+            "stop_reason": "stop",
+            "system_prefix_sha": "885285cb1ffe",
+            "system_suffix_sha": "e3b0c44298fc"
+          },
+          "execution_id": "<execution_id>",
+          "node_id": "queen",
+          "seq": 0.0,
+          "stream_id": "queen",
+          "timestamp": "<timestamp>",
+          "type": "llm_turn_complete"
+        },
+        "event": null,
+        "seq": 0.0,
+        "type": "llm_turn_complete"
+      },
+      {
+        "envelope": {
+          "colony_id": null,
+          "correlation_id": null,
+          "data": {
+            "park_reason": "turn_done"
+          },
+          "execution_id": "<execution_id>",
+          "node_id": "queen",
+          "seq": 0.0,
+          "stream_id": "queen",
+          "timestamp": "<timestamp>",
+          "type": "client_input_requested"
+        },
+        "event": null,
+        "seq": 0.0,
+        "type": "client_input_requested"
       }
     ],
     "payload_types": [
-      "session_snapshot"
+      "session_snapshot",
+      "client_output_delta",
+      "llm_turn_complete",
+      "client_input_requested"
     ]
   },
   "shape": {
     "content_type": "string",
     "event_names": "array",
-    "event_names[]": "string",
     "frame_count": "number(int)",
     "frames": "array",
     "frames[].envelope": "object",
     "frames[].envelope.colony_id": "null",
     "frames[].envelope.correlation_id": "null",
     "frames[].envelope.data": "object",
-    "frames[].envelope.data.activity": "null",
+    "frames[].envelope.data.activity": "string",
     "frames[].envelope.data.awaiting_input": "boolean",
     "frames[].envelope.data.current_execution_id": "null",
     "frames[].envelope.data.current_tool_calls": "array",
@@ -70,28 +138,43 @@
     "frames[].envelope.data.interrupted": "boolean",
     "frames[].envelope.data.is_executing": "boolean",
     "frames[].envelope.data.last_event_at": "string",
-    "frames[].envelope.data.last_event_seq": "null",
+    "frames[].envelope.data.last_event_seq": "number(float)",
     "frames[].envelope.data.last_queen_event_at": "string",
-    "frames[].envelope.data.park_reason": "null",
+    "frames[].envelope.data.park_reason": "string",
     "frames[].envelope.data.pending_questions": "null",
-    "frames[].envelope.data.queen_busy_reason": "null",
+    "frames[].envelope.data.queen_busy_reason": "string",
     "frames[].envelope.data.snapshot_seq": "number(float)",
-    "frames[].envelope.execution_id": "null",
+    "frames[].envelope.execution_id": "string",
     "frames[].envelope.node_id": "string",
     "frames[].envelope.seq": "number(float)",
     "frames[].envelope.stream_id": "string",
     "frames[].envelope.timestamp": "string",
     "frames[].envelope.type": "string",
-    "frames[].event": "string",
+    "frames[].event": "null",
     "frames[].seq": "number(float)",
     "frames[].type": "string",
+    "frames[].envelope.data.content": "string",
+    "frames[].envelope.data.inner_turn": "number(int)",
+    "frames[].envelope.data.iteration": "number(int)",
+    "frames[].envelope.data.snapshot": "string",
+    "frames[].envelope.data.cache_creation_tokens": "number(int)",
+    "frames[].envelope.data.cached_tokens": "number(int)",
+    "frames[].envelope.data.cost_usd": "number(int)",
+    "frames[].envelope.data.history_anchor_idx": "number(int)",
+    "frames[].envelope.data.input_tokens": "number(int)",
+    "frames[].envelope.data.message_count": "number(int)",
+    "frames[].envelope.data.model": "string",
+    "frames[].envelope.data.output_tokens": "number(int)",
+    "frames[].envelope.data.stop_reason": "string",
+    "frames[].envelope.data.system_prefix_sha": "string",
+    "frames[].envelope.data.system_suffix_sha": "string",
     "payload_types": "array",
     "payload_types[]": "string"
   },
   "counts": {
-    "event_names": 1,
-    "frames": 1,
-    "payload_types": 1
+    "event_names": 0,
+    "frames": 4,
+    "payload_types": 4
   },
   "notes": [
     "timed out"

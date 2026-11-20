@@ -314,7 +314,7 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	installRuntimeLogBuffer()
 	soulProbeAnswerFor := newSoulProbeAnswerFor(home, args.str("model"))
 
-	app := hiveserver.NewApp(hiveserver.AppDeps{
+	app := hiveserver.NewApp(newServeAppDeps(home, hiveserver.AppDeps{
 		Sessions: func() []hiveserver.FeatureSession {
 			liveMu.Lock()
 			defer liveMu.Unlock()
@@ -333,7 +333,7 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 		QueenMail:              queenMail,
 		SoulProbeAnswerFor:     soulProbeAnswerFor,
 		SoulReflect:            newSoulReflectFor(home, args.str("model")),
-	})
+	}))
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Error: %v\n", err)
@@ -607,10 +607,10 @@ func (r *Runner) createSessionWithRuntime(
 	} else {
 		toolbox := builtin.New("")
 		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
-		onTurnStart := enableQueenSessionTools(tools, manager, sessionID, record, home)
+		onTurnStart := r.enableQueenTools(tools, manager, sessionID, record, home, liveMu, live, defaultModel)
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 			LLM:           provider,
-			Tools:         tools.Defs(),
+			Tools:         tools.ModelDefs(),
 			Execute:       tools.Execute,
 			ExecuteBlocks: tools.ExecuteBlocks,
 			Root:          sessionDir,
@@ -681,10 +681,8 @@ func (r *Runner) createSessionWithRuntime(
 	*live = append(*live, record)
 	liveMu.Unlock()
 
-	if runtime != nil && params.InitialPrompt != nil && strings.TrimSpace(*params.InitialPrompt) != "" {
-		if err := runtime.Deliver(*params.InitialPrompt); err != nil {
-			return nil, err
-		}
+	if err := startSessionTurns(record, runtime, params.InitialPrompt); err != nil {
+		return nil, err
 	}
 	hiveserver.MarkBootReady("Queen ready")
 	return record, nil

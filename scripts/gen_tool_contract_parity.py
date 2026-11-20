@@ -35,14 +35,18 @@ CONTEXT_PARAMS = {
     "profile_display_name", "session_cwd",
 }
 
-# The 36 same-name tools of the contract audit (Python 857/270 vs Go 137).
+# The 42 same-name tools of the contract audit (Python 857/270 vs Go 137).
+# The seven aden_tools security tools are registered unconditionally upstream
+# and (since the scanners-parity lane) unconditionally in Go as well, so all
+# seven are part of the same-name surface.
 CORE_TOOLS = [
     "attach_file", "chart_render", "csv_append", "csv_info", "csv_read",
-    "csv_write", "edit_file", "exa_search", "excel_append", "excel_info",
-    "excel_read", "excel_search", "excel_sheet_list", "excel_write",
-    "get_account_info", "get_current_time", "image_generate", "pdf_read",
-    "read_file", "risk_score", "search_files", "search_messages",
-    "search_wikipedia", "terminal_exec", "terminal_glob", "terminal_job_logs",
+    "csv_write", "dns_security_scan", "edit_file", "exa_search", "excel_append",
+    "excel_info", "excel_read", "excel_search", "excel_sheet_list", "excel_write",
+    "get_account_info", "get_current_time", "http_headers_scan", "image_generate",
+    "pdf_read", "port_scan", "read_file", "risk_score", "search_files",
+    "search_messages", "search_wikipedia", "ssl_tls_scan", "subdomain_enumerate",
+    "tech_stack_detect", "terminal_exec", "terminal_glob", "terminal_job_logs",
     "terminal_job_manage", "terminal_job_start", "terminal_output_get",
     "terminal_pty_close", "terminal_pty_open", "terminal_pty_run",
     "terminal_rg", "web_scrape", "web_search", "write_file",
@@ -56,6 +60,16 @@ TERMINAL_TOOLS = {
 }
 
 HARNESS_GROUPS = ("files-tools", "terminal-tools", "chart-tools", "memory-tools", "hive_tools")
+
+# Tools whose frozen contract reference is the Python REQUEST layer (the freeze
+# capture recorded them under layers including llm_request). The request path
+# (`framework/llm/litellm.py::_tool_to_openai_format`) always writes
+# `required`, even as an empty list, so their model-visible schema publishes
+# `required: []` while the registry dump below has no such key. The three names
+# are review-verified against go_hive/contracts/tool-definitions.json; a tool
+# whose only reference is the Tool Library layer (edit_file, terminal_pty_open)
+# stays without the key, because that layer omits it.
+REQUEST_REQUIRED_MATERIALIZED = {"get_account_info", "get_current_time", "pdf_read"}
 
 
 def strip_titles(node):
@@ -74,12 +88,16 @@ def strip_titles(node):
     return out
 
 
-def visible(schema):
+def visible(schema, ensure_required: bool = False):
     schema = json.loads(json.dumps(schema or {}))
     props = schema.get("properties") or {}
     schema["properties"] = {k: v for k, v in props.items() if k not in CONTEXT_PARAMS}
     if "required" in schema:
         schema["required"] = [r for r in (schema.get("required") or []) if r not in CONTEXT_PARAMS]
+    elif ensure_required:
+        # The request layer materializes the key (see below); the registry dump
+        # does not. Restore it for tools whose frozen reference is the request.
+        schema["required"] = []
     return strip_titles(schema)
 
 
@@ -150,12 +168,12 @@ def main() -> None:
             "apply_description": status == "aligned",
             "apply_parameters": status == "aligned",
             "description": py["description"],
-            "parameters": visible(py["inputSchema"]),
+            "parameters": visible(py["inputSchema"], ensure_required=name in REQUEST_REQUIRED_MATERIALIZED),
         }
 
     manifest = {
         "provenance": {
-            "purpose": "Python ⇄ Go model-visible tool contract for the 36 same-name core tools (P1 lane)",
+            "purpose": "Python ⇄ Go model-visible tool contract for the 42 same-name core tools (P1 lane)",
             "python_default_tools": len(py_default),
             "python_all_tools": len(py_all),
             "harness_groups": counts,

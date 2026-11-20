@@ -34,8 +34,8 @@
 | judge（success_criteria） | 已实现 | colony worker 带 criteria 时评估并发布 `judge_verdict`；chat 会话无 criteria 不评估 |
 | stall_check（停滞检查） | 已实现 | judge 槽在 queen 回合以 `turn_done` 结束后判定「宣称要做却停手」，命中则注入一次提醒（与上游一致，不发布事件；`node_stalled` 属 doom-loop）。2026-11-20 真实 `hive serve` + 脚本化 OpenAI 兼容网关 E2E：judge true → 提醒进入下一轮模型请求与会话转录；judge false → 不提醒；开关关闭 → 0 次 judge 调用（`docs/stall-check-e2e.md`，证据 `docs/e2e-assets/stall-check-e2e/`）。threshold 缺省 0.5、数字字符串同 `float()` 语义、非法值不提醒（单测钉住） |
 | 内建工具 `read_file` / `write_file` / `terminal_exec` | 已实现，未在文档中触发 | 单测覆盖；本次假模型未发工具调用 |
-| 集成工具（会话可用） | 已实现 | 23 个安装器 102 模块 / 854 action，加 senders 1 模块 / 9 action，合计 **103 模块 / 863 action**；会话目录实测 103 个集成工具（扫描器与 senders 打开时） |
-| 集成工具（默认关闭） | 已实现，默认关闭 | 6 个网络扫描器 + senders；见 §2.4，实测默认目录 96 个工具 |
+| 集成工具（会话可用） | 已实现 | 23 个安装器 102 模块 / 854 action，加 senders 1 模块 / 9 action，合计 **103 模块 / 863 action**；会话目录实测 113 个集成工具（默认，senders 关闭）；打开 `HIVE_EMAIL_SENDERS` 后 114 |
+| 集成工具（默认关闭） | 已实现，默认关闭 | 仅 `senders`（`email_senders` / `HIVE_EMAIL_SENDERS`）；网络扫描器已与上游一致默认注册，见 §2.4 |
 | 有意排除的 action | 未实现（有意） | `csv_sql`、`excel_sql` 依赖 DuckDB；纯 Go 无 cgo 不引入，见 §2.3 |
 | Colony 磁盘加载 + 会话注册 | 已实现 | 实测 `serve --colony docs_probe` |
 | Colony 多 worker 编排闭环 | 部分 | 包级测试；未用真实模型跑多 worker 任务 |
@@ -69,14 +69,14 @@
 
 23 个安装器的 action 明细见 `REMAINING_MODULES.md` §5（各安装器测试各自钉住 `installed` 数）。安装器之间无重名工具：`TestSessionToolCatalogueInstallsEveryBatch` 用「逐个安装后名字集合 ⊆ 会话目录」+「`installed` 计数等于 registry 大小」双重校验。
 
-会话目录的实测口径（2026-11-19，本工作树）：
+会话目录的实测口径（2026-11-21，本工作树）：
 
 ```text
-HIVE_NETWORK_SCANNERS=1 HIVE_EMAIL_SENDERS=1 → installed=103 registry=103
-默认（都不设）                                  → installed=96  registry=96
+默认（不设功能开关）                            → installed=113 registry=113
+HIVE_EMAIL_SENDERS=1                            → installed=114 registry=114
 ```
 
-默认的 96 = 103 − 6 个网络扫描器 − senders。
+6 个网络扫描器与 `risk_score` 默认注册（与上游 `aden_tools` 一致）；默认与打开 senders 的差只有 senders 1 个工具。
 
 ### 2.2 按 backlog 优先级
 
@@ -114,11 +114,11 @@ P0 逐项：
 
 | 工具 | 开关 | 默认 | 说明 |
 | --- | --- | --- | --- |
-| `port_scan`、`dns_security_scan`、`ssl_tls_scan`、`http_headers_scan` | `HIVE_NETWORK_SCANNERS=1` 或 `hive.config.json` 的 `network_scanners` | 关闭 | 会向第三方主机发探测流量 |
-| `subdomain_enumerate`、`tech_stack_detect` | 同上 | 关闭 | batch8 的两个扫描器共用同一开关 |
 | `senders` | `HIVE_EMAIL_SENDERS=1` 或 `email_senders` | 关闭 | 需要本地发信配置 |
 
-扫描器先按批次注册，再由 `installIntegrationBatches` 在开关关闭时从会话目录摘除；`TestSessionToolCatalogueKeepsNetworkScannersOffByDefault` 同时钉住「默认不在」与「打开后在」。
+网络扫描器（`port_scan`、`dns_security_scan`、`ssl_tls_scan`、`http_headers_scan`、`subdomain_enumerate`、`tech_stack_detect`）与 `risk_score` 不再有开关：它们和上游一样默认注册，会向模型指定的目标发探测流量，调用方只能扫描已获授权的目标。
+
+扫描器随批次直接注册进会话目录；`TestSessionToolCatalogueRegistersSecurityScannersByDefault` 钉住 7 个工具默认存在，且旧的 `HIVE_NETWORK_SCANNERS=0` 不再影响工具面。
 
 ### 2.5 `attach_file` 的多模态路径（图片 / PDF → 模型内容块）
 
@@ -177,7 +177,7 @@ Windows 已知未验证点：
 | `embed_ui.sh` | 需要 Node/npm，或预构建 `FRONTEND_DIST` + `SKIP_FRONTEND_BUILD=1` | 实测：`npm ci` + `vite build` 6.32s，产出 41.8 MB 嵌入二进制 |
 | `hive open` | 启动服务后向 `https://api.adenhq.com/v1/gateway/availability` 发一次可用性 ping | 代码路径；`serve` 不发 |
 | 集成工具 | 真正调用时访问第三方 API；没有凭据就不会成功 | 测试只用假上游 |
-| 网络扫描器 | 默认关闭；打开后会探测第三方主机 | 代码 + 会话目录测试 |
+| 网络扫描器 | 默认注册；调用时会向模型指定的主机探测（仅限已获授权目标） | 代码 + 会话目录测试 + 本地 127.0.0.1 真实调用 |
 | 技能注册表 / MCP `update` | 使用时访问注册表或索引 | 代码路径 |
 
 ## 5. 未验证清单（按风险排序）

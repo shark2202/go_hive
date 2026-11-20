@@ -38,7 +38,7 @@
   "tools": {
     "modules": "103 / 103",
     "actions": "863 / 865",
-    "default_tools": "137"
+    "default_tools": "143"
   },
   "upstream_tools": {
     "modules": 103,

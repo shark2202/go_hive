@@ -1,6 +1,6 @@
 {
  "provenance": {
-  "purpose": "Python ⇄ Go model-visible tool contract for the 36 same-name core tools (P1 lane)",
+  "purpose": "Python ⇄ Go model-visible tool contract for the 42 same-name core tools (P1 lane)",
   "python_default_tools": 270,
   "python_all_tools": 857,
   "harness_groups": {
@@ -217,6 +217,25 @@
      "path",
      "columns",
      "rows"
+    ],
+    "type": "object"
+   }
+  },
+  "dns_security_scan": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Scan a domain's DNS records for email security and infrastructure hardening.\n\n        Checks SPF, DMARC, DKIM (common selectors), DNSSEC, MX, CAA records,\n        and tests for zone transfer vulnerability. Non-intrusive — uses standard\n        DNS queries only.\n\n        Args:\n            domain: Domain name to scan (e.g., \"example.com\"). Do not include protocol.\n\n        Returns:\n            Dict with SPF, DMARC, DKIM, DNSSEC, MX, CAA results, zone transfer\n            status, and grade_input for the risk_scorer tool.\n        ",
+   "parameters": {
+    "properties": {
+     "domain": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "domain"
     ],
     "type": "object"
    }
@@ -580,7 +599,8 @@
       "type": "string"
      }
     },
-    "type": "object"
+    "type": "object",
+    "required": []
    }
   },
   "get_current_time": {
@@ -597,6 +617,30 @@
       "type": "string"
      }
     },
+    "type": "object",
+    "required": []
+   }
+  },
+  "http_headers_scan": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Scan a URL for OWASP-recommended security headers and information leaks.\n\n        Sends a single GET request and evaluates response headers against\n        OWASP Secure Headers Project guidelines. Non-intrusive — just one request.\n\n        Args:\n            url: Full URL to scan (e.g., \"https://example.com\"). Auto-prefixes https://.\n            follow_redirects: Whether to follow HTTP redirects (default True).\n\n        Returns:\n            Dict with present headers, missing headers with remediation,\n            leaky headers, and grade_input for the risk_scorer tool.\n        ",
+   "parameters": {
+    "properties": {
+     "url": {
+      "type": "string"
+     },
+     "follow_redirects": {
+      "default": true,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "url"
+    ],
     "type": "object"
    }
   },
@@ -722,6 +766,34 @@
       "type": "boolean"
      }
     },
+    "type": "object",
+    "required": []
+   }
+  },
+  "port_scan": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Scan a host for open ports using TCP connect probes.\n\n        Non-intrusive scan that checks if ports accept connections, grabs service\n        banners where possible, and flags risky exposures (databases, admin interfaces).\n\n        Args:\n            hostname: Domain or IP to scan (e.g., \"example.com\").\n            ports: Which ports to scan. Options: \"top20\" (default), \"top100\",\n                   or comma-separated list like \"80,443,8080\".\n            timeout: Connection timeout per port in seconds (default 3.0, max 10.0).\n\n        Returns:\n            Dict with open/closed ports, service details, security findings,\n            and grade_input for the risk_scorer tool.\n        ",
+   "parameters": {
+    "properties": {
+     "hostname": {
+      "type": "string"
+     },
+     "ports": {
+      "default": "top20",
+      "type": "string"
+     },
+     "timeout": {
+      "default": 3.0,
+      "type": "number"
+     }
+    },
+    "required": [
+     "hostname"
+    ],
     "type": "object"
    }
   },
@@ -987,6 +1059,71 @@
     },
     "required": [
      "query"
+    ],
+    "type": "object"
+   }
+  },
+  "ssl_tls_scan": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Scan a host's SSL/TLS configuration and certificate.\n\n        Performs a non-intrusive check of TLS version, cipher suite, certificate\n        validity, expiry, chain details, and common misconfigurations.\n        Uses only Python stdlib — no external tools required.\n\n        Args:\n            hostname: Domain name to scan (e.g., \"example.com\"). Do not include protocol.\n            port: Port to connect to (default 443).\n\n        Returns:\n            Dict with TLS version, cipher, certificate details, issues found,\n            and grade_input for the risk_scorer tool.\n        ",
+   "parameters": {
+    "properties": {
+     "hostname": {
+      "type": "string"
+     },
+     "port": {
+      "default": 443,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "hostname"
+    ],
+    "type": "object"
+   }
+  },
+  "subdomain_enumerate": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Discover subdomains using Certificate Transparency (CT) logs.\n\n        Queries crt.sh to find all certificates issued for a domain, extracting\n        subdomain names. Fully passive — uses only public CT log data.\n        Flags potentially interesting subdomains (staging, dev, admin, etc.).\n\n        Args:\n            domain: Base domain to enumerate (e.g., \"example.com\"). No protocol prefix.\n            max_results: Maximum number of subdomains to return (default 50, max 200).\n\n        Returns:\n            Dict with discovered subdomains, interesting findings,\n            and grade_input for the risk_scorer tool.\n        ",
+   "parameters": {
+    "properties": {
+     "domain": {
+      "type": "string"
+     },
+     "max_results": {
+      "default": 50,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "domain"
+    ],
+    "type": "object"
+   }
+  },
+  "tech_stack_detect": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Detect the technology stack of a website through passive analysis.\n\n        Identifies web server, framework, CMS, JavaScript libraries, CDN,\n        analytics, and security configuration by analyzing HTTP responses,\n        HTML content, cookies, and common paths. Non-intrusive.\n\n        Args:\n            url: URL to analyze (e.g., \"https://example.com\"). Auto-prefixes https://.\n\n        Returns:\n            Dict with detected technologies, security configuration,\n            and grade_input for the risk_scorer tool.\n        ",
+   "parameters": {
+    "properties": {
+     "url": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "url"
     ],
     "type": "object"
    }

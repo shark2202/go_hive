@@ -487,3 +487,105 @@ curl -s -X POST localhost:<api>/api/sessions/<sid>/chat -d '{"message":"hi"}'
 
 原始证据（抓取物、网关日志、分析脚本）：
 `/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolfreeze2/`（`captures/`、`out/`、`capture.py`、`analyze2.py`、`recheck.py`、`matrix.py`）。
+
+## 12. recheck @ tool-residual-align（2026-11-21，terminal 10 + task_create + write_skill + 序列化）
+
+> 本节由 `tool-residual-align` 车道追加。**§1–§11 与 `contracts/*` 未改动**（§11 是 round 1 的冻结记录）；
+> 本节是 round 2 的当前事实，机器可读版见 `docs/tool-contract-recheck.json` 的 `rounds[1]`（`rounds[0]` 指向顶层 round 1 字段）。
+
+### 12.1 抓取
+
+| 侧 | 版本 | commit | 抓取 |
+| --- | --- | --- | --- |
+| reference（Python） | 1.0.14 | `/Users/mac/hive`（main `dab983d4`；core `a756b1e5` / tools/src `68b6c230f20e`，与冻结基线同一 commit） | 临时 `HIVE_HOME` + 假 OpenAI 网关；默认 `queen_growth` 首轮请求 `tools[]` |
+| target（go_hive） | 1.0.26-go.1 | `tool-residual-align` @ `c18abcea` + 本车道改动 | 同一假网关、同一流程；`make build`（CGO_ENABLED=0 GOPROXY=off） |
+
+Python 侧 `tools[]` 与 round 1 **内容逐字节相同**（canonical 内容 sha256 相同；文件只差抓取脚本补的一个行尾换行）。
+Go 侧仍是 144 个工具，只有本节的残留工具定义变化。
+
+### 12.2 总量与逐字段（41 个同名工具，同一口径）
+
+| 维度 | 基线 `1b9c458a` | round 1 `c8cca067` | round 2 |
+| --- | --- | --- | --- |
+| Python 参考面 | 54 | 54 | 54 |
+| Go LLM 请求 `tools[]` | 144 | 144 | 144 |
+| 同名 / 仅 py / 仅 go | 41 / 13 / 103 | 41 / 13 / 103 | 41 / 13 / 103 |
+| description 逐字一致 | 13 | 34 | **40** |
+| input_schema 逐字一致（raw） | 8 | 19 | **32** |
+| 剥 CONTEXT_PARAMS 后一致 | 8 | 20 | **36** |
+| 归一化一致（再剥 title、空 `required`≡缺省、数值等价） | 11 | 24 | **36** |
+| 参数总数 py/go | 156/167 | 156/172 | 156/174 |
+| 仅 py / 仅 go 参数 | 14/25 | 6/22 | **4/22** |
+| 参数类型不一致 | 7 | 0 | 0 |
+| 可选性（nullable）不一致 | 11 | 0 | 0 |
+| `required` 列表不一致 | 7 | 4 | 4 |
+
+- 目标「desc ≥39」达成：**40/41**，唯一不同项是 `run_playbook`（见 §12.5，语义不同且是 Go 侧更诚实的文本）。
+- 目标「schema ≥30」达成：raw **32/41**；剥 CONTEXT_PARAMS **36/41**；归一化 **36/41**。
+  三项的差额只有 §12.5 列的「真正不可比」项。
+- 目标「terminal 10/10」达成：desc 10/10、归一化 10/10、ctx 10/10；raw 8/10，差的 2 个是
+  `terminal_job_start` / `terminal_pty_open`（Python 参考只存在于 Tool Library 层，带框架 `session_cwd`，见 §12.5）。
+- 仅 py 参数 6→4：`task_create` 的 `handoff`、`new_session` 已补齐；剩下 4 个都是 lifecycle 层不可比项。
+
+### 12.3 terminal 10 个：表示差异全部消除
+
+原差异是三类表示差异，不是参数集差异（参数集 round 1 已一致）。本轮把 Go 的生成器改成 pydantic 形状：
+
+| 差异 | 处理 |
+| --- | --- |
+| 可空表示 `anyOf:[{type:X},{type:null}]` vs `type:[X,"null"]` | Go 改为 `anyOf` 形状，`additionalProperties`/`items` 落在内层；`default: null` 保留 |
+| Go 每个参数多一段 `description`（10/10） | 从模型可见 schema 删除；语义仍保留在工具 description 的 Args 段（模型可见）和 Go 源码逐参数行尾注释（内部文档） |
+| 缺 12 处 `default` | 补齐：`terminal_job_logs` 6（stream "stdout"、since_offset 0、max_bytes 64000、wait_until_exit false、wait_timeout_sec 600.0、tail false）、`terminal_pty_run` 3（raw_send false、read_only false、timeout_sec 60.0）、`terminal_output_get` 2（since_offset 0、max_kb 64）、`terminal_pty_close` 1（force false） |
+| description 5 个逐字不同（job_logs / job_manage / output_get / pty_close / pty_run） | 换成 Python docstring 的逐字文本，集中在 `internal/tools/builtin/terminal_tool_descriptions.go` |
+
+`terminal_exec` 的 schema 与 description 也从 `internal/tools/builtin/builtin.go` 换成同一套生成器。
+守门测试：`internal/cli/tool_contract_parity_test.go::TestTerminalToolsRequestShapeMatchesPythonContract`
+（走 `StripContextParams → ToolToOpenAIFormat` 的真实请求管线，与 Python 契约逐字节比较 10/10）。
+
+### 12.4 task_create 与 write_skill
+
+**`task_create`：4 参数 + 真实执行语义（不是只加 schema）。**
+
+- 参数：`goal`、`tasks`、`new_session`、`handoff`；两个新参数的 description 是 Python 契约逐字文本
+  （`internal/tasks/task_create_contract.go`）。
+- 语义：`new_session=true` → 校验 `goal` + 非空 `handoff` → 新建后继 session 目录（只装
+  `[Session handoff]` 的 handoff 消息，不复制旧 transcript）→ 把 tasks 计划种进新 session →
+  以 kickoff 指令启动新 session → 旧 session 写 `superseded_by` 并发布 `SESSION_FORKED`
+  （`internal/server/session_fork_handoff.go`，`internal/cli/session_tools_task_pivot.go` 接线）。
+- 未移植/降级项（不隐藏）：
+  - `new_colony` 枢轴（colony 相位）未移植：colony 绑定的 session 仍是 2 参数 `task_create`；
+  - 旧 session 的退场是「锁 + 回合结束后自然结束」，Python 会等 `TOOL_CALL_COMPLETED` 立即停 loop（Go 无对应的回合内取消缝）；
+  - Python 的 chat-channel 拒 fork 检查在 Go 无对应字段（session 没有 channel 概念）。
+- 守门测试：`TestTaskCreatePivotDefinitionMatchesPythonContract`（4 参数逐字节）、
+  `TestTaskCreateNewSessionForksThroughTheExecutor`（真实 executor 走 fork：工厂调用、种计划、旧 session 置 superseded、
+  空 handoff 拒绝且不 fork）、`TestTaskCreateNonPivotSkipsFork`（无 pivot 字段时仍是本 session 建任务）。
+
+**`write_skill`：description 与 6 个参数描述、`required: []` 全部逐字对齐**
+（`internal/skills/write_skill_contract.go`）；执行语义本就存在（inline / source_path / 三种 scope），未改。
+
+### 12.5 纯序列化与剩余差异
+
+**空 `required` 键**：Python 请求层对每个工具都写 `required`（`framework/llm/litellm.py::_tool_to_openai_format`），
+而 pydantic 生成的 harness schema 在无必填项时省略该键。Go 侧改为「定义里声明就发、没声明就不发」：
+
+- `list_browser_profiles` / `list_triggers` / `list_worker_questions` / `edit_file`：定义未声明 → 省略（与 Python 一致）；
+- `get_account_info` / `get_current_time` / `pdf_read`：冻结参考带 `required: []` → 由 parity manifest 覆盖层补回（生成器 `visible(ensure_required=...)`）；
+- `task_list` / `browser_setup` / `write_skill`：原生定义显式声明 `required: []`。
+
+**数字序列化**：parity manifest 改为 `json.Decoder.UseNumber()`，`attach_file` / `pdf_read` 的
+`max_bytes_mb.default` 从 `25` 变回 `25.0`，与 Python 的 `25.0` 文本一致。
+
+**剩余差异（全部，均已分类）：**
+
+| 工具 | 归因 |
+| --- | --- |
+| `remove_trigger` `reply_to_worker` `run_playbook` `set_trigger` `update_worker_profile` | lifecycle 层：Python Tool Library 只渲染名字+描述，无 schema → **层间不可比**，Go 保留真实 schema。`run_playbook` 的 description 也不同：Go 的 playbook 引擎是原生 JSON 实现，文本如实描述该能力；Python 文本描述的 Python 脚本引擎本移植不存在 |
+| `edit_file` `read_file` `terminal_job_start` `terminal_pty_open` | 只差框架 `session_cwd`：Python 参考是 Tool Library 层（保留 CONTEXT_PARAM），Go 模型可见请求按设计剥离；剥掉后逐字一致 |
+| `exa_search` | 仍是 P1 记录的 partial：Go 是 7-action 聚合模块（required `action`），Python 是扁平工具（required `query`）；扁平化是另一波 |
+
+### 12.6 七门禁
+
+`make fmt-check vet test cross parity parity-targets wiring-check` 全 0（4988 测试，`check_parity` 0 未标注）。
+
+证据：`/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolresidual/`
+（`captures/`、`out/`、`capture.py`、`recheck2.py`、`matrix2.py`、`emit_round2.py`、`out/gate-*.log`）。

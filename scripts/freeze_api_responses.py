@@ -574,10 +574,11 @@ class Freezer:
     def wait_for_events(self) -> None:
         """Wait until both history logs stop growing (kickoff turns settle).
 
-        Python runs an opening turn that calls the stub model; the Go target
-        currently settles after the pre-turn events.  Stability, not a fixed
-        count, is the completion condition so the probe does not bake one
-        implementation's event count into the harness.
+        Both servers run the same opening turn that calls the stub model:
+        the session starts its queen loop immediately, answers from the stub
+        and parks on turn_done. Stability, not a fixed count, is the
+        completion condition so the probe does not bake one implementation's
+        event count into the harness.
         """
         assert self.reference and self.target
         deadline = time.time() + SETTLE_TIMEOUT_S

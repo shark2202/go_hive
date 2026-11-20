@@ -213,8 +213,16 @@ func TestChatRuntimeAnswerResumesFromAskUserPark(t *testing.T) {
 	if runtime.hasPendingQuestions() {
 		t.Fatal("pending ask_user question survived the answer")
 	}
-	if got := len(recorder.ofType(eventbus.EventClientInputRequested)); got != 1 {
-		t.Fatalf("client_input_requested count = %d, want no new question after the answer", got)
+	if got := len(recorder.ofType(eventbus.EventClientInputRequested)); got != 2 {
+		t.Fatalf("client_input_requested count = %d, want the ask_user park plus the turn_done park after the answer", got)
+	}
+	// The answer's own turn parks on turn_done and announces that wait the
+	// way upstream's _await_user_input does; the resolved ask_user request is
+	// followed by the ordinary end-of-turn request.
+	requested := recorder.ofType(eventbus.EventClientInputRequested)
+	if requested[len(requested)-1].Data["park_reason"] != "turn_done" {
+		t.Fatalf("final client_input_requested park_reason = %#v, want turn_done",
+			requested[len(requested)-1].Data["park_reason"])
 	}
 	states := recorder.ofType(eventbus.EventLoopStateChanged)
 	final := states[len(states)-1].Data

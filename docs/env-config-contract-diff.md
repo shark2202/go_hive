@@ -7,8 +7,8 @@
 
 ## 0. 结论摘要
 
-- 环境变量清单沿用已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236），本次独立复算：Python **89** / Go **96** / 共有 **66**；Python 独有 **23**，Go 独有 **30**。数字与发布审计一致。
-- configuration.json：**135** 个键 / **20** 个 section；其中 `aligned` 96，`go_partial` 27，`python_only` 6，`go_only` 5，`unread` 1。
+- 环境变量清单沿用已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236），本次独立复算：Python **89** / Go **96** / 共有 **67**；Python 独有 **22**，Go 独有 **29**。数字与发布审计一致。
+- configuration.json：**134** 个键 / **20** 个 section；其中 `aligned` 96，`go_partial` 27，`python_only` 6，`go_only` 4，`unread` 1。
 - 最重的配置缺口都集中在“Go 有 REST/CRUD、运行时没接”：`worker_llm.*`、`vision_fallback.*`、`queen_llm.<id>.*` 三类槽位在 Go 侧只被读写端点使用，运行时不消费；`llm.aux_max_tokens`、`loop.max_tool_result_chars`、`worker_tools.always_enabled_categories` 则完全没有 reader。
 - 环境变量侧，Python 独有的生产开关主要是 `HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_TRACKER_WORKER_TOOL_CALLS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_COMPACTION_DEBUG`、`HIVE_PLAYBOOK_FAST_GRACE`；其余 Python 独有项是资源采样 / GCU memtrace / 日志等运维与调试面。
 
@@ -20,9 +20,9 @@
 |---|---|---|---|
 | Python | 89 | 89 | ✅ |
 | Go | 96 | 96 | ✅ |
-| 共有 | 66 | 66 | ✅ |
-| Python 独有 | 23 | 23 | ✅ |
-| Go 独有 | 30 | 30 | ✅ |
+| 共有 | 67 | 67 | ✅ |
+| Python 独有 | 22 | 22 | ✅ |
+| Go 独有 | 29 | 29 | ✅ |
 
 > `env-vars.json` 逐个名字给出两侧的读取点/默认值，并标注 `audit_membership`；只出现在字面量里、没有读取点的名字标为 `literal_only`，避免把 MCP env 字段名或注释当成读取面。
 
@@ -56,12 +56,11 @@
 | HIVE_BROWSER_BRIDGE | documented Go bridge on/off switch |
 | HIVE_BROWSER_VIEWPORT_SCALE | injected into the bridge from gcu_viewport_scale |
 | HIVE_MCP2CLI | native/external/auto mcp2cli selection (Go-only) |
-| HIVE_NETWORK_SCANNERS | operator opt-in for four scanning tools (Go-only) |
 | HIVE_SESSION_COST_LIMIT_USD | per-session cost ceiling (Go-only) |
 
 ## 2. configuration.json 逐键契约
 
-共 135 个键。状态定义见生成器数据文件头：`aligned` 两侧读取且类型/默认/语义一致；`go_partial` Go 只有 REST/CRUD 或部分路径；`python_only` Go 无读取；`go_only` Python 无对应键；`unread` 两侧都不读。
+共 134 个键。状态定义见生成器数据文件头：`aligned` 两侧读取且类型/默认/语义一致；`go_partial` Go 只有 REST/CRUD 或部分路径；`python_only` Go 无读取；`go_only` Python 无对应键；`unread` 两侧都不读。
 
 ### 2.1 `channels`
 
@@ -356,10 +355,9 @@
 | `adaptive_tool_budget` | bool | true | HIVE_ADAPTIVE_TOOL_BUDGET | `core/framework/config.py:963` (+1) | `go_hive/go-hive/internal/server/config_features.go:47` (+1) | aligned |
 | `email_senders` | bool | false | HIVE_EMAIL_SENDERS | `core/framework/config.py:992` (+1) | `go_hive/go-hive/internal/server/config_features.go:55` (+1) | aligned |
 | `stall_check` | bool | false | HIVE_STALL_CHECK | `core/framework/config.py:1009` (+1) | `go_hive/go-hive/internal/server/hive_config.go:37` (+1) | aligned |
-| `memory_timeline` | bool | false | HIVE_MEMORY_TIMELINE | `core/framework/config.py:1310` (+1) | `go_hive/go-hive/internal/server/config_features.go:76` (+1) | aligned |
+| `memory_timeline` | bool | false | HIVE_MEMORY_TIMELINE | `core/framework/config.py:1310` (+1) | `go_hive/go-hive/internal/server/config_features.go:63` (+1) | aligned |
 | `gcu_enabled` | bool | true | — | `core/framework/config.py:945` | `go_hive/go-hive/internal/cli/browser_supervisor.go:118` | aligned |
 | `gcu_viewport_scale` | number (0.1-1.0) | 0.8 | — | `core/framework/config.py:1344` | `go_hive/go-hive/internal/server/hive_config.go:93` | aligned |
-| `network_scanners` | bool | false | HIVE_NETWORK_SCANNERS | — | `go_hive/go-hive/internal/server/config_features.go:68` (+1) | go_only |
 | `created_at` | string (ISO time) | null | — | `quickstart.sh:1048` | — | unread |
 | `external_skills` | list[string] | [] | — | `core/framework/skills/discovery.py:149` | `go_hive/go-hive/internal/skills/discovery.go:212` | aligned |
 | `rate_limits` | object (dotted platform.action.window) | built-in table | HIVE_RATE_<PLATFORM>_<ACTION>_<WINDOW> | `core/framework/rate_limiter.py:30` | `go_hive/go-hive/internal/ratelimit/rate_limiter.go:123` | aligned |
@@ -370,7 +368,6 @@
 - `memory_timeline`：same env > file > default(false) chain.
 - `gcu_enabled`：file only. Go additionally lets HIVE_BROWSER_BRIDGE force the bridge on/off (documented operator override, not a parity break).
 - `gcu_viewport_scale`：out-of-range / non-number -> 0.8; Python's isinstance(True, int) quirk (true -> 1.0) is replicated in Go.
-- `network_scanners`：Go extension: gates the four network-probing tools. Python has no same-named switch (its default tool surface differs).
 - `created_at`：written by the installers, read by neither runtime. Documented example only.
 - `external_skills`：non-string entries ignored; paths may be nonexistent and resolve later.
 - `rate_limits`：file values can raise defaults but never past the hard ceiling; env overrides exist on the Python side (HIVE_RATE_...) and are documented in the rate-limiter module.
@@ -519,19 +516,18 @@
 - `loop.max_tool_result_chars` — P1: Go has the 30_000 default but no configuration.json reader for the global `loop` section; a file override is ignored.
 - `worker_tools.always_enabled_categories` — P1: Go has no worker_tools reader; worker tool-tier overrides from configuration.json are not honored.
 
-### go_only（5）
+### go_only（4）
 
 - `mcp.enabled` — Go reads an `mcp` block from configuration.json; Python's MCP servers come from .mcp.json / the registry. A Go extension, not an upstream key.
 - `mcp.namespace` — tool-name namespace; blank keeps the default.
 - `mcp.timeout_seconds` — priority REVERSED vs the general rule: file wins over env here (>0 only). This is the only configuration.json key in either tree with file > env.
 - `mcp.servers` — accepts both the list and map shapes; a same-named registry entry is replaced by the file entry.
-- `network_scanners` — Go extension: gates the four network-probing tools. Python has no same-named switch (its default tool surface differs).
 
 ### unread（1）
 
 - `created_at` — written by the installers, read by neither runtime. Documented example only.
 
-非 `aligned` 键合计 **39** 个，已全部列出（上表）。
+非 `aligned` 键合计 **38** 个，已全部列出（上表）。
 
 ## 5. 复现与门禁
 

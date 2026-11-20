@@ -61,13 +61,15 @@ type sessionToolCatalogue struct {
 // A new batch is one line in that table; install_references_test.go fails when
 // an exported installer is left out.
 //
-// The network scanners keep their own opt-in: they probe third-party hosts, so
-// they are dropped from the registry unless HIVE_NETWORK_SCANNERS (or the
-// network_scanners key in hive.config.json) turns them on.
+// The network scanners are part of that default surface, matching upstream
+// aden_tools (tools/src/aden_tools/tools/__init__.py registers all seven
+// unconditionally). They send probe traffic at the host the model names, so
+// callers must only scan hosts they are authorized to test; there is no
+// Go-only opt-in.
 func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehome.Home) *sessionToolCatalogue {
 	registry := tools.NewToolRegistry()
 	installed := integrations.New(integrations.WithRoots(root)).Install(registry)
-	installed += installIntegrationBatches(registry, home)
+	installed += installIntegrationBatches(registry)
 	if senders, err := hiveserver.RegisterSenderTools(registry, home); err != nil {
 		// A broken sender store costs the senders tool, not the whole
 		// catalogue; the feature gate itself returns (0, nil).
@@ -267,36 +269,14 @@ var sessionIntegrationInstallers = []struct {
 	{"browser-setup", integrations.InstallBrowserSetup},
 }
 
-// networkScannerTools are the tools that send probe traffic at third-party
-// hosts. They are registered and then dropped unless
-// hiveserver.NetworkScannersEnabled says otherwise.
-var networkScannerTools = []string{
-	"port_scan",
-	"dns_security_scan",
-	"ssl_tls_scan",
-	"http_headers_scan",
-	"subdomain_enumerate",
-	"tech_stack_detect",
-}
-
 // installIntegrationBatches publishes every ported batch into registry and
-// returns the number of tools left registered. The scanner filter runs after
-// the batch install so the opt-in stays a catalogue concern and every installer
-// keeps one behaviour.
-func installIntegrationBatches(registry *tools.ToolRegistry, home hivehome.Home) int {
+// returns the number of tools registered. The network scanners are registered
+// like every other batch: upstream has no opt-in gate for them, so the Go
+// session surface keeps the same seven default tools.
+func installIntegrationBatches(registry *tools.ToolRegistry) int {
 	installed := 0
 	for _, installer := range sessionIntegrationInstallers {
 		installed += installer.install(registry)
-	}
-	if hiveserver.NetworkScannersEnabled(home) {
-		return installed
-	}
-	for _, name := range networkScannerTools {
-		if !registry.HasTool(name) {
-			continue
-		}
-		registry.Unregister(name)
-		installed--
 	}
 	return installed
 }
@@ -407,6 +387,12 @@ func (c *sessionToolCatalogue) execute(ctx context.Context, name string, input m
 			success, _ := result["success"].(bool)
 			return string(payload), !success, nil, nil
 		}
+	}
+	// The default flat surface advertises Python-only names; route the ones
+	// this build serves through their existing implementation (playbook
+	// control -> run_playbook actions) and answer the rest explicitly.
+	if content, isError, handled := c.executeFlatSurfaceTool(ctx, name, input); handled {
+		return content, isError, nil, nil
 	}
 	// chart_render may be catalog-only until the chart lane lands its renderer;
 	// answer those calls with an explicit not_implemented envelope instead of a

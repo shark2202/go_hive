@@ -2,9 +2,9 @@
 // missing after wave 8 — attach_file, subdomain_enumerate and tech_stack_detect.
 //
 // Everything lives in batch8_final*.go so the earlier batches stay untouched.
-// The two scanners share the batch-2 opt-in (HIVE_NETWORK_SCANNERS via
-// internal/server.NetworkScannersEnabled) and are dropped from the session
-// catalogue by default; attach_file is always installed.
+// The two scanners are part of the default session surface, matching upstream
+// aden_tools (which registers all seven security tools unconditionally);
+// attach_file is always installed too.
 //
 // Parity: tools/src/aden_tools/tools/attach_file_tool/attach_file_tool.py::register_tools
 // Parity: tools/src/aden_tools/tools/subdomain_enumerator/subdomain_enumerator.py::register_tools

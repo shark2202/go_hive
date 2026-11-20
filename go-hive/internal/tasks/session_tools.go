@@ -15,7 +15,12 @@ var CRMInThisBuild = false
 type PivotHandler struct {
 	FieldName        string
 	FieldDescription string
-	Handle           func(goal string, handoff any, tasks []any) map[string]any
+	// HandoffDescription overrides the generated handoff argument docs. The
+	// queen's DM pivot passes the Python contract text
+	// (task_create_contract.go); an empty value keeps the generic text below
+	// for handlers that only care about routing.
+	HandoffDescription string
+	Handle             func(goal string, handoff any, tasks []any) map[string]any
 }
 
 var taskStatusValues = []string{"pending", "in_progress", "completed", "archived", "deleted"}
@@ -74,6 +79,9 @@ func listSchema() map[string]any {
 					"by editing its status back to pending/in_progress.",
 			},
 		},
+		// The Python request layer publishes the key even when empty
+		// (framework/llm/litellm.py::_tool_to_openai_format).
+		"required": []string{},
 	}
 }
 
@@ -126,9 +134,9 @@ func createSchema(pivotHandler *PivotHandler) map[string]any {
 			"type":        "boolean",
 			"description": pivotHandler.FieldDescription,
 		}
-		properties["handoff"] = map[string]any{
-			"type": "string",
-			"description": "Required when " + pivotHandler.FieldName + "=true. The new " +
+		handoffDescription := pivotHandler.HandoffDescription
+		if handoffDescription == "" {
+			handoffDescription = "Required when " + pivotHandler.FieldName + "=true. The new " +
 				"context inherits NOTHING from this conversation except " +
 				"what you write here — no transcript, no summary, no " +
 				"scrollback. So write a COMPLETE, self-contained " +
@@ -152,7 +160,11 @@ func createSchema(pivotHandler *PivotHandler) map[string]any {
 				"subject/description, it MUST be in this handoff. Write " +
 				"it in full now, while you still have the whole " +
 				"conversation in view. Ignored when " +
-				pivotHandler.FieldName + " is false.",
+				pivotHandler.FieldName + " is false."
+		}
+		properties["handoff"] = map[string]any{
+			"type":        "string",
+			"description": handoffDescription,
 		}
 	}
 	return map[string]any{

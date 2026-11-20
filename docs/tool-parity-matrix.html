@@ -55,17 +55,17 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <section id="summary"><h2><span class="num">00</span>总览</h2><div class="grid g4">
 <div class="card"><div class="k">集成模块</div><div class="v">103 / 103</div><div class="d">上游可用模块全部有 Go 工具；104 个目录中 file_system_toolkits 只是 helper</div></div>
 <div class="card"><div class="k">集成 Action</div><div class="v">863 / 865</div><div class="d">仅 csv_sql / excel_sql 有意排除（DuckDB/cgo）</div></div>
-<div class="card"><div class="k">默认会话工具</div><div class="v">137</div><div class="d">默认配置下（扫描器/发件人/queen mail 关闭）；含 chart_render、csv/excel 同名别名、browser_setup</div></div>
+<div class="card"><div class="k">默认会话工具</div><div class="v">143</div><div class="d">默认配置下（发件人/queen mail 关闭；全部扫描器默认注册，与上游一致）；含 chart_render、csv/excel 同名别名、browser_setup</div></div>
 <div class="card"><div class="k">浏览器工具</div><div class="v">22 / 22 active</div><div class="d">33 个上游定义；serve 自动拉起 bridge 子进程 + hive-browser CLI + control RPC 14831；真实 Chrome 已跑通；模型经 terminal 调 CLI（与上游同款）</div></div></div>
 <div class="callout info"><b>Skill 面：</b>3 个 agent 工具（<code>write_skill</code>/<code>skill_view</code>/<code>list_skills</code>）+ <b>20 个内置 Skill</b>（12 默认 + 8 preset）；矩阵主体是集成工具，Skill 单独见 §02B。<br><b>口径：</b>“已实现”= Go 代码路径存在且被测试覆盖；<b>不等于</b>真实第三方 API 已验证。需要凭据的模块统一按“未验证”看待。Browser Bridge 已用真实 Chrome 跑通 19 步 E2E（残余形状差异见 §03）。</div>
 <!-- TOOLS:START -->
-<div class="callout info"><b>自动核对：</b>刷新 2026-11-21 00:19 CST · HEAD <code>40945349</code> · 上游实测 <b>103 模块 / 865 action</b>（AST 扫描 <code>tools/src/aden_tools/tools/*</code>）· 与正文卡片 <span class="pill ok">一致</span>。Go 侧数字（集成 action 863 / 865、默认会话 137、browser 22/22）由正文人工维护，Go 变更后需同步；此块由 <code>refresh_surface_matrix.py</code> 定时重写。</div>
+<div class="callout info"><b>自动核对：</b>刷新 2026-11-21 00:19 CST · HEAD <code>40945349</code> · 上游实测 <b>103 模块 / 865 action</b>（AST 扫描 <code>tools/src/aden_tools/tools/*</code>）· 与正文卡片 <span class="pill ok">一致</span>。Go 侧数字（集成 action 863 / 865、默认会话 143、browser 22/22）由正文人工维护，Go 变更后需同步；此块由 <code>refresh_surface_matrix.py</code> 定时重写。</div>
 <!-- TOOLS:END -->
 <div class="callout"><b>契约审计：</b>name / desc / input / output 与内置 Skill 的逐字一致性见 <a href="tool-consistency-audit.html">tool-consistency-audit.html</a>（2026-11-20：Skill 20/20 逐字一致；工具契约未达标，P0 缺陷 3 类）。</div>
 </section>
 
 <section id="integrations"><h2><span class="num">01</span>集成工具矩阵（103 模块）</h2>
-<p class="sub">状态：已实现 94、部分 2、默认关闭/功能开关 7。所有 action 名称来自上游 <code>@mcp.tool</code> 扫描；Go action 来自 session catalogue 的 <code>action</code> enum。</p>
+<p class="sub">状态：已实现 100、部分 2、默认关闭/功能开关 1（senders）。所有 action 名称来自上游 <code>@mcp.tool</code> 扫描；Go action 来自 session catalogue 的 <code>action</code> enum。</p>
 <input id="filter" placeholder="过滤：模块名 / tool / action / 状态…">
 <div class="tablewrap"><table><thead><tr><th style="width:17%">上游模块</th><th style="width:17%">Go tool / 证据</th><th style="width:7%">上游</th><th style="width:7%">Go</th><th style="width:14%">状态 / 缺口</th><th>Action（展开）</th></tr></thead><tbody>
 <tr data-search="account_info_tool get_account_info get_account_info">
@@ -219,7 +219,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td><code>dns_security_scanner</code></td>
 <td><code>dns_security_scan</code><div class="small">research_registry.go</div></td>
 <td class="num">1</td><td class="num">1</td>
-<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：dns_security_scan</div></td>
+<td><span class="pill ok">已实现</span></td>
 <td><details><summary>1 action</summary><div class="small">上游：dns_security_scan</div><div class="small">Go：单工具调用</div></details></td>
 </tr>
 <tr data-search="docker_hub_tool docker_hub docker_hub_search docker_hub_list_repos docker_hub_list_tags docker_hub_get_repo docker_hub_get_tag_detail docker_hub_delete_tag docker_hub_list_webhooks docker_hub_search docker_hub_list_repos docker_hub_list_tags docker_hub_get_repo docker_hub_get_tag_detail docker_hub_delete_tag docker_hub_list_webhooks">
@@ -331,7 +331,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td><code>http_headers_scanner</code></td>
 <td><code>http_headers_scan</code><div class="small">research_registry.go</div></td>
 <td class="num">1</td><td class="num">1</td>
-<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：http_headers_scan</div></td>
+<td><span class="pill ok">已实现</span></td>
 <td><details><summary>1 action</summary><div class="small">上游：http_headers_scan</div><div class="small">Go：单工具调用</div></details></td>
 </tr>
 <tr data-search="hubspot_tool hubspot hubspot_search_contacts hubspot_get_contact hubspot_create_contact hubspot_update_contact hubspot_search_companies hubspot_get_company hubspot_create_company hubspot_update_company hubspot_search_deals hubspot_get_deal hubspot_create_deal hubspot_update_deal hubspot_delete_object hubspot_list_associations hubspot_create_association hubspot_search_contacts hubspot_get_contact hubspot_create_contact hubspot_update_contact hubspot_search_companies hubspot_get_company hubspot_create_company hubspot_update_company hubspot_search_deals hubspot_get_deal hubspot_create_deal hubspot_update_deal hubspot_delete_object hubspot_list_associations hubspot_create_association">
@@ -492,7 +492,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td><code>port_scanner</code></td>
 <td><code>port_scan</code><div class="small">research_registry.go</div></td>
 <td class="num">1</td><td class="num">1</td>
-<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：port_scan</div></td>
+<td><span class="pill ok">已实现</span></td>
 <td><details><summary>1 action</summary><div class="small">上游：port_scan</div><div class="small">Go：单工具调用</div></details></td>
 </tr>
 <tr data-search="postgres_tool postgres pg_query pg_list_schemas pg_list_tables pg_describe_table pg_explain pg_get_table_stats pg_list_indexes pg_get_foreign_keys pg_query pg_list_schemas pg_list_tables pg_describe_table pg_explain pg_get_table_stats pg_list_indexes pg_get_foreign_keys">
@@ -625,7 +625,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td><code>ssl_tls_scanner</code></td>
 <td><code>ssl_tls_scan</code><div class="small">research_registry.go</div></td>
 <td class="num">1</td><td class="num">1</td>
-<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：ssl_tls_scan</div></td>
+<td><span class="pill ok">已实现</span></td>
 <td><details><summary>1 action</summary><div class="small">上游：ssl_tls_scan</div><div class="small">Go：单工具调用</div></details></td>
 </tr>
 <tr data-search="stripe_tool stripe stripe_create_customer stripe_get_customer stripe_get_customer_by_email stripe_update_customer stripe_list_customers stripe_get_subscription stripe_get_subscription_status stripe_list_subscriptions stripe_create_subscription stripe_update_subscription stripe_cancel_subscription stripe_create_payment_intent stripe_get_payment_intent stripe_confirm_payment_intent stripe_cancel_payment_intent stripe_list_payment_intents stripe_list_charges stripe_get_charge stripe_capture_charge stripe_create_refund stripe_get_refund stripe_list_refunds stripe_list_invoices stripe_get_invoice stripe_create_invoice stripe_finalize_invoice stripe_pay_invoice stripe_void_invoice stripe_create_invoice_item stripe_list_invoice_items stripe_delete_invoice_item stripe_create_product stripe_get_product stripe_list_products stripe_update_product stripe_create_price stripe_get_price stripe_list_prices stripe_update_price stripe_create_payment_link stripe_get_payment_link stripe_list_payment_links stripe_create_coupon stripe_list_coupons stripe_delete_coupon stripe_get_balance stripe_list_balance_transactions stripe_list_webhook_endpoints stripe_list_payment_methods stripe_get_payment_method stripe_detach_payment_method stripe_list_disputes stripe_list_events stripe_create_checkout_session stripe_cancel_payment_intent stripe_cancel_subscription stripe_capture_charge stripe_confirm_payment_intent stripe_create_checkout_session stripe_create_coupon stripe_create_customer stripe_create_invoice stripe_create_invoice_item stripe_create_payment_intent stripe_create_payment_link stripe_create_price stripe_create_product stripe_create_refund stripe_create_subscription stripe_delete_coupon stripe_delete_invoice_item stripe_detach_payment_method stripe_finalize_invoice stripe_get_balance stripe_get_charge stripe_get_customer stripe_get_customer_by_email stripe_get_invoice stripe_get_payment_intent stripe_get_payment_link stripe_get_payment_method stripe_get_price stripe_get_product stripe_get_refund stripe_get_subscription stripe_get_subscription_status stripe_list_balance_transactions stripe_list_charges stripe_list_coupons stripe_list_customers stripe_list_disputes stripe_list_events stripe_list_invoice_items stripe_list_invoices stripe_list_payment_intents stripe_list_payment_links stripe_list_payment_methods stripe_list_prices stripe_list_products stripe_list_refunds stripe_list_subscriptions stripe_list_webhook_endpoints stripe_pay_invoice stripe_update_customer stripe_update_price stripe_update_product stripe_update_subscription stripe_void_invoice">
@@ -639,7 +639,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td><code>subdomain_enumerator</code></td>
 <td><code>subdomain_enumerate</code><div class="small">extras_registry.go</div></td>
 <td class="num">1</td><td class="num">1</td>
-<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：subdomain_enumerate</div></td>
+<td><span class="pill ok">已实现</span></td>
 <td><details><summary>1 action</summary><div class="small">上游：subdomain_enumerate</div><div class="small">Go：单工具调用</div></details></td>
 </tr>
 <tr data-search="supabase_tool supabase supabase_select supabase_insert supabase_update supabase_delete supabase_auth_signup supabase_auth_signin supabase_edge_invoke supabase_select supabase_insert supabase_update supabase_delete supabase_auth_signup supabase_auth_signin supabase_edge_invoke">
@@ -653,7 +653,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td><code>tech_stack_detector</code></td>
 <td><code>tech_stack_detect</code><div class="small">extras_registry.go</div></td>
 <td class="num">1</td><td class="num">1</td>
-<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：tech_stack_detect</div></td>
+<td><span class="pill ok">已实现</span></td>
 <td><details><summary>1 action</summary><div class="small">上游：tech_stack_detect</div><div class="small">Go：单工具调用</div></details></td>
 </tr>
 <tr data-search="telegram_tool telegram telegram_send_message telegram_send_document telegram_edit_message telegram_delete_message telegram_forward_message telegram_send_photo telegram_send_chat_action telegram_get_chat telegram_pin_message telegram_unpin_message telegram_get_chat_member_count telegram_send_video telegram_set_chat_description telegram_delete_message telegram_edit_message telegram_forward_message telegram_get_chat telegram_get_chat_member_count telegram_pin_message telegram_send_chat_action telegram_send_document telegram_send_message telegram_send_photo telegram_send_video telegram_set_chat_description telegram_unpin_message">
@@ -790,7 +790,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td><details><summary>9 actions</summary><div class="small">上游：zoom_get_user, zoom_list_meetings, zoom_get_meeting, zoom_create_meeting, zoom_delete_meeting, zoom_list_recordings, zoom_update_meeting, zoom_list_meeting_participants, zoom_list_meeting_registrants</div><div class="small">Go：zoom_get_user, zoom_list_meetings, zoom_get_meeting, zoom_create_meeting, zoom_delete_meeting, zoom_list_recordings, zoom_update_meeting, zoom_list_meeting_participants, zoom_list_meeting_registrants</div></details></td>
 </tr>
 </tbody></table></div>
-<p class="small">模块总数 103；上游 action 865，Go 863。默认关闭的 6 个扫描器和 1 个 senders 工具仍计为“已实现”，但默认会话工具表里不出现。</p>
+<p class="small">模块总数 103；上游 action 865，Go 863。扫描器与其余模块一样默认注册（与上游一致）；只有 <code>senders</code> 工具仍受 <code>email_senders</code> 开关控制、默认不在会话表里。</p>
 </section>
 
 <section id="core"><h2><span class="num">02</span>核心会话工具</h2>
@@ -930,12 +930,12 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td>LongMemEval</td><td>harness + 脱敏 fixture + 脚本化管线 PASS；真实 S/M 数据集与官方 judge 因无外网未验证，<b>没有任何分数</b></td></tr>
 <tr><td>第三方集成</td><td>81 个需凭据模块未做真实 API 验证；本矩阵的“已实现”仅指代码路径/测试</td></tr>
 <tr><td>发送人工具</td><td><code>senders</code> 已实现，但 <code>email_senders</code> 默认关闭，默认工具表不含 9 个 action</td></tr>
-<tr><td>网络扫描器</td><td>4 个扫描器 + 子域/技术栈共 6 个已实现，默认关闭（<code>HIVE_NETWORK_SCANNERS=false</code>）</td></tr>
+<tr><td>网络扫描器</td><td>6 个扫描器 + <code>risk_score</code> 共 7 个已实现并默认注册（与上游一致）；无 Go 独有开关</td></tr>
 </tbody></table></div>
 <div class="callout"><b>结论：</b>集成模块/action 覆盖接近完整（103/103、863/865）；file_ops、Queen lifecycle、Browser active 面与 Claude Code queen 运行器已补齐并有真实验证。Soul 每日反思与手动 reflect 已接通；冷会话开幕事件、Browser notify/面板、技能 live reload、附件多模态均已在 2026-11-20 补齐，LongMemEval harness 已实现但真实数据集/judge 因无外网未验证（fixture 管线 PASS，无分数）；仍存的明确缺口是 LongMemEval 真实跑分、81 个第三方凭据模块、Windows 实机与少量 CLI/schema 形状差异。此页是追踪矩阵，不是“全部可用”的证明。</div>
 </section>
 
-<footer>生成：2026-11-21 00:19 CST · 数据：上游 <code>tools/src/aden_tools/tools/*</code> 的 103 个模块、<code>tools/src/gcu/browser/tools/*</code> 的 33 个定义、Go session catalogue 的 137 个默认工具、<code>go_hive/browserbridge/PARITY.md</code>。状态口径见页首。</footer>
+<footer>生成：2026-11-21 00:43 CST · 数据：上游 <code>tools/src/aden_tools/tools/*</code> 的 103 个模块、<code>tools/src/gcu/browser/tools/*</code> 的 33 个定义、Go session catalogue 的 143 个默认工具、<code>go_hive/browserbridge/PARITY.md</code>。状态口径见页首。</footer>
 </div>
 <script>
 document.getElementById('filter').addEventListener('input', function(e){

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Queen / Worker / Colony 核心概念对齐审计 · go_hive × Hive</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1360px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:1040px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g5{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:1100px){.g5{grid-template-columns:repeat(3,minmax(0,1fr))}} @media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3,.g4,.g5{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px} .missing{color:#f2a3a3}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff} .callout.ok{border-color:var(--ok);background:#0f1a13;color:#c8e8cf}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:900px){table{min-width:900px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+
+<header><div class="eyebrow">Hive · Core Concepts Parity Audit</div>
+<h1>Queen / Worker / Colony <span>核心概念对齐审计</span></h1>
+<p class="lede">回答一个问题：<b>queen / worker / colony 这些核心概念与特性，go_hive 与 Hive（Python 1.0.14）是否完全一致？</b>本页把这个问题拆成 <b>24 个维度</b>，逐维给出「Python 参考行为 / go_hive 当前行为 / 状态 / 证据 / 精确差异」。范围覆盖 queen 身份与双会话、worker 创建/预算/报告/续跑/judge、colony 目录/绑定/runtime、playbook、triggers、reminders/idle、Sentinel、Queen Mail 与 Claude Code Queen、模型槽位、破坏性操作，并把补充四份文档（<code>docs/key_concepts/improvement.md</code>、<code>docs/key_concepts/coordination.md</code>、<code>docs/memory-benchmark.md</code>、<code>go_hive/07-memory-and-skills.md</code>）的 Improvement / Coordination / LongMemEval / Memory &amp; Skills 四组维度并入同一页，不另开结论。</p>
+<div class="meta"><span>审计基线：<b>go_hive@dab983d4</b>（Go <b>1.0.26-go.1</b>；分支 <code>core-concepts-parity-audit</code>）</span><span>Python 参考：<b>hive 1.0.14</b>（<code>core/framework</code>）</span><span>审计日期：<b>2026-11-21 00:44 CST</b></span><span>证据优先级：<b>生产调用链 &gt; 测试 &gt; 文档；不把「代码存在」当「行为对齐」</b></span></div>
+<div class="toc"><a href="#summary">总览</a><a href="#how">判定口径</a><a href="#dimensions">24 维矩阵</a><a href="#aligned">对齐项清单</a><a href="#gaps">缺口/未验证</a><a href="#repro">复现命令</a><a href="#conclusion">结论</a><a href="#refs">相关文档</a></div></header>
+
+<section id="summary"><h2><span class="num">00</span>总览</h2>
+<div class="grid g5">
+<div class="card"><div class="k">维度总数</div><div class="v">24</div><div class="d">核心 17（Queen/Worker/Colony）+ 补充文档 7（Improvement/Coordination/Memory/Skills/Soul/LongMemEval）</div></div>
+<div class="card"><div class="k">已对齐</div><div class="v" style="color:var(--ok)">12</div><div class="d">代码级对齐并有测试/生产接线；其中 3 维带 live 记录（#3/#5/#8）</div></div>
+<div class="card"><div class="k">部分</div><div class="v" style="color:var(--warn)">9</div><div class="d">主路径存在，但有明确差异（脚本、投递、作用域、双存储等）</div></div>
+<div class="card"><div class="k">未对齐</div><div class="v" style="color:var(--bad)">1</div><div class="d">模型槽位运行时消费：<code>worker_llm</code>/<code>vision_fallback</code> 零消费、<code>queen_llm</code> 创建期不生效</div></div>
+<div class="card"><div class="k">未验证</div><div class="v" style="color:var(--accent2)">2</div><div class="d">破坏性操作未实机执行；LongMemEval 无任何 Go 分数</div></div>
+</div>
+<div class="callout bad"><b>结论先行：</b>不能宣布「完全一致」。24 个维度中 <b>12 已对齐 / 9 部分 / 1 未对齐 / 2 未验证</b>。最严重的三类：① <b>模型槽位运行时消费缺失</b>（Python 真消费 <code>worker_llm</code>/<code>vision_fallback</code>/<code>queen_llm</code>，Go 只存配置）；② <b>Worker 升级通道未接</b>（<code>escalate</code> 工具只有定义、<code>escalation_requested</code> 无生产者、<code>InstallWorkerEscalationRouting</code> 零生产调用，导致 <code>list_worker_questions</code>/<code>reply_to_worker</code> 生产恒空）；③ <b>Sentinel 真实投递未验证</b>（Telegram/Slack/Hive Inbox 从未真实送达）。另有 Playbook 只支持 Go JSON、两份 conversation 存储、<code>STREAM_STALLED</code> 未注册、LongMemEval 零分数等 8 条 P1/P2。详见 <a href="#gaps">§04 缺口清单</a> 与 <a href="#conclusion">§06 结论</a>。</div>
+<div class="callout info"><b>本页与既有审计的关系：</b><code>RUNTIME_SPINE_AUDIT.md</code>（八层，基线 <code>efb81858</code>，70/0/0）与 <code>CONCEPT_WIRING_AUDIT.md</code>（七概念页，80/0/0）回答「机制能否从生产入口走到」；本页回答「走到之后，行为与 Python 参考是否一致」。三者互补：既有两份审计的「已接」可能仍带行为差异（本页 9 条「部分」+1 条「未对齐」），也有本页「已对齐」的行在旧审计里仍是「部分」口径的存量边界。基线 <code>efb81858</code> 之后 main 又合入 76 个提交（工具契约/配置/Browser 残差等），本页所有行号与调用链均按 <code>dab983d4</code> 现场复核。</div>
+</section>
+
+<section id="how"><h2><span class="num">01</span>判定口径与证据级别</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">状态</th><th>含义</th></tr></thead><tbody>
+<tr><td><span class="pill ok">已对齐</span></td><td>Python 参考行为在 Go 生产路径上成立（创建期/运行期真实消费或真实注入），并有测试锚定；带 <b>L</b> 的另有交付侧 live 记录。</td></tr>
+<tr><td><span class="pill warn">部分</span></td><td>主路径存在，但有明确差异：只覆盖一个角色/阶段、只实现一种形态（如 playbook 只支持 Go JSON）、或某条链路未接（如 worker escalation）。</td></tr>
+<tr><td><span class="pill bad">未对齐</span></td><td>Python 的运行时行为在 Go 没有任何生产消费者，或语义相反。</td></tr>
+<tr><td><span class="pill info">未验证</span></td><td>代码/测试在，但没有对真实外部系统或真实数据跑过（凭据、外网、真实模型、真实破坏性操作）。<b>未验证 ≠ 未实现；也不得外推为已对齐。</b></td></tr>
+</tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">证据级别</th><th>含义</th></tr></thead><tbody>
+<tr><td><span class="pill ok">L · 实测</span></td><td>交付侧既有 live 记录：<code>docs/support-matrix.md</code> 的实测行、真实双 queen E2E（depth 1→4）、真实 <code>claude -p</code> 回合、Orca UI E2E 7/7（构建 1.0.25）。</td></tr>
+<tr><td><span class="pill info">C · 代码确认</span></td><td>从 <code>cmd/hive</code> → <code>internal/cli</code>/<code>internal/server</code> 逐段静态追踪到生产调用点，带 file:line。</td></tr>
+<tr><td><span class="pill warn">T · 测试</span></td><td>有 Go 测试（含 <code>// Parity:</code> 注解指向 Python 用例），但没有跨实现行为对比。</td></tr>
+<tr><td><span class="pill bad">⌕ · 阴性证据</span></td><td>用 grep 证明「生产调用者为空」的缺口（如 <code>BuildEscalateTool</code> 仅定义、零调用）；阴性证据是本页多条缺口的直接依据。</td></tr>
+</tbody></table></div>
+<p class="sub">Python 参考一律指 <code>core/framework</code> @ hive 1.0.14；工具契约、env、API 表面的逐字差异不在本页范围（见 <a href="module-interfaces.html">module-interfaces.html</a> 与 <code>docs/contracts/</code>）。</p>
+</section>
+
+<section id="dimensions"><h2><span class="num">02</span>24 维逐条矩阵</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:3%">#</th><th style="width:12%">维度</th><th style="width:21%">Python 参考（1.0.14）</th><th style="width:22%">go_hive 当前（dab983d4）</th><th style="width:7%">状态</th><th style="width:11%">证据</th><th style="width:24%">精确差异</th></tr></thead><tbody>
+
+<tr><td class="num">1</td><td><b>Queen 身份 / profile / persona</b></td>
+<td>13 个 queen 档案 YAML（<code>agents/queen/*.yaml</code>）；<code>queen_orchestrator.py</code> 组装 identity；无 profile 的 default queen 走通用身份。</td>
+<td>13/13 embed YAML（<code>internal/queen/queen_defaults/</code>）、<code>identity.go:85</code>、<code>chat_runtime.go:1315-1340</code>（identity + soul 拼装）、<code>loader.go:490 queenOverseerSpec</code>。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>C + 13/13 计数；<code>profiles_test.go</code></td>
+<td>default queen 无 profile 回退通用身份（预期）；soul 只叠加在 chat Queen 的 prompt（见 #23）；overseer 的 persona 读 profile 但不读 soul。</td></tr>
+
+<tr><td class="num">2</td><td><b>Queen 双会话（chat Queen vs colony overseer）</b></td>
+<td><code>colony_runtime.py::start_overseer</code>(2276) 在 1.0.14 <b>只有测试调用</b>；生产聊天席位是 <code>queen_task</code>（<code>session_manager._start_queen</code>），ColonyRuntime 只是 <code>run_worker</code> 的 spawn surface。</td>
+<td><code>runtime.go:732 StartOverseer</code> 生产接线（load / fork / <code>serve --colony</code>）；<code>chat_runtime.go:1135 BindColony</code> 把客户端消息/报告/trigger 转投 overseer；<code>chat_colony_bridge.go:405 recordOverseerTerminal</code>；回复经 <code>chat_overseer_transcript.go:52/138</code> 收束为一条 <code>[overseer]</code> assistant 记录。overseer 工具面含 <code>ask_user</code>（<code>overseer_tools.go:112/120/149</code>）。</td>
+<td><span class="pill warn">部分</span></td>
+<td>C + L；<code>TestOverseerTerminalReportRunsNoChatTurn</code>、<code>TestOverseerReplyRecordedOnceInChatTranscript</code>、<code>TestChatRuntimeRelaysClientMessageToOverseer</code>、Orca E2E 用例 4</td>
+<td>单执行 lead 是 <b>Go 独有 seam</b>，注解为 <code>Parity-exempt</code>（<code>chat_colony_bridge.go:401</code>）——不能宣称与 Python 行为一致，只能宣称「对等物 + 有意偏差」。仍两份 conversation 存储（<code>&lt;colony&gt;/conversations</code> 独立执行史）；colony 侧 question 半份只在内存（<code>overseer_park.go:64</code>），重启只恢复 chat cursor 半份；overseer 执行时 chat hub 的 skills source 不参与该次输入。</td></tr>
+
+<tr><td class="num">3</td><td><b>Worker 创建 / 身份 / 工具集</b></td>
+<td><code>colony_runtime.py::_build_worker</code>(1390) 建 <code>workers/&lt;id&gt;/</code>；<code>worker.py</code> Worker；worker 用 worker prompt（不含 Queen 姓名）。</td>
+<td>fork 写 <code>worker.json.system_prompt</code>（<code>colony_worker_definition.go:58/92</code>）；<code>runtime.go:856 workerTools</code> = builtin + 声明项 + tracker + <code>report_to_parent</code> + skill 读 + 4 个 task 工具；<code>worker_tool_selection.go:28</code>。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>C + L；<code>TestForkedWorkerJSONCarriesWorkerIdentityNotQueenPersona</code>、<code>TestForkedColonyWorkerRunsWorkerIdentity</code>、<code>TestWorkerToolPoolHonoursMCPAllowlist</code></td>
+<td>builtin base 恒保留（不是严格 Queen 子集）；空 <code>tools</code> 只剩 builtin；193ace3d 之前 fork 的旧 <code>worker.json</code> 仍是 Queen persona（无迁移）；声明了未注册的工具名会被静默丢弃。</td></tr>
+
+<tr><td class="num">4</td><td><b>Worker 预算 / grace / 自适应</b></td>
+<td><code>worker_definition.py</code> 3 轮+1 grace、30/轮、硬停 90、终身 200；<code>_LOOP_OVERRIDE_BOUNDS</code> 白名单；自适应预算（<code>test_adaptive_tool_budget.py</code>）。</td>
+<td><code>worker_definition.go:9-16</code>（同 5 值）、<code>worker_loop_config.go:46-65</code> 显式清 hard limit 保持 90、<code>scheduler.go</code> 自适应（floor 30 / 上限 200、收缩广播、提升不广播）。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>C；<code>TestShrinkHitsFloorAndClampsRunningWorkers</code>、<code>TestRaiseDoesNotLiftAlreadyClampedInflightWorkers</code>、<code>TestActiveWorkerCountCountsInFlightWorkers</code></td>
+<td><code>max_cost_per_run</code> 仍只是 schema 字段（无执行者）；soft 预算是单 turn-loop 内计数；resume 后预算 pinned（与上游一致）。</td></tr>
+
+<tr><td class="num">5</td><td><b>Worker 报告 / 转录 / 进度镜像</b></td>
+<td><code>report_to_parent(status, summary, data)</code> 终态 → <code>SUBAGENT_REPORT</code> → Queen 的 <code>[WORKER_REPORT]</code>；<code>_build_worker</code> 落 <code>conversations/</code>。</td>
+<td><code>synthetic_tools.go:402</code>（工具）、<code>runtime.go:891/1257/1354</code>（入表/发布）、<code>queen_tools.go:492/504/426</code>（订阅/格式化）、<code>chat_runtime.go:434</code>（注入）；worker 回合 text/tool/token 以 <code>relayed_from=&lt;worker-id&gt;</code> 镜像（<code>chat_colony_bridge.go:217-239</code>）。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>L（报告）+ C（镜像）；<code>TestWorkerReportCarriesDurationSeconds</code>、<code>TestWorkerTranscriptPersistedToDisk</code>、<code>TestColonyBridgeRelaysWorkerProgressWithOrigin</code></td>
+<td>预载 colony 无 chat runtime 时报告无人消费（边界）；<code>HandleReportToParent</code> 零调用（走等价 <code>RecordExplicitReport</code>）；worker 不发布 <code>client_reasoning</code>；overseer 自身 tool/token 不重镜像。</td></tr>
+
+<tr><td class="num">6</td><td><b>Worker 续跑 <code>resume_worker_ids</code></b></td>
+<td><code>run_worker(resume_worker_ids=…)</code>(1379) → <code>resume_worker</code>(1856)，从保存的对话恢复并可带 guidance；逐 id 报失败。</td>
+<td><code>queen_tools.go:231-280</code>（resume 分支，spawner 不支持时明确 unsupported）、<code>resume_workers.go:38 ResumeWorkers</code>、<code>worker_transcript.go:40</code>（transcript 落盘）、<code>worker_state.go:226</code>（Start 自动续跑 queued/running）、<code>runtime.go:518</code>。生产 spawner 就是 <code>*ColonyRuntime</code>（<code>chat_runtime.go:1124</code> 把 runtime 绑进 ctx）。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>C；<code>TestResumeWorkersContinuesSavedTranscript</code>、<code>TestResumeWorkersRejectsMissingTranscript</code>、<code>TestWorkerTranscriptPersistedToDisk</code></td>
+<td><code>docs/support-matrix.md:30</code> 仍写「<code>resume_worker_ids</code> 未实现」= <b>文档旧口径</b>，代码与测试已实现（本页按代码判定）。边界：自动续跑只覆盖崩溃时 queued/running（completed/failed/stopped 不复活）；活动中 worker 拒绝手动 resume；无 <code>meta.json</code> 的旧 worker 不能 resume。</td></tr>
+
+<tr><td class="num">7</td><td><b>Worker judge / 成功标准</b></td>
+<td>declare criteria → judge accept/retry/escalate；RETRY 反馈回注 <code>[Judge feedback]</code>；worker goal criteria。</td>
+<td><code>judge.go:92/109/127/198</code>、<code>colony/runtime.go:1105/1197</code>（worker + overseer <code>ConfigureJudge</code>）、<code>chat_runtime.go:1161/1173/1202</code>（有 criteria 的 chat Queen / goal 继承）、<code>goal_eval.go:144</code> 加权评估、<code>goal_outcome.go</code> 写 result/报告。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>C；<code>TestWorkerRunExecutesGoalCriteriaIntoResultAndReport</code>、<code>TestWorkerJudgeRetryRecordsImprovementSignal</code>、<code>TestOverseerInheritsGoalCriteriaAndRunsJudge</code>、<code>TestJudgeRetryRunsOneMoreTurn</code></td>
+<td>plain chat（无 criteria、无 bound goal）仍 <code>Judge == nil</code>（与上游一致）；绑定 colony 且有 live overseer 时实际被 judge 的是 overseer 的回合；<code>GoalCriteriaText</code> 只取描述，权重/metric 由 <code>EvaluateGoal</code> 单独执行；<code>custom</code>/未知 metric 明确 unsupported。</td></tr>
+
+<tr><td class="num">8</td><td><b>Colony 目录 / 绑定 / tracker</b></td>
+<td>单目录自包含；不可变 <code>ColonyBinding{name, dir, tracker_db}</code> 传播到 queen 与 worker；无 binding 拒绝执行；worker 只写 Queen 声明列。</td>
+<td><code>colony_scaffold.go:31</code>（写 <code>metadata.json</code>/<code>worker.json</code> + 建 <code>skills/</code>、<code>runs/</code>、空 <code>triggers.json</code>，幂等）、<code>routes_colonies.go:409/440/474</code>、<code>colony/tracker.go:61/139</code>、<code>tracker/binding.go:67</code>、<code>tracker/tools.go:1030</code>、导入 <code>routes_colonies_import.go:705</code>。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>L（建库/binding/读写）+ C；<code>TestLoadColonyStartsRuntimeAndOverseer</code></td>
+<td>fork 仍只写两个 JSON（<code>skills/</code>、<code>runs/</code> 在 fork 树上靠首次写入懒建）；tracker 只对含 <code>metadata.json</code> 的目录建库；<code>RuntimeOptions.Binding</code> 无生产注入者（宿主自备）。</td></tr>
+
+<tr><td class="num">9</td><td><b>Colony runtime / 并行 / 限额</b></td>
+<td>默认 4 并发（<code>HIVE_MAX_CONCURRENT_WORKERS</code> 可覆盖）、<code>_pending_queue</code>、软 600s / 硬 <code>min(max(4s, s+600), 3600)</code>；playbook 默认 8、上限 32。</td>
+<td><code>scheduler.go:15</code>（env 4 默认）、<code>runtime.go:202/597/673/980</code>（admission gate）、<code>queen_tools.go:32</code>（soft 600s）、<code>:398-409 computeHardTimeout</code>（同公式 + 3600 cap）、<code>playbook_tools.go:227</code>（ConcurrencyCap）。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>C；<code>TestActiveWorkerCountCountsInFlightWorkers</code>、<code>TestRunWorkerToolSchema</code></td>
+<td>无独立 pending queue 对象，排队等价于 admission gate 阻塞；soft 超时只对 straggler 注入；resume 的批次同样受同一看门狗。</td></tr>
+
+<tr><td class="num">10</td><td><b>Playbook</b></td>
+<td><code>host/playbook/runner.py</code>；playbook 是 <code>.play.py</code> 脚本（进程内 <code>exec</code>，完整 stdlib）；后台收敛、完成注入 <code>[PLAYBOOK_COMPLETE]</code>；<code>run_playbook</code>/status/stop。</td>
+<td><code>playbook_tools.go:144 RunPlaybook</code>、<code>:293 unsupportedPythonPayload</code>、<code>playbook/runner.go:190/423</code>、<code>rows.go</code>；只支持 native JSON（<code>playbooks/&lt;name&gt;.play.json</code>），按 <code>pending_sql</code> 查行、派 worker、重试/退避/死信；<code>action=status/stop</code> <code>playbook_control.go:120/157</code>；run log 落 <code>colony.db playbook_runs</code>。</td>
+<td><span class="pill warn">部分</span></td>
+<td>C；<code>TestRunPlaybookPythonScriptIsUnsupported</code>、<code>TestRunPlaybookSavedPythonNameIsUnsupported</code>、<code>TestRunPlaybookNativeConvergesAndRecordsRun</code>、<code>TestRunPlaybookNativeResumesFromTracker</code></td>
+<td><b>Python 脚本明确 unsupported、0 派发</b>（有明确错误文案，不假装支持）；native JSON 是上游没有的形态（schema 由 <code>run_playbook</code> 工具描述承载）；<b>同步执行</b>，长批次占住一轮工具调用，无后台 <code>[PLAYBOOK_COMPLETE]</code> 通知；控制动作并入同一工具参数（无独立工具名/路由）。</td></tr>
+
+<tr><td class="num">11</td><td><b>Triggers</b></td>
+<td><code>host/triggers.py</code>（cron/interval/webhook）；<code>set_trigger</code>(3732) 写 <code>triggers.json</code>；<code>compute_missed</code> 离线补算，Colony 加载默认静默跳过、不逐条补跑。</td>
+<td>六条生命周期路由 + <code>trigger_runtime.go:220 RestoreSessionTriggers</code>、<code>:416 StartTriggerTimer</code>、<code>:268-281</code> missed 静默跳过盖章；<code>loader.go:633</code> 与 <code>loader_preloaded_session.go</code> 给 <code>QueenExecutor</code> 赋值（<code>chat_runtime.go:470</code> 实现 <code>InjectTrigger</code>）；有 live overseer 时只投 overseer。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>C；<code>TestTimerTriggerWakesChatQueen</code>、<code>TestPersistActiveTriggers</code>、<code>TestResolveMissedRoute</code>、<code>TestTimerFiresAndStampsStats</code></td>
+<td>只对 <code>session.ColonyID != ""</code> 的会话真正生效（符合「唤醒 colony」）；普通 DM 会话的 trigger 不在 boot 时重建；missed 语义与上游一致（盖章跳过，不补跑）——关键定时任务应外部 cron 驱动。</td></tr>
+
+<tr><td class="num">12</td><td><b>Reminders / idle tick</b></td>
+<td><code>agent_loop/reminders.py</code> 的 ReminderHub + 独立 source 模块（tracker/active_workers/colony_parallel/past_conversations/tool_skill/stream_stall/idle_nudge）；idle 预算 120/120/30s、每周期 ≤3 次。</td>
+<td><code>chat_reminders.go:96-121</code> 注册 8 个 source（task/colony_parallel/active_workers/tracker_snapshot/searchable_tools/skills_catalog/turn_context/idle）+ Sentinel escalation source；<code>reminder_hub.go:235 Start</code>；worker/overseer 的 hub 只注册 task + idle（<code>worker_reminders.go:107-135</code>）。</td>
+<td><span class="pill warn">部分</span></td>
+<td>C；<code>TestSessionStartReminderReachesTheModel</code>、<code>TestChatRuntimeTrackerSnapshotFromBoundColony</code>、<code>TestChatRuntimeSkillsCatalogInjectsOnce</code>、<code>TestColonyParallelNudgeFiresAfterPilotThenTrackerWrite</code></td>
+<td><code>STREAM_STALLED</code> source 未注册（<code>stream_stall.go</code> 有实现、零注册）——上游有 <code>stream_stall.py</code>；worker/overseer 没有 fleet/tracker/skills 源；预载 colony 会话的 skills catalog 固定 <code>default</code> queen scope；overseer 执行时 chat hub 的 skills source 不参与。</td></tr>
+
+<tr><td class="num">13</td><td><b>Sentinel / 通知渠道</b></td>
+<td><code>core/framework/sentinel/*</code>（classifier/manager/listeners/notifier/store/token）；per-colony opt-in；渠道 telegram/slack/hive；无 channel 时记录落盘但用户收不到。</td>
+<td><code>sentinel_runtime.go:41 NewSentinelManager</code> + <code>:107 configureSentinel</code> + <code>:165</code> source；<code>sentinel/manager.go:174/230/244</code>（Start/RefreshListeners/ensureListener）；<code>notifier.go</code> telegram/slack/hive 三分支；escalation 落 <code>colonies/&lt;id&gt;/escalations/</code>，回复可重启解析。</td>
+<td><span class="pill warn">部分</span></td>
+<td>C；<code>TestNudgeReturnsReminder</code>、<code>TestAuthorizedReplyResumesAndResolves</code>、<code>TestNotificationsEnabledReadsPerColonyOptIn</code>；<code>support-matrix.md</code>「未接真实 Telegram/Slack」</td>
+<td><b>真实投递未验证</b>：默认 channel <code>hive</code> 依赖云登录态（<code>HIVE_CLOUD_BASE</code>/JWT，本机无则 <code>HiveConnected()=false</code>，发送失败）；Telegram/Slack 无凭据从未真实送达；dead session 不能冷恢复（<code>ErrSentinelColdRestoreUnsupported</code>）；分类质量未 live 验证；渠道写死三个（加 sender 需改五处）。</td></tr>
+
+<tr><td class="num">14</td><td><b>Queen Mail / Claude Code Queen</b></td>
+<td><code>tools/queen_mail_tools.py</code>、<code>server/queen_mail.py</code>、<code>channels.py</code>；每次注册/发送重读配置；CC queen 走 <code>claude -p</code>，MCP 注入 <code>list_queens</code>/<code>message_queen</code>。</td>
+<td><code>internal/qmail/*</code>（引擎/日限/深度/审计）、<code>adapters_qmail.go</code>（线程会话/回复唤醒）、<code>session_tools_queen_mail.go</code>（两个会话工具、queen-only）、CC runner + MCP stdio（<code>qmail/claude_runner*.go</code>、<code>hive queen-mail-mcp</code>）。</td>
+<td><span class="pill warn">部分</span></td>
+<td>L：真实双 queen E2E（depth 1→4，<code>docs/queen-mail.md</code> §7）+ 真实 <code>claude -p</code> 回合；C/T：<code>TestQueenMailRepliesGoBackToTheWriterAndContinueTheChain</code>、<code>TestQueenMailAdapterWakesAStoppedWritersSession</code></td>
+<td>配置只在 <code>hive serve</code> 启动时读一次（上游每次重读，改配置需重启）；fork/superseded 会话不跟随 <code>_newest_successor</code>；CC queen 的<b>真实模型主动调 <code>message_queen</code> 未联调</b>（runner/回复闭环已验）；CC 配置只在启动读取；只支持 Claude Code（不支持 Codex/OpenCode 等）。</td></tr>
+
+<tr><td class="num">15</td><td><b>模型槽位配置面</b></td>
+<td><code>routes_models.py</code> <code>_ROLE_SLOTS=(llm, worker_llm, vision_fallback)</code>；<code>routes_config.py</code> <code>_ROLE_SECTIONS</code> 含 judge；<code>queen_llm.&lt;id&gt;</code> 双入口（<code>/api/models/slots/queen:&lt;id&gt;</code>、<code>/api/queen/&lt;id&gt;/llm</code>）。</td>
+<td><code>routes_models.go:28/441/539/576</code>（slot 校验/写入/summary/热切换）、<code>provider_library.go:12</code>（RoleSections 四槽）、<code>routes_queens.go:517/540</code>（GET/PUT queen llm）。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>C；<code>TestModelsSlotValidation</code>、<code>TestModelsEverySlotKindTakesEndpointKey</code>、<code>TestModelsOverviewJudgeQueensProviders</code></td>
+<td><code>section:null</code> 只能清 worker/vision，<code>llm</code> 不能清（400，两边一致）；<code>queen:&lt;id&gt;</code> 槽与 queen 路由双入口并存；GET 逐槽返回原文/ null。</td></tr>
+
+<tr><td class="num">16</td><td><b>模型槽位运行时消费</b></td>
+<td><code>config.py:294 get_preferred_worker_model</code>（worker 独立模型）、<code>config.py:312 get_vision_fallback_model</code>（caption 链，<code>agent_loop.py:303 _vision_fallback_active</code>）、<code>config.py:614 get_queen_llm_section</code> + <code>queen_orchestrator.py:536-539</code>（会话创建即用 queen 自己的模型）、<code>session_manager.py:485-518</code>（worker_llm → worker provider）。</td>
+<td><code>loader.go:1087 resolveChatProvider</code> 只读 <code>llm</code> 段；<code>loader.go:441-465 newColonyHost</code> 只传 <code>LLM</code>、不传 <code>WorkerLLM</code>；<code>host.go:51/107</code> 的 <code>WorkerLLM</code> 字段无生产赋值（仅测试）；<code>runtime.go:862 workerCompleter</code> fallback 主模型；<code>vision_fallback</code> 仅出现在角色名常量里；<code>queen_llm</code> 只读路由配置（<code>routes_models.go:539</code> 的 PUT 可热切换 live 会话；<code>routes_queens.go:620</code> 的 PUT 因 <code>ApplyQueenModel</code> 未装配返回 <code>switched=0</code>）。</td>
+<td><span class="pill bad">未对齐</span></td>
+<td>⌕ + C：<code>grep '"worker_llm"' internal --include=*.go</code> 生产命中仅 routes/provider_library 常量；无消费测试存在（阴性）</td>
+<td><b>worker_llm 零消费</b>：worker 恒用主 LLM（Python 会为 worker 建独立 provider）；<b>vision_fallback 零消费</b>：无 caption 子模型链（Python 对 text-only 模型启动图像 caption 链）；<b>queen_llm 创建期不生效</b>：新建 queen 会话用主模型（Python 创建即 <code>has_own</code> → <code>queen_models.build</code>），仅 <code>/api/models/slots/queen:&lt;id&gt;</code> PUT 能热切换已存在会话。</td></tr>
+
+<tr><td class="num">17</td><td><b>破坏性操作 / 清理</b></td>
+<td><code>framework/maintenance/{retention,janitor,archive}.py</code>；<code>hive janitor</code>；colony 删除。</td>
+<td><code>janitor.go:22/34/103</code>（默认 dry-run，<code>--execute</code> 真删/归档）；<code>routes_colonies.go:62/271</code>（DELETE colony：默认软标记，<code>purge=1</code> 删目录，先停会话下挂在跑的会话）。</td>
+<td><span class="pill info">未验证</span></td>
+<td>T：<code>janitor_test.go:122/146</code>（fake 服务上执行 <code>--execute</code>）；<code>support-matrix.md</code>：发布验证只跑 <code>status</code>，<code>run --execute</code> 与 <code>colony delete</code> 未执行</td>
+<td>代码与单测齐全，但从未对真实数据执行过破坏性路径；archive 的 tar 结构与失败保留有单测（<code>R-JN-08</code>）；purge 删除目标包含 <code>&lt;HIVE_HOME&gt;/colonies/&lt;id&gt;</code> 与 agents 目录。</td></tr>
+
+<tr><td class="num">18</td><td><b>Improvement · Reflexion（session 内）</b></td>
+<td><code>improvement.md</code>：工具结果/错误回注下一轮；judge RETRY 的 critique 回注（<code>agent_loop.py</code> RETRY 分支）。</td>
+<td><code>agentloop/loop.go:756</code>（工具结果带 <code>IsError</code> 回注）、<code>judge.go:198-202</code>（<code>[Judge feedback]</code> user message）。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>C；<code>TestJudgeRetryRunsOneMoreTurn</code>、<code>TestPostToolUseReminderRidesTheToolResult</code></td>
+<td>作用域同 #7：无 criteria 的 plain chat 无 judge 即无 RETRY；绑定 colony 时 retry 发生在 overseer/worker 的 loop 内。</td></tr>
+
+<tr><td class="num">19</td><td><b>Improvement · scoped memory / learned skills / playbook systematization（跨 session）</b></td>
+<td><code>improvement.md</code> 四条 in-band 机制：冷却门控 reflection 写 global/per-queen markdown；recall 召回；<code>write_skill</code> → colony <code>skills/</code> → worker 目录；pilot 固化成 playbook（resume by construction）。</td>
+<td>reflection <code>memory/reflection.go:1026</code> + <code>chat_runtime.go:221/607</code>；recall <code>recall.go:174</code> + <code>chat_runtime.go:784</code>；past conversations <code>past_conversations.go:13/222</code>；learned skills <code>agent_tools.go:54/178</code>、<code>skill_writer.go:169</code>；playbook #10；提醒 Queen 沉淀 <code>colony_parallel_nudge.go:54</code>（已注册，<code>chat_reminders.go:113</code>）。</td>
+<td><span class="pill warn">部分</span></td>
+<td>C；<code>TestReflectionSchedulerWritesQueenMemoryInBackground</code>、<code>TestWriteSkillToolWritesAndReadsColonySkill</code>、<code>TestColonyParallelNudgeFiresAfterPilotThenTrackerWrite</code></td>
+<td>没有「从成功中自动提炼 skill/playbook」的触发器（与上游一致，仍靠 Queen 主动——但 Go 的 colony_parallel nudge 只识别 <code>browser_*</code>/<code>web_scrape</code> pilot，软件工程型工作不会被提醒沉淀）；reflection 每 6 回合而非每轮；<code>write_skill(global)</code> 只落安装请求，需用户批准；playbook 机制差异见 #10。</td></tr>
+
+<tr><td class="num">20</td><td><b>Coordination · tracker / task plan / event bus / reminder hub / human-in-the-loop</b></td>
+<td><code>coordination.md</code> 四底座：tracker（唯一事实源）、持久 task plan、event bus（报告 + UI 流）、reminder hub；人机协同 = <code>ask_user</code> 停车 + Sentinel；blocked worker 报 Queen，Queen 决定。</td>
+<td>tracker #8；task plan <code>tasks/session_tools.go:747</code>（chat/overseer/worker 各自 store）；event bus <code>chat_runtime.go:629-709</code> + <code>eventbus/bus.go:559-573</code>（回合边界 flush）；hub #12；park <code>chat_park.go:30/92/139</code>；<code>ask_user</code> <code>synthetic_tools.go:217</code>。worker 提问收件箱工具 <code>queen_lifecycle_questions.go</code> 已注册（10 工具之一）。</td>
+<td><span class="pill warn">部分</span></td>
+<td>C/L；<code>TestChatRuntimeAnswerResumesFromAskUserPark</code>、<code>TestOverseerAskUserParksSessionAndAnswerRelays</code>、<code>TestWorkerHandoffInjectsAddressedRequestIntoQueen</code>（仅测试路径）</td>
+<td><b>worker 升级通道未接（本页最重的协作缺口）</b>：<code>BuildEscalateTool</code>（<code>synthetic_tools.go:376</code>）零调用、<code>EventEscalationRequested</code> 无生产者（<code>emit.go:517</code> 仅定义）、<code>InstallWorkerEscalationRouting</code>（<code>queen_orchestrator.go:19</code>）零生产调用（上游在 <code>queen_orchestrator.py:1898</code> 生产安装）→ 生产的 <code>list_worker_questions</code>/<code>reply_to_worker</code> 恒空、worker 阻塞只能靠 <code>report_to_parent</code>；计划作用域分裂（chat/overseer/worker 三份 <code>tasks.json</code>）；两份 conversation（#2）。</td></tr>
+
+<tr><td class="num">21</td><td><b>Memory · 三层记忆 + reflection/recall/past conversations/timeline</b></td>
+<td><code>queen_memory_v2.py</code>（global/colonies/agents 三层、200 文件/4KB 上限、profile/preference/environment/feedback 类别）；<code>reflection_agent.py</code>（冷却门控）；<code>recall_selector.py</code>（每回合最多 5 条）；<code>recall.py</code>/<code>turn_index.py</code>（每回合 ≤6 段带日期摘录、1.0.14 窗口改进）；<code>timeline.py</code>（flag 默认关）。</td>
+<td><code>memory/memory.go:14-15/20-35</code>（上限 200/4096、三层目录）、<code>reflection.go:864-870</code>（EveryTurns=6/LongEvery=4）、<code>:1026 OnTurnDone</code>；recall <code>recall.go:175</code>；past <code>past_conversations.go:13 PastRecallTopK=6</code>/<code>:222</code> + <code>chat_memory_wiring.go:37</code> + <code>chat_runtime.go:607</code>；timeline 读 <code>cli/memory_timeline.go</code>、写 <code>chat_memory_wiring.go:67/99</code> + <code>timeline.go:426/491/528</code>。</td>
+<td><span class="pill ok">已对齐</span></td>
+<td>C；<code>TestReflectionSchedulerWritesQueenMemoryInBackground</code>、<code>TestChatRuntimeTurnDoneReflectsIntoQueenMemory</code>、<code>TestSearchTimelineColonyScopeCoversOverseerQueens</code>、<code>TestScanMemoryFilesCap</code></td>
+<td>只覆盖 chat Queen（worker 无记忆是设计；overseer 无 reflection）；timeline 默认关、flag 门控、<code>SubscribeTimelineTriggers</code> 零调用（由等价 <code>startTimeline</code>+<code>timelineAfterTurn</code> 承担）；<b>真实模型下的记忆质量未验证</b>（Python 侧对应 LongMemEval 分数，Go 侧无 → #24）。</td></tr>
+
+<tr><td class="num">22</td><td><b>Skills · 格式 / scope / write_skill / trust / registry / tool gating</b></td>
+<td><code>skills/{parser,manager,skill_writer,install_requests,overrides,trust,registry,tool_gating}.py</code>；6 级 scope；queen scope 对她名下会话与 Colony 可见；global 需批准；trust 门控 project 技能；tool gating 预激活基础技能。</td>
+<td>全套对应文件在（<code>parser.go</code>、<code>manager.go:102-104</code> trust 门控、<code>skill_writer.go:169</code>、<code>install_requests.go</code>、<code>overrides.go</code>、<code>trust.go:373/394</code>、<code>registry.go:29</code>（CLI）、<code>tool_gating.go:84</code> + <code>agentloop/prompting.go:102</code>）；内置技能 12 default + 8 preset 与上游逐字节 manifest（<code>builtin_manifest_test.go</code>）。</td>
+<td><span class="pill warn">部分</span></td>
+<td>C；<code>TestWriteSkillToolWritesAndReadsColonySkill</code>、<code>TestWriteSkillToolGlobalScopeFilesRequest</code>、<code>TestSkillViewRejectsTraversal</code>、<code>TestDiscoverProjectSkills</code></td>
+<td><b>worker 只能看到 colony scope</b>：<code>skills_surface.go:39-46</code> 只把 colony <code>skills/</code> 给 worker（上游 queen scope 对她名下 Colony 可见，<code>07-memory-and-skills.md</code> §4.2）——Queen 私有技能不能作为协议传给 worker；交互式 trust 同意流程未 live 验证（<code>HIVE_TRUST_PROJECT_SKILLS</code>/<code>HIVE_OWN_REMOTES</code> 常量在）；registry 只接 CLI（<code>hive skill search/install</code>），agent catalog 不聚合社区索引；<code>write_skill</code> 的 queen scope 写入用户手写技能时不覆盖（有保护）。</td></tr>
+
+<tr><td class="num">23</td><td><b>Soul</b></td>
+<td><code>soul.py</code>/<code>soul_probes.py</code>/<code>soul_reflection.py</code>：每天在配置小时后读聊天、提修改、用户逐条批准；提案必须逐字引用来源；<code>soul.queens.&lt;id&gt;</code>。</td>
+<td><code>internal/soul/{reflection,reflection_run,sediment,store,probes}.go</code>；每日调度 <code>loader_soul_daily.go:29</code>（<code>loader_background_services.go:30</code> 启动）；persona 注入 <code>store.go:405</code> + <code>chat_runtime.go:1315-1340</code>；sediment 联动 <code>chat_runtime.go:1434-1437</code>；<code>state.json</code> 游标/last_run/attempts + Go 附加 <code>last_error</code>；<code>POST /api/queen/&lt;id&gt;/soul/reflect</code> 202/409。</td>
+<td><span class="pill warn">部分</span></td>
+<td>C + E2E（脚本化）：<code>TestStartSoulDailyReflectionStartsAndStops</code>、<code>TestSoulReflectReviewWritesPendingProposal</code>、<code>TestSoulReflectAutoAppliesTheProposal</code>、<code>TestChatRuntimeSoulRidesSystemPrompt</code>、<code>e2e/soul_reflection_e2e_test.go</code>（本地脚本化网关）</td>
+<td><b>真实模型的一天调度未验证</b>（E2E 用脚本化模型；真实模型下的提案质量、逐字引用校验的运行表现未跑）；soul 只进 chat Queen persona，overseer spec 不读 soul；review 模式下 pending proposal 阻止当天再跑（与上游一致）。</td></tr>
+
+<tr><td class="num">24</td><td><b>LongMemEval（记忆基准）</b></td>
+<td><code>core/tests/e2e/test_longmemeval.py</code> + <code>docs/memory-benchmark.md</code>：官方 2025 cleaned 数据集、官方 judge（gpt-4o-2024-08-06、temperature 0、10-token）、真实 Queen 回答；上游发布分数 S 88.4% / M 82.0%（gpt-6.1-sol）。</td>
+<td><code>internal/longmemeval/*</code>（数据拆分/选题/seed/judge/结果/汇总）、<code>cmd/hive-longmemeval</code>（run/rejudge/summary/reference oracle|full-history）、<code>internal/cli/longmemeval.go</code>（真实 ChatRuntime + 完整工具目录 + <code>HIVE_FAKE_NOW</code> 冻结时钟）；官方 judge prompt 逐字移植（含 <code>_abs</code> 弃权段）。</td>
+<td><span class="pill info">未验证</span></td>
+<td>C + fixture smoke（脚本化 asker + fake judge；<code>internal/longmemeval</code> 测试组）；<code>docs/longmemeval.md</code> §7</td>
+<td><b>零分数</b>：真实 S/M 数据集从未下载（本机无外网）、官方 judge 从未对真实题目调用；<b>不得引用/外推上游 88.4%、82.0% 作为 Go 结果</b>；timeline 抽取未移植（与上游默认 off 一致）；<code>--resume</code>/rejudge/汇总口径已实现。</td></tr>
+
+</tbody></table></div>
+<p class="sub">状态判定的边界：一个维度只要 Python 的运行时行为在 Go 缺少生产消费者（#16）、或存在影响语义的形态差异（#10/#22）、或链路未接（#20 的 escalation），就降为「部分/未对齐」，即使测试与门禁全绿。</p>
+</section>
+
+<section id="aligned"><h2><span class="num">03</span>对齐项清单（可以宣布一致的部分）</h2>
+<div class="callout ok"><b>以下 12 个维度可以在「代码级对齐」口径下宣布一致</b>（其中 #3/#5/#8 带交付侧 live 记录）；宣布时必须附后文 §04 的差距清单与 §06 的限定，不能单独使用「完全一致」措辞。</div>
+<div class="tablewrap"><table><thead><tr><th style="width:4%">#</th><th style="width:26%">对齐项</th><th>关键证据</th></tr></thead><tbody>
+<tr><td class="num">1</td><td>Queen 身份 / profile / persona</td><td>13/13 YAML；identity 注入 chat 与 overseer；<code>internal/queen/profiles_test.go</code></td></tr>
+<tr><td class="num">3</td><td>Worker 创建 / 身份 / 工具集</td><td>fork 写 worker 人格与声明工具；<code>TestForkedColonyWorkerRunsWorkerIdentity</code>；<code>docs/support-matrix.md</code> 实测 worker 派发闭环（L）</td></tr>
+<tr><td class="num">4</td><td>Worker 预算 / grace / 自适应</td><td>3+1/30/90/200 与自适应收缩/提升测试；<code>TestShrinkHitsFloorAndClampsRunningWorkers</code></td></tr>
+<tr><td class="num">5</td><td>Worker 报告 / 转录 / 进度镜像</td><td><code>[WORKER_REPORT]</code> 实测回传（L）；镜像带 <code>relayed_from</code> 去重；<code>TestWorkerReportCarriesDurationSeconds</code></td></tr>
+<tr><td class="num">6</td><td>Worker 续跑 <code>resume_worker_ids</code></td><td>transcript 落盘 + 逐 id resume + colony Start 自动续跑；<code>TestResumeWorkersContinuesSavedTranscript</code>（support-matrix.md:30 是旧口径）</td></tr>
+<tr><td class="num">7</td><td>Worker judge / 成功标准</td><td>worker + overseer + 有 criteria 的 chat 均 <code>ConfigureJudge</code>；goal 加权评估写 result/报告</td></tr>
+<tr><td class="num">8</td><td>Colony 目录 / 绑定 / tracker</td><td>scaffold 幂等完整；tracker 建库/binding/读写实测（L）；无 binding 返回 <code>ErrNoBinding</code></td></tr>
+<tr><td class="num">9</td><td>Colony runtime / 并行 / 限额</td><td>admission gate + 软 600s/硬公式 + playbook cap；env 覆盖一致</td></tr>
+<tr><td class="num">11</td><td>Triggers</td><td>六条路由 + timer/webhook/manual + <code>triggers.json</code> 恢复 + missed 盖章语义；<code>QueenExecutor</code> 生产赋值（loader.go:633）</td></tr>
+<tr><td class="num">15</td><td>模型槽位配置面</td><td>4 槽 CRUD + summary + queen 槽双入口 + provider library；<code>TestModelsSlotValidation</code></td></tr>
+<tr><td class="num">18</td><td>Improvement · Reflexion</td><td>工具错误回注 + <code>[Judge feedback]</code>；<code>TestJudgeRetryRunsOneMoreTurn</code></td></tr>
+<tr><td class="num">21</td><td>Memory 三层 + reflection/recall/past/timeline</td><td>上限 200/4KB、EveryTurns=6、每轮 ≤6 条摘录、timeline 写侧接通（flag 门控）</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="gaps"><h2><span class="num">04</span>缺口 / 未验证清单（按严重度）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:7%">编号</th><th style="width:5%">级别</th><th style="width:22%">事实（入口 / 复现）</th><th style="width:30%">影响</th><th>证据</th></tr></thead><tbody>
+
+<tr><td>GAP-01</td><td><span class="pill bad">P0</span></td><td><b>模型槽位运行时消费缺失</b>（#16）。<code>grep -rn '"worker_llm"\|vision_fallback' internal cmd --include='*.go' | grep -v _test</code> 只有角色名常量；<code>newColonyHost</code> 不传 <code>WorkerLLM</code>；<code>resolveChatProvider</code> 只读 <code>llm</code> 段；<code>queen_llm</code> 创建期不读。</td><td>Python 用户配了 worker 独立模型 / 视觉 fallback / queen 私有模型后，Go 侧 worker 恒用主模型、无 caption 子模型、新建 queen 会话用主模型——<b>多模型路由承诺不成立</b>（仅 <code>/api/models/slots/queen:&lt;id&gt;</code> PUT 能热切换已存在会话）。</td><td>⌕ + C（<code>loader.go:441-465/1087</code>、<code>runtime.go:862</code>、<code>host.go:51</code>）</td></tr>
+
+<tr><td>GAP-02</td><td><span class="pill bad">P0</span></td><td><b>Worker 升级通道未接</b>（#20）。<code>BuildEscalateTool</code> 仅定义（<code>synthetic_tools.go:376</code>）；<code>EventEscalationRequested</code> 无生产者（<code>emit.go:517</code> 仅定义）；<code>InstallWorkerEscalationRouting</code> 零生产调用（<code>queen_orchestrator.go:19</code>；上游 <code>queen_orchestrator.py:1898</code> 生产安装）。</td><td>worker tool 表不含 <code>escalate</code>；阻塞 worker 不能升级到 Queen；<code>list_worker_questions</code>/<code>reply_to_worker</code> 生产恒空（工具在、收件箱无人写）；只能整批停靠 <code>report_to_parent</code>。upside：<code>report_to_parent</code> 与 overseer 的 <code>ask_user</code> 仍可用。</td><td>⌕（三处零调用/零生产者）+ T（<code>TestWorkerHandoffInjectsAddressedRequestIntoQueen</code> 只走测试注入）</td></tr>
+
+<tr><td>GAP-03</td><td><span class="pill bad">P0</span></td><td><b>Sentinel 真实投递未验证</b>（#13）。本机无 Telegram/Slack 凭据、无 Hive Inbox 登录态（<code>HiveConnected()=false</code>）。</td><td>无人值守升级链路的「最后一跳」从未真实送达；用户离开界面时 Queen 停靠可能只落盘 <code>escalations/</code>。分类器质量也未验证。</td><td><code>support-matrix.md</code>「部分」；C（<code>sentinel_runtime.go:41/107/165</code>、<code>notifier.go</code>）</td></tr>
+
+<tr><td>GAP-04</td><td><span class="pill warn">P1</span></td><td><b>Playbook 只支持 Go JSON</b>（#10）。<code>.play.py</code>（inline/path/saved）一律 <code>status='unsupported'</code>、0 派发；同步执行、无后台 <code>[PLAYBOOK_COMPLETE]</code>。</td><td>上游 Python playbook 库不可直接运行；长批次会占住 Queen 一轮工具调用；「重跑=续跑」仍成立（按 tracker 现状）。</td><td>C + T（<code>TestRunPlaybookPythonScriptIsUnsupported</code> 等）</td></tr>
+
+<tr><td>GAP-05</td><td><span class="pill warn">P1</span></td><td><b>两份 conversation 存储 + colony 侧 question 半份只在内存</b>（#2）。<code>&lt;colony&gt;/conversations</code> 与 chat transcript 各保留执行史；<code>overseer_park.go:64</code> 不落盘。</td><td>重启只恢复 chat cursor 半份；审计/回放要跨两处；overseer 的 pending question 在进程重启后可能显示不一致。操作面已是单 lead，回复已回写。</td><td>C；<code>TestOverseerAskUserParkSurvivesRestart</code>（覆盖 chat 半份）</td></tr>
+
+<tr><td>GAP-06</td><td><span class="pill warn">P1</span></td><td><b>Reminders 覆盖不完整</b>（#12）：<code>STREAM_STALLED</code> source 未注册；worker/overseer 只有 task+idle；预载 colony catalog 固定 <code>default</code> scope；overseer 执行时 chat hub skills source 不参与。</td><td>长流停滞没有主动提醒注入；worker 侧没有 fleet/tracker 感知；预载 colony 看不到命名 queen 的私有技能目录提示。</td><td>C + ⌕（<code>stream_stall.go</code> 零注册）</td></tr>
+
+<tr><td>GAP-07</td><td><span class="pill warn">P1</span></td><td><b>Skills：worker 只见 colony scope</b>（#22）。<code>skills_surface.go:39-46</code> 只给 colony 目录；上游 queen scope 对她名下 Colony 可见。</td><td>Queen 私有技能不能作为协议传给 worker（需先 <code>write_skill(scope='colony')</code> 或手动复制）；跨 colony 共享要 global（需批准）。</td><td>C + 文档对照（<code>07-memory-and-skills.md</code> §4.2）</td></tr>
+
+<tr><td>GAP-08</td><td><span class="pill warn">P1</span></td><td><b>Queen Mail 配置时机 + 会话延续</b>（#14）：配置只在 serve 启动读一次；fork/superseded 会话不跟随；CC queen 真实模型主动调 <code>message_queen</code> 未联调。</td><td>改配置要重启；<code>_newest_successor</code> 语义缺失；CC queen 的「她自己在回合里写信」只有 fake/契约测试。</td><td><code>docs/queen-mail.md</code> §6；C</td></tr>
+
+<tr><td>GAP-09</td><td><span class="pill info">P2</span></td><td><b>LongMemEval 零分数</b>（#24）：真实数据集未下载、官方 judge 未真实调用；fixture smoke 只证管线。</td><td>不能发布任何记忆分数；不能与上游 88.4%/82.0% 对比；记忆改动（1.0.14 的自动召回/日期过滤/timeline）在 Go 侧只有单测，无基准回归网。</td><td>C + fixture smoke；<code>docs/longmemeval.md</code> §7</td></tr>
+
+<tr><td>GAP-10</td><td><span class="pill info">P2</span></td><td><b>破坏性操作未实机</b>（#17）：<code>janitor run --execute</code>、colony delete（purge）在发布验证中未执行。</td><td>真实数据上的删除/归档语义（保留结构、失败回滚、活跃会话下挂）只有 fake 服务单测。</td><td><code>support-matrix.md</code> §5；T</td></tr>
+
+<tr><td>GAP-11</td><td><span class="pill info">P2</span></td><td><b>文档旧口径</b>：<code>docs/support-matrix.md:30</code> 写「<code>resume_worker_ids</code> 未实现」（与代码不符）；<code>11-product-requirements.md</code> 是 2026-11-18 历史快照（自述「历史快照」），引用其「Colony 进行中」会误判当前状态。</td><td>按旧文档排期会重复劳动或漏报；建议修 support-matrix 那一行并注明快照日期。</td><td>⌕ 文档对照</td></tr>
+
+</tbody></table></div>
+<p class="sub">另有两项「已知差异而非缺口」，保留口径：MiniMax 非流式（明确回退）；81 个第三方凭据模块未验证（无凭据，用户已定不阻塞）。</p>
+</section>
+
+<section id="repro"><h2><span class="num">05</span>复现命令</h2>
+<pre>cd go_hive/go-hive
+
+# GAP-01 模型槽位运行时消费（阴性证据：生产无消费者）
+grep -rn '"worker_llm"\|vision_fallback\|queen_llm' internal cmd --include='*.go' | grep -v _test
+grep -rn 'WorkerLLM:' internal --include='*.go' | grep -v _test        # 只应命中 host.go 字段映射
+go test ./internal/server -run 'TestModels' -count=1
+
+# GAP-02 Worker 升级通道（阴性证据：零调用/零生产者）
+grep -rn 'BuildEscalateTool\|InstallWorkerEscalationRouting\|EmitEscalationRequested' internal --include='*.go' | grep -v _test
+go test ./internal/server -run 'TestWorkerHandoff' -count=1
+
+# #5/#6 报告、转录与 resume_worker_ids
+go test ./internal/colony -run 'TestResumeWorkers|TestWorkerTranscript|TestWorkerReport' -count=1
+
+# #10 Playbook（Python 脚本 unsupported）
+go test ./internal/colony -run 'TestRunPlaybook' -count=1
+
+# #11 Triggers / #12 Reminders
+go test ./internal/server -run 'TestTimerTrigger|TestPersistActiveTriggers|TestResolveMissed' -count=1
+go test ./internal/agentloop -run 'TestColonyParallelNudge|TestSessionStartReminder' -count=1
+
+# #13 Sentinel（引擎全绿 ≠ 真实投递）
+go test ./internal/sentinel -count=1
+
+# #14 Queen Mail / CC queen
+go test ./internal/qmail ./internal/server -run 'TestQueenMail' -count=1
+# 真实 CC 回合（需已登录 claude CLI）：HIVE_CLAUDE_REAL_TEST=1 PATH=$HOME/.npm-global/bin:$PATH go test ./internal/qmail -run TestClaudeCodeQueenRealTurn -v
+
+# #21/#22/#23 Memory / Skills / Soul
+go test ./internal/memory ./internal/skills ./internal/soul -count=1
+
+# #24 LongMemEval（fixture 管线；真实分数需要数据集与 judge 凭据）
+go test ./internal/longmemeval ./internal/cli -count=1
+# 真实复跑（有出口/凭据时）：./hive-longmemeval run --dataset s --questions all --timeout 420 --verbose
+
+# 门禁（lane 口径；全量 make ci 由 integrator 在合并后统一跑）
+make fmt-check vet parity parity-targets
+</pre>
+</section>
+
+<section id="conclusion"><h2><span class="num">06</span>结论：哪些维度不能宣布「完全一致」</h2>
+<div class="callout bad"><b>总判定：</b>queen / worker / colony 的核心机制在 Go 侧「可运行、可派活、可恢复、可审计」已经成立（12 维代码级对齐），但 <b>12 个维度不能宣布与 Python 完全一致</b>（9 部分 + 1 未对齐 + 2 未验证）。对外表述建议：「机制已对齐 12/24；行为面存在 1 个 P0 未对齐（模型槽位消费）、2 个 P0 部分/未验证（worker escalation、Sentinel 投递），其余为已知形态差异与验证缺口」。禁止使用「完全一致 / 100% 对齐」。</div>
+<div class="tablewrap"><table><thead><tr><th style="width:4%">#</th><th style="width:15%">维度</th><th style="width:9%">状态</th><th style="width:36%">为什么不能宣布一致</th><th>补齐条件（验收判据）</th></tr></thead><tbody>
+<tr><td class="num">16</td><td>模型槽位运行时消费</td><td><span class="pill bad">未对齐</span></td><td><code>worker_llm</code>/<code>vision_fallback</code> 零生产消费；<code>queen_llm</code> 创建期不生效。</td><td>worker 构建时消费 <code>worker_llm</code>；text-only 模型走 caption 链；queen 新建会话即用 <code>queen_llm</code>；三条都有端到端测试。</td></tr>
+<tr><td class="num">20</td><td>Coordination（human-in-the-loop 的一半）</td><td><span class="pill warn">部分</span></td><td>worker 升级通道三处零调用/零生产者；<code>list_worker_questions</code> 恒空。</td><td>worker 工具面含 <code>escalate</code>；<code>escalation_requested</code> 有生产者；<code>InstallWorkerEscalationRouting</code> 在生产装配；E2E 断言 Queen 收到 <code>[WORKER_ESCALATION]</code> 并能 <code>reply_to_worker</code>。</td></tr>
+<tr><td class="num">13</td><td>Sentinel / 通知</td><td><span class="pill warn">部分</span>（投递未验证）</td><td>Telegram/Slack/Hive Inbox 从未真实送达；dead session 冷恢复不支持。</td><td>至少一条真实渠道完成 escalate→reply→resume 闭环并留日志。</td></tr>
+<tr><td class="num">10</td><td>Playbook</td><td><span class="pill warn">部分</span></td><td>Python 脚本 unsupported；同步执行、无后台完成通知。</td><td>按产品决定：要么明确「Go JSON 是移植形态」（写进契约），要么引入 Python 互操作（见 <code>references/python-interop-options.md</code>）。</td></tr>
+<tr><td class="num">2</td><td>Queen 双会话</td><td><span class="pill warn">部分</span></td><td>单 lead 是 Go 独有 seam（Parity-exempt）；两份存储；colony 侧 question 半份内存。</td><td>声明「overseer 为对等物 + 有意偏差」并合并存储（或明确前者只是执行日志）+ colony 半份落盘。</td></tr>
+<tr><td class="num">12</td><td>Reminders / idle</td><td><span class="pill warn">部分</span></td><td><code>STREAM_STALLED</code> 未注册；worker/overseer 源窄；catalog scope。</td><td>注册 stream_stall source；预载会话用实际 queen scope；按需补 worker 源。</td></tr>
+<tr><td class="num">22</td><td>Skills 作用域</td><td><span class="pill warn">部分</span></td><td>worker 只见 colony scope；trust 交互流程未 live 验证。</td><td>明确 worker 技能可见面（queen scope 是否透出），并补 trust 交互实测。</td></tr>
+<tr><td class="num">14</td><td>Queen Mail / CC Queen</td><td><span class="pill warn">部分</span></td><td>配置只读一次；fork 不跟随；CC 主动调 MCP 未联调。</td><td>配置热读或重启提示；补 fork 会话跟随；真实模型回合里调 <code>message_queen</code> 并留证。</td></tr>
+<tr><td class="num">19</td><td>Improvement 跨 session</td><td><span class="pill warn">部分</span></td><td>无自动提炼触发器；nudge 只识别 browser/web_scrape；playbook 形态差异。</td><td>若要自动化：明确触发面与规则；否则维持「模型主动 + 提醒」并写清。</td></tr>
+<tr><td class="num">23</td><td>Soul</td><td><span class="pill warn">部分</span></td><td>真实模型每日调度未验证。</td><td>真实模型跑满一个「配置小时后」的调度周期并留证。</td></tr>
+<tr><td class="num">17</td><td>破坏性操作</td><td><span class="pill info">未验证</span></td><td>真实数据上的 <code>janitor --execute</code> / <code>colony delete</code> 未执行。</td><td>在可丢弃的真实 HIVE_HOME 上演练一次并核对保留/删除结构。</td></tr>
+<tr><td class="num">24</td><td>LongMemEval</td><td><span class="pill info">未验证</span></td><td>零分数；数据集与 judge 从未真实触达。</td><td>有出口/凭据后按 <code>docs/longmemeval.md</code> §8 复跑，产出 <code>summary.json</code>；在此之前不得引用任何分数。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="refs"><h2><span class="num">07</span>相关文档与证据</h2>
+<div class="callout info"><b>机制接线（互补）：</b><code>RUNTIME_SPINE_AUDIT.md</code>（八层 70/0/0，基线 efb81858）· <code>CONCEPT_WIRING_AUDIT.md</code>（七概念页 80/0/0）· 本页（24 维行为口径，基线 dab983d4）。<br><b>范围视角：</b><a href="alignment-dimensions.html">alignment-dimensions.html</a>（18 维）· <a href="surface-tracking-matrix.html">surface-tracking-matrix.html</a>（外观）· <a href="module-interfaces.html">module-interfaces.html</a>（接口不变量）。<br><b>专题页：</b><a href="queen-mail.html">queen-mail</a>（本目录为 <code>docs/queen-mail.md</code>）· <code>docs/queen-lifecycle-tools.md</code> · <code>docs/longmemeval.md</code> · <code>docs/soul-daily-reflection.md</code> · <code>docs/support-matrix.md</code>。<br><b>上游参考：</b><code>docs/key_concepts/improvement.md</code> · <code>docs/key_concepts/coordination.md</code> · <code>docs/memory-benchmark.md</code> · <code>go_hive/07-memory-and-skills.md</code> · <code>go_hive/04-colony-runtime.md</code>。<br><b>证据命令：</b>见 <a href="#repro">§05 复现命令</a>。</div>
+</section>
+
+<footer>审计快照：2026-11-21 00:44 CST · 基线 go_hive@dab983d4（1.0.26-go.1）· Python hive 1.0.14 · 只读审计：不改产品代码、不改测试、不改 go.mod · 状态计数：12 已对齐 / 9 部分 / 1 未对齐 / 2 未验证（24 维）· 本页与 <a href="alignment-dimensions.html">alignment-dimensions.html</a> 口径一致：路由/门禁全绿 ≠ 行为对齐。</footer>
+</div></body></html>

@@ -11,10 +11,13 @@ package cli
 import (
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
+	hiveserver "github.com/aden-hive/hive-go/internal/server"
+	"github.com/aden-hive/hive-go/internal/tools"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 )
 
@@ -108,8 +111,8 @@ func parityEnum(t *testing.T, prop map[string]any) []string {
 // frozen fixture itself.
 func TestToolContractParityManifestShape(t *testing.T) {
 	manifest := toolContractParityManifestData()
-	if len(manifest.Tools) != 36 {
-		t.Fatalf("manifest holds %d tools, want the 36 audited same-name tools", len(manifest.Tools))
+	if len(manifest.Tools) != 42 {
+		t.Fatalf("manifest holds %d tools, want the 42 audited same-name tools", len(manifest.Tools))
 	}
 	counts := map[string]int{}
 	for name, entry := range manifest.Tools {
@@ -133,8 +136,8 @@ func TestToolContractParityManifestShape(t *testing.T) {
 			t.Fatalf("%s: %s entry has no recorded reason", name, entry.Status)
 		}
 	}
-	if counts["aligned"] != 25 || counts["partial"] != 1 || counts["dependency"] != 10 {
-		t.Fatalf("manifest status counts = %v, want aligned 25 / partial 1 / dependency 10", counts)
+	if counts["aligned"] != 31 || counts["partial"] != 1 || counts["dependency"] != 10 {
+		t.Fatalf("manifest status counts = %v, want aligned 31 / partial 1 / dependency 10", counts)
 	}
 }
 
@@ -254,31 +257,132 @@ func TestToolContractParityP1DefectsAreFixed(t *testing.T) {
 	})
 }
 
+// Terminal tool names whose request shape is compared against the Python
+// contract below.
+var terminalContractToolNames = []string{
+	"terminal_exec", "terminal_glob", "terminal_rg", "terminal_job_start",
+	"terminal_job_logs", "terminal_job_manage", "terminal_output_get",
+	"terminal_pty_open", "terminal_pty_run", "terminal_pty_close",
+}
+
+// Parity-exempt: the assertion target is the Python contract fixture
+// (tool_contract_parity.json, generated from the live Python registries), not a
+// Python unit test. This is the recheck's口径 applied in-process: take the
+// definition the catalogue advertises, run it through the exact request
+// pipeline (StripContextParams -> ToolToOpenAIFormat), and require the
+// serialized JSON Schema to equal the Python one.
+func TestTerminalToolsRequestShapeMatchesPythonContract(t *testing.T) {
+	catalogue := newSessionToolCatalogue(t.TempDir(), builtin.New(t.TempDir()), hivehome.Home{})
+	manifest := toolContractParityManifestData()
+	// Index the model-visible defs the way a session runtime publishes them.
+	visible := map[string]llm.ToolDef{}
+	for _, def := range tools.StripContextParams(catalogue.Defs()) {
+		visible[def.Name] = def
+	}
+	for _, name := range terminalContractToolNames {
+		entry, ok := manifest.Tools[name]
+		if !ok {
+			t.Fatalf("%s: no Python contract entry in the parity manifest", name)
+		}
+		def, ok := visible[name]
+		if !ok {
+			t.Fatalf("%s: missing from the session catalogue", name)
+		}
+		got := requestParametersJSON(t, def)
+		want := schemaJSON(entry.Parameters)
+		if got != want {
+			t.Fatalf("%s: request schema is not the Python contract\ngot:  %s\nwant: %s", name, got, want)
+		}
+		if def.Description != entry.Description {
+			t.Fatalf("%s: description is not the Python contract (got %d bytes, want %d)",
+				name, len(def.Description), len(entry.Description))
+		}
+	}
+}
+
+// requestParametersJSON renders the parameters object exactly as the provider
+// request carries it.
+func requestParametersJSON(t *testing.T, def llm.ToolDef) string {
+	t.Helper()
+	wire := llm.ToolToOpenAIFormat(def)
+	fn, _ := wire["function"].(map[string]any)
+	return schemaJSON(fn["parameters"].(map[string]any))
+}
+
+// Parity-exempt: same fixture as above; this checks the two serialization
+// rules the recheck's 归一化口径 had to paper over — an empty `required` list
+// stays absent unless the contract declares it (pydantic omits it; MCP tool
+// schemas publish it), and float defaults keep their decimal spelling.
+func TestRequestSchemaSerializationMatchesPythonContract(t *testing.T) {
+	catalogue := newSessionToolCatalogue(t.TempDir(), builtin.New(t.TempDir()), hivehome.Home{})
+	defs := append([]llm.ToolDef{}, catalogue.Defs()...)
+	defs = append(defs, hiveserver.QueenLifecycleToolDefs()...)
+	visible := map[string]llm.ToolDef{}
+	for _, def := range tools.StripContextParams(defs) {
+		visible[def.Name] = def
+	}
+
+	for _, name := range []string{"list_browser_profiles", "list_triggers", "list_worker_questions", "edit_file", "terminal_pty_open"} {
+		def, ok := visible[name]
+		if !ok {
+			t.Fatalf("%s: missing from the session catalogue", name)
+		}
+		wire := requestParametersJSON(t, def)
+		if strings.Contains(wire, `"required":[]`) {
+			t.Fatalf("%s: empty required list must stay absent (Python omits the key): %s", name, wire)
+		}
+	}
+
+	// write_skill is the mirror case: its Python schema publishes required: [].
+	writeSkill, ok := visible["write_skill"]
+	if !ok {
+		t.Fatal("write_skill: missing from the session catalogue")
+	}
+	if wire := requestParametersJSON(t, writeSkill); !strings.Contains(wire, `"required":[]`) {
+		t.Fatalf("write_skill: Python publishes an explicit empty required list: %s", wire)
+	}
+
+	// attach_file / pdf_read publish max_bytes_mb default 25.0 upstream; the
+	// decimal spelling must survive the manifest decode.
+	for _, name := range []string{"attach_file", "pdf_read"} {
+		def, ok := visible[name]
+		if !ok {
+			t.Fatalf("%s: missing from the session catalogue", name)
+		}
+		wire := requestParametersJSON(t, def)
+		if !strings.Contains(wire, `"default":25.0`) {
+			t.Fatalf("%s: max_bytes_mb default must serialize as 25.0: %s", name, wire)
+		}
+	}
+}
+
 // Parity-exempt: the known-gap list is the P1 lane's recorded delivery state,
-// not a Python unit test.
+// not a Python unit test. The comparison runs on the model-visible surface
+// (context params stripped) and on serialized JSON, so it measures what the
+// provider request carries rather than Go's internal map typing.
 func TestToolContractParityRemainingGaps(t *testing.T) {
-	defs := parityCatalogueDefs(t)
+	catalogue := newSessionToolCatalogue(t.TempDir(), builtin.New(t.TempDir()), hivehome.Home{})
+	visible := map[string]llm.ToolDef{}
+	for _, def := range tools.StripContextParams(catalogue.Defs()) {
+		visible[def.Name] = def
+	}
 	manifest := toolContractParityManifestData()
 	var gaps []string
 	for name, entry := range manifest.Tools {
-		def, ok := defs[name]
+		def, ok := visible[name]
 		if !ok {
 			t.Fatalf("%s: manifest tool missing from the session catalogue", name)
 		}
-		if def.Description == entry.Description && reflect.DeepEqual(def.Parameters, entry.Parameters) {
+		if def.Description == entry.Description && requestParametersJSON(t, def) == schemaJSON(entry.Parameters) {
 			continue
 		}
 		gaps = append(gaps, name)
 	}
 	sort.Strings(gaps)
-	want := []string{
-		"exa_search",
-		"terminal_exec", "terminal_glob", "terminal_job_logs",
-		"terminal_job_manage", "terminal_job_start", "terminal_output_get",
-		"terminal_pty_close", "terminal_pty_open", "terminal_pty_run",
-		"terminal_rg",
-	}
-	sort.Strings(want)
+	// exa_search is the one recorded partial: Go registers Exa as a 7-action
+	// module tool (required `action`) while Python exposes a flat tool
+	// (required `query`). Flattening is its own lane, not a schema-shape gap.
+	want := []string{"exa_search"}
 	if !reflect.DeepEqual(gaps, want) {
 		t.Fatalf("remaining gaps = %v\nwant (recorded) = %v", gaps, want)
 	}
