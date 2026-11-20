@@ -4,13 +4,18 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/aden-hive/hive-go/internal/atomicfs"
+	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/qmail"
 )
@@ -36,6 +41,13 @@ type QueenMailAdapter struct {
 	createSession func(CreateSessionParams) (*Session, error)
 	sessionDir    func(*Session) string
 	mail          *qmail.Mail
+
+	// replySubs marks the thread sessions whose words are taken back to their
+	// writers: one subscription per live conversation, however many letters
+	// arrive. The bus is part of the key because a resumed session gets a new
+	// one. replyMu guards it.
+	replyMu   sync.Mutex
+	replySubs map[string]*eventbus.EventBus
 }
 
 var _ QueenMailBackend = (*QueenMailAdapter)(nil)
@@ -56,9 +68,20 @@ func NewQueenMailAdapter(options QueenMailAdapterOptions) *QueenMailAdapter {
 		manager:       options.Manager,
 		createSession: options.CreateSession,
 		sessionDir:    options.SessionDir,
+		replySubs:     map[string]*eventbus.EventBus{},
 	}
 	adapter.mail = qmail.New(home, qmail.ConfigFromHive(HiveConfig(home)), adapter)
+	adapter.mail.SetClaudeRunner(qmail.NewClaudeRunner(adapter.mail))
 	return adapter
+}
+
+// Close stops the process's Claude Code queen runner: no more turns start, and
+// the process trees of the running ones are killed.
+func (a *QueenMailAdapter) Close() {
+	if a == nil || a.mail == nil {
+		return
+	}
+	a.mail.Close()
 }
 
 // Mail is the service behind the adapter (tokens, inboxes, queue).
@@ -155,6 +178,9 @@ func (a *QueenMailAdapter) Deliver(ctx context.Context, toQueen, writer, fromRef
 		return "", qmailError(toQueen + " can't take letters now: the conversation is in a colony")
 	}
 	a.markThread(session, toQueen, writer, fromRef, letter.FromName)
+	// Subscribe before the letter enters the turn: a fast answer must not miss
+	// the events that carry it back.
+	a.subscribeReplies(session, toQueen, writer)
 	if err := queenMailInject(session, qmail.LetterText(letter.FromName, letter.From, letter.Text)); err != nil {
 		return "", qmailError(toQueen + " can't take letters now: " + err.Error())
 	}
@@ -303,7 +329,7 @@ func queenMailInject(session *Session, text string) error {
 		return errors.New("no session")
 	}
 	if session.Chat != nil {
-		return session.Chat.Deliver(text)
+		return session.Chat.InjectQueenMail(text)
 	}
 	if found, err := injectQueenEvent(session, text, true); found {
 		return err
@@ -313,4 +339,186 @@ func queenMailInject(session *Session, text string) error {
 
 func qmailError(message string) *qmail.Error {
 	return &qmail.Error{Message: message}
+}
+
+// subscribeReplies takes what the queen says in her thread session with writer
+// back to the writer, however many letters arrive in that conversation. One
+// watcher and one delivery worker per live session keeps her words in order;
+// delivering inside the event handler would hold the session bus while a
+// stopped writer's session starts.
+//
+// Parity: framework/server/queen_mail.py::QueenMail._subscribe
+// Parity: framework/server/queen_mail.py::QueenMail._reply
+func (a *QueenMailAdapter) subscribeReplies(session *Session, queenID, writer string) {
+	if a == nil || a.mail == nil || session == nil || session.EventBus == nil {
+		return
+	}
+	a.replyMu.Lock()
+	if a.replySubs == nil {
+		a.replySubs = map[string]*eventbus.EventBus{}
+	}
+	if a.replySubs[session.ID] == session.EventBus {
+		a.replyMu.Unlock()
+		return
+	}
+	a.replySubs[session.ID] = session.EventBus
+	a.replyMu.Unlock()
+
+	replies := make(chan string, 16)
+	go func() {
+		for text := range replies {
+			a.deliverQueenReply(session, queenID, writer, text)
+		}
+	}()
+	var pendingMu sync.Mutex
+	pending := ""
+
+	put := func(text string) {
+		if strings.TrimSpace(text) == "" {
+			return
+		}
+		replies <- text
+	}
+	flush := func() {
+		pendingMu.Lock()
+		text := pending
+		pending = ""
+		pendingMu.Unlock()
+		text = strings.TrimSpace(text)
+		if text == "" {
+			return
+		}
+		if isQueenMailVisibleError(text) {
+			put("(Her reply failed: " + text + ")")
+			return
+		}
+		put(text)
+	}
+
+	session.EventBus.Subscribe(
+		[]eventbus.EventType{
+			eventbus.EventClientOutputDelta,
+			eventbus.EventToolCallStarted,
+			eventbus.EventToolCallCompleted,
+			eventbus.EventLLMTurnComplete,
+			eventbus.EventClientInputRequested,
+			eventbus.EventExecutionFailed,
+		},
+		func(event *eventbus.AgentEvent) {
+			data := event.Data
+			switch event.Type {
+			case eventbus.EventClientOutputDelta:
+				if snapshot := queenStr(data["snapshot"]); snapshot != "" {
+					pendingMu.Lock()
+					pending = snapshot
+					pendingMu.Unlock()
+				}
+			case eventbus.EventToolCallStarted:
+				// What she wrote before a tool call is finished; an ask_user
+				// question carries its own text and is not said twice.
+				if queenStr(data["tool_name"]) != "ask_user" {
+					flush()
+				}
+			case eventbus.EventToolCallCompleted:
+				if queenStr(data["tool_name"]) == "attach_file" && !queenMailBool(data["is_error"]) {
+					if files := queenMailAttachedFiles(queenStr(data["result"])); len(files) > 0 {
+						put("(She attached: " + strings.Join(files, ", ") + ")")
+					}
+				}
+			case eventbus.EventLLMTurnComplete:
+				flush()
+			case eventbus.EventClientInputRequested:
+				questions, _ := data["questions"].([]map[string]any)
+				if queenStr(data["park_reason"]) == "ask_user" && len(questions) > 0 {
+					put(queenMailQuestionsText(questions))
+				} else {
+					flush()
+				}
+			case eventbus.EventExecutionFailed:
+				flush()
+				if message := queenStr(data["error"]); message != "" {
+					put("(Her reply failed: " + message + ")")
+				}
+			}
+		},
+		eventbus.WithFilterStream(chatStreamID),
+	)
+}
+
+// deliverQueenReply takes one thing the queen said back to the writer's
+// session. A refused or unreachable delivery is logged by the mail service as a
+// dropped reply, so it never disappears silently.
+func (a *QueenMailAdapter) deliverQueenReply(session *Session, queenID, writer, text string) {
+	replyTo := a.mail.ReplyTarget(queenID, writer, session.ID)
+	if replyTo == "" {
+		replyTo = queenStr(a.threadMeta(session)["reply_to"])
+	}
+	if err := a.mail.DeliverReply(replyTo, queenID, writer, session.ID, text, a.mail.CauseFor(session.ID)); err != nil {
+		log.Printf("queen mail: %s's reply to %s not delivered: %v", queenID, writer, err)
+	}
+}
+
+// threadMeta is the thread's meta.json, or an empty map when the session has no
+// directory yet.
+func (a *QueenMailAdapter) threadMeta(session *Session) map[string]any {
+	dir := a.sessionDirOf(session)
+	if dir == "" {
+		return map[string]any{}
+	}
+	return readJSONObjectOr(filepath.Join(dir, "meta.json"), map[string]any{})
+}
+
+// queenMailQuestionsText is what the writer is told of what her correspondent
+// asked, with the options a structured question carries.
+//
+// Parity: framework/server/queen_mail.py::_reply_text (question)
+func queenMailQuestionsText(questions []map[string]any) string {
+	asked := make([]string, 0, len(questions))
+	for _, question := range questions {
+		prompt := queenStr(question["prompt"])
+		choices := ""
+		if options, ok := question["options"].([]any); ok && len(options) > 0 {
+			texts := make([]string, 0, len(options))
+			for _, option := range options {
+				texts = append(texts, fmt.Sprint(option))
+			}
+			choices = " (" + strings.Join(texts, " / ") + ")"
+		}
+		asked = append(asked, prompt+choices)
+	}
+	return "(She asks:) " + strings.Join(asked, "\n")
+}
+
+// queenMailAttachedFiles is the files an attach_file result published into the
+// session, per the JSON summary the tool returns.
+//
+// Parity: framework/server/channels.py::_attached_files
+func queenMailAttachedFiles(result string) []string {
+	decoder := json.NewDecoder(strings.NewReader(strings.TrimSpace(result)))
+	var summary map[string]any
+	if err := decoder.Decode(&summary); err != nil {
+		return nil
+	}
+	entries, _ := summary["attached"].([]any)
+	files := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		row, _ := entry.(map[string]any)
+		resolved := queenStr(row["resolved"])
+		if resolved == "" {
+			continue
+		}
+		if info, err := os.Stat(resolved); err == nil && !info.IsDir() {
+			files = append(files, resolved)
+		}
+	}
+	return files
+}
+
+func isQueenMailVisibleError(text string) bool {
+	return strings.HasPrefix(strings.TrimLeft(text, " 	\r\n"), "[Error: LLM call failed: ")
+}
+
+func queenMailBool(value any) bool {
+	flag, _ := value.(bool)
+	return flag
 }

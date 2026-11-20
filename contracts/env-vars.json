@@ -1,0 +1,5171 @@
+{
+  "schema_version": 1,
+  "scanner": "go_hive/scripts/freeze_env_config_contract.py",
+  "scanner_version": "1.0.0",
+  "audit_reference": {
+    "file": "go_hive/docs/env-surface-audit.json",
+    "commit": "622cc236",
+    "doc": "go_hive/docs/environment-variables.html"
+  },
+  "verification": {
+    "rule": "quoted HIVE_* literals in production sources; tests/testdata/_test.go excluded; python = core/*.py + tools/*.py + root launcher scripts; go = go_hive/go-hive/{internal,cmd}/**/*.go",
+    "expected": {
+      "python": 89,
+      "go": 96,
+      "common": 66,
+      "python_only": 23,
+      "go_only": 30
+    },
+    "reproduced": {
+      "python": 89,
+      "go": 96,
+      "common": 66,
+      "python_only": 23,
+      "go_only": 30
+    },
+    "counts_match": true,
+    "published_lists_compared": {
+      "file": "go_hive/docs/env-surface-audit.json",
+      "counts": {
+        "python": 89,
+        "go": 96
+      },
+      "common_equal": true,
+      "python_only_equal": true,
+      "go_only_equal": true,
+      "normalization": "published 'HIVE_RETENTION_' (trailing underscore) maps to 'HIVE_RETENTION_*'"
+    }
+  },
+  "summary": {
+    "python": 89,
+    "go": 96,
+    "common": 66,
+    "python_only": 23,
+    "go_only": 30,
+    "status_counts": {
+      "aligned": 56,
+      "go_only": 4,
+      "literal_only": 36,
+      "parse_differs": 2,
+      "python_only": 21
+    },
+    "python_read_sites": 138,
+    "go_read_sites": 80
+  },
+  "inventory": {
+    "common": [
+      "HIVE_ACTIVE_WORKERS_SNAPSHOT_MAX",
+      "HIVE_ACTIVE_WORKERS_TASK_MAX",
+      "HIVE_ADAPTIVE_BUDGET_FLOOR",
+      "HIVE_ADAPTIVE_BUDGET_MIN_SAMPLES",
+      "HIVE_ADAPTIVE_TOOL_BUDGET",
+      "HIVE_API_KEY",
+      "HIVE_APP_VERSION",
+      "HIVE_BASH_PATH",
+      "HIVE_BRIDGE_PORT",
+      "HIVE_BROWSER_PROFILE_DISPLAY_NAME",
+      "HIVE_BROWSER_SESSION",
+      "HIVE_CLOUD_BASE",
+      "HIVE_CLOUD_JWT",
+      "HIVE_COLONY_NAME",
+      "HIVE_COLONY_PARALLEL_COOLDOWN",
+      "HIVE_COLONY_PARALLEL_MAX",
+      "HIVE_CREDENTIAL_KEY",
+      "HIVE_CRED_LOG",
+      "HIVE_DEBUG_EVENTS",
+      "HIVE_DEFAULT_PLAYBOOK_CONCURRENCY",
+      "HIVE_DESKTOP_MODE",
+      "HIVE_DESKTOP_PARENT_PID",
+      "HIVE_DESKTOP_THEME",
+      "HIVE_DESKTOP_TOKEN",
+      "HIVE_EMAIL_SENDERS",
+      "HIVE_HOME",
+      "HIVE_LLM_BASE_URL",
+      "HIVE_MAX_CONCURRENT_WORKERS",
+      "HIVE_MAX_PLAYBOOK_CONCURRENCY",
+      "HIVE_MAX_VERBATIM_CLIENT_MSGS",
+      "HIVE_MCP_CALL_RESULT_TIMEOUT",
+      "HIVE_MEMORY_TIMELINE",
+      "HIVE_MICROCOMPACT_KEEP_RECENT",
+      "HIVE_OWN_REMOTES",
+      "HIVE_PAST_RECALL_TIMEOUT",
+      "HIVE_PRINCIPAL",
+      "HIVE_QUEEN_ID",
+      "HIVE_QUEEN_MAIL_FROM",
+      "HIVE_QUEEN_MAIL_TOKEN",
+      "HIVE_QUEEN_MAIL_URL",
+      "HIVE_REGISTRY_URL",
+      "HIVE_REQUEST_EXECUTOR_MAX",
+      "HIVE_RIPGREP_PATH",
+      "HIVE_RUNTIME_ID",
+      "HIVE_RUNTIME_KIND",
+      "HIVE_RUNTIME_PORT",
+      "HIVE_STALL_CHECK",
+      "HIVE_STORAGE_PATH",
+      "HIVE_TASK_COMPLETED_CLEANUP",
+      "HIVE_TASK_LIST_ID",
+      "HIVE_TASK_REMINDER_BACKOFF",
+      "HIVE_TASK_REMINDER_COOLDOWN",
+      "HIVE_TASK_REMINDER_SOFT_CAP",
+      "HIVE_TASK_REMINDER_TURNS",
+      "HIVE_TASK_REMINDER_WARMUP",
+      "HIVE_TASK_SNAPSHOT_HEARTBEAT",
+      "HIVE_TASK_SNAPSHOT_ITEMS",
+      "HIVE_TASK_SNAPSHOT_MAX",
+      "HIVE_TASK_UNTRACKED_TURNS",
+      "HIVE_TIMELINE_BATCH",
+      "HIVE_TIMELINE_COOLDOWN",
+      "HIVE_TOOL_EXECUTOR_WORKERS",
+      "HIVE_TRACKER_QUEEN_COOLDOWN_NO_TABLE",
+      "HIVE_TRACKER_QUEEN_COOLDOWN_WITH_TABLE",
+      "HIVE_TRACKER_QUEEN_FIRST_FIRE",
+      "HIVE_TRUST_PROJECT_SKILLS"
+    ],
+    "python_only": [
+      "HIVE_AGENT_NAME",
+      "HIVE_COMPACTION_DEBUG",
+      "HIVE_CRM_PRINCIPAL",
+      "HIVE_ENABLE_LLM_LOGS",
+      "HIVE_GCU_MEMTRACE",
+      "HIVE_GCU_MEMTRACE_FILE",
+      "HIVE_GCU_MEMTRACE_FRAMES",
+      "HIVE_GCU_MEMTRACE_INTERVAL_S",
+      "HIVE_GCU_MEMTRACE_TOP",
+      "HIVE_GCU_SCREENSHOT_CONCURRENCY",
+      "HIVE_HISTORY_READ_WORKERS",
+      "HIVE_MAX_ITER",
+      "HIVE_NO_FILE_LOG",
+      "HIVE_PLAYBOOK_FAST_GRACE",
+      "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
+      "HIVE_RESOURCE_CRIT_RENDERERS",
+      "HIVE_RESOURCE_HISTORY",
+      "HIVE_RESOURCE_INTERVAL_S",
+      "HIVE_RESOURCE_WARN_AVAIL_FRAC",
+      "HIVE_RESOURCE_WARN_RENDERERS",
+      "HIVE_SENTINEL_LOG",
+      "HIVE_SPLIT_WORKER_EVENTS",
+      "HIVE_TRACKER_WORKER_TOOL_CALLS"
+    ],
+    "go_only": [
+      "HIVE_BROWSERBRIDGE_ARGS",
+      "HIVE_BROWSERBRIDGE_BIN",
+      "HIVE_BROWSERBRIDGE_CONTROL",
+      "HIVE_BROWSERBRIDGE_HTTP",
+      "HIVE_BROWSER_BRIDGE",
+      "HIVE_BROWSER_VIEWPORT_SCALE",
+      "HIVE_FAKE_NOW",
+      "HIVE_LIVE_API_BASE",
+      "HIVE_LIVE_API_KEY",
+      "HIVE_LIVE_MODEL",
+      "HIVE_LIVE_TIMEOUT",
+      "HIVE_LME_API_BASE",
+      "HIVE_LME_API_KEY",
+      "HIVE_LME_DATA",
+      "HIVE_LME_DATASET",
+      "HIVE_LME_JUDGE_API_BASE",
+      "HIVE_LME_JUDGE_API_KEY",
+      "HIVE_LME_JUDGE_MODEL",
+      "HIVE_LME_MODEL",
+      "HIVE_LME_QUEEN",
+      "HIVE_LME_QUESTIONS",
+      "HIVE_LME_READER_API_BASE",
+      "HIVE_LME_READER_API_KEY",
+      "HIVE_LME_READER_MODEL",
+      "HIVE_LME_RESUME",
+      "HIVE_LME_RUN_DIR",
+      "HIVE_MCP2CLI",
+      "HIVE_NETWORK_SCANNERS",
+      "HIVE_RETENTION_*",
+      "HIVE_SESSION_COST_LIMIT_USD"
+    ]
+  },
+  "recommendations": [
+    {
+      "name": "HIVE_MAX_ITER",
+      "priority": "P1",
+      "why": "caps queen reply-loop iterations for single-reply deployments",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_SPLIT_WORKER_EVENTS",
+      "priority": "P1",
+      "why": "splits worker event streams; affects transcript/event consumers",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_TRACKER_WORKER_TOOL_CALLS",
+      "priority": "P2",
+      "why": "tracker reminder cadence for worker tool calls",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_HISTORY_READ_WORKERS",
+      "priority": "P2",
+      "why": "parallelism for session history reads (default 8)",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_NO_FILE_LOG",
+      "priority": "P2",
+      "why": "turns off file logging; operators rely on it in containers",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_COMPACTION_DEBUG",
+      "priority": "P2",
+      "why": "compaction debug log switch",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_PLAYBOOK_FAST_GRACE",
+      "priority": "P2",
+      "why": "playbook fast-path grace seconds (default 1.5)",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_SENTINEL_LOG",
+      "priority": "P3",
+      "why": "sentinel log switch",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_ENABLE_LLM_LOGS",
+      "priority": "P3",
+      "why": "LLM debug log switch",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_RESOURCE_*",
+      "priority": "P3",
+      "why": "host resource sampling knobs (6 vars)",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_GCU_MEMTRACE*",
+      "priority": "P3",
+      "why": "GCU memory tracing (5 vars)",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_GCU_SCREENSHOT_CONCURRENCY",
+      "priority": "P3",
+      "why": "GCU screenshot concurrency",
+      "direction": "port to go"
+    },
+    {
+      "name": "HIVE_BROWSERBRIDGE_ARGS",
+      "priority": "document",
+      "why": "documented Go bridge flag pass-through",
+      "direction": "keep go-only, document as extension"
+    },
+    {
+      "name": "HIVE_BROWSERBRIDGE_BIN",
+      "priority": "document",
+      "why": "documented Go bridge binary path",
+      "direction": "keep go-only, document as extension"
+    },
+    {
+      "name": "HIVE_BROWSERBRIDGE_CONTROL",
+      "priority": "document",
+      "why": "documented Go bridge control port",
+      "direction": "keep go-only, document as extension"
+    },
+    {
+      "name": "HIVE_BROWSERBRIDGE_HTTP",
+      "priority": "document",
+      "why": "documented Go bridge HTTP port",
+      "direction": "keep go-only, document as extension"
+    },
+    {
+      "name": "HIVE_BROWSER_BRIDGE",
+      "priority": "document",
+      "why": "documented Go bridge on/off switch",
+      "direction": "keep go-only, document as extension"
+    },
+    {
+      "name": "HIVE_BROWSER_VIEWPORT_SCALE",
+      "priority": "document",
+      "why": "injected into the bridge from gcu_viewport_scale",
+      "direction": "keep go-only, document as extension"
+    },
+    {
+      "name": "HIVE_MCP2CLI",
+      "priority": "document",
+      "why": "native/external/auto mcp2cli selection (Go-only)",
+      "direction": "keep go-only, document as extension"
+    },
+    {
+      "name": "HIVE_NETWORK_SCANNERS",
+      "priority": "document",
+      "why": "operator opt-in for four scanning tools (Go-only)",
+      "direction": "keep go-only, document as extension"
+    },
+    {
+      "name": "HIVE_SESSION_COST_LIMIT_USD",
+      "priority": "document",
+      "why": "per-session cost ceiling (Go-only)",
+      "direction": "keep go-only, document as extension"
+    }
+  ],
+  "scope_note": "Adopts the published audit (622cc236) as the inventory baseline instead of re-inventing it. browserbridge's protocol env surface is out of scope; quickstart.sh local shell variables are not env vars. Python dev/eval vars (LongMemEval, core/tests) are excluded by the audit's production rule.",
+  "variables": [
+    {
+      "name": "HIVE_ACTIVE_WORKERS_SNAPSHOT_MAX",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['8'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/active_workers_reminder.py",
+            "line": 41,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "8",
+            "snippet": "ACTIVE_WORKERS_SNAPSHOT_MAX = _env_int(\"HIVE_ACTIVE_WORKERS_SNAPSHOT_MAX\", 8)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/active_workers_reminder.go",
+            "line": 9,
+            "symbol": null,
+            "parse": "int",
+            "helper": "envInt",
+            "default": "8",
+            "snippet": "var ActiveWorkersSnapshotMax = envInt(\"HIVE_ACTIVE_WORKERS_SNAPSHOT_MAX\", 8)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_ACTIVE_WORKERS_TASK_MAX",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['80'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/active_workers_reminder.py",
+            "line": 45,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "80",
+            "snippet": "TASK_BODY_MAX = _env_int(\"HIVE_ACTIVE_WORKERS_TASK_MAX\", 80)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/active_workers_reminder.go",
+            "line": 12,
+            "symbol": null,
+            "parse": "int",
+            "helper": "envInt",
+            "default": "80",
+            "snippet": "var ActiveWorkersTaskMax = envInt(\"HIVE_ACTIVE_WORKERS_TASK_MAX\", 80)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_ADAPTIVE_BUDGET_FLOOR",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['30'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/colony_runtime.py",
+            "line": 169,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "30",
+            "snippet": "_ADAPTIVE_BUDGET_FLOOR = _env_int(\"HIVE_ADAPTIVE_BUDGET_FLOOR\", 30)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/colony/runtime.go",
+            "line": 31,
+            "symbol": null,
+            "parse": "int",
+            "helper": "colonyEnvInt",
+            "default": "30",
+            "snippet": "AdaptiveBudgetFloor       = colonyEnvInt(\"HIVE_ADAPTIVE_BUDGET_FLOOR\", 30)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_ADAPTIVE_BUDGET_MIN_SAMPLES",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['3'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/colony_runtime.py",
+            "line": 166,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "3",
+            "snippet": "_ADAPTIVE_BUDGET_MIN_SAMPLES = _env_int(\"HIVE_ADAPTIVE_BUDGET_MIN_SAMPLES\", 3)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/colony/runtime.go",
+            "line": 30,
+            "symbol": null,
+            "parse": "int",
+            "helper": "colonyEnvInt",
+            "default": "3",
+            "snippet": "AdaptiveBudgetMinSamples  = colonyEnvInt(\"HIVE_ADAPTIVE_BUDGET_MIN_SAMPLES\", 3)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_ADAPTIVE_TOOL_BUDGET",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/config.py",
+            "line": 963,
+            "symbol": "get_adaptive_tool_budget_enabled",
+            "parse": "string",
+            "snippet": "raw = os.environ.get(\"HIVE_ADAPTIVE_TOOL_BUDGET\")"
+          },
+          {
+            "file": "core/framework/host/colony_runtime.py",
+            "line": 164,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_flag",
+            "default": "True",
+            "snippet": "_DEFAULT_ADAPTIVE_TOOL_BUDGET = _env_flag(\"HIVE_ADAPTIVE_TOOL_BUDGET\", True)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 3,
+        "writes": [],
+        "mentions": 2,
+        "comments": 2
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/colony/runtime.go",
+            "line": 29,
+            "symbol": null,
+            "parse": "bool",
+            "helper": "colonyEnvBool",
+            "default": "true",
+            "snippet": "DefaultAdaptiveToolBudget = colonyEnvBool(\"HIVE_ADAPTIVE_TOOL_BUDGET\", true)"
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/config_features.go",
+            "line": 47,
+            "symbol": "AdaptiveToolBudgetEnabled",
+            "parse": "helper",
+            "helper": "envFeatureFlag",
+            "snippet": "if value, ok := envFeatureFlag(\"HIVE_ADAPTIVE_TOOL_BUDGET\"); ok {"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 3,
+        "writes": [],
+        "mentions": 10,
+        "comments": 0
+      },
+      "notes": "helper defaults true on both sides (colonyEnvBool/envFeatureFlag mirror _env_flag)."
+    },
+    {
+      "name": "HIVE_AGENT_NAME",
+      "audit_membership": "python_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_API_KEY",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/server/routes_config.py",
+            "line": 236,
+            "symbol": "_detect_subscriptions",
+            "parse": "string",
+            "snippet": "if os.environ.get(\"HIVE_API_KEY\"):"
+          },
+          {
+            "file": "core/framework/server/routes_config.py",
+            "line": 281,
+            "symbol": "_get_subscription_token",
+            "parse": "string",
+            "snippet": "return os.environ.get(\"HIVE_API_KEY\")"
+          },
+          {
+            "file": "tools/src/aden_tools/tools/image_gen_tool/image_gen_tool.py",
+            "line": 294,
+            "symbol": "register_tools",
+            "parse": "string",
+            "snippet": "token = os.environ.get(\"HIVE_API_KEY\")"
+          },
+          {
+            "file": "quickstart.sh",
+            "line": 1186,
+            "symbol": null,
+            "snippet": "if [ -n \"${HIVE_API_KEY:-}\" ]; then"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 1120,
+            "symbol": null,
+            "snippet": "$hiveKey = [System.Environment]::GetEnvironmentVariable(\"HIVE_API_KEY\", \"User\")"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 1121,
+            "symbol": null,
+            "snippet": "if (-not $hiveKey) { $hiveKey = $env:HIVE_API_KEY }"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 1847,
+            "symbol": null,
+            "snippet": "$existingHive = [System.Environment]::GetEnvironmentVariable(\"HIVE_API_KEY\", \"User\")"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 1848,
+            "symbol": null,
+            "snippet": "if (-not $existingHive) { $existingHive = $env:HIVE_API_KEY }"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 5,
+        "writes": [
+          {
+            "file": "quickstart.ps1",
+            "line": 1865,
+            "scope": "runtime"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 1866,
+            "scope": "runtime"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 1881,
+            "scope": "runtime"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 1897,
+            "scope": "runtime"
+          }
+        ],
+        "mentions": 11,
+        "comments": 2
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/cli/loader.go",
+            "line": 1127,
+            "symbol": "resolveChatProvider",
+            "parse": "string",
+            "snippet": "apiKey = strings.TrimSpace(os.Getenv(\"HIVE_API_KEY\"))",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/llm_config.go",
+            "line": 209,
+            "symbol": "defaultSubscriptionToken",
+            "parse": "string",
+            "snippet": "return os.Getenv(\"HIVE_API_KEY\"), true",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/llm_config.go",
+            "line": 240,
+            "symbol": "defaultDetectSubscriptions",
+            "parse": "string",
+            "snippet": "if os.Getenv(\"HIVE_API_KEY\") != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 2,
+        "writes": [],
+        "mentions": 17,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_APP_VERSION",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agents/queen/queen_tools_defaults.py",
+            "line": 38,
+            "symbol": "_current_app_version",
+            "parse": "string",
+            "snippet": "return os.environ.get(\"HIVE_APP_VERSION\") or \"0.0.0\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 0,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/server/routes_colony_tools.go",
+            "line": 75,
+            "symbol": "appVersion",
+            "parse": "string",
+            "snippet": "if value := os.Getenv(\"HIVE_APP_VERSION\"); value != \"\" {",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/routes_colony_tools.go",
+            "line": 345,
+            "symbol": "appVersionFromEnv",
+            "parse": "string",
+            "snippet": "if value := os.Getenv(\"HIVE_APP_VERSION\"); value != \"\" {",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/routes_queens_tools.go",
+            "line": 158,
+            "symbol": "queenAppVersion",
+            "parse": "string",
+            "snippet": "if version := os.Getenv(\"HIVE_APP_VERSION\"); version != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_BASH_PATH",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "tools/src/terminal_tools/common/limits.py",
+            "line": 78,
+            "symbol": "_windows_bash",
+            "parse": "string",
+            "snippet": "env_bash = os.environ.get(\"HIVE_BASH_PATH\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 3,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tools/builtin/terminal_guard.go",
+            "line": 96,
+            "symbol": "terminalFindWindowsBash",
+            "parse": "string",
+            "snippet": "if override := os.Getenv(\"HIVE_BASH_PATH\"); override != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_BRIDGE_PORT",
+      "audit_membership": "common",
+      "status": "parse_differs",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/worker.py",
+            "line": 42,
+            "symbol": "_connected_browser_labels",
+            "parse": "int",
+            "snippet": "bridge_port = int(os.environ.get(\"HIVE_BRIDGE_PORT\", \"14829\"))",
+            "default": "\"14829\""
+          },
+          {
+            "file": "core/framework/server/app.py",
+            "line": 646,
+            "symbol": "_probe_browser_bridge",
+            "parse": "int",
+            "snippet": "bridge_port = int(os.environ.get(\"HIVE_BRIDGE_PORT\", \"9229\"))",
+            "default": "\"9229\""
+          },
+          {
+            "file": "core/framework/server/app.py",
+            "line": 700,
+            "symbol": "_probe_browser_contexts",
+            "parse": "int",
+            "snippet": "bridge_port = int(os.environ.get(\"HIVE_BRIDGE_PORT\", \"9229\"))",
+            "default": "\"9229\""
+          },
+          {
+            "file": "core/framework/server/app.py",
+            "line": 766,
+            "symbol": "_reveal_browser_tab",
+            "parse": "int",
+            "snippet": "bridge_port = int(os.environ.get(\"HIVE_BRIDGE_PORT\", \"9229\"))",
+            "default": "\"9229\""
+          },
+          {
+            "file": "core/framework/tools/queen_lifecycle_tools.py",
+            "line": 2691,
+            "symbol": "register_queen_lifecycle_tools",
+            "parse": "int",
+            "snippet": "bridge_port = int(os.environ.get(\"HIVE_BRIDGE_PORT\", \"14829\"))",
+            "default": "\"14829\""
+          },
+          {
+            "file": "tools/src/gcu/bridge_host.py",
+            "line": 306,
+            "symbol": "_run_worker",
+            "parse": "helper",
+            "helper": "getenv",
+            "default": "str(BRIDGE_PORT",
+            "snippet": "port = int(os.getenv(\"HIVE_BRIDGE_PORT\", str(BRIDGE_PORT)))"
+          },
+          {
+            "file": "tools/src/gcu/server.py",
+            "line": 220,
+            "symbol": "_lifespan",
+            "parse": "helper",
+            "helper": "getenv",
+            "default": "str(BRIDGE_PORT",
+            "snippet": "bridge_port = int(os.getenv(\"HIVE_BRIDGE_PORT\", str(BRIDGE_PORT)))"
+          }
+        ],
+        "dev_reads": [
+          {
+            "file": "scripts/browser_remote.py",
+            "line": 54,
+            "symbol": "get_mcp_client",
+            "parse": "string",
+            "snippet": "bridge_port = os.environ.get(\"HIVE_BRIDGE_PORT\", \"9229\")",
+            "default": "\"9229\""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/server/queen_lifecycle_workers.go",
+            "line": 387,
+            "symbol": "listBrowserProfiles",
+            "parse": "string",
+            "snippet": "if raw := strings.TrimSpace(os.Getenv(\"HIVE_BRIDGE_PORT\")); raw != \"\" {",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/routes_app_extra.go",
+            "line": 442,
+            "symbol": "defaultBridgeStatusAddr",
+            "parse": "string",
+            "snippet": "if raw := os.Getenv(\"HIVE_BRIDGE_PORT\"); raw != \"\" {",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/routes_browser_panel.go",
+            "line": 67,
+            "symbol": "defaultBrowserPanelBase",
+            "parse": "string",
+            "snippet": "if raw := strings.TrimSpace(os.Getenv(\"HIVE_BRIDGE_PORT\")); raw != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 2,
+        "writes": [],
+        "mentions": 4,
+        "comments": 4
+      },
+      "notes": "py int() raises at import on garbage; go parses per site and keeps the default. Per-site defaults (14829/9229) match upstream."
+    },
+    {
+      "name": "HIVE_BROWSERBRIDGE_ARGS",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 4,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_BROWSERBRIDGE_BIN",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 4,
+        "writes": [],
+        "mentions": 8,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_BROWSERBRIDGE_CONTROL",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 4,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_BROWSERBRIDGE_HTTP",
+      "audit_membership": "go_only",
+      "status": "go_only",
+      "status_basis": "go has a read site, python has none",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/server/routes_browser_panel.go",
+            "line": 63,
+            "symbol": "defaultBrowserPanelBase",
+            "parse": "string",
+            "snippet": "if raw := strings.TrimSpace(os.Getenv(\"HIVE_BROWSERBRIDGE_HTTP\")); raw != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 6,
+        "writes": [],
+        "mentions": 7,
+        "comments": 3
+      }
+    },
+    {
+      "name": "HIVE_BROWSER_BRIDGE",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 4,
+        "writes": [],
+        "mentions": 4,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_BROWSER_PROFILE_DISPLAY_NAME",
+      "audit_membership": "common",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_BROWSER_SESSION",
+      "audit_membership": "common",
+      "status": "go_only",
+      "status_basis": "go has a read site, python has none",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 6,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/cli/browser_cli.go",
+            "line": 227,
+            "symbol": "profile",
+            "parse": "helper",
+            "helper": "env",
+            "snippet": "if raw := strings.TrimSpace(c.env(\"HIVE_BROWSER_SESSION\")); raw != \"\" {"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 2,
+        "writes": [],
+        "mentions": 5,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_BROWSER_VIEWPORT_SCALE",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 10,
+        "comments": 2
+      }
+    },
+    {
+      "name": "HIVE_CLOUD_BASE",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/global_db/client.py",
+            "line": 43,
+            "symbol": "_cloud_config",
+            "parse": "string",
+            "snippet": "base = os.environ.get(\"HIVE_CLOUD_BASE\", \"\").strip()",
+            "default": "\"\""
+          },
+          {
+            "file": "core/framework/llm/model_catalog.py",
+            "line": 173,
+            "symbol": "_hide_managed_providers",
+            "parse": "string",
+            "snippet": "return not os.environ.get(\"HIVE_CLOUD_BASE\", \"\").strip()",
+            "default": "\"\""
+          },
+          {
+            "file": "core/framework/sentinel/notifier.py",
+            "line": 72,
+            "symbol": "hive_backend_base",
+            "parse": "string",
+            "snippet": "return os.environ.get(\"HIVE_CLOUD_BASE\", \"\").strip() or None",
+            "default": "\"\""
+          },
+          {
+            "file": "core/framework/server/streamtoken_refresh.py",
+            "line": 243,
+            "symbol": "_refresh_loop",
+            "parse": "string",
+            "snippet": "base_url = os.environ.get(\"HIVE_CLOUD_BASE\", \"\").rstrip(\"/\")",
+            "default": "\"\""
+          },
+          {
+            "file": "core/framework/server/streamtoken_refresh.py",
+            "line": 417,
+            "symbol": "start_streamtoken_refresh",
+            "parse": "string",
+            "snippet": "_aden_base_url_ref = os.environ.get(\"HIVE_CLOUD_BASE\", \"\").rstrip(\"/\") or None",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 5,
+        "comments": 5
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/llm/catalog.go",
+            "line": 528,
+            "symbol": "hideManagedProviders",
+            "parse": "string",
+            "snippet": "return strings.TrimSpace(os.Getenv(\"HIVE_CLOUD_BASE\")) == \"\"",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/sentinel/notifier.go",
+            "line": 126,
+            "symbol": "HiveBackendBase",
+            "parse": "helper",
+            "helper": "getenv",
+            "snippet": "return strings.TrimSpace(n.getenv(\"HIVE_CLOUD_BASE\"))"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 3,
+        "writes": [],
+        "mentions": 8,
+        "comments": 2
+      },
+      "notes": "strip+empty -> disabled on both sides."
+    },
+    {
+      "name": "HIVE_CLOUD_JWT",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=[''] parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/global_db/client.py",
+            "line": 42,
+            "symbol": "_cloud_config",
+            "parse": "string",
+            "snippet": "jwt = os.environ.get(\"HIVE_CLOUD_JWT\", \"\").strip()",
+            "default": "\"\""
+          },
+          {
+            "file": "core/framework/sentinel/notifier.py",
+            "line": 77,
+            "symbol": "hive_jwt",
+            "parse": "string",
+            "snippet": "return os.environ.get(\"HIVE_CLOUD_JWT\", \"\").strip() or None",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 2,
+        "writes": [],
+        "mentions": 5,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/sentinel/notifier.go",
+            "line": 130,
+            "symbol": "HiveJWT",
+            "parse": "helper",
+            "helper": "getenv",
+            "snippet": "func (n *HTTPNotifier) HiveJWT() string { return strings.TrimSpace(n.getenv(\"HIVE_CLOUD_JWT\")) }"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 5,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_COLONY_NAME",
+      "audit_membership": "common",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 4,
+        "writes": [],
+        "mentions": 9,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 10,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_COLONY_PARALLEL_COOLDOWN",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['4'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/colony_parallel_nudge.py",
+            "line": 57,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "4",
+            "snippet": "COLONY_PARALLEL_COOLDOWN_TURNS = _env_int(\"HIVE_COLONY_PARALLEL_COOLDOWN\", 4)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/colony_parallel_nudge.go",
+            "line": 22,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "4",
+            "snippet": "ColonyParallelCooldownTurns = envInt(\"HIVE_COLONY_PARALLEL_COOLDOWN\", 4)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_COLONY_PARALLEL_MAX",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['4'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/colony_parallel_nudge.py",
+            "line": 59,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "4",
+            "snippet": "COLONY_PARALLEL_MAX_PER_SESSION = _env_int(\"HIVE_COLONY_PARALLEL_MAX\", 4)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/colony_parallel_nudge.go",
+            "line": 23,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "4",
+            "snippet": "ColonyParallelMaxPerSession = envInt(\"HIVE_COLONY_PARALLEL_MAX\", 4)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_COMPACTION_DEBUG",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/internals/compaction.py",
+            "line": 1007,
+            "symbol": "log_compaction",
+            "parse": "string",
+            "snippet": "if os.environ.get(\"HIVE_COMPACTION_DEBUG\"):"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_CREDENTIAL_KEY",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/config.py",
+            "line": 261,
+            "symbol": "_get_api_key_from_credential_store",
+            "parse": "string",
+            "snippet": "if not os.environ.get(\"HIVE_CREDENTIAL_KEY\"):"
+          },
+          {
+            "file": "core/framework/credentials/validation.py",
+            "line": 401,
+            "symbol": "validate_agent_credentials",
+            "parse": "string",
+            "snippet": "if os.environ.get(\"HIVE_CREDENTIAL_KEY\"):"
+          },
+          {
+            "file": "core/framework/llm/endpoints.py",
+            "line": 81,
+            "symbol": "stored_key",
+            "parse": "string",
+            "snippet": "if not os.environ.get(\"HIVE_CREDENTIAL_KEY\"):"
+          },
+          {
+            "file": "core/framework/loader/agent_loader.py",
+            "line": 1643,
+            "symbol": "AgentLoader",
+            "parse": "string",
+            "snippet": "if not os.environ.get(\"HIVE_CREDENTIAL_KEY\"):"
+          },
+          {
+            "file": "core/framework/sentinel/notifier.py",
+            "line": 44,
+            "symbol": "_credential",
+            "parse": "string",
+            "snippet": "if os.environ.get(\"HIVE_CREDENTIAL_KEY\"):"
+          },
+          {
+            "file": "core/framework/server/app.py",
+            "line": 974,
+            "symbol": "create_app",
+            "parse": "string",
+            "snippet": "if not os.environ.get(\"HIVE_CREDENTIAL_KEY\"):"
+          },
+          {
+            "file": "core/framework/server/app.py",
+            "line": 1000,
+            "symbol": "create_app",
+            "parse": "string",
+            "snippet": "if not os.environ.get(\"HIVE_CREDENTIAL_KEY\") and _has_encrypted_credentials():"
+          },
+          {
+            "file": "core/framework/server/routes_credentials.py",
+            "line": 564,
+            "symbol": "handle_list_specs",
+            "parse": "string",
+            "snippet": "if os.environ.get(\"HIVE_CREDENTIAL_KEY\"):"
+          },
+          {
+            "file": "hive.ps1",
+            "line": 65,
+            "symbol": null,
+            "snippet": "if (-not $env:HIVE_CREDENTIAL_KEY) {"
+          },
+          {
+            "file": "hive.ps1",
+            "line": 67,
+            "symbol": null,
+            "snippet": "$credKey = [System.Environment]::GetEnvironmentVariable(\"HIVE_CREDENTIAL_KEY\", \"User\")"
+          },
+          {
+            "file": "quickstart.sh",
+            "line": 2099,
+            "symbol": null,
+            "snippet": "if [ -n \"$HIVE_CREDENTIAL_KEY\" ]; then"
+          },
+          {
+            "file": "quickstart.sh",
+            "line": 2129,
+            "symbol": null,
+            "snippet": "if [ -n \"$HIVE_CREDENTIAL_KEY\" ]; then"
+          },
+          {
+            "file": "quickstart.sh",
+            "line": 2236,
+            "symbol": null,
+            "snippet": "if [ -n \"$HIVE_CREDENTIAL_KEY\" ] && [ -d \"$HOME/.hive/credentials/credentials\" ]; then"
+          },
+          {
+            "file": "quickstart.sh",
+            "line": 2362,
+            "symbol": null,
+            "snippet": "if [ -n \"$HIVE_CREDENTIAL_KEY\" ]; then"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 2012,
+            "symbol": null,
+            "snippet": "$credKey = $env:HIVE_CREDENTIAL_KEY"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 2025,
+            "symbol": null,
+            "snippet": "$credKey = [System.Environment]::GetEnvironmentVariable(\"HIVE_CREDENTIAL_KEY\", \"User\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 11,
+        "writes": [
+          {
+            "file": "core/tests/conftest.py",
+            "line": 119,
+            "scope": "test"
+          },
+          {
+            "file": "hive.ps1",
+            "line": 69,
+            "scope": "runtime"
+          },
+          {
+            "file": "hive.ps1",
+            "line": 74,
+            "scope": "runtime"
+          },
+          {
+            "file": "quickstart.sh",
+            "line": 2103,
+            "scope": "runtime"
+          },
+          {
+            "file": "quickstart.sh",
+            "line": 2122,
+            "scope": "runtime"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 2019,
+            "scope": "runtime"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 2027,
+            "scope": "runtime"
+          },
+          {
+            "file": "quickstart.ps1",
+            "line": 2063,
+            "scope": "runtime"
+          }
+        ],
+        "mentions": 39,
+        "comments": 11
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/llm/endpoints.go",
+            "line": 106,
+            "symbol": "StoredKey",
+            "parse": "string",
+            "snippet": "if os.Getenv(\"HIVE_CREDENTIAL_KEY\") == \"\" {",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/llm_config.go",
+            "line": 442,
+            "symbol": "configuredAPIKeyPresent",
+            "parse": "string",
+            "snippet": "if os.Getenv(\"HIVE_CREDENTIAL_KEY\") != \"\" {",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/routes_models.go",
+            "line": 116,
+            "symbol": "credentialStore",
+            "parse": "string",
+            "snippet": "if os.Getenv(\"HIVE_CREDENTIAL_KEY\") == \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 15,
+        "writes": [],
+        "mentions": 13,
+        "comments": 4
+      }
+    },
+    {
+      "name": "HIVE_CRED_LOG",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/credentials/cli.py",
+            "line": 55,
+            "symbol": "_setup_cli_logging",
+            "parse": "string",
+            "snippet": "log_file = os.environ.get(\"HIVE_CRED_LOG\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/cli/cred.go",
+            "line": 38,
+            "symbol": "setupCredLogging",
+            "parse": "string",
+            "snippet": "path := os.Getenv(\"HIVE_CRED_LOG\")",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_CRM_PRINCIPAL",
+      "audit_membership": "python_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_DEBUG_EVENTS",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=[''] parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/event_bus.py",
+            "line": 36,
+            "symbol": null,
+            "parse": "string",
+            "snippet": "_DEBUG_EVENTS_RAW = os.environ.get(\"HIVE_DEBUG_EVENTS\", \"\").strip()",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 4
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/eventbus/bus.go",
+            "line": 703,
+            "symbol": "marshalLine",
+            "parse": "string",
+            "snippet": "debugEventsRaw = strings.TrimSpace(os.Getenv(\"HIVE_DEBUG_EVENTS\"))",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "notes": "true for 1/true/full and any non-empty except 0/false."
+    },
+    {
+      "name": "HIVE_DEFAULT_PLAYBOOK_CONCURRENCY",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['8'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tools/playbook_tools.py",
+            "line": 207,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_int_env",
+            "default": "8",
+            "snippet": "_DEFAULT_PLAYBOOK_CONCURRENCY = _int_env(\"HIVE_DEFAULT_PLAYBOOK_CONCURRENCY\", 8)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/playbook/rows.go",
+            "line": 229,
+            "symbol": "intEnv",
+            "parse": "int",
+            "helper": "intEnv",
+            "default": "8",
+            "snippet": "DefaultPlaybookConcurrency = intEnv(\"HIVE_DEFAULT_PLAYBOOK_CONCURRENCY\", 8)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_DESKTOP_MODE",
+      "audit_membership": "common",
+      "status": "parse_differs",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/config.py",
+            "line": 21,
+            "symbol": null,
+            "parse": "truthy",
+            "note": "any non-empty string is True (incl. '0')",
+            "snippet": "DESKTOP_MODE: bool = bool(os.environ.get(\"HIVE_DESKTOP_MODE\"))"
+          },
+          {
+            "file": "core/framework/credentials/key_storage.py",
+            "line": 254,
+            "symbol": "_read_from_shell_config",
+            "parse": "string",
+            "snippet": "if os.environ.get(\"HIVE_DESKTOP_MODE\") == \"1\":"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/credentials/keys.go",
+            "line": 175,
+            "symbol": "readFromShellConfig",
+            "parse": "bool_eq_1",
+            "snippet": "if os.Getenv(\"HIVE_DESKTOP_MODE\") == \"1\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 9,
+        "writes": [],
+        "mentions": 3,
+        "comments": 1
+      },
+      "notes": "py bool() treats \"0\" as true; go compares the raw string with \"1\" where it gates."
+    },
+    {
+      "name": "HIVE_DESKTOP_PARENT_PID",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/loader/cli.py",
+            "line": 317,
+            "symbol": "_runtime_owner_pid",
+            "parse": "string",
+            "snippet": "raw = os.environ.get(\"HIVE_DESKTOP_PARENT_PID\", \"\")",
+            "default": "\"\""
+          },
+          {
+            "file": "core/framework/server/app.py",
+            "line": 392,
+            "symbol": "_start_parent_watchdog",
+            "parse": "string",
+            "snippet": "parent_pid_env = os.environ.get(\"HIVE_DESKTOP_PARENT_PID\")"
+          },
+          {
+            "file": "tools/src/chart_tools/server.py",
+            "line": 55,
+            "symbol": "_lifespan",
+            "parse": "string",
+            "snippet": "parent_pid_env = os.getenv(\"HIVE_DESKTOP_PARENT_PID\")"
+          },
+          {
+            "file": "tools/src/gcu/bridge_host.py",
+            "line": 247,
+            "symbol": "_idle_exit_watchdog",
+            "parse": "string",
+            "snippet": "parent_raw = os.getenv(\"HIVE_DESKTOP_PARENT_PID\")"
+          },
+          {
+            "file": "tools/src/gcu/bridge_host.py",
+            "line": 338,
+            "symbol": "_run_worker",
+            "parse": "string",
+            "snippet": "parent = os.getenv(\"HIVE_DESKTOP_PARENT_PID\")"
+          },
+          {
+            "file": "tools/src/gcu/bridge_host.py",
+            "line": 390,
+            "symbol": "_run_supervisor",
+            "parse": "string",
+            "snippet": "parent = os.getenv(\"HIVE_DESKTOP_PARENT_PID\")"
+          },
+          {
+            "file": "tools/src/gcu/browser/bridge.py",
+            "line": 616,
+            "symbol": "BeelineBridge",
+            "parse": "string",
+            "snippet": "pid_str = os.getenv(\"HIVE_DESKTOP_PARENT_PID\")"
+          },
+          {
+            "file": "tools/src/gcu/browser/bridge_rpc.py",
+            "line": 800,
+            "symbol": "RemoteBridge",
+            "parse": "string",
+            "snippet": "raw = os.getenv(\"HIVE_DESKTOP_PARENT_PID\")"
+          },
+          {
+            "file": "tools/src/gcu/server.py",
+            "line": 224,
+            "symbol": "_lifespan",
+            "parse": "string",
+            "snippet": "parent_pid_env = os.getenv(\"HIVE_DESKTOP_PARENT_PID\")"
+          },
+          {
+            "file": "tools/src/terminal_tools/server.py",
+            "line": 68,
+            "symbol": "_lifespan",
+            "parse": "string",
+            "snippet": "parent_pid_env = os.getenv(\"HIVE_DESKTOP_PARENT_PID\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 3,
+        "writes": [
+          {
+            "file": "core/framework/loader/cli.py",
+            "line": 320,
+            "scope": "runtime"
+          }
+        ],
+        "mentions": 13,
+        "comments": 2
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/cli/browser_supervisor.go",
+            "line": 266,
+            "symbol": "browserControlOwnerPID",
+            "parse": "helper",
+            "helper": "lookupEnv",
+            "snippet": "raw := strings.TrimSpace(lookupEnv(\"HIVE_DESKTOP_PARENT_PID\"))"
+          },
+          {
+            "file": "go_hive/go-hive/internal/cli/loader.go",
+            "line": 1191,
+            "symbol": "runtimeOwnerPID",
+            "parse": "string",
+            "snippet": "owner := os.Getenv(\"HIVE_DESKTOP_PARENT_PID\")",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [
+          {
+            "file": "go_hive/go-hive/internal/cli/loader.go",
+            "line": 1194,
+            "scope": "runtime"
+          }
+        ],
+        "mentions": 8,
+        "comments": 1
+      },
+      "notes": "presence/empty gate; no numeric parsing."
+    },
+    {
+      "name": "HIVE_DESKTOP_THEME",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "tools/src/chart_tools/tools.py",
+            "line": 49,
+            "symbol": "_system_theme",
+            "parse": "string",
+            "snippet": "val = (os.environ.get(\"HIVE_DESKTOP_THEME\") or \"\").strip().lower()"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/charts/theme.go",
+            "line": 45,
+            "symbol": "ResolveThemeName",
+            "parse": "string",
+            "snippet": "if strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_DESKTOP_THEME\"))) == \"dark\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 3,
+        "writes": [],
+        "mentions": 3,
+        "comments": 3
+      }
+    },
+    {
+      "name": "HIVE_DESKTOP_TOKEN",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/server/app.py",
+            "line": 254,
+            "symbol": null,
+            "parse": "string",
+            "snippet": "_EXPECTED_DESKTOP_TOKEN: str | None = os.environ.get(\"HIVE_DESKTOP_TOKEN\") or None"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/cli/loader.go",
+            "line": 263,
+            "symbol": "defaultServe",
+            "parse": "string",
+            "snippet": "if !isLoopbackListenHost(host) && strings.TrimSpace(os.Getenv(\"HIVE_DESKTOP_TOKEN\")) == \"\" {",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/app.go",
+            "line": 35,
+            "symbol": null,
+            "parse": "string",
+            "snippet": "var desktopTokenFromEnv = os.Getenv(\"HIVE_DESKTOP_TOKEN\")",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 6,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_EMAIL_SENDERS",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=[''] parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/config.py",
+            "line": 992,
+            "symbol": "get_email_senders_enabled",
+            "parse": "string",
+            "snippet": "raw = os.environ.get(\"HIVE_EMAIL_SENDERS\")"
+          },
+          {
+            "file": "tools/src/aden_tools/tools/__init__.py",
+            "line": 176,
+            "symbol": "_email_senders_enabled",
+            "parse": "string",
+            "snippet": "raw = os.getenv(\"HIVE_EMAIL_SENDERS\", \"\")",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 3,
+        "writes": [
+          {
+            "file": "core/framework/config.py",
+            "line": 1338,
+            "scope": "runtime"
+          }
+        ],
+        "mentions": 5,
+        "comments": 3
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/server/config_features.go",
+            "line": 55,
+            "symbol": "EmailSendersEnabled",
+            "parse": "helper",
+            "helper": "envFeatureFlag",
+            "snippet": "if value, ok := envFeatureFlag(\"HIVE_EMAIL_SENDERS\"); ok {"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 10,
+        "writes": [
+          {
+            "file": "go_hive/go-hive/internal/server/config_features.go",
+            "line": 88,
+            "scope": "runtime"
+          }
+        ],
+        "mentions": 9,
+        "comments": 0
+      },
+      "notes": "env > configuration.json > false; the resolved value is written back to the process env on both sides."
+    },
+    {
+      "name": "HIVE_ENABLE_LLM_LOGS",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tracker/llm_debug_logger.py",
+            "line": 118,
+            "symbol": "log_llm_turn",
+            "parse": "bool_deny_list",
+            "note": "falsey = strip().lower() in (0,false,no,off); empty string handled separately",
+            "snippet": "if os.environ.get(\"HIVE_ENABLE_LLM_LOGS\", \"\").strip().lower() not in (\"1\", \"true\"):",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_FAKE_NOW",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_GCU_MEMTRACE",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "tools/src/gcu/memtrace.py",
+            "line": 112,
+            "symbol": "maybe_start",
+            "parse": "string",
+            "snippet": "if _started or not _truthy(os.environ.get(\"HIVE_GCU_MEMTRACE\", \"\")):",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 2
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_GCU_MEMTRACE_FILE",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "tools/src/gcu/bridge_host.py",
+            "line": 472,
+            "symbol": "main",
+            "parse": "string",
+            "snippet": "if gcu_log and not os.environ.get(\"HIVE_GCU_MEMTRACE_FILE\"):"
+          },
+          {
+            "file": "tools/src/gcu/memtrace.py",
+            "line": 122,
+            "symbol": "maybe_start",
+            "parse": "string",
+            "snippet": "sink = os.environ.get(\"HIVE_GCU_MEMTRACE_FILE\", \"\").strip()",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [
+          {
+            "file": "tools/src/gcu/bridge_host.py",
+            "line": 473,
+            "scope": "runtime"
+          }
+        ],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_GCU_MEMTRACE_FRAMES",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "tools/src/gcu/memtrace.py",
+            "line": 114,
+            "symbol": "maybe_start",
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "12",
+            "snippet": "frames = _env_int(\"HIVE_GCU_MEMTRACE_FRAMES\", 12, 1)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_GCU_MEMTRACE_INTERVAL_S",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "tools/src/gcu/memtrace.py",
+            "line": 115,
+            "symbol": "maybe_start",
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "60",
+            "snippet": "interval_s = float(_env_int(\"HIVE_GCU_MEMTRACE_INTERVAL_S\", 60, 10))"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_GCU_MEMTRACE_TOP",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "tools/src/gcu/memtrace.py",
+            "line": 116,
+            "symbol": "maybe_start",
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "8",
+            "snippet": "top_n = _env_int(\"HIVE_GCU_MEMTRACE_TOP\", 8, 1)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_GCU_SCREENSHOT_CONCURRENCY",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "tools/src/gcu/browser/tools/inspection.py",
+            "line": 94,
+            "symbol": null,
+            "parse": "int",
+            "snippet": "_SCREENSHOT_CONCURRENCY = max(1, int(os.environ.get(\"HIVE_GCU_SCREENSHOT_CONCURRENCY\", \"2\") or \"2\"))",
+            "default": "\"2\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_HISTORY_READ_WORKERS",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/server/routes_sessions.py",
+            "line": 1845,
+            "symbol": "_history_read_executor",
+            "parse": "int",
+            "snippet": "workers = max(4, int(os.environ.get(\"HIVE_HISTORY_READ_WORKERS\", \"8\")))",
+            "default": "\"8\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_HOME",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/config.py",
+            "line": 43,
+            "symbol": "_resolve_hive_home",
+            "parse": "string",
+            "snippet": "override = os.environ.get(\"HIVE_HOME\")"
+          },
+          {
+            "file": "tools/src/aden_tools/senders/rotation.py",
+            "line": 34,
+            "symbol": "_state_path",
+            "parse": "string",
+            "snippet": "base = os.environ.get(\"HIVE_HOME\") or str(Path.home() / \".hive\")"
+          },
+          {
+            "file": "tools/src/aden_tools/senders/threads.py",
+            "line": 50,
+            "symbol": "_state_path",
+            "parse": "string",
+            "snippet": "base = os.environ.get(\"HIVE_HOME\") or str(Path.home() / \".hive\")"
+          },
+          {
+            "file": "tools/src/aden_tools/tools/image_gen_tool/image_gen_tool.py",
+            "line": 95,
+            "symbol": "_resolve_image_artifact_dir",
+            "parse": "string",
+            "snippet": "hive_home = os.environ.get(\"HIVE_HOME\")"
+          },
+          {
+            "file": "tools/src/aden_tools/tools/web_scrape_tool/web_scrape_tool.py",
+            "line": 52,
+            "symbol": "_resolve_scrape_artifact_dir",
+            "parse": "string",
+            "snippet": "hive_home = os.environ.get(\"HIVE_HOME\")"
+          },
+          {
+            "file": "tools/src/chart_tools/tools.py",
+            "line": 253,
+            "symbol": "_hive_home",
+            "parse": "string",
+            "snippet": "override = os.environ.get(\"HIVE_HOME\")"
+          },
+          {
+            "file": "tools/src/gcu/browser/tools/inspection.py",
+            "line": 48,
+            "symbol": "_resolve_browser_artifact_dir",
+            "parse": "string",
+            "snippet": "hive_home = os.environ.get(\"HIVE_HOME\")"
+          },
+          {
+            "file": "tools/src/memory_tools/paths.py",
+            "line": 38,
+            "symbol": "hive_home",
+            "parse": "string",
+            "snippet": "override = os.environ.get(\"HIVE_HOME\")"
+          }
+        ],
+        "dev_reads": [
+          {
+            "file": "scripts/llm_timeline_viewer.py",
+            "line": 76,
+            "symbol": "_resolve_logs_dirs",
+            "parse": "string",
+            "snippet": "hive_home_env = os.environ.get(\"HIVE_HOME\")"
+          },
+          {
+            "file": "scripts/sentinel_classify_debug.py",
+            "line": 84,
+            "symbol": "_candidate_bases",
+            "parse": "string",
+            "snippet": "env = os.environ.get(\"HIVE_HOME\")"
+          }
+        ],
+        "test_reads": 11,
+        "writes": [
+          {
+            "file": "core/conftest.py",
+            "line": 21,
+            "scope": "runtime"
+          },
+          {
+            "file": "core/framework/tasks/tests/test_e2e.py",
+            "line": 120,
+            "scope": "test"
+          },
+          {
+            "file": "tools/tests/conftest.py",
+            "line": 18,
+            "scope": "test"
+          }
+        ],
+        "mentions": 282,
+        "comments": 36
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/cli/browser_cli.go",
+            "line": 271,
+            "symbol": "statePath",
+            "parse": "helper",
+            "helper": "env",
+            "snippet": "if root := strings.TrimSpace(c.env(\"HIVE_HOME\")); root != \"\" {"
+          },
+          {
+            "file": "go_hive/go-hive/internal/eventbus/bus.go",
+            "line": 718,
+            "symbol": "hiveHomeDir",
+            "parse": "string",
+            "snippet": "if home := strings.TrimSpace(os.Getenv(\"HIVE_HOME\")); home != \"\" {",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/tasks/store.go",
+            "line": 49,
+            "symbol": "HiveRoot",
+            "parse": "string",
+            "snippet": "if v := os.Getenv(\"HIVE_HOME\"); v != \"\" {",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/tools/integrations/scrape.go",
+            "line": 506,
+            "symbol": "batch3ScrapeArtifactDir",
+            "parse": "string",
+            "snippet": "home := strings.TrimSpace(os.Getenv(\"HIVE_HOME\"))",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 29,
+        "writes": [],
+        "mentions": 58,
+        "comments": 61
+      },
+      "notes": "fallback ~/.hive on both; Go converts to an absolute path."
+    },
+    {
+      "name": "HIVE_LIVE_API_BASE",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 153,
+            "symbol": "cmdRun",
+            "parse": "string",
+            "snippet": "apiBase := fs.String(\"api-base\", firstNonEmpty(os.Getenv(\"HIVE_LME_API_BASE\"), os.Getenv(\"HIVE_LIVE_API_BASE\")), \"queen endpoint\")",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LIVE_API_KEY",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 169,
+            "symbol": "cmdRun",
+            "parse": "string",
+            "snippet": "queenKey := firstNonEmpty(*apiKey, os.Getenv(\"HIVE_LME_API_KEY\"), os.Getenv(\"HIVE_LIVE_API_KEY\"))",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LIVE_MODEL",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 2,
+        "writes": [],
+        "mentions": 7,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 152,
+            "symbol": "cmdRun",
+            "parse": "string",
+            "snippet": "model := fs.String(\"model\", firstNonEmpty(os.Getenv(\"HIVE_LME_MODEL\"), os.Getenv(\"HIVE_LIVE_MODEL\")), \"queen model\")",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LIVE_TIMEOUT",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 155,
+            "symbol": "cmdRun",
+            "parse": "float",
+            "helper": "envFloatOr",
+            "default": "420",
+            "snippet": "timeout := fs.Float64(\"timeout\", envFloatOr(\"HIVE_LIVE_TIMEOUT\", 420), \"per-question queen turn timeout in seconds\")"
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LLM_BASE_URL",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/llm/litellm.py",
+            "line": 73,
+            "symbol": "_api_base_needs_bearer_auth",
+            "parse": "string",
+            "snippet": "override = os.environ.get(\"HIVE_LLM_BASE_URL\")"
+          },
+          {
+            "file": "tools/src/aden_tools/tools/image_gen_tool/image_gen_tool.py",
+            "line": 330,
+            "symbol": "register_tools",
+            "parse": "string",
+            "snippet": "base = (os.environ.get(\"HIVE_LLM_BASE_URL\") or DEFAULT_PROXY_BASE).rstrip(\"/\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 0,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/llm/transport.go",
+            "line": 232,
+            "symbol": "apiBaseNeedsBearerAuth",
+            "parse": "string",
+            "snippet": "override := strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_LLM_BASE_URL\")))",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 6,
+        "comments": 4
+      }
+    },
+    {
+      "name": "HIVE_LME_API_BASE",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 153,
+            "symbol": "cmdRun",
+            "parse": "string",
+            "snippet": "apiBase := fs.String(\"api-base\", firstNonEmpty(os.Getenv(\"HIVE_LME_API_BASE\"), os.Getenv(\"HIVE_LIVE_API_BASE\")), \"queen endpoint\")",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_API_KEY",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 169,
+            "symbol": "cmdRun",
+            "parse": "string",
+            "snippet": "queenKey := firstNonEmpty(*apiKey, os.Getenv(\"HIVE_LME_API_KEY\"), os.Getenv(\"HIVE_LIVE_API_KEY\"))",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 174,
+            "scope": "dev_eval"
+          }
+        ],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_DATA",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 3
+      }
+    },
+    {
+      "name": "HIVE_LME_DATASET",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 105,
+            "symbol": "bindDataset",
+            "parse": "helper",
+            "helper": "envOr",
+            "default": "longmemeval.VariantS",
+            "snippet": "fs.StringVar(&c.dataset, \"dataset\", envOr(\"HIVE_LME_DATASET\", longmemeval.VariantS), \"LongMemEval variant: s or m\")"
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_JUDGE_API_BASE",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 112,
+            "symbol": "bindJudge",
+            "parse": "helper",
+            "helper": "envOr",
+            "default": "\"https://api.openai.com/v1\"",
+            "snippet": "fs.StringVar(&c.judgeBase, \"judge-api-base\", envOr(\"HIVE_LME_JUDGE_API_BASE\", \"https://api.openai.com/v1\"), \"judge endpoint\")"
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 279,
+            "symbol": "cmdReference",
+            "parse": "string",
+            "snippet": "readerBase := fs.String(\"reader-api-base\", firstNonEmpty(os.Getenv(\"HIVE_LME_READER_API_BASE\"), os.Getenv(\"HIVE_LME_JUDGE_API_BASE\"), \"https://api.openai.com/v1\"), \"reader endpoint\")",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_JUDGE_API_KEY",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 2,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 133,
+            "symbol": "judge",
+            "parse": "string",
+            "snippet": "key := firstNonEmpty(c.judgeKey, os.Getenv(\"HIVE_LME_JUDGE_API_KEY\"), os.Getenv(\"OPENAI_API_KEY\"))",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 305,
+            "symbol": "cmdReference",
+            "parse": "string",
+            "snippet": "key := firstNonEmpty(*readerKey, os.Getenv(\"HIVE_LME_READER_API_KEY\"), os.Getenv(\"HIVE_LME_JUDGE_API_KEY\"), os.Getenv(\"OPENAI_API_KEY\"))",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_JUDGE_MODEL",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 111,
+            "symbol": "bindJudge",
+            "parse": "helper",
+            "helper": "envOr",
+            "default": "longmemeval.OfficialJudgeModel",
+            "snippet": "fs.StringVar(&c.judgeModel, \"judge-model\", envOr(\"HIVE_LME_JUDGE_MODEL\", longmemeval.OfficialJudgeModel), \"judge model\")"
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_MODEL",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 152,
+            "symbol": "cmdRun",
+            "parse": "string",
+            "snippet": "model := fs.String(\"model\", firstNonEmpty(os.Getenv(\"HIVE_LME_MODEL\"), os.Getenv(\"HIVE_LIVE_MODEL\")), \"queen model\")",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_QUEEN",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 151,
+            "symbol": "cmdRun",
+            "parse": "helper",
+            "helper": "envOr",
+            "default": "\"queen_technology\"",
+            "snippet": "queen := fs.String(\"queen\", envOr(\"HIVE_LME_QUEEN\", \"queen_technology\"), \"queen to ask\")"
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_QUESTIONS",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 147,
+            "symbol": "cmdRun",
+            "parse": "helper",
+            "helper": "envOr",
+            "default": "\"12\"",
+            "snippet": "questions := fs.String(\"questions\", envOr(\"HIVE_LME_QUESTIONS\", \"12\"), \"all, comma-separated ids, or a count\")"
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_READER_API_BASE",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 279,
+            "symbol": "cmdReference",
+            "parse": "string",
+            "snippet": "readerBase := fs.String(\"reader-api-base\", firstNonEmpty(os.Getenv(\"HIVE_LME_READER_API_BASE\"), os.Getenv(\"HIVE_LME_JUDGE_API_BASE\"), \"https://api.openai.com/v1\"), \"reader endpoint\")",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_READER_API_KEY",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 305,
+            "symbol": "cmdReference",
+            "parse": "string",
+            "snippet": "key := firstNonEmpty(*readerKey, os.Getenv(\"HIVE_LME_READER_API_KEY\"), os.Getenv(\"HIVE_LME_JUDGE_API_KEY\"), os.Getenv(\"OPENAI_API_KEY\"))",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_READER_MODEL",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 278,
+            "symbol": "cmdReference",
+            "parse": "helper",
+            "helper": "envOr",
+            "default": "longmemeval.OfficialJudgeModel",
+            "snippet": "readerModel := fs.String(\"reader-model\", envOr(\"HIVE_LME_READER_MODEL\", longmemeval.OfficialJudgeModel), \"reader model\")"
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_RESUME",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 148,
+            "symbol": "cmdRun",
+            "parse": "bool_eq_1",
+            "snippet": "resumeDefault := os.Getenv(\"HIVE_LME_RESUME\") == \"1\"",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_RUN_DIR",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 3,
+        "writes": [
+          {
+            "file": "core/tests/e2e/conftest.py",
+            "line": 299,
+            "scope": "test"
+          }
+        ],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 150,
+            "symbol": "cmdRun",
+            "parse": "string",
+            "snippet": "runDir := fs.String(\"run-dir\", os.Getenv(\"HIVE_LME_RUN_DIR\"), \"results directory\")",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_MAX_CONCURRENT_WORKERS",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['4'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/colony_runtime.py",
+            "line": 141,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "4",
+            "snippet": "_DEFAULT_MAX_CONCURRENT_WORKERS = _env_int(\"HIVE_MAX_CONCURRENT_WORKERS\", 4)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/colony/scheduler.go",
+            "line": 15,
+            "symbol": null,
+            "parse": "int",
+            "helper": "colonyEnvInt",
+            "default": "4",
+            "snippet": "var DefaultMaxConcurrentWorkers = colonyEnvInt(\"HIVE_MAX_CONCURRENT_WORKERS\", 4)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_MAX_ITER",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/server/queen_orchestrator.py",
+            "line": 1589,
+            "symbol": "create_queen",
+            "parse": "string",
+            "snippet": "_iter_cap = _os.environ.get(\"HIVE_MAX_ITER\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 4,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_MAX_PLAYBOOK_CONCURRENCY",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['32'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tools/playbook_tools.py",
+            "line": 206,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_int_env",
+            "default": "32",
+            "snippet": "_MAX_PLAYBOOK_CONCURRENCY = _int_env(\"HIVE_MAX_PLAYBOOK_CONCURRENCY\", 32)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/playbook/rows.go",
+            "line": 228,
+            "symbol": "intEnv",
+            "parse": "int",
+            "helper": "intEnv",
+            "default": "32",
+            "snippet": "MaxPlaybookConcurrency     = intEnv(\"HIVE_MAX_PLAYBOOK_CONCURRENCY\", 32)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_MAX_VERBATIM_CLIENT_MSGS",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/internals/compaction.py",
+            "line": 122,
+            "symbol": null,
+            "parse": "int",
+            "snippet": "_MAX_VERBATIM_CLIENT_RAW = int(os.environ.get(\"HIVE_MAX_VERBATIM_CLIENT_MSGS\", \"40\") or 40)",
+            "default": "\"40\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/compaction.go",
+            "line": 39,
+            "symbol": null,
+            "parse": "int",
+            "helper": "envPositiveIntPtr",
+            "default": "DefaultMaxVerbatimClientMessages",
+            "snippet": "var MaxVerbatimClientMessages = envPositiveIntPtr(\"HIVE_MAX_VERBATIM_CLIENT_MSGS\", DefaultMaxVerbatimClientMessages)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "notes": "default 40 on both (DefaultMaxVerbatimClientMessages). Go maps <=0 to nil (feature off) where Python keeps a positive-int list."
+    },
+    {
+      "name": "HIVE_MCP2CLI",
+      "audit_membership": "go_only",
+      "status": "go_only",
+      "status_basis": "go has a read site, python has none",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/mcpregistry/mcp2cli.go",
+            "line": 235,
+            "symbol": "MCP2CLIBackendFromEnv",
+            "parse": "string",
+            "snippet": "switch strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_MCP2CLI\"))) {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 9,
+        "writes": [],
+        "mentions": 4,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_MCP_CALL_RESULT_TIMEOUT",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/loader/mcp_client.py",
+            "line": 919,
+            "symbol": "MCPClient",
+            "parse": "int",
+            "snippet": "_CALL_RESULT_TIMEOUT = int(os.environ.get(\"HIVE_MCP_CALL_RESULT_TIMEOUT\", \"240\"))",
+            "default": "\"240\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tools/mcp_client.go",
+            "line": 48,
+            "symbol": "mcpCallTimeoutFromEnv",
+            "parse": "string",
+            "snippet": "raw := os.Getenv(\"HIVE_MCP_CALL_RESULT_TIMEOUT\")",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 8,
+        "comments": 2
+      },
+      "notes": "both default 240s; garbage/<=0 -> 240s."
+    },
+    {
+      "name": "HIVE_MEMORY_TIMELINE",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/config.py",
+            "line": 1310,
+            "symbol": "get_memory_timeline_enabled",
+            "parse": "string",
+            "snippet": "raw = os.environ.get(\"HIVE_MEMORY_TIMELINE\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 4,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/memory/timeline.go",
+            "line": 617,
+            "symbol": "MemoryTimelineEnabled",
+            "parse": "string",
+            "snippet": "if raw, ok := os.LookupEnv(\"HIVE_MEMORY_TIMELINE\"); ok && strings.TrimSpace(raw) != \"\" {",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/config_features.go",
+            "line": 76,
+            "symbol": "MemoryTimelineEnabled",
+            "parse": "helper",
+            "helper": "envFeatureFlag",
+            "snippet": "if value, ok := envFeatureFlag(\"HIVE_MEMORY_TIMELINE\"); ok {"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 12,
+        "writes": [],
+        "mentions": 8,
+        "comments": 0
+      },
+      "notes": "env > configuration.json > false."
+    },
+    {
+      "name": "HIVE_MICROCOMPACT_KEEP_RECENT",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/internals/compaction.py",
+            "line": 111,
+            "symbol": null,
+            "parse": "int",
+            "snippet": "_MICROCOMPACT_KEEP_RECENT_RAW = int(os.environ.get(\"HIVE_MICROCOMPACT_KEEP_RECENT\", \"6\") or 6)",
+            "default": "\"6\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/compaction.go",
+            "line": 37,
+            "symbol": null,
+            "parse": "int",
+            "helper": "envPositiveInt",
+            "default": "DefaultMicrocompactKeepRecent",
+            "snippet": "var MicrocompactKeepRecent = envPositiveInt(\"HIVE_MICROCOMPACT_KEEP_RECENT\", DefaultMicrocompactKeepRecent)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "notes": "default 6 on both (DefaultMicrocompactKeepRecent)."
+    },
+    {
+      "name": "HIVE_NETWORK_SCANNERS",
+      "audit_membership": "go_only",
+      "status": "go_only",
+      "status_basis": "go has a read site, python has none",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/server/config_features.go",
+            "line": 68,
+            "symbol": "NetworkScannersEnabled",
+            "parse": "helper",
+            "helper": "envFeatureFlag",
+            "snippet": "if value, ok := envFeatureFlag(\"HIVE_NETWORK_SCANNERS\"); ok {"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 3,
+        "writes": [],
+        "mentions": 3,
+        "comments": 5
+      }
+    },
+    {
+      "name": "HIVE_NO_FILE_LOG",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/observability/logging.py",
+            "line": 289,
+            "symbol": "configure_logging",
+            "parse": "string",
+            "snippet": "if not os.getenv(\"HIVE_NO_FILE_LOG\"):"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 4,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_OWN_REMOTES",
+      "audit_membership": "common",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_PAST_RECALL_TIMEOUT",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['3'] parse=['float']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/past_conversations_reminder.py",
+            "line": 34,
+            "symbol": null,
+            "parse": "float",
+            "snippet": "RECALL_TIMEOUT_S = float(os.environ.get(\"HIVE_PAST_RECALL_TIMEOUT\", \"3\"))",
+            "default": "\"3\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/memory/past_conversations.go",
+            "line": 21,
+            "symbol": null,
+            "parse": "float",
+            "helper": "envFloat",
+            "default": "3",
+            "snippet": "var PastRecallTimeout = time.Duration(envFloat(\"HIVE_PAST_RECALL_TIMEOUT\", 3) * float64(time.Second))"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_PLAYBOOK_FAST_GRACE",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tools/playbook_tools.py",
+            "line": 184,
+            "symbol": "_fast_result_grace",
+            "parse": "float",
+            "snippet": "return max(0.0, float(os.environ.get(\"HIVE_PLAYBOOK_FAST_GRACE\", \"1.5\")))",
+            "default": "\"1.5\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_PRINCIPAL",
+      "audit_membership": "common",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 5,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 5,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_QUEEN_ID",
+      "audit_membership": "common",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 4,
+        "writes": [],
+        "mentions": 12,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 31,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_QUEEN_MAIL_FROM",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=[''] parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/server/queen_mail_mcp.py",
+            "line": 51,
+            "symbol": "list_queens",
+            "parse": "string",
+            "snippet": "query = urllib.parse.urlencode({\"from\": os.environ.get(\"HIVE_QUEEN_MAIL_FROM\", \"\")})",
+            "default": "\"\""
+          },
+          {
+            "file": "core/framework/server/queen_mail_mcp.py",
+            "line": 61,
+            "symbol": "message_queen",
+            "parse": "string",
+            "snippet": "body = {\"from\": os.environ.get(\"HIVE_QUEEN_MAIL_FROM\", \"\"), \"to\": queen_id, \"message\": message}",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/qmail/mcp_stdio.go",
+            "line": 162,
+            "symbol": "callQueenMailTool",
+            "parse": "helper",
+            "helper": "getenv",
+            "snippet": "from := getenv(\"HIVE_QUEEN_MAIL_FROM\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 6,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_QUEEN_MAIL_TOKEN",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=[''] parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/server/queen_mail_mcp.py",
+            "line": 29,
+            "symbol": "_call",
+            "parse": "string",
+            "snippet": "headers = {\"X-Queen-Mail-Token\": os.environ.get(\"HIVE_QUEEN_MAIL_TOKEN\", \"\"), \"Content-Type\": \"application/json\"}",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/qmail/mcp_stdio.go",
+            "line": 161,
+            "symbol": "callQueenMailTool",
+            "parse": "helper",
+            "helper": "getenv",
+            "snippet": "token := getenv(\"HIVE_QUEEN_MAIL_TOKEN\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 6,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_QUEEN_MAIL_URL",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=[''] parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/server/queen_mail_mcp.py",
+            "line": 31,
+            "symbol": "_call",
+            "parse": "string",
+            "snippet": "os.environ.get(\"HIVE_QUEEN_MAIL_URL\", \"\").rstrip(\"/\") + path,",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 2,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/qmail/mcp_stdio.go",
+            "line": 160,
+            "symbol": "callQueenMailTool",
+            "parse": "helper",
+            "helper": "getenv",
+            "snippet": "baseURL := getenv(\"HIVE_QUEEN_MAIL_URL\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 7,
+        "comments": 3
+      }
+    },
+    {
+      "name": "HIVE_REGISTRY_URL",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/skills/registry.py",
+            "line": 58,
+            "symbol": "RegistryClient",
+            "parse": "string",
+            "snippet": "self._url = registry_url or os.environ.get(\"HIVE_REGISTRY_URL\", _DEFAULT_REGISTRY_URL)",
+            "default": "_DEFAULT_REGISTRY_URL"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/skills/registry.go",
+            "line": 32,
+            "symbol": "NewRegistryClient",
+            "parse": "string",
+            "snippet": "url = os.Getenv(\"HIVE_REGISTRY_URL\")",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 2,
+        "comments": 1
+      },
+      "notes": "same default URL string in both trees."
+    },
+    {
+      "name": "HIVE_REQUEST_EXECUTOR_MAX",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/server/app.py",
+            "line": 50,
+            "symbol": "get_request_executor",
+            "parse": "int",
+            "snippet": "max_workers = int(os.environ.get(\"HIVE_REQUEST_EXECUTOR_MAX\", \"32\"))",
+            "default": "\"32\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/server/app.go",
+            "line": 439,
+            "symbol": "requestExecutorMax",
+            "parse": "string",
+            "snippet": "if value := os.Getenv(\"HIVE_REQUEST_EXECUTOR_MAX\"); value != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "notes": "both default 32; invalid int keeps the default."
+    },
+    {
+      "name": "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/runtime_resources.py",
+            "line": 72,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_num",
+            "default": "0.15",
+            "snippet": "_CRIT_AVAIL_FRAC: float = _env_num(\"HIVE_RESOURCE_CRIT_AVAIL_FRAC\", 0.15, float)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_RESOURCE_CRIT_RENDERERS",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/runtime_resources.py",
+            "line": 75,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_num",
+            "default": "60",
+            "snippet": "_CRIT_RENDERERS: int = _env_num(\"HIVE_RESOURCE_CRIT_RENDERERS\", 60, int)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_RESOURCE_HISTORY",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/runtime_resources.py",
+            "line": 57,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_num",
+            "default": "480",
+            "snippet": "_HISTORY_MAX: int = _env_num(\"HIVE_RESOURCE_HISTORY\", 480, int)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_RESOURCE_INTERVAL_S",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/runtime_resources.py",
+            "line": 55,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_num",
+            "default": "15.0",
+            "snippet": "SAMPLE_INTERVAL_S: float = _env_num(\"HIVE_RESOURCE_INTERVAL_S\", 15.0, float)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_RESOURCE_WARN_AVAIL_FRAC",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/runtime_resources.py",
+            "line": 71,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_num",
+            "default": "0.25",
+            "snippet": "_WARN_AVAIL_FRAC: float = _env_num(\"HIVE_RESOURCE_WARN_AVAIL_FRAC\", 0.25, float)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_RESOURCE_WARN_RENDERERS",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/runtime_resources.py",
+            "line": 74,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_num",
+            "default": "45",
+            "snippet": "_WARN_RENDERERS: int = _env_num(\"HIVE_RESOURCE_WARN_RENDERERS\", 45, int)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_RETENTION_*",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "notes": "bool fields: (0,false,no,'') false; int fields: invalid ignored (Go) / warned+ignored (py). Empty bool env = false on both."
+    },
+    {
+      "name": "HIVE_RIPGREP_PATH",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "tools/src/terminal_tools/common/ripgrep.py",
+            "line": 47,
+            "symbol": "_candidate_paths",
+            "parse": "string",
+            "snippet": "override = os.environ.get(\"HIVE_RIPGREP_PATH\")"
+          }
+        ],
+        "dev_reads": [
+          {
+            "file": "scripts/ensure_ripgrep.py",
+            "line": 72,
+            "symbol": "main",
+            "parse": "string",
+            "snippet": "if args.install and not os.environ.get(\"HIVE_RIPGREP_PATH\"):"
+          }
+        ],
+        "test_reads": 8,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tools/builtin/terminal_search.go",
+            "line": 69,
+            "symbol": "terminalRipgrepCandidates",
+            "parse": "string",
+            "snippet": "if override := os.Getenv(\"HIVE_RIPGREP_PATH\"); override != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 4,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_RUNTIME_ID",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=[''] parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/sentinel/runtime_identity.py",
+            "line": 39,
+            "symbol": "get_runtime_kind",
+            "parse": "string",
+            "snippet": "if os.environ.get(\"HIVE_RUNTIME_ID\", \"\").strip() or os.environ.get(\"E2B_SANDBOX_ID\", \"\").strip():",
+            "default": "\"\""
+          },
+          {
+            "file": "core/framework/sentinel/runtime_identity.py",
+            "line": 51,
+            "symbol": "get_runtime_id",
+            "parse": "string",
+            "snippet": "rid = os.environ.get(\"HIVE_RUNTIME_ID\", \"\").strip() or os.environ.get(\"E2B_SANDBOX_ID\", \"\").strip()",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/sentinel/runtime_identity.go",
+            "line": 84,
+            "symbol": "Kind",
+            "parse": "helper",
+            "helper": "getenv",
+            "snippet": "if strings.TrimSpace(r.getenv(\"HIVE_RUNTIME_ID\")) != \"\" ||"
+          },
+          {
+            "file": "go_hive/go-hive/internal/sentinel/runtime_identity.go",
+            "line": 100,
+            "symbol": "ID",
+            "parse": "helper",
+            "helper": "getenv",
+            "snippet": "if rid := strings.TrimSpace(r.getenv(\"HIVE_RUNTIME_ID\")); rid != \"\" {"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 2
+      }
+    },
+    {
+      "name": "HIVE_RUNTIME_KIND",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=[''] parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/sentinel/runtime_identity.py",
+            "line": 36,
+            "symbol": "get_runtime_kind",
+            "parse": "string",
+            "snippet": "k = os.environ.get(\"HIVE_RUNTIME_KIND\", \"\").strip().lower()",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/sentinel/runtime_identity.go",
+            "line": 80,
+            "symbol": "Kind",
+            "parse": "helper",
+            "helper": "getenv",
+            "snippet": "kind := strings.ToLower(strings.TrimSpace(r.getenv(\"HIVE_RUNTIME_KIND\")))"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 2
+      }
+    },
+    {
+      "name": "HIVE_RUNTIME_PORT",
+      "audit_membership": "common",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [
+          {
+            "file": "core/framework/loader/cli.py",
+            "line": 156,
+            "scope": "runtime"
+          }
+        ],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [
+          {
+            "file": "go_hive/go-hive/internal/cli/loader.go",
+            "line": 268,
+            "scope": "runtime"
+          }
+        ],
+        "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_SENTINEL_LOG",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/sentinel/manager.py",
+            "line": 62,
+            "symbol": "_install_sentinel_log_file",
+            "parse": "string",
+            "snippet": "if not os.environ.get(\"HIVE_SENTINEL_LOG\"):"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 5,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_SESSION_COST_LIMIT_USD",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 1
+      }
+    },
+    {
+      "name": "HIVE_SPLIT_WORKER_EVENTS",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/host/colony_runtime.py",
+            "line": 1245,
+            "symbol": "ColonyRuntime",
+            "parse": "bool_deny_list",
+            "note": "falsey = strip().lower() in (0,false,no,off); empty string handled separately",
+            "snippet": "if os.environ.get(\"HIVE_SPLIT_WORKER_EVENTS\", \"\").lower() not in (",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_STALL_CHECK",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/config.py",
+            "line": 1009,
+            "symbol": "get_stall_check_enabled",
+            "parse": "string",
+            "snippet": "raw = os.environ.get(\"HIVE_STALL_CHECK\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 2,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/server/hive_config.go",
+            "line": 37,
+            "symbol": "StallCheckEnabled",
+            "parse": "string",
+            "snippet": "if raw, ok := os.LookupEnv(\"HIVE_STALL_CHECK\"); ok {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 5,
+        "writes": [],
+        "mentions": 8,
+        "comments": 0
+      },
+      "notes": "env > configuration.json > false."
+    },
+    {
+      "name": "HIVE_STORAGE_PATH",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "tools/src/aden_tools/tools/attach_file_tool/attach_file_tool.py",
+            "line": 116,
+            "symbol": "_resolve_path",
+            "parse": "string",
+            "snippet": "storage = os.environ.get(\"HIVE_STORAGE_PATH\")"
+          },
+          {
+            "file": "tools/src/aden_tools/tools/image_gen_tool/image_gen_tool.py",
+            "line": 92,
+            "symbol": "_resolve_image_artifact_dir",
+            "parse": "string",
+            "snippet": "storage = os.environ.get(\"HIVE_STORAGE_PATH\")"
+          },
+          {
+            "file": "tools/src/aden_tools/tools/web_scrape_tool/web_scrape_tool.py",
+            "line": 49,
+            "symbol": "_resolve_scrape_artifact_dir",
+            "parse": "string",
+            "snippet": "storage = os.environ.get(\"HIVE_STORAGE_PATH\")"
+          },
+          {
+            "file": "tools/src/gcu/browser/tools/inspection.py",
+            "line": 45,
+            "symbol": "_resolve_browser_artifact_dir",
+            "parse": "string",
+            "snippet": "storage = os.environ.get(\"HIVE_STORAGE_PATH\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 5,
+        "writes": [],
+        "mentions": 13,
+        "comments": 6
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tools/integrations/attach_file.go",
+            "line": 114,
+            "symbol": "attachFileResolve",
+            "parse": "string",
+            "snippet": "storagePath = os.Getenv(\"HIVE_STORAGE_PATH\")",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/tools/integrations/scrape.go",
+            "line": 503,
+            "symbol": "batch3ScrapeArtifactDir",
+            "parse": "string",
+            "snippet": "if storage := strings.TrimSpace(os.Getenv(\"HIVE_STORAGE_PATH\")); storage != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 4,
+        "writes": [],
+        "mentions": 16,
+        "comments": 2
+      }
+    },
+    {
+      "name": "HIVE_TASK_COMPLETED_CLEANUP",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['20'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/reminders.py",
+            "line": 82,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "20",
+            "snippet": "COMPLETED_CLEANUP_THRESHOLD = _env_int(\"HIVE_TASK_COMPLETED_CLEANUP\", 20)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/reminders.go",
+            "line": 45,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "20",
+            "snippet": "CompletedCleanupThreshold = envInt(\"HIVE_TASK_COMPLETED_CLEANUP\", 20)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TASK_LIST_ID",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/scoping.py",
+            "line": 58,
+            "symbol": "resolve_task_list_id",
+            "parse": "string",
+            "snippet": "override = os.environ.get(\"HIVE_TASK_LIST_ID\")"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 4,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/scoping.go",
+            "line": 50,
+            "symbol": "ResolveTaskListID",
+            "parse": "string",
+            "snippet": "if override := os.Getenv(\"HIVE_TASK_LIST_ID\"); override != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 4,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "notes": "non-empty override wins over the session-derived task list id."
+    },
+    {
+      "name": "HIVE_TASK_REMINDER_BACKOFF",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['2'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/reminders.py",
+            "line": 69,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "2",
+            "snippet": "DRIFT_BACKOFF_FACTOR = _env_int(\"HIVE_TASK_REMINDER_BACKOFF\", 2)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/reminders.go",
+            "line": 40,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "2",
+            "snippet": "DriftBackoffFactor        = envInt(\"HIVE_TASK_REMINDER_BACKOFF\", 2)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TASK_REMINDER_COOLDOWN",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['10'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/reminders.py",
+            "line": 61,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "10",
+            "snippet": "REMINDER_COOLDOWN_TURNS = _env_int(\"HIVE_TASK_REMINDER_COOLDOWN\", 10)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/reminders.go",
+            "line": 38,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "10",
+            "snippet": "ReminderCooldownTurns     = envInt(\"HIVE_TASK_REMINDER_COOLDOWN\", 10)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TASK_REMINDER_SOFT_CAP",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['2'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/reminders.py",
+            "line": 68,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "2",
+            "snippet": "DRIFT_SOFT_CAP = _env_int(\"HIVE_TASK_REMINDER_SOFT_CAP\", 2)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/reminders.go",
+            "line": 39,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "2",
+            "snippet": "DriftSoftCap              = envInt(\"HIVE_TASK_REMINDER_SOFT_CAP\", 2)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TASK_REMINDER_TURNS",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['10'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/reminders.py",
+            "line": 55,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "10",
+            "snippet": "REMINDER_THRESHOLD_TURNS = _env_int(\"HIVE_TASK_REMINDER_TURNS\", 10)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/reminders.go",
+            "line": 36,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "10",
+            "snippet": "ReminderThresholdTurns    = envInt(\"HIVE_TASK_REMINDER_TURNS\", 10)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TASK_REMINDER_WARMUP",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['4'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/reminders.py",
+            "line": 71,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "4",
+            "snippet": "REMINDER_WARMUP_TURNS = _env_int(\"HIVE_TASK_REMINDER_WARMUP\", 4)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/reminders.go",
+            "line": 41,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "4",
+            "snippet": "ReminderWarmupTurns       = envInt(\"HIVE_TASK_REMINDER_WARMUP\", 4)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TASK_SNAPSHOT_HEARTBEAT",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['12'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/reminders.py",
+            "line": 73,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "12",
+            "snippet": "SNAPSHOT_HEARTBEAT_TURNS = _env_int(\"HIVE_TASK_SNAPSHOT_HEARTBEAT\", 12)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/reminders.go",
+            "line": 42,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "12",
+            "snippet": "SnapshotHeartbeatTurns    = envInt(\"HIVE_TASK_SNAPSHOT_HEARTBEAT\", 12)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TASK_SNAPSHOT_ITEMS",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['12'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/reminders.py",
+            "line": 77,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "12",
+            "snippet": "SNAPSHOT_MAX_ITEMS = _env_int(\"HIVE_TASK_SNAPSHOT_ITEMS\", 12)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/reminders.go",
+            "line": 44,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "12",
+            "snippet": "SnapshotMaxItems          = envInt(\"HIVE_TASK_SNAPSHOT_ITEMS\", 12)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TASK_SNAPSHOT_MAX",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['40'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/reminders.py",
+            "line": 75,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "40",
+            "snippet": "MAX_SNAPSHOTS = _env_int(\"HIVE_TASK_SNAPSHOT_MAX\", 40)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/reminders.go",
+            "line": 43,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "40",
+            "snippet": "MaxSnapshots              = envInt(\"HIVE_TASK_SNAPSHOT_MAX\", 40)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TASK_UNTRACKED_TURNS",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['5'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/tasks/reminders.py",
+            "line": 59,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "5",
+            "snippet": "UNTRACKED_TURNS = _env_int(\"HIVE_TASK_UNTRACKED_TURNS\", 5)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tasks/reminders.go",
+            "line": 37,
+            "symbol": "envInt",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "5",
+            "snippet": "UntrackedTurns            = envInt(\"HIVE_TASK_UNTRACKED_TURNS\", 5)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TIMELINE_BATCH",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['3'] parse=['int']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agents/queen/timeline.py",
+            "line": 49,
+            "symbol": null,
+            "parse": "int",
+            "snippet": "LIVE_BATCH_MESSAGES = int(os.environ.get(\"HIVE_TIMELINE_BATCH\", \"3\"))",
+            "default": "\"3\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/memory/timeline.go",
+            "line": 38,
+            "symbol": null,
+            "parse": "int",
+            "helper": "envInt",
+            "default": "3",
+            "snippet": "TimelineLiveBatchMessages = envInt(\"HIVE_TIMELINE_BATCH\", 3)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 5,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TIMELINE_COOLDOWN",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['300'] parse=['float']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agents/queen/timeline.py",
+            "line": 50,
+            "symbol": null,
+            "parse": "float",
+            "snippet": "LIVE_COOLDOWN_S = float(os.environ.get(\"HIVE_TIMELINE_COOLDOWN\", \"300\"))",
+            "default": "\"300\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/memory/timeline.go",
+            "line": 39,
+            "symbol": null,
+            "parse": "float",
+            "helper": "envFloat",
+            "default": "300",
+            "snippet": "TimelineLiveCooldown      = time.Duration(envFloat(\"HIVE_TIMELINE_COOLDOWN\", 300) * float64(time.Second))"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 3,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TOOL_EXECUTOR_WORKERS",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "reviewed",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/internals/tool_result_handler.py",
+            "line": 48,
+            "symbol": "_tool_executor",
+            "parse": "int",
+            "snippet": "workers = max(8, int(os.environ.get(\"HIVE_TOOL_EXECUTOR_WORKERS\", \"64\")))",
+            "default": "\"64\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/tools/execute.go",
+            "line": 117,
+            "symbol": "ToolExecutorWorkers",
+            "parse": "string",
+            "snippet": "if raw := strings.TrimSpace(os.Getenv(\"HIVE_TOOL_EXECUTOR_WORKERS\")); raw != \"\" {",
+            "default": ""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "notes": "both default 64 and floor at 8."
+    },
+    {
+      "name": "HIVE_TRACKER_QUEEN_COOLDOWN_NO_TABLE",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['10'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/tracker_snapshot_reminder.py",
+            "line": 76,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "10",
+            "snippet": "QUEEN_COOLDOWN_NO_TABLE = _env_int(\"HIVE_TRACKER_QUEEN_COOLDOWN_NO_TABLE\", 10)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/tracker_snapshot_reminder.go",
+            "line": 36,
+            "symbol": null,
+            "parse": "int",
+            "helper": "envInt",
+            "default": "10",
+            "snippet": "var TrackerQueenCooldownNoTable = envInt(\"HIVE_TRACKER_QUEEN_COOLDOWN_NO_TABLE\", 10)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TRACKER_QUEEN_COOLDOWN_WITH_TABLE",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['20'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/tracker_snapshot_reminder.py",
+            "line": 77,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "20",
+            "snippet": "QUEEN_COOLDOWN_WITH_TABLE = _env_int(\"HIVE_TRACKER_QUEEN_COOLDOWN_WITH_TABLE\", 20)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/tracker_snapshot_reminder.go",
+            "line": 39,
+            "symbol": null,
+            "parse": "int",
+            "helper": "envInt",
+            "default": "20",
+            "snippet": "var TrackerQueenCooldownWithTable = envInt(\"HIVE_TRACKER_QUEEN_COOLDOWN_WITH_TABLE\", 20)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TRACKER_QUEEN_FIRST_FIRE",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['3'] parse=['helper']",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/tracker_snapshot_reminder.py",
+            "line": 75,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "3",
+            "snippet": "QUEEN_FIRST_FIRE_TURNS = _env_int(\"HIVE_TRACKER_QUEEN_FIRST_FIRE\", 3)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/tracker_snapshot_reminder.go",
+            "line": 33,
+            "symbol": null,
+            "parse": "int",
+            "helper": "envInt",
+            "default": "3",
+            "snippet": "var TrackerQueenFirstFireTurns = envInt(\"HIVE_TRACKER_QUEEN_FIRST_FIRE\", 3)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TRACKER_WORKER_TOOL_CALLS",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/agent_loop/tracker_snapshot_reminder.py",
+            "line": 81,
+            "symbol": null,
+            "parse": "helper",
+            "helper": "_env_int",
+            "default": "20",
+            "snippet": "WORKER_CADENCE_TOOL_CALLS = _env_int(\"HIVE_TRACKER_WORKER_TOOL_CALLS\", 20)"
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_TRUST_PROJECT_SKILLS",
+      "audit_membership": "common",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      }
+    }
+  ]
+}

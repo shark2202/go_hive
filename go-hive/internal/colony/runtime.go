@@ -144,6 +144,10 @@ type ColonyRuntime struct {
 	workerLLM       llm.Completer
 	skillsProvider  func() ([]*skills.ParsedSkill, bool)
 	toolProviderMap map[string]string
+	// skillsCatalogMu guards the memoised colony catalog prompt in-flight
+	// workers read each iteration; ReloadSkills swaps it (skills_surface.go).
+	skillsCatalogMu     sync.RWMutex
+	skillsCatalogPrompt string
 	// dispatchBlocked stops queued workers from starting during a stop sweep
 	// (and, when a caller holds it, until UnblockDispatch). Guarded by mu.
 	dispatchBlocked bool
@@ -415,6 +419,12 @@ func (r *ColonyRuntime) buildWorkerContext(worker *Worker, spec agentloop.AgentS
 	if skillDirs := r.workerSkillDirs(); len(skillDirs) > 0 {
 		ctx.SkillDirs = skillDirs
 		ctx.SkillsCatalogPrompt = r.workerSkillsCatalogPrompt()
+		// Upstream spawns workers with dynamic_skills_catalog_provider set to
+		// the runtime's live catalog, so an in-flight worker picks up a reload
+		// on its next iteration instead of keeping the spawn-time prompt.
+		ctx.DynamicSkillsCatalogProvider = func() string {
+			return r.cachedSkillsCatalogPrompt()
+		}
 	}
 
 	keepSet := r.workerKeepSet()

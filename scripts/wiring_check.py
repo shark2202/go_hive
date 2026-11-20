@@ -77,6 +77,15 @@ WIRING: tuple[WiringPoint, ...] = (
             Requirement("Install* 引用", r"\bInstall[A-Z][A-Za-z0-9]*\b", minimum=2),
         ),
     ),
+    WiringPoint(
+        path="internal/server/chat_reminders.go",
+        description="会话提醒：turn context 必须注册、接线并随 home 启动",
+        requirements=(
+            Requirement("turn context source 注册", r"NewTurnContextReminderSource\(\)"),
+            Requirement("turn context provider 接线", r"agentCtx\.TurnContextProvider\s*="),
+            Requirement("turn context 运行时启动", r"StartTurnContexts\("),
+        ),
+    ),
 )
 
 

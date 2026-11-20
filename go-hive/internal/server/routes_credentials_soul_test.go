@@ -4,6 +4,7 @@ package server
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -315,4 +316,77 @@ func TestSoulRoutesQueenWithoutSoulRejected(t *testing.T) {
 	if !strings.Contains(message, "has no soul") {
 		t.Fatalf("error = %q", message)
 	}
+}
+
+// Parity-exempt: no upstream route test pins the unwired-model answer; the Go
+// port keeps answering 503 (an explicit "not available") instead of a fake 202.
+func TestSoulRoutesReflectWithoutModelAnswers503(t *testing.T) {
+	home := soulTestHome(t)
+	mux := soulTestMux(SoulRouteDeps{Home: home})
+
+	recorder, body := doSessionJSON(t, mux, http.MethodPost, "/api/queen/queen_x/soul/reflect", `{}`)
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if message, _ := body["error"].(string); !strings.Contains(message, "not available") {
+		t.Fatalf("error = %q", message)
+	}
+}
+
+// Parity-exempt: upstream keeps one lock per queen inside the reflection
+// module; the Go route claims its reflecting slot atomically, so a burst of
+// concurrent reflects admits exactly one run and answers the rest 409.
+func TestSoulRoutesReflectConcurrentCallsReturn409(t *testing.T) {
+	home := soulTestHome(t)
+	started := make(chan struct{})
+	release := make(chan struct{})
+	done := make(chan struct{}, 1)
+	var once sync.Once
+	mux := soulTestMux(SoulRouteDeps{
+		Home: home,
+		Reflect: func(queenID string, cfg *soulstore.SoulConfig, bootstrap bool) error {
+			once.Do(func() { close(started) })
+			<-release
+			done <- struct{}{}
+			return nil
+		},
+	})
+
+	post := func() int {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodPost, "/api/queen/queen_x/soul/reflect", strings.NewReader("{}"))
+		mux.ServeHTTP(recorder, request)
+		return recorder.Code
+	}
+
+	const attempts = 8
+	codes := make(chan int, attempts)
+	var wait sync.WaitGroup
+	for i := 0; i < attempts; i++ {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			codes <- post()
+		}()
+	}
+	wait.Wait()
+	close(codes)
+
+	accepted, conflicted := 0, 0
+	for code := range codes {
+		switch code {
+		case http.StatusAccepted:
+			accepted++
+		case http.StatusConflict:
+			conflicted++
+		default:
+			t.Fatalf("unexpected status %d", code)
+		}
+	}
+	if accepted != 1 || conflicted != attempts-1 {
+		t.Fatalf("accepted = %d, conflicted = %d, want 1 and %d", accepted, conflicted, attempts-1)
+	}
+	<-started
+	close(release)
+	<-done
 }

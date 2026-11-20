@@ -92,7 +92,16 @@ func (a *AnthropicProvider) AComplete(ctx context.Context, req CompletionRequest
 func ChatMessagesToMaps(messages []ChatMessage) []map[string]any {
 	out := make([]map[string]any, 0, len(messages))
 	for _, message := range messages {
-		entry := map[string]any{"role": message.Role, "content": message.Content}
+		entry := map[string]any{"role": message.Role}
+		if len(message.ContentParts) > 0 {
+			parts := make([]any, 0, len(message.ContentParts))
+			for _, part := range message.ContentParts {
+				parts = append(parts, part)
+			}
+			entry["content"] = parts
+		} else {
+			entry["content"] = message.Content
+		}
 		if message.ToolCallID != "" {
 			entry["tool_call_id"] = message.ToolCallID
 		}
@@ -109,7 +118,7 @@ func ChatMessagesToMaps(messages []ChatMessage) []map[string]any {
 				})
 			}
 			entry["tool_calls"] = calls
-			if message.Content == "" {
+			if _, blocks := entry["content"].([]any); !blocks && message.Content == "" {
 				entry["content"] = nil
 			}
 		}

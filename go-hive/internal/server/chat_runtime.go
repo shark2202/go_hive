@@ -18,6 +18,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/aden-hive/hive-go/internal/hiveclock"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/memory"
@@ -57,11 +58,18 @@ var (
 // ChatRuntimeDeps are injected so internal/server never imports a concrete tool
 // package (nor builds providers): the loader owns those adapters.
 type ChatRuntimeDeps struct {
-	LLM     llm.Completer
-	Tools   []llm.ToolDef
+	LLM   llm.Completer
+	Tools []llm.ToolDef
+	// Execute runs one tool call as text. It stays the compatibility path for
+	// callers that never produce images.
 	Execute func(ctx context.Context, name string, input map[string]any) (content string, isError bool, err error)
-	Store   agentloop.ConversationStore
-	Root    string
+	// ExecuteBlocks supersedes Execute when set: it also returns the
+	// provider-neutral content blocks (image_url for images, file for PDFs) a
+	// tool returned, so attach_file attachments reach the model as real
+	// multimodal parts instead of text.
+	ExecuteBlocks func(ctx context.Context, name string, input map[string]any) (content string, isError bool, imageContent []map[string]any, err error)
+	Store         agentloop.ConversationStore
+	Root          string
 	// Bus is the session's event bus. When set, the runtime mirrors the
 	// upstream agent loop's emissions (execution / loop lifecycle, assistant
 	// text, tool calls, per-LLM-call usage) so the dashboard's session SSE
@@ -91,6 +99,11 @@ type ChatRuntimeDeps struct {
 	// or later through Session.BindChatColony), the queen gains run_worker and
 	// every worker report arrives as a [WORKER_REPORT] user turn.
 	Colony ColonyRuntime
+	// OnTurnStart runs when a turn begins from a person, a timer or a worker
+	// report (never for a letter another queen sent, and never for a
+	// reminder-only wake). Queen mail uses it to start a new chain of letters,
+	// as upstream does when someone else speaks in the conversation.
+	OnTurnStart func()
 }
 
 // chatTurnRequest is one queued turn: a real client message, an external
@@ -118,6 +131,10 @@ type chatTurnRequest struct {
 	// frames the user message; the event itself is never counted as client
 	// input.
 	trigger *agentloop.TriggerEvent
+	// fromQueenMail marks a letter or reply another queen sent. It enters as a
+	// client message (so she sees who spoke) but does not start a new chain:
+	// the depth of the letter it answers continues.
+	fromQueenMail bool
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
@@ -148,9 +165,6 @@ type ChatRuntime struct {
 	// lastRecall is the block injected last turn; recall is re-injected only
 	// when its content changes (same guard as the upstream _last_injected_recall).
 	lastRecall string
-	// lastPastRecall is the past-conversation excerpt block injected last
-	// turn; the same content is not repeated on the next message.
-	lastPastRecall string
 	// timelineEnabled is set when the memory_timeline feature is on for this
 	// home; timelineAfterTurn then extracts new user turns in the background.
 	timelineEnabled bool
@@ -237,7 +251,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	if deps.LLM == nil {
 		return nil, ErrChatRuntimeNoLLM
 	}
-	if len(deps.Tools) > 0 && deps.Execute == nil {
+	if len(deps.Tools) > 0 && deps.Execute == nil && deps.ExecuteBlocks == nil {
 		return nil, ErrChatRuntimeNoToolExecutor
 	}
 	store := deps.Store
@@ -395,6 +409,22 @@ func (r *ChatRuntime) Deliver(message string) error {
 	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true})
 }
 
+// InjectQueenMail queues a letter or reply from another queen: it enters as a
+// client message (the way a chat app's message does, so she credits the
+// writer) but is marked as queen mail, so the chain depth continues instead of
+// starting over.
+//
+// Parity: framework/server/queen_mail.py::QueenMail._send_to_hive_queen
+func (r *ChatRuntime) InjectQueenMail(content string) error {
+	if r == nil {
+		return ErrChatRuntimeNoLLM
+	}
+	if strings.TrimSpace(content) == "" {
+		return nil
+	}
+	return r.enqueueTurn(chatTurnRequest{message: content, clientInput: true, fromQueenMail: true})
+}
+
 // InjectWorkerReport queues a worker's [WORKER_REPORT] block as the queen's
 // next turn. It is delivered as a non-client ("[External event]") user message,
 // exactly like the upstream AgentLoop.inject_event(notification) the worker
@@ -516,6 +546,22 @@ func (r *ChatRuntime) Close() error {
 
 	r.cancel()
 	<-r.done
+	// Upstream's session_manager.stop_session flushes the timeline after the
+	// turn loop is quiescent, so messages that arrived inside the live
+	// coalescing window are not lost. The runtime context is already
+	// cancelled here, so the flush gets its own bounded context; timelineWG
+	// keeps Close's promise that nothing writes after it returns.
+	//
+	// Parity: core/framework/server/session_manager.py::SessionManager.stop_session
+	if r.timelineEnabled && r.deps.LLM != nil && r.deps.Root != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), memoryTimelineStopFlushTimeout)
+		r.timelineWG.Add(1)
+		go func() {
+			defer r.timelineWG.Done()
+			defer cancel()
+			_, _ = memory.UpdateSessionTimeline(ctx, r.deps.LLM, r.deps.Root)
+		}()
+	}
 	// The timeline writers run on their own goroutines and write into the
 	// session directory. Waiting here keeps Close's promise that nothing writes
 	// after it returns (fork/stop then remove that directory).
@@ -605,6 +651,11 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	if request.reminderWake {
 		message = "Reminder"
 	}
+	// Someone other than a correspondent spoke: the chain of letters starts
+	// again here. A letter or reply she is answering keeps its depth.
+	if r.deps.OnTurnStart != nil && !request.fromQueenMail && !request.reminderWake {
+		r.deps.OnTurnStart()
+	}
 	executionID := newChatExecutionID()
 	emitter := r.newTurnEmitter(executionID)
 	if emitter != nil {
@@ -621,7 +672,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		defer r.streamLLM.endTurn()
 	}
 
-	stamp := time.Now().Format("2006-01-02 15:04 MST")
+	stamp := hiveclock.Now().Format("2006-01-02 15:04 MST")
 	if request.trigger != nil {
 		// A trigger is delivered as upstream's drained trigger batch: the
 		// block carries its own timestamp, so it is inserted verbatim rather
@@ -1009,13 +1060,23 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 	if r.mcpToolBlocked(req.Name) {
 		return mcpToolRefusal(req.Name), nil
 	}
-	if r.deps.Execute == nil {
+	if r.deps.Execute == nil && r.deps.ExecuteBlocks == nil {
 		return agentloop.ToolResult{
 			Content: fmt.Sprintf("No executor registered for tool '%s'", req.Name),
 			IsError: true,
 		}, nil
 	}
-	content, isError, err := r.deps.Execute(r.toolExecuteContext(), req.Name, req.Input)
+	var (
+		content      string
+		isError      bool
+		imageContent []map[string]any
+		err          error
+	)
+	if r.deps.ExecuteBlocks != nil {
+		content, isError, imageContent, err = r.deps.ExecuteBlocks(r.toolExecuteContext(), req.Name, req.Input)
+	} else {
+		content, isError, err = r.deps.Execute(r.toolExecuteContext(), req.Name, req.Input)
+	}
 	if err != nil {
 		return agentloop.ToolResult{Content: err.Error(), IsError: true}, nil
 	}
@@ -1025,16 +1086,17 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 	if annotated, parked := r.parkForMissingCredential(req.Name, content); parked {
 		content = annotated
 	}
-	return agentloop.ToolResult{Content: content, IsError: isError}, nil
+	return agentloop.ToolResult{Content: content, IsError: isError, ImageContent: imageContent}, nil
 }
 
-// toolsForTurn advertises the session tools for one turn. run_worker is
-// colony-gated: without a bound colony the queen does not see the def at all
-// (a direct call still returns an actionable no-colony error from the
-// executor).
+// toolsForTurn advertises the session tools for one turn. The colony-runtime
+// lifecycle tools (run_worker, get_worker_status, inject_message,
+// stop_worker) are colony-gated: without a bound colony the queen does not see
+// the defs at all (a direct call still returns an actionable no-colony error
+// from the executor), matching upstream's colony-phase tool list.
 //
 // Parity: framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools
-// (the run_worker tool only reaches a colony-phase registry)
+// (the colony-runtime tools only reach a colony-phase registry)
 func (r *ChatRuntime) toolsForTurn() []llm.ToolDef {
 	runtime := r.boundColonyRuntime()
 	if runtime != nil {
@@ -1042,7 +1104,7 @@ func (r *ChatRuntime) toolsForTurn() []llm.ToolDef {
 	}
 	out := make([]llm.ToolDef, 0, len(r.tools))
 	for _, def := range r.tools {
-		if def.Name == colony.RunWorkerToolName {
+		if def.Name == colony.RunWorkerToolName || colonyBoundQueenTool(def.Name) {
 			continue
 		}
 		out = append(out, def)
@@ -1371,7 +1433,8 @@ func (r *ChatRuntime) clearPendingCredentialForm() {
 //
 // Parity-exempt: Go-only sediment seam. Upstream revises a soul in its own
 // daily chat-reading reflection (framework/agents/queen/soul_reflection.py);
-// the Go port has no such pass and rides the memory reflection instead.
+// the Go port now runs that daily pass too, and also rides the memory
+// reflection so a soul still updates between daily runs.
 func (r *ChatRuntime) sedimentSoul(result memory.LoopResult) {
 	if r == nil || r.deps.HomeRoot == "" || r.queenName == "" {
 		return

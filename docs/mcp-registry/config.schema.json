@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aden-hive/hive-go/mcp-registry/config.schema.json",
+  "title": "Hive MCP registry config",
+  "type": "object",
+  "properties": {
+    "index_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "refresh_interval_hours": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    }
+  },
+  "additionalProperties": true
+}

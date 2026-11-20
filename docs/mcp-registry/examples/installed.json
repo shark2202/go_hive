@@ -1,0 +1,38 @@
+{
+  "servers": {
+    "fixture-echo": {
+      "source": "registry",
+      "manifest_version": "0.1.0",
+      "manifest": {
+        "version": "0.1.0",
+        "description": "Local stdio MCP fixture used by go_hive tests",
+        "transport": {
+          "supported": [
+            "stdio"
+          ],
+          "default": "stdio"
+        },
+        "stdio": {
+          "command": "/opt/hive/bin/mcp-fixture",
+          "args": [
+            "--stdio"
+          ],
+          "env": {}
+        }
+      },
+      "transport": "stdio",
+      "mode": "tools",
+      "enabled": true,
+      "pinned": false,
+      "auto_update": false,
+      "overrides": {
+        "env": {},
+        "headers": {}
+      },
+      "installed_at": "2026-11-20T00:00:00Z",
+      "installed_by": "hive mcp install",
+      "last_health_status": null,
+      "last_used_at": null
+    }
+  }
+}

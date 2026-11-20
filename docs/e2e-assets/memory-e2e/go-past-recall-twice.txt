@@ -1,0 +1,15 @@
+excerpt blocks after two identical prompts: 2
+
+[2026-11-20 18:53 CST] [External event] <system-reminder>
+Recalled past conversation excerpts relevant to the latest user message (supersedes earlier excerpt reminders):
+
+Excerpts from earlier conversations that may relate to the user's latest message (matched by keyword, so possibly incomplete; search_messages and search_timeline go deeper):
+- 2025-01-01 (Wed), session_20250101_093000_meme2e01
+  
+
+[2026-11-20 18:53 CST] [External event] <system-reminder>
+Recalled past conversation excerpts relevant to the latest user message (supersedes earlier excerpt reminders):
+
+Excerpts from earlier conversations that may relate to the user's latest message (matched by keyword, so possibly incomplete; search_messages and search_timeline go deeper):
+- 2025-01-01 (Wed), session_20250101_093000_meme2e01
+  

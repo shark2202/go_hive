@@ -24,7 +24,7 @@
 | 上游 | 未移植 action | 原因 |
 | --- | --- | --- |
 | `csv_tool` | `csv_sql` | 上游用 DuckDB（native 依赖）；纯 Go 不做 cgo，`gen_catalog.py` 与 `doc.go` 均已注明排除。 |
-| `excel_tool` | `excel_sql` | 同上；`batch3_excel.go` 与测试断言该 action 返回 `ErrUnknownAction`。 |
+| `excel_tool` | `excel_sql` | 同上；`excel.go` 与测试断言该 action 返回 `ErrUnknownAction`。 |
 
 ## 4. 已移植但不在 integrations 包里
 

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive Inbox — 协议与流程</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:860px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Sentinel · Hive Inbox</div><h1>Hive Inbox <span>协议与流程</span></h1>
+<p class="lede">Hive Inbox 是 Hive 云端后端（hive-backend）提供的第一方、账号绑定、双向通知通道——Sentinel 三个原生 channel 之一，默认开启。本页把<b>协议（端点/字段/路由）</b>与<b>端到端流程</b>可视化；它不是新的规范，唯一事实源仍是 <code>docs/internal/hive-inbox-design.md</code>（Draft，含实现状态 §14）。</p>
+<div class="meta"><span>生成：<b>2026-11-20 22:08 CST</b></span><span>状态：<b>Draft（设计文档）+ feature/hive-inbox 实现</b></span><span>协议/运行时客户端：<b>Apache-2.0 开源</b></span><span>后端/Inbox UI：<b>闭源</b></span></div>
+<div class="toc"><a href="#what">是什么</a><a href="#topology">拓扑</a><a href="#endpoints">端点</a><a href="#data">数据模型</a><a href="#flows">流程</a><a href="#runtime">运行时实现</a><a href="#compare">渠道对照</a><a href="#status">实现状态</a><a href="#openness">开源边界</a><a href="#refs">索引</a></div></header>
+
+<section id="what"><h2><span class="num">00</span>是什么（以及不是什么）</h2>
+<div class="grid g3">
+<div class="card"><div class="k">是</div><div class="v">双向通道</div><div class="d">colony 停泊提问 → 用户在 Inbox 回答 → colony 恢复。不是单向"通知中心"，是一条会话。</div></div>
+<div class="card"><div class="k">是</div><div class="v">账号级收件箱</div><div class="d">按账号（user_id + team_id）聚合所有 colony；桌面/网页/未来移动端都是同一通道的客户端。</div></div>
+<div class="card"><div class="k">不是</div><div class="v">本地文件 / 自托管</div><div class="d">消息存在 Hive 云端 Postgres；开源仓库只有协议与运行时客户端，后端实现是闭源的。</div></div>
+</div>
+<div class="callout info"><b>默认行为：</b>没有 <code>notifications.json</code> 的 colony 解析为 <code>channel="hive"</code> + <code>sentinel_enabled=true</code>；有显式配置的按文件来；旧文件缺 <code>channel</code> 时解析为 <code>hive</code>。因此"登录状态下 Sentinel 默认开启"，Telegram/Slack 是 opt-in 的"also notify"。</div>
+</section>
+
+<section id="topology"><h2><span class="num">01</span>拓扑与传输</h2>
+<pre>                    ┌─────────────────── hive-backend (hub，闭源) ──────────────┐
+                    │  inbox_messages（user-scoped, team-visible）              │
+                    │  inbox_message_reads（每人独立已读状态）                  │
+                    │  runtime_connections（runtime_id → 活跃 SSE 连接）        │
+                    │  Redis pub/sub 扇出                                       │
+                    └───▲────────────▲───────────────────────┬─────────────────┘
+   POST /v1/inbox/messages │            │ GET /v1/inbox/runtime/stream       │ GET /v1/inbox/stream (SSE)
+   （升级上报）             │            │ （回复流，SSE，自注册 runtime_id）   │ + list/reply/read（POST）
+              ┌────────────┴──┐   ┌─────┴────────┐        ┌──────▼──────────────┐
+              │ runtime local │   │ runtime cloud│        │ clients             │
+              │ colony A      │   │ colony B     │        │ desktop / web inbox │
+              └───────────────┘   └──────────────┘        └─────────────────────┘</pre>
+<ul>
+<li><b>传输：</b>SSE 下行 + 普通 POST 上行。runtime 和客户端都是<b>主动连出去</b>（NAT 友好），后端不回调本地进程。</li>
+<li><b>路由键：</b>消息上记录的 <code>runtime_id</code>（不是 colony→runtime 的映射，后者会漂移）。</li>
+<li><b>runtime_id：</b>云上 = <code>e2b_sandbox_id</code>；本地 = <code>$HIVE_HOME/runtime_id</code> 持久化的 uuid。环境契约：<code>HIVE_RUNTIME_ID</code>/<code>HIVE_RUNTIME_KIND</code> → <code>E2B_SANDBOX_ID</code> → 本地 uuid。</li>
+<li><b>presence：</b><code>runtime_connections</code> 记录活跃连接；<code>POST /v1/inbox/runtime/heartbeat</code> 端点已存在，但 runtime 尚未调用，也没有过期清扫器（见 §07）。</li>
+</ul>
+</section>
+
+<section id="endpoints"><h2><span class="num">02</span>端点（/v1/inbox/*）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:9%">方法</th><th style="width:30%">路径</th><th style="width:12%">调用方</th><th>用途</th></tr></thead><tbody>
+<tr><td><code>POST</code></td><td><code>/v1/inbox/messages</code></td><td>runtime</td><td>上报一条升级/报告（user_id/team_id 取自登录态）</td></tr>
+<tr><td><code>GET</code></td><td><code>/v1/inbox/messages</code></td><td>device</td><td>列表（自己的 + 团队可见），支持 unread 过滤</td></tr>
+<tr><td><code>GET</code></td><td><code>/v1/inbox/stream</code></td><td>device</td><td><b>SSE</b> 推送新/更新消息（P1 桌面端实际用 15s 轮询，未消费此流）</td></tr>
+<tr><td><code>POST</code></td><td><code>/v1/inbox/messages/:id/reply</code></td><td>device</td><td>用户答复；后端校验该消息属于当前用户/团队</td></tr>
+<tr><td><code>POST</code></td><td><code>/v1/inbox/resolve</code></td><td>runtime</td><td>跨渠道关闭（会话已在应用内/别处答复），按 <code>session_id</code></td></tr>
+<tr><td><code>POST</code></td><td><code>/v1/inbox/messages/:id/read</code></td><td>device</td><td>标记单条已读</td></tr>
+<tr><td><code>POST</code></td><td><code>/v1/inbox/messages/mark-all-read</code></td><td>device</td><td>全部标记已读</td></tr>
+<tr><td><code>GET</code></td><td><code>/v1/inbox/messages/unread-count</code></td><td>device</td><td>角标未读数</td></tr>
+<tr><td><code>GET</code></td><td><code>/v1/inbox/runtime/stream</code></td><td>runtime</td><td><b>SSE</b> 回复流；连接即自注册 <code>runtime_id</code></td></tr>
+<tr><td><code>POST</code></td><td><code>/v1/inbox/runtime/heartbeat</code></td><td>runtime</td><td>presence 保活（<b>端点存在，runtime 未调用</b>）</td></tr>
+</tbody></table></div>
+<h3>上报字段（runtime → backend）</h3>
+<pre>{
+  "runtime_id": "…",        // 路由键：回复沿这条 id 回投
+  "session_id": "…",         // 停泊待恢复的会话
+  "colony_id": "…",          // 深链目标
+  "kind": "blocker",         // blocker | heartbeat | progress | done
+  "title": "…",
+  "body": "…",
+  "correlation_token": "…",  // 与 runtime 本地 escalation 记录对上
+  "deep_link": null          // P1 未接线
+}</pre>
+<p class="sub"><b>认证：</b>所有端点都要登录态；<code>user_id</code>/<code>team_id</code> 从登录凭据解析。runtime 用与 <code>cloud_sync</code> 相同的 Bearer 方式；desktop 用 <code>Authorization: jwt …</code>。回复会校验消息归属（owner 或 team-visible）。</p>
+</section>
+
+<section id="data"><h2><span class="num">03</span>数据模型（后端 Postgres）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">表 / 字段</th><th>说明</th></tr></thead><tbody>
+<tr><td><code>inbox_messages</code></td><td>一条消息一行；<b>user-scoped, team-visible</b>（owner 是主收件人，团队可读/可答作为兜底）</td></tr>
+<tr><td>— <code>id</code></td><td>消息 id，也是返回给 runtime 的回复锚点</td></tr>
+<tr><td>— <code>user_id</code> / <code>team_id</code></td><td>主收件人 / 团队可见范围（均来自登录态）</td></tr>
+<tr><td>— <code>runtime_id</code></td><td><b>回复路由键</b>：这条消息是哪个 runtime 发的</td></tr>
+<tr><td>— <code>session_id</code> / <code>colony_id</code></td><td>待恢复会话 / 深链目标</td></tr>
+<tr><td>— <code>kind</code></td><td><code>blocker</code> · <code>heartbeat</code> · <code>progress</code> · <code>done</code>（kind 扩容迁移 035 已写未应用）</td></tr>
+<tr><td>— <code>title</code> / <code>body</code></td><td>渲染内容</td></tr>
+<tr><td>— <code>correlation_token</code></td><td>对回 runtime 本地 escalation 记录</td></tr>
+<tr><td>— <code>status</code> / <code>resolved_by</code></td><td><code>open|resolved</code>；谁关的（user / superseded / 其他渠道）</td></tr>
+<tr><td>— <code>reply_text</code> / <code>deep_link</code> / 时间戳</td><td>存下的答复、深链、created/resolved/updated</td></tr>
+<tr><td><code>inbox_message_reads</code></td><td>每人独立已读状态；<b>没有行 = 未读</b></td></tr>
+<tr><td><code>runtime_connections</code></td><td><code>runtime_id → 活跃 SSE 连接</code> + presence；<b>只按 runtime_id 建键，绝不用 team_id 路由</b></td></tr>
+</tbody></table></div>
+<div class="callout"><b>为什么用 Postgres：</b>要和 <code>account_vm</code>、runtime 注册表做事务读、关系型 ACL（team-visible）；不复用团队级 Mongo 的 <code>honeycomb_notifications</code>（生命周期不同）。</div>
+</section>
+
+<section id="flows"><h2><span class="num">04</span>端到端流程</h2>
+<h3>4.1 报告（每次评估都发）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">kind</th><th style="width:22%">触发</th><th>行为</th></tr></thead><tbody>
+<tr><td><code>blocker</code></td><td>judge 判定需人工 / 硬停</td><td>停泊等回复，通知（loud）</td></tr>
+<tr><td><code>heartbeat</code></td><td>自动续跑到 <code>max_nudges</code></td><td>更响的检查点，停泊</td></tr>
+<tr><td><code>progress</code></td><td>judge 判定继续</td><td><b>只进 Inbox feed</b>，不发 Telegram/Slack、不弹 toast；去重</td></tr>
+<tr><td><code>done</code></td><td>classifier 判定目标完成</td><td>终态报告，通知（quiet）</td></tr>
+</tbody></table></div>
+<p><b>发送：</b><code>escalation_source._decide</code> 选 kind → <code>notifier.send("hive", …)</code> → <code>POST /v1/inbox/messages</code> → 落 <code>inbox_messages</code> → Redis 扇出 → 客户端 SSE/轮询看到。<br>
+<b>单会话单开项：</b>新报告会 supersede 同一 session 之前的 open 报告（<code>resolved_by='superseded'</code>）；<code>blocker</code> 持有会话，等待回复期间不会被 supersede。首次评估前的空闲预算是 <b>5 分钟</b>（<code>classify_after_seconds</code>）。</p>
+
+<h3>4.2 回复 → 恢复</h3>
+<ol>
+<li>用户在客户端提交答复：<code>POST /v1/inbox/messages/:id/reply</code>。</li>
+<li>后端按 <code>id</code> 读消息，取 <code>runtime_id</code>。</li>
+<li>在 <code>runtime_connections</code> 里找到该 runtime 的活跃 SSE 连接。</li>
+<li>把回复推到 <code>GET /v1/inbox/runtime/stream</code>（事件里带 <code>correlation_token</code>）。</li>
+<li>runtime 的 <code>HiveInboxListener</code> → <code>manager.on_inbound("hive", …)</code> → <code>_resume()</code> 把答复注入停泊的 queen。</li>
+<li>后端把消息标记 <code>resolved</code>，把解决状态扇出给客户端。</li>
+</ol>
+
+<h3>4.3 跨渠道关闭 / 离线</h3>
+<ul>
+<li><b>应用内答复：</b><code>manager.on_local_resume</code> 同时调 <code>POST /v1/inbox/resolve</code>（按 session_id），避免 Inbox 里留下过期条目。</li>
+<li><b>离线：</b>路由依赖活跃 SSE 连接；runtime 不在线时回复返回 <code>delivered:false</code>（不排队）。"该 colony 离线"的提示与 heartbeat/sweeper 属于 P1.5。</li>
+<li><b>去重：</b>连续相同的报告在 runtime 与后端两侧都去重。</li>
+</ul>
+</section>
+
+<section id="runtime"><h2><span class="num">05</span>运行时实现与配置</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">位置</th><th>内容</th></tr></thead><tbody>
+<tr><td><code>core/framework/sentinel/notifier.py</code></td><td><code>CHANNEL_HIVE</code>、<code>_send_hive()</code>、<code>resolve_hive_session()</code>；读 <code>HIVE_CLOUD_BASE</code> + 账号登录态；未登录 → <code>hive not connected</code></td></tr>
+<tr><td><code>core/framework/sentinel/listeners.py</code></td><td><code>HiveInboxListener</code>：SSE 订阅 <code>/v1/inbox/runtime/stream</code>，解析 reply 事件 → <code>on_inbound("hive", …)</code></td></tr>
+<tr><td><code>core/framework/sentinel/runtime_identity.py</code></td><td><code>runtime_id</code> / <code>runtime_kind</code> 解析（env → e2b → 本地 uuid）</td></tr>
+<tr><td><code>core/framework/sentinel/store.py</code></td><td>per-colony <code>notifications.json</code>：<code>channel</code>、<code>sentinel_enabled</code>、target、allowlist、thread、<code>classify_after_seconds</code></td></tr>
+<tr><td><code>core/framework/sentinel/escalation_source.py</code></td><td>kind 决策、channel-aware suppression（Inbox 总是投递，toast 受 UI 在场门控）</td></tr>
+<tr><td><code>go_hive/go-hive/internal/sentinel/</code></td><td>Go 对侧：<code>notifier.go</code>（同端点）、<code>listeners.go</code>（SSE 流 + <code>runtime/heartbeat</code> 未调用）、<code>manager.go</code>、<code>escalation_source.go</code>、<code>runtime_identity.go</code>、<code>store.go</code></td></tr>
+</tbody></table></div>
+<div class="callout info"><b>NAT 约束：</b>所有渠道（Telegram long-poll、Slack Socket Mode、Hive SSE）都是 outbound 连接。后端永远不能回调本地 runtime——这也是回复必须走 runtime 自注册 + SSE 的原因。</div>
+</section>
+
+<section id="compare"><h2><span class="num">06</span>三个 Sentinel 渠道对照</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">能力</th><th>Telegram</th><th>Slack</th><th>Hive Inbox</th></tr></thead><tbody>
+<tr><td>出站</td><td>httpx → Telegram API</td><td>httpx → Slack API</td><td>带登录态 POST 到 <code>/v1/inbox/messages</code></td></tr>
+<tr><td>入站回复</td><td><code>getUpdates</code> 长轮询</td><td>Socket Mode WS</td><td>SSE 回复流订阅</td></tr>
+<tr><td>线程锚点</td><td><code>message_id</code></td><td><code>ts</code></td><td>后端 <code>message_id</code></td></tr>
+<tr><td>寻址</td><td><code>chat_id</code></td><td><code>channel</code></td><td>账号（登录态里的 user id）</td></tr>
+<tr><td>已连接判定</td><td>bot token 已配</td><td>token 已配</td><td>已登录 + 回复流打开</td></tr>
+<tr><td>监听生命周期</td><td>轮询任务</td><td>socket 任务</td><td>SSE 订阅任务</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="status"><h2><span class="num">07</span>实现状态（按设计文档 §14，分支 feature/hive-inbox）</h2>
+<div class="grid g3">
+<div class="card"><div class="k">已建</div><div class="v">P1 主干</div><div class="d">后端 migration 034（三张表）+ inbox 服务/控制器 + Redis 扇出；runtime 的 hive 通道/监听/身份/默认开启；桌面 InboxButton；Web Dashboard InboxBell（轮询）；跨渠道 resolve；report-everything。</div></div>
+<div class="card"><div class="k">有意偏差</div><div class="v">4 项</div><div class="d">设备端 15s 轮询（未消费 device SSE）；Sentinel 设置里 hive 呈现很少；<code>deep_link</code> 传 null；team-visible 只在刷新时可见（不实时推送）。</div></div>
+<div class="card"><div class="k">未建 / 债务</div><div class="v">3 项</div><div class="d">云 runtime_id ↔ <code>account_vm</code> 对账与终止清理；presence heartbeat/sweeper；spawner 环境契约（本地要 <code>HIVE_RUNTIME_KIND=local</code>，云要 <code>HIVE_RUNTIME_ID=e2b_sandbox_id</code>）。另有 migration 035 未应用（progress/done 会被旧 CHECK 拒绝）。</div></div>
+</div>
+<div class="callout bad"><b>诚实口径：</b>本页描述的是"协议 + 已建实现"。设计文档标 <b>Draft</b>，后端在<b>独立闭源仓库</b>；不要把"协议可见"当成"功能已在你本机可用"——本机没有配置 <code>HIVE_CLOUD_BASE</code>/登录态时，<code>hive</code> 通道发送会直接失败。</div>
+</section>
+
+<section id="openness"><h2><span class="num">08</span>开源边界（谁能看到/改什么）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">部分</th><th style="width:16%">可见性</th><th>说明</th></tr></thead><tbody>
+<tr><td>设计文档 <code>docs/internal/hive-inbox-design.md</code></td><td><span class="pill ok">开源仓库内</span></td><td>端点、数据模型、流程、实现状态、P1.5 债务全在；标 Draft，不是对外稳定规范</td></tr>
+<tr><td>运行时客户端（Python + Go）</td><td><span class="pill ok">Apache-2.0</span></td><td><code>core/framework/sentinel/*</code>、<code>internal/sentinel/*</code></td></tr>
+<tr><td>后端 <code>hive-backend</code>（Express/TS）</td><td><span class="pill bad">闭源</span></td><td>不在本仓库；GitHub 上 <code>aden-hive/hive-backend</code> 不可见（私有或不存在）</td></tr>
+<tr><td>Inbox UI（桌面/网页）</td><td><span class="pill bad">闭源</span></td><td>开源前端无 <code>/v1/inbox</code> 调用；界面在闭源桌面/云 Dashboard</td></tr>
+</tbody></table></div>
+<p><b>自建兼容：</b>按本页端点 + 数据模型可以写一个兼容后端，但登录态/身份体系由 Hive 云签发，自建要自己造账号体系；<code>HIVE_CLOUD_BASE</code> 只能指向你自建的服务。成本明显高于直接用 Telegram/Slack，或把 Inbox 当 feed 再由外部转发。</p>
+</section>
+
+<section id="refs"><h2><span class="num">09</span>索引与维护</h2>
+<div class="callout info"><b>事实源：</b><code>docs/internal/hive-inbox-design.md</code>（Draft 2026-06-23，§8 端点、§6 数据模型、§10 流程、§14 实现状态）。本页是可视化摘要；设计文档变更时同步本页，并在页头更新生成时间与状态。<br><b>代码：</b><code>core/framework/sentinel/{notifier,listeners,manager,store,escalation_source,runtime_identity}.py</code> · <code>go_hive/go-hive/internal/sentinel/*.go</code>。<br><b>相关页：</b><a href="module-interfaces.html">接口不变量</a>（INV-12/15 等）· <a href="alignment-dimensions.html">对齐维度矩阵</a> · <a href="platform-support.html">平台支持矩阵</a> · <a href="browser-bridge.html">Browser Bridge</a>。</div>
+</section>
+
+<footer>生成：2026-11-20 22:08 CST · 依据：<code>docs/internal/hive-inbox-design.md</code>（Draft）+ Python/Go runtime 代码 · 状态：协议可见、后端闭源 · 未验证：真实 Hive 云端 e2e（本机无登录态）· 本页随设计文档更新，不单独充当规范。</footer>
+</div></body></html>

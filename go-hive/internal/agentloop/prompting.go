@@ -3,8 +3,8 @@ package agentloop
 import (
 	"encoding/json"
 	"strings"
-	"time"
 
+	"github.com/aden-hive/hive-go/internal/hiveclock"
 	"github.com/aden-hive/hive-go/internal/skills"
 )
 
@@ -35,7 +35,7 @@ type PromptOverrides struct {
 
 // Parity: framework/agent_loop/prompting.py stamp_prompt_datetime. The Python version uses
 func StampPromptDatetime(prompt string) string {
-	local := time.Now()
+	local := hiveclock.Now()
 	stamp := "Current date: " + local.Format("2006-01-02 MST (UTC-0700)")
 	if prompt == "" {
 		return stamp

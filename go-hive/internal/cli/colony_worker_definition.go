@@ -85,18 +85,20 @@ func colonyToolsFor(queenName string) []string {
 // colonyWorkerToolSurface assembles the colony worker's tool wiring: the
 // builtin base surface every worker keeps, the declared-tool pool a
 // worker.json "tools" list selects from (the session integration catalogue),
-// and the executor that runs both under the colony workspace root.
+// and the executor that runs both under the colony workspace root. The
+// executor carries the catalogue's content blocks, so a worker's attach_file
+// reaches its model as image/PDF parts exactly like the queen's.
 //
 // Parity: framework/host/colony_runtime.py::ColonyRuntime (spawn_tools +
 // _apply_tool_allowlist resolution for a colony worker)
 func colonyWorkerToolSurface(colonyPath string, toolbox *builtin.Toolbox, home hivehome.Home) ([]llm.ToolDef, []llm.ToolDef, func(agentloop.ToolCallRequest) (agentloop.ToolResult, error)) {
 	catalogue := newSessionToolCatalogue(colonyPath, toolbox, home)
 	execute := func(request agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
-		content, isError, execErr := catalogue.Execute(context.Background(), request.Name, request.Input)
+		content, isError, imageContent, execErr := catalogue.ExecuteBlocks(context.Background(), request.Name, request.Input)
 		if execErr != nil {
 			return agentloop.ToolResult{}, execErr
 		}
-		return agentloop.ToolResult{Content: content, IsError: isError}, nil
+		return agentloop.ToolResult{Content: content, IsError: isError, ImageContent: imageContent}, nil
 	}
 	return toolbox.Defs(), catalogue.Defs(), execute
 }

@@ -1,6 +1,8 @@
 package charts
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"image"
 	"image/color"
@@ -8,72 +10,421 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 )
 
-// stubRasterizer makes the PNG path deterministic: it pretends rsvg-convert is
-// installed and writes a real PNG at the requested size.
-func stubRasterizer(t *testing.T) {
-	t.Helper()
-	oldLook, oldRun := chartLookPath, chartRunCommand
-	t.Cleanup(func() {
-		chartLookPath = oldLook
-		chartRunCommand = oldRun
-	})
-	chartLookPath = func(name string) (string, error) {
-		if name == "rsvg-convert" {
-			return "/stub/rsvg-convert", nil
-		}
-		return "", os.ErrNotExist
-	}
-	chartRunCommand = func(name string, args ...string) ([]byte, error) {
-		// rsvg-convert args: -w W -h H -o PNG SVG
-		width, _ := strconv.Atoi(args[1])
-		height, _ := strconv.Atoi(args[3])
-		pngPath := args[5]
-		img := image.NewRGBA(image.Rect(0, 0, width, height))
-		draw.Draw(img, img.Bounds(), &image.Uniform{C: color.White}, image.Point{}, draw.Src)
-		draw.Draw(img, image.Rect(10, 10, width/2, height/2), &image.Uniform{C: color.RGBA{R: 219, G: 111, B: 2, A: 255}}, image.Point{}, draw.Src)
-		file, err := os.Create(pngPath)
-		if err != nil {
-			return nil, err
-		}
-		defer file.Close()
-		if err := png.Encode(file, img); err != nil {
-			return nil, err
-		}
-		return nil, nil
-	}
-}
+// ── test helpers ─────────────────────────────────────────────────────
 
 func chartsTestHome(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HIVE_HOME", home)
 	t.Setenv("HIVE_DESKTOP_THEME", "light")
+	t.Setenv("CHROME_PATH", "")
 	return home
 }
 
-func pngDimensions(t *testing.T, path string) (int, int) {
+func requireChrome(t *testing.T) {
+	t.Helper()
+	if _, err := findChrome(); err != nil {
+		t.Skipf("real Chrome render skipped: %v", err)
+	}
+}
+
+// stubChrome replaces the lookup and run hooks. The handler receives the argv
+// and is responsible for writing the screenshot file and returning the DOM
+// dump Chrome would have printed.
+func stubChrome(t *testing.T, handler func(args []string) (stdout, stderr []byte, err error)) *[]string {
+	t.Helper()
+	oldLook, oldRun := chartLookPath, chartRunChrome
+	var captured []string
+	t.Cleanup(func() {
+		chartLookPath = oldLook
+		chartRunChrome = oldRun
+	})
+	chartLookPath = func(name string) (string, error) { return "/stub/chrome", nil }
+	chartRunChrome = func(_ context.Context, _ string, args []string) ([]byte, []byte, error) {
+		captured = append([]string{}, args...)
+		return handler(args)
+	}
+	return &captured
+}
+
+func writeStubPNG(t *testing.T, path string, width, height int) {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.Draw(img, img.Bounds(), &image.Uniform{C: color.White}, image.Point{}, draw.Src)
+	draw.Draw(img, image.Rect(10, 10, width/2, height/2), &image.Uniform{C: color.RGBA{R: 219, G: 111, B: 2, A: 255}}, image.Point{}, draw.Src)
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func okDOM() []byte {
+	return []byte(`<!DOCTYPE html><html data-chart-status="ok"><body><div id="chart"></div></body></html>`)
+}
+
+// pngStats decodes a PNG and reports the pixel histogram, enough for a
+// text-first visual check: a chart renders as many distinct colors and a large
+// share of non-background pixels.
+func pngStats(t *testing.T, path string) (width, height, distinct, nonBackground int, counts map[color.RGBA]int) {
 	t.Helper()
 	file, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer file.Close()
-	config, err := png.DecodeConfig(file)
+	img, err := png.Decode(file)
+	if err != nil {
+		t.Fatalf("decode %s: %v", path, err)
+	}
+	bounds := img.Bounds()
+	counts = map[color.RGBA]int{}
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			r, g, b, a := img.At(x, y).RGBA()
+			counts[color.RGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: uint8(a >> 8)}]++
+		}
+	}
+	background := 0
+	for _, count := range counts {
+		if count > background {
+			background = count
+		}
+	}
+	return bounds.Dx(), bounds.Dy(), len(counts), bounds.Dx()*bounds.Dy() - background, counts
+}
+
+func mustRGBA(t *testing.T, hex string) color.RGBA {
+	t.Helper()
+	value, err := strconv.ParseUint(strings.TrimPrefix(hex, "#"), 16, 32)
+	if err != nil {
+		t.Fatalf("bad color %q: %v", hex, err)
+	}
+	return color.RGBA{R: uint8(value >> 16), G: uint8(value >> 8), B: uint8(value), A: 255}
+}
+
+// ── theme / path rules ───────────────────────────────────────────────
+
+// Parity: tools/src/chart_tools/theme.py::build_theme
+func TestThemeMatchesUpstreamJSON(t *testing.T) {
+	for _, name := range []string{"light", "dark"} {
+		fixture, err := os.ReadFile(filepath.Join("testdata", "theme-"+name+".json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var want, got any
+		if err := json.Unmarshal(fixture, &want); err != nil {
+			t.Fatalf("%s fixture: %v", name, err)
+		}
+		if err := json.Unmarshal([]byte(ThemeJSON(name)), &got); err != nil {
+			t.Fatalf("%s ThemeJSON: %v", name, err)
+		}
+		if !reflect.DeepEqual(want, got) {
+			t.Fatalf("%s theme differs from upstream theme.py:\nwant %#v\ngot  %#v", name, want, got)
+		}
+	}
+}
+
+// Parity: tools/src/chart_tools/tools.py::_system_theme
+func TestResolveThemeNameFollowsDesktopEnv(t *testing.T) {
+	cases := []struct {
+		env  string
+		want string
+	}{
+		{"", "light"},
+		{"dark", "dark"},
+		{"  DARK ", "dark"},
+		{"Dark", "dark"},
+		{"light", "light"},
+		{"solarized", "light"},
+	}
+	for _, test := range cases {
+		t.Setenv("HIVE_DESKTOP_THEME", test.env)
+		if got := ResolveThemeName(); got != test.want {
+			t.Fatalf("HIVE_DESKTOP_THEME=%q => %q, want %q", test.env, got, test.want)
+		}
+	}
+}
+
+// Parity: tools/src/chart_tools/tools.py::_slugify
+func TestSlugifyMirrorsUpstream(t *testing.T) {
+	cases := map[string]string{
+		"":                  "chart",
+		"   ":               "chart",
+		"Quarterly Revenue": "quarterly-revenue",
+		"  -- weird!!  ":    "weird",
+		"Chart 2024 (v2)":   "chart-2024-v2",
+	}
+	for input, want := range cases {
+		if got := Slugify(input); got != want {
+			t.Fatalf("Slugify(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
+// Parity: tools/src/chart_tools/tools.py::_resolve_output_path
+func TestOutputPathDefaultsUnderChartsDir(t *testing.T) {
+	home := chartsTestHome(t)
+	path, err := ResolveOutputPath("", "Quarterly Revenue", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return config.Width, config.Height
+	if filepath.Dir(path) != filepath.Join(home, "charts") {
+		t.Fatalf("dir = %s", filepath.Dir(path))
+	}
+	if !strings.HasSuffix(filepath.Base(path), "-quarterly-revenue.png") {
+		t.Fatalf("filename = %s", filepath.Base(path))
+	}
+	// <UTC-timestamp>-<slug>.png, e.g. 2026-11-20T10-30-00-quarterly-revenue.png
+	if len(filepath.Base(path)) != len("2006-01-02T15-04-05")+1+len("quarterly-revenue")+4 {
+		t.Fatalf("filename shape = %s", filepath.Base(path))
+	}
+	if _, err := checkOverridePath(t, home); err != nil {
+		t.Fatal(err)
+	}
 }
+
+// checkOverridePath checks the override branch creates the parent dir.
+func checkOverridePath(t *testing.T, home string) (string, error) {
+	t.Helper()
+	target := filepath.Join(home, "nested", "custom.png")
+	path, err := ResolveOutputPath(target, "ignored", "")
+	if err != nil {
+		return "", err
+	}
+	if path != target {
+		t.Fatalf("override path = %s, want %s", path, target)
+	}
+	if _, err := os.Stat(filepath.Dir(target)); err != nil {
+		t.Fatalf("override parent dir missing: %v", err)
+	}
+	return path, nil
+}
+
+// Parity-exempt: the pixel-size rule (dpi/96, clamped at 1x) has no direct
+// upstream unit test; it is exercised through the Chrome flag tests.
+func TestPixelSizeScalesByDPI(t *testing.T) {
+	if width, height := pixelSize(1600, 900, 300); width != 5000 || height != 2813 {
+		t.Fatalf("pixelSize(1600x900@300) = %dx%d", width, height)
+	}
+	if width, height := pixelSize(600, 400, 96); width != 600 || height != 400 {
+		t.Fatalf("pixelSize(600x400@96) = %dx%d", width, height)
+	}
+	if width, height := pixelSize(600, 400, 48); width != 600 || height != 400 {
+		t.Fatalf("pixelSize(600x400@48) should clamp to 1x, got %dx%d", width, height)
+	}
+}
+
+// ── argument validation / error envelopes ────────────────────────────
+
+// Parity: tools/tests/test_chart_tools_smoke.py::test_render_echarts_invalid_kind_returns_error
+func TestRenderEChartsInvalidKindReturnsError(t *testing.T) {
+	chartsTestHome(t)
+	result := Envelope(context.Background(), Options{Kind: "bogus", Spec: map[string]any{}, Title: "x"})
+	if result["error"] == nil {
+		t.Fatalf("expected an error, got %#v", result)
+	}
+	if result["kind"] != "bogus" {
+		t.Fatalf("kind = %v", result["kind"])
+	}
+	if message, _ := result["error"].(string); !strings.Contains(message, "kind must be 'echarts' or 'mermaid', got 'bogus'") {
+		t.Fatalf("error = %q", message)
+	}
+	if result["retried"] != nil {
+		t.Fatalf("validation errors must not report retried: %#v", result)
+	}
+}
+
+// Parity: tools/tests/test_chart_tools_smoke.py::test_render_echarts_accepts_string_spec
+func TestRenderEChartsStringSpecInvalidJSONReturnsError(t *testing.T) {
+	chartsTestHome(t)
+	result := Envelope(context.Background(), Options{Kind: "echarts", Spec: "not-json", Title: "x"})
+	message, _ := result["error"].(string)
+	if !strings.Contains(message, "not valid JSON") || !strings.Contains(message, "Pass the spec as a dict") {
+		t.Fatalf("error = %q", message)
+	}
+	if result["spec"] != "not-json" {
+		t.Fatalf("spec echo = %#v", result["spec"])
+	}
+}
+
+// Parity-exempt: Go-only coercion guard; FastMCP rejects these shapes before
+// the Python tool body runs.
+func TestRenderRejectsBadDimensions(t *testing.T) {
+	chartsTestHome(t)
+	result := ExecuteToolJSON(t, map[string]any{"kind": "echarts", "spec": map[string]any{}, "width": "wide"})
+	if !strings.Contains(result["error"].(string), "width: must be an integer") {
+		t.Fatalf("error = %v", result["error"])
+	}
+	if result["kind"] != "echarts" {
+		t.Fatalf("kind = %v", result["kind"])
+	}
+}
+
+// ExecuteToolJSON runs ExecuteTool and decodes the envelope.
+func ExecuteToolJSON(t *testing.T, input map[string]any) map[string]any {
+	t.Helper()
+	content, isError := ExecuteTool(context.Background(), input, t.TempDir())
+	var envelope map[string]any
+	if err := json.Unmarshal([]byte(content), &envelope); err != nil {
+		t.Fatalf("tool content is not JSON (%q): %v", content, err)
+	}
+	_, hasError := envelope["error"]
+	if hasError != isError {
+		t.Fatalf("isError=%v but error field present=%v (%s)", isError, hasError, content)
+	}
+	return envelope
+}
+
+// Parity-exempt: Go-specific guard for a missing Chrome; upstream Playwright
+// raises the same class of error but there is no Python test for it.
+func TestNoChromeReturnsExplicitError(t *testing.T) {
+	home := chartsTestHome(t)
+	oldLook := chartLookPath
+	t.Cleanup(func() { chartLookPath = oldLook })
+	chartLookPath = func(string) (string, error) { return "", os.ErrNotExist }
+
+	result := Envelope(context.Background(), Options{
+		Kind: "echarts", Spec: map[string]any{"series": []any{}}, Title: "nochrome",
+	})
+	message, _ := result["error"].(string)
+	if !strings.Contains(message, "no Chrome/Chromium found") || !strings.Contains(message, "CHROME_PATH") {
+		t.Fatalf("error = %q", message)
+	}
+	if result["retried"] != true {
+		t.Fatalf("failed render should mark retried: %#v", result)
+	}
+	// No fake PNG may be left behind.
+	entries, err := os.ReadDir(filepath.Join(home, "charts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("no-chrome run wrote %d files: %v", len(entries), entries)
+	}
+}
+
+// Parity-exempt: browser-side message passthrough has no Python unit test;
+// the markup channel (data-chart-error) is a Go-renderer detail.
+func TestPageErrorSurfacesInEnvelope(t *testing.T) {
+	home := chartsTestHome(t)
+	stubChrome(t, func(args []string) ([]byte, []byte, error) {
+		return []byte(`<!DOCTYPE html><html data-chart-status="error" ` +
+			`data-chart-error="Cannot read property &quot;series&quot; of undefined">`), nil, nil
+	})
+	result := Envelope(context.Background(), Options{Kind: "echarts", Spec: map[string]any{}, Title: "boom"})
+	message, _ := result["error"].(string)
+	if !strings.Contains(message, `ECharts render failed: Cannot read property "series" of undefined`) {
+		t.Fatalf("error = %q", message)
+	}
+	if result["retried"] != true {
+		t.Fatalf("expected retried marker, got %#v", result)
+	}
+	entries, err := os.ReadDir(filepath.Join(home, "charts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("failed render wrote %d files", len(entries))
+	}
+}
+
+// ── Chrome invocation contract ───────────────────────────────────────
+
+// Parity-exempt: the flag set is the Go replacement for Playwright's
+// new_context(viewport, device_scale_factor); no Python test asserts CLI flags.
+func TestChromeArgsCarryViewportScaleAndBudget(t *testing.T) {
+	home := chartsTestHome(t)
+	var captured *[]string
+	captured = stubChrome(t, func(args []string) ([]byte, []byte, error) {
+		screenshot := ""
+		for _, arg := range args {
+			if strings.HasPrefix(arg, "--screenshot=") {
+				screenshot = strings.TrimPrefix(arg, "--screenshot=")
+			}
+		}
+		if screenshot == "" {
+			t.Error("no --screenshot flag")
+		}
+		writeStubPNG(t, screenshot, 600, 400)
+		return okDOM(), nil, nil
+	})
+
+	result := Envelope(context.Background(), Options{Kind: "echarts", Spec: map[string]any{}, Title: "flags", Width: 600, Height: 400, DPI: 300})
+	if result["error"] != nil {
+		t.Fatalf("unexpected error: %v", result)
+	}
+	args := strings.Join(*captured, " ")
+	for _, want := range []string{
+		"--headless=new",
+		"--window-size=600,400",
+		"--force-device-scale-factor=3.125",
+		"--virtual-time-budget=10000",
+		"--dump-dom",
+		"--screenshot=",
+		"file://",
+	} {
+		if !strings.Contains(args, want) {
+			t.Fatalf("chrome args missing %q: %s", want, args)
+		}
+	}
+	// dpi below 96 clamps to 1x, matching renderer.py's max(1.0, dpi/96).
+	result = Envelope(context.Background(), Options{Kind: "echarts", Spec: map[string]any{}, Title: "clamp", Width: 600, Height: 400, DPI: 48})
+	if result["error"] == nil && !strings.Contains(strings.Join(*captured, " "), "--force-device-scale-factor=1 ") {
+		t.Fatalf("48 dpi should clamp to 1x: %s", strings.Join(*captured, " "))
+	}
+	// The rendered page must sit next to the embedded library.
+	if !strings.Contains(strings.Join(*captured, " "), "chart.html") {
+		t.Fatalf("chrome args missing page path: %s", strings.Join(*captured, " "))
+	}
+	_ = home
+}
+
+// Parity-exempt: envelope shape guard for the Go tool channel; upstream
+// returns a dict, Go returns its JSON encoding.
+func TestExecuteToolSerializesEnvelope(t *testing.T) {
+	chartsTestHome(t)
+	stubChrome(t, func(args []string) ([]byte, []byte, error) {
+		for _, arg := range args {
+			if strings.HasPrefix(arg, "--screenshot=") {
+				writeStubPNG(t, strings.TrimPrefix(arg, "--screenshot="), 600, 400)
+			}
+		}
+		return okDOM(), nil, nil
+	})
+	envelope := ExecuteToolJSON(t, map[string]any{
+		"kind": "echarts", "spec": map[string]any{"series": []any{}}, "title": "Envelope Check", "dpi": float64(96),
+	})
+	for _, key := range []string{"kind", "spec", "title", "file_path", "file_url", "width", "height", "dpi", "bytes", "theme", "runtime_ms"} {
+		if _, ok := envelope[key]; !ok {
+			t.Fatalf("envelope missing %q: %#v", key, envelope)
+		}
+	}
+	if envelope["title"] != "Envelope Check" {
+		t.Fatalf("title = %v", envelope["title"])
+	}
+	if envelope["theme"] != "light" {
+		t.Fatalf("theme = %v", envelope["theme"])
+	}
+	if !strings.HasSuffix(envelope["file_path"].(string), "-envelope-check.png") {
+		t.Fatalf("file_path = %v", envelope["file_path"])
+	}
+}
+
+// ── real Chrome renders ──────────────────────────────────────────────
 
 // Parity: tools/tests/test_chart_tools_smoke.py::test_render_echarts_bar_chart
 func TestRenderEChartsBarChart(t *testing.T) {
 	home := chartsTestHome(t)
-	stubRasterizer(t)
+	requireChrome(t)
 
 	spec := map[string]any{
 		"title":  map[string]any{"text": "Smoke test"},
@@ -81,7 +432,7 @@ func TestRenderEChartsBarChart(t *testing.T) {
 		"yAxis":  map[string]any{"type": "value"},
 		"series": []any{map[string]any{"type": "bar", "data": []any{12, 24, 6}}},
 	}
-	result := Envelope(Options{Kind: "echarts", Spec: spec, Title: "smoke", Width: 600, Height: 400, DPI: 96})
+	result := Envelope(context.Background(), Options{Kind: "echarts", Spec: spec, Title: "smoke", Width: 600, Height: 400, DPI: 96})
 	if result["error"] != nil {
 		t.Fatalf("unexpected error: %v", result)
 	}
@@ -95,45 +446,41 @@ func TestRenderEChartsBarChart(t *testing.T) {
 	if result["width"] != 600 || result["height"] != 400 {
 		t.Fatalf("dims = %v x %v", result["width"], result["height"])
 	}
-	if result["bytes"].(int) <= 200 {
-		t.Fatalf("bytes = %v", result["bytes"])
+	if bytesValue, _ := result["bytes"].(int); bytesValue <= 1000 {
+		t.Fatalf("bytes = %v, want > 1000", result["bytes"])
 	}
-	if result["format"] != "png" {
-		t.Fatalf("format = %v", result["format"])
+	if result["theme"] != "light" {
+		t.Fatalf("theme = %v", result["theme"])
 	}
 
 	path := result["file_path"].(string)
-	if _, err := os.Stat(path); err != nil {
-		t.Fatal(err)
-	}
 	if filepath.Dir(path) != filepath.Join(home, "charts") {
 		t.Fatalf("dir = %s", filepath.Dir(path))
 	}
 	if !strings.Contains(filepath.Base(path), "smoke") {
 		t.Fatalf("filename = %s", filepath.Base(path))
 	}
-	width, height := pngDimensions(t, path)
-	if width != 600 || height != 400 {
-		t.Fatalf("png = %dx%d", width, height)
+	if result["file_url"].(string) != FileURL(path) {
+		t.Fatalf("file_url = %v", result["file_url"])
 	}
-}
 
-// Parity: tools/tests/test_chart_tools_smoke.py::test_render_echarts_invalid_kind_returns_error
-func TestRenderEChartsInvalidKindReturnsError(t *testing.T) {
-	chartsTestHome(t)
-	result := Envelope(Options{Kind: "bogus", Spec: map[string]any{}, Title: "x"})
-	if result["error"] == nil {
-		t.Fatal("expected an error")
+	width, height, distinct, nonBackground, counts := pngStats(t, path)
+	if width != 600 || height != 400 {
+		t.Fatalf("png = %dx%d, want 600x400", width, height)
 	}
-	if result["kind"] != "bogus" {
-		t.Fatalf("kind = %v", result["kind"])
+	if distinct < 20 || nonBackground < 2000 {
+		t.Fatalf("png looks blank: %d colors, %d non-background pixels", distinct, nonBackground)
+	}
+	// The primary palette color must actually be painted (the bars).
+	if got := counts[mustRGBA(t, "#db6f02")]; got < 1000 {
+		t.Fatalf("brand color pixels = %d, want > 1000", got)
 	}
 }
 
 // Parity: tools/tests/test_chart_tools_smoke.py::test_render_echarts_accepts_string_spec
 func TestRenderEChartsAcceptsStringSpec(t *testing.T) {
 	chartsTestHome(t)
-	stubRasterizer(t)
+	requireChrome(t)
 
 	spec := map[string]any{
 		"title":  map[string]any{"text": "String-spec regression"},
@@ -145,9 +492,12 @@ func TestRenderEChartsAcceptsStringSpec(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result := Envelope(Options{Kind: "echarts", Spec: string(encoded), Title: "string-spec", Width: 600, Height: 400, DPI: 96})
+	result := Envelope(context.Background(), Options{Kind: "echarts", Spec: string(encoded), Title: "string-spec", Width: 600, Height: 400, DPI: 96})
 	if result["error"] != nil {
 		t.Fatalf("unexpected error: %v", result)
+	}
+	if bytesValue, _ := result["bytes"].(int); bytesValue <= 1000 {
+		t.Fatalf("bytes = %v", result["bytes"])
 	}
 	echo, ok := result["spec"].(map[string]any)
 	if !ok {
@@ -161,10 +511,10 @@ func TestRenderEChartsAcceptsStringSpec(t *testing.T) {
 // Parity: tools/tests/test_chart_tools_smoke.py::test_render_mermaid_flowchart
 func TestRenderMermaidFlowchart(t *testing.T) {
 	chartsTestHome(t)
-	stubRasterizer(t)
+	requireChrome(t)
 
 	src := "flowchart LR\nA[Start] --> B{ok?}\nB -- yes --> C[Done]\nB -- no --> D[Retry]\n"
-	result := Envelope(Options{Kind: "mermaid", Spec: src, Title: "flow", Width: 600, Height: 400, DPI: 96})
+	result := Envelope(context.Background(), Options{Kind: "mermaid", Spec: src, Title: "flow", Width: 600, Height: 400, DPI: 96})
 	if result["error"] != nil {
 		t.Fatalf("unexpected error: %v", result)
 	}
@@ -172,171 +522,139 @@ func TestRenderMermaidFlowchart(t *testing.T) {
 		t.Fatalf("spec echo = %#v", result["spec"])
 	}
 	path := result["file_path"].(string)
-	if _, err := os.Stat(path); err != nil {
-		t.Fatal(err)
-	}
-	graph, err := parseMermaid(src)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(graph.Nodes) != 4 || len(graph.Edges) != 3 {
-		t.Fatalf("graph = %d nodes, %d edges", len(graph.Nodes), len(graph.Edges))
-	}
-	if graph.Direction != "LR" {
-		t.Fatalf("direction = %q", graph.Direction)
-	}
-	if edge := graph.Edges[1]; edge.Label != "yes" || edge.To != "C" {
-		t.Fatalf("edge = %+v", edge)
+	_, _, distinct, nonBackground, _ := pngStats(t, path)
+	if distinct < 20 || nonBackground < 2000 {
+		t.Fatalf("mermaid png looks blank: %d colors, %d non-background pixels", distinct, nonBackground)
 	}
 }
 
-// Parity: tools/tests/test_chart_tools_smoke.py::test_render_echarts_bar_chart
-func TestOutputPathDefaultsUnderChartsDir(t *testing.T) {
-	home := chartsTestHome(t)
-	path, err := ResolveOutputPath("", "Quarterly Revenue")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if filepath.Dir(path) != filepath.Join(home, "charts") {
-		t.Fatalf("dir = %s", filepath.Dir(path))
-	}
-	if !strings.HasSuffix(filepath.Base(path), "-quarterly-revenue.png") {
-		t.Fatalf("filename = %s", filepath.Base(path))
-	}
-}
-
-// Parity-exempt: no Python test covers the Go-only SVG fallback; the renderer
-// always has Chromium upstream.
-func TestRenderFallsBackToSVG(t *testing.T) {
+// Parity-exempt: theme selection through HIVE_DESKTOP_THEME is covered by the
+// Python smoke only indirectly (the fixture pins light); the dark PNG is
+// verified here so the env plumbing has real evidence.
+func TestRenderMermaidDarkTheme(t *testing.T) {
 	chartsTestHome(t)
-	oldLook := chartLookPath
-	t.Cleanup(func() { chartLookPath = oldLook })
-	chartLookPath = func(string) (string, error) { return "", os.ErrNotExist }
+	requireChrome(t)
+	t.Setenv("HIVE_DESKTOP_THEME", "dark")
 
-	spec := map[string]any{
-		"xAxis":  map[string]any{"data": []any{"A", "B"}},
-		"series": []any{map[string]any{"type": "line", "data": []any{1, 4}}},
-	}
-	result := Envelope(Options{Kind: "echarts", Spec: spec, Title: "fallback", Width: 600, Height: 400, DPI: 96})
+	src := "flowchart TD\nX[Alpha] --> Y[Beta]\n"
+	result := Envelope(context.Background(), Options{Kind: "mermaid", Spec: src, Title: "dark-flow", Width: 600, Height: 400, DPI: 96})
 	if result["error"] != nil {
 		t.Fatalf("unexpected error: %v", result)
 	}
-	if result["format"] != "svg" {
-		t.Fatalf("format = %v", result["format"])
-	}
-	if result["backend"] != "svg" {
-		t.Fatalf("backend = %v", result["backend"])
-	}
-	if note, _ := result["note"].(string); !strings.Contains(note, "rasterizer") {
-		t.Fatalf("note = %q", note)
+	if result["theme"] != "dark" {
+		t.Fatalf("theme = %v", result["theme"])
 	}
 	path := result["file_path"].(string)
-	if !strings.HasSuffix(path, ".svg") {
-		t.Fatalf("path = %s", path)
+	_, _, _, _, counts := pngStats(t, path)
+	if counts[mustRGBA(t, "#0e0e0d")] < 100000 {
+		t.Fatalf("dark background missing: %d px of #0e0e0d", counts[mustRGBA(t, "#0e0e0d")])
 	}
-	body, err := os.ReadFile(path)
+}
+
+// Parity-exempt: dpi scaling is asserted upstream as "roughly viewport-sized"
+// at 1x; the 2x case is exercised here so the device-scale flag has evidence.
+func TestRenderHonorsDPIScale(t *testing.T) {
+	chartsTestHome(t)
+	requireChrome(t)
+
+	spec := map[string]any{
+		"xAxis":  map[string]any{"type": "category", "data": []any{"A", "B"}},
+		"yAxis":  map[string]any{"type": "value"},
+		"series": []any{map[string]any{"type": "line", "data": []any{1, 3}}},
+	}
+	result := Envelope(context.Background(), Options{Kind: "echarts", Spec: spec, Title: "hidpi", Width: 300, Height: 200, DPI: 192})
+	if result["error"] != nil {
+		t.Fatalf("unexpected error: %v", result)
+	}
+	if result["width"] != 300 || result["height"] != 200 {
+		t.Fatalf("logical dims = %v x %v", result["width"], result["height"])
+	}
+	width, height, _, _, _ := pngStats(t, result["file_path"].(string))
+	if width != 600 || height != 400 {
+		t.Fatalf("png = %dx%d, want 600x400 at 2x dpi scaling", width, height)
+	}
+}
+
+// Parity-exempt: upstream raises RendererError for bad mermaid source; there
+// is no Python test, so this checks the real browser message passthrough.
+func TestRenderMermaidInvalidSourceReturnsError(t *testing.T) {
+	chartsTestHome(t)
+	requireChrome(t)
+
+	result := Envelope(context.Background(), Options{
+		Kind: "mermaid", Spec: "hello world not a diagram", Title: "bad-mermaid", Width: 600, Height: 400, DPI: 96,
+	})
+	message, _ := result["error"].(string)
+	if !strings.Contains(message, "Mermaid render failed:") {
+		t.Fatalf("error = %q", message)
+	}
+	if result["retried"] != true {
+		t.Fatalf("expected retried marker: %#v", result)
+	}
+}
+
+// ── page markup ──────────────────────────────────────────────────────
+
+// Parity-exempt: the HTML shell is renderer.py's _build_html rendered to a
+// file; template assertions are Go-side.
+func TestBuildPageMatchesRendererShell(t *testing.T) {
+	light, err := buildPage("echarts", map[string]any{"series": []any{}}, 800, 600, "light")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(body), "<svg") || !strings.Contains(string(body), "</svg>") {
-		t.Fatalf("not an svg: %s", body[:min(len(body), 80)])
+	for _, want := range []string{
+		`background: #ffffff`,
+		`width: 800px`,
+		`height: 600px`,
+		`<script src="echarts.min.js"></script>`,
+		`animation: false`,
+		`containLabel: true`,
+		`data-chart-status`,
+		`registerTheme('openhive'`,
+		`legend.top:"8%"`,
+	} {
+		if !strings.Contains(light, want) {
+			t.Fatalf("light page missing %q", want)
+		}
 	}
-}
-
-// Parity-exempt: line/pie drawing coverage has no direct Python test; the
-// shapes are exercised through the same renderer entry point as the bar test.
-func TestRenderEChartsLineAndPie(t *testing.T) {
-	chartsTestHome(t)
-	stubRasterizer(t)
-
-	line := map[string]any{
-		"xAxis": map[string]any{"data": []any{"Q1", "Q2", "Q3"}},
-		"series": []any{map[string]any{
-			"type": "line", "name": "Revenue", "data": []any{3, 8, 5},
-			"areaStyle": map[string]any{},
-		}},
-		"legend": map[string]any{},
+	// A mis-escaped Sprintf verb would surface as %! in the page.
+	if strings.Contains(light, "%!") {
+		t.Fatalf("page has a formatting error: %s", light[:min(len(light), 400)])
 	}
-	result := RenderSVGOnly(line, "line")
-	if !strings.Contains(result, "polyline") || !strings.Contains(result, "<path") || !strings.Contains(result, "Revenue") {
-		t.Fatalf("line svg missing primitives: %s", result[:min(len(result), 400)])
-	}
-
-	pieSpec := map[string]any{
-		"series": []any{map[string]any{
-			"type": "pie", "radius": []any{"40%", "70%"},
-			"data": []any{
-				map[string]any{"name": "A", "value": 3},
-				map[string]any{"name": "B", "value": 7},
-			},
-		}},
-		"legend": map[string]any{},
-	}
-	svg := RenderSVGOnly(pieSpec, "pie")
-	if !strings.Contains(svg, ">A</text>") || !strings.Contains(svg, "M ") {
-		t.Fatalf("pie svg missing arcs: %s", svg[:min(len(svg), 400)])
-	}
-	if strings.Count(svg, "<path") < 2 {
-		t.Fatalf("pie svg has too few slices")
-	}
-}
-
-// RenderSVGOnly renders directly to markup, bypassing the filesystem and the
-// rasterizer. Test-only helper kept beside its users.
-func RenderSVGOnly(spec any, title string) string {
-	svg, err := buildSVG("echarts", spec, 600, 400, 600, 400, "light")
+	dark, err := buildPage("mermaid", "flowchart LR\nA --> B\n", 400, 300, "dark")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	return svg
-}
-
-// Parity-exempt: helper behavior (slugging, dpi scale) has no Python unit test.
-func TestSlugifyAndPixelSize(t *testing.T) {
-	cases := map[string]string{
-		"":                  "chart",
-		"Quarterly Revenue": "quarterly-revenue",
-		"  -- weird!!  ":    "weird",
-	}
-	for input, want := range cases {
-		if got := Slugify(input); got != want {
-			t.Fatalf("Slugify(%q) = %q, want %q", input, got, want)
+	for _, want := range []string{
+		`background: #0e0e0d`,
+		`<script src="mermaid.min.js"></script>`,
+		`theme: "dark"`,
+		`securityLevel: 'loose'`,
+	} {
+		if !strings.Contains(dark, want) {
+			t.Fatalf("dark page missing %q", want)
 		}
 	}
-	if width, height := pixelSize(1600, 900, 300); width != 5000 || height != 2813 {
-		t.Fatalf("pixelSize(300) = %dx%d", width, height)
+	// A spec string must never be handed to setOption, and mermaid needs source.
+	if _, err := buildPage("echarts", "{}", 100, 100, "light"); err == nil {
+		t.Fatal("string echarts spec should be rejected at page build")
 	}
-	if width, height := pixelSize(600, 400, 48); width != 600 || height != 400 {
-		t.Fatalf("pixelSize(48) should clamp to 1x, got %dx%d", width, height)
+	if _, err := buildPage("mermaid", map[string]any{}, 100, 100, "light"); err == nil {
+		t.Fatal("non-string mermaid spec should be rejected")
 	}
 }
 
-// Parity-exempt: rejection messages are Go-specific guards for specs outside
-// the documented subset.
-func TestRenderRejectsUnsupportedSpecs(t *testing.T) {
-	chartsTestHome(t)
-	stubRasterizer(t)
-
-	cases := []struct {
-		name string
-		opts Options
-		want string
-	}{
-		{"unknown series", Options{Kind: "echarts", Spec: map[string]any{
-			"xAxis":  map[string]any{"data": []any{"A"}},
-			"series": []any{map[string]any{"type": "radar", "data": []any{1}}},
-		}}, "unsupported series type"},
-		{"missing categories", Options{Kind: "echarts", Spec: map[string]any{
-			"series": []any{map[string]any{"type": "bar", "data": []any{1}}},
-		}}, "xAxis.data is required"},
-		{"not an object", Options{Kind: "echarts", Spec: "not-json"}, "not valid JSON"},
-		{"unsupported diagram", Options{Kind: "mermaid", Spec: "sequenceDiagram\nA->>B: hi"}, "unsupported mermaid diagram"},
+// Parity-exempt: embeds guard; the bundles must ship in the binary.
+func TestEmbeddedLibrariesPresent(t *testing.T) {
+	echarts := libraryBytes("echarts")
+	mermaid := libraryBytes("mermaid")
+	if len(echarts) < 500_000 || !bytes.Contains(echarts, []byte("echarts")) {
+		t.Fatalf("echarts bundle looks wrong: %d bytes", len(echarts))
 	}
-	for _, test := range cases {
-		result := Envelope(test.opts)
-		message, _ := result["error"].(string)
-		if !strings.Contains(message, test.want) {
-			t.Fatalf("%s: error = %q, want %q", test.name, message, test.want)
-		}
+	if len(mermaid) < 1_000_000 || !bytes.Contains(mermaid, []byte("mermaid")) {
+		t.Fatalf("mermaid bundle looks wrong: %d bytes", len(mermaid))
+	}
+	if libraryFileName("echarts") != "echarts.min.js" || libraryFileName("mermaid") != "mermaid.min.js" {
+		t.Fatalf("library file names = %q, %q", libraryFileName("echarts"), libraryFileName("mermaid"))
 	}
 }

@@ -309,6 +309,7 @@ func (r *Runner) rootCommand() *commandSpec {
 	root.Subcommands = append(root.Subcommands, r.debuggerCommands()...)
 	root.Subcommands = append(root.Subcommands, r.mcpCommands()...)
 	root.Subcommands = append(root.Subcommands, r.janitorCommands()...)
+	root.Subcommands = append(root.Subcommands, r.queenMailMCPCommands()...)
 	return root
 }
 

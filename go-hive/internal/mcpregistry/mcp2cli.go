@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/aden-hive/hive-go/internal/mcpregistry/nativecli"
 )
 
 func MCP2CLIInvocation(config *ServerConfig) ([]string, map[string]string, *string, error) {
@@ -216,6 +217,31 @@ func ShellSplit(line string) ([]string, error) {
 	return words, nil
 }
 
+// MCP2CLIBackend names the implementation `hive mcp run` should use.
+type MCP2CLIBackend string
+
+const (
+	// BackendAuto prefers the in-process implementation and falls back to the
+	// external binary only for features the native subset does not cover.
+	BackendAuto MCP2CLIBackend = "auto"
+	// BackendNative forces the in-process implementation.
+	BackendNative MCP2CLIBackend = "native"
+	// BackendExternal forces the external mcp2cli binary.
+	BackendExternal MCP2CLIBackend = "external"
+)
+
+// MCP2CLIBackendFromEnv reads HIVE_MCP2CLI, defaulting to auto.
+func MCP2CLIBackendFromEnv() MCP2CLIBackend {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("HIVE_MCP2CLI"))) {
+	case "native":
+		return BackendNative
+	case "external":
+		return BackendExternal
+	default:
+		return BackendAuto
+	}
+}
+
 func RunMCP2CLI(config *ServerConfig, args []string) (int, error) {
 	source, env, cwd, err := MCP2CLIInvocation(config)
 	if err != nil {
@@ -226,17 +252,60 @@ func RunMCP2CLI(config *ServerConfig, args []string) (int, error) {
 	}
 
 	execArgs := append(append([]string{}, source...), args...)
-	command := exec.Command("mcp2cli", execArgs...)
+
+	switch MCP2CLIBackendFromEnv() {
+	case BackendNative:
+		return runNativeMCP2CLI(execArgs, env, cwd)
+	case BackendExternal:
+		return runExternalMCP2CLI(execArgs, env, cwd)
+	default:
+		supportErr := nativecli.Supports(execArgs)
+		if supportErr == nil {
+			return runNativeMCP2CLI(execArgs, env, cwd)
+		}
+		// The native subset cannot serve this invocation: use the installed
+		// binary when there is one, and explain the gap when there is not.
+		if _, lookErr := exec.LookPath("mcp2cli"); lookErr == nil {
+			return runExternalMCP2CLI(execArgs, env, cwd)
+		}
+		return 1, fmt.Errorf("%v; install mcp2cli or set HIVE_MCP2CLI=external with it on PATH", supportErr)
+	}
+}
+
+// runNativeMCP2CLI runs the in-process implementation with the same
+// environment and working directory the binary would have received.
+func runNativeMCP2CLI(args []string, env map[string]string, cwd *string) (int, error) {
+	commandEnv := mcp2cliEnvironment(env)
+	directory := ""
+	if cwd != nil {
+		directory = *cwd
+	}
+	code, err := nativecli.Run(nativecli.Invocation{
+		Args:   args,
+		Env:    commandEnv,
+		Dir:    directory,
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	})
+	if err != nil {
+		var unsupported *nativecli.UnsupportedError
+		if errors.As(err, &unsupported) {
+			return 1, fmt.Errorf("%v; set HIVE_MCP2CLI=external to use the mcp2cli binary", err)
+		}
+		return 1, err
+	}
+	return code, nil
+}
+
+// runExternalMCP2CLI runs the reference binary, preserving the historical
+// behaviour of `hive mcp run`.
+func runExternalMCP2CLI(args []string, env map[string]string, cwd *string) (int, error) {
+	command := exec.Command("mcp2cli", args...)
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 	command.Stdin = os.Stdin
-	command.Env = mergedEnvironment(env)
-
-	if _, ok := env["MCP2CLI_CACHE_DIR"]; !ok {
-		if home, err := hivehome.Resolve(); err == nil {
-			command.Env = append(command.Env, "MCP2CLI_CACHE_DIR="+filepath.Join(home.CacheDir(), "mcp2cli"))
-		}
-	}
+	command.Env = mcp2cliEnvironment(env)
 	if cwd != nil {
 		command.Dir = *cwd
 	}
@@ -249,6 +318,19 @@ func RunMCP2CLI(config *ServerConfig, args []string) (int, error) {
 		return 1, err
 	}
 	return 0, nil
+}
+
+// mcp2cliEnvironment merges the transport environment over the process
+// environment and points the cache at the hive home by default.
+func mcp2cliEnvironment(env map[string]string) []string {
+	merged := mergedEnvironment(env)
+	if _, ok := env["MCP2CLI_CACHE_DIR"]; ok {
+		return merged
+	}
+	if home, err := hivehome.Resolve(); err == nil {
+		merged = append(merged, "MCP2CLI_CACHE_DIR="+filepath.Join(home.CacheDir(), "mcp2cli"))
+	}
+	return merged
 }
 
 func mergedEnvironment(overrides map[string]string) []string {

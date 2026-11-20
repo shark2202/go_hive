@@ -357,6 +357,11 @@ func (r *ColonyRuntime) setDispatchBlocked(blocked bool) bool {
 	return previous
 }
 
+// WorkerList returns the runtime's worker handles (live and terminal). It is
+// the pointer-level companion of ListWorkers for callers that need worker
+// methods (IsActive / IsPersistent / ExplicitReport) rather than the info view.
+func (r *ColonyRuntime) WorkerList() []*Worker { return r.workerList() }
+
 // workerList copies the registry so callers never hold r.mu while touching
 // individual workers.
 func (r *ColonyRuntime) workerList() []*Worker {

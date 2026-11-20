@@ -59,8 +59,9 @@ func NewClaudeStore(home hivehome.Home) *ClaudeStore {
 	}
 }
 
-// validClaudeQueenID keeps a configured queen id to one directory segment.
-func validClaudeQueenID(id string) bool {
+// validClaudePathSegment keeps an id that becomes one directory or file name
+// (a queen id or a Claude Code session id) to a single path segment.
+func validClaudePathSegment(id string) bool {
 	if id == "" || len(id) > 128 {
 		return false
 	}
@@ -72,7 +73,7 @@ func validClaudeQueenID(id string) bool {
 
 // Home is one queen's Claude Code folder: HIVE_HOME/claude_code/<queen id>.
 func (c *ClaudeStore) Home(queenID string) string {
-	if !validClaudeQueenID(queenID) {
+	if !validClaudePathSegment(queenID) {
 		return filepath.Join(c.home.Root, "claude_code", "__invalid__")
 	}
 	return filepath.Join(c.home.Root, "claude_code", queenID)
@@ -279,6 +280,14 @@ func (c *ClaudeStore) enqueueLocked(queenID string, letter Letter) error {
 
 // Pending lists the letters waiting for one queen's next turn, oldest first.
 func (c *ClaudeStore) Pending(queenID string) []Letter {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.pendingLocked(queenID)
+}
+
+// pendingLocked reads the letters one queen's inbox file names; the caller
+// holds the store lock. Missing files and unreadable lines are skipped.
+func (c *ClaudeStore) pendingLocked(queenID string) []Letter {
 	data, err := os.ReadFile(c.InboxFile(queenID))
 	if err != nil {
 		return nil
@@ -305,6 +314,108 @@ func (c *ClaudeStore) Pending(queenID string) []Letter {
 		letters = append(letters, letter)
 	}
 	return letters
+}
+
+// TakePending removes and returns the letters waiting in conversation ref, in
+// the order they arrived: one turn's batch. Letters for other conversations of
+// the same queen stay in the inbox.
+func (c *ClaudeStore) TakePending(ref string) []Letter {
+	queenID := QueenIDOfRef(ref)
+	if queenID == "" {
+		return nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.loadLocked(queenID)
+	var taken, kept []Letter
+	for _, letter := range c.pendingLocked(queenID) {
+		if letter.ToSession == ref {
+			taken = append(taken, letter)
+			continue
+		}
+		kept = append(kept, letter)
+	}
+	if len(taken) == 0 {
+		return nil
+	}
+	c.removePendingLocked(queenID, taken, kept)
+	return taken
+}
+
+// removePendingLocked deletes the taken letters and rewrites the inbox file
+// with the ones still waiting. The caller holds the store lock.
+func (c *ClaudeStore) removePendingLocked(queenID string, taken, kept []Letter) {
+	for _, letter := range taken {
+		_ = os.Remove(filepath.Join(c.Inbox(queenID), letter.ID+".json"))
+	}
+	var body strings.Builder
+	for _, letter := range kept {
+		body.WriteString(letter.ID)
+		body.WriteString("\n")
+	}
+	_ = writeFileAtomic(c.InboxFile(queenID), []byte(body.String()))
+}
+
+// HasPending reports whether conversation ref has letters waiting.
+func (c *ClaudeStore) HasPending(ref string) bool {
+	queenID := QueenIDOfRef(ref)
+	if queenID == "" {
+		return false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, letter := range c.pendingLocked(queenID) {
+		if letter.ToSession == ref {
+			return true
+		}
+	}
+	return false
+}
+
+// PendingRefs lists the conversations of one queen with letters waiting, in
+// the order the first of each arrived.
+func (c *ClaudeStore) PendingRefs(queenID string) []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var refs []string
+	seen := map[string]bool{}
+	for _, letter := range c.pendingLocked(queenID) {
+		if letter.ToSession == "" || seen[letter.ToSession] {
+			continue
+		}
+		seen[letter.ToSession] = true
+		refs = append(refs, letter.ToSession)
+	}
+	return refs
+}
+
+// SetCause records what set off the turn now running in ref (the hop a letter
+// she writes in it follows). Only in memory, as upstream keeps it.
+func (c *ClaudeStore) SetCause(ref string, cause *Cause) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if queenID := QueenIDOfRef(ref); queenID != "" {
+		c.loadLocked(queenID)
+	}
+	if conversation, ok := c.conversations[ref]; ok {
+		conversation.Cause = cause
+	}
+}
+
+// SetStarted records whether her Claude Code session exists, and writes the
+// conversations record so a restart resumes rather than starts again.
+func (c *ClaudeStore) SetStarted(ref string, started bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if queenID := QueenIDOfRef(ref); queenID != "" {
+		c.loadLocked(queenID)
+	}
+	conversation, ok := c.conversations[ref]
+	if !ok {
+		return
+	}
+	conversation.Started = started
+	_ = c.saveLocked(conversation.QueenID)
 }
 
 // Conversations lists a queen's conversations, newest session id first.

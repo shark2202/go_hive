@@ -38,6 +38,7 @@ func (t *Toolbox) readFile(ctx context.Context, input map[string]any) (Result, e
 	if limit <= 0 {
 		limit = DefaultReadLimit
 	}
+	hashline := boolArgOr(input, "hashline", false)
 
 	root, err := t.rootPath()
 	if err != nil {
@@ -88,7 +89,10 @@ func (t *Toolbox) readFile(ctx context.Context, input map[string]any) (Result, e
 	}
 
 	content := strings.ToValidUTF8(string(data), "\uFFFD")
-	return Result{Content: formatReadOutput(content, offset, limit)}, nil
+	// Parity: tools/src/aden_tools/file_ops.py::read_file records the raw bytes (partial reads
+	// included) so a later edit can detect external writes.
+	t.readState().recordRead(path, data)
+	return Result{Content: formatReadOutput(content, offset, limit, hashline)}, nil
 }
 
 // isBinary reports whether data looks binary: a NUL byte in the leading
@@ -115,24 +119,49 @@ func isBinary(data []byte) bool {
 	return true
 }
 
-// splitLines splits content the way Python's str.splitlines does for the
-// newline forms agents produce, dropping a single trailing newline.
+// splitLines splits content the way Python's str.splitlines does: on \n, \r,
+// \r\n, \v, \f, \x1c-\x1e, \x85, \u2028 and \u2029, dropping the empty element
+// a trailing boundary would otherwise produce. file_ops.py::read_file uses
+// splitlines() before hashing, so the hashline numbering depends on it.
 func splitLines(content string) []string {
 	if content == "" {
 		return nil
 	}
-	content = strings.ReplaceAll(content, "\r\n", "\n")
-	content = strings.ReplaceAll(content, "\r", "\n")
-	lines := strings.Split(content, "\n")
-	if n := len(lines); n > 0 && lines[n-1] == "" {
-		lines = lines[:n-1]
+	lines := make([]string, 0, strings.Count(content, "\n")+1)
+	start := 0
+	for i := 0; i < len(content); {
+		r, size := utf8.DecodeRuneInString(content[i:])
+		if !isPythonLineBoundary(r) {
+			i += size
+			continue
+		}
+		lines = append(lines, content[start:i])
+		if r == '\r' && i+size < len(content) && content[i+size] == '\n' {
+			size++ // \r\n is one boundary
+		}
+		i += size
+		start = i
+	}
+	if start < len(content) {
+		lines = append(lines, content[start:])
 	}
 	return lines
 }
 
+// isPythonLineBoundary reports whether r ends a line for str.splitlines.
+func isPythonLineBoundary(r rune) bool {
+	switch r {
+	case '\n', '\r', '\v', '\f', 0x1c, 0x1d, 0x1e, 0x85, 0x2028, 0x2029:
+		return true
+	}
+	return false
+}
+
 // formatReadOutput renders lines offset..offset+limit-1 with 1-based line
-// numbers and a continuation hint when output was cut short.
-func formatReadOutput(content string, offset, limit int) string {
+// numbers and a continuation hint when output was cut short. In hashline mode
+// each line is prefixed with "N:hhhh|" anchors and no line is truncated, since
+// truncation would corrupt the hash (file_ops.py::read_file).
+func formatReadOutput(content string, offset, limit int, hashline bool) string {
 	lines := splitLines(content)
 	total := len(lines)
 	if total == 0 {
@@ -153,11 +182,16 @@ func formatReadOutput(content string, offset, limit int) string {
 	truncatedByBytes := false
 	for i := start; i < end; i++ {
 		line := lines[i]
-		if utf8.RuneCountInString(line) > MaxReadLineLength {
-			runes := []rune(line)
-			line = string(runes[:MaxReadLineLength]) + "..."
+		var formatted string
+		if hashline {
+			formatted = fmt.Sprintf("%d:%s|%s", i+1, computeLineHash(line), line)
+		} else {
+			if utf8.RuneCountInString(line) > MaxReadLineLength {
+				runes := []rune(line)
+				line = string(runes[:MaxReadLineLength]) + "..."
+			}
+			formatted = fmt.Sprintf("%6d	%s", i+1, line)
 		}
-		formatted := fmt.Sprintf("%6d\t%s", i+1, line)
 		lineBytes := len(formatted) + 1
 		if byteCount+lineBytes > MaxReadOutputBytes {
 			truncatedByBytes = true

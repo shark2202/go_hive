@@ -1,0 +1,26 @@
+{
+  "endpoint": "queen_profiles",
+  "shape": {
+    "queens": "array",
+    "queens[].has_avatar": "boolean",
+    "queens[].id": "string",
+    "queens[].name": "string",
+    "queens[].portrait": "object",
+    "queens[].portrait.beard": "string",
+    "queens[].portrait.cut": "string",
+    "queens[].portrait.face": "string",
+    "queens[].portrait.hair": "string",
+    "queens[].portrait.mouth": "string",
+    "queens[].portrait.shirt": "string",
+    "queens[].portrait.skin": "string",
+    "queens[].title": "string",
+    "queens[].portrait.eyes": "string",
+    "queens[].portrait.brow": "string",
+    "queens[].portrait.glasses": "string",
+    "queens[].portrait.neck": "string",
+    "queens[].portrait.collar": "string"
+  },
+  "counts": {
+    "queens": 13
+  }
+}

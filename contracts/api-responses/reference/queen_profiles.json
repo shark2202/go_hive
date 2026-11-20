@@ -1,0 +1,237 @@
+{
+  "endpoint": "queen_profiles",
+  "label": "Queen 档案",
+  "method": "GET",
+  "path": "/api/queen/profiles",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-20T23:43:50+08:00",
+  "canonical": {
+    "queens": [
+      {
+        "has_avatar": false,
+        "id": "queen_brand_design",
+        "name": "Jony Ive",
+        "portrait": {
+          "beard": "stubble",
+          "cut": "crop-thin",
+          "face": "round",
+          "hair": "#7E6A56",
+          "mouth": "smile-soft",
+          "shirt": "tee-grey",
+          "skin": "#EBC8A2"
+        },
+        "title": "Head of Brand & Design"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_content_creation",
+        "name": "Gary Vaynerchuk",
+        "portrait": {
+          "beard": "stubble",
+          "cut": "short-back",
+          "eyes": "sharp",
+          "face": "round",
+          "hair": "#1A1410",
+          "mouth": "smile-broad",
+          "shirt": "tee-grey",
+          "skin": "#E5BD90"
+        },
+        "title": "Head of Content"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_finance_fundraising",
+        "name": "Warren Buffett",
+        "portrait": {
+          "brow": "bushy",
+          "cut": "side-bushy-grey",
+          "face": "round",
+          "glasses": "square-thick",
+          "hair": "#E5DECF",
+          "mouth": "smile-soft",
+          "skin": "#F4DDB6"
+        },
+        "title": "Head of Finance"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_growth",
+        "name": "Steve Jobs",
+        "portrait": {
+          "beard": "stubble",
+          "cut": "crop-thin",
+          "face": "oval",
+          "glasses": "round-rimless",
+          "hair": "#2B2624",
+          "mouth": "smile-soft",
+          "neck": "turtleneck",
+          "skin": "#E8D2B8"
+        },
+        "title": "Head of Growth"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_lead_gen",
+        "name": "Alex Hormozi",
+        "portrait": {
+          "beard": "full",
+          "cut": "bald-shine",
+          "eyes": "sharp",
+          "face": "square",
+          "hair": "#1A1410",
+          "mouth": "flat",
+          "shirt": "tee-black",
+          "skin": "#E5BD90"
+        },
+        "title": "Head of Lead Generation"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_legal",
+        "name": "Ruth Bader Ginsburg",
+        "portrait": {
+          "collar": "jabot",
+          "cut": "pulled-tight",
+          "face": "oval",
+          "glasses": "round-thick",
+          "hair": "#E2DBCC",
+          "mouth": "flat",
+          "skin": "#F2D5B0"
+        },
+        "title": "Head of Legal"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_market_research",
+        "name": "Mary Meeker",
+        "portrait": {
+          "cut": "bob-long",
+          "face": "oval",
+          "glasses": "rect",
+          "hair": "#C8AE86",
+          "mouth": "smile-soft",
+          "shirt": "shirt-blue",
+          "skin": "#F0CFA8"
+        },
+        "title": "Head of Market Research"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_operations",
+        "name": "Tim Cook",
+        "portrait": {
+          "cut": "side-short-grey",
+          "eyes": "kind",
+          "face": "oval",
+          "hair": "#C9C2B8",
+          "mouth": "flat",
+          "shirt": "tee-black",
+          "skin": "#E6C5A4"
+        },
+        "title": "Head of Operations"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_outbound",
+        "name": "Chris Voss",
+        "portrait": {
+          "cut": "bald-shine",
+          "face": "oval",
+          "glasses": "rect",
+          "hair": "#C9C2B8",
+          "mouth": "smile-soft",
+          "shirt": "shirt-blue",
+          "skin": "#EFCDA6"
+        },
+        "title": "Head of Outbound"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_product_strategy",
+        "name": "Steve Jobs",
+        "portrait": {
+          "beard": "goatee-stubble",
+          "cut": "crop-thin",
+          "face": "oval",
+          "glasses": "round-rimless",
+          "hair": "#2A2520",
+          "neck": "turtleneck",
+          "skin": "#E8C7A4"
+        },
+        "title": "Head of Product Strategy"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_sales",
+        "name": "Larry Ellison",
+        "portrait": {
+          "beard": "stubble",
+          "cut": "side-back",
+          "face": "rect",
+          "hair": "#7B6F62",
+          "mouth": "smirk",
+          "skin": "#E9C2A0"
+        },
+        "title": "Head of RevOps"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_talent",
+        "name": "Laszlo Bock",
+        "portrait": {
+          "cut": "short",
+          "face": "rect",
+          "glasses": "rect",
+          "hair": "#1F1A16",
+          "mouth": "smile-soft",
+          "skin": "#EAC09C"
+        },
+        "title": "Head of Talent"
+      },
+      {
+        "has_avatar": false,
+        "id": "queen_technology",
+        "name": "Elon Musk",
+        "portrait": {
+          "brow": "arched",
+          "cut": "swept-front",
+          "eyes": "sharp",
+          "face": "long",
+          "hair": "#8B6E55",
+          "mouth": "flat",
+          "shirt": "tee-black",
+          "skin": "#F0D2B0"
+        },
+        "title": "Head of Technology"
+      }
+    ]
+  },
+  "shape": {
+    "queens": "array",
+    "queens[].has_avatar": "boolean",
+    "queens[].id": "string",
+    "queens[].name": "string",
+    "queens[].portrait": "object",
+    "queens[].portrait.beard": "string",
+    "queens[].portrait.cut": "string",
+    "queens[].portrait.face": "string",
+    "queens[].portrait.hair": "string",
+    "queens[].portrait.mouth": "string",
+    "queens[].portrait.shirt": "string",
+    "queens[].portrait.skin": "string",
+    "queens[].title": "string",
+    "queens[].portrait.eyes": "string",
+    "queens[].portrait.brow": "string",
+    "queens[].portrait.glasses": "string",
+    "queens[].portrait.neck": "string",
+    "queens[].portrait.collar": "string"
+  },
+  "counts": {
+    "queens": 13
+  },
+  "notes": []
+}

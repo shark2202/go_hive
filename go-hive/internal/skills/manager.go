@@ -43,6 +43,10 @@ type SkillsManager struct {
 	watchedFiles []string
 
 	mutationLock sync.Mutex
+	// snapshotMu guards the catalog snapshot a reload swaps in. A live reload
+	// runs while queen turns read SkillsCatalogPrompt from another goroutine
+	// (the skills reminder provider), so the swap must not race those reads.
+	snapshotMu sync.RWMutex
 }
 
 func NewSkillsManager(config *SkillsManagerConfig) *SkillsManager {
@@ -69,10 +73,13 @@ func NewSkillsManagerFromPrecomputed(catalogPrompt, protocolsPrompt string) *Ski
 }
 
 func (m *SkillsManager) Load() {
+	m.snapshotMu.Lock()
 	if m.loaded {
+		m.snapshotMu.Unlock()
 		return
 	}
 	m.loaded = true
+	m.snapshotMu.Unlock()
 
 	if err := m.doLoad(); err != nil {
 		log.Printf("Skill system init failed (non-fatal): %v", err)
@@ -90,7 +97,7 @@ func (m *SkillsManager) doLoad() error {
 		ExtraScopes:        m.config.ExtraScopeDirs,
 	})
 	discovered := discovery.Discover()
-	m.watchedDirs = discovery.ScannedDirectories()
+	watchedDirs := discovery.ScannedDirectories()
 
 	if m.config.ProjectRoot != "" && !m.config.SkipCommunityDiscovery {
 		gate := NewTrustGate(nil, m.config.Interactive)
@@ -101,28 +108,35 @@ func (m *SkillsManager) doLoad() error {
 	if m.config.QueenOverridesPath != "" {
 		queenStore = LoadSkillOverrideStore(m.config.QueenOverridesPath, "queen:"+m.config.QueenID)
 	}
-	m.queenOverrides = queenStore
-	m.watchedFiles = nil
+	var watchedFiles []string
 	if m.config.QueenOverridesPath != "" {
-		m.watchedFiles = append(m.watchedFiles, m.config.QueenOverridesPath)
+		watchedFiles = append(watchedFiles, m.config.QueenOverridesPath)
 	}
 
-	m.allSkills = make([]*ParsedSkill, len(discovered))
-	copy(m.allSkills, discovered)
+	allSkills := make([]*ParsedSkill, len(discovered))
+	copy(allSkills, discovered)
 	discovered = ApplyManagerOverrides(discovered, skillsConfig, queenStore, m.config.DefaultPresetSkills)
 
 	catalog := NewSkillCatalog(discovered)
-	m.catalog = catalog
-	m.allowlistedDirs = catalog.AllowlistedDirs()
 	catalogPrompt := catalog.ToPrompt(nil)
 
 	defaultMgr := NewDefaultSkillManager(skillsConfig)
 	defaultMgr.Load()
 	defaultMgr.LogActiveSkills()
-	m.defaultMgr = defaultMgr
 
+	// Swap the whole snapshot at once so a concurrent reader never observes a
+	// half-reloaded manager (new catalog with the old prompt, and so on).
+	m.snapshotMu.Lock()
+	m.queenOverrides = queenStore
+	m.watchedDirs = watchedDirs
+	m.watchedFiles = watchedFiles
+	m.allSkills = allSkills
+	m.catalog = catalog
+	m.allowlistedDirs = catalog.AllowlistedDirs()
+	m.defaultMgr = defaultMgr
 	m.catalogPrompt = catalogPrompt
 	m.protocolsPrompt = ""
+	m.snapshotMu.Unlock()
 
 	if catalogPrompt != "" {
 		log.Printf("Skill system ready: catalog=%d chars", utf8.RuneCountInString(catalogPrompt))
@@ -183,55 +197,96 @@ func ApplyManagerOverrides(
 	return out
 }
 
-func (m *SkillsManager) QueenOverrides() *SkillOverrideStore { return m.queenOverrides }
+func (m *SkillsManager) QueenOverrides() *SkillOverrideStore {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
+	return m.queenOverrides
+}
 
 func (m *SkillsManager) MutationLock() *sync.Mutex { return &m.mutationLock }
 
 func (m *SkillsManager) Reload() error {
+	m.snapshotMu.Lock()
 	m.loaded = false
+	m.snapshotMu.Unlock()
+
 	err := m.doLoad()
+
+	m.snapshotMu.Lock()
 	m.loaded = true
+	m.snapshotMu.Unlock()
+
 	log.Printf("Skills reloaded: protocols=%d chars, catalog=%d chars",
-		utf8.RuneCountInString(m.protocolsPrompt), utf8.RuneCountInString(m.catalogPrompt))
+		utf8.RuneCountInString(m.ProtocolsPrompt()), utf8.RuneCountInString(m.SkillsCatalogPrompt()))
 	return err
 }
 
 func (m *SkillsManager) EnumerateSkillsWithSource() []*ParsedSkill {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
 	out := make([]*ParsedSkill, len(m.allSkills))
 	copy(out, m.allSkills)
 	return out
 }
 
-func (m *SkillsManager) SkillsCatalogPrompt() string { return m.catalogPrompt }
+func (m *SkillsManager) SkillsCatalogPrompt() string {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
+	return m.catalogPrompt
+}
 
 func (m *SkillsManager) SkillsCatalogPromptForPhase(phase *string) string {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
 	if m.catalog == nil || phase == nil {
 		return m.catalogPrompt
 	}
 	return m.catalog.ToPrompt(phase)
 }
 
-func (m *SkillsManager) ProtocolsPrompt() string { return m.protocolsPrompt }
+func (m *SkillsManager) ProtocolsPrompt() string {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
+	return m.protocolsPrompt
+}
 
 func (m *SkillsManager) AllowlistedDirs() []string {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
 	out := make([]string, len(m.allowlistedDirs))
 	copy(out, m.allowlistedDirs)
 	return out
 }
 
-func (m *SkillsManager) IsLoaded() bool { return m.loaded }
+func (m *SkillsManager) IsLoaded() bool {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
+	return m.loaded
+}
 
-func (m *SkillsManager) Catalog() *SkillCatalog { return m.catalog }
+func (m *SkillsManager) Catalog() *SkillCatalog {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
+	return m.catalog
+}
 
-func (m *SkillsManager) DefaultManager() *DefaultSkillManager { return m.defaultMgr }
+func (m *SkillsManager) DefaultManager() *DefaultSkillManager {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
+	return m.defaultMgr
+}
 
 func (m *SkillsManager) WatchedDirs() []string {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
 	out := make([]string, len(m.watchedDirs))
 	copy(out, m.watchedDirs)
 	return out
 }
 
 func (m *SkillsManager) WatchedFiles() []string {
+	m.snapshotMu.RLock()
+	defer m.snapshotMu.RUnlock()
 	out := make([]string, len(m.watchedFiles))
 	copy(out, m.watchedFiles)
 	return out

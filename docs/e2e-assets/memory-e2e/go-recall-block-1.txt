@@ -1,0 +1,43 @@
+[2026-11-20 18:53 CST] [External event] <system-reminder>
+Recalled memories relevant to the latest user message (supersedes earlier recall reminders):
+
+--- Global Memories ---
+
+### project_atlas.md
+
+---
+name: Atlas project
+description: deployment notes for project Atlas
+type: preference
+---
+
+Atlas 部署在 8080 端口。
+
+---
+
+### profile_user.md
+
+---
+name: user profile
+description: stable facts about the user
+type: profile
+---
+
+用户偏好简洁、直接的回复。
+
+--- End Global Memories ---
+
+--- Queen Memories: default ---
+
+### queen_notes.md
+
+---
+name: queen notes
+description: working notes for this queen
+type: preference
+---
+
+这个 queen 负责记忆验证。
+
+--- End Queen Memories: default ---
+</system-reminder>

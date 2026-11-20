@@ -4,8 +4,11 @@
 # The archive is either found locally (release.sh output, a release asset
 # directory, or --from PATH) or downloaded from a release base URL. In both
 # cases SHA256 verification against the release's SHA256SUMS is mandatory,
-# and the archive's own SHA256SUMS (hive binary + docs) is checked after
-# extraction.
+# and the archive's own SHA256SUMS (hive, hive-cred, hive-browser,
+# browserbridge + docs) is checked after extraction. All four binaries are
+# installed side by side: `hive serve` resolves browserbridge next to the hive
+# executable, so an archive missing any of them is a build error and aborts
+# the install instead of leaving a half-working setup.
 #
 # Usage:
 #   install.sh [options]
@@ -108,9 +111,15 @@ case "$arch" in amd64|arm64) ;; *) die "unsupported architecture: $arch" ;; esac
 
 archive_ext="tar.gz"
 bin_name="hive"
+cred_bin_name="hive-cred"
+browser_bin_name="hive-browser"
+bridge_bin_name="browserbridge"
 if [ "$os" = "windows" ]; then
 	archive_ext="zip"
 	bin_name="hive.exe"
+	cred_bin_name="hive-cred.exe"
+	browser_bin_name="hive-browser.exe"
+	bridge_bin_name="browserbridge.exe"
 fi
 
 if [ -z "$version" ]; then
@@ -268,24 +277,63 @@ if [ -f "$extract_dir/SHA256SUMS" ]; then
 	log "verified archive contents"
 fi
 
-bin_path="$extract_dir/$bin_name"
-if [ ! -f "$bin_path" ]; then
-	bin_path="$(find "$extract_dir" -maxdepth 2 -type f -name "$bin_name" | head -n 1)"
-fi
-[ -n "$bin_path" ] && [ -f "$bin_path" ] || die "archive does not contain $bin_name"
+locate_binary() {
+	name="$1"
+	found="$extract_dir/$name"
+	if [ ! -f "$found" ]; then
+		found="$(find "$extract_dir" -maxdepth 2 -type f -name "$name" | head -n 1)"
+	fi
+	[ -n "$found" ] && [ -f "$found" ] || return 1
+	printf '%s\n' "$found"
+}
+
+bin_path="$(locate_binary "$bin_name" || true)"
+[ -n "$bin_path" ] || die "archive does not contain $bin_name"
+cred_path="$(locate_binary "$cred_bin_name" || true)"
+[ -n "$cred_path" ] || die "archive does not contain $cred_bin_name (release archives must carry hive and hive-cred; rebuild with scripts/release.sh)"
+browser_path="$(locate_binary "$browser_bin_name" || true)"
+[ -n "$browser_path" ] || die "archive does not contain $browser_bin_name (release archives must carry hive, hive-cred, hive-browser and browserbridge; rebuild with scripts/release.sh)"
+bridge_path="$(locate_binary "$bridge_bin_name" || true)"
+[ -n "$bridge_path" ] || die "archive does not contain $bridge_bin_name (release archives must carry hive, hive-cred, hive-browser and browserbridge; rebuild with scripts/release.sh)"
 
 mkdir -p "$install_dir"
-dest="$install_dir/$bin_name"
-tmp_dest="$install_dir/.$bin_name.tmp.$$"
-cp "$bin_path" "$tmp_dest"
-chmod 0755 "$tmp_dest"
-mv -f "$tmp_dest" "$dest"
-log "installed $bin_name -> $dest"
+install_binary() {
+	src="$1"
+	name="$2"
+	dest="$install_dir/$name"
+	tmp_dest="$install_dir/.$name.tmp.$$"
+	cp "$src" "$tmp_dest"
+	chmod 0755 "$tmp_dest"
+	mv -f "$tmp_dest" "$dest"
+	log "installed $name -> $dest"
+}
+install_binary "$bin_path" "$bin_name"
+install_binary "$cred_path" "$cred_bin_name"
+install_binary "$browser_path" "$browser_bin_name"
+install_binary "$bridge_path" "$bridge_bin_name"
 
-if version_output="$("$dest" --version 2>&1)"; then
+if version_output="$("$install_dir/$bin_name" --version 2>&1)"; then
 	printf '%s\n' "$version_output"
 else
 	warn "installed binary did not run --version (cross-OS archive?)"
+fi
+
+if "$install_dir/$cred_bin_name" --help >/dev/null 2>&1; then
+	log "verified $cred_bin_name --help"
+else
+	warn "installed $cred_bin_name did not run --help (cross-OS archive?)"
+fi
+
+if "$install_dir/$browser_bin_name" help >/dev/null 2>&1; then
+	log "verified $browser_bin_name help"
+else
+	warn "installed $browser_bin_name did not run help (cross-OS archive?)"
+fi
+
+if "$install_dir/$bridge_bin_name" -version >/dev/null 2>&1; then
+	log "verified $bridge_bin_name -version"
+else
+	warn "installed $bridge_bin_name did not run -version (cross-OS archive?)"
 fi
 
 case ":$PATH:" in

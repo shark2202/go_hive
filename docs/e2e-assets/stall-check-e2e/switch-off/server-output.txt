@@ -1,0 +1,23 @@
+2026/11/20 22:58:54 [sentinel] manager starting (0 open escalations)
+Browser bridge: reusing the instance on 127.0.0.1:14830
+
+Hive API server running on http://127.0.0.1:62824
+Health:     http://127.0.0.1:62824/api/health
+Sessions:   0 colony, 0 queen-only
+
+Press Ctrl+C to stop
+Browser bridge: control connected on 127.0.0.1:14831
+2026/11/20 22:58:54 [access] GET /api/health -> 200 (0ms)
+2026/11/20 22:58:54 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261120_225854_98da503e") — sentinel SKIPS this stream
+2026/11/20 22:58:54 [access] POST /api/sessions -> 201 (31ms)
+2026/11/20 22:58:54 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026/11/20 22:58:54 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026/11/20 22:58:54 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026/11/20 22:58:54 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026/11/20 22:58:54 skill_startup name=hive.pdf scope=framework status=loaded
+2026/11/20 22:58:54 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026/11/20 22:58:54 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026/11/20 22:58:54 Skill system ready: catalog=28704 chars
+2026/11/20 22:58:54 [access] POST /api/sessions/session_20261120_225854_98da503e/chat -> 200 (13ms)
+
+Received SIGTERM, shutting down gracefully… (press Ctrl+C again to force quit)

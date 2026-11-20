@@ -38,8 +38,17 @@ type sessionToolCatalogue struct {
 	// built before the colony attaches (same reason run_worker resolves its
 	// spawner per call).
 	trackerTools *tracker.Registry
-	defs         []llm.ToolDef
-	installed    int
+	// queenMail is the session's list_queens/message_queen binding. It stays
+	// nil for colony workers and when queen_mail is off: enableQueenMail is
+	// only called for queen chat sessions.
+	queenMail *queenMailToolBinding
+	// queenLifecycle is the session's queen lifecycle tool table
+	// (get_worker_status, stop_worker, triggers, worker profiles, ...). It
+	// stays nil for colony workers and for non-queen catalogues, so a worker's
+	// tool inventory keeps the upstream worker surface.
+	queenLifecycle *hiveserver.QueenLifecycleBinding
+	defs           []llm.ToolDef
+	installed      int
 }
 
 // newSessionToolCatalogue installs the integration tools for one session root
@@ -80,6 +89,11 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 		catalogue.builtinNames[def.Name] = struct{}{}
 		catalogue.defs = append(catalogue.defs, def)
 	}
+	catalogue.recordFilesToolGroup()
+	// chart_render is the chart-tools harness group's only tool; it runs in
+	// process (headless Chrome) and records its group catalog the same way.
+	catalogue.registerChartTool()
+	catalogue.recordHarnessGroups()
 	for _, def := range catalogue.taskTools.Defs() {
 		if _, taken := catalogue.builtinNames[def.Name]; taken {
 			continue
@@ -174,7 +188,45 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 			ConcurrencySafe: tool.ConcurrencySafe,
 		})
 	}
+	// Freeze the model-visible description/schema of the same-name core tools
+	// to the Python contract (see tool_contract_parity.go). This is the last
+	// step so every owner — builtin, task, search, chart, integration — is
+	// already in defs; execution paths are untouched.
+	catalogue.defs = applyToolContractParity(catalogue.defs)
 	return catalogue
+}
+
+// recordFilesToolGroup publishes the four in-process files-tools tools under
+// the harness group name of the same name. They execute through the builtin
+// sandbox, not the registry, but the Tool Library and @server:files-tools
+// categories read the registry's catalog, so without this record the group
+// would look empty. An already-registered group (a real MCP server) wins.
+func (c *sessionToolCatalogue) recordFilesToolGroup() {
+	if len(c.registry.GetServerToolNames("files-tools")) > 0 {
+		return
+	}
+	wanted := map[string]struct{}{
+		builtin.ToolReadFile:    {},
+		builtin.ToolWriteFile:   {},
+		builtin.ToolEditFile:    {},
+		builtin.ToolSearchFiles: {},
+	}
+	group := make([]tools.Tool, 0, len(wanted))
+	for _, def := range c.toolbox.Defs() {
+		if _, ok := wanted[def.Name]; !ok {
+			continue
+		}
+		group = append(group, tools.Tool{
+			Name:            def.Name,
+			Description:     def.Description,
+			Parameters:      def.Parameters,
+			ConcurrencySafe: def.ConcurrencySafe,
+		})
+	}
+	if len(group) == 0 {
+		return
+	}
+	c.registry.RecordBuiltinToolGroup("files-tools", group)
 }
 
 // sessionIntegrationInstallers lists every ported batch installer with the
@@ -209,6 +261,10 @@ var sessionIntegrationInstallers = []struct {
 	{"batch7-lane8", integrations.InstallBatch7Lane8},
 	{"batch7-lane9", integrations.InstallBatch7Lane9},
 	{"batch8-final", integrations.InstallBatch8Final},
+	// Upstream per-tool spreadsheet names on top of the aggregate csv/excel
+	// tools, and the browser discovery tool.
+	{"spreadsheet-aliases", integrations.InstallSpreadsheetAliases},
+	{"browser-setup", integrations.InstallBrowserSetup},
 }
 
 // networkScannerTools are the tools that send probe traffic at third-party
@@ -250,53 +306,89 @@ func (c *sessionToolCatalogue) Defs() []llm.ToolDef { return c.defs }
 
 // Execute runs one tool call, dispatching builtins to their sandbox, session
 // task tools to the session's task list, and integration tools to the registry
-// executor.
+// executor. It is the text-only view of execute and keeps the historical
+// signature every existing caller uses.
 //
-// attach_file needs the session working directory, which upstream passes as a
-// hidden CONTEXT_PARAM; sessionToolContext injects it here (never in the schema).
+// attach_file and the terminal tools need the session working directory,
+// which upstream passes as a hidden CONTEXT_PARAM; injectContextParams adds it
+// at call time (never in the model-visible schema).
 // Attachments get their chip copies published against c.root before the result
-// is handed to the text-only chat runtime, so a publish failure surfaces as a
-// tool error instead of a silent "attached" claim.
+// is handed to the chat runtime, so a publish failure surfaces as a tool error
+// instead of a silent "attached" claim.
 func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input map[string]any) (string, bool, error) {
+	content, isError, _, err := c.execute(ctx, name, input)
+	return content, isError, err
+}
+
+// ExecuteBlocks is Execute plus the provider-neutral content blocks the tool
+// returned (attach_file images/PDFs, browser screenshots). The chat runtime
+// puts them in the model request instead of dropping the bytes at the text
+// boundary.
+func (c *sessionToolCatalogue) ExecuteBlocks(ctx context.Context, name string, input map[string]any) (string, bool, []map[string]any, error) {
+	return c.execute(ctx, name, input)
+}
+
+func (c *sessionToolCatalogue) execute(ctx context.Context, name string, input map[string]any) (string, bool, []map[string]any, error) {
 	if _, ok := c.builtinNames[name]; ok {
-		result, err := c.toolbox.Execute(ctx, name, input)
+		result, err := c.toolbox.Execute(ctx, name, c.injectContextParams(name, input))
 		if err != nil {
-			return "", false, err
+			return "", false, nil, err
 		}
-		return result.Content, result.IsError, nil
+		return result.Content, result.IsError, nil, nil
+	}
+	// chart_render renders through the local Chrome renderer, not the
+	// registry. The check is inside the helper so this file stays unaware of
+	// the charts package.
+	if content, isError, handled := c.executeChartTool(ctx, name, input); handled {
+		return content, isError, nil, nil
 	}
 	if c.taskTools.Has(name) {
-		return c.taskTools.Execute(name, input)
+		content, isError, err := c.taskTools.Execute(name, input)
+		return content, isError, nil, err
+	}
+	// list_queens / message_queen go through the shared queen-mail service.
+	if c.queenMail != nil {
+		if content, handled := c.queenMail.execute(name, input); handled {
+			return content, false, nil, nil
+		}
+	}
+	// Queen lifecycle tools (worker status / stop / inject, worker questions,
+	// triggers, worker profiles) resolve the live session per call — the
+	// catalogue is built before the colony attaches.
+	if c.queenLifecycle != nil && c.queenLifecycle.Has(name) {
+		content, isError := c.queenLifecycle.Execute(ctx, name, input)
+		return content, isError, nil, nil
 	}
 	// Past-session search runs against this session's queen directory; the
 	// catalogue carries the root, the memory package does the reading.
 	if content, isError, handled := c.executeSearchTool(name, input); handled {
-		return content, isError, nil
+		return content, isError, nil, nil
 	}
 	// memory_timeline browses the same past-session timeline by day; its
 	// feature flag and scope resolution match search_timeline.
 	if content, isError, handled := c.executeMemoryTimelineTool(name, input); handled {
-		return content, isError, nil
+		return content, isError, nil, nil
 	}
 	// Credential status is a metadata-only read of the host's credential
 	// store; it never decrypts a key.
 	if name == CredentialStatusToolName {
-		return executeCredentialStatusTool()
+		content, isError, err := executeCredentialStatusTool()
+		return content, isError, nil, err
 	}
 	// The colony runtime travels on the context (ChatRuntime binds it per
 	// call), so this executor stays valid even though the catalogue is built
 	// before a session's colony host exists.
 	if name == skills.WriteSkillToolName || name == skills.SkillViewToolName || name == skills.ListSkillsToolName {
 		content, isError, _ := skills.ExecuteAgentTool(name, input, c.skillToolDirs(ctx))
-		return content, isError, nil
+		return content, isError, nil, nil
 	}
 	if name == colony.RunPlaybookToolName {
 		content, isError := colony.RunPlaybook(ctx, colony.RunWorkerSpawnerFromContext(ctx), input)
-		return content, isError, nil
+		return content, isError, nil, nil
 	}
 	if name == colony.RunWorkerToolName {
 		content, isError := colony.RunWorker(ctx, colony.RunWorkerSpawnerFromContext(ctx), input)
-		return content, isError, nil
+		return content, isError, nil, nil
 	}
 	// Tracker tools resolve their binding per call: the catalogue is built
 	// before a colony attaches, so the session's bound runtime is the only
@@ -305,47 +397,65 @@ func (c *sessionToolCatalogue) Execute(ctx context.Context, name string, input m
 		if _, registered := c.trackerTools.Get(name); registered {
 			binding := colony.TrackerBindingFromContext(ctx)
 			if binding == nil {
-				return tracker.ErrNoBinding.Error(), true, nil
+				return tracker.ErrNoBinding.Error(), true, nil, nil
 			}
 			result, _ := c.trackerTools.WithResolver(tracker.StaticResolver(binding)).Execute(name, input)
 			payload, err := json.Marshal(result)
 			if err != nil {
-				return "tracker tool result could not be encoded: " + err.Error(), true, nil
+				return "tracker tool result could not be encoded: " + err.Error(), true, nil, nil
 			}
 			success, _ := result["success"].(bool)
-			return string(payload), !success, nil
+			return string(payload), !success, nil, nil
 		}
+	}
+	// chart_render may be catalog-only until the chart lane lands its renderer;
+	// answer those calls with an explicit not_implemented envelope instead of a
+	// generic unknown-tool error.
+	if content, isError, handled := c.executeHarnessPlaceholder(name); handled {
+		return content, isError, nil, nil
 	}
 	result, err := c.registry.GetExecutor().Execute(ctx, tools.ToolUse{
 		Name:  name,
-		Input: c.sessionToolContext(name, input),
+		Input: c.injectContextParams(name, input),
 	})
 	if err != nil {
-		return "", false, err
+		return "", false, nil, err
 	}
 	content, isError := result.Content, result.IsError
 	if len(result.Attachments) > 0 {
 		content, isError = integrations.PublishAttachFileResult(content, result.Attachments, c.root)
 	}
-	return content, isError, nil
+	return content, isError, result.ImageContent, nil
 }
 
-// sessionToolContext injects the per-session values attach_file resolves
-// against (the caller's working directory and the storage root). Inputs the
-// model already supplied win, and the caller's map is never mutated.
-func (c *sessionToolCatalogue) sessionToolContext(name string, input map[string]any) map[string]any {
-	if name != "attach_file" || c.root == "" {
+// contextParamInjection maps a tool to the framework context values the host
+// injects at execution time. Every injected name is a CONTEXT_PARAM: it is
+// stripped from the model-visible schema (builtin.Defs and
+// tools.StripContextParams) and supplied here, never by the model.
+var contextParamInjection = map[string][]string{
+	"attach_file":                {"session_cwd", "storage_path"},
+	builtin.ToolTerminalExec:     {"session_cwd"},
+	builtin.ToolTerminalGlob:     {"session_cwd"},
+	builtin.ToolTerminalRG:       {"session_cwd"},
+	builtin.ToolTerminalJobStart: {"session_cwd"},
+	builtin.ToolTerminalPTYOpen:  {"session_cwd"},
+}
+
+// injectContextParams merges the per-session values a tool resolves against
+// (session working directory, attach_file's storage root). Framework values
+// are authoritative over anything in input, matching upstream
+// ToolRegistry._prepare_call_inputs; the caller's map is never mutated.
+func (c *sessionToolCatalogue) injectContextParams(name string, input map[string]any) map[string]any {
+	names := contextParamInjection[name]
+	if len(names) == 0 || c.root == "" {
 		return input
 	}
-	merged := make(map[string]any, len(input)+2)
+	merged := make(map[string]any, len(input)+len(names))
 	for key, value := range input {
 		merged[key] = value
 	}
-	if _, ok := merged["session_cwd"]; !ok {
-		merged["session_cwd"] = c.root
-	}
-	if _, ok := merged["storage_path"]; !ok {
-		merged["storage_path"] = c.root
+	for _, key := range names {
+		merged[key] = c.root
 	}
 	return merged
 }

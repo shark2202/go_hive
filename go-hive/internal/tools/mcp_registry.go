@@ -758,6 +758,32 @@ func (r *ToolRegistry) RecordBuiltinTools(group string, names []string) {
 	r.saveHarnessGroup(group)
 }
 
+// RecordBuiltinToolGroup records in-process tools that execute through a
+// builtin sandbox (not a registry executor) under a harness group name. The
+// Tool Library and @server:<group> category resolution read these catalog
+// entries, so a group whose tools never register with the registry still
+// advertises its full surface.
+func (r *ToolRegistry) RecordBuiltinToolGroup(group string, builtins []Tool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ensureServerOrder(group)
+	if _, exists := r.mcpServerTools[group]; !exists {
+		r.mcpServerTools[group] = map[string]struct{}{}
+	}
+	catalog := make([]map[string]any, 0, len(builtins))
+	for _, tool := range builtins {
+		r.mcpServerTools[group][tool.Name] = struct{}{}
+		catalog = append(catalog, map[string]any{
+			"name":         tool.Name,
+			"description":  tool.Description,
+			"input_schema": tool.Parameters,
+			"provider":     nil,
+		})
+	}
+	r.mcpFullCatalog[group] = catalog
+	r.saveHarnessGroup(group)
+}
+
 func (r *ToolRegistry) saveHarnessGroup(group string) {
 	if _, seen := r.harnessGroups[group]; !seen {
 		r.harnessGroupOrder = append(r.harnessGroupOrder, group)

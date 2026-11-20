@@ -52,3 +52,45 @@ func SupportsImagesInToolResults(model string) bool {
 	}
 	return false
 }
+
+// SupportsImageBlocks reports whether the model accepts image content blocks.
+// The curated catalog decides; unknown models default to capable, mirroring
+// upstream's model_supports_vision default so hosted frontier models work
+// without a catalog entry.
+func SupportsImageBlocks(model string) bool {
+	return ModelSupportsVision(model)
+}
+
+var documentModelPrefixes = []string{
+	// Anthropic Messages API: the file part is remapped to a `document` block.
+	"anthropic/",
+	"claude-",
+	"kimi/",
+	"hive/",
+	// OpenAI Chat Completions and OpenRouter: native `file` content parts
+	// (PDF only on Chat Completions; OpenRouter parses for every model).
+	"openai/",
+	"gpt-",
+	"o1-",
+	"o3-",
+	"o4-",
+	"openrouter/",
+}
+
+// SupportsDocumentBlocks reports whether the model's endpoint accepts a PDF
+// `file` content part (OpenAI/LiteLLM shape, remapped to Anthropic `document`
+// by the transport). Unknown prefixes return false: the message assembly then
+// replaces the block with an explicit "not delivered" note instead of sending
+// a part the endpoint may reject or silently ignore.
+func SupportsDocumentBlocks(model string) bool {
+	if model == "" {
+		return true
+	}
+	lower := strings.ToLower(model)
+	for _, prefix := range documentModelPrefixes {
+		if strings.HasPrefix(lower, prefix) {
+			return true
+		}
+	}
+	return false
+}

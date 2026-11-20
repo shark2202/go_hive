@@ -146,7 +146,7 @@ P0 是**可运行切片**，不是 Python 全量对等。以下能力已在当�
 
 **明确延期（P0 不含）**：216 条 Python 路由的完整对等、集成工具（`tools/src/aden_tools` 104 模块 / 324 文件 / 865 action，本期只做优先子集，见 `INTEGRATION_BACKLOG.md`）、Sentinel、browser 工具、React dashboard（只有存在 `frontend/dist` 时才提供静态资源，仓库未附带该构建产物）、queen/colony 多 worker 编排闭环。
 
-**门禁状态（1.0.26-go.1 实测，PASS）**：七道门禁 `fmt-check`、`vet`、`test`、`cross`、`parity`、`parity-targets`、`wiring-check` 全部退出码 0；测试 **4,566**、parity **4566/4566**、引用 **4,843**（3,773 test + 1,070 prod）0 missing；e2e `ok`、smoke **13/13**、QC **8/8**。发布包解压后 `hive --version` = `hive 1.0.26-go.1`，六平台归档 + `SHA256SUMS` 全部校验通过。完整证据见 `docs/support-matrix.md`。
+**门禁状态（1.0.26-go.1 实测，PASS）**：七道门禁 `fmt-check`、`vet`、`test`、`cross`、`parity`、`parity-targets`、`wiring-check` 全部退出码 0；测试 **4,566**、parity **4566/4566**、引用 **4,843**（3,773 test + 1,070 prod）0 missing；e2e `ok`、smoke **13/13**、QC **8/8**。发布包解压后 `hive --version` = `hive 1.0.26-go.1`；归档含 `hive`/`hive-cred`/`hive-browser`/`browserbridge` 四个二进制，解压后 `hive serve` 会在同目录自动拉起 `browserbridge`（14830 `/health` 200，SIGTERM 一并回收）。六平台归档 + `SHA256SUMS` 全部校验通过。完整证据见 `docs/support-matrix.md`。
 
 ## 5. 当前实现状态
 

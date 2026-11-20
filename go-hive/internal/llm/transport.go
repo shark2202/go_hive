@@ -825,6 +825,10 @@ func anthropicUserBlocks(content any) []any {
 				if image := anthropicImageBlock(block); image != nil {
 					blocks = append(blocks, image)
 				}
+			case "file":
+				if document := anthropicDocumentBlock(block); document != nil {
+					blocks = append(blocks, document)
+				}
 			default:
 				blocks = append(blocks, copyBlock(block))
 			}
@@ -897,6 +901,33 @@ func anthropicImageBlock(block map[string]any) map[string]any {
 		converted["cache_control"] = cacheControl
 	}
 	return converted
+}
+
+// anthropicDocumentBlock maps the OpenAI/LiteLLM “file“ content part to the
+// Anthropic “document“ block. LiteLLM performs the same remap upstream; an
+// “image_url“ carrying application/pdf is rejected by the Messages API, so a
+// PDF must never travel as an image block.
+func anthropicDocumentBlock(block map[string]any) map[string]any {
+	file, ok := block["file"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	fileData := transportString(file["file_data"])
+	if !strings.HasPrefix(fileData, "data:") {
+		return nil
+	}
+	mediaType, data, ok := parseDataURL(fileData)
+	if !ok || mediaType != "application/pdf" {
+		return nil
+	}
+	return map[string]any{
+		"type": "document",
+		"source": map[string]any{
+			"type":       "base64",
+			"media_type": mediaType,
+			"data":       data,
+		},
+	}
 }
 
 func parseDataURL(url string) (mediaType, data string, ok bool) {

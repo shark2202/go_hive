@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-20T00:00:00Z",
+  "servers": {
+    "fixture-echo": {
+      "version": "0.1.0",
+      "description": "Local stdio MCP fixture used by go_hive tests",
+      "transport": {
+        "supported": [
+          "stdio"
+        ],
+        "default": "stdio"
+      },
+      "stdio": {
+        "command": "/opt/hive/bin/mcp-fixture",
+        "args": [
+          "--stdio"
+        ],
+        "env": {}
+      }
+    },
+    "internal-db": {
+      "version": "1.2.0",
+      "description": "Internal database MCP server over streamable HTTP",
+      "transport": {
+        "supported": [
+          "http"
+        ],
+        "default": "http"
+      },
+      "http": {
+        "url": "https://mcp.internal.example.com/mcp",
+        "headers": {}
+      }
+    }
+  }
+}

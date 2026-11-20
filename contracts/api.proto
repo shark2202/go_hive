@@ -1,0 +1,450 @@
+// Frozen HTTP API contract for Hive — proto3 style specification.
+//
+// This file is a SPECIFICATION, not a build input: there is no protobuf
+// runtime dependency, no code generation, and nothing here is compiled or
+// linked by go_hive. `go_hive/scripts/check_api_proto.py` parses it with a
+// small self-written reader to validate the frozen JSON snapshots against it.
+//
+// Baseline (reference): the Python hive checkout in this repository.
+//   reference = python@<git rev-parse HEAD>  (version 1.0.14)
+// Target being aligned: go_hive@<git rev-parse HEAD>.
+// Field names, scalar shapes and message structure below describe the Python
+// reference payloads captured by `go_hive/scripts/freeze_api_responses.py`
+// under `go_hive/contracts/api-responses/reference/`. Go-only fields are
+// marked `// target-extension` and are NOT part of the contract.
+//
+// JSON wire rules (see go_hive/contracts/type-mapping.md):
+//   * int64/uint64/fixed64 are strings in canonical proto3 JSON; Hive emits
+//     bare JSON numbers, so only values <= 2^53 round-trip losslessly.
+//   * google.protobuf.Timestamp is RFC 3339 with a timezone; Hive emits a
+//     naive local-time string. It is frozen as an opaque string.
+//   * null is not a scalar in proto3 JSON; `optional` captures presence only.
+//   * map ordering is unspecified; object key order is not part of the contract.
+
+syntax = "proto3";
+
+package hive.contract.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+// --- shared enums -----------------------------------------------------------
+
+enum ResourceVerdict {
+  RESOURCE_VERDICT_UNSPECIFIED = 0;
+  RESOURCE_VERDICT_OK = 1;
+  RESOURCE_VERDICT_WARN = 2;
+  RESOURCE_VERDICT_CRIT = 3;
+  RESOURCE_VERDICT_UNKNOWN = 4;
+}
+
+enum QueenPhase {
+  QUEEN_PHASE_UNSPECIFIED = 0;
+  QUEEN_PHASE_PLANNING = 1;
+  QUEEN_PHASE_INDEPENDENT = 2;
+  QUEEN_PHASE_COLONY = 3;
+  QUEEN_PHASE_STAGING = 4;
+}
+
+// --- GET /api/health --------------------------------------------------------
+
+message HealthResponse {
+  string status = 1;
+  int32 sessions = 2;
+  int32 agents_loaded = 3;
+  HealthResources resources = 4;
+  RequestExecutorStats request_executor = 5;
+}
+
+message HealthResources {
+  ResourceVerdict verdict = 1;
+  // Emitted by Python only when a memory sample exists; the Go target omits
+  // the pair entirely (optional presence, not a scalar-null difference).
+  optional int64 avail_mb = 2;
+  optional int32 renderers = 3;
+}
+
+message RequestExecutorStats {
+  int32 max_workers = 1;
+  int32 active = 2;
+  int32 queued = 3;
+}
+
+// --- GET /api/queen/profiles ------------------------------------------------
+
+message QueenProfilesResponse {
+  repeated QueenProfile queens = 1;
+}
+
+message QueenProfile {
+  string id = 1;
+  string name = 2;
+  string title = 3;
+  bool has_avatar = 4;
+  QueenPortrait portrait = 5;
+}
+
+message QueenPortrait {
+  string face = 1;
+  string hair = 2;
+  string mouth = 3;
+  string shirt = 4;
+  string skin = 5;
+  string beard = 6;
+  string cut = 7;
+  string brow = 8;
+  string collar = 9;
+  string eyes = 10;
+  string glasses = 11;
+  string neck = 12;
+}
+
+// --- GET /api/queen/{queen_id}/tools ----------------------------------------
+
+message QueenToolsResponse {
+  string queen_id = 1;
+  bool stale = 2;
+  bool is_role_default = 3;
+  repeated ToolCategory categories = 4;
+  repeated string enabled_mcp_tools = 5;
+  repeated McpServerSummary mcp_servers = 6;
+  repeated ToolSummary lifecycle = 7;
+  repeated ToolSummary synthetic = 8;
+  repeated string connected_providers = 9;
+}
+
+message ToolCategory {
+  string name = 1;
+  bool always_enabled = 2;
+  bool in_role_default = 3;
+  repeated string tools = 4;
+}
+
+message McpServerSummary {
+  string name = 1;
+  repeated McpToolSummary tools = 2;
+}
+
+message McpToolSummary {
+  string name = 1;
+  string description = 2;
+  bool enabled = 3;
+  optional string provider = 4;
+  bool provider_connected = 5;
+  google.protobuf.Struct input_schema = 6;
+}
+
+message ToolSummary {
+  string name = 1;
+  string description = 2;
+  bool editable = 3;
+}
+
+// --- GET /api/skills --------------------------------------------------------
+
+message SkillsResponse {
+  repeated SkillSummary skills = 1;
+  repeated ScopeRef queens = 2;
+  repeated ScopeRef colonies = 3;
+}
+
+message SkillSummary {
+  string name = 1;
+  string description = 2;
+  string location = 3;
+  string provenance = 4;
+  string source_scope = 5;
+  bool deletable = 6;
+  bool editable = 7;
+  bool enabled_by_default = 8;
+  optional string owner = 9;
+  optional string visibility = 10;
+  SkillVisibility visible_to = 11;
+}
+
+message SkillVisibility {
+  repeated string queens = 1;
+  repeated string colonies = 2;
+}
+
+message ScopeRef {
+  string id = 1;
+  string name = 2;
+}
+
+// --- GET /api/config/llm ----------------------------------------------------
+
+message LlmConfigResponse {
+  string provider = 1;
+  string model = 2;
+  string api_base = 3;
+  string api_key_env_var = 4;
+  bool has_api_key = 5;
+  optional int64 max_tokens = 6;
+  optional int64 max_context_tokens = 7;
+  optional string active_subscription = 8;
+  repeated LlmSubscription subscriptions = 9;
+  repeated string connected_providers = 10;
+  repeated string detected_subscriptions = 11;
+}
+
+message LlmSubscription {
+  string id = 1;
+  string name = 2;
+  string provider = 3;
+  string description = 4;
+  string flag = 5;
+  string default_model = 6;
+  // Emitted for some subscription entries (the model-catalog row carries its
+  // API base); optional because not every entry has one.
+  optional string api_base = 7;
+}
+
+// --- GET /api/models/overview ----------------------------------------------
+
+message ModelsOverviewResponse {
+  ModelSlots slots = 1;
+  repeated ModelProvider providers = 2;
+  repeated ModelEndpoint endpoints = 3;
+  repeated QueenModelAssignment queens = 4;
+  repeated SubscriptionSummary subscriptions = 5;
+  JudgeSlot judge = 6;
+}
+
+message ModelSlots {
+  LlmSlot llm = 1;
+  optional LlmSlot worker_llm = 2;
+  optional LlmSlot vision_fallback = 3;
+}
+
+message LlmSlot {
+  string source = 1;
+  string provider = 2;
+  string model = 3;
+  string api_base = 4;
+  optional string endpoint = 5;
+  optional string subscription = 6;
+  bool has_extra_body = 7;
+  optional int64 max_context_tokens = 8;
+}
+
+message JudgeSlot {
+  optional string model = 1;
+  optional string api_base = 2;
+  bool configured = 3;
+}
+
+message ModelProvider {
+  string id = 1;
+  bool connected = 2;
+  repeated ModelInfo models = 3;
+}
+
+message ModelInfo {
+  string id = 1;
+  string label = 2;
+  bool supports_vision = 3;
+  bool recommended = 4;
+  int64 max_context_tokens = 5;
+}
+
+message ModelEndpoint {
+  string name = 1;
+  string api_base = 2;
+  bool builtin = 3;
+  bool has_key = 4;
+  bool running = 5;
+}
+
+// Not populated in the frozen capture (empty array on both sides); the
+// message exists so the field has a declared element type.
+message QueenModelAssignment {
+  string queen_id = 1;
+  string model = 2;
+}
+
+message SubscriptionSummary {
+  string id = 1;
+  string name = 2;
+  string model = 3;
+  string description = 4;
+  bool active = 5;
+  bool detected = 6;
+  bool own_risk = 7;
+}
+
+// --- GET /api/credentials/specs --------------------------------------------
+
+message CredentialSpecsResponse {
+  repeated CredentialSpec specs = 1;
+  map<string, google.protobuf.Struct> accounts_by_provider = 2;
+  bool has_aden_key = 3;
+}
+
+message CredentialSpec {
+  string credential_id = 1;
+  string credential_key = 2;
+  string credential_name = 3;
+  string credential_group = 4;
+  string description = 5;
+  string env_var = 6;
+  string help_url = 7;
+  string api_key_instructions = 8;
+  bool aden_supported = 9;
+  bool direct_api_key_supported = 10;
+  bool available = 11;
+  repeated string tools = 12;
+  // target-extension: go_hive emits tool_modules per spec; Python 1.0.14 does not.
+  repeated string tool_modules = 13;
+  // target-extension: go_hive emits per-provider accounts; Python 1.0.14 does not.
+  repeated CredentialAccount accounts = 14;
+}
+
+message CredentialAccount {
+  string alias = 1;
+  string provider = 2;
+  string label = 3;
+}
+
+// --- sessions ---------------------------------------------------------------
+
+message SessionView {
+  string session_id = 1;
+  optional string colony_id = 2;
+  optional string spawned_colony_id = 3;
+  bool has_worker = 4;
+  string agent_path = 5;
+  string description = 6;
+  string goal = 7;
+  int32 node_count = 8;
+  double loaded_at = 9;
+  double uptime_seconds = 10;
+  QueenPhase queen_phase = 11;
+  bool queen_supports_images = 12;
+  optional string queen_id = 13;
+  optional string queen_name = 14;
+  bool colony_spawned = 15;
+}
+
+message SessionsListResponse {
+  repeated SessionView sessions = 1;
+}
+
+message SessionDetailResponse {
+  string session_id = 1;
+  optional string colony_id = 2;
+  optional string spawned_colony_id = 3;
+  bool has_worker = 4;
+  string agent_path = 5;
+  string description = 6;
+  string goal = 7;
+  int32 node_count = 8;
+  double loaded_at = 9;
+  double uptime_seconds = 10;
+  QueenPhase queen_phase = 11;
+  bool queen_supports_images = 12;
+  optional string queen_id = 13;
+  optional string queen_name = 14;
+  bool colony_spawned = 15;
+  repeated EntryPoint entry_points = 16;
+}
+
+message EntryPoint {
+  string name = 1;
+  string path = 2;
+}
+
+// --- GET /api/sessions/{id}/events/history ---------------------------------
+
+message EventsHistoryResponse {
+  repeated EventEnvelope events = 1;
+  bool has_more_older = 2;
+  bool truncated = 3;
+  int32 limit = 4;
+  int32 returned = 5;
+  int32 start_index = 6;
+  int32 start_offset = 7;
+  int32 total = 8;
+  string session_id = 9;
+}
+
+message EventEnvelope {
+  string type = 1;
+  optional string stream_id = 2;
+  optional string node_id = 3;
+  optional string execution_id = 4;
+  optional string correlation_id = 5;
+  optional string colony_id = 6;
+  int64 seq = 7;
+  google.protobuf.Timestamp timestamp = 8;
+  google.protobuf.Struct data = 9;
+}
+
+// --- GET /api/sessions/{id}/snapshot ---------------------------------------
+
+message SnapshotResponse {
+  int64 snapshot_seq = 1;
+  optional string activity = 2;
+  bool is_executing = 3;
+  bool awaiting_input = 4;
+  bool interrupted = 5;
+  optional string interrupt_cause = 6;
+  optional string current_execution_id = 7;
+  repeated google.protobuf.Struct current_tool_calls = 8;
+  optional string queen_busy_reason = 9;
+  optional string park_reason = 10;
+  optional google.protobuf.Value pending_questions = 11;
+  optional int64 last_event_seq = 12;
+  google.protobuf.Timestamp last_event_at = 13;
+  google.protobuf.Timestamp last_queen_event_at = 14;
+}
+
+// --- GET /api/sessions/{id}/stats ------------------------------------------
+
+message SessionStatsResponse {
+  bool running = 1;
+  string colony_id = 2;
+  int32 active_workers = 3;
+  int32 total_workers = 4;
+  int32 triggers = 5;
+  EventBusStats event_bus = 6;
+  AdaptiveToolBudget adaptive_tool_budget = 7;
+}
+
+message EventBusStats {
+  int64 total_events = 1;
+  int32 subscriptions = 2;
+  map<string, int64> events_by_type = 3;
+}
+
+message AdaptiveToolBudget {
+  bool enabled = 1;
+  optional int64 nominal = 2;
+  int32 samples = 3;
+}
+
+// --- GET /api/sessions/{id}/events (SSE) -----------------------------------
+
+message SseStream {
+  repeated SseFrame frames = 1;
+  int32 frame_count = 2;
+  repeated string payload_types = 3;
+  repeated string event_names = 4;
+  // Harness capture field: the response Content-Type observed on the stream
+  // (the JSON shape of this capture is produced by freeze_api_responses.py,
+  // not by the server; every server-side frame lives under `frames`).
+  optional string content_type = 5;
+}
+
+message SseFrame {
+  // SSE "event:" name. Python 1.0.14 sends data lines only; go_hive also
+  // writes the name, so this is optional in the contract.
+  optional string event = 1;
+  int64 seq = 2;
+  // Harness capture field: the decoded payload `type` (mirrors envelope.type).
+  optional string type = 5;
+  oneof payload {
+    EventEnvelope envelope = 3;
+    string raw_data = 4;
+  }
+}

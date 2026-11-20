@@ -1,0 +1,208 @@
+{
+  "schema": "hive-api-responses/1",
+  "generated_at": "2026-11-20T23:43:51+08:00",
+  "direction": "reference(python) -> target(go_hive)",
+  "reference": {
+    "implementation": "python",
+    "version": "hive 1.0.14",
+    "commit": "1b9c458a19244379ac65dabd4827addb891045ef",
+    "last_core_commit": "a756b1e51765bc75b0a40e362859452a0a54081b",
+    "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd"
+  },
+  "target": {
+    "implementation": "go_hive",
+    "version": "hive 1.0.26-go.1",
+    "commit": "1b9c458a19244379ac65dabd4827addb891045ef"
+  },
+  "probe": {
+    "queen_id": "queen_growth",
+    "llm": {
+      "provider": "openai",
+      "model": "contract-probe-model",
+      "api_base": "http://127.0.0.1:54335/v1",
+      "key_env": "HIVE_CONTRACT_PROBE_KEY",
+      "note": "local OpenAI-compatible stub; deterministic kickoff turn, no vendor call, no network"
+    },
+    "sse_seconds": 3.0
+  },
+  "endpoints": [
+    {
+      "endpoint": "health",
+      "label": "健康检查",
+      "method": "GET",
+      "path": "/api/health",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/health.json",
+      "target_file": "target/health.json",
+      "reference_shape": "shapes/reference/health.shape.json",
+      "target_shape": "shapes/target/health.shape.json"
+    },
+    {
+      "endpoint": "queen_profiles",
+      "label": "Queen 档案",
+      "method": "GET",
+      "path": "/api/queen/profiles",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/queen_profiles.json",
+      "target_file": "target/queen_profiles.json",
+      "reference_shape": "shapes/reference/queen_profiles.shape.json",
+      "target_shape": "shapes/target/queen_profiles.shape.json"
+    },
+    {
+      "endpoint": "queen_tools",
+      "label": "Queen 工具库",
+      "method": "GET",
+      "path": "/api/queen/queen_growth/tools",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/queen_tools.json",
+      "target_file": "target/queen_tools.json",
+      "reference_shape": "shapes/reference/queen_tools.shape.json",
+      "target_shape": "shapes/target/queen_tools.shape.json"
+    },
+    {
+      "endpoint": "skills",
+      "label": "技能目录",
+      "method": "GET",
+      "path": "/api/skills",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/skills.json",
+      "target_file": "target/skills.json",
+      "reference_shape": "shapes/reference/skills.shape.json",
+      "target_shape": "shapes/target/skills.shape.json"
+    },
+    {
+      "endpoint": "config_llm",
+      "label": "LLM 配置",
+      "method": "GET",
+      "path": "/api/config/llm",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/config_llm.json",
+      "target_file": "target/config_llm.json",
+      "reference_shape": "shapes/reference/config_llm.shape.json",
+      "target_shape": "shapes/target/config_llm.shape.json"
+    },
+    {
+      "endpoint": "models_overview",
+      "label": "模型总览",
+      "method": "GET",
+      "path": "/api/models/overview",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/models_overview.json",
+      "target_file": "target/models_overview.json",
+      "reference_shape": "shapes/reference/models_overview.shape.json",
+      "target_shape": "shapes/target/models_overview.shape.json"
+    },
+    {
+      "endpoint": "credentials_specs",
+      "label": "凭据规格目录",
+      "method": "GET",
+      "path": "/api/credentials/specs",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/credentials_specs.json",
+      "target_file": "target/credentials_specs.json",
+      "reference_shape": "shapes/reference/credentials_specs.shape.json",
+      "target_shape": "shapes/target/credentials_specs.shape.json"
+    },
+    {
+      "endpoint": "session_create",
+      "label": "创建会话",
+      "method": "POST",
+      "path": "/api/sessions",
+      "reference_status": 201,
+      "target_status": 201,
+      "reference_file": "reference/session_create.json",
+      "target_file": "target/session_create.json",
+      "reference_shape": "shapes/reference/session_create.shape.json",
+      "target_shape": "shapes/target/session_create.shape.json"
+    },
+    {
+      "endpoint": "sessions_list",
+      "label": "会话列表",
+      "method": "GET",
+      "path": "/api/sessions",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/sessions_list.json",
+      "target_file": "target/sessions_list.json",
+      "reference_shape": "shapes/reference/sessions_list.shape.json",
+      "target_shape": "shapes/target/sessions_list.shape.json"
+    },
+    {
+      "endpoint": "session_detail",
+      "label": "会话详情",
+      "method": "GET",
+      "path": "/api/sessions/{session}",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/session_detail.json",
+      "target_file": "target/session_detail.json",
+      "reference_shape": "shapes/reference/session_detail.shape.json",
+      "target_shape": "shapes/target/session_detail.shape.json"
+    },
+    {
+      "endpoint": "session_events",
+      "label": "会话事件流",
+      "method": "GET",
+      "path": "/api/sessions/{session}/events",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/session_events.json",
+      "target_file": "target/session_events.json",
+      "reference_shape": "shapes/reference/session_events.shape.json",
+      "target_shape": "shapes/target/session_events.shape.json"
+    },
+    {
+      "endpoint": "session_events_history",
+      "label": "事件历史",
+      "method": "GET",
+      "path": "/api/sessions/{session}/events/history",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/session_events_history.json",
+      "target_file": "target/session_events_history.json",
+      "reference_shape": "shapes/reference/session_events_history.shape.json",
+      "target_shape": "shapes/target/session_events_history.shape.json"
+    },
+    {
+      "endpoint": "session_snapshot",
+      "label": "会话快照",
+      "method": "GET",
+      "path": "/api/sessions/{session}/snapshot",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/session_snapshot.json",
+      "target_file": "target/session_snapshot.json",
+      "reference_shape": "shapes/reference/session_snapshot.shape.json",
+      "target_shape": "shapes/target/session_snapshot.shape.json"
+    },
+    {
+      "endpoint": "session_stats",
+      "label": "会话统计",
+      "method": "GET",
+      "path": "/api/sessions/{session}/stats",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_file": "reference/session_stats.json",
+      "target_file": "target/session_stats.json",
+      "reference_shape": "shapes/reference/session_stats.shape.json",
+      "target_shape": "shapes/target/session_stats.shape.json"
+    }
+  ],
+  "totals": {
+    "endpoints": 14,
+    "pass": 7,
+    "fail": 7,
+    "missing_in_target": 4,
+    "extra_in_target": 2,
+    "type_mismatch": 7,
+    "count_mismatch": 9,
+    "semantic_failures": 7
+  }
+}

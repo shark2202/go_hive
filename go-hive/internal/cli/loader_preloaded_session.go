@@ -82,7 +82,7 @@ func (r *Runner) loadPreloadedColonySession(
 	// Chat/trigger/dispatch runtime for the preloaded session. It must exist
 	// before triggers are restored: a restored timer's first fire needs the
 	// session's queen executor.
-	r.attachPreloadedChatRuntime(record, home, model, sessionDir)
+	r.attachPreloadedChatRuntime(record, manager, home, model, sessionDir)
 	// Rebuild the colony's triggers.json runtime: enabled timers and
 	// webhook routes survive a restart without the user re-activating them.
 	if loaded, started := hiveserver.RestoreSessionTriggers(record); loaded > 0 {
@@ -168,7 +168,7 @@ func persistPreloadedColonySessionID(home hivehome.Home, colonyID, queenScope, s
 //
 // sessionDir is the colony-scoped session directory the loader resolved; a
 // resumed session continues the transcript already in it.
-func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, home hivehome.Home, model, sessionDir string) {
+func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager *hiveserver.SessionManager, home hivehome.Home, model, sessionDir string) {
 	if record == nil || record.Colony == nil {
 		return
 	}
@@ -182,22 +182,30 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, home hiv
 	}
 	toolbox := builtin.New("")
 	tools := newSessionToolCatalogue(sessionDir, toolbox, home)
+	skillsCatalog := liveSkillsCatalog(record, home, chatSessionQueenScope(record.QueenName))
+	// A preloaded colony session is still a queen chat session: it gets the
+	// same queen-mail and session-bound lifecycle tools a created one does.
+	// A session whose queen was not picked yet registers them and is refused
+	// when it writes.
+	onTurnStart := enableQueenSessionTools(tools, manager, record.ID, record, home)
 	built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
-		LLM:       provider,
-		Tools:     tools.Defs(),
-		Execute:   tools.Execute,
-		Root:      sessionDir,
-		Bus:       record.EventBus,
-		SessionID: record.ID,
-		QueenName: record.QueenName,
-		HomeRoot:  home.Root,
+		LLM:           provider,
+		Tools:         tools.Defs(),
+		Execute:       tools.Execute,
+		ExecuteBlocks: tools.ExecuteBlocks,
+		Root:          sessionDir,
+		Bus:           record.EventBus,
+		SessionID:     record.ID,
+		QueenName:     record.QueenName,
+		HomeRoot:      home.Root,
 		// The preloaded path must announce the same queen skills catalog a
 		// created session does: without it the skills_catalog reminder source
 		// stays silent for the whole `serve --colony` session.
 		//
 		// Parity: core/framework/server/queen_orchestrator.py::create_queen
-		SkillsCatalog: queenSkillsCatalogProvider(home, chatSessionQueenScope(record.QueenName)),
+		SkillsCatalog: skillsCatalog.Catalog,
 		Colony:        record.Colony,
+		OnTurnStart:   onTurnStart,
 	})
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", record.ID, err)

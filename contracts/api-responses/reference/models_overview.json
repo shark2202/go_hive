@@ -1,0 +1,512 @@
+{
+  "endpoint": "models_overview",
+  "label": "模型总览",
+  "method": "GET",
+  "path": "/api/models/overview",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-20T23:43:50+08:00",
+  "canonical": {
+    "endpoints": [
+      {
+        "api_base": "http://127.0.0.1:3425/v1",
+        "builtin": true,
+        "has_key": false,
+        "name": "magpie",
+        "running": false
+      }
+    ],
+    "judge": {
+      "api_base": null,
+      "configured": false,
+      "model": null
+    },
+    "providers": [
+      {
+        "connected": false,
+        "id": "anthropic",
+        "models": [
+          {
+            "id": "claude-haiku-4-5-20251001",
+            "label": "Haiku 4.5 - Fast + cheap",
+            "max_context_tokens": 136000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "claude-sonnet-4-5-20250929",
+            "label": "Sonnet 4.5 - Best balance",
+            "max_context_tokens": 136000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "claude-opus-4-6",
+            "label": "Opus 4.6 - Most capable",
+            "max_context_tokens": 872000,
+            "recommended": true,
+            "supports_vision": true
+          }
+        ]
+      },
+      {
+        "connected": false,
+        "id": "openai",
+        "models": [
+          {
+            "id": "gpt-5.5",
+            "label": "GPT-5.5 - Frontier coding + reasoning",
+            "max_context_tokens": 1050000,
+            "recommended": true,
+            "supports_vision": true
+          },
+          {
+            "id": "gpt-5.4",
+            "label": "GPT-5.4 - Previous flagship",
+            "max_context_tokens": 960000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "gpt-5.4-mini",
+            "label": "GPT-5.4 Mini - Faster + cheaper",
+            "max_context_tokens": 400000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "gpt-5.4-nano",
+            "label": "GPT-5.4 Nano - Cheapest high-volume",
+            "max_context_tokens": 400000,
+            "recommended": false,
+            "supports_vision": true
+          }
+        ]
+      },
+      {
+        "connected": false,
+        "id": "gemini",
+        "models": [
+          {
+            "id": "gemini-3-flash-preview",
+            "label": "Gemini 3 Flash - Fast",
+            "max_context_tokens": 240000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "gemini-3.5-flash",
+            "label": "Gemini 3.5 Flash - Fast vision",
+            "max_context_tokens": 240000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "gemini-3.1-pro-preview-customtools",
+            "label": "Gemini 3.1 Pro - Best quality",
+            "max_context_tokens": 240000,
+            "recommended": true,
+            "supports_vision": true
+          }
+        ]
+      },
+      {
+        "connected": false,
+        "id": "groq",
+        "models": [
+          {
+            "id": "openai/gpt-oss-120b",
+            "label": "GPT-OSS 120B - Best reasoning",
+            "max_context_tokens": 131072,
+            "recommended": true,
+            "supports_vision": false
+          },
+          {
+            "id": "openai/gpt-oss-20b",
+            "label": "GPT-OSS 20B - Fast + cheaper",
+            "max_context_tokens": 131072,
+            "recommended": false,
+            "supports_vision": false
+          },
+          {
+            "id": "llama-3.3-70b-versatile",
+            "label": "Llama 3.3 70B - General purpose",
+            "max_context_tokens": 131072,
+            "recommended": false,
+            "supports_vision": false
+          },
+          {
+            "id": "llama-3.1-8b-instant",
+            "label": "Llama 3.1 8B - Fastest",
+            "max_context_tokens": 131072,
+            "recommended": false,
+            "supports_vision": false
+          }
+        ]
+      },
+      {
+        "connected": false,
+        "id": "cerebras",
+        "models": [
+          {
+            "id": "gpt-oss-120b",
+            "label": "GPT-OSS 120B - Best production reasoning",
+            "max_context_tokens": 131072,
+            "recommended": true,
+            "supports_vision": false
+          },
+          {
+            "id": "zai-glm-4.7",
+            "label": "Z.ai GLM 4.7 - Strong coding preview",
+            "max_context_tokens": 131072,
+            "recommended": true,
+            "supports_vision": false
+          },
+          {
+            "id": "qwen-3-235b-a22b-instruct-2507",
+            "label": "Qwen 3 235B Instruct - Frontier preview",
+            "max_context_tokens": 131072,
+            "recommended": false,
+            "supports_vision": false
+          }
+        ]
+      },
+      {
+        "connected": false,
+        "id": "minimax",
+        "models": [
+          {
+            "id": "MiniMax-M2.7",
+            "label": "MiniMax M2.7 - Best coding quality",
+            "max_context_tokens": 180000,
+            "recommended": true,
+            "supports_vision": false
+          },
+          {
+            "id": "MiniMax-M2.5",
+            "label": "MiniMax M2.5 - Strong value",
+            "max_context_tokens": 180000,
+            "recommended": false,
+            "supports_vision": false
+          }
+        ]
+      },
+      {
+        "connected": false,
+        "id": "mistral",
+        "models": [
+          {
+            "id": "mistral-large-2512",
+            "label": "Mistral Large 3 - Best quality",
+            "max_context_tokens": 256000,
+            "recommended": true,
+            "supports_vision": true
+          },
+          {
+            "id": "mistral-medium-2508",
+            "label": "Mistral Medium 3.1 - Balanced",
+            "max_context_tokens": 128000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "mistral-small-2603",
+            "label": "Mistral Small 4 - Fast + capable",
+            "max_context_tokens": 256000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "codestral-2508",
+            "label": "Codestral - Coding specialist",
+            "max_context_tokens": 128000,
+            "recommended": false,
+            "supports_vision": false
+          }
+        ]
+      },
+      {
+        "connected": false,
+        "id": "together",
+        "models": [
+          {
+            "id": "deepseek-ai/DeepSeek-V3.1",
+            "label": "DeepSeek V3.1 - Best general coding",
+            "max_context_tokens": 128000,
+            "recommended": true,
+            "supports_vision": false
+          },
+          {
+            "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8",
+            "label": "Qwen3 Coder 480B - Advanced coding",
+            "max_context_tokens": 262144,
+            "recommended": false,
+            "supports_vision": false
+          },
+          {
+            "id": "openai/gpt-oss-120b",
+            "label": "GPT-OSS 120B - Strong reasoning",
+            "max_context_tokens": 128000,
+            "recommended": false,
+            "supports_vision": false
+          },
+          {
+            "id": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "label": "Llama 3.3 70B Turbo - Fast baseline",
+            "max_context_tokens": 131072,
+            "recommended": false,
+            "supports_vision": false
+          }
+        ]
+      },
+      {
+        "connected": false,
+        "id": "deepseek",
+        "models": [
+          {
+            "id": "deepseek-v4-pro",
+            "label": "DeepSeek V4 Pro - Most capable",
+            "max_context_tokens": 1000000,
+            "recommended": true,
+            "supports_vision": false
+          },
+          {
+            "id": "deepseek-v4-flash",
+            "label": "DeepSeek V4 Flash - Fast + cheap",
+            "max_context_tokens": 1000000,
+            "recommended": true,
+            "supports_vision": false
+          },
+          {
+            "id": "deepseek-reasoner",
+            "label": "DeepSeek Reasoner - Legacy (deprecating)",
+            "max_context_tokens": 128000,
+            "recommended": false,
+            "supports_vision": false
+          }
+        ]
+      },
+      {
+        "connected": false,
+        "id": "kimi",
+        "models": [
+          {
+            "id": "kimi-k2.6",
+            "label": "Kimi K2.6 - Best coding",
+            "max_context_tokens": 262144,
+            "recommended": true,
+            "supports_vision": true
+          },
+          {
+            "id": "kimi-k2.5",
+            "label": "Kimi K2.5 - Previous coding model",
+            "max_context_tokens": 200000,
+            "recommended": false,
+            "supports_vision": true
+          }
+        ]
+      },
+      {
+        "connected": false,
+        "id": "openrouter",
+        "models": [
+          {
+            "id": "openai/gpt-5.4",
+            "label": "GPT-5.4 - Best overall",
+            "max_context_tokens": 872000,
+            "recommended": true,
+            "supports_vision": true
+          },
+          {
+            "id": "anthropic/claude-sonnet-4.6",
+            "label": "Claude Sonnet 4.6 - Best coding balance",
+            "max_context_tokens": 872000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "anthropic/claude-opus-4.6",
+            "label": "Claude Opus 4.6 - Most capable",
+            "max_context_tokens": 872000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "google/gemini-3.1-pro-preview-customtools",
+            "label": "Gemini 3.1 Pro Preview - Long-context reasoning",
+            "max_context_tokens": 872000,
+            "recommended": false,
+            "supports_vision": true
+          },
+          {
+            "id": "qwen/qwen3.6-plus",
+            "label": "Qwen 3.6 Plus - Strong reasoning",
+            "max_context_tokens": 240000,
+            "recommended": true,
+            "supports_vision": false
+          },
+          {
+            "id": "z-ai/glm-5v-turbo",
+            "label": "GLM-5V Turbo - Vision capable",
+            "max_context_tokens": 192000,
+            "recommended": true,
+            "supports_vision": true
+          },
+          {
+            "id": "z-ai/glm-5.1",
+            "label": "GLM-5.1 - Better but Slower",
+            "max_context_tokens": 192000,
+            "recommended": true,
+            "supports_vision": false
+          },
+          {
+            "id": "minimax/minimax-m2.7",
+            "label": "Minimax M2.7 - Minimax flagship",
+            "max_context_tokens": 180000,
+            "recommended": false,
+            "supports_vision": false
+          },
+          {
+            "id": "xiaomi/mimo-v2-pro",
+            "label": "MiMo V2 Pro - Xiaomi multimodal",
+            "max_context_tokens": 240000,
+            "recommended": true,
+            "supports_vision": true
+          }
+        ]
+      }
+    ],
+    "queens": [],
+    "slots": {
+      "llm": {
+        "api_base": "http://127.0.0.1:54335/v1",
+        "endpoint": null,
+        "has_extra_body": false,
+        "max_context_tokens": null,
+        "model": "contract-probe-model",
+        "provider": "openai",
+        "source": "catalog",
+        "subscription": null
+      },
+      "vision_fallback": null,
+      "worker_llm": null
+    },
+    "subscriptions": [
+      {
+        "active": false,
+        "description": "Use your Claude Max/Pro plan",
+        "detected": false,
+        "id": "claude_code",
+        "model": "claude-opus-4-6",
+        "name": "Claude Code Subscription",
+        "own_risk": true
+      },
+      {
+        "active": false,
+        "description": "Use your ZAI Code plan",
+        "detected": false,
+        "id": "zai_code",
+        "model": "glm-5.1",
+        "name": "ZAI Code Subscription",
+        "own_risk": true
+      },
+      {
+        "active": false,
+        "description": "Use your Codex/ChatGPT Plus plan",
+        "detected": false,
+        "id": "codex",
+        "model": "gpt-5.3-codex",
+        "name": "OpenAI Codex Subscription",
+        "own_risk": true
+      },
+      {
+        "active": false,
+        "description": "Use your MiniMax coding key",
+        "detected": false,
+        "id": "minimax_code",
+        "model": "MiniMax-M2.7",
+        "name": "MiniMax Coding Key",
+        "own_risk": true
+      },
+      {
+        "active": false,
+        "description": "Use your Kimi Code plan",
+        "detected": false,
+        "id": "kimi_code",
+        "model": "kimi-k2.6",
+        "name": "Kimi Code Subscription",
+        "own_risk": true
+      },
+      {
+        "active": false,
+        "description": "Use your Hive API key",
+        "detected": false,
+        "id": "hive_llm",
+        "model": "queen",
+        "name": "Hive LLM",
+        "own_risk": true
+      },
+      {
+        "active": false,
+        "description": "Use your Google/Gemini plan",
+        "detected": false,
+        "id": "antigravity",
+        "model": "gemini-3-flash",
+        "name": "Antigravity Subscription",
+        "own_risk": true
+      }
+    ]
+  },
+  "shape": {
+    "endpoints": "array",
+    "endpoints[].api_base": "string",
+    "endpoints[].builtin": "boolean",
+    "endpoints[].has_key": "boolean",
+    "endpoints[].name": "string",
+    "endpoints[].running": "boolean",
+    "judge": "object",
+    "judge.api_base": "null",
+    "judge.configured": "boolean",
+    "judge.model": "null",
+    "providers": "array",
+    "providers[].connected": "boolean",
+    "providers[].id": "string",
+    "providers[].models": "array",
+    "providers[].models[].id": "string",
+    "providers[].models[].label": "string",
+    "providers[].models[].max_context_tokens": "number(int)",
+    "providers[].models[].recommended": "boolean",
+    "providers[].models[].supports_vision": "boolean",
+    "queens": "array",
+    "slots": "object",
+    "slots.llm": "object",
+    "slots.llm.api_base": "string",
+    "slots.llm.endpoint": "null",
+    "slots.llm.has_extra_body": "boolean",
+    "slots.llm.max_context_tokens": "null",
+    "slots.llm.model": "string",
+    "slots.llm.provider": "string",
+    "slots.llm.source": "string",
+    "slots.llm.subscription": "null",
+    "slots.vision_fallback": "null",
+    "slots.worker_llm": "null",
+    "subscriptions": "array",
+    "subscriptions[].active": "boolean",
+    "subscriptions[].description": "string",
+    "subscriptions[].detected": "boolean",
+    "subscriptions[].id": "string",
+    "subscriptions[].model": "string",
+    "subscriptions[].name": "string",
+    "subscriptions[].own_risk": "boolean"
+  },
+  "counts": {
+    "endpoints": 1,
+    "providers": 11,
+    "queens": 0,
+    "subscriptions": 7
+  },
+  "notes": []
+}

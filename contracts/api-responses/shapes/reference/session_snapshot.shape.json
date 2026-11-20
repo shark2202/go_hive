@@ -1,0 +1,22 @@
+{
+  "endpoint": "session_snapshot",
+  "shape": {
+    "activity": "string",
+    "awaiting_input": "boolean",
+    "current_execution_id": "null",
+    "current_tool_calls": "array",
+    "interrupt_cause": "null",
+    "interrupted": "boolean",
+    "is_executing": "boolean",
+    "last_event_at": "string",
+    "last_event_seq": "number(float)",
+    "last_queen_event_at": "string",
+    "park_reason": "string",
+    "pending_questions": "null",
+    "queen_busy_reason": "string",
+    "snapshot_seq": "number(float)"
+  },
+  "counts": {
+    "current_tool_calls": 0
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "endpoint": "health",
+  "label": "健康检查",
+  "method": "GET",
+  "path": "/api/health",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-20T23:43:50+08:00",
+  "canonical": {
+    "agents_loaded": 0,
+    "request_executor": {
+      "active": 0,
+      "max_workers": 32,
+      "queued": 0
+    },
+    "resources": {
+      "verdict": "unknown"
+    },
+    "sessions": 0,
+    "status": "ok"
+  },
+  "shape": {
+    "agents_loaded": "number(int)",
+    "request_executor": "object",
+    "request_executor.active": "number(int)",
+    "request_executor.max_workers": "number(int)",
+    "request_executor.queued": "number(int)",
+    "resources": "object",
+    "resources.verdict": "string",
+    "sessions": "number(int)",
+    "status": "string"
+  },
+  "counts": {},
+  "notes": []
+}

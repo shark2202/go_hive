@@ -1,0 +1,477 @@
+package cli
+
+// Parity-exempt: upstream has no test for tools/src/gcu/cli.py; these cases pin
+// the ported CLI contract instead — every verb's bridge command name and
+// parameters, the exit-code taxonomy from tools/src/gcu/errors.py, and the
+// local session state that makes tab-less commands work between processes.
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+	"testing"
+)
+
+// browserBridgeCommands is the bridge's canonical command list
+// (browserbridge/commands.go canonicalCommands). The CLI must reach every one.
+var browserBridgeCommands = []string{
+	"browser_setup", "browser_status", "browser_stop",
+	"browser_tabs", "browser_open", "browser_close", "browser_activate_tab",
+	"browser_navigate", "browser_reload",
+	"browser_interact", "browser_select",
+	"browser_get_text", "browser_resize", "browser_upload", "browser_dialog_respond",
+	"browser_console", "browser_html", "browser_shadow_query", "browser_script",
+	"browser_click", "browser_type", "browser_type_focused", "browser_press",
+	"browser_scroll", "browser_snapshot", "browser_screenshot", "browser_evaluate",
+}
+
+type capturedCommand struct {
+	Profile string
+	Type    string
+	Params  map[string]any
+}
+
+// fakeBridge records the last /command envelope and answers with `response`.
+func fakeBridge(t *testing.T, response map[string]any) (*httptest.Server, func() capturedCommand) {
+	t.Helper()
+	var mu sync.Mutex
+	last := capturedCommand{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/command" || r.Method != http.MethodPost {
+			http.NotFound(w, r)
+			return
+		}
+		var envelope capturedCommand
+		if err := json.NewDecoder(r.Body).Decode(&envelope); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		mu.Lock()
+		last = envelope
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		payload := response
+		if payload == nil {
+			payload = map[string]any{"ok": true, "result": map[string]any{"ok": true}}
+		}
+		_ = json.NewEncoder(w).Encode(payload)
+	}))
+	t.Cleanup(server.Close)
+	return server, func() capturedCommand {
+		mu.Lock()
+		defer mu.Unlock()
+		return last
+	}
+}
+
+// runBrowser executes one CLI invocation with an isolated HIVE_HOME.
+func runBrowser(t *testing.T, home string, argv ...string) (string, string, int) {
+	t.Helper()
+	var stdout, stderr bytes.Buffer
+	code := RunBrowserCLI(argv, &stdout, &stderr)
+	return stdout.String(), stderr.String(), code
+}
+
+// TestBrowserCLICoverage drives every verb and pins the bridge command + the
+// parameters it sends.
+//
+// Parity: tools/src/gcu/cli.py::_build_parser
+func TestBrowserCLICoverage(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	upload := filepath.Join(home, "upload.txt")
+	if err := os.WriteFile(upload, []byte("hello"), 0o644); err != nil {
+		t.Fatalf("write upload fixture: %v", err)
+	}
+
+	cases := []struct {
+		name   string
+		argv   []string
+		want   string
+		checks map[string]string
+	}{
+		{name: "setup", argv: []string{"setup", "--json"}, want: "browser_setup"},
+		{name: "status", argv: []string{"status", "--json", "--tab", "5"}, want: "browser_status",
+			checks: map[string]string{"tab_id": "5"}},
+		{name: "stop", argv: []string{"stop", "--json"}, want: "browser_stop"},
+		{name: "open", argv: []string{"open", "https://example.com", "--json"}, want: "browser_open",
+			checks: map[string]string{"url": "https://example.com", "background": "false"}},
+		{name: "open background in profile", argv: []string{"open", "https://example.com", "--background", "--browser-profile", "Work", "--json"},
+			want: "browser_open", checks: map[string]string{"background": "true", "browser_profile": "Work"}},
+		{name: "navigate", argv: []string{"navigate", "https://example.com/a", "--tab", "7", "--wait-until", "networkidle", "--json"},
+			want: "browser_navigate", checks: map[string]string{"url": "https://example.com/a", "wait_until": "networkidle", "tab_id": "7", "timeout_ms": "30000"}},
+		{name: "reload", argv: []string{"reload", "--tab", "7", "--json"}, want: "browser_reload",
+			checks: map[string]string{"tab_id": "7"}},
+		{name: "interact click", argv: []string{"interact", "--action", "left_click", "--selector", "#go", "--tab", "7", "--json"},
+			want: "browser_interact", checks: map[string]string{"action": "left_click", "selector": "#go", "tab_id": "7"}},
+		{name: "interact screenshot", argv: []string{"interact", "--action", "screenshot", "--intent", "verify layout", "--tab", "7", "--json"},
+			want: "browser_interact", checks: map[string]string{"action": "screenshot", "intent": "verify layout"}},
+		{name: "interact drag coordinates", argv: []string{"interact", "--action", "drag", "--start-coordinate", "0.1,0.2", "--coordinate", "0.3,0.4", "--tab", "7", "--json"},
+			want: "browser_interact", checks: map[string]string{"start_coordinate": "[0.1 0.2]", "coordinate": "[0.3 0.4]"}},
+		{name: "select", argv: []string{"select", "#s", "--value", "a", "--value", "b", "--tab", "7", "--json"},
+			want: "browser_select", checks: map[string]string{"selector": "#s", "values": "[a b]"}},
+		{name: "upload", argv: []string{"upload", "#f", "--file", upload, "--tab", "7", "--json"},
+			want: "browser_upload", checks: map[string]string{"selector": "#f", "file_paths": "[" + upload + "]"}},
+		{name: "screenshot", argv: []string{"screenshot", "--intent", "verify layout", "--tab", "7", "--json"},
+			want:   "browser_screenshot",
+			checks: map[string]string{"full_page": "false", "timeout_ms": "5000", "intent": "verify layout"}},
+		{name: "evaluate", argv: []string{"evaluate", "--js", "document.title", "--tab", "7", "--json"},
+			want: "browser_evaluate", checks: map[string]string{"script": "document.title"}},
+		{name: "script", argv: []string{"script", "--skill", "hive.demo", "--script", "run", "--args", `{"a":1}`, "--tab", "7", "--json"},
+			want: "browser_script", checks: map[string]string{"skill": "hive.demo", "script": "run", "timeout_s": "60"}},
+		{name: "click", argv: []string{"click", "#b", "--tab", "7", "--json"}, want: "browser_click",
+			checks: map[string]string{"selector": "#b", "button": "left", "double_click": "false"}},
+		{name: "type", argv: []string{"type", "#i", "--text", "hi", "--tab", "7", "--json"}, want: "browser_type",
+			checks: map[string]string{"selector": "#i", "text": "hi"}},
+		{name: "type-focused", argv: []string{"type-focused", "--text", "hi", "--tab", "7", "--json"},
+			want: "browser_type_focused", checks: map[string]string{"text": "hi"}},
+		{name: "press", argv: []string{"press", "Enter", "--tab", "7", "--json"}, want: "browser_press",
+			checks: map[string]string{"key": "Enter"}},
+		{name: "scroll", argv: []string{"scroll", "--direction", "up", "--amount", "100", "--tab", "7", "--json"},
+			want: "browser_scroll", checks: map[string]string{"direction": "up", "amount": "100"}},
+		{name: "tab list", argv: []string{"tab", "list", "--json"}, want: "browser_tabs"},
+		{name: "tab close", argv: []string{"tab", "close", "9", "--json"}, want: "browser_close",
+			checks: map[string]string{"tab_id": "9"}},
+		{name: "tab activate", argv: []string{"tab", "activate", "9", "--json"}, want: "browser_activate_tab",
+			checks: map[string]string{"tab_id": "9"}},
+		{name: "page html", argv: []string{"page", "html", "#x", "--tab", "7", "--json"}, want: "browser_html",
+			checks: map[string]string{"selector": "#x"}},
+		{name: "page snapshot", argv: []string{"page", "snapshot", "--mode", "simple", "--tab", "7", "--json"},
+			want: "browser_snapshot", checks: map[string]string{"mode": "simple"}},
+		{name: "page text", argv: []string{"page", "text", "#t", "--tab", "7", "--json"}, want: "browser_get_text",
+			checks: map[string]string{"selector": "#t", "timeout_ms": "5000"}},
+		{name: "page shadow-query", argv: []string{"page", "shadow-query", "#q", "--tab", "7", "--json"},
+			want: "browser_shadow_query", checks: map[string]string{"selector": "#q"}},
+		{name: "page console", argv: []string{"page", "console", "--tab", "7", "--json"}, want: "browser_console"},
+		{name: "page resize", argv: []string{"page", "resize", "--width", "1280", "--height", "800", "--tab", "7", "--json"},
+			want: "browser_resize", checks: map[string]string{"width": "1280", "height": "800"}},
+		{name: "dialog respond", argv: []string{"dialog", "respond", "accept", "--tab", "7", "--json"},
+			want: "browser_dialog_respond", checks: map[string]string{"action": "accept"}},
+	}
+
+	seen := map[string]bool{}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			server, last := fakeBridge(t, nil)
+			argv := append(append([]string{}, testCase.argv...), "--bridge", server.URL)
+			_, stderr, code := runBrowser(t, home, argv...)
+			if code != browserExitOK {
+				t.Fatalf("exit = %d, want 0 (stderr: %s)", code, stderr)
+			}
+			got := last()
+			if got.Type != testCase.want {
+				t.Fatalf("bridge command = %q, want %q", got.Type, testCase.want)
+			}
+			seen[got.Type] = true
+			for key, want := range testCase.checks {
+				if rendered := fmt.Sprintf("%v", got.Params[key]); rendered != want {
+					t.Fatalf("params[%s] = %s, want %s (all params: %v)", key, rendered, want, got.Params)
+				}
+			}
+		})
+	}
+
+	missing := make([]string, 0, len(browserBridgeCommands))
+	for _, name := range browserBridgeCommands {
+		if !seen[name] {
+			missing = append(missing, name)
+		}
+	}
+	sort.Strings(missing)
+	if len(missing) > 0 {
+		t.Fatalf("CLI does not reach %d bridge command(s): %v", len(missing), missing)
+	}
+}
+
+// TestBrowserCLIExitCodes pins the taxonomy agents branch on.
+//
+// Parity: tools/src/gcu/errors.py::classify_result
+func TestBrowserCLIExitCodes(t *testing.T) {
+	cases := []struct {
+		name     string
+		response map[string]any
+		status   int
+		want     int
+	}{
+		{name: "ok", response: map[string]any{"ok": true, "result": map[string]any{"ok": true}}, want: browserExitOK},
+		{name: "pending dialog", response: map[string]any{"ok": true, "result": map[string]any{"ok": false, "pending_dialog": map[string]any{"type": "alert"}}}, want: browserExitPendingDialog},
+		{name: "rate limited", response: map[string]any{"ok": true, "result": map[string]any{"ok": false, "error": "rate_limited"}}, want: browserExitRateLimited},
+		{name: "not connected result", response: map[string]any{"ok": true, "result": map[string]any{"ok": false, "connected": false, "error": "The Hive browser extension isn't connected."}}, want: browserExitNotConnected},
+		{name: "not started result", response: map[string]any{"ok": true, "result": map[string]any{"ok": false, "error": "Browser not started. Run open first."}}, want: browserExitNotStarted},
+		{name: "no active tab", response: map[string]any{"ok": true, "result": map[string]any{"ok": false, "error": "no active tab is known for this profile — pass tab_id"}}, want: browserExitNotStarted},
+		{name: "element not found", response: map[string]any{"ok": true, "result": map[string]any{"ok": false, "error": "Element not found: #nope"}}, want: browserExitNotFound},
+		{name: "ambiguous selector", response: map[string]any{"ok": true, "result": map[string]any{"ok": false, "error": "selector matched multiple elements"}}, want: browserExitAmbiguous},
+		{name: "domain failure", response: map[string]any{"ok": true, "result": map[string]any{"ok": false, "error": "tab.create returned no tabId"}}, want: browserExitDomain},
+		{name: "http not found code", response: map[string]any{"ok": false, "code": "not_found", "message": "no such tab"}, status: http.StatusNotFound, want: browserExitNotFound},
+		{name: "http not connected code", response: map[string]any{"ok": false, "code": "not_connected", "message": "no extension"}, status: http.StatusServiceUnavailable, want: browserExitNotConnected},
+		{name: "http bad request code", response: map[string]any{"ok": false, "code": "bad_request", "message": "missing selector"}, status: http.StatusBadRequest, want: browserExitBadArgs},
+		{name: "http rate limit code", response: map[string]any{"ok": false, "code": "rate_limited", "message": "view cap"}, status: http.StatusTooManyRequests, want: browserExitRateLimited},
+	}
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			status := testCase.status
+			if status == 0 {
+				status = http.StatusOK
+			}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(status)
+				_ = json.NewEncoder(w).Encode(testCase.response)
+			}))
+			defer server.Close()
+			_, stderr, code := runBrowser(t, home, "status", "--json", "--bridge", server.URL)
+			if code != testCase.want {
+				t.Fatalf("exit = %d, want %d (stderr: %s)", code, testCase.want, stderr)
+			}
+		})
+	}
+}
+
+// TestBrowserCLIUsageErrors pins CLI-level usage errors to exit 2 — argparse's
+// code, which the upstream `hive-browser` runs on (measured: no args, unknown
+// command/flag, missing required flag/positional, bad choice, bad float list).
+//
+// Parity: tools/src/gcu/cli.py::_build_parser
+func TestBrowserCLIUsageErrors(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	server, last := fakeBridge(t, nil)
+	cases := [][]string{
+		{}, // no command
+		{"bogus"},
+		{"navigate"},                     // missing url positional
+		{"open"},                         // missing url positional
+		{"interact"},                     // --action required
+		{"interact", "--action", "nope"}, // argparse choices
+		{"interact", "--action", "screenshot", "--coordinate", "0.1"},       // _floats(2)
+		{"interact", "--action", "zoom", "--region", "0.1,0.2"},             // _floats(4)
+		{"interact", "--action", "wait", "--tab", "7", "--duration", "abc"}, // type=float
+		{"interact", "--action", "left_click", "--tab", "7", "--auto-snapshot-mode", "nope"},
+		{"interact", "--action", "left_click", "--tab", "7", "--scroll-direction", "sideways"},
+		{"navigate", "https://example.com", "--tab", "7", "--wait-until", "whenever"},
+		{"select", "#s"},                      // --value required
+		{"upload", "#f"},                      // --file required
+		{"page", "resize", "--width", "1280"}, // --height required
+		{"page", "snapshot", "--mode", "nope"},
+		{"tab", "close", "abc"},
+		{"tab", "activate", "0"},
+		{"dialog", "respond", "maybe"},
+		{"script", "--skill", "x", "--script", "y", "--timeout-s", "soon"},
+		{"status", "--unknown-flag"},
+	}
+	for _, argv := range cases {
+		full := append(append([]string{}, argv...), "--bridge", server.URL)
+		_, stderr, code := runBrowser(t, home, full...)
+		if code != browserExitUsage {
+			t.Fatalf("%v: exit = %d, want %d (stderr: %s)", argv, code, browserExitUsage, stderr)
+		}
+		if got := last(); got.Type != "" {
+			t.Fatalf("%v: must not reach the bridge, but sent %q", argv, got.Type)
+		}
+	}
+}
+
+// TestBrowserCLIBadArgs pins the Go-internal validations that stay on exit 6
+// (upstream has no argparse equivalent: upload file existence, the standalone
+// screenshot verb's intent, evaluate/script handler checks, the Go-only `type`
+// verb).
+//
+// Parity: tools/src/gcu/errors.py::EXIT_VALIDATION
+func TestBrowserCLIBadArgs(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	server, last := fakeBridge(t, nil)
+	cases := [][]string{
+		{"screenshot"}, // standalone verb keeps its local --intent requirement
+		{"upload", "#f", "--file", filepath.Join(home, "missing.txt")},
+		{"evaluate"},
+		{"script", "--skill", "x"},
+		{"script", "--skill", "x", "--script", "y", "--args", "not-json"},
+		{"type", "#i"},
+	}
+	for _, argv := range cases {
+		full := append(append([]string{}, argv...), "--bridge", server.URL)
+		_, stderr, code := runBrowser(t, home, full...)
+		if code != browserExitBadArgs {
+			t.Fatalf("%v: exit = %d, want %d (stderr: %s)", argv, code, browserExitBadArgs, stderr)
+		}
+		if got := last(); got.Type != "" {
+			t.Fatalf("%v: must not reach the bridge, but sent %q", argv, got.Type)
+		}
+	}
+}
+
+// TestBrowserCLIIntentErrorIsDomain pins the upstream intent path: the CLI does
+// not pre-check `--intent` for interact screenshot/zoom; the bridge answers
+// ok:false and the taxonomy maps that to exit 1 (domain), exactly like
+// gcu.browser.tools.interact._dispatch → classify_result upstream.
+//
+// Parity: tools/src/gcu/browser/tools/interact.py::_dispatch
+func TestBrowserCLIIntentErrorIsDomain(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	cases := []struct {
+		name     string
+		argv     []string
+		response map[string]any
+		action   string
+	}{
+		{
+			name: "screenshot without intent",
+			argv: []string{"interact", "--action", "screenshot", "--tab", "7"},
+			response: map[string]any{"ok": true, "result": map[string]any{
+				"ok": false,
+				"error": "screenshot requires `intent` — one phrase naming the entity, " +
+					"the target element, and the action you plan to take.",
+			}},
+			action: "screenshot",
+		},
+		{
+			name: "zoom without region",
+			argv: []string{"interact", "--action", "zoom", "--tab", "7"},
+			response: map[string]any{"ok": true, "result": map[string]any{
+				"ok": false, "error": "zoom requires region [x0, y0, x1, y1]",
+			}},
+			action: "zoom",
+		},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			server, last := fakeBridge(t, testCase.response)
+			argv := append(append([]string{}, testCase.argv...), "--bridge", server.URL)
+			_, stderr, code := runBrowser(t, home, argv...)
+			if code != browserExitDomain {
+				t.Fatalf("exit = %d, want %d (stderr: %s)", code, browserExitDomain, stderr)
+			}
+			got := last()
+			if got.Type != "browser_interact" || fmt.Sprintf("%v", got.Params["action"]) != testCase.action {
+				t.Fatalf("command = %q params = %v, want browser_interact/%s", got.Type, got.Params, testCase.action)
+			}
+			if _, present := got.Params["intent"]; present {
+				t.Fatalf("CLI must not invent an intent: %v", got.Params)
+			}
+		})
+	}
+}
+
+// TestBrowserCLINotConnected covers the cold case: nothing listens, so the CLI
+// says so and exits 2 (agents then run `hive serve` / `hive-browser setup`).
+//
+// Parity-exempt: 上游 CLI 在 errors.run 里自带 ensure_bridge_host_running()，
+// 先拉起 bridge_host 再退 2；Go CLI 不拉桥（桥归 serve 管），这条断言的「不拉桥」
+// 分支上游没有等价测试。
+func TestBrowserCLINotConnected(t *testing.T) {
+	t.Setenv("HIVE_HOME", t.TempDir())
+	addr, _ := freeTCPAddr(t)
+	stdout, stderr, code := runBrowser(t, "", "status", "--json", "--bridge", "http://"+addr)
+	if code != browserExitNotConnected {
+		t.Fatalf("exit = %d, want %d (stdout: %s stderr: %s)", code, browserExitNotConnected, stdout, stderr)
+	}
+	if !strings.Contains(stderr, "not reachable") {
+		t.Fatalf("expected a reachability error, got %q", stderr)
+	}
+}
+
+// TestBrowserCLIJSONOutput pins the --json envelope and the human form.
+//
+// Parity: tools/src/gcu/errors.py::run
+func TestBrowserCLIJSONOutput(t *testing.T) {
+	t.Setenv("HIVE_HOME", t.TempDir())
+	server, _ := fakeBridge(t, map[string]any{"ok": true, "result": map[string]any{"ok": true, "tabId": 42, "url": "https://example.com"}})
+	defer server.Close()
+
+	stdout, stderr, code := runBrowser(t, "", "open", "https://example.com", "--json", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("exit = %d (stderr: %s)", code, stderr)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal([]byte(stdout), &decoded); err != nil {
+		t.Fatalf("stdout is not JSON: %v\n%s", err, stdout)
+	}
+	if intOf(decoded["tabId"]) != 42 {
+		t.Fatalf("tabId = %v, want 42", decoded["tabId"])
+	}
+
+	stdout, _, code = runBrowser(t, "", "open", "https://example.com", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("human form exit = %d", code)
+	}
+	if !strings.Contains(stdout, "tabId: 42") || !strings.Contains(stdout, "url: https://example.com") {
+		t.Fatalf("human output = %q", stdout)
+	}
+}
+
+// TestBrowserCLIStateFile pins the client-side session memory: `open` remembers
+// the tab for the profile, tab-less commands reuse it, and closing it forgets.
+//
+// Parity-exempt: 上游把 profile→group 索引用 browser_contexts.json + rehydrate_contexts
+// 重建（tools/src/gcu/browser/tools/lifecycle.py），没有对应单测；Go 侧只记 tabId。
+func TestBrowserCLIStateFile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	t.Setenv("HIVE_BROWSER_SESSION", "worker-1")
+	server, last := fakeBridge(t, nil)
+	defer server.Close()
+
+	if _, stderr, code := runBrowser(t, home, "open", "https://example.com", "--json", "--bridge", server.URL); code != browserExitOK {
+		t.Fatalf("open exit = %d (stderr: %s)", code, stderr)
+	}
+	// The fake bridge returns no tabId, so seed the state the way a real open
+	// would (the supervisor test covers the real bridge).
+	saveBrowserCLIState(filepath.Join(home, "browser_cli_state.json"), "worker-1", 77, "Default")
+
+	if _, stderr, code := runBrowser(t, home, "page", "text", "h1", "--json", "--bridge", server.URL); code != browserExitOK {
+		t.Fatalf("page text exit = %d (stderr: %s)", code, stderr)
+	}
+	if got := fmt.Sprintf("%v", last().Params["tab_id"]); got != "77" {
+		t.Fatalf("tab_id = %s, want the remembered 77", got)
+	}
+	if got := last().Profile; got != "worker-1" {
+		t.Fatalf("profile = %q, want worker-1", got)
+	}
+
+	// A different profile has no tab: the CLI refuses with exit 3.
+	t.Setenv("HIVE_BROWSER_SESSION", "worker-2")
+	_, stderr, code := runBrowser(t, home, "page", "text", "h1", "--json", "--bridge", server.URL)
+	if code != browserExitNotStarted {
+		t.Fatalf("exit = %d, want %d (stderr: %s)", code, browserExitNotStarted, stderr)
+	}
+	if !strings.Contains(stderr, "Browser not started") {
+		t.Fatalf("stderr = %q", stderr)
+	}
+
+	// Closing the remembered tab clears the profile entry.
+	saveBrowserCLIState(filepath.Join(home, "browser_cli_state.json"), "worker-2", 88, "Default")
+	runBrowser(t, home, "tab", "close", "88", "--json", "--bridge", server.URL)
+	state := loadBrowserCLIState(filepath.Join(home, "browser_cli_state.json"))
+	if _, still := state["worker-2"]; still {
+		t.Fatalf("closed tab left state behind: %v", state)
+	}
+}
+
+// TestBrowserCLIHelp pins the local help paths (no bridge, exit 0).
+//
+// Parity: tools/src/gcu/cli.py::_help
+func TestBrowserCLIHelp(t *testing.T) {
+	stdout, _, code := runBrowser(t, "", "help")
+	if code != browserExitOK || !strings.Contains(stdout, "hive-browser") {
+		t.Fatalf("help exit = %d, output = %q", code, stdout)
+	}
+	stdout, _, code = runBrowser(t, "", "help", "tab")
+	if code != browserExitOK || !strings.Contains(stdout, "tab-group management") {
+		t.Fatalf("help tab exit = %d, output = %q", code, stdout)
+	}
+	_, stderr, code := runBrowser(t, "", "help", "nope")
+	if code != browserExitBadArgs || !strings.Contains(stderr, "no such command") {
+		t.Fatalf("help nope exit = %d, stderr = %q", code, stderr)
+	}
+}

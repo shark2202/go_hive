@@ -1,0 +1,143 @@
+{
+ "python": {
+  "version": "1.0.14",
+  "commit": "4e737cbc63523ba5eeda84820c09f28ebd43a670",
+  "commit_subject": "docs(audit): 工具契约深度审计（Python 857/270 vs Go 137；Skill 25/25 逐字一致）",
+  "capture_head": "1b9c458a19244379ac65dabd4827addb891045ef",
+  "core_commit": "a756b1e51765bc75b0a40e362859452a0a54081b",
+  "core_commit_date": "2026-11-19T09:48:44+08:00",
+  "tools_commit": "68b6c23095aef8bc9a0dcbc05aeb16e61b1ba8db",
+  "tools_commit_date": "2026-11-02T08:44:49-08:00",
+  "route_commit": "6dafbbe3dd9e8d028551d792f21940dd00542ce4",
+  "checkout": "/Users/mac/hive",
+  "note": "capture ran at 1b9c458a; core/ is unchanged since a756b1e5 and the tool/queen sources since 68b6c230, so the captured surface is identical at both commits"
+ },
+ "go": {
+  "version": "1.0.26-go.1",
+  "commit": "1b9c458a19244379ac65dabd4827addb891045ef",
+  "branch": "contract-tool-freeze",
+  "checkout": "/Users/mac/hive/.wt/contract-tool-freeze",
+  "tools_commit": "721cb199335895024b9ef5b05b7263411c9ef46b",
+  "build": "make build (CGO_ENABLED=0 GOPROXY=off), dist/hive"
+ },
+ "captures": {
+  "method": "fake OpenAI-compatible gateway in front of each runtime's `serve`; llm.api_base pointed at it; create a queen session; POST one chat message; record the request body verbatim",
+  "python": {
+   "endpoint": "GET http://127.0.0.1:8803/api/queen/queen_growth/tools",
+   "home": "temporary HIVE_HOME, no credentials, clean queens/ tree",
+   "files": {
+    "python-queen-tools.json": "c92d0320dfbeea0838970d462fff6701b74c4589a19c904953d27fda5db8ede1",
+    "python-llm-tools.json": "79d632dcc0fd3827f666202f837ba141922a530cb82ef953d7c8a0ee795c4f8c"
+   },
+   "gateway_log": "captures/python-llm.full.jsonl (scratch, not committed)",
+   "requests": [
+    {
+     "tool_count": 24,
+     "model": "gpt-4o-mini",
+     "stream": true,
+     "layer": "queen first turn"
+    },
+    {
+     "tool_count": 24,
+     "model": "gpt-4o-mini",
+     "stream": true,
+     "layer": "queen first turn, redelivered"
+    },
+    {
+     "tool_count": 0,
+     "model": "gpt-4o-mini",
+     "stream": false,
+     "layer": "aux call (no tools)"
+    }
+   ]
+  },
+  "go": {
+   "endpoint": "GET http://127.0.0.1:8805/api/queen/queen_growth/tools",
+   "home": "temporary HIVE_HOME, no credentials",
+   "files": {
+    "go-queen-tools.json": "9d1b0eb426b96a9aae54b54e0909a569e8e9ede5594619a7172a1090a3f28ac8",
+    "go-llm-tools.json": "926845b18ab07ca4cc8d1a974171f3b04dae6e88d1937a5981cc02ec02ccdcee"
+   },
+   "gateway_log": "captures/go-llm.full.jsonl (scratch, not committed)",
+   "requests": [
+    {
+     "tool_count": 144,
+     "model": "gpt-4o-mini",
+     "stream": true,
+     "layer": "queen first turn"
+    }
+   ],
+   "go_catalogue_union": {
+    "session_catalogue": 137,
+    "queen_lifecycle": 10,
+    "union": 147,
+    "llm_request": 144,
+    "difference": "147 - 4 colony-only tools (get_worker_status, inject_message, run_worker, stop_worker) + 1 synthetic (ask_user) = 144"
+   }
+  }
+ },
+ "cross_checks": {
+  "source_level_audit": {
+   "path": "go_hive/docs/tool-consistency-audit.json",
+   "commit": "4e737cbc63523ba5eeda84820c09f28ebd43a670",
+   "note": "static source scan (Python 857 all / 270 default tools, Go 137 session tools); this manifest is the runtime-captured LLM layer and agrees with go_session_tools=137"
+  }
+ },
+ "uncovered": [
+  "Python colony/worker tool surfaces (worker sessions, colony overseer) — only the default independent-phase DM queen session was captured.",
+  "Python deferred (searchable) tool schemas: they never reach the request. Names appear only in the user turn's <system-reminder>; this capture listed chart_render and web_scrape (the email_senders category is hidden while the feature flag is off).",
+  "Go MCP-origin tools: with a clean HIVE_HOME the Go runtime registers no MCP server (mcp_servers=[], stale=true), so its whole LLM surface comes from the builtin catalogue. The MCP catalog layer has no Go counterpart to compare against.",
+  "Credentialed (OAuth) integration tools on the Python side: connected_providers=[] in a clean home, so gmail/github/hubspot/... are in neither the catalog nor the request.",
+  "Output/return schemas: neither runtime declares one in the tool definition (the source audit also reports py_output_schema=0).",
+  "Anthropic Messages protocol path: only the OpenAI-compatible serialization was captured.",
+  "System-prompt coupling: the Python <searchable_tools>/<system-reminder> manifest was captured; Go sends no equivalent block because nothing is deferred."
+ ],
+ "tool_library_layer": {
+  "python": {
+   "enabled_mcp_tools": 25,
+   "mcp_catalog_tools": 26,
+   "enabled_but_not_in_catalog": [
+    "adjust_sender",
+    "browser_setup",
+    "list_senders",
+    "list_suppressed",
+    "pick_sender",
+    "search_messages",
+    "search_timeline",
+    "send_campaign",
+    "send_from_sender",
+    "sender_history",
+    "setup_email_sender",
+    "suppress_recipient"
+   ],
+   "stale": false,
+   "connected_providers": []
+  },
+  "go": {
+   "enabled_mcp_tools": 24,
+   "mcp_catalog_tools": 0,
+   "stale": true,
+   "connected_providers": []
+  },
+  "enabled_python_only": [
+   "chart_render"
+  ],
+  "enabled_go_only": [],
+  "note": "Python's allowlist names 25 tools but only 13 are in the live MCP catalog and 12 are deferred/in-process; the Go snapshot names 24 because it has no MCP catalog to enumerate in a clean home"
+ },
+ "deferred_reminder": {
+  "python": [
+   "chart_render",
+   "web_scrape"
+  ],
+  "source": "user-turn <system-reminder> in the captured request",
+  "go": []
+ },
+ "capture_sha256": {
+  "python-queen-tools.json": "c92d0320dfbeea0838970d462fff6701b74c4589a19c904953d27fda5db8ede1",
+  "python-llm-tools.json": "79d632dcc0fd3827f666202f837ba141922a530cb82ef953d7c8a0ee795c4f8c",
+  "go-queen-tools.json": "9d1b0eb426b96a9aae54b54e0909a569e8e9ede5594619a7172a1090a3f28ac8",
+  "go-llm-tools.json": "926845b18ab07ca4cc8d1a974171f3b04dae6e88d1937a5981cc02ec02ccdcee"
+ },
+ "generated_at_utc": "2026-11-20T15:35:11Z"
+}

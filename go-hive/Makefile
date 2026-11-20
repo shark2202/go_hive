@@ -33,7 +33,7 @@ PY_ROOT   ?= ../../core
 OFFLINE    = CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod
 PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report ci clean help
 
 all: ci
 
@@ -48,6 +48,8 @@ help:
 	@echo "  make cross       交叉编译 6 平台到 dist/"
 	@echo "  make parity      校验每个 Test 的 // Parity: 注解"
 	@echo "  make parity-targets 校验注解引用的 Python 测试真实存在"
+	@echo "  make tool-contract-check  校验 contracts/tool-definitions.json 自洽"
+	@echo "  make tool-contract-report 对拍冻结契约与当前工具面（只报告，不阻断）"
 	@echo "  make ci          fmt-check + vet + test + cross + parity + parity-targets"
 
 test:
@@ -109,6 +111,17 @@ parity:
 
 parity-targets:
 	@bash $(PARITY_TARGETS) . "$(PY_ROOT)"
+
+# 工具契约冻结（不等于 parity 门禁）：manifest 是抓取到的 Python 基准面，
+# 本仓库工具面是待对齐方。check 只校验产物自洽（排序/唯一/覆盖率/文档数字），
+# report 全量打印差异但退出码不受差异影响 —— 差异是当前事实，不是回归。
+TOOL_CONTRACT ?= ../contracts/tool-definitions.json
+tool-contract-check:
+	@python3 ../scripts/freeze_tool_contract.py check
+
+tool-contract-report:
+	@test -f "$(TOOL_CONTRACT)" || (echo "tool-contract-report: $(TOOL_CONTRACT) missing（先运行 scripts/freeze_tool_contract.py build）"; exit 1)
+	$(OFFLINE) $(GO) test ./internal/cli -run TestToolContractFreeze -v
 
 # 接线守护：关键运行时调用点（内存注入、事件日志、会话工具安装）缺失即失败。
 # 纯 stdlib，无外网也能跑。

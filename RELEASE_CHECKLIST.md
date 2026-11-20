@@ -1,7 +1,7 @@
 # 发布检查单：hive 1.0.26-go.1
 
 > 出口标准定义见 `RELEASE_PLAN.md` §1（R1–R10）。
-> 检查对象：主线 `8518c2c8` 之后的 1.0.16 构建，2026-11-19 构建的 `hive 1.0.26-go.1`。
+> 检查对象：`hive 1.0.26-go.1`；§2 与 R9 为 2026-11-20 本工作树（`release-ci-contract`，main `853a15e9` 之上）的复跑结果，其余行为 2026-11-19 快照。
 > 状态口径：**PASS** = 判据满足且有本次可复现证据；**部分** = 有实现/部分证据但判据未完整满足；**阻塞** = 缺外部条件，代码无法补齐。
 
 ## 1. 逐项状态
@@ -16,35 +16,41 @@
 | R6 | 可靠性 | 超时、并发、资源回收、崩溃恢复有测试；无已知数据损坏路径 | **PASS** | `go test -race -count=1 ./...`；`RELIABILITY_REPORT.md` | `-race` 退出码 **0**，37 包 `ok`；故障注入 5 项记录在 `RELIABILITY_REPORT.md`（本次未复跑注入，只复跑 `-race`） |
 | R7 | 可观测 | `--version`、`/api/health`、结构化日志、诊断包 | **PASS** | `./hive --version`；`curl -sS localhost:PORT/api/health`；`curl -X POST .../api/sessions/<id>/report-bundle` | 前三项本次实测（`--version`、health 200、`[access] GET … -> 200 (0ms)`）；`report-bundle` 路由与测试存在（`internal/server/routes_session_report*`），本次未实调 |
 | R8 | 质量证据 | `make ci` + smoke + e2e + 跨平台 + parity + QA/QC 报告 | **PASS** | `make ci`；`go test -tags e2e -count=1 ./e2e/...`；`bash scripts/smoke.sh <port>`；`bash scripts/check_parity.sh .`；`bash scripts/check_parity_targets.sh . ../../core` | `make ci` 退出码 0；4,256 测试声明；`make test` 退出码 0（38 包 ok、0 fail）；e2e `ok 2.064s`；交叉编译 6/6；parity 4256/4256；refs 4,489 0 missing；源码 smoke **13/13**（端口 8803） |
-| R9 | 发布流程 | tag、release notes、CI release job、制品上传 | **部分** | `grep -n "^  [a-z-]*:" .github/workflows/release.yml`；`ls docs/release-notes-v1.0.26-go.1.md go-hive/dist/release` | `release.yml` 含 meta/frontend/build/package/publish 5 个 job；release notes 与本地制品齐；**未打 tag、未运行 CI、未上传制品**（需发布权限与远端） |
+| R9 | 发布流程 | tag、release notes、CI release job、制品上传 | **workflow 已对齐，Actions 未跑** | `python3 -c "import yaml,pathlib; yaml.safe_load(pathlib.Path('.github/workflows/release.yml').read_text())"`；`go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/release.yml`；本机逐步仿真（见本次结果） | `release.yml` 已按现行 `release.sh` 契约重写：4 job（meta/build/verify/publish），`VERSION/DIST/RELEASE_DIR/FRONTEND_DIST` 环境变量 + 仓库根调用 `go_hive/scripts/release.sh`，产物为六平台归档 + `SHA256SUMS`，发布资产里的 `install.sh` 取自 `go_hive/install.sh`；YAML 解析 OK、actionlint 0 问题、本机逐步仿真全 PASS（六平台归档构建、`sha256sum -c`、归档冒烟 13/13、内嵌 dashboard `/` 200、`install.sh` 安装成功）；**GitHub Actions 从未运行**，未打 tag、未上传制品，不得按通过处理 |
 | R10 | 真实集成验证 | 关键模块至少各有一条真实凭据的端到端记录 | **不适用（用户决定 2026-11-19）** | 本阶段不提供第三方工具凭据，仅提供 LLM 凭据；以支持矩阵的「未验证」声明为准 | 无任何真实第三方调用记录；全部集成仅对假上游验证 |
 
-## 2. 发布产物
+## 2. 发布产物（本机实测）
 
-目录：`go_hive/go-hive/dist/release/`
+2026-11-20 在本工作树（`release-ci-contract`，main `853a15e9` 之上）按 `release.yml` 的调用方式重跑。目录：`dist/release/`（`release.sh` 默认输出在 `go_hive/go-hive/dist/release/`）。生成命令（仓库根）：
+
+```bash
+VERSION=1.0.26-go.1 DIST="$PWD/dist" RELEASE_DIR="$PWD/dist/release" \
+  FRONTEND_DIST="$PWD/go_hive/go-hive/frontend/dist" bash go_hive/scripts/release.sh
+( cd dist/release && shasum -a 256 -c SHA256SUMS )   # Linux 上用 sha256sum -c
+```
 
 | 归档 | 字节 | SHA-256 |
 | --- | ---: | --- |
-| `hive-1.0.26-go.1-darwin-amd64.tar.gz` | 14,447,379 | `c5b5ecf1…a096e35` |
-| `hive-1.0.26-go.1-darwin-arm64.tar.gz` | 13,683,951 | `43c63c04…bd2fecc` |
-| `hive-1.0.26-go.1-linux-amd64.tar.gz` | 14,421,044 | `bc90ba67…ebce544` |
-| `hive-1.0.26-go.1-linux-arm64.tar.gz` | 13,377,254 | `a00d79c1…7db2f09` |
-| `hive-1.0.26-go.1-windows-amd64.zip` | 14,525,132 | `58102d2a…a8361ae` |
-| `hive-1.0.26-go.1-windows-arm64.zip` | 13,378,867 | `169214b8…17ca704` |
-| `SHA256SUMS` | — | 上述六项 |
+| `hive-1.0.26-go.1-darwin-amd64.tar.gz` | 29,469,556 | `c525054a0e6694324e90500c144cd2a01e494c230243b6b8e06cc317592677f1` |
+| `hive-1.0.26-go.1-darwin-arm64.tar.gz` | 27,760,344 | `0410b30010ea1e398901cf035eaf9381fea3ef69f12cd27f2c29acf3418f684b` |
+| `hive-1.0.26-go.1-linux-amd64.tar.gz` | 29,481,538 | `deb1bd4420b4d7e2de4514c92c596ade5ae2a309fe66f37c37295baa8d95d52e` |
+| `hive-1.0.26-go.1-linux-arm64.tar.gz` | 27,187,310 | `15b568d88989119bf0244fe16f19b8e6f963df5a83cf7d278f840411f5082af2` |
+| `hive-1.0.26-go.1-windows-amd64.zip` | 29,628,892 | `10ae2777b533b87ec31f18af12e1c8c20c6a30c010a2c4cfdc818abc58627cd5` |
+| `hive-1.0.26-go.1-windows-arm64.zip` | 27,078,613 | `b9549b9e2f48971372a87ca5c6448bf8f1329df8a50e719120396206ec63949c` |
+| `SHA256SUMS` | 612 | 上述六项（`shasum -a 256 -c` 六项全 `OK`） |
 
-完整哈希见 `go_hive/go-hive/dist/release/SHA256SUMS` 与发布说明 §4.2。
+说明：本轮归档比 2026-11-19 表内数值大约翻倍，原因是 11-20 的 `c45473b3` 起归档才纳入 hive-browser / browserbridge 两个约 8 MB 级的二进制（hive-cred 更早加入），旧表是内容更少的旧快照；tar/zip 带文件时间戳，**哈希随构建变化、不可复现**，上表是本轮实测值，重跑即得新值。上一轮快照的哈希（含发布说明 §4.2）不再代表当前制品。
 
 ## 3. 发布包验收（darwin-arm64）
 
 ```bash
-mkdir -p /tmp/hive-rel && tar -xzf go_hive/go-hive/dist/release/hive-1.0.26-go.1-darwin-arm64.tar.gz -C /tmp/hive-rel
+mkdir -p /tmp/hive-rel && tar -xzf dist/release/hive-1.0.26-go.1-darwin-arm64.tar.gz -C /tmp/hive-rel
 /tmp/hive-rel/hive --version                       # hive 1.0.26-go.1
 HIVE_HOME=/tmp/hive-rel/home /tmp/hive-rel/hive serve --port 8797
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8797/    # 200
 ```
 
-实测：`/` 200（`text/html`）、`/sessions` 200、`/favicon.png` 200、`/api/health` 200；`serve` 打印 `Dashboard:` 行；SIGTERM 优雅退出。
+本轮实测（2026-11-20）：`--version` = `hive 1.0.26-go.1`；`/` 200（HTML，内嵌 dashboard）、`/api/health` 200；`serve` 打印 `Dashboard:` 行；SIGTERM 优雅退出；`bash go_hive/scripts/verify_release_archive.sh dist/release` = 13/13 PASS；`bash go_hive/install.sh --from dist/release --version 1.0.26-go.1` 四个二进制安装成功。`/sessions`、`/favicon.png` 为上一轮记录，本轮未复跑。
 
 ## 4. 未满足项与风险
 
@@ -52,9 +58,9 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8797/    # 200
 | --- | --- | --- |
 | ~~R4 缺 `THIRD_PARTY` 依赖清单~~ | 已解决：`go_hive/go-hive/THIRD_PARTY_NOTICES.md` 存在，`release.sh` 已改为随归档分发 | — |
 | R5 无在线 CVE 扫描 | 依赖漏洞状态未知 | 已在支持矩阵 §5/§6 与发布说明 §5 明示；有外网时补 `govulncheck ./...` |
-| R9 未打 tag、未上传 | 制品只在本地 | 需发布权限后执行：`git tag v1.0.26-go.1 && git push origin v1.0.26-go.1`（触发 `release.yml`） |
+| R9 Actions 未跑（workflow 已对齐） | CI 路径没有执行证据；本机仿真通过不等于 Actions 通过 | 有发布权限后：`git tag v1.0.26-go.1 && git push origin v1.0.26-go.1`（触发 `release.yml`），或用 workflow_dispatch（`dry_run=false`，`draft` 可先留 true 人工过目） |
 | R10 无真实凭据 | 集成工具只有假上游证据 | 已决定本阶段不验证（用户 2026-11-19）；发布时以支持矩阵「未验证」声明为准，不得写成可用 |
 
 ## 5. 结论
 
-**可作为 `1.0.26-go.1` 快照发布**：R1、R2、R3、R6、R7、R8 满足；R4、R5、R9 为部分满足且已在文档中明示；R10 按用户决定本阶段不验证（以支持矩阵声明代替），不作为本版发布声明的一部分。
+**可作为 `1.0.26-go.1` 快照发布**：R1、R2、R3、R6、R7、R8 满足；R4、R5 为部分满足且已在文档中明示；R9 仅到「workflow 已对齐，Actions 未跑」，不构成 CI 通过；R10 按用户决定本阶段不验证（以支持矩阵声明代替），不作为本版发布声明的一部分。

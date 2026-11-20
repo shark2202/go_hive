@@ -1,0 +1,193 @@
+{
+ "directions": {},
+ "skills": {
+  "_default_skills/browser-automation": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/colony-progress-tracker": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/context-preservation": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/error-recovery": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/image-generation": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/note-taking": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/pdf": {
+   "py_files": 2,
+   "go_files": 2,
+   "identical": 2,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/quality-monitor": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/slack-notifications-setup": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/telegram-notifications-setup": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/worker-delegation": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_default_skills/writing-hive-skills": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_preset_skills/chart-creation-foundations": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_preset_skills/linkedin-automation": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_preset_skills/terminal-tools-foundations": {
+   "py_files": 2,
+   "go_files": 2,
+   "identical": 2,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_preset_skills/terminal-tools-fs-search": {
+   "py_files": 3,
+   "go_files": 3,
+   "identical": 3,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_preset_skills/terminal-tools-job-control": {
+   "py_files": 2,
+   "go_files": 2,
+   "identical": 2,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_preset_skills/terminal-tools-pty-sessions": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_preset_skills/terminal-tools-troubleshooting": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  },
+  "_preset_skills/x-automation": {
+   "py_files": 1,
+   "go_files": 1,
+   "identical": 1,
+   "missing_in_go": [],
+   "extra_in_go": [],
+   "differing": [],
+   "diffs": {}
+  }
+ },
+ "totals": {
+  "skills": 20,
+  "files": 25,
+  "identical_files": 25,
+  "missing_in_go": 0,
+  "extra_in_go": 0,
+  "differing": 0
+ }
+}

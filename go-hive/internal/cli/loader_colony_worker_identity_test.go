@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -276,4 +277,35 @@ func toolDefNames(defs []llm.ToolDef) []string {
 		names = append(names, def.Name)
 	}
 	return names
+}
+
+// Parity-exempt: worker tool-surface block propagation is Go-only; upstream
+// returns MCP content blocks and LiteLLM carries them.
+func TestColonyWorkerToolSurfaceCarriesAttachFileBlocks(t *testing.T) {
+	root := t.TempDir()
+	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
+	if err != nil {
+		t.Fatalf("resolve home: %v", err)
+	}
+	colonyPath := home.ColonyDir("blocks")
+	if err := os.MkdirAll(colonyPath, 0o755); err != nil {
+		t.Fatalf("mkdir colony: %v", err)
+	}
+	raw, err := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
+	if err != nil {
+		t.Fatal(err)
+	}
+	png := filepath.Join(colonyPath, "pic.png")
+	if err := os.WriteFile(png, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, execute := colonyWorkerToolSurface(colonyPath, builtin.New(colonyPath), home)
+	result, err := execute(agentloop.ToolCallRequest{Name: "attach_file", Input: map[string]any{"paths": png}})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if len(result.ImageContent) != 1 || result.ImageContent[0]["type"] != "image_url" {
+		t.Fatalf("worker attach_file content blocks = %#v", result.ImageContent)
+	}
 }

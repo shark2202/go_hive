@@ -1,0 +1,679 @@
+{
+  "schema": "hive-api-contract-diff/1",
+  "generated_at": "2026-11-20T23:43:50+08:00",
+  "direction": "reference(python) -> target(go_hive)",
+  "reference_id": "python@1b9c458a19244379ac65dabd4827addb891045ef",
+  "target_id": "go_hive@1b9c458a19244379ac65dabd4827addb891045ef",
+  "reference": {
+    "implementation": "python",
+    "version": "hive 1.0.14",
+    "commit": "1b9c458a19244379ac65dabd4827addb891045ef",
+    "last_core_commit": "a756b1e51765bc75b0a40e362859452a0a54081b",
+    "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd"
+  },
+  "target": {
+    "implementation": "go_hive",
+    "version": "hive 1.0.26-go.1",
+    "commit": "1b9c458a19244379ac65dabd4827addb891045ef"
+  },
+  "probe": {
+    "queen_id": "queen_growth",
+    "llm": {
+      "provider": "openai",
+      "model": "contract-probe-model",
+      "api_base": "http://127.0.0.1:54335/v1",
+      "key_env": "HIVE_CONTRACT_PROBE_KEY",
+      "note": "local OpenAI-compatible stub; deterministic kickoff turn, no vendor call, no network"
+    },
+    "sse_seconds": 3.0
+  },
+  "totals": {
+    "endpoints": 14,
+    "pass": 7,
+    "fail": 7,
+    "missing_in_target": 4,
+    "extra_in_target": 2,
+    "type_mismatch": 7,
+    "count_mismatch": 9,
+    "semantic_failures": 7
+  },
+  "endpoints": [
+    {
+      "endpoint": "health",
+      "label": "健康检查",
+      "method": "GET",
+      "path": "/api/health",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status == ok",
+          "ok": true,
+          "detail": "reference='ok' target='ok'"
+        }
+      ],
+      "notes": [
+        "比较时忽略 resources.：这些是进程环境读数（内存采样/渲染器数），不是 API 契约字段；reference 触发采样时才会出现 avail_mb/renderers。"
+      ]
+    },
+    {
+      "endpoint": "queen_profiles",
+      "label": "Queen 档案",
+      "method": "GET",
+      "path": "/api/queen/profiles",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "queen id set equal",
+          "ok": true,
+          "detail": "reference=13 target=13 missing=[]"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "queen_tools",
+      "label": "Queen 工具库",
+      "method": "GET",
+      "path": "/api/queen/queen_growth/tools",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "FAIL",
+      "diff_count": 4,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [
+        {
+          "field": "enabled_mcp_tools",
+          "proto": "repeated string",
+          "reference_type": "array[25]",
+          "target_type": "array[24]",
+          "json_normalizable": "no",
+          "note": "element count differs; only the element type is proto-verifiable"
+        },
+        {
+          "field": "lifecycle",
+          "proto": "repeated ToolSummary",
+          "reference_type": "array[16]",
+          "target_type": "array[0]",
+          "json_normalizable": "no",
+          "note": "element count differs; only the element type is proto-verifiable"
+        },
+        {
+          "field": "mcp_servers",
+          "proto": "repeated McpServerSummary",
+          "reference_type": "array[4]",
+          "target_type": "array[0]",
+          "json_normalizable": "no",
+          "note": "element count differs; only the element type is proto-verifiable"
+        }
+      ],
+      "semantic": [
+        {
+          "check": "queen_id equal",
+          "ok": true,
+          "detail": "reference='queen_growth' target='queen_growth'"
+        },
+        {
+          "check": "mcp server set equal",
+          "ok": false,
+          "detail": "reference=['chart-tools', 'files-tools', 'hive_tools', 'terminal-tools'] target=[]"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "skills",
+      "label": "技能目录",
+      "method": "GET",
+      "path": "/api/skills",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "FAIL",
+      "diff_count": 2,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [
+        {
+          "field": "skills",
+          "proto": "repeated SkillSummary",
+          "reference_type": "array[195]",
+          "target_type": "array[194]",
+          "json_normalizable": "no",
+          "note": "element count differs; only the element type is proto-verifiable"
+        }
+      ],
+      "semantic": [
+        {
+          "check": "skill name set equal",
+          "ok": false,
+          "detail": "reference=195 target=194 missing=['ego-browser'] extra=[]"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "config_llm",
+      "label": "LLM 配置",
+      "method": "GET",
+      "path": "/api/config/llm",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "provider equal",
+          "ok": true,
+          "detail": "reference='openai' target='openai'"
+        },
+        {
+          "check": "model equal",
+          "ok": true,
+          "detail": "reference='contract-probe-model' target='contract-probe-model'"
+        },
+        {
+          "check": "has_api_key equal",
+          "ok": true,
+          "detail": "reference=True target=True"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "models_overview",
+      "label": "模型总览",
+      "method": "GET",
+      "path": "/api/models/overview",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "slots.llm.provider equal",
+          "ok": true,
+          "detail": "reference='openai' target='openai'"
+        },
+        {
+          "check": "slots.llm.model equal",
+          "ok": true,
+          "detail": "reference='contract-probe-model' target='contract-probe-model'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "credentials_specs",
+      "label": "凭据规格目录",
+      "method": "GET",
+      "path": "/api/credentials/specs",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "FAIL",
+      "diff_count": 4,
+      "missing_in_target": [],
+      "extra_in_target": [
+        {
+          "field": "specs[].tool_modules",
+          "proto": "repeated string",
+          "reference_type": "absent",
+          "target_type": "array",
+          "json_normalizable": "yes",
+          "note": "target extension: additive field; drop it when projecting onto the reference contract"
+        },
+        {
+          "field": "specs[].tool_modules[]",
+          "proto": "repeated string",
+          "reference_type": "absent",
+          "target_type": "string",
+          "json_normalizable": "yes",
+          "note": "target extension: additive field; not part of the reference contract"
+        }
+      ],
+      "type_mismatch": [],
+      "count_mismatch": [
+        {
+          "field": "specs",
+          "proto": "repeated CredentialSpec",
+          "reference_type": "array[115]",
+          "target_type": "array[123]",
+          "json_normalizable": "no",
+          "note": "element count differs; only the element type is proto-verifiable"
+        }
+      ],
+      "semantic": [
+        {
+          "check": "credential_id set equal",
+          "ok": false,
+          "detail": "reference=115 target=123 missing=[] extra=['hive', 'kimi', 'minimax', 'openai', 'x_access_token', 'x_access_token_secret']"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "session_create",
+      "label": "创建会话",
+      "method": "POST",
+      "path": "/api/sessions",
+      "reference_status": 201,
+      "target_status": 201,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "queen_id equal",
+          "ok": true,
+          "detail": "reference='queen_growth' target='queen_growth'"
+        },
+        {
+          "check": "queen_name equal",
+          "ok": true,
+          "detail": "reference='Steve Jobs' target='Steve Jobs'"
+        },
+        {
+          "check": "queen_phase equal",
+          "ok": true,
+          "detail": "reference='independent' target='independent'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "sessions_list",
+      "label": "会话列表",
+      "method": "GET",
+      "path": "/api/sessions",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "session count equal",
+          "ok": true,
+          "detail": "reference=1 target=1"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "session_detail",
+      "label": "会话详情",
+      "method": "GET",
+      "path": "/api/sessions/{session}",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "queen_id equal",
+          "ok": true,
+          "detail": "reference='queen_growth' target='queen_growth'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "session_events",
+      "label": "会话事件流",
+      "method": "GET",
+      "path": "/api/sessions/{session}/events",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "text/event-stream",
+      "target_content_type": "text/event-stream",
+      "verdict": "FAIL",
+      "diff_count": 7,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [
+        {
+          "field": "frames[].envelope.execution_id",
+          "proto": "optional string",
+          "reference_type": "string",
+          "target_type": "null",
+          "json_normalizable": "no",
+          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
+        },
+        {
+          "field": "frames[].event",
+          "proto": "optional string",
+          "reference_type": "null",
+          "target_type": "string",
+          "json_normalizable": "no",
+          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
+        }
+      ],
+      "count_mismatch": [
+        {
+          "field": "event_names",
+          "proto": "repeated string",
+          "reference_type": "array[0]",
+          "target_type": "array[1]",
+          "json_normalizable": "no",
+          "note": "element count differs; only the element type is proto-verifiable"
+        },
+        {
+          "field": "frames",
+          "proto": "repeated SseFrame",
+          "reference_type": "array[4]",
+          "target_type": "array[1]",
+          "json_normalizable": "no",
+          "note": "element count differs; only the element type is proto-verifiable"
+        },
+        {
+          "field": "payload_types",
+          "proto": "repeated string",
+          "reference_type": "array[4]",
+          "target_type": "array[1]",
+          "json_normalizable": "no",
+          "note": "element count differs; only the element type is proto-verifiable"
+        }
+      ],
+      "semantic": [
+        {
+          "check": "content type is event-stream",
+          "ok": true,
+          "detail": "reference='text/event-stream' target='text/event-stream'"
+        },
+        {
+          "check": "payload type set equal",
+          "ok": false,
+          "detail": "reference=['client_input_requested', 'client_output_delta', 'llm_turn_complete', 'session_snapshot'] target=['session_snapshot']"
+        },
+        {
+          "check": "SSE event: name presence equal",
+          "ok": false,
+          "detail": "reference=[] target=['session_snapshot']"
+        },
+        {
+          "check": "data keys equal for common frame types",
+          "ok": true,
+          "detail": "differences=[]"
+        }
+      ],
+      "notes": [
+        "events[].data 与 frames[].envelope.data 是 google.protobuf.Struct 自由字段：按事件类型比较 data 键集合（见语义检查），不逐字段列出。"
+      ]
+    },
+    {
+      "endpoint": "session_events_history",
+      "label": "事件历史",
+      "method": "GET",
+      "path": "/api/sessions/{session}/events/history",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "FAIL",
+      "diff_count": 4,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [
+        {
+          "field": "events[].execution_id",
+          "proto": "optional string",
+          "reference_type": "string",
+          "target_type": "null",
+          "json_normalizable": "no",
+          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
+        }
+      ],
+      "count_mismatch": [
+        {
+          "field": "events",
+          "proto": "repeated EventEnvelope",
+          "reference_type": "array[9]",
+          "target_type": "array[5]",
+          "json_normalizable": "no",
+          "note": "element count differs; only the element type is proto-verifiable"
+        }
+      ],
+      "semantic": [
+        {
+          "check": "event type sequence equal",
+          "ok": false,
+          "detail": "reference=['queen_identity_selected', 'reminder_injected', 'node_loop_started', 'node_loop_iteration', 'context_usage_updated', 'client_output_delta', 'llm_turn_complete', 'client_input_requested', 'loop_state_changed'] target=['queen_identity_selected', 'reminder_injected', 'node_loop_started', 'node_loop_iteration', 'context_usage_updated']"
+        },
+        {
+          "check": "total equal",
+          "ok": false,
+          "detail": "reference=9 target=5"
+        },
+        {
+          "check": "data keys equal for common event types",
+          "ok": true,
+          "detail": "differences=[]"
+        }
+      ],
+      "notes": [
+        "events[].data 与 frames[].envelope.data 是 google.protobuf.Struct 自由字段：按事件类型比较 data 键集合（见语义检查），不逐字段列出。"
+      ]
+    },
+    {
+      "endpoint": "session_snapshot",
+      "label": "会话快照",
+      "method": "GET",
+      "path": "/api/sessions/{session}/snapshot",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "FAIL",
+      "diff_count": 4,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [
+        {
+          "field": "activity",
+          "proto": "optional string",
+          "reference_type": "string",
+          "target_type": "null",
+          "json_normalizable": "no",
+          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
+        },
+        {
+          "field": "last_event_seq",
+          "proto": "optional int64",
+          "reference_type": "number(float)",
+          "target_type": "null",
+          "json_normalizable": "no",
+          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
+        },
+        {
+          "field": "park_reason",
+          "proto": "optional string",
+          "reference_type": "string",
+          "target_type": "null",
+          "json_normalizable": "no",
+          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
+        },
+        {
+          "field": "queen_busy_reason",
+          "proto": "optional string",
+          "reference_type": "string",
+          "target_type": "null",
+          "json_normalizable": "no",
+          "note": "null vs value: proto3 JSON folds null and unset together; the distinction is lost"
+        }
+      ],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "snapshot keys equal",
+          "ok": true,
+          "detail": "reference=['activity', 'awaiting_input', 'current_execution_id', 'current_tool_calls', 'interrupt_cause', 'interrupted', 'is_executing', 'last_event_at', 'last_event_seq', 'last_queen_event_at', 'park_reason', 'pending_questions', 'queen_busy_reason', 'snapshot_seq'] target=['activity', 'awaiting_input', 'current_execution_id', 'current_tool_calls', 'interrupt_cause', 'interrupted', 'is_executing', 'last_event_at', 'last_event_seq', 'last_queen_event_at', 'park_reason', 'pending_questions', 'queen_busy_reason', 'snapshot_seq']"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "session_stats",
+      "label": "会话统计",
+      "method": "GET",
+      "path": "/api/sessions/{session}/stats",
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "FAIL",
+      "diff_count": 4,
+      "missing_in_target": [
+        {
+          "field": "event_bus.events_by_type.client_input_requested",
+          "proto": "map<string, int64>",
+          "reference_type": "number(int)",
+          "target_type": "absent",
+          "json_normalizable": "yes (presence)",
+          "note": "reference emits a field the target omits; proto optional captures absence, not a value"
+        },
+        {
+          "field": "event_bus.events_by_type.client_output_delta",
+          "proto": "map<string, int64>",
+          "reference_type": "number(int)",
+          "target_type": "absent",
+          "json_normalizable": "yes (presence)",
+          "note": "reference emits a field the target omits; proto optional captures absence, not a value"
+        },
+        {
+          "field": "event_bus.events_by_type.llm_turn_complete",
+          "proto": "map<string, int64>",
+          "reference_type": "number(int)",
+          "target_type": "absent",
+          "json_normalizable": "yes (presence)",
+          "note": "reference emits a field the target omits; proto optional captures absence, not a value"
+        },
+        {
+          "field": "event_bus.events_by_type.loop_state_changed",
+          "proto": "map<string, int64>",
+          "reference_type": "number(int)",
+          "target_type": "absent",
+          "json_normalizable": "yes (presence)",
+          "note": "reference emits a field the target omits; proto optional captures absence, not a value"
+        }
+      ],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "stats keys equal",
+          "ok": true,
+          "detail": "reference=['active_workers', 'adaptive_tool_budget', 'colony_id', 'event_bus', 'running', 'total_workers', 'triggers'] target=['active_workers', 'adaptive_tool_budget', 'colony_id', 'event_bus', 'running', 'total_workers', 'triggers']"
+        },
+        {
+          "check": "running equal",
+          "ok": true,
+          "detail": "reference=True target=True"
+        },
+        {
+          "check": "event_bus.subscriptions is runtime-internal (not compared)",
+          "ok": true,
+          "detail": "reference=9 target=1"
+        }
+      ],
+      "notes": [
+        "event_bus.events_by_type 是 map<string, int64>：键名即事件类型，缺失的键等价于 target 少发对应事件类型。"
+      ]
+    }
+  ],
+  "non_verbatim": [
+    {
+      "id": "NV-01",
+      "topic": "int64/uint64 与 2^53",
+      "detail": "proto3 JSON 把 64 位整数编码为字符串；Hive 两端都发 JSON number。> 2^53 的整数在 JSON number 中不可无损往返，需按 string 传或在契约中声明上限。"
+    },
+    {
+      "id": "NV-02",
+      "topic": "JSON number 整数性",
+      "detail": "Python json 区分 3（int）与 3.0（float），Go encoding/json 统一成 float64，proto3 double 两种字面量都接受。`uptime_seconds` 的 int/float 差异无法逐字，只能按 double 规范化。"
+    },
+    {
+      "id": "NV-03",
+      "topic": "null vs 缺失",
+      "detail": "proto3 JSON 中 null 表示字段未设置；它不能与“字段存在且值为 null”区分。契约冻结保留 null 与缺失的差异（shape 里 null 与 absent 是两种类型），但任何 proto 化投影都会丢掉这一层。"
+    },
+    {
+      "id": "NV-04",
+      "topic": "map 顺序",
+      "detail": "map<string, T> 与 JSON object 的键序都不属于契约；逐字节比较必须排序后比较。"
+    },
+    {
+      "id": "NV-05",
+      "topic": "浮点打印精度",
+      "detail": "Python repr 与 Go encoding/json 对 double 的最短表示不同（如 loaded_at 的末位），值级不能逐字比较，只能按 double 语义比较或屏蔽。"
+    },
+    {
+      "id": "NV-06",
+      "topic": "Timestamp 文本格式",
+      "detail": "google.protobuf.Timestamp 的规范 JSON 是带时区的 RFC 3339；Hive 两端都发本地 naive 时间（YYYY-MM-DDTHH:MM:SS.ffffff）。冻结按不透明 string 处理，转 Timestamp 时必须先约定时区。"
+    },
+    {
+      "id": "NV-07",
+      "topic": "NaN / Infinity",
+      "detail": "proto3 JSON 用 \"NaN\"/\"Infinity\" 字符串；Python json 默认发 NaN/Infinity 裸字面量（非标准 JSON）。当前冻结载荷未出现。"
+    },
+    {
+      "id": "NV-08",
+      "topic": "bytes/base64",
+      "detail": "proto3 bytes 线上是 base64；当前冻结端点不含二进制字段，附件接口未纳入本批冻结。"
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "generator": "go_hive/scripts/gen_builtin_skills_manifest.py",
+  "source": "core/framework/skills",
+  "count": 25,
+  "total_bytes": 229354,
+  "files": [
+    {
+      "path": "_default_skills/browser-automation/SKILL.md",
+      "sha256": "5c7701a17939ebcd8ff4a6f2d95ac28904cbe1e9057e65d530ffa085a646e6f0",
+      "bytes": 49967
+    },
+    {
+      "path": "_default_skills/colony-progress-tracker/SKILL.md",
+      "sha256": "5cc320255b244e8074d7077ac184daa86b7fcb134422cab11d41378be9791080",
+      "bytes": 4678
+    },
+    {
+      "path": "_default_skills/context-preservation/SKILL.md",
+      "sha256": "8407879a67bd76a5aaf4dd0ab3527b46029355d76d757e4df07e6b3cdff8e170",
+      "bytes": 1314
+    },
+    {
+      "path": "_default_skills/error-recovery/SKILL.md",
+      "sha256": "a0a3cd0f686e873382395340397286d97832bba1b86be6d460664983f8fc65bd",
+      "bytes": 1386
+    },
+    {
+      "path": "_default_skills/image-generation/SKILL.md",
+      "sha256": "4bef7073ca7241b358d88ac9c4196e9d905e4aa11a74ddcd7e62e6063a01177f",
+      "bytes": 5559
+    },
+    {
+      "path": "_default_skills/note-taking/SKILL.md",
+      "sha256": "476f7e41ac1a4b10369df40d10be28d43b5d9eea127f46f28fe3b037303e9673",
+      "bytes": 1368
+    },
+    {
+      "path": "_default_skills/pdf/REFERENCE.md",
+      "sha256": "03a5f964f8abecbbe156f363356e927e864d7ee964f1012c84ee1bfc8acbeb95",
+      "bytes": 16692
+    },
+    {
+      "path": "_default_skills/pdf/SKILL.md",
+      "sha256": "9ae25b6c21ba2578e15de29af90d925fe40915b4835c355fc637102a611f8f51",
+      "bytes": 7855
+    },
+    {
+      "path": "_default_skills/quality-monitor/SKILL.md",
+      "sha256": "d6ff38573ddb26be97cde060f73935275a56840f5cbe978962e632f226bd05f0",
+      "bytes": 735
+    },
+    {
+      "path": "_default_skills/slack-notifications-setup/SKILL.md",
+      "sha256": "fd465c378f2753360938f4167ea487ca0b846c9388d0db80eaf87ba51c3ac357",
+      "bytes": 10601
+    },
+    {
+      "path": "_default_skills/telegram-notifications-setup/SKILL.md",
+      "sha256": "36877925ba302ea5e4222131cfb6178fbc94ee12c57e0a45820229af54d8bc56",
+      "bytes": 9006
+    },
+    {
+      "path": "_default_skills/worker-delegation/SKILL.md",
+      "sha256": "87c254a1e26d6564a02979d497bc073e9dacd5614389ccc6f54ad8cf93903c14",
+      "bytes": 19143
+    },
+    {
+      "path": "_default_skills/writing-hive-skills/SKILL.md",
+      "sha256": "607e54622c0e47e96edb05aa1ebb6b22aa5ecf72a7c8302f8b78f1890a5fef67",
+      "bytes": 9781
+    },
+    {
+      "path": "_preset_skills/chart-creation-foundations/SKILL.md",
+      "sha256": "386a241b781c97c56d189e3f70db3f1d38dc2708ab4f898ef11ad782dd9d08ed",
+      "bytes": 10055
+    },
+    {
+      "path": "_preset_skills/linkedin-automation/SKILL.md",
+      "sha256": "0fe897aaaf17f2ec6e080c52fc7e919efcce87498d25fb12790f57fe546debd4",
+      "bytes": 21613
+    },
+    {
+      "path": "_preset_skills/terminal-tools-foundations/SKILL.md",
+      "sha256": "00128351f369a1fb3fe87fb4f20d518bb273bcc565e28e2c6dfbd8c1c15e84a9",
+      "bytes": 11065
+    },
+    {
+      "path": "_preset_skills/terminal-tools-foundations/references/exit_codes.md",
+      "sha256": "408b87b805d4982faf47c257c197a57c8583494b50613e3c6cc32b7c588a7c27",
+      "bytes": 2018
+    },
+    {
+      "path": "_preset_skills/terminal-tools-fs-search/SKILL.md",
+      "sha256": "43ee5d53deb0d5f49a93e47f1ce14fc78c5f3568de4d4bdcbcff230b89b6acaa",
+      "bytes": 6392
+    },
+    {
+      "path": "_preset_skills/terminal-tools-fs-search/references/find_predicates.md",
+      "sha256": "3d7339f3f6044e326ad9c3ef89941e0baec5ee61f83a24b5fb858a3e23703413",
+      "bytes": 2407
+    },
+    {
+      "path": "_preset_skills/terminal-tools-fs-search/references/ripgrep_cheatsheet.md",
+      "sha256": "802a528bf37aa9181919c676bc1cd858e0ad1b0398e546f83a4c7c3fa944cc6c",
+      "bytes": 1974
+    },
+    {
+      "path": "_preset_skills/terminal-tools-job-control/SKILL.md",
+      "sha256": "726f3ba6c792fe2dd034d5d0448b37e5f10341308e843f6ac699e0eea37fd468",
+      "bytes": 5772
+    },
+    {
+      "path": "_preset_skills/terminal-tools-job-control/references/signals.md",
+      "sha256": "ae37cd937f44e77ef401abb2f87c8ea467c4ac1d31556978fdd4c3b5448b55a6",
+      "bytes": 2366
+    },
+    {
+      "path": "_preset_skills/terminal-tools-pty-sessions/SKILL.md",
+      "sha256": "5842a7c281f91937e5fe096b3d9d62e4e8875f2af129b087671c9ef27798ad4b",
+      "bytes": 5616
+    },
+    {
+      "path": "_preset_skills/terminal-tools-troubleshooting/SKILL.md",
+      "sha256": "1b9d7c9762ab5ddae43cd13204768c2d6923c84d129e3546391f6a1257aa9be1",
+      "bytes": 4820
+    },
+    {
+      "path": "_preset_skills/x-automation/SKILL.md",
+      "sha256": "2732e9e53265281f0f0e30a60a363da45c0ea212d345938cd2ccee629d3c6ec2",
+      "bytes": 17171
+    }
+  ]
+}

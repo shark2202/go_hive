@@ -16,12 +16,14 @@ import (
 )
 
 // Parity-exempt: timeout must kill grandchildren that inherited the capture
-// pipes; otherwise cmd.Wait blocks on the pipe even though bash exited.
+// pipes; upstream has no equivalent exec test (its lifecycle test covers the
+// job manager). The foreground command has to stay alive for the deadline to
+// fire — a command that backgrounds a child and exits is a success upstream.
 func TestTerminalExecTimeoutKillsBackgroundChildHoldingPipe(t *testing.T) {
 	tb := New(t.TempDir())
 	start := time.Now()
 	res, err := tb.Execute(context.Background(), ToolTerminalExec, map[string]any{
-		"command":         "(sleep 30 & echo $! > child.pid); echo started",
+		"command":         "(sleep 30 & echo $! > child.pid); sleep 30",
 		"timeout_seconds": 0.3,
 	})
 	elapsed := time.Since(start)

@@ -1,0 +1,55 @@
+{
+  "endpoint": "sessions_list",
+  "label": "会话列表",
+  "method": "GET",
+  "path": "/api/sessions",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-20T23:43:50+08:00",
+  "canonical": {
+    "sessions": [
+      {
+        "agent_path": "<agent_path>",
+        "colony_id": null,
+        "colony_spawned": false,
+        "description": "",
+        "goal": "",
+        "has_worker": false,
+        "loaded_at": 0.0,
+        "node_count": 0,
+        "queen_id": "queen_growth",
+        "queen_name": "Steve Jobs",
+        "queen_phase": "independent",
+        "queen_supports_images": true,
+        "session_id": "<session_id>",
+        "spawned_colony_id": null,
+        "uptime_seconds": 0.0
+      }
+    ]
+  },
+  "shape": {
+    "sessions": "array",
+    "sessions[].agent_path": "string",
+    "sessions[].colony_id": "null",
+    "sessions[].colony_spawned": "boolean",
+    "sessions[].description": "string",
+    "sessions[].goal": "string",
+    "sessions[].has_worker": "boolean",
+    "sessions[].loaded_at": "number(float)",
+    "sessions[].node_count": "number(int)",
+    "sessions[].queen_id": "string",
+    "sessions[].queen_name": "string",
+    "sessions[].queen_phase": "string",
+    "sessions[].queen_supports_images": "boolean",
+    "sessions[].session_id": "string",
+    "sessions[].spawned_colony_id": "null",
+    "sessions[].uptime_seconds": "number(float)"
+  },
+  "counts": {
+    "sessions": 1
+  },
+  "notes": []
+}

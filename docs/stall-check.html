@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive judge 槽与 stall check</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:860px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Guardrails</div><h1>judge 槽与 <span>stall check</span></h1>
+<p class="lede">补上 Hive 目前缺的那页文档：<b>judge</b> 是一个只回答概率的模型槽，<b>stall check</b> 是它的第一个消费者——抓 queen「嘴上说要做、回合结束却没调用工具」的情况。本页写清怎么配、怎么判定、影响什么、怎么排障；机制以代码为准（Python 与 Go 同语义）。</p>
+<div class="meta"><span>生成：<b>2026-11-20 22:32 CST</b></span><span>状态：<b>已实现并有测试；默认关</b></span><span>Python：<code>server/stall_check.py</code> · <code>server/judge.py</code></span><span>Go：<code>internal/server/stall_check.go</code> · <code>judge.go</code></span></div>
+<div class="toc"><a href="#what">是什么</a><a href="#config">怎么配</a><a href="#flow">判定流程</a><a href="#impact">影响面</a><a href="#verify">验证排障</a><a href="#docs">文档现状</a><a href="#refs">索引</a></div></header>
+
+<section id="what"><h2><span class="num">00</span>是什么（两个东西，一个目的）</h2>
+<div class="grid g3">
+<div class="card"><div class="k">judge 槽</div><div class="v">概率裁判</div><div class="d">不是聊天模型。给它一段现场 + 一个问题 + true/false 标准，它返回「是」的概率（0–1）。协议目前只有 <code>typesafe</code>（POST <code>/systemone</code>，读 <code>noul</code>）。</div></div>
+<div class="card"><div class="k">stall check</div><div class="v">说到没做 → 提醒一次</div><div class="d">queen 回合结束、开始等用户时，把这一轮现场交给 judge；概率过阈值就注入一条系统提醒让她补做。</div></div>
+<div class="card"><div class="k">边界</div><div class="v">只提醒，不代做</div><div class="d">不阻塞、不改回复、不碰工具权限；每条用户消息最多判定一次、最多提醒一次，误判不会循环。</div></div>
+</div>
+<div class="callout info"><b>它解决的具体问题：</b>有些模型会说「马上做 / 正在画」，然后结束回合却没调用任何工具；或者用户指出「手指画错了」，它只描述应该怎么改，却不动手。stall check 就是抓这种「talk ≠ work」。</div>
+</section>
+
+<section id="config"><h2><span class="num">01</span>怎么配置</h2>
+<h3>1.1 judge 槽（必须）</h3>
+<pre>"judge": {
+  "protocol": "typesafe",
+  "api_base": "https://&lt;typesafe-endpoint&gt;",
+  "model": "&lt;model&gt;",
+  "api_key": "***",
+  "threshold": 0.5
+}</pre>
+<ul>
+<li><b>可用条件：</b><code>api_base</code> 与 <code>api_key</code> 都存在；缺一个 → <code>judge.slot()</code> 返回 None，stall check 静默不工作。</li>
+<li><b>协议：</b><code>typesafe</code> → <code>POST {api_base}/systemone</code>，body 含 <code>state</code>、<code>model</code>、<code>questions.answer = {type:"noul", instructions, criteria}</code>，取 <code>answers.answer.noul</code>。超时 20s；失败只记日志。</li>
+<li><b>阈值：</b><code>threshold</code>（默认 0.5）；概率 ≥ 阈值才提醒。误报多就调高（如 0.7）。</li>
+<li><b>注意：</b>judge 的 <code>api_key</code> 必须直接写在槽里（不像 <code>vision_fallback</code> 有 <code>api_key_env_var</code> 回退）；通常通过 Settings → AI Model → Judge 或 Advanced 原始 JSON 配置。</li>
+</ul>
+
+<h3>1.2 stall_check 开关</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">入口</th><th>行为</th></tr></thead><tbody>
+<tr><td>Settings → Developer → <b>Stall check</b></td><td>写入 <code>configuration.json</code> 的 <code>stall_check</code>；没有 judge 时开关置灰并提示 "Needs a judge: set up AI Model → Judge"</td></tr>
+<tr><td><code>HIVE_STALL_CHECK=true|false</code></td><td>环境变量优先于配置文件</td></tr>
+<tr><td><code>configuration.json</code> 顶层 <code>"stall_check": true</code></td><td>持久化开关（features 端点写的就是它）</td></tr>
+</tbody></table></div>
+<p class="sub">开关与 judge 槽都是<b>每回合读取</b>：改完对运行中的会话立即生效，不用重启。默认关（Developer 选项）。</p>
+</section>
+
+<section id="flow"><h2><span class="num">02</span>判定流程</h2>
+<pre>queen 事件流
+  ├─ CLIENT_INPUT_RECEIVED     记录用户消息；把上一轮存为 previous_turn
+  ├─ CLIENT_REASONING          记录推理（尾部）
+  ├─ CLIENT_OUTPUT_DELTA       记录回复快照
+  ├─ TOOL_CALL_STARTED         记录本轮工具；清空当前段 reasoning/reply
+  └─ CLIENT_INPUT_REQUESTED    park_reason == "turn_done" 才继续
+        │
+        ├─ 跳过：已判过 / 没有用户 / 回复为空 / 回复是可见错误
+        ├─ 组装 state：user ≤2000 · reasoning 尾 ≤1500 · reply ≤1500
+        │              · tools_called_this_turn · previous_turn{reply≤600, tools}
+        ├─ 问 judge：这一轮有没有把该做的工作留着没做？（带 true/false 标准）
+        ├─ p &lt; threshold → 记 debug，结束
+        └─ p ≥ threshold → inject_event(REMINDER, is_client_input=False)
+              └─ 内容：你刚才说要做但没调用工具；如果该做就现在做；不要提这条提醒</pre>
+<h3>2.1 判定标准（judge 的 criteria 摘要）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">判定</th><th>含义</th></tr></thead><tbody>
+<tr><td><span class="pill bad">true</span></td><td>回复在谈"现在就该做的工作"（宣布、承诺、或同意修正并说明要改什么），而本轮没有任何工具调用去做它</td></tr>
+<tr><td><span class="pill ok">false</span></td><td>只是聊天 / 回答问题 / 反问需要的信息 / 拒绝或反驳（即使承认错误、给了替代方案）/ 回应用户的解释而非新任务 / 本轮工具已经做了（即使结果有瑕疵且回复列出了问题）</td></tr>
+</tbody></table></div>
+<h3>2.2 防抖</h3>
+<ul>
+<li>每条用户消息最多一次判定、最多一次提醒（<code>judged</code> 标记）。</li>
+<li>判定是后台任务；judge 超时/失败/未配置 → no-op，不影响回合。</li>
+<li>提醒以 <code>is_client_input=False</code> 注入：模型知道它不是用户原话，UI 也不会把它当用户消息。</li>
+</ul>
+</section>
+
+<section id="impact"><h2><span class="num">03</span>影响面</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">方面</th><th>影响</th></tr></thead><tbody>
+<tr><td>触发范围</td><td><b>只对 queen 回合</b>（<code>stream_id == "queen"</code>），且只在 <code>turn_done</code> 停泊时；不碰 worker、不碰非 queen 流</td></tr>
+<tr><td>会话类型</td><td>所有 queen 会话（DM、colony overseer）；与渠道无关（Telegram/Slack/Inbox 只是传输）</td></tr>
+<tr><td>动作</td><td>过阈值 → 注入一条提醒；queen 若照做，会多一轮模型调用 + 工具调用</td></tr>
+<tr><td>成本</td><td>每个合格回合 1 次 judge 调用（≤20s 超时）；被提醒后额外 token/延迟/工具副作用</td></tr>
+<tr><td>时延</td><td>judge 在后台跑，用户看到的回复已经流出；补做表现为 queen 又发消息/又调工具</td></tr>
+<tr><td>输出/转录</td><td>不改已发出的回复；提醒是系统提醒、不算用户原话；失败不写任何东西</td></tr>
+<tr><td>安全/权限</td><td>不绕过审批、不扩大工具权限；只是"再推一次"，是否执行仍由模型决定</td></tr>
+<tr><td>隐私</td><td>用户消息、回复、推理片段会发给 judge 端点——judge 是外部服务时要按数据边界选型</td></tr>
+<tr><td>不生效的条件</td><td>开关关、judge 缺 api_base/api_key、协议不支持、judge 调用失败、回复是可见错误、没有用户消息、已判过</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>不要当成"质量门禁"：</b>它是启发式提醒，不是正确性保证；误判的代价被限制在"每条用户消息一次提醒"，但调高阈值/关掉是合法手段。</div>
+</section>
+
+<section id="verify"><h2><span class="num">04</span>启用、验证与排障</h2>
+<ol>
+<li><b>确认开关状态：</b><code>curl /api/config/features</code> 里 <code>stall_check</code>；Go 侧同名字段。</li>
+<li><b>确认 judge 槽：</b>Settings → AI Model → Judge 能看到已保存的 section；或 <code>/api/config/llm-sections</code> 的 <code>judge</code> 非空。</li>
+<li><b>日志：</b>命中 <code>stall check: p=0.xx &gt;= 0.50, reminding the queen…</code>；未命中 <code>p=… &lt; …, turn is fine</code>；judge 不可用 <code>judge: unavailable (…)</code>。</li>
+<li><b>人为复现：</b>让 queen 说"好的，我马上改"但停住不动（或临时把 threshold 降到 0.1 放大触发），观察是否多出一轮补做。</li>
+<li><b>开关灰掉：</b>先配 judge（需要 api_base + api_key）；环境变量强开不会绕过这个可用性检查，只会 no-op。</li>
+</ol>
+</section>
+
+<section id="docs"><h2><span class="num">05</span>文档现状（为什么有这页）</h2>
+<div class="callout"><b>此前没有专门文档：</b>Python 仓库只有代码注释、UI 两行说明和发布注记（<code>docs/releases/v1.0.8.md</code>、<code>v1.0.9.md</code>）；go_hive 只在 <code>docs/configuration.md</code> §2.3 的特征表里有一行。本页补上配置、流程、影响面与排障；机制变更时以代码为准并同步本页。</div>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">事实源</th><th>内容</th></tr></thead><tbody>
+<tr><td><code>core/framework/server/stall_check.py</code></td><td>事件订阅、状态拼装、问题/标准、提醒注入、防抖</td></tr>
+<tr><td><code>core/framework/server/judge.py</code></td><td>槽读取、typesafe 协议、20s 超时、失败返回 None</td></tr>
+<tr><td><code>core/framework/config.py</code></td><td><code>get_stall_check_enabled()</code>（env 优先，默认 false）</td></tr>
+<tr><td><code>go_hive/go-hive/internal/server/judge.go · stall_check.go · chat_loop_guards.go</code></td><td>Go 对侧同语义实现（typesafe → /systemone）</td></tr>
+<tr><td><code>core/frontend/src/components/SettingsModal.tsx</code></td><td>Developer 开关；无 judge 时置灰提示</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="refs"><h2><span class="num">06</span>相关页</h2>
+<div class="callout info"><a href="module-interfaces.html">接口不变量</a>（模型槽/协议）· <a href="alignment-dimensions.html">对齐维度矩阵</a> · <a href="platform-support.html">平台支持矩阵</a> · <a href="hive-inbox.html">Hive Inbox 协议</a> · <code>docs/releases/v1.0.8.md</code> · <code>docs/releases/v1.0.9.md</code> · <code>go_hive/docs/configuration.md</code>。</div>
+</section>
+
+<footer>生成：2026-11-20 22:32 CST · 依据：Python/Go 源码 + Settings UI + 发布注记 · 状态：实现与测试存在、默认关；本机未配置 judge（无 live 判定样本）· 本页补缺，不替代代码。</footer>
+</div></body></html>

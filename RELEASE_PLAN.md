@@ -14,7 +14,7 @@
 | R6 | 可靠性 | 超时、并发、资源回收、崩溃恢复有测试；无已知数据损坏路径 | **已完成**：故障注入 5 项全 PASS，修 11 处真实缺陷，`-race` 全仓通过 |
 | R7 | 可观测 | `--version`、`/api/health`、结构化日志、诊断包 | 已有前三项 |
 | R8 | 质量证据 | `make ci` + smoke + e2e + 跨平台 + parity + QA/QC 报告 | **QC 8/8 PASS**（`qc_check.py --full --smoke`）：4,160 测试、4,357 parity 引用 0 失效、prod 830 条 0 missing、六平台产物、cgo 0、smoke 13/13 |
-| R9 | 发布流程 | tag、release notes、CI release job、制品上传 | **已完成**：`release.yml` 5 job（meta/frontend/build×6/package/publish），语法与 shell 片段实跑校验 |
+| R9 | 发布流程 | tag、release notes、CI release job、制品上传 | **workflow 已对齐，Actions 未跑**：`release.yml` 4 job（meta/build/verify/publish）按现行 `release.sh` 契约重写（`go_hive/scripts/release.sh` + `VERSION/DIST/RELEASE_DIR/FRONTEND_DIST`），本机逐步仿真通过；GitHub Actions 从未运行，未打 tag、未上传制品 |
 | R10 | 真实集成验证 | 关键模块至少各有一条真实凭据的端到端记录 | **不适用（用户决定，2026-11-19）**：本阶段只提供 LLM 凭据，不提供第三方工具凭据。发布以支持矩阵的「未验证」声明为准；仅对无需凭据的工具做真实验证 |
 
 ## 2. 剩余 wave 划分

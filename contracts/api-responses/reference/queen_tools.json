@@ -1,0 +1,1892 @@
+{
+  "endpoint": "queen_tools",
+  "label": "Queen 工具库",
+  "method": "GET",
+  "path": "/api/queen/queen_growth/tools",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-20T23:43:50+08:00",
+  "canonical": {
+    "categories": [
+      {
+        "always_enabled": true,
+        "in_role_default": true,
+        "name": "file_ops",
+        "tools": [
+          "pdf_read",
+          "attach_file"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "code_editing",
+        "tools": [
+          "read_file",
+          "edit_file"
+        ]
+      },
+      {
+        "always_enabled": true,
+        "in_role_default": true,
+        "name": "terminal_basic",
+        "tools": [
+          "terminal_exec",
+          "terminal_rg",
+          "terminal_glob",
+          "terminal_output_get",
+          "terminal_job_logs",
+          "terminal_job_manage"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "terminal_advanced",
+        "tools": [
+          "terminal_job_start",
+          "terminal_job_manage",
+          "terminal_job_logs",
+          "terminal_output_get",
+          "terminal_pty_open",
+          "terminal_pty_run",
+          "terminal_pty_close"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "spreadsheet_advanced",
+        "tools": [
+          "csv_read",
+          "csv_info",
+          "csv_write",
+          "csv_append",
+          "csv_sql",
+          "excel_read",
+          "excel_info",
+          "excel_write",
+          "excel_append",
+          "excel_search",
+          "excel_sheet_list",
+          "excel_sql"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": true,
+        "name": "browser_basic",
+        "tools": [
+          "browser_setup"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": true,
+        "name": "browser_interaction",
+        "tools": [
+          "browser_setup"
+        ]
+      },
+      {
+        "always_enabled": true,
+        "in_role_default": false,
+        "name": "browser_core",
+        "tools": [
+          "browser_setup"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "browser_extended",
+        "tools": [
+          "browser_setup"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "terminal_core",
+        "tools": [
+          "terminal_exec",
+          "terminal_output_get",
+          "terminal_job_logs",
+          "terminal_job_manage"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "terminal_extended",
+        "tools": [
+          "terminal_rg",
+          "terminal_glob"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "files_core",
+        "tools": [
+          "attach_file"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "context_core",
+        "tools": [
+          "get_current_time",
+          "get_account_info"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "web_core",
+        "tools": [
+          "web_scrape"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": true,
+        "name": "research",
+        "tools": [
+          "web_scrape",
+          "pdf_read"
+        ]
+      },
+      {
+        "always_enabled": true,
+        "in_role_default": true,
+        "name": "context_awareness",
+        "tools": [
+          "get_current_time",
+          "get_account_info",
+          "search_messages",
+          "search_timeline"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": true,
+        "name": "charts",
+        "tools": [
+          "chart_render"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": true,
+        "name": "media",
+        "tools": [
+          "image_generate"
+        ]
+      }
+    ],
+    "connected_providers": [],
+    "enabled_mcp_tools": [
+      "list_senders",
+      "setup_email_sender",
+      "send_from_sender",
+      "pick_sender",
+      "send_campaign",
+      "sender_history",
+      "suppress_recipient",
+      "list_suppressed",
+      "adjust_sender",
+      "pdf_read",
+      "attach_file",
+      "terminal_exec",
+      "terminal_rg",
+      "terminal_glob",
+      "terminal_output_get",
+      "terminal_job_logs",
+      "terminal_job_manage",
+      "browser_setup",
+      "web_scrape",
+      "get_current_time",
+      "get_account_info",
+      "search_messages",
+      "search_timeline",
+      "chart_render",
+      "image_generate"
+    ],
+    "is_role_default": true,
+    "lifecycle": [
+      {
+        "description": "Check a playbook run by its run_id (the handle run_playbook returned). If still running, returns live progress (dispatched count, dead-lettered, phase, recent log lines). If finished, returns its run-log row. You usually DON'T need this — completion fires a [PLAYBOOK_COMPLETE] notification — use it only for an interim peek. (Use get_worker_status for an individual run_worker worker, not a playbook.)",
+        "editable": false,
+        "name": "get_playbook_status"
+      },
+      {
+        "description": "Check on the loaded graph. Returns a brief prose summary by default. Use 'focus' to drill into specifics:\n- activity: current node, transitions, latest LLM output\n- memory: worker's accumulated buffer state\n- tools: running and recent tool calls\n- issues: retries, stalls, constraint violations\n- progress: goal criteria, token consumption\n- full: everything as JSON\nFor a PLAYBOOK (run_playbook), use get_playbook_status(run_id=...) instead — it reports the convergence run's progress by run_id.",
+        "editable": false,
+        "name": "get_worker_status"
+      },
+      {
+        "description": "Send a message to the running graph. The message is injected into the graph's active node conversation. Use this to relay user instructions or concerns. The graph must be running.",
+        "editable": false,
+        "name": "inject_message"
+      },
+      {
+        "description": "List the Chrome profiles whose Hive extension is currently connected, each with the label to pass as browser_profile in update_worker_profile. Call this before binding workers to browser profiles so you bind to real, connected labels.",
+        "editable": false,
+        "name": "list_browser_profiles"
+      },
+      {
+        "description": "Read the playbook run-log for this colony (from colony.db, the colony bookkeeping store — separate from the domain tracker). Returns recent runs most-recent-first: run_id, name, status, dispatched, dead_lettered, result, and the log narration. Pass `run_id` to fetch one run (e.g. the id run_playbook returned), or `limit` for the most recent N.",
+        "editable": false,
+        "name": "list_playbook_runs"
+      },
+      {
+        "description": "List all available triggers (from the loaded worker) and their active/inactive status.",
+        "editable": false,
+        "name": "list_triggers"
+      },
+      {
+        "description": "List all worker escalations currently awaiting your reply. Each entry has a request_id that you pass to reply_to_worker() to unblock the specific worker that asked.",
+        "editable": false,
+        "name": "list_worker_questions"
+      },
+      {
+        "description": "Deactivate an active trigger. The trigger stops firing but remains available for re-activation.",
+        "editable": false,
+        "name": "remove_trigger"
+      },
+      {
+        "description": "Reply to a specific worker escalation. The reply is injected into the identified worker's conversation so it can resume. Use list_worker_questions() to discover pending request_ids.",
+        "editable": false,
+        "name": "reply_to_worker"
+      },
+      {
+        "description": "Run a colony playbook — a deterministic Python script that drives a tracker table to convergence: query the undone work, dispatch workers on it, re-query, repeat. Use it whenever the goal has row shape; reach for run_worker only for one-off heterogeneous tasks. ASYNC: returns a run_id immediately and notifies you via [PLAYBOOK_COMPLETE]; the convergence loop absorbs routine worker outcomes. Re-running is resume — done rows drop out of the pending query, so a second run only does the gap.\n\nSUPPLY THE SCRIPT (exactly one):\n• `playbook` — inline; saved to the colony library at playbooks/<meta-nam…[+3378 chars sha256:479f6dddb732]",
+        "editable": false,
+        "name": "run_playbook"
+      },
+      {
+        "description": "Lower-level fan-out — PREFER run_playbook for row-shaped work. For N units of the same job over a tracker table, run_playbook converges the table deterministically (one worker per undone unit — usually a CHUNK of 5-10 rows — with retry / dead-letter / resume) instead of making you re-coordinate each report. Reach for run_worker only for one-off heterogeneous tasks that don't fit a table, or when each report genuinely needs your judgment.\n\nBATCH SIMILAR UNITS — 5-10 PER WORKER. Every worker pays a fixed orientation tax before its first useful action: fresh context, system prompt, skill reads — …[+3591 chars sha256:71e99e30a84c]",
+        "editable": false,
+        "name": "run_worker"
+      },
+      {
+        "description": "Activate a trigger (timer) so it fires periodically. Use trigger_id of an available trigger, or provide trigger_type + trigger_config to create a custom one. A task must be configured before activation — either pre-set on the trigger or provided here.",
+        "editable": false,
+        "name": "set_trigger"
+      },
+      {
+        "description": "Kill a RUNNING playbook by its run_id: stops the convergence loop (no more rows dispatched) and stops its in-flight workers. Use it to halt a run that's going wrong (bad protocol, burning an account). Rows already marked done are kept — re-run with run_playbook(playbook_name=...) to resume from where the tracker stands (no run-id needed; the tracker is the resume point). (Use stop_worker for an individual run_worker worker.)",
+        "editable": false,
+        "name": "stop_playbook"
+      },
+      {
+        "description": "Halt ALL colony work and pause timers. Use this whenever the user asks to pause, stop, or halt — it is the honest 'stop everything'. It first cancels any running playbook convergence loops (so they can't re-dispatch fresh workers), then cancels every active worker — including queued ones waiting for capacity. Each live worker first receives a [STOP REQUESTED] inject asking it to call report_to_parent with its latest progress; workers that do not report within `grace_seconds` are force-stopped. This is reliable and fast — it always returns within seconds, so call it ONCE and report the result; …[+414 chars sha256:c8bd88f9cd67]",
+        "editable": false,
+        "name": "stop_worker"
+      },
+      {
+        "description": "Insert or update one worker profile on an existing colony. Use this to swap a profile's account alias (e.g. 'switch slack-work to use alias work-2'), bind it to a specific Chrome profile via browser_profile (a connected label from list_browser_profiles), or add a profile after the colony was forked. Existing siblings are preserved. Pass only the fields you want to change.",
+        "editable": false,
+        "name": "update_worker_profile"
+      },
+      {
+        "description": "Write or replace a skill, or install one (yours, a downloaded one, an existing skill folder). This is the way to add a skill: don't write SKILL.md into a skills folder with the terminal or write_file, since a skill put there by hand isn't loaded until a new session and skips the user's approval.\n\nSCOPE (who sees it):\n  - 'queen' (default outside a colony): your own skills. In your skills catalog from your next turn and in your colonies'; no other queen sees it. A skill the user made in your skills can't be replaced.\n  - 'colony' (default inside a colony): THIS colony's workers only. Use it BEF…[+1384 chars sha256:c6b020685e2a]",
+        "editable": false,
+        "name": "write_skill"
+      }
+    ],
+    "mcp_servers": [
+      {
+        "name": "chart-tools",
+        "tools": [
+          {
+            "description": "Render a chart or diagram to a high-DPI PNG and return a rich\nenvelope so the chat can also render the chart live.\n\nThis single tool drives both the live in-chat embedding (chat\nreads `result.spec` and mounts the same lib in the bubble) and\nthe downloadable file (chat shows `result.file_url` as a link).\nCalling this tool IS the embedding — there is no separate\n\"show in chat\" step.\n\nArgs:\n    kind: \"echarts\" for ECharts JSON specs (general BI: bar, line,\n          area, scatter, candlestick, heatmap, treemap, sankey,\n          parallel, calendar, gauge, pie, sunburst, geo maps).\n          \"merm…[+1593 chars sha256:39dc1d30c79b]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "dpi": {
+                  "default": 300,
+                  "type": "integer"
+                },
+                "height": {
+                  "default": 900,
+                  "type": "integer"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "output_path": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "spec": {},
+                "title": {
+                  "default": "",
+                  "type": "string"
+                },
+                "width": {
+                  "default": 1600,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "name": "chart_render",
+            "provider": null,
+            "provider_connected": true
+          }
+        ]
+      },
+      {
+        "name": "files-tools",
+        "tools": [
+          {
+            "description": "Edit files: one string in one file (replace mode), or many edits across many files (patch mode). Use this instead of `sed`, `awk`, or shell redirects. Returns a unified diff. If old_string doesn't match in replace mode, re-read the file with read_file or use search_files to locate the exact text — don't retry blindly.",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "mode": {
+                  "default": "replace",
+                  "description": "Edit mode. 'replace' (default) for single-file find-and-replace. 'patch' for multi-file structured patches that can Update/Add/Delete/Move files atomically.",
+                  "type": "string"
+                },
+                "new_string": {
+                  "default": "",
+                  "description": "Replace mode only. Replacement text. Pass an empty string to delete the matched text.",
+                  "type": "string"
+                },
+                "old_string": {
+                  "default": "",
+                  "description": "Replace mode only. Text to find. Must be unique in the file unless replace_all=True; include surrounding context to disambiguate. Fuzzy matching tolerates whitespace/indent drift, tabs vs spaces, smart quotes vs ASCII, and literal \\n/\\t/\\r vs real control chars.",
+                  "type": "string"
+                },
+                "patch_text": {
+                  "default": "",
+                  "description": "Patch mode only. Structured patch body. File paths are embedded inside the body via '*** Update File: <path>' / '*** Add File: <path>' / '*** Delete File: <path>' / '*** Move File: <src> -> <dst>' markers, so one call can touch many files. Hunks use unified-diff syntax: lines starting with ' ' (space) are context, '-' lines are removed, '+' lines are added. Separate hunks with '@@', or '@@ hint @@' to narrow fuzzy matching to a window around the hint. The first header is optional. These headers use content hints, not unified-diff line numbers. If any operation fails validation, no files are wr…[+210 chars sha256:9f33fe2a8ef1]",
+                  "type": "string"
+                },
+                "path": {
+                  "default": "",
+                  "description": "Replace mode only. File path to edit. Relative paths anchor to the agent's home; absolute paths used verbatim. Ignored in patch mode (paths live inside patch_text).",
+                  "type": "string"
+                },
+                "replace_all": {
+                  "default": false,
+                  "description": "Replace mode only. Replace every occurrence instead of requiring a unique match. Default False.",
+                  "type": "boolean"
+                },
+                "session_cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                }
+              },
+              "type": "object"
+            },
+            "name": "edit_file",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Read file contents with line numbers. Use this instead of `cat`. Binary files are detected and rejected. Large files are auto-truncated at 2000 lines or 50KB — use offset/limit to paginate. Reading a directory returns its entries (use search_files for proper find/ls).",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "hashline": {
+                  "default": false,
+                  "description": "If True, return lines in N:hhhh|content format with content-hash anchors. Line truncation is disabled in this mode to preserve hash integrity. Default False.",
+                  "type": "boolean"
+                },
+                "limit": {
+                  "default": 0,
+                  "description": "Max lines to return. 0 means up to 2000. Default 0.",
+                  "type": "integer"
+                },
+                "offset": {
+                  "default": 1,
+                  "description": "Starting line number, 1-indexed. Default 1.",
+                  "type": "integer"
+                },
+                "path": {
+                  "description": "File path to read. Relative paths anchor to the agent's home; absolute paths used verbatim. Credential paths (~/.ssh, ~/.aws, etc.) are denied.",
+                  "type": "string"
+                },
+                "session_cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "type": "object"
+            },
+            "name": "read_file",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Search file contents OR find files by name. Use this instead of grep, find, or ls. target='content' (default) regex-greps inside files; target='files' globs file names (mtime-sorted, newest first). Pagination via limit/offset; truncated responses include a hint with the next offset. Repeating the same exact query consecutively is warned at 3 calls and blocked at 4 — use the results you already have.",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "context": {
+                  "default": 0,
+                  "description": "Lines of context before and after each match (content mode only). Default 0.",
+                  "type": "integer"
+                },
+                "file_glob": {
+                  "default": "",
+                  "description": "Restrict content search to filenames matching this glob. Ignored in files mode (use the 'pattern' argument instead).",
+                  "type": "string"
+                },
+                "hashline": {
+                  "default": false,
+                  "description": "Content mode: include N:hhhh hash anchors in matched lines. Default False.",
+                  "type": "boolean"
+                },
+                "limit": {
+                  "default": 50,
+                  "description": "Max results to return. Default 50.",
+                  "type": "integer"
+                },
+                "offset": {
+                  "default": 0,
+                  "description": "Skip first N results for pagination. Default 0.",
+                  "type": "integer"
+                },
+                "output_mode": {
+                  "default": "content",
+                  "description": "Content-mode output shape: 'content' (lines + line numbers, default), 'files_only' (paths only), 'count' (per-file match counts).",
+                  "type": "string"
+                },
+                "path": {
+                  "default": ".",
+                  "description": "Directory (or, in content mode, a single file) to search. Default '.'.",
+                  "type": "string"
+                },
+                "pattern": {
+                  "description": "Regex (content mode) or glob (files mode, e.g. '*.py'). For an 'ls'-style listing pass '*' or '*.<ext>'.",
+                  "type": "string"
+                },
+                "target": {
+                  "default": "content",
+                  "description": "'content' to grep inside files, 'files' to list/find files. Legacy aliases: 'grep' -> 'content', 'find'/'ls' -> 'files'. Default 'content'.",
+                  "type": "string"
+                },
+                "task_id": {
+                  "default": "",
+                  "description": "Optional anti-loop scope key. Defaults to a shared bucket; pass a per-task id when multiple agents share a process.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "pattern"
+              ],
+              "type": "object"
+            },
+            "name": "search_files",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Create or overwrite a file with the given content. Parent directories are created automatically. Use this instead of `cat > file` or shell redirects. For targeted edits in an existing file, prefer edit_file (this tool overwrites the whole file). Existing files require a recent read_file call first; brand-new files don't.",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "content": {
+                  "description": "Complete file content to write.",
+                  "type": "string"
+                },
+                "path": {
+                  "description": "File path to write. Relative paths anchor to the agent's home; absolute paths used verbatim. System and credential paths are denied.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "content"
+              ],
+              "type": "object"
+            },
+            "name": "write_file",
+            "provider": null,
+            "provider_connected": true
+          }
+        ]
+      },
+      {
+        "name": "hive_tools",
+        "tools": [
+          {
+            "description": "Surface one or more local files to the user as clickable chips\nin chat. **Any file type is accepted.**\n\nUse this whenever the user has asked for a file — a report, a\nspreadsheet, a config, a zip, anything. Never rename, zip, or\npaste the contents inline as a workaround \"because the tool\ndoesn't support this format\" — it does.\n\nUse this on a PDF that ``pdf_read`` returned with\n``needs_vision_pages`` (scanned / image-based) — the PDF is sent\nas ImageContent so vision can read the rendered pages directly.\nDo NOT reach for tesseract / pdftoppm first; ``attach_file`` on\nthe original PDF replaces th…[+1628 chars sha256:8ecca78d3964]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "max_bytes_mb": {
+                  "default": 25.0,
+                  "type": "number"
+                },
+                "paths": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "session_cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                }
+              },
+              "required": [
+                "paths"
+              ],
+              "type": "object"
+            },
+            "name": "attach_file",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Append rows to an existing CSV file.\n\nArgs:\n    path: Absolute path to the CSV file\n    rows: List of dictionaries to append, keys should match existing columns\n\nReturns:\n    dict with success status and metadata",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "rows": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "path",
+                "rows"
+              ],
+              "type": "object"
+            },
+            "name": "csv_append",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Get metadata about a CSV file without reading all data.\n\nArgs:\n    path: Absolute path to the CSV file\n\nReturns:\n    dict with file metadata (columns, row count, file size)",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "type": "object"
+            },
+            "name": "csv_info",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Read a CSV file and return its contents.\n\nArgs:\n    path: Absolute path to the CSV file\n    limit: Maximum number of rows to return (None = all rows)\n    offset: Number of rows to skip from the beginning\n\nReturns:\n    dict with success status, data, and metadata",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "limit": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "offset": {
+                  "default": 0,
+                  "type": "integer"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "type": "object"
+            },
+            "name": "csv_read",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Query a CSV file using SQL (powered by DuckDB).\n\nThe CSV file is loaded as a table named 'data'. Use standard SQL syntax.\n\nArgs:\n    path: Absolute path to the CSV file\n    query: SQL query to execute. The CSV is available as table 'data'.\n           Example: \"SELECT * FROM data WHERE price > 100 ORDER BY name LIMIT 10\"\n\nReturns:\n    dict with query results, columns, and row count",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "query": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "query"
+              ],
+              "type": "object"
+            },
+            "name": "csv_sql",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Write data to a new CSV file.\n\nArgs:\n    path: Absolute path to the CSV file\n    columns: List of column names for the header\n    rows: List of dictionaries, each representing a row\n\nReturns:\n    dict with success status and metadata",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "columns": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "rows": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "path",
+                "columns",
+                "rows"
+              ],
+              "type": "object"
+            },
+            "name": "csv_write",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "List connected accounts and their identities.\n\nCall with no arguments to see all connected accounts.\nCall with provider=\"google\" to filter by provider type.\n\nReturns account IDs, provider types, and identity labels\n(email, username, workspace) for each connected account.",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "provider": {
+                  "default": "",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "name": "get_account_info",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Get the current date and time.\n\nUse this tool when you need accurate current time, especially in\nlong-running sessions or when precision matters (e.g., scheduling,\nchecking availability, time-sensitive operations).\n\nArgs:\n    timezone: IANA timezone name (e.g., \"UTC\", \"America/New_York\",\n             \"Asia/Kolkata\", \"Europe/London\"). Defaults to \"UTC\".\n\nReturns:\n    Dictionary with datetime info:\n    - datetime: Full ISO 8601 datetime string\n    - date: Date in YYYY-MM-DD format\n    - time: Time in HH:MM:SS format\n    - timezone: The timezone used\n    - day_of_week: Full day name (e.g., \"Monda…[+62 chars sha256:b84b98b3ada2]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "timezone": {
+                  "default": "UTC",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "name": "get_current_time",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Generate or edit an image from a text prompt. Billed to Hive credits.\n\nRoutes through the Hive image service (OpenAI ``gpt-image-2``). The cost\nis charged to the user's credits like an LLM call — no API key needed.\n\nProvide ``reference_images`` to edit / compose from existing images\n(e.g. restyle a product photo, combine elements, keep a character's\nidentity); the model conditions on them at high fidelity. Without them\nit's pure text-to-image.\n\nArgs:\n    prompt: What to draw. Be specific about subject, style, composition,\n        colors, and any text to render.\n    reference_images: Up to 10 l…[+876 chars sha256:372a5d183db8]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "model": {
+                  "default": "gpt-image-2",
+                  "type": "string"
+                },
+                "n": {
+                  "default": 1,
+                  "type": "integer"
+                },
+                "output_format": {
+                  "default": "png",
+                  "type": "string"
+                },
+                "prompt": {
+                  "type": "string"
+                },
+                "quality": {
+                  "default": "low",
+                  "type": "string"
+                },
+                "reference_images": {
+                  "anyOf": [
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "size": {
+                  "default": "1024x1024",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "prompt"
+              ],
+              "type": "object"
+            },
+            "name": "image_generate",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Read and extract text from one or many PDF files.\n\nSingle-file mode (``file_path``) returns a flat result:\n``{path, name, total_pages, pages_extracted, content, char_count,\npages: [{number, text, needs_vision}], needs_vision_pages?, metadata?}``.\n\nMulti-file mode (``files``, up to 10) returns ``{pdfs: [...]}`` with\neach entry in the single-file shape. Pages below 200 chars of\nextracted text are flagged ``needs_vision: true``; the result also\ncarries a ``next_step`` field telling the caller to use\n``attach_file`` on the original PDF — it sends the pages as\nImageContent so vision reads them dire…[+469 chars sha256:c0471437107b]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "file_path": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "files": {
+                  "anyOf": [
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "include_metadata": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "max_bytes_mb": {
+                  "default": 25.0,
+                  "type": "number"
+                },
+                "max_pages": {
+                  "default": 100,
+                  "type": "integer"
+                },
+                "pages": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "password": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                }
+              },
+              "type": "object"
+            },
+            "name": "pdf_read",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Scrape and extract text content from a webpage.\n\nUses a headless browser to render JavaScript and bypass bot detection.\nUse when you need to read the content of a specific URL,\nextract data from a website, or read articles/documentation.\n\nThe extracted text body is **written to a file on disk** rather\nthan returned inline — JSON-wrapping multi-KB page text escapes\nevery newline and quote, which poisons the agent's context. The\nresponse carries only metadata (title, description, headings,\nstructured data, links) plus ``saved_to`` pointing at the raw\ntext file. Use ``terminal_exec(\"cat <saved_to…[+891 chars sha256:a479a54a2eb0]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "include_links": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "respect_robots_txt": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "selector": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "url"
+              ],
+              "type": "object"
+            },
+            "name": "web_scrape",
+            "provider": null,
+            "provider_connected": true
+          }
+        ]
+      },
+      {
+        "name": "terminal-tools",
+        "tools": [
+          {
+            "description": "Run a shell command and capture its output.\n\nPast auto_background_after_sec, the call auto-promotes to a background\njob and returns immediately with `auto_backgrounded=True, job_id=...`\n— poll with terminal_job_logs(job_id, since_offset=...) to read the rest.\nSet auto_background_after_sec=0 to force pure foreground (kill on\ntimeout_sec).\n\nThe agent loop may first return a bg_* handle; use collect_result for\nthat handle, then terminal_job_logs for any job_id in the result.\nPOSIX uses bash when shell=True; Windows selects Git Bash, PowerShell,\nthen cmd. Read shell_kind before choosing platform-s…[+1240 chars sha256:b1921e412ee4]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "auto_background_after_sec": {
+                  "default": 30,
+                  "type": "integer"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "crm_principal": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "env": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "limits": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": {
+                        "type": "integer"
+                      },
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "max_output_kb": {
+                  "default": 256,
+                  "type": "integer"
+                },
+                "session_cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "shell": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "stdin": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "timeout_sec": {
+                  "default": 60,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "command"
+              ],
+              "type": "object"
+            },
+            "name": "terminal_exec",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Find files by name/glob under `path` — the Glob tool.\n\nUse this to locate files by name, in the project tree or raw/arbitrary\npaths (/var/log, /etc, archive contents). Relative paths resolve against\nthe session workdir. For mtime/size/type predicate queries, drop to\nterminal_exec(\"find ...\") — see references/find_predicates.md.\n\nPattern handling (so bare stems Just Work):\n    \"lk_scan_post_reactors\" -> matched as **/*lk_scan_post_reactors*\n    \"*.py\"                  -> matched as **/*.py (recursive)\n    \"src/**/*.py\"           -> used verbatim\nThe glob actually run is returned as `expanded_pa…[+533 chars sha256:42245c342183]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "include_ignored": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "max_results": {
+                  "default": 1000,
+                  "type": "integer"
+                },
+                "path": {
+                  "default": ".",
+                  "type": "string"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "session_cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                }
+              },
+              "required": [
+                "pattern"
+              ],
+              "type": "object"
+            },
+            "name": "terminal_glob",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Read job output at an offset. Combined read + status + wait primitive.\n\nTrack next_offset across calls to avoid replaying data. When\nwait_until_exit=True, waits until the job exits, a new message for you\narrives, or wait_timeout_sec elapses, then returns logs and status.\n\nArgs:\n    job_id: From terminal_job_start (or auto-promoted from terminal_exec).\n    stream: \"stdout\" | \"stderr\" | \"merged\". Use \"merged\" only when the\n        job was started with merge_stderr=True.\n    since_offset: Absolute byte offset to start reading from. Pass 0\n        on first call; pass next_offset on subsequent call…[+635 chars sha256:078c6f6e67cc]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "job_id": {
+                  "type": "string"
+                },
+                "max_bytes": {
+                  "default": 64000,
+                  "type": "integer"
+                },
+                "since_offset": {
+                  "default": 0,
+                  "type": "integer"
+                },
+                "stream": {
+                  "default": "stdout",
+                  "type": "string"
+                },
+                "tail": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "wait_timeout_sec": {
+                  "default": 600.0,
+                  "type": "number"
+                },
+                "wait_until_exit": {
+                  "default": false,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "job_id"
+              ],
+              "type": "object"
+            },
+            "name": "terminal_job_logs",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "List jobs, send signals, or write to job stdin.\n\nSingle tool covering job-control side effects. The action argument\npicks the operation:\n\n- \"capabilities\": return platform, supported_actions and signal semantics.\nNo job_id required. Check this before choosing a signal.\n- \"list\": list active + recently-exited jobs. job_id ignored.\n- \"signal_term\" | \"signal_kill\" | \"signal_int\" | \"signal_hup\"\n| \"signal_usr1\" | \"signal_usr2\": send the named signal. Requires job_id.\n- \"stdin\": write `data` to the job's stdin. Requires job_id and data.\n- \"close_stdin\": close the job's stdin pipe (e.g. to flush a to…[+502 chars sha256:fe37077ba4e3]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "action": {
+                  "type": "string"
+                },
+                "data": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "job_id": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "type": "object"
+            },
+            "name": "terminal_job_manage",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Spawn a background process. Returns a job_id you poll with terminal_job_logs.\n\nUse this when work might run >1 minute, when you want to keep doing\nother things while it runs, or when you need to stream logs as they\narrive. Jobs die when the terminal-tools server restarts — they are NOT\npersistent across reboots.\n\nArgs:\n    command: Shell command to run. With shell=False, pass argv via the\n        command string and we'll split on whitespace; for complex\n        quoting use shell=True with the selected platform's syntax.\n    cwd: Working directory. Defaults to the session workdir when\n        o…[+660 chars sha256:639b6c3b9e81]",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "command": {
+                  "type": "string"
+                },
+                "crm_principal": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "env": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "limits": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": {
+                        "type": "integer"
+                      },
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "merge_stderr": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "name": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "session_cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "shell": {
+                  "default": false,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "command"
+              ],
+              "type": "object"
+            },
+            "name": "terminal_job_start",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Retrieve a slice of truncated output by handle.\n\nWhen terminal_exec or terminal_job_logs returns more output than fits inline,\nyou'll see `output_handle: \"out_<hex>\"`. Pass it here with successive\noffsets to paginate. The full output is preserved (combined stdout+stderr\nwith `--- stdout ---` / `--- stderr ---` separators) for 5 minutes.\n\nArgs:\n    output_handle: From a prior tool's envelope.\n    since_offset: Pass 0 first, then next_offset from the previous call.\n    max_kb: Max KB to return per call.\n\nReturns: {data, offset, next_offset, eof, expired}",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "max_kb": {
+                  "default": 64,
+                  "type": "integer"
+                },
+                "output_handle": {
+                  "type": "string"
+                },
+                "since_offset": {
+                  "default": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "output_handle"
+              ],
+              "type": "object"
+            },
+            "name": "terminal_output_get",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Terminate a PTY session. Always do this when you're done — leaked\nsessions count against the per-server PTY cap.\n\nArgs:\n    session_id: From terminal_pty_open.\n    force: Skip the graceful \"exit\\n\" attempt and SIGTERM/SIGKILL.\n\nReturns: {exit_code, final_output, already_closed}",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "force": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "session_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "session_id"
+              ],
+              "type": "object"
+            },
+            "name": "terminal_pty_close",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Open a persistent /bin/bash session in a PTY.\n\nUse a session when you need state across calls — building env vars,\nnavigating with cd, driving REPLs, or responding to interactive\nprompts (sudo, ssh, mysql). For one-shot work, use terminal_exec\ninstead.\n\nThe session runs vanilla bash (--norc --noprofile) so dotfiles\ndon't surprise you. A unique PS1 sentinel is set so terminal_pty_run\ncan unambiguously detect command completion. macOS users: this\nis /bin/bash, not zsh, by deliberate policy — explicit\nshell=\"/bin/zsh\" overrides are rejected.\n\nArgs:\n    cwd: Initial working directory. Defaults to …[+274 chars sha256:031211a49e65]",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "cols": {
+                  "default": 120,
+                  "type": "integer"
+                },
+                "cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "env": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "idle_timeout_sec": {
+                  "default": 1800,
+                  "type": "integer"
+                },
+                "rows": {
+                  "default": 40,
+                  "type": "integer"
+                },
+                "session_cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                }
+              },
+              "type": "object"
+            },
+            "name": "terminal_pty_open",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Run a command in a session, send raw input, or drain output.\n\nThree modes:\n- Default: pass a command. The session sends it, waits for the\n    unique prompt sentinel (or `expect` regex if provided), and\n    returns the output between submission and prompt.\n- raw_send=True: pass a command. The text is written without\n    waiting for prompt. Use for REPL input (\"p('hi')\\n\"), for\n    password prompts (sudo), or for vim keystrokes.\n- read_only=True: drains whatever's currently buffered.\n    Typically follows raw_send.\n\nArgs:\n    session_id: From terminal_pty_open.\n    command: The text to send. Non…[+483 chars sha256:52cd0e518336]",
+            "enabled": false,
+            "input_schema": {
+              "properties": {
+                "command": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "expect": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "raw_send": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "read_only": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "session_id": {
+                  "type": "string"
+                },
+                "timeout_sec": {
+                  "default": 60.0,
+                  "type": "number"
+                }
+              },
+              "required": [
+                "session_id"
+              ],
+              "type": "object"
+            },
+            "name": "terminal_pty_run",
+            "provider": null,
+            "provider_connected": true
+          },
+          {
+            "description": "Run ripgrep on `path` for `pattern` — the content-search tool.\n\nUse this for all content (regex) search, whether project code or raw\npaths (system configs, /var/log, archive contents); it exposes the full\nrg flag surface. Relative paths resolve against the session workdir.\n\nArgs:\n    pattern: Regex pattern.\n    path: Directory or file to search. Relative paths resolve against\n        the session workdir; default is the session workdir itself.\n    glob: Filename glob (e.g. \"*.py\").\n    type_filter: rg filetype shortcut (e.g. \"py\", \"rust\", \"md\").\n    ignore_case: Case-insensitive search.\n    con…[+855 chars sha256:c5b75a3ff55b]",
+            "enabled": true,
+            "input_schema": {
+              "properties": {
+                "allow_fallback": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "context": {
+                  "default": 0,
+                  "type": "integer"
+                },
+                "extra_args": {
+                  "anyOf": [
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "glob": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "hidden": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "ignore_case": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "max_count": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "max_depth": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "no_ignore": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "path": {
+                  "default": ".",
+                  "type": "string"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "session_cwd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
+                "type_filter": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                }
+              },
+              "required": [
+                "pattern"
+              ],
+              "type": "object"
+            },
+            "name": "terminal_rg",
+            "provider": null,
+            "provider_connected": true
+          }
+        ]
+      }
+    ],
+    "queen_id": "queen_growth",
+    "stale": false,
+    "synthetic": [
+      {
+        "description": "Use this tool when you need to ask the user questions during execution. Reach for it when:\n\n- The task is ambiguous and the user needs to choose an approach\n- You need missing information to continue\n- You want approval before taking a meaningful action\n- A decision has real trade-offs the user should weigh in on\n- You want post-task feedback, or to offer saving a skill or updating memory\n\nUsage notes:\n- Users will always be able to select \"Other\" to provide custom text input, so do not include catch-all options like \"Other\" or \"Something else\" yourself.\n- Each option is a plain string. Do NOT…[+1309 chars sha256:a92b2256b4aa]",
+        "editable": false,
+        "name": "ask_user"
+      }
+    ]
+  },
+  "shape": {
+    "categories": "array",
+    "categories[].always_enabled": "boolean",
+    "categories[].in_role_default": "boolean",
+    "categories[].name": "string",
+    "categories[].tools": "array",
+    "categories[].tools[]": "string",
+    "connected_providers": "array",
+    "enabled_mcp_tools": "array",
+    "enabled_mcp_tools[]": "string",
+    "is_role_default": "boolean",
+    "lifecycle": "array",
+    "lifecycle[].description": "string",
+    "lifecycle[].editable": "boolean",
+    "lifecycle[].name": "string",
+    "mcp_servers": "array",
+    "mcp_servers[].name": "string",
+    "mcp_servers[].tools": "array",
+    "mcp_servers[].tools[].description": "string",
+    "mcp_servers[].tools[].enabled": "boolean",
+    "mcp_servers[].tools[].input_schema": "object",
+    "mcp_servers[].tools[].input_schema.properties": "object",
+    "mcp_servers[].tools[].input_schema.properties.dpi": "object",
+    "mcp_servers[].tools[].input_schema.properties.dpi.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.dpi.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.height": "object",
+    "mcp_servers[].tools[].input_schema.properties.height.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.height.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.kind": "object",
+    "mcp_servers[].tools[].input_schema.properties.kind.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.output_path": "object",
+    "mcp_servers[].tools[].input_schema.properties.output_path.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.output_path.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.output_path.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.spec": "object",
+    "mcp_servers[].tools[].input_schema.properties.title": "object",
+    "mcp_servers[].tools[].input_schema.properties.title.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.title.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.width": "object",
+    "mcp_servers[].tools[].input_schema.properties.width.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.width.type": "string",
+    "mcp_servers[].tools[].input_schema.required": "array",
+    "mcp_servers[].tools[].input_schema.required[]": "string",
+    "mcp_servers[].tools[].input_schema.type": "string",
+    "mcp_servers[].tools[].name": "string",
+    "mcp_servers[].tools[].provider": "null",
+    "mcp_servers[].tools[].provider_connected": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.mode": "object",
+    "mcp_servers[].tools[].input_schema.properties.mode.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.mode.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.mode.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.new_string": "object",
+    "mcp_servers[].tools[].input_schema.properties.new_string.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.new_string.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.new_string.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.old_string": "object",
+    "mcp_servers[].tools[].input_schema.properties.old_string.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.old_string.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.old_string.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.patch_text": "object",
+    "mcp_servers[].tools[].input_schema.properties.patch_text.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.patch_text.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.patch_text.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.path": "object",
+    "mcp_servers[].tools[].input_schema.properties.path.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.path.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.path.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.replace_all": "object",
+    "mcp_servers[].tools[].input_schema.properties.replace_all.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.replace_all.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.replace_all.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.session_cwd": "object",
+    "mcp_servers[].tools[].input_schema.properties.session_cwd.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.session_cwd.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.session_cwd.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.hashline": "object",
+    "mcp_servers[].tools[].input_schema.properties.hashline.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.hashline.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.hashline.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.limit": "object",
+    "mcp_servers[].tools[].input_schema.properties.limit.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.limit.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.limit.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.offset": "object",
+    "mcp_servers[].tools[].input_schema.properties.offset.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.offset.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.offset.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.context": "object",
+    "mcp_servers[].tools[].input_schema.properties.context.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.context.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.context.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.file_glob": "object",
+    "mcp_servers[].tools[].input_schema.properties.file_glob.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.file_glob.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.file_glob.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.output_mode": "object",
+    "mcp_servers[].tools[].input_schema.properties.output_mode.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.output_mode.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.output_mode.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.pattern": "object",
+    "mcp_servers[].tools[].input_schema.properties.pattern.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.pattern.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.target": "object",
+    "mcp_servers[].tools[].input_schema.properties.target.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.target.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.target.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.task_id": "object",
+    "mcp_servers[].tools[].input_schema.properties.task_id.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.task_id.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.task_id.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.content": "object",
+    "mcp_servers[].tools[].input_schema.properties.content.description": "string",
+    "mcp_servers[].tools[].input_schema.properties.content.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.max_bytes_mb": "object",
+    "mcp_servers[].tools[].input_schema.properties.max_bytes_mb.default": "number(float)",
+    "mcp_servers[].tools[].input_schema.properties.max_bytes_mb.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.paths": "object",
+    "mcp_servers[].tools[].input_schema.properties.paths.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.paths.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.paths.anyOf[].items": "object",
+    "mcp_servers[].tools[].input_schema.properties.paths.anyOf[].items.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.rows": "object",
+    "mcp_servers[].tools[].input_schema.properties.rows.items": "object",
+    "mcp_servers[].tools[].input_schema.properties.rows.items.additionalProperties": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.rows.items.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.rows.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.limit.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.limit.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.query": "object",
+    "mcp_servers[].tools[].input_schema.properties.query.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.columns": "object",
+    "mcp_servers[].tools[].input_schema.properties.columns.items": "object",
+    "mcp_servers[].tools[].input_schema.properties.columns.items.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.columns.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.provider": "object",
+    "mcp_servers[].tools[].input_schema.properties.provider.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.provider.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.timezone": "object",
+    "mcp_servers[].tools[].input_schema.properties.timezone.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.timezone.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.model": "object",
+    "mcp_servers[].tools[].input_schema.properties.model.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.model.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.n": "object",
+    "mcp_servers[].tools[].input_schema.properties.n.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.n.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.output_format": "object",
+    "mcp_servers[].tools[].input_schema.properties.output_format.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.output_format.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.prompt": "object",
+    "mcp_servers[].tools[].input_schema.properties.prompt.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.quality": "object",
+    "mcp_servers[].tools[].input_schema.properties.quality.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.quality.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.reference_images": "object",
+    "mcp_servers[].tools[].input_schema.properties.reference_images.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.reference_images.anyOf[].items": "object",
+    "mcp_servers[].tools[].input_schema.properties.reference_images.anyOf[].items.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.reference_images.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.reference_images.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.size": "object",
+    "mcp_servers[].tools[].input_schema.properties.size.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.size.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.file_path": "object",
+    "mcp_servers[].tools[].input_schema.properties.file_path.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.file_path.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.file_path.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.files": "object",
+    "mcp_servers[].tools[].input_schema.properties.files.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.files.anyOf[].items": "object",
+    "mcp_servers[].tools[].input_schema.properties.files.anyOf[].items.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.files.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.files.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.include_metadata": "object",
+    "mcp_servers[].tools[].input_schema.properties.include_metadata.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.include_metadata.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.max_pages": "object",
+    "mcp_servers[].tools[].input_schema.properties.max_pages.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.max_pages.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.pages": "object",
+    "mcp_servers[].tools[].input_schema.properties.pages.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.pages.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.pages.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.password": "object",
+    "mcp_servers[].tools[].input_schema.properties.password.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.password.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.password.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.include_links": "object",
+    "mcp_servers[].tools[].input_schema.properties.include_links.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.include_links.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.respect_robots_txt": "object",
+    "mcp_servers[].tools[].input_schema.properties.respect_robots_txt.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.respect_robots_txt.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.selector": "object",
+    "mcp_servers[].tools[].input_schema.properties.selector.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.selector.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.selector.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.url": "object",
+    "mcp_servers[].tools[].input_schema.properties.url.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.auto_background_after_sec": "object",
+    "mcp_servers[].tools[].input_schema.properties.auto_background_after_sec.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.auto_background_after_sec.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.command": "object",
+    "mcp_servers[].tools[].input_schema.properties.command.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.crm_principal": "object",
+    "mcp_servers[].tools[].input_schema.properties.crm_principal.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.crm_principal.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.crm_principal.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.cwd": "object",
+    "mcp_servers[].tools[].input_schema.properties.cwd.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.cwd.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.cwd.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.env": "object",
+    "mcp_servers[].tools[].input_schema.properties.env.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.env.anyOf[].additionalProperties": "object",
+    "mcp_servers[].tools[].input_schema.properties.env.anyOf[].additionalProperties.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.env.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.env.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.limits": "object",
+    "mcp_servers[].tools[].input_schema.properties.limits.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.limits.anyOf[].additionalProperties": "object",
+    "mcp_servers[].tools[].input_schema.properties.limits.anyOf[].additionalProperties.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.limits.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.limits.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.max_output_kb": "object",
+    "mcp_servers[].tools[].input_schema.properties.max_output_kb.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.max_output_kb.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.shell": "object",
+    "mcp_servers[].tools[].input_schema.properties.shell.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.shell.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.stdin": "object",
+    "mcp_servers[].tools[].input_schema.properties.stdin.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.stdin.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.stdin.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.timeout_sec": "object",
+    "mcp_servers[].tools[].input_schema.properties.timeout_sec.default": "number(float)",
+    "mcp_servers[].tools[].input_schema.properties.timeout_sec.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.include_ignored": "object",
+    "mcp_servers[].tools[].input_schema.properties.include_ignored.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.include_ignored.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.max_results": "object",
+    "mcp_servers[].tools[].input_schema.properties.max_results.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.max_results.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.job_id": "object",
+    "mcp_servers[].tools[].input_schema.properties.job_id.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.max_bytes": "object",
+    "mcp_servers[].tools[].input_schema.properties.max_bytes.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.max_bytes.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.since_offset": "object",
+    "mcp_servers[].tools[].input_schema.properties.since_offset.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.since_offset.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.stream": "object",
+    "mcp_servers[].tools[].input_schema.properties.stream.default": "string",
+    "mcp_servers[].tools[].input_schema.properties.stream.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.tail": "object",
+    "mcp_servers[].tools[].input_schema.properties.tail.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.tail.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.wait_timeout_sec": "object",
+    "mcp_servers[].tools[].input_schema.properties.wait_timeout_sec.default": "number(float)",
+    "mcp_servers[].tools[].input_schema.properties.wait_timeout_sec.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.wait_until_exit": "object",
+    "mcp_servers[].tools[].input_schema.properties.wait_until_exit.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.wait_until_exit.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.action": "object",
+    "mcp_servers[].tools[].input_schema.properties.action.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.data": "object",
+    "mcp_servers[].tools[].input_schema.properties.data.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.data.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.data.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.job_id.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.job_id.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.job_id.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.merge_stderr": "object",
+    "mcp_servers[].tools[].input_schema.properties.merge_stderr.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.merge_stderr.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.name": "object",
+    "mcp_servers[].tools[].input_schema.properties.name.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.name.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.name.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.max_kb": "object",
+    "mcp_servers[].tools[].input_schema.properties.max_kb.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.max_kb.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.output_handle": "object",
+    "mcp_servers[].tools[].input_schema.properties.output_handle.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.force": "object",
+    "mcp_servers[].tools[].input_schema.properties.force.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.force.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.session_id": "object",
+    "mcp_servers[].tools[].input_schema.properties.session_id.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.cols": "object",
+    "mcp_servers[].tools[].input_schema.properties.cols.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.cols.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.idle_timeout_sec": "object",
+    "mcp_servers[].tools[].input_schema.properties.idle_timeout_sec.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.idle_timeout_sec.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.rows.default": "number(int)",
+    "mcp_servers[].tools[].input_schema.properties.command.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.command.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.command.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.expect": "object",
+    "mcp_servers[].tools[].input_schema.properties.expect.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.expect.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.expect.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.raw_send": "object",
+    "mcp_servers[].tools[].input_schema.properties.raw_send.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.raw_send.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.read_only": "object",
+    "mcp_servers[].tools[].input_schema.properties.read_only.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.read_only.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.allow_fallback": "object",
+    "mcp_servers[].tools[].input_schema.properties.allow_fallback.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.allow_fallback.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.extra_args": "object",
+    "mcp_servers[].tools[].input_schema.properties.extra_args.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.extra_args.anyOf[].items": "object",
+    "mcp_servers[].tools[].input_schema.properties.extra_args.anyOf[].items.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.extra_args.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.extra_args.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.glob": "object",
+    "mcp_servers[].tools[].input_schema.properties.glob.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.glob.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.glob.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.hidden": "object",
+    "mcp_servers[].tools[].input_schema.properties.hidden.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.hidden.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.ignore_case": "object",
+    "mcp_servers[].tools[].input_schema.properties.ignore_case.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.ignore_case.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.max_count": "object",
+    "mcp_servers[].tools[].input_schema.properties.max_count.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.max_count.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.max_count.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.max_depth": "object",
+    "mcp_servers[].tools[].input_schema.properties.max_depth.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.max_depth.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.max_depth.default": "null",
+    "mcp_servers[].tools[].input_schema.properties.no_ignore": "object",
+    "mcp_servers[].tools[].input_schema.properties.no_ignore.default": "boolean",
+    "mcp_servers[].tools[].input_schema.properties.no_ignore.type": "string",
+    "mcp_servers[].tools[].input_schema.properties.type_filter": "object",
+    "mcp_servers[].tools[].input_schema.properties.type_filter.anyOf": "array",
+    "mcp_servers[].tools[].input_schema.properties.type_filter.anyOf[].type": "string",
+    "mcp_servers[].tools[].input_schema.properties.type_filter.default": "null",
+    "queen_id": "string",
+    "stale": "boolean",
+    "synthetic": "array",
+    "synthetic[].description": "string",
+    "synthetic[].editable": "boolean",
+    "synthetic[].name": "string"
+  },
+  "counts": {
+    "categories": 18,
+    "connected_providers": 0,
+    "enabled_mcp_tools": 25,
+    "lifecycle": 16,
+    "mcp_servers": 4,
+    "synthetic": 1
+  },
+  "notes": []
+}

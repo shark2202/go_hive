@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -304,6 +305,68 @@ func TestEndToEndDefaultsPlusCommunitySkills(t *testing.T) {
 	if !strings.Contains(protocolsPrompt, "## Operational Protocols") {
 		t.Fatalf("protocols prompt = %q", protocolsPrompt)
 	}
+}
+
+// Parity: framework/skills/manager.py::SkillsManager.reload (a changed
+// SKILL.md reaches the rendered prompt only after the reload).
+func TestManagerReloadRefreshesCatalogPrompt(t *testing.T) {
+	scope := t.TempDir()
+	writeDiscoverySkill(t, scope, "reload-demo", "first description")
+
+	manager := newIsolatedManager(t, &SkillsManagerConfig{
+		ExtraScopeDirs: []ExtraScope{{Directory: scope, Label: "queen_ui", Priority: 2}},
+	})
+	if !strings.Contains(manager.SkillsCatalogPrompt(), "first description") {
+		t.Fatalf("catalog = %q, want the first description", manager.SkillsCatalogPrompt())
+	}
+
+	writeDiscoverySkill(t, scope, "reload-demo", "second description")
+	if stale := manager.SkillsCatalogPrompt(); strings.Contains(stale, "second description") {
+		t.Fatalf("catalog picked the edit up without a reload: %q", stale)
+	}
+
+	if err := manager.Reload(); err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if refreshed := manager.SkillsCatalogPrompt(); !strings.Contains(refreshed, "second description") {
+		t.Fatalf("catalog after reload = %q, want the second description", refreshed)
+	}
+}
+
+// Parity-exempt: Go-only concurrency guard. The live fan-out reloads a shared
+// manager from a goroutine while a queen turn reads the catalog prompt.
+func TestManagerReloadIsSafeAgainstConcurrentCatalogReads(t *testing.T) {
+	scope := t.TempDir()
+	writeDiscoverySkill(t, scope, "reload-race", "race probe")
+
+	manager := newIsolatedManager(t, &SkillsManagerConfig{
+		ExtraScopeDirs: []ExtraScope{{Directory: scope, Label: "queen_ui", Priority: 2}},
+	})
+
+	var wg sync.WaitGroup
+	stop := make(chan struct{})
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+					_ = manager.SkillsCatalogPrompt()
+					_ = manager.SkillsCatalogPromptForPhase(nil)
+				}
+			}
+		}()
+	}
+	for i := 0; i < 5; i++ {
+		if err := manager.Reload(); err != nil {
+			t.Fatalf("reload: %v", err)
+		}
+	}
+	close(stop)
+	wg.Wait()
 }
 
 // Parity: tests/test_skill_integration.py::TestEndToEndPipeline::test_config_disables_defaults_keeps_community

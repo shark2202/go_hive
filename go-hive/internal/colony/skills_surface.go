@@ -6,6 +6,8 @@ package colony
 // adds skill_view/list_skills and an allowlisted SkillDirs root for view_file.
 
 import (
+	"unicode/utf8"
+
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/skills"
 )
@@ -45,8 +47,60 @@ func (r *ColonyRuntime) workerSkillDirs() []string {
 	return []string{dir}
 }
 
+// workerSkillsCatalogPrompt renders the colony catalog a spawning worker's
+// prompt announces, straight off disk (the freshness a new worker always had),
+// and primes the memo in-flight workers read. ReloadSkills refreshes the same
+// memo when a skill changes while workers are running.
 func (r *ColonyRuntime) workerSkillsCatalogPrompt() string {
-	return skills.ScopedCatalogPrompt(r.colonySkillsDir(), "colony")
+	dir := r.colonySkillsDir()
+	prompt := ""
+	if dir != "" {
+		prompt = skills.ScopedCatalogPrompt(dir, "colony")
+	}
+	r.storeSkillsCatalog(prompt)
+	return prompt
+}
+
+// cachedSkillsCatalogPrompt is the memo an in-flight worker's dynamic provider
+// reads each iteration. It starts at the spawn-time render and is swapped by
+// ReloadSkills.
+func (r *ColonyRuntime) cachedSkillsCatalogPrompt() string {
+	r.skillsCatalogMu.RLock()
+	defer r.skillsCatalogMu.RUnlock()
+	return r.skillsCatalogPrompt
+}
+
+// storeSkillsCatalog publishes one rendered catalog memo.
+func (r *ColonyRuntime) storeSkillsCatalog(prompt string) {
+	r.skillsCatalogMu.Lock()
+	r.skillsCatalogPrompt = prompt
+	r.skillsCatalogMu.Unlock()
+}
+
+// ReloadSkills rebuilds the colony's catalog after a skill changed on disk.
+// Every worker already reads the catalog through the dynamic provider its
+// context was spawned with, so one reload reaches in-flight workers on their
+// next iteration without a respawn. Returns the stats the HTTP fan-out echoes
+// (catalog_chars, skill_dirs), mirroring ColonyRuntime.reload_skills upstream.
+func (r *ColonyRuntime) ReloadSkills() (map[string]any, error) {
+	if r == nil {
+		return nil, nil
+	}
+	dir := r.colonySkillsDir()
+	prompt := ""
+	if dir != "" {
+		prompt = skills.ScopedCatalogPrompt(dir, "colony")
+	}
+	// Publish even the empty result: a colony whose skills folder disappeared
+	// must drop the stale catalog instead of keeping the last one.
+	r.storeSkillsCatalog(prompt)
+	stats := map[string]any{"catalog_chars": utf8.RuneCountInString(prompt)}
+	if dir != "" {
+		stats["skill_dirs"] = []string{dir}
+	} else {
+		stats["skill_dirs"] = []string{}
+	}
+	return stats, nil
 }
 
 // withoutTool removes one tool definition by name, keeping order otherwise.

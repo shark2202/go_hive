@@ -32,23 +32,23 @@ type sizeWaiver struct {
 
 // fileWaivers: module-relative path -> frozen ceiling + why it is tolerated.
 var fileWaivers = map[string]sizeWaiver{
-	"internal/tools/integrations/batch7_lane1.go": {2276, "batch7 工具移植按 lane 整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/batch7_lane2.go": {1973, "batch7 工具移植按 lane 整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/batch7_lane3.go": {2086, "batch7 工具移植按 lane 整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/batch7_lane4.go": {3031, "batch7 工具移植按 lane 整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/batch7_lane5.go": {2848, "batch7 工具移植按 lane 整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/batch7_lane6.go": {1838, "batch7 工具移植按 lane 整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/batch7_lane7.go": {2532, "batch7 工具移植按 lane 整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/batch7_lane8.go": {2255, "batch7 工具移植按 lane 整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/batch3_pdf.go":   {2014, "batch3 PDF 工具整批移植（action 定义 + 参数 schema + 错误映射）；拆分列入后续重构，上限冻结"},
-	"internal/tools/integrations/batch3_excel.go": {1818, "batch3 Excel 工具整批移植（action 定义 + 参数 schema + 错误映射）；拆分列入后续重构，上限冻结"},
-	"internal/tools/integrations/catalog_gen.go":  {2074, "生成文件（gen_catalog.py 产出，DO NOT EDIT）：工具目录表的行数由上游 @mcp.tool 数量决定，不应手改"},
-	"internal/credentials/specs_gen.go":           {2523, "生成文件（gen_credential_specs.py 产出，DO NOT EDIT）：85 个模块的凭据规格表，行数由上游注册表决定"},
-	"internal/orchestrator/safe_eval.go":          {2734, "安全求值器的运算符与内建函数分派表集中在一个文件：表驱动结构改动一处就要整批对照，拆分的收益低于保持单表可审"},
-	"internal/mcpregistry/cli.go":                 {1746, "MCP 注册表子命令（import/export/list/…）共享一套 flag 解析与错误输出；先冻结规模，拆分留待命令族稳定"},
-	"internal/cli/skill.go":                       {1601, "skill 子命令族与安装/测试流程集中在一个文件；拆分列入后续重构，上限冻结"},
-	"internal/agentloop/conversation.go":          {1549, "会话转换与消息编排集中在一个文件，循环核心语义都在这；拆分需先稳定接口，暂冻结规模"},
-	"internal/cli/loader.go":                      {1936, "serve 装配入口：flag 解析、home/manager 构建、会话/colony 生命周期与 HTTP 装配同处一条命令路径；拆分需先把 colony 生命周期抽成独立文件，上限冻结只减不增"},
+	"internal/tools/integrations/devops_hosting.go":    {2276, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
+	"internal/tools/integrations/cloudflare.go":        {1973, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
+	"internal/tools/integrations/infra_automation.go":  {2086, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
+	"internal/tools/integrations/ai_platform.go":       {3031, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
+	"internal/tools/integrations/enrichment_search.go": {2848, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
+	"internal/tools/integrations/web_intelligence.go":  {1838, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
+	"internal/tools/integrations/social_media.go":      {2532, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
+	"internal/tools/integrations/scheduling_chat.go":   {2255, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
+	"internal/tools/integrations/pdf.go":               {2014, "PDF 工具整批移植（action 定义 + 参数 schema + 错误映射）；拆分列入后续重构，上限冻结"},
+	"internal/tools/integrations/excel.go":             {1818, "Excel 工具整批移植（action 定义 + 参数 schema + 错误映射）；拆分列入后续重构，上限冻结"},
+	"internal/tools/integrations/catalog_gen.go":       {2074, "生成文件（gen_catalog.py 产出，DO NOT EDIT）：工具目录表的行数由上游 @mcp.tool 数量决定，不应手改"},
+	"internal/credentials/specs_gen.go":                {2523, "生成文件（gen_credential_specs.py 产出，DO NOT EDIT）：85 个模块的凭据规格表，行数由上游注册表决定"},
+	"internal/orchestrator/safe_eval.go":               {2734, "安全求值器的运算符与内建函数分派表集中在一个文件：表驱动结构改动一处就要整批对照，拆分的收益低于保持单表可审"},
+	"internal/mcpregistry/cli.go":                      {1746, "MCP 注册表子命令（import/export/list/…）共享一套 flag 解析与错误输出；先冻结规模，拆分留待命令族稳定"},
+	"internal/cli/skill.go":                            {1601, "skill 子命令族与安装/测试流程集中在一个文件；拆分列入后续重构，上限冻结"},
+	"internal/agentloop/conversation.go":               {1549, "会话转换与消息编排集中在一个文件，循环核心语义都在这；拆分需先稳定接口，暂冻结规模"},
+	"internal/cli/loader.go":                           {1936, "serve 装配入口：flag 解析、home/manager 构建、会话/colony 生命周期与 HTTP 装配同处一条命令路径；拆分需先把 colony 生命周期抽成独立文件，上限冻结只减不增"},
 }
 
 // funcWaivers: "<module-relative file>::<func label>" -> frozen ceiling + why.
@@ -57,7 +57,7 @@ var funcWaivers = map[string]sizeWaiver{
 	"internal/agentloop/loop.go::(*AgentLoop).ExecuteTurn":          {321, "一轮对话的主流程（模型调用、工具分派、事件发布、judge 钩子）共享同一条错误路径；拆分需先稳定阶段接口"},
 	"internal/maintenance/janitor.go::RunOnce":                      {239, "janitor 单轮清理按类别顺序执行，共享同一份报告与安全上下文；按类别拆分改的是行为顺序"},
 	"internal/server/routes_session_create.go::handleCreateSession": {227, "会话创建路由：参数校验、home 解析、事件总线接线在同一事务边界内"},
-	"internal/tools/integrations/batch3_scrape.go::webScrapeAction": {217, "抓取工具的 fetch/解析/截断分支集中在一处；拆分需先抽出抓取器"},
+	"internal/tools/integrations/scrape.go::webScrapeAction":        {217, "抓取工具的 fetch/解析/截断分支集中在一处；拆分需先抽出抓取器"},
 }
 
 // Parity-exempt: Go 侧文件规模护栏（按行数冻结 + allowlist），上游 Python 没有对应测试。

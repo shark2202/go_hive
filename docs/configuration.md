@@ -96,6 +96,10 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 | `memory_timeline` | `/api/config/features` | 布尔 |
 | `rate_limits` | `internal/ratelimit` | `platform.action.window` → 整数限额；环境变量 `HIVE_RATE_<PLATFORM>_<ACTION>_<WINDOW>` 优先 |
 | `provider_library` | `/api/config/provider-library` | 保存的 provider 模板，按名称逐字存取 |
+| `queen_mail` | `internal/qmail`、`internal/cli` | queen 互写：`enabled`/`queens`/`daily_limit`/`max_depth`；工具面与投递细节见 [queen-mail.md](queen-mail.md)。启动时读取，改后需重启 |
+| `gcu_enabled` | `cli.browserBridgeRequested` | 布尔；`HIVE_BROWSER_BRIDGE` 环境变量优先，未设置时决定 serve 是否拉起 `browserbridge`（缺省开） |
+| `gcu_viewport_scale` | `server.GcuViewportScale` → `HIVE_BROWSER_VIEWPORT_SCALE` | 数字 0.1–1.0，默认 0.8；非数字/越界回落 0.8，显式 env 覆盖按 [0.1, 1.0] 夹取。桥在 `GET /status` 的 `viewport_scale` 与启动日志上报（实测 0.65 / 0.55 / 0.8）。上游 getter 自扩展化浏览器后无消费点，Go 只读并上报，不改截图/抓取几何 |
+| `turn_context` | `server.StartTurnContexts` | `turn_context.<name>.enabled` 为真时启动该已安装包，其文本作为 `<system-reminder>` 插在 queen 每回合用户消息之前；queen-only，单包 5s 超时，异常/启动失败跳过；默认无包 |
 
 `llm`、`worker_llm`、`vision_fallback`、`judge` 是四个模型「槽位」，由设置接口写入；本版本聊天会话只使用 `llm` 槽（代码路径）。
 

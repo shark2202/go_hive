@@ -26,6 +26,15 @@ type ConversationStore interface {
 	Destroy() error
 }
 
+// CursorMutator is the atomic read-modify-write seam for the conversation
+// cursor. Every writer that adds or replaces a cursor field must use it: a
+// ReadCursor/WriteCursor pair is two steps, and a concurrent writer (a message
+// persist bumping next_seq, a park checkpoint stamping pending_input) that
+// lands in between is silently overwritten by the older snapshot.
+type CursorMutator interface {
+	MutateCursor(fn func(cursor map[string]any)) error
+}
+
 type FileConversationStore struct {
 	base        string
 	partsDir    string
@@ -152,6 +161,66 @@ func (s *FileConversationStore) WriteCursor(data map[string]any) error {
 
 func (s *FileConversationStore) ReadCursor() (map[string]any, error) {
 	return readJSON(filepath.Join(s.base, "cursor.json"))
+}
+
+// writeCursorNextSeq advances the cursor's next_seq without disturbing fields
+// another writer owns (the park checkpoint's pending_input). The update is one
+// atomic read-modify-write when the store supports it; a ReadCursor/WriteCursor
+// pair can land on either side of a concurrent park checkpoint and then carry
+// that writer's field away with the older snapshot.
+func writeCursorNextSeq(store ConversationStore, nextSeq int) error {
+	if store == nil {
+		return nil
+	}
+	if mutator, ok := store.(CursorMutator); ok {
+		return mutator.MutateCursor(func(cursor map[string]any) {
+			cursor["next_seq"] = nextSeq
+		})
+	}
+	cursor, err := store.ReadCursor()
+	if err != nil {
+		return err
+	}
+	updated := UpdateCursorNextSeq(cursor, nextSeq)
+	return store.WriteCursor(updated)
+}
+
+// cursorDirLocks serialises cursor read-modify-writes per conversation
+// directory. The key is the directory, not the store instance: a route may open
+// a second store over the same conversation and must share the same lock, or
+// the two instances still lose each other's updates.
+var cursorDirLocks sync.Map // map[string]*sync.Mutex
+
+func cursorDirLock(base string) *sync.Mutex {
+	key := filepath.Clean(base)
+	if lock, ok := cursorDirLocks.Load(key); ok {
+		return lock.(*sync.Mutex)
+	}
+	lock := &sync.Mutex{}
+	actual, _ := cursorDirLocks.LoadOrStore(key, lock)
+	return actual.(*sync.Mutex)
+}
+
+// MutateCursor applies fn to the cursor as one atomic read-modify-write. Callers
+// that preserve fields they do not own must use it instead of a
+// ReadCursor/WriteCursor pair: the pair's snapshot goes stale while another
+// writer's update lands in between.
+func (s *FileConversationStore) MutateCursor(fn func(cursor map[string]any)) error {
+	if fn == nil {
+		return nil
+	}
+	lock := cursorDirLock(s.base)
+	lock.Lock()
+	defer lock.Unlock()
+	cursor, err := readJSON(filepath.Join(s.base, "cursor.json"))
+	if err != nil {
+		return err
+	}
+	if cursor == nil {
+		cursor = map[string]any{}
+	}
+	fn(cursor)
+	return writeJSONAtomic(filepath.Join(s.base, "cursor.json"), cursor)
 }
 
 func (s *FileConversationStore) WritePartial(seq int, data map[string]any) error {
@@ -300,6 +369,20 @@ func (s *MemoryConversationStore) ReadCursor() (map[string]any, error) {
 		return nil, nil
 	}
 	return copyMap(s.cursor), nil
+}
+
+// MutateCursor applies fn under the store lock, so an in-memory cursor gets the
+// same atomic update seam as the file store.
+func (s *MemoryConversationStore) MutateCursor(fn func(cursor map[string]any)) error {
+	if fn == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cursor := copyMap(s.cursor)
+	fn(cursor)
+	s.cursor = cursor
+	return nil
 }
 
 func (s *MemoryConversationStore) DeletePartsBefore(seq int) error {

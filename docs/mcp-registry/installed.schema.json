@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aden-hive/hive-go/mcp-registry/installed.schema.json",
+  "title": "Hive MCP installed servers",
+  "type": "object",
+  "required": [
+    "servers"
+  ],
+  "properties": {
+    "servers": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": [
+        "source",
+        "manifest",
+        "transport",
+        "mode",
+        "enabled"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "registry",
+            "local"
+          ]
+        },
+        "manifest_version": {
+          "type": "string"
+        },
+        "manifest": {
+          "$ref": "index.schema.json#/$defs/manifest"
+        },
+        "transport": {
+          "type": "string",
+          "enum": [
+            "stdio",
+            "http",
+            "sse",
+            "unix"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "tools",
+            "cli"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "auto_update": {
+          "type": "boolean"
+        },
+        "overrides": {
+          "type": "object",
+          "properties": {
+            "env": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "headers": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "installed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "installed_by": {
+          "type": "string"
+        },
+        "last_health_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_used_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

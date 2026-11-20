@@ -1,0 +1,28 @@
+{
+  "endpoint": "config_llm",
+  "shape": {
+    "active_subscription": "null",
+    "api_base": "string",
+    "api_key_env_var": "string",
+    "connected_providers": "array",
+    "detected_subscriptions": "array",
+    "has_api_key": "boolean",
+    "max_context_tokens": "null",
+    "max_tokens": "null",
+    "model": "string",
+    "provider": "string",
+    "subscriptions": "array",
+    "subscriptions[].default_model": "string",
+    "subscriptions[].description": "string",
+    "subscriptions[].flag": "string",
+    "subscriptions[].id": "string",
+    "subscriptions[].name": "string",
+    "subscriptions[].provider": "string",
+    "subscriptions[].api_base": "string"
+  },
+  "counts": {
+    "connected_providers": 0,
+    "detected_subscriptions": 0,
+    "subscriptions": 7
+  }
+}

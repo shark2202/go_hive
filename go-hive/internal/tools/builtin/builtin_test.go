@@ -25,14 +25,15 @@ func toolDef(t *testing.T, name string) bool {
 	return false
 }
 
-// Parity-exempt: Go-only P0 builtin; Python registers read_file/write_file
-// through files_server.py and terminal_exec through terminal_tools/exec.py.
+// Parity-exempt: Go-only P0 builtin; Python registers read_file/write_file/
+// edit_file/search_files through files_server.py and terminal_exec through
+// terminal_tools/exec.py.
 func TestDefsExposeP0Tools(t *testing.T) {
 	defs := Defs()
-	if len(defs) != 12 {
-		t.Fatalf("Defs() = %d tools, want 12 (3 P0 + 9 terminal)", len(defs))
+	if len(defs) != 14 {
+		t.Fatalf("Defs() = %d tools, want 14 (5 file tools + 9 terminal)", len(defs))
 	}
-	for _, name := range []string{ToolReadFile, ToolWriteFile, ToolTerminalExec} {
+	for _, name := range []string{ToolReadFile, ToolWriteFile, ToolEditFile, ToolSearchFiles, ToolTerminalExec} {
 		if !toolDef(t, name) {
 			t.Fatalf("missing tool definition %q", name)
 		}
@@ -45,7 +46,14 @@ func TestDefsExposeP0Tools(t *testing.T) {
 	if len(write) != 2 || write[0] != "path" || write[1] != "content" {
 		t.Fatalf("write_file required = %v, want [path content]", write)
 	}
-	exec := defs[2].Parameters["required"].([]string)
+	if _, required := defs[2].Parameters["required"]; required {
+		t.Fatalf("edit_file should default every argument, got required = %v", defs[2].Parameters["required"])
+	}
+	search := defs[3].Parameters["required"].([]string)
+	if len(search) != 1 || search[0] != "pattern" {
+		t.Fatalf("search_files required = %v, want [pattern]", search)
+	}
+	exec := defs[4].Parameters["required"].([]string)
 	if len(exec) != 1 || exec[0] != "command" {
 		t.Fatalf("terminal_exec required = %v, want [command]", exec)
 	}
@@ -382,7 +390,7 @@ func TestTerminalExecTruncatesOutput(t *testing.T) {
 	}
 }
 
-// Parity-exempt: Go-only P0 builtin; invalid args are tool errors.
+// Parity: tools/tests/test_terminal_tools_exec.py::test_timed_out_marker
 func TestTerminalExecRejectsInvalidArguments(t *testing.T) {
 	tb := New(t.TempDir())
 	res, err := tb.Execute(context.Background(), ToolTerminalExec, map[string]any{})
@@ -393,10 +401,10 @@ func TestTerminalExecRejectsInvalidArguments(t *testing.T) {
 		t.Fatalf("missing command result = %+v", res)
 	}
 
-	for _, timeout := range []any{0, -1, 601, "soon"} {
+	for _, timeout := range []any{-1, "soon"} {
 		res, err = tb.Execute(context.Background(), ToolTerminalExec, map[string]any{
-			"command":         "true",
-			"timeout_seconds": timeout,
+			"command":     "true",
+			"timeout_sec": timeout,
 		})
 		if err != nil {
 			t.Fatalf("timeout %v: %v", timeout, err)
@@ -404,6 +412,20 @@ func TestTerminalExecRejectsInvalidArguments(t *testing.T) {
 		if !res.IsError {
 			t.Fatalf("timeout %v accepted: %+v", timeout, res)
 		}
+	}
+
+	// Both waits zero means no finite foreground budget: upstream rejects it
+	// and points at terminal_job_start (exec.py).
+	res, err = tb.Execute(context.Background(), ToolTerminalExec, map[string]any{
+		"command":                   "true",
+		"timeout_sec":               0,
+		"auto_background_after_sec": 0,
+	})
+	if err != nil {
+		t.Fatalf("zero waits: %v", err)
+	}
+	if !res.IsError || !strings.Contains(res.Content, "Foreground wait must be at most 220 seconds") {
+		t.Fatalf("zero waits result = %+v, want the foreground-budget error", res)
 	}
 }
 

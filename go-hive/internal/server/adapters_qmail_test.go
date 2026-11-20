@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
@@ -229,5 +231,100 @@ func TestQueenMailAdapterWakesAStoppedWritersSession(t *testing.T) {
 	want := "(A reply from Ivy to your message_queen letter. To go on, write to her again.)\n[Ivy(queen_ivy)]: North shore done."
 	if len(injected) != 1 || injected[0] != want {
 		t.Fatalf("injected = %#v", injected)
+	}
+}
+
+// waitForQueenMailInjections polls a fake queen node until it has at least
+// count messages; the reply path runs on its own worker so the test must not
+// assume the event publish alone completed it.
+func waitForQueenMailInjections(t *testing.T, node *queenMailRouteNode, count int) []string {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if injected := node.injected(); len(injected) >= count {
+			return injected
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	return node.injected()
+}
+
+// Parity: framework/server/tests/test_queen_mail.py::test_what_she_says_goes_back_to_the_writer_in_her_name
+func TestQueenMailRepliesGoBackToTheWriterAndContinueTheChain(t *testing.T) {
+	home := queenMailRouteHome(t)
+	manager := NewSessionManager()
+
+	// The writer's own chat session is live and addressable by its id.
+	avaNode := &queenMailRouteNode{}
+	ava := NewSession("session_ava", eventbus.NewEventBus())
+	ava.QueenName = "queen_ava"
+	ava.QueenDir = filepath.Join(home.QueenSessionsDir("queen_ava"), "session_ava")
+	ava.QueenExecutor = &QueenExecutor{NodeRegistry: map[string]QueenNode{"queen": avaNode}}
+	manager.AddSession(ava)
+
+	// The recipient's thread session is opened by the adapter's deliverer, the
+	// same way a real server starts (or resumes) her conversation.
+	var ivy *Session
+	ivyNode := &queenMailRouteNode{}
+	adapter := NewQueenMailAdapter(QueenMailAdapterOptions{
+		Home:    home,
+		Manager: manager,
+		CreateSession: func(params CreateSessionParams) (*Session, error) {
+			if params.QueenName == nil || *params.QueenName != "queen_ivy" {
+				t.Fatalf("queen name = %#v", params.QueenName)
+			}
+			ivy = NewSession("session_thread_1", eventbus.NewEventBus())
+			ivy.QueenName = "queen_ivy"
+			ivy.QueenDir = filepath.Join(home.QueenSessionsDir("queen_ivy"), "session_thread_1")
+			ivy.QueenExecutor = &QueenExecutor{NodeRegistry: map[string]QueenNode{"queen": ivyNode}}
+			manager.AddSession(ivy)
+			return ivy, nil
+		},
+	})
+	manager.SetQueenMail(adapter)
+
+	sent, err := adapter.Mail().Send("queen_ava", "session_ava", "queen_ivy", "Can you map the north shore?", nil)
+	if err != nil || sent["to"] != "queen_ivy" {
+		t.Fatalf("send = %#v, err = %v", sent, err)
+	}
+	if ivy == nil {
+		t.Fatal("the deliverer did not open the recipient's thread session")
+	}
+	if injected := ivyNode.injected(); len(injected) != 1 {
+		t.Fatalf("letter injection = %#v", injected)
+	}
+
+	// What she says in that conversation is a reply, not a new letter she has
+	// to send with message_queen.
+	ivy.EventBus.EmitClientOutputDelta("queen", "queen", "The map is done.", "The map is done.", nil, nil, 0)
+	ivy.EventBus.Publish(eventbus.NewAgentEvent(eventbus.EventLLMTurnComplete, "queen"))
+
+	injected := waitForQueenMailInjections(t, avaNode, 1)
+	want := "(A reply from Ivy to your message_queen letter. To go on, write to her again.)\n[Ivy(queen_ivy)]: The map is done."
+	if len(injected) != 1 || injected[0] != want {
+		t.Fatalf("reply injection = %#v", injected)
+	}
+
+	// The reply continued the chain: her next letter is hop 3. The delivery
+	// worker records the cause right after the reply lands, so poll for it.
+	var cause *qmail.Cause
+	for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); {
+		if cause = adapter.Mail().CauseFor("session_ava"); cause != nil {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if cause == nil {
+		t.Fatal("the delivered reply did not set the writer's cause")
+	}
+	next, err := adapter.Mail().Send("queen_ava", "session_ava", "queen_ivy", "And the east?", cause)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next["depth"] != 3 {
+		t.Fatalf("next depth = %#v", next["depth"])
+	}
+	if !strings.Contains(adapter.Mail().ReplyTarget("queen_ivy", "queen_ava", "session_thread_1"), "session_ava") {
+		t.Fatalf("reply target = %q", adapter.Mail().ReplyTarget("queen_ivy", "queen_ava", "session_thread_1"))
 	}
 }

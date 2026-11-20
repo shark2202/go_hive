@@ -12,7 +12,18 @@
 #   hive-<version>-<os>-<arch>.zip      windows
 #   SHA256SUMS                          hashes of the archives above
 # Each archive contains, at its root:
-#   hive[.exe] LICENSE NOTICE README.md SHA256SUMS
+#   hive[.exe] hive-cred[.exe] hive-browser[.exe] browserbridge[.exe]
+#   LICENSE NOTICE README.md SHA256SUMS
+#
+# hive-cred is the credential CLI (token/browse/inspect) that worker system
+# prompts call as `hive-cred token <id> --account <alias>`; it ships in every
+# archive next to hive and is covered by the same SHA256SUMS.
+#
+# hive-browser is the browser automation CLI and browserbridge the standalone
+# bridge it posts commands to. `hive serve` starts and supervises
+# browserbridge, resolving it next to the hive executable, so the four
+# binaries must stay in one directory after extraction/install. Every binary
+# is covered by the archive's SHA256SUMS.
 #
 # Only system tools are used: tar, zip, shasum/sha256sum, go.
 #
@@ -35,6 +46,7 @@ export COPYFILE_DISABLE=1
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 go_hive_root="$(cd "$script_dir/.." && pwd)"
 module_dir="$go_hive_root/go-hive"
+bridge_module_dir="$go_hive_root/browserbridge"
 repo_root="$(cd "$go_hive_root/.." && pwd)"
 
 log() { printf 'release: %s\n' "$*"; }
@@ -53,9 +65,12 @@ Archives go to <dist>/release/:
   hive-<version>-<os>-<arch>.zip      windows
   SHA256SUMS
 
-Each archive contains hive[.exe], LICENSE, NOTICE, README.md and SHA256SUMS.
-The default binary embeds the dashboard (hive-embed); if the frontend build
-is unavailable the script falls back to plain binaries with a warning.
+Each archive contains hive[.exe], hive-cred[.exe], hive-browser[.exe],
+browserbridge[.exe], LICENSE, NOTICE, README.md and SHA256SUMS. Only hive
+embeds the dashboard (hive-embed); the other three are plain binaries. Keep
+all four in one directory: `hive serve` starts browserbridge from the
+directory holding the hive executable. If the frontend build is unavailable
+the script falls back to plain binaries with a warning.
 
 Environment:
   VERSION, DIST, RELEASE_DIR, PLATFORMS, EMBED=0, GO,
@@ -74,6 +89,7 @@ done
 
 GO="${GO:-go}"
 command -v "$GO" >/dev/null 2>&1 || die "go binary '$GO' not found"
+[ -f "$bridge_module_dir/go.mod" ] || die "browserbridge module not found: $bridge_module_dir (archives must carry browserbridge)"
 
 version="${VERSION:-}"
 if [ -z "$version" ]; then
@@ -188,7 +204,15 @@ build_platform() {
 	os="$1"
 	arch="$2"
 	bin_name="hive"
-	[ "$os" = "windows" ] && bin_name="hive.exe"
+	cred_bin_name="hive-cred"
+	browser_bin_name="hive-browser"
+	bridge_bin_name="browserbridge"
+	if [ "$os" = "windows" ]; then
+		bin_name="hive.exe"
+		cred_bin_name="hive-cred.exe"
+		browser_bin_name="hive-browser.exe"
+		bridge_bin_name="browserbridge.exe"
+	fi
 	out_dir="$work_dir/build-$os-$arch"
 	mkdir -p "$out_dir"
 
@@ -207,6 +231,32 @@ build_platform() {
 				"$GO" build -trimpath -ldflags "-s -w" -o "$out_dir/$bin_name" ./cmd/hive
 		)
 	fi
+
+	# hive-cred is a separate CLI and never carries the dashboard embed tag.
+	(
+		cd "$module_dir"
+		CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod \
+			"$GO" build -trimpath -ldflags "-s -w" -o "$out_dir/$cred_bin_name" ./cmd/hive-cred
+	)
+	[ -x "$out_dir/$cred_bin_name" ] || die "hive-cred build produced no executable for $os/$arch"
+
+	# hive-browser is the browser automation CLI; like hive-cred it never
+	# carries the dashboard embed tag.
+	(
+		cd "$module_dir"
+		CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod \
+			"$GO" build -trimpath -ldflags "-s -w" -o "$out_dir/$browser_bin_name" ./cmd/hive-browser
+	)
+	[ -x "$out_dir/$browser_bin_name" ] || die "hive-browser build produced no executable for $os/$arch"
+
+	# browserbridge lives in its own module (own go.mod); the main module never
+	# imports it, so build it from its module root.
+	(
+		cd "$bridge_module_dir"
+		CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod \
+			"$GO" build -trimpath -ldflags "-s -w" -o "$out_dir/$bridge_bin_name" ./cmd/browserbridge
+	)
+	[ -x "$out_dir/$bridge_bin_name" ] || die "browserbridge build produced no executable for $os/$arch"
 }
 
 # --- package ----------------------------------------------------------------
@@ -214,12 +264,23 @@ package_platform() {
 	os="$1"
 	arch="$2"
 	bin_name="hive"
-	[ "$os" = "windows" ] && bin_name="hive.exe"
+	cred_bin_name="hive-cred"
+	browser_bin_name="hive-browser"
+	bridge_bin_name="browserbridge"
+	if [ "$os" = "windows" ]; then
+		bin_name="hive.exe"
+		cred_bin_name="hive-cred.exe"
+		browser_bin_name="hive-browser.exe"
+		bridge_bin_name="browserbridge.exe"
+	fi
 	build_dir="$work_dir/build-$os-$arch"
 	pkg_dir="$work_dir/pkg-$os-$arch"
 	mkdir -p "$pkg_dir"
 
 	cp "$build_dir/$bin_name" "$pkg_dir/$bin_name"
+	cp "$build_dir/$cred_bin_name" "$pkg_dir/$cred_bin_name"
+	cp "$build_dir/$browser_bin_name" "$pkg_dir/$browser_bin_name"
+	cp "$build_dir/$bridge_bin_name" "$pkg_dir/$bridge_bin_name"
 	cp "$license" "$pkg_dir/LICENSE"
 	cp "$readme" "$pkg_dir/README.md"
 	if [ -n "$notice" ]; then
@@ -248,7 +309,7 @@ EOF
 
 	(
 		cd "$pkg_dir"
-		sha256_write "$bin_name" LICENSE NOTICE README.md $extra_files > SHA256SUMS
+		sha256_write "$bin_name" "$cred_bin_name" "$browser_bin_name" "$bridge_bin_name" LICENSE NOTICE README.md $extra_files > SHA256SUMS
 	)
 	if ! ( cd "$pkg_dir" && sha256_check SHA256SUMS >/dev/null ); then
 		die "internal SHA256SUMS verification failed for $os/$arch"
@@ -256,10 +317,10 @@ EOF
 
 	if [ "$os" = "windows" ]; then
 		archive_name="hive-$version-$os-$arch.zip"
-		( cd "$pkg_dir" && zip -q -X "$release_dir/$archive_name" "$bin_name" LICENSE NOTICE README.md SHA256SUMS $extra_files )
+		( cd "$pkg_dir" && zip -q -X "$release_dir/$archive_name" "$bin_name" "$cred_bin_name" "$browser_bin_name" "$bridge_bin_name" LICENSE NOTICE README.md SHA256SUMS $extra_files )
 	else
 		archive_name="hive-$version-$os-$arch.tar.gz"
-		tar -czf "$release_dir/$archive_name" -C "$pkg_dir" "$bin_name" LICENSE NOTICE README.md SHA256SUMS $extra_files
+		tar -czf "$release_dir/$archive_name" -C "$pkg_dir" "$bin_name" "$cred_bin_name" "$browser_bin_name" "$bridge_bin_name" LICENSE NOTICE README.md SHA256SUMS $extra_files
 	fi
 	[ -s "$release_dir/$archive_name" ] || die "archive not created: $archive_name"
 	printf '%s\n' "$archive_name" >> "$work_dir/archives.txt"

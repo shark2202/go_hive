@@ -1,0 +1,10 @@
+stall-check e2e case: judge-true
+session: session_20261120_225852_dd7b76b4
+
+seq 1 queen model=stall-e2e-model messages=2 reminder=false
+seq 2 judge  auth="Bearer judge-key"
+seq 3 queen model=stall-e2e-model messages=4 reminder=true
+
+judge requests: 1
+queen requests: 2
+other requests (titles): 0

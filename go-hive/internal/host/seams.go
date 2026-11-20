@@ -93,6 +93,12 @@ func (h *Host) Skills() ([]*skills.ParsedSkill, bool) {
 	return h.runtime.Skills()
 }
 
+// ReloadSkills rebuilds the colony's catalog after a skill changed on disk; the
+// session manager's reload fan-out reaches a preloaded colony through this seam.
+func (h *Host) ReloadSkills() (map[string]any, error) {
+	return h.runtime.ReloadSkills()
+}
+
 // Tools reports the colony's default tool set plus provider attribution.
 func (h *Host) Tools() ([]colony.ColonyTool, map[string]string) {
 	return h.runtime.Tools()

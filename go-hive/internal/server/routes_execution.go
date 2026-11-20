@@ -255,9 +255,15 @@ func handleRecordUserMessage(w http.ResponseWriter, r *http.Request, deps Execut
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	updatedCursor := agentloop.UpdateCursorNextSeq(cursor, nextSeq+1)
-	updatedCursor["pending_input"] = nil
-	if err := store.WriteCursor(updatedCursor); err != nil {
+	// The cursor update is one atomic read-modify-write: the live runtime may
+	// rewrite the same cursor (a park checkpoint, or a message persist bumping
+	// next_seq) while this route runs, and a stale snapshot must not carry the
+	// other writer's field away.
+	err = mutateConversationCursor(store, func(cursor map[string]any) {
+		cursor["next_seq"] = nextSeq + 1
+		cursor["pending_input"] = nil
+	})
+	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}

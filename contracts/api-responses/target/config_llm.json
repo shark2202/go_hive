@@ -1,0 +1,113 @@
+{
+  "endpoint": "config_llm",
+  "label": "LLM 配置",
+  "method": "GET",
+  "path": "/api/config/llm",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-20T23:43:50+08:00",
+  "canonical": {
+    "active_subscription": null,
+    "api_base": "http://127.0.0.1:54335/v1",
+    "api_key_env_var": "HIVE_CONTRACT_PROBE_KEY",
+    "connected_providers": [],
+    "detected_subscriptions": [],
+    "has_api_key": true,
+    "max_context_tokens": null,
+    "max_tokens": null,
+    "model": "contract-probe-model",
+    "provider": "openai",
+    "subscriptions": [
+      {
+        "default_model": "claude-opus-4-6",
+        "description": "Use your Claude Max/Pro plan",
+        "flag": "use_claude_code_subscription",
+        "id": "claude_code",
+        "name": "Claude Code Subscription",
+        "provider": "anthropic"
+      },
+      {
+        "api_base": "https://api.z.ai/api/coding/paas/v4",
+        "default_model": "glm-5.1",
+        "description": "Use your ZAI Code plan",
+        "flag": "use_zai_code_subscription",
+        "id": "zai_code",
+        "name": "ZAI Code Subscription",
+        "provider": "openai"
+      },
+      {
+        "api_base": "https://chatgpt.com/backend-api/codex",
+        "default_model": "gpt-5.3-codex",
+        "description": "Use your Codex/ChatGPT Plus plan",
+        "flag": "use_codex_subscription",
+        "id": "codex",
+        "name": "OpenAI Codex Subscription",
+        "provider": "openai"
+      },
+      {
+        "api_base": "https://api.minimax.io/v1",
+        "default_model": "MiniMax-M2.7",
+        "description": "Use your MiniMax coding key",
+        "flag": "use_minimax_code_subscription",
+        "id": "minimax_code",
+        "name": "MiniMax Coding Key",
+        "provider": "minimax"
+      },
+      {
+        "api_base": "https://api.kimi.com/coding",
+        "default_model": "kimi-k2.6",
+        "description": "Use your Kimi Code plan",
+        "flag": "use_kimi_code_subscription",
+        "id": "kimi_code",
+        "name": "Kimi Code Subscription",
+        "provider": "kimi"
+      },
+      {
+        "api_base": "https://api.adenhq.com",
+        "default_model": "queen",
+        "description": "Use your Hive API key",
+        "flag": "use_hive_llm_subscription",
+        "id": "hive_llm",
+        "name": "Hive LLM",
+        "provider": "hive"
+      },
+      {
+        "default_model": "gemini-3-flash",
+        "description": "Use your Google/Gemini plan",
+        "flag": "use_antigravity_subscription",
+        "id": "antigravity",
+        "name": "Antigravity Subscription",
+        "provider": "openai"
+      }
+    ]
+  },
+  "shape": {
+    "active_subscription": "null",
+    "api_base": "string",
+    "api_key_env_var": "string",
+    "connected_providers": "array",
+    "detected_subscriptions": "array",
+    "has_api_key": "boolean",
+    "max_context_tokens": "null",
+    "max_tokens": "null",
+    "model": "string",
+    "provider": "string",
+    "subscriptions": "array",
+    "subscriptions[].default_model": "string",
+    "subscriptions[].description": "string",
+    "subscriptions[].flag": "string",
+    "subscriptions[].id": "string",
+    "subscriptions[].name": "string",
+    "subscriptions[].provider": "string",
+    "subscriptions[].api_base": "string"
+  },
+  "counts": {
+    "connected_providers": 0,
+    "detected_subscriptions": 0,
+    "subscriptions": 7
+  },
+  "notes": []
+}

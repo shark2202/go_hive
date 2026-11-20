@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
@@ -38,23 +37,23 @@ func (f *fakeStallJudge) recorded() []map[string]any {
 	return append([]map[string]any(nil), f.states...)
 }
 
-func writeStallConfig(t *testing.T, home hivehome.Home, enabled bool) {
+func writeStallConfig(t *testing.T, home hivehome.Home, slot map[string]any, enabled bool) {
 	t.Helper()
-	slot := map[string]any{}
-	for key, value := range stallJudgeSlot {
-		slot[key] = value
+	copied := map[string]any{}
+	for key, value := range slot {
+		copied[key] = value
 	}
 	writeServerTestJSON(t, home.ConfigurationFile(), map[string]any{
 		"stall_check": enabled,
-		"judge":       slot,
+		"judge":       copied,
 	})
 }
 
-func watchStallCheck(t *testing.T, p float64, enabled bool) (*eventbus.EventBus, *fakeQueen, *fakeStallJudge, *StallCheckSubscription) {
+func watchStallCheckSlot(t *testing.T, slot map[string]any, p float64, enabled bool) (*eventbus.EventBus, *fakeQueen, *fakeStallJudge, *StallCheckSubscription) {
 	t.Helper()
 	t.Setenv("HIVE_STALL_CHECK", "")
 	home := serverTestHome(t)
-	writeStallConfig(t, home, enabled)
+	writeStallConfig(t, home, slot, enabled)
 
 	bus := eventbus.NewEventBus()
 	node := &fakeQueen{}
@@ -62,6 +61,11 @@ func watchStallCheck(t *testing.T, p float64, enabled bool) (*eventbus.EventBus,
 	handle := SubscribeStallCheck(bus, home, func() QueenNode { return node }, map[string]JudgeProtocol{"fake": judge.score})
 	t.Cleanup(handle.Close)
 	return bus, node, judge, handle
+}
+
+func watchStallCheck(t *testing.T, p float64, enabled bool) (*eventbus.EventBus, *fakeQueen, *fakeStallJudge, *StallCheckSubscription) {
+	t.Helper()
+	return watchStallCheckSlot(t, stallJudgeSlot, p, enabled)
 }
 
 func publishQueen(t *testing.T, bus *eventbus.EventBus, eventType eventbus.EventType, data map[string]any) {
@@ -213,54 +217,6 @@ func TestACorrectionIsJudgedWithTheTurnItCorrects(t *testing.T) {
 	}
 }
 
-// Parity-exempt: the port publishes the stall on the session bus (upstream only
-// reminded the queen); this pins the observable signal the dashboard sees.
-func TestAStalledTurnPublishesANodeStalledEvent(t *testing.T) {
-	bus, _, _, handle := watchStallCheck(t, 0.95, true)
-	events := make(chan *eventbus.AgentEvent, 4)
-	bus.Subscribe([]eventbus.EventType{eventbus.EventNodeStalled}, func(event *eventbus.AgentEvent) {
-		events <- event
-	})
-
-	stalledTurn(t, bus, handle)
-
-	select {
-	case event := <-events:
-		if event.StreamID != "queen" {
-			t.Fatalf("stream = %q, want queen", event.StreamID)
-		}
-		if got := event.Data["reason"]; got != "stall_check" {
-			t.Fatalf("reason = %v, want stall_check", got)
-		}
-		if got := event.Data["probability"]; got != 0.95 {
-			t.Fatalf("probability = %v, want 0.95", got)
-		}
-		if got := event.Data["threshold"]; got != 0.5 {
-			t.Fatalf("threshold = %v, want 0.5", got)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("a stalled turn published no node_stalled event")
-	}
-}
-
-// Parity-exempt: a turn the judge clears must stay silent on the bus; the stall
-// signal is only worth anything if it does not fire on healthy turns.
-func TestAHealthyTurnPublishesNoStallEvent(t *testing.T) {
-	bus, _, _, handle := watchStallCheck(t, 0.05, true)
-	events := make(chan *eventbus.AgentEvent, 1)
-	bus.Subscribe([]eventbus.EventType{eventbus.EventNodeStalled}, func(event *eventbus.AgentEvent) {
-		events <- event
-	})
-
-	stalledTurn(t, bus, handle)
-
-	select {
-	case event := <-events:
-		t.Fatalf("healthy turn published %v", event.Data)
-	case <-time.After(100 * time.Millisecond):
-	}
-}
-
 // Parity-exempt: this port's chat emitter publishes the turn-end park as
 // loop_state_changed(awaiting_user, park_reason=turn_done) rather than
 // client_input_requested; the subscription must accept that shape or the check
@@ -293,6 +249,98 @@ func TestThePortTurnEndShapeReachesTheStallCheck(t *testing.T) {
 	handle.Wait()
 	if got := len(judge.recorded()); got != 1 {
 		t.Fatalf("judge asked %d times after an ask_user park, want 1", got)
+	}
+}
+
+// Parity-exempt: upstream reads the threshold with a bare float() on the slot
+// value and exercises only the 0.5 default through JUDGE; these pin the
+// coercion contract “check“ relies on — an absent threshold keeps 0.5, a
+// numeric string floats like Python's float(), and a value float() would reject
+// raises there (skipping the reminder) just as it skips it here.
+func TestASlotWithoutAThresholdKeepsTheDefault(t *testing.T) {
+	slot := map[string]any{
+		"protocol": "fake",
+		"api_base": "https://judge.invalid/v1",
+		"model":    "judge-1",
+		"api_key":  "k",
+	}
+
+	bus, node, judge, handle := watchStallCheckSlot(t, slot, 0.6, true)
+	stalledTurn(t, bus, handle)
+
+	if got := len(judge.recorded()); got != 1 {
+		t.Fatalf("judge asked %d times, want once", got)
+	}
+	if got := node.callCount(); got != 1 {
+		t.Fatalf("p=0.6 without a threshold: queen reminded %d times, want once (0.5 default)", got)
+	}
+
+	bus, node, judge, handle = watchStallCheckSlot(t, slot, 0.4, true)
+	stalledTurn(t, bus, handle)
+
+	if got := len(judge.recorded()); got != 1 {
+		t.Fatalf("judge asked %d times, want once", got)
+	}
+	if got := node.callCount(); got != 0 {
+		t.Fatalf("p=0.4 without a threshold: queen reminded %d times, want none (0.5 default)", got)
+	}
+}
+
+// Parity-exempt: the slot's threshold may be a JSON string; upstream's float()
+// turns a numeric string into a number, and the port must match.
+func TestANumericStringThresholdFloatsLikePythonsFloat(t *testing.T) {
+	slot := map[string]any{
+		"protocol":  "fake",
+		"api_base":  "https://judge.invalid/v1",
+		"model":     "judge-1",
+		"api_key":   "k",
+		"threshold": "0.7",
+	}
+
+	bus, node, _, handle := watchStallCheckSlot(t, slot, 0.6, true)
+	stalledTurn(t, bus, handle)
+	if got := node.callCount(); got != 0 {
+		t.Fatalf("p=0.6 < 0.7: queen reminded %d times, want none", got)
+	}
+
+	bus, node, _, handle = watchStallCheckSlot(t, slot, 0.9, true)
+	stalledTurn(t, bus, handle)
+	if got := node.callCount(); got != 1 {
+		t.Fatalf("p=0.9 >= 0.7: queen reminded %d times, want once", got)
+	}
+}
+
+// Parity-exempt: JSON values float() rejects (garbage string, null, list,
+// object) raise upstream, which skips the reminder; the port must end the same
+// way without an exception to raise.
+func TestAThresholdFloatCannotTakeSkipsTheReminder(t *testing.T) {
+	// JSON can carry these values in the slot; Python's float() rejects each of
+	// them, which raises out of check() and leaves the queen unreminded. The
+	// port has to end in the same place without an exception to raise.
+	for name, raw := range map[string]any{
+		"garbage": "not-a-number",
+		"null":    nil,
+		"list":    []any{0.9},
+		"object":  map[string]any{"value": 0.9},
+	} {
+		t.Run(name, func(t *testing.T) {
+			slot := map[string]any{
+				"protocol":  "fake",
+				"api_base":  "https://judge.invalid/v1",
+				"model":     "judge-1",
+				"api_key":   "k",
+				"threshold": raw,
+			}
+			bus, node, judge, handle := watchStallCheckSlot(t, slot, 0.95, true)
+			stalledTurn(t, bus, handle)
+
+			if got := len(judge.recorded()); got != 1 {
+				t.Fatalf("judge asked %d times, want once", got)
+			}
+			if got := node.callCount(); got != 0 {
+				t.Fatalf("an unusable threshold reminded the queen %d times, want none", got)
+			}
+		})
 	}
 }
 

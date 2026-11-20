@@ -1,0 +1,15 @@
+{
+  "endpoint": "health",
+  "shape": {
+    "agents_loaded": "number(int)",
+    "request_executor": "object",
+    "request_executor.active": "number(int)",
+    "request_executor.max_workers": "number(int)",
+    "request_executor.queued": "number(int)",
+    "resources": "object",
+    "resources.verdict": "string",
+    "sessions": "number(int)",
+    "status": "string"
+  },
+  "counts": {}
+}

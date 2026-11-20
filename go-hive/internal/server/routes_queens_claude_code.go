@@ -18,9 +18,12 @@ type ClaudeCodeQueenView struct {
 	Model          string
 }
 
-// ClaudeCodeQueenRouteDeps wires the read-only dashboard views. When Enabled
-// is false (or Queens is nil — no queen mail runtime) the list is empty, the
-// same as `not config.enabled or mail is None`.
+// ClaudeCodeQueenRouteDeps wires the read-only dashboard views. Enabled is the
+// feature switch (queen_mail.enabled): off empties the list, as upstream's
+// `not config.enabled` does. A nil Queens means no queen-mail runtime at all
+// (upstream's `mail is None`), which empties the list and 404s every
+// transcript; with the runtime present but the feature off, a configured
+// queen's transcript still reads, as upstream's handle_transcript does.
 type ClaudeCodeQueenRouteDeps struct {
 	Enabled       bool
 	Queens        func() []ClaudeCodeQueenView
@@ -53,13 +56,18 @@ func handleClaudeCodeQueenList(w http.ResponseWriter, r *http.Request, deps Clau
 		if conversations == nil {
 			conversations = []map[string]any{}
 		}
+		// Upstream's model is str | None: an empty one is null, not "".
+		var model any
+		if entry.Model != "" {
+			model = entry.Model
+		}
 		queens = append(queens, map[string]any{
 			"id":              entry.ID,
 			"name":            entry.Name,
 			"title":           entry.Title,
 			"permission_mode": entry.PermissionMode,
 			"auth":            entry.Auth,
-			"model":           entry.Model,
+			"model":           model,
 			"conversations":   conversations,
 		})
 	}
@@ -72,7 +80,10 @@ func handleClaudeCodeQueenTranscript(w http.ResponseWriter, r *http.Request, dep
 	sessionID := r.PathValue("session_id")
 	var entries []map[string]any
 	known := false
-	if deps.mail() && deps.Transcript != nil {
+	// This view answers whenever queen mail runs at all: upstream reads
+	// `mail is None` here, not the feature switch, so a conversation of a
+	// configured queen still reads with queen_mail.enabled off.
+	if deps.Queens != nil && deps.Transcript != nil {
 		entries, known = deps.Transcript(queenID, sessionID)
 	}
 	if !known {

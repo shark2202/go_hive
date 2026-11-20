@@ -24,6 +24,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/server/uiembed"
+	soulstore "github.com/aden-hive/hive-go/internal/soul"
 	"github.com/aden-hive/hive-go/internal/tasks"
 )
 
@@ -65,6 +66,18 @@ type AppDeps struct {
 	VacateSoftDeleted  func(colonyID string) error
 	ConnectedProviders func() []string
 	AgentRoots         *agents.AllowedRoots
+	// SoulProbeAnswerFor resolves the queen's model for a soul probe. Nil
+	// leaves POST .../soul/proposals/{id}/probe answering 503, like a server
+	// without a configured model.
+	SoulProbeAnswerFor func(queenID string, cfg *soulstore.SoulConfig) (soulstore.ProbeAnswerFunc, error)
+	// SoulReflect runs the manual "reflect now" request. Nil leaves
+	// POST .../soul/reflect answering 503 instead of faking a run.
+	SoulReflect func(queenID string, cfg *soulstore.SoulConfig, bootstrap bool) error
+	// QueenMail is the process's queen-mail service. The loader builds it
+	// before preloaded sessions so their chat tool tables and the
+	// /api/queen-mail routes share one instance (limits, tokens, return
+	// addresses). Nil builds one here for tests and embedded servers.
+	QueenMail *QueenMailAdapter
 }
 
 type App struct {
@@ -150,7 +163,13 @@ func NewApp(deps AppDeps) *App {
 		Manager: deps.Manager,
 		Specs:   credentialSpecsFromRegistry,
 	})
-	RegisterSoulRoutes(mux, SoulRouteDeps{Home: deps.Home})
+	RegisterSoulRoutes(mux, SoulRouteDeps{Home: deps.Home, Reflect: deps.SoulReflect})
+	RegisterSoulProbeRoutes(mux, SoulProbeRouteDeps{
+		Home:      deps.Home,
+		AnswerFor: deps.SoulProbeAnswerFor,
+	})
+	RegisterLocalCredentialRoutes(mux, LocalCredentialRouteDeps{Home: deps.Home})
+	RegisterRuntimeLogRoutes(mux, RuntimeLogRouteDeps{})
 	RegisterChannelRoutes(mux, ChannelRouteDeps{Home: deps.Home})
 	RegisterPromptRoutes(mux, PromptRouteDeps{Home: deps.Home})
 	RegisterMemoryRoutes(mux, MemoryRouteDeps{Home: deps.Home})
@@ -163,6 +182,7 @@ func NewApp(deps AppDeps) *App {
 	})
 	RegisterEventRoutes(mux, EventRouteDeps{})
 	RegisterAppExtraRoutes(mux, AppExtraRouteDeps{})
+	RegisterBrowserPanelRoutes(mux, BrowserPanelDeps{})
 	RegisterModelRoutes(mux, ModelRouteDeps{Home: deps.Home, Manager: deps.Manager})
 	RegisterTaskRoutes(mux, TaskRouteDeps{Store: tasks.NewTaskStore(deps.Home.Root)})
 	RegisterReminderRoutes(mux, ReminderRouteDeps{Runtime: reminders})
@@ -224,19 +244,34 @@ func NewApp(deps AppDeps) *App {
 		// reports no refresh instead of a fabricated count.
 		RefreshSessionTools: RefreshQueenToolAllowlist,
 	})
+	// Skills library + per-queen skill editing; the shared Skills page and
+	// queen profile call these routes directly.
+	RegisterSkillsRoutes(mux, SkillsRouteDeps{
+		Home:    deps.Home,
+		Manager: deps.Manager,
+	})
 	// Queen mail runs on the ported qmail backend: tokens, inboxes, queue and
 	// delivery through the same session-create hook as the queen routes. With
-	// the feature off the adapter keeps the routes' own 401 contract.
-	RegisterQueenMailRoutes(mux, QueenMailRouteDeps{
-		QueenMail: NewQueenMailAdapter(QueenMailAdapterOptions{
+	// the feature off the adapter keeps the routes' own 401 contract. The
+	// adapter is recorded on the manager so chat sessions register the two
+	// tools against the same service the routes use.
+	queenMail := deps.QueenMail
+	if queenMail == nil {
+		queenMail = NewQueenMailAdapter(QueenMailAdapterOptions{
 			Home:          deps.Home,
 			Manager:       deps.Manager,
 			CreateSession: deps.CreateSession,
-		}),
-	})
-	// Claude Code queens are off in this build: the list reports `queens: []`
-	// and transcripts 404, exactly as upstream does when the feature is off.
-	RegisterClaudeCodeQueenRoutes(mux, ClaudeCodeQueenRouteDeps{})
+		})
+	}
+	if deps.Manager != nil {
+		deps.Manager.SetQueenMail(queenMail)
+	}
+	RegisterQueenMailRoutes(mux, QueenMailRouteDeps{QueenMail: queenMail})
+	// The dashboard's read-only view of the Claude Code queens: the configured
+	// ones, their conversations and the transcript of one, from the same
+	// queen-mail service the routes above use (her runner included, for the
+	// "running" mark).
+	RegisterClaudeCodeQueenRoutes(mux, NewClaudeCodeQueenRouteDeps(queenMail.Mail()))
 
 	if app.HasFrontend() {
 		mux.HandleFunc("GET /", app.handleSPA)

@@ -4,7 +4,7 @@
 
 ## 1.0.26-go.1 — 2026-11-20
 
-overseer 回复写入会话转录；events.jsonl flush 边界；Orca 浏览器 UI E2E 7/7。测试 4,566、引用 4,843。
+overseer 回复写入会话转录；events.jsonl flush 边界；归档补齐 `hive-browser`/`browserbridge`（六平台，包内 SHA256SUMS 全覆盖）；Orca 浏览器 UI E2E 7/7。测试 4,566、引用 4,843。
 
 ## 1.0.25-go.1 — 2026-11-20
 

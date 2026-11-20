@@ -76,10 +76,9 @@ func (rt *SoulRoutes) soulView(queenID string, cfg *soulstore.SoulConfig) map[st
 	proposal := soulstore.PendingProposal(queensDir, queenID)
 	state := loadSoulState(queensDir, queenID)
 	lastRun, lastResult := state["last_run"], state["last_result"]
-	// Compatibility read: the Go port runs no chat-reading soul reflection, so
-	// state.json stays empty and the sediment's bookkeeping is the only record
-	// of the last automatic write. Only missing keys are filled, so a real
-	// state.json still wins.
+	// Compatibility read: the ported daily soul reflection now writes state.json
+	// (last_run/last_result), so those keys win. Older homes only have the
+	// memory-reflection sediment bookkeeping; fill missing keys from it.
 	if lastRun == nil {
 		if sediment := soulstore.LoadSedimentState(queensDir, queenID); sediment != nil && sediment.LastRun != "" {
 			lastRun = sediment.LastRun
@@ -133,8 +132,8 @@ func (rt *SoulRoutes) soulView(queenID string, cfg *soulstore.SoulConfig) map[st
 		"proposal":    proposalValue,
 		"history":     history,
 		"reflecting":  rt.isReflecting(queenID),
-		"probes":      0,
-		"probing":     false,
+		"probes":      len(soulstore.LoadProbes(queensDir, queenID)),
+		"probing":     soulstore.IsProbing(queenID),
 		"last_run":    lastRun,
 		"last_result": lastResult,
 	}
@@ -207,10 +206,17 @@ func (rt *SoulRoutes) isReflecting(queenID string) bool {
 	return rt.reflecting[queenID]
 }
 
-func (rt *SoulRoutes) beginReflecting(queenID string) {
+// beginReflecting claims the queen's reflecting slot. It reports false when
+// another request already holds it, so two concurrent reflects cannot both
+// start (exactly one 202, the rest 409).
+func (rt *SoulRoutes) beginReflecting(queenID string) bool {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
+	if rt.reflecting[queenID] {
+		return false
+	}
 	rt.reflecting[queenID] = true
+	return true
 }
 
 func (rt *SoulRoutes) endReflecting(queenID string) {
@@ -405,7 +411,7 @@ func (rt *SoulRoutes) handleReflectSoul(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	if rt.isReflecting(queenID) {
+	if rt.isReflecting(queenID) || soulstore.IsReflecting(queenID) {
 		writeJSON(w, http.StatusConflict, map[string]any{"error": "She is reflecting already"})
 		return
 	}
@@ -423,7 +429,10 @@ func (rt *SoulRoutes) handleReflectSoul(w http.ResponseWriter, r *http.Request) 
 	}
 	bootstrap := pythonTruthy(body["bootstrap"])
 	reflect := rt.deps.Reflect
-	rt.beginReflecting(queenID)
+	if !rt.beginReflecting(queenID) {
+		writeJSON(w, http.StatusConflict, map[string]any{"error": "She is reflecting already"})
+		return
+	}
 	run := func() {
 		defer rt.endReflecting(queenID)
 		if err := reflect(queenID, cfg, bootstrap); err != nil {

@@ -1,0 +1,57 @@
+{
+  "endpoint": "session_stats",
+  "label": "会话统计",
+  "method": "GET",
+  "path": "/api/sessions/{session}/stats",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-20T23:43:50+08:00",
+  "canonical": {
+    "active_workers": 0,
+    "adaptive_tool_budget": {
+      "enabled": true,
+      "nominal": null,
+      "samples": 0
+    },
+    "colony_id": "<colony_id>",
+    "event_bus": {
+      "events_by_type": {
+        "context_usage_updated": 1,
+        "node_loop_iteration": 1,
+        "node_loop_started": 1,
+        "queen_identity_selected": 1,
+        "reminder_injected": 1
+      },
+      "subscriptions": 1,
+      "total_events": 5
+    },
+    "running": true,
+    "total_workers": 0,
+    "triggers": 0
+  },
+  "shape": {
+    "active_workers": "number(int)",
+    "adaptive_tool_budget": "object",
+    "adaptive_tool_budget.enabled": "boolean",
+    "adaptive_tool_budget.nominal": "null",
+    "adaptive_tool_budget.samples": "number(int)",
+    "colony_id": "string",
+    "event_bus": "object",
+    "event_bus.events_by_type": "object",
+    "event_bus.events_by_type.context_usage_updated": "number(int)",
+    "event_bus.events_by_type.node_loop_iteration": "number(int)",
+    "event_bus.events_by_type.node_loop_started": "number(int)",
+    "event_bus.events_by_type.queen_identity_selected": "number(int)",
+    "event_bus.events_by_type.reminder_injected": "number(int)",
+    "event_bus.subscriptions": "number(int)",
+    "event_bus.total_events": "number(int)",
+    "running": "boolean",
+    "total_workers": "number(int)",
+    "triggers": "number(int)"
+  },
+  "counts": {},
+  "notes": []
+}

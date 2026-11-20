@@ -14,7 +14,7 @@
 | R5 安全 | 部分满足：已修 3 个真实漏洞（附件读写 symlink 逃逸、任务体无限流、`/api` 点段 307），但**未做在线漏洞库比对**（`govulncheck` 装不上） |
 | R6 可靠性 | 满足：`-race` 全绿、故障注入与并发修复已合入 |
 | R7 可观测 | 满足：会话事件链、SSE、`/stats` 字段对齐、诊断包 |
-| R8 质量证据 | 满足：七道门禁、4,566 测试、QC 8/8、smoke 13/13、六平台归档校验 |
+| R8 质量证据 | 满足：七道门禁、4,568 测试、QC 9/9、smoke 13/13、六平台归档校验（含 `hive-cred`） |
 | R9 发布流程 | 满足：版本、CHANGELOG、发布说明、tag、归档 |
 | R10 真实第三方集成 | 不适用（用户决定 2026-11-19）：本阶段不提供第三方凭据，以支持矩阵「未验证」声明代替 |
 | **总判定** | **可运行的移植快照（试用版），不是「完整复刻交付」**。工程发布条件（构建/测试/打包/安全修复）成立；行为对齐条件（概念机制生产可达）不成立 |
@@ -40,9 +40,9 @@
 | 项 | 结果 | 复现命令 |
 | --- | --- | --- |
 | 全量门禁 | 退出码 0（fmt/vet/test/cross/parity/parity-targets/wiring-check） | `cd go_hive/go-hive && make ci` |
-| 测试 | **4,566**（全部带 parity 注解或豁免） | 同上 |
+| 测试 | **4,568**（全部带 parity 注解或豁免） | 同上 |
 | parity 引用 | **4,843** 条，0 失效文件 / 0 失效测试；含生产代码 **1,070** 条 0 失效符号 | `make parity-targets` |
-| QC 全量 | **8/8 PASS**（含重跑 make ci 与冒烟） | `uv run --no-project python go_hive/scripts/qc_check.py --full --smoke` |
+| QC 全量 | **9/9 PASS**（含重跑 make ci 与冒烟） | `uv run --no-project python go_hive/scripts/qc_check.py --full --smoke` |
 | 集成冒烟 | **13/13 PASS**（真二进制 + 真 HTTP） | `bash go_hive/scripts/smoke.sh` |
 | 发布包 | 6 归档 + SHA256SUMS，`shasum -c` 全 OK | `bash go_hive/scripts/release.sh` |
 | 归档可用性 | 解压 darwin-arm64 → `--version` 正确，`/`、`/api/health`、`/assets/*` 全 200 | 见 §5 |
@@ -58,7 +58,7 @@
 | Sentinel | 8 模块移植，100 测试 |
 | Colony | spawn → 多 worker（并发上限/排队晋升）→ 汇总 → 终态；agent-spec 解析器已接入 |
 | 前端 | React 构建产物 embed 进 `hive-embed`，单二进制自带 dashboard（实测 `/`、深链、assets 200） |
-| 分发 | 六平台归档 + SHA256SUMS + `install.sh`（篡改拒装已验证） |
+| 分发 | 六平台归档（每包含 `hive` + `hive-cred`）+ SHA256SUMS + `install.sh`（篡改拒装已验证） |
 | 文档 | quickstart / configuration / support-matrix / CHANGELOG / release-notes / 检查单 |
 | 许可 | LICENSE（Apache-2.0 逐字节）+ NOTICE + THIRD_PARTY_NOTICES（随归档分发） |
 
@@ -89,8 +89,9 @@ go_hive/go-hive/dist/release/
   SHA256SUMS
 ```
 
-归档根目录：`hive[.exe]  LICENSE  NOTICE  THIRD_PARTY_NOTICES.md  README.md  SHA256SUMS`。
-独立验收（解压后直接运行）：`--version` = `hive 1.0.26-go.1`；`serve` 后 `/` 200、`/api/health` 200、`/assets/index-*.js` 200。
+归档根目录：`hive[.exe]  hive-cred[.exe]  LICENSE  NOTICE  THIRD_PARTY_NOTICES.md  README.md  SHA256SUMS`。
+每个归档同时携带 `hive` 与 `hive-cred`（凭据 CLI），两者的哈希都在 SHA256SUMS 中；`install.sh` 把两个二进制装进同一 bin 目录，归档缺 `hive-cred` 时直接报错拒装。
+独立验收（解压后直接运行）：`hive --version` = `hive 1.0.26-go.1`；`hive-cred --help` 正常输出；`serve` 后 `/` 200、`/api/health` 200、`/assets/index-*.js` 200。
 
 ## 6. 未做（需发布权限或外部条件）
 

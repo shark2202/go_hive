@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive 文件工具（files-tools / file_ops）</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:900px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Tool Surface</div><h1>文件工具 <span>files-tools / file_ops</span></h1>
+<p class="lede">Hive 的文件能力是 harness 组 <code>files-tools</code> 的 <b>4 个工具</b>：<code>read_file</code>、<code>write_file</code>、<code>edit_file</code>、<code>search_files</code>。本页登记工具面、参数与关键语义（hashline、stale-edit guard、write_safe_root、fuzzy 编辑、防循环搜索），以及 Python / Go 之间的已知差异；机制以代码与 <code>go_hive/docs/fileops-parity.md</code> 为准。</p>
+<div class="meta"><span>生成：<b>2026-11-20 22:59 CST</b></span><span>工具数：<b>4（Python 枚举 / Go builtin 一致）</b></span><span>Python：<code>tools/src/aden_tools/file_ops.py</code></span><span>Go：<code>internal/tools/builtin/</code></span></div>
+<div class="toc"><a href="#tools">清单</a><a href="#read">read_file</a><a href="#write">write_file</a><a href="#edit">edit_file</a><a href="#search">search_files</a><a href="#sandbox">路径与沙箱</a><a href="#diffs">已知差异</a><a href="#code">代码</a><a href="#refs">相关页</a></div></header>
+
+<section id="tools"><h2><span class="num">01</span>工具清单与参数</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">工具</th><th style="width:44%">参数（模型可见）</th><th>必需</th></tr></thead><tbody>
+<tr><td><code>read_file</code></td><td><code>path</code>、<code>offset</code>、<code>limit</code>、<code>hashline</code>（+ 隐藏 <code>session_cwd</code>）</td><td><code>path</code></td></tr>
+<tr><td><code>write_file</code></td><td><code>path</code>、<code>content</code></td><td>两者</td></tr>
+<tr><td><code>edit_file</code></td><td><code>mode</code>（<code>replace</code>|<code>patch</code>，默认 replace）、<code>path</code>、<code>old_string</code>、<code>new_string</code>、<code>replace_all</code>、<code>patch_text</code>（+ 隐藏 <code>session_cwd</code>）</td><td>无（全有默认，与上游签名一致）</td></tr>
+<tr><td><code>search_files</code></td><td><code>pattern</code>、<code>target</code>（<code>content</code>|<code>files</code>）、<code>path</code>、<code>file_glob</code>、<code>limit</code>、<code>offset</code>、<code>output_mode</code>（<code>content</code>|<code>files_only</code>|<code>count</code>）、<code>context</code>、<code>hashline</code>、<code>task_id</code></td><td><code>pattern</code></td></tr>
+</tbody></table></div>
+<div class="callout info"><b>组与重复登记：</b>这 4 个工具在 <code>files-tools</code> 组；<code>hive_tools</code> 组另外再登记一次 <code>read_file</code>/<code>edit_file</code>——因为 stale-edit guard 依赖 <code>read_file</code> 记录状态，只开 <code>hive_tools</code> 的会话也必须拿到这对工具（注册按"先到先得"，重复会被跳过）。</div>
+</section>
+
+<section id="read"><h2><span class="num">02</span>read_file</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">行为</th><th>细节</th></tr></thead><tbody>
+<tr><td>普通输出</td><td>带行号 <code>%6d\t&lt;line&gt;</code>；单行超 2000 rune 截断并追加 <code>...</code></td></tr>
+<tr><td><code>hashline=true</code></td><td>每行 <code>N:hhhh|content</code>，<code>hhhh = crc32(line.rstrip(" \t")) % 65536</code> 的 4 位小写十六进制（空行为 <code>N:0000|</code>）；<b>该模式不做行截断</b>（截断会破坏哈希）</td></tr>
+<tr><td>行切分</td><td>与 Python <code>str.splitlines()</code> 一致（<code>\n</code>、<code>\r\n</code>、<code>\r</code>、<code>\v</code>、<code>\f</code>、<code>\x1c-\x1e</code>、<code>\x85</code>、<code>\u2028/29</code> 都算行边界）；CRLF 只算一次；末尾换行不产生额外空行</td></tr>
+<tr><td>分页</td><td><code>offset</code> 从 1 起；<code>limit=0</code> → 2000 行；未显示完追加 <code>(Showing lines A-B of N. Use offset=… to continue reading.)</code></td></tr>
+<tr><td>字节预算</td><td>50KB（格式化后行字节+1 累计），超出截断并追加 <code>Truncated by byte budget.</code></td></tr>
+<tr><td>二进制</td><td>检测为二进制时不输出内容；可查看的图片/PDF 会提示改用 <code>attach_file(paths=…)</code> 以图片形式查看</td></tr>
+<tr><td>状态记录</td><td>每次成功读取都把<b>原始字节</b>记入 stale-edit guard 缓存（部分读取也记录整文件哈希）</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="write"><h2><span class="num">03</span>write_file</h2>
+<ul>
+<li>创建或覆盖；父目录自动创建；原子写入（tempfile + rename）。</li>
+<li><b>stale-edit guard：</b>只对<b>已存在的普通文件</b>设防 —— 没读过 → 拒绝；读过但磁盘变了 → 拒绝。新文件可直接创建。错误文案与上游逐字一致，例如：<br>
+<code>Refusing to overwrite '&lt;path&gt;': call read_file('&lt;path&gt;') first so the harness can track its state before you replace it. …</code></li>
+<li>写成功后立即记录新状态，同轮链式编辑不会自我失效。</li>
+<li>成功文案：Go 为 <code>Wrote N bytes to &lt;path&gt;</code>（上游是 <code>Created/Updated &lt;path&gt; (N bytes, M lines)</code>）——既有差异，见 §07。</li>
+</ul>
+</section>
+
+<section id="edit"><h2><span class="num">04</span>edit_file</h2>
+<h3>mode=replace</h3>
+<ul>
+<li>唯一匹配（<code>replace_all=false</code>）或全部替换（<code>true</code>）；空 path/old_string、<code>old_string == new_string</code> 直接报错。</li>
+<li>写前顺序：路径策略 → 文件存在性 → <b>guard</b> → 匹配（与上游一致的顺序）。</li>
+<li><b>fuzzy 策略链（9 级，按序尝试）：</b>exact → line-trimmed → whitespace-normalized → indentation-flexible → escape-normalized → trimmed-boundary → unicode-normalized（弯引号/em-dash/NBSP）→ block-anchor（0.50 单候选 / 0.70 多候选）→ context-aware（逐行 ≥0.50 且均值 ≥0.65）。命中非 exact 时返回 <code>(matched via &lt;strategy&gt;)</code>。</li>
+<li>返回 unified diff（3 行上下文，2000 字符截断）；未命中时附最多 3 条近似行与 <code>Use read_file … or search_files</code> 提示。</li>
+<li>CRLF 文件在 LF 空间匹配、按原行尾写回。</li>
+</ul>
+<h3>mode=patch（V4A）</h3>
+<ul>
+<li>支持 <code>*** Begin/Patch</code>、<code>Update/Add/Delete/Move File:</code>、<code>@@</code>/<code>@@ hint @@</code>、行前缀 <code> </code>/<code>-</code>/<code>+</code>，容忍缺前缀的隐式上下文行与 <code>\ No newline at end of file</code>。</li>
+<li><b>两阶段 apply：</b>先在内存里验证全部操作（fuzzy 唯一性、add 已存在、move 目标、路径逃逸、write_safe_root）——任一失败返回 <code>Patch validation failed (no files were modified)</code>，磁盘不变；全部通过才写入。</li>
+<li>写入阶段失败 → <code>Apply phase failed (state may be inconsistent — run git diff …)</code>。</li>
+<li>摘要：<code>Modified/Created/Deleted N file(s): &lt;abs paths&gt;</code> + 各文件 diff。</li>
+<li><b>patch 模式不设 stale guard</b>（与上游一致：只记录写后状态），但同样受路径/沙箱约束。</li>
+</ul>
+</section>
+
+<section id="search"><h2><span class="num">05</span>search_files</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">模式</th><th>行为</th></tr></thead><tbody>
+<tr><td><code>target=content</code> + <code>output_mode=content</code></td><td><code>rel:line:text</code>；<code>context&gt;0</code> 时命中行 <code>rel:line:text</code>、上下文行 <code>rel:line-text</code>，分组间空行</td></tr>
+<tr><td><code>output_mode=files_only</code></td><td>每行一个相对路径</td></tr>
+<tr><td><code>output_mode=count</code></td><td><code>rel:count</code></td></tr>
+<tr><td><code>hashline=true</code></td><td>命中行 <code>rel:line:hhhh|text</code>（同一 crc32 算法）</td></tr>
+<tr><td>分页</td><td><code>limit</code> 默认 50（content 最小 1）、<code>offset</code> 默认 0；未显示完附 <code>[Hint: showing N of M matches. Use offset=… ]</code>；越界 <code>No matches at offset N (total: M).</code></td></tr>
+<tr><td><code>target=files</code></td><td>按 basename glob（<code>*</code>/<code>*&lt;.ext&gt;</code>）；跳过 <code>.git</code>/<code>__pycache__</code>/<code>node_modules</code>/<code>.venv</code> 等与所有 <code>.</code> 开头目录（另跳隐藏文件）；按 mtime 倒序输出相对路径</td></tr>
+<tr><td>实现</td><td>Go：纯 Go 遍历 + <b>RE2</b>（不依赖 rg 子进程）；非法模式 <code>Error: invalid regex: …</code>；不支持反向引用等 Python 专有语法</td></tr>
+<tr><td>防循环</td><td>进程级 tracker 按 <code>task_id</code>/共享 bucket 计数完全相同查询：第 3 次加 <code>[Warning: …]</code>，第 4 次 <code>BLOCKED: …</code>；查询 key 含分页参数，翻页不误伤</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="sandbox"><h2><span class="num">06</span>路径与沙箱</h2>
+<ul>
+<li><b>write_safe_root</b>（可选、单值或列表）：写路径必须落在任一配置 root 之下；越界文案 <code>write denied: '&lt;original&gt;' is outside the configured write_safe_root(s) (&lt;roots&gt;)</code>。Go 用 <code>Toolbox.SetWriteSafeRoots(…)</code> 配置。</li>
+<li><b>读不放宽</b>：<code>write_safe_root</code> 只作用于写；读仍严格限定在沙箱 root 内。</li>
+<li>Go 的 root = 会话沙箱根（<code>builtin.New(root)</code> 构造时绑定）；模型的 <code>session_cwd</code> 是隐藏 context 参数，不进入 schema。</li>
+<li>上游读绝对路径原样可用（仅凭据 deny list）；Go 一律要求落在 root 内——<b>比上游更严</b>，属于沙箱模型差异而非能力缺失。</li>
+</ul>
+</section>
+
+<section id="diffs"><h2><span class="num">07</span>已知差异（Python ⇄ Go）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">项</th><th style="width:30%">上游 Python</th><th>Go</th></tr></thead><tbody>
+<tr><td>读绝对路径</td><td>原样使用（仅凭据 deny list）</td><td><span class="pill warn">严格限 root</span>（更严）；write_safe_root 不放宽读</td></tr>
+<tr><td>写绝对路径</td><td>原样（deny list + 可选上限）</td><td>root 内，或配置后在 write_safe_root 内</td></tr>
+<tr><td>系统/凭据写 deny list</td><td>逐条（<code>/etc</code>、<code>~/.ssh</code> 等）</td><td><span class="pill warn">未逐条复刻</span>（root 边界已覆盖）</td></tr>
+<tr><td>根外目标 + edit_file</td><td>可读可编辑</td><td>即便 write_safe_root 允许写，仍会先被 guard 拦（读不能出 root）；<code>write_file</code> 不受影响</td></tr>
+<tr><td>write_file 成功文案</td><td><code>Created/Updated &lt;path&gt; (N bytes, M lines)</code></td><td><code>Wrote N bytes to &lt;path&gt;</code></td></tr>
+<tr><td>before_write 钩子 / session_cwd 注入</td><td>有</td><td>未移植（由 Toolbox root + 原子写替代）</td></tr>
+<tr><td>内容搜索引擎</td><td>Python re（含反向引用等）</td><td>RE2 子集</td></tr>
+<tr><td>.gitignore 语义</td><td>rg 路径遵守；Python fallback 不读</td><td>固定 skip 集 + 隐藏目录规则</td></tr>
+</tbody></table></div>
+<div class="callout"><b>已对齐重点：</b>hashline、stale-edit guard（含全部错误文案）、fuzzy 9 策略、patch 两阶段、write_safe_root、search 各模式与防循环、行切分/CRLF 语义——逐条有 parity 注解测试（<code>file_ops_test.go</code> + <code>file_ops_residual_test.go</code>）。</div>
+</section>
+
+<section id="code"><h2><span class="num">08</span>代码位置与维护</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:38%">位置</th><th>内容</th></tr></thead><tbody>
+<tr><td><code>tools/src/aden_tools/file_ops.py</code></td><td>上游实现：4 个工具、路径策略、fuzzy、patch、guard 调用</td></tr>
+<tr><td><code>tools/src/aden_tools/file_state_cache.py</code>、<code>hashline.py</code></td><td>stale guard 缓存与行哈希</td></tr>
+<tr><td><code>core/framework/tools/harness_tools.py::_files</code> / <code>_hive_core</code></td><td>组注册（files-tools 4 个；hive_tools 再登记 read/edit）</td></tr>
+<tr><td><code>go_hive/go-hive/internal/tools/builtin/{read,write,edit,search,diff,edit_patch,paths,file_state}.go</code></td><td>Go 实现：读取/写入/编辑/search/diff/补丁与文件状态缓存</td></tr>
+<tr><td><code>go_hive/go-hive/internal/cli/session_tools_harness_groups.go</code></td><td><code>files-tools</code> 组记录（Tool Library / <code>@server:files-tools</code> 可见）</td></tr>
+<tr><td><code>go_hive/docs/fileops-parity.md</code></td><td>逐条对齐说明（本页事实源）</td></tr>
+</tbody></table></div>
+<p class="sub"><b>维护口径：</b>改工具面/文案时同步本页、<code>fileops-parity.md</code>、工具矩阵与支持矩阵；差异项保持"显式列出"而不静默。</p>
+</section>
+
+<section id="refs"><h2><span class="num">09</span>相关页</h2>
+<div class="callout info"><a href="terminal-tools.html">终端工具</a> · <a href="module-interfaces.html">接口不变量</a> · <a href="platform-support.html">平台支持矩阵</a> · <a href="tool-parity-matrix.html">工具追踪矩阵</a> · <a href="stall-check.html">judge 与 stall check</a> · <code>go_hive/docs/fileops-parity.md</code>。</div>
+</section>
+
+<footer>生成：2026-11-20 22:59 CST · 依据：Python 实测枚举（build_harness_group files-tools）+ <code>fileops-parity.md</code> + Go 源码 · 状态：4/4 工具与核心语义已对齐；§07 列为显式差异（沙箱模型/文案）· 本页随工具面变更同步。</footer>
+</div></body></html>

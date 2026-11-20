@@ -43,6 +43,12 @@ type ReminderAgentContext struct {
 	// ColonyStatsProvider reports the colony's active/total worker counts for
 	// snapshots. Nil reports an empty colony.
 	ColonyStatsProvider func() ColonyStats
+	// TurnContextProvider is the queen's turn-context hook
+	// (framework/server/turn_context.py): it takes the user's message and
+	// returns the text to place ahead of it, or "" for nothing. Nil means
+	// no package is installed+enabled, and the turn-context reminder
+	// source self-skips.
+	TurnContextProvider func(string) string
 }
 
 // ActiveWorker is one in-flight colony worker as the reminder sources read it.

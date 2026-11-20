@@ -1,0 +1,8 @@
+Probe: fresh Python session, first message "FAILRECALL 今天天气怎么样？" (selector answers 500),
+then a second message "再问一次天气。" to drain the non-waking injection queue.
+
+observed recall blocks after the second turn:
+  1. profile True  atlas False   <- pinned fallback produced by the failed selector, injected at the next drain
+  2. profile True  atlas True    <- normal selection for the follow-up query
+  (3. no filenames: the empty queen-scope block)
+assistant replies: 2 (the FAILRECALL turn completed; failure never blocked the turn)

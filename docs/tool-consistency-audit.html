@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive ⇄ go_hive 工具一致性深度审计</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:33px;line-height:1.22;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1000px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g4,.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g4,.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:880px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Tool Contract Audit</div><h1>工具一致性深度审计 <span>name / desc / input / output + 内置 Skill 逐字</span></h1>
+<p class="lede">按「完全一致」这一硬标准审计 Python hive 与 go_hive 的工具契约：<b>名称、描述、输入 schema、输出声明</b>逐项比对，并按 JSON Schema / protobuf 的类型语义归一化，避免把「integer vs int64」「Optional 表示法」这类实现差异误判为不一致；同时把 <b>20 个内置 Skill（25 个文件）</b>做 sha256 逐字比对。结论先给：<b>Skill 逐字一致；工具契约尚未达到「完全一致」</b>。</p>
+<div class="meta"><span>生成：<b>2026-11-20 23:19 CST</b></span><span>reference：<b>python@1b9c458a</b>（core a756b1e5 / tools 68b6c230，hive 1.0.14）</span><span>target：<b>go_hive@1b9c458a</b></span><span>Python 工具：<b>857 全量 / 270 默认</b></span><span>Go 会话工具：<b>137</b></span><span>数据：<b>tool-consistency-audit.json</b></span></div>
+<div class="toc"><a href="#verdict">结论</a><a href="#method">口径</a><a href="#skills">Skill 逐字</a><a href="#name">名称</a><a href="#desc">描述</a><a href="#input">输入/类型</a><a href="#output">输出</a><a href="#defects">缺陷清单</a><a href="#evidence">复现</a><a href="#refs">相关页</a></div></header>
+
+<section id="verdict"><h2><span class="num">00</span>结论</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">维度</th><th style="width:16%">结果</th><th>实测</th></tr></thead><tbody>
+<tr><td>内置 Skill 逐字</td><td><span class="pill ok">通过</span></td><td><b>20/20 Skill、25/25 文件 sha256 相同</b>；无缺失、无多余、无内容差异（<code>_default_skills</code> 12 + <code>_preset_skills</code> 8）。</td></tr>
+<tr><td>name</td><td><span class="pill bad">不一致</span></td><td>同名工具仅 <b>36</b> 个；集成层 Go 是 <b>87 个模块分组工具</b>（<code>airtable</code> + <code>action</code> 枚举，839 个 action），Python 是 <b>857 个扁平工具</b>（<code>airtable_create_records</code>…）。命名形状本身不同，逐工具同名不成立。</td></tr>
+<tr><td>desc</td><td><span class="pill bad">不一致</span></td><td>36 个同名工具 <b>0 个逐字相同</b>；首段/首句相同 <b>14/36</b>。集成 action 的单行描述与 Python docstring 首行逐字一致 <b>747/837（89.3%）</b>。</td></tr>
+<tr><td>input</td><td><span class="pill bad">不一致</span></td><td>36 个同名工具：原始 JSON Schema 完全相等 <b>3/36</b>；按 JSON Schema/protobuf 类型语义归一后 <b>16/36</b>；required 相等 <b>30/36</b>。Go 集成工具 schema 仅 <code>action</code> 必填，其余必填只写在描述文本里。</td></tr>
+<tr><td>output</td><td><span class="pill warn">无法校验</span></td><td>双方都<b>没有声明输出 schema</b>：Python <code>outputSchema</code> 0/857；Go <code>llm.ToolDef</code> 无输出字段。输出契约只能靠运行样例（golden output），当前没有覆盖 857 个工具。</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>结论：</b>「Skill 逐字一致」已达标；「工具的 name/desc/input 完全一致」<b>未达标</b>，且存在明确缺陷（见 §07），其中 <code>terminal_exec</code> 的输入 schema 少了 8 个参数、Go 把隐藏参数 <code>session_cwd</code> 暴露给模型，属于功能性不一致，不是文字差异。</div>
+</section>
+
+<section id="method"><h2><span class="num">01</span>口径与方法</h2>
+<ul>
+<li><b>Python 侧</b>：<code>tools/src/aden_tools</code> 的 <code>register_all_tools</code> 真实注册结果（FastMCP <code>get_tools()</code>）——全量 <b>857</b>（含 unverified），默认 <b>270</b>；harness 组（files/terminal/chart/memory/hive_tools）从 <code>core/framework/tools/harness_tools.py</code> 枚举。</li>
+<li><b>Go 侧</b>：临时探针构建真实 <code>newSessionToolCatalogue</code>，dump <code>Defs()</code> —— <b>137</b> 个默认会话工具；另 dump <code>builtin.Defs()</code> 与集成注册表。</li>
+<li><b>模型可见口径</b>：Python 在 <code>tool_registry.py:1417</code> 把 <code>CONTEXT_PARAMS</code>（<code>session_cwd</code>、<code>agent_id</code>、<code>profile</code>、<code>colony_id</code>、<code>principal</code>、<code>data_dir</code>、<code>profile_display_name</code>）从 properties/required 中剥离后再给模型；本次比对按同一口径处理。</li>
+<li><b>类型归一（JSON Schema / protobuf）</b>：<code>integer</code> ↔ int32/int64/uint32/uint64；<code>number</code> ↔ float/double；<code>boolean</code> ↔ bool；<code>string(format=byte/binary)</code> ↔ bytes；<code>array</code> ↔ repeated；<code>object/map</code> ↔ message/map；<code>enum</code> 比值集合。可选性由 <code>required</code> 表达；<code>anyOf[T,null]</code> 记 nullable（与「非必填但非 null」不是同一语义，单列）。</li>
+<li><b>Skill 逐字</b>：对 <code>core/framework/skills/{_default_skills,_preset_skills}</code> 与 <code>go-hive/internal/skills/</code> 逐文件 sha256 比对，不规范化、不改行尾。</li>
+</ul>
+<div class="callout info"><b>基准数字：</b>Python AST 源计数 865 个 <code>@mcp.tool</code> / 103 模块；实际注册 857（8 个未进注册表：重复名与未接线模块，例如 <code>openmeteo_tool</code>）；默认开启 270。Go 默认会话 137（含 87 个分组集成工具 + 内置/任务/技能等）。</div>
+</section>
+
+<section id="skills"><h2><span class="num">02</span>内置 Skill 逐字比对</h2>
+<div class="grid g4">
+<div class="card"><div class="k">Skill 数</div><div class="v">20 / 20</div><div class="d">12 default + 8 preset</div></div>
+<div class="card"><div class="k">文件数</div><div class="v">25 / 25</div><div class="d">含 SKILL.md 与 references/scripts</div></div>
+<div class="card"><div class="k">sha256 相同</div><div class="v">25 / 25</div><div class="d">逐字一致（bytes）</div></div>
+<div class="card"><div class="k">缺失 / 多余 / 差异</div><div class="v">0 / 0 / 0</div><div class="d">两侧目录树完全对应</div></div>
+</div>
+<p class="sub">明细：<a href="skills-parity-report.json"><code>skills-parity-report.json</code></a>（每 Skill 的文件数、相同数、缺失/多余清单）。抽查：<code>terminal-tools-fs-search</code> 3 文件、<code>pdf</code> 2 文件、<code>terminal-tools-foundations</code> 2 文件，全部逐字相同。</p>
+</section>
+
+<section id="name"><h2><span class="num">03</span>名称（name）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">集合</th><th style="width:14%">数量</th><th>说明</th></tr></thead><tbody>
+<tr><td>两侧同名工具</td><td class="num">36</td><td>核心/会话/独立工具：<code>read_file</code>、<code>terminal_*</code>、<code>csv_*</code>、<code>excel_*</code>、<code>web_search</code>、<code>attach_file</code>、<code>chart_render</code> 等</td></tr>
+<tr><td>Go 集成分组工具</td><td class="num">87</td><td>一个模块一个工具（<code>airtable</code>、<code>slack</code>、<code>stripe</code>…），另有 <code>action</code> 枚举 839 项</td></tr>
+<tr><td>Python 扁平工具</td><td class="num">857</td><td>每个 action 一个独立工具名（<code>airtable_create_records</code>…）</td></tr>
+<tr><td>Go 有、Python 无</td><td class="num">2</td><td><code>weather_get_current</code>、<code>weather_get_forecast</code>（openmeteo；Python 侧模块存在但未注册）</td></tr>
+<tr><td>Python 有、Go 未按 action 列出</td><td class="num">15</td><td>扫描器 5（dns/headers/port/ssl/subdomain/tech）、<code>csv_sql</code>/<code>excel_sql</code>（有意排除）、<code>exa_*</code> 6 个旧扁平工具、manifest 占位</td></tr>
+</tbody></table></div>
+<div class="callout"><b>判定：</b>即便不看描述与 schema，仅名称层就<b>无法满足逐工具同名</b>——87 个分组名 vs 857 个扁平名，只有 36 个交集。这是结构选择（分组 + action）与「完全一致」目标之间的直接冲突。</div>
+</section>
+
+<section id="desc"><h2><span class="num">04</span>描述（desc）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">对比</th><th style="width:16%">逐字相同</th><th>说明</th></tr></thead><tbody>
+<tr><td>36 个同名工具的完整 description</td><td class="num">0 / 36</td><td>Go 多为改写/压缩版（去掉 <code>Args:</code> 段、换行合并）；Python 保留完整 docstring</td></tr>
+<tr><td>首段或首句相同</td><td class="num">14 / 36</td><td>例：<code>csv_read</code> 首句同为 “Read a CSV file and return its contents.”，但 Python 后续还有参数说明</td></tr>
+<tr><td>集成 action 单行描述（Go 描述内嵌）</td><td class="num">747 / 837</td><td>Go 的模块描述格式：<code>- action (required: …): 描述</code>；747 个与 Python docstring 首行逐字一致（89.3%），90 个被改写</td></tr>
+</tbody></table></div>
+<p class="sub">典型改写样例：<code>terminal_exec</code> —— Python：“Run a shell command and capture its output. Past auto_background_after_sec, the call auto-promotes…”；Go：“Run a shell command with /bin/bash -lc in the workspace root and capture its output…”——语义相近但<b>不逐字</b>，且 Go 的版本还写死了 <code>/bin/bash</code>。</p>
+</section>
+
+<section id="input"><h2><span class="num">05</span>输入 schema 与字段类型</h2>
+<div class="grid g4">
+<div class="card"><div class="k">原始 schema 相等</div><div class="v">3 / 36</div><div class="d">csv_info · get_account_info · get_current_time</div></div>
+<div class="card"><div class="k">类型层相等</div><div class="v">16 / 36</div><div class="d">按 JSON Schema/protobuf 归一后</div></div>
+<div class="card"><div class="k">required 相等</div><div class="v">30 / 36</div><div class="d">差异集中在 6 个工具</div></div>
+<div class="card"><div class="k">差异条目</div><div class="v">59</div><div class="d">type 12 · py_only 10 · go_only 11 · nullability 18 · enum 2 · required 6</div></div>
+</div>
+<h3>关键差异（按严重度）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">工具</th><th style="width:30%">差异</th><th>影响</th></tr></thead><tbody>
+<tr><td><code>terminal_exec</code></td><td>Go 仅 <code>command</code> + <code>timeout_seconds</code>；Python 还有 <code>cwd</code>、<code>env</code>、<code>shell</code>、<code>stdin</code>、<code>limits</code>、<code>max_output_kb</code>、<code>auto_background_after_sec</code>（8 项）</td><td><span class="pill bad">P0</span> 同名工具输入契约严重不一致；模型按 Python 习惯传参会被 Go 忽略/拒绝</td></tr>
+<tr><td><code>terminal_glob</code> / <code>terminal_rg</code> / <code>terminal_pty_open</code> / <code>terminal_job_start</code></td><td>Go 把隐藏 context 参数 <code>session_cwd</code> 暴露在 schema 里；Python 已剥离</td><td><span class="pill bad">P0</span> schema 泄漏内部参数，且与 Python 模型可见面不一致</td></tr>
+<tr><td><code>attach_file</code> / <code>image_generate</code> / <code>web_scrape</code> / <code>web_search</code></td><td>Python 有 required（<code>paths</code>/<code>prompt</code>/<code>url</code>/<code>query</code>），Go 的 required 为空</td><td><span class="pill warn">P1</span> Go 不做必填校验，行为可能推迟到运行期失败</td></tr>
+<tr><td><code>csv_write</code> / <code>csv_append</code> / <code>excel_write</code> / <code>excel_append</code> / <code>pdf_read</code> / <code>image_generate</code></td><td>Python <code>ARRAY&lt;STRING&gt;</code>/<code>ARRAY&lt;OBJECT&gt;</code>；Go 统一 <code>ARRAY&lt;ANY&gt;</code></td><td><span class="pill warn">P1</span> 类型放宽（接受更宽），JSON Schema 语义不等价</td></tr>
+<tr><td><code>web_search</code> / <code>exa_search</code> / <code>arxiv</code> 的枚举参数</td><td>Python 有 <code>enum</code>（provider: auto/brave/google；search_type: auto/keyword/neural；sort_by/sort_order）；Go 为裸 <code>STRING</code></td><td><span class="pill warn">P1</span> 丢枚举约束，拼写错误不再被 schema 拦截</td></tr>
+<tr><td><code>terminal_job_start</code></td><td><code>limits</code>：Python <code>MAP&lt;INT&gt;</code>；Go 空 <code>OBJECT</code></td><td><span class="pill warn">P2</span> 值类型未约束</td></tr>
+</tbody></table></div>
+<h3>集成层（Go 分组 schema）</h3>
+<ul>
+<li>Go 每个模块工具只声明 <code>action</code> 必填；其余参数的 required 仅存在于 description 文本（<code>(required: …)</code>）。</li>
+<li>action 级 required 与 Python 一致 <b>665</b>；Go 无注解且 Python 也无需填 <b>166</b>；<b>不一致 3</b>：<code>cloudflare_create_firewall_rule</code>（Python 用 <code>action</code>，Go 用 <code>rule_action</code>）、<code>freshdesk_get_agent</code>、<code>outlook_send_mail</code>。</li>
+<li><b>无注解但 Python 必填 3</b>：<code>maps_geocode</code>、<code>maps_place_search</code>、<code>salesforce_soql_query</code>。</li>
+<li>联合 schema 的类型放宽：<b>20 个模块</b>存在 <code>ARRAY&lt;ANY&gt;</code> 对 <code>ARRAY&lt;STRING&gt;/&lt;OBJECT&gt;</code>、<code>STRING</code> 对 enum 的差异（apollo、arxiv、attio、calcom、calendar、csv、email、exa、hubspot、jira…）。按 protobuf/JSON Schema 语义：这是<b>接受更宽</b>，不是等价。</li>
+</ul>
+</section>
+
+<section id="output"><h2><span class="num">06</span>输出（output）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">检查</th><th style="width:18%">结果</th><th>说明</th></tr></thead><tbody>
+<tr><td>Python 是否声明 outputSchema</td><td class="num">0 / 857</td><td>FastMCP Tool 只有 <code>parameters</code>，没有输出 schema</td></tr>
+<tr><td>Go 是否声明输出 schema</td><td class="num">0</td><td><code>llm.ToolDef</code> 字段为 Name/Description/Parameters/ProducesImage/ConcurrencySafe</td></tr>
+<tr><td>输出内容逐字对比</td><td><span class="pill warn">未覆盖</span></td><td>需要 golden-output 夹具（同一输入跑两侧、比对序列化文本）；当前只对少数工具做过行为验证（file_ops、terminal、chart_render、browser）</td></tr>
+</tbody></table></div>
+<div class="callout"><b>建议：</b>输出一致性不能靠静态比对达成。要么给两侧补 <code>outputSchema</code>（MCP 标准字段），要么为每个 action 建立 golden fixture（输入 + 期望输出 JSON），纳入 parity 测试。当前两条都没有。</div>
+</section>
+
+<section id="defects"><h2><span class="num">07</span>缺陷清单（按修复顺序）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:8%">级别</th><th style="width:30%">项</th><th>事实 / 建议</th></tr></thead><tbody>
+<tr><td><span class="pill bad">P0</span></td><td><code>terminal_exec</code> 输入 schema</td><td>Go 缺 8 个参数；先补齐 schema，再核对执行路径是否真的支持这些参数（描述里写死 <code>/bin/bash -lc</code> 也是平台缺陷）。</td></tr>
+<tr><td><span class="pill bad">P0</span></td><td>context 参数泄漏</td><td>Go 的 <code>session_cwd</code> 出现在 4 个终端工具 schema；与 Python <code>CONTEXT_PARAMS</code> 剥离规则不一致，需在 Go 侧同样剥离（或确认注入路径）。</td></tr>
+<tr><td><span class="pill bad">P0</span></td><td>名称形状</td><td>87 分组 vs 857 扁平。若目标是逐工具同名，只有两条路：Go 改为扁平注册（保留分组为别名），或 Python 改为分组。前者对现有 agent prompt 兼容性更好。</td></tr>
+<tr><td><span class="pill warn">P1</span></td><td>描述逐字</td><td>同名工具 0/36；集成 action 747/837。需要决定「逐字复用 Python docstring」还是「允许改写但建立语义映射」；当前文档没有声明例外。</td></tr>
+<tr><td><span class="pill warn">P1</span></td><td>required 缺失 / 注解不一致</td><td>4 个工具 required 为空；3 个 action 注解不一致；3 个 action 无注解但必填。schema 层应在 Go 侧补 required。</td></tr>
+<tr><td><span class="pill warn">P1</span></td><td>类型放宽</td><td>20 个模块 <code>ARRAY&lt;ANY&gt;</code> / 裸 <code>STRING</code>；按 JSON Schema 语义不等价。需要按 action 拆 schema，或在 Go 侧做 per-action 校验。</td></tr>
+<tr><td><span class="pill warn">P2</span></td><td>extra / 未注册</td><td>Go 多 2 个 openmeteo action；Python 侧模块未注册。属于「Go 超前」而非缺失，但同样破坏逐字对齐。</td></tr>
+<tr><td><span class="pill warn">P2</span></td><td>输出契约</td><td>双方 0 个 outputSchema；补声明或 golden fixture。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="evidence"><h2><span class="num">08</span>证据与复现</h2>
+<pre># 1) Skill 逐字（sha256）
+uv run --no-project python ~/.hermes/profiles/omh-tui/cache/scratch/tool-audit/check_skills.py
+
+# 2) Python 工具 dump（857 / 270）
+cd /Users/mac/hive/tools &amp;&amp; uv run python ~/.hermes/profiles/omh-tui/cache/scratch/tool-audit/dump_py_tools.py
+cd /Users/mac/hive/core &amp;&amp; uv run --no-project python ~/.hermes/profiles/omh-tui/cache/scratch/tool-audit/dump_py_all.py
+
+# 3) Go 工具 dump（137）
+#    临时 test：internal/cli/zz_dump_tools_test.go（已删除，可重建）
+DUMP_DIR=... go test ./internal/cli -run TestZZDumpToolDefs -v
+
+# 4) 比对
+uv run --no-project python .../compare_tools.py
+uv run --no-project python .../type_check.py
+uv run --no-project python .../final_audit.py</pre>
+<p class="sub">机器可读：<a href="tool-consistency-audit.json"><code>tool-consistency-audit.json</code></a>（逐工具差异行）、<a href="skills-parity-report.json"><code>skills-parity-report.json</code></a>（Skill 文件哈希）。</p>
+</section>
+
+<section id="refs"><h2><span class="num">09</span>相关页</h2>
+<div class="callout info"><a href="tool-parity-matrix.html">工具追踪矩阵</a> · <a href="module-interfaces.html">接口不变量</a> · <a href="terminal-tools.html">终端工具</a> · <a href="file-ops.html">文件工具</a> · <a href="platform-support.html">平台支持</a> · <a href="browser-bridge.html">Browser Bridge</a></div>
+</section>
+
+<footer>生成：2026-11-20 23:19 CST · reference=python@<code>1b9c458a</code>（core <code>a756b1e5</code> / tools <code>68b6c230</code>，hive 1.0.14）· target=go_hive@<code>1b9c458a</code> · 依据：真实注册表 dump（Python FastMCP / Go session catalogue）+ 类型归一 + Skill sha256 · 口径：只陈述实测，未对齐项保留为缺陷，不用「已实现」掩盖契约差异。</footer>
+</div></body></html>

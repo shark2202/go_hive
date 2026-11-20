@@ -30,7 +30,9 @@
 | `run_worker` 并行 worker | 已实现 | 实测 queen 派 worker → worker 执行 → `[WORKER_REPORT]` 回传；`resume_worker_ids` 未实现 |
 | tracker 共享账本 | 已实现 | 实测 colony 建库、worker 注入 binding、`tracker_*` 建表/upsert/query |
 | 提醒中枢 | 已实现 | idle / task / parallel 等 source 注册并随会话启停 |
+| 配置键 `turn_context` / `gcu_viewport_scale` | 已实现 | 实测 + 测试：`turn_context.<name>.enabled` 决定进程内注册的包是否启动并注入 queen 回合提示（queen-only、每包 5s 超时、异常跳过）；`gcu_viewport_scale`（0.1–1.0，默认 0.8）经 `server.GcuViewportScale` 注入 `HIVE_BROWSER_VIEWPORT_SCALE`，桥 `/status.viewport_scale` 实测 0.65 / 0.55（配置文件）/ 0.8（非法值回落）。上游 `get_gcu_viewport_scale` 自扩展化浏览器后无消费点，Go 侧只读并上报，不改截图/抓取几何 |
 | judge（success_criteria） | 已实现 | colony worker 带 criteria 时评估并发布 `judge_verdict`；chat 会话无 criteria 不评估 |
+| stall_check（停滞检查） | 已实现 | judge 槽在 queen 回合以 `turn_done` 结束后判定「宣称要做却停手」，命中则注入一次提醒（与上游一致，不发布事件；`node_stalled` 属 doom-loop）。2026-11-20 真实 `hive serve` + 脚本化 OpenAI 兼容网关 E2E：judge true → 提醒进入下一轮模型请求与会话转录；judge false → 不提醒；开关关闭 → 0 次 judge 调用（`docs/stall-check-e2e.md`，证据 `docs/e2e-assets/stall-check-e2e/`）。threshold 缺省 0.5、数字字符串同 `float()` 语义、非法值不提醒（单测钉住） |
 | 内建工具 `read_file` / `write_file` / `terminal_exec` | 已实现，未在文档中触发 | 单测覆盖；本次假模型未发工具调用 |
 | 集成工具（会话可用） | 已实现 | 23 个安装器 102 模块 / 854 action，加 senders 1 模块 / 9 action，合计 **103 模块 / 863 action**；会话目录实测 103 个集成工具（扫描器与 senders 打开时） |
 | 集成工具（默认关闭） | 已实现，默认关闭 | 6 个网络扫描器 + senders；见 §2.4，实测默认目录 96 个工具 |
@@ -38,13 +40,13 @@
 | Colony 磁盘加载 + 会话注册 | 已实现 | 实测 `serve --colony docs_probe` |
 | Colony 多 worker 编排闭环 | 部分 | 包级测试；未用真实模型跑多 worker 任务 |
 | 13 个默认 queen 档案 | 已实现 | 实测 `hive queen list` |
-| 技能 / 记忆 / Tracker / 触发器 / 事件总线 | 部分 | 库层与单测存在；本文档未走通用户入口 |
+| 技能 / 记忆 / Tracker / 触发器 / 事件总线 | 部分 | 技能入口已实测：14 个 HTTP 端点，8788 上 `/api/skills`、queen 技能列表 200，create→body→patch→delete 为 201/200/200/200、删除后 404；记忆/Tracker/触发器仍以库层与单测为主 |
 | Sentinel | 部分 | 8 个包移植、测试通过；未接真实 Telegram/Slack |
-| Queen mail | 部分 | 路由已挂载，`serve` 未注入后端（代码路径；预期 401） |
-| Claude Code queens | 部分 | 路由存在；未接入运行时（列表为空，代码路径） |
-| Browser 工具 / `hive-browser` | 未实现 | 未移植 |
+| Queen mail | 部分 | 正常 queen 双端已实测（2026-11-20，real LLM：发送→回复→续链至 depth 4）；Claude Code queen 运行器/MCP/回复闭环已实现并经真实 `claude -p` 验证 |
+| Claude Code queens | 已实现 | 运行器 + 真实 dashboard 列表/transcript；残余：真实模型主动调 `message_queen` 未联调，配置仅在 serve 启动时读取 |
+| Browser 工具 / `hive-browser` | 已实现 | 2026-11-20 实测：真实 Chrome + 仓库内 1.7.4 扩展，`hive serve` 自动拉起并守护 `browserbridge` 子进程；`hive-browser status/open/page text/evaluate/interact/snapshot/screenshot/tab` 真实驱动成功（`go_hive/scripts/e2e_browser_host.sh` 全绿，含 control RPC 14831 断言与裸桥空闲退出断言）；无扩展时 `status`/`setup` 退出 2。见 `docs/browser-host.md`。control RPC / `client_hello(owner_pid)` / 30s 空闲退出 / notify 注入 / 3 条面板代理已对齐 |
 | React dashboard | 已内嵌（发布包） | `release.sh` 默认以 `-tags embed_ui` 构建；实测发布包 `/`、`/sessions`（深链）、`/favicon.png` 均 200。源码树不附带 `frontend/dist`，需 `embed_ui.sh` 现场构建 |
-| 附件多模态（`attach_file`） | 部分 | 工具结果层有 `Attachments`/`ImageContent`；`serve` 的 chat runtime 只把文本传给模型，PDF 无 `file` 块，见 §2.5 |
+| 附件多模态（`attach_file`） | 已实现 | 图片/PDF 以真实内容块进入模型请求（OpenAI `image_url`/`file`，Anthropic `image`/`document`）；provider 不支持时显式 not-delivered，不静默丢。未验证真实视觉模型读图、5MB 以上图片缩放，见 §2.5 |
 | Janitor | 部分 | `hive janitor status` 实测；`run --execute` 未执行 |
 | `hive-cred` | 已实现 | 实测 `browse` / `inspect` |
 | MCP 注册表与 CLI | 部分 | 14 个子命令注册；未对真实 MCP server 验证 |
@@ -104,7 +106,7 @@ P0 逐项：
 | 上游 | 未移植 action | 原因 |
 | --- | --- | --- |
 | `csv_tool` | `csv_sql` | 上游用 DuckDB（native 依赖）；纯 Go 不做 cgo，`gen_catalog.py` 与 `doc.go` 均已注明排除 |
-| `excel_tool` | `excel_sql` | 同上；`batch3_excel.go` 与测试断言该 action 返回 `ErrUnknownAction` |
+| `excel_tool` | `excel_sql` | 同上；`excel.go` 与测试断言该 action 返回 `ErrUnknownAction` |
 
 这两个 action 在工具描述里不出现，调用时明确返回未知 action，不假装支持。
 
@@ -118,14 +120,19 @@ P0 逐项：
 
 扫描器先按批次注册，再由 `installIntegrationBatches` 在开关关闭时从会话目录摘除；`TestSessionToolCatalogueKeepsNetworkScannersOffByDefault` 同时钉住「默认不在」与「打开后在」。
 
-### 2.5 `attach_file` 的多模态限制
+### 2.5 `attach_file` 的多模态路径（图片 / PDF → 模型内容块）
 
-`attach_file` 已接入会话目录（batch8-final），但**多模态只到工具结果层**：
+`attach_file`（batch8-final）的多模态已贯通到模型请求，不再止步于工具结果层：
 
-- `ToolResult.Attachments` 与 `ImageContent` 已实现；真实图片（png/jpg/jpeg/webp/gif）会生成 `ImageContent` 块，PDF 没有 content 块。
-- `hive serve` 的 chat runtime 只把工具结果的**文本**传给模型（`server.ChatRuntimeDeps.Execute`），所以 `ImageContent` 到不了 LLM；PDF 也没有 Go 侧的 `file` 块（Anthropic 会拒绝 `application/pdf` image 块）。
-- 结果 JSON 用 `inline` 字段如实标注每个路径走的是 `text_preview`、`image_block` 还是 `none`，不声称模型看到了字节。
-- 文本预览内联上限 8 KiB，完整文件仍会复制到会话附件目录并生成 chip。
+- **工具层**：真实图片（png/jpg/jpeg/webp/gif）生成 `image_url` 块（`data:<mime>;base64,...`）；PDF 生成 provider-neutral 的 `file` 块（`file_data` data URL + 文件名）。两者都经 `tools.ToolResult.ImageContent` 返回，同时照常复制到会话附件目录并发布 chip。
+- **运行时层**：`hive serve` 的 chat runtime 通过 `server.ChatRuntimeDeps.ExecuteBlocks` 接收这些块（装配在 `sessionToolCatalogue.ExecuteBlocks`），写入工具消息的 `image_content`；会话恢复时从存储重建，历史消息继续带块。
+- **消息装配层**：`NodeConversation.ToLLMMessages(model)` 按模型能力决定块的位置——Anthropic 系（`anthropic/`、`claude-`、`kimi/`、`hive/`）图片留在 `tool_result` 内；其他 API 把块 hoist 到紧随工具批次的 user 消息（与上游 `_hoist_tool_result_images` 一致）。`llm.ChatMessage.ContentParts` 承载块，文本投影仍保留给日志与非多模态调用方。
+- **provider 形状**：OpenAI 兼容端点原样发送 `image_url` / `file` 块（OpenAI 与 OpenRouter 的 Chat Completions 均支持 PDF `file` 块）；Anthropic 传输把 `file` 转成 `document` 块（base64 source），`image_url` 转成 `image` 块。
+- **不支持时不静默丢**：catalog `supports_vision=false` 的模型收到显式 `[IMAGE attachment not delivered: …]` 占位文本；不在 PDF 支持清单（Anthropic / OpenAI / OpenRouter 系）的端点收到 `[PDF attachment not delivered: …]`。超过块上限（图片 20 MB、PDF 32 MB）的文件只发 chip，条目用 `inline_error` 说明原因。结果 JSON 的 `inline` 字段标注 `text_preview` / `image_block` / `file_block` / `none`。
+- **安全**：内容块只携带 base64 字节与文件名（`filepath.Base`），不携带源路径或凭据；凭据从不进入消息装配。
+- **文本预览**：内联上限仍为 8 KiB，完整文件以 chip 交付。
+
+证据：`internal/tools/integrations/attach_file_test.go`（块形状、多附件、超限、无路径泄露）、`internal/agentloop/node_conversation_tools_test.go`（hoist、能力门禁）、`internal/llm/multimodal_test.go`（真实 HTTP 请求体：OpenAI `image_url`/`file`，Anthropic `image`/`document`）、`internal/server/chat_runtime_attachments_test.go`（fake provider 捕获 chat runtime 请求：图片、PDF、多附件、文本模型门禁、流式路径、会话恢复）。
 
 ## 3. 平台与 cgo 矩阵
 
@@ -179,12 +186,10 @@ Windows 已知未验证点：
 | --- | --- | --- |
 | 真实厂商模型调用 | 发布任务没有可用的真实 key | 请求形状已验证；鉴权/额度/模型可用性未知 |
 | 863 个集成 action 的真实调用 | 需要大量第三方凭据（backlog 里 74 个模块需凭据） | 只有 `httptest`/假上游证据；真实 API 的字段漂移未覆盖 |
-| `attach_file` 让模型看到图片/PDF 字节 | chat runtime 只传文本 | 附件 chip 与预览可用，但不是多模态输入 |
+| 真实视觉模型读图/PDF 端到端 | 本机无本地网关（11434/8000/1234/8080/3000 均未监听）；配置的远程网关没有可解析的明文凭据，vision 能力未知 | 块形状与装配由 fake provider、假上游 HTTP、流式路径与会话恢复钉住；真模型对图片内容的理解未验证 |
 | Colony 多 worker 闭环 | 需要真实模型与长任务 | 调度/报告/预算有单测，端到端未跑 |
 | Sentinel 通知 | 需要 Telegram/Slack 凭据 | 引擎单测通过，真实投递未验证 |
-| Queen mail | `serve` 未注入后端 | 路由预期 401（代码路径）；`internal/qmail` 与 adapter 存在但未接线 |
-| Claude Code queens | 运行时未接入 | 列表为空（代码路径） |
-| Browser 工具 | 未移植 | 无 |
+| Claude Code queen 真实模型主动调 `message_queen` | 未做真实模型回合联调 | 运行器/回复闭环已验证，但“她自己在回合中调 MCP 工具”只有 fake/契约测试 |
 | Windows 运行 | 无 Windows 机器 | 只有交叉编译 |
 | 在线 CVE 扫描 | **仓库没有做**：Makefile/CI 中没有 `govulncheck`、OSV、nancy 或等价步骤 | 依赖漏洞状态未知；只能确认依赖锁定、无 cgo、无运行时下载 |
 | `hive janitor run --execute` | 会删除数据，未在发布验证中执行 | 只验证了 `status` |
@@ -213,6 +218,14 @@ CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -tags e2e -count=
 | `check_parity_targets.sh` | 4,843 条引用（3,773 test + 1,070 prod），0 missing files/tests/symbols |
 
 这些数字是**本工作树**的实测值，与 `STATUS.md` 中的 2,238/2,045 等历史快照不同（文档快照时间不同）。
+
+2026-11-20（attach-multimodal 工作树）复跑：
+
+| 项 | 结果 |
+| --- | --- |
+| `make fmt-check vet cross parity parity-targets wiring-check` | 退出码 0：gofmt OK；vet 无输出；六目标交叉编译通过；parity `4898/4898`、0 missing；refs 5,183（3,939 test + 1,244 prod）0 missing；wiring_check 12/12 |
+| `make test`（全量） | 4,898 条声明；一轮全量通过，随后一轮复跑出现既有 `internal/server::TestOverseerAskUserParksSessionAndAnswerRelays` 时序 flake（`cursor pending_input after answer = <nil>`）；隔离 `-run TestOverseerAskUserParksSessionAndAnswerRelays -count=10` 通过 10/10，与本次 attach 改动无关，未修改该测试 |
+| 本次车道目标测试 | `internal/server` 6 条 attach 用例、`internal/llm` 3 条请求体用例、`internal/agentloop` 3 条门禁用例、`internal/cli` 1 条 worker 块透传用例、`internal/tools/integrations` attach 全组均通过 |
 
 发布包本身另有一轮验证（`hive --version`、`shasum -a 256 -c SHA256SUMS`、解压 darwin-arm64 后 `/` 200）记录在 `release-notes-v1.0.26-go.1.md`。
 

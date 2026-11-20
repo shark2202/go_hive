@@ -126,11 +126,30 @@ files they distribute are under the SIL Open Font License 1.1. That license
 permits bundling and redistribution of the fonts; keep the OFL notice with the
 font files.
 
-## 3. Redistribution checklist
+## 3. Embedded chart render bundles (`go_hive/go-hive/internal/charts/assets`)
+
+`chart_render` embeds two minified browser bundles with `go:embed` so a render
+never needs the network. They are byte-identical copies of the Python tool's
+static assets (`tools/src/chart_tools/static/`); see
+`internal/charts/assets/README.md` for checksums.
+
+| Bundle | Version (self-reported) | License | Source |
+| --- | --- | --- | --- |
+| `echarts.min.js` | Apache ECharts 5.6.0 | Apache-2.0 | https://github.com/apache/echarts |
+| `mermaid.min.js` | Mermaid 11.4.0 | MIT | https://github.com/mermaid-js/mermaid |
+
+- `echarts.min.js` retains its upstream Apache-2.0 banner, including the
+  bundled Microsoft TypeScript runtime notice. Apache-2.0 requires keeping the
+  LICENSE/NOTICE of the distribution with any redistribution that contains it.
+- `mermaid.min.js` retains the MIT notices of the packages bundled into it.
+
+## 4. Redistribution checklist
 
 - Apache-2.0 components (this repository, purego, pprof, echarts, TypeScript,
   and the Apache-2.0 files of yaml.v3) require retaining the LICENSE and any
   NOTICE file; do not remove or rewrite the upstream copyright notices.
+- The embedded chart bundles keep the mit/apache headers of their upstream
+  builds; do not reformat or strip those banners.
 - MPL-2.0 (golang-lru/v2) is file-level copyleft. Do not modify those files
   without publishing the modified source, or replace the dependency.
 - OFL-1.1 fonts must keep their license notice when redistributed.
@@ -139,7 +158,7 @@ font files.
 - License texts are available from each source link above and, for Go modules,
   from the `LICENSE*` files in the module cache.
 
-## 4. Verification performed
+## 5. Verification performed
 
 ```text
 $ cd go_hive/go-hive && go list -m all | wc -l

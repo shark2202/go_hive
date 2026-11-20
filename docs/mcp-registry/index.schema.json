@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aden-hive/hive-go/mcp-registry/index.schema.json",
+  "title": "Hive MCP registry index",
+  "description": "Static JSON fetched by hive mcp update; one GET, no auth, no pagination.",
+  "type": "object",
+  "required": [
+    "servers"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "servers": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/manifest"
+      }
+    }
+  },
+  "$defs": {
+    "transportName": {
+      "type": "string",
+      "enum": [
+        "stdio",
+        "http",
+        "sse",
+        "unix"
+      ]
+    },
+    "headers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "required": [
+        "transport"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "transport": {
+          "type": "object",
+          "required": [
+            "supported"
+          ],
+          "properties": {
+            "supported": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/transportName"
+              },
+              "uniqueItems": true
+            },
+            "default": {
+              "$ref": "#/$defs/transportName"
+            }
+          },
+          "additionalProperties": false
+        },
+        "stdio": {
+          "type": "object",
+          "required": [
+            "command"
+          ],
+          "properties": {
+            "command": {
+              "type": "string",
+              "minLength": 1
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "env": {
+              "$ref": "#/$defs/env"
+            },
+            "cwd": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "http": {
+          "type": "object",
+          "required": [
+            "url"
+          ],
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https?://"
+            },
+            "headers": {
+              "$ref": "#/$defs/headers"
+            }
+          },
+          "additionalProperties": true
+        },
+        "sse": {
+          "type": "object",
+          "required": [
+            "url"
+          ],
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https?://"
+            },
+            "headers": {
+              "$ref": "#/$defs/headers"
+            }
+          },
+          "additionalProperties": true
+        },
+        "unix": {
+          "type": "object",
+          "required": [
+            "socket_path"
+          ],
+          "properties": {
+            "socket_path": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "if": {
+        "properties": {
+          "transport": {
+            "properties": {
+              "default": {
+                "const": "stdio"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "stdio"
+        ]
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "transport": {
+                "properties": {
+                  "default": {
+                    "const": "http"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "http"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transport": {
+                "properties": {
+                  "default": {
+                    "const": "sse"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "sse"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transport": {
+                "properties": {
+                  "default": {
+                    "const": "unix"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "unix"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

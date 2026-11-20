@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aden-hive/hive-go/internal/hiveclock"
 	"github.com/aden-hive/hive-go/internal/llm"
 )
 
@@ -229,7 +230,7 @@ func (l *AgentLoop) clock() time.Time {
 	if l.now != nil {
 		return l.now()
 	}
-	return time.Now()
+	return hiveclock.Now()
 }
 
 func (l *AgentLoop) stamp() string {
@@ -1205,6 +1206,9 @@ func toChatMessages(messages []map[string]any) []llm.ChatMessage {
 	for _, message := range messages {
 		role, _ := message["role"].(string)
 		chat := llm.ChatMessage{Role: role, Content: contentString(message["content"])}
+		if blocks := multimodalContentBlocks(message["content"]); len(blocks) > 0 {
+			chat.ContentParts = blocks
+		}
 		if id, ok := message["tool_call_id"].(string); ok {
 			chat.ToolCallID = id
 		}
@@ -1283,6 +1287,7 @@ func NewReminderAgentContext(agentCtx *AgentContext) *ReminderAgentContext {
 		ColonyBindingProvider:      agentCtx.ColonyBindingProvider,
 		ActiveWorkersProvider:      activeWorkersFrom(agentCtx.ActiveWorkersProvider),
 		ColonyStatsProvider:        colonyStatsFrom(agentCtx.ColonyStatsProvider),
+		TurnContextProvider:        turnContextProviderFrom(agentCtx.TurnContextProvider),
 	}
 	if agentCtx.SessionID != nil {
 		out.SessionID = *agentCtx.SessionID
@@ -1466,6 +1471,7 @@ func (l *AgentLoop) storeToolBatch(conv *NodeConversation, toolCalls []llm.ToolC
 		opts := ToolResultOptions{
 			IsError:        results[i].IsError,
 			IsSkillContent: results[i].IsSkillContent,
+			ImageContent:   results[i].ImageContent,
 		}
 		if results[i].SpilloverPath != "" {
 			spillover := results[i].SpilloverPath

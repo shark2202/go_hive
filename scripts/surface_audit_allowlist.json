@@ -1,0 +1,39 @@
+{
+  "description": "surface_audit.py 的豁免清单。python_to_go / frontend_to_go 里的条目必须有 reason；空理由视为静默豁免，评审应拒绝。pending 只用于给已知待修项标注归属，不改变「缺失属实」这个事实，也不影响 --strict。",
+  "python_to_go": [],
+  "frontend_to_go": [],
+  "pending": [
+    {
+      "prefix": "/api/queen/{param}/skills",
+      "owner": "skills-api lane",
+      "reason": "per-queen skills 的读写/改名/reload 整组未移植"
+    },
+    {
+      "prefix": "/api/skills",
+      "owner": "skills-api lane",
+      "reason": "聚合 skills 库、scopes、upload、detail 未移植"
+    },
+    {
+      "prefix": "/api/sessions/{param}/skill-installs",
+      "owner": "skills-api lane",
+      "reason": "queen 发起的 skill 安装审批未移植"
+    },
+    {
+      "prefix": "/api/credentials/local",
+      "owner": "credentials lane",
+      "reason": "手动命名本地凭据写入/删除未移植；前端 credentials.ts 已调用"
+    },
+    {
+      "prefix": "/api/queen/{param}/soul/proposals",
+      "owner": "soul lane",
+      "reason": "soul 提案 probe 路由未移植；前端 queens.ts 已调用"
+    },
+    {
+      "prefix": "/api/runtime-logs",
+      "owner": "observability lane",
+      "reason": "Go 侧只有 runtimeLogsPath 常量与 quiet 判断，没有注册 GET 路由"
+    }
+  ],
+  "empty_dirs": [],
+  "lane_named_files": []
+}

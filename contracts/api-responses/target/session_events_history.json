@@ -1,0 +1,154 @@
+{
+  "endpoint": "session_events_history",
+  "label": "事件历史",
+  "method": "GET",
+  "path": "/api/sessions/{session}/events/history",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-20T23:43:50+08:00",
+  "canonical": {
+    "events": [
+      {
+        "colony_id": null,
+        "correlation_id": null,
+        "data": {
+          "name": "Steve Jobs",
+          "queen_id": "queen_growth",
+          "title": "Head of Growth"
+        },
+        "execution_id": null,
+        "node_id": null,
+        "seq": 0.0,
+        "stream_id": "queen",
+        "timestamp": "<timestamp>",
+        "type": "queen_identity_selected"
+      },
+      {
+        "colony_id": null,
+        "correlation_id": null,
+        "data": {
+          "detail": "session_start",
+          "meta": {
+            "point": "session_start"
+          },
+          "source": "point:session_start"
+        },
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "seq": 0.0,
+        "stream_id": "queen",
+        "timestamp": "<timestamp>",
+        "type": "reminder_injected"
+      },
+      {
+        "colony_id": null,
+        "correlation_id": null,
+        "data": {
+          "max_iterations": 50
+        },
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "seq": 0.0,
+        "stream_id": "queen",
+        "timestamp": "<timestamp>",
+        "type": "node_loop_started"
+      },
+      {
+        "colony_id": null,
+        "correlation_id": null,
+        "data": {
+          "iteration": 0,
+          "phase": "independent"
+        },
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "seq": 0.0,
+        "stream_id": "queen",
+        "timestamp": "<timestamp>",
+        "type": "node_loop_iteration"
+      },
+      {
+        "colony_id": null,
+        "correlation_id": null,
+        "data": {
+          "breakdown": {
+            "conversation_chars": 0,
+            "image_blocks": 0,
+            "image_tokens": 0,
+            "system_chars": 71929,
+            "tool_defs_chars": 211538
+          },
+          "estimated_tokens": 94489,
+          "max_context_tokens": 180000,
+          "message_count": 0,
+          "trigger": "iteration_start",
+          "usage_pct": 52,
+          "usage_ratio": 0.5249
+        },
+        "execution_id": null,
+        "node_id": "queen",
+        "seq": 0.0,
+        "stream_id": "queen",
+        "timestamp": "<timestamp>",
+        "type": "context_usage_updated"
+      }
+    ],
+    "has_more_older": false,
+    "limit": 500,
+    "returned": 5,
+    "session_id": "<session_id>",
+    "start_index": 1,
+    "start_offset": 0,
+    "total": 5,
+    "truncated": false
+  },
+  "shape": {
+    "events": "array",
+    "events[].colony_id": "null",
+    "events[].correlation_id": "null",
+    "events[].data": "object",
+    "events[].data.name": "string",
+    "events[].data.queen_id": "string",
+    "events[].data.title": "string",
+    "events[].execution_id": "null",
+    "events[].node_id": "string",
+    "events[].seq": "number(float)",
+    "events[].stream_id": "string",
+    "events[].timestamp": "string",
+    "events[].type": "string",
+    "events[].data.detail": "string",
+    "events[].data.meta": "object",
+    "events[].data.meta.point": "string",
+    "events[].data.source": "string",
+    "events[].data.max_iterations": "number(int)",
+    "events[].data.iteration": "number(int)",
+    "events[].data.phase": "string",
+    "events[].data.breakdown": "object",
+    "events[].data.breakdown.conversation_chars": "number(int)",
+    "events[].data.breakdown.image_blocks": "number(int)",
+    "events[].data.breakdown.image_tokens": "number(int)",
+    "events[].data.breakdown.system_chars": "number(int)",
+    "events[].data.breakdown.tool_defs_chars": "number(int)",
+    "events[].data.estimated_tokens": "number(int)",
+    "events[].data.max_context_tokens": "number(int)",
+    "events[].data.message_count": "number(int)",
+    "events[].data.trigger": "string",
+    "events[].data.usage_pct": "number(int)",
+    "events[].data.usage_ratio": "number(float)",
+    "has_more_older": "boolean",
+    "limit": "number(int)",
+    "returned": "number(int)",
+    "session_id": "string",
+    "start_index": "number(int)",
+    "start_offset": "number(int)",
+    "total": "number(int)",
+    "truncated": "boolean"
+  },
+  "counts": {
+    "events": 5
+  },
+  "notes": []
+}

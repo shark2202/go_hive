@@ -300,6 +300,16 @@ var ColonyQueenTools = map[string]struct{}{
 	"stop_playbook":       {},
 	"list_playbook_runs":  {},
 	"run_worker":          {},
+	// Queen lifecycle tools the upstream COLONY phase list exposes. They are
+	// registered on the queen's own session catalogue (internal/server); this
+	// map is the classification the worker strip reads, so a spawned worker can
+	// never inherit the queen's control surface.
+	"get_worker_status": {},
+	"inject_message":    {},
+	"stop_worker":       {},
+	"set_trigger":       {},
+	"remove_trigger":    {},
+	"list_triggers":     {},
 }
 
 var IndependentQueenTools = map[string]struct{}{}

@@ -12,6 +12,10 @@ type ToolResult struct {
 	IsError        bool
 	IsSkillContent bool
 	SpilloverPath  string
+	// ImageContent carries provider-neutral content blocks (image_url for
+	// images, file for PDFs) the tool returned. The conversation stores them on
+	// the tool message so the next request can send real multimodal parts.
+	ImageContent []map[string]any
 }
 
 type SkillFileReadInterceptor struct {

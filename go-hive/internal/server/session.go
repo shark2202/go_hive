@@ -5,9 +5,11 @@ package server
 import (
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/aden-hive/hive-go/internal/skills"
 	"github.com/aden-hive/hive-go/internal/triggers"
 )
 
@@ -60,6 +62,13 @@ type Session struct {
 	// case POST /chat reports 503 instead of pretending to deliver.
 	Chat *ChatRuntime
 
+	// LiveSkills is the session's reloadable skills catalog — the queen's
+	// SkillsManager, whose prompt the skills reminder announces each turn. The
+	// /api/skills reload fan-out rebuilds it so a skill that landed after this
+	// session started reaches the queen's next turn instead of the catalog the
+	// session loaded at creation. Nil when the assembly layer attached none.
+	LiveSkills skills.ReloadableSkillsManager
+
 	ColonySpawned   bool
 	SpawnedColonyID string
 
@@ -80,6 +89,10 @@ type Session struct {
 	WorkerHandoffSub string
 
 	PendingEscalations map[string]map[string]any
+	// pendingOrder is the arrival order of PendingEscalations keys. Python
+	// dicts are insertion-ordered and list_worker_questions returns the inbox
+	// in that order; a Go map has none, so the order is kept explicitly.
+	pendingOrder []string
 
 	pivotMu            sync.Mutex
 	pendingColonyPivot any
@@ -101,6 +114,11 @@ type Session struct {
 
 	pendingMu sync.Mutex
 	triggerMu sync.Mutex
+	// closedFlag marks a session torn down by StopSession. The reload fan-out
+	// snapshots live sessions before reloading them, so a session that closed
+	// in between must refuse the reload instead of rebuilding a catalog
+	// nothing reads.
+	closedFlag atomic.Bool
 }
 
 type SessionTriggerClock interface {
@@ -337,6 +355,9 @@ func (s *Session) RecordPendingEscalation(requestID string, entry map[string]any
 	if s.PendingEscalations == nil {
 		s.PendingEscalations = map[string]map[string]any{}
 	}
+	if _, exists := s.PendingEscalations[requestID]; !exists {
+		s.pendingOrder = append(s.pendingOrder, requestID)
+	}
 	s.PendingEscalations[requestID] = entry
 	s.pendingMu.Unlock()
 }
@@ -382,6 +403,12 @@ type SessionManager struct {
 	sessions map[string]*Session
 	order    []string
 	loading  map[string]struct{}
+	// queenMail is the process's queen-mail service, the same instance the
+	// /api/queen-mail routes use. Mirrors upstream's SessionManager.queen_mail:
+	// the chat tools and the deliverer must share one service or daily limits,
+	// tokens and return addresses split in two.
+	queenMailMu sync.Mutex
+	queenMail   *QueenMailAdapter
 }
 
 func NewSessionManager() *SessionManager {
@@ -389,6 +416,28 @@ func NewSessionManager() *SessionManager {
 		sessions: map[string]*Session{},
 		loading:  map[string]struct{}{},
 	}
+}
+
+// SetQueenMail records the server's queen-mail service on the manager.
+func (m *SessionManager) SetQueenMail(mail *QueenMailAdapter) {
+	if m == nil {
+		return
+	}
+	m.queenMailMu.Lock()
+	m.queenMail = mail
+	m.queenMailMu.Unlock()
+}
+
+// QueenMail is the server's queen-mail service, or nil when this process has
+// none (the routes then answer unauthorized, exactly as upstream without
+// queen_mail).
+func (m *SessionManager) QueenMail() *QueenMailAdapter {
+	if m == nil {
+		return nil
+	}
+	m.queenMailMu.Lock()
+	defer m.queenMailMu.Unlock()
+	return m.queenMail
 }
 
 // Parity: framework/server/session_manager.py::SessionManager.is_loading
@@ -430,6 +479,10 @@ func (m *SessionManager) AddSession(session *Session) {
 	if session.Chat != nil {
 		session.Chat.startLoopGuards()
 	}
+	// A session registering on an empty event segment gets the opening block
+	// upstream's queen writes at session start (identity, the session_start
+	// reminder, loop start, iteration 0 and the context readout).
+	emitSessionStartEvents(session)
 }
 
 // Parity: framework/server/session_manager.py::SessionManager.list_sessions
@@ -444,6 +497,27 @@ func (m *SessionManager) ListSessions() []*Session {
 	}
 	return out
 }
+
+// PhaseSkillsManager exposes the session's reloadable skills catalog to the
+// skills reload fan-out (the skills.LiveQueenSession seam). Nil means the
+// session has no catalog of its own or is already closed.
+func (s *Session) PhaseSkillsManager() skills.ReloadableSkillsManager {
+	if s == nil || s.LiveSkills == nil || s.isClosed() {
+		return nil
+	}
+	return sessionLiveSkills{session: s, inner: s.LiveSkills}
+}
+
+// markClosed flags the session as torn down. StopSession removes the session
+// from the manager first; the flag covers a fan-out that already snapshotted
+// it, so a closing session is never reloaded.
+func (s *Session) markClosed() {
+	if s != nil {
+		s.closedFlag.Store(true)
+	}
+}
+
+func (s *Session) isClosed() bool { return s == nil || s.closedFlag.Load() }
 
 func (m *SessionManager) GetSession(id string) *Session {
 	m.mu.Lock()
@@ -494,6 +568,9 @@ func (m *SessionManager) StopSession(sessionID string) bool {
 	if !ok {
 		return false
 	}
+	// Flag the session before its runtime is torn down: a reload fan-out that
+	// snapshotted this session a moment ago must skip it from here on.
+	session.markClosed()
 
 	// Stop the session's worker before unwiring its subscriptions so an
 	// in-flight turn cannot publish into a session that is being torn down.

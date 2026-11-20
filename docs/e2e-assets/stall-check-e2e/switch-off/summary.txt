@@ -1,0 +1,8 @@
+stall-check e2e case: switch-off
+session: session_20261120_225854_98da503e
+
+seq 1 queen model=stall-e2e-model messages=2 reminder=false
+
+judge requests: 0
+queen requests: 1
+other requests (titles): 0

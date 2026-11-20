@@ -10,6 +10,12 @@ import (
 	"github.com/aden-hive/hive-go/internal/memory"
 )
 
+// memoryTimelineStopFlushTimeout bounds the timeline flush Close runs after a
+// session stops. Upstream spawns the flush fire-and-forget; the port waits on
+// it (see ChatRuntime.Close) so a stopped session's directory is complete
+// before teardown returns, hence the explicit bound.
+const memoryTimelineStopFlushTimeout = 30 * time.Second
+
 // chatLoopConfig is the queen loop's configuration: the defaults plus the
 // session-scoped spillover directory large tool results are written to.
 //
@@ -42,10 +48,12 @@ func (r *ChatRuntime) injectPastConversationRecall(query, stamp string) {
 		query,
 		filepath.Base(r.deps.Root),
 	)
-	if block == "" || block == r.lastPastRecall {
+	// Upstream (past_conversations_reminder.py) renders on every
+	// USER_PROMPT_SUBMIT, so an identical message gets the excerpts again;
+	// there is no repeat guard to port.
+	if block == "" {
 		return
 	}
-	r.lastPastRecall = block
 	reminder := "<system-reminder>\nRecalled past conversation excerpts relevant to the latest " +
 		"user message (supersedes earlier excerpt reminders):\n\n" + block + "\n</system-reminder>"
 	// Excerpt recall is context, never a reason to fail a turn.
@@ -97,6 +105,10 @@ func (r *ChatRuntime) timelineAfterTurn() {
 		return
 	}
 	r.timelineMu.Lock()
+	// time.Since on the zero lastTimelineRun saturates at the maximum
+	// duration, so the first completed turn always clears the cooldown guard
+	// — the same "last_run starts at 0.0" behaviour upstream gets from
+	// time.monotonic().
 	waited := time.Since(r.lastTimelineRun)
 	if len(pending.Messages) < memory.TimelineLiveBatchMessages && waited < memory.TimelineLiveCooldown {
 		r.timelineMu.Unlock()

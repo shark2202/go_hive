@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive 环境变量依赖（Python ⇄ go_hive）</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1000px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g4,.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g4,.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:760px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Env Surface</div><h1>环境变量依赖 <span>Python ⇄ go_hive</span></h1>
+<p class="lede">环境变量是独立于 <code>configuration.json</code> 的一层外观面。本页登记两侧生产代码实际引用的 <code>HIVE_*</code> 变量、凭据类 env、测试专用变量，以及"设了不生效 / 只有一侧认"的差异。口径：字符串字面量扫描（排除 tests / testdata / <code>_test.go</code>）。</p>
+<div class="meta"><span>生成：<b>2026-11-20 23:40 CST</b></span><span>Python：<b>89</b></span><span>Go：<b>96</b></span><span>共有：<b>66</b></span><span>凭据 spec：<b>114 / 123</b></span></div>
+<div class="toc"><a href="#summary">结论</a><a href="#method">口径</a><a href="#common">共有</a><a href="#pyonly">Python 独有</a><a href="#goonly">Go 独有</a><a href="#cred">凭据 env</a><a href="#nonhive">非 HIVE_</a><a href="#test">测试变量</a><a href="#impact">影响</a><a href="#repro">复现</a><a href="#refs">相关页</a></div></header>
+
+<section id="summary"><h2><span class="num">00</span>结论</h2>
+<div class="grid g4">
+<div class="card"><div class="k">运行时/部署 HIVE_*</div><div class="v">89 / 96</div><div class="d">Python / Go 字面量引用</div></div>
+<div class="card"><div class="k">共有</div><div class="v">66</div><div class="d">名字与读取点都存在</div></div>
+<div class="card"><div class="k">Python 独有</div><div class="v">23</div><div class="d">Go 侧设了不生效</div></div>
+<div class="card"><div class="k">Go 独有</div><div class="v">30</div><div class="d">生产 9 + 测试 harness 21</div></div>
+</div>
+<p class="small">另有<b>非 HIVE_ 前缀</b>的直接读取：Python 51 / Go 17（共有 7；Python 独有 44；Go 独有 10）——见 §06。</p>
+<div class="callout bad"><b>结论：</b>env 面<b>未完全对齐</b>。主要缺口是 Python 独有的 23 个调优/诊断开关（资源采样、GCU memtrace、日志、迭代上限等）在 Go 不存在；Go 独有的是 BrowserBridge 部署面与 <code>HIVE_NETWORK_SCANNERS</code>。<b>凭据 env</b>两侧都支持，但 Go 通过 credentials spec + <code>integrationkit.Getenv</code> 间接读取，命名有 1 处拆分、9 个别名。</div>
+</section>
+
+<section id="method"><h2><span class="num">01</span>口径与方法</h2>
+<ul>
+<li>扫描两侧源码中的 <code>"HIVE_..."</code> 字符串字面量；排除 <code>tests/</code>、<code>testdata/</code>、<code>*_test.go</code>、<code>test_*.py</code>。</li>
+<li>这样能覆盖"包装函数读取"（例如 Go 的 <code>envFeatureFlag("HIVE_EMAIL_SENDERS")</code>），比只 grep <code>os.Getenv</code> 更准；纯 <code>os.Getenv</code> 扫描会把 Go 的凭据 env 全部漏掉。</li>
+<li>"引用"不等于"生效"：大量变量在两侧都是<b>代码内 fallback</b>（无 JSON schema、无默认值字段），本页只登记名字、用途与读取点；默认值需看调用点。</li>
+<li>凭据类 env 用两侧 credentials spec 对照：Python <code>CREDENTIAL_SPECS</code> 114 条；Go <code>/api/credentials/specs</code> 123 条（实测）。</li>
+</ul>
+</section>
+
+<section id="common"><h2><span class="num">02</span>共有变量（66）</h2>
+<p class="sub">两侧都存在同名引用；按用途分组，完整名单如下。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">分组</th><th>变量</th></tr></thead><tbody>
+<tr><td>路径 / 部署</td><td><code>HIVE_APP_VERSION</code> <code>HIVE_BASH_PATH</code> <code>HIVE_DEBUG_EVENTS</code> <code>HIVE_DESKTOP_MODE</code> <code>HIVE_DESKTOP_PARENT_PID</code> <code>HIVE_DESKTOP_THEME</code> <code>HIVE_DESKTOP_TOKEN</code> <code>HIVE_HOME</code> <code>HIVE_RIPGREP_PATH</code> <code>HIVE_STORAGE_PATH</code> </td></tr>
+<tr><td>云端 / 凭据 / 身份</td><td><code>HIVE_API_KEY</code> <code>HIVE_CLOUD_BASE</code> <code>HIVE_CLOUD_JWT</code> <code>HIVE_COLONY_NAME</code> <code>HIVE_CREDENTIAL_KEY</code> <code>HIVE_CRED_LOG</code> <code>HIVE_LLM_BASE_URL</code> <code>HIVE_PRINCIPAL</code> <code>HIVE_QUEEN_ID</code> <code>HIVE_REGISTRY_URL</code> <code>HIVE_RUNTIME_ID</code> <code>HIVE_RUNTIME_KIND</code> <code>HIVE_RUNTIME_PORT</code> </td></tr>
+<tr><td>桥 / 浏览器</td><td><code>HIVE_BRIDGE_PORT</code> <code>HIVE_BROWSER_PROFILE_DISPLAY_NAME</code> <code>HIVE_BROWSER_SESSION</code> </td></tr>
+<tr><td>任务 / 记忆 / 追踪</td><td><code>HIVE_MAX_VERBATIM_CLIENT_MSGS</code> <code>HIVE_MEMORY_TIMELINE</code> <code>HIVE_MICROCOMPACT_KEEP_RECENT</code> <code>HIVE_PAST_RECALL_TIMEOUT</code> <code>HIVE_TASK_COMPLETED_CLEANUP</code> <code>HIVE_TASK_LIST_ID</code> <code>HIVE_TASK_REMINDER_BACKOFF</code> <code>HIVE_TASK_REMINDER_COOLDOWN</code> <code>HIVE_TASK_REMINDER_SOFT_CAP</code> <code>HIVE_TASK_REMINDER_TURNS</code> <code>HIVE_TASK_REMINDER_WARMUP</code> <code>HIVE_TASK_SNAPSHOT_HEARTBEAT</code> <code>HIVE_TASK_SNAPSHOT_ITEMS</code> <code>HIVE_TASK_SNAPSHOT_MAX</code> <code>HIVE_TASK_UNTRACKED_TURNS</code> <code>HIVE_TIMELINE_BATCH</code> <code>HIVE_TIMELINE_COOLDOWN</code> <code>HIVE_TRACKER_QUEEN_COOLDOWN_NO_TABLE</code> <code>HIVE_TRACKER_QUEEN_COOLDOWN_WITH_TABLE</code> <code>HIVE_TRACKER_QUEEN_FIRST_FIRE</code> </td></tr>
+<tr><td>预算 / 并发 / 刷新节奏</td><td><code>HIVE_ACTIVE_WORKERS_SNAPSHOT_MAX</code> <code>HIVE_ACTIVE_WORKERS_TASK_MAX</code> <code>HIVE_ADAPTIVE_BUDGET_FLOOR</code> <code>HIVE_ADAPTIVE_BUDGET_MIN_SAMPLES</code> <code>HIVE_ADAPTIVE_TOOL_BUDGET</code> <code>HIVE_COLONY_PARALLEL_COOLDOWN</code> <code>HIVE_COLONY_PARALLEL_MAX</code> <code>HIVE_DEFAULT_PLAYBOOK_CONCURRENCY</code> <code>HIVE_MAX_CONCURRENT_WORKERS</code> <code>HIVE_MAX_PLAYBOOK_CONCURRENCY</code> <code>HIVE_MCP_CALL_RESULT_TIMEOUT</code> <code>HIVE_REQUEST_EXECUTOR_MAX</code> <code>HIVE_TOOL_EXECUTOR_WORKERS</code> </td></tr>
+<tr><td>开关 / 策略</td><td><code>HIVE_EMAIL_SENDERS</code> <code>HIVE_OWN_REMOTES</code> <code>HIVE_QUEEN_MAIL_FROM</code> <code>HIVE_QUEEN_MAIL_TOKEN</code> <code>HIVE_QUEEN_MAIL_URL</code> <code>HIVE_STALL_CHECK</code> <code>HIVE_TRUST_PROJECT_SKILLS</code> </td></tr>
+</tbody></table></div>
+</section>
+
+<section id="pyonly"><h2><span class="num">03</span>Python 独有（23）</h2>
+<p class="sub">Go 侧没有这些名字的读取点；在 Go 里设置不会改变行为（除非将来补读）。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">变量</th><th style="width:44%">用途 / 语义</th><th>读取点</th></tr></thead><tbody>
+<tr><td><code>HIVE_AGENT_NAME</code></td><td>agent 加载器把目录名注入子进程 env</td><td><code>core/framework/loader/agent_loader.py</code></td></tr>
+<tr><td><code>HIVE_COMPACTION_DEBUG</code></td><td>上下文压缩调试日志</td><td><code>core/framework/agent_loop/internals/compaction.py</code></td></tr>
+<tr><td><code>HIVE_CRM_PRINCIPAL</code></td><td>terminal_exec 注入 CRM principal</td><td><code>tools/src/terminal_tools/exec.py</code> 等 2 处</td></tr>
+<tr><td><code>HIVE_ENABLE_LLM_LOGS</code></td><td>LLM 调试日志开关</td><td><code>core/framework/tracker/llm_debug_logger.py</code></td></tr>
+<tr><td><code>HIVE_GCU_MEMTRACE</code></td><td>GCU 内存追踪开关</td><td><code>tools/src/gcu/memtrace.py</code></td></tr>
+<tr><td><code>HIVE_GCU_MEMTRACE_FILE</code></td><td>GCU 内存追踪输出文件</td><td><code>tools/src/gcu/bridge_host.py</code> 等 2 处</td></tr>
+<tr><td><code>HIVE_GCU_MEMTRACE_FRAMES</code></td><td>GCU 追踪保留帧数</td><td><code>tools/src/gcu/memtrace.py</code></td></tr>
+<tr><td><code>HIVE_GCU_MEMTRACE_INTERVAL_S</code></td><td>GCU 追踪采样间隔（秒）</td><td><code>tools/src/gcu/memtrace.py</code></td></tr>
+<tr><td><code>HIVE_GCU_MEMTRACE_TOP</code></td><td>GCU 追踪 TopN</td><td><code>tools/src/gcu/memtrace.py</code></td></tr>
+<tr><td><code>HIVE_GCU_SCREENSHOT_CONCURRENCY</code></td><td>GCU 截图并发（默认 2）</td><td><code>tools/src/gcu/browser/tools/inspection.py</code></td></tr>
+<tr><td><code>HIVE_HISTORY_READ_WORKERS</code></td><td>会话历史读取线程数（默认 8）</td><td><code>core/framework/server/routes_sessions.py</code></td></tr>
+<tr><td><code>HIVE_MAX_ITER</code></td><td>queen 单轮迭代上限</td><td><code>core/framework/server/queen_orchestrator.py</code></td></tr>
+<tr><td><code>HIVE_NO_FILE_LOG</code></td><td>关闭文件日志</td><td><code>core/framework/observability/logging.py</code></td></tr>
+<tr><td><code>HIVE_PLAYBOOK_FAST_GRACE</code></td><td>playbook 快速宽限秒数（默认 1.5）</td><td><code>core/framework/tools/playbook_tools.py</code></td></tr>
+<tr><td><code>HIVE_RESOURCE_CRIT_AVAIL_FRAC</code></td><td>资源严重告警阈值</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
+<tr><td><code>HIVE_RESOURCE_CRIT_RENDERERS</code></td><td>严重告警的渲染器数量</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
+<tr><td><code>HIVE_RESOURCE_HISTORY</code></td><td>资源采样保留点数</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
+<tr><td><code>HIVE_RESOURCE_INTERVAL_S</code></td><td>资源采样间隔（默认 15s）</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
+<tr><td><code>HIVE_RESOURCE_WARN_AVAIL_FRAC</code></td><td>资源告警阈值</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
+<tr><td><code>HIVE_RESOURCE_WARN_RENDERERS</code></td><td>告警的渲染器数量</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
+<tr><td><code>HIVE_SENTINEL_LOG</code></td><td>sentinel 日志开关</td><td><code>core/framework/sentinel/manager.py</code></td></tr>
+<tr><td><code>HIVE_SPLIT_WORKER_EVENTS</code></td><td>worker 事件拆分开关</td><td><code>core/framework/host/colony_runtime.py</code></td></tr>
+<tr><td><code>HIVE_TRACKER_WORKER_TOOL_CALLS</code></td><td>tracker worker 提醒节奏（默认 20 次工具调用）</td><td><code>core/framework/agent_loop/tracker_snapshot_reminder.py</code></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="goonly"><h2><span class="num">04</span>Go 独有（30）</h2>
+<h3>生产（9）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">变量</th><th style="width:44%">用途 / 语义</th><th>读取点</th></tr></thead><tbody>
+<tr><td><code>HIVE_BROWSERBRIDGE_ARGS</code></td><td>browserbridge 额外启动参数</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code></td></tr>
+<tr><td><code>HIVE_BROWSERBRIDGE_BIN</code></td><td>browserbridge 可执行文件路径</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code></td></tr>
+<tr><td><code>HIVE_BROWSERBRIDGE_CONTROL</code></td><td>bridge control RPC 端口</td><td><code>go_hive/go-hive/internal/cli/browser_control.go</code></td></tr>
+<tr><td><code>HIVE_BROWSERBRIDGE_HTTP</code></td><td>bridge HTTP 端口/地址</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code> 等 2 处</td></tr>
+<tr><td><code>HIVE_BROWSER_BRIDGE</code></td><td>是否随 serve 拉起 bridge</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code></td></tr>
+<tr><td><code>HIVE_BROWSER_VIEWPORT_SCALE</code></td><td>GCU 视口缩放（由 configuration/gcu_viewport_scale 注入）</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code></td></tr>
+<tr><td><code>HIVE_MCP2CLI</code></td><td>mcp2cli 兼容层开关</td><td><code>go_hive/go-hive/internal/mcpregistry/mcp2cli.go</code></td></tr>
+<tr><td><code>HIVE_NETWORK_SCANNERS</code></td><td>网络扫描器 opt-in（Python 无同名变量）</td><td><code>go_hive/go-hive/internal/server/config_features.go</code></td></tr>
+<tr><td><code>HIVE_SESSION_COST_LIMIT_USD</code></td><td>会话成本上限（美元）</td><td><code>go_hive/go-hive/internal/agentloop/session_cost.go</code></td></tr>
+</tbody></table></div>
+<h3>测试 / harness（21，不计入对齐口径）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">变量</th><th>用途</th><th>读取点</th></tr></thead><tbody>
+<tr><td><code>HIVE_FAKE_NOW</code></td><td>测试 / harness 专用</td><td><code>go_hive/go-hive/internal/cli/longmemeval.go</code> 等 2 处</td></tr>
+<tr><td><code>HIVE_LIVE_API_BASE</code></td><td>测试 / harness 专用</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LIVE_API_KEY</code></td><td>测试 / harness 专用</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LIVE_MODEL</code></td><td>测试 / harness 专用</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LIVE_TIMEOUT</code></td><td>测试 / harness 专用</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_API_BASE</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_API_KEY</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_DATA</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/internal/longmemeval/dataset.go</code></td></tr>
+<tr><td><code>HIVE_LME_DATASET</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_JUDGE_API_BASE</code></td><td>LongMemEval judge</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_JUDGE_API_KEY</code></td><td>LongMemEval judge</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_JUDGE_MODEL</code></td><td>LongMemEval judge</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_MODEL</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_QUEEN</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_QUESTIONS</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_READER_API_BASE</code></td><td>LongMemEval reader</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_READER_API_KEY</code></td><td>LongMemEval reader</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_READER_MODEL</code></td><td>LongMemEval reader</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_RESUME</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_LME_RUN_DIR</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
+<tr><td><code>HIVE_RETENTION_</code></td><td>测试前缀残留（HIVE_RETENTION_）</td><td><code>go_hive/go-hive/internal/maintenance/config.go</code></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="cred"><h2><span class="num">05</span>凭据类 env（114 ⇄ 123）</h2>
+<p>Python 每个集成模块直接读自己的 env（如 <code>AIRTABLE_PAT</code>），同时有 114 条 credentials spec；Go 用 catalog 的 <code>Requires</code> 元数据 + <code>integrationkit.Getenv</code>（或模块 token helper）解析，<code>/api/credentials/specs</code> 实测 123 条。两侧都能用 env 提供凭据，但<b>命名与条目集合不完全相同</b>。</p>
+<h3>env_var 不一致（3 条）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:28%">credential_id</th><th style="width:30%">Python env_var</th><th>Go env_var</th></tr></thead><tbody>
+<tr><td><code>aden_api_key</code></td><td><code>—</code></td><td><code>ADEN_API_KEY</code></td></tr>
+<tr><td><code>cloudflare</code></td><td><code>CLOUDFLARE_API_TOKEN</code></td><td><code>—</code></td></tr>
+<tr><td><code>cloudflare_api_token</code></td><td><code>—</code></td><td><code>CLOUDFLARE_API_TOKEN</code></td></tr>
+<tr><td><code>hive</code></td><td><code>—</code></td><td><code>HIVE_API_KEY</code></td></tr>
+<tr><td><code>kimi</code></td><td><code>—</code></td><td><code>KIMI_API_KEY</code></td></tr>
+<tr><td><code>minimax</code></td><td><code>—</code></td><td><code>MINIMAX_API_KEY</code></td></tr>
+<tr><td><code>openai</code></td><td><code>—</code></td><td><code>ZAI_API_KEY</code></td></tr>
+<tr><td><code>x_access_token</code></td><td><code>—</code></td><td><code>X_ACCESS_TOKEN</code></td></tr>
+<tr><td><code>x_access_token_secret</code></td><td><code>—</code></td><td><code>X_ACCESS_TOKEN_SECRET</code></td></tr>
+<tr><td><code>x_api_key</code></td><td><code>—</code></td><td><code>X_API_KEY</code></td></tr>
+<tr><td><code>x_api_secret</code></td><td><code>—</code></td><td><code>X_API_SECRET</code></td></tr>
+</tbody></table></div>
+<h3>条目差异</h3>
+<ul>
+<li>Python 独有 id：<code>cloudflare</code> </li>
+<li>Go 独有 id（10 个）：<code>aden_api_key</code> <code>cloudflare_api_token</code> <code>hive</code> <code>kimi</code> <code>minimax</code> <code>openai</code> <code>x_access_token</code> <code>x_access_token_secret</code> <code>x_api_key</code> <code>x_api_secret</code> </li>
+<li>其中 <code>cloudflare</code> 是命名拆分（Python 一条 → Go <code>cloudflare</code> + <code>cloudflare_api_token</code>），其余为 provider 别名（<code>openai</code>/<code>kimi</code>/<code>minimax</code>/<code>hive</code>/<code>aden_api_key</code>/<code>x_*</code>）。</li>
+</ul>
+</section>
+
+<section id="nonhive"><h2><span class="num">06</span>非 HIVE_ 前缀变量（补充）</h2>
+<p>上一节只统计 <code>HIVE_*</code>。生产代码还直接读取了一批<b>不带 HIVE_ 前缀</b>的 env；凭据类大多已由 credentials spec 覆盖（§05），这里列出"直接读取、非 spec、非 HIVE_"的剩余控制变量与配置项。</p>
+<div class="grid g3">
+<div class="card"><div class="k">Python 直接读取</div><div class="v">51</div><div class="d">非 HIVE_、非 spec</div></div>
+<div class="card"><div class="k">Go 直接读取</div><div class="v">17</div><div class="d">非 HIVE_、非 spec</div></div>
+<div class="card"><div class="k">共有 / 独有</div><div class="v">7 / 44 · 10</div><div class="d">共有 · Python 独有 · Go 独有</div></div>
+</div>
+<h3>共有（7）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">变量</th><th>读取点</th></tr></thead><tbody>
+<tr><td><code>ANTHROPIC_API_KEY</code></td><td><code>core/framework/llm/anthropic.py</code> 等 2 处</td></tr>
+<tr><td><code>CARGO_HOME</code></td><td><code>tools/src/terminal_tools/common/ripgrep.py</code> 等 2 处</td></tr>
+<tr><td><code>LOCALAPPDATA</code></td><td><code>tools/src/terminal_tools/common/limits.py</code> 等 2 处</td></tr>
+<tr><td><code>OPENAI_API_KEY</code></td><td><code>core/framework/testing/llm_judge.py</code> 等 2 处</td></tr>
+<tr><td><code>SHELL</code></td><td><code>tools/src/aden_tools/credentials/shell_config.py</code> 等 2 处</td></tr>
+<tr><td><code>TERMINAL_TOOLS_MAX_JOBS</code></td><td><code>tools/src/terminal_tools/jobs/manager.py</code> 等 2 处</td></tr>
+<tr><td><code>TERMINAL_TOOLS_MAX_PTY</code></td><td><code>tools/src/terminal_tools/pty/tools.py</code> 等 2 处</td></tr>
+</tbody></table></div>
+<h3>Python 独有（44）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">变量</th><th>读取点</th></tr></thead><tbody>
+<tr><td><code>ADEN_API_URL</code></td><td><code>core/framework/credentials/aden/__init__.py</code> 等 2 处</td></tr>
+<tr><td><code>ANTIGRAVITY_CLIENT_ID</code></td><td><code>core/antigravity_auth.py</code> 等 2 处</td></tr>
+<tr><td><code>ANTIGRAVITY_CLIENT_SECRET</code></td><td><code>core/antigravity_auth.py</code> 等 2 处</td></tr>
+<tr><td><code>AWS_REGION</code></td><td><code>tools/src/aden_tools/tools/aws_s3_tool/aws_s3_tool.py</code> 等 2 处</td></tr>
+<tr><td><code>CHART_TOOLS_PORT</code></td><td><code>tools/src/chart_tools/server.py</code></td></tr>
+<tr><td><code>CLAUDE_CODE_ENTRYPOINT</code></td><td><code>core/framework/llm/litellm.py</code></td></tr>
+<tr><td><code>DATABRICKS_HOST</code></td><td><code>tools/src/aden_tools/tools/databricks_tool/databricks_tool.py</code></td></tr>
+<tr><td><code>DOCKER_HUB_USERNAME</code></td><td><code>tools/src/aden_tools/tools/docker_hub_tool/docker_hub_tool.py</code></td></tr>
+<tr><td><code>E2B_SANDBOX_ID</code></td><td><code>core/framework/sentinel/runtime_identity.py</code></td></tr>
+<tr><td><code>EDITOR</code></td><td><code>core/framework/testing/approval_cli.py</code></td></tr>
+<tr><td><code>EMAIL_FROM</code></td><td><code>tools/src/aden_tools/tools/email_tool/email_tool.py</code></td></tr>
+<tr><td><code>EMAIL_OVERRIDE_TO</code></td><td><code>tools/src/aden_tools/tools/email_tool/email_tool.py</code></td></tr>
+<tr><td><code>ENV</code></td><td><code>core/framework/observability/logging.py</code></td></tr>
+<tr><td><code>FORCE_COLOR</code></td><td><code>core/framework/observability/logging.py</code></td></tr>
+<tr><td><code>GCU_BRIDGE_MODE</code></td><td><code>tools/src/gcu/browser/bridge.py</code> 等 2 处</td></tr>
+<tr><td><code>GCU_LOG_FILE</code></td><td><code>tools/src/gcu/bridge_host.py</code> 等 2 处</td></tr>
+<tr><td><code>GCU_LOG_LEVEL</code></td><td><code>tools/src/gcu/cli.py</code> 等 2 处</td></tr>
+<tr><td><code>GCU_PORT</code></td><td><code>tools/src/gcu/server.py</code></td></tr>
+<tr><td><code>GITLAB_URL</code></td><td><code>tools/src/aden_tools/tools/gitlab_tool/gitlab_tool.py</code></td></tr>
+<tr><td><code>KAFKA_API_KEY</code></td><td><code>tools/src/aden_tools/tools/kafka_tool/kafka_tool.py</code></td></tr>
+<tr><td><code>KAFKA_API_SECRET</code></td><td><code>tools/src/aden_tools/tools/kafka_tool/kafka_tool.py</code></td></tr>
+<tr><td><code>LANGFUSE_HOST</code></td><td><code>tools/src/aden_tools/tools/langfuse_tool/langfuse_tool.py</code></td></tr>
+<tr><td><code>LITELLM_LOG</code></td><td><code>core/framework/observability/logging.py</code></td></tr>
+<tr><td><code>LOG_FORMAT</code></td><td><code>core/framework/observability/logging.py</code></td></tr>
+<tr><td><code>MEMORY_TOOLS_PORT</code></td><td><code>tools/src/memory_tools/server.py</code></td></tr>
+<tr><td><code>NO_COLOR</code></td><td><code>core/framework/observability/logging.py</code></td></tr>
+<tr><td><code>OBSIDIAN_REST_BASE_URL</code></td><td><code>tools/src/aden_tools/tools/obsidian_tool/obsidian_tool.py</code></td></tr>
+<tr><td><code>PIPEDRIVE_DOMAIN</code></td><td><code>tools/src/aden_tools/tools/pipedrive_tool/pipedrive_tool.py</code></td></tr>
+<tr><td><code>PLAID_ENV</code></td><td><code>tools/src/aden_tools/tools/plaid_tool/plaid_tool.py</code></td></tr>
+<tr><td><code>PROMETHEUS_PASSWORD</code></td><td><code>tools/src/aden_tools/tools/prometheus_tool/prometheus_tool.py</code></td></tr>
+<tr><td><code>PROMETHEUS_TOKEN</code></td><td><code>tools/src/aden_tools/tools/prometheus_tool/prometheus_tool.py</code></td></tr>
+<tr><td><code>PROMETHEUS_USERNAME</code></td><td><code>tools/src/aden_tools/tools/prometheus_tool/prometheus_tool.py</code></td></tr>
+<tr><td><code>PYTEST_CURRENT_TEST</code></td><td><code>core/framework/tracker/llm_debug_logger.py</code></td></tr>
+<tr><td><code>QUICKBOOKS_SANDBOX</code></td><td><code>tools/src/aden_tools/tools/quickbooks_tool/quickbooks_tool.py</code></td></tr>
+<tr><td><code>SLACK_USER_TOKEN</code></td><td><code>tools/src/aden_tools/tools/slack_tool/slack_tool.py</code></td></tr>
+<tr><td><code>SNOWFLAKE_DATABASE</code></td><td><code>tools/src/aden_tools/tools/snowflake_tool/snowflake_tool.py</code></td></tr>
+<tr><td><code>SNOWFLAKE_SCHEMA</code></td><td><code>tools/src/aden_tools/tools/snowflake_tool/snowflake_tool.py</code></td></tr>
+<tr><td><code>SNOWFLAKE_TOKEN_TYPE</code></td><td><code>tools/src/aden_tools/tools/snowflake_tool/snowflake_tool.py</code></td></tr>
+<tr><td><code>SNOWFLAKE_WAREHOUSE</code></td><td><code>tools/src/aden_tools/tools/snowflake_tool/snowflake_tool.py</code></td></tr>
+<tr><td><code>SUPABASE_URL</code></td><td><code>tools/src/aden_tools/tools/supabase_tool/supabase_tool.py</code></td></tr>
+<tr><td><code>TERMINAL_TOOLS_PORT</code></td><td><code>tools/src/terminal_tools/server.py</code></td></tr>
+<tr><td><code>TFC_URL</code></td><td><code>tools/src/aden_tools/tools/terraform_tool/terraform_tool.py</code></td></tr>
+<tr><td><code>ZOHO_API_DOMAIN</code></td><td><code>core/framework/credentials/oauth2/zoho_provider.py</code> 等 2 处</td></tr>
+<tr><td><code>ZOHO_CRM_DOMAIN</code></td><td><code>tools/src/aden_tools/tools/zoho_crm_tool/zoho_crm_tool.py</code></td></tr>
+</tbody></table></div>
+<h3>Go 独有（10）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">变量</th><th>读取点</th></tr></thead><tbody>
+<tr><td><code>ANTHROPIC_API_BASE</code></td><td><code>go_hive/go-hive/internal/llm/anthropic.go</code></td></tr>
+<tr><td><code>ANTHROPIC_BASE_URL</code></td><td><code>go_hive/go-hive/internal/llm/anthropic.go</code></td></tr>
+<tr><td><code>CHROME_PATH</code></td><td><code>go_hive/go-hive/internal/charts/chrome.go</code></td></tr>
+<tr><td><code>OLLAMA_HOST</code></td><td><code>go_hive/go-hive/internal/llm/transport.go</code></td></tr>
+<tr><td><code>PGDATABASE</code></td><td><code>go_hive/go-hive/internal/tools/integrations/pgwire.go</code></td></tr>
+<tr><td><code>PGHOST</code></td><td><code>go_hive/go-hive/internal/tools/integrations/pgwire.go</code></td></tr>
+<tr><td><code>PGPASSWORD</code></td><td><code>go_hive/go-hive/internal/tools/integrations/pgwire.go</code></td></tr>
+<tr><td><code>PGPORT</code></td><td><code>go_hive/go-hive/internal/tools/integrations/pgwire.go</code></td></tr>
+<tr><td><code>PGUSER</code></td><td><code>go_hive/go-hive/internal/tools/integrations/pgwire.go</code></td></tr>
+<tr><td><code>USER</code></td><td><code>go_hive/go-hive/internal/tools/integrations/pgwire.go</code></td></tr>
+</tbody></table></div>
+<div class="callout info"><b>解读：</b>Python 独有里既有<b>真实控制面</b>（<code>GCU_PORT</code>/<code>GCU_LOG_LEVEL</code>/<code>GCU_BRIDGE_MODE</code>、<code>CHART_TOOLS_PORT</code>、<code>TERMINAL_TOOLS_PORT</code>、<code>MEMORY_TOOLS_PORT</code>、<code>LITELLM_LOG</code>、<code>LOG_FORMAT</code>、<code>CLAUDE_CODE_ENTRYPOINT</code>），也有<b>厂商配置</b>（<code>SNOWFLAKE_*</code>、<code>ZOHO_*_DOMAIN</code>、<code>GITLAB_URL</code>、<code>LANGFUSE_HOST</code>、<code>DATABRICKS_HOST</code>、<code>SUPABASE_URL</code> 等）。Go 独有主要是运行环境：<code>CHROME_PATH</code>（chart_render 用系统 Chrome）、<code>ANTHROPIC_BASE_URL</code>/<code>ANTHROPIC_API_BASE</code>（Claude Code queen）、<code>OLLAMA_HOST</code>、<code>PG*</code>。</div>
+<p class="small">机器可读：<a href="env-nonhive-audit.json"><code>env-nonhive-audit.json</code></a>。</p>
+</section>
+
+<section id="test"><h2><span class="num">07</span>测试专用变量</h2>
+<p class="sub">不计入对齐口径：<code>HIVE_LME_*</code>（15，LongMemEval harness）、<code>HIVE_LIVE_*</code>（4，live e2e）、<code>HIVE_FAKE_NOW</code>、<code>HIVE_TEST_*</code>、<code>HIVE_MEMORY_E2E_*</code>、<code>HIVE_SOUL_E2E_*</code>、<code>HIVE_RETENTION_</code>（前缀拼接残留）。</p>
+</section>
+
+<section id="impact"><h2><span class="num">08</span>影响与缺口</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:10%">级别</th><th style="width:28%">项</th><th>影响</th></tr></thead><tbody>
+<tr><td><span class="pill warn">P1</span></td><td>Python 独有 23 个开关</td><td>资源守卫（<code>HIVE_RESOURCE_*</code>）、GCU memtrace（5）、日志/调试（4）、迭代上限、历史读取线程数等在 Go 设置无效；同一份 env 文件不能等价迁移。</td></tr>
+<tr><td><span class="pill warn">P1</span></td><td><code>HIVE_NETWORK_SCANNERS</code></td><td>Go 默认隐藏 6 个扫描器；Python 默认注册、无同名 env。默认工具面不同（矩阵 P1 已记）。</td></tr>
+<tr><td><span class="pill warn">P1</span></td><td>凭据 env 命名</td><td><code>cloudflare</code> vs <code>cloudflare_api_token</code>；按 Python env 名配置的自动化在 Go 上可能不命中（Go 还会检查 credential store）。</td></tr>
+<tr><td><span class="pill info">P2</span></td><td>默认值口径</td><td>两侧都常用代码 fallback（如 <code>HIVE_HISTORY_READ_WORKERS=8</code>、<code>HIVE_GCU_SCREENSHOT_CONCURRENCY=2</code>、<code>HIVE_PLAYBOOK_FAST_GRACE=1.5</code>、<code>HIVE_TRACKER_WORKER_TOOL_CALLS=20</code>）；没有统一 schema，无法机器校验默认值一致性。</td></tr>
+<tr><td><span class="pill warn">P1</span></td><td>非 HIVE_ 控制变量</td><td>Python 的 <code>GCU_*</code>/端口类/日志格式在 Go 不存在；Go 的 <code>CHROME_PATH</code>、<code>ANTHROPIC_BASE_URL</code>、<code>PG*</code> 在 Python 不存在——env 文件跨端迁移仍需逐项核对。</td></tr>
+<tr><td><span class="pill info">P2</span></td><td>测试变量混入</td><td>两侧都存在测试专用 env；统计时必须过滤，否则会把 harness 变量误判为生产面。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="repro"><h2><span class="num">09</span>复现</h2>
+<pre># 两侧 HIVE_* 字面量
+uv run --no-project python ~/.hermes/profiles/omh-tui/cache/scratch/tool-audit/env_check2.py
+uv run --no-project python ~/.hermes/profiles/omh-tui/cache/scratch/tool-audit/env_check.py
+
+# 凭据 spec 对照（Go 需 8788 在运行）
+curl -s http://127.0.0.1:8788/api/credentials/specs
+
+# 机器可读
+go_hive/docs/env-surface-audit.json</pre>
+</section>
+
+<section id="refs"><h2><span class="num">10</span>相关页</h2>
+<div class="callout info"><a href="surface-tracking-matrix.html#env">外观矩阵 §05 环境变量</a> · <a href="module-interfaces.html">接口不变量</a> · <a href="platform-support.html">平台支持</a> · <a href="browser-bridge.html">Browser Bridge</a> · <a href="terminal-tools.html">终端工具</a> · <a href="tool-parity-matrix.html">工具矩阵</a></div>
+</section>
+
+<footer>生成：2026-11-20 23:40 CST · 数据：两侧源码字面量扫描（生产文件）+ credentials spec 实测 · 口径：只登记"引用与读取点"，默认值以调用点为准；测试变量不计入对齐。机器可读：<code>env-surface-audit.json</code>。</footer>
+</div></body></html>

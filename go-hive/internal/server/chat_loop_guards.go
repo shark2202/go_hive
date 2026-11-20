@@ -4,9 +4,10 @@ package server
 //
 // Two protections existed without a production consumer: the judge-based stall
 // check (SubscribeStallCheck) and the deterministic doom-loop park. This file
-// arms both when the session manager hands a session out, and publishes what
-// they find on the session's event bus so a stuck queen is observable instead
-// of ending in a log line.
+// arms both when the session manager hands a session out. The stall check stays
+// in-band — a reminder injected into the conversation, as upstream; a loop park
+// is mirrored onto the session's event bus by publishLoopPark so a stuck queen
+// is observable instead of ending in a log line.
 //
 // Parity: framework/server/stall_check.py::subscribe_stall_check (the call
 // site upstream has in queen_orchestrator; the port's session manager is the

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/aden-hive/hive-go/internal/hiveclock"
 )
 
 // getCurrentTime ports time_tool.get_current_time.
@@ -16,7 +18,7 @@ func getCurrentTime(_ context.Context, _ *Runtime, input map[string]any) (any, e
 	if err != nil {
 		return map[string]any{"error": "Invalid timezone: " + name}, nil
 	}
-	now := time.Now().In(location)
+	now := hiveclock.Now().In(location)
 	return map[string]any{
 		"datetime":       now.Format(time.RFC3339),
 		"date":           now.Format("2006-01-02"),
@@ -37,7 +39,7 @@ func csvPath(rt *Runtime, input map[string]any) (string, map[string]any) {
 	if len(raw) < 4 || !hasSuffixFold(raw, ".csv") {
 		return "", map[string]any{"error": "File must have .csv extension"}
 	}
-	path, err := rt.resolveSafePath(raw)
+	path, err := rt.ResolveSafePath(raw)
 	if err != nil {
 		return "", map[string]any{"error": err.Error()}
 	}

@@ -50,3 +50,57 @@ func TestQueenSkillsCatalogProviderEmptyWithoutHome(t *testing.T) {
 		t.Fatalf("catalog = %q, want empty without a hive home", catalog)
 	}
 }
+
+// Parity: framework/skills/live_reload.py::ManagerReloadAdapter (a live
+// session's catalog is rebuilt in place after a skill changed on disk).
+func TestQueenSkillsCatalogReloadPicksUpANewSkill(t *testing.T) {
+	home := hivehome.Home{Root: t.TempDir()}
+	writeQueenSkill(t, home, "queen_alpha", "reload-probe", "First skill.")
+
+	catalog := queenSkillsCatalogAt(home, "queen_alpha", t.TempDir())
+	before := catalog.Catalog()
+	if !strings.Contains(before, "<name>reload-probe</name>") {
+		t.Fatalf("catalog = %q, want the first skill", before)
+	}
+
+	writeQueenSkill(t, home, "queen_alpha", "reload-probe-two", "Second skill.")
+	if stale := catalog.Catalog(); strings.Contains(stale, "reload-probe-two") {
+		t.Fatalf("catalog picked the skill up without a reload: %q", stale)
+	}
+
+	// The reload fan-out holds the mutation lock while rebuilding, exactly like
+	// skills.ManagerReloadAdapter.
+	lock := catalog.MutationLock()
+	lock.Lock()
+	err := catalog.Reload()
+	lock.Unlock()
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+
+	after := catalog.Catalog()
+	if !strings.Contains(after, "<name>reload-probe</name>") ||
+		!strings.Contains(after, "<name>reload-probe-two</name>") {
+		t.Fatalf("catalog after reload = %q, want both skills", after)
+	}
+	if after == before {
+		t.Fatal("catalog did not change across the reload")
+	}
+}
+
+// Parity-exempt: the degrade path has no manager to rebuild, so a reload on an
+// unresolved home must no-op instead of building a layout out of nothing.
+func TestQueenSkillsCatalogReloadWithoutHomeIsANoop(t *testing.T) {
+	catalog := queenSkillsCatalogAt(hivehome.Home{}, "queen_alpha", "")
+	lock := catalog.MutationLock()
+	lock.Lock()
+	err := catalog.Reload()
+	lock.Unlock()
+
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if catalog := catalog.Catalog(); catalog != "" {
+		t.Fatalf("catalog = %q, want empty", catalog)
+	}
+}

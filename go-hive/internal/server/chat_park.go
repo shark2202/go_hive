@@ -31,6 +31,13 @@ func (r *ChatRuntime) persistParkState() {
 	if r == nil || r.store == nil {
 		return
 	}
+	// Snapshot the in-memory park under the runtime's lock, but write the
+	// cursor through the store's atomic update: the conversation's message
+	// persist also rewrites next_seq, and a plain read-then-write here could
+	// carry away that writer's bump. Ordering between the park snapshot and
+	// the write stays serialised by parkStoreMu.
+	r.parkStoreMu.Lock()
+	defer r.parkStoreMu.Unlock()
 	r.parkMu.Lock()
 	reason := r.parkReason
 	r.parkMu.Unlock()
@@ -48,16 +55,6 @@ func (r *ChatRuntime) persistParkState() {
 		reason = agentloop.ParkReasonUnknown
 	}
 
-	r.parkStoreMu.Lock()
-	defer r.parkStoreMu.Unlock()
-	cursor, err := r.store.ReadCursor()
-	if err != nil {
-		log.Printf("chat runtime %s: read cursor for park state: %v", r.sessionID, err)
-		return
-	}
-	if cursor == nil {
-		cursor = map[string]any{}
-	}
 	pending := map[string]any{
 		"reason":              string(reason),
 		"emit_client_request": true,
@@ -76,10 +73,13 @@ func (r *ChatRuntime) persistParkState() {
 	} else {
 		pending["questions"] = nil
 	}
-	cursor[parkPendingInputKey] = pending
-	cursor[parkReasonKey] = string(reason)
-	cursor[parkParkedAtKey] = time.Now().UTC().Format(time.RFC3339Nano)
-	if err := r.store.WriteCursor(cursor); err != nil {
+	parkedAt := time.Now().UTC().Format(time.RFC3339Nano)
+	err := mutateConversationCursor(r.store, func(cursor map[string]any) {
+		cursor[parkPendingInputKey] = pending
+		cursor[parkReasonKey] = string(reason)
+		cursor[parkParkedAtKey] = parkedAt
+	})
+	if err != nil {
 		log.Printf("chat runtime %s: persist park state: %v", r.sessionID, err)
 	}
 }
@@ -95,22 +95,40 @@ func (r *ChatRuntime) clearParkPendingInput() {
 	}
 	r.parkStoreMu.Lock()
 	defer r.parkStoreMu.Unlock()
-	cursor, err := r.store.ReadCursor()
+	parkedAt := time.Now().UTC().Format(time.RFC3339Nano)
+	// The presence check happens inside the atomic update: checking it on a
+	// stale read could clear a park another writer just recorded.
+	err := mutateConversationCursor(r.store, func(cursor map[string]any) {
+		if _, present := cursor[parkPendingInputKey]; !present {
+			return
+		}
+		cursor[parkPendingInputKey] = nil
+		cursor[parkParkedAtKey] = parkedAt
+	})
 	if err != nil {
-		log.Printf("chat runtime %s: read cursor to clear park state: %v", r.sessionID, err)
-		return
-	}
-	if cursor == nil {
-		return
-	}
-	if _, present := cursor[parkPendingInputKey]; !present {
-		return
-	}
-	cursor[parkPendingInputKey] = nil
-	cursor[parkParkedAtKey] = time.Now().UTC().Format(time.RFC3339Nano)
-	if err := r.store.WriteCursor(cursor); err != nil {
 		log.Printf("chat runtime %s: clear park state: %v", r.sessionID, err)
 	}
+}
+
+// mutateConversationCursor applies fn to the conversation cursor as one atomic
+// read-modify-write. The park checkpoint and the conversation's message persist
+// race on the same cursor; with separate read and write calls the later writer
+// restores the earlier snapshot and drops the other's field.
+func mutateConversationCursor(store agentloop.ConversationStore, fn func(cursor map[string]any)) error {
+	if mutator, ok := store.(agentloop.CursorMutator); ok {
+		return mutator.MutateCursor(fn)
+	}
+	// A store without the atomic seam (test stubs): keep the old pair, still
+	// serialised between park writers by parkStoreMu.
+	cursor, err := store.ReadCursor()
+	if err != nil {
+		return err
+	}
+	if cursor == nil {
+		cursor = map[string]any{}
+	}
+	fn(cursor)
+	return store.WriteCursor(cursor)
 }
 
 // restoreParkState rehydrates a persisted park. It returns false when the

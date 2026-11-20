@@ -2,6 +2,7 @@ package skills
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -185,3 +186,74 @@ func TestLiveSkillRuntimesSkipsSessionsWithoutManager(t *testing.T) {
 		t.Fatalf("runtimes = %+v", runtimes)
 	}
 }
+
+// Parity-exempt: the parity caller returns None; the report is the Go seam the
+// HTTP reload endpoints echo back to the UI.
+func TestReloadRuntimesReportCountsReloadedAndFailed(t *testing.T) {
+	good := &countingColony{queenID: "queen_ava"}
+	report := ReloadRuntimesReport([]SkillReloader{brokenReloader{}, good})
+
+	if report.Runtimes != 2 || report.Reloaded != 1 || report.Failed != 1 {
+		t.Fatalf("report = %+v", report)
+	}
+	if good.reloadCount() != 1 {
+		t.Fatalf("good reloads = %d, want 1", good.reloadCount())
+	}
+	if len(report.Errors) != 1 || !strings.Contains(report.Errors[0], "disk gone") {
+		t.Fatalf("errors = %v", report.Errors)
+	}
+}
+
+// Parity-exempt: no upstream equivalent — the report is a Go-side API detail.
+func TestReloadRuntimesReportRecoversPanickingRuntime(t *testing.T) {
+	good := &countingColony{queenID: "queen_ava"}
+
+	report := ReloadRuntimesReport([]SkillReloader{panickingReloader{}, good})
+
+	if report.Reloaded != 1 || report.Failed != 1 {
+		t.Fatalf("report = %+v", report)
+	}
+	if good.reloadCount() != 1 {
+		t.Fatalf("good reloads = %d, want 1", good.reloadCount())
+	}
+	if len(report.Errors) != 1 || !strings.Contains(report.Errors[0], "boom") {
+		t.Fatalf("errors = %v", report.Errors)
+	}
+}
+
+// Parity-exempt: the report naming contract is a Go-side API detail.
+func TestReloadRuntimesReportNamesTargets(t *testing.T) {
+	report := ReloadRuntimesReport([]SkillReloader{namedReloader{name: "session:sess_ops"}})
+
+	if len(report.Targets) != 1 || report.Targets[0].Target != "session:sess_ops" {
+		t.Fatalf("targets = %+v", report.Targets)
+	}
+}
+
+// Parity-exempt: the dict shape is the Go HTTP contract; empty collections must
+// render as arrays so the dashboard can iterate without null checks.
+func TestReloadReportDictKeepsEmptyCollections(t *testing.T) {
+	dict := ReloadReport{}.Dict()
+	errorsOut, errorsOK := dict["errors"].([]string)
+	targetsOut, targetsOK := dict["targets"].([]ReloadTarget)
+
+	if !errorsOK || len(errorsOut) != 0 {
+		t.Fatalf("errors = %#v", dict["errors"])
+	}
+	if !targetsOK || len(targetsOut) != 0 {
+		t.Fatalf("targets = %#v", dict["targets"])
+	}
+	if dict["runtimes"] != 0 || dict["reloaded"] != 0 || dict["failed"] != 0 {
+		t.Fatalf("dict = %v", dict)
+	}
+}
+
+type panickingReloader struct{}
+
+func (panickingReloader) ReloadSkills() (map[string]any, error) { panic("boom") }
+
+type namedReloader struct{ name string }
+
+func (r namedReloader) ReloadSkills() (map[string]any, error) { return nil, nil }
+
+func (r namedReloader) ReloadTarget() string { return r.name }

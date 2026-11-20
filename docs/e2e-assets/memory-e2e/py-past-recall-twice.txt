@@ -1,0 +1,17 @@
+excerpt blocks after two identical prompts: 2
+
+<system-reminder>
+Excerpts from earlier conversations that may relate to the user's latest message (matched by keyword, so possibly incomplete; search_messages and search_timeline go deeper):
+- 2025-01-01 (Wed), session_20250101_093000_meme2e01
+  user: 去年我在杭州买了一套房子。
+- 2026-11-20 (Fri), session_20261120_185326_87ee25e7
+  user: 昨天我去参加了同事的婚礼，随礼 800 元。
+  you: ASSISTANT_REPLY_1_OK (echo: The following 
+
+<system-reminder>
+Excerpts from earlier conversations that may relate to the user's latest message (matched by keyword, so possibly incomplete; search_messages and search_timeline go deeper):
+- 2025-01-01 (Wed), session_20250101_093000_meme2e01
+  user: 去年我在杭州买了一套房子。
+- 2026-11-20 (Fri), session_20261120_185326_87ee25e7
+  user: 昨天我去参加了同事的婚礼，随礼 800 元。
+  you: ASSISTANT_REPLY_1_OK (echo: The following 

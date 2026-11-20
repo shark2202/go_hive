@@ -1,0 +1,276 @@
+{
+  "generated_at": "2026-11-21 00:19 CST",
+  "commit": "40945349",
+  "versions": {
+    "python": "1.0.14",
+    "go": "1.0.26-go.1"
+  },
+  "repo": "/Users/mac/hive",
+  "routes": {
+    "go_total": 220,
+    "python_total": 216,
+    "exact": 213,
+    "python_only": [
+      "DELETE /api/sessions/history/{session_id}",
+      "DELETE /api/sessions/{session_id}/colony",
+      "GET /{path:.*}"
+    ],
+    "go_only": [
+      "DELETE /api/sessions/{first}/{second}",
+      "DELETE /api/sessions/{session_id}/reminders",
+      "GET /",
+      "GET /api/runtime-logs",
+      "GET /api/sessions/{session_id}/reminders",
+      "POST /api/mcp/reload",
+      "POST /api/skills/reload"
+    ],
+    "skills_routes_exact": 17,
+    "skills_routes_total": 17,
+    "config_routes_exact": 20,
+    "config_routes_total": 20
+  },
+  "frontend": {
+    "shared_paths": 1106,
+    "go_only": 10,
+    "python_only": 0,
+    "content_diff": 63
+  },
+  "tools": {
+    "modules": "103 / 103",
+    "actions": "863 / 865",
+    "default_tools": "137"
+  },
+  "upstream_tools": {
+    "modules": 103,
+    "actions": 865
+  },
+  "audit": {
+    "generated_at": "2026-11-21T00:19:27+08:00",
+    "frontend_missing": 0,
+    "python_missing": 0,
+    "python_pending": 0,
+    "go_extra": 11,
+    "python_missing_items": []
+  },
+  "probe": {
+    "total": 18,
+    "passed": 11,
+    "failed": [
+      {
+        "name": "凭据规格目录",
+        "path": "GET /api/credentials/specs",
+        "py": 200,
+        "go": 200,
+        "diff": 4
+      },
+      {
+        "name": "模型列表（占位）",
+        "path": "GET /api/models",
+        "py": 200,
+        "go": 404,
+        "diff": 2
+      },
+      {
+        "name": "组织架构图（占位）",
+        "path": "GET /api/org-chart",
+        "py": 200,
+        "go": 404,
+        "diff": 2
+      },
+      {
+        "name": "技能目录",
+        "path": "GET /api/skills",
+        "py": 200,
+        "go": 200,
+        "diff": 1
+      },
+      {
+        "name": "创建会话",
+        "path": "POST /api/sessions",
+        "py": 201,
+        "go": 201,
+        "diff": 3
+      },
+      {
+        "name": "会话列表",
+        "path": "GET /api/sessions",
+        "py": 200,
+        "go": 200,
+        "diff": 2
+      },
+      {
+        "name": "会话详情",
+        "path": "GET /api/sessions/{id}",
+        "py": 200,
+        "go": 200,
+        "diff": 3
+      }
+    ],
+    "rows": [
+      {
+        "name": "健康检查",
+        "method": "GET",
+        "path": "/api/health",
+        "py": 200,
+        "go": 200,
+        "ok": true,
+        "diff": 0
+      },
+      {
+        "name": "LLM 配置",
+        "method": "GET",
+        "path": "/api/config/llm",
+        "py": 200,
+        "go": 200,
+        "ok": true,
+        "diff": 0
+      },
+      {
+        "name": "凭据列表",
+        "method": "GET",
+        "path": "/api/credentials",
+        "py": 200,
+        "go": 200,
+        "ok": true,
+        "diff": 0
+      },
+      {
+        "name": "凭据规格目录",
+        "method": "GET",
+        "path": "/api/credentials/specs",
+        "py": 200,
+        "go": 200,
+        "ok": false,
+        "diff": 4
+      },
+      {
+        "name": "Queen 档案",
+        "method": "GET",
+        "path": "/api/queen/profiles",
+        "py": 200,
+        "go": 200,
+        "ok": true,
+        "diff": 0
+      },
+      {
+        "name": "模型列表（占位）",
+        "method": "GET",
+        "path": "/api/models",
+        "py": 200,
+        "go": 404,
+        "ok": false,
+        "diff": 2
+      },
+      {
+        "name": "模型总览",
+        "method": "GET",
+        "path": "/api/models/overview",
+        "py": 200,
+        "go": 200,
+        "ok": true,
+        "diff": 0
+      },
+      {
+        "name": "组织架构图（占位）",
+        "method": "GET",
+        "path": "/api/org-chart",
+        "py": 200,
+        "go": 404,
+        "ok": false,
+        "diff": 2
+      },
+      {
+        "name": "技能目录",
+        "method": "GET",
+        "path": "/api/skills",
+        "py": 200,
+        "go": 200,
+        "ok": false,
+        "diff": 1
+      },
+      {
+        "name": "MCP 服务器",
+        "method": "GET",
+        "path": "/api/mcp/servers",
+        "py": 200,
+        "go": 200,
+        "ok": true,
+        "diff": 0
+      },
+      {
+        "name": "创建会话",
+        "method": "POST",
+        "path": "/api/sessions",
+        "py": 201,
+        "go": 201,
+        "ok": false,
+        "diff": 3
+      },
+      {
+        "name": "会话列表",
+        "method": "GET",
+        "path": "/api/sessions",
+        "py": 200,
+        "go": 200,
+        "ok": false,
+        "diff": 2
+      },
+      {
+        "name": "会话详情",
+        "method": "GET",
+        "path": "/api/sessions/{id}",
+        "py": 200,
+        "go": 200,
+        "ok": false,
+        "diff": 3
+      },
+      {
+        "name": "事件流订阅",
+        "method": "GET",
+        "path": "/api/sessions/{id}/events",
+        "py": 200,
+        "go": 200,
+        "ok": true,
+        "diff": 0
+      },
+      {
+        "name": "事件历史",
+        "method": "GET",
+        "path": "/api/sessions/{id}/events/history",
+        "py": 200,
+        "go": 200,
+        "ok": true,
+        "diff": 0
+      },
+      {
+        "name": "会话快照",
+        "method": "GET",
+        "path": "/api/sessions/{id}/snapshot",
+        "py": 200,
+        "go": 200,
+        "ok": true,
+        "diff": 0
+      },
+      {
+        "name": "会话统计",
+        "method": "GET",
+        "path": "/api/sessions/{id}/stats",
+        "py": 200,
+        "go": 200,
+        "ok": true,
+        "diff": 0
+      },
+      {
+        "name": "会话任务",
+        "method": "GET",
+        "path": "/api/sessions/{id}/tasks",
+        "py": 404,
+        "go": 404,
+        "ok": true,
+        "diff": 0
+      }
+    ],
+    "python_start_s": 2.3,
+    "go_start_s": 0.26
+  }
+}

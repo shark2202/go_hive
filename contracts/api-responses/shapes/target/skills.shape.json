@@ -1,0 +1,30 @@
+{
+  "endpoint": "skills",
+  "shape": {
+    "colonies": "array",
+    "queens": "array",
+    "queens[].id": "string",
+    "queens[].name": "string",
+    "skills": "array",
+    "skills[].deletable": "boolean",
+    "skills[].description": "string",
+    "skills[].editable": "boolean",
+    "skills[].enabled_by_default": "boolean",
+    "skills[].location": "string",
+    "skills[].name": "string",
+    "skills[].owner": "null",
+    "skills[].provenance": "string",
+    "skills[].source_scope": "string",
+    "skills[].visibility": "null",
+    "skills[].visible_to": "object",
+    "skills[].visible_to.colonies": "array",
+    "skills[].visible_to.queens": "array",
+    "skills[].visible_to.queens[]": "string",
+    "skills[].visibility[]": "string"
+  },
+  "counts": {
+    "colonies": 0,
+    "queens": 1,
+    "skills": 194
+  }
+}

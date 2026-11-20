@@ -1,0 +1,1651 @@
+{
+ "provenance": {
+  "purpose": "Python ⇄ Go model-visible tool contract for the 36 same-name core tools (P1 lane)",
+  "python_default_tools": 270,
+  "python_all_tools": 857,
+  "harness_groups": {
+   "files-tools": 4,
+   "terminal-tools": 10,
+   "chart-tools": 1,
+   "memory-tools": 1,
+   "hive_tools": 13
+  },
+  "context_params_stripped": [
+   "agent_id",
+   "colony_id",
+   "data_dir",
+   "principal",
+   "profile",
+   "profile_display_name",
+   "session_cwd"
+  ],
+  "excluded_schema_keys": [
+   "title"
+  ],
+  "description_rule": "harness tools use inspect.cleandoc(docstring); aden_tools tools use the raw FastMCP docstring; file_ops tools use their explicit *_DOC constants",
+  "generator": "go_hive/scripts/gen_tool_contract_parity.py"
+ },
+ "tools": {
+  "attach_file": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Surface one or more local files to the user as clickable chips\nin chat. **Any file type is accepted.**\n\nUse this whenever the user has asked for a file — a report, a\nspreadsheet, a config, a zip, anything. Never rename, zip, or\npaste the contents inline as a workaround \"because the tool\ndoesn't support this format\" — it does.\n\nUse this on a PDF that ``pdf_read`` returned with\n``needs_vision_pages`` (scanned / image-based) — the PDF is sent\nas ImageContent so vision can read the rendered pages directly.\nDo NOT reach for tesseract / pdftoppm first; ``attach_file`` on\nthe original PDF replaces that whole pipeline.\n\nArgs:\n    paths: One path or a list of up to 10 paths. Each may be\n        absolute, relative to your working directory (where\n        terminal commands run), or relative to ``$HIVE_STORAGE_PATH``\n        (so ``data/attachments/X.pdf`` works as the agent reads\n        it from the user message).\n    max_bytes_mb: Per-file cap. Files larger than this are\n        reported in the ``errors`` list instead of being attached.\n\nHow each file type is handled:\n    - **PDFs + images** (.pdf, .png, .jpg, .jpeg, .webp, .gif) —\n      base64-encoded into ImageContent so you can re-read the\n      bytes, AND surfaced as a chip the user can open.\n    - **Text formats** (.md, .txt, .csv, .json, .yaml, .py, .ts,\n      .sh, .xml, .html, source code, configs, logs, ...) — read\n      as text and inlined as TextContent so you can read them\n      directly, AND surfaced as a chip.\n    - **Anything else** (.zip, .docx, .xlsx, .mp3, .mp4, .wav,\n      .exe, ...) — published as a chip the user can download.\n      You receive only the metadata summary, not the bytes.\n      The chip opens in a new browser tab; the browser previews\n      the file when it can and downloads it otherwise.\n\nReturns:\n    An MCP content list: a TextContent JSON summary plus zero or\n    more content blocks per file (one for preview/text kinds;\n    none for opaque blobs). Each ``attached`` entry includes\n    ``kind`` ∈ {pdf, image, text, blob}, ``mime``, ``filename``,\n    and ``resolved`` (absolute path). The framework injects\n    ``hive_attachment_url`` (the renderer's chip URL) into each\n    entry post-hoc once the chip copy is in place.",
+   "parameters": {
+    "properties": {
+     "paths": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       }
+      ]
+     },
+     "max_bytes_mb": {
+      "default": 25.0,
+      "type": "number"
+     }
+    },
+    "required": [
+     "paths"
+    ],
+    "type": "object"
+   }
+  },
+  "chart_render": {
+   "status": "aligned",
+   "source": "harness:chart-tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Render a chart or diagram to a high-DPI PNG and return a rich\nenvelope so the chat can also render the chart live.\n\nThis single tool drives both the live in-chat embedding (chat\nreads `result.spec` and mounts the same lib in the bubble) and\nthe downloadable file (chat shows `result.file_url` as a link).\nCalling this tool IS the embedding — there is no separate\n\"show in chat\" step.\n\nArgs:\n    kind: \"echarts\" for ECharts JSON specs (general BI: bar, line,\n          area, scatter, candlestick, heatmap, treemap, sankey,\n          parallel, calendar, gauge, pie, sunburst, geo maps).\n          \"mermaid\" for diagrams (flowchart, sequence, gantt, ERD,\n          state, mindmap, C4).\n    spec: For kind=\"echarts\", a dict matching the ECharts option\n          schema (https://echarts.apache.org/en/option.html).\n          For kind=\"mermaid\", the raw mermaid source string.\n    title: Short slug used in the auto-generated filename.\n           Trims to lowercase-hyphenated. Required for\n           discoverability via chart_list_recent later.\n    width, height: Logical viewport size in CSS pixels. Default\n          1600×900 is good for slide decks; 1200×800 for web;\n          640×400 for inline thumbnails.\n    dpi: Device pixel ratio for the screenshot. 300 is print\n          quality; 150 is web-retina; 96 is screen-default.\n          Higher dpi = larger file, no quality difference once\n          past the display's native ratio.\n    output_path: Override where the PNG lands. Default is\n          $HIVE_HOME/charts/<UTC-timestamp>-<title>.png.\n\nNote: theme is NOT an argument. It's resolved automatically\nfrom the desktop's HIVE_DESKTOP_THEME env var so the saved\nchart matches the user's UI without the agent picking.\n\nReturns:\n    {\n      \"kind\": \"echarts\" | \"mermaid\",\n      \"spec\": <echoed spec>,\n      \"file_path\": \"/abs/path/to/chart.png\",\n      \"file_url\": \"file:///abs/path/to/chart.png\",\n      \"width\": 1600,\n      \"height\": 900,\n      \"dpi\": 300,\n      \"bytes\": 142318,\n      \"title\": \"revenue-by-region\"\n    }\n\n    On error, returns {\"error\": \"...\", \"spec\": <echoed>, \"kind\": ...}\n    so the chat can still surface a \"spec invalid\" pill rather\n    than swallowing the failure.",
+   "parameters": {
+    "properties": {
+     "kind": {
+      "type": "string"
+     },
+     "spec": {},
+     "title": {
+      "default": "",
+      "type": "string"
+     },
+     "width": {
+      "default": 1600,
+      "type": "integer"
+     },
+     "height": {
+      "default": 900,
+      "type": "integer"
+     },
+     "dpi": {
+      "default": 300,
+      "type": "integer"
+     },
+     "output_path": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     }
+    },
+    "required": [
+     "kind",
+     "spec"
+    ],
+    "type": "object"
+   }
+  },
+  "csv_append": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Append rows to an existing CSV file.\n\nArgs:\n    path: Absolute path to the CSV file\n    rows: List of dictionaries to append, keys should match existing columns\n\nReturns:\n    dict with success status and metadata",
+   "parameters": {
+    "properties": {
+     "path": {
+      "type": "string"
+     },
+     "rows": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array"
+     }
+    },
+    "required": [
+     "path",
+     "rows"
+    ],
+    "type": "object"
+   }
+  },
+  "csv_info": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Get metadata about a CSV file without reading all data.\n\nArgs:\n    path: Absolute path to the CSV file\n\nReturns:\n    dict with file metadata (columns, row count, file size)",
+   "parameters": {
+    "properties": {
+     "path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "type": "object"
+   }
+  },
+  "csv_read": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Read a CSV file and return its contents.\n\nArgs:\n    path: Absolute path to the CSV file\n    limit: Maximum number of rows to return (None = all rows)\n    offset: Number of rows to skip from the beginning\n\nReturns:\n    dict with success status, data, and metadata",
+   "parameters": {
+    "properties": {
+     "path": {
+      "type": "string"
+     },
+     "limit": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "offset": {
+      "default": 0,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "type": "object"
+   }
+  },
+  "csv_write": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Write data to a new CSV file.\n\nArgs:\n    path: Absolute path to the CSV file\n    columns: List of column names for the header\n    rows: List of dictionaries, each representing a row\n\nReturns:\n    dict with success status and metadata",
+   "parameters": {
+    "properties": {
+     "path": {
+      "type": "string"
+     },
+     "columns": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "rows": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array"
+     }
+    },
+    "required": [
+     "path",
+     "columns",
+     "rows"
+    ],
+    "type": "object"
+   }
+  },
+  "edit_file": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Edit files: one string in one file (replace mode), or many edits across many files (patch mode). Use this instead of `sed`, `awk`, or shell redirects. Returns a unified diff. If old_string doesn't match in replace mode, re-read the file with read_file or use search_files to locate the exact text — don't retry blindly.",
+   "parameters": {
+    "properties": {
+     "mode": {
+      "default": "replace",
+      "description": "Edit mode. 'replace' (default) for single-file find-and-replace. 'patch' for multi-file structured patches that can Update/Add/Delete/Move files atomically.",
+      "type": "string"
+     },
+     "path": {
+      "default": "",
+      "description": "Replace mode only. File path to edit. Relative paths anchor to the agent's home; absolute paths used verbatim. Ignored in patch mode (paths live inside patch_text).",
+      "type": "string"
+     },
+     "old_string": {
+      "default": "",
+      "description": "Replace mode only. Text to find. Must be unique in the file unless replace_all=True; include surrounding context to disambiguate. Fuzzy matching tolerates whitespace/indent drift, tabs vs spaces, smart quotes vs ASCII, and literal \\n/\\t/\\r vs real control chars.",
+      "type": "string"
+     },
+     "new_string": {
+      "default": "",
+      "description": "Replace mode only. Replacement text. Pass an empty string to delete the matched text.",
+      "type": "string"
+     },
+     "replace_all": {
+      "default": false,
+      "description": "Replace mode only. Replace every occurrence instead of requiring a unique match. Default False.",
+      "type": "boolean"
+     },
+     "patch_text": {
+      "default": "",
+      "description": "Patch mode only. Structured patch body. File paths are embedded inside the body via '*** Update File: <path>' / '*** Add File: <path>' / '*** Delete File: <path>' / '*** Move File: <src> -> <dst>' markers, so one call can touch many files. Hunks use unified-diff syntax: lines starting with ' ' (space) are context, '-' lines are removed, '+' lines are added. Separate hunks with '@@', or '@@ hint @@' to narrow fuzzy matching to a window around the hint. The first header is optional. These headers use content hints, not unified-diff line numbers. If any operation fails validation, no files are written. Example:\n*** Begin Patch\n*** Update File: a.py\n@@ def hello @@\n def hello():\n-    return 1\n+    return 42\n*** Add File: new.py\n+x = 1\n*** Delete File: old.py\n*** Move File: src.py -> dst.py\n*** End Patch",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   }
+  },
+  "exa_search": {
+   "status": "partial",
+   "source": "aden_tools:default",
+   "reason": "Go registers Exa as a 7-action module tool; replacing the module description/schema with the flat exa_search def would orphan the other six actions. Action params carry the enum/items fix instead.",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "\n        Search the web using Exa's AI-powered search engine.\n\n        Supports neural (semantic) and keyword search with domain and date filters.\n\n        Args:\n            query: The search query (1-500 chars)\n            num_results: Number of results to return (1-20)\n            search_type: Search mode - \"auto\", \"neural\" (semantic), or \"keyword\"\n            include_domains: Only include results from these domains\n            exclude_domains: Exclude results from these domains\n            start_published_date: Filter by publish date start (ISO 8601, e.g. \"2024-01-01\")\n            end_published_date: Filter results published before this date (ISO 8601)\n            include_text: Include full page text in results\n            include_highlights: Include relevant text highlights\n            category: Content category filter (e.g. \"research paper\", \"news\", \"company\")\n\n        Returns:\n            Dict with search results including titles, URLs, and optionally text/highlights\n        ",
+   "parameters": {
+    "properties": {
+     "query": {
+      "type": "string"
+     },
+     "num_results": {
+      "default": 10,
+      "type": "integer"
+     },
+     "search_type": {
+      "default": "auto",
+      "enum": [
+       "auto",
+       "neural",
+       "keyword"
+      ],
+      "type": "string"
+     },
+     "include_domains": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "exclude_domains": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "start_published_date": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "end_published_date": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "include_text": {
+      "default": true,
+      "type": "boolean"
+     },
+     "include_highlights": {
+      "default": false,
+      "type": "boolean"
+     },
+     "category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     }
+    },
+    "required": [
+     "query"
+    ],
+    "type": "object"
+   }
+  },
+  "excel_append": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Append rows to an existing Excel file.\n\n        Args:\n            path: Path to the Excel file (relative to agent sandbox)\n            agent_id: Agent identifier\n            rows: List of dictionaries to append, keys should match existing columns\n            sheet: Sheet name to append to (default: active sheet)\n\n        Returns:\n            dict with success status and metadata\n        ",
+   "parameters": {
+    "properties": {
+     "path": {
+      "type": "string"
+     },
+     "rows": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array"
+     },
+     "sheet": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     }
+    },
+    "required": [
+     "path",
+     "rows"
+    ],
+    "type": "object"
+   }
+  },
+  "excel_info": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Get metadata about an Excel file without reading all data.\n\n        Args:\n            path: Path to the Excel file (relative to agent sandbox)\n            agent_id: Agent identifier\n\n        Returns:\n            dict with file metadata (sheets, columns per sheet, row counts, file size)\n        ",
+   "parameters": {
+    "properties": {
+     "path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "type": "object"
+   }
+  },
+  "excel_read": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Read an Excel file and return its contents.\n\n        Args:\n            path: Path to the Excel file (relative to agent sandbox)\n            agent_id: Agent identifier\n            sheet: Sheet name to read (default: active sheet)\n            limit: Maximum number of rows to return (None = all rows)\n            offset: Number of rows to skip from the beginning (after header)\n\n        Returns:\n            dict with success status, data, and metadata\n        ",
+   "parameters": {
+    "properties": {
+     "path": {
+      "type": "string"
+     },
+     "sheet": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "limit": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "offset": {
+      "default": 0,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "type": "object"
+   }
+  },
+  "excel_search": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Search for values across Excel sheets.\n\n        Args:\n            path: Path to the Excel file (relative to agent sandbox)\n            agent_id: Agent identifier\n            search_term: Text to search for\n            sheet: Specific sheet to search (default: search all sheets)\n            case_sensitive: Whether search is case-sensitive (default: False)\n            match_type: 'contains', 'exact', 'starts_with', or 'ends_with'\n\n        Returns:\n            dict with list of matches containing sheet, row, column, and value\n        ",
+   "parameters": {
+    "properties": {
+     "path": {
+      "type": "string"
+     },
+     "search_term": {
+      "type": "string"
+     },
+     "sheet": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "case_sensitive": {
+      "default": false,
+      "type": "boolean"
+     },
+     "match_type": {
+      "default": "contains",
+      "type": "string"
+     }
+    },
+    "required": [
+     "path",
+     "search_term"
+    ],
+    "type": "object"
+   }
+  },
+  "excel_sheet_list": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        List all sheet names in an Excel file.\n\n        Args:\n            path: Path to the Excel file (relative to agent sandbox)\n            agent_id: Agent identifier\n\n        Returns:\n            dict with list of sheet names\n        ",
+   "parameters": {
+    "properties": {
+     "path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "type": "object"
+   }
+  },
+  "excel_write": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Write data to a new Excel file.\n\n        Args:\n            path: Path to the Excel file (relative to agent sandbox)\n            agent_id: Agent identifier\n            columns: List of column names for the header\n            rows: List of dictionaries, each representing a row\n            sheet: Name for the sheet (default: \"Sheet1\")\n\n        Returns:\n            dict with success status and metadata\n        ",
+   "parameters": {
+    "properties": {
+     "path": {
+      "type": "string"
+     },
+     "columns": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "rows": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array"
+     },
+     "sheet": {
+      "default": "Sheet1",
+      "type": "string"
+     }
+    },
+    "required": [
+     "path",
+     "columns",
+     "rows"
+    ],
+    "type": "object"
+   }
+  },
+  "get_account_info": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "List connected accounts and their identities.\n\nCall with no arguments to see all connected accounts.\nCall with provider=\"google\" to filter by provider type.\n\nReturns account IDs, provider types, and identity labels\n(email, username, workspace) for each connected account.",
+   "parameters": {
+    "properties": {
+     "provider": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   }
+  },
+  "get_current_time": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Get the current date and time.\n\nUse this tool when you need accurate current time, especially in\nlong-running sessions or when precision matters (e.g., scheduling,\nchecking availability, time-sensitive operations).\n\nArgs:\n    timezone: IANA timezone name (e.g., \"UTC\", \"America/New_York\",\n             \"Asia/Kolkata\", \"Europe/London\"). Defaults to \"UTC\".\n\nReturns:\n    Dictionary with datetime info:\n    - datetime: Full ISO 8601 datetime string\n    - date: Date in YYYY-MM-DD format\n    - time: Time in HH:MM:SS format\n    - timezone: The timezone used\n    - day_of_week: Full day name (e.g., \"Monday\")\n    - unix_timestamp: Unix timestamp (seconds since epoch)",
+   "parameters": {
+    "properties": {
+     "timezone": {
+      "default": "UTC",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   }
+  },
+  "image_generate": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Generate or edit an image from a text prompt. Billed to Hive credits.\n\nRoutes through the Hive image service (OpenAI ``gpt-image-2``). The cost\nis charged to the user's credits like an LLM call — no API key needed.\n\nProvide ``reference_images`` to edit / compose from existing images\n(e.g. restyle a product photo, combine elements, keep a character's\nidentity); the model conditions on them at high fidelity. Without them\nit's pure text-to-image.\n\nArgs:\n    prompt: What to draw. Be specific about subject, style, composition,\n        colors, and any text to render.\n    reference_images: Up to 10 local file paths or http(s) URLs to\n        condition on. Omit for text-to-image.\n    size: ``1024x1024`` (default), ``1536x1024`` (landscape),\n        ``1024x1536`` (portrait), or ``auto``.\n    quality: ``low`` only. Higher tiers (``medium``/``high``/``auto``)\n        are disabled for cost control and are forced down to ``low``.\n    n: Number of images, 1-4 (default 1). Each one is billed separately.\n    output_format: ``png`` (default), ``jpeg``, or ``webp``.\n    model: Image model. Defaults to ``gpt-image-2``.\n\nReturns:\n    An MCP content list: a leading TextContent JSON summary with\n    ``images`` (each ``{path, size, quality, format, bytes}``), ``model``,\n    ``n``, and ``usage`` tokens, plus one inline image preview. Pass a\n    saved ``path`` to ``attach_file`` to show the user a downloadable\n    chip. On failure, a single TextContent JSON ``{\"error\": ...}``.",
+   "parameters": {
+    "properties": {
+     "prompt": {
+      "type": "string"
+     },
+     "reference_images": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "size": {
+      "default": "1024x1024",
+      "type": "string"
+     },
+     "quality": {
+      "default": "low",
+      "type": "string"
+     },
+     "n": {
+      "default": 1,
+      "type": "integer"
+     },
+     "output_format": {
+      "default": "png",
+      "type": "string"
+     },
+     "model": {
+      "default": "gpt-image-2",
+      "type": "string"
+     }
+    },
+    "required": [
+     "prompt"
+    ],
+    "type": "object"
+   }
+  },
+  "pdf_read": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Read and extract text from one or many PDF files.\n\nSingle-file mode (``file_path``) returns a flat result:\n``{path, name, total_pages, pages_extracted, content, char_count,\npages: [{number, text, needs_vision}], needs_vision_pages?, metadata?}``.\n\nMulti-file mode (``files``, up to 10) returns ``{pdfs: [...]}`` with\neach entry in the single-file shape. Pages below 200 chars of\nextracted text are flagged ``needs_vision: true``; the result also\ncarries a ``next_step`` field telling the caller to use\n``attach_file`` on the original PDF — it sends the pages as\nImageContent so vision reads them directly (no OCR, no per-page\nimage rendering).\n\nArgs:\n    file_path: One PDF (local path or http(s):// URL). Back-compat.\n    files: Up to 10 PDFs. Mutually-exclusive with ``file_path``.\n    pages: ``\"all\"``/None, ``\"5\"``, ``\"1-10\"``, or ``\"1,3,5\"``.\n    max_pages: Per-PDF cap on parsed pages (1-1000).\n    max_bytes_mb: Per-PDF download cap for URL inputs.\n    password: Decrypt password for encrypted PDFs.\n    include_metadata: Include title/author/dates if available.",
+   "parameters": {
+    "properties": {
+     "file_path": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "files": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "pages": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "max_pages": {
+      "default": 100,
+      "type": "integer"
+     },
+     "max_bytes_mb": {
+      "default": 25.0,
+      "type": "number"
+     },
+     "password": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "include_metadata": {
+      "default": true,
+      "type": "boolean"
+     }
+    },
+    "type": "object"
+   }
+  },
+  "read_file": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Read file contents with line numbers. Use this instead of `cat`. Binary files are detected and rejected. Large files are auto-truncated at 2000 lines or 50KB — use offset/limit to paginate. Reading a directory returns its entries (use search_files for proper find/ls).",
+   "parameters": {
+    "properties": {
+     "path": {
+      "description": "File path to read. Relative paths anchor to the agent's home; absolute paths used verbatim. Credential paths (~/.ssh, ~/.aws, etc.) are denied.",
+      "type": "string"
+     },
+     "offset": {
+      "default": 1,
+      "description": "Starting line number, 1-indexed. Default 1.",
+      "type": "integer"
+     },
+     "limit": {
+      "default": 0,
+      "description": "Max lines to return. 0 means up to 2000. Default 0.",
+      "type": "integer"
+     },
+     "hashline": {
+      "default": false,
+      "description": "If True, return lines in N:hhhh|content format with content-hash anchors. Line truncation is disabled in this mode to preserve hash integrity. Default False.",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "type": "object"
+   }
+  },
+  "risk_score": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Calculate a weighted risk score from scan results.\n\n        Consumes the JSON output from the 6 scanning tools (ssl_tls_scan,\n        http_headers_scan, dns_security_scan, port_scan, tech_stack_detect,\n        subdomain_enumerate) and produces letter grades (A-F) per category\n        plus an overall weighted score.\n\n        Args:\n            ssl_results: JSON string from ssl_tls_scan output. Empty string to skip.\n            headers_results: JSON string from http_headers_scan output. Empty string to skip.\n            dns_results: JSON string from dns_security_scan output. Empty string to skip.\n            ports_results: JSON string from port_scan output. Empty string to skip.\n            tech_results: JSON string from tech_stack_detect output. Empty string to skip.\n            subdomain_results: JSON string from subdomain_enumerate output. Empty string to skip.\n\n        Returns:\n            Dict with overall_score, overall_grade, per-category scores/grades,\n            top_risks list, and grade_scale reference.\n        ",
+   "parameters": {
+    "properties": {
+     "ssl_results": {
+      "default": "",
+      "type": "string"
+     },
+     "headers_results": {
+      "default": "",
+      "type": "string"
+     },
+     "dns_results": {
+      "default": "",
+      "type": "string"
+     },
+     "ports_results": {
+      "default": "",
+      "type": "string"
+     },
+     "tech_results": {
+      "default": "",
+      "type": "string"
+     },
+     "subdomain_results": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   }
+  },
+  "search_files": {
+   "status": "aligned",
+   "source": "harness:files-tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Search file contents OR find files by name. Use this instead of grep, find, or ls. target='content' (default) regex-greps inside files; target='files' globs file names (mtime-sorted, newest first). Pagination via limit/offset; truncated responses include a hint with the next offset. Repeating the same exact query consecutively is warned at 3 calls and blocked at 4 — use the results you already have.",
+   "parameters": {
+    "properties": {
+     "pattern": {
+      "description": "Regex (content mode) or glob (files mode, e.g. '*.py'). For an 'ls'-style listing pass '*' or '*.<ext>'.",
+      "type": "string"
+     },
+     "target": {
+      "default": "content",
+      "description": "'content' to grep inside files, 'files' to list/find files. Legacy aliases: 'grep' -> 'content', 'find'/'ls' -> 'files'. Default 'content'.",
+      "type": "string"
+     },
+     "path": {
+      "default": ".",
+      "description": "Directory (or, in content mode, a single file) to search. Default '.'.",
+      "type": "string"
+     },
+     "file_glob": {
+      "default": "",
+      "description": "Restrict content search to filenames matching this glob. Ignored in files mode (use the 'pattern' argument instead).",
+      "type": "string"
+     },
+     "limit": {
+      "default": 50,
+      "description": "Max results to return. Default 50.",
+      "type": "integer"
+     },
+     "offset": {
+      "default": 0,
+      "description": "Skip first N results for pagination. Default 0.",
+      "type": "integer"
+     },
+     "output_mode": {
+      "default": "content",
+      "description": "Content-mode output shape: 'content' (lines + line numbers, default), 'files_only' (paths only), 'count' (per-file match counts).",
+      "type": "string"
+     },
+     "context": {
+      "default": 0,
+      "description": "Lines of context before and after each match (content mode only). Default 0.",
+      "type": "integer"
+     },
+     "hashline": {
+      "default": false,
+      "description": "Content mode: include N:hhhh hash anchors in matched lines. Default False.",
+      "type": "boolean"
+     },
+     "task_id": {
+      "default": "",
+      "description": "Optional anti-loop scope key. Defaults to a shared bucket; pass a per-task id when multiple agents share a process.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "pattern"
+    ],
+    "type": "object"
+   }
+  },
+  "search_messages": {
+   "status": "aligned",
+   "source": "harness:memory-tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Recall what was said in any past session — yours and the user's.\n\nThis is your long-term memory. Your active context only holds\nthe current session (and even that gets compacted as it grows).\nEverything the user told you, every answer you gave, every\ntool result you saw across every previous session lives in\nthis index. Reach for this tool whenever you can't see\nsomething in your active context but suspect it happened.\n\nCALL THIS when the user says any of:\n    • \"remember…\" / \"do you remember…\"\n    • \"last time\" / \"before\" / \"earlier\" / \"previously\"\n    • \"what did I ask about…\" / \"what did we decide…\"\n    • \"the X I mentioned\" / \"that thing we worked on\"\n    • any reference to a prior conversation, decision,\n      ticker, name, link, file, or fact you don't currently\n      have in front of you\n\nSearchable content (the only things this matches):\n    • user text the user typed\n    • your own prose responses\n    • tool result bodies (including full bodies of large\n      tool results that spilled to disk)\n\nPattern is a Rust-style regex (RE2 subset). For a name or\nticker, plain text is enough: ``\"AAPL\"``, ``\"(?i)stock\"``,\n``\"deadline\"``. See per-argument descriptions for inline\nflags and other options.\n\nReturns: dict with ``matches[]`` and ``total_matches``. Each\nmatch has ``session``, ``session_started_at`` and ``turn[]``\nof ``{role, content, is_hit?}`` entries. On invalid input or\nan unbound scope, returns ``{\"error\": \"...\", ...}`` instead\nof raising.",
+   "parameters": {
+    "properties": {
+     "pattern": {
+      "description": "Rust-style regex (RE2 subset). Plain text matches plain text — for a name, ticker, or keyword you can pass it as-is (e.g. 'AAPL', 'deadline'). Use inline flags for case-insensitive match ('(?i)stock'), line-bound ^/$ ('(?m)'), or '.' matching newlines ('(?s)'). Lookaround and backreferences are not supported.",
+      "type": "string"
+     },
+     "session": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Optional. Restrict to one session id (e.g. 'session_20260501_145636_72fa023d'). Use to drill into a specific past conversation; omit to search across all sessions."
+     },
+     "role": {
+      "default": "all",
+      "description": "Filter by who said it: 'user' (the user's typed messages), 'assistant' (your own prose), 'tool' (tool result bodies), or 'all' (default).",
+      "enum": [
+       "user",
+       "assistant",
+       "tool",
+       "all"
+      ],
+      "type": "string"
+     },
+     "match_source": {
+      "default": "all",
+      "description": "'events' searches in-chat message text. 'data' searches the spilled bodies of large tool results. 'all' (default) searches both in parallel.",
+      "enum": [
+       "events",
+       "data",
+       "all"
+      ],
+      "type": "string"
+     },
+     "since": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "ISO date or datetime. Only sessions started on or after this point are searched. Use to scope to recent memory."
+     },
+     "until": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "ISO date or datetime. Only sessions started before this point are searched (exclusive)."
+     },
+     "max_matches": {
+      "default": 20,
+      "description": "Cap on returned hits. Default 20. Bump up if you suspect more relevant past context exists.",
+      "type": "integer"
+     },
+     "context": {
+      "default": "turn",
+      "description": "How much context to return per hit. 'turn' (default) returns the full conversational turn around the match — best for understanding what was happening. 'narrow' returns only the matched message. 'none' returns coordinates only.",
+      "enum": [
+       "none",
+       "narrow",
+       "turn"
+      ],
+      "type": "string"
+     },
+     "turn_char_cap": {
+      "default": 4000,
+      "description": "Total character budget per returned turn window. Default 4000.",
+      "type": "integer"
+     },
+     "per_message_char_cap": {
+      "default": 800,
+      "description": "Character budget per individual message inside a turn — long messages get middle-truncated. Default 800.",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "pattern"
+    ],
+    "type": "object"
+   }
+  },
+  "search_wikipedia": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Search Wikipedia for a given query and return summaries of top matching articles.\n\n        Args:\n            query: The search term (e.g. \"Artificial Intelligence\")\n            lang: Language code (default: \"en\")\n            num_results: Number of pages to retrieve (default: 3, max: 10)\n\n        Returns:\n            Dict containing query metadata and list of results (title, summary, url).\n        ",
+   "parameters": {
+    "properties": {
+     "query": {
+      "type": "string"
+     },
+     "lang": {
+      "default": "en",
+      "type": "string"
+     },
+     "num_results": {
+      "default": 3,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "query"
+    ],
+    "type": "object"
+   }
+  },
+  "terminal_exec": {
+   "status": "dependency",
+   "source": "harness:terminal-tools",
+   "reason": "terminal-schema-p0 lane owns internal/tools/builtin/terminal_*.go; description/required/schema not modified by this lane",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "Run a shell command and capture its output.\n\nPast auto_background_after_sec, the call auto-promotes to a background\njob and returns immediately with `auto_backgrounded=True, job_id=...`\n— poll with terminal_job_logs(job_id, since_offset=...) to read the rest.\nSet auto_background_after_sec=0 to force pure foreground (kill on\ntimeout_sec).\n\nThe agent loop may first return a bg_* handle; use collect_result for\nthat handle, then terminal_job_logs for any job_id in the result.\nPOSIX uses bash when shell=True; Windows selects Git Bash, PowerShell,\nthen cmd. Read shell_kind before choosing platform-specific syntax.\n\nArgs:\n    command: The command. With shell=False POSIX uses shlex splitting;\n        shell syntax is detected automatically. Use shell=True for scripts.\n    cwd: Working directory. Defaults to the session workdir when\n        omitted; pass an absolute path to override (loose default,\n        not a sandbox — you can point anywhere).\n    env: Environment override (merged into a sanitized base — zsh\n        dotfile vars are stripped).\n    timeout_sec: Total deadline from command start, including background\n        execution. Expiry terminates the process tree and reports\n        timed_out=True. 0 means unlimited, requiring auto-promotion.\n    auto_background_after_sec: Inline budget. Past this, promote to\n        a background job and return. 0 disables auto-promotion. The\n        foreground wait must be finite and at most 220 seconds.\n    shell: True to use the platform shell. zsh refused.\n    stdin: Optional stdin payload (string).\n    limits: Optional setrlimit caps. Keys: cpu_sec, rss_mb,\n        fsize_mb, nofile.\n    max_output_kb: Inline output cap. Overflow stashes to an\n        output_handle for retrieval via terminal_output_get.\n\nReturns the standard envelope: see `terminal-tools-foundations` skill.",
+   "parameters": {
+    "properties": {
+     "command": {
+      "type": "string"
+     },
+     "cwd": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "env": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "timeout_sec": {
+      "default": 60,
+      "type": "integer"
+     },
+     "auto_background_after_sec": {
+      "default": 30,
+      "type": "integer"
+     },
+     "shell": {
+      "default": false,
+      "type": "boolean"
+     },
+     "stdin": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "limits": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "integer"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "max_output_kb": {
+      "default": 256,
+      "type": "integer"
+     },
+     "crm_principal": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     }
+    },
+    "required": [
+     "command"
+    ],
+    "type": "object"
+   }
+  },
+  "terminal_glob": {
+   "status": "dependency",
+   "source": "harness:terminal-tools",
+   "reason": "terminal-schema-p0 lane owns internal/tools/builtin/terminal_*.go; description/required/schema not modified by this lane",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "Find files by name/glob under `path` — the Glob tool.\n\nUse this to locate files by name, in the project tree or raw/arbitrary\npaths (/var/log, /etc, archive contents). Relative paths resolve against\nthe session workdir. For mtime/size/type predicate queries, drop to\nterminal_exec(\"find ...\") — see references/find_predicates.md.\n\nPattern handling (so bare stems Just Work):\n    \"lk_scan_post_reactors\" -> matched as **/*lk_scan_post_reactors*\n    \"*.py\"                  -> matched as **/*.py (recursive)\n    \"src/**/*.py\"           -> used verbatim\nThe glob actually run is returned as `expanded_pattern`.\n\nArgs:\n    pattern: Filename glob or bare substring.\n    path: Directory to search under. Relative paths resolve against the\n        session workdir; default is the session workdir itself.\n    max_results: Cap on returned paths (search stops early at the cap).\n    include_ignored: Include .gitignored / hidden / build-cache files.\n\nReturns: {paths, count, truncated, timed_out, expanded_pattern, command}\n    Without rg, returns fallback=\"python-walk\" and a note: the\n    approximate filename walk does not honor .gitignore.",
+   "parameters": {
+    "properties": {
+     "pattern": {
+      "type": "string"
+     },
+     "path": {
+      "default": ".",
+      "type": "string"
+     },
+     "max_results": {
+      "default": 1000,
+      "type": "integer"
+     },
+     "include_ignored": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "pattern"
+    ],
+    "type": "object"
+   }
+  },
+  "terminal_job_logs": {
+   "status": "dependency",
+   "source": "harness:terminal-tools",
+   "reason": "terminal-schema-p0 lane owns internal/tools/builtin/terminal_*.go; description/required/schema not modified by this lane",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "Read job output at an offset. Combined read + status + wait primitive.\n\nTrack next_offset across calls to avoid replaying data. When\nwait_until_exit=True, waits until the job exits, a new message for you\narrives, or wait_timeout_sec elapses, then returns logs and status.\n\nArgs:\n    job_id: From terminal_job_start (or auto-promoted from terminal_exec).\n    stream: \"stdout\" | \"stderr\" | \"merged\". Use \"merged\" only when the\n        job was started with merge_stderr=True.\n    since_offset: Absolute byte offset to start reading from. Pass 0\n        on first call; pass next_offset on subsequent calls.\n    max_bytes: Max bytes of decoded output to return inline.\n    wait_until_exit: When True, waits for the job to exit before reading.\n        Prefer one long wait to repeated short ones: each repeat costs a\n        whole model turn. If it returns status=\"running\" because a new\n        message arrived, deal with the message, then wait again.\n    wait_timeout_sec: Longest to wait, in seconds (up to 600). Does not\n        change the job's execution deadline.\n    tail: When True, ignores since_offset and returns the last max_bytes.\n\nReturns: {data, offset, next_offset, status, exit_code, timed_out, eof, truncated_bytes_dropped}",
+   "parameters": {
+    "properties": {
+     "job_id": {
+      "type": "string"
+     },
+     "stream": {
+      "default": "stdout",
+      "type": "string"
+     },
+     "since_offset": {
+      "default": 0,
+      "type": "integer"
+     },
+     "max_bytes": {
+      "default": 64000,
+      "type": "integer"
+     },
+     "wait_until_exit": {
+      "default": false,
+      "type": "boolean"
+     },
+     "wait_timeout_sec": {
+      "default": 600.0,
+      "type": "number"
+     },
+     "tail": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "job_id"
+    ],
+    "type": "object"
+   }
+  },
+  "terminal_job_manage": {
+   "status": "dependency",
+   "source": "harness:terminal-tools",
+   "reason": "terminal-schema-p0 lane owns internal/tools/builtin/terminal_*.go; description/required/schema not modified by this lane",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "List jobs, send signals, or write to job stdin.\n\nSingle tool covering job-control side effects. The action argument\npicks the operation:\n\n- \"capabilities\": return platform, supported_actions and signal semantics.\nNo job_id required. Check this before choosing a signal.\n- \"list\": list active + recently-exited jobs. job_id ignored.\n- \"signal_term\" | \"signal_kill\" | \"signal_int\" | \"signal_hup\"\n| \"signal_usr1\" | \"signal_usr2\": send the named signal. Requires job_id.\n- \"stdin\": write `data` to the job's stdin. Requires job_id and data.\n- \"close_stdin\": close the job's stdin pipe (e.g. to flush a tool that\nreads until EOF). Requires job_id.\n\nOn POSIX, signal_int requests an interrupt; signal_term requests\ntermination and forces cleanup after up to 2 seconds. On Windows,\nonly signal_term and signal_kill are supported: both forcefully\nterminate the job process tree, without application cleanup handlers.\nWindows signal_int returns unsupported_action without signaling the job.\n\nReturns vary by action. List → {jobs: [...], capabilities}.\nSignals → {ok, signal, semantics}.\nStdin → {bytes_written}.",
+   "parameters": {
+    "properties": {
+     "action": {
+      "type": "string"
+     },
+     "job_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "data": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     }
+    },
+    "required": [
+     "action"
+    ],
+    "type": "object"
+   }
+  },
+  "terminal_job_start": {
+   "status": "dependency",
+   "source": "harness:terminal-tools",
+   "reason": "terminal-schema-p0 lane owns internal/tools/builtin/terminal_*.go; description/required/schema not modified by this lane",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "Spawn a background process. Returns a job_id you poll with terminal_job_logs.\n\nUse this when work might run >1 minute, when you want to keep doing\nother things while it runs, or when you need to stream logs as they\narrive. Jobs die when the terminal-tools server restarts — they are NOT\npersistent across reboots.\n\nArgs:\n    command: Shell command to run. With shell=False, pass argv via the\n        command string and we'll split on whitespace; for complex\n        quoting use shell=True with the selected platform's syntax.\n    cwd: Working directory. Defaults to the session workdir when\n        omitted; pass an absolute path to override.\n    env: Environment override. Merged into a sanitized base env (with\n        zsh dotfile vars stripped).\n    merge_stderr: When True, stderr is interleaved into stdout in a\n        single ring buffer. Convenient for log-shaped output where\n        ordering matters.\n    shell: True to use the platform shell (POSIX bash; Windows Git Bash,\n        PowerShell, then cmd). Refuses zsh.\n    name: Optional human label surfaced in terminal_job_manage(action=\"list\").\n    limits: Optional resource caps applied via setrlimit before exec.\n        Keys: cpu_sec, rss_mb, fsize_mb, nofile.\n\nReturns: {job_id, pid, started_at}",
+   "parameters": {
+    "properties": {
+     "command": {
+      "type": "string"
+     },
+     "cwd": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "env": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "merge_stderr": {
+      "default": false,
+      "type": "boolean"
+     },
+     "shell": {
+      "default": false,
+      "type": "boolean"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "limits": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "integer"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "crm_principal": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     }
+    },
+    "required": [
+     "command"
+    ],
+    "type": "object"
+   }
+  },
+  "terminal_output_get": {
+   "status": "dependency",
+   "source": "harness:terminal-tools",
+   "reason": "terminal-schema-p0 lane owns internal/tools/builtin/terminal_*.go; description/required/schema not modified by this lane",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "Retrieve a slice of truncated output by handle.\n\nWhen terminal_exec or terminal_job_logs returns more output than fits inline,\nyou'll see `output_handle: \"out_<hex>\"`. Pass it here with successive\noffsets to paginate. The full output is preserved (combined stdout+stderr\nwith `--- stdout ---` / `--- stderr ---` separators) for 5 minutes.\n\nArgs:\n    output_handle: From a prior tool's envelope.\n    since_offset: Pass 0 first, then next_offset from the previous call.\n    max_kb: Max KB to return per call.\n\nReturns: {data, offset, next_offset, eof, expired}",
+   "parameters": {
+    "properties": {
+     "output_handle": {
+      "type": "string"
+     },
+     "since_offset": {
+      "default": 0,
+      "type": "integer"
+     },
+     "max_kb": {
+      "default": 64,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "output_handle"
+    ],
+    "type": "object"
+   }
+  },
+  "terminal_pty_close": {
+   "status": "dependency",
+   "source": "harness:terminal-tools",
+   "reason": "terminal-schema-p0 lane owns internal/tools/builtin/terminal_*.go; description/required/schema not modified by this lane",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "Terminate a PTY session. Always do this when you're done — leaked\nsessions count against the per-server PTY cap.\n\nArgs:\n    session_id: From terminal_pty_open.\n    force: Skip the graceful \"exit\\n\" attempt and SIGTERM/SIGKILL.\n\nReturns: {exit_code, final_output, already_closed}",
+   "parameters": {
+    "properties": {
+     "session_id": {
+      "type": "string"
+     },
+     "force": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "session_id"
+    ],
+    "type": "object"
+   }
+  },
+  "terminal_pty_open": {
+   "status": "dependency",
+   "source": "harness:terminal-tools",
+   "reason": "terminal-schema-p0 lane owns internal/tools/builtin/terminal_*.go; description/required/schema not modified by this lane",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "Open a persistent /bin/bash session in a PTY.\n\nUse a session when you need state across calls — building env vars,\nnavigating with cd, driving REPLs, or responding to interactive\nprompts (sudo, ssh, mysql). For one-shot work, use terminal_exec\ninstead.\n\nThe session runs vanilla bash (--norc --noprofile) so dotfiles\ndon't surprise you. A unique PS1 sentinel is set so terminal_pty_run\ncan unambiguously detect command completion. macOS users: this\nis /bin/bash, not zsh, by deliberate policy — explicit\nshell=\"/bin/zsh\" overrides are rejected.\n\nArgs:\n    cwd: Initial working directory. Defaults to the session workdir\n        when omitted; pass an absolute path to override.\n    env: Environment override (zsh dotfile vars are stripped).\n    cols, rows: Terminal size.\n    idle_timeout_sec: Drop the session after this many seconds idle.\n\nReturns: {session_id, pid, shell}",
+   "parameters": {
+    "properties": {
+     "cwd": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "env": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "cols": {
+      "default": 120,
+      "type": "integer"
+     },
+     "rows": {
+      "default": 40,
+      "type": "integer"
+     },
+     "idle_timeout_sec": {
+      "default": 1800,
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   }
+  },
+  "terminal_pty_run": {
+   "status": "dependency",
+   "source": "harness:terminal-tools",
+   "reason": "terminal-schema-p0 lane owns internal/tools/builtin/terminal_*.go; description/required/schema not modified by this lane",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "Run a command in a session, send raw input, or drain output.\n\nThree modes:\n- Default: pass a command. The session sends it, waits for the\n    unique prompt sentinel (or `expect` regex if provided), and\n    returns the output between submission and prompt.\n- raw_send=True: pass a command. The text is written without\n    waiting for prompt. Use for REPL input (\"p('hi')\\n\"), for\n    password prompts (sudo), or for vim keystrokes.\n- read_only=True: drains whatever's currently buffered.\n    Typically follows raw_send.\n\nArgs:\n    session_id: From terminal_pty_open.\n    command: The text to send. None when read_only=True.\n    expect: Regex to wait for INSTEAD of the default prompt sentinel.\n        Useful when the command launches a REPL with its own prompt.\n    raw_send: Don't wait for prompt; just write.\n    read_only: Don't send anything; drain the buffer.\n    timeout_sec: Max wait. On timeout, returns whatever's buffered\n        with timed_out=True (the command may still be running —\n        check with another _run call).\n\nReturns: {output, prompt_after, timed_out, ...}",
+   "parameters": {
+    "properties": {
+     "session_id": {
+      "type": "string"
+     },
+     "command": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "expect": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "raw_send": {
+      "default": false,
+      "type": "boolean"
+     },
+     "read_only": {
+      "default": false,
+      "type": "boolean"
+     },
+     "timeout_sec": {
+      "default": 60.0,
+      "type": "number"
+     }
+    },
+    "required": [
+     "session_id"
+    ],
+    "type": "object"
+   }
+  },
+  "terminal_rg": {
+   "status": "dependency",
+   "source": "harness:terminal-tools",
+   "reason": "terminal-schema-p0 lane owns internal/tools/builtin/terminal_*.go; description/required/schema not modified by this lane",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "Run ripgrep on `path` for `pattern` — the content-search tool.\n\nUse this for all content (regex) search, whether project code or raw\npaths (system configs, /var/log, archive contents); it exposes the full\nrg flag surface. Relative paths resolve against the session workdir.\n\nArgs:\n    pattern: Regex pattern.\n    path: Directory or file to search. Relative paths resolve against\n        the session workdir; default is the session workdir itself.\n    glob: Filename glob (e.g. \"*.py\").\n    type_filter: rg filetype shortcut (e.g. \"py\", \"rust\", \"md\").\n    ignore_case: Case-insensitive search.\n    context: Lines of context above and below each match.\n    max_count: Stop after N matches per file.\n    max_depth: Limit directory recursion depth.\n    hidden: Include hidden files (rg ignores them by default).\n    no_ignore: Don't respect .gitignore.\n    extra_args: Raw flags to append (use sparingly — most needs are covered above).\n    allow_fallback: If rg is missing, explicitly accept approximate Python\n        search without .gitignore support and with Python regex syntax.\n        Context, extra_args, unknown filetypes and complex globs still\n        require rg; unsupported parameters return an error without searching.\n\nReturns: {matches: [...], context: [...], total, truncated, exit_code, stderr}.\n    Context entries have the same path/line/text shape as matches;\n    total counts only matches. Missing rg returns ripgrep_required by default.",
+   "parameters": {
+    "properties": {
+     "pattern": {
+      "type": "string"
+     },
+     "path": {
+      "default": ".",
+      "type": "string"
+     },
+     "glob": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "type_filter": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "ignore_case": {
+      "default": false,
+      "type": "boolean"
+     },
+     "context": {
+      "default": 0,
+      "type": "integer"
+     },
+     "max_count": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "max_depth": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "hidden": {
+      "default": false,
+      "type": "boolean"
+     },
+     "no_ignore": {
+      "default": false,
+      "type": "boolean"
+     },
+     "extra_args": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "allow_fallback": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "pattern"
+    ],
+    "type": "object"
+   }
+  },
+  "web_scrape": {
+   "status": "aligned",
+   "source": "harness:hive_tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Scrape and extract text content from a webpage.\n\nUses a headless browser to render JavaScript and bypass bot detection.\nUse when you need to read the content of a specific URL,\nextract data from a website, or read articles/documentation.\n\nThe extracted text body is **written to a file on disk** rather\nthan returned inline — JSON-wrapping multi-KB page text escapes\nevery newline and quote, which poisons the agent's context. The\nresponse carries only metadata (title, description, headings,\nstructured data, links) plus ``saved_to`` pointing at the raw\ntext file. Use ``terminal_exec(\"cat <saved_to>\")`` (page large\noutput via ``terminal_output_get``) or ``terminal_rg`` on\n``saved_to`` to inspect the body. Length is reported via\n``total_length``.\n\nArgs:\n    url: URL of the webpage to scrape\n    selector: CSS selector to target specific content (e.g., 'article', '.main-content')\n    include_links: When True, links are inlined as `[text](url)` in\n        the saved body and also returned as a `links` list\n    respect_robots_txt: Whether to respect robots.txt rules (default False —\n        operator has authorization for these one-off, low-volume fetches;\n        pass True to re-enable the check for a given call)\n\nReturns:\n    Dict with: url, final_url, title, description, page_type\n    (article|listing|page), total_length, saved_to, headings,\n    structured_data (json_ld + open_graph), and optionally links.\n    On error, returns {\"error\": str, ...} with a hint when applicable.",
+   "parameters": {
+    "properties": {
+     "url": {
+      "type": "string"
+     },
+     "selector": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "include_links": {
+      "default": false,
+      "type": "boolean"
+     },
+     "respect_robots_txt": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "url"
+    ],
+    "type": "object"
+   }
+  },
+  "web_search": {
+   "status": "aligned",
+   "source": "aden_tools:default",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "\n        Search the web for information.\n\n        Supports multiple search providers:\n        - \"auto\": Tries Brave first (backward compatible), then Google\n        - \"google\": Use Google Custom Search API (requires GOOGLE_API_KEY + GOOGLE_CSE_ID)\n        - \"brave\": Use Brave Search API (requires BRAVE_SEARCH_API_KEY)\n\n        Args:\n            query: The search query (1-500 chars)\n            num_results: Number of results to return (1-20 for Brave, 1-10 for Google)\n            country: Country code for localized results (us, id, uk, de, etc.)\n            language: Language code for results (en, id, etc.) - Google only\n            provider: Search provider to use (\"auto\", \"google\", \"brave\")\n\n        Returns:\n            Dict with search results, total count, and provider used\n        ",
+   "parameters": {
+    "properties": {
+     "query": {
+      "type": "string"
+     },
+     "num_results": {
+      "default": 10,
+      "type": "integer"
+     },
+     "country": {
+      "default": "us",
+      "type": "string"
+     },
+     "language": {
+      "default": "en",
+      "type": "string"
+     },
+     "provider": {
+      "default": "auto",
+      "enum": [
+       "auto",
+       "google",
+       "brave"
+      ],
+      "type": "string"
+     }
+    },
+    "required": [
+     "query"
+    ],
+    "type": "object"
+   }
+  },
+  "write_file": {
+   "status": "aligned",
+   "source": "harness:files-tools",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Create or overwrite a file with the given content. Parent directories are created automatically. Use this instead of `cat > file` or shell redirects. For targeted edits in an existing file, prefer edit_file (this tool overwrites the whole file). Existing files require a recent read_file call first; brand-new files don't.",
+   "parameters": {
+    "properties": {
+     "path": {
+      "description": "File path to write. Relative paths anchor to the agent's home; absolute paths used verbatim. System and credential paths are denied.",
+      "type": "string"
+     },
+     "content": {
+      "description": "Complete file content to write.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "path",
+     "content"
+    ],
+    "type": "object"
+   }
+  }
+ }
+}

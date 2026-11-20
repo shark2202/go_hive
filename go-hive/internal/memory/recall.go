@@ -20,7 +20,8 @@ Return a JSON object with a single key "selected_memories" containing a list of 
 
 Only include memories that you are certain will be helpful based on their name and description.
 - If you are unsure if a memory will be useful in processing the user's query, then do not include it in your list.  Be selective and discerning.
-- If there are no memories in the list that would clearly be useful, return an empty list.`
+- If there are no memories in the list that would clearly be useful, return an empty list.
+`
 
 var jsonObjectRe = regexp.MustCompile(`(?s)\{.*\}`)
 

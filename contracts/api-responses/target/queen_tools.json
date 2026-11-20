@@ -1,0 +1,259 @@
+{
+  "endpoint": "queen_tools",
+  "label": "Queen 工具库",
+  "method": "GET",
+  "path": "/api/queen/queen_growth/tools",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-20T23:43:50+08:00",
+  "canonical": {
+    "categories": [
+      {
+        "always_enabled": true,
+        "in_role_default": true,
+        "name": "file_ops",
+        "tools": [
+          "pdf_read",
+          "attach_file"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "code_editing",
+        "tools": [
+          "read_file",
+          "edit_file"
+        ]
+      },
+      {
+        "always_enabled": true,
+        "in_role_default": true,
+        "name": "terminal_basic",
+        "tools": [
+          "terminal_exec",
+          "terminal_rg",
+          "terminal_glob",
+          "terminal_output_get",
+          "terminal_job_logs",
+          "terminal_job_manage"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "terminal_advanced",
+        "tools": [
+          "terminal_job_start",
+          "terminal_job_manage",
+          "terminal_job_logs",
+          "terminal_output_get",
+          "terminal_pty_open",
+          "terminal_pty_run",
+          "terminal_pty_close"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "spreadsheet_advanced",
+        "tools": [
+          "csv_read",
+          "csv_info",
+          "csv_write",
+          "csv_append",
+          "csv_sql",
+          "excel_read",
+          "excel_info",
+          "excel_write",
+          "excel_append",
+          "excel_search",
+          "excel_sheet_list",
+          "excel_sql"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": true,
+        "name": "browser_basic",
+        "tools": [
+          "browser_setup"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": true,
+        "name": "browser_interaction",
+        "tools": [
+          "browser_setup"
+        ]
+      },
+      {
+        "always_enabled": true,
+        "in_role_default": false,
+        "name": "browser_core",
+        "tools": [
+          "browser_setup"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "browser_extended",
+        "tools": [
+          "browser_setup"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "terminal_core",
+        "tools": [
+          "terminal_exec",
+          "terminal_output_get",
+          "terminal_job_logs",
+          "terminal_job_manage"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "terminal_extended",
+        "tools": [
+          "terminal_rg",
+          "terminal_glob"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "files_core",
+        "tools": [
+          "attach_file"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "context_core",
+        "tools": [
+          "get_current_time",
+          "get_account_info"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": false,
+        "name": "web_core",
+        "tools": [
+          "web_scrape"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": true,
+        "name": "research",
+        "tools": [
+          "web_scrape",
+          "pdf_read"
+        ]
+      },
+      {
+        "always_enabled": true,
+        "in_role_default": true,
+        "name": "context_awareness",
+        "tools": [
+          "get_current_time",
+          "get_account_info",
+          "search_messages",
+          "search_timeline"
+        ]
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": true,
+        "name": "charts",
+        "tools": []
+      },
+      {
+        "always_enabled": false,
+        "in_role_default": true,
+        "name": "media",
+        "tools": [
+          "image_generate"
+        ]
+      }
+    ],
+    "connected_providers": [],
+    "enabled_mcp_tools": [
+      "list_senders",
+      "setup_email_sender",
+      "send_from_sender",
+      "pick_sender",
+      "send_campaign",
+      "sender_history",
+      "suppress_recipient",
+      "list_suppressed",
+      "adjust_sender",
+      "pdf_read",
+      "attach_file",
+      "terminal_exec",
+      "terminal_rg",
+      "terminal_glob",
+      "terminal_output_get",
+      "terminal_job_logs",
+      "terminal_job_manage",
+      "browser_setup",
+      "web_scrape",
+      "get_current_time",
+      "get_account_info",
+      "search_messages",
+      "search_timeline",
+      "image_generate"
+    ],
+    "is_role_default": true,
+    "lifecycle": [],
+    "mcp_servers": [],
+    "queen_id": "queen_growth",
+    "stale": true,
+    "synthetic": [
+      {
+        "description": "Pause and ask the user a structured question.",
+        "editable": false,
+        "name": "ask_user"
+      }
+    ]
+  },
+  "shape": {
+    "categories": "array",
+    "categories[].always_enabled": "boolean",
+    "categories[].in_role_default": "boolean",
+    "categories[].name": "string",
+    "categories[].tools": "array",
+    "categories[].tools[]": "string",
+    "connected_providers": "array",
+    "enabled_mcp_tools": "array",
+    "enabled_mcp_tools[]": "string",
+    "is_role_default": "boolean",
+    "lifecycle": "array",
+    "mcp_servers": "array",
+    "queen_id": "string",
+    "stale": "boolean",
+    "synthetic": "array",
+    "synthetic[].description": "string",
+    "synthetic[].editable": "boolean",
+    "synthetic[].name": "string"
+  },
+  "counts": {
+    "categories": 18,
+    "connected_providers": 0,
+    "enabled_mcp_tools": 24,
+    "lifecycle": 0,
+    "mcp_servers": 0,
+    "synthetic": 1
+  },
+  "notes": []
+}

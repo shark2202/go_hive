@@ -221,8 +221,23 @@ func TestOverseerAskUserParksSessionAndAnswerRelays(t *testing.T) {
 
 	// The answer resolves both halves: no pending question, and the cursor's
 	// pending_input is rewritten as turn_done (the answer, not a new wait).
+	// The rewrite happens after the relay, so wait for the persisted value
+	// instead of reading the cursor immediately after the overseer saw the
+	// text. The wait is generous: this whole path is asynchronous, and a
+	// fully loaded CI machine can take seconds to schedule the writer.
 	if chatRuntime.hasPendingQuestions() {
 		t.Fatal("the chat runtime kept the answered question")
+	}
+	if !waitForServerCondition(10*time.Second, func() bool {
+		cursor, err := chatRuntime.store.ReadCursor()
+		if err != nil || cursor == nil {
+			return false
+		}
+		pending, _ := cursor[parkPendingInputKey].(map[string]any)
+		return pending["reason"] == string(agentloop.ParkReasonTurnDone)
+	}) {
+		cursor, _ := chatRuntime.store.ReadCursor()
+		t.Fatalf("cursor pending_input after answer = %#v, want reason turn_done (within 3s)", cursor[parkPendingInputKey])
 	}
 	cursor, err = chatRuntime.store.ReadCursor()
 	if err != nil {

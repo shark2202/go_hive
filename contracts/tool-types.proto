@@ -1,0 +1,573 @@
+// Tool input contract — proto3 spec, generated from the Python reference surface.
+//
+// SPEC ONLY: this file documents the contract's type vocabulary. Nothing imports it,
+// no protobuf runtime is required, and no code is generated from it. Do not add a
+// protobuf dependency to go.mod for this file.
+//
+// Reference: python 1.0.14 @ 4e737cbc63523ba5eeda84820c09f28ebd43a670
+// Target:    go_hive 1.0.26-go.1 @ 1b9c458a19244379ac65dabd4827addb891045ef
+// Manifest:  contracts/tool-definitions.json (authoritative name/description/schema)
+//
+// Mapping rules (JSON Schema -> proto3):
+//   string                 -> string
+//   boolean                -> bool            (never int)
+//   integer                -> int64           Python int is unbounded; int64 narrows it
+//   number                 -> double          NaN/Inf have no JSON encoding
+//   array                  -> repeated T
+//   object + properties    -> message T
+//   object + additional    -> map<string, T>
+//   object, no properties  -> map<string, JsonValue>
+//   enum: [...]            -> enum
+//   anyOf [T, null]        -> optional T     (presence, not null)
+//   anyOf [T1, T2, ...]    -> JsonValue
+//   missing / unknown      -> JsonValue
+//
+// uint32 / uint64 / bytes are unreachable from JSON Schema: JSON has one number
+// type and one string type. A tool that wants them must say so in prose, which is
+// not machine-checkable, so the contract never claims them.
+//
+// Required-ness: proto3 cannot enforce `required`. Required parameters are emitted as
+// plain fields, every other parameter as `optional`, and the manifest's
+// proto.required list stays authoritative.
+
+syntax = "proto3";
+
+package hive.toolcontract.v1;
+
+// JsonValue is the unconstrained fallback (no declared JSON type, or a union).
+message JsonValue {
+  oneof kind {
+    bool null_value = 1;
+    bool bool_value = 2;
+    int64 int_value = 3;
+    double double_value = 4;
+    string string_value = 5;
+    JsonObject object_value = 6;
+    JsonArray array_value = 7;
+  }
+}
+
+message JsonObject {
+  map<string, JsonValue> fields = 1;
+}
+
+message JsonArray {
+  repeated JsonValue items = 1;
+}
+
+// One request message per reference tool, plus the nested messages they need.
+// Order and contents mirror contracts/tool-definitions.json -> tools[].proto.
+
+// ask_user — python:llm_request
+message AskUserInput {
+  repeated AskUserQuestions questions = 1; // List of questions to present to the user.
+}
+
+// ask_user — python:llm_request
+message AskUserQuestions {
+  string id = 1; // Short identifier for this question (used in the response).
+  string prompt = 2; // The question text shown to the user.
+  repeated string options = 3; // 2-3 predefined choices as plain strings (e.g. ["Yes", "No", "Maybe"]). Do NOT wrap items i
+}
+
+// attach_file — python:llm_request
+message AttachFileInput {
+  optional double max_bytes_mb = 1; // default 25.0
+  JsonValue paths = 2;
+}
+
+// browser_setup — python:llm_request
+message BrowserSetupInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// chart_render — python:mcp_catalog:chart-tools
+message ChartRenderInput {
+  optional int64 dpi = 1; // default 300
+  optional int64 height = 2; // default 900
+  string kind = 3;
+  optional string output_path = 4;
+  JsonValue spec = 5;
+  optional string title = 6; // default ""
+  optional int64 width = 7; // default 1600
+}
+
+// collect_result — python:llm_request
+message CollectResultInput {
+  string handle = 1; // The handle from the backgrounded call (e.g. "bg_1").
+  optional int64 wait_seconds = 2; // Stop waiting after this many seconds. Leave it out to wait until the work is done.
+}
+
+// credentials — python:llm_request
+message CredentialsInput {
+  optional string account = 1; // Account alias for multi-account providers (e.g. 'work'). Defaults to 'default'.
+  optional Action action = 2; // What to do. Defaults to "help", which returns full usage. Call help first if unsure.
+  optional string credential_id = 3; // Logical credential / provider id (e.g. 'stripe', 'github'). Required for collect/attach/de
+  repeated CredentialsFields fields = 4; // Optional field specs for collect. Each: {name, label?, secret?, required?, placeholder?}.
+  optional string instructions = 5; // Optional help text shown above the collect form.
+  optional string title = 6; // Optional form title for collect.
+}
+
+// credentials — python:llm_request
+message CredentialsFields {
+  string name = 1;
+  optional string label = 2;
+  optional bool secret = 3;
+  optional bool required_ = 4;
+  optional string placeholder = 5;
+}
+
+// csv_append — python:mcp_catalog:hive_tools
+message CsvAppendInput {
+  string path = 1;
+  repeated CsvAppendRowsItem rows = 2;
+}
+
+// csv_append — python:mcp_catalog:hive_tools
+message CsvAppendRowsItem {
+  map<string, JsonValue> fields = 1; // map entry
+}
+
+// csv_info — python:mcp_catalog:hive_tools
+message CsvInfoInput {
+  string path = 1;
+}
+
+// csv_read — python:mcp_catalog:hive_tools
+message CsvReadInput {
+  optional int64 limit = 1;
+  optional int64 offset = 2; // default 0
+  string path = 3;
+}
+
+// csv_sql — python:mcp_catalog:hive_tools
+message CsvSqlInput {
+  string path = 1;
+  string query = 2;
+}
+
+// csv_write — python:mcp_catalog:hive_tools
+message CsvWriteInput {
+  repeated string columns = 1;
+  string path = 2;
+  repeated CsvWriteRowsItem rows = 3;
+}
+
+// csv_write — python:mcp_catalog:hive_tools
+message CsvWriteRowsItem {
+  map<string, JsonValue> fields = 1; // map entry
+}
+
+// edit_file — python:mcp_catalog:files-tools
+message EditFileInput {
+  optional string mode = 1; // default "replace" — Edit mode. 'replace' (default) for single-file find-and-replace. 'patch' for multi-file st
+  optional string new_string = 2; // default "" — Replace mode only. Replacement text. Pass an empty string to delete the matched text.
+  optional string old_string = 3; // default "" — Replace mode only. Text to find. Must be unique in the file unless replace_all=True; inclu
+  optional string patch_text = 4; // default "" — Patch mode only. Structured patch body. File paths are embedded inside the body via '*** U
+  optional string path = 5; // default "" — Replace mode only. File path to edit. Relative paths anchor to the agent's home; absolute 
+  optional bool replace_all = 6; // default false — Replace mode only. Replace every occurrence instead of requiring a unique match. Default F
+  optional string session_cwd = 7;
+}
+
+// get_account_info — python:llm_request
+message GetAccountInfoInput {
+  optional string provider = 1; // default ""
+}
+
+// get_current_time — python:llm_request
+message GetCurrentTimeInput {
+  optional string timezone = 1; // default "UTC"
+}
+
+// get_playbook_status — python:lifecycle
+message GetPlaybookStatusInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// get_worker_status — python:lifecycle
+message GetWorkerStatusInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// image_generate — python:llm_request
+message ImageGenerateInput {
+  optional string model = 1; // default "gpt-image-2"
+  optional int64 n = 2; // default 1
+  optional string output_format = 3; // default "png"
+  string prompt = 4;
+  optional string quality = 5; // default "low"
+  repeated string reference_images = 6;
+  optional string size = 7; // default "1024x1024"
+}
+
+// inject_message — python:lifecycle
+message InjectMessageInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// list_browser_profiles — python:lifecycle
+message ListBrowserProfilesInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// list_playbook_runs — python:lifecycle
+message ListPlaybookRunsInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// list_triggers — python:lifecycle
+message ListTriggersInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// list_worker_questions — python:lifecycle
+message ListWorkerQuestionsInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// pdf_read — python:llm_request
+message PdfReadInput {
+  optional string file_path = 1;
+  repeated string files = 2;
+  optional bool include_metadata = 3; // default true
+  optional double max_bytes_mb = 4; // default 25.0
+  optional int64 max_pages = 5; // default 100
+  optional string pages = 6;
+  optional string password = 7;
+}
+
+// read_file — python:mcp_catalog:files-tools
+message ReadFileInput {
+  optional bool hashline = 1; // default false — If True, return lines in N:hhhh|content format with content-hash anchors. Line truncation 
+  optional int64 limit = 2; // default 0 — Max lines to return. 0 means up to 2000. Default 0.
+  optional int64 offset = 3; // default 1 — Starting line number, 1-indexed. Default 1.
+  string path = 4; // File path to read. Relative paths anchor to the agent's home; absolute paths used verbatim
+  optional string session_cwd = 5;
+}
+
+// remove_trigger — python:lifecycle
+message RemoveTriggerInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// reply_to_worker — python:lifecycle
+message ReplyToWorkerInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// run_playbook — python:lifecycle
+message RunPlaybookInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// run_worker — python:lifecycle
+message RunWorkerInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// search_files — python:mcp_catalog:files-tools
+message SearchFilesInput {
+  optional int64 context = 1; // default 0 — Lines of context before and after each match (content mode only). Default 0.
+  optional string file_glob = 2; // default "" — Restrict content search to filenames matching this glob. Ignored in files mode (use the 'p
+  optional bool hashline = 3; // default false — Content mode: include N:hhhh hash anchors in matched lines. Default False.
+  optional int64 limit = 4; // default 50 — Max results to return. Default 50.
+  optional int64 offset = 5; // default 0 — Skip first N results for pagination. Default 0.
+  optional string output_mode = 6; // default "content" — Content-mode output shape: 'content' (lines + line numbers, default), 'files_only' (paths 
+  optional string path = 7; // default "." — Directory (or, in content mode, a single file) to search. Default '.'.
+  string pattern = 8; // Regex (content mode) or glob (files mode, e.g. '*.py'). For an 'ls'-style listing pass '*'
+  optional string target = 9; // default "content" — 'content' to grep inside files, 'files' to list/find files. Legacy aliases: 'grep' -> 'con
+  optional string task_id = 10; // default "" — Optional anti-loop scope key. Defaults to a shared bucket; pass a per-task id when multipl
+}
+
+// search_messages — python:llm_request
+message SearchMessagesInput {
+  optional Context context = 1; // default "turn" — How much context to return per hit. 'turn' (default) returns the full conversational turn 
+  optional MatchSource match_source = 2; // default "all" — 'events' searches in-chat message text. 'data' searches the spilled bodies of large tool r
+  optional int64 max_matches = 3; // default 20 — Cap on returned hits. Default 20. Bump up if you suspect more relevant past context exists
+  string pattern = 4; // Rust-style regex (RE2 subset). Plain text matches plain text — for a name, ticker, or keyw
+  optional int64 per_message_char_cap = 5; // default 800 — Character budget per individual message inside a turn — long messages get middle-truncated
+  optional Role role = 6; // default "all" — Filter by who said it: 'user' (the user's typed messages), 'assistant' (your own prose), '
+  optional string session = 7; // Optional. Restrict to one session id (e.g. 'session_20260501_145636_72fa023d'). Use to dri
+  optional string since = 8; // ISO date or datetime. Only sessions started on or after this point are searched. Use to sc
+  optional int64 turn_char_cap = 9; // default 4000 — Total character budget per returned turn window. Default 4000.
+  optional string until = 10; // ISO date or datetime. Only sessions started before this point are searched (exclusive).
+}
+
+// search_tools — python:llm_request
+message SearchToolsInput {
+  optional double max_results = 1; // default 5 — Max tools a keyword search loads (default 5). Ignored by select:, which loads every name y
+  string query = 2; // "select:name_a,name_b" to load exact tools by name, or keywords to search.
+}
+
+// sentinel_setup — python:llm_request
+message SentinelSetupInput {
+  optional Action action = 1; // What to do. Defaults to "help", which returns full usage.
+  repeated string allowlist = 2; // For configure: sender ids allowed to reply and drive the colony.
+  optional Channel channel = 3; // For configure/test: the channel to deliver on.
+  optional double classify_after_seconds = 4; // For configure: per-colony idle budget before escalating; omit to inherit the default.
+  optional string colony_id = 5; // For configure/test: target colony's on-disk directory name. Defaults to the colony bound t
+  optional bool enabled = 6; // For configure: turn Sentinel on (true) or off (false) for the colony.
+  optional Provider provider = 7; // For store_token: which token. 'slack' = bot xoxb-, 'slack_app' = app-level xapp-, 'telegra
+  map<string, JsonValue> target = 8; // For configure/test: destination. Slack: {"channel": "C0123ABC"}. Telegram: {"chat_id": "12
+  optional string token = 9; // For store_token: the raw token value to store (kept encrypted).
+}
+
+// set_trigger — python:lifecycle
+message SetTriggerInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// stop_playbook — python:lifecycle
+message StopPlaybookInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// stop_worker — python:lifecycle
+message StopWorkerInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// suggest_colony — python:llm_request
+message SuggestColonyInput {
+  string colony_id = 1; // Lowercase alphanumeric+underscore slug for the proposed colony (e.g. 'morning_hn_digest', 
+  optional string reason = 2; // Optional one-sentence rationale shown in the popup — why parallel/persistent execution hel
+}
+
+// task_create — python:llm_request
+message TaskCreateInput {
+  optional string goal = 1; // One-sentence statement of what this plan is for, in the user's own terms. Required on the 
+  optional string handoff = 2; // Required when new_session=true. The new context inherits NOTHING from this conversation ex
+  optional bool new_session = 3; // Whether to start this plan in a fresh session. Default false. This is the DM-phase pivot f
+  repeated TaskCreateTasks tasks = 4; // Array of task specs. Each becomes one task with a sequential id. Atomic — all created or n
+}
+
+// task_create — python:llm_request
+message TaskCreateTasks {
+  string subject = 1; // Imperative title (e.g. 'Crawl target URL').
+  optional string description = 2;
+  optional string active_form = 3; // Present-continuous label shown while in_progress.
+  map<string, JsonValue> metadata = 4;
+}
+
+// task_get — python:llm_request
+message TaskGetInput {
+  int64 id = 1;
+}
+
+// task_list — python:llm_request
+message TaskListInput {
+  optional bool include_archived = 1; // Include archived tasks (default false). Set true to review what you archived — e.g. before
+}
+
+// task_update — python:llm_request
+message TaskUpdateInput {
+  optional string active_form = 1;
+  repeated int64 add_blocked_by = 2; // Add task ids that block this task (bidirectional).
+  repeated int64 add_blocks = 3; // Add task ids that this task blocks (bidirectional).
+  optional string description = 4;
+  int64 id = 5; // Task id (the #N from task_list).
+  map<string, JsonValue> metadata_patch = 6; // Merge into metadata. Null values delete keys.
+  optional string owner = 7; // Agent id of the owner. Null clears ownership.
+  optional Status status = 8; // pending / in_progress / completed track work. 'archived' moves a finished or no-longer-rel
+  optional string subject = 9;
+}
+
+// terminal_exec — python:llm_request
+message TerminalExecInput {
+  optional int64 auto_background_after_sec = 1; // default 30
+  string command = 2;
+  optional string crm_principal = 3;
+  optional string cwd = 4;
+  map<string, string> env = 5;
+  map<string, int64> limits = 6;
+  optional int64 max_output_kb = 7; // default 256
+  optional bool shell = 8; // default false
+  optional string stdin = 9;
+  optional int64 timeout_sec = 10; // default 60
+}
+
+// terminal_glob — python:llm_request
+message TerminalGlobInput {
+  optional bool include_ignored = 1; // default false
+  optional int64 max_results = 2; // default 1000
+  optional string path = 3; // default "."
+  string pattern = 4;
+}
+
+// terminal_job_logs — python:llm_request
+message TerminalJobLogsInput {
+  string job_id = 1;
+  optional int64 max_bytes = 2; // default 64000
+  optional int64 since_offset = 3; // default 0
+  optional string stream = 4; // default "stdout"
+  optional bool tail = 5; // default false
+  optional double wait_timeout_sec = 6; // default 600.0
+  optional bool wait_until_exit = 7; // default false
+}
+
+// terminal_job_manage — python:llm_request
+message TerminalJobManageInput {
+  string action = 1;
+  optional string data = 2;
+  optional string job_id = 3;
+}
+
+// terminal_job_start — python:mcp_catalog:terminal-tools
+message TerminalJobStartInput {
+  string command = 1;
+  optional string crm_principal = 2;
+  optional string cwd = 3;
+  map<string, string> env = 4;
+  map<string, int64> limits = 5;
+  optional bool merge_stderr = 6; // default false
+  optional string name = 7;
+  optional string session_cwd = 8;
+  optional bool shell = 9; // default false
+}
+
+// terminal_output_get — python:llm_request
+message TerminalOutputGetInput {
+  optional int64 max_kb = 1; // default 64
+  string output_handle = 2;
+  optional int64 since_offset = 3; // default 0
+}
+
+// terminal_pty_close — python:mcp_catalog:terminal-tools
+message TerminalPtyCloseInput {
+  optional bool force = 1; // default false
+  string session_id = 2;
+}
+
+// terminal_pty_open — python:mcp_catalog:terminal-tools
+message TerminalPtyOpenInput {
+  optional int64 cols = 1; // default 120
+  optional string cwd = 2;
+  map<string, string> env = 3;
+  optional int64 idle_timeout_sec = 4; // default 1800
+  optional int64 rows = 5; // default 40
+  optional string session_cwd = 6;
+}
+
+// terminal_pty_run — python:mcp_catalog:terminal-tools
+message TerminalPtyRunInput {
+  optional string command = 1;
+  optional string expect = 2;
+  optional bool raw_send = 3; // default false
+  optional bool read_only = 4; // default false
+  string session_id = 5;
+  optional double timeout_sec = 6; // default 60.0
+}
+
+// terminal_rg — python:llm_request
+message TerminalRgInput {
+  optional bool allow_fallback = 1; // default false
+  optional int64 context = 2; // default 0
+  repeated string extra_args = 3;
+  optional string glob = 4;
+  optional bool hidden = 5; // default false
+  optional bool ignore_case = 6; // default false
+  optional int64 max_count = 7;
+  optional int64 max_depth = 8;
+  optional bool no_ignore = 9; // default false
+  optional string path = 10; // default "."
+  string pattern = 11;
+  optional string type_filter = 12;
+}
+
+// update_worker_profile — python:lifecycle
+message UpdateWorkerProfileInput {
+  // no declared input schema: the tool takes free-form input
+}
+
+// web_scrape — python:mcp_catalog:hive_tools
+message WebScrapeInput {
+  optional bool include_links = 1; // default false
+  optional bool respect_robots_txt = 2; // default false
+  optional string selector = 3;
+  string url = 4;
+}
+
+// write_file — python:mcp_catalog:files-tools
+message WriteFileInput {
+  string content = 1; // Complete file content to write.
+  string path = 2; // File path to write. Relative paths anchor to the agent's home; absolute paths used verbati
+}
+
+// write_skill — python:llm_request
+message WriteSkillInput {
+  optional Scope scope = 1; // Who sees the skill: 'queen' (you, and your colonies), 'colony' (this colony's workers), or
+  optional string skill_body = 2; // Markdown body of SKILL.md — the operational procedure the agent needs to run it unattended
+  optional string skill_description = 3; // One-line summary of what this skill teaches and when to use it. Surfaced in the skills cat
+  repeated WriteSkillSkillFiles skill_files = 4; // Optional supporting files (scripts, JSON refs, etc.). Each entry is {path, content} where 
+  optional string skill_name = 5; // Lowercase, hyphen-separated, ≤64 chars (e.g. 'competitor-research-protocol'). Required in 
+  optional string source_path = 6; // Absolute or '~'-prefixed path to an existing skill's root directory (the one that contains
+}
+
+// write_skill — python:llm_request
+message WriteSkillSkillFiles {
+  string path = 1;
+  string content = 2;
+}
+
+enum Action {
+  ACTION_UNSPECIFIED = 0;
+  ACTION_HELP = 1;
+  ACTION_COLLECT = 2;
+  ACTION_ATTACH = 3;
+  ACTION_DETACH = 4;
+}
+
+enum Context {
+  CONTEXT_UNSPECIFIED = 0;
+  CONTEXT_NONE = 1;
+  CONTEXT_NARROW = 2;
+  CONTEXT_TURN = 3;
+}
+
+enum MatchSource {
+  MATCHSOURCE_UNSPECIFIED = 0;
+  MATCHSOURCE_EVENTS = 1;
+  MATCHSOURCE_DATA = 2;
+  MATCHSOURCE_ALL = 3;
+}
+
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_USER = 1;
+  ROLE_ASSISTANT = 2;
+  ROLE_TOOL = 3;
+  ROLE_ALL = 4;
+}
+
+enum Channel {
+  CHANNEL_UNSPECIFIED = 0;
+  CHANNEL_SLACK = 1;
+  CHANNEL_TELEGRAM = 2;
+}
+
+enum Provider {
+  PROVIDER_UNSPECIFIED = 0;
+  PROVIDER_SLACK = 1;
+  PROVIDER_SLACK_APP = 2;
+  PROVIDER_TELEGRAM = 3;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_PENDING = 1;
+  STATUS_IN_PROGRESS = 2;
+  STATUS_COMPLETED = 3;
+  STATUS_ARCHIVED = 4;
+  STATUS_DELETED = 5;
+}
+
+enum Scope {
+  SCOPE_UNSPECIFIED = 0;
+  SCOPE_QUEEN = 1;
+  SCOPE_COLONY = 2;
+  SCOPE_GLOBAL = 3;
+}
+
+// go_hive exposes 103 tools with no Python counterpart (grouped action tools).
+// They are outside the contract until the reference grows the same capability; see
+// contracts/tool-definitions.json -> go_only_tools.

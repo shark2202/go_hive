@@ -1,0 +1,17 @@
+<system-reminder>
+Excerpts from earlier conversations that may relate to the user's latest message (matched by keyword, so possibly incomplete; search_messages and search_timeline go deeper):
+- 2025-02-01 (Sat), session_20250201_090000_topk0001
+  user: 我在第 1 次帆船训练中完成了绕标。
+- 2025-02-02 (Sun), session_20250202_090000_topk0002
+  user: 我在第 2 次帆船训练中完成了绕标。
+- 2025-02-03 (Mon), session_20250203_090000_topk0003
+  user: 我在第 3 次帆船训练中完成了绕标。
+- 2025-02-04 (Tue), session_20250204_090000_topk0004
+  user: 我在第 4 次帆船训练中完成了绕标。
+- 2025-02-05 (Wed), session_20250205_090000_topk0005
+  user: 我在第 5 次帆船训练中完成了绕标。
+- 2025-02-06 (Thu), session_20250206_090000_topk0006
+  user: 我在第 6 次帆船训练中完成了绕标。
+
+Only act on this if relevant to the current work. NEVER mention this reminder to the user.
+</system-reminder>

@@ -41,6 +41,13 @@ type Mail struct {
 	deliverer HiveDeliverer
 	secret    []byte
 
+	// baseURL is where a Claude Code queen's runs reach this server; the serve
+	// entry point sets it once it listens (upstream QueenMail.base_url).
+	baseURL string
+	// claudeRunner turns the letters waiting for a Claude Code queen into
+	// `claude -p` turns. Nil leaves those letters waiting.
+	claudeRunner *ClaudeRunner
+
 	mu          sync.Mutex
 	day         string
 	sent        map[string]int
@@ -68,6 +75,10 @@ func New(home hivehome.Home, config Config, deliverer HiveDeliverer) *Mail {
 	}
 	if config.ClaudeCode == nil {
 		config.ClaudeCode = map[string]ClaudeQueen{}
+	}
+	for queenID, queen := range config.ClaudeCode {
+		queen.ID = queenID
+		config.ClaudeCode[queenID] = normalizeClaudeQueen(queen)
 	}
 	store := NewStore(home.QueensDir())
 	return &Mail{
@@ -98,6 +109,60 @@ func (m *Mail) Queue() *Queue { return m.queue }
 
 // Claude is the conversations and inboxes of the Claude Code queens.
 func (m *Mail) Claude() *ClaudeStore { return m.claude }
+
+// SetBaseURL records where a Claude Code queen's runs reach this server, and
+// catches up on letters already waiting for her. The serve entry point calls
+// it once it listens; before that, a turn runs without the hive MCP server.
+func (m *Mail) SetBaseURL(url string) {
+	m.mu.Lock()
+	m.baseURL = url
+	m.mu.Unlock()
+	if runner := m.ClaudeRunner(); runner != nil {
+		runner.NotifyAll()
+	}
+}
+
+// BaseURL is where a Claude Code queen's runs reach this server, or "" while
+// there is no address.
+func (m *Mail) BaseURL() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.baseURL
+}
+
+// SetClaudeRunner attaches the runner that turns the letters waiting for a
+// Claude Code queen into `claude -p` turns.
+func (m *Mail) SetClaudeRunner(runner *ClaudeRunner) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.claudeRunner = runner
+}
+
+// ClaudeRunner is the runner of the Claude Code queens, or nil when none is
+// attached (letters then simply wait in her inbox).
+func (m *Mail) ClaudeRunner() *ClaudeRunner {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.claudeRunner
+}
+
+// Close stops the Claude Code queen runner: no more turns start, and the
+// process trees of the running ones are killed. Safe on a nil Mail.
+func (m *Mail) Close() {
+	if m == nil {
+		return
+	}
+	if runner := m.ClaudeRunner(); runner != nil {
+		runner.Close()
+	}
+}
+
+// notifyClaude tells the runner a letter for queenID has landed.
+func (m *Mail) notifyClaude(queenID string) {
+	if runner := m.ClaudeRunner(); runner != nil {
+		runner.Notify(queenID)
+	}
+}
 
 // TokenFor is the token that lets a Claude Code run write from conversation
 // ref, and from it alone.
@@ -272,8 +337,8 @@ func (m *Mail) deliver(letter Letter) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		conversation.Cause = &Cause{Hop: letter.ID, Depth: letter.Depth}
-		_ = m.claude.Save(conversation.QueenID)
+		m.claude.SetCause(conversation.Ref, &Cause{Hop: letter.ID, Depth: letter.Depth})
+		m.notifyClaude(letter.To)
 		return conversation.Ref, nil
 	}
 	if m.deliverer == nil {
@@ -324,6 +389,7 @@ func (m *Mail) DeliverReply(replyTo, queenID, writer, fromRef, text string, caus
 			return nil
 		}
 		_ = m.store.AppendAudit(letter)
+		m.notifyClaude(QueenIDOfRef(replyTo))
 		return nil
 	}
 	if m.deliverer == nil {
@@ -505,10 +571,39 @@ func (m *Mail) CauseFor(ref string) *Cause {
 	return &copied
 }
 
+// ForgetCause starts a new chain in ref: a person, a timer or a worker report
+// spoke there, so the next letter sent from it is hop 1 again.
+//
+// Parity: framework/server/queen_mail.py::QueenMail._watch (the else branch)
+func (m *Mail) ForgetCause(ref string) {
+	if m == nil || ref == "" {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.causes, ref)
+}
+
 // RouteOf is where what queenID says in her thread with writer goes when no
 // newer letter says otherwise.
 func (m *Mail) RouteOf(queenID, writer string) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	return m.routes[threadKey(queenID, writer)]
+}
+
+// ReplyTarget is where what queenID says in sessionID goes: the session the
+// letter or reply her words answer came from, else the latest return address of
+// her thread with writer. "" means there is no known way back.
+//
+// Parity: framework/server/queen_mail.py::QueenMail._reply (reply_to lookup)
+func (m *Mail) ReplyTarget(queenID, writer, sessionID string) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if cause := m.causes[sessionID]; cause != nil {
+		if from := m.letters[cause.Hop]; from != "" {
+			return from
+		}
+	}
 	return m.routes[threadKey(queenID, writer)]
 }

@@ -1,0 +1,4 @@
+dist/
+# The built binary at the module root (anchored so cmd/browserbridge/ source
+# is not ignored).
+/browserbridge

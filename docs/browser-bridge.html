@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive Browser Bridge — 设计、实现与使用</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px} .missing{color:#f2a3a3}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:760px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Browser Bridge</div><h1>Hive <span>Browser Bridge</span> — 设计、实现与使用</h1>
+<p class="lede">让 agent 驱动<b>你正在用的那一个 Chrome</b>，而不是每个 agent 各起一个无头浏览器：Chrome 扩展 + 本地 WebSocket 桥 + 每 agent 一个 tab group。本文覆盖设计动机、进程/端口架构、协议、代码地图、使用步骤、安全边界，以及 Go 移植的诚实现状。</p>
+<div class="meta"><span>生成：<b>2026-11-20 17:30 CST</b></span><span>扩展：<b>1.7.4 · protocol 6</b></span><span>端口：<b>14829 / 14830 / 14831</b>（legacy 9229 / 9230）</span><span>Go 模块：<b>github.com/aden-hive/hive-go/browserbridge</b></span></div>
+<div class="toc"><a href="#why">为什么</a><a href="#arch">架构</a><a href="#ports">端口与协议</a><a href="#lifecycle">命令生命周期</a><a href="#codemap">代码地图</a><a href="#usage">怎么用</a><a href="#health">健康与安全</a><a href="#goparity">Go 现状</a><a href="#repro">复现</a></div></header>
+
+<section id="why"><h2><span class="num">00</span>为什么需要它</h2>
+<p class="sub">一句话：agent 需要操作真实网页，而“每个 agent 启动一个 Playwright Chrome”在真实账号场景里代价太高。Browser Bridge 用扩展把自动化接进用户已有的 Chrome。</p>
+<div class="grid g3" style="margin:14px 0">
+<div class="card"><div class="k">问题 1 · 登录态</div><div class="v">真实会话</div><div class="d">独立浏览器 = 独立 profile：SSO、Cookie、企业门户都要重新登录；很多系统还会对无头浏览器做风控。</div></div>
+<div class="card"><div class="k">问题 2 · 隔离与可见</div><div class="v">Tab group / agent</div><div class="d">多个 agent 共用一个浏览器会互相踩标签页；用户也看不到 agent 在操作什么。</div></div>
+<div class="card"><div class="k">问题 3 · 生命周期</div><div class="v">桥独立存活</div><div class="d">浏览器连接不能绑在可随时被超时杀掉的工具子进程上，否则一次慢调用会带走所有标签页。</div></div>
+</div>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">设计选择</th><th style="width:38%">做法</th><th>解决什么</th></tr></thead><tbody>
+<tr><td>复用真实 Chrome</td><td>Chrome 扩展（<code>chrome.debugger</code> + <code>chrome.tabs</code> + <code>chrome.tabGroups</code>）连到本地桥；不启动新浏览器</td><td>登录态、Cookie、扩展、企业风控全部保持原样；用户可随时接管。</td></tr>
+<tr><td>每 agent 一个 tab group</td><td>首个浏览器调用时 <code>context.create</code> 建组；组标题带零宽标记 <code>U+200B</code>，供清扫器识别 Hive 组</td><td>并发 agent 互不串页；标签栏可见；任务结束 <code>context.destroy</code> 关组，Chrome 不退出。</td></tr>
+<tr><td>桥独立进程</td><td><code>gcu.bridge_host</code> 监督进程 + 常驻 worker；gcu MCP server 只是 RPC 客户端</td><td>工具调用超时/子进程重启不会断开扩展；gcu 重启后重连仍保留所有标签页。</td></tr>
+<tr><td>控制面与数据面分离</td><td>14829 扩展中继、14830 状态/代理 HTTP、14831 方法调用 RPC</td><td>坏掉的工具调用不会和扩展帧混在一起；两套协议可独立演进。</td></tr>
+<tr><td>健康可观测</td><td>双向心跳（WS ping + 应用层 ping）、<code>/status</code>、side panel、状态徽章、blocker 规则</td><td>“绿灯但实际卡死”能被识别；DevTools 抢占、特权页面、原生对话框会给出可读原因。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="arch"><h2><span class="num">01</span>架构总览</h2>
+<pre>┌─────────────────────────────── Hive runtime（hive serve / desktop）───────────────────────────────┐
+│  会话工具 browser_setup（仅发现入口）                                                              │
+│  POST /api/browser/tab/reveal   GET /api/browser/status[/stream]（服务端代理，避免浏览器跨域）        │
+│  loader._bridge_keepalive_loop ── 确保 bridge_host 在跑；把 side-panel notify 路由回 agent           │
+└───────────────────────────────────────────────┬──────────────────────────────────────────────────┘
+                                                │ ① terminal_exec
+                                                ▼
+┌───────────────────────────────┐      ┌──────────────────────────────────────────────┐
+│ agent（queen / worker）        │      │ hive-browser CLI（gcu.cli）                   │
+│ 每轮由 runtime 注入           │      │ 身份来自 HIVE_BROWSER_SESSION                 │
+│ HIVE_BROWSER_SESSION /         │      │ 同进程：BridgeClient ──RPC 14831──┐           │
+│ HIVE_BROWSER_PROFILE_DISPLAY_  │      └───────────────────────────────────┼───────────┘
+│ NAME                          │                                          │
+└───────────────────────────────┘                                          ▼
+                                                      ┌─────────────────────────────────────┐
+                                                      │ bridge_host（supervisor + worker）   │
+                                                      │ 重启退避；监听父进程死亡；优雅关闭     │
+                                                      │ BeelineBridge  WS 14829 /bridge      │
+                                                      │ HTTP 14830（/health /status /contexts│
+                                                      │ /command /tabs/{id}/health …）        │
+                                                      └───────────────┬─────────────────────┘
+                                                                      │ ② WebSocket（JSON）
+                                                                      ▼
+                                              ┌──────────────────────────────────────────────┐
+                                              │ Chrome 扩展 1.7.4（protocol 6）                │
+                                              │ offscreen.js 持久 WS（防 service worker 挂起） │
+                                              │ background.js 执行 tab.* / cdp.* / group.*    │
+                                              │ sidepanel.js 健康面板 + 接管 / 释放           │
+                                              └───────────────┬──────────────────────────────┘
+                                                              │ ③ chrome.debugger / chrome.tabs / tabGroups
+                                                              ▼
+                                              ┌──────────────────────────────────────────────┐
+                                              │ 用户正在用的 Chrome（真实 profile、登录态）    │
+                                              │ 每个 agent 一个彩色 tab group                  │
+                                              └──────────────────────────────────────────────┘</pre>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">组件</th><th style="width:44%">职责</th><th>关键点</th></tr></thead><tbody>
+<tr><td>Chrome 扩展</td><td>唯一接触浏览器的一侧：把 CDP 方法、标签操作、分组操作暴露成 JSON 消息</td><td>MV3；<code>offscreen</code> 持有持久 WebSocket；<code>background</code> 执行；<code>sidePanel</code> 做健康面板。</td></tr>
+<tr><td>BeelineBridge（Python）</td><td>WebSocket 服务端：hello 注册、多 profile、请求路由、心跳、命令实现、context 注册表、健康/telemetry/限流</td><td><code>tools/src/gcu/browser/bridge.py</code>；协议版本 6；同名 profile 会踢掉旧连接（4002）。</td></tr>
+<tr><td>bridge_host</td><td>独立进程 + 监督器；把桥的生命周期绑到 durable runtime，而不是某个 gcu MCP 子进程</td><td><code>python -m gcu.bridge_host</code>（worker）/ <code>--supervise</code>；SIGTERM 优雅关闭；父进程死亡确认后退出。</td></tr>
+<tr><td>BridgeClient / RPC</td><td>每个 gcu 进程里的薄客户端，经 14831 调桥方法；失败抛出，工具层 <code>try/except</code> 不变</td><td><code>gcu/browser/bridge_rpc.py</code>；<code>rpc_id</code> 关联请求/响应；大响应（AX 树、截图）单独放宽帧上限。</td></tr>
+<tr><td>hive-browser CLI</td><td>agent 的实际入口：<code>hive-browser &lt;command&gt; ... --json</code></td><td><code>tools/pyproject.toml</code> 的 console script；fallback <code>uv run --project tools python -m gcu.cli</code>；退出码语义固定。</td></tr>
+<tr><td>Hive server 代理</td><td><code>/api/browser/status[/stream]</code>、<code>/api/browser/tab/reveal</code></td><td>服务端探测 127.0.0.1:9230（可用 <code>HIVE_BRIDGE_PORT</code> 改基址，+1 为状态口），避免浏览器跨域报错。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="ports"><h2><span class="num">02</span>端口与协议</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">端口</th><th style="width:26%">用途</th><th>说明</th></tr></thead><tbody>
+<tr><td><code>14829</code></td><td>扩展中继 WebSocket</td><td>路径 <code>/bridge</code>；扩展主动连入；主通道。</td></tr>
+<tr><td><code>14830</code></td><td>HTTP 状态 / 代理 API</td><td><code>/health</code>、<code>/status</code>、<code>/profiles</code>、<code>/contexts</code>、<code>/command</code>、<code>/tabs/{id}/health</code>、<code>/tabs/{id}/actions</code>、adopt/release、star default。</td></tr>
+<tr><td><code>14831</code></td><td>控制 RPC WebSocket</td><td><code>BRIDGE_PORT + 2</code>；<code>BridgeClient</code> ↔ 桥；JSON-RPC 形状 <code>{rpc_id, method, args, params}</code>。</td></tr>
+<tr><td><code>9229 / 9230</code></td><td>legacy 中继 / 状态</td><td>迁移窗口内保留；旧版扩展仍拨 9229。Hive server 的 status 探测默认就是 9230。</td></tr>
+<tr><td><code>4002</code></td><td>GCU MCP server HTTP</td><td>可选 HTTP transport（<code>python -m gcu.server --port 4002</code>）；与浏览器桥不是同一个进程。</td></tr>
+</tbody></table></div>
+<h3>2.1 这是标准接口吗？</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">层</th><th style="width:16%">标准性</th><th>说明</th></tr></thead><tbody>
+<tr><td>传输</td><td><span class="pill ok">标准</span></td><td>RFC 6455 WebSocket，JSON 文本帧，扩展主动连 <code>ws://127.0.0.1:14829/bridge</code>；WS 层 ping/pong 由协议自带。</td></tr>
+<tr><td>信封与命令词表</td><td><span class="pill warn">Hive 私有</span></td><td><code>hello{version,protocolVersion,extensionId,profileLabel}</code>、<code>ping/pong</code>、<code>{id,type,...params}</code> → <code>{id,result|error}</code>、<code>tab.*</code>/<code>cdp.attach</code>/<code>cdp</code>、<code>cdp_event</code>/<code>tab_event</code>/<code>tab_group_event</code>。有版本协商（当前 protocol 6）和同 label 顶替（close 4002），但不是公开规范，没有第三方 SDK/多实现生态。</td></tr>
+<tr><td>页面动作语义</td><td><span class="pill ok">事实标准</span></td><td><code>cdp</code> 命令把 Chrome DevTools Protocol 的 <code>method</code>/<code>params</code> 原样透传给 <code>chrome.debugger.sendCommand</code>；点击/输入/截图最终都是 CDP。这层是标准的，“怎么跟桥说话”那层是私有的。</td></tr>
+</tbody></table></div>
+<p class="sub"><b>对比：</b>W3C 的 WebDriver BiDi 是标准化浏览器自动化协议，Hive 没有实现；MCP 是更外层（agent ↔ 工具）的标准，不负责扩展 ↔ 桥；Playwright/Puppeteer 走 CDP 或自家驱动。Hive 选私有薄协议的原因是：要驱动<b>用户已登录的真实 Chrome</b>（不能要求用 <code>--remote-debugging-port</code> 重启浏览器）、要 <code>chrome.tabGroups</code> 这类扩展 API（CDP 没有稳定等价物）、还要 context 接管/健康/遥测等 CDP 之外的语义。</p>
+<h3>线上消息（节选）</h3>
+<pre>扩展 → 桥：  {"type":"hello","version":"1.7.4","protocolVersion":6,"extensionId":"…","profileLabel":"work"}
+              {"type":"ping"} / {"type":"pong"}
+              {"id":"1","result":{…}}  |  {"id":"1","error":"message"}
+
+桥 → 扩展：  {"id":"1","type":"tab.list"}
+              {"id":"2","type":"tab.create","url":"https://…"}
+              {"id":"3","type":"cdp","tabId":11,"method":"Runtime.evaluate","params":{…}}</pre>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">错误码</th><th style="width:12%">HTTP</th><th>场景</th></tr></thead><tbody>
+<tr><td><code>not_connected</code></td><td>503</td><td>没有扩展连上（Chrome 没开 / 扩展没装 / 桥没跑）。</td></tr>
+<tr><td><code>timeout</code></td><td>504</td><td>扩展在预算内没有回包。</td></tr>
+<tr><td><code>conflict</code></td><td>409</td><td>标签页已被另一个 agent 的组占用（adopt 时）。</td></tr>
+<tr><td><code>rate_limited</code></td><td>429</td><td>社交平台的浏览/导航限流钩子触发。</td></tr>
+<tr><td><code>bad_request</code> / <code>no_such_profile</code> / <code>unsupported_extension</code></td><td>400</td><td>参数/配置/协议版本问题。</td></tr>
+<tr><td><code>not_found</code></td><td>404</td><td>标签页/上下文不存在。</td></tr>
+<tr><td><code>connection_lost</code> / <code>extension_error</code> / <code>cdp_error</code></td><td>502/500</td><td>扩展或 CDP 侧失败；具体原因在 <code>message</code>。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="lifecycle"><h2><span class="num">03</span>一条命令的生命周期</h2>
+<p class="sub">以 <code>hive-browser open https://example.com --json</code> 为例：</p>
+<ol>
+<li><b>身份注入</b>：Hive runtime 在 <code>terminal_exec</code> 子进程环境里写入 <code>HIVE_BROWSER_SESSION</code>（= 该 agent 的 session id）与 <code>HIVE_BROWSER_PROFILE_DISPLAY_NAME</code>；CLI 把它绑成 <code>_active_profile</code> contextvar。没有它，所有 agent 会落到共享的 <code>default</code> 组，互相串页。</li>
+<li><b>CLI → RPC</b>：<code>gcu.cli</code> 经 <code>BridgeClient</code> 连 14831，调 <code>open</code>；<code>gcu.errors.run</code> 负责把异常映射成 JSON envelope + 退出码。</li>
+<li><b>桥 → 扩展</b>：桥若发现该 profile 还没有组，先发 <code>context.create</code>（返回 <code>groupId, tabId</code>）；然后 <code>tab.create</code> → <code>tab.activate</code>（除非 background）→ <code>cdp.attach</code> → <code>Page.enable</code> → <code>Page.navigate</code> → <code>Runtime.evaluate</code> 轮询 readyState/url/title。</li>
+<li><b>扩展 → Chrome</b>：<code>chrome.tabs</code> 建标签、<code>chrome.tabGroups</code> 标记组、<code>chrome.debugger</code> 发 CDP；结果原路回传。</li>
+<li><b>桥侧记账</b>：context 注册表、active tab、action history、telemetry JSONL（opt-in）、限流钩子、stale sweep（30s）在同一进程内更新。</li>
+<li><b>返回</b>：CLI 打印 <code>{"ok":true,"tabId":…,"url":…,"title":…,"browser_profile":…}</code>；退出码 0。截图类命令会把 JPEG 写到 <code>saved_to</code> 并自动挂到 agent 下一轮。</li>
+</ol>
+<div class="callout info"><b>为什么截图要“自动挂下一轮”：</b>工具结果里只有文本和路径，图片字节要由 framework 的 <code>_maybe_inline_browser_image</code> 在下一轮转成多模态内容；这也是为什么 CLI 文档反复强调“不要再用 attach_file 重复挂”。</div>
+</section>
+
+<section id="codemap"><h2><span class="num">04</span>代码地图</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">层</th><th style="width:44%">文件</th><th>作用</th></tr></thead><tbody>
+<tr><td>扩展</td><td><code>tools/browser-extension/</code><br><code>go_hive/browserbridge/extension/</code></td><td>manifest 1.7.4 / MV3；<code>background.js</code>、<code>offscreen.js</code>、<code>sidepanel.js</code>、<code>popup.js</code>。Go 侧是逐字节复制（<code>SOURCE.md</code> 记录来源）。</td></tr>
+<tr><td>桥（Python）</td><td><code>tools/src/gcu/browser/bridge.py</code></td><td><code>BeelineBridge</code>：WS 服务端、命令实现、context 注册表、心跳、健康、telemetry、限流、清扫。</td></tr>
+<tr><td>进程宿主</td><td><code>tools/src/gcu/browser/bridge_rpc.py</code><br><code>tools/src/gcu/bridge_host.py</code></td><td>控制 RPC（14831）+ 独立进程监督；父进程死亡检测与优雅关闭。</td></tr>
+<tr><td>CLI</td><td><code>tools/src/gcu/cli.py</code><br><code>tools/src/gcu/cli_commands/*.py</code><br><code>tools/src/gcu/browser/identity.py</code></td><td><code>hive-browser</code> 的 noun/verb 树、每个命令的 handler、身份 env 解析、退出码映射。</td></tr>
+<tr><td>工具面</td><td><code>tools/src/gcu/browser/tools/*.py</code><br><code>core/framework/tools/browser_tools.py</code></td><td>33 个 <code>@mcp.tool</code> 定义（lifecycle/tabs/navigation/inspection/interact/advanced/script + legacy interactions）；Hive 侧只保留一个只读 <code>browser_setup</code> 发现工具。</td></tr>
+<tr><td>Hive 接线</td><td><code>core/framework/loader/cli.py</code><br><code>core/framework/loader/tool_registry.py</code><br><code>core/framework/server/app.py</code></td><td><code>_bridge_keepalive_loop</code> 启动/重连 bridge_host；把 <code>HIVE_BROWSER_SESSION</code> 注入子进程；<code>/api/browser/status[/stream]</code> 与 tab reveal 代理。</td></tr>
+<tr><td>UI</td><td><code>core/frontend/src/components/BrowserStatusBadge.tsx</code><br><code>core/frontend/src/pages/skills-library.tsx</code></td><td>顶栏徽章：checking / connected / stale / disconnected / offline；显示当前 queen 的活动标签页；点击断线徽章打开 Chrome Web Store。</td></tr>
+<tr><td>Go 移植</td><td><code>go_hive/browserbridge/</code></td><td>独立 Go module（零外部依赖）：<code>ws/</code> RFC 6455、<code>bridge.go</code>、<code>connection.go</code>、<code>commands*.go</code>、<code>contexts.go</code>、<code>health.go</code>、<code>httpapi.go</code>、<code>PARITY.md</code>。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="usage"><h2><span class="num">05</span>怎么用</h2>
+<h3>5.1 安装扩展</h3>
+<ol>
+<li><b>Chrome Web Store（推荐）</b>：<a href="https://chromewebstore.google.com/detail/hive-browser-bridge/jkpcegnbfimimjodblcemoheedidnppm">Hive Browser Bridge</a>。</li>
+<li><b>开发者安装</b>：打开 <code>chrome://extensions</code> → 开启 Developer mode → Load unpacked → 选 <code>go_hive/browserbridge/extension</code>（或 <code>tools/browser-extension</code>）。</li>
+<li><b>打包分发</b>：<code>go_hive/browserbridge/scripts/package_extension.sh</code> 生成 <code>dist/hive-browser-bridge-1.7.4.zip</code>；<code>--check</code> 只校验 manifest 引用文件。</li>
+</ol>
+<h3>5.2 启动桥</h3>
+<ul>
+<li><b>Hive 运行时</b>：<code>hive serve</code> / 桌面端启动后，<code>_bridge_keepalive_loop</code> 会调用 <code>ensure_bridge_host_running()</code> 自动拉起 supervisor；无需手工起。</li>
+<li><b>手工调试</b>：<code>uv run --project tools python -m gcu.bridge_host --supervise</code>（supervisor）或 <code>python -m gcu.bridge_host</code>（单 worker）。</li>
+<li><b>确认</b>：<code>curl -s http://127.0.0.1:14830/status | jq .</code>；或 <code>hive-browser setup --json</code> 看 <code>connected_profiles</code>。</li>
+</ul>
+<h3>5.3 Agent 命令面</h3>
+<p class="sub">agent 通过 <code>terminal_exec</code> 跑 <code>hive-browser &lt;command&gt; ... --json</code>；先调 <code>browser_setup</code> 拿完整命令表。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">命令</th><th>用途</th></tr></thead><tbody>
+<tr><td><code>setup --json</code></td><td>检查扩展/桥连接、列出 Chrome profile、未连接时返回安装步骤。</td></tr>
+<tr><td><code>status --json</code></td><td>当前 tab group 的连接与运行状态。</td></tr>
+<tr><td><code>open &lt;url&gt; --json</code></td><td>冷启动入口：建组 + 开标签 + 导航。</td></tr>
+<tr><td><code>navigate &lt;url&gt; --tab &lt;id&gt; --json</code></td><td>把已有标签导航到新地址。</td></tr>
+<tr><td><code>interact --action click|type|key|scroll|drag|screenshot|zoom|wait</code></td><td>统一交互面；<code>--selector</code> 或 <code>--coordinate x,y</code>（0..1 视口分数）。</td></tr>
+<tr><td><code>select &lt;sel&gt; --value V</code> / <code>upload &lt;sel&gt; --file P</code></td><td>下拉选择 / 文件上传。</td></tr>
+<tr><td><code>screenshot --intent &lt;p&gt;</code></td><td>截图，JPEG 落盘并自动挂到下一轮。</td></tr>
+<tr><td><code>evaluate --js &lt;src|@file|-&gt;</code></td><td>页面内执行 JS，返回最后一个表达式值。</td></tr>
+<tr><td><code>tab list|close|activate</code></td><td>管理当前组内的标签。</td></tr>
+<tr><td><code>page html|snapshot|text|shadow-query|console|resize</code></td><td>页面读取与视口；大结果 spill 到文件。</td></tr>
+<tr><td><code>dialog respond accept|dismiss</code></td><td>处理原生对话框。</td></tr>
+<tr><td><code>script --skill S --script F.py --args '{...}'</code></td><td>跑 skill 自带的 <code>run(ctx)</code> 编排脚本。</td></tr>
+</tbody></table></div>
+<p class="sub"><b>退出码：</b>0 ok · 2 not_connected · 3 not_started · 4 not_found · 6 bad_args · 7 pending_dialog · 8 rate_limited。</p>
+<h3>5.4 直接调 HTTP（调试/集成）</h3>
+<pre>curl -s http://127.0.0.1:14830/command \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"browser_tabs","params":{"browser_profile":"work"}}'
+
+# 成功
+{"ok":true,"result":{"ok":true,"total":3,"activeTabId":null,"tabs":[…]}}
+# 失败
+{"ok":false,"code":"not_connected","message":"no browser extension is connected — …"}</pre>
+<h3>5.5 Go 开发者</h3>
+<pre>cd go_hive/browserbridge
+go build ./...
+go test ./...        # 本机实测：bridge 3.03s + ws 0.85s，全部 ok
+
+# 作为库嵌入（当前 lane 没有 cmd/ 入口）：
+b := browserbridge.New(browserbridge.Config{ /* … */ })
+go b.Start(ctx)</pre>
+</section>
+
+<section id="health"><h2><span class="num">06</span>健康、隔离与安全</h2>
+<div class="grid g3" style="margin:14px 0">
+<div class="card"><div class="k">健康状态</div><div class="v">4 态</div><div class="d"><code>healthy</code>（connected 且 pong &lt; 15s）· <code>stale</code>（connected 但 pong 过期）· <code>disconnected</code>（桥在、扩展不在）· <code>offline</code>（桥都不在）。</div></div>
+<div class="card"><div class="k">双向心跳</div><div class="v">WS + 应用层</div><div class="d">WS ping 查 TCP；应用层 ping 查 offscreen/Service Worker 是否还在泵消息。半开连接任一侧都能发现并重连。</div></div>
+<div class="card"><div class="k">隔离单位</div><div class="v">tab group</div><div class="d">每个 agent/session 一个组；组标题带零宽标记供清扫器识别；<code>context.destroy</code> 只关组内标签，Chrome 不退出。</div></div>
+</div>
+<h3>6.1 Blocker（可读的失败原因）</h3>
+<ul>
+<li><code>privileged_scheme</code>：<code>chrome://</code> 等特权页，Chrome 禁止扩展自动化；</li>
+<li><code>devtools_attached</code>：DevTools 或别的工具占着 <code>chrome.debugger</code>；</li>
+<li><code>pending_dialog</code>：页面有原生 alert/confirm/prompt 挡住输入；</li>
+<li>其余规则在 <code>gcu/browser/health.py</code>，<code>/contexts</code> 会把组内所有标签的 blocker 去重后汇总，<code>/status</code> 给 <code>system_blocker</code>。</li>
+</ul>
+<h3>6.2 隔离与接管</h3>
+<p>side panel 可以 <b>adopt</b> 一个用户正在看的标签（把它移进 agent 的组）或 <b>release</b> 它（移出组、交还用户）；另一个 agent 已拥有该标签时返回 <code>409 conflict</code>。从用户侧发起的接管会通过 notify 帧回传到对应 agent 的 <code>inject_event</code>，agent 下一轮就能看到“标签被接管/释放”。</p>
+<h3>6.3 安全边界（必须知道）</h3>
+<div class="callout bad"><b>它驱动的是你真实的浏览器和真实的登录态。</b>扩展权限包括 <code>debugger</code>、<code>tabs</code>、<code>tabGroups</code>、<code>scripting</code>、<code>offscreen</code>、<code>storage</code>、<code>alarms</code>、<code>sidePanel</code>，host 权限含 <code>&lt;all_urls&gt;</code>。任何能向 agent 输入文本的人（聊天渠道、网页内容）都可能间接让 agent 在你已登录的站点上操作；Hive 文档明确提醒：<code>bypassPermissions</code> 或 Bash 工具下，陌生人的一句话离“在你机器上执行命令”只有几个字母。桥只监听 loopback，但这不防提示注入。</div>
+<ul>
+<li>桥/HTTP 全部绑 <code>127.0.0.1</code>，非 loopback 对端直接拒绝；</li>
+<li>导航可挂社交平台限流钩子（<code>SocialRateLimiter</code>），429 回到 agent；</li>
+<li>每次工具调用受 60s 预算约束；桥独立进程保证超时只杀客户端，不杀浏览器连接；</li>
+<li>telemetry 默认 opt-in，写入按天 JSONL，敏感字段做脱敏。</li>
+</ul>
+<h3>6.4 部署边界：必须和 Chrome 同机吗？</h3>
+<p><b>当前设计：必须同机。</b>Hive 运行时、bridge（bridge_host + BeelineBridge）、Chrome 扩展三者全部只走 loopback，且没有任何认证/TLS：扩展硬编码 <code>ws://127.0.0.1:14829/bridge</code>（legacy 9229），桥只绑 <code>127.0.0.1</code>，Hive 的状态探针与 CLI 的 RPC 也只拨 <code>127.0.0.1</code>（14830/14831）。它们是<b>不同进程</b>，但不是<b>可分离的主机</b>。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">拓扑</th><th style="width:14%">可行性</th><th>说明</th></tr></thead><tbody>
+<tr><td>Hive + bridge + Chrome 同一台（推荐）</td><td><span class="pill ok">开箱即用</span></td><td>三个独立进程 + loopback；这也是唯一被测试过（协议层）的形态。</td></tr>
+<tr><td>Hive 在远程服务器，Chrome 在你桌面</td><td><span class="pill bad">不支持的</span></td><td>扩展只会拨本机 loopback；远程 Hive 的 CLI/探针也拨它自己的 loopback。要拆开必须改代码（见下）。</td></tr>
+<tr><td>同机 Docker（Linux，<code>--network host</code>）</td><td><span class="pill warn">勉强可行</span></td><td>容器与宿主共享 loopback 才能让扩展连上容器里的桥；macOS/Windows 的 Docker 不共享 loopback，不可行。</td></tr>
+<tr><td>WSL2：Windows Chrome + WSL 里的 Hive</td><td><span class="pill bad">不可行</span></td><td>loopback 隔离；需要 Windows portproxy 且扩展仍只认 127.0.0.1，不被支持。</td></tr>
+<tr><td>Hive 留在桌面，远程访问它的 dashboard/API</td><td><span class="pill ok">可行</span></td><td>自动化留在桌面；<code>hive serve --host</code> 或 SSH 隧道把 UI/API 暴露出去（注意 Hive API 的鉴权面）。</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>真要分离部署，需要五项改造：</b>① 扩展的 bridge URL 可配置（不是硬编码 127.0.0.1）+ manifest host 权限；② 桥支持 <code>wss://</code> + 认证令牌（现在是<b>无鉴权的浏览器控制面</b>）；③ Hive 侧把状态探针 / CLI RPC 的 host 做成配置（现在只有 <code>HIVE_BRIDGE_PORT</code> 改端口）；④ 关掉 Hive 侧的 <code>ensure_bridge_host_running</code>（否则它会在 Hive 所在机器本地拉起一个桥）；⑤ 隧道/VPN 承载。在此之前，把 14829/14830/14831 暴露到非 loopback 等于把你已登录的浏览器控制面交给网络——不要这么做。</div>
+</section>
+
+<section id="goparity"><h2><span class="num">07</span>Go 移植现状（诚实版）</h2>
+<p class="sub">Go 侧 <code>go_hive/browserbridge</code> 是一个<b>独立 module、零外部依赖</b>的库（没有 <code>cmd/</code> 入口），覆盖 L0/L1/L2：WS 传输、hello/多 profile、路由/错误、核心命令、context/tab-group 注册表、adopt/release、事件消费、30s 清扫、健康、telemetry、限流、side-panel HTTP。它<b>尚未被主 go-hive module 引用</b>（<code>grep aden-hive/hive-go/browserbridge</code> 在 <code>go_hive/go-hive</code> 下 0 命中），所以生产 Go hive 目前不会启动它。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">维度</th><th style="width:30%">Python（上游）</th><th style="width:26%">Go browserbridge</th><th>判定</th></tr></thead><tbody>
+<tr><td>扩展源码</td><td>1.7.4 / protocol 6</td><td>逐字节复制</td><td><span class="pill ok">已对齐</span></td></tr>
+<tr><td>WS 传输 / 多 profile / 心跳</td><td>完整</td><td>完整（fake-extension 测试）</td><td><span class="pill ok">已移植</span></td></tr>
+<tr><td>MCP 工具定义</td><td>33 个（22 active + 11 legacy）</td><td><b>22 / 22 active</b> 已移植；legacy 未注册项由 <code>browser_interact</code> 覆盖</td><td><span class="pill ok">已移植</span></td></tr>
+<tr><td>核心交互面 <code>browser_interact</code></td><td>active 主入口（click/type/key/scroll/drag/screenshot/upload…）</td><td>13 个 action 全部移植；参数相关性守卫、分数坐标、修饰键、HTML5 drag、zoom crop、auto-snapshot</td><td><span class="pill ok">已移植</span></td></tr>
+<tr><td>setup / status / stop 工具包装</td><td>有</td><td>已实现：<code>browser_setup</code> / <code>browser_status</code> / <code>browser_stop</code> + <code>hive-browser</code> CLI</td><td><span class="pill ok">已移植</span></td></tr>
+<tr><td>shadow DOM / select / console / html / upload / drag / dialog</td><td>有</td><td>已移植：shadow query（<code>&gt;&gt;&gt;</code> piercing）、select、console、html 落盘、upload（含 picker 拦截）、drag、dialog respond；均过真实 Chrome 验证</td><td><span class="pill ok">已移植</span></td></tr>
+<tr><td>artifact spill / refs / annotation / region 截图</td><td>有</td><td>部分：html 已落盘；快照 ref/href、注解截图、坐标动作图仍为 Go-native 形状</td><td><span class="pill warn">部分</span></td></tr>
+<tr><td>RPC 控制面 / <code>/tabs/{id}/reveal</code> / <code>/shutdown</code></td><td>有</td><td>已移植：14831 control RPC（46 方法白名单、client_hello、30s 空闲退出）</td><td><span class="pill ok">已移植</span></td></tr>
+<tr><td>真实 Chrome 验证</td><td>—</td><td>已做：Chrome 158.0.8127.37 + 扩展 1.7.4，19 步 E2E PASS；<code>scripts/real_chrome_e2e.sh</code></td><td><span class="pill ok">已验证</span></td></tr>
+<tr><td>主服务接线</td><td>runtime 自动拉起 bridge_host</td><td>已接线：<code>hive serve</code> 自动拉起/回收桥；3 条 <code>/api/browser/*</code> 面板代理 + notify 注入会话</td><td><span class="pill ok">已接线</span></td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>口径：</b>“Go 模块能 build、测试全绿”只证明协议层和 fake extension 用例通过，<b>不等于</b>真实 Chrome 可用，也不等于生产入口可达。逐条状态见 <a href="tool-parity-matrix.html">tool-parity-matrix.html</a> 与 <code>go_hive/browserbridge/PARITY.md</code>（22/22 active 已移植；残差为快照 ref/注解图形状与 CLI 退出码）。</div>
+</section>
+
+<section id="repro"><h2><span class="num">08</span>复现与证据</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">检查</th><th>命令 / 结果</th></tr></thead><tbody>
+<tr><td>Go 模块构建</td><td><code>cd go_hive/browserbridge &amp;&amp; CGO_ENABLED=0 GOPROXY=off go build ./...</code><div class="small">本机 2026-11-20：退出码 0。</div></td></tr>
+<tr><td>Go 模块测试</td><td><code>go test ./...</code><div class="small">本机实测：<code>ok github.com/aden-hive/hive-go/browserbridge 3.032s</code>；<code>ok .../ws 0.850s</code>。</div></td></tr>
+<tr><td>扩展 manifest</td><td><code>1.7.4</code> / <code>manifest_version 3</code>；权限与 host 见 §6.3。</td></tr>
+<tr><td>桥状态</td><td><code>curl -s http://127.0.0.1:14830/status | jq .</code>；未运行时 <code>hive-browser setup --json</code> 返回 <code>connected_profiles: []</code> 和安装步骤。</td></tr>
+<tr><td>Hive 代理</td><td><code>curl -s 'http://127.0.0.1:8787/api/browser/status?session_id=&lt;id&gt;' | jq .</code></td></tr>
+<tr><td>表面审计</td><td><code>uv run python go_hive/scripts/surface_audit.py</code><div class="small">前端→Go 缺失 0；Python→Go 缺失 0（浏览器面板路由已实现，豁免已删除）。</div></td></tr>
+</tbody></table></div>
+<div class="callout info"><b>相关文档：</b><a href="tool-parity-matrix.html">Hive ↔ go_hive 工具追踪矩阵</a> · <a href="surface-tracking-matrix.html">外观对齐追踪矩阵</a> · <a href="alignment-dimensions.html">对齐维度矩阵</a> · <a href="module-interfaces.html">接口不变量</a> · <code>go_hive/browserbridge/README.md</code> · <code>go_hive/browserbridge/PARITY.md</code> · <code>tools/browser-extension/README.md</code>。</div>
+</section>
+
+<footer>生成：2026-11-20 22:55 CST · 依据：本地源码 + <code>go_hive/browserbridge</code> 实测 build/test + 真实 Chrome 19 步 E2E + <code>PARITY.md</code> · 版本：扩展 1.7.4 / protocol 6 · 说明：active 工具与主服务接线已验证；快照 ref/注解图、CLI 退出码仍有形状差异。</footer>
+</div></body></html>

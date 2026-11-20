@@ -1,0 +1,3749 @@
+{
+  "schema": "hive-api-routes/1",
+  "description": "Frozen HTTP route tables. The contract reference is the Python hive checkout (reference=python@<commit>); go_hive is the target being aligned (target=go_hive@<commit>). Static extraction; path parameters are compared by shape, original spelling preserved.",
+  "reference_id": "python@1b9c458a19244379ac65dabd4827addb891045ef",
+  "target_id": "go_hive@1b9c458a19244379ac65dabd4827addb891045ef",
+  "reference": {
+    "implementation": "python",
+    "version": "1.0.14",
+    "commit": "1b9c458a19244379ac65dabd4827addb891045ef",
+    "last_core_commit": "a756b1e51765bc75b0a40e362859452a0a54081b",
+    "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd",
+    "source_root": "core/framework/server"
+  },
+  "target": {
+    "implementation": "go_hive",
+    "version": "1.0.26-go.1",
+    "commit": "1b9c458a19244379ac65dabd4827addb891045ef",
+    "source_root": "go_hive/go-hive/internal/server"
+  },
+  "generated_at": "2026-11-20T23:42:01+08:00",
+  "python": {
+    "version": "1.0.14",
+    "commit": "1b9c458a19244379ac65dabd4827addb891045ef",
+    "source_root": "core/framework/server",
+    "route_count": 217,
+    "routes": [
+      {
+        "method": "DELETE",
+        "path": "/api/agents",
+        "path_shape": "/api/agents",
+        "handler": "handle_delete_agent",
+        "source": "core/framework/server/routes_sessions.py:3198",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/agents/metadata",
+        "path_shape": "/api/agents/metadata",
+        "handler": "handle_update_colony_metadata",
+        "source": "core/framework/server/routes_sessions.py:3199",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/browser/contexts",
+        "path_shape": "/api/browser/contexts",
+        "handler": "handle_browser_contexts",
+        "source": "core/framework/server/routes_workers.py:441",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/browser/contexts/close",
+        "path_shape": "/api/browser/contexts/close",
+        "handler": "handle_close_browser_context",
+        "source": "core/framework/server/routes_workers.py:443",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/browser/status",
+        "path_shape": "/api/browser/status",
+        "handler": "handle_browser_status",
+        "source": "core/framework/server/app.py:1091",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/browser/status/stream",
+        "path_shape": "/api/browser/status/stream",
+        "handler": "handle_browser_status_stream",
+        "source": "core/framework/server/app.py:1092",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/browser/tab/reveal",
+        "path_shape": "/api/browser/tab/reveal",
+        "handler": "handle_browser_tab_reveal",
+        "source": "core/framework/server/app.py:1093",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/browser/tabs",
+        "path_shape": "/api/browser/tabs",
+        "handler": "handle_browser_tabs",
+        "source": "core/framework/server/routes_workers.py:442",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/channels",
+        "path_shape": "/api/channels",
+        "handler": "handle_list_channels",
+        "source": "core/framework/server/channels.py:548",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/claude-code-queens",
+        "path_shape": "/api/claude-code-queens",
+        "handler": "handle_list",
+        "source": "core/framework/server/routes_claude_code_queens.py:49",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/claude-code-queens/{queen_id}/conversations/{session_id}",
+        "path_shape": "/api/claude-code-queens/{}/conversations/{}",
+        "handler": "handle_transcript",
+        "source": "core/framework/server/routes_claude_code_queens.py:50",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/import",
+        "path_shape": "/api/colonies/import",
+        "handler": "handle_import_colony",
+        "source": "core/framework/server/routes_colonies.py:1560",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/colonies/import/chunk/{upload_id}",
+        "path_shape": "/api/colonies/import/chunk/{}",
+        "handler": "handle_chunk_upload",
+        "source": "core/framework/server/routes_colonies.py:1566",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/import/finalize/{upload_id}",
+        "path_shape": "/api/colonies/import/finalize/{}",
+        "handler": "handle_finalize_upload",
+        "source": "core/framework/server/routes_colonies.py:1568",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/import/init",
+        "path_shape": "/api/colonies/import/init",
+        "handler": "handle_init_upload",
+        "source": "core/framework/server/routes_colonies.py:1565",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/import/status/{upload_id}",
+        "path_shape": "/api/colonies/import/status/{}",
+        "handler": "handle_upload_status",
+        "source": "core/framework/server/routes_colonies.py:1567",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/colonies/import/{upload_id}",
+        "path_shape": "/api/colonies/import/{}",
+        "handler": "handle_cancel_upload",
+        "source": "core/framework/server/routes_colonies.py:1569",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/tools-index",
+        "path_shape": "/api/colonies/tools-index",
+        "handler": "handle_list_colonies",
+        "source": "core/framework/server/routes_colony_tools.py:363",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/colonies/{colony_id}",
+        "path_shape": "/api/colonies/{}",
+        "handler": "handle_delete_colony",
+        "source": "core/framework/server/routes_colonies.py:1574",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/active-session",
+        "path_shape": "/api/colonies/{}/active-session",
+        "handler": "handle_get_active_colony_session",
+        "source": "core/framework/server/routes_sessions.py:3235",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/data/changes",
+        "path_shape": "/api/colonies/{}/data/changes",
+        "handler": "handle_table_changes",
+        "source": "core/framework/server/routes_colony_workers.py:1845",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/data/tables",
+        "path_shape": "/api/colonies/{}/data/tables",
+        "handler": "handle_list_tables",
+        "source": "core/framework/server/routes_colony_workers.py:1844",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/data/tables/{table}/rows",
+        "path_shape": "/api/colonies/{}/data/tables/{}/rows",
+        "handler": "handle_table_rows",
+        "source": "core/framework/server/routes_colony_workers.py:1846",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/colonies/{colony_id}/data/tables/{table}/rows",
+        "path_shape": "/api/colonies/{}/data/tables/{}/rows",
+        "handler": "handle_update_row",
+        "source": "core/framework/server/routes_colony_workers.py:1850",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/{colony_id}/rename",
+        "path_shape": "/api/colonies/{}/rename",
+        "handler": "handle_rename_colony",
+        "source": "core/framework/server/routes_colonies.py:1582",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/{colony_id}/reveal",
+        "path_shape": "/api/colonies/{}/reveal",
+        "handler": "handle_reveal_colony_folder",
+        "source": "core/framework/server/routes_colonies.py:1578",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/{colony_id}/scaffold",
+        "path_shape": "/api/colonies/{}/scaffold",
+        "handler": "handle_scaffold_colony",
+        "source": "core/framework/server/routes_colonies.py:1570",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/sessions",
+        "path_shape": "/api/colonies/{}/sessions",
+        "handler": "handle_list_colony_sessions",
+        "source": "core/framework/server/routes_sessions.py:3234",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/worker_profiles",
+        "path_shape": "/api/colonies/{}/worker_profiles",
+        "handler": "handle_list_worker_profiles",
+        "source": "core/framework/server/routes_colonies.py:1586",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/{colony_id}/worker_profiles",
+        "path_shape": "/api/colonies/{}/worker_profiles",
+        "handler": "handle_upsert_worker_profile",
+        "source": "core/framework/server/routes_colonies.py:1590",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/colonies/{colony_id}/worker_profiles/{profile_name}",
+        "path_shape": "/api/colonies/{}/worker_profiles/{}",
+        "handler": "handle_delete_worker_profile",
+        "source": "core/framework/server/routes_colonies.py:1594",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colony/{colony_id}/notifications",
+        "path_shape": "/api/colony/{}/notifications",
+        "handler": "handle_get_notifications",
+        "source": "core/framework/server/routes_sentinel.py:243",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/colony/{colony_id}/notifications",
+        "path_shape": "/api/colony/{}/notifications",
+        "handler": "handle_put_notifications",
+        "source": "core/framework/server/routes_sentinel.py:244",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colony/{colony_id}/notifications/test",
+        "path_shape": "/api/colony/{}/notifications/test",
+        "handler": "handle_test_notification",
+        "source": "core/framework/server/routes_sentinel.py:245",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colony/{colony_id}/tools",
+        "path_shape": "/api/colony/{}/tools",
+        "handler": "handle_get_tools",
+        "source": "core/framework/server/routes_colony_tools.py:364",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/colony/{colony_id}/tools",
+        "path_shape": "/api/colony/{}/tools",
+        "handler": "handle_patch_tools",
+        "source": "core/framework/server/routes_colony_tools.py:365",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/external-skills",
+        "path_shape": "/api/config/external-skills",
+        "handler": "handle_get_external_skills",
+        "source": "core/framework/server/routes_config.py:1411",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/external-skills",
+        "path_shape": "/api/config/external-skills",
+        "handler": "handle_put_external_skills",
+        "source": "core/framework/server/routes_config.py:1412",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/features",
+        "path_shape": "/api/config/features",
+        "handler": "handle_get_features",
+        "source": "core/framework/server/routes_config.py:1421",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/features",
+        "path_shape": "/api/config/features",
+        "handler": "handle_update_features",
+        "source": "core/framework/server/routes_config.py:1422",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/llm",
+        "path_shape": "/api/config/llm",
+        "handler": "handle_get_llm_config",
+        "source": "core/framework/server/routes_config.py:1409",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/llm",
+        "path_shape": "/api/config/llm",
+        "handler": "handle_update_llm_config",
+        "source": "core/framework/server/routes_config.py:1417",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/llm-sections",
+        "path_shape": "/api/config/llm-sections",
+        "handler": "handle_get_llm_sections",
+        "source": "core/framework/server/routes_config.py:1410",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/llm-sections",
+        "path_shape": "/api/config/llm-sections",
+        "handler": "handle_put_llm_section",
+        "source": "core/framework/server/routes_config.py:1413",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/models",
+        "path_shape": "/api/config/models",
+        "handler": "handle_get_models",
+        "source": "core/framework/server/routes_config.py:1418",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/profile",
+        "path_shape": "/api/config/profile",
+        "handler": "handle_get_profile",
+        "source": "core/framework/server/routes_config.py:1425",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/profile",
+        "path_shape": "/api/config/profile",
+        "handler": "handle_update_profile",
+        "source": "core/framework/server/routes_config.py:1426",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/profile/avatar",
+        "path_shape": "/api/config/profile/avatar",
+        "handler": "handle_get_user_avatar",
+        "source": "core/framework/server/routes_config.py:1428",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/config/profile/avatar",
+        "path_shape": "/api/config/profile/avatar",
+        "handler": "handle_upload_user_avatar",
+        "source": "core/framework/server/routes_config.py:1427",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/provider-library",
+        "path_shape": "/api/config/provider-library",
+        "handler": "handle_get_provider_library",
+        "source": "core/framework/server/routes_config.py:1414",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/provider-library",
+        "path_shape": "/api/config/provider-library",
+        "handler": "handle_put_provider_library",
+        "source": "core/framework/server/routes_config.py:1415",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/config/provider-library/apply",
+        "path_shape": "/api/config/provider-library/apply",
+        "handler": "handle_apply_provider_library",
+        "source": "core/framework/server/routes_config.py:1416",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/rate-limits",
+        "path_shape": "/api/config/rate-limits",
+        "handler": "handle_get_rate_limits",
+        "source": "core/framework/server/routes_config.py:1423",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/rate-limits",
+        "path_shape": "/api/config/rate-limits",
+        "handler": "handle_update_rate_limits",
+        "source": "core/framework/server/routes_config.py:1424",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/sentinel",
+        "path_shape": "/api/config/sentinel",
+        "handler": "handle_get_sentinel_config",
+        "source": "core/framework/server/routes_config.py:1419",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/sentinel",
+        "path_shape": "/api/config/sentinel",
+        "handler": "handle_update_sentinel_config",
+        "source": "core/framework/server/routes_config.py:1420",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/credentials",
+        "path_shape": "/api/credentials",
+        "handler": "handle_list_credentials",
+        "source": "core/framework/server/routes_credentials.py:937",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/credentials",
+        "path_shape": "/api/credentials",
+        "handler": "handle_save_credential",
+        "source": "core/framework/server/routes_credentials.py:938",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/credentials/check-agent",
+        "path_shape": "/api/credentials/check-agent",
+        "handler": "handle_check_agent",
+        "source": "core/framework/server/routes_credentials.py:934",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/credentials/local",
+        "path_shape": "/api/credentials/local",
+        "handler": "handle_save_local_credential",
+        "source": "core/framework/server/routes_credentials.py:926",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/credentials/local/{credential_id}/{alias}",
+        "path_shape": "/api/credentials/local/{}/{}",
+        "handler": "handle_delete_local_credential",
+        "source": "core/framework/server/routes_credentials.py:927",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/credentials/oauth-status",
+        "path_shape": "/api/credentials/oauth-status",
+        "handler": "handle_oauth_status",
+        "source": "core/framework/server/routes_credentials.py:933",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/credentials/resync",
+        "path_shape": "/api/credentials/resync",
+        "handler": "handle_resync_credentials",
+        "source": "core/framework/server/routes_credentials.py:935",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/credentials/specs",
+        "path_shape": "/api/credentials/specs",
+        "handler": "handle_list_specs",
+        "source": "core/framework/server/routes_credentials.py:932",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/credentials/validate-key",
+        "path_shape": "/api/credentials/validate-key",
+        "handler": "handle_validate_key",
+        "source": "core/framework/server/routes_credentials.py:936",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/credentials/{credential_id}",
+        "path_shape": "/api/credentials/{}",
+        "handler": "handle_delete_credential",
+        "source": "core/framework/server/routes_credentials.py:940",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/credentials/{credential_id}",
+        "path_shape": "/api/credentials/{}",
+        "handler": "handle_get_credential",
+        "source": "core/framework/server/routes_credentials.py:939",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/changed",
+        "path_shape": "/api/crm/changed",
+        "handler": "handle_crm_changed",
+        "source": "core/framework/server/routes_events.py:610",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/claim",
+        "path_shape": "/api/crm/claim",
+        "handler": "handle_crm_claim",
+        "source": "core/framework/server/routes_colony_workers.py:1880",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/crm/grid/schema",
+        "path_shape": "/api/crm/grid/schema",
+        "handler": "handle_crm_schema",
+        "source": "core/framework/server/routes_colony_workers.py:1872",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/grid/{entity}",
+        "path_shape": "/api/crm/grid/{}",
+        "handler": "handle_crm_entity_create",
+        "source": "core/framework/server/routes_colony_workers.py:1876",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/grid/{entity}/group-counts",
+        "path_shape": "/api/crm/grid/{}/group-counts",
+        "handler": "handle_crm_entity_group_counts",
+        "source": "core/framework/server/routes_colony_workers.py:1874",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/grid/{entity}/query",
+        "path_shape": "/api/crm/grid/{}/query",
+        "handler": "handle_crm_entity_query",
+        "source": "core/framework/server/routes_colony_workers.py:1873",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/crm/grid/{entity}/{id}",
+        "path_shape": "/api/crm/grid/{}/{}",
+        "handler": "handle_crm_entity_delete",
+        "source": "core/framework/server/routes_colony_workers.py:1878",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/crm/grid/{entity}/{id}",
+        "path_shape": "/api/crm/grid/{}/{}",
+        "handler": "handle_crm_entity_detail",
+        "source": "core/framework/server/routes_colony_workers.py:1875",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/crm/grid/{entity}/{id}",
+        "path_shape": "/api/crm/grid/{}/{}",
+        "handler": "handle_crm_entity_update",
+        "source": "core/framework/server/routes_colony_workers.py:1877",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/grid/{entity}/{id}/stage",
+        "path_shape": "/api/crm/grid/{}/{}/stage",
+        "handler": "handle_crm_entity_set_stage",
+        "source": "core/framework/server/routes_colony_workers.py:1879",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/release",
+        "path_shape": "/api/crm/release",
+        "handler": "handle_crm_release",
+        "source": "core/framework/server/routes_colony_workers.py:1881",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/discover",
+        "path_shape": "/api/discover",
+        "handler": "handle_discover",
+        "source": "core/framework/server/routes_sessions.py:3197",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/events/global",
+        "path_shape": "/api/events/global",
+        "handler": "handle_global_events",
+        "source": "core/framework/server/routes_events.py:606",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/global/crm/status",
+        "path_shape": "/api/global/crm/status",
+        "handler": "handle_global_crm_status",
+        "source": "core/framework/server/routes_colony_workers.py:1856",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/global/data/changes",
+        "path_shape": "/api/global/data/changes",
+        "handler": "handle_global_changes",
+        "source": "core/framework/server/routes_colony_workers.py:1858",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/global/data/foreign-keys",
+        "path_shape": "/api/global/data/foreign-keys",
+        "handler": "handle_global_foreign_keys",
+        "source": "core/framework/server/routes_colony_workers.py:1859",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/global/data/tables",
+        "path_shape": "/api/global/data/tables",
+        "handler": "handle_global_list_tables",
+        "source": "core/framework/server/routes_colony_workers.py:1857",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/global/data/tables/{table}/group-counts",
+        "path_shape": "/api/global/data/tables/{}/group-counts",
+        "handler": "handle_global_table_group_counts",
+        "source": "core/framework/server/routes_colony_workers.py:1862",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/global/data/tables/{table}/query",
+        "path_shape": "/api/global/data/tables/{}/query",
+        "handler": "handle_global_table_query",
+        "source": "core/framework/server/routes_colony_workers.py:1861",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/global/data/tables/{table}/rows",
+        "path_shape": "/api/global/data/tables/{}/rows",
+        "handler": "handle_global_delete_row",
+        "source": "core/framework/server/routes_colony_workers.py:1868",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/global/data/tables/{table}/rows",
+        "path_shape": "/api/global/data/tables/{}/rows",
+        "handler": "handle_global_table_rows",
+        "source": "core/framework/server/routes_colony_workers.py:1860",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/global/data/tables/{table}/rows",
+        "path_shape": "/api/global/data/tables/{}/rows",
+        "handler": "handle_global_update_row",
+        "source": "core/framework/server/routes_colony_workers.py:1867",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/global/data/tables/{table}/rows",
+        "path_shape": "/api/global/data/tables/{}/rows",
+        "handler": "handle_global_insert_row",
+        "source": "core/framework/server/routes_colony_workers.py:1866",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "path_shape": "/api/health",
+        "handler": "handle_health",
+        "source": "core/framework/server/app.py:1088",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/health/resources",
+        "path_shape": "/api/health/resources",
+        "handler": "handle_resources",
+        "source": "core/framework/server/app.py:1089",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/maintenance/janitor/report",
+        "path_shape": "/api/maintenance/janitor/report",
+        "handler": "handle_janitor_report",
+        "source": "core/framework/server/routes_maintenance.py:102",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/maintenance/janitor/run",
+        "path_shape": "/api/maintenance/janitor/run",
+        "handler": "handle_janitor_run",
+        "source": "core/framework/server/routes_maintenance.py:101",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/mcp/servers",
+        "path_shape": "/api/mcp/servers",
+        "handler": "handle_list_servers",
+        "source": "core/framework/server/routes_mcp.py:303",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers",
+        "path_shape": "/api/mcp/servers",
+        "handler": "handle_add_server",
+        "source": "core/framework/server/routes_mcp.py:304",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/mcp/servers/{name}",
+        "path_shape": "/api/mcp/servers/{}",
+        "handler": "handle_remove_server",
+        "source": "core/framework/server/routes_mcp.py:305",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers/{name}/disable",
+        "path_shape": "/api/mcp/servers/{}/disable",
+        "handler": "handle_disable",
+        "source": "core/framework/server/routes_mcp.py:307",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers/{name}/enable",
+        "path_shape": "/api/mcp/servers/{}/enable",
+        "handler": "handle_enable",
+        "source": "core/framework/server/routes_mcp.py:306",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers/{name}/health",
+        "path_shape": "/api/mcp/servers/{}/health",
+        "handler": "handle_health",
+        "source": "core/framework/server/routes_mcp.py:308",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers/{name}/mode",
+        "path_shape": "/api/mcp/servers/{}/mode",
+        "handler": "handle_set_mode",
+        "source": "core/framework/server/routes_mcp.py:309",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/memories",
+        "path_shape": "/api/memories",
+        "handler": "handle_list_memories",
+        "source": "core/framework/server/routes_memories.py:261",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/memories/file",
+        "path_shape": "/api/memories/file",
+        "handler": "handle_delete_memory",
+        "source": "core/framework/server/routes_memories.py:265",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/memories/file",
+        "path_shape": "/api/memories/file",
+        "handler": "handle_get_memory",
+        "source": "core/framework/server/routes_memories.py:262",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/memories/file",
+        "path_shape": "/api/memories/file",
+        "handler": "handle_create_memory",
+        "source": "core/framework/server/routes_memories.py:263",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/memories/file",
+        "path_shape": "/api/memories/file",
+        "handler": "handle_update_memory",
+        "source": "core/framework/server/routes_memories.py:264",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/messages/classify",
+        "path_shape": "/api/messages/classify",
+        "handler": "handle_classify_message",
+        "source": "core/framework/server/routes_messages.py:88",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/messages/classify-colony",
+        "path_shape": "/api/messages/classify-colony",
+        "handler": "handle_classify_colony",
+        "source": "core/framework/server/routes_messages.py:89",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/models/endpoints/{name}",
+        "path_shape": "/api/models/endpoints/{}",
+        "handler": "handle_delete_endpoint",
+        "source": "core/framework/server/routes_models.py:427",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/models/endpoints/{name}",
+        "path_shape": "/api/models/endpoints/{}",
+        "handler": "handle_put_endpoint",
+        "source": "core/framework/server/routes_models.py:426",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/models/endpoints/{name}/models",
+        "path_shape": "/api/models/endpoints/{}/models",
+        "handler": "handle_endpoint_models",
+        "source": "core/framework/server/routes_models.py:425",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/models/overview",
+        "path_shape": "/api/models/overview",
+        "handler": "handle_overview",
+        "source": "core/framework/server/routes_models.py:422",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/models/slots/{slot}",
+        "path_shape": "/api/models/slots/{}",
+        "handler": "handle_delete_slot",
+        "source": "core/framework/server/routes_models.py:424",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/models/slots/{slot}",
+        "path_shape": "/api/models/slots/{}",
+        "handler": "handle_put_slot",
+        "source": "core/framework/server/routes_models.py:423",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/prompts",
+        "path_shape": "/api/prompts",
+        "handler": "handle_list_prompts",
+        "source": "core/framework/server/routes_prompts.py:167",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/prompts",
+        "path_shape": "/api/prompts",
+        "handler": "handle_create_prompt",
+        "source": "core/framework/server/routes_prompts.py:168",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/prompts/{prompt_id}",
+        "path_shape": "/api/prompts/{}",
+        "handler": "handle_delete_prompt",
+        "source": "core/framework/server/routes_prompts.py:170",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/prompts/{prompt_id}",
+        "path_shape": "/api/prompts/{}",
+        "handler": "handle_update_prompt",
+        "source": "core/framework/server/routes_prompts.py:169",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen-mail/letters",
+        "path_shape": "/api/queen-mail/letters",
+        "handler": "handle_letter",
+        "source": "core/framework/server/queen_mail.py:539",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen-mail/queens",
+        "path_shape": "/api/queen-mail/queens",
+        "handler": "handle_queens",
+        "source": "core/framework/server/queen_mail.py:538",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/create",
+        "path_shape": "/api/queen/create",
+        "handler": "handle_create_queen",
+        "source": "core/framework/server/routes_queens.py:1048",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/initialize-preferences",
+        "path_shape": "/api/queen/initialize-preferences",
+        "handler": "handle_initialize_preferences",
+        "source": "core/framework/server/routes_queens.py:1052",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/profiles",
+        "path_shape": "/api/queen/profiles",
+        "handler": "handle_list_profiles",
+        "source": "core/framework/server/routes_queens.py:1040",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/removed",
+        "path_shape": "/api/queen/removed",
+        "handler": "handle_list_removed",
+        "source": "core/framework/server/routes_queens.py:1049",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/queen/{queen_id}/avatar",
+        "path_shape": "/api/queen/{}/avatar",
+        "handler": "handle_delete_avatar",
+        "source": "core/framework/server/routes_queens.py:1055",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/avatar",
+        "path_shape": "/api/queen/{}/avatar",
+        "handler": "handle_get_avatar",
+        "source": "core/framework/server/routes_queens.py:1054",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/avatar",
+        "path_shape": "/api/queen/{}/avatar",
+        "handler": "handle_upload_avatar",
+        "source": "core/framework/server/routes_queens.py:1053",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/llm",
+        "path_shape": "/api/queen/{}/llm",
+        "handler": "handle_get_queen_llm",
+        "source": "core/framework/server/routes_queens.py:1043",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/queen/{queen_id}/llm",
+        "path_shape": "/api/queen/{}/llm",
+        "handler": "handle_put_queen_llm",
+        "source": "core/framework/server/routes_queens.py:1044",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/overview",
+        "path_shape": "/api/queen/{}/overview",
+        "handler": "handle_get_overview",
+        "source": "core/framework/server/routes_queens.py:1047",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/persona",
+        "path_shape": "/api/queen/{}/persona",
+        "handler": "handle_get_persona",
+        "source": "core/framework/server/routes_queens.py:1045",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/queen/{queen_id}/persona",
+        "path_shape": "/api/queen/{}/persona",
+        "handler": "handle_put_persona",
+        "source": "core/framework/server/routes_queens.py:1046",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/profile",
+        "path_shape": "/api/queen/{}/profile",
+        "handler": "handle_get_profile",
+        "source": "core/framework/server/routes_queens.py:1041",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/queen/{queen_id}/profile",
+        "path_shape": "/api/queen/{}/profile",
+        "handler": "handle_update_profile",
+        "source": "core/framework/server/routes_queens.py:1042",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/remove",
+        "path_shape": "/api/queen/{}/remove",
+        "handler": "handle_remove_queen",
+        "source": "core/framework/server/routes_queens.py:1050",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/restore",
+        "path_shape": "/api/queen/{}/restore",
+        "handler": "handle_restore_queen",
+        "source": "core/framework/server/routes_queens.py:1051",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/session",
+        "path_shape": "/api/queen/{}/session",
+        "handler": "handle_queen_session",
+        "source": "core/framework/server/routes_queens.py:1056",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/session/new",
+        "path_shape": "/api/queen/{}/session/new",
+        "handler": "handle_new_queen_session",
+        "source": "core/framework/server/routes_queens.py:1058",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/session/select",
+        "path_shape": "/api/queen/{}/session/select",
+        "handler": "handle_select_queen_session",
+        "source": "core/framework/server/routes_queens.py:1057",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/skills",
+        "path_shape": "/api/queen/{}/skills",
+        "handler": "handle_list_queen_skills",
+        "source": "core/framework/server/routes_skills.py:1191",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/skills",
+        "path_shape": "/api/queen/{}/skills",
+        "handler": "handle_create_queen_skill",
+        "source": "core/framework/server/routes_skills.py:1192",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/skills/reload",
+        "path_shape": "/api/queen/{}/skills/reload",
+        "handler": "handle_reload_queen_skills",
+        "source": "core/framework/server/routes_skills.py:1198",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/queen/{queen_id}/skills/{skill_name}",
+        "path_shape": "/api/queen/{}/skills/{}",
+        "handler": "handle_delete_queen_skill",
+        "source": "core/framework/server/routes_skills.py:1197",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/queen/{queen_id}/skills/{skill_name}",
+        "path_shape": "/api/queen/{}/skills/{}",
+        "handler": "handle_patch_queen_skill",
+        "source": "core/framework/server/routes_skills.py:1193",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/skills/{skill_name}/body",
+        "path_shape": "/api/queen/{}/skills/{}/body",
+        "handler": "handle_get_queen_skill_body",
+        "source": "core/framework/server/routes_skills.py:1194",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/queen/{queen_id}/skills/{skill_name}/body",
+        "path_shape": "/api/queen/{}/skills/{}/body",
+        "handler": "handle_put_queen_skill_body",
+        "source": "core/framework/server/routes_skills.py:1195",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/skills/{skill_name}/rename",
+        "path_shape": "/api/queen/{}/skills/{}/rename",
+        "handler": "handle_rename_queen_skill",
+        "source": "core/framework/server/routes_skills.py:1196",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/soul",
+        "path_shape": "/api/queen/{}/soul",
+        "handler": "handle_get_soul",
+        "source": "core/framework/server/routes_soul.py:208",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/queen/{queen_id}/soul",
+        "path_shape": "/api/queen/{}/soul",
+        "handler": "handle_put_soul",
+        "source": "core/framework/server/routes_soul.py:209",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/soul/proposals/{proposal_id}/decide",
+        "path_shape": "/api/queen/{}/soul/proposals/{}/decide",
+        "handler": "handle_decide",
+        "source": "core/framework/server/routes_soul.py:210",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/soul/proposals/{proposal_id}/probe",
+        "path_shape": "/api/queen/{}/soul/proposals/{}/probe",
+        "handler": "handle_probe",
+        "source": "core/framework/server/routes_soul.py:213",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/soul/reflect",
+        "path_shape": "/api/queen/{}/soul/reflect",
+        "handler": "handle_reflect",
+        "source": "core/framework/server/routes_soul.py:212",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/soul/rollback",
+        "path_shape": "/api/queen/{}/soul/rollback",
+        "handler": "handle_rollback",
+        "source": "core/framework/server/routes_soul.py:211",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/queen/{queen_id}/tools",
+        "path_shape": "/api/queen/{}/tools",
+        "handler": "handle_delete_tools",
+        "source": "core/framework/server/routes_queen_tools.py:678",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/tools",
+        "path_shape": "/api/queen/{}/tools",
+        "handler": "handle_get_tools",
+        "source": "core/framework/server/routes_queen_tools.py:676",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/queen/{queen_id}/tools",
+        "path_shape": "/api/queen/{}/tools",
+        "handler": "handle_patch_tools",
+        "source": "core/framework/server/routes_queen_tools.py:677",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/runtime-logs",
+        "path_shape": "/api/runtime-logs",
+        "handler": "handle_runtime_logs",
+        "source": "core/framework/server/routes_logs.py:32",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sentinel/credentials",
+        "path_shape": "/api/sentinel/credentials",
+        "handler": "handle_credential_status",
+        "source": "core/framework/server/routes_sentinel.py:246",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentinel/slack/validate",
+        "path_shape": "/api/sentinel/slack/validate",
+        "handler": "handle_slack_validate",
+        "source": "core/framework/server/routes_sentinel.py:249",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentinel/telegram/detect-chat",
+        "path_shape": "/api/sentinel/telegram/detect-chat",
+        "handler": "handle_telegram_detect_chat",
+        "source": "core/framework/server/routes_sentinel.py:248",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentinel/telegram/validate",
+        "path_shape": "/api/sentinel/telegram/validate",
+        "handler": "handle_telegram_validate",
+        "source": "core/framework/server/routes_sentinel.py:247",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions",
+        "path_shape": "/api/sessions",
+        "handler": "handle_list_live_sessions",
+        "source": "core/framework/server/routes_sessions.py:3203",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions",
+        "path_shape": "/api/sessions",
+        "handler": "handle_create_session",
+        "source": "core/framework/server/routes_sessions.py:3202",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/history",
+        "path_shape": "/api/sessions/history",
+        "handler": "handle_session_history",
+        "source": "core/framework/server/routes_sessions.py:3206",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/sessions/history/{session_id}",
+        "path_shape": "/api/sessions/history/{}",
+        "handler": "handle_delete_history_session",
+        "source": "core/framework/server/routes_sessions.py:3207",
+        "kind": "api",
+        "served_by_alias": "DELETE /api/sessions/{first}/{second}"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/live",
+        "path_shape": "/api/sessions/live",
+        "handler": "handle_live_sessions_stream",
+        "source": "core/framework/server/routes_sessions.py:3205",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/sessions/{session_id}",
+        "path_shape": "/api/sessions/{}",
+        "handler": "handle_stop_session",
+        "source": "core/framework/server/routes_sessions.py:3210",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}",
+        "path_shape": "/api/sessions/{}",
+        "handler": "handle_get_live_session",
+        "source": "core/framework/server/routes_sessions.py:3209",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/attachment/{filename}",
+        "path_shape": "/api/sessions/{}/attachment/{}",
+        "handler": "handle_session_attachment",
+        "source": "core/framework/server/routes_sessions.py:3245",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/cancel-queen",
+        "path_shape": "/api/sessions/{}/cancel-queen",
+        "handler": "handle_cancel_queen",
+        "source": "core/framework/server/routes_execution.py:2341",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/chat",
+        "path_shape": "/api/sessions/{}/chat",
+        "handler": "handle_chat",
+        "source": "core/framework/server/routes_execution.py:2338",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/sessions/{session_id}/colony",
+        "path_shape": "/api/sessions/{}/colony",
+        "handler": "handle_unload_colony",
+        "source": "core/framework/server/routes_sessions.py:3214",
+        "kind": "api",
+        "served_by_alias": "DELETE /api/sessions/{first}/{second}"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/colony",
+        "path_shape": "/api/sessions/{}/colony",
+        "handler": "handle_load_colony",
+        "source": "core/framework/server/routes_sessions.py:3213",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/colony/resolve_missed",
+        "path_shape": "/api/sessions/{}/colony/resolve_missed",
+        "handler": "handle_resolve_missed_triggers",
+        "source": "core/framework/server/routes_sessions.py:3226",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/colony/skills",
+        "path_shape": "/api/sessions/{}/colony/skills",
+        "handler": "handle_list_colony_skills",
+        "source": "core/framework/server/routes_colony_workers.py:1841",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/colony/tools",
+        "path_shape": "/api/sessions/{}/colony/tools",
+        "handler": "handle_list_colony_tools",
+        "source": "core/framework/server/routes_colony_workers.py:1842",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/compact-and-fork",
+        "path_shape": "/api/sessions/{}/compact-and-fork",
+        "handler": "handle_compact_and_fork",
+        "source": "core/framework/server/routes_execution.py:2347",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/credential-form",
+        "path_shape": "/api/sessions/{}/credential-form",
+        "handler": "handle_credential_form",
+        "source": "core/framework/server/routes_credentials.py:942",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/dismiss-colony-pivot",
+        "path_shape": "/api/sessions/{}/dismiss-colony-pivot",
+        "handler": "handle_dismiss_colony_pivot",
+        "source": "core/framework/server/routes_sessions.py:3219",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/events",
+        "path_shape": "/api/sessions/{}/events",
+        "handler": "handle_events",
+        "source": "core/framework/server/routes_events.py:604",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/events/history",
+        "path_shape": "/api/sessions/{}/events/history",
+        "handler": "handle_session_events_history",
+        "source": "core/framework/server/routes_sessions.py:3264",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/fork",
+        "path_shape": "/api/sessions/{}/fork",
+        "handler": "handle_fork_session",
+        "source": "core/framework/server/routes_sessions.py:3241",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/live_tools",
+        "path_shape": "/api/sessions/{}/live_tools",
+        "handler": "handle_session_live_tools",
+        "source": "core/framework/server/routes_sessions.py:3265",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/mark-colony-spawned",
+        "path_shape": "/api/sessions/{}/mark-colony-spawned",
+        "handler": "handle_mark_colony_spawned",
+        "source": "core/framework/server/routes_execution.py:2343",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/presence",
+        "path_shape": "/api/sessions/{}/presence",
+        "handler": "handle_session_presence",
+        "source": "core/framework/server/routes_execution.py:2342",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/queen-context",
+        "path_shape": "/api/sessions/{}/queen-context",
+        "handler": "handle_queen_context",
+        "source": "core/framework/server/routes_execution.py:2339",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/record-message",
+        "path_shape": "/api/sessions/{}/record-message",
+        "handler": "handle_record_user_message",
+        "source": "core/framework/server/routes_execution.py:2340",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/report-bundle",
+        "path_shape": "/api/sessions/{}/report-bundle",
+        "handler": "handle_report_session_bundle",
+        "source": "core/framework/server/routes_sessions.py:3244",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/reveal",
+        "path_shape": "/api/sessions/{}/reveal",
+        "handler": "handle_reveal_session_folder",
+        "source": "core/framework/server/routes_sessions.py:3243",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/skill-installs",
+        "path_shape": "/api/sessions/{}/skill-installs",
+        "handler": "handle_list_skill_installs",
+        "source": "core/framework/server/routes_skills.py:1201",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/skill-installs/{request_id}",
+        "path_shape": "/api/sessions/{}/skill-installs/{}",
+        "handler": "handle_decide_skill_install",
+        "source": "core/framework/server/routes_skills.py:1202",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/snapshot",
+        "path_shape": "/api/sessions/{}/snapshot",
+        "handler": "handle_get_session_snapshot",
+        "source": "core/framework/server/routes_sessions.py:3208",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/stats",
+        "path_shape": "/api/sessions/{}/stats",
+        "handler": "handle_session_stats",
+        "source": "core/framework/server/routes_sessions.py:3247",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/tasks",
+        "path_shape": "/api/sessions/{}/tasks",
+        "handler": "handle_get_task_list",
+        "source": "core/framework/server/routes_tasks.py:119",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/tasks/clear-completed",
+        "path_shape": "/api/sessions/{}/tasks/clear-completed",
+        "handler": "handle_clear_completed_tasks",
+        "source": "core/framework/server/routes_tasks.py:121",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/tasks/unarchive",
+        "path_shape": "/api/sessions/{}/tasks/unarchive",
+        "handler": "handle_unarchive_task_list",
+        "source": "core/framework/server/routes_tasks.py:120",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/sessions/{session_id}/title",
+        "path_shape": "/api/sessions/{}/title",
+        "handler": "handle_set_session_title",
+        "source": "core/framework/server/routes_sessions.py:3242",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/triggers",
+        "path_shape": "/api/sessions/{}/triggers",
+        "handler": "handle_list_triggers",
+        "source": "core/framework/server/routes_sessions.py:3248",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/triggers",
+        "path_shape": "/api/sessions/{}/triggers",
+        "handler": "handle_create_trigger",
+        "source": "core/framework/server/routes_sessions.py:3249",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/sessions/{session_id}/triggers/{trigger_id}",
+        "path_shape": "/api/sessions/{}/triggers/{}",
+        "handler": "handle_update_trigger_task",
+        "source": "core/framework/server/routes_sessions.py:3250",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/triggers/{trigger_id}/activate",
+        "path_shape": "/api/sessions/{}/triggers/{}/activate",
+        "handler": "handle_activate_trigger",
+        "source": "core/framework/server/routes_sessions.py:3251",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/triggers/{trigger_id}/deactivate",
+        "path_shape": "/api/sessions/{}/triggers/{}/deactivate",
+        "handler": "handle_deactivate_trigger",
+        "source": "core/framework/server/routes_sessions.py:3255",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/triggers/{trigger_id}/run",
+        "path_shape": "/api/sessions/{}/triggers/{}/run",
+        "handler": "handle_run_trigger",
+        "source": "core/framework/server/routes_sessions.py:3259",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/upload-attachment",
+        "path_shape": "/api/sessions/{}/upload-attachment",
+        "handler": "handle_upload_attachment",
+        "source": "core/framework/server/routes_sessions.py:3246",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/workers",
+        "path_shape": "/api/sessions/{}/workers",
+        "handler": "handle_list_workers",
+        "source": "core/framework/server/routes_colony_workers.py:1831",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/workers/stop-all",
+        "path_shape": "/api/sessions/{}/workers/stop-all",
+        "handler": "handle_stop_all_live_workers",
+        "source": "core/framework/server/routes_workers.py:427",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/workers/stream",
+        "path_shape": "/api/sessions/{}/workers/stream",
+        "handler": "handle_live_workers_stream",
+        "source": "core/framework/server/routes_workers.py:426",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/workers/{worker_id}",
+        "path_shape": "/api/sessions/{}/workers/{}",
+        "handler": "handle_get_worker",
+        "source": "core/framework/server/routes_colony_workers.py:1835",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/workers/{worker_id}/conversation",
+        "path_shape": "/api/sessions/{}/workers/{}/conversation",
+        "handler": "handle_get_worker_conversation",
+        "source": "core/framework/server/routes_colony_workers.py:1837",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/workers/{worker_id}/reap-timeline",
+        "path_shape": "/api/sessions/{}/workers/{}/reap-timeline",
+        "handler": "handle_worker_reap_timeline",
+        "source": "core/framework/server/routes_workers.py:437",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/workers/{worker_id}/stop",
+        "path_shape": "/api/sessions/{}/workers/{}/stop",
+        "handler": "handle_stop_live_worker",
+        "source": "core/framework/server/routes_workers.py:431",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/skills",
+        "path_shape": "/api/skills",
+        "handler": "handle_list_all_skills",
+        "source": "core/framework/server/routes_skills.py:1205",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/skills/scopes",
+        "path_shape": "/api/skills/scopes",
+        "handler": "handle_list_scopes",
+        "source": "core/framework/server/routes_skills.py:1206",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/skills/upload",
+        "path_shape": "/api/skills/upload",
+        "handler": "handle_upload_skill",
+        "source": "core/framework/server/routes_skills.py:1207",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/skills/{skill_name}",
+        "path_shape": "/api/skills/{}",
+        "handler": "handle_get_skill_detail",
+        "source": "core/framework/server/routes_skills.py:1208",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/startup-status",
+        "path_shape": "/api/startup-status",
+        "handler": "handle_startup_status",
+        "source": "core/framework/server/app.py:1090",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/{path:.*}",
+        "path_shape": "<spa>",
+        "handler": "handle_spa",
+        "source": "core/framework/server/app.py:1234",
+        "kind": "spa_fallback"
+      }
+    ],
+    "duplicates": [],
+    "unresolved": []
+  },
+  "go": {
+    "version": "1.0.26-go.1",
+    "commit": "1b9c458a19244379ac65dabd4827addb891045ef",
+    "source_root": "go_hive/go-hive/internal/server",
+    "route_count": 220,
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/",
+        "path_shape": "<spa>",
+        "handler": "app.handleSPA",
+        "source": "go_hive/go-hive/internal/server/app.go:277",
+        "kind": "spa_fallback"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/agents",
+        "path_shape": "/api/agents",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_agents.go:30",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/agents/metadata",
+        "path_shape": "/api/agents/metadata",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_agents.go:33",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/browser/contexts",
+        "path_shape": "/api/browser/contexts",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_browser_panel.go:82",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/browser/contexts/close",
+        "path_shape": "/api/browser/contexts/close",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_browser_panel.go:88",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/browser/status",
+        "path_shape": "/api/browser/status",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_app_extra.go:108",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/browser/status/stream",
+        "path_shape": "/api/browser/status/stream",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_app_extra.go:111",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/browser/tab/reveal",
+        "path_shape": "/api/browser/tab/reveal",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_app_extra.go:114",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/browser/tabs",
+        "path_shape": "/api/browser/tabs",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_browser_panel.go:85",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/channels",
+        "path_shape": "/api/channels",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_credentials_channels.go:18",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/claude-code-queens",
+        "path_shape": "/api/claude-code-queens",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens_claude_code.go:136",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/claude-code-queens/{queen_id}/conversations/{session_id}",
+        "path_shape": "/api/claude-code-queens/{}/conversations/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens_claude_code.go:139",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/import",
+        "path_shape": "/api/colonies/import",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:41",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/colonies/import/chunk/{upload_id}",
+        "path_shape": "/api/colonies/import/chunk/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:47",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/import/finalize/{upload_id}",
+        "path_shape": "/api/colonies/import/finalize/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:53",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/import/init",
+        "path_shape": "/api/colonies/import/init",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:44",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/import/status/{upload_id}",
+        "path_shape": "/api/colonies/import/status/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:50",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/colonies/import/{upload_id}",
+        "path_shape": "/api/colonies/import/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:56",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/tools-index",
+        "path_shape": "/api/colonies/tools-index",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_tools.go:45",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/colonies/{colony_id}",
+        "path_shape": "/api/colonies/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:62",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/active-session",
+        "path_shape": "/api/colonies/{}/active-session",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:141",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/data/changes",
+        "path_shape": "/api/colonies/{}/data/changes",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_data.go:915",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/data/tables",
+        "path_shape": "/api/colonies/{}/data/tables",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_data.go:912",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/data/tables/{table}/rows",
+        "path_shape": "/api/colonies/{}/data/tables/{}/rows",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_data.go:918",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/colonies/{colony_id}/data/tables/{table}/rows",
+        "path_shape": "/api/colonies/{}/data/tables/{}/rows",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_data.go:921",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/{colony_id}/rename",
+        "path_shape": "/api/colonies/{}/rename",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:68",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/{colony_id}/reveal",
+        "path_shape": "/api/colonies/{}/reveal",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:65",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/{colony_id}/scaffold",
+        "path_shape": "/api/colonies/{}/scaffold",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:59",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/sessions",
+        "path_shape": "/api/colonies/{}/sessions",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:138",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colonies/{colony_id}/worker_profiles",
+        "path_shape": "/api/colonies/{}/worker_profiles",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:71",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colonies/{colony_id}/worker_profiles",
+        "path_shape": "/api/colonies/{}/worker_profiles",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:74",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/colonies/{colony_id}/worker_profiles/{profile_name}",
+        "path_shape": "/api/colonies/{}/worker_profiles/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:77",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colony/{colony_id}/notifications",
+        "path_shape": "/api/colony/{}/notifications",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:104",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/colony/{colony_id}/notifications",
+        "path_shape": "/api/colony/{}/notifications",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:107",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/colony/{colony_id}/notifications/test",
+        "path_shape": "/api/colony/{}/notifications/test",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:110",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/colony/{colony_id}/tools",
+        "path_shape": "/api/colony/{}/tools",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_tools.go:48",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/colony/{colony_id}/tools",
+        "path_shape": "/api/colony/{}/tools",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_tools.go:51",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/external-skills",
+        "path_shape": "/api/config/external-skills",
+        "handler": "handleGetExternalSkills(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:294",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/external-skills",
+        "path_shape": "/api/config/external-skills",
+        "handler": "handlePutExternalSkills(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:295",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/features",
+        "path_shape": "/api/config/features",
+        "handler": "handleGetFeatures(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:279",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/features",
+        "path_shape": "/api/config/features",
+        "handler": "handleUpdateFeatures(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:280",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/llm",
+        "path_shape": "/api/config/llm",
+        "handler": "handleGetLLMConfig(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:283",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/llm",
+        "path_shape": "/api/config/llm",
+        "handler": "handleUpdateLLMConfig(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:284",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/llm-sections",
+        "path_shape": "/api/config/llm-sections",
+        "handler": "handleGetLLMSections(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:281",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/llm-sections",
+        "path_shape": "/api/config/llm-sections",
+        "handler": "handlePutLLMSection(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:282",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/models",
+        "path_shape": "/api/config/models",
+        "handler": "handleGetModels(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:276",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/profile",
+        "path_shape": "/api/config/profile",
+        "handler": "handleGetProfile(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:290",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/profile",
+        "path_shape": "/api/config/profile",
+        "handler": "handleUpdateProfile(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:291",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/profile/avatar",
+        "path_shape": "/api/config/profile/avatar",
+        "handler": "handleGetAvatar(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:293",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/config/profile/avatar",
+        "path_shape": "/api/config/profile/avatar",
+        "handler": "handleUploadAvatar(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:292",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/provider-library",
+        "path_shape": "/api/config/provider-library",
+        "handler": "handleGetProviderLibrary(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:285",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/provider-library",
+        "path_shape": "/api/config/provider-library",
+        "handler": "handlePutProviderLibrary(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:286",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/config/provider-library/apply",
+        "path_shape": "/api/config/provider-library/apply",
+        "handler": "handleApplyProviderLibrary(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:287",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/rate-limits",
+        "path_shape": "/api/config/rate-limits",
+        "handler": "handleGetRateLimits(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:288",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/rate-limits",
+        "path_shape": "/api/config/rate-limits",
+        "handler": "handleUpdateRateLimits(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:289",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/sentinel",
+        "path_shape": "/api/config/sentinel",
+        "handler": "handleGetSentinel(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:277",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/sentinel",
+        "path_shape": "/api/config/sentinel",
+        "handler": "handleUpdateSentinel(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:278",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/credentials",
+        "path_shape": "/api/credentials",
+        "handler": "routes.handleListCredentials",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:79",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/credentials",
+        "path_shape": "/api/credentials",
+        "handler": "routes.handleSaveCredential",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:80",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/credentials/check-agent",
+        "path_shape": "/api/credentials/check-agent",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_agents.go:36",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/credentials/local",
+        "path_shape": "/api/credentials/local",
+        "handler": "routes.handleSaveLocalCredential",
+        "source": "go_hive/go-hive/internal/server/routes_credentials_local.go:59",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/credentials/local/{credential_id}/{alias}",
+        "path_shape": "/api/credentials/local/{}/{}",
+        "handler": "routes.handleDeleteLocalCredential",
+        "source": "go_hive/go-hive/internal/server/routes_credentials_local.go:60",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/credentials/oauth-status",
+        "path_shape": "/api/credentials/oauth-status",
+        "handler": "routes.handleOAuthStatus",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:76",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/credentials/resync",
+        "path_shape": "/api/credentials/resync",
+        "handler": "routes.handleResync",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:77",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/credentials/specs",
+        "path_shape": "/api/credentials/specs",
+        "handler": "routes.handleListSpecs",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:75",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/credentials/validate-key",
+        "path_shape": "/api/credentials/validate-key",
+        "handler": "routes.handleValidateKey",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:78",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/credentials/{credential_id}",
+        "path_shape": "/api/credentials/{}",
+        "handler": "routes.handleDeleteCredential",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:86",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/credentials/{credential_id}",
+        "path_shape": "/api/credentials/{}",
+        "handler": "routes.handleGetCredential",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:85",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/changed",
+        "path_shape": "/api/crm/changed",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_events.go:73",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/claim",
+        "path_shape": "/api/crm/claim",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:787",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/crm/grid/schema",
+        "path_shape": "/api/crm/grid/schema",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:752",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/grid/{entity}",
+        "path_shape": "/api/crm/grid/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:768",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/grid/{entity}/group-counts",
+        "path_shape": "/api/crm/grid/{}/group-counts",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:759",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/grid/{entity}/query",
+        "path_shape": "/api/crm/grid/{}/query",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:755",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/crm/grid/{entity}/{id}",
+        "path_shape": "/api/crm/grid/{}/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:777",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/crm/grid/{entity}/{id}",
+        "path_shape": "/api/crm/grid/{}/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:763",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/crm/grid/{entity}/{id}",
+        "path_shape": "/api/crm/grid/{}/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:772",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/grid/{entity}/{id}/stage",
+        "path_shape": "/api/crm/grid/{}/{}/stage",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:782",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crm/release",
+        "path_shape": "/api/crm/release",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:790",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/discover",
+        "path_shape": "/api/discover",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_agents.go:27",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/events/global",
+        "path_shape": "/api/events/global",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_events.go:70",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/global/crm/status",
+        "path_shape": "/api/global/crm/status",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:722",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/global/data/changes",
+        "path_shape": "/api/global/data/changes",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:728",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/global/data/foreign-keys",
+        "path_shape": "/api/global/data/foreign-keys",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:731",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/global/data/tables",
+        "path_shape": "/api/global/data/tables",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:725",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/global/data/tables/{table}/group-counts",
+        "path_shape": "/api/global/data/tables/{}/group-counts",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:740",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/global/data/tables/{table}/query",
+        "path_shape": "/api/global/data/tables/{}/query",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:737",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/global/data/tables/{table}/rows",
+        "path_shape": "/api/global/data/tables/{}/rows",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:749",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/global/data/tables/{table}/rows",
+        "path_shape": "/api/global/data/tables/{}/rows",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:734",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/global/data/tables/{table}/rows",
+        "path_shape": "/api/global/data/tables/{}/rows",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:746",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/global/data/tables/{table}/rows",
+        "path_shape": "/api/global/data/tables/{}/rows",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:743",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "path_shape": "/api/health",
+        "handler": "app.handleHealth",
+        "source": "go_hive/go-hive/internal/server/app.go:125",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/health/resources",
+        "path_shape": "/api/health/resources",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_app_extra.go:105",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/maintenance/janitor/report",
+        "path_shape": "/api/maintenance/janitor/report",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_maintenance.go:80",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/maintenance/janitor/run",
+        "path_shape": "/api/maintenance/janitor/run",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_maintenance.go:77",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/reload",
+        "path_shape": "/api/mcp/reload",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_mcp.go:92",
+        "kind": "api",
+        "extension": true,
+        "annotation": "Go extension: MCP registry reload; Python reloads per-server only"
+      },
+      {
+        "method": "GET",
+        "path": "/api/mcp/servers",
+        "path_shape": "/api/mcp/servers",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_mcp.go:71",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers",
+        "path_shape": "/api/mcp/servers",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_mcp.go:74",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/mcp/servers/{name}",
+        "path_shape": "/api/mcp/servers/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_mcp.go:77",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers/{name}/disable",
+        "path_shape": "/api/mcp/servers/{}/disable",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_mcp.go:83",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers/{name}/enable",
+        "path_shape": "/api/mcp/servers/{}/enable",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_mcp.go:80",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers/{name}/health",
+        "path_shape": "/api/mcp/servers/{}/health",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_mcp.go:86",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers/{name}/mode",
+        "path_shape": "/api/mcp/servers/{}/mode",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_mcp.go:89",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/memories",
+        "path_shape": "/api/memories",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:22",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/memories/file",
+        "path_shape": "/api/memories/file",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:34",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/memories/file",
+        "path_shape": "/api/memories/file",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:25",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/memories/file",
+        "path_shape": "/api/memories/file",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:28",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/memories/file",
+        "path_shape": "/api/memories/file",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:31",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/messages/classify",
+        "path_shape": "/api/messages/classify",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_messages_extra.go:66",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/messages/classify-colony",
+        "path_shape": "/api/messages/classify-colony",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_messages_extra.go:69",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/models/endpoints/{name}",
+        "path_shape": "/api/models/endpoints/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_models.go:143",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/models/endpoints/{name}",
+        "path_shape": "/api/models/endpoints/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_models.go:140",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/models/endpoints/{name}/models",
+        "path_shape": "/api/models/endpoints/{}/models",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_models.go:137",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/models/overview",
+        "path_shape": "/api/models/overview",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_models.go:128",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/models/slots/{slot}",
+        "path_shape": "/api/models/slots/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_models.go:134",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/models/slots/{slot}",
+        "path_shape": "/api/models/slots/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_models.go:131",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/prompts",
+        "path_shape": "/api/prompts",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_prompts_extra.go:50",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/prompts",
+        "path_shape": "/api/prompts",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_prompts_extra.go:53",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/prompts/{prompt_id}",
+        "path_shape": "/api/prompts/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_prompts_extra.go:59",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/prompts/{prompt_id}",
+        "path_shape": "/api/prompts/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_prompts_extra.go:56",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen-mail/letters",
+        "path_shape": "/api/queen-mail/letters",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens_mail.go:100",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen-mail/queens",
+        "path_shape": "/api/queen-mail/queens",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens_mail.go:97",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/create",
+        "path_shape": "/api/queen/create",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1012",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/initialize-preferences",
+        "path_shape": "/api/queen/initialize-preferences",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1015",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/profiles",
+        "path_shape": "/api/queen/profiles",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1006",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/removed",
+        "path_shape": "/api/queen/removed",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1009",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/queen/{queen_id}/avatar",
+        "path_shape": "/api/queen/{}/avatar",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1062",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/avatar",
+        "path_shape": "/api/queen/{}/avatar",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1059",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/avatar",
+        "path_shape": "/api/queen/{}/avatar",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1056",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/llm",
+        "path_shape": "/api/queen/{}/llm",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1041",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/queen/{queen_id}/llm",
+        "path_shape": "/api/queen/{}/llm",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1044",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/overview",
+        "path_shape": "/api/queen/{}/overview",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1053",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/persona",
+        "path_shape": "/api/queen/{}/persona",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1047",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/queen/{queen_id}/persona",
+        "path_shape": "/api/queen/{}/persona",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1050",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/profile",
+        "path_shape": "/api/queen/{}/profile",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1035",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/queen/{queen_id}/profile",
+        "path_shape": "/api/queen/{}/profile",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1038",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/remove",
+        "path_shape": "/api/queen/{}/remove",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1027",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/restore",
+        "path_shape": "/api/queen/{}/restore",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1031",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/session",
+        "path_shape": "/api/queen/{}/session",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1018",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/session/new",
+        "path_shape": "/api/queen/{}/session/new",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1024",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/session/select",
+        "path_shape": "/api/queen/{}/session/select",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1021",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/skills",
+        "path_shape": "/api/queen/{}/skills",
+        "handler": "deps.handleListQueenSkills",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:62",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/skills",
+        "path_shape": "/api/queen/{}/skills",
+        "handler": "deps.handleCreateQueenSkill",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:63",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/skills/reload",
+        "path_shape": "/api/queen/{}/skills/reload",
+        "handler": "deps.handleReloadQueenSkills",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:69",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/queen/{queen_id}/skills/{skill_name}",
+        "path_shape": "/api/queen/{}/skills/{}",
+        "handler": "deps.handleDeleteQueenSkill",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:68",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/queen/{queen_id}/skills/{skill_name}",
+        "path_shape": "/api/queen/{}/skills/{}",
+        "handler": "deps.handlePatchQueenSkill",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:64",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/skills/{skill_name}/body",
+        "path_shape": "/api/queen/{}/skills/{}/body",
+        "handler": "deps.handleGetQueenSkillBody",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:65",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/queen/{queen_id}/skills/{skill_name}/body",
+        "path_shape": "/api/queen/{}/skills/{}/body",
+        "handler": "deps.handlePutQueenSkillBody",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:66",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/skills/{skill_name}/rename",
+        "path_shape": "/api/queen/{}/skills/{}/rename",
+        "handler": "deps.handleRenameQueenSkill",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:67",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/soul",
+        "path_shape": "/api/queen/{}/soul",
+        "handler": "routes.handleGetSoul",
+        "source": "go_hive/go-hive/internal/server/routes_credentials_soul.go:42",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/queen/{queen_id}/soul",
+        "path_shape": "/api/queen/{}/soul",
+        "handler": "routes.handlePutSoul",
+        "source": "go_hive/go-hive/internal/server/routes_credentials_soul.go:43",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/soul/proposals/{proposal_id}/decide",
+        "path_shape": "/api/queen/{}/soul/proposals/{}/decide",
+        "handler": "routes.handleDecideSoulProposal",
+        "source": "go_hive/go-hive/internal/server/routes_credentials_soul.go:44",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/soul/proposals/{proposal_id}/probe",
+        "path_shape": "/api/queen/{}/soul/proposals/{}/probe",
+        "handler": "routes.handleProbeSoulProposal",
+        "source": "go_hive/go-hive/internal/server/routes_soul_probe.go:42",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/soul/reflect",
+        "path_shape": "/api/queen/{}/soul/reflect",
+        "handler": "routes.handleReflectSoul",
+        "source": "go_hive/go-hive/internal/server/routes_credentials_soul.go:46",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/queen/{queen_id}/soul/rollback",
+        "path_shape": "/api/queen/{}/soul/rollback",
+        "handler": "routes.handleRollbackSoul",
+        "source": "go_hive/go-hive/internal/server/routes_credentials_soul.go:45",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/queen/{queen_id}/tools",
+        "path_shape": "/api/queen/{}/tools",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens_tools.go:709",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/queen/{queen_id}/tools",
+        "path_shape": "/api/queen/{}/tools",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens_tools.go:703",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/queen/{queen_id}/tools",
+        "path_shape": "/api/queen/{}/tools",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_queens_tools.go:706",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/runtime-logs",
+        "path_shape": "/api/runtime-logs",
+        "handler": "routes.handleRuntimeLogs",
+        "source": "go_hive/go-hive/internal/server/routes_runtime_logs.go:170",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sentinel/credentials",
+        "path_shape": "/api/sentinel/credentials",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:113",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentinel/slack/validate",
+        "path_shape": "/api/sentinel/slack/validate",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:122",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentinel/telegram/detect-chat",
+        "path_shape": "/api/sentinel/telegram/detect-chat",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:119",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentinel/telegram/validate",
+        "path_shape": "/api/sentinel/telegram/validate",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:116",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions",
+        "path_shape": "/api/sessions",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:45",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions",
+        "path_shape": "/api/sessions",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:52",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/history",
+        "path_shape": "/api/sessions/history",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:58",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/live",
+        "path_shape": "/api/sessions/live",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:55",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/sessions/{first}/{second}",
+        "path_shape": "/api/sessions/{}/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:61",
+        "kind": "api",
+        "extension": true,
+        "annotation": "Go compatibility alias: dispatches DELETE /api/sessions/history/{id} and DELETE /api/sessions/{id}/colony"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/sessions/{session_id}",
+        "path_shape": "/api/sessions/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:78",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}",
+        "path_shape": "/api/sessions/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:75",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/attachment/{filename}",
+        "path_shape": "/api/sessions/{}/attachment/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:90",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/cancel-queen",
+        "path_shape": "/api/sessions/{}/cancel-queen",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_execution.go:55",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/chat",
+        "path_shape": "/api/sessions/{}/chat",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/chat_routes.go:33",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/colony",
+        "path_shape": "/api/sessions/{}/colony",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:114",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/colony/resolve_missed",
+        "path_shape": "/api/sessions/{}/colony/resolve_missed",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:120",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/colony/skills",
+        "path_shape": "/api/sessions/{}/colony/skills",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:652",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/colony/tools",
+        "path_shape": "/api/sessions/{}/colony/tools",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:655",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/compact-and-fork",
+        "path_shape": "/api/sessions/{}/compact-and-fork",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_execution.go:64",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/credential-form",
+        "path_shape": "/api/sessions/{}/credential-form",
+        "handler": "routes.handleCredentialForm",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:84",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/dismiss-colony-pivot",
+        "path_shape": "/api/sessions/{}/dismiss-colony-pivot",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:117",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/events",
+        "path_shape": "/api/sessions/{}/events",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/chat_routes.go:36",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/events/history",
+        "path_shape": "/api/sessions/{}/events/history",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:123",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/fork",
+        "path_shape": "/api/sessions/{}/fork",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:129",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/live_tools",
+        "path_shape": "/api/sessions/{}/live_tools",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:81",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/mark-colony-spawned",
+        "path_shape": "/api/sessions/{}/mark-colony-spawned",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_execution.go:61",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/presence",
+        "path_shape": "/api/sessions/{}/presence",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_execution.go:58",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/queen-context",
+        "path_shape": "/api/sessions/{}/queen-context",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_execution.go:49",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/record-message",
+        "path_shape": "/api/sessions/{}/record-message",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_execution.go:52",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/sessions/{session_id}/reminders",
+        "path_shape": "/api/sessions/{}/reminders",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_reminders.go:359",
+        "kind": "api",
+        "extension": true,
+        "annotation": "Go extension: reminder-hub dismissal endpoint (Go-only runtime feature)"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/reminders",
+        "path_shape": "/api/sessions/{}/reminders",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_reminders.go:356",
+        "kind": "api",
+        "extension": true,
+        "annotation": "Go extension: reminder-hub drain endpoint (Go-only runtime feature)"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/report-bundle",
+        "path_shape": "/api/sessions/{}/report-bundle",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:135",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/reveal",
+        "path_shape": "/api/sessions/{}/reveal",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:132",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/skill-installs",
+        "path_shape": "/api/sessions/{}/skill-installs",
+        "handler": "deps.handleListSkillInstalls",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:71",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/skill-installs/{request_id}",
+        "path_shape": "/api/sessions/{}/skill-installs/{}",
+        "handler": "deps.handleDecideSkillInstall",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:72",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/snapshot",
+        "path_shape": "/api/sessions/{}/snapshot",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:87",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/stats",
+        "path_shape": "/api/sessions/{}/stats",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:84",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/tasks",
+        "path_shape": "/api/sessions/{}/tasks",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_tasks.go:39",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/tasks/clear-completed",
+        "path_shape": "/api/sessions/{}/tasks/clear-completed",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_tasks.go:45",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/tasks/unarchive",
+        "path_shape": "/api/sessions/{}/tasks/unarchive",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_tasks.go:42",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/sessions/{session_id}/title",
+        "path_shape": "/api/sessions/{}/title",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:126",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/triggers",
+        "path_shape": "/api/sessions/{}/triggers",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:96",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/triggers",
+        "path_shape": "/api/sessions/{}/triggers",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:99",
+        "kind": "api"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/sessions/{session_id}/triggers/{trigger_id}",
+        "path_shape": "/api/sessions/{}/triggers/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:102",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/triggers/{trigger_id}/activate",
+        "path_shape": "/api/sessions/{}/triggers/{}/activate",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:108",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/triggers/{trigger_id}/deactivate",
+        "path_shape": "/api/sessions/{}/triggers/{}/deactivate",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:111",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/triggers/{trigger_id}/run",
+        "path_shape": "/api/sessions/{}/triggers/{}/run",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:105",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/upload-attachment",
+        "path_shape": "/api/sessions/{}/upload-attachment",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:93",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/workers",
+        "path_shape": "/api/sessions/{}/workers",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:643",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/workers/stop-all",
+        "path_shape": "/api/sessions/{}/workers/stop-all",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_workers.go:94",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/workers/stream",
+        "path_shape": "/api/sessions/{}/workers/stream",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_workers.go:91",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/workers/{worker_id}",
+        "path_shape": "/api/sessions/{}/workers/{}",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:646",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/workers/{worker_id}/conversation",
+        "path_shape": "/api/sessions/{}/workers/{}/conversation",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:649",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{session_id}/workers/{worker_id}/reap-timeline",
+        "path_shape": "/api/sessions/{}/workers/{}/reap-timeline",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_workers.go:100",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/{session_id}/workers/{worker_id}/stop",
+        "path_shape": "/api/sessions/{}/workers/{}/stop",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_workers.go:97",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/skills",
+        "path_shape": "/api/skills",
+        "handler": "deps.handleListAllSkills",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:74",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/skills/reload",
+        "path_shape": "/api/skills/reload",
+        "handler": "deps.handleReloadLibrarySkills",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:76",
+        "kind": "api",
+        "extension": true,
+        "annotation": "Go extension: library-wide skill reload; Python exposes per-queen reload only"
+      },
+      {
+        "method": "GET",
+        "path": "/api/skills/scopes",
+        "path_shape": "/api/skills/scopes",
+        "handler": "deps.handleListScopes",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:75",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/skills/upload",
+        "path_shape": "/api/skills/upload",
+        "handler": "deps.handleUploadSkill",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:77",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/skills/{skill_name}",
+        "path_shape": "/api/skills/{}",
+        "handler": "deps.handleGetSkillDetail",
+        "source": "go_hive/go-hive/internal/server/routes_skills.go:78",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/startup-status",
+        "path_shape": "/api/startup-status",
+        "handler": "app.handleStartupStatus",
+        "source": "go_hive/go-hive/internal/server/app.go:126",
+        "kind": "api"
+      }
+    ],
+    "duplicates": [],
+    "unresolved": []
+  },
+  "summary": {
+    "reference_routes": 217,
+    "target_routes": 220,
+    "python_routes": 217,
+    "go_routes": 220,
+    "missing_in_target": 2,
+    "missing_in_target_effective": 0,
+    "missing_in_target_served_by_alias": 2,
+    "missing_in_go": 2,
+    "missing_in_go_effective": 0,
+    "missing_in_go_served_by_alias": 2,
+    "extra_in_target": 5,
+    "extra_in_target_api": 5,
+    "extra_in_target_spa": 0,
+    "extra_in_go": 5,
+    "extra_in_go_api": 5,
+    "extra_in_go_spa": 0,
+    "method_mismatch": 1
+  },
+  "missing_in_target": [
+    {
+      "method": "DELETE",
+      "path": "/api/sessions/history/{session_id}",
+      "path_shape": "/api/sessions/history/{}",
+      "handler": "handle_delete_history_session",
+      "source": "core/framework/server/routes_sessions.py:3207",
+      "kind": "api",
+      "served_by_alias": "DELETE /api/sessions/{first}/{second}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/sessions/{session_id}/colony",
+      "path_shape": "/api/sessions/{}/colony",
+      "handler": "handle_unload_colony",
+      "source": "core/framework/server/routes_sessions.py:3214",
+      "kind": "api",
+      "served_by_alias": "DELETE /api/sessions/{first}/{second}"
+    }
+  ],
+  "missing_in_target_effective": [],
+  "missing_in_target_served_by_alias": [
+    {
+      "method": "DELETE",
+      "path": "/api/sessions/history/{session_id}",
+      "path_shape": "/api/sessions/history/{}",
+      "handler": "handle_delete_history_session",
+      "source": "core/framework/server/routes_sessions.py:3207",
+      "kind": "api",
+      "served_by_alias": "DELETE /api/sessions/{first}/{second}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/sessions/{session_id}/colony",
+      "path_shape": "/api/sessions/{}/colony",
+      "handler": "handle_unload_colony",
+      "source": "core/framework/server/routes_sessions.py:3214",
+      "kind": "api",
+      "served_by_alias": "DELETE /api/sessions/{first}/{second}"
+    }
+  ],
+  "extra_in_target": [
+    {
+      "method": "POST",
+      "path": "/api/mcp/reload",
+      "path_shape": "/api/mcp/reload",
+      "handler": "func(w http.ResponseWriter",
+      "source": "go_hive/go-hive/internal/server/routes_mcp.go:92",
+      "kind": "api",
+      "extension": true,
+      "annotation": "Go extension: MCP registry reload; Python reloads per-server only"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/sessions/{session_id}/reminders",
+      "path_shape": "/api/sessions/{}/reminders",
+      "handler": "func(w http.ResponseWriter",
+      "source": "go_hive/go-hive/internal/server/routes_reminders.go:359",
+      "kind": "api",
+      "extension": true,
+      "annotation": "Go extension: reminder-hub dismissal endpoint (Go-only runtime feature)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/{session_id}/reminders",
+      "path_shape": "/api/sessions/{}/reminders",
+      "handler": "func(w http.ResponseWriter",
+      "source": "go_hive/go-hive/internal/server/routes_reminders.go:356",
+      "kind": "api",
+      "extension": true,
+      "annotation": "Go extension: reminder-hub drain endpoint (Go-only runtime feature)"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/sessions/{first}/{second}",
+      "path_shape": "/api/sessions/{}/{}",
+      "handler": "func(w http.ResponseWriter",
+      "source": "go_hive/go-hive/internal/server/routes_sessions.go:61",
+      "kind": "api",
+      "extension": true,
+      "annotation": "Go compatibility alias: dispatches DELETE /api/sessions/history/{id} and DELETE /api/sessions/{id}/colony"
+    },
+    {
+      "method": "POST",
+      "path": "/api/skills/reload",
+      "path_shape": "/api/skills/reload",
+      "handler": "deps.handleReloadLibrarySkills",
+      "source": "go_hive/go-hive/internal/server/routes_skills.go:76",
+      "kind": "api",
+      "extension": true,
+      "annotation": "Go extension: library-wide skill reload; Python exposes per-queen reload only"
+    }
+  ],
+  "method_mismatch": [
+    {
+      "path_shape": "/api/sessions/{}/colony",
+      "reference_methods": [
+        "DELETE",
+        "POST"
+      ],
+      "target_methods": [
+        "POST"
+      ],
+      "only_reference": [
+        "DELETE"
+      ],
+      "only_target": []
+    }
+  ],
+  "missing_in_go": [
+    {
+      "method": "DELETE",
+      "path": "/api/sessions/history/{session_id}",
+      "path_shape": "/api/sessions/history/{}",
+      "handler": "handle_delete_history_session",
+      "source": "core/framework/server/routes_sessions.py:3207",
+      "kind": "api",
+      "served_by_alias": "DELETE /api/sessions/{first}/{second}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/sessions/{session_id}/colony",
+      "path_shape": "/api/sessions/{}/colony",
+      "handler": "handle_unload_colony",
+      "source": "core/framework/server/routes_sessions.py:3214",
+      "kind": "api",
+      "served_by_alias": "DELETE /api/sessions/{first}/{second}"
+    }
+  ],
+  "extra_in_go": [
+    {
+      "method": "POST",
+      "path": "/api/mcp/reload",
+      "path_shape": "/api/mcp/reload",
+      "handler": "func(w http.ResponseWriter",
+      "source": "go_hive/go-hive/internal/server/routes_mcp.go:92",
+      "kind": "api",
+      "extension": true,
+      "annotation": "Go extension: MCP registry reload; Python reloads per-server only"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/sessions/{session_id}/reminders",
+      "path_shape": "/api/sessions/{}/reminders",
+      "handler": "func(w http.ResponseWriter",
+      "source": "go_hive/go-hive/internal/server/routes_reminders.go:359",
+      "kind": "api",
+      "extension": true,
+      "annotation": "Go extension: reminder-hub dismissal endpoint (Go-only runtime feature)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/{session_id}/reminders",
+      "path_shape": "/api/sessions/{}/reminders",
+      "handler": "func(w http.ResponseWriter",
+      "source": "go_hive/go-hive/internal/server/routes_reminders.go:356",
+      "kind": "api",
+      "extension": true,
+      "annotation": "Go extension: reminder-hub drain endpoint (Go-only runtime feature)"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/sessions/{first}/{second}",
+      "path_shape": "/api/sessions/{}/{}",
+      "handler": "func(w http.ResponseWriter",
+      "source": "go_hive/go-hive/internal/server/routes_sessions.go:61",
+      "kind": "api",
+      "extension": true,
+      "annotation": "Go compatibility alias: dispatches DELETE /api/sessions/history/{id} and DELETE /api/sessions/{id}/colony"
+    },
+    {
+      "method": "POST",
+      "path": "/api/skills/reload",
+      "path_shape": "/api/skills/reload",
+      "handler": "deps.handleReloadLibrarySkills",
+      "source": "go_hive/go-hive/internal/server/routes_skills.go:76",
+      "kind": "api",
+      "extension": true,
+      "annotation": "Go extension: library-wide skill reload; Python exposes per-queen reload only"
+    }
+  ]
+}

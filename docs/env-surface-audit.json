@@ -1,0 +1,198 @@
+{
+ "generated_at": "2026-11-20 23:3x CST",
+ "method": "两侧源码 HIVE_* 字符串字面量（生产，排除 tests/testdata/_test.go）+ credentials spec 对照",
+ "hive_literals": {
+  "python": 89,
+  "go": 96,
+  "common": [
+   "HIVE_ACTIVE_WORKERS_SNAPSHOT_MAX",
+   "HIVE_ACTIVE_WORKERS_TASK_MAX",
+   "HIVE_ADAPTIVE_BUDGET_FLOOR",
+   "HIVE_ADAPTIVE_BUDGET_MIN_SAMPLES",
+   "HIVE_ADAPTIVE_TOOL_BUDGET",
+   "HIVE_API_KEY",
+   "HIVE_APP_VERSION",
+   "HIVE_BASH_PATH",
+   "HIVE_BRIDGE_PORT",
+   "HIVE_BROWSER_PROFILE_DISPLAY_NAME",
+   "HIVE_BROWSER_SESSION",
+   "HIVE_CLOUD_BASE",
+   "HIVE_CLOUD_JWT",
+   "HIVE_COLONY_NAME",
+   "HIVE_COLONY_PARALLEL_COOLDOWN",
+   "HIVE_COLONY_PARALLEL_MAX",
+   "HIVE_CREDENTIAL_KEY",
+   "HIVE_CRED_LOG",
+   "HIVE_DEBUG_EVENTS",
+   "HIVE_DEFAULT_PLAYBOOK_CONCURRENCY",
+   "HIVE_DESKTOP_MODE",
+   "HIVE_DESKTOP_PARENT_PID",
+   "HIVE_DESKTOP_THEME",
+   "HIVE_DESKTOP_TOKEN",
+   "HIVE_EMAIL_SENDERS",
+   "HIVE_HOME",
+   "HIVE_LLM_BASE_URL",
+   "HIVE_MAX_CONCURRENT_WORKERS",
+   "HIVE_MAX_PLAYBOOK_CONCURRENCY",
+   "HIVE_MAX_VERBATIM_CLIENT_MSGS",
+   "HIVE_MCP_CALL_RESULT_TIMEOUT",
+   "HIVE_MEMORY_TIMELINE",
+   "HIVE_MICROCOMPACT_KEEP_RECENT",
+   "HIVE_OWN_REMOTES",
+   "HIVE_PAST_RECALL_TIMEOUT",
+   "HIVE_PRINCIPAL",
+   "HIVE_QUEEN_ID",
+   "HIVE_QUEEN_MAIL_FROM",
+   "HIVE_QUEEN_MAIL_TOKEN",
+   "HIVE_QUEEN_MAIL_URL",
+   "HIVE_REGISTRY_URL",
+   "HIVE_REQUEST_EXECUTOR_MAX",
+   "HIVE_RIPGREP_PATH",
+   "HIVE_RUNTIME_ID",
+   "HIVE_RUNTIME_KIND",
+   "HIVE_RUNTIME_PORT",
+   "HIVE_STALL_CHECK",
+   "HIVE_STORAGE_PATH",
+   "HIVE_TASK_COMPLETED_CLEANUP",
+   "HIVE_TASK_LIST_ID",
+   "HIVE_TASK_REMINDER_BACKOFF",
+   "HIVE_TASK_REMINDER_COOLDOWN",
+   "HIVE_TASK_REMINDER_SOFT_CAP",
+   "HIVE_TASK_REMINDER_TURNS",
+   "HIVE_TASK_REMINDER_WARMUP",
+   "HIVE_TASK_SNAPSHOT_HEARTBEAT",
+   "HIVE_TASK_SNAPSHOT_ITEMS",
+   "HIVE_TASK_SNAPSHOT_MAX",
+   "HIVE_TASK_UNTRACKED_TURNS",
+   "HIVE_TIMELINE_BATCH",
+   "HIVE_TIMELINE_COOLDOWN",
+   "HIVE_TOOL_EXECUTOR_WORKERS",
+   "HIVE_TRACKER_QUEEN_COOLDOWN_NO_TABLE",
+   "HIVE_TRACKER_QUEEN_COOLDOWN_WITH_TABLE",
+   "HIVE_TRACKER_QUEEN_FIRST_FIRE",
+   "HIVE_TRUST_PROJECT_SKILLS"
+  ],
+  "python_only": [
+   "HIVE_AGENT_NAME",
+   "HIVE_COMPACTION_DEBUG",
+   "HIVE_CRM_PRINCIPAL",
+   "HIVE_ENABLE_LLM_LOGS",
+   "HIVE_GCU_MEMTRACE",
+   "HIVE_GCU_MEMTRACE_FILE",
+   "HIVE_GCU_MEMTRACE_FRAMES",
+   "HIVE_GCU_MEMTRACE_INTERVAL_S",
+   "HIVE_GCU_MEMTRACE_TOP",
+   "HIVE_GCU_SCREENSHOT_CONCURRENCY",
+   "HIVE_HISTORY_READ_WORKERS",
+   "HIVE_MAX_ITER",
+   "HIVE_NO_FILE_LOG",
+   "HIVE_PLAYBOOK_FAST_GRACE",
+   "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
+   "HIVE_RESOURCE_CRIT_RENDERERS",
+   "HIVE_RESOURCE_HISTORY",
+   "HIVE_RESOURCE_INTERVAL_S",
+   "HIVE_RESOURCE_WARN_AVAIL_FRAC",
+   "HIVE_RESOURCE_WARN_RENDERERS",
+   "HIVE_SENTINEL_LOG",
+   "HIVE_SPLIT_WORKER_EVENTS",
+   "HIVE_TRACKER_WORKER_TOOL_CALLS"
+  ],
+  "go_only": [
+   "HIVE_BROWSERBRIDGE_ARGS",
+   "HIVE_BROWSERBRIDGE_BIN",
+   "HIVE_BROWSERBRIDGE_CONTROL",
+   "HIVE_BROWSERBRIDGE_HTTP",
+   "HIVE_BROWSER_BRIDGE",
+   "HIVE_BROWSER_VIEWPORT_SCALE",
+   "HIVE_FAKE_NOW",
+   "HIVE_LIVE_API_BASE",
+   "HIVE_LIVE_API_KEY",
+   "HIVE_LIVE_MODEL",
+   "HIVE_LIVE_TIMEOUT",
+   "HIVE_LME_API_BASE",
+   "HIVE_LME_API_KEY",
+   "HIVE_LME_DATA",
+   "HIVE_LME_DATASET",
+   "HIVE_LME_JUDGE_API_BASE",
+   "HIVE_LME_JUDGE_API_KEY",
+   "HIVE_LME_JUDGE_MODEL",
+   "HIVE_LME_MODEL",
+   "HIVE_LME_QUEEN",
+   "HIVE_LME_QUESTIONS",
+   "HIVE_LME_READER_API_BASE",
+   "HIVE_LME_READER_API_KEY",
+   "HIVE_LME_READER_MODEL",
+   "HIVE_LME_RESUME",
+   "HIVE_LME_RUN_DIR",
+   "HIVE_MCP2CLI",
+   "HIVE_NETWORK_SCANNERS",
+   "HIVE_RETENTION_",
+   "HIVE_SESSION_COST_LIMIT_USD"
+  ]
+ },
+ "credential_specs": {
+  "python": 114,
+  "go": 123,
+  "env_var_mismatch": {
+   "cloudflare": [
+    "CLOUDFLARE_API_TOKEN",
+    null
+   ],
+   "openai": [
+    null,
+    "ZAI_API_KEY"
+   ],
+   "cloudflare_api_token": [
+    null,
+    "CLOUDFLARE_API_TOKEN"
+   ],
+   "hive": [
+    null,
+    "HIVE_API_KEY"
+   ],
+   "kimi": [
+    null,
+    "KIMI_API_KEY"
+   ],
+   "minimax": [
+    null,
+    "MINIMAX_API_KEY"
+   ],
+   "aden_api_key": [
+    null,
+    "ADEN_API_KEY"
+   ],
+   "x_access_token": [
+    null,
+    "X_ACCESS_TOKEN"
+   ],
+   "x_api_key": [
+    null,
+    "X_API_KEY"
+   ],
+   "x_api_secret": [
+    null,
+    "X_API_SECRET"
+   ],
+   "x_access_token_secret": [
+    null,
+    "X_ACCESS_TOKEN_SECRET"
+   ]
+  },
+  "python_only_ids": [
+   "cloudflare"
+  ],
+  "go_only_ids": [
+   "aden_api_key",
+   "cloudflare_api_token",
+   "hive",
+   "kimi",
+   "minimax",
+   "openai",
+   "x_access_token",
+   "x_access_token_secret",
+   "x_api_key",
+   "x_api_secret"
+  ]
+ }
+}

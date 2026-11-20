@@ -1,0 +1,3557 @@
+{
+  "endpoint": "skills",
+  "label": "技能目录",
+  "method": "GET",
+  "path": "/api/skills",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-20T23:43:50+08:00",
+  "canonical": {
+    "colonies": [],
+    "queens": [
+      {
+        "id": "queen_growth",
+        "name": "queen_growth"
+      }
+    ],
+    "skills": [
+      {
+        "deletable": false,
+        "description": "管理行为（赫伯特·西蒙《Administrative Behavior》，诺贝尔奖作品）。当用户要理解\"有限理性\"与\"满意准则\"（管理人 vs 经济人）、要把决策拆成\"事实要素与价值要素\"（手段-目的链）、要理解决策的层级系统、要用\"诱因-贡献\"分析组织均衡、要理解权威与影响/权威的限度、或要理解效率准则与组织认同时，按意图路由到 6 张能力卡。核心定位：决策制定过程是理解组织现象的关键——组织是决策的系统，人是\"有限理性\"的，不追求最优而追求满意。覆盖：有限理性与满意准则、决策的事实要素与价值要素、决策层级系统、组织均衡（诱因-贡献）、权威的角色、效率准则与组织认同。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "administrative-behavior-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "把一本书/长视频/播客/课程/访谈蒸馏成一组可执行 skills 的元 skill——在 cangjie-skill 的蒸馏工艺（5 视角并行提取 + 三重验证 + RIA++ 能力卡 + Capability Bundle 编译）之上，注入 ai-native 组织骨架：判断基准三问门、显式委托链（Liability 不可委托）、I-DISC 判别独立、判定门不可去中心化、认知债务/验证额度记账。多 Agent 多视角、多阶段流水线。使用时机：用户说\"拆书/蒸馏成 skill/把 XX 做成可调用的能力\"并期望以有问责、可收敛、判定受保护的方式完成。NOT for 简单总结、读后感、作者人设（人设用 nuwa-skill）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "ai-cangjie-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "通用 AI-agent 编排系统的设计实施规范——把多 agent 协调系统设计成不会误杀、不会泄漏、不会递归失控的工程系统。适用于：设计或评审一套 agent 编排运行时、定义任务/派发/结算的状态模型、排查\"agent 消失了怎么办\"\"谁有权停止它\"\"重复执行如何收敛\"\"嵌套派生如何防爆炸\"、审查编排协议是否把\"不知道\"当失败处理。核心是七条可验证的工程不变量：权威来自不可伪造 ID、缺席≠失败、未知是一等状态、结算必须显式定归属、递归深度必须设上限、失败重试必须熔断、资源必须能枚举归零。关键 trigger：编排/编排层/dispatch/派发/结算/settle/围栏/fencing/split-brain/幂等/重放/退避/熔断/circuit breaker/深度上限/nesting/资源泄漏/孤儿任务/孤儿进程/unverifiable/租约/lease/心跳/heartbeat/存活/liveness/多 agent 运行时/协调器/coordinator。何时不用：只判断\"该不该开并行\"用 ai-native-swarm-skill；只判断\"该串行还是并行\"用 ai-native-ralph-skill；蒸馏外部书籍用 ai-cangjie-skill。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "ai-native-orchestration-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "来源路由入口：把 AI 原生组织理论（判断基准/需求锁定/AI 收敛/委托问责/能力衰减/判断再生/契约征信/组织资产/Goal 保真/知识沉淀/组织成军/全流程质检/资产分层目录/确定性构建/多智能体协议/治理平台/工程部署/知识生命周期）18 项能力按意图路由。\n何时用：用户提到组织设计、AI 协作治理、判断与决策、需求与目标、知识沉淀、质检等与本书能力域相关的任务。\n何时不用：与本书能力域无关的查询。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "ai-native-org-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "通用的「Ralph 串行循环 + 多 agent 蜂群」编排能力库。用 ai-native 组织理论把 Ralph（单 agent 串行、任务依赖强）与蜂群（多 agent 并行、任务可独立）合成一个编排决策框架。何时用：要组织 agent 无人值守跑完一批任务、要决定任务该串行还是并行、要搭单 agent 循环或多 agent 蜂群、任务依赖结构不清晰需要先判形态。何时不用：单次对话能完成的简单任务、纯人工决策不需要 agent 编排、任务一次能塞进一个上下文窗口。关键 trigger：编排形态/串行还是并行/Ralph循环/蜂群/多agent/无人值守/任务依赖/backpressure/背压/带宽收敛/单agent循环。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "ai-native-ralph-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "通用的「多 AI-agent 蜂群」组织能力库。用 ai-native 组织理论把多 agent 并行组织成一个有门禁、可收敛、不失控的蜂群。何时用：要组织多个 agent 并行跑一批可独立任务、要搭分形 AOOS + 带宽收敛、要去中心化协调权但守住判定门、任务可独立且有背压机制。何时不用：任务强依赖互相牵连（那是 Ralph 串行循环）、无背压机制兜不住非确定性、单 agent 一次能做完、纯人工决策不需要 agent 编排。关键 trigger：蜂群/swarm/多agent/并行/去中心化/带宽收敛/分形AOOS/判定门/自组织/涌现/契约路线/atomic note/Interest-Aware。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "ai-native-swarm-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Create professional, dark-themed architecture diagrams as standalone HTML files with SVG graphics. Use when the user asks for system architecture diagrams, infrastructure diagrams, cloud architecture visualizations, security diagrams, network topology diagrams, or any technical diagram showing system components and their relationships.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "architecture-diagram",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "《学会提问》来源路由入口：把 11 个关键问题按意图路由到能力卡。当请求属于「评价一段具体论证/材料的说服力是否成立」时命中——拆结论与理由、查歧义与假设、验谬误、评证据效力、找替代原因、审数据与省略信息。不属于本书域时明确告知超出范围。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "ask-right-questions",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "管理注意力分配的框架。当你发现自己每天大量时间花在八卦热搜、无目的刷短视频、被动接收推送内容上，需要重新审视注意力去向时使用。核心逻辑：注意力是唯一与生俱来可自主控制的生产性资产，注意力的去向决定了人生产出。不适用于已经拥有稳定深度工作习惯、注意力分配清晰的人。关键触发信号：\"我时间都去哪了\"\"又刷了一晚上手机\"\"为什么这么累却没产出\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "attention-management",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "《学会提问》（Brownne & Keeley，原书第 11 版）论证评价能力卡。\n正例：评价一个具体论证的说服力是否成立——从作者／演说者的文本中拆出论题、结论、理由，\n查关键术语歧义，挖价值观与描述性假设，按六步流程验谬误，最后用条件句给出可辩护的结论。\n触发面：文章、研报、行业结论、方案、广告文案、他人提案的说服力评审与自查。\n本书的关键问题共 11 个（ch03–ch13），ch01/ch02 是前置校准；本书的\n「批判性思维关键问题」与「论证评价的 11 问」指同一套东西，调用时以「批判性思维」\n或「论证评价」限定，不单独使用「关键问题」四字。\n近邻负例：\n- 只想诊断一段话用词是否准确／是否有大词／是不是伪问题／模型是否形式有效 → 用 tractatus-skill。\n- 要验算自己写的逻辑是否形式有效／判断是否重言式 → 用 truth-function / tautology-logic。\n- 要在重大决策信息不全期主动减速、安排研究流程 → 用 dynamic-decision-skill。\n- 要判定一段表述是否形式上重言 → 用 tautology-logic。\n触发词：critical thinking, argument analysis, 论证审计, 论题, 结论, 理由, 假设, 谬误, 条件句。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "audit-pipeline",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "深度思考：不断逼近问题的本质——前香奈儿CEO莫琳·希凯的领导力与自我成长方法论。当用户面临重大人生/职业抉择说不清动机、需要说服上级接受非常规提案、要在会议中坚持立场、要练习倾听与管理自己的阴暗面、评审创意产出怕扼杀原创时，按意图路由到 19 张能力卡。覆盖：决策动机反思、数据支撑直觉、坚持立场判据、深度倾听、阴暗面管理、创意简报松绑、职业软因素评估，以及换位思考/语境重构/愿景共创/聚焦目标/逆向澄清/底层学习/乐谱即兴/身体边界/提问式领导/拥抱矛盾/年度词/家庭分工重定义等支撑能力。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "beyond-the-label-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户想评估商业模式竞争力、给方案打分时使用；商业模式7问+价值主张10问+高附加值4维+四项行动。不适用于生成创意（用 bm-ideation）或验证假设（用 bm-testing）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "bm-assessment",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户想用画布描述或分析一个组织的商业模式时使用；九模块（客户细分/价值主张/渠道/客户关系/收入/核心资源/关键业务/合作/成本）逐格填写。不适用于需要财务估值或法律合规的场景。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "bm-canvas",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户想设计或创新一个商业模式、生成并筛选创意时使用；构思五步（组队/钻研/开拓/甄选/建模）+原型法。不适用于评估已有模式（用 bm-assessment）或描述现状（用 bm-canvas）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "bm-ideation",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户想验证商业假设、用证据测试创意时使用；假设排序→测试卡→实验→学习卡流水线+10测试原则+5数据陷阱。不适用于评估静态竞争力（用 bm-assessment）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "bm-testing",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "解除大脑的两道封印（负面词语和负面情绪），恢复理性思考能力。适用于面对压力、挫折、冲突时大脑\"宕机\"无法思考的场景，以及长期的思维模式优化。当你陷入\"我不行\"、\"做不到\"、\"没办法\"的自我否定循环，或被愤怒、焦虑、恐惧等情绪淹没时使用此skill。不适用于需要深度心理治疗的精神健康问题（如抑郁症、焦虑症需专业医疗），也不适用于纯粹的知识学习瓶颈（那是方法问题不是封印问题）。关键触发信号：\"我不行/我做不到\"、\"气死我了/急死了\"、\"脑子一片空白\"、\"越想越烦\"、\"控制不住自己\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "brain-unseal",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "brainstorming",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "《商业模式决定成败》套装5册方法论路由入口。当用户涉及商业模式描述、设计、评估、测试、个人职业或产业创新时路由到对应能力。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "business-model-5in1",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Distill a book, long-video transcript, podcast, course, or interview into a coherent set of executable skills. Use when the user asks to \"拆书\" / \"蒸馏一本书\" / \"把 XX 书做成 skill\" / \"把这个视频/播客/课程蒸馏成 skill\" / \"turn a book or video into skills\" — i.e. wants the frameworks, principles, and methodologies in long-form content extracted into atomic, reusable Claude skills that an agent can invoke in real-world situations. NOT for simple summarization, book reviews, or role-playing as the author (that is nuwa-skill's job).",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "cangjie-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "为一个因果结论至少列出一个言之有理的替代解释，并按六条标准比较它们的可信度。\n批判性思维 / 论证评价场景触发：当材料说「A 导致了 B」「与 B 有关」「A 决定了 B」\n「A 增加了 B 的可能」「A 阻止了 B」，或用组间比较、事件先后、单一动机来支撑一个原因时，\n用它做三路分流（强因果词 / 弱关联词 / 无标记）、跑替代原因四问、区分「唯一原因」与「原因之一」、\n检出相关≠因果 / 事后归因 / 基本归因错误 / 过度简化因果关系。\n适用于：事故与业务指标归因、政策效果评估、研究结论解读、新闻复盘、解释某个人的行为。\n英文信号：what caused this, correlation vs causation, alternative explanation, rival cause, confounding, post hoc。\n何时不用：①要在决策流程中系统检验竞争性假设（ACH / 正反分析）→ 用 dynamic-decision-skill；\n②要查数据是否骗人（平均值口径、来源、偏见、分母）或被省略了什么 → 用本书第 9、10 问；\n③要查循环论证 / 稻草人 / 虚假两难等论证形式谬误 → 用本书第 5 问；\n④材料中没有任何因果或相关主张 → 本卡不启动。\n本卡只降低置信度，永不输出「该论证正确」。\n口径提示：本书的关键问题为 ch03–ch13 共 …[+150 chars sha256:592500769127]",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "causal-alternatives",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "决策：做出正确选择的8个要素（埃里克·约翰逊《The Elements of Choice》）。当用户要设计/评估\"选项如何呈现\"（选择架构）、要为表单/菜单/网站/APP 设计默认选项、要理解\"合理路径\"（人们如何决定关注什么忽略什么）、要理解偏好为何是\"组合\"出来的而非固定的、要设计选项数量与排序、要写选项描述（框架效应）、或要构建\"选择引擎\"时，按意图路由到 6 张能力卡。核心定位：选择架构 = 选项呈现方式的各个方面，能系统改变人们的选择——既是设计者的工具，也是选择者的防身术（识别\"阻滞\"与\"黑暗模式\"）。覆盖：选择架构总纲、合理路径（切负荷）、组合偏好（记忆可达性）、默认选项、选项数量与排序、选项描述与选择引擎。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "choice-architecture-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Reverse-engineer a SPEC document from an existing project. Analyzes code, config, tests, and structure to produce a comprehensive specification. Triggers on: code-to-spec, reverse spec, generate spec, 逆向规格, 生成规格文档, 生成设计文档, 生成设计方案, extract spec, document this project, what does this project do.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "code-to-spec",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "跨團隊交接、寫文件/API 契約、分工邊界爭議時，用 why+五維+黑盒重議條件的交接包三件套，完成標準是接手者能複述為什麼。與 people-priorities 區分：本卡管知識傳遞契約，它管動機診斷。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "collaboration-communication",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Comet 工作流入口。当用户明确调用 /comet，或明确要求使用 Comet 但未指定 Native/Classic 时使用；解析项目配置并加载唯一入口。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "comet",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "通过 Comet Creator 创建或升级 Comet Classic workflow Skill。不用于一般 Skill 的编写、整理或评审。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "comet-any",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Comet Classic 阶段 5 —— 确认归档、合并 delta spec 并完成分支收尾。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "comet-archive",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Comet Classic 阶段 3 —— 恢复或创建实施计划并执行其任务。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "comet-build",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Comet Classic 工作流（OpenSpec + Superpowers）。当用户明确调用 /comet-classic、要求启动或恢复 Comet Classic，或 resume-probe 返回可无歧义恢复的 active Classic change 时使用。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "comet-classic",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Comet Classic 阶段 2 —— 为 change 产出深度技术 Design Doc。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "comet-design",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Comet 预设 —— 通过 open-build-verify-archive 短流程修复已有行为 bug。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "comet-hotfix",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Comet Classic 阶段 1 —— 开启 OpenSpec change 并建立 proposal/design/tasks/.comet.yaml 产物。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "comet-open",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Comet 预设 —— 处理可收敛为单一 OpenSpec change 的轻量或中等变更。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "comet-tweak",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Comet Classic 阶段 4 —— 验证 change、记录证据并驱动修复循环。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "comet-verify",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "当用户目标已锁定但反复执行失败时，按自知诊断→选强度（软承诺/移除选项/惩罚承诺）→适度校准→第三方自动执行四步设计承诺机制（Save More Tomorrow 储蓄率 4 年增 4 倍；SEED 余额增 82%）。不适用于探索期方向未定、严重成瘾/精神健康问题（需医疗辅助）；警惕初期胜利陷阱导致过早停用。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "commitment-devices",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "设计具有复利效应的增长模型。当你做一件事很久但增长缓慢想放弃、或者想让自己的努力产生\"越做越快\"的效果时使用。核心方法：找支点（验证因果关系）→设计增强循环（A增强B、B反过来增强A）→坚持到里程碑。不适用于一次性任务、短期项目或因果关系不明确的事件。关键触发信号：\"为什么做了这么久还是没效果\"\"我该不该坚持\"\"如何让增长加速\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "compound-effect",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户用 AI 做方案探索/技术选型/产品方向需要收敛、担心 AI 给多个选项实为同一方案、或\"不知道有几个维度要选\"时激活。\n走 L0 枚举维度→L1 不可逆人主导→L2 差异最大化候选→L3 并排原型→L4 灰度真值；强制 I-DISC（判别器≠生成器）与伪多样性检测（rank(Δ)≥2）。\n何时不用：目标已明确无需探索、不涉及 AI 辅助的决策。\n关键 trigger：帮我枚举方案/怎么收敛/AI 给的选项靠谱吗/让 AI 自己评估一下。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "convergence-funnel",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Darwin Skill 2.0 (达尔文.skill 2.0): autonomous skill optimizer, v2.0 integrates Microsoft Research SkillLens (arXiv 2605.23899) 9-dim rubric + SkillOpt (arXiv 2605.23904) validation-gated design + human-in-the-loop checkpoints. Evaluates SKILL.md files using a 9-dimension rubric (structure + effectiveness + meta-skill blacklists), runs hill-climbing with git version control, spawns independent judge agents for blind evaluation, validates improvements through test prompts with auto-break on diminishing returns, and generates visual result cards. Use when user mentions \"优化skill\", \"skill评分\", \"自动优化\"…[+113 chars sha256:c10bbd2030cc]",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "darwin-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "判断一组数字和一个省略了什么的结论可不可信——按《学会提问》批判性思维/论证评价的两个关键问题（ch11 数据有没有欺骗性、ch12 有什么重要信息被省略了）跑一套提问程序：先审数字本身怎么被摆出来（平均数 mean／中位数 median／众数 mode 三选一、全距 range 与数值分布、数据来历与可能偏见、偷换结论所证明的对象、分母与绝对值↔百分比互问、柱状图先看 y 轴起点是否为 0），再审什么被拿掉（九类常见省略信息的 19 个子问、被省略的有利信息与不利信息、谁在说、从中得什么，以及凡「更大／更多／更快／更瘦／在……之后」等大小范围概念一律追问其量度单位的具体数值）。\n用于评价一个具体论证的说服力是否成立中的数据与缺口一环。判据是追问程序，不是可信度标尺：输出「未发现可识别缺陷」时必须附上它的分母（=本卡判据清单），任何情况下不输出「这个数字可信」。\n不宣称完备：ch11 明示「我们无法向你全面展示」所有撒谎方法（ch11 L2963）；ch12 的九类清单原书只称「一个单子」（ch12 L3180），且原书明言「论证的过程从来都是不完整的」（ch12 L3293）。「谁在说、从中得什么」在原书 L3142–3144 提出过却未落进九类清单，故本卡单列一组执行。时间跨度与暴露率仅见于原书习题答案（ch11 L3120），未升格为规则，不作通用判据。\n边界（均按本包 NE…[+587 chars sha256:c77396354f28]",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "data-omission",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "成为决策架构师：把行为决策科学编译成领导者的组织设计动作。当用户面临重大决策拍脑袋、团队意见被权威带偏、需要校准自信/设计实验/创造价值谈判/装伦理护栏/设计助推环境时，按意图路由到 15 张能力卡。覆盖：期望值理性决策、自信校准与可信度追踪、主动侦查、独立意见采集、实验试点、创造价值谈判、伦理护栏、助推设计，以及偏差速查/过程奖励/红队/目标设定/风险偏好/授权道德/决策工厂等支撑能力。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "decision-architect-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户要把工作/决策委托给 AI、下属或外包方，设计岗位授权，或担心\"出了事谁负责\"、监督形同虚设时激活。\n划分可委托/不可委托（Accountability/Liability/Purpose 合法性/解释义务不可委托），检查 I-ACC（问责者须具领域能力/信息可达/认知带宽/否决权/组织保护五要素），检查委托是否抬高门槛、是否毁掉委托人判断。\n何时不用：完全可逆无问责含义的临时帮忙、纯技术匹配。\n关键 trigger：能不能交给 AI 做/出了事谁负责/怎么授权/监督形同虚设。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "delegation-accountability",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "写设计概要给团队/代理；评审概要质量；对齐跨部门目标理解。用 DQC 九标准与三步协作流程编写与评审设计概要",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "design-brief-dqc",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "設計評審問「這裡壞了會怎樣」時，用失效模式表+犧牲件指定+傷害路徑引導做事前失效防護（熔斷/降級/隔離）。與 failure-case-analysis 區分：本卡事前設計，它事後復盤。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "design-for-failure",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "需要更多创意变体；打破创意僵局；教非设计师发散。用 77 种设计启示卡片强制发散并叠加创意",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "design-heuristics",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "《设计规则:模块化的力量》方法论入口：把\"模块化\"从口号变成可操作的结构事实。当用户要梳理复杂系统的依赖结构、创建设计规则/接口协议、决定一个系统如何演进(拆/换/加/减/抽公共层/跨平台)、估算模块化价值、判断何时该模块化、规划最小可行系统或设计可移植组件时，按意图路由到 7 张能力卡。覆盖：设计结构矩阵诊断、设计规则三要素、六模块操作符、选择权价值估算(E(X⁺)=0.3989σ、2ⁿ、5倍/25倍)、模块化时机与互补投资、排除-扩展最小系统、归纳与移植设计。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "design-rules-modularity-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "《设计思维手册：斯坦福创新方法论》全书蒸馏的单一入口——以双钻过程为主线，覆盖理解用户、定义问题、构思、原型测试、组织促进、战略设计六阶段的 105 个方法论能力。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "design-thinking-handbook-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "多個互斥目標拉扯（時程/品質/成本）時，用取捨對+多完整方案+停止點判準做決策，附取捨聲明。適用於架構拍板、MVP 範圍、趕工評估。與 safety-margin-reliability 區分：本卡管一般多目標，它管安全定量。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "design-tradeoffs",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "可设计的增长：用四问流程（是什么→如果→什么让人眼前一亮→什么行之有效）+ 十工具 + 组织落地机制把设计思维编译成管理者的增长动作。当用户面临增长停滞、新概念验证、客户洞察、市场测试设计、组织内推进创新时，按意图路由到 45 张能力卡。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "designing-for-growth-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用\"透析三棱镜\"框架穿透问题表象找到本质原因，通过校准目标B、重构方法A、消除变量C三步解决反复出现的顽固问题。适用于面对同一个问题反复出现、用了各种方法都治不好的场景，以及需要精准定义问题后再解决的分析型场景。当你发现\"打补丁式\"的解决方案无效时使用此skill。不适用于全新领域没有历史方法可回溯的场景，也不适用于纯不确定性事件（那是概率域/风险域，应使用mirror-world）。关键触发信号：\"这个问题怎么又出现了\"、\"为什么总是解决不了\"、\"试了好多方法都没用\"、\"问题的根源到底是什么\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "dialysis-prism",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "dispatching-parallel-agents",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Build and sharpen a project's domain model. Use when discussing codebase terminology, writing or editing a CONTEXT.md, or recording or editing an ADR.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "domain-modeling",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "《设计思维：PDMA新产品开发精髓及实践》来源路由入口（compact pack）。\n按意图路由到 21 张能力卡；7 张已晋级为独立 Skill 时优先直接使用，\n其余 14 张经本入口 references/capabilities/ 到达。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "dt-framework",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "动态决策（谢丽尔·斯特劳斯·艾因霍恩《Problem Solved》，AREA 决策法）。当用户要在信息不断变化、不完全的条件下做高风险/重大决策、要把\"研究\"作为决策的基本组成部分、要确定\"关键概念\"聚焦研究、要用\"绝对/相对/探索/利用/分析\"五阶段 AREA 法、要用\"竞争性替代假设（ACH）/正反分析/情境分析\"审视预先假设、或要\"放慢速度、策略性暂停\"以提升判断力时，按意图路由到 6 张能力卡。核心定位：出色的决策源于严谨的决策过程——用新闻调查/情报搜集/心理学/医学的审视工具，管控\"走思维捷径\"的心理。覆盖：AREA 决策法总纲、关键概念、绝对与相对信息、探索（采访与提问）、审视预先假设、整合信息与导出论点。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "dynamic-decision-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "When you need a browser, read this Skill by default. Use it to open and operate websites, fill forms, click buttons, take screenshots, extract page data, sign in, and perform other browser automation tasks, as well as web app testing, dogfooding, QA, bug investigation, and app-quality review. ego-browser (ego-lite) is a Chromium browser designed for both human users and AI Agents. Agents can use the user's logged-in websites and personal context to complete tasks and collaborate smoothly with the user through the browser interface. Therefore, prefer ego-browser over built-in browsers or other …[+10 chars sha256:176bdb8f412c]",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "ego-browser",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "《工程師的思考法則》來源路由入口：20 張能力卡的統一著陸點。按用戶意圖路由；\n7 個高頻能力已晉級為獨立 Skill（problem-decomposition、design-tradeoffs、\nsafety-margin-reliability、design-for-failure、es101-systems-thinking、\ncollaboration-communication、failure-case-analysis），已安裝時優先直接使用。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "engineering-school-101-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "問題反覆出現、越改越糟、局部優化拖垮整體時（工程師的思考法則體系），畫關係圖找正/負回饋迴路，把介入點落在迴路上並預測新平衡。與 problem-decomposition 區分：本卡分析關係網，它枚舉要素成因。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "es101-systems-thinking",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "判断一条证据够不够硬——按《学会提问》批判性思维/论证评价的分类型程序，判定八类证据（直觉、个人经历、典型案例、当事人证言、专家意见、个人观察、研究报告、类比）的效力。用于评价一个具体论证的说服力是否成立中的证据一环：先抽事实断言并标证据类型，再按该类型的原书判据逐条判（专家三问与专家观点最可信八条、当事人证言四因素、个人经历强度分层、研究报告抽样三问与测量方法两句、类比相关共同点与相关不同点的比例规则），最后用「追问对方补证」与「追原始来源、查语境剥离」两个出口动作收口。\n不宣称完备评价证据：直觉无强度阈值、典型案例原书主动弃权、测量方法效度原书明示超出讨论范围（ch08 L2217 / L2189 / L2488）。\n边界（均为本包 NEIGHBOR-BOUNDARIES.md 裁定）：只想诊断一段话用词是否准确、是否有大词、是不是伪问题、模型是否形式有效 → 用 tractatus-skill；要验算一段自己写的逻辑是否形式有效或判定是否重言 → 用 truth-function / tautology-logic；要在重大决策的信息不全期主动减速并安排研究流程、或系统检验竞争性假设（ACH） → 用 dynamic-decision-skill；要在博弈结构中重新定义问题、破两难困局 → 用 shengwei-skill；用「关键问题」四项框架分析商业模式 → 用 busi…[+219 chars sha256:a6db3390ecce]",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "evidence-grading",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用生物演化逻辑（遗传变异+自然选择）应对不确定性，通过MVP启动→市场反馈筛选→变异创新→积累优势的循环来迭代产品或团队。适用于目标不明确、环境变化快、无法提前规划的场景。不适用于目标明确、路径清晰的确定性项目（用计划更高效）。计划与演化是阴阳互补：计划=阳（效率），演化=阴（应对不确定）。关键触发信号：\"不确定用户要什么\"、\"市场变化太快\"、\"计划赶不上变化\"、\"先跑起来再说\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "evolution-strategy",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when you have a written implementation plan to execute in a separate session with review checkpoints",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "executing-plans",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "梳理完整体验找痛点；从接触点升级到完整体验视角；把痛点转机遇。制作客户体验地图并用 SPICE/痛点→HMW 找创新机遇",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "experience-map",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "事故/上線翻車後的 postmortem：隔離流行敘事、鑑別真肇因、找更動失守點、對照基率，修正方案分工程/程序/組織三層。與 design-for-failure 區分：本卡事後提取規律，它事前設計防線。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "failure-case-analysis",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Operate web pages with a local model through the fbu CLI on Linux, Windows or macOS (PyTorch CUDA/CPU or Apple Silicon MLX). Use for browser navigation, searches, standard forms and dropdowns when the user wants local inference; accept any starting URL and natural-language goal.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "fast-browser-use",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when implementation is complete, all tests pass, and you need to decide how to integrate the work",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "finishing-a-development-branch",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用第一性原理拆解复杂的产品、商业、流程、决策和抽象命题，回到定义、\n事实、假设、约束、从零重构和最小验证实验。\nUse when the user asks to think from first principles, challenge assumptions,\nclarify overloaded concepts or abstract questions, redesign from scratch,\nanalyze why something is expensive, simplify a system, or identify the real bottleneck.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "first-principles-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when the user asks for a comprehensive codebase audit or structured repository health report across multiple quality dimensions such as architecture, design, security, stability, performance, testing, maintainability, release readiness, documentation, observability, configuration safety, data integrity, privacy, accessibility, supply chain, cost, AI/LLM safety, frontend state, backend API design, dependency weight, code consistency, comment coverage, or concurrency. Also supports incremental audits of changed files for PR reviews and continuous auditing workflows.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "fuck-my-shit-mountain",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "与 5-10 年后的自己建立双向书信仪式：三段式去信+换位回信，把回信要点转成 3 个月内可执行动作。当用户需要情感层连接（而非认知提醒）、或里程碑仪式（生日/入职/退休前）时激活；双向设计优于 FutureMe 式单向喊话（Chishima & Wilson 2021）。不适用于急性心理危机期（先处理当下）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "future-self-correspondence",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "《终局思维》来源路由入口：当用户面对「为未来的自己做决定」的场景（储蓄/拖延/承诺/长期规划/身份焦虑）时，按意图把请求路由到 16 张能力卡之一（7 张已晋级独立 Skill），并说明相邻能力的区分；路由表无法命中时明确告知超出本书范围。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "future-self-thinking",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用年龄递进老化图像让未来自我可识别（墨西哥 5 万银行客户实地实验：储蓄总额增 54%），生成 +10/+20/+30 年形象并嵌入可立即行动的决策场景（储蓄 APP 首页/冰箱门）。当用户要启动长期行为且连续性测量偏低、或企业设计储蓄/健康干预时触发。不适用于对老化形象有强烈负面反应的用户（改用通信卡）；绝对效应小（参与率 1.7% vs 1.5%）不可夸大。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "future-self-visualization",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Graph engineering for parallel task execution: convert a task, PRD, SPEC, or issue set into a dependency graph (DAG), layer it into supersteps, then implement each independent node concurrently with subagents — each node runs /goal → /review-it → /ship-it in an isolated git worktree, with a fan-in barrier between waves. Triggers on: graph, graph engineering, build a graph, task graph, dependency graph, DAG, parallel implement, 并发实现, 并行实现, 任务图, 把任务变成图, fan-out fan-in, superstep, dynamic workflow.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "graph",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "grill-with-docs",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Grill the user relentlessly about a plan or design. Use when the user wants to stress-test a plan before building, or uses any 'grill' trigger phrases.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "grilling",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Compact the current conversation into a handoff document for another agent to pick up.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "handoff",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Control Herdr, a terminal multiplexer for coding agents. Use only when the user explicitly mentions Herdr or asks to use Herdr to inspect or control panes, tabs, workspaces, commands, or another agent. Do not use merely because a task could benefit from a background terminal, delegation, or parallel work. Requires HERDR_ENV=1.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "herdr",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Required before any hive-browser CLI command. The browser is driven from the terminal by running `hive-browser <command> ... --json` via terminal_exec — not via MCP tools. Teaches the browser lifecycle rules (the bridge attaches to the USER'S running Chrome — never kill or launch browser processes; timeouts are transport issues, not crashes), the screenshot + coordinate workflow (hive-browser interact with a fractional coordinate) that reaches shadow-DOM inputs selectors can't see, the viewport-fraction coordinate rule (not pixels), rich-text editor quirks (\"send button stays disabled\" failure…[+77 chars sha256:d3f2e3e815f2]",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.browser-automation",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Required reading whenever any chart_* tool is available. Teaches the one-tool embedding contract (call chart_render → live chart appears in chat AND a downloadable PNG lands in the queen session dir), the ECharts (data viz) vs Mermaid (structural diagrams) decision, the BI/financial-grade aesthetic baseline (no chartjunk, restrained palette, proper typography, single message per chart), and the canonical spec patterns for the 12 most-common chart types. Skipping this leads to 1990s-Excel charts, missing downloads, and the agent writing markdown image links by hand instead of letting chart_rend…[+16 chars sha256:0afc4b3d0c03]",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.chart-creation-foundations",
+        "owner": null,
+        "provenance": "preset",
+        "source_scope": "preset",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": []
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Claim tasks, record step progress, and verify SOP gates in the colony SQLite queue. Applies when your spawn message includes a db_path field.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.colony-progress-tracker",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": [
+          "worker"
+        ],
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Proactively extract critical values from tool results into working notes before automatic context pruning destroys them.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.context-preservation",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": [
+          "worker"
+        ],
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Follow a structured recovery decision tree when tool calls fail instead of blindly retrying or giving up.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.error-recovery",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": [
+          "worker"
+        ],
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Required before calling image_generate. Create and edit images from a prompt — generate an image, make a picture / logo / illustration / icon / banner / poster / thumbnail / hero image / mockup / product shot / social graphic, or edit / restyle / combine existing images from reference images. Uses OpenAI gpt-image-2 through the Hive image service, billed to the user's Hive credits like an LLM call (no API key needed). Teaches the exact call shape, the quality/cost tradeoff (quality=\"low\" is the default and cheapest), reference-image editing, how to show the result to the user with attach_file,…[+71 chars sha256:d406441b8a16]",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.image-generation",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Read before automating LinkedIn with browser_* tools. LinkedIn combines shadow DOM (#interop-outlet), strict Trusted Types CSP that silently drops innerHTML, Lexical composer, native beforeunload dialogs that hang the bridge, and aggressive spam filters — each has bitten us at least once. Verified flows for profile messaging, connection-request acceptance, feed composition, and search. Requires hive.browser-automation. Verified against logged-in production 2026-04-11.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.linkedin-automation",
+        "owner": null,
+        "provenance": "preset",
+        "source_scope": "preset",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": []
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Maintain a free-form scratchpad of decisions, extracted values, and open questions so context pruning doesn't lose anything you still need.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.note-taking",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": [
+          "worker"
+        ],
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Read, write, merge, split, rotate, watermark, encrypt, and OCR PDF files using Python (pypdf, pdfplumber, reportlab, pypdfium2) and command-line tools (poppler-utils, qpdf). Use when the user asks to extract text/tables/images from a PDF, create or modify a PDF, combine or split PDFs, OCR a scanned PDF, password-protect a PDF, or render PDF pages as images.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.pdf",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Periodically self-assess output quality to catch degradation before the judge does.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.quality-monitor",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": [
+          "worker"
+        ],
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Set up a Slack notification channel (Sentinel) for a colony by driving the browser — reuse or create the \"Hive Sentinel\" Slack app from a JSON manifest, install it, capture the bot + app tokens, create/select the channel via the Slack API, and turn Sentinel on so the colony can ping the user on Slack and accept replies. Use when the user asks to \"set up Slack notifications\", \"get pinged on Slack\", \"connect Slack for alerts\", \"set up Sentinel on Slack\", or clicks the in-app \"Set this up with the agent\" button on the Slack channel step. Requires hive.browser-automation.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.slack-notifications-setup",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Set up a Telegram notification channel (Sentinel) for a colony by driving the browser — create a bot via @BotFather in Telegram Web, store its token, detect the chat to notify, and turn Sentinel on so the colony can ping the user on Telegram and accept replies. Use when the user asks to \"set up Telegram notifications\", \"get pinged on Telegram\", \"connect Telegram for alerts\", \"set up Sentinel on Telegram\", or clicks the in-app \"Set this up with the agent\" button on the Telegram step. Requires hive.browser-automation.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.telegram-notifications-setup",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Required when terminal_* tools are available. Explains foreground execution, outer collect_result handles, promoted job IDs and their retrieval/cancellation, deadlines, output retention, platform shell selection, and structured editing when enabled.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.terminal-tools-foundations",
+        "owner": null,
+        "provenance": "preset",
+        "source_scope": "preset",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": []
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use terminal_rg / terminal_glob for all filesystem search — your project tree as well as system configs, /var/log, /etc, archive contents. Teaches the rg vs glob vs terminal_exec(\"find/ls/du/tree\") split, common rg flag combos for code/logs/configs, glob patterns for finding files by name, the rule that mtime/size/type predicate queries drop to terminal_exec(\"find ...\"), and that for tree views or single-file stat info you should just use terminal_exec instead of inventing a tool. Read before reaching for raw shell to grep or find anything.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.terminal-tools-fs-search",
+        "owner": null,
+        "provenance": "preset",
+        "source_scope": "preset",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": []
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when launching anything that runs longer than a minute, anything that streams logs, anything you want to keep running while doing other work — or when terminal_exec auto-backgrounded on you and returned a job_id. Teaches the start→poll→wait pattern with terminal_job_logs offset bookkeeping, bounded blocking polls, platform-specific process control via terminal_job_manage capabilities, and the hard rule that jobs die when the terminal-tools server restarts. Read before calling terminal_job_start, or right after terminal_exec auto-backgrounded.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.terminal-tools-job-control",
+        "owner": null,
+        "provenance": "preset",
+        "source_scope": "preset",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": []
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when you need state across calls — building env vars, navigating with cd, driving REPLs (python -i, mysql, psql, node), or responding to interactive prompts (sudo password, ssh host-key confirmation, mysql connection). Teaches the prompt-sentinel exec pattern (default mode), raw I/O for REPLs (raw_send=True then read_only=True), the one-in-flight-per-session rule, and the close-or-leak-against-the-cap discipline. Bash on macOS — never zsh; explicit shell=/bin/zsh is rejected. Read before calling terminal_pty_open.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.terminal-tools-pty-sessions",
+        "owner": null,
+        "provenance": "preset",
+        "source_scope": "preset",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": []
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Read when a terminal-tools call returned something surprising — empty stdout despite no error, exit_code is null, output_handle came back expired, \"too many jobs\" / \"session busy\" / \"too many PTYs\", warning was set unexpectedly, semantic_status disagrees with exit_code. Diagnostic recipes only — load on demand. Don't preload; the foundational skill covers the happy path.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.terminal-tools-troubleshooting",
+        "owner": null,
+        "provenance": "preset",
+        "source_scope": "preset",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": []
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Concrete patterns for breaking colony work into parallel worker jobs via run_playbook — when fan-out helps, how to model the goal as a tracker table, write the worker skill, author the playbook, pilot, and let convergence retry/resume the gap.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.worker-delegation",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": [
+          "colony"
+        ],
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Author a new Agent Skill for a Hive agent that conforms to the Agent Skills specification (SKILL.md with YAML frontmatter, optional scripts/references/assets directories). Use when the user asks to create, scaffold, add, install, or package a new skill for a Hive agent, or you want to keep a procedure as a skill.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.writing-hive-skills",
+        "owner": null,
+        "provenance": "framework",
+        "source_scope": "framework",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Read before automating X / Twitter with browser_* tools. Verified flows for post, reply, delete, search-and-engage, plus the Draft.js compose quirks that silently disable the send button. Includes the daily-reply and job-market-reply playbooks. Requires hive.browser-automation for the underlying screenshot + coordinate workflow. Verified 2026-04-11.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "hive.x-automation",
+        "owner": null,
+        "provenance": "preset",
+        "source_scope": "preset",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": []
+        }
+      },
+      {
+        "deletable": false,
+        "description": "女娲造人：输入人名/主题/甚至只是模糊需求，自动深度调研→思维框架提炼→生成可运行的人物Skill。\n两种入口：(1)明确人名→直接蒸馏 (2)模糊需求→诊断推荐→再蒸馏。\n触发词：「造skill」「蒸馏XX」「女娲」「造人」「XX的思维方式」「做个XX视角」「更新XX的skill」。\n模糊需求也触发：「我想提升决策质量」「有没有一种思维方式能帮我...」「我需要一个思维顾问」。\nEnglish triggers: \"distill [person]\", \"nuwa\", \"create a [person] perspective skill\", \"how does [person] think\", \"I need a thinking advisor\".",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "huashu-nuwa",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户想定位企业所属商业模式类型、分析产业价值链找创新方向时使用；价值地图12宫+价值链11环节+价值洼地。不适用于单产品价值主张设计（用 value-proposition-canvas）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "industry-innovation",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "single 模式主入口:加载全书 11 张能力卡,按生命周期阶段路由到下游框架;覆盖阶段判定/可行性/规模/护城河/估值/景气度/研究法/输出/资讯源/AI/PEST 全链路。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "industry-quick-scan",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用两种系统化方法实现创新：重组式创新（向外收集元素并重新组合）和突变式创新（向内拆解并修改已有结构）。所有创新必须同时满足三要素：新元素+价值增量+可实现性。适用于需要突破现有框架、寻找新产品/新方案、或解决\"创新靠碰运气\"问题的场景。不适用于纯执行性的优化改进（那不需要新元素）。关键触发信号：\"需要新想法\"、\"怎么创新\"、\"创意枯竭\"、\"产品同质化严重\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "innovation-method",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "为任意项目生成 UML 图、架构图和流程图。分析代码库后让用户选择要生成的图表类型，使用 architecture-diagram skill 渲染为 HTML+SVG，保存到 docs/ 目录。适用于任何软件项目的文档可视化。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "insight-diagram",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户面对含不可逆维度的决策（架构选型、数据迁移、资金操作、对外契约）纠结\"该不该做/会不会翻车/怎么判断\"时激活。\n按强制顺序走三问：维度（区分≥2/评价/反向）→死法（概率×代价排序、尾部致命项、目标可错性）→可逆性（回退/损失有界/留档 Prediction），并纳入\"维持现状\"候选。\n何时不用：完全可逆的小决策、纯信息查询。\n关键 trigger：该不该做/怎么判断/会不会翻车/能回退吗/最坏会怎样。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "judgment-baseline",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "创造知识的企业（野中郁次郎、竹内弘高《创造知识的企业》）。当用户要理解/运用 SECI 知识创造模型、要把隐性知识（暗默知）显性化（隐喻/类比）、要搭建促进知识螺旋的组织条件（意图/自主/波动混沌/冗余/必要多样性）、要用\"共享隐性知识→创造概念→验证概念→建立原型→跨层转移\"的五阶段模型做产品/组织创新、要在\"自上而下/自下而上/自中向上而下\"三种管理模式间选择、或要设计\"超文本组织\"时，按意图路由到 6 张能力卡。核心定位：野中知识创造理论的奠基之作——组织是\"创造知识的平台\"而非\"信息处理机器\"，创新源于隐性知识与显性知识的社会化转换。覆盖：SECI 模型与知识螺旋、促进知识螺旋的 5 个条件、组织知识创造五阶段模型、自中向上而下式管理、超文本组织、隐喻与类比（外显化工具）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "knowledge-creating-company-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "知识创造管理（野中郁次郎、绀野登《知识创造管理》）。当用户要把管理从\"利益最大化/量化管理\"转向\"追求共同善与实践智慧\"、要用\"实践三段论\"（目的→手段→行为）做判断而非逻辑分析、要当/培养\"明智的领导者\"、要把战略当成\"作为生活方式的叙事\"而非中长期规划、要把市场理解成\"发现性场所/知识生态系统\"、或要把技术融入社会（融合市场知识与技术的设计知识）时，按意图路由到 6 张能力卡。核心定位：野中知识管理理论的集大成——以\"实践智慧（phronesis）+ 共同善\"为核心，重构 21 世纪的管理。覆盖：实践智慧与共同善、实践三段论、明智的领导者与实践智慧循环、市场作为发现性场所与知识生态系统、作为生活方式的战略（叙事）、知识资产商业模式与设计知识。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "knowledge-creation-management-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "创造知识的方法论（野中郁次郎、绀野登《创造知识的方法论》）。当用户要创造产品概念/事业概念/战略概念却只会\"遣词造句\"、想把隐性知识（暗默知）显性化却说不清、做现场调研却带着偏见、提炼不出\"真正的概念\"只停在表面、要搭建概念背后的因果关系与变量模型、要用隐喻表达\"言不可言之事\"、或想建设\"场\"与知识领导力时，按意图路由到 6 张能力卡。核心定位：回答\"知识创造为什么这么做\"而非\"怎么做\"——从哲学原点（柏拉图/笛卡儿/杜威/西田几多郎）到社会科学方法论，落到\"观察→概念化→模型化→实践化\"的概念创造四部曲。覆盖：概念创造四部曲、观察与悬搁、隐喻与溯因推理、变量与因果关系模型化、哲学四原型与 SECI 模型、场的领导力（原始场/对话场/系统场/实践场）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "knowledge-creation-methodology-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "创造知识的实践（野中郁次郎、西原文乃《创造知识的实践》）。当用户要建设\"创新型组织\"、想知道\"知识创造/创新到底怎么落地\"、要当/培养\"创造知识型领导者\"却不知该具备哪些能力、要判断一个\"场\"是否真的能创造新知识、要处理高层理想与一线现实的矛盾（自中向上而下式）、或用\"守破离\"培养全员实践能力时，按意图路由到 6 张能力卡。核心定位：把 SECI 模型与\"场\"落到中小企业/民营企业的创新现场——创新的方法 = 横向关系（以现场领导的美好目标为起点，共同进行场的建设）× 纵向关系（实现目标的全员实践能力）。覆盖：创新型组织五要素、创造知识型领导者的 6 种能力、场的 6 个条件、实践的知识（phronesis/真善美）、自中向上而下式与开放式创新 2.0、全员实践能力与守破离。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "knowledge-creation-practice-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "知识创造的螺旋（野中郁次郎、竹内弘高《知识创造的螺旋》）。当用户要用\"辩证\"思维（正题—反题—合题的螺旋）理解与驱动知识创造、要建设\"场\"（创造/共享/运用知识的平台）、要做组织间知识创造（丰田集团紧密网络 vs 硅谷知识再结合两种模式）、要在\"有意图的战略 vs 突现的战略\"之间做辩证综合、要做产品概念创新（功能差异化 vs 价值差异化）、或要建设\"辩证组织\"时，按意图路由到 6 张能力卡。核心定位：在 SECI 模型基础上，用辩证思维（相互依存/相互渗透/统一）拥抱矛盾、超越对立，驱动知识螺旋。覆盖：辩证知识创造、场、组织间知识创造、战略形成与对话、价值差异化（产品概念创新）、辩证组织。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "knowledge-creation-spiral-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "把 ai-native 组织理论语境下**已沉淀的知识**（wiki pattern、审查发现、方法论、复盘经验）蒸馏成可执行、可复用的 SKILL。**底层载体 = KLP（知识生命周期执行包规范）**——本 skill 是 KLP 五阶段（产生/验证/发布/使用/复验）在\"知识→技能\"升格场景的操作化，直接采用 KLP 的状态模型、验证分级与使用状态，不另造一套生命周期。当用户说\"把这段知识/方法论/审查结论蒸馏成 skill\"\"沉淀成可复用技能\"\"把 XX pattern 固化成 skill\"时使用。区别于 cangjie-skill（蒸馏外部书籍）与 wikiskill（经验→wiki 维护循环）——本 skill 是\"知识→技能\"的升格蒸馏，且以 KLP 为底层载体、强制对齐理论治理。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "knowledge-distill-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户事故复盘/项目总结想把经验变成能力、建设知识库担心\"存了没人用\"、判断某次\"知识沉淀\"是否完成时激活。\n走五阶段：产生（产出+DR 回填）→验证（固化双门+人裁决）→沉淀（双账本+单写者）→应用（命中短路+三边界）→升级（复验+行为可验证改变 T10）。\n何时不用：一次性不会复发的孤立事件、纯信息归档。\n关键 trigger：怎么把教训沉淀下来/复盘怎么落地/知识库存了没用/文档写完算不算沉淀完。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "knowledge-sedimentation",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "问题分级与澄清：列出全部问题/断言→分可答/可疑/伪问题三级→对伪问题按 6.53 定点到未获指谓的记号→\n对可答级写真值条件→清点澄清产出。当讨论空转无结论、出现宏大断言、争论双方说的不是一回事、\n评估会议/咨询价值时触发。不用于经验研究问题、价值表达场景、需要安抚情绪的对话。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "language-critique",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "语言边界审计与沉默纪律：列出想说却缺失的概念（缺词=认知边界）→检验怀疑合法性→检查\"评估者自身\"被误列为对象→\n写\"框架用后放回\"声明→对不可说者明文标记沉默。当团队语言贫乏讨论打转、出现无解怀疑、方法论术语拜物、\n触及不可说之物时触发。不用于具体技术问题攻坚期、对外沟通材料、心理咨询/存在困扰。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "language-limit-silence",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户拿到模糊需求/目标（\"系统要稳定\"\"体验要好\"）要落地、要定义\"什么算做完\"、要验收标准时激活。\n走五道裂缝逐条答 + 三件套落盘（可判定 AC + 反例 + 优先级），把评价性语言转译为描述性语言，拒绝数值化的形容词记显式未决项。\n何时不用：已高度明确的执行指令、纯可逆小调整。\n关键 trigger：需求怎么落地/什么算做完/验收标准/怎么分解目标/避免做完不是想要的。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "locked-goal",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Automated issue loop with checkpoint/resume: fetch open GitHub issues → dependency-aware topological sort → implement each issue end-to-end → review with /review-it → document with /note-it → ship with /ship-it → repeat. Persists state to .loop-state.json for crash recovery. Triggers on: loop-it, loop issues, auto implement, 批量实现, 循环实现, 实现所有issue, 恢复循环, resume loop.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "loop-it",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Grill me about specs for the workflows I want to build, within this workspace.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "loop-me",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "通过元认知三阶段控制大脑信息处理流程。当你\"知道该做什么但做不到\"、情绪被绑架后无法理性思考、或需要系统性提高大脑信息处理质量时使用。三阶段：控制输入（注意力把关信息入口）→控制大脑（对信息丢弃/储存/处理）→控制输出（将思考结果高质量执行）。不适用于需要快速本能反应的紧急场景。关键触发信号：\"知道但做不到\"\"我又情绪化了\"\"脑子很乱\"\"学了但用不出来\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "metacognition-control",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "识别当前事件落在镜像世界的哪个区域（掌控域/盲域/概率域/风险域），采用对应的生存策略，避免用左侧世界的确定性法则去面对右侧世界的不确定性问题。适用于面对投资决策、创业选择、职业转型的策略制定，以及\"为什么按计划执行却失败了\"的复盘分析。不适用于纯粹的技能提升和刻意练习场景（那些天然属于掌控域）。关键触发信号：\"为什么努力了还是不行\"、\"这件事到底靠实力还是靠运气\"、\"我该怎么应对不确定性\"、\"怎么提高成功率\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "mirror-world",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "当长期任务因太痛苦/太无聊而启动或坚持困难时：启动难→诱惑捆绑（有聲書只在健身房聽，Milkman +51%）；续航难→离题沉浸（刷牙+纪录片 +30% 时长）；意义匮乏→好坏兼收练习。不适用于需要高度专注的认知任务与深度悲伤急性期。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "mixed-emotions-temptation-bundling",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Modernize Go code by applying version-appropriate idioms and APIs (gofix-style transformations). Scans go.mod for the Go version, then transforms Go source files to use modern patterns—from Go 1.0 through 1.26+. Use when the user says \"现代化\",\"现代Go语言\", \"地道的\", \"idiomatic\",  \"modernize\", \"modern-go\", \"update Go code\", \"gofix\", or wants to upgrade Go idioms.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "modern-go",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "通过组合多种能力创造稀缺性，让个人价值从\"可替代\"变为\"唯一\"。适用于职业规划、个人品牌定位、核心竞争力设计场景。当你感觉\"什么都会一点但都不精\"、或想在竞争中建立独特壁垒时使用此skill。不适用于尚未建立任何一项长板能力的阶段（先有单点价值再谈组合），也不适用于需要纯粹深钻单一专业领域的场景（如学术研究）。关键触发信号：\"我没什么特别的优势\"、\"别人也能做我做的事\"、\"怎么让自己不可替代\"、\"兴趣广泛但赚不到钱\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "multi-dimension-ability",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用NLP理解层次模型分析和解决问题的框架。当你陷入某个困境找不到出路、反复在同一个层面打转、或需要做重大人生决策时使用。六层由低到高：环境→行为→能力→BVR（信念/价值观/规条）→身份→精神。核心方法：从顶层向下设计人生，升维解决低维度无法解决的问题。不适用于日常操作性问题（如如何写一封邮件）。关键触发信号：\"我该怎么办\"\"为什么总是遇到同样的问题\"\"不知道该怎么选择\"\"人生方向迷茫\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "nlp-levels",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Capture implementation notes after code implementation and review/fix. Records design decisions, deviations, tradeoffs, and open questions to docs/issue#XXXX.html. Triggers on: /note-it, 记录笔记, implementation notes.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "note-it",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Create, analyze, proofread, and modify Office documents (.docx, .xlsx, .pptx) using the officecli CLI tool. Use when the user wants to create, inspect, check formatting, find issues, add charts, or modify Office documents.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "officecli",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Implement tasks from an OpenSpec change. Use when the user wants to start implementing, continue implementation, or work through tasks.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-apply-change",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Archive a completed change in the experimental workflow. Use when the user wants to finalize and archive a change after implementation is complete.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-archive-change",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Archive multiple completed changes at once. Use when archiving several parallel changes.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-bulk-archive-change",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Continue working on an OpenSpec change by creating the next artifact. Use when the user wants to progress their change, create the next artifact, or continue their workflow.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-continue-change",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Enter explore mode - a thinking partner for exploring ideas, investigating problems, and clarifying requirements. Use when the user wants to think through something before or during a change.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-explore",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Fast-forward through OpenSpec artifact creation. Use when the user wants to quickly create all artifacts needed for implementation without stepping through each one individually.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-ff-change",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Start a new OpenSpec change using the experimental artifact workflow. Use when the user wants to create a new feature, fix, or modification with a structured step-by-step approach.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-new-change",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Guided onboarding for OpenSpec - walk through a complete workflow cycle with narration and real codebase work.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-onboard",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Propose a new change with all artifacts generated in one step. Use when the user wants to quickly describe what they want to build and get a complete proposal with design, specs, and tasks ready for implementation.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-propose",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Sync delta specs from a change to main specs. Use when the user wants to update main specs with changes from a delta spec, without archiving the change.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-sync-specs",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Verify implementation matches change artifacts. Use when the user wants to validate that implementation is complete, correct, and coherent before archiving.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "openspec-verify-change",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Operate Orca-managed worktrees, folder contexts, terminals, repos, automations, worktree comments, and Orca's embedded browser through the `orca` CLI. Use when the user says \"$orca-cli\", \"Orca worktree\", \"child worktree\", \"spawn codex/claude in a worktree\", \"read/wait/send Orca terminal\", \"handoff\" / \"handover\" / \"give this to another agent\", or \"Orca browser\". Also use for opening, testing, screenshotting, or checking how a local or external web page renders while working in Orca, unless the user or project names another browser tool; plain HTTP or API calls (curl, fetch) do not need it. Pref…[+190 chars sha256:e657d261b67a]",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "orca-cli",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Drives the GUI of a local app window in the background through `orca computer`, without bringing it forward or taking the user's keyboard and pointer where the platform allows: accessibility tree, clicks, typing, menus, dialogs, and screenshots in native apps and external browser windows (Chrome, Edge, Safari) or webviews. Prefer a programmatic path (shell, filesystem, git, HTTP, existing CLIs) whenever it can complete the task. Use only when an app window needs GUI control those cannot reach. Do not use for Orca's embedded browser (`orca-cli`).",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "orca-computer-use",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Run work in separate Orca worker agents and get their results back. Use when the user asks for Orca workers or supervision (monitor, task DAGs, ask/reply, decision gates), or when the work needs something your own subagents cannot give: a different agent (such as Codex from Claude) or its own Orca workspace. \"Have Codex (or Claude) review this and report back\" means an Orca worker of that agent, even when you have your own model subagents. Also use when you are a dispatched worker (a prompt with Task and Dispatch IDs: ask, worker_done). Otherwise prefer your own subagents, including for long o…[+251 chars sha256:6bdbd0f888c5]",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "orchestration",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "组织的逻辑（丛龙峰《组织的逻辑》）。当用户面对\"组织不起来、部门难协同、流程打不通、结构改来改去没效果、搞不清企业靠什么驱动、分钱分权分不清、想搞平台生态或内部创新却抓不住要害、接班/权力斗争内耗\"等企业组织建设问题时，按意图路由到 11 张能力卡。核心定位：用\"组织即编织、组织即器官\"贯穿——组织机能=组织机制+组织能力，结构效率>运营效率，组织有三种形态（经济/社会/政治）。覆盖：组织三要素诊断、共识达成四步法、点线面体效率定位、三种组织设计选择（任务/结果/关系中心）、三种组织形态诊断、责权利匹配与利益分享、组织协同模型与适用性边界、创新活力三角与内部创业、组织理性建设三角（德胜）、生态战略内在统一性（小米）、企业家领导力三阶段与权威建设。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "organization-logic-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户评估\"引入 AI 值不值\"、审计组织是否透支信任、设计\"哪些 AI 产出可免检直通\"、担心\"看着正常其实判断带宽已崩\"时激活。\n核算资产（VC+能力池+协作模式+组织记忆）与负债（认知债务+透支+关键人依赖+不可逆承诺），读五指标（TTA/VOR/PTR/RI/CDR），核查判断带宽不等式 (1−p)×R_ai ≤ R_h。\n何时不用：无委托/无 AI 引入的纯人力组织、要精确财务数字。\n关键 trigger：引入 AI 值不值/怎么审计组织健康度/哪些能免检/认知债务/验证额度。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "organizational-assets",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "认识组织行为（忻榕、琼·皮尔斯）。当用户要做\"组织诊断\"（检验管理观念、三角验证、反事实思维、区分理论vs数据）、要管理绩效（衡量/反馈/评估体系）、要设计激励体系（金钱能否激励、薪酬与绩效挂钩、避免高绩效者受惩罚、就业安全）、要理解情绪与绩效（情商/积极情绪/满意度）、要创建高效团队（团队类型/自主性）、或要修炼领导力与理解文化/权力时，按意图路由到 6 张能力卡。核心定位：用组织行为学 80 年研究\"检验你的管理观念\"——管理不是常识，需要诊断、证据与行动。覆盖：组织诊断、管理绩效、激励体系设计、情绪与绩效、创建高效团队、领导力与权力文化。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "organizational-behavior-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Paseo reference for managing projects, workspaces, workspace scripts, agents, schedules, and heartbeats.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "paseo",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Spin up a single agent as an advisor — second opinion on the current task. Use when the user says \"advisor\", \"second opinion\", \"what does X think\", or wants an outside take without delegating the work itself.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "paseo-advisor",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Form a committee of two high-reasoning agents to step back, do root cause analysis, and produce a plan. Use when stuck, looping, tunnel-visioning, or facing a hard planning problem.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "paseo-committee",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Hand off the current task to another agent with full context. Use when the user says \"handoff\", \"hand off\", \"hand this to\", or wants to pass work to another agent.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "paseo-handoff",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Answer questions about the Paseo product and app, including setup, configuration, connectivity, providers, workspaces, updates, logs, and troubleshooting. Use when a user inside Paseo asks how Paseo works, how to configure it, or why something is broken; use the paseo skill instead to operate agents and workspaces through MCP or the CLI.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "paseo-help",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Build and manage trusted local Paseo plugins. Use when the user asks to create, edit, install, reload, enable, disable, remove, or troubleshoot a Paseo plugin; add a native surface or sidebar item; use Paseo from plugin code; add plugin RPCs; or contribute composer attachments.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "paseo-plugin",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "对齐目标用户认知；给头脑风暴锚定用户；向决策层/投资者讲用户。人种学研究创建用户/购买者/逆画像并优先排序",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "persona-design",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户想重设计职业、把个人当一人企业经营时使用；个人画布九问+自我认知+目标声明+市场测试。不适用于组织级商业模式分析（用 bm-canvas）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "personal-canvas",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "对任何模型（业务/数据/心智/流程图）执行三要素检查：要素对应→关系同构→共有图示形式声明→实证对照计划→\n适用边界声明，并记住\"没有先天为真的图像\"。当用户建模并据以决策、团队把模型当现实、模型越精美越免检、\n多份表述需对齐时触发。不用于纯演绎系统内部（数学证明），也不用于一次性沟通草图（只跑第 1 步）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "picture-model",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "通过识别和借助势能差（效率/规模/认知/引力），选择站上高势能位置来放大个人或组织的竞争力。适用于职业选择、创业方向判断、行业趋势分析场景。当你面临\"选哪个平台/公司/行业\"的决策，或想理解为什么同样努力结果差距巨大时使用此skill。不适用于已经锁定赛道只能苦干的执行阶段（此时应回到提升具体能力），也不适用于纯内部管理优化（势能是外部杠杆）。关键触发信号：\"为什么我这么努力还是不行\"、\"选A还是选B行业\"、\"这个行业还有没有未来\"、\"怎么借势\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "potential-energy",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Generate a Product Requirements Document (PRD) for a new feature. Use when planning a feature, starting a new project, or when asked to create a PRD. After PRD is confirmed, use /prd-to-spec (optional) for technical design, then /to-issues to create implementable tickets. Triggers on: create a prd, write prd for, plan this feature, requirements for, spec out, 写PRD, 需求文档, 需求分析, 规格说明.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "prd",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Generate comprehensive Product Requirements Documents (PRDs) for product managers. Use this skill when users ask to \"create a PRD\", \"write product requirements\", \"document a feature\", or need help structuring product specifications.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "prd-generator",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Transform a PRD into a technical SPEC document — architecture, API design, data model, error handling, and implementation contracts. Triggers on: prd-to-spec, prd to spec, prd转spec, 需求转设计, 需求转规格, generate spec from prd, design from prd, 技术方案, 设计方案.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "prd-to-spec",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "面對模糊大問題不知從何下手、或團隊立刻跳進解法時，用先拓維/追因三層/拆到熟悉處的六步流程定義問題並圈出切入點。適用於需求分析、故障排查、調研起手式。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "problem-decomposition",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "收敛研究发现；写清问题定义；把痛点转成可头脑风暴的题目。把洞察收敛成问题说明，并用 HMW 转成机遇陈述",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "problem-statement-hmw",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "在强烈情绪/生理状态（餓/累/沮喪/興奮/戀愛腦）下做长期决策（採購/職業/分手複合/簽約）前强制 24-72 小時冷靜期，做雙狀態記錄防狀態污染；計劃依賴「未來的我會忍住」時改為移除誘惑。不用于需要即時反應的專業場景（急診/交易/談判）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "projection-bias-defense",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户缺陷总逃逸到生产/下游反复返工、设计多道门禁想知道哪道有效、想建立\"缺陷在哪层发生该在哪层拦\"的仪表、用 AI 生产后担心质检退化时激活。\n标注每错误的发生层/发现层，算逃逸距离，定位系统性变长的失效门禁（Goodhart 化）；按三症状（发散/遗漏/漂移）或四类（实现偏离/需求歧义/环境差异/需求证伪）分诊路由。\n何时不用：无门禁体系无质检诉求的纯探索、要\"零缺陷\"绝对承诺。\n关键 trigger：缺陷总漏到生产/哪道门没拦住/怎么设计质检流程/逃逸距离。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "quality-chain",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "receiving-code-review",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Expert code refactoring based on Martin Fowler's catalog — improve maintainability without changing behavior. Covers code smells, composing methods, moving features, organizing data, simplifying conditionals, method calls, and generalization. Triggers on: refactor, 重构, clean up, improve code, code smell, extract method, rename, simplify.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "refactor",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "requesting-code-review",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Code review closeout for Claude Code, Codex, OpenCode, DeepSeek TUI, and Antigravity CLI: local dirty changes, branch vs main, parallel tests.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "review-it",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "設定容量/冗餘/SLA 目標（留多少餘量、幾個 9）時，用後果等級+三重保守疊加+MTBF 表述定量壓低失效機率。與 design-for-failure 區分：本卡壓機率，它設計失效時的表現。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "safety-margin-reliability",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "大词审计：抽出抽象名词→用变项测试区分形式概念与普通概念→把\"形式概念当普通概念用\"的句子标为伪命题（4.1274）→\n改写为变项式或删除→对评估对象写\"说层/显示层\"双行。当文档塞满\"本质/对象/实体\"类大词、写生成规则、\n评估真实能力、写兜底条款时触发。不用于普通概念的实质讨论（变项测试是唯一判据），也不用于诗性/宗教表达。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "saying-showing",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用四步流程做出理性客观的决策：紧盯目标过滤小事→找第三选择突破选项限制→绕开认知偏误→量化打分做最终选择。适用于面临重大选择纠结不已、选项看似非此即彼、或担心被直觉误导的场景。不适用于日常低风险小决策（过度量化反而浪费时间）。关键触发信号：\"纠结选A还是B\"、\"不知道怎么选\"、\"两个都不满意但必须选一个\"、\"帮我做个决定\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "scientific-decision",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "升维（不确定性决策博弈）方法论能力库，蒸馏自王珞《升维：不确定时代的决策博弈》。何时用：面对不确定性的决策、博弈论分析、两难困局破局、有限理性决策、复杂系统/二八法则分析、网络思维抓主要矛盾、升维思考/重新定义问题、有限vs无限游戏、谈判与定价、危机决策。何时不用：可精准量化的确定性计算、无互动的单方规划、需要\"最优解\"的给定结构优化问题。关键 trigger：升维/不确定性决策/超边际/博弈结构/两难/矩阵思维/有限理性/二八法则/复杂系统/有限游戏无限游戏/一报还一报/维克瑞拍卖。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "shengwei-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Code commit, PR creation, merge, and issue closure workflow via GitHub CLI (gh). Triggers after a goal (GitHub Issue) implementation is complete — commit code, push branch, create PR, merge, then close the issue. Use when the user says \"提交代码\", \"commit and merge\", \"创建PR\", \"合入\", \"关闭issue\", \"ship-it\", or when a goal implementation is done and code needs to be shipped.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "ship-it",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "skill-creator",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "通用 agent 技能演化循环（源自 WikiSkill 论文 arXiv:2608.27454）：把 agent 的执行经验编译成三层工作区——不可变的原始轨迹、永不回滚的知识 wiki、由验证门控决定去留的技能——让技能从自己的重复任务里长出来。适用于：让 agent 在重复任务中自动积累可复用技能；同类错误反复发生时把教训沉淀成可查的记录；技能改了一轮又一轮但每轮都从零分析、上一轮被否决的提案被反复重提；为技能演化设计验证门控、holdout 与污染防控；判断\"沉淀下来的经验到底有没有用\"。关键 trigger：技能演化/skill evolution/自我改进/自进化/从经验中学习/越用越差/重复犯同样的错/把经验沉淀/经验固化/教训不保留/提案总被否决/技能改不动/怎么让 agent 学会一件重复的事/闭环改进/迭代优化技能/知识积累/wiki 记忆/持久知识/技能回归/门控/gate/holdout/泛化验证。何时不用：已安装 wikiskill CLI（Stahl-G 的 wikiskill-research）并要跑它的完整控制器时改用它，本 skill 只做方法与轻量落地，两者不要对同一任务同时开两个控制器；只是写或改一份 SKILL.md 而不需要跨轮次演化时用普通技能编辑；需要连续更新模型权重时本 skill 不适用，它不改任何参数。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "skill-evolution-loop-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Detect software architecture bad smells, algorithmic complexity hotspots, and anti-patterns in a codebase. Produces a detailed markdown report identifying violations of architectural principles, design patterns, code quality, and performance complexity. Triggers on: smell, code smell, architecture smell, find anti-patterns, detect bad smells, complexity analysis, 代码坏味道, 架构坏味道, 反模式, 找出坏味道, 复杂度分析.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "smell",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "让团队对问题形成共识；用原型启发创意/收集反馈；向投资者展示。故事五原则与原型分级测试（学习+交流工具）",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "story-prototype",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "将复杂问题拆解为层次分明、不重叠不遗漏的结构框架。适用于需要梳理混乱信息、向他人清晰表达、全面分析问题的场景。当你面对一堆散乱的要素无法形成全局视图，或需要向他人做结构化汇报时使用此skill。不适用于已经高度结构化的问题或需要直觉判断的快速决策场景。关键触发信号：\"信息太多理不清\"、\"怎么说才清楚\"、\"有没有遗漏\"、\"帮我拆解这个问题\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "structured-thinking",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when executing implementation plans with independent tasks in the current session",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "subagent-driven-development",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "systematic-debugging",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "从要素到关系、从局部到整体、从静态到动态地分析复杂系统。适用于问题反复出现、牵一发动全身、头痛医头无效的场景。当你发现\"越努力越糟糕\"或\"问题总是复发\"时，需要切换到系统性思维找根本解。不适用于简单的单因果问题或需要快速行动的紧急场景。关键触发信号：\"为什么这个问题反复出现\"、\"改了A反而坏了B\"、\"感觉陷入了死循环\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "systems-thinking",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "把论证形式化为 p、q→用置零法（组合前提与否定结论判重言式）检验有效性→逐前提标真值来源（重言式/经验/\n无意义候选）→剥离重言式→按简单性标准裁决竞争方案。当审论证/汇报、检测会议共识、组织立基本原则、\n审计口号时触发。不用于经验内容审计、显示层评估（价值/伦理）、教学场景的定义陈述。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "tautology-logic",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Teach the user a new skill or concept, within this workspace.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "teach",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "当用户反复出现「计划时想选A、临场选了B」的模式（健身卡不去/买书不读/说好存钱又花掉）时激活，用双曲贴现定位偏好逆转点，并设计「不让选项进入当下」的修复结构。不用于经济约束导致的真实流动性问题，也不用于模糊的情绪失控（路由到当下放大陷阱卡）。引用时必须带 Read et al. 2012 纵向复现失败的边界声明。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "temporal-discounting-awareness",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when implementing any feature or bugfix, before writing implementation code",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "test-driven-development",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "对赌：信息不足时如何做出高明决策（Annie Duke《Thinking in Bets》）。当用户复盘结果却以成败论英雄、把信念说成\"我确定\"、纠结结果里多少是实力多少是运气、想组建求真团体或提异议、要做重大决策前想清楚各种可能、或控制不住情绪化决策时，按意图路由到 7 张能力卡。核心定位：生活是扑克不是象棋——把信念概率化、分离运气与技能、用求真团体与未来视角校准判断。覆盖：结果导向识别、信念概率化与自我审查、运气技能分离、结伴制求真团体、默顿式异议规范、预先检查与反向回顾、预先承诺与情绪中断。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "thinking-in-bets-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "评估和升级个人时间经营模式的框架。当你觉得\"我很努力但收入上不去\"\"同等工作量别人赚得比我多很多\"时使用。核心公式：个人生产总值=时间单价×能产生价值的时间。四种模式从低到高：零售→批发→买卖→收税。不适用于已经拥有平台级商业模式的人。关键触发信号：\"我每天很忙但收入没增长\"\"为什么别人没那么努力却赚得更多\"\"如何突破收入天花板\"。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "time-merchant",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "把「X 年内」的长期目标改写成「X×365 天」并从未来目标日反向叙事回今天，压缩心理时间距离（Lewis & Oyserman 2015：按天思考退休者开始储蓄早 4 倍；UNest 反向时间旅行注册率 2 倍以上）。当用户的目标显得遥不可及、拖延者声称「还早着呢」时激活。不用于需要精确财务建模的场景（天数是心理工具不是计算工具）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "time-reframing",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Generate a design document (design proposal) from a PRD, in the style of Go's official design proposals — Abstract / Background / Design / Rationale / Compatibility / Implementation, heavy on the 'why' and tradeoffs. Triggers on: to-design, prd-to-design, prd转设计文档, 生成设计文档, 写设计文档, design doc, design proposal, 设计提案, 技术设计文档.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "to-design",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Decompose a PRD and/or SPEC into implementable Issues and create them in your chosen platform (GitHub, Local, or Baidu iCafe). Use after /prd (and optionally /prd-to-spec) to turn requirements into actionable tickets. Triggers on: create issues, to-issues, 创建issue, 拆解issue, 生成卡片, 创建卡片, generate issues from PRD, issues from spec.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "to-issues",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "《逻辑哲学论》来源路由入口：把 15 项能力按意图路由到能力卡。当请求属于\"语言/思想出了毛病\"的诊断与澄清\n（伪问题分级、大词审计、建模检验、推理验算、废话检测、价值分层）时命中；请求不属于任何能力时明确告知超出本书范围。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "tractatus-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "把复杂陈述拆到互相独立的基本命题→展开真值组合→标真值基础→做\"结论成立行 ⊇ 前提成立行\"的包含检验→\n按 5.15 真值基础之比核算概率。当评估\"从 A 推出 B\"、决策依赖多个独立判断点、遇到\"七成把握\"、\n审计汇报逻辑词时触发。不用于非二值判断、基本单元超过 4–5 个、含时间/模态的陈述。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "truth-function",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "推演（战略预判/情景规划/红蓝对抗）方法论能力库，蒸馏自杨霄《推演：让决策更具洞见》。何时用：用户要做战略预判、情景想定、兵棋/沙盘/红蓝对抗推演、研判未来形势、检验决策方案、商业战略推演、复盘推演、净评估、应对深度不确定性。何时不用：需要精准预测未来/给出确定性结论、纯数据统计分析（那是大数据而非战略数据）、无对手互动的单方规划。关键 trigger：推演/情景想定/红蓝对抗/兵棋/净评估/战略预判/研判/黑天鹅/深度不确定性/演绎推理。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "tuiyan-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "using-git-worktrees",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "using-superpowers",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "用户想设计价值主张、验证产品-客户契合时使用；客户概况（工作/痛点/收益）与价值图（产品/缓释/创造）逐条对齐。不适用于组织整体商业模式分析（用 bm-canvas）。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "value-proposition-canvas",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "资源受限下做 NPD；大企业转型/破坏性创新；验证商业模式。初创设计流程与大企业精益创业四要素",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "venture-npd",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "verification-before-completion",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "软件需求可视化建模（RML 22 模型）咨询与执行入口：当用户需要澄清业务目标、梳理流程、写用例、定义权限、画生态/界面/数据图、穷举决策与状态、或把模糊需求转成可开发可测试的可视化规格时激活；按意图路由到 22 张能力卡之一加载执行。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "visual-models-requirements-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Get current weather and forecasts (no API key required).",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "weather",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "微信开发者工具（wechatide）工作流根入口：小程序/小游戏的创建与导入、编译预览上传、 登录与项目管理、页面自动化、调试取证、云开发，以及开发者工具的下载安装更新。 当当前项目明确是微信小程序或小游戏时使用；用户提到微信开发者工具、小程序/小游戏模拟器、 新建项目、预览上传、自动化点击、console/network、云函数/云数据库、下载安装开发者工具时也使用。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "wechatide-skill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Operate WikiSkill workflows that use task examples, scores, a persistent Wiki, and validation to improve reusable skills. Use when starting or resuming such a loop, adding feedback to its workspace, or exporting its result. Ordinary SKILL.md writing or editing belongs to the user's existing skill editor.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "wikiskill",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "把\"事物清单式\"描述改写成\"事实配置式\"描述：列出条目→逐条写成\"X 与 Y 以 R 关联且可真可假\"→补\"不存在\"面→\n按可独立变化切单元→声明封闭。当用户接手新系统想先盘点、需求只列功能点无法验收、能力清单越列越长对不齐、\n竞品分析只抄\"有什么\"时触发。不用于纯枚举（库存/购物清单），也不用于需要立即行动的紧急场景。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "world-as-facts",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Reference for writing and editing skills well — the vocabulary and principles that make a skill predictable.",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "writing-great-skills",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when you have a spec or requirements for a multi-step task, before touching code",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "writing-plans",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "Use when creating new skills, editing existing skills, or verifying skills work before deployment",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "writing-skills",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      },
+      {
+        "deletable": false,
+        "description": "z-fde 全量操作手册（独立分发、自包含，不依赖仓库文档）。面向四类受众——日常编码的普通用户、Hooks 开发人员、插件开发人员、实施/运维人员。当用户询问 z-fde 的用法、安装、命令行参数、运行模式、Provider/模型配置、命名 Profile、REPL/TUI 斜杠命令、技能/子 Agent/插件/hooks 开发、config.toml 全量配置项、环境变量、会话管理、包管理与自更新、目录结构时使用；也适用于排查\"怎么装/怎么配/怎么用 z-fde 做 X\"\"z-fde 怎么连 Ollama/OpenRouter\"\"这个报错怎么办\"\"怎么写一个 hook/插件\"这类问题。",
+        "editable": false,
+        "enabled_by_default": true,
+        "location": "<location>",
+        "name": "zfde-user-guide",
+        "owner": null,
+        "provenance": "user_dropped",
+        "source_scope": "user",
+        "visibility": null,
+        "visible_to": {
+          "colonies": [],
+          "queens": [
+            "queen_growth"
+          ]
+        }
+      }
+    ]
+  },
+  "shape": {
+    "colonies": "array",
+    "queens": "array",
+    "queens[].id": "string",
+    "queens[].name": "string",
+    "skills": "array",
+    "skills[].deletable": "boolean",
+    "skills[].description": "string",
+    "skills[].editable": "boolean",
+    "skills[].enabled_by_default": "boolean",
+    "skills[].location": "string",
+    "skills[].name": "string",
+    "skills[].owner": "null",
+    "skills[].provenance": "string",
+    "skills[].source_scope": "string",
+    "skills[].visibility": "null",
+    "skills[].visible_to": "object",
+    "skills[].visible_to.colonies": "array",
+    "skills[].visible_to.queens": "array",
+    "skills[].visible_to.queens[]": "string",
+    "skills[].visibility[]": "string"
+  },
+  "counts": {
+    "colonies": 0,
+    "queens": 1,
+    "skills": 195
+  },
+  "notes": []
+}

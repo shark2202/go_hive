@@ -319,7 +319,51 @@ func (m *terminalJobManager) start(commandText string, argv []string, spec termi
 	m.jobs[record.JobID] = record
 	m.mu.Unlock()
 
-	go m.watch(record, &pumps)
+	go m.watch(record, &pumps, nil)
+	return record, nil
+}
+
+// terminalExecAdoption carries the live pieces of a foreground exec that is
+// being promoted into the job manager.
+type terminalExecAdoption struct {
+	cmd       *exec.Cmd
+	stdout    *terminalRing
+	stderr    *terminalRing
+	pumps     *sync.WaitGroup
+	waited    chan error
+	startedAt time.Time
+	deadline  time.Time
+	command   any
+}
+
+// adopt registers an already-running process as a background job. The
+// already-pumping rings, the pending Wait result and the original deadline
+// transfer ownership; terminal_exec keeps none of them.
+func (m *terminalJobManager) adopt(a terminalExecAdoption) (*terminalJobRecord, error) {
+	if m.activeCount() >= m.maxJobs {
+		return nil, terminalJobLimitError{max: m.maxJobs}
+	}
+	record := &terminalJobRecord{
+		JobID:     terminalJobID(),
+		PID:       a.cmd.Process.Pid,
+		Command:   a.command,
+		Adopted:   true,
+		StartedAt: a.startedAt,
+		deadline:  a.deadline,
+		cmd:       a.cmd,
+		stdout:    a.stdout,
+		stderr:    a.stderr,
+		done:      make(chan struct{}),
+	}
+	if record.Name == "" {
+		record.Name = terminalJobDefaultName(record.Command)
+	}
+
+	m.mu.Lock()
+	m.jobs[record.JobID] = record
+	m.mu.Unlock()
+
+	go m.watch(record, a.pumps, a.waited)
 	return record, nil
 }
 
@@ -365,10 +409,14 @@ func terminalPumpStream(file *os.File, ring *terminalRing, wg *sync.WaitGroup) {
 }
 
 // watch waits for the process, enforces its deadline, drains the pumps and
-// stamps the final state.
-func (m *terminalJobManager) watch(record *terminalJobRecord, pumps *sync.WaitGroup) {
-	waited := make(chan error, 1)
-	go func() { waited <- record.cmd.Wait() }()
+// stamps the final state. A promoted foreground exec passes its own Wait
+// result channel so the process is never waited on twice.
+func (m *terminalJobManager) watch(record *terminalJobRecord, pumps *sync.WaitGroup, awaited chan error) {
+	if awaited == nil {
+		awaited = make(chan error, 1)
+		go func() { awaited <- record.cmd.Wait() }()
+	}
+	waited := awaited
 
 	if record.deadline.IsZero() {
 		<-waited
@@ -556,6 +604,15 @@ func (t *Toolbox) terminalJobStart(ctx context.Context, input map[string]any) (R
 	if !ok {
 		return terminalErr("terminal_job_start: env must map names to strings"), nil
 	}
+	if principal, ok := stringArg(input, "crm_principal"); ok && strings.TrimSpace(principal) != "" {
+		merged := make(map[string]string, len(env)+1)
+		for key, value := range env {
+			merged[key] = value
+		}
+		merged["HIVE_CRM_PRINCIPAL"] = principal
+		env = merged
+	}
+	limits := terminalExecLimits(input)
 	name, _ := stringArg(input, "name")
 	mergeStderr := terminalBool(input, "merge_stderr")
 	useShell := terminalBool(input, "shell")
@@ -583,7 +640,16 @@ func (t *Toolbox) terminalJobStart(ctx context.Context, input map[string]any) (R
 		spec = terminalWindowsShellSpec()
 	}
 
-	record, err := terminalJobs.start(command, argv, spec, cwd, terminalSanitizedEnv(env), mergeStderr, name)
+	// limits are applied through the same ulimit preamble terminal_exec uses:
+	// prefixed onto a bash command string, or wrapped around a direct argv.
+	spawnCommand := command
+	if spec.executable != "" {
+		spawnCommand = terminalExecLimitedCommand(command, spec, limits)
+	} else {
+		argv = terminalExecApplyLimits(argv, limits)
+	}
+
+	record, err := terminalJobs.start(spawnCommand, argv, spec, cwd, terminalSanitizedEnv(env), mergeStderr, name)
 	if err != nil {
 		var limit terminalJobLimitError
 		if errors.As(err, &limit) {

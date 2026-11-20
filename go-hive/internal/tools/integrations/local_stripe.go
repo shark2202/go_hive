@@ -12,7 +12,7 @@ func stripeSubscriptionStatus(ctx context.Context, rt *Runtime, input map[string
 	if customerID == "" {
 		return map[string]any{"error": "customer_id is required"}, nil
 	}
-	result, err := rt.callHelper(ctx, "stripe_tool", "Stripe", RestSpec{
+	result, err := rt.CallHelper(ctx, "stripe_tool", "Stripe", RestSpec{
 		Method:    http.MethodGet,
 		Path:      "/v1/subscriptions",
 		ListKey:   "subscriptions",
@@ -44,12 +44,12 @@ func stripeSubscriptionStatus(ctx context.Context, rt *Runtime, input map[string
 // update, an immediate cancel is the provider's cancel endpoint.
 func stripeCancelSubscription(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	if !boolArg(input, "at_period_end", false) {
-		return rt.callHelper(ctx, "stripe_tool", "Stripe", RestSpec{
+		return rt.CallHelper(ctx, "stripe_tool", "Stripe", RestSpec{
 			Method: http.MethodDelete,
 			Path:   "/v1/subscriptions/{subscription_id}",
 		}, input)
 	}
-	return rt.callHelper(ctx, "stripe_tool", "Stripe", RestSpec{
+	return rt.CallHelper(ctx, "stripe_tool", "Stripe", RestSpec{
 		Method: http.MethodPost,
 		Path:   "/v1/subscriptions/{subscription_id}",
 		Body:   []string{},

@@ -1875,7 +1875,7 @@ tar -czf growth-lab.tar.gz -C ~/.hive/colonies growth_lab</code></pre>
               <tr><td>Colony 运行时（worker 调度）</td><td>部分</td><td>代码和单测在，生产入口（Host.Start / SpawnBatch）没有调用者</td></tr>
               <tr><td>终端 TUI</td><td>没有</td><td>与 Python 版一样，只有 CLI</td></tr>
               <tr><td>工作目录绑定</td><td>没有</td><td>Queen 工具根 = 启动 cwd；Colony 会话 = Colony 目录；无 session 级字段</td></tr>
-              <tr><td>Claude Code queen</td><td>没有</td><td><code class="inline">qmail</code> 只保留 ID/Name/Title，没有 cwd 和执行桥</td></tr>
+              <tr><td>Claude Code queen</td><td>可用（运行器 + dashboard）</td><td><code class="inline">qmail</code> 运行器已实现：cwd/权限/会话/超时/回复闭环/MCP 注入；真实 <code class="inline">claude -p</code> 已验证；<code class="inline">/api/claude-code-queens</code> 已接真实配置与 transcript</td></tr>
               <tr><td>内置 git 工具</td><td>没有</td><td>与 Python 版相同，只能 terminal 跑 git</td></tr>
             </tbody>
           </table>

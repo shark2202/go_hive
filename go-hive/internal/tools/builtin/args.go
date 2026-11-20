@@ -81,3 +81,38 @@ func intArg(input map[string]any, key string) (int, bool) {
 	}
 	return int(f), true
 }
+
+// boolArgOr extracts a boolean argument, accepting the shapes JSON, YAML-ish
+// callers and direct Go callers produce. Missing or unparseable values fall
+// back to fallback.
+func boolArgOr(input map[string]any, key string, fallback bool) bool {
+	v, ok := input[key]
+	if !ok || v == nil {
+		return fallback
+	}
+	switch value := v.(type) {
+	case bool:
+		return value
+	case string:
+		parsed, err := strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return fallback
+		}
+		return parsed
+	case json.Number:
+		if f, err := value.Float64(); err == nil {
+			return f != 0
+		}
+	case float64:
+		return value != 0
+	case float32:
+		return value != 0
+	case int:
+		return value != 0
+	case int64:
+		return value != 0
+	case int32:
+		return value != 0
+	}
+	return fallback
+}

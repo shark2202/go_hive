@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive 终端工具（terminal-tools）</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:900px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Tool Surface</div><h1>终端工具 <span>terminal-tools</span></h1>
+<p class="lede">Hive 的终端能力是一组 harness 组 <code>terminal-tools</code>：<b>10 个工具、进程内执行</b>（不是 MCP 子进程），默认 queen 就包含这一组，默认会话能直接看到它们。本页登记工具面、参数、边界（截断/后台/PTY/平台差异）与代码位置；机制以代码为准，Python 与 Go 同名。</p>
+<div class="meta"><span>生成：<b>2026-11-20 22:54 CST</b></span><span>工具数：<b>10（Python 枚举 + Go 名单一致）</b></span><span>Python：<code>tools/src/terminal_tools/</code></span><span>Go：<code>internal/tools/builtin/</code></span></div>
+<div class="toc"><a href="#tools">工具清单</a><a href="#mechanics">机制</a><a href="#platform">平台差异</a><a href="#safety">安全与生命周期</a><a href="#code">代码位置</a><a href="#refs">相关页</a></div></header>
+
+<section id="tools"><h2><span class="num">01</span>工具清单（10 个）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:19%">工具</th><th style="width:36%">作用</th><th>关键参数</th></tr></thead><tbody>
+<tr><td><code>terminal_exec</code></td><td>跑一条 shell 命令并捕获输出（stdout/stderr 分离、有界）</td><td><code>command</code>、<code>cwd</code>、<code>env</code>、<code>timeout_sec</code>、<code>shell</code>、<code>stdin</code>、<code>auto_background_after_sec</code>、<code>max_output_kb</code></td></tr>
+<tr><td><code>terminal_job_start</code></td><td>起后台进程，返回 <code>job_id</code></td><td><code>command</code>、<code>cwd</code>、<code>env</code>、<code>merge_stderr</code>、<code>shell</code>、<code>name</code></td></tr>
+<tr><td><code>terminal_job_logs</code></td><td>按偏移读 job 输出；读 + 状态 + 等待退出三合一</td><td><code>job_id</code>、<code>stream</code>、<code>since_offset</code>、<code>max_bytes</code>、<code>wait_until_exit</code>、<code>wait_timeout_sec</code>、<code>tail</code></td></tr>
+<tr><td><code>terminal_job_manage</code></td><td>列 job / 发信号 / 向 stdin 写数据</td><td><code>action</code>、<code>job_id</code>、<code>data</code></td></tr>
+<tr><td><code>terminal_pty_open</code></td><td>打开持久 <code>/bin/bash</code> PTY 会话（env/cd/REPL/交互提示可跨调用保活）</td><td><code>cwd</code>、<code>env</code>、<code>cols</code>、<code>rows</code>、<code>idle_timeout_sec</code></td></tr>
+<tr><td><code>terminal_pty_run</code></td><td>在会话里跑命令 / 发原始输入 / 排空输出（支持 expect 等待）</td><td><code>session_id</code>、<code>command</code>、<code>expect</code>、<code>raw_send</code>、<code>read_only</code>、<code>timeout_sec</code></td></tr>
+<tr><td><code>terminal_pty_close</code></td><td>关闭会话（用完必须关，防泄漏）</td><td><code>session_id</code>、<code>force</code></td></tr>
+<tr><td><code>terminal_rg</code></td><td>ripgrep 内容搜索（内容级搜索的正式工具）</td><td><code>pattern</code>、<code>path</code>、<code>glob</code>、<code>type_filter</code>、<code>ignore_case</code>、<code>context</code>、<code>max_count</code>、<code>max_depth</code>、<code>hidden</code>、<code>no_ignore</code>、<code>extra_args</code></td></tr>
+<tr><td><code>terminal_glob</code></td><td>按文件名/glob 找文件</td><td><code>pattern</code>、<code>path</code>、<code>max_results</code>、<code>include_ignored</code></td></tr>
+<tr><td><code>terminal_output_get</code></td><td>用 handle 取被截断输出的切片（续读）</td><td><code>output_handle</code>、<code>since_offset</code>、<code>max_kb</code></td></tr>
+</tbody></table></div>
+<div class="callout info"><b>枚举证据：</b><code>build_harness_group('terminal-tools')</code> 返回 10 条（上表即其名称与参数）；Go 的 <code>terminalHarnessToolNames</code>（<code>internal/cli/session_tools_harness_groups.go</code>）逐条相同，顺序为 exec / search / output / jobs / PTY。</div>
+</section>
+
+<section id="mechanics"><h2><span class="num">02</span>机制</h2>
+<div class="grid g3">
+<div class="card"><div class="k">有界输出 + handle</div><div class="v">不丢数据</div><div class="d">exec/job 的每路输出有上限；超出即截断并返回 handle，用 <code>terminal_output_get</code> 按 <code>since_offset</code> 续读。</div></div>
+<div class="card"><div class="k">自动转后台</div><div class="v">auto_background</div><div class="d"><code>terminal_exec</code> 的 <code>auto_background_after_sec</code>：命令跑超时即转成 job，返回 <code>job_id</code> 继续跟踪，不再阻塞。</div></div>
+<div class="card"><div class="k">shell 语义自动检测</div><div class="v">管道即可靠</div><div class="d">命令含管道/重定向等 shell 语法时自动走平台 shell（Python：POSIX <code>/bin/bash</code>；Windows Git Bash→PowerShell→cmd）；<code>zsh</code> 明确拒绝（安全立场）。</div></div>
+</div>
+<h3>PTY 会话语义</h3>
+<ul>
+<li>一个会话绑定一个持久 bash；同一会话的 <code>run</code> 串行（忙时拒绝并发调用），状态（env、cd、REPL）跨调用保留。</li>
+<li>有 idle 超时（默认 1800s，可配 <code>idle_timeout_sec</code>）与会话数上限（env <code>TERMINAL_TOOLS_MAX_PTY</code>）。</li>
+<li>用完必须 <code>terminal_pty_close</code>；宿主退出时统一回收（atexit）。</li>
+</ul>
+<h3>搜索类</h3>
+<ul>
+<li><code>terminal_rg</code>：ripgrep 优先；<code>allow_fallback</code> 控制找不到 rg 时的降级路径；Windows 有独立的 rg 安装发现逻辑。</li>
+<li><code>terminal_glob</code>：按名字/glob 枚举文件，<code>include_ignored</code> 决定是否包含 ignore 规则命中的文件。</li>
+</ul>
+</section>
+
+<section id="platform"><h2><span class="num">03</span>平台差异</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">能力</th><th style="width:26%">macOS / Linux</th><th>Windows</th></tr></thead><tbody>
+<tr><td>exec / job</td><td><span class="pill ok">可用</span>（bash）</td><td>Python：可用（Git Bash→PowerShell→cmd 解析）；<span class="pill bad">Go 当前不可用</span>：<code>internal/tools/builtin/exec.go</code> 硬编码 <code>/bin/bash</code>（job 工具有正确解析）</td></tr>
+<tr><td>PTY 三件套</td><td><span class="pill ok">可用</span></td><td><span class="pill warn">明确不支持</span>：调用返回 <code>terminal_pty_* tools are POSIX-only; not supported on Windows</code>（工具仍在位，保持工具面一致；Python/Go 文案逐字相同）</td></tr>
+<tr><td>进程终止语义</td><td>进程组 SIGKILL（连带子进程）</td><td>无 POSIX 进程组；Go 只杀直接进程（孙进程不覆盖），Python 的 Claude Code 树用 <code>taskkill /T</code></td></tr>
+<tr><td>ripgrep</td><td>PATH 或安装发现</td><td>有独立安装发现逻辑（含专用测试）</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>PLAT-01（已知缺口）：</b>Go 的 <code>terminal_exec</code> 在原生 Windows 上启动 <code>/bin/bash</code> 会失败；这是 go_hive 侧未对齐项，Python 不受影响。详见 <a href="platform-support.html">platform-support.html</a>。</div>
+</section>
+
+<section id="safety"><h2><span class="num">04</span>安全与生命周期</h2>
+<ul>
+<li><b>命令守卫</b>只拦「杀/启动浏览器进程」（runtime 和用户拥有浏览器生命周期，bridge 是连到用户已开的 Chrome）；其余命令放行，属于"受信 agent + 宿主权限"模型，不是沙箱。</li>
+<li><b>回收</b>：后台 job 与 PTY 会话在宿主退出时统一 shutdown（原 MCP server lifespan 的职责，进程内化后由 atexit 承担）。</li>
+<li><b>作用域</b>：会话的工具集受 allowlist / colony gating 控制；worker 的工具面由 queen 派活时裁剪（剥掉 queen 生命周期工具）。</li>
+<li><b>输出对模型的影响</b>：截断 + handle 机制防止一次调用把上下文灌满；<code>max_output_kb</code> 可在调用级收窄。</li>
+</ul>
+</section>
+
+<section id="code"><h2><span class="num">05</span>代码位置与维护</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">位置</th><th>内容</th></tr></thead><tbody>
+<tr><td><code>core/framework/tools/harness_tools.py::_terminal</code></td><td>组注册：把 exec/job/pty/search/output 五个模块的工具收进 <code>terminal-tools</code></td></tr>
+<tr><td><code>tools/src/terminal_tools/exec.py</code></td><td><code>terminal_exec</code>：shell 解析、auto-shell 检测、有界输出</td></tr>
+<tr><td><code>tools/src/terminal_tools/jobs/</code></td><td><code>terminal_job_*</code>：JobManager（start/logs/manage）</td></tr>
+<tr><td><code>tools/src/terminal_tools/pty/</code></td><td><code>terminal_pty_*</code>：PTY 会话（POSIX-only）与注册表</td></tr>
+<tr><td><code>tools/src/terminal_tools/search/</code></td><td><code>terminal_rg</code> / <code>terminal_glob</code></td></tr>
+<tr><td><code>tools/src/terminal_tools/output.py</code></td><td><code>terminal_output_get</code> 与输出 handle 存储</td></tr>
+<tr><td><code>tools/src/terminal_tools/common/limits.py</code></td><td><code>resolve_shell_spec</code>（bash / Windows 链 / zsh 拒绝）与默认限额</td></tr>
+<tr><td><code>go_hive/go-hive/internal/tools/builtin/</code></td><td>Go 对侧：<code>exec.go</code>、<code>terminal_jobs.go</code>、<code>terminal_pty_{darwin,linux,windows}.go</code>、<code>terminal_search.go</code>、<code>terminal_output.go</code>、<code>terminal_guard.go</code></td></tr>
+<tr><td><code>go_hive/go-hive/internal/cli/session_tools_harness_groups.go</code></td><td>组名单（10 条）与 Tool Library 记录</td></tr>
+</tbody></table></div>
+<p class="sub"><b>维护口径：</b>新增/改名终端工具时，同步本页清单、Go 的 <code>terminalHarnessToolNames</code>、工具矩阵（<a href="tool-parity-matrix.html">tool-parity-matrix.html</a>）与支持矩阵；Windows 差异保持"工具在位 + 明确错误文案"的既定风格。</p>
+</section>
+
+<section id="refs"><h2><span class="num">06</span>相关页</h2>
+<div class="callout info"><a href="module-interfaces.html">接口不变量</a>（INV-12/15 等）· <a href="platform-support.html">平台支持矩阵</a>（PLAT-01）· <a href="alignment-dimensions.html">对齐维度矩阵</a> · <a href="hive-inbox.html">Hive Inbox</a> · <a href="stall-check.html">judge 与 stall check</a> · <code>go_hive/docs/tool-parity-matrix.html</code> · <code>go_hive/docs/fileops-parity.md</code>。</div>
+</section>
+
+<footer>生成：2026-11-20 22:54 CST · 依据：Python 实测枚举（build_harness_group）+ Go 源码名单 + 平台测试 · 状态：桌面 10/10 可用；Windows 上 PTY 明确不支持、Go exec 缺口未修 · 本页随工具面变更同步。</footer>
+</div></body></html>

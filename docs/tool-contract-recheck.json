@@ -1,0 +1,943 @@
+{
+ "kind": "hive-tool-contract-recheck",
+ "schema_version": 1,
+ "generated_at_utc": "2026-11-20T16:12:43Z",
+ "scope": "model-visible tools[] of a default queen_growth session, re-captured after terminal-schema-p0 (b9a85d51) and tool-desc-schema-p1 (85988b03) merged",
+ "baseline": {
+  "frozen_at_commit": "1b9c458a19244379ac65dabd4827addb891045ef",
+  "manifest": "go_hive/contracts/tool-definitions.json",
+  "report": "go_hive/docs/tool-contract-diff.md §1-§10 (left untouched)",
+  "statistics": {
+   "python_surface": 54,
+   "go_llm_request": 144,
+   "shared": 41,
+   "python_only": 13,
+   "go_only": 103,
+   "description_identical": 13,
+   "input_schema_raw_identical": 8,
+   "input_schema_ctx_stripped_identical": 8,
+   "input_schema_normalized_identical": 8,
+   "python_params": 156,
+   "go_params": 167,
+   "python_only_params": 14,
+   "go_only_params": 25,
+   "type_mismatches": 7,
+   "optionality_mismatches": 11,
+   "required_mismatches": 7
+  }
+ },
+ "recheck": {
+  "python": {
+   "role": "reference",
+   "version": "1.0.14",
+   "checkout": "/Users/mac/hive",
+   "head_at_capture": "889bbfdedac1572b31488e97effcc4bec9bc50fd",
+   "head_after_capture": "98b3a0abaad1408f972ba253de672439561877bf",
+   "core_commit": "a756b1e51765bc75b0a40e362859452a0a54081b",
+   "tools_src_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd",
+   "capture": "temporary HIVE_HOME + fake OpenAI-compatible gateway (llm.api_base -> gateway); POST /api/queen/queen_growth/session; POST /api/sessions/<id>/chat; first request body's tools[] recorded verbatim; GET /api/queen/queen_growth/tools before session creation for the Tool Library layer"
+  },
+  "go": {
+   "role": "target",
+   "version": "1.0.26-go.1",
+   "branch": "tool-contract-recheck",
+   "commit": "c8cca0677bb827637bfb2985332ec4dad886b7d5",
+   "build": "make build (CGO_ENABLED=0 GOPROXY=off GOSUMDB=off), dist/hive",
+   "capture": "same fake gateway; OPENAI_API_KEY=fake-freeze-key only makes the runtime consider the model configured (the gateway accepts anything)"
+  },
+  "capture_files": {
+   "python-llm-tools.json": "79d632dcc0fd3827f666202f837ba141922a530cb82ef953d7c8a0ee795c4f8c",
+   "python-queen-tools.json": "c92d0320dfbeea0838970d462fff6701b74c4589a19c904953d27fda5db8ede1",
+   "go-llm-tools.json": "1f56366cef1ce81862b737f6cde352b8117047b2f2bbd658ecba9b5e405e22d1",
+   "go-queen-tools.json": "9d1b0eb426b96a9aae54b54e0909a569e8e9ede5594619a7172a1090a3f28ac8"
+  },
+  "capture_notes": {
+   "python_llm_tools_byte_identical_to_frozen_baseline": true,
+   "python_queen_tools_byte_identical_to_frozen_baseline": true,
+   "python_registry_dump_unchanged": "gen_tool_contract_parity.py re-run at this checkout reproduced internal/cli/tool_contract_parity.json byte-for-byte (git diff empty)"
+  },
+  "statistics": {
+   "python_surface": 54,
+   "python_llm_request": 24,
+   "python_mcp_catalog": 26,
+   "python_lifecycle": 16,
+   "python_synthetic": 1,
+   "go_llm_request": 144,
+   "shared": 41,
+   "python_only": 13,
+   "go_only": 103,
+   "description_identical": 34,
+   "input_schema_raw_identical": 19,
+   "input_schema_ctx_stripped_identical": 20,
+   "input_schema_normalized_identical": 20,
+   "python_params": 156,
+   "go_params": 172,
+   "python_only_params": 6,
+   "go_only_params": 22,
+   "type_mismatches": 0,
+   "optionality_mismatches": 0,
+   "required_mismatches": 4
+  },
+  "focus": {
+   "p1_aligned": 16,
+   "p1_aligned_comparable_at_runtime": 16,
+   "p1_aligned_registry_only": 9,
+   "p1_aligned_registry_exact": 9,
+   "terminal_exact": 0,
+   "terminal_total": 10,
+   "p1_partial": {
+    "tool": "exa_search",
+    "status": "unchanged (P1 recorded partial: Go registers Exa as a 7-action module tool; the flat Python tool requires `query`, the Go module requires `action`)"
+   }
+  },
+  "per_tool": [
+   {
+    "name": "attach_file",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "chart_render",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "csv_append",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "csv_info",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "csv_read",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "csv_write",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "edit_file",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [
+     "session_cwd"
+    ],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "excel_append",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "not_in_default_surface",
+    "description_equal_vs_python": null,
+    "schema_equal_vs_python": null,
+    "python_only_params": [],
+    "go_only_params": [],
+    "description_equal_vs_registry": true,
+    "schema_equal_vs_registry": true,
+    "registry_diff": [],
+    "diff_count": 0
+   },
+   {
+    "name": "excel_info",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "not_in_default_surface",
+    "description_equal_vs_python": null,
+    "schema_equal_vs_python": null,
+    "python_only_params": [],
+    "go_only_params": [],
+    "description_equal_vs_registry": true,
+    "schema_equal_vs_registry": true,
+    "registry_diff": [],
+    "diff_count": 0
+   },
+   {
+    "name": "excel_read",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "not_in_default_surface",
+    "description_equal_vs_python": null,
+    "schema_equal_vs_python": null,
+    "python_only_params": [],
+    "go_only_params": [],
+    "description_equal_vs_registry": true,
+    "schema_equal_vs_registry": true,
+    "registry_diff": [],
+    "diff_count": 0
+   },
+   {
+    "name": "excel_search",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "not_in_default_surface",
+    "description_equal_vs_python": null,
+    "schema_equal_vs_python": null,
+    "python_only_params": [],
+    "go_only_params": [],
+    "description_equal_vs_registry": true,
+    "schema_equal_vs_registry": true,
+    "registry_diff": [],
+    "diff_count": 0
+   },
+   {
+    "name": "excel_sheet_list",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "not_in_default_surface",
+    "description_equal_vs_python": null,
+    "schema_equal_vs_python": null,
+    "python_only_params": [],
+    "go_only_params": [],
+    "description_equal_vs_registry": true,
+    "schema_equal_vs_registry": true,
+    "registry_diff": [],
+    "diff_count": 0
+   },
+   {
+    "name": "excel_write",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "not_in_default_surface",
+    "description_equal_vs_python": null,
+    "schema_equal_vs_python": null,
+    "python_only_params": [],
+    "go_only_params": [],
+    "description_equal_vs_registry": true,
+    "schema_equal_vs_registry": true,
+    "registry_diff": [],
+    "diff_count": 0
+   },
+   {
+    "name": "get_account_info",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "get_current_time",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "image_generate",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "pdf_read",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "read_file",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [
+     "session_cwd"
+    ],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "risk_score",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "not_in_default_surface",
+    "description_equal_vs_python": null,
+    "schema_equal_vs_python": null,
+    "python_only_params": [],
+    "go_only_params": [],
+    "description_equal_vs_registry": true,
+    "schema_equal_vs_registry": true,
+    "registry_diff": [],
+    "diff_count": 0
+   },
+   {
+    "name": "search_files",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "search_messages",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "search_wikipedia",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "not_in_default_surface",
+    "description_equal_vs_python": null,
+    "schema_equal_vs_python": null,
+    "python_only_params": [],
+    "go_only_params": [],
+    "description_equal_vs_registry": true,
+    "schema_equal_vs_registry": true,
+    "registry_diff": [],
+    "diff_count": 0
+   },
+   {
+    "name": "web_scrape",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "web_search",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "not_in_default_surface",
+    "description_equal_vs_python": null,
+    "schema_equal_vs_python": null,
+    "python_only_params": [],
+    "go_only_params": [],
+    "description_equal_vs_registry": true,
+    "schema_equal_vs_registry": true,
+    "registry_diff": [],
+    "diff_count": 0
+   },
+   {
+    "name": "write_file",
+    "p1_status": "aligned",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": true,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 0
+   },
+   {
+    "name": "terminal_exec",
+    "p1_status": "dependency",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": false,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 22
+   },
+   {
+    "name": "terminal_glob",
+    "p1_status": "dependency",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": false,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 4
+   },
+   {
+    "name": "terminal_job_logs",
+    "p1_status": "dependency",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": false,
+    "schema_equal_vs_python": false,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 13
+   },
+   {
+    "name": "terminal_job_manage",
+    "p1_status": "dependency",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": false,
+    "schema_equal_vs_python": false,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 7
+   },
+   {
+    "name": "terminal_job_start",
+    "p1_status": "dependency",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": false,
+    "python_only_params": [
+     "session_cwd"
+    ],
+    "go_only_params": [],
+    "diff_count": 20
+   },
+   {
+    "name": "terminal_output_get",
+    "p1_status": "dependency",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": false,
+    "schema_equal_vs_python": false,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 5
+   },
+   {
+    "name": "terminal_pty_close",
+    "p1_status": "dependency",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": false,
+    "schema_equal_vs_python": false,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 3
+   },
+   {
+    "name": "terminal_pty_open",
+    "p1_status": "dependency",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": false,
+    "python_only_params": [
+     "session_cwd"
+    ],
+    "go_only_params": [],
+    "diff_count": 10
+   },
+   {
+    "name": "terminal_pty_run",
+    "p1_status": "dependency",
+    "in_go_request": true,
+    "python_layer": "mcp_catalog",
+    "description_equal_vs_python": false,
+    "schema_equal_vs_python": false,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 13
+   },
+   {
+    "name": "terminal_rg",
+    "p1_status": "dependency",
+    "in_go_request": true,
+    "python_layer": "llm_request",
+    "description_equal_vs_python": true,
+    "schema_equal_vs_python": false,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_count": 23
+   },
+   {
+    "name": "exa_search",
+    "p1_status": "partial",
+    "in_go_request": true,
+    "python_layer": "not_in_default_surface",
+    "description_equal_vs_python": null,
+    "schema_equal_vs_python": null,
+    "python_only_params": [],
+    "go_only_params": [],
+    "description_equal_vs_registry": false,
+    "schema_equal_vs_registry": false,
+    "registry_diff": [
+     {
+      "path": ".properties.action",
+      "go": {
+       "description": "Action to invoke. See the tool description for per-action arguments.",
+       "enum": [
+        "exa_search",
+        "exa_find_similar",
+        "exa_get_contents",
+        "exa_answer",
+        "exa_search_news",
+        "exa_search_papers",
+        "exa_search_companies"
+       ],
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.category.anyOf",
+      "py": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "kind": "py_only"
+     },
+     {
+      "path": ".properties.category.default",
+      "py": null,
+      "kind": "py_only"
+     },
+     {
+      "path": ".properties.category.type",
+      "go": "string",
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.days_back",
+      "go": {
+       "default": 7,
+       "type": "integer"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.end_published_date.anyOf",
+      "py": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "kind": "py_only"
+     },
+     {
+      "path": ".properties.end_published_date.default",
+      "py": null,
+      "kind": "py_only"
+     },
+     {
+      "path": ".properties.end_published_date.type",
+      "go": "string",
+      "kind": "go_only"
+     }
+    ],
+    "diff_count": 24
+   }
+  ],
+  "other_shared_residual": [
+   {
+    "tool": "remove_trigger",
+    "python_layer": "lifecycle",
+    "description_identical": true,
+    "schema_identical": false,
+    "python_only_params": [],
+    "go_only_params": [
+     "trigger_id"
+    ],
+    "diff_sample": [
+     {
+      "path": ".properties.trigger_id",
+      "go": {
+       "description": "ID of the trigger to deactivate",
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".required",
+      "go": [
+       "trigger_id"
+      ],
+      "kind": "go_only"
+     }
+    ]
+   },
+   {
+    "tool": "reply_to_worker",
+    "python_layer": "lifecycle",
+    "description_identical": true,
+    "schema_identical": false,
+    "python_only_params": [],
+    "go_only_params": [
+     "reply",
+     "request_id"
+    ],
+    "diff_sample": [
+     {
+      "path": ".properties.reply",
+      "go": {
+       "description": "Guidance or answer text to hand back to the worker.",
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.request_id",
+      "go": {
+       "description": "The escalation request_id from list_worker_questions.",
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".required",
+      "go": [
+       "request_id",
+       "reply"
+      ],
+      "kind": "go_only"
+     }
+    ]
+   },
+   {
+    "tool": "run_playbook",
+    "python_layer": "lifecycle",
+    "description_identical": false,
+    "schema_identical": false,
+    "python_only_params": [],
+    "go_only_params": [
+     "action",
+     "args",
+     "playbook",
+     "playbook_name",
+     "playbook_path",
+     "run_id"
+    ],
+    "diff_sample": [
+     {
+      "path": ".properties.action",
+      "go": {
+       "description": "'run' (default) executes a playbook. 'status' lists in-flight runs of this colony and the recent history from colony.db. 'stop' cancels the run named by `run_id`.",
+       "enum": [
+        "run",
+        "status",
+        "stop"
+       ],
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.args",
+      "go": {
+       "description": "Optional JSON object passed to the native playbook entrypoint.",
+       "type": "object"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.playbook",
+      "go": {
+       "description": "Inline playbook. This build supports native JSON; a Python script is returned as unsupported. Pass exactly one of playbook / playbook_name / playbook_path.",
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.playbook_name",
+      "go": {
+       "description": "Re-run a SAVED playbook by its meta name (playbooks/<name>.play.json, falling back to .play.py) — the normal way to resume or re-run without re-sending the script.",
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.playbook_path",
+      "go": {
+       "description": "Path to a playbook file on disk (native JSON or .play.py).",
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.run_id",
+      "go": {
+       "description": "The run to stop (only with action='stop'), as returned by an earlier run_playbook or listed by action='status'.",
+       "type": "string"
+      },
+      "kind": "go_only"
+     }
+    ]
+   },
+   {
+    "tool": "set_trigger",
+    "python_layer": "lifecycle",
+    "description_identical": true,
+    "schema_identical": false,
+    "python_only_params": [],
+    "go_only_params": [
+     "task",
+     "trigger_config",
+     "trigger_id",
+     "trigger_type"
+    ],
+    "diff_sample": [
+     {
+      "path": ".properties.task",
+      "go": {
+       "description": "The task/instructions for the worker when this trigger fires (e.g. 'Process inbox emails using saved rules'). Required if not already configured on the trigger.",
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.trigger_config",
+      "go": {
+       "description": "Config for the trigger. Timer: {cron: '*/5 * * * *'} or {interval_minutes: 5}. Only needed for custom triggers.",
+       "type": "object"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.trigger_id",
+      "go": {
+       "description": "ID of the trigger to activate (from list_triggers) or a new custom ID",
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.trigger_type",
+      "go": {
+       "description": "Type of trigger ('timer'). Only needed for custom triggers.",
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".required",
+      "go": [
+       "trigger_id"
+      ],
+      "kind": "go_only"
+     }
+    ]
+   },
+   {
+    "tool": "task_create",
+    "python_layer": "llm_request",
+    "description_identical": true,
+    "schema_identical": false,
+    "python_only_params": [
+     "handoff",
+     "new_session"
+    ],
+    "go_only_params": [],
+    "diff_sample": [
+     {
+      "path": ".properties.handoff",
+      "py": {
+       "type": "string",
+       "description": "Required when new_session=true. The new context inherits NOTHING from this conversation except what you write here — no transcript, no summary, no scrollback. So write a COMPLETE, self-contained handoff: everything the new context needs to know to carry the task plan through to done.\n\nBe descriptive and objective — state facts, not impressions. Cover, as applicable:\n- The user's actual goal and intent for this work, in their own terms.\n- Concrete facts and data established so far: names, URLs, IDs, file paths, the account/alias to use, numbers, exact requirements and wording.\n- Decisions already made, and options already considered and ruled out (with the reason).\n- Constraints, preferences, deadlines, and what 'done' looks like.\n- Anything already attempted or partially completed that the new context must not redo.\n\nThe new context cannot look back — if a detail matters for finishing the task and is not already in a task subject/description, it MUST be in this handoff. Write it in full now, while you still have the whole conversation in view. Ignored when new_session is false."
+      },
+      "kind": "py_only"
+     },
+     {
+      "path": ".properties.new_session",
+      "py": {
+       "type": "boolean",
+       "description": "Whether to start this plan in a fresh session. Default false. This is the DM-phase pivot field; in COLONY phase the equivalent is `new_colony` (different field, same criteria — see `<pivot>` in the queen prompt for the universal contract).\n\nSet true ONLY for a clean pivot: the user introduces big new work that shares no goal, files, or topic with the current task list — typically the prior task is finished and they ask for something unrelated.\n\nExamples of the boundary:\n- Just finished pulling a news digest; user says 'now start a CTO sourcing campaign.' -> new session (true): zero overlap with the digest.\n- Running a CTO sourcing campaign; user says 'tweak the scoring rubric.' -> same session (false): it refines the work already underway.\n\nWhen true: a fresh session is created carrying ONLY your `handoff` note and this `tasks` plan — the old conversation is left behind, not copied or summarized. The user is silently swapped into it. Set this on your FIRST tool call of the turn, then end the turn — the new session's queen continues the work from there.\n\nKeep it false for follow-ups, clarifications, continuations, or anything that touches the current plan. When unsure, ask the user before forking."
+      },
+      "kind": "py_only"
+     }
+    ]
+   },
+   {
+    "tool": "update_worker_profile",
+    "python_layer": "lifecycle",
+    "description_identical": true,
+    "schema_identical": false,
+    "python_only_params": [],
+    "go_only_params": [
+     "browser_profile",
+     "colony_id",
+     "concurrency_hint",
+     "integrations",
+     "profile_name",
+     "prompt_override",
+     "skill_name",
+     "task",
+     "tool_filter"
+    ],
+    "diff_sample": [
+     {
+      "path": ".properties.browser_profile",
+      "go": {
+       "description": "Chrome profile label this profile's browser tools target (from list_browser_profiles). Empty clears it.",
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.concurrency_hint",
+      "go": {
+       "minimum": 1,
+       "type": "integer"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.integrations",
+      "go": {
+       "additionalProperties": {
+        "type": "string"
+       },
+       "type": "object"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.profile_name",
+      "go": {
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.prompt_override",
+      "go": {
+       "type": "string"
+      },
+      "kind": "go_only"
+     },
+     {
+      "path": ".properties.skill_name",
+      "go": {
+       "type": "string"
+      },
+      "kind": "go_only"
+     }
+    ]
+   },
+   {
+    "tool": "write_skill",
+    "python_layer": "llm_request",
+    "description_identical": false,
+    "schema_identical": false,
+    "python_only_params": [],
+    "go_only_params": [],
+    "diff_sample": [
+     {
+      "path": ".properties.scope.description",
+      "py": "Who sees the skill: 'queen' (you, and your colonies), 'colony' (this colony's workers), or 'global' (every queen and colony, after the user approves). Defaults to 'colony' inside a colony, 'queen' outside one.",
+      "go": "Who sees the skill: 'colony' (this colony's workers), 'queen' (you and your colonies), or 'global' (everyone, after the user approves). Defaults to 'colony' inside a colony, 'queen' outside one.",
+      "kind": "value"
+     },
+     {
+      "path": ".properties.skill_description.description",
+      "py": "One-line summary of what this skill teaches and when to use it. Surfaced in the skills catalog. Required in inline mode; rejected in source_path mode (description comes from the source SKILL.md frontmatter).",
+      "go": "One-line summary of what this skill teaches and when to use it. Required in inline mode; rejected in source_path mode.",
+      "kind": "value"
+     },
+     {
+      "path": ".properties.skill_files.description",
+      "py": "Optional supporting files (scripts, JSON refs, etc.). Each entry is {path, content} where path is relative to the skill root. Inline mode only; rejected in source_path mode (the tool walks the source dir and copies aux files automatically).",
+      "go": "Optional supporting files (scripts, JSON refs). Each entry is {path, content} with path relative to the skill root. Inline mode only.",
+      "kind": "value"
+     },
+     {
+      "path": ".properties.skill_name.description",
+      "py": "Lowercase, hyphen-separated, ≤64 chars (e.g. 'competitor-research-protocol'). Required in inline mode; optional in source_path mode (renames the skill on copy — defaults to the source's frontmatter name).",
+      "go": "Lowercase, hyphen-separated, ≤64 chars (e.g. 'competitor-research-protocol'). Required in inline mode; optional in source_path mode (renames the skill on copy).",
+      "kind": "value"
+     },
+     {
+      "path": ".properties.source_path.description",
+      "py": "Absolute or '~'-prefixed path to an existing skill's root directory (the one that contains SKILL.md). When set, the tool copies the entire skill folder — SKILL.md + every other UTF-8 file — into the chosen scope. Use this to install a skill you downloaded (e.g. git clone it into your workspace first), or to lift a framework default, shared or another colony's skill into your own skills or THIS colony to customize it.",
+      "go": "Absolute or '~'-prefixed path to an existing skill's root directory (containing SKILL.md). Copies the whole skill folder — SKILL.md plus every other UTF-8 file — into the chosen scope.",
+      "kind": "value"
+     }
+    ]
+   }
+  ],
+  "python_only": 13
+ },
+ "regressions": {
+  "checked": "25 P1-aligned tools in the real model request vs the frozen Python contract: required lists, enum values, items",
+  "findings": [],
+  "note": "no overlay regression: every aligned tool carries the Python required list and the two enum-carrying tools (search_messages, web_search) keep their enums in the request"
+ },
+ "evidence": {
+  "raw_captures": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolfreeze2/captures",
+  "gateway_logs": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolfreeze2/out",
+  "capture_driver": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolfreeze2/capture.py",
+  "analysis": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolfreeze2/{analyze2,recheck,matrix}.py",
+  "reproduce": [
+   "python3 go_hive/scripts/freeze_tool_contract.py build --captures <dir>  # freeze lane 口径",
+   "python3 <scratch>/capture.py all   # re-capture both sides via the fake gateway"
+  ]
+ },
+ "divergence_note": "capture ran on branch tool-contract-recheck @ c8cca067; the python reference checkout (/Users/mac/hive, main) was at 889bbfde during the capture and advanced to 98b3a0ab afterwards (env/config contract + qc commits). None of those touch the tool surface: core/ is still a756b1e5, tools/src still 68b6c230f20e, and the captured Python tools[] is byte-identical to the frozen baseline."
+}

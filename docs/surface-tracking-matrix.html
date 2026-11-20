@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive ↔ go_hive 外观对齐追踪矩阵</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:22px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px} .missing{color:#f2a3a3}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.callout,.sub,.small,.mobile-hint,p,li,.card .d{overflow-wrap:anywhere}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:760px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Surface Parity</div><h1>Hive ↔ go_hive <span>外观对齐追踪矩阵</span></h1>
+<p class="lede">把「对外可观测面」逐项对齐：<b>API 路由、工具 schema、技能接口、配置接口、环境变量、前端 UI</b>。数字来自本机现场实测；<b>外观对齐不等于行为对齐</b>，未验证或未接生产链的能力不写成可用。</p>
+<div class="meta"><span>生成：<b>2026-11-21 00:19 CST</b></span><span>Python hive：<b>1.0.14</b></span><span>Go hive：<b>1.0.26-go.1</b></span><span>Go HEAD：<b>40945349</b></span><span>证据：<b>surface_audit.py + api_parity.py + 临时 Go 目录探针</b></span></div>
+<div class="toc"><a href="#summary">总览</a><a href="#api">API</a><a href="#tools">Tools</a><a href="#skills">Skills</a><a href="#config">Config</a><a href="#env">环境变量</a><a href="#ui">UI</a><a href="#gaps">缺口</a><a href="#repro">复现</a></div></header>
+
+<section id="summary"><h2><span class="num">00</span>总览</h2>
+<div class="grid g3">
+<div class="card"><div class="k">API 路由</div><div class="v">缺失 0</div><div class="d">前端 160 个调用 → Go 缺失 0；Python → Go 缺失 0（浏览器面板已补齐）；剩余为 SPA fallback 等表观差异。</div></div>
+<div class="card"><div class="k">端点契约（严格）</div><div class="v">11 / 18 PASS</div><div class="d">7 条 FAIL：2 条表观（SPA fallback 200 HTML vs 404）、1 条 Go 字段领先（credentials specs 115→123 + tool_modules）、4 条真实差异（冷启动 Go 会话 queen_id/queen_name=null；/api/skills 195 vs 194）。</div></div>
+<div class="card"><div class="k">集成工具</div><div class="v">103 / 103 模块</div><div class="d">863 / 865 action；仅 csv_sql、excel_sql 因 DuckDB 有意排除。默认会话合计 137（实测：14 builtin + 87 分组集成 + 36 独立/任务/技能），见 tool-parity-matrix.html。</div></div>
+<div class="card"><div class="k">Skills 目录</div><div class="v">195 / 194</div><div class="d">17/17 路由、14 个端点、6 个 scope 优先级一致；冷启动目录 195 vs 194（差 1，见 §01 #9）；live reload 扇出已实现。</div></div>
+<div class="card"><div class="k">Config 路由</div><div class="v">20 / 20</div><div class="d">11 个路径；现场 9 个 GET 键集合完全一致；configuration.json 49 段中 44 段有 Go 读取。</div></div>
+<div class="card"><div class="k">UI 源码</div><div class="v">1106 / 63</div><div class="d">1106 个同路径文件，63 个内容不同；Go 多 10 个中文 i18n 文件；package.json 相同。</div></div>
+</div>
+<div class="callout info"><b>判定口径：</b><code>已对齐</code> = 名称/方法/键集合一致（动态值除外）；<code>部分</code> = 有实现但有明确差异；<code>未对齐</code> = 缺失或行为不成立；<code>非缺口</code> = 统计口径、SPA fallback、额外字段导致的表观差异。严格对比会把“额外字段”也记为 FAIL，所以 11/18 不等于“只有 11 个接口可用”；失败项见下表逐条判定。</div>
+<!-- SNAPSHOT:START -->
+<h3>最近一次自动刷新</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">指标</th><th>最近一次自动刷新的实测值</th></tr></thead><tbody>
+<tr><td>刷新时间</td><td>2026-11-21 00:19 CST（脚本 refresh_surface_matrix.py）</td></tr>
+<tr><td>路由注册 / 完全一致</td><td>Go 220 · Python 216 · 完全一致 213</td></tr>
+<tr><td>skills / config 路由</td><td>skills 17/17 · config 20/20（method+path 完全一致）</td></tr>
+<tr><td>surface_audit</td><td>前端→Go 缺失 0；Python→Go 缺失 0（待修 0，全部豁免）</td></tr>
+<tr><td>端点契约（严格，18 条）</td><td>11 / 18 PASS</td></tr>
+<tr><td>失败端点</td><td><div class="small">✗ GET /api/credentials/specs — Py 200 / Go 200（差异 4）</div><div class="small">✗ GET /api/models — Py 200 / Go 404（差异 2）</div><div class="small">✗ GET /api/org-chart — Py 200 / Go 404（差异 2）</div><div class="small">✗ GET /api/skills — Py 200 / Go 200（差异 1）</div><div class="small">✗ POST /api/sessions — Py 201 / Go 201（差异 3）</div><div class="small">✗ GET /api/sessions — Py 200 / Go 200（差异 2）</div><div class="small">✗ GET /api/sessions/{id} — Py 200 / Go 200（差异 3）</div></td></tr>
+<tr><td>前端源码</td><td>同路径 1106 · Go 独有 10 · 内容不同 63（Python 独有 0）</td></tr>
+<tr><td>工具面</td><td>模块 103 / 103 · action 863 / 865 · 默认会话工具 137（矩阵生成值，未重算）</td></tr>
+</tbody></table></div>
+<div class="small">本区块由 <code>go_hive/scripts/refresh_surface_matrix.py</code> 定时重写；正文各表是人工维护的基线快照，两者不一致时以本区块为准。机器可读：<code>go_hive/docs/surface-matrix-snapshot.json</code>。</div>
+<!-- SNAPSHOT:END -->
+</section>
+
+<section id="api"><h2><span class="num">01</span>API 路由</h2>
+<p class="sub">静态提取两边 <code>app.router.add_*</code> / <code>mux.HandleFunc</code> 的 method+path；Python 使用常量注册的少数路由（如 <code>PATH = "/api/runtime-logs"</code>）会产生静态漏计，已在差异表标注。</p>
+<div class="grid g3" style="margin:14px 0">
+<div class="card"><div class="k">前端 → Go</div><div class="v">0 缺失</div><div class="d">surface_audit.py：前端 160 个调用全部有同方法、同形状的 Go 注册</div></div>
+<div class="card"><div class="k">Python → Go</div><div class="v">0 缺失</div><div class="d">Browser Bridge 的 contexts、tabs、contexts/close 已实现并实测；豁免已删除</div></div>
+<div class="card"><div class="k">Go 额外</div><div class="v">3 条</div><div class="d">reminders ×2、mcp/reload ×1；其余差异是 catch-all/SPA/别名</div></div>
+</div>
+
+<h3>路由差异（6 对 6，全部可解释）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:9%">方向</th><th style="width:8%">方法</th><th style="width:38%">路径</th><th style="width:12%">判定</th><th>说明</th></tr></thead><tbody>
+<tr><td>Python → Go</td><td><code>DELETE</code></td><td><code>/api/sessions/history/{id}</code></td><td><span class="pill ok">已承接</span></td><td>Go 用 <code>DELETE /api/sessions/{first}/{second}</code> 的 catch-all 转发到 delete-history。</td></tr>
+<tr><td>Python → Go</td><td><code>DELETE</code></td><td><code>/api/sessions/{id}/colony</code></td><td><span class="pill ok">已承接</span></td><td>同一 catch-all：<code>second == "colony"</code> 时调用 unload-colony。</td></tr>
+<tr><td>Python → Go</td><td><code>GET</code></td><td><code>/api/browser/contexts</code></td><td><span class="pill ok">已实现</span></td><td>serve 代理到 bridge 14830；实测 200。</td></tr>
+<tr><td>Python → Go</td><td><code>GET</code></td><td><code>/api/browser/tabs</code></td><td><span class="pill ok">已实现</span></td><td>透传 bridge；无扩展连接时 503 not_connected，不伪造空列表。</td></tr>
+<tr><td>Python → Go</td><td><code>POST</code></td><td><code>/api/browser/contexts/close</code></td><td><span class="pill ok">已实现</span></td><td>支持 <code>{profile}</code> / <code>{all:true}</code>，透传 bridge 结果。</td></tr>
+<tr><td>Python → Go</td><td><code>GET</code></td><td><code>/{path:.*}</code></td><td><span class="pill info">非缺口</span></td><td>Python 的 SPA fallback；Go 用 <code>GET /</code> 提供同一深链入口。</td></tr>
+<tr><td>Go → Python</td><td><code>DELETE</code></td><td><code>/api/sessions/{first}/{second}</code></td><td><span class="pill info">实现细节</span></td><td>合并了上面前两条 Python 路由，不新增语义。</td></tr>
+<tr><td>Go → Python</td><td><code>GET</code></td><td><code>/</code></td><td><span class="pill info">实现细节</span></td><td>SPA 宿主入口，对应 Python 的 <code>/{path:.*}</code>。</td></tr>
+<tr><td>Go → Python</td><td><code>GET</code> / <code>POST</code></td><td><code>/api/sessions/{id}/reminders</code></td><td><span class="pill info">Go 扩展</span></td><td>Python 没有对应 HTTP 路由；Go 的提醒中枢读接口。</td></tr>
+<tr><td>Go → Python</td><td><code>POST</code></td><td><code>/api/mcp/reload</code></td><td><span class="pill info">Go 扩展</span></td><td>Python 的 MCP 路由无 reload 动作。</td></tr>
+<tr><td>Go → Python</td><td><code>GET</code></td><td><code>/api/runtime-logs</code></td><td><span class="pill info">非差异</span></td><td>Python 用 <code>PATH</code> 常量注册（<code>routes_logs.py</code>），静态正则漏计；实际存在。</td></tr>
+</tbody></table></div>
+
+<h3>18 个端点现场对比（严格 comparator）</h3>
+<p class="sub">规则：状态码相同；JSON 键集合与类型递归相同（数组取前 3 个）；动态值不参与比较；<b>额外字段也记 FAIL</b>。运行命令见 §07。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:5%">#</th><th style="width:34%">端点</th><th style="width:10%">结果</th><th>差异 / 判定说明</th></tr></thead><tbody>
+<tr><td class="num">1</td><td><code>GET /api/health</code></td><td><span class="pill ok">PASS</span></td><td>status=ok；键集合一致。</td></tr>
+<tr><td class="num">2</td><td><code>GET /api/config/llm</code></td><td><span class="pill ok">PASS</span></td><td>provider/model/has_api_key 一致。</td></tr>
+<tr><td class="num">3</td><td><code>GET /api/credentials</code></td><td><span class="pill ok">PASS</span></td><td>两边都是空数组（临时 HOME）。</td></tr>
+<tr><td class="num">4</td><td><code>GET /api/credentials/specs</code></td><td><span class="pill bad">FAIL</span></td><td><b>非缺失</b>：Go 123 vs Python 115，且 Go 多 <code>tool_modules</code> 字段。Go 领先，不是缺口。</td></tr>
+<tr><td class="num">5</td><td><code>GET /api/queen/profiles</code></td><td><span class="pill ok">PASS</span></td><td>13 个 queen；id 集合相同。</td></tr>
+<tr><td class="num">6</td><td><code>GET /api/models</code></td><td><span class="pill warn">FAIL（非缺口）</span></td><td>Python 的 SPA fallback 返回 200 HTML；Go 返回 404 JSON。Python 没有这个 API。</td></tr>
+<tr><td class="num">7</td><td><code>GET /api/models/overview</code></td><td><span class="pill ok">PASS</span></td><td>llm 槽位的 provider/model/api_base 一致。</td></tr>
+<tr><td class="num">8</td><td><code>GET /api/org-chart</code></td><td><span class="pill warn">FAIL（非缺口）</span></td><td>同 <code>/api/models</code>：Python SPA 200 HTML vs Go 404。</td></tr>
+<tr><td class="num">9</td><td><code>GET /api/skills</code></td><td><span class="pill bad">FAIL</span></td><td>2026-11-21 冷启动实测 <b>195 vs 194</b>（live 8788 曾 195/195）；差 1 条，需定位缺失的 skill。</td></tr>
+<tr><td class="num">10</td><td><code>GET /api/mcp/servers</code></td><td><span class="pill ok">PASS</span></td><td>两边 5 个 server，名称集合相同。</td></tr>
+<tr><td class="num">11</td><td><code>POST /api/sessions</code></td><td><span class="pill bad">FAIL</span></td><td>2026-11-21 冷启动实测 Go <code>queen_id=null</code>/<code>queen_name=null</code>（Python <code>queen_growth</code>/Steve Jobs）；live 8788 曾绑定。</td></tr>
+<tr><td class="num">12</td><td><code>GET /api/sessions</code></td><td><span class="pill bad">FAIL</span></td><td>列表里 <code>sessions[].queen_id/queen_name</code>：Python string，Go null（冷启动同源缺口）。</td></tr>
+<tr><td class="num">13</td><td><code>GET /api/sessions/{id}</code></td><td><span class="pill bad">FAIL</span></td><td><code>queen_id</code> 不同：python=<code>queen_growth</code> go=None（<code>queen_phase</code> 一致）。</td></tr>
+<tr><td class="num">14</td><td><code>GET /api/sessions/{id}/events</code></td><td><span class="pill ok">PASS</span></td><td>都 200，Content-Type 都是 <code>text/event-stream</code>。</td></tr>
+<tr><td class="num">15</td><td><code>GET /api/sessions/{id}/events/history</code></td><td><span class="pill ok">PASS</span></td><td>实测新建会话 total=5，events.jsonl 5 行；首轮后继续追加不重复。</td></tr>
+<tr><td class="num">16</td><td><code>GET /api/sessions/{id}/snapshot</code></td><td><span class="pill ok">PASS</span></td><td>实测 <code>snapshot_seq=5</code>，<code>last_event_at</code> 非空。</td></tr>
+<tr><td class="num">17</td><td><code>GET /api/sessions/{id}/stats</code></td><td><span class="pill ok">PASS</span></td><td>实测 <code>events_by_type</code> 5 类；顶层键一致。</td></tr>
+<tr><td class="num">18</td><td><code>GET /api/sessions/{id}/tasks</code></td><td><span class="pill ok">PASS</span></td><td>两边都 404（该会话尚无任务列表），属预期一致。</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>2026-11-21 00:17 复测（冷启动 parity）：</b>11/18 PASS。7 条 FAIL = 2 条表观（SPA 200 HTML vs 404）+ 1 条 Go 字段领先（credentials specs 115→123 + <code>tool_modules</code>）+ <b>4 条真实差异</b>：冷启动 Go 会话 <code>queen_id/queen_name=null</code>（Python 绑定 <code>queen_growth</code>）、<code>/api/skills</code> 195 vs 194。事件三件套（events/history/snapshot/stats）冷启动均 PASS。</div>
+</section>
+
+<section id="tools"><h2><span class="num">02</span>Tools</h2>
+<p class="sub">上游来源：<code>tools/src/aden_tools/tools/*</code> 的 <code>@mcp.tool</code>；Go 来源：会话工具目录（<code>newSessionToolCatalogue</code>）与集成安装器。现场探针实测后已删除临时测试文件。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">指标</th><th style="width:18%">Python 上游</th><th style="width:18%">Go</th><th>判定</th></tr></thead><tbody>
+<tr><td>工具模块</td><td class="num">103</td><td class="num">103</td><td><span class="pill ok">已对齐</span>；<code>file_system_toolkits</code> 是共享 helper，不计模块。</td></tr>
+<tr><td>集成 action</td><td class="num">865</td><td class="num">863</td><td><span class="pill warn">部分</span>；仅 <code>csv_sql</code>、<code>excel_sql</code> 因 DuckDB/cgo 有意排除，调用时返回未知 action，不假装支持。</td></tr>
+<tr><td>默认集成工具</td><td>—</td><td class="num">96</td><td><span class="pill ok">实测</span>；模块开关关闭时 96，打开 <code>HIVE_NETWORK_SCANNERS</code> + <code>HIVE_EMAIL_SENDERS</code> 后 103。</td></tr>
+<tr><td>会话工具合计</td><td>—</td><td class="num">137</td><td><span class="pill ok">实测（Go 默认 session catalogue，2026-11-21 00:16）</span>；14 个 builtin（files 4 + terminal 10）+ 87 个分组集成工具 + 36 个独立/任务/技能/追踪工具（<code>chart_render</code>、csv/excel 独立工具、<code>browser_setup</code>、<code>task_*</code>、<code>tracker_*</code>、skills 3 个等）。旧口径 125（29 core + 96 集成）已过期。</td></tr>
+<tr><td>网络扫描器</td><td>6 个默认注册（无开关）</td><td>6 个默认隐藏</td><td><span class="pill warn">默认面不同</span>；Go 需 <code>HIVE_NETWORK_SCANNERS=1</code> 才出现；默认不向第三方发探测流量。</td></tr>
+<tr><td>senders</td><td>1 模块 / 9 action</td><td>1 模块 / 9 action（默认关）</td><td><span class="pill ok">开关一致</span>；<code>HIVE_EMAIL_SENDERS</code> 或 <code>email_senders</code> 打开。</td></tr>
+</tbody></table></div>
+
+<h3>关键外形差异：扁平 vs 分组</h3>
+<div class="callout"><b>Python</b> 把每个 action 注册成独立 MCP 工具：<code>airtable_create_records</code>、<code>airtable_list_records</code> … 共 865 个工具名。<br>
+<b>Go</b> 把每个集成注册成一个模块工具：<code>airtable</code> + <code>action</code> 参数（<code>action: "airtable_create_records"</code>），共 103 个工具名、863 个 action。<br>
+<b>结论：</b>能力覆盖对齐（99.8% action），但 <b>工具名 / JSON schema 不是 1:1</b>；依赖 Python 工具名的 prompt 需要改写，不能直接复用。逐模块明细见 <a href="tool-parity-matrix.html">tool-parity-matrix.html</a>。</div>
+</section>
+
+<section id="skills"><h2><span class="num">03</span>Skills</h2>
+<p class="sub">事实源：Python <code>core/framework/server/routes_skills.py</code>；Go <code>internal/server/routes_skills.go</code>。路由 17/17 method+path 完全一致，文档化的 14 个端点全部存在。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:29%">检查项</th><th style="width:42%">结果</th><th>判定</th></tr></thead><tbody>
+<tr><td>HTTP 路由</td><td>17 / 17 method+path 相同</td><td><span class="pill ok">已对齐</span></td></tr>
+<tr><td>端点数量</td><td>14 个（per-queen 8 + 聚合 4 + install 2）</td><td><span class="pill ok">已对齐</span></td></tr>
+<tr><td>scope 与优先级</td><td><code>framework 0 / preset 1 / user 2 / queen_ui 3 / colony_ui 4 / project 5</code></td><td><span class="pill ok">已对齐</span></td></tr>
+<tr><td>聚合目录行数</td><td>Python 195 vs Go 195</td><td><span class="pill ok">已对齐</span>；响应结构与字段一致。</td></tr>
+<tr><td>per-queen override</td><td>创建 / 开关 / 参数 / 备注 / body 读写 / rename / delete</td><td><span class="pill ok">已实现</span></td></tr>
+<tr><td>上传与安装审批</td><td><code>.md</code> / <code>.zip</code> 上传；<code>skill-installs</code> 批准/拒绝</td><td><span class="pill ok">已实现</span></td></tr>
+<tr><td>live reload 扇出</td><td><code>POST /api/queen/{id}/skills/reload</code> 与 <code>POST /api/skills/reload</code> 均扇出到 live 会话/colony；返回 <code>live</code> 统计</td><td><span class="pill ok">已对齐</span>；实测 catalog 28894→29084 chars</td></tr>
+<tr><td>queen id 路径约束</td><td>Go 额外拒绝 <code>..</code>、绝对路径（404）；Python 直接拼接路径</td><td><span class="pill info">Go 加固，非缺口</span></td></tr>
+</tbody></table></div>
+<div class="callout info"><b>14 个端点：</b>queen 技能列表/创建/PATCH/body GET/PUT/rename/delete/reload（8）；<code>/api/sessions/{id}/skill-installs</code> GET/POST（2）；<code>/api/skills</code>、<code>/api/skills/scopes</code>、<code>/api/skills/upload</code>、<code>/api/skills/{name}</code>（4）。现场对比中 <code>/api/skills/scopes</code> 与 8 个 config GET 的键集合完全一致；冷启动 <code>/api/queen/queen_growth/skills</code> 两边同为 404（queen 尚未物化）。</div>
+</section>
+
+<section id="config"><h2><span class="num">04</span>Config</h2>
+<p class="sub">11 个配置路径 / 20 个 method+path，全部一致。现场对比 9 个 GET（<code>llm</code>、<code>features</code>、<code>models</code>、<code>llm-sections</code>、<code>rate-limits</code>、<code>provider-library</code>、<code>profile</code>、<code>sentinel</code>、<code>external-skills</code>）顶层键集合全部相同。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">项</th><th style="width:24%">Python</th><th style="width:24%">Go</th><th>判定</th></tr></thead><tbody>
+<tr><td>配置路由</td><td class="num">20 method+path</td><td class="num">20 method+path</td><td><span class="pill ok">已对齐</span></td></tr>
+<tr><td>LLM 槽位</td><td><code>llm / worker_llm / vision_fallback / judge</code></td><td>同名 4 槽位</td><td><span class="pill ok">已对齐</span></td></tr>
+<tr><td><code>configuration.json</code> 读取段</td><td class="num">49 个 section</td><td class="num">46 个有读取点</td><td><span class="pill warn">部分</span>；在 44 的基础上本次接通 2 个（<code>turn_context</code>、<code>gcu_viewport_scale</code>）。</td></tr>
+<tr><td>写入语义（PUT）</td><td>逐字段校验 + 热切换</td><td>路由已对齐</td><td><span class="pill warn">未逐项实测</span>；本文只证明 GET 形状。</td></tr>
+</tbody></table></div>
+
+<h3>曾报未读的 5 个配置键</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">键</th><th style="width:26%">Python 用途</th><th style="width:26%">Go 读取点 / 使用点</th><th>现状</th></tr></thead><tbody>
+<tr><td><code>gcu_enabled</code></td><td>浏览器自动化（GCU）总开关</td><td><code>cli/browser_supervisor.go::browserBridgeRequested</code>（env → configuration.json → 默认开）</td><td><span class="pill ok">已读</span>；env 优先，文件值决定是否拉起 <code>browserbridge</code>。</td></tr>
+<tr><td><code>gcu_viewport_scale</code></td><td>GCU 视口缩放（0.1–1.0，默认 0.8）</td><td><code>server.GcuViewportScale</code> → 监督进程注入 <code>HIVE_BROWSER_VIEWPORT_SCALE</code> → 桥 <code>/status.viewport_scale</code> + 启动日志</td><td><span class="pill ok">已读</span>；2026-11-20 实测 0.65 / 0.55（配置文件）/ 0.8（非法值回落）。上游 getter 自扩展化浏览器后已无消费点，Go 侧只读并上报，不改截图/抓取几何。</td></tr>
+<tr><td><code>turn_context</code></td><td>entry-point 插件式 turn context</td><td><code>server.TurnContextSettings</code>/<code>StartTurnContexts</code> → <code>agentloop.TurnContextReminderSource</code> → queen 每回合提示</td><td><span class="pill ok">已读</span>；Go 无 entry point，包在进程内注册（<code>RegisterTurnContextProvider</code>），配置门 <code>turn_context.&lt;name&gt;.enabled</code> 与上游同语义；queen-only，超时/异常跳过。</td></tr>
+<tr><td><code>timeout_minutes</code></td><td>Claude Code queen 单轮超时</td><td><code>qmail/config.go</code></td><td><span class="pill ok">已读</span>；运行器按该值设置单轮超时；默认 10 分钟。</td></tr>
+<tr><td><code>loop.max_tool_result_chars</code></td><td>工具结果 spillover 阈值</td><td>未接（<code>agentloop.LoopConfig.MaxToolResultChars</code> 固定 30,000）</td><td><span class="pill warn">未读</span>；配置该键不会改变 Go 行为。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="env"><h2><span class="num">05</span>环境变量</h2>
+<p class="sub">此前本矩阵只覆盖 <code>configuration.json</code>；env 是<b>独立外观面</b>，之前漏计。口径：两侧源码里 <code>HIVE_*</code> 字符串字面量（生产文件，排除 tests / testdata / <code>_test.go</code>）；凭据类 env 用两侧 credentials spec 对照；测试专用变量（<code>HIVE_LME_*</code>、<code>HIVE_TEST*</code>、<code>*_E2E</code>）不计入。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">类别</th><th style="width:14%">Python</th><th style="width:14%">Go</th><th>判定 / 影响</th></tr></thead><tbody>
+<tr><td>运行时 / 部署 <code>HIVE_*</code>（字面量引用）</td><td class="num">89</td><td class="num">96</td><td><span class="pill warn">部分</span>：共有 <b>66</b>；Python 独有 <b>23</b>；Go 独有 <b>30</b>：生产 9 个（BrowserBridge 部署面 6 + <code>HIVE_NETWORK_SCANNERS</code> + <code>HIVE_MCP2CLI</code> + <code>HIVE_SESSION_COST_LIMIT_USD</code>），其余 21 个为测试/harness（LME 15、LIVE 4、<code>HIVE_FAKE_NOW</code>、<code>HIVE_RETENTION_</code> 前缀残留）。</td></tr>
+<tr><td>非 <code>HIVE_</code> 前缀（直接读取）</td><td class="num">51</td><td class="num">17</td><td><span class="pill warn">部分</span>：共有 7；Python 独有 44（<code>GCU_*</code>、<code>CHART/MEMORY/TERMINAL_TOOLS_PORT</code>、<code>LITELLM_LOG</code>、厂商配置类）；Go 独有 10（<code>CHROME_PATH</code>、<code>ANTHROPIC_BASE_URL</code>、<code>OLLAMA_HOST</code>、<code>PG*</code>）。详见 <a href="environment-variables.html#nonhive">独立页 §06</a>。</td></tr>
+<tr><td>凭据 env（credentials spec）</td><td class="num">114</td><td class="num">123</td><td><span class="pill warn">部分</span>：Go 多 9 个 provider 别名；<code>cloudflare</code> 在 Go 拆成 <code>cloudflare</code> + <code>cloudflare_api_token</code>。Go 通过 <code>integrationkit.Getenv</code> + <code>Requires</code>/token helper 读 env，不是每模块直读。</td></tr>
+<tr><td>测试专用 env</td><td>—</td><td>—</td><td><code>HIVE_LME_*</code>（15）、<code>HIVE_TEST_*</code>、<code>HIVE_MEMORY_E2E_*</code> 等；不计入对齐口径。</td></tr>
+</tbody></table></div>
+<h3>Python 独有（Go 不存在 → 设了也不生效）</h3>
+<p class="sub"><code>HIVE_COMPACTION_DEBUG</code>、<code>HIVE_ENABLE_LLM_LOGS</code>、<code>HIVE_NO_FILE_LOG</code>、<code>HIVE_SENTINEL_LOG</code>、<code>HIVE_SPLIT_WORKER_EVENTS</code>、<code>HIVE_MAX_ITER</code>、<code>HIVE_HISTORY_READ_WORKERS</code>、<code>HIVE_PLAYBOOK_FAST_GRACE</code>、<code>HIVE_TRACKER_WORKER_TOOL_CALLS</code>、<code>HIVE_AGENT_NAME</code>、<code>HIVE_CRM_PRINCIPAL</code>、<code>HIVE_GCU_SCREENSHOT_CONCURRENCY</code>、<code>HIVE_GCU_MEMTRACE*</code>（5 个）、<code>HIVE_RESOURCE_*</code>（5 个）。</p>
+<h3>Go 独有（生产）</h3>
+<p class="sub"><code>HIVE_BROWSERBRIDGE_{ARGS,BIN,CONTROL,HTTP}</code>、<code>HIVE_BROWSER_BRIDGE</code>（桥部署面）、<code>HIVE_BROWSER_VIEWPORT_SCALE</code>、<code>HIVE_NETWORK_SCANNERS</code>（Python 默认注册扫描器，无同名 env）、<code>HIVE_MCP2CLI</code>、<code>HIVE_SESSION_COST_LIMIT_USD</code>。</p>
+<h3>共有（66 个，抽查语义一致）</h3>
+<p class="sub"><code>HIVE_HOME</code>、<code>HIVE_STORAGE_PATH</code>、<code>HIVE_DESKTOP_TOKEN</code>、<code>HIVE_CLOUD_BASE</code>/<code>HIVE_CLOUD_JWT</code>、<code>HIVE_STALL_CHECK</code>、<code>HIVE_MEMORY_TIMELINE</code>、<code>HIVE_EMAIL_SENDERS</code>、<code>HIVE_BRIDGE_PORT</code>、<code>HIVE_RIPGREP_PATH</code>、<code>HIVE_TASK_*</code>（10 个）、<code>HIVE_TRACKER_QUEEN_*</code>（3 个）、<code>HIVE_TIMELINE_*</code>、<code>HIVE_PAST_RECALL_TIMEOUT</code>、<code>HIVE_MAX_VERBATIM_CLIENT_MSGS</code>、<code>HIVE_MICROCOMPACT_KEEP_RECENT</code>、<code>HIVE_ADAPTIVE_*</code>（3 个）、<code>HIVE_COLONY_PARALLEL_*</code>（2 个）、<code>HIVE_DEFAULT_PLAYBOOK_CONCURRENCY</code>、<code>HIVE_MAX_PLAYBOOK_CONCURRENCY</code> 等。</p>
+<p class="small">独立页：<a href="environment-variables.html">environment-variables.html</a>（完整清单、用途、读取点、凭据 spec 对照）· 机器可读：<a href="env-surface-audit.json"><code>env-surface-audit.json</code></a>。</p>
+</section>
+
+<section id="ui"><h2><span class="num">06</span>UI</h2>
+<p class="sub">以同一套 React 前端为底本；Go 分支加入了中文 i18n 与版本号读取适配。不是逐字节相同，但页面、布局、组件结构同源。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:32%">项</th><th style="width:20%">值</th><th>说明</th></tr></thead><tbody>
+<tr><td>同路径文件</td><td class="num">1106</td><td><code>core/frontend</code> 的文件在 Go 前端全部存在。</td></tr>
+<tr><td>Go 独有文件</td><td class="num">10</td><td><code>src/i18n/*</code>、<code>LocaleSwitcher.tsx</code>、中文文案与测试。</td></tr>
+<tr><td>内容不同文件</td><td class="num">63</td><td>大量为文案包 <code>t()</code>；少量功能适配。</td></tr>
+<tr><td><code>package.json</code></td><td>相同</td><td>版本号都是 <code>0.1.0</code>；依赖清单一致。</td></tr>
+<tr><td><code>vite.config.ts</code></td><td>已改</td><td>版本号改为读 <code>internal/version/version.go</code>，支持 <code>HIVE_APP_VERSION</code> 覆盖。</td></tr>
+<tr><td><code>api/credentials.ts</code></td><td>已改</td><td>删除了上游的 <code>tool_modules</code> 字段类型（Go 的响应反而多这个字段，UI 暂不消费）。</td></tr>
+<tr><td>页面可观测效果</td><td><span class="pill ok">已实测</span></td><td>2026-11-20 实测：dashboard 打开显示 6 后/2 群；queen_growth 页会话列表显示新建会话并可打开；创建会话返回 queen 身份；会话 events 5 行、history/snapshot/stats 有数据。冷会话聊天区“No assistant reply yet”属预期；memory_timeline 关闭时时间线为空是配置行为。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="gaps"><h2><span class="num">07</span>缺口与优先级</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:7%">优先级</th><th style="width:30%">缺口</th><th style="width:30%">可观测影响</th><th>现状</th></tr></thead><tbody>
+<tr><td><span class="pill warn">P1</span></td><td>会话 queen 绑定（冷启动）</td><td>冷启动 parity（临时 HOME）下 Go 返回 <code>queen_id=null</code>/<code>queen_name=null</code>，Python 返回 <code>queen_growth</code>/Steve Jobs</td><td>live 8788（已有 <code>~/.hive-go</code> 数据）曾绑定成功；2026-11-21 00:17 冷启动探针暴露新缺口，三条会话端点同源 FAIL。</td></tr>
+<tr><td><span class="pill warn">P1</span></td><td>/api/skills 目录计数（冷启动）</td><td>技能库少 1 条（195 vs 194）</td><td>live 环境曾 195/195；差 1 条待定位（可能是某内置 skill 的落盘/扫描路径）。</td></tr>
+<tr><td><span class="pill ok">已对齐</span></td><td>创建期事件</td><td>首轮对话前 history/snapshot/stats</td><td>2026-11-20 实测冷会话 <code>events.jsonl</code> 5 行：identity/reminder/node_loop_started/iteration/context_usage；首轮后续写不重复。</td></tr>
+<tr><td><span class="pill ok">已对齐</span></td><td>Browser 面板 3 条路由</td><td>contexts/tabs/close 面板</td><td>已实现代理并实测（contexts 200、无扩展时 tabs 503、close 透传）；surface 豁免已移除。</td></tr>
+<tr><td><span class="pill ok">P2</span></td><td>Claude Code queen dashboard</td><td>列表/transcript 已可用</td><td>已接真实配置、conversations 与 transcript；列表按 id 排序（上游按配置顺序），无缓存。</td></tr>
+<tr><td><span class="pill ok">已对齐</span></td><td><code>/api/skills</code> 数量</td><td>技能库列表</td><td>2026-11-20 实测返回 195，与 Python 一致。</td></tr>
+<tr><td><span class="pill ok">已对齐</span></td><td>live skill reload 扇出</td><td>运行中的会话/colony 刷新技能</td><td>已实现并实测：新增 SKILL.md 后 reload，catalog chars 28894→29084；停止会话后不再命中。</td></tr>
+<tr><td><span class="pill warn">P1</span></td><td>默认工具面：6 个网络扫描器</td><td>同一提示词在两边可用工具不同</td><td>Python 默认注册；Go 默认隐藏，需 <code>HIVE_NETWORK_SCANNERS=1</code>。</td></tr>
+<tr><td><span class="pill ok">已对齐</span></td><td>配置键 <code>turn_context</code> / <code>gcu_viewport_scale</code></td><td>turn context 注入 queen 提示；视口缩放到桥</td><td>2026-11-20 接通：<code>turn_context.&lt;name&gt;.enabled</code> 决定已安装包是否启动并注入（queen-only、每包 5s 超时、异常跳过）；<code>gcu_viewport_scale</code> 经 <code>server.GcuViewportScale</code>（0.1–1.0，默认 0.8）注入 <code>HIVE_BROWSER_VIEWPORT_SCALE</code>，桥 <code>/status.viewport_scale</code> 实测 0.65/0.55/0.8。上游 getter 无消费点，Go 只读+上报。</td></tr>
+<tr><td><span class="pill warn">P1</span></td><td>工具 schema 扁平 vs 分组</td><td>依赖 Python 工具名的 prompt 不能直接复用</td><td>能力覆盖对齐，形状不同。</td></tr>
+<tr><td><span class="pill info">P2</span></td><td>未知路径行为：SPA 200 HTML vs Go 404 JSON</td><td><code>/api/models</code>、<code>/api/org-chart</code> 等表观差异</td><td>非缺口；按需对齐 fallback。</td></tr>
+<tr><td><span class="pill info">P2</span></td><td>UI 源码 63 个文件差异</td><td>中文 i18n、版本号、字段类型</td><td>同源分支，不是逐字节相同。</td></tr>
+<tr><td><span class="pill info">P2</span></td><td>Config PUT 字段级语义</td><td>写入校验/热切换未逐项验证</td><td>只证明路由与 GET 形状。</td></tr>
+</tbody></table></div>
+<h3>尚未纳入追踪的「外观面」清单</h3>
+<p class="sub">本矩阵当前统计的是 API 路由 / 工具 / Skills / Config / Env / UI 六块。以下同样是"对外可观测、可被客户端或 agent 依赖"的面，但还没进矩阵。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">面</th><th style="width:30%">现状</th><th style="width:8%">优先级</th><th>影响</th></tr></thead><tbody>
+<tr><td>SSE 事件面</td><td>只验证过 <code>text/event-stream</code>；77 个事件类型常量未逐一对齐</td><td><span class="pill bad">P0</span></td><td>前端/GUI 依赖事件名、payload 字段、顺序与 replay 语义；漂移即静默坏。</td></tr>
+<tr><td>磁盘契约</td><td>未追踪：<code>meta.json</code>、<code>events.jsonl</code>、<code>conversations/parts</code>、<code>credentials/metadata/index.json</code>、<code>tracker.db</code> schema</td><td><span class="pill bad">P0</span></td><td>CLI/工具/迁移直接读盘；两侧文件形状不一致会导致跨版本读不了。</td></tr>
+<tr><td>CLI 面</td><td>未追踪：子命令集合、flags、退出码、stdout/JSON 形状（仅 dimensions 记过错误码 2→6）</td><td><span class="pill bad">P0</span></td><td>脚本与自动化直接依赖；错误码差异会破坏 CI 判定。</td></tr>
+<tr><td>系统 Prompt / turn-context / 工具 guidance</td><td>未追踪（<code>turn_context</code> 键已接通，但注入文本无对比）</td><td><span class="pill warn">P1</span></td><td>同一输入的模型行为差异主要来自 prompt 文本。</td></tr>
+<tr><td>MCP 面</td><td>仅 module-interfaces 登记 schema；命名空间 <code>mcp__server__tool</code>、transport 枚举、reload 语义未纳入矩阵</td><td><span class="pill warn">P1</span></td><td>依赖 MCP 的扩展与工具链按注册表/命名空间工作。</td></tr>
+<tr><td>错误分类（HTTP 状态码 / 错误体 / 工具错误文案）</td><td>18 条端点探针间接覆盖；无逐错误码表</td><td><span class="pill warn">P1</span></td><td>客户端的重试/降级逻辑按状态码分支。</td></tr>
+<tr><td>前端路由与文案</td><td>UI 只统计文件差异；hash 路由表、页面 title、i18n key、空态/错误态未对比</td><td><span class="pill warn">P1</span></td><td>深链、书签、自动化截图路径依赖路由。</td></tr>
+<tr><td>静态资源与上传下载</td><td>未追踪：附件 chip、<code>Content-Disposition</code>、range、asset 404、SPA fallback 之外的静态路径</td><td><span class="pill warn">P1</span></td><td>附件下载与多模态回路。</td></tr>
+<tr><td>时间 / ID / 分页格式</td><td>未追踪：时间戳格式、事件 seq、session id 格式、分页 meta</td><td><span class="pill info">P2</span></td><td>客户端解析与排序。</td></tr>
+<tr><td>发布产物</td><td>P0 已知（release 归档缺 browserbridge/hive-browser）但未进矩阵行</td><td><span class="pill info">P2</span></td><td>安装/升级路径。</td></tr>
+<tr><td>日志 / 可观测</td><td>未追踪：日志级别、格式、文件位置、LLM 调试日志</td><td><span class="pill info">P2</span></td><td>运维诊断与反馈闭环。</td></tr>
+<tr><td>调度 / 触发器 / playbook 运行时</td><td>未追踪（playbook 格式差异在别处记录）</td><td><span class="pill info">P2</span></td><td>自动化流程的可移植性。</td></tr>
+<tr><td>桌面壳 / 数据迁移 / 限额</td><td>未追踪：Electron IPC 与 <code>HIVE_DESKTOP_*</code>、schema version 升级路径、输出/并发上限</td><td><span class="pill info">P2</span></td><td>桌面模式、升级兼容与稳定性边界。</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>交付口径：</b>本矩阵证明的是“对外接口外形对齐”。P0/P1 未清零之前，不能把“路由全绿 / 门禁通过 / 能打包”当作与 Python 版行为对齐，也不能据此宣称交付完成。</div>
+</section>
+
+<section id="repro"><h2><span class="num">08</span>复现</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">检查</th><th>命令</th></tr></thead><tbody>
+<tr><td>表面审计</td><td><code>uv run python go_hive/scripts/surface_audit.py</code><div class="small">期望：前端→Go 缺失 0；Python→Go 缺失 0（无豁免）；PASS。</div></td></tr>
+<tr><td>API 现场对比</td><td><code>uv run python go_hive/scripts/api_parity.py --skip-flow --skip-restart</code><div class="small">只跑端点，不调用 LLM；加 <code>--report &lt;path&gt;</code> 落盘详细报告。默认会跑对话流程。</div></td></tr>
+<tr><td>工具目录探针</td><td><code>cd go_hive/go-hive &amp;&amp; go test ./internal/cli -run TestSessionToolCatalogue -v</code><div class="small">本次另用临时测试打印 installed：默认 96、全开 103；临时文件已删除。</div></td></tr>
+<tr><td>构建与门禁</td><td><code>cd go_hive/go-hive &amp;&amp; make ci</code><div class="small">fmt-check / vet / test / cross / parity / parity-targets / wiring-check；门禁全绿不等于行为对齐。</div></td></tr>
+</tbody></table></div>
+<div class="callout info"><b>版本说明：</b>Python 侧是当前 checkout 的 <code>hive 1.0.14</code>，Go 侧是 <code>1.0.26-go.1</code>（HEAD 见页头）。路由数按原始注册条目统计；<code>surface_audit.py</code> 会解析常量注册，口径略窄（Python 207 条），但结论相同：前端调用 0 缺失、Python→Go 0 缺失。</div>
+</section>
+
+<footer>生成：2026-11-21 00:19 CST · 快照：Go HEAD <code>40945349</code> · 证据：现场 <code>surface_audit</code>、<code>api_parity --skip-flow</code>、临时 Go 工具目录探针 · 下次更新：路由 / 工具 / 技能 / 配置变更后重跑 §07 并回填本页 · 维度视角：<a href="alignment-dimensions.html">alignment-dimensions.html</a> · 接口不变量：<a href="module-interfaces.html">module-interfaces.html</a> · 平台支持：<a href="platform-support.html">platform-support.html</a>。</footer>
+</div></body></html>

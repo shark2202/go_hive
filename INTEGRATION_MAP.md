@@ -42,7 +42,7 @@ RegisterChatRoutes(mux, ChatRouteDeps{Manager: deps.Manager})
 | `RegisterMemoryRoutes` | `routes_memories_extra.go:21` | `{Home}` |
 | `RegisterMessageRoutes` | `routes_messages_extra.go:63` | `{Home, BuildLLM}` |
 | `tasks.RegisterTaskRoutes` | `internal/tasks/routes.go:149` | 已自带 mux 组装，直接调用 |
-| `integrations.New(...).Install(registry)` | `internal/tools/integrations/integration.go:355` | 返回安装数量；接入会话工具注册表（`internal/cli/loader.go` 的 `builtin.New`） |
+| `integrations.New(...).Install(registry)` | `internal/tools/integrations/integration.go:157` | 返回安装数量；接入会话工具注册表（`internal/cli/loader.go` 的 `builtin.New`） |
 | `host.New(host.Config{...})` | `internal/host/host.go` | Colony spawn/run/SSE 入口，供 execution 路由与 SSE 推送使用 |
 
 ## 3. 接线顺序与冲突约束

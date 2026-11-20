@@ -28,7 +28,7 @@ func TestSessionToolCatalogueInstallsIntegrations(t *testing.T) {
 	for _, def := range catalogue.Defs() {
 		defined[def.Name] = struct{}{}
 	}
-	for _, name := range []string{builtin.ToolReadFile, builtin.ToolWriteFile, builtin.ToolTerminalExec} {
+	for _, name := range []string{builtin.ToolReadFile, builtin.ToolWriteFile, builtin.ToolEditFile, builtin.ToolSearchFiles, builtin.ToolTerminalExec} {
 		if _, ok := defined[name]; !ok {
 			t.Fatalf("builtin %q missing from the catalogue", name)
 		}
@@ -112,6 +112,79 @@ func TestSessionToolCatalogueInstallsWaveFourModules(t *testing.T) {
 	if _, ok := names()["senders"]; !ok {
 		t.Fatal("senders missing from the catalogue while email_senders is on")
 	}
+}
+
+// Parity-exempt: assembly guard. The files-tools harness group is served in
+// process by the builtin toolbox; its catalog must carry all four tools, and
+// every code_editing category name must resolve to a registered tool.
+func TestSessionCatalogueExposesFileToolsGroup(t *testing.T) {
+	root := t.TempDir()
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+
+	group := catalogue.registry.GetFullMCPCatalog()["files-tools"]
+	entries := map[string]map[string]any{}
+	for _, entry := range group {
+		name, _ := entry["name"].(string)
+		entries[name] = entry
+	}
+	for _, want := range []string{builtin.ToolReadFile, builtin.ToolWriteFile, builtin.ToolEditFile, builtin.ToolSearchFiles} {
+		if _, ok := entries[want]; !ok {
+			t.Fatalf("files-tools group missing %q: %#v", want, entries)
+		}
+	}
+	if len(group) != 4 {
+		t.Fatalf("files-tools group = %d tools, want 4", len(group))
+	}
+	if schema, _ := entries[builtin.ToolEditFile]["input_schema"].(map[string]any); schema == nil || schema["type"] != "object" {
+		t.Fatalf("edit_file catalog schema = %#v", entries[builtin.ToolEditFile]["input_schema"])
+	}
+
+	// code_editing used to name a tool that no surface registered.
+	defined := map[string]struct{}{}
+	for _, def := range catalogue.Defs() {
+		defined[def.Name] = struct{}{}
+	}
+	for _, name := range tools.ResolveCategoryTools("code_editing", nil) {
+		if _, ok := defined[name]; !ok {
+			t.Fatalf("code_editing member %q is not registered on the session surface", name)
+		}
+	}
+	if _, ok := defined[builtin.ToolEditFile]; !ok {
+		t.Fatalf("edit_file missing from session defs")
+	}
+
+	// The builtin dispatch path executes edit_file inside the session root.
+	write, isError, err := catalogue.Execute(context.Background(), builtin.ToolWriteFile, map[string]any{
+		"path":    "edited.txt",
+		"content": "alpha\n",
+	})
+	if err != nil || isError {
+		t.Fatalf("write_file: err=%v isError=%v (%s)", err, isError, write)
+	}
+	edited, isError, err := catalogue.Execute(context.Background(), builtin.ToolEditFile, map[string]any{
+		"mode":       "replace",
+		"path":       "edited.txt",
+		"old_string": "alpha",
+		"new_string": "beta",
+	})
+	if err != nil || isError {
+		t.Fatalf("edit_file: err=%v isError=%v (%s)", err, isError, edited)
+	}
+	if !strings.Contains(edited, "Replaced 1") {
+		t.Fatalf("edit_file summary = %q", edited)
+	}
+	if got := readSessionFile(t, filepath.Join(root, "edited.txt")); got != "beta\n" {
+		t.Fatalf("edited content = %q", got)
+	}
+}
+
+func readSessionFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
 }
 
 // Parity-exempt: assembly guard. Every installer in the wiring table must put

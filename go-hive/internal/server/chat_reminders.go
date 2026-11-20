@@ -14,9 +14,11 @@ package server
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/tasks"
 )
@@ -62,7 +64,31 @@ func (r *ChatRuntime) configureReminderProviders() {
 	}
 	r.agentCtx.ActiveWorkersProvider = r.activeWorkers
 	r.agentCtx.ColonyStatsProvider = r.colonyStats
+	// Turn context (framework/server/turn_context.py + queen_orchestrator.py):
+	// a queen stream gets the started packages' aggregator; a worker stream has
+	// no turn context. No installed+enabled package leaves the provider nil and
+	// the reminder source self-skips.
+	if r.agentCtx.IsQueenStream() {
+		if runtime := r.turnContextRuntime(); runtime != nil && !runtime.Empty() {
+			queenName := r.queenName
+			r.agentCtx.TurnContextProvider = runtime.ForSession(func() string { return queenName })
+		}
+	}
 	r.setColonyBinding()
+}
+
+// turnContextRuntime is the hive home's started turn-context packages. A serve
+// process starts them at boot (startServeBackgroundServices); a one-shot CLI
+// chat starts them here, at the first session that can answer a message.
+func (r *ChatRuntime) turnContextRuntime() *TurnContextRuntime {
+	if r == nil || strings.TrimSpace(r.deps.HomeRoot) == "" {
+		return nil
+	}
+	home, err := hivehome.ResolveAt(r.deps.HomeRoot)
+	if err != nil {
+		return nil
+	}
+	return StartTurnContexts(home)
 }
 
 // configureReminders registers the per-session sources on the loop's hub and
@@ -89,6 +115,9 @@ func (r *ChatRuntime) configureReminders(override *agentloop.IdleNudgeConfig) {
 	hub.Register(agentloop.NewTrackerSnapshotReminderSource())
 	hub.Register(agentloop.NewSearchableToolsReminderSource())
 	hub.Register(agentloop.NewSkillsCatalogReminderSource())
+	// Installed turn-context packages put their text ahead of each user turn;
+	// the source is silent until a session runtime wires a provider.
+	hub.Register(agentloop.NewTurnContextReminderSource())
 	hub.Register(r.idleSource)
 
 	r.hub = hub

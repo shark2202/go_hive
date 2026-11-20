@@ -106,6 +106,9 @@ func SubscribeStallCheck(bus *eventbus.EventBus, home hivehome.Home, queenNode f
 		if raw, present := slot["threshold"]; present {
 			f, coercible := toFloat(raw)
 			if !coercible {
+				// Upstream floats the slot value directly, so a threshold that
+				// is not a number raises there and the raise skips the
+				// reminder. Returning skips it here: same observable end.
 				return
 			}
 			threshold = f
@@ -118,17 +121,10 @@ func SubscribeStallCheck(bus *eventbus.EventBus, home hivehome.Home, queenNode f
 		if node == nil {
 			return
 		}
-		// A stall is observable on the session bus, not only in the conversation
-		// and the log: the dashboard and the event history would otherwise show
-		// a queen that keeps talking instead of acting as a normal turn.
-		event := eventbus.NewAgentEvent(eventbus.EventNodeStalled, "queen")
-		event.NodeID = eventbus.StrPtr("queen")
-		event.Data = map[string]any{
-			"reason":      "stall_check",
-			"probability": p,
-			"threshold":   threshold,
-		}
-		s.bus.Publish(event)
+		// Parity note: upstream's stall path publishes no event. node_stalled
+		// is the doom loop's signal; here the reminder injected into the
+		// conversation is the stall check's whole observable effect, so the
+		// session bus stays quiet and the log line is the operator's trace.
 		log.Printf("stall check: p=%.2f >= %.2f, reminding the queen to do the work she talked about", p, threshold)
 		if err := node.InjectEvent(StallReminder, false); err != nil {
 			log.Printf("stall check: remind the queen: %v", err)
@@ -140,11 +136,13 @@ func SubscribeStallCheck(bus *eventbus.EventBus, home hivehome.Home, queenNode f
 			return
 		}
 		mu.Lock()
-		// endTurn runs the judge for the turn that just ended. Two event shapes
-		// land here: upstream parks with client_input_requested(turn_done), while
-		// this port's chat emitter parks with loop_state_changed(awaiting_user,
-		// park_reason=turn_done). Both mean "the queen yields the turn now", so a
-		// subscription that ignored either one would be structurally inert.
+		// endTurn runs the judge for the turn that just ended. Upstream parks
+		// with client_input_requested(turn_done) only; this port's chat emitter
+		// reports the same park as loop_state_changed(awaiting_user,
+		// park_reason=turn_done) instead. Accepting that additional shape is a
+		// deliberate port adaptation — without it the subscription would be
+		// structurally inert in a chat session — and it filters on the same
+		// park_reason upstream does, so the signal judged is the same one.
 		endTurn := func() {
 			if turn.judged || turn.user == "" || strings.TrimFunc(turn.reply, pySpace) == "" || agentloop.IsVisibleError(turn.reply) {
 				return
@@ -186,6 +184,8 @@ func SubscribeStallCheck(bus *eventbus.EventBus, home hivehome.Home, queenNode f
 			}
 			endTurn()
 		case eventbus.EventLoopStateChanged:
+			// Port adaptation (upstream has no such case): the chat emitter's
+			// turn-end park. Same park_reason filter as the upstream case above.
 			if pyStrOr(event.Data["park_reason"], "") != "turn_done" {
 				break
 			}

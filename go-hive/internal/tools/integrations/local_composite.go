@@ -61,7 +61,7 @@ func (r *Registry) addImpl(tool, action string, fn ActionFunc) {
 
 // slackCall performs one Slack Web API call and surfaces provider errors.
 func slackCall(ctx context.Context, rt *Runtime, method string, body map[string]any) (map[string]any, bool) {
-	result, err := rt.callHelper(ctx, "slack_tool", "Slack", RestSpec{
+	result, err := rt.CallHelper(ctx, "slack_tool", "Slack", RestSpec{
 		Method: http.MethodPost,
 		Path:   "/" + method,
 	}, body)
@@ -245,11 +245,11 @@ func githubListRepos(ctx context.Context, rt *Runtime, input map[string]any) (an
 	if username := stringArg(input, "username"); username != "" {
 		spec.Path = "/users/{username}/repos"
 	}
-	return rt.callHelper(ctx, "github_tool", "GitHub", spec, input)
+	return rt.CallHelper(ctx, "github_tool", "GitHub", spec, input)
 }
 
 func githubUserEmails(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	return rt.callHelper(ctx, "github_tool", "GitHub", RestSpec{Method: http.MethodGet, Path: "/user/emails"}, input)
+	return rt.CallHelper(ctx, "github_tool", "GitHub", RestSpec{Method: http.MethodGet, Path: "/user/emails"}, input)
 }
 
 func githubWorkflowRuns(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -257,5 +257,5 @@ func githubWorkflowRuns(ctx context.Context, rt *Runtime, input map[string]any) 
 	if workflow := stringArg(input, "workflow_id"); workflow != "" {
 		spec.Path = "/repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"
 	}
-	return rt.callHelper(ctx, "github_tool", "GitHub", spec, input)
+	return rt.CallHelper(ctx, "github_tool", "GitHub", spec, input)
 }

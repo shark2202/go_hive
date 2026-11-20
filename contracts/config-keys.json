@@ -1,0 +1,3285 @@
+{
+  "schema_version": 1,
+  "scanner": "go_hive/scripts/freeze_env_config_contract.py",
+  "scanner_version": "1.0.0",
+  "reference": {
+    "name": "python",
+    "head": "bd5041862d5df219a029b190141dda3db8c7eeab",
+    "version": "1.0.14"
+  },
+  "target": {
+    "name": "go_hive",
+    "head": "bd5041862d5df219a029b190141dda3db8c7eeab",
+    "version": "1.0.26-go.1"
+  },
+  "method": "curated per-key table (go_hive/scripts/env_config_contract_data.py) whose reader anchors are resolved and validated against the checked-out source; line numbers are recomputed, a missing anchor is a hard failure. Types/defaults/invalid-value rules were read from both implementations.",
+  "scope_note": "Covers configuration.json keys read by either runtime. Per-colony notifications.json (sentinel_enabled/channel/target/allowlist/thread) and agent/worker sidecars are separate files and out of scope. The Go-only `mcp` block is included and marked go_only.",
+  "summary": {
+    "keys": 135,
+    "sections": 20,
+    "status_counts": {
+      "aligned": 96,
+      "go_only": 5,
+      "go_partial": 27,
+      "python_only": 6,
+      "unread": 1
+    },
+    "env_overrides": 28,
+    "boundary_rules": 9
+  },
+  "sections": [
+    {
+      "name": "channels",
+      "keys": [
+        {
+          "path": "channels.<name>.enabled",
+          "type": "bool",
+          "default": false,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/channels.py",
+              "line": 501,
+              "snippet": "settings = get_hive_config().get(\"channels\") or {}"
+            }
+          ],
+          "go": [],
+          "status": "python_only",
+          "notes": "P2: optional-package channels (OneBot, etc.) are Python-only; Go has no channels.<name> runtime reader."
+        }
+      ]
+    },
+    {
+      "name": "judge",
+      "keys": [
+        {
+          "path": "judge.protocol",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/judge.py",
+              "line": 75,
+              "snippet": "proto = protocols.get(str(s.get(\"protocol\") or \"\"))"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/judge.go",
+              "line": 45,
+              "snippet": "name := pyStrOr(slot[\"protocol\"], \"\")"
+            }
+          ],
+          "status": "aligned",
+          "notes": "only typesafe exists; an unknown protocol logs and returns no answer on both sides."
+        },
+        {
+          "path": "judge.api_base",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/judge.py",
+              "line": 33,
+              "snippet": "if not isinstance(s, dict) or not s.get(\"api_base\") or not s.get(\"api_key\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/judge.go",
+              "line": 29,
+              "snippet": "if !pyTruthy(slot[\"api_base\"]) || !pyTruthy(slot[\"api_key\"]) {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "both api_base and api_key are required for the slot to count."
+        },
+        {
+          "path": "judge.model",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/judge.py",
+              "line": 45,
+              "snippet": "body = {\"state\": state, \"model\": s.get(\"model\"), \"questions\": {\"answer\": q}}"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/judge.go",
+              "line": 71,
+              "snippet": "\"model\":     slot[\"model\"],"
+            }
+          ],
+          "status": "aligned",
+          "notes": "sent as-is in the /systemone body."
+        },
+        {
+          "path": "judge.api_key",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/judge.py",
+              "line": 50,
+              "snippet": "headers={\"Authorization\": f\"Bearer {s['api_key']}\"},"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/judge.go",
+              "line": 29,
+              "snippet": "if !pyTruthy(slot[\"api_base\"]) || !pyTruthy(slot[\"api_key\"]) {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "literal key only; no env indirection on either side."
+        },
+        {
+          "path": "judge.threshold",
+          "type": "number",
+          "default": 0.5,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/stall_check.py",
+              "line": 90,
+              "snippet": "threshold = float(slot.get(\"threshold\", 0.5))"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/stall_check.go",
+              "line": 105,
+              "snippet": "threshold := 0.5"
+            }
+          ],
+          "status": "aligned",
+          "notes": "stall check only; invalid value falls back to 0.5."
+        }
+      ]
+    },
+    {
+      "name": "llm",
+      "keys": [
+        {
+          "path": "llm.provider",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 283,
+              "snippet": "if llm.get(\"provider\") and llm.get(\"model\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 340,
+              "snippet": "provider, hasProvider := llmSection[\"provider\"]"
+            }
+          ],
+          "status": "aligned",
+          "notes": "both require provider+model before the slot counts as configured; otherwise the main model falls back to the hardcoded default pair."
+        },
+        {
+          "path": "llm.model",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 285,
+              "snippet": "model = str(llm[\"model\"]).strip()"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 344,
+              "snippet": "model, hasModel := llmSection[\"model\"]"
+            }
+          ],
+          "status": "aligned",
+          "notes": "openrouter/<id> prefix is stripped on both sides before the provider/model join."
+        },
+        {
+          "path": "llm.api_key",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 784,
+              "snippet": "literal = llm.get(\"api_key\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 431,
+              "snippet": "if pyTruthy(llmSection[\"api_key\"]) {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "a literal key beats ambient sources on both sides; Go's hot-swap path mirrors Python's credential-store-before-env order."
+        },
+        {
+          "path": "llm.api_keys",
+          "type": "list[string]",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 728,
+              "snippet": "keys = llm.get(\"api_keys\")"
+            },
+            {
+              "file": "core/framework/llm/key_pool.py",
+              "line": 28,
+              "snippet": "class KeyPool:"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 423,
+              "snippet": "if pool, ok := llmSection[\"api_keys\"].([]any); ok && len(pool) > 0 {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/llm/keypool.go",
+              "line": 16,
+              "snippet": "type KeyPool struct {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "empty strings are filtered; non-list is ignored on both sides."
+        },
+        {
+          "path": "llm.api_base",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1362,
+              "snippet": "if llm.get(\"api_base\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 405,
+              "snippet": "\"api_base\":               llmSection[\"api_base\"],"
+            }
+          ],
+          "status": "aligned",
+          "notes": "openrouter with no api_base resolves to https://openrouter.ai/api/v1 on both sides."
+        },
+        {
+          "path": "llm.api_key_env_var",
+          "type": "string",
+          "default": null,
+          "env_override": "name read from the file",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 852,
+              "snippet": "api_key_env_var = llm.get(\"api_key_env_var\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 458,
+              "snippet": "if envValue := llmSection[\"api_key_env_var\"]; pyTruthy(envValue) {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "the env var named here is a fallback AFTER the credential store for Python's get_api_key; Go's llm_config hot-swap follows the same order."
+        },
+        {
+          "path": "llm.max_tokens",
+          "type": "int",
+          "default": 8192,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 584,
+              "snippet": "if \"max_tokens\" in llm:"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 399,
+              "snippet": "\"max_tokens\":             llmSection[\"max_tokens\"],"
+            }
+          ],
+          "status": "aligned",
+          "notes": "missing -> model catalog -> DEFAULT_MAX_TOKENS=8192. Go's chat runtime seeds 8192 and the model catalog the same way."
+        },
+        {
+          "path": "llm.max_context_tokens",
+          "type": "int",
+          "default": 32000,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 574,
+              "snippet": "if \"max_context_tokens\" in llm:"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 400,
+              "snippet": "\"max_context_tokens\":     llmSection[\"max_context_tokens\"],"
+            }
+          ],
+          "status": "aligned",
+          "notes": "missing -> catalog -> 32000 (DEFAULT_MAX_CONTEXT_TOKENS)."
+        },
+        {
+          "path": "llm.aux_max_tokens",
+          "type": "int",
+          "default": "min(8192, max_tokens)",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 700,
+              "snippet": "if \"aux_max_tokens\" in llm:"
+            }
+          ],
+          "go": [],
+          "status": "python_only",
+          "notes": "P1: Go never reads llm.aux_max_tokens. internal/llm/complete.go has DefaultAuxMaxTokens=8192 but no configuration.json reader, so a user-pinned aux budget is ignored."
+        },
+        {
+          "path": "llm.endpoint",
+          "type": "string (endpoint name)",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 341,
+              "snippet": "name = section.get(\"endpoint\") if isinstance(section, dict) else None"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 417,
+              "snippet": "if name, ok := llmSection[\"endpoint\"].(string); ok && name != \"\" {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "named endpoint must exist in model_endpoints; its stored credential wins over ambient keys on both sides."
+        },
+        {
+          "path": "llm.extra_body",
+          "type": "object",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 642,
+              "snippet": "extra_body = section.get(\"extra_body\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/llm/request_shape.go",
+              "line": 180,
+              "snippet": "if extraBody, ok := llmSection[\"extra_body\"].(map[string]any); ok && len(extraBody) > 0 {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "non-object/empty -> not sent; copied verbatim into every request body."
+        },
+        {
+          "path": "llm.num_ctx",
+          "type": "int",
+          "default": 16384,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1411,
+              "snippet": "return {\"num_ctx\": llm.get(\"num_ctx\", 16384)}"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/llm/request_shape.go",
+              "line": 178,
+              "snippet": "return map[string]any{\"num_ctx\": numCtxOr(llmSection[\"num_ctx\"], 16384)}"
+            }
+          ],
+          "status": "aligned",
+          "notes": "only sent for provider=ollama on both sides."
+        },
+        {
+          "path": "llm.use_claude_code_subscription",
+          "type": "bool",
+          "default": false,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 790,
+              "snippet": "if llm.get(\"use_claude_code_subscription\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/llm/request_shape.go",
+              "line": 158,
+              "snippet": "if truthy(llmSection[\"use_claude_code_subscription\"]) && apiKey != \"\" {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "adds Bearer auth headers; token source differs by platform but the config gate matches."
+        },
+        {
+          "path": "llm.use_codex_subscription",
+          "type": "bool",
+          "default": false,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 802,
+              "snippet": "if llm.get(\"use_codex_subscription\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/llm/request_shape.go",
+              "line": 163,
+              "snippet": "if truthy(llmSection[\"use_codex_subscription\"]) && apiKey != \"\" {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "adds ChatGPT backend headers (Authorization/User-Agent/ChatGPT-Account-Id) on both sides."
+        },
+        {
+          "path": "llm.use_kimi_code_subscription",
+          "type": "bool",
+          "default": false,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 814,
+              "snippet": "if llm.get(\"use_kimi_code_subscription\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 80,
+              "snippet": "{\"kimi_code\", \"Kimi Code Subscription\", \"Use your Kimi Code plan\", \"use_kimi_code_subscription\"},"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "P1: Go lists/detects the Kimi subscription in the REST surface; the runtime token path is not wired like Python's get_api_key branch."
+        },
+        {
+          "path": "llm.use_antigravity_subscription",
+          "type": "bool",
+          "default": false,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 826,
+              "snippet": "if llm.get(\"use_antigravity_subscription\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/llm_config.go",
+              "line": 210,
+              "snippet": "case \"antigravity\":"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "P1: Go has an antigravity token resolver in llm_config; no equivalent of Python's full provider branch (api_base=None, token refresh)."
+        },
+        {
+          "path": "llm.antigravity_client_id",
+          "type": "string",
+          "default": null,
+          "env_override": "ANTIGRAVITY_CLIENT_ID",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 911,
+              "snippet": "cfg_val = get_hive_config().get(\"llm\", {}).get(\"antigravity_client_id\")"
+            }
+          ],
+          "go": [],
+          "status": "python_only",
+          "notes": "Go has no configuration.json reader for the Antigravity OAuth client id (Python falls back to the public upstream constants)."
+        },
+        {
+          "path": "llm.antigravity_client_secret",
+          "type": "string",
+          "default": null,
+          "env_override": "ANTIGRAVITY_CLIENT_SECRET",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 935,
+              "snippet": "cfg_val = get_hive_config().get(\"llm\", {}).get(\"antigravity_client_secret\") or None"
+            }
+          ],
+          "go": [],
+          "status": "python_only",
+          "notes": "same as antigravity_client_id."
+        }
+      ]
+    },
+    {
+      "name": "loop",
+      "keys": [
+        {
+          "path": "loop.max_tool_result_chars",
+          "type": "int",
+          "default": 30000,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 714,
+              "snippet": "loop = get_hive_config().get(\"loop\", {})"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/agentloop/loop.go",
+              "line": 109,
+              "snippet": "MaxToolResultChars:    30_000,"
+            }
+          ],
+          "status": "python_only",
+          "notes": "P1: Go has the 30_000 default but no configuration.json reader for the global `loop` section; a file override is ignored."
+        }
+      ]
+    },
+    {
+      "name": "mcp",
+      "keys": [
+        {
+          "path": "mcp.enabled",
+          "type": "bool",
+          "default": true,
+          "env_override": null,
+          "python": [],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/cli/mcp_config.go",
+              "line": 67,
+              "snippet": "Enabled        *bool           `json:\"enabled\"`"
+            }
+          ],
+          "status": "go_only",
+          "notes": "Go reads an `mcp` block from configuration.json; Python's MCP servers come from .mcp.json / the registry. A Go extension, not an upstream key."
+        },
+        {
+          "path": "mcp.namespace",
+          "type": "string",
+          "default": "mcp__",
+          "env_override": null,
+          "python": [],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/cli/mcp_config.go",
+              "line": 68,
+              "snippet": "Namespace      string          `json:\"namespace\"`"
+            }
+          ],
+          "status": "go_only",
+          "notes": "tool-name namespace; blank keeps the default."
+        },
+        {
+          "path": "mcp.timeout_seconds",
+          "type": "number",
+          "default": 240.0,
+          "env_override": "HIVE_MCP_CALL_RESULT_TIMEOUT",
+          "python": [],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/cli/mcp_config.go",
+              "line": 69,
+              "snippet": "TimeoutSeconds *float64        `json:\"timeout_seconds\"`"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/mcp_loader.go",
+              "line": 148,
+              "snippet": "// configuration.json wins over HIVE_MCP_CALL_RESULT_TIMEOUT, which in"
+            }
+          ],
+          "status": "go_only",
+          "notes": "priority REVERSED vs the general rule: file wins over env here (>0 only). This is the only configuration.json key in either tree with file > env."
+        },
+        {
+          "path": "mcp.servers",
+          "type": "list | object(name->spec)",
+          "default": "[]",
+          "env_override": null,
+          "python": [],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/cli/mcp_config.go",
+              "line": 70,
+              "snippet": "Servers        json.RawMessage `json:\"servers\"`"
+            }
+          ],
+          "status": "go_only",
+          "notes": "accepts both the list and map shapes; a same-named registry entry is replaced by the file entry."
+        }
+      ]
+    },
+    {
+      "name": "memory_reflection",
+      "keys": [
+        {
+          "path": "memory_reflection.every_turns",
+          "type": "int >= 1",
+          "default": 6,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1023,
+              "snippet": "every_turns: int = 6"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/chat_runtime.go",
+              "line": 1479,
+              "snippet": "cfg.EveryTurns = positive(\"every_turns\", cfg.EveryTurns)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "int (bool rejected), >=1; invalid keeps 6."
+        },
+        {
+          "path": "memory_reflection.long_every",
+          "type": "int >= 1",
+          "default": 4,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1025,
+              "snippet": "long_every: int = 4"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/chat_runtime.go",
+              "line": 1480,
+              "snippet": "cfg.LongEvery = positive(\"long_every\", cfg.LongEvery)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same validation as every_turns."
+        },
+        {
+          "path": "memory_reflection.model",
+          "type": "\"main\" | \"worker\"",
+          "default": "main",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1041,
+              "snippet": "model = raw.get(\"model\", default.model)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/chat_runtime.go",
+              "line": 1481,
+              "snippet": "if model, ok := section[\"model\"].(string); ok && (model == \"main\" || model == \"worker\") {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "other strings keep \"main\"."
+        }
+      ]
+    },
+    {
+      "name": "model_endpoints",
+      "keys": [
+        {
+          "path": "model_endpoints.<name>.api_base",
+          "type": "object(str->str)",
+          "default": "{}",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/llm/endpoints.py",
+              "line": 63,
+              "snippet": "raw = get_hive_config().get(\"model_endpoints\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/llm/endpoints.go",
+              "line": 79,
+              "snippet": "raw, _ := loadHiveConfig()[\"model_endpoints\"].(map[string]any)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "name must match [a-z0-9_-]+; blank api_base skipped; trailing / trimmed. magpie is built in."
+        }
+      ]
+    },
+    {
+      "name": "provider_library",
+      "keys": [
+        {
+          "path": "provider_library.<name>",
+          "type": "object (slot-shaped)",
+          "default": "{}",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/routes_config.py",
+              "line": 1224,
+              "snippet": "lib = get_hive_config().get(\"provider_library\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 65,
+              "snippet": "raw, ok := config[\"provider_library\"].(map[string]any)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "named saved slots; applying copies the object into a role slot, no indirection. Non-object entries ignored."
+        }
+      ]
+    },
+    {
+      "name": "queen_llm",
+      "keys": [
+        {
+          "path": "queen_llm.<queen_id>.provider",
+          "type": "string",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 614,
+              "snippet": "def get_queen_llm_section(queen_id: str | None) -> dict[str, Any] | None:"
+            },
+            {
+              "file": "core/framework/server/queen_models.py",
+              "line": 38,
+              "snippet": "section = get_queen_llm_section(queen_id)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_queens.go",
+              "line": 526,
+              "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "P1: Go reads queen_llm only for the REST endpoints; ApplyQueenModel has no production assignment, so a queen's own model is not honored at session start."
+        },
+        {
+          "path": "queen_llm.<queen_id>.model",
+          "type": "string",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 624,
+              "snippet": "section = sections.get(queen_id)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_queens.go",
+              "line": 564,
+              "snippet": "if strings.TrimSpace(queenStr(object[\"provider\"])) == \"\" || strings.TrimSpace(queenStr(object[\"model\"])) == \"\" {"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime wiring gap."
+        },
+        {
+          "path": "queen_llm.<queen_id>.api_key",
+          "type": "string",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 655,
+              "snippet": "if section.get(\"api_key\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_queens.go",
+              "line": 569,
+              "snippet": "apiKey := queenStr(object[\"api_key\"])"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime wiring gap."
+        },
+        {
+          "path": "queen_llm.<queen_id>.api_base",
+          "type": "string",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 671,
+              "snippet": "if section.get(\"api_base\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_queens.go",
+              "line": 575,
+              "snippet": "apiBase := strings.TrimSpace(queenStr(object[\"api_base\"]))"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime wiring gap."
+        },
+        {
+          "path": "queen_llm.<queen_id>.api_key_env_var",
+          "type": "string",
+          "default": null,
+          "env_override": "name read from the file",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 660,
+              "snippet": "env_var = section.get(\"api_key_env_var\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_queens.go",
+              "line": 571,
+              "snippet": "if envName := queenStr(object[\"api_key_env_var\"]); envName != \"\" {"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime wiring gap."
+        },
+        {
+          "path": "queen_llm.<queen_id>.max_context_tokens",
+          "type": "int",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 684,
+              "snippet": "if \"max_context_tokens\" in section:"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_queens.go",
+              "line": 526,
+              "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime wiring gap."
+        },
+        {
+          "path": "queen_llm.<queen_id>.endpoint",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 652,
+              "snippet": "endpoint_key = _endpoint_key(section)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_queens.go",
+              "line": 526,
+              "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime wiring gap."
+        },
+        {
+          "path": "queen_llm.<queen_id>.extra_body",
+          "type": "object",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 642,
+              "snippet": "extra_body = section.get(\"extra_body\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_queens.go",
+              "line": 526,
+              "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime wiring gap."
+        }
+      ]
+    },
+    {
+      "name": "queen_mail",
+      "keys": [
+        {
+          "path": "queen_mail.enabled",
+          "type": "bool",
+          "default": false,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1127,
+              "snippet": "enabled=raw.get(\"enabled\") is True,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 120,
+              "snippet": "config.Enabled = section[\"enabled\"] == true"
+            }
+          ],
+          "status": "aligned",
+          "notes": "only JSON true enables it; 1/\"true\" do not."
+        },
+        {
+          "path": "queen_mail.queens",
+          "type": "list[string]",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1128,
+              "snippet": "queens=tuple(q for q in queens if isinstance(q, str) and q) if isinstance(queens, list) else None,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 122,
+              "snippet": "if rawQueens, present := section[\"queens\"]; present {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "absent -> every queen; non-list -> every queen; empty entries dropped."
+        },
+        {
+          "path": "queen_mail.daily_limit",
+          "type": "int >= 1",
+          "default": 100,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1100,
+              "snippet": "daily_limit: int = 100"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 134,
+              "snippet": "config.DailyLimit = positiveInt(section[\"daily_limit\"], config.DailyLimit)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "bool is rejected as an int on both sides."
+        },
+        {
+          "path": "queen_mail.max_depth",
+          "type": "int >= 1",
+          "default": 8,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1102,
+              "snippet": "max_depth: int = 8"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 135,
+              "snippet": "config.MaxDepth = positiveInt(section[\"max_depth\"], config.MaxDepth)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same validation."
+        },
+        {
+          "path": "queen_mail.max_parallel_turns",
+          "type": "int >= 1",
+          "default": 2,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1106,
+              "snippet": "max_parallel_turns: int = 2"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 136,
+              "snippet": "config.MaxParallelTurns = positiveInt(section[\"max_parallel_turns\"], config.MaxParallelTurns)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same validation."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.name",
+          "type": "string",
+          "default": "id",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1162,
+              "snippet": "name=text(\"name\", default.name) or queen_id,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 157,
+              "snippet": "Name:            textOr(entry[\"name\"], queenID),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "blank/whitespace falls back to the id."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.title",
+          "type": "string",
+          "default": "Claude Code",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1163,
+              "snippet": "title=text(\"title\", default.title) or default.title,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 158,
+              "snippet": "Title:           textOr(entry[\"title\"], DefaultClaudeTitle),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same fallback."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.command",
+          "type": "string | list[string]",
+          "default": "[\"claude\"]",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1156,
+              "snippet": "command_parts = texts(\"command\") or default.command"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 159,
+              "snippet": "Command:         commandOf(entry[\"command\"]),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "a non-empty string is one argv element; a list is filtered to non-empty strings."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.auth",
+          "type": "\"api_key\" | \"subscription\"",
+          "default": "api_key",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1165,
+              "snippet": "auth=auth if auth in (\"api_key\", \"subscription\") else default.auth,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 160,
+              "snippet": "Auth:            authOf(entry[\"auth\"]),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "anything else keeps api_key."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.api_key",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1166,
+              "snippet": "api_key=text(\"api_key\", None),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 161,
+              "snippet": "APIKey:          textOr(entry[\"api_key\"], \"\"),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "blank is none; ignored when auth=subscription."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.api_base",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1167,
+              "snippet": "api_base=text(\"api_base\", None),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 162,
+              "snippet": "APIBase:         textOr(entry[\"api_base\"], \"\"),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "passed as ANTHROPIC_BASE_URL."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.config_dir",
+          "type": "string",
+          "default": "HIVE_HOME/claude_code/<id>/config",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1168,
+              "snippet": "config_dir=text(\"config_dir\", None),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 163,
+              "snippet": "ConfigDir:       textOr(entry[\"config_dir\"], \"\"),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "None is resolved by the runner, not the config reader."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.cwd",
+          "type": "string",
+          "default": "HIVE_HOME/claude_code/<id>/workspace",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1169,
+              "snippet": "cwd=text(\"cwd\", None),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 164,
+              "snippet": "Cwd:             textOr(entry[\"cwd\"], \"\"),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same resolution split."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.permission_mode",
+          "type": "string",
+          "default": "default",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1170,
+              "snippet": "permission_mode=text(\"permission_mode\", default.permission_mode) or default.permission_mode,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 165,
+              "snippet": "PermissionMode:  textOr(entry[\"permission_mode\"], DefaultClaudePermissionMode),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "passed verbatim to --permission-mode; no allowlist of values."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.allowed_tools",
+          "type": "list[string]",
+          "default": [],
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1171,
+              "snippet": "allowed_tools=texts(\"allowed_tools\"),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 166,
+              "snippet": "AllowedTools:    stringsList(entry[\"allowed_tools\"]),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "non-string entries and empties dropped."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.disallowed_tools",
+          "type": "list[string]",
+          "default": [],
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1172,
+              "snippet": "disallowed_tools=texts(\"disallowed_tools\"),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 167,
+              "snippet": "DisallowedTools: stringsList(entry[\"disallowed_tools\"]),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same filtering."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.add_dirs",
+          "type": "list[string]",
+          "default": [],
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1173,
+              "snippet": "add_dirs=texts(\"add_dirs\"),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 168,
+              "snippet": "AddDirs:         stringsList(entry[\"add_dirs\"]),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same filtering."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.model",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1174,
+              "snippet": "model=text(\"model\", None),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 169,
+              "snippet": "Model:           textOr(entry[\"model\"], \"\"),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "None leaves Claude Code's own default."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.timeout_minutes",
+          "type": "int >= 1",
+          "default": 30,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1082,
+              "snippet": "timeout_minutes: int = 30"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 170,
+              "snippet": "TimeoutMinutes:  positiveInt(entry[\"timeout_minutes\"], DefaultClaudeTimeoutMinutes),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "bool/invalid keeps 30."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.system_prompt",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1176,
+              "snippet": "system_prompt=text(\"system_prompt\", None),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 171,
+              "snippet": "SystemPrompt:    textOr(entry[\"system_prompt\"], \"\"),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "appended after Hive's note."
+        },
+        {
+          "path": "queen_mail.claude_code.<id>.env",
+          "type": "object str->str",
+          "default": {},
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1177,
+              "snippet": "env=tuple((k, v) for k, v in env.items() if isinstance(k, str) and isinstance(v, str)) if isinstance(env, dict) else (),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "line": 172,
+              "snippet": "Env:             envMap(entry[\"env\"]),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "non-string keys/values dropped."
+        }
+      ]
+    },
+    {
+      "name": "queen_tools",
+      "keys": [
+        {
+          "path": "queen_tools.always_enabled_categories",
+          "type": "list[string]",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/agents/queen/queen_tools_defaults.py",
+              "line": 398,
+              "snippet": "override = get_hive_config().get(\"queen_tools\", {}).get(\"always_enabled_categories\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_queens_tools.go",
+              "line": 494,
+              "snippet": "if section, ok := HiveConfig(deps.Home)[\"queen_tools\"].(map[string]any); ok {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "list of strings; non-list/entries ignored; applies to the default tool catalogue."
+        }
+      ]
+    },
+    {
+      "name": "retention",
+      "keys": [
+        {
+          "path": "retention.enabled",
+          "type": "bool",
+          "default": true,
+          "env_override": "HIVE_RETENTION_ENABLED",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1455,
+              "snippet": "enabled: bool = True  # master kill switch"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 33,
+              "snippet": "Enabled:             true,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "file: exact bool only; env: (0,false,no,'') false. Same on both sides."
+        },
+        {
+          "path": "retention.mode",
+          "type": "\"archive\" | \"delete\"",
+          "default": "archive",
+          "env_override": "HIVE_RETENTION_MODE",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1456,
+              "snippet": "mode: str = \"archive\"  # \"archive\" | \"delete\" — disposal for tiers 2/3"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 34,
+              "snippet": "Mode:                \"archive\","
+            }
+          ],
+          "status": "aligned",
+          "notes": "neither side validates the enum; an unknown string is kept (janitor treats non-delete as archive on both sides)."
+        },
+        {
+          "path": "retention.archive_dir",
+          "type": "string",
+          "default": "HIVE_HOME/archive",
+          "env_override": "HIVE_RETENTION_ARCHIVE_DIR",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1457,
+              "snippet": "archive_dir: str = \"\"  # default: $HIVE_HOME/archive"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 35,
+              "snippet": "ArchiveDir:          \"\","
+            }
+          ],
+          "status": "aligned",
+          "notes": "empty resolves to $HIVE_HOME/archive."
+        },
+        {
+          "path": "retention.event_logs_days",
+          "type": "int",
+          "default": 7,
+          "env_override": "HIVE_RETENTION_EVENT_LOGS_DAYS",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1459,
+              "snippet": "event_logs_days: int = 7"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 36,
+              "snippet": "EventLogsDays:       7,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "file: JSON integer only (bool/float/string ignored); env: invalid int keeps the file/default value."
+        },
+        {
+          "path": "retention.llm_logs_days",
+          "type": "int",
+          "default": 7,
+          "env_override": "HIVE_RETENTION_LLM_LOGS_DAYS",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1460,
+              "snippet": "llm_logs_days: int = 7"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 37,
+              "snippet": "LLMLogsDays:         7,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same rule."
+        },
+        {
+          "path": "retention.compaction_log_days",
+          "type": "int",
+          "default": 7,
+          "env_override": "HIVE_RETENTION_COMPACTION_LOG_DAYS",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1461,
+              "snippet": "compaction_log_days: int = 7"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 38,
+              "snippet": "CompactionLogDays:   7,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same rule."
+        },
+        {
+          "path": "retention.tool_artifacts_days",
+          "type": "int",
+          "default": 14,
+          "env_override": "HIVE_RETENTION_TOOL_ARTIFACTS_DAYS",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1462,
+              "snippet": "tool_artifacts_days: int = 14"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 39,
+              "snippet": "ToolArtifactsDays:   14,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same rule."
+        },
+        {
+          "path": "retention.rotated_logs_days",
+          "type": "int",
+          "default": 30,
+          "env_override": "HIVE_RETENTION_ROTATED_LOGS_DAYS",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1463,
+              "snippet": "rotated_logs_days: int = 30"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 40,
+              "snippet": "RotatedLogsDays:     30,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same rule."
+        },
+        {
+          "path": "retention.worker_deep_clean_days",
+          "type": "int",
+          "default": 14,
+          "env_override": "HIVE_RETENTION_WORKER_DEEP_CLEAN_DAYS",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1465,
+              "snippet": "worker_deep_clean_days: int = 14"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 41,
+              "snippet": "WorkerDeepCleanDays: 14,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same rule."
+        },
+        {
+          "path": "retention.queen_hygiene_days",
+          "type": "int",
+          "default": 30,
+          "env_override": "HIVE_RETENTION_QUEEN_HYGIENE_DAYS",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1467,
+              "snippet": "queen_hygiene_days: int = 30"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 42,
+              "snippet": "QueenHygieneDays:    30,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same rule."
+        },
+        {
+          "path": "retention.events_rewrite_min_bytes",
+          "type": "int",
+          "default": 1000000,
+          "env_override": "HIVE_RETENTION_EVENTS_REWRITE_MIN_BYTES",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1468,
+              "snippet": "events_rewrite_min_bytes: int = 1_000_000"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 43,
+              "snippet": "EventsRewriteMin:    1_000_000,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "int64 in Go; JSON integer only."
+        },
+        {
+          "path": "retention.active_grace_hours",
+          "type": "int",
+          "default": 48,
+          "env_override": "HIVE_RETENTION_ACTIVE_GRACE_HOURS",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1470,
+              "snippet": "active_grace_hours: int = 48"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 44,
+              "snippet": "ActiveGraceHours:    48,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same rule."
+        },
+        {
+          "path": "retention.io_sleep_ms",
+          "type": "int",
+          "default": 10,
+          "env_override": "HIVE_RETENTION_IO_SLEEP_MS",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1471,
+              "snippet": "io_sleep_ms: int = 10"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 45,
+              "snippet": "IOSleepMS:           10,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same rule."
+        },
+        {
+          "path": "retention.batch_size",
+          "type": "int",
+          "default": 200,
+          "env_override": "HIVE_RETENTION_BATCH_SIZE",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1472,
+              "snippet": "batch_size: int = 200"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 46,
+              "snippet": "BatchSize:           200,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same rule."
+        },
+        {
+          "path": "retention.junk_min_bytes",
+          "type": "int",
+          "default": 50000000,
+          "env_override": "HIVE_RETENTION_JUNK_MIN_BYTES",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1473,
+              "snippet": "junk_min_bytes: int = 50_000_000"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/maintenance/config.go",
+              "line": 47,
+              "snippet": "JunkMinBytes:        50_000_000,"
+            }
+          ],
+          "status": "aligned",
+          "notes": "int64 in Go."
+        }
+      ]
+    },
+    {
+      "name": "sentinel",
+      "keys": [
+        {
+          "path": "sentinel.classify_after_seconds",
+          "type": "number >= 1",
+          "default": 300.0,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/sentinel/store.py",
+              "line": 56,
+              "snippet": "raw = global_sentinel_config().get(\"classify_after_seconds\", _DEFAULT_CLASSIFY_AFTER_SECONDS)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/sentinel/store.go",
+              "line": 124,
+              "snippet": "raw, ok := block[\"classify_after_seconds\"]"
+            }
+          ],
+          "status": "aligned",
+          "notes": "float() coercion; values < 1 clamp to 1.0; invalid -> 300.0."
+        },
+        {
+          "path": "sentinel.max_nudges_before_escalate",
+          "type": "int >= 1",
+          "default": 5,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/sentinel/store.py",
+              "line": 64,
+              "snippet": "raw = global_sentinel_config().get(\"max_nudges_before_escalate\", _DEFAULT_MAX_NUDGES_BEFORE_ESCALATE)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/sentinel/store.go",
+              "line": 141,
+              "snippet": "raw, ok := block[\"max_nudges_before_escalate\"]"
+            }
+          ],
+          "status": "aligned",
+          "notes": "int(); values < 1 clamp to 1; invalid -> 5."
+        },
+        {
+          "path": "sentinel.escalate_when_ui_attached",
+          "type": "bool",
+          "default": false,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/sentinel/store.py",
+              "line": 72,
+              "snippet": "return bool(global_sentinel_config().get(\"escalate_when_ui_attached\", _DEFAULT_ESCALATE_WHEN_UI_ATTACHED))"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/sentinel/store.go",
+              "line": 159,
+              "snippet": "raw, ok := block[\"escalate_when_ui_attached\"]"
+            }
+          ],
+          "status": "aligned",
+          "notes": "Python bool() admits truthy strings; Go uses PyTruthy to match."
+        }
+      ]
+    },
+    {
+      "name": "soul",
+      "keys": [
+        {
+          "path": "soul.queens.<id>.enabled",
+          "type": "bool",
+          "default": "true when the entry exists",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1251,
+              "snippet": "if not isinstance(raw, dict) or raw.get(\"enabled\") is False:"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 164,
+              "snippet": "if enabled, present := raw[\"enabled\"]; present && enabled == false {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "only JSON false disables; an absent entry means no soul."
+        },
+        {
+          "path": "soul.queens.<id>.mode",
+          "type": "\"review\" | \"auto\"",
+          "default": "review",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1281,
+              "snippet": "mode=raw.get(\"mode\") if raw.get(\"mode\") in (\"review\", \"auto\") else default.mode,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 231,
+              "snippet": "if mode, ok := raw[\"mode\"].(string); ok && (mode == \"review\" || mode == \"auto\") {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "other values keep review."
+        },
+        {
+          "path": "soul.queens.<id>.hour",
+          "type": "int 0..23",
+          "default": 4,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1282,
+              "snippet": "hour=count(raw.get(\"hour\"), default.hour, low=0, high=23),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 218,
+              "snippet": "Hour:              pyCount(raw[\"hour\"], defaults.Hour, 0, intPtr(23)),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "out of range -> 4."
+        },
+        {
+          "path": "soul.queens.<id>.model",
+          "type": "\"queen\" | \"worker\"",
+          "default": "queen",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1283,
+              "snippet": "model=raw.get(\"model\") if raw.get(\"model\") in (\"queen\", \"worker\") else default.model,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 234,
+              "snippet": "if model, ok := raw[\"model\"].(string); ok && (model == \"queen\" || model == \"worker\") {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "other values keep queen."
+        },
+        {
+          "path": "soul.queens.<id>.max_edits",
+          "type": "int >= 1",
+          "default": 5,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1284,
+              "snippet": "max_edits=count(raw.get(\"max_edits\"), default.max_edits),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 220,
+              "snippet": "MaxEdits:          pyCount(raw[\"max_edits\"], defaults.MaxEdits, 1, nil),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "bool rejected."
+        },
+        {
+          "path": "soul.queens.<id>.bootstrap_edits",
+          "type": "int >= 1",
+          "default": 30,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1285,
+              "snippet": "bootstrap_edits=count(raw.get(\"bootstrap_edits\"), default.bootstrap_edits),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 221,
+              "snippet": "BootstrapEdits:    pyCount(raw[\"bootstrap_edits\"], defaults.BootstrapEdits, 1, nil),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same validation."
+        },
+        {
+          "path": "soul.queens.<id>.include_titles",
+          "type": "list[string]",
+          "default": [],
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1286,
+              "snippet": "include_titles=patterns(\"include_titles\"),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 222,
+              "snippet": "IncludeTitles:     patterns(raw, \"include_titles\"),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "regex strings; non-list/empty entries dropped."
+        },
+        {
+          "path": "soul.queens.<id>.exclude_titles",
+          "type": "list[string]",
+          "default": [],
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1287,
+              "snippet": "exclude_titles=patterns(\"exclude_titles\"),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 223,
+              "snippet": "ExcludeTitles:     patterns(raw, \"exclude_titles\"),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same filtering."
+        },
+        {
+          "path": "soul.queens.<id>.sources.file",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1288,
+              "snippet": "source_file=str(sources.get(\"file\") or \"\") or None,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 241,
+              "snippet": "if file := OrString(sources[\"file\"]); file != \"\" {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "relative paths resolve against HIVE_HOME."
+        },
+        {
+          "path": "soul.queens.<id>.sources.keys",
+          "type": "list[string]",
+          "default": [],
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1289,
+              "snippet": "source_keys=tuple(str(k) for k in sources.get(\"keys\") or [] if isinstance(k, str) and k),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 256,
+              "snippet": "list, _ := sources[\"keys\"].([]any)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "empty strings dropped."
+        },
+        {
+          "path": "soul.queens.<id>.bootstrap_memories",
+          "type": "list[string]",
+          "default": [],
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1290,
+              "snippet": "bootstrap_memories=patterns(\"bootstrap_memories\"),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 225,
+              "snippet": "BootstrapMemories: patterns(raw, \"bootstrap_memories\"),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same filtering."
+        },
+        {
+          "path": "soul.queens.<id>.sections[].key",
+          "type": "string",
+          "default": "default section list",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1270,
+              "snippet": "key=str(entry[\"key\"]).strip(),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 187,
+              "snippet": "key := strings.TrimSpace(PyString(mapping[\"key\"]))"
+            }
+          ],
+          "status": "aligned",
+          "notes": "a missing/blank key drops the entry."
+        },
+        {
+          "path": "soul.queens.<id>.sections[].title",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1271,
+              "snippet": "title=str(entry[\"title\"]).strip(),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 188,
+              "snippet": "title := strings.TrimSpace(PyString(mapping[\"title\"]))"
+            }
+          ],
+          "status": "aligned",
+          "notes": "blank title drops the entry."
+        },
+        {
+          "path": "soul.queens.<id>.sections[].limit",
+          "type": "int >= 1",
+          "default": 400,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1272,
+              "snippet": "limit=count(entry.get(\"limit\"), 400),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 195,
+              "snippet": "Limit:    pyCount(mapping[\"limit\"], 400, 1, nil),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "invalid -> 400."
+        },
+        {
+          "path": "soul.queens.<id>.sections[].max_age_days",
+          "type": "int >= 1",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1273,
+              "snippet": "max_age_days=max_age if isinstance(max_age, int) and not isinstance(max_age, bool) and max_age >= 1 else None,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 198,
+              "snippet": "if age, isInt := AsInt(mapping[\"max_age_days\"]); isInt && age >= 1 {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "None/0/invalid means keep forever."
+        },
+        {
+          "path": "soul.queens.<id>.sections[].evidence",
+          "type": "int >= 1",
+          "default": 1,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1274,
+              "snippet": "evidence=count(entry.get(\"evidence\"), 1),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 196,
+              "snippet": "Evidence: pyCount(mapping[\"evidence\"], 1, 1, nil),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "invalid -> 1."
+        },
+        {
+          "path": "soul.queens.<id>.header",
+          "type": "string",
+          "default": "built-in header",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1292,
+              "snippet": "header=str(raw.get(\"header\") or default.header),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 245,
+              "snippet": "if header := OrString(raw[\"header\"]); header != \"\" {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "blank keeps the built-in header."
+        },
+        {
+          "path": "soul.queens.<id>.session_chars",
+          "type": "int >= 1",
+          "default": 12000,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1293,
+              "snippet": "session_chars=count(raw.get(\"session_chars\"), default.session_chars),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 228,
+              "snippet": "SessionChars:      pyCount(raw[\"session_chars\"], defaults.SessionChars, 1, nil),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "invalid -> 12000."
+        },
+        {
+          "path": "soul.queens.<id>.message_chars",
+          "type": "int >= 1",
+          "default": 400,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1294,
+              "snippet": "message_chars=count(raw.get(\"message_chars\"), default.message_chars),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/soul/config.go",
+              "line": 229,
+              "snippet": "MessageChars:      pyCount(raw[\"message_chars\"], defaults.MessageChars, 1, nil),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "invalid -> 400."
+        }
+      ]
+    },
+    {
+      "name": "top-level",
+      "keys": [
+        {
+          "path": "adaptive_tool_budget",
+          "type": "bool",
+          "default": true,
+          "env_override": "HIVE_ADAPTIVE_TOOL_BUDGET",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 963,
+              "snippet": "raw = os.environ.get(\"HIVE_ADAPTIVE_TOOL_BUDGET\")"
+            },
+            {
+              "file": "core/framework/config.py",
+              "line": 966,
+              "snippet": "value = get_hive_config().get(\"adaptive_tool_budget\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/config_features.go",
+              "line": 47,
+              "snippet": "if value, ok := envFeatureFlag(\"HIVE_ADAPTIVE_TOOL_BUDGET\"); ok {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_features.go",
+              "line": 50,
+              "snippet": "return boolConfigFlag(home, \"adaptive_tool_budget\", true)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "env > configuration.json > default(true); empty env string falls through to the file on both sides."
+        },
+        {
+          "path": "email_senders",
+          "type": "bool",
+          "default": false,
+          "env_override": "HIVE_EMAIL_SENDERS",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 992,
+              "snippet": "raw = os.environ.get(\"HIVE_EMAIL_SENDERS\")"
+            },
+            {
+              "file": "core/framework/config.py",
+              "line": 995,
+              "snippet": "value = get_hive_config().get(\"email_senders\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/config_features.go",
+              "line": 55,
+              "snippet": "if value, ok := envFeatureFlag(\"HIVE_EMAIL_SENDERS\"); ok {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_features.go",
+              "line": 58,
+              "snippet": "return boolConfigFlag(home, \"email_senders\", false)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "env > file > default(false); sync_email_senders_env publishes the resolved flag back to the process env on both sides."
+        },
+        {
+          "path": "stall_check",
+          "type": "bool",
+          "default": false,
+          "env_override": "HIVE_STALL_CHECK",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1009,
+              "snippet": "raw = os.environ.get(\"HIVE_STALL_CHECK\")"
+            },
+            {
+              "file": "core/framework/config.py",
+              "line": 1012,
+              "snippet": "return bool(get_hive_config().get(\"stall_check\", False))"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/hive_config.go",
+              "line": 37,
+              "snippet": "if raw, ok := os.LookupEnv(\"HIVE_STALL_CHECK\"); ok {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/hive_config.go",
+              "line": 47,
+              "snippet": "return pyTruthy(HiveConfig(home)[\"stall_check\"])"
+            }
+          ],
+          "status": "aligned",
+          "notes": "empty/whitespace env falls through to the file; falsey = (0,false,no,off)."
+        },
+        {
+          "path": "memory_timeline",
+          "type": "bool",
+          "default": false,
+          "env_override": "HIVE_MEMORY_TIMELINE",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1310,
+              "snippet": "raw = os.environ.get(\"HIVE_MEMORY_TIMELINE\")"
+            },
+            {
+              "file": "core/framework/config.py",
+              "line": 1313,
+              "snippet": "value = get_hive_config().get(\"memory_timeline\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/config_features.go",
+              "line": 76,
+              "snippet": "if value, ok := envFeatureFlag(\"HIVE_MEMORY_TIMELINE\"); ok {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_features.go",
+              "line": 79,
+              "snippet": "return boolConfigFlag(home, \"memory_timeline\", false)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same env > file > default(false) chain."
+        },
+        {
+          "path": "gcu_enabled",
+          "type": "bool",
+          "default": true,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 945,
+              "snippet": "return get_hive_config().get(\"gcu_enabled\", True)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/cli/browser_supervisor.go",
+              "line": 118,
+              "snippet": "if enabled, present := config[\"gcu_enabled\"].(bool); present {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "file only. Go additionally lets HIVE_BROWSER_BRIDGE force the bridge on/off (documented operator override, not a parity break)."
+        },
+        {
+          "path": "gcu_viewport_scale",
+          "type": "number (0.1-1.0)",
+          "default": 0.8,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1344,
+              "snippet": "scale = get_hive_config().get(\"gcu_viewport_scale\", 0.8)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/hive_config.go",
+              "line": 93,
+              "snippet": "scale, ok := pythonNumber(HiveConfig(home)[\"gcu_viewport_scale\"])"
+            }
+          ],
+          "status": "aligned",
+          "notes": "out-of-range / non-number -> 0.8; Python's isinstance(True, int) quirk (true -> 1.0) is replicated in Go."
+        },
+        {
+          "path": "network_scanners",
+          "type": "bool",
+          "default": false,
+          "env_override": "HIVE_NETWORK_SCANNERS",
+          "python": [],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/config_features.go",
+              "line": 68,
+              "snippet": "if value, ok := envFeatureFlag(\"HIVE_NETWORK_SCANNERS\"); ok {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_features.go",
+              "line": 71,
+              "snippet": "return boolConfigFlag(home, \"network_scanners\", false)"
+            }
+          ],
+          "status": "go_only",
+          "notes": "Go extension: gates the four network-probing tools. Python has no same-named switch (its default tool surface differs)."
+        },
+        {
+          "path": "created_at",
+          "type": "string (ISO time)",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "quickstart.sh",
+              "line": 1048,
+              "snippet": "config[\"created_at\"] = created_at"
+            }
+          ],
+          "go": [],
+          "status": "unread",
+          "notes": "written by the installers, read by neither runtime. Documented example only."
+        },
+        {
+          "path": "external_skills",
+          "type": "list[string]",
+          "default": "[]",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/skills/discovery.py",
+              "line": 149,
+              "snippet": "for raw in get_hive_config().get(\"external_skills\") or []:"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/skills/discovery.go",
+              "line": 212,
+              "snippet": "raw, _ := cfg[\"external_skills\"].([]any)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "non-string entries ignored; paths may be nonexistent and resolve later."
+        },
+        {
+          "path": "rate_limits",
+          "type": "object (dotted platform.action.window)",
+          "default": "built-in table",
+          "env_override": "HIVE_RATE_<PLATFORM>_<ACTION>_<WINDOW>",
+          "python": [
+            {
+              "file": "core/framework/rate_limiter.py",
+              "line": 30,
+              "snippet": "return get_hive_config().get(\"rate_limits\", {})"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/ratelimit/rate_limiter.go",
+              "line": 123,
+              "snippet": "section, ok := cfg[\"rate_limits\"].(map[string]any)"
+            }
+          ],
+          "status": "aligned",
+          "notes": "file values can raise defaults but never past the hard ceiling; env overrides exist on the Python side (HIVE_RATE_...) and are documented in the rate-limiter module."
+        }
+      ]
+    },
+    {
+      "name": "turn_context",
+      "keys": [
+        {
+          "path": "turn_context.<name>.enabled",
+          "type": "bool",
+          "default": false,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/turn_context.py",
+              "line": 114,
+              "snippet": "settings = get_hive_config().get(\"turn_context\") or {}"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/turn_context.go",
+              "line": 159,
+              "snippet": "if section, ok := config[\"turn_context\"].(map[string]any); ok && section != nil {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "section must be an object; a truthy enabled starts the installed entry point. `{\"voice\": true}` does not enable anything."
+        }
+      ]
+    },
+    {
+      "name": "user_profile",
+      "keys": [
+        {
+          "path": "user_profile.displayName",
+          "type": "string",
+          "default": "\"\"",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/routes_config.py",
+              "line": 681,
+              "snippet": "\"displayName\": profile.get(\"displayName\", \"\"),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/profile.go",
+              "line": 128,
+              "snippet": "\"prompt_library_sort\": NormalizePromptSort(profile[\"prompt_library_sort\"]),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "GET returns \"\" for missing; PUT trims. Go's ProfileResponse 500s on a non-object user_profile exactly like upstream's AttributeError path."
+        },
+        {
+          "path": "user_profile.about",
+          "type": "string",
+          "default": "\"\"",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/routes_config.py",
+              "line": 682,
+              "snippet": "\"about\": profile.get(\"about\", \"\"),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/profile.go",
+              "line": 148,
+              "snippet": "aboutValue, hasAbout := body[\"about\"]"
+            }
+          ],
+          "status": "aligned",
+          "notes": "same trim; max length enforced by both (profile.go mirrors routes_config)."
+        },
+        {
+          "path": "user_profile.theme",
+          "type": "\"\" | \"light\" | \"dark\"",
+          "default": "\"\"",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/routes_config.py",
+              "line": 683,
+              "snippet": "\"theme\": profile.get(\"theme\", \"\"),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/profile.go",
+              "line": 150,
+              "snippet": "setTheme := themeIsString && (themeValue == \"light\" || themeValue == \"dark\")"
+            }
+          ],
+          "status": "aligned",
+          "notes": "PUT ignores other values."
+        },
+        {
+          "path": "user_profile.density",
+          "type": "\"\" | \"spacious\" | \"compact\"",
+          "default": "\"\"",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/routes_config.py",
+              "line": 684,
+              "snippet": "\"density\": profile.get(\"density\", \"\"),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/profile.go",
+              "line": 152,
+              "snippet": "setDensity := densityIsString && (densityValue == \"spacious\" || densityValue == \"compact\")"
+            }
+          ],
+          "status": "aligned",
+          "notes": "PUT ignores other values."
+        },
+        {
+          "path": "user_profile.prompt_library_sort",
+          "type": "object {my,community}",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/server/routes_config.py",
+              "line": 685,
+              "snippet": "\"prompt_library_sort\": _normalize_prompt_sort(profile.get(\"prompt_library_sort\")),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/profile.go",
+              "line": 128,
+              "snippet": "\"prompt_library_sort\": NormalizePromptSort(profile[\"prompt_library_sort\"]),"
+            }
+          ],
+          "status": "aligned",
+          "notes": "only known sort keys survive; absent -> null so the UI cache is not clobbered."
+        }
+      ]
+    },
+    {
+      "name": "vision_fallback",
+      "keys": [
+        {
+          "path": "vision_fallback.provider",
+          "type": "string",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 324,
+              "snippet": "vision = get_hive_config().get(\"vision_fallback\", {})"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_models.go",
+              "line": 28,
+              "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "P1: slot is CRUD-only in Go; find_vision_fallback's caption chain is not ported (runtime never reads it)."
+        },
+        {
+          "path": "vision_fallback.model",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 325,
+              "snippet": "if vision.get(\"provider\") and vision.get(\"model\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_models.go",
+              "line": 28,
+              "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime gap."
+        },
+        {
+          "path": "vision_fallback.api_key",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 363,
+              "snippet": "if vision.get(\"api_key\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_models.go",
+              "line": 28,
+              "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime gap."
+        },
+        {
+          "path": "vision_fallback.api_base",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 376,
+              "snippet": "if vision.get(\"api_base\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_models.go",
+              "line": 28,
+              "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime gap."
+        },
+        {
+          "path": "vision_fallback.api_key_env_var",
+          "type": "string",
+          "default": null,
+          "env_override": "name read from the file",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 365,
+              "snippet": "api_key_env_var = vision.get(\"api_key_env_var\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_models.go",
+              "line": 28,
+              "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime gap."
+        },
+        {
+          "path": "vision_fallback.max_tokens",
+          "type": "int",
+          "default": "aux_max_tokens",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/agent_loop/internals/vision_fallback.py",
+              "line": 329,
+              "snippet": "\"max_tokens\": int(get_hive_config().get(\"vision_fallback\", {}).get(\"max_tokens\") or get_aux_max_tokens()),"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_models.go",
+              "line": 28,
+              "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime gap; 0/absent falls back to aux_max_tokens."
+        },
+        {
+          "path": "vision_fallback.endpoint",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 360,
+              "snippet": "endpoint_key = _endpoint_key(vision)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/routes_models.go",
+              "line": 28,
+              "snippet": "var modelRoleSlots = []string{\"llm\", \"worker_llm\", \"vision_fallback\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime gap."
+        }
+      ]
+    },
+    {
+      "name": "worker_llm",
+      "keys": [
+        {
+          "path": "worker_llm.provider",
+          "type": "string",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 301,
+              "snippet": "worker_llm = get_hive_config().get(\"worker_llm\", {})"
+            },
+            {
+              "file": "core/framework/server/session_manager.py",
+              "line": 480,
+              "snippet": "def build_worker_llm(self):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 12,
+              "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/colony/runtime.go",
+              "line": 65,
+              "snippet": "// worker_llm separately)."
+            }
+          ],
+          "status": "go_partial",
+          "notes": "P1: Go exposes worker_llm through the REST slot API but never resolves it for the runtime (colony/runtime.go comment: the port does not split queen/worker models by default). Python's session_manager.build_worker_llm does."
+        },
+        {
+          "path": "worker_llm.model",
+          "type": "string",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 302,
+              "snippet": "if worker_llm.get(\"provider\") and worker_llm.get(\"model\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 12,
+              "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "same runtime gap as worker_llm.provider."
+        },
+        {
+          "path": "worker_llm.api_key",
+          "type": "string",
+          "default": "inherit",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 398,
+              "snippet": "literal = worker_llm.get(\"api_key\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 12,
+              "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "runtime not wired in Go."
+        },
+        {
+          "path": "worker_llm.api_base",
+          "type": "string",
+          "default": "inherit",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 471,
+              "snippet": "if worker_llm.get(\"api_base\"):"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 12,
+              "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "runtime not wired in Go."
+        },
+        {
+          "path": "worker_llm.api_key_env_var",
+          "type": "string",
+          "default": null,
+          "env_override": "name read from the file",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 448,
+              "snippet": "api_key_env_var = worker_llm.get(\"api_key_env_var\")"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 12,
+              "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "runtime not wired in Go."
+        },
+        {
+          "path": "worker_llm.max_tokens",
+          "type": "int",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 547,
+              "snippet": "if worker_llm and \"max_tokens\" in worker_llm:"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 12,
+              "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "runtime not wired in Go."
+        },
+        {
+          "path": "worker_llm.max_context_tokens",
+          "type": "int",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 566,
+              "snippet": "if worker_llm and \"max_context_tokens\" in worker_llm:"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 12,
+              "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "runtime not wired in Go."
+        },
+        {
+          "path": "worker_llm.endpoint",
+          "type": "string",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 393,
+              "snippet": "endpoint_key = _endpoint_key(worker_llm)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 12,
+              "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "runtime not wired in Go."
+        },
+        {
+          "path": "worker_llm.extra_body",
+          "type": "object",
+          "default": "inherit llm",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 512,
+              "snippet": "extra_body = section_extra_body(worker_llm)"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 12,
+              "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "runtime not wired in Go."
+        },
+        {
+          "path": "worker_llm.num_ctx",
+          "type": "int",
+          "default": 16384,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 511,
+              "snippet": "return {\"num_ctx\": worker_llm.get(\"num_ctx\", 16384)}"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/provider_library.go",
+              "line": 12,
+              "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "runtime not wired in Go."
+        }
+      ]
+    },
+    {
+      "name": "worker_tools",
+      "keys": [
+        {
+          "path": "worker_tools.always_enabled_categories",
+          "type": "list[string]",
+          "default": null,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/agents/queen/queen_tools_defaults.py",
+              "line": 462,
+              "snippet": "override = get_hive_config().get(\"worker_tools\", {}).get(\"always_enabled_categories\")"
+            }
+          ],
+          "go": [],
+          "status": "python_only",
+          "notes": "P1: Go has no worker_tools reader; worker tool-tier overrides from configuration.json are not honored."
+        }
+      ]
+    }
+  ],
+  "boundary_rules": [
+    {
+      "rule": "general precedence",
+      "contract": "env > configuration.json > built-in default",
+      "evidence": [
+        {
+          "file": "core/framework/config.py",
+          "line": 963,
+          "snippet": "raw = os.environ.get(\"HIVE_ADAPTIVE_TOOL_BUDGET\")"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/config_features.go",
+          "line": 47,
+          "snippet": "if value, ok := envFeatureFlag(\"HIVE_ADAPTIVE_TOOL_BUDGET\"); ok {"
+        }
+      ],
+      "status": "aligned",
+      "notes": "Holds for adaptive_tool_budget, email_senders, stall_check, memory_timeline, network_scanners and every HIVE_RETENTION_<FIELD>."
+    },
+    {
+      "rule": "empty env string",
+      "contract": "feature flags: empty/whitespace = not set -> fall through to configuration.json; retention bool fields: empty = false",
+      "evidence": [
+        {
+          "file": "core/framework/config.py",
+          "line": 964,
+          "snippet": "if raw is not None and raw.strip() != \"\":"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/config_features.go",
+          "line": 27,
+          "snippet": "if trimmed == \"\" {"
+        },
+        {
+          "file": "core/framework/config.py",
+          "line": 1492,
+          "snippet": "setattr(cfg, f.name, env_val.strip().lower() not in (\"0\", \"false\", \"no\", \"\"))"
+        }
+      ],
+      "status": "aligned",
+      "notes": "The two rules are deliberately different; both runtimes implement the same split."
+    },
+    {
+      "rule": "non-boolean env values",
+      "contract": "deny-list (0/false/no/off) -> false; any other non-empty value -> true. Not strconv.ParseBool.",
+      "evidence": [
+        {
+          "file": "core/framework/config.py",
+          "line": 965,
+          "snippet": "return raw.strip().lower() not in (\"0\", \"false\", \"no\", \"off\")"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/config_features.go",
+          "line": 31,
+          "snippet": "case \"0\", \"false\", \"no\", \"off\":"
+        }
+      ],
+      "status": "aligned",
+      "notes": "So HIVE_STALL_CHECK=disabled is TRUE on both sides. Documented as a boundary, not a bug to fix casually."
+    },
+    {
+      "rule": "file value of the wrong JSON type",
+      "contract": "flag/section readers require the exact type; non-bool for a flag keeps the default; non-object section reads as empty",
+      "evidence": [
+        {
+          "file": "core/framework/config.py",
+          "line": 967,
+          "snippet": "if isinstance(value, bool):"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/config_features.go",
+          "line": 38,
+          "snippet": "value, ok := HiveConfig(home)[key].(bool)"
+        },
+        {
+          "file": "core/framework/config.py",
+          "line": 1033,
+          "snippet": "raw = raw if isinstance(raw, dict) else {}"
+        }
+      ],
+      "status": "aligned",
+      "notes": "JSON 1 is not a bool on either side (Go decodes to json.Number/float64; Python bool is a distinct type)."
+    },
+    {
+      "rule": "bad JSON / unreadable configuration.json",
+      "contract": "read as {} -> every reader falls back to its default; a warning is logged on the Python side",
+      "evidence": [
+        {
+          "file": "core/framework/config.py",
+          "line": 224,
+          "snippet": "except (json.JSONDecodeError, OSError) as e:"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/hive_config.go",
+          "line": 26,
+          "snippet": "if err := decoder.Decode(&out); err != nil || out == nil {"
+        }
+      ],
+      "status": "aligned",
+      "notes": "Both strip a UTF-8 BOM; Go additionally rejects trailing JSON values after the object."
+    },
+    {
+      "rule": "integer fields: invalid value",
+      "contract": "JSON: non-integer (bool/float/string) is ignored and the default/file value stays; env: invalid integer is ignored (Go) or warned+ignored (Python)",
+      "evidence": [
+        {
+          "file": "core/framework/config.py",
+          "line": 1483,
+          "snippet": "if f.name in raw and type(raw[f.name]) is type(getattr(cfg, f.name)):"
+        },
+        {
+          "file": "go_hive/go-hive/internal/maintenance/config.go",
+          "line": 136,
+          "snippet": "if strings.ContainsAny(num.String(), \".eE\") {"
+        }
+      ],
+      "status": "aligned",
+      "notes": "Floats like 7.0 are rejected by both (Python type mismatch; Go rejects decimal spellings)."
+    },
+    {
+      "rule": "bounded / non-negative fields",
+      "contract": "soul hour 0..23, every count >= 1, sentinel seconds >= 1, gcu viewport 0.1..1.0; out-of-range keeps the default (or clamps where the doc says clamp)",
+      "evidence": [
+        {
+          "file": "core/framework/config.py",
+          "line": 1255,
+          "snippet": "def count(value: Any, fallback: int, *, low: int = 1, high: int | None = None) -> int:"
+        },
+        {
+          "file": "go_hive/go-hive/internal/soul/config.go",
+          "line": 218,
+          "snippet": "Hour:              pyCount(raw[\"hour\"], defaults.Hour, 0, intPtr(23)),"
+        },
+        {
+          "file": "go_hive/go-hive/internal/sentinel/store.go",
+          "line": 132,
+          "snippet": "if value < 1.0 {"
+        }
+      ],
+      "status": "aligned",
+      "notes": "sentinel clamps to the floor; soul/gcu fall back to the default. Both sides agree per field."
+    },
+    {
+      "rule": "credentials vs env",
+      "contract": "LLM key resolution: slot literal api_key -> named endpoint key -> subscription token -> credential store -> api_key_env_var -> main key",
+      "evidence": [
+        {
+          "file": "core/framework/config.py",
+          "line": 757,
+          "snippet": "Credential store is checked BEFORE the env var so that desktop"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/llm_config.go",
+          "line": 458,
+          "snippet": "if envValue := llmSection[\"api_key_env_var\"]; pyTruthy(envValue) {"
+        }
+      ],
+      "status": "go_partial",
+      "notes": "Go's hot-swap path mirrors the order; its boot path is simpler. Any parity test for keys must pin this order."
+    },
+    {
+      "rule": "MCP call timeout",
+      "contract": "file > env (exception to the general rule): mcp.timeout_seconds wins over HIVE_MCP_CALL_RESULT_TIMEOUT",
+      "evidence": [
+        {
+          "file": "go_hive/go-hive/internal/cli/mcp_loader.go",
+          "line": 148,
+          "snippet": "// configuration.json wins over HIVE_MCP_CALL_RESULT_TIMEOUT, which in"
+        }
+      ],
+      "status": "go_only",
+      "notes": "No Python counterpart (Python has no mcp block in configuration.json). Freeze as a Go extension."
+    }
+  ]
+}

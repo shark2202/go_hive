@@ -139,6 +139,6 @@
 | `terminal_rg` `terminal_glob` `terminal_output_get` `terminal_job_logs` `terminal_job_manage` | 未移植 | 无（本地） |
 | `terminal_job_start` `terminal_pty_open/run/close` | 未移植 | 无（本地，需 PTY） |
 | `search_messages` `search_timeline` | 未移植 | 无（本地记忆检索） |
-| `browser_setup` + `hive-browser` CLI | 未移植 | 本机浏览器 |
+| `browser_setup` + `hive-browser` CLI | 已移植 | 本机浏览器（2026-11-20 真实 Chrome 实测；`hive serve` 监督 `browserbridge`；见 `docs/browser-host.md`） |
 | `@server:chart-tools`（图表渲染） | 未移植 | 无（本地渲染） |
 | `csv_sql` | 未移植 | DuckDB 等价物 |

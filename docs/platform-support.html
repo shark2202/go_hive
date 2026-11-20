@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive ↔ go_hive 平台支持矩阵</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:860px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Platform Support</div><h1>Hive ↔ go_hive <span>平台支持矩阵</span></h1>
+<p class="lede">macOS / Linux / Windows 两个实现各支持到什么程度、哪里不一致。判定分四级：<b>本机实测</b>（macOS 真跑）＞ <b>CI 配置</b>（workflow 里真跑测试）＞ <b>代码确认</b>（读了分支但没跑）＞ <b>未验证</b>。"支持"不等于"一致"——本页把三层（表面 / 行为 / 验证）分开写。</p>
+<div class="meta"><span>生成：<b>2026-11-20 18:18 CST</b></span><span>Python hive：<b>1.0.14</b></span><span>Go hive：<b>1.0.26-go.1</b></span><span>本机：<b>macOS（唯一实测平台）</b></span></div>
+<div class="toc"><a href="#python">Python hive</a><a href="#go">go_hive</a><a href="#layers">三层一致性</a><a href="#gaps">缺口清单</a><a href="#evidence">证据</a><a href="#verdict">结论</a></div></header>
+
+<section id="python"><h2><span class="num">01</span>Python hive</h2>
+<p>官方口径支持三大平台：<code>quickstart.sh</code>（macOS/Linux）与 <code>quickstart.ps1</code>（Windows PowerShell 5.1+，README 明示）。CI 覆盖 Ubuntu 与 Windows，<b>没有 macOS 任务</b>——macOS 靠开发者本机。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">维度</th><th style="width:26%">macOS</th><th style="width:26%">Linux</th><th>Windows</th></tr></thead><tbody>
+<tr><td>安装</td><td><code>quickstart.sh</code></td><td><code>quickstart.sh</code>（Alpine 需系统依赖 + venv）</td><td><code>quickstart.ps1</code>（PS 5.1+），或 WSL</td></tr>
+<tr><td>终端 shell</td><td><code>/bin/bash</code></td><td><code>/bin/bash</code></td><td>Git Bash → PowerShell → cmd 自动解析（<code>limits.py:162</code>）</td></tr>
+<tr><td>PTY 持久会话</td><td><span class="pill ok">支持</span></td><td><span class="pill ok">支持</span></td><td><span class="pill warn">不支持但工具在位</span>：调用返回 <code>terminal_pty_* tools are POSIX-only</code>（<code>pty/tools.py:88</code>，刻意保持工具面统一）</td></tr>
+<tr><td>后台 job</td><td>支持</td><td>支持</td><td>支持；SIGTERM 相关断言 skip（无 POSIX 信号）</td></tr>
+<tr><td>进程终止</td><td>进程组 SIGKILL</td><td>同</td><td>无 POSIX 进程组；Claude Code run 用 <code>taskkill /T /F</code> 杀树</td></tr>
+<tr><td>打开文件夹 / 链接</td><td><code>open</code></td><td><code>xdg-open</code></td><td><code>explorer</code> / <code>cmd start</code></td></tr>
+<tr><td>进程存活探测</td><td><code>kill(0)</code></td><td>同</td><td><code>OpenProcess</code>（ctypes）</td></tr>
+<tr><td>ripgrep</td><td>PATH</td><td>PATH</td><td>有独立的 Windows 安装发现逻辑 + 专用测试</td></tr>
+<tr><td>技能脚本可执行位校验</td><td>有</td><td>有</td><td>跳过（Windows 无 POSIX 位）</td></tr>
+<tr><td>Codex OAuth（Keychain）</td><td><span class="pill ok">支持</span></td><td><span class="pill bad">不适用</span>（走其他认证）</td><td><span class="pill bad">不适用</span></td></tr>
+<tr><td>Claude Code queen</td><td>支持</td><td>支持</td><td>支持（新进程组 + taskkill）</td></tr>
+<tr><td>CI</td><td><span class="pill bad">无 job</span></td><td><span class="pill ok">ubuntu-latest</span></td><td><span class="pill ok">windows-latest</span>：POSIX 语义测试按平台 skip，另有 Windows 专用测试</td></tr>
+</tbody></table></div>
+<div class="sub">文档级限制：Claude Code Skills 路径要求 "Unix-based shell（macOS、Linux 或 WSL）"（<code>docs/getting-started.md</code>）。</div>
+</section>
+
+<section id="go"><h2><span class="num">02</span>go_hive</h2>
+<p>发布六目标（<code>darwin/linux/windows × amd64/arm64</code>，<code>CGO_ENABLED=0</code>），但"能编译"≠"能工作"：<code>make cross</code> 只编译，Go 测试没有 CI 任务（<code>make ci</code> 在本机 macOS 跑），release workflow 只 build 不 test。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">维度</th><th style="width:26%">macOS</th><th style="width:26%">Linux</th><th>Windows</th></tr></thead><tbody>
+<tr><td>构建 / 发布</td><td>tar.gz</td><td>tar.gz（musl 静态可跑 Alpine）</td><td>zip（<code>.exe</code>）；<b>无 install.ps1</b>，只有 install.sh</td></tr>
+<tr><td>验证</td><td><span class="pill ok">本机实测</span>（日常开发/服务运行）</td><td><span class="pill warn">仅编译</span></td><td><span class="pill warn">仅编译</span></td></tr>
+<tr><td><code>terminal_exec</code></td><td><code>/bin/bash -lc</code> 正常</td><td>同</td><td><span class="pill bad">缺口</span>：<code>exec.go:54</code> 硬编码 <code>/bin/bash</code>，无 Windows 分支 → 启动失败（报 <code>failed to start /bin/bash</code>）</td></tr>
+<tr><td><code>terminal_job_*</code></td><td>bash</td><td>bash</td><td>有正确解析：Git Bash → pwsh/powershell → ComSpec cmd，且刻意跳过 System32 的 WSL 启动器（<code>terminal_guard.go:72</code>）</td></tr>
+<tr><td>PTY</td><td>支持</td><td>支持</td><td>返回 unsupported，文案与 Python <b>逐字一致</b>（<code>terminal_pty_windows.go</code>）</td></tr>
+<tr><td>进程终止</td><td>进程组 SIGKILL</td><td>同</td><td><code>killProcessGroup</code> 只杀直接进程，孙进程不覆盖（<code>exec_windows.go</code>）</td></tr>
+<tr><td>打开路径</td><td><code>open</code></td><td><code>xdg-open</code></td><td><code>explorer</code>（<code>internal/platform/open.go</code>，与 Python 对齐）</td></tr>
+<tr><td>Go 测试 CI</td><td colspan="3"><span class="pill bad">无</span>：主仓 <code>ci.yml</code> 不跑 Go；release 矩阵只交叉编译六平台</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="layers"><h2><span class="num">03</span>"一致吗"——分三层看</h2>
+<div class="grid g3">
+<div class="card"><div class="k">第一层 · 表面</div><div class="v">一致</div><div class="d">工具名与 API 面按平台统一：Windows 上 PTY 工具照样注册、返回同一条错误文案（Python 与 Go 逐字相同），这是刻意设计——模型看到的工具面不随平台变化。</div></div>
+<div class="card"><div class="k">第二层 · 行为</div><div class="v">有意差异</div><div class="d">shell 解析链、进程终止语义、路径/权限模型、可执行位校验、认证后端（Codex Keychain 仅 macOS）都按平台分支。这是上游的有意行为，不是缺陷。</div></div>
+<div class="card"><div class="k">第三层 · 验证</div><div class="v">差最多</div><div class="d">Python 在 Windows 有真实 CI（另有 Windows 专用测试）；Go 的 Windows/Linux 只有交叉编译。Go 的 Windows 属于"未达标"——terminal_exec 在原生 Windows 不可用。</div></div>
+</div>
+</section>
+
+<section id="gaps"><h2><span class="num">04</span>缺口清单（PLAT-01 … PLAT-10）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:8%">编号</th><th style="width:30%">问题</th><th style="width:26%">影响</th><th>证据 / 修法</th></tr></thead><tbody>
+<tr><td><code>PLAT-01</code></td><td>Go <code>terminal_exec</code> 硬编码 <code>/bin/bash</code></td><td>原生 Windows 核心工具不可用</td><td><code>internal/tools/builtin/exec.go:54</code>；修法：走 <code>terminalResolveShellSpec(true,"")</code>（job 已在用）</td></tr>
+<tr><td><code>PLAT-02</code></td><td>Go 无 Windows/Linux 运行时测试（无 CI，release 只 build）</td><td>平台行为回归无人守</td><td>主仓 <code>ci.yml</code> 无 Go job；<code>release.yml</code> 矩阵只编译</td></tr>
+<tr><td><code>PLAT-03</code></td><td>PTY 在 Windows 双端不支持</td><td>能力差异，<b>有意</b></td><td>Python <code>pty/tools.py:88</code>；Go <code>terminal_pty_windows.go</code>；文案一致</td></tr>
+<tr><td><code>PLAT-04</code></td><td>Python 无 macOS CI job</td><td>macOS 回归靠本机</td><td><code>ci.yml</code> matrix = ubuntu + windows</td></tr>
+<tr><td><code>PLAT-05</code></td><td>Codex Keychain OAuth 仅 macOS</td><td>Windows/Linux 该功能不可用</td><td><code>agent_loader.py</code> 三处 <code>platform.system() != "Darwin"</code></td></tr>
+<tr><td><code>PLAT-06</code></td><td>Claude Code Skills 路径要求 Unix shell</td><td>Windows 需 WSL</td><td><code>docs/getting-started.md</code> 明示</td></tr>
+<tr><td><code>PLAT-07</code></td><td>Go 发布无 Windows 安装脚本</td><td>Windows 手动解压 zip</td><td><code>release.yml</code> 只产 install.sh；Python 有 quickstart.ps1</td></tr>
+<tr><td><code>PLAT-08</code></td><td>进程终止语义不同（孙进程）</td><td>Windows 上后台进程可能残留</td><td><code>exec_windows.go</code>（Go）；Python 用 taskkill /T 覆盖 Claude Code 树</td></tr>
+<tr><td><code>PLAT-09</code></td><td>技能 scripts/ 可执行位校验在 Windows 跳过</td><td>检查项差异（无 POSIX 位可查）</td><td><code>skills/validator.py:128</code></td></tr>
+<tr><td><code>PLAT-10</code></td><td>Browser Bridge 未在 Windows/Linux 实测</td><td>loopback + 扩展理论跨平台，未验证</td><td>Go 侧主服务已接线并在 macOS + 真实 Chrome 实跑；Windows/Linux 仍未实机</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>PLAT-01 是唯一"明确不可用"级别的缺口</b>；其余要么是有意差异（PLAT-03/08/09）、要么是验证/打包缺口。在 PLAT-01 修复并上 Windows 运行时 CI 之前，<b>不能说 go_hive 支持 Windows</b>。</div>
+</section>
+
+<section id="evidence"><h2><span class="num">05</span>证据与复现命令</h2>
+<pre># 平台矩阵与交叉编译目标
+grep -n 'PLATFORMS' go_hive/go-hive/Makefile            # 六目标
+sed -n '175,210p' .github/workflows/release.yml         # release 只 build
+
+# Python CI 平台
+grep -n 'os: \[' .github/workflows/ci.yml               # ubuntu / windows，无 macOS
+
+# Go Windows 缺口
+sed -n '50,62p' go_hive/go-hive/internal/tools/builtin/exec.go          # /bin/bash 硬编码
+sed -n '66,92p' go_hive/go-hive/internal/tools/builtin/terminal_guard.go # job 的 Windows 解析
+
+# PTY 双端一致性
+grep -n 'POSIX-only' go_hive/go-hive/internal/tools/builtin/terminal_pty_windows.go
+sed -n '86,100p' tools/src/terminal_tools/pty/tools.py</pre>
+</section>
+
+<section id="verdict"><h2><span class="num">06</span>结论</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">平台</th><th style="width:42%">Python hive</th><th>go_hive</th></tr></thead><tbody>
+<tr><td>macOS</td><td><span class="pill ok">可用</span>（本机日常验证；无 CI）</td><td><span class="pill ok">可用</span>（唯一实测平台）</td></tr>
+<tr><td>Linux</td><td><span class="pill ok">支持</span>（CI 实测）</td><td><span class="pill warn">大概率可用、未验证</span>（有 bash；无运行时测试）</td></tr>
+<tr><td>Windows</td><td><span class="pill warn">支持但有差异</span>（CI 实测；PTY/Keychain 等除外）</td><td><span class="pill bad">未达标</span>（terminal_exec /bin/bash 不可用；仅编译验证）</td></tr>
+</tbody></table></div>
+</section>
+
+<section><h2><span class="num">07</span>相关文档</h2>
+<div class="callout info"><a href="alignment-dimensions.html">对齐维度矩阵</a>（第 16 维=平台/发布）· <a href="module-interfaces.html">接口不变量</a> · <a href="surface-tracking-matrix.html">外观对齐矩阵</a> · <a href="browser-bridge.html">Browser Bridge</a> · <code>docs/environment-setup.md</code>（安装指南，含 Windows/Alpine）· <code>docs/getting-started.md</code>。</div>
+</section>
+
+<footer>生成：2026-11-20 18:18 CST · 依据：本机 macOS 实测 + CI 配置 + 源码；Windows/Linux 未实机运行 · 缺口编号 PLAT-01…10 随修复更新（修复后标 已修，不删行）· 相关：<a href="alignment-dimensions.html">alignment-dimensions.html</a> · <a href="module-interfaces.html">module-interfaces.html</a>。</footer>
+</div></body></html>

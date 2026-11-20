@@ -1,11 +1,14 @@
 package agentloop
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/aden-hive/hive-go/internal/llm"
 )
 
 func toolCallWithName(id, name string) map[string]any {
@@ -1044,5 +1047,118 @@ func TestHoistToolResultImagesStoredContentSurvives(t *testing.T) {
 	last := conv.messages[len(conv.messages)-1]
 	if !reflect.DeepEqual(last.ImageContent, []map[string]any{hoistImgA}) {
 		t.Fatalf("stored image content = %#v", last.ImageContent)
+	}
+}
+
+// Parity-exempt: ChatMessage.ContentParts is the Go transport seam; upstream
+// hands the same blocks to LiteLLM, which has no Go-side test target.
+func TestToChatMessagesPreservesImageBlocks(t *testing.T) {
+	msgs := screenshotTurn(t, "anthropic/claude-opus-4-6")
+	chats := toChatMessages(msgs)
+
+	var toolChat *llm.ChatMessage
+	for i := range chats {
+		if chats[i].Role == RoleTool {
+			toolChat = &chats[i]
+		}
+	}
+	if toolChat == nil {
+		t.Fatal("no tool message")
+	}
+	if len(toolChat.ContentParts) == 0 {
+		t.Fatalf("tool ContentParts empty; image blocks were flattened away")
+	}
+	if !reflect.DeepEqual(toolChat.ContentParts[1], hoistImgA) {
+		t.Fatalf("tool ContentParts = %#v", toolChat.ContentParts)
+	}
+	if toolChat.Content != `{"ok": true}` {
+		t.Fatalf("tool text projection = %q", toolChat.Content)
+	}
+}
+
+// Parity-exempt: the capability gate serializes blocks for text-only models,
+// a Go-side replacement for upstream's caption subagent; upstream has no test
+// for an explicit not-delivered placeholder.
+func TestToChatMessagesGatesImageForTextOnlyModel(t *testing.T) {
+	msgs := screenshotTurn(t, "deepseek-v4-pro")
+	serialized, err := json.Marshal(msgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(serialized), "image_url") {
+		t.Fatalf("image block survived for a text-only model: %s", serialized)
+	}
+	if !strings.Contains(string(serialized), "not delivered") {
+		t.Fatalf("no explicit not-delivered note: %s", serialized)
+	}
+	chats := toChatMessages(msgs)
+	for _, chat := range chats {
+		if len(chat.ContentParts) == 0 {
+			continue
+		}
+		for _, block := range chat.ContentParts {
+			if block["type"] == "image_url" {
+				t.Fatalf("gated chat still carries an image block: %#v", block)
+			}
+		}
+	}
+}
+
+// Parity-exempt: PDF capability gating is Go-side; upstream relies on LiteLLM
+// to remap the file block and has no unsupported-transport test.
+func TestToChatMessagesGatesPDFForUnsupportedModel(t *testing.T) {
+	conv := NewNodeConversation("sys")
+	if _, err := conv.AddUserMessage("read the pdf", UserMessageOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conv.AddAssistantMessage("", []map[string]any{toolCallWithName("c1", "attach_file")}, AssistantMessageOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	pdfBlock := map[string]any{
+		"type": "file",
+		"file": map[string]any{
+			"file_data": "data:application/pdf;base64,JVBERi0=",
+			"filename":  "doc.pdf",
+		},
+	}
+	if _, err := conv.AddToolResult("c1", `{"attached": []}`, ToolResultOptions{ImageContent: []map[string]any{pdfBlock}}); err != nil {
+		t.Fatal(err)
+	}
+
+	unsupported := conv.ToLLMMessages("ollama/llama3")
+	serialized, err := json.Marshal(unsupported)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(serialized), "application/pdf") {
+		t.Fatalf("pdf block survived for a model that cannot take it: %s", serialized)
+	}
+	if !strings.Contains(string(serialized), "attachment not delivered") {
+		t.Fatalf("no explicit pdf not-delivered note: %s", serialized)
+	}
+
+	supported := conv.ToLLMMessages("openai/gpt-5.4")
+	found := false
+	for _, m := range supported {
+		for _, block := range contentBlocks(m["content"]) {
+			if block["type"] == "file" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("openai model lost the pdf block: %#v", supported)
+	}
+	chats := toChatMessages(supported)
+	pdfParts := 0
+	for _, chat := range chats {
+		for _, block := range chat.ContentParts {
+			if block["type"] == "file" {
+				pdfParts++
+			}
+		}
+	}
+	if pdfParts != 1 {
+		t.Fatalf("pdf ContentParts = %d, want 1", pdfParts)
 	}
 }

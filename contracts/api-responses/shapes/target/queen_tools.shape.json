@@ -1,0 +1,31 @@
+{
+  "endpoint": "queen_tools",
+  "shape": {
+    "categories": "array",
+    "categories[].always_enabled": "boolean",
+    "categories[].in_role_default": "boolean",
+    "categories[].name": "string",
+    "categories[].tools": "array",
+    "categories[].tools[]": "string",
+    "connected_providers": "array",
+    "enabled_mcp_tools": "array",
+    "enabled_mcp_tools[]": "string",
+    "is_role_default": "boolean",
+    "lifecycle": "array",
+    "mcp_servers": "array",
+    "queen_id": "string",
+    "stale": "boolean",
+    "synthetic": "array",
+    "synthetic[].description": "string",
+    "synthetic[].editable": "boolean",
+    "synthetic[].name": "string"
+  },
+  "counts": {
+    "categories": 18,
+    "connected_providers": 0,
+    "enabled_mcp_tools": 24,
+    "lifecycle": 0,
+    "mcp_servers": 0,
+    "synthetic": 1
+  }
+}

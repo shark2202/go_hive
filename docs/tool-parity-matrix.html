@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive ↔ go_hive 工具追踪矩阵</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mobile-hint{display:none;color:var(--muted);font-size:11.5px;margin:-4px 0 8px}
+@media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g4,.g3,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+@media(max-width:640px){
+  .mobile-hint{display:block}
+  section:not(#integrations) table{min-width:720px}
+  #integrations .tablewrap{overflow:visible;border:0;background:transparent;border-radius:0}
+  #integrations table,#integrations tbody,#integrations tr,#integrations td{display:block;width:100%}
+  #integrations thead{display:none}
+  #integrations tr{background:var(--panel);border:1px solid var(--line);border-radius:11px;margin:10px 0;padding:10px}
+  #integrations td{border:0;padding:3px 0;display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px;font-size:12.5px}
+  #integrations td::before{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding-top:2px}
+  #integrations td:nth-child(1)::before{content:"上游模块"}
+  #integrations td:nth-child(2)::before{content:"Go tool"}
+  #integrations td:nth-child(3)::before{content:"上游 actions"}
+  #integrations td:nth-child(4)::before{content:"Go actions"}
+  #integrations td:nth-child(5)::before{content:"状态 / 缺口"}
+  #integrations td:nth-child(6)::before{content:"Action"}
+  #integrations td.num{text-align:left}
+  #integrations td .pill{display:inline-flex}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:22px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px} .missing{color:#f2a3a3}
+details{margin:0} summary{cursor:pointer;color:var(--accent2);font-size:12px} details[open] summary{margin-bottom:4px}
+#filter{width:100%;margin:16px 0;padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:14px;outline:none} #filter:focus{border-color:#3a5a80}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Tool Traceability</div><h1>Hive ↔ go_hive <span>工具追踪矩阵</span></h1>
+<p class="lede">把上游 Hive 的工具面与 go_hive 已注册工具逐项对齐：<b>103 个集成模块 / 865 个 action</b>、浏览器桥、核心会话工具、Queen/Colony 工具与动态 MCP。每一行都给出上游来源、Go 对应、缺口和状态；未实现/未验证不写成可用。</p>
+<div class="meta"><span>生成：<b>2026-11-21 00:19 CST</b></span><span>Go HEAD：<b>40945349</b></span><span>来源：<b>上游 @mcp.tool 扫描 + Go session catalogue dump + PARITY.md</b></span></div>
+<div class="toc"><a href="#summary">总览</a><a href="#integrations">集成矩阵</a><a href="#core">核心工具</a><a href="#skills">Skills</a><a href="#browser">Browser Bridge</a><a href="#queen">Queen/Colony</a><a href="#gaps">缺口与边界</a></div></header>
+
+<section id="summary"><h2><span class="num">00</span>总览</h2><div class="grid g4">
+<div class="card"><div class="k">集成模块</div><div class="v">103 / 103</div><div class="d">上游可用模块全部有 Go 工具；104 个目录中 file_system_toolkits 只是 helper</div></div>
+<div class="card"><div class="k">集成 Action</div><div class="v">863 / 865</div><div class="d">仅 csv_sql / excel_sql 有意排除（DuckDB/cgo）</div></div>
+<div class="card"><div class="k">默认会话工具</div><div class="v">137</div><div class="d">默认配置下（扫描器/发件人/queen mail 关闭）；含 chart_render、csv/excel 同名别名、browser_setup</div></div>
+<div class="card"><div class="k">浏览器工具</div><div class="v">22 / 22 active</div><div class="d">33 个上游定义；serve 自动拉起 bridge 子进程 + hive-browser CLI + control RPC 14831；真实 Chrome 已跑通；模型经 terminal 调 CLI（与上游同款）</div></div></div>
+<div class="callout info"><b>Skill 面：</b>3 个 agent 工具（<code>write_skill</code>/<code>skill_view</code>/<code>list_skills</code>）+ <b>20 个内置 Skill</b>（12 默认 + 8 preset）；矩阵主体是集成工具，Skill 单独见 §02B。<br><b>口径：</b>“已实现”= Go 代码路径存在且被测试覆盖；<b>不等于</b>真实第三方 API 已验证。需要凭据的模块统一按“未验证”看待。Browser Bridge 已用真实 Chrome 跑通 19 步 E2E（残余形状差异见 §03）。</div>
+<!-- TOOLS:START -->
+<div class="callout info"><b>自动核对：</b>刷新 2026-11-21 00:19 CST · HEAD <code>40945349</code> · 上游实测 <b>103 模块 / 865 action</b>（AST 扫描 <code>tools/src/aden_tools/tools/*</code>）· 与正文卡片 <span class="pill ok">一致</span>。Go 侧数字（集成 action 863 / 865、默认会话 137、browser 22/22）由正文人工维护，Go 变更后需同步；此块由 <code>refresh_surface_matrix.py</code> 定时重写。</div>
+<!-- TOOLS:END -->
+<div class="callout"><b>契约审计：</b>name / desc / input / output 与内置 Skill 的逐字一致性见 <a href="tool-consistency-audit.html">tool-consistency-audit.html</a>（2026-11-20：Skill 20/20 逐字一致；工具契约未达标，P0 缺陷 3 类）。</div>
+</section>
+
+<section id="integrations"><h2><span class="num">01</span>集成工具矩阵（103 模块）</h2>
+<p class="sub">状态：已实现 94、部分 2、默认关闭/功能开关 7。所有 action 名称来自上游 <code>@mcp.tool</code> 扫描；Go action 来自 session catalogue 的 <code>action</code> enum。</p>
+<input id="filter" placeholder="过滤：模块名 / tool / action / 状态…">
+<div class="tablewrap"><table><thead><tr><th style="width:17%">上游模块</th><th style="width:17%">Go tool / 证据</th><th style="width:7%">上游</th><th style="width:7%">Go</th><th style="width:14%">状态 / 缺口</th><th>Action（展开）</th></tr></thead><tbody>
+<tr data-search="account_info_tool get_account_info get_account_info">
+<td><code>account_info_tool</code></td>
+<td><code>get_account_info</code><div class="small">catalog_gen.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>1 action</summary><div class="small">上游：get_account_info</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="airtable_tool airtable airtable_list_records airtable_get_record airtable_create_records airtable_update_records airtable_list_bases airtable_get_base_schema airtable_delete_records airtable_search_records airtable_list_collaborators airtable_create_records airtable_delete_records airtable_get_base_schema airtable_get_record airtable_list_bases airtable_list_collaborators airtable_list_records airtable_search_records airtable_update_records">
+<td><code>airtable_tool</code></td>
+<td><code>airtable</code><div class="small">catalog_gen.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：airtable_list_records, airtable_get_record, airtable_create_records, airtable_update_records, airtable_list_bases, airtable_get_base_schema, airtable_delete_records, airtable_search_records, airtable_list_collaborators</div><div class="small">Go：airtable_create_records, airtable_delete_records, airtable_get_base_schema, airtable_get_record, airtable_list_bases, airtable_list_collaborators, airtable_list_records, airtable_search_records, airtable_update_records</div></details></td>
+</tr>
+<tr data-search="apify_tool apify apify_run_actor apify_get_run apify_get_dataset_items apify_list_actors apify_list_runs apify_get_kv_store_record apify_run_actor apify_get_run apify_get_dataset_items apify_list_actors apify_list_runs apify_get_kv_store_record">
+<td><code>apify_tool</code></td>
+<td><code>apify</code><div class="small">enrichment_search.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：apify_run_actor, apify_get_run, apify_get_dataset_items, apify_list_actors, apify_list_runs, apify_get_kv_store_record</div><div class="small">Go：apify_run_actor, apify_get_run, apify_get_dataset_items, apify_list_actors, apify_list_runs, apify_get_kv_store_record</div></details></td>
+</tr>
+<tr data-search="apollo_tool apollo apollo_enrich_person apollo_enrich_company apollo_search_people apollo_get_person_activities apollo_list_email_accounts apollo_bulk_enrich_people apollo_search_companies apollo_enrich_person apollo_enrich_company apollo_search_people apollo_get_person_activities apollo_list_email_accounts apollo_bulk_enrich_people apollo_search_companies">
+<td><code>apollo_tool</code></td>
+<td><code>apollo</code><div class="small">enrichment_search.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：apollo_enrich_person, apollo_enrich_company, apollo_search_people, apollo_get_person_activities, apollo_list_email_accounts, apollo_bulk_enrich_people, apollo_search_companies</div><div class="small">Go：apollo_enrich_person, apollo_enrich_company, apollo_search_people, apollo_get_person_activities, apollo_list_email_accounts, apollo_bulk_enrich_people, apollo_search_companies</div></details></td>
+</tr>
+<tr data-search="arxiv_tool arxiv search_papers download_paper search_papers download_paper">
+<td><code>arxiv_tool</code></td>
+<td><code>arxiv</code><div class="small">research_registry.go</div></td>
+<td class="num">2</td><td class="num">2</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>2 actions</summary><div class="small">上游：search_papers, download_paper</div><div class="small">Go：search_papers, download_paper</div></details></td>
+</tr>
+<tr data-search="asana_tool asana asana_list_workspaces asana_list_projects asana_list_tasks asana_get_task asana_create_task asana_search_tasks asana_update_task asana_add_comment asana_create_subtask asana_list_workspaces asana_list_projects asana_list_tasks asana_get_task asana_create_task asana_search_tasks asana_update_task asana_add_comment asana_create_subtask">
+<td><code>asana_tool</code></td>
+<td><code>asana</code><div class="small">asana.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：asana_list_workspaces, asana_list_projects, asana_list_tasks, asana_get_task, asana_create_task, asana_search_tasks, asana_update_task, asana_add_comment, asana_create_subtask</div><div class="small">Go：asana_list_workspaces, asana_list_projects, asana_list_tasks, asana_get_task, asana_create_task, asana_search_tasks, asana_update_task, asana_add_comment, asana_create_subtask</div></details></td>
+</tr>
+<tr data-search="attach_file_tool attach_file attach_file">
+<td><code>attach_file_tool</code></td>
+<td><code>attach_file</code><div class="small">extras_registry.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>1 action</summary><div class="small">上游：attach_file</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="attio_tool attio attio_record_list attio_record_get attio_record_create attio_record_update attio_record_assert attio_list_lists attio_list_entries_get attio_list_entry_create attio_list_entry_delete attio_task_create attio_task_list attio_task_get attio_task_delete attio_members_list attio_member_get attio_list_entries_get attio_list_entry_create attio_list_entry_delete attio_list_lists attio_member_get attio_members_list attio_record_assert attio_record_create attio_record_get attio_record_list attio_record_update attio_task_create attio_task_delete attio_task_get attio_task_list">
+<td><code>attio_tool</code></td>
+<td><code>attio</code><div class="small">attio.go</div></td>
+<td class="num">15</td><td class="num">15</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>15 actions</summary><div class="small">上游：attio_record_list, attio_record_get, attio_record_create, attio_record_update, attio_record_assert, attio_list_lists, attio_list_entries_get, attio_list_entry_create, attio_list_entry_delete, attio_task_create, attio_task_list, attio_task_get, attio_task_delete, attio_members_list, attio_member_get</div><div class="small">Go：attio_list_entries_get, attio_list_entry_create, attio_list_entry_delete, attio_list_lists, attio_member_get, attio_members_list, attio_record_assert, attio_record_create, attio_record_get, attio_record_list, attio_record_update, attio_task_create, attio_task_delete, attio_task_get, attio_task_list</div></details></td>
+</tr>
+<tr data-search="aws_s3_tool aws_s3 s3_list_buckets s3_list_objects s3_get_object s3_put_object s3_delete_object s3_copy_object s3_get_object_metadata s3_generate_presigned_url s3_list_buckets s3_list_objects s3_get_object s3_put_object s3_delete_object s3_copy_object s3_get_object_metadata s3_generate_presigned_url">
+<td><code>aws_s3_tool</code></td>
+<td><code>aws_s3</code><div class="small">devops_hosting.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：s3_list_buckets, s3_list_objects, s3_get_object, s3_put_object, s3_delete_object, s3_copy_object, s3_get_object_metadata, s3_generate_presigned_url</div><div class="small">Go：s3_list_buckets, s3_list_objects, s3_get_object, s3_put_object, s3_delete_object, s3_copy_object, s3_get_object_metadata, s3_generate_presigned_url</div></details></td>
+</tr>
+<tr data-search="azure_sql_tool azure_sql azure_sql_list_servers azure_sql_get_server azure_sql_list_databases azure_sql_get_database azure_sql_list_firewall_rules azure_sql_list_servers azure_sql_get_server azure_sql_list_databases azure_sql_get_database azure_sql_list_firewall_rules">
+<td><code>azure_sql_tool</code></td>
+<td><code>azure_sql</code><div class="small">azure_sql.go</div></td>
+<td class="num">5</td><td class="num">5</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>5 actions</summary><div class="small">上游：azure_sql_list_servers, azure_sql_get_server, azure_sql_list_databases, azure_sql_get_database, azure_sql_list_firewall_rules</div><div class="small">Go：azure_sql_list_servers, azure_sql_get_server, azure_sql_list_databases, azure_sql_get_database, azure_sql_list_firewall_rules</div></details></td>
+</tr>
+<tr data-search="bigquery_tool bigquery run_bigquery_query describe_dataset run_bigquery_query describe_dataset">
+<td><code>bigquery_tool</code></td>
+<td><code>bigquery</code><div class="small">bigquery.go</div></td>
+<td class="num">2</td><td class="num">2</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>2 actions</summary><div class="small">上游：run_bigquery_query, describe_dataset</div><div class="small">Go：run_bigquery_query, describe_dataset</div></details></td>
+</tr>
+<tr data-search="brevo_tool brevo brevo_send_email brevo_send_sms brevo_create_contact brevo_get_contact brevo_update_contact brevo_list_contacts brevo_delete_contact brevo_list_email_campaigns brevo_get_email_stats brevo_create_contact brevo_delete_contact brevo_get_contact brevo_get_email_stats brevo_list_contacts brevo_list_email_campaigns brevo_send_email brevo_send_sms brevo_update_contact">
+<td><code>brevo_tool</code></td>
+<td><code>brevo</code><div class="small">scheduling_chat.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：brevo_send_email, brevo_send_sms, brevo_create_contact, brevo_get_contact, brevo_update_contact, brevo_list_contacts, brevo_delete_contact, brevo_list_email_campaigns, brevo_get_email_stats</div><div class="small">Go：brevo_create_contact, brevo_delete_contact, brevo_get_contact, brevo_get_email_stats, brevo_list_contacts, brevo_list_email_campaigns, brevo_send_email, brevo_send_sms, brevo_update_contact</div></details></td>
+</tr>
+<tr data-search="calcom_tool calcom calcom_list_bookings calcom_get_booking calcom_create_booking calcom_cancel_booking calcom_get_availability calcom_update_schedule calcom_list_schedules calcom_list_event_types calcom_get_event_type calcom_cancel_booking calcom_create_booking calcom_get_availability calcom_get_booking calcom_get_event_type calcom_list_bookings calcom_list_event_types calcom_list_schedules calcom_update_schedule">
+<td><code>calcom_tool</code></td>
+<td><code>calcom</code><div class="small">scheduling_chat.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：calcom_list_bookings, calcom_get_booking, calcom_create_booking, calcom_cancel_booking, calcom_get_availability, calcom_update_schedule, calcom_list_schedules, calcom_list_event_types, calcom_get_event_type</div><div class="small">Go：calcom_cancel_booking, calcom_create_booking, calcom_get_availability, calcom_get_booking, calcom_get_event_type, calcom_list_bookings, calcom_list_event_types, calcom_list_schedules, calcom_update_schedule</div></details></td>
+</tr>
+<tr data-search="calendar_tool calendar calendar_list_events calendar_get_event calendar_create_event calendar_update_event calendar_delete_event calendar_list_calendars calendar_get_calendar calendar_check_availability calendar_list_events calendar_get_event calendar_create_event calendar_update_event calendar_delete_event calendar_list_calendars calendar_get_calendar calendar_check_availability">
+<td><code>calendar_tool</code></td>
+<td><code>calendar</code><div class="small">google_workspace.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：calendar_list_events, calendar_get_event, calendar_create_event, calendar_update_event, calendar_delete_event, calendar_list_calendars, calendar_get_calendar, calendar_check_availability</div><div class="small">Go：calendar_list_events, calendar_get_event, calendar_create_event, calendar_update_event, calendar_delete_event, calendar_list_calendars, calendar_get_calendar, calendar_check_availability</div></details></td>
+</tr>
+<tr data-search="calendly_tool calendly calendly_get_current_user calendly_list_event_types calendly_list_scheduled_events calendly_get_scheduled_event calendly_list_invitees calendly_cancel_event calendly_list_webhooks calendly_get_event_type calendly_cancel_event calendly_get_current_user calendly_get_event_type calendly_get_scheduled_event calendly_list_event_types calendly_list_invitees calendly_list_scheduled_events calendly_list_webhooks">
+<td><code>calendly_tool</code></td>
+<td><code>calendly</code><div class="small">scheduling_chat.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：calendly_get_current_user, calendly_list_event_types, calendly_list_scheduled_events, calendly_get_scheduled_event, calendly_list_invitees, calendly_cancel_event, calendly_list_webhooks, calendly_get_event_type</div><div class="small">Go：calendly_cancel_event, calendly_get_current_user, calendly_get_event_type, calendly_get_scheduled_event, calendly_list_event_types, calendly_list_invitees, calendly_list_scheduled_events, calendly_list_webhooks</div></details></td>
+</tr>
+<tr data-search="cloudflare_tool cloudflare cloudflare_list_zones cloudflare_get_zone cloudflare_get_zone_settings cloudflare_list_zone_custom_pages cloudflare_get_ssl_verification cloudflare_list_zone_certificates cloudflare_list_zone_subscriptions cloudflare_get_dnssec_status cloudflare_update_zone_setting cloudflare_list_dns_records cloudflare_get_dns_record cloudflare_list_dns_record_scan cloudflare_get_dns_settings cloudflare_list_dns_analytics_report cloudflare_check_domain_dns_health cloudflare_create_dns_record cloudflare_update_dns_record cloudflare_delete_dns_record cloudflare_get_zone_analytics cloudflare_get_top_analytics cloudflare_get_security_analytics cloudflare_get_cache_analytics cloudflare_get_performance_analytics cloudflare_get_http_analytics_report cloudflare_list_firewall_events cloudflare_get_security_settings cloudflare_list_page_rules cloudflare_list_waf_rulesets cloudflare_get_bot_management_settings cloudflare_list_managed_transforms cloudflare_get_ddos_protection_settings cloudflare_create_firewall_rule cloudflare_delete_firewall_rule cloudflare_get_speed_settings cloudflare_get_cache_settings cloudflare_get_http_config cloudflare_get_network_settings cloudflare_purge_cache_all cloudflare_purge_cache_files cloudflare_list_advanced_services cloudflare_list_accounts cloudflare_get_account_details cloudflare_list_account_members cloudflare_invite_account_member cloudflare_delete_account_member cloudflare_list_custom_hostnames cloudflare_list_audit_logs cloudflare_list_firewall_rules cloudflare_list_access_applications cloudflare_list_r2_buckets cloudflare_list_pages_projects cloudflare_create_access_policy cloudflare_create_worker_route cloudflare_set_ssl_mode cloudflare_list_zones cloudflare_get_zone cloudflare_get_zone_settings cloudflare_list_zone_custom_pages cloudflare_get_ssl_verification cloudflare_list_zone_certificates cloudflare_list_zone_subscriptions cloudflare_get_dnssec_status cloudflare_update_zone_setting cloudflare_list_dns_records cloudflare_get_dns_record cloudflare_list_dns_record_scan cloudflare_get_dns_settings cloudflare_list_dns_analytics_report cloudflare_check_domain_dns_health cloudflare_create_dns_record cloudflare_update_dns_record cloudflare_delete_dns_record cloudflare_get_zone_analytics cloudflare_get_top_analytics cloudflare_get_security_analytics cloudflare_get_cache_analytics cloudflare_get_performance_analytics cloudflare_get_http_analytics_report cloudflare_list_firewall_events cloudflare_get_security_settings cloudflare_list_page_rules cloudflare_list_waf_rulesets cloudflare_get_bot_management_settings cloudflare_list_managed_transforms cloudflare_get_ddos_protection_settings cloudflare_create_firewall_rule cloudflare_delete_firewall_rule cloudflare_list_firewall_rules cloudflare_get_speed_settings cloudflare_get_cache_settings cloudflare_get_http_config cloudflare_get_network_settings cloudflare_purge_cache_all cloudflare_purge_cache_files cloudflare_list_advanced_services cloudflare_list_accounts cloudflare_get_account_details cloudflare_list_account_members cloudflare_invite_account_member cloudflare_delete_account_member cloudflare_list_audit_logs cloudflare_list_custom_hostnames cloudflare_list_access_applications cloudflare_list_r2_buckets cloudflare_list_pages_projects cloudflare_create_access_policy cloudflare_create_worker_route cloudflare_set_ssl_mode">
+<td><code>cloudflare_tool</code></td>
+<td><code>cloudflare</code><div class="small">cloudflare.go</div></td>
+<td class="num">54</td><td class="num">54</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>54 actions</summary><div class="small">上游：cloudflare_list_zones, cloudflare_get_zone, cloudflare_get_zone_settings, cloudflare_list_zone_custom_pages, cloudflare_get_ssl_verification, cloudflare_list_zone_certificates, cloudflare_list_zone_subscriptions, cloudflare_get_dnssec_status, cloudflare_update_zone_setting, cloudflare_list_dns_records, cloudflare_get_dns_record, cloudflare_list_dns_record_scan, cloudflare_get_dns_settings, cloudflare_list_dns_analytics_report, cloudflare_check_domain_dns_health, cloudflare_create_dns_record, cloudflare_update_dns_record, cloudflare_delete_dns_record, cloudflare_get_zone_analytics, cloudflare_get_top_analytics, cloudflare_get_security_analytics, cloudflare_get_cache_analytics, cloudflare_get_performance_analytics, cloudflare_get_http_analytics_report, cloudflare_list_firewall_events, cloudflare_get_security_settings, cloudflare_list_page_rules, cloudflare_list_waf_rulesets, cloudflare_get_bot_management_settings, cloudflare_list_managed_transforms, cloudflare_get_ddos_protection_settings, cloudflare_create_firewall_rule, cloudflare_delete_firewall_rule, cloudflare_get_speed_settings, cloudflare_get_cache_settings, cloudflare_get_http_config, cloudflare_get_network_settings, cloudflare_purge_cache_all, cloudflare_purge_cache_files, cloudflare_list_advanced_services, cloudflare_list_accounts, cloudflare_get_account_details, cloudflare_list_account_members, cloudflare_invite_account_member, cloudflare_delete_account_member, cloudflare_list_custom_hostnames, cloudflare_list_audit_logs, cloudflare_list_firewall_rules, cloudflare_list_access_applications, cloudflare_list_r2_buckets, cloudflare_list_pages_projects, cloudflare_create_access_policy, cloudflare_create_worker_route, cloudflare_set_ssl_mode</div><div class="small">Go：cloudflare_list_zones, cloudflare_get_zone, cloudflare_get_zone_settings, cloudflare_list_zone_custom_pages, cloudflare_get_ssl_verification, cloudflare_list_zone_certificates, cloudflare_list_zone_subscriptions, cloudflare_get_dnssec_status, cloudflare_update_zone_setting, cloudflare_list_dns_records, cloudflare_get_dns_record, cloudflare_list_dns_record_scan, cloudflare_get_dns_settings, cloudflare_list_dns_analytics_report, cloudflare_check_domain_dns_health, cloudflare_create_dns_record, cloudflare_update_dns_record, cloudflare_delete_dns_record, cloudflare_get_zone_analytics, cloudflare_get_top_analytics, cloudflare_get_security_analytics, cloudflare_get_cache_analytics, cloudflare_get_performance_analytics, cloudflare_get_http_analytics_report, cloudflare_list_firewall_events, cloudflare_get_security_settings, cloudflare_list_page_rules, cloudflare_list_waf_rulesets, cloudflare_get_bot_management_settings, cloudflare_list_managed_transforms, cloudflare_get_ddos_protection_settings, cloudflare_create_firewall_rule, cloudflare_delete_firewall_rule, cloudflare_list_firewall_rules, cloudflare_get_speed_settings, cloudflare_get_cache_settings, cloudflare_get_http_config, cloudflare_get_network_settings, cloudflare_purge_cache_all, cloudflare_purge_cache_files, cloudflare_list_advanced_services, cloudflare_list_accounts, cloudflare_get_account_details, cloudflare_list_account_members, cloudflare_invite_account_member, cloudflare_delete_account_member, cloudflare_list_audit_logs, cloudflare_list_custom_hostnames, cloudflare_list_access_applications, cloudflare_list_r2_buckets, cloudflare_list_pages_projects, cloudflare_create_access_policy, cloudflare_create_worker_route, cloudflare_set_ssl_mode</div></details></td>
+</tr>
+<tr data-search="cloudinary_tool cloudinary cloudinary_upload cloudinary_list_resources cloudinary_get_resource cloudinary_delete_resource cloudinary_search cloudinary_get_usage cloudinary_rename_resource cloudinary_add_tag cloudinary_upload cloudinary_list_resources cloudinary_get_resource cloudinary_delete_resource cloudinary_search cloudinary_get_usage cloudinary_rename_resource cloudinary_add_tag">
+<td><code>cloudinary_tool</code></td>
+<td><code>cloudinary</code><div class="small">cloudinary.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：cloudinary_upload, cloudinary_list_resources, cloudinary_get_resource, cloudinary_delete_resource, cloudinary_search, cloudinary_get_usage, cloudinary_rename_resource, cloudinary_add_tag</div><div class="small">Go：cloudinary_upload, cloudinary_list_resources, cloudinary_get_resource, cloudinary_delete_resource, cloudinary_search, cloudinary_get_usage, cloudinary_rename_resource, cloudinary_add_tag</div></details></td>
+</tr>
+<tr data-search="confluence_tool confluence confluence_list_spaces confluence_list_pages confluence_get_page confluence_create_page confluence_search confluence_update_page confluence_delete_page confluence_get_page_children confluence_list_spaces confluence_list_pages confluence_get_page confluence_create_page confluence_search confluence_update_page confluence_delete_page confluence_get_page_children">
+<td><code>confluence_tool</code></td>
+<td><code>confluence</code><div class="small">confluence.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：confluence_list_spaces, confluence_list_pages, confluence_get_page, confluence_create_page, confluence_search, confluence_update_page, confluence_delete_page, confluence_get_page_children</div><div class="small">Go：confluence_list_spaces, confluence_list_pages, confluence_get_page, confluence_create_page, confluence_search, confluence_update_page, confluence_delete_page, confluence_get_page_children</div></details></td>
+</tr>
+<tr data-search="csv_tool csv csv_read csv_write csv_append csv_info csv_sql csv_append csv_info csv_read csv_write">
+<td><code>csv_tool</code></td>
+<td><code>csv</code><div class="small">catalog_gen.go</div></td>
+<td class="num">5</td><td class="num">4</td>
+<td><span class="pill warn">部分（有意排除）</span><div class="small missing">缺：csv_sql</div></td>
+<td><details><summary>5 actions</summary><div class="small">上游：csv_read, csv_write, csv_append, csv_info, csv_sql</div><div class="small">Go：csv_append, csv_info, csv_read, csv_write</div></details></td>
+</tr>
+<tr data-search="databricks_tool databricks databricks_sql_query databricks_list_jobs databricks_run_job databricks_get_run databricks_list_clusters databricks_start_cluster databricks_terminate_cluster databricks_list_workspace databricks_sql_query databricks_list_jobs databricks_run_job databricks_get_run databricks_list_clusters databricks_start_cluster databricks_terminate_cluster databricks_list_workspace">
+<td><code>databricks_tool</code></td>
+<td><code>databricks</code><div class="small">databricks.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：databricks_sql_query, databricks_list_jobs, databricks_run_job, databricks_get_run, databricks_list_clusters, databricks_start_cluster, databricks_terminate_cluster, databricks_list_workspace</div><div class="small">Go：databricks_sql_query, databricks_list_jobs, databricks_run_job, databricks_get_run, databricks_list_clusters, databricks_start_cluster, databricks_terminate_cluster, databricks_list_workspace</div></details></td>
+</tr>
+<tr data-search="discord_tool discord discord_list_guilds discord_list_channels discord_send_message discord_get_messages discord_get_channel discord_create_reaction discord_delete_message discord_create_reaction discord_delete_message discord_get_channel discord_get_messages discord_list_channels discord_list_guilds discord_send_message">
+<td><code>discord_tool</code></td>
+<td><code>discord</code><div class="small">scheduling_chat.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：discord_list_guilds, discord_list_channels, discord_send_message, discord_get_messages, discord_get_channel, discord_create_reaction, discord_delete_message</div><div class="small">Go：discord_create_reaction, discord_delete_message, discord_get_channel, discord_get_messages, discord_list_channels, discord_list_guilds, discord_send_message</div></details></td>
+</tr>
+<tr data-search="dns_security_scanner dns_security_scan dns_security_scan">
+<td><code>dns_security_scanner</code></td>
+<td><code>dns_security_scan</code><div class="small">research_registry.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：dns_security_scan</div></td>
+<td><details><summary>1 action</summary><div class="small">上游：dns_security_scan</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="docker_hub_tool docker_hub docker_hub_search docker_hub_list_repos docker_hub_list_tags docker_hub_get_repo docker_hub_get_tag_detail docker_hub_delete_tag docker_hub_list_webhooks docker_hub_search docker_hub_list_repos docker_hub_list_tags docker_hub_get_repo docker_hub_get_tag_detail docker_hub_delete_tag docker_hub_list_webhooks">
+<td><code>docker_hub_tool</code></td>
+<td><code>docker_hub</code><div class="small">devops_hosting.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：docker_hub_search, docker_hub_list_repos, docker_hub_list_tags, docker_hub_get_repo, docker_hub_get_tag_detail, docker_hub_delete_tag, docker_hub_list_webhooks</div><div class="small">Go：docker_hub_search, docker_hub_list_repos, docker_hub_list_tags, docker_hub_get_repo, docker_hub_get_tag_detail, docker_hub_delete_tag, docker_hub_list_webhooks</div></details></td>
+</tr>
+<tr data-search="duckduckgo_tool duckduckgo duckduckgo_search duckduckgo_news duckduckgo_images duckduckgo_search duckduckgo_news duckduckgo_images">
+<td><code>duckduckgo_tool</code></td>
+<td><code>duckduckgo</code><div class="small">research_registry.go</div></td>
+<td class="num">3</td><td class="num">3</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>3 actions</summary><div class="small">上游：duckduckgo_search, duckduckgo_news, duckduckgo_images</div><div class="small">Go：duckduckgo_search, duckduckgo_news, duckduckgo_images</div></details></td>
+</tr>
+<tr data-search="email_tool email send_email gmail_reply_email send_email gmail_reply_email">
+<td><code>email_tool</code></td>
+<td><code>email</code><div class="small">email.go</div></td>
+<td class="num">2</td><td class="num">2</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>2 actions</summary><div class="small">上游：send_email, gmail_reply_email</div><div class="small">Go：send_email, gmail_reply_email</div></details></td>
+</tr>
+<tr data-search="exa_search_tool exa_search exa_search exa_find_similar exa_get_contents exa_answer exa_search_news exa_search_papers exa_search_companies exa_search exa_find_similar exa_get_contents exa_answer exa_search_news exa_search_papers exa_search_companies">
+<td><code>exa_search_tool</code></td>
+<td><code>exa_search</code><div class="small">enrichment_search.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：exa_search, exa_find_similar, exa_get_contents, exa_answer, exa_search_news, exa_search_papers, exa_search_companies</div><div class="small">Go：exa_search, exa_find_similar, exa_get_contents, exa_answer, exa_search_news, exa_search_papers, exa_search_companies</div></details></td>
+</tr>
+<tr data-search="excel_tool excel excel_read excel_write excel_append excel_info excel_sheet_list excel_sql excel_search excel_append excel_info excel_read excel_search excel_sheet_list excel_write">
+<td><code>excel_tool</code></td>
+<td><code>excel</code><div class="small">excel.go</div></td>
+<td class="num">7</td><td class="num">6</td>
+<td><span class="pill warn">部分（有意排除）</span><div class="small missing">缺：excel_sql</div></td>
+<td><details><summary>7 actions</summary><div class="small">上游：excel_read, excel_write, excel_append, excel_info, excel_sheet_list, excel_sql, excel_search</div><div class="small">Go：excel_append, excel_info, excel_read, excel_search, excel_sheet_list, excel_write</div></details></td>
+</tr>
+<tr data-search="freshdesk_tool freshdesk freshdesk_list_tickets freshdesk_filter_tickets freshdesk_list_ticket_conversations freshdesk_get_ticket freshdesk_create_ticket freshdesk_update_ticket freshdesk_add_ticket_reply freshdesk_list_contacts freshdesk_get_contact freshdesk_create_contact freshdesk_update_contact freshdesk_list_agents freshdesk_get_agent freshdesk_list_groups freshdesk_get_group freshdesk_list_companies freshdesk_get_company freshdesk_list_tickets freshdesk_filter_tickets freshdesk_list_ticket_conversations freshdesk_get_ticket freshdesk_create_ticket freshdesk_update_ticket freshdesk_add_ticket_reply freshdesk_list_contacts freshdesk_get_contact freshdesk_create_contact freshdesk_update_contact freshdesk_list_agents freshdesk_get_agent freshdesk_list_groups freshdesk_get_group freshdesk_list_companies freshdesk_get_company">
+<td><code>freshdesk_tool</code></td>
+<td><code>freshdesk</code><div class="small">freshdesk.go</div></td>
+<td class="num">17</td><td class="num">17</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>17 actions</summary><div class="small">上游：freshdesk_list_tickets, freshdesk_filter_tickets, freshdesk_list_ticket_conversations, freshdesk_get_ticket, freshdesk_create_ticket, freshdesk_update_ticket, freshdesk_add_ticket_reply, freshdesk_list_contacts, freshdesk_get_contact, freshdesk_create_contact, freshdesk_update_contact, freshdesk_list_agents, freshdesk_get_agent, freshdesk_list_groups, freshdesk_get_group, freshdesk_list_companies, freshdesk_get_company</div><div class="small">Go：freshdesk_list_tickets, freshdesk_filter_tickets, freshdesk_list_ticket_conversations, freshdesk_get_ticket, freshdesk_create_ticket, freshdesk_update_ticket, freshdesk_add_ticket_reply, freshdesk_list_contacts, freshdesk_get_contact, freshdesk_create_contact, freshdesk_update_contact, freshdesk_list_agents, freshdesk_get_agent, freshdesk_list_groups, freshdesk_get_group, freshdesk_list_companies, freshdesk_get_company</div></details></td>
+</tr>
+<tr data-search="github_tool github github_list_repos github_get_repo github_search_repos github_list_issues github_get_issue github_create_issue github_update_issue github_list_pull_requests github_get_pull_request github_create_pull_request github_search_code github_list_branches github_get_branch github_list_stargazers github_get_user_profile github_get_user_emails github_list_commits github_create_release github_list_workflow_runs github_create_issue github_create_pull_request github_create_release github_get_branch github_get_issue github_get_pull_request github_get_repo github_get_user_emails github_get_user_profile github_list_branches github_list_commits github_list_issues github_list_pull_requests github_list_repos github_list_stargazers github_list_workflow_runs github_search_code github_search_repos github_update_issue">
+<td><code>github_tool</code></td>
+<td><code>github</code><div class="small">catalog_gen.go</div></td>
+<td class="num">19</td><td class="num">19</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>19 actions</summary><div class="small">上游：github_list_repos, github_get_repo, github_search_repos, github_list_issues, github_get_issue, github_create_issue, github_update_issue, github_list_pull_requests, github_get_pull_request, github_create_pull_request, github_search_code, github_list_branches, github_get_branch, github_list_stargazers, github_get_user_profile, github_get_user_emails, github_list_commits, github_create_release, github_list_workflow_runs</div><div class="small">Go：github_create_issue, github_create_pull_request, github_create_release, github_get_branch, github_get_issue, github_get_pull_request, github_get_repo, github_get_user_emails, github_get_user_profile, github_list_branches, github_list_commits, github_list_issues, github_list_pull_requests, github_list_repos, github_list_stargazers, github_list_workflow_runs, github_search_code, github_search_repos, github_update_issue</div></details></td>
+</tr>
+<tr data-search="gitlab_tool gitlab gitlab_list_projects gitlab_get_project gitlab_list_issues gitlab_get_issue gitlab_create_issue gitlab_list_merge_requests gitlab_update_issue gitlab_get_merge_request gitlab_create_merge_request_note gitlab_list_projects gitlab_get_project gitlab_list_issues gitlab_get_issue gitlab_create_issue gitlab_list_merge_requests gitlab_update_issue gitlab_get_merge_request gitlab_create_merge_request_note">
+<td><code>gitlab_tool</code></td>
+<td><code>gitlab</code><div class="small">devops_hosting.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：gitlab_list_projects, gitlab_get_project, gitlab_list_issues, gitlab_get_issue, gitlab_create_issue, gitlab_list_merge_requests, gitlab_update_issue, gitlab_get_merge_request, gitlab_create_merge_request_note</div><div class="small">Go：gitlab_list_projects, gitlab_get_project, gitlab_list_issues, gitlab_get_issue, gitlab_create_issue, gitlab_list_merge_requests, gitlab_update_issue, gitlab_get_merge_request, gitlab_create_merge_request_note</div></details></td>
+</tr>
+<tr data-search="gmail_tool gmail gmail_list_messages gmail_get_message gmail_trash_message gmail_modify_message gmail_batch_modify_messages gmail_batch_get_messages gmail_create_draft gmail_get_signature gmail_list_labels gmail_create_label gmail_list_messages gmail_get_message gmail_trash_message gmail_modify_message gmail_batch_modify_messages gmail_batch_get_messages gmail_create_draft gmail_get_signature gmail_list_labels gmail_create_label">
+<td><code>gmail_tool</code></td>
+<td><code>gmail</code><div class="small">google_workspace.go</div></td>
+<td class="num">10</td><td class="num">10</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>10 actions</summary><div class="small">上游：gmail_list_messages, gmail_get_message, gmail_trash_message, gmail_modify_message, gmail_batch_modify_messages, gmail_batch_get_messages, gmail_create_draft, gmail_get_signature, gmail_list_labels, gmail_create_label</div><div class="small">Go：gmail_list_messages, gmail_get_message, gmail_trash_message, gmail_modify_message, gmail_batch_modify_messages, gmail_batch_get_messages, gmail_create_draft, gmail_get_signature, gmail_list_labels, gmail_create_label</div></details></td>
+</tr>
+<tr data-search="google_analytics_tool google_analytics ga_run_report ga_get_realtime ga_get_top_pages ga_get_traffic_sources ga_get_user_demographics ga_get_conversion_events ga_get_landing_pages ga_run_report ga_get_realtime ga_get_top_pages ga_get_traffic_sources ga_get_user_demographics ga_get_conversion_events ga_get_landing_pages">
+<td><code>google_analytics_tool</code></td>
+<td><code>google_analytics</code><div class="small">google_analytics.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：ga_run_report, ga_get_realtime, ga_get_top_pages, ga_get_traffic_sources, ga_get_user_demographics, ga_get_conversion_events, ga_get_landing_pages</div><div class="small">Go：ga_run_report, ga_get_realtime, ga_get_top_pages, ga_get_traffic_sources, ga_get_user_demographics, ga_get_conversion_events, ga_get_landing_pages</div></details></td>
+</tr>
+<tr data-search="google_docs_tool google_docs google_docs_create_document google_docs_get_document google_docs_insert_text google_docs_replace_all_text google_docs_insert_image google_docs_format_text google_docs_batch_update google_docs_create_list google_docs_add_comment google_docs_list_comments google_docs_export_content google_docs_create_document google_docs_get_document google_docs_insert_text google_docs_replace_all_text google_docs_insert_image google_docs_format_text google_docs_batch_update google_docs_create_list google_docs_add_comment google_docs_list_comments google_docs_export_content">
+<td><code>google_docs_tool</code></td>
+<td><code>google_docs</code><div class="small">google_workspace.go</div></td>
+<td class="num">11</td><td class="num">11</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>11 actions</summary><div class="small">上游：google_docs_create_document, google_docs_get_document, google_docs_insert_text, google_docs_replace_all_text, google_docs_insert_image, google_docs_format_text, google_docs_batch_update, google_docs_create_list, google_docs_add_comment, google_docs_list_comments, google_docs_export_content</div><div class="small">Go：google_docs_create_document, google_docs_get_document, google_docs_insert_text, google_docs_replace_all_text, google_docs_insert_image, google_docs_format_text, google_docs_batch_update, google_docs_create_list, google_docs_add_comment, google_docs_list_comments, google_docs_export_content</div></details></td>
+</tr>
+<tr data-search="google_maps_tool google_maps maps_geocode maps_reverse_geocode maps_directions maps_distance_matrix maps_place_details maps_place_search maps_geocode maps_reverse_geocode maps_directions maps_distance_matrix maps_place_details maps_place_search">
+<td><code>google_maps_tool</code></td>
+<td><code>google_maps</code><div class="small">web_intelligence.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：maps_geocode, maps_reverse_geocode, maps_directions, maps_distance_matrix, maps_place_details, maps_place_search</div><div class="small">Go：maps_geocode, maps_reverse_geocode, maps_directions, maps_distance_matrix, maps_place_details, maps_place_search</div></details></td>
+</tr>
+<tr data-search="google_search_console_tool google_search_console gsc_search_analytics gsc_list_sites gsc_list_sitemaps gsc_inspect_url gsc_submit_sitemap gsc_top_queries gsc_top_pages gsc_delete_sitemap gsc_search_analytics gsc_list_sites gsc_list_sitemaps gsc_inspect_url gsc_submit_sitemap gsc_top_queries gsc_top_pages gsc_delete_sitemap">
+<td><code>google_search_console_tool</code></td>
+<td><code>google_search_console</code><div class="small">google_analytics.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：gsc_search_analytics, gsc_list_sites, gsc_list_sitemaps, gsc_inspect_url, gsc_submit_sitemap, gsc_top_queries, gsc_top_pages, gsc_delete_sitemap</div><div class="small">Go：gsc_search_analytics, gsc_list_sites, gsc_list_sitemaps, gsc_inspect_url, gsc_submit_sitemap, gsc_top_queries, gsc_top_pages, gsc_delete_sitemap</div></details></td>
+</tr>
+<tr data-search="google_sheets_tool google_sheets google_sheets_get_spreadsheet google_sheets_create_spreadsheet google_sheets_get_values google_sheets_update_values google_sheets_append_values google_sheets_clear_values google_sheets_batch_update_values google_sheets_batch_clear_values google_sheets_add_sheet google_sheets_delete_sheet google_sheets_get_spreadsheet google_sheets_create_spreadsheet google_sheets_get_values google_sheets_update_values google_sheets_append_values google_sheets_clear_values google_sheets_batch_update_values google_sheets_batch_clear_values google_sheets_add_sheet google_sheets_delete_sheet">
+<td><code>google_sheets_tool</code></td>
+<td><code>google_sheets</code><div class="small">google_workspace.go</div></td>
+<td class="num">10</td><td class="num">10</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>10 actions</summary><div class="small">上游：google_sheets_get_spreadsheet, google_sheets_create_spreadsheet, google_sheets_get_values, google_sheets_update_values, google_sheets_append_values, google_sheets_clear_values, google_sheets_batch_update_values, google_sheets_batch_clear_values, google_sheets_add_sheet, google_sheets_delete_sheet</div><div class="small">Go：google_sheets_get_spreadsheet, google_sheets_create_spreadsheet, google_sheets_get_values, google_sheets_update_values, google_sheets_append_values, google_sheets_clear_values, google_sheets_batch_update_values, google_sheets_batch_clear_values, google_sheets_add_sheet, google_sheets_delete_sheet</div></details></td>
+</tr>
+<tr data-search="greenhouse_tool greenhouse greenhouse_list_jobs greenhouse_get_job greenhouse_list_candidates greenhouse_get_candidate greenhouse_list_applications greenhouse_get_application greenhouse_list_offers greenhouse_add_candidate_note greenhouse_list_scorecards greenhouse_list_jobs greenhouse_get_job greenhouse_list_candidates greenhouse_get_candidate greenhouse_list_applications greenhouse_get_application greenhouse_list_offers greenhouse_add_candidate_note greenhouse_list_scorecards">
+<td><code>greenhouse_tool</code></td>
+<td><code>greenhouse</code><div class="small">greenhouse.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：greenhouse_list_jobs, greenhouse_get_job, greenhouse_list_candidates, greenhouse_get_candidate, greenhouse_list_applications, greenhouse_get_application, greenhouse_list_offers, greenhouse_add_candidate_note, greenhouse_list_scorecards</div><div class="small">Go：greenhouse_list_jobs, greenhouse_get_job, greenhouse_list_candidates, greenhouse_get_candidate, greenhouse_list_applications, greenhouse_get_application, greenhouse_list_offers, greenhouse_add_candidate_note, greenhouse_list_scorecards</div></details></td>
+</tr>
+<tr data-search="http_headers_scanner http_headers_scan http_headers_scan">
+<td><code>http_headers_scanner</code></td>
+<td><code>http_headers_scan</code><div class="small">research_registry.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：http_headers_scan</div></td>
+<td><details><summary>1 action</summary><div class="small">上游：http_headers_scan</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="hubspot_tool hubspot hubspot_search_contacts hubspot_get_contact hubspot_create_contact hubspot_update_contact hubspot_search_companies hubspot_get_company hubspot_create_company hubspot_update_company hubspot_search_deals hubspot_get_deal hubspot_create_deal hubspot_update_deal hubspot_delete_object hubspot_list_associations hubspot_create_association hubspot_search_contacts hubspot_get_contact hubspot_create_contact hubspot_update_contact hubspot_search_companies hubspot_get_company hubspot_create_company hubspot_update_company hubspot_search_deals hubspot_get_deal hubspot_create_deal hubspot_update_deal hubspot_delete_object hubspot_list_associations hubspot_create_association">
+<td><code>hubspot_tool</code></td>
+<td><code>hubspot</code><div class="small">hubspot.go</div></td>
+<td class="num">15</td><td class="num">15</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>15 actions</summary><div class="small">上游：hubspot_search_contacts, hubspot_get_contact, hubspot_create_contact, hubspot_update_contact, hubspot_search_companies, hubspot_get_company, hubspot_create_company, hubspot_update_company, hubspot_search_deals, hubspot_get_deal, hubspot_create_deal, hubspot_update_deal, hubspot_delete_object, hubspot_list_associations, hubspot_create_association</div><div class="small">Go：hubspot_search_contacts, hubspot_get_contact, hubspot_create_contact, hubspot_update_contact, hubspot_search_companies, hubspot_get_company, hubspot_create_company, hubspot_update_company, hubspot_search_deals, hubspot_get_deal, hubspot_create_deal, hubspot_update_deal, hubspot_delete_object, hubspot_list_associations, hubspot_create_association</div></details></td>
+</tr>
+<tr data-search="huggingface_tool huggingface huggingface_search_models huggingface_get_model huggingface_search_datasets huggingface_get_dataset huggingface_search_spaces huggingface_whoami huggingface_run_inference huggingface_run_embedding huggingface_list_inference_endpoints huggingface_search_models huggingface_get_model huggingface_search_datasets huggingface_get_dataset huggingface_search_spaces huggingface_whoami huggingface_run_inference huggingface_run_embedding huggingface_list_inference_endpoints">
+<td><code>huggingface_tool</code></td>
+<td><code>huggingface</code><div class="small">ai_platform.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：huggingface_search_models, huggingface_get_model, huggingface_search_datasets, huggingface_get_dataset, huggingface_search_spaces, huggingface_whoami, huggingface_run_inference, huggingface_run_embedding, huggingface_list_inference_endpoints</div><div class="small">Go：huggingface_search_models, huggingface_get_model, huggingface_search_datasets, huggingface_get_dataset, huggingface_search_spaces, huggingface_whoami, huggingface_run_inference, huggingface_run_embedding, huggingface_list_inference_endpoints</div></details></td>
+</tr>
+<tr data-search="image_gen_tool image_generate image_generate">
+<td><code>image_gen_tool</code></td>
+<td><code>image_generate</code><div class="small">image.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>1 action</summary><div class="small">上游：image_generate</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="intercom_tool intercom intercom_search_conversations intercom_get_conversation intercom_get_contact intercom_search_contacts intercom_add_note intercom_add_tag intercom_assign_conversation intercom_list_teams intercom_close_conversation intercom_create_contact intercom_list_conversations intercom_search_conversations intercom_get_conversation intercom_get_contact intercom_search_contacts intercom_add_note intercom_add_tag intercom_assign_conversation intercom_list_teams intercom_close_conversation intercom_create_contact intercom_list_conversations">
+<td><code>intercom_tool</code></td>
+<td><code>intercom</code><div class="small">intercom.go</div></td>
+<td class="num">11</td><td class="num">11</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>11 actions</summary><div class="small">上游：intercom_search_conversations, intercom_get_conversation, intercom_get_contact, intercom_search_contacts, intercom_add_note, intercom_add_tag, intercom_assign_conversation, intercom_list_teams, intercom_close_conversation, intercom_create_contact, intercom_list_conversations</div><div class="small">Go：intercom_search_conversations, intercom_get_conversation, intercom_get_contact, intercom_search_contacts, intercom_add_note, intercom_add_tag, intercom_assign_conversation, intercom_list_teams, intercom_close_conversation, intercom_create_contact, intercom_list_conversations</div></details></td>
+</tr>
+<tr data-search="jira_tool jira jira_search_issues jira_get_issue jira_create_issue jira_list_projects jira_get_project jira_add_comment jira_update_issue jira_list_transitions jira_transition_issue jira_search_issues jira_get_issue jira_create_issue jira_list_projects jira_get_project jira_add_comment jira_update_issue jira_list_transitions jira_transition_issue">
+<td><code>jira_tool</code></td>
+<td><code>jira</code><div class="small">jira.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：jira_search_issues, jira_get_issue, jira_create_issue, jira_list_projects, jira_get_project, jira_add_comment, jira_update_issue, jira_list_transitions, jira_transition_issue</div><div class="small">Go：jira_search_issues, jira_get_issue, jira_create_issue, jira_list_projects, jira_get_project, jira_add_comment, jira_update_issue, jira_list_transitions, jira_transition_issue</div></details></td>
+</tr>
+<tr data-search="kafka_tool kafka kafka_list_topics kafka_get_topic kafka_create_topic kafka_produce_message kafka_list_consumer_groups kafka_get_consumer_group_lag kafka_list_topics kafka_get_topic kafka_create_topic kafka_produce_message kafka_list_consumer_groups kafka_get_consumer_group_lag">
+<td><code>kafka_tool</code></td>
+<td><code>kafka</code><div class="small">infra_automation.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：kafka_list_topics, kafka_get_topic, kafka_create_topic, kafka_produce_message, kafka_list_consumer_groups, kafka_get_consumer_group_lag</div><div class="small">Go：kafka_list_topics, kafka_get_topic, kafka_create_topic, kafka_produce_message, kafka_list_consumer_groups, kafka_get_consumer_group_lag</div></details></td>
+</tr>
+<tr data-search="langfuse_tool langfuse langfuse_list_traces langfuse_get_trace langfuse_list_scores langfuse_create_score langfuse_list_prompts langfuse_get_prompt langfuse_list_traces langfuse_get_trace langfuse_list_scores langfuse_create_score langfuse_list_prompts langfuse_get_prompt">
+<td><code>langfuse_tool</code></td>
+<td><code>langfuse</code><div class="small">ai_platform.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：langfuse_list_traces, langfuse_get_trace, langfuse_list_scores, langfuse_create_score, langfuse_list_prompts, langfuse_get_prompt</div><div class="small">Go：langfuse_list_traces, langfuse_get_trace, langfuse_list_scores, langfuse_create_score, langfuse_list_prompts, langfuse_get_prompt</div></details></td>
+</tr>
+<tr data-search="linear_tool linear linear_issue_create linear_issue_get linear_issue_update linear_issue_delete linear_issue_search linear_issue_add_comment linear_project_create linear_project_get linear_project_update linear_project_list linear_teams_list linear_team_get linear_workflow_states_get linear_label_create linear_labels_list linear_users_list linear_user_get linear_viewer linear_cycles_list linear_issue_comments_list linear_issue_relation_create linear_cycles_list linear_issue_add_comment linear_issue_comments_list linear_issue_create linear_issue_delete linear_issue_get linear_issue_relation_create linear_issue_search linear_issue_update linear_label_create linear_labels_list linear_project_create linear_project_get linear_project_list linear_project_update linear_team_get linear_teams_list linear_user_get linear_users_list linear_viewer linear_workflow_states_get">
+<td><code>linear_tool</code></td>
+<td><code>linear</code><div class="small">linear.go</div></td>
+<td class="num">21</td><td class="num">21</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>21 actions</summary><div class="small">上游：linear_issue_create, linear_issue_get, linear_issue_update, linear_issue_delete, linear_issue_search, linear_issue_add_comment, linear_project_create, linear_project_get, linear_project_update, linear_project_list, linear_teams_list, linear_team_get, linear_workflow_states_get, linear_label_create, linear_labels_list, linear_users_list, linear_user_get, linear_viewer, linear_cycles_list, linear_issue_comments_list, linear_issue_relation_create</div><div class="small">Go：linear_cycles_list, linear_issue_add_comment, linear_issue_comments_list, linear_issue_create, linear_issue_delete, linear_issue_get, linear_issue_relation_create, linear_issue_search, linear_issue_update, linear_label_create, linear_labels_list, linear_project_create, linear_project_get, linear_project_list, linear_project_update, linear_team_get, linear_teams_list, linear_user_get, linear_users_list, linear_viewer, linear_workflow_states_get</div></details></td>
+</tr>
+<tr data-search="lusha_tool lusha lusha_enrich_person lusha_enrich_company lusha_search_contacts lusha_search_companies lusha_get_usage lusha_bulk_enrich_persons lusha_get_technologies lusha_search_decision_makers lusha_enrich_person lusha_enrich_company lusha_search_contacts lusha_search_companies lusha_get_usage lusha_bulk_enrich_persons lusha_get_technologies lusha_search_decision_makers">
+<td><code>lusha_tool</code></td>
+<td><code>lusha</code><div class="small">enrichment_search.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：lusha_enrich_person, lusha_enrich_company, lusha_search_contacts, lusha_search_companies, lusha_get_usage, lusha_bulk_enrich_persons, lusha_get_technologies, lusha_search_decision_makers</div><div class="small">Go：lusha_enrich_person, lusha_enrich_company, lusha_search_contacts, lusha_search_companies, lusha_get_usage, lusha_bulk_enrich_persons, lusha_get_technologies, lusha_search_decision_makers</div></details></td>
+</tr>
+<tr data-search="mattermost_tool mattermost mattermost_list_teams mattermost_list_channels mattermost_get_channel mattermost_send_message mattermost_get_posts mattermost_create_reaction mattermost_delete_post mattermost_create_reaction mattermost_delete_post mattermost_get_channel mattermost_get_posts mattermost_list_channels mattermost_list_teams mattermost_send_message">
+<td><code>mattermost_tool</code></td>
+<td><code>mattermost</code><div class="small">scheduling_chat.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：mattermost_list_teams, mattermost_list_channels, mattermost_get_channel, mattermost_send_message, mattermost_get_posts, mattermost_create_reaction, mattermost_delete_post</div><div class="small">Go：mattermost_create_reaction, mattermost_delete_post, mattermost_get_channel, mattermost_get_posts, mattermost_list_channels, mattermost_list_teams, mattermost_send_message</div></details></td>
+</tr>
+<tr data-search="microsoft_graph_tool microsoft_graph outlook_list_messages outlook_get_message outlook_send_mail teams_list_teams teams_list_channels teams_send_channel_message teams_get_channel_messages onedrive_search_files onedrive_list_files onedrive_download_file onedrive_upload_file outlook_list_messages outlook_get_message outlook_send_mail teams_list_teams teams_list_channels teams_send_channel_message teams_get_channel_messages onedrive_search_files onedrive_list_files onedrive_download_file onedrive_upload_file">
+<td><code>microsoft_graph_tool</code></td>
+<td><code>microsoft_graph</code><div class="small">microsoft_graph.go</div></td>
+<td class="num">11</td><td class="num">11</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>11 actions</summary><div class="small">上游：outlook_list_messages, outlook_get_message, outlook_send_mail, teams_list_teams, teams_list_channels, teams_send_channel_message, teams_get_channel_messages, onedrive_search_files, onedrive_list_files, onedrive_download_file, onedrive_upload_file</div><div class="small">Go：outlook_list_messages, outlook_get_message, outlook_send_mail, teams_list_teams, teams_list_channels, teams_send_channel_message, teams_get_channel_messages, onedrive_search_files, onedrive_list_files, onedrive_download_file, onedrive_upload_file</div></details></td>
+</tr>
+<tr data-search="mongodb_tool mongodb mongodb_find mongodb_find_one mongodb_insert_one mongodb_update_one mongodb_delete_one mongodb_aggregate mongodb_find mongodb_find_one mongodb_insert_one mongodb_update_one mongodb_delete_one mongodb_aggregate">
+<td><code>mongodb_tool</code></td>
+<td><code>mongodb</code><div class="small">mongodb.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：mongodb_find, mongodb_find_one, mongodb_insert_one, mongodb_update_one, mongodb_delete_one, mongodb_aggregate</div><div class="small">Go：mongodb_find, mongodb_find_one, mongodb_insert_one, mongodb_update_one, mongodb_delete_one, mongodb_aggregate</div></details></td>
+</tr>
+<tr data-search="n8n_tool n8n n8n_list_workflows n8n_get_workflow n8n_activate_workflow n8n_deactivate_workflow n8n_list_executions n8n_get_execution n8n_list_workflows n8n_get_workflow n8n_activate_workflow n8n_deactivate_workflow n8n_list_executions n8n_get_execution">
+<td><code>n8n_tool</code></td>
+<td><code>n8n</code><div class="small">infra_automation.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：n8n_list_workflows, n8n_get_workflow, n8n_activate_workflow, n8n_deactivate_workflow, n8n_list_executions, n8n_get_execution</div><div class="small">Go：n8n_list_workflows, n8n_get_workflow, n8n_activate_workflow, n8n_deactivate_workflow, n8n_list_executions, n8n_get_execution</div></details></td>
+</tr>
+<tr data-search="news_tool news news_search news_headlines news_by_company news_sentiment news_latest news_by_source news_by_topic news_search news_headlines news_by_company news_sentiment news_latest news_by_source news_by_topic">
+<td><code>news_tool</code></td>
+<td><code>news</code><div class="small">web_intelligence.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：news_search, news_headlines, news_by_company, news_sentiment, news_latest, news_by_source, news_by_topic</div><div class="small">Go：news_search, news_headlines, news_by_company, news_sentiment, news_latest, news_by_source, news_by_topic</div></details></td>
+</tr>
+<tr data-search="notion_tool notion notion_search notion_get_page notion_create_page notion_query_database notion_get_database notion_create_database notion_update_database notion_update_page notion_get_block_children notion_get_block notion_update_block notion_delete_block notion_append_blocks notion_append_blocks notion_create_database notion_create_page notion_delete_block notion_get_block notion_get_block_children notion_get_database notion_get_page notion_query_database notion_search notion_update_block notion_update_database notion_update_page">
+<td><code>notion_tool</code></td>
+<td><code>notion</code><div class="small">notion.go</div></td>
+<td class="num">13</td><td class="num">13</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>13 actions</summary><div class="small">上游：notion_search, notion_get_page, notion_create_page, notion_query_database, notion_get_database, notion_create_database, notion_update_database, notion_update_page, notion_get_block_children, notion_get_block, notion_update_block, notion_delete_block, notion_append_blocks</div><div class="small">Go：notion_append_blocks, notion_create_database, notion_create_page, notion_delete_block, notion_get_block, notion_get_block_children, notion_get_database, notion_get_page, notion_query_database, notion_search, notion_update_block, notion_update_database, notion_update_page</div></details></td>
+</tr>
+<tr data-search="obsidian_tool obsidian obsidian_read_note obsidian_write_note obsidian_append_note obsidian_search obsidian_list_files obsidian_get_active obsidian_read_note obsidian_write_note obsidian_append_note obsidian_search obsidian_list_files obsidian_get_active">
+<td><code>obsidian_tool</code></td>
+<td><code>obsidian</code><div class="small">obsidian.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：obsidian_read_note, obsidian_write_note, obsidian_append_note, obsidian_search, obsidian_list_files, obsidian_get_active</div><div class="small">Go：obsidian_read_note, obsidian_write_note, obsidian_append_note, obsidian_search, obsidian_list_files, obsidian_get_active</div></details></td>
+</tr>
+<tr data-search="openmeteo_tool openmeteo weather_get_current weather_get_forecast weather_get_current weather_get_forecast">
+<td><code>openmeteo_tool</code></td>
+<td><code>openmeteo</code><div class="small">research_registry.go</div></td>
+<td class="num">2</td><td class="num">2</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>2 actions</summary><div class="small">上游：weather_get_current, weather_get_forecast</div><div class="small">Go：weather_get_current, weather_get_forecast</div></details></td>
+</tr>
+<tr data-search="pagerduty_tool pagerduty pagerduty_list_incidents pagerduty_get_incident pagerduty_create_incident pagerduty_update_incident pagerduty_list_services pagerduty_list_oncalls pagerduty_add_incident_note pagerduty_list_escalation_policies pagerduty_list_incidents pagerduty_get_incident pagerduty_create_incident pagerduty_update_incident pagerduty_list_services pagerduty_list_oncalls pagerduty_add_incident_note pagerduty_list_escalation_policies">
+<td><code>pagerduty_tool</code></td>
+<td><code>pagerduty</code><div class="small">infra_automation.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：pagerduty_list_incidents, pagerduty_get_incident, pagerduty_create_incident, pagerduty_update_incident, pagerduty_list_services, pagerduty_list_oncalls, pagerduty_add_incident_note, pagerduty_list_escalation_policies</div><div class="small">Go：pagerduty_list_incidents, pagerduty_get_incident, pagerduty_create_incident, pagerduty_update_incident, pagerduty_list_services, pagerduty_list_oncalls, pagerduty_add_incident_note, pagerduty_list_escalation_policies</div></details></td>
+</tr>
+<tr data-search="pdf_read_tool pdf_read pdf_read">
+<td><code>pdf_read_tool</code></td>
+<td><code>pdf_read</code><div class="small">pdf.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>1 action</summary><div class="small">上游：pdf_read</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="pinecone_tool pinecone pinecone_list_indexes pinecone_create_index pinecone_describe_index pinecone_delete_index pinecone_upsert_vectors pinecone_query_vectors pinecone_fetch_vectors pinecone_delete_vectors pinecone_index_stats pinecone_list_indexes pinecone_create_index pinecone_describe_index pinecone_delete_index pinecone_upsert_vectors pinecone_query_vectors pinecone_fetch_vectors pinecone_delete_vectors pinecone_index_stats">
+<td><code>pinecone_tool</code></td>
+<td><code>pinecone</code><div class="small">ai_platform.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：pinecone_list_indexes, pinecone_create_index, pinecone_describe_index, pinecone_delete_index, pinecone_upsert_vectors, pinecone_query_vectors, pinecone_fetch_vectors, pinecone_delete_vectors, pinecone_index_stats</div><div class="small">Go：pinecone_list_indexes, pinecone_create_index, pinecone_describe_index, pinecone_delete_index, pinecone_upsert_vectors, pinecone_query_vectors, pinecone_fetch_vectors, pinecone_delete_vectors, pinecone_index_stats</div></details></td>
+</tr>
+<tr data-search="pipedrive_tool pipedrive pipedrive_list_deals pipedrive_get_deal pipedrive_create_deal pipedrive_list_persons pipedrive_search_persons pipedrive_list_organizations pipedrive_list_activities pipedrive_list_pipelines pipedrive_list_stages pipedrive_add_note pipedrive_update_deal pipedrive_create_person pipedrive_create_activity pipedrive_add_note pipedrive_create_activity pipedrive_create_deal pipedrive_create_person pipedrive_get_deal pipedrive_list_activities pipedrive_list_deals pipedrive_list_organizations pipedrive_list_persons pipedrive_list_pipelines pipedrive_list_stages pipedrive_search_persons pipedrive_update_deal">
+<td><code>pipedrive_tool</code></td>
+<td><code>pipedrive</code><div class="small">pipedrive.go</div></td>
+<td class="num">13</td><td class="num">13</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>13 actions</summary><div class="small">上游：pipedrive_list_deals, pipedrive_get_deal, pipedrive_create_deal, pipedrive_list_persons, pipedrive_search_persons, pipedrive_list_organizations, pipedrive_list_activities, pipedrive_list_pipelines, pipedrive_list_stages, pipedrive_add_note, pipedrive_update_deal, pipedrive_create_person, pipedrive_create_activity</div><div class="small">Go：pipedrive_add_note, pipedrive_create_activity, pipedrive_create_deal, pipedrive_create_person, pipedrive_get_deal, pipedrive_list_activities, pipedrive_list_deals, pipedrive_list_organizations, pipedrive_list_persons, pipedrive_list_pipelines, pipedrive_list_stages, pipedrive_search_persons, pipedrive_update_deal</div></details></td>
+</tr>
+<tr data-search="plaid_tool plaid plaid_get_accounts plaid_get_balance plaid_sync_transactions plaid_get_transactions plaid_get_institution plaid_search_institutions plaid_get_accounts plaid_get_balance plaid_sync_transactions plaid_get_transactions plaid_get_institution plaid_search_institutions">
+<td><code>plaid_tool</code></td>
+<td><code>plaid</code><div class="small">plaid.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：plaid_get_accounts, plaid_get_balance, plaid_sync_transactions, plaid_get_transactions, plaid_get_institution, plaid_search_institutions</div><div class="small">Go：plaid_get_accounts, plaid_get_balance, plaid_sync_transactions, plaid_get_transactions, plaid_get_institution, plaid_search_institutions</div></details></td>
+</tr>
+<tr data-search="port_scanner port_scan port_scan">
+<td><code>port_scanner</code></td>
+<td><code>port_scan</code><div class="small">research_registry.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：port_scan</div></td>
+<td><details><summary>1 action</summary><div class="small">上游：port_scan</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="postgres_tool postgres pg_query pg_list_schemas pg_list_tables pg_describe_table pg_explain pg_get_table_stats pg_list_indexes pg_get_foreign_keys pg_query pg_list_schemas pg_list_tables pg_describe_table pg_explain pg_get_table_stats pg_list_indexes pg_get_foreign_keys">
+<td><code>postgres_tool</code></td>
+<td><code>postgres</code><div class="small">postgres.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：pg_query, pg_list_schemas, pg_list_tables, pg_describe_table, pg_explain, pg_get_table_stats, pg_list_indexes, pg_get_foreign_keys</div><div class="small">Go：pg_query, pg_list_schemas, pg_list_tables, pg_describe_table, pg_explain, pg_get_table_stats, pg_list_indexes, pg_get_foreign_keys</div></details></td>
+</tr>
+<tr data-search="powerbi_tool powerbi powerbi_list_workspaces powerbi_list_datasets powerbi_list_reports powerbi_refresh_dataset powerbi_get_refresh_history powerbi_list_workspaces powerbi_list_datasets powerbi_list_reports powerbi_refresh_dataset powerbi_get_refresh_history">
+<td><code>powerbi_tool</code></td>
+<td><code>powerbi</code><div class="small">powerbi.go</div></td>
+<td class="num">5</td><td class="num">5</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>5 actions</summary><div class="small">上游：powerbi_list_workspaces, powerbi_list_datasets, powerbi_list_reports, powerbi_refresh_dataset, powerbi_get_refresh_history</div><div class="small">Go：powerbi_list_workspaces, powerbi_list_datasets, powerbi_list_reports, powerbi_refresh_dataset, powerbi_get_refresh_history</div></details></td>
+</tr>
+<tr data-search="prometheus_tool prometheus prometheus_query prometheus_query_range prometheus_query prometheus_query_range">
+<td><code>prometheus_tool</code></td>
+<td><code>prometheus</code><div class="small">infra_automation.go</div></td>
+<td class="num">2</td><td class="num">2</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>2 actions</summary><div class="small">上游：prometheus_query, prometheus_query_range</div><div class="small">Go：prometheus_query, prometheus_query_range</div></details></td>
+</tr>
+<tr data-search="pushover_tool pushover pushover_send pushover_validate_user pushover_list_sounds pushover_check_receipt pushover_cancel_receipt pushover_send_glance pushover_get_limits pushover_send pushover_validate_user pushover_list_sounds pushover_check_receipt pushover_cancel_receipt pushover_send_glance pushover_get_limits">
+<td><code>pushover_tool</code></td>
+<td><code>pushover</code><div class="small">social_media.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：pushover_send, pushover_validate_user, pushover_list_sounds, pushover_check_receipt, pushover_cancel_receipt, pushover_send_glance, pushover_get_limits</div><div class="small">Go：pushover_send, pushover_validate_user, pushover_list_sounds, pushover_check_receipt, pushover_cancel_receipt, pushover_send_glance, pushover_get_limits</div></details></td>
+</tr>
+<tr data-search="quickbooks_tool quickbooks quickbooks_query quickbooks_get_entity quickbooks_create_customer quickbooks_create_invoice quickbooks_get_company_info quickbooks_list_invoices quickbooks_get_customer quickbooks_create_payment quickbooks_query quickbooks_get_entity quickbooks_create_customer quickbooks_create_invoice quickbooks_get_company_info quickbooks_list_invoices quickbooks_get_customer quickbooks_create_payment">
+<td><code>quickbooks_tool</code></td>
+<td><code>quickbooks</code><div class="small">quickbooks.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：quickbooks_query, quickbooks_get_entity, quickbooks_create_customer, quickbooks_create_invoice, quickbooks_get_company_info, quickbooks_list_invoices, quickbooks_get_customer, quickbooks_create_payment</div><div class="small">Go：quickbooks_query, quickbooks_get_entity, quickbooks_create_customer, quickbooks_create_invoice, quickbooks_get_company_info, quickbooks_list_invoices, quickbooks_get_customer, quickbooks_create_payment</div></details></td>
+</tr>
+<tr data-search="razorpay_tool razorpay razorpay_list_payments razorpay_get_payment razorpay_create_payment_link razorpay_list_invoices razorpay_get_invoice razorpay_create_refund razorpay_list_payments razorpay_get_payment razorpay_create_payment_link razorpay_list_invoices razorpay_get_invoice razorpay_create_refund">
+<td><code>razorpay_tool</code></td>
+<td><code>razorpay</code><div class="small">razorpay.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：razorpay_list_payments, razorpay_get_payment, razorpay_create_payment_link, razorpay_list_invoices, razorpay_get_invoice, razorpay_create_refund</div><div class="small">Go：razorpay_list_payments, razorpay_get_payment, razorpay_create_payment_link, razorpay_list_invoices, razorpay_get_invoice, razorpay_create_refund</div></details></td>
+</tr>
+<tr data-search="reddit_tool reddit reddit_search reddit_get_posts reddit_get_comments reddit_get_user reddit_get_subreddit_info reddit_get_post_detail reddit_get_user_posts reddit_search reddit_get_posts reddit_get_comments reddit_get_user reddit_get_subreddit_info reddit_get_post_detail reddit_get_user_posts">
+<td><code>reddit_tool</code></td>
+<td><code>reddit</code><div class="small">social_media.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：reddit_search, reddit_get_posts, reddit_get_comments, reddit_get_user, reddit_get_subreddit_info, reddit_get_post_detail, reddit_get_user_posts</div><div class="small">Go：reddit_search, reddit_get_posts, reddit_get_comments, reddit_get_user, reddit_get_subreddit_info, reddit_get_post_detail, reddit_get_user_posts</div></details></td>
+</tr>
+<tr data-search="redis_tool redis redis_get redis_set redis_delete redis_keys redis_hset redis_hgetall redis_lpush redis_lrange redis_publish redis_info redis_ttl redis_get redis_set redis_delete redis_keys redis_hset redis_hgetall redis_lpush redis_lrange redis_publish redis_info redis_ttl">
+<td><code>redis_tool</code></td>
+<td><code>redis</code><div class="small">redis.go</div></td>
+<td class="num">11</td><td class="num">11</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>11 actions</summary><div class="small">上游：redis_get, redis_set, redis_delete, redis_keys, redis_hset, redis_hgetall, redis_lpush, redis_lrange, redis_publish, redis_info, redis_ttl</div><div class="small">Go：redis_get, redis_set, redis_delete, redis_keys, redis_hset, redis_hgetall, redis_lpush, redis_lrange, redis_publish, redis_info, redis_ttl</div></details></td>
+</tr>
+<tr data-search="redshift_tool redshift redshift_execute_sql redshift_describe_statement redshift_get_results redshift_list_databases redshift_list_tables redshift_execute_sql redshift_describe_statement redshift_get_results redshift_list_databases redshift_list_tables">
+<td><code>redshift_tool</code></td>
+<td><code>redshift</code><div class="small">redshift.go</div></td>
+<td class="num">5</td><td class="num">5</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>5 actions</summary><div class="small">上游：redshift_execute_sql, redshift_describe_statement, redshift_get_results, redshift_list_databases, redshift_list_tables</div><div class="small">Go：redshift_execute_sql, redshift_describe_statement, redshift_get_results, redshift_list_databases, redshift_list_tables</div></details></td>
+</tr>
+<tr data-search="risk_scorer risk_score risk_score">
+<td><code>risk_scorer</code></td>
+<td><code>risk_score</code><div class="small">catalog_gen.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>1 action</summary><div class="small">上游：risk_score</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="salesforce_tool salesforce salesforce_soql_query salesforce_get_record salesforce_create_record salesforce_update_record salesforce_describe_object salesforce_list_objects salesforce_delete_record salesforce_search_records salesforce_get_record_count salesforce_create_record salesforce_delete_record salesforce_describe_object salesforce_get_record salesforce_get_record_count salesforce_list_objects salesforce_search_records salesforce_soql_query salesforce_update_record">
+<td><code>salesforce_tool</code></td>
+<td><code>salesforce</code><div class="small">salesforce.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：salesforce_soql_query, salesforce_get_record, salesforce_create_record, salesforce_update_record, salesforce_describe_object, salesforce_list_objects, salesforce_delete_record, salesforce_search_records, salesforce_get_record_count</div><div class="small">Go：salesforce_create_record, salesforce_delete_record, salesforce_describe_object, salesforce_get_record, salesforce_get_record_count, salesforce_list_objects, salesforce_search_records, salesforce_soql_query, salesforce_update_record</div></details></td>
+</tr>
+<tr data-search="sap_tool sap sap_list_purchase_orders sap_get_purchase_order sap_list_business_partners sap_list_products sap_list_sales_orders sap_list_purchase_orders sap_get_purchase_order sap_list_business_partners sap_list_products sap_list_sales_orders">
+<td><code>sap_tool</code></td>
+<td><code>sap</code><div class="small">sap.go</div></td>
+<td class="num">5</td><td class="num">5</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>5 actions</summary><div class="small">上游：sap_list_purchase_orders, sap_get_purchase_order, sap_list_business_partners, sap_list_products, sap_list_sales_orders</div><div class="small">Go：sap_list_purchase_orders, sap_get_purchase_order, sap_list_business_partners, sap_list_products, sap_list_sales_orders</div></details></td>
+</tr>
+<tr data-search="senders_tool senders list_senders send_from_sender setup_email_sender adjust_sender suppress_recipient list_suppressed sender_history pick_sender send_campaign">
+<td><code>senders_tool</code></td>
+<td><code>senders</code><div class="small">internal/senders</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现，功能开关关闭</span><div class="small missing">缺：list_senders, send_from_sender, setup_email_sender, adjust_sender, suppress_recipient, list_suppressed, sender_history, pick_sender, send_campaign</div></td>
+<td><details><summary>9 actions</summary><div class="small">上游：list_senders, send_from_sender, setup_email_sender, adjust_sender, suppress_recipient, list_suppressed, sender_history, pick_sender, send_campaign</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="serpapi_tool serpapi scholar_search scholar_get_citations scholar_get_author patents_search patents_get_details scholar_cited_by scholar_search_profiles serpapi_google_search scholar_search scholar_get_citations scholar_get_author patents_search patents_get_details scholar_cited_by scholar_search_profiles serpapi_google_search">
+<td><code>serpapi_tool</code></td>
+<td><code>serpapi</code><div class="small">enrichment_search.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：scholar_search, scholar_get_citations, scholar_get_author, patents_search, patents_get_details, scholar_cited_by, scholar_search_profiles, serpapi_google_search</div><div class="small">Go：scholar_search, scholar_get_citations, scholar_get_author, patents_search, patents_get_details, scholar_cited_by, scholar_search_profiles, serpapi_google_search</div></details></td>
+</tr>
+<tr data-search="shopify_tool shopify shopify_list_orders shopify_get_order shopify_list_products shopify_get_product shopify_list_customers shopify_search_customers shopify_update_product shopify_get_customer shopify_create_draft_order shopify_list_orders shopify_get_order shopify_list_products shopify_get_product shopify_list_customers shopify_search_customers shopify_update_product shopify_get_customer shopify_create_draft_order">
+<td><code>shopify_tool</code></td>
+<td><code>shopify</code><div class="small">shopify.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：shopify_list_orders, shopify_get_order, shopify_list_products, shopify_get_product, shopify_list_customers, shopify_search_customers, shopify_update_product, shopify_get_customer, shopify_create_draft_order</div><div class="small">Go：shopify_list_orders, shopify_get_order, shopify_list_products, shopify_get_product, shopify_list_customers, shopify_search_customers, shopify_update_product, shopify_get_customer, shopify_create_draft_order</div></details></td>
+</tr>
+<tr data-search="similarweb_tool similarweb similarweb_v5_traffic_and_engagement similarweb_v5_website_rank similarweb_v5_traffic_sources similarweb_v5_geography similarweb_v5_demographics similarweb_v5_company_info similarweb_v5_top_sites_by_category similarweb_v5_referrals similarweb_v5_ppc_spend similarweb_v5_geography_details similarweb_v5_similar_sites similarweb_v5_ad_networks similarweb_v5_demographics_traffic similarweb_v5_deduplicated_audience similarweb_v5_audience_interests similarweb_v5_audience_overlap similarweb_v5_technologies similarweb_v5_leading_folders similarweb_v5_popular_pages similarweb_v5_subdomains similarweb_v5_keyword_competitors similarweb_v5_keyword_opportunities similarweb_v5_serp_features similarweb_v5_organic_keywords similarweb_v5_paid_keywords similarweb_v5_serp_players similarweb_v5_social_referrals similarweb_v5_segments_list similarweb_v5_segment_analysis similarweb_v5_traffic_and_engagement similarweb_v5_website_rank similarweb_v5_traffic_sources similarweb_v5_geography similarweb_v5_demographics similarweb_v5_company_info similarweb_v5_top_sites_by_category similarweb_v5_referrals similarweb_v5_ppc_spend similarweb_v5_geography_details similarweb_v5_similar_sites similarweb_v5_ad_networks similarweb_v5_demographics_traffic similarweb_v5_deduplicated_audience similarweb_v5_audience_interests similarweb_v5_audience_overlap similarweb_v5_technologies similarweb_v5_leading_folders similarweb_v5_popular_pages similarweb_v5_subdomains similarweb_v5_keyword_competitors similarweb_v5_keyword_opportunities similarweb_v5_serp_features similarweb_v5_organic_keywords similarweb_v5_paid_keywords similarweb_v5_serp_players similarweb_v5_social_referrals similarweb_v5_segments_list similarweb_v5_segment_analysis">
+<td><code>similarweb_tool</code></td>
+<td><code>similarweb</code><div class="small">web_intelligence.go</div></td>
+<td class="num">29</td><td class="num">29</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>29 actions</summary><div class="small">上游：similarweb_v5_traffic_and_engagement, similarweb_v5_website_rank, similarweb_v5_traffic_sources, similarweb_v5_geography, similarweb_v5_demographics, similarweb_v5_company_info, similarweb_v5_top_sites_by_category, similarweb_v5_referrals, similarweb_v5_ppc_spend, similarweb_v5_geography_details, similarweb_v5_similar_sites, similarweb_v5_ad_networks, similarweb_v5_demographics_traffic, similarweb_v5_deduplicated_audience, similarweb_v5_audience_interests, similarweb_v5_audience_overlap, similarweb_v5_technologies, similarweb_v5_leading_folders, similarweb_v5_popular_pages, similarweb_v5_subdomains, similarweb_v5_keyword_competitors, similarweb_v5_keyword_opportunities, similarweb_v5_serp_features, similarweb_v5_organic_keywords, similarweb_v5_paid_keywords, similarweb_v5_serp_players, similarweb_v5_social_referrals, similarweb_v5_segments_list, similarweb_v5_segment_analysis</div><div class="small">Go：similarweb_v5_traffic_and_engagement, similarweb_v5_website_rank, similarweb_v5_traffic_sources, similarweb_v5_geography, similarweb_v5_demographics, similarweb_v5_company_info, similarweb_v5_top_sites_by_category, similarweb_v5_referrals, similarweb_v5_ppc_spend, similarweb_v5_geography_details, similarweb_v5_similar_sites, similarweb_v5_ad_networks, similarweb_v5_demographics_traffic, similarweb_v5_deduplicated_audience, similarweb_v5_audience_interests, similarweb_v5_audience_overlap, similarweb_v5_technologies, similarweb_v5_leading_folders, similarweb_v5_popular_pages, similarweb_v5_subdomains, similarweb_v5_keyword_competitors, similarweb_v5_keyword_opportunities, similarweb_v5_serp_features, similarweb_v5_organic_keywords, similarweb_v5_paid_keywords, similarweb_v5_serp_players, similarweb_v5_social_referrals, similarweb_v5_segments_list, similarweb_v5_segment_analysis</div></details></td>
+</tr>
+<tr data-search="slack_tool slack slack_send_message slack_list_channels slack_get_channel_history slack_add_reaction slack_get_user_info slack_update_message slack_delete_message slack_schedule_message slack_create_channel slack_archive_channel slack_invite_to_channel slack_set_channel_topic slack_remove_reaction slack_list_users slack_upload_file slack_search_messages slack_get_thread_replies slack_pin_message slack_unpin_message slack_list_pins slack_add_bookmark slack_list_scheduled_messages slack_delete_scheduled_message slack_send_dm slack_get_permalink slack_send_ephemeral slack_post_blocks slack_open_modal slack_update_home_tab slack_set_status slack_set_presence slack_get_presence slack_create_reminder slack_list_reminders slack_delete_reminder slack_create_usergroup slack_update_usergroup_members slack_list_usergroups slack_list_emoji slack_create_canvas slack_edit_canvas slack_get_messages_for_analysis slack_trigger_workflow slack_get_conversation_context slack_find_user_by_email slack_kick_user_from_channel slack_delete_file slack_get_team_stats slack_get_channel_info slack_list_files slack_get_file_info slack_add_bookmark slack_add_reaction slack_archive_channel slack_create_canvas slack_create_channel slack_create_reminder slack_create_usergroup slack_delete_file slack_delete_message slack_delete_reminder slack_delete_scheduled_message slack_edit_canvas slack_find_user_by_email slack_get_channel_history slack_get_channel_info slack_get_conversation_context slack_get_file_info slack_get_messages_for_analysis slack_get_permalink slack_get_presence slack_get_team_stats slack_get_thread_replies slack_get_user_info slack_invite_to_channel slack_kick_user_from_channel slack_list_channels slack_list_emoji slack_list_files slack_list_pins slack_list_reminders slack_list_scheduled_messages slack_list_usergroups slack_list_users slack_open_modal slack_pin_message slack_post_blocks slack_remove_reaction slack_schedule_message slack_search_messages slack_send_dm slack_send_ephemeral slack_send_message slack_set_channel_topic slack_set_presence slack_set_status slack_trigger_workflow slack_unpin_message slack_update_home_tab slack_update_message slack_update_usergroup_members slack_upload_file">
+<td><code>slack_tool</code></td>
+<td><code>slack</code><div class="small">catalog_gen.go</div></td>
+<td class="num">51</td><td class="num">51</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>51 actions</summary><div class="small">上游：slack_send_message, slack_list_channels, slack_get_channel_history, slack_add_reaction, slack_get_user_info, slack_update_message, slack_delete_message, slack_schedule_message, slack_create_channel, slack_archive_channel, slack_invite_to_channel, slack_set_channel_topic, slack_remove_reaction, slack_list_users, slack_upload_file, slack_search_messages, slack_get_thread_replies, slack_pin_message, slack_unpin_message, slack_list_pins, slack_add_bookmark, slack_list_scheduled_messages, slack_delete_scheduled_message, slack_send_dm, slack_get_permalink, slack_send_ephemeral, slack_post_blocks, slack_open_modal, slack_update_home_tab, slack_set_status, slack_set_presence, slack_get_presence, slack_create_reminder, slack_list_reminders, slack_delete_reminder, slack_create_usergroup, slack_update_usergroup_members, slack_list_usergroups, slack_list_emoji, slack_create_canvas, slack_edit_canvas, slack_get_messages_for_analysis, slack_trigger_workflow, slack_get_conversation_context, slack_find_user_by_email, slack_kick_user_from_channel, slack_delete_file, slack_get_team_stats, slack_get_channel_info, slack_list_files, slack_get_file_info</div><div class="small">Go：slack_add_bookmark, slack_add_reaction, slack_archive_channel, slack_create_canvas, slack_create_channel, slack_create_reminder, slack_create_usergroup, slack_delete_file, slack_delete_message, slack_delete_reminder, slack_delete_scheduled_message, slack_edit_canvas, slack_find_user_by_email, slack_get_channel_history, slack_get_channel_info, slack_get_conversation_context, slack_get_file_info, slack_get_messages_for_analysis, slack_get_permalink, slack_get_presence, slack_get_team_stats, slack_get_thread_replies, slack_get_user_info, slack_invite_to_channel, slack_kick_user_from_channel, slack_list_channels, slack_list_emoji, slack_list_files, slack_list_pins, slack_list_reminders, slack_list_scheduled_messages, slack_list_usergroups, slack_list_users, slack_open_modal, slack_pin_message, slack_post_blocks, slack_remove_reaction, slack_schedule_message, slack_search_messages, slack_send_dm, slack_send_ephemeral, slack_send_message, slack_set_channel_topic, slack_set_presence, slack_set_status, slack_trigger_workflow, slack_unpin_message, slack_update_home_tab, slack_update_message, slack_update_usergroup_members, slack_upload_file</div></details></td>
+</tr>
+<tr data-search="snowflake_tool snowflake snowflake_execute_sql snowflake_get_statement_status snowflake_cancel_statement snowflake_execute_sql snowflake_get_statement_status snowflake_cancel_statement">
+<td><code>snowflake_tool</code></td>
+<td><code>snowflake</code><div class="small">snowflake.go</div></td>
+<td class="num">3</td><td class="num">3</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>3 actions</summary><div class="small">上游：snowflake_execute_sql, snowflake_get_statement_status, snowflake_cancel_statement</div><div class="small">Go：snowflake_execute_sql, snowflake_get_statement_status, snowflake_cancel_statement</div></details></td>
+</tr>
+<tr data-search="ssl_tls_scanner ssl_tls_scan ssl_tls_scan">
+<td><code>ssl_tls_scanner</code></td>
+<td><code>ssl_tls_scan</code><div class="small">research_registry.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：ssl_tls_scan</div></td>
+<td><details><summary>1 action</summary><div class="small">上游：ssl_tls_scan</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="stripe_tool stripe stripe_create_customer stripe_get_customer stripe_get_customer_by_email stripe_update_customer stripe_list_customers stripe_get_subscription stripe_get_subscription_status stripe_list_subscriptions stripe_create_subscription stripe_update_subscription stripe_cancel_subscription stripe_create_payment_intent stripe_get_payment_intent stripe_confirm_payment_intent stripe_cancel_payment_intent stripe_list_payment_intents stripe_list_charges stripe_get_charge stripe_capture_charge stripe_create_refund stripe_get_refund stripe_list_refunds stripe_list_invoices stripe_get_invoice stripe_create_invoice stripe_finalize_invoice stripe_pay_invoice stripe_void_invoice stripe_create_invoice_item stripe_list_invoice_items stripe_delete_invoice_item stripe_create_product stripe_get_product stripe_list_products stripe_update_product stripe_create_price stripe_get_price stripe_list_prices stripe_update_price stripe_create_payment_link stripe_get_payment_link stripe_list_payment_links stripe_create_coupon stripe_list_coupons stripe_delete_coupon stripe_get_balance stripe_list_balance_transactions stripe_list_webhook_endpoints stripe_list_payment_methods stripe_get_payment_method stripe_detach_payment_method stripe_list_disputes stripe_list_events stripe_create_checkout_session stripe_cancel_payment_intent stripe_cancel_subscription stripe_capture_charge stripe_confirm_payment_intent stripe_create_checkout_session stripe_create_coupon stripe_create_customer stripe_create_invoice stripe_create_invoice_item stripe_create_payment_intent stripe_create_payment_link stripe_create_price stripe_create_product stripe_create_refund stripe_create_subscription stripe_delete_coupon stripe_delete_invoice_item stripe_detach_payment_method stripe_finalize_invoice stripe_get_balance stripe_get_charge stripe_get_customer stripe_get_customer_by_email stripe_get_invoice stripe_get_payment_intent stripe_get_payment_link stripe_get_payment_method stripe_get_price stripe_get_product stripe_get_refund stripe_get_subscription stripe_get_subscription_status stripe_list_balance_transactions stripe_list_charges stripe_list_coupons stripe_list_customers stripe_list_disputes stripe_list_events stripe_list_invoice_items stripe_list_invoices stripe_list_payment_intents stripe_list_payment_links stripe_list_payment_methods stripe_list_prices stripe_list_products stripe_list_refunds stripe_list_subscriptions stripe_list_webhook_endpoints stripe_pay_invoice stripe_update_customer stripe_update_price stripe_update_product stripe_update_subscription stripe_void_invoice">
+<td><code>stripe_tool</code></td>
+<td><code>stripe</code><div class="small">catalog_gen.go</div></td>
+<td class="num">54</td><td class="num">54</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>54 actions</summary><div class="small">上游：stripe_create_customer, stripe_get_customer, stripe_get_customer_by_email, stripe_update_customer, stripe_list_customers, stripe_get_subscription, stripe_get_subscription_status, stripe_list_subscriptions, stripe_create_subscription, stripe_update_subscription, stripe_cancel_subscription, stripe_create_payment_intent, stripe_get_payment_intent, stripe_confirm_payment_intent, stripe_cancel_payment_intent, stripe_list_payment_intents, stripe_list_charges, stripe_get_charge, stripe_capture_charge, stripe_create_refund, stripe_get_refund, stripe_list_refunds, stripe_list_invoices, stripe_get_invoice, stripe_create_invoice, stripe_finalize_invoice, stripe_pay_invoice, stripe_void_invoice, stripe_create_invoice_item, stripe_list_invoice_items, stripe_delete_invoice_item, stripe_create_product, stripe_get_product, stripe_list_products, stripe_update_product, stripe_create_price, stripe_get_price, stripe_list_prices, stripe_update_price, stripe_create_payment_link, stripe_get_payment_link, stripe_list_payment_links, stripe_create_coupon, stripe_list_coupons, stripe_delete_coupon, stripe_get_balance, stripe_list_balance_transactions, stripe_list_webhook_endpoints, stripe_list_payment_methods, stripe_get_payment_method, stripe_detach_payment_method, stripe_list_disputes, stripe_list_events, stripe_create_checkout_session</div><div class="small">Go：stripe_cancel_payment_intent, stripe_cancel_subscription, stripe_capture_charge, stripe_confirm_payment_intent, stripe_create_checkout_session, stripe_create_coupon, stripe_create_customer, stripe_create_invoice, stripe_create_invoice_item, stripe_create_payment_intent, stripe_create_payment_link, stripe_create_price, stripe_create_product, stripe_create_refund, stripe_create_subscription, stripe_delete_coupon, stripe_delete_invoice_item, stripe_detach_payment_method, stripe_finalize_invoice, stripe_get_balance, stripe_get_charge, stripe_get_customer, stripe_get_customer_by_email, stripe_get_invoice, stripe_get_payment_intent, stripe_get_payment_link, stripe_get_payment_method, stripe_get_price, stripe_get_product, stripe_get_refund, stripe_get_subscription, stripe_get_subscription_status, stripe_list_balance_transactions, stripe_list_charges, stripe_list_coupons, stripe_list_customers, stripe_list_disputes, stripe_list_events, stripe_list_invoice_items, stripe_list_invoices, stripe_list_payment_intents, stripe_list_payment_links, stripe_list_payment_methods, stripe_list_prices, stripe_list_products, stripe_list_refunds, stripe_list_subscriptions, stripe_list_webhook_endpoints, stripe_pay_invoice, stripe_update_customer, stripe_update_price, stripe_update_product, stripe_update_subscription, stripe_void_invoice</div></details></td>
+</tr>
+<tr data-search="subdomain_enumerator subdomain_enumerate subdomain_enumerate">
+<td><code>subdomain_enumerator</code></td>
+<td><code>subdomain_enumerate</code><div class="small">extras_registry.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：subdomain_enumerate</div></td>
+<td><details><summary>1 action</summary><div class="small">上游：subdomain_enumerate</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="supabase_tool supabase supabase_select supabase_insert supabase_update supabase_delete supabase_auth_signup supabase_auth_signin supabase_edge_invoke supabase_select supabase_insert supabase_update supabase_delete supabase_auth_signup supabase_auth_signin supabase_edge_invoke">
+<td><code>supabase_tool</code></td>
+<td><code>supabase</code><div class="small">supabase.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：supabase_select, supabase_insert, supabase_update, supabase_delete, supabase_auth_signup, supabase_auth_signin, supabase_edge_invoke</div><div class="small">Go：supabase_select, supabase_insert, supabase_update, supabase_delete, supabase_auth_signup, supabase_auth_signin, supabase_edge_invoke</div></details></td>
+</tr>
+<tr data-search="tech_stack_detector tech_stack_detect tech_stack_detect">
+<td><code>tech_stack_detector</code></td>
+<td><code>tech_stack_detect</code><div class="small">extras_registry.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill warn">已实现，默认关闭</span><div class="small missing">缺：tech_stack_detect</div></td>
+<td><details><summary>1 action</summary><div class="small">上游：tech_stack_detect</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="telegram_tool telegram telegram_send_message telegram_send_document telegram_edit_message telegram_delete_message telegram_forward_message telegram_send_photo telegram_send_chat_action telegram_get_chat telegram_pin_message telegram_unpin_message telegram_get_chat_member_count telegram_send_video telegram_set_chat_description telegram_delete_message telegram_edit_message telegram_forward_message telegram_get_chat telegram_get_chat_member_count telegram_pin_message telegram_send_chat_action telegram_send_document telegram_send_message telegram_send_photo telegram_send_video telegram_set_chat_description telegram_unpin_message">
+<td><code>telegram_tool</code></td>
+<td><code>telegram</code><div class="small">catalog_gen.go</div></td>
+<td class="num">13</td><td class="num">13</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>13 actions</summary><div class="small">上游：telegram_send_message, telegram_send_document, telegram_edit_message, telegram_delete_message, telegram_forward_message, telegram_send_photo, telegram_send_chat_action, telegram_get_chat, telegram_pin_message, telegram_unpin_message, telegram_get_chat_member_count, telegram_send_video, telegram_set_chat_description</div><div class="small">Go：telegram_delete_message, telegram_edit_message, telegram_forward_message, telegram_get_chat, telegram_get_chat_member_count, telegram_pin_message, telegram_send_chat_action, telegram_send_document, telegram_send_message, telegram_send_photo, telegram_send_video, telegram_set_chat_description, telegram_unpin_message</div></details></td>
+</tr>
+<tr data-search="terraform_tool terraform terraform_list_workspaces terraform_get_workspace terraform_list_runs terraform_get_run terraform_create_run terraform_list_workspaces terraform_get_workspace terraform_list_runs terraform_get_run terraform_create_run">
+<td><code>terraform_tool</code></td>
+<td><code>terraform</code><div class="small">infra_automation.go</div></td>
+<td class="num">5</td><td class="num">5</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>5 actions</summary><div class="small">上游：terraform_list_workspaces, terraform_get_workspace, terraform_list_runs, terraform_get_run, terraform_create_run</div><div class="small">Go：terraform_list_workspaces, terraform_get_workspace, terraform_list_runs, terraform_get_run, terraform_create_run</div></details></td>
+</tr>
+<tr data-search="time_tool get_current_time get_current_time">
+<td><code>time_tool</code></td>
+<td><code>get_current_time</code><div class="small">catalog_gen.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>1 action</summary><div class="small">上游：get_current_time</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="tines_tool tines tines_list_stories tines_get_story tines_list_actions tines_get_action tines_get_action_logs tines_list_stories tines_get_story tines_list_actions tines_get_action tines_get_action_logs">
+<td><code>tines_tool</code></td>
+<td><code>tines</code><div class="small">infra_automation.go</div></td>
+<td class="num">5</td><td class="num">5</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>5 actions</summary><div class="small">上游：tines_list_stories, tines_get_story, tines_list_actions, tines_get_action, tines_get_action_logs</div><div class="small">Go：tines_list_stories, tines_get_story, tines_list_actions, tines_get_action, tines_get_action_logs</div></details></td>
+</tr>
+<tr data-search="trello_tool trello trello_list_boards trello_get_member trello_list_lists trello_list_cards trello_create_card trello_move_card trello_update_card trello_add_comment trello_add_attachment trello_get_card trello_create_list trello_search_cards trello_add_attachment trello_add_comment trello_create_card trello_create_list trello_get_card trello_get_member trello_list_boards trello_list_cards trello_list_lists trello_move_card trello_search_cards trello_update_card">
+<td><code>trello_tool</code></td>
+<td><code>trello</code><div class="small">catalog_gen.go</div></td>
+<td class="num">12</td><td class="num">12</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>12 actions</summary><div class="small">上游：trello_list_boards, trello_get_member, trello_list_lists, trello_list_cards, trello_create_card, trello_move_card, trello_update_card, trello_add_comment, trello_add_attachment, trello_get_card, trello_create_list, trello_search_cards</div><div class="small">Go：trello_add_attachment, trello_add_comment, trello_create_card, trello_create_list, trello_get_card, trello_get_member, trello_list_boards, trello_list_cards, trello_list_lists, trello_move_card, trello_search_cards, trello_update_card</div></details></td>
+</tr>
+<tr data-search="twilio_tool twilio twilio_send_sms twilio_send_whatsapp twilio_list_messages twilio_get_message twilio_list_phone_numbers twilio_list_calls twilio_delete_message twilio_send_sms twilio_send_whatsapp twilio_list_messages twilio_get_message twilio_list_phone_numbers twilio_list_calls twilio_delete_message">
+<td><code>twilio_tool</code></td>
+<td><code>twilio</code><div class="small">social_media.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：twilio_send_sms, twilio_send_whatsapp, twilio_list_messages, twilio_get_message, twilio_list_phone_numbers, twilio_list_calls, twilio_delete_message</div><div class="small">Go：twilio_send_sms, twilio_send_whatsapp, twilio_list_messages, twilio_get_message, twilio_list_phone_numbers, twilio_list_calls, twilio_delete_message</div></details></td>
+</tr>
+<tr data-search="twitter_tool twitter twitter_search_tweets twitter_get_user twitter_get_user_tweets twitter_get_tweet twitter_get_user_followers twitter_get_tweet_replies twitter_get_list_tweets twitter_search_tweets twitter_get_user twitter_get_user_tweets twitter_get_tweet twitter_get_user_followers twitter_get_tweet_replies twitter_get_list_tweets">
+<td><code>twitter_tool</code></td>
+<td><code>twitter</code><div class="small">social_media.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：twitter_search_tweets, twitter_get_user, twitter_get_user_tweets, twitter_get_tweet, twitter_get_user_followers, twitter_get_tweet_replies, twitter_get_list_tweets</div><div class="small">Go：twitter_search_tweets, twitter_get_user, twitter_get_user_tweets, twitter_get_tweet, twitter_get_user_followers, twitter_get_tweet_replies, twitter_get_list_tweets</div></details></td>
+</tr>
+<tr data-search="vercel_tool vercel vercel_list_deployments vercel_get_deployment vercel_list_projects vercel_get_project vercel_list_project_domains vercel_list_env_vars vercel_create_env_var vercel_list_deployments vercel_get_deployment vercel_list_projects vercel_get_project vercel_list_project_domains vercel_list_env_vars vercel_create_env_var">
+<td><code>vercel_tool</code></td>
+<td><code>vercel</code><div class="small">devops_hosting.go</div></td>
+<td class="num">7</td><td class="num">7</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>7 actions</summary><div class="small">上游：vercel_list_deployments, vercel_get_deployment, vercel_list_projects, vercel_get_project, vercel_list_project_domains, vercel_list_env_vars, vercel_create_env_var</div><div class="small">Go：vercel_list_deployments, vercel_get_deployment, vercel_list_projects, vercel_get_project, vercel_list_project_domains, vercel_list_env_vars, vercel_create_env_var</div></details></td>
+</tr>
+<tr data-search="vision_tool vision vision_detect_labels vision_detect_text vision_detect_faces vision_localize_objects vision_detect_logos vision_detect_landmarks vision_image_properties vision_web_detection vision_safe_search vision_detect_labels vision_detect_text vision_detect_faces vision_localize_objects vision_detect_logos vision_detect_landmarks vision_image_properties vision_web_detection vision_safe_search">
+<td><code>vision_tool</code></td>
+<td><code>vision</code><div class="small">ai_platform.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：vision_detect_labels, vision_detect_text, vision_detect_faces, vision_localize_objects, vision_detect_logos, vision_detect_landmarks, vision_image_properties, vision_web_detection, vision_safe_search</div><div class="small">Go：vision_detect_labels, vision_detect_text, vision_detect_faces, vision_localize_objects, vision_detect_logos, vision_detect_landmarks, vision_image_properties, vision_web_detection, vision_safe_search</div></details></td>
+</tr>
+<tr data-search="wandb_tool wandb wandb_list_projects wandb_list_runs wandb_get_run wandb_get_run_metrics wandb_list_artifacts wandb_get_summary wandb_list_projects wandb_list_runs wandb_get_run wandb_get_run_metrics wandb_list_artifacts wandb_get_summary">
+<td><code>wandb_tool</code></td>
+<td><code>wandb</code><div class="small">ai_platform.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：wandb_list_projects, wandb_list_runs, wandb_get_run, wandb_get_run_metrics, wandb_list_artifacts, wandb_get_summary</div><div class="small">Go：wandb_list_projects, wandb_list_runs, wandb_get_run, wandb_get_run_metrics, wandb_list_artifacts, wandb_get_summary</div></details></td>
+</tr>
+<tr data-search="web_scrape_tool web_scrape web_scrape">
+<td><code>web_scrape_tool</code></td>
+<td><code>web_scrape</code><div class="small">scrape.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>1 action</summary><div class="small">上游：web_scrape</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="web_search_tool web_search web_search">
+<td><code>web_search_tool</code></td>
+<td><code>web_search</code><div class="small">web_search.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>1 action</summary><div class="small">上游：web_search</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="wikipedia_tool search_wikipedia search_wikipedia">
+<td><code>wikipedia_tool</code></td>
+<td><code>search_wikipedia</code><div class="small">research_registry.go</div></td>
+<td class="num">1</td><td class="num">1</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>1 action</summary><div class="small">上游：search_wikipedia</div><div class="small">Go：单工具调用</div></details></td>
+</tr>
+<tr data-search="yahoo_finance_tool yahoo_finance yahoo_finance_quote yahoo_finance_history yahoo_finance_financials yahoo_finance_info yahoo_finance_search yahoo_finance_quote yahoo_finance_history yahoo_finance_financials yahoo_finance_info yahoo_finance_search">
+<td><code>yahoo_finance_tool</code></td>
+<td><code>yahoo_finance</code><div class="small">research_registry.go</div></td>
+<td class="num">5</td><td class="num">5</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>5 actions</summary><div class="small">上游：yahoo_finance_quote, yahoo_finance_history, yahoo_finance_financials, yahoo_finance_info, yahoo_finance_search</div><div class="small">Go：yahoo_finance_quote, yahoo_finance_history, yahoo_finance_financials, yahoo_finance_info, yahoo_finance_search</div></details></td>
+</tr>
+<tr data-search="youtube_tool youtube youtube_search_videos youtube_get_video_details youtube_get_channel youtube_list_channel_videos youtube_get_playlist youtube_search_channels youtube_get_video_comments youtube_get_video_categories youtube_search_videos youtube_get_video_details youtube_get_channel youtube_list_channel_videos youtube_get_playlist youtube_search_channels youtube_get_video_comments youtube_get_video_categories">
+<td><code>youtube_tool</code></td>
+<td><code>youtube</code><div class="small">social_media.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：youtube_search_videos, youtube_get_video_details, youtube_get_channel, youtube_list_channel_videos, youtube_get_playlist, youtube_search_channels, youtube_get_video_comments, youtube_get_video_categories</div><div class="small">Go：youtube_search_videos, youtube_get_video_details, youtube_get_channel, youtube_list_channel_videos, youtube_get_playlist, youtube_search_channels, youtube_get_video_comments, youtube_get_video_categories</div></details></td>
+</tr>
+<tr data-search="youtube_transcript_tool youtube_transcript youtube_get_transcript youtube_list_transcripts youtube_get_transcript youtube_list_transcripts">
+<td><code>youtube_transcript_tool</code></td>
+<td><code>youtube_transcript</code><div class="small">research_registry.go</div></td>
+<td class="num">2</td><td class="num">2</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>2 actions</summary><div class="small">上游：youtube_get_transcript, youtube_list_transcripts</div><div class="small">Go：youtube_get_transcript, youtube_list_transcripts</div></details></td>
+</tr>
+<tr data-search="zendesk_tool zendesk zendesk_list_tickets zendesk_get_ticket zendesk_create_ticket zendesk_update_ticket zendesk_search_tickets zendesk_get_ticket_comments zendesk_add_ticket_comment zendesk_list_users zendesk_list_tickets zendesk_get_ticket zendesk_create_ticket zendesk_update_ticket zendesk_search_tickets zendesk_get_ticket_comments zendesk_add_ticket_comment zendesk_list_users">
+<td><code>zendesk_tool</code></td>
+<td><code>zendesk</code><div class="small">zendesk.go</div></td>
+<td class="num">8</td><td class="num">8</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>8 actions</summary><div class="small">上游：zendesk_list_tickets, zendesk_get_ticket, zendesk_create_ticket, zendesk_update_ticket, zendesk_search_tickets, zendesk_get_ticket_comments, zendesk_add_ticket_comment, zendesk_list_users</div><div class="small">Go：zendesk_list_tickets, zendesk_get_ticket, zendesk_create_ticket, zendesk_update_ticket, zendesk_search_tickets, zendesk_get_ticket_comments, zendesk_add_ticket_comment, zendesk_list_users</div></details></td>
+</tr>
+<tr data-search="zoho_crm_tool zoho_crm zoho_crm_list_records zoho_crm_get_record zoho_crm_create_record zoho_crm_search_records zoho_crm_list_modules zoho_crm_add_note zoho_crm_add_note zoho_crm_create_record zoho_crm_get_record zoho_crm_list_modules zoho_crm_list_records zoho_crm_search_records">
+<td><code>zoho_crm_tool</code></td>
+<td><code>zoho_crm</code><div class="small">zoho_crm.go</div></td>
+<td class="num">6</td><td class="num">6</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>6 actions</summary><div class="small">上游：zoho_crm_list_records, zoho_crm_get_record, zoho_crm_create_record, zoho_crm_search_records, zoho_crm_list_modules, zoho_crm_add_note</div><div class="small">Go：zoho_crm_add_note, zoho_crm_create_record, zoho_crm_get_record, zoho_crm_list_modules, zoho_crm_list_records, zoho_crm_search_records</div></details></td>
+</tr>
+<tr data-search="zoom_tool zoom zoom_get_user zoom_list_meetings zoom_get_meeting zoom_create_meeting zoom_delete_meeting zoom_list_recordings zoom_update_meeting zoom_list_meeting_participants zoom_list_meeting_registrants zoom_get_user zoom_list_meetings zoom_get_meeting zoom_create_meeting zoom_delete_meeting zoom_list_recordings zoom_update_meeting zoom_list_meeting_participants zoom_list_meeting_registrants">
+<td><code>zoom_tool</code></td>
+<td><code>zoom</code><div class="small">zoom.go</div></td>
+<td class="num">9</td><td class="num">9</td>
+<td><span class="pill ok">已实现</span></td>
+<td><details><summary>9 actions</summary><div class="small">上游：zoom_get_user, zoom_list_meetings, zoom_get_meeting, zoom_create_meeting, zoom_delete_meeting, zoom_list_recordings, zoom_update_meeting, zoom_list_meeting_participants, zoom_list_meeting_registrants</div><div class="small">Go：zoom_get_user, zoom_list_meetings, zoom_get_meeting, zoom_create_meeting, zoom_delete_meeting, zoom_list_recordings, zoom_update_meeting, zoom_list_meeting_participants, zoom_list_meeting_registrants</div></details></td>
+</tr>
+</tbody></table></div>
+<p class="small">模块总数 103；上游 action 865，Go 863。默认关闭的 6 个扫描器和 1 个 senders 工具仍计为“已实现”，但默认会话工具表里不出现。</p>
+</section>
+
+<section id="core"><h2><span class="num">02</span>核心会话工具</h2>
+<p class="sub">Go 默认会话里 29 个核心工具；chart_render 已实现并注册。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">Go 工具</th><th style="width:18%">用途</th><th style="width:22%">上游来源</th><th style="width:14%">状态</th><th>说明</th></tr></thead><tbody>
+<tr data-search="read_file 文件读取 aden_tools/file_ops.py 已实现 需沙箱路径校验"><td><code>read_file</code></td><td>文件读取</td><td><code>aden_tools/file_ops.py</code></td><td><span class="pill ok">已实现</span></td><td>需沙箱路径校验</td></tr>
+<tr data-search="write_file 文件写入 aden_tools/file_ops.py 已实现 需沙箱路径校验"><td><code>write_file</code></td><td>文件写入</td><td><code>aden_tools/file_ops.py</code></td><td><span class="pill ok">已实现</span></td><td>需沙箱路径校验</td></tr>
+<tr data-search="search_files 文件内容/文件名搜索 aden_tools/file_ops.py 已实现 原生遍历 regex"><td><code>search_files</code></td><td>文件内容/文件名搜索</td><td><code>aden_tools/file_ops.py</code></td><td><span class="pill ok">已实现</span></td><td>原生 Go 遍历 + regex；content/files、glob、分页、上下文；非 terminal_rg 包装</td></tr>
+<tr data-search="edit_file fuzzy replace patch aden_tools/file_ops.py 已实现"><td><code>edit_file</code></td><td>fuzzy replace / patch</td><td><code>aden_tools/file_ops.py</code></td><td><span class="pill ok">已实现</span></td><td>9 级 fuzzy replace + V4A patch；验证失败不落盘</td></tr>
+<tr data-search="terminal_exec shell 命令 terminal_tools/exec 已实现 "><td><code>terminal_exec</code></td><td>shell 命令</td><td><code>terminal_tools/exec</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="terminal_rg ripgrep 搜索 terminal_tools/search 已实现 "><td><code>terminal_rg</code></td><td>ripgrep 搜索</td><td><code>terminal_tools/search</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="terminal_glob glob 文件枚举 terminal_tools/search 已实现 "><td><code>terminal_glob</code></td><td>glob 文件枚举</td><td><code>terminal_tools/search</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="terminal_output_get 读取后台输出 terminal_tools/output 已实现 "><td><code>terminal_output_get</code></td><td>读取后台输出</td><td><code>terminal_tools/output</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="terminal_job_start 启动后台 job terminal_tools/jobs 已实现 "><td><code>terminal_job_start</code></td><td>启动后台 job</td><td><code>terminal_tools/jobs</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="terminal_job_logs job 日志 terminal_tools/jobs 已实现 "><td><code>terminal_job_logs</code></td><td>job 日志</td><td><code>terminal_tools/jobs</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="terminal_job_manage job 管理 terminal_tools/jobs 已实现 "><td><code>terminal_job_manage</code></td><td>job 管理</td><td><code>terminal_tools/jobs</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="terminal_pty_open 打开 pty terminal_tools/pty 已实现 "><td><code>terminal_pty_open</code></td><td>打开 PTY</td><td><code>terminal_tools/pty</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="terminal_pty_run pty 执行 terminal_tools/pty 已实现 "><td><code>terminal_pty_run</code></td><td>PTY 执行</td><td><code>terminal_tools/pty</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="terminal_pty_close 关闭 pty terminal_tools/pty 已实现 "><td><code>terminal_pty_close</code></td><td>关闭 PTY</td><td><code>terminal_tools/pty</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="task_create 创建任务 framework/task tools 已实现 "><td><code>task_create</code></td><td>创建任务</td><td><code>framework/task tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="task_update 更新任务 framework/task tools 已实现 "><td><code>task_update</code></td><td>更新任务</td><td><code>framework/task tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="task_list 任务列表 framework/task tools 已实现 "><td><code>task_list</code></td><td>任务列表</td><td><code>framework/task tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="task_get 任务详情 framework/task tools 已实现 "><td><code>task_get</code></td><td>任务详情</td><td><code>framework/task tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="write_skill 写技能 skills/agent_tools 已实现 scope=colony/queen/global"><td><code>write_skill</code></td><td>写技能</td><td><code>skills/agent_tools</code></td><td><span class="pill ok">已实现</span></td><td>scope=colony/queen/global</td></tr>
+<tr data-search="skill_view 读技能 skills/agent_tools 已实现 "><td><code>skill_view</code></td><td>读技能</td><td><code>skills/agent_tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="list_skills 列技能 skills/agent_tools 已实现 "><td><code>list_skills</code></td><td>列技能</td><td><code>skills/agent_tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="search_messages 历史会话搜索 memory_tools 已实现 "><td><code>search_messages</code></td><td>历史会话搜索</td><td><code>memory_tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="search_timeline 时间线搜索 memory_tools/timeline 已实现，默认关闭 需 memory_timeline 功能开关"><td><code>search_timeline</code></td><td>时间线搜索</td><td><code>memory_tools/timeline</code></td><td><span class="pill warn">已实现，默认关闭</span></td><td>需 memory_timeline 功能开关</td></tr>
+<tr data-search="credential_status 凭据状态 —（go 侧只读工具） go 额外 上游通过 credentials api/ui 提供"><td><code>credential_status</code></td><td>凭据状态</td><td><code>—（Go 侧只读工具）</code></td><td><span class="pill info">Go 额外</span></td><td>上游通过 credentials API/UI 提供</td></tr>
+<tr data-search="run_playbook 运行 playbook queen_lifecycle_tools 部分对齐 go 原生 json playbook 可跑；python playbook 明确 unsupported"><td><code>run_playbook</code></td><td>运行 playbook</td><td><code>queen_lifecycle_tools</code></td><td><span class="pill warn">部分对齐</span></td><td>Go 原生 JSON playbook 可跑；Python playbook 明确 unsupported</td></tr>
+<tr data-search="run_worker 派 colony worker queen_lifecycle_tools 已实现 含 resume_worker_ids 路径"><td><code>run_worker</code></td><td>派 colony worker</td><td><code>queen_lifecycle_tools</code></td><td><span class="pill ok">已实现</span></td><td>含 resume_worker_ids 路径</td></tr>
+<tr data-search="tracker_query 查询 tracker tracker tools 已实现 select-only"><td><code>tracker_query</code></td><td>查询 tracker</td><td><code>tracker tools</code></td><td><span class="pill ok">已实现</span></td><td>SELECT-only</td></tr>
+<tr data-search="tracker_register_writable 注册可写表 tracker tools 已实现 "><td><code>tracker_register_writable</code></td><td>注册可写表</td><td><code>tracker tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="tracker_sql tracker sql tracker tools 已实现 "><td><code>tracker_sql</code></td><td>tracker SQL</td><td><code>tracker tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="tracker_upsert tracker 写入 tracker tools 已实现 "><td><code>tracker_upsert</code></td><td>tracker 写入</td><td><code>tracker tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
+<tr data-search="ask_user 向用户提问并停车 queen_lifecycle/overseer 已实现 chat/overseer 共用 park"><td><code>ask_user</code></td><td>向用户提问并停车</td><td><code>queen_lifecycle/overseer</code></td><td><span class="pill ok">已实现</span></td><td>chat/overseer 共用 park</td></tr>
+<tr data-search="chart_render echarts/mermaid 渲染 tools/src/chart_tools 已实现 chrome 无头渲染 png"><td><code>chart_render</code></td><td>ECharts/Mermaid 渲染</td><td><code>tools/src/chart_tools</code></td><td><span class="pill ok">已实现</span></td><td>Chrome 无头渲染 → PNG；证据 <code>docs/e2e-assets/chart-render-*.png</code>；差异见 docs/chart-render.md</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>已补齐：</b>上游 <code>file_ops</code> 的 4 个文件工具现在 Go 都有（<code>read_file</code>、<code>write_file</code>、<code>edit_file</code>、<code>search_files</code>）。仍存残差：读路径仍受 root 限制、系统 deny list 未逐条复刻；<code>hashline</code>、stale-edit guard、<code>write_safe_root</code> 已补齐。</div>
+</section>
+
+<section id="skills"><h2><span class="num">02B</span>Skills：内置、工具与动态发现</h2>
+<p>Hive <b>支持 Skill</b>，而且有三层：内置 SKILL.md、agent 可调用的技能工具、以及技能目录发现/热重载。上一版矩阵把 3 个技能工具放在核心表里，但没有单独列出 20 个内置 Skill 和发现机制——这是页面缺口，不是 Hive 不支持。</p>
+<p class="mobile-hint">移动端表格可左右滑动查看完整内容。</p>
+<h3>1) 内置 Skill（20 个，go_hive 与上游逐文件一致）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">作用域</th><th style="width:10%">数量</th><th>内容</th></tr></thead><tbody>
+<tr><td>framework（默认）</td><td class="num">12</td><td><code>browser-automation</code>、<code>colony-progress-tracker</code>、<code>context-preservation</code>、<code>error-recovery</code>、<code>image-generation</code>、<code>note-taking</code>、<code>pdf</code>、<code>quality-monitor</code>、<code>slack-notifications-setup</code>、<code>telegram-notifications-setup</code>、<code>worker-delegation</code>、<code>writing-hive-skills</code></td></tr>
+<tr><td>preset（默认关闭）</td><td class="num">8</td><td><code>chart-creation-foundations</code>、<code>linkedin-automation</code>、<code>terminal-tools-foundations</code>、<code>terminal-tools-fs-search</code>、<code>terminal-tools-job-control</code>、<code>terminal-tools-pty-sessions</code>、<code>terminal-tools-troubleshooting</code>、<code>x-automation</code></td></tr>
+</tbody></table></div>
+<p class="small">上游 DefaultSkillManager 默认注入的是 3 个参考类：<code>writing-hive-skills</code>、<code>browser-automation</code>、<code>pdf</code>；worker 的操作协议内容已并入 system prompt。preset 不绑定任何默认 queen，需要显式启用。</p>
+<h3>2) Agent 技能工具</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">工具</th><th style="width:14%">Go</th><th>说明</th></tr></thead><tbody>
+<tr><td><code>write_skill</code></td><td><span class="pill ok">已实现</span></td><td>写 colony/queen/global 作用域；写入 <code>&lt;scope&gt;/skills/&lt;name&gt;/SKILL.md</code></td></tr>
+<tr><td><code>skill_view</code></td><td><span class="pill ok">已实现</span></td><td>按名字读技能正文；worker 的 <code>view_file</code> 在技能目录内也被拦截为技能内容</td></tr>
+<tr><td><code>list_skills</code></td><td><span class="pill ok">已实现</span></td><td>列出当前作用域可见技能</td></tr>
+</tbody></table></div>
+<h3>3) 动态发现与热重载</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">机制</th><th style="width:16%">Python 上游</th><th style="width:16%">go_hive</th><th>说明</th></tr></thead><tbody>
+<tr><td>启动/显式发现</td><td><span class="pill ok">支持</span></td><td><span class="pill ok">支持</span></td><td>框架、preset、user、queen_ui、colony_ui、project、external roots；每个 manager 加载时扫描</td></tr>
+<tr><td>文件系统 watcher</td><td><span class="pill warn">依赖 watchfiles</span></td><td><span class="pill bad">未实现</span></td><td>Python 有 <code>start_watching()</code>，但当前 venv <b>没装 watchfiles</b>，因此实际不启用；Go 只保存 watchedDirs，没有 watcher</td></tr>
+<tr><td>UI/API 显式 reload</td><td><span class="pill ok">支持</span></td><td><span class="pill ok">支持</span></td><td>Go 的 <code>POST /api/queen/{id}/skills/reload</code> / <code>POST /api/skills/reload</code> 扇出到 live 会话与 colony，并返回 <code>live</code> 统计；实测 catalog 28894→29084 chars</td></tr>
+<tr><td>写入后可见</td><td><span class="pill ok">下一回合</span></td><td><span class="pill ok">reload 后下一回合</span></td><td>运行中会话/colony 经显式 reload 后重建目录，下一回合生效；无 watcher（上游当前部署未装 watchfiles）</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>结论：</b>Hive 支持 Skill，也有动态发现/热重载代码；但当前环境没有安装 <code>watchfiles</code>，所以“丢一个 SKILL.md 自动出现”在这种部署下不成立。go_hive 的 watcher 未实现，但 REST 显式 reload 已完整扇出到 live 会话/colony。</div>
+</section>
+
+<section id="browser"><h2><span class="num">03</span>Browser Bridge 工具</h2>
+<p>上游 Hive 有 33 个 <code>browser_*</code> 定义，其中 22 个 active（由 <code>tools/__init__.py</code> 注册）、11 个 legacy 未注册。go_hive 的 Browser Bridge 现有 <b>22/22 active handler + 可执行入口</b>（<code>cmd/browserbridge</code>）并由 <code>hive serve</code> 自动拉起；真实 Chrome 158.0.8127.37 + vendored 扩展 1.7.4 已跑通 19 步 E2E；模型经 <code>hive-browser</code> CLI 驱动（上游同款）。残差：快照 ref/href、注解截图、CLI 错误码（用法 2→6）等见 PARITY.md / browser-host.md。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">工具</th><th style="width:16%">上游面</th><th>Go 状态</th></tr></thead><tbody>
+<tr data-search="browser_setup 已实现 模块内"><td><code>browser_setup</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_status 已实现 模块内"><td><code>browser_status</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_stop 已实现 模块内"><td><code>browser_stop</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_tabs 已移植"><td><code>browser_tabs</code></td><td>active</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_open 已移植"><td><code>browser_open</code></td><td>active</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_close 已移植"><td><code>browser_close</code></td><td>active</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_activate_tab 已移植"><td><code>browser_activate_tab</code></td><td>active</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_navigate 已移植"><td><code>browser_navigate</code></td><td>active</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_reload 已移植"><td><code>browser_reload</code></td><td>active</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_screenshot 已移植（返回形状不同）"><td><code>browser_screenshot</code></td><td>active</td><td><span class="pill warn">已移植（返回形状不同）</span></td></tr>
+<tr data-search="browser_shadow_query 已实现 模块内"><td><code>browser_shadow_query</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_snapshot 已移植"><td><code>browser_snapshot</code></td><td>active</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_console 已实现 模块内"><td><code>browser_console</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_html 已实现 模块内"><td><code>browser_html</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_interact 已实现 模块内"><td><code>browser_interact</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_select 已实现 模块内"><td><code>browser_select</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_evaluate 已移植"><td><code>browser_evaluate</code></td><td>active</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_get_text 已实现 模块内"><td><code>browser_get_text</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_resize 已实现 模块内"><td><code>browser_resize</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_upload 已实现 模块内"><td><code>browser_upload</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_dialog_respond 已实现 模块内"><td><code>browser_dialog_respond</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_script 已实现 模块内"><td><code>browser_script</code></td><td>active</td><td><span class="pill ok">已实现（模块内）</span></td></tr>
+<tr data-search="browser_click legacy 已移植"><td><code>browser_click</code></td><td>legacy（未注册）</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_click_coordinate legacy 未移植"><td><code>browser_click_coordinate</code></td><td>legacy（未注册）</td><td><span class="pill bad">未移植</span></td></tr>
+<tr data-search="browser_type legacy 已移植"><td><code>browser_type</code></td><td>legacy（未注册）</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_type_focused legacy 已移植"><td><code>browser_type_focused</code></td><td>legacy（未注册）</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_press legacy 已移植"><td><code>browser_press</code></td><td>legacy（未注册）</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_hover legacy 未移植"><td><code>browser_hover</code></td><td>legacy（未注册）</td><td><span class="pill bad">未移植</span></td></tr>
+<tr data-search="browser_hover_coordinate legacy 未移植"><td><code>browser_hover_coordinate</code></td><td>legacy（未注册）</td><td><span class="pill bad">未移植</span></td></tr>
+<tr data-search="browser_press_at legacy 未移植"><td><code>browser_press_at</code></td><td>legacy（未注册）</td><td><span class="pill bad">未移植</span></td></tr>
+<tr data-search="browser_select legacy 未移植"><td><code>browser_select</code></td><td>legacy（未注册）</td><td><span class="pill bad">未移植</span></td></tr>
+<tr data-search="browser_scroll legacy 已移植"><td><code>browser_scroll</code></td><td>legacy（未注册）</td><td><span class="pill ok">已移植</span></td></tr>
+<tr data-search="browser_drag legacy 未移植"><td><code>browser_drag</code></td><td>legacy（未注册）</td><td><span class="pill bad">未移植</span></td></tr>
+</tbody></table></div>
+<div class="callout info"><b>边界：</b>22 个 active 命令已实现、真实 Chrome 验证；serve 生命周期托管 + control RPC 14831（client_hello/notify/30s 空闲退出）已对齐；agent 通过 terminal 调用 <code>hive-browser</code>。notify 注入与 3 条面板路由均已实现；残差只剩快照 ref/注解图/CLI 错误码等形状差异。</div>
+</section>
+
+<section id="queen"><h2><span class="num">04</span>Queen / Colony / 动态工具</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">工具/能力</th><th style="width:22%">上游</th><th style="width:16%">Go 状态</th><th>说明</th></tr></thead><tbody>
+<tr><td><code>run_worker</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>派 worker、report_to_parent、resume_worker_ids；真实多 worker 长任务未跑</td></tr>
+<tr><td><code>run_playbook</code></td><td>queen_lifecycle_tools</td><td><span class="pill warn">部分对齐</span></td><td>Go 原生 JSON playbook 可跑；Python playbook 明确 unsupported</td></tr>
+<tr><td><code>ask_user</code></td><td>agent_loop / overseer</td><td><span class="pill ok">已实现</span></td><td>chat 与 overseer 共用 park；真实 UI 闭环已验证</td></tr>
+<tr><td><code>tracker_*</code>（4）</td><td>tracker tools</td><td><span class="pill ok">已实现</span></td><td>SQLite 建库、binding、Queen/worker/overseer 三侧工具</td></tr>
+<tr><td><code>list_queens</code> / <code>message_queen</code></td><td>queen_mail_tools</td><td><span class="pill warn">已实现，默认关闭</span></td><td>仅 queen 聊天会话；真实双 queen 端到端已跑通（depth 1→4）</td></tr>
+<tr><td>Claude Code queen</td><td>claude_code_queens.py</td><td><span class="pill ok">已实现运行器</span></td><td>真实 <code>claude -p</code> 回合/会话/超时/并发/回复闭环/MCP 注入已跑通；只读 dashboard 列表/transcript 路由已实现（<code>routes_queens_claude_code.go</code> + 测试），真实模型主动调 <code>message_queen</code> 未联调</td></tr>
+<tr><td><code>get_worker_status</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>summary/activity/memory/tools/issues/progress/full；memory focus 无 shared buffer</td></tr>
+<tr><td><code>inject_message</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>注入全部活动 worker；colony 无单一 graph</td></tr>
+<tr><td><code>reply_to_worker</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>Session escalation 收件箱，按到达顺序回复出队</td></tr>
+<tr><td><code>list_worker_questions</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>worker 提问闭环已通</td></tr>
+<tr><td><code>stop_worker</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>playbook 取消 + grace 收集报告 + 暂停 timer trigger</td></tr>
+<tr><td><code>update_worker_profile</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>复用 colony metadata profile 注册表</td></tr>
+<tr><td><code>set_trigger</code> / <code>list_triggers</code> / <code>remove_trigger</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>复用 Session trigger store 与 timer/webhook 运行期</td></tr>
+<tr><td><code>list_browser_profiles</code></td><td>queen_lifecycle_tools</td><td><span class="pill warn">已实现（有桥才有数据）</span></td><td>探测本地桥 14830/9230；无桥返回空列表，不伪造</td></tr>
+<tr><td>动态 MCP 工具</td><td>mcp_registry</td><td><span class="pill ok">已实现</span></td><td>命名空间 <code>mcp__&lt;server&gt;__&lt;tool&gt;</code>；真实 MCP server 数量随安装变化</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>Queen lifecycle 已补齐：</b>上游该模块 12 个工具（含 <code>run_worker</code>/<code>write_skill</code>）在 Go 均已实现；本轮补的 10 个只向 colony 运行期 queen 会话暴露，worker/overseer 面未扩大。残差见 <code>docs/queen-lifecycle-tools.md</code>。</div>
+</section>
+
+<section id="gaps"><h2><span class="num">05</span>缺口与验收边界</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:28%">缺口</th><th>事实</th></tr></thead><tbody>
+<tr><td><code>csv_sql</code> / <code>excel_sql</code></td><td>上游用 DuckDB（native）；纯 Go 无 cgo 不引入，明确返回 unknown action，不伪造</td></tr>
+<tr><td>file_ops 残差</td><td><code>hashline</code>、stale-edit guard、<code>write_safe_root</code> 已补齐；读路径仍严格限 root、上游系统 deny list 未逐条复刻</td></tr>
+<tr><td>chart_render</td><td>已实现（Chrome 无头渲染 ECharts/Mermaid → PNG）；与上游差异见 docs/chart-render.md</td></tr>
+<tr><td>Browser Bridge</td><td>22/22 active + CLI + serve 托管 + control RPC 14831/空闲退出 + notify 注入 + 3 条面板代理已对齐；残余：快照 ref/注解图、CLI 错误码等形状差异</td></tr>
+<tr><td>Claude Code queen</td><td>运行器/MCP/回复闭环 + 真实 dashboard 列表/transcript 已实现并经真实 <code>claude -p</code> 验证；真实模型主动调 <code>message_queen</code> 未联调</td></tr>
+<tr><td>Soul 自动演化</td><td>每日反思 + <code>POST /soul/reflect</code> 已接通（202/409/review/auto；真实二进制 E2E 用脚本化模型 PASS）；真实模型日调度未跑；差异见 docs/soul-daily-reflection.md</td></tr>
+<tr><td>Memory 双跑</td><td>timeline/past recall/recall 与 Python 双跑 PASS；stop flush、past recall twice 已修；真实慢模型/UI/cooldown 到期未验，见 docs/memory-e2e.md</td></tr>
+<tr><td>LongMemEval</td><td>harness + 脱敏 fixture + 脚本化管线 PASS；真实 S/M 数据集与官方 judge 因无外网未验证，<b>没有任何分数</b></td></tr>
+<tr><td>第三方集成</td><td>81 个需凭据模块未做真实 API 验证；本矩阵的“已实现”仅指代码路径/测试</td></tr>
+<tr><td>发送人工具</td><td><code>senders</code> 已实现，但 <code>email_senders</code> 默认关闭，默认工具表不含 9 个 action</td></tr>
+<tr><td>网络扫描器</td><td>4 个扫描器 + 子域/技术栈共 6 个已实现，默认关闭（<code>HIVE_NETWORK_SCANNERS=false</code>）</td></tr>
+</tbody></table></div>
+<div class="callout"><b>结论：</b>集成模块/action 覆盖接近完整（103/103、863/865）；file_ops、Queen lifecycle、Browser active 面与 Claude Code queen 运行器已补齐并有真实验证。Soul 每日反思与手动 reflect 已接通；冷会话开幕事件、Browser notify/面板、技能 live reload、附件多模态均已在 2026-11-20 补齐，LongMemEval harness 已实现但真实数据集/judge 因无外网未验证（fixture 管线 PASS，无分数）；仍存的明确缺口是 LongMemEval 真实跑分、81 个第三方凭据模块、Windows 实机与少量 CLI/schema 形状差异。此页是追踪矩阵，不是“全部可用”的证明。</div>
+</section>
+
+<footer>生成：2026-11-21 00:19 CST · 数据：上游 <code>tools/src/aden_tools/tools/*</code> 的 103 个模块、<code>tools/src/gcu/browser/tools/*</code> 的 33 个定义、Go session catalogue 的 137 个默认工具、<code>go_hive/browserbridge/PARITY.md</code>。状态口径见页首。</footer>
+</div>
+<script>
+document.getElementById('filter').addEventListener('input', function(e){
+  var q=e.target.value.trim().toLowerCase();
+  document.querySelectorAll('tr[data-search]').forEach(function(r){
+    r.style.display = !q || r.getAttribute('data-search').indexOf(q)>=0 ? '' : 'none';
+  });
+});
+</script></body></html>

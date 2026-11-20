@@ -301,9 +301,18 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	live := make([]*hiveserver.Session, 0)
 	lifecycle := r.newColonyLifecycle(manager, &liveMu, &live, home, args.str("model"))
 
+	// One queen-mail service for the process: routes, deliverer and the chat
+	// tools share it. Built before preloaded sessions so they register too.
+	queenMail, createSession := r.newQueenMailService(manager, &liveMu, &live, home, args.str("model"))
+	defer queenMail.Close()
+
 	for _, colonyArg := range args.list("colony") {
 		r.loadPreloadedColonySession(colonyArg, manager, &liveMu, &live, home, args.str("model"))
 	}
+
+	// Runtime logs: the route reads the process-wide ring; stderr still sees all.
+	installRuntimeLogBuffer()
+	soulProbeAnswerFor := newSoulProbeAnswerFor(home, args.str("model"))
 
 	app := hiveserver.NewApp(hiveserver.AppDeps{
 		Sessions: func() []hiveserver.FeatureSession {
@@ -320,11 +329,11 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 		Home:                   home,
 		Colony:                 lifecycle,
 		CreateColonyFromSource: lifecycle.CreateColonyFromSource,
-		CreateSession: func(params hiveserver.CreateSessionParams) (*hiveserver.Session, error) {
-			return r.createChatSession(params, manager, &liveMu, &live, home, args.str("model"))
-		},
+		CreateSession:          createSession,
+		QueenMail:              queenMail,
+		SoulProbeAnswerFor:     soulProbeAnswerFor,
+		SoulReflect:            newSoulReflectFor(home, args.str("model")),
 	})
-
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Error: %v\n", err)
@@ -339,8 +348,12 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- server.Serve(listener) }()
 	hiveserver.MarkBootReady("Server ready")
-
+	// Bridge + soul lifecycles: loader_background_services.go.
+	defer startServeBackgroundServices(r, home, manager)()
 	dashboardURL := fmt.Sprintf("http://%s:%d", host, port)
+	// A Claude Code queen's runs reach this server here (upstream sets
+	// queen_mail.base_url once serve listens).
+	queenMail.Mail().SetBaseURL(dashboardURL)
 	hasFrontend := app.HasFrontend()
 
 	liveMu.Lock()
@@ -583,6 +596,7 @@ func (r *Runner) createSessionWithRuntime(
 		requestedModel = defaultModel
 	}
 
+	skillsCatalog := liveSkillsCatalog(record, home, queenScope)
 	var runtime *hiveserver.ChatRuntime
 	provider, providerErr := chatProviderFactory(home, requestedModel)
 	if providerErr != nil {
@@ -593,16 +607,19 @@ func (r *Runner) createSessionWithRuntime(
 	} else {
 		toolbox := builtin.New("")
 		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
+		onTurnStart := enableQueenSessionTools(tools, manager, sessionID, record, home)
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 			LLM:           provider,
 			Tools:         tools.Defs(),
 			Execute:       tools.Execute,
+			ExecuteBlocks: tools.ExecuteBlocks,
 			Root:          sessionDir,
 			Bus:           record.EventBus,
 			SessionID:     sessionID,
 			QueenName:     record.QueenName,
 			HomeRoot:      home.Root,
-			SkillsCatalog: queenSkillsCatalogProvider(home, queenScope),
+			SkillsCatalog: skillsCatalog.Catalog,
+			OnTurnStart:   onTurnStart,
 		})
 		if err != nil {
 			fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, err)

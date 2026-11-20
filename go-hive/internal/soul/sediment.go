@@ -1,10 +1,11 @@
 package soul
 
-// Parity-exempt: no upstream counterpart. Upstream revises a queen's soul in a
+// Parity-exempt: Go-only sediment seam. Upstream revises a queen's soul in a
 // separate daily reflection that reads her chats
-// (framework/agents/queen/soul_reflection.py); the Go port has no chat-reading
-// soul reflection, so a finished memory reflection sediments its conclusions
-// here instead. Storage stays upstream-shaped: soul.json, history/v<n>.json and
+// (framework/agents/queen/soul_reflection.py); the Go port now also runs that
+// daily reflection (internal/soul/reflection*.go), and additionally sediments a
+// finished memory reflection's conclusions here so either pass keeps her soul
+// current. Storage stays upstream-shaped: soul.json, history/v<n>.json and
 // log.jsonl are all written through Save, so the soul routes keep reading it.
 
 import (

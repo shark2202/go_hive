@@ -182,8 +182,8 @@
 
 ### W5-SEC-12（Medium）PDF URL SSRF：DNS 解析与重定向
 
-- 位置：`internal/tools/integrations/batch3_pdf.go:443`；
-  `internal/tools/integrations/batch3_scrape.go:302`；`internal/tools/integrations/integration.go:139`
+- 位置：`internal/tools/integrations/pdf.go:443`；
+  `internal/tools/integrations/scrape.go:302`；`internal/tools/integrationkit/runtime.go:44`
 - 问题：`pdf_read` 仅做字符串 deny-list（`127.`、`10.`、`192.168.` 等），
   不解析 DNS，也不检查重定向；`https://internal.corp/doc.pdf` 或公网 URL 302 到
   `169.254.169.254` 可绕过。`web_scrape` 已有 DNS+逐跳重定向检查，PDF 没有。
@@ -278,7 +278,7 @@
 | --- | --- | --- | --- | --- |
 | R-01 | Medium | `routes_colonies_import.go:1039` | tar 解压无总字节/单文件上限；2 GiB 压缩包可解压出巨量数据（压缩炸弹） | 增加 `maxTotalExtractedBytes`（如 8 GiB）与单文件上限，`io.Copy` 用 `LimitReader` 并超限中止清理 |
 | R-02 | Medium | `sessionreport/session_report.go:172` | 文本文件 `os.ReadFile` 全量读入；超大日志可打爆内存 | 按 `info.Size()` 限制（如 64 MiB/文件），超出记入 `omitted_paths` |
-| R-03 | Medium | `batch3_scrape.go:302`、`batch3_pdf.go:443` | DNS 解析与 HTTP 拨号是两次解析，存在 rebinding TOCTOU | 自定义 `DialContext` 固定已校验 IP，或在 transport 层做 IP 校验 |
+| R-03 | Medium | `scrape.go:302`、`pdf.go:443` | DNS 解析与 HTTP 拨号是两次解析，存在 rebinding TOCTOU | 自定义 `DialContext` 固定已校验 IP，或在 transport 层做 IP 校验 |
 | R-04 | Low | `routes_colonies_import.go:1000` | `secureTarget` 校验后到 `os.Create/Rename` 之间存在本地 symlink 替换窗口 | 解压到独立临时目录后整体 rename；或使用 `openat`/`O_NOFOLLOW` |
 | R-05 | Low | `server/app.go:395` | 只脱敏 query，path 段中的秘密仍会进日志（如 webhook 自定义路径） | 对已知 token 形状（`/bot<digits>:...`）或配置的 webhook secret 做 path 脱敏 |
 | R-06 | Low | `server/app.go:378` | `HIVE_DESKTOP_TOKEN` 为空时本地 API 无鉴权 | 保持默认 loopback；已加非 loopback fail-closed；如需远程强烈建议配 token |

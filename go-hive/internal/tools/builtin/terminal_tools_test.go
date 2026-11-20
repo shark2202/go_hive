@@ -35,8 +35,8 @@ func TestTerminalToolsRegistered(t *testing.T) {
 			t.Fatalf("terminal tool %q missing from Defs()", name)
 		}
 	}
-	if len(defs) != 3+len(want) {
-		t.Fatalf("Defs() = %d tools, want %d", len(defs), 3+len(want))
+	if len(defs) != 5+len(want) {
+		t.Fatalf("Defs() = %d tools, want %d", len(defs), 5+len(want))
 	}
 }
 

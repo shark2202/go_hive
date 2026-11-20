@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive ↔ go_hive 对齐维度矩阵</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px} .missing{color:#f2a3a3}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:760px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Alignment Dimensions</div><h1>Hive ↔ go_hive <span>对齐维度矩阵</span></h1>
+<p class="lede">把「对齐」拆成 18 个维度：每个维度给出已对齐项、仍需对齐/未验证项、以及验证方式。它是 <a href="surface-tracking-matrix.html">外观对齐追踪矩阵</a>（接口外形）与 <a href="browser-bridge.html">Browser Bridge 文档</a>（单模块）之上的<b>范围视角</b>：回答“还差哪些类，而不只是哪些点”。</p>
+<div class="meta"><span>生成：<b>2026-11-20 22:55 CST</b></span><span>基线：<b>Go 1.0.26-go.1 · Python hive 1.0.14</b></span><span>口径：<b>已实测 &gt; 代码确认 &gt; 未验证；wiring 绿 ≠ 行为对齐</b></span></div>
+<div class="toc"><a href="#how">怎么读</a><a href="#dimensions">18 维度矩阵</a><a href="#priority">优先级</a><a href="#meta">元维度</a><a href="#not-align">不要求对齐</a><a href="#refs">相关文档</a></div></header>
+
+<section id="how"><h2><span class="num">00</span>怎么读这张表</h2>
+<div class="callout info"><b>判定口径：</b>“已对齐”= 名称/键集合/机制在生产路径上一致（有实测或代码双证）；“部分”= 有实现但有明确差异；“未对齐”= 缺失或行为不成立；“未验证”= 有代码/测试但没对真实外部系统跑过。<b>本页不把“路由存在”“测试带注解”“审计写着已接”当成行为对齐。</b>概念审计目前 80/0/0、runtime spine 70/0/0，只说明机制<b>生产可达</b>；下面的 P0 就是在 80/0/0 之下依然存在的行为差。</div>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">证据级别</th><th>含义与例子</th></tr></thead><tbody>
+<tr><td><span class="pill ok">实测</span></td><td>本机双跑/探针/真实调用：18 端点探针、go build/test、<code>claude -p</code>、8766 端到端。</td></tr>
+<tr><td><span class="pill info">代码确认</span></td><td>逐段静态追踪生产入口（如路由 diff、类型断言、deps 硬编码空）。</td></tr>
+<tr><td><span class="pill warn">测试/注解</span></td><td>单测或 parity 注解覆盖，但没有跨实现行为对比。</td></tr>
+<tr><td><span class="pill bad">未验证</span></td><td>需要凭据/真机/真实 Chrome 才能跑的部分（第三方 API、Sentinel 投递、Windows 运行）。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="dimensions"><h2><span class="num">01</span>18 个维度矩阵</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:4%">#</th><th style="width:13%">维度</th><th style="width:26%">已对齐</th><th style="width:31%">仍需对齐 / 未验证</th><th>怎么验</th></tr></thead><tbody>
+<tr><td class="num">1</td><td><b>HTTP 路由</b></td><td>前端 160 调用 → Go 缺失 0；Python → Go 缺失 0</td><td>未知路径 SPA fallback(200 HTML) vs Go 404 JSON；浏览器面板 3 条路由已补齐</td><td><code>surface_audit.py</code> + 路由 diff（已做）</td></tr>
+<tr><td class="num">2</td><td><b>会话运行时</b></td><td>创建/列表/详情/events 的状态码与响应骨架</td><td>SSE 事件种类/顺序/流式粒度；queen 身份与创建期 5 条事件已一致</td><td>18 端点探针 + 同场景对话双跑（部分做）</td></tr>
+<tr><td class="num">3</td><td><b>工具能力</b></td><td>103/103 模块；863/865 action；默认集成 96、会话合计 125</td><td><b>schema 形态</b>：Python 865 扁平工具 vs Go 103 分组+<code>action</code>；read_file hashline/stale-edit；chart_render；Queen lifecycle 10 工具</td><td>工具名/参数逐项 diff + 调用结果对照</td></tr>
+<tr><td class="num">4</td><td><b>技能</b></td><td>17/17 路由；14 端点；6 scope 优先级一致</td><td>聚合库 195/195；live reload 扇出已实现；trust/安装审批细节</td><td>API 行级 diff + reload 后运行会话可见性实测</td></tr>
+<tr><td class="num">5</td><td><b>配置</b></td><td>20/20 路由；9 个 GET 键集合一致；49 段中 46 段有读取</td><td>余 3 段未读（含 <code>loop.max_tool_result_chars</code>）；<code>turn_context</code>/<code>gcu_viewport_scale</code> 已接通；PUT 字段级语义未验</td><td>写入→重启→行为变化实测</td></tr>
+<tr><td class="num">6</td><td><b>CLI</b></td><td>10 个顶级命令完全一致；抽查 skill/session/queen/colony/janitor/mcp 子命令也一致</td><td>flags、默认值、输出格式、退出码、交互提示未逐项 diff</td><td><code>--help</code> 递归 diff + 逐命令退出码矩阵</td></tr>
+<tr><td class="num">7</td><td><b>协议/数据格式</b></td><td>主要 JSON 键集合一致</td><td>时间格式（isoformat vs RFC3339Nano）、错误 envelope、SSE <code>event:</code> 命名、排序/分页/游标、ID 生成格式</td><td>golden response + 磁盘文件对照</td></tr>
+<tr><td class="num">8</td><td><b>磁盘/状态</b></td><td>HIVE_HOME 布局、transcript parts、events.jsonl、tracker.db 基本可用</td><td>schema 版本/迁移、meta.json 字段、conversations.json、skill overrides、credential Fernet 兼容</td><td>同场景跑完 diff 目录树 + sqlite schema</td></tr>
+<tr><td class="num">9</td><td><b>编排/自治</b></td><td>run_worker / tracker / 提醒 hub / judge / trigger 生产可达（审计 80/0/0、70/0/0）</td><td>resume_worker_ids、overseer 与 chat 两份存储、park/ask_user/credential park 全链路、Sentinel 真实投递</td><td>真实模型多 worker E2E + 故障注入</td></tr>
+<tr><td class="num">10</td><td><b>Skills/Memory 机制</b></td><td>发现根、override、scope、安装请求</td><td>memory timeline 写入侧、每轮召回注入、reflection、跨 queen/colony 作用域</td><td>机制级场景测试</td></tr>
+<tr><td class="num">11</td><td><b>Playbook/Trigger</b></td><td>原生 JSON playbook 可跑；timer 到点触发</td><td>Python 脚本 playbook 明确 unsupported；missed-fire/webhook/恢复语义</td><td>上游 playbook 样例逐条跑</td></tr>
+<tr><td class="num">12</td><td><b>Queen mail / CC queens</b></td><td>正常 queen 双端 E2E（depth 1→4）</td><td>Claude Code queen 运行器已移植并接真实列表/transcript；真实模型主动调 <code>message_queen</code> 未联调</td><td>真模型 queen 互写 + CC queen 端到端</td></tr>
+<tr><td class="num">13</td><td><b>Browser Bridge</b></td><td>22/22 active + CLI + serve 托管 + control RPC + notify 注入 + 3 条面板路由；真实 Chrome 1.7.4 验证</td><td>CLI 退出码、孤儿桥退出时延、快照 ref/注解图形状</td><td>真实 Chrome + 13 个 active 工具逐条</td></tr>
+<tr><td class="num">14</td><td><b>集成真实性</b></td><td>863 action 的 schema 与安装器 pin 住</td><td>真实第三方 API 调用未做（无凭据；按用户决定不阻塞，但保持“未验证”）</td><td>有凭据时逐模块 smoke</td></tr>
+<tr><td class="num">15</td><td><b>安全</b></td><td>loopback 绑定、桌面 token、credential 加密（Fernet 兼容）</td><td>独立 <code>hive serve</code> 无鉴权；文件工具沙箱范围（Python 无沙箱 vs Go 有根）；提示注入边界；密钥脱敏口径</td><td>威胁建模 + 越权/路径穿越用例</td></tr>
+<tr><td class="num">16</td><td><b>平台/发布</b></td><td>六平台交叉编译；离线无 cgo；发布包 + SHA256 + 安装脚本</td><td>Windows 运行/PTY/路径/信号；升级迁移；在线 CVE 扫描缺失</td><td>各平台运行测试 + 升级演练</td></tr>
+<tr><td class="num">17</td><td><b>可观测/运维</b></td><td>runtime-logs、health、watchdog 脚本</td><td>主动告警（用户要求不能只写日志）；成本/延迟/队列指标口径</td><td>故障注入 → 是否真的告警</td></tr>
+<tr><td class="num">18</td><td><b>验证方法（元）</b></td><td>4,566 测试带 parity 注解；概念审计 80/0/0、70/0/0</td><td>注解≠语义等价；缺“同场景 golden trace”；wiring 绿掩盖行为差</td><td>双跑 diff：事件/转录/文件/API/成本（见 §03）</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="priority"><h2><span class="num">02</span>优先级：先修什么</h2>
+<div class="grid g3">
+<div class="card"><div class="k">P0 · 行为数据面</div><div class="v">已清零</div><div class="d">① queen 绑定/scope；② 创建期 5 条事件 + history/snapshot/stats；③ Claude Code queen 运行器 + dashboard；④ Browser Bridge 主服务接线 + 22/22 active —— 四项均已修复并有实测证据。</div></div>
+<div class="card"><div class="k">P1 · 机制语义</div><div class="v">收窄中</div><div class="d">已补齐：Queen lifecycle 10 工具 / chart_render / read_file hashline / skills live reload / <code>turn_context</code> + <code>gcu_viewport_scale</code> 读取。剩余：工具 schema 形态、resume 语义、memory timeline 真实模型路径、playbook 脚本、Sentinel 真实投递、配置 PUT 语义 + 其余未读段。</div></div>
+<div class="card"><div class="k">P2 · 协议/运维</div><div class="v">3 组</div><div class="d">SSE 命名/顺序/粒度、时间戳格式、错误码、分页游标；磁盘 schema/迁移、ID 格式、凭据兼容；CLI flags/输出/退出码、Windows 运行、升级迁移、在线 CVE、主动告警。Browser CLI 退出码在修。</div></div>
+</div>
+<div class="callout warn"><b>交付口径不变：</b>P0 已清零，但 P1/P2（真实模型路径、Windows 实机、81 个凭据集成、协议形状）未验证前，“路由全绿 / 门禁通过 / 能打包”仍不能当作完全对齐。</div>
+</section>
+
+<section id="meta"><h2><span class="num">03</span>元维度：验证方法本身要升级</h2>
+<p>现在的“对齐证据”偏向三类：<b>路由名、JSON 键集合、测试注解</b>。这三类都能同时全绿而用户可见行为仍不同——18 端点里 8 PASS 就是例子：路由全在，但 queen 身份与事件数据不对。</p>
+<h3>下一层：场景级 golden trace</h3>
+<pre>同一 HIVE_HOME 初始状态 · 同一 prompt · 同一模型
+  ├─ 双跑 Python / Go
+  └─ diff：
+       · SSE 事件序列（type / 顺序 / 关键字段）
+       · 最终 transcript parts（conversation/parts/*.json）
+       · events.jsonl / snapshot / stats
+       · 工具调用参数与结果（含失败路径）
+       · 磁盘目录树 + sqlite schema
+       · 成本 / 延迟 / token 计数</pre>
+<p class="sub">现有每日 9:00 的自动快照（<code>refresh_surface_matrix.py</code>）只防路由/表面漂移，防不了行为漂移；下一步把 golden trace 纳入定时对比，才算“行为回归网”。</p>
+</section>
+
+<section id="not-align"><h2><span class="num">04</span>明确不要求对齐的</h2>
+<ul>
+<li><code>csv_sql</code> / <code>excel_sql</code>：依赖 DuckDB（native），纯 Go 无 cgo 有意排除，调用时返回未知 action，不假装支持。</li>
+<li>平台专有 PTY 实现细节（Windows 无 PTY 工具，属于已知限制）。</li>
+<li>订阅制 OAuth 的厂商细节（Codex/Kimi/Claude 订阅路由属上游专有行为，go_hive 以不可用/未验证标注）。</li>
+<li>UI 的中文 i18n 是 Go 侧增量，不要求回灌上游。</li>
+</ul>
+</section>
+
+<section id="refs"><h2><span class="num">05</span>相关文档与证据</h2>
+<div class="callout info"><b>文档：</b><a href="surface-tracking-matrix.html">外观对齐追踪矩阵</a>（接口外形 + 自动快照）· <a href="tool-parity-matrix.html">工具追踪矩阵</a>（103 模块逐条）· <a href="browser-bridge.html">Browser Bridge 设计/使用/部署边界</a> · <a href="module-interfaces.html">接口不变量</a>（进程边界 + Go 接口 + INV 清单）· <a href="platform-support.html">平台支持矩阵</a>（macOS/Linux/Windows + PLAT 缺口）· <code>docs/support-matrix.md</code>（能力状态 + 未验证清单）· <code>CONCEPT_WIRING_AUDIT.md</code> / <code>RUNTIME_SPINE_AUDIT.md</code>（机制接线）。<br><b>证据命令：</b><code>surface_audit.py</code>、<code>api_parity.py --skip-flow --skip-restart</code>、<code>go test ./internal/cli -run TestSessionToolCatalogue -v</code>、<code>cd go_hive/browserbridge &amp;&amp; go build ./... &amp;&amp; go test ./...</code>。</div>
+</section>
+
+<footer>生成：2026-11-20 22:55 CST · 基线：Go 1.0.26-go.1 · Python hive 1.0.14 · 本页是范围视角，不重复逐点清单；逐点状态以 <a href="surface-tracking-matrix.html">surface-tracking-matrix.html</a> 与 <a href="tool-parity-matrix.html">tool-parity-matrix.html</a> 为准，接口契约见 <a href="module-interfaces.html">module-interfaces.html</a>。</footer>
+</div></body></html>

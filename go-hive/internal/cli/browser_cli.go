@@ -1,0 +1,349 @@
+package cli
+
+// Parity: tools/src/gcu/cli.py::main
+//
+// browser_cli.go is the `hive-browser` command surface: the CLI that replaces
+// the retired `browser_*` MCP tools. It is a thin, stateless client of the
+// standalone bridge's local HTTP API (POST /command on 14830) — the same
+// surface `cmd/browserbridge` exposes — so the main module needs no dependency
+// on the browserbridge module and no WebSocket/RPC client of its own.
+//
+// Layout:
+//   browser_cli.go           dispatch, help, arg helpers
+//   browser_cli_commands.go  the verb tree (setup … dialog respond)
+//   browser_cli_client.go    HTTP transport, exit-code taxonomy, state file
+//
+// Exit codes are the stable agent contract ported from gcu/errors.py.
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+)
+
+// Exit codes — parity with tools/src/gcu/errors.py.
+//
+// browserExitUsage shares the value 2 with browserExitNotConnected: upstream's
+// argparse exits 2 on a usage error (unknown flag/command, missing required
+// argument, bad choice or type) and errors.py also uses 2 for not_connected, so
+// both meanings live on the same code upstream too.
+const (
+	browserExitOK            = 0
+	browserExitDomain        = 1
+	browserExitUsage         = 2
+	browserExitNotConnected  = 2
+	browserExitNotStarted    = 3
+	browserExitNotFound      = 4
+	browserExitAmbiguous     = 5
+	browserExitBadArgs       = 6
+	browserExitPendingDialog = 7
+	browserExitRateLimited   = 8
+)
+
+// browserCLI holds the process state one invocation needs.
+type browserCLI struct {
+	stdout io.Writer
+	stderr io.Writer
+	env    func(string) string
+	stdin  io.Reader
+	root   *commandSpec
+}
+
+// RunBrowserCLI is the `hive-browser` entry point; it returns the process exit
+// code (see tools/src/gcu/errors.py for the taxonomy).
+func RunBrowserCLI(argv []string, stdout, stderr io.Writer) int {
+	app := &browserCLI{stdout: stdout, stderr: stderr, env: os.Getenv, stdin: os.Stdin}
+	root := app.rootCommand()
+	app.root = root
+	args, err := parseCommand(root, argv)
+	if err != nil {
+		var help *helpRequest
+		if errors.As(err, &help) {
+			fmt.Fprint(app.stdout, help.spec.helpText())
+			return browserExitOK
+		}
+		fmt.Fprintf(app.stderr, "hive-browser: %v\n", err)
+		fmt.Fprintln(app.stderr, "run `hive-browser help` for usage")
+		// A CLI-level usage error exits 2: that is argparse's code, which the
+		// upstream `hive-browser` runs on (measured: no args, unknown command,
+		// unknown flag, missing required flag, bad choice, bad float list).
+		return browserExitUsage
+	}
+	if args.cmd == nil || args.cmd.Run == nil {
+		fmt.Fprintln(app.stderr, "hive-browser: the following arguments are required: command")
+		fmt.Fprintln(app.stderr, "run `hive-browser help` for usage")
+		return browserExitUsage
+	}
+	return args.cmd.Run(args)
+}
+
+func (c *browserCLI) rootCommand() *commandSpec {
+	root := &commandSpec{
+		Prog: "hive-browser",
+		Description: "Drive the Hive browser (Hive Browser Bridge extension) from the terminal. " +
+			"Replaces the retired browser_* MCP tools; agents invoke it with --json.",
+		Dest:        "command",
+		Subcommands: c.subcommands(),
+	}
+	return root
+}
+
+// commonFlags are the shared options every leaf accepts (upstream's argparse
+// `common` parent). They are declared per leaf because the shared parser does
+// not propagate parent values into a subcommand that also declares the flag;
+// `hive-browser status --json` (flag after the command) is the documented form.
+func browserCommonFlags() []argSpec {
+	return []argSpec{
+		{Dest: "json", Long: "json", Kind: kindBool, Help: "machine output (agent mode)"},
+		{Dest: "profile", Long: "profile", Kind: kindString,
+			Help: "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"},
+		{Dest: "bridge", Long: "bridge", Kind: kindString,
+			Help: "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"},
+	}
+}
+
+// withCommon appends the shared flags to a leaf's own flags.
+func withCommon(flags ...argSpec) []argSpec {
+	return append(flags, browserCommonFlags()...)
+}
+
+// tabFlag is the `--tab` option shared by the tab-scoped commands.
+func tabFlag() argSpec {
+	return argSpec{Dest: "tab", Long: "tab", Kind: kindInt, Help: "tab id (default: this profile's active tab)"}
+}
+
+func browserProfileFlag() argSpec {
+	return argSpec{Dest: "browser_profile", Long: "browser-profile", Kind: kindString,
+		Help: "which connected Chrome profile to use"}
+}
+
+func timeoutFlag(def int, help string) argSpec {
+	return argSpec{Dest: "timeout_ms", Long: "timeout-ms", Kind: kindInt, Default: def, Help: help}
+}
+
+// leaf builds one command: the spec, the parameter builder and an optional
+// post-processor for the successful result.
+func (c *browserCLI) leaf(prog, help string, flags []argSpec, positionals []positionalSpec, typ string, params browserParams, post browserPost) *commandSpec {
+	return &commandSpec{
+		Prog:        prog,
+		Help:        help,
+		Flags:       withCommon(flags...),
+		Positionals: positionals,
+		Run: func(args *parsedArgs) int {
+			built, code := params(args)
+			if code != browserExitOK {
+				return code
+			}
+			return c.call(args, typ, built, post)
+		},
+	}
+}
+
+// call sends one bridge command and returns the classified exit code.
+func (c *browserCLI) call(args *parsedArgs, typ string, params map[string]any, post browserPost) int {
+	if params == nil {
+		params = map[string]any{}
+	}
+	base := c.bridgeBase(args)
+	profile := c.profile(args)
+	result, err := c.post(base, profile, typ, params)
+	if err != nil {
+		var refusal *browserBridgeRefusal
+		if errors.As(err, &refusal) {
+			code := classifyBrowserError(stringOf(refusal.payload["code"]), err.Error())
+			c.printResult(args, refusal.payload, code)
+			return code
+		}
+		fmt.Fprintf(c.stderr, "hive-browser: %v\n", err)
+		if isConnectError(err) {
+			fmt.Fprintf(c.stderr, "start the bridge with `hive serve` (or `browserbridge`) and retry\n")
+			return browserExitNotConnected
+		}
+		return browserExitDomain
+	}
+	code := classifyBrowserResult(result)
+	if code == browserExitOK && post != nil {
+		post(args, result)
+	}
+	c.printResult(args, result, code)
+	return code
+}
+
+// printResult writes the result as JSON (--json) or a terse key/value list.
+func (c *browserCLI) printResult(args *parsedArgs, result map[string]any, code int) {
+	if args != nil && args.boolean("json") {
+		writeJSONOut(c.stdout, result, true)
+		return
+	}
+	if code != browserExitOK {
+		message := "command failed"
+		switch value := result["error"].(type) {
+		case string:
+			if value != "" {
+				message = value
+			}
+		case nil:
+			if text, ok := result["message"].(string); ok && text != "" {
+				message = text
+			}
+		default:
+			if encoded, err := json.Marshal(value); err == nil {
+				message = string(encoded)
+			}
+		}
+		fmt.Fprintf(c.stderr, "hive-browser: %s\n", message)
+		return
+	}
+	renderBrowserResult(c.stdout, result)
+}
+
+// bridgeBase resolves --bridge, then HIVE_BROWSERBRIDGE_HTTP, then the
+// documented 14830 endpoint.
+func (c *browserCLI) bridgeBase(args *parsedArgs) string {
+	if args != nil {
+		if raw := strings.TrimSpace(args.str("bridge")); raw != "" {
+			if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") {
+				raw = "http://" + raw
+			}
+			return strings.TrimRight(raw, "/")
+		}
+	}
+	return browserBridgeBaseURL(c.env)
+}
+
+// profile resolves --profile, then the runtime-stamped HIVE_BROWSER_SESSION,
+// then "default" (the bridge's own fallback).
+func (c *browserCLI) profile(args *parsedArgs) string {
+	if args != nil {
+		if raw := strings.TrimSpace(args.str("profile")); raw != "" {
+			return raw
+		}
+	}
+	if raw := strings.TrimSpace(c.env("HIVE_BROWSER_SESSION")); raw != "" {
+		return raw
+	}
+	return "default"
+}
+
+// tabOrState returns --tab when given, else the active tab this profile opened
+// through the CLI (the local mirror of upstream's persisted contexts).
+func (c *browserCLI) tabOrState(args *parsedArgs) (int, bool) {
+	if args != nil && args.wasProvided("tab") && args.intValue("tab") > 0 {
+		return args.intValue("tab"), true
+	}
+	state := loadBrowserCLIState(c.statePath())
+	entry, ok := state[c.profile(args)]
+	if !ok || entry.TabID <= 0 {
+		return 0, false
+	}
+	return entry.TabID, true
+}
+
+// requireTab injects the resolved tab id; commands that cannot work without one
+// fail with exit 3 (not started) before any round-trip, matching the upstream
+// CLI's "Browser not started. Run `hive-browser open <url>` first." message.
+func (c *browserCLI) requireTab(args *parsedArgs, params map[string]any) int {
+	tab, ok := c.tabOrState(args)
+	if !ok {
+		fmt.Fprintln(c.stderr, "hive-browser: Browser not started. Run `hive-browser open <url>` first.")
+		return browserExitNotStarted
+	}
+	params["tab_id"] = tab
+	return browserExitOK
+}
+
+// optTab injects the resolved tab id when there is one; the bridge then falls
+// back to its own context registry for the profile.
+func (c *browserCLI) optTab(args *parsedArgs, params map[string]any) {
+	if tab, ok := c.tabOrState(args); ok {
+		params["tab_id"] = tab
+	}
+}
+
+// statePath is <HIVE_HOME>/browser_cli_state.json (upstream keeps the
+// equivalent profile→group index in ~/.hive/browser_contexts.json).
+func (c *browserCLI) statePath() string {
+	if root := strings.TrimSpace(c.env("HIVE_HOME")); root != "" {
+		return filepath.Join(root, "browser_cli_state.json")
+	}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		return filepath.Join(home, ".hive", "browser_cli_state.json")
+	}
+	return ""
+}
+
+// --- argument helpers -------------------------------------------------------
+
+// readScriptSource implements `--js SRC|@FILE|-` (inline, file, stdin).
+func (c *browserCLI) readScriptSource(value string) (string, error) {
+	raw := strings.TrimSpace(value)
+	switch {
+	case raw == "-":
+		data, err := io.ReadAll(io.LimitReader(c.stdin, 8<<20))
+		if err != nil {
+			return "", fmt.Errorf("read script from stdin: %w", err)
+		}
+		return string(data), nil
+	case strings.HasPrefix(raw, "@"):
+		data, err := os.ReadFile(expandUser(raw[1:]))
+		if err != nil {
+			return "", fmt.Errorf("read script file: %w", err)
+		}
+		return string(data), nil
+	case raw == "":
+		return "", fmt.Errorf("--js is required (inline source, @FILE, or - for stdin)")
+	}
+	return value, nil
+}
+
+// parseFloatList parses "0.3,0.6" (or "x0,y0,x1,y1") into a JSON-ready list.
+func parseFloatList(raw string, want int, label string) ([]any, error) {
+	parts := strings.Split(raw, ",")
+	if len(parts) != want {
+		return nil, fmt.Errorf("%s expects %d comma-separated numbers, got %d", label, want, len(parts))
+	}
+	out := make([]any, 0, want)
+	for _, part := range parts {
+		value, err := strconv.ParseFloat(strings.TrimSpace(part), 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %q is not a number", label, strings.TrimSpace(part))
+		}
+		out = append(out, value)
+	}
+	return out, nil
+}
+
+// decodeJSONObject parses inline JSON, @file, or - for stdin.
+func (c *browserCLI) decodeJSONObject(raw string, label string) (map[string]any, error) {
+	source := strings.TrimSpace(raw)
+	switch {
+	case source == "":
+		return nil, nil
+	case source == "-":
+		data, err := io.ReadAll(io.LimitReader(c.stdin, 8<<20))
+		if err != nil {
+			return nil, fmt.Errorf("read %s from stdin: %w", label, err)
+		}
+		source = string(data)
+	case strings.HasPrefix(source, "@"):
+		data, err := os.ReadFile(expandUser(source[1:]))
+		if err != nil {
+			return nil, fmt.Errorf("read %s file: %w", label, err)
+		}
+		source = string(data)
+	}
+	var decoded any
+	if err := json.Unmarshal([]byte(source), &decoded); err != nil {
+		return nil, fmt.Errorf("%s is not valid JSON: %w", label, err)
+	}
+	object, ok := decoded.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("%s must be a JSON object", label)
+	}
+	return object, nil
+}

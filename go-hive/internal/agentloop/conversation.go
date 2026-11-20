@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/aden-hive/hive-go/internal/llm"
 )
 
 const DefaultMaxContextTokens = 180_000
@@ -403,20 +405,12 @@ func (c *NodeConversation) ToLLMMessages(model string) []map[string]any {
 	if !supportsImagesInToolResults(model) {
 		msgs = hoistToolResultImages(msgs)
 	}
+	msgs = gateUnsupportedMedia(msgs, model)
 	return sanitizeForAPI(msgs)
 }
 
 func supportsImagesInToolResults(model string) bool {
-	if model == "" {
-		return true
-	}
-	lower := strings.ToLower(model)
-	for _, prefix := range []string{"anthropic/", "claude-", "kimi/", "hive/", "openrouter/anthropic/"} {
-		if strings.HasPrefix(lower, prefix) {
-			return true
-		}
-	}
-	return false
+	return llm.SupportsImagesInToolResults(model)
 }
 
 func reasoningForThisTurn(msgs []map[string]any) []map[string]any {
@@ -1185,15 +1179,7 @@ func (c *NodeConversation) persistMeta() error {
 }
 
 func (c *NodeConversation) writeNextSeq() error {
-	if c.store == nil {
-		return nil
-	}
-	cursor, err := c.store.ReadCursor()
-	if err != nil {
-		return err
-	}
-	updated := UpdateCursorNextSeq(cursor, c.nextSeq)
-	return c.store.WriteCursor(updated)
+	return writeCursorNextSeq(c.store, c.nextSeq)
 }
 
 func ptrOrNilInt(value *int) any {
