@@ -1,0 +1,66 @@
+%% go_hive 业务能力地图（生成物，勿手改）
+%% 源：architecture/model.yaml · commit 5a1cde61a121
+%% 实线 = 业务主链路；虚线 = 反馈/审批关系；六边形 = 人工审批点。
+flowchart LR
+  subgraph stage_intent["客户目标"]
+    direction TB
+    cap_goal_outcome["目标与结果<br/><small>tested</small>"]
+  end
+  subgraph stage_orchestration["Queen 编排"]
+    direction TB
+    cap_queen_triage["Queen 分诊与对话<br/><small>live</small>"]
+    cap_colony_unit["Colony 部署单元<br/><small>tested</small>"]
+    cap_worker_dispatch["Worker 派发与回报<br/><small>tested</small>"]
+  end
+  subgraph stage_execution["执行与支撑"]
+    direction TB
+    cap_skills_playbook["技能与 Playbook<br/><small>tested</small>"]
+    cap_tools_credentials["工具与凭据边界<br/><small>live</small>"]
+    cap_memory_sediment["记忆与沉淀<br/><small>tested</small>"]
+  end
+  subgraph stage_evidence["证据与自治"]
+    direction TB
+    cap_evidence_tracker["Tracker、计划与证据<br/><small>tested</small>"]
+    cap_triggers_sentinel["触发器与 Sentinel 自治<br/><small>tested</small>"]
+    cap_notifications["通知与提醒<br/><small>tested</small>"]
+  end
+  subgraph stage_delivery["交付与改进"]
+    direction TB
+    cap_channels_dashboard["渠道与仪表盘<br/><small>tested</small>"]
+    cap_release_quality["发布与质量门禁<br/><small>tested</small>"]
+  end
+  subgraph stage_approval["人工审批点"]
+    direction TB
+    appr_cap_goal_outcome{{"人工审批<br/>目标与结果<br/><small>partial</small>"}}
+    appr_cap_queen_triage{{"人工审批<br/>Queen 分诊与对话<br/><small>partial</small>"}}
+    appr_cap_skills_playbook{{"人工审批<br/>技能与 Playbook<br/><small>partial</small>"}}
+    appr_cap_tools_credentials{{"人工审批<br/>工具与凭据边界<br/><small>yes</small>"}}
+    appr_cap_memory_sediment{{"人工审批<br/>记忆与沉淀<br/><small>partial</small>"}}
+    appr_cap_triggers_sentinel{{"人工审批<br/>触发器与 Sentinel 自治<br/><small>partial</small>"}}
+    appr_cap_release_quality{{"人工审批<br/>发布与质量门禁<br/><small>yes</small>"}}
+  end
+  cap_goal_outcome --> cap_queen_triage
+  cap_queen_triage --> cap_colony_unit
+  cap_queen_triage --> cap_memory_sediment
+  cap_colony_unit --> cap_worker_dispatch
+  cap_worker_dispatch --> cap_evidence_tracker
+  cap_worker_dispatch --> cap_skills_playbook
+  cap_tools_credentials --> cap_worker_dispatch
+  cap_triggers_sentinel --> cap_queen_triage
+  cap_triggers_sentinel --> cap_notifications
+  cap_evidence_tracker --> cap_channels_dashboard
+  cap_notifications --> cap_channels_dashboard
+  cap_evidence_tracker --> cap_release_quality
+  cap_release_quality -.-> cap_goal_outcome
+  cap_goal_outcome -.-> appr_cap_goal_outcome
+  cap_queen_triage -.-> appr_cap_queen_triage
+  cap_skills_playbook -.-> appr_cap_skills_playbook
+  cap_tools_credentials -.-> appr_cap_tools_credentials
+  cap_memory_sediment -.-> appr_cap_memory_sediment
+  cap_triggers_sentinel -.-> appr_cap_triggers_sentinel
+  cap_release_quality -.-> appr_cap_release_quality
+
+  classDef cap fill:#eef2ff,stroke:#4338ca,color:#1e1b4b;
+  classDef appr fill:#fef3c7,stroke:#b45309,color:#7c2d12;
+  class cap_channels_dashboard,cap_colony_unit,cap_evidence_tracker,cap_goal_outcome,cap_memory_sediment,cap_notifications,cap_queen_triage,cap_release_quality,cap_skills_playbook,cap_tools_credentials,cap_triggers_sentinel,cap_worker_dispatch cap;
+  class appr_cap_goal_outcome,appr_cap_queen_triage,appr_cap_skills_playbook,appr_cap_tools_credentials,appr_cap_memory_sediment,appr_cap_triggers_sentinel,appr_cap_release_quality appr;
