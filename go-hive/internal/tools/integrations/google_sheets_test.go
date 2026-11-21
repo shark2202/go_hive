@@ -23,7 +23,7 @@ func TestBatch5Lane3SheetsGetSpreadsheet(t *testing.T) {
 	result := batch4Execute(t, registry, "google_sheets", map[string]any{
 		"action": "google_sheets_get_spreadsheet", "spreadsheet_id": "sheet-1", "include_grid_data": true,
 	})
-	if batch4AsMap(result["properties"])["title"] != "My Spreadsheet" {
+	if asMap(result["properties"])["title"] != "My Spreadsheet" {
 		t.Fatalf("result = %v", result)
 	}
 	batch5Lane3RequireBearer(t, recorder)
@@ -46,11 +46,11 @@ func TestBatch5Lane3SheetsCreateSpreadsheet(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	body := recorder.last(t).Body
-	if batch4AsMap(body["properties"])["title"] != "Q3 Report" {
+	if asMap(body["properties"])["title"] != "Q3 Report" {
 		t.Fatalf("body = %v", body)
 	}
 	sheets := batch4BodySlice(t, body["sheets"])
-	if len(sheets) != 2 || batch4AsMap(batch4AsMap(sheets[0])["properties"])["title"] != "Summary" {
+	if len(sheets) != 2 || asMap(asMap(sheets[0])["properties"])["title"] != "Summary" {
 		t.Fatalf("sheets = %v", sheets)
 	}
 }
@@ -119,7 +119,7 @@ func TestBatch5Lane3SheetsAppendValues(t *testing.T) {
 		"action": "google_sheets_append_values", "spreadsheet_id": "sheet-1",
 		"range_name": "Sheet1", "values": []any{[]any{"Carol", 78}},
 	})
-	if batch4AsMap(result["updates"])["updatedRows"] != float64(1) {
+	if asMap(result["updates"])["updatedRows"] != float64(1) {
 		t.Fatalf("result = %v", result)
 	}
 	if values := batch4BodySlice(t, recorder.last(t).Body["values"]); len(values) != 1 {
@@ -207,17 +207,17 @@ func TestBatch5Lane3SheetsAddSheet(t *testing.T) {
 		"action": "google_sheets_add_sheet", "spreadsheet_id": "sheet-1", "title": "New Tab",
 	})
 	replies := batch4BodySlice(t, result["replies"])
-	properties := batch4AsMap(batch4AsMap(replies[0])["addSheet"])["properties"]
-	if batch4AsMap(properties)["sheetId"] != float64(7) {
+	properties := asMap(asMap(replies[0])["addSheet"])["properties"]
+	if asMap(properties)["sheetId"] != float64(7) {
 		t.Fatalf("result = %v", result)
 	}
 	requests := batch4BodySlice(t, recorder.last(t).Body["requests"])
-	addSheet := batch4AsMap(batch4AsMap(requests[0])["addSheet"])
-	props := batch4AsMap(addSheet["properties"])
+	addSheet := asMap(asMap(requests[0])["addSheet"])
+	props := asMap(addSheet["properties"])
 	if props["title"] != "New Tab" {
 		t.Fatalf("properties = %v", props)
 	}
-	grid := batch4AsMap(props["gridProperties"])
+	grid := asMap(props["gridProperties"])
 	if grid["rowCount"] != float64(1000) || grid["columnCount"] != float64(26) {
 		t.Fatalf("grid = %v", grid)
 	}
@@ -239,7 +239,7 @@ func TestBatch5Lane3SheetsDeleteSheet(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	requests := batch4BodySlice(t, recorder.last(t).Body["requests"])
-	if batch4AsMap(batch4AsMap(requests[0])["deleteSheet"])["sheetId"] != float64(42) {
+	if asMap(asMap(requests[0])["deleteSheet"])["sheetId"] != float64(42) {
 		t.Fatalf("requests = %v", requests)
 	}
 }

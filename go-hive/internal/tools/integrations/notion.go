@@ -22,22 +22,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/aden-hive/hive-go/internal/tools"
 )
 
 const (
-	batch4NotionVersion  = "2022-06-28"
-	batch4NotionMaxBody  = 8 << 20
-	batch4NotionMaxError = 500
-	batch4NotionMaxItems = 100
+	notionVersion  = "2022-06-28"
+	notionMaxBody  = 8 << 20
+	notionMaxError = 500
+	notionMaxItems = 100
 )
 
 // InstallBatch4 publishes the batch-4 SaaS tools (notion and linear) into a
@@ -52,28 +50,28 @@ func newBatch4Registry(opts ...Option) *Registry {
 	runtime := &Runtime{
 		HTTP:    newHTTPClient(nil),
 		Now:     time.Now,
-		Modules: batch4Modules(),
+		Modules: notionModules(),
 		Getenv:  os.Getenv,
 	}
 	for _, opt := range opts {
 		opt(runtime)
 	}
 	registry := NewRegistry(runtime)
-	for _, tool := range []*Tool{batch4NotionTool, batch4LinearTool} {
+	for _, tool := range []*Tool{notionTool, linearTool} {
 		registry.AddTool(tool)
 	}
-	for action, impl := range batch4NotionImpls() {
+	for action, impl := range notionImpls() {
 		registry.AddImpl("notion", action, impl)
 	}
-	for action, impl := range batch4LinearImpls() {
+	for action, impl := range linearImpls() {
 		registry.AddImpl("linear", action, impl)
 	}
 	return registry
 }
 
-// batch4Modules declares the public endpoints and credential variables for the
+// notionModules declares the public endpoints and credential variables for the
 // two modules. Tests override BaseURL with WithBaseURL.
-func batch4Modules() map[string]*ModuleConfig {
+func notionModules() map[string]*ModuleConfig {
 	return map[string]*ModuleConfig{
 		"notion_tool": {ID: "notion_tool", BaseURL: "https://api.notion.com", EnvVars: []string{"NOTION_API_TOKEN"}},
 		"linear_tool": {ID: "linear_tool", BaseURL: "https://api.linear.app", EnvVars: []string{"LINEAR_API_KEY"}},
@@ -82,117 +80,8 @@ func batch4Modules() map[string]*ModuleConfig {
 
 // ------------------------------------------------------------ shared bits ---
 
-// batch4ModuleURL resolves a module base URL, honouring WithBaseURL.
-func batch4ModuleURL(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	return strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
-}
-
-// batch4ModuleToken resolves the module credential from WithCredential or the
-// configured environment lookup.
-func batch4ModuleToken(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	getenv := rt.Getenv
-	if getenv == nil {
-		getenv = os.Getenv
-	}
-	token, _ := cfg.ResolvedToken(getenv)
-	return strings.TrimSpace(token)
-}
-
-// batch4HTTP returns the runtime transport, falling back to a client with the
-// standard timeout for hand-built runtimes.
-func batch4HTTP(rt *Runtime) *httpClient {
-	if rt != nil && rt.HTTP != nil {
-		return rt.HTTP
-	}
-	return newHTTPClient(nil)
-}
-
-// batch4IsTimeout reports whether err is a deadline or a net timeout.
-func batch4IsTimeout(ctx context.Context, err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	var netErr net.Error
-	return errors.As(err, &netErr) && netErr.Timeout()
-}
-
-// batch4TruncateText caps provider error bodies the same way upstream slices
-// response.text[:500].
-func batch4TruncateText(text string, limit int) string {
-	if utf8.RuneCountInString(text) <= limit {
-		return text
-	}
-	runes := []rune(text)
-	return string(runes[:limit])
-}
-
-// batch4AsMap safely views a decoded JSON object.
-func batch4AsMap(value any) map[string]any {
-	object, _ := value.(map[string]any)
-	return object
-}
-
-// batch4AsSlice safely views a decoded JSON array.
-func batch4AsSlice(value any) []any {
-	items, _ := value.([]any)
-	return items
-}
-
-// batch4AsString reads a decoded JSON string.
-func batch4AsString(value any) string {
-	text, _ := value.(string)
-	return text
-}
-
-// batch4AsBool reads a decoded JSON boolean.
-func batch4AsBool(value any) bool {
-	flag, _ := value.(bool)
-	return flag
-}
-
-// batch4Clamp bounds an integer to [low, high].
-func batch4Clamp(value, low, high int) int {
-	if value < low {
-		return low
-	}
-	if value > high {
-		return high
-	}
-	return value
-}
-
-// batch4OptionalString distinguishes an absent/null argument from "".
-func batch4OptionalString(input map[string]any, name string) (string, bool) {
-	value, present := input[name]
-	if !present || value == nil {
-		return "", false
-	}
-	text, ok := value.(string)
-	if !ok {
-		return fmt.Sprint(value), true
-	}
-	return text, true
-}
-
-// batch4OptionalBool distinguishes an absent/null argument from false.
-func batch4OptionalBool(input map[string]any, name string) (bool, bool) {
+// notionOptionalBool distinguishes an absent/null argument from false.
+func notionOptionalBool(input map[string]any, name string) (bool, bool) {
 	value, present := input[name]
 	if !present || value == nil {
 		return false, false
@@ -204,32 +93,8 @@ func batch4OptionalBool(input map[string]any, name string) (bool, bool) {
 	return flag, true
 }
 
-// batch4OptionalInt distinguishes an absent/null argument from 0.
-func batch4OptionalInt(input map[string]any, name string) (int, bool) {
-	value, present := input[name]
-	if !present || value == nil {
-		return 0, false
-	}
-	switch typed := value.(type) {
-	case int:
-		return typed, true
-	case int64:
-		return int(typed), true
-	case float64:
-		return int(typed), true
-	case json.Number:
-		parsed, err := typed.Int64()
-		if err != nil {
-			return 0, false
-		}
-		return int(parsed), true
-	default:
-		return 0, false
-	}
-}
-
-// batch4OptionalStrings distinguishes an absent/null list from an empty list.
-func batch4OptionalStrings(input map[string]any, name string) ([]string, bool) {
+// notionOptionalStrings distinguishes an absent/null list from an empty list.
+func notionOptionalStrings(input map[string]any, name string) ([]string, bool) {
 	value, present := input[name]
 	if !present || value == nil {
 		return nil, false
@@ -239,35 +104,35 @@ func batch4OptionalStrings(input map[string]any, name string) ([]string, bool) {
 
 // ---------------------------------------------------------------- notion ----
 
-type batch4BlockType string
+type notionBlockType string
 
 const (
-	batch4BlockBulletedItem batch4BlockType = "bulleted_list_item"
-	batch4BlockCallout      batch4BlockType = "callout"
-	batch4BlockHeading1     batch4BlockType = "heading_1"
-	batch4BlockHeading2     batch4BlockType = "heading_2"
-	batch4BlockHeading3     batch4BlockType = "heading_3"
-	batch4BlockNumberedItem batch4BlockType = "numbered_list_item"
-	batch4BlockParagraph    batch4BlockType = "paragraph"
-	batch4BlockQuote        batch4BlockType = "quote"
-	batch4BlockToDo         batch4BlockType = "to_do"
+	notionBlockBulletedItem notionBlockType = "bulleted_list_item"
+	notionBlockCallout      notionBlockType = "callout"
+	notionBlockHeading1     notionBlockType = "heading_1"
+	notionBlockHeading2     notionBlockType = "heading_2"
+	notionBlockHeading3     notionBlockType = "heading_3"
+	notionBlockNumberedItem notionBlockType = "numbered_list_item"
+	notionBlockParagraph    notionBlockType = "paragraph"
+	notionBlockQuote        notionBlockType = "quote"
+	notionBlockToDo         notionBlockType = "to_do"
 )
 
-// batch4NotionBlockTypes mirrors Python's sorted(BlockType) order.
-var batch4NotionBlockTypes = []batch4BlockType{
-	batch4BlockBulletedItem,
-	batch4BlockCallout,
-	batch4BlockHeading1,
-	batch4BlockHeading2,
-	batch4BlockHeading3,
-	batch4BlockNumberedItem,
-	batch4BlockParagraph,
-	batch4BlockQuote,
-	batch4BlockToDo,
+// notionBlockTypes mirrors Python's sorted(BlockType) order.
+var notionBlockTypes = []notionBlockType{
+	notionBlockBulletedItem,
+	notionBlockCallout,
+	notionBlockHeading1,
+	notionBlockHeading2,
+	notionBlockHeading3,
+	notionBlockNumberedItem,
+	notionBlockParagraph,
+	notionBlockQuote,
+	notionBlockToDo,
 }
 
-func batch4ParseBlockType(value string) (batch4BlockType, bool) {
-	for _, candidate := range batch4NotionBlockTypes {
+func notionParseBlockType(value string) (notionBlockType, bool) {
+	for _, candidate := range notionBlockTypes {
 		if string(candidate) == value {
 			return candidate, true
 		}
@@ -275,29 +140,29 @@ func batch4ParseBlockType(value string) (batch4BlockType, bool) {
 	return "", false
 }
 
-func batch4BlockTypeHelp() string {
-	names := make([]string, 0, len(batch4NotionBlockTypes))
-	for _, blockType := range batch4NotionBlockTypes {
+func notionBlockTypeHelp() string {
+	names := make([]string, 0, len(notionBlockTypes))
+	for _, blockType := range notionBlockTypes {
 		names = append(names, string(blockType))
 	}
 	return strings.Join(names, ", ")
 }
 
-func batch4InvalidBlockType(value string) map[string]any {
+func notionInvalidBlockType(value string) map[string]any {
 	return map[string]any{
 		"error": fmt.Sprintf("Invalid block_type: '%s'", value),
-		"help":  "Must be one of: " + batch4BlockTypeHelp(),
+		"help":  "Must be one of: " + notionBlockTypeHelp(),
 	}
 }
 
-func batch4NotionAuthError() map[string]any {
+func notionAuthError() map[string]any {
 	return map[string]any{
 		"error": "NOTION_API_TOKEN not set",
 		"help":  "Create an integration at https://www.notion.so/my-integrations",
 	}
 }
 
-var batch4NotionTool = &Tool{
+var notionTool = &Tool{
 	ID:          "notion_tool",
 	Name:        "notion",
 	DisplayName: "Notion",
@@ -459,40 +324,32 @@ var batch4NotionTool = &Tool{
 	},
 }
 
-func batch4NotionImpls() map[string]ActionFunc {
+func notionImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
-		"notion_append_blocks":      batch4NotionAppendBlocks,
-		"notion_create_database":    batch4NotionCreateDatabase,
-		"notion_create_page":        batch4NotionCreatePage,
-		"notion_delete_block":       batch4NotionDeleteBlock,
-		"notion_get_block":          batch4NotionGetBlock,
-		"notion_get_block_children": batch4NotionGetBlockChildren,
-		"notion_get_database":       batch4NotionGetDatabase,
-		"notion_get_page":           batch4NotionGetPage,
-		"notion_query_database":     batch4NotionQueryDatabase,
-		"notion_search":             batch4NotionSearch,
-		"notion_update_block":       batch4NotionUpdateBlock,
-		"notion_update_database":    batch4NotionUpdateDatabase,
-		"notion_update_page":        batch4NotionUpdatePage,
+		"notion_append_blocks":      notionAppendBlocks,
+		"notion_create_database":    notionCreateDatabase,
+		"notion_create_page":        notionCreatePage,
+		"notion_delete_block":       notionDeleteBlock,
+		"notion_get_block":          notionGetBlock,
+		"notion_get_block_children": notionGetBlockChildren,
+		"notion_get_database":       notionGetDatabase,
+		"notion_get_page":           notionGetPage,
+		"notion_query_database":     notionQueryDatabase,
+		"notion_search":             notionSearch,
+		"notion_update_block":       notionUpdateBlock,
+		"notion_update_database":    notionUpdateDatabase,
+		"notion_update_page":        notionUpdatePage,
 	}
 }
 
-// batch4AccountToken resolves a module credential for the current call. An
-// account alias the action selected wins over the module's single token, the
-// way upstream `_get_token(account)` calls credentials.get_by_alias(provider,
-// account) first.
-func batch4AccountToken(rt *Runtime, moduleID, provider string) string {
-	return accountToken(rt, moduleID, provider)
-}
-
-// batch4NotionRequest performs one Notion API call and maps HTTP failures to
+// notionRequest performs one Notion API call and maps HTTP failures to
 // the upstream error dicts.
-func batch4NotionRequest(ctx context.Context, rt *Runtime, method, path string, payload any) map[string]any {
-	token := batch4AccountToken(rt, "notion_tool", "notion")
+func notionRequest(ctx context.Context, rt *Runtime, method, path string, payload any) map[string]any {
+	token := accountToken(rt, "notion_tool", "notion")
 	if token == "" {
-		return batch4NotionAuthError()
+		return notionAuthError()
 	}
-	base := batch4ModuleURL(rt, "notion_tool")
+	base := moduleBaseURL(rt, "notion_tool")
 	if base == "" {
 		base = "https://api.notion.com"
 	}
@@ -509,18 +366,18 @@ func batch4NotionRequest(ctx context.Context, rt *Runtime, method, path string, 
 		return map[string]any{"error": "Notion request failed: " + err.Error()}
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Notion-Version", batch4NotionVersion)
+	req.Header.Set("Notion-Version", notionVersion)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := batch4HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
-		if batch4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Notion timed out"}
 		}
 		return map[string]any{"error": "Notion request failed: " + err.Error()}
 	}
 	defer resp.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, batch4NotionMaxBody))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, notionMaxBody))
 	if err != nil {
 		return map[string]any{"error": "Notion request failed: " + err.Error()}
 	}
@@ -538,7 +395,7 @@ func batch4NotionRequest(ctx context.Context, rt *Runtime, method, path string, 
 		// Success: fall through to decoding.
 	default:
 		return map[string]any{
-			"error": fmt.Sprintf("Notion API error %d: %s", resp.StatusCode, batch4TruncateText(string(raw), batch4NotionMaxError)),
+			"error": fmt.Sprintf("Notion API error %d: %s", resp.StatusCode, truncateText(string(raw), notionMaxError)),
 		}
 	}
 
@@ -552,76 +409,76 @@ func batch4NotionRequest(ctx context.Context, rt *Runtime, method, path string, 
 	return object
 }
 
-// batch4NotionRichText concatenates rich_text text.content values.
-func batch4NotionRichText(value any) string {
+// notionRichText concatenates rich_text text.content values.
+func notionRichText(value any) string {
 	var builder strings.Builder
-	for _, raw := range batch4AsSlice(value) {
-		part := batch4AsMap(raw)
-		text := batch4AsMap(part["text"])
-		builder.WriteString(batch4AsString(text["content"]))
+	for _, raw := range asSlice(value) {
+		part := asMap(raw)
+		text := asMap(part["text"])
+		builder.WriteString(asString(text["content"]))
 	}
 	return builder.String()
 }
 
-// batch4NotionTitle extracts the first title property's plain text.
-func batch4NotionTitle(properties map[string]any) string {
+// notionTitle extracts the first title property's plain text.
+func notionTitle(properties map[string]any) string {
 	for _, raw := range properties {
-		prop := batch4AsMap(raw)
-		if batch4AsString(prop["type"]) == "title" {
-			return batch4NotionRichText(prop["title"])
+		prop := asMap(raw)
+		if asString(prop["type"]) == "title" {
+			return notionRichText(prop["title"])
 		}
 	}
 	return ""
 }
 
-// batch4NotionSimpleProperties flattens page properties the way upstream does.
-func batch4NotionSimpleProperties(properties map[string]any) map[string]any {
+// notionSimpleProperties flattens page properties the way upstream does.
+func notionSimpleProperties(properties map[string]any) map[string]any {
 	simple := make(map[string]any, len(properties))
 	for name, raw := range properties {
-		prop := batch4AsMap(raw)
-		switch batch4AsString(prop["type"]) {
+		prop := asMap(raw)
+		switch asString(prop["type"]) {
 		case "title":
-			simple[name] = batch4NotionRichText(prop["title"])
+			simple[name] = notionRichText(prop["title"])
 		case "rich_text":
-			simple[name] = batch4NotionRichText(prop["rich_text"])
+			simple[name] = notionRichText(prop["rich_text"])
 		case "select":
-			selectProp := batch4AsMap(prop["select"])
+			selectProp := asMap(prop["select"])
 			if len(selectProp) == 0 {
 				simple[name] = ""
 			} else {
-				simple[name] = batch4AsString(selectProp["name"])
+				simple[name] = asString(selectProp["name"])
 			}
 		case "multi_select":
 			names := make([]string, 0)
-			for _, option := range batch4AsSlice(prop["multi_select"]) {
-				names = append(names, batch4AsString(batch4AsMap(option)["name"]))
+			for _, option := range asSlice(prop["multi_select"]) {
+				names = append(names, asString(asMap(option)["name"]))
 			}
 			simple[name] = names
 		case "number":
 			simple[name] = prop["number"]
 		case "checkbox":
-			simple[name] = batch4AsBool(prop["checkbox"])
+			simple[name] = asBool(prop["checkbox"])
 		case "date":
-			dateProp := batch4AsMap(prop["date"])
+			dateProp := asMap(prop["date"])
 			if len(dateProp) == 0 {
 				simple[name] = ""
 			} else {
-				simple[name] = batch4AsString(dateProp["start"])
+				simple[name] = asString(dateProp["start"])
 			}
 		case "status":
-			statusProp := batch4AsMap(prop["status"])
+			statusProp := asMap(prop["status"])
 			if len(statusProp) == 0 {
 				simple[name] = ""
 			} else {
-				simple[name] = batch4AsString(statusProp["name"])
+				simple[name] = asString(statusProp["name"])
 			}
 		}
 	}
 	return simple
 }
 
-// batch4DecodeJSONObject decodes a user-supplied JSON object parameter.
-func batch4DecodeJSONObject(text string) (map[string]any, error) {
+// notionDecodeJSONObject decodes a user-supplied JSON object parameter.
+func notionDecodeJSONObject(text string) (map[string]any, error) {
 	var value any
 	if err := json.Unmarshal([]byte(text), &value); err != nil {
 		return nil, err
@@ -633,9 +490,9 @@ func batch4DecodeJSONObject(text string) (map[string]any, error) {
 	return object, nil
 }
 
-func batch4NotionSearch(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionSearch(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	body := map[string]any{
-		"page_size": batch4Clamp(intArg(input, "page_size", 20), 1, batch4NotionMaxItems),
+		"page_size": clampInt(intArg(input, "page_size", 20), 1, notionMaxItems),
 	}
 	if query := stringArg(input, "query"); query != "" {
 		body["query"] = query
@@ -645,59 +502,59 @@ func batch4NotionSearch(ctx context.Context, rt *Runtime, input map[string]any) 
 		body["filter"] = map[string]any{"property": "object", "value": filterType}
 	}
 
-	data := batch4NotionRequest(ctx, rt, http.MethodPost, "/v1/search", body)
+	data := notionRequest(ctx, rt, http.MethodPost, "/v1/search", body)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	results := make([]map[string]any, 0)
-	for _, raw := range batch4AsSlice(data["results"]) {
-		item := batch4AsMap(raw)
-		objectType := batch4AsString(item["object"])
+	for _, raw := range asSlice(data["results"]) {
+		item := asMap(raw)
+		objectType := asString(item["object"])
 		title := ""
 		switch objectType {
 		case "page":
-			title = batch4NotionTitle(batch4AsMap(item["properties"]))
+			title = notionTitle(asMap(item["properties"]))
 		case "database":
-			title = batch4NotionRichText(item["title"])
+			title = notionRichText(item["title"])
 		}
 		results = append(results, map[string]any{
-			"id":               batch4AsString(item["id"]),
+			"id":               asString(item["id"]),
 			"object":           objectType,
 			"title":            title,
-			"url":              batch4AsString(item["url"]),
-			"created_time":     batch4AsString(item["created_time"]),
-			"last_edited_time": batch4AsString(item["last_edited_time"]),
+			"url":              asString(item["url"]),
+			"created_time":     asString(item["created_time"]),
+			"last_edited_time": asString(item["last_edited_time"]),
 		})
 	}
 	return map[string]any{
 		"results":  results,
 		"count":    len(results),
-		"has_more": batch4AsBool(data["has_more"]),
+		"has_more": asBool(data["has_more"]),
 	}, nil
 }
 
-func batch4NotionGetPage(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionGetPage(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	pageID := stringArg(input, "page_id")
 	if pageID == "" {
 		return map[string]any{"error": "page_id is required"}, nil
 	}
-	data := batch4NotionRequest(ctx, rt, http.MethodGet, "/v1/pages/"+url.PathEscape(pageID), nil)
+	data := notionRequest(ctx, rt, http.MethodGet, "/v1/pages/"+url.PathEscape(pageID), nil)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	properties := batch4AsMap(data["properties"])
+	properties := asMap(data["properties"])
 	return map[string]any{
-		"id":               batch4AsString(data["id"]),
-		"title":            batch4NotionTitle(properties),
-		"url":              batch4AsString(data["url"]),
-		"archived":         batch4AsBool(data["archived"]),
-		"properties":       batch4NotionSimpleProperties(properties),
-		"created_time":     batch4AsString(data["created_time"]),
-		"last_edited_time": batch4AsString(data["last_edited_time"]),
+		"id":               asString(data["id"]),
+		"title":            notionTitle(properties),
+		"url":              asString(data["url"]),
+		"archived":         asBool(data["archived"]),
+		"properties":       notionSimpleProperties(properties),
+		"created_time":     asString(data["created_time"]),
+		"last_edited_time": asString(data["last_edited_time"]),
 	}, nil
 }
 
-func batch4NotionCreatePage(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionCreatePage(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	title := stringArg(input, "title")
 	if title == "" {
 		return map[string]any{"error": "title is required"}, nil
@@ -726,7 +583,7 @@ func batch4NotionCreatePage(ctx context.Context, rt *Runtime, input map[string]a
 			},
 		}
 		if propertiesJSON := stringArg(input, "properties_json"); propertiesJSON != "" {
-			extra, err := batch4DecodeJSONObject(propertiesJSON)
+			extra, err := notionDecodeJSONObject(propertiesJSON)
 			if err != nil {
 				return map[string]any{"error": "properties_json is not valid JSON"}, nil
 			}
@@ -758,24 +615,24 @@ func batch4NotionCreatePage(ctx context.Context, rt *Runtime, input map[string]a
 		}
 	}
 
-	data := batch4NotionRequest(ctx, rt, http.MethodPost, "/v1/pages", body)
+	data := notionRequest(ctx, rt, http.MethodPost, "/v1/pages", body)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	return map[string]any{
-		"id":     batch4AsString(data["id"]),
-		"url":    batch4AsString(data["url"]),
+		"id":     asString(data["id"]),
+		"url":    asString(data["url"]),
 		"status": "created",
 	}, nil
 }
 
-func batch4NotionQueryDatabase(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionQueryDatabase(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	databaseID := stringArg(input, "database_id")
 	if databaseID == "" {
 		return map[string]any{"error": "database_id is required"}, nil
 	}
 	body := map[string]any{
-		"page_size": batch4Clamp(intArg(input, "page_size", 50), 1, batch4NotionMaxItems),
+		"page_size": clampInt(intArg(input, "page_size", 50), 1, notionMaxItems),
 	}
 	if filterJSON := stringArg(input, "filter_json"); filterJSON != "" {
 		var filter any
@@ -796,57 +653,57 @@ func batch4NotionQueryDatabase(ctx context.Context, rt *Runtime, input map[strin
 	}
 
 	path := fmt.Sprintf("/v1/databases/%s/query", url.PathEscape(databaseID))
-	data := batch4NotionRequest(ctx, rt, http.MethodPost, path, body)
+	data := notionRequest(ctx, rt, http.MethodPost, path, body)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	pages := make([]map[string]any, 0)
-	for _, raw := range batch4AsSlice(data["results"]) {
-		item := batch4AsMap(raw)
+	for _, raw := range asSlice(data["results"]) {
+		item := asMap(raw)
 		pages = append(pages, map[string]any{
-			"id":               batch4AsString(item["id"]),
-			"title":            batch4NotionTitle(batch4AsMap(item["properties"])),
-			"url":              batch4AsString(item["url"]),
-			"created_time":     batch4AsString(item["created_time"]),
-			"last_edited_time": batch4AsString(item["last_edited_time"]),
+			"id":               asString(item["id"]),
+			"title":            notionTitle(asMap(item["properties"])),
+			"url":              asString(item["url"]),
+			"created_time":     asString(item["created_time"]),
+			"last_edited_time": asString(item["last_edited_time"]),
 		})
 	}
 	return map[string]any{
 		"pages":       pages,
 		"count":       len(pages),
-		"has_more":    batch4AsBool(data["has_more"]),
+		"has_more":    asBool(data["has_more"]),
 		"next_cursor": data["next_cursor"],
 	}, nil
 }
 
-func batch4NotionGetDatabase(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionGetDatabase(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	databaseID := stringArg(input, "database_id")
 	if databaseID == "" {
 		return map[string]any{"error": "database_id is required"}, nil
 	}
-	data := batch4NotionRequest(ctx, rt, http.MethodGet, "/v1/databases/"+url.PathEscape(databaseID), nil)
+	data := notionRequest(ctx, rt, http.MethodGet, "/v1/databases/"+url.PathEscape(databaseID), nil)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	properties := make(map[string]any)
-	for name, raw := range batch4AsMap(data["properties"]) {
-		prop := batch4AsMap(raw)
+	for name, raw := range asMap(data["properties"]) {
+		prop := asMap(raw)
 		properties[name] = map[string]any{
-			"type": batch4AsString(prop["type"]),
-			"id":   batch4AsString(prop["id"]),
+			"type": asString(prop["type"]),
+			"id":   asString(prop["id"]),
 		}
 	}
 	return map[string]any{
-		"id":               batch4AsString(data["id"]),
-		"title":            batch4NotionRichText(data["title"]),
-		"url":              batch4AsString(data["url"]),
+		"id":               asString(data["id"]),
+		"title":            notionRichText(data["title"]),
+		"url":              asString(data["url"]),
 		"properties":       properties,
-		"created_time":     batch4AsString(data["created_time"]),
-		"last_edited_time": batch4AsString(data["last_edited_time"]),
+		"created_time":     asString(data["created_time"]),
+		"last_edited_time": asString(data["last_edited_time"]),
 	}, nil
 }
 
-func batch4NotionCreateDatabase(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionCreateDatabase(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	parentPageID := stringArg(input, "parent_page_id")
 	title := stringArg(input, "title")
 	if parentPageID == "" || title == "" {
@@ -854,7 +711,7 @@ func batch4NotionCreateDatabase(ctx context.Context, rt *Runtime, input map[stri
 	}
 	properties := map[string]any{"Name": map[string]any{"title": map[string]any{}}}
 	if propertiesJSON := stringArg(input, "properties_json"); propertiesJSON != "" {
-		extra, err := batch4DecodeJSONObject(propertiesJSON)
+		extra, err := notionDecodeJSONObject(propertiesJSON)
 		if err != nil {
 			return map[string]any{"error": "properties_json is not valid JSON"}, nil
 		}
@@ -867,18 +724,18 @@ func batch4NotionCreateDatabase(ctx context.Context, rt *Runtime, input map[stri
 		"title":      []any{map[string]any{"type": "text", "text": map[string]any{"content": title}}},
 		"properties": properties,
 	}
-	data := batch4NotionRequest(ctx, rt, http.MethodPost, "/v1/databases", body)
+	data := notionRequest(ctx, rt, http.MethodPost, "/v1/databases", body)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	return map[string]any{
-		"id":     batch4AsString(data["id"]),
-		"url":    batch4AsString(data["url"]),
+		"id":     asString(data["id"]),
+		"url":    asString(data["url"]),
 		"status": "created",
 	}, nil
 }
 
-func batch4NotionUpdateDatabase(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionUpdateDatabase(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	databaseID := stringArg(input, "database_id")
 	if databaseID == "" {
 		return map[string]any{"error": "database_id is required"}, nil
@@ -888,116 +745,116 @@ func batch4NotionUpdateDatabase(ctx context.Context, rt *Runtime, input map[stri
 		body["title"] = []any{map[string]any{"type": "text", "text": map[string]any{"content": title}}}
 	}
 	if propertiesJSON := stringArg(input, "properties_json"); propertiesJSON != "" {
-		properties, err := batch4DecodeJSONObject(propertiesJSON)
+		properties, err := notionDecodeJSONObject(propertiesJSON)
 		if err != nil {
 			return map[string]any{"error": "properties_json is not valid JSON"}, nil
 		}
 		body["properties"] = properties
 	}
-	if archived, present := batch4OptionalBool(input, "archived"); present {
+	if archived, present := notionOptionalBool(input, "archived"); present {
 		body["archived"] = archived
 	}
 	if len(body) == 0 {
 		return map[string]any{"error": "No updates provided. Set title, properties_json, or archived."}, nil
 	}
-	data := batch4NotionRequest(ctx, rt, http.MethodPatch, "/v1/databases/"+url.PathEscape(databaseID), body)
+	data := notionRequest(ctx, rt, http.MethodPatch, "/v1/databases/"+url.PathEscape(databaseID), body)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	return map[string]any{
-		"id":     batch4AsString(data["id"]),
-		"url":    batch4AsString(data["url"]),
+		"id":     asString(data["id"]),
+		"url":    asString(data["url"]),
 		"status": "updated",
 	}, nil
 }
 
-func batch4NotionUpdatePage(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionUpdatePage(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	pageID := stringArg(input, "page_id")
 	if pageID == "" {
 		return map[string]any{"error": "page_id is required"}, nil
 	}
 	body := map[string]any{}
 	if propertiesJSON := stringArg(input, "properties_json"); propertiesJSON != "" {
-		properties, err := batch4DecodeJSONObject(propertiesJSON)
+		properties, err := notionDecodeJSONObject(propertiesJSON)
 		if err != nil {
 			return map[string]any{"error": "properties_json is not valid JSON"}, nil
 		}
 		body["properties"] = properties
 	}
-	if archived, present := batch4OptionalBool(input, "archived"); present {
+	if archived, present := notionOptionalBool(input, "archived"); present {
 		body["archived"] = archived
 	}
 	if len(body) == 0 {
 		return map[string]any{"error": "No updates provided. Set properties_json or archived."}, nil
 	}
-	data := batch4NotionRequest(ctx, rt, http.MethodPatch, "/v1/pages/"+url.PathEscape(pageID), body)
+	data := notionRequest(ctx, rt, http.MethodPatch, "/v1/pages/"+url.PathEscape(pageID), body)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	return map[string]any{
-		"id":     batch4AsString(data["id"]),
-		"url":    batch4AsString(data["url"]),
+		"id":     asString(data["id"]),
+		"url":    asString(data["url"]),
 		"status": "updated",
 	}, nil
 }
 
-func batch4NotionGetBlockChildren(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionGetBlockChildren(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	blockID := stringArg(input, "block_id")
 	if blockID == "" {
 		return map[string]any{"error": "block_id is required"}, nil
 	}
-	query := url.Values{"page_size": {fmt.Sprint(batch4Clamp(intArg(input, "page_size", 50), 1, batch4NotionMaxItems))}}
+	query := url.Values{"page_size": {fmt.Sprint(clampInt(intArg(input, "page_size", 50), 1, notionMaxItems))}}
 	path := fmt.Sprintf("/v1/blocks/%s/children?%s", url.PathEscape(blockID), query.Encode())
-	data := batch4NotionRequest(ctx, rt, http.MethodGet, path, nil)
+	data := notionRequest(ctx, rt, http.MethodGet, path, nil)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	blocks := make([]map[string]any, 0)
-	for _, raw := range batch4AsSlice(data["results"]) {
-		item := batch4AsMap(raw)
-		blockType := batch4AsString(item["type"])
+	for _, raw := range asSlice(data["results"]) {
+		item := asMap(raw)
+		blockType := asString(item["type"])
 		block := map[string]any{
-			"id":           batch4AsString(item["id"]),
+			"id":           asString(item["id"]),
 			"type":         blockType,
-			"has_children": batch4AsBool(item["has_children"]),
+			"has_children": asBool(item["has_children"]),
 		}
-		if richText := batch4AsSlice(batch4AsMap(item[blockType])["rich_text"]); len(richText) > 0 {
-			block["text"] = batch4NotionRichText(richText)
+		if richText := asSlice(asMap(item[blockType])["rich_text"]); len(richText) > 0 {
+			block["text"] = notionRichText(richText)
 		}
 		blocks = append(blocks, block)
 	}
 	return map[string]any{
 		"blocks":   blocks,
 		"count":    len(blocks),
-		"has_more": batch4AsBool(data["has_more"]),
+		"has_more": asBool(data["has_more"]),
 	}, nil
 }
 
-func batch4NotionGetBlock(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionGetBlock(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	blockID := stringArg(input, "block_id")
 	if blockID == "" {
 		return map[string]any{"error": "block_id is required"}, nil
 	}
-	data := batch4NotionRequest(ctx, rt, http.MethodGet, "/v1/blocks/"+url.PathEscape(blockID), nil)
+	data := notionRequest(ctx, rt, http.MethodGet, "/v1/blocks/"+url.PathEscape(blockID), nil)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	blockType := batch4AsString(data["type"])
+	blockType := asString(data["type"])
 	result := map[string]any{
-		"id":               batch4AsString(data["id"]),
+		"id":               asString(data["id"]),
 		"type":             blockType,
-		"has_children":     batch4AsBool(data["has_children"]),
-		"archived":         batch4AsBool(data["archived"]),
-		"created_time":     batch4AsString(data["created_time"]),
-		"last_edited_time": batch4AsString(data["last_edited_time"]),
+		"has_children":     asBool(data["has_children"]),
+		"archived":         asBool(data["archived"]),
+		"created_time":     asString(data["created_time"]),
+		"last_edited_time": asString(data["last_edited_time"]),
 	}
-	if richText := batch4AsSlice(batch4AsMap(data[blockType])["rich_text"]); len(richText) > 0 {
-		result["text"] = batch4NotionRichText(richText)
+	if richText := asSlice(asMap(data[blockType])["rich_text"]); len(richText) > 0 {
+		result["text"] = notionRichText(richText)
 	}
 	return result, nil
 }
 
-func batch4NotionUpdateBlock(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionUpdateBlock(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	blockID := stringArg(input, "block_id")
 	if blockID == "" {
 		return map[string]any{"error": "block_id is required"}, nil
@@ -1008,56 +865,56 @@ func batch4NotionUpdateBlock(ctx context.Context, rt *Runtime, input map[string]
 		if blockType == "" {
 			return map[string]any{"error": "block_type is required when setting content. Use notion_get_block to find the type."}, nil
 		}
-		validated, ok := batch4ParseBlockType(blockType)
+		validated, ok := notionParseBlockType(blockType)
 		if !ok {
-			return batch4InvalidBlockType(blockType), nil
+			return notionInvalidBlockType(blockType), nil
 		}
 		body[string(validated)] = map[string]any{
 			"rich_text": []any{map[string]any{"type": "text", "text": map[string]any{"content": content}}},
 		}
 	}
-	if archived, present := batch4OptionalBool(input, "archived"); present {
+	if archived, present := notionOptionalBool(input, "archived"); present {
 		body["archived"] = archived
 	}
 	if len(body) == 0 {
 		return map[string]any{"error": "No updates provided. Set content or archived."}, nil
 	}
-	data := batch4NotionRequest(ctx, rt, http.MethodPatch, "/v1/blocks/"+url.PathEscape(blockID), body)
+	data := notionRequest(ctx, rt, http.MethodPatch, "/v1/blocks/"+url.PathEscape(blockID), body)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	return map[string]any{
-		"id":     batch4AsString(data["id"]),
-		"type":   batch4AsString(data["type"]),
+		"id":     asString(data["id"]),
+		"type":   asString(data["type"]),
 		"status": "updated",
 	}, nil
 }
 
-func batch4NotionDeleteBlock(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionDeleteBlock(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	blockID := stringArg(input, "block_id")
 	if blockID == "" {
 		return map[string]any{"error": "block_id is required"}, nil
 	}
-	data := batch4NotionRequest(ctx, rt, http.MethodDelete, "/v1/blocks/"+url.PathEscape(blockID), nil)
+	data := notionRequest(ctx, rt, http.MethodDelete, "/v1/blocks/"+url.PathEscape(blockID), nil)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	return map[string]any{
-		"id":     batch4AsString(data["id"]),
+		"id":     asString(data["id"]),
 		"status": "deleted",
 	}, nil
 }
 
-func batch4NotionAppendBlocks(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func notionAppendBlocks(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	blockID := stringArg(input, "block_id")
 	content := stringArg(input, "content")
 	if blockID == "" || content == "" {
 		return map[string]any{"error": "block_id and content are required"}, nil
 	}
 	blockType := stringArg(input, "block_type")
-	validated, ok := batch4ParseBlockType(blockType)
+	validated, ok := notionParseBlockType(blockType)
 	if !ok {
-		return batch4InvalidBlockType(blockType), nil
+		return notionInvalidBlockType(blockType), nil
 	}
 	lines := make([]string, 0)
 	for _, line := range strings.Split(content, "\n") {
@@ -1068,7 +925,7 @@ func batch4NotionAppendBlocks(ctx context.Context, rt *Runtime, input map[string
 	if len(lines) == 0 {
 		return map[string]any{"error": "content is empty after stripping blank lines"}, nil
 	}
-	if len(lines) > batch4NotionMaxItems {
+	if len(lines) > notionMaxItems {
 		return map[string]any{"error": "Too many blocks. Notion API allows max 100 per request."}, nil
 	}
 	children := make([]any, 0, len(lines))
@@ -1080,13 +937,13 @@ func batch4NotionAppendBlocks(ctx context.Context, rt *Runtime, input map[string
 				"rich_text": []any{map[string]any{"type": "text", "text": map[string]any{"content": line}}},
 			},
 		}
-		if validated == batch4BlockToDo {
+		if validated == notionBlockToDo {
 			block[string(validated)].(map[string]any)["checked"] = false
 		}
 		children = append(children, block)
 	}
 	path := fmt.Sprintf("/v1/blocks/%s/children", url.PathEscape(blockID))
-	data := batch4NotionRequest(ctx, rt, http.MethodPatch, path, map[string]any{"children": children})
+	data := notionRequest(ctx, rt, http.MethodPatch, path, map[string]any{"children": children})
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}

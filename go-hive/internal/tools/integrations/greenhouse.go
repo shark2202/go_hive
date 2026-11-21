@@ -14,7 +14,7 @@ import (
 	"net/url"
 )
 
-var batch6Lane2GreenhouseTool = &Tool{
+var greenhouseTool = &Tool{
 	ID:          "greenhouse_tool",
 	Name:        "greenhouse",
 	DisplayName: "Greenhouse",
@@ -114,7 +114,7 @@ var batch6Lane2GreenhouseTool = &Tool{
 	},
 }
 
-func batch6Lane2GreenhouseImpls() map[string]ActionFunc {
+func greenhouseImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
 		"greenhouse_list_jobs":          batch6Lane2GreenhouseListJobs,
 		"greenhouse_get_job":            batch6Lane2GreenhouseGetJob,
@@ -138,7 +138,7 @@ func batch6Lane2GreenhouseAuthError() map[string]any {
 
 // batch6Lane2GreenhouseBaseURL resolves the Harvest API root.
 func batch6Lane2GreenhouseBaseURL(rt *Runtime) string {
-	if base := batch6Lane2ModuleURL(rt, "greenhouse_tool"); base != "" {
+	if base := moduleBaseURL(rt, "greenhouse_tool"); base != "" {
 		return base
 	}
 	return "https://harvest.greenhouse.io/v1"
@@ -152,7 +152,7 @@ func batch6Lane2GreenhouseGet(
 	path string,
 	query url.Values,
 ) (any, bool) {
-	token := batch6Lane2ModuleToken(rt, "greenhouse_tool")
+	token := supportModuleToken(rt, "greenhouse_tool")
 	if token == "" {
 		return batch6Lane2GreenhouseAuthError(), false
 	}
@@ -161,11 +161,11 @@ func batch6Lane2GreenhouseGet(
 		target += "?" + query.Encode()
 	}
 	headers := map[string]string{
-		"Authorization": batch6Lane2BasicAuth(token, ""),
+		"Authorization": basicAuth(token, ""),
 	}
-	reply, err := batch6Lane2Do(ctx, rt, http.MethodGet, target, headers, nil)
+	reply, err := supportDo(ctx, rt, http.MethodGet, target, headers, nil)
 	if err != nil {
-		if batch6Lane2IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Greenhouse timed out"}, false
 		}
 		return map[string]any{"error": "Greenhouse request failed: " + err.Error()}, false
@@ -185,11 +185,11 @@ func batch6Lane2GreenhouseGet(
 			"error": fmt.Sprintf(
 				"Greenhouse API error %d: %s",
 				reply.Status,
-				batch6Lane2TruncateText(string(reply.Body), batch6Lane2MaxError),
+				truncateText(string(reply.Body), supportMaxError),
 			),
 		}, false
 	}
-	value, ok := batch6Lane2DecodeAny(reply.Body)
+	value, ok := decodeAny(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Greenhouse request failed: invalid JSON response"}, false
 	}
@@ -203,19 +203,19 @@ func batch6Lane2GreenhousePost(
 	path string,
 	payload any,
 ) (any, bool) {
-	token := batch6Lane2ModuleToken(rt, "greenhouse_tool")
+	token := supportModuleToken(rt, "greenhouse_tool")
 	if token == "" {
 		return batch6Lane2GreenhouseAuthError(), false
 	}
 	target := batch6Lane2GreenhouseBaseURL(rt) + path
 	headers := map[string]string{
-		"Authorization": batch6Lane2BasicAuth(token, ""),
+		"Authorization": basicAuth(token, ""),
 		"Content-Type":  "application/json",
 		"On-Behalf-Of":  "",
 	}
-	reply, err := batch6Lane2Do(ctx, rt, http.MethodPost, target, headers, payload)
+	reply, err := supportDo(ctx, rt, http.MethodPost, target, headers, payload)
 	if err != nil {
-		if batch6Lane2IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Greenhouse timed out"}, false
 		}
 		return map[string]any{"error": "Greenhouse request failed: " + err.Error()}, false
@@ -231,11 +231,11 @@ func batch6Lane2GreenhousePost(
 			"error": fmt.Sprintf(
 				"Greenhouse API error %d: %s",
 				reply.Status,
-				batch6Lane2TruncateText(string(reply.Body), batch6Lane2MaxError),
+				truncateText(string(reply.Body), supportMaxError),
 			),
 		}, false
 	}
-	value, ok := batch6Lane2DecodeAny(reply.Body)
+	value, ok := decodeAny(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Greenhouse request failed: invalid JSON response"}, false
 	}
@@ -245,17 +245,17 @@ func batch6Lane2GreenhousePost(
 // batch6Lane2GreenhousePage builds the standard pagination query.
 func batch6Lane2GreenhousePage(input map[string]any) url.Values {
 	return url.Values{
-		"per_page": {fmt.Sprint(batch6Lane2Clamp(intArg(input, "per_page", 50), 1, 500))},
+		"per_page": {fmt.Sprint(clampInt(intArg(input, "per_page", 50), 1, 500))},
 		"page":     {fmt.Sprint(max(1, intArg(input, "page", 1)))},
 	}
 }
 
 // batch6Lane2GreenhouseNames extracts `name` from a list of objects.
 func batch6Lane2GreenhouseNames(value any) []string {
-	items := batch6Lane2AsSlice(value)
+	items := asSlice(value)
 	out := make([]string, 0, len(items))
 	for _, item := range items {
-		out = append(out, batch6Lane2AsString(batch6Lane2AsMap(item)["name"]))
+		out = append(out, asString(asMap(item)["name"]))
 	}
 	return out
 }
@@ -270,16 +270,16 @@ func batch6Lane2GreenhouseListJobs(ctx context.Context, rt *Runtime, input map[s
 		return value, nil
 	}
 	jobs := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(value) {
-		item := batch6Lane2AsMap(raw)
+	for _, raw := range asSlice(value) {
+		item := asMap(raw)
 		jobs = append(jobs, map[string]any{
-			"id":          batch6Lane2JSONNumber(item["id"]),
-			"name":        batch6Lane2AsString(item["name"]),
-			"status":      batch6Lane2AsString(item["status"]),
+			"id":          jsonNumber(item["id"]),
+			"name":        asString(item["name"]),
+			"status":      asString(item["status"]),
 			"departments": batch6Lane2GreenhouseNames(item["departments"]),
 			"offices":     batch6Lane2GreenhouseNames(item["offices"]),
-			"created_at":  batch6Lane2AsString(item["created_at"]),
-			"updated_at":  batch6Lane2AsString(item["updated_at"]),
+			"created_at":  asString(item["created_at"]),
+			"updated_at":  asString(item["updated_at"]),
 		})
 	}
 	return map[string]any{"jobs": jobs, "count": len(jobs)}, nil
@@ -299,24 +299,24 @@ func batch6Lane2GreenhouseGetJob(ctx context.Context, rt *Runtime, input map[str
 		return map[string]any{"error": "Unexpected response format"}, nil
 	}
 	openings := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(source["openings"]) {
-		opening := batch6Lane2AsMap(raw)
+	for _, raw := range asSlice(source["openings"]) {
+		opening := asMap(raw)
 		openings = append(openings, map[string]any{
-			"id":     batch6Lane2JSONNumber(opening["id"]),
-			"status": batch6Lane2AsString(opening["status"]),
+			"id":     jsonNumber(opening["id"]),
+			"status": asString(opening["status"]),
 		})
 	}
 	return map[string]any{
-		"id":           batch6Lane2JSONNumber(source["id"]),
-		"name":         batch6Lane2AsString(source["name"]),
-		"status":       batch6Lane2AsString(source["status"]),
-		"confidential": batch6Lane2BoolOr(source["confidential"], false),
+		"id":           jsonNumber(source["id"]),
+		"name":         asString(source["name"]),
+		"status":       asString(source["status"]),
+		"confidential": boolOr(source["confidential"], false),
 		"departments":  batch6Lane2GreenhouseNames(source["departments"]),
 		"offices":      batch6Lane2GreenhouseNames(source["offices"]),
 		"openings":     openings,
-		"created_at":   batch6Lane2AsString(source["created_at"]),
-		"updated_at":   batch6Lane2AsString(source["updated_at"]),
-		"notes":        batch6Lane2TruncateText(batch6Lane2AsString(source["notes"]), batch6Lane2MaxError),
+		"created_at":   asString(source["created_at"]),
+		"updated_at":   asString(source["updated_at"]),
+		"notes":        truncateText(asString(source["notes"]), supportMaxError),
 	}, nil
 }
 
@@ -333,17 +333,17 @@ func batch6Lane2GreenhouseListCandidates(ctx context.Context, rt *Runtime, input
 		return value, nil
 	}
 	candidates := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(value) {
-		item := batch6Lane2AsMap(raw)
+	for _, raw := range asSlice(value) {
+		item := asMap(raw)
 		candidates = append(candidates, map[string]any{
-			"id":              batch6Lane2JSONNumber(item["id"]),
-			"first_name":      batch6Lane2AsString(item["first_name"]),
-			"last_name":       batch6Lane2AsString(item["last_name"]),
-			"company":         batch6Lane2AsString(item["company"]),
-			"title":           batch6Lane2AsString(item["title"]),
-			"tags":            batch6Lane2StringList(item["tags"]),
-			"application_ids": batch6Lane2NumberList(item["application_ids"]),
-			"created_at":      batch6Lane2AsString(item["created_at"]),
+			"id":              jsonNumber(item["id"]),
+			"first_name":      asString(item["first_name"]),
+			"last_name":       asString(item["last_name"]),
+			"company":         asString(item["company"]),
+			"title":           asString(item["title"]),
+			"tags":            supportStringList(item["tags"]),
+			"application_ids": supportNumberList(item["application_ids"]),
+			"created_at":      asString(item["created_at"]),
 		})
 	}
 	return map[string]any{"candidates": candidates, "count": len(candidates)}, nil
@@ -363,25 +363,25 @@ func batch6Lane2GreenhouseGetCandidate(ctx context.Context, rt *Runtime, input m
 		return map[string]any{"error": "Unexpected response format"}, nil
 	}
 	emails := make([]string, 0)
-	for _, raw := range batch6Lane2AsSlice(source["email_addresses"]) {
-		emails = append(emails, batch6Lane2AsString(batch6Lane2AsMap(raw)["value"]))
+	for _, raw := range asSlice(source["email_addresses"]) {
+		emails = append(emails, asString(asMap(raw)["value"]))
 	}
 	phones := make([]string, 0)
-	for _, raw := range batch6Lane2AsSlice(source["phone_numbers"]) {
-		phones = append(phones, batch6Lane2AsString(batch6Lane2AsMap(raw)["value"]))
+	for _, raw := range asSlice(source["phone_numbers"]) {
+		phones = append(phones, asString(asMap(raw)["value"]))
 	}
 	return map[string]any{
-		"id":              batch6Lane2JSONNumber(source["id"]),
-		"first_name":      batch6Lane2AsString(source["first_name"]),
-		"last_name":       batch6Lane2AsString(source["last_name"]),
-		"company":         batch6Lane2AsString(source["company"]),
-		"title":           batch6Lane2AsString(source["title"]),
+		"id":              jsonNumber(source["id"]),
+		"first_name":      asString(source["first_name"]),
+		"last_name":       asString(source["last_name"]),
+		"company":         asString(source["company"]),
+		"title":           asString(source["title"]),
 		"emails":          emails,
 		"phones":          phones,
-		"tags":            batch6Lane2StringList(source["tags"]),
-		"application_ids": batch6Lane2NumberList(source["application_ids"]),
-		"created_at":      batch6Lane2AsString(source["created_at"]),
-		"updated_at":      batch6Lane2AsString(source["updated_at"]),
+		"tags":            supportStringList(source["tags"]),
+		"application_ids": supportNumberList(source["application_ids"]),
+		"created_at":      asString(source["created_at"]),
+		"updated_at":      asString(source["updated_at"]),
 	}, nil
 }
 
@@ -398,17 +398,17 @@ func batch6Lane2GreenhouseListApplications(ctx context.Context, rt *Runtime, inp
 		return value, nil
 	}
 	applications := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(value) {
-		item := batch6Lane2AsMap(raw)
-		stage := batch6Lane2AsMap(item["current_stage"])
+	for _, raw := range asSlice(value) {
+		item := asMap(raw)
+		stage := asMap(item["current_stage"])
 		applications = append(applications, map[string]any{
-			"id":               batch6Lane2JSONNumber(item["id"]),
-			"candidate_id":     batch6Lane2JSONNumber(item["candidate_id"]),
-			"status":           batch6Lane2AsString(item["status"]),
-			"current_stage":    batch6Lane2AsString(stage["name"]),
+			"id":               jsonNumber(item["id"]),
+			"candidate_id":     jsonNumber(item["candidate_id"]),
+			"status":           asString(item["status"]),
+			"current_stage":    asString(stage["name"]),
 			"jobs":             batch6Lane2GreenhouseNames(item["jobs"]),
-			"applied_at":       batch6Lane2AsString(item["applied_at"]),
-			"last_activity_at": batch6Lane2AsString(item["last_activity_at"]),
+			"applied_at":       asString(item["applied_at"]),
+			"last_activity_at": asString(item["last_activity_at"]),
 		})
 	}
 	return map[string]any{"applications": applications, "count": len(applications)}, nil
@@ -427,27 +427,27 @@ func batch6Lane2GreenhouseGetApplication(ctx context.Context, rt *Runtime, input
 	if !isObject {
 		return map[string]any{"error": "Unexpected response format"}, nil
 	}
-	stage := batch6Lane2AsMap(source["current_stage"])
-	origin := batch6Lane2AsMap(source["source"])
+	stage := asMap(source["current_stage"])
+	origin := asMap(source["source"])
 	answers := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(source["answers"]) {
-		answer := batch6Lane2AsMap(raw)
+	for _, raw := range asSlice(source["answers"]) {
+		answer := asMap(raw)
 		answers = append(answers, map[string]any{
-			"question": batch6Lane2AsString(answer["question"]),
-			"answer":   batch6Lane2AsString(answer["answer"]),
+			"question": asString(answer["question"]),
+			"answer":   asString(answer["answer"]),
 		})
 	}
 	return map[string]any{
-		"id":               batch6Lane2JSONNumber(source["id"]),
-		"candidate_id":     batch6Lane2JSONNumber(source["candidate_id"]),
-		"status":           batch6Lane2AsString(source["status"]),
-		"current_stage":    batch6Lane2AsString(stage["name"]),
-		"source":           batch6Lane2AsString(origin["public_name"]),
+		"id":               jsonNumber(source["id"]),
+		"candidate_id":     jsonNumber(source["candidate_id"]),
+		"status":           asString(source["status"]),
+		"current_stage":    asString(stage["name"]),
+		"source":           asString(origin["public_name"]),
 		"jobs":             batch6Lane2GreenhouseNames(source["jobs"]),
 		"answers":          answers,
-		"applied_at":       batch6Lane2AsString(source["applied_at"]),
+		"applied_at":       asString(source["applied_at"]),
 		"rejected_at":      source["rejected_at"],
-		"last_activity_at": batch6Lane2AsString(source["last_activity_at"]),
+		"last_activity_at": asString(source["last_activity_at"]),
 	}, nil
 }
 
@@ -462,16 +462,16 @@ func batch6Lane2GreenhouseListOffers(ctx context.Context, rt *Runtime, input map
 		return value, nil
 	}
 	offers := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(value) {
-		item := batch6Lane2AsMap(raw)
+	for _, raw := range asSlice(value) {
+		item := asMap(raw)
 		offers = append(offers, map[string]any{
-			"id":             batch6Lane2JSONNumber(item["id"]),
-			"application_id": batch6Lane2JSONNumber(item["application_id"]),
-			"version":        batch6Lane2JSONNumber(item["version"]),
-			"status":         batch6Lane2AsString(item["status"]),
-			"starts_at":      batch6Lane2AsString(item["starts_at"]),
-			"created_at":     batch6Lane2AsString(item["created_at"]),
-			"updated_at":     batch6Lane2AsString(item["updated_at"]),
+			"id":             jsonNumber(item["id"]),
+			"application_id": jsonNumber(item["application_id"]),
+			"version":        jsonNumber(item["version"]),
+			"status":         asString(item["status"]),
+			"starts_at":      asString(item["starts_at"]),
+			"created_at":     asString(item["created_at"]),
+			"updated_at":     asString(item["updated_at"]),
 			"sent_at":        item["sent_at"],
 			"resolved_at":    item["resolved_at"],
 		})
@@ -496,12 +496,12 @@ func batch6Lane2GreenhouseAddCandidateNote(ctx context.Context, rt *Runtime, inp
 	if !ok {
 		return value, nil
 	}
-	created := batch6Lane2AsMap(value)
+	created := asMap(value)
 	return map[string]any{
-		"id":         batch6Lane2JSONNumber(created["id"]),
-		"body":       batch6Lane2AsString(created["body"]),
-		"visibility": batch6Lane2AsString(created["visibility"]),
-		"created_at": batch6Lane2AsString(created["created_at"]),
+		"id":         jsonNumber(created["id"]),
+		"body":       asString(created["body"]),
+		"visibility": asString(created["visibility"]),
+		"created_at": asString(created["created_at"]),
 		"status":     "created",
 	}, nil
 }
@@ -518,19 +518,19 @@ func batch6Lane2GreenhouseListScorecards(ctx context.Context, rt *Runtime, input
 		return value, nil
 	}
 	scorecards := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(value) {
-		item := batch6Lane2AsMap(raw)
-		interviewer := batch6Lane2AsMap(item["interviewer"])
-		interview := batch6Lane2AsMap(item["interview"])
+	for _, raw := range asSlice(value) {
+		item := asMap(raw)
+		interviewer := asMap(item["interviewer"])
+		interview := asMap(item["interview"])
 		scorecards = append(scorecards, map[string]any{
-			"id":                     batch6Lane2JSONNumber(item["id"]),
-			"interviewer_name":       batch6Lane2AsString(interviewer["name"]),
-			"interviewer_id":         batch6Lane2JSONNumber(interviewer["id"]),
-			"overall_recommendation": batch6Lane2AsString(item["overall_recommendation"]),
-			"submitted_at":           batch6Lane2AsString(item["submitted_at"]),
-			"interview":              batch6Lane2AsString(interview["name"]),
-			"created_at":             batch6Lane2AsString(item["created_at"]),
-			"updated_at":             batch6Lane2AsString(item["updated_at"]),
+			"id":                     jsonNumber(item["id"]),
+			"interviewer_name":       asString(interviewer["name"]),
+			"interviewer_id":         jsonNumber(interviewer["id"]),
+			"overall_recommendation": asString(item["overall_recommendation"]),
+			"submitted_at":           asString(item["submitted_at"]),
+			"interview":              asString(interview["name"]),
+			"created_at":             asString(item["created_at"]),
+			"updated_at":             asString(item["updated_at"]),
 		})
 	}
 	return map[string]any{"scorecards": scorecards, "count": len(scorecards)}, nil

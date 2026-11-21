@@ -31,10 +31,8 @@ package integrations
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -130,56 +128,6 @@ func batch7Lane6Modules() map[string]*ModuleConfig {
 
 // ------------------------------------------------------------ shared bits ---
 
-// batch7Lane6Base resolves a module base URL, honouring WithBaseURL.
-func batch7Lane6Base(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	return strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
-}
-
-// batch7Lane6Token resolves the module credential from WithCredential or the
-// configured environment lookup.
-func batch7Lane6Token(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	getenv := rt.Getenv
-	if getenv == nil {
-		getenv = os.Getenv
-	}
-	token, _ := cfg.ResolvedToken(getenv)
-	return strings.TrimSpace(token)
-}
-
-// batch7Lane6Clock reads the runtime clock, defaulting to time.Now.
-func batch7Lane6Clock(rt *Runtime) time.Time {
-	if rt != nil && rt.Now != nil {
-		return rt.Now()
-	}
-	return time.Now()
-}
-
-// batch7Lane6IsTimeout reports whether err is a deadline or a net timeout.
-func batch7Lane6IsTimeout(ctx context.Context, err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	var netErr net.Error
-	return errors.As(err, &netErr) && netErr.Timeout()
-}
-
 // batch7Lane6Truncate caps text at limit runes, matching upstream slicing on
 // Python strings.
 func batch7Lane6Truncate(text string, limit int) string {
@@ -189,73 +137,30 @@ func batch7Lane6Truncate(text string, limit int) string {
 	return string([]rune(text)[:limit])
 }
 
-// batch7Lane6AsMap safely views a decoded JSON object.
-func batch7Lane6AsMap(value any) map[string]any {
-	object, _ := value.(map[string]any)
-	return object
-}
-
 // batch7Lane6MapOrEmpty views a decoded object, substituting {} when absent.
 func batch7Lane6MapOrEmpty(value any) map[string]any {
-	if object := batch7Lane6AsMap(value); object != nil {
+	if object := asMap(value); object != nil {
 		return object
 	}
 	return map[string]any{}
 }
 
-// batch7Lane6AsSlice safely views a decoded JSON array.
-func batch7Lane6AsSlice(value any) []any {
-	items, _ := value.([]any)
-	return items
-}
-
 // batch7Lane6SliceOrEmpty views a decoded array, substituting [] when absent.
 func batch7Lane6SliceOrEmpty(value any) []any {
-	if items := batch7Lane6AsSlice(value); items != nil {
+	if items := asSlice(value); items != nil {
 		return items
 	}
 	return []any{}
-}
-
-// batch7Lane6AsString reads a decoded JSON string.
-func batch7Lane6AsString(value any) string {
-	text, _ := value.(string)
-	return text
 }
 
 // batch7Lane6StringOr reads a string field with a fallback alternative: the
 // second value wins only when the first is an empty string, mirroring the
 // upstream `a or b` projections.
 func batch7Lane6StringOr(primary, fallback any) string {
-	if text := batch7Lane6AsString(primary); text != "" {
+	if text := asString(primary); text != "" {
 		return text
 	}
-	return batch7Lane6AsString(fallback)
-}
-
-// batch7Lane6Float distinguishes an absent/null argument from 0, which matters
-// for coordinates where 0 is a valid value.
-func batch7Lane6Float(input map[string]any, name string) (float64, bool) {
-	value, present := input[name]
-	if !present || value == nil {
-		return 0, false
-	}
-	switch typed := value.(type) {
-	case float64:
-		return typed, true
-	case int:
-		return float64(typed), true
-	case int64:
-		return float64(typed), true
-	case json.Number:
-		parsed, err := typed.Float64()
-		if err != nil {
-			return 0, false
-		}
-		return parsed, true
-	default:
-		return 0, false
-	}
+	return asString(fallback)
 }
 
 // batch7Lane6HTTPResponse is one completed HTTP exchange with its decoded
@@ -613,7 +518,7 @@ func batch7Lane6SimilarWebImpls() map[string]ActionFunc {
 // "Request failed: <error>" wording.
 func batch7Lane6SWExecute(endpoint batch7Lane6SWAction) ActionFunc {
 	return func(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-		token := batch7Lane6Token(rt, "similarweb_tool")
+		token := moduleToken(rt, "similarweb_tool")
 		if token == "" {
 			return map[string]any{
 				"error": "SimilarWeb credentials not configured",
@@ -635,7 +540,7 @@ func batch7Lane6SWExecute(endpoint batch7Lane6SWAction) ActionFunc {
 		for name, value := range endpoint.constants {
 			query.Set(name, fmt.Sprint(value))
 		}
-		target := batch7Lane6Join(batch7Lane6Base(rt, "similarweb_tool")+endpoint.path, query)
+		target := batch7Lane6Join(moduleBaseURL(rt, "similarweb_tool")+endpoint.path, query)
 		resp, err := batch7Lane6Do(ctx, rt, http.MethodGet, target, map[string]string{
 			"api-key": token,
 			"Accept":  "application/json",
@@ -780,7 +685,7 @@ func batch7Lane6NewsImpls() map[string]ActionFunc {
 
 // batch7Lane6NewsKeys resolves the two provider credentials independently.
 func batch7Lane6NewsKeys(rt *Runtime) (string, string) {
-	return batch7Lane6Token(rt, "news_tool"), batch7Lane6Token(rt, "finlight_tool")
+	return moduleToken(rt, "news_tool"), moduleToken(rt, "finlight_tool")
 }
 
 // batch7Lane6NewsNoCredentials is the upstream missing-pair error.
@@ -804,7 +709,7 @@ func batch7Lane6NewsLimit(input map[string]any) int {
 // batch7Lane6NewsDateRange builds the upstream from/to pair for the past N
 // days (both inclusive).
 func batch7Lane6NewsDateRange(rt *Runtime, days int) (string, string) {
-	now := batch7Lane6Clock(rt)
+	now := runtimeNow(rt)
 	end := now.Format("2006-01-02")
 	start := now.AddDate(0, 0, -days).Format("2006-01-02")
 	return start, end
@@ -814,19 +719,19 @@ func batch7Lane6NewsDateRange(rt *Runtime, days int) (string, string) {
 // present, defaulting to "".
 func batch7Lane6NewsArticle(title, source, published, link, snippet any) map[string]any {
 	return map[string]any{
-		"title":   batch7Lane6AsString(title),
-		"source":  batch7Lane6AsString(source),
-		"date":    batch7Lane6AsString(published),
-		"url":     batch7Lane6AsString(link),
-		"snippet": batch7Lane6AsString(snippet),
+		"title":   asString(title),
+		"source":  asString(source),
+		"date":    asString(published),
+		"url":     asString(link),
+		"snippet": asString(snippet),
 	}
 }
 
 // batch7Lane6NewsDataArticles projects the NewsData results array.
 func batch7Lane6NewsDataArticles(parsed any) []any {
 	results := make([]any, 0)
-	for _, raw := range batch7Lane6AsSlice(batch7Lane6AsMap(parsed)["results"]) {
-		item := batch7Lane6AsMap(raw)
+	for _, raw := range asSlice(asMap(parsed)["results"]) {
+		item := asMap(raw)
 		results = append(results, batch7Lane6NewsArticle(
 			item["title"], item["source_id"], item["pubDate"], item["link"], item["description"],
 		))
@@ -844,7 +749,7 @@ func batch7Lane6NewsDataError(status int, parsed any, body []byte) map[string]an
 		return map[string]any{"error": "NewsData rate limit exceeded. Try again later."}
 	case http.StatusUnprocessableEntity:
 		detail := string(body)
-		if results, ok := batch7Lane6AsMap(parsed)["results"].(map[string]any); ok {
+		if results, ok := asMap(parsed)["results"].(map[string]any); ok {
 			if message, present := results["message"]; present {
 				detail = fmt.Sprint(message)
 			}
@@ -865,7 +770,7 @@ func batch7Lane6FinlightError(status int, parsed any, body []byte) map[string]an
 		return map[string]any{"error": "Finlight rate limit exceeded. Try again later."}
 	case http.StatusUnprocessableEntity:
 		detail := string(body)
-		if message, present := batch7Lane6AsMap(parsed)["message"]; present {
+		if message, present := asMap(parsed)["message"]; present {
 			detail = fmt.Sprint(message)
 		}
 		return map[string]any{"error": "Invalid Finlight parameters: " + detail}
@@ -925,7 +830,7 @@ func batch7Lane6NewsDataSearch(ctx context.Context, rt *Runtime, args batch7Lane
 	if args.Sources != "" {
 		query.Set("sources", args.Sources)
 	}
-	target := batch7Lane6Join(batch7Lane6Base(rt, "news_tool")+path, query)
+	target := batch7Lane6Join(moduleBaseURL(rt, "news_tool")+path, query)
 	resp, err := batch7Lane6NewsRetry(ctx, rt, http.MethodGet, target, nil, nil)
 	if err != nil {
 		return map[string]any{"error": "Network error: " + err.Error()}
@@ -948,17 +853,17 @@ func batch7Lane6NewsSentimentValue(raw any) (float64, bool) {
 	case nil:
 		return 0, false
 	case float64:
-		return batch7Lane6ClampFloat(typed, -1, 1), true
+		return clampFloat(typed, -1, 1), true
 	case int:
-		return batch7Lane6ClampFloat(float64(typed), -1, 1), true
+		return clampFloat(float64(typed), -1, 1), true
 	case int64:
-		return batch7Lane6ClampFloat(float64(typed), -1, 1), true
+		return clampFloat(float64(typed), -1, 1), true
 	case json.Number:
 		parsed, err := typed.Float64()
 		if err != nil {
 			return 0, false
 		}
-		return batch7Lane6ClampFloat(parsed, -1, 1), true
+		return clampFloat(parsed, -1, 1), true
 	case string:
 		switch strings.ToLower(strings.TrimSpace(typed)) {
 		case "positive":
@@ -973,17 +878,6 @@ func batch7Lane6NewsSentimentValue(raw any) (float64, bool) {
 	default:
 		return 0, false
 	}
-}
-
-// batch7Lane6ClampFloat bounds a float to [low, high].
-func batch7Lane6ClampFloat(value, low, high float64) float64 {
-	if value < low {
-		return low
-	}
-	if value > high {
-		return high
-	}
-	return value
 }
 
 // batch7Lane6NewsFalsy mirrors Python truthiness for the sentiment fallback
@@ -1038,7 +932,7 @@ func batch7Lane6FinlightSearch(ctx context.Context, rt *Runtime, args batch7Lane
 	if args.Country != "" {
 		body["countries"] = []any{strings.ToUpper(args.Country)}
 	}
-	target := batch7Lane6Base(rt, "finlight_tool") + "/articles"
+	target := moduleBaseURL(rt, "finlight_tool") + "/articles"
 	resp, err := batch7Lane6NewsRetry(ctx, rt, http.MethodPost, target, map[string]string{
 		"X-API-KEY": key,
 		"Accept":    "application/json",
@@ -1049,7 +943,7 @@ func batch7Lane6FinlightSearch(ctx context.Context, rt *Runtime, args batch7Lane
 	if resp.Status != http.StatusOK {
 		return batch7Lane6FinlightError(resp.Status, resp.Parsed, resp.Body)
 	}
-	payload := batch7Lane6AsMap(resp.Parsed)
+	payload := asMap(resp.Parsed)
 	rawResults := payload["articles"]
 	if rawResults == nil {
 		rawResults = payload["data"]
@@ -1058,8 +952,8 @@ func batch7Lane6FinlightSearch(ctx context.Context, rt *Runtime, args batch7Lane
 		rawResults = payload["results"]
 	}
 	results := make([]any, 0)
-	for _, raw := range batch7Lane6AsSlice(rawResults) {
-		item := batch7Lane6AsMap(raw)
+	for _, raw := range asSlice(rawResults) {
+		item := asMap(raw)
 		article := batch7Lane6NewsArticle(
 			item["title"],
 			item["source"],
@@ -1237,7 +1131,7 @@ func batch7Lane6NewsLatest(ctx context.Context, rt *Runtime, input map[string]an
 			query.Set("country", country)
 		}
 		query.Set("size", strconv.Itoa(limit))
-		target := batch7Lane6Join(batch7Lane6Base(rt, "news_tool")+"/news", query)
+		target := batch7Lane6Join(moduleBaseURL(rt, "news_tool")+"/news", query)
 		resp, err := batch7Lane6NewsRetry(ctx, rt, http.MethodGet, target, nil, nil)
 		if err == nil && resp.Status == http.StatusOK {
 			results := batch7Lane6NewsDataArticles(resp.Parsed)
@@ -1471,10 +1365,10 @@ func batch7Lane6MapsStatus(status, errorMessage string) map[string]any {
 // when the call failed.
 func batch7Lane6MapsGet(ctx context.Context, rt *Runtime, key, path string, query url.Values, label string) (map[string]any, map[string]any) {
 	query.Set("key", key)
-	target := batch7Lane6Join(batch7Lane6Base(rt, "google_maps_tool")+path, query)
+	target := batch7Lane6Join(moduleBaseURL(rt, "google_maps_tool")+path, query)
 	resp, err := batch7Lane6Do(ctx, rt, http.MethodGet, target, nil, nil)
 	if err != nil {
-		if batch7Lane6IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return nil, map[string]any{"error": "Request timed out"}
 		}
 		return nil, map[string]any{"error": "Network error: " + err.Error()}
@@ -1484,12 +1378,12 @@ func batch7Lane6MapsGet(ctx context.Context, rt *Runtime, key, path string, quer
 			"error": fmt.Sprintf("HTTP %d: %s", resp.Status, batch7Lane6Truncate(string(resp.Body), batch7Lane6HTTPText)),
 		}
 	}
-	data := batch7Lane6AsMap(resp.Parsed)
+	data := asMap(resp.Parsed)
 	if data == nil {
 		return nil, map[string]any{"error": label + " failed: invalid JSON response"}
 	}
-	status := batch7Lane6AsString(data["status"])
-	errorMessage := batch7Lane6AsString(data["error_message"])
+	status := asString(data["status"])
+	errorMessage := asString(data["error_message"])
 	if errDict := batch7Lane6MapsStatus(status, errorMessage); errDict != nil {
 		return nil, errDict
 	}
@@ -1500,18 +1394,18 @@ func batch7Lane6MapsGet(ctx context.Context, rt *Runtime, key, path string, quer
 // array.
 func batch7Lane6MapsResults(data map[string]any) []any {
 	results := make([]any, 0)
-	for _, raw := range batch7Lane6AsSlice(data["results"]) {
-		item := batch7Lane6AsMap(raw)
-		geometry := batch7Lane6AsMap(item["geometry"])
+	for _, raw := range asSlice(data["results"]) {
+		item := asMap(raw)
+		geometry := asMap(item["geometry"])
 		location := geometry["location"]
 		if location == nil {
 			location = map[string]any{}
 		}
 		results = append(results, map[string]any{
-			"formatted_address":  batch7Lane6AsString(item["formatted_address"]),
+			"formatted_address":  asString(item["formatted_address"]),
 			"location":           location,
-			"location_type":      batch7Lane6AsString(geometry["location_type"]),
-			"place_id":           batch7Lane6AsString(item["place_id"]),
+			"location_type":      asString(geometry["location_type"]),
+			"place_id":           asString(item["place_id"]),
 			"types":              batch7Lane6SliceOrEmpty(item["types"]),
 			"address_components": batch7Lane6SliceOrEmpty(item["address_components"]),
 		})
@@ -1527,7 +1421,7 @@ func batch7Lane6MapsGeocode(ctx context.Context, rt *Runtime, input map[string]a
 	if address == "" && components == "" {
 		return map[string]any{"error": "Either address or components is required"}, nil
 	}
-	key := batch7Lane6Token(rt, "google_maps_tool")
+	key := moduleToken(rt, "google_maps_tool")
 	if key == "" {
 		return batch7Lane6MapsMissingKey(), nil
 	}
@@ -1564,11 +1458,11 @@ func batch7Lane6FormatCoordinate(value float64) string {
 
 // batch7Lane6MapsReverseGeocode converts coordinates to an address.
 func batch7Lane6MapsReverseGeocode(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	latitude, latOK := batch7Lane6Float(input, "latitude")
+	latitude, latOK := optionalFloat(input, "latitude")
 	if !latOK {
 		return map[string]any{"error": "latitude is required"}, nil
 	}
-	longitude, lngOK := batch7Lane6Float(input, "longitude")
+	longitude, lngOK := optionalFloat(input, "longitude")
 	if !lngOK {
 		return map[string]any{"error": "longitude is required"}, nil
 	}
@@ -1578,7 +1472,7 @@ func batch7Lane6MapsReverseGeocode(ctx context.Context, rt *Runtime, input map[s
 	if longitude < -180 || longitude > 180 {
 		return map[string]any{"error": "Longitude must be between -180 and 180"}, nil
 	}
-	key := batch7Lane6Token(rt, "google_maps_tool")
+	key := moduleToken(rt, "google_maps_tool")
 	if key == "" {
 		return batch7Lane6MapsMissingKey(), nil
 	}
@@ -1611,7 +1505,7 @@ func batch7Lane6MapsDirections(ctx context.Context, rt *Runtime, input map[strin
 	if destination == "" {
 		return map[string]any{"error": "Destination is required"}, nil
 	}
-	key := batch7Lane6Token(rt, "google_maps_tool")
+	key := moduleToken(rt, "google_maps_tool")
 	if key == "" {
 		return batch7Lane6MapsMissingKey(), nil
 	}
@@ -1635,24 +1529,24 @@ func batch7Lane6MapsDirections(ctx context.Context, rt *Runtime, input map[strin
 		return errDict, nil
 	}
 	routes := make([]any, 0)
-	for _, rawRoute := range batch7Lane6AsSlice(data["routes"]) {
-		route := batch7Lane6AsMap(rawRoute)
+	for _, rawRoute := range asSlice(data["routes"]) {
+		route := asMap(rawRoute)
 		legs := make([]any, 0)
-		for _, rawLeg := range batch7Lane6AsSlice(route["legs"]) {
-			leg := batch7Lane6AsMap(rawLeg)
+		for _, rawLeg := range asSlice(route["legs"]) {
+			leg := asMap(rawLeg)
 			steps := make([]any, 0)
-			for _, rawStep := range batch7Lane6AsSlice(leg["steps"]) {
-				step := batch7Lane6AsMap(rawStep)
+			for _, rawStep := range asSlice(leg["steps"]) {
+				step := asMap(rawStep)
 				steps = append(steps, map[string]any{
-					"instruction": batch7Lane6AsString(step["html_instructions"]),
+					"instruction": asString(step["html_instructions"]),
 					"distance":    batch7Lane6MapOrEmpty(step["distance"]),
 					"duration":    batch7Lane6MapOrEmpty(step["duration"]),
-					"travel_mode": batch7Lane6AsString(step["travel_mode"]),
+					"travel_mode": asString(step["travel_mode"]),
 				})
 			}
 			legs = append(legs, map[string]any{
-				"start_address":       batch7Lane6AsString(leg["start_address"]),
-				"end_address":         batch7Lane6AsString(leg["end_address"]),
+				"start_address":       asString(leg["start_address"]),
+				"end_address":         asString(leg["end_address"]),
 				"distance":            batch7Lane6MapOrEmpty(leg["distance"]),
 				"duration":            batch7Lane6MapOrEmpty(leg["duration"]),
 				"duration_in_traffic": leg["duration_in_traffic"],
@@ -1660,9 +1554,9 @@ func batch7Lane6MapsDirections(ctx context.Context, rt *Runtime, input map[strin
 			})
 		}
 		routes = append(routes, map[string]any{
-			"summary":           batch7Lane6AsString(route["summary"]),
+			"summary":           asString(route["summary"]),
 			"legs":              legs,
-			"overview_polyline": batch7Lane6AsString(batch7Lane6AsMap(route["overview_polyline"])["points"]),
+			"overview_polyline": asString(asMap(route["overview_polyline"])["points"]),
 			"warnings":          batch7Lane6SliceOrEmpty(route["warnings"]),
 			"waypoint_order":    batch7Lane6SliceOrEmpty(route["waypoint_order"]),
 		})
@@ -1686,7 +1580,7 @@ func batch7Lane6MapsDistanceMatrix(ctx context.Context, rt *Runtime, input map[s
 	if destinations == "" {
 		return map[string]any{"error": "Destinations is required"}, nil
 	}
-	key := batch7Lane6Token(rt, "google_maps_tool")
+	key := moduleToken(rt, "google_maps_tool")
 	if key == "" {
 		return batch7Lane6MapsMissingKey(), nil
 	}
@@ -1706,13 +1600,13 @@ func batch7Lane6MapsDistanceMatrix(ctx context.Context, rt *Runtime, input map[s
 		return errDict, nil
 	}
 	rows := make([]any, 0)
-	for _, rawRow := range batch7Lane6AsSlice(data["rows"]) {
-		row := batch7Lane6AsMap(rawRow)
+	for _, rawRow := range asSlice(data["rows"]) {
+		row := asMap(rawRow)
 		elements := make([]any, 0)
-		for _, rawElement := range batch7Lane6AsSlice(row["elements"]) {
-			element := batch7Lane6AsMap(rawElement)
+		for _, rawElement := range asSlice(row["elements"]) {
+			element := asMap(rawElement)
 			projected := map[string]any{
-				"status":   batch7Lane6AsString(element["status"]),
+				"status":   asString(element["status"]),
 				"distance": batch7Lane6MapOrEmpty(element["distance"]),
 				"duration": batch7Lane6MapOrEmpty(element["duration"]),
 			}
@@ -1736,7 +1630,7 @@ func batch7Lane6MapsPlaceDetails(ctx context.Context, rt *Runtime, input map[str
 	if placeID == "" {
 		return map[string]any{"error": "place_id is required"}, nil
 	}
-	key := batch7Lane6Token(rt, "google_maps_tool")
+	key := moduleToken(rt, "google_maps_tool")
 	if key == "" {
 		return batch7Lane6MapsMissingKey(), nil
 	}
@@ -1765,7 +1659,7 @@ func batch7Lane6MapsPlaceSearch(ctx context.Context, rt *Runtime, input map[stri
 	if query == "" && pageToken == "" {
 		return map[string]any{"error": "Query or page_token is required"}, nil
 	}
-	key := batch7Lane6Token(rt, "google_maps_tool")
+	key := moduleToken(rt, "google_maps_tool")
 	if key == "" {
 		return batch7Lane6MapsMissingKey(), nil
 	}
@@ -1782,7 +1676,7 @@ func batch7Lane6MapsPlaceSearch(ctx context.Context, rt *Runtime, input map[stri
 		}
 	}
 	if radius := intArg(input, "radius", 0); radius > 0 {
-		params.Set("radius", strconv.Itoa(batch7Lane6Min(radius, 50000)))
+		params.Set("radius", strconv.Itoa(minInt(radius, 50000)))
 	}
 	if boolArg(input, "opennow", false) {
 		params.Set("opennow", "true")
@@ -1798,35 +1692,27 @@ func batch7Lane6MapsPlaceSearch(ctx context.Context, rt *Runtime, input map[stri
 		return errDict, nil
 	}
 	results := make([]any, 0)
-	for _, raw := range batch7Lane6AsSlice(data["results"]) {
-		item := batch7Lane6AsMap(raw)
+	for _, raw := range asSlice(data["results"]) {
+		item := asMap(raw)
 		place := map[string]any{
-			"name":               batch7Lane6AsString(item["name"]),
-			"formatted_address":  batch7Lane6AsString(item["formatted_address"]),
-			"location":           batch7Lane6MapOrEmpty(batch7Lane6AsMap(item["geometry"])["location"]),
-			"place_id":           batch7Lane6AsString(item["place_id"]),
+			"name":               asString(item["name"]),
+			"formatted_address":  asString(item["formatted_address"]),
+			"location":           batch7Lane6MapOrEmpty(asMap(item["geometry"])["location"]),
+			"place_id":           asString(item["place_id"]),
 			"types":              batch7Lane6SliceOrEmpty(item["types"]),
 			"rating":             item["rating"],
 			"user_ratings_total": item["user_ratings_total"],
 			"price_level":        item["price_level"],
-			"business_status":    batch7Lane6AsString(item["business_status"]),
+			"business_status":    asString(item["business_status"]),
 		}
 		if openingHours, present := item["opening_hours"]; present {
-			place["open_now"] = batch7Lane6AsMap(openingHours)["open_now"]
+			place["open_now"] = asMap(openingHours)["open_now"]
 		}
 		results = append(results, place)
 	}
 	response := map[string]any{"query": query, "results": results, "total": len(results)}
-	if token := batch7Lane6AsString(data["next_page_token"]); token != "" {
+	if token := asString(data["next_page_token"]); token != "" {
 		response["next_page_token"] = token
 	}
 	return response, nil
-}
-
-// batch7Lane6Min returns the smaller of two integers.
-func batch7Lane6Min(left, right int) int {
-	if left < right {
-		return left
-	}
-	return right
 }

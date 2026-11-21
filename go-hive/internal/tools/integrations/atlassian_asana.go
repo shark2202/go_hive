@@ -20,16 +20,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/aden-hive/hive-go/internal/tools"
 )
@@ -101,57 +98,6 @@ func batch5Lane1Getenv(rt *Runtime, name string) string {
 	return strings.TrimSpace(getenv(name))
 }
 
-// batch5Lane1ModuleToken resolves the module credential from WithCredential or
-// the configured environment lookup.
-func batch5Lane1ModuleToken(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	getenv := rt.Getenv
-	if getenv == nil {
-		getenv = os.Getenv
-	}
-	token, _ := cfg.ResolvedToken(getenv)
-	return strings.TrimSpace(token)
-}
-
-// batch5Lane1ModuleBase resolves a module base URL, honouring WithBaseURL.
-func batch5Lane1ModuleBase(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	return strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
-}
-
-// batch5Lane1HTTP returns the runtime transport, falling back to a client with
-// the standard timeout for hand-built runtimes.
-func batch5Lane1HTTP(rt *Runtime) *httpClient {
-	if rt != nil && rt.HTTP != nil {
-		return rt.HTTP
-	}
-	return newHTTPClient(nil)
-}
-
-// batch5Lane1IsTimeout reports whether err is a deadline or a net timeout.
-func batch5Lane1IsTimeout(ctx context.Context, err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	var netErr net.Error
-	return errors.As(err, &netErr) && netErr.Timeout()
-}
-
 // batch5Lane1BasicAuth renders the Atlassian Basic header (email + API token).
 func batch5Lane1BasicAuth(email, token string) string {
 	encoded := base64.StdEncoding.EncodeToString([]byte(email + ":" + token))
@@ -188,7 +134,7 @@ func batch5Lane1Do(ctx context.Context, rt *Runtime, method, rawURL string, quer
 	for name, value := range headers {
 		req.Header.Set(name, value)
 	}
-	resp, err := batch5Lane1HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -210,18 +156,6 @@ func batch5Lane1Decode(raw []byte) (map[string]any, error) {
 		object = map[string]any{}
 	}
 	return object, nil
-}
-
-// batch5Lane1Map safely views a decoded JSON object.
-func batch5Lane1Map(value any) map[string]any {
-	object, _ := value.(map[string]any)
-	return object
-}
-
-// batch5Lane1Slice safely views a decoded JSON array.
-func batch5Lane1Slice(value any) []any {
-	items, _ := value.([]any)
-	return items
 }
 
 // batch5Lane1Text reads a decoded JSON string field.
@@ -269,28 +203,6 @@ func batch5Lane1Int(object map[string]any, key string, fallback int) int {
 		}
 	}
 	return fallback
-}
-
-// batch5Lane1Truncate caps text by runes, matching Python string slicing.
-func batch5Lane1Truncate(text string, limit int) string {
-	if limit < 0 {
-		limit = 0
-	}
-	if utf8.RuneCountInString(text) <= limit {
-		return text
-	}
-	return string([]rune(text)[:limit])
-}
-
-// batch5Lane1Clamp bounds an integer to [low, high].
-func batch5Lane1Clamp(value, low, high int) int {
-	if value < low {
-		return low
-	}
-	if value > high {
-		return high
-	}
-	return value
 }
 
 // batch5Lane1OptionalBool distinguishes an absent/null argument from false.

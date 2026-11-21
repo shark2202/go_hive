@@ -83,7 +83,7 @@ func batch6Lane4PowerBIToolImpls() map[string]ActionFunc {
 }
 
 func batch6Lane4PowerBIConfig(rt *Runtime) (map[string]string, map[string]any) {
-	token := batch6Lane4ModuleToken(rt, "powerbi_tool")
+	token := moduleToken(rt, "powerbi_tool")
 	if token == "" {
 		return nil, map[string]any{
 			"error": "POWERBI_ACCESS_TOKEN is required",
@@ -97,7 +97,7 @@ func batch6Lane4PowerBIConfig(rt *Runtime) (map[string]string, map[string]any) {
 }
 
 func batch6Lane4PowerBIBase(rt *Runtime) string {
-	base := batch6Lane4ModuleURL(rt, "powerbi_tool")
+	base := moduleBaseURL(rt, "powerbi_tool")
 	if base == "" {
 		base = "https://api.powerbi.com/v1.0/myorg"
 	}
@@ -111,12 +111,12 @@ func batch6Lane4PowerBIGet(ctx context.Context, rt *Runtime, headers map[string]
 	}
 	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, target, headers, nil, 30*time.Second)
 	if err != nil {
-		return batch6Lane4TransportError(ctx, "Power BI", err)
+		return transportError(ctx, "Power BI", err)
 	}
 	if resp.Status >= 400 {
 		return batch6Lane4HTTPError(resp)
 	}
-	data, ok := batch6Lane4JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Power BI API error: invalid JSON response"}
 	}
@@ -139,13 +139,13 @@ func batch6Lane4PowerBIListWorkspaces(ctx context.Context, rt *Runtime, input ma
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	groups := batch4AsSlice(data["value"])
+	groups := asSlice(data["value"])
 	if groups == nil {
 		groups = []any{}
 	}
 	workspaces := make([]any, 0, len(groups))
 	for _, rawGroup := range groups {
-		group := batch4AsMap(rawGroup)
+		group := asMap(rawGroup)
 		workspaces = append(workspaces, map[string]any{
 			"id":                       group["id"],
 			"name":                     group["name"],
@@ -165,17 +165,17 @@ func batch6Lane4PowerBIListDatasets(ctx context.Context, rt *Runtime, input map[
 	if workspaceID == "" {
 		return map[string]any{"error": "workspace_id is required"}, nil
 	}
-	data := batch6Lane4PowerBIGet(ctx, rt, headers, "/groups/"+batch6Lane4PathEscape(workspaceID)+"/datasets", nil)
+	data := batch6Lane4PowerBIGet(ctx, rt, headers, "/groups/"+pathEscape(workspaceID)+"/datasets", nil)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	datasets := batch4AsSlice(data["value"])
+	datasets := asSlice(data["value"])
 	if datasets == nil {
 		datasets = []any{}
 	}
 	extracted := make([]any, 0, len(datasets))
 	for _, rawDataset := range datasets {
-		dataset := batch4AsMap(rawDataset)
+		dataset := asMap(rawDataset)
 		extracted = append(extracted, map[string]any{
 			"id":             dataset["id"],
 			"name":           dataset["name"],
@@ -198,17 +198,17 @@ func batch6Lane4PowerBIListReports(ctx context.Context, rt *Runtime, input map[s
 	if workspaceID == "" {
 		return map[string]any{"error": "workspace_id is required"}, nil
 	}
-	data := batch6Lane4PowerBIGet(ctx, rt, headers, "/groups/"+batch6Lane4PathEscape(workspaceID)+"/reports", nil)
+	data := batch6Lane4PowerBIGet(ctx, rt, headers, "/groups/"+pathEscape(workspaceID)+"/reports", nil)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	reports := batch4AsSlice(data["value"])
+	reports := asSlice(data["value"])
 	if reports == nil {
 		reports = []any{}
 	}
 	extracted := make([]any, 0, len(reports))
 	for _, rawReport := range reports {
-		report := batch4AsMap(rawReport)
+		report := asMap(rawReport)
 		extracted = append(extracted, map[string]any{
 			"id":          report["id"],
 			"name":        report["name"],
@@ -235,11 +235,11 @@ func batch6Lane4PowerBIRefreshDataset(ctx context.Context, rt *Runtime, input ma
 	if notifyOption == "" {
 		notifyOption = "NoNotification"
 	}
-	target := batch6Lane4PowerBIBase(rt) + "/groups/" + batch6Lane4PathEscape(workspaceID) +
-		"/datasets/" + batch6Lane4PathEscape(datasetID) + "/refreshes"
+	target := batch6Lane4PowerBIBase(rt) + "/groups/" + pathEscape(workspaceID) +
+		"/datasets/" + pathEscape(datasetID) + "/refreshes"
 	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodPost, target, headers, map[string]any{"notifyOption": notifyOption}, 30*time.Second)
 	if err != nil {
-		return batch6Lane4TransportError(ctx, "Power BI", err), nil
+		return transportError(ctx, "Power BI", err), nil
 	}
 	if resp.Status >= 400 {
 		return batch6Lane4HTTPError(resp), nil
@@ -250,7 +250,7 @@ func batch6Lane4PowerBIRefreshDataset(ctx context.Context, rt *Runtime, input ma
 	if len(strings.TrimSpace(string(resp.Body))) == 0 {
 		return map[string]any{"result": "ok"}, nil
 	}
-	data, ok := batch6Lane4JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Power BI API error: invalid JSON response"}, nil
 	}
@@ -269,17 +269,17 @@ func batch6Lane4PowerBIGetRefreshHistory(ctx context.Context, rt *Runtime, input
 	}
 	params := url.Values{"$top": []string{strconv.Itoa(intArg(input, "top", 10))}}
 	data := batch6Lane4PowerBIGet(ctx, rt, headers,
-		"/groups/"+batch6Lane4PathEscape(workspaceID)+"/datasets/"+batch6Lane4PathEscape(datasetID)+"/refreshes", params)
+		"/groups/"+pathEscape(workspaceID)+"/datasets/"+pathEscape(datasetID)+"/refreshes", params)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	refreshes := batch4AsSlice(data["value"])
+	refreshes := asSlice(data["value"])
 	if refreshes == nil {
 		refreshes = []any{}
 	}
 	extracted := make([]any, 0, len(refreshes))
 	for _, rawRefresh := range refreshes {
-		refresh := batch4AsMap(rawRefresh)
+		refresh := asMap(rawRefresh)
 		extracted = append(extracted, map[string]any{
 			"request_id":   refresh["requestId"],
 			"refresh_type": refresh["refreshType"],

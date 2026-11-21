@@ -89,12 +89,12 @@ func batch6Lane4SAPImpls() map[string]ActionFunc {
 
 // batch6Lane4SAPConfig mirrors upstream _get_config: base URL plus basic auth.
 func batch6Lane4SAPConfig(rt *Runtime) (string, map[string]string, map[string]any) {
-	base := strings.TrimRight(batch6Lane4ModuleURL(rt, "sap_tool"), "/")
+	base := strings.TrimRight(moduleBaseURL(rt, "sap_tool"), "/")
 	if base == "" {
-		base = strings.TrimRight(strings.TrimSpace(batch6Lane4Getenv(rt, "SAP_BASE_URL")), "/")
+		base = strings.TrimRight(strings.TrimSpace(runtimeEnv(rt, "SAP_BASE_URL")), "/")
 	}
-	username := batch6Lane4Getenv(rt, "SAP_USERNAME")
-	password := batch6Lane4Getenv(rt, "SAP_PASSWORD")
+	username := runtimeEnv(rt, "SAP_USERNAME")
+	password := runtimeEnv(rt, "SAP_PASSWORD")
 	if base == "" || username == "" || password == "" {
 		return "", nil, map[string]any{
 			"error": "SAP credentials not configured",
@@ -116,12 +116,12 @@ func batch6Lane4SAPGet(ctx context.Context, rt *Runtime, base string, headers ma
 	}
 	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, target, headers, nil, 30*time.Second)
 	if err != nil {
-		return batch6Lane4TransportError(ctx, "SAP", err)
+		return transportError(ctx, "SAP", err)
 	}
 	if resp.Status >= 400 {
 		return batch6Lane4HTTPError(resp)
 	}
-	data, ok := batch6Lane4JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "SAP API error: invalid JSON response"}
 	}
@@ -130,14 +130,14 @@ func batch6Lane4SAPGet(ctx context.Context, rt *Runtime, base string, headers ma
 
 // batch6Lane4SAPODataList mirrors upstream _odata_list.
 func batch6Lane4SAPODataList(data map[string]any) ([]any, any) {
-	envelope := batch4AsMap(data["d"])
-	results := batch4AsSlice(envelope["results"])
+	envelope := asMap(data["d"])
+	results := asSlice(envelope["results"])
 	if results == nil {
 		results = []any{}
 	}
 	var total any
 	if rawCount, present := envelope["__count"]; present {
-		if parsed, err := strconv.Atoi(strings.TrimSpace(batch4AsString(rawCount))); err == nil {
+		if parsed, err := strconv.Atoi(strings.TrimSpace(asString(rawCount))); err == nil {
 			total = parsed
 		}
 	}
@@ -170,15 +170,15 @@ func batch6Lane4SAPListPurchaseOrders(ctx context.Context, rt *Runtime, input ma
 	results, total := batch6Lane4SAPODataList(data)
 	purchaseOrders := make([]any, 0, len(results))
 	for _, rawOrder := range results {
-		order := batch4AsMap(rawOrder)
+		order := asMap(rawOrder)
 		purchaseOrders = append(purchaseOrders, map[string]any{
-			"purchase_order": batch6Lane4StringOr(order, "PurchaseOrder", ""),
-			"type":           batch6Lane4StringOr(order, "PurchaseOrderType", ""),
-			"company_code":   batch6Lane4StringOr(order, "CompanyCode", ""),
-			"supplier":       batch6Lane4StringOr(order, "Supplier", ""),
+			"purchase_order": stringOr(order, "PurchaseOrder", ""),
+			"type":           stringOr(order, "PurchaseOrderType", ""),
+			"company_code":   stringOr(order, "CompanyCode", ""),
+			"supplier":       stringOr(order, "Supplier", ""),
 			"creation_date":  order["CreationDate"],
 			"net_amount":     order["PurchaseOrderNetAmount"],
-			"currency":       batch6Lane4StringOr(order, "DocumentCurrency", ""),
+			"currency":       stringOr(order, "DocumentCurrency", ""),
 		})
 	}
 	return map[string]any{"count": len(purchaseOrders), "total": total, "purchase_orders": purchaseOrders}, nil
@@ -199,16 +199,16 @@ func batch6Lane4SAPGetPurchaseOrder(ctx context.Context, rt *Runtime, input map[
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	order := batch4AsMap(data["d"])
+	order := asMap(data["d"])
 	return map[string]any{
-		"purchase_order": batch6Lane4StringOr(order, "PurchaseOrder", ""),
-		"type":           batch6Lane4StringOr(order, "PurchaseOrderType", ""),
-		"company_code":   batch6Lane4StringOr(order, "CompanyCode", ""),
-		"supplier":       batch6Lane4StringOr(order, "Supplier", ""),
-		"purchasing_org": batch6Lane4StringOr(order, "PurchasingOrganization", ""),
+		"purchase_order": stringOr(order, "PurchaseOrder", ""),
+		"type":           stringOr(order, "PurchaseOrderType", ""),
+		"company_code":   stringOr(order, "CompanyCode", ""),
+		"supplier":       stringOr(order, "Supplier", ""),
+		"purchasing_org": stringOr(order, "PurchasingOrganization", ""),
 		"creation_date":  order["CreationDate"],
 		"net_amount":     order["PurchaseOrderNetAmount"],
-		"currency":       batch6Lane4StringOr(order, "DocumentCurrency", ""),
+		"currency":       stringOr(order, "DocumentCurrency", ""),
 	}, nil
 }
 
@@ -225,17 +225,17 @@ func batch6Lane4SAPListBusinessPartners(ctx context.Context, rt *Runtime, input 
 	results, total := batch6Lane4SAPODataList(data)
 	partners := make([]any, 0, len(results))
 	for _, rawPartner := range results {
-		partner := batch4AsMap(rawPartner)
-		name := batch6Lane4StringOr(partner, "BusinessPartnerFullName", "")
+		partner := asMap(rawPartner)
+		name := stringOr(partner, "BusinessPartnerFullName", "")
 		if name == "" {
-			name = batch6Lane4StringOr(partner, "BusinessPartnerName", "")
+			name = stringOr(partner, "BusinessPartnerName", "")
 		}
 		partners = append(partners, map[string]any{
-			"business_partner": batch6Lane4StringOr(partner, "BusinessPartner", ""),
-			"category":         batch6Lane4StringOr(partner, "BusinessPartnerCategory", ""),
+			"business_partner": stringOr(partner, "BusinessPartner", ""),
+			"category":         stringOr(partner, "BusinessPartnerCategory", ""),
 			"name":             name,
-			"is_customer":      batch6Lane4StringOr(partner, "Customer", "") != "",
-			"is_supplier":      batch6Lane4StringOr(partner, "Supplier", "") != "",
+			"is_customer":      stringOr(partner, "Customer", "") != "",
+			"is_supplier":      stringOr(partner, "Supplier", "") != "",
 			"creation_date":    partner["CreationDate"],
 		})
 	}
@@ -255,12 +255,12 @@ func batch6Lane4SAPListProducts(ctx context.Context, rt *Runtime, input map[stri
 	results, total := batch6Lane4SAPODataList(data)
 	products := make([]any, 0, len(results))
 	for _, rawProduct := range results {
-		product := batch4AsMap(rawProduct)
+		product := asMap(rawProduct)
 		products = append(products, map[string]any{
-			"product":       batch6Lane4StringOr(product, "Product", ""),
-			"product_type":  batch6Lane4StringOr(product, "ProductType", ""),
-			"base_unit":     batch6Lane4StringOr(product, "BaseUnit", ""),
-			"product_group": batch6Lane4StringOr(product, "ProductGroup", ""),
+			"product":       stringOr(product, "Product", ""),
+			"product_type":  stringOr(product, "ProductType", ""),
+			"base_unit":     stringOr(product, "BaseUnit", ""),
+			"product_group": stringOr(product, "ProductGroup", ""),
 			"creation_date": product["CreationDate"],
 		})
 	}
@@ -280,15 +280,15 @@ func batch6Lane4SAPListSalesOrders(ctx context.Context, rt *Runtime, input map[s
 	results, total := batch6Lane4SAPODataList(data)
 	salesOrders := make([]any, 0, len(results))
 	for _, rawOrder := range results {
-		order := batch4AsMap(rawOrder)
+		order := asMap(rawOrder)
 		salesOrders = append(salesOrders, map[string]any{
-			"sales_order":        batch6Lane4StringOr(order, "SalesOrder", ""),
-			"sales_order_type":   batch6Lane4StringOr(order, "SalesOrderType", ""),
-			"sales_organization": batch6Lane4StringOr(order, "SalesOrganization", ""),
-			"sold_to_party":      batch6Lane4StringOr(order, "SoldToParty", ""),
+			"sales_order":        stringOr(order, "SalesOrder", ""),
+			"sales_order_type":   stringOr(order, "SalesOrderType", ""),
+			"sales_organization": stringOr(order, "SalesOrganization", ""),
+			"sold_to_party":      stringOr(order, "SoldToParty", ""),
 			"creation_date":      order["CreationDate"],
 			"net_amount":         order["TotalNetAmount"],
-			"currency":           batch6Lane4StringOr(order, "TransactionCurrency", ""),
+			"currency":           stringOr(order, "TransactionCurrency", ""),
 		})
 	}
 	return map[string]any{"count": len(salesOrders), "total": total, "sales_orders": salesOrders}, nil

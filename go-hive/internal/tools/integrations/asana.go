@@ -136,7 +136,7 @@ func batch5Lane1AsanaImpls() map[string]ActionFunc {
 // order: every Asana tool resolves the PAT before validating required fields.
 func batch5Lane1AsanaAuthFirst(fn ActionFunc) ActionFunc {
 	return func(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-		if batch5Lane1ModuleToken(rt, "asana_tool") == "" {
+		if moduleToken(rt, "asana_tool") == "" {
 			return batch5Lane1AsanaAuthError(), nil
 		}
 		return fn(ctx, rt, input)
@@ -152,11 +152,11 @@ func batch5Lane1AsanaAuthError() map[string]any {
 
 // batch5Lane1AsanaClient resolves the API base and personal access token.
 func batch5Lane1AsanaClient(rt *Runtime) (base, token string, ok bool) {
-	base = batch5Lane1ModuleBase(rt, "asana_tool")
+	base = moduleBaseURL(rt, "asana_tool")
 	if base == "" {
 		base = batch5Lane1AsanaDefaultBase
 	}
-	token = batch5Lane1ModuleToken(rt, "asana_tool")
+	token = moduleToken(rt, "asana_tool")
 	return base, token, token != ""
 }
 
@@ -173,7 +173,7 @@ func batch5Lane1AsanaRequest(ctx context.Context, rt *Runtime, method, path stri
 	}
 	resp, err := batch5Lane1Do(ctx, rt, method, base+path, query, payload, headers)
 	if err != nil {
-		if batch5Lane1IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Asana timed out"}
 		}
 		return map[string]any{"error": "Asana request failed: " + err.Error()}
@@ -184,20 +184,20 @@ func batch5Lane1AsanaRequest(ctx context.Context, rt *Runtime, method, path stri
 	if write {
 		if resp.Status != http.StatusOK && resp.Status != http.StatusCreated {
 			return map[string]any{
-				"error": fmt.Sprintf("Asana API error %d: %s", resp.Status, batch5Lane1Truncate(string(resp.Body), 500)),
+				"error": fmt.Sprintf("Asana API error %d: %s", resp.Status, truncateTextClamped(string(resp.Body), 500)),
 			}
 		}
 	} else {
 		switch resp.Status {
 		case http.StatusForbidden:
-			return map[string]any{"error": "Forbidden: " + batch5Lane1Truncate(string(resp.Body), 300)}
+			return map[string]any{"error": "Forbidden: " + truncateTextClamped(string(resp.Body), 300)}
 		case http.StatusNotFound:
 			return map[string]any{"error": "Not found"}
 		case http.StatusOK:
 			// Success: fall through to decoding.
 		default:
 			return map[string]any{
-				"error": fmt.Sprintf("Asana API error %d: %s", resp.Status, batch5Lane1Truncate(string(resp.Body), 500)),
+				"error": fmt.Sprintf("Asana API error %d: %s", resp.Status, truncateTextClamped(string(resp.Body), 500)),
 			}
 		}
 	}
@@ -222,8 +222,8 @@ func batch5Lane1AsanaListWorkspaces(ctx context.Context, rt *Runtime, _ map[stri
 		return data, nil
 	}
 	workspaces := make([]map[string]any, 0)
-	for _, rawWorkspace := range batch5Lane1Slice(data["data"]) {
-		workspace := batch5Lane1Map(rawWorkspace)
+	for _, rawWorkspace := range asSlice(data["data"]) {
+		workspace := asMap(rawWorkspace)
 		workspaces = append(workspaces, map[string]any{
 			"gid":  batch5Lane1Text(workspace, "gid"),
 			"name": batch5Lane1Text(workspace, "name"),
@@ -239,15 +239,15 @@ func batch5Lane1AsanaListProjects(ctx context.Context, rt *Runtime, input map[st
 	}
 	query := url.Values{}
 	query.Set("workspace", workspaceGID)
-	query.Set("limit", strconv.Itoa(batch5Lane1Clamp(intArg(input, "limit", 50), 1, 100)))
+	query.Set("limit", strconv.Itoa(clampInt(intArg(input, "limit", 50), 1, 100)))
 	query.Set("opt_fields", "name,color,archived,created_at")
 	data := batch5Lane1AsanaRequest(ctx, rt, http.MethodGet, "/projects", query, nil, false)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	projects := make([]map[string]any, 0)
-	for _, rawProject := range batch5Lane1Slice(data["data"]) {
-		project := batch5Lane1Map(rawProject)
+	for _, rawProject := range asSlice(data["data"]) {
+		project := asMap(rawProject)
 		projects = append(projects, map[string]any{
 			"gid":      batch5Lane1Text(project, "gid"),
 			"name":     batch5Lane1Text(project, "name"),
@@ -265,7 +265,7 @@ func batch5Lane1AsanaListTasks(ctx context.Context, rt *Runtime, input map[strin
 		return map[string]any{"error": "Either project_gid or workspace_gid is required"}, nil
 	}
 	query := url.Values{}
-	query.Set("limit", strconv.Itoa(batch5Lane1Clamp(intArg(input, "limit", 50), 1, 100)))
+	query.Set("limit", strconv.Itoa(clampInt(intArg(input, "limit", 50), 1, 100)))
 	query.Set("opt_fields", "name,completed,due_on,assignee.name")
 	if projectGID != "" {
 		query.Set("project", projectGID)
@@ -278,14 +278,14 @@ func batch5Lane1AsanaListTasks(ctx context.Context, rt *Runtime, input map[strin
 		return data, nil
 	}
 	tasks := make([]map[string]any, 0)
-	for _, rawTask := range batch5Lane1Slice(data["data"]) {
-		task := batch5Lane1Map(rawTask)
+	for _, rawTask := range asSlice(data["data"]) {
+		task := asMap(rawTask)
 		tasks = append(tasks, map[string]any{
 			"gid":           batch5Lane1Text(task, "gid"),
 			"name":          batch5Lane1Text(task, "name"),
 			"completed":     batch5Lane1Bool(task, "completed"),
 			"due_on":        batch5Lane1Text(task, "due_on"),
-			"assignee_name": batch5Lane1Text(batch5Lane1Map(task["assignee"]), "name"),
+			"assignee_name": batch5Lane1Text(asMap(task["assignee"]), "name"),
 		})
 	}
 	return map[string]any{"tasks": tasks, "count": len(tasks)}, nil
@@ -302,22 +302,22 @@ func batch5Lane1AsanaGetTask(ctx context.Context, rt *Runtime, input map[string]
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	task := batch5Lane1Map(data["data"])
+	task := asMap(data["data"])
 	projects := make([]string, 0)
-	for _, rawProject := range batch5Lane1Slice(task["projects"]) {
-		projects = append(projects, batch5Lane1Text(batch5Lane1Map(rawProject), "name"))
+	for _, rawProject := range asSlice(task["projects"]) {
+		projects = append(projects, batch5Lane1Text(asMap(rawProject), "name"))
 	}
 	tags := make([]string, 0)
-	for _, rawTag := range batch5Lane1Slice(task["tags"]) {
-		tags = append(tags, batch5Lane1Text(batch5Lane1Map(rawTag), "name"))
+	for _, rawTag := range asSlice(task["tags"]) {
+		tags = append(tags, batch5Lane1Text(asMap(rawTag), "name"))
 	}
 	return map[string]any{
 		"gid":           batch5Lane1Text(task, "gid"),
 		"name":          batch5Lane1Text(task, "name"),
-		"notes":         batch5Lane1Truncate(batch5Lane1OptionalText(task, "notes"), 500),
+		"notes":         truncateTextClamped(batch5Lane1OptionalText(task, "notes"), 500),
 		"completed":     batch5Lane1Bool(task, "completed"),
 		"due_on":        batch5Lane1Text(task, "due_on"),
-		"assignee_name": batch5Lane1Text(batch5Lane1Map(task["assignee"]), "name"),
+		"assignee_name": batch5Lane1Text(asMap(task["assignee"]), "name"),
 		"projects":      projects,
 		"tags":          tags,
 		"created_at":    batch5Lane1Text(task, "created_at"),
@@ -348,7 +348,7 @@ func batch5Lane1AsanaCreateTask(ctx context.Context, rt *Runtime, input map[stri
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	task := batch5Lane1Map(data["data"])
+	task := asMap(data["data"])
 	return map[string]any{
 		"gid":    batch5Lane1Text(task, "gid"),
 		"name":   batch5Lane1Text(task, "name"),
@@ -364,15 +364,15 @@ func batch5Lane1AsanaSearchTasks(ctx context.Context, rt *Runtime, input map[str
 	}
 	query := url.Values{}
 	query.Set("text", searchText)
-	query.Set("limit", strconv.Itoa(batch5Lane1Clamp(intArg(input, "limit", 20), 1, 100)))
+	query.Set("limit", strconv.Itoa(clampInt(intArg(input, "limit", 20), 1, 100)))
 	query.Set("opt_fields", "name,completed,due_on")
 	data := batch5Lane1AsanaRequest(ctx, rt, http.MethodGet, "/workspaces/"+workspaceGID+"/tasks/search", query, nil, false)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	tasks := make([]map[string]any, 0)
-	for _, rawTask := range batch5Lane1Slice(data["data"]) {
-		task := batch5Lane1Map(rawTask)
+	for _, rawTask := range asSlice(data["data"]) {
+		task := asMap(rawTask)
 		tasks = append(tasks, map[string]any{
 			"gid":       batch5Lane1Text(task, "gid"),
 			"name":      batch5Lane1Text(task, "name"),
@@ -411,7 +411,7 @@ func batch5Lane1AsanaUpdateTask(ctx context.Context, rt *Runtime, input map[stri
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	task := batch5Lane1Map(data["data"])
+	task := asMap(data["data"])
 	return map[string]any{
 		"gid":       batch5Lane1Text(task, "gid"),
 		"name":      batch5Lane1Text(task, "name"),
@@ -430,10 +430,10 @@ func batch5Lane1AsanaAddComment(ctx context.Context, rt *Runtime, input map[stri
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	story := batch5Lane1Map(data["data"])
+	story := asMap(data["data"])
 	return map[string]any{
 		"gid":        batch5Lane1Text(story, "gid"),
-		"text":       batch5Lane1Truncate(batch5Lane1OptionalText(story, "text"), 500),
+		"text":       truncateTextClamped(batch5Lane1OptionalText(story, "text"), 500),
 		"created_at": batch5Lane1Text(story, "created_at"),
 		"status":     "created",
 	}, nil
@@ -459,7 +459,7 @@ func batch5Lane1AsanaCreateSubtask(ctx context.Context, rt *Runtime, input map[s
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	task := batch5Lane1Map(data["data"])
+	task := asMap(data["data"])
 	return map[string]any{
 		"gid":    batch5Lane1Text(task, "gid"),
 		"name":   batch5Lane1Text(task, "name"),

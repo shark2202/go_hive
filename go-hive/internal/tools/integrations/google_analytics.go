@@ -38,8 +38,8 @@ import (
 
 // ------------------------------------------------------- shared credentials ---
 
-// batch7Lane9GoogleAuthError renders the GA "not configured" map.
-func batch7Lane9GoogleAuthError(detail string) map[string]any {
+// googleAuthError renders the GA "not configured" map.
+func googleAuthError(detail string) map[string]any {
 	message := "Google Analytics credentials not configured"
 	if detail != "" {
 		message += ": " + detail
@@ -51,26 +51,26 @@ func batch7Lane9GoogleAuthError(detail string) map[string]any {
 	}
 }
 
-// batch7Lane9GoogleToken resolves a bearer token for one Google API: the direct
+// googleToken resolves a bearer token for one Google API: the direct
 // token first, then a service-account JWT exchange with the given scope.
-func batch7Lane9GoogleToken(ctx context.Context, rt *Runtime, moduleID, scope string) (string, map[string]any) {
-	if token := batch7Lane9ModuleToken(rt, moduleID); token != "" {
+func googleToken(ctx context.Context, rt *Runtime, moduleID, scope string) (string, map[string]any) {
+	if token := moduleToken(rt, moduleID); token != "" {
 		return token, nil
 	}
-	credentialsPath := strings.TrimSpace(batch7Lane9Getenv(rt, "GOOGLE_APPLICATION_CREDENTIALS"))
+	credentialsPath := strings.TrimSpace(runtimeEnv(rt, "GOOGLE_APPLICATION_CREDENTIALS"))
 	if credentialsPath == "" {
 		return "", nil
 	}
-	token, _, failure := batch7Lane9GoogleServiceAccountToken(ctx, rt, credentialsPath, scope)
+	token, _, failure := googleServiceAccountToken(ctx, rt, credentialsPath, scope)
 	if failure != nil {
 		return "", failure
 	}
 	return token, nil
 }
 
-// batch7Lane9GoogleServiceAccountToken exchanges a service-account JSON key
+// googleServiceAccountToken exchanges a service-account JSON key
 // for an OAuth access token using the JWT bearer grant.
-func batch7Lane9GoogleServiceAccountToken(ctx context.Context, rt *Runtime, path, scope string) (string, string, map[string]any) {
+func googleServiceAccountToken(ctx context.Context, rt *Runtime, path, scope string) (string, string, map[string]any) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return "", "", map[string]any{"error": "Google authentication failed: " + err.Error()}
@@ -91,9 +91,9 @@ func batch7Lane9GoogleServiceAccountToken(ctx context.Context, rt *Runtime, path
 	}
 	tokenURI := key.TokenURI
 	if tokenURI == "" {
-		tokenURI = batch7Lane9GoogleTokenURI
+		tokenURI = marketingGoogleTokenURI
 	}
-	assertion, err := batch7Lane9GoogleJWT(key.ClientEmail, key.PrivateKey, tokenURI, scope, batch7Lane9Now(rt).UTC())
+	assertion, err := googleJWT(key.ClientEmail, key.PrivateKey, tokenURI, scope, runtimeNow(rt).UTC())
 	if err != nil {
 		return "", "", map[string]any{"error": "Google authentication failed: " + err.Error()}
 	}
@@ -101,7 +101,7 @@ func batch7Lane9GoogleServiceAccountToken(ctx context.Context, rt *Runtime, path
 		"grant_type": []string{"urn:ietf:params:oauth:grant-type:jwt-bearer"},
 		"assertion":  []string{assertion},
 	}
-	resp, err := batch7Lane9DoForm(ctx, rt, tokenURI, nil, form, 30*time.Second)
+	resp, err := marketingDoForm(ctx, rt, tokenURI, nil, form, 30*time.Second)
 	if err != nil {
 		return "", "", map[string]any{"error": "Google authentication failed: " + err.Error()}
 	}
@@ -110,20 +110,20 @@ func batch7Lane9GoogleServiceAccountToken(ctx context.Context, rt *Runtime, path
 			"error": "Google authentication failed: token endpoint returned HTTP " + strconv.Itoa(resp.Status),
 		}
 	}
-	data, ok := batch7Lane9JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return "", "", map[string]any{"error": "Google authentication failed: token endpoint returned invalid JSON"}
 	}
-	accessToken := batch7Lane9StringOr(data, "access_token", "")
+	accessToken := stringOr(data, "access_token", "")
 	if accessToken == "" {
 		return "", "", map[string]any{"error": "Google authentication failed: token endpoint returned no access_token"}
 	}
 	return accessToken, key.ProjectID, nil
 }
 
-// batch7Lane9GoogleJWT builds an RS256-signed JWT for the service-account
+// googleJWT builds an RS256-signed JWT for the service-account
 // OAuth flow with an explicit scope.
-func batch7Lane9GoogleJWT(email, privateKeyPEM, audience, scope string, now time.Time) (string, error) {
+func googleJWT(email, privateKeyPEM, audience, scope string, now time.Time) (string, error) {
 	block, _ := pem.Decode([]byte(privateKeyPEM))
 	if block == nil {
 		return "", fmt.Errorf("service account private_key is not PEM encoded")
@@ -164,7 +164,7 @@ func batch7Lane9GoogleJWT(email, privateKeyPEM, audience, scope string, now time
 
 // ------------------------------------------------------------ google analytics ---
 
-var batch7Lane9GoogleAnalyticsTool = &Tool{
+var googleAnalyticsTool = &Tool{
 	ID:          "google_analytics_tool",
 	Name:        "google_analytics",
 	DisplayName: "Google Analytics",
@@ -177,8 +177,8 @@ var batch7Lane9GoogleAnalyticsTool = &Tool{
 			Required: []string{"property_id", "metrics"},
 			Params: map[string]any{
 				"property_id": param("string"),
-				"metrics":     batch7Lane9ArrayParam(),
-				"dimensions":  batch7Lane9ArrayParam(),
+				"metrics":     marketingArrayParam(),
+				"dimensions":  marketingArrayParam(),
 				"start_date":  paramDefault("string", "28daysAgo"),
 				"end_date":    paramDefault("string", "today"),
 				"limit":       paramDefault("integer", 100),
@@ -191,7 +191,7 @@ var batch7Lane9GoogleAnalyticsTool = &Tool{
 			Required: []string{"property_id"},
 			Params: map[string]any{
 				"property_id": param("string"),
-				"metrics":     batch7Lane9ArrayParam(),
+				"metrics":     marketingArrayParam(),
 			},
 		},
 		{
@@ -257,20 +257,20 @@ var batch7Lane9GoogleAnalyticsTool = &Tool{
 	},
 }
 
-func batch7Lane9GoogleAnalyticsImpls() map[string]ActionFunc {
+func googleAnalyticsImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
-		"ga_run_report":            batch7Lane9GARunReportAction,
-		"ga_get_realtime":          batch7Lane9GAGetRealtime,
-		"ga_get_top_pages":         batch7Lane9GATopPages,
-		"ga_get_traffic_sources":   batch7Lane9GATrafficSources,
-		"ga_get_user_demographics": batch7Lane9GADemographics,
-		"ga_get_conversion_events": batch7Lane9GAConversionEvents,
-		"ga_get_landing_pages":     batch7Lane9GALandingPages,
+		"ga_run_report":            gaRunReportAction,
+		"ga_get_realtime":          gaGetRealtime,
+		"ga_get_top_pages":         gaTopPages,
+		"ga_get_traffic_sources":   gaTrafficSources,
+		"ga_get_user_demographics": gaDemographics,
+		"ga_get_conversion_events": gaConversionEvents,
+		"ga_get_landing_pages":     gaLandingPages,
 	}
 }
 
-// batch7Lane9GAValidate mirrors upstream _validate_inputs.
-func batch7Lane9GAValidate(propertyID string, limit *int) map[string]any {
+// gaValidate mirrors upstream _validate_inputs.
+func gaValidate(propertyID string, limit *int) map[string]any {
 	if propertyID == "" || !strings.HasPrefix(propertyID, "properties/") {
 		return map[string]any{
 			"error": "property_id must start with 'properties/' (e.g., 'properties/123456')",
@@ -282,18 +282,18 @@ func batch7Lane9GAValidate(propertyID string, limit *int) map[string]any {
 	return nil
 }
 
-// batch7Lane9GACall performs one Data API request and decodes the object.
-func batch7Lane9GACall(ctx context.Context, rt *Runtime, token, endpoint string, payload any) (map[string]any, map[string]any) {
-	headers := batch7Lane9Bearer(token)
-	resp, err := batch7Lane9DoJSON(ctx, rt, http.MethodPost, endpoint, headers, payload, 60*time.Second)
+// gaCall performs one Data API request and decodes the object.
+func gaCall(ctx context.Context, rt *Runtime, token, endpoint string, payload any) (map[string]any, map[string]any) {
+	headers := marketingBearer(token)
+	resp, err := marketingDoJSON(ctx, rt, http.MethodPost, endpoint, headers, payload, 60*time.Second)
 	if err != nil {
-		return nil, batch7Lane9TransportError(ctx, "Google Analytics", err)
+		return nil, transportError(ctx, "Google Analytics", err)
 	}
 	if resp.Status >= 400 {
-		message := batch4TruncateText(string(resp.Body), 500)
-		if data, ok := batch7Lane9JSONObject(resp.Body); ok {
-			if inner := batch4AsMap(data["error"]); inner != nil {
-				if text := batch7Lane9StringOr(inner, "message", ""); text != "" {
+		message := truncateText(string(resp.Body), 500)
+		if data, ok := jsonObject(resp.Body); ok {
+			if inner := asMap(data["error"]); inner != nil {
+				if text := stringOr(inner, "message", ""); text != "" {
 					message = text
 				}
 			}
@@ -302,79 +302,79 @@ func batch7Lane9GACall(ctx context.Context, rt *Runtime, token, endpoint string,
 			"error": "Google Analytics API error: HTTP " + strconv.Itoa(resp.Status) + ": " + message,
 		}
 	}
-	data, ok := batch7Lane9JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return nil, map[string]any{"error": "Google Analytics API error: invalid JSON response"}
 	}
 	return data, nil
 }
 
-// batch7Lane9GARowValues reads the header names of a GA response section.
-func batch7Lane9GAHeaders(value any) []string {
+// gaHeaders reads the header names of a GA response section.
+func gaHeaders(value any) []string {
 	headers := make([]string, 0)
-	for _, raw := range batch4AsSlice(value) {
-		headers = append(headers, batch7Lane9StringOr(batch4AsMap(raw), "name", ""))
+	for _, raw := range asSlice(value) {
+		headers = append(headers, stringOr(asMap(raw), "name", ""))
 	}
 	return headers
 }
 
-// batch7Lane9GAFormatReport mirrors _format_report_response.
-func batch7Lane9GAFormatReport(response map[string]any) map[string]any {
-	dimensionHeaders := batch7Lane9GAHeaders(response["dimensionHeaders"])
-	metricHeaders := batch7Lane9GAHeaders(response["metricHeaders"])
+// gaFormatReport mirrors _format_report_response.
+func gaFormatReport(response map[string]any) map[string]any {
+	dimensionHeaders := gaHeaders(response["dimensionHeaders"])
+	metricHeaders := gaHeaders(response["metricHeaders"])
 	rows := make([]any, 0)
-	for _, raw := range batch4AsSlice(response["rows"]) {
-		row := batch4AsMap(raw)
+	for _, raw := range asSlice(response["rows"]) {
+		row := asMap(raw)
 		rowData := map[string]any{}
-		for index, value := range batch4AsSlice(row["dimensionValues"]) {
+		for index, value := range asSlice(row["dimensionValues"]) {
 			if index < len(dimensionHeaders) {
-				rowData[dimensionHeaders[index]] = batch7Lane9StringOr(batch4AsMap(value), "value", "")
+				rowData[dimensionHeaders[index]] = stringOr(asMap(value), "value", "")
 			}
 		}
-		for index, value := range batch4AsSlice(row["metricValues"]) {
+		for index, value := range asSlice(row["metricValues"]) {
 			if index < len(metricHeaders) {
-				rowData[metricHeaders[index]] = batch7Lane9StringOr(batch4AsMap(value), "value", "")
+				rowData[metricHeaders[index]] = stringOr(asMap(value), "value", "")
 			}
 		}
 		rows = append(rows, rowData)
 	}
 	return map[string]any{
-		"row_count":         batch7Lane9IntOr(response, "rowCount", 0),
+		"row_count":         marketingIntOr(response, "rowCount", 0),
 		"rows":              rows,
 		"dimension_headers": dimensionHeaders,
 		"metric_headers":    metricHeaders,
 	}
 }
 
-// batch7Lane9GAFormatRealtime mirrors _format_realtime_response.
-func batch7Lane9GAFormatRealtime(response map[string]any) map[string]any {
-	metricHeaders := batch7Lane9GAHeaders(response["metricHeaders"])
+// gaFormatRealtime mirrors _format_realtime_response.
+func gaFormatRealtime(response map[string]any) map[string]any {
+	metricHeaders := gaHeaders(response["metricHeaders"])
 	rows := make([]any, 0)
-	for _, raw := range batch4AsSlice(response["rows"]) {
-		row := batch4AsMap(raw)
+	for _, raw := range asSlice(response["rows"]) {
+		row := asMap(raw)
 		rowData := map[string]any{}
-		for index, value := range batch4AsSlice(row["metricValues"]) {
+		for index, value := range asSlice(row["metricValues"]) {
 			if index < len(metricHeaders) {
-				rowData[metricHeaders[index]] = batch7Lane9StringOr(batch4AsMap(value), "value", "")
+				rowData[metricHeaders[index]] = stringOr(asMap(value), "value", "")
 			}
 		}
 		rows = append(rows, rowData)
 	}
 	return map[string]any{
-		"row_count":      batch7Lane9IntOr(response, "rowCount", 0),
+		"row_count":      marketingIntOr(response, "rowCount", 0),
 		"rows":           rows,
 		"metric_headers": metricHeaders,
 	}
 }
 
-// batch7Lane9GAPropertyPath renders the {property}:method path segment.
-func batch7Lane9GAPropertyPath(rt *Runtime, propertyID, method string) string {
-	base := batch7Lane9Base(rt, "google_analytics_tool", batch7Lane9GABase)
+// gaPropertyPath renders the {property}:method path segment.
+func gaPropertyPath(rt *Runtime, propertyID, method string) string {
+	base := marketingBase(rt, "google_analytics_tool", gaBase)
 	return base + "/" + propertyID + ":" + method
 }
 
-// batch7Lane9GARunReport performs the shared report request.
-func batch7Lane9GARunReport(ctx context.Context, rt *Runtime, token, propertyID string, metrics, dimensions []string, startDate, endDate string, limit int) (any, map[string]any) {
+// gaRunReport performs the shared report request.
+func gaRunReport(ctx context.Context, rt *Runtime, token, propertyID string, metrics, dimensions []string, startDate, endDate string, limit int) (any, map[string]any) {
 	metricEntries := make([]any, 0, len(metrics))
 	for _, metric := range metrics {
 		metricEntries = append(metricEntries, map[string]any{"name": metric})
@@ -391,33 +391,33 @@ func batch7Lane9GARunReport(ctx context.Context, rt *Runtime, token, propertyID 
 		}
 		body["dimensions"] = dimensionEntries
 	}
-	response, failure := batch7Lane9GACall(ctx, rt, token, batch7Lane9GAPropertyPath(rt, propertyID, "runReport"), body)
+	response, failure := gaCall(ctx, rt, token, gaPropertyPath(rt, propertyID, "runReport"), body)
 	if failure != nil {
 		return nil, failure
 	}
-	return batch7Lane9GAFormatReport(response), nil
+	return gaFormatReport(response), nil
 }
 
-func batch7Lane9GARunReportAction(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func gaRunReportAction(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	propertyID := stringArg(input, "property_id")
 	metrics := stringSliceArg(input, "metrics")
 	dimensions := stringSliceArg(input, "dimensions")
 	limit := intArg(input, "limit", 100)
 
-	token, failure := batch7Lane9GoogleToken(ctx, rt, "google_analytics_tool", batch7Lane9GAReadScope)
+	token, failure := googleToken(ctx, rt, "google_analytics_tool", gaReadScope)
 	if token == "" {
 		if failure != nil {
-			return map[string]any{"error": "Failed to initialize Google Analytics client: " + batch7Lane9StringOr(failure, "error", "")}, nil
+			return map[string]any{"error": "Failed to initialize Google Analytics client: " + stringOr(failure, "error", "")}, nil
 		}
-		return batch7Lane9GoogleAuthError(""), nil
+		return googleAuthError(""), nil
 	}
-	if err := batch7Lane9GAValidate(propertyID, &limit); err != nil {
+	if err := gaValidate(propertyID, &limit); err != nil {
 		return err, nil
 	}
 	if len(metrics) == 0 {
 		return map[string]any{"error": "metrics list must not be empty"}, nil
 	}
-	result, failure := batch7Lane9GARunReport(ctx, rt, token, propertyID, metrics, dimensions,
+	result, failure := gaRunReport(ctx, rt, token, propertyID, metrics, dimensions,
 		stringArg(input, "start_date"), stringArg(input, "end_date"), limit)
 	if failure != nil {
 		return failure, nil
@@ -425,16 +425,16 @@ func batch7Lane9GARunReportAction(ctx context.Context, rt *Runtime, input map[st
 	return result, nil
 }
 
-func batch7Lane9GAGetRealtime(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func gaGetRealtime(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	propertyID := stringArg(input, "property_id")
-	token, failure := batch7Lane9GoogleToken(ctx, rt, "google_analytics_tool", batch7Lane9GAReadScope)
+	token, failure := googleToken(ctx, rt, "google_analytics_tool", gaReadScope)
 	if token == "" {
 		if failure != nil {
-			return map[string]any{"error": "Failed to initialize Google Analytics client: " + batch7Lane9StringOr(failure, "error", "")}, nil
+			return map[string]any{"error": "Failed to initialize Google Analytics client: " + stringOr(failure, "error", "")}, nil
 		}
-		return batch7Lane9GoogleAuthError(""), nil
+		return googleAuthError(""), nil
 	}
-	if err := batch7Lane9GAValidate(propertyID, nil); err != nil {
+	if err := gaValidate(propertyID, nil); err != nil {
 		return err, nil
 	}
 	metrics := stringSliceArg(input, "metrics")
@@ -449,28 +449,28 @@ func batch7Lane9GAGetRealtime(ctx context.Context, rt *Runtime, input map[string
 		"metrics":      metricEntries,
 		"minuteRanges": []any{map[string]any{"startMinutesAgo": 29, "endMinutesAgo": 0}},
 	}
-	response, failure := batch7Lane9GACall(ctx, rt, token, batch7Lane9GAPropertyPath(rt, propertyID, "runRealtimeReport"), body)
+	response, failure := gaCall(ctx, rt, token, gaPropertyPath(rt, propertyID, "runRealtimeReport"), body)
 	if failure != nil {
 		return failure, nil
 	}
-	return batch7Lane9GAFormatRealtime(response), nil
+	return gaFormatRealtime(response), nil
 }
 
-// batch7Lane9GAWrapper runs one of the fixed report wrappers.
-func batch7Lane9GAWrapper(ctx context.Context, rt *Runtime, input map[string]any, defaultLimit int, metrics, dimensions []string) (any, error) {
+// gaWrapper runs one of the fixed report wrappers.
+func gaWrapper(ctx context.Context, rt *Runtime, input map[string]any, defaultLimit int, metrics, dimensions []string) (any, error) {
 	propertyID := stringArg(input, "property_id")
 	limit := intArg(input, "limit", defaultLimit)
-	token, failure := batch7Lane9GoogleToken(ctx, rt, "google_analytics_tool", batch7Lane9GAReadScope)
+	token, failure := googleToken(ctx, rt, "google_analytics_tool", gaReadScope)
 	if token == "" {
 		if failure != nil {
-			return map[string]any{"error": "Failed to initialize Google Analytics client: " + batch7Lane9StringOr(failure, "error", "")}, nil
+			return map[string]any{"error": "Failed to initialize Google Analytics client: " + stringOr(failure, "error", "")}, nil
 		}
-		return batch7Lane9GoogleAuthError(""), nil
+		return googleAuthError(""), nil
 	}
-	if err := batch7Lane9GAValidate(propertyID, &limit); err != nil {
+	if err := gaValidate(propertyID, &limit); err != nil {
 		return err, nil
 	}
-	result, failure := batch7Lane9GARunReport(ctx, rt, token, propertyID, metrics, dimensions,
+	result, failure := gaRunReport(ctx, rt, token, propertyID, metrics, dimensions,
 		stringArg(input, "start_date"), stringArg(input, "end_date"), limit)
 	if failure != nil {
 		return failure, nil
@@ -478,39 +478,39 @@ func batch7Lane9GAWrapper(ctx context.Context, rt *Runtime, input map[string]any
 	return result, nil
 }
 
-func batch7Lane9GATopPages(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	return batch7Lane9GAWrapper(ctx, rt, input, 10,
+func gaTopPages(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	return gaWrapper(ctx, rt, input, 10,
 		[]string{"screenPageViews", "averageSessionDuration", "bounceRate"},
 		[]string{"pagePath", "pageTitle"})
 }
 
-func batch7Lane9GATrafficSources(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	return batch7Lane9GAWrapper(ctx, rt, input, 10,
+func gaTrafficSources(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	return gaWrapper(ctx, rt, input, 10,
 		[]string{"sessions", "totalUsers", "conversions"},
 		[]string{"sessionSource", "sessionMedium"})
 }
 
-func batch7Lane9GADemographics(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	return batch7Lane9GAWrapper(ctx, rt, input, 20,
+func gaDemographics(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	return gaWrapper(ctx, rt, input, 20,
 		[]string{"totalUsers", "sessions", "engagedSessions"},
 		[]string{"country", "language", "deviceCategory"})
 }
 
-func batch7Lane9GAConversionEvents(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	return batch7Lane9GAWrapper(ctx, rt, input, 20,
+func gaConversionEvents(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	return gaWrapper(ctx, rt, input, 20,
 		[]string{"eventCount", "conversions", "totalRevenue"},
 		[]string{"eventName"})
 }
 
-func batch7Lane9GALandingPages(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	return batch7Lane9GAWrapper(ctx, rt, input, 10,
+func gaLandingPages(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	return gaWrapper(ctx, rt, input, 10,
 		[]string{"sessions", "bounceRate", "conversions", "averageSessionDuration"},
 		[]string{"landingPagePlusQueryString"})
 }
 
 // ------------------------------------------------------- google search console ---
 
-var batch7Lane9SearchConsoleTool = &Tool{
+var searchConsoleTool = &Tool{
 	ID:          "google_search_console_tool",
 	Name:        "google_search_console",
 	DisplayName: "Google Search Console",
@@ -604,47 +604,47 @@ var batch7Lane9SearchConsoleTool = &Tool{
 	},
 }
 
-func batch7Lane9SearchConsoleImpls() map[string]ActionFunc {
+func searchConsoleImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
-		"gsc_search_analytics": batch7Lane9GSCSearchAnalytics,
-		"gsc_list_sites":       batch7Lane9GSCListSites,
-		"gsc_list_sitemaps":    batch7Lane9GSCListSitemaps,
-		"gsc_inspect_url":      batch7Lane9GSCInspectURL,
-		"gsc_submit_sitemap":   batch7Lane9GSCSubmitSitemap,
-		"gsc_top_queries":      batch7Lane9GSCTopQueries,
-		"gsc_top_pages":        batch7Lane9GSCTopPages,
-		"gsc_delete_sitemap":   batch7Lane9GSCDeleteSitemap,
+		"gsc_search_analytics": gscSearchAnalytics,
+		"gsc_list_sites":       gscListSites,
+		"gsc_list_sitemaps":    gscListSitemaps,
+		"gsc_inspect_url":      gscInspectURL,
+		"gsc_submit_sitemap":   gscSubmitSitemap,
+		"gsc_top_queries":      gscTopQueries,
+		"gsc_top_pages":        gscTopPages,
+		"gsc_delete_sitemap":   gscDeleteSitemap,
 	}
 }
 
-// batch7Lane9GSCAuthError mirrors upstream _auth_error.
-func batch7Lane9GSCAuthError() map[string]any {
+// gscAuthError mirrors upstream _auth_error.
+func gscAuthError() map[string]any {
 	return map[string]any{
 		"error": "GOOGLE_SEARCH_CONSOLE_TOKEN not set",
 		"help":  "Generate an OAuth2 access token with webmasters.readonly scope",
 	}
 }
 
-// batch7Lane9GSCToken resolves the bearer token for Search Console, minting one
+// gscToken resolves the bearer token for Search Console, minting one
 // from GOOGLE_APPLICATION_CREDENTIALS when no direct token is configured.
-func batch7Lane9GSCToken(ctx context.Context, rt *Runtime) (string, map[string]any) {
-	token, failure := batch7Lane9GoogleToken(ctx, rt, "google_search_console_tool", batch7Lane9GSCReadScope)
+func gscToken(ctx context.Context, rt *Runtime) (string, map[string]any) {
+	token, failure := googleToken(ctx, rt, "google_search_console_tool", gscReadScope)
 	if token != "" {
 		return token, nil
 	}
 	if failure != nil {
 		return "", failure
 	}
-	return "", batch7Lane9GSCAuthError()
+	return "", gscAuthError()
 }
 
-// batch7Lane9GSCCall performs one Search Console request. The accepted success
+// gscCall performs one Search Console request. The accepted success
 // codes differ per verb (PUT/DELETE answer 200 or 204).
-func batch7Lane9GSCCall(ctx context.Context, rt *Runtime, token, method, endpoint string, payload any) (map[string]any, map[string]any) {
-	headers := batch7Lane9Bearer(token)
-	resp, err := batch7Lane9DoJSON(ctx, rt, method, endpoint, headers, payload, 30*time.Second)
+func gscCall(ctx context.Context, rt *Runtime, token, method, endpoint string, payload any) (map[string]any, map[string]any) {
+	headers := marketingBearer(token)
+	resp, err := marketingDoJSON(ctx, rt, method, endpoint, headers, payload, 30*time.Second)
 	if err != nil {
-		if batch7Lane9IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return nil, map[string]any{"error": "Request to Google Search Console timed out"}
 		}
 		return nil, map[string]any{"error": "Request failed: " + err.Error()}
@@ -653,7 +653,7 @@ func batch7Lane9GSCCall(ctx context.Context, rt *Runtime, token, method, endpoin
 	case http.StatusUnauthorized:
 		return nil, map[string]any{"error": "Unauthorized. Check your GOOGLE_SEARCH_CONSOLE_TOKEN."}
 	case http.StatusForbidden:
-		return nil, map[string]any{"error": "Forbidden: " + batch4TruncateText(string(resp.Body), 300)}
+		return nil, map[string]any{"error": "Forbidden: " + truncateText(string(resp.Body), 300)}
 	}
 	success := resp.Status == http.StatusOK || resp.Status == http.StatusCreated
 	if method == http.MethodPut || method == http.MethodDelete {
@@ -661,22 +661,22 @@ func batch7Lane9GSCCall(ctx context.Context, rt *Runtime, token, method, endpoin
 	}
 	if !success {
 		return nil, map[string]any{
-			"error": "Google API error " + strconv.Itoa(resp.Status) + ": " + batch4TruncateText(string(resp.Body), 500),
+			"error": "Google API error " + strconv.Itoa(resp.Status) + ": " + truncateText(string(resp.Body), 500),
 		}
 	}
 	if len(resp.Body) == 0 {
 		return map[string]any{}, nil
 	}
-	data, ok := batch7Lane9JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return nil, map[string]any{"error": "Google API error: invalid JSON response"}
 	}
 	return data, nil
 }
 
-// batch7Lane9GSCAnalyticsBody builds the searchAnalytics/query payload.
-func batch7Lane9GSCAnalyticsBody(input map[string]any, dimensions []any) map[string]any {
-	rowLimit := batch7Lane9Clamp(intArg(input, "row_limit", 100), 1, 25000)
+// gscAnalyticsBody builds the searchAnalytics/query payload.
+func gscAnalyticsBody(input map[string]any, dimensions []any) map[string]any {
+	rowLimit := clampInt(intArg(input, "row_limit", 100), 1, 25000)
 	searchType := stringArg(input, "search_type")
 	if searchType == "" {
 		searchType = "web"
@@ -690,24 +690,24 @@ func batch7Lane9GSCAnalyticsBody(input map[string]any, dimensions []any) map[str
 	}
 }
 
-// batch7Lane9GSCRows maps analytics rows. A non-empty keyName flattens the
+// gscRows maps analytics rows. A non-empty keyName flattens the
 // first key into that field (the top-query/top-page wrappers), otherwise the
 // full keys array is kept.
-func batch7Lane9GSCRows(rows []any, keyName string) []any {
+func gscRows(rows []any, keyName string) []any {
 	out := make([]any, 0, len(rows))
 	for _, raw := range rows {
-		row := batch4AsMap(raw)
-		keys := batch4AsSlice(row["keys"])
+		row := asMap(raw)
+		keys := asSlice(row["keys"])
 		entry := map[string]any{
-			"clicks":      batch7Lane9IntOr(row, "clicks", 0),
-			"impressions": batch7Lane9IntOr(row, "impressions", 0),
-			"ctr":         batch7Lane9Round(batch7Lane9FloatOr(row, "ctr", 0), 4),
-			"position":    batch7Lane9Round(batch7Lane9FloatOr(row, "position", 0), 1),
+			"clicks":      marketingIntOr(row, "clicks", 0),
+			"impressions": marketingIntOr(row, "impressions", 0),
+			"ctr":         marketingRound(marketingFloatOr(row, "ctr", 0), 4),
+			"position":    marketingRound(marketingFloatOr(row, "position", 0), 1),
 		}
 		if keyName != "" {
 			first := ""
 			if len(keys) > 0 {
-				first = batch4AsString(keys[0])
+				first = asString(keys[0])
 			}
 			entry[keyName] = first
 		} else {
@@ -718,22 +718,22 @@ func batch7Lane9GSCRows(rows []any, keyName string) []any {
 	return out
 }
 
-// batch7Lane9GSCSortByClicks sorts rows by clicks descending (stable).
-func batch7Lane9GSCSortByClicks(rows []any) {
+// gscSortByClicks sorts rows by clicks descending (stable).
+func gscSortByClicks(rows []any) {
 	sort.SliceStable(rows, func(left, right int) bool {
-		leftRow := batch4AsMap(rows[left])
-		rightRow := batch4AsMap(rows[right])
-		return batch7Lane9IntOr(leftRow, "clicks", 0) > batch7Lane9IntOr(rightRow, "clicks", 0)
+		leftRow := asMap(rows[left])
+		rightRow := asMap(rows[right])
+		return marketingIntOr(leftRow, "clicks", 0) > marketingIntOr(rightRow, "clicks", 0)
 	})
 }
 
-// batch7Lane9GSCSitePath escapes one site URL into a path segment.
-func batch7Lane9GSCSitePath(siteURL string) string {
-	return "sites/" + batch7Lane9StrictEscape(siteURL)
+// gscSitePath escapes one site URL into a path segment.
+func gscSitePath(siteURL string) string {
+	return "sites/" + marketingStrictEscape(siteURL)
 }
 
-func batch7Lane9GSCSearchAnalytics(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	token, authFailure := batch7Lane9GSCToken(ctx, rt)
+func gscSearchAnalytics(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	token, authFailure := gscToken(ctx, rt)
 	if token == "" {
 		return authFailure, nil
 	}
@@ -750,39 +750,39 @@ func batch7Lane9GSCSearchAnalytics(ctx context.Context, rt *Runtime, input map[s
 	for _, dimension := range dimensions {
 		dimensionList = append(dimensionList, dimension)
 	}
-	base := batch7Lane9Base(rt, "google_search_console_tool", batch7Lane9GSCBase)
-	endpoint := base + "/" + batch7Lane9GSCSitePath(siteURL) + "/searchAnalytics/query"
-	data, failure := batch7Lane9GSCCall(ctx, rt, token, http.MethodPost, endpoint, batch7Lane9GSCAnalyticsBody(input, dimensionList))
+	base := marketingBase(rt, "google_search_console_tool", gscBase)
+	endpoint := base + "/" + gscSitePath(siteURL) + "/searchAnalytics/query"
+	data, failure := gscCall(ctx, rt, token, http.MethodPost, endpoint, gscAnalyticsBody(input, dimensionList))
 	if failure != nil {
 		return failure, nil
 	}
-	rows := batch7Lane9GSCRows(batch4AsSlice(data["rows"]), "")
+	rows := gscRows(asSlice(data["rows"]), "")
 	return map[string]any{"site_url": siteURL, "rows": rows, "count": len(rows)}, nil
 }
 
-func batch7Lane9GSCListSites(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	token, authFailure := batch7Lane9GSCToken(ctx, rt)
+func gscListSites(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	token, authFailure := gscToken(ctx, rt)
 	if token == "" {
 		return authFailure, nil
 	}
-	base := batch7Lane9Base(rt, "google_search_console_tool", batch7Lane9GSCBase)
-	data, failure := batch7Lane9GSCCall(ctx, rt, token, http.MethodGet, base+"/sites", nil)
+	base := marketingBase(rt, "google_search_console_tool", gscBase)
+	data, failure := gscCall(ctx, rt, token, http.MethodGet, base+"/sites", nil)
 	if failure != nil {
 		return failure, nil
 	}
 	sites := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["siteEntry"]) {
-		entry := batch4AsMap(raw)
+	for _, raw := range asSlice(data["siteEntry"]) {
+		entry := asMap(raw)
 		sites = append(sites, map[string]any{
-			"site_url":         batch7Lane9StringOr(entry, "siteUrl", ""),
-			"permission_level": batch7Lane9StringOr(entry, "permissionLevel", ""),
+			"site_url":         stringOr(entry, "siteUrl", ""),
+			"permission_level": stringOr(entry, "permissionLevel", ""),
 		})
 	}
 	return map[string]any{"sites": sites}, nil
 }
 
-func batch7Lane9GSCListSitemaps(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	token, authFailure := batch7Lane9GSCToken(ctx, rt)
+func gscListSitemaps(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	token, authFailure := gscToken(ctx, rt)
 	if token == "" {
 		return authFailure, nil
 	}
@@ -790,29 +790,29 @@ func batch7Lane9GSCListSitemaps(ctx context.Context, rt *Runtime, input map[stri
 	if siteURL == "" {
 		return map[string]any{"error": "site_url is required"}, nil
 	}
-	base := batch7Lane9Base(rt, "google_search_console_tool", batch7Lane9GSCBase)
-	endpoint := base + "/" + batch7Lane9GSCSitePath(siteURL) + "/sitemaps"
-	data, failure := batch7Lane9GSCCall(ctx, rt, token, http.MethodGet, endpoint, nil)
+	base := marketingBase(rt, "google_search_console_tool", gscBase)
+	endpoint := base + "/" + gscSitePath(siteURL) + "/sitemaps"
+	data, failure := gscCall(ctx, rt, token, http.MethodGet, endpoint, nil)
 	if failure != nil {
 		return failure, nil
 	}
 	sitemaps := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["sitemap"]) {
-		entry := batch4AsMap(raw)
+	for _, raw := range asSlice(data["sitemap"]) {
+		entry := asMap(raw)
 		sitemaps = append(sitemaps, map[string]any{
-			"path":           batch7Lane9StringOr(entry, "path", ""),
-			"last_submitted": batch7Lane9StringOr(entry, "lastSubmitted", ""),
-			"is_pending":     batch7Lane9Bool(entry["isPending"]),
-			"is_index":       batch7Lane9Bool(entry["isSitemapsIndex"]),
-			"warnings":       batch7Lane9IntOr(entry, "warnings", 0),
-			"errors":         batch7Lane9IntOr(entry, "errors", 0),
+			"path":           stringOr(entry, "path", ""),
+			"last_submitted": stringOr(entry, "lastSubmitted", ""),
+			"is_pending":     asBool(entry["isPending"]),
+			"is_index":       asBool(entry["isSitemapsIndex"]),
+			"warnings":       marketingIntOr(entry, "warnings", 0),
+			"errors":         marketingIntOr(entry, "errors", 0),
 		})
 	}
 	return map[string]any{"site_url": siteURL, "sitemaps": sitemaps}, nil
 }
 
-func batch7Lane9GSCInspectURL(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	token, authFailure := batch7Lane9GSCToken(ctx, rt)
+func gscInspectURL(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	token, authFailure := gscToken(ctx, rt)
 	if token == "" {
 		return authFailure, nil
 	}
@@ -820,30 +820,30 @@ func batch7Lane9GSCInspectURL(ctx context.Context, rt *Runtime, input map[string
 	if siteURL == "" || inspectionURL == "" {
 		return map[string]any{"error": "site_url and inspection_url are required"}, nil
 	}
-	base := batch7Lane9Base(rt, "google_search_console_inspection_tool", batch7Lane9GSCInspectionBase)
+	base := marketingBase(rt, "google_search_console_inspection_tool", gscInspectionBase)
 	body := map[string]any{"inspectionUrl": inspectionURL, "siteUrl": siteURL}
-	data, failure := batch7Lane9GSCCall(ctx, rt, token, http.MethodPost, base+"/urlInspection/index:inspect", body)
+	data, failure := gscCall(ctx, rt, token, http.MethodPost, base+"/urlInspection/index:inspect", body)
 	if failure != nil {
 		return failure, nil
 	}
-	result := batch4AsMap(data["inspectionResult"])
-	indexStatus := batch4AsMap(result["indexStatusResult"])
-	mobile := batch4AsMap(result["mobileUsabilityResult"])
+	result := asMap(data["inspectionResult"])
+	indexStatus := asMap(result["indexStatusResult"])
+	mobile := asMap(result["mobileUsabilityResult"])
 	return map[string]any{
 		"inspection_url":   inspectionURL,
-		"verdict":          batch7Lane9StringOr(indexStatus, "verdict", ""),
-		"coverage_state":   batch7Lane9StringOr(indexStatus, "coverageState", ""),
-		"indexing_state":   batch7Lane9StringOr(indexStatus, "indexingState", ""),
-		"last_crawl_time":  batch7Lane9StringOr(indexStatus, "lastCrawlTime", ""),
-		"crawled_as":       batch7Lane9StringOr(indexStatus, "crawledAs", ""),
-		"page_fetch_state": batch7Lane9StringOr(indexStatus, "pageFetchState", ""),
-		"robots_txt_state": batch7Lane9StringOr(indexStatus, "robotsTxtState", ""),
-		"mobile_verdict":   batch7Lane9StringOr(mobile, "verdict", ""),
+		"verdict":          stringOr(indexStatus, "verdict", ""),
+		"coverage_state":   stringOr(indexStatus, "coverageState", ""),
+		"indexing_state":   stringOr(indexStatus, "indexingState", ""),
+		"last_crawl_time":  stringOr(indexStatus, "lastCrawlTime", ""),
+		"crawled_as":       stringOr(indexStatus, "crawledAs", ""),
+		"page_fetch_state": stringOr(indexStatus, "pageFetchState", ""),
+		"robots_txt_state": stringOr(indexStatus, "robotsTxtState", ""),
+		"mobile_verdict":   stringOr(mobile, "verdict", ""),
 	}, nil
 }
 
-func batch7Lane9GSCSubmitSitemap(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	token, authFailure := batch7Lane9GSCToken(ctx, rt)
+func gscSubmitSitemap(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	token, authFailure := gscToken(ctx, rt)
 	if token == "" {
 		return authFailure, nil
 	}
@@ -851,17 +851,17 @@ func batch7Lane9GSCSubmitSitemap(ctx context.Context, rt *Runtime, input map[str
 	if siteURL == "" || sitemapURL == "" {
 		return map[string]any{"error": "site_url and sitemap_url are required"}, nil
 	}
-	base := batch7Lane9Base(rt, "google_search_console_tool", batch7Lane9GSCBase)
-	endpoint := base + "/" + batch7Lane9GSCSitePath(siteURL) + "/sitemaps/" + batch7Lane9StrictEscape(sitemapURL)
-	if _, failure := batch7Lane9GSCCall(ctx, rt, token, http.MethodPut, endpoint, nil); failure != nil {
+	base := marketingBase(rt, "google_search_console_tool", gscBase)
+	endpoint := base + "/" + gscSitePath(siteURL) + "/sitemaps/" + marketingStrictEscape(sitemapURL)
+	if _, failure := gscCall(ctx, rt, token, http.MethodPut, endpoint, nil); failure != nil {
 		return failure, nil
 	}
 	return map[string]any{"sitemap_url": sitemapURL, "status": "submitted"}, nil
 }
 
-// batch7Lane9GSCTopDimension runs the shared top-query/top-page wrapper.
-func batch7Lane9GSCTopDimension(ctx context.Context, rt *Runtime, input map[string]any, dimension, key string, defaultLimit int) (any, error) {
-	token, authFailure := batch7Lane9GSCToken(ctx, rt)
+// gscTopDimension runs the shared top-query/top-page wrapper.
+func gscTopDimension(ctx context.Context, rt *Runtime, input map[string]any, dimension, key string, defaultLimit int) (any, error) {
+	token, authFailure := gscToken(ctx, rt)
 	if token == "" {
 		return authFailure, nil
 	}
@@ -871,22 +871,22 @@ func batch7Lane9GSCTopDimension(ctx context.Context, rt *Runtime, input map[stri
 		return map[string]any{"error": "site_url, start_date, and end_date are required"}, nil
 	}
 	if _, present := input["row_limit"]; !present {
-		input = batch7Lane9CloneWith(input, "row_limit", defaultLimit)
+		input = googleCloneWith(input, "row_limit", defaultLimit)
 	}
-	base := batch7Lane9Base(rt, "google_search_console_tool", batch7Lane9GSCBase)
-	endpoint := base + "/" + batch7Lane9GSCSitePath(siteURL) + "/searchAnalytics/query"
-	data, failure := batch7Lane9GSCCall(ctx, rt, token, http.MethodPost, endpoint,
-		batch7Lane9GSCAnalyticsBody(input, []any{dimension}))
+	base := marketingBase(rt, "google_search_console_tool", gscBase)
+	endpoint := base + "/" + gscSitePath(siteURL) + "/searchAnalytics/query"
+	data, failure := gscCall(ctx, rt, token, http.MethodPost, endpoint,
+		gscAnalyticsBody(input, []any{dimension}))
 	if failure != nil {
 		return failure, nil
 	}
-	rows := batch7Lane9GSCRows(batch4AsSlice(data["rows"]), dimension)
-	batch7Lane9GSCSortByClicks(rows)
+	rows := gscRows(asSlice(data["rows"]), dimension)
+	gscSortByClicks(rows)
 	return map[string]any{"site_url": siteURL, key: rows, "count": len(rows)}, nil
 }
 
-// batch7Lane9CloneWith returns a shallow copy of input with one extra key.
-func batch7Lane9CloneWith(input map[string]any, name string, value any) map[string]any {
+// googleCloneWith returns a shallow copy of input with one extra key.
+func googleCloneWith(input map[string]any, name string, value any) map[string]any {
 	out := make(map[string]any, len(input)+1)
 	for key, existing := range input {
 		out[key] = existing
@@ -895,16 +895,16 @@ func batch7Lane9CloneWith(input map[string]any, name string, value any) map[stri
 	return out
 }
 
-func batch7Lane9GSCTopQueries(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	return batch7Lane9GSCTopDimension(ctx, rt, input, "query", "queries", 25)
+func gscTopQueries(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	return gscTopDimension(ctx, rt, input, "query", "queries", 25)
 }
 
-func batch7Lane9GSCTopPages(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	return batch7Lane9GSCTopDimension(ctx, rt, input, "page", "pages", 25)
+func gscTopPages(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	return gscTopDimension(ctx, rt, input, "page", "pages", 25)
 }
 
-func batch7Lane9GSCDeleteSitemap(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	token, authFailure := batch7Lane9GSCToken(ctx, rt)
+func gscDeleteSitemap(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	token, authFailure := gscToken(ctx, rt)
 	if token == "" {
 		return authFailure, nil
 	}
@@ -912,9 +912,9 @@ func batch7Lane9GSCDeleteSitemap(ctx context.Context, rt *Runtime, input map[str
 	if siteURL == "" || sitemapURL == "" {
 		return map[string]any{"error": "site_url and sitemap_url are required"}, nil
 	}
-	base := batch7Lane9Base(rt, "google_search_console_tool", batch7Lane9GSCBase)
-	endpoint := base + "/" + batch7Lane9GSCSitePath(siteURL) + "/sitemaps/" + batch7Lane9StrictEscape(sitemapURL)
-	if _, failure := batch7Lane9GSCCall(ctx, rt, token, http.MethodDelete, endpoint, nil); failure != nil {
+	base := marketingBase(rt, "google_search_console_tool", gscBase)
+	endpoint := base + "/" + gscSitePath(siteURL) + "/sitemaps/" + marketingStrictEscape(sitemapURL)
+	if _, failure := gscCall(ctx, rt, token, http.MethodDelete, endpoint, nil); failure != nil {
 		return failure, nil
 	}
 	return map[string]any{"sitemap_url": sitemapURL, "status": "deleted"}, nil

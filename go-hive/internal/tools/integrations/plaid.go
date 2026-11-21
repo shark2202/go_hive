@@ -117,9 +117,9 @@ func batch6Lane3PlaidAuthError() map[string]any {
 
 // batch6Lane3PlaidCredentials resolves the client id and secret pair.
 func batch6Lane3PlaidCredentials(rt *Runtime) (string, string, map[string]any) {
-	clientID, secret, paired := batch6Lane3SplitCredential(batch6Lane3ModuleToken(rt, "plaid_tool"))
+	clientID, secret, paired := batch6Lane3SplitCredential(moduleToken(rt, "plaid_tool"))
 	if !paired {
-		secret = batch6Lane3Env(rt, "PLAID_SECRET")
+		secret = runtimeEnvTrimmed(rt, "PLAID_SECRET")
 	}
 	if clientID == "" || secret == "" {
 		return "", "", batch6Lane3PlaidAuthError()
@@ -129,10 +129,10 @@ func batch6Lane3PlaidCredentials(rt *Runtime) (string, string, map[string]any) {
 
 // batch6Lane3PlaidBase resolves the environment host, honouring WithBaseURL.
 func batch6Lane3PlaidBase(rt *Runtime) string {
-	if base := batch6Lane3ModuleURL(rt, "plaid_tool"); base != "" {
+	if base := moduleBaseURL(rt, "plaid_tool"); base != "" {
 		return base
 	}
-	switch strings.ToLower(batch6Lane3Env(rt, "PLAID_ENV")) {
+	switch strings.ToLower(runtimeEnvTrimmed(rt, "PLAID_ENV")) {
 	case "development":
 		return batch6Lane3PlaidDevelopmentURL
 	case "production":
@@ -166,9 +166,9 @@ func batch6Lane3PlaidPost(ctx context.Context, rt *Runtime, path string, body ma
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := batch6Lane3HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
-		if batch6Lane3IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Plaid timed out"}
 		}
 		return map[string]any{"error": "Plaid request failed: " + err.Error()}
@@ -207,15 +207,15 @@ func batch6Lane3PlaidErrorText(data map[string]any, status int) string {
 // batch6Lane3PlaidTransaction projects a transaction the way upstream does.
 func batch6Lane3PlaidTransaction(transaction map[string]any) map[string]any {
 	return map[string]any{
-		"transaction_id": batch6Lane3ValueOr(transaction, "transaction_id", ""),
-		"account_id":     batch6Lane3ValueOr(transaction, "account_id", ""),
-		"amount":         batch6Lane3ValueOr(transaction, "amount", 0),
-		"date":           batch6Lane3ValueOr(transaction, "date", ""),
-		"name":           batch6Lane3ValueOr(transaction, "name", ""),
-		"merchant_name":  batch6Lane3ValueOr(transaction, "merchant_name", ""),
-		"category":       batch6Lane3ValueOr(transaction, "category", []any{}),
-		"pending":        batch6Lane3ValueOr(transaction, "pending", false),
-		"currency":       batch6Lane3ValueOr(transaction, "iso_currency_code", ""),
+		"transaction_id": valueOr(transaction, "transaction_id", ""),
+		"account_id":     valueOr(transaction, "account_id", ""),
+		"amount":         valueOr(transaction, "amount", 0),
+		"date":           valueOr(transaction, "date", ""),
+		"name":           valueOr(transaction, "name", ""),
+		"merchant_name":  valueOr(transaction, "merchant_name", ""),
+		"category":       valueOr(transaction, "category", []any{}),
+		"pending":        valueOr(transaction, "pending", false),
+		"currency":       valueOr(transaction, "iso_currency_code", ""),
 	}
 }
 
@@ -235,23 +235,23 @@ func batch6Lane3PlaidGetAccounts(ctx context.Context, rt *Runtime, input map[str
 		return map[string]any{"error": "access_token is required"}, nil
 	}
 	data := batch6Lane3PlaidPost(ctx, rt, "/accounts/get", map[string]any{"access_token": accessToken})
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	accounts := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(data["accounts"]) {
-		account := batch6Lane3AsMap(raw)
-		balances := batch6Lane3AsMap(account["balances"])
+	for _, raw := range asSlice(data["accounts"]) {
+		account := asMap(raw)
+		balances := asMap(account["balances"])
 		accounts = append(accounts, map[string]any{
-			"account_id":        batch6Lane3ValueOr(account, "account_id", ""),
-			"name":              batch6Lane3ValueOr(account, "name", ""),
-			"official_name":     batch6Lane3ValueOr(account, "official_name", ""),
-			"type":              batch6Lane3ValueOr(account, "type", ""),
-			"subtype":           batch6Lane3ValueOr(account, "subtype", ""),
-			"mask":              batch6Lane3ValueOr(account, "mask", ""),
+			"account_id":        valueOr(account, "account_id", ""),
+			"name":              valueOr(account, "name", ""),
+			"official_name":     valueOr(account, "official_name", ""),
+			"type":              valueOr(account, "type", ""),
+			"subtype":           valueOr(account, "subtype", ""),
+			"mask":              valueOr(account, "mask", ""),
 			"available_balance": balances["available"],
 			"current_balance":   balances["current"],
-			"currency":          batch6Lane3ValueOr(balances, "iso_currency_code", ""),
+			"currency":          valueOr(balances, "iso_currency_code", ""),
 		})
 	}
 	return map[string]any{"accounts": accounts, "count": len(accounts)}, nil
@@ -263,21 +263,21 @@ func batch6Lane3PlaidGetBalance(ctx context.Context, rt *Runtime, input map[stri
 		return map[string]any{"error": "access_token is required"}, nil
 	}
 	data := batch6Lane3PlaidPost(ctx, rt, "/accounts/balance/get", map[string]any{"access_token": accessToken})
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	accounts := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(data["accounts"]) {
-		account := batch6Lane3AsMap(raw)
-		balances := batch6Lane3AsMap(account["balances"])
+	for _, raw := range asSlice(data["accounts"]) {
+		account := asMap(raw)
+		balances := asMap(account["balances"])
 		accounts = append(accounts, map[string]any{
-			"account_id": batch6Lane3ValueOr(account, "account_id", ""),
-			"name":       batch6Lane3ValueOr(account, "name", ""),
-			"type":       batch6Lane3ValueOr(account, "type", ""),
+			"account_id": valueOr(account, "account_id", ""),
+			"name":       valueOr(account, "name", ""),
+			"type":       valueOr(account, "type", ""),
 			"available":  balances["available"],
 			"current":    balances["current"],
 			"limit":      balances["limit"],
-			"currency":   batch6Lane3ValueOr(balances, "iso_currency_code", ""),
+			"currency":   valueOr(balances, "iso_currency_code", ""),
 		})
 	}
 	return map[string]any{"accounts": accounts}, nil
@@ -297,27 +297,27 @@ func batch6Lane3PlaidSyncTransactions(ctx context.Context, rt *Runtime, input ma
 	}
 
 	data := batch6Lane3PlaidPost(ctx, rt, "/transactions/sync", body)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	added := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(data["added"]) {
-		added = append(added, batch6Lane3PlaidTransaction(batch6Lane3AsMap(raw)))
+	for _, raw := range asSlice(data["added"]) {
+		added = append(added, batch6Lane3PlaidTransaction(asMap(raw)))
 	}
 	modified := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(data["modified"]) {
-		modified = append(modified, batch6Lane3PlaidTransaction(batch6Lane3AsMap(raw)))
+	for _, raw := range asSlice(data["modified"]) {
+		modified = append(modified, batch6Lane3PlaidTransaction(asMap(raw)))
 	}
 	removed := make([]string, 0)
-	for _, raw := range batch6Lane3AsSlice(data["removed"]) {
-		removed = append(removed, batch6Lane3AsString(batch6Lane3AsMap(raw)["transaction_id"]))
+	for _, raw := range asSlice(data["removed"]) {
+		removed = append(removed, asString(asMap(raw)["transaction_id"]))
 	}
 	return map[string]any{
 		"added":       added,
 		"modified":    modified,
 		"removed":     removed,
-		"next_cursor": batch6Lane3ValueOr(data, "next_cursor", ""),
-		"has_more":    batch6Lane3ValueOr(data, "has_more", false),
+		"next_cursor": valueOr(data, "next_cursor", ""),
+		"has_more":    valueOr(data, "has_more", false),
 	}, nil
 }
 
@@ -339,16 +339,16 @@ func batch6Lane3PlaidGetTransactions(ctx context.Context, rt *Runtime, input map
 	}
 
 	data := batch6Lane3PlaidPost(ctx, rt, "/transactions/get", body)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	transactions := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(data["transactions"]) {
-		transactions = append(transactions, batch6Lane3PlaidTransaction(batch6Lane3AsMap(raw)))
+	for _, raw := range asSlice(data["transactions"]) {
+		transactions = append(transactions, batch6Lane3PlaidTransaction(asMap(raw)))
 	}
 	return map[string]any{
 		"transactions":       transactions,
-		"total_transactions": batch6Lane3ValueOr(data, "total_transactions", 0),
+		"total_transactions": valueOr(data, "total_transactions", 0),
 	}, nil
 }
 
@@ -363,18 +363,18 @@ func batch6Lane3PlaidGetInstitution(ctx context.Context, rt *Runtime, input map[
 		"options":        map[string]any{"include_optional_metadata": true},
 	}
 	data := batch6Lane3PlaidPost(ctx, rt, "/institutions/get_by_id", body)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	institution := batch6Lane3AsMap(data["institution"])
+	institution := asMap(data["institution"])
 	return map[string]any{
-		"institution_id": batch6Lane3ValueOr(institution, "institution_id", ""),
-		"name":           batch6Lane3ValueOr(institution, "name", ""),
-		"products":       batch6Lane3ValueOr(institution, "products", []any{}),
-		"country_codes":  batch6Lane3ValueOr(institution, "country_codes", []any{}),
-		"url":            batch6Lane3ValueOr(institution, "url", ""),
-		"logo":           batch6Lane3ValueOr(institution, "logo", ""),
-		"oauth":          batch6Lane3ValueOr(institution, "oauth", false),
+		"institution_id": valueOr(institution, "institution_id", ""),
+		"name":           valueOr(institution, "name", ""),
+		"products":       valueOr(institution, "products", []any{}),
+		"country_codes":  valueOr(institution, "country_codes", []any{}),
+		"url":            valueOr(institution, "url", ""),
+		"logo":           valueOr(institution, "logo", ""),
+		"oauth":          valueOr(institution, "oauth", false),
 	}, nil
 }
 
@@ -396,19 +396,19 @@ func batch6Lane3PlaidSearchInstitutions(ctx context.Context, rt *Runtime, input 
 	}
 
 	data := batch6Lane3PlaidPost(ctx, rt, "/institutions/search", body)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	institutions := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(data["institutions"]) {
-		institution := batch6Lane3AsMap(raw)
+	for _, raw := range asSlice(data["institutions"]) {
+		institution := asMap(raw)
 		institutions = append(institutions, map[string]any{
-			"institution_id": batch6Lane3ValueOr(institution, "institution_id", ""),
-			"name":           batch6Lane3ValueOr(institution, "name", ""),
-			"products":       batch6Lane3ValueOr(institution, "products", []any{}),
-			"country_codes":  batch6Lane3ValueOr(institution, "country_codes", []any{}),
-			"url":            batch6Lane3ValueOr(institution, "url", ""),
-			"oauth":          batch6Lane3ValueOr(institution, "oauth", false),
+			"institution_id": valueOr(institution, "institution_id", ""),
+			"name":           valueOr(institution, "name", ""),
+			"products":       valueOr(institution, "products", []any{}),
+			"country_codes":  valueOr(institution, "country_codes", []any{}),
+			"url":            valueOr(institution, "url", ""),
+			"oauth":          valueOr(institution, "oauth", false),
 		})
 	}
 	return map[string]any{"institutions": institutions, "count": len(institutions)}, nil

@@ -120,9 +120,9 @@ func batch6Lane3RazorpayAuthError() map[string]any {
 
 // batch6Lane3RazorpayCredentials resolves the Basic-auth key/secret pair.
 func batch6Lane3RazorpayCredentials(rt *Runtime) (string, string, map[string]any) {
-	key, secret, paired := batch6Lane3SplitCredential(batch6Lane3ModuleToken(rt, "razorpay_tool"))
+	key, secret, paired := batch6Lane3SplitCredential(moduleToken(rt, "razorpay_tool"))
 	if !paired {
-		secret = batch6Lane3Env(rt, "RAZORPAY_API_SECRET")
+		secret = runtimeEnvTrimmed(rt, "RAZORPAY_API_SECRET")
 	}
 	if key == "" || secret == "" {
 		return "", "", batch6Lane3RazorpayAuthError()
@@ -132,7 +132,7 @@ func batch6Lane3RazorpayCredentials(rt *Runtime) (string, string, map[string]any
 
 // batch6Lane3RazorpayBase resolves the API prefix, honouring WithBaseURL.
 func batch6Lane3RazorpayBase(rt *Runtime) string {
-	if base := batch6Lane3ModuleURL(rt, "razorpay_tool"); base != "" {
+	if base := moduleBaseURL(rt, "razorpay_tool"); base != "" {
 		return base
 	}
 	return batch6Lane3RazorpayAPIBase
@@ -164,9 +164,9 @@ func batch6Lane3RazorpayRequest(ctx context.Context, rt *Runtime, method, path s
 	req.SetBasicAuth(key, secret)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := batch6Lane3HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
-		if batch6Lane3IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request timed out"}
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}
@@ -210,7 +210,7 @@ func batch6Lane3RazorpayRequest(ctx context.Context, rt *Runtime, method, path s
 func batch6Lane3RazorpayDetail(raw []byte) string {
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err == nil {
-		if description, ok := batch6Lane3AsMap(payload["error"])["description"].(string); ok {
+		if description, ok := asMap(payload["error"])["description"].(string); ok {
 			return description
 		}
 	}
@@ -227,21 +227,21 @@ func batch6Lane3RazorpayListPayments(ctx context.Context, rt *Runtime, input map
 	params := url.Values{}
 	params.Set("count", batch6Lane3RazorpayCount(input))
 	params.Set("skip", strconv.Itoa(intArg(input, "skip", 0)))
-	if from, present := batch6Lane3OptionalInt(input, "from_timestamp"); present {
+	if from, present := optionalInt(input, "from_timestamp"); present {
 		params.Set("from", strconv.Itoa(from))
 	}
-	if to, present := batch6Lane3OptionalInt(input, "to_timestamp"); present {
+	if to, present := optionalInt(input, "to_timestamp"); present {
 		params.Set("to", strconv.Itoa(to))
 	}
 
 	data := batch6Lane3RazorpayRequest(ctx, rt, http.MethodGet, "/payments", params, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	items := batch6Lane3AsSlice(data["items"])
+	items := asSlice(data["items"])
 	payments := make([]map[string]any, 0, len(items))
 	for _, raw := range items {
-		payment := batch6Lane3AsMap(raw)
+		payment := asMap(raw)
 		payments = append(payments, map[string]any{
 			"id":          payment["id"],
 			"amount":      payment["amount"],
@@ -256,7 +256,7 @@ func batch6Lane3RazorpayListPayments(ctx context.Context, rt *Runtime, input map
 		})
 	}
 	return map[string]any{
-		"count":    batch6Lane3ValueOr(data, "count", len(items)),
+		"count":    valueOr(data, "count", len(items)),
 		"payments": payments,
 	}, nil
 }
@@ -267,7 +267,7 @@ func batch6Lane3RazorpayGetPayment(ctx context.Context, rt *Runtime, input map[s
 		return map[string]any{"error": "Invalid payment_id. Must match pattern: pay_[A-Za-z0-9]+"}, nil
 	}
 	data := batch6Lane3RazorpayRequest(ctx, rt, http.MethodGet, "/payments/"+url.PathEscape(paymentID), nil, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	return map[string]any{
@@ -292,7 +292,7 @@ func batch6Lane3RazorpayGetPayment(ctx context.Context, rt *Runtime, input map[s
 }
 
 func batch6Lane3RazorpayCreatePaymentLink(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	amount, _ := batch6Lane3OptionalInt(input, "amount")
+	amount, _ := optionalInt(input, "amount")
 	if amount <= 0 {
 		return map[string]any{"error": "Amount must be positive"}, nil
 	}
@@ -325,7 +325,7 @@ func batch6Lane3RazorpayCreatePaymentLink(ctx context.Context, rt *Runtime, inpu
 	}
 
 	data := batch6Lane3RazorpayRequest(ctx, rt, http.MethodPost, "/payment_links", nil, body)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	return map[string]any{
@@ -349,13 +349,13 @@ func batch6Lane3RazorpayListInvoices(ctx context.Context, rt *Runtime, input map
 	}
 
 	data := batch6Lane3RazorpayRequest(ctx, rt, http.MethodGet, "/invoices", params, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	items := batch6Lane3AsSlice(data["items"])
+	items := asSlice(data["items"])
 	invoices := make([]map[string]any, 0, len(items))
 	for _, raw := range items {
-		invoice := batch6Lane3AsMap(raw)
+		invoice := asMap(raw)
 		invoices = append(invoices, map[string]any{
 			"id":          invoice["id"],
 			"amount":      invoice["amount"],
@@ -368,7 +368,7 @@ func batch6Lane3RazorpayListInvoices(ctx context.Context, rt *Runtime, input map
 		})
 	}
 	return map[string]any{
-		"count":    batch6Lane3ValueOr(data, "count", len(items)),
+		"count":    valueOr(data, "count", len(items)),
 		"invoices": invoices,
 	}, nil
 }
@@ -379,7 +379,7 @@ func batch6Lane3RazorpayGetInvoice(ctx context.Context, rt *Runtime, input map[s
 		return map[string]any{"error": "Invalid invoice_id. Must match pattern: inv_[A-Za-z0-9]+"}, nil
 	}
 	data := batch6Lane3RazorpayRequest(ctx, rt, http.MethodGet, "/invoices/"+url.PathEscape(invoiceID), nil, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	return map[string]any{
@@ -389,7 +389,7 @@ func batch6Lane3RazorpayGetInvoice(ctx context.Context, rt *Runtime, input map[s
 		"status":           data["status"],
 		"customer_id":      data["customer_id"],
 		"customer_details": data["customer_details"],
-		"line_items":       batch6Lane3ValueOr(data, "line_items", []any{}),
+		"line_items":       valueOr(data, "line_items", []any{}),
 		"created_at":       data["created_at"],
 		"description":      data["description"],
 		"short_url":        data["short_url"],
@@ -404,7 +404,7 @@ func batch6Lane3RazorpayCreateRefund(ctx context.Context, rt *Runtime, input map
 		return map[string]any{"error": "Invalid payment_id. Must match pattern: pay_[A-Za-z0-9]+"}, nil
 	}
 	body := map[string]any{}
-	if amount, present := batch6Lane3OptionalInt(input, "amount"); present {
+	if amount, present := optionalInt(input, "amount"); present {
 		if amount <= 0 {
 			return map[string]any{"error": "Refund amount must be positive"}, nil
 		}
@@ -415,7 +415,7 @@ func batch6Lane3RazorpayCreateRefund(ctx context.Context, rt *Runtime, input map
 	}
 
 	data := batch6Lane3RazorpayRequest(ctx, rt, http.MethodPost, "/payments/"+url.PathEscape(paymentID)+"/refund", nil, body)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	return map[string]any{

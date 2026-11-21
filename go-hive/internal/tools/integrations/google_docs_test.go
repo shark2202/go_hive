@@ -77,8 +77,8 @@ func TestBatch5Lane3DocsInsertTextAppends(t *testing.T) {
 		t.Fatalf("requests = %d, want 2", recorder.count())
 	}
 	requests := batch4BodySlice(t, recorder.last(t).Body["requests"])
-	insertText := batch4AsMap(batch4AsMap(requests[0])["insertText"])
-	if batch4AsMap(insertText["location"])["index"] != float64(9) || insertText["text"] != "Hello" {
+	insertText := asMap(asMap(requests[0])["insertText"])
+	if asMap(insertText["location"])["index"] != float64(9) || insertText["text"] != "Hello" {
 		t.Fatalf("insertText = %v", insertText)
 	}
 }
@@ -118,12 +118,12 @@ func TestBatch5Lane3DocsInsertImage(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	requests := batch4BodySlice(t, recorder.last(t).Body["requests"])
-	image := batch4AsMap(batch4AsMap(requests[0])["insertInlineImage"])
-	if image["uri"] != "https://example.com/chart.png" || batch4AsMap(image["location"])["index"] != float64(5) {
+	image := asMap(asMap(requests[0])["insertInlineImage"])
+	if image["uri"] != "https://example.com/chart.png" || asMap(image["location"])["index"] != float64(5) {
 		t.Fatalf("image = %v", image)
 	}
-	objectSize := batch4AsMap(image["objectSize"])
-	if batch4AsMap(objectSize["width"])["magnitude"] != float64(120) {
+	objectSize := asMap(image["objectSize"])
+	if asMap(objectSize["width"])["magnitude"] != float64(120) {
 		t.Fatalf("objectSize = %v", objectSize)
 	}
 }
@@ -161,12 +161,12 @@ func TestBatch5Lane3DocsFormatText(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	requests := batch4BodySlice(t, recorder.last(t).Body["requests"])
-	style := batch4AsMap(batch4AsMap(requests[0])["updateTextStyle"])
-	textStyle := batch4AsMap(style["textStyle"])
+	style := asMap(asMap(requests[0])["updateTextStyle"])
+	textStyle := asMap(style["textStyle"])
 	if textStyle["bold"] != true {
 		t.Fatalf("textStyle = %v", textStyle)
 	}
-	if batch4AsMap(textStyle["fontSize"])["magnitude"] != float64(12.5) {
+	if asMap(textStyle["fontSize"])["magnitude"] != float64(12.5) {
 		t.Fatalf("textStyle = %v", textStyle)
 	}
 	if style["fields"] != "bold,fontSize" {
@@ -224,7 +224,7 @@ func TestBatch5Lane3DocsCreateList(t *testing.T) {
 		"start_index": 1, "end_index": 20,
 	})
 	requests := batch4BodySlice(t, recorder.last(t).Body["requests"])
-	bullets := batch4AsMap(batch4AsMap(requests[0])["createParagraphBullets"])
+	bullets := asMap(asMap(requests[0])["createParagraphBullets"])
 	if bullets["bulletPreset"] != "BULLET_DISC_CIRCLE_SQUARE" {
 		t.Fatalf("bullets = %v", bullets)
 	}
@@ -246,7 +246,7 @@ func TestBatch5Lane3DocsAddComment(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	body := recorder.last(t).Body
-	if body["content"] != "Nice" || batch4AsMap(body["quotedFileContent"])["value"] != "paragraph" {
+	if body["content"] != "Nice" || asMap(body["quotedFileContent"])["value"] != "paragraph" {
 		t.Fatalf("body = %v", body)
 	}
 	if recorder.last(t).Query.Get("fields") != "*" {

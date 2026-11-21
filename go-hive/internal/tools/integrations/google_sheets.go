@@ -47,7 +47,7 @@ func batch5Lane3SheetsResponse(status int, raw []byte) map[string]any {
 			"error": fmt.Sprintf("Google Sheets API error (HTTP %d): %s", status, batch5Lane3ErrorDetail(raw)),
 		}
 	}
-	payload, ok := batch5Lane3JSONObject(raw)
+	payload, ok := jsonObject(raw)
 	if !ok {
 		return map[string]any{"error": "Google Sheets API error: invalid JSON response"}
 	}

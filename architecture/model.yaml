@@ -185,6 +185,10 @@ packages:
     layer: capability
     responsibility: "Excel 领域子包（结构试点）：工具目录、OOXML 读写与 6 个 action 实现；只 import integrationkit。"
     stability: evolving
+  - package: internal/tools/integrations/devops
+    layer: capability
+    responsibility: "DevOps/hosting 领域子包（第二个领域子包）：GitLab / AWS S3 / Vercel / Docker Hub 的目录、31 个 action 实现与共享 helper；只 import integrationkit。"
+    stability: evolving
   - package: internal/llm
     layer: capability
     responsibility: "LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。"

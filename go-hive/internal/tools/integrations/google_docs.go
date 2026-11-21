@@ -63,7 +63,7 @@ func batch5Lane3DocsResponse(status int, raw []byte) map[string]any {
 			"error": fmt.Sprintf("Google Docs API error (HTTP %d): %s", status, batch5Lane3ErrorDetail(raw)),
 		}
 	}
-	payload, ok := batch5Lane3JSONObject(raw)
+	payload, ok := jsonObject(raw)
 	if !ok {
 		return map[string]any{"error": "Google Docs API error: invalid JSON response"}
 	}
@@ -127,13 +127,13 @@ func batch5Lane3ValidateImageURI(uri string) map[string]any {
 
 // batch5Lane3DocumentEndIndex mirrors _get_document_end_index.
 func batch5Lane3DocumentEndIndex(doc map[string]any) int {
-	body := batch4AsMap(doc["body"])
-	content := batch4AsSlice(body["content"])
+	body := asMap(doc["body"])
+	content := asSlice(body["content"])
 	if len(content) == 0 {
 		return 1
 	}
 	endIndex := 1
-	if value, present := batch4OptionalInt(batch4AsMap(content[len(content)-1]), "endIndex"); present {
+	if value, present := optionalInt(asMap(content[len(content)-1]), "endIndex"); present {
 		endIndex = value
 	}
 	return endIndex - 1
@@ -145,11 +145,11 @@ func batch5Lane3DocsCreateDocument(ctx context.Context, rt *Runtime, input map[s
 	if err != nil {
 		return nil, err
 	}
-	payload := batch4AsMap(result)
+	payload := asMap(result)
 	if _, failed := payload["error"]; failed {
 		return payload, nil
 	}
-	documentID := batch4AsString(payload["documentId"])
+	documentID := asString(payload["documentId"])
 	return map[string]any{
 		"document_id":  documentID,
 		"title":        payload["title"],
@@ -165,7 +165,7 @@ func batch5Lane3DocsGetDocument(ctx context.Context, rt *Runtime, input map[stri
 func batch5Lane3DocsInsertText(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	documentID := stringArg(input, "document_id")
 	location := map[string]any{}
-	index, present := batch4OptionalInt(input, "index")
+	index, present := optionalInt(input, "index")
 	if present {
 		location["index"] = index
 	} else {
@@ -174,7 +174,7 @@ func batch5Lane3DocsInsertText(ctx context.Context, rt *Runtime, input map[strin
 		if err != nil {
 			return nil, err
 		}
-		doc := batch4AsMap(docResult)
+		doc := asMap(docResult)
 		if _, failed := doc["error"]; failed {
 			return doc, nil
 		}
@@ -213,14 +213,14 @@ func batch5Lane3DocsReplaceAllText(ctx context.Context, rt *Runtime, input map[s
 	if err != nil {
 		return nil, err
 	}
-	payload := batch4AsMap(result)
+	payload := asMap(result)
 	if _, failed := payload["error"]; failed {
 		return payload, nil
 	}
 	occurrences := 0
-	for _, rawReply := range batch4AsSlice(payload["replies"]) {
-		replaceReply := batch4AsMap(batch4AsMap(rawReply)["replaceAllText"])
-		if value, present := batch4OptionalInt(replaceReply, "occurrencesChanged"); present {
+	for _, rawReply := range asSlice(payload["replies"]) {
+		replaceReply := asMap(asMap(rawReply)["replaceAllText"])
+		if value, present := optionalInt(replaceReply, "occurrencesChanged"); present {
 			occurrences += value
 		}
 	}
@@ -264,15 +264,15 @@ func batch5Lane3DocsInsertImage(ctx context.Context, rt *Runtime, input map[stri
 func batch5Lane3DocsFormatText(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	textStyle := map[string]any{}
 	fields := make([]string, 0, 5)
-	if value, present := batch4OptionalBool(input, "bold"); present {
+	if value, present := notionOptionalBool(input, "bold"); present {
 		textStyle["bold"] = value
 		fields = append(fields, "bold")
 	}
-	if value, present := batch4OptionalBool(input, "italic"); present {
+	if value, present := notionOptionalBool(input, "italic"); present {
 		textStyle["italic"] = value
 		fields = append(fields, "italic")
 	}
-	if value, present := batch4OptionalBool(input, "underline"); present {
+	if value, present := notionOptionalBool(input, "underline"); present {
 		textStyle["underline"] = value
 		fields = append(fields, "underline")
 	}
@@ -352,7 +352,7 @@ func batch5Lane3DocsAddComment(ctx context.Context, rt *Runtime, input map[strin
 
 func batch5Lane3DocsListComments(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	documentID := stringArg(input, "document_id")
-	pageSize := batch4Clamp(intArg(input, "page_size", 20), 1, 100)
+	pageSize := clampInt(intArg(input, "page_size", 20), 1, 100)
 	query := map[string]string{
 		"fields":         "comments(*),nextPageToken",
 		"pageSize":       fmt.Sprint(pageSize),
@@ -369,7 +369,7 @@ func batch5Lane3DocsListComments(ctx context.Context, rt *Runtime, input map[str
 	if _, failed := result["error"]; failed {
 		return result, nil
 	}
-	comments := batch4AsSlice(result["comments"])
+	comments := asSlice(result["comments"])
 	if comments == nil {
 		comments = []any{}
 	}

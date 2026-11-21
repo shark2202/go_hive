@@ -113,7 +113,7 @@ func batch5ObsidianBaseURL(rt *Runtime) string {
 	if base := batch5Lane4ModuleURL(rt, "obsidian_tool", ""); base != "" {
 		return base
 	}
-	if env := strings.TrimSpace(batch5Lane4Getenv(rt)("OBSIDIAN_REST_BASE_URL")); env != "" {
+	if env := strings.TrimSpace(runtimeGetenv(rt)("OBSIDIAN_REST_BASE_URL")); env != "" {
 		return strings.TrimRight(env, "/")
 	}
 	return batch5ObsidianDefaultBase
@@ -169,9 +169,9 @@ func (c *batch5ObsidianClient) do(spec batch5ObsidianRequest) any {
 		req.Header.Set("Accept", spec.accept)
 	}
 
-	resp, err := batch4HTTP(c.rt).Do(req)
+	resp, err := runtimeHTTP(c.rt).Do(req)
 	if err != nil {
-		if batch4IsTimeout(c.ctx, err) {
+		if isTimeout(c.ctx, err) {
 			return map[string]any{"error": "Request timed out"}
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}
@@ -249,9 +249,9 @@ func batch5ObsidianReadNote(ctx context.Context, rt *Runtime, input map[string]a
 		return map[string]any{"path": path, "content": fmt.Sprint(result)}, nil
 	}
 	return map[string]any{
-		"path":        batch5Lane4Get(object, "path", path),
-		"content":     batch5Lane4Get(object, "content", ""),
-		"tags":        batch5Lane4Get(object, "tags", []any{}),
+		"path":        valueOr(object, "path", path),
+		"content":     valueOr(object, "content", ""),
+		"tags":        valueOr(object, "tags", []any{}),
 		"frontmatter": object["frontmatter"],
 		"stat":        object["stat"],
 	}, nil
@@ -320,25 +320,25 @@ func batch5ObsidianSearch(ctx context.Context, rt *Runtime, input map[string]any
 	if failure, failed := batch5ObsidianFailure(result); failed {
 		return failure, nil
 	}
-	items := batch4AsSlice(result)
+	items := asSlice(result)
 	if items == nil {
 		// Upstream only reshapes a JSON array; anything else counts as no hit.
 		return map[string]any{"count": 0, "results": []map[string]any{}}, nil
 	}
 	matches := make([]map[string]any, 0, len(items))
 	for _, rawItem := range items {
-		item := batch4AsMap(rawItem)
-		rawMatches := batch4AsSlice(item["matches"])
+		item := asMap(rawItem)
+		rawMatches := asSlice(item["matches"])
 		contexts := make([]any, 0, len(rawMatches))
 		for _, rawMatch := range rawMatches {
-			contexts = append(contexts, batch5Lane4Get(batch4AsMap(rawMatch), "context", ""))
+			contexts = append(contexts, valueOr(asMap(rawMatch), "context", ""))
 		}
 		if len(contexts) > batch5ObsidianMaxContexts {
 			contexts = contexts[:batch5ObsidianMaxContexts]
 		}
 		matches = append(matches, map[string]any{
-			"filename":    batch5Lane4Get(item, "filename", nil),
-			"score":       batch5Lane4Get(item, "score", nil),
+			"filename":    valueOr(item, "filename", nil),
+			"score":       valueOr(item, "score", nil),
 			"match_count": len(rawMatches),
 			"contexts":    contexts,
 		})
@@ -366,7 +366,7 @@ func batch5ObsidianListFiles(ctx context.Context, rt *Runtime, input map[string]
 	case []any:
 		files = typed
 	case map[string]any:
-		files = batch4AsSlice(typed["files"])
+		files = asSlice(typed["files"])
 	}
 	if files == nil {
 		files = []any{}
@@ -396,9 +396,9 @@ func batch5ObsidianGetActive(ctx context.Context, rt *Runtime, input map[string]
 		return map[string]any{"content": fmt.Sprint(result)}, nil
 	}
 	return map[string]any{
-		"path":        batch5Lane4Get(object, "path", ""),
-		"content":     batch5Lane4Get(object, "content", ""),
-		"tags":        batch5Lane4Get(object, "tags", []any{}),
+		"path":        valueOr(object, "path", ""),
+		"content":     valueOr(object, "content", ""),
+		"tags":        valueOr(object, "tags", []any{}),
 		"frontmatter": object["frontmatter"],
 	}, nil
 }

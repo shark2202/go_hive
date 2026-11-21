@@ -403,7 +403,7 @@ func TestBatch6BaseURLResolution(t *testing.T) {
 		"PIPEDRIVE_DOMAIN":        "acme.pipedrive.com/",
 		"ZOHO_CRM_DOMAIN":         "www.zohoapis.eu",
 	}
-	runtime := &Runtime{Modules: batch6Modules(), Getenv: func(name string) string { return env[name] }}
+	runtime := &Runtime{Modules: crmModules(), Getenv: func(name string) string { return env[name] }}
 	cases := map[string]string{
 		"salesforce_tool": "https://acme.my.salesforce.com",
 		"pipedrive_tool":  "https://acme.pipedrive.com/api/v1",
@@ -411,17 +411,17 @@ func TestBatch6BaseURLResolution(t *testing.T) {
 		"attio_tool":      "https://api.attio.com/v2",
 	}
 	for module, want := range cases {
-		if got := batch6Base(runtime, module); got != want {
+		if got := crmBase(runtime, module); got != want {
 			t.Fatalf("%s base = %q, want %q", module, got, want)
 		}
 	}
-	if got := batch6Base(&Runtime{Modules: map[string]*ModuleConfig{}}, "zoho_crm_tool"); got != "https://www.zohoapis.com/crm/v7" {
+	if got := crmBase(&Runtime{Modules: map[string]*ModuleConfig{}}, "zoho_crm_tool"); got != "https://www.zohoapis.com/crm/v7" {
 		t.Fatalf("zoho default = %q", got)
 	}
-	if got := batch6Base(&Runtime{Modules: map[string]*ModuleConfig{}}, "pipedrive_tool"); got != "https://api.pipedrive.com/v1" {
+	if got := crmBase(&Runtime{Modules: map[string]*ModuleConfig{}}, "pipedrive_tool"); got != "https://api.pipedrive.com/v1" {
 		t.Fatalf("pipedrive default = %q", got)
 	}
-	if got := batch6Base(&Runtime{Modules: map[string]*ModuleConfig{}}, "salesforce_tool"); got != "" {
+	if got := crmBase(&Runtime{Modules: map[string]*ModuleConfig{}}, "salesforce_tool"); got != "" {
 		t.Fatalf("salesforce without instance = %q", got)
 	}
 }

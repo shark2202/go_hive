@@ -43,7 +43,7 @@ func batch5MongoRequest(ctx context.Context, rt *Runtime, action string, body ma
 		"api-key":      apiKey,
 	}, body)
 	if err != nil {
-		if batch5Lane2IsTimeout(err) {
+		if isTimeout(ctx, err) {
 			return batch5Lane2Err("MongoDB request timed out")
 		}
 		return batch5Lane2Err("MongoDB request failed: " + err.Error())

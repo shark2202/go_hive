@@ -62,7 +62,7 @@ func batch5Lane3CalResponse(status int, raw []byte) map[string]any {
 	case status == http.StatusTooManyRequests:
 		return map[string]any{"error": "Rate limit exceeded. Try again later."}
 	case status >= 400:
-		if payload, ok := batch5Lane3JSONObject(raw); ok {
+		if payload, ok := jsonObject(raw); ok {
 			if errorObject, ok := payload["error"].(map[string]any); ok {
 				if message, ok := errorObject["message"].(string); ok {
 					return map[string]any{"error": "API error: " + message}
@@ -71,7 +71,7 @@ func batch5Lane3CalResponse(status int, raw []byte) map[string]any {
 		}
 		return map[string]any{"error": fmt.Sprintf("API request failed: HTTP %d", status)}
 	}
-	payload, ok := batch5Lane3JSONObject(raw)
+	payload, ok := jsonObject(raw)
 	if !ok {
 		return map[string]any{"error": "API request failed: invalid JSON response"}
 	}
@@ -122,8 +122,8 @@ func batch5Lane3CalParseDT(text string) (time.Time, bool) {
 
 // batch5Lane3CalFormatEvent shapes the event list output.
 func batch5Lane3CalFormatEvent(item map[string]any) map[string]any {
-	start := batch4AsMap(item["start"])
-	end := batch4AsMap(item["end"])
+	start := asMap(item["start"])
+	end := asMap(item["end"])
 	summary := "(No title)"
 	if value, ok := item["summary"].(string); ok {
 		summary = value
@@ -139,10 +139,10 @@ func batch5Lane3CalFormatEvent(item map[string]any) map[string]any {
 		"description": item["description"],
 		"hangoutLink": item["hangoutLink"],
 	}
-	if attendees := batch4AsSlice(item["attendees"]); len(attendees) > 0 {
+	if attendees := asSlice(item["attendees"]); len(attendees) > 0 {
 		emails := make([]any, 0, len(attendees))
 		for _, rawAttendee := range attendees {
-			emails = append(emails, batch4AsMap(rawAttendee)["email"])
+			emails = append(emails, asMap(rawAttendee)["email"])
 		}
 		event["attendees"] = emails
 	}
@@ -168,8 +168,8 @@ func lane3FirstNonEmpty(values ...any) any {
 
 // batch5Lane3CalAvailabilityEvent shapes one event for availability math.
 func batch5Lane3CalAvailabilityEvent(item map[string]any) map[string]any {
-	start := batch4AsMap(item["start"])
-	end := batch4AsMap(item["end"])
+	start := asMap(item["start"])
+	end := asMap(item["end"])
 	summary := "(No title)"
 	if value, ok := item["summary"].(string); ok {
 		summary = value
@@ -202,12 +202,12 @@ type batch5Lane3CalInterval struct {
 func batch5Lane3CalBusyFree(events []any, windowStart, windowEnd time.Time) ([]any, []any, []any) {
 	intervals := make([]batch5Lane3CalInterval, 0, len(events))
 	for _, rawEvent := range events {
-		event := batch4AsMap(rawEvent)
-		if batch4AsString(event["transparency"]) == "transparent" || batch4AsString(event["status"]) == "cancelled" {
+		event := asMap(rawEvent)
+		if asString(event["transparency"]) == "transparent" || asString(event["status"]) == "cancelled" {
 			continue
 		}
-		startText := batch4AsString(event["start"])
-		endText := batch4AsString(event["end"])
+		startText := asString(event["start"])
+		endText := asString(event["end"])
 		if startText == "" || endText == "" {
 			continue
 		}
@@ -219,7 +219,7 @@ func batch5Lane3CalBusyFree(events []any, windowStart, windowEnd time.Time) ([]a
 		if !startOK || !endOK {
 			continue
 		}
-		intervals = append(intervals, batch5Lane3CalInterval{start: start, end: end, name: batch4AsString(event["summary"])})
+		intervals = append(intervals, batch5Lane3CalInterval{start: start, end: end, name: asString(event["summary"])})
 	}
 	sort.SliceStable(intervals, func(i, j int) bool { return intervals[i].start.Before(intervals[j].start) })
 
@@ -259,9 +259,9 @@ func batch5Lane3CalBusyFree(events []any, windowStart, windowEnd time.Time) ([]a
 	freeSlots := make([]any, 0)
 	cursor := windowStart
 	for _, rawBlock := range busy {
-		block := batch4AsMap(rawBlock)
-		blockStart, okStart := batch5Lane3CalParseDT(batch4AsString(block["start"]))
-		blockEnd, okEnd := batch5Lane3CalParseDT(batch4AsString(block["end"]))
+		block := asMap(rawBlock)
+		blockStart, okStart := batch5Lane3CalParseDT(asString(block["start"]))
+		blockEnd, okEnd := batch5Lane3CalParseDT(asString(block["end"]))
 		if !okStart || !okEnd {
 			continue
 		}
@@ -322,13 +322,13 @@ func batch5Lane3CalListEvents(ctx context.Context, rt *Runtime, input map[string
 	if err != nil {
 		return nil, err
 	}
-	payload := batch4AsMap(result)
+	payload := asMap(result)
 	if _, failed := payload["error"]; failed {
 		return payload, nil
 	}
 	events := make([]any, 0)
-	for _, rawItem := range batch4AsSlice(payload["items"]) {
-		events = append(events, batch5Lane3CalFormatEvent(batch4AsMap(rawItem)))
+	for _, rawItem := range asSlice(payload["items"]) {
+		events = append(events, batch5Lane3CalFormatEvent(asMap(rawItem)))
 	}
 	return map[string]any{"calendar_id": calendarID, "events": events, "total": len(events)}, nil
 }
@@ -390,10 +390,10 @@ func batch5Lane3CalCreateEvent(ctx context.Context, rt *Runtime, input map[strin
 		}
 		eventBody = map[string]any{"summary": summary, "start": start, "end": end}
 	}
-	if value, present := batch4OptionalString(input, "description"); present {
+	if value, present := optionalString(input, "description"); present {
 		eventBody["description"] = value
 	}
-	if value, present := batch4OptionalString(input, "location"); present {
+	if value, present := optionalString(input, "location"); present {
 		eventBody["location"] = value
 	}
 	attendees := stringSliceArg(input, "attendees")
@@ -445,24 +445,24 @@ func batch5Lane3CalUpdateEvent(ctx context.Context, rt *Runtime, input map[strin
 		}
 	}
 	patch := map[string]any{}
-	if value, present := batch4OptionalString(input, "summary"); present {
+	if value, present := optionalString(input, "summary"); present {
 		patch["summary"] = value
 	}
-	if value, present := batch4OptionalString(input, "description"); present {
+	if value, present := optionalString(input, "description"); present {
 		patch["description"] = value
 	}
-	if value, present := batch4OptionalString(input, "location"); present {
+	if value, present := optionalString(input, "location"); present {
 		patch["location"] = value
 	}
-	removeAttendees, hasRemove := batch4OptionalStrings(input, "remove_attendees")
-	attendees, hasAttendees := batch4OptionalStrings(input, "attendees")
+	removeAttendees, hasRemove := notionOptionalStrings(input, "remove_attendees")
+	attendees, hasAttendees := notionOptionalStrings(input, "attendees")
 	if hasRemove {
 		current, err := batch5Lane3CalCall(ctx, rt, http.MethodGet,
 			batch5Lane3CalEventPath(calendarID, eventID), nil, nil)
 		if err != nil {
 			return nil, err
 		}
-		event := batch4AsMap(current)
+		event := asMap(current)
 		if _, failed := event["error"]; failed {
 			return event, nil
 		}
@@ -471,9 +471,9 @@ func batch5Lane3CalUpdateEvent(ctx context.Context, rt *Runtime, input map[strin
 			removeSet[strings.ToLower(email)] = true
 		}
 		remaining := make([]any, 0)
-		for _, rawAttendee := range batch4AsSlice(event["attendees"]) {
-			attendee := batch4AsMap(rawAttendee)
-			if !removeSet[strings.ToLower(batch4AsString(attendee["email"]))] {
+		for _, rawAttendee := range asSlice(event["attendees"]) {
+			attendee := asMap(rawAttendee)
+			if !removeSet[strings.ToLower(asString(attendee["email"]))] {
 				remaining = append(remaining, attendee)
 			}
 		}
@@ -496,7 +496,7 @@ func batch5Lane3CalUpdateEvent(ctx context.Context, rt *Runtime, input map[strin
 			},
 		}
 	}
-	if value, present := batch4OptionalString(input, "start_time"); present {
+	if value, present := optionalString(input, "start_time"); present {
 		if allDay {
 			if !batch5Lane3CalDateOnly.MatchString(value) {
 				return map[string]any{"error": "all-day events require date-only format for start_time (YYYY-MM-DD)"}, nil
@@ -510,7 +510,7 @@ func batch5Lane3CalUpdateEvent(ctx context.Context, rt *Runtime, input map[strin
 			patch["start"] = start
 		}
 	}
-	if value, present := batch4OptionalString(input, "end_time"); present {
+	if value, present := optionalString(input, "end_time"); present {
 		if allDay {
 			if !batch5Lane3CalDateOnly.MatchString(value) {
 				return map[string]any{"error": "all-day events require date-only format for end_time (YYYY-MM-DD)"}, nil
@@ -567,18 +567,18 @@ func batch5Lane3CalListCalendars(ctx context.Context, rt *Runtime, input map[str
 	if err != nil {
 		return nil, err
 	}
-	payload := batch4AsMap(result)
+	payload := asMap(result)
 	if _, failed := payload["error"]; failed {
 		return payload, nil
 	}
 	calendars := make([]any, 0)
-	for _, rawItem := range batch4AsSlice(payload["items"]) {
-		item := batch4AsMap(rawItem)
+	for _, rawItem := range asSlice(payload["items"]) {
+		item := asMap(rawItem)
 		calendars = append(calendars, map[string]any{
 			"id":               item["id"],
 			"summary":          item["summary"],
 			"description":      item["description"],
-			"primary":          batch4AsBool(item["primary"]),
+			"primary":          asBool(item["primary"]),
 			"access_role":      item["accessRole"],
 			"background_color": item["backgroundColor"],
 		})
@@ -634,14 +634,14 @@ func batch5Lane3CalCheckAvailability(ctx context.Context, rt *Runtime, input map
 			formatted[calendarID] = map[string]any{"error": err.Error()}
 			continue
 		}
-		payload := batch4AsMap(result)
+		payload := asMap(result)
 		if message, failed := payload["error"]; failed {
 			formatted[calendarID] = map[string]any{"error": message}
 			continue
 		}
 		events := make([]any, 0)
-		for _, rawItem := range batch4AsSlice(payload["items"]) {
-			events = append(events, batch5Lane3CalAvailabilityEvent(batch4AsMap(rawItem)))
+		for _, rawItem := range asSlice(payload["items"]) {
+			events = append(events, batch5Lane3CalAvailabilityEvent(asMap(rawItem)))
 		}
 		busy, freeSlots, conflicts := batch5Lane3CalBusyFree(events, windowStart, windowEnd)
 		formatted[calendarID] = map[string]any{

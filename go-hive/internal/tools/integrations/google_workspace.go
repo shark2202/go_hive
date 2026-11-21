@@ -116,28 +116,10 @@ func batch5Lane3Modules() map[string]*ModuleConfig {
 
 // ------------------------------------------------------------ shared bits ---
 
-// batch5Lane3Token resolves a module credential from WithCredential or the
-// configured environment lookup.
-func batch5Lane3Token(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	getenv := rt.Getenv
-	if getenv == nil {
-		getenv = os.Getenv
-	}
-	token, _ := cfg.ResolvedToken(getenv)
-	return strings.TrimSpace(token)
-}
-
 // batch5Lane3AccountToken resolves a Google module credential for the current
 // call: an account alias the action selected wins over the module's single
 // token (upstream `_get_token(account)` -> credentials.get_by_alias("google",
-// account)). Google Sheets is the one module that keeps batch5Lane3Token:
+// account)). Google Sheets is the one module that keeps moduleToken:
 // upstream treats its `account` parameter as a framework tracking value.
 func batch5Lane3AccountToken(rt *Runtime, moduleID string) string {
 	return accountToken(rt, moduleID, "google")
@@ -159,7 +141,7 @@ func batch5Lane3Credential(rt *Runtime, moduleID string) bool {
 	if rt.OAuthRefreshable(moduleID) {
 		return true
 	}
-	return batch5Lane3Token(rt, moduleID) != ""
+	return moduleToken(rt, moduleID) != ""
 }
 
 // batch5Lane3ValueError carries an upstream-style value error through the
@@ -185,18 +167,6 @@ func batch5Lane3AccessToken(ctx context.Context, rt *Runtime, moduleID string, u
 	return oauthModuleToken(ctx, rt, moduleID)
 }
 
-// batch5Lane3Base resolves a module base URL, honouring WithBaseURL.
-func batch5Lane3Base(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	return strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
-}
-
 // batch5Lane3Segments percent-encodes each path segment and joins them.
 // Segments are escaped individually so an A1 range keeps its ":" separator but
 // spaces, "!" and "#" are encoded the way httpx would encode them.
@@ -213,7 +183,7 @@ func batch5Lane3Segments(segments ...string) string {
 // An expired OAuth2 token is refreshed before the request; a 401 retries once
 // with a freshly minted token.
 func batch5Lane3Do(ctx context.Context, rt *Runtime, moduleID, method, path string, query map[string]string, body any) (int, []byte, error) {
-	target := batch5Lane3Base(rt, moduleID) + path
+	target := moduleBaseURL(rt, moduleID) + path
 	if len(query) > 0 {
 		values := url.Values{}
 		for name, value := range query {
@@ -259,7 +229,7 @@ func batch5Lane3Do(ctx context.Context, rt *Runtime, moduleID, method, path stri
 	if err != nil {
 		return 0, nil, err
 	}
-	resp, err := batch4HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -272,7 +242,7 @@ func batch5Lane3Do(ctx context.Context, rt *Runtime, moduleID, method, path stri
 			if err != nil {
 				return 0, nil, err
 			}
-			resp, err = batch4HTTP(rt).Do(req)
+			resp, err = runtimeHTTP(rt).Do(req)
 			if err != nil {
 				return 0, nil, err
 			}
@@ -296,7 +266,7 @@ func batch5Lane3TransportError(ctx context.Context, err error) map[string]any {
 	if errors.As(err, &valueErr) {
 		return valueErr.dict
 	}
-	if batch4IsTimeout(ctx, err) {
+	if isTimeout(ctx, err) {
 		return map[string]any{"error": "Request timed out"}
 	}
 	message := err.Error()
@@ -309,19 +279,10 @@ func batch5Lane3TransportError(ctx context.Context, err error) map[string]any {
 	return map[string]any{"error": "Network error: " + message}
 }
 
-// batch5Lane3JSONObject decodes a JSON object response body.
-func batch5Lane3JSONObject(raw []byte) (map[string]any, bool) {
-	var payload map[string]any
-	if err := json.Unmarshal(raw, &payload); err != nil || payload == nil {
-		return nil, false
-	}
-	return payload, true
-}
-
 // batch5Lane3ErrorDetail mirrors response.json().get("error", {}).get("message",
 // response.text), falling back to the raw body when the shape differs.
 func batch5Lane3ErrorDetail(raw []byte) string {
-	if payload, ok := batch5Lane3JSONObject(raw); ok {
+	if payload, ok := jsonObject(raw); ok {
 		if errorObject, ok := payload["error"].(map[string]any); ok {
 			if message, ok := errorObject["message"].(string); ok {
 				return message

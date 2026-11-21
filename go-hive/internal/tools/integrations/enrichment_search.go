@@ -22,10 +22,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -117,29 +115,9 @@ func batch7Lane5Modules() map[string]*ModuleConfig {
 
 // ------------------------------------------------------------ shared bits ---
 
-// batch7Lane5Getenv resolves the runtime environment lookup.
-func batch7Lane5Getenv(rt *Runtime) func(string) string {
-	if rt != nil && rt.Getenv != nil {
-		return rt.Getenv
-	}
-	return os.Getenv
-}
-
-// batch7Lane5ModuleURL resolves a module base URL, honouring WithBaseURL.
-func batch7Lane5ModuleURL(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	return strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
-}
-
 // batch7Lane5BaseURL resolves a module root with a hard-coded fallback.
 func batch7Lane5BaseURL(rt *Runtime, moduleID, fallback string) string {
-	if base := batch7Lane5ModuleURL(rt, moduleID); base != "" {
+	if base := moduleBaseURL(rt, moduleID); base != "" {
 		return base
 	}
 	return fallback
@@ -155,17 +133,8 @@ func batch7Lane5ModuleToken(rt *Runtime, moduleID string) string {
 	if cfg == nil {
 		return ""
 	}
-	token, _ := cfg.ResolvedToken(batch7Lane5Getenv(rt))
+	token, _ := cfg.ResolvedToken(runtimeGetenv(rt))
 	return strings.TrimSpace(token)
-}
-
-// batch7Lane5HTTP returns the runtime transport, falling back to a client with
-// the standard timeout for hand-built runtimes.
-func batch7Lane5HTTP(rt *Runtime) *httpClient {
-	if rt != nil && rt.HTTP != nil {
-		return rt.HTTP
-	}
-	return newHTTPClient(nil)
 }
 
 // batch7Lane5Reply is the status/body pair every module helper inspects.
@@ -197,7 +166,7 @@ func batch7Lane5Do(
 	for name, value := range headers {
 		req.Header.Set(name, value)
 	}
-	resp, err := batch7Lane5HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
 		return batch7Lane5Reply{}, err
 	}
@@ -207,99 +176,6 @@ func batch7Lane5Do(
 		return batch7Lane5Reply{}, err
 	}
 	return batch7Lane5Reply{Status: resp.StatusCode, Body: raw}, nil
-}
-
-// batch7Lane5IsTimeout reports whether err is a deadline or a net timeout.
-func batch7Lane5IsTimeout(ctx context.Context, err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	var netErr net.Error
-	return errors.As(err, &netErr) && netErr.Timeout()
-}
-
-// batch7Lane5TruncateText caps provider text the way upstream slices it.
-func batch7Lane5TruncateText(text string, limit int) string {
-	if utf8.RuneCountInString(text) <= limit {
-		return text
-	}
-	runes := []rune(text)
-	return string(runes[:limit])
-}
-
-// batch7Lane5Clamp bounds an integer to [low, high].
-func batch7Lane5Clamp(value, low, high int) int {
-	if value < low {
-		return low
-	}
-	if value > high {
-		return high
-	}
-	return value
-}
-
-// batch7Lane5AsMap safely views a decoded JSON object.
-func batch7Lane5AsMap(value any) map[string]any {
-	object, _ := value.(map[string]any)
-	return object
-}
-
-// batch7Lane5AsSlice safely views a decoded JSON array.
-func batch7Lane5AsSlice(value any) []any {
-	items, _ := value.([]any)
-	return items
-}
-
-// batch7Lane5AsString reads a decoded JSON string.
-func batch7Lane5AsString(value any) string {
-	text, _ := value.(string)
-	return text
-}
-
-// batch7Lane5JSONNumber turns integral float64 values back into integers so
-// responses render like Python ints instead of 456.0.
-func batch7Lane5JSONNumber(value any) any {
-	switch typed := value.(type) {
-	case float64:
-		if typed == float64(int64(typed)) {
-			return int64(typed)
-		}
-		return typed
-	case json.Number:
-		if parsed, err := typed.Int64(); err == nil {
-			return parsed
-		}
-		return typed
-	default:
-		return value
-	}
-}
-
-// batch7Lane5OptionalInt distinguishes an absent/null argument from 0.
-func batch7Lane5OptionalInt(input map[string]any, name string) (int, bool) {
-	value, present := input[name]
-	if !present || value == nil {
-		return 0, false
-	}
-	switch typed := value.(type) {
-	case int:
-		return typed, true
-	case int64:
-		return int(typed), true
-	case float64:
-		return int(typed), true
-	case json.Number:
-		parsed, err := typed.Int64()
-		if err != nil {
-			return 0, false
-		}
-		return int(parsed), true
-	default:
-		return 0, false
-	}
 }
 
 // batch7Lane5ValidQuery mirrors the upstream 1..500 character check.
@@ -323,36 +199,12 @@ func batch7Lane5ErrorDetail(raw []byte) string {
 	return string(raw)
 }
 
-// batch7Lane5DecodeObject decodes a JSON object body.
-func batch7Lane5DecodeObject(raw []byte) (map[string]any, bool) {
-	var value map[string]any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return nil, false
-	}
-	if value == nil {
-		value = map[string]any{}
-	}
-	return value, true
-}
-
 // batch7Lane5SliceOr keeps a decoded array, defaulting to an empty array.
 func batch7Lane5SliceOr(value any) []any {
 	if items, ok := value.([]any); ok {
 		return items
 	}
 	return []any{}
-}
-
-// batch7Lane5SplitCSV splits a comma-separated argument, trimming blanks.
-func batch7Lane5SplitCSV(raw string) []string {
-	parts := strings.Split(raw, ",")
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if trimmed := strings.TrimSpace(part); trimmed != "" {
-			out = append(out, trimmed)
-		}
-	}
-	return out
 }
 
 // batch7Lane5FirstNonEmpty mirrors Python's `a or b` for optional string
@@ -514,7 +366,7 @@ func batch7Lane5ApifyCall(
 		payload,
 	)
 	if err != nil {
-		if batch7Lane5IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Apify timed out"}, false
 		}
 		return map[string]any{"error": "Apify request failed: " + err.Error()}, false
@@ -528,7 +380,7 @@ func batch7Lane5ApifyCall(
 	if reply.Status != http.StatusOK {
 		return batch7Lane5ApifyAPIError(reply), false
 	}
-	value, ok := batch7Lane5DecodeAnyBody(reply.Body)
+	value, ok := decodeAny(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Apify request failed: invalid JSON response"}, false
 	}
@@ -553,7 +405,7 @@ func batch7Lane5ApifyPostCall(
 	}
 	reply, err := batch7Lane5Do(ctx, rt, http.MethodPost, target, batch7Lane5ApifyHeaders(token, true), payload)
 	if err != nil {
-		if batch7Lane5IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Apify timed out"}, false
 		}
 		return map[string]any{"error": "Apify request failed: " + err.Error()}, false
@@ -564,7 +416,7 @@ func batch7Lane5ApifyPostCall(
 	if reply.Status != http.StatusOK && reply.Status != http.StatusCreated {
 		return batch7Lane5ApifyAPIError(reply), false
 	}
-	value, ok := batch7Lane5DecodeObject(reply.Body)
+	value, ok := decodeObject(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Apify request failed: invalid JSON response"}, false
 	}
@@ -577,18 +429,9 @@ func batch7Lane5ApifyAPIError(reply batch7Lane5Reply) map[string]any {
 		"error": fmt.Sprintf(
 			"Apify API error %d: %s",
 			reply.Status,
-			batch7Lane5TruncateText(string(reply.Body), batch7Lane5MaxError),
+			truncateText(string(reply.Body), batch7Lane5MaxError),
 		),
 	}
-}
-
-// batch7Lane5DecodeAnyBody decodes a JSON body of any shape.
-func batch7Lane5DecodeAnyBody(raw []byte) (any, bool) {
-	var value any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return nil, false
-	}
-	return value, true
 }
 
 func batch7Lane5ApifyRunActor(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -610,20 +453,20 @@ func batch7Lane5ApifyRunActor(ctx context.Context, rt *Runtime, input map[string
 		query.Set("build", build)
 	}
 	payload := map[string]any{}
-	if data := batch7Lane5AsMap(input["input_data"]); data != nil {
+	if data := asMap(input["input_data"]); data != nil {
 		payload = data
 	}
 	value, ok := batch7Lane5ApifyPostCall(ctx, rt, "/acts/"+actorID+"/runs", query, payload)
 	if !ok {
 		return value, nil
 	}
-	data := batch7Lane5AsMap(value["data"])
+	data := asMap(value["data"])
 	return map[string]any{
-		"run_id":      batch7Lane5AsString(data["id"]),
-		"status":      batch7Lane5AsString(data["status"]),
-		"dataset_id":  batch7Lane5AsString(data["defaultDatasetId"]),
-		"kv_store_id": batch7Lane5AsString(data["defaultKeyValueStoreId"]),
-		"started_at":  batch7Lane5AsString(data["startedAt"]),
+		"run_id":      asString(data["id"]),
+		"status":      asString(data["status"]),
+		"dataset_id":  asString(data["defaultDatasetId"]),
+		"kv_store_id": asString(data["defaultKeyValueStoreId"]),
+		"started_at":  asString(data["startedAt"]),
 	}, nil
 }
 
@@ -642,19 +485,19 @@ func batch7Lane5ApifyGetRun(ctx context.Context, rt *Runtime, input map[string]a
 	if !ok {
 		return value, nil
 	}
-	run := batch7Lane5AsMap(batch7Lane5AsMap(value)["data"])
-	usage := batch7Lane5AsMap(run["usage"])
+	run := asMap(asMap(value)["data"])
+	usage := asMap(run["usage"])
 	usageUSD := any(0)
 	if units, present := usage["ACTOR_COMPUTE_UNITS"]; present {
-		usageUSD = batch7Lane5JSONNumber(units)
+		usageUSD = jsonNumber(units)
 	}
 	return map[string]any{
-		"run_id":      batch7Lane5AsString(run["id"]),
-		"status":      batch7Lane5AsString(run["status"]),
-		"started_at":  batch7Lane5AsString(run["startedAt"]),
-		"finished_at": batch7Lane5AsString(run["finishedAt"]),
-		"dataset_id":  batch7Lane5AsString(run["defaultDatasetId"]),
-		"kv_store_id": batch7Lane5AsString(run["defaultKeyValueStoreId"]),
+		"run_id":      asString(run["id"]),
+		"status":      asString(run["status"]),
+		"started_at":  asString(run["startedAt"]),
+		"finished_at": asString(run["finishedAt"]),
+		"dataset_id":  asString(run["defaultDatasetId"]),
+		"kv_store_id": asString(run["defaultKeyValueStoreId"]),
 		"usage_usd":   usageUSD,
 	}, nil
 }
@@ -668,7 +511,7 @@ func batch7Lane5ApifyGetDatasetItems(ctx context.Context, rt *Runtime, input map
 		return map[string]any{"error": "dataset_id is required"}, nil
 	}
 	query := url.Values{
-		"limit":  {strconv.Itoa(batch7Lane5Clamp(intArg(input, "limit", 100), 1, 250000))},
+		"limit":  {strconv.Itoa(clampInt(intArg(input, "limit", 100), 1, 250000))},
 		"offset": {strconv.Itoa(intArg(input, "offset", 0))},
 		"format": {stringArg(input, "format")},
 	}
@@ -676,7 +519,7 @@ func batch7Lane5ApifyGetDatasetItems(ctx context.Context, rt *Runtime, input map
 	target := batch7Lane5ApifyBaseURL(rt) + "/datasets/" + datasetID + "/items?" + query.Encode()
 	reply, err := batch7Lane5Do(ctx, rt, http.MethodGet, target, batch7Lane5ApifyHeaders(token, true), nil)
 	if err != nil {
-		if batch7Lane5IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Apify timed out"}, nil
 		}
 		return map[string]any{"error": "Apify request failed: " + err.Error()}, nil
@@ -684,7 +527,7 @@ func batch7Lane5ApifyGetDatasetItems(ctx context.Context, rt *Runtime, input map
 	if reply.Status != http.StatusOK {
 		return batch7Lane5ApifyAPIError(reply), nil
 	}
-	value, ok := batch7Lane5DecodeAnyBody(reply.Body)
+	value, ok := decodeAny(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Apify request failed: invalid JSON response"}, nil
 	}
@@ -696,7 +539,7 @@ func batch7Lane5ApifyGetDatasetItems(ctx context.Context, rt *Runtime, input map
 
 func batch7Lane5ApifyListActors(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	query := url.Values{
-		"limit":  {strconv.Itoa(batch7Lane5Clamp(intArg(input, "limit", 50), 1, 1000))},
+		"limit":  {strconv.Itoa(clampInt(intArg(input, "limit", 50), 1, 1000))},
 		"offset": {strconv.Itoa(intArg(input, "offset", 0))},
 	}
 	value, ok := batch7Lane5ApifyCall(ctx, rt, http.MethodGet, "/acts", query, nil)
@@ -704,18 +547,18 @@ func batch7Lane5ApifyListActors(ctx context.Context, rt *Runtime, input map[stri
 		return value, nil
 	}
 	actors := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(batch7Lane5AsMap(batch7Lane5AsMap(value)["data"])["items"]) {
-		actor := batch7Lane5AsMap(raw)
-		stats := batch7Lane5AsMap(actor["stats"])
+	for _, raw := range asSlice(asMap(asMap(value)["data"])["items"]) {
+		actor := asMap(raw)
+		stats := asMap(actor["stats"])
 		totalRuns := any(0)
 		if runs, present := stats["totalRuns"]; present {
-			totalRuns = batch7Lane5JSONNumber(runs)
+			totalRuns = jsonNumber(runs)
 		}
 		actors = append(actors, map[string]any{
-			"id":          batch7Lane5AsString(actor["id"]),
-			"name":        batch7Lane5AsString(actor["name"]),
-			"title":       batch7Lane5AsString(actor["title"]),
-			"description": batch7Lane5TruncateText(batch7Lane5AsString(actor["description"]), 200),
+			"id":          asString(actor["id"]),
+			"name":        asString(actor["name"]),
+			"title":       asString(actor["title"]),
+			"description": truncateText(asString(actor["description"]), 200),
 			"total_runs":  totalRuns,
 		})
 	}
@@ -724,7 +567,7 @@ func batch7Lane5ApifyListActors(ctx context.Context, rt *Runtime, input map[stri
 
 func batch7Lane5ApifyListRuns(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	query := url.Values{
-		"limit":  {strconv.Itoa(batch7Lane5Clamp(intArg(input, "limit", 50), 1, 1000))},
+		"limit":  {strconv.Itoa(clampInt(intArg(input, "limit", 50), 1, 1000))},
 		"offset": {strconv.Itoa(intArg(input, "offset", 0))},
 	}
 	endpoint := "/actor-runs"
@@ -736,15 +579,15 @@ func batch7Lane5ApifyListRuns(ctx context.Context, rt *Runtime, input map[string
 		return value, nil
 	}
 	runs := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(batch7Lane5AsMap(batch7Lane5AsMap(value)["data"])["items"]) {
-		run := batch7Lane5AsMap(raw)
+	for _, raw := range asSlice(asMap(asMap(value)["data"])["items"]) {
+		run := asMap(raw)
 		runs = append(runs, map[string]any{
-			"run_id":      batch7Lane5AsString(run["id"]),
-			"actor_id":    batch7Lane5AsString(run["actId"]),
-			"status":      batch7Lane5AsString(run["status"]),
-			"started_at":  batch7Lane5AsString(run["startedAt"]),
-			"finished_at": batch7Lane5AsString(run["finishedAt"]),
-			"dataset_id":  batch7Lane5AsString(run["defaultDatasetId"]),
+			"run_id":      asString(run["id"]),
+			"actor_id":    asString(run["actId"]),
+			"status":      asString(run["status"]),
+			"started_at":  asString(run["startedAt"]),
+			"finished_at": asString(run["finishedAt"]),
+			"dataset_id":  asString(run["defaultDatasetId"]),
 		})
 	}
 	return map[string]any{"runs": runs, "count": len(runs)}, nil
@@ -763,7 +606,7 @@ func batch7Lane5ApifyGetKVStoreRecord(ctx context.Context, rt *Runtime, input ma
 	target := batch7Lane5ApifyBaseURL(rt) + "/key-value-stores/" + storeID + "/records/" + key
 	reply, err := batch7Lane5Do(ctx, rt, http.MethodGet, target, batch7Lane5ApifyHeaders(token, false), nil)
 	if err != nil {
-		if batch7Lane5IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Apify timed out"}, nil
 		}
 		return map[string]any{"error": "Apify request failed: " + err.Error()}, nil
@@ -774,12 +617,12 @@ func batch7Lane5ApifyGetKVStoreRecord(ctx context.Context, rt *Runtime, input ma
 	if reply.Status != http.StatusOK {
 		return batch7Lane5ApifyAPIError(reply), nil
 	}
-	if value, ok := batch7Lane5DecodeAnyBody(reply.Body); ok {
+	if value, ok := decodeAny(reply.Body); ok {
 		return map[string]any{"key": key, "value": value}, nil
 	}
 	return map[string]any{
 		"key":   key,
-		"value": batch7Lane5TruncateText(string(reply.Body), batch7Lane5MaxValue),
+		"value": truncateText(string(reply.Body), batch7Lane5MaxValue),
 	}, nil
 }
 
@@ -920,7 +763,7 @@ func batch7Lane5ApolloCall(
 	}
 	reply, err := batch7Lane5Do(ctx, rt, method, target, headers, payload)
 	if err != nil {
-		if batch7Lane5IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request timed out"}, false
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}, false
@@ -928,7 +771,7 @@ func batch7Lane5ApolloCall(
 	if failure := batch7Lane5ApolloStatus(reply); failure != nil {
 		return failure, false
 	}
-	value, ok := batch7Lane5DecodeObject(reply.Body)
+	value, ok := decodeObject(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Apollo request failed: invalid JSON response"}, false
 	}
@@ -966,7 +809,7 @@ func batch7Lane5ApolloStatus(reply batch7Lane5Reply) map[string]any {
 
 // batch7Lane5ApolloPerson flattens a person the way enrich_person does.
 func batch7Lane5ApolloPerson(person map[string]any) map[string]any {
-	organization := batch7Lane5AsMap(person["organization"])
+	organization := asMap(person["organization"])
 	phoneNumbers := batch7Lane5SliceOr(person["phone_numbers"])
 	return map[string]any{
 		"id":            person["id"],
@@ -1037,18 +880,18 @@ func batch7Lane5ApolloScope(source map[string]any) map[string]any {
 
 // batch7Lane5ApolloPagination reads the upstream pagination defaults.
 func batch7Lane5ApolloPagination(result map[string]any, total, limit int) (any, any, any) {
-	pagination := batch7Lane5AsMap(result["pagination"])
+	pagination := asMap(result["pagination"])
 	totalEntries := any(total)
 	if value, present := pagination["total_entries"]; present && value != nil {
-		totalEntries = batch7Lane5JSONNumber(value)
+		totalEntries = jsonNumber(value)
 	}
 	page := any(1)
 	if value, present := pagination["page"]; present && value != nil {
-		page = batch7Lane5JSONNumber(value)
+		page = jsonNumber(value)
 	}
 	perPage := any(limit)
 	if value, present := pagination["per_page"]; present && value != nil {
-		perPage = batch7Lane5JSONNumber(value)
+		perPage = jsonNumber(value)
 	}
 	return totalEntries, page, perPage
 }
@@ -1111,14 +954,14 @@ func batch7Lane5ApolloEnrichPerson(ctx context.Context, rt *Runtime, input map[s
 	if !ok {
 		return value, nil
 	}
-	result := batch7Lane5AsMap(value)
+	result := asMap(value)
 	person, present := result["person"]
 	if !present || person == nil {
 		return map[string]any{"match_found": false, "message": "No matching person found"}, nil
 	}
 	return map[string]any{
 		"match_found": true,
-		"person":      batch7Lane5ApolloPerson(batch7Lane5AsMap(person)),
+		"person":      batch7Lane5ApolloPerson(asMap(person)),
 	}, nil
 }
 
@@ -1131,21 +974,21 @@ func batch7Lane5ApolloEnrichCompany(ctx context.Context, rt *Runtime, input map[
 	if !ok {
 		return value, nil
 	}
-	result := batch7Lane5AsMap(value)
+	result := asMap(value)
 	organization, present := result["organization"]
 	if !present || organization == nil {
 		return map[string]any{"match_found": false, "message": "No matching company found"}, nil
 	}
 	return map[string]any{
 		"match_found":  true,
-		"organization": batch7Lane5ApolloOrganization(batch7Lane5AsMap(organization)),
+		"organization": batch7Lane5ApolloOrganization(asMap(organization)),
 	}, nil
 }
 
 func batch7Lane5ApolloSearchPeople(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	limit := intArg(input, "limit", 10)
 	body := map[string]any{
-		"per_page": batch7Lane5MinInt(limit, 100),
+		"per_page": minInt(limit, 100),
 		"page":     1,
 	}
 	batch7Lane5ApolloFilters(input, body, map[string]string{
@@ -1160,15 +1003,15 @@ func batch7Lane5ApolloSearchPeople(ctx context.Context, rt *Runtime, input map[s
 	if !ok {
 		return value, nil
 	}
-	result := batch7Lane5AsMap(value)
-	people := batch7Lane5AsSlice(result["people"])
+	result := asMap(value)
+	people := asSlice(result["people"])
 	total, page, perPage := batch7Lane5ApolloPagination(result, len(people), limit)
 	results := make([]map[string]any, 0, len(people))
 	for _, raw := range people {
-		person := batch7Lane5AsMap(raw)
+		person := asMap(raw)
 		var organization map[string]any
 		if scope, present := person["organization"]; present && scope != nil {
-			organization = batch7Lane5ApolloScope(batch7Lane5AsMap(scope))
+			organization = batch7Lane5ApolloScope(asMap(scope))
 		} else {
 			organization = batch7Lane5ApolloScope(nil)
 		}
@@ -1208,19 +1051,19 @@ func batch7Lane5ApolloGetPersonActivities(ctx context.Context, rt *Runtime, inpu
 	if !ok {
 		return value, nil
 	}
-	activities := batch7Lane5AsSlice(batch7Lane5AsMap(value)["activities"])
+	activities := asSlice(asMap(value)["activities"])
 	limit := len(activities)
 	if limit > 50 {
 		limit = 50
 	}
 	out := make([]map[string]any, 0, limit)
 	for _, raw := range activities[:limit] {
-		activity := batch7Lane5AsMap(raw)
+		activity := asMap(raw)
 		out = append(out, map[string]any{
 			"id":           activity["id"],
 			"type":         activity["type"],
 			"subject":      activity["subject"],
-			"body":         batch7Lane5TruncateText(batch7Lane5AsString(activity["body"]), batch7Lane5MaxError),
+			"body":         truncateText(asString(activity["body"]), batch7Lane5MaxError),
 			"created_at":   activity["created_at"],
 			"completed_at": activity["completed_at"],
 			"status":       activity["status"],
@@ -1239,10 +1082,10 @@ func batch7Lane5ApolloListEmailAccounts(ctx context.Context, rt *Runtime, _ map[
 	if !ok {
 		return value, nil
 	}
-	accounts := batch7Lane5AsSlice(batch7Lane5AsMap(value)["email_accounts"])
+	accounts := asSlice(asMap(value)["email_accounts"])
 	out := make([]map[string]any, 0, len(accounts))
 	for _, raw := range accounts {
-		account := batch7Lane5AsMap(raw)
+		account := asMap(raw)
 		out = append(out, map[string]any{
 			"id":                  account["id"],
 			"email":               account["email"],
@@ -1279,10 +1122,10 @@ func batch7Lane5ApolloBulkEnrichPeople(ctx context.Context, rt *Runtime, input m
 	if !ok {
 		return value, nil
 	}
-	matches := batch7Lane5AsSlice(batch7Lane5AsMap(value)["matches"])
+	matches := asSlice(asMap(value)["matches"])
 	results := make([]map[string]any, 0, len(matches))
 	for _, raw := range matches {
-		match := batch7Lane5AsMap(raw)
+		match := asMap(raw)
 		if match == nil {
 			results = append(results, map[string]any{"match_found": false})
 			continue
@@ -1295,7 +1138,7 @@ func batch7Lane5ApolloBulkEnrichPeople(ctx context.Context, rt *Runtime, input m
 			"email":             match["email"],
 			"email_status":      match["email_status"],
 			"linkedin_url":      match["linkedin_url"],
-			"organization_name": batch7Lane5AsMap(match["organization"])["name"],
+			"organization_name": asMap(match["organization"])["name"],
 		})
 	}
 	return map[string]any{"count": len(results), "results": results}, nil
@@ -1304,7 +1147,7 @@ func batch7Lane5ApolloBulkEnrichPeople(ctx context.Context, rt *Runtime, input m
 func batch7Lane5ApolloSearchCompanies(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	limit := intArg(input, "limit", 10)
 	body := map[string]any{
-		"per_page": batch7Lane5MinInt(limit, 100),
+		"per_page": minInt(limit, 100),
 		"page":     1,
 	}
 	batch7Lane5ApolloFilters(input, body, map[string]string{
@@ -1317,12 +1160,12 @@ func batch7Lane5ApolloSearchCompanies(ctx context.Context, rt *Runtime, input ma
 	if !ok {
 		return value, nil
 	}
-	result := batch7Lane5AsMap(value)
-	organizations := batch7Lane5AsSlice(result["organizations"])
+	result := asMap(value)
+	organizations := asSlice(result["organizations"])
 	total, page, perPage := batch7Lane5ApolloPagination(result, len(organizations), limit)
 	results := make([]map[string]any, 0, len(organizations))
 	for _, raw := range organizations {
-		organization := batch7Lane5AsMap(raw)
+		organization := asMap(raw)
 		results = append(results, map[string]any{
 			"id":                     organization["id"],
 			"name":                   organization["name"],
@@ -1345,14 +1188,6 @@ func batch7Lane5ApolloSearchCompanies(ctx context.Context, rt *Runtime, input ma
 		"per_page": perPage,
 		"results":  results,
 	}, nil
-}
-
-// batch7Lane5MinInt returns the smaller of two integers.
-func batch7Lane5MinInt(left, right int) int {
-	if left < right {
-		return left
-	}
-	return right
 }
 
 // ------------------------------------------------------------------ lusha ---
@@ -1497,7 +1332,7 @@ func batch7Lane5LushaCall(
 	headers := map[string]string{"api_key": token, "Content-Type": "application/json"}
 	reply, err := batch7Lane5Do(ctx, rt, method, target, headers, payload)
 	if err != nil {
-		if batch7Lane5IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Lusha timed out"}, false
 		}
 		return map[string]any{"error": "Lusha request failed: " + err.Error()}, false
@@ -1507,11 +1342,11 @@ func batch7Lane5LushaCall(
 			"error": fmt.Sprintf(
 				"HTTP %d: %s",
 				reply.Status,
-				batch7Lane5TruncateText(string(reply.Body), batch7Lane5MaxError),
+				truncateText(string(reply.Body), batch7Lane5MaxError),
 			),
 		}, false
 	}
-	value, ok := batch7Lane5DecodeAnyBody(reply.Body)
+	value, ok := decodeAny(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Lusha request failed: invalid JSON response"}, false
 	}
@@ -1552,10 +1387,10 @@ func batch7Lane5LushaCompany(source map[string]any) map[string]any {
 
 // batch7Lane5LushaContacts flattens a prospecting contact page.
 func batch7Lane5LushaContacts(data map[string]any) map[string]any {
-	contacts := batch7Lane5AsSlice(data["data"])
+	contacts := asSlice(data["data"])
 	out := make([]map[string]any, 0, len(contacts))
 	for _, raw := range contacts {
-		contact := batch7Lane5AsMap(raw)
+		contact := asMap(raw)
 		out = append(out, map[string]any{
 			"id":             contact["contactId"],
 			"first_name":     contact["firstName"],
@@ -1570,7 +1405,7 @@ func batch7Lane5LushaContacts(data map[string]any) map[string]any {
 	}
 	total := any(nil)
 	if value, present := data["total"]; present {
-		total = batch7Lane5JSONNumber(value)
+		total = jsonNumber(value)
 	}
 	return map[string]any{"count": len(out), "total": total, "contacts": out}
 }
@@ -1599,7 +1434,7 @@ func batch7Lane5LushaEnrichPerson(ctx context.Context, rt *Runtime, input map[st
 	if !ok {
 		return value, nil
 	}
-	return batch7Lane5LushaPerson(batch7Lane5AsMap(value)), nil
+	return batch7Lane5LushaPerson(asMap(value)), nil
 }
 
 func batch7Lane5LushaEnrichCompany(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -1615,26 +1450,26 @@ func batch7Lane5LushaEnrichCompany(ctx context.Context, rt *Runtime, input map[s
 	if !ok {
 		return value, nil
 	}
-	return batch7Lane5LushaCompany(batch7Lane5AsMap(value)), nil
+	return batch7Lane5LushaCompany(asMap(value)), nil
 }
 
 func batch7Lane5LushaSearchContacts(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	contactsInclude := map[string]any{}
 	companiesInclude := map[string]any{}
 	if raw := stringArg(input, "seniorities"); raw != "" {
-		contactsInclude["seniorities"] = batch7Lane5InterfaceSlice(batch7Lane5SplitCSV(raw))
+		contactsInclude["seniorities"] = batch7Lane5InterfaceSlice(splitCSV(raw))
 	}
 	if raw := stringArg(input, "departments"); raw != "" {
-		contactsInclude["departments"] = batch7Lane5InterfaceSlice(batch7Lane5SplitCSV(raw))
+		contactsInclude["departments"] = batch7Lane5InterfaceSlice(splitCSV(raw))
 	}
 	if country := stringArg(input, "country"); country != "" {
 		contactsInclude["locations"] = []any{map[string]any{"country": country}}
 	}
 	if raw := stringArg(input, "company_names"); raw != "" {
-		companiesInclude["names"] = batch7Lane5InterfaceSlice(batch7Lane5SplitCSV(raw))
+		companiesInclude["names"] = batch7Lane5InterfaceSlice(splitCSV(raw))
 	}
 	if raw := stringArg(input, "company_domains"); raw != "" {
-		companiesInclude["domains"] = batch7Lane5InterfaceSlice(batch7Lane5SplitCSV(raw))
+		companiesInclude["domains"] = batch7Lane5InterfaceSlice(splitCSV(raw))
 	}
 	if len(contactsInclude) == 0 && len(companiesInclude) == 0 {
 		return map[string]any{"error": "At least one filter is required"}, nil
@@ -1647,23 +1482,23 @@ func batch7Lane5LushaSearchContacts(ctx context.Context, rt *Runtime, input map[
 		filters["companies"] = map[string]any{"include": companiesInclude}
 	}
 	payload := map[string]any{
-		"pages":   map[string]any{"page": intArg(input, "page", 0), "size": batch7Lane5MinInt(intArg(input, "page_size", 20), 100)},
+		"pages":   map[string]any{"page": intArg(input, "page", 0), "size": minInt(intArg(input, "page_size", 20), 100)},
 		"filters": filters,
 	}
 	value, ok := batch7Lane5LushaCall(ctx, rt, http.MethodPost, "/prospecting/contact/search", nil, payload)
 	if !ok {
 		return value, nil
 	}
-	return batch7Lane5LushaContacts(batch7Lane5AsMap(value)), nil
+	return batch7Lane5LushaContacts(asMap(value)), nil
 }
 
 func batch7Lane5LushaSearchCompanies(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	include := map[string]any{}
 	if raw := stringArg(input, "company_names"); raw != "" {
-		include["names"] = batch7Lane5InterfaceSlice(batch7Lane5SplitCSV(raw))
+		include["names"] = batch7Lane5InterfaceSlice(splitCSV(raw))
 	}
 	if raw := stringArg(input, "domains"); raw != "" {
-		include["domains"] = batch7Lane5InterfaceSlice(batch7Lane5SplitCSV(raw))
+		include["domains"] = batch7Lane5InterfaceSlice(splitCSV(raw))
 	}
 	if country := stringArg(input, "country"); country != "" {
 		include["locations"] = []any{map[string]any{"country": country}}
@@ -1686,7 +1521,7 @@ func batch7Lane5LushaSearchCompanies(ctx context.Context, rt *Runtime, input map
 	payload := map[string]any{
 		"pages": map[string]any{
 			"page": intArg(input, "page", 0),
-			"size": batch7Lane5MinInt(intArg(input, "page_size", 20), 100),
+			"size": minInt(intArg(input, "page_size", 20), 100),
 		},
 		"filters": map[string]any{"companies": map[string]any{"include": include}},
 	}
@@ -1694,15 +1529,15 @@ func batch7Lane5LushaSearchCompanies(ctx context.Context, rt *Runtime, input map
 	if !ok {
 		return value, nil
 	}
-	data := batch7Lane5AsMap(value)
-	companies := batch7Lane5AsSlice(data["data"])
+	data := asMap(value)
+	companies := asSlice(data["data"])
 	out := make([]map[string]any, 0, len(companies))
 	for _, raw := range companies {
-		out = append(out, batch7Lane5LushaCompany(batch7Lane5AsMap(raw)))
+		out = append(out, batch7Lane5LushaCompany(asMap(raw)))
 	}
 	total := any(nil)
 	if totalRaw, present := data["total"]; present {
-		total = batch7Lane5JSONNumber(totalRaw)
+		total = jsonNumber(totalRaw)
 	}
 	return map[string]any{"count": len(out), "total": total, "companies": out}, nil
 }
@@ -1734,14 +1569,14 @@ func batch7Lane5LushaBulkEnrichPersons(ctx context.Context, rt *Runtime, input m
 	if !ok {
 		return value, nil
 	}
-	data := batch7Lane5AsMap(value)
-	contacts := batch7Lane5AsSlice(data["data"])
+	data := asMap(value)
+	contacts := asSlice(data["data"])
 	if contacts == nil {
-		contacts = batch7Lane5AsSlice(data["contacts"])
+		contacts = asSlice(data["contacts"])
 	}
 	results := make([]map[string]any, 0, len(contacts))
 	for _, raw := range contacts {
-		results = append(results, batch7Lane5LushaPerson(batch7Lane5AsMap(raw)))
+		results = append(results, batch7Lane5LushaPerson(asMap(raw)))
 	}
 	return map[string]any{"results": results, "count": len(results)}, nil
 }
@@ -1758,7 +1593,7 @@ func batch7Lane5LushaGetTechnologies(ctx context.Context, rt *Runtime, input map
 	if !ok {
 		return value, nil
 	}
-	data := batch7Lane5AsMap(value)
+	data := asMap(value)
 	name := batch7Lane5FirstNonEmpty(data["name"], data["companyName"])
 	if name == nil {
 		name = ""
@@ -1787,12 +1622,12 @@ func batch7Lane5LushaSearchDecisionMakers(ctx context.Context, rt *Runtime, inpu
 		contactsInclude["locations"] = []any{map[string]any{"country": country}}
 	}
 	companiesInclude := map[string]any{
-		"domains": batch7Lane5InterfaceSlice(batch7Lane5SplitCSV(rawDomains)),
+		"domains": batch7Lane5InterfaceSlice(splitCSV(rawDomains)),
 	}
 	payload := map[string]any{
 		"pages": map[string]any{
 			"page": intArg(input, "page", 0),
-			"size": batch7Lane5MinInt(intArg(input, "page_size", 20), 100),
+			"size": minInt(intArg(input, "page_size", 20), 100),
 		},
 		"filters": map[string]any{
 			"contacts":  map[string]any{"include": contactsInclude},
@@ -1803,7 +1638,7 @@ func batch7Lane5LushaSearchDecisionMakers(ctx context.Context, rt *Runtime, inpu
 	if !ok {
 		return value, nil
 	}
-	return batch7Lane5LushaContacts(batch7Lane5AsMap(value)), nil
+	return batch7Lane5LushaContacts(asMap(value)), nil
 }
 
 // ---------------------------------------------------------------- serpapi ---
@@ -1950,7 +1785,7 @@ func batch7Lane5SerpapiCall(
 	target := batch7Lane5SerpapiBaseURL(rt) + "/search.json?" + params.Encode()
 	reply, err := batch7Lane5Do(ctx, rt, http.MethodGet, target, nil, nil)
 	if err != nil {
-		if batch7Lane5IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": timeoutLabel}, false
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}, false
@@ -1973,29 +1808,29 @@ func batch7Lane5SerpapiCall(
 			),
 		}, false
 	}
-	value, ok := batch7Lane5DecodeObject(reply.Body)
+	value, ok := decodeObject(reply.Body)
 	if !ok {
 		return map[string]any{"error": "SerpAPI request failed: invalid JSON response"}, false
 	}
 	if rawError, present := value["error"]; present {
-		return map[string]any{"error": "SerpAPI error: " + batch7Lane5AsString(rawError)}, false
+		return map[string]any{"error": "SerpAPI error: " + asString(rawError)}, false
 	}
 	return value, true
 }
 
 // batch7Lane5SerpapiAuthors renders the optional publication authors list.
 func batch7Lane5SerpapiAuthors(item map[string]any) []any {
-	publication := batch7Lane5AsMap(item["publication_info"])
-	rawAuthors := batch7Lane5AsSlice(publication["authors"])
+	publication := asMap(item["publication_info"])
+	rawAuthors := asSlice(publication["authors"])
 	if len(rawAuthors) == 0 {
 		return nil
 	}
 	authors := make([]any, 0, len(rawAuthors))
 	for _, raw := range rawAuthors {
-		author := batch7Lane5AsMap(raw)
+		author := asMap(raw)
 		authors = append(authors, map[string]any{
-			"name":      batch7Lane5AsString(author["name"]),
-			"author_id": batch7Lane5AsString(author["author_id"]),
+			"name":      asString(author["name"]),
+			"author_id": asString(author["author_id"]),
 		})
 	}
 	return authors
@@ -2003,12 +1838,12 @@ func batch7Lane5SerpapiAuthors(item map[string]any) []any {
 
 // batch7Lane5SerpapiCitedBy reads inline_links.cited_by defaults.
 func batch7Lane5SerpapiCitedBy(item map[string]any) (any, string) {
-	citedBy := batch7Lane5AsMap(batch7Lane5AsMap(item["inline_links"])["cited_by"])
+	citedBy := asMap(asMap(item["inline_links"])["cited_by"])
 	total := any(0)
 	if value, present := citedBy["total"]; present {
-		total = batch7Lane5JSONNumber(value)
+		total = jsonNumber(value)
 	}
-	return total, batch7Lane5AsString(citedBy["cites_id"])
+	return total, asString(citedBy["cites_id"])
 }
 
 func batch7Lane5SerpapiScholarSearch(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -2019,13 +1854,13 @@ func batch7Lane5SerpapiScholarSearch(ctx context.Context, rt *Runtime, input map
 	params := url.Values{
 		"engine": {"google_scholar"},
 		"q":      {query},
-		"num":    {strconv.Itoa(batch7Lane5MinInt(intArg(input, "num_results", 10), 20))},
+		"num":    {strconv.Itoa(minInt(intArg(input, "num_results", 10), 20))},
 		"start":  {strconv.Itoa(intArg(input, "start", 0))},
 	}
-	if year, present := batch7Lane5OptionalInt(input, "year_low"); present {
+	if year, present := optionalInt(input, "year_low"); present {
 		params.Set("as_ylo", strconv.Itoa(year))
 	}
-	if year, present := batch7Lane5OptionalInt(input, "year_high"); present {
+	if year, present := optionalInt(input, "year_high"); present {
 		params.Set("as_yhi", strconv.Itoa(year))
 	}
 	if boolArg(input, "sort_by_date", false) {
@@ -2036,29 +1871,29 @@ func batch7Lane5SerpapiScholarSearch(ctx context.Context, rt *Runtime, input map
 		return data, nil
 	}
 	results := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(data["organic_results"]) {
-		item := batch7Lane5AsMap(raw)
+	for _, raw := range asSlice(data["organic_results"]) {
+		item := asMap(raw)
 		total, citesID := batch7Lane5SerpapiCitedBy(item)
 		result := map[string]any{
-			"title":            batch7Lane5AsString(item["title"]),
-			"link":             batch7Lane5AsString(item["link"]),
-			"snippet":          batch7Lane5AsString(item["snippet"]),
-			"result_id":        batch7Lane5AsString(item["result_id"]),
-			"publication_info": batch7Lane5AsString(batch7Lane5AsMap(item["publication_info"])["summary"]),
+			"title":            asString(item["title"]),
+			"link":             asString(item["link"]),
+			"snippet":          asString(item["snippet"]),
+			"result_id":        asString(item["result_id"]),
+			"publication_info": asString(asMap(item["publication_info"])["summary"]),
 			"cited_by_count":   total,
 			"cites_id":         citesID,
 		}
 		if authors := batch7Lane5SerpapiAuthors(item); authors != nil {
 			result["authors"] = authors
 		}
-		if resources := batch7Lane5AsSlice(item["resources"]); len(resources) > 0 {
-			result["pdf_link"] = batch7Lane5AsString(batch7Lane5AsMap(resources[0])["link"])
+		if resources := asSlice(item["resources"]); len(resources) > 0 {
+			result["pdf_link"] = asString(asMap(resources[0])["link"])
 		}
 		results = append(results, result)
 	}
 	totalResults := any(0)
-	if value, present := batch7Lane5AsMap(data["search_information"])["total_results"]; present {
-		totalResults = batch7Lane5JSONNumber(value)
+	if value, present := asMap(data["search_information"])["total_results"]; present {
+		totalResults = jsonNumber(value)
 	}
 	return map[string]any{
 		"query":         query,
@@ -2106,48 +1941,48 @@ func batch7Lane5SerpapiScholarAuthor(ctx context.Context, rt *Runtime, input map
 		"engine":    {"google_scholar_author"},
 		"author_id": {authorID},
 		"start":     {strconv.Itoa(intArg(input, "start", 0))},
-		"num":       {strconv.Itoa(batch7Lane5MinInt(intArg(input, "num_articles", 20), 100))},
+		"num":       {strconv.Itoa(minInt(intArg(input, "num_articles", 20), 100))},
 		"sort":      {sortBy},
 	}
 	data, ok := batch7Lane5SerpapiCall(ctx, rt, params, "Author lookup timed out")
 	if !ok {
 		return data, nil
 	}
-	author := batch7Lane5AsMap(data["author"])
-	citedBy := batch7Lane5AsMap(data["cited_by"])
+	author := asMap(data["author"])
+	citedBy := asMap(data["cited_by"])
 	metrics := map[string]any{}
-	for _, raw := range batch7Lane5AsSlice(citedBy["table"]) {
-		for key, value := range batch7Lane5AsMap(raw) {
+	for _, raw := range asSlice(citedBy["table"]) {
+		for key, value := range asMap(raw) {
 			metrics[key] = value
 		}
 	}
 	interests := make([]string, 0)
-	for _, raw := range batch7Lane5AsSlice(author["interests"]) {
-		interests = append(interests, batch7Lane5AsString(batch7Lane5AsMap(raw)["title"]))
+	for _, raw := range asSlice(author["interests"]) {
+		interests = append(interests, asString(asMap(raw)["title"]))
 	}
 	articles := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(data["articles"]) {
-		article := batch7Lane5AsMap(raw)
+	for _, raw := range asSlice(data["articles"]) {
+		article := asMap(raw)
 		citedByCount := any(0)
-		if value, present := batch7Lane5AsMap(article["cited_by"])["value"]; present {
-			citedByCount = batch7Lane5JSONNumber(value)
+		if value, present := asMap(article["cited_by"])["value"]; present {
+			citedByCount = jsonNumber(value)
 		}
 		articles = append(articles, map[string]any{
-			"title":          batch7Lane5AsString(article["title"]),
-			"authors":        batch7Lane5AsString(article["authors"]),
-			"publication":    batch7Lane5AsString(article["publication"]),
-			"year":           batch7Lane5AsString(article["year"]),
+			"title":          asString(article["title"]),
+			"authors":        asString(article["authors"]),
+			"publication":    asString(article["publication"]),
+			"year":           asString(article["year"]),
 			"cited_by_count": citedByCount,
-			"citation_id":    batch7Lane5AsString(article["citation_id"]),
+			"citation_id":    asString(article["citation_id"]),
 		})
 	}
 	return map[string]any{
 		"author_id":     authorID,
-		"name":          batch7Lane5AsString(author["name"]),
-		"affiliations":  batch7Lane5AsString(author["affiliations"]),
-		"email":         batch7Lane5AsString(author["email"]),
+		"name":          asString(author["name"]),
+		"affiliations":  asString(author["affiliations"]),
+		"email":         asString(author["email"]),
 		"interests":     interests,
-		"thumbnail":     batch7Lane5AsString(author["thumbnail"]),
+		"thumbnail":     asString(author["thumbnail"]),
 		"metrics":       metrics,
 		"articles":      articles,
 		"article_count": len(articles),
@@ -2157,18 +1992,18 @@ func batch7Lane5SerpapiScholarAuthor(ctx context.Context, rt *Runtime, input map
 // batch7Lane5SerpapiPatent flattens one patent result.
 func batch7Lane5SerpapiPatent(item map[string]any) map[string]any {
 	return map[string]any{
-		"title":              batch7Lane5AsString(item["title"]),
-		"snippet":            batch7Lane5AsString(item["snippet"]),
-		"link":               batch7Lane5AsString(item["link"]),
-		"patent_id":          batch7Lane5AsString(item["patent_id"]),
-		"publication_number": batch7Lane5AsString(item["publication_number"]),
-		"inventor":           batch7Lane5AsString(item["inventor"]),
-		"assignee":           batch7Lane5AsString(item["assignee"]),
-		"filing_date":        batch7Lane5AsString(item["filing_date"]),
+		"title":              asString(item["title"]),
+		"snippet":            asString(item["snippet"]),
+		"link":               asString(item["link"]),
+		"patent_id":          asString(item["patent_id"]),
+		"publication_number": asString(item["publication_number"]),
+		"inventor":           asString(item["inventor"]),
+		"assignee":           asString(item["assignee"]),
+		"filing_date":        asString(item["filing_date"]),
 		"grant_date":         item["grant_date"],
-		"publication_date":   batch7Lane5AsString(item["publication_date"]),
-		"priority_date":      batch7Lane5AsString(item["priority_date"]),
-		"pdf":                batch7Lane5AsString(item["pdf"]),
+		"publication_date":   asString(item["publication_date"]),
+		"priority_date":      asString(item["priority_date"]),
+		"pdf":                asString(item["pdf"]),
 	}
 }
 
@@ -2200,12 +2035,12 @@ func batch7Lane5SerpapiPatentsSearch(ctx context.Context, rt *Runtime, input map
 		return data, nil
 	}
 	results := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(data["organic_results"]) {
-		results = append(results, batch7Lane5SerpapiPatent(batch7Lane5AsMap(raw)))
+	for _, raw := range asSlice(data["organic_results"]) {
+		results = append(results, batch7Lane5SerpapiPatent(asMap(raw)))
 	}
 	totalResults := any(0)
-	if value, present := batch7Lane5AsMap(data["search_information"])["total_results"]; present {
-		totalResults = batch7Lane5JSONNumber(value)
+	if value, present := asMap(data["search_information"])["total_results"]; present {
+		totalResults = jsonNumber(value)
 	}
 	return map[string]any{
 		"query":         query,
@@ -2226,14 +2061,14 @@ func batch7Lane5SerpapiPatentsDetails(ctx context.Context, rt *Runtime, input ma
 	if !ok {
 		return data, nil
 	}
-	results := batch7Lane5AsSlice(data["organic_results"])
+	results := asSlice(data["organic_results"])
 	if len(results) == 0 {
 		return map[string]any{"error": "No patent found for ID: " + patentID}, nil
 	}
-	patent := batch7Lane5SerpapiPatent(batch7Lane5AsMap(results[0]))
+	patent := batch7Lane5SerpapiPatent(asMap(results[0]))
 	patent["patent_id"] = patentID
 	classifications := any(map[string]any{})
-	if value, present := batch7Lane5AsMap(results[0])["classifications"]; present {
+	if value, present := asMap(results[0])["classifications"]; present {
 		classifications = value
 	}
 	patent["classifications"] = classifications
@@ -2248,7 +2083,7 @@ func batch7Lane5SerpapiScholarCitedBy(ctx context.Context, rt *Runtime, input ma
 	params := url.Values{
 		"engine": {"google_scholar"},
 		"cites":  {citesID},
-		"num":    {strconv.Itoa(batch7Lane5MinInt(intArg(input, "num_results", 10), 20))},
+		"num":    {strconv.Itoa(minInt(intArg(input, "num_results", 10), 20))},
 		"start":  {strconv.Itoa(intArg(input, "start", 0))},
 	}
 	data, ok := batch7Lane5SerpapiCall(ctx, rt, params, "Cited-by request timed out")
@@ -2256,15 +2091,15 @@ func batch7Lane5SerpapiScholarCitedBy(ctx context.Context, rt *Runtime, input ma
 		return data, nil
 	}
 	results := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(data["organic_results"]) {
-		item := batch7Lane5AsMap(raw)
+	for _, raw := range asSlice(data["organic_results"]) {
+		item := asMap(raw)
 		total, _ := batch7Lane5SerpapiCitedBy(item)
 		result := map[string]any{
-			"title":            batch7Lane5AsString(item["title"]),
-			"link":             batch7Lane5AsString(item["link"]),
-			"snippet":          batch7Lane5AsString(item["snippet"]),
-			"result_id":        batch7Lane5AsString(item["result_id"]),
-			"publication_info": batch7Lane5AsString(batch7Lane5AsMap(item["publication_info"])["summary"]),
+			"title":            asString(item["title"]),
+			"link":             asString(item["link"]),
+			"snippet":          asString(item["snippet"]),
+			"result_id":        asString(item["result_id"]),
+			"publication_info": asString(asMap(item["publication_info"])["summary"]),
 			"cited_by_count":   total,
 		}
 		if authors := batch7Lane5SerpapiAuthors(item); authors != nil {
@@ -2283,31 +2118,31 @@ func batch7Lane5SerpapiScholarProfiles(ctx context.Context, rt *Runtime, input m
 	params := url.Values{
 		"engine":   {"google_scholar_profiles"},
 		"mauthors": {query},
-		"num":      {strconv.Itoa(batch7Lane5MinInt(intArg(input, "num_results", 10), 20))},
+		"num":      {strconv.Itoa(minInt(intArg(input, "num_results", 10), 20))},
 	}
 	data, ok := batch7Lane5SerpapiCall(ctx, rt, params, "Profile search timed out")
 	if !ok {
 		return data, nil
 	}
 	profiles := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(data["profiles"]) {
-		profile := batch7Lane5AsMap(raw)
+	for _, raw := range asSlice(data["profiles"]) {
+		profile := asMap(raw)
 		interests := make([]string, 0)
-		for _, interest := range batch7Lane5AsSlice(profile["interests"]) {
-			interests = append(interests, batch7Lane5AsString(batch7Lane5AsMap(interest)["title"]))
+		for _, interest := range asSlice(profile["interests"]) {
+			interests = append(interests, asString(asMap(interest)["title"]))
 		}
 		citedBy := any(0)
 		if value, present := profile["cited_by"]; present {
-			citedBy = batch7Lane5JSONNumber(value)
+			citedBy = jsonNumber(value)
 		}
 		profiles = append(profiles, map[string]any{
-			"name":         batch7Lane5AsString(profile["name"]),
-			"author_id":    batch7Lane5AsString(profile["author_id"]),
-			"affiliations": batch7Lane5AsString(profile["affiliations"]),
-			"email":        batch7Lane5AsString(profile["email"]),
+			"name":         asString(profile["name"]),
+			"author_id":    asString(profile["author_id"]),
+			"affiliations": asString(profile["affiliations"]),
+			"email":        asString(profile["email"]),
 			"cited_by":     citedBy,
 			"interests":    interests,
-			"thumbnail":    batch7Lane5AsString(profile["thumbnail"]),
+			"thumbnail":    asString(profile["thumbnail"]),
 		})
 	}
 	return map[string]any{"query": query, "profiles": profiles, "count": len(profiles)}, nil
@@ -2321,7 +2156,7 @@ func batch7Lane5SerpapiGoogleSearch(ctx context.Context, rt *Runtime, input map[
 	params := url.Values{
 		"engine": {"google"},
 		"q":      {query},
-		"num":    {strconv.Itoa(batch7Lane5MinInt(intArg(input, "num_results", 10), 20))},
+		"num":    {strconv.Itoa(minInt(intArg(input, "num_results", 10), 20))},
 	}
 	if country := stringArg(input, "country"); country != "" {
 		params.Set("gl", country)
@@ -2331,33 +2166,33 @@ func batch7Lane5SerpapiGoogleSearch(ctx context.Context, rt *Runtime, input map[
 		return data, nil
 	}
 	results := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(data["organic_results"]) {
-		item := batch7Lane5AsMap(raw)
+	for _, raw := range asSlice(data["organic_results"]) {
+		item := asMap(raw)
 		results = append(results, map[string]any{
-			"title":          batch7Lane5AsString(item["title"]),
-			"link":           batch7Lane5AsString(item["link"]),
-			"snippet":        batch7Lane5AsString(item["snippet"]),
-			"displayed_link": batch7Lane5AsString(item["displayed_link"]),
+			"title":          asString(item["title"]),
+			"link":           asString(item["link"]),
+			"snippet":        asString(item["snippet"]),
+			"displayed_link": asString(item["displayed_link"]),
 			"position":       item["position"],
 		})
 	}
 	output := map[string]any{"query": query, "results": results, "count": len(results)}
-	if answerBox := batch7Lane5AsMap(data["answer_box"]); answerBox != nil {
+	if answerBox := asMap(data["answer_box"]); answerBox != nil {
 		answer := answerBox["answer"]
 		if answer == nil {
 			answer = answerBox["snippet"]
 		}
 		output["answer_box"] = map[string]any{
-			"type":   batch7Lane5AsString(answerBox["type"]),
-			"title":  batch7Lane5AsString(answerBox["title"]),
+			"type":   asString(answerBox["type"]),
+			"title":  asString(answerBox["title"]),
 			"answer": answer,
 		}
 	}
-	if graph := batch7Lane5AsMap(data["knowledge_graph"]); graph != nil {
+	if graph := asMap(data["knowledge_graph"]); graph != nil {
 		output["knowledge_graph"] = map[string]any{
-			"title":       batch7Lane5AsString(graph["title"]),
-			"type":        batch7Lane5AsString(graph["type"]),
-			"description": batch7Lane5AsString(graph["description"]),
+			"title":       asString(graph["title"]),
+			"type":        asString(graph["type"]),
+			"description": asString(graph["description"]),
 		}
 	}
 	return output, nil
@@ -2506,7 +2341,7 @@ func batch7Lane5ExaCall(
 	for attempt := 0; attempt <= 3; attempt++ {
 		reply, err := batch7Lane5Do(ctx, rt, http.MethodPost, target, headers, payload)
 		if err != nil {
-			if batch7Lane5IsTimeout(ctx, err) {
+			if isTimeout(ctx, err) {
 				return map[string]any{"error": timeoutLabel}, false
 			}
 			return map[string]any{"error": "Network error: " + err.Error()}, false
@@ -2526,7 +2361,7 @@ func batch7Lane5ExaCall(
 				"error": fmt.Sprintf("Exa API request failed: HTTP %d", reply.Status),
 			}, false
 		}
-		value, ok := batch7Lane5DecodeObject(reply.Body)
+		value, ok := decodeObject(reply.Body)
 		if !ok {
 			return map[string]any{"error": "Exa API request failed: invalid JSON response"}, false
 		}
@@ -2538,10 +2373,10 @@ func batch7Lane5ExaCall(
 // batch7Lane5ExaResult flattens one Exa result with optional text/highlights.
 func batch7Lane5ExaResult(item map[string]any, includeText, includeHighlights bool) map[string]any {
 	result := map[string]any{
-		"title":          batch7Lane5AsString(item["title"]),
-		"url":            batch7Lane5AsString(item["url"]),
-		"published_date": batch7Lane5AsString(item["publishedDate"]),
-		"author":         batch7Lane5AsString(item["author"]),
+		"title":          asString(item["title"]),
+		"url":            asString(item["url"]),
+		"published_date": asString(item["publishedDate"]),
+		"author":         asString(item["author"]),
 	}
 	if includeText {
 		if text, present := item["text"]; present {
@@ -2559,8 +2394,8 @@ func batch7Lane5ExaResult(item map[string]any, includeText, includeHighlights bo
 // batch7Lane5ExaResults flattens a result page with the standard envelope.
 func batch7Lane5ExaResults(data map[string]any, includeText, includeHighlights bool) ([]map[string]any, int) {
 	results := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(data["results"]) {
-		results = append(results, batch7Lane5ExaResult(batch7Lane5AsMap(raw), includeText, includeHighlights))
+	for _, raw := range asSlice(data["results"]) {
+		results = append(results, batch7Lane5ExaResult(asMap(raw), includeText, includeHighlights))
 	}
 	return results, len(results)
 }
@@ -2570,7 +2405,7 @@ func batch7Lane5ExaSearch(ctx context.Context, rt *Runtime, input map[string]any
 	if !batch7Lane5ValidQuery(query) {
 		return map[string]any{"error": "Query must be 1-500 characters"}, nil
 	}
-	numResults := batch7Lane5Clamp(intArg(input, "num_results", 10), 1, 20)
+	numResults := clampInt(intArg(input, "num_results", 10), 1, 20)
 	includeText := boolArg(input, "include_text", true)
 	includeHighlights := boolArg(input, "include_highlights", false)
 	payload := map[string]any{
@@ -2596,7 +2431,7 @@ func batch7Lane5ExaSearch(ctx context.Context, rt *Runtime, input map[string]any
 	if category := stringArg(input, "category"); category != "" {
 		payload["category"] = category
 	}
-	contents := batch7Lane5AsMap(payload["contents"])
+	contents := asMap(payload["contents"])
 	if includeText {
 		contents["text"] = true
 	}
@@ -2624,7 +2459,7 @@ func batch7Lane5ExaFindSimilar(ctx context.Context, rt *Runtime, input map[strin
 	includeText := boolArg(input, "include_text", true)
 	payload := map[string]any{
 		"url":        sourceURL,
-		"numResults": batch7Lane5Clamp(intArg(input, "num_results", 10), 1, 20),
+		"numResults": clampInt(intArg(input, "num_results", 10), 1, 20),
 		"contents":   map[string]any{},
 	}
 	if domains := stringSliceArg(input, "include_domains"); len(domains) > 0 {
@@ -2634,19 +2469,19 @@ func batch7Lane5ExaFindSimilar(ctx context.Context, rt *Runtime, input map[strin
 		payload["excludeDomains"] = batch7Lane5InterfaceSlice(domains)
 	}
 	if includeText {
-		batch7Lane5AsMap(payload["contents"])["text"] = true
+		asMap(payload["contents"])["text"] = true
 	}
 	data, ok := batch7Lane5ExaCall(ctx, rt, "/findSimilar", payload, "Exa find similar request timed out")
 	if !ok {
 		return data, nil
 	}
 	results := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(data["results"]) {
-		item := batch7Lane5AsMap(raw)
+	for _, raw := range asSlice(data["results"]) {
+		item := asMap(raw)
 		result := map[string]any{
-			"title":          batch7Lane5AsString(item["title"]),
-			"url":            batch7Lane5AsString(item["url"]),
-			"published_date": batch7Lane5AsString(item["publishedDate"]),
+			"title":          asString(item["title"]),
+			"url":            asString(item["url"]),
+			"published_date": asString(item["publishedDate"]),
 		}
 		if includeText {
 			if text, present := item["text"]; present {
@@ -2677,7 +2512,7 @@ func batch7Lane5ExaGetContents(ctx context.Context, rt *Runtime, input map[strin
 		"ids":      batch7Lane5InterfaceSlice(urls),
 		"contents": map[string]any{},
 	}
-	contents := batch7Lane5AsMap(payload["contents"])
+	contents := asMap(payload["contents"])
 	if includeText {
 		contents["text"] = true
 	}
@@ -2689,11 +2524,11 @@ func batch7Lane5ExaGetContents(ctx context.Context, rt *Runtime, input map[strin
 		return data, nil
 	}
 	results := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(data["results"]) {
-		item := batch7Lane5AsMap(raw)
+	for _, raw := range asSlice(data["results"]) {
+		item := asMap(raw)
 		result := map[string]any{
-			"url":   batch7Lane5AsString(item["url"]),
-			"title": batch7Lane5AsString(item["title"]),
+			"url":   asString(item["url"]),
+			"title": asString(item["title"]),
 		}
 		if includeText {
 			if text, present := item["text"]; present {
@@ -2721,17 +2556,17 @@ func batch7Lane5ExaAnswer(ctx context.Context, rt *Runtime, input map[string]any
 	}
 	result := map[string]any{
 		"query":    query,
-		"answer":   batch7Lane5AsString(data["answer"]),
+		"answer":   asString(data["answer"]),
 		"provider": "exa",
 	}
 	if boolArg(input, "include_citations", true) {
 		citations := make([]map[string]any, 0)
-		for _, raw := range batch7Lane5AsSlice(data["citations"]) {
-			source := batch7Lane5AsMap(raw)
+		for _, raw := range asSlice(data["citations"]) {
+			source := asMap(raw)
 			citations = append(citations, map[string]any{
-				"title":          batch7Lane5AsString(source["title"]),
-				"url":            batch7Lane5AsString(source["url"]),
-				"published_date": batch7Lane5AsString(source["publishedDate"]),
+				"title":          asString(source["title"]),
+				"url":            asString(source["url"]),
+				"published_date": asString(source["publishedDate"]),
 			})
 		}
 		result["citations"] = citations
@@ -2753,13 +2588,13 @@ func batch7Lane5ExaSearchNews(ctx context.Context, rt *Runtime, input map[string
 	includeText := boolArg(input, "include_text", true)
 	payload := map[string]any{
 		"query":              query,
-		"numResults":         batch7Lane5Clamp(intArg(input, "num_results", 10), 1, 20),
+		"numResults":         clampInt(intArg(input, "num_results", 10), 1, 20),
 		"category":           "news",
 		"startPublishedDate": startDate,
 		"contents":           map[string]any{"highlights": true},
 	}
 	if includeText {
-		batch7Lane5AsMap(payload["contents"])["text"] = true
+		asMap(payload["contents"])["text"] = true
 	}
 	data, ok := batch7Lane5ExaCall(ctx, rt, "/search", payload, "Exa news search timed out")
 	if !ok {
@@ -2783,14 +2618,14 @@ func batch7Lane5ExaSearchPapers(ctx context.Context, rt *Runtime, input map[stri
 	includeText := boolArg(input, "include_text", false)
 	payload := map[string]any{
 		"query":      query,
-		"numResults": batch7Lane5Clamp(intArg(input, "num_results", 10), 1, 20),
+		"numResults": clampInt(intArg(input, "num_results", 10), 1, 20),
 		"category":   "research paper",
 		"contents":   map[string]any{"highlights": true},
 	}
 	if includeText {
-		batch7Lane5AsMap(payload["contents"])["text"] = true
+		asMap(payload["contents"])["text"] = true
 	}
-	if year, present := batch7Lane5OptionalInt(input, "year_start"); present && year != 0 {
+	if year, present := optionalInt(input, "year_start"); present && year != 0 {
 		payload["startPublishedDate"] = fmt.Sprintf("%d-01-01T00:00:00.000Z", year)
 	}
 	data, ok := batch7Lane5ExaCall(ctx, rt, "/search", payload, "Exa paper search timed out")
@@ -2809,24 +2644,24 @@ func batch7Lane5ExaSearchCompanies(ctx context.Context, rt *Runtime, input map[s
 	includeText := boolArg(input, "include_text", true)
 	payload := map[string]any{
 		"query":      query,
-		"numResults": batch7Lane5Clamp(intArg(input, "num_results", 10), 1, 20),
+		"numResults": clampInt(intArg(input, "num_results", 10), 1, 20),
 		"category":   "company",
 		"contents":   map[string]any{"highlights": true},
 	}
 	if includeText {
-		batch7Lane5AsMap(payload["contents"])["text"] = true
+		asMap(payload["contents"])["text"] = true
 	}
 	data, ok := batch7Lane5ExaCall(ctx, rt, "/search", payload, "Exa company search timed out")
 	if !ok {
 		return data, nil
 	}
 	results := make([]map[string]any, 0)
-	for _, raw := range batch7Lane5AsSlice(data["results"]) {
-		item := batch7Lane5AsMap(raw)
+	for _, raw := range asSlice(data["results"]) {
+		item := asMap(raw)
 		result := map[string]any{
-			"title":          batch7Lane5AsString(item["title"]),
-			"url":            batch7Lane5AsString(item["url"]),
-			"published_date": batch7Lane5AsString(item["publishedDate"]),
+			"title":          asString(item["title"]),
+			"url":            asString(item["url"]),
+			"published_date": asString(item["publishedDate"]),
 		}
 		if highlights, present := item["highlights"]; present {
 			result["highlights"] = highlights

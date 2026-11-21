@@ -13,8 +13,8 @@ import (
 	"net/url"
 )
 
-// batch6ZohoCRMTool mirrors gen_catalog.py output for the module.
-var batch6ZohoCRMTool = &Tool{
+// zohoCRMTool mirrors gen_catalog.py output for the module.
+var zohoCRMTool = &Tool{
 	ID:          "zoho_crm_tool",
 	Name:        "zoho_crm",
 	DisplayName: "Zoho Crm",
@@ -90,8 +90,8 @@ var batch6ZohoCRMTool = &Tool{
 	},
 }
 
-// batch6ZohoCRMImpls binds every action name to its implementation.
-func batch6ZohoCRMImpls() map[string]ActionFunc {
+// zohoCRMImpls binds every action name to its implementation.
+func zohoCRMImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
 		"zoho_crm_add_note":       batch6ZohoCRMAddNote,
 		"zoho_crm_create_record":  batch6ZohoCRMCreateRecord,
@@ -103,18 +103,18 @@ func batch6ZohoCRMImpls() map[string]ActionFunc {
 }
 
 // batch6ZohoCall executes a request and returns the decoded envelope.
-func batch6ZohoCall(ctx context.Context, rt *Runtime, spec batch6Request, read bool) (map[string]any, map[string]any) {
-	res, fail := batch6Send(ctx, rt, "zoho_crm_tool", spec)
+func batch6ZohoCall(ctx context.Context, rt *Runtime, spec crmRequest, read bool) (map[string]any, map[string]any) {
+	res, fail := crmSend(ctx, rt, "zoho_crm_tool", spec)
 	if fail != nil {
 		return nil, fail
 	}
-	if errDict := batch6ZohoCheck(res, read); errDict != nil {
+	if errDict := zohoCheck(res, read); errDict != nil {
 		return nil, errDict
 	}
 	if res.Status == http.StatusNoContent {
 		return map[string]any{"data": []any{}}, nil
 	}
-	data := batch6AsMap(res.Parsed)
+	data := asMap(res.Parsed)
 	if data == nil {
 		data = map[string]any{}
 	}
@@ -130,7 +130,7 @@ func batch6ZohoCRMListRecords(ctx context.Context, rt *Runtime, input map[string
 	page := intArg(input, "page", 1)
 	filters := map[string]any{
 		"page":     page,
-		"per_page": batch6Clamp(intArg(input, "per_page", 50), 1, 200),
+		"per_page": clampInt(intArg(input, "per_page", 50), 1, 200),
 	}
 	if fields := stringArg(input, "fields"); fields != "" {
 		filters["fields"] = fields
@@ -139,29 +139,29 @@ func batch6ZohoCRMListRecords(ctx context.Context, rt *Runtime, input map[string
 		filters["sort_by"] = sortBy
 		filters["sort_order"] = stringArg(input, "sort_order")
 	}
-	data, errDict := batch6ZohoCall(ctx, rt, batch6Request{
+	data, errDict := batch6ZohoCall(ctx, rt, crmRequest{
 		Method: http.MethodGet,
 		Path:   "/" + url.PathEscape(module),
-		Query:  batch6QueryValues(filters),
+		Query:  crmQueryValues(filters),
 	}, true)
 	if errDict != nil {
 		return errDict, nil
 	}
-	records := batch6SliceOrEmpty(data["data"])
-	info := batch6AsMap(data["info"])
+	records := sliceOrEmpty(data["data"])
+	info := asMap(data["info"])
 	count := len(records)
 	if _, present := info["count"]; present {
-		count = int(batch6AsNumber(info["count"]))
+		count = int(crmAsNumber(info["count"]))
 	}
 	pageValue := page
 	if _, present := info["page"]; present {
-		pageValue = int(batch6AsNumber(info["page"]))
+		pageValue = int(crmAsNumber(info["page"]))
 	}
 	return map[string]any{
 		"module":       module,
 		"records":      records,
 		"count":        count,
-		"more_records": batch6AsBool(info["more_records"]),
+		"more_records": asBool(info["more_records"]),
 		"page":         pageValue,
 	}, nil
 }
@@ -173,14 +173,14 @@ func batch6ZohoCRMGetRecord(ctx context.Context, rt *Runtime, input map[string]a
 	if module == "" || recordID == "" {
 		return map[string]any{"error": "module and record_id are required"}, nil
 	}
-	data, errDict := batch6ZohoCall(ctx, rt, batch6Request{
+	data, errDict := batch6ZohoCall(ctx, rt, crmRequest{
 		Method: http.MethodGet,
 		Path:   "/" + url.PathEscape(module) + "/" + url.PathEscape(recordID),
 	}, true)
 	if errDict != nil {
 		return errDict, nil
 	}
-	records := batch6SliceOrEmpty(data["data"])
+	records := sliceOrEmpty(data["data"])
 	if len(records) == 0 {
 		return map[string]any{"error": "Record not found"}, nil
 	}
@@ -193,11 +193,11 @@ func batch6ZohoCRMCreateRecord(ctx context.Context, rt *Runtime, input map[strin
 	if module == "" {
 		return map[string]any{"error": "module is required"}, nil
 	}
-	record, present, err := batch6OptionalMap(input, "record_data")
+	record, present, err := crmOptionalMap(input, "record_data")
 	if err != nil || !present || len(record) == 0 {
 		return map[string]any{"error": "record_data dict is required"}, nil
 	}
-	data, errDict := batch6ZohoCall(ctx, rt, batch6Request{
+	data, errDict := batch6ZohoCall(ctx, rt, crmRequest{
 		Method: http.MethodPost,
 		Path:   "/" + url.PathEscape(module),
 		Body:   map[string]any{"data": []any{record}},
@@ -205,15 +205,15 @@ func batch6ZohoCRMCreateRecord(ctx context.Context, rt *Runtime, input map[strin
 	if errDict != nil {
 		return errDict, nil
 	}
-	results := batch6SliceOrEmpty(data["data"])
+	results := sliceOrEmpty(data["data"])
 	if len(results) == 0 {
 		return map[string]any{"error": "Failed to create record"}, nil
 	}
-	first := batch6AsMap(results[0])
+	first := asMap(results[0])
 	return map[string]any{
-		"id":      batch6AsString(batch6AsMap(first["details"])["id"]),
-		"status":  batch6AsString(first["status"]),
-		"message": batch6AsString(first["message"]),
+		"id":      asString(asMap(first["details"])["id"]),
+		"status":  asString(first["status"]),
+		"message": asString(first["message"]),
 	}, nil
 }
 
@@ -225,7 +225,7 @@ func batch6ZohoCRMSearchRecords(ctx context.Context, rt *Runtime, input map[stri
 	}
 	filters := map[string]any{
 		"page":     intArg(input, "page", 1),
-		"per_page": batch6Clamp(intArg(input, "per_page", 50), 1, 200),
+		"per_page": clampInt(intArg(input, "per_page", 50), 1, 200),
 	}
 	searched := false
 	for _, name := range []string{"criteria", "email", "phone", "word"} {
@@ -239,34 +239,34 @@ func batch6ZohoCRMSearchRecords(ctx context.Context, rt *Runtime, input map[stri
 			"error": "At least one search parameter is required (criteria, email, phone, or word)",
 		}, nil
 	}
-	data, errDict := batch6ZohoCall(ctx, rt, batch6Request{
+	data, errDict := batch6ZohoCall(ctx, rt, crmRequest{
 		Method: http.MethodGet,
 		Path:   "/" + url.PathEscape(module) + "/search",
-		Query:  batch6QueryValues(filters),
+		Query:  crmQueryValues(filters),
 	}, true)
 	if errDict != nil {
 		return errDict, nil
 	}
-	records := batch6SliceOrEmpty(data["data"])
+	records := sliceOrEmpty(data["data"])
 	return map[string]any{"module": module, "results": records, "count": len(records)}, nil
 }
 
 // batch6ZohoCRMListModules lists the account's modules.
 func batch6ZohoCRMListModules(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	data, errDict := batch6ZohoCall(ctx, rt, batch6Request{
+	data, errDict := batch6ZohoCall(ctx, rt, crmRequest{
 		Method: http.MethodGet, Path: "/settings/modules",
 	}, true)
 	if errDict != nil {
 		return errDict, nil
 	}
 	modules := make([]any, 0)
-	for _, raw := range batch6SliceOrEmpty(data["modules"]) {
-		module := batch6AsMap(raw)
+	for _, raw := range sliceOrEmpty(data["modules"]) {
+		module := asMap(raw)
 		modules = append(modules, map[string]any{
-			"api_name":     batch6AsString(module["api_name"]),
-			"module_name":  batch6AsString(module["module_name"]),
-			"plural_label": batch6AsString(module["plural_label"]),
-			"editable":     batch6AsBool(module["editable"]),
+			"api_name":     asString(module["api_name"]),
+			"module_name":  asString(module["module_name"]),
+			"plural_label": asString(module["plural_label"]),
+			"editable":     asBool(module["editable"]),
 		})
 	}
 	return map[string]any{"modules": modules}, nil
@@ -283,7 +283,7 @@ func batch6ZohoCRMAddNote(ctx context.Context, rt *Runtime, input map[string]any
 	if content == "" {
 		return map[string]any{"error": "content is required"}, nil
 	}
-	data, errDict := batch6ZohoCall(ctx, rt, batch6Request{
+	data, errDict := batch6ZohoCall(ctx, rt, crmRequest{
 		Method: http.MethodPost,
 		Path:   fmt.Sprintf("/%s/%s/Notes", url.PathEscape(module), url.PathEscape(recordID)),
 		Body: map[string]any{"data": []any{map[string]any{
@@ -294,13 +294,13 @@ func batch6ZohoCRMAddNote(ctx context.Context, rt *Runtime, input map[string]any
 	if errDict != nil {
 		return errDict, nil
 	}
-	results := batch6SliceOrEmpty(data["data"])
+	results := sliceOrEmpty(data["data"])
 	if len(results) == 0 {
 		return map[string]any{"error": "Failed to create note"}, nil
 	}
-	first := batch6AsMap(results[0])
+	first := asMap(results[0])
 	return map[string]any{
-		"id":     batch6AsString(batch6AsMap(first["details"])["id"]),
-		"status": batch6AsString(first["status"]),
+		"id":     asString(asMap(first["details"])["id"]),
+		"status": asString(first["status"]),
 	}, nil
 }

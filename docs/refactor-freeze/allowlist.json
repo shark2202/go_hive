@@ -24,6 +24,9 @@
     {
       "path": "go_hive/docs/appearance-master-matrix.html",
       "reason": "同上：由 gen_appearance_master_matrix.py 从 registry 重生成。"
-    }
+    },
+    {
+      "path": "go_hive/contracts/api-routes.json",
+"reason": "api-routes 既有导出刷新（fcfadc90，inventory-triage 注解插入致 routes_colony_tools / routes_events 行号刷新，reference/target pin 059f4afe→e702559a 与 generated_at 随之刷新）；217/220 路由集合不变，无路由或响应语义变化。两 lane（int-p2-devops / int-p2-helpers）基线均已含该漂移，合并后单条登记，供 wave15-base 基线复现比较。"    }
   ]
 }

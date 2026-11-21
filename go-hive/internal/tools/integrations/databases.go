@@ -39,7 +39,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -148,15 +147,6 @@ func batch5Lane2ModuleBaseURL(rt *Runtime, moduleID, envName string) string {
 	return strings.TrimRight(batch5Lane2Getenv(rt, envName), "/")
 }
 
-// batch5Lane2HTTP returns the runtime transport, falling back to a client with
-// the standard timeout for hand-built runtimes.
-func batch5Lane2HTTP(rt *Runtime) *httpClient {
-	if rt != nil && rt.HTTP != nil {
-		return rt.HTTP
-	}
-	return newHTTPClient(nil)
-}
-
 // batch5Lane2Err builds the upstream-style error map.
 func batch5Lane2Err(message string) map[string]any {
 	return map[string]any{"error": message}
@@ -169,18 +159,6 @@ func batch5Lane2Truncate(text string, limit int) string {
 	}
 	runes := []rune(text)
 	return string(runes[:limit])
-}
-
-// batch5Lane2IsTimeout reports whether err is a deadline or net timeout.
-func batch5Lane2IsTimeout(err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	var netErr net.Error
-	return errors.As(err, &netErr) && netErr.Timeout()
 }
 
 // batch5Lane2ObjectArg normalizes a JSON object parameter. The agent runtime
@@ -256,7 +234,7 @@ func batch5Lane2Do(
 	for name, value := range headers {
 		req.Header.Set(name, value)
 	}
-	resp, err := batch5Lane2HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
 		return nil, err
 	}

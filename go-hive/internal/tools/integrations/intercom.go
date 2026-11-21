@@ -13,7 +13,7 @@ import (
 	"net/url"
 )
 
-var batch6Lane2IntercomTool = &Tool{
+var intercomTool = &Tool{
 	ID:          "intercom_tool",
 	Name:        "intercom",
 	DisplayName: "Intercom",
@@ -132,7 +132,7 @@ var batch6Lane2IntercomTool = &Tool{
 	},
 }
 
-func batch6Lane2IntercomImpls() map[string]ActionFunc {
+func intercomImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
 		"intercom_search_conversations": batch6Lane2IntercomSearchConversations,
 		"intercom_get_conversation":     batch6Lane2IntercomGetConversation,
@@ -165,11 +165,11 @@ func batch6Lane2IntercomCall(
 	query url.Values,
 	payload any,
 ) (any, bool) {
-	token := batch6Lane2ModuleToken(rt, "intercom_tool")
+	token := supportModuleToken(rt, "intercom_tool")
 	if token == "" {
 		return batch6Lane2IntercomAuthError(), false
 	}
-	base := batch6Lane2ModuleURL(rt, "intercom_tool")
+	base := moduleBaseURL(rt, "intercom_tool")
 	if base == "" {
 		base = "https://api.intercom.io"
 	}
@@ -183,9 +183,9 @@ func batch6Lane2IntercomCall(
 		"Accept":           "application/json",
 		"Intercom-Version": "2.11",
 	}
-	reply, err := batch6Lane2Do(ctx, rt, method, target, headers, payload)
+	reply, err := supportDo(ctx, rt, method, target, headers, payload)
 	if err != nil {
-		if batch6Lane2IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request timed out"}, false
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}, false
@@ -202,9 +202,9 @@ func batch6Lane2IntercomCall(
 	}
 	if reply.Status >= 400 {
 		detail := string(reply.Body)
-		if object, ok := batch6Lane2DecodeObject(reply.Body); ok {
-			if entries := batch6Lane2AsSlice(object["errors"]); len(entries) > 0 {
-				if message := batch6Lane2AsString(batch6Lane2AsMap(entries[0])["message"]); message != "" {
+		if object, ok := decodeObject(reply.Body); ok {
+			if entries := asSlice(object["errors"]); len(entries) > 0 {
+				if message := asString(asMap(entries[0])["message"]); message != "" {
 					detail = message
 				}
 			}
@@ -213,7 +213,7 @@ func batch6Lane2IntercomCall(
 			"error": fmt.Sprintf("Intercom API error (HTTP %d): %s", reply.Status, detail),
 		}, false
 	}
-	value, ok := batch6Lane2DecodeAny(reply.Body)
+	value, ok := decodeAny(reply.Body)
 	if !ok {
 		return map[string]any{}, true
 	}
@@ -227,7 +227,7 @@ func batch6Lane2IntercomAdminID(ctx context.Context, rt *Runtime) (string, map[s
 		failure, _ := value.(map[string]any)
 		return "", failure
 	}
-	adminID := batch6Lane2StringID(batch6Lane2AsMap(value)["id"])
+	adminID := stringID(asMap(value)["id"])
 	if adminID == "" {
 		return "", map[string]any{"error": "Resource not found"}
 	}
@@ -241,7 +241,7 @@ func batch6Lane2IntercomListTags(ctx context.Context, rt *Runtime) (any, bool) {
 
 func batch6Lane2IntercomSearchConversations(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	limit := intArg(input, "limit", 20)
-	if limit < 1 || limit > batch6Lane2MaxItems {
+	if limit < 1 || limit > supportMaxItems {
 		return map[string]any{"error": "limit must be between 1 and 150"}, nil
 	}
 	status := stringArg(input, "status")
@@ -266,9 +266,9 @@ func batch6Lane2IntercomSearchConversations(ctx context.Context, rt *Runtime, in
 			return tagsResult, nil
 		}
 		var tagID any
-		for _, entry := range batch6Lane2AsSlice(batch6Lane2AsMap(tagsResult)["data"]) {
-			tagObject := batch6Lane2AsMap(entry)
-			if batch6Lane2AsString(tagObject["name"]) == tag {
+		for _, entry := range asSlice(asMap(tagsResult)["data"]) {
+			tagObject := asMap(entry)
+			if asString(tagObject["name"]) == tag {
 				tagID = tagObject["id"]
 				break
 			}
@@ -281,7 +281,7 @@ func batch6Lane2IntercomSearchConversations(ctx context.Context, rt *Runtime, in
 		})
 	}
 	if createdAfter := stringArg(input, "created_after"); createdAfter != "" {
-		parsed, ok := batch6Lane2ParseISO(createdAfter)
+		parsed, ok := supportParseISO(createdAfter)
 		if !ok {
 			return map[string]any{
 				"error": "created_after must be a valid ISO date string (e.g., '2026-01-15')",
@@ -297,14 +297,14 @@ func batch6Lane2IntercomSearchConversations(ctx context.Context, rt *Runtime, in
 	case 0:
 		query = map[string]any{"field": "created_at", "operator": ">", "value": 0}
 	case 1:
-		query = batch6Lane2AsMap(filters[0])
+		query = asMap(filters[0])
 	default:
 		query = map[string]any{"operator": "AND", "value": filters}
 	}
 
 	payload := map[string]any{
 		"query":      query,
-		"pagination": map[string]any{"per_page": batch6Lane2Clamp(limit, 1, batch6Lane2MaxItems)},
+		"pagination": map[string]any{"per_page": clampInt(limit, 1, supportMaxItems)},
 	}
 	value, _ := batch6Lane2IntercomCall(ctx, rt, http.MethodPost, "/conversations/search", nil, payload)
 	return value, nil
@@ -341,7 +341,7 @@ func batch6Lane2IntercomGetContact(ctx context.Context, rt *Runtime, input map[s
 	if !ok {
 		return value, nil
 	}
-	contacts := batch6Lane2AsSlice(batch6Lane2AsMap(value)["data"])
+	contacts := asSlice(asMap(value)["data"])
 	if len(contacts) == 0 {
 		return map[string]any{"error": "No contact found with email: " + email}, nil
 	}
@@ -354,7 +354,7 @@ func batch6Lane2IntercomSearchContacts(ctx context.Context, rt *Runtime, input m
 		return map[string]any{"error": "query is required"}, nil
 	}
 	limit := intArg(input, "limit", 20)
-	if limit < 1 || limit > batch6Lane2MaxItems {
+	if limit < 1 || limit > supportMaxItems {
 		return map[string]any{"error": "limit must be between 1 and 150"}, nil
 	}
 	payload := map[string]any{
@@ -365,7 +365,7 @@ func batch6Lane2IntercomSearchContacts(ctx context.Context, rt *Runtime, input m
 				map[string]any{"field": "name", "operator": "~", "value": search},
 			},
 		},
-		"pagination": map[string]any{"per_page": batch6Lane2Clamp(limit, 1, batch6Lane2MaxItems)},
+		"pagination": map[string]any{"per_page": clampInt(limit, 1, supportMaxItems)},
 	}
 	value, _ := batch6Lane2IntercomCall(ctx, rt, http.MethodPost, "/contacts/search", nil, payload)
 	return value, nil
@@ -426,7 +426,7 @@ func batch6Lane2IntercomAddTag(ctx context.Context, rt *Runtime, input map[strin
 	if !ok {
 		return tagValue, nil
 	}
-	tagID := batch6Lane2StringID(batch6Lane2AsMap(tagValue)["id"])
+	tagID := stringID(asMap(tagValue)["id"])
 	if tagID == "" {
 		return map[string]any{"error": "Resource not found"}, nil
 	}
@@ -537,7 +537,7 @@ func batch6Lane2IntercomCreateContact(ctx context.Context, rt *Runtime, input ma
 func batch6Lane2IntercomListConversations(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	limit := intArg(input, "limit", 20)
 	query := url.Values{
-		"per_page":   {fmt.Sprint(batch6Lane2Clamp(limit, 1, batch6Lane2MaxItems))},
+		"per_page":   {fmt.Sprint(clampInt(limit, 1, supportMaxItems))},
 		"display_as": {"plaintext"},
 	}
 	if cursor := stringArg(input, "starting_after"); cursor != "" {

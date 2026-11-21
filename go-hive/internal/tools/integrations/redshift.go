@@ -119,16 +119,16 @@ func batch6Lane4RedshiftSigningKey(secret, datestamp, region string) []byte {
 
 // batch6Lane4RedshiftCall signs and posts one Redshift Data API action.
 func batch6Lane4RedshiftCall(ctx context.Context, rt *Runtime, action string, payload map[string]any) map[string]any {
-	accessKey := strings.TrimSpace(batch6Lane4Getenv(rt, "AWS_ACCESS_KEY_ID"))
-	secretKey := strings.TrimSpace(batch6Lane4Getenv(rt, "AWS_SECRET_ACCESS_KEY"))
-	region := strings.TrimSpace(batch6Lane4Getenv(rt, "AWS_REGION"))
+	accessKey := strings.TrimSpace(runtimeEnv(rt, "AWS_ACCESS_KEY_ID"))
+	secretKey := strings.TrimSpace(runtimeEnv(rt, "AWS_SECRET_ACCESS_KEY"))
+	region := strings.TrimSpace(runtimeEnv(rt, "AWS_REGION"))
 	if region == "" {
 		region = "us-east-1"
 	}
 	if accessKey == "" || secretKey == "" {
 		return batch6Lane4RedshiftAuthError()
 	}
-	base := batch6Lane4ModuleURL(rt, "redshift_tool")
+	base := moduleBaseURL(rt, "redshift_tool")
 	if base == "" {
 		base = "https://" + batch6Lane4RedshiftService + "." + region + ".amazonaws.com"
 	}
@@ -179,12 +179,12 @@ func batch6Lane4RedshiftCall(ctx context.Context, rt *Runtime, action string, pa
 		"Authorization": authorization,
 	}, body, 30*time.Second)
 	if err != nil {
-		return batch6Lane4TransportError(ctx, "Redshift", err)
+		return transportError(ctx, "Redshift", err)
 	}
 	if resp.Status >= 400 {
 		return batch6Lane4HTTPError(resp)
 	}
-	data, ok := batch6Lane4JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Redshift API error: invalid JSON response"}
 	}
@@ -193,7 +193,7 @@ func batch6Lane4RedshiftCall(ctx context.Context, rt *Runtime, action string, pa
 
 // batch6Lane4RedshiftField extracts a Redshift Data API field union value.
 func batch6Lane4RedshiftField(field map[string]any) any {
-	if batch6Lane4Bool(field["isNull"]) {
+	if asBool(field["isNull"]) {
 		return nil
 	}
 	for _, key := range []string{"stringValue", "longValue", "doubleValue", "booleanValue", "blobValue"} {
@@ -249,7 +249,7 @@ func batch6Lane4RedshiftDescribeStatement(ctx context.Context, rt *Runtime, inpu
 		return data, nil
 	}
 	var statementError any
-	if text := batch6Lane4StringOr(data, "Error", ""); text != "" {
+	if text := stringOr(data, "Error", ""); text != "" {
 		statementError = text
 	}
 	return map[string]any{
@@ -273,10 +273,10 @@ func batch6Lane4RedshiftGetResults(ctx context.Context, rt *Runtime, input map[s
 		return data, nil
 	}
 	columns := make([]any, 0)
-	for _, rawColumn := range batch4AsSlice(data["ColumnMetadata"]) {
-		columns = append(columns, batch4AsMap(rawColumn)["name"])
+	for _, rawColumn := range asSlice(data["ColumnMetadata"]) {
+		columns = append(columns, asMap(rawColumn)["name"])
 	}
-	records := batch4AsSlice(data["Records"])
+	records := asSlice(data["Records"])
 	if records == nil {
 		records = []any{}
 	}
@@ -286,10 +286,10 @@ func batch6Lane4RedshiftGetResults(ctx context.Context, rt *Runtime, input map[s
 	}
 	rows := make([]any, 0, limit)
 	for _, rawRecord := range records[:limit] {
-		fields := batch4AsSlice(rawRecord)
+		fields := asSlice(rawRecord)
 		row := make([]any, 0, len(fields))
 		for _, rawField := range fields {
-			row = append(row, batch6Lane4RedshiftField(batch4AsMap(rawField)))
+			row = append(row, batch6Lane4RedshiftField(asMap(rawField)))
 		}
 		rows = append(rows, row)
 	}
@@ -308,7 +308,7 @@ func batch6Lane4RedshiftListDatabases(ctx context.Context, rt *Runtime, input ma
 		return map[string]any{"error": "cluster_identifier or workgroup_name is required"}, nil
 	}
 	payload := map[string]any{
-		"Database":   batch6Lane4StringOr(input, "database", "dev"),
+		"Database":   stringOr(input, "database", "dev"),
 		"MaxResults": 100,
 	}
 	if cluster != "" {
@@ -324,7 +324,7 @@ func batch6Lane4RedshiftListDatabases(ctx context.Context, rt *Runtime, input ma
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	databases := batch4AsSlice(data["Databases"])
+	databases := asSlice(data["Databases"])
 	if databases == nil {
 		databases = []any{}
 	}
@@ -360,8 +360,8 @@ func batch6Lane4RedshiftListTables(ctx context.Context, rt *Runtime, input map[s
 		return data, nil
 	}
 	tables := make([]any, 0)
-	for _, rawTable := range batch4AsSlice(data["Tables"]) {
-		table := batch4AsMap(rawTable)
+	for _, rawTable := range asSlice(data["Tables"]) {
+		table := asMap(rawTable)
 		tables = append(tables, map[string]any{
 			"name":   table["name"],
 			"schema": table["schema"],

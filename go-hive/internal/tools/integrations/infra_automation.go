@@ -129,32 +129,13 @@ func batch7Lane3Modules() map[string]*ModuleConfig {
 
 // ------------------------------------------------------------ shared bits ---
 
-// batch7Lane3Getenv resolves an environment variable through the runtime.
-func batch7Lane3Getenv(rt *Runtime, name string) string {
-	if rt != nil && rt.Getenv != nil {
-		return rt.Getenv(name)
-	}
-	return os.Getenv(name)
-}
-
-// batch7Lane3ModuleToken resolves the module credential from WithCredential or
-// the configured environment lookup.
-func batch7Lane3ModuleToken(rt *Runtime, moduleID string) string {
-	return batch4ModuleToken(rt, moduleID)
-}
-
-// batch7Lane3ModuleURL resolves a module base URL, honouring WithBaseURL.
-func batch7Lane3ModuleURL(rt *Runtime, moduleID string) string {
-	return batch4ModuleURL(rt, moduleID)
-}
-
 // batch7Lane3Endpoint resolves a module endpoint: WithBaseURL first, then the
 // module's environment variable, then the given default.
 func batch7Lane3Endpoint(rt *Runtime, moduleID, envName, fallback string) string {
-	if base := batch7Lane3ModuleURL(rt, moduleID); base != "" {
+	if base := moduleBaseURL(rt, moduleID); base != "" {
 		return base
 	}
-	if value := strings.TrimRight(strings.TrimSpace(batch7Lane3Getenv(rt, envName)), "/"); value != "" {
+	if value := strings.TrimRight(strings.TrimSpace(runtimeEnv(rt, envName)), "/"); value != "" {
 		return value
 	}
 	return fallback
@@ -188,7 +169,7 @@ func batch7Lane3Send(ctx context.Context, rt *Runtime, method, endpoint string, 
 	for name, value := range headers {
 		req.Header.Set(name, value)
 	}
-	resp, err := batch4HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -213,28 +194,11 @@ func batch7Lane3DoJSON(ctx context.Context, rt *Runtime, method, endpoint string
 	return batch7Lane3Send(ctx, rt, method, endpoint, headers, body, timeout)
 }
 
-// batch7Lane3JSONObject decodes a JSON object body.
-func batch7Lane3JSONObject(raw []byte) (map[string]any, bool) {
-	var payload map[string]any
-	if err := json.Unmarshal(raw, &payload); err != nil || payload == nil {
-		return nil, false
-	}
-	return payload, true
-}
-
 // batch7Lane3HTTPError renders the upstream "HTTP <code>: <body[:500]>" error.
 func batch7Lane3HTTPError(resp *batch7Lane3Response) map[string]any {
 	return map[string]any{
-		"error": fmt.Sprintf("HTTP %d: %s", resp.Status, batch4TruncateText(string(resp.Body), 500)),
+		"error": fmt.Sprintf("HTTP %d: %s", resp.Status, truncateText(string(resp.Body), 500)),
 	}
-}
-
-// batch7Lane3TransportError renders a labelled transport failure.
-func batch7Lane3TransportError(ctx context.Context, label string, err error) map[string]any {
-	if batch4IsTimeout(ctx, err) {
-		return map[string]any{"error": "Request to " + label + " timed out"}
-	}
-	return map[string]any{"error": label + " request failed: " + err.Error()}
 }
 
 // batch7Lane3Get performs a GET and decodes the JSON object, or returns the
@@ -245,12 +209,12 @@ func batch7Lane3Get(ctx context.Context, rt *Runtime, label, endpoint string, he
 	}
 	resp, err := batch7Lane3DoJSON(ctx, rt, http.MethodGet, endpoint, headers, nil, timeout)
 	if err != nil {
-		return batch7Lane3TransportError(ctx, label, err), false
+		return transportError(ctx, label, err), false
 	}
 	if resp.Status >= 400 {
 		return batch7Lane3HTTPError(resp), false
 	}
-	data, ok := batch7Lane3JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": label + " API error: invalid JSON response"}, false
 	}
@@ -270,17 +234,6 @@ func batch7Lane3MinInt(value, limit int) int {
 		return value
 	}
 	return limit
-}
-
-// batch7Lane3Text reads a string field with a fallback.
-func batch7Lane3Text(object map[string]any, name, fallback string) string {
-	if object == nil {
-		return fallback
-	}
-	if text, ok := object[name].(string); ok {
-		return text
-	}
-	return fallback
 }
 
 // batch7Lane3Int reads a numeric JSON field with a fallback.
@@ -305,15 +258,10 @@ func batch7Lane3Int(object map[string]any, name string, fallback int) int {
 
 // batch7Lane3ListOrEmpty views a decoded JSON array, defaulting to empty.
 func batch7Lane3ListOrEmpty(value any) []any {
-	if items := batch4AsSlice(value); items != nil {
+	if items := asSlice(value); items != nil {
 		return items
 	}
 	return []any{}
-}
-
-// batch7Lane3PathEscape escapes one URL path segment.
-func batch7Lane3PathEscape(value string) string {
-	return url.PathEscape(value)
 }
 
 // batch7Lane3AddPrefix joins a base URL and an absolute path.
@@ -400,7 +348,7 @@ func batch7Lane3TerraformImpls() map[string]ActionFunc {
 // batch7Lane3TerraformConfig mirrors upstream _get_config: Bearer token plus
 // the JSON:API content type, with the base URL defaulting to Terraform Cloud.
 func batch7Lane3TerraformConfig(rt *Runtime) (string, map[string]string, map[string]any) {
-	token := batch7Lane3ModuleToken(rt, "terraform_tool")
+	token := moduleToken(rt, "terraform_tool")
 	if token == "" {
 		return "", nil, map[string]any{
 			"error": "TFC_TOKEN is required",
@@ -420,8 +368,8 @@ func batch7Lane3TerraformConfig(rt *Runtime) (string, map[string]string, map[str
 
 // batch7Lane3TerraformWorkspace mirrors upstream _extract_workspace.
 func batch7Lane3TerraformWorkspace(raw any) map[string]any {
-	workspace := batch4AsMap(raw)
-	attrs := batch4AsMap(workspace["attributes"])
+	workspace := asMap(raw)
+	attrs := asMap(workspace["attributes"])
 	return map[string]any{
 		"id":                workspace["id"],
 		"name":              attrs["name"],
@@ -437,8 +385,8 @@ func batch7Lane3TerraformWorkspace(raw any) map[string]any {
 
 // batch7Lane3TerraformRun mirrors upstream _extract_run.
 func batch7Lane3TerraformRun(raw any) map[string]any {
-	run := batch4AsMap(raw)
-	attrs := batch4AsMap(run["attributes"])
+	run := asMap(raw)
+	attrs := asMap(run["attributes"])
 	return map[string]any{
 		"id":             run["id"],
 		"status":         attrs["status"],
@@ -455,7 +403,7 @@ func batch7Lane3TerraformRun(raw any) map[string]any {
 
 // batch7Lane3TerraformPagination mirrors upstream meta.pagination reads.
 func batch7Lane3TerraformPagination(data map[string]any) (any, any) {
-	pagination := batch4AsMap(batch4AsMap(data["meta"])["pagination"])
+	pagination := asMap(asMap(data["meta"])["pagination"])
 	return pagination["total-count"], pagination["total-pages"]
 }
 
@@ -475,7 +423,7 @@ func batch7Lane3TerraformListWorkspaces(ctx context.Context, rt *Runtime, input 
 	if search := stringArg(input, "search"); search != "" {
 		params.Set("search[name]", search)
 	}
-	path := "/organizations/" + batch7Lane3PathEscape(organization) + "/workspaces"
+	path := "/organizations/" + pathEscape(organization) + "/workspaces"
 	data, ok := batch7Lane3Get(ctx, rt, "Terraform", batch7Lane3AddPrefix(base, path), headers, params, batch7Lane3DefaultTimeout)
 	if !ok {
 		return data, nil
@@ -503,14 +451,14 @@ func batch7Lane3TerraformGetWorkspace(ctx context.Context, rt *Runtime, input ma
 	if workspaceID == "" {
 		return map[string]any{"error": "workspace_id is required"}, nil
 	}
-	path := "/workspaces/" + batch7Lane3PathEscape(workspaceID)
+	path := "/workspaces/" + pathEscape(workspaceID)
 	data, ok := batch7Lane3Get(ctx, rt, "Terraform", batch7Lane3AddPrefix(base, path), headers, nil, batch7Lane3DefaultTimeout)
 	if !ok {
 		return data, nil
 	}
-	workspace := batch4AsMap(data["data"])
+	workspace := asMap(data["data"])
 	result := batch7Lane3TerraformWorkspace(workspace)
-	attrs := batch4AsMap(workspace["attributes"])
+	attrs := asMap(workspace["attributes"])
 	result["description"] = attrs["description"]
 	result["vcs_repo"] = attrs["vcs-repo"]
 	result["working_directory"] = attrs["working-directory"]
@@ -533,7 +481,7 @@ func batch7Lane3TerraformListRuns(ctx context.Context, rt *Runtime, input map[st
 	if status := stringArg(input, "status"); status != "" {
 		params.Set("filter[status]", status)
 	}
-	path := "/workspaces/" + batch7Lane3PathEscape(workspaceID) + "/runs"
+	path := "/workspaces/" + pathEscape(workspaceID) + "/runs"
 	data, ok := batch7Lane3Get(ctx, rt, "Terraform", batch7Lane3AddPrefix(base, path), headers, params, batch7Lane3DefaultTimeout)
 	if !ok {
 		return data, nil
@@ -561,17 +509,17 @@ func batch7Lane3TerraformGetRun(ctx context.Context, rt *Runtime, input map[stri
 	if runID == "" {
 		return map[string]any{"error": "run_id is required"}, nil
 	}
-	path := "/runs/" + batch7Lane3PathEscape(runID)
+	path := "/runs/" + pathEscape(runID)
 	data, ok := batch7Lane3Get(ctx, rt, "Terraform", batch7Lane3AddPrefix(base, path), headers, nil, batch7Lane3DefaultTimeout)
 	if !ok {
 		return data, nil
 	}
-	run := batch4AsMap(data["data"])
+	run := asMap(data["data"])
 	result := batch7Lane3TerraformRun(run)
-	attrs := batch4AsMap(run["attributes"])
+	attrs := asMap(run["attributes"])
 	// Upstream reuses this key for the plan-queued timestamp.
 	result["plan_and_apply"] = map[string]any{
-		"resource_additions": batch4AsMap(attrs["status-timestamps"])["plan-queued-at"],
+		"resource_additions": asMap(attrs["status-timestamps"])["plan-queued-at"],
 	}
 	result["permissions"] = attrs["permissions"]
 	return result, nil
@@ -604,12 +552,12 @@ func batch7Lane3TerraformCreateRun(ctx context.Context, rt *Runtime, input map[s
 	}
 	resp, err := batch7Lane3DoJSON(ctx, rt, http.MethodPost, batch7Lane3AddPrefix(base, "/runs"), headers, payload, batch7Lane3DefaultTimeout)
 	if err != nil {
-		return batch7Lane3TransportError(ctx, "Terraform", err), nil
+		return transportError(ctx, "Terraform", err), nil
 	}
 	if resp.Status >= 400 {
 		return batch7Lane3HTTPError(resp), nil
 	}
-	data, ok := batch7Lane3JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Terraform API error: invalid JSON response"}, nil
 	}
@@ -727,7 +675,7 @@ func batch7Lane3PagerDutyImpls() map[string]ActionFunc {
 
 // batch7Lane3PagerDutyHeaders mirrors upstream _get_headers.
 func batch7Lane3PagerDutyHeaders(rt *Runtime, write bool) (map[string]string, map[string]any) {
-	apiKey := batch7Lane3ModuleToken(rt, "pagerduty_tool")
+	apiKey := moduleToken(rt, "pagerduty_tool")
 	if apiKey == "" {
 		return nil, map[string]any{
 			"error": "PAGERDUTY_API_KEY is required",
@@ -740,7 +688,7 @@ func batch7Lane3PagerDutyHeaders(rt *Runtime, write bool) (map[string]string, ma
 		"Content-Type":  "application/json",
 	}
 	if write {
-		if from := strings.TrimSpace(batch7Lane3Getenv(rt, "PAGERDUTY_FROM_EMAIL")); from != "" {
+		if from := strings.TrimSpace(runtimeEnv(rt, "PAGERDUTY_FROM_EMAIL")); from != "" {
 			headers["From"] = from
 		}
 	}
@@ -749,12 +697,12 @@ func batch7Lane3PagerDutyHeaders(rt *Runtime, write bool) (map[string]string, ma
 
 // batch7Lane3PagerDutyIncident mirrors upstream _extract_incident.
 func batch7Lane3PagerDutyIncident(raw any) map[string]any {
-	incident := batch4AsMap(raw)
-	service := batch4AsMap(incident["service"])
+	incident := asMap(raw)
+	service := asMap(incident["service"])
 	assignments := make([]any, 0)
 	for _, rawAssignment := range batch7Lane3ListOrEmpty(incident["assignments"]) {
-		assignment := batch4AsMap(rawAssignment)
-		assignments = append(assignments, batch4AsMap(assignment["assignee"])["summary"])
+		assignment := asMap(rawAssignment)
+		assignments = append(assignments, asMap(assignment["assignee"])["summary"])
 	}
 	return map[string]any{
 		"id":              incident["id"],
@@ -808,7 +756,7 @@ func batch7Lane3PagerDutyListIncidents(ctx context.Context, rt *Runtime, input m
 	}
 	return map[string]any{
 		"count":     len(out),
-		"more":      batch4AsBool(data["more"]),
+		"more":      asBool(data["more"]),
 		"incidents": out,
 	}, nil
 }
@@ -823,13 +771,13 @@ func batch7Lane3PagerDutyGetIncident(ctx context.Context, rt *Runtime, input map
 		return map[string]any{"error": "incident_id is required"}, nil
 	}
 	data, ok := batch7Lane3Get(ctx, rt, "PagerDuty",
-		batch7Lane3AddPrefix(batch7Lane3PagerDutyBase(rt), "/incidents/"+batch7Lane3PathEscape(incidentID)), headers, nil, batch7Lane3DefaultTimeout)
+		batch7Lane3AddPrefix(batch7Lane3PagerDutyBase(rt), "/incidents/"+pathEscape(incidentID)), headers, nil, batch7Lane3DefaultTimeout)
 	if !ok {
 		return data, nil
 	}
-	incident := batch4AsMap(data["incident"])
+	incident := asMap(data["incident"])
 	result := batch7Lane3PagerDutyIncident(incident)
-	if body := batch4AsMap(incident["body"]); len(body) > 0 {
+	if body := asMap(incident["body"]); len(body) > 0 {
 		result["details"] = body["details"]
 	}
 	return result, nil
@@ -858,12 +806,12 @@ func batch7Lane3PagerDutyCreateIncident(ctx context.Context, rt *Runtime, input 
 		batch7Lane3AddPrefix(batch7Lane3PagerDutyBase(rt), "/incidents"), headers,
 		map[string]any{"incident": incident}, batch7Lane3DefaultTimeout)
 	if err != nil {
-		return batch7Lane3TransportError(ctx, "PagerDuty", err), nil
+		return transportError(ctx, "PagerDuty", err), nil
 	}
 	if resp.Status >= 400 {
 		return batch7Lane3HTTPError(resp), nil
 	}
-	data, ok := batch7Lane3JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "PagerDuty API error: invalid JSON response"}, nil
 	}
@@ -889,17 +837,17 @@ func batch7Lane3PagerDutyUpdateIncident(ctx context.Context, rt *Runtime, input 
 	if resolution := stringArg(input, "resolution"); resolution != "" && status == "resolved" {
 		incident["resolution"] = resolution
 	}
-	path := "/incidents/" + batch7Lane3PathEscape(incidentID)
+	path := "/incidents/" + pathEscape(incidentID)
 	resp, err := batch7Lane3DoJSON(ctx, rt, http.MethodPut,
 		batch7Lane3AddPrefix(batch7Lane3PagerDutyBase(rt), path), headers,
 		map[string]any{"incident": incident}, batch7Lane3DefaultTimeout)
 	if err != nil {
-		return batch7Lane3TransportError(ctx, "PagerDuty", err), nil
+		return transportError(ctx, "PagerDuty", err), nil
 	}
 	if resp.Status >= 400 {
 		return batch7Lane3HTTPError(resp), nil
 	}
-	data, ok := batch7Lane3JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "PagerDuty API error: invalid JSON response"}, nil
 	}
@@ -922,7 +870,7 @@ func batch7Lane3PagerDutyListServices(ctx context.Context, rt *Runtime, input ma
 	services := batch7Lane3ListOrEmpty(data["services"])
 	out := make([]any, 0, len(services))
 	for _, raw := range services {
-		service := batch4AsMap(raw)
+		service := asMap(raw)
 		out = append(out, map[string]any{
 			"id":                      service["id"],
 			"name":                    service["name"],
@@ -961,19 +909,19 @@ func batch7Lane3PagerDutyListOncalls(ctx context.Context, rt *Runtime, input map
 	oncalls := batch7Lane3ListOrEmpty(data["oncalls"])
 	out := make([]any, 0, len(oncalls))
 	for _, raw := range oncalls {
-		oncall := batch4AsMap(raw)
-		user := batch4AsMap(oncall["user"])
-		schedule := batch4AsMap(oncall["schedule"])
-		policy := batch4AsMap(oncall["escalation_policy"])
+		oncall := asMap(raw)
+		user := asMap(oncall["user"])
+		schedule := asMap(oncall["schedule"])
+		policy := asMap(oncall["escalation_policy"])
 		out = append(out, map[string]any{
-			"user_name":         batch7Lane3Text(user, "summary", ""),
-			"user_id":           batch7Lane3Text(user, "id", ""),
-			"schedule_name":     batch7Lane3Text(schedule, "summary", ""),
-			"schedule_id":       batch7Lane3Text(schedule, "id", ""),
-			"escalation_policy": batch7Lane3Text(policy, "summary", ""),
+			"user_name":         stringOr(user, "summary", ""),
+			"user_id":           stringOr(user, "id", ""),
+			"schedule_name":     stringOr(schedule, "summary", ""),
+			"schedule_id":       stringOr(schedule, "id", ""),
+			"escalation_policy": stringOr(policy, "summary", ""),
 			"escalation_level":  batch7Lane3Int(oncall, "escalation_level", 0),
-			"start":             batch7Lane3Text(oncall, "start", ""),
-			"end":               batch7Lane3Text(oncall, "end", ""),
+			"start":             stringOr(oncall, "start", ""),
+			"end":               stringOr(oncall, "end", ""),
 		})
 	}
 	return map[string]any{"count": len(out), "oncalls": out}, nil
@@ -989,26 +937,26 @@ func batch7Lane3PagerDutyAddIncidentNote(ctx context.Context, rt *Runtime, input
 	if incidentID == "" || content == "" {
 		return map[string]any{"error": "incident_id and content are required"}, nil
 	}
-	path := "/incidents/" + batch7Lane3PathEscape(incidentID) + "/notes"
+	path := "/incidents/" + pathEscape(incidentID) + "/notes"
 	resp, err := batch7Lane3DoJSON(ctx, rt, http.MethodPost,
 		batch7Lane3AddPrefix(batch7Lane3PagerDutyBase(rt), path), headers,
 		map[string]any{"note": map[string]any{"content": content}}, batch7Lane3DefaultTimeout)
 	if err != nil {
-		return batch7Lane3TransportError(ctx, "PagerDuty", err), nil
+		return transportError(ctx, "PagerDuty", err), nil
 	}
 	if resp.Status >= 400 {
 		return batch7Lane3HTTPError(resp), nil
 	}
-	data, ok := batch7Lane3JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "PagerDuty API error: invalid JSON response"}, nil
 	}
-	note := batch4AsMap(data["note"])
+	note := asMap(data["note"])
 	return map[string]any{
-		"id":         batch7Lane3Text(note, "id", ""),
-		"content":    batch7Lane3Text(note, "content", ""),
-		"created_at": batch7Lane3Text(note, "created_at", ""),
-		"user":       batch7Lane3Text(batch4AsMap(note["user"]), "summary", ""),
+		"id":         stringOr(note, "id", ""),
+		"content":    stringOr(note, "content", ""),
+		"created_at": stringOr(note, "created_at", ""),
+		"user":       stringOr(asMap(note["user"]), "summary", ""),
 		"status":     "created",
 	}, nil
 }
@@ -1030,15 +978,15 @@ func batch7Lane3PagerDutyListEscalationPolicies(ctx context.Context, rt *Runtime
 	policies := batch7Lane3ListOrEmpty(data["escalation_policies"])
 	out := make([]any, 0, len(policies))
 	for _, raw := range policies {
-		policy := batch4AsMap(raw)
+		policy := asMap(raw)
 		teams := make([]any, 0)
 		for _, rawTeam := range batch7Lane3ListOrEmpty(policy["teams"]) {
-			teams = append(teams, batch7Lane3Text(batch4AsMap(rawTeam), "summary", ""))
+			teams = append(teams, stringOr(asMap(rawTeam), "summary", ""))
 		}
 		out = append(out, map[string]any{
-			"id":                     batch7Lane3Text(policy, "id", ""),
-			"name":                   batch7Lane3Text(policy, "name", ""),
-			"description":            batch7Lane3Text(policy, "description", ""),
+			"id":                     stringOr(policy, "id", ""),
+			"name":                   stringOr(policy, "name", ""),
+			"description":            stringOr(policy, "description", ""),
 			"num_loops":              batch7Lane3Int(policy, "num_loops", 0),
 			"teams":                  teams,
 			"escalation_rules_count": len(batch7Lane3ListOrEmpty(policy["escalation_rules"])),
@@ -1091,11 +1039,11 @@ func batch7Lane3PrometheusImpls() map[string]ActionFunc {
 // batch7Lane3PrometheusAuth mirrors upstream _get_auth: Bearer token wins,
 // then optional basic auth, otherwise unauthenticated.
 func batch7Lane3PrometheusAuth(rt *Runtime) map[string]string {
-	if token := strings.TrimSpace(batch7Lane3Getenv(rt, "PROMETHEUS_TOKEN")); token != "" {
+	if token := strings.TrimSpace(runtimeEnv(rt, "PROMETHEUS_TOKEN")); token != "" {
 		return map[string]string{"Authorization": "Bearer " + token}
 	}
-	username := batch7Lane3Getenv(rt, "PROMETHEUS_USERNAME")
-	password := batch7Lane3Getenv(rt, "PROMETHEUS_PASSWORD")
+	username := runtimeEnv(rt, "PROMETHEUS_USERNAME")
+	password := runtimeEnv(rt, "PROMETHEUS_PASSWORD")
 	if username != "" && password != "" {
 		encoded := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
 		return map[string]string{"Authorization": "Basic " + encoded}
@@ -1121,7 +1069,7 @@ func batch7Lane3PrometheusTimeout(input map[string]any) int {
 // batch7Lane3PrometheusTransport maps transport failures the way upstream
 // distinguishes timeout, connection failure and everything else.
 func batch7Lane3PrometheusTransport(ctx context.Context, err error) map[string]any {
-	if batch4IsTimeout(ctx, err) {
+	if isTimeout(ctx, err) {
 		return map[string]any{"error": "Request to Prometheus timed out"}
 	}
 	var netErr *net.OpError
@@ -1163,16 +1111,16 @@ func batch7Lane3PrometheusRun(ctx context.Context, rt *Runtime, endpoint string,
 			"details": string(resp.Body),
 		}, false
 	}
-	data, ok := batch7Lane3JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Unexpected error: invalid JSON response"}, false
 	}
-	if batch4AsString(data["status"]) != "success" {
+	if asString(data["status"]) != "success" {
 		return map[string]any{"error": label + " failed", "details": data}, false
 	}
 	return map[string]any{
 		"success": true,
-		"result":  batch7Lane3ListOrEmpty(batch4AsMap(data["data"])["result"]),
+		"result":  batch7Lane3ListOrEmpty(asMap(data["data"])["result"]),
 		"raw":     data,
 	}, true
 }
@@ -1302,7 +1250,7 @@ func batch7Lane3KafkaConfig(rt *Runtime) (string, map[string]string, map[string]
 			"help":  "Set KAFKA_REST_URL environment variable",
 		}
 	}
-	clusterID := strings.TrimSpace(batch7Lane3Getenv(rt, "KAFKA_CLUSTER_ID"))
+	clusterID := strings.TrimSpace(runtimeEnv(rt, "KAFKA_CLUSTER_ID"))
 	if clusterID == "" {
 		return "", nil, map[string]any{
 			"error": "KAFKA_CLUSTER_ID is required",
@@ -1310,13 +1258,13 @@ func batch7Lane3KafkaConfig(rt *Runtime) (string, map[string]string, map[string]
 		}
 	}
 	headers := map[string]string{"Content-Type": "application/json"}
-	apiKey := batch7Lane3Getenv(rt, "KAFKA_API_KEY")
-	apiSecret := batch7Lane3Getenv(rt, "KAFKA_API_SECRET")
+	apiKey := runtimeEnv(rt, "KAFKA_API_KEY")
+	apiSecret := runtimeEnv(rt, "KAFKA_API_SECRET")
 	if apiKey != "" && apiSecret != "" {
 		encoded := base64.StdEncoding.EncodeToString([]byte(apiKey + ":" + apiSecret))
 		headers["Authorization"] = "Basic " + encoded
 	}
-	return restURL + "/v3/clusters/" + batch7Lane3PathEscape(clusterID), headers, nil
+	return restURL + "/v3/clusters/" + pathEscape(clusterID), headers, nil
 }
 
 // batch7Lane3KafkaTopic projects one REST Proxy topic resource.
@@ -1341,7 +1289,7 @@ func batch7Lane3KafkaListTopics(ctx context.Context, rt *Runtime, input map[stri
 	topics := batch7Lane3ListOrEmpty(data["data"])
 	out := make([]any, 0, len(topics))
 	for _, raw := range topics {
-		out = append(out, batch7Lane3KafkaTopic(batch4AsMap(raw)))
+		out = append(out, batch7Lane3KafkaTopic(asMap(raw)))
 	}
 	return map[string]any{"count": len(out), "topics": out}, nil
 }
@@ -1355,7 +1303,7 @@ func batch7Lane3KafkaGetTopic(ctx context.Context, rt *Runtime, input map[string
 	if topicName == "" {
 		return map[string]any{"error": "topic_name is required"}, nil
 	}
-	path := "/topics/" + batch7Lane3PathEscape(topicName)
+	path := "/topics/" + pathEscape(topicName)
 	data, ok := batch7Lane3Get(ctx, rt, "Kafka", batch7Lane3AddPrefix(base, path), headers, nil, batch7Lane3DefaultTimeout)
 	if !ok {
 		return data, nil
@@ -1381,12 +1329,12 @@ func batch7Lane3KafkaCreateTopic(ctx context.Context, rt *Runtime, input map[str
 	}
 	resp, err := batch7Lane3DoJSON(ctx, rt, http.MethodPost, batch7Lane3AddPrefix(base, "/topics"), headers, payload, batch7Lane3DefaultTimeout)
 	if err != nil {
-		return batch7Lane3TransportError(ctx, "Kafka", err), nil
+		return transportError(ctx, "Kafka", err), nil
 	}
 	if resp.Status >= 400 {
 		return batch7Lane3HTTPError(resp), nil
 	}
-	data, ok := batch7Lane3JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Kafka API error: invalid JSON response"}, nil
 	}
@@ -1413,15 +1361,15 @@ func batch7Lane3KafkaProduceMessage(ctx context.Context, rt *Runtime, input map[
 	if key := stringArg(input, "key"); key != "" {
 		payload["key"] = map[string]any{"type": "STRING", "data": key}
 	}
-	path := "/topics/" + batch7Lane3PathEscape(topicName) + "/records"
+	path := "/topics/" + pathEscape(topicName) + "/records"
 	resp, err := batch7Lane3DoJSON(ctx, rt, http.MethodPost, batch7Lane3AddPrefix(base, path), headers, payload, batch7Lane3DefaultTimeout)
 	if err != nil {
-		return batch7Lane3TransportError(ctx, "Kafka", err), nil
+		return transportError(ctx, "Kafka", err), nil
 	}
 	if resp.Status >= 400 {
 		return batch7Lane3HTTPError(resp), nil
 	}
-	data, ok := batch7Lane3JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Kafka API error: invalid JSON response"}, nil
 	}
@@ -1445,8 +1393,8 @@ func batch7Lane3KafkaListConsumerGroups(ctx context.Context, rt *Runtime, input 
 	groups := batch7Lane3ListOrEmpty(data["data"])
 	out := make([]any, 0, len(groups))
 	for _, raw := range groups {
-		group := batch4AsMap(raw)
-		coordinator := batch4AsMap(group["coordinator"])
+		group := asMap(raw)
+		coordinator := asMap(group["coordinator"])
 		out = append(out, map[string]any{
 			"id":             group["consumer_group_id"],
 			"is_simple":      group["is_simple"],
@@ -1466,7 +1414,7 @@ func batch7Lane3KafkaGetConsumerGroupLag(ctx context.Context, rt *Runtime, input
 	if groupID == "" {
 		return map[string]any{"error": "consumer_group_id is required"}, nil
 	}
-	path := "/consumer-groups/" + batch7Lane3PathEscape(groupID) + "/lag-summary"
+	path := "/consumer-groups/" + pathEscape(groupID) + "/lag-summary"
 	data, ok := batch7Lane3Get(ctx, rt, "Kafka", batch7Lane3AddPrefix(base, path), headers, nil, batch7Lane3DefaultTimeout)
 	if !ok {
 		return data, nil
@@ -1565,7 +1513,7 @@ func batch7Lane3N8nImpls() map[string]ActionFunc {
 
 // batch7Lane3N8nConfig mirrors upstream _get_creds.
 func batch7Lane3N8nConfig(rt *Runtime) (string, map[string]string, map[string]any) {
-	apiKey := batch7Lane3ModuleToken(rt, "n8n_tool")
+	apiKey := moduleToken(rt, "n8n_tool")
 	baseURL := batch7Lane3Endpoint(rt, "n8n_tool", "N8N_BASE_URL", "")
 	if apiKey == "" || baseURL == "" {
 		return "", nil, map[string]any{
@@ -1594,14 +1542,14 @@ func batch7Lane3N8nResult(resp *batch7Lane3Response) map[string]any {
 	}
 	if resp.Status >= 400 {
 		detail := string(resp.Body)
-		if body, ok := batch7Lane3JSONObject(resp.Body); ok {
+		if body, ok := jsonObject(resp.Body); ok {
 			if message, present := body["message"].(string); present {
 				detail = message
 			}
 		}
 		return map[string]any{"error": fmt.Sprintf("n8n API error (HTTP %d): %s", resp.Status, detail)}
 	}
-	data, ok := batch7Lane3JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": fmt.Sprintf("n8n API error (HTTP %d): invalid JSON response", resp.Status)}
 	}
@@ -1610,7 +1558,7 @@ func batch7Lane3N8nResult(resp *batch7Lane3Response) map[string]any {
 
 // batch7Lane3N8nTransport renders the upstream network-error split.
 func batch7Lane3N8nTransport(ctx context.Context, err error) map[string]any {
-	if batch4IsTimeout(ctx, err) {
+	if isTimeout(ctx, err) {
 		return map[string]any{"error": "Request timed out"}
 	}
 	return map[string]any{"error": "Network error: " + err.Error()}
@@ -1636,7 +1584,7 @@ func batch7Lane3N8nCall(ctx context.Context, rt *Runtime, method, endpoint strin
 func batch7Lane3N8nTags(value any) []any {
 	tags := make([]any, 0)
 	for _, raw := range batch7Lane3ListOrEmpty(value) {
-		tags = append(tags, batch7Lane3Text(batch4AsMap(raw), "name", ""))
+		tags = append(tags, stringOr(asMap(raw), "name", ""))
 	}
 	return tags
 }
@@ -1659,7 +1607,7 @@ func batch7Lane3N8nListWorkflows(ctx context.Context, rt *Runtime, input map[str
 	workflows := batch7Lane3ListOrEmpty(result["data"])
 	out := make([]any, 0, len(workflows))
 	for _, raw := range workflows {
-		workflow := batch4AsMap(raw)
+		workflow := asMap(raw)
 		out = append(out, map[string]any{
 			"id":         workflow["id"],
 			"name":       workflow["name"],
@@ -1671,7 +1619,7 @@ func batch7Lane3N8nListWorkflows(ctx context.Context, rt *Runtime, input map[str
 		})
 	}
 	output := map[string]any{"count": len(out), "workflows": out}
-	if cursor := batch7Lane3Text(result, "nextCursor", ""); cursor != "" {
+	if cursor := stringOr(result, "nextCursor", ""); cursor != "" {
 		output["next_cursor"] = cursor
 	}
 	return output, nil
@@ -1686,14 +1634,14 @@ func batch7Lane3N8nGetWorkflow(ctx context.Context, rt *Runtime, input map[strin
 	if workflowID == "" {
 		return map[string]any{"error": "workflow_id is required"}, nil
 	}
-	path := "/api/v1/workflows/" + batch7Lane3PathEscape(workflowID)
+	path := "/api/v1/workflows/" + pathEscape(workflowID)
 	result, ok := batch7Lane3N8nCall(ctx, rt, http.MethodGet, batch7Lane3AddPrefix(base, path), headers, nil, nil)
 	if !ok {
 		return result, nil
 	}
 	nodes := make([]any, 0)
 	for _, raw := range batch7Lane3ListOrEmpty(result["nodes"]) {
-		node := batch4AsMap(raw)
+		node := asMap(raw)
 		nodes = append(nodes, map[string]any{
 			"name":     node["name"],
 			"type":     node["type"],
@@ -1723,7 +1671,7 @@ func batch7Lane3N8nToggle(ctx context.Context, rt *Runtime, input map[string]any
 	if workflowID == "" {
 		return map[string]any{"error": "workflow_id is required"}, nil
 	}
-	path := "/api/v1/workflows/" + batch7Lane3PathEscape(workflowID) + suffix
+	path := "/api/v1/workflows/" + pathEscape(workflowID) + suffix
 	result, ok := batch7Lane3N8nCall(ctx, rt, http.MethodPost, batch7Lane3AddPrefix(base, path), headers, nil, nil)
 	if !ok {
 		return result, nil
@@ -1765,7 +1713,7 @@ func batch7Lane3N8nListExecutions(ctx context.Context, rt *Runtime, input map[st
 	executions := batch7Lane3ListOrEmpty(result["data"])
 	out := make([]any, 0, len(executions))
 	for _, raw := range executions {
-		execution := batch4AsMap(raw)
+		execution := asMap(raw)
 		out = append(out, map[string]any{
 			"id":          execution["id"],
 			"workflow_id": execution["workflowId"],
@@ -1777,7 +1725,7 @@ func batch7Lane3N8nListExecutions(ctx context.Context, rt *Runtime, input map[st
 		})
 	}
 	output := map[string]any{"count": len(out), "executions": out}
-	if cursor := batch7Lane3Text(result, "nextCursor", ""); cursor != "" {
+	if cursor := stringOr(result, "nextCursor", ""); cursor != "" {
 		output["next_cursor"] = cursor
 	}
 	return output, nil
@@ -1797,7 +1745,7 @@ func batch7Lane3N8nGetExecution(ctx context.Context, rt *Runtime, input map[stri
 	if includeData {
 		params = url.Values{"includeData": []string{"true"}}
 	}
-	path := "/api/v1/executions/" + batch7Lane3PathEscape(executionID)
+	path := "/api/v1/executions/" + pathEscape(executionID)
 	result, ok := batch7Lane3N8nCall(ctx, rt, http.MethodGet, batch7Lane3AddPrefix(base, path), headers, nil, params)
 	if !ok {
 		return result, nil
@@ -1894,10 +1842,10 @@ func batch7Lane3TinesImpls() map[string]ActionFunc {
 // batch7Lane3TinesConfig mirrors upstream _get_config: TINES_DOMAIN plus
 // Bearer API key against https://<domain>/api/v1.
 func batch7Lane3TinesConfig(rt *Runtime) (string, map[string]string, map[string]any) {
-	apiKey := batch7Lane3ModuleToken(rt, "tines_tool")
-	root := batch7Lane3ModuleURL(rt, "tines_tool")
+	apiKey := moduleToken(rt, "tines_tool")
+	root := moduleBaseURL(rt, "tines_tool")
 	if root == "" {
-		domain := strings.TrimRight(strings.TrimSpace(batch7Lane3Getenv(rt, "TINES_DOMAIN")), "/")
+		domain := strings.TrimRight(strings.TrimSpace(runtimeEnv(rt, "TINES_DOMAIN")), "/")
 		if domain != "" && !strings.Contains(domain, "://") {
 			domain = "https://" + domain
 		}
@@ -1938,7 +1886,7 @@ func batch7Lane3TinesListStories(ctx context.Context, rt *Runtime, input map[str
 	stories := batch7Lane3ListOrEmpty(data["stories"])
 	out := make([]any, 0, len(stories))
 	for _, raw := range stories {
-		story := batch4AsMap(raw)
+		story := asMap(raw)
 		out = append(out, map[string]any{
 			"id":          story["id"],
 			"name":        story["name"],
@@ -2004,7 +1952,7 @@ func batch7Lane3TinesListActions(ctx context.Context, rt *Runtime, input map[str
 	agents := batch7Lane3ListOrEmpty(data["agents"])
 	out := make([]any, 0, len(agents))
 	for _, raw := range agents {
-		agent := batch4AsMap(raw)
+		agent := asMap(raw)
 		out = append(out, map[string]any{
 			"id":         agent["id"],
 			"name":       agent["name"],
@@ -2041,7 +1989,7 @@ func batch7Lane3TinesGetAction(ctx context.Context, rt *Runtime, input map[strin
 		"disabled":    data["disabled"],
 		"sources":     batch7Lane3ListOrEmpty(data["sources"]),
 		"receivers":   batch7Lane3ListOrEmpty(data["receivers"]),
-		"options":     batch4AsMap(data["options"]),
+		"options":     asMap(data["options"]),
 		"created_at":  data["created_at"],
 		"updated_at":  data["updated_at"],
 	}, nil
@@ -2068,7 +2016,7 @@ func batch7Lane3TinesGetActionLogs(ctx context.Context, rt *Runtime, input map[s
 	logs := batch7Lane3ListOrEmpty(data["action_logs"])
 	out := make([]any, 0, len(logs))
 	for _, raw := range logs {
-		entry := batch4AsMap(raw)
+		entry := asMap(raw)
 		out = append(out, map[string]any{
 			"id":         entry["id"],
 			"level":      entry["level"],

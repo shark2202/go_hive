@@ -108,10 +108,10 @@ func batch6Lane4DatabricksImpls() map[string]ActionFunc {
 // batch6Lane4DatabricksConfig resolves token and host. WithBaseURL wins over
 // DATABRICKS_HOST so tests can point at a fake workspace.
 func batch6Lane4DatabricksConfig(rt *Runtime) (string, string, bool) {
-	token := batch6Lane4ModuleToken(rt, "databricks_tool")
-	host := strings.TrimRight(batch6Lane4ModuleURL(rt, "databricks_tool"), "/")
+	token := moduleToken(rt, "databricks_tool")
+	host := strings.TrimRight(moduleBaseURL(rt, "databricks_tool"), "/")
 	if host == "" {
-		host = strings.TrimRight(strings.TrimSpace(batch6Lane4Getenv(rt, "DATABRICKS_HOST")), "/")
+		host = strings.TrimRight(strings.TrimSpace(runtimeEnv(rt, "DATABRICKS_HOST")), "/")
 	}
 	if token == "" || host == "" {
 		return "", "", false
@@ -126,20 +126,13 @@ func batch6Lane4DatabricksAuthError() map[string]any {
 	}
 }
 
-func batch6Lane4DatabricksHeaders(token string) map[string]string {
-	return map[string]string{
-		"Authorization": "Bearer " + token,
-		"Content-Type":  "application/json",
-	}
-}
-
 // batch6Lane4DatabricksGet mirrors upstream _get error handling.
 func batch6Lane4DatabricksGet(ctx context.Context, rt *Runtime, host, token, endpoint string, params url.Values) map[string]any {
 	target := host + "/api/2.0/" + endpoint
 	if len(params) > 0 {
 		target += "?" + params.Encode()
 	}
-	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, target, batch6Lane4DatabricksHeaders(token), nil, 30*time.Second)
+	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, target, bearerJSONHeaders(token), nil, 30*time.Second)
 	if err != nil {
 		return batch6Lane4DatabricksTransport(ctx, err)
 	}
@@ -147,16 +140,16 @@ func batch6Lane4DatabricksGet(ctx context.Context, rt *Runtime, host, token, end
 	case http.StatusUnauthorized:
 		return map[string]any{"error": "Unauthorized. Check your DATABRICKS_TOKEN."}
 	case http.StatusForbidden:
-		return map[string]any{"error": "Forbidden: " + batch4TruncateText(string(resp.Body), 300)}
+		return map[string]any{"error": "Forbidden: " + truncateText(string(resp.Body), 300)}
 	case http.StatusOK:
-		data, ok := batch6Lane4JSONObject(resp.Body)
+		data, ok := jsonObject(resp.Body)
 		if !ok {
 			return map[string]any{"error": "Databricks API error: invalid JSON response"}
 		}
 		return data
 	default:
 		return map[string]any{
-			"error": "Databricks API error " + strconv.Itoa(resp.Status) + ": " + batch4TruncateText(string(resp.Body), 500),
+			"error": "Databricks API error " + strconv.Itoa(resp.Status) + ": " + truncateText(string(resp.Body), 500),
 		}
 	}
 }
@@ -164,7 +157,7 @@ func batch6Lane4DatabricksGet(ctx context.Context, rt *Runtime, host, token, end
 // batch6Lane4DatabricksPost mirrors upstream _post error handling.
 func batch6Lane4DatabricksPost(ctx context.Context, rt *Runtime, host, token, endpoint string, body map[string]any) map[string]any {
 	target := host + "/api/2.0/" + endpoint
-	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodPost, target, batch6Lane4DatabricksHeaders(token), body, 60*time.Second)
+	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodPost, target, bearerJSONHeaders(token), body, 60*time.Second)
 	if err != nil {
 		return batch6Lane4DatabricksTransport(ctx, err)
 	}
@@ -175,30 +168,23 @@ func batch6Lane4DatabricksPost(ctx context.Context, rt *Runtime, host, token, en
 		if len(strings.TrimSpace(string(resp.Body))) == 0 {
 			return map[string]any{"status": "success"}
 		}
-		data, ok := batch6Lane4JSONObject(resp.Body)
+		data, ok := jsonObject(resp.Body)
 		if !ok {
 			return map[string]any{"error": "Databricks API error: invalid JSON response"}
 		}
 		return data
 	default:
 		return map[string]any{
-			"error": "Databricks API error " + strconv.Itoa(resp.Status) + ": " + batch4TruncateText(string(resp.Body), 500),
+			"error": "Databricks API error " + strconv.Itoa(resp.Status) + ": " + truncateText(string(resp.Body), 500),
 		}
 	}
 }
 
 func batch6Lane4DatabricksTransport(ctx context.Context, err error) map[string]any {
-	if batch4IsTimeout(ctx, err) {
+	if isTimeout(ctx, err) {
 		return map[string]any{"error": "Request to Databricks timed out"}
 	}
 	return map[string]any{"error": "Databricks request failed: " + err.Error()}
-}
-
-func batch6Lane4DatabricksFailure(result map[string]any) (map[string]any, bool) {
-	if _, failed := result["error"]; failed {
-		return result, true
-	}
-	return nil, false
 }
 
 func batch6Lane4DatabricksSQLQuery(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -211,28 +197,28 @@ func batch6Lane4DatabricksSQLQuery(ctx context.Context, rt *Runtime, input map[s
 	if statement == "" || warehouseID == "" {
 		return map[string]any{"error": "statement and warehouse_id are required"}, nil
 	}
-	maxRows := batch6Lane4Clamp(intArg(input, "max_rows", 100), 1, 10000)
+	maxRows := clampInt(intArg(input, "max_rows", 100), 1, 10000)
 	data := batch6Lane4DatabricksPost(ctx, rt, host, token, "sql/statements", map[string]any{
 		"statement":    statement,
 		"warehouse_id": warehouseID,
 		"wait_timeout": "30s",
 		"row_limit":    maxRows,
 	})
-	if failure, failed := batch6Lane4DatabricksFailure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	statusObject := batch4AsMap(data["status"])
-	status := batch6Lane4StringOr(statusObject, "state", "UNKNOWN")
+	statusObject := asMap(data["status"])
+	status := stringOr(statusObject, "state", "UNKNOWN")
 	if status == "FAILED" {
 		return map[string]any{
-			"error": "SQL query failed: " + batch6Lane4StringOr(batch4AsMap(statusObject["error"]), "message", "Query failed"),
+			"error": "SQL query failed: " + stringOr(asMap(statusObject["error"]), "message", "Query failed"),
 		}, nil
 	}
 	columns := make([]any, 0)
-	for _, rawColumn := range batch4AsSlice(batch4AsMap(batch4AsMap(data["manifest"])["schema"])["columns"]) {
-		columns = append(columns, batch6Lane4StringOr(batch4AsMap(rawColumn), "name", ""))
+	for _, rawColumn := range asSlice(asMap(asMap(data["manifest"])["schema"])["columns"]) {
+		columns = append(columns, stringOr(asMap(rawColumn), "name", ""))
 	}
-	rows := batch4AsSlice(batch4AsMap(data["result"])["data_array"])
+	rows := asSlice(asMap(data["result"])["data_array"])
 	if rows == nil {
 		rows = []any{}
 	}
@@ -241,7 +227,7 @@ func batch6Lane4DatabricksSQLQuery(ctx context.Context, rt *Runtime, input map[s
 		"columns":      columns,
 		"rows":         rows,
 		"row_count":    len(rows),
-		"statement_id": batch6Lane4StringOr(data, "statement_id", ""),
+		"statement_id": stringOr(data, "statement_id", ""),
 	}, nil
 }
 
@@ -251,18 +237,18 @@ func batch6Lane4DatabricksListJobs(ctx context.Context, rt *Runtime, input map[s
 		return batch6Lane4DatabricksAuthError(), nil
 	}
 	params := url.Values{}
-	params.Set("limit", strconv.Itoa(batch6Lane4Clamp(intArg(input, "max_results", 25), 1, 100)))
+	params.Set("limit", strconv.Itoa(clampInt(intArg(input, "max_results", 25), 1, 100)))
 	if name := stringArg(input, "name_filter"); name != "" {
 		params.Set("name", name)
 	}
 	data := batch6Lane4DatabricksGet(ctx, rt, host, token, "jobs/list", params)
-	if failure, failed := batch6Lane4DatabricksFailure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	jobs := make([]any, 0)
-	for _, rawJob := range batch4AsSlice(data["jobs"]) {
-		job := batch4AsMap(rawJob)
-		settings := batch4AsMap(job["settings"])
+	for _, rawJob := range asSlice(data["jobs"]) {
+		job := asMap(rawJob)
+		settings := asMap(job["settings"])
 		// Upstream reads job.get("job_id", 0) / job.get("created_time", 0): a
 		// missing key must render as 0, not JSON null.
 		jobID := job["job_id"]
@@ -275,8 +261,8 @@ func batch6Lane4DatabricksListJobs(ctx context.Context, rt *Runtime, input map[s
 		}
 		jobs = append(jobs, map[string]any{
 			"job_id":       jobID,
-			"name":         batch6Lane4StringOr(settings, "name", ""),
-			"creator":      batch6Lane4StringOr(job, "creator_user_name", ""),
+			"name":         stringOr(settings, "name", ""),
+			"creator":      stringOr(job, "creator_user_name", ""),
 			"created_time": createdTime,
 		})
 	}
@@ -293,7 +279,7 @@ func batch6Lane4DatabricksRunJob(ctx context.Context, rt *Runtime, input map[str
 		return map[string]any{"error": "job_id is required"}, nil
 	}
 	data := batch6Lane4DatabricksPost(ctx, rt, host, token, "jobs/run-now", map[string]any{"job_id": jobID})
-	if failure, failed := batch6Lane4DatabricksFailure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	runID := data["run_id"]
@@ -314,10 +300,10 @@ func batch6Lane4DatabricksGetRun(ctx context.Context, rt *Runtime, input map[str
 	}
 	params := url.Values{"run_id": []string{strconv.Itoa(runID)}}
 	data := batch6Lane4DatabricksGet(ctx, rt, host, token, "jobs/runs/get", params)
-	if failure, failed := batch6Lane4DatabricksFailure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	state := batch4AsMap(data["state"])
+	state := asMap(data["state"])
 	// Upstream reads data.get(...) with 0 defaults for run_id/job_id/start_time.
 	runIDValue := data["run_id"]
 	if runIDValue == nil {
@@ -334,10 +320,10 @@ func batch6Lane4DatabricksGetRun(ctx context.Context, rt *Runtime, input map[str
 	return map[string]any{
 		"run_id":       runIDValue,
 		"job_id":       jobIDValue,
-		"state":        batch6Lane4StringOr(state, "life_cycle_state", ""),
-		"result_state": batch6Lane4StringOr(state, "result_state", ""),
+		"state":        stringOr(state, "life_cycle_state", ""),
+		"result_state": stringOr(state, "result_state", ""),
 		"start_time":   startTime,
-		"run_page_url": batch6Lane4StringOr(data, "run_page_url", ""),
+		"run_page_url": stringOr(data, "run_page_url", ""),
 	}, nil
 }
 
@@ -347,23 +333,23 @@ func batch6Lane4DatabricksListClusters(ctx context.Context, rt *Runtime, input m
 		return batch6Lane4DatabricksAuthError(), nil
 	}
 	data := batch6Lane4DatabricksGet(ctx, rt, host, token, "clusters/list", nil)
-	if failure, failed := batch6Lane4DatabricksFailure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	clusters := make([]any, 0)
-	for _, rawCluster := range batch4AsSlice(data["clusters"]) {
-		cluster := batch4AsMap(rawCluster)
+	for _, rawCluster := range asSlice(data["clusters"]) {
+		cluster := asMap(rawCluster)
 		// Upstream reads c.get("num_workers", 0).
 		numWorkers := cluster["num_workers"]
 		if numWorkers == nil {
 			numWorkers = 0
 		}
 		clusters = append(clusters, map[string]any{
-			"cluster_id":    batch6Lane4StringOr(cluster, "cluster_id", ""),
-			"cluster_name":  batch6Lane4StringOr(cluster, "cluster_name", ""),
-			"state":         batch6Lane4StringOr(cluster, "state", ""),
-			"spark_version": batch6Lane4StringOr(cluster, "spark_version", ""),
-			"creator":       batch6Lane4StringOr(cluster, "creator_user_name", ""),
+			"cluster_id":    stringOr(cluster, "cluster_id", ""),
+			"cluster_name":  stringOr(cluster, "cluster_name", ""),
+			"state":         stringOr(cluster, "state", ""),
+			"spark_version": stringOr(cluster, "spark_version", ""),
+			"creator":       stringOr(cluster, "creator_user_name", ""),
 			"num_workers":   numWorkers,
 		})
 	}
@@ -380,7 +366,7 @@ func batch6Lane4DatabricksStartCluster(ctx context.Context, rt *Runtime, input m
 		return map[string]any{"error": "cluster_id is required"}, nil
 	}
 	data := batch6Lane4DatabricksPost(ctx, rt, host, token, "clusters/start", map[string]any{"cluster_id": clusterID})
-	if failure, failed := batch6Lane4DatabricksFailure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	return map[string]any{"status": "starting", "cluster_id": clusterID}, nil
@@ -396,7 +382,7 @@ func batch6Lane4DatabricksTerminateCluster(ctx context.Context, rt *Runtime, inp
 		return map[string]any{"error": "cluster_id is required"}, nil
 	}
 	data := batch6Lane4DatabricksPost(ctx, rt, host, token, "clusters/delete", map[string]any{"cluster_id": clusterID})
-	if failure, failed := batch6Lane4DatabricksFailure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	return map[string]any{"status": "terminating", "cluster_id": clusterID}, nil
@@ -413,16 +399,16 @@ func batch6Lane4DatabricksListWorkspace(ctx context.Context, rt *Runtime, input 
 	}
 	params := url.Values{"path": []string{path}}
 	data := batch6Lane4DatabricksGet(ctx, rt, host, token, "workspace/list", params)
-	if failure, failed := batch6Lane4DatabricksFailure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	objects := make([]any, 0)
-	for _, rawObject := range batch4AsSlice(data["objects"]) {
-		object := batch4AsMap(rawObject)
+	for _, rawObject := range asSlice(data["objects"]) {
+		object := asMap(rawObject)
 		objects = append(objects, map[string]any{
-			"path":        batch6Lane4StringOr(object, "path", ""),
-			"object_type": batch6Lane4StringOr(object, "object_type", ""),
-			"language":    batch6Lane4StringOr(object, "language", ""),
+			"path":        stringOr(object, "path", ""),
+			"object_type": stringOr(object, "object_type", ""),
+			"language":    stringOr(object, "language", ""),
 		})
 	}
 	return map[string]any{"path": path, "objects": objects}, nil

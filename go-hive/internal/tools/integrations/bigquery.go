@@ -86,7 +86,7 @@ func batch6Lane4BigQueryReadOnly(sql string) bool {
 }
 
 func batch6Lane4BigQueryBase(rt *Runtime) string {
-	base := batch6Lane4ModuleURL(rt, "bigquery_tool")
+	base := moduleBaseURL(rt, "bigquery_tool")
 	if base == "" {
 		base = "https://bigquery.googleapis.com/bigquery/v2"
 	}
@@ -117,13 +117,13 @@ func batch6Lane4BigQueryAuthError(detail string) map[string]any {
 // project_id.
 func batch6Lane4BigQueryResolveCredentials(ctx context.Context, rt *Runtime, requestedProject string) (batch6Lane4BigQueryCredentials, map[string]any) {
 	creds := batch6Lane4BigQueryCredentials{
-		Token:   batch6Lane4ModuleToken(rt, "bigquery_tool"),
+		Token:   moduleToken(rt, "bigquery_tool"),
 		Project: strings.TrimSpace(requestedProject),
 	}
 	if creds.Project == "" {
-		creds.Project = strings.TrimSpace(batch6Lane4Getenv(rt, "BIGQUERY_PROJECT_ID"))
+		creds.Project = strings.TrimSpace(runtimeEnv(rt, "BIGQUERY_PROJECT_ID"))
 	}
-	credentialsPath := strings.TrimSpace(batch6Lane4Getenv(rt, "GOOGLE_APPLICATION_CREDENTIALS"))
+	credentialsPath := strings.TrimSpace(runtimeEnv(rt, "GOOGLE_APPLICATION_CREDENTIALS"))
 	if creds.Token == "" {
 		if credentialsPath == "" {
 			return creds, batch6Lane4BigQueryAuthError("no access token or service account file configured")
@@ -188,11 +188,11 @@ func batch6Lane4BigQueryServiceAccountToken(ctx context.Context, rt *Runtime, pa
 	if resp.Status >= 400 {
 		return "", "", batch6Lane4BigQueryAuthError("token endpoint returned HTTP " + strconv.Itoa(resp.Status))
 	}
-	data, ok := batch6Lane4JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return "", "", batch6Lane4BigQueryAuthError("token endpoint returned invalid JSON")
 	}
-	accessToken := batch6Lane4StringOr(data, "access_token", "")
+	accessToken := stringOr(data, "access_token", "")
 	if accessToken == "" {
 		return "", "", batch6Lane4BigQueryAuthError("token endpoint returned no access_token")
 	}
@@ -240,20 +240,13 @@ func batch6Lane4BigQueryJWT(email, privateKeyPEM, audience string, now time.Time
 	return signingInput + "." + base64.RawURLEncoding.EncodeToString(signature), nil
 }
 
-func batch6Lane4BigQueryHeaders(token string) map[string]string {
-	return map[string]string{
-		"Authorization": "Bearer " + token,
-		"Content-Type":  "application/json",
-	}
-}
-
 // batch6Lane4BigQueryError maps BigQuery REST errors to the upstream
 // user-facing messages.
 func batch6Lane4BigQueryError(resp *batch6Lane4Response, datasetID string, describe bool) map[string]any {
-	message := batch4TruncateText(string(resp.Body), 500)
-	if data, ok := batch6Lane4JSONObject(resp.Body); ok {
-		if inner := batch4AsMap(data["error"]); inner != nil {
-			if text := batch6Lane4StringOr(inner, "message", ""); text != "" {
+	message := truncateText(string(resp.Body), 500)
+	if data, ok := jsonObject(resp.Body); ok {
+		if inner := asMap(data["error"]); inner != nil {
+			if text := stringOr(inner, "message", ""); text != "" {
 				message = text
 			}
 		}
@@ -303,7 +296,7 @@ func batch6Lane4BigQueryScalar(value any, fieldType string) any {
 	switch strings.ToUpper(fieldType) {
 	case "INTEGER", "INT64", "INT", "SMALLINT", "BIGINT", "TINYINT", "BYTEINT":
 		if !isText {
-			if parsed, ok := batch6Lane4Int64(value); ok {
+			if parsed, ok := int64Value(value); ok {
 				return parsed
 			}
 			return value
@@ -325,7 +318,7 @@ func batch6Lane4BigQueryScalar(value any, fieldType string) any {
 		return text
 	case "BOOLEAN", "BOOL":
 		if !isText {
-			return batch6Lane4Bool(value)
+			return asBool(value)
 		}
 		switch strings.ToLower(strings.TrimSpace(text)) {
 		case "true", "1":
@@ -344,25 +337,25 @@ func batch6Lane4BigQueryValue(value any, field map[string]any) any {
 	if value == nil {
 		return nil
 	}
-	fieldType := strings.ToUpper(batch6Lane4StringOr(field, "type", ""))
-	mode := strings.ToUpper(batch6Lane4StringOr(field, "mode", ""))
+	fieldType := strings.ToUpper(stringOr(field, "type", ""))
+	mode := strings.ToUpper(stringOr(field, "mode", ""))
 	if fieldType == "RECORD" || fieldType == "STRUCT" {
-		nested := batch4AsSlice(field["fields"])
+		nested := asSlice(field["fields"])
 		if mode == "REPEATED" {
-			items := batch4AsSlice(value)
+			items := asSlice(value)
 			out := make([]any, 0, len(items))
 			for _, item := range items {
-				out = append(out, batch6Lane4BigQueryRecord(batch4AsMap(item)["v"], nested))
+				out = append(out, batch6Lane4BigQueryRecord(asMap(item)["v"], nested))
 			}
 			return out
 		}
 		return batch6Lane4BigQueryRecord(value, nested)
 	}
 	if mode == "REPEATED" {
-		items := batch4AsSlice(value)
+		items := asSlice(value)
 		out := make([]any, 0, len(items))
 		for _, item := range items {
-			out = append(out, batch6Lane4BigQueryScalar(batch4AsMap(item)["v"], fieldType))
+			out = append(out, batch6Lane4BigQueryScalar(asMap(item)["v"], fieldType))
 		}
 		return out
 	}
@@ -371,17 +364,17 @@ func batch6Lane4BigQueryValue(value any, field map[string]any) any {
 
 // batch6Lane4BigQueryRecord converts one record value ({"f": [...]}).
 func batch6Lane4BigQueryRecord(value any, fields []any) map[string]any {
-	record := batch4AsMap(value)
-	values := batch4AsSlice(record["f"])
+	record := asMap(value)
+	values := asSlice(record["f"])
 	out := make(map[string]any, len(fields))
 	for index, rawField := range fields {
-		field := batch4AsMap(rawField)
-		name := batch6Lane4StringOr(field, "name", "")
+		field := asMap(rawField)
+		name := stringOr(field, "name", "")
 		if index >= len(values) {
 			out[name] = nil
 			continue
 		}
-		out[name] = batch6Lane4BigQueryValue(batch4AsMap(values[index])["v"], field)
+		out[name] = batch6Lane4BigQueryValue(asMap(values[index])["v"], field)
 	}
 	return out
 }
@@ -390,16 +383,16 @@ func batch6Lane4BigQueryRecord(value any, fields []any) map[string]any {
 func batch6Lane4BigQueryRows(rows []any, fields []any) []any {
 	out := make([]any, 0, len(rows))
 	for _, rawRow := range rows {
-		values := batch4AsSlice(batch4AsMap(rawRow)["f"])
+		values := asSlice(asMap(rawRow)["f"])
 		row := make(map[string]any, len(fields))
 		for index, rawField := range fields {
-			field := batch4AsMap(rawField)
-			name := batch6Lane4StringOr(field, "name", "")
+			field := asMap(rawField)
+			name := stringOr(field, "name", "")
 			if index >= len(values) {
 				row[name] = nil
 				continue
 			}
-			row[name] = batch6Lane4BigQueryValue(batch4AsMap(values[index])["v"], field)
+			row[name] = batch6Lane4BigQueryValue(asMap(values[index])["v"], field)
 		}
 		out = append(out, row)
 	}
@@ -410,10 +403,10 @@ func batch6Lane4BigQueryRows(rows []any, fields []any) []any {
 func batch6Lane4BigQuerySchema(fields []any) []any {
 	out := make([]any, 0, len(fields))
 	for _, rawField := range fields {
-		field := batch4AsMap(rawField)
+		field := asMap(rawField)
 		out = append(out, map[string]any{
-			"name": batch6Lane4StringOr(field, "name", ""),
-			"type": batch6Lane4StringOr(field, "type", ""),
+			"name": stringOr(field, "name", ""),
+			"type": stringOr(field, "type", ""),
 			"mode": field["mode"],
 		})
 	}
@@ -443,24 +436,24 @@ func batch6Lane4BigQueryRunQuery(ctx context.Context, rt *Runtime, input map[str
 		return failure, nil
 	}
 	base := batch6Lane4BigQueryBase(rt)
-	endpoint := base + "/projects/" + batch6Lane4PathEscape(creds.Project) + "/queries"
+	endpoint := base + "/projects/" + pathEscape(creds.Project) + "/queries"
 	body := map[string]any{
 		"query":        sql,
 		"useLegacySql": false,
 		"maxResults":   maxRows,
 	}
-	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodPost, endpoint, batch6Lane4BigQueryHeaders(creds.Token), body, 60*time.Second)
+	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodPost, endpoint, bearerJSONHeaders(creds.Token), body, 60*time.Second)
 	if err != nil {
-		return batch6Lane4TransportError(ctx, "BigQuery", err), nil
+		return transportError(ctx, "BigQuery", err), nil
 	}
 	if resp.Status >= 400 {
 		return batch6Lane4BigQueryError(resp, "", false), nil
 	}
-	payload, ok := batch6Lane4JSONObject(resp.Body)
+	payload, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "BigQuery API error: invalid JSON response"}, nil
 	}
-	jobID := batch6Lane4StringOr(batch4AsMap(payload["jobReference"]), "jobId", "")
+	jobID := stringOr(asMap(payload["jobReference"]), "jobId", "")
 	// Poll a bounded number of times when the job is still running.
 	attempts := 0
 	for payload["jobComplete"] == false && jobID != "" && attempts < 10 {
@@ -481,12 +474,12 @@ func batch6Lane4BigQueryRunQuery(ctx context.Context, rt *Runtime, input map[str
 		return map[string]any{"error": "BigQuery query did not complete within 30 seconds"}, nil
 	}
 
-	schemaFields := batch4AsSlice(batch4AsMap(payload["schema"])["fields"])
-	rows := batch4AsSlice(payload["rows"])
-	totalRows, hasTotal := batch6Lane4Int64(payload["totalRows"])
+	schemaFields := asSlice(asMap(payload["schema"])["fields"])
+	rows := asSlice(payload["rows"])
+	totalRows, hasTotal := int64Value(payload["totalRows"])
 	// Follow page tokens until max_rows or a bounded page count.
 	pages := 0
-	for pageToken := batch6Lane4StringOr(payload, "pageToken", ""); pageToken != "" && len(rows) < maxRows && pages < 20; {
+	for pageToken := stringOr(payload, "pageToken", ""); pageToken != "" && len(rows) < maxRows && pages < 20; {
 		pages++
 		query := url.Values{
 			"maxResults": []string{strconv.Itoa(maxRows - len(rows))},
@@ -496,10 +489,10 @@ func batch6Lane4BigQueryRunQuery(ctx context.Context, rt *Runtime, input map[str
 		if failure != nil {
 			return failure, nil
 		}
-		rows = append(rows, batch4AsSlice(page["rows"])...)
-		pageToken = batch6Lane4StringOr(page, "pageToken", "")
+		rows = append(rows, asSlice(page["rows"])...)
+		pageToken = stringOr(page, "pageToken", "")
 		if page["schema"] != nil && len(schemaFields) == 0 {
-			schemaFields = batch4AsSlice(batch4AsMap(page["schema"])["fields"])
+			schemaFields = asSlice(asMap(page["schema"])["fields"])
 		}
 	}
 	converted := batch6Lane4BigQueryRows(rows, schemaFields)
@@ -510,7 +503,7 @@ func batch6Lane4BigQueryRunQuery(ctx context.Context, rt *Runtime, input map[str
 	if hasTotal && totalRows > total {
 		total = totalRows
 	}
-	bytesProcessed, _ := batch6Lane4Int64(payload["totalBytesProcessed"])
+	bytesProcessed, _ := int64Value(payload["totalBytesProcessed"])
 	return map[string]any{
 		"success":         true,
 		"rows":            converted,
@@ -524,19 +517,19 @@ func batch6Lane4BigQueryRunQuery(ctx context.Context, rt *Runtime, input map[str
 
 // batch6Lane4BigQueryGetResults fetches one page of query results.
 func batch6Lane4BigQueryGetResults(ctx context.Context, rt *Runtime, base string, creds batch6Lane4BigQueryCredentials, jobID string, query url.Values) (map[string]any, map[string]any) {
-	endpoint := base + "/projects/" + batch6Lane4PathEscape(creds.Project) +
-		"/queries/" + batch6Lane4PathEscape(jobID)
+	endpoint := base + "/projects/" + pathEscape(creds.Project) +
+		"/queries/" + pathEscape(jobID)
 	if encoded := query.Encode(); encoded != "" {
 		endpoint += "?" + encoded
 	}
-	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, endpoint, batch6Lane4BigQueryHeaders(creds.Token), nil, 60*time.Second)
+	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, endpoint, bearerJSONHeaders(creds.Token), nil, 60*time.Second)
 	if err != nil {
-		return nil, batch6Lane4TransportError(ctx, "BigQuery", err)
+		return nil, transportError(ctx, "BigQuery", err)
 	}
 	if resp.Status >= 400 {
 		return nil, batch6Lane4BigQueryError(resp, "", false)
 	}
-	data, ok := batch6Lane4JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return nil, map[string]any{"error": "BigQuery API error: invalid JSON response"}
 	}
@@ -553,8 +546,8 @@ func batch6Lane4BigQueryDescribeDataset(ctx context.Context, rt *Runtime, input 
 		return failure, nil
 	}
 	base := batch6Lane4BigQueryBase(rt)
-	tableBase := base + "/projects/" + batch6Lane4PathEscape(creds.Project) +
-		"/datasets/" + batch6Lane4PathEscape(datasetID) + "/tables"
+	tableBase := base + "/projects/" + pathEscape(creds.Project) +
+		"/datasets/" + pathEscape(datasetID) + "/tables"
 	tables := make([]any, 0)
 	pageToken := ""
 	pages := 0
@@ -564,19 +557,19 @@ func batch6Lane4BigQueryDescribeDataset(ctx context.Context, rt *Runtime, input 
 		if pageToken != "" {
 			query.Set("pageToken", pageToken)
 		}
-		resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, tableBase+"?"+query.Encode(), batch6Lane4BigQueryHeaders(creds.Token), nil, 60*time.Second)
+		resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, tableBase+"?"+query.Encode(), bearerJSONHeaders(creds.Token), nil, 60*time.Second)
 		if err != nil {
-			return batch6Lane4TransportError(ctx, "BigQuery", err), nil
+			return transportError(ctx, "BigQuery", err), nil
 		}
 		if resp.Status >= 400 {
 			return batch6Lane4BigQueryError(resp, datasetID, true), nil
 		}
-		page, ok := batch6Lane4JSONObject(resp.Body)
+		page, ok := jsonObject(resp.Body)
 		if !ok {
 			return map[string]any{"error": "BigQuery API error: invalid JSON response"}, nil
 		}
-		tables = append(tables, batch4AsSlice(page["tables"])...)
-		pageToken = batch6Lane4StringOr(page, "nextPageToken", "")
+		tables = append(tables, asSlice(page["tables"])...)
+		pageToken = stringOr(page, "nextPageToken", "")
 		if pageToken == "" || pages >= 20 {
 			break
 		}
@@ -584,25 +577,25 @@ func batch6Lane4BigQueryDescribeDataset(ctx context.Context, rt *Runtime, input 
 
 	described := make([]any, 0, len(tables))
 	for _, rawTable := range tables {
-		table := batch4AsMap(rawTable)
-		tableID := batch6Lane4StringOr(batch4AsMap(table["tableReference"]), "tableId", "")
+		table := asMap(rawTable)
+		tableID := stringOr(asMap(table["tableReference"]), "tableId", "")
 		if tableID == "" {
 			continue
 		}
-		endpoint := tableBase + "/" + batch6Lane4PathEscape(tableID)
-		resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, endpoint, batch6Lane4BigQueryHeaders(creds.Token), nil, 60*time.Second)
+		endpoint := tableBase + "/" + pathEscape(tableID)
+		resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, endpoint, bearerJSONHeaders(creds.Token), nil, 60*time.Second)
 		if err != nil {
-			return batch6Lane4TransportError(ctx, "BigQuery", err), nil
+			return transportError(ctx, "BigQuery", err), nil
 		}
 		if resp.Status >= 400 {
 			return batch6Lane4BigQueryError(resp, datasetID, true), nil
 		}
-		detail, ok := batch6Lane4JSONObject(resp.Body)
+		detail, ok := jsonObject(resp.Body)
 		if !ok {
 			return map[string]any{"error": "BigQuery API error: invalid JSON response"}, nil
 		}
-		rowCount, _ := batch6Lane4Int64(detail["numRows"])
-		sizeBytes, _ := batch6Lane4Int64(detail["numBytes"])
+		rowCount, _ := int64Value(detail["numRows"])
+		sizeBytes, _ := int64Value(detail["numBytes"])
 		var rowCountValue any
 		if _, present := detail["numRows"]; present {
 			rowCountValue = rowCount
@@ -612,11 +605,11 @@ func batch6Lane4BigQueryDescribeDataset(ctx context.Context, rt *Runtime, input 
 			sizeBytesValue = sizeBytes
 		}
 		described = append(described, map[string]any{
-			"table_id":   batch6Lane4StringOr(batch4AsMap(detail["tableReference"]), "tableId", tableID),
-			"type":       batch6Lane4StringOr(detail, "type", ""),
+			"table_id":   stringOr(asMap(detail["tableReference"]), "tableId", tableID),
+			"type":       stringOr(detail, "type", ""),
 			"row_count":  rowCountValue,
 			"size_bytes": sizeBytesValue,
-			"columns":    batch6Lane4BigQuerySchema(batch4AsSlice(batch4AsMap(detail["schema"])["fields"])),
+			"columns":    batch6Lane4BigQuerySchema(asSlice(asMap(detail["schema"])["fields"])),
 		})
 	}
 	return map[string]any{

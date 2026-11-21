@@ -1,6 +1,7 @@
 # integrations 包目录与 integrationkit 边界
 
-> 状态：P1（纯改名）与 P2（共享层试点）已落地。行为、错误文案、对外符号与测试断言不变。
+> 状态：P1（纯改名）、P2（共享层试点）与领域子包试点（excel、devops）已落地。
+> 行为、错误文案、对外符号与测试断言不变。
 > 适用模块：`go_hive/go-hive`，包 `internal/tools/integrations` 与 `internal/tools/integrationkit`。
 
 ## 1. 目标与结论
@@ -25,7 +26,8 @@
 | 文件类型 | 规则 | 示例 |
 | --- | --- | --- |
 | 单 provider 模块 | `<module>.go`，与上游模块名一致；测试 `<module>_test.go` | `jira.go`、`quickbooks.go`、`cloudflare.go` |
-| 多模块领域注册表 | `<domain>.go`：该领域的 Registry 构造、模块配置与共享 helper | `devops_hosting.go`、`data_platform.go`、`google_workspace.go` |
+| 多模块领域注册表 | `<domain>.go`：该领域的 Registry 构造、模块配置与共享 helper | `data_platform.go`、`google_workspace.go` |
+| 领域子包 | `<domain>/`：单领域 catalog + action + `register.go`，只 import `integrationkit` | `excel/`、`devops/` |
 | 共享 helper | 按用途命名，避免裸 `helpers.go` | `http_fetch.go`、`crm_common.go`、`pgwire.go` |
 | 批次安装器 | 文件名跟领域，**导出符号不改**（`InstallBatch5Lane1` 等保持原样） | `atlassian_asana.go` 仍导出 `InstallBatch5Lane1` |
 | 生成文件 | 保持 `catalog_gen.go`，由 `gen_catalog.py` 生成，不手改 | — |
@@ -34,7 +36,8 @@
 
 - 不再新增带 `batch` / `lane` / `wave` 前缀的文件名；批次信息留在提交历史与
   `docs/CHANGELOG.md`。
-- 新文件优先 ≤ 1,500 行；超过时先拆模块或抽 helper，不新增 waiver。
+- 新文件 ≤ 800 行（`internal/quality` 的 integrations 子树门禁）；超过时先拆模块
+  或抽 helper，不新增 waiver。迁入子包时把 `batchN*`/`lane*` 标识符改成领域名。
 - 领域注册表与单模块文件不要互相复制 HTTP 样板；先查 `integrationkit` 是否已有原语。
 
 ### 2.1 P1 改名清单（145 个文件）
@@ -150,8 +153,8 @@ provider，不会形成循环依赖。
 
 ## 5. P4：超大文件拆分与可选子包化（预估 3–5 人日）
 
-1. 按模块拆 `devops_hosting.go`（2,276 行 → gitlab / aws_s3 / vercel / docker_hub）、
-   `cloudflare.go`（1,973 → zones / dns / security / workers）、
+1. ✅ `devops_hosting.go` 已拆入 `devops/` 子包（2,270 行 → 8 个文件，见 §5.1）。
+   其余仍待拆：`cloudflare.go`（1,973 → zones / dns / security / workers）、
    `ai_platform.go`（3,031 → pinecone / wandb / langfuse / huggingface / vision）、
    `enrichment_search.go`（2,848 → apify / apollo / lusha / serpapi / exa）、
    `social_media.go`（2,532 → youtube / reddit / twitter / twilio / pushover）、
@@ -161,9 +164,52 @@ provider，不会形成循环依赖。
    waiver，而不是提高上限。
 3. 领域子包化（可选）：`integrations/<domain>` 各自注册，`integrations` 只保留
    `New` 门面与 catalog 汇总。前置条件是 P3 完成；否则 Registry 仍在父包。
+   （excel、devops 已按此模式落地。）
 4. 给 kit 补独立测试：`fillPath`、`encodeForm`、`providerError`、`ResolvedToken`
    的边界用例，以及一个 `CallREST` 的 httptest 用例，降低对 integrations 测试
    套件的隐式覆盖依赖。
+
+### 5.1 devops 子包落地（P2 领域拆分 lane `int-p2-devops`）
+
+基线 `a955c3b6`。`devops_hosting.go`（2,270 行）整体下沉为
+`internal/tools/integrations/devops/`，根包只保留薄入口
+`integrations/devops_install.go`。
+
+| 新文件 | 内容 | 行数 |
+| --- | --- | ---: |
+| `devops/doc.go` | 包注释：4 个模块的契约、刻意限制与迁移说明 | 42 |
+| `devops/kit.go` | `Tool`/`Action`/`Runtime`/`Registry`/`Option`/`ModuleConfig` 等 kit 别名 | 17 |
+| `devops/register.go` | `NewRegistry`/`Register`、4 个 `ModuleConfig` 与上限常量 | 80 |
+| `devops/common.go` | 共享 helper：`doRequest`/`jsonRequest`/`httpReply`/JSON 访问器 | 297 |
+| `devops/gitlab.go` | GitLab catalog + 9 个 action + `gitlabCall` | 561 |
+| `devops/s3.go` | AWS S3 catalog + SigV4 签名 + 8 个 action | 643 |
+| `devops/vercel.go` | Vercel catalog + 7 个 action | 343 |
+| `devops/dockerhub.go` | Docker Hub catalog + 7 个 action | 383 |
+| `devops/digest_test.go` | 四工具 catalog digest 冻结（迁移前基线） | 49 |
+| `integrations/devops_install.go` | 根包薄入口：`InstallBatch7Lane1`/`newBatch7Lane1Registry` | 22 |
+
+行数对照：`devops_hosting.go` 2,270 行 → 子包生产代码 2,366 行 + 根包入口 22 行
+（新增文件头、包注释与 import 块；工具定义的字符串字面量逐字节未改）。
+
+行为与工具面：
+
+- 4 个工具 / 31 个 action（gitlab 9、aws_s3 8、vercel 7、docker_hub 7）的
+  name/description/input_schema 逐字节不变：迁移前后 `(name, description,
+  schema)` JSON 的 sha256 均为
+  `9787a660980bfae91aac3878d329826750f088b1017ffb60cdf0bdb9869828c5`
+  （entries-only：`490e4e2d2d3ccb952f053e3106e8bed435b2f7cbfe4c2b74123fb7b4894529c4`）；
+  子包 `digest_test.go` 冻结 entries-only 值。
+- 根包 `InstallBatch7Lane1` 签名不变，改调 `devops.NewRegistry().Install(target)`；
+  测试用 `newBatch7Lane1Registry` 转发 `devops.NewRegistry`，1,613 行的
+  `devops_hosting_test.go` 未改动即全绿。
+- 依赖方向：`integrations → devops → integrationkit`；子包不 import 根包或
+  `internal/tools`。`batch7Lane1*` 标识符全部改为领域名（`gitlabCall`、
+  `s3SignRequest`、`dockerHubListTags` …），lane 前缀标识符 1,902 → 1,818。
+- `internal/quality/size_test.go` 删除 `devops_hosting.go` 的 2,276 行 waiver；
+  子包最大文件 643 行，低于 800 行门禁。
+- 验收：`go build ./...`、`go test ./internal/tools/integrations/...
+  ./internal/server/ ./internal/quality/`、`gen_tool_surface_flat.py --check`、
+  `refactor_freeze.sh compare wave15-base`、`gen_arch.py --check` 全部通过。
 
 ## 6. 验证
 

@@ -99,11 +99,11 @@ func batch5Lane4HubSpotOAuth(getenv func(string) string) *integrationkit.OAuth2R
 	})
 }
 
-// batch6ZohoOAuth is the `zoho_crm` credential. Upstream documents
+// oauthZohoOAuth is the `zoho_crm` credential. Upstream documents
 // ZOHO_CLIENT_ID / ZOHO_CLIENT_SECRET / ZOHO_REFRESH_TOKEN and derives the
 // token endpoint from ZOHO_ACCOUNTS_DOMAIN (or ZOHO_REGION); the default is
 // the US accounts host.
-func batch6ZohoOAuth(getenv func(string) string) *integrationkit.OAuth2Refresh {
+func oauthZohoOAuth(getenv func(string) string) *integrationkit.OAuth2Refresh {
 	return oauthRefreshFromEnv(getenv, oauthEnv{
 		module:          "zoho_crm",
 		defaultTokenURL: batch6ZohoTokenURL(getenv),

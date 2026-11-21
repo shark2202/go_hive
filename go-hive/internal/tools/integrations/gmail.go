@@ -28,7 +28,7 @@ func batch5Lane3GmailImpls() map[string]ActionFunc {
 	}
 }
 
-func batch5Lane3GmailAuthError() map[string]any {
+func gmailAuthError() map[string]any {
 	return map[string]any{
 		"error": "Gmail credentials not configured",
 		"help":  "Connect Gmail via hive.adenhq.com",
@@ -39,7 +39,7 @@ func batch5Lane3GmailAuthError() map[string]any {
 func batch5Lane3GmailResponse(status int, raw []byte) map[string]any {
 	switch status {
 	case http.StatusOK:
-		payload, ok := batch5Lane3JSONObject(raw)
+		payload, ok := jsonObject(raw)
 		if !ok {
 			return map[string]any{"error": "Gmail API error: invalid JSON response"}
 		}
@@ -62,7 +62,7 @@ func batch5Lane3GmailResponse(status int, raw []byte) map[string]any {
 
 func batch5Lane3GmailCall(ctx context.Context, rt *Runtime, method, path string, query map[string]string, body any) (map[string]any, error) {
 	if !batch5Lane3AccountCredential(rt, batch5Lane3GmailModule) {
-		return batch5Lane3GmailAuthError(), nil
+		return gmailAuthError(), nil
 	}
 	status, raw, err := batch5Lane3Do(ctx, rt, batch5Lane3GmailModule, method, path, query, body)
 	if err != nil {
@@ -119,12 +119,12 @@ func batch5Lane3GmailPyList(raw any, values []string) string {
 // batch5Lane3GmailHeaders flattens the headers upstream keeps.
 func batch5Lane3GmailHeaders(headers any) map[string]string {
 	out := map[string]string{}
-	for _, rawHeader := range batch4AsSlice(headers) {
-		header := batch4AsMap(rawHeader)
-		name := strings.ToLower(batch4AsString(header["name"]))
+	for _, rawHeader := range asSlice(headers) {
+		header := asMap(rawHeader)
+		name := strings.ToLower(asString(header["name"]))
 		switch name {
 		case "subject", "from", "to", "date", "cc":
-			out[name] = batch4AsString(header["value"])
+			out[name] = asString(header["value"])
 		}
 	}
 	return out
@@ -132,10 +132,10 @@ func batch5Lane3GmailHeaders(headers any) map[string]string {
 
 // batch5Lane3GmailHeaderValue reads a header case-insensitively.
 func batch5Lane3GmailHeaderValue(headers any, name string) string {
-	for _, rawHeader := range batch4AsSlice(headers) {
-		header := batch4AsMap(rawHeader)
-		if strings.EqualFold(batch4AsString(header["name"]), name) {
-			return batch4AsString(header["value"])
+	for _, rawHeader := range asSlice(headers) {
+		header := asMap(rawHeader)
+		if strings.EqualFold(asString(header["name"]), name) {
+			return asString(header["value"])
 		}
 	}
 	return ""
@@ -159,17 +159,17 @@ func batch5Lane3GmailDecode(text string) (string, bool) {
 // batch5Lane3GmailBody extracts a plain-text body the way get_message does:
 // direct payload body first, then top-level text/plain, then text/html.
 func batch5Lane3GmailBody(payload map[string]any) string {
-	if text, ok := batch5Lane3GmailDecode(batch4AsString(batch4AsMap(payload["body"])["data"])); ok {
+	if text, ok := batch5Lane3GmailDecode(asString(asMap(payload["body"])["data"])); ok {
 		return text
 	}
-	parts := batch4AsSlice(payload["parts"])
+	parts := asSlice(payload["parts"])
 	for _, mimeType := range []string{"text/plain", "text/html"} {
 		for _, rawPart := range parts {
-			part := batch4AsMap(rawPart)
-			if batch4AsString(part["mimeType"]) != mimeType {
+			part := asMap(rawPart)
+			if asString(part["mimeType"]) != mimeType {
 				continue
 			}
-			if text, ok := batch5Lane3GmailDecode(batch4AsString(batch4AsMap(part["body"])["data"])); ok {
+			if text, ok := batch5Lane3GmailDecode(asString(asMap(part["body"])["data"])); ok {
 				return text
 			}
 		}
@@ -180,13 +180,13 @@ func batch5Lane3GmailBody(payload map[string]any) string {
 // batch5Lane3GmailBodyType walks the MIME tree for one content type, like the
 // recursive helper used when quoting a reply.
 func batch5Lane3GmailBodyType(part map[string]any, mimeType string) string {
-	if batch4AsString(part["mimeType"]) == mimeType {
-		if text, ok := batch5Lane3GmailDecode(batch4AsString(batch4AsMap(part["body"])["data"])); ok {
+	if asString(part["mimeType"]) == mimeType {
+		if text, ok := batch5Lane3GmailDecode(asString(asMap(part["body"])["data"])); ok {
 			return text
 		}
 	}
-	for _, rawChild := range batch4AsSlice(part["parts"]) {
-		if text := batch5Lane3GmailBodyType(batch4AsMap(rawChild), mimeType); text != "" {
+	for _, rawChild := range asSlice(part["parts"]) {
+		if text := batch5Lane3GmailBodyType(asMap(rawChild), mimeType); text != "" {
 			return text
 		}
 	}
@@ -208,7 +208,7 @@ func batch5Lane3GmailMessageShape(data map[string]any, full bool) map[string]any
 	if result["snippet"] == nil {
 		result["snippet"] = ""
 	}
-	payload := batch4AsMap(data["payload"])
+	payload := asMap(data["payload"])
 	if headers := batch5Lane3GmailHeaders(payload["headers"]); len(headers) > 0 {
 		for name, value := range headers {
 			result[name] = value
@@ -241,7 +241,7 @@ func batch5Lane3GmailRawMessage(to, subject, htmlBody, inReplyTo string) string 
 }
 
 func batch5Lane3GmailListMessages(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	maxResults := batch4Clamp(intArg(input, "max_results", 100), 1, 500)
+	maxResults := clampInt(intArg(input, "max_results", 100), 1, 500)
 	query := map[string]string{
 		"q":          stringArg(input, "query"),
 		"maxResults": strconv.Itoa(maxResults),
@@ -256,7 +256,7 @@ func batch5Lane3GmailListMessages(ctx context.Context, rt *Runtime, input map[st
 	if _, failed := result["error"]; failed {
 		return result, nil
 	}
-	messages := batch4AsSlice(result["messages"])
+	messages := asSlice(result["messages"])
 	if messages == nil {
 		messages = []any{}
 	}
@@ -316,7 +316,7 @@ func batch5Lane3GmailModifyMessage(ctx context.Context, rt *Runtime, input map[s
 		return map[string]any{"error": "message_id is required"}, nil
 	}
 	if !batch5Lane3AccountCredential(rt, batch5Lane3GmailModule) {
-		return batch5Lane3GmailAuthError(), nil
+		return gmailAuthError(), nil
 	}
 	addLabels := batch5Lane3GmailEnsureList(input["add_labels"])
 	removeLabels := batch5Lane3GmailEnsureList(input["remove_labels"])
@@ -344,7 +344,7 @@ func batch5Lane3GmailModifyMessage(ctx context.Context, rt *Runtime, input map[s
 	if _, failed := result["error"]; failed {
 		return result, nil
 	}
-	labels := batch4AsSlice(result["labelIds"])
+	labels := asSlice(result["labelIds"])
 	if labels == nil {
 		labels = []any{}
 	}
@@ -357,7 +357,7 @@ func batch5Lane3GmailBatchModifyMessages(ctx context.Context, rt *Runtime, input
 		return map[string]any{"error": "message_ids list is required and must not be empty"}, nil
 	}
 	if !batch5Lane3AccountCredential(rt, batch5Lane3GmailModule) {
-		return batch5Lane3GmailAuthError(), nil
+		return gmailAuthError(), nil
 	}
 	addLabels := batch5Lane3GmailEnsureList(input["add_labels"])
 	removeLabels := batch5Lane3GmailEnsureList(input["remove_labels"])
@@ -426,7 +426,7 @@ func batch5Lane3GmailBatchGetMessages(ctx context.Context, rt *Runtime, input ma
 
 // batch5Lane3GmailQuote builds the quoted-reply block upstream appends.
 func batch5Lane3GmailQuote(original map[string]any) string {
-	payload := batch4AsMap(original["payload"])
+	payload := asMap(original["payload"])
 	originalHTML := batch5Lane3GmailBodyType(payload, "text/html")
 	if originalHTML == "" {
 		plain := batch5Lane3GmailBodyType(payload, "text/plain")
@@ -449,7 +449,7 @@ func batch5Lane3GmailCreateDraft(ctx context.Context, rt *Runtime, input map[str
 		return map[string]any{"error": "Email body (html) is required"}, nil
 	}
 	if !batch5Lane3AccountCredential(rt, batch5Lane3GmailModule) {
-		return batch5Lane3GmailAuthError(), nil
+		return gmailAuthError(), nil
 	}
 	to := stringArg(input, "to")
 	subject := stringArg(input, "subject")
@@ -477,8 +477,8 @@ func batch5Lane3GmailCreateDraft(ctx context.Context, rt *Runtime, input map[str
 		if _, failed := original["error"]; failed {
 			return original, nil
 		}
-		threadID = batch4AsString(original["threadId"])
-		payload := batch4AsMap(original["payload"])
+		threadID = asString(original["threadId"])
+		payload := asMap(original["payload"])
 		inReplyTo = batch5Lane3GmailHeaderValue(payload["headers"], "Message-ID")
 		if inReplyTo == "" {
 			inReplyTo = batch5Lane3GmailHeaderValue(payload["headers"], "Message-Id")
@@ -524,8 +524,8 @@ func batch5Lane3GmailCreateDraft(ctx context.Context, rt *Runtime, input map[str
 	}
 	draft := map[string]any{
 		"success":    true,
-		"draft_id":   batch4AsString(result["id"]),
-		"message_id": batch4AsString(batch4AsMap(result["message"])["id"]),
+		"draft_id":   asString(result["id"]),
+		"message_id": asString(asMap(result["message"])["id"]),
 	}
 	if threadID != "" {
 		draft["thread_id"] = threadID
@@ -544,7 +544,7 @@ func batch5Lane3GmailGetSignature(ctx context.Context, rt *Runtime, input map[st
 		path += "/" + batch5Lane3Segments(sanitized)
 	}
 	if !batch5Lane3AccountCredential(rt, batch5Lane3GmailModule) {
-		return batch5Lane3GmailAuthError(), nil
+		return gmailAuthError(), nil
 	}
 	status, raw, err := batch5Lane3Do(ctx, rt, batch5Lane3GmailModule, http.MethodGet, path, nil, nil)
 	if err != nil {
@@ -566,26 +566,26 @@ func batch5Lane3GmailGetSignature(ctx context.Context, rt *Runtime, input map[st
 	if sendAsEmail != "" {
 		alias = result
 	} else {
-		aliases := batch4AsSlice(result["sendAs"])
+		aliases := asSlice(result["sendAs"])
 		for _, rawAlias := range aliases {
-			candidate := batch4AsMap(rawAlias)
-			if batch4AsBool(candidate["isPrimary"]) {
+			candidate := asMap(rawAlias)
+			if asBool(candidate["isPrimary"]) {
 				alias = candidate
 				break
 			}
 		}
 		if alias == nil && len(aliases) > 0 {
-			alias = batch4AsMap(aliases[0])
+			alias = asMap(aliases[0])
 		}
 		if alias == nil {
 			return map[string]any{"error": "No send-as aliases found on this account"}, nil
 		}
 	}
 	return map[string]any{
-		"signature":     batch4AsString(alias["signature"]),
-		"send_as_email": batch4AsString(alias["sendAsEmail"]),
-		"display_name":  batch4AsString(alias["displayName"]),
-		"is_primary":    batch4AsBool(alias["isPrimary"]),
+		"signature":     asString(alias["signature"]),
+		"send_as_email": asString(alias["sendAsEmail"]),
+		"display_name":  asString(alias["displayName"]),
+		"is_primary":    asBool(alias["isPrimary"]),
 	}, nil
 }
 
@@ -597,7 +597,7 @@ func batch5Lane3GmailListLabels(ctx context.Context, rt *Runtime, input map[stri
 	if _, failed := result["error"]; failed {
 		return result, nil
 	}
-	labels := batch4AsSlice(result["labels"])
+	labels := asSlice(result["labels"])
 	if labels == nil {
 		labels = []any{}
 	}
@@ -621,14 +621,14 @@ func batch5Lane3GmailCreateLabel(ctx context.Context, rt *Runtime, input map[str
 	if _, failed := result["error"]; failed {
 		return result, nil
 	}
-	labelType := batch4AsString(result["type"])
+	labelType := asString(result["type"])
 	if labelType == "" {
 		labelType = "user"
 	}
 	return map[string]any{
 		"success": true,
-		"id":      batch4AsString(result["id"]),
-		"name":    batch4AsString(result["name"]),
+		"id":      asString(result["id"]),
+		"name":    asString(result["name"]),
 		"type":    labelType,
 	}, nil
 }

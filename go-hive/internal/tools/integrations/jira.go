@@ -141,14 +141,14 @@ func batch5Lane1JiraAuthError() map[string]any {
 // pair. WithBaseURL supplies the base in tests; JIRA_DOMAIN supplies it in
 // production.
 func batch5Lane1JiraClient(rt *Runtime) (base, email, token string, ok bool) {
-	base = batch5Lane1ModuleBase(rt, "jira_tool")
+	base = moduleBaseURL(rt, "jira_tool")
 	if base == "" {
 		if domain := batch5Lane1Getenv(rt, "JIRA_DOMAIN"); domain != "" {
 			base = "https://" + domain + "/rest/api/3"
 		}
 	}
 	email = batch5Lane1Getenv(rt, "JIRA_EMAIL")
-	token = batch5Lane1ModuleToken(rt, "jira_tool")
+	token = moduleToken(rt, "jira_tool")
 	return base, email, token, base != "" && email != "" && token != ""
 }
 
@@ -174,7 +174,7 @@ func batch5Lane1JiraRequest(ctx context.Context, rt *Runtime, base, email, token
 	}
 	resp, err := batch5Lane1Do(ctx, rt, method, base+path, query, payload, headers)
 	if err != nil {
-		if batch5Lane1IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Jira timed out"}
 		}
 		return map[string]any{"error": "Jira request failed: " + err.Error()}
@@ -194,7 +194,7 @@ func batch5Lane1JiraRequest(ctx context.Context, rt *Runtime, base, email, token
 		// Success: fall through to decoding.
 	default:
 		return map[string]any{
-			"error": fmt.Sprintf("Jira API error %d: %s", resp.Status, batch5Lane1Truncate(string(resp.Body), 500)),
+			"error": fmt.Sprintf("Jira API error %d: %s", resp.Status, truncateTextClamped(string(resp.Body), 500)),
 		}
 	}
 	object, err := batch5Lane1Decode(resp.Body)
@@ -224,15 +224,15 @@ func batch5Lane1JiraTextToADF(text string) map[string]any {
 // batch5Lane1JiraADFToText extracts plain text from an ADF document, mirroring
 // upstream _adf_to_text (blocks are newline separated, then stripped).
 func batch5Lane1JiraADFToText(value any) string {
-	document := batch5Lane1Map(value)
+	document := asMap(value)
 	if len(document) == 0 {
 		return ""
 	}
 	var builder strings.Builder
-	for _, rawBlock := range batch5Lane1Slice(document["content"]) {
-		block := batch5Lane1Map(rawBlock)
-		for _, rawInline := range batch5Lane1Slice(block["content"]) {
-			inline := batch5Lane1Map(rawInline)
+	for _, rawBlock := range asSlice(document["content"]) {
+		block := asMap(rawBlock)
+		for _, rawInline := range asSlice(block["content"]) {
+			inline := asMap(rawInline)
 			if batch5Lane1Text(inline, "type") == "text" {
 				builder.WriteString(batch5Lane1Text(inline, "text"))
 			}
@@ -264,7 +264,7 @@ func batch5Lane1JiraSearchIssues(ctx context.Context, rt *Runtime, input map[str
 	}
 	query := url.Values{}
 	query.Set("jql", jql)
-	query.Set("maxResults", strconv.Itoa(batch5Lane1Clamp(intArg(input, "max_results", 25), 1, 100)))
+	query.Set("maxResults", strconv.Itoa(clampInt(intArg(input, "max_results", 25), 1, 100)))
 	query.Set("fields", stringArg(input, "fields"))
 
 	data := batch5Lane1JiraRequest(ctx, rt, base, email, token, http.MethodGet, "/search/jql", query, nil)
@@ -272,16 +272,16 @@ func batch5Lane1JiraSearchIssues(ctx context.Context, rt *Runtime, input map[str
 		return data, nil
 	}
 	issues := make([]map[string]any, 0)
-	for _, rawIssue := range batch5Lane1Slice(data["issues"]) {
-		issue := batch5Lane1Map(rawIssue)
-		fields := batch5Lane1Map(issue["fields"])
+	for _, rawIssue := range asSlice(data["issues"]) {
+		issue := asMap(rawIssue)
+		fields := asMap(issue["fields"])
 		issues = append(issues, map[string]any{
 			"key":       batch5Lane1Text(issue, "key"),
 			"summary":   batch5Lane1Text(fields, "summary"),
-			"status":    batch5Lane1Text(batch5Lane1Map(fields["status"]), "name"),
-			"assignee":  batch5Lane1Text(batch5Lane1Map(fields["assignee"]), "displayName"),
-			"priority":  batch5Lane1Text(batch5Lane1Map(fields["priority"]), "name"),
-			"issuetype": batch5Lane1Text(batch5Lane1Map(fields["issuetype"]), "name"),
+			"status":    batch5Lane1Text(asMap(fields["status"]), "name"),
+			"assignee":  batch5Lane1Text(asMap(fields["assignee"]), "displayName"),
+			"priority":  batch5Lane1Text(asMap(fields["priority"]), "name"),
+			"issuetype": batch5Lane1Text(asMap(fields["issuetype"]), "name"),
 		})
 	}
 	return map[string]any{"issues": issues, "count": len(issues)}, nil
@@ -300,9 +300,9 @@ func batch5Lane1JiraGetIssue(ctx context.Context, rt *Runtime, input map[string]
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	fields := batch5Lane1Map(data["fields"])
+	fields := asMap(data["fields"])
 	labels := make([]string, 0)
-	for _, rawLabel := range batch5Lane1Slice(fields["labels"]) {
+	for _, rawLabel := range asSlice(fields["labels"]) {
 		if label, ok := rawLabel.(string); ok {
 			labels = append(labels, label)
 		}
@@ -311,12 +311,12 @@ func batch5Lane1JiraGetIssue(ctx context.Context, rt *Runtime, input map[string]
 		"key":         batch5Lane1Text(data, "key"),
 		"summary":     batch5Lane1Text(fields, "summary"),
 		"description": batch5Lane1JiraADFToText(fields["description"]),
-		"status":      batch5Lane1Text(batch5Lane1Map(fields["status"]), "name"),
-		"assignee":    batch5Lane1Text(batch5Lane1Map(fields["assignee"]), "displayName"),
-		"reporter":    batch5Lane1Text(batch5Lane1Map(fields["reporter"]), "displayName"),
-		"priority":    batch5Lane1Text(batch5Lane1Map(fields["priority"]), "name"),
-		"issuetype":   batch5Lane1Text(batch5Lane1Map(fields["issuetype"]), "name"),
-		"project":     batch5Lane1Text(batch5Lane1Map(fields["project"]), "name"),
+		"status":      batch5Lane1Text(asMap(fields["status"]), "name"),
+		"assignee":    batch5Lane1Text(asMap(fields["assignee"]), "displayName"),
+		"reporter":    batch5Lane1Text(asMap(fields["reporter"]), "displayName"),
+		"priority":    batch5Lane1Text(asMap(fields["priority"]), "name"),
+		"issuetype":   batch5Lane1Text(asMap(fields["issuetype"]), "name"),
+		"project":     batch5Lane1Text(asMap(fields["project"]), "name"),
 		"labels":      labels,
 		"created":     batch5Lane1Text(fields, "created"),
 		"updated":     batch5Lane1Text(fields, "updated"),
@@ -366,7 +366,7 @@ func batch5Lane1JiraListProjects(ctx context.Context, rt *Runtime, input map[str
 		return batch5Lane1JiraAuthError(), nil
 	}
 	query := url.Values{}
-	query.Set("maxResults", strconv.Itoa(batch5Lane1Clamp(intArg(input, "max_results", 50), 1, 100)))
+	query.Set("maxResults", strconv.Itoa(clampInt(intArg(input, "max_results", 50), 1, 100)))
 	if filter := stringArg(input, "query"); filter != "" {
 		query.Set("query", filter)
 	}
@@ -375,8 +375,8 @@ func batch5Lane1JiraListProjects(ctx context.Context, rt *Runtime, input map[str
 		return data, nil
 	}
 	projects := make([]map[string]any, 0)
-	for _, rawProject := range batch5Lane1Slice(data["values"]) {
-		project := batch5Lane1Map(rawProject)
+	for _, rawProject := range asSlice(data["values"]) {
+		project := asMap(rawProject)
 		projects = append(projects, map[string]any{
 			"key":          batch5Lane1Text(project, "key"),
 			"name":         batch5Lane1Text(project, "name"),
@@ -403,8 +403,8 @@ func batch5Lane1JiraGetProject(ctx context.Context, rt *Runtime, input map[strin
 		return data, nil
 	}
 	issueTypes := make([]map[string]any, 0)
-	for _, rawType := range batch5Lane1Slice(data["issueTypes"]) {
-		issueType := batch5Lane1Map(rawType)
+	for _, rawType := range asSlice(data["issueTypes"]) {
+		issueType := asMap(rawType)
 		issueTypes = append(issueTypes, map[string]any{
 			"name":    batch5Lane1Text(issueType, "name"),
 			"subtask": batch5Lane1Bool(issueType, "subtask"),
@@ -419,7 +419,7 @@ func batch5Lane1JiraGetProject(ctx context.Context, rt *Runtime, input map[strin
 		"name":         batch5Lane1Text(data, "name"),
 		"id":           batch5Lane1Text(data, "id"),
 		"description":  description,
-		"lead":         batch5Lane1Text(batch5Lane1Map(data["lead"]), "displayName"),
+		"lead":         batch5Lane1Text(asMap(data["lead"]), "displayName"),
 		"project_type": batch5Lane1Text(data, "projectTypeKey"),
 		"issue_types":  issueTypes,
 	}, nil
@@ -443,7 +443,7 @@ func batch5Lane1JiraAddComment(ctx context.Context, rt *Runtime, input map[strin
 	}
 	return map[string]any{
 		"id":      batch5Lane1Text(data, "id"),
-		"author":  batch5Lane1Text(batch5Lane1Map(data["author"]), "displayName"),
+		"author":  batch5Lane1Text(asMap(data["author"]), "displayName"),
 		"created": batch5Lane1Text(data, "created"),
 		"status":  "created",
 	}, nil
@@ -502,12 +502,12 @@ func batch5Lane1JiraListTransitions(ctx context.Context, rt *Runtime, input map[
 		return data, nil
 	}
 	transitions := make([]map[string]any, 0)
-	for _, rawTransition := range batch5Lane1Slice(data["transitions"]) {
-		transition := batch5Lane1Map(rawTransition)
+	for _, rawTransition := range asSlice(data["transitions"]) {
+		transition := asMap(rawTransition)
 		transitions = append(transitions, map[string]any{
 			"id":        batch5Lane1Text(transition, "id"),
 			"name":      batch5Lane1Text(transition, "name"),
-			"to_status": batch5Lane1Text(batch5Lane1Map(transition["to"]), "name"),
+			"to_status": batch5Lane1Text(asMap(transition["to"]), "name"),
 		})
 	}
 	return map[string]any{"transitions": transitions, "count": len(transitions)}, nil

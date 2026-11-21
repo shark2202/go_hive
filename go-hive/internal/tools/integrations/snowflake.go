@@ -66,26 +66,26 @@ func batch6Lane4SnowflakeImpls() map[string]ActionFunc {
 // (tests); otherwise the account subdomain builds the public URL, like
 // upstream.
 func batch6Lane4SnowflakeBase(rt *Runtime) string {
-	if base := batch6Lane4ModuleURL(rt, "snowflake_tool"); base != "" {
+	if base := moduleBaseURL(rt, "snowflake_tool"); base != "" {
 		return base + "/api/v2/statements"
 	}
-	account := strings.TrimSpace(batch6Lane4Getenv(rt, "SNOWFLAKE_ACCOUNT"))
+	account := strings.TrimSpace(runtimeEnv(rt, "SNOWFLAKE_ACCOUNT"))
 	return "https://" + account + ".snowflakecomputing.com/api/v2/statements"
 }
 
 // batch6Lane4SnowflakeConfig mirrors upstream _get_config: token plus the
 // account (unless the base URL is overridden).
 func batch6Lane4SnowflakeConfig(rt *Runtime) (string, map[string]string, map[string]any) {
-	token := strings.TrimSpace(batch6Lane4ModuleToken(rt, "snowflake_tool"))
-	account := strings.TrimSpace(batch6Lane4Getenv(rt, "SNOWFLAKE_ACCOUNT"))
-	base := batch6Lane4ModuleURL(rt, "snowflake_tool")
+	token := strings.TrimSpace(moduleToken(rt, "snowflake_tool"))
+	account := strings.TrimSpace(runtimeEnv(rt, "SNOWFLAKE_ACCOUNT"))
+	base := moduleBaseURL(rt, "snowflake_tool")
 	if token == "" || (base == "" && account == "") {
 		return "", nil, map[string]any{
 			"error": "SNOWFLAKE_ACCOUNT and SNOWFLAKE_TOKEN are required",
 			"help":  "Set SNOWFLAKE_ACCOUNT and SNOWFLAKE_TOKEN environment variables",
 		}
 	}
-	tokenType := batch6Lane4Getenv(rt, "SNOWFLAKE_TOKEN_TYPE")
+	tokenType := runtimeEnv(rt, "SNOWFLAKE_TOKEN_TYPE")
 	if tokenType == "" {
 		tokenType = "OAUTH"
 	}
@@ -100,12 +100,12 @@ func batch6Lane4SnowflakeConfig(rt *Runtime) (string, map[string]string, map[str
 
 // batch6Lane4SnowflakeFormat mirrors upstream _format_results.
 func batch6Lane4SnowflakeFormat(data map[string]any) map[string]any {
-	meta := batch4AsMap(data["resultSetMetaData"])
+	meta := asMap(data["resultSetMetaData"])
 	columns := make([]any, 0)
-	for _, rawColumn := range batch4AsSlice(meta["rowType"]) {
-		columns = append(columns, batch4AsString(batch4AsMap(rawColumn)["name"]))
+	for _, rawColumn := range asSlice(meta["rowType"]) {
+		columns = append(columns, asString(asMap(rawColumn)["name"]))
 	}
-	rows := batch4AsSlice(data["data"])
+	rows := asSlice(data["data"])
 	if rows == nil {
 		rows = []any{}
 	}
@@ -130,7 +130,7 @@ func batch6Lane4SnowflakeFormat(data map[string]any) map[string]any {
 
 // batch6Lane4SnowflakeDecode decodes a response body, reporting invalid JSON.
 func batch6Lane4SnowflakeDecode(resp *batch6Lane4Response) (map[string]any, map[string]any) {
-	data, ok := batch6Lane4JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return nil, map[string]any{"error": "Snowflake API error: invalid JSON response"}
 	}
@@ -153,21 +153,21 @@ func batch6Lane4SnowflakeExecuteSQL(ctx context.Context, rt *Runtime, input map[
 	}
 	database := stringArg(input, "database")
 	if database == "" {
-		database = batch6Lane4Getenv(rt, "SNOWFLAKE_DATABASE")
+		database = runtimeEnv(rt, "SNOWFLAKE_DATABASE")
 	}
 	if database != "" {
 		body["database"] = database
 	}
 	schema := stringArg(input, "schema")
 	if schema == "" {
-		schema = batch6Lane4Getenv(rt, "SNOWFLAKE_SCHEMA")
+		schema = runtimeEnv(rt, "SNOWFLAKE_SCHEMA")
 	}
 	if schema != "" {
 		body["schema"] = schema
 	}
 	warehouse := stringArg(input, "warehouse")
 	if warehouse == "" {
-		warehouse = batch6Lane4Getenv(rt, "SNOWFLAKE_WAREHOUSE")
+		warehouse = runtimeEnv(rt, "SNOWFLAKE_WAREHOUSE")
 	}
 	if warehouse != "" {
 		body["warehouse"] = warehouse
@@ -180,7 +180,7 @@ func batch6Lane4SnowflakeExecuteSQL(ctx context.Context, rt *Runtime, input map[
 	}
 	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodPost, base, headers, body, requestTimeout)
 	if err != nil {
-		return batch6Lane4TransportError(ctx, "Snowflake", err), nil
+		return transportError(ctx, "Snowflake", err), nil
 	}
 	switch resp.Status {
 	case http.StatusOK:
@@ -197,7 +197,7 @@ func batch6Lane4SnowflakeExecuteSQL(ctx context.Context, rt *Runtime, input map[
 		return map[string]any{
 			"statement_handle": data["statementHandle"],
 			"status":           "running",
-			"message":          batch6Lane4StringOr(data, "message", "Asynchronous execution in progress"),
+			"message":          stringOr(data, "message", "Asynchronous execution in progress"),
 		}, nil
 	default:
 		return batch6Lane4HTTPError(resp), nil
@@ -215,7 +215,7 @@ func batch6Lane4SnowflakeGetStatementStatus(ctx context.Context, rt *Runtime, in
 	}
 	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, base+"/"+handle, headers, nil, 30*time.Second)
 	if err != nil {
-		return batch6Lane4TransportError(ctx, "Snowflake", err), nil
+		return transportError(ctx, "Snowflake", err), nil
 	}
 	switch resp.Status {
 	case http.StatusOK:
@@ -232,7 +232,7 @@ func batch6Lane4SnowflakeGetStatementStatus(ctx context.Context, rt *Runtime, in
 		return map[string]any{
 			"statement_handle": data["statementHandle"],
 			"status":           "running",
-			"message":          batch6Lane4StringOr(data, "message", "Still executing"),
+			"message":          stringOr(data, "message", "Still executing"),
 		}, nil
 	case http.StatusUnprocessableEntity:
 		data, failure := batch6Lane4SnowflakeDecode(resp)
@@ -242,7 +242,7 @@ func batch6Lane4SnowflakeGetStatementStatus(ctx context.Context, rt *Runtime, in
 		return map[string]any{
 			"statement_handle": data["statementHandle"],
 			"status":           "error",
-			"message":          batch6Lane4StringOr(data, "message", "Query failed"),
+			"message":          stringOr(data, "message", "Query failed"),
 		}, nil
 	default:
 		return batch6Lane4HTTPError(resp), nil
@@ -260,7 +260,7 @@ func batch6Lane4SnowflakeCancelStatement(ctx context.Context, rt *Runtime, input
 	}
 	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodPost, base+"/"+handle+"/cancel", headers, nil, 30*time.Second)
 	if err != nil {
-		return batch6Lane4TransportError(ctx, "Snowflake", err), nil
+		return transportError(ctx, "Snowflake", err), nil
 	}
 	if resp.Status != http.StatusOK {
 		return batch6Lane4HTTPError(resp), nil

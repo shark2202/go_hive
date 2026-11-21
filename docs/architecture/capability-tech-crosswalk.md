@@ -1,6 +1,6 @@
 # 业务能力 ↔ 技术模块对照（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `6624019b734d`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `a955c3b61e00`
 > 这是业务视图与技术视图的接缝：左边是人关心的结果，右边是代码里真实存在的包、入口与落盘文件。
 
 ## 成熟度与审批口径
@@ -79,12 +79,13 @@
 
 ## 未被业务能力直接引用的模块
 
-共 30 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
+共 31 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
 
 | 模块 | 层 | 说明 |
 | --- | --- | --- |
 | `internal/cli` | assembly | 装配/传输面，通常只体现在能力的入口列 |
 | `internal/pipeline` | capability | 能力层未映射，建议补充 modules |
+| `internal/tools/integrations/devops` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/excel` | capability | 能力层未映射，建议补充 modules |
 | `cmd/hive` | entry | 基础/入口/测试装置层，预期不挂业务能力 |
 | `cmd/hive-browser` | entry | 基础/入口/测试装置层，预期不挂业务能力 |

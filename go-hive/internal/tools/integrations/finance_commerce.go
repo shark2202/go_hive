@@ -30,16 +30,11 @@
 package integrations
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/aden-hive/hive-go/internal/tools"
 )
@@ -156,166 +151,6 @@ func batch6Lane3SplitCredential(value string) (string, string, bool) {
 	return strings.TrimSpace(head), strings.TrimSpace(tail), true
 }
 
-// batch6Lane3ModuleURL resolves a module base URL, honouring WithBaseURL.
-func batch6Lane3ModuleURL(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	return strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
-}
-
-// batch6Lane3ModuleToken resolves the module credential from WithCredential or
-// the configured environment lookup.
-func batch6Lane3ModuleToken(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	getenv := rt.Getenv
-	if getenv == nil {
-		getenv = os.Getenv
-	}
-	token, _ := cfg.ResolvedToken(getenv)
-	return strings.TrimSpace(token)
-}
-
-// batch6Lane3Env resolves an auxiliary environment value (store name, realm,
-// sandbox flag) through the runtime lookup.
-func batch6Lane3Env(rt *Runtime, name string) string {
-	getenv := os.Getenv
-	if rt != nil && rt.Getenv != nil {
-		getenv = rt.Getenv
-	}
-	return strings.TrimSpace(getenv(name))
-}
-
-// batch6Lane3HTTP returns the runtime transport, falling back to a client with
-// the standard timeout for hand-built runtimes.
-func batch6Lane3HTTP(rt *Runtime) *httpClient {
-	if rt != nil && rt.HTTP != nil {
-		return rt.HTTP
-	}
-	return newHTTPClient(nil)
-}
-
-// batch6Lane3Now reads the runtime clock, defaulting to time.Now.
-func batch6Lane3Now(rt *Runtime) time.Time {
-	if rt != nil && rt.Now != nil {
-		return rt.Now()
-	}
-	return time.Now()
-}
-
-// batch6Lane3IsTimeout reports whether err is a deadline or a net timeout.
-func batch6Lane3IsTimeout(ctx context.Context, err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	var netErr net.Error
-	return errors.As(err, &netErr) && netErr.Timeout()
-}
-
-// batch6Lane3Truncate caps provider error bodies the way upstream slices
-// response.text[:500].
-func batch6Lane3Truncate(text string, limit int) string {
-	if utf8.RuneCountInString(text) <= limit {
-		return text
-	}
-	runes := []rune(text)
-	return string(runes[:limit])
-}
-
-// batch6Lane3AsMap safely views a decoded JSON object.
-func batch6Lane3AsMap(value any) map[string]any {
-	object, _ := value.(map[string]any)
-	return object
-}
-
-// batch6Lane3AsSlice safely views a decoded JSON array.
-func batch6Lane3AsSlice(value any) []any {
-	items, _ := value.([]any)
-	return items
-}
-
-// batch6Lane3AsString reads a decoded JSON string.
-func batch6Lane3AsString(value any) string {
-	text, _ := value.(string)
-	return text
-}
-
-// batch6Lane3AsBool reads a decoded JSON boolean.
-func batch6Lane3AsBool(value any) bool {
-	flag, _ := value.(bool)
-	return flag
-}
-
-// batch6Lane3ValueOr mirrors Python's dict.get(key, fallback): a present null
-// stays null, only an absent key takes the fallback.
-func batch6Lane3ValueOr(object map[string]any, key string, fallback any) any {
-	if value, present := object[key]; present {
-		return value
-	}
-	return fallback
-}
-
-// batch6Lane3OptionalInt distinguishes an absent/null argument from 0.
-func batch6Lane3OptionalInt(input map[string]any, name string) (int, bool) {
-	value, present := input[name]
-	if !present || value == nil {
-		return 0, false
-	}
-	switch typed := value.(type) {
-	case int:
-		return typed, true
-	case int64:
-		return int(typed), true
-	case float64:
-		return int(typed), true
-	case json.Number:
-		parsed, err := typed.Int64()
-		if err != nil {
-			return 0, false
-		}
-		return int(parsed), true
-	default:
-		return 0, false
-	}
-}
-
-// batch6Lane3OptionalFloat distinguishes an absent/null argument from 0.
-func batch6Lane3OptionalFloat(input map[string]any, name string) (float64, bool) {
-	value, present := input[name]
-	if !present || value == nil {
-		return 0, false
-	}
-	switch typed := value.(type) {
-	case float64:
-		return typed, true
-	case int:
-		return float64(typed), true
-	case int64:
-		return float64(typed), true
-	case json.Number:
-		parsed, err := typed.Float64()
-		if err != nil {
-			return 0, false
-		}
-		return parsed, true
-	default:
-		return 0, false
-	}
-}
-
 // batch6Lane3OptionalMap distinguishes an absent/null object from {}.
 func batch6Lane3OptionalMap(input map[string]any, name string) (map[string]any, bool) {
 	value, present := input[name]
@@ -327,16 +162,6 @@ func batch6Lane3OptionalMap(input map[string]any, name string) (map[string]any, 
 		return nil, false
 	}
 	return object, true
-}
-
-// batch6Lane3Failure reports an API error carried in a result map so list
-// actions can return it before reshaping, like upstream's
-// `if "error" in result: return result`.
-func batch6Lane3Failure(result map[string]any) (map[string]any, bool) {
-	if _, failed := result["error"]; failed {
-		return result, true
-	}
-	return nil, false
 }
 
 // batch6Lane3DetailText renders a provider error detail field the way the

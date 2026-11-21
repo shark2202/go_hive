@@ -44,7 +44,7 @@ func TestBatch5Lane3CalendarListEvents(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	events := batch4BodySlice(t, result["events"])
-	first := batch4AsMap(events[0])
+	first := asMap(events[0])
 	if first["summary"] != "Standup" || first["start"] != "2024-01-15T09:00:00Z" ||
 		first["html_link"] != "https://calendar.google.com/event?eid=1" {
 		t.Fatalf("event = %v", first)
@@ -52,7 +52,7 @@ func TestBatch5Lane3CalendarListEvents(t *testing.T) {
 	if len(batch4BodySlice(t, first["attendees"])) != 2 {
 		t.Fatalf("attendees = %v", first["attendees"])
 	}
-	second := batch4AsMap(events[1])
+	second := asMap(events[1])
 	if second["start"] != "2024-01-16" {
 		t.Fatalf("event = %v", second)
 	}
@@ -116,7 +116,7 @@ func TestBatch5Lane3CalendarCreateEvent(t *testing.T) {
 	if body["summary"] != "Planning" || body["description"] != "Quarterly planning" {
 		t.Fatalf("body = %v", body)
 	}
-	start := batch4AsMap(body["start"])
+	start := asMap(body["start"])
 	if start["dateTime"] != "2024-01-15T09:00:00" || start["timeZone"] != "UTC" {
 		t.Fatalf("start = %v", start)
 	}
@@ -134,11 +134,11 @@ func TestBatch5Lane3CalendarCreateEventWithAttendees(t *testing.T) {
 	})
 	body := recorder.last(t).Body
 	attendees := batch4BodySlice(t, body["attendees"])
-	if len(attendees) != 1 || batch4AsMap(attendees[0])["email"] != "a@example.com" {
+	if len(attendees) != 1 || asMap(attendees[0])["email"] != "a@example.com" {
 		t.Fatalf("attendees = %v", attendees)
 	}
-	conference := batch4AsMap(batch4AsMap(body["conferenceData"])["createRequest"])
-	if batch4AsMap(conference["conferenceSolutionKey"])["type"] != "hangoutsMeet" {
+	conference := asMap(asMap(body["conferenceData"])["createRequest"])
+	if asMap(conference["conferenceSolutionKey"])["type"] != "hangoutsMeet" {
 		t.Fatalf("conference = %v", conference)
 	}
 	if recorder.last(t).Query.Get("conferenceDataVersion") != "1" {
@@ -213,7 +213,7 @@ func TestBatch5Lane3CalendarUpdateEventRemovesAttendee(t *testing.T) {
 		"remove_attendees": []any{"drop@example.com"},
 	})
 	remaining := batch4BodySlice(t, recorder.last(t).Body["attendees"])
-	if len(remaining) != 1 || batch4AsMap(remaining[0])["email"] != "keep@example.com" {
+	if len(remaining) != 1 || asMap(remaining[0])["email"] != "keep@example.com" {
 		t.Fatalf("attendees = %v", remaining)
 	}
 	if recorder.last(t).Query.Get("conferenceDataVersion") != "1" {
@@ -258,7 +258,7 @@ func TestBatch5Lane3CalendarListCalendars(t *testing.T) {
 	if result["total"] != 1 {
 		t.Fatalf("result = %v", result)
 	}
-	calendar := batch4AsMap(batch4BodySlice(t, result["calendars"])[0])
+	calendar := asMap(batch4BodySlice(t, result["calendars"])[0])
 	if calendar["id"] != "primary" || calendar["primary"] != true || calendar["access_role"] != "owner" {
 		t.Fatalf("calendar = %v", calendar)
 	}
@@ -320,8 +320,8 @@ func TestBatch5Lane3CalendarCheckAvailability(t *testing.T) {
 		"action":   "calendar_check_availability",
 		"time_min": "2024-01-15T09:00:00Z", "time_max": "2024-01-15T11:00:00Z",
 	})
-	calendars := batch4AsMap(result["calendars"])
-	day := batch4AsMap(calendars["primary"])
+	calendars := asMap(result["calendars"])
+	day := asMap(calendars["primary"])
 	if len(batch4BodySlice(t, day["events"])) != 4 {
 		t.Fatalf("events = %v", day["events"])
 	}
@@ -329,16 +329,16 @@ func TestBatch5Lane3CalendarCheckAvailability(t *testing.T) {
 	if len(busy) != 1 {
 		t.Fatalf("busy = %v", busy)
 	}
-	block := batch4AsMap(busy[0])
+	block := asMap(busy[0])
 	if block["start"] != "2024-01-15T09:00:00+00:00" || block["end"] != "2024-01-15T10:30:00+00:00" {
 		t.Fatalf("busy = %v", block)
 	}
 	conflicts := batch4BodySlice(t, day["conflicts"])
-	if len(conflicts) != 1 || len(batch4BodySlice(t, batch4AsMap(conflicts[0])["events"])) != 2 {
+	if len(conflicts) != 1 || len(batch4BodySlice(t, asMap(conflicts[0])["events"])) != 2 {
 		t.Fatalf("conflicts = %v", conflicts)
 	}
 	free := batch4BodySlice(t, day["free_slots"])
-	if len(free) != 1 || batch4AsMap(free[0])["start"] != "2024-01-15T10:30:00+00:00" {
+	if len(free) != 1 || asMap(free[0])["start"] != "2024-01-15T10:30:00+00:00" {
 		t.Fatalf("free = %v", free)
 	}
 	if result["timezone"] != "UTC" {

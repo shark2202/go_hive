@@ -137,16 +137,16 @@ func batch6Lane3QuickBooksAuthError() map[string]any {
 // batch6Lane3QuickBooksConfig resolves the company base URL, bearer token and
 // realm id. The base always ends at the realm segment, like upstream.
 func batch6Lane3QuickBooksConfig(rt *Runtime) (string, string, string, map[string]any) {
-	token, realm, paired := batch6Lane3SplitCredential(batch6Lane3ModuleToken(rt, "quickbooks_tool"))
+	token, realm, paired := batch6Lane3SplitCredential(moduleToken(rt, "quickbooks_tool"))
 	if !paired {
-		realm = batch6Lane3Env(rt, "QUICKBOOKS_REALM_ID")
+		realm = runtimeEnvTrimmed(rt, "QUICKBOOKS_REALM_ID")
 	}
 	if token == "" || realm == "" {
 		return "", "", "", batch6Lane3QuickBooksAuthError()
 	}
-	base := batch6Lane3ModuleURL(rt, "quickbooks_tool")
+	base := moduleBaseURL(rt, "quickbooks_tool")
 	if base == "" {
-		switch strings.ToLower(batch6Lane3Env(rt, "QUICKBOOKS_SANDBOX")) {
+		switch strings.ToLower(runtimeEnvTrimmed(rt, "QUICKBOOKS_SANDBOX")) {
 		case "1", "true":
 			base = batch6Lane3QuickBooksSandboxURL
 		default:
@@ -184,9 +184,9 @@ func batch6Lane3QuickBooksRequest(ctx context.Context, rt *Runtime, method, path
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := batch6Lane3HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
-		if batch6Lane3IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request timed out"}
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}
@@ -198,7 +198,7 @@ func batch6Lane3QuickBooksRequest(ctx context.Context, rt *Runtime, method, path
 	}
 	if resp.StatusCode >= 400 {
 		return map[string]any{
-			"error": fmt.Sprintf("HTTP %d: %s", resp.StatusCode, batch6Lane3Truncate(string(raw), batch6Lane3MaxError)),
+			"error": fmt.Sprintf("HTTP %d: %s", resp.StatusCode, truncateText(string(raw), batch6Lane3MaxError)),
 		}
 	}
 
@@ -233,11 +233,11 @@ func batch6Lane3QuickBooksQuery(ctx context.Context, rt *Runtime, input map[stri
 	query += fmt.Sprintf(" STARTPOSITION %d MAXRESULTS %d", intArg(input, "start_position", 1), min(intArg(input, "max_results", 100), 1000))
 
 	data := batch6Lane3QuickBooksRequest(ctx, rt, http.MethodGet, "/query", batch6Lane3QuickBooksQueryParams(query), nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	response := batch6Lane3AsMap(data["QueryResponse"])
-	entities := batch6Lane3AsSlice(response[entity])
+	response := asMap(data["QueryResponse"])
+	entities := asSlice(response[entity])
 	if entities == nil {
 		entities = []any{}
 	}
@@ -257,10 +257,10 @@ func batch6Lane3QuickBooksGetEntity(ctx context.Context, rt *Runtime, input map[
 	params := url.Values{"minorversion": {batch6Lane3QuickBooksMinorVersion}}
 	path := "/" + strings.ToLower(entity) + "/" + url.PathEscape(entityID)
 	data := batch6Lane3QuickBooksRequest(ctx, rt, http.MethodGet, path, params, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	return batch6Lane3ValueOr(data, entity, data), nil
+	return valueOr(data, entity, data), nil
 }
 
 func batch6Lane3QuickBooksCreateCustomer(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -277,10 +277,10 @@ func batch6Lane3QuickBooksCreateCustomer(ctx context.Context, rt *Runtime, input
 	}
 
 	data := batch6Lane3QuickBooksRequest(ctx, rt, http.MethodPost, "/customer", nil, body)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	customer := batch6Lane3AsMap(data["Customer"])
+	customer := asMap(data["Customer"])
 	return map[string]any{
 		"result":       "created",
 		"id":           customer["Id"],
@@ -306,12 +306,12 @@ func batch6Lane3QuickBooksCreateInvoice(ctx context.Context, rt *Runtime, input 
 
 	lines := make([]map[string]any, 0, len(items))
 	for _, raw := range items {
-		item := batch6Lane3AsMap(raw)
+		item := asMap(raw)
 		detail := map[string]any{}
 		line := map[string]any{
-			"Amount":              batch6Lane3ValueOr(item, "amount", 0),
+			"Amount":              valueOr(item, "amount", 0),
 			"DetailType":          "SalesItemLineDetail",
-			"Description":         batch6Lane3ValueOr(item, "description", ""),
+			"Description":         valueOr(item, "description", ""),
 			"SalesItemLineDetail": detail,
 		}
 		if itemID, present := item["item_id"]; present {
@@ -331,10 +331,10 @@ func batch6Lane3QuickBooksCreateInvoice(ctx context.Context, rt *Runtime, input 
 		"Line":        lines,
 	}
 	data := batch6Lane3QuickBooksRequest(ctx, rt, http.MethodPost, "/invoice", nil, body)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	invoice := batch6Lane3AsMap(data["Invoice"])
+	invoice := asMap(data["Invoice"])
 	return map[string]any{
 		"result":     "created",
 		"id":         invoice["Id"],
@@ -352,10 +352,10 @@ func batch6Lane3QuickBooksGetCompanyInfo(ctx context.Context, rt *Runtime, input
 	}
 	params := url.Values{"minorversion": {batch6Lane3QuickBooksMinorVersion}}
 	data := batch6Lane3QuickBooksRequest(ctx, rt, http.MethodGet, "/companyinfo/"+url.PathEscape(realm), params, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	info := batch6Lane3AsMap(data["CompanyInfo"])
+	info := asMap(data["CompanyInfo"])
 	var email any
 	if address, ok := info["Email"].(map[string]any); ok {
 		email = address["Address"]
@@ -377,7 +377,7 @@ func batch6Lane3QuickBooksListInvoices(ctx context.Context, rt *Runtime, input m
 	case "Paid":
 		whereParts = append(whereParts, "Balance = '0'")
 	case "Overdue":
-		today := batch6Lane3Now(rt).Format("2006-01-02")
+		today := runtimeNow(rt).Format("2006-01-02")
 		whereParts = append(whereParts, fmt.Sprintf("DueDate < '%s' AND Balance > '0'", today))
 	}
 	if customerID := stringArg(input, "customer_id"); customerID != "" {
@@ -391,18 +391,18 @@ func batch6Lane3QuickBooksListInvoices(ctx context.Context, rt *Runtime, input m
 	query += fmt.Sprintf(" MAXRESULTS %d", min(intArg(input, "max_results", 100), 1000))
 
 	data := batch6Lane3QuickBooksRequest(ctx, rt, http.MethodGet, "/query", batch6Lane3QuickBooksQueryParams(query), nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	invoices := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(batch6Lane3AsMap(data["QueryResponse"])["Invoice"]) {
-		invoice := batch6Lane3AsMap(raw)
-		customer := batch6Lane3AsMap(invoice["CustomerRef"])
+	for _, raw := range asSlice(asMap(data["QueryResponse"])["Invoice"]) {
+		invoice := asMap(raw)
+		customer := asMap(invoice["CustomerRef"])
 		invoices = append(invoices, map[string]any{
 			"id":            invoice["Id"],
 			"doc_number":    invoice["DocNumber"],
-			"customer_name": batch6Lane3ValueOr(customer, "name", ""),
-			"customer_id":   batch6Lane3ValueOr(customer, "value", ""),
+			"customer_name": valueOr(customer, "name", ""),
+			"customer_id":   valueOr(customer, "value", ""),
 			"total_amt":     invoice["TotalAmt"],
 			"balance":       invoice["Balance"],
 			"due_date":      invoice["DueDate"],
@@ -420,10 +420,10 @@ func batch6Lane3QuickBooksGetCustomer(ctx context.Context, rt *Runtime, input ma
 	}
 	params := url.Values{"minorversion": {batch6Lane3QuickBooksMinorVersion}}
 	data := batch6Lane3QuickBooksRequest(ctx, rt, http.MethodGet, "/customer/"+url.PathEscape(customerID), params, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	customer := batch6Lane3AsMap(data["Customer"])
+	customer := asMap(data["Customer"])
 	var email, phone any
 	if address, ok := customer["PrimaryEmailAddr"].(map[string]any); ok {
 		email = address["Address"]
@@ -431,7 +431,7 @@ func batch6Lane3QuickBooksGetCustomer(ctx context.Context, rt *Runtime, input ma
 	if number, ok := customer["PrimaryPhone"].(map[string]any); ok {
 		phone = number["FreeFormNumber"]
 	}
-	address := batch6Lane3AsMap(customer["BillAddr"])
+	address := asMap(customer["BillAddr"])
 	return map[string]any{
 		"id":           customer["Id"],
 		"display_name": customer["DisplayName"],
@@ -443,11 +443,11 @@ func batch6Lane3QuickBooksGetCustomer(ctx context.Context, rt *Runtime, input ma
 		"balance":      customer["Balance"],
 		"active":       customer["Active"],
 		"billing_address": map[string]any{
-			"line1":       batch6Lane3ValueOr(address, "Line1", ""),
-			"city":        batch6Lane3ValueOr(address, "City", ""),
-			"state":       batch6Lane3ValueOr(address, "CountrySubDivisionCode", ""),
-			"postal_code": batch6Lane3ValueOr(address, "PostalCode", ""),
-			"country":     batch6Lane3ValueOr(address, "Country", ""),
+			"line1":       valueOr(address, "Line1", ""),
+			"city":        valueOr(address, "City", ""),
+			"state":       valueOr(address, "CountrySubDivisionCode", ""),
+			"postal_code": valueOr(address, "PostalCode", ""),
+			"country":     valueOr(address, "Country", ""),
 		},
 		"sync_token": customer["SyncToken"],
 	}, nil
@@ -455,7 +455,7 @@ func batch6Lane3QuickBooksGetCustomer(ctx context.Context, rt *Runtime, input ma
 
 func batch6Lane3QuickBooksCreatePayment(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	customerID := stringArg(input, "customer_id")
-	totalAmt, _ := batch6Lane3OptionalFloat(input, "total_amt")
+	totalAmt, _ := optionalFloat(input, "total_amt")
 	if customerID == "" || totalAmt <= 0 {
 		return map[string]any{"error": "customer_id and a positive total_amt are required"}, nil
 	}
@@ -475,15 +475,15 @@ func batch6Lane3QuickBooksCreatePayment(ctx context.Context, rt *Runtime, input 
 	}
 
 	data := batch6Lane3QuickBooksRequest(ctx, rt, http.MethodPost, "/payment", nil, body)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	payment := batch6Lane3AsMap(data["Payment"])
+	payment := asMap(data["Payment"])
 	return map[string]any{
 		"result":      "created",
 		"id":          payment["Id"],
 		"total_amt":   payment["TotalAmt"],
-		"customer_id": batch6Lane3AsMap(payment["CustomerRef"])["value"],
+		"customer_id": asMap(payment["CustomerRef"])["value"],
 		"txn_date":    payment["TxnDate"],
 		"sync_token":  payment["SyncToken"],
 	}, nil

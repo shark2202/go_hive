@@ -34,11 +34,15 @@ internal/tools/
     ├── kit_aliases.go       # 历史名→kit 的类型别名与薄转发
     ├── doc.go               # 包结构说明
     ├── <domain>.go          # 既有领域实现（第二阶段继续下沉）
-    └── excel/               # ✅ 试点领域子包
-        ├── doc.go / kit.go / register.go
-        ├── catalog.go / actions.go
-        ├── xlsx_package.go / xlsx_styles.go / xlsx_sheet.go / xlsx_write.go
-        └── excel_test.go / digest_test.go
+    ├── excel/               # ✅ 试点领域子包
+    │   ├── doc.go / kit.go / register.go
+    │   ├── catalog.go / actions.go
+    │   ├── xlsx_package.go / xlsx_styles.go / xlsx_sheet.go / xlsx_write.go
+    │   └── excel_test.go / digest_test.go
+    └── devops/              # ✅ DevOps/hosting 领域子包（int-p2-devops）
+        ├── doc.go / kit.go / register.go / common.go
+        ├── gitlab.go / s3.go / vercel.go / dockerhub.go
+        └── digest_test.go
 ```
 
 ## 依赖规则
@@ -81,7 +85,7 @@ internal/tools/
 | `cloudinary.go` | `cloudinary` |
 | `confluence.go` | `confluence` |
 | `databricks.go` | `databricks` |
-| `devops_hosting.go` | `aws_s3`, `docker_hub`, `gitlab`, `vercel` |
+| `devops/（子包）` | `aws_s3`, `docker_hub`, `gitlab`, `vercel` |
 | `email.go` | `email` |
 | `enrichment_search.go` | `apify`, `apollo`, `exa_search`, `lusha`, `serpapi` |
 | `excel/catalog.go（子包）` | `excel` |
@@ -134,7 +138,8 @@ internal/tools/
 | excel | ✅ 已迁入 `excel/`（本分支） | 6 actions；catalog digest 与迁移前一致；文件 ≤800 行 |
 | cloudflare | ⏳ 第二阶段候选 #1 | 1973 行、73 个 lane 前缀 helper；结构最接近 excel |
 | ai_platform / enrichment_search / social_media | ⏳ 第二阶段 | 110/109/105 个 lane 前缀标识符，优先消重 |
-| devops_hosting / scheduling_chat / infra_automation / web_intelligence | ⏳ 第二阶段 | 已冻结 size waiver 的大文件 |
+| devops | ✅ 已迁入 `devops/`（int-p2-devops） | 4 tools / 31 actions；catalog digest 与迁移前逐字节一致；文件 ≤800 行；根包 `devops_install.go` 薄入口 |
+| scheduling_chat / infra_automation / web_intelligence | ⏳ 第二阶段 | 已冻结 size waiver 的大文件 |
 | 其余 40+ 领域文件 | ⏳ 第二阶段/第三阶段 | 按领域逐个迁出，根包只留装配 |
 | integrationkit | ✅ 内核已就位 | 新增 registry/params/httpx/files；行为零变化 |
 
@@ -142,11 +147,11 @@ internal/tools/
 
 | 门禁 | 位置 | 当前基线 |
 | --- | --- | --- |
-| lane 前缀预算 | `internal/quality/lane_prefix_test.go` + `lane_prefix_waiver.json` | 1908（brief 标称）→ 1906（冻结实测）→ **1902**（excel 迁出后）；只减不增 |
+| lane 前缀预算 | `internal/quality/lane_prefix_test.go` + `lane_prefix_waiver.json` | 1908（brief 标称）→ 1906（冻结实测）→ 1902（excel 迁出后）→ **1818**（devops 迁出后）；只减不增 |
 | integrations 子树 800 行 | `internal/quality/size_test.go` | 新建/拆分文件 ≤800；既有 7 个 800–1500 行文件冻结在 `integrationSizeWaivers` |
 | 生成物标记 | `internal/quality/generated_test.go` | 全部 `*_gen.go` 必须带 `// Code generated … DO NOT EDIT.` |
 | 包文档基线 | `internal/quality/package_doc_test.go` + `package_doc_waiver.json` | 缺 47 / 有 24（brief 标称 51/19；口径差异见 waiver note） |
-| 工具目录快照 | `catalog_digest_test.go`、`excel/digest_test.go` | core / excel sha256 不变 |
+| 工具目录快照 | `catalog_digest_test.go`、`excel/digest_test.go`、`devops/digest_test.go` | core / excel / devops sha256 不变 |
 | 行为冻结 | `make refactor-freeze`（compare wave15-base） | 契约文件 sha256 不变；不进 ci，重构 lane 必跑 |
 
 本地验证：
@@ -167,10 +172,12 @@ integrations 任何包）；`internal/colony` 的 playbook 迁移用例单跑 0.
 
 ## 第二阶段计划（留给后续 lane）
 
-1. 按 `cloudflare → ai_platform → enrichment_search → social_media → devops_hosting`
-   的顺序迁出 5–8 个领域子包；每个子包保持只依赖 integrationkit。
-2. 消重 lane 前缀 helper：把 batch4AsString/batch7Lane1AsString 等收敛为 kit 的
-   `StringArg`/`Object`/`Number`/`Round`，每迁一个领域下调一次 lane prefix limit。
+1. `devops_hosting` 已迁入 `devops/`（int-p2-devops）；其余按
+   `cloudflare → ai_platform → enrichment_search → social_media` 的顺序迁出
+   5–8 个领域子包；每个子包保持只依赖 integrationkit。
+2. 消重 lane 前缀 helper：把残留的 `batch4AsString` 等收敛为 kit 的
+   `StringArg`/`Object`/`Number`/`Round`；devops 迁出时已把 `batch7Lane1*` 改成
+   领域名（lane 前缀 1902 → 1818），每迁一个领域继续下调 lane prefix limit。
 3. 拆分 `integrationSizeWaivers` 里 7 个 800–1500 行文件与 fileWaivers 里的大文件，
    每拆完一个删除对应 waiver（只减不增）。
 4. 根包最终只保留 `catalog_gen.go`、装配文件与别名层；别名层随调用点迁移逐步删除。

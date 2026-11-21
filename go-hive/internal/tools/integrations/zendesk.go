@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-var batch6Lane2ZendeskTool = &Tool{
+var zendeskTool = &Tool{
 	ID:          "zendesk_tool",
 	Name:        "zendesk",
 	DisplayName: "Zendesk",
@@ -108,7 +108,7 @@ var batch6Lane2ZendeskTool = &Tool{
 	},
 }
 
-func batch6Lane2ZendeskImpls() map[string]ActionFunc {
+func zendeskImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
 		"zendesk_list_tickets":        batch6Lane2ZendeskListTickets,
 		"zendesk_get_ticket":          batch6Lane2ZendeskGetTicket,
@@ -123,7 +123,7 @@ func batch6Lane2ZendeskImpls() map[string]ActionFunc {
 
 // batch6Lane2ZendeskCredentials reads the three-part credential bundle.
 func batch6Lane2ZendeskCredentials(rt *Runtime) (subdomain, email, token string) {
-	getenv := batch6Lane2Getenv(rt)
+	getenv := runtimeGetenv(rt)
 	return strings.TrimSpace(getenv("ZENDESK_SUBDOMAIN")),
 		strings.TrimSpace(getenv("ZENDESK_EMAIL")),
 		strings.TrimSpace(getenv("ZENDESK_API_TOKEN"))
@@ -139,7 +139,7 @@ func batch6Lane2ZendeskAuthError() map[string]any {
 
 // batch6Lane2ZendeskBaseURL resolves the account API root.
 func batch6Lane2ZendeskBaseURL(rt *Runtime, subdomain string) string {
-	if base := batch6Lane2ModuleURL(rt, "zendesk_tool"); base != "" {
+	if base := moduleBaseURL(rt, "zendesk_tool"); base != "" {
 		return base
 	}
 	return "https://" + subdomain + ".zendesk.com/api/v2"
@@ -163,12 +163,12 @@ func batch6Lane2ZendeskCall(
 		target += "?" + query.Encode()
 	}
 	headers := map[string]string{
-		"Authorization": batch6Lane2BasicAuth(email+"/token", token),
+		"Authorization": basicAuth(email+"/token", token),
 		"Content-Type":  "application/json",
 	}
-	reply, err := batch6Lane2Do(ctx, rt, method, target, headers, payload)
+	reply, err := supportDo(ctx, rt, method, target, headers, payload)
 	if err != nil {
-		if batch6Lane2IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Zendesk timed out"}, false
 		}
 		return map[string]any{"error": "Zendesk request failed: " + err.Error()}, false
@@ -188,11 +188,11 @@ func batch6Lane2ZendeskCall(
 			"error": fmt.Sprintf(
 				"Zendesk API error %d: %s",
 				reply.Status,
-				batch6Lane2TruncateText(string(reply.Body), batch6Lane2MaxError),
+				truncateText(string(reply.Body), supportMaxError),
 			),
 		}, false
 	}
-	value, ok := batch6Lane2DecodeAny(reply.Body)
+	value, ok := decodeAny(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Zendesk request failed: invalid JSON response"}, false
 	}
@@ -202,31 +202,31 @@ func batch6Lane2ZendeskCall(
 // batch6Lane2ZendeskTicket flattens a ticket the way _extract_ticket does.
 func batch6Lane2ZendeskTicket(source map[string]any) map[string]any {
 	return map[string]any{
-		"id":           batch6Lane2JSONNumber(source["id"]),
-		"subject":      batch6Lane2AsString(source["subject"]),
-		"description":  batch6Lane2TruncateText(batch6Lane2AsString(source["description"]), batch6Lane2MaxError),
-		"status":       batch6Lane2AsString(source["status"]),
-		"priority":     batch6Lane2AsString(source["priority"]),
-		"type":         batch6Lane2AsString(source["type"]),
-		"tags":         batch6Lane2StringList(source["tags"]),
-		"requester_id": batch6Lane2JSONNumber(source["requester_id"]),
-		"assignee_id":  batch6Lane2JSONNumber(source["assignee_id"]),
-		"created_at":   batch6Lane2AsString(source["created_at"]),
-		"updated_at":   batch6Lane2AsString(source["updated_at"]),
+		"id":           jsonNumber(source["id"]),
+		"subject":      asString(source["subject"]),
+		"description":  truncateText(asString(source["description"]), supportMaxError),
+		"status":       asString(source["status"]),
+		"priority":     asString(source["priority"]),
+		"type":         asString(source["type"]),
+		"tags":         supportStringList(source["tags"]),
+		"requester_id": jsonNumber(source["requester_id"]),
+		"assignee_id":  jsonNumber(source["assignee_id"]),
+		"created_at":   asString(source["created_at"]),
+		"updated_at":   asString(source["updated_at"]),
 	}
 }
 
 func batch6Lane2ZendeskListTickets(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	query := url.Values{
-		"page[size]": {fmt.Sprint(batch6Lane2Clamp(intArg(input, "page_size", 25), 1, 100))},
+		"page[size]": {fmt.Sprint(clampInt(intArg(input, "page_size", 25), 1, 100))},
 	}
 	value, ok := batch6Lane2ZendeskCall(ctx, rt, http.MethodGet, "/tickets", query, nil)
 	if !ok {
 		return value, nil
 	}
 	tickets := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(batch6Lane2AsMap(value)["tickets"]) {
-		tickets = append(tickets, batch6Lane2ZendeskTicket(batch6Lane2AsMap(raw)))
+	for _, raw := range asSlice(asMap(value)["tickets"]) {
+		tickets = append(tickets, batch6Lane2ZendeskTicket(asMap(raw)))
 	}
 	return map[string]any{"tickets": tickets, "count": len(tickets)}, nil
 }
@@ -242,7 +242,7 @@ func batch6Lane2ZendeskGetTicket(ctx context.Context, rt *Runtime, input map[str
 	if !ok {
 		return value, nil
 	}
-	return batch6Lane2ZendeskTicket(batch6Lane2AsMap(batch6Lane2AsMap(value)["ticket"])), nil
+	return batch6Lane2ZendeskTicket(asMap(asMap(value)["ticket"])), nil
 }
 
 func batch6Lane2ZendeskCreateTicket(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -264,7 +264,7 @@ func batch6Lane2ZendeskCreateTicket(ctx context.Context, rt *Runtime, input map[
 		ticket["type"] = ticketType
 	}
 	if tags := stringArg(input, "tags"); tags != "" {
-		ticket["tags"] = batch6Lane2SplitTags(tags)
+		ticket["tags"] = splitCSV(tags)
 	}
 	value, ok := batch6Lane2ZendeskCall(
 		ctx, rt, http.MethodPost, "/tickets", nil, map[string]any{"ticket": ticket},
@@ -272,14 +272,14 @@ func batch6Lane2ZendeskCreateTicket(ctx context.Context, rt *Runtime, input map[
 	if !ok {
 		return value, nil
 	}
-	created := batch6Lane2AsMap(batch6Lane2AsMap(value)["ticket"])
-	id := batch6Lane2JSONNumber(created["id"])
+	created := asMap(asMap(value)["ticket"])
+	id := jsonNumber(created["id"])
 	subdomain, _, _ := batch6Lane2ZendeskCredentials(rt)
 	return map[string]any{
 		"id":      id,
-		"subject": batch6Lane2AsString(created["subject"]),
-		"status":  batch6Lane2AsString(created["status"]),
-		"url":     "https://" + subdomain + ".zendesk.com/agent/tickets/" + batch6Lane2StringID(id),
+		"subject": asString(created["subject"]),
+		"status":  asString(created["status"]),
+		"url":     "https://" + subdomain + ".zendesk.com/agent/tickets/" + stringID(id),
 		"result":  "created",
 	}, nil
 }
@@ -303,7 +303,7 @@ func batch6Lane2ZendeskUpdateTicket(ctx context.Context, rt *Runtime, input map[
 		}
 	}
 	if tags := stringArg(input, "tags"); tags != "" {
-		ticket["tags"] = batch6Lane2SplitTags(tags)
+		ticket["tags"] = splitCSV(tags)
 	}
 	if len(ticket) == 0 {
 		return map[string]any{"error": "At least one field to update is required"}, nil
@@ -315,7 +315,7 @@ func batch6Lane2ZendeskUpdateTicket(ctx context.Context, rt *Runtime, input map[
 	if !ok {
 		return value, nil
 	}
-	return batch6Lane2ZendeskTicket(batch6Lane2AsMap(batch6Lane2AsMap(value)["ticket"])), nil
+	return batch6Lane2ZendeskTicket(asMap(asMap(value)["ticket"])), nil
 }
 
 func batch6Lane2ZendeskSearchTickets(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -340,15 +340,15 @@ func batch6Lane2ZendeskSearchTickets(ctx context.Context, rt *Runtime, input map
 	if !ok {
 		return value, nil
 	}
-	object := batch6Lane2AsMap(value)
+	object := asMap(value)
 	results := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(object["results"]) {
-		item := batch6Lane2AsMap(raw)
+	for _, raw := range asSlice(object["results"]) {
+		item := asMap(raw)
 		results = append(results, map[string]any{
-			"id":       batch6Lane2JSONNumber(item["id"]),
-			"subject":  batch6Lane2AsString(item["subject"]),
-			"status":   batch6Lane2AsString(item["status"]),
-			"priority": batch6Lane2AsString(item["priority"]),
+			"id":       jsonNumber(item["id"]),
+			"subject":  asString(item["subject"]),
+			"status":   asString(item["status"]),
+			"priority": asString(item["priority"]),
 		})
 	}
 	count := len(results)
@@ -364,7 +364,7 @@ func batch6Lane2ZendeskGetTicketComments(ctx context.Context, rt *Runtime, input
 		return map[string]any{"error": "ticket_id is required"}, nil
 	}
 	query := url.Values{
-		"page[size]": {fmt.Sprint(batch6Lane2Clamp(intArg(input, "page_size", 25), 1, 100))},
+		"page[size]": {fmt.Sprint(clampInt(intArg(input, "page_size", 25), 1, 100))},
 	}
 	value, ok := batch6Lane2ZendeskCall(
 		ctx, rt, http.MethodGet, fmt.Sprintf("/tickets/%d/comments", ticketID), query, nil,
@@ -373,14 +373,14 @@ func batch6Lane2ZendeskGetTicketComments(ctx context.Context, rt *Runtime, input
 		return value, nil
 	}
 	comments := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(batch6Lane2AsMap(value)["comments"]) {
-		item := batch6Lane2AsMap(raw)
+	for _, raw := range asSlice(asMap(value)["comments"]) {
+		item := asMap(raw)
 		comments = append(comments, map[string]any{
-			"id":         batch6Lane2JSONNumber(item["id"]),
-			"body":       batch6Lane2TruncateText(batch6Lane2AsString(item["body"]), batch6Lane2MaxError),
-			"author_id":  batch6Lane2JSONNumber(item["author_id"]),
-			"public":     batch6Lane2BoolOr(item["public"], true),
-			"created_at": batch6Lane2AsString(item["created_at"]),
+			"id":         jsonNumber(item["id"]),
+			"body":       truncateText(asString(item["body"]), supportMaxError),
+			"author_id":  jsonNumber(item["author_id"]),
+			"public":     boolOr(item["public"], true),
+			"created_at": asString(item["created_at"]),
 		})
 	}
 	return map[string]any{"ticket_id": ticketID, "comments": comments, "count": len(comments)}, nil
@@ -402,18 +402,18 @@ func batch6Lane2ZendeskAddTicketComment(ctx context.Context, rt *Runtime, input 
 	if !ok {
 		return value, nil
 	}
-	updated := batch6Lane2AsMap(batch6Lane2AsMap(value)["ticket"])
+	updated := asMap(asMap(value)["ticket"])
 	return map[string]any{
-		"id":      batch6Lane2JSONNumber(updated["id"]),
-		"subject": batch6Lane2AsString(updated["subject"]),
-		"status":  batch6Lane2AsString(updated["status"]),
+		"id":      jsonNumber(updated["id"]),
+		"subject": asString(updated["subject"]),
+		"status":  asString(updated["status"]),
 		"result":  "comment_added",
 	}, nil
 }
 
 func batch6Lane2ZendeskListUsers(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	query := url.Values{
-		"page[size]": {fmt.Sprint(batch6Lane2Clamp(intArg(input, "page_size", 25), 1, 100))},
+		"page[size]": {fmt.Sprint(clampInt(intArg(input, "page_size", 25), 1, 100))},
 	}
 	if role := stringArg(input, "role"); role != "" {
 		query.Set("role", role)
@@ -423,15 +423,15 @@ func batch6Lane2ZendeskListUsers(ctx context.Context, rt *Runtime, input map[str
 		return value, nil
 	}
 	users := make([]map[string]any, 0)
-	for _, raw := range batch6Lane2AsSlice(batch6Lane2AsMap(value)["users"]) {
-		item := batch6Lane2AsMap(raw)
+	for _, raw := range asSlice(asMap(value)["users"]) {
+		item := asMap(raw)
 		users = append(users, map[string]any{
-			"id":         batch6Lane2JSONNumber(item["id"]),
-			"name":       batch6Lane2AsString(item["name"]),
-			"email":      batch6Lane2AsString(item["email"]),
-			"role":       batch6Lane2AsString(item["role"]),
-			"active":     batch6Lane2BoolOr(item["active"], false),
-			"created_at": batch6Lane2AsString(item["created_at"]),
+			"id":         jsonNumber(item["id"]),
+			"name":       asString(item["name"]),
+			"email":      asString(item["email"]),
+			"role":       asString(item["role"]),
+			"active":     boolOr(item["active"], false),
+			"created_at": asString(item["created_at"]),
 		})
 	}
 	return map[string]any{"users": users, "count": len(users)}, nil

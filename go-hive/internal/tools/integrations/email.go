@@ -76,14 +76,6 @@ func batch7Lane9EmailImpls() map[string]ActionFunc {
 	}
 }
 
-// batch7Lane9EmailGmailAuthError mirrors the upstream Gmail credential map.
-func batch7Lane9EmailGmailAuthError() map[string]any {
-	return map[string]any{
-		"error": "Gmail credentials not configured",
-		"help":  "Connect Gmail via hive.adenhq.com",
-	}
-}
-
 // batch7Lane9EmailResendAuthError mirrors the upstream Resend credential map.
 func batch7Lane9EmailResendAuthError() map[string]any {
 	return map[string]any{
@@ -199,25 +191,25 @@ func batch7Lane9EmailSendResend(ctx context.Context, rt *Runtime, key string, to
 	if len(bcc) > 0 {
 		payload["bcc"] = bcc
 	}
-	endpoint := batch7Lane9Base(rt, "email_tool", batch7Lane9ResendBase) + "/emails"
-	resp, err := batch7Lane9DoJSON(ctx, rt, http.MethodPost, endpoint,
+	endpoint := marketingBase(rt, "email_tool", batch7Lane9ResendBase) + "/emails"
+	resp, err := marketingDoJSON(ctx, rt, http.MethodPost, endpoint,
 		map[string]string{"Authorization": "Bearer " + key}, payload, 30*time.Second)
 	if err != nil {
 		return map[string]any{"error": "Resend API error: " + err.Error()}
 	}
 	if resp.Status < 200 || resp.Status >= 300 {
 		return map[string]any{
-			"error": "Resend API error: HTTP " + strconv.Itoa(resp.Status) + ": " + batch4TruncateText(string(resp.Body), 500),
+			"error": "Resend API error: HTTP " + strconv.Itoa(resp.Status) + ": " + truncateText(string(resp.Body), 500),
 		}
 	}
-	data, ok := batch7Lane9JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Resend API error: invalid JSON response"}
 	}
 	return map[string]any{
 		"success":  true,
 		"provider": "resend",
-		"id":       batch7Lane9StringOr(data, "id", ""),
+		"id":       stringOr(data, "id", ""),
 		"to":       to,
 		"subject":  subject,
 	}
@@ -229,8 +221,8 @@ func batch7Lane9EmailSendGmail(ctx context.Context, rt *Runtime, token, raw, thr
 	if threadID != "" {
 		payload["threadId"] = threadID
 	}
-	endpoint := batch7Lane9Base(rt, "email_gmail_tool", batch7Lane9GmailBase) + "/users/me/messages/send"
-	resp, err := batch7Lane9DoJSON(ctx, rt, http.MethodPost, endpoint,
+	endpoint := marketingBase(rt, "email_gmail_tool", batch7Lane9GmailBase) + "/users/me/messages/send"
+	resp, err := marketingDoJSON(ctx, rt, http.MethodPost, endpoint,
 		map[string]string{"Authorization": "Bearer " + token}, payload, 30*time.Second)
 	if err != nil {
 		return map[string]any{"error": "Gmail API error: " + err.Error()}
@@ -246,19 +238,19 @@ func batch7Lane9EmailSendGmail(ctx context.Context, rt *Runtime, token, raw, thr
 			"error": "Gmail API error (HTTP " + strconv.Itoa(resp.Status) + "): " + string(resp.Body),
 		}
 	}
-	data, ok := batch7Lane9JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Gmail API error: invalid JSON response"}
 	}
 	result := map[string]any{
 		"success":  true,
 		"provider": "gmail",
-		"id":       batch7Lane9StringOr(data, "id", ""),
+		"id":       stringOr(data, "id", ""),
 		"to":       to,
 		"subject":  subject,
 	}
 	if threadID != "" {
-		result["threadId"] = batch7Lane9StringOr(data, "threadId", threadID)
+		result["threadId"] = stringOr(data, "threadId", threadID)
 	}
 	return result
 }
@@ -266,7 +258,7 @@ func batch7Lane9EmailSendGmail(ctx context.Context, rt *Runtime, token, raw, thr
 func batch7Lane9EmailSend(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	fromEmail := stringArg(input, "from_email")
 	if fromEmail == "" {
-		fromEmail = batch7Lane9Getenv(rt, "EMAIL_FROM")
+		fromEmail = runtimeEnv(rt, "EMAIL_FROM")
 	}
 	to := batch7Lane9EmailNormalizeRecipients(input, "to")
 	if len(to) == 0 {
@@ -283,7 +275,7 @@ func batch7Lane9EmailSend(ctx context.Context, rt *Runtime, input map[string]any
 	cc := batch7Lane9EmailNormalizeRecipients(input, "cc")
 	bcc := batch7Lane9EmailNormalizeRecipients(input, "bcc")
 
-	if override := batch7Lane9Getenv(rt, "EMAIL_OVERRIDE_TO"); override != "" {
+	if override := runtimeEnv(rt, "EMAIL_OVERRIDE_TO"); override != "" {
 		subject = "[TEST -> " + strings.Join(to, ", ") + "] " + subject
 		to = []string{override}
 		cc = nil
@@ -307,7 +299,7 @@ func batch7Lane9EmailSend(ctx context.Context, rt *Runtime, input map[string]any
 			return problem, nil
 		}
 		if token == "" {
-			return batch7Lane9EmailGmailAuthError(), nil
+			return gmailAuthError(), nil
 		}
 		raw := batch7Lane9EmailRaw(batch7Lane9EmailMessage{
 			To:      strings.Join(to, ", "),
@@ -319,7 +311,7 @@ func batch7Lane9EmailSend(ctx context.Context, rt *Runtime, input map[string]any
 		})
 		return batch7Lane9EmailSendGmail(ctx, rt, token, raw, "", to, subject), nil
 	}
-	key := batch7Lane9ModuleToken(rt, "email_tool")
+	key := moduleToken(rt, "email_tool")
 	if key == "" {
 		return batch7Lane9EmailResendAuthError(), nil
 	}
@@ -330,11 +322,11 @@ func batch7Lane9EmailSend(ctx context.Context, rt *Runtime, input map[string]any
 // name, matching the upstream dict comprehension.
 func batch7Lane9EmailHeaders(raw any) map[string]string {
 	headers := map[string]string{}
-	for _, entry := range batch4AsSlice(raw) {
-		header := batch4AsMap(entry)
-		name := batch7Lane9StringOr(header, "name", "")
+	for _, entry := range asSlice(raw) {
+		header := asMap(entry)
+		name := stringOr(header, "name", "")
 		if name != "" {
-			headers[strings.ToLower(name)] = batch7Lane9StringOr(header, "value", "")
+			headers[strings.ToLower(name)] = stringOr(header, "value", "")
 		}
 	}
 	return headers
@@ -358,15 +350,15 @@ func batch7Lane9EmailDecodeBody(data string) (string, bool) {
 // batch7Lane9EmailExtractBody walks a MIME tree for the first part of the
 // requested type, mirroring the upstream recursive helper.
 func batch7Lane9EmailExtractBody(part map[string]any, mimeType string) string {
-	if batch7Lane9StringOr(part, "mimeType", "") == mimeType {
-		if body := batch7Lane9StringOr(batch4AsMap(part["body"]), "data", ""); body != "" {
+	if stringOr(part, "mimeType", "") == mimeType {
+		if body := stringOr(asMap(part["body"]), "data", ""); body != "" {
 			if decoded, ok := batch7Lane9EmailDecodeBody(body); ok {
 				return decoded
 			}
 		}
 	}
-	for _, raw := range batch4AsSlice(part["parts"]) {
-		if decoded := batch7Lane9EmailExtractBody(batch4AsMap(raw), mimeType); decoded != "" {
+	for _, raw := range asSlice(part["parts"]) {
+		if decoded := batch7Lane9EmailExtractBody(asMap(raw), mimeType); decoded != "" {
 			return decoded
 		}
 	}
@@ -392,12 +384,12 @@ func batch7Lane9EmailReply(ctx context.Context, rt *Runtime, input map[string]an
 		return problem, nil
 	}
 	if token == "" {
-		return batch7Lane9EmailGmailAuthError(), nil
+		return gmailAuthError(), nil
 	}
 
-	endpoint := batch7Lane9Base(rt, "email_gmail_tool", batch7Lane9GmailBase) +
-		"/users/me/messages/" + batch7Lane9PathEscape(messageID) + "?format=full"
-	resp, err := batch7Lane9DoJSON(ctx, rt, http.MethodGet, endpoint,
+	endpoint := marketingBase(rt, "email_gmail_tool", batch7Lane9GmailBase) +
+		"/users/me/messages/" + pathEscape(messageID) + "?format=full"
+	resp, err := marketingDoJSON(ctx, rt, http.MethodGet, endpoint,
 		map[string]string{"Authorization": "Bearer " + token}, nil, 30*time.Second)
 	if err != nil {
 		return map[string]any{"error": "Failed to fetch original message: " + err.Error()}, nil
@@ -416,13 +408,13 @@ func batch7Lane9EmailReply(ctx context.Context, rt *Runtime, input map[string]an
 			"error": "Gmail API error (HTTP " + strconv.Itoa(resp.Status) + "): " + string(resp.Body),
 		}, nil
 	}
-	original, ok := batch7Lane9JSONObject(resp.Body)
+	original, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Failed to fetch original message: invalid JSON response"}, nil
 	}
-	payload := batch4AsMap(original["payload"])
+	payload := asMap(original["payload"])
 	headers := batch7Lane9EmailHeaders(payload["headers"])
-	threadID := batch7Lane9StringOr(original, "threadId", "")
+	threadID := stringOr(original, "threadId", "")
 	originalMessageID := headers["message-id"]
 	originalSubject := headers["subject"]
 	replyTo := headers["from"]
@@ -449,7 +441,7 @@ func batch7Lane9EmailReply(ctx context.Context, rt *Runtime, input map[string]an
 	bcc := batch7Lane9EmailNormalizeRecipients(input, "bcc")
 	finalSubject := subject
 	finalTo := replyTo
-	if override := batch7Lane9Getenv(rt, "EMAIL_OVERRIDE_TO"); override != "" {
+	if override := runtimeEnv(rt, "EMAIL_OVERRIDE_TO"); override != "" {
 		finalTo = override
 		cc = nil
 		bcc = nil
@@ -466,8 +458,8 @@ func batch7Lane9EmailReply(ctx context.Context, rt *Runtime, input map[string]an
 		HTML:       fullHTML,
 	})
 	payloadOut := map[string]any{"raw": raw, "threadId": threadID}
-	base := batch7Lane9Base(rt, "email_gmail_tool", batch7Lane9GmailBase)
-	postResp, err := batch7Lane9DoJSON(ctx, rt, http.MethodPost, base+"/users/me/messages/send",
+	base := marketingBase(rt, "email_gmail_tool", batch7Lane9GmailBase)
+	postResp, err := marketingDoJSON(ctx, rt, http.MethodPost, base+"/users/me/messages/send",
 		map[string]string{"Authorization": "Bearer " + token}, payloadOut, 30*time.Second)
 	if err != nil {
 		return map[string]any{"error": "Failed to send reply: " + err.Error()}, nil
@@ -483,15 +475,15 @@ func batch7Lane9EmailReply(ctx context.Context, rt *Runtime, input map[string]an
 			"error": "Gmail API error (HTTP " + strconv.Itoa(postResp.Status) + "): " + string(postResp.Body),
 		}, nil
 	}
-	data, ok := batch7Lane9JSONObject(postResp.Body)
+	data, ok := jsonObject(postResp.Body)
 	if !ok {
 		return map[string]any{"error": "Gmail API error: invalid JSON response"}, nil
 	}
 	return map[string]any{
 		"success":  true,
 		"provider": "gmail",
-		"id":       batch7Lane9StringOr(data, "id", ""),
-		"threadId": batch7Lane9StringOr(data, "threadId", threadID),
+		"id":       stringOr(data, "id", ""),
+		"threadId": stringOr(data, "threadId", threadID),
 		"to":       replyTo,
 		"subject":  subject,
 	}, nil

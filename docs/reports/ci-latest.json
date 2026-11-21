@@ -1,9 +1,9 @@
 {
- "wave": 29,
- "at": "2026-11-22 02:40",
- "head": "fcfadc90",
- "ci": 2,
+ "wave": 30,
+ "at": "2026-11-22 02:50",
+ "head": "23d98383",
+ "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "api-routes 重导出后"
+ "note": "claudecode WaitDelay + env/config 契约重刷后"
 }

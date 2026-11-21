@@ -28,18 +28,15 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/aden-hive/hive-go/internal/tools"
 )
@@ -149,26 +146,6 @@ func batch7Lane4Modules() map[string]*ModuleConfig {
 
 // ------------------------------------------------------------------ shared ---
 
-// batch7Lane4Getenv resolves the runtime environment lookup.
-func batch7Lane4Getenv(rt *Runtime) func(string) string {
-	if rt != nil && rt.Getenv != nil {
-		return rt.Getenv
-	}
-	return os.Getenv
-}
-
-// batch7Lane4ModuleURL resolves a module base URL, honouring WithBaseURL.
-func batch7Lane4ModuleURL(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	return strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
-}
-
 // batch7Lane4ModuleToken resolves a single-token module credential from
 // WithCredential first, then the configured environment lookup.
 func batch7Lane4ModuleToken(rt *Runtime, moduleID string) string {
@@ -179,17 +156,8 @@ func batch7Lane4ModuleToken(rt *Runtime, moduleID string) string {
 	if cfg == nil {
 		return ""
 	}
-	token, _ := cfg.ResolvedToken(batch7Lane4Getenv(rt))
+	token, _ := cfg.ResolvedToken(runtimeGetenv(rt))
 	return strings.TrimSpace(token)
-}
-
-// batch7Lane4HTTP returns the runtime transport, falling back to a client with
-// the standard timeout for hand-built runtimes.
-func batch7Lane4HTTP(rt *Runtime) *httpClient {
-	if rt != nil && rt.HTTP != nil {
-		return rt.HTTP
-	}
-	return newHTTPClient(nil)
 }
 
 // batch7Lane4Reply is the status/body pair every module helper inspects.
@@ -222,7 +190,7 @@ func batch7Lane4Do(
 	for name, value := range headers {
 		req.Header.Set(name, value)
 	}
-	resp, err := batch7Lane4HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
 		return batch7Lane4Reply{}, err
 	}
@@ -238,57 +206,6 @@ func batch7Lane4Do(
 	}, nil
 }
 
-// batch7Lane4IsTimeout reports whether err is a deadline or a net timeout.
-func batch7Lane4IsTimeout(ctx context.Context, err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	var netErr net.Error
-	return errors.As(err, &netErr) && netErr.Timeout()
-}
-
-// batch7Lane4BasicAuth renders an HTTP Basic header value.
-func batch7Lane4BasicAuth(user, password string) string {
-	encoded := base64.StdEncoding.EncodeToString([]byte(user + ":" + password))
-	return "Basic " + encoded
-}
-
-// batch7Lane4TruncateText caps provider error/description text the same way
-// upstream slices response.text[:500].
-func batch7Lane4TruncateText(text string, limit int) string {
-	if utf8.RuneCountInString(text) <= limit {
-		return text
-	}
-	runes := []rune(text)
-	return string(runes[:limit])
-}
-
-// batch7Lane4Clamp bounds an integer to [low, high].
-func batch7Lane4Clamp(value, low, high int) int {
-	if value < low {
-		return low
-	}
-	if value > high {
-		return high
-	}
-	return value
-}
-
-// batch7Lane4AsMap safely views a decoded JSON object.
-func batch7Lane4AsMap(value any) map[string]any {
-	object, _ := value.(map[string]any)
-	return object
-}
-
-// batch7Lane4AsSlice safely views a decoded JSON array.
-func batch7Lane4AsSlice(value any) []any {
-	items, _ := value.([]any)
-	return items
-}
-
 // batch7Lane4AnyList renders a decoded JSON array, normalising a missing field
 // to an empty (non-nil) slice so it encodes as [].
 func batch7Lane4AnyList(value any) []any {
@@ -297,21 +214,6 @@ func batch7Lane4AnyList(value any) []any {
 		return []any{}
 	}
 	return items
-}
-
-// batch7Lane4AsString reads a decoded JSON string.
-func batch7Lane4AsString(value any) string {
-	text, _ := value.(string)
-	return text
-}
-
-// batch7Lane4BoolOr reads a boolean with the upstream `.get(key, fallback)`
-// default applied when the field is absent.
-func batch7Lane4BoolOr(value any, fallback bool) bool {
-	if flag, ok := value.(bool); ok {
-		return flag
-	}
-	return fallback
 }
 
 // batch7Lane4FloatOr reads a number with a fallback.
@@ -348,52 +250,13 @@ func batch7Lane4IntOr(value any, fallback int) int {
 	return fallback
 }
 
-// batch7Lane4JSONNumber turns integral float64 values (the form
-// encoding/json produces) back into integers so responses render like Python
-// ints instead of 456.0.
-func batch7Lane4JSONNumber(value any) any {
-	switch typed := value.(type) {
-	case float64:
-		if typed == float64(int64(typed)) {
-			return int64(typed)
-		}
-		return typed
-	case json.Number:
-		if parsed, err := typed.Int64(); err == nil {
-			return parsed
-		}
-		return typed
-	default:
-		return value
-	}
-}
-
-// batch7Lane4StringID renders an identifier the way Python's str() does.
-func batch7Lane4StringID(value any) string {
-	switch typed := value.(type) {
-	case nil:
-		return ""
-	case string:
-		return typed
-	case float64:
-		if typed == float64(int64(typed)) {
-			return strconv.FormatInt(int64(typed), 10)
-		}
-		return strconv.FormatFloat(typed, 'f', -1, 64)
-	case json.Number:
-		return typed.String()
-	default:
-		return fmt.Sprint(typed)
-	}
-}
-
 // batch7Lane4StringList renders a decoded JSON array of names as []string. A
 // missing field produces an empty (non-nil) slice so it encodes as [].
 func batch7Lane4StringList(value any) []string {
-	items := batch7Lane4AsSlice(value)
+	items := asSlice(value)
 	out := make([]string, 0, len(items))
 	for _, item := range items {
-		out = append(out, batch7Lane4AsString(item))
+		out = append(out, asString(item))
 	}
 	return out
 }
@@ -406,43 +269,9 @@ func batch7Lane4FirstN(values []string, limit int) []string {
 	return values[:limit]
 }
 
-// batch7Lane4DecodeAny decodes a JSON body of any shape.
-func batch7Lane4DecodeAny(raw []byte) (any, bool) {
-	var value any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return nil, false
-	}
-	return value, true
-}
-
-// batch7Lane4DecodeObject decodes a JSON object body.
-func batch7Lane4DecodeObject(raw []byte) (map[string]any, bool) {
-	var value map[string]any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return nil, false
-	}
-	if value == nil {
-		value = map[string]any{}
-	}
-	return value, true
-}
-
 // batch7Lane4Round3 mirrors Python round(value, 3).
 func batch7Lane4Round3(value float64) float64 {
 	return math.Round(value*1000) / 1000
-}
-
-// batch7Lane4SplitCSV splits a comma-separated argument, trimming and dropping
-// blanks.
-func batch7Lane4SplitCSV(raw string) []string {
-	parts := strings.Split(raw, ",")
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if trimmed := strings.TrimSpace(part); trimmed != "" {
-			out = append(out, trimmed)
-		}
-	}
-	return out
 }
 
 // ---------------------------------------------------------------- pinecone ---
@@ -596,7 +425,7 @@ func batch7Lane4PineconeControl(
 	token, method, path string,
 	payload any,
 ) (map[string]any, bool) {
-	target := batch7Lane4ModuleURL(rt, "pinecone_tool")
+	target := moduleBaseURL(rt, "pinecone_tool")
 	if target == "" {
 		target = batch7Lane4PineconeBase
 	}
@@ -604,7 +433,7 @@ func batch7Lane4PineconeControl(
 		ctx, rt, method, target+path, batch7Lane4PineconeHeaders(token), payload,
 	)
 	if err != nil {
-		if batch7Lane4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Pinecone timed out"}, false
 		}
 		return map[string]any{"error": "Pinecone request failed: " + err.Error()}, false
@@ -620,14 +449,14 @@ func batch7Lane4PineconeControl(
 			"error": fmt.Sprintf(
 				"Pinecone API error %d: %s",
 				reply.Status,
-				batch7Lane4TruncateText(string(reply.Body), batch7Lane4MaxError),
+				truncateText(string(reply.Body), batch7Lane4MaxError),
 			),
 		}, false
 	}
 	if len(bytes.TrimSpace(reply.Body)) == 0 {
 		return map[string]any{"status": "ok"}, true
 	}
-	value, ok := batch7Lane4DecodeObject(reply.Body)
+	value, ok := decodeObject(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Pinecone request failed: invalid JSON response"}, false
 	}
@@ -655,7 +484,7 @@ func batch7Lane4PineconeData(
 		ctx, rt, method, target, batch7Lane4PineconeHeaders(token), payload,
 	)
 	if err != nil {
-		if batch7Lane4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Pinecone timed out"}, false
 		}
 		return map[string]any{"error": "Pinecone request failed: " + err.Error()}, false
@@ -668,14 +497,14 @@ func batch7Lane4PineconeData(
 			"error": fmt.Sprintf(
 				"Pinecone API error %d: %s",
 				reply.Status,
-				batch7Lane4TruncateText(string(reply.Body), batch7Lane4MaxError),
+				truncateText(string(reply.Body), batch7Lane4MaxError),
 			),
 		}, false
 	}
 	if len(bytes.TrimSpace(reply.Body)) == 0 {
 		return map[string]any{}, true
 	}
-	value, ok := batch7Lane4DecodeObject(reply.Body)
+	value, ok := decodeObject(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Pinecone request failed: invalid JSON response"}, false
 	}
@@ -701,17 +530,17 @@ func batch7Lane4PineconeListIndexes(ctx context.Context, rt *Runtime, _ map[stri
 		return data, nil
 	}
 	indexes := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(data["indexes"]) {
-		index := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(data["indexes"]) {
+		index := asMap(raw)
 		status := batch7Lane4PineconeStatus(index)
 		indexes = append(indexes, map[string]any{
-			"name":        batch7Lane4AsString(index["name"]),
-			"dimension":   batch7Lane4JSONNumber(batch7Lane4IntOr(index["dimension"], 0)),
-			"metric":      batch7Lane4AsString(index["metric"]),
-			"host":        batch7Lane4AsString(index["host"]),
+			"name":        asString(index["name"]),
+			"dimension":   jsonNumber(batch7Lane4IntOr(index["dimension"], 0)),
+			"metric":      asString(index["metric"]),
+			"host":        asString(index["host"]),
 			"vector_type": batch7Lane4StringDefault(index["vector_type"], "dense"),
-			"state":       batch7Lane4AsString(status["state"]),
-			"ready":       batch7Lane4BoolOr(status["ready"], false),
+			"state":       asString(status["state"]),
+			"ready":       boolOr(status["ready"], false),
 		})
 	}
 	return map[string]any{"indexes": indexes, "count": len(indexes)}, nil
@@ -744,9 +573,9 @@ func batch7Lane4PineconeCreateIndex(ctx context.Context, rt *Runtime, input map[
 	}
 	return map[string]any{
 		"name":      batch7Lane4StringDefault(data["name"], name),
-		"dimension": batch7Lane4JSONNumber(batch7Lane4IntOr(data["dimension"], dimension)),
+		"dimension": jsonNumber(batch7Lane4IntOr(data["dimension"], dimension)),
 		"metric":    batch7Lane4StringDefault(data["metric"], metric),
-		"host":      batch7Lane4AsString(data["host"]),
+		"host":      asString(data["host"]),
 		"status":    "created",
 	}, nil
 }
@@ -768,15 +597,15 @@ func batch7Lane4PineconeDescribeIndex(ctx context.Context, rt *Runtime, input ma
 	}
 	status := batch7Lane4PineconeStatus(data)
 	return map[string]any{
-		"name":                batch7Lane4AsString(data["name"]),
-		"dimension":           batch7Lane4JSONNumber(batch7Lane4IntOr(data["dimension"], 0)),
-		"metric":              batch7Lane4AsString(data["metric"]),
-		"host":                batch7Lane4AsString(data["host"]),
+		"name":                asString(data["name"]),
+		"dimension":           jsonNumber(batch7Lane4IntOr(data["dimension"], 0)),
+		"metric":              asString(data["metric"]),
+		"host":                asString(data["host"]),
 		"vector_type":         batch7Lane4StringDefault(data["vector_type"], "dense"),
-		"state":               batch7Lane4AsString(status["state"]),
-		"ready":               batch7Lane4BoolOr(status["ready"], false),
+		"state":               asString(status["state"]),
+		"ready":               boolOr(status["ready"], false),
 		"deletion_protection": batch7Lane4StringDefault(data["deletion_protection"], "disabled"),
-		"spec":                batch7Lane4AnyOrMap(data["spec"]),
+		"spec":                mapOrEmpty(data["spec"]),
 	}, nil
 }
 
@@ -804,7 +633,7 @@ func batch7Lane4PineconeUpsertVectors(ctx context.Context, rt *Runtime, input ma
 		return problem, nil
 	}
 	indexHost := stringArg(input, "index_host")
-	vectors := batch7Lane4AsSlice(input["vectors"])
+	vectors := asSlice(input["vectors"])
 	if indexHost == "" || len(vectors) == 0 {
 		return map[string]any{"error": "index_host and vectors are required"}, nil
 	}
@@ -820,7 +649,7 @@ func batch7Lane4PineconeUpsertVectors(ctx context.Context, rt *Runtime, input ma
 		return data, nil
 	}
 	return map[string]any{
-		"upserted_count": batch7Lane4JSONNumber(batch7Lane4IntOr(data["upsertedCount"], 0)),
+		"upserted_count": jsonNumber(batch7Lane4IntOr(data["upsertedCount"], 0)),
 	}, nil
 }
 
@@ -833,12 +662,12 @@ func batch7Lane4PineconeQueryVectors(ctx context.Context, rt *Runtime, input map
 	if indexHost == "" {
 		return map[string]any{"error": "index_host is required"}, nil
 	}
-	vector := batch7Lane4AsSlice(input["vector"])
+	vector := asSlice(input["vector"])
 	id := stringArg(input, "id")
 	if len(vector) == 0 && id == "" {
 		return map[string]any{"error": "Either vector or id is required"}, nil
 	}
-	topK := batch7Lane4Clamp(intArg(input, "top_k", 10), 1, 10000)
+	topK := clampInt(intArg(input, "top_k", 10), 1, 10000)
 	includeMetadata := boolArg(input, "include_metadata", true)
 	includeValues := boolArg(input, "include_values", false)
 	body := map[string]any{
@@ -866,23 +695,23 @@ func batch7Lane4PineconeQueryVectors(ctx context.Context, rt *Runtime, input map
 		return data, nil
 	}
 	matches := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(data["matches"]) {
-		source := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(data["matches"]) {
+		source := asMap(raw)
 		match := map[string]any{
-			"id":    batch7Lane4AsString(source["id"]),
+			"id":    asString(source["id"]),
 			"score": batch7Lane4FloatOr(source["score"], 0),
 		}
-		if metadata := batch7Lane4AsMap(source["metadata"]); includeMetadata && len(metadata) > 0 {
+		if metadata := asMap(source["metadata"]); includeMetadata && len(metadata) > 0 {
 			match["metadata"] = metadata
 		}
-		if values := batch7Lane4AsSlice(source["values"]); includeValues && len(values) > 0 {
+		if values := asSlice(source["values"]); includeValues && len(values) > 0 {
 			match["values"] = values
 		}
 		matches = append(matches, match)
 	}
 	return map[string]any{
 		"matches":   matches,
-		"namespace": batch7Lane4AsString(data["namespace"]),
+		"namespace": asString(data["namespace"]),
 	}, nil
 }
 
@@ -892,7 +721,7 @@ func batch7Lane4PineconeFetchVectors(ctx context.Context, rt *Runtime, input map
 		return problem, nil
 	}
 	indexHost := stringArg(input, "index_host")
-	ids := batch7Lane4ToStrings(batch7Lane4AsSlice(input["ids"]))
+	ids := batch7Lane4ToStrings(asSlice(input["ids"]))
 	if indexHost == "" || len(ids) == 0 {
 		return map[string]any{"error": "index_host and ids are required"}, nil
 	}
@@ -908,8 +737,8 @@ func batch7Lane4PineconeFetchVectors(ctx context.Context, rt *Runtime, input map
 		return data, nil
 	}
 	vectors := map[string]any{}
-	for id, raw := range batch7Lane4AsMap(data["vectors"]) {
-		source := batch7Lane4AsMap(raw)
+	for id, raw := range asMap(data["vectors"]) {
+		source := asMap(raw)
 		vectors[id] = map[string]any{
 			"id":       batch7Lane4StringDefault(source["id"], id),
 			"values":   batch7Lane4AnyList(source["values"]),
@@ -918,7 +747,7 @@ func batch7Lane4PineconeFetchVectors(ctx context.Context, rt *Runtime, input map
 	}
 	return map[string]any{
 		"vectors":   vectors,
-		"namespace": batch7Lane4AsString(data["namespace"]),
+		"namespace": asString(data["namespace"]),
 	}, nil
 }
 
@@ -931,7 +760,7 @@ func batch7Lane4PineconeDeleteVectors(ctx context.Context, rt *Runtime, input ma
 	if indexHost == "" {
 		return map[string]any{"error": "index_host is required"}, nil
 	}
-	ids := batch7Lane4ToStrings(batch7Lane4AsSlice(input["ids"]))
+	ids := batch7Lane4ToStrings(asSlice(input["ids"]))
 	deleteAll := boolArg(input, "delete_all", false)
 	filter, hasFilter := input["filter"].(map[string]any)
 	if len(ids) == 0 && !deleteAll && (!hasFilter || len(filter) == 0) {
@@ -977,19 +806,19 @@ func batch7Lane4PineconeIndexStats(ctx context.Context, rt *Runtime, input map[s
 		return data, nil
 	}
 	namespaces := map[string]any{}
-	for name, raw := range batch7Lane4AsMap(data["namespaces"]) {
+	for name, raw := range asMap(data["namespaces"]) {
 		namespaces[name] = map[string]any{
-			"vector_count": batch7Lane4JSONNumber(
-				batch7Lane4IntOr(batch7Lane4AsMap(raw)["vectorCount"], 0),
+			"vector_count": jsonNumber(
+				batch7Lane4IntOr(asMap(raw)["vectorCount"], 0),
 			),
 		}
 	}
 	return map[string]any{
 		"namespaces":         namespaces,
-		"dimension":          batch7Lane4JSONNumber(batch7Lane4IntOr(data["dimension"], 0)),
-		"total_vector_count": batch7Lane4JSONNumber(batch7Lane4IntOr(data["totalVectorCount"], 0)),
-		"metric":             batch7Lane4AsString(data["metric"]),
-		"vector_type":        batch7Lane4AsString(data["vectorType"]),
+		"dimension":          jsonNumber(batch7Lane4IntOr(data["dimension"], 0)),
+		"total_vector_count": jsonNumber(batch7Lane4IntOr(data["totalVectorCount"], 0)),
+		"metric":             asString(data["metric"]),
+		"vector_type":        asString(data["vectorType"]),
 	}, nil
 }
 
@@ -1104,7 +933,7 @@ func batch7Lane4WandbCall(
 	if variables == nil {
 		variables = map[string]any{}
 	}
-	target := batch7Lane4ModuleURL(rt, "wandb_tool")
+	target := moduleBaseURL(rt, "wandb_tool")
 	if target == "" {
 		target = batch7Lane4WandbEndpoint
 	}
@@ -1117,7 +946,7 @@ func batch7Lane4WandbCall(
 		map[string]any{"query": query, "variables": variables},
 	)
 	if err != nil {
-		if batch7Lane4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request timed out"}, false
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}, false
@@ -1132,9 +961,9 @@ func batch7Lane4WandbCall(
 	}
 	if reply.Status >= 400 {
 		detail := string(reply.Body)
-		if payload, ok := batch7Lane4DecodeObject(reply.Body); ok {
-			if errorsList := batch7Lane4AsSlice(payload["errors"]); len(errorsList) > 0 {
-				if message := batch7Lane4AsString(batch7Lane4AsMap(errorsList[0])["message"]); message != "" {
+		if payload, ok := decodeObject(reply.Body); ok {
+			if errorsList := asSlice(payload["errors"]); len(errorsList) > 0 {
+				if message := asString(asMap(errorsList[0])["message"]); message != "" {
 					detail = message
 				}
 			}
@@ -1145,12 +974,12 @@ func batch7Lane4WandbCall(
 			),
 		}, false
 	}
-	payload, ok := batch7Lane4DecodeObject(reply.Body)
+	payload, ok := decodeObject(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Network error: invalid JSON response"}, false
 	}
-	if errorsList := batch7Lane4AsSlice(payload["errors"]); len(errorsList) > 0 {
-		message := batch7Lane4AsString(batch7Lane4AsMap(errorsList[0])["message"])
+	if errorsList := asSlice(payload["errors"]); len(errorsList) > 0 {
+		message := asString(asMap(errorsList[0])["message"])
 		if message == "" {
 			message = fmt.Sprint(payload["errors"])
 		}
@@ -1169,7 +998,7 @@ func batch7Lane4WandbObject(value any) map[string]any {
 	if !ok {
 		return map[string]any{}
 	}
-	decoded, ok := batch7Lane4DecodeObject([]byte(text))
+	decoded, ok := decodeObject([]byte(text))
 	if !ok {
 		return map[string]any{}
 	}
@@ -1199,14 +1028,14 @@ func batch7Lane4WandbListProjects(ctx context.Context, rt *Runtime, input map[st
 	if !ok {
 		return data, nil
 	}
-	edges := batch7Lane4AsSlice(batch7Lane4AsMap(data["projects"])["edges"])
+	edges := asSlice(asMap(data["projects"])["edges"])
 	projects := make([]map[string]any, 0, len(edges))
 	for _, raw := range edges {
-		node := batch7Lane4AsMap(batch7Lane4AsMap(raw)["node"])
+		node := asMap(asMap(raw)["node"])
 		projects = append(projects, map[string]any{
-			"name":        batch7Lane4AsString(node["name"]),
-			"description": batch7Lane4AsString(node["description"]),
-			"created_at":  batch7Lane4AsString(node["createdAt"]),
+			"name":        asString(node["name"]),
+			"description": asString(node["description"]),
+			"created_at":  asString(node["createdAt"]),
 		})
 	}
 	return map[string]any{"entity": entity, "projects": projects}, nil
@@ -1217,7 +1046,7 @@ func batch7Lane4WandbListRuns(ctx context.Context, rt *Runtime, input map[string
 	project := stringArg(input, "project")
 	var parsedFilters any
 	if raw := stringArg(input, "filters"); raw != "" {
-		decoded, ok := batch7Lane4DecodeAny([]byte(raw))
+		decoded, ok := decodeAny([]byte(raw))
 		if !ok {
 			return map[string]any{"error": "filters must be a valid JSON string"}, nil
 		}
@@ -1254,17 +1083,17 @@ func batch7Lane4WandbListRuns(ctx context.Context, rt *Runtime, input map[string
 	if !ok {
 		return data, nil
 	}
-	edges := batch7Lane4AsSlice(
-		batch7Lane4AsMap(batch7Lane4AsMap(data["project"])["runs"])["edges"],
+	edges := asSlice(
+		asMap(asMap(data["project"])["runs"])["edges"],
 	)
 	runs := make([]map[string]any, 0, len(edges))
 	for _, raw := range edges {
-		node := batch7Lane4AsMap(batch7Lane4AsMap(raw)["node"])
+		node := asMap(asMap(raw)["node"])
 		runs = append(runs, map[string]any{
-			"id":           batch7Lane4AsString(node["name"]),
-			"display_name": batch7Lane4AsString(node["id"]),
-			"state":        batch7Lane4AsString(node["state"]),
-			"created_at":   batch7Lane4AsString(node["createdAt"]),
+			"id":           asString(node["name"]),
+			"display_name": asString(node["id"]),
+			"state":        asString(node["state"]),
+			"created_at":   asString(node["createdAt"]),
 			"config":       batch7Lane4WandbObject(node["config"]),
 		})
 	}
@@ -1305,19 +1134,19 @@ func batch7Lane4WandbGetRun(ctx context.Context, rt *Runtime, input map[string]a
 	if !ok {
 		return data, nil
 	}
-	node, found := batch7Lane4AsMap(data["project"])["run"].(map[string]any)
+	node, found := asMap(data["project"])["run"].(map[string]any)
 	if !found || node == nil {
 		return map[string]any{"error": "Weights & Biases resource not found"}, nil
 	}
 	return map[string]any{
-		"id":           batch7Lane4AsString(node["name"]),
-		"display_name": batch7Lane4AsString(node["id"]),
-		"state":        batch7Lane4AsString(node["state"]),
-		"created_at":   batch7Lane4AsString(node["createdAt"]),
+		"id":           asString(node["name"]),
+		"display_name": asString(node["id"]),
+		"state":        asString(node["state"]),
+		"created_at":   asString(node["createdAt"]),
 		"config":       batch7Lane4WandbObject(node["config"]),
 		"summary":      batch7Lane4WandbObject(node["summaryMetrics"]),
 		"tags":         batch7Lane4AnyList(node["tags"]),
-		"notes":        batch7Lane4AsString(node["notes"]),
+		"notes":        asString(node["notes"]),
 	}, nil
 }
 
@@ -1336,7 +1165,7 @@ func batch7Lane4WandbGetRunMetrics(ctx context.Context, rt *Runtime, input map[s
 			"error": "metric_keys is required (comma-separated, e.g. 'loss,accuracy')",
 		}, nil
 	}
-	keys := batch7Lane4SplitCSV(metricKeys)
+	keys := splitCSV(metricKeys)
 	if len(keys) == 0 {
 		return map[string]any{"error": "metric_keys must include at least one non-empty key"}, nil
 	}
@@ -1366,7 +1195,7 @@ func batch7Lane4WandbGetRunMetrics(ctx context.Context, rt *Runtime, input map[s
 	if !ok {
 		return data, nil
 	}
-	node, found := batch7Lane4AsMap(data["project"])["run"].(map[string]any)
+	node, found := asMap(data["project"])["run"].(map[string]any)
 	if !found || node == nil {
 		return map[string]any{"error": "Weights & Biases resource not found"}, nil
 	}
@@ -1413,19 +1242,19 @@ func batch7Lane4WandbListArtifacts(ctx context.Context, rt *Runtime, input map[s
 	if !ok {
 		return data, nil
 	}
-	node, found := batch7Lane4AsMap(data["project"])["run"].(map[string]any)
+	node, found := asMap(data["project"])["run"].(map[string]any)
 	if !found || node == nil {
 		return map[string]any{"error": "Weights & Biases resource not found"}, nil
 	}
-	edges := batch7Lane4AsSlice(batch7Lane4AsMap(node["outputArtifacts"])["edges"])
+	edges := asSlice(asMap(node["outputArtifacts"])["edges"])
 	artifacts := make([]map[string]any, 0, len(edges))
 	for _, raw := range edges {
-		artifact := batch7Lane4AsMap(batch7Lane4AsMap(raw)["node"])
+		artifact := asMap(asMap(raw)["node"])
 		artifacts = append(artifacts, map[string]any{
-			"name":        batch7Lane4AsString(artifact["name"]),
-			"type":        batch7Lane4AsString(artifact["type"]),
-			"description": batch7Lane4AsString(artifact["description"]),
-			"created_at":  batch7Lane4AsString(artifact["createdAt"]),
+			"name":        asString(artifact["name"]),
+			"type":        asString(artifact["type"]),
+			"description": asString(artifact["description"]),
+			"created_at":  asString(artifact["createdAt"]),
 		})
 	}
 	return map[string]any{"run_id": runID, "artifacts": artifacts}, nil
@@ -1458,7 +1287,7 @@ func batch7Lane4WandbGetSummary(ctx context.Context, rt *Runtime, input map[stri
 	if !ok {
 		return data, nil
 	}
-	node, found := batch7Lane4AsMap(data["project"])["run"].(map[string]any)
+	node, found := asMap(data["project"])["run"].(map[string]any)
 	if !found || node == nil {
 		return map[string]any{"error": "Weights & Biases resource not found"}, nil
 	}
@@ -1568,7 +1397,7 @@ func batch7Lane4LangfuseImpls() map[string]ActionFunc {
 
 // batch7Lane4LangfuseAuth resolves the public/secret/host bundle.
 func batch7Lane4LangfuseAuth(rt *Runtime) (string, string, string, map[string]any) {
-	getenv := batch7Lane4Getenv(rt)
+	getenv := runtimeGetenv(rt)
 	publicKey := strings.TrimSpace(getenv("LANGFUSE_PUBLIC_KEY"))
 	secretKey := strings.TrimSpace(getenv("LANGFUSE_SECRET_KEY"))
 	if publicKey == "" || secretKey == "" {
@@ -1577,7 +1406,7 @@ func batch7Lane4LangfuseAuth(rt *Runtime) (string, string, string, map[string]an
 			"help":  "Set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY environment variables or configure via credential store",
 		}
 	}
-	host := batch7Lane4ModuleURL(rt, "langfuse_tool")
+	host := moduleBaseURL(rt, "langfuse_tool")
 	if host == "" {
 		host = strings.TrimSpace(getenv("LANGFUSE_HOST"))
 	}
@@ -1601,12 +1430,12 @@ func batch7Lane4LangfuseCall(
 		target += "?" + query.Encode()
 	}
 	headers := map[string]string{
-		"Authorization": batch7Lane4BasicAuth(publicKey, secretKey),
+		"Authorization": basicAuth(publicKey, secretKey),
 		"Content-Type":  "application/json",
 	}
 	reply, err := batch7Lane4Do(ctx, rt, method, target, headers, payload)
 	if err != nil {
-		if batch7Lane4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request timed out"}, false
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}, false
@@ -1627,10 +1456,10 @@ func batch7Lane4LangfuseCall(
 	}
 	if reply.Status >= 400 {
 		detail := string(reply.Body)
-		if payload, ok := batch7Lane4DecodeObject(reply.Body); ok {
-			if message := batch7Lane4AsString(payload["message"]); message != "" {
+		if payload, ok := decodeObject(reply.Body); ok {
+			if message := asString(payload["message"]); message != "" {
 				detail = message
-			} else if message := batch7Lane4AsString(payload["error"]); message != "" {
+			} else if message := asString(payload["error"]); message != "" {
 				detail = message
 			}
 		}
@@ -1638,7 +1467,7 @@ func batch7Lane4LangfuseCall(
 			"error": fmt.Sprintf("Langfuse API error (HTTP %d): %s", reply.Status, detail),
 		}, false
 	}
-	value, ok := batch7Lane4DecodeObject(reply.Body)
+	value, ok := decodeObject(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Network error: invalid JSON response"}, false
 	}
@@ -1665,7 +1494,7 @@ func batch7Lane4LangfuseListTraces(ctx context.Context, rt *Runtime, input map[s
 	if sessionID := stringArg(input, "session_id"); sessionID != "" {
 		query.Set("sessionId", sessionID)
 	}
-	for _, tag := range batch7Lane4SplitCSV(stringArg(input, "tags")) {
+	for _, tag := range splitCSV(stringArg(input, "tags")) {
 		query.Add("tags", tag)
 	}
 	data, ok := batch7Lane4LangfuseCall(
@@ -1675,8 +1504,8 @@ func batch7Lane4LangfuseListTraces(ctx context.Context, rt *Runtime, input map[s
 		return data, nil
 	}
 	traces := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(data["data"]) {
-		trace := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(data["data"]) {
+		trace := asMap(raw)
 		traces = append(traces, map[string]any{
 			"id":                trace["id"],
 			"name":              trace["name"],
@@ -1686,15 +1515,15 @@ func batch7Lane4LangfuseListTraces(ctx context.Context, rt *Runtime, input map[s
 			"tags":              batch7Lane4AnyList(trace["tags"]),
 			"latency":           trace["latency"],
 			"total_cost":        trace["totalCost"],
-			"observation_count": len(batch7Lane4AsSlice(trace["observations"])),
+			"observation_count": len(asSlice(trace["observations"])),
 		})
 	}
-	meta := batch7Lane4AsMap(data["meta"])
+	meta := asMap(data["meta"])
 	return map[string]any{
 		"count":       len(traces),
-		"total_items": batch7Lane4JSONNumber(batch7Lane4IntOr(meta["totalItems"], 0)),
-		"page":        batch7Lane4JSONNumber(batch7Lane4IntOr(meta["page"], page)),
-		"total_pages": batch7Lane4JSONNumber(batch7Lane4IntOr(meta["totalPages"], 0)),
+		"total_items": jsonNumber(batch7Lane4IntOr(meta["totalItems"], 0)),
+		"page":        jsonNumber(batch7Lane4IntOr(meta["page"], page)),
+		"total_pages": jsonNumber(batch7Lane4IntOr(meta["totalPages"], 0)),
 		"traces":      traces,
 	}, nil
 }
@@ -1716,8 +1545,8 @@ func batch7Lane4LangfuseGetTrace(ctx context.Context, rt *Runtime, input map[str
 		return data, nil
 	}
 	observations := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(data["observations"]) {
-		observation := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(data["observations"]) {
+		observation := asMap(raw)
 		observations = append(observations, map[string]any{
 			"id":         observation["id"],
 			"type":       observation["type"],
@@ -1729,8 +1558,8 @@ func batch7Lane4LangfuseGetTrace(ctx context.Context, rt *Runtime, input map[str
 		})
 	}
 	scores := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(data["scores"]) {
-		score := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(data["scores"]) {
+		score := asMap(raw)
 		scores = append(scores, map[string]any{
 			"id":        score["id"],
 			"name":      score["name"],
@@ -1786,8 +1615,8 @@ func batch7Lane4LangfuseListScores(ctx context.Context, rt *Runtime, input map[s
 		return data, nil
 	}
 	scores := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(data["data"]) {
-		score := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(data["data"]) {
+		score := asMap(raw)
 		scores = append(scores, map[string]any{
 			"id":             score["id"],
 			"trace_id":       score["traceId"],
@@ -1800,12 +1629,12 @@ func batch7Lane4LangfuseListScores(ctx context.Context, rt *Runtime, input map[s
 			"timestamp":      score["timestamp"],
 		})
 	}
-	meta := batch7Lane4AsMap(data["meta"])
+	meta := asMap(data["meta"])
 	return map[string]any{
 		"count":       len(scores),
-		"total_items": batch7Lane4JSONNumber(batch7Lane4IntOr(meta["totalItems"], 0)),
-		"page":        batch7Lane4JSONNumber(batch7Lane4IntOr(meta["page"], page)),
-		"total_pages": batch7Lane4JSONNumber(batch7Lane4IntOr(meta["totalPages"], 0)),
+		"total_items": jsonNumber(batch7Lane4IntOr(meta["totalItems"], 0)),
+		"page":        jsonNumber(batch7Lane4IntOr(meta["page"], page)),
+		"total_pages": jsonNumber(batch7Lane4IntOr(meta["totalPages"], 0)),
 		"scores":      scores,
 	}, nil
 }
@@ -1868,8 +1697,8 @@ func batch7Lane4LangfuseListPrompts(ctx context.Context, rt *Runtime, input map[
 		return data, nil
 	}
 	prompts := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(data["data"]) {
-		prompt := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(data["data"]) {
+		prompt := asMap(raw)
 		prompts = append(prompts, map[string]any{
 			"name":            prompt["name"],
 			"versions":        batch7Lane4AnyList(prompt["versions"]),
@@ -1878,12 +1707,12 @@ func batch7Lane4LangfuseListPrompts(ctx context.Context, rt *Runtime, input map[
 			"last_updated_at": prompt["lastUpdatedAt"],
 		})
 	}
-	meta := batch7Lane4AsMap(data["meta"])
+	meta := asMap(data["meta"])
 	return map[string]any{
 		"count":       len(prompts),
-		"total_items": batch7Lane4JSONNumber(batch7Lane4IntOr(meta["totalItems"], 0)),
-		"page":        batch7Lane4JSONNumber(batch7Lane4IntOr(meta["page"], page)),
-		"total_pages": batch7Lane4JSONNumber(batch7Lane4IntOr(meta["totalPages"], 0)),
+		"total_items": jsonNumber(batch7Lane4IntOr(meta["totalItems"], 0)),
+		"page":        jsonNumber(batch7Lane4IntOr(meta["page"], page)),
+		"total_pages": jsonNumber(batch7Lane4IntOr(meta["totalPages"], 0)),
 		"prompts":     prompts,
 	}, nil
 }
@@ -2054,7 +1883,7 @@ func batch7Lane4HuggingFaceGet(
 	token, path string,
 	params url.Values,
 ) (any, bool) {
-	target := batch7Lane4ModuleURL(rt, "huggingface_tool")
+	target := moduleBaseURL(rt, "huggingface_tool")
 	if target == "" {
 		target = batch7Lane4HuggingFaceBase
 	}
@@ -2068,7 +1897,7 @@ func batch7Lane4HuggingFaceGet(
 	}
 	reply, err := batch7Lane4Do(ctx, rt, http.MethodGet, target, headers, nil)
 	if err != nil {
-		if batch7Lane4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to HuggingFace timed out"}, false
 		}
 		return map[string]any{"error": "HuggingFace request failed: " + err.Error()}, false
@@ -2084,11 +1913,11 @@ func batch7Lane4HuggingFaceGet(
 			"error": fmt.Sprintf(
 				"HuggingFace API error %d: %s",
 				reply.Status,
-				batch7Lane4TruncateText(string(reply.Body), batch7Lane4MaxError),
+				truncateText(string(reply.Body), batch7Lane4MaxError),
 			),
 		}, false
 	}
-	value, ok := batch7Lane4DecodeAny(reply.Body)
+	value, ok := decodeAny(reply.Body)
 	if !ok {
 		return map[string]any{"error": "HuggingFace request failed: invalid JSON response"}, false
 	}
@@ -2102,7 +1931,7 @@ func batch7Lane4HuggingFaceInferencePOST(
 	token, modelID string,
 	payload map[string]any,
 ) (any, bool) {
-	base := batch7Lane4ModuleURL(rt, "huggingface_inference_tool")
+	base := moduleBaseURL(rt, "huggingface_inference_tool")
 	if base == "" {
 		base = batch7Lane4HuggingFaceInference
 	}
@@ -2113,7 +1942,7 @@ func batch7Lane4HuggingFaceInferencePOST(
 	}
 	reply, err := batch7Lane4Do(ctx, rt, http.MethodPost, target, headers, payload)
 	if err != nil {
-		if batch7Lane4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{
 				"error": "Inference request timed out. Try a smaller input or a faster model.",
 			}, false
@@ -2130,7 +1959,7 @@ func batch7Lane4HuggingFaceInferencePOST(
 	case http.StatusServiceUnavailable:
 		estimated := any("unknown")
 		if strings.HasPrefix(strings.ToLower(reply.ContentType), "application/json") {
-			if body, ok := batch7Lane4DecodeObject(reply.Body); ok {
+			if body, ok := decodeObject(reply.Body); ok {
 				if value, present := body["estimated_time"]; present && value != nil {
 					estimated = value
 				}
@@ -2147,11 +1976,11 @@ func batch7Lane4HuggingFaceInferencePOST(
 			"error": fmt.Sprintf(
 				"HuggingFace Inference API error %d: %s",
 				reply.Status,
-				batch7Lane4TruncateText(string(reply.Body), batch7Lane4MaxError),
+				truncateText(string(reply.Body), batch7Lane4MaxError),
 			),
 		}, false
 	}
-	value, ok := batch7Lane4DecodeAny(reply.Body)
+	value, ok := decodeAny(reply.Body)
 	if !ok {
 		return map[string]any{
 			"error": "HuggingFace inference request failed: invalid JSON response",
@@ -2166,7 +1995,7 @@ func batch7Lane4HuggingFaceListEndpoints(
 	rt *Runtime,
 	token, path string,
 ) (any, bool) {
-	base := batch7Lane4ModuleURL(rt, "huggingface_endpoints_tool")
+	base := moduleBaseURL(rt, "huggingface_endpoints_tool")
 	if base == "" {
 		base = batch7Lane4HuggingFaceEndpoints
 	}
@@ -2175,7 +2004,7 @@ func batch7Lane4HuggingFaceListEndpoints(
 		map[string]string{"Authorization": "Bearer " + token}, nil,
 	)
 	if err != nil {
-		if batch7Lane4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to HuggingFace Endpoints API timed out"}, false
 		}
 		return map[string]any{"error": "Endpoints request failed: " + err.Error()}, false
@@ -2188,11 +2017,11 @@ func batch7Lane4HuggingFaceListEndpoints(
 			"error": fmt.Sprintf(
 				"Failed to list endpoints (HTTP %d): %s",
 				reply.Status,
-				batch7Lane4TruncateText(string(reply.Body), batch7Lane4MaxError),
+				truncateText(string(reply.Body), batch7Lane4MaxError),
 			),
 		}, false
 	}
-	value, ok := batch7Lane4DecodeAny(reply.Body)
+	value, ok := decodeAny(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Endpoints request failed: invalid JSON response"}, false
 	}
@@ -2204,7 +2033,7 @@ func batch7Lane4HuggingFaceSearchParams(input map[string]any, defaultSort string
 	params := url.Values{
 		"sort":      {batch7Lane4StringDefault(input["sort"], defaultSort)},
 		"direction": {"-1"},
-		"limit":     {strconv.Itoa(batch7Lane4Clamp(intArg(input, "limit", 20), 1, 100))},
+		"limit":     {strconv.Itoa(clampInt(intArg(input, "limit", 20), 1, 100))},
 	}
 	if query := stringArg(input, "query"); query != "" {
 		params.Set("search", query)
@@ -2227,16 +2056,16 @@ func batch7Lane4HuggingFaceSearchModels(ctx context.Context, rt *Runtime, input 
 		return data, nil
 	}
 	models := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(data) {
-		model := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(data) {
+		model := asMap(raw)
 		models = append(models, map[string]any{
-			"id":            batch7Lane4AsString(model["id"]),
-			"author":        batch7Lane4AsString(model["author"]),
-			"downloads":     batch7Lane4JSONNumber(batch7Lane4IntOr(model["downloads"], 0)),
-			"likes":         batch7Lane4JSONNumber(batch7Lane4IntOr(model["likes"], 0)),
-			"pipeline_tag":  batch7Lane4AsString(model["pipeline_tag"]),
+			"id":            asString(model["id"]),
+			"author":        asString(model["author"]),
+			"downloads":     jsonNumber(batch7Lane4IntOr(model["downloads"], 0)),
+			"likes":         jsonNumber(batch7Lane4IntOr(model["likes"], 0)),
+			"pipeline_tag":  asString(model["pipeline_tag"]),
 			"tags":          batch7Lane4FirstN(batch7Lane4StringList(model["tags"]), 10),
-			"last_modified": batch7Lane4AsString(model["lastModified"]),
+			"last_modified": asString(model["lastModified"]),
 		})
 	}
 	return map[string]any{"models": models, "count": len(models)}, nil
@@ -2255,20 +2084,20 @@ func batch7Lane4HuggingFaceGetModel(ctx context.Context, rt *Runtime, input map[
 	if !ok {
 		return data, nil
 	}
-	model := batch7Lane4AsMap(data)
+	model := asMap(data)
 	return map[string]any{
-		"id":            batch7Lane4AsString(model["id"]),
-		"author":        batch7Lane4AsString(model["author"]),
-		"downloads":     batch7Lane4JSONNumber(batch7Lane4IntOr(model["downloads"], 0)),
-		"likes":         batch7Lane4JSONNumber(batch7Lane4IntOr(model["likes"], 0)),
-		"pipeline_tag":  batch7Lane4AsString(model["pipeline_tag"]),
+		"id":            asString(model["id"]),
+		"author":        asString(model["author"]),
+		"downloads":     jsonNumber(batch7Lane4IntOr(model["downloads"], 0)),
+		"likes":         jsonNumber(batch7Lane4IntOr(model["likes"], 0)),
+		"pipeline_tag":  asString(model["pipeline_tag"]),
 		"tags":          batch7Lane4StringList(model["tags"]),
-		"library_name":  batch7Lane4AsString(model["library_name"]),
+		"library_name":  asString(model["library_name"]),
 		"model_index":   model["model-index"],
 		"card_data":     model["cardData"],
-		"private":       batch7Lane4BoolOr(model["private"], false),
-		"last_modified": batch7Lane4AsString(model["lastModified"]),
-		"created_at":    batch7Lane4AsString(model["createdAt"]),
+		"private":       boolOr(model["private"], false),
+		"last_modified": asString(model["lastModified"]),
+		"created_at":    asString(model["createdAt"]),
 	}, nil
 }
 
@@ -2284,15 +2113,15 @@ func batch7Lane4HuggingFaceSearchDatasets(ctx context.Context, rt *Runtime, inpu
 		return data, nil
 	}
 	datasets := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(data) {
-		dataset := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(data) {
+		dataset := asMap(raw)
 		datasets = append(datasets, map[string]any{
-			"id":            batch7Lane4AsString(dataset["id"]),
-			"author":        batch7Lane4AsString(dataset["author"]),
-			"downloads":     batch7Lane4JSONNumber(batch7Lane4IntOr(dataset["downloads"], 0)),
-			"likes":         batch7Lane4JSONNumber(batch7Lane4IntOr(dataset["likes"], 0)),
+			"id":            asString(dataset["id"]),
+			"author":        asString(dataset["author"]),
+			"downloads":     jsonNumber(batch7Lane4IntOr(dataset["downloads"], 0)),
+			"likes":         jsonNumber(batch7Lane4IntOr(dataset["likes"], 0)),
 			"tags":          batch7Lane4FirstN(batch7Lane4StringList(dataset["tags"]), 10),
-			"last_modified": batch7Lane4AsString(dataset["lastModified"]),
+			"last_modified": asString(dataset["lastModified"]),
 		})
 	}
 	return map[string]any{"datasets": datasets, "count": len(datasets)}, nil
@@ -2311,17 +2140,17 @@ func batch7Lane4HuggingFaceGetDataset(ctx context.Context, rt *Runtime, input ma
 	if !ok {
 		return data, nil
 	}
-	dataset := batch7Lane4AsMap(data)
+	dataset := asMap(data)
 	return map[string]any{
-		"id":            batch7Lane4AsString(dataset["id"]),
-		"author":        batch7Lane4AsString(dataset["author"]),
-		"downloads":     batch7Lane4JSONNumber(batch7Lane4IntOr(dataset["downloads"], 0)),
-		"likes":         batch7Lane4JSONNumber(batch7Lane4IntOr(dataset["likes"], 0)),
+		"id":            asString(dataset["id"]),
+		"author":        asString(dataset["author"]),
+		"downloads":     jsonNumber(batch7Lane4IntOr(dataset["downloads"], 0)),
+		"likes":         jsonNumber(batch7Lane4IntOr(dataset["likes"], 0)),
 		"tags":          batch7Lane4StringList(dataset["tags"]),
 		"card_data":     dataset["cardData"],
-		"private":       batch7Lane4BoolOr(dataset["private"], false),
-		"last_modified": batch7Lane4AsString(dataset["lastModified"]),
-		"created_at":    batch7Lane4AsString(dataset["createdAt"]),
+		"private":       boolOr(dataset["private"], false),
+		"last_modified": asString(dataset["lastModified"]),
+		"created_at":    asString(dataset["createdAt"]),
 	}, nil
 }
 
@@ -2337,15 +2166,15 @@ func batch7Lane4HuggingFaceSearchSpaces(ctx context.Context, rt *Runtime, input 
 		return data, nil
 	}
 	spaces := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(data) {
-		space := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(data) {
+		space := asMap(raw)
 		spaces = append(spaces, map[string]any{
-			"id":            batch7Lane4AsString(space["id"]),
-			"author":        batch7Lane4AsString(space["author"]),
-			"likes":         batch7Lane4JSONNumber(batch7Lane4IntOr(space["likes"], 0)),
-			"sdk":           batch7Lane4AsString(space["sdk"]),
+			"id":            asString(space["id"]),
+			"author":        asString(space["author"]),
+			"likes":         jsonNumber(batch7Lane4IntOr(space["likes"], 0)),
+			"sdk":           asString(space["sdk"]),
 			"tags":          batch7Lane4FirstN(batch7Lane4StringList(space["tags"]), 10),
-			"last_modified": batch7Lane4AsString(space["lastModified"]),
+			"last_modified": asString(space["lastModified"]),
 		})
 	}
 	return map[string]any{"spaces": spaces, "count": len(spaces)}, nil
@@ -2360,22 +2189,22 @@ func batch7Lane4HuggingFaceWhoami(ctx context.Context, rt *Runtime, _ map[string
 	if !ok {
 		return data, nil
 	}
-	user := batch7Lane4AsMap(data)
+	user := asMap(data)
 	orgs := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(user["orgs"]) {
-		org := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(user["orgs"]) {
+		org := asMap(raw)
 		orgs = append(orgs, map[string]any{
-			"name": batch7Lane4AsString(org["name"]),
-			"role": batch7Lane4AsString(org["roleInOrg"]),
+			"name": asString(org["name"]),
+			"role": asString(org["roleInOrg"]),
 		})
 	}
 	return map[string]any{
-		"name":       batch7Lane4AsString(user["name"]),
-		"fullname":   batch7Lane4AsString(user["fullname"]),
-		"email":      batch7Lane4AsString(user["email"]),
-		"avatar_url": batch7Lane4AsString(user["avatarUrl"]),
+		"name":       asString(user["name"]),
+		"fullname":   asString(user["fullname"]),
+		"email":      asString(user["email"]),
+		"avatar_url": asString(user["avatarUrl"]),
 		"orgs":       orgs,
-		"type":       batch7Lane4AsString(user["type"]),
+		"type":       asString(user["type"]),
 	}, nil
 }
 
@@ -2394,7 +2223,7 @@ func batch7Lane4HuggingFaceRunInference(ctx context.Context, rt *Runtime, input 
 	}
 	payload := map[string]any{"inputs": inputs}
 	if raw := stringArg(input, "parameters"); raw != "" {
-		parameters, ok := batch7Lane4DecodeAny([]byte(raw))
+		parameters, ok := decodeAny([]byte(raw))
 		if !ok {
 			return map[string]any{"error": "parameters must be a valid JSON string"}, nil
 		}
@@ -2430,7 +2259,7 @@ func batch7Lane4HuggingFaceRunEmbedding(ctx context.Context, rt *Runtime, input 
 	if !ok {
 		return data, nil
 	}
-	embedding := batch7Lane4AsSlice(data)
+	embedding := asSlice(data)
 	dims := 0
 	if len(embedding) > 0 {
 		switch embedding[0].(type) {
@@ -2465,34 +2294,34 @@ func batch7Lane4HuggingFaceListInferenceEndpoints(ctx context.Context, rt *Runti
 		}
 	}
 	endpoints := make([]map[string]any, 0)
-	for _, raw := range batch7Lane4AsSlice(items) {
-		endpoint := batch7Lane4AsMap(raw)
+	for _, raw := range asSlice(items) {
+		endpoint := asMap(raw)
 		model := ""
 		if modelObject, ok := endpoint["model"].(map[string]any); ok {
-			model = batch7Lane4AsString(modelObject["repository"])
+			model = asString(modelObject["repository"])
 		} else {
-			model = batch7Lane4AsString(endpoint["model"])
+			model = asString(endpoint["model"])
 		}
 		status := ""
 		endpointURL := ""
 		if statusObject, ok := endpoint["status"].(map[string]any); ok {
-			status = batch7Lane4AsString(statusObject["state"])
-			endpointURL = batch7Lane4AsString(statusObject["url"])
+			status = asString(statusObject["state"])
+			endpointURL = asString(statusObject["url"])
 		} else {
-			status = batch7Lane4AsString(endpoint["status"])
+			status = asString(endpoint["status"])
 		}
 		provider := ""
 		region := ""
 		if providerObject, ok := endpoint["provider"].(map[string]any); ok {
-			provider = batch7Lane4AsString(providerObject["vendor"])
-			region = batch7Lane4AsString(providerObject["region"])
+			provider = asString(providerObject["vendor"])
+			region = asString(providerObject["region"])
 		}
 		endpoints = append(endpoints, map[string]any{
-			"name":     batch7Lane4AsString(endpoint["name"]),
+			"name":     asString(endpoint["name"]),
 			"model":    model,
 			"status":   status,
 			"url":      endpointURL,
-			"type":     batch7Lane4AsString(endpoint["type"]),
+			"type":     asString(endpoint["type"]),
 			"provider": provider,
 			"region":   region,
 		})
@@ -2676,7 +2505,7 @@ func batch7Lane4VisionCall(
 	image map[string]any,
 	features []any,
 ) (map[string]any, bool) {
-	base := batch7Lane4ModuleURL(rt, "vision_tool")
+	base := moduleBaseURL(rt, "vision_tool")
 	if base == "" {
 		base = batch7Lane4VisionURL
 	}
@@ -2687,7 +2516,7 @@ func batch7Lane4VisionCall(
 		map[string]any{"requests": []any{map[string]any{"image": image, "features": features}}},
 	)
 	if err != nil {
-		if batch7Lane4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request timed out"}, false
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}, false
@@ -2711,17 +2540,17 @@ func batch7Lane4VisionCall(
 			"error": fmt.Sprintf("Vision API error (HTTP %d)", reply.Status),
 		}, false
 	}
-	payload, ok := batch7Lane4DecodeObject(reply.Body)
+	payload, ok := decodeObject(reply.Body)
 	if !ok {
 		return map[string]any{"error": "Vision API returned invalid JSON"}, false
 	}
-	responses := batch7Lane4AsSlice(payload["responses"])
+	responses := asSlice(payload["responses"])
 	if len(responses) == 0 {
 		return map[string]any{"error": "Empty response from API"}, false
 	}
-	result := batch7Lane4AsMap(responses[0])
+	result := asMap(responses[0])
 	if problem, present := result["error"].(map[string]any); present {
-		message := batch7Lane4AsString(problem["message"])
+		message := asString(problem["message"])
 		if message == "" {
 			message = "Unknown API error"
 		}
@@ -2761,16 +2590,16 @@ func batch7Lane4VisionVertices(node map[string]any, poly, vertices string) []any
 }
 
 func batch7Lane4VisionDetectLabels(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	maxLabels := batch7Lane4Clamp(intArg(input, "max_labels", 10), 1, 100)
+	maxLabels := clampInt(intArg(input, "max_labels", 10), 1, 100)
 	return batch7Lane4VisionRun(
 		ctx, rt, input,
 		batch7Lane4VisionFeature("LABEL_DETECTION", maxLabels),
 		func(result map[string]any) any {
 			labels := make([]map[string]any, 0)
-			for _, raw := range batch7Lane4AsSlice(result["labelAnnotations"]) {
-				label := batch7Lane4AsMap(raw)
+			for _, raw := range asSlice(result["labelAnnotations"]) {
+				label := asMap(raw)
 				labels = append(labels, map[string]any{
-					"description": batch7Lane4AsString(label["description"]),
+					"description": asString(label["description"]),
 					"score":       batch7Lane4Round3(batch7Lane4FloatOr(label["score"], 0)),
 				})
 			}
@@ -2784,20 +2613,20 @@ func batch7Lane4VisionDetectText(ctx context.Context, rt *Runtime, input map[str
 		ctx, rt, input,
 		batch7Lane4VisionFeature("TEXT_DETECTION", 0),
 		func(result map[string]any) any {
-			annotations := batch7Lane4AsSlice(result["textAnnotations"])
+			annotations := asSlice(result["textAnnotations"])
 			if len(annotations) == 0 {
 				return map[string]any{"text": "", "blocks": []any{}}
 			}
 			blocks := make([]map[string]any, 0, len(annotations)-1)
 			for _, raw := range annotations[1:] {
-				annotation := batch7Lane4AsMap(raw)
+				annotation := asMap(raw)
 				blocks = append(blocks, map[string]any{
-					"text":   batch7Lane4AsString(annotation["description"]),
+					"text":   asString(annotation["description"]),
 					"bounds": batch7Lane4VisionVertices(annotation, "boundingPoly", "vertices"),
 				})
 			}
 			return map[string]any{
-				"text":   batch7Lane4AsString(batch7Lane4AsMap(annotations[0])["description"]),
+				"text":   asString(asMap(annotations[0])["description"]),
 				"blocks": blocks,
 			}
 		},
@@ -2805,14 +2634,14 @@ func batch7Lane4VisionDetectText(ctx context.Context, rt *Runtime, input map[str
 }
 
 func batch7Lane4VisionDetectFaces(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	maxFaces := batch7Lane4Clamp(intArg(input, "max_faces", 10), 1, 100)
+	maxFaces := clampInt(intArg(input, "max_faces", 10), 1, 100)
 	return batch7Lane4VisionRun(
 		ctx, rt, input,
 		batch7Lane4VisionFeature("FACE_DETECTION", maxFaces),
 		func(result map[string]any) any {
 			faces := make([]map[string]any, 0)
-			for _, raw := range batch7Lane4AsSlice(result["faceAnnotations"]) {
-				face := batch7Lane4AsMap(raw)
+			for _, raw := range asSlice(result["faceAnnotations"]) {
+				face := asMap(raw)
 				faces = append(faces, map[string]any{
 					"joy":        batch7Lane4StringDefault(face["joyLikelihood"], "UNKNOWN"),
 					"sorrow":     batch7Lane4StringDefault(face["sorrowLikelihood"], "UNKNOWN"),
@@ -2828,16 +2657,16 @@ func batch7Lane4VisionDetectFaces(ctx context.Context, rt *Runtime, input map[st
 }
 
 func batch7Lane4VisionLocalizeObjects(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	maxObjects := batch7Lane4Clamp(intArg(input, "max_objects", 10), 1, 100)
+	maxObjects := clampInt(intArg(input, "max_objects", 10), 1, 100)
 	return batch7Lane4VisionRun(
 		ctx, rt, input,
 		batch7Lane4VisionFeature("OBJECT_LOCALIZATION", maxObjects),
 		func(result map[string]any) any {
 			objects := make([]map[string]any, 0)
-			for _, raw := range batch7Lane4AsSlice(result["localizedObjectAnnotations"]) {
-				object := batch7Lane4AsMap(raw)
+			for _, raw := range asSlice(result["localizedObjectAnnotations"]) {
+				object := asMap(raw)
 				objects = append(objects, map[string]any{
-					"name":   batch7Lane4AsString(object["name"]),
+					"name":   asString(object["name"]),
 					"score":  batch7Lane4Round3(batch7Lane4FloatOr(object["score"], 0)),
 					"bounds": batch7Lane4VisionVertices(object, "boundingPoly", "normalizedVertices"),
 				})
@@ -2848,16 +2677,16 @@ func batch7Lane4VisionLocalizeObjects(ctx context.Context, rt *Runtime, input ma
 }
 
 func batch7Lane4VisionDetectLogos(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	maxLogos := batch7Lane4Clamp(intArg(input, "max_logos", 5), 1, 20)
+	maxLogos := clampInt(intArg(input, "max_logos", 5), 1, 20)
 	return batch7Lane4VisionRun(
 		ctx, rt, input,
 		batch7Lane4VisionFeature("LOGO_DETECTION", maxLogos),
 		func(result map[string]any) any {
 			logos := make([]map[string]any, 0)
-			for _, raw := range batch7Lane4AsSlice(result["logoAnnotations"]) {
-				logo := batch7Lane4AsMap(raw)
+			for _, raw := range asSlice(result["logoAnnotations"]) {
+				logo := asMap(raw)
 				logos = append(logos, map[string]any{
-					"description": batch7Lane4AsString(logo["description"]),
+					"description": asString(logo["description"]),
 					"score":       batch7Lane4Round3(batch7Lane4FloatOr(logo["score"], 0)),
 				})
 			}
@@ -2867,24 +2696,24 @@ func batch7Lane4VisionDetectLogos(ctx context.Context, rt *Runtime, input map[st
 }
 
 func batch7Lane4VisionDetectLandmarks(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	maxLandmarks := batch7Lane4Clamp(intArg(input, "max_landmarks", 5), 1, 20)
+	maxLandmarks := clampInt(intArg(input, "max_landmarks", 5), 1, 20)
 	return batch7Lane4VisionRun(
 		ctx, rt, input,
 		batch7Lane4VisionFeature("LANDMARK_DETECTION", maxLandmarks),
 		func(result map[string]any) any {
 			landmarks := make([]map[string]any, 0)
-			for _, raw := range batch7Lane4AsSlice(result["landmarkAnnotations"]) {
-				landmark := batch7Lane4AsMap(raw)
+			for _, raw := range asSlice(result["landmarkAnnotations"]) {
+				landmark := asMap(raw)
 				location := map[string]any{}
-				if locations := batch7Lane4AsSlice(landmark["locations"]); len(locations) > 0 {
-					latLng := batch7Lane4AsMap(batch7Lane4AsMap(locations[0])["latLng"])
+				if locations := asSlice(landmark["locations"]); len(locations) > 0 {
+					latLng := asMap(asMap(locations[0])["latLng"])
 					location = map[string]any{
 						"latitude":  latLng["latitude"],
 						"longitude": latLng["longitude"],
 					}
 				}
 				landmarks = append(landmarks, map[string]any{
-					"description": batch7Lane4AsString(landmark["description"]),
+					"description": asString(landmark["description"]),
 					"score":       batch7Lane4Round3(batch7Lane4FloatOr(landmark["score"], 0)),
 					"location":    location,
 				})
@@ -2903,15 +2732,15 @@ func batch7Lane4VisionImageProperties(ctx context.Context, rt *Runtime, input ma
 		},
 		func(result map[string]any) any {
 			colors := make([]map[string]any, 0)
-			dominant := batch7Lane4AsMap(
-				batch7Lane4AsMap(result["imagePropertiesAnnotation"])["dominantColors"],
+			dominant := asMap(
+				asMap(result["imagePropertiesAnnotation"])["dominantColors"],
 			)
-			for index, raw := range batch7Lane4AsSlice(dominant["colors"]) {
+			for index, raw := range asSlice(dominant["colors"]) {
 				if index >= 5 {
 					break
 				}
-				color := batch7Lane4AsMap(raw)
-				rgb := batch7Lane4AsMap(color["color"])
+				color := asMap(raw)
+				rgb := asMap(color["color"])
 				colors = append(colors, map[string]any{
 					"red":            int(batch7Lane4FloatOr(rgb["red"], 0)),
 					"green":          int(batch7Lane4FloatOr(rgb["green"], 0)),
@@ -2921,9 +2750,9 @@ func batch7Lane4VisionImageProperties(ctx context.Context, rt *Runtime, input ma
 				})
 			}
 			cropHints := make([]map[string]any, 0)
-			hints := batch7Lane4AsMap(result["cropHintsAnnotation"])
-			for _, raw := range batch7Lane4AsSlice(hints["cropHints"]) {
-				hint := batch7Lane4AsMap(raw)
+			hints := asMap(result["cropHintsAnnotation"])
+			for _, raw := range asSlice(hints["cropHints"]) {
+				hint := asMap(raw)
 				cropHints = append(cropHints, map[string]any{
 					"bounds":     batch7Lane4VisionVertices(hint, "boundingPoly", "vertices"),
 					"confidence": batch7Lane4Round3(batch7Lane4FloatOr(hint["confidence"], 0)),
@@ -2939,36 +2768,36 @@ func batch7Lane4VisionWebDetection(ctx context.Context, rt *Runtime, input map[s
 		ctx, rt, input,
 		batch7Lane4VisionFeature("WEB_DETECTION", 0),
 		func(result map[string]any) any {
-			web := batch7Lane4AsMap(result["webDetection"])
+			web := asMap(result["webDetection"])
 			webEntities := make([]map[string]any, 0)
-			for index, raw := range batch7Lane4AsSlice(web["webEntities"]) {
+			for index, raw := range asSlice(web["webEntities"]) {
 				if index >= 10 {
 					break
 				}
-				entity := batch7Lane4AsMap(raw)
+				entity := asMap(raw)
 				webEntities = append(webEntities, map[string]any{
-					"description": batch7Lane4AsString(entity["description"]),
+					"description": asString(entity["description"]),
 					"score":       batch7Lane4Round3(batch7Lane4FloatOr(entity["score"], 0)),
 				})
 			}
 			similarImages := make([]string, 0)
-			for index, raw := range batch7Lane4AsSlice(web["visuallySimilarImages"]) {
+			for index, raw := range asSlice(web["visuallySimilarImages"]) {
 				if index >= 5 {
 					break
 				}
 				similarImages = append(
-					similarImages, batch7Lane4AsString(batch7Lane4AsMap(raw)["url"]),
+					similarImages, asString(asMap(raw)["url"]),
 				)
 			}
 			pages := make([]map[string]any, 0)
-			for index, raw := range batch7Lane4AsSlice(web["pagesWithMatchingImages"]) {
+			for index, raw := range asSlice(web["pagesWithMatchingImages"]) {
 				if index >= 5 {
 					break
 				}
-				page := batch7Lane4AsMap(raw)
+				page := asMap(raw)
 				pages = append(pages, map[string]any{
-					"url":   batch7Lane4AsString(page["url"]),
-					"title": batch7Lane4AsString(page["pageTitle"]),
+					"url":   asString(page["url"]),
+					"title": asString(page["pageTitle"]),
 				})
 			}
 			return map[string]any{
@@ -2985,7 +2814,7 @@ func batch7Lane4VisionSafeSearch(ctx context.Context, rt *Runtime, input map[str
 		ctx, rt, input,
 		batch7Lane4VisionFeature("SAFE_SEARCH_DETECTION", 0),
 		func(result map[string]any) any {
-			safe := batch7Lane4AsMap(result["safeSearchAnnotation"])
+			safe := asMap(result["safeSearchAnnotation"])
 			return map[string]any{
 				"adult":    batch7Lane4StringDefault(safe["adult"], "UNKNOWN"),
 				"spoof":    batch7Lane4StringDefault(safe["spoof"], "UNKNOWN"),
@@ -3007,19 +2836,11 @@ func batch7Lane4StringDefault(value any, fallback string) string {
 	return fallback
 }
 
-// batch7Lane4AnyOrMap normalises an optional JSON object to a map.
-func batch7Lane4AnyOrMap(value any) map[string]any {
-	if object, ok := value.(map[string]any); ok && object != nil {
-		return object
-	}
-	return map[string]any{}
-}
-
 // batch7Lane4ToStrings renders a decoded JSON array as []string.
 func batch7Lane4ToStrings(values []any) []string {
 	out := make([]string, 0, len(values))
 	for _, value := range values {
-		out = append(out, batch7Lane4StringID(value))
+		out = append(out, stringID(value))
 	}
 	return out
 }

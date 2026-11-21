@@ -83,8 +83,8 @@ func batch6Lane4AzureSQLImpls() map[string]ActionFunc {
 }
 
 func batch6Lane4AzureSQLConfig(rt *Runtime) (map[string]string, string, map[string]any) {
-	token := batch6Lane4ModuleToken(rt, "azure_sql_tool")
-	subscription := strings.TrimSpace(batch6Lane4Getenv(rt, "AZURE_SUBSCRIPTION_ID"))
+	token := moduleToken(rt, "azure_sql_tool")
+	subscription := strings.TrimSpace(runtimeEnv(rt, "AZURE_SUBSCRIPTION_ID"))
 	if token == "" || subscription == "" {
 		return nil, "", map[string]any{
 			"error": "AZURE_SQL_ACCESS_TOKEN and AZURE_SUBSCRIPTION_ID are required",
@@ -99,19 +99,19 @@ func batch6Lane4AzureSQLConfig(rt *Runtime) (map[string]string, string, map[stri
 
 // batch6Lane4AzureSQLGet performs one ARM GET with api-version.
 func batch6Lane4AzureSQLGet(ctx context.Context, rt *Runtime, headers map[string]string, path string) map[string]any {
-	base := batch6Lane4ModuleURL(rt, "azure_sql_tool")
+	base := moduleBaseURL(rt, "azure_sql_tool")
 	if base == "" {
 		base = "https://management.azure.com"
 	}
 	params := url.Values{"api-version": []string{batch6Lane4AzureAPIVersion}}
 	resp, err := batch6Lane4DoJSON(ctx, rt, http.MethodGet, strings.TrimRight(base, "/")+path+"?"+params.Encode(), headers, nil, 30*time.Second)
 	if err != nil {
-		return batch6Lane4TransportError(ctx, "Azure SQL", err)
+		return transportError(ctx, "Azure SQL", err)
 	}
 	if resp.Status >= 400 {
 		return batch6Lane4HTTPError(resp)
 	}
-	data, ok := batch6Lane4JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Azure SQL API error: invalid JSON response"}
 	}
@@ -120,8 +120,8 @@ func batch6Lane4AzureSQLGet(ctx context.Context, rt *Runtime, headers map[string
 
 // batch6Lane4AzureServer extracts the same fields as upstream _extract_server.
 func batch6Lane4AzureServer(raw any) map[string]any {
-	server := batch4AsMap(raw)
-	properties := batch4AsMap(server["properties"])
+	server := asMap(raw)
+	properties := asMap(server["properties"])
 	return map[string]any{
 		"id":          server["id"],
 		"name":        server["name"],
@@ -136,9 +136,9 @@ func batch6Lane4AzureServer(raw any) map[string]any {
 // batch6Lane4AzureDatabase extracts the same fields as upstream
 // _extract_database.
 func batch6Lane4AzureDatabase(raw any) map[string]any {
-	database := batch4AsMap(raw)
-	properties := batch4AsMap(database["properties"])
-	sku := batch4AsMap(database["sku"])
+	database := asMap(raw)
+	properties := asMap(database["properties"])
+	sku := asMap(database["sku"])
 	return map[string]any{
 		"id":                        database["id"],
 		"name":                      database["name"],
@@ -162,17 +162,17 @@ func batch6Lane4AzureSQLListServers(ctx context.Context, rt *Runtime, input map[
 	resourceGroup := stringArg(input, "resource_group")
 	var path string
 	if resourceGroup != "" {
-		path = "/subscriptions/" + batch6Lane4PathEscape(subscription) +
-			"/resourceGroups/" + batch6Lane4PathEscape(resourceGroup) +
+		path = "/subscriptions/" + pathEscape(subscription) +
+			"/resourceGroups/" + pathEscape(resourceGroup) +
 			"/providers/Microsoft.Sql/servers"
 	} else {
-		path = "/subscriptions/" + batch6Lane4PathEscape(subscription) + "/providers/Microsoft.Sql/servers"
+		path = "/subscriptions/" + pathEscape(subscription) + "/providers/Microsoft.Sql/servers"
 	}
 	data := batch6Lane4AzureSQLGet(ctx, rt, headers, path)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	servers := batch4AsSlice(data["value"])
+	servers := asSlice(data["value"])
 	if servers == nil {
 		servers = []any{}
 	}
@@ -193,9 +193,9 @@ func batch6Lane4AzureSQLGetServer(ctx context.Context, rt *Runtime, input map[st
 	if resourceGroup == "" || serverName == "" {
 		return map[string]any{"error": "resource_group and server_name are required"}, nil
 	}
-	path := "/subscriptions/" + batch6Lane4PathEscape(subscription) +
-		"/resourceGroups/" + batch6Lane4PathEscape(resourceGroup) +
-		"/providers/Microsoft.Sql/servers/" + batch6Lane4PathEscape(serverName)
+	path := "/subscriptions/" + pathEscape(subscription) +
+		"/resourceGroups/" + pathEscape(resourceGroup) +
+		"/providers/Microsoft.Sql/servers/" + pathEscape(serverName)
 	data := batch6Lane4AzureSQLGet(ctx, rt, headers, path)
 	if _, failed := data["error"]; failed {
 		return data, nil
@@ -213,14 +213,14 @@ func batch6Lane4AzureSQLListDatabases(ctx context.Context, rt *Runtime, input ma
 	if resourceGroup == "" || serverName == "" {
 		return map[string]any{"error": "resource_group and server_name are required"}, nil
 	}
-	path := "/subscriptions/" + batch6Lane4PathEscape(subscription) +
-		"/resourceGroups/" + batch6Lane4PathEscape(resourceGroup) +
-		"/providers/Microsoft.Sql/servers/" + batch6Lane4PathEscape(serverName) + "/databases"
+	path := "/subscriptions/" + pathEscape(subscription) +
+		"/resourceGroups/" + pathEscape(resourceGroup) +
+		"/providers/Microsoft.Sql/servers/" + pathEscape(serverName) + "/databases"
 	data := batch6Lane4AzureSQLGet(ctx, rt, headers, path)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	databases := batch4AsSlice(data["value"])
+	databases := asSlice(data["value"])
 	if databases == nil {
 		databases = []any{}
 	}
@@ -242,10 +242,10 @@ func batch6Lane4AzureSQLGetDatabase(ctx context.Context, rt *Runtime, input map[
 	if resourceGroup == "" || serverName == "" || databaseName == "" {
 		return map[string]any{"error": "resource_group, server_name, and database_name are required"}, nil
 	}
-	path := "/subscriptions/" + batch6Lane4PathEscape(subscription) +
-		"/resourceGroups/" + batch6Lane4PathEscape(resourceGroup) +
-		"/providers/Microsoft.Sql/servers/" + batch6Lane4PathEscape(serverName) +
-		"/databases/" + batch6Lane4PathEscape(databaseName)
+	path := "/subscriptions/" + pathEscape(subscription) +
+		"/resourceGroups/" + pathEscape(resourceGroup) +
+		"/providers/Microsoft.Sql/servers/" + pathEscape(serverName) +
+		"/databases/" + pathEscape(databaseName)
 	data := batch6Lane4AzureSQLGet(ctx, rt, headers, path)
 	if _, failed := data["error"]; failed {
 		return data, nil
@@ -263,21 +263,21 @@ func batch6Lane4AzureSQLListFirewallRules(ctx context.Context, rt *Runtime, inpu
 	if resourceGroup == "" || serverName == "" {
 		return map[string]any{"error": "resource_group and server_name are required"}, nil
 	}
-	path := "/subscriptions/" + batch6Lane4PathEscape(subscription) +
-		"/resourceGroups/" + batch6Lane4PathEscape(resourceGroup) +
-		"/providers/Microsoft.Sql/servers/" + batch6Lane4PathEscape(serverName) + "/firewallRules"
+	path := "/subscriptions/" + pathEscape(subscription) +
+		"/resourceGroups/" + pathEscape(resourceGroup) +
+		"/providers/Microsoft.Sql/servers/" + pathEscape(serverName) + "/firewallRules"
 	data := batch6Lane4AzureSQLGet(ctx, rt, headers, path)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	rules := batch4AsSlice(data["value"])
+	rules := asSlice(data["value"])
 	if rules == nil {
 		rules = []any{}
 	}
 	extracted := make([]any, 0, len(rules))
 	for _, rawRule := range rules {
-		rule := batch4AsMap(rawRule)
-		properties := batch4AsMap(rule["properties"])
+		rule := asMap(rawRule)
+		properties := asMap(rule["properties"])
 		extracted = append(extracted, map[string]any{
 			"id":       rule["id"],
 			"name":     rule["name"],

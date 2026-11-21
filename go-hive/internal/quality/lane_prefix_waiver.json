@@ -2,6 +2,6 @@
   "metric": "unique identifiers matching batch[0-9]+(Lane[0-9]+)?[A-Za-z0-9_]* in non-test .go files under internal/",
   "stated_baseline": 1908,
   "measured_at_freeze": 1906,
-  "limit": 1902,
-  "note": "只减不增：超过 limit 即失败；每次结构重构使计数下降后，应把 limit 下调到当前实测值。measured_at_freeze=1906 是 excel 试点迁出前的实测值（brief 标称 1908 来自不同计数快照）；1902 是 excel 子包迁出后的实测值。"
+  "limit": 1535,
+  "note": "只减不增：超过 limit 即失败；每次结构重构使计数下降后，应把 limit 下调到当前实测值。measured_at_freeze=1906 是 excel 试点迁出前的实测值（brief 标称 1908 来自不同计数快照）；1902 是 excel 子包迁出后的实测值。int-p2-helpers：batch 前缀标识符批量改语义名 + 重复 helper 收敛入 integrationkit 后实测 1535（deploy 前最后一次全包扫描），limit 随之下调至该值。"
 }

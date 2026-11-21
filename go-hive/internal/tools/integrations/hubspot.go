@@ -310,9 +310,9 @@ func (c *batch5HubSpotClient) attempt(method, path string, query url.Values, pay
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := batch4HTTP(c.rt).Do(req)
+	resp, err := runtimeHTTP(c.rt).Do(req)
 	if err != nil {
-		if batch4IsTimeout(c.ctx, err) {
+		if isTimeout(c.ctx, err) {
 			return nil, nil, map[string]any{"error": "Request timed out"}
 		}
 		return nil, nil, map[string]any{"error": "Network error: " + err.Error()}

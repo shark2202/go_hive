@@ -155,7 +155,7 @@ func batch7Lane9ZoomAuthError() map[string]any {
 
 // batch7Lane9ZoomTokens resolves the module bearer token.
 func batch7Lane9ZoomToken(rt *Runtime) string {
-	return batch7Lane9ModuleToken(rt, "zoom_tool")
+	return moduleToken(rt, "zoom_tool")
 }
 
 // batch7Lane9ZoomCall performs one Zoom request and maps status codes to the
@@ -169,9 +169,9 @@ func batch7Lane9ZoomCall(ctx context.Context, rt *Runtime, method, endpoint stri
 	if encoded := query.Encode(); encoded != "" {
 		endpoint += "?" + encoded
 	}
-	resp, err := batch7Lane9DoJSON(ctx, rt, method, endpoint, headers, payload, 30*time.Second)
+	resp, err := marketingDoJSON(ctx, rt, method, endpoint, headers, payload, 30*time.Second)
 	if err != nil {
-		if batch7Lane9IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return nil, map[string]any{"error": "Request timed out"}
 		}
 		return nil, map[string]any{"error": "Network error: " + err.Error()}
@@ -190,8 +190,8 @@ func batch7Lane9ZoomCall(ctx context.Context, rt *Runtime, method, endpoint stri
 	}
 	if resp.Status >= 400 {
 		detail := string(resp.Body)
-		if body, ok := batch7Lane9JSONObject(resp.Body); ok {
-			detail = batch7Lane9StringOr(body, "message", detail)
+		if body, ok := jsonObject(resp.Body); ok {
+			detail = stringOr(body, "message", detail)
 		}
 		return nil, map[string]any{
 			"error": "Zoom API error (HTTP " + strconv.Itoa(resp.Status) + "): " + detail,
@@ -200,7 +200,7 @@ func batch7Lane9ZoomCall(ctx context.Context, rt *Runtime, method, endpoint stri
 	if len(resp.Body) == 0 {
 		return map[string]any{"success": true}, nil
 	}
-	body, ok := batch7Lane9JSONObject(resp.Body)
+	body, ok := jsonObject(resp.Body)
 	if !ok {
 		return nil, map[string]any{"error": "Zoom API error: invalid JSON response"}
 	}
@@ -210,7 +210,7 @@ func batch7Lane9ZoomCall(ctx context.Context, rt *Runtime, method, endpoint stri
 // batch7Lane9ZoomQuery builds the shared page_size/next_page_token query.
 func batch7Lane9ZoomQuery(input map[string]any) url.Values {
 	query := url.Values{
-		"page_size": []string{strconv.Itoa(batch7Lane9Clamp(intArg(input, "page_size", 30), 1, 300))},
+		"page_size": []string{strconv.Itoa(clampInt(intArg(input, "page_size", 30), 1, 300))},
 	}
 	if token := stringArg(input, "next_page_token"); token != "" {
 		query.Set("next_page_token", token)
@@ -221,11 +221,11 @@ func batch7Lane9ZoomQuery(input map[string]any) url.Values {
 // batch7Lane9ZoomPage renders the shared {"total_records","count",key,["next_page_token"]} shape.
 func batch7Lane9ZoomPage(data map[string]any, key string, items []any) map[string]any {
 	output := map[string]any{
-		"total_records": batch7Lane9IntOr(data, "total_records", 0),
+		"total_records": marketingIntOr(data, "total_records", 0),
 		"count":         len(items),
 		key:             items,
 	}
-	if token := batch7Lane9StringOr(data, "next_page_token", ""); token != "" {
+	if token := stringOr(data, "next_page_token", ""); token != "" {
 		output["next_page_token"] = token
 	}
 	return output
@@ -239,7 +239,7 @@ func batch7Lane9ZoomGetUser(ctx context.Context, rt *Runtime, input map[string]a
 	if userID == "" {
 		userID = "me"
 	}
-	endpoint := batch7Lane9Base(rt, "zoom_tool", batch7Lane9ZoomBase) + "/users/" + batch7Lane9PathEscape(userID)
+	endpoint := marketingBase(rt, "zoom_tool", batch7Lane9ZoomBase) + "/users/" + pathEscape(userID)
 	data, failure := batch7Lane9ZoomCall(ctx, rt, http.MethodGet, endpoint, nil, nil)
 	if failure != nil {
 		return failure, nil
@@ -272,15 +272,15 @@ func batch7Lane9ZoomListMeetings(ctx context.Context, rt *Runtime, input map[str
 		meetingType = "upcoming"
 	}
 	query.Set("type", meetingType)
-	endpoint := batch7Lane9Base(rt, "zoom_tool", batch7Lane9ZoomBase) +
-		"/users/" + batch7Lane9PathEscape(userID) + "/meetings"
+	endpoint := marketingBase(rt, "zoom_tool", batch7Lane9ZoomBase) +
+		"/users/" + pathEscape(userID) + "/meetings"
 	data, failure := batch7Lane9ZoomCall(ctx, rt, http.MethodGet, endpoint, query, nil)
 	if failure != nil {
 		return failure, nil
 	}
 	meetings := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["meetings"]) {
-		meeting := batch4AsMap(raw)
+	for _, raw := range asSlice(data["meetings"]) {
+		meeting := asMap(raw)
 		meetings = append(meetings, map[string]any{
 			"id":         meeting["id"],
 			"uuid":       meeting["uuid"],
@@ -304,12 +304,12 @@ func batch7Lane9ZoomGetMeeting(ctx context.Context, rt *Runtime, input map[strin
 	if meetingID == "" {
 		return map[string]any{"error": "meeting_id is required"}, nil
 	}
-	endpoint := batch7Lane9Base(rt, "zoom_tool", batch7Lane9ZoomBase) + "/meetings/" + batch7Lane9PathEscape(meetingID)
+	endpoint := marketingBase(rt, "zoom_tool", batch7Lane9ZoomBase) + "/meetings/" + pathEscape(meetingID)
 	data, failure := batch7Lane9ZoomCall(ctx, rt, http.MethodGet, endpoint, nil, nil)
 	if failure != nil {
 		return failure, nil
 	}
-	settings := batch4AsMap(data["settings"])
+	settings := asMap(data["settings"])
 	return map[string]any{
 		"id":         data["id"],
 		"uuid":       data["uuid"],
@@ -363,8 +363,8 @@ func batch7Lane9ZoomCreateMeeting(ctx context.Context, rt *Runtime, input map[st
 	if agenda := stringArg(input, "agenda"); agenda != "" {
 		body["agenda"] = agenda
 	}
-	endpoint := batch7Lane9Base(rt, "zoom_tool", batch7Lane9ZoomBase) +
-		"/users/" + batch7Lane9PathEscape(userID) + "/meetings"
+	endpoint := marketingBase(rt, "zoom_tool", batch7Lane9ZoomBase) +
+		"/users/" + pathEscape(userID) + "/meetings"
 	data, failure := batch7Lane9ZoomCall(ctx, rt, http.MethodPost, endpoint, nil, body)
 	if failure != nil {
 		return failure, nil
@@ -390,7 +390,7 @@ func batch7Lane9ZoomDeleteMeeting(ctx context.Context, rt *Runtime, input map[st
 	if meetingID == "" {
 		return map[string]any{"error": "meeting_id is required"}, nil
 	}
-	endpoint := batch7Lane9Base(rt, "zoom_tool", batch7Lane9ZoomBase) + "/meetings/" + batch7Lane9PathEscape(meetingID)
+	endpoint := marketingBase(rt, "zoom_tool", batch7Lane9ZoomBase) + "/meetings/" + pathEscape(meetingID)
 	data, failure := batch7Lane9ZoomCall(ctx, rt, http.MethodDelete, endpoint, nil, nil)
 	if failure != nil {
 		return failure, nil
@@ -413,18 +413,18 @@ func batch7Lane9ZoomListRecordings(ctx context.Context, rt *Runtime, input map[s
 	query := batch7Lane9ZoomQuery(input)
 	query.Set("from", fromDate)
 	query.Set("to", toDate)
-	endpoint := batch7Lane9Base(rt, "zoom_tool", batch7Lane9ZoomBase) +
-		"/users/" + batch7Lane9PathEscape(userID) + "/recordings"
+	endpoint := marketingBase(rt, "zoom_tool", batch7Lane9ZoomBase) +
+		"/users/" + pathEscape(userID) + "/recordings"
 	data, failure := batch7Lane9ZoomCall(ctx, rt, http.MethodGet, endpoint, query, nil)
 	if failure != nil {
 		return failure, nil
 	}
 	recordings := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["meetings"]) {
-		meeting := batch4AsMap(raw)
+	for _, raw := range asSlice(data["meetings"]) {
+		meeting := asMap(raw)
 		files := make([]any, 0)
-		for _, rawFile := range batch4AsSlice(meeting["recording_files"]) {
-			file := batch4AsMap(rawFile)
+		for _, rawFile := range asSlice(meeting["recording_files"]) {
+			file := asMap(rawFile)
 			files = append(files, map[string]any{
 				"id":             file["id"],
 				"file_type":      file["file_type"],
@@ -474,7 +474,7 @@ func batch7Lane9ZoomUpdateMeeting(ctx context.Context, rt *Runtime, input map[st
 	if len(body) == 0 {
 		return map[string]any{"error": "At least one field to update is required"}, nil
 	}
-	endpoint := batch7Lane9Base(rt, "zoom_tool", batch7Lane9ZoomBase) + "/meetings/" + batch7Lane9PathEscape(meetingID)
+	endpoint := marketingBase(rt, "zoom_tool", batch7Lane9ZoomBase) + "/meetings/" + pathEscape(meetingID)
 	data, failure := batch7Lane9ZoomCall(ctx, rt, http.MethodPatch, endpoint, nil, body)
 	if failure != nil {
 		return failure, nil
@@ -490,15 +490,15 @@ func batch7Lane9ZoomListParticipants(ctx context.Context, rt *Runtime, input map
 	if meetingID == "" {
 		return map[string]any{"error": "meeting_id is required"}, nil
 	}
-	endpoint := batch7Lane9Base(rt, "zoom_tool", batch7Lane9ZoomBase) +
-		"/past_meetings/" + batch7Lane9PathEscape(meetingID) + "/participants"
+	endpoint := marketingBase(rt, "zoom_tool", batch7Lane9ZoomBase) +
+		"/past_meetings/" + pathEscape(meetingID) + "/participants"
 	data, failure := batch7Lane9ZoomCall(ctx, rt, http.MethodGet, endpoint, batch7Lane9ZoomQuery(input), nil)
 	if failure != nil {
 		return failure, nil
 	}
 	participants := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["participants"]) {
-		participant := batch4AsMap(raw)
+	for _, raw := range asSlice(data["participants"]) {
+		participant := asMap(raw)
 		participants = append(participants, map[string]any{
 			"id":         participant["id"],
 			"name":       participant["name"],
@@ -525,15 +525,15 @@ func batch7Lane9ZoomListRegistrants(ctx context.Context, rt *Runtime, input map[
 		status = "approved"
 	}
 	query.Set("status", status)
-	endpoint := batch7Lane9Base(rt, "zoom_tool", batch7Lane9ZoomBase) +
-		"/meetings/" + batch7Lane9PathEscape(meetingID) + "/registrants"
+	endpoint := marketingBase(rt, "zoom_tool", batch7Lane9ZoomBase) +
+		"/meetings/" + pathEscape(meetingID) + "/registrants"
 	data, failure := batch7Lane9ZoomCall(ctx, rt, http.MethodGet, endpoint, query, nil)
 	if failure != nil {
 		return failure, nil
 	}
 	registrants := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["registrants"]) {
-		registrant := batch4AsMap(raw)
+	for _, raw := range asSlice(data["registrants"]) {
+		registrant := asMap(raw)
 		registrants = append(registrants, map[string]any{
 			"id":          registrant["id"],
 			"email":       registrant["email"],

@@ -76,14 +76,6 @@ func batch5Lane4Modules() map[string]*ModuleConfig {
 
 // ------------------------------------------------------------ shared bits ---
 
-// batch5Lane4Getenv returns the runtime environment lookup.
-func batch5Lane4Getenv(rt *Runtime) func(string) string {
-	if rt != nil && rt.Getenv != nil {
-		return rt.Getenv
-	}
-	return os.Getenv
-}
-
 // batch5Lane4ModuleURL resolves a module base URL, honouring WithBaseURL, and falls
 // back to the public endpoint when the module has no configured base.
 func batch5Lane4ModuleURL(rt *Runtime, moduleID, fallback string) string {
@@ -107,22 +99,6 @@ func batch5Lane4ModuleToken(rt *Runtime, moduleID string) string {
 	if cfg == nil {
 		return ""
 	}
-	token, _ := cfg.ResolvedToken(batch5Lane4Getenv(rt))
+	token, _ := cfg.ResolvedToken(runtimeGetenv(rt))
 	return strings.TrimSpace(token)
-}
-
-// batch5Lane4AccountToken resolves a lane-4 credential for the current call: an
-// account alias the action selected wins over the module's single token
-// (upstream `_get_token(account)` -> credentials.get_by_alias(provider,
-// account)).
-func batch5Lane4AccountToken(rt *Runtime, moduleID, provider string) string {
-	return accountToken(rt, moduleID, provider)
-}
-
-// batch5Lane4Get mirrors Python's dict.get: a present key wins even when null.
-func batch5Lane4Get(object map[string]any, key string, fallback any) any {
-	if value, present := object[key]; present {
-		return value
-	}
-	return fallback
 }

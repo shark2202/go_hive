@@ -44,7 +44,7 @@ func batch7Lane9EnvRegistry(env map[string]string, opts ...Option) *Registry {
 // batch7Lane9Numeric reads a numeric result field that arrived as JSON.
 func batch7Lane9Numeric(t *testing.T, value any) int64 {
 	t.Helper()
-	parsed, ok := batch7Lane9Int64(value)
+	parsed, ok := int64Value(value)
 	if !ok {
 		t.Fatalf("value = %T (%v), want numeric", value, value)
 	}

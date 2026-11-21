@@ -147,9 +147,9 @@ func batch6Lane3ShopifyAuthError() map[string]any {
 
 // batch6Lane3ShopifyCredentials resolves the access token and store name.
 func batch6Lane3ShopifyCredentials(rt *Runtime) (string, string, map[string]any) {
-	token, store, paired := batch6Lane3SplitCredential(batch6Lane3ModuleToken(rt, "shopify_tool"))
+	token, store, paired := batch6Lane3SplitCredential(moduleToken(rt, "shopify_tool"))
 	if !paired {
-		store = batch6Lane3Env(rt, "SHOPIFY_STORE_NAME")
+		store = runtimeEnvTrimmed(rt, "SHOPIFY_STORE_NAME")
 	}
 	if token == "" || store == "" {
 		return "", "", batch6Lane3ShopifyAuthError()
@@ -159,7 +159,7 @@ func batch6Lane3ShopifyCredentials(rt *Runtime) (string, string, map[string]any)
 
 // batch6Lane3ShopifyBase resolves the store-specific Admin API prefix.
 func batch6Lane3ShopifyBase(rt *Runtime, store string) string {
-	if base := batch6Lane3ModuleURL(rt, "shopify_tool"); base != "" {
+	if base := moduleBaseURL(rt, "shopify_tool"); base != "" {
 		return base
 	}
 	return "https://" + store + ".myshopify.com/admin/api/" + batch6Lane3ShopifyAPIVersion
@@ -192,9 +192,9 @@ func batch6Lane3ShopifyRequest(ctx context.Context, rt *Runtime, method, path st
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := batch6Lane3HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
-		if batch6Lane3IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request timed out"}
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}
@@ -256,12 +256,12 @@ func batch6Lane3ShopifyListOrders(ctx context.Context, rt *Runtime, input map[st
 	}
 
 	data := batch6Lane3ShopifyRequest(ctx, rt, http.MethodGet, "/orders.json", params, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	orders := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(data["orders"]) {
-		order := batch6Lane3AsMap(raw)
+	for _, raw := range asSlice(data["orders"]) {
+		order := asMap(raw)
 		orders = append(orders, map[string]any{
 			"id":                 order["id"],
 			"name":               order["name"],
@@ -271,7 +271,7 @@ func batch6Lane3ShopifyListOrders(ctx context.Context, rt *Runtime, input map[st
 			"fulfillment_status": order["fulfillment_status"],
 			"total_price":        order["total_price"],
 			"currency":           order["currency"],
-			"line_item_count":    len(batch6Lane3AsSlice(order["line_items"])),
+			"line_item_count":    len(asSlice(order["line_items"])),
 		})
 	}
 	return map[string]any{"count": len(orders), "orders": orders}, nil
@@ -283,13 +283,13 @@ func batch6Lane3ShopifyGetOrder(ctx context.Context, rt *Runtime, input map[stri
 		return map[string]any{"error": "order_id is required"}, nil
 	}
 	data := batch6Lane3ShopifyRequest(ctx, rt, http.MethodGet, "/orders/"+url.PathEscape(orderID)+".json", nil, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	order := batch6Lane3AsMap(data["order"])
+	order := asMap(data["order"])
 	lineItems := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(order["line_items"]) {
-		item := batch6Lane3AsMap(raw)
+	for _, raw := range asSlice(order["line_items"]) {
+		item := asMap(raw)
 		lineItems = append(lineItems, map[string]any{
 			"title":      item["title"],
 			"quantity":   item["quantity"],
@@ -299,7 +299,7 @@ func batch6Lane3ShopifyGetOrder(ctx context.Context, rt *Runtime, input map[stri
 			"product_id": item["product_id"],
 		})
 	}
-	customer := batch6Lane3AsMap(order["customer"])
+	customer := asMap(order["customer"])
 	return map[string]any{
 		"id":                 order["id"],
 		"name":               order["name"],
@@ -340,12 +340,12 @@ func batch6Lane3ShopifyListProducts(ctx context.Context, rt *Runtime, input map[
 	}
 
 	data := batch6Lane3ShopifyRequest(ctx, rt, http.MethodGet, "/products.json", params, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	products := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(data["products"]) {
-		product := batch6Lane3AsMap(raw)
+	for _, raw := range asSlice(data["products"]) {
+		product := asMap(raw)
 		products = append(products, map[string]any{
 			"id":            product["id"],
 			"title":         product["title"],
@@ -354,7 +354,7 @@ func batch6Lane3ShopifyListProducts(ctx context.Context, rt *Runtime, input map[
 			"status":        product["status"],
 			"handle":        product["handle"],
 			"created_at":    product["created_at"],
-			"variant_count": len(batch6Lane3AsSlice(product["variants"])),
+			"variant_count": len(asSlice(product["variants"])),
 			"tags":          product["tags"],
 		})
 	}
@@ -367,13 +367,13 @@ func batch6Lane3ShopifyGetProduct(ctx context.Context, rt *Runtime, input map[st
 		return map[string]any{"error": "product_id is required"}, nil
 	}
 	data := batch6Lane3ShopifyRequest(ctx, rt, http.MethodGet, "/products/"+url.PathEscape(productID)+".json", nil, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	product := batch6Lane3AsMap(data["product"])
+	product := asMap(data["product"])
 	variants := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(product["variants"]) {
-		variant := batch6Lane3AsMap(raw)
+	for _, raw := range asSlice(product["variants"]) {
+		variant := asMap(raw)
 		variants = append(variants, map[string]any{
 			"id":                 variant["id"],
 			"title":              variant["title"],
@@ -386,8 +386,8 @@ func batch6Lane3ShopifyGetProduct(ctx context.Context, rt *Runtime, input map[st
 		})
 	}
 	images := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(product["images"]) {
-		image := batch6Lane3AsMap(raw)
+	for _, raw := range asSlice(product["images"]) {
+		image := asMap(raw)
 		images = append(images, map[string]any{
 			"id":       image["id"],
 			"src":      image["src"],
@@ -406,7 +406,7 @@ func batch6Lane3ShopifyGetProduct(ctx context.Context, rt *Runtime, input map[st
 		"updated_at":   product["updated_at"],
 		"tags":         product["tags"],
 		"variants":     variants,
-		"options":      batch6Lane3ValueOr(product, "options", []any{}),
+		"options":      valueOr(product, "options", []any{}),
 		"images":       images,
 	}, nil
 }
@@ -430,12 +430,12 @@ func batch6Lane3ShopifyListCustomers(ctx context.Context, rt *Runtime, input map
 	params.Set("limit", strconv.Itoa(min(intArg(input, "limit", 50), 250)))
 
 	data := batch6Lane3ShopifyRequest(ctx, rt, http.MethodGet, "/customers.json", params, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	customers := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(data["customers"]) {
-		source := batch6Lane3AsMap(raw)
+	for _, raw := range asSlice(data["customers"]) {
+		source := asMap(raw)
 		customer := batch6Lane3ShopifyCustomerSummary(source)
 		customer["created_at"] = source["created_at"]
 		customers = append(customers, customer)
@@ -453,12 +453,12 @@ func batch6Lane3ShopifySearchCustomers(ctx context.Context, rt *Runtime, input m
 	params.Set("limit", strconv.Itoa(min(intArg(input, "limit", 50), 250)))
 
 	data := batch6Lane3ShopifyRequest(ctx, rt, http.MethodGet, "/customers/search.json", params, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
 	customers := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(data["customers"]) {
-		customers = append(customers, batch6Lane3ShopifyCustomerSummary(batch6Lane3AsMap(raw)))
+	for _, raw := range asSlice(data["customers"]) {
+		customers = append(customers, batch6Lane3ShopifyCustomerSummary(asMap(raw)))
 	}
 	return map[string]any{"count": len(customers), "customers": customers}, nil
 }
@@ -479,10 +479,10 @@ func batch6Lane3ShopifyUpdateProduct(ctx context.Context, rt *Runtime, input map
 	}
 
 	data := batch6Lane3ShopifyRequest(ctx, rt, http.MethodPut, "/products/"+url.PathEscape(productID)+".json", nil, map[string]any{"product": product})
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	updated := batch6Lane3AsMap(data["product"])
+	updated := asMap(data["product"])
 	return map[string]any{
 		"id":           updated["id"],
 		"title":        updated["title"],
@@ -501,13 +501,13 @@ func batch6Lane3ShopifyGetCustomer(ctx context.Context, rt *Runtime, input map[s
 		return map[string]any{"error": "customer_id is required"}, nil
 	}
 	data := batch6Lane3ShopifyRequest(ctx, rt, http.MethodGet, "/customers/"+url.PathEscape(customerID)+".json", nil, nil)
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	customer := batch6Lane3AsMap(data["customer"])
+	customer := asMap(data["customer"])
 	addresses := make([]map[string]any, 0)
-	for _, raw := range batch6Lane3AsSlice(customer["addresses"]) {
-		address := batch6Lane3AsMap(raw)
+	for _, raw := range asSlice(customer["addresses"]) {
+		address := asMap(raw)
 		addresses = append(addresses, map[string]any{
 			"id":       address["id"],
 			"address1": address["address1"],
@@ -515,7 +515,7 @@ func batch6Lane3ShopifyGetCustomer(ctx context.Context, rt *Runtime, input map[s
 			"province": address["province"],
 			"country":  address["country"],
 			"zip":      address["zip"],
-			"default":  batch6Lane3ValueOr(address, "default", false),
+			"default":  valueOr(address, "default", false),
 		})
 	}
 	return map[string]any{
@@ -567,10 +567,10 @@ func batch6Lane3ShopifyCreateDraftOrder(ctx context.Context, rt *Runtime, input 
 	}
 
 	data := batch6Lane3ShopifyRequest(ctx, rt, http.MethodPost, "/draft_orders.json", nil, map[string]any{"draft_order": draftOrder})
-	if failure, failed := batch6Lane3Failure(data); failed {
+	if failure, failed := failureResult(data); failed {
 		return failure, nil
 	}
-	draft := batch6Lane3AsMap(data["draft_order"])
+	draft := asMap(data["draft_order"])
 	return map[string]any{
 		"id":              draft["id"],
 		"name":            draft["name"],
@@ -581,7 +581,7 @@ func batch6Lane3ShopifyCreateDraftOrder(ctx context.Context, rt *Runtime, input 
 		"currency":        draft["currency"],
 		"invoice_url":     draft["invoice_url"],
 		"created_at":      draft["created_at"],
-		"line_item_count": len(batch6Lane3AsSlice(draft["line_items"])),
+		"line_item_count": len(asSlice(draft["line_items"])),
 		"result":          "created",
 	}, nil
 }

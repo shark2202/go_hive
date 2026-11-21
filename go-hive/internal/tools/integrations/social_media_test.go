@@ -201,7 +201,7 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 		if got := batch7Lane7FieldInt(t, result, "total_results"); got != 2 {
 			t.Fatalf("total_results = %d, want 2", got)
 		}
-		first := batch7Lane7Map(batch7Lane7FieldSlice(t, result, "results")[0])
+		first := asMap(batch7Lane7FieldSlice(t, result, "results")[0])
 		if got := batch7Lane7FieldString(t, first, "videoId"); got != "v1" {
 			t.Fatalf("videoId = %q", got)
 		}
@@ -233,7 +233,7 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 		if len(videos) != 1 {
 			t.Fatalf("videos = %d", len(videos))
 		}
-		video := batch7Lane7Map(videos[0])
+		video := asMap(videos[0])
 		if got := batch7Lane7FieldString(t, video, "duration"); got != "1h2m3s" {
 			t.Fatalf("duration = %q", got)
 		}
@@ -320,7 +320,7 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 			t.Fatalf("itemCount = %d", got)
 		}
 		items := batch7Lane7FieldSlice(t, result, "items")
-		if len(items) != 1 || batch7Lane7FieldString(t, batch7Lane7Map(items[0]), "videoId") != "v1" {
+		if len(items) != 1 || batch7Lane7FieldString(t, asMap(items[0]), "videoId") != "v1" {
 			t.Fatalf("items = %v", items)
 		}
 		if got := recorder.at(t, 0).Path; got != "/playlists" {
@@ -341,7 +341,7 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_search_channels", "query": "hive"})
 		batch7Lane7WantOK(t, result)
 		results := batch7Lane7FieldSlice(t, result, "results")
-		if len(results) != 1 || batch7Lane7FieldString(t, batch7Lane7Map(results[0]), "channelId") != "UC9" {
+		if len(results) != 1 || batch7Lane7FieldString(t, asMap(results[0]), "channelId") != "UC9" {
 			t.Fatalf("results = %v", results)
 		}
 		if got := recorder.last(t).Query.Get("type"); got != "channel" {
@@ -367,7 +367,7 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 		if len(comments) != 1 {
 			t.Fatalf("comments = %d", len(comments))
 		}
-		comment := batch7Lane7Map(comments[0])
+		comment := asMap(comments[0])
 		if got := batch7Lane7FieldInt(t, comment, "replyCount"); got != 3 {
 			t.Fatalf("replyCount = %d", got)
 		}
@@ -528,7 +528,7 @@ func TestBatch7Lane7RedditActions(t *testing.T) {
 		if got := batch7Lane7FieldInt(t, result, "total_karma"); got != 30 {
 			t.Fatalf("total_karma = %d", got)
 		}
-		if !batch7Lane7Bool(result["is_gold"]) {
+		if !asBool(result["is_gold"]) {
 			t.Fatal("is_gold = false")
 		}
 	})
@@ -682,7 +682,7 @@ func TestBatch7Lane7TwitterActions(t *testing.T) {
 		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
-		tweet := batch7Lane7Map(batch7Lane7FieldSlice(t, result, "tweets")[0])
+		tweet := asMap(batch7Lane7FieldSlice(t, result, "tweets")[0])
 		if got := batch7Lane7FieldString(t, tweet, "author_username"); got != "alice" {
 			t.Fatalf("author_username = %q", got)
 		}
@@ -902,8 +902,8 @@ func TestBatch7Lane7TwilioActions(t *testing.T) {
 		if len(numbers) != 1 {
 			t.Fatalf("phone_numbers = %d", len(numbers))
 		}
-		number := batch7Lane7Map(numbers[0])
-		if !batch7Lane7Bool(number["sms_enabled"]) || batch7Lane7Bool(number["mms_enabled"]) {
+		number := asMap(numbers[0])
+		if !asBool(number["sms_enabled"]) || asBool(number["mms_enabled"]) {
 			t.Fatalf("capabilities = %v", number)
 		}
 		if got := recorder.last(t).Query.Get("PageSize"); got != "100" {
@@ -981,7 +981,7 @@ func TestBatch7Lane7PushoverActions(t *testing.T) {
 		})
 		result := batch7Lane7Run(t, registry, "pushover", map[string]any{"action": "pushover_validate_user", "user_key": "user1"})
 		batch7Lane7WantOK(t, result)
-		if !batch7Lane7Bool(result["is_valid"]) || !batch7Lane7Bool(result["is_group"]) {
+		if !asBool(result["is_valid"]) || !asBool(result["is_group"]) {
 			t.Fatalf("result = %v", result)
 		}
 		if got := len(batch7Lane7FieldSlice(t, result, "devices")); got != 2 {
@@ -1016,7 +1016,7 @@ func TestBatch7Lane7PushoverActions(t *testing.T) {
 		})
 		result := batch7Lane7Run(t, registry, "pushover", map[string]any{"action": "pushover_check_receipt", "receipt": "r1"})
 		batch7Lane7WantOK(t, result)
-		if !batch7Lane7Bool(result["acknowledged"]) || !batch7Lane7Bool(result["called_back"]) {
+		if !asBool(result["acknowledged"]) || !asBool(result["called_back"]) {
 			t.Fatalf("result = %v", result)
 		}
 		if got := recorder.last(t).Path; got != "/receipts/r1.json" {

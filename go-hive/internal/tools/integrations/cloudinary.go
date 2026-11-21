@@ -149,9 +149,9 @@ func batch7Lane9CloudinaryAuthError() map[string]any {
 // batch7Lane9CloudinaryResolve reads the three credential fields.
 func batch7Lane9CloudinaryResolve(rt *Runtime) (batch7Lane9CloudinaryCredentials, map[string]any) {
 	creds := batch7Lane9CloudinaryCredentials{
-		Cloud:  strings.TrimSpace(batch7Lane9Getenv(rt, "CLOUDINARY_CLOUD_NAME")),
-		Key:    strings.TrimSpace(batch7Lane9Getenv(rt, "CLOUDINARY_API_KEY")),
-		Secret: strings.TrimSpace(batch7Lane9Getenv(rt, "CLOUDINARY_API_SECRET")),
+		Cloud:  strings.TrimSpace(runtimeEnv(rt, "CLOUDINARY_CLOUD_NAME")),
+		Key:    strings.TrimSpace(runtimeEnv(rt, "CLOUDINARY_API_KEY")),
+		Secret: strings.TrimSpace(runtimeEnv(rt, "CLOUDINARY_API_SECRET")),
 	}
 	if creds.Cloud == "" || creds.Key == "" || creds.Secret == "" {
 		return creds, batch7Lane9CloudinaryAuthError()
@@ -161,8 +161,8 @@ func batch7Lane9CloudinaryResolve(rt *Runtime) (batch7Lane9CloudinaryCredentials
 
 // batch7Lane9CloudinaryRoot renders "<base>/<cloud_name>".
 func batch7Lane9CloudinaryRoot(rt *Runtime) string {
-	base := batch7Lane9Base(rt, "cloudinary_tool", batch7Lane9CloudinaryBase)
-	if cloud := strings.TrimSpace(batch7Lane9Getenv(rt, "CLOUDINARY_CLOUD_NAME")); cloud != "" {
+	base := marketingBase(rt, "cloudinary_tool", batch7Lane9CloudinaryBase)
+	if cloud := strings.TrimSpace(runtimeEnv(rt, "CLOUDINARY_CLOUD_NAME")); cloud != "" {
 		return base + "/" + url.PathEscape(cloud)
 	}
 	return base
@@ -196,7 +196,7 @@ func batch7Lane9CloudinaryCall(ctx context.Context, rt *Runtime, creds batch7Lan
 	headers["Authorization"] = batch7Lane9BasicAuth(creds.Key, creds.Secret)
 	resp, err := batch7Lane9Send(ctx, rt, method, endpoint, headers, body, timeout)
 	if err != nil {
-		if batch7Lane9IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return nil, map[string]any{"error": "Request to Cloudinary timed out"}
 		}
 		return nil, map[string]any{"error": "Cloudinary request failed: " + err.Error()}
@@ -206,10 +206,10 @@ func batch7Lane9CloudinaryCall(ctx context.Context, rt *Runtime, creds batch7Lan
 	}
 	if resp.Status != http.StatusOK && resp.Status != http.StatusCreated {
 		return nil, map[string]any{
-			"error": "Cloudinary API error " + strconv.Itoa(resp.Status) + ": " + batch4TruncateText(string(resp.Body), 500),
+			"error": "Cloudinary API error " + strconv.Itoa(resp.Status) + ": " + truncateText(string(resp.Body), 500),
 		}
 	}
-	data, ok := batch7Lane9JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return nil, map[string]any{"error": "Cloudinary request failed: invalid JSON response"}
 	}
@@ -235,16 +235,16 @@ func batch7Lane9CloudinaryJSON(ctx context.Context, rt *Runtime, creds batch7Lan
 // batch7Lane9CloudinaryResource renders the shared resource subset.
 func batch7Lane9CloudinaryResource(resource map[string]any, withType bool) map[string]any {
 	out := map[string]any{
-		"public_id":  batch7Lane9StringOr(resource, "public_id", ""),
-		"secure_url": batch7Lane9StringOr(resource, "secure_url", ""),
-		"format":     batch7Lane9StringOr(resource, "format", ""),
-		"bytes":      batch7Lane9IntOr(resource, "bytes", 0),
+		"public_id":  stringOr(resource, "public_id", ""),
+		"secure_url": stringOr(resource, "secure_url", ""),
+		"format":     stringOr(resource, "format", ""),
+		"bytes":      marketingIntOr(resource, "bytes", 0),
 		"width":      resource["width"],
 		"height":     resource["height"],
-		"created_at": batch7Lane9StringOr(resource, "created_at", ""),
+		"created_at": stringOr(resource, "created_at", ""),
 	}
 	if withType {
-		out["resource_type"] = batch7Lane9StringOr(resource, "resource_type", "")
+		out["resource_type"] = stringOr(resource, "resource_type", "")
 	}
 	return out
 }
@@ -286,14 +286,14 @@ func batch7Lane9CloudinaryUpload(ctx context.Context, rt *Runtime, input map[str
 		return failure, nil
 	}
 	return map[string]any{
-		"public_id":     batch7Lane9StringOr(data, "public_id", ""),
-		"secure_url":    batch7Lane9StringOr(data, "secure_url", ""),
-		"format":        batch7Lane9StringOr(data, "format", ""),
-		"resource_type": batch7Lane9StringOr(data, "resource_type", ""),
-		"bytes":         batch7Lane9IntOr(data, "bytes", 0),
+		"public_id":     stringOr(data, "public_id", ""),
+		"secure_url":    stringOr(data, "secure_url", ""),
+		"format":        stringOr(data, "format", ""),
+		"resource_type": stringOr(data, "resource_type", ""),
+		"bytes":         marketingIntOr(data, "bytes", 0),
 		"width":         data["width"],
 		"height":        data["height"],
-		"created_at":    batch7Lane9StringOr(data, "created_at", ""),
+		"created_at":    stringOr(data, "created_at", ""),
 	}, nil
 }
 
@@ -307,7 +307,7 @@ func batch7Lane9CloudinaryListResources(ctx context.Context, rt *Runtime, input 
 		resourceType = "image"
 	}
 	query := url.Values{
-		"max_results": []string{strconv.Itoa(batch7Lane9Clamp(intArg(input, "max_results", 30), 1, 500))},
+		"max_results": []string{strconv.Itoa(clampInt(intArg(input, "max_results", 30), 1, 500))},
 	}
 	if prefix := stringArg(input, "prefix"); prefix != "" {
 		query.Set("prefix", prefix)
@@ -318,8 +318,8 @@ func batch7Lane9CloudinaryListResources(ctx context.Context, rt *Runtime, input 
 		return failure, nil
 	}
 	resources := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["resources"]) {
-		resources = append(resources, batch7Lane9CloudinaryResource(batch4AsMap(raw), false))
+	for _, raw := range asSlice(data["resources"]) {
+		resources = append(resources, batch7Lane9CloudinaryResource(asMap(raw), false))
 	}
 	return map[string]any{"resources": resources, "count": len(resources)}, nil
 }
@@ -342,21 +342,21 @@ func batch7Lane9CloudinaryGetResource(ctx context.Context, rt *Runtime, input ma
 	if failure != nil {
 		return failure, nil
 	}
-	tags := batch4AsSlice(data["tags"])
+	tags := asSlice(data["tags"])
 	if tags == nil {
 		tags = []any{}
 	}
 	return map[string]any{
-		"public_id":     batch7Lane9StringOr(data, "public_id", ""),
-		"secure_url":    batch7Lane9StringOr(data, "secure_url", ""),
-		"format":        batch7Lane9StringOr(data, "format", ""),
-		"resource_type": batch7Lane9StringOr(data, "resource_type", ""),
-		"bytes":         batch7Lane9IntOr(data, "bytes", 0),
+		"public_id":     stringOr(data, "public_id", ""),
+		"secure_url":    stringOr(data, "secure_url", ""),
+		"format":        stringOr(data, "format", ""),
+		"resource_type": stringOr(data, "resource_type", ""),
+		"bytes":         marketingIntOr(data, "bytes", 0),
 		"width":         data["width"],
 		"height":        data["height"],
 		"tags":          tags,
-		"created_at":    batch7Lane9StringOr(data, "created_at", ""),
-		"status":        batch7Lane9StringOr(data, "status", ""),
+		"created_at":    stringOr(data, "created_at", ""),
+		"status":        stringOr(data, "status", ""),
 	}, nil
 }
 
@@ -380,7 +380,7 @@ func batch7Lane9CloudinaryDeleteResource(ctx context.Context, rt *Runtime, input
 	}
 	return map[string]any{
 		"public_id": publicID,
-		"result":    batch7Lane9StringOr(data, "result", "unknown"),
+		"result":    stringOr(data, "result", "unknown"),
 	}, nil
 }
 
@@ -395,27 +395,27 @@ func batch7Lane9CloudinarySearch(ctx context.Context, rt *Runtime, input map[str
 	}
 	payload := map[string]any{
 		"expression":  expression,
-		"max_results": batch7Lane9Clamp(intArg(input, "max_results", 30), 1, 500),
+		"max_results": clampInt(intArg(input, "max_results", 30), 1, 500),
 	}
 	data, failure := batch7Lane9CloudinaryJSON(ctx, rt, creds, "/resources/search", payload)
 	if failure != nil {
 		return failure, nil
 	}
 	resources := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["resources"]) {
-		resource := batch4AsMap(raw)
+	for _, raw := range asSlice(data["resources"]) {
+		resource := asMap(raw)
 		resources = append(resources, map[string]any{
-			"public_id":     batch7Lane9StringOr(resource, "public_id", ""),
-			"secure_url":    batch7Lane9StringOr(resource, "secure_url", ""),
-			"format":        batch7Lane9StringOr(resource, "format", ""),
-			"resource_type": batch7Lane9StringOr(resource, "resource_type", ""),
-			"bytes":         batch7Lane9IntOr(resource, "bytes", 0),
-			"created_at":    batch7Lane9StringOr(resource, "created_at", ""),
+			"public_id":     stringOr(resource, "public_id", ""),
+			"secure_url":    stringOr(resource, "secure_url", ""),
+			"format":        stringOr(resource, "format", ""),
+			"resource_type": stringOr(resource, "resource_type", ""),
+			"bytes":         marketingIntOr(resource, "bytes", 0),
+			"created_at":    stringOr(resource, "created_at", ""),
 		})
 	}
 	return map[string]any{
 		"resources":   resources,
-		"total_count": batch7Lane9IntOr(data, "total_count", 0),
+		"total_count": marketingIntOr(data, "total_count", 0),
 	}, nil
 }
 
@@ -429,29 +429,29 @@ func batch7Lane9CloudinaryUsage(ctx context.Context, rt *Runtime, input map[stri
 	if failure != nil {
 		return failure, nil
 	}
-	storage := batch4AsMap(data["storage"])
-	bandwidth := batch4AsMap(data["bandwidth"])
-	transformations := batch4AsMap(data["transformations"])
+	storage := asMap(data["storage"])
+	bandwidth := asMap(data["bandwidth"])
+	transformations := asMap(data["transformations"])
 	return map[string]any{
-		"plan": batch7Lane9StringOr(data, "plan", ""),
+		"plan": stringOr(data, "plan", ""),
 		"storage": map[string]any{
-			"used_bytes":   batch7Lane9IntOr(storage, "usage", 0),
-			"limit_bytes":  batch7Lane9IntOr(storage, "limit", 0),
-			"used_percent": batch7Lane9FloatOr(storage, "used_percent", 0),
+			"used_bytes":   marketingIntOr(storage, "usage", 0),
+			"limit_bytes":  marketingIntOr(storage, "limit", 0),
+			"used_percent": marketingFloatOr(storage, "used_percent", 0),
 		},
 		"bandwidth": map[string]any{
-			"used_bytes":   batch7Lane9IntOr(bandwidth, "usage", 0),
-			"limit_bytes":  batch7Lane9IntOr(bandwidth, "limit", 0),
-			"used_percent": batch7Lane9FloatOr(bandwidth, "used_percent", 0),
+			"used_bytes":   marketingIntOr(bandwidth, "usage", 0),
+			"limit_bytes":  marketingIntOr(bandwidth, "limit", 0),
+			"used_percent": marketingFloatOr(bandwidth, "used_percent", 0),
 		},
 		"transformations": map[string]any{
-			"used":         batch7Lane9IntOr(transformations, "usage", 0),
-			"limit":        batch7Lane9IntOr(transformations, "limit", 0),
-			"used_percent": batch7Lane9FloatOr(transformations, "used_percent", 0),
+			"used":         marketingIntOr(transformations, "usage", 0),
+			"limit":        marketingIntOr(transformations, "limit", 0),
+			"used_percent": marketingFloatOr(transformations, "used_percent", 0),
 		},
-		"resources":         batch7Lane9IntOr(data, "resources", 0),
-		"derived_resources": batch7Lane9IntOr(data, "derived_resources", 0),
-		"last_updated":      batch7Lane9StringOr(data, "last_updated", ""),
+		"resources":         marketingIntOr(data, "resources", 0),
+		"derived_resources": marketingIntOr(data, "derived_resources", 0),
+		"last_updated":      stringOr(data, "last_updated", ""),
 	}, nil
 }
 
@@ -480,9 +480,9 @@ func batch7Lane9CloudinaryRename(ctx context.Context, rt *Runtime, input map[str
 		return failure, nil
 	}
 	return map[string]any{
-		"public_id":  batch7Lane9StringOr(data, "public_id", ""),
-		"secure_url": batch7Lane9StringOr(data, "secure_url", ""),
-		"format":     batch7Lane9StringOr(data, "format", ""),
+		"public_id":  stringOr(data, "public_id", ""),
+		"secure_url": stringOr(data, "secure_url", ""),
+		"format":     stringOr(data, "format", ""),
 		"status":     "renamed",
 	}, nil
 }
@@ -515,7 +515,7 @@ func batch7Lane9CloudinaryAddTag(ctx context.Context, rt *Runtime, input map[str
 	if failure != nil {
 		return failure, nil
 	}
-	tagged := batch4AsSlice(data["public_ids"])
+	tagged := asSlice(data["public_ids"])
 	if tagged == nil {
 		tagged = ids
 	}

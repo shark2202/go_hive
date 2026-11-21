@@ -122,7 +122,7 @@ func batch5Lane2SupabaseSelect(ctx context.Context, rt *Runtime, input map[strin
 	target := baseURL + "/rest/v1/" + table + "?" + params.Encode()
 	response, err := batch5SupabaseCall(ctx, rt, http.MethodGet, target, batch5SupabaseRESTHeaders(key), nil)
 	if err != nil {
-		if batch5Lane2IsTimeout(err) {
+		if isTimeout(ctx, err) {
 			return batch5Lane2Err("Request to Supabase timed out"), nil
 		}
 		return batch5Lane2Err("Supabase request failed: " + err.Error()), nil
@@ -153,7 +153,7 @@ func batch5Lane2SupabaseInsert(ctx context.Context, rt *Runtime, input map[strin
 	}
 	response, err := batch5SupabaseCall(ctx, rt, http.MethodPost, baseURL+"/rest/v1/"+table, batch5SupabaseRESTHeaders(key), body)
 	if err != nil {
-		if batch5Lane2IsTimeout(err) {
+		if isTimeout(ctx, err) {
 			return batch5Lane2Err("Request to Supabase timed out"), nil
 		}
 		return batch5Lane2Err("Supabase request failed: " + err.Error()), nil
@@ -185,7 +185,7 @@ func batch5Lane2SupabaseUpdate(ctx context.Context, rt *Runtime, input map[strin
 	target := baseURL + "/rest/v1/" + table + "?" + batch5SupabaseFilters(filters).Encode()
 	response, err := batch5SupabaseCall(ctx, rt, http.MethodPatch, target, batch5SupabaseRESTHeaders(key), body)
 	if err != nil {
-		if batch5Lane2IsTimeout(err) {
+		if isTimeout(ctx, err) {
 			return batch5Lane2Err("Request to Supabase timed out"), nil
 		}
 		return batch5Lane2Err("Supabase request failed: " + err.Error()), nil
@@ -215,7 +215,7 @@ func batch5Lane2SupabaseDelete(ctx context.Context, rt *Runtime, input map[strin
 	headers["Prefer"] = "return=representation"
 	response, err := batch5SupabaseCall(ctx, rt, http.MethodDelete, target, headers, nil)
 	if err != nil {
-		if batch5Lane2IsTimeout(err) {
+		if isTimeout(ctx, err) {
 			return batch5Lane2Err("Request to Supabase timed out"), nil
 		}
 		return batch5Lane2Err("Supabase request failed: " + err.Error()), nil
@@ -348,7 +348,7 @@ func batch5Lane2SupabaseEdgeInvoke(ctx context.Context, rt *Runtime, input map[s
 	target := baseURL + "/functions/v1/" + functionName
 	response, err := batch5SupabaseCall(ctx, rt, method, target, headers, payload)
 	if err != nil {
-		if batch5Lane2IsTimeout(err) {
+		if isTimeout(ctx, err) {
 			return batch5Lane2Err("Edge function invocation timed out"), nil
 		}
 		return batch5Lane2Err("Edge function invocation failed: " + err.Error()), nil

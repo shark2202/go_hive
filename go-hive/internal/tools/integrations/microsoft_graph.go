@@ -171,12 +171,12 @@ func batch7Lane9GraphAuthError() map[string]any {
 
 // batch7Lane9GraphRoot renders the Graph base URL.
 func batch7Lane9GraphRoot(rt *Runtime) string {
-	return batch7Lane9Base(rt, "microsoft_graph_tool", batch7Lane9GraphBase)
+	return marketingBase(rt, "microsoft_graph_tool", batch7Lane9GraphBase)
 }
 
 // batch7Lane9GraphToken resolves the bearer token.
 func batch7Lane9GraphToken(rt *Runtime) string {
-	return batch7Lane9ModuleToken(rt, "microsoft_graph_tool")
+	return moduleToken(rt, "microsoft_graph_tool")
 }
 
 // batch7Lane9GraphHeaders builds the JSON request headers.
@@ -196,7 +196,7 @@ func batch7Lane9GraphDecode(resp *batch7Lane9Response, allowAccepted bool) (map[
 		return nil, map[string]any{"error": "Unauthorized. Access token may be expired or invalid."}
 	case http.StatusForbidden:
 		return nil, map[string]any{
-			"error": "Forbidden. Missing required permission scope. Details: " + batch4TruncateText(string(resp.Body), 300),
+			"error": "Forbidden. Missing required permission scope. Details: " + truncateText(string(resp.Body), 300),
 		}
 	}
 	if allowAccepted && resp.Status == http.StatusAccepted {
@@ -208,7 +208,7 @@ func batch7Lane9GraphDecode(resp *batch7Lane9Response, allowAccepted bool) (map[
 	}
 	if !success {
 		return nil, map[string]any{
-			"error": "Microsoft Graph API error " + strconv.Itoa(resp.Status) + ": " + batch4TruncateText(string(resp.Body), 500),
+			"error": "Microsoft Graph API error " + strconv.Itoa(resp.Status) + ": " + truncateText(string(resp.Body), 500),
 		}
 	}
 	if len(resp.Body) == 0 {
@@ -217,7 +217,7 @@ func batch7Lane9GraphDecode(resp *batch7Lane9Response, allowAccepted bool) (map[
 		}
 		return nil, map[string]any{"error": "Microsoft Graph API error: empty response body"}
 	}
-	data, ok := batch7Lane9JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return nil, map[string]any{"error": "Microsoft Graph API error: invalid JSON response"}
 	}
@@ -230,7 +230,7 @@ func batch7Lane9GraphGet(ctx context.Context, rt *Runtime, path string, query ur
 	if len(query) > 0 {
 		endpoint += "?" + query.Encode()
 	}
-	resp, err := batch7Lane9DoJSON(ctx, rt, http.MethodGet, endpoint, batch7Lane9GraphHeaders(rt), nil, 30*time.Second)
+	resp, err := marketingDoJSON(ctx, rt, http.MethodGet, endpoint, batch7Lane9GraphHeaders(rt), nil, 30*time.Second)
 	if err != nil {
 		return nil, batch7Lane9GraphTransport(ctx, err)
 	}
@@ -239,7 +239,7 @@ func batch7Lane9GraphGet(ctx context.Context, rt *Runtime, path string, query ur
 
 // batch7Lane9GraphPost performs one authenticated JSON POST.
 func batch7Lane9GraphPost(ctx context.Context, rt *Runtime, path string, payload any) (map[string]any, map[string]any) {
-	resp, err := batch7Lane9DoJSON(ctx, rt, http.MethodPost,
+	resp, err := marketingDoJSON(ctx, rt, http.MethodPost,
 		batch7Lane9GraphRoot(rt)+"/"+path, batch7Lane9GraphHeaders(rt), payload, 30*time.Second)
 	if err != nil {
 		return nil, batch7Lane9GraphTransport(ctx, err)
@@ -249,7 +249,7 @@ func batch7Lane9GraphPost(ctx context.Context, rt *Runtime, path string, payload
 
 // batch7Lane9GraphTransport renders a transport failure.
 func batch7Lane9GraphTransport(ctx context.Context, err error) map[string]any {
-	if batch7Lane9IsTimeout(ctx, err) {
+	if isTimeout(ctx, err) {
 		return map[string]any{"error": "Request to Microsoft Graph API timed out"}
 	}
 	return map[string]any{"error": "Microsoft Graph API request failed: " + err.Error()}
@@ -264,7 +264,7 @@ func batch7Lane9GraphListMessages(ctx context.Context, rt *Runtime, input map[st
 		folder = "inbox"
 	}
 	query := url.Values{
-		"$top":     []string{strconv.Itoa(batch7Lane9Clamp(intArg(input, "max_results", 20), 1, 50))},
+		"$top":     []string{strconv.Itoa(clampInt(intArg(input, "max_results", 20), 1, 50))},
 		"$select":  []string{"id,subject,from,receivedDateTime,isRead,hasAttachments,bodyPreview"},
 		"$orderby": []string{"receivedDateTime desc"},
 	}
@@ -279,18 +279,18 @@ func batch7Lane9GraphListMessages(ctx context.Context, rt *Runtime, input map[st
 		return failure, nil
 	}
 	messages := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["value"]) {
-		message := batch4AsMap(raw)
-		fromAddr := batch4AsMap(batch4AsMap(message["from"])["emailAddress"])
+	for _, raw := range asSlice(data["value"]) {
+		message := asMap(raw)
+		fromAddr := asMap(asMap(message["from"])["emailAddress"])
 		messages = append(messages, map[string]any{
-			"id":               batch7Lane9StringOr(message, "id", ""),
-			"subject":          batch7Lane9StringOr(message, "subject", ""),
-			"from_name":        batch7Lane9StringOr(fromAddr, "name", ""),
-			"from_email":       batch7Lane9StringOr(fromAddr, "address", ""),
-			"receivedDateTime": batch7Lane9StringOr(message, "receivedDateTime", ""),
-			"isRead":           batch7Lane9Bool(message["isRead"]),
-			"hasAttachments":   batch7Lane9Bool(message["hasAttachments"]),
-			"bodyPreview":      batch7Lane9StringOr(message, "bodyPreview", ""),
+			"id":               stringOr(message, "id", ""),
+			"subject":          stringOr(message, "subject", ""),
+			"from_name":        stringOr(fromAddr, "name", ""),
+			"from_email":       stringOr(fromAddr, "address", ""),
+			"receivedDateTime": stringOr(message, "receivedDateTime", ""),
+			"isRead":           asBool(message["isRead"]),
+			"hasAttachments":   asBool(message["hasAttachments"]),
+			"bodyPreview":      stringOr(message, "bodyPreview", ""),
 		})
 	}
 	return map[string]any{"folder": folder, "messages": messages}, nil
@@ -308,34 +308,34 @@ func batch7Lane9GraphGetMessage(ctx context.Context, rt *Runtime, input map[stri
 	if failure != nil {
 		return failure, nil
 	}
-	fromAddr := batch4AsMap(batch4AsMap(data["from"])["emailAddress"])
+	fromAddr := asMap(asMap(data["from"])["emailAddress"])
 	toList := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["toRecipients"]) {
-		address := batch4AsMap(batch4AsMap(raw)["emailAddress"])
+	for _, raw := range asSlice(data["toRecipients"]) {
+		address := asMap(asMap(raw)["emailAddress"])
 		toList = append(toList, map[string]any{
-			"name":  batch7Lane9StringOr(address, "name", ""),
-			"email": batch7Lane9StringOr(address, "address", ""),
+			"name":  stringOr(address, "name", ""),
+			"email": stringOr(address, "address", ""),
 		})
 	}
-	body := batch4AsMap(data["body"])
-	categories := batch4AsSlice(data["categories"])
+	body := asMap(data["body"])
+	categories := asSlice(data["categories"])
 	if categories == nil {
 		categories = []any{}
 	}
-	importance := batch7Lane9StringOr(data, "importance", "normal")
+	importance := stringOr(data, "importance", "normal")
 	return map[string]any{
-		"id":               batch7Lane9StringOr(data, "id", ""),
-		"subject":          batch7Lane9StringOr(data, "subject", ""),
-		"from_name":        batch7Lane9StringOr(fromAddr, "name", ""),
-		"from_email":       batch7Lane9StringOr(fromAddr, "address", ""),
+		"id":               stringOr(data, "id", ""),
+		"subject":          stringOr(data, "subject", ""),
+		"from_name":        stringOr(fromAddr, "name", ""),
+		"from_email":       stringOr(fromAddr, "address", ""),
 		"to":               toList,
-		"body":             batch7Lane9StringOr(body, "content", ""),
-		"bodyContentType":  batch7Lane9StringOr(body, "contentType", ""),
-		"receivedDateTime": batch7Lane9StringOr(data, "receivedDateTime", ""),
-		"hasAttachments":   batch7Lane9Bool(data["hasAttachments"]),
+		"body":             stringOr(body, "content", ""),
+		"bodyContentType":  stringOr(body, "contentType", ""),
+		"receivedDateTime": stringOr(data, "receivedDateTime", ""),
+		"hasAttachments":   asBool(data["hasAttachments"]),
 		"importance":       importance,
 		"categories":       categories,
-		"isRead":           batch7Lane9Bool(data["isRead"]),
+		"isRead":           asBool(data["isRead"]),
 	}, nil
 }
 
@@ -392,12 +392,12 @@ func batch7Lane9GraphListTeams(ctx context.Context, rt *Runtime, input map[strin
 		return failure, nil
 	}
 	teams := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["value"]) {
-		team := batch4AsMap(raw)
+	for _, raw := range asSlice(data["value"]) {
+		team := asMap(raw)
 		teams = append(teams, map[string]any{
-			"id":          batch7Lane9StringOr(team, "id", ""),
-			"displayName": batch7Lane9StringOr(team, "displayName", ""),
-			"description": batch7Lane9StringOr(team, "description", ""),
+			"id":          stringOr(team, "id", ""),
+			"displayName": stringOr(team, "displayName", ""),
+			"description": stringOr(team, "description", ""),
 		})
 	}
 	return map[string]any{"teams": teams}, nil
@@ -416,13 +416,13 @@ func batch7Lane9GraphListChannels(ctx context.Context, rt *Runtime, input map[st
 		return failure, nil
 	}
 	channels := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["value"]) {
-		channel := batch4AsMap(raw)
+	for _, raw := range asSlice(data["value"]) {
+		channel := asMap(raw)
 		channels = append(channels, map[string]any{
-			"id":             batch7Lane9StringOr(channel, "id", ""),
-			"displayName":    batch7Lane9StringOr(channel, "displayName", ""),
-			"description":    batch7Lane9StringOr(channel, "description", ""),
-			"membershipType": batch7Lane9StringOr(channel, "membershipType", ""),
+			"id":             stringOr(channel, "id", ""),
+			"displayName":    stringOr(channel, "displayName", ""),
+			"description":    stringOr(channel, "description", ""),
+			"membershipType": stringOr(channel, "membershipType", ""),
 		})
 	}
 	return map[string]any{"team_id": teamID, "channels": channels}, nil
@@ -448,7 +448,7 @@ func batch7Lane9GraphSendChannelMessage(ctx context.Context, rt *Runtime, input 
 	}
 	return map[string]any{
 		"status":     "sent",
-		"messageId":  batch7Lane9StringOr(data, "id", ""),
+		"messageId":  stringOr(data, "id", ""),
 		"team_id":    teamID,
 		"channel_id": channelID,
 	}, nil
@@ -463,7 +463,7 @@ func batch7Lane9GraphChannelMessages(ctx context.Context, rt *Runtime, input map
 		return map[string]any{"error": "team_id and channel_id are required"}, nil
 	}
 	query := url.Values{
-		"$top": []string{strconv.Itoa(batch7Lane9Clamp(intArg(input, "max_results", 20), 1, 50))},
+		"$top": []string{strconv.Itoa(clampInt(intArg(input, "max_results", 20), 1, 50))},
 	}
 	data, failure := batch7Lane9GraphGet(ctx, rt,
 		"teams/"+url.PathEscape(teamID)+"/channels/"+url.PathEscape(channelID)+"/messages", query)
@@ -471,16 +471,16 @@ func batch7Lane9GraphChannelMessages(ctx context.Context, rt *Runtime, input map
 		return failure, nil
 	}
 	messages := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["value"]) {
-		message := batch4AsMap(raw)
-		fromUser := batch4AsMap(batch4AsMap(message["from"])["user"])
-		body := batch4AsMap(message["body"])
+	for _, raw := range asSlice(data["value"]) {
+		message := asMap(raw)
+		fromUser := asMap(asMap(message["from"])["user"])
+		body := asMap(message["body"])
 		messages = append(messages, map[string]any{
-			"id":              batch7Lane9StringOr(message, "id", ""),
-			"from_name":       batch7Lane9StringOr(fromUser, "displayName", ""),
-			"body":            batch7Lane9StringOr(body, "content", ""),
-			"contentType":     batch7Lane9StringOr(body, "contentType", ""),
-			"createdDateTime": batch7Lane9StringOr(message, "createdDateTime", ""),
+			"id":              stringOr(message, "id", ""),
+			"from_name":       stringOr(fromUser, "displayName", ""),
+			"body":            stringOr(body, "content", ""),
+			"contentType":     stringOr(body, "contentType", ""),
+			"createdDateTime": stringOr(message, "createdDateTime", ""),
 		})
 	}
 	return map[string]any{"team_id": teamID, "channel_id": channelID, "messages": messages}, nil
@@ -495,7 +495,7 @@ func batch7Lane9GraphSearchFiles(ctx context.Context, rt *Runtime, input map[str
 		return map[string]any{"error": "query is required"}, nil
 	}
 	top := url.Values{
-		"$top": []string{strconv.Itoa(batch7Lane9Clamp(intArg(input, "max_results", 20), 1, 50))},
+		"$top": []string{strconv.Itoa(clampInt(intArg(input, "max_results", 20), 1, 50))},
 	}
 	data, failure := batch7Lane9GraphGet(ctx, rt,
 		"me/drive/root/search(q='"+url.PathEscape(query)+"')", top)
@@ -503,16 +503,16 @@ func batch7Lane9GraphSearchFiles(ctx context.Context, rt *Runtime, input map[str
 		return failure, nil
 	}
 	files := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["value"]) {
-		item := batch4AsMap(raw)
+	for _, raw := range asSlice(data["value"]) {
+		item := asMap(raw)
 		files = append(files, map[string]any{
-			"id":                   batch7Lane9StringOr(item, "id", ""),
-			"name":                 batch7Lane9StringOr(item, "name", ""),
-			"size":                 batch7Lane9IntOr(item, "size", 0),
-			"lastModifiedDateTime": batch7Lane9StringOr(item, "lastModifiedDateTime", ""),
-			"webUrl":               batch7Lane9StringOr(item, "webUrl", ""),
-			"mimeType":             batch7Lane9StringOr(batch4AsMap(item["file"]), "mimeType", ""),
-			"path":                 batch7Lane9StringOr(batch4AsMap(item["parentReference"]), "path", ""),
+			"id":                   stringOr(item, "id", ""),
+			"name":                 stringOr(item, "name", ""),
+			"size":                 marketingIntOr(item, "size", 0),
+			"lastModifiedDateTime": stringOr(item, "lastModifiedDateTime", ""),
+			"webUrl":               stringOr(item, "webUrl", ""),
+			"mimeType":             stringOr(asMap(item["file"]), "mimeType", ""),
+			"path":                 stringOr(asMap(item["parentReference"]), "path", ""),
 		})
 	}
 	return map[string]any{"query": query, "files": files}, nil
@@ -524,7 +524,7 @@ func batch7Lane9GraphListFiles(ctx context.Context, rt *Runtime, input map[strin
 	}
 	folderPath := stringArg(input, "folder_path")
 	top := url.Values{
-		"$top": []string{strconv.Itoa(batch7Lane9Clamp(intArg(input, "max_results", 50), 1, 200))},
+		"$top": []string{strconv.Itoa(clampInt(intArg(input, "max_results", 50), 1, 200))},
 	}
 	endpoint := "me/drive/root/children"
 	if folderPath != "" {
@@ -535,19 +535,19 @@ func batch7Lane9GraphListFiles(ctx context.Context, rt *Runtime, input map[strin
 		return failure, nil
 	}
 	items := make([]any, 0)
-	for _, raw := range batch4AsSlice(data["value"]) {
-		item := batch4AsMap(raw)
+	for _, raw := range asSlice(data["value"]) {
+		item := asMap(raw)
 		itemType := "file"
 		if item["folder"] != nil {
 			itemType = "folder"
 		}
 		items = append(items, map[string]any{
-			"id":                   batch7Lane9StringOr(item, "id", ""),
-			"name":                 batch7Lane9StringOr(item, "name", ""),
-			"size":                 batch7Lane9IntOr(item, "size", 0),
+			"id":                   stringOr(item, "id", ""),
+			"name":                 stringOr(item, "name", ""),
+			"size":                 marketingIntOr(item, "size", 0),
 			"type":                 itemType,
-			"lastModifiedDateTime": batch7Lane9StringOr(item, "lastModifiedDateTime", ""),
-			"webUrl":               batch7Lane9StringOr(item, "webUrl", ""),
+			"lastModifiedDateTime": stringOr(item, "lastModifiedDateTime", ""),
+			"webUrl":               stringOr(item, "webUrl", ""),
 		})
 	}
 	path := folderPath
@@ -587,7 +587,7 @@ func batch7Lane9GraphDownloadFile(ctx context.Context, rt *Runtime, input map[st
 	if failure != nil {
 		return failure, nil
 	}
-	downloadURL := batch7Lane9StringOr(meta, "@microsoft.graph.downloadUrl", "")
+	downloadURL := stringOr(meta, "@microsoft.graph.downloadUrl", "")
 	if downloadURL == "" {
 		if itemID != "" {
 			downloadURL = batch7Lane9GraphRoot(rt) + "/me/drive/items/" + url.PathEscape(itemID) + "/content"
@@ -598,7 +598,7 @@ func batch7Lane9GraphDownloadFile(ctx context.Context, rt *Runtime, input map[st
 	resp, err := batch7Lane9Send(ctx, rt, http.MethodGet, downloadURL,
 		map[string]string{"Authorization": "Bearer " + batch7Lane9GraphToken(rt)}, nil, 60*time.Second)
 	if err != nil {
-		if batch7Lane9IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "File download timed out"}, nil
 		}
 		return map[string]any{"error": "Download failed: " + err.Error()}, nil
@@ -606,7 +606,7 @@ func batch7Lane9GraphDownloadFile(ctx context.Context, rt *Runtime, input map[st
 	if resp.Status != http.StatusOK {
 		return map[string]any{"error": "Download failed with status " + strconv.Itoa(resp.Status)}, nil
 	}
-	contentType := batch7Lane9StringOr(batch4AsMap(meta["file"]), "mimeType", "application/octet-stream")
+	contentType := stringOr(asMap(meta["file"]), "mimeType", "application/octet-stream")
 	content, encoding := "", "base64"
 	if batch7Lane9GraphIsText(contentType) {
 		content, encoding = string(resp.Body), "text"
@@ -614,8 +614,8 @@ func batch7Lane9GraphDownloadFile(ctx context.Context, rt *Runtime, input map[st
 		content = base64.StdEncoding.EncodeToString(resp.Body)
 	}
 	return map[string]any{
-		"name":         batch7Lane9StringOr(meta, "name", ""),
-		"size":         batch7Lane9IntOr(meta, "size", 0),
+		"name":         stringOr(meta, "name", ""),
+		"size":         marketingIntOr(meta, "size", 0),
 		"content_type": contentType,
 		"content":      content,
 		"encoding":     encoding,
@@ -640,25 +640,25 @@ func batch7Lane9GraphUploadFile(ctx context.Context, rt *Runtime, input map[stri
 		"Content-Type":  contentType,
 	}, []byte(content), 60*time.Second)
 	if err != nil {
-		if batch7Lane9IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "File upload timed out"}, nil
 		}
 		return map[string]any{"error": "Upload failed: " + err.Error()}, nil
 	}
 	if resp.Status != http.StatusOK && resp.Status != http.StatusCreated {
 		return map[string]any{
-			"error": "Upload failed with status " + strconv.Itoa(resp.Status) + ": " + batch4TruncateText(string(resp.Body), 500),
+			"error": "Upload failed with status " + strconv.Itoa(resp.Status) + ": " + truncateText(string(resp.Body), 500),
 		}, nil
 	}
-	data, ok := batch7Lane9JSONObject(resp.Body)
+	data, ok := jsonObject(resp.Body)
 	if !ok {
 		return map[string]any{"error": "Upload failed: invalid JSON response"}, nil
 	}
 	return map[string]any{
 		"status": "uploaded",
-		"name":   batch7Lane9StringOr(data, "name", ""),
-		"id":     batch7Lane9StringOr(data, "id", ""),
-		"size":   batch7Lane9IntOr(data, "size", 0),
-		"webUrl": batch7Lane9StringOr(data, "webUrl", ""),
+		"name":   stringOr(data, "name", ""),
+		"id":     stringOr(data, "id", ""),
+		"size":   marketingIntOr(data, "size", 0),
+		"webUrl": stringOr(data, "webUrl", ""),
 	}, nil
 }

@@ -12,8 +12,8 @@ import (
 	"net/http"
 )
 
-// batch6PipedriveTool mirrors gen_catalog.py output for the module.
-var batch6PipedriveTool = &Tool{
+// pipedriveTool mirrors gen_catalog.py output for the module.
+var pipedriveTool = &Tool{
 	ID:          "pipedrive_tool",
 	Name:        "pipedrive",
 	DisplayName: "Pipedrive",
@@ -164,8 +164,8 @@ var batch6PipedriveTool = &Tool{
 	},
 }
 
-// batch6PipedriveImpls binds every action name to its implementation.
-func batch6PipedriveImpls() map[string]ActionFunc {
+// pipedriveImpls binds every action name to its implementation.
+func pipedriveImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
 		"pipedrive_add_note":           batch6PipedriveAddNote,
 		"pipedrive_create_activity":    batch6PipedriveCreateActivity,
@@ -185,17 +185,17 @@ func batch6PipedriveImpls() map[string]ActionFunc {
 
 // batch6PipedriveCall executes a request and unwraps the {success, data}
 // envelope. A failed call returns the error dict as the second value.
-func batch6PipedriveCall(ctx context.Context, rt *Runtime, spec batch6Request, fallback string) (map[string]any, map[string]any) {
-	res, fail := batch6Send(ctx, rt, "pipedrive_tool", spec)
+func batch6PipedriveCall(ctx context.Context, rt *Runtime, spec crmRequest, fallback string) (map[string]any, map[string]any) {
+	res, fail := crmSend(ctx, rt, "pipedrive_tool", spec)
 	if fail != nil {
 		return nil, fail
 	}
-	if errDict := batch6PipedriveCheck(res, res.Method); errDict != nil {
+	if errDict := pipedriveCheck(res, res.Method); errDict != nil {
 		return nil, errDict
 	}
-	data := batch6AsMap(res.Parsed)
+	data := asMap(res.Parsed)
 	if success, present := data["success"].(bool); !present || !success {
-		message := batch6AsString(data["error"])
+		message := asString(data["error"])
 		if message == "" {
 			message = fallback
 		}
@@ -206,44 +206,44 @@ func batch6PipedriveCall(ctx context.Context, rt *Runtime, spec batch6Request, f
 
 // batch6PipedriveName reads a nested {"name": ...} reference.
 func batch6PipedriveName(value any) string {
-	return batch6AsString(batch6AsMap(value)["name"])
+	return asString(asMap(value)["name"])
 }
 
 // batch6PipedriveFirstValue reads the first {"value": ...} entry of a list.
 func batch6PipedriveFirstValue(value any) string {
-	items := batch6AsSlice(value)
+	items := asSlice(value)
 	if len(items) == 0 {
 		return ""
 	}
-	return batch6AsString(batch6AsMap(items[0])["value"])
+	return asString(asMap(items[0])["value"])
 }
 
 // batch6PipedriveListDeals lists deals filtered by status.
 func batch6PipedriveListDeals(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	query := batch6QueryValues(map[string]any{
+	query := crmQueryValues(map[string]any{
 		"status": stringArg(input, "status"),
-		"limit":  batch6Clamp(intArg(input, "limit", 50), 1, 500),
+		"limit":  clampInt(intArg(input, "limit", 50), 1, 500),
 		"start":  intArg(input, "start", 0),
 	})
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodGet, Path: "/deals", Query: query,
 	}, "Unknown Pipedrive error")
 	if errDict != nil {
 		return errDict, nil
 	}
 	deals := make([]any, 0)
-	for _, raw := range batch6SliceOrEmpty(data["data"]) {
-		deal := batch6AsMap(raw)
+	for _, raw := range sliceOrEmpty(data["data"]) {
+		deal := asMap(raw)
 		deals = append(deals, map[string]any{
 			"id":          deal["id"],
-			"title":       batch6AsString(deal["title"]),
-			"value":       batch6AsNumber(deal["value"]),
-			"currency":    batch6AsString(deal["currency"]),
-			"status":      batch6AsString(deal["status"]),
+			"title":       asString(deal["title"]),
+			"value":       crmAsNumber(deal["value"]),
+			"currency":    asString(deal["currency"]),
+			"status":      asString(deal["status"]),
 			"person_name": batch6PipedriveName(deal["person_id"]),
 			"org_name":    batch6PipedriveName(deal["org_id"]),
 			"stage_id":    deal["stage_id"],
-			"add_time":    batch6AsString(deal["add_time"]),
+			"add_time":    asString(deal["add_time"]),
 		})
 	}
 	return map[string]any{"deals": deals, "count": len(deals)}, nil
@@ -255,29 +255,29 @@ func batch6PipedriveGetDeal(ctx context.Context, rt *Runtime, input map[string]a
 	if dealID == 0 {
 		return map[string]any{"error": "deal_id is required"}, nil
 	}
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodGet, Path: fmt.Sprintf("/deals/%d", dealID),
 	}, "Deal not found")
 	if errDict != nil {
 		return errDict, nil
 	}
-	deal := batch6AsMap(data["data"])
+	deal := asMap(data["data"])
 	return map[string]any{
 		"id":                  deal["id"],
-		"title":               batch6AsString(deal["title"]),
-		"value":               batch6AsNumber(deal["value"]),
-		"currency":            batch6AsString(deal["currency"]),
-		"status":              batch6AsString(deal["status"]),
+		"title":               asString(deal["title"]),
+		"value":               crmAsNumber(deal["value"]),
+		"currency":            asString(deal["currency"]),
+		"status":              asString(deal["status"]),
 		"person_name":         batch6PipedriveName(deal["person_id"]),
 		"org_name":            batch6PipedriveName(deal["org_id"]),
 		"stage_id":            deal["stage_id"],
 		"pipeline_id":         deal["pipeline_id"],
-		"expected_close_date": batch6AsString(deal["expected_close_date"]),
+		"expected_close_date": asString(deal["expected_close_date"]),
 		"probability":         deal["probability"],
-		"add_time":            batch6AsString(deal["add_time"]),
-		"won_time":            batch6AsString(deal["won_time"]),
-		"lost_time":           batch6AsString(deal["lost_time"]),
-		"lost_reason":         batch6AsString(deal["lost_reason"]),
+		"add_time":            asString(deal["add_time"]),
+		"won_time":            asString(deal["won_time"]),
+		"lost_time":           asString(deal["lost_time"]),
+		"lost_reason":         asString(deal["lost_reason"]),
 	}, nil
 }
 
@@ -301,42 +301,42 @@ func batch6PipedriveCreateDeal(ctx context.Context, rt *Runtime, input map[strin
 	if stageID := intArg(input, "stage_id", 0); stageID != 0 {
 		body["stage_id"] = stageID
 	}
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodPost, Path: "/deals", Body: body,
 	}, "Failed to create deal")
 	if errDict != nil {
 		return errDict, nil
 	}
-	deal := batch6AsMap(data["data"])
+	deal := asMap(data["data"])
 	return map[string]any{
 		"id":     deal["id"],
-		"title":  batch6AsString(deal["title"]),
+		"title":  asString(deal["title"]),
 		"status": "created",
 	}, nil
 }
 
 // batch6PipedriveListPersons lists contacts with their primary email/phone.
 func batch6PipedriveListPersons(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	query := batch6QueryValues(map[string]any{
-		"limit": batch6Clamp(intArg(input, "limit", 50), 1, 500),
+	query := crmQueryValues(map[string]any{
+		"limit": clampInt(intArg(input, "limit", 50), 1, 500),
 		"start": intArg(input, "start", 0),
 	})
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodGet, Path: "/persons", Query: query,
 	}, "Unknown error")
 	if errDict != nil {
 		return errDict, nil
 	}
 	persons := make([]any, 0)
-	for _, raw := range batch6SliceOrEmpty(data["data"]) {
-		person := batch6AsMap(raw)
+	for _, raw := range sliceOrEmpty(data["data"]) {
+		person := asMap(raw)
 		persons = append(persons, map[string]any{
 			"id":               person["id"],
-			"name":             batch6AsString(person["name"]),
+			"name":             asString(person["name"]),
 			"email":            batch6PipedriveFirstValue(person["email"]),
 			"phone":            batch6PipedriveFirstValue(person["phone"]),
 			"org_name":         batch6PipedriveName(person["org_id"]),
-			"open_deals_count": batch6AsNumber(person["open_deals_count"]),
+			"open_deals_count": crmAsNumber(person["open_deals_count"]),
 		})
 	}
 	return map[string]any{"persons": persons, "count": len(persons)}, nil
@@ -348,22 +348,22 @@ func batch6PipedriveSearchPersons(ctx context.Context, rt *Runtime, input map[st
 	if query == "" {
 		return map[string]any{"error": "query is required"}, nil
 	}
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodGet, Path: "/persons/search",
-		Query: batch6QueryValues(map[string]any{
+		Query: crmQueryValues(map[string]any{
 			"term":  query,
-			"limit": batch6Clamp(intArg(input, "limit", 20), 1, 100),
+			"limit": clampInt(intArg(input, "limit", 20), 1, 100),
 		}),
 	}, "Search failed")
 	if errDict != nil {
 		return errDict, nil
 	}
 	results := make([]any, 0)
-	for _, raw := range batch6AsSlice(batch6AsMap(data["data"])["items"]) {
-		item := batch6AsMap(batch6AsMap(raw)["item"])
+	for _, raw := range asSlice(asMap(data["data"])["items"]) {
+		item := asMap(asMap(raw)["item"])
 		results = append(results, map[string]any{
 			"id":       item["id"],
-			"name":     batch6AsString(item["name"]),
+			"name":     asString(item["name"]),
 			"email":    batch6PipedriveFirstString(item["emails"]),
 			"phone":    batch6PipedriveFirstString(item["phones"]),
 			"org_name": batch6PipedriveName(item["organization"]),
@@ -375,34 +375,34 @@ func batch6PipedriveSearchPersons(ctx context.Context, rt *Runtime, input map[st
 // batch6PipedriveFirstString reads the first plain string of a list (the search
 // endpoint returns emails/phones as strings, unlike the list endpoint).
 func batch6PipedriveFirstString(value any) string {
-	items := batch6AsSlice(value)
+	items := asSlice(value)
 	if len(items) == 0 {
 		return ""
 	}
-	return batch6AsString(items[0])
+	return asString(items[0])
 }
 
 // batch6PipedriveListOrganizations lists organizations.
 func batch6PipedriveListOrganizations(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	query := batch6QueryValues(map[string]any{
-		"limit": batch6Clamp(intArg(input, "limit", 50), 1, 500),
+	query := crmQueryValues(map[string]any{
+		"limit": clampInt(intArg(input, "limit", 50), 1, 500),
 		"start": intArg(input, "start", 0),
 	})
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodGet, Path: "/organizations", Query: query,
 	}, "Unknown error")
 	if errDict != nil {
 		return errDict, nil
 	}
 	organizations := make([]any, 0)
-	for _, raw := range batch6SliceOrEmpty(data["data"]) {
-		org := batch6AsMap(raw)
+	for _, raw := range sliceOrEmpty(data["data"]) {
+		org := asMap(raw)
 		organizations = append(organizations, map[string]any{
 			"id":               org["id"],
-			"name":             batch6AsString(org["name"]),
-			"address":          batch6AsString(org["address"]),
-			"open_deals_count": batch6AsNumber(org["open_deals_count"]),
-			"people_count":     batch6AsNumber(org["people_count"]),
+			"name":             asString(org["name"]),
+			"address":          asString(org["address"]),
+			"open_deals_count": crmAsNumber(org["open_deals_count"]),
+			"people_count":     crmAsNumber(org["people_count"]),
 		})
 	}
 	return map[string]any{"organizations": organizations, "count": len(organizations)}, nil
@@ -411,7 +411,7 @@ func batch6PipedriveListOrganizations(ctx context.Context, rt *Runtime, input ma
 // batch6PipedriveListActivities lists activities with optional filters.
 func batch6PipedriveListActivities(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	filters := map[string]any{
-		"limit": batch6Clamp(intArg(input, "limit", 50), 1, 500),
+		"limit": clampInt(intArg(input, "limit", 50), 1, 500),
 		"start": intArg(input, "start", 0),
 	}
 	if done := stringArg(input, "done"); done != "" {
@@ -420,26 +420,26 @@ func batch6PipedriveListActivities(ctx context.Context, rt *Runtime, input map[s
 	if activityType := stringArg(input, "activity_type"); activityType != "" {
 		filters["type"] = activityType
 	}
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
-		Method: http.MethodGet, Path: "/activities", Query: batch6QueryValues(filters),
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
+		Method: http.MethodGet, Path: "/activities", Query: crmQueryValues(filters),
 	}, "Unknown error")
 	if errDict != nil {
 		return errDict, nil
 	}
 	activities := make([]any, 0)
-	for _, raw := range batch6SliceOrEmpty(data["data"]) {
-		activity := batch6AsMap(raw)
-		note := batch6Truncate(batch6AsString(activity["note"]), 200)
+	for _, raw := range sliceOrEmpty(data["data"]) {
+		activity := asMap(raw)
+		note := crmTruncate(asString(activity["note"]), 200)
 		activities = append(activities, map[string]any{
 			"id":          activity["id"],
-			"subject":     batch6AsString(activity["subject"]),
-			"type":        batch6AsString(activity["type"]),
-			"done":        batch6AsBool(activity["done"]),
-			"due_date":    batch6AsString(activity["due_date"]),
-			"due_time":    batch6AsString(activity["due_time"]),
-			"deal_title":  batch6AsString(activity["deal_title"]),
-			"person_name": batch6AsString(activity["person_name"]),
-			"org_name":    batch6AsString(activity["org_name"]),
+			"subject":     asString(activity["subject"]),
+			"type":        asString(activity["type"]),
+			"done":        asBool(activity["done"]),
+			"due_date":    asString(activity["due_date"]),
+			"due_time":    asString(activity["due_time"]),
+			"deal_title":  asString(activity["deal_title"]),
+			"person_name": asString(activity["person_name"]),
+			"org_name":    asString(activity["org_name"]),
 			"note":        note,
 		})
 	}
@@ -448,21 +448,21 @@ func batch6PipedriveListActivities(ctx context.Context, rt *Runtime, input map[s
 
 // batch6PipedriveListPipelines lists sales pipelines.
 func batch6PipedriveListPipelines(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodGet, Path: "/pipelines",
 	}, "Unknown error")
 	if errDict != nil {
 		return errDict, nil
 	}
 	pipelines := make([]any, 0)
-	for _, raw := range batch6SliceOrEmpty(data["data"]) {
-		pipeline := batch6AsMap(raw)
+	for _, raw := range sliceOrEmpty(data["data"]) {
+		pipeline := asMap(raw)
 		pipelines = append(pipelines, map[string]any{
 			"id":               pipeline["id"],
-			"name":             batch6AsString(pipeline["name"]),
-			"active":           batch6AsBool(pipeline["active"]),
-			"deal_probability": batch6AsBool(pipeline["deal_probability"]),
-			"order_nr":         batch6AsNumber(pipeline["order_nr"]),
+			"name":             asString(pipeline["name"]),
+			"active":           asBool(pipeline["active"]),
+			"deal_probability": asBool(pipeline["deal_probability"]),
+			"order_nr":         crmAsNumber(pipeline["order_nr"]),
 		})
 	}
 	return map[string]any{"pipelines": pipelines}, nil
@@ -474,20 +474,20 @@ func batch6PipedriveListStages(ctx context.Context, rt *Runtime, input map[strin
 	if pipelineID := intArg(input, "pipeline_id", 0); pipelineID != 0 {
 		filters["pipeline_id"] = pipelineID
 	}
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
-		Method: http.MethodGet, Path: "/stages", Query: batch6QueryValues(filters),
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
+		Method: http.MethodGet, Path: "/stages", Query: crmQueryValues(filters),
 	}, "Unknown error")
 	if errDict != nil {
 		return errDict, nil
 	}
 	stages := make([]any, 0)
-	for _, raw := range batch6SliceOrEmpty(data["data"]) {
-		stage := batch6AsMap(raw)
+	for _, raw := range sliceOrEmpty(data["data"]) {
+		stage := asMap(raw)
 		stages = append(stages, map[string]any{
 			"id":          stage["id"],
-			"name":        batch6AsString(stage["name"]),
+			"name":        asString(stage["name"]),
 			"pipeline_id": stage["pipeline_id"],
-			"order_nr":    batch6AsNumber(stage["order_nr"]),
+			"order_nr":    crmAsNumber(stage["order_nr"]),
 			"active_flag": batch6AsBoolDefault(stage["active_flag"], true),
 		})
 	}
@@ -516,14 +516,14 @@ func batch6PipedriveAddNote(ctx context.Context, rt *Runtime, input map[string]a
 	if orgID != 0 {
 		body["org_id"] = orgID
 	}
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodPost, Path: "/notes", Body: body,
 	}, "Failed to add note")
 	if errDict != nil {
 		return errDict, nil
 	}
 	return map[string]any{
-		"id":     batch6AsMap(data["data"])["id"],
+		"id":     asMap(data["data"])["id"],
 		"status": "created",
 	}, nil
 }
@@ -552,17 +552,17 @@ func batch6PipedriveUpdateDeal(ctx context.Context, rt *Runtime, input map[strin
 	if len(body) == 0 {
 		return map[string]any{"error": "At least one field to update is required"}, nil
 	}
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodPut, Path: fmt.Sprintf("/deals/%d", dealID), Body: body,
 	}, "Failed to update deal")
 	if errDict != nil {
 		return errDict, nil
 	}
-	deal := batch6AsMap(data["data"])
+	deal := asMap(data["data"])
 	return map[string]any{
 		"id":     deal["id"],
-		"title":  batch6AsString(deal["title"]),
-		"status": batch6AsString(deal["status"]),
+		"title":  asString(deal["title"]),
+		"status": asString(deal["status"]),
 		"result": "updated",
 	}, nil
 }
@@ -583,16 +583,16 @@ func batch6PipedriveCreatePerson(ctx context.Context, rt *Runtime, input map[str
 	if orgID := intArg(input, "org_id", 0); orgID != 0 {
 		body["org_id"] = orgID
 	}
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodPost, Path: "/persons", Body: body,
 	}, "Failed to create person")
 	if errDict != nil {
 		return errDict, nil
 	}
-	person := batch6AsMap(data["data"])
+	person := asMap(data["data"])
 	return map[string]any{
 		"id":     person["id"],
-		"name":   batch6AsString(person["name"]),
+		"name":   asString(person["name"]),
 		"status": "created",
 	}, nil
 }
@@ -618,17 +618,17 @@ func batch6PipedriveCreateActivity(ctx context.Context, rt *Runtime, input map[s
 			body[name] = value
 		}
 	}
-	data, errDict := batch6PipedriveCall(ctx, rt, batch6Request{
+	data, errDict := batch6PipedriveCall(ctx, rt, crmRequest{
 		Method: http.MethodPost, Path: "/activities", Body: body,
 	}, "Failed to create activity")
 	if errDict != nil {
 		return errDict, nil
 	}
-	activity := batch6AsMap(data["data"])
+	activity := asMap(data["data"])
 	return map[string]any{
 		"id":      activity["id"],
-		"subject": batch6AsString(activity["subject"]),
-		"type":    batch6AsString(activity["type"]),
+		"subject": asString(activity["subject"]),
+		"type":    asString(activity["type"]),
 		"status":  "created",
 	}, nil
 }

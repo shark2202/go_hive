@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `6624019b734d`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `a955c3b61e00`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计
@@ -13,10 +13,10 @@
 | 传输层（`transport`） | 3 | HTTP + SSE 边界：路由、会话查找、请求校验、事件镜像；不含 agent 决策。 |
 | 编排层（`orchestration`） | 14 | Queen / Colony / Worker 的生命周期与协调：派发、报告、计划、账本、触发器、看护。 |
 | 执行原语层（`runtime`） | 3 | 唯一的执行原语 AgentLoop：一次 turn 内的模型调用、工具批处理、压缩、预算与停泊。 |
-| 能力层（`capability`） | 20 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
+| 能力层（`capability`） | 21 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
 
-共 73 个包、196 条包间 import 边。
+共 74 个包、198 条包间 import 边。
 
 ## 模块表
 
@@ -75,8 +75,9 @@
 | `internal/soul` | capability | Queen 的 soul：分区、字符上限、版本历史、提案与回滚。 | 1 | 2 |  |
 | `internal/tools` | capability | 工具注册表：eager/searchable 分层、MCP 服务器加载与代理执行、结果规范化与溢出落盘。 | 2 | 12 |  |
 | `internal/tools/builtin` | capability | 内置工具实现：read_file / write_file / terminal_exec 等，刻意不依赖 server 与 agentloop。 | 3 | 1 |  |
-| `internal/tools/integrationkit` | capability | 集成工具的共享原语：传输、凭据与参数 schema 复用件，供 internal/tools/integrations 各模块使用。 | 1 | 2 |  |
-| `internal/tools/integrations` | capability | 集成工具集（装配根）：生成目录、领域实现与 InstallBatch* 入口；领域实现按 internal/tools/integrations/<domain> 子包迁出，子包只依赖 integrationkit。 | 5 | 1 |  |
+| `internal/tools/integrationkit` | capability | 集成工具的共享原语：传输、凭据与参数 schema 复用件，供 internal/tools/integrations 各模块使用。 | 1 | 3 |  |
+| `internal/tools/integrations` | capability | 集成工具集（装配根）：生成目录、领域实现与 InstallBatch* 入口；领域实现按 internal/tools/integrations/<domain> 子包迁出，子包只依赖 integrationkit。 | 6 | 1 |  |
+| `internal/tools/integrations/devops` | capability | DevOps/hosting 领域子包（第二个领域子包）：GitLab / AWS S3 / Vercel / Docker Hub 的目录、31 个 action 实现与共享 helper；只 import integrationkit。 | 1 | 1 |  |
 | `internal/tools/integrations/excel` | capability | Excel 领域子包（结构试点）：工具目录、OOXML 读写与 6 个 action 实现；只 import integrationkit。 | 1 | 1 |  |
 | `internal/visionfallback` | capability | 文本主模型下的图像转述回退：为工具结果里的图片生成 caption。 | 1 | 2 |  |
 | `internal/arghelp` | foundation | argparse HelpFormatter 的 Go 移植：usage 折行、选项列宽、choices 与 section 渲染，供 CLI/MCP 帮助共用。 | 0 | 2 |  |
@@ -114,4 +115,4 @@
 
 ---
 
-共 73 个包；层的定义与业务能力对照见 `docs/architecture/README.md` 与 `docs/architecture/capability-tech-crosswalk.md`。
+共 74 个包；层的定义与业务能力对照见 `docs/architecture/README.md` 与 `docs/architecture/capability-tech-crosswalk.md`。

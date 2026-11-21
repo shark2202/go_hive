@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "6624019b734d",
+  "generated_at_commit": "a955c3b61e00",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 73,
-    "package_edges": 196,
+    "packages": 74,
+    "package_edges": 198,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -130,10 +130,11 @@
         "internal/tools/builtin",
         "internal/tools/integrationkit",
         "internal/tools/integrations",
+        "internal/tools/integrations/devops",
         "internal/tools/integrations/excel",
         "internal/visionfallback"
       ],
-      "package_count": 20
+      "package_count": 21
     },
     {
       "id": "foundation",
@@ -808,7 +809,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 1,
-      "dependents": 2
+      "dependents": 3
     },
     {
       "id": "pkg:internal/tools/integrations",
@@ -819,7 +820,19 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 5,
+      "direct_dependencies": 6,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/devops",
+      "kind": "technical",
+      "package": "internal/tools/integrations/devops",
+      "layer": "capability",
+      "responsibility": "DevOps/hosting 领域子包（第二个领域子包）：GitLab / AWS S3 / Vercel / Docker Hub 的目录、31 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
       "dependents": 1
     },
     {
@@ -2440,7 +2453,17 @@
     },
     {
       "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/devops",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/tools/integrations/excel",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/devops",
+      "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
     },
     {

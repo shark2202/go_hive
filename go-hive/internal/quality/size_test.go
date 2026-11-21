@@ -39,7 +39,6 @@ type sizeWaiver struct {
 
 // fileWaivers: module-relative path -> frozen ceiling + why it is tolerated.
 var fileWaivers = map[string]sizeWaiver{
-	"internal/tools/integrations/devops_hosting.go":    {2276, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
 	"internal/tools/integrations/cloudflare.go":        {1973, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
 	"internal/tools/integrations/infra_automation.go":  {2086, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
 	"internal/tools/integrations/ai_platform.go":       {3031, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},

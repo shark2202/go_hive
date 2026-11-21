@@ -125,7 +125,7 @@ func batch5Lane1ConfluenceAuthError() map[string]any {
 // batch5Lane1ConfluenceClient resolves the wiki base plus Basic auth pair.
 // CONFLUENCE_DOMAIN may already carry the https scheme, matching upstream.
 func batch5Lane1ConfluenceClient(rt *Runtime) (base, email, token string, ok bool) {
-	base = batch5Lane1ModuleBase(rt, "confluence_tool")
+	base = moduleBaseURL(rt, "confluence_tool")
 	if base == "" {
 		if domain := batch5Lane1Getenv(rt, "CONFLUENCE_DOMAIN"); domain != "" {
 			if strings.HasPrefix(domain, "https://") {
@@ -136,7 +136,7 @@ func batch5Lane1ConfluenceClient(rt *Runtime) (base, email, token string, ok boo
 		}
 	}
 	email = batch5Lane1Getenv(rt, "CONFLUENCE_EMAIL")
-	token = batch5Lane1ModuleToken(rt, "confluence_tool")
+	token = moduleToken(rt, "confluence_tool")
 	return base, email, token, base != "" && email != "" && token != ""
 }
 
@@ -150,7 +150,7 @@ func batch5Lane1ConfluenceRequest(ctx context.Context, rt *Runtime, base, email,
 	}
 	resp, err := batch5Lane1Do(ctx, rt, method, base+path, query, payload, headers)
 	if err != nil {
-		if batch5Lane1IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request to Confluence timed out"}
 		}
 		return map[string]any{"error": "Confluence request failed: " + err.Error()}
@@ -166,7 +166,7 @@ func batch5Lane1ConfluenceRequest(ctx context.Context, rt *Runtime, base, email,
 		return map[string]any{"status": "ok"}
 	default:
 		return map[string]any{
-			"error": fmt.Sprintf("Confluence API error %d: %s", resp.Status, batch5Lane1Truncate(string(resp.Body), 500)),
+			"error": fmt.Sprintf("Confluence API error %d: %s", resp.Status, truncateTextClamped(string(resp.Body), 500)),
 		}
 	}
 	if len(resp.Body) == 0 {
@@ -185,14 +185,14 @@ func batch5Lane1ConfluenceListSpaces(ctx context.Context, rt *Runtime, input map
 		return batch5Lane1ConfluenceAuthError(), nil
 	}
 	query := url.Values{}
-	query.Set("limit", strconv.Itoa(batch5Lane1Clamp(intArg(input, "limit", 25), 1, 250)))
+	query.Set("limit", strconv.Itoa(clampInt(intArg(input, "limit", 25), 1, 250)))
 	data := batch5Lane1ConfluenceRequest(ctx, rt, base, email, token, http.MethodGet, "/wiki/api/v2/spaces", query, nil)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	spaces := make([]map[string]any, 0)
-	for _, rawSpace := range batch5Lane1Slice(data["results"]) {
-		space := batch5Lane1Map(rawSpace)
+	for _, rawSpace := range asSlice(data["results"]) {
+		space := asMap(rawSpace)
 		spaces = append(spaces, map[string]any{
 			"id":     batch5Lane1Text(space, "id"),
 			"key":    batch5Lane1Text(space, "key"),
@@ -210,7 +210,7 @@ func batch5Lane1ConfluenceListPages(ctx context.Context, rt *Runtime, input map[
 		return batch5Lane1ConfluenceAuthError(), nil
 	}
 	query := url.Values{}
-	query.Set("limit", strconv.Itoa(batch5Lane1Clamp(intArg(input, "limit", 25), 1, 250)))
+	query.Set("limit", strconv.Itoa(clampInt(intArg(input, "limit", 25), 1, 250)))
 	if title := stringArg(input, "title"); title != "" {
 		query.Set("title", title)
 	}
@@ -223,14 +223,14 @@ func batch5Lane1ConfluenceListPages(ctx context.Context, rt *Runtime, input map[
 		return data, nil
 	}
 	pages := make([]map[string]any, 0)
-	for _, rawPage := range batch5Lane1Slice(data["results"]) {
-		page := batch5Lane1Map(rawPage)
+	for _, rawPage := range asSlice(data["results"]) {
+		page := asMap(rawPage)
 		pages = append(pages, map[string]any{
 			"id":         batch5Lane1Text(page, "id"),
 			"title":      batch5Lane1Text(page, "title"),
 			"space_id":   batch5Lane1Text(page, "spaceId"),
 			"status":     batch5Lane1Text(page, "status"),
-			"version":    batch5Lane1Int(batch5Lane1Map(page["version"]), "number", 0),
+			"version":    batch5Lane1Int(asMap(page["version"]), "number", 0),
 			"created_at": batch5Lane1Text(page, "createdAt"),
 		})
 	}
@@ -253,23 +253,23 @@ func batch5Lane1ConfluenceGetPage(ctx context.Context, rt *Runtime, input map[st
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
-	body := batch5Lane1Map(data["body"])
+	body := asMap(data["body"])
 	bodyContent := ""
 	for _, format := range []string{bodyFormat, "storage", "view"} {
 		if entry, exists := body[format]; exists {
-			bodyContent = batch5Lane1Text(batch5Lane1Map(entry), "value")
+			bodyContent = batch5Lane1Text(asMap(entry), "value")
 			break
 		}
 	}
 	if len([]rune(bodyContent)) > 5000 {
-		bodyContent = batch5Lane1Truncate(bodyContent, 5000) + "... (truncated)"
+		bodyContent = truncateTextClamped(bodyContent, 5000) + "... (truncated)"
 	}
 	return map[string]any{
 		"id":         batch5Lane1Text(data, "id"),
 		"title":      batch5Lane1Text(data, "title"),
 		"space_id":   batch5Lane1Text(data, "spaceId"),
 		"status":     batch5Lane1Text(data, "status"),
-		"version":    batch5Lane1Int(batch5Lane1Map(data["version"]), "number", 0),
+		"version":    batch5Lane1Int(asMap(data["version"]), "number", 0),
 		"body":       bodyContent,
 		"created_at": batch5Lane1Text(data, "createdAt"),
 	}, nil
@@ -325,19 +325,19 @@ func batch5Lane1ConfluenceSearch(ctx context.Context, rt *Runtime, input map[str
 	cql := strings.Join(cqlParts, " AND ") + " ORDER BY lastModified desc"
 	query := url.Values{}
 	query.Set("cql", cql)
-	query.Set("limit", strconv.Itoa(batch5Lane1Clamp(intArg(input, "limit", 25), 1, 50)))
+	query.Set("limit", strconv.Itoa(clampInt(intArg(input, "limit", 25), 1, 50)))
 	data := batch5Lane1ConfluenceRequest(ctx, rt, base, email, token, http.MethodGet, "/wiki/rest/api/search", query, nil)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	results := make([]map[string]any, 0)
-	for _, rawResult := range batch5Lane1Slice(data["results"]) {
-		result := batch5Lane1Map(rawResult)
-		content := batch5Lane1Map(result["content"])
-		space := batch5Lane1Map(content["space"])
+	for _, rawResult := range asSlice(data["results"]) {
+		result := asMap(rawResult)
+		content := asMap(result["content"])
+		space := asMap(content["space"])
 		results = append(results, map[string]any{
 			"title":         batch5Lane1Text(result, "title"),
-			"excerpt":       batch5Lane1Truncate(batch5Lane1OptionalText(result, "excerpt"), 300),
+			"excerpt":       truncateTextClamped(batch5Lane1OptionalText(result, "excerpt"), 300),
 			"page_id":       batch5Lane1Text(content, "id"),
 			"space_key":     batch5Lane1Text(space, "key"),
 			"space_name":    batch5Lane1Text(space, "name"),
@@ -382,7 +382,7 @@ func batch5Lane1ConfluenceUpdatePage(ctx context.Context, rt *Runtime, input map
 	return map[string]any{
 		"id":      batch5Lane1Text(data, "id"),
 		"title":   batch5Lane1Text(data, "title"),
-		"version": batch5Lane1Int(batch5Lane1Map(data["version"]), "number", 0),
+		"version": batch5Lane1Int(asMap(data["version"]), "number", 0),
 		"status":  "updated",
 	}, nil
 }
@@ -413,19 +413,19 @@ func batch5Lane1ConfluenceGetPageChildren(ctx context.Context, rt *Runtime, inpu
 		return map[string]any{"error": "page_id is required"}, nil
 	}
 	query := url.Values{}
-	query.Set("limit", strconv.Itoa(batch5Lane1Clamp(intArg(input, "limit", 25), 1, 250)))
+	query.Set("limit", strconv.Itoa(clampInt(intArg(input, "limit", 25), 1, 250)))
 	data := batch5Lane1ConfluenceRequest(ctx, rt, base, email, token, http.MethodGet, "/wiki/api/v2/pages/"+pageID+"/children", query, nil)
 	if _, failed := data["error"]; failed {
 		return data, nil
 	}
 	children := make([]map[string]any, 0)
-	for _, rawPage := range batch5Lane1Slice(data["results"]) {
-		page := batch5Lane1Map(rawPage)
+	for _, rawPage := range asSlice(data["results"]) {
+		page := asMap(rawPage)
 		children = append(children, map[string]any{
 			"id":      batch5Lane1Text(page, "id"),
 			"title":   batch5Lane1Text(page, "title"),
 			"status":  batch5Lane1Text(page, "status"),
-			"version": batch5Lane1Int(batch5Lane1Map(page["version"]), "number", 0),
+			"version": batch5Lane1Int(asMap(page["version"]), "number", 0),
 		})
 	}
 	return map[string]any{"children": children, "count": len(children)}, nil

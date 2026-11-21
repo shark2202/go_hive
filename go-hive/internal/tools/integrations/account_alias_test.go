@@ -134,7 +134,7 @@ func TestBatch4NotionAccountAliasSelectsToken(t *testing.T) {
 	if got := request.Header.Get("Authorization"); got != "Bearer notion-work-token" {
 		t.Fatalf("Authorization = %q", got)
 	}
-	if got := request.Header.Get("Notion-Version"); got != batch4NotionVersion {
+	if got := request.Header.Get("Notion-Version"); got != notionVersion {
 		t.Fatalf("Notion-Version = %q", got)
 	}
 }

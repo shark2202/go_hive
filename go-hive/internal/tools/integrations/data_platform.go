@@ -29,15 +29,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/tools"
@@ -136,25 +132,6 @@ func batch6Lane4Modules() map[string]*ModuleConfig {
 
 // ------------------------------------------------------------ shared bits ---
 
-// batch6Lane4Getenv resolves an environment variable through the runtime.
-func batch6Lane4Getenv(rt *Runtime, name string) string {
-	if rt != nil && rt.Getenv != nil {
-		return rt.Getenv(name)
-	}
-	return os.Getenv(name)
-}
-
-// batch6Lane4ModuleToken resolves the module credential from WithCredential or
-// the configured environment lookup.
-func batch6Lane4ModuleToken(rt *Runtime, moduleID string) string {
-	return batch4ModuleToken(rt, moduleID)
-}
-
-// batch6Lane4ModuleURL resolves a module base URL, honouring WithBaseURL.
-func batch6Lane4ModuleURL(rt *Runtime, moduleID string) string {
-	return batch4ModuleURL(rt, moduleID)
-}
-
 // batch6Lane4Response is one completed HTTP exchange.
 type batch6Lane4Response struct {
 	Status int
@@ -183,7 +160,7 @@ func batch6Lane4Send(ctx context.Context, rt *Runtime, method, endpoint string, 
 	for name, value := range headers {
 		req.Header.Set(name, value)
 	}
-	resp, err := batch4HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -214,99 +191,17 @@ func batch6Lane4DoForm(ctx context.Context, rt *Runtime, endpoint string, form u
 	return batch6Lane4Send(ctx, rt, http.MethodPost, endpoint, headers, []byte(form.Encode()), timeout)
 }
 
-// batch6Lane4JSONObject decodes a JSON object body.
-func batch6Lane4JSONObject(raw []byte) (map[string]any, bool) {
-	var payload map[string]any
-	if err := json.Unmarshal(raw, &payload); err != nil || payload == nil {
-		return nil, false
-	}
-	return payload, true
-}
-
 // batch6Lane4HTTPError renders the upstream "HTTP <code>: <body[:500]>" error.
 func batch6Lane4HTTPError(resp *batch6Lane4Response) map[string]any {
 	return map[string]any{
-		"error": fmt.Sprintf("HTTP %d: %s", resp.Status, batch4TruncateText(string(resp.Body), 500)),
-	}
-}
-
-// batch6Lane4TransportError renders a labelled transport failure.
-func batch6Lane4TransportError(ctx context.Context, label string, err error) map[string]any {
-	if batch4IsTimeout(ctx, err) {
-		return map[string]any{"error": "Request to " + label + " timed out"}
-	}
-	return map[string]any{"error": label + " request failed: " + err.Error()}
-}
-
-// batch6Lane4StringOr reads a string field with a fallback.
-func batch6Lane4StringOr(object map[string]any, name, fallback string) string {
-	if object == nil {
-		return fallback
-	}
-	if text, ok := object[name].(string); ok {
-		return text
-	}
-	return fallback
-}
-
-// batch6Lane4Int64 converts common JSON numeric representations.
-func batch6Lane4Int64(value any) (int64, bool) {
-	switch typed := value.(type) {
-	case int:
-		return int64(typed), true
-	case int64:
-		return typed, true
-	case float64:
-		return int64(typed), true
-	case json.Number:
-		parsed, err := typed.Int64()
-		if err != nil {
-			return 0, false
-		}
-		return parsed, true
-	case string:
-		parsed, err := strconv.ParseInt(strings.TrimSpace(typed), 10, 64)
-		if err != nil {
-			return 0, false
-		}
-		return parsed, true
-	default:
-		return 0, false
+		"error": fmt.Sprintf("HTTP %d: %s", resp.Status, truncateText(string(resp.Body), 500)),
 	}
 }
 
 // batch6Lane4IntOr reads an integer field with a fallback.
 func batch6Lane4IntOr(object map[string]any, name string, fallback int64) int64 {
-	if parsed, ok := batch6Lane4Int64(object[name]); ok {
+	if parsed, ok := int64Value(object[name]); ok {
 		return parsed
 	}
 	return fallback
-}
-
-// batch6Lane4Bool reads a decoded JSON boolean.
-func batch6Lane4Bool(value any) bool {
-	flag, _ := value.(bool)
-	return flag
-}
-
-// batch6Lane4Clamp bounds an integer to [low, high].
-func batch6Lane4Clamp(value, low, high int) int {
-	return batch4Clamp(value, low, high)
-}
-
-// batch6Lane4IsTimeout reports whether err is a deadline or a net timeout.
-func batch6Lane4IsTimeout(ctx context.Context, err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	var netErr net.Error
-	return errors.As(err, &netErr) && netErr.Timeout()
-}
-
-// batch6Lane4PathEscape escapes one URL path segment.
-func batch6Lane4PathEscape(value string) string {
-	return url.PathEscape(value)
 }

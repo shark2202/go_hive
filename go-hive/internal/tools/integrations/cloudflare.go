@@ -29,10 +29,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -871,23 +869,6 @@ func (reply batch7Lane2Reply) value() any {
 	return reply.result
 }
 
-// batch7Lane2Getenv resolves the runtime environment lookup.
-func batch7Lane2Getenv(rt *Runtime) func(string) string {
-	if rt != nil && rt.Getenv != nil {
-		return rt.Getenv
-	}
-	return os.Getenv
-}
-
-// batch7Lane2HTTP returns the runtime transport, falling back to a client with
-// the standard timeout for hand-built runtimes.
-func batch7Lane2HTTP(rt *Runtime) *httpClient {
-	if rt != nil && rt.HTTP != nil {
-		return rt.HTTP
-	}
-	return newHTTPClient(nil)
-}
-
 // batch7Lane2Token resolves CLOUDFLARE_API_TOKEN from WithCredential or env.
 func batch7Lane2Token(rt *Runtime) string {
 	if rt == nil || rt.Modules == nil {
@@ -897,7 +878,7 @@ func batch7Lane2Token(rt *Runtime) string {
 	if cfg == nil {
 		return ""
 	}
-	token, _ := cfg.ResolvedToken(batch7Lane2Getenv(rt))
+	token, _ := cfg.ResolvedToken(runtimeGetenv(rt))
 	return strings.TrimSpace(token)
 }
 
@@ -946,9 +927,9 @@ func batch7Lane2Call(
 	}
 	request.Header.Set("Authorization", "Bearer "+token)
 	request.Header.Set("Content-Type", "application/json")
-	response, err := batch7Lane2HTTP(rt).Do(request)
+	response, err := runtimeHTTP(rt).Do(request)
 	if err != nil {
-		if batch7Lane2IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return batch7Lane2Failure("Request timed out")
 		}
 		return batch7Lane2Failure("Request failed: " + err.Error())
@@ -1039,7 +1020,7 @@ func batch7Lane2EnvelopeError(envelope map[string]any) string {
 // batch7Lane2ProviderError renders the provider message for a >=400 response,
 // falling back to the upstream `response.text[:500]` slice.
 func batch7Lane2ProviderError(raw []byte) string {
-	if envelope, ok := batch7Lane2DecodeObject(raw); ok {
+	if envelope, ok := decodeObject(raw); ok {
 		if message := batch7Lane2EnvelopeError(envelope); message != "" {
 			return message
 		}
@@ -1047,37 +1028,7 @@ func batch7Lane2ProviderError(raw []byte) string {
 	return batch7Lane2TruncateText(string(raw), batch7Lane2MaxError)
 }
 
-// batch7Lane2IsTimeout reports whether err is a deadline or a net timeout.
-func batch7Lane2IsTimeout(ctx context.Context, err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	var netErr net.Error
-	return errors.As(err, &netErr) && netErr.Timeout()
-}
-
 // ------------------------------------------------------------- accessors ---
-
-// batch7Lane2DecodeObject decodes a JSON object body.
-func batch7Lane2DecodeObject(raw []byte) (map[string]any, bool) {
-	var value map[string]any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return nil, false
-	}
-	if value == nil {
-		value = map[string]any{}
-	}
-	return value, true
-}
-
-// batch7Lane2MapValue views a decoded value as an object.
-func batch7Lane2MapValue(value any) map[string]any {
-	object, _ := value.(map[string]any)
-	return object
-}
 
 // batch7Lane2SliceValue views a decoded value as an array, returning nil when
 // the value is not an array (an empty array stays non-nil).
@@ -1089,19 +1040,13 @@ func batch7Lane2SliceValue(value any) []any {
 	return items
 }
 
-// batch7Lane2TextValue reads a decoded string.
-func batch7Lane2TextValue(value any) string {
-	text, _ := value.(string)
-	return text
-}
-
 // batch7Lane2MapAt reads an object field, returning an empty object when the
 // field is absent or not an object (the upstream `.get(key, {})` default).
 func batch7Lane2MapAt(source map[string]any, key string) map[string]any {
 	if source == nil {
 		return map[string]any{}
 	}
-	if object := batch7Lane2MapValue(source[key]); object != nil {
+	if object := asMap(source[key]); object != nil {
 		return object
 	}
 	return map[string]any{}
@@ -1124,7 +1069,7 @@ func batch7Lane2TextAt(source map[string]any, key string) string {
 	if source == nil {
 		return ""
 	}
-	return batch7Lane2TextValue(source[key])
+	return asString(source[key])
 }
 
 // batch7Lane2IntAt reads an integer field with a fallback.
@@ -1169,17 +1114,6 @@ func batch7Lane2OptionalInt(input map[string]any, name string) (int, bool) {
 	return batch7Lane2Int(value, 0), true
 }
 
-// batch7Lane2Clamp bounds an integer to [low, high].
-func batch7Lane2Clamp(value, low, high int) int {
-	if value < low {
-		return low
-	}
-	if value > high {
-		return high
-	}
-	return value
-}
-
 // batch7Lane2TruncateText caps provider text the way upstream slices [:500].
 func batch7Lane2TruncateText(text string, limit int) string {
 	runes := []rune(text)
@@ -1200,7 +1134,7 @@ func batch7Lane2ResultArray(value any) []any {
 	if items := batch7Lane2SliceValue(value); items != nil {
 		return items
 	}
-	if object := batch7Lane2MapValue(value); object != nil {
+	if object := asMap(value); object != nil {
 		if _, present := object["id"]; present {
 			return []any{object}
 		}
@@ -1247,7 +1181,7 @@ func batch7Lane2PlanName(plan map[string]any) any {
 func batch7Lane2TextList(items []any) []string {
 	out := make([]string, 0, len(items))
 	for _, item := range items {
-		out = append(out, batch7Lane2TextValue(item))
+		out = append(out, asString(item))
 	}
 	return out
 }
@@ -1275,12 +1209,12 @@ func batch7Lane2RecordDetail(source map[string]any) map[string]any {
 
 // batch7Lane2ShapeZoneDetail applies batch7Lane2ZoneDetail to a reply.
 func batch7Lane2ShapeZoneDetail(reply batch7Lane2Reply, _ map[string]any) any {
-	return batch7Lane2ZoneDetail(batch7Lane2MapValue(reply.result))
+	return batch7Lane2ZoneDetail(asMap(reply.result))
 }
 
 // batch7Lane2ShapeRecordDetail applies batch7Lane2RecordDetail to a reply.
 func batch7Lane2ShapeRecordDetail(reply batch7Lane2Reply, _ map[string]any) any {
-	return batch7Lane2RecordDetail(batch7Lane2MapValue(reply.result))
+	return batch7Lane2RecordDetail(asMap(reply.result))
 }
 
 // batch7Lane2Dashboard normalises the analytics dashboard payload, which the
@@ -1290,9 +1224,9 @@ func batch7Lane2Dashboard(value any) map[string]any {
 		if len(items) == 0 {
 			return map[string]any{}
 		}
-		return batch7Lane2MapValue(items[0])
+		return asMap(items[0])
 	}
-	return batch7Lane2MapValue(value)
+	return asMap(value)
 }
 
 // batch7Lane2AllValue reads the "all" bucket of a dashboard metric.
@@ -1351,7 +1285,7 @@ func batch7Lane2ShapeHTTPReport(reply batch7Lane2Reply, _ map[string]any) any {
 func batch7Lane2ShapePageRules(reply batch7Lane2Reply, _ map[string]any) any {
 	rules := make([]map[string]any, 0)
 	for _, raw := range batch7Lane2SliceAt(map[string]any{"rules": reply.result}, "rules") {
-		source := batch7Lane2MapValue(raw)
+		source := asMap(raw)
 		rules = append(rules, map[string]any{
 			"id":       source["id"],
 			"targets":  source["targets"],
@@ -1365,7 +1299,7 @@ func batch7Lane2ShapePageRules(reply batch7Lane2Reply, _ map[string]any) any {
 
 // batch7Lane2ShapeFirewallRules mirrors cloudflare_list_firewall_rules.
 func batch7Lane2ShapeFirewallRules(reply batch7Lane2Reply, _ map[string]any) any {
-	entrypoint := batch7Lane2MapValue(reply.result)
+	entrypoint := asMap(reply.result)
 	return map[string]any{"firewall_rules": batch7Lane2SliceAt(entrypoint, "rules")}
 }
 
@@ -1387,7 +1321,7 @@ func batch7Lane2ShapeCustomHostnames(reply batch7Lane2Reply, _ map[string]any) a
 		return map[string]any{"custom_hostnames": items}
 	}
 	return map[string]any{
-		"custom_hostnames": batch7Lane2SliceAt(batch7Lane2MapValue(reply.result), "custom_hostnames"),
+		"custom_hostnames": batch7Lane2SliceAt(asMap(reply.result), "custom_hostnames"),
 	}
 }
 
@@ -1402,10 +1336,10 @@ func batch7Lane2ShapeAccessApplications(reply batch7Lane2Reply, _ map[string]any
 
 // batch7Lane2ShapeAccountDetails mirrors cloudflare_get_account_details.
 func batch7Lane2ShapeAccountDetails(reply batch7Lane2Reply, _ map[string]any) any {
-	account := batch7Lane2MapValue(reply.result)
+	account := asMap(reply.result)
 	if account == nil {
 		if items := batch7Lane2SliceValue(reply.result); len(items) > 0 {
-			account = batch7Lane2MapValue(items[0])
+			account = asMap(items[0])
 		}
 	}
 	if account == nil {
@@ -1423,8 +1357,8 @@ func batch7Lane2ShapeAccountDetails(reply batch7Lane2Reply, _ map[string]any) an
 
 // batch7Lane2ListZones mirrors cloudflare_list_zones (full envelope).
 func batch7Lane2ListZones(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	page := batch7Lane2Clamp(intArg(input, "page", 1), 1, 1<<31-1)
-	perPage := batch7Lane2Clamp(intArg(input, "per_page", 20), 1, batch7Lane2MaxPageSize)
+	page := clampInt(intArg(input, "page", 1), 1, 1<<31-1)
+	perPage := clampInt(intArg(input, "per_page", 20), 1, batch7Lane2MaxPageSize)
 	query := url.Values{
 		"page":     {strconv.Itoa(page)},
 		"per_page": {strconv.Itoa(perPage)},
@@ -1438,10 +1372,10 @@ func batch7Lane2ListZones(ctx context.Context, rt *Runtime, input map[string]any
 	}
 	zones := make([]map[string]any, 0)
 	for _, raw := range batch7Lane2ResultArray(reply.result) {
-		zones = append(zones, batch7Lane2ZoneSummary(batch7Lane2MapValue(raw)))
+		zones = append(zones, batch7Lane2ZoneSummary(asMap(raw)))
 	}
 	total := len(zones)
-	if info := batch7Lane2MapValue(reply.envelope["result_info"]); info != nil {
+	if info := asMap(reply.envelope["result_info"]); info != nil {
 		total = batch7Lane2IntAt(info, "total_count", total)
 	}
 	return map[string]any{
@@ -1455,8 +1389,8 @@ func batch7Lane2ListDNSRecords(ctx context.Context, rt *Runtime, input map[strin
 	if failure := batch7Lane2ValidateZoneID(zoneID); failure != nil {
 		return failure, nil
 	}
-	page := batch7Lane2Clamp(intArg(input, "page", 1), 1, 1<<31-1)
-	perPage := batch7Lane2Clamp(intArg(input, "per_page", 20), 1, batch7Lane2MaxPageSize)
+	page := clampInt(intArg(input, "page", 1), 1, 1<<31-1)
+	perPage := clampInt(intArg(input, "per_page", 20), 1, batch7Lane2MaxPageSize)
 	query := url.Values{
 		"page":     {strconv.Itoa(page)},
 		"per_page": {strconv.Itoa(perPage)},
@@ -1474,13 +1408,13 @@ func batch7Lane2ListDNSRecords(ctx context.Context, rt *Runtime, input map[strin
 	records := make([]map[string]any, 0)
 	if items := batch7Lane2SliceValue(reply.result); items != nil {
 		for _, raw := range items {
-			records = append(records, batch7Lane2RecordSummary(batch7Lane2MapValue(raw)))
+			records = append(records, batch7Lane2RecordSummary(asMap(raw)))
 		}
-	} else if object := batch7Lane2MapValue(reply.result); object != nil {
+	} else if object := asMap(reply.result); object != nil {
 		records = append(records, batch7Lane2RecordSummary(object))
 	}
 	total := len(records)
-	if info := batch7Lane2MapValue(reply.envelope["result_info"]); info != nil {
+	if info := asMap(reply.envelope["result_info"]); info != nil {
 		total = batch7Lane2IntAt(info, "total_count", total)
 	}
 	return map[string]any{
@@ -1591,7 +1525,7 @@ func batch7Lane2DomainHealth(ctx context.Context, rt *Runtime, input map[string]
 	}
 	var zone map[string]any
 	if zones := batch7Lane2SliceValue(zonesReply.result); len(zones) > 0 {
-		zone = batch7Lane2MapValue(zones[0])
+		zone = asMap(zones[0])
 	}
 	if zone == nil || batch7Lane2TextAt(zone, "name") != domain {
 		return map[string]any{
@@ -1625,7 +1559,7 @@ func batch7Lane2DomainHealth(ctx context.Context, rt *Runtime, input map[string]
 	mxRecords := make([]any, 0)
 	nsRecords := make([]any, 0)
 	for _, raw := range records {
-		record := batch7Lane2MapValue(raw)
+		record := asMap(raw)
 		name := batch7Lane2TextAt(record, "name")
 		recordType := batch7Lane2TextAt(record, "type")
 		if name == domain && (recordType == "A" || recordType == "AAAA") {
@@ -1669,7 +1603,7 @@ func batch7Lane2DomainHealth(ctx context.Context, rt *Runtime, input map[string]
 		})
 	}
 	for _, raw := range append(append([]any{}, rootRecords...), wwwRecords...) {
-		record := batch7Lane2MapValue(raw)
+		record := asMap(raw)
 		if proxied, _ := record["proxied"].(bool); !proxied {
 			continue
 		}
@@ -1684,7 +1618,7 @@ func batch7Lane2DomainHealth(ctx context.Context, rt *Runtime, input map[string]
 	if len(issues) > 0 {
 		codes := make([]string, 0, len(issues))
 		for _, raw := range issues {
-			codes = append(codes, batch7Lane2TextAt(batch7Lane2MapValue(raw), "code"))
+			codes = append(codes, batch7Lane2TextAt(asMap(raw), "code"))
 		}
 		summary += " Issues detected: " + strings.Join(codes, ", ") + "."
 	} else {
@@ -1711,15 +1645,15 @@ func batch7Lane2ListFirewallEvents(ctx context.Context, rt *Runtime, input map[s
 	if failure := batch7Lane2ValidateZoneID(zoneID); failure != nil {
 		return failure, nil
 	}
-	limit := batch7Lane2Clamp(intArg(input, "limit", 10), 0, 1<<31-1)
-	query := url.Values{"per_page": {strconv.Itoa(batch7Lane2Clamp(limit, 0, 50))}}
+	limit := clampInt(intArg(input, "limit", 10), 0, 1<<31-1)
+	query := url.Values{"per_page": {strconv.Itoa(clampInt(limit, 0, 50))}}
 	reply := batch7Lane2Call(ctx, rt, http.MethodGet, "/zones/"+url.PathEscape(zoneID)+"/firewall/events", query, nil)
 	if !reply.ok() {
 		return reply.failure, nil
 	}
 	events := batch7Lane2SliceValue(reply.result)
 	if events == nil {
-		events = batch7Lane2SliceAt(batch7Lane2MapValue(reply.result), "events")
+		events = batch7Lane2SliceAt(asMap(reply.result), "events")
 	}
 	if limit < len(events) {
 		events = events[:limit]
@@ -1733,7 +1667,7 @@ func batch7Lane2SettingValue(reply batch7Lane2Reply) (any, bool) {
 	if reply.failure != nil {
 		return nil, true
 	}
-	object := batch7Lane2MapValue(reply.result)
+	object := asMap(reply.result)
 	if object == nil {
 		return nil, false
 	}
@@ -1926,10 +1860,10 @@ func batch7Lane2ListAccounts(ctx context.Context, rt *Runtime, input map[string]
 	accounts := make([]map[string]any, 0)
 	items := batch7Lane2SliceValue(reply.result)
 	if items == nil {
-		items = batch7Lane2SliceAt(batch7Lane2MapValue(reply.result), "accounts")
+		items = batch7Lane2SliceAt(asMap(reply.result), "accounts")
 	}
 	for _, raw := range items {
-		account := batch7Lane2MapValue(raw)
+		account := asMap(raw)
 		accounts = append(accounts, map[string]any{
 			"id":     account["id"],
 			"name":   batch7Lane2TextAt(account, "name"),
@@ -1937,7 +1871,7 @@ func batch7Lane2ListAccounts(ctx context.Context, rt *Runtime, input map[string]
 		})
 	}
 	total := len(accounts)
-	if info := batch7Lane2MapValue(reply.envelope["result_info"]); info != nil {
+	if info := asMap(reply.envelope["result_info"]); info != nil {
 		total = batch7Lane2IntAt(info, "total_count", batch7Lane2IntAt(info, "count", total))
 	}
 	return map[string]any{
@@ -1947,8 +1881,8 @@ func batch7Lane2ListAccounts(ctx context.Context, rt *Runtime, input map[string]
 
 // batch7Lane2ListAuditLogs mirrors cloudflare_list_audit_logs.
 func batch7Lane2ListAuditLogs(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	limit := batch7Lane2Clamp(intArg(input, "limit", 20), 0, 1<<31-1)
-	query := url.Values{"per_page": {strconv.Itoa(batch7Lane2Clamp(limit, 0, 50))}}
+	limit := clampInt(intArg(input, "limit", 20), 0, 1<<31-1)
+	query := url.Values{"per_page": {strconv.Itoa(clampInt(limit, 0, 50))}}
 	reply := batch7Lane2Call(
 		ctx, rt, http.MethodGet,
 		"/accounts/"+url.PathEscape(stringArg(input, "account_id"))+"/audit_logs", query, nil,
@@ -1958,7 +1892,7 @@ func batch7Lane2ListAuditLogs(ctx context.Context, rt *Runtime, input map[string
 	}
 	logs := batch7Lane2SliceValue(reply.result)
 	if logs == nil {
-		logs = batch7Lane2SliceAt(batch7Lane2MapValue(reply.result), "result")
+		logs = batch7Lane2SliceAt(asMap(reply.result), "result")
 	}
 	if limit < len(logs) {
 		logs = logs[:limit]

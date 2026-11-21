@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	batch6MaxBody  = 8 << 20
-	batch6MaxError = 500
+	crmMaxBody  = 8 << 20
+	crmMaxError = 500
 )
 
 // InstallBatch6Lane1 publishes the batch-6 lane-1 CRM tools into a shared
@@ -54,7 +54,7 @@ func newBatch6Lane1Registry(opts ...Option) *Registry {
 	runtime := &Runtime{
 		HTTP:    newHTTPClient(nil),
 		Now:     time.Now,
-		Modules: batch6Modules(),
+		Modules: crmModules(),
 		Getenv:  os.Getenv,
 	}
 	for _, opt := range opts {
@@ -62,18 +62,18 @@ func newBatch6Lane1Registry(opts ...Option) *Registry {
 	}
 	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{
-		batch6SalesforceTool,
-		batch6PipedriveTool,
-		batch6ZohoCRMTool,
-		batch6AttioTool,
+		salesforceTool,
+		pipedriveTool,
+		zohoCRMTool,
+		attioTool,
 	} {
 		registry.AddTool(tool)
 	}
 	for tool, actions := range map[string]map[string]ActionFunc{
-		"salesforce": batch6SalesforceImpls(),
-		"pipedrive":  batch6PipedriveImpls(),
-		"zoho_crm":   batch6ZohoCRMImpls(),
-		"attio":      batch6AttioImpls(),
+		"salesforce": salesforceImpls(),
+		"pipedrive":  pipedriveImpls(),
+		"zoho_crm":   zohoCRMImpls(),
+		"attio":      attioImpls(),
 	} {
 		for action, impl := range actions {
 			registry.AddImpl(tool, action, impl)
@@ -82,11 +82,11 @@ func newBatch6Lane1Registry(opts ...Option) *Registry {
 	return registry
 }
 
-// batch6Modules declares credential variables. Base URLs stay empty on
+// crmModules declares credential variables. Base URLs stay empty on
 // purpose: they resolve at request time (WithBaseURL, then the provider host
 // variable, then the built-in default), so tests can point one module at a
 // fake upstream without inventing a default that shadows the environment.
-func batch6Modules() map[string]*ModuleConfig {
+func crmModules() map[string]*ModuleConfig {
 	return map[string]*ModuleConfig{
 		"salesforce_tool": {
 			ID: "salesforce_tool", BaseURL: "",
@@ -99,7 +99,7 @@ func batch6Modules() map[string]*ModuleConfig {
 		"zoho_crm_tool": {
 			ID: "zoho_crm_tool", BaseURL: "",
 			EnvVars: []string{"ZOHO_CRM_ACCESS_TOKEN"},
-			OAuth:   batch6ZohoOAuth,
+			OAuth:   oauthZohoOAuth,
 		},
 		"attio_tool": {
 			ID: "attio_tool", BaseURL: "",
@@ -110,8 +110,8 @@ func batch6Modules() map[string]*ModuleConfig {
 
 // ------------------------------------------------------------- transport ---
 
-// batch6Request is one provider call after auth and module resolution.
-type batch6Request struct {
+// crmRequest is one provider call after auth and module resolution.
+type crmRequest struct {
 	Method string
 	// Path is appended to the module base URL; an absolute http(s) URL (SOQL
 	// nextRecordsUrl) is used as-is.
@@ -120,26 +120,17 @@ type batch6Request struct {
 	Body  any
 }
 
-// batch6Response is a decoded provider response.
-type batch6Response struct {
+// crmResponse is a decoded provider response.
+type crmResponse struct {
 	Status int
 	Method string
 	Parsed any
 	Raw    []byte
 }
 
-// batch6Env reads an environment value through the runtime lookup.
-func batch6Env(rt *Runtime, name string) string {
-	getenv := os.Getenv
-	if rt != nil && rt.Getenv != nil {
-		getenv = rt.Getenv
-	}
-	return strings.TrimSpace(getenv(name))
-}
-
-// batch6Base resolves the module base URL: WithBaseURL wins, then the
+// crmBase resolves the module base URL: WithBaseURL wins, then the
 // provider-specific environment variable, then the built-in default.
-func batch6Base(rt *Runtime, moduleID string) string {
+func crmBase(rt *Runtime, moduleID string) string {
 	base := ""
 	if rt != nil && rt.Modules != nil {
 		if cfg := rt.Modules[moduleID]; cfg != nil {
@@ -151,13 +142,13 @@ func batch6Base(rt *Runtime, moduleID string) string {
 	}
 	switch moduleID {
 	case "salesforce_tool":
-		instance := strings.TrimRight(batch6Env(rt, "SALESFORCE_INSTANCE_URL"), "/")
+		instance := strings.TrimRight(runtimeEnvTrimmed(rt, "SALESFORCE_INSTANCE_URL"), "/")
 		if instance != "" && !strings.HasPrefix(instance, "http") {
 			instance = "https://" + instance
 		}
 		return instance
 	case "pipedrive_tool":
-		domain := strings.TrimRight(batch6Env(rt, "PIPEDRIVE_DOMAIN"), "/")
+		domain := strings.TrimRight(runtimeEnvTrimmed(rt, "PIPEDRIVE_DOMAIN"), "/")
 		if domain == "" {
 			return "https://api.pipedrive.com/v1"
 		}
@@ -166,7 +157,7 @@ func batch6Base(rt *Runtime, moduleID string) string {
 		}
 		return domain + "/api/v1"
 	case "zoho_crm_tool":
-		domain := batch6Env(rt, "ZOHO_CRM_DOMAIN")
+		domain := runtimeEnvTrimmed(rt, "ZOHO_CRM_DOMAIN")
 		if domain == "" {
 			domain = "www.zohoapis.com"
 		}
@@ -177,8 +168,8 @@ func batch6Base(rt *Runtime, moduleID string) string {
 	return ""
 }
 
-// batch6AuthError is the upstream "credentials not configured" value.
-func batch6AuthError(moduleID string) map[string]any {
+// crmAuthError is the upstream "credentials not configured" value.
+func crmAuthError(moduleID string) map[string]any {
 	switch moduleID {
 	case "salesforce_tool":
 		return map[string]any{
@@ -203,25 +194,25 @@ func batch6AuthError(moduleID string) map[string]any {
 	}
 }
 
-// batch6Send resolves credentials, applies provider auth and executes one
+// crmSend resolves credentials, applies provider auth and executes one
 // request. A non-nil value means the call never produced an HTTP response. A
 // module with an OAuth2 refresh source mints an access token when its static
 // one is expired, and a 401 retries once with a freshly minted token.
-func batch6Send(ctx context.Context, rt *Runtime, moduleID string, spec batch6Request) (batch6Response, map[string]any) {
-	var out batch6Response
+func crmSend(ctx context.Context, rt *Runtime, moduleID string, spec crmRequest) (crmResponse, map[string]any) {
+	var out crmResponse
 	token, refreshable, problem := oauthModuleToken(ctx, rt, moduleID)
 	if problem != nil {
 		return out, problem
 	}
-	base := batch6Base(rt, moduleID)
+	base := crmBase(rt, moduleID)
 	// Salesforce and Pipedrive can be configured without a base URL, so the
 	// credential check runs first to keep the upstream error text.
 	if token == "" || base == "" {
-		return out, batch6AuthError(moduleID)
+		return out, crmAuthError(moduleID)
 	}
 
-	attempt := func(token string) (batch6Response, map[string]any) {
-		var page batch6Response
+	attempt := func(token string) (crmResponse, map[string]any) {
+		var page crmResponse
 		query := url.Values{}
 		for name, values := range spec.Query {
 			for _, value := range values {
@@ -248,14 +239,14 @@ func batch6Send(ctx context.Context, rt *Runtime, moduleID string, spec batch6Re
 		if spec.Body != nil {
 			payload, err := json.Marshal(spec.Body)
 			if err != nil {
-				return page, map[string]any{"error": batch6RequestFailedPrefix(moduleID) + err.Error()}
+				return page, map[string]any{"error": crmRequestFailedPrefix(moduleID) + err.Error()}
 			}
 			reader = bytes.NewReader(payload)
 		}
 
 		req, err := http.NewRequestWithContext(ctx, spec.Method, target, reader)
 		if err != nil {
-			return page, map[string]any{"error": batch6RequestFailedPrefix(moduleID) + err.Error()}
+			return page, map[string]any{"error": crmRequestFailedPrefix(moduleID) + err.Error()}
 		}
 		if spec.Body != nil {
 			req.Header.Set("Content-Type", "application/json")
@@ -277,19 +268,19 @@ func batch6Send(ctx context.Context, rt *Runtime, moduleID string, spec batch6Re
 		resp, err := client.Do(req)
 		if err != nil {
 			if ctx != nil && ctx.Err() != nil {
-				return page, map[string]any{"error": batch6TimeoutMessage(moduleID)}
+				return page, map[string]any{"error": crmTimeoutMessage(moduleID)}
 			}
 			var netErr net.Error
 			if errors.As(err, &netErr) && netErr.Timeout() {
-				return page, map[string]any{"error": batch6TimeoutMessage(moduleID)}
+				return page, map[string]any{"error": crmTimeoutMessage(moduleID)}
 			}
-			return page, map[string]any{"error": batch6NetworkPrefix(moduleID) + err.Error()}
+			return page, map[string]any{"error": crmNetworkPrefix(moduleID) + err.Error()}
 		}
 		defer resp.Body.Close()
 
-		raw, err := io.ReadAll(io.LimitReader(resp.Body, batch6MaxBody))
+		raw, err := io.ReadAll(io.LimitReader(resp.Body, crmMaxBody))
 		if err != nil {
-			return page, map[string]any{"error": batch6RequestFailedPrefix(moduleID) + err.Error()}
+			return page, map[string]any{"error": crmRequestFailedPrefix(moduleID) + err.Error()}
 		}
 		page.Status = resp.StatusCode
 		page.Method = spec.Method
@@ -304,18 +295,18 @@ func batch6Send(ctx context.Context, rt *Runtime, moduleID string, spec batch6Re
 	if problem != nil || out.Status != http.StatusUnauthorized || !refreshable {
 		return out, problem
 	}
-	resolution := rt.ResolveUnauthorized(ctx, moduleID, batch6DisplayName(moduleID))
+	resolution := rt.ResolveUnauthorized(ctx, moduleID, crmDisplayName(moduleID))
 	if !resolution.Retry {
 		if resolution.Failure != nil {
-			return batch6Response{}, resolution.Failure
+			return crmResponse{}, resolution.Failure
 		}
 		return out, nil
 	}
 	return attempt(resolution.Token)
 }
 
-// batch6DisplayName names the provider in refresh failure messages.
-func batch6DisplayName(moduleID string) string {
+// crmDisplayName names the provider in refresh failure messages.
+func crmDisplayName(moduleID string) string {
 	switch moduleID {
 	case "zoho_crm_tool":
 		return "Zoho CRM"
@@ -330,8 +321,8 @@ func batch6DisplayName(moduleID string) string {
 	}
 }
 
-// batch6TimeoutMessage mirrors each provider's timeout wording.
-func batch6TimeoutMessage(moduleID string) string {
+// crmTimeoutMessage mirrors each provider's timeout wording.
+func crmTimeoutMessage(moduleID string) string {
 	switch moduleID {
 	case "salesforce_tool":
 		return "Request timed out"
@@ -344,8 +335,8 @@ func batch6TimeoutMessage(moduleID string) string {
 	}
 }
 
-// batch6NetworkPrefix mirrors each provider's transport-error wording.
-func batch6NetworkPrefix(moduleID string) string {
+// crmNetworkPrefix mirrors each provider's transport-error wording.
+func crmNetworkPrefix(moduleID string) string {
 	switch moduleID {
 	case "salesforce_tool":
 		return "Network error: "
@@ -358,8 +349,8 @@ func batch6NetworkPrefix(moduleID string) string {
 	}
 }
 
-// batch6RequestFailedPrefix covers local failures (encode/read).
-func batch6RequestFailedPrefix(moduleID string) string {
+// crmRequestFailedPrefix covers local failures (encode/read).
+func crmRequestFailedPrefix(moduleID string) string {
 	switch moduleID {
 	case "pipedrive_tool":
 		return "Pipedrive request failed: "
@@ -374,8 +365,8 @@ func batch6RequestFailedPrefix(moduleID string) string {
 
 // ---------------------------------------------------------- error mapping ---
 
-// batch6SalesforceCheck maps non-2xx responses onto the upstream error dicts.
-func batch6SalesforceCheck(res batch6Response) map[string]any {
+// salesforceCheck maps non-2xx responses onto the upstream error dicts.
+func salesforceCheck(res crmResponse) map[string]any {
 	if res.Status >= 200 && res.Status < 300 {
 		return nil
 	}
@@ -389,7 +380,7 @@ func batch6SalesforceCheck(res batch6Response) map[string]any {
 	}
 	detail := string(res.Raw)
 	if items, ok := res.Parsed.([]any); ok && len(items) > 0 {
-		if message := batch6AsString(batch6AsMap(items[0])["message"]); message != "" {
+		if message := asString(asMap(items[0])["message"]); message != "" {
 			detail = message
 		}
 	}
@@ -398,10 +389,10 @@ func batch6SalesforceCheck(res batch6Response) map[string]any {
 	}
 }
 
-// batch6PipedriveCheck maps responses using the upstream per-verb rules:
+// pipedriveCheck maps responses using the upstream per-verb rules:
 // reads accept 200, creates 200/201, updates 200 and deletes 200/204. Only
 // reads map 404 to "Not found"; writes surface the provider body.
-func batch6PipedriveCheck(res batch6Response, method string) map[string]any {
+func pipedriveCheck(res crmResponse, method string) map[string]any {
 	if res.Status == http.StatusUnauthorized {
 		return map[string]any{"error": "Unauthorized. Check your PIPEDRIVE_API_TOKEN."}
 	}
@@ -412,12 +403,12 @@ func batch6PipedriveCheck(res batch6Response, method string) map[string]any {
 		return nil
 	}
 	return map[string]any{
-		"error": fmt.Sprintf("Pipedrive API error %d: %s", res.Status, batch6Truncate(string(res.Raw), batch6MaxError)),
+		"error": fmt.Sprintf("Pipedrive API error %d: %s", res.Status, crmTruncate(string(res.Raw), crmMaxError)),
 	}
 }
 
-// batch6ZohoCheck maps responses; a 204 on a read means "no records".
-func batch6ZohoCheck(res batch6Response, read bool) map[string]any {
+// zohoCheck maps responses; a 204 on a read means "no records".
+func zohoCheck(res crmResponse, read bool) map[string]any {
 	if res.Status == http.StatusUnauthorized {
 		if read {
 			return map[string]any{"error": "Unauthorized. Check your ZOHO_CRM_ACCESS_TOKEN (may need refresh)."}
@@ -431,12 +422,12 @@ func batch6ZohoCheck(res batch6Response, read bool) map[string]any {
 		return nil
 	}
 	return map[string]any{
-		"error": fmt.Sprintf("Zoho CRM API error %d: %s", res.Status, batch6Truncate(string(res.Raw), batch6MaxError)),
+		"error": fmt.Sprintf("Zoho CRM API error %d: %s", res.Status, crmTruncate(string(res.Raw), crmMaxError)),
 	}
 }
 
-// batch6AttioCheck maps non-2xx responses onto the upstream error dicts.
-func batch6AttioCheck(res batch6Response) map[string]any {
+// attioCheck maps non-2xx responses onto the upstream error dicts.
+func attioCheck(res crmResponse) map[string]any {
 	if res.Status >= 200 && res.Status < 300 {
 		return nil
 	}
@@ -449,7 +440,7 @@ func batch6AttioCheck(res batch6Response) map[string]any {
 		return map[string]any{"error": "Attio rate limit exceeded. Try again later."}
 	}
 	detail := string(res.Raw)
-	if message := batch6AsString(batch6AsMap(res.Parsed)["message"]); message != "" {
+	if message := asString(asMap(res.Parsed)["message"]); message != "" {
 		detail = message
 	}
 	return map[string]any{
@@ -459,41 +450,8 @@ func batch6AttioCheck(res batch6Response) map[string]any {
 
 // ---------------------------------------------------------------- helpers ---
 
-// batch6AsMap views a decoded JSON object.
-func batch6AsMap(value any) map[string]any {
-	object, _ := value.(map[string]any)
-	return object
-}
-
-// batch6AsSlice views a decoded JSON array.
-func batch6AsSlice(value any) []any {
-	items, _ := value.([]any)
-	return items
-}
-
-// batch6SliceOrEmpty mirrors upstream's `data.get(key) or []`: an absent list
-// is an empty array, never JSON null.
-func batch6SliceOrEmpty(value any) []any {
-	if items, ok := value.([]any); ok && items != nil {
-		return items
-	}
-	return []any{}
-}
-
-// batch6AsString reads a decoded JSON string.
-func batch6AsString(value any) string {
-	text, _ := value.(string)
-	return text
-}
-
-// batch6AsBool reads a decoded JSON boolean.
-func batch6AsBool(value any) bool {
-	flag, _ := value.(bool)
-	return flag
-}
-
-// batch6AsNumber reads a decoded JSON number (0 when absent or not numeric).
-func batch6AsNumber(value any) float64 {
+// crmAsNumber reads a decoded JSON number (0 when absent or not numeric).
+func crmAsNumber(value any) float64 {
 	switch typed := value.(type) {
 	case float64:
 		return typed
@@ -512,27 +470,16 @@ func batch6AsNumber(value any) float64 {
 	}
 }
 
-// batch6Clamp bounds an integer to [low, high].
-func batch6Clamp(value, low, high int) int {
-	if value < low {
-		return low
-	}
-	if value > high {
-		return high
-	}
-	return value
-}
-
-// batch6Truncate caps provider bodies at the upstream slice width.
-func batch6Truncate(text string, limit int) string {
+// crmTruncate caps provider bodies at the upstream slice width.
+func crmTruncate(text string, limit int) string {
 	if utf8.RuneCountInString(text) <= limit {
 		return text
 	}
 	return string([]rune(text)[:limit])
 }
 
-// batch6OptionalString distinguishes an absent/null argument from "".
-func batch6OptionalString(input map[string]any, name string) (string, bool) {
+// crmOptionalString distinguishes an absent/null argument from "".
+func crmOptionalString(input map[string]any, name string) (string, bool) {
 	value, present := input[name]
 	if !present || value == nil {
 		return "", false
@@ -543,9 +490,9 @@ func batch6OptionalString(input map[string]any, name string) (string, bool) {
 	return fmt.Sprint(value), true
 }
 
-// batch6OptionalMap returns a map argument, decoding it when the caller sent a
+// crmOptionalMap returns a map argument, decoding it when the caller sent a
 // JSON string (upstream accepts dicts from MCP clients).
-func batch6OptionalMap(input map[string]any, name string) (map[string]any, bool, error) {
+func crmOptionalMap(input map[string]any, name string) (map[string]any, bool, error) {
 	value, present := input[name]
 	if !present || value == nil {
 		return nil, false, nil
@@ -579,8 +526,8 @@ func batch6OptionalMap(input map[string]any, name string) (map[string]any, bool,
 	}
 }
 
-// batch6OptionalList returns a list argument, decoding JSON strings.
-func batch6OptionalList(input map[string]any, name string) ([]any, bool, error) {
+// crmOptionalList returns a list argument, decoding JSON strings.
+func crmOptionalList(input map[string]any, name string) ([]any, bool, error) {
 	value, present := input[name]
 	if !present || value == nil {
 		return nil, false, nil
@@ -614,9 +561,9 @@ func batch6OptionalList(input map[string]any, name string) ([]any, bool, error) 
 	}
 }
 
-// batch6JSONParam decodes an optional JSON-string argument (filter_json,
+// crmJsonParam decodes an optional JSON-string argument (filter_json,
 // sorts_json) into its structured form.
-func batch6JSONParam(input map[string]any, name string) (any, bool, error) {
+func crmJsonParam(input map[string]any, name string) (any, bool, error) {
 	raw, present := input[name]
 	if !present || raw == nil {
 		return nil, false, nil
@@ -634,9 +581,9 @@ func batch6JSONParam(input map[string]any, name string) (any, bool, error) {
 	return raw, true, nil
 }
 
-// batch6QueryValues turns a map of optional query parameters into url.Values,
+// crmQueryValues turns a map of optional query parameters into url.Values,
 // skipping absent/empty values.
-func batch6QueryValues(values map[string]any) url.Values {
+func crmQueryValues(values map[string]any) url.Values {
 	out := url.Values{}
 	for name, value := range values {
 		if value == nil {

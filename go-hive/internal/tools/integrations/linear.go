@@ -17,10 +17,10 @@ import (
 	"strings"
 )
 
-const batch4LinearMaxBody = 8 << 20
+const linearMaxBody = 8 << 20
 
 const (
-	batch4LinearIssueCreateMutation = `
+	linearIssueCreateMutation = `
 	mutation IssueCreate($input: IssueCreateInput!) {
 		issueCreate(input: $input) {
 			success
@@ -41,7 +41,7 @@ const (
 	}
 	`
 
-	batch4LinearIssueQuery = `
+	linearIssueQuery = `
 	query Issue($id: String!) {
 		issue(id: $id) {
 			id
@@ -63,7 +63,7 @@ const (
 	}
 	`
 
-	batch4LinearIssueUpdateMutation = `
+	linearIssueUpdateMutation = `
 	mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
 		issueUpdate(id: $id, input: $input) {
 			success
@@ -83,7 +83,7 @@ const (
 	}
 	`
 
-	batch4LinearIssueDeleteMutation = `
+	linearIssueDeleteMutation = `
 	mutation IssueDelete($id: String!) {
 		issueDelete(id: $id) {
 			success
@@ -91,7 +91,7 @@ const (
 	}
 	`
 
-	batch4LinearIssuesQuery = `
+	linearIssuesQuery = `
 	query Issues($filter: IssueFilter, $first: Int) {
 		issues(filter: $filter, first: $first) {
 			nodes {
@@ -118,7 +118,7 @@ const (
 	}
 	`
 
-	batch4LinearCommentCreateMutation = `
+	linearCommentCreateMutation = `
 	mutation CommentCreate($input: CommentCreateInput!) {
 		commentCreate(input: $input) {
 			success
@@ -132,7 +132,7 @@ const (
 	}
 	`
 
-	batch4LinearProjectCreateMutation = `
+	linearProjectCreateMutation = `
 	mutation ProjectCreate($input: ProjectCreateInput!) {
 		projectCreate(input: $input) {
 			success
@@ -152,7 +152,7 @@ const (
 	}
 	`
 
-	batch4LinearProjectQuery = `
+	linearProjectQuery = `
 	query Project($id: String!) {
 		project(id: $id) {
 			id
@@ -171,7 +171,7 @@ const (
 	}
 	`
 
-	batch4LinearProjectUpdateMutation = `
+	linearProjectUpdateMutation = `
 	mutation ProjectUpdate($id: String!, $input: ProjectUpdateInput!) {
 		projectUpdate(id: $id, input: $input) {
 			success
@@ -189,7 +189,7 @@ const (
 	}
 	`
 
-	batch4LinearProjectsQuery = `
+	linearProjectsQuery = `
 	query Projects($filter: ProjectFilter, $first: Int) {
 		projects(filter: $filter, first: $first) {
 			nodes {
@@ -211,7 +211,7 @@ const (
 	}
 	`
 
-	batch4LinearTeamsQuery = `
+	linearTeamsQuery = `
 	query Teams {
 		teams {
 			nodes {
@@ -226,7 +226,7 @@ const (
 	}
 	`
 
-	batch4LinearTeamQuery = `
+	linearTeamQuery = `
 	query Team($id: String!) {
 		team(id: $id) {
 			id
@@ -242,7 +242,7 @@ const (
 	}
 	`
 
-	batch4LinearWorkflowStatesQuery = `
+	linearWorkflowStatesQuery = `
 	query WorkflowStates($teamId: ID!) {
 		workflowStates(filter: { team: { id: { eq: $teamId } } }) {
 			nodes {
@@ -257,7 +257,7 @@ const (
 	}
 	`
 
-	batch4LinearIssueLabelCreateMutation = `
+	linearIssueLabelCreateMutation = `
 	mutation IssueLabelCreate($input: IssueLabelCreateInput!) {
 		issueLabelCreate(input: $input) {
 			success
@@ -271,7 +271,7 @@ const (
 	}
 	`
 
-	batch4LinearIssueLabelsQuery = `
+	linearIssueLabelsQuery = `
 	query IssueLabels($filter: IssueLabelFilter) {
 		issueLabels(filter: $filter) {
 			nodes {
@@ -285,7 +285,7 @@ const (
 	}
 	`
 
-	batch4LinearCyclesQuery = `
+	linearCyclesQuery = `
 	query Cycles($filter: CycleFilter, $first: Int) {
 		cycles(filter: $filter, first: $first) {
 			nodes {
@@ -307,7 +307,7 @@ const (
 	}
 	`
 
-	batch4LinearIssueCommentsQuery = `
+	linearIssueCommentsQuery = `
 	query Issue($id: String!) {
 		issue(id: $id) {
 			comments(first: 50) {
@@ -323,7 +323,7 @@ const (
 	}
 	`
 
-	batch4LinearIssueRelationCreateMutation = `
+	linearIssueRelationCreateMutation = `
 	mutation IssueRelationCreate($input: IssueRelationCreateInput!) {
 		issueRelationCreate(input: $input) {
 			success
@@ -337,7 +337,7 @@ const (
 	}
 	`
 
-	batch4LinearUsersQuery = `
+	linearUsersQuery = `
 	query Users {
 		users {
 			nodes {
@@ -353,7 +353,7 @@ const (
 	}
 	`
 
-	batch4LinearUserQuery = `
+	linearUserQuery = `
 	query User($id: String!) {
 		user(id: $id) {
 			id
@@ -375,7 +375,7 @@ const (
 	}
 	`
 
-	batch4LinearViewerQuery = `
+	linearViewerQuery = `
 	query Viewer {
 		viewer {
 			id
@@ -399,7 +399,7 @@ const (
 	`
 )
 
-var batch4LinearTool = &Tool{
+var linearTool = &Tool{
 	ID:          "linear_tool",
 	Name:        "linear",
 	DisplayName: "Linear",
@@ -619,48 +619,48 @@ var batch4LinearTool = &Tool{
 	},
 }
 
-func batch4LinearImpls() map[string]ActionFunc {
+func linearImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
-		"linear_cycles_list":           batch4LinearCyclesList,
-		"linear_issue_add_comment":     batch4LinearIssueAddComment,
-		"linear_issue_comments_list":   batch4LinearIssueCommentsList,
-		"linear_issue_create":          batch4LinearIssueCreate,
-		"linear_issue_delete":          batch4LinearIssueDelete,
-		"linear_issue_get":             batch4LinearIssueGet,
-		"linear_issue_relation_create": batch4LinearIssueRelationCreate,
-		"linear_issue_search":          batch4LinearIssueSearch,
-		"linear_issue_update":          batch4LinearIssueUpdate,
-		"linear_label_create":          batch4LinearLabelCreate,
-		"linear_labels_list":           batch4LinearLabelsList,
-		"linear_project_create":        batch4LinearProjectCreate,
-		"linear_project_get":           batch4LinearProjectGet,
-		"linear_project_list":          batch4LinearProjectList,
-		"linear_project_update":        batch4LinearProjectUpdate,
-		"linear_team_get":              batch4LinearTeamGet,
-		"linear_teams_list":            batch4LinearTeamsList,
-		"linear_user_get":              batch4LinearUserGet,
-		"linear_users_list":            batch4LinearUsersList,
-		"linear_viewer":                batch4LinearViewer,
-		"linear_workflow_states_get":   batch4LinearWorkflowStatesGet,
+		"linear_cycles_list":           linearCyclesList,
+		"linear_issue_add_comment":     linearIssueAddComment,
+		"linear_issue_comments_list":   linearIssueCommentsList,
+		"linear_issue_create":          linearIssueCreate,
+		"linear_issue_delete":          linearIssueDelete,
+		"linear_issue_get":             linearIssueGet,
+		"linear_issue_relation_create": linearIssueRelationCreate,
+		"linear_issue_search":          linearIssueSearch,
+		"linear_issue_update":          linearIssueUpdate,
+		"linear_label_create":          linearLabelCreate,
+		"linear_labels_list":           linearLabelsList,
+		"linear_project_create":        linearProjectCreate,
+		"linear_project_get":           linearProjectGet,
+		"linear_project_list":          linearProjectList,
+		"linear_project_update":        linearProjectUpdate,
+		"linear_team_get":              linearTeamGet,
+		"linear_teams_list":            linearTeamsList,
+		"linear_user_get":              linearUserGet,
+		"linear_users_list":            linearUsersList,
+		"linear_viewer":                linearViewer,
+		"linear_workflow_states_get":   linearWorkflowStatesGet,
 	}
 }
 
-func batch4LinearAuthError() map[string]any {
+func linearAuthError() map[string]any {
 	return map[string]any{
 		"error": "Linear credentials not configured",
 		"help":  "Set LINEAR_API_KEY environment variable or configure via credential store. Get an API key at https://linear.app/settings/api",
 	}
 }
 
-// batch4LinearExecute posts one GraphQL document. Transport failures are
+// linearExecute posts one GraphQL document. Transport failures are
 // returned as Go errors so the action wrappers can apply the upstream
 // timeout/network messages; API failures are returned as error dicts.
-func batch4LinearExecute(ctx context.Context, rt *Runtime, query string, variables map[string]any) (map[string]any, error) {
-	token := batch4ModuleToken(rt, "linear_tool")
+func linearExecute(ctx context.Context, rt *Runtime, query string, variables map[string]any) (map[string]any, error) {
+	token := moduleToken(rt, "linear_tool")
 	if token == "" {
-		return batch4LinearAuthError(), nil
+		return linearAuthError(), nil
 	}
-	base := batch4ModuleURL(rt, "linear_tool")
+	base := moduleBaseURL(rt, "linear_tool")
 	if base == "" {
 		base = "https://api.linear.app"
 	}
@@ -680,12 +680,12 @@ func batch4LinearExecute(ctx context.Context, rt *Runtime, query string, variabl
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := batch4HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, batch4LinearMaxBody))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, linearMaxBody))
 	if err != nil {
 		return nil, err
 	}
@@ -699,11 +699,11 @@ func batch4LinearExecute(ctx context.Context, rt *Runtime, query string, variabl
 		return map[string]any{"error": "Linear rate limit exceeded. Try again later."}, nil
 	case resp.StatusCode >= 400:
 		return map[string]any{
-			"error": fmt.Sprintf("Linear API error (HTTP %d): %s", resp.StatusCode, batch4LinearErrorDetail(raw)),
+			"error": fmt.Sprintf("Linear API error (HTTP %d): %s", resp.StatusCode, linearErrorDetail(raw)),
 		}, nil
 	case resp.StatusCode < 200 || resp.StatusCode >= 300:
 		return map[string]any{
-			"error": fmt.Sprintf("Linear API error (HTTP %d): %s", resp.StatusCode, batch4LinearErrorDetail(raw)),
+			"error": fmt.Sprintf("Linear API error (HTTP %d): %s", resp.StatusCode, linearErrorDetail(raw)),
 		}, nil
 	}
 
@@ -713,8 +713,8 @@ func batch4LinearExecute(ctx context.Context, rt *Runtime, query string, variabl
 	}
 	if errors, present := envelope["errors"]; present {
 		messages := make([]string, 0)
-		for _, rawError := range batch4AsSlice(errors) {
-			object := batch4AsMap(rawError)
+		for _, rawError := range asSlice(errors) {
+			object := asMap(rawError)
 			if message, ok := object["message"].(string); ok {
 				messages = append(messages, message)
 				continue
@@ -729,8 +729,8 @@ func batch4LinearExecute(ctx context.Context, rt *Runtime, query string, variabl
 	return envelope, nil
 }
 
-// batch4LinearErrorDetail mirrors response.json().get("message", response.text).
-func batch4LinearErrorDetail(raw []byte) string {
+// linearErrorDetail mirrors response.json().get("message", response.text).
+func linearErrorDetail(raw []byte) string {
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err == nil {
 		if message, ok := payload["message"].(string); ok {
@@ -740,11 +740,11 @@ func batch4LinearErrorDetail(raw []byte) string {
 	return string(raw)
 }
 
-// batch4LinearCall runs one document and translates transport errors.
-func batch4LinearCall(ctx context.Context, rt *Runtime, query string, variables map[string]any) (map[string]any, error) {
-	result, err := batch4LinearExecute(ctx, rt, query, variables)
+// linearCall runs one document and translates transport errors.
+func linearCall(ctx context.Context, rt *Runtime, query string, variables map[string]any) (map[string]any, error) {
+	result, err := linearExecute(ctx, rt, query, variables)
 	if err != nil {
-		if batch4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return map[string]any{"error": "Request timed out"}, nil
 		}
 		return map[string]any{"error": "Network error: " + err.Error()}, nil
@@ -752,42 +752,32 @@ func batch4LinearCall(ctx context.Context, rt *Runtime, query string, variables 
 	return result, nil
 }
 
-// batch4LinearUnwrap returns the named payload or the whole data map, matching
+// linearUnwrap returns the named payload or the whole data map, matching
 // Python's result.get(key, result).
-func batch4LinearUnwrap(result map[string]any, key string) any {
+func linearUnwrap(result map[string]any, key string) any {
 	if value, present := result[key]; present {
 		return value
 	}
 	return result
 }
 
-// batch4LinearFailure reports an API/GraphQL error carried in the result map.
-// List actions must return it before reshaping, like upstream's
-// `if "error" in result: return result`.
-func batch4LinearFailure(result map[string]any) (map[string]any, bool) {
-	if _, failed := result["error"]; failed {
-		return result, true
-	}
-	return nil, false
-}
-
-// batch4LinearNodes reads a connection's nodes, defaulting to an empty list.
-func batch4LinearNodes(result map[string]any, connection string) []any {
-	payload := batch4AsMap(result[connection])
-	nodes := batch4AsSlice(payload["nodes"])
+// linearNodes reads a connection's nodes, defaulting to an empty list.
+func linearNodes(result map[string]any, connection string) []any {
+	payload := asMap(result[connection])
+	nodes := asSlice(payload["nodes"])
 	if nodes == nil {
 		return []any{}
 	}
 	return nodes
 }
 
-// batch4LinearHasNextPage reads connection.pageInfo.hasNextPage.
-func batch4LinearHasNextPage(result map[string]any, connection string) bool {
-	payload := batch4AsMap(result[connection])
-	return batch4AsBool(batch4AsMap(payload["pageInfo"])["hasNextPage"])
+// linearHasNextPage reads connection.pageInfo.hasNextPage.
+func linearHasNextPage(result map[string]any, connection string) bool {
+	payload := asMap(result[connection])
+	return asBool(asMap(payload["pageInfo"])["hasNextPage"])
 }
 
-func batch4LinearIssueCreate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func linearIssueCreate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	inputData := map[string]any{
 		"title":  stringArg(input, "title"),
 		"teamId": stringArg(input, "team_id"),
@@ -798,7 +788,7 @@ func batch4LinearIssueCreate(ctx context.Context, rt *Runtime, input map[string]
 	if assignee := stringArg(input, "assignee_id"); assignee != "" {
 		inputData["assigneeId"] = assignee
 	}
-	if priority, present := batch4OptionalInt(input, "priority"); present {
+	if priority, present := optionalInt(input, "priority"); present {
 		inputData["priority"] = priority
 	}
 	if labels := stringSliceArg(input, "label_ids"); len(labels) > 0 {
@@ -810,60 +800,60 @@ func batch4LinearIssueCreate(ctx context.Context, rt *Runtime, input map[string]
 	if state := stringArg(input, "state_id"); state != "" {
 		inputData["stateId"] = state
 	}
-	result, err := batch4LinearCall(ctx, rt, batch4LinearIssueCreateMutation, map[string]any{"input": inputData})
+	result, err := linearCall(ctx, rt, linearIssueCreateMutation, map[string]any{"input": inputData})
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "issueCreate"), nil
+	return linearUnwrap(result, "issueCreate"), nil
 }
 
-func batch4LinearIssueGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearIssueQuery, map[string]any{"id": stringArg(input, "issue_id")})
+func linearIssueGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearIssueQuery, map[string]any{"id": stringArg(input, "issue_id")})
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "issue"), nil
+	return linearUnwrap(result, "issue"), nil
 }
 
-func batch4LinearIssueUpdate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func linearIssueUpdate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	inputData := map[string]any{}
-	if value, present := batch4OptionalString(input, "title"); present {
+	if value, present := optionalString(input, "title"); present {
 		inputData["title"] = value
 	}
-	if value, present := batch4OptionalString(input, "description"); present {
+	if value, present := optionalString(input, "description"); present {
 		inputData["description"] = value
 	}
-	if value, present := batch4OptionalString(input, "state_id"); present {
+	if value, present := optionalString(input, "state_id"); present {
 		inputData["stateId"] = value
 	}
-	if value, present := batch4OptionalString(input, "assignee_id"); present {
+	if value, present := optionalString(input, "assignee_id"); present {
 		inputData["assigneeId"] = value
 	}
-	if value, present := batch4OptionalInt(input, "priority"); present {
+	if value, present := optionalInt(input, "priority"); present {
 		inputData["priority"] = value
 	}
-	if value, present := batch4OptionalStrings(input, "label_ids"); present {
+	if value, present := notionOptionalStrings(input, "label_ids"); present {
 		inputData["labelIds"] = value
 	}
-	result, err := batch4LinearCall(ctx, rt, batch4LinearIssueUpdateMutation, map[string]any{
+	result, err := linearCall(ctx, rt, linearIssueUpdateMutation, map[string]any{
 		"id":    stringArg(input, "issue_id"),
 		"input": inputData,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "issueUpdate"), nil
+	return linearUnwrap(result, "issueUpdate"), nil
 }
 
-func batch4LinearIssueDelete(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearIssueDeleteMutation, map[string]any{"id": stringArg(input, "issue_id")})
+func linearIssueDelete(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearIssueDeleteMutation, map[string]any{"id": stringArg(input, "issue_id")})
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "issueDelete"), nil
+	return linearUnwrap(result, "issueDelete"), nil
 }
 
-func batch4LinearIssueSearch(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func linearIssueSearch(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	filterData := map[string]any{}
 	if query := stringArg(input, "query"); query != "" {
 		filterData["or"] = []any{
@@ -894,23 +884,23 @@ func batch4LinearIssueSearch(ctx context.Context, rt *Runtime, input map[string]
 	if len(filterData) > 0 {
 		variables["filter"] = filterData
 	}
-	result, err := batch4LinearCall(ctx, rt, batch4LinearIssuesQuery, variables)
+	result, err := linearCall(ctx, rt, linearIssuesQuery, variables)
 	if err != nil {
 		return nil, err
 	}
-	if failure, failed := batch4LinearFailure(result); failed {
+	if failure, failed := failureResult(result); failed {
 		return failure, nil
 	}
-	issues := batch4LinearNodes(result, "issues")
+	issues := linearNodes(result, "issues")
 	return map[string]any{
 		"issues":      issues,
 		"total":       len(issues),
-		"hasNextPage": batch4LinearHasNextPage(result, "issues"),
+		"hasNextPage": linearHasNextPage(result, "issues"),
 	}, nil
 }
 
-func batch4LinearIssueAddComment(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearCommentCreateMutation, map[string]any{
+func linearIssueAddComment(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearCommentCreateMutation, map[string]any{
 		"input": map[string]any{
 			"issueId": stringArg(input, "issue_id"),
 			"body":    stringArg(input, "body"),
@@ -919,10 +909,10 @@ func batch4LinearIssueAddComment(ctx context.Context, rt *Runtime, input map[str
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "commentCreate"), nil
+	return linearUnwrap(result, "commentCreate"), nil
 }
 
-func batch4LinearProjectCreate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func linearProjectCreate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	inputData := map[string]any{
 		"name":    stringArg(input, "name"),
 		"teamIds": stringSliceArg(input, "team_ids"),
@@ -939,46 +929,46 @@ func batch4LinearProjectCreate(ctx context.Context, rt *Runtime, input map[strin
 	if lead := stringArg(input, "lead_id"); lead != "" {
 		inputData["leadId"] = lead
 	}
-	result, err := batch4LinearCall(ctx, rt, batch4LinearProjectCreateMutation, map[string]any{"input": inputData})
+	result, err := linearCall(ctx, rt, linearProjectCreateMutation, map[string]any{"input": inputData})
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "projectCreate"), nil
+	return linearUnwrap(result, "projectCreate"), nil
 }
 
-func batch4LinearProjectGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearProjectQuery, map[string]any{"id": stringArg(input, "project_id")})
+func linearProjectGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearProjectQuery, map[string]any{"id": stringArg(input, "project_id")})
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "project"), nil
+	return linearUnwrap(result, "project"), nil
 }
 
-func batch4LinearProjectUpdate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func linearProjectUpdate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	inputData := map[string]any{}
-	if value, present := batch4OptionalString(input, "name"); present {
+	if value, present := optionalString(input, "name"); present {
 		inputData["name"] = value
 	}
-	if value, present := batch4OptionalString(input, "description"); present {
+	if value, present := optionalString(input, "description"); present {
 		inputData["description"] = value
 	}
-	if value, present := batch4OptionalString(input, "state"); present {
+	if value, present := optionalString(input, "state"); present {
 		inputData["state"] = value
 	}
-	if value, present := batch4OptionalString(input, "target_date"); present {
+	if value, present := optionalString(input, "target_date"); present {
 		inputData["targetDate"] = value
 	}
-	result, err := batch4LinearCall(ctx, rt, batch4LinearProjectUpdateMutation, map[string]any{
+	result, err := linearCall(ctx, rt, linearProjectUpdateMutation, map[string]any{
 		"id":    stringArg(input, "project_id"),
 		"input": inputData,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "projectUpdate"), nil
+	return linearUnwrap(result, "projectUpdate"), nil
 }
 
-func batch4LinearProjectList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func linearProjectList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	filterData := map[string]any{}
 	if team := stringArg(input, "team_id"); team != "" {
 		filterData["accessibleTeams"] = map[string]any{"id": map[string]any{"eq": team}}
@@ -994,54 +984,54 @@ func batch4LinearProjectList(ctx context.Context, rt *Runtime, input map[string]
 	if len(filterData) > 0 {
 		variables["filter"] = filterData
 	}
-	result, err := batch4LinearCall(ctx, rt, batch4LinearProjectsQuery, variables)
+	result, err := linearCall(ctx, rt, linearProjectsQuery, variables)
 	if err != nil {
 		return nil, err
 	}
-	if failure, failed := batch4LinearFailure(result); failed {
+	if failure, failed := failureResult(result); failed {
 		return failure, nil
 	}
-	projects := batch4LinearNodes(result, "projects")
+	projects := linearNodes(result, "projects")
 	return map[string]any{
 		"projects":    projects,
 		"total":       len(projects),
-		"hasNextPage": batch4LinearHasNextPage(result, "projects"),
+		"hasNextPage": linearHasNextPage(result, "projects"),
 	}, nil
 }
 
-func batch4LinearTeamsList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearTeamsQuery, nil)
+func linearTeamsList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearTeamsQuery, nil)
 	if err != nil {
 		return nil, err
 	}
-	if failure, failed := batch4LinearFailure(result); failed {
+	if failure, failed := failureResult(result); failed {
 		return failure, nil
 	}
-	teams := batch4LinearNodes(result, "teams")
+	teams := linearNodes(result, "teams")
 	return map[string]any{"teams": teams, "total": len(teams)}, nil
 }
 
-func batch4LinearTeamGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearTeamQuery, map[string]any{"id": stringArg(input, "team_id")})
+func linearTeamGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearTeamQuery, map[string]any{"id": stringArg(input, "team_id")})
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "team"), nil
+	return linearUnwrap(result, "team"), nil
 }
 
-func batch4LinearWorkflowStatesGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearWorkflowStatesQuery, map[string]any{"teamId": stringArg(input, "team_id")})
+func linearWorkflowStatesGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearWorkflowStatesQuery, map[string]any{"teamId": stringArg(input, "team_id")})
 	if err != nil {
 		return nil, err
 	}
-	if failure, failed := batch4LinearFailure(result); failed {
+	if failure, failed := failureResult(result); failed {
 		return failure, nil
 	}
-	states := batch4LinearNodes(result, "workflowStates")
+	states := linearNodes(result, "workflowStates")
 	return map[string]any{"states": states, "total": len(states)}, nil
 }
 
-func batch4LinearLabelCreate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func linearLabelCreate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	inputData := map[string]any{
 		"name":   stringArg(input, "name"),
 		"teamId": stringArg(input, "team_id"),
@@ -1052,58 +1042,58 @@ func batch4LinearLabelCreate(ctx context.Context, rt *Runtime, input map[string]
 	if description := stringArg(input, "description"); description != "" {
 		inputData["description"] = description
 	}
-	result, err := batch4LinearCall(ctx, rt, batch4LinearIssueLabelCreateMutation, map[string]any{"input": inputData})
+	result, err := linearCall(ctx, rt, linearIssueLabelCreateMutation, map[string]any{"input": inputData})
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "issueLabelCreate"), nil
+	return linearUnwrap(result, "issueLabelCreate"), nil
 }
 
-func batch4LinearLabelsList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func linearLabelsList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	var variables map[string]any
 	if team := stringArg(input, "team_id"); team != "" {
 		variables = map[string]any{"filter": map[string]any{"team": map[string]any{"id": map[string]any{"eq": team}}}}
 	}
-	result, err := batch4LinearCall(ctx, rt, batch4LinearIssueLabelsQuery, variables)
+	result, err := linearCall(ctx, rt, linearIssueLabelsQuery, variables)
 	if err != nil {
 		return nil, err
 	}
-	if failure, failed := batch4LinearFailure(result); failed {
+	if failure, failed := failureResult(result); failed {
 		return failure, nil
 	}
-	labels := batch4LinearNodes(result, "issueLabels")
+	labels := linearNodes(result, "issueLabels")
 	return map[string]any{"labels": labels, "total": len(labels)}, nil
 }
 
-func batch4LinearUsersList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearUsersQuery, nil)
+func linearUsersList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearUsersQuery, nil)
 	if err != nil {
 		return nil, err
 	}
-	if failure, failed := batch4LinearFailure(result); failed {
+	if failure, failed := failureResult(result); failed {
 		return failure, nil
 	}
-	users := batch4LinearNodes(result, "users")
+	users := linearNodes(result, "users")
 	return map[string]any{"users": users, "total": len(users)}, nil
 }
 
-func batch4LinearUserGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearUserQuery, map[string]any{"id": stringArg(input, "user_id")})
+func linearUserGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearUserQuery, map[string]any{"id": stringArg(input, "user_id")})
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "user"), nil
+	return linearUnwrap(result, "user"), nil
 }
 
-func batch4LinearViewer(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearViewerQuery, nil)
+func linearViewer(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearViewerQuery, nil)
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "viewer"), nil
+	return linearUnwrap(result, "viewer"), nil
 }
 
-func batch4LinearCyclesList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func linearCyclesList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	limit := intArg(input, "limit", 50)
 	first := limit
 	if first > 100 {
@@ -1113,43 +1103,43 @@ func batch4LinearCyclesList(ctx context.Context, rt *Runtime, input map[string]a
 		"first":  first,
 		"filter": map[string]any{"team": map[string]any{"id": map[string]any{"eq": stringArg(input, "team_id")}}},
 	}
-	result, err := batch4LinearCall(ctx, rt, batch4LinearCyclesQuery, variables)
+	result, err := linearCall(ctx, rt, linearCyclesQuery, variables)
 	if err != nil {
 		return nil, err
 	}
-	if failure, failed := batch4LinearFailure(result); failed {
+	if failure, failed := failureResult(result); failed {
 		return failure, nil
 	}
-	cycles := batch4LinearNodes(result, "cycles")
+	cycles := linearNodes(result, "cycles")
 	return map[string]any{
 		"cycles":      cycles,
 		"total":       len(cycles),
-		"hasNextPage": batch4LinearHasNextPage(result, "cycles"),
+		"hasNextPage": linearHasNextPage(result, "cycles"),
 	}, nil
 }
 
-func batch4LinearIssueCommentsList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	result, err := batch4LinearCall(ctx, rt, batch4LinearIssueCommentsQuery, map[string]any{"id": stringArg(input, "issue_id")})
+func linearIssueCommentsList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	result, err := linearCall(ctx, rt, linearIssueCommentsQuery, map[string]any{"id": stringArg(input, "issue_id")})
 	if err != nil {
 		return nil, err
 	}
-	if failure, failed := batch4LinearFailure(result); failed {
+	if failure, failed := failureResult(result); failed {
 		return failure, nil
 	}
-	issue := batch4AsMap(result["issue"])
-	comments := batch4AsSlice(batch4AsMap(issue["comments"])["nodes"])
+	issue := asMap(result["issue"])
+	comments := asSlice(asMap(issue["comments"])["nodes"])
 	if comments == nil {
 		comments = []any{}
 	}
 	return map[string]any{"comments": comments, "total": len(comments)}, nil
 }
 
-func batch4LinearIssueRelationCreate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+func linearIssueRelationCreate(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	relationType := stringArg(input, "relation_type")
 	if relationType == "" {
 		relationType = "related"
 	}
-	result, err := batch4LinearCall(ctx, rt, batch4LinearIssueRelationCreateMutation, map[string]any{
+	result, err := linearCall(ctx, rt, linearIssueRelationCreateMutation, map[string]any{
 		"input": map[string]any{
 			"issueId":        stringArg(input, "issue_id"),
 			"relatedIssueId": stringArg(input, "related_issue_id"),
@@ -1159,5 +1149,5 @@ func batch4LinearIssueRelationCreate(ctx context.Context, rt *Runtime, input map
 	if err != nil {
 		return nil, err
 	}
-	return batch4LinearUnwrap(result, "issueRelationCreate"), nil
+	return linearUnwrap(result, "issueRelationCreate"), nil
 }

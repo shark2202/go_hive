@@ -140,24 +140,16 @@ func batch7Lane8Modules() map[string]*ModuleConfig {
 
 // ------------------------------------------------------------ shared bits ---
 
-// batch7Lane8Getenv resolves an environment variable through the runtime.
-func batch7Lane8Getenv(rt *Runtime, name string) string {
-	if rt != nil && rt.Getenv != nil {
-		return rt.Getenv(name)
-	}
-	return os.Getenv(name)
-}
-
 // batch7Lane8Base resolves the module base URL. Mattermost mirrors the
 // upstream client: strip the trailing slash and append /api/v4 when the
 // configured server URL does not already include it.
 func batch7Lane8Base(rt *Runtime, moduleID string) string {
 	if moduleID != "mattermost_tool" {
-		return batch4ModuleURL(rt, moduleID)
+		return moduleBaseURL(rt, moduleID)
 	}
-	base := batch4ModuleURL(rt, moduleID)
+	base := moduleBaseURL(rt, moduleID)
 	if base == "" {
-		base = strings.TrimSpace(batch7Lane8Getenv(rt, "MATTERMOST_URL"))
+		base = strings.TrimSpace(runtimeEnv(rt, "MATTERMOST_URL"))
 	}
 	base = strings.TrimRight(base, "/")
 	if base == "" {
@@ -288,9 +280,9 @@ func batch7Lane8Send(ctx context.Context, rt *Runtime, moduleID, method, path st
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	resp, err := batch4HTTP(rt).Do(req)
+	resp, err := runtimeHTTP(rt).Do(req)
 	if err != nil {
-		if batch4IsTimeout(ctx, err) {
+		if isTimeout(ctx, err) {
 			return nil, map[string]any{"error": "Request timed out"}
 		}
 		return nil, map[string]any{"error": "Network error: " + err.Error()}
@@ -314,7 +306,7 @@ func batch7Lane8Send(ctx context.Context, rt *Runtime, moduleID, method, path st
 // batch7Lane8ProviderMessage reads the provider's {"message": ...} field,
 // falling back to the raw body like the upstream handlers do.
 func batch7Lane8ProviderMessage(resp *batch7Lane8Response) string {
-	if message := batch6AsString(batch4AsMap(resp.Parsed)["message"]); message != "" {
+	if message := asString(asMap(resp.Parsed)["message"]); message != "" {
 		return message
 	}
 	return string(resp.Body)
@@ -323,7 +315,7 @@ func batch7Lane8ProviderMessage(resp *batch7Lane8Response) string {
 // batch7Lane8RateLimitError mirrors the discord/mattermost 429 value.
 func batch7Lane8RateLimitError(moduleID string, resp *batch7Lane8Response) map[string]any {
 	if moduleID == "mattermost_tool" {
-		retry, ok := batch7Lane8FloatValue(batch7Lane8HeaderRetryAfter(resp))
+		retry, ok := numberValue(batch7Lane8HeaderRetryAfter(resp))
 		if !ok {
 			retry = 60
 		}
@@ -332,11 +324,11 @@ func batch7Lane8RateLimitError(moduleID string, resp *batch7Lane8Response) map[s
 			"retry_after": retry,
 		}
 	}
-	retry, ok := batch7Lane8FloatValue(batch4AsMap(resp.Parsed)["retry_after"])
+	retry, ok := numberValue(asMap(resp.Parsed)["retry_after"])
 	if !ok {
 		retry = 60
 	}
-	message := batch6AsString(batch4AsMap(resp.Parsed)["message"])
+	message := asString(asMap(resp.Parsed)["message"])
 	if message == "" {
 		message = "Rate limit exceeded"
 	}
@@ -398,7 +390,7 @@ func batch7Lane8CheckResponse(moduleID string, resp *batch7Lane8Response) map[st
 	case "calendly_tool":
 		if resp.Status >= 400 {
 			return map[string]any{
-				"error": fmt.Sprintf("HTTP %d: %s", resp.Status, batch4TruncateText(string(resp.Body), batch7Lane8MaxError)),
+				"error": fmt.Sprintf("HTTP %d: %s", resp.Status, truncateText(string(resp.Body), batch7Lane8MaxError)),
 			}
 		}
 	case "discord_tool":
@@ -439,7 +431,7 @@ func batch7Lane8Decode(resp *batch7Lane8Response) any {
 	if resp.Parsed != nil {
 		return resp.Parsed
 	}
-	return map[string]any{"raw": batch4TruncateText(string(resp.Body), batch7Lane8MaxError)}
+	return map[string]any{"raw": truncateText(string(resp.Body), batch7Lane8MaxError)}
 }
 
 // batch7Lane8RetryAfter computes the 429 wait for discord/mattermost.
@@ -456,12 +448,12 @@ func batch7Lane8RetryAfter(moduleID string, resp *batch7Lane8Response, attempt i
 		}
 		return math.Min(parsed, batch7Lane8MaxRetryWait)
 	}
-	data := batch4AsMap(resp.Parsed)
+	data := asMap(resp.Parsed)
 	value, present := data["retry_after"]
 	if !present {
 		return math.Min(1, batch7Lane8MaxRetryWait)
 	}
-	parsed, ok := batch7Lane8FloatValue(value)
+	parsed, ok := numberValue(value)
 	if !ok {
 		return math.Min(fallback, batch7Lane8MaxRetryWait)
 	}
@@ -521,28 +513,6 @@ func batch7Lane8BoolArg(input map[string]any, name string, fallback bool) bool {
 		}
 	}
 	return fallback
-}
-
-// batch7Lane8FloatValue converts common JSON numeric representations.
-func batch7Lane8FloatValue(value any) (float64, bool) {
-	switch typed := value.(type) {
-	case float64:
-		return typed, true
-	case float32:
-		return float64(typed), true
-	case int:
-		return float64(typed), true
-	case int64:
-		return float64(typed), true
-	case json.Number:
-		parsed, err := typed.Float64()
-		return parsed, err == nil
-	case string:
-		parsed, err := strconv.ParseFloat(strings.TrimSpace(typed), 64)
-		return parsed, err == nil
-	default:
-		return 0, false
-	}
 }
 
 // batch7Lane8IntFrom reads an integer with a fallback (provider totals).
@@ -808,7 +778,7 @@ func batch7Lane8BrevoSendEmail(ctx context.Context, rt *Runtime, input map[strin
 	}
 	return map[string]any{
 		"success":    true,
-		"message_id": batch4AsMap(parsed)["messageId"],
+		"message_id": asMap(parsed)["messageId"],
 	}, nil
 }
 
@@ -837,7 +807,7 @@ func batch7Lane8BrevoSendSms(ctx context.Context, rt *Runtime, input map[string]
 	if errDict != nil {
 		return errDict, nil
 	}
-	result := batch4AsMap(parsed)
+	result := asMap(parsed)
 	return map[string]any{
 		"success":           true,
 		"reference":         result["reference"],
@@ -871,7 +841,7 @@ func batch7Lane8BrevoCreateContact(ctx context.Context, rt *Runtime, input map[s
 	}
 	return map[string]any{
 		"success": true,
-		"id":      batch4AsMap(parsed)["id"],
+		"id":      asMap(parsed)["id"],
 		"email":   email,
 	}, nil
 }
@@ -890,8 +860,8 @@ func batch7Lane8BrevoGetContact(ctx context.Context, rt *Runtime, input map[stri
 	if errDict != nil {
 		return errDict, nil
 	}
-	contact := batch4AsMap(parsed)
-	attributes := batch4AsMap(contact["attributes"])
+	contact := asMap(parsed)
+	attributes := asMap(contact["attributes"])
 	return map[string]any{
 		"success":           true,
 		"id":                contact["id"],
@@ -899,9 +869,9 @@ func batch7Lane8BrevoGetContact(ctx context.Context, rt *Runtime, input map[stri
 		"first_name":        attributes["FIRSTNAME"],
 		"last_name":         attributes["LASTNAME"],
 		"phone":             attributes["SMS"],
-		"list_ids":          batch6SliceOrEmpty(contact["listIds"]),
-		"email_blacklisted": batch6AsBool(contact["emailBlacklisted"]),
-		"sms_blacklisted":   batch6AsBool(contact["smsBlacklisted"]),
+		"list_ids":          sliceOrEmpty(contact["listIds"]),
+		"email_blacklisted": asBool(contact["emailBlacklisted"]),
+		"sms_blacklisted":   asBool(contact["smsBlacklisted"]),
 		"created_at":        contact["createdAt"],
 		"modified_at":       contact["modifiedAt"],
 	}, nil
@@ -936,8 +906,8 @@ func batch7Lane8BrevoListContacts(ctx context.Context, rt *Runtime, input map[st
 	if errDict := batch7Lane8RequireModule(rt, "brevo_tool"); errDict != nil {
 		return errDict, nil
 	}
-	limit := batch4Clamp(intArg(input, "limit", 50), 1, 1000)
-	query := batch6QueryValues(map[string]any{
+	limit := clampInt(intArg(input, "limit", 50), 1, 1000)
+	query := crmQueryValues(map[string]any{
 		"limit":         limit,
 		"offset":        intArg(input, "offset", 0),
 		"modifiedSince": stringArg(input, "modified_since"),
@@ -946,18 +916,18 @@ func batch7Lane8BrevoListContacts(ctx context.Context, rt *Runtime, input map[st
 	if errDict != nil {
 		return errDict, nil
 	}
-	result := batch4AsMap(parsed)
+	result := asMap(parsed)
 	contacts := make([]any, 0)
-	for _, raw := range batch6SliceOrEmpty(result["contacts"]) {
-		contact := batch4AsMap(raw)
-		attributes := batch4AsMap(contact["attributes"])
+	for _, raw := range sliceOrEmpty(result["contacts"]) {
+		contact := asMap(raw)
+		attributes := asMap(contact["attributes"])
 		contacts = append(contacts, map[string]any{
 			"id":                contact["id"],
 			"email":             contact["email"],
 			"first_name":        attributes["FIRSTNAME"],
 			"last_name":         attributes["LASTNAME"],
-			"list_ids":          batch6SliceOrEmpty(contact["listIds"]),
-			"email_blacklisted": batch6AsBool(contact["emailBlacklisted"]),
+			"list_ids":          sliceOrEmpty(contact["listIds"]),
+			"email_blacklisted": asBool(contact["emailBlacklisted"]),
 			"modified_at":       contact["modifiedAt"],
 		})
 	}
@@ -989,8 +959,8 @@ func batch7Lane8BrevoListEmailCampaigns(ctx context.Context, rt *Runtime, input 
 	if errDict := batch7Lane8RequireModule(rt, "brevo_tool"); errDict != nil {
 		return errDict, nil
 	}
-	limit := batch4Clamp(intArg(input, "limit", 50), 1, 1000)
-	query := batch6QueryValues(map[string]any{
+	limit := clampInt(intArg(input, "limit", 50), 1, 1000)
+	query := crmQueryValues(map[string]any{
 		"status": stringArg(input, "status"),
 		"limit":  limit,
 		"offset": intArg(input, "offset", 0),
@@ -999,11 +969,11 @@ func batch7Lane8BrevoListEmailCampaigns(ctx context.Context, rt *Runtime, input 
 	if errDict != nil {
 		return errDict, nil
 	}
-	result := batch4AsMap(parsed)
+	result := asMap(parsed)
 	campaigns := make([]any, 0)
-	for _, raw := range batch6SliceOrEmpty(result["campaigns"]) {
-		campaign := batch4AsMap(raw)
-		statistics := batch4AsMap(batch4AsMap(campaign["statistics"])["globalStats"])
+	for _, raw := range sliceOrEmpty(result["campaigns"]) {
+		campaign := asMap(raw)
+		statistics := asMap(asMap(campaign["statistics"])["globalStats"])
 		if statistics == nil {
 			statistics = map[string]any{}
 		}
@@ -1039,14 +1009,14 @@ func batch7Lane8BrevoGetEmailStats(ctx context.Context, rt *Runtime, input map[s
 	if errDict != nil {
 		return errDict, nil
 	}
-	result := batch4AsMap(parsed)
+	result := asMap(parsed)
 	return map[string]any{
 		"success":    true,
 		"message_id": result["messageId"],
 		"email":      result["email"],
 		"subject":    result["subject"],
 		"date":       result["date"],
-		"events":     batch6SliceOrEmpty(result["events"]),
+		"events":     sliceOrEmpty(result["events"]),
 	}, nil
 }
 
@@ -1480,7 +1450,7 @@ func batch7Lane8CalendlyGetCurrentUser(ctx context.Context, rt *Runtime, input m
 	if errDict != nil {
 		return errDict, nil
 	}
-	user := batch4AsMap(batch4AsMap(parsed)["resource"])
+	user := asMap(asMap(parsed)["resource"])
 	return map[string]any{
 		"uri":            user["uri"],
 		"name":           user["name"],
@@ -1514,10 +1484,10 @@ func batch7Lane8CalendlyListEventTypes(ctx context.Context, rt *Runtime, input m
 	if errDict != nil {
 		return errDict, nil
 	}
-	items := batch6SliceOrEmpty(batch4AsMap(parsed)["collection"])
+	items := sliceOrEmpty(asMap(parsed)["collection"])
 	eventTypes := make([]any, 0, len(items))
 	for _, raw := range items {
-		eventType := batch4AsMap(raw)
+		eventType := asMap(raw)
 		eventTypes = append(eventTypes, map[string]any{
 			"uri":            eventType["uri"],
 			"name":           eventType["name"],
@@ -1561,11 +1531,11 @@ func batch7Lane8CalendlyListScheduledEvents(ctx context.Context, rt *Runtime, in
 	if errDict != nil {
 		return errDict, nil
 	}
-	items := batch6SliceOrEmpty(batch4AsMap(parsed)["collection"])
+	items := sliceOrEmpty(asMap(parsed)["collection"])
 	events := make([]any, 0, len(items))
 	for _, raw := range items {
-		event := batch4AsMap(raw)
-		invitees := batch4AsMap(event["invitees_counter"])
+		event := asMap(raw)
+		invitees := asMap(event["invitees_counter"])
 		events = append(events, map[string]any{
 			"uri":            event["uri"],
 			"name":           event["name"],
@@ -1573,7 +1543,7 @@ func batch7Lane8CalendlyListScheduledEvents(ctx context.Context, rt *Runtime, in
 			"start_time":     event["start_time"],
 			"end_time":       event["end_time"],
 			"event_type":     event["event_type"],
-			"location":       batch4AsMap(event["location"])["location"],
+			"location":       asMap(event["location"])["location"],
 			"invitees_count": batch7Lane8IntFrom(invitees["total"], 0),
 		})
 	}
@@ -1594,7 +1564,7 @@ func batch7Lane8CalendlyGetScheduledEvent(ctx context.Context, rt *Runtime, inpu
 	if errDict != nil {
 		return errDict, nil
 	}
-	event := batch4AsMap(batch4AsMap(parsed)["resource"])
+	event := asMap(asMap(parsed)["resource"])
 	return map[string]any{
 		"uri":               event["uri"],
 		"name":              event["name"],
@@ -1629,17 +1599,17 @@ func batch7Lane8CalendlyListInvitees(ctx context.Context, rt *Runtime, input map
 	if errDict != nil {
 		return errDict, nil
 	}
-	items := batch6SliceOrEmpty(batch4AsMap(parsed)["collection"])
+	items := sliceOrEmpty(asMap(parsed)["collection"])
 	invitees := make([]any, 0, len(items))
 	for _, raw := range items {
-		invitee := batch4AsMap(raw)
+		invitee := asMap(raw)
 		invitees = append(invitees, map[string]any{
 			"uri":                   invitee["uri"],
 			"name":                  invitee["name"],
 			"email":                 invitee["email"],
 			"status":                invitee["status"],
 			"timezone":              invitee["timezone"],
-			"questions_and_answers": batch6SliceOrEmpty(invitee["questions_and_answers"]),
+			"questions_and_answers": sliceOrEmpty(invitee["questions_and_answers"]),
 			"created_at":            invitee["created_at"],
 		})
 	}
@@ -1664,11 +1634,11 @@ func batch7Lane8CalendlyCancelEvent(ctx context.Context, rt *Runtime, input map[
 	if errDict != nil {
 		return errDict, nil
 	}
-	resource := batch4AsMap(batch4AsMap(parsed)["resource"])
+	resource := asMap(asMap(parsed)["resource"])
 	return map[string]any{
-		"canceled_by": batch6AsString(resource["canceled_by"]),
-		"reason":      batch6AsString(resource["reason"]),
-		"created_at":  batch6AsString(resource["created_at"]),
+		"canceled_by": asString(resource["canceled_by"]),
+		"reason":      asString(resource["reason"]),
+		"created_at":  asString(resource["created_at"]),
 		"status":      "canceled",
 	}, nil
 }
@@ -1694,17 +1664,17 @@ func batch7Lane8CalendlyListWebhooks(ctx context.Context, rt *Runtime, input map
 	if errDict != nil {
 		return errDict, nil
 	}
-	items := batch6SliceOrEmpty(batch4AsMap(parsed)["collection"])
+	items := sliceOrEmpty(asMap(parsed)["collection"])
 	webhooks := make([]any, 0, len(items))
 	for _, raw := range items {
-		webhook := batch4AsMap(raw)
+		webhook := asMap(raw)
 		webhooks = append(webhooks, map[string]any{
-			"uri":          batch6AsString(webhook["uri"]),
-			"callback_url": batch6AsString(webhook["callback_url"]),
-			"state":        batch6AsString(webhook["state"]),
-			"events":       batch6SliceOrEmpty(webhook["events"]),
-			"scope":        batch6AsString(webhook["scope"]),
-			"created_at":   batch6AsString(webhook["created_at"]),
+			"uri":          asString(webhook["uri"]),
+			"callback_url": asString(webhook["callback_url"]),
+			"state":        asString(webhook["state"]),
+			"events":       sliceOrEmpty(webhook["events"]),
+			"scope":        asString(webhook["scope"]),
+			"created_at":   asString(webhook["created_at"]),
 		})
 	}
 	return map[string]any{"count": len(webhooks), "webhooks": webhooks}, nil
@@ -1724,19 +1694,19 @@ func batch7Lane8CalendlyGetEventType(ctx context.Context, rt *Runtime, input map
 	if errDict != nil {
 		return errDict, nil
 	}
-	eventType := batch4AsMap(batch4AsMap(parsed)["resource"])
+	eventType := asMap(asMap(parsed)["resource"])
 	return map[string]any{
-		"uri":              batch6AsString(eventType["uri"]),
-		"name":             batch6AsString(eventType["name"]),
-		"slug":             batch6AsString(eventType["slug"]),
-		"active":           batch6AsBool(eventType["active"]),
+		"uri":              asString(eventType["uri"]),
+		"name":             asString(eventType["name"]),
+		"slug":             asString(eventType["slug"]),
+		"active":           asBool(eventType["active"]),
 		"duration":         eventType["duration"],
-		"kind":             batch6AsString(eventType["kind"]),
-		"type":             batch6AsString(eventType["type"]),
-		"color":            batch6AsString(eventType["color"]),
-		"scheduling_url":   batch6AsString(eventType["scheduling_url"]),
-		"description":      batch6AsString(eventType["description_plain"]),
-		"custom_questions": batch6SliceOrEmpty(eventType["custom_questions"]),
+		"kind":             asString(eventType["kind"]),
+		"type":             asString(eventType["type"]),
+		"color":            asString(eventType["color"]),
+		"scheduling_url":   asString(eventType["scheduling_url"]),
+		"description":      asString(eventType["description_plain"]),
+		"custom_questions": sliceOrEmpty(eventType["custom_questions"]),
 	}, nil
 }
 
@@ -1881,8 +1851,8 @@ func batch7Lane8DiscordListChannels(ctx context.Context, rt *Runtime, input map[
 		return map[string]any{"channels": parsed, "success": true}, nil
 	}
 	channels := make([]any, 0)
-	for _, raw := range batch4AsSlice(parsed) {
-		channel := batch4AsMap(raw)
+	for _, raw := range asSlice(parsed) {
+		channel := asMap(raw)
 		if batch7Lane8DiscordIsTextChannel(channel["type"]) {
 			channels = append(channels, channel)
 		}
@@ -2224,7 +2194,7 @@ func batch7Lane8MattermostCreateReaction(ctx context.Context, rt *Runtime, input
 	if errDict != nil {
 		return errDict, nil
 	}
-	userID := batch6AsString(batch4AsMap(me)["id"])
+	userID := asString(asMap(me)["id"])
 	body := map[string]any{"user_id": userID, "post_id": postID, "emoji_name": emojiName}
 	if _, errDict := batch7Lane8Call(ctx, rt, "mattermost_tool", http.MethodPost, "/reactions", nil, body); errDict != nil {
 		return errDict, nil

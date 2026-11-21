@@ -17,9 +17,9 @@ import (
 
 const batch6SalesforceAPIVersion = "v62.0"
 
-// batch6SalesforceTool mirrors gen_catalog.py output: one action per @mcp.tool
+// salesforceTool mirrors gen_catalog.py output: one action per @mcp.tool
 // function, alphabetical, with the upstream parameter names and defaults.
-var batch6SalesforceTool = &Tool{
+var salesforceTool = &Tool{
 	ID:          "salesforce_tool",
 	Name:        "salesforce",
 	DisplayName: "Salesforce",
@@ -112,8 +112,8 @@ var batch6SalesforceTool = &Tool{
 	},
 }
 
-// batch6SalesforceImpls binds every action name to its implementation.
-func batch6SalesforceImpls() map[string]ActionFunc {
+// salesforceImpls binds every action name to its implementation.
+func salesforceImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
 		"salesforce_create_record":    batch6SalesforceCreateRecord,
 		"salesforce_delete_record":    batch6SalesforceDeleteRecord,
@@ -135,7 +135,7 @@ func batch6SalesforcePath(suffix string) string {
 // batch6SalesforceFields accepts the object form the model sends for create and
 // update, or a JSON string for clients that pre-encode it.
 func batch6SalesforceFields(input map[string]any) (map[string]any, map[string]any) {
-	fields, present, err := batch6OptionalMap(input, "fields")
+	fields, present, err := crmOptionalMap(input, "fields")
 	if err != nil || !present || len(fields) == 0 {
 		return nil, map[string]any{"error": "fields dict is required"}
 	}
@@ -150,23 +150,23 @@ func batch6SalesforceSOQLQuery(ctx context.Context, rt *Runtime, input map[strin
 		return map[string]any{"error": "Either query or next_records_url is required"}, nil
 	}
 
-	spec := batch6Request{Method: http.MethodGet}
+	spec := crmRequest{Method: http.MethodGet}
 	if nextURL != "" {
 		spec.Path = nextURL
 	} else {
 		spec.Path = batch6SalesforcePath("/query/")
 		spec.Query = url.Values{"q": {query}}
 	}
-	res, fail := batch6Send(ctx, rt, "salesforce_tool", spec)
+	res, fail := crmSend(ctx, rt, "salesforce_tool", spec)
 	if fail != nil {
 		return fail, nil
 	}
-	if errDict := batch6SalesforceCheck(res); errDict != nil {
+	if errDict := salesforceCheck(res); errDict != nil {
 		return errDict, nil
 	}
-	data := batch6AsMap(res.Parsed)
+	data := asMap(res.Parsed)
 	output := map[string]any{
-		"total_size": batch6AsNumber(data["totalSize"]),
+		"total_size": crmAsNumber(data["totalSize"]),
 		"done":       true,
 		"records":    []any{},
 	}
@@ -176,7 +176,7 @@ func batch6SalesforceSOQLQuery(ctx context.Context, rt *Runtime, input map[strin
 	if records, ok := data["records"].([]any); ok {
 		output["records"] = records
 	}
-	if next := batch6AsString(data["nextRecordsUrl"]); next != "" {
+	if next := asString(data["nextRecordsUrl"]); next != "" {
 		output["next_records_url"] = next
 	}
 	return output, nil
@@ -189,18 +189,18 @@ func batch6SalesforceGetRecord(ctx context.Context, rt *Runtime, input map[strin
 	if objectType == "" || recordID == "" {
 		return map[string]any{"error": "object_type and record_id are required"}, nil
 	}
-	spec := batch6Request{
+	spec := crmRequest{
 		Method: http.MethodGet,
 		Path:   batch6SalesforcePath("/sobjects/" + url.PathEscape(objectType) + "/" + url.PathEscape(recordID)),
 	}
 	if fields := batch6SalesforceFieldList(input); fields != "" {
 		spec.Query = url.Values{"fields": {fields}}
 	}
-	res, fail := batch6Send(ctx, rt, "salesforce_tool", spec)
+	res, fail := crmSend(ctx, rt, "salesforce_tool", spec)
 	if fail != nil {
 		return fail, nil
 	}
-	if errDict := batch6SalesforceCheck(res); errDict != nil {
+	if errDict := salesforceCheck(res); errDict != nil {
 		return errDict, nil
 	}
 	if res.Status == http.StatusNoContent {
@@ -222,7 +222,7 @@ func batch6SalesforceFieldList(input map[string]any) string {
 	if items, ok := value.([]any); ok {
 		parts := make([]string, 0, len(items))
 		for _, item := range items {
-			if text := batch6AsString(item); text != "" {
+			if text := asString(item); text != "" {
 				parts = append(parts, text)
 			}
 		}
@@ -241,7 +241,7 @@ func batch6SalesforceCreateRecord(ctx context.Context, rt *Runtime, input map[st
 	if errDict != nil {
 		return errDict, nil
 	}
-	res, fail := batch6Send(ctx, rt, "salesforce_tool", batch6Request{
+	res, fail := crmSend(ctx, rt, "salesforce_tool", crmRequest{
 		Method: http.MethodPost,
 		Path:   batch6SalesforcePath("/sobjects/" + url.PathEscape(objectType)),
 		Body:   fields,
@@ -249,7 +249,7 @@ func batch6SalesforceCreateRecord(ctx context.Context, rt *Runtime, input map[st
 	if fail != nil {
 		return fail, nil
 	}
-	if errDict := batch6SalesforceCheck(res); errDict != nil {
+	if errDict := salesforceCheck(res); errDict != nil {
 		return errDict, nil
 	}
 	return res.Parsed, nil
@@ -266,7 +266,7 @@ func batch6SalesforceUpdateRecord(ctx context.Context, rt *Runtime, input map[st
 	if errDict != nil {
 		return errDict, nil
 	}
-	res, fail := batch6Send(ctx, rt, "salesforce_tool", batch6Request{
+	res, fail := crmSend(ctx, rt, "salesforce_tool", crmRequest{
 		Method: http.MethodPatch,
 		Path:   batch6SalesforcePath("/sobjects/" + url.PathEscape(objectType) + "/" + url.PathEscape(recordID)),
 		Body:   fields,
@@ -274,7 +274,7 @@ func batch6SalesforceUpdateRecord(ctx context.Context, rt *Runtime, input map[st
 	if fail != nil {
 		return fail, nil
 	}
-	if errDict := batch6SalesforceCheck(res); errDict != nil {
+	if errDict := salesforceCheck(res); errDict != nil {
 		return errDict, nil
 	}
 	if res.Status == http.StatusNoContent {
@@ -290,14 +290,14 @@ func batch6SalesforceDeleteRecord(ctx context.Context, rt *Runtime, input map[st
 	if objectType == "" || recordID == "" {
 		return map[string]any{"error": "object_type and record_id are required"}, nil
 	}
-	res, fail := batch6Send(ctx, rt, "salesforce_tool", batch6Request{
+	res, fail := crmSend(ctx, rt, "salesforce_tool", crmRequest{
 		Method: http.MethodDelete,
 		Path:   batch6SalesforcePath("/sobjects/" + url.PathEscape(objectType) + "/" + url.PathEscape(recordID)),
 	})
 	if fail != nil {
 		return fail, nil
 	}
-	if errDict := batch6SalesforceCheck(res); errDict != nil {
+	if errDict := salesforceCheck(res); errDict != nil {
 		return errDict, nil
 	}
 	if res.Status == http.StatusNoContent {
@@ -312,34 +312,34 @@ func batch6SalesforceDescribeObject(ctx context.Context, rt *Runtime, input map[
 	if objectType == "" {
 		return map[string]any{"error": "object_type is required"}, nil
 	}
-	res, fail := batch6Send(ctx, rt, "salesforce_tool", batch6Request{
+	res, fail := crmSend(ctx, rt, "salesforce_tool", crmRequest{
 		Method: http.MethodGet,
 		Path:   batch6SalesforcePath("/sobjects/" + url.PathEscape(objectType) + "/describe"),
 	})
 	if fail != nil {
 		return fail, nil
 	}
-	if errDict := batch6SalesforceCheck(res); errDict != nil {
+	if errDict := salesforceCheck(res); errDict != nil {
 		return errDict, nil
 	}
-	data := batch6AsMap(res.Parsed)
-	allFields := batch6AsSlice(data["fields"])
+	data := asMap(res.Parsed)
+	allFields := asSlice(data["fields"])
 	fields := make([]any, 0, len(allFields))
 	for _, raw := range allFields {
 		if len(fields) >= 200 {
 			break
 		}
-		field := batch6AsMap(raw)
+		field := asMap(raw)
 		entry := map[string]any{
 			"name":     field["name"],
 			"label":    field["label"],
 			"type":     field["type"],
-			"required": !batch6AsBoolDefault(field["nillable"], true) && batch6AsBool(field["createable"]),
+			"required": !batch6AsBoolDefault(field["nillable"], true) && asBool(field["createable"]),
 		}
 		picklist := make([]any, 0)
-		for _, rawValue := range batch6AsSlice(field["picklistValues"]) {
-			option := batch6AsMap(rawValue)
-			if batch6AsBool(option["active"]) {
+		for _, rawValue := range asSlice(field["picklistValues"]) {
+			option := asMap(rawValue)
+			if asBool(option["active"]) {
 				picklist = append(picklist, option["value"])
 			}
 		}
@@ -361,20 +361,20 @@ func batch6SalesforceDescribeObject(ctx context.Context, rt *Runtime, input map[
 
 // batch6SalesforceListObjects lists the org's SObject types.
 func batch6SalesforceListObjects(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	res, fail := batch6Send(ctx, rt, "salesforce_tool", batch6Request{
+	res, fail := crmSend(ctx, rt, "salesforce_tool", crmRequest{
 		Method: http.MethodGet,
 		Path:   batch6SalesforcePath("/sobjects/"),
 	})
 	if fail != nil {
 		return fail, nil
 	}
-	if errDict := batch6SalesforceCheck(res); errDict != nil {
+	if errDict := salesforceCheck(res); errDict != nil {
 		return errDict, nil
 	}
-	data := batch6AsMap(res.Parsed)
+	data := asMap(res.Parsed)
 	sobjects := make([]any, 0)
-	for _, raw := range batch6AsSlice(data["sobjects"]) {
-		object := batch6AsMap(raw)
+	for _, raw := range asSlice(data["sobjects"]) {
+		object := asMap(raw)
 		sobjects = append(sobjects, map[string]any{
 			"name":       object["name"],
 			"label":      object["label"],
@@ -393,7 +393,7 @@ func batch6SalesforceSearchRecords(ctx context.Context, rt *Runtime, input map[s
 	if searchQuery == "" {
 		return map[string]any{"error": "search_query is required"}, nil
 	}
-	res, fail := batch6Send(ctx, rt, "salesforce_tool", batch6Request{
+	res, fail := crmSend(ctx, rt, "salesforce_tool", crmRequest{
 		Method: http.MethodGet,
 		Path:   batch6SalesforcePath("/search/"),
 		Query:  url.Values{"q": {searchQuery}},
@@ -401,13 +401,13 @@ func batch6SalesforceSearchRecords(ctx context.Context, rt *Runtime, input map[s
 	if fail != nil {
 		return fail, nil
 	}
-	if errDict := batch6SalesforceCheck(res); errDict != nil {
+	if errDict := salesforceCheck(res); errDict != nil {
 		return errDict, nil
 	}
 	if records, ok := res.Parsed.([]any); ok {
 		return map[string]any{"records": records, "count": len(records)}, nil
 	}
-	records := batch6AsSlice(batch6AsMap(res.Parsed)["searchRecords"])
+	records := asSlice(asMap(res.Parsed)["searchRecords"])
 	if records == nil {
 		records = []any{}
 	}
@@ -420,7 +420,7 @@ func batch6SalesforceGetRecordCount(ctx context.Context, rt *Runtime, input map[
 	if objectType == "" {
 		return map[string]any{"error": "object_type is required"}, nil
 	}
-	res, fail := batch6Send(ctx, rt, "salesforce_tool", batch6Request{
+	res, fail := crmSend(ctx, rt, "salesforce_tool", crmRequest{
 		Method: http.MethodGet,
 		Path:   batch6SalesforcePath("/query/"),
 		Query:  url.Values{"q": {fmt.Sprintf("SELECT COUNT() FROM %s", objectType)}},
@@ -428,12 +428,12 @@ func batch6SalesforceGetRecordCount(ctx context.Context, rt *Runtime, input map[
 	if fail != nil {
 		return fail, nil
 	}
-	if errDict := batch6SalesforceCheck(res); errDict != nil {
+	if errDict := salesforceCheck(res); errDict != nil {
 		return errDict, nil
 	}
 	return map[string]any{
 		"object_type": objectType,
-		"total_size":  batch6AsNumber(batch6AsMap(res.Parsed)["totalSize"]),
+		"total_size":  crmAsNumber(asMap(res.Parsed)["totalSize"]),
 	}, nil
 }
 

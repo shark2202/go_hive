@@ -12,8 +12,8 @@ import (
 	"net/url"
 )
 
-// batch6AttioTool mirrors gen_catalog.py output for the module.
-var batch6AttioTool = &Tool{
+// attioTool mirrors gen_catalog.py output for the module.
+var attioTool = &Tool{
 	ID:          "attio_tool",
 	Name:        "attio",
 	DisplayName: "Attio",
@@ -173,8 +173,8 @@ var batch6AttioTool = &Tool{
 	},
 }
 
-// batch6AttioImpls binds every action name to its implementation.
-func batch6AttioImpls() map[string]ActionFunc {
+// attioImpls binds every action name to its implementation.
+func attioImpls() map[string]ActionFunc {
 	return map[string]ActionFunc{
 		"attio_list_entries_get":  batch6AttioListEntriesGet,
 		"attio_list_entry_create": batch6AttioListEntryCreate,
@@ -196,18 +196,18 @@ func batch6AttioImpls() map[string]ActionFunc {
 
 // batch6AttioCall executes a request and unwraps the "data" envelope. A failed
 // call returns the error dict as the second value.
-func batch6AttioCall(ctx context.Context, rt *Runtime, spec batch6Request) (any, map[string]any) {
-	res, fail := batch6Send(ctx, rt, "attio_tool", spec)
+func batch6AttioCall(ctx context.Context, rt *Runtime, spec crmRequest) (any, map[string]any) {
+	res, fail := crmSend(ctx, rt, "attio_tool", spec)
 	if fail != nil {
 		return nil, fail
 	}
-	if errDict := batch6AttioCheck(res); errDict != nil {
+	if errDict := attioCheck(res); errDict != nil {
 		return nil, errDict
 	}
 	if res.Status == http.StatusNoContent {
 		return map[string]any{"success": true}, nil
 	}
-	if object := batch6AsMap(res.Parsed); object != nil {
+	if object := asMap(res.Parsed); object != nil {
 		if data, present := object["data"]; present {
 			return data, nil
 		}
@@ -217,7 +217,7 @@ func batch6AttioCall(ctx context.Context, rt *Runtime, spec batch6Request) (any,
 
 // batch6AttioValues reads the required attribute-values object.
 func batch6AttioValues(input map[string]any) (map[string]any, map[string]any) {
-	values, present, err := batch6OptionalMap(input, "values")
+	values, present, err := crmOptionalMap(input, "values")
 	if err != nil || !present {
 		return nil, map[string]any{"error": "values dict is required"}
 	}
@@ -231,12 +231,12 @@ func batch6AttioQueryBody(input map[string]any) (map[string]any, map[string]any)
 		"limit":  intArg(input, "limit", 50),
 		"offset": intArg(input, "offset", 0),
 	}
-	if filter, present, err := batch6JSONParam(input, "filter_json"); err != nil {
+	if filter, present, err := crmJsonParam(input, "filter_json"); err != nil {
 		return nil, map[string]any{"error": err.Error()}
 	} else if present {
 		body["filter"] = filter
 	}
-	if sorts, present, err := batch6JSONParam(input, "sorts_json"); err != nil {
+	if sorts, present, err := crmJsonParam(input, "sorts_json"); err != nil {
 		return nil, map[string]any{"error": err.Error()}
 	} else if present {
 		body["sorts"] = sorts
@@ -254,7 +254,7 @@ func batch6AttioRecordList(ctx context.Context, rt *Runtime, input map[string]an
 	if errDict != nil {
 		return errDict, nil
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodPost,
 		Path:   "/objects/" + url.PathEscape(objectHandle) + "/records/query",
 		Body:   body,
@@ -262,7 +262,7 @@ func batch6AttioRecordList(ctx context.Context, rt *Runtime, input map[string]an
 	if errDict != nil {
 		return errDict, nil
 	}
-	records := batch6SliceOrEmpty(data)
+	records := sliceOrEmpty(data)
 	return map[string]any{"records": records, "total": len(records)}, nil
 }
 
@@ -273,7 +273,7 @@ func batch6AttioRecordGet(ctx context.Context, rt *Runtime, input map[string]any
 	if objectHandle == "" || recordID == "" {
 		return map[string]any{"error": "object_handle and record_id are required"}, nil
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodGet,
 		Path:   "/objects/" + url.PathEscape(objectHandle) + "/records/" + url.PathEscape(recordID),
 	})
@@ -293,7 +293,7 @@ func batch6AttioRecordCreate(ctx context.Context, rt *Runtime, input map[string]
 	if errDict != nil {
 		return errDict, nil
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodPost,
 		Path:   "/objects/" + url.PathEscape(objectHandle) + "/records",
 		Body:   map[string]any{"data": map[string]any{"values": values}},
@@ -315,7 +315,7 @@ func batch6AttioRecordUpdate(ctx context.Context, rt *Runtime, input map[string]
 	if errDict != nil {
 		return errDict, nil
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodPatch,
 		Path:   "/objects/" + url.PathEscape(objectHandle) + "/records/" + url.PathEscape(recordID),
 		Body:   map[string]any{"data": map[string]any{"values": values}},
@@ -337,7 +337,7 @@ func batch6AttioRecordAssert(ctx context.Context, rt *Runtime, input map[string]
 	if errDict != nil {
 		return errDict, nil
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodPut,
 		Path:   "/objects/" + url.PathEscape(objectHandle) + "/records",
 		Query:  url.Values{"matching_attribute": {matchingAttribute}},
@@ -351,11 +351,11 @@ func batch6AttioRecordAssert(ctx context.Context, rt *Runtime, input map[string]
 
 // batch6AttioListLists lists the workspace's lists.
 func batch6AttioListLists(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{Method: http.MethodGet, Path: "/lists"})
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{Method: http.MethodGet, Path: "/lists"})
 	if errDict != nil {
 		return errDict, nil
 	}
-	lists := batch6SliceOrEmpty(data)
+	lists := sliceOrEmpty(data)
 	return map[string]any{"lists": lists, "total": len(lists)}, nil
 }
 
@@ -369,7 +369,7 @@ func batch6AttioListEntriesGet(ctx context.Context, rt *Runtime, input map[strin
 	if errDict != nil {
 		return errDict, nil
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodPost,
 		Path:   "/lists/" + url.PathEscape(listID) + "/entries/query",
 		Body:   body,
@@ -377,7 +377,7 @@ func batch6AttioListEntriesGet(ctx context.Context, rt *Runtime, input map[strin
 	if errDict != nil {
 		return errDict, nil
 	}
-	entries := batch6SliceOrEmpty(data)
+	entries := sliceOrEmpty(data)
 	return map[string]any{"entries": entries, "total": len(entries)}, nil
 }
 
@@ -392,12 +392,12 @@ func batch6AttioListEntryCreate(ctx context.Context, rt *Runtime, input map[stri
 		"parent_record_id": parentRecordID,
 		"parent_object":    stringArg(input, "parent_object"),
 	}
-	if values, present, err := batch6OptionalMap(input, "entry_values"); err != nil {
+	if values, present, err := crmOptionalMap(input, "entry_values"); err != nil {
 		return map[string]any{"error": "entry_values must be an object"}, nil
 	} else if present && len(values) > 0 {
 		parent["entry_values"] = values
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodPost,
 		Path:   "/lists/" + url.PathEscape(listID) + "/entries",
 		Body:   map[string]any{"data": parent},
@@ -415,7 +415,7 @@ func batch6AttioListEntryDelete(ctx context.Context, rt *Runtime, input map[stri
 	if listID == "" || entryID == "" {
 		return map[string]any{"error": "list_id and entry_id are required"}, nil
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodDelete,
 		Path:   "/lists/" + url.PathEscape(listID) + "/entries/" + url.PathEscape(entryID),
 	})
@@ -436,12 +436,12 @@ func batch6AttioTaskCreate(ctx context.Context, rt *Runtime, input map[string]an
 		"format":       "plaintext",
 		"is_completed": boolArg(input, "is_completed", false),
 	}
-	if records, present, err := batch6OptionalList(input, "linked_records"); err != nil {
+	if records, present, err := crmOptionalList(input, "linked_records"); err != nil {
 		return map[string]any{"error": "linked_records must be an array"}, nil
 	} else if present && len(records) > 0 {
 		body["linked_records"] = records
 	}
-	if assignees, present, err := batch6OptionalList(input, "assignees"); err != nil {
+	if assignees, present, err := crmOptionalList(input, "assignees"); err != nil {
 		return map[string]any{"error": "assignees must be an array"}, nil
 	} else if present && len(assignees) > 0 {
 		body["assignees"] = assignees
@@ -449,7 +449,7 @@ func batch6AttioTaskCreate(ctx context.Context, rt *Runtime, input map[string]an
 	if deadline := stringArg(input, "deadline_at"); deadline != "" {
 		body["deadline_at"] = deadline
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodPost, Path: "/tasks",
 		Body: map[string]any{"data": body},
 	})
@@ -461,9 +461,9 @@ func batch6AttioTaskCreate(ctx context.Context, rt *Runtime, input map[string]an
 
 // batch6AttioTaskList lists tasks with pagination.
 func batch6AttioTaskList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodGet, Path: "/tasks",
-		Query: batch6QueryValues(map[string]any{
+		Query: crmQueryValues(map[string]any{
 			"limit":  intArg(input, "limit", 50),
 			"offset": intArg(input, "offset", 0),
 		}),
@@ -471,7 +471,7 @@ func batch6AttioTaskList(ctx context.Context, rt *Runtime, input map[string]any)
 	if errDict != nil {
 		return errDict, nil
 	}
-	tasks := batch6SliceOrEmpty(data)
+	tasks := sliceOrEmpty(data)
 	return map[string]any{"tasks": tasks, "total": len(tasks)}, nil
 }
 
@@ -481,7 +481,7 @@ func batch6AttioTaskGet(ctx context.Context, rt *Runtime, input map[string]any) 
 	if taskID == "" {
 		return map[string]any{"error": "task_id is required"}, nil
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodGet, Path: "/tasks/" + url.PathEscape(taskID),
 	})
 	if errDict != nil {
@@ -496,7 +496,7 @@ func batch6AttioTaskDelete(ctx context.Context, rt *Runtime, input map[string]an
 	if taskID == "" {
 		return map[string]any{"error": "task_id is required"}, nil
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodDelete, Path: "/tasks/" + url.PathEscape(taskID),
 	})
 	if errDict != nil {
@@ -507,11 +507,11 @@ func batch6AttioTaskDelete(ctx context.Context, rt *Runtime, input map[string]an
 
 // batch6AttioMembersList lists workspace members.
 func batch6AttioMembersList(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{Method: http.MethodGet, Path: "/workspace_members"})
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{Method: http.MethodGet, Path: "/workspace_members"})
 	if errDict != nil {
 		return errDict, nil
 	}
-	members := batch6SliceOrEmpty(data)
+	members := sliceOrEmpty(data)
 	return map[string]any{"members": members, "total": len(members)}, nil
 }
 
@@ -521,7 +521,7 @@ func batch6AttioMemberGet(ctx context.Context, rt *Runtime, input map[string]any
 	if memberID == "" {
 		return map[string]any{"error": "member_id is required"}, nil
 	}
-	data, errDict := batch6AttioCall(ctx, rt, batch6Request{
+	data, errDict := batch6AttioCall(ctx, rt, crmRequest{
 		Method: http.MethodGet, Path: "/workspace_members/" + url.PathEscape(memberID),
 	})
 	if errDict != nil {

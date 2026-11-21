@@ -691,29 +691,9 @@ func batch7Lane7Do(ctx context.Context, rt *Runtime, spec batch7Lane7Request) (b
 	return out, nil
 }
 
-// batch7Lane7Getenv resolves the runtime environment lookup.
-func batch7Lane7Getenv(rt *Runtime) func(string) string {
-	if rt != nil && rt.Getenv != nil {
-		return rt.Getenv
-	}
-	return os.Getenv
-}
-
 // batch7Lane7Env reads a trimmed environment value through the runtime lookup.
 func batch7Lane7Env(rt *Runtime, name string) string {
-	return strings.TrimSpace(batch7Lane7Getenv(rt)(name))
-}
-
-// batch7Lane7ModuleBase resolves a module base URL, honouring WithBaseURL.
-func batch7Lane7ModuleBase(rt *Runtime, moduleID string) string {
-	if rt == nil || rt.Modules == nil {
-		return ""
-	}
-	cfg := rt.Modules[moduleID]
-	if cfg == nil {
-		return ""
-	}
-	return strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
+	return strings.TrimSpace(runtimeGetenv(rt)(name))
 }
 
 // batch7Lane7ModuleToken resolves a single-value module credential.
@@ -725,7 +705,7 @@ func batch7Lane7ModuleToken(rt *Runtime, moduleID string) string {
 	if cfg == nil {
 		return ""
 	}
-	token, _ := cfg.ResolvedToken(batch7Lane7Getenv(rt))
+	token, _ := cfg.ResolvedToken(runtimeGetenv(rt))
 	return strings.TrimSpace(token)
 }
 
@@ -785,12 +765,6 @@ func batch7Lane7NetworkFailure(moduleID string, ctx context.Context, err error) 
 
 // ---------------------------------------------------------------- helpers ---
 
-// batch7Lane7Map views a decoded JSON object.
-func batch7Lane7Map(value any) map[string]any {
-	object, _ := value.(map[string]any)
-	return object
-}
-
 // batch7Lane7Default mirrors Python's `dict.get(key, fallback)` for fields
 // whose absence must surface as the upstream default rather than null.
 func batch7Lane7Default(value, fallback any) any {
@@ -798,41 +772,6 @@ func batch7Lane7Default(value, fallback any) any {
 		return fallback
 	}
 	return value
-}
-
-// batch7Lane7MapOrEmpty mirrors `result.get(key, {})`: absent objects are
-// empty maps rather than JSON null.
-func batch7Lane7MapOrEmpty(value any) map[string]any {
-	if object, ok := value.(map[string]any); ok && object != nil {
-		return object
-	}
-	return map[string]any{}
-}
-
-// batch7Lane7Slice views a decoded JSON array.
-func batch7Lane7Slice(value any) []any {
-	items, _ := value.([]any)
-	return items
-}
-
-// batch7Lane7SliceOrEmpty mirrors upstream's `data.get(key) or []`.
-func batch7Lane7SliceOrEmpty(value any) []any {
-	if items, ok := value.([]any); ok && items != nil {
-		return items
-	}
-	return []any{}
-}
-
-// batch7Lane7String reads a decoded JSON string.
-func batch7Lane7String(value any) string {
-	text, _ := value.(string)
-	return text
-}
-
-// batch7Lane7Bool reads a decoded JSON boolean.
-func batch7Lane7Bool(value any) bool {
-	flag, _ := value.(bool)
-	return flag
 }
 
 // batch7Lane7Int reads a decoded JSON number as an int.
@@ -874,28 +813,6 @@ func batch7Lane7Dig(root any, path ...string) any {
 	return current
 }
 
-// batch7Lane7Clamp bounds an integer to [low, high].
-func batch7Lane7Clamp(value, low, high int) int {
-	if value < low {
-		return low
-	}
-	if value > high {
-		return high
-	}
-	return value
-}
-
-// batch7Lane7Truncate caps text by runes, matching Python slicing.
-func batch7Lane7Truncate(text string, limit int) string {
-	if limit < 0 {
-		limit = 0
-	}
-	if utf8.RuneCountInString(text) <= limit {
-		return text
-	}
-	return string([]rune(text)[:limit])
-}
-
 // batch7Lane7OptionalInt distinguishes an absent argument from zero.
 func batch7Lane7OptionalInt(input map[string]any, name string) (int, bool) {
 	value, present := input[name]
@@ -908,8 +825,8 @@ func batch7Lane7OptionalInt(input map[string]any, name string) (int, bool) {
 // batch7Lane7JoinErrors joins Pushover's `errors` array the upstream way.
 func batch7Lane7JoinErrors(value any) string {
 	parts := make([]string, 0)
-	for _, item := range batch7Lane7Slice(value) {
-		if text := batch7Lane7String(item); text != "" {
+	for _, item := range asSlice(value) {
+		if text := asString(item); text != "" {
 			parts = append(parts, text)
 		}
 	}
@@ -937,7 +854,7 @@ func batch7Lane7YouTubeGET(
 	key, endpoint string,
 	params url.Values,
 ) (any, map[string]any) {
-	base := batch7Lane7ModuleBase(rt, batch7Lane7YouTubeModule)
+	base := moduleBaseURL(rt, batch7Lane7YouTubeModule)
 	if base == "" {
 		base = batch7Lane7YouTubeDefaultAPI
 	}
@@ -952,8 +869,8 @@ func batch7Lane7YouTubeGET(
 	}
 	if res.Status == http.StatusForbidden {
 		reason := ""
-		if errorsList := batch7Lane7Slice(batch7Lane7Dig(res.Parsed, "error", "errors")); len(errorsList) > 0 {
-			reason = batch7Lane7String(batch7Lane7Map(errorsList[0])["reason"])
+		if errorsList := asSlice(batch7Lane7Dig(res.Parsed, "error", "errors")); len(errorsList) > 0 {
+			reason = asString(asMap(errorsList[0])["reason"])
 		}
 		if reason == "quotaExceeded" {
 			return nil, map[string]any{
@@ -968,7 +885,7 @@ func batch7Lane7YouTubeGET(
 	}
 	if res.Status != http.StatusOK {
 		return nil, map[string]any{
-			"error": fmt.Sprintf("YouTube API error %d: %s", res.Status, batch7Lane7Truncate(string(res.Body), batch7Lane7MaxError)),
+			"error": fmt.Sprintf("YouTube API error %d: %s", res.Status, truncateTextClamped(string(res.Body), batch7Lane7MaxError)),
 		}
 	}
 	return res.Parsed, nil
@@ -1021,7 +938,7 @@ func batch7Lane7YouTubeSearchVideos(ctx context.Context, rt *Runtime, input map[
 	if query == "" {
 		return map[string]any{"error": "query is required"}, nil
 	}
-	maxResults := batch7Lane7Clamp(intArg(input, "max_results", 10), 1, 50)
+	maxResults := clampInt(intArg(input, "max_results", 10), 1, 50)
 	params := url.Values{
 		"part":       {"snippet"},
 		"q":          {query},
@@ -1044,17 +961,17 @@ func batch7Lane7YouTubeSearchVideos(ctx context.Context, rt *Runtime, input map[
 		return fail, nil
 	}
 	results := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(data)["items"]) {
-		item := batch7Lane7Map(raw)
-		snippet := batch7Lane7Map(item["snippet"])
+	for _, raw := range asSlice(asMap(data)["items"]) {
+		item := asMap(raw)
+		snippet := asMap(item["snippet"])
 		results = append(results, map[string]any{
-			"videoId":      batch7Lane7String(batch7Lane7Dig(item, "id", "videoId")),
-			"title":        batch7Lane7String(snippet["title"]),
-			"channelTitle": batch7Lane7String(snippet["channelTitle"]),
-			"channelId":    batch7Lane7String(snippet["channelId"]),
-			"publishedAt":  batch7Lane7String(snippet["publishedAt"]),
-			"description":  batch7Lane7String(snippet["description"]),
-			"thumbnail":    batch7Lane7String(batch7Lane7Dig(snippet, "thumbnails", "medium", "url")),
+			"videoId":      asString(batch7Lane7Dig(item, "id", "videoId")),
+			"title":        asString(snippet["title"]),
+			"channelTitle": asString(snippet["channelTitle"]),
+			"channelId":    asString(snippet["channelId"]),
+			"publishedAt":  asString(snippet["publishedAt"]),
+			"description":  asString(snippet["description"]),
+			"thumbnail":    asString(batch7Lane7Dig(snippet, "thumbnails", "medium", "url")),
 		})
 	}
 	return map[string]any{
@@ -1081,27 +998,27 @@ func batch7Lane7YouTubeGetVideoDetails(ctx context.Context, rt *Runtime, input m
 		return fail, nil
 	}
 	videos := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(data)["items"]) {
-		item := batch7Lane7Map(raw)
-		snippet := batch7Lane7Map(item["snippet"])
-		stats := batch7Lane7Map(item["statistics"])
-		content := batch7Lane7Map(item["contentDetails"])
-		rawDuration := batch7Lane7String(content["duration"])
+	for _, raw := range asSlice(asMap(data)["items"]) {
+		item := asMap(raw)
+		snippet := asMap(item["snippet"])
+		stats := asMap(item["statistics"])
+		content := asMap(item["contentDetails"])
+		rawDuration := asString(content["duration"])
 		videos = append(videos, map[string]any{
-			"videoId":      batch7Lane7String(item["id"]),
-			"title":        batch7Lane7String(snippet["title"]),
-			"description":  batch7Lane7String(snippet["description"]),
-			"channelTitle": batch7Lane7String(snippet["channelTitle"]),
-			"channelId":    batch7Lane7String(snippet["channelId"]),
-			"publishedAt":  batch7Lane7String(snippet["publishedAt"]),
-			"tags":         batch7Lane7SliceOrEmpty(snippet["tags"]),
-			"categoryId":   batch7Lane7String(snippet["categoryId"]),
+			"videoId":      asString(item["id"]),
+			"title":        asString(snippet["title"]),
+			"description":  asString(snippet["description"]),
+			"channelTitle": asString(snippet["channelTitle"]),
+			"channelId":    asString(snippet["channelId"]),
+			"publishedAt":  asString(snippet["publishedAt"]),
+			"tags":         sliceOrEmpty(snippet["tags"]),
+			"categoryId":   asString(snippet["categoryId"]),
 			"duration":     batch7Lane7ParseDuration(rawDuration),
 			"duration_raw": rawDuration,
 			"viewCount":    batch7Lane7Int(stats["viewCount"]),
 			"likeCount":    batch7Lane7Int(stats["likeCount"]),
 			"commentCount": batch7Lane7Int(stats["commentCount"]),
-			"thumbnail":    batch7Lane7String(batch7Lane7Dig(snippet, "thumbnails", "high", "url")),
+			"thumbnail":    asString(batch7Lane7Dig(snippet, "thumbnails", "high", "url")),
 		})
 	}
 	return map[string]any{"videos": videos}, nil
@@ -1127,24 +1044,24 @@ func batch7Lane7YouTubeGetChannel(ctx context.Context, rt *Runtime, input map[st
 	if fail != nil {
 		return fail, nil
 	}
-	items := batch7Lane7Slice(batch7Lane7Map(data)["items"])
+	items := asSlice(asMap(data)["items"])
 	if len(items) == 0 {
 		return map[string]any{"error": "Channel not found"}, nil
 	}
-	item := batch7Lane7Map(items[0])
-	snippet := batch7Lane7Map(item["snippet"])
-	stats := batch7Lane7Map(item["statistics"])
+	item := asMap(items[0])
+	snippet := asMap(item["snippet"])
+	stats := asMap(item["statistics"])
 	return map[string]any{
-		"channelId":         batch7Lane7String(item["id"]),
-		"title":             batch7Lane7String(snippet["title"]),
-		"description":       batch7Lane7String(snippet["description"]),
-		"customUrl":         batch7Lane7String(snippet["customUrl"]),
-		"publishedAt":       batch7Lane7String(snippet["publishedAt"]),
+		"channelId":         asString(item["id"]),
+		"title":             asString(snippet["title"]),
+		"description":       asString(snippet["description"]),
+		"customUrl":         asString(snippet["customUrl"]),
+		"publishedAt":       asString(snippet["publishedAt"]),
 		"subscriberCount":   batch7Lane7Int(stats["subscriberCount"]),
 		"videoCount":        batch7Lane7Int(stats["videoCount"]),
 		"viewCount":         batch7Lane7Int(stats["viewCount"]),
-		"thumbnail":         batch7Lane7String(batch7Lane7Dig(snippet, "thumbnails", "high", "url")),
-		"uploadsPlaylistId": batch7Lane7String(batch7Lane7Dig(item, "contentDetails", "relatedPlaylists", "uploads")),
+		"thumbnail":         asString(batch7Lane7Dig(snippet, "thumbnails", "high", "url")),
+		"uploadsPlaylistId": asString(batch7Lane7Dig(item, "contentDetails", "relatedPlaylists", "uploads")),
 	}, nil
 }
 
@@ -1157,7 +1074,7 @@ func batch7Lane7YouTubeListChannelVideos(ctx context.Context, rt *Runtime, input
 	if channelID == "" {
 		return map[string]any{"error": "channel_id is required"}, nil
 	}
-	maxResults := batch7Lane7Clamp(intArg(input, "max_results", 20), 1, 50)
+	maxResults := clampInt(intArg(input, "max_results", 20), 1, 50)
 	data, fail := batch7Lane7YouTubeGET(ctx, rt, key, "search", url.Values{
 		"part":       {"snippet"},
 		"channelId":  {channelID},
@@ -1169,15 +1086,15 @@ func batch7Lane7YouTubeListChannelVideos(ctx context.Context, rt *Runtime, input
 		return fail, nil
 	}
 	videos := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(data)["items"]) {
-		item := batch7Lane7Map(raw)
-		snippet := batch7Lane7Map(item["snippet"])
+	for _, raw := range asSlice(asMap(data)["items"]) {
+		item := asMap(raw)
+		snippet := asMap(item["snippet"])
 		videos = append(videos, map[string]any{
-			"videoId":     batch7Lane7String(batch7Lane7Dig(item, "id", "videoId")),
-			"title":       batch7Lane7String(snippet["title"]),
-			"publishedAt": batch7Lane7String(snippet["publishedAt"]),
-			"description": batch7Lane7String(snippet["description"]),
-			"thumbnail":   batch7Lane7String(batch7Lane7Dig(snippet, "thumbnails", "medium", "url")),
+			"videoId":     asString(batch7Lane7Dig(item, "id", "videoId")),
+			"title":       asString(snippet["title"]),
+			"publishedAt": asString(snippet["publishedAt"]),
+			"description": asString(snippet["description"]),
+			"thumbnail":   asString(batch7Lane7Dig(snippet, "thumbnails", "medium", "url")),
 		})
 	}
 	return map[string]any{"channel_id": channelID, "videos": videos}, nil
@@ -1192,7 +1109,7 @@ func batch7Lane7YouTubeGetPlaylist(ctx context.Context, rt *Runtime, input map[s
 	if playlistID == "" {
 		return map[string]any{"error": "playlist_id is required"}, nil
 	}
-	maxResults := batch7Lane7Clamp(intArg(input, "max_results", 20), 1, 50)
+	maxResults := clampInt(intArg(input, "max_results", 20), 1, 50)
 	playlistData, fail := batch7Lane7YouTubeGET(ctx, rt, key, "playlists", url.Values{
 		"part": {"snippet,contentDetails"},
 		"id":   {playlistID},
@@ -1200,12 +1117,12 @@ func batch7Lane7YouTubeGetPlaylist(ctx context.Context, rt *Runtime, input map[s
 	if fail != nil {
 		return fail, nil
 	}
-	playlistItems := batch7Lane7Slice(batch7Lane7Map(playlistData)["items"])
+	playlistItems := asSlice(asMap(playlistData)["items"])
 	if len(playlistItems) == 0 {
 		return map[string]any{"error": "Playlist not found"}, nil
 	}
-	playlist := batch7Lane7Map(playlistItems[0])
-	playlistSnippet := batch7Lane7Map(playlist["snippet"])
+	playlist := asMap(playlistItems[0])
+	playlistSnippet := asMap(playlist["snippet"])
 	itemsData, fail := batch7Lane7YouTubeGET(ctx, rt, key, "playlistItems", url.Values{
 		"part":       {"snippet,contentDetails"},
 		"playlistId": {playlistID},
@@ -1215,22 +1132,22 @@ func batch7Lane7YouTubeGetPlaylist(ctx context.Context, rt *Runtime, input map[s
 		return fail, nil
 	}
 	items := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(itemsData)["items"]) {
-		item := batch7Lane7Map(raw)
-		snippet := batch7Lane7Map(item["snippet"])
+	for _, raw := range asSlice(asMap(itemsData)["items"]) {
+		item := asMap(raw)
+		snippet := asMap(item["snippet"])
 		items = append(items, map[string]any{
-			"videoId":      batch7Lane7String(batch7Lane7Dig(snippet, "resourceId", "videoId")),
-			"title":        batch7Lane7String(snippet["title"]),
+			"videoId":      asString(batch7Lane7Dig(snippet, "resourceId", "videoId")),
+			"title":        asString(snippet["title"]),
 			"position":     batch7Lane7Int(snippet["position"]),
-			"channelTitle": batch7Lane7String(snippet["videoOwnerChannelTitle"]),
-			"thumbnail":    batch7Lane7String(batch7Lane7Dig(snippet, "thumbnails", "medium", "url")),
+			"channelTitle": asString(snippet["videoOwnerChannelTitle"]),
+			"thumbnail":    asString(batch7Lane7Dig(snippet, "thumbnails", "medium", "url")),
 		})
 	}
 	return map[string]any{
 		"playlistId":   playlistID,
-		"title":        batch7Lane7String(playlistSnippet["title"]),
-		"description":  batch7Lane7String(playlistSnippet["description"]),
-		"channelTitle": batch7Lane7String(playlistSnippet["channelTitle"]),
+		"title":        asString(playlistSnippet["title"]),
+		"description":  asString(playlistSnippet["description"]),
+		"channelTitle": asString(playlistSnippet["channelTitle"]),
 		"itemCount":    batch7Lane7Int(batch7Lane7Dig(playlist, "contentDetails", "itemCount")),
 		"items":        items,
 	}, nil
@@ -1245,7 +1162,7 @@ func batch7Lane7YouTubeSearchChannels(ctx context.Context, rt *Runtime, input ma
 	if query == "" {
 		return map[string]any{"error": "query is required"}, nil
 	}
-	maxResults := batch7Lane7Clamp(intArg(input, "max_results", 10), 1, 50)
+	maxResults := clampInt(intArg(input, "max_results", 10), 1, 50)
 	data, fail := batch7Lane7YouTubeGET(ctx, rt, key, "search", url.Values{
 		"part":       {"snippet"},
 		"q":          {query},
@@ -1257,14 +1174,14 @@ func batch7Lane7YouTubeSearchChannels(ctx context.Context, rt *Runtime, input ma
 		return fail, nil
 	}
 	results := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(data)["items"]) {
-		item := batch7Lane7Map(raw)
-		snippet := batch7Lane7Map(item["snippet"])
+	for _, raw := range asSlice(asMap(data)["items"]) {
+		item := asMap(raw)
+		snippet := asMap(item["snippet"])
 		results = append(results, map[string]any{
-			"channelId":   batch7Lane7String(batch7Lane7Dig(item, "id", "channelId")),
-			"title":       batch7Lane7String(snippet["title"]),
-			"description": batch7Lane7String(snippet["description"]),
-			"thumbnail":   batch7Lane7String(batch7Lane7Dig(snippet, "thumbnails", "medium", "url")),
+			"channelId":   asString(batch7Lane7Dig(item, "id", "channelId")),
+			"title":       asString(snippet["title"]),
+			"description": asString(snippet["description"]),
+			"thumbnail":   asString(batch7Lane7Dig(snippet, "thumbnails", "medium", "url")),
 		})
 	}
 	return map[string]any{"query": query, "results": results}, nil
@@ -1279,7 +1196,7 @@ func batch7Lane7YouTubeGetVideoComments(ctx context.Context, rt *Runtime, input 
 	if videoID == "" {
 		return map[string]any{"error": "video_id is required"}, nil
 	}
-	maxResults := batch7Lane7Clamp(intArg(input, "max_results", 20), 1, 100)
+	maxResults := clampInt(intArg(input, "max_results", 20), 1, 100)
 	data, fail := batch7Lane7YouTubeGET(ctx, rt, key, "commentThreads", url.Values{
 		"part":       {"snippet"},
 		"videoId":    {videoID},
@@ -1291,14 +1208,14 @@ func batch7Lane7YouTubeGetVideoComments(ctx context.Context, rt *Runtime, input 
 		return fail, nil
 	}
 	comments := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(data)["items"]) {
-		item := batch7Lane7Map(raw)
-		top := batch7Lane7Map(batch7Lane7Dig(item, "snippet", "topLevelComment", "snippet"))
+	for _, raw := range asSlice(asMap(data)["items"]) {
+		item := asMap(raw)
+		top := asMap(batch7Lane7Dig(item, "snippet", "topLevelComment", "snippet"))
 		comments = append(comments, map[string]any{
-			"author":      batch7Lane7String(top["authorDisplayName"]),
-			"text":        batch7Lane7String(top["textDisplay"]),
+			"author":      asString(top["authorDisplayName"]),
+			"text":        asString(top["textDisplay"]),
 			"likeCount":   batch7Lane7Int(top["likeCount"]),
-			"publishedAt": batch7Lane7String(top["publishedAt"]),
+			"publishedAt": asString(top["publishedAt"]),
 			"replyCount":  batch7Lane7Int(batch7Lane7Dig(item, "snippet", "totalReplyCount")),
 		})
 	}
@@ -1319,11 +1236,11 @@ func batch7Lane7YouTubeGetVideoCategories(ctx context.Context, rt *Runtime, inpu
 		return fail, nil
 	}
 	categories := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(data)["items"]) {
-		item := batch7Lane7Map(raw)
+	for _, raw := range asSlice(asMap(data)["items"]) {
+		item := asMap(raw)
 		categories = append(categories, map[string]any{
-			"id":    batch7Lane7String(item["id"]),
-			"title": batch7Lane7String(batch7Lane7Dig(item, "snippet", "title")),
+			"id":    asString(item["id"]),
+			"title": asString(batch7Lane7Dig(item, "snippet", "title")),
 		})
 	}
 	return map[string]any{"region_code": regionCode, "categories": categories}, nil
@@ -1387,7 +1304,7 @@ func batch7Lane7RedditAccessToken(ctx context.Context, rt *Runtime) (string, map
 	if err != nil || res.Status != http.StatusOK {
 		return "", failure
 	}
-	token := batch7Lane7String(batch7Lane7Map(res.Parsed)["access_token"])
+	token := asString(asMap(res.Parsed)["access_token"])
 	if token == "" {
 		return "", failure
 	}
@@ -1400,7 +1317,7 @@ func batch7Lane7RedditGET(ctx context.Context, rt *Runtime, path string, params 
 	if fail != nil {
 		return nil, fail
 	}
-	base := batch7Lane7ModuleBase(rt, batch7Lane7RedditModule)
+	base := moduleBaseURL(rt, batch7Lane7RedditModule)
 	if base == "" {
 		base = batch7Lane7RedditDefaultAPI
 	}
@@ -1424,7 +1341,7 @@ func batch7Lane7RedditGET(ctx context.Context, rt *Runtime, path string, params 
 	}
 	if res.Status != http.StatusOK {
 		return nil, map[string]any{
-			"error": fmt.Sprintf("Reddit API error %d: %s", res.Status, batch7Lane7Truncate(string(res.Body), batch7Lane7MaxError)),
+			"error": fmt.Sprintf("Reddit API error %d: %s", res.Status, truncateTextClamped(string(res.Body), batch7Lane7MaxError)),
 		}
 	}
 	return res.Parsed, nil
@@ -1433,24 +1350,24 @@ func batch7Lane7RedditGET(ctx context.Context, rt *Runtime, path string, params 
 // batch7Lane7RedditPosts extracts t3 children from a Listing.
 func batch7Lane7RedditPosts(listing map[string]any) []any {
 	posts := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Dig(listing, "data", "children")) {
-		child := batch7Lane7Map(raw)
-		if batch7Lane7String(child["kind"]) != "t3" {
+	for _, raw := range asSlice(batch7Lane7Dig(listing, "data", "children")) {
+		child := asMap(raw)
+		if asString(child["kind"]) != "t3" {
 			continue
 		}
-		post := batch7Lane7Map(child["data"])
+		post := asMap(child["data"])
 		posts = append(posts, map[string]any{
-			"id":           batch7Lane7String(post["id"]),
-			"title":        batch7Lane7String(post["title"]),
-			"author":       batch7Lane7String(post["author"]),
-			"subreddit":    batch7Lane7String(post["subreddit"]),
+			"id":           asString(post["id"]),
+			"title":        asString(post["title"]),
+			"author":       asString(post["author"]),
+			"subreddit":    asString(post["subreddit"]),
 			"score":        batch7Lane7Int(post["score"]),
 			"num_comments": batch7Lane7Int(post["num_comments"]),
-			"url":          batch7Lane7String(post["url"]),
-			"permalink":    batch7Lane7String(post["permalink"]),
-			"selftext":     batch7Lane7Truncate(batch7Lane7String(post["selftext"]), 500),
+			"url":          asString(post["url"]),
+			"permalink":    asString(post["permalink"]),
+			"selftext":     truncateTextClamped(asString(post["selftext"]), 500),
 			"created_utc":  batch7Lane7Default(post["created_utc"], 0),
-			"is_self":      batch7Lane7Bool(post["is_self"]),
+			"is_self":      asBool(post["is_self"]),
 		})
 	}
 	return posts
@@ -1475,13 +1392,13 @@ func batch7Lane7RedditSearch(ctx context.Context, rt *Runtime, input map[string]
 		"q":           {query},
 		"sort":        {stringArg(input, "sort")},
 		"t":           {stringArg(input, "time")},
-		"limit":       {strconv.Itoa(batch7Lane7Clamp(intArg(input, "limit", 25), 1, 100))},
+		"limit":       {strconv.Itoa(clampInt(intArg(input, "limit", 25), 1, 100))},
 		"restrict_sr": {restrict},
 	})
 	if fail != nil {
 		return fail, nil
 	}
-	posts := batch7Lane7RedditPosts(batch7Lane7Map(data))
+	posts := batch7Lane7RedditPosts(asMap(data))
 	return map[string]any{"query": query, "posts": posts, "count": len(posts)}, nil
 }
 
@@ -1494,13 +1411,13 @@ func batch7Lane7RedditGetPosts(ctx context.Context, rt *Runtime, input map[strin
 		return map[string]any{"error": "subreddit is required"}, nil
 	}
 	data, fail := batch7Lane7RedditGET(ctx, rt, "/r/"+subreddit+"/"+stringArg(input, "sort"), url.Values{
-		"limit": {strconv.Itoa(batch7Lane7Clamp(intArg(input, "limit", 25), 1, 100))},
+		"limit": {strconv.Itoa(clampInt(intArg(input, "limit", 25), 1, 100))},
 		"t":     {stringArg(input, "time")},
 	})
 	if fail != nil {
 		return fail, nil
 	}
-	posts := batch7Lane7RedditPosts(batch7Lane7Map(data))
+	posts := batch7Lane7RedditPosts(asMap(data))
 	return map[string]any{"subreddit": subreddit, "posts": posts, "count": len(posts)}, nil
 }
 
@@ -1519,40 +1436,40 @@ func batch7Lane7RedditGetComments(ctx context.Context, rt *Runtime, input map[st
 	}
 	data, fail := batch7Lane7RedditGET(ctx, rt, path, url.Values{
 		"sort":  {stringArg(input, "sort")},
-		"limit": {strconv.Itoa(batch7Lane7Clamp(intArg(input, "limit", 25), 1, 100))},
+		"limit": {strconv.Itoa(clampInt(intArg(input, "limit", 25), 1, 100))},
 	})
 	if fail != nil {
 		return fail, nil
 	}
-	listings := batch7Lane7Slice(data)
+	listings := asSlice(data)
 	if len(listings) < 2 {
 		return map[string]any{"error": "Unexpected response format"}, nil
 	}
 	post := map[string]any{}
-	postChildren := batch7Lane7Slice(batch7Lane7Dig(listings[0], "data", "children"))
+	postChildren := asSlice(batch7Lane7Dig(listings[0], "data", "children"))
 	if len(postChildren) > 0 {
-		if child := batch7Lane7Map(postChildren[0]); batch7Lane7String(child["kind"]) == "t3" {
-			details := batch7Lane7Map(child["data"])
+		if child := asMap(postChildren[0]); asString(child["kind"]) == "t3" {
+			details := asMap(child["data"])
 			post = map[string]any{
-				"id":       batch7Lane7String(details["id"]),
-				"title":    batch7Lane7String(details["title"]),
-				"author":   batch7Lane7String(details["author"]),
+				"id":       asString(details["id"]),
+				"title":    asString(details["title"]),
+				"author":   asString(details["author"]),
 				"score":    batch7Lane7Int(details["score"]),
-				"selftext": batch7Lane7Truncate(batch7Lane7String(details["selftext"]), 500),
+				"selftext": truncateTextClamped(asString(details["selftext"]), 500),
 			}
 		}
 	}
 	comments := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Dig(listings[1], "data", "children")) {
-		child := batch7Lane7Map(raw)
-		if batch7Lane7String(child["kind"]) != "t1" {
+	for _, raw := range asSlice(batch7Lane7Dig(listings[1], "data", "children")) {
+		child := asMap(raw)
+		if asString(child["kind"]) != "t1" {
 			continue
 		}
-		details := batch7Lane7Map(child["data"])
+		details := asMap(child["data"])
 		comments = append(comments, map[string]any{
-			"id":          batch7Lane7String(details["id"]),
-			"author":      batch7Lane7String(details["author"]),
-			"body":        batch7Lane7Truncate(batch7Lane7String(details["body"]), 500),
+			"id":          asString(details["id"]),
+			"author":      asString(details["author"]),
+			"body":        truncateTextClamped(asString(details["body"]), 500),
 			"score":       batch7Lane7Int(details["score"]),
 			"created_utc": batch7Lane7Default(details["created_utc"], 0),
 		})
@@ -1572,14 +1489,14 @@ func batch7Lane7RedditGetUser(ctx context.Context, rt *Runtime, input map[string
 	if fail != nil {
 		return fail, nil
 	}
-	details := batch7Lane7Map(batch7Lane7Map(data)["data"])
+	details := asMap(asMap(data)["data"])
 	return map[string]any{
-		"name":          batch7Lane7String(details["name"]),
+		"name":          asString(details["name"]),
 		"link_karma":    batch7Lane7Int(details["link_karma"]),
 		"comment_karma": batch7Lane7Int(details["comment_karma"]),
 		"total_karma":   batch7Lane7Int(details["total_karma"]),
 		"created_utc":   batch7Lane7Default(details["created_utc"], 0),
-		"is_gold":       batch7Lane7Bool(details["is_gold"]),
+		"is_gold":       asBool(details["is_gold"]),
 	}, nil
 }
 
@@ -1595,17 +1512,17 @@ func batch7Lane7RedditGetSubredditInfo(ctx context.Context, rt *Runtime, input m
 	if fail != nil {
 		return fail, nil
 	}
-	details := batch7Lane7Map(batch7Lane7Map(data)["data"])
+	details := asMap(asMap(data)["data"])
 	return map[string]any{
-		"name":            batch7Lane7String(details["display_name"]),
-		"title":           batch7Lane7String(details["title"]),
-		"description":     batch7Lane7Truncate(batch7Lane7String(details["public_description"]), 500),
+		"name":            asString(details["display_name"]),
+		"title":           asString(details["title"]),
+		"description":     truncateTextClamped(asString(details["public_description"]), 500),
 		"subscribers":     batch7Lane7Int(details["subscribers"]),
 		"active_users":    batch7Lane7Int(details["accounts_active"]),
 		"created_utc":     batch7Lane7Default(details["created_utc"], 0),
-		"over18":          batch7Lane7Bool(details["over18"]),
-		"subreddit_type":  batch7Lane7String(details["subreddit_type"]),
-		"submission_type": batch7Lane7String(details["submission_type"]),
+		"over18":          asBool(details["over18"]),
+		"subreddit_type":  asString(details["subreddit_type"]),
+		"submission_type": asString(details["submission_type"]),
 	}, nil
 }
 
@@ -1621,28 +1538,28 @@ func batch7Lane7RedditGetPostDetail(ctx context.Context, rt *Runtime, input map[
 	if fail != nil {
 		return fail, nil
 	}
-	children := batch7Lane7Slice(batch7Lane7Dig(data, "data", "children"))
-	if len(children) == 0 || batch7Lane7String(batch7Lane7Map(children[0])["kind"]) != "t3" {
+	children := asSlice(batch7Lane7Dig(data, "data", "children"))
+	if len(children) == 0 || asString(asMap(children[0])["kind"]) != "t3" {
 		return map[string]any{"error": "Post not found"}, nil
 	}
-	details := batch7Lane7Map(batch7Lane7Map(children[0])["data"])
+	details := asMap(asMap(children[0])["data"])
 	return map[string]any{
-		"id":              batch7Lane7String(details["id"]),
-		"title":           batch7Lane7String(details["title"]),
-		"author":          batch7Lane7String(details["author"]),
-		"subreddit":       batch7Lane7String(details["subreddit"]),
+		"id":              asString(details["id"]),
+		"title":           asString(details["title"]),
+		"author":          asString(details["author"]),
+		"subreddit":       asString(details["subreddit"]),
 		"score":           batch7Lane7Int(details["score"]),
 		"upvote_ratio":    batch7Lane7Default(details["upvote_ratio"], 0),
 		"num_comments":    batch7Lane7Int(details["num_comments"]),
-		"url":             batch7Lane7String(details["url"]),
-		"permalink":       batch7Lane7String(details["permalink"]),
-		"selftext":        batch7Lane7Truncate(batch7Lane7String(details["selftext"]), 2000),
-		"link_flair_text": batch7Lane7String(details["link_flair_text"]),
+		"url":             asString(details["url"]),
+		"permalink":       asString(details["permalink"]),
+		"selftext":        truncateTextClamped(asString(details["selftext"]), 2000),
+		"link_flair_text": asString(details["link_flair_text"]),
 		"created_utc":     batch7Lane7Default(details["created_utc"], 0),
-		"is_self":         batch7Lane7Bool(details["is_self"]),
-		"over_18":         batch7Lane7Bool(details["over_18"]),
-		"locked":          batch7Lane7Bool(details["locked"]),
-		"archived":        batch7Lane7Bool(details["archived"]),
+		"is_self":         asBool(details["is_self"]),
+		"over_18":         asBool(details["over_18"]),
+		"locked":          asBool(details["locked"]),
+		"archived":        asBool(details["archived"]),
 	}, nil
 }
 
@@ -1657,12 +1574,12 @@ func batch7Lane7RedditGetUserPosts(ctx context.Context, rt *Runtime, input map[s
 	data, fail := batch7Lane7RedditGET(ctx, rt, "/user/"+username+"/submitted", url.Values{
 		"sort":  {stringArg(input, "sort")},
 		"t":     {stringArg(input, "time")},
-		"limit": {strconv.Itoa(batch7Lane7Clamp(intArg(input, "limit", 25), 1, 100))},
+		"limit": {strconv.Itoa(clampInt(intArg(input, "limit", 25), 1, 100))},
 	})
 	if fail != nil {
 		return fail, nil
 	}
-	posts := batch7Lane7RedditPosts(batch7Lane7Map(data))
+	posts := batch7Lane7RedditPosts(asMap(data))
 	return map[string]any{"username": username, "posts": posts, "count": len(posts)}, nil
 }
 
@@ -1687,7 +1604,7 @@ func batch7Lane7TwitterGET(
 	token, path string,
 	params url.Values,
 ) (any, map[string]any) {
-	base := batch7Lane7ModuleBase(rt, batch7Lane7TwitterModule)
+	base := moduleBaseURL(rt, batch7Lane7TwitterModule)
 	if base == "" {
 		base = batch7Lane7TwitterDefaultAPI
 	}
@@ -1702,7 +1619,7 @@ func batch7Lane7TwitterGET(
 	}
 	if res.Status >= http.StatusBadRequest {
 		return nil, map[string]any{
-			"error": fmt.Sprintf("HTTP %d: %s", res.Status, batch7Lane7Truncate(string(res.Body), batch7Lane7MaxError)),
+			"error": fmt.Sprintf("HTTP %d: %s", res.Status, truncateTextClamped(string(res.Body), batch7Lane7MaxError)),
 		}
 	}
 	return res.Parsed, nil
@@ -1710,7 +1627,7 @@ func batch7Lane7TwitterGET(
 
 // batch7Lane7TwitterTweet extracts the upstream tweet projection.
 func batch7Lane7TwitterTweet(tweet map[string]any) map[string]any {
-	metrics := batch7Lane7Map(tweet["public_metrics"])
+	metrics := asMap(tweet["public_metrics"])
 	return map[string]any{
 		"id":               tweet["id"],
 		"text":             tweet["text"],
@@ -1727,9 +1644,9 @@ func batch7Lane7TwitterTweet(tweet map[string]any) map[string]any {
 // batch7Lane7TwitterUsers indexes includes.users by id.
 func batch7Lane7TwitterUsers(data map[string]any) map[string]map[string]any {
 	users := map[string]map[string]any{}
-	for _, raw := range batch7Lane7Slice(batch7Lane7Dig(data, "includes", "users")) {
-		user := batch7Lane7Map(raw)
-		users[batch7Lane7String(user["id"])] = user
+	for _, raw := range asSlice(batch7Lane7Dig(data, "includes", "users")) {
+		user := asMap(raw)
+		users[asString(user["id"])] = user
 	}
 	return users
 }
@@ -1745,7 +1662,7 @@ func batch7Lane7TwitterSearchTweets(ctx context.Context, rt *Runtime, input map[
 	}
 	data, fail := batch7Lane7TwitterGET(ctx, rt, token, "/tweets/search/recent", url.Values{
 		"query":        {query},
-		"max_results":  {strconv.Itoa(batch7Lane7Clamp(intArg(input, "max_results", 10), 10, 100))},
+		"max_results":  {strconv.Itoa(clampInt(intArg(input, "max_results", 10), 10, 100))},
 		"sort_order":   {stringArg(input, "sort_order")},
 		"tweet.fields": {"created_at,public_metrics,author_id,lang"},
 		"expansions":   {"author_id"},
@@ -1754,18 +1671,18 @@ func batch7Lane7TwitterSearchTweets(ctx context.Context, rt *Runtime, input map[
 	if fail != nil {
 		return fail, nil
 	}
-	object := batch7Lane7Map(data)
+	object := asMap(data)
 	users := batch7Lane7TwitterUsers(object)
 	results := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(object["data"]) {
-		tweet := batch7Lane7TwitterTweet(batch7Lane7Map(raw))
-		author := users[batch7Lane7String(tweet["author_id"])]
+	for _, raw := range asSlice(object["data"]) {
+		tweet := batch7Lane7TwitterTweet(asMap(raw))
+		author := users[asString(tweet["author_id"])]
 		tweet["author_name"] = author["name"]
 		tweet["author_username"] = author["username"]
 		results = append(results, tweet)
 	}
 	count := len(results)
-	if resultCount, present := batch7Lane7Map(object["meta"])["result_count"]; present {
+	if resultCount, present := asMap(object["meta"])["result_count"]; present {
 		count = batch7Lane7Int(resultCount)
 	}
 	return map[string]any{"count": count, "tweets": results}, nil
@@ -1786,8 +1703,8 @@ func batch7Lane7TwitterGetUser(ctx context.Context, rt *Runtime, input map[strin
 	if fail != nil {
 		return fail, nil
 	}
-	user := batch7Lane7Map(batch7Lane7Map(data)["data"])
-	metrics := batch7Lane7Map(user["public_metrics"])
+	user := asMap(asMap(data)["data"])
+	metrics := asMap(user["public_metrics"])
 	return map[string]any{
 		"id":                user["id"],
 		"name":              user["name"],
@@ -1812,7 +1729,7 @@ func batch7Lane7TwitterGetUserTweets(ctx context.Context, rt *Runtime, input map
 		return map[string]any{"error": "user_id is required"}, nil
 	}
 	params := url.Values{
-		"max_results":  {strconv.Itoa(batch7Lane7Clamp(intArg(input, "max_results", 10), 5, 100))},
+		"max_results":  {strconv.Itoa(clampInt(intArg(input, "max_results", 10), 5, 100))},
 		"tweet.fields": {"created_at,public_metrics,author_id,lang"},
 	}
 	excludes := make([]string, 0, 2)
@@ -1830,8 +1747,8 @@ func batch7Lane7TwitterGetUserTweets(ctx context.Context, rt *Runtime, input map
 		return fail, nil
 	}
 	tweets := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(data)["data"]) {
-		tweets = append(tweets, batch7Lane7TwitterTweet(batch7Lane7Map(raw)))
+	for _, raw := range asSlice(asMap(data)["data"]) {
+		tweets = append(tweets, batch7Lane7TwitterTweet(asMap(raw)))
 	}
 	return map[string]any{"count": len(tweets), "tweets": tweets}, nil
 }
@@ -1853,11 +1770,11 @@ func batch7Lane7TwitterGetTweet(ctx context.Context, rt *Runtime, input map[stri
 	if fail != nil {
 		return fail, nil
 	}
-	object := batch7Lane7Map(data)
-	tweet := batch7Lane7TwitterTweet(batch7Lane7Map(object["data"]))
-	users := batch7Lane7Slice(batch7Lane7Dig(object, "includes", "users"))
+	object := asMap(data)
+	tweet := batch7Lane7TwitterTweet(asMap(object["data"]))
+	users := asSlice(batch7Lane7Dig(object, "includes", "users"))
 	if len(users) > 0 {
-		user := batch7Lane7Map(users[0])
+		user := asMap(users[0])
 		tweet["author_name"] = user["name"]
 		tweet["author_username"] = user["username"]
 	}
@@ -1874,21 +1791,21 @@ func batch7Lane7TwitterGetUserFollowers(ctx context.Context, rt *Runtime, input 
 		return map[string]any{"error": "user_id is required"}, nil
 	}
 	data, fail := batch7Lane7TwitterGET(ctx, rt, token, "/users/"+userID+"/followers", url.Values{
-		"max_results": {strconv.Itoa(batch7Lane7Clamp(intArg(input, "max_results", 25), 1, 100))},
+		"max_results": {strconv.Itoa(clampInt(intArg(input, "max_results", 25), 1, 100))},
 		"user.fields": {"created_at,description,public_metrics,profile_image_url,verified"},
 	})
 	if fail != nil {
 		return fail, nil
 	}
 	followers := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(data)["data"]) {
-		user := batch7Lane7Map(raw)
-		metrics := batch7Lane7Map(user["public_metrics"])
+	for _, raw := range asSlice(asMap(data)["data"]) {
+		user := asMap(raw)
+		metrics := asMap(user["public_metrics"])
 		followers = append(followers, map[string]any{
 			"id":              user["id"],
 			"name":            user["name"],
 			"username":        user["username"],
-			"description":     batch7Lane7Truncate(batch7Lane7String(user["description"]), 200),
+			"description":     truncateTextClamped(asString(user["description"]), 200),
 			"followers_count": batch7Lane7Int(metrics["followers_count"]),
 			"following_count": batch7Lane7Int(metrics["following_count"]),
 			"verified":        user["verified"],
@@ -1908,7 +1825,7 @@ func batch7Lane7TwitterGetTweetReplies(ctx context.Context, rt *Runtime, input m
 	}
 	data, fail := batch7Lane7TwitterGET(ctx, rt, token, "/tweets/search/recent", url.Values{
 		"query":        {"conversation_id:" + tweetID + " is:reply"},
-		"max_results":  {strconv.Itoa(batch7Lane7Clamp(intArg(input, "max_results", 10), 10, 100))},
+		"max_results":  {strconv.Itoa(clampInt(intArg(input, "max_results", 10), 10, 100))},
 		"tweet.fields": {"created_at,public_metrics,author_id,lang"},
 		"expansions":   {"author_id"},
 		"user.fields":  {"name,username"},
@@ -1916,12 +1833,12 @@ func batch7Lane7TwitterGetTweetReplies(ctx context.Context, rt *Runtime, input m
 	if fail != nil {
 		return fail, nil
 	}
-	object := batch7Lane7Map(data)
+	object := asMap(data)
 	users := batch7Lane7TwitterUsers(object)
 	replies := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(object["data"]) {
-		reply := batch7Lane7TwitterTweet(batch7Lane7Map(raw))
-		author := users[batch7Lane7String(reply["author_id"])]
+	for _, raw := range asSlice(object["data"]) {
+		reply := batch7Lane7TwitterTweet(asMap(raw))
+		author := users[asString(reply["author_id"])]
 		reply["author_name"] = author["name"]
 		reply["author_username"] = author["username"]
 		replies = append(replies, reply)
@@ -1939,7 +1856,7 @@ func batch7Lane7TwitterGetListTweets(ctx context.Context, rt *Runtime, input map
 		return map[string]any{"error": "list_id is required"}, nil
 	}
 	data, fail := batch7Lane7TwitterGET(ctx, rt, token, "/lists/"+listID+"/tweets", url.Values{
-		"max_results":  {strconv.Itoa(batch7Lane7Clamp(intArg(input, "max_results", 10), 1, 100))},
+		"max_results":  {strconv.Itoa(clampInt(intArg(input, "max_results", 10), 1, 100))},
 		"tweet.fields": {"created_at,public_metrics,author_id,lang"},
 		"expansions":   {"author_id"},
 		"user.fields":  {"name,username"},
@@ -1947,12 +1864,12 @@ func batch7Lane7TwitterGetListTweets(ctx context.Context, rt *Runtime, input map
 	if fail != nil {
 		return fail, nil
 	}
-	object := batch7Lane7Map(data)
+	object := asMap(data)
 	users := batch7Lane7TwitterUsers(object)
 	tweets := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(object["data"]) {
-		tweet := batch7Lane7TwitterTweet(batch7Lane7Map(raw))
-		author := users[batch7Lane7String(tweet["author_id"])]
+	for _, raw := range asSlice(object["data"]) {
+		tweet := batch7Lane7TwitterTweet(asMap(raw))
+		author := users[asString(tweet["author_id"])]
 		tweet["author_name"] = author["name"]
 		tweet["author_username"] = author["username"]
 		tweets = append(tweets, tweet)
@@ -1982,7 +1899,7 @@ func batch7Lane7TwilioRequest(
 	sid, token, method, suffix string,
 	query, form url.Values,
 ) (batch7Lane7Response, map[string]any) {
-	base := batch7Lane7ModuleBase(rt, batch7Lane7TwilioModule)
+	base := moduleBaseURL(rt, batch7Lane7TwilioModule)
 	if base == "" {
 		base = batch7Lane7TwilioDefaultAPI
 	}
@@ -2016,7 +1933,7 @@ func batch7Lane7TwilioChecked(res batch7Lane7Response) (any, map[string]any) {
 	}
 	if res.Status != http.StatusOK && res.Status != http.StatusCreated {
 		return nil, map[string]any{
-			"error": fmt.Sprintf("Twilio API error %d: %s", res.Status, batch7Lane7Truncate(string(res.Body), batch7Lane7MaxError)),
+			"error": fmt.Sprintf("Twilio API error %d: %s", res.Status, truncateTextClamped(string(res.Body), batch7Lane7MaxError)),
 		}
 	}
 	return res.Parsed, nil
@@ -2025,12 +1942,12 @@ func batch7Lane7TwilioChecked(res batch7Lane7Response) (any, map[string]any) {
 // batch7Lane7TwilioMessage extracts the upstream message projection.
 func batch7Lane7TwilioMessage(message map[string]any) map[string]any {
 	return map[string]any{
-		"sid":           batch7Lane7String(message["sid"]),
-		"to":            batch7Lane7String(message["to"]),
-		"from":          batch7Lane7String(message["from"]),
-		"body":          batch7Lane7String(message["body"]),
-		"status":        batch7Lane7String(message["status"]),
-		"direction":     batch7Lane7String(message["direction"]),
+		"sid":           asString(message["sid"]),
+		"to":            asString(message["to"]),
+		"from":          asString(message["from"]),
+		"body":          asString(message["body"]),
+		"status":        asString(message["status"]),
+		"direction":     asString(message["direction"]),
 		"date_sent":     message["date_sent"],
 		"price":         message["price"],
 		"error_code":    message["error_code"],
@@ -2059,7 +1976,7 @@ func batch7Lane7TwilioSendSMS(ctx context.Context, rt *Runtime, input map[string
 	if fail != nil {
 		return fail, nil
 	}
-	return batch7Lane7TwilioMessage(batch7Lane7Map(decoded)), nil
+	return batch7Lane7TwilioMessage(asMap(decoded)), nil
 }
 
 func batch7Lane7TwilioSendWhatsApp(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -2089,7 +2006,7 @@ func batch7Lane7TwilioSendWhatsApp(ctx context.Context, rt *Runtime, input map[s
 	if fail != nil {
 		return fail, nil
 	}
-	return batch7Lane7TwilioMessage(batch7Lane7Map(decoded)), nil
+	return batch7Lane7TwilioMessage(asMap(decoded)), nil
 }
 
 func batch7Lane7TwilioListMessages(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -2098,7 +2015,7 @@ func batch7Lane7TwilioListMessages(ctx context.Context, rt *Runtime, input map[s
 		return fail, nil
 	}
 	query := url.Values{
-		"PageSize": {strconv.Itoa(batch7Lane7Clamp(intArg(input, "page_size", 20), 1, 1000))},
+		"PageSize": {strconv.Itoa(clampInt(intArg(input, "page_size", 20), 1, 1000))},
 	}
 	if to := stringArg(input, "to"); to != "" {
 		query.Set("To", to)
@@ -2115,8 +2032,8 @@ func batch7Lane7TwilioListMessages(ctx context.Context, rt *Runtime, input map[s
 		return fail, nil
 	}
 	messages := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(decoded)["messages"]) {
-		messages = append(messages, batch7Lane7TwilioMessage(batch7Lane7Map(raw)))
+	for _, raw := range asSlice(asMap(decoded)["messages"]) {
+		messages = append(messages, batch7Lane7TwilioMessage(asMap(raw)))
 	}
 	return map[string]any{"messages": messages, "count": len(messages)}, nil
 }
@@ -2138,7 +2055,7 @@ func batch7Lane7TwilioGetMessage(ctx context.Context, rt *Runtime, input map[str
 	if fail != nil {
 		return fail, nil
 	}
-	return batch7Lane7TwilioMessage(batch7Lane7Map(decoded)), nil
+	return batch7Lane7TwilioMessage(asMap(decoded)), nil
 }
 
 func batch7Lane7TwilioListPhoneNumbers(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -2155,16 +2072,16 @@ func batch7Lane7TwilioListPhoneNumbers(ctx context.Context, rt *Runtime, input m
 		return fail, nil
 	}
 	numbers := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(decoded)["incoming_phone_numbers"]) {
-		number := batch7Lane7Map(raw)
-		capabilities := batch7Lane7Map(number["capabilities"])
+	for _, raw := range asSlice(asMap(decoded)["incoming_phone_numbers"]) {
+		number := asMap(raw)
+		capabilities := asMap(number["capabilities"])
 		numbers = append(numbers, map[string]any{
-			"sid":           batch7Lane7String(number["sid"]),
-			"phone_number":  batch7Lane7String(number["phone_number"]),
-			"friendly_name": batch7Lane7String(number["friendly_name"]),
-			"sms_enabled":   batch7Lane7Bool(capabilities["sms"]),
-			"voice_enabled": batch7Lane7Bool(capabilities["voice"]),
-			"mms_enabled":   batch7Lane7Bool(capabilities["mms"]),
+			"sid":           asString(number["sid"]),
+			"phone_number":  asString(number["phone_number"]),
+			"friendly_name": asString(number["friendly_name"]),
+			"sms_enabled":   asBool(capabilities["sms"]),
+			"voice_enabled": asBool(capabilities["voice"]),
+			"mms_enabled":   asBool(capabilities["mms"]),
 			"date_created":  number["date_created"],
 		})
 	}
@@ -2177,7 +2094,7 @@ func batch7Lane7TwilioListCalls(ctx context.Context, rt *Runtime, input map[stri
 		return fail, nil
 	}
 	query := url.Values{
-		"PageSize": {strconv.Itoa(batch7Lane7Clamp(intArg(input, "page_size", 20), 1, 1000))},
+		"PageSize": {strconv.Itoa(clampInt(intArg(input, "page_size", 20), 1, 1000))},
 	}
 	if to := stringArg(input, "to"); to != "" {
 		query.Set("To", to)
@@ -2197,14 +2114,14 @@ func batch7Lane7TwilioListCalls(ctx context.Context, rt *Runtime, input map[stri
 		return fail, nil
 	}
 	calls := make([]any, 0)
-	for _, raw := range batch7Lane7Slice(batch7Lane7Map(decoded)["calls"]) {
-		call := batch7Lane7Map(raw)
+	for _, raw := range asSlice(asMap(decoded)["calls"]) {
+		call := asMap(raw)
 		calls = append(calls, map[string]any{
-			"sid":        batch7Lane7String(call["sid"]),
-			"to":         batch7Lane7String(call["to"]),
-			"from":       batch7Lane7String(call["from"]),
-			"status":     batch7Lane7String(call["status"]),
-			"direction":  batch7Lane7String(call["direction"]),
+			"sid":        asString(call["sid"]),
+			"to":         asString(call["to"]),
+			"from":       asString(call["from"]),
+			"status":     asString(call["status"]),
+			"direction":  asString(call["direction"]),
 			"duration":   call["duration"],
 			"price":      call["price"],
 			"start_time": call["start_time"],
@@ -2236,7 +2153,7 @@ func batch7Lane7TwilioDeleteMessage(ctx context.Context, rt *Runtime, input map[
 		return map[string]any{"error": "Message not found."}, nil
 	}
 	return map[string]any{
-		"error": fmt.Sprintf("Twilio API error %d: %s", res.Status, batch7Lane7Truncate(string(res.Body), batch7Lane7MaxError)),
+		"error": fmt.Sprintf("Twilio API error %d: %s", res.Status, truncateTextClamped(string(res.Body), batch7Lane7MaxError)),
 	}, nil
 }
 
@@ -2261,7 +2178,7 @@ func batch7Lane7PushoverPost(
 	suffix string,
 	form url.Values,
 ) (batch7Lane7Response, error) {
-	base := batch7Lane7ModuleBase(rt, batch7Lane7PushoverModule)
+	base := moduleBaseURL(rt, batch7Lane7PushoverModule)
 	if base == "" {
 		base = batch7Lane7PushoverDefaultAPI
 	}
@@ -2279,7 +2196,7 @@ func batch7Lane7PushoverGet(
 	suffix string,
 	query url.Values,
 ) (batch7Lane7Response, error) {
-	base := batch7Lane7ModuleBase(rt, batch7Lane7PushoverModule)
+	base := moduleBaseURL(rt, batch7Lane7PushoverModule)
 	if base == "" {
 		base = batch7Lane7PushoverDefaultAPI
 	}
@@ -2310,7 +2227,7 @@ func batch7Lane7PushoverSend(ctx context.Context, rt *Runtime, input map[string]
 	}
 	form := url.Values{"token": {token}, "user": {userKey}, "message": {message}}
 	if title := stringArg(input, "title"); title != "" {
-		form.Set("title", batch7Lane7Truncate(title, 250))
+		form.Set("title", truncateTextClamped(title, 250))
 	}
 	if priority != 0 {
 		form.Set("priority", strconv.Itoa(priority))
@@ -2326,10 +2243,10 @@ func batch7Lane7PushoverSend(ctx context.Context, rt *Runtime, input map[string]
 		form.Set("device", device)
 	}
 	if link := stringArg(input, "url"); link != "" {
-		form.Set("url", batch7Lane7Truncate(link, 512))
+		form.Set("url", truncateTextClamped(link, 512))
 	}
 	if title := stringArg(input, "url_title"); title != "" {
-		form.Set("url_title", batch7Lane7Truncate(title, 100))
+		form.Set("url_title", truncateTextClamped(title, 100))
 	}
 	if boolArg(input, "html", false) {
 		form.Set("html", "1")
@@ -2344,15 +2261,15 @@ func batch7Lane7PushoverSend(ctx context.Context, rt *Runtime, input map[string]
 		}
 		return map[string]any{"error": "Pushover request failed: " + err.Error()}, nil
 	}
-	result := batch7Lane7Map(res.Parsed)
+	result := asMap(res.Parsed)
 	if batch7Lane7Int(result["status"]) != 1 {
 		detail := batch7Lane7JoinErrors(result["errors"])
 		if detail == "" {
-			detail = batch7Lane7Truncate(string(res.Body), 300)
+			detail = truncateTextClamped(string(res.Body), 300)
 		}
 		return map[string]any{"error": "Pushover error: " + detail}, nil
 	}
-	out := map[string]any{"status": "sent", "request": batch7Lane7String(result["request"])}
+	out := map[string]any{"status": "sent", "request": asString(result["request"])}
 	if receipt, present := result["receipt"]; present {
 		out["receipt"] = receipt
 	}
@@ -2376,10 +2293,10 @@ func batch7Lane7PushoverValidateUser(ctx context.Context, rt *Runtime, input map
 	if err != nil {
 		return map[string]any{"error": "Validation failed: " + err.Error()}, nil
 	}
-	result := batch7Lane7Map(res.Parsed)
+	result := asMap(res.Parsed)
 	return map[string]any{
 		"is_valid": batch7Lane7Int(result["status"]) == 1,
-		"devices":  batch7Lane7SliceOrEmpty(result["devices"]),
+		"devices":  sliceOrEmpty(result["devices"]),
 		"is_group": batch7Lane7Int(result["group"]) == 1,
 	}, nil
 }
@@ -2393,11 +2310,11 @@ func batch7Lane7PushoverListSounds(ctx context.Context, rt *Runtime, input map[s
 	if err != nil {
 		return map[string]any{"error": "List sounds failed: " + err.Error()}, nil
 	}
-	result := batch7Lane7Map(res.Parsed)
+	result := asMap(res.Parsed)
 	if batch7Lane7Int(result["status"]) != 1 {
-		return map[string]any{"error": "Failed to list sounds: " + batch7Lane7Truncate(string(res.Body), 300)}, nil
+		return map[string]any{"error": "Failed to list sounds: " + truncateTextClamped(string(res.Body), 300)}, nil
 	}
-	return map[string]any{"sounds": batch7Lane7MapOrEmpty(result["sounds"])}, nil
+	return map[string]any{"sounds": mapOrEmpty(result["sounds"])}, nil
 }
 
 func batch7Lane7PushoverCheckReceipt(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -2413,13 +2330,13 @@ func batch7Lane7PushoverCheckReceipt(ctx context.Context, rt *Runtime, input map
 	if err != nil {
 		return map[string]any{"error": "Receipt check failed: " + err.Error()}, nil
 	}
-	result := batch7Lane7Map(res.Parsed)
+	result := asMap(res.Parsed)
 	if batch7Lane7Int(result["status"]) != 1 {
-		return map[string]any{"error": "Receipt check failed: " + batch7Lane7Truncate(string(res.Body), 300)}, nil
+		return map[string]any{"error": "Receipt check failed: " + truncateTextClamped(string(res.Body), 300)}, nil
 	}
 	return map[string]any{
 		"acknowledged":      batch7Lane7Int(result["acknowledged"]) == 1,
-		"acknowledged_by":   batch7Lane7String(result["acknowledged_by"]),
+		"acknowledged_by":   asString(result["acknowledged_by"]),
 		"acknowledged_at":   batch7Lane7Default(result["acknowledged_at"], 0),
 		"last_delivered_at": batch7Lane7Default(result["last_delivered_at"], 0),
 		"expired":           batch7Lane7Int(result["expired"]) == 1,
@@ -2443,9 +2360,9 @@ func batch7Lane7PushoverCancelReceipt(ctx context.Context, rt *Runtime, input ma
 		}
 		return map[string]any{"error": "Cancel failed: " + err.Error()}, nil
 	}
-	result := batch7Lane7Map(res.Parsed)
+	result := asMap(res.Parsed)
 	if batch7Lane7Int(result["status"]) != 1 {
-		return map[string]any{"error": "Cancel failed: " + batch7Lane7Truncate(string(res.Body), 300)}, nil
+		return map[string]any{"error": "Cancel failed: " + truncateTextClamped(string(res.Body), 300)}, nil
 	}
 	return map[string]any{"status": "cancelled", "receipt": receipt}, nil
 }
@@ -2467,19 +2384,19 @@ func batch7Lane7PushoverSendGlance(ctx context.Context, rt *Runtime, input map[s
 	}
 	form := url.Values{"token": {token}, "user": {userKey}}
 	if title != "" {
-		form.Set("title", batch7Lane7Truncate(title, 100))
+		form.Set("title", truncateTextClamped(title, 100))
 	}
 	if text != "" {
-		form.Set("text", batch7Lane7Truncate(text, 100))
+		form.Set("text", truncateTextClamped(text, 100))
 	}
 	if subtext != "" {
-		form.Set("subtext", batch7Lane7Truncate(subtext, 100))
+		form.Set("subtext", truncateTextClamped(subtext, 100))
 	}
 	if hasCount {
-		form.Set("count", strconv.Itoa(batch7Lane7Clamp(count, -999, 999)))
+		form.Set("count", strconv.Itoa(clampInt(count, -999, 999)))
 	}
 	if hasPercent {
-		form.Set("percent", strconv.Itoa(batch7Lane7Clamp(percent, 0, 100)))
+		form.Set("percent", strconv.Itoa(clampInt(percent, 0, 100)))
 	}
 	if device := stringArg(input, "device"); device != "" {
 		form.Set("device", device)
@@ -2491,15 +2408,15 @@ func batch7Lane7PushoverSendGlance(ctx context.Context, rt *Runtime, input map[s
 		}
 		return map[string]any{"error": "Glance update failed: " + err.Error()}, nil
 	}
-	result := batch7Lane7Map(res.Parsed)
+	result := asMap(res.Parsed)
 	if batch7Lane7Int(result["status"]) != 1 {
 		detail := batch7Lane7JoinErrors(result["errors"])
 		if detail == "" {
-			detail = batch7Lane7Truncate(string(res.Body), 300)
+			detail = truncateTextClamped(string(res.Body), 300)
 		}
 		return map[string]any{"error": "Glance error: " + detail}, nil
 	}
-	return map[string]any{"status": "updated", "request": batch7Lane7String(result["request"])}, nil
+	return map[string]any{"status": "updated", "request": asString(result["request"])}, nil
 }
 
 func batch7Lane7PushoverGetLimits(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -2514,9 +2431,9 @@ func batch7Lane7PushoverGetLimits(ctx context.Context, rt *Runtime, input map[st
 		}
 		return map[string]any{"error": "Limits check failed: " + err.Error()}, nil
 	}
-	result := batch7Lane7Map(res.Parsed)
+	result := asMap(res.Parsed)
 	if batch7Lane7Int(result["status"]) != 1 {
-		return map[string]any{"error": "Limits check failed: " + batch7Lane7Truncate(string(res.Body), 300)}, nil
+		return map[string]any{"error": "Limits check failed: " + truncateTextClamped(string(res.Body), 300)}, nil
 	}
 	return map[string]any{
 		"limit":     batch7Lane7Int(result["limit"]),

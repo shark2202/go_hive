@@ -192,7 +192,7 @@ func TestBatch5Lane3GmailBatchGetMessages(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	messages := batch4BodySlice(t, result["messages"])
-	if len(messages) != 2 || batch4AsMap(messages[1])["subject"] != "S2" {
+	if len(messages) != 2 || asMap(messages[1])["subject"] != "S2" {
 		t.Fatalf("messages = %v", messages)
 	}
 	if recorder.count() != 2 {
@@ -218,7 +218,7 @@ func TestBatch5Lane3GmailCreateDraft(t *testing.T) {
 	if result["draft_id"] != "draft-1" || result["message_id"] != "msg-9" {
 		t.Fatalf("result = %v", result)
 	}
-	raw := batch4AsString(batch4AsMap(recorder.last(t).Body["message"])["raw"])
+	raw := asString(asMap(recorder.last(t).Body["message"])["raw"])
 	decoded, err := base64.URLEncoding.DecodeString(raw)
 	if err != nil {
 		t.Fatalf("raw base64: %v", err)
@@ -266,11 +266,11 @@ func TestBatch5Lane3GmailCreateDraftReply(t *testing.T) {
 	if result["thread_id"] != "thread-1" {
 		t.Fatalf("result = %v", result)
 	}
-	messageBody := batch4AsMap(recorder.last(t).Body["message"])
+	messageBody := asMap(recorder.last(t).Body["message"])
 	if messageBody["threadId"] != "thread-1" {
 		t.Fatalf("threadId = %v", messageBody["threadId"])
 	}
-	decoded, err := base64.URLEncoding.DecodeString(batch4AsString(messageBody["raw"]))
+	decoded, err := base64.URLEncoding.DecodeString(asString(messageBody["raw"]))
 	if err != nil {
 		t.Fatalf("raw base64: %v", err)
 	}
