@@ -162,7 +162,7 @@
       },
       {
         "id": "inventory-triage-fixes",
-        "label": "清单误判/注解修正：tracker_tools/harness_tools/tracker_db/worker_profiles + skills/discovery + pipeline/registry 错配（应指 stage registry 而非 tools/registry）",
+        "label": "清单误判/注解修正：tracker_tools/tracker_db/worker_profiles/colony_tools_config/outcome_aggregator + skills/discovery + server/sse + pipeline/registry 错配",
         "hours": 3,
         "done": false
       },
@@ -181,6 +181,18 @@
       {
         "id": "config-key-pipeline",
         "label": "config 契约补 pipeline 键（当前 134 键未含）",
+        "hours": 1,
+        "done": false
+      },
+      {
+        "id": "streamtoken-refresh-scope",
+        "label": "server/streamtoken_refresh.py（云端 streamToken 轮换）归属：实现或登记 out_of_scope(cloud)",
+        "hours": 2,
+        "done": false
+      },
+      {
+        "id": "browser-audit-d02-refresh",
+        "label": "browser 审计页 D02 文案与 tool-surface 22/22 sha 证据不一致，需刷新口径",
         "hours": 1,
         "done": false
       }
