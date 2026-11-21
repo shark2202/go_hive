@@ -1,0 +1,198 @@
+{
+  "round": "R15 \u5750\u6807\u52a8\u4f5c\u9644\u56fe (browser-annotated-actions)",
+  "measured_with": "real browserbridge binary + e2e_browser_panel_fakeext.py (1280x720, dpr 1); hive-browser CLI over /command",
+  "upstream": {
+    "tool_layer": "list[TextContent(json.dumps(interaction_result)), ImageContent(type=image, data=<annotated jpeg>, mimeType=image/jpeg)]",
+    "build_visual_response_call_sites": [
+      "coordinate click: interact.py:871",
+      "coordinate hover: interact.py:885",
+      "coordinate key: interact.py:944"
+    ],
+    "highlight_source": "bridge._interaction_highlights[tab] = {x,y,w,h,label,kind}; click->point 'click (x,y)', hover->'hover (x,y)', key->'<key> (x,y)'",
+    "cli_collapse": "cli_commands/interact.py::_blocks_to_cli_dict -> interaction dict + saved_to + _image; artifact browser_interact_<ms>_tab<id>.jpg",
+    "selector_click": "no image; _attach_snapshot adds `snapshot`",
+    "drag_type_scroll": "drag has no visual response; type/scroll only get `snapshot`"
+  },
+  "bridge": {
+    "click": {
+      "before": [
+        "action",
+        "button",
+        "clickCount",
+        "method",
+        "ok",
+        "tabId",
+        "x",
+        "y"
+      ],
+      "after": [
+        "action",
+        "button",
+        "clickCount",
+        "data",
+        "method",
+        "mimeType",
+        "ok",
+        "tabId",
+        "x",
+        "y"
+      ]
+    },
+    "hover": {
+      "before": [
+        "action",
+        "ok",
+        "tabId",
+        "x",
+        "y"
+      ],
+      "after": [
+        "action",
+        "data",
+        "mimeType",
+        "ok",
+        "tabId",
+        "x",
+        "y"
+      ]
+    },
+    "key": {
+      "before": [
+        "action",
+        "key",
+        "ok",
+        "tabId",
+        "x",
+        "y"
+      ],
+      "after": [
+        "action",
+        "data",
+        "key",
+        "mimeType",
+        "ok",
+        "tabId",
+        "x",
+        "y"
+      ]
+    }
+  },
+  "cli": {
+    "click": {
+      "before": [
+        "action",
+        "button",
+        "clickCount",
+        "method",
+        "ok",
+        "tabId",
+        "x",
+        "y"
+      ],
+      "after": [
+        "_image",
+        "action",
+        "button",
+        "clickCount",
+        "method",
+        "ok",
+        "saved_to",
+        "tabId",
+        "x",
+        "y"
+      ]
+    },
+    "hover": {
+      "before": [
+        "action",
+        "ok",
+        "tabId",
+        "x",
+        "y"
+      ],
+      "after": [
+        "_image",
+        "action",
+        "ok",
+        "saved_to",
+        "tabId",
+        "x",
+        "y"
+      ]
+    },
+    "key": {
+      "before": [
+        "action",
+        "key",
+        "ok",
+        "tabId",
+        "x",
+        "y"
+      ],
+      "after": [
+        "_image",
+        "action",
+        "key",
+        "ok",
+        "saved_to",
+        "tabId",
+        "x",
+        "y"
+      ]
+    }
+  },
+  "attached_image": {
+    "source": "fake extension Page.captureScreenshot (deterministic grid render)",
+    "mimeType": "image/jpeg",
+    "bytes": 18113,
+    "sha256": "bbdc359f7c7be280d291165e5ca0bed4074c58cc4991ade60d0e18d9b9f06f83",
+    "decoded": {
+      "width": 800,
+      "height": 450,
+      "format": "JPEG"
+    }
+  },
+  "real_chrome": {
+    "chrome": "Google Chrome 158.0.8127.37",
+    "ran": "19-step flow + coordinate-click probe; PASS",
+    "click_result_keys": [
+      "action",
+      "button",
+      "clickCount",
+      "data",
+      "method",
+      "mimeType",
+      "ok",
+      "tabId",
+      "x",
+      "y"
+    ],
+    "click_point_css": {
+      "x": 1152,
+      "y": 642.6
+    },
+    "image": {
+      "bytes": 26748,
+      "sha256": "12073971d1a43881f948a4a8178847fd86a09d597388ab82046c315f10813489",
+      "decoded": {
+        "width": 1600,
+        "height": 893,
+        "format": "JPEG"
+      },
+      "note": "dpr=2 host: Chrome clip.scale is in CSS px, so output = 800 CSS px * dpr device px (pre-existing R01 approximation; the fake extension models dpr=1 and yields 800x450)"
+    },
+    "annotation_marker_scan": {
+      "red_px": 200,
+      "bbox": [
+        1424,
+        788,
+        1455,
+        816
+      ],
+      "expected_centre_px": [
+        1440,
+        803
+      ]
+    }
+  }
+}

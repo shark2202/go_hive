@@ -51,97 +51,175 @@ func (rt *Runtime) CallREST(ctx context.Context, tool *Tool, action Action, spec
 	if spec.Pagination != nil {
 		return rt.callRESTPages(ctx, tool, spec, input)
 	}
-	result, _, err := rt.callRESTOnce(ctx, tool, spec, input, false)
+	result, _, _, err := rt.callRESTOnce(ctx, tool, spec, input, false, "")
 	return result, err
 }
 
-// callRESTPages walks the provider cursor, concatenating the item arrays and
-// returning the first page's envelope with the merged list in place.
+// callRESTPages walks the provider's pagination contract, concatenating the
+// item arrays and returning the first page's envelope with the merged list in
+// place. Three cursors drive the walk, in priority order: the rel="next" URL
+// from the response Link header (LinkHeader), a field of the last item on the
+// page (LastItemField), or a cursor field in the response body
+// (NextCursorPath). A page that does not carry the declared item shape is
+// surfaced untouched rather than turned into an empty list.
 func (rt *Runtime) callRESTPages(ctx context.Context, tool *Tool, spec RestSpec, input map[string]any) (any, error) {
 	pagination := spec.Pagination
 	current := input
-	var envelope map[string]any
-	var merged []any
-	seen := map[string]bool{}
+	nextURL := ""
+	var envelope any
+	merged := []any{}
+	seenCursors := map[string]bool{}
+	seenURLs := map[string]bool{}
 	for page := 1; ; page++ {
-		result, status, err := rt.callRESTStep(ctx, tool, spec, current)
+		result, status, linkNext, err := rt.callRESTStep(ctx, tool, spec, current, nextURL)
 		if err != nil {
 			return nil, err
 		}
 		if status >= 400 {
 			return result, nil
 		}
-		object, ok := result.(map[string]any)
-		if !ok {
-			return result, nil
-		}
-		items, found := pathItems(object, pagination.ItemsPath)
+		items, found := pageItems(result, pagination.ItemsPath)
 		if !found {
-			// The provider did not return the declared shape; surface the page
-			// untouched rather than inventing an empty list.
 			return result, nil
 		}
 		if envelope == nil {
-			envelope = object
+			envelope = result
 		}
 		merged = append(merged, items...)
-		next := strings.TrimSpace(scalarString(pathValue(object, pagination.NextCursorPath)))
-		if next == "" || pagination.CursorParam == "" || seen[next] || page >= pagination.maxPages() {
+		if page >= pagination.maxPages() {
 			break
 		}
-		seen[next] = true
-		nextInput := make(map[string]any, len(input)+1)
-		for name, value := range input {
-			nextInput[name] = value
+		if pagination.LinkHeader {
+			if linkNext == "" || seenURLs[linkNext] {
+				break
+			}
+			seenURLs[linkNext] = true
+			nextURL = linkNext
+			continue
 		}
-		nextInput[pagination.CursorParam] = next
-		current = nextInput
+		if pagination.LastItemField != "" {
+			if object, ok := result.(map[string]any); ok {
+				if more, present := object["has_more"].(bool); present && !more {
+					break
+				}
+			}
+			next := lastItemValue(items, pagination.LastItemField)
+			if next == "" || pagination.CursorParam == "" || seenCursors[next] {
+				break
+			}
+			seenCursors[next] = true
+			current = withParam(input, pagination.CursorParam, next)
+			continue
+		}
+		object, ok := result.(map[string]any)
+		if !ok {
+			break
+		}
+		next := strings.TrimSpace(scalarString(pathValue(object, pagination.NextCursorPath)))
+		if next == "" || pagination.CursorParam == "" || seenCursors[next] {
+			break
+		}
+		seenCursors[next] = true
+		current = withParam(input, pagination.CursorParam, next)
 	}
-	setPathValue(envelope, pagination.ItemsPath, merged)
-	clearPathValue(envelope, pagination.NextCursorPath)
-	return envelope, nil
+	switch first := envelope.(type) {
+	case map[string]any:
+		if pagination.ItemsPath != "" {
+			setPathValue(first, pagination.ItemsPath, merged)
+		}
+		// A fully walked response no longer advertises a next cursor.
+		clearPathValue(first, pagination.NextCursorPath)
+		if pagination.LastItemField != "" {
+			// has_more described a single page; the merged envelope is the walk.
+			delete(first, "has_more")
+		}
+		return first, nil
+	case []any:
+		return merged, nil
+	default:
+		return envelope, nil
+	}
+}
+
+// pageItems reads one page's item array. An empty path means the page itself is
+// the array (GitHub list endpoints return a bare JSON array).
+func pageItems(page any, path string) ([]any, bool) {
+	if path == "" {
+		items, ok := page.([]any)
+		return items, ok
+	}
+	object, ok := page.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	return pathItems(object, path)
+}
+
+// lastItemValue reads the named field off the page's last item.
+func lastItemValue(items []any, field string) string {
+	if field == "" || len(items) == 0 {
+		return ""
+	}
+	last, ok := items[len(items)-1].(map[string]any)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(scalarString(last[field]))
+}
+
+// withParam copies the base input and sets one request parameter.
+func withParam(input map[string]any, name, value string) map[string]any {
+	next := make(map[string]any, len(input)+1)
+	for key, item := range input {
+		next[key] = item
+	}
+	next[name] = value
+	return next
 }
 
 // callRESTStep performs one request and resolves a 401 through the module's
 // OAuth refresh source: either one retry with a fresh token or an explicit
-// value error naming the credential that cannot be refreshed.
-func (rt *Runtime) callRESTStep(ctx context.Context, tool *Tool, spec RestSpec, input map[string]any) (any, int, error) {
-	result, status, err := rt.callRESTOnce(ctx, tool, spec, input, false)
+// value error naming the credential that cannot be refreshed. The returned
+// string is the rel="next" URL from the Link header, when the spec asked for
+// header pagination.
+func (rt *Runtime) callRESTStep(ctx context.Context, tool *Tool, spec RestSpec, input map[string]any, overrideURL string) (any, int, string, error) {
+	result, status, linkNext, err := rt.callRESTOnce(ctx, tool, spec, input, false, overrideURL)
 	if err != nil || status != http.StatusUnauthorized || !rt.OAuthConfigured(tool.ID) {
-		return result, status, err
+		return result, status, linkNext, err
 	}
 	resolution := rt.ResolveUnauthorized(ctx, tool.ID, tool.DisplayName)
 	if !resolution.Retry {
 		if resolution.Failure != nil {
-			return resolution.Failure, status, nil
+			return resolution.Failure, status, "", nil
 		}
-		return result, status, nil
+		return result, status, linkNext, nil
 	}
-	return rt.callRESTOnce(ctx, tool, spec, input, true)
+	return rt.callRESTOnce(ctx, tool, spec, input, true, overrideURL)
 }
 
 // callRESTOnce is one pass over the spec with a token resolved either through
-// the cache (force false) or through a forced refresh (force true).
-func (rt *Runtime) callRESTOnce(ctx context.Context, tool *Tool, spec RestSpec, input map[string]any, force bool) (any, int, error) {
+// the cache (force false) or through a forced refresh (force true). overrideURL
+// replaces the derived target when a Link header advertised the next page.
+func (rt *Runtime) callRESTOnce(ctx context.Context, tool *Tool, spec RestSpec, input map[string]any, force bool, overrideURL string) (any, int, string, error) {
 	client := rt.clientFor(tool.ID)
 	token, missing, tokenErr := rt.restToken(ctx, client.cfg, force)
 	if tokenErr != nil {
 		var refreshErr *OAuthRefreshError
 		if errors.As(tokenErr, &refreshErr) {
-			return refreshErr.ValueError(), http.StatusUnauthorized, nil
+			return refreshErr.ValueError(), http.StatusUnauthorized, "", nil
 		}
-		return map[string]any{"error": tokenErr.Error()}, 0, nil
+		return map[string]any{"error": tokenErr.Error()}, 0, "", nil
 	}
 	if len(missing) > 0 {
 		return map[string]any{
 			"error": fmt.Sprintf("%s credentials not configured", tool.DisplayName),
 			"help":  "Set " + strings.Join(missing, " or ") + " environment variable, or configure the credential store.",
-		}, 0, nil
+		}, 0, "", nil
 	}
 
 	path, consumed, err := fillPath(spec.Path, input)
 	if err != nil {
-		return map[string]any{"error": err.Error()}, 0, nil
+		return map[string]any{"error": err.Error()}, 0, "", nil
 	}
 	query := url.Values{}
 	body := map[string]any{}
@@ -223,6 +301,11 @@ func (rt *Runtime) callRESTOnce(ctx context.Context, tool *Tool, spec RestSpec, 
 	if encoded := query.Encode(); encoded != "" {
 		target += "?" + encoded
 	}
+	if overrideURL != "" {
+		// Link pagination walks the provider-advertised URL verbatim; the
+		// advertised query already carries the follow-up page parameters.
+		target = overrideURL
+	}
 
 	var reader io.Reader
 	contentType := ""
@@ -233,7 +316,7 @@ func (rt *Runtime) callRESTOnce(ctx context.Context, tool *Tool, spec RestSpec, 
 		} else {
 			payload, err := json.Marshal(body)
 			if err != nil {
-				return map[string]any{"error": "failed to encode request: " + err.Error()}, 0, nil
+				return map[string]any{"error": "failed to encode request: " + err.Error()}, 0, "", nil
 			}
 			reader = strings.NewReader(string(payload))
 			contentType = "application/json"
@@ -242,7 +325,7 @@ func (rt *Runtime) callRESTOnce(ctx context.Context, tool *Tool, spec RestSpec, 
 
 	req, err := http.NewRequestWithContext(ctx, spec.Method, target, reader)
 	if err != nil {
-		return map[string]any{"error": "failed to build request: " + err.Error()}, 0, nil
+		return map[string]any{"error": "failed to build request: " + err.Error()}, 0, "", nil
 	}
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
@@ -255,29 +338,91 @@ func (rt *Runtime) callRESTOnce(ctx context.Context, tool *Tool, spec RestSpec, 
 	resp, err := rt.HTTP.Do(req)
 	if err != nil {
 		if ctx.Err() != nil {
-			return nil, 0, ctx.Err()
+			return nil, 0, "", ctx.Err()
 		}
-		return map[string]any{"error": "Network error: " + err.Error()}, 0, nil
+		return map[string]any{"error": "Network error: " + err.Error()}, 0, "", nil
 	}
 	defer resp.Body.Close()
+	linkNext := ""
+	if spec.Pagination != nil && spec.Pagination.LinkHeader {
+		linkNext = parseLinkNextHeader(resp.Header.Get("Link"), req.URL)
+	}
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 	if readErr != nil {
-		return map[string]any{"error": "Failed to read response: " + readErr.Error()}, resp.StatusCode, nil
+		return map[string]any{"error": "Failed to read response: " + readErr.Error()}, resp.StatusCode, "", nil
 	}
 	parsed := any(nil)
 	if len(raw) > 0 {
 		_ = json.Unmarshal(raw, &parsed)
 	}
 	if resp.StatusCode >= 400 {
-		return providerError(tool, resp.StatusCode, parsed, raw), resp.StatusCode, nil
+		return providerError(tool, resp.StatusCode, parsed, raw), resp.StatusCode, "", nil
 	}
 	if object, ok := parsed.(map[string]any); ok && tool.ID == "slack_tool" {
 		if success, present := object["ok"].(bool); present && !success {
 			code := fmt.Sprint(object["error"])
-			return map[string]any{"error": slackErrorMessage(code), "error_code": code}, resp.StatusCode, nil
+			return map[string]any{"error": slackErrorMessage(code), "error_code": code}, resp.StatusCode, "", nil
 		}
 	}
-	return shapeResponse(spec, parsed, raw), resp.StatusCode, nil
+	return shapeResponse(spec, parsed, raw), resp.StatusCode, linkNext, nil
+}
+
+// parseLinkNextHeader returns the absolute URL advertised with rel="next" in an
+// RFC 8288 Link header, resolved against the request URL. It returns "" when the
+// header is absent or carries no next relation.
+func parseLinkNextHeader(raw string, base *url.URL) string {
+	for _, part := range splitLinkHeader(raw) {
+		start := strings.Index(part, "<")
+		end := strings.Index(part, ">")
+		if start < 0 || end < start {
+			continue
+		}
+		target := strings.TrimSpace(part[start+1 : end])
+		next := false
+		for _, param := range strings.Split(part[end+1:], ";") {
+			name, value, ok := strings.Cut(strings.TrimSpace(param), "=")
+			if !ok || !strings.EqualFold(strings.TrimSpace(name), "rel") {
+				continue
+			}
+			for _, relation := range strings.Fields(strings.Trim(strings.TrimSpace(value), `"`)) {
+				if strings.EqualFold(relation, "next") {
+					next = true
+				}
+			}
+		}
+		if !next || target == "" {
+			continue
+		}
+		if base != nil {
+			if ref, err := url.Parse(target); err == nil {
+				return base.ResolveReference(ref).String()
+			}
+		}
+		return target
+	}
+	return ""
+}
+
+// splitLinkHeader splits a Link header on the commas separating link-values,
+// not on commas inside <...> URIs.
+func splitLinkHeader(raw string) []string {
+	parts := []string{}
+	start := 0
+	inURI := false
+	for i := 0; i < len(raw); i++ {
+		switch raw[i] {
+		case '<':
+			inURI = true
+		case '>':
+			inURI = false
+		case ',':
+			if !inURI {
+				parts = append(parts, raw[start:i])
+				start = i + 1
+			}
+		}
+	}
+	return append(parts, raw[start:])
 }
 
 // restToken resolves the request token: the cached/static path normally, a

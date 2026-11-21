@@ -1,6 +1,6 @@
 # SSE payload 对照（Python 参考 vs Go 目标）
 
-> 状态：**已实测**（2026-11-21，双跑探针 + 字段矩阵）
+> 状态：**已实测**（2026-11-21，双跑探针 + 字段矩阵；sse-timing-judge 车道复跑）
 > 探针：`go_hive/scripts/sse_payload_parity.py`（opt-in，本地 stub LLM，不触外网）
 > 证据：`go_hive/docs/e2e-assets/sse-payload-parity/`（capture-*.json / diff.json / summary.txt）
 > 关联：外观矩阵 `sse` 维度、`surface-tracking-matrix.html`、`alignment-dimensions.html`
@@ -9,7 +9,7 @@
 
 `api-contract-diff`（14 端点）只比较单个响应体的形状；`session_events` 捕获也只覆盖
 「订阅即重放」的那几帧。本页回答另一个问题：**同一场景下，两侧客户端实际收到的 SSE
-帧序列（类型、顺序、data 字段、replay 语义）是否一致。**
+帧序列（类型、顺序、data 字段、replay 语义、judge 行为）是否一致。**
 
 探针驱动同一剧本，两侧各起一个临时 `HIVE_HOME` + 同一个本地 OpenAI 兼容 stub：
 
@@ -20,13 +20,16 @@
 5. 回一条答案 → 续跑并停在 `turn_done`；
 6. 断开后重连一次，捕获 replay 序列；
 7. `DELETE /api/sessions/{id}` 停会话（捕获停止尾巴，不参与逐字段矩阵）；
-8. 读 `/events/history` 作为完整事件日志（含开场块，SSE 不会重放它）。
+8. 读 `/events/history` 作为完整事件日志（含开场块，SSE 不会重放它；`judge_verdict`
+   也只出现在 history，与参考一致）。
 
 归一化：`seq` / `timestamp` / `execution_id` / `tool_use_id` / `session_id` /
 `correlation_id` 等易变值替换为占位符，**键存在性与类型保留**；`content`、`prompt`、
-`model`、`max_iterations` 等语义值保留用于值级对照。
+`model`、`max_iterations` 等语义值保留用于值级对照。`diff.json` 的 `judge` 段把两侧
+history 里的 `judge_verdict`（action / feedback / judge_type / iteration）逐条比对，
+并记录它是否出现在 live/replay。
 
-## 2. 逐类型字段矩阵（修复后）
+## 2. 逐类型字段矩阵（本车道修复后）
 
 完整机器可读版本见 `diff.json` 的 `per_type`；下表的 `missing/extra/type` 均指
 **reference → target 方向**。`live/replay/history` 三路都做键集合与类型比较。
@@ -34,49 +37,69 @@
 | 事件类型 | live 帧数 ref/go | 键缺失 | 键多余 | 类型差 | 结论 |
 | --- | --- | --- | --- | --- | --- |
 | `session_snapshot` | 1/1 | — | — | — | 一致（14 个键，含 `snapshot_seq`/`activity`/`current_tool_calls`） |
-| `client_output_delta` | 3/3 | — | — | — | 键一致（content/snapshot/iteration/inner_turn）；iteration 值见 §4 |
-| `llm_turn_complete` | 4/4 | — | — | `cost_usd` float vs int | 键一致；`cost_usd` 为 JSON 数字表示差（见 §4） |
-| `client_input_requested` | 4/4 | — | — | — | 键一致（`park_reason`；带问题时为 `questions`） |
+| `client_output_delta` | 3/3 | — | — | — | 键一致（content/snapshot/iteration/inner_turn）；iteration 值见 §4.6 |
+| `llm_turn_complete` | 4/4 | — | — | `cost_usd` float vs int | 键一致；`cost_usd` 数字表示差见 §4.6（其余值级差异同节） |
+| `client_input_requested` | 4/4 | — | — | — | 键一致（`park_reason`；带问题时为 `questions`）；发射时机本车道已对齐（§3） |
 | `loop_state_changed` | 6/6 | — | — | — | 键一致（activity/park_reason/interrupt_cause/questions） |
 | `reminder_injected` | 0/0（仅 history 1/1） | — | — | — | 键一致（source/detail/meta） |
-| `node_loop_started` | 0/3 | — | `max_iterations`（target 独有帧） | — | 见 §4「Go 每回合 envelope」 |
+| `node_loop_started` | 0/3 | — | `max_iterations`（target 独有帧） | — | 见 §4.1、§4.6 |
 | `node_loop_iteration` | 3/3 | — | — | — | 键一致（iteration+phase） |
-| `node_loop_completed` | 0/3 | — | `iterations`（target 独有帧） | — | 见 §4「Go 每回合 envelope」 |
-| `execution_started` | 0/3 | — | `input`（target 独有帧） | — | 见 §4「Go 每回合 envelope」 |
-| `execution_completed` | 0/3 | — | `output`（target 独有帧） | — | 见 §4「Go 每回合 envelope」 |
+| `node_loop_completed` | 0/3 | — | `iterations`（target 独有帧） | — | 见 §4.1、§4.6 |
+| `execution_started` | 0/3 | — | `input`（target 独有帧） | — | 见 §4.1 |
+| `execution_completed` | 0/3 | — | `output`（target 独有帧） | — | 见 §4.1 |
 | `client_input_committed` | 3/3 | — | — | — | 键 `seq`，correlation 与 received 对齐 |
-| `context_usage_updated` | 5/3 | — | — | — | 键/类型一致；**每迭代发射**；触发粒度见 §4（参考 4 种 trigger vs Go 1 种） |
-| `session_title_updated` | 1/1 | — | — | — | 键 `session_id`/`title` |
+| `context_usage_updated` | 5/3 | — | — | — | 键/类型一致；**每迭代发射**；触发粒度见 §4.5（参考 3 种 trigger vs Go 1 种） |
+| `session_title_updated` | 1/1 | — | — | — | 键 `session_id`/`title`；发射为异步任务，见 §4.6 |
 | `tool_call_started` / `_completed` | 1/1 | — | — | — | 键一致（含 `tool_index`） |
-| `judge_verdict` | 0/0（仅 history 3/0） | `action`/`feedback`/`iteration`/`judge_type` | — | — | 参考独有（隐式 judge）；见 §4 |
+| `judge_verdict` | 0/0（history 3/3） | — | — | — | **已对齐**（本车道）；history-only，两侧 live/replay 均不可见；见 §4.3 |
 
-修复前（sse-payload-parity 首跑）的差异供对照：target live 类型集合缺 `client_input_committed`、
+修复历史（前两轮车道）供对照：target live 类型集合缺 `client_input_committed`、
 `context_usage_updated`、`session_title_updated`；target live 每回合多
 `execution_started`/`execution_completed`/`node_loop_started`/`node_loop_completed`；
 `node_loop_iteration` 每回合帧缺 `phase`；`context_usage_updated` 只在开场块出现一次；
-`ask_user` 回合多一次模型调用（多一帧 `client_output_delta` + `llm_turn_complete`，计数 3/4、4/5）；
-replay 集合缺三类可见聊天帧、多 execution 信封帧。
+`ask_user` 回合多一次模型调用；replay 集合缺三类可见聊天帧、多 execution 信封帧。
+`judge_verdict` 参考独有与 `llm_turn_complete`/`client_input_requested` 发射时机是本
+车道（sse-timing-judge）修的残余。
 
-## 3. 本轮修复（低风险、证据明确）
+## 3. 本车道修复（发射时机 + 隐式 judge）
 
 | 问题 | 证据 | 修复 | 代码 |
 | --- | --- | --- | --- |
-| 每回合 `node_loop_iteration` 缺 `phase` | 参考 live/history 每个 iteration 都带 `phase`；Go 仅开场块带 | emitter 在每次迭代写入 `phase`（`SessionPhaseLabel`，independent/colony） | `internal/server/chat_turn_emitter.go`、`session_start_events.go`、`cli/loader*.go` |
-| 缺 `client_input_committed` | 参考在每条用户消息落地时发一次 `{seq}`，replay 子集也包含它；Go 只定义了 emitter 从未调用 | 用户消息写入会话后发 committed，`seq` 取会话消息 seq，correlation 与 `client_input_received` 相同 | `internal/server/chat_runtime.go`、`chat_routes.go` |
-| 每迭代缺 `context_usage_updated` | 参考在每次 iteration start 发一次；Go 只在开场块发一次 | `IterationStarted` 之后按同一 payload 形状发一次（开场首迭代仍由开场块独占） | `chat_turn_emitter.go`、`chat_runtime.go`、`session_start_events.go` |
-| 缺 `session_title_updated` | 参考首回合后自动命名并发事件；Go 的 `TitleTrigger` 有实现有测试但**从未接线** | 会话创建/预加载两条路径订阅 title trigger，停止时释放 | `internal/cli/loader.go`、`loader_preloaded_session.go`、`session.go`、`session_titles.go` |
-| live 默认事件过滤缺失 | 参考 `handle_events` 无 `?types=` 时回退 `DEFAULT_EVENT_TYPES`（49 类）；Go 无过滤直接推所有事件；且参考 replay 与订阅过滤集求交（`_REPLAY_TYPES & event_type_values`），Go replay 不看过滤 | Go 订阅按上游 49 类白名单过滤；replay 同样与订阅过滤求交；未知类型名被丢弃，全无效时回退默认集（对齐 `_parse_event_types`） | `internal/server/chat_routes.go` |
-| replay 集合多 `execution_failed` | 参考 `_REPLAY_TYPES` 只含 started/completed | 从 Go replay 集合移除 `execution_failed` | `internal/server/chat_routes.go` |
-| `ask_user` 回合多一次模型调用 | 参考在 `ask_user` 工具返回后立即结束回合（`user_input_requested` → return），Go 继续下一轮迭代（多 1 帧 `client_output_delta` + `llm_turn_complete`，replay 计数 3/4、4/5） | loop 在工具批结束后检查成功的 `ask_user`，命中即提前返回（`batchStopsTurn`），由 host 停车（§4.4） | `internal/agentloop/loop.go`（`batchAskedUser`/`batchStopsTurn`）、`synthetic_tools.go`（`AskUserToolName`） |
+| `client_input_requested` 由工具处理器提前发射（夹在 tool_started 与 tool_completed 之间） | 参考在 `_await_user_input` 里、工具批与 `llm_turn_complete` 之后发；目标在 ask_user 工具执行时发 | 工具处理器只记 `pendingQuestions` 并落盘；停车边界（`executionCompleted`）统一一次性发出，ask_user park 带上原 `questions` | `chat_runtime.go`（`executeAskUser` 去掉提前发射）、`chat_turn_emitter.go`（`executionCompleted(..., questions)`） |
+| `llm_turn_complete` 非流式「完成即发」，落在工具帧之前 | 参考在 `_run_turn_loop` 返回后（工具批之后、park 之前）发 | 文本回合在 `settleTextOnlyTurn` 开头发；工具回合在 `observeToolBatch` 里、`tool_call_completed` 之后发 | `loop.go`、`worker_stall.go` |
+| 同一改动会把 `message_count` 变成「回合结束后的会话大小」（+assistant/+tool 消息） | 复跑探针发现 target `2/4/7/9` vs 参考 `1/3/5/8` | loop 新增 `RequestMessageRecorder` 可选 seam：请求发出前记录 `len(messages)`，emitter 用它填充诊断字段 | `loop.go::requestCompletion`、`types.go`、`chat_turn_emitter.go` |
+| `judge_verdict` 参考独有（隐式 judge，history 3/0） | 参考 queen 的永久 loop 在 park 解除后跑 6i judge；`skip_judge=True` 短路仍发布 RETRY/implicit 事件 | 会话级隐式 verdict 账本：回合结束时记账，下一回合开始（`client_input_received`+EXECUTING 之后、`client_input_committed` 之前）发布上一回合的 `judge_verdict{RETRY,"",implicit,iteration}`；带 criteria 的会话跳过（其 loop judge 自己发 verdict） | `chat_implicit_judge.go`、`chat_runtime.go` |
 
-以上均有回归测试钉住（`internal/server/sse_payload_parity_test.go`、`internal/agentloop/ask_user_turn_test.go`，
-`// Parity:` 注解指向
-`routes_events.py::DEFAULT_EVENT_TYPES`、`_REPLAY_TYPES`、`agent_loop.py::_publish_iteration`、
-`event_publishing.py::publish_context_usage`、`agent_loop.py::_drain_injection_queue`、
-`agent_loop.py::_run_turn_loop`、`tests/test_event_loop_node.py::test_client_input_requested_event_published`、
-`test_queen_ask_user_with_real_tools`、`test_answering_restored_question_clears_pending_input_on_disk`）。
-两个既有顺序断言测试按上游顺序更新（committed 在 node_loop_started 之后、context usage 在
-iteration 之后）；`TestChatRuntimeAnswerResumesFromAskUserPark` 收紧为「ask 回合 + 回答回合 = 恰好 2 次调用」。
+发射时机修复前/后（探针剧本的 ask_user 回合，Go live）：
+
+```
+修复前 Go:  llm_turn_complete(iter=1, stop=tool_calls) → tool_call_started(ask_user)
+            → client_input_requested{park_reason=ask_user, questions} → tool_call_completed(ask_user)
+            → node_loop_completed → loop_state awaiting_user → execution_completed
+修复后 Go:  tool_call_started(ask_user) → tool_call_completed(ask_user)
+            → llm_turn_complete(iter=1, stop=tool_calls)
+            → node_loop_completed → client_input_requested{ask_user, questions}
+            → loop_state awaiting_user → execution_completed
+参考（去 envelope）: tool_call_started → tool_call_completed → llm_turn_complete
+            → client_input_requested{ask_user, questions} → loop_state awaiting_user
+```
+
+隐式 judge（探针剧本的 history，两侧现在逐条一致）：
+
+```
+参考 & 目标: 回合 1 开始: client_input_received → loop_state executing → judge_verdict{RETRY,"",implicit,0}
+                            → client_input_committed → node_loop_iteration(1) …
+             回合 2 开始: … judge_verdict{…,1} …；回合 3 开始: … judge_verdict{…,2} …
+             末回合（回答回合，停止前无下一条消息）不发 verdict —— 两侧一致
+修复前 Go:  history 中 0 条 judge_verdict（同一位置缺帧）
+```
+
+以上均有回归测试钉住：`internal/server/sse_payload_parity_test.go`
+（`TestAskUserRequestIsAnnouncedAtTheTurnBoundary`、
+`TestImplicitJudgeVerdictFollowsThePreviousTurn`，后者同时钉住
+`llm_turn_complete.message_count` 为请求时刻的大小），`// Parity:` 注解指向
+`agent_loop.py::_run_turn_loop`、`_await_user_input`、`execute`（6i）、
+`judge_pipeline.py::judge_turn`、`queen_orchestrator.py`（skip_judge spec）。
 
 ## 4. 差异清单（保留项与已修项）
 
@@ -91,81 +114,60 @@ Python 的 queen 是**永久 loop**：整个会话只在开场写一次 node_loo
 证据：target live 45 帧 vs reference 35 帧 = +12 帧信封（execution_started/completed ×3、
 node_loop_started/completed ×3）−2 帧（4.5 的 context usage 触发粒度：参考 5 vs Go 3）。
 `diff.json` 中 `execution_started`/`execution_completed`/`node_loop_completed` 的 extra
-键只出现在 target-only 帧上。**结论：作为有意差异保留，不硬改**；快照（is_executing）与
-前端 spinner 依赖这组信封，拆掉会破坏 Go 的运行时可观测性。
+键（`input`/`output`/`iterations`）只出现在 target-only 帧上。**结论：作为有意差异保留，
+不硬改**；快照（is_executing）与前端 spinner 依赖这组信封，拆掉会破坏 Go 的运行时可观测性。
 
 ### 4.2 `max_iterations` 值：999999 vs 50（有意）
 
 参考永久 loop 报 `999999`，Go 报每回合 loop 的实际上限（默认 50）。字段存在性与类型一致，
 值不同是 4.1 的直接推论。
 
-### 4.3 `judge_verdict`（参考独有）
+### 4.3 `judge_verdict`（本车道已对齐）
 
-Python 的 queen loop 每个回合跑一次「隐式 judge」（`judge_type: implicit`，本场景恒
-`RETRY` + 空 feedback），Go 的 judge 只在配置了 success criteria 时武装（chat 会话默认无
-criteria）。这是 judge 机制的差异，不是 SSE 层缺失；作为已知差异保留。
+参考 queen（`queen_orchestrator.py` 的 `skip_judge=True` spec）每个回合在 park 解除后跑
+一次 6i judge；短路 verdict 是恒定的 `RETRY` + 空 feedback，但仍发布
+`judge_verdict{judge_type: implicit}`，且只在 history（默认 live 过滤与 replay 集合都不含
+它）。Go 现在用会话级账本在**下一回合开始**发布上一回合的 verdict，payload 与位置和参考
+逐条一致（`diff.json.judge.same_verdicts=true`；两侧 live/replay 均不可见）。
 
-### 4.4 `ask_user` 回合的提前返回（本车道已修）
+保留的粒度边界（探针剧本之外才可见，属实现结构差异）：
+- 参考每**loop iteration**（多 inner-turn 回合 = 多次 LLM 调用）各发一次；Go 每**回合**
+  发一次（per-turn loop 的迭代号也按回合计）。
+- 带 `success_criteria` 的会话走 Go 的 criteria judge（`judge_type=custom`，由 loop 发布），
+  本隐式账本跳过，避免重复帧；探针剧本（无 criteria）不受影响。
+- 进程重启后账本重置：重启会话的第一条新消息不会再补发重启前那一回合的 verdict。
 
-参考在 `ask_user` 工具返回后**立即结束当前回合**（Python `_run_turn_loop` 的
-`user_input_requested` 提前 return：tool_started → tool_completed →
-post_tool_call/post_tool_results context usage → llm_turn_complete → client_input_requested
-+ questions → loop_state awaiting_user）。修复前 Go 在该回合继续跑一次 LLM 调用，然后才挂起
-（多 1 帧 `client_output_delta` + 1 帧 `llm_turn_complete`，replay 计数 3/4、4/5 的唯一来源，
-并可能在问题挂起时多出一条助手文本气泡）。
+### 4.4 `ask_user` 回合的提前返回与发射时机（已修）
 
-修复：loop 在工具批落盘后（doom-loop 停车检查之后）检查批内是否有**成功**的 `ask_user`
-（`internal/agentloop/loop.go::batchAskedUser`，经 `batchStopsTurn` 与 worker 的
-「显式报告即停」共享同一提前返回点；工具名常量 `AskUserToolName`），命中即
-`return`（`InnerTurns = inner+1`），由 host（chat runtime / colony overseer）按既有
-`pendingParkReason`/`overseerTurnParkReason` 停车；失败的 `ask_user`（问题形状非法）保持普通
-工具错误，回合继续——与上游 `user_input_requested=False` 的语义一致。普通工具回合不受影响
-（`TestOrdinaryToolTurnStillCallsTheModelAgain`、`TestChatRuntimePublishesToolCallEvents`）。
+参考在 `ask_user` 工具返回后**立即结束当前回合**（`user_input_requested` 提前 return），
+并在 `_await_user_input` 里发 `client_input_requested{questions}`。Go 的回合提前返回在
+前一轮车道修完（`batchStopsTurn`）；本轮把 `client_input_requested` 从工具处理器移到
+停车边界（§3 的第一条），两侧去 envelope 后的顺序现在一致。
 
-修复前后对照（stub LLM，探针剧本的单次 ask 回合）：
+### 4.5 `context_usage_updated` 的触发粒度（保留）
 
-```
-修复前 Go: llm_turn_complete(iter=1, stop=tool_calls) → tool_call_started(ask_user)
-           → client_input_requested{questions} → tool_call_completed(ask_user)
-           → node_loop_iteration(iter=2) → context_usage → client_output_delta
-           → llm_turn_complete(iter=2) → node_loop_completed → loop_state awaiting_user
-           ⇒ ask 回合 2 次模型调用（多一次，stub 的工具结果调用被消费）
-修复后 Go: llm_turn_complete(iter=1, stop=tool_calls) → tool_call_started(ask_user)
-           → client_input_requested{questions} → tool_call_completed(ask_user)
-           → node_loop_completed(iterations=1) → loop_state awaiting_user → execution_completed
-           ⇒ ask 回合 1 次模型调用（与参考一致）
-```
+参考有 3 种本次观察到的 trigger：`iteration_start`、`post_tool_call`（每个工具结果后）、
+`post_tool_results`（工具批结束后）。Go 目前只有 `iteration_start`（每迭代一次）。键/类型
+已一致，缺的是事件发射点；补齐需要 loop 级工具批钩子，保留为下一车道事项。
 
-探针判据：`diff.json.replay.same_replayed_multiset_without_go_envelope` 由 `false` 变为
-`true`，`multiset_delta_without_envelope` 为空（修复前 `{client_output_delta: 3→4,
-llm_turn_complete: 4→5}`）；live 帧数 49→45，history 54→50，replay 25→23。
+### 4.6 值级/有意差异（不追平，明确归类）
 
-**残留（顺序，非调用次数）**：Go 的 `llm_turn_complete` 在非流式传输里「完成即发」，落在工具
-帧之前；参考在迭代末（工具之后）发。`client_input_requested` 由 Go 的工具处理器在工具执行时
-发出（tool_started 与 tool_completed 之间），参考在 `_await_user_input` 里、llm_turn_complete
-之后发出。两者是发射时机差异，不影响帧集合、计数与 replay 多重集；连同 4.5 的 context usage
-触发粒度一并记录，不在本车道硬改。
+以下差异是**值级（value-level）或实现结构性的有意差异**，探针逐项复测但不作为对齐目标；
+本车道不为凑数硬改：
 
-### 4.5 `context_usage_updated` 的触发粒度
-
-参考有 4 种 trigger：`iteration_start`、`post_tool_call`（每个工具结果后）、
-`post_tool_results`（工具批结束后）、`post_compaction`。Go 目前只有 `iteration_start`
-（每迭代一次）。键/类型已一致，缺的是事件发射点；补齐需要 loop 级工具批钩子，保留为下一车道事项
-（ask_user 的提前返回已独立修完，不再依赖它）。
-
-### 4.6 值级差异（非形状）
-
-| 路径 | 参考 | Go | 说明 |
+| 路径 | 参考 | Go | 归类 |
 | --- | --- | --- | --- |
-| `llm_turn_complete.model` | `openai/sse-parity-probe-model` | `sse-parity-probe-model` | provider 前缀由 litellm 归一化；配置层差异 |
-| `llm_turn_complete.cost_usd` | `0.0`（float） | `0`（int） | JSON 数字表示差，数值等价；`encoding/json` 对 float64(0) 打 `0` |
-| `llm_turn_complete.system_prefix_sha` | `692b774c98c7` | `885285cb1ffe` | 两侧系统提示词文本不同（prompt parity 车道） |
-| `node_loop_iteration.iteration` | 会话累计 0,1,2,3 | 每回合 0,1,2 | 永久 loop vs 每回合 loop（4.1 推论） |
-| `client_output_delta.iteration` | 0,1,3 | 0,1 | 同上；参考的 3 是回答回合的累计迭代号 |
-| `context_usage_updated.*` | conv/system/tool 字符数 | 不同 | 系统提示词与消息顺序不同（prompt parity）；参考 5 条、Go 3 条（4.5） |
+| `llm_turn_complete.system_prefix_sha` | `692b774c98c7` | `885285cb1ffe` | **值级**：两侧系统提示词文本不同（prompt parity 车道），hash 只是文本指纹 |
+| `node_loop_started.max_iterations` | `999999` | `50` | **有意**：永久 loop vs 每回合 loop（§4.2） |
+| `node_loop_completed.iterations` | （参考无此帧） | `1` | **有意**：Go-only 每回合信封的 `iterations` 字段（§4.1） |
+| `llm_turn_complete.cost_usd` | `0.0`（float） | `0`（int） | **值级**：JSON 数字表示差，数值等价（`encoding/json` 对 float64(0) 打 `0`） |
+| `llm_turn_complete.model` | `openai/sse-parity-probe-model` | `sse-parity-probe-model` | **值级**：provider 前缀由 litellm 归一化；配置层差异 |
+| `llm_turn_complete.iteration` / `node_loop_iteration.iteration` / `client_output_delta.iteration` | 会话累计 0,1,2,3 | 每回合 0,1 | **有意**：永久 loop vs 每回合 loop（§4.1） |
+| `context_usage_updated.*` 值 | 不同字符数/条数 | 不同 | **值级**：系统提示词与消息顺序不同（prompt parity）+ §4.5 粒度 |
+| `session_title_updated` 位置 | 异步任务，落在 llm_turn_complete 之后 | 同（异步）；具体相对位置随调度漂移 | **非契约**：两侧都由后台任务发标题，位置不确定；本复跑落在 `execution_completed` 之后，首跑落在 `node_loop_completed` 之前 |
 
-`llm_turn_complete.message_count` 曾因 4.4 的额外迭代不同（1,3,5,7,9）；提前返回修复后
-两侧一致（1,3,5,8）。
+`llm_turn_complete.message_count` 曾因发射时机后移而漂移（`2/4/7/9` vs `1/3/5/8`），本
+车道用请求时刻快照修回 `1/3/5/8`，已在 §3 与回归测试里钉住。
 
 ## 5. Replay / history 语义
 
@@ -174,13 +176,14 @@ llm_turn_complete: 4→5}`）；live 帧数 49→45，history 54→50，replay 2
   即「按时间正序重放」。`diff.json`：
   `reference_replay_order_matches_history=true`、`target_replay_order_matches_history=true`。
 - **集合**：剔除 Go-only execution 信封后，replay 多重集**完全一致**：`diff.json` 的
-  `same_replayed_multiset_without_go_envelope=true`、`multiset_delta_without_envelope` 为空
-  （修复前唯一计数差是 4.4 的 `client_output_delta` 3→4、`llm_turn_complete` 4→5）。
+  `same_replayed_multiset_without_go_envelope=true`、`multiset_delta_without_envelope` 为空。
 - **已解决问题抑制**：两侧都跳过已被 `client_input_received` 回答的
   `client_input_requested`（参考 `collect_resolved_request_seqs` / Go
   `CollectResolvedRequestSeqs`），本次场景验证到 replay 只重放最后一条未回答问题。
 - **history**：包含开场 5 条块（identity/reminder/node_loop_started/iteration/context usage），
   两侧开场块逐字段一致（`session_start_events.go` 既有实现；`max_iterations` 值见 4.2）。
+  本复跑 target history 53 条 vs reference 44 条，差额仍是 Go-only 信封（+12）与
+  context usage 粒度（−2）以及每回合 verdict 缺尾帧（−1）的组合。
 
 ## 6. 复现
 
@@ -192,12 +195,14 @@ uv run python go_hive/scripts/sse_payload_parity.py --no-build --keep --workdir 
 ```
 
 探针只监听 127.0.0.1、只调用本地 stub，不访问任何外部服务；**不纳入 `make ci`**，按需手动跑。
-Go 侧二进制构建到 `go_hive/go-hive/dist/hive-sse-parity`（git 忽略）。
+Go 侧二进制构建到 `go_hive/go-hive/dist/hive-sse-parity`（git 忽略）。注意：脚本复用已存在的
+二进制，改动 Go 代码后先删 `dist/hive-sse-parity` 再跑，否则对照的是旧版本。
 
 ## 7. 门禁
 
 本车道改动后 `cd go_hive/go-hive && make ci`（fmt-check / vet / test / cross / parity /
-parity-targets / wiring-check）**七项全部退出码 0**：测试 5163（基线 5159 + 本车道新增 4：
-`ask_user_turn_test.go` 3 条 + SSE 帧序列 1 条）、parity 注解 5163/5163、parity 引用
-5495/5495、wiring 12 文件 47 项全命中。
+parity-targets / wiring-check）**七项全部退出码 0**：测试 5172（基线 5170 + 本车道新增 2：
+`TestAskUserRequestIsAnnouncedAtTheTurnBoundary`、
+`TestImplicitJudgeVerdictFollowsThePreviousTurn`），parity 注解 5172/5172、parity 引用
+5522/5522（test refs 4116 + prod refs 1406，missing 0）、wiring 12 文件 47 项全命中。
 新增/更新的测试均带 `// Parity:` 注解；双跑探针不在 `make ci` 内（opt-in、本地 stub、不触外网）。

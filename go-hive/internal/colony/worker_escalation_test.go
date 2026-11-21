@@ -176,6 +176,7 @@ func TestWorkerDoomLoopEscalatesOnceAndResumesWithGuidance(t *testing.T) {
 	runtime := makeTestColony(t, provider, bus)
 
 	escalations := collectEvents(bus, eventbus.EventEscalationRequested)
+	doomLoops := collectEvents(bus, eventbus.EventNodeToolDoomLoop)
 
 	// The default worker profile is 3 iterations + 1 grace: too short to trip
 	// the detector (3 calls) and then resume on a later call. Raise the budget
@@ -209,6 +210,30 @@ func TestWorkerDoomLoopEscalatesOnceAndResumesWithGuidance(t *testing.T) {
 	}
 	if !strings.Contains(stringValue(event.Data["context"]), "task_list") {
 		t.Fatalf("escalation context = %v, want the repeating call named", event.Data["context"])
+	}
+	// The same detection publishes node_tool_doom_loop: exactly once, on the
+	// worker's own stream, with the repeating call in the upstream description
+	// payload. The escalation and the event are one detection, not two
+	// independent producers.
+	if got := doomLoops.count(); got != 1 {
+		t.Fatalf("node_tool_doom_loop events = %d, want exactly 1 for the same detection", got)
+	}
+	doomEvent := doomLoops.snapshot()[0]
+	if doomEvent.StreamID != worker.StreamID {
+		t.Fatalf("doom-loop stream = %q, want the worker stream %q", doomEvent.StreamID, worker.StreamID)
+	}
+	if doomEvent.NodeID == nil || *doomEvent.NodeID != worker.StreamID {
+		t.Fatalf("doom-loop node_id = %v, want %q", doomEvent.NodeID, worker.StreamID)
+	}
+	if doomEvent.ColonyID == nil || *doomEvent.ColonyID != "test_colony" {
+		t.Fatalf("doom-loop colony_id = %v, want test_colony", doomEvent.ColonyID)
+	}
+	if doomEvent.ExecutionID == nil || *doomEvent.ExecutionID != worker.ID {
+		t.Fatalf("doom-loop execution_id = %v, want %q", doomEvent.ExecutionID, worker.ID)
+	}
+	description := stringValue(doomEvent.Data["description"])
+	if !strings.Contains(description, "task_list") || !strings.Contains(description, "3 times") {
+		t.Fatalf("doom-loop description = %q, want the repeating call and streak", description)
 	}
 	requestID, _ := event.Data["request_id"].(string)
 	if requestID == "" {
@@ -253,6 +278,7 @@ func TestWorkerWithoutRepeatedCallsPublishesNoEscalation(t *testing.T) {
 	bus := eventbus.NewEventBus()
 	runtime := makeTestColony(t, provider, bus)
 	escalations := collectEvents(bus, eventbus.EventEscalationRequested)
+	doomLoops := collectEvents(bus, eventbus.EventNodeToolDoomLoop)
 
 	ids, err := runtime.Spawn(context.Background(), "varied work", SpawnOptions{Count: 1})
 	if err != nil {
@@ -264,6 +290,9 @@ func TestWorkerWithoutRepeatedCallsPublishesNoEscalation(t *testing.T) {
 	}
 	if got := escalations.count(); got != 0 {
 		t.Fatalf("escalations = %d, want none without a repeated call: %#v", got, escalations.snapshot())
+	}
+	if got := doomLoops.count(); got != 0 {
+		t.Fatalf("node_tool_doom_loop events = %d, want none without a repeated call: %#v", got, doomLoops.snapshot())
 	}
 	if report := worker.ExplicitReport(); report == nil || report["status"] != "success" {
 		t.Fatalf("worker report = %#v, want the scripted success report", report)

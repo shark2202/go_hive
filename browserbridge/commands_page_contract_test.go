@@ -347,3 +347,142 @@ func toFloatMust(t *testing.T, v any) float64 {
 	}
 	return f
 }
+
+// TestInteractCoordinateClickAttachesAnnotatedImage pins R15: a coordinate click
+// returns its interaction dict plus one annotated viewport screenshot, captured
+// through the shared browser_screenshot path so the just-recorded highlight is
+// drawn (upstream `_build_visual_response`).
+//
+// Parity: tools/src/gcu/browser/tools/interact.py::_build_visual_response
+func TestInteractCoordinateClickAttachesAnnotatedImage(t *testing.T) {
+	b, f := newContractBridge(t)
+	res := execTool(t, b, "browser_interact", map[string]any{
+		"action": "left_click", "coordinate": []any{0.5, 0.5}, "tab_id": 11,
+	})
+	if res["ok"] != true || res["action"] != "click" || res["button"] != "left" {
+		t.Fatalf("action result=%+v", res)
+	}
+	if res["mimeType"] != "image/jpeg" {
+		t.Fatalf("mimeType=%v", res["mimeType"])
+	}
+	raw := decodeBase64Image(stringOf(res["data"]))
+	if w, h := imageDimensions(raw); w != 800 || h != 500 {
+		t.Fatalf("attached jpeg = %dx%d, want 800x500", w, h)
+	}
+	// Only the bridge-native image carrier is added — the action dict must not
+	// grow the screenshot metadata keys.
+	for _, key := range []string{"imageWidth", "imageHeight", "cssWidth", "cssHeight", "capturedWidth", "capturedHeight", "physicalScale", "devicePixelRatio", "annotated", "format", "saved_to", "crop_box", "scaleHint", "clip", "fullPage"} {
+		if _, present := res[key]; present {
+			t.Fatalf("action result gained screenshot metadata key %q: %+v", key, res)
+		}
+	}
+	// The capture annotates the click that just happened: overlay inject →
+	// capture → overlay removal, with the click point in the label.
+	inject, capture, remove := -1, -1, -1
+	var injectExpr string
+	for i, cmd := range f.commands() {
+		if cmd.Type != "cdp" {
+			continue
+		}
+		method, _ := cmd.Params["method"].(string)
+		inner, _ := cmd.Params["params"].(map[string]any)
+		switch method {
+		case "Page.captureScreenshot":
+			capture = i
+		case "Runtime.evaluate":
+			expr, _ := inner["expression"].(string)
+			switch {
+			case strings.Contains(expr, "__hive_shot_hl") && strings.Contains(expr, "click (800.0,500.0)"):
+				inject = i
+				injectExpr = expr
+			case strings.Contains(expr, "__hive_shot_hl") && strings.Contains(expr, "remove"):
+				remove = i
+			}
+		}
+	}
+	if inject < 0 || capture < 0 || remove < 0 {
+		t.Fatalf("inject=%d capture=%d remove=%d", inject, capture, remove)
+	}
+	if !(inject < capture && capture < remove) {
+		t.Fatalf("overlay must bracket the capture: inject=%d capture=%d remove=%d", inject, capture, remove)
+	}
+	if !strings.Contains(injectExpr, "(400,250) click (800.0,500.0)") {
+		t.Fatalf("overlay label missing: %s", injectExpr)
+	}
+}
+
+// TestInteractCoordinateHoverAndKeyAttachAnnotatedImage pins R15 for the other
+// two coordinate actions: hover and key carry the same annotated screenshot,
+// labelled with the point they landed on.
+//
+// Parity: tools/src/gcu/browser/tools/interact.py::_build_visual_response
+func TestInteractCoordinateHoverAndKeyAttachAnnotatedImage(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		params map[string]any
+		action string
+		label  string
+	}{
+		{"hover", map[string]any{"action": "hover", "coordinate": []any{0.25, 0.5}, "tab_id": 11}, "hover_coordinate", "hover (400.0,500.0)"},
+		{"key", map[string]any{"action": "key", "text": "Enter", "coordinate": []any{0.5, 0.5}, "tab_id": 11}, "press_at", "Enter (800.0,500.0)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			b, f := newContractBridge(t)
+			res := execTool(t, b, "browser_interact", tc.params)
+			if res["ok"] != true || res["action"] != tc.action {
+				t.Fatalf("action result=%+v", res)
+			}
+			raw := decodeBase64Image(stringOf(res["data"]))
+			if w, h := imageDimensions(raw); w != 800 || h != 500 {
+				t.Fatalf("attached jpeg = %dx%d, want 800x500", w, h)
+			}
+			found := false
+			for _, cmd := range f.commands() {
+				if cmd.Type != "cdp" || cmd.Params["method"] != "Runtime.evaluate" {
+					continue
+				}
+				inner, _ := cmd.Params["params"].(map[string]any)
+				expr, _ := inner["expression"].(string)
+				if strings.Contains(expr, "__hive_shot_hl") && strings.Contains(expr, tc.label) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("annotated overlay never carried %q", tc.label)
+			}
+		})
+	}
+}
+
+// TestInteractCoordinateImageFailureDegradesToActionResult pins upstream's
+// text-only fallback: a screenshot failure never fails the interaction and
+// never attaches an image.
+//
+// Parity: tools/src/gcu/browser/tools/interact.py::_build_visual_response
+func TestInteractCoordinateImageFailureDegradesToActionResult(t *testing.T) {
+	b := newTestBridge(t, Config{CommandTimeout: 5 * time.Second, ArtifactDir: t.TempDir()})
+	inner := contractCDP(t)
+	startFakeExtension(t, b.WSAddr(), helloFor("alpha"), func(cmd fakeCommand) (any, string) {
+		if cmd.Type == "cdp" && cmd.Params["method"] == "Page.captureScreenshot" {
+			return nil, "capture failed"
+		}
+		return inner(cmd)
+	})
+	waitFor(t, 2*time.Second, func() bool {
+		_, err := b.resolve("alpha", nil)
+		return err == nil
+	}, "hello")
+	res := execTool(t, b, "browser_interact", map[string]any{
+		"action": "left_click", "coordinate": []any{0.5, 0.5}, "tab_id": 11,
+	})
+	if res["ok"] != true || res["action"] != "click" {
+		t.Fatalf("interaction must survive a capture failure: %+v", res)
+	}
+	if _, present := res["data"]; present {
+		t.Fatalf("capture failure must not attach an image: %+v", res)
+	}
+	if toFloatMust(t, res["x"]) != 800 || toFloatMust(t, res["y"]) != 500 {
+		t.Fatalf("click point = %v,%v", res["x"], res["y"])
+	}
+}

@@ -114,11 +114,18 @@ func (l *AgentLoop) workerStallKindFor(agentCtx *AgentContext) workerStallKind {
 // worker turn never reaches it); everything else falls through to the judge
 // exactly as before, or returns a plain natural stop.
 //
+// The turn's llm_turn_complete is published first: upstream emits it when
+// _run_turn_loop returns, before the stall policy and the judge run.
+//
 // done=false means the inner loop continues (stall grace, or judge RETRY); a
 // non-nil error ends the turn with that error.
 //
 // Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (6h then 6i)
+// Parity: framework/agent_loop/agent_loop.py::execute (llm_turn_complete after _run_turn_loop)
 func (l *AgentLoop) settleTextOnlyTurn(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, reminderCtx *ReminderAgentContext, completion llm.Completion, inner int, result *TurnResult) (done bool, err error) {
+	if agentCtx.Observer != nil {
+		agentCtx.Observer.LLMTurnComplete(completion, inner+1)
+	}
 	if kind := l.workerStallKindFor(agentCtx); kind != workerStallNone {
 		stop, stallErr := l.handleWorkerTextOnlyTurn(ctx, agentCtx, conv, reminderCtx, kind, completion.Content)
 		if stallErr != nil {

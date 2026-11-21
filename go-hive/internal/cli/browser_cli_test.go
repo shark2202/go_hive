@@ -421,6 +421,79 @@ func TestBrowserCLIScreenshotSpillsArtifact(t *testing.T) {
 	}
 }
 
+// TestBrowserCLIInteractCoordinateSpillsImagePointer pins R15 on the CLI layer:
+// a coordinate click/hover/key result keeps its interaction dict and gains only
+// `saved_to` + `_image` (upstream `_blocks_to_cli_dict`), with the JPEG written
+// as <artifactDir>/browser_interact_<ms>_tab<id>.jpg — no screenshot metadata
+// keys and no inline base64.
+//
+// Parity: tools/src/gcu/cli_commands/interact.py::_blocks_to_cli_dict
+func TestBrowserCLIInteractCoordinateSpillsImagePointer(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	jpegBytes := []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 'J', 'F', 'I', 'F', 0x00, 0xFF, 0xD9}
+	server, last := fakeBridge(t, map[string]any{
+		"ok": true,
+		"result": map[string]any{
+			"ok": true, "action": "click", "tabId": 7, "x": 400.0, "y": 300.0,
+			"button": "left", "clickCount": 1, "method": "cdp",
+			"data": base64.StdEncoding.EncodeToString(jpegBytes), "mimeType": "image/jpeg",
+		},
+	})
+
+	stdout, stderr, code := runBrowser(t, home, "interact", "--action", "left_click",
+		"--coordinate", "0.5,0.5", "--tab", "7", "--json", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("exit = %d (stderr: %s)", code, stderr)
+	}
+	got := last()
+	if got.Type != "browser_interact" || got.Params["action"] != "left_click" {
+		t.Fatalf("bridge command = %q params=%v", got.Type, got.Params)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(stdout), &payload); err != nil {
+		t.Fatalf("stdout is not JSON: %v (%s)", err, stdout)
+	}
+	if payload["action"] != "click" || payload["x"] != float64(400) {
+		t.Fatalf("interaction dict not preserved: %v", payload)
+	}
+	for _, key := range []string{"data", "mimeType", "imageWidth", "imageHeight", "cssWidth", "cssHeight", "capturedWidth", "capturedHeight", "physicalScale", "devicePixelRatio", "annotated", "imageType", "size", "scaleHint", "crop_box", "fullPage"} {
+		if _, present := payload[key]; present {
+			t.Fatalf("unexpected %q in coordinate-action CLI result: %v", key, payload)
+		}
+	}
+	path, _ := payload["saved_to"].(string)
+	if !strings.Contains(filepath.Base(path), "browser_interact_") || !strings.HasSuffix(path, "_tab7.jpg") {
+		t.Fatalf("artifact name = %s", path)
+	}
+	written, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("artifact unreadable: %v", err)
+	}
+	if !bytes.Equal(written, jpegBytes) {
+		t.Fatalf("artifact bytes = %v", written)
+	}
+	image, ok := payload["_image"].(map[string]any)
+	if !ok {
+		t.Fatalf("_image missing: %v", payload)
+	}
+	if image["path"] != path || image["mime"] != "image/jpeg" {
+		t.Fatalf("_image = %v", image)
+	}
+	if intent, present := image["intent"]; !present || intent != nil {
+		t.Fatalf("_image.intent = %v (present=%v), want null", intent, present)
+	}
+	want := []string{"_image", "action", "button", "clickCount", "method", "ok", "saved_to", "tabId", "x", "y"}
+	var keys []string
+	for key := range payload {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	if strings.Join(keys, ",") != strings.Join(want, ",") {
+		t.Fatalf("key set = %v, want %v", keys, want)
+	}
+}
+
 // TestBrowserCLISnapshotSpillsArtifact pins R02 on the CLI layer: `page
 // snapshot` writes the AX tree to <artifactDir>/browser_snapshot_<ms>_tab<id>.txt
 // and returns {ok,tabId,url,length,saved_to} — no inline tree — so `--head`

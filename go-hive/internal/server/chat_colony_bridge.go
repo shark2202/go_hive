@@ -38,6 +38,7 @@ var colonyBridgeEventTypes = []eventbus.EventType{
 	eventbus.EventToolCallStarted,
 	eventbus.EventToolCallCompleted,
 	eventbus.EventLLMTurnComplete,
+	eventbus.EventNodeToolDoomLoop,
 }
 
 // overseerStreamID is the stream the colony's persistent overseer publishes

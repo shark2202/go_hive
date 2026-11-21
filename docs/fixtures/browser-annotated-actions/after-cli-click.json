@@ -1,0 +1,16 @@
+{
+  "_image": {
+    "intent": null,
+    "mime": "image/jpeg",
+    "path": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/probe-actions.BzEbSi/cli-home/tool-artifacts/browser_interact_1795223726049_tab101.jpg"
+  },
+  "action": "click",
+  "button": "left",
+  "clickCount": 1,
+  "method": "cdp",
+  "ok": true,
+  "saved_to": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/probe-actions.BzEbSi/cli-home/tool-artifacts/browser_interact_1795223726049_tab101.jpg",
+  "tabId": 101,
+  "x": 640,
+  "y": 360
+}

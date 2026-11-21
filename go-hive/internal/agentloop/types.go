@@ -205,6 +205,18 @@ type LoopObserver interface {
 	ToolCallCompleted(call ToolCallRequest, result ToolResult)
 }
 
+// RequestMessageRecorder is the optional companion seam to LoopObserver: the
+// loop reports how many messages the provider request carried, before the
+// assistant message and tool results are appended. The chat emitter publishes
+// llm_turn_complete after the tool batch (upstream's timing) and uses this
+// snapshot to report the request it actually sent, as upstream's
+// _compute_turn_diagnostics does with the captured request_messages.
+//
+// Parity: framework/agent_loop/agent_loop.py::execute (_compute_turn_diagnostics)
+type RequestMessageRecorder interface {
+	NoteRequestMessages(count int)
+}
+
 type CurrentToolNamer interface {
 	CurrentToolNames() []string
 }

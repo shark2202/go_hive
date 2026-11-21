@@ -190,6 +190,20 @@ func doomLoopDescription(tool string, streak int) string {
 	return fmt.Sprintf("`%s` called %d times in a row with identical arguments and the same result", tool, streak)
 }
 
+// DoomLoopDescription is doomLoopDescription for hosts that publish the
+// detection as an event (the colony runtime's node_tool_doom_loop payload), so
+// the event, the escalation context and the park detail name the repetition
+// with one wording.
+func DoomLoopDescription(tool string, streak int) string {
+	return doomLoopDescription(tool, streak)
+}
+
+// DoomLoopSink publishes the loop's first tool doom-loop detection of a
+// turn-loop. The repeating tool and the streak that crossed the warning
+// threshold ride the call; the host (the colony runtime) stamps them onto the
+// node_tool_doom_loop event. A nil sink is a no-op.
+type DoomLoopSink func(tool string, streak int)
+
 // DoomLoopParkedError is the turn-loop error that ends a turn parked on a
 // repeated identical tool call. It carries the repeating call and the streak
 // so the publisher (execution_failed) and the worker failure report name the

@@ -3,20 +3,25 @@ package integrations
 import "net/http"
 
 func githubSpecs() map[string]RestSpec {
+	// GitHub list endpoints advertise the follow-up page as a Link header
+	// (rel="next"). The walk is wired only where the upstream tool exposes a
+	// page parameter (issues / pull requests / stargazers), i.e. where the
+	// model could reach the same pages through repeated upstream calls.
+	linkPagination := func() *PaginationSpec { return &PaginationSpec{LinkHeader: true} }
 	return map[string]RestSpec{
 		"github_get_repo":            {Method: http.MethodGet, Path: "/repos/{owner}/{repo}"},
 		"github_search_repos":        {Method: http.MethodGet, Path: "/search/repositories", Rename: map[string]string{"query": "q", "limit": "per_page"}},
-		"github_list_issues":         {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/issues", Rename: map[string]string{"limit": "per_page"}},
+		"github_list_issues":         {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/issues", Rename: map[string]string{"limit": "per_page"}, Pagination: linkPagination()},
 		"github_get_issue":           {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/issues/{issue_number}"},
 		"github_create_issue":        {Method: http.MethodPost, Path: "/repos/{owner}/{repo}/issues"},
 		"github_update_issue":        {Method: http.MethodPatch, Path: "/repos/{owner}/{repo}/issues/{issue_number}"},
-		"github_list_pull_requests":  {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/pulls", Rename: map[string]string{"limit": "per_page"}},
+		"github_list_pull_requests":  {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/pulls", Rename: map[string]string{"limit": "per_page"}, Pagination: linkPagination()},
 		"github_get_pull_request":    {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/pulls/{pull_number}"},
 		"github_create_pull_request": {Method: http.MethodPost, Path: "/repos/{owner}/{repo}/pulls"},
 		"github_search_code":         {Method: http.MethodGet, Path: "/search/code", Rename: map[string]string{"query": "q", "limit": "per_page"}},
 		"github_list_branches":       {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/branches", Rename: map[string]string{"limit": "per_page"}},
 		"github_get_branch":          {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/branches/{branch}"},
-		"github_list_stargazers":     {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/stargazers", Rename: map[string]string{"limit": "per_page"}},
+		"github_list_stargazers":     {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/stargazers", Rename: map[string]string{"limit": "per_page"}, Pagination: linkPagination()},
 		"github_get_user_profile":    {Method: http.MethodGet, Path: "/users/{username}"},
 		"github_list_commits":        {Method: http.MethodGet, Path: "/repos/{owner}/{repo}/commits", Rename: map[string]string{"limit": "per_page"}},
 		"github_create_release":      {Method: http.MethodPost, Path: "/repos/{owner}/{repo}/releases"},

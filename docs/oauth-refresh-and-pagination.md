@@ -1,6 +1,6 @@
 # OAuth2 刷新与通用 REST 分页
 
-状态：已实现（2026-11-21，`oauth-refresh-pagination` 车道）。本文是该能力的契约说明；证据审计见
+状态：已实现（2026-11-21，`oauth-refresh-pagination` / `integration-pagination-alias` 车道）。本文是该能力的契约说明；证据审计见
 `docs/integrations-evidence-audit.json` 的 `revision`、`global_gaps[0..1]` 与各模块 `oauth_refresh` / `pagination` 字段。
 
 ## 1. 上游事实表（为什么是这两个能力）
@@ -16,7 +16,7 @@
 | HubSpot 接受 Private App token 或 OAuth2 | `tools/src/aden_tools/credentials/hubspot.py` | `HUBSPOT_*` |
 | Zoho CRM 明确用 client_id/client_secret/refresh_token，token endpoint 随区域 | `tools/src/aden_tools/credentials/zoho.py`、`core/framework/credentials/oauth2/zoho_provider.py` | `ZOHO_*` |
 | Reddit client-credentials / BigQuery·GA·GSC service-account JWT | 各 tool | 端口已有独立实现，本次不改 |
-| 通用 REST 客户端无分页原语；上游列表以 has_more/offset/next_cursor 透传给模型 | 端口审计 `global_gaps`（分页） | `internal/tools/integrationkit/rest.go` |
+| 通用 REST 客户端无分页原语；上游列表以 has_more/offset/next_cursor/Link 透传给模型 | 端口审计 `global_gaps`（分页） | `internal/tools/integrationkit/rest.go`（body 光标 / Link 头 / 末条 id 三种模式） |
 
 ## 2. 刷新契约
 
@@ -69,30 +69,42 @@
 
 ## 4. 声明式分页
 
-`RestSpec.Pagination`：
+`RestSpec.Pagination` 支持三种游标模式，共用同一套合并/停止语义：
 
 ```go
 Pagination: &PaginationSpec{
-    ItemsPath:      "records",                  // 页内条目数组，点号路径
-    NextCursorPath: "response_metadata.next_cursor", // 下一页光标，点号路径
+    ItemsPath:      "records",                  // 页内条目数组，点号路径；空 = 页本身就是数组
+    NextCursorPath: "response_metadata.next_cursor", // 模式①：响应体光标，点号路径
     CursorParam:    "cursor",                   // 回传参数：GET/DELETE 走 query，其余走 body
+    LinkHeader:     false,                      // 模式②：跟随响应 Link 头 rel=next
+    LastItemField:  "",                         // 模式③：取页末条目该字段作为游标（stripe id）
     MaxPages:       10,                         // 0 = DefaultMaxPages(10)
 }
 ```
 
-语义：请求第一页后读取 `NextCursorPath`；光标存在且未重复则带 `CursorParam` 重发，最多 `MaxPages` 页；合并所有
-`ItemsPath` 条目写回第一页信封，并删除 `next_cursor` 叶子（避免调用方误以为还有下一页）。光标为空、缺失、重复或达到
-页数上限即停止；响应不含 `ItemsPath` 时原样返回该页，不伪造空列表。
+| 模式 | 游标来源 | 回传方式 | 已接线 |
+| --- | --- | --- | --- |
+| ① body 光标 | `NextCursorPath` 响应字段 | `CursorParam`（query/body） | `airtable_list_records`（`offset`）、`slack_list_channels` / `slack_list_users`（`response_metadata.next_cursor`） |
+| ② `LinkHeader` | 响应 `Link` 头的 `rel="next"` URL（RFC 8288；相对引用按请求 URL 解析，URI 内逗号不误切分） | 直接用该 URL 作为下一页目标（原样复用，含 `per_page`/`state` 等查询参数） | `github_list_issues` / `github_list_pull_requests` / `github_list_stargazers`（GitHub 列表返回裸数组，`ItemsPath` 为空） |
+| ③ `LastItemField` | 当前页最后一条目的该字段（如 stripe `id`） | `CursorParam`（stripe 为 `starting_after`） | 全部 16 个 `stripe_list_*`；页内 `has_more=false` 时提前停止，不多发一页 |
 
-已接线：
+共用语义：请求第一页后按模式取下一页游标；光标存在且未重复则重发，最多 `MaxPages` 页；合并所有 `ItemsPath`
+条目写回第一页信封（裸数组页直接返回合并数组），并删除 `next_cursor` 叶子（last-item 模式同时删除 `has_more`）。
+光标为空、缺失、重复、页广告 `has_more=false` 或达到页数上限即停止；响应不含 `ItemsPath`、或后续页返回 ≥400 时
+原样返回该页/错误信封，不伪造空列表、不返回半合并列表。`Link` 模式下若供应商返回自引用的 next URL，重复检测会终止循环。
 
-| 模块 / action | 供应商分页 | 测试 |
-| --- | --- | --- |
-| `airtable_list_records` | 响应 `offset`，请求 `offset`（每页 ≤100） | `TestAirtableListRecordsFollowsOffsetPages` |
-| `slack_list_channels` | `response_metadata.next_cursor`，请求 `cursor` | `TestSlackListChannelsFollowsCursor` |
-| `slack_list_users` | 同上 | `TestSlackPaginationStopsAtMaxPages`（页数上限） |
+## 5. 凭据库 provider/alias 只读索引
 
-## 5. 测试证据（全部离线）
+`EncryptedFileStorage` 实现 `ProviderAccountStorage` / `AliasStorage`：
+
+- `LoadAllForProvider(provider)`：读 `metadata/index.json`（`ListAll` 同一份只读投影），挑出 `provider == _integration_type`
+  的条目，按 credential id 排序后逐个解密返回；单条解密失败只跳过该条，不影响其它账号。
+- `LoadByAlias(provider, alias)`：按 index 的 `provider + alias` 匹配并解密；无匹配返回 `(nil, nil)`。
+- `CredentialStore.GetCredentialByAlias` / `ListAccounts` 因此对 OAuth 托管账号（`_integration_type` + `_alias`）生效；
+  无索引记录时按既有链路降级本地注册表（`CredentialStoreAdapter` 先 store 后 local，store 命中优先）。
+- 索引只读复用，不在读取路径重写 `index.json`；保存/删除仍由 `indexUpsert` / `indexRemove` 维护。
+
+## 6. 测试证据（全部离线）
 
 `internal/tools/integrationkit/oauth_test.go`（2 个）、`internal/tools/integrations/oauth_refresh_test.go`（12 个）、
 `internal/credentials/oauth_refresh_test.go`（3 个），共 17 个：
@@ -106,15 +118,20 @@ Pagination: &PaginationSpec{
 - `TestOAuthRefreshGmailSenderRefreshesBeforeSend`：email（Gmail）模块调用前刷新。
 - `TestTokenRefresherUsesRotatedRefreshToken`：供应商轮换 refresh_token 后，下一次授权使用新值；强制刷新写回常规缓存。
 - `TestTokenRefresherStaticTokenSemantics`：未知过期时间直通；已知过期 → `no_refresh_token` 且带变量名。
-- 分页 3 个测试：见上表。
+- 分页 14 个：既有 3 个（airtable offset、slack next_cursor、页数上限）+ `integrationkit/rest_pagination_test.go` 6 个
+  （Link 多页、无 next、max_pages、last-item 多页、错误页、Link 解析）+ `integrations/rest_pagination_test.go` 5 个
+  （github Link 多页、github 无 Link 单页、stripe last-item 多页、has_more=false 停止、错误页映射）。
+- 别名索引 5 个：`credentials/storage_alias_test.go` 3 个（多账号索引 / store 消费 / local 回退与 store 优先）+
+  `cli/session_account_source_test.go` 2 个（会话视图解析 OAuth 托管别名 / 无 index 记录降级本地注册表）。
 - 凭据桥 3 个测试：导出变量名、无过期时间不导出、绑定唯一。
-- 全部使用本地 fake token endpoint 与 httptest 假 provider，0 外网调用。
+- 全部使用本地 fake token endpoint 与 httptest 假 provider / `t.TempDir` 加密 store，0 外网调用。
 
-## 6. 残余
+## 7. 残余
 
 - 只声明静态 access token 的条目（salesforce / microsoft_graph / powerbi / quickbooks / zoom / google_search_console 等）上游规格没有
   client_id/client_secret/refresh_token，无法在不发明变量的前提下刷新；仍按供应商 401 文案失败。
 - `account` 别名的凭据是单 token，不携带刷新材料。
 - 刷新后的 token 仅在进程内缓存，不写回凭据库或 `*_ACCESS_TOKEN` 环境变量。
-- 分页：github（`Link` 响应头）、stripe（`starting_after` 需上页最后一条 id，而非响应字段）无法用当前 `next_cursor_path` 表达；
-  zoom/gmail/google_docs/google_maps/salesforce 仍是参数透传，bigquery 仍是自研 token 循环；这些列为残余而非静默推断。
+- 分页：zoom/gmail/google_docs/google_maps/salesforce 仍是参数透传，bigquery 仍是自研 token 循环；github
+  `list_branches` / `list_commits` / `list_repos` / `list_workflow_runs` 与 `search_repos` / `search_code` 的上游工具没有
+  `page` 参数（上游本身只能取一页），不硬接 Link 跟随，列为残余。除此之外 github/stripe 的列表分页已由声明式原语覆盖。

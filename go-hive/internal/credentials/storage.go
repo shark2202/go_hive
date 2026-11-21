@@ -224,6 +224,66 @@ func (s *EncryptedFileStorage) Exists(credentialID string) (bool, error) {
 	return false, err
 }
 
+// LoadAllForProvider returns every stored credential whose index entry names
+// providerName as its provider (_integration_type). It reads the metadata
+// index — the same read-only projection ListAll uses — and decrypts each
+// matching credential. An entry whose file no longer decrypts is skipped so one
+// broken account cannot hide the others; the index itself is never rewritten.
+func (s *EncryptedFileStorage) LoadAllForProvider(providerName string) ([]*CredentialObject, error) {
+	if providerName == "" {
+		return []*CredentialObject{}, nil
+	}
+	index, err := s.readIndex()
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(index.Credentials))
+	for id, entry := range index.Credentials {
+		if entry.Provider != nil && *entry.Provider == providerName {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	out := make([]*CredentialObject, 0, len(ids))
+	for _, id := range ids {
+		credential, err := s.Load(id)
+		if err != nil || credential == nil {
+			continue
+		}
+		out = append(out, credential)
+	}
+	return out, nil
+}
+
+// LoadByAlias resolves one provider/alias pair through the metadata index and
+// decrypts the matching credential. It returns (nil, nil) when no entry carries
+// that pair, which is what lets callers fall back to the local account registry
+// (upstream AdenCachedStorage.load_by_alias -> store.get_credential_by_alias).
+func (s *EncryptedFileStorage) LoadByAlias(providerName, alias string) (*CredentialObject, error) {
+	if providerName == "" || alias == "" {
+		return nil, nil
+	}
+	index, err := s.readIndex()
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, 1)
+	for id, entry := range index.Credentials {
+		if entry.Provider == nil || *entry.Provider != providerName {
+			continue
+		}
+		if entry.Alias == nil || *entry.Alias != alias {
+			continue
+		}
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	sort.Strings(ids)
+	return s.Load(ids[0])
+}
+
 func (s *EncryptedFileStorage) readIndex() (IndexEnvelope, error) {
 	s.indexMu.Lock()
 	defer s.indexMu.Unlock()

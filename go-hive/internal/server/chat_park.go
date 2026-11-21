@@ -308,3 +308,81 @@ func parkFormFromCursor(raw any) map[string]any {
 	}
 	return cloneParkForm(form)
 }
+
+// executeAskUser records the question the turn is parking on. The next user
+// message is the answer: runTurn clears the pending state when it starts, and
+// the turn that produced the question ends parked on ask_user, where the park
+// boundary publishes client_input_requested with these same questions
+// (upstream's _await_user_input announces the wait, not the tool handler).
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+func (r *ChatRuntime) executeAskUser(input map[string]any) agentloop.ToolResult {
+	questions, problem := normalizeAskUserQuestions(input)
+	if problem != "" {
+		return agentloop.ToolResult{Content: problem, IsError: true}
+	}
+	r.mu.Lock()
+	r.pendingQuestions = questions
+	r.mu.Unlock()
+	// Persist immediately: if the process dies before the turn's end checkpoint,
+	// the question is still the wait a restarted session must re-enter.
+	r.persistParkState()
+	return agentloop.ToolResult{Content: "Waiting for user input..."}
+}
+
+// normalizeAskUserQuestions is the chat runtime's seam over the shared
+// normaliser: the chat queen and the colony's persistent overseer must park on
+// the exact same question shape, so the shaping lives in agentloop and both
+// callers use it.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+// Parity: framework/agent_loop/internals/synthetic_tools.py::sanitize_ask_user_inputs
+func normalizeAskUserQuestions(input map[string]any) ([]map[string]any, string) {
+	return agentloop.NormalizeAskUserQuestions(input)
+}
+
+func (r *ChatRuntime) hasPendingQuestions() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.pendingQuestions) > 0
+}
+
+// pendingParkReason classifies the wait the finished turn parked on: a
+// credential form (credential_form) outranks an ask_user question, and an
+// empty string means an ordinary turn_done. Both are external waits, so the
+// idle nudge must not re-engage them.
+//
+// Parity: framework/agent_loop/reminders.py::ParkReason
+func (r *ChatRuntime) pendingParkReason() agentloop.ParkReason {
+	if r == nil {
+		return ""
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.pendingCredentialForm != nil {
+		return agentloop.ParkReasonCredentialForm
+	}
+	if len(r.pendingQuestions) > 0 {
+		return agentloop.ParkReasonAskUser
+	}
+	return ""
+}
+
+func (r *ChatRuntime) clearPendingQuestions() {
+	r.mu.Lock()
+	r.pendingQuestions = nil
+	r.mu.Unlock()
+	r.clearParkPendingInput()
+}
+
+// clearPendingCredentialForm drops a parked credential form once a real user
+// message or trigger answers it (the same unblocking the ask_user park gets).
+func (r *ChatRuntime) clearPendingCredentialForm() {
+	r.mu.Lock()
+	had := r.pendingCredentialForm != nil
+	r.pendingCredentialForm = nil
+	r.mu.Unlock()
+	if had {
+		r.clearParkPendingInput()
+	}
+}

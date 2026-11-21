@@ -113,6 +113,41 @@ func (c *browserCLI) spillImageResult(result map[string]any, toolName string, in
 	result["_image"] = image
 }
 
+// spillActionImage mirrors the image branch of upstream
+// cli_commands/interact.py::_blocks_to_cli_dict: an interaction whose tool-layer
+// return carried an ImageContent block keeps its own result dict and gains only
+// `saved_to` + `_image` (no screenshot metadata keys). The bridge hands the JPEG
+// inline as `data` + `mimeType`, so those two become the file pointer.
+func (c *browserCLI) spillActionImage(result map[string]any, intent string, hasIntent bool) {
+	data := stringOf(result["data"])
+	if data == "" {
+		return
+	}
+	raw, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return
+	}
+	tabID := intOf(result["tabId"])
+	path, err := writeBrowserCLIArtifact(c.env, "browser_interact", tabID, raw, ".jpg")
+	if err != nil {
+		result["ok"] = false
+		result["error"] = "Failed to write screenshot artifact: " + err.Error()
+		delete(result, "data")
+		delete(result, "mimeType")
+		return
+	}
+	delete(result, "data")
+	delete(result, "mimeType")
+	result["saved_to"] = path
+	image := map[string]any{"path": path, "mime": "image/jpeg"}
+	if hasIntent {
+		image["intent"] = intent
+	} else {
+		image["intent"] = nil
+	}
+	result["_image"] = image
+}
+
 // cropBoxFromClip renders the viewport-fraction rectangle the image spans, or
 // nil when the capture covered the whole viewport.
 func cropBoxFromClip(result map[string]any) any {

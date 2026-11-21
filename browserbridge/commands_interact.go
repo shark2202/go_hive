@@ -178,7 +178,7 @@ func cmdBrowserInteract(ctx context.Context, b *Bridge, profile string, params m
 			if err != nil {
 				return nil, err
 			}
-			return res, nil
+			return attachInteractImage(ctx, b, label, tabID, res), nil
 		}
 		return map[string]any{"ok": false, "error": action + " requires a selector or coordinate"}, nil
 
@@ -194,7 +194,11 @@ func cmdBrowserInteract(ctx context.Context, b *Bridge, profile string, params m
 			if err != nil {
 				return nil, err
 			}
-			return b.hoverPoint(ctx, conn, tabID, px, py)
+			res, err := b.hoverPoint(ctx, conn, tabID, px, py)
+			if err != nil {
+				return nil, err
+			}
+			return attachInteractImage(ctx, b, label, tabID, res), nil
 		}
 		return map[string]any{"ok": false, "error": "hover requires a selector or coordinate"}, nil
 
@@ -261,7 +265,7 @@ func cmdBrowserInteract(ctx context.Context, b *Bridge, profile string, params m
 					return nil, err
 				}
 			}
-			return res, nil
+			return attachInteractImage(ctx, b, label, tabID, res), nil
 		}
 		var res any
 		for i := 0; i < repeat; i++ {
@@ -458,6 +462,49 @@ func attachInteractSnapshot(ctx context.Context, b *Bridge, tabID int, result an
 		return m
 	}
 	m["snapshot"] = snap
+	return m
+}
+
+// attachInteractImage mirrors upstream interact._build_visual_response: after a
+// successful coordinate click / hover / key, capture one annotated viewport
+// screenshot through the existing browser_screenshot path (annotate=true draws
+// the last-interaction highlight the action just recorded) and attach the image
+// to the action result under the bridge's native image fields. Any capture
+// failure degrades to the action result unchanged, exactly like upstream's
+// text-only fallback.
+//
+// Only `data` + `mimeType` are added: those are the two keys every bridge image
+// payload already uses, so the action dict keeps upstream's shape
+// (interaction result + image) instead of growing screenshot metadata.
+func attachInteractImage(ctx context.Context, b *Bridge, label string, tabID int, result any) any {
+	m, ok := result.(map[string]any)
+	if !ok {
+		return result
+	}
+	if okFlag, _ := m["ok"].(bool); !okFlag {
+		return m
+	}
+	shot, err := cmdScreenshot(ctx, b, label, map[string]any{
+		"tabId":     tabID,
+		"format":    "jpeg",
+		"quality":   75,
+		"max_width": 800,
+		"annotate":  true,
+	})
+	if err != nil {
+		return m
+	}
+	shotMap, ok := shot.(map[string]any)
+	if !ok {
+		return m
+	}
+	if okFlag, _ := shotMap["ok"].(bool); !okFlag {
+		return m
+	}
+	if data, _ := shotMap["data"].(string); data != "" {
+		m["data"] = data
+		m["mimeType"] = shotMap["mimeType"]
+	}
 	return m
 }
 

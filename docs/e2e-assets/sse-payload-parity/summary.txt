@@ -1,5 +1,5 @@
 SSE payload parity — Python reference vs Go target
-generated: 2026-11-21T07:28:07+08:00
+generated: 2026-11-21T09:23:53+08:00
 reference: hive 1.0.14    target: hive 1.0.26-go.1
 
 == live type sets ==
@@ -11,13 +11,12 @@ extra in target: execution_completed, execution_started, node_loop_completed, no
 DIFF (reference=35 target=45)
   insert: reference=[] target=['execution_started']
   insert: reference=[] target=['node_loop_started']
-  insert: reference=[] target=['node_loop_completed']
-  insert: reference=[] target=['execution_completed']
+  replace: reference=['session_title_updated'] target=['node_loop_completed']
+  insert: reference=[] target=['execution_completed', 'session_title_updated']
   insert: reference=[] target=['execution_started']
   insert: reference=[] target=['node_loop_started']
-  insert: reference=[] target=['llm_turn_complete']
-  insert: reference=[] target=['client_input_requested']
-  replace: reference=['context_usage_updated', 'context_usage_updated', 'llm_turn_complete', 'client_input_requested'] target=['node_loop_completed']
+  delete: reference=['context_usage_updated', 'context_usage_updated'] target=[]
+  insert: reference=[] target=['node_loop_completed']
   insert: reference=[] target=['execution_completed']
   insert: reference=[] target=['execution_started']
   insert: reference=[] target=['node_loop_started']
@@ -29,33 +28,31 @@ DIFF (reference=17 target=23)
   insert: reference=[] target=['execution_started']
   insert: reference=[] target=['execution_completed']
   insert: reference=[] target=['execution_started']
-  insert: reference=[] target=['llm_turn_complete']
-  replace: reference=['llm_turn_complete'] target=['execution_completed']
+  insert: reference=[] target=['execution_completed']
   insert: reference=[] target=['execution_started']
   insert: reference=[] target=['execution_completed']
 
 == history sequence ==
-DIFF (reference=44 target=50)
+DIFF (reference=44 target=53)
   insert: reference=[] target=['execution_started']
-  replace: reference=['judge_verdict'] target=['node_loop_started']
+  insert: reference=[] target=['node_loop_started']
+  replace: reference=['session_title_updated'] target=['node_loop_completed']
+  insert: reference=[] target=['execution_completed', 'session_title_updated']
+  insert: reference=[] target=['execution_started']
+  insert: reference=[] target=['node_loop_started']
+  delete: reference=['context_usage_updated', 'context_usage_updated'] target=[]
   insert: reference=[] target=['node_loop_completed']
   insert: reference=[] target=['execution_completed']
   insert: reference=[] target=['execution_started']
-  replace: reference=['judge_verdict'] target=['node_loop_started']
-  insert: reference=[] target=['llm_turn_complete']
-  insert: reference=[] target=['client_input_requested']
-  replace: reference=['context_usage_updated', 'context_usage_updated', 'llm_turn_complete', 'client_input_requested'] target=['node_loop_completed']
-  insert: reference=[] target=['execution_completed']
-  insert: reference=[] target=['execution_started']
-  replace: reference=['judge_verdict'] target=['node_loop_started']
+  insert: reference=[] target=['node_loop_started']
   insert: reference=[] target=['node_loop_completed']
   replace: reference=['loop_state_changed'] target=['execution_completed']
 
 == live_without_go_envelope sequence ==
 DIFF (reference=35 target=33)
-  insert: reference=[] target=['llm_turn_complete']
-  insert: reference=[] target=['client_input_requested']
-  delete: reference=['context_usage_updated', 'context_usage_updated', 'llm_turn_complete', 'client_input_requested'] target=[]
+  delete: reference=['session_title_updated'] target=[]
+  insert: reference=[] target=['session_title_updated']
+  delete: reference=['context_usage_updated', 'context_usage_updated'] target=[]
 
 == per-type field gaps ==
 - execution_completed
@@ -66,8 +63,6 @@ DIFF (reference=35 target=33)
     history: extra_in_target=input
     live: extra_in_target=input
     replay: extra_in_target=input
-- judge_verdict
-    history: missing_in_target=action,feedback,iteration,judge_type
 - llm_turn_complete
     history: type_mismatch=cost_usd
       cost_usd: reference=['float'] target=['int']
@@ -86,23 +81,18 @@ DIFF (reference=35 target=33)
 - client_output_delta
     iteration: reference=['0', '1', '3'] target=['0', '1']
 - context_usage_updated
-    breakdown.conversation_chars: reference=['27996', '28056', '28126', '28268', '28295'] target=['0', '29031', '29101', '29270']
+    breakdown.conversation_chars: reference=['27984', '28044', '28114', '28256', '28283'] target=['0', '29019', '29089', '29258']
     breakdown.system_chars: reference=['21584'] target=['62554']
     breakdown.tool_defs_chars: reference=['45171'] target=['52587']
-    estimated_tokens: reference=['31583', '31603', '31627', '31674', '31683'] target=['38380', '48057', '48080', '48137']
+    estimated_tokens: reference=['31579', '31599', '31623', '31670', '31679'] target=['38380', '48053', '48076', '48133']
     message_count: reference=['1', '3', '5', '7', '8'] target=['0', '3', '5', '8']
     trigger: reference=['"iteration_start"', '"post_tool_call"', '"post_tool_results"'] target=['"iteration_start"']
     usage_pct: reference=['18'] target=['21', '27']
-    usage_ratio: reference=['0.1755', '0.1756', '0.1757', '0.176'] target=['0.2132', '0.267', '0.2671', '0.2674']
+    usage_ratio: reference=['0.1754', '0.1756', '0.1757', '0.1759', '0.176'] target=['0.2132', '0.267', '0.2671', '0.2674']
 - execution_completed
     output.status: reference=[] target=['"completed"']
 - execution_started
     input.message: reference=[] target=['"ASK_ME payload parity question"', '"blue"', '"payload parity probe"']
-- judge_verdict
-    action: reference=['"RETRY"'] target=[]
-    feedback: reference=['""'] target=[]
-    iteration: reference=['0', '1', '2'] target=[]
-    judge_type: reference=['"implicit"'] target=[]
 - llm_turn_complete
     cost_usd: reference=['0.0'] target=['0']
     iteration: reference=['0', '1', '2', '3'] target=['0', '1']
@@ -114,6 +104,12 @@ DIFF (reference=35 target=33)
     iteration: reference=['0', '1', '2', '3'] target=['0', '1']
 - node_loop_started
     max_iterations: reference=['999999'] target=['50']
+
+== judge verdicts (history-only) ==
+reference (3): [{"action": "RETRY", "feedback": "", "judge_type": "implicit", "iteration": 0}, {"action": "RETRY", "feedback": "", "judge_type": "implicit", "iteration": 1}, {"action": "RETRY", "feedback": "", "judge_type": "implicit", "iteration": 2}]
+target    (3): [{"action": "RETRY", "feedback": "", "judge_type": "implicit", "iteration": 0}, {"action": "RETRY", "feedback": "", "judge_type": "implicit", "iteration": 1}, {"action": "RETRY", "feedback": "", "judge_type": "implicit", "iteration": 2}]
+same verdicts: yes
+visible in live/replay: reference=False/False target=False/False
 
 == replay ==
 reference first frame: session_snapshot

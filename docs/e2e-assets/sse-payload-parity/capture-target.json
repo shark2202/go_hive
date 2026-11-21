@@ -3,7 +3,7 @@
   "implementation": "go_hive",
   "version": "hive 1.0.26-go.1",
   "session_id": "<session_id>",
-  "captured_at": "2026-11-21T07:28:07+08:00",
+  "captured_at": "2026-11-21T09:23:53+08:00",
   "responses": {
     "session_create": {
       "status": 201,
@@ -14,13 +14,13 @@
         "description": "",
         "goal": "",
         "has_worker": false,
-        "loaded_at": 1795217204.6604319,
+        "loaded_at": 1795224151.1916852,
         "node_count": 0,
         "queen_id": "queen_growth",
         "queen_name": "Steve Jobs",
         "queen_phase": "independent",
         "queen_supports_images": true,
-        "session_id": "session_20261121_072644_052d772a",
+        "session_id": "session_20261121_092231_5e4335c1",
         "spawned_colony_id": null,
         "uptime_seconds": 0
       },
@@ -53,7 +53,7 @@
     "session_stop": {
       "status": 200,
       "payload": {
-        "session_id": "session_20261121_072644_052d772a",
+        "session_id": "session_20261121_092231_5e4335c1",
         "stopped": true
       },
       "error": ""
@@ -84,9 +84,9 @@
             "interrupt_cause": null,
             "interrupted": false,
             "is_executing": false,
-            "last_event_at": "2026-11-21T07:26:44.740426",
+            "last_event_at": "2026-11-21T09:22:31.278196",
             "last_event_seq": 8,
-            "last_queen_event_at": "2026-11-21T07:26:44.740426",
+            "last_queen_event_at": "2026-11-21T09:22:31.278196",
             "park_reason": "turn_done",
             "pending_questions": null,
             "queen_busy_reason": "awaiting_input",
@@ -262,13 +262,13 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 29031,
+              "conversation_chars": 29019,
               "image_blocks": 0,
               "image_tokens": 0,
               "system_chars": 62554,
               "tool_defs_chars": 52587
             },
-            "estimated_tokens": 48057,
+            "estimated_tokens": 48053,
             "max_context_tokens": 180000,
             "message_count": 3,
             "trigger": "iteration_start",
@@ -318,22 +318,6 @@
             "stop_reason": "stop",
             "system_prefix_sha": "885285cb1ffe",
             "system_suffix_sha": "e3b0c44298fc"
-          }
-        },
-        {
-          "event": null,
-          "type": "session_title_updated",
-          "stream_id": "queen",
-          "node_id": null,
-          "execution_id": null,
-          "correlation_id": null,
-          "colony_id": null,
-          "run_id": "<absent>",
-          "seq": "<seq>",
-          "timestamp": "<timestamp>",
-          "data": {
-            "session_id": "<session_id>",
-            "title": "PAYLOAD_PARITY_OK"
           }
         },
         {
@@ -399,6 +383,22 @@
             "output": {
               "status": "completed"
             }
+          }
+        },
+        {
+          "event": null,
+          "type": "session_title_updated",
+          "stream_id": "queen",
+          "node_id": null,
+          "execution_id": null,
+          "correlation_id": null,
+          "colony_id": null,
+          "run_id": "<absent>",
+          "seq": "<seq>",
+          "timestamp": "<timestamp>",
+          "data": {
+            "session_id": "<session_id>",
+            "title": "PAYLOAD_PARITY_OK"
           }
         },
         {
@@ -511,44 +511,18 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 29101,
+              "conversation_chars": 29089,
               "image_blocks": 0,
               "image_tokens": 0,
               "system_chars": 62554,
               "tool_defs_chars": 52587
             },
-            "estimated_tokens": 48080,
+            "estimated_tokens": 48076,
             "max_context_tokens": 180000,
             "message_count": 5,
             "trigger": "iteration_start",
             "usage_pct": 27,
             "usage_ratio": 0.2671
-          }
-        },
-        {
-          "event": null,
-          "type": "llm_turn_complete",
-          "stream_id": "queen",
-          "node_id": "queen",
-          "execution_id": "<execution_id>",
-          "correlation_id": null,
-          "colony_id": null,
-          "run_id": "<absent>",
-          "seq": "<seq>",
-          "timestamp": "<timestamp>",
-          "data": {
-            "cache_creation_tokens": 0,
-            "cached_tokens": 0,
-            "cost_usd": 0,
-            "history_anchor_idx": -1,
-            "input_tokens": 0,
-            "iteration": 1,
-            "message_count": 5,
-            "model": "sse-parity-probe-model",
-            "output_tokens": 0,
-            "stop_reason": "tool_calls",
-            "system_prefix_sha": "885285cb1ffe",
-            "system_suffix_sha": "e3b0c44298fc"
           }
         },
         {
@@ -582,6 +556,66 @@
         },
         {
           "event": null,
+          "type": "tool_call_completed",
+          "stream_id": "queen",
+          "node_id": "queen",
+          "execution_id": "<execution_id>",
+          "correlation_id": null,
+          "colony_id": null,
+          "run_id": "<absent>",
+          "seq": "<seq>",
+          "timestamp": "<timestamp>",
+          "data": {
+            "is_error": false,
+            "result": "Waiting for user input...",
+            "tool_index": 1,
+            "tool_name": "ask_user",
+            "tool_use_id": "<tool_use_id>"
+          }
+        },
+        {
+          "event": null,
+          "type": "llm_turn_complete",
+          "stream_id": "queen",
+          "node_id": "queen",
+          "execution_id": "<execution_id>",
+          "correlation_id": null,
+          "colony_id": null,
+          "run_id": "<absent>",
+          "seq": "<seq>",
+          "timestamp": "<timestamp>",
+          "data": {
+            "cache_creation_tokens": 0,
+            "cached_tokens": 0,
+            "cost_usd": 0,
+            "history_anchor_idx": -1,
+            "input_tokens": 0,
+            "iteration": 1,
+            "message_count": 5,
+            "model": "sse-parity-probe-model",
+            "output_tokens": 0,
+            "stop_reason": "tool_calls",
+            "system_prefix_sha": "885285cb1ffe",
+            "system_suffix_sha": "e3b0c44298fc"
+          }
+        },
+        {
+          "event": null,
+          "type": "node_loop_completed",
+          "stream_id": "queen",
+          "node_id": "queen",
+          "execution_id": "<execution_id>",
+          "correlation_id": null,
+          "colony_id": null,
+          "run_id": "<absent>",
+          "seq": "<seq>",
+          "timestamp": "<timestamp>",
+          "data": {
+            "iterations": 1
+          }
+        },
+        {
+          "event": null,
           "type": "client_input_requested",
           "stream_id": "queen",
           "node_id": "queen",
@@ -603,40 +637,6 @@
                 "prompt": "Which color should the probe use?"
               }
             ]
-          }
-        },
-        {
-          "event": null,
-          "type": "tool_call_completed",
-          "stream_id": "queen",
-          "node_id": "queen",
-          "execution_id": "<execution_id>",
-          "correlation_id": null,
-          "colony_id": null,
-          "run_id": "<absent>",
-          "seq": "<seq>",
-          "timestamp": "<timestamp>",
-          "data": {
-            "is_error": false,
-            "result": "Waiting for user input...",
-            "tool_index": 1,
-            "tool_name": "ask_user",
-            "tool_use_id": "<tool_use_id>"
-          }
-        },
-        {
-          "event": null,
-          "type": "node_loop_completed",
-          "stream_id": "queen",
-          "node_id": "queen",
-          "execution_id": "<execution_id>",
-          "correlation_id": null,
-          "colony_id": null,
-          "run_id": "<absent>",
-          "seq": "<seq>",
-          "timestamp": "<timestamp>",
-          "data": {
-            "iterations": 1
           }
         },
         {
@@ -784,13 +784,13 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 29270,
+              "conversation_chars": 29258,
               "image_blocks": 0,
               "image_tokens": 0,
               "system_chars": 62554,
               "tool_defs_chars": 52587
             },
-            "estimated_tokens": 48137,
+            "estimated_tokens": 48133,
             "max_context_tokens": 180000,
             "message_count": 8,
             "trigger": "iteration_start",
@@ -937,13 +937,13 @@
             "interrupt_cause": null,
             "interrupted": false,
             "is_executing": false,
-            "last_event_at": "2026-11-21T07:26:49.989977",
-            "last_event_seq": 48,
-            "last_queen_event_at": "2026-11-21T07:26:49.989977",
+            "last_event_at": "2026-11-21T09:22:36.397918",
+            "last_event_seq": 51,
+            "last_queen_event_at": "2026-11-21T09:22:36.397918",
             "park_reason": "turn_done",
             "pending_questions": null,
             "queen_busy_reason": "awaiting_input",
-            "snapshot_seq": 50
+            "snapshot_seq": 53
           }
         },
         {
@@ -1149,32 +1149,6 @@
         },
         {
           "event": null,
-          "type": "llm_turn_complete",
-          "stream_id": "queen",
-          "node_id": "queen",
-          "execution_id": "<execution_id>",
-          "correlation_id": null,
-          "colony_id": null,
-          "run_id": "<absent>",
-          "seq": "<seq>",
-          "timestamp": "<timestamp>",
-          "data": {
-            "cache_creation_tokens": 0,
-            "cached_tokens": 0,
-            "cost_usd": 0,
-            "history_anchor_idx": -1,
-            "input_tokens": 0,
-            "iteration": 1,
-            "message_count": 5,
-            "model": "sse-parity-probe-model",
-            "output_tokens": 0,
-            "stop_reason": "tool_calls",
-            "system_prefix_sha": "885285cb1ffe",
-            "system_suffix_sha": "e3b0c44298fc"
-          }
-        },
-        {
-          "event": null,
           "type": "tool_call_started",
           "stream_id": "queen",
           "node_id": "queen",
@@ -1219,6 +1193,32 @@
             "tool_index": 1,
             "tool_name": "ask_user",
             "tool_use_id": "<tool_use_id>"
+          }
+        },
+        {
+          "event": null,
+          "type": "llm_turn_complete",
+          "stream_id": "queen",
+          "node_id": "queen",
+          "execution_id": "<execution_id>",
+          "correlation_id": null,
+          "colony_id": null,
+          "run_id": "<absent>",
+          "seq": "<seq>",
+          "timestamp": "<timestamp>",
+          "data": {
+            "cache_creation_tokens": 0,
+            "cached_tokens": 0,
+            "cost_usd": 0,
+            "history_anchor_idx": -1,
+            "input_tokens": 0,
+            "iteration": 1,
+            "message_count": 5,
+            "model": "sse-parity-probe-model",
+            "output_tokens": 0,
+            "stop_reason": "tool_calls",
+            "system_prefix_sha": "885285cb1ffe",
+            "system_suffix_sha": "e3b0c44298fc"
           }
         },
         {
@@ -1390,13 +1390,13 @@
             "interrupt_cause": null,
             "interrupted": false,
             "is_executing": false,
-            "last_event_at": "2026-11-21T07:26:49.989977",
-            "last_event_seq": 48,
-            "last_queen_event_at": "2026-11-21T07:26:49.989977",
+            "last_event_at": "2026-11-21T09:22:36.397918",
+            "last_event_seq": 51,
+            "last_queen_event_at": "2026-11-21T09:22:36.397918",
             "park_reason": "turn_done",
             "pending_questions": null,
             "queen_busy_reason": "awaiting_input",
-            "snapshot_seq": 50
+            "snapshot_seq": 53
           }
         },
         {
@@ -1602,32 +1602,6 @@
         },
         {
           "event": null,
-          "type": "llm_turn_complete",
-          "stream_id": "queen",
-          "node_id": "queen",
-          "execution_id": "<execution_id>",
-          "correlation_id": null,
-          "colony_id": null,
-          "run_id": "<absent>",
-          "seq": "<seq>",
-          "timestamp": "<timestamp>",
-          "data": {
-            "cache_creation_tokens": 0,
-            "cached_tokens": 0,
-            "cost_usd": 0,
-            "history_anchor_idx": -1,
-            "input_tokens": 0,
-            "iteration": 1,
-            "message_count": 5,
-            "model": "sse-parity-probe-model",
-            "output_tokens": 0,
-            "stop_reason": "tool_calls",
-            "system_prefix_sha": "885285cb1ffe",
-            "system_suffix_sha": "e3b0c44298fc"
-          }
-        },
-        {
-          "event": null,
           "type": "tool_call_started",
           "stream_id": "queen",
           "node_id": "queen",
@@ -1672,6 +1646,32 @@
             "tool_index": 1,
             "tool_name": "ask_user",
             "tool_use_id": "<tool_use_id>"
+          }
+        },
+        {
+          "event": null,
+          "type": "llm_turn_complete",
+          "stream_id": "queen",
+          "node_id": "queen",
+          "execution_id": "<execution_id>",
+          "correlation_id": null,
+          "colony_id": null,
+          "run_id": "<absent>",
+          "seq": "<seq>",
+          "timestamp": "<timestamp>",
+          "data": {
+            "cache_creation_tokens": 0,
+            "cached_tokens": 0,
+            "cost_usd": 0,
+            "history_anchor_idx": -1,
+            "input_tokens": 0,
+            "iteration": 1,
+            "message_count": 5,
+            "model": "sse-parity-probe-model",
+            "output_tokens": 0,
+            "stop_reason": "tool_calls",
+            "system_prefix_sha": "885285cb1ffe",
+            "system_suffix_sha": "e3b0c44298fc"
           }
         },
         {
@@ -2060,6 +2060,24 @@
     },
     {
       "event": null,
+      "type": "judge_verdict",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "action": "RETRY",
+        "feedback": "",
+        "iteration": 0,
+        "judge_type": "implicit"
+      }
+    },
+    {
+      "event": null,
       "type": "client_input_committed",
       "stream_id": "queen",
       "node_id": "queen",
@@ -2102,13 +2120,13 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 29031,
+          "conversation_chars": 29019,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 62554,
           "tool_defs_chars": 52587
         },
-        "estimated_tokens": 48057,
+        "estimated_tokens": 48053,
         "max_context_tokens": 180000,
         "message_count": 3,
         "trigger": "iteration_start",
@@ -2158,22 +2176,6 @@
         "stop_reason": "stop",
         "system_prefix_sha": "885285cb1ffe",
         "system_suffix_sha": "e3b0c44298fc"
-      }
-    },
-    {
-      "event": null,
-      "type": "session_title_updated",
-      "stream_id": "queen",
-      "node_id": null,
-      "execution_id": null,
-      "correlation_id": null,
-      "colony_id": null,
-      "run_id": "<absent>",
-      "seq": "<seq>",
-      "timestamp": "<timestamp>",
-      "data": {
-        "session_id": "<session_id>",
-        "title": "PAYLOAD_PARITY_OK"
       }
     },
     {
@@ -2239,6 +2241,22 @@
         "output": {
           "status": "completed"
         }
+      }
+    },
+    {
+      "event": null,
+      "type": "session_title_updated",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "session_id": "<session_id>",
+        "title": "PAYLOAD_PARITY_OK"
       }
     },
     {
@@ -2309,6 +2327,24 @@
     },
     {
       "event": null,
+      "type": "judge_verdict",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "action": "RETRY",
+        "feedback": "",
+        "iteration": 1,
+        "judge_type": "implicit"
+      }
+    },
+    {
+      "event": null,
       "type": "client_input_committed",
       "stream_id": "queen",
       "node_id": "queen",
@@ -2351,44 +2387,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 29101,
+          "conversation_chars": 29089,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 62554,
           "tool_defs_chars": 52587
         },
-        "estimated_tokens": 48080,
+        "estimated_tokens": 48076,
         "max_context_tokens": 180000,
         "message_count": 5,
         "trigger": "iteration_start",
         "usage_pct": 27,
         "usage_ratio": 0.2671
-      }
-    },
-    {
-      "event": null,
-      "type": "llm_turn_complete",
-      "stream_id": "queen",
-      "node_id": "queen",
-      "execution_id": "<execution_id>",
-      "correlation_id": null,
-      "colony_id": null,
-      "run_id": "<absent>",
-      "seq": "<seq>",
-      "timestamp": "<timestamp>",
-      "data": {
-        "cache_creation_tokens": 0,
-        "cached_tokens": 0,
-        "cost_usd": 0,
-        "history_anchor_idx": -1,
-        "input_tokens": 0,
-        "iteration": 1,
-        "message_count": 5,
-        "model": "sse-parity-probe-model",
-        "output_tokens": 0,
-        "stop_reason": "tool_calls",
-        "system_prefix_sha": "885285cb1ffe",
-        "system_suffix_sha": "e3b0c44298fc"
       }
     },
     {
@@ -2422,6 +2432,66 @@
     },
     {
       "event": null,
+      "type": "tool_call_completed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "is_error": false,
+        "result": "Waiting for user input...",
+        "tool_index": 1,
+        "tool_name": "ask_user",
+        "tool_use_id": "<tool_use_id>"
+      }
+    },
+    {
+      "event": null,
+      "type": "llm_turn_complete",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "cache_creation_tokens": 0,
+        "cached_tokens": 0,
+        "cost_usd": 0,
+        "history_anchor_idx": -1,
+        "input_tokens": 0,
+        "iteration": 1,
+        "message_count": 5,
+        "model": "sse-parity-probe-model",
+        "output_tokens": 0,
+        "stop_reason": "tool_calls",
+        "system_prefix_sha": "885285cb1ffe",
+        "system_suffix_sha": "e3b0c44298fc"
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_completed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "iterations": 1
+      }
+    },
+    {
+      "event": null,
       "type": "client_input_requested",
       "stream_id": "queen",
       "node_id": "queen",
@@ -2443,40 +2513,6 @@
             "prompt": "Which color should the probe use?"
           }
         ]
-      }
-    },
-    {
-      "event": null,
-      "type": "tool_call_completed",
-      "stream_id": "queen",
-      "node_id": "queen",
-      "execution_id": "<execution_id>",
-      "correlation_id": null,
-      "colony_id": null,
-      "run_id": "<absent>",
-      "seq": "<seq>",
-      "timestamp": "<timestamp>",
-      "data": {
-        "is_error": false,
-        "result": "Waiting for user input...",
-        "tool_index": 1,
-        "tool_name": "ask_user",
-        "tool_use_id": "<tool_use_id>"
-      }
-    },
-    {
-      "event": null,
-      "type": "node_loop_completed",
-      "stream_id": "queen",
-      "node_id": "queen",
-      "execution_id": "<execution_id>",
-      "correlation_id": null,
-      "colony_id": null,
-      "run_id": "<absent>",
-      "seq": "<seq>",
-      "timestamp": "<timestamp>",
-      "data": {
-        "iterations": 1
       }
     },
     {
@@ -2582,6 +2618,24 @@
     },
     {
       "event": null,
+      "type": "judge_verdict",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "action": "RETRY",
+        "feedback": "",
+        "iteration": 2,
+        "judge_type": "implicit"
+      }
+    },
+    {
+      "event": null,
       "type": "client_input_committed",
       "stream_id": "queen",
       "node_id": "queen",
@@ -2624,13 +2678,13 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 29270,
+          "conversation_chars": 29258,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 62554,
           "tool_defs_chars": 52587
         },
-        "estimated_tokens": 48137,
+        "estimated_tokens": 48133,
         "max_context_tokens": 180000,
         "message_count": 8,
         "trigger": "iteration_start",

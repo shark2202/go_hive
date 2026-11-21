@@ -56,7 +56,7 @@ definitions for compatibility and are not the active path). The six remaining
 | 12 | `browser_snapshot` | `(tab_id=None, profile=None, mode="default")` | `{ok, tabId, url, length, saved_to}` (tree spilled to file; errors pass through) | active | 已移植 | Bridge renders `[ref=eN]` + `[href="…"]` (+ DOM-orphan link section), `_clean_inline_text_boxes`, DOM fallback (>50000 nodes / visible<10 && >500) and the pending-dialog gate; the CLI spills the tree and returns `{ok,tabId,url,length,saved_to}` so `page snapshot --head` reads real content. Sample tree is byte-identical to upstream (112 chars). |
 | 13 | `browser_console` | `(tab_id=None, profile=None, level=None)` | `{ok,message,suggestion}` stub upstream | active | 已移植 | Upstream is a stub; the Go handler returns the same three fields verbatim. Console rows still land in the telemetry JSONL via the `cdp_event` consumer. |
 | 14 | `browser_html` | `(tab_id=None, profile=None, selector=None)` | `{ok, tabId, selector, length, saved_to}` or `{ok,tabId,html,selector}` | active | 已移植 | Spills `outerHTML` to `<ArtifactDir>/browser_html_<ms>_tab<id>.html`; a selector that matches nothing returns `html:null`. |
-| 15 | `browser_interact` | `(action, tab_id=None, profile=None, selector=None, coordinate=None, start_selector=None, start_coordinate=None, text=None, clear_first=True, use_insert_text=True, modifiers=None, repeat=1, scroll_direction="down", scroll_amount=500, intent=None, full_page=False, annotate=True, region=None, duration=None, wait_for_selector=None, wait_for_text=None, timeout_ms=None, auto_snapshot_mode="simple", wait_after_ms=0)` | `list[TextContent, ImageContent?]` | active | 已移植 | All 13 actions. Parameter-relevance guard, fraction coordinates (`0..1`), `key` "+" modifier parsing, `repeat`, HTML5 drag synthesis, zoom `crop_box`, auto-snapshot (`default/simple/interactive/off`). Returns Go-native JSON instead of MCP content blocks, and coordinate actions carry no annotated image. |
+| 15 | `browser_interact` | `(action, tab_id=None, profile=None, selector=None, coordinate=None, start_selector=None, start_coordinate=None, text=None, clear_first=True, use_insert_text=True, modifiers=None, repeat=1, scroll_direction="down", scroll_amount=500, intent=None, full_page=False, annotate=True, region=None, duration=None, wait_for_selector=None, wait_for_text=None, timeout_ms=None, auto_snapshot_mode="simple", wait_after_ms=0)` | `list[TextContent, ImageContent?]` | active | 已移植 | All 13 actions. Parameter-relevance guard, fraction coordinates (`0..1`), `key` "+" modifier parsing, `repeat`, HTML5 drag synthesis, zoom `crop_box`, auto-snapshot (`default/simple/interactive/off`). Returns Go-native JSON instead of MCP content blocks; coordinate click/hover/key attach the annotated screenshot as `data`+`mimeType` (R15), which the CLI collapses to `saved_to`+`_image` like upstream `_build_visual_response` / `_blocks_to_cli_dict`. |
 | 16 | `browser_select` | `(selector, values, tab_id=None, profile=None)` | `{ok, action:"select", selector, selected[]}`; errors add `options` | active | 已移植 | Sets `selected` per option, dispatches `change`, reports `selected`/`options`; invalid values produce `ok:false` with the option list. |
 | 17 | `browser_click` | `(selector, tab_id=None, profile=None, button="left", double_click=False, timeout_ms=5000, auto_snapshot_mode="simple")` | click result `{ok,action:"click",selector,x,y,method,focused_element?}` plus `snapshot`/`snapshot_error` | legacy | 已移植 | Pointer click + auto-snapshot; no highlight overlay, focused-element descriptor, or JS fallback. |
 | 18 | `browser_click_coordinate` | `(x, y, tab_id=None, profile=None, button="left")` | `list[TextContent(click result), ImageContent]` | legacy | 未移植 | Not registered upstream; the active path is `browser_interact` with `coordinate`. |
@@ -117,7 +117,7 @@ included here). Signatures are copied from the upstream AST.
 | 32 | `get_pending_dialog` | `(tab_id)` | 已移植 | Per-tab state from `Page.javascriptDialogOpening/Closed`. |
 | 33 | `list_pending_dialogs` | `()` | 已移植 | All tracked dialogs keyed by tab id. |
 | 34 | `click` | `(tab_id, selector, button="left", click_count=1, timeout_ms=5000)` | 已移植 | JS rect + pointer events; no highlight/focused descriptor/fallback. |
-| 35 | `click_coordinate` | `(tab_id, x, y, button="left", click_count=1)` | 已移植 | Internal coordinate path in `page.click`; no visual response. |
+| 35 | `click_coordinate` | `(tab_id, x, y, button="left", click_count=1)` | 已移植 | Internal coordinate path in `page.click`; `browser_interact`'s coordinate click attaches the annotated screenshot (`data`+`mimeType`, R15). |
 | 36 | `type_text` | `(tab_id, selector, text, clear_first=True, delay_ms=1, timeout_ms=30000, use_insert_text=True)` | 已移植 | Pointer focus + `Input.insertText`/per-char. |
 | 37 | `press_key` | `(tab_id, key, selector=None, modifiers=None)` | 已移植 | Modifier mask + special-key map. |
 | 38 | `shadow_query` | `(tab_id, selector)` | 已移植 | `_shadowQuery` JS ported; `browser_shadow_query` converts the CSS-px rect to viewport fractions. |
@@ -239,8 +239,6 @@ Still open (not available; no fallback):
   `clear_highlight` inject a pulsing box upstream); the last-interaction
   highlight is recorded for screenshot annotation only.
 - `has_public_listeners`.
-- Coordinate click/hover/key carry no annotated image in their own result
-  (upstream `_build_visual_response`).
 - `browser_close` / navigation still require an explicit `tab_id`; only the
   L3a tools resolve the context's active tab automatically.
 - The desktop panel's three Go-server routes (`/api/browser/contexts`,
@@ -321,8 +319,9 @@ browser_activate_tab(tab_id: int, profile: str | None = None) -> dict
 - `browser_snapshot` / `browser_screenshot` / `browser_interact` return shapes
   are Go-native JSON, not the upstream MCP content-block list. Screenshots are
   resized to 800px JPEG by the browser itself (approximation vs upstream's PIL
-  pass, quantified in `docs/fixtures/browser-return-contract/`), and the
-  coordinate-action visual response is still absent.
+  pass, quantified in `docs/fixtures/browser-return-contract/`); coordinate
+  click/hover/key attach that same annotated screenshot (`data`+`mimeType`,
+  R15, measured in `docs/fixtures/browser-annotated-actions/`).
 - `browser_script` runs the skill script as a **child process** (default
   `uv run python`), not in-process: there is no `ctx.bridge` object, the script
   gets a JSON stdin envelope plus `HIVE_BRIDGE_*` env vars and is expected to

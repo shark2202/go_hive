@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-11-21 05:47 CST",
+  "generated_at": "2026-11-21 09:18 CST",
   "baseline": {
-    "branch": "integrations-account-wiring",
-    "commit": "db5c4c1bf168823a993fefc36b0e356fdab67ca3",
-    "parent": "db5c4c1b",
-    "note": "修订：get_account_info 的 AccountSource 已接入默认会话；account 别名在 hubspot/notion/discord/mattermost/google docs 复刻。"
+    "branch": "integration-pagination-alias",
+    "commit": "1f52a20e1ba0f2c94bf6a7c1ab59cd27908650e5",
+    "parent": "93193450",
+    "note": "修订：新增 Link 头 / 末条 id 分页原语并接线 github 3 个列表 + stripe 16 个列表；EncryptedFileStorage 补 provider/alias 只读索引。"
   },
   "scope": {
     "package_files_nontest": 96,
@@ -12,7 +12,7 @@
     "module_actions": 854,
     "senders_actions": 9,
     "session_registry_names": 113,
-    "test_functions": 1245,
+    "test_functions": 1262,
     "upstream_modules": 103,
     "upstream_actions": 865,
     "excluded_actions": [
@@ -46,8 +46,8 @@
       "detail": "已实现：integrationkit.TokenRefresher 提供标准 RFC 6749 §6 refresh_token 授权（POST form grant_type=refresh_token，过期前 5 分钟刷新，按 endpoint+client+refresh_token 缓存并并发去重，refresh_token 轮换后后续授权使用新值，失败返回 {error, error_code, help} 不静默；401 → 强制刷新 → 重试一次；只有静态 access token 且已知过期时报 no_refresh_token 并给出原变量名）。已接入 7 个模块：google 系（calendar/gmail/google_docs/google_sheets/email Gmail sender，GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN/TOKEN_URL + GOOGLE_ACCESS_TOKEN[_EXPIRES_AT]）、hubspot（HUBSPOT_*）、zoho_crm（ZOHO_CLIENT_ID/SECRET/REFRESH_TOKEN + ZOHO_ACCOUNTS_DOMAIN/ZOHO_REGION → token endpoint）。凭据库经 env sync 额外导出 client_id/client_secret/refresh_token/access_token expires_at（credentials.OAuthRefreshEnvBindings）。仍未接入：仅接受静态 access token 的 salesforce/microsoft_graph/powerbi/quickbooks/zoom/google_search_console/reddit(client-credentials 已单独实现)等 12 个条目——上游凭据规格未声明 client_id/secret/refresh_token，无法在不发明变量的前提下刷新；account 别名 token 为单值不可刷新；刷新结果只在本进程缓存，不写回凭据库。"
     },
     {
-      "title": "分页（2026-11-21 通用客户端已支持声明式分页，覆盖 2 个模块）",
-      "detail": "通用 REST 客户端（integrationkit）新增 RestSpec.Pagination：items_path / next_cursor_path / cursor_param / max_pages（默认 10 页；光标缺失/为空/重复即停；路径支持点号嵌套；走完合并 items 并清除 next_cursor，不自动推断）。已接线：airtable_list_records（offset）、slack_list_channels / slack_list_users（response_metadata.next_cursor）。残余：github（Link 响应头分页）、stripe（starting_after=上页最后 id，非响应字段）、zoom/gmail/google_docs/google_maps/salesforce（参数透传）与 bigquery（自研 token 循环）未改为声明式；其余列表 action 本来就单页。"
+      "title": "分页（2026-11-21 已支持 body 光标 / Link 头 / 末条 id 三种模式，覆盖 4 个模块）",
+      "detail": "通用 REST 客户端（integrationkit）RestSpec.Pagination 现有三种模式：① body 光标（items_path / next_cursor_path / cursor_param）：airtable_list_records（offset）、slack_list_channels / slack_list_users（response_metadata.next_cursor）；② LinkHeader：跟随响应 Link 头 rel=next 的 URL（原样复用），github_list_issues / github_list_pull_requests / github_list_stargazers；③ LastItemField：取页末条目的字段作为回传光标，stripe 全部 16 个 stripe_list_*（starting_after=末条 id，has_more=false 即停）。三种模式共用：默认 10 页（max_pages）、光标缺失/为空/重复即停、走完清除 next_cursor（last-item 模式同时清 has_more）、响应不含声明条目形状或错误页时原样返回、不伪造空列表。残余：zoom / gmail / google_docs / google_maps / salesforce 仍是参数透传，bigquery 仍是自研 token 循环；github list_branches / list_commits / list_repos / list_workflow_runs 与 search_* 上游无 page 参数，未接（不硬接）；其余列表 action 本来就单页。"
     },
     {
       "title": "文件上传 / multipart",
@@ -59,7 +59,7 @@
     },
     {
       "title": "多账号 / account 别名",
-      "detail": "已复刻：hubspot、notion、discord、mattermost、google docs/gmail/calendar 的 account 别名走会话注入的凭据视图（CredentialStoreAdapter.get_by_alias 语义：先别名、无别名叫模块单凭据；未知别名返回该工具自己的 auth 错误，对应上游返回 None）。未支持：obsidian（上游无 account 参数）、google sheets（account 是上游框架 tracking 参数，_get_client() 忽略）、support/ATS 组 intercom/zendesk/freshdesk/greenhouse（上游无 account 参数，多值 bundle 仍按环境变量/单条存储凭据）。get_account_info 已接线：无凭据返回空列表 count 0。"
+      "detail": "已复刻：hubspot、notion、discord、mattermost、google docs/gmail/calendar 的 account 别名走会话注入的凭据视图（CredentialStoreAdapter.get_by_alias 语义：先别名、无别名叫模块单凭据；未知别名返回该工具自己的 auth 错误，对应上游返回 None）。未支持：obsidian（上游无 account 参数）、google sheets（account 是上游框架 tracking 参数，_get_client() 忽略）、support/ATS 组 intercom/zendesk/freshdesk/greenhouse（上游无 account 参数，多值 bundle 仍按环境变量/单条存储凭据）。get_account_info 已接线：无凭据返回空列表 count 0。 2026-11-21 修订：EncryptedFileStorage 实现 LoadByAlias / LoadAllForProvider（读 metadata/index.json 只读索引），OAuth 托管账号（_integration_type / _alias）的 account 别名在会话凭据视图里可直接解析；索引无记录时按既有链路降级本地注册表（CredentialStoreAdapter 先 store 后 local）。"
     },
     {
       "title": "二进制响应",
@@ -1757,8 +1757,13 @@
       },
       "oauth_refresh": false,
       "pagination": {
-        "mode": "none",
-        "detail": "per_page 参数；无 page/cursor 参数、无自动翻页"
+        "mode": "follow",
+        "detail": "link_header：github_list_issues / github_list_pull_requests / github_list_stargazers 跟随响应 Link 头 rel=next（完整 URL 原样复用，per_page/state 保留）；其余列表（branches/commits/search/workflow_runs）上游无 page 参数，保持单页",
+        "wiring": "internal/tools/integrationkit/rest.go（LinkHeader 模式）；specs_providers.go::githubSpecs",
+        "tests": [
+          "TestGitHubListIssuesFollowsLinkHeaderPages",
+          "TestGitHubListStargazersStopsWithoutLinkHeader"
+        ]
       },
       "special_gaps": [],
       "grade": "B",
@@ -4734,8 +4739,14 @@
       },
       "oauth_refresh": false,
       "pagination": {
-        "mode": "passthrough",
-        "detail": "列表响应带 has_more；不自动翻页"
+        "mode": "follow",
+        "detail": "last_item_field：全部 16 个 stripe_list_* 以 starting_after=上页末条 id 翻页；has_more=false 即停（不多发一页），合并后清除 has_more",
+        "wiring": "internal/tools/integrationkit/rest.go（LastItemField 模式）；specs_stripe.go::stripeList",
+        "tests": [
+          "TestStripeListCustomersFollowsLastItemId",
+          "TestStripeListInvoicesStopsOnHasMoreFalse",
+          "TestStripeListChargesPaginationErrorSurfaces"
+        ]
       },
       "special_gaps": [],
       "grade": "B",
@@ -5892,48 +5903,40 @@
     }
   ],
   "revision": {
-    "generated_at": "2026-11-21 06:45 CST",
-    "branch": "oauth-refresh-pagination",
-    "base": "main 05f178e2",
-    "scope": "OAuth2 refresh_token 通用刷新 + 通用 REST 声明式分页",
+    "generated_at": "2026-11-21 09:18 CST",
+    "branch": "integration-pagination-alias",
+    "base": "main 93193450",
+    "scope": "通用 REST 分页新增 Link 头 / 末条 id 两种模式并接线 github·stripe 列表；EncryptedFileStorage 补 provider/alias 只读索引，OAuth 托管账号别名可用",
     "implemented": {
-      "oauth_refresh_modules": [
-        "calendar",
-        "email",
-        "gmail",
-        "google_docs",
-        "google_sheets",
-        "hubspot",
-        "zoho_crm"
-      ],
       "pagination_modules": [
         "airtable",
-        "slack"
+        "slack",
+        "github",
+        "stripe"
       ],
       "primitives": [
-        "internal/tools/integrationkit/oauth.go",
-        "internal/tools/integrationkit/rest.go（Pagination + 401 重试）",
-        "internal/tools/integrations/oauth.go",
-        "internal/credentials/oauth_refresh.go（OAuthRefreshEnvBindings）"
+        "internal/tools/integrationkit/rest.go（PaginationSpec.LinkHeader=rel=next；LastItemField=末条字段；合并后清 next_cursor/has_more）",
+        "internal/credentials/storage.go（EncryptedFileStorage.LoadByAlias / LoadAllForProvider，只读 metadata/index.json，不重写索引）"
       ]
     },
     "tests": {
-      "new_test_functions": 17,
+      "new_test_functions": 16,
       "files": [
-        "internal/tools/integrations/oauth_refresh_test.go",
-        "internal/tools/integrationkit/oauth_test.go",
-        "internal/credentials/oauth_refresh_test.go"
+        "internal/tools/integrationkit/rest_pagination_test.go",
+        "internal/tools/integrations/rest_pagination_test.go",
+        "internal/credentials/storage_alias_test.go",
+        "internal/cli/session_account_source_test.go"
       ],
-      "network": "0 外网调用：假 token endpoint + httptest 假 provider"
+      "network": "0 外网调用：httptest 假服务 + t.TempDir 加密 store"
     },
     "notes": [
-      "HTML 视图（integrations-evidence-audit.html）未随本次修订重绘，仍是 05:47 快照；JSON 为权威数据。",
-      "本次未改动任何既有模块的既有行为；未配置 OAuth 变量时走原静态 token 路径（既有测试全绿）。"
+      "github 只接有上游 page 参数的三个列表（issues/pull_requests/stargazers），其余列表不硬接。",
+      "stripe 16 个 stripe_list_* 全部接线；has_more=false 立即停止，拿到 N 页只发 N 次请求、不多发一页。",
+      "无索引记录（如无 _alias 的旧记录或存储里没有该 alias）返回 nil，继续走本地注册表回退，链路行为不变。"
     ],
     "remaining": [
-      "静态 access token 条目（salesforce/microsoft_graph/powerbi/quickbooks/zoom 等）无刷新契约",
-      "account 别名 token 不可刷新",
-      "github/stripe 等分页语义无法用当前声明式原语覆盖（响应头 / 末条 id 光标）",
+      "zoom/gmail/google_docs/google_maps/salesforce 列表仍参数透传；bigquery 仍自研 token 循环",
+      "account 别名的凭据是单 token，不携带刷新材料；刷新后的 token 只在本进程缓存",
       "multipart 上传、webhook 验签（另见 global_gaps）"
     ]
   }

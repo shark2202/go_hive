@@ -21,8 +21,20 @@ func stripeDelete(resource, idParam string) RestSpec {
 	return RestSpec{Method: http.MethodDelete, Path: "/v1/" + resource + "/{" + idParam + "}"}
 }
 
+// stripeList declares one list endpoint. Stripe advertises one page per call
+// and accepts starting_after=<id of the last item on the previous page>; the
+// declarative walk derives that cursor from the merged item's id and stops when
+// the page reports has_more=false (upstream stripe_list_* document
+// starting_after for every list tool).
 func stripeList(resource, listKey string) RestSpec {
-	return RestSpec{Method: http.MethodGet, Path: "/v1/" + resource, ListKey: listKey, HasMore: true}
+	return RestSpec{
+		Method: http.MethodGet, Path: "/v1/" + resource, ListKey: listKey, HasMore: true,
+		Pagination: &PaginationSpec{
+			ItemsPath:     listKey,
+			CursorParam:   "starting_after",
+			LastItemField: "id",
+		},
+	}
 }
 
 func stripeAction(resource, idParam, action, bodyKey string) RestSpec {

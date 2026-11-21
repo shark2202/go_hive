@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-21T07:28:07+08:00",
+  "generated_at": "2026-11-21T09:23:53+08:00",
   "reference": {
     "version": "hive 1.0.14",
     "session_id": "<session_id>"
@@ -1054,17 +1054,17 @@
       "history_value_diff": {
         "breakdown.conversation_chars": {
           "reference": [
-            "27996",
-            "28056",
-            "28126",
-            "28268",
-            "28295"
+            "27984",
+            "28044",
+            "28114",
+            "28256",
+            "28283"
           ],
           "target": [
             "0",
-            "29031",
-            "29101",
-            "29270"
+            "29019",
+            "29089",
+            "29258"
           ]
         },
         "breakdown.system_chars": {
@@ -1085,17 +1085,17 @@
         },
         "estimated_tokens": {
           "reference": [
-            "31583",
-            "31603",
-            "31627",
-            "31674",
-            "31683"
+            "31579",
+            "31599",
+            "31623",
+            "31670",
+            "31679"
           ],
           "target": [
             "38380",
-            "48057",
-            "48080",
-            "48137"
+            "48053",
+            "48076",
+            "48133"
           ]
         },
         "message_count": {
@@ -1134,9 +1134,10 @@
         },
         "usage_ratio": {
           "reference": [
-            "0.1755",
+            "0.1754",
             "0.1756",
             "0.1757",
+            "0.1759",
             "0.176"
           ],
           "target": [
@@ -1425,15 +1426,10 @@
     "judge_verdict": {
       "history": {
         "reference_count": 3,
-        "target_count": 0,
+        "target_count": 3,
         "reference_present": true,
-        "target_present": false,
-        "missing_in_target": [
-          "action",
-          "feedback",
-          "iteration",
-          "judge_type"
-        ],
+        "target_present": true,
+        "missing_in_target": [],
         "extra_in_target": [],
         "type_mismatch": [],
         "type_details": {},
@@ -1443,7 +1439,12 @@
           "iteration",
           "judge_type"
         ],
-        "target_keys": [],
+        "target_keys": [
+          "action",
+          "feedback",
+          "iteration",
+          "judge_type"
+        ],
         "reference_shapes": {
           "action": [
             "str"
@@ -1458,87 +1459,87 @@
             "int"
           ]
         },
-        "target_shapes": {}
+        "target_shapes": {
+          "action": [
+            "str"
+          ],
+          "feedback": [
+            "str"
+          ],
+          "iteration": [
+            "int"
+          ],
+          "judge_type": [
+            "str"
+          ]
+        }
       },
       "envelope": {
         "event": {
           "reference": [
             "null"
           ],
-          "target": [],
-          "equal": false
+          "target": [
+            "null"
+          ],
+          "equal": true
         },
         "stream_id": {
           "reference": [
             "\"queen\""
           ],
-          "target": [],
-          "equal": false
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
         },
         "node_id": {
           "reference": [
             "\"queen\""
           ],
-          "target": [],
-          "equal": false
+          "target": [
+            "\"queen\""
+          ],
+          "equal": true
         },
         "execution_id": {
           "reference": [
             "\"<execution_id>\""
           ],
-          "target": [],
-          "equal": false
+          "target": [
+            "\"<execution_id>\""
+          ],
+          "equal": true
         },
         "colony_id": {
           "reference": [
             "null"
           ],
-          "target": [],
-          "equal": false
+          "target": [
+            "null"
+          ],
+          "equal": true
         },
         "correlation_id": {
           "reference": [
             "null"
           ],
-          "target": [],
-          "equal": false
+          "target": [
+            "null"
+          ],
+          "equal": true
         },
         "run_id": {
           "reference": [
             "\"<absent>\""
           ],
-          "target": [],
-          "equal": false
+          "target": [
+            "\"<absent>\""
+          ],
+          "equal": true
         }
       },
-      "history_value_diff": {
-        "action": {
-          "reference": [
-            "\"RETRY\""
-          ],
-          "target": []
-        },
-        "feedback": {
-          "reference": [
-            "\"\""
-          ],
-          "target": []
-        },
-        "iteration": {
-          "reference": [
-            "0",
-            "1",
-            "2"
-          ],
-          "target": []
-        },
-        "judge_type": {
-          "reference": [
-            "\"implicit\""
-          ],
-          "target": []
-        }
-      }
+      "history_value_diff": {}
     },
     "llm_turn_complete": {
       "live": {
@@ -3886,11 +3887,11 @@
         "context_usage_updated",
         "client_output_delta",
         "llm_turn_complete",
-        "session_title_updated",
         "node_loop_completed",
         "client_input_requested",
         "loop_state_changed",
         "execution_completed",
+        "session_title_updated",
         "client_input_received",
         "execution_started",
         "loop_state_changed",
@@ -3898,11 +3899,11 @@
         "client_input_committed",
         "node_loop_iteration",
         "context_usage_updated",
-        "llm_turn_complete",
         "tool_call_started",
-        "client_input_requested",
         "tool_call_completed",
+        "llm_turn_complete",
         "node_loop_completed",
+        "client_input_requested",
         "loop_state_changed",
         "execution_completed",
         "client_input_received",
@@ -3936,8 +3937,10 @@
           ]
         },
         {
-          "op": "insert",
-          "reference": [],
+          "op": "replace",
+          "reference": [
+            "session_title_updated"
+          ],
           "target": [
             "node_loop_completed"
           ]
@@ -3946,7 +3949,8 @@
           "op": "insert",
           "reference": [],
           "target": [
-            "execution_completed"
+            "execution_completed",
+            "session_title_updated"
           ]
         },
         {
@@ -3964,27 +3968,16 @@
           ]
         },
         {
-          "op": "insert",
-          "reference": [],
-          "target": [
-            "llm_turn_complete"
-          ]
-        },
-        {
-          "op": "insert",
-          "reference": [],
-          "target": [
-            "client_input_requested"
-          ]
-        },
-        {
-          "op": "replace",
+          "op": "delete",
           "reference": [
             "context_usage_updated",
-            "context_usage_updated",
-            "llm_turn_complete",
-            "client_input_requested"
+            "context_usage_updated"
           ],
+          "target": []
+        },
+        {
+          "op": "insert",
+          "reference": [],
           "target": [
             "node_loop_completed"
           ]
@@ -4062,9 +4055,9 @@
         "client_input_received",
         "execution_started",
         "client_input_committed",
-        "llm_turn_complete",
         "tool_call_started",
         "tool_call_completed",
+        "llm_turn_complete",
         "execution_completed",
         "client_input_received",
         "execution_started",
@@ -4101,15 +4094,6 @@
           "op": "insert",
           "reference": [],
           "target": [
-            "llm_turn_complete"
-          ]
-        },
-        {
-          "op": "replace",
-          "reference": [
-            "llm_turn_complete"
-          ],
-          "target": [
             "execution_completed"
           ]
         },
@@ -4132,7 +4116,7 @@
     "history": {
       "capture": "history",
       "reference_count": 44,
-      "target_count": 50,
+      "target_count": 53,
       "reference_types": [
         "queen_identity_selected",
         "reminder_injected",
@@ -4193,34 +4177,37 @@
         "execution_started",
         "loop_state_changed",
         "node_loop_started",
+        "judge_verdict",
         "client_input_committed",
         "node_loop_iteration",
         "context_usage_updated",
         "client_output_delta",
         "llm_turn_complete",
-        "session_title_updated",
         "node_loop_completed",
         "client_input_requested",
         "loop_state_changed",
         "execution_completed",
+        "session_title_updated",
         "client_input_received",
         "execution_started",
         "loop_state_changed",
         "node_loop_started",
+        "judge_verdict",
         "client_input_committed",
         "node_loop_iteration",
         "context_usage_updated",
-        "llm_turn_complete",
         "tool_call_started",
-        "client_input_requested",
         "tool_call_completed",
+        "llm_turn_complete",
         "node_loop_completed",
+        "client_input_requested",
         "loop_state_changed",
         "execution_completed",
         "client_input_received",
         "execution_started",
         "loop_state_changed",
         "node_loop_started",
+        "judge_verdict",
         "client_input_committed",
         "node_loop_iteration",
         "context_usage_updated",
@@ -4241,13 +4228,50 @@
           ]
         },
         {
-          "op": "replace",
-          "reference": [
-            "judge_verdict"
-          ],
+          "op": "insert",
+          "reference": [],
           "target": [
             "node_loop_started"
           ]
+        },
+        {
+          "op": "replace",
+          "reference": [
+            "session_title_updated"
+          ],
+          "target": [
+            "node_loop_completed"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_completed",
+            "session_title_updated"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "execution_started"
+          ]
+        },
+        {
+          "op": "insert",
+          "reference": [],
+          "target": [
+            "node_loop_started"
+          ]
+        },
+        {
+          "op": "delete",
+          "reference": [
+            "context_usage_updated",
+            "context_usage_updated"
+          ],
+          "target": []
         },
         {
           "op": "insert",
@@ -4271,59 +4295,8 @@
           ]
         },
         {
-          "op": "replace",
-          "reference": [
-            "judge_verdict"
-          ],
-          "target": [
-            "node_loop_started"
-          ]
-        },
-        {
           "op": "insert",
           "reference": [],
-          "target": [
-            "llm_turn_complete"
-          ]
-        },
-        {
-          "op": "insert",
-          "reference": [],
-          "target": [
-            "client_input_requested"
-          ]
-        },
-        {
-          "op": "replace",
-          "reference": [
-            "context_usage_updated",
-            "context_usage_updated",
-            "llm_turn_complete",
-            "client_input_requested"
-          ],
-          "target": [
-            "node_loop_completed"
-          ]
-        },
-        {
-          "op": "insert",
-          "reference": [],
-          "target": [
-            "execution_completed"
-          ]
-        },
-        {
-          "op": "insert",
-          "reference": [],
-          "target": [
-            "execution_started"
-          ]
-        },
-        {
-          "op": "replace",
-          "reference": [
-            "judge_verdict"
-          ],
           "target": [
             "node_loop_started"
           ]
@@ -4399,18 +4372,18 @@
         "context_usage_updated",
         "client_output_delta",
         "llm_turn_complete",
-        "session_title_updated",
         "client_input_requested",
         "loop_state_changed",
+        "session_title_updated",
         "client_input_received",
         "loop_state_changed",
         "client_input_committed",
         "node_loop_iteration",
         "context_usage_updated",
-        "llm_turn_complete",
         "tool_call_started",
-        "client_input_requested",
         "tool_call_completed",
+        "llm_turn_complete",
+        "client_input_requested",
         "loop_state_changed",
         "client_input_received",
         "loop_state_changed",
@@ -4425,26 +4398,24 @@
       "equal": false,
       "ops": [
         {
-          "op": "insert",
-          "reference": [],
-          "target": [
-            "llm_turn_complete"
-          ]
+          "op": "delete",
+          "reference": [
+            "session_title_updated"
+          ],
+          "target": []
         },
         {
           "op": "insert",
           "reference": [],
           "target": [
-            "client_input_requested"
+            "session_title_updated"
           ]
         },
         {
           "op": "delete",
           "reference": [
             "context_usage_updated",
-            "context_usage_updated",
-            "llm_turn_complete",
-            "client_input_requested"
+            "context_usage_updated"
           ],
           "target": []
         }
@@ -4482,9 +4453,9 @@
       "client_input_received",
       "execution_started",
       "client_input_committed",
-      "llm_turn_complete",
       "tool_call_started",
       "tool_call_completed",
+      "llm_turn_complete",
       "execution_completed",
       "client_input_received",
       "execution_started",
@@ -4501,6 +4472,59 @@
     "target_replay_order_matches_history": true,
     "reference_first_frame": "session_snapshot",
     "target_first_frame": "session_snapshot"
+  },
+  "judge": {
+    "reference": [
+      {
+        "action": "RETRY",
+        "feedback": "",
+        "judge_type": "implicit",
+        "iteration": 0
+      },
+      {
+        "action": "RETRY",
+        "feedback": "",
+        "judge_type": "implicit",
+        "iteration": 1
+      },
+      {
+        "action": "RETRY",
+        "feedback": "",
+        "judge_type": "implicit",
+        "iteration": 2
+      }
+    ],
+    "target": [
+      {
+        "action": "RETRY",
+        "feedback": "",
+        "judge_type": "implicit",
+        "iteration": 0
+      },
+      {
+        "action": "RETRY",
+        "feedback": "",
+        "judge_type": "implicit",
+        "iteration": 1
+      },
+      {
+        "action": "RETRY",
+        "feedback": "",
+        "judge_type": "implicit",
+        "iteration": 2
+      }
+    ],
+    "reference_count": 3,
+    "target_count": 3,
+    "same_verdicts": true,
+    "live_visible": {
+      "reference": false,
+      "target": false
+    },
+    "replay_visible": {
+      "reference": false,
+      "target": false
+    }
   },
   "live_type_sets": {
     "reference": [
@@ -4592,19 +4616,6 @@
         "extra_in_target": [
           "input"
         ],
-        "type_mismatch": [],
-        "type_details": {}
-      }
-    },
-    "judge_verdict": {
-      "history": {
-        "missing_in_target": [
-          "action",
-          "feedback",
-          "iteration",
-          "judge_type"
-        ],
-        "extra_in_target": [],
         "type_mismatch": [],
         "type_details": {}
       }

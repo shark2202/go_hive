@@ -1173,6 +1173,43 @@ def compare_captures(reference: dict[str, Any], target: dict[str, Any]) -> dict[
         "target_first_frame": (tgt_caps.get("replay", {}).get("frames") or [{}])[0].get("type"),
     }
 
+    # -- judge behaviour: the implicit verdict stream is history-only (it is
+    #    in neither the default live subscription nor the replay subset), so
+    #    it is compared from the full event log. Both sides must publish the
+    #    same verdict per settled turn: a queen turn is judged when its park
+    #    unblocks, and the skip_judge short-circuit still publishes the verdict.
+    def _judge_rows(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        rows = []
+        for event in frames_by_type(history).get("judge_verdict", []):
+            data = event.get("data") or {}
+            rows.append(
+                {
+                    "action": data.get("action"),
+                    "feedback": data.get("feedback"),
+                    "judge_type": data.get("judge_type"),
+                    "iteration": data.get("iteration"),
+                }
+            )
+        return rows
+
+    ref_judge = _judge_rows(history_ref)
+    tgt_judge = _judge_rows(history_tgt)
+    judge = {
+        "reference": ref_judge,
+        "target": tgt_judge,
+        "reference_count": len(ref_judge),
+        "target_count": len(tgt_judge),
+        "same_verdicts": ref_judge == tgt_judge,
+        "live_visible": {
+            "reference": any(frame.get("type") == "judge_verdict" for frame in ref_caps.get("live", {}).get("frames", [])),
+            "target": any(frame.get("type") == "judge_verdict" for frame in tgt_caps.get("live", {}).get("frames", [])),
+        },
+        "replay_visible": {
+            "reference": any(frame.get("type") == "judge_verdict" for frame in ref_caps.get("replay", {}).get("frames", [])),
+            "target": any(frame.get("type") == "judge_verdict" for frame in tgt_caps.get("replay", {}).get("frames", [])),
+        },
+    }
+
     # -- summary counters
     type_gaps = {
         event_type: {
@@ -1206,6 +1243,7 @@ def compare_captures(reference: dict[str, Any], target: dict[str, Any]) -> dict[
         "per_type": per_type,
         "sequences": sequences,
         "replay": replay,
+        "judge": judge,
         "live_type_sets": live_type_sets,
         "live_missing_in_target": live_missing,
         "live_extra_in_target": live_extra,
@@ -1266,6 +1304,23 @@ def write_summary(diff: dict[str, Any], path: Path) -> None:
             lines.append(f"    {data_path}: reference={values['reference']} target={values['target']}")
     if not any_values:
         lines.append("none: every compared data value matched.")
+    lines.append("")
+    lines.append("== judge verdicts (history-only) ==")
+    lines.append(
+        f"reference ({diff['judge']['reference_count']}): "
+        + json.dumps(diff["judge"]["reference"], ensure_ascii=False)
+    )
+    lines.append(
+        f"target    ({diff['judge']['target_count']}): "
+        + json.dumps(diff["judge"]["target"], ensure_ascii=False)
+    )
+    lines.append("same verdicts: " + ("yes" if diff["judge"]["same_verdicts"] else "NO"))
+    lines.append(
+        "visible in live/replay: reference="
+        + f"{diff['judge']['live_visible']['reference']}/{diff['judge']['replay_visible']['reference']}"
+        + " target="
+        + f"{diff['judge']['live_visible']['target']}/{diff['judge']['replay_visible']['target']}"
+    )
     lines.append("")
     lines.append("== replay ==")
     lines.append(f"reference first frame: {diff['replay']['reference_first_frame']}")

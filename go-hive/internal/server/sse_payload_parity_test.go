@@ -287,3 +287,142 @@ func TestAskUserTurnStopsAtTheQuestionWithoutAnotherModelCall(t *testing.T) {
 		t.Fatalf("client_input_requested questions = %#v, want one question", requested[0].Data["questions"])
 	}
 }
+
+// TestAskUserRequestIsAnnouncedAtTheTurnBoundary pins the emission point the
+// sse-timing-judge probe found: upstream's ask_user turn does not announce the
+// wait from the tool handler. It announces it in _await_user_input, after the
+// tool batch (tool_call_completed) and after llm_turn_complete. The Go port
+// must keep that order so a subscriber sees the question arrive with the park,
+// not in the middle of the tool pair.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
+// Parity: framework/agent_loop/agent_loop.py::_await_user_input
+func TestAskUserRequestIsAnnouncedAtTheTurnBoundary(t *testing.T) {
+	model := &queenChatLLM{responses: []llm.Completion{
+		{ToolCalls: []llm.ToolCall{{
+			ID:        "ask-1",
+			Name:      "ask_user",
+			Arguments: `{"questions":[{"id":"next","prompt":"Which next?","options":["Ship it","Wait"]}]}`,
+		}}},
+		{Content: "never streamed"},
+	}}
+	runtime, recorder, _ := newQueenChatRuntime(t, model, "", "queen_technology")
+	if err := runtime.Deliver("start the work"); err != nil {
+		t.Fatalf("Deliver: %v", err)
+	}
+	waitForChatEvents(t, recorder, eventbus.EventExecutionCompleted, 1)
+
+	index := map[string]int{}
+	for position, event := range recorder.snapshot() {
+		switch event.Type {
+		case eventbus.EventToolCallStarted:
+			index["tool_call_started"] = position
+		case eventbus.EventToolCallCompleted:
+			index["tool_call_completed"] = position
+		case eventbus.EventLLMTurnComplete:
+			index["llm_turn_complete"] = position
+		case eventbus.EventNodeLoopCompleted:
+			index["node_loop_completed"] = position
+		case eventbus.EventClientInputRequested:
+			index["client_input_requested"] = position
+		}
+	}
+	wantOrder := []string{
+		"tool_call_started",
+		"tool_call_completed",
+		"llm_turn_complete",
+		"node_loop_completed",
+		"client_input_requested",
+	}
+	last := -1
+	for _, name := range wantOrder {
+		position, present := index[name]
+		if !present {
+			t.Fatalf("missing %s; frames: %v", name, recorder.types())
+		}
+		if position <= last {
+			t.Fatalf("%s at %d does not follow the previous frame (order: %v)", name, position, wantOrder)
+		}
+		last = position
+	}
+}
+
+// TestImplicitJudgeVerdictFollowsThePreviousTurn pins the judge behaviour the
+// probe found reference-only: the queen's permanent loop evaluates each turn
+// when its park unblocks, and the skip_judge short-circuit still publishes the
+// verdict (RETRY / implicit / empty feedback). The Go port emits the finished
+// turn's verdict at the next turn start: after client_input_received and the
+// new EXECUTING state, before that message's client_input_committed boundary.
+//
+// Parity: framework/agent_loop/agent_loop.py::execute (step 6i)
+// Parity: framework/agent_loop/internals/judge_pipeline.py::judge_turn (skip_judge)
+// Parity: framework/server/queen_orchestrator.py (queen spec sets skip_judge=True)
+func TestImplicitJudgeVerdictFollowsThePreviousTurn(t *testing.T) {
+	runtime, recorder, _ := newQueenChatRuntime(t, &queenChatLLM{}, "", "queen_technology")
+
+	if err := runtime.Deliver("first turn"); err != nil {
+		t.Fatalf("Deliver first: %v", err)
+	}
+	waitForChatEvents(t, recorder, eventbus.EventExecutionCompleted, 1)
+	if got := len(recorder.ofType(eventbus.EventJudgeVerdict)); got != 0 {
+		t.Fatalf("judge_verdict after the first turn = %d, want 0: upstream publishes it when the next turn starts", got)
+	}
+
+	if err := runtime.Deliver("second turn"); err != nil {
+		t.Fatalf("Deliver second: %v", err)
+	}
+	waitForChatEvents(t, recorder, eventbus.EventExecutionCompleted, 2)
+
+	verdicts := recorder.ofType(eventbus.EventJudgeVerdict)
+	if len(verdicts) != 1 {
+		t.Fatalf("judge_verdict count = %d, want exactly one for the finished turn; frames: %v", len(verdicts), recorder.types())
+	}
+	verdict := verdicts[0]
+	if verdict.Data["action"] != "RETRY" || verdict.Data["feedback"] != "" {
+		t.Fatalf("judge_verdict data = %#v, want RETRY with empty feedback (skip_judge short-circuit)", verdict.Data)
+	}
+	if verdict.Data["judge_type"] != "implicit" {
+		t.Fatalf("judge_verdict judge_type = %#v, want implicit", verdict.Data["judge_type"])
+	}
+	if verdict.Data["iteration"] != 0 {
+		t.Fatalf("judge_verdict iteration = %#v, want the finished turn's index 0", verdict.Data["iteration"])
+	}
+
+	// llm_turn_complete is published after the turn body, but it reports the
+	// request that was actually sent — not the conversation that has since
+	// absorbed the assistant reply.
+	completes := recorder.ofType(eventbus.EventLLMTurnComplete)
+	if len(completes) != 2 {
+		t.Fatalf("llm_turn_complete count = %d, want 2; frames: %v", len(completes), recorder.types())
+	}
+	if completes[0].Data["message_count"] != 1 || completes[1].Data["message_count"] != 3 {
+		t.Fatalf("llm_turn_complete message_counts = %#v/%#v, want the request sizes 1/3",
+			completes[0].Data["message_count"], completes[1].Data["message_count"])
+	}
+
+	// Position: after the first turn's completion, and inside the second turn
+	// between its execution envelope and its client_input_committed frame.
+	positions := map[string][]int{}
+	for position, event := range recorder.snapshot() {
+		positions[string(event.Type)] = append(positions[string(event.Type)], position)
+	}
+	verdictPos := -1
+	for position, event := range recorder.snapshot() {
+		if event == verdict {
+			verdictPos = position
+			break
+		}
+	}
+	if verdictPos < 0 {
+		t.Fatal("judge_verdict not found in the recorded stream")
+	}
+	if completed := positions["execution_completed"]; len(completed) < 1 || verdictPos <= completed[0] {
+		t.Fatalf("judge_verdict at %d must follow the first turn's execution_completed %v", verdictPos, completed)
+	}
+	secondStart := positions["execution_started"][1]
+	secondCommit := positions["client_input_committed"][1]
+	if verdictPos <= secondStart || verdictPos >= secondCommit {
+		t.Fatalf("judge_verdict at %d, want after the second execution_started (%d) and before its client_input_committed (%d)",
+			verdictPos, secondStart, secondCommit)
+	}
+}

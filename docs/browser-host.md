@@ -369,10 +369,12 @@ canonical command 全部可达；supervisor 测试用测试二进制自身充当
 | 快照行格式 | `- link [ref=e1] "Home" [href="https://…"]`：交互角色或任何有 accessible name 的节点分配 `eN` ref；`link` 节点按名字顺序消费 `_collect_link_hrefs` 的 href | 同：`[ref=eN]` + `[href="…"]`（含 DOM 漏掉链接的补充段） | 已对齐（单测 + 真桥 e2e） |
 | AX 预处理/兜底 | `_clean_inline_text_boxes`；>50000 节点或可见节点 <10 且 >500 时走 `_dom_snapshot`；快照前有 pending dialog 检查（返回 `pending_dialog` → 7） | 同；`cmdBrowserSnapshot` 三条路径齐备 | 已对齐（单测覆盖 fallback/dialog） |
 | 截图 | 800px 宽 JPEG(q75)（`_resize_and_annotate`）+ 可选注解（高亮框）；CLI 落盘并给 `saved_to`/`_image` | 桥以 `format=jpeg&quality=75&max_width=800` 让 Chrome 按 `clip.scale` 原生输出 800px JPEG；CLI 落盘 + `saved_to`/`_image`；点击/悬停/按键记录高亮，截图前注入同几何 overlay | 已对齐（字段逐 key 相同；编码为浏览器原生重采样，见 fixture README 的量化说明） |
-| 坐标动作图 | 坐标 click/hover/key 成功后追加一张注解截图（`_build_visual_response`，高亮落点） | 仍只回 JSON（高亮已被记录，供下一次 screenshot 注解） | 未对齐（保留残差 R15） |
+| 坐标动作图 | 坐标 click/hover/key 成功后追加一张注解截图（`_build_visual_response`，高亮落点） | 桥侧 `attachInteractImage` 复用 `cmdScreenshot` 注解路径，把 `data`+`mimeType` 合入动作结果；CLI 侧 `spillActionImage` 只加 `saved_to`+`_image`（同 `_blocks_to_cli_dict`） | 已对齐（2026-11-21 修复轮 3；真桥+假扩展 e2e 与真 Chrome 坐标 click 落点像素扫描，见审计页 §04.8） |
 
-未实现的剩余项只有一个：坐标动作自动附带注解图。它依赖工具层把动作结果改写成
-content blocks，属交互动作的返回形状（不是截图动词本身），故单列为 R15。
+修复轮 3 把最后一条形状残差（R15，坐标动作附图）收口：失败时回退为动作原结果
+（上游 text-only fallback），selector click/hover、focused key、drag 仍不附图（与上游
+一致）。剩余的不对齐项不是返回形状，而是已量化的图像近似（浏览器原生编码/注解合成，
+dpr>1 主机上注解图为 800 CSS px × dpr 设备像素）与动作 dict 沿用 Go legacy 字段集。
 
 ## 7. 本 lane 的真机实测（2026-11-20）
 

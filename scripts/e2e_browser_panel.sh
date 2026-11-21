@@ -22,9 +22,13 @@
 #        and a leading common flag (`--json status`) parses.
 #   R07  `hive-browser upload` with a missing file exits 4 (the bridge's
 #        "File not found", never the old local 6).
+#   R15  coordinate click/hover/key carry the annotated screenshot: the CLI
+#        result keeps the interaction dict and adds only saved_to + _image
+#        (800x450 JPEG, decoded), with no inline base64 or screenshot metadata.
 #
 # Ports are overridable: BRIDGE_WS_PORT / BRIDGE_HTTP_PORT / BRIDGE_CONTROL_PORT
 # / SERVER_PORT. Zero network access; everything is local and torn down on exit.
+# Set E2E_EVIDENCE_DIR to copy the R15 raw JSON outputs out of the temp dir.
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -248,6 +252,60 @@ text = pathlib.Path(full["saved_to"]).read_text()
 assert head.get("head") == text[:40], (head.get("head"), text[:40])
 PY
 pass "hive-browser page snapshot -> saved_to + [ref=eN]/[href] + working --head"
+
+echo "== R15: coordinate click/hover/key carry the annotated screenshot =="
+r15() { # name, args...
+  local name=$1
+  shift
+  set +e
+  cli interact "$@" --tab 101 --json --bridge "http://127.0.0.1:$HTTP_PORT" >"$tmp/r15-$name.json" 2>"$tmp/r15-$name.err"
+  local code=$?
+  set -e
+  [ "$code" -eq 0 ] || fail "R15 $name exited $code (stderr: $(cat "$tmp/r15-$name.err"))"
+}
+r15 click --action left_click --coordinate 0.5,0.5
+r15 hover --action hover --coordinate 0.5,0.5
+r15 key --action key --text Enter --coordinate 0.5,0.5
+python3 - "$tmp" <<'PY' || fail "R15 coordinate action image contract"
+import json, pathlib, sys
+tmp = pathlib.Path(sys.argv[1])
+cases = {
+    "click": ("click", {"ok", "action", "tabId", "x", "y", "button", "clickCount", "method", "saved_to", "_image"}),
+    "hover": ("hover_coordinate", {"ok", "action", "tabId", "x", "y", "saved_to", "_image"}),
+    "key": ("press_at", {"ok", "action", "tabId", "x", "y", "key", "saved_to", "_image"}),
+}
+for name, (action, want_keys) in cases.items():
+    body = json.loads((tmp / f"r15-{name}.json").read_text())
+    assert body["ok"] is True, body
+    assert body["action"] == action, body
+    assert "data" not in body and "mimeType" not in body, "inline image must be spilled"
+    assert set(body) == want_keys, (sorted(body), sorted(want_keys))
+    saved = pathlib.Path(body["saved_to"])
+    assert saved.is_file(), saved
+    assert saved.name.startswith("browser_interact_") and saved.name.endswith("_tab101.jpg"), saved.name
+    raw = saved.read_bytes()
+    assert raw[:3] == b"\xff\xd8\xff", raw[:3]
+    image = body["_image"]
+    assert image["path"] == str(saved) and image["mime"] == "image/jpeg", image
+    assert "intent" in image and image["intent"] is None, image
+print("R15 key sets + pointers ok: click/hover/key")
+PY
+uv run --offline --project "$root/tools" python - "$tmp" <<'PY' || fail "R15 annotated JPEG decode"
+import json, pathlib, sys
+from PIL import Image
+tmp = pathlib.Path(sys.argv[1])
+for name in ("click", "hover", "key"):
+    body = json.loads((tmp / f"r15-{name}.json").read_text())
+    with Image.open(body["saved_to"]) as img:
+        assert img.format == "JPEG", (name, img.format)
+        assert img.size == (800, 450), (name, img.size)
+print("R15 image decode ok: 800x450 JPEG x3")
+PY
+if [ "${E2E_EVIDENCE_DIR:-}" != "" ]; then
+  mkdir -p "$E2E_EVIDENCE_DIR"
+  cp "$tmp"/r15-*.json "$E2E_EVIDENCE_DIR"/
+fi
+pass "hive-browser interact coordinate click/hover/key -> interaction dict + saved_to/_image (800x450 JPEG)"
 
 echo "== R07: upload missing file -> 4 (bridge-side, not local 6) =="
 set +e

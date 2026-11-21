@@ -99,6 +99,29 @@ func (l *AgentLoop) emitPark(reason ParkReason, detail string) {
 	l.ParkSink(reason, detail)
 }
 
+// reportDoomLoop hands the turn's first tool doom-loop detection to the
+// configured sink (the colony runtime's node_tool_doom_loop publisher). The
+// latch is per turn-loop, not per streak: the event marks that this turn hit a
+// doom loop, and a worker that thrashes through several streaks must not
+// publish one event per streak. A nil sink keeps the loop silent.
+//
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom
+// loop -> emit_tool_doom_loop)
+func (l *AgentLoop) reportDoomLoop(tool string, streak int) {
+	if l == nil || l.DoomLoopSink == nil {
+		return
+	}
+	l.mu.Lock()
+	if l.doomLoopReported {
+		l.mu.Unlock()
+		return
+	}
+	l.doomLoopReported = true
+	l.mu.Unlock()
+	l.bumpBy("doom_loop_reported", 1)
+	l.DoomLoopSink(tool, streak)
+}
+
 // announceGrace opens the grace phase with one reminder: the budget (or the
 // iteration limit) is spent, so the next turns are wind-down work. The
 // announcement happens once per turn-loop.

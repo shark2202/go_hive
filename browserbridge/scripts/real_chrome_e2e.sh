@@ -16,6 +16,12 @@
 #      create_context -> status -> stop
 #   6. writes every raw response plus the screenshot into an evidence dir
 #
+# Ports and the extension dir are overridable for hosts where something else
+# already listens: BB_E2E_WS_PORT / BB_E2E_HTTP_PORT / BB_E2E_CONTROL_PORT /
+# BB_E2E_LEGACY_PORT / BB_E2E_FIXTURE_PORT / BB_E2E_EXT_DIR. The shipped
+# extension hardcodes 14829/9229, so a non-default WS port needs an extension
+# copy with that one constant changed (BB_E2E_EXT_DIR).
+#
 # Requirements: macOS/Linux, curl, jq, a Chrome/Chromium binary, uv or python3
 # (for the fixture server). Nothing here mocks the extension: a real Chrome and
 # the real 1.7.4 extension are used.
@@ -28,8 +34,12 @@ OUT=${1:-$(mktemp -d "${TMPDIR:-/tmp}/browserbridge-e2e.XXXXXX")}
 WS_PORT=${BB_E2E_WS_PORT:-14829}
 HTTP_PORT=${BB_E2E_HTTP_PORT:-14830}
 FIXTURE_PORT=${BB_E2E_FIXTURE_PORT:-18099}
+LEGACY_PORT=${BB_E2E_LEGACY_PORT:-9229}
 BASE="http://127.0.0.1:${HTTP_PORT}"
-EXT_DIR="$MODULE_DIR/extension"
+# The shipped extension hardcodes BRIDGE_PORTS=[14829, 9229]; when another
+# bridge already holds those ports, point this at a copy whose port constant
+# matches BB_E2E_WS_PORT (documented in the run notes) instead of stopping it.
+EXT_DIR=${BB_E2E_EXT_DIR:-$MODULE_DIR/extension}
 
 FAILURES=0
 STEP=0
@@ -54,7 +64,7 @@ cleanup() {
   # Child processes can outlive the wrappers (uv -> python, chromeloader ->
   # Chrome). The preflight proved these ports were free, so anything listening
   # on them now belongs to this run.
-  for port in "${WS_PORT:-}" "${HTTP_PORT:-}" "${FIXTURE_PORT:-}"; do
+  for port in "${WS_PORT:-}" "${HTTP_PORT:-}" "${FIXTURE_PORT:-}" "${LEGACY_PORT:-}"; do
     [ -n "$port" ] || continue
     lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null | xargs -r kill -9 2>/dev/null || true
   done
@@ -90,7 +100,7 @@ log "evidence dir : $OUT"
 log "chrome       : $CHROME_BIN ($("$CHROME_BIN" --version 2>/dev/null || echo unknown))"
 log "extension    : $(jq -r '.version' "$EXT_DIR/manifest.json")"
 
-for port in "$WS_PORT" "$HTTP_PORT" "$FIXTURE_PORT"; do
+for port in "$WS_PORT" "$HTTP_PORT" "$FIXTURE_PORT" "$LEGACY_PORT"; do
   if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
     fail "port $port is already in use"
   fi
@@ -184,7 +194,7 @@ step "start the Go bridge (ws $WS_PORT, legacy 9229, http $HTTP_PORT)"
   -http "127.0.0.1:$HTTP_PORT" \
   -control "127.0.0.1:${BB_E2E_CONTROL_PORT:-14831}" \
   -no-idle-exit \
-  -legacy "127.0.0.1:9229" \
+  -legacy "127.0.0.1:$LEGACY_PORT" \
   -artifacts "$OUT/artifacts" \
   -extension "$EXT_DIR" \
   -skills "$OUT/skills" \
@@ -198,7 +208,7 @@ for _ in $(seq 1 40); do
 done
 curl -sf "$BASE/health" > "$OUT/health.json" || fail "bridge never became healthy"
 log "bridge pid $BRIDGE_PID ready: $(cat "$OUT/health.json")"
-grep -q "legacy websocket listening" "$OUT/bridge.log" || fail "legacy 9229 listener did not bind"
+grep -q "legacy websocket listening" "$OUT/bridge.log" || fail "legacy $LEGACY_PORT listener did not bind"
 
 # ── real chrome ─────────────────────────────────────────────────────────────
 step "launch real Chrome with a throwaway profile and load the extension"
@@ -259,6 +269,37 @@ log "tab id: $TAB_ID"
 call navigate browser_navigate "{\"tab_id\":$TAB_ID,\"url\":\"http://127.0.0.1:$FIXTURE_PORT/index.html\"}"
 call interact_click browser_interact "{\"action\":\"left_click\",\"selector\":\"#btn\",\"tab_id\":$TAB_ID,\"auto_snapshot_mode\":\"simple\"}"
 jq -e '.result.snapshot.ok == true' "$OUT/cmd-interact_click.json" > /dev/null || { log "  FAIL: click did not return an auto snapshot"; FAILURES=$((FAILURES+1)); }
+# R15: a coordinate click returns the interaction dict plus the annotated
+# screenshot (annotation drawn by the shared browser_screenshot path).
+call interact_click_coordinate browser_interact "{\"action\":\"left_click\",\"coordinate\":[0.9,0.9],\"tab_id\":$TAB_ID,\"auto_snapshot_mode\":\"off\"}"
+jq -e '.result.ok == true and .result.action == "click" and .result.mimeType == "image/jpeg"' "$OUT/cmd-interact_click_coordinate.json" > /dev/null || { log "  FAIL: coordinate click lost the action/image shape"; FAILURES=$((FAILURES+1)); }
+jq -r '.result.data' "$OUT/cmd-interact_click_coordinate.json" | base64 -D > "$OUT/click-coordinate.jpg" 2>/dev/null \
+  || jq -r '.result.data' "$OUT/cmd-interact_click_coordinate.json" | base64 -d > "$OUT/click-coordinate.jpg"
+[ -s "$OUT/click-coordinate.jpg" ] || { log "  FAIL: coordinate click image decode failed"; FAILURES=$((FAILURES+1)); }
+# The image must carry the annotation, not just be a capture: the red click
+# marker is drawn at the clicked point. Scan for its pixels (PIL only; a host
+# without PIL skips the scan instead of failing).
+$PY_RUNNER - "$OUT" <<'PY' || { log "  FAIL: coordinate click marker scan"; FAILURES=$((FAILURES+1)); }
+import json, pathlib, sys
+out = pathlib.Path(sys.argv[1])
+try:
+    from PIL import Image
+except Exception:
+    print("  note: PIL unavailable — marker scan skipped")
+    raise SystemExit(0)
+body = json.loads((out / "cmd-interact_click_coordinate.json").read_text())
+img = Image.open(out / "click-coordinate.jpg").convert("RGB")
+w, h = img.size
+px = img.load()
+marker = [(x, y) for x in range(w) for y in range(h)
+          if px[x, y][0] > 170 and px[x, y][1] < 120 and px[x, y][2] < 120]
+if len(marker) < 50:
+    print(f"  FAIL: red click-marker pixels = {len(marker)} in {w}x{h}")
+    raise SystemExit(1)
+xs = [p[0] for p in marker]
+ys = [p[1] for p in marker]
+print(f"  ok  : click marker {len(marker)} red px, bbox=({min(xs)},{min(ys)})-({max(xs)},{max(ys)}) in {w}x{h}")
+PY
 call evaluate_title browser_evaluate "{\"tab_id\":$TAB_ID,\"script\":\"document.title\"}"
 jq -e '.result.result == "clicked"' "$OUT/cmd-evaluate_title.json" > /dev/null || log "  note: document.title not 'clicked' ($(jq -c '.result.result' "$OUT/cmd-evaluate_title.json"))"
 

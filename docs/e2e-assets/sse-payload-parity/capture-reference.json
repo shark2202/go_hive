@@ -3,19 +3,19 @@
   "implementation": "python",
   "version": "hive 1.0.14",
   "session_id": "<session_id>",
-  "captured_at": "2026-11-21T07:28:07+08:00",
+  "captured_at": "2026-11-21T09:23:53+08:00",
   "responses": {
     "session_create": {
       "status": 201,
       "payload": {
-        "session_id": "session_20261121_072643_d9e02bff",
+        "session_id": "session_20261121_092230_c65dec76",
         "colony_id": null,
         "has_worker": false,
         "agent_path": "",
         "description": "",
         "goal": "",
         "node_count": 0,
-        "loaded_at": 1795217203.832108,
+        "loaded_at": 1795224150.421566,
         "uptime_seconds": 0.8,
         "queen_phase": "independent",
         "queen_supports_images": true,
@@ -53,7 +53,7 @@
     "session_stop": {
       "status": 200,
       "payload": {
-        "session_id": "session_20261121_072643_d9e02bff",
+        "session_id": "session_20261121_092230_c65dec76",
         "stopped": true
       },
       "error": ""
@@ -89,8 +89,8 @@
             "park_reason": "turn_done",
             "pending_questions": null,
             "last_event_seq": 8,
-            "last_event_at": "2026-11-21T07:26:44.846408",
-            "last_queen_event_at": "2026-11-21T07:26:44.846408"
+            "last_event_at": "2026-11-21T09:22:31.385725",
+            "last_queen_event_at": "2026-11-21T09:22:31.385725"
           }
         },
         {
@@ -232,11 +232,11 @@
             "usage_ratio": 0.1756,
             "usage_pct": 18,
             "message_count": 3,
-            "estimated_tokens": 31603,
+            "estimated_tokens": 31599,
             "max_context_tokens": 180000,
             "trigger": "iteration_start",
             "breakdown": {
-              "conversation_chars": 28056,
+              "conversation_chars": 28044,
               "system_chars": 21584,
               "tool_defs_chars": 45171,
               "image_blocks": 0,
@@ -417,11 +417,11 @@
             "usage_ratio": 0.1757,
             "usage_pct": 18,
             "message_count": 5,
-            "estimated_tokens": 31627,
+            "estimated_tokens": 31623,
             "max_context_tokens": 180000,
             "trigger": "iteration_start",
             "breakdown": {
-              "conversation_chars": 28126,
+              "conversation_chars": 28114,
               "system_chars": 21584,
               "tool_defs_chars": 45171,
               "image_blocks": 0,
@@ -489,14 +489,14 @@
           "seq": "<seq>",
           "timestamp": "<timestamp>",
           "data": {
-            "usage_ratio": 0.176,
+            "usage_ratio": 0.1759,
             "usage_pct": 18,
             "message_count": 7,
-            "estimated_tokens": 31674,
+            "estimated_tokens": 31670,
             "max_context_tokens": 180000,
             "trigger": "post_tool_call",
             "breakdown": {
-              "conversation_chars": 28268,
+              "conversation_chars": 28256,
               "system_chars": 21584,
               "tool_defs_chars": 45171,
               "image_blocks": 0,
@@ -516,14 +516,14 @@
           "seq": "<seq>",
           "timestamp": "<timestamp>",
           "data": {
-            "usage_ratio": 0.176,
+            "usage_ratio": 0.1759,
             "usage_pct": 18,
             "message_count": 7,
-            "estimated_tokens": 31674,
+            "estimated_tokens": 31670,
             "max_context_tokens": 180000,
             "trigger": "post_tool_results",
             "breakdown": {
-              "conversation_chars": 28268,
+              "conversation_chars": 28256,
               "system_chars": 21584,
               "tool_defs_chars": 45171,
               "image_blocks": 0,
@@ -680,11 +680,11 @@
             "usage_ratio": 0.176,
             "usage_pct": 18,
             "message_count": 8,
-            "estimated_tokens": 31683,
+            "estimated_tokens": 31679,
             "max_context_tokens": 180000,
             "trigger": "iteration_start",
             "breakdown": {
-              "conversation_chars": 28295,
+              "conversation_chars": 28283,
               "system_chars": 21584,
               "tool_defs_chars": 45171,
               "image_blocks": 0,
@@ -802,8 +802,8 @@
             "park_reason": "turn_done",
             "pending_questions": null,
             "last_event_seq": 42,
-            "last_event_at": "2026-11-21T07:26:49.994049",
-            "last_queen_event_at": "2026-11-21T07:26:49.994049"
+            "last_event_at": "2026-11-21T09:22:36.414009",
+            "last_queen_event_at": "2026-11-21T09:22:36.414009"
           }
         },
         {
@@ -1153,8 +1153,8 @@
             "park_reason": "turn_done",
             "pending_questions": null,
             "last_event_seq": 42,
-            "last_event_at": "2026-11-21T07:26:49.994049",
-            "last_queen_event_at": "2026-11-21T07:26:49.994049"
+            "last_event_at": "2026-11-21T09:22:36.414009",
+            "last_queen_event_at": "2026-11-21T09:22:36.414009"
           }
         },
         {
@@ -1574,14 +1574,14 @@
       "seq": "<seq>",
       "timestamp": "<timestamp>",
       "data": {
-        "usage_ratio": 0.1755,
+        "usage_ratio": 0.1754,
         "usage_pct": 18,
         "message_count": 1,
-        "estimated_tokens": 31583,
+        "estimated_tokens": 31579,
         "max_context_tokens": 180000,
         "trigger": "iteration_start",
         "breakdown": {
-          "conversation_chars": 27996,
+          "conversation_chars": 27984,
           "system_chars": 21584,
           "tool_defs_chars": 45171,
           "image_blocks": 0,
@@ -1764,11 +1764,11 @@
         "usage_ratio": 0.1756,
         "usage_pct": 18,
         "message_count": 3,
-        "estimated_tokens": 31603,
+        "estimated_tokens": 31599,
         "max_context_tokens": 180000,
         "trigger": "iteration_start",
         "breakdown": {
-          "conversation_chars": 28056,
+          "conversation_chars": 28044,
           "system_chars": 21584,
           "tool_defs_chars": 45171,
           "image_blocks": 0,
@@ -1967,11 +1967,11 @@
         "usage_ratio": 0.1757,
         "usage_pct": 18,
         "message_count": 5,
-        "estimated_tokens": 31627,
+        "estimated_tokens": 31623,
         "max_context_tokens": 180000,
         "trigger": "iteration_start",
         "breakdown": {
-          "conversation_chars": 28126,
+          "conversation_chars": 28114,
           "system_chars": 21584,
           "tool_defs_chars": 45171,
           "image_blocks": 0,
@@ -2039,14 +2039,14 @@
       "seq": "<seq>",
       "timestamp": "<timestamp>",
       "data": {
-        "usage_ratio": 0.176,
+        "usage_ratio": 0.1759,
         "usage_pct": 18,
         "message_count": 7,
-        "estimated_tokens": 31674,
+        "estimated_tokens": 31670,
         "max_context_tokens": 180000,
         "trigger": "post_tool_call",
         "breakdown": {
-          "conversation_chars": 28268,
+          "conversation_chars": 28256,
           "system_chars": 21584,
           "tool_defs_chars": 45171,
           "image_blocks": 0,
@@ -2066,14 +2066,14 @@
       "seq": "<seq>",
       "timestamp": "<timestamp>",
       "data": {
-        "usage_ratio": 0.176,
+        "usage_ratio": 0.1759,
         "usage_pct": 18,
         "message_count": 7,
-        "estimated_tokens": 31674,
+        "estimated_tokens": 31670,
         "max_context_tokens": 180000,
         "trigger": "post_tool_results",
         "breakdown": {
-          "conversation_chars": 28268,
+          "conversation_chars": 28256,
           "system_chars": 21584,
           "tool_defs_chars": 45171,
           "image_blocks": 0,
@@ -2248,11 +2248,11 @@
         "usage_ratio": 0.176,
         "usage_pct": 18,
         "message_count": 8,
-        "estimated_tokens": 31683,
+        "estimated_tokens": 31679,
         "max_context_tokens": 180000,
         "trigger": "iteration_start",
         "breakdown": {
-          "conversation_chars": 28295,
+          "conversation_chars": 28283,
           "system_chars": 21584,
           "tool_defs_chars": 45171,
           "image_blocks": 0,

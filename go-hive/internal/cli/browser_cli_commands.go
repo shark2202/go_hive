@@ -335,7 +335,15 @@ func (c *browserCLI) interactCommand() *commandSpec {
 			if args.wasProvided("intent") {
 				intent, hasIntent = args.str("intent"), true
 			}
-			c.spillImageResult(result, "browser_interact", intent, hasIntent)
+			action := strings.TrimSpace(args.str("action"))
+			if action == "screenshot" || action == "zoom" {
+				c.spillImageResult(result, "browser_interact", intent, hasIntent)
+				return
+			}
+			// Coordinate click / hover / key return the interaction dict plus
+			// one annotated screenshot; upstream collapses that image block
+			// into saved_to + _image only (no screenshot metadata).
+			c.spillActionImage(result, intent, hasIntent)
 		})
 }
 

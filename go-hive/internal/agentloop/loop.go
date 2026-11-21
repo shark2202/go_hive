@@ -106,6 +106,13 @@ type AgentLoop struct {
 	// of ending in a log line. Nil is a no-op.
 	ParkSink func(reason ParkReason, detail string)
 
+	// DoomLoopSink, when set, observes the first tool doom-loop detection of
+	// each turn-loop (the streak that crossed the warning threshold) with the
+	// repeating tool and its streak. The colony runtime wires it to the colony
+	// event bus so the detection is published as node_tool_doom_loop alongside
+	// the ESCALATION_REQUESTED the same detection raises. Nil is a no-op.
+	DoomLoopSink DoomLoopSink
+
 	now func() time.Time
 
 	mu      sync.Mutex
@@ -127,6 +134,10 @@ type AgentLoop struct {
 	// the latch keeps a worker that thrashes through several streaks from
 	// flooding the queen's inbox. Reset at the next turn boundary.
 	doomLoopEscalated bool
+	// doomLoopReported latches the node_tool_doom_loop publication for the same
+	// reason: the event describes "this turn hit a doom loop", not every later
+	// streak of it. Reset at the next turn boundary.
+	doomLoopReported bool
 	// workerTextOnlyStreak counts consecutive text-only worker turns in this
 	// turn-loop; any turn that issues a tool call resets it. Reset at the turn
 	// boundary so a parked/resumed worker starts a fresh grace window.
@@ -461,6 +472,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 	l.mu.Lock()
 	l.unread = false
 	l.doomLoopEscalated = false
+	l.doomLoopReported = false
 	l.mu.Unlock()
 
 	if err := l.ensureInitialMessage(agentCtx, conv, reminderCtx); err != nil {
@@ -520,18 +532,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 		tools = l.RefreshDynamicTools(agentCtx, tools)
 		l.compactConversationIfNeeded(ctx, agentCtx, conv, reminderCtx)
-		messages, err := l.llmMessages(conv, model)
-		if err != nil {
-			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
-		}
-
-		request := llm.CompletionRequest{
-			Messages:  toChatMessages(messages),
-			System:    conv.SystemPrompt(),
-			Tools:     tools,
-			MaxTokens: agentCtx.MaxTokens,
-		}
-		completion, err := agentCtx.LLM.AComplete(ctx, request)
+		completion, err := l.requestCompletion(ctx, agentCtx, conv, model, tools)
 		if err != nil {
 			// A stalled stream is recoverable: nudge, then re-stream this same
 			// inner turn (upstream's continue-nudge recovery path).
@@ -544,15 +545,14 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		// Record spend as soon as the completion lands so the hard cap sees
 		// it even when the turn later fails or is cancelled.
 		l.AddSessionCost(completion.CostUSD)
-		// Parity: framework/agent_loop/agent_loop.py::_publish_text_delta +
-		// _publish_llm_turn_complete. The Go transport is non-streaming, so the
-		// complete assistant message is published as one snapshot instead of
-		// per-chunk deltas; the event shape is unchanged.
-		if agentCtx.Observer != nil {
-			if completion.Content != "" {
-				agentCtx.Observer.AssistantText(completion.Content, completion.Content, inner+1)
-			}
-			agentCtx.Observer.LLMTurnComplete(completion, inner+1)
+		// Parity: framework/agent_loop/agent_loop.py::_publish_text_delta. The
+		// Go transport is non-streaming, so the complete assistant message is
+		// published as one snapshot instead of per-chunk deltas; the event
+		// shape is unchanged. llm_turn_complete is NOT published here: upstream
+		// publishes it after _run_turn_loop returns, i.e. after the tool batch
+		// (see the per-iteration publish below).
+		if agentCtx.Observer != nil && completion.Content != "" {
+			agentCtx.Observer.AssistantText(completion.Content, completion.Content, inner+1)
 		}
 
 		toolCalls := completion.ToolCalls
@@ -645,7 +645,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 		l.executeToolBatch(ctx, agentCtx, pending, results, tools)
 
-		toolFailure, doomLoopReminder, doomPark := l.observeToolBatch(agentCtx, pending, results)
+		toolFailure, doomLoopReminder, doomPark := l.observeToolBatch(agentCtx, pending, results, completion, inner)
 
 		if len(graceSkippedIdx) > 0 {
 			l.bumpBy("grace_iteration_skipped", len(graceSkippedIdx))
@@ -764,6 +764,31 @@ func (l *AgentLoop) llmMessages(conv *NodeConversation, model string) ([]map[str
 	return messages, nil
 }
 
+// requestCompletion renders the request messages and asks the provider for one
+// completion. It reports the rendered request size to an observer that records
+// it (the chat emitter): llm_turn_complete is published after the tool batch,
+// and upstream still reports the request it actually sent, so the count must
+// be captured before the assistant and tool messages are appended.
+//
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (request build)
+// Parity: framework/agent_loop/agent_loop.py::execute (_compute_turn_diagnostics(request_messages=...))
+func (l *AgentLoop) requestCompletion(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, model string, tools []llm.ToolDef) (llm.Completion, error) {
+	messages, err := l.llmMessages(conv, model)
+	if err != nil {
+		return llm.Completion{}, err
+	}
+	if recorder, ok := agentCtx.Observer.(RequestMessageRecorder); ok {
+		recorder.NoteRequestMessages(len(messages))
+	}
+	request := llm.CompletionRequest{
+		Messages:  toChatMessages(messages),
+		System:    conv.SystemPrompt(),
+		Tools:     tools,
+		MaxTokens: agentCtx.MaxTokens,
+	}
+	return agentCtx.LLM.AComplete(ctx, request)
+}
+
 // Parity: AgentLoop._run_turn_loop hard-stop advisory (tool_budget reminder).
 func (l *AgentLoop) injectToolBudgetStop(reminderCtx *ReminderAgentContext, conv *NodeConversation, deferred, lifetimeBudget, hardLimit int, lifetime bool, names []string) {
 	var bodies []string
@@ -851,7 +876,13 @@ func allToolsConcurrencySafe(pending []pendingToolCall, tools []llm.ToolDef) boo
 // runs the deterministic doom-loop guard, and publishes completed events. Doing
 // this after the batch (rather than inside each goroutine) keeps event and
 // reminder order stable even when executeToolBatch ran concurrently.
-func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult) (bool, string, doomLoopPark) {
+//
+// It also publishes the iteration's llm_turn_complete after the batch's
+// tool_call_completed frames: upstream emits it when _run_turn_loop returns,
+// i.e. after the tool results, and before any park or judge the batch triggers.
+//
+// Parity: framework/agent_loop/agent_loop.py::execute (llm_turn_complete after _run_turn_loop)
+func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult, completion llm.Completion, iteration int) (bool, string, doomLoopPark) {
 	toolFailure := false
 	doomLoopReminder := ""
 	park := doomLoopPark{}
@@ -868,6 +899,10 @@ func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingTo
 		if warning := l.DoomLoop.Observe(item.call.Name, item.call.Input); warning != "" {
 			doomLoopReminder = warning
 			l.bumpBy("doom_loop_warned", 1)
+			// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f'
+			// tool doom loop -> emit_tool_doom_loop at the same detection that
+			// raises the escalation).
+			l.reportDoomLoop(item.call.Name, l.DoomLoop.Streak())
 			if notice := l.escalateDoomLoop(agentCtx, item.call.Name, l.DoomLoop.Streak()); notice != "" {
 				doomLoopReminder = doomLoopReminder + "\n\n" + notice
 			}
@@ -878,6 +913,9 @@ func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingTo
 		if agentCtx.Observer != nil {
 			agentCtx.Observer.ToolCallCompleted(item.call, results[item.index])
 		}
+	}
+	if agentCtx.Observer != nil {
+		agentCtx.Observer.LLMTurnComplete(completion, iteration+1)
 	}
 	return toolFailure, doomLoopReminder, park
 }

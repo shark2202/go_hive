@@ -32,7 +32,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <div class="eyebrow">Hive · Integration Evidence Audit</div>
 <h1>go_hive integrations <span>真实可用性与证据分级审计</span></h1>
 <p class="lede">逐个审计 <code>internal/tools/integrations</code> 的 102 个模块工具（854 actions）+ <code>senders</code>（9 actions）+ 会话别名与 <code>browser_setup</code>：哪些真实可用（A）、哪些只是代码完整 + 假服务测试（B）、哪些有明确缺口。全部数字来自本机实测（AST 双侧扫描 + 运行时注册表 dump + 包内测试），未调用任何外部网络。</p>
-<div class="meta"><span>生成：<b>2026-11-21 05:47 CST（修订）</b></span><span>基线：<b>main db5c4c1b</b></span><span>分支：<code>integrations-account-wiring</code></span><span>方法：<b>AST 双侧对账 + 注册表 dump + 包测试实跑</b></span></div>
+<div class="meta"><span>生成：<b>2026-11-21 09:18 CST（修订）</b></span><span>代码基线：<b>1f52a20e</b>（main 93193450）</span><span>分支：<code>integration-pagination-alias</code></span><span>方法：<b>AST 双侧对账 + 注册表 dump + 包测试实跑</b></span></div>
 <div class="toc"><a href="#summary">总览</a><a href="#rubric">分级口径</a><a href="#modules">模块明细</a><a href="#real">A 真实证据</a><a href="#fake">B 假服务口径</a><a href="#gaps">缺口清单</a><a href="#repro">复现命令</a><a href="#method">方法与边界</a></div>
 </header>
 
@@ -47,7 +47,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <div class="grid g3" style="margin-top:12px">
 <div class="card"><div class="k">集成模块工具</div><div class="v">102</div><div class="d">854 actions；impl 706 / spec 148（覆盖 854/854）</div></div>
 <div class="card"><div class="k">上游对账</div><div class="v">103 / 865</div><div class="d">上游 103 模块 865 actions（AST）；Go = 102+9（senders）= 863，仅差 csv_sql/excel_sql</div></div>
-<div class="card"><div class="k">测试规模</div><div class="v">1245</div><div class="d">integration 包顶层测试数；0 个 t.Skip / 0 个真实凭据环境变量</div></div>
+<div class="card"><div class="k">测试规模</div><div class="v">1262</div><div class="d">integration 包顶层测试数；0 个 t.Skip / 0 个真实凭据环境变量</div></div>
 </div>
 <div class="callout info"><b>怎么读：</b>A 代表“实测过真实行为”；B 代表“代码完整、测试充分，但测试对象是假服务，不是真实 API”——B 不等于不可用，也不等于已验证。任何“有 impl”都被视为结构完整，而非真实可用。</div>
 </section>
@@ -63,7 +63,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <p class="sub">统计口径：模块行 = 102 个 integrations 包工具 + <code>senders</code> + <code>browser_setup</code>；action 列以 registry 中的 action 数为准（854 + 9 + 1 = 864）。csv/excel 的 10 个同名别名（<code>csv_append</code>, <code>csv_info</code>, <code>csv_read</code>, <code>csv_write</code>, <code>excel_append</code>, <code>excel_info</code>, <code>excel_read</code>, <code>excel_search</code>, <code>excel_sheet_list</code>, <code>excel_write</code>）委托同一实现，不单列。</p>
 <div class="tablewrap"><table><thead><tr><th style="width:34%">级别</th><th style="width:8%">数量</th><th>模块</th></tr></thead><tbody>
 <tr><td><span class="pill ok">A</span> A 真实可用已验证</td><td class="num">12</td><td>attach_file, browser_setup, csv, excel, get_current_time, http_headers_scan, pdf_read, port_scan, risk_score, ssl_tls_scan, tech_stack_detect, web_scrape</td></tr>
-<tr><td><span class="pill info">B</span> B 代码完整+假服务测试</td><td class="num">90</td><td>airtable, apify, apollo, arxiv, asana, attio, aws_s3, azure_sql, bigquery, brevo, calcom, calendar, calendly, cloudflare, cloudinary, confluence, databricks, discord, dns_security_scan, docker_hub, duckduckgo, email, email_senders (internal/senders), exa_search, freshdesk, github, gitlab, gmail, google_analytics, google_docs, google_maps, google_search_console, google_sheets, greenhouse, hubspot, huggingface, image_generate, intercom, jira, kafka, langfuse, linear, lusha, mattermost, microsoft_graph, n8n, news, notion, obsidian, openmeteo, pagerduty, pinecone, pipedrive, plaid, postgres, powerbi, prometheus, pushover, quickbooks, razorpay, reddit, redis, redshift, salesforce, sap, search_wikipedia, serpapi, shopify, similarweb, slack, snowflake, stripe, subdomain_enumerate, supabase, telegram, terraform, tines, trello, twilio, twitter, vercel, vision, wandb, web_search, yahoo_finance, youtube, youtube_transcript, zendesk, zoho_crm, zoom</td></tr>
+<tr><td><span class="pill info">B</span> B 代码完整+假服务测试</td><td class="num">91</td><td>airtable, apify, apollo, arxiv, asana, attio, aws_s3, azure_sql, bigquery, brevo, calcom, calendar, calendly, cloudflare, cloudinary, confluence, databricks, discord, dns_security_scan, docker_hub, duckduckgo, email, email_senders (internal/senders), exa_search, freshdesk, get_account_info, github, gitlab, gmail, google_analytics, google_docs, google_maps, google_search_console, google_sheets, greenhouse, hubspot, huggingface, image_generate, intercom, jira, kafka, langfuse, linear, lusha, mattermost, microsoft_graph, n8n, news, notion, obsidian, openmeteo, pagerduty, pinecone, pipedrive, plaid, postgres, powerbi, prometheus, pushover, quickbooks, razorpay, reddit, redis, redshift, salesforce, sap, search_wikipedia, serpapi, shopify, similarweb, slack, snowflake, stripe, subdomain_enumerate, supabase, telegram, terraform, tines, trello, twilio, twitter, vercel, vision, wandb, web_search, yahoo_finance, youtube, youtube_transcript, zendesk, zoho_crm, zoom</td></tr>
 <tr><td><span class="pill warn">C</span> C 部分/未接线</td><td class="num">0</td><td>—</td></tr>
 <tr><td><span class="pill bad">D</span> D 排除/EOL</td><td class="num">1</td><td>mongodb</td></tr>
 <tr><td><span class="pill bad">E</span> E 未验证</td><td class="num">0</td><td>—</td></tr>
@@ -82,7 +82,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td>fake_httptest<div class="small">rest_test.go</div></td>
 <td>bearer<div class="small">Authorization: Bearer &lt;AIRTABLE_PAT&gt;</div></td>
 <td>—</td>
-<td>none<div class="small">list_records 支持 maxRecords/offset 参数，无自动翻页</div></td>
+<td>follow<div class="small">list_records 跟随 offset 翻页（声明式，默认 10 页）— TestAirtableListRecordsFollowsOffsetPages</div></td>
 <td style="text-align:center"><span class="pill info">B</span></td>
 <td>—</td>
 </tr>
@@ -398,10 +398,10 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td><code>github</code><div class="small">github_tool</div></td>
 <td><span class="pill">core</span></td>
 <td class="num">19<div class="small">impl 3 · spec 16</div></td>
-<td>fake_httptest<div class="small">local_composite_test.go, local_slack_github_test.go, rest_test.go</div></td>
+<td>fake_httptest<div class="small">local_composite_test.go, local_slack_github_test.go, rest_test.go, rest_pagination_test.go</div></td>
 <td>bearer<div class="small">Bearer + Accept + X-GitHub-Api-Version（moduleConfigs）</div></td>
 <td>—</td>
-<td>none<div class="small">per_page 参数；无 page/cursor 参数、无自动翻页</div></td>
+<td>follow<div class="small">link_header：list_issues / list_pull_requests / list_stargazers 跟随 Link 头 rel=next（URL 原样复用）— TestGitHubListIssuesFollowsLinkHeaderPages, TestGitHubListStargazersStopsWithoutLinkHeader</div></td>
 <td style="text-align:center"><span class="pill info">B</span></td>
 <td>—</td>
 </tr>
@@ -940,9 +940,9 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td>fake_httptest<div class="small">local_composite_test.go, local_slack_github_test.go, rest_test.go</div></td>
 <td>bearer<div class="small">Authorization: Bearer &lt;SLACK_BOT_TOKEN&gt;</div></td>
 <td>—</td>
-<td>none<div class="small">cursor 参数存在但只透传，不自动翻页</div></td>
+<td>follow<div class="small">list_channels/list_users 跟随 response_metadata.next_cursor（声明式，默认 10 页）— TestSlackListChannelsFollowsCursor, TestSlackPaginationStopsAtMaxPages</div></td>
 <td style="text-align:center"><span class="pill info">B</span></td>
-<td>upload 走 external upload URL + PUT 文本内容；无 multipart；分页仅 cursor 透传</td>
+<td>upload 走 external upload URL + PUT 文本内容；无 multipart；分页 list_channels/users 已自动跟随 next_cursor</td>
 </tr>
 <tr data-grade="B" data-search="snowflake snowflake snowflake_tool batch6-lane4 fake_httptest bearer b">
 <td><code>snowflake</code><div class="small">snowflake_tool</div></td>
@@ -970,10 +970,10 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <td><code>stripe</code><div class="small">stripe_tool</div></td>
 <td><span class="pill">core</span></td>
 <td class="num">54<div class="small">impl 2 · spec 54</div></td>
-<td>fake_httptest<div class="small">local_stripe_test.go, rest_test.go</div></td>
+<td>fake_httptest<div class="small">local_stripe_test.go, rest_test.go, rest_pagination_test.go</div></td>
 <td>bearer<div class="small">Authorization: Bearer &lt;STRIPE_API_KEY&gt;，application/x-www-form-urlencoded</div></td>
 <td>—</td>
-<td>passthrough<div class="small">列表响应带 has_more；不自动翻页</div></td>
+<td>follow<div class="small">last_item_field：全部 16 个 stripe_list_* 以 starting_after=上页末条 id 翻页；has_more=false 即停 — TestStripeListCustomersFollowsLastItemId, TestStripeListInvoicesStopsOnHasMoreFalse, TestStripeListChargesPaginationErrorSurfaces</div></td>
 <td style="text-align:center"><span class="pill info">B</span></td>
 <td>—</td>
 </tr>
@@ -1246,6 +1246,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <div class="tablewrap"><table><thead><tr><th style="width:22%">样例</th><th>测试如何假服务</th></tr></thead><tbody>
 <tr><td><code>salesforce</code>（crm_common_test.go）</td><td>httptest + recorder：断言 SOQL 分页跟随、Bearer 头、401/403/404 错误映射逐个 action</td></tr>
 <tr><td><code>stripe/slack/github/telegram/trello/airtable</code>（rest_test.go）</td><td>TestEveryDeclarativeActionExecutes 对每个 spec action 发请求并断言路径占位符全部填充；另有 RequestShape 单测断言表单编码/查询鉴权/路径 token</td></tr>
+<tr><td><code>airtable/slack/github/stripe</code> 分页（oauth_refresh_test.go, rest_pagination_test.go, integrationkit/rest_pagination_test.go）</td><td>Link 头多页/无下一页/max_pages、last-item 多页/has_more 停止/错误页、body 光标多页；另有 <code>EncryptedFileStorage</code> 别名索引与 <code>CredentialStoreAdapter</code> 本地回退（credentials/storage_alias_test.go、cli/session_account_source_test.go）；全部 httptest 假服务 / t.TempDir 加密 store</td></tr>
 <tr><td><code>similarweb</code>（29 actions）</td><td>表驱动逐 action 断言 method/path/api-key 头/查询参数/常量</td></tr>
 <tr><td><code>postgres/redis/mongodb/supabase</code></td><td>PG/Redis 用进程内协议假服务（真实 wire 客户端）；Mongo/Supabase 用 httptest 假 API</td></tr>
 <tr><td><code>postgres</code>（batch5PGTestServer）</td><td>假 PG 服务器支持 startup/MD5/SCRAM/simple query/扩展协议——仍是假服务，不是真实 PG</td></tr>
@@ -1257,11 +1258,11 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <section id="gaps"><h2><span class="num">05</span>缺口清单</h2>
 <h3>5.1 跨模块系统性缺口</h3>
 <div class="tablewrap"><table><thead><tr><th style="width:22%">缺口</th><th>事实与影响</th></tr></thead><tbody>
-<tr><td><b>OAuth refresh</b></td><td>全包 0 处 refresh_token/grant_type=refresh。20 个凭据条目（17 个工具）只接受静态 access token；bigquery / google_analytics / google_search_console 支持 service-account JWT 换 token，reddit 支持 client-credentials 取 token，但都没有刷新循环。</td></tr>
-<tr><td><b>分页</b></td><td>integrationkit 的通用 REST 客户端没有分页原语；只有 bigquery 自动跟随 token，zoom/google_docs/gmail/google_maps/salesforce/stripe 做参数透传，其余列表 action 单页返回。</td></tr>
+<tr><td><b>OAuth refresh</b></td><td>已实现通用刷新（2026-11-21）：<code>integrationkit.TokenRefresher</code> 标准 refresh_token 授权（过期前 5 分钟、并发去重、401 → 刷新 → 重试一次、失败返回 <code>{error, error_code, help}</code>），接入 calendar/gmail/google_docs/google_sheets/email（GOOGLE_*）、hubspot（HUBSPOT_*）、zoho_crm（ZOHO_*）。仍未接入：只声明静态 access token 的 salesforce / microsoft_graph / powerbi / quickbooks / zoom / google_search_console 等条目，以及 account 别名单 token（刷新结果只在本进程缓存）。</td></tr>
+<tr><td><b>分页</b></td><td>三种声明式模式（2026-11-21）：① body 光标（airtable offset；slack next_cursor）② <code>link_header</code>（github list_issues/list_pull_requests/list_stargazers 跟随 Link 头 rel=next）③ <code>last_item_field</code>（stripe 全部 16 个 stripe_list_* 用 starting_after=末条 id，has_more=false 即停）；共用默认 10 页、重复/空光标即停、走完清 next_cursor/has_more、错误页原样返回。残余：zoom/gmail/google_docs/google_maps/salesforce 参数透传，bigquery 自研循环；github list_branches/list_commits/list_repos/list_workflow_runs 与 search_* 上游无 page 参数未接（不硬接）。</td></tr>
 <tr><td><b>文件上传 / multipart</b></td><td>全包无 multipart.NewWriter：slack 用 external upload URL + PUT 文本，microsoft_graph 用 4MB simple PUT，cloudinary 只接受 file_url，aws_s3 put_object 只接受文本。</td></tr>
 <tr><td><b>webhook 验签</b></td><td>无入站 webhook 接收器，因此也没有 HMAC/验签实现（工具面全部是出站客户端）。</td></tr>
-<tr><td><b>多账号 / account 别名</b></td><td>已复刻：hubspot、notion、discord、mattermost、google docs/gmail/calendar 的 <code>account</code> 走会话注入的凭据视图（<code>CredentialStoreAdapter.get_by_alias</code> 语义：别名优先、无别名叫模块单凭据、未知别名返回该工具自己的 auth 错误对应上游 None）。未支持：obsidian（上游无 account 参数）、google sheets（account 是上游框架 tracking 参数，<code>_get_client()</code> 忽略）、support/ATS 组 intercom/zendesk/freshdesk/greenhouse（上游无 account 参数；多值 bundle 仍按 env/单条存储）。<code>get_account_info</code> 已接线：无凭据返回 <code>{"accounts":[],"count":0}</code>。</td></tr>
+<tr><td><b>多账号 / account 别名</b></td><td><b>存储别名索引（2026-11-21）</b>：<code>EncryptedFileStorage</code> 实现 <code>LoadByAlias</code>/<code>LoadAllForProvider</code>（只读 <code>metadata/index.json</code>），OAuth 托管账号的别名可直接解析；索引无记录返回 nil 并降级本地注册表（store 命中优先）。已复刻：hubspot、notion、discord、mattermost、google docs/gmail/calendar 的 <code>account</code> 走会话注入的凭据视图（<code>CredentialStoreAdapter.get_by_alias</code> 语义：别名优先、无别名叫模块单凭据、未知别名返回该工具自己的 auth 错误对应上游 None）。未支持：obsidian（上游无 account 参数）、google sheets（account 是上游框架 tracking 参数，<code>_get_client()</code> 忽略）、support/ATS 组 intercom/zendesk/freshdesk/greenhouse（上游无 account 参数；多值 bundle 仍按 env/单条存储）。<code>get_account_info</code> 已接线：无凭据返回 <code>{"accounts":[],"count":0}</code>。</td></tr>
 <tr><td><b>二进制响应</b></td><td>只有 microsoft_graph 下载（文本/base64）与 attach_file 图片块；其它模块按 JSON 处理。</td></tr>
 <tr><td><b>测试真实性</b></td><td>integration 包 0 个 t.Skip、0 个真实凭据环境变量读取、0 个外网调用；全部联网模块只用 httptest 或进程内协议假服务。</td></tr>
 </tbody></table></div>
@@ -1296,7 +1297,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td><code>redis</code> <span class="pill info">B</span></td><td>无连接池；RESP2；无 pub/sub 订阅（publish 支持）；无 cluster 重定向</td></tr>
 <tr><td><code>redshift</code> <span class="pill info">B</span></td><td>仅长期 IAM key（无 STS/session token）</td></tr>
 <tr><td><code>sap</code> <span class="pill info">B</span></td><td>只读 OData V2；仅 BASIC</td></tr>
-<tr><td><code>slack</code> <span class="pill info">B</span></td><td>upload 走 external upload URL + PUT 文本内容；无 multipart；分页仅 cursor 透传</td></tr>
+<tr><td><code>slack</code> <span class="pill info">B</span></td><td>upload 走 external upload URL + PUT 文本内容；无 multipart；分页（list_channels/users）已自动跟随 next_cursor</td></tr>
 <tr><td><code>snowflake</code> <span class="pill info">B</span></td><td>仅 statements API；OAuth token 类型可调</td></tr>
 <tr><td><code>supabase</code> <span class="pill info">B</span></td><td>仅 anon key；无 service-role</td></tr>
 <tr><td><code>terraform</code> <span class="pill info">B</span></td><td>仅 TFC/TFE API v2；无 apply/discard/cancel（上游同）</td></tr>
@@ -1314,15 +1315,16 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 </section>
 
 <section id="repro"><h2><span class="num">06</span>复现命令与实测结果</h2>
-<p class="sub">全部在本 worktree（<code>.wt/integrations-account-wiring</code>，基线 db5c4c1b）实跑；不访问外网。</p>
+<p class="sub">全部在本 worktree（<code>.wt/integration-pagination-alias</code>，代码基线 1f52a20e / main 93193450）实跑；不访问外网。</p>
 <div class="tablewrap"><table><thead><tr><th style="width:26%">项目</th><th>命令与结果</th></tr></thead><tbody>
-<tr><td><b>全包测试</b></td><td><code>cd go_hive/go-hive &amp;&amp; go test ./internal/tools/integrations/ -count=1</code><div class="small">ok github.com/aden-hive/hive-go/internal/tools/integrations 2.458s</div></td></tr>
-<tr><td><b>用例总数</b></td><td><code>go test ./internal/tools/integrations/ -list &#x27;Test.*&#x27; | grep -c &#x27;^Test&#x27;</code><div class="small">1245（另 internal/cli 会话接线测试 5 个）</div></td></tr>
+<tr><td><b>全包测试</b></td><td><code>cd go_hive/go-hive &amp;&amp; go test ./internal/tools/integrations/ -count=1</code><div class="small">ok github.com/aden-hive/hive-go/internal/tools/integrations 2.868s</div></td></tr>
+<tr><td><b>用例总数</b></td><td><code>go test ./internal/tools/integrations/ -list &#x27;Test.*&#x27; | grep -c &#x27;^Test&#x27;</code><div class="small">1262（另 internal/cli 会话接线测试 7 个）</div></td></tr>
 <tr><td><b>本地文件类（PDF/Excel/CSV/scrape）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch3PDFRead|TestBatch3Excel|TestCSV|TestBatch3WebScrape&#x27; -count=1 -v</code><div class="small">全 PASS；例：TestBatch3PDFReadLocalTextPDF、TestBatch3ExcelWriteNewFile、TestCSVWriteReadAppendInfo、TestBatch3WebScrapePersistsFullBody</div></td></tr>
 <tr><td><b>扫描器（真实 loopback socket/TLS）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch2PortScan|TestBatch2SSLTLS|TestBatch2HTTPHeaders|TestBatch2DNSSecurity&#x27; -count=1 -v</code><div class="small">14/14 PASS；含 TestBatch2SSLTLSRealHandshake、TestBatch2PortScan（net.Listen 127.0.0.1）</div></td></tr>
 <tr><td><b>本地协议假服务（PG/Redis/Mongo/Supabase）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch5Lane2Redis|TestBatch5Lane2Mongo|TestBatch5Lane2Supabase|TestBatch5PG&#x27; -count=1</code><div class="small">ok 0.285s（进程内假服务，非真实 PG/Redis）</div></td></tr>
 <tr><td><b>REST 假服务样例（Salesforce/CRM）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch6(Salesforce|Lane1)&#x27; -count=1 -v</code><div class="small">16 个顶层用例 PASS（含 401/403/404 错误映射与 Bearer 断言）</div></td></tr>
 <tr><td><b>声明式全量 sweep（stripe/slack/github/telegram/trello/airtable）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestEveryDeclarativeActionExecutes|TestStripeRequestShape|TestSlackRequestShape|TestGitHubRequestShape&#x27; -count=1 -v</code><div class="small">PASS；sweep 对 6 个模块的每个 spec action 都发请求并断言无未填充占位符</div></td></tr>
+<tr><td><b>分页（Link 头 / 末条 id）与凭据别名索引</b></td><td><code>go test ./internal/tools/integrationkit/ -run &#x27;TestPagination|TestParseLink&#x27; -count=1 &amp;&amp; go test ./internal/tools/integrations/ -run &#x27;TestGitHubListIssuesFollows|TestGitHubListStargazersStops|TestStripeList&#x27; -count=1 &amp;&amp; go test ./internal/credentials/ -run &#x27;AliasIndex|FallsBack&#x27; -count=1 &amp;&amp; go test ./internal/cli/ -run &#x27;TestSessionAccountSource&#x27; -count=1</code><div class="small">全 PASS；kit 0.388s / credentials 0.475s；16 个新测试，0 外网</div></td></tr>
 <tr><td><b>富化/情报（retry、多 provider 回退）</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch7Lane5|TestBatch7Lane6SimilarWeb&#x27; -count=1</code><div class="small">ok 0.326s</div></td></tr>
 <tr><td><b>邮件/Google/Notion/Linear</b></td><td><code>go test ./internal/tools/integrations/ -run &#x27;TestBatch7Lane9Email|TestBatch5Lane3|TestBatch4Notion|TestBatch4Linear&#x27; -count=1 -v</code><div class="small">130 个顶层用例 PASS</div></td></tr>
 <tr><td><b>表格别名 + browser_setup（session 注册面）</b></td><td><code>go test ./internal/cli/ -run &#x27;TestSessionCatalogueRegistersSpreadsheetToolNames|TestSessionCatalogueBrowserSetupDispatch&#x27; -count=1 -v</code><div class="small">PASS；csv_*/excel_* 10 个别名与 browser_setup 均由 session catalogue 实测分发</div></td></tr>
@@ -1354,11 +1356,11 @@ EOF</pre>
 <li><b>取数</b>：① 临时 Go 测试遍历 24 个 registry 构造器 dump tool/action/impl/spec 与 ModuleConfig；② 上游 Python AST 扫描 @mcp.tool；③ 测试文件静态扫描（httptest / 127.0.0.1 / t.Skip / os.Getenv）；④ 全包与定向测试实跑。</li>
 <li><b>不猜</b>：action 数、impl/spec 覆盖、鉴权形态都落到 file:line；未实测的能力不写“可用”。</li>
 <li><b>边界</b>：本审计只覆盖 integrations 包 + senders 工具面；不含浏览器桥（另有 docs/browser-bridge.html）、内置 harness 工具、动态 MCP。</li>
-<li><b>快照</b>：结论绑定基线 <code>db5c4c1b</code>（<code>integrations-account-wiring</code>）；基线之后的变更需重跑 §06 复现命令。</li>
+<li><b>快照</b>：结论绑定代码基线 <code>1f52a20e</code>（<code>integration-pagination-alias</code>，main 93193450）；基线之后的变更需重跑 §06 复现命令。</li>
 </ul>
 </section>
 
-<footer>go_hive · integrations evidence audit · 2026-11-21 05:47 CST（修订） · baseline main db5c4c1b · 数据：<code>integrations-evidence-audit.json</code> · 摘要：<code>integrations-evidence-audit.md</code></footer>
+<footer>go_hive · integrations evidence audit · 2026-11-21 09:18 CST（修订） · baseline 1f52a20e（main 93193450） · 数据：<code>integrations-evidence-audit.json</code> · 摘要：<code>integrations-evidence-audit.md</code></footer>
 </div>
 <script>
 const f = document.getElementById('filter');

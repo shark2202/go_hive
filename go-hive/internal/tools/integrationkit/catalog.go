@@ -150,21 +150,31 @@ type RestSpec struct {
 // set its own limit.
 const DefaultMaxPages = 10
 
-// PaginationSpec is declarative cursor pagination for one REST action: the
-// client follows NextCursorPath through the response payload, sending the
-// cursor back in CursorParam, and concatenates the ItemsPath arrays.
+// PaginationSpec is declarative pagination for one REST action: the client
+// follows one of three cursors, sends the next cursor back in CursorParam (or
+// follows a Link URL directly), and concatenates the ItemsPath arrays.
 //
 // Paths are dot-separated field names ("records", "response_metadata.
 // next_cursor"). The walk stops when the cursor is missing, empty, repeated,
-// or MaxPages pages have been read.
+// advertised has_more is false, or MaxPages pages have been read.
 type PaginationSpec struct {
-	// ItemsPath is the dot path to the page's item array.
+	// ItemsPath is the dot path to the page's item array. Empty means the page
+	// itself is the array (GitHub list endpoints return a bare JSON array).
 	ItemsPath string
-	// NextCursorPath is the dot path to the next-page cursor.
+	// NextCursorPath is the dot path to the next-page cursor in the response
+	// payload.
 	NextCursorPath string
-	// CursorParam is the request parameter carrying the cursor: query for
+	// CursorParam is the request parameter carrying the body cursor: query for
 	// GET/DELETE, body otherwise.
 	CursorParam string
+	// LinkHeader follows the rel="next" URL advertised in the response Link
+	// header instead of a body cursor (GitHub list endpoints). The walked
+	// request reuses the advertised URL as-is, including its query string.
+	LinkHeader bool
+	// LastItemField derives the next cursor from this field of the last item on
+	// the page, then sends it in CursorParam (Stripe starting_after). The walk
+	// also stops early when the page advertises has_more=false.
+	LastItemField string
 	// MaxPages caps the walk; 0 uses DefaultMaxPages.
 	MaxPages int
 }

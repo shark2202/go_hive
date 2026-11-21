@@ -264,6 +264,15 @@ type ChatRuntime struct {
 	// a tool reported a missing credential (upstream: credentials(collect)).
 	// It survives until the next user message/trigger, like pendingQuestions.
 	pendingCredentialForm map[string]any
+	// Implicit judge ledger: upstream publishes turn N's verdict when the park
+	// unblocks (the next message starts the turn that announces it). The chat
+	// runtime remembers the finished turn and settles it at the next turn
+	// start. verdictIteration is the session turn index (opening turn = 0).
+	verdictMu          sync.Mutex
+	verdictPending     bool
+	verdictIteration   int
+	verdictExecutionID string
+	turnIndex          int
 	// overseerTranscript folds the colony overseer's client-facing reply
 	// frames into one assistant message per turn for the chat transcript.
 	// The overseer runs on the colony bus, so this bridge is the only path
@@ -773,11 +782,15 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	}
 	if request.reminderWake {
 		if !r.injectHubReminders() {
-			emitter.executionCompleted(0, string(agentloop.ParkReasonTurnDone))
+			emitter.executionCompleted(0, string(agentloop.ParkReasonTurnDone), nil)
 			r.setParkState(agentloop.ParkReasonTurnDone, true)
 			return
 		}
+		r.emitPendingImplicitJudgeVerdict()
 	} else {
+		// Upstream publishes the previous turn's judge verdict as its park
+		// unblocks — before this message's reminder frame and commit.
+		r.emitPendingImplicitJudgeVerdict()
 		// Parity: framework/agent_loop/agent_loop.py::execute — SESSION_START
 		// fires before the first user message so the situational frame
 		// precedes the request.
@@ -861,7 +874,8 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	if pending := r.pendingParkReason(); pending != "" {
 		parkReason = pending
 	}
-	emitter.executionCompleted(result.InnerTurns, string(parkReason))
+	emitter.executionCompleted(result.InnerTurns, string(parkReason), r.parkQuestionsFor(parkReason))
+	r.noteImplicitJudgeVerdictDue(executionID)
 	// Parity: framework/agent_loop/agent_loop.py::execute — STOP fires after a
 	// text-only turn (no tool result can carry a tail).
 	if len(result.ToolResults) == 0 {
@@ -951,7 +965,8 @@ func (r *ChatRuntime) runOpeningTurn() {
 	if pending := r.pendingParkReason(); pending != "" {
 		parkReason = pending
 	}
-	emitter.executionCompleted(result.InnerTurns, string(parkReason))
+	emitter.executionCompleted(result.InnerTurns, string(parkReason), r.parkQuestionsFor(parkReason))
+	r.noteImplicitJudgeVerdictDue(executionID)
 	if len(result.ToolResults) == 0 {
 		r.fireReminderPoint(agentloop.STOP, "", nil)
 	}
@@ -961,6 +976,18 @@ func (r *ChatRuntime) runOpeningTurn() {
 	}
 	r.timelineAfterTurn()
 	r.setLastError(nil)
+}
+
+// parkQuestionsFor returns the questions the park boundary must announce: only
+// an ask_user park carries them (upstream passes `questions` to
+// _await_user_input only on that branch).
+func (r *ChatRuntime) parkQuestionsFor(parkReason agentloop.ParkReason) []map[string]any {
+	if r == nil || parkReason != agentloop.ParkReasonAskUser {
+		return nil
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return cloneParkQuestions(r.pendingQuestions)
 }
 
 // pinTurnProvider resolves the session's provider slot at the start of a turn.
@@ -1402,88 +1429,6 @@ func chatQueenIdentityPrompt(homeRoot, queenName string) string {
 		}
 	}
 	return identity
-}
-
-// executeAskUser records the question the turn is parking on and announces it
-// on the session bus. The next user message is the answer: runTurn clears the
-// pending state when it starts, and the turn that produced the question ends
-// parked on ask_user.
-//
-// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
-func (r *ChatRuntime) executeAskUser(input map[string]any) agentloop.ToolResult {
-	questions, problem := normalizeAskUserQuestions(input)
-	if problem != "" {
-		return agentloop.ToolResult{Content: problem, IsError: true}
-	}
-	r.mu.Lock()
-	r.pendingQuestions = questions
-	r.mu.Unlock()
-	// Persist immediately: if the process dies before the turn's end checkpoint,
-	// the question is still the wait a restarted session must re-enter.
-	r.persistParkState()
-	if r.bus != nil {
-		executionID := r.agentCtx.ExecutionID
-		parkReason := string(agentloop.ParkReasonAskUser)
-		r.bus.EmitClientInputRequested(chatStreamID, chatNodeID, &executionID, questions, &parkReason)
-	}
-	return agentloop.ToolResult{Content: "Waiting for user input..."}
-}
-
-// normalizeAskUserQuestions is the chat runtime's seam over the shared
-// normaliser: the chat queen and the colony's persistent overseer must park on
-// the exact same question shape, so the shaping lives in agentloop and both
-// callers use it.
-//
-// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
-// Parity: framework/agent_loop/internals/synthetic_tools.py::sanitize_ask_user_inputs
-func normalizeAskUserQuestions(input map[string]any) ([]map[string]any, string) {
-	return agentloop.NormalizeAskUserQuestions(input)
-}
-
-func (r *ChatRuntime) hasPendingQuestions() bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return len(r.pendingQuestions) > 0
-}
-
-// pendingParkReason classifies the wait the finished turn parked on: a
-// credential form (credential_form) outranks an ask_user question, and an
-// empty string means an ordinary turn_done. Both are external waits, so the
-// idle nudge must not re-engage them.
-//
-// Parity: framework/agent_loop/reminders.py::ParkReason
-func (r *ChatRuntime) pendingParkReason() agentloop.ParkReason {
-	if r == nil {
-		return ""
-	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.pendingCredentialForm != nil {
-		return agentloop.ParkReasonCredentialForm
-	}
-	if len(r.pendingQuestions) > 0 {
-		return agentloop.ParkReasonAskUser
-	}
-	return ""
-}
-
-func (r *ChatRuntime) clearPendingQuestions() {
-	r.mu.Lock()
-	r.pendingQuestions = nil
-	r.mu.Unlock()
-	r.clearParkPendingInput()
-}
-
-// clearPendingCredentialForm drops a parked credential form once a real user
-// message or trigger answers it (the same unblocking the ask_user park gets).
-func (r *ChatRuntime) clearPendingCredentialForm() {
-	r.mu.Lock()
-	had := r.pendingCredentialForm != nil
-	r.pendingCredentialForm = nil
-	r.mu.Unlock()
-	if had {
-		r.clearParkPendingInput()
-	}
 }
 
 // sedimentSoul writes a finished reflection's durable conclusions into this

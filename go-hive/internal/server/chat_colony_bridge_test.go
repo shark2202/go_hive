@@ -2,6 +2,9 @@ package server
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -96,6 +99,78 @@ func waitForServerCondition(timeout time.Duration, condition func() bool) bool {
 		time.Sleep(10 * time.Millisecond)
 	}
 	return condition()
+}
+
+// Parity-exempt: Go-side SSE bridge. A colony worker's node_tool_doom_loop is
+// published on the colony bus (the worker loop's sink); the session bus and its
+// events.jsonl are what the dashboard and GET /events/history read, so the
+// bridge must carry it over. It stays on the worker stream (upstream keeps the
+// event worker-local): a watching SSE client sees it, and the session log
+// records it.
+func TestColonyBridgeMirrorsWorkerToolDoomLoop(t *testing.T) {
+	colonyBus := eventbus.NewEventBus()
+	colonyRuntime := colony.NewColonyRuntime(colony.RuntimeOptions{
+		AgentSpec:   agentloop.AgentSpec{ID: "worker", Name: "Worker", AgentType: "event_loop"},
+		LLM:         &fakeChatLLM{},
+		EventBus:    colonyBus,
+		StreamID:    "colony_doom_loop",
+		StoragePath: t.TempDir(),
+	})
+	sessionBus := eventbus.NewEventBus()
+	// The chat runtime writes the session event log under its Root; point it at
+	// a temp dir and read the same file back.
+	root := t.TempDir()
+	chatRuntime, err := NewChatRuntime(ChatRuntimeDeps{
+		LLM:       &fakeChatLLM{},
+		Bus:       sessionBus,
+		Root:      root,
+		SessionID: "s-colony-doom-loop",
+	})
+	if err != nil {
+		t.Fatalf("NewChatRuntime: %v", err)
+	}
+	t.Cleanup(func() { _ = chatRuntime.Close() })
+	chatRuntime.BindColony(colonyHostStub{runtime: colonyRuntime})
+	recorder := recordChatEvents(sessionBus)
+
+	executionID := "worker-exec-1"
+	workerStream := "worker:w1"
+	description := "`task_list` called 3 times in a row with identical arguments and the same result"
+	colonyBus.EmitToolDoomLoop(workerStream, workerStream, description, &executionID)
+
+	if !waitForServerCondition(3*time.Second, func() bool {
+		return len(recorder.ofType(eventbus.EventNodeToolDoomLoop)) == 1
+	}) {
+		t.Fatalf("session bus events = %v, want the mirrored node_tool_doom_loop", recorder.types())
+	}
+	event := recorder.ofType(eventbus.EventNodeToolDoomLoop)[0]
+	if event.StreamID != workerStream {
+		t.Fatalf("mirrored stream = %q, want the worker stream %q", event.StreamID, workerStream)
+	}
+	if event.NodeID == nil || *event.NodeID != workerStream {
+		t.Fatalf("mirrored node_id = %v, want %q", event.NodeID, workerStream)
+	}
+	if event.ExecutionID == nil || *event.ExecutionID != executionID {
+		t.Fatalf("mirrored execution_id = %v, want %q", event.ExecutionID, executionID)
+	}
+	if event.ColonyID == nil || *event.ColonyID != "colony_doom_loop" {
+		t.Fatalf("mirrored colony_id = %v, want colony_doom_loop", event.ColonyID)
+	}
+	if _, relayed := event.Data["relayed_from"]; relayed {
+		t.Fatalf("doom-loop event must keep its worker identity, got relayed_from=%v", event.Data["relayed_from"])
+	}
+	if got, _ := event.Data["description"].(string); got != description {
+		t.Fatalf("mirrored description = %q, want %q", got, description)
+	}
+
+	// The session event log records it for GET /events/history.
+	raw, err := os.ReadFile(filepath.Join(root, "events.jsonl"))
+	if err != nil {
+		t.Fatalf("read session events log: %v", err)
+	}
+	if !strings.Contains(string(raw), `"node_tool_doom_loop"`) {
+		t.Fatalf("session events.jsonl has no node_tool_doom_loop line:\n%s", raw)
+	}
 }
 
 // Parity: framework/server/routes_events.py::_is_worker_noise

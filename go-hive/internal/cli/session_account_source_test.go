@@ -253,3 +253,84 @@ func TestSessionAccountAliasRoutesThroughSharedRegistry(t *testing.T) {
 		t.Fatalf("no-alias result = %v", failure)
 	}
 }
+
+// saveEncryptedAccounts writes OAuth-managed accounts the way the credential
+// store does: _integration_type + _alias inside the encrypted record, so the
+// account is reachable through the provider/alias index.
+func saveEncryptedAccounts(t *testing.T, home hivehome.Home, creds ...*credentials.CredentialObject) {
+	t.Helper()
+	storage, err := credentials.NewEncryptedFileStorage(home.CredentialsDir(), "")
+	if err != nil {
+		t.Fatalf("open encrypted store: %v", err)
+	}
+	for _, cred := range creds {
+		if err := storage.Save(cred); err != nil {
+			t.Fatalf("save %s: %v", cred.ID, err)
+		}
+	}
+}
+
+// oauthSessionAccount builds one OAuth-managed account record.
+func oauthSessionAccount(id, provider, alias, token string) *credentials.CredentialObject {
+	cred := credentials.NewCredentialObject(id)
+	cred.CredentialType = credentials.CredentialTypeOAuth2
+	cred.Keys.Set(credentials.NewCredentialKey("access_token", token))
+	cred.Keys.Set(credentials.NewCredentialKey("_alias", alias))
+	cred.Keys.Set(credentials.NewCredentialKey("_integration_type", provider))
+	return cred
+}
+
+// Parity-exempt: upstream resolves OAuth-managed multi-accounts through
+// AdenCachedStorage.load_by_alias; the Go encrypted-store index is the new
+// wiring and has no Python pytest counterpart.
+func TestSessionAccountSourceResolvesOAuthManagedAliases(t *testing.T) {
+	home := sessionCredentialHome(t)
+	saveEncryptedAccounts(t, home,
+		oauthSessionAccount("google_work", "google", "work", "oauth-work-token"),
+		oauthSessionAccount("google_sandbox", "google", "sandbox", "oauth-sandbox-token"),
+	)
+	source := newSessionAccountSource(home)
+
+	for _, want := range [][2]string{
+		{"work", "oauth-work-token"},
+		{"sandbox", "oauth-sandbox-token"},
+	} {
+		token, ok := source.AccountToken("google", want[0])
+		if !ok || token != want[1] {
+			t.Fatalf("AccountToken(google, %s) = %q, %v", want[0], token, ok)
+		}
+	}
+	if _, ok := source.AccountToken("google", "missing"); ok {
+		t.Fatal("unknown alias resolved")
+	}
+	if _, ok := source.AccountToken("github", "work"); ok {
+		t.Fatal("alias leaked across providers")
+	}
+}
+
+// Parity-exempt: when the encrypted index has no (provider, alias) record — a
+// legacy account whose id carries the alias but whose record has no _alias key
+// — resolution degrades to the local account registry (upstream
+// store.get_credential_by_alias returns None and the adapter falls back).
+func TestSessionAccountSourceFallsBackToLocalRegistry(t *testing.T) {
+	home := sessionCredentialHome(t)
+	storage, err := credentials.NewEncryptedFileStorage(home.CredentialsDir(), "")
+	if err != nil {
+		t.Fatalf("open encrypted store: %v", err)
+	}
+	legacy := credentials.NewCredentialObject("google/legacy")
+	legacy.Keys.Set(credentials.NewCredentialKey("api_key", "legacy-token"))
+	legacy.Keys.Set(credentials.NewCredentialKey("_integration_type", "google"))
+	if err := storage.Save(legacy); err != nil {
+		t.Fatalf("save legacy account: %v", err)
+	}
+
+	source := newSessionAccountSource(home)
+	token, ok := source.AccountToken("google", "legacy")
+	if !ok || token != "legacy-token" {
+		t.Fatalf("AccountToken(google, legacy) = %q, %v", token, ok)
+	}
+	if _, ok := source.AccountToken("google", "missing"); ok {
+		t.Fatal("unknown alias resolved")
+	}
+}

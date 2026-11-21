@@ -15,7 +15,7 @@ worker 连续重复同一工具调用 ×3
 的工具面与消息内容给出脚本化回合）。
 
 - 日期：2026-11-21
-- 被测：`.wt/escalation-doomloop/go_hive/go-hive`（module `github.com/aden-hive/hive-go`，分支 `escalation-doomloop`，基线 `db5c4c1b`）
+- 被测：`.wt/colony-doomloop-event/go_hive/go-hive`（module `github.com/aden-hive/hive-go`，分支 `colony-doomloop-event`，基线 `93193450`）
 - 网关：`go_hive/go-hive/e2e/escalationgw`（本 lane 改写为 doom-loop 剧本）
 - 证据目录：`go_hive/docs/e2e-assets/worker-escalation-e2e/escalation-chain/`
 
@@ -59,6 +59,11 @@ worker 连续重复同一工具调用 ×3
 - 事件字段：`reason="Tool doom loop detected"`、`context="`tool` called N times in a row with
   identical arguments and the same result"`、`stream_id=worker:<id>`、`node_id`、
   `execution_id`、`colony_id`、`request_id`。
+- 观测事件：同一次检测（首次跨过阈值）经 `AgentLoop.DoomLoopSink` 发布
+  `node_tool_doom_loop`（payload `description` 为同一句 `doomLoopDescription`，
+  `stream_id=node_id=worker:<id>`、`execution_id`、`colony_id`），每 turn-loop 至多 1 次；
+  会话桥把它镜像到 session bus（保留 worker 流身份），会话事件日志与
+  `?watch=worker:<id>` 的 SSE 订阅可观察。见 §8。
 - 不等待：升级是信息性的（上游同语义），worker 继续；能继续工作的 worker 会在
   `InjectInput` 后收到 `[QUEEN_REPLY]`，已经停车的 worker 由 `reply_to_worker` 返回
   `worker_not_active`。
@@ -76,7 +81,7 @@ worker 连续重复同一工具调用 ×3
 
 ## 3. 结论（本次真实运行）
 
-用例 `TestWorkerEscalationEndToEnd` PASS（2026-11-21，1.7s）：
+用例 `TestWorkerEscalationEndToEnd` PASS（2026-11-21，2.0s，含 §8 的 `node_tool_doom_loop` 断言）：
 
 | 步骤 | 断言 | 实测（模型请求序号） |
 | --- | --- | --- |
@@ -88,6 +93,7 @@ worker 连续重复同一工具调用 ×3
 | `reply_to_worker` 回写 | 工具返回 `delivered`；worker 收到 `[QUEEN_REPLY] request_id=…` | seq 8 queen；seq 11 worker |
 | worker 继续并终止 | 恢复后的 worker 回合携带 `[QUEEN_REPLY]` 并调用 `report_to_parent` | seq 11 worker |
 | 不重复/不风暴 | queen 转录中 `[WORKER_ESCALATION]` 记录恰好 1 条；worker 转录中 `[SYSTEM] Escalated tool doom loop…` 恰好 1 条 | 证据 `queen-transcript.json` / `worker-transcript.json` |
+| session 事件日志含 `node_tool_doom_loop` | 恰好 1 条：`stream_id=node_id=worker:<id>`、`colony_id=escalation_e2e`、description 含 `task_list` / `3 times` | `session-events.jsonl`（seq 26） |
 | 重复后不触发停车 | 升级后 worker 改用不同参数（`task_list {"status":…}` 交替），未达到 5 次停车阈值 | `model-requests.jsonl`：3 次 `{}` + 2 次不同参数 |
 
 一次真实运行的链路（`summary.txt` 原样摘录）：
@@ -100,7 +106,8 @@ chain (model request seq):
   8 queen   reply_to_worker
   11 worker  [QUEEN_REPLY] -> report_to_parent
 
-model requests: 3 queen, 3 overseer, 5 worker, 0 other
+model requests: 3 queen, 3 overseer, 5 worker, 1 other
+session events: node_tool_doom_loop stream=worker:worker_1 description="`task_list` called 3 times in a row with identical arguments and the same result"
 ```
 
 **这是管线验证，不是模型质量结论**：worker 的重复调用、queen 的列表/回复都是脚本；本 E2E
@@ -129,7 +136,7 @@ HIVE_ESCALATION_E2E_OUT=/tmp/escalation-e2e \
 | --- | --- | --- | --- |
 | 工具面 | 有 `report_to_parent`，无 `escalate` | 同（`is_parallel_worker` 门控） | 已对齐 |
 | 模型幻觉调用 `escalate` | 分发层拒绝，返回 `ERROR: escalate is not available to colony workers…`，不产生事件、不停车 | 分发层只拒绝 queen/judge（会发事件并停泊） | 本 port 更严格（BRD 不变式；防 fail-fast worker 被永久停泊），已记录 |
-| 连续 3 次同名同参工具调用 | 1 个 `ESCALATION_REQUESTED` + 提醒 + `[SYSTEM] Escalated…` 通知；worker 继续 | 同（reason/通知一致；上游清空指纹后继续） | 已对齐（去重更强） |
+| 连续 3 次同名同参工具调用 | 1 个 `ESCALATION_REQUESTED` + 1 个 `node_tool_doom_loop` + 提醒 + `[SYSTEM] Escalated…` 通知；worker 继续 | 同（两个事件同一检测点；上游清空指纹后继续） | 已对齐（去重更强：每 turn-loop 各至多 1 次） |
 | 连续 5 次同名同参 | 停车：`ParkReasonDoomLoop` + `DoomLoopParkedError`，worker failed | 无确定性停车，靠预算/迭代上限 | port 增强（Parity-exempt），见 §6 |
 | 未重复（参数持续变化） | 不产生升级事件 | 同 | 已对齐 |
 | 女王回复时 worker 仍存活 | `[QUEEN_REPLY]` 入会话，worker 继续 | `inject_input` 队列，worker 下一回合读取 | 已对齐（本 lane E2E 覆盖） |
@@ -142,10 +149,10 @@ HIVE_ESCALATION_E2E_OUT=/tmp/escalation-e2e \
    作为不收敛 worker 的终态边界。停车后 `reply_to_worker` 只能得到 `worker_not_active`。
 2. **legacy primary worker 入口不存在**：上游 `stream_id="worker"` 的手动 escalate 路径在本
    port 没有生产者形态；`escalate` 工具构建器、分发与停车/唤醒语义保留并由 loop 级测试覆盖。
-3. **`node_tool_doom_loop` 事件仍只覆盖 chat**：上游在检测点对所有流发该事件；本 port 的
-   colony worker 目前不发（会话事件日志里不会出现），只有 `ESCALATION_REQUESTED`。属可观测性
-   残余，不影响本链路。text-only stall 自动失败已移植（§7），这是 worker 行为矩阵中与
-   escalation 无关的最后一个已知差异。
+3. **`node_tool_doom_loop` 已覆盖 colony worker（本 lane 移植）**：上游在检测点对所有流发该事件；
+   本 port 现在在 worker loop 的同一检测点发布（`AgentLoop.DoomLoopSink` →
+   `colony.workerDoomLoopSink` → colony bus → 会话桥 → session bus 与 `events.jsonl`），
+   与 `ESCALATION_REQUESTED` 恰好 1:1。见 §8。
 4. **收件箱持久化口径**：与上游一致为内存字典；durable 的一半是 queen 转录里的
    `[WORKER_ESCALATION]` 记录（本 E2E 已断言恰好 1 条）。
 
@@ -173,3 +180,28 @@ HIVE_ESCALATION_E2E_OUT=/tmp/escalation-e2e \
   `internal/colony/worker_stall_test.go`（真实 colony spawn：3 次调用后终止、报告 failed、
   无 escalation 事件、有工具调用者不误杀；Parity:
   `core/tests/test_run_worker_tool.py::test_parallel_worker_stall_auto_fails_with_synthetic_report`）。
+
+## 8. worker 侧 `node_tool_doom_loop`（本 lane 移植）
+
+- **检测/阈值**：与 escalation 同一检测点——`DoomLoopDetector.Observe` 首次跨过
+  `DefaultDoomLoopThreshold=3`（同名同参连续 3 次）。阈值 5 的确定性停车不会发第二个事件。
+- **生产者**：`internal/agentloop/loop_guards.go::reportDoomLoop`（每 turn-loop 锁存）→
+  `AgentLoop.DoomLoopSink` → `internal/colony/worker_doom_loop.go::workerDoomLoopSink`
+  → colony bus。
+- **事件形状**（对齐上游 `emit_tool_doom_loop`；`colony_id` 是上游 StreamEventBus 的作用域戳）：
+  - `type=node_tool_doom_loop`、`stream_id=worker:<id>`、`node_id=worker:<id>`、
+    `execution_id`（worker 上下文为空时退化为 worker id）、`colony_id=<colony stream>`。
+  - `data={"description": "<tool> called N times in a row with identical arguments and the same result"}`。
+- **去重**：`doomLoopReported` 锁存（`ExecuteTurn` 重置）——一个 worker 回合内即使 thrash 出多个
+  streak 也只有 1 个事件；它与 `doomLoopEscalated` 在同一检测点触发，事件与升级恰好 1:1。
+- **可观察性**：事件先落在 colony bus（worker 流上，保持 worker 身份、不加 `relayed_from`）；
+  会话桥 `internal/server/chat_colony_bridge.go::colonyBridgeEventTypes` 把它镜像到 session bus。
+  因此 `GET /api/sessions/{id}/events/history`（读会话 `events.jsonl`）能查到；SSE
+  `?watch=worker:<id>` 能收到（与上游一致：未 watch 的客户端不接收 worker-local 事件）。
+- **测试**：
+  - `internal/agentloop/doom_loop_test.go::TestDoomLoopReportsOnceThroughTheEventSink`
+    （阈值 3、每 turn 1 次、锁存、无重复不产事件）。
+  - `internal/colony/worker_escalation_test.go`（真实 colony spawn：事件与 escalation 各恰好 1 次、
+    payload 字段、worker 继续；参数持续变化的 worker 不产事件）。
+  - `internal/server/chat_colony_bridge_test.go::TestColonyBridgeMirrorsWorkerToolDoomLoop`
+    （colony bus → session bus 镜像 + 会话 `events.jsonl` 落盘）。

@@ -52,6 +52,11 @@ type chatTurnEmitter struct {
 	// contextUsage builds the per-iteration context_usage_updated payload.
 	// Upstream publishes it on every iteration start; nil skips the readout.
 	contextUsage func() map[string]any
+	// requestMessages is the size of the request the provider received for the
+	// current iteration. llm_turn_complete is published after the tool batch
+	// (upstream's timing), so the conversation has already grown by then; the
+	// diagnostics report this snapshot instead.
+	requestMessages int
 }
 
 func (r *ChatRuntime) newTurnEmitter(executionID string) *chatTurnEmitter {
@@ -95,12 +100,18 @@ func (e *chatTurnEmitter) executionStarted(message string) {
 	e.bus.EmitNodeLoopStarted(e.streamID, e.nodeID, &e.executionID, &maxIterations)
 }
 
+// IterationStarted begins one inner turn: it records the iteration for the
+// streaming adapter, announces the node_loop_iteration frame with the queen's
+// phase, follows it with the iteration_start context readout, and clears the
+// previous request's message count so the diagnostics never reuse it.
+//
 // Parity: framework/agent_loop/agent_loop.py::_publish_iteration
 // Parity: framework/agent_loop/internals/event_publishing.py::publish_context_usage
 func (e *chatTurnEmitter) IterationStarted(iteration int) {
 	if e == nil {
 		return
 	}
+	e.requestMessages = 0
 	if e.stream != nil {
 		e.stream.noteIteration(iteration)
 	}
@@ -198,6 +209,20 @@ func (e *chatTurnEmitter) LLMTurnComplete(completion llm.Completion, iteration i
 		&e.executionID, &iteration, prefixSHA, suffixSHA, historyAnchor, messageCount)
 }
 
+// NoteRequestMessages records the size of the request the provider is about to
+// receive (the loop's RequestMessageRecorder seam). llm_turn_complete is
+// published after the tool batch, so the conversation has already absorbed
+// this iteration's assistant and tool messages by then; the diagnostics must
+// report the request upstream computed them from.
+//
+// Parity: framework/agent_loop/agent_loop.py::execute (_compute_turn_diagnostics)
+func (e *chatTurnEmitter) NoteRequestMessages(count int) {
+	if e == nil {
+		return
+	}
+	e.requestMessages = count
+}
+
 // turnDiagnostics mirrors the upstream per-turn cache fingerprints published
 // on llm_turn_complete: 12-char sha256 of the static system prefix and the
 // dynamic suffix, the rolling history cache breakpoint index (none here, so
@@ -211,7 +236,12 @@ func (e *chatTurnEmitter) turnDiagnostics(model string) (prefixSHA, suffixSHA *s
 	prefix := sha256Hex12(e.conv.SystemPromptStatic())
 	suffix := sha256Hex12(e.conv.SystemPromptDynamicSuffix())
 	anchor := -1
-	count := len(e.conv.ToLLMMessages(model))
+	count := e.requestMessages
+	if count <= 0 {
+		// A caller that never reported the request (an auxiliary path) falls
+		// back to the live conversation size.
+		count = len(e.conv.ToLLMMessages(model))
+	}
 	return &prefix, &suffix, &anchor, &count
 }
 
@@ -237,10 +267,13 @@ func (e *chatTurnEmitter) ToolCallCompleted(call agentloop.ToolCallRequest, resu
 // parkReason distinguishes a plain end-of-turn from a turn that parked on an
 // ask_user question.
 //
-// The turn_done park also announces client_input_requested, as upstream's
-// _await_user_input does on every wait; a question/credential park already
-// emitted its request from the tool handler, so this path must not repeat it.
-func (e *chatTurnEmitter) executionCompleted(iterations int, parkReason string) {
+// The park announces client_input_requested once, at the turn boundary, as
+// upstream's _await_user_input does on every wait: a plain turn_done park
+// questionless, an ask_user park carrying the questions it waited on. A
+// credential-form park is the exception — upstream announces
+// client_credential_form_requested instead, which its producer already
+// published.
+func (e *chatTurnEmitter) executionCompleted(iterations int, parkReason string, questions []map[string]any) {
 	if e == nil {
 		return
 	}
@@ -251,25 +284,34 @@ func (e *chatTurnEmitter) executionCompleted(iterations int, parkReason string) 
 		// The persistent queen loop publishes no per-iteration execution
 		// envelope; its first iteration ends at the same park boundary the
 		// dashboard sees on every later turn.
-		e.bus.EmitClientInputRequested(e.streamID, e.nodeID, &e.executionID, nil, &parkReason)
+		e.bus.EmitClientInputRequested(e.streamID, e.nodeID, &e.executionID, questions, &parkReason)
 		e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "awaiting_user", &e.executionID, &parkReason, nil, nil)
 		return
 	}
 	e.bus.EmitNodeLoopCompleted(e.streamID, e.nodeID, iterations, &e.executionID)
-	if !parkEmittedWithRequest(parkReason) {
-		e.bus.EmitClientInputRequested(e.streamID, e.nodeID, &e.executionID, nil, &parkReason)
+	if parkAnnouncesClientRequest(parkReason) {
+		e.bus.EmitClientInputRequested(e.streamID, e.nodeID, &e.executionID, questions, &parkReason)
 	}
 	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "awaiting_user", &e.executionID, &parkReason, nil, nil)
 	e.bus.EmitExecutionCompleted(e.streamID, e.executionID,
 		map[string]any{"status": "completed"}, nil, nil)
 }
 
-// parkEmittedWithRequest reports whether the tool handler already announced
-// the park's client_input_requested (with its questions/credential form), so
-// the turn boundary does not publish a second, questionless copy.
-func parkEmittedWithRequest(parkReason string) bool {
-	return parkReason == string(agentloop.ParkReasonAskUser) ||
-		parkReason == string(agentloop.ParkReasonCredentialForm)
+// parkAnnouncesClientRequest reports whether the park boundary itself
+// announces client_input_requested (upstream's _await_user_input): every wait
+// does, except the ones that announce a richer variant in its place. A
+// credential_form park announces client_credential_form_requested (published
+// by its producer), a colony_suggestion park announces
+// colony_suggestion_requested, and a worker's awaiting_queen wait is silent
+// (emit_client_request=False upstream).
+func parkAnnouncesClientRequest(parkReason string) bool {
+	switch parkReason {
+	case string(agentloop.ParkReasonCredentialForm),
+		string(agentloop.ParkReasonColonySuggestion),
+		string(agentloop.ParkReasonAwaitingQueen):
+		return false
+	}
+	return true
 }
 
 // executionFailed makes a broken turn visible: execution_failed carries the

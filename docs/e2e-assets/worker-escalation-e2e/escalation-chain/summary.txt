@@ -1,4 +1,4 @@
-worker escalation e2e: session=session_20261121_055142_26037683 colony=escalation_e2e
+worker escalation e2e: session=session_20261121_091344_54aa6984 colony=escalation_e2e
 
 chain (model request seq):
   3 worker  identical task_list x3 -> doom-loop escalation
@@ -7,4 +7,5 @@ chain (model request seq):
   8 queen   reply_to_worker
   11 worker  [QUEEN_REPLY] -> report_to_parent
 
-model requests: 3 queen, 3 overseer, 5 worker, 0 other
+model requests: 3 queen, 3 overseer, 5 worker, 1 other
+session events: node_tool_doom_loop stream=worker:worker_1 description="`task_list` called 3 times in a row with identical arguments and the same result"

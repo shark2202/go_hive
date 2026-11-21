@@ -60,14 +60,14 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <div class="card"><div class="k">维度</div><div class="v">13</div><div class="d">模型面 1 · 协议 3 · CLI/通知 2 · 契约/语义 4 · 安全/证据/文档 3</div></div>
 <div class="card ok"><div class="k">可宣布对齐</div><div class="v">3</div><div class="d">模型可见工具面 · control RPC 14831 · 面板/status（R03/R04 修复后）</div></div>
 <div class="card warn"><div class="k">部分对齐</div><div class="v">10</div><div class="d">名字/主路径在，形状、边界或证据有缺口；返回契约（D08）本轮由未对齐升为部分对齐</div></div>
-<div class="card ok"><div class="k">未对齐</div><div class="v">0</div><div class="d">无整维未对齐；D08 剩余残差见 R15（坐标动作图）</div></div>
+<div class="card ok"><div class="k">未对齐</div><div class="v">0</div><div class="d">无整维未对齐；D08 坐标动作附图（R15）已修，剩余为已量化近似</div></div>
 </div>
 <div class="grid g3" style="margin:14px 0">
 <div class="card"><div class="k">工具名覆盖</div><div class="v">22 / 22</div><div class="d">22 个 active 工具名在 Go 全部有 handler；Go 另有 5 个 legacy 类命令，合计 27 canonical commands。</div></div>
 <div class="card ok"><div class="k">control RPC</div><div class="v">46 / 46</div><div class="d">白名单、帧形状、<code>client_hello</code>、notify、reaper 均对齐；证据为本模块 <code>go test -race</code> 与上游对照。</div></div>
 <div class="card ok"><div class="k">模型实际拿到的截图</div><div class="v">800px JPEG + saved_to</div><div class="d">R01 修复后：Chrome 按 <code>clip.scale</code> 输出 800px JPEG(q75)，CLI 落盘 <code>saved_to</code> + <code>_image</code>，Go 运行时 <code>MaybeInlineBrowserImage</code> 把图挂回下一轮；元数据 18 个 key 与 Python 逐 key 相同。</div></div>
 </div>
-<p class="sub">判定统计：<span class="pill ok">已对齐 3</span> <span class="pill warn">部分对齐 10</span> <span class="pill bad">未对齐 0</span> <span class="pill info">未验证 0</span>。共 15 条残差（R01–R15）；已修 9（R01–R08、R12——R03/R04 修复轮 1，R01/R02/R05/R06/R07/R08/R12 修复轮 2），剩余 6：高 0、中 3（R09–R11）、低 2（R13–R14）、新增 1（R15，坐标动作图）。</p>
+<p class="sub">判定统计：<span class="pill ok">已对齐 3</span> <span class="pill warn">部分对齐 10</span> <span class="pill bad">未对齐 0</span> <span class="pill info">未验证 0</span>。共 15 条残差（R01–R15）；已修 10（R01–R08、R12、R15——R03/R04 修复轮 1，R01/R02/R05/R06/R07/R08/R12 修复轮 2，R15 修复轮 3），剩余 5：高 0、中 3（R09–R11）、低 2（R13–R14）。</p>
 </section>
 
 <section id="dims"><h2><span class="num">02</span>13 维逐项核对</h2>
@@ -137,11 +137,11 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:30%">Python 参考行为</th><th style="width:28%">Go 当前行为</th><th>证据 / 影响</th></tr></thead><tbody>
 <tr><td>截图</td><td>800px 宽 JPEG(q75)，PIL 注解高亮；返回 <code>[TextContent(metadata), ImageContent(image/jpeg)]</code>；CLI 模式落盘 <code>&lt;ArtifactDir&gt;/browser_screenshot_&lt;ms&gt;_tab&lt;id&gt;.jpg</code>，返回 <code>saved_to</code> + <code>_image</code>，框架下一轮自动挂图。</td><td><b>R01 已修（2026-11-21）</b>：桥接受 <code>format=jpeg&amp;quality=75&amp;max_width=800</code>，以 <code>clip.scale=800/cssWidth</code> 让 Chrome 原生渲染 800px JPEG；CLI 落盘 <code>browser_screenshot_&lt;ms&gt;_tab&lt;id&gt;.jpg</code>，返回与 Python 逐 key 相同的 18 个字段（含 <code>saved_to</code>/<code>_image</code>/<code>crop_box</code>/<code>scaleHint</code>）；Go 运行时 <code>MaybeInlineBrowserImage</code> 按 <code>_image.path</code> 挂回下一轮。点击/悬停/按键会记录高亮，下一次截图注入同几何 overlay（<code>annotated:true</code>）。</td><td><code>inspection.py:134-256,505-515</code>；<code>commands_page.go</code> cmdScreenshot；<code>browser_cli_artifacts.go</code>；<code>mcp.go:197-240</code>、<code>mcp_registry.go:584,812</code>；实测 §04.7 + fixture（before/after 与 Python 参考）。编码近似（Chrome/Skia 重采样+编码 vs PIL LANCZOS+libjpeg）已在 fixture README 量化：800×450、物理比例、字段逐值相同，字节级不等价。</td></tr>
 <tr><td>快照</td><td>桥返回 <code>tree</code>；工具层落盘 <code>browser_snapshot_&lt;ms&gt;_tab&lt;id&gt;.txt</code>，返回 <code>{ok,tabId,url,length,saved_to}</code>；行内 <code>[ref=eN]</code>、<code>[href="…"]</code>；&gt;50000 节点或可见&lt;10 且 &gt;500 走 DOM fallback；快照前查 pending dialog。</td><td><b>R02 已修（2026-11-21）</b>：桥内实现 refs（<code>eN</code>）、<code>[href="…"]</code>（含 DOM 漏链接补充段）、<code>_clean_inline_text_boxes</code>、DOM fallback、dialog 前置检查（<code>pending_dialog</code> → 7）；CLI 落盘并返回 <code>{ok,tabId,url,length,saved_to}</code>，<code>page snapshot --head</code> 读 artifact 生效。真桥 e2e 树文本与 Python 逐字节相同（112 chars）。</td><td><code>inspection.py:751-826</code>；<code>bridge.py:5421-5499,5666-5898</code>；<code>refs.py:108-139</code>；<code>commands_page.go</code> cmdSnapshot；<code>commands_page_snapshot.go</code>；<code>browser_cli_artifacts.go</code>；实测 §04.7，回归 <code>TestSnapshotAddsRefsHrefAndMissedLinks</code>、<code>TestSnapshotFallsBackToDOMWhenAXMostlyIgnored</code>、<code>TestSnapshotBlockedByPendingDialog</code>、<code>TestBrowserCLISnapshotSpillsArtifact</code>。</td></tr>
-<tr><td>坐标动作图</td><td>坐标 click/hover/key 成功后追加一张注解截图（<code>_build_visual_response</code>），高亮落点。</td><td>仍只回 JSON；高亮已记录并可被下一次 <code>screenshot</code> 注解，但动作结果本身不带图。</td><td><code>interact.py:180-205</code>（调用点 871/885/944）。保留为 R15。</td></tr>
+<tr><td>坐标动作图</td><td>坐标 click/hover/key 成功后追加一张注解截图（<code>_build_visual_response</code>），高亮落点；工具层返回 <code>[TextContent(动作 dict), ImageContent]</code>，CLI 侧 <code>_blocks_to_cli_dict</code> 只加 <code>saved_to</code>+<code>_image</code>。</td><td><b>R15 已修（2026-11-21）</b>：坐标 click/hover/key 结果多 <code>data</code>+<code>mimeType</code>（复用 <code>cmdScreenshot</code> 注解路径，overlay 落点即动作刚记录的 highlight）；CLI 只加 <code>saved_to</code>+<code>_image</code>，无新增字段名。真桥+假扩展 e2e 覆盖三动作；真 Chrome 以像素扫描确认 200 px 红色落点标记。selector click/hover、focused key、drag 仍不附图（与上游一致）。</td><td><code>interact.py:180-205</code>（调用点 871/885/944）；<code>commands_interact.go::attachInteractImage</code>；<code>browser_cli_artifacts.go::spillActionImage</code>；fixtures <code>docs/fixtures/browser-annotated-actions/</code>；回归 <code>TestInteractCoordinate*AttachAnnotatedImage</code>、<code>TestBrowserCLIInteractCoordinateSpillsImagePointer</code>、e2e R15 段（§04.8）。</td></tr>
 <tr><td>HTML / artifact</td><td><code>browser_html</code> 落盘 <code>browser_html_&lt;ms&gt;_tab&lt;id&gt;.html</code>，返回 <code>length</code>/<code>saved_to</code>。</td><td><b>已对齐</b>：同样落盘并返回 <code>length</code>/<code>saved_to</code>。</td><td><code>commands_read.go:53-98</code>；真实 Chrome 19 步 step 13 已验证。</td></tr>
 <tr><td>其他工具</td><td>text/snapshot/click/type 等返回 dict；截图类才有多模态块。</td><td>全部 dict（Go-native JSON）。</td><td>对非图像工具，形状差异主要在 snapshot/interact 的附加字段（见残差）。</td></tr>
 </tbody></table></div>
-<div class="callout info"><b>本轮收口（2026-11-21）：</b>截图、快照、HTML/artifact 三条主通道已对齐并有真桥实测（§04.7）。D08 由「未对齐」升为「部分对齐」：剩下的唯一形状差异是<b>坐标动作自动附图</b>（R15），外加两条已量化的近似——注解像素级（页面 overlay vs PIL 字体/alpha）与图像编码器（Chrome/Skia vs PIL/libjpeg，尺寸与元数据逐值相同、字节不等价）。</div>
+<div class="callout info"><b>修复轮 3（2026-11-21，工作树 <code>browser-annotated-actions</code>）：</b>坐标动作附图（R15）已修——click/hover/key 的坐标分支复用 <code>cmdScreenshot</code> 注解路径把 <code>data</code>+<code>mimeType</code> 合入动作结果，CLI 只加 <code>saved_to</code>+<code>_image</code>；真桥+假扩展 e2e（§04.8）与真 Chrome（坐标 click + 落点像素扫描）双证。D08 仍记「部分对齐」：剩余是<b>已量化近似</b>（注解像素级；Chrome/Skia vs PIL/libjpeg 编码，尺寸与元数据逐值相同、字节不等价；dpr&gt;1 主机上 Go 注解图为 800 CSS px × dpr 设备像素）与<b>动作 dict 字段集</b>沿用 Go legacy 形状（R15 只补图、未改字段名），不含形状缺口。</div>
 
 <h3>2.9 错误与超时语义 <span class="pill warn">部分对齐</span></h3>
 <div class="tablewrap"><table><thead><tr><th style="width:16%">项</th><th style="width:32%">Python 参考行为</th><th style="width:28%">Go 当前行为</th><th>证据 / 精确差异</th></tr></thead><tbody>
@@ -169,8 +169,8 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 
 <h3>2.12 真实 Chrome 验证 <span class="pill warn">部分对齐</span></h3>
 <div class="tablewrap"><table><thead><tr><th style="width:18%">项</th><th style="width:34%">Python 参考</th><th style="width:28%">Go 当前</th><th>证据</th></tr></thead><tbody>
-<tr><td>脚本化 E2E</td><td>仓库内<b>没有</b>真 Chrome 脚本；<code>tools/tests/</code> 是 fake extension / 单元级。</td><td><code>go_hive/browserbridge/scripts/real_chrome_e2e.sh</code>：构建 → fixture → 桥 → chromeloader 装真扩展 → 19 步 → 证据目录。</td><td>脚本 339 行；<code>PARITY.md</code> §10；Chrome 158.0.8127.37 + 扩展 1.7.4。</td></tr>
-<tr><td>覆盖范围</td><td>上游历史验证不可在本仓库复现。</td><td>19 步全 <code>ok:true</code>：status/open/navigate/interact(click/type/key/scroll/zoom)/select/get_text/resize/shadow_query/upload/html/screenshot/snapshot/console/dialog/script/context/stop；29 条断言 PASS。</td><td>截图为 PNG 53KB，解码后可看到输入值、下拉选择、上传文件名与 shadow 文本。</td></tr>
+<tr><td>脚本化 E2E</td><td>仓库内<b>没有</b>真 Chrome 脚本；<code>tools/tests/</code> 是 fake extension / 单元级。</td><td><code>go_hive/browserbridge/scripts/real_chrome_e2e.sh</code>：构建 → fixture → 桥 → chromeloader 装真扩展 → 19 步 → 证据目录。</td><td>脚本 380 行；<code>PARITY.md</code> §10；Chrome 158.0.8127.37 + 扩展 1.7.4。</td></tr>
+<tr><td>覆盖范围</td><td>上游历史验证不可在本仓库复现。</td><td>19 步全 <code>ok:true</code>：status/open/navigate/interact(click/type/key/scroll/zoom)/select/get_text/resize/shadow_query/upload/html/screenshot/snapshot/console/dialog/script/context/stop；29 条断言 PASS。<b>2026-11-21 修复轮 3 本机重跑</b>：19 步 + 坐标 click 探针全部 PASS（Chrome 158.0.8127.37；本机 14829 被占，扩展副本仅改端口常量，见 §04.8）。</td><td>截图为 PNG 53KB，解码后可看到输入值、下拉选择、上传文件名与 shadow 文本；坐标 click 注解图 1600×893，红色落点 marker 扫描 200 px。</td></tr>
 <tr><td>未覆盖</td><td>—</td><td>多 profile 同时连接、hand-over、full-page 截图、sweep/rate limit 全路径仍只有 fake-extension 证据；单 macOS 主机。</td><td><code>PARITY.md</code> §8 明示，未夸大。</td></tr>
 </tbody></table></div>
 <p class="sub">判定说明：这一维不是「行为差异」，而是「证据不对称」。Go 的真机证据强于上游仓库内可复现证据，但覆盖面仍有限，故记部分对齐而不是已对齐。</p>
@@ -185,7 +185,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </section>
 
 <section id="residual"><h2><span class="num">03</span>残差清单（按影响排序）</h2>
-<p class="sub">严重度：高 = 模型能力/用户可见状态直接缺失；中高 = 契约形状或退出码可被 agent 观测；中 = 边界/并发/大响应；低 = 口径与文案。每条都给「Python / Go / 证据」。原审计不改行为；<b>修复轮 1（2026-11-21）</b>收口 R03/R04/R05（含 R06、R08）；<b>修复轮 2（2026-11-21，工作树 <code>browser-return-contract</code>）</b>收口 R01/R02/R07/R12（截图/快照返回契约与 upload 退出码），其余残差仍待处理。</p>
+<p class="sub">严重度：高 = 模型能力/用户可见状态直接缺失；中高 = 契约形状或退出码可被 agent 观测；中 = 边界/并发/大响应；低 = 口径与文案。每条都给「Python / Go / 证据」。原审计不改行为；<b>修复轮 1（2026-11-21）</b>收口 R03/R04/R05（含 R06、R08）；<b>修复轮 2（2026-11-21，工作树 <code>browser-return-contract</code>）</b>收口 R01/R02/R07/R12（截图/快照返回契约与 upload 退出码）；<b>修复轮 3（2026-11-21，工作树 <code>browser-annotated-actions</code>）</b>收口 R15（坐标动作附图），其余残差仍待处理。</p>
 <div class="tablewrap"><table><thead><tr><th style="width:6%">#</th><th style="width:7%">级别</th><th style="width:15%">差异</th><th style="width:36%">Python 行为 → Go 行为</th><th>证据</th></tr></thead><tbody>
 <tr><td>R01</td><td><span class="pill ok">已修</span>（原高）</td><td>截图返回契约断裂</td><td>800px JPEG(q75) + PIL 注解 + <code>saved_to</code> + <code>_image</code> 自动挂下一轮 → 原始 base64（默认 PNG）、无缩放/注解/落盘/标记，模型看不到图。<br><b>2026-11-21 修复</b>：桥 <code>max_width</code> 走 <code>clip.scale</code> 让 Chrome 输出 800px JPEG；CLI 落盘 + <code>saved_to</code>/<code>_image</code>；18 个元数据 key 与 Python 逐 key 相同；点击/悬停/按键记录高亮，下一次截图注入 overlay。实测 §04.7。编码为近似（Chrome/Skia vs PIL/libjpeg），量化见 fixture README。</td><td><code>inspection.py:134-256,505-515</code>；<code>tool_registry.py:81-110</code>；<code>commands_page.go</code> cmdScreenshot；<code>browser_cli_artifacts.go</code>；<code>mcp.go:197-240</code>；回归 <code>TestScreenshotMaxWidthJpegsAt800</code>、<code>TestScreenshotAnnotatesTrackedHighlight</code>、<code>TestBrowserCLIScreenshotSpillsArtifact</code>；e2e R01 段（800×450 JPEG 解码）。</td></tr>
 <tr><td>R02</td><td><span class="pill ok">已修</span>（原高）</td><td>快照 refs/href/DOM fallback/artifact</td><td><code>length</code>+<code>saved_to</code>、<code>[ref=eN]</code>、<code>[href=…]</code>、DOM fallback、dialog 前置检查 → 内联 <code>tree/nodes</code>，无 artifact/refs/href/fallback；<code>page snapshot --head</code> no-op。<br><b>2026-11-21 修复</b>：桥补齐 refs/href/补充段/InlineTextBox 去重/DOM fallback/dialog 检查；CLI 落盘 <code>{ok,tabId,url,length,saved_to}</code>，<code>--head</code> 读 artifact。真桥树文本与 Python 逐字节相同（112 chars）。</td><td><code>inspection.py:751-826</code>；<code>bridge.py:5421-5499,5666-5898</code>；<code>refs.py:108-139</code>；<code>commands_page.go</code>；<code>commands_page_snapshot.go</code>；回归 <code>TestSnapshotAddsRefsHrefAndMissedLinks</code>、<code>TestSnapshotFallsBackToDOMWhenAXMostlyIgnored</code>、<code>TestSnapshotBlockedByPendingDialog</code>、<code>TestBrowserCLISnapshotSpillsArtifact</code>；e2e R02 段。</td></tr>
@@ -201,9 +201,9 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td>R12</td><td><span class="pill ok">已修</span>（原低）</td><td>模型文案承诺不成立</td><td><code>browser_setup.payload.screenshots</code> 说「保存 JPEG 并自动挂到下一轮」；Go 复制了同一段文案，但 CLI 不产生 <code>saved_to</code>，行为与文案不符。<br><b>2026-11-21 修复</b>：CLI 现产生 <code>saved_to</code>/<code>_image</code>，Go 运行时已有 <code>MaybeInlineBrowserImage</code>（terminal 结果 → <code>_image.path</code>/<code>saved_to</code> → data URL 挂下一轮），文案成立。</td><td><code>browser_tools.py:71-75</code>；<code>browser_setup.go:106-110</code>；<code>mcp.go:197-240</code>；<code>mcp_registry.go:584,812</code>；CLI 输出见 §04.7。</td></tr>
 <tr><td>R13</td><td><span class="pill info">低</span></td><td>父死时延口径</td><td>上游 5s × 2 确认（≈5–10s）→ Go 400ms × 2（0.78–0.87s）。行为更快、可用，但「已对齐（≤2s）」应写成「有意加速」。退出机制也不同（SIGTERM supervisor vs exit 0 park）。</td><td><code>bridge_host.py:64-65</code>；<code>main.go:183</code>；<code>browser-host.md</code> §7.1。</td></tr>
 <tr><td>R14</td><td><span class="pill info">低</span></td><td>CLI 增量与文档漂移</td><td>Go CLI 多 5 个 legacy 动词 + <code>--bridge</code>；文档把 <code>/health</code>、<code>/command</code> 当公共 API；PARITY 行 20 把 type_focused 标 active。<br><b>2026-11-21 部分收口</b>：根 help 已列 <code>--json</code>/<code>--profile</code>；面板/status 的形状差异已写入本页与 <code>browser-host.md</code>；§6.1 已按修复后状态重写。剩余：多出的 5 个动词与 <code>--bridge</code>、<code>browser-bridge.html</code> 的 API 口径、PARITY 行 20。</td><td><code>browser_cli_commands.go:27-51</code>；<code>browser-bridge.html:101,189-196</code>；<code>PARITY.md:64,198-207</code>；<code>browser-host.md:336-370</code>。</td></tr>
-<tr><td>R15</td><td><span class="pill info">低</span></td><td>坐标动作不附图</td><td>上游坐标 click/hover/key 成功后把结果改写成 <code>[TextContent, ImageContent]</code>（<code>_build_visual_response</code>，注解落点）→ Go 只回 JSON dict。高亮已在桥内记录，可被下一次 <code>browser_screenshot</code> 注解；差别在「动作结果本身是否带图」。</td><td><code>interact.py:180-205</code>（调用点 871/885/944）；<code>commands_interact.go</code> click/hover/key 分支；<code>commands_page_visual.go</code> 的 highlight 记录。无真机证据差异，属形状增量。</td></tr>
+<tr><td>R15</td><td><span class="pill ok">已修</span>（原低）</td><td>坐标动作不附图</td><td>上游坐标 click/hover/key 成功后把结果改写成 <code>[TextContent, ImageContent]</code>（<code>_build_visual_response</code>，注解落点）→ Go 只回 JSON dict。<br><b>2026-11-21 修复（修复轮 3，工作树 <code>browser-annotated-actions</code>）</b>：坐标分支经 <code>attachInteractImage</code> 复用 <code>cmdScreenshot</code> 注解路径，把 <code>data</code>+<code>mimeType</code> 合入动作结果（失败回退为原结果）；CLI 经 <code>spillActionImage</code> 只加 <code>saved_to</code>+<code>_image</code>。真桥+假扩展 e2e 三动作通过（800×450 JPEG 解码）；真 Chrome 坐标 click 返回 1600×893 注解图，像素扫描到 200 px 红色落点标记（bbox 中心 ≈ 点击点）。实测见 §04.8，fixtures 见 <code>docs/fixtures/browser-annotated-actions/</code>。</td><td><code>interact.py:180-205</code>（调用点 871/885/944）；<code>commands_interact.go</code> click/hover/key 坐标分支 + <code>attachInteractImage</code>；<code>browser_cli_commands.go</code> interact post + <code>browser_cli_artifacts.go::spillActionImage</code>；回归 <code>TestInteractCoordinateClickAttachesAnnotatedImage</code>、<code>TestInteractCoordinateHoverAndKeyAttachAnnotatedImage</code>、<code>TestInteractCoordinateImageFailureDegradesToActionResult</code>、<code>TestBrowserCLIInteractCoordinateSpillsImagePointer</code>；e2e R15 段；<code>real_chrome_e2e.sh</code> 坐标 click 探针（含 marker 扫描）。</td></tr>
 </tbody></table></div>
-<p class="sub">统计（修复轮 2 后）：已修 9（R01–R08、R12）· 剩余 高 0 · 中 3（R09–R11）· 低 3（R13–R15）。R01/R02/R07 的 before/after 原始输出在 <code>docs/fixtures/browser-return-contract/</code>。</p>
+<p class="sub">统计（修复轮 3 后）：已修 10（R01–R08、R12、R15）· 剩余 高 0 · 中 3（R09–R11）· 低 2（R13–R14）。R01/R02/R07 的 before/after 原始输出在 <code>docs/fixtures/browser-return-contract/</code>；R15 的在 <code>docs/fixtures/browser-annotated-actions/</code>。</p>
 </section>
 
 <section id="repro"><h2><span class="num">04</span>复现命令与实测输出</h2>
@@ -448,10 +448,38 @@ Go after 18113 B vs Python 2458 B，两个样本源图不同，仅作量级参�
 标签文本同公式，字体/alpha 混合由页面合成器完成，PIL 输出不逐像素等价。
 Python 侧未做进程级 e2e（本机 14829/14831 被在跑的 Go 桥占用），上表 Python 列是工具层
 函数实测；全链路等价性由 e2e 对同一契约形状的断言承担。</p>
+
+<h3>4.8 R15 修复后实测（真桥 + 假扩展 + 真 Chrome；fixtures 见 <code>docs/fixtures/browser-annotated-actions/</code>）</h3>
+<pre>bash go_hive/scripts/e2e_browser_panel.sh
+== R15: coordinate click/hover/key carry the annotated screenshot ==
+R15 key sets + pointers ok: click/hover/key
+R15 image decode ok: 800x450 JPEG x3
+PASS: hive-browser interact coordinate click/hover/key -> interaction dict + saved_to/_image (800x450 JPEG)</pre>
+<pre># 返回 key 集合（1280×720 假扩展；before = 基线 93193450 构建，after = 本分支）
+bridge click  before: action,button,clickCount,method,ok,tabId,x,y
+bridge click  after : + data,mimeType
+bridge hover  before: action,ok,tabId,x,y          after: + data,mimeType
+bridge key    before: action,key,ok,tabId,x,y      after: + data,mimeType
+cli click     after : action,button,clickCount,method,ok,tabId,x,y,saved_to,_image
+cli hover     after : action,ok,tabId,x,y,saved_to,_image
+cli key       after : action,key,ok,tabId,x,y,saved_to,_image
+# 与上游 _blocks_to_cli_dict 的图像分支相同：动作 dict 保持原样，只加 saved_to + _image；
+# 无 imageWidth/cssWidth/annotated 等截图元数据键，无新增字段名。</pre>
+<pre># 真 Chrome（158.0.8127.37 + 扩展 1.7.4；本机 14829/9229 被在跑的 Hive 会话桥占用，
+# 故用扩展副本仅改 BRIDGE_PORTS=[19849]，端口用 BB_E2E_* env 覆盖）
+BB_E2E_WS_PORT=19849 BB_E2E_HTTP_PORT=19850 BB_E2E_CONTROL_PORT=19851 \
+BB_E2E_LEGACY_PORT=19852 BB_E2E_FIXTURE_PORT=19899 BB_E2E_EXT_DIR=&lt;扩展副本&gt; \
+  bash go_hive/browserbridge/scripts/real_chrome_e2e.sh &lt;out&gt;
+ok  : interact_click_coordinate -> {"action":"click",…,"mimeType":"image/jpeg",…,"x":1152,"y":642.6}
+ok  : click marker 200 red px, bbox=(1424,788)-(1455,816) in 1600x893
+PASS: all steps succeeded against real Chrome (Google Chrome 158.0.8127.37)
+# 注解图 1600×893 = 800 CSS px × dpr(2)：Chrome 的 clip.scale 以 CSS px 计，dpr&gt;1 主机上
+# 是 R01 既有的量化近似（假扩展按 dpr=1 建模，故 e2e 断言为 800×450）。
+# marker bbox 中心 (1439.7,802.4) ≈ 点击点 CSS (1152,642.6) × 1.25——返回的是注解图而非普通截图。</pre>
 </section>
 
 <section id="verdict"><h2><span class="num">05</span>结论：哪些维度可以宣布对齐，哪些不能</h2>
-<div class="callout bad"><b>总口径：不能写「Browser Bridge 已整体对齐」。</b>22/22 active 工具名与 46/46 control RPC 能对上；截图/快照返回契约（D08）在修复轮 2 后升为部分对齐，但坐标动作附图仍缺（R15），CLI 增量、/status 字段集、帧上限、并发隔离仍存在可观察差异。任何「整体已对齐」的表述都会掩盖这些差异。</div>
+<div class="callout bad"><b>总口径：不能写「Browser Bridge 已整体对齐」。</b>22/22 active 工具名与 46/46 control RPC 能对上；截图/快照返回契约（D08）在修复轮 2 后升为部分对齐，坐标动作附图（R15）在修复轮 3 补齐并有真桥/真机实测；CLI 增量、/status 字段集、帧上限、并发隔离仍存在可观察差异。任何「整体已对齐」的表述都会掩盖这些差异。</div>
 <div class="tablewrap"><table><thead><tr><th style="width:8%">维度</th><th style="width:18%">结论</th><th>可以怎么写 / 不能怎么写</th></tr></thead><tbody>
 <tr><td>D01</td><td><span class="pill ok">可宣布对齐</span></td><td>可以写：「模型可见 browser 工具面在两边都只有 <code>browser_setup</code>，name/schema/description 一致」。<b>限定</b>：只到工具定义层；payload 的截图承诺现已在 Go 成立（R12 已修）。</td></tr>
 <tr><td>D02</td><td><span class="pill warn">部分</span></td><td>可以写：「22/22 active 工具名都有 Go handler，13 个 interact action 全实现」。不能写「工具定义已完全对齐」——参数默认值、activeTabId、group 摘要、描述层都不同。</td></tr>
@@ -460,7 +488,7 @@ Python 侧未做进程级 e2e（本机 14829/14831 被在跑的 Go 桥占用）�
 <tr><td>D05</td><td><span class="pill ok">可宣布对齐</span></td><td>可以写：「14831 的 46 个 RPC 方法、帧形状、client_hello、notify、reaper 与上游一致（fake-extension + 单测证据）」。不能写「已用旧版 Python CLI 交叉实测」——没做。</td></tr>
 <tr><td>D06</td><td><span class="pill warn">部分</span></td><td>可以写：「命令树覆盖 22 个 active 工具，另加 5 个 legacy 动词；upload 文件不存在与上游同为 4（R07 修复后）」。不能写「CLI 契约一致」——flag 位置更严（上游无 <code>--bridge</code>）、5 个 legacy 动词无上游对应、evaluate/script 本地校验仍为 6。</td></tr>
 <tr><td>D07</td><td><span class="pill warn">部分</span></td><td>可以写：「adopt/release notify 文本、14831 推送、serve 注入与上游一致；面板 3 路由与 status 探针在 R03/R04 后真桥实测对齐」。不能写「通知/面板全等价」——notify 的具体投递时序未做并发压测。</td></tr>
-<tr><td>D08</td><td><span class="pill warn">部分</span></td><td>可以写：「截图返回 800px JPEG + saved_to/18 字段 + _image 挂下一轮；快照返回 refs/href/DOM fallback + saved_to/length，树文本与上游逐字节相同；upload 退出码 4（R01/R02/R07 修复后，真桥实测）」。不能写「返回契约完全对齐」——坐标动作自动附图（R15）、注解像素级与图像编码器是已量化的近似。</td></tr>
+<tr><td>D08</td><td><span class="pill warn">部分</span></td><td>可以写：「截图返回 800px JPEG + saved_to/18 字段 + _image 挂下一轮；快照返回 refs/href/DOM fallback + saved_to/length，树文本与上游逐字节相同；坐标 click/hover/key 返回注解图（bridge <code>data</code>+<code>mimeType</code>，CLI <code>saved_to</code>+<code>_image</code>，R15 修复后真桥 + 真机实测）；upload 退出码 4」。不能写「返回契约完全对齐」——注解像素级、图像编码器（Skia vs PIL）与 dpr&gt;1 主机上的注解图宽度是已量化近似，动作 dict 字段集沿用 Go legacy 形状（上游 <code>{ok,action,x,y}</code>）。</td></tr>
 <tr><td>D09</td><td><span class="pill warn">部分</span></td><td>可以写：「默认 30s、17 个错误码、pending dialog→7 一致」。不能写「错误语义完全一致」——结构化 bad_request 在 Go 映射 6，上游落到 1。</td></tr>
 <tr><td>D10</td><td><span class="pill warn">部分</span></td><td>可以写：「空闲 10s/30s、exit 0 语义一致；父死 0.8s 比上游 5–10s 更快」。不能写「父死时序已对齐」——是更快，不是同值。</td></tr>
 <tr><td>D11</td><td><span class="pill warn">部分</span></td><td>可以写：「全部 loopback、无鉴权/TLS、同 label 4002、多 profile 路由一致」。不能写「隔离等价」——Python 有 per-tab CDP 锁，Go 没有；<code>has_public_listeners</code> 未移植。</td></tr>
@@ -470,11 +498,11 @@ Python 侧未做进程级 e2e（本机 14829/14831 被在跑的 Go 桥占用）�
 <h3>可以拍板的范围</h3>
 <ul>
 <li><b>可以宣布对齐：</b>D01 模型可见工具面（仅定义层，payload 承诺已成立）、D05 control RPC 14831（仅协议与单测证据）、D07 面板/status（R03/R04 修复后，真桥 + 假扩展实测）。</li>
-<li><b>不能宣布对齐：</b>D08 返回契约（部分对齐：截图/快照已实测对齐，R15 坐标动作附图未做、编码/注解为已量化近似）；D02/D03/D04/D06/D09/D10/D11/D12/D13 均为部分对齐，需带限定词。</li>
-<li><b>对外一句话：</b>「22/22 active 工具、46/46 control RPC、面板 3 路由与 status、截图 800px JPEG + saved_to/_image、快照 refs/href/DOM fallback + artifact 均已移植并有真桥实测；坐标动作附图（R15）、WS 帧上限与 per-tab CDP 隔离仍未对齐——不能称为整体对齐。」</li>
+<li><b>不能宣布对齐：</b>D08 返回契约（部分对齐：截图/快照/坐标动作附图均已实测，编码/注解/dpr 宽度为已量化近似，动作 dict 字段集沿用 Go legacy 形状）；D02/D03/D04/D06/D09/D10/D11/D12/D13 均为部分对齐，需带限定词。</li>
+<li><b>对外一句话：</b>「22/22 active 工具、46/46 control RPC、面板 3 路由与 status、截图 800px JPEG + saved_to/_image、快照 refs/href/DOM fallback + artifact、坐标动作注解图（R15）均已移植并有真桥实测；WS 帧上限与 per-tab CDP 隔离仍未对齐——不能称为整体对齐。」</li>
 </ul>
-<div class="callout info"><b>修复优先级：</b><s>R01/R02（截图与快照返回契约）</s>（2026-11-21 修复轮 2 已修）→ <s>R03/R04（面板 status 与字段）</s>（修复轮 1 已修）→ <s>R05–R08（CLI 退出码/参数）</s>（R05/R06/R07/R08 已修）→ R09/R10（并发与帧上限）。R11–R15 是文档与低风险项，可随修复一起收口。</div>
+<div class="callout info"><b>修复优先级：</b><s>R01/R02（截图与快照返回契约）</s>（2026-11-21 修复轮 2 已修）→ <s>R03/R04（面板 status 与字段）</s>（修复轮 1 已修）→ <s>R05–R08（CLI 退出码/参数）</s>（R05/R06/R07/R08 已修）→ <s>R15（坐标动作附图）</s>（修复轮 3 已修）→ R09/R10（并发与帧上限）。R11/R13/R14 是文档与低风险项，可随修复一起收口。</div>
 </section>
 
-<footer>生成：2026-11-21 00:45 CST · 基线 <code>dab983d4</code>（分支 <code>browser-surface-audit</code>）· 修复轮 1：2026-11-21（分支 <code>browser-panel-status</code>，基线 <code>32092445</code>；R03/R04/R05/R06/R08）· 修复轮 2：2026-11-21（分支 <code>browser-return-contract</code>，基线 <code>db5c4c1b</code>；R01/R02/R07/R12，真桥 + 假扩展实测 + fixtures）· 方法：源码逐行对照 + 本机 CLI/HTTP 实测 + 引用既有真实 Chrome 19 步证据（未重跑）+ §04.2/§04.7 真桥/假扩展 e2e · 相关：<a href="browser-bridge.html">browser-bridge.html</a> · <a href="browser-host.md">browser-host.md</a> · <code>docs/fixtures/browser-return-contract/</code> · <code>go_hive/browserbridge/PARITY.md</code> · <code>go_hive/scripts/e2e_browser_panel.sh</code> · 说明：修复轮零新依赖，七门禁 0；其余残差不在本次范围。</footer>
+<footer>生成：2026-11-21 00:45 CST · 基线 <code>dab983d4</code>（分支 <code>browser-surface-audit</code>）· 修复轮 1：2026-11-21（分支 <code>browser-panel-status</code>，基线 <code>32092445</code>；R03/R04/R05/R06/R08）· 修复轮 2：2026-11-21（分支 <code>browser-return-contract</code>，基线 <code>db5c4c1b</code>；R01/R02/R07/R12，真桥 + 假扩展实测 + fixtures）· 修复轮 3：2026-11-21（分支 <code>browser-annotated-actions</code>，基线 <code>93193450</code>；R15，真桥 + 假扩展 e2e + 真 Chrome 坐标 click 探针 + fixtures）· 方法：源码逐行对照 + 本机 CLI/HTTP 实测 + 引用既有真实 Chrome 19 步证据（修复轮 3 重跑并加坐标 click 探针）+ §04.2/§04.7/§04.8 真桥/假扩展/真机 e2e · 相关：<a href="browser-bridge.html">browser-bridge.html</a> · <a href="browser-host.md">browser-host.md</a> · <code>docs/fixtures/browser-return-contract/</code> · <code>docs/fixtures/browser-annotated-actions/</code> · <code>go_hive/browserbridge/PARITY.md</code> · <code>go_hive/scripts/e2e_browser_panel.sh</code> · 说明：修复轮零新依赖，七门禁 0；其余残差不在本次范围。</footer>
 </div></body></html>

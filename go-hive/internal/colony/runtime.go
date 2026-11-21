@@ -1165,6 +1165,10 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 	tools := r.workerTools(worker)
 	loop, stopHub := r.newWorkerAgentLoop(worker, *cfg, tools)
 	defer stopHub()
+	// The deterministic doom-loop detection is published as
+	// node_tool_doom_loop at the threshold that also raises the escalation, so
+	// the session event log and a watching SSE client see the repetition.
+	loop.DoomLoopSink = r.workerDoomLoopSink(worker)
 	// A goal that declares criteria but whose spec carries no compiled
 	// criteria paragraph still gets a judge: the criteria come from the goal.
 	judgeSpec := worker.Context.AgentSpec

@@ -295,6 +295,48 @@ func TestDoomLoopEscalatesOnceThroughTheWorkerSink(t *testing.T) {
 	}
 }
 
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom
+// loop -> emit_tool_doom_loop). The host sink fires once per turn-loop, on the
+// same detection that escalates, and names the repeating call and streak.
+func TestDoomLoopReportsOnceThroughTheEventSink(t *testing.T) {
+	const path = `{"path":"status.txt"}`
+	scenarios := make([]scriptedResponse, 0, DefaultDoomLoopParkThreshold)
+	for i := 0; i < DefaultDoomLoopParkThreshold; i++ {
+		scenarios = append(scenarios, scriptedResponse{toolCalls: []llm.ToolCall{
+			{ID: "call_" + strconv.Itoa(i), Name: "read_file", Arguments: path},
+		}})
+	}
+	type report struct {
+		tool   string
+		streak int
+	}
+	var reports []report
+	completer := &scriptedCompleter{scenarios: scenarios}
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 10}, successToolExecutor)
+	ctx := judgeTestContext(completer, nil, "read_file")
+	loop.DoomLoopSink = func(tool string, streak int) {
+		reports = append(reports, report{tool: tool, streak: streak})
+	}
+
+	if _, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("system"), nil); err == nil {
+		t.Fatal("ExecuteTurn succeeded, want the doom-loop park")
+	}
+	if len(reports) != 1 {
+		t.Fatalf("doom-loop reports = %#v, want exactly 1 for the streak", reports)
+	}
+	if reports[0].tool != "read_file" || reports[0].streak != DefaultDoomLoopThreshold {
+		t.Fatalf("doom-loop report = %#v, want read_file at the warning threshold %d",
+			reports[0], DefaultDoomLoopThreshold)
+	}
+	description := DoomLoopDescription(reports[0].tool, reports[0].streak)
+	if !strings.Contains(description, "read_file") || !strings.Contains(description, "3 times") {
+		t.Fatalf("description = %q, want the repeating call and streak", description)
+	}
+	if got := loop.Counter("doom_loop_reported"); got != 1 {
+		t.Fatalf("stats[doom_loop_reported] = %d, want 1", got)
+	}
+}
+
 // Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom loop
 // only escalates when the fingerprint really repeats). A turn that keeps
 // changing its arguments must not publish anything.
@@ -324,6 +366,9 @@ func TestDoomLoopWithoutRepetitionPublishesNoEscalation(t *testing.T) {
 	if got := loop.Counter("doom_loop_escalated"); got != 0 {
 		t.Fatalf("stats[doom_loop_escalated] = %d, want 0", got)
 	}
+	if got := loop.Counter("doom_loop_reported"); got != 0 {
+		t.Fatalf("stats[doom_loop_reported] = %d, want 0", got)
+	}
 }
 
 // Parity-exempt: the port latches the automatic escalation once per turn so a
@@ -347,6 +392,8 @@ func TestDoomLoopEscalationIsAtMostOnePerTurn(t *testing.T) {
 	ctx := judgeTestContext(completer, nil, "read_file")
 	ctx.StreamID = "worker:thrash"
 	ctx.EscalationSink = recorder.sink
+	reported := 0
+	loop.DoomLoopSink = func(string, int) { reported++ }
 
 	result, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("system"), nil)
 	if err != nil {
@@ -360,5 +407,8 @@ func TestDoomLoopEscalationIsAtMostOnePerTurn(t *testing.T) {
 	}
 	if requests := recorder.snapshot(); len(requests) != 1 {
 		t.Fatalf("escalation requests = %d, want 1 (the per-turn latch): %#v", len(requests), requests)
+	}
+	if reported != 1 {
+		t.Fatalf("doom-loop event reports = %d, want 1 (the per-turn latch despite two streaks)", reported)
 	}
 }

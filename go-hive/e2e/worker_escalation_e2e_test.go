@@ -440,7 +440,67 @@ func TestWorkerEscalationEndToEnd(t *testing.T) {
 		t.Fatalf("worker transcript carries %d doom-loop escalation notices, want exactly 1", notices)
 	}
 
+	// 12. The session event log carries the same detection as
+	// node_tool_doom_loop exactly once: published on the worker's own stream
+	// and mirrored onto the session bus, so GET /events/history sees what the
+	// transcript already shows.
+	doom := waitForSessionDoomLoop(t, run)
+	streamID, _ := doom["stream_id"].(string)
+	if !strings.HasPrefix(streamID, "worker:") {
+		t.Fatalf("node_tool_doom_loop stream_id = %q, want worker:<id>", streamID)
+	}
+	if nodeID, _ := doom["node_id"].(string); nodeID != streamID {
+		t.Fatalf("node_tool_doom_loop node_id = %q, want the worker stream %q", nodeID, streamID)
+	}
+	if colonyID, _ := doom["colony_id"].(string); colonyID != escalationE2EColonyID {
+		t.Fatalf("node_tool_doom_loop colony_id = %q, want %q", colonyID, escalationE2EColonyID)
+	}
+	doomData, _ := doom["data"].(map[string]any)
+	description, _ := doomData["description"].(string)
+	if !strings.Contains(description, "task_list") || !strings.Contains(description, "3 times") {
+		t.Fatalf("node_tool_doom_loop description = %q, want the repeating call and streak", description)
+	}
+
 	run.writeEvidence(handoff, listed, replied, resumed, repeating)
+}
+
+// sessionDoomLoopEvents parses the session event log's node_tool_doom_loop
+// lines. Unparseable (mid-write) lines are skipped; the caller polls.
+func (r *escalationE2ERun) sessionDoomLoopEvents() []map[string]any {
+	raw, err := os.ReadFile(filepath.Join(r.sessionDir(), "events.jsonl"))
+	if err != nil {
+		return nil
+	}
+	var events []map[string]any
+	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+		if !strings.Contains(line, `"node_tool_doom_loop"`) {
+			continue
+		}
+		var event map[string]any
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			continue
+		}
+		events = append(events, event)
+	}
+	return events
+}
+
+func waitForSessionDoomLoop(t *testing.T, run *escalationE2ERun) map[string]any {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		events := run.sessionDoomLoopEvents()
+		if len(events) == 1 {
+			return events[0]
+		}
+		if len(events) > 1 {
+			t.Fatalf("session event log carries %d node_tool_doom_loop events, want exactly 1", len(events))
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("session event log never carried a node_tool_doom_loop event; server logs:\n%s", run.logs.String())
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 }
 
 func containsString(values []string, needle string) bool {
@@ -535,6 +595,11 @@ func (r *escalationE2ERun) writeEvidence(handoff, listed, replied, resumed, repe
 	fmt.Fprintf(&summary, "\nmodel requests: %d queen, %d overseer, %d worker, %d other\n",
 		kinds[escalationgw.KindQueen], kinds[escalationgw.KindOverseer],
 		kinds[escalationgw.KindWorker], kinds[escalationgw.KindOther])
+	for _, event := range r.sessionDoomLoopEvents() {
+		data, _ := event["data"].(map[string]any)
+		fmt.Fprintf(&summary, "session events: node_tool_doom_loop stream=%v description=%q\n",
+			event["stream_id"], data["description"])
+	}
 	writeFile("summary.txt", []byte(summary.String()))
 	writeFile("model-requests.jsonl", []byte(requests.String()))
 

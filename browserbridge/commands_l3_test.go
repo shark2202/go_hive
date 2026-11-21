@@ -257,6 +257,11 @@ func TestInteractClickBySelectorAttachesSnapshot(t *testing.T) {
 	if res["snapshot"].(map[string]any)["ok"] != true {
 		t.Fatalf("snapshot=%+v", res["snapshot"])
 	}
+	// Selector clicks keep the snapshot contract; the annotated coordinate
+	// image stays a coordinate-action-only addition (R15).
+	if _, present := res["data"]; present {
+		t.Fatalf("selector click must not attach an image: %+v", res)
+	}
 	// Action history recorded the upstream verb/target pair.
 	actions := b.TabActions(501, 8, nil)["actions"].([]TabAction)
 	if len(actions) != 1 || actions[0].Verb != "click" || actions[0].Target != ".btn" {
