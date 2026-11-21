@@ -196,6 +196,12 @@ func pageOutcome(stdout []byte) (status, message string) {
 	}
 	if match := chartErrorPattern.FindSubmatch(prefix); match != nil {
 		message = html.UnescapeString(string(match[1]))
+		// A render error is final: ECharts' 'finished' handler can race the
+		// catch and leave status "ok" next to the error text, but upstream's
+		// evaluate returns {ok:false} regardless of what happens later.
+		if status == "" || status == "ok" {
+			status = "error"
+		}
 	}
 	if status == "" && message != "" {
 		status = "error"

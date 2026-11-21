@@ -31,12 +31,12 @@ manifest and re-reports against the live Go registry.
 - 同名（name 一致）：**41**
 - 仅 Python 有：**13**
 - 仅 Go 有：**103**（其中 87 个是带 `action` 参数的分组工具）
-- 同名工具中 description 逐字一致：**13** / 不一致：**28**
-- 同名工具中 input_schema 逐字一致：**8** / 不一致：**33**
+- 同名工具中 description 逐字一致：**15** / 不一致：**26**
+- 同名工具中 input_schema 逐字一致：**10** / 不一致：**31**
 - 参数总数：Python 156 / Go 167；Python 独有参数 14，Go 独有参数 25
 - 同名参数的类型不一致：**7**
-- 类型相同但可选性（nullable）不一致的参数：**11**
-- `required` 列表不一致的工具：**7**
+- 类型相同但可选性（nullable）不一致的参数：**9**
+- `required` 列表不一致的工具：**6**
 
 ## 4. 默认会话层面的差异（全部）
 
@@ -47,7 +47,7 @@ manifest and re-reports against the live Go registry.
 | `ask_user` | ✅ | ✅ | 1/1 | 0 | 0 | 0 | 0 |
 | `attach_file` | ❌ | ❌ | 2/2 | 0 | 0 | 1 | 0 |
 | `browser_setup` | ✅ | ✅ | 0/0 | 0 | 0 | 0 | 0 |
-| `chart_render` | ❌ | ❌ | 7/7 | 0 | 0 | 0 | 1 |
+| `chart_render` | ✅ | ✅ | 7/7 | 0 | 0 | 0 | 0 |
 | `csv_append` | ❌ | ❌ | 2/2 | 0 | 0 | 1 | 0 |
 | `csv_info` | ❌ | ✅ | 1/1 | 0 | 0 | 0 | 0 |
 | `csv_read` | ❌ | ❌ | 3/3 | 0 | 0 | 0 | 1 |
@@ -82,7 +82,7 @@ manifest and re-reports against the live Go registry.
 | `terminal_pty_run` | ❌ | ❌ | 6/6 | 0 | 0 | 0 | 0 |
 | `terminal_rg` | ❌ | ❌ | 12/13 | 0 | 1 | 0 | 2 |
 | `update_worker_profile` | ✅ | ❌ | 0/9 | 0 | 9 | 0 | 0 |
-| `web_scrape` | ❌ | ❌ | 4/4 | 0 | 0 | 0 | 1 |
+| `web_scrape` | ✅ | ✅ | 4/4 | 0 | 0 | 0 | 0 |
 | `write_file` | ❌ | ❌ | 2/2 | 0 | 0 | 0 | 0 |
 | `write_skill` | ❌ | ❌ | 6/6 | 0 | 0 | 0 | 0 |
 
@@ -293,9 +293,8 @@ Python 侧 schema 有两种来源层：`llm_request`（模型实际收到的，�
 | `update_worker_profile` | lifecycle | `skill_name` | —（Python 无） | —（缺失） | string | 需改 schema：Go 需删该参数或 Python 需补 |
 | `update_worker_profile` | lifecycle | `task` | —（Python 无） | —（缺失） | string | 需改 schema：Go 需删该参数或 Python 需补 |
 | `update_worker_profile` | lifecycle | `tool_filter` | —（Python 无） | —（缺失） | array<string> | 需改 schema：Go 需删该参数或 Python 需补 |
-| `web_scrape` | mcp_catalog | `selector` | optional string | ?string | string | 可（仅 nullable/默认值差异，需显式 `required` 或 `null` 约定） |
 
-共 57 行参数级差异。
+共 56 行参数级差异。
 
 ## 6. proto 类型分布
 
@@ -783,3 +782,73 @@ description 44/44、剥 CONTEXT_PARAMS 44/44、归一化 44/44；raw 40/44（差
 - 证据：`/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/`
   （`capture.py`、`dump_py.py`、`compare.py`、`captures/`、`compare/compare-report.{json,md}`、
   `compare/raw-dumps/`、修前抓包 `*.prefix.json`）；文件 sha256 见 recheck JSON `rounds[4].recheck`。
+
+## 15. round 6 @ chart-envelope-parity（2026-11-21，chart_render envelope 字段级收口）
+
+> 本节由 `chart-envelope-parity` 车道追加（worktree `.wt/chart-envelope-parity`，base `98120156`）。
+> §4.1 的 `chart_render` 行与 §3 三项统计已按本次收口刷新；其余 §1–§12 仍是 round-1 冻结记录。
+> 与 §14.6 的差别：§14.6 拒绝的是「重跑 freeze build 全量改写历史」；本 lane 只对
+> `chart_render` 一条做**手术式刷新**（理由见 15.3），manifest 中该条带
+> `go.refreshed_round: 6` 标记，其余 `go` 快照原样保留。
+
+### 15.1 收口内容（模型可见值级）
+
+| 项 | 收口前 | 收口后 |
+| --- | --- | --- |
+| 成功 envelope `theme` 字段 | Go 多返回 `theme`（上游不返回） | 已删除；10 字段，字段集与顺序同上游 |
+| 成功 envelope 字段顺序 | Go map 序列化按字典序 | struct 按上游 dict 插入序：`kind / spec / file_path / file_url / width / height / dpi / bytes / title / runtime_ms` |
+| 错误 envelope 字段顺序 | Go 字典序（如 `error / kind / retried / spec`） | 上游插入序：`error / kind / spec`（重试后追加 `retried`） |
+| kind 错误文案 | Go 手写单引号 `quote()` | Python `{kind!r}` 语义逐字（引号选择/转义一致：`it's` → `"it's"`，`a'b"c` → `'a\'b"c'`） |
+| 渲染失败文案 | ECharts `finished` 竞态可把 error 翻回 ok（同一非法 spec 5 次中 1 次报错、4 次误报成功） | 错误终态；`data-chart-error` 存在即失败。`<ECharts|Mermaid> render failed: <String(e)>` 与上游逐字 |
+| mermaid 未加载文案 | `throw new Error('mermaid not loaded')` → `Error: mermaid not loaded` | 固定 `mermaid not loaded`（同上游 evaluate 的返回字面量） |
+| 校验顺序 | Go 先查 `width/height/dpi` 再查 kind | 先查 kind（上游顺序），非法 kind 文案优先 |
+| 工具定义 desc / schema | desc❌ schema❌，`output_path` 非 nullable | ✅ ✅；`contracts/tool-definitions.json` 权威文本逐字，`output_path` = `anyOf[string, null]` + `default: null` |
+
+### 15.2 字段级对照（两侧实跑）
+
+成功（Python stub 渲染取 envelope 形状；Go 真实 Chrome 渲染 600×400@96）：
+两边的 JSON key order 相同、`theme` 均不存在、`kind/spec/width/height/dpi/title` 值相等
+（`file_path` 时间戳与 `bytes/runtime_ms` 属运行值）。
+
+错误四例（Python 侧经 `ChartRenderer` + 系统 Chrome，Go 侧真实 Chrome）：
+
+| 用例 | Python | Go | 判定 |
+| --- | --- | --- | --- |
+| `kind=bogus` | `kind must be 'echarts' or 'mermaid', got 'bogus'` | 同 | 逐字，字段 `error/kind/spec` |
+| mermaid 非法源码 | `Mermaid render failed: UnknownDiagramError: No diagram type detected matching given configuration for text: hello world not a diagram` | 同 | 逐字，追加 `retried: true` |
+| echarts `data:"bad"` | `ECharts render failed: TypeError: Cannot read properties of undefined (reading 'get')` | 同 | 逐字（修复竞态后 5/5 稳定） |
+| JSON 字符串 spec 非法 | `spec was a string but not valid JSON: Expecting value: line 1 column 1 (char 0). Pass the spec as a dict, not a JSON-encoded string.` | `…not valid JSON: invalid character 'o' in literal null (expecting 'u'). Pass…` | 框架/前后缀逐字，解码器细则不同（见 15.4） |
+
+证据：`/Users/mac/.hermes/profiles/omh-tui/cache/scratch/chart-envelope-parity/`
+（`python_chart_envelope.txt`、`go_chart_envelope.txt`、`chart_parity_compare.txt`）。
+
+### 15.3 manifest 手术式刷新的理由
+
+`tool_contract_parity.json`（Python 权威文本）在会话目录层已把 `chart_render` 的
+description/schema 覆盖为 Python 契约，因此**模型实际看到的一直是 Python 文本**；
+本轮又把 `charts.ToolDef()` 原始定义也改为同一文本（逐字），于是：
+
+- `TestToolContractFreeze` 的 A 段（reference vs live）：`chart_render` 不出现于 desc/schema 差异清单；
+- B 段（round-1 Go 快照 vs live）：此前的 `chart_render` 文本漂移来自快照陈旧（快照记录的是
+  parity overlay 之前的原始文案），刷新该条后消失。
+
+因此这里刷新的是「快照与两侧当前事实都不一致」的唯一条目，而不是把 round-1 抓包整体改写为当前抓取。
+
+### 15.4 残余差异（本轮不可消除）
+
+| 类别 | 说明 |
+| --- | --- |
+| JSON 解码器细则 | 两侧框架逐字（`…not valid JSON: <.> Pass…`），但 `<.>` 是 `json.loads` 与 `encoding/json` 各自的错误细则（`Expecting value: line 1 column 1 (char 0)` vs `invalid character 'o' in literal null (expecting 'u')`） |
+| 参数校验位置 | FastMCP 在进工具前按 schema 拒绝；Go 在工具内返回 envelope。Go 侧文案：缺 spec `spec is required`、类型错 `kind must be a string, got %T` / `width: must be an integer …`（上游无对应 envelope） |
+| 运输层错误 | 无 Chrome、Chrome 超时、Chrome stderr、页面未报状态、非 PNG 输出等 Go 侧显式错误；上游对应 Playwright 异常路径，不产生同文案 |
+| 嵌套对象 key order | Go 对 `spec` 内层 map 按字典序序列化（JSON 对象无序；值逐字不变）；上游保留输入顺序 |
+| 渲染进程/资源 | 进程模型、无 CDN 回退、截图范围、字体等待、Chromium 版本亚像素差异、`width/height/dpi<=0`、并发：见 `docs/chart-render.md` §8 |
+
+### 15.5 钉住测试与证据
+
+- `internal/charts`：`TestToolDefMatchesUpstreamContract`（ToolDef vs `contracts/tool-definitions.json` 逐字）、
+  `TestSuccessEnvelopeMatchesUpstreamFieldOrder` / `TestErrorEnvelopeMatchesUpstreamFieldOrder`（字段顺序）、
+  `TestInvalidKindMessageUsesPythonRepr`、`TestInvalidKindWinsOverBadSizes`、
+  `TestSmallPNGErrorMatchesUpstreamWording`、
+  `TestPageOutcomeErrorWinsOverRacingOkStatus` / `TestRacedPageErrorSurfacesAsRenderFailure`（竞态回归）。
+- 命令：`CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test ./internal/charts/ ./internal/cli/`。

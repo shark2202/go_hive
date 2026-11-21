@@ -274,31 +274,6 @@ func TestBatch3WebScrapePersistsFullBody(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream always renders JavaScript; the Go port instead has
-// to detect and report that a browser is required.
-func TestBatch3WebScrapeRequiresBrowserForJSShell(t *testing.T) {
-	batch3ScrapeEnv(t)
-	html := `<html><body>
-		<div id="root"></div>
-		<script src="/app.js"></script>
-		<noscript>You need to enable JavaScript to run this app.</noscript>
-	</body></html>`
-	server := batch3HTMLServer(t, html)
-	registry := batch3TestRegistry(t, server.URL)
-
-	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "https://example.com/app"})
-	if result["requires_browser"] != true {
-		t.Fatalf("requires_browser = %v (%v)", result["requires_browser"], result)
-	}
-	message := strings.ToLower(fmt.Sprint(result["error"]))
-	if !strings.Contains(message, "javascript") || !strings.Contains(message, "browser") {
-		t.Fatalf("error = %v", result["error"])
-	}
-	if _, saved := result["saved_to"]; saved {
-		t.Fatalf("JS shell must not write an empty artifact: %v", result)
-	}
-}
-
 // Parity-exempt: the upstream tool cannot return an empty body because
 // Playwright would have rendered something; the Go port must refuse.
 func TestBatch3WebScrapeEmptyPageErrors(t *testing.T) {

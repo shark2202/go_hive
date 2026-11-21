@@ -6,8 +6,10 @@ package charts
 // Upstream (tools/src/chart_tools/tools.py) drives Chromium through Playwright.
 // This port drives the local Chrome binary in headless mode against a temporary
 // page that loads the same bundled ECharts/Mermaid builds, so the PNG comes
-// from the same engine. The success envelope carries the upstream fields plus
-// `theme`, the HIVE_DESKTOP_THEME value the render used.
+// from the same engine. The success envelope is upstream's dict field for
+// field and in upstream's insertion order: kind, spec, file_path, file_url,
+// width, height, dpi, bytes, title, runtime_ms. Theme is renderer input, not
+// part of the returned envelope.
 //
 // Behavioural contract kept from upstream:
 //   - kind must be echarts or mermaid;
@@ -18,6 +20,10 @@ package charts
 //     "spec"} (plus "retried": true);
 //   - a PNG smaller than 200 bytes counts as a failed render;
 //   - no Chrome means an explicit error, never a fabricated PNG.
+//
+// JSON object key order is canonicalized: Go emits the envelope in upstream's
+// field order, and maps nested inside `spec` come out with sorted keys (JSON
+// objects are unordered; values and the echoed spec itself are unchanged).
 
 import (
 	"bytes"
@@ -32,6 +38,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
@@ -62,7 +69,8 @@ type Options struct {
 	Home       string
 }
 
-// Result is the success envelope (upstream fields plus theme).
+// Result is the success envelope exactly as upstream returns it (no theme:
+// the HIVE_DESKTOP_THEME value only selects the renderer's colors).
 type Result struct {
 	Kind      string `json:"kind"`
 	Spec      any    `json:"spec"`
@@ -73,8 +81,33 @@ type Result struct {
 	DPI       int    `json:"dpi"`
 	Bytes     int    `json:"bytes"`
 	Title     string `json:"title"`
-	Theme     string `json:"theme"`
 	RuntimeMS int64  `json:"runtime_ms"`
+}
+
+// successEnvelope and errorEnvelope encode the tool result in upstream's dict
+// insertion order. Python returns a dict; its JSON-RPC serialization preserves
+// the order the handler wrote. Go maps sort keys, so the wire form is built
+// from structs instead.
+type successEnvelope struct {
+	Kind      string `json:"kind"`
+	Spec      any    `json:"spec"`
+	FilePath  string `json:"file_path"`
+	FileURL   string `json:"file_url"`
+	Width     int    `json:"width"`
+	Height    int    `json:"height"`
+	DPI       int    `json:"dpi"`
+	Bytes     int    `json:"bytes"`
+	Title     string `json:"title"`
+	RuntimeMS int64  `json:"runtime_ms"`
+}
+
+// errorEnvelope mirrors upstream's {"error", "kind", "spec"} dict and appends
+// "retried" only after the single retry also failed.
+type errorEnvelope struct {
+	Error   string `json:"error"`
+	Kind    any    `json:"kind"`
+	Spec    any    `json:"spec"`
+	Retried bool   `json:"retried,omitempty"`
 }
 
 // RenderError carries the message the chat surfaces as a "spec invalid" pill.
@@ -87,66 +120,88 @@ type RenderError struct {
 
 func (e *RenderError) Error() string { return e.Message }
 
-// ToolDef advertises chart_render with the upstream argument surface.
+// toolDescription is chart_render's Python docstring verbatim, copied from the
+// frozen reference in go_hive/contracts/tool-definitions.json.
+//
+// Parity: tools/src/chart_tools/tools.py::chart_render
+const toolDescription = `Render a chart or diagram to a high-DPI PNG and return a rich
+envelope so the chat can also render the chart live.
+
+This single tool drives both the live in-chat embedding (chat
+reads ` +
+	"`result.spec`" +
+	` and mounts the same lib in the bubble) and
+the downloadable file (chat shows ` +
+	"`result.file_url`" +
+	` as a link).
+Calling this tool IS the embedding — there is no separate
+"show in chat" step.
+
+Args:
+    kind: "echarts" for ECharts JSON specs (general BI: bar, line,
+          area, scatter, candlestick, heatmap, treemap, sankey,
+          parallel, calendar, gauge, pie, sunburst, geo maps).
+          "mermaid" for diagrams (flowchart, sequence, gantt, ERD,
+          state, mindmap, C4).
+    spec: For kind="echarts", a dict matching the ECharts option
+          schema (https://echarts.apache.org/en/option.html).
+          For kind="mermaid", the raw mermaid source string.
+    title: Short slug used in the auto-generated filename.
+           Trims to lowercase-hyphenated. Required for
+           discoverability via chart_list_recent later.
+    width, height: Logical viewport size in CSS pixels. Default
+          1600×900 is good for slide decks; 1200×800 for web;
+          640×400 for inline thumbnails.
+    dpi: Device pixel ratio for the screenshot. 300 is print
+          quality; 150 is web-retina; 96 is screen-default.
+          Higher dpi = larger file, no quality difference once
+          past the display's native ratio.
+    output_path: Override where the PNG lands. Default is
+          $HIVE_HOME/charts/<UTC-timestamp>-<title>.png.
+
+Note: theme is NOT an argument. It's resolved automatically
+from the desktop's HIVE_DESKTOP_THEME env var so the saved
+chart matches the user's UI without the agent picking.
+
+Returns:
+    {
+      "kind": "echarts" | "mermaid",
+      "spec": <echoed spec>,
+      "file_path": "/abs/path/to/chart.png",
+      "file_url": "file:///abs/path/to/chart.png",
+      "width": 1600,
+      "height": 900,
+      "dpi": 300,
+      "bytes": 142318,
+      "title": "revenue-by-region"
+    }
+
+    On error, returns {"error": "...", "spec": <echoed>, "kind": ...}
+    so the chat can still surface a "spec invalid" pill rather
+    than swallowing the failure.`
+
+// ToolDef advertises chart_render with the upstream argument surface: the
+// model-visible input_schema from contracts/tool-definitions.json verbatim
+// (property set, defaults, and output_path's string|null union included).
 func ToolDef() llm.ToolDef {
 	return llm.ToolDef{
-		Name: ToolName,
-		Description: "Render a chart or diagram to a high-DPI PNG and return a rich envelope so the " +
-			"chat can also render the chart live.\n\n" +
-			"This single tool drives both the live in-chat embedding (chat reads result.spec and " +
-			"mounts the same library in the bubble) and the downloadable file (chat shows " +
-			"result.file_url as a link). Calling this tool IS the embedding — there is no separate " +
-			"\"show in chat\" step.\n\n" +
-			"Args:\n" +
-			"  kind: \"echarts\" for ECharts JSON specs (bar, line, area, scatter, candlestick, " +
-			"heatmap, treemap, sankey, gauge, pie, sunburst, geo maps); \"mermaid\" for diagrams " +
-			"(flowchart, sequence, gantt, ERD, state, mindmap).\n" +
-			"  spec: echarts — a dict matching the ECharts option schema; mermaid — the raw " +
-			"mermaid source string. A JSON-encoded echarts spec string is accepted too.\n" +
-			"  title: short slug used in the auto-generated filename.\n" +
-			"  width, height: logical viewport size in CSS pixels (default 1600x900).\n" +
-			"  dpi: device pixel ratio for the screenshot (300 is print quality, 96 screen).\n" +
-			"  output_path: override where the PNG lands; default $HIVE_HOME/charts/" +
-			"<UTC-timestamp>-<title>.png.\n\n" +
-			"Returns kind, spec, title, file_path, file_url, width, height, dpi, bytes, theme, " +
-			"runtime_ms. On error returns {error, kind, spec} so the chat can surface a " +
-			"\"spec invalid\" pill instead of swallowing the failure. The theme is resolved from " +
-			"HIVE_DESKTOP_THEME, not from an argument.",
+		Name:        ToolName,
+		Description: toolDescription,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"kind": map[string]any{
-					"type":        "string",
-					"description": `"echarts" for ECharts JSON specs, "mermaid" for raw mermaid diagram source.`,
-				},
-				"spec": map[string]any{
-					"description": "For kind=\"echarts\", a dict matching the ECharts option schema " +
-						"(https://echarts.apache.org/en/option.html); a JSON-encoded dict string is also " +
-						"accepted. For kind=\"mermaid\", the raw mermaid source string.",
-				},
-				"title": map[string]any{
-					"type":        "string",
-					"description": "Short slug used in the auto-generated filename (lowercased and hyphenated).",
-					"default":     "",
-				},
-				"width": map[string]any{
-					"type":        "integer",
-					"description": "Logical viewport width in CSS pixels. Default 1600.",
-					"default":     DefaultWidth,
-				},
-				"height": map[string]any{
-					"type":        "integer",
-					"description": "Logical viewport height in CSS pixels. Default 900.",
-					"default":     DefaultHeight,
-				},
-				"dpi": map[string]any{
-					"type":        "integer",
-					"description": "Device pixel ratio for the screenshot: 300 print quality, 150 web-retina, 96 screen.",
-					"default":     DefaultDPI,
-				},
+				"kind":   map[string]any{"type": "string"},
+				"spec":   map[string]any{},
+				"title":  map[string]any{"type": "string", "default": ""},
+				"width":  map[string]any{"type": "integer", "default": DefaultWidth},
+				"height": map[string]any{"type": "integer", "default": DefaultHeight},
+				"dpi":    map[string]any{"type": "integer", "default": DefaultDPI},
 				"output_path": map[string]any{
-					"type":        "string",
-					"description": "Override where the PNG lands. Default $HIVE_HOME/charts/<UTC-timestamp>-<title>.png.",
+					"anyOf": []any{
+						map[string]any{"type": "string"},
+						map[string]any{"type": "null"},
+					},
+					"default": nil,
 				},
 			},
 			"required": []string{"kind", "spec"},
@@ -166,7 +221,7 @@ func ExecuteTool(ctx context.Context, input map[string]any, home string) (string
 	} else {
 		envelope = Envelope(ctx, opts)
 	}
-	payload, marshalErr := json.Marshal(envelope)
+	payload, marshalErr := marshalEnvelope(envelope)
 	if marshalErr != nil {
 		// The spec echo is the only value that can be unencodable (for
 		// example a NaN float smuggled in by a test harness).
@@ -174,6 +229,42 @@ func ExecuteTool(ctx context.Context, input map[string]any, home string) (string
 	}
 	_, isError := envelope["error"]
 	return string(payload), isError
+}
+
+// marshalEnvelope encodes the envelope in upstream's insertion order. Python's
+// handler returns a dict and the JSON-RPC layer preserves that order; Go maps
+// sort their keys, so the model-visible JSON is rebuilt from structs.
+func marshalEnvelope(envelope map[string]any) ([]byte, error) {
+	if message, isError := envelope["error"].(string); isError {
+		retried, _ := envelope["retried"].(bool)
+		return json.Marshal(errorEnvelope{
+			Error:   message,
+			Kind:    envelope["kind"],
+			Spec:    envelope["spec"],
+			Retried: retried,
+		})
+	}
+	kind, _ := envelope["kind"].(string)
+	filePath, _ := envelope["file_path"].(string)
+	fileURL, _ := envelope["file_url"].(string)
+	width, _ := envelope["width"].(int)
+	height, _ := envelope["height"].(int)
+	dpi, _ := envelope["dpi"].(int)
+	bytesValue, _ := envelope["bytes"].(int)
+	title, _ := envelope["title"].(string)
+	runtimeMS, _ := envelope["runtime_ms"].(int64)
+	return json.Marshal(successEnvelope{
+		Kind:      kind,
+		Spec:      envelope["spec"],
+		FilePath:  filePath,
+		FileURL:   fileURL,
+		Width:     width,
+		Height:    height,
+		DPI:       dpi,
+		Bytes:     bytesValue,
+		Title:     title,
+		RuntimeMS: runtimeMS,
+	})
 }
 
 // Envelope renders and returns the dict-shaped result the tool exposes.
@@ -194,14 +285,13 @@ func Envelope(ctx context.Context, opts Options) map[string]any {
 	return map[string]any{
 		"kind":       result.Kind,
 		"spec":       result.Spec,
-		"title":      result.Title,
 		"file_path":  result.FilePath,
 		"file_url":   result.FileURL,
 		"width":      result.Width,
 		"height":     result.Height,
 		"dpi":        result.DPI,
 		"bytes":      result.Bytes,
-		"theme":      result.Theme,
+		"title":      result.Title,
 		"runtime_ms": result.RuntimeMS,
 	}
 }
@@ -223,12 +313,10 @@ func Render(ctx context.Context, opts Options) (Result, error) {
 		dpi = DefaultDPI
 	}
 	result := Result{Kind: opts.Kind, Spec: opts.Spec, Title: opts.Title, Width: width, Height: height, DPI: dpi}
-	if width < 0 || height < 0 || dpi < 0 {
-		return result, &RenderError{Message: fmt.Sprintf(
-			"width, height and dpi must be positive (got %d x %d @ %d dpi)", opts.Width, opts.Height, opts.DPI)}
-	}
+	// Upstream validates kind before it touches the spec or the output path, so
+	// an invalid kind wins over every other input problem.
 	if opts.Kind != "echarts" && opts.Kind != "mermaid" {
-		return result, &RenderError{Message: fmt.Sprintf("kind must be 'echarts' or 'mermaid', got %s", quote(opts.Kind))}
+		return result, &RenderError{Message: fmt.Sprintf("kind must be 'echarts' or 'mermaid', got %s", pyRepr(opts.Kind))}
 	}
 
 	// Coerce a JSON-string ECharts spec to a dict. Common LLM mistake: the
@@ -251,6 +339,13 @@ func Render(ctx context.Context, opts Options) (Result, error) {
 	path, err := ResolveOutputPath(opts.OutputPath, opts.Title, opts.Home)
 	if err != nil {
 		return result, &RenderError{Message: "could not create output dir: " + err.Error()}
+	}
+
+	// Go-only guard: upstream hands 0/negative sizes to Playwright, where they
+	// are undefined behaviour; 0 here means "use the default" (schema default).
+	if width < 0 || height < 0 || dpi < 0 {
+		return result, &RenderError{Message: fmt.Sprintf(
+			"width, height and dpi must be positive (got %d x %d @ %d dpi)", opts.Width, opts.Height, opts.DPI)}
 	}
 
 	// One retry on transient errors (browser cold-start race, font loading
@@ -286,7 +381,6 @@ func Render(ctx context.Context, opts Options) (Result, error) {
 	result.FilePath = path
 	result.FileURL = FileURL(path)
 	result.Bytes = len(pngBytes)
-	result.Theme = theme
 	result.RuntimeMS = time.Since(start).Milliseconds()
 	return result, nil
 }
@@ -458,8 +552,47 @@ func pngDimensions(data []byte) (int, int, bool) {
 	return config.Width, config.Height, true
 }
 
-func quote(value string) string {
-	return "'" + strings.ReplaceAll(value, "'", "\\'") + "'"
+// pyRepr renders a string exactly the way Python's repr() does, because
+// upstream's invalid-kind message interpolates {kind!r}. CPython picks single
+// quotes unless the value contains a single quote and no double quote, and
+// escapes backslashes, the active quote, control characters and
+// non-printable runes.
+func pyRepr(value string) string {
+	active := byte('\'')
+	if strings.ContainsRune(value, '\'') && !strings.ContainsRune(value, '"') {
+		active = '"'
+	}
+	var out strings.Builder
+	out.WriteByte(active)
+	for _, r := range value {
+		switch {
+		case r == '\\':
+			out.WriteString(`\\`)
+		case r == '\n':
+			out.WriteString(`\n`)
+		case r == '\r':
+			out.WriteString(`\r`)
+		case r == '	':
+			out.WriteString(`	`)
+		case r == rune(active):
+			out.WriteByte('\\')
+			out.WriteRune(r)
+		case r < 0x20 || r == 0x7f:
+			fmt.Fprintf(&out, `\x%02x`, r)
+		case r < 0x80:
+			out.WriteRune(r)
+		case unicode.IsPrint(r):
+			out.WriteRune(r)
+		case r <= 0xff:
+			fmt.Fprintf(&out, `\x%02x`, r)
+		case r <= 0xffff:
+			fmt.Fprintf(&out, `\u%04x`, r)
+		default:
+			fmt.Fprintf(&out, `\U%08x`, r)
+		}
+	}
+	out.WriteByte(active)
+	return out.String()
 }
 
 func escapeJSON(text string) string {

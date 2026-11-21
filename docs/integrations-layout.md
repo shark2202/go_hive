@@ -89,6 +89,10 @@ integrations  ──>  integrationkit  ──>  标准库
 `integrationkit` 不知道 catalog、不知道 `builtinCatalog`、不导入 `integrations`，
 也不导入 `internal/tools`。它只回答“一次外部调用需要什么”。
 
+唯一的外部运行时依赖在 `integrations` 自身：`scrape_browser.go` 用
+`go-rod/rod` + `go-rod/stealth`（纯 Go CDP，`CGO_ENABLED=0`）驱动系统
+Chrome/Chromium 渲染 web_scrape 页面；它不进入 `integrationkit`，kit 仍只依赖标准库。
+
 ### 3.1 已在 kit 的内容
 
 | 文件 | 内容 |

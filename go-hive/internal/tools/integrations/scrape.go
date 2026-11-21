@@ -1,11 +1,18 @@
-// Batch 3: web_scrape without a browser.
+// Batch 3: web_scrape with real browser rendering.
 //
-// The upstream tool drives Playwright so it can render JavaScript. This port
-// deliberately does not: it fetches the URL, parses the static HTML with a
-// dependency-free tokenizer, and extracts the readable body. When a page is a
-// client-side shell that only renders with JavaScript, the action returns an
-// explicit requires_browser error instead of an empty body — an empty result
-// is never a success here.
+// The upstream tool drives Playwright + playwright_stealth so it can render
+// JavaScript. This port keeps the same model-visible contract (description and
+// input schema byte-for-byte from the Python capture) and the same extraction
+// pipeline — dependency-free HTML tokenizer, body written to disk — but renders
+// through go-rod/rod + go-rod/stealth against the system Chrome/Chromium. See
+// scrape_browser.go for the browser lifecycle, the Playwright wait semantics
+// (domcontentloaded, then a best-effort networkidle(3s)) and the stealth
+// coverage table.
+//
+// The pre-flight net/http fetch is deliberate: it applies the SSRF guard, the
+// optional robots.txt check, redirect re-validation and the HTTP status /
+// Content-Type checks before any navigation. An empty rendered page is still an
+// error, never a success.
 package integrations
 
 import (
@@ -30,8 +37,16 @@ const batch3BrowserUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleW
 
 type batch3Resolver func(ctx context.Context, host string) ([]string, error)
 
+// batch3Renderer returns the post-JavaScript DOM for a URL. Production runs
+// the shared headless browser (batch3RenderWithBrowser); tests inject a fake
+// so extraction fixtures never need a browser. staticHTML is the pre-flight
+// body — production ignores it, tests may return it to stand in for
+// page.content() on a static fixture.
+type batch3Renderer func(ctx context.Context, target, staticHTML string) (string, error)
+
 type batch3Deps struct {
 	scrapeResolver batch3Resolver
+	scrapeRenderer batch3Renderer
 }
 
 type batch3Option func(*batch3Deps)
@@ -40,27 +55,75 @@ func withBatch3Resolver(resolver batch3Resolver) batch3Option {
 	return func(deps *batch3Deps) { deps.scrapeResolver = resolver }
 }
 
-func defaultBatch3Deps() batch3Deps {
-	return batch3Deps{scrapeResolver: func(ctx context.Context, host string) ([]string, error) {
-		return net.DefaultResolver.LookupHost(ctx, host)
-	}}
+func withBatch3Renderer(renderer batch3Renderer) batch3Option {
+	return func(deps *batch3Deps) { deps.scrapeRenderer = renderer }
 }
+
+func defaultBatch3Deps() batch3Deps {
+	return batch3Deps{
+		scrapeResolver: func(ctx context.Context, host string) ([]string, error) {
+			return net.DefaultResolver.LookupHost(ctx, host)
+		},
+		scrapeRenderer: batch3BrowserRenderer,
+	}
+}
+
+// batch3ScrapeDescription is the upstream web_scrape docstring, byte for byte:
+// go_hive/contracts/tool-definitions.json, 1495 bytes, sha256
+// a479a54a2eb01fe84a58028c23dcd3ba2cfe45ddd4d02f4ad1e3bf9511e04cc1.
+const batch3ScrapeDescription = "Scrape and extract text content from a webpage.\n" +
+	"\n" +
+	"Uses a headless browser to render JavaScript and bypass bot detection.\n" +
+	"Use when you need to read the content of a specific URL,\n" +
+	"extract data from a website, or read articles/documentation.\n" +
+	"\n" +
+	"The extracted text body is **written to a file on disk** rather\n" +
+	"than returned inline — JSON-wrapping multi-KB page text escapes\n" +
+	"every newline and quote, which poisons the agent's context. The\n" +
+	"response carries only metadata (title, description, headings,\n" +
+	"structured data, links) plus ``saved_to`` pointing at the raw\n" +
+	"text file. Use ``terminal_exec(\"cat <saved_to>\")`` (page large\n" +
+	"output via ``terminal_output_get``) or ``terminal_rg`` on\n" +
+	"``saved_to`` to inspect the body. Length is reported via\n" +
+	"``total_length``.\n" +
+	"\n" +
+	"Args:\n" +
+	"    url: URL of the webpage to scrape\n" +
+	"    selector: CSS selector to target specific content (e.g., 'article', '.main-content')\n" +
+	"    include_links: When True, links are inlined as `[text](url)` in\n" +
+	"        the saved body and also returned as a `links` list\n" +
+	"    respect_robots_txt: Whether to respect robots.txt rules (default False —\n" +
+	"        operator has authorization for these one-off, low-volume fetches;\n" +
+	"        pass True to re-enable the check for a given call)\n" +
+	"\n" +
+	"Returns:\n" +
+	"    Dict with: url, final_url, title, description, page_type\n" +
+	"    (article|listing|page), total_length, saved_to, headings,\n" +
+	"    structured_data (json_ld + open_graph), and optionally links.\n" +
+	"    On error, returns {\"error\": str, ...} with a hint when applicable."
 
 var batch3ScrapeTool = &Tool{
 	ID:          "web_scrape_tool",
 	Name:        "web_scrape",
 	DisplayName: "Web Scrape",
-	Summary:     "Fetch a web page and extract its readable text from static HTML (no JavaScript rendering).",
+	Summary:     batch3ScrapeDescription,
 	Actions: []Action{
 		{
-			Name: "web_scrape",
-			Summary: "Extract title, description, headings, structured data and body text from a URL. " +
-				"Pages that only render with JavaScript return an explicit requires_browser error.",
+			Name:     "web_scrape",
+			Summary:  batch3ScrapeDescription,
 			Source:   "web_scrape_tool/web_scrape_tool.py",
 			Required: []string{"url"},
 			Params: map[string]any{
-				"url":                param("string"),
-				"selector":           param("string"),
+				"url": param("string"),
+				// Python: selector: str | None = None → anyOf[string, null]
+				// with an explicit null default.
+				"selector": map[string]any{
+					"anyOf": []any{
+						map[string]any{"type": "string"},
+						map[string]any{"type": "null"},
+					},
+					"default": nil,
+				},
 				"include_links":      paramDefault("boolean", false),
 				"respect_robots_txt": paramDefault("boolean", false),
 			},
@@ -70,7 +133,10 @@ var batch3ScrapeTool = &Tool{
 
 // ---------------------------------------------------------------- action ----
 
-func webScrapeAction(ctx context.Context, rt *Runtime, input map[string]any, resolver batch3Resolver) (any, error) {
+func webScrapeAction(ctx context.Context, rt *Runtime, input map[string]any, resolver batch3Resolver, renderer batch3Renderer) (any, error) {
+	if renderer == nil {
+		renderer = defaultBatch3Deps().scrapeRenderer
+	}
 	rawURL := strings.TrimSpace(stringArg(input, "url"))
 	if rawURL == "" {
 		return map[string]any{"error": "url is required"}, nil
@@ -132,7 +198,28 @@ func webScrapeAction(ctx context.Context, rt *Runtime, input map[string]any, res
 		}, nil
 	}
 
-	doc := batch3ParseHTML(string(body))
+	// Render the final URL in the shared headless browser. Upstream does this
+	// inside Playwright (page.goto + page.content()); the pre-flight fetch above
+	// already validated the target and the redirect chain, so the browser
+	// navigates straight to the resolved URL.
+	rendered, renderErr := renderer(ctx, finalURL, string(body))
+	if renderErr != nil {
+		var unavailable *batch3BrowserUnavailableError
+		if errors.As(renderErr, &unavailable) {
+			return map[string]any{
+				"error":               unavailable.Error(),
+				"browser_unavailable": true,
+				"url":                 target,
+				"hint":                "Install Google Chrome (or Chromium), or set CHROME_PATH to the browser binary, then retry.",
+			}, nil
+		}
+		if ctx.Err() != nil || errors.Is(renderErr, context.DeadlineExceeded) || errTimeout(renderErr) {
+			return map[string]any{"error": "Request timed out"}, nil
+		}
+		return map[string]any{"error": "Browser error: " + renderErr.Error()}, nil
+	}
+
+	doc := batch3ParseHTML(rendered)
 
 	// Structured data is extracted before boilerplate removal because JSON-LD
 	// lives in <script>, which the text walker ignores.
@@ -235,19 +322,9 @@ func webScrapeAction(ctx context.Context, rt *Runtime, input map[string]any, res
 	rawText, links := batch3ExtractText(contentRoot, base, includeLinks)
 	text := batch3CleanText(rawText)
 
-	if text == "" || (len(text) < 20 && len(headings) == 0 && batch3StrongJSSignal(doc)) {
-		if batch3NeedsBrowser(doc, text, len(headings)) {
-			return map[string]any{
-				"error": "Page requires JavaScript rendering: the static HTML contains no readable text " +
-					"(client-side shell detected). Use a browser-capable tool (browser_exec / Playwright) instead.",
-				"requires_browser": true,
-				"url":              target,
-				"final_url":        finalURL,
-				"hint":             "Retry with a JavaScript-capable browser automation tool.",
-			}, nil
-		}
+	if text == "" {
 		return map[string]any{
-			"error":     "Empty page: no readable text was found in the HTML after removing scripts, navigation and boilerplate. Refusing to return an empty result.",
+			"error":     "Empty page: no readable text was found in the rendered HTML after removing scripts, navigation and boilerplate. Refusing to return an empty result.",
 			"url":       target,
 			"final_url": finalURL,
 		}, nil
@@ -1108,29 +1185,4 @@ func batch3CleanText(raw string) string {
 		}
 	}
 	return strings.TrimSpace(strings.Join(lines, "\n"))
-}
-
-// ------------------------------------------------------- JS requirement ------
-
-func batch3StrongJSSignal(doc *batch3Node) bool {
-	for _, id := range []string{"root", "app", "__next", "__nuxt", "react-root", "main-app"} {
-		if mount := batch3FindByID(doc, id); mount != nil && strings.TrimSpace(batch3PlainText(mount)) == "" {
-			return true
-		}
-	}
-	for _, noscript := range batch3FindAll(doc, "noscript") {
-		if strings.Contains(strings.ToLower(batch3PlainText(noscript)), "javascript") {
-			return true
-		}
-	}
-	return false
-}
-
-func batch3NeedsBrowser(doc *batch3Node, text string, headingCount int) bool {
-	scriptCount := len(batch3FindAll(doc, "script"))
-	strong := batch3StrongJSSignal(doc)
-	if text == "" {
-		return scriptCount > 0 || strong
-	}
-	return len(text) < 20 && headingCount == 0 && strong
 }

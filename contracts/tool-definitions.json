@@ -2,10 +2,10 @@
  "schema_version": "1.0",
  "kind": "hive-tool-definition-contract",
  "recheck": {
-  "current_round": 5,
+  "current_round": 6,
   "registry": "go_hive/docs/tool-contract-recheck.json",
-  "report": "go_hive/docs/tool-contract-diff.md §13-§14",
-  "note": "This manifest is the round-1 frozen reference capture (single commit); the `go` blocks below are the round-1 target snapshot and are intentionally not rewritten. Per-round re-captures append to the registry. Round 5 (tool-schema-residual) is the current state: all 41 same-name schemas normalized-identical, run_playbook's folded action/run_id controls moved onto real control tool definitions."
+  "report": "go_hive/docs/tool-contract-diff.md §15",
+  "note": "This manifest is the round-1 frozen reference capture (single commit); the `go` blocks below are the round-1 target snapshot and are intentionally not rewritten, with one surgical exception: chart_render's block was refreshed in round 6 (chart-envelope-parity) because the raw Go ToolDef was aligned to the same Python text the live catalogue already applied, so the snapshot no longer described either side. Everything else stays round-1. Round 6 (§15) is the current state for chart_render."
  },
  "generated_at_utc": "2026-11-20T15:35:11Z",
  "reference": {
@@ -83,17 +83,17 @@
   "shared": 41,
   "python_only": 13,
   "go_only": 103,
-  "description_identical": 13,
-  "description_different": 28,
-  "schema_identical": 8,
-  "schema_different": 33,
+  "description_identical": 15,
+  "description_different": 26,
+  "schema_identical": 10,
+  "schema_different": 31,
   "python_params": 156,
   "go_params": 167,
   "python_only_params": 14,
   "go_only_params": 25,
   "type_mismatches": 7,
-  "optionality_mismatches": 11,
-  "required_mismatches": 7,
+  "optionality_mismatches": 9,
+  "required_mismatches": 6,
   "python_layers": {
    "llm_request+synthetic": 1,
    "llm_request+mcp_catalog": 11,
@@ -492,41 +492,41 @@
    "go": {
     "present": true,
     "layer": "llm_request",
-    "description_identical": false,
-    "input_schema_identical": false,
-    "description": "Render a chart or diagram to a high-DPI PNG and return a rich envelope so the chat can also render the chart live.\n\nThis single tool drives both the live in-chat embedding (chat reads result.spec and mounts the same library in the bubble) and the downloadable file (chat shows result.file_url as a link). Calling this tool IS the embedding — there is no separate \"show in chat\" step.\n\nArgs:\n  kind: \"echarts\" for ECharts JSON specs (bar, line, area, scatter, candlestick, heatmap, treemap, sankey, gauge, pie, sunburst, geo maps); \"mermaid\" for diagrams (flowchart, sequence, gantt, ERD, state, mindmap).\n  spec: echarts — a dict matching the ECharts option schema; mermaid — the raw mermaid source string. A JSON-encoded echarts spec string is accepted too.\n  title: short slug used in the auto-generated filename.\n  width, height: logical viewport size in CSS pixels (default 1600x900).\n  dpi: device pixel ratio for the screenshot (300 is print quality, 96 screen).\n  output_path: override where the PNG lands; default $HIVE_HOME/charts/<UTC-timestamp>-<title>.png.\n\nReturns kind, spec, title, file_path, file_url, width, height, dpi, bytes, theme, runtime_ms. On error returns {error, kind, spec} so the chat can surface a \"spec invalid\" pill instead of swallowing the failure. The theme is resolved from HIVE_DESKTOP_THEME, not from an argument.",
+    "description_identical": true,
+    "input_schema_identical": true,
+    "description": "Render a chart or diagram to a high-DPI PNG and return a rich\nenvelope so the chat can also render the chart live.\n\nThis single tool drives both the live in-chat embedding (chat\nreads `result.spec` and mounts the same lib in the bubble) and\nthe downloadable file (chat shows `result.file_url` as a link).\nCalling this tool IS the embedding — there is no separate\n\"show in chat\" step.\n\nArgs:\n    kind: \"echarts\" for ECharts JSON specs (general BI: bar, line,\n          area, scatter, candlestick, heatmap, treemap, sankey,\n          parallel, calendar, gauge, pie, sunburst, geo maps).\n          \"mermaid\" for diagrams (flowchart, sequence, gantt, ERD,\n          state, mindmap, C4).\n    spec: For kind=\"echarts\", a dict matching the ECharts option\n          schema (https://echarts.apache.org/en/option.html).\n          For kind=\"mermaid\", the raw mermaid source string.\n    title: Short slug used in the auto-generated filename.\n           Trims to lowercase-hyphenated. Required for\n           discoverability via chart_list_recent later.\n    width, height: Logical viewport size in CSS pixels. Default\n          1600×900 is good for slide decks; 1200×800 for web;\n          640×400 for inline thumbnails.\n    dpi: Device pixel ratio for the screenshot. 300 is print\n          quality; 150 is web-retina; 96 is screen-default.\n          Higher dpi = larger file, no quality difference once\n          past the display's native ratio.\n    output_path: Override where the PNG lands. Default is\n          $HIVE_HOME/charts/<UTC-timestamp>-<title>.png.\n\nNote: theme is NOT an argument. It's resolved automatically\nfrom the desktop's HIVE_DESKTOP_THEME env var so the saved\nchart matches the user's UI without the agent picking.\n\nReturns:\n    {\n      \"kind\": \"echarts\" | \"mermaid\",\n      \"spec\": <echoed spec>,\n      \"file_path\": \"/abs/path/to/chart.png\",\n      \"file_url\": \"file:///abs/path/to/chart.png\",\n      \"width\": 1600,\n      \"height\": 900,\n      \"dpi\": 300,\n      \"bytes\": 142318,\n      \"title\": \"revenue-by-region\"\n    }\n\n    On error, returns {\"error\": \"...\", \"spec\": <echoed>, \"kind\": ...}\n    so the chat can still surface a \"spec invalid\" pill rather\n    than swallowing the failure.",
     "input_schema": {
      "properties": {
-      "dpi": {
-       "default": 300,
-       "description": "Device pixel ratio for the screenshot: 300 print quality, 150 web-retina, 96 screen.",
-       "type": "integer"
-      },
-      "height": {
-       "default": 900,
-       "description": "Logical viewport height in CSS pixels. Default 900.",
-       "type": "integer"
-      },
       "kind": {
-       "description": "\"echarts\" for ECharts JSON specs, \"mermaid\" for raw mermaid diagram source.",
        "type": "string"
       },
-      "output_path": {
-       "description": "Override where the PNG lands. Default $HIVE_HOME/charts/<UTC-timestamp>-<title>.png.",
-       "type": "string"
-      },
-      "spec": {
-       "description": "For kind=\"echarts\", a dict matching the ECharts option schema (https://echarts.apache.org/en/option.html); a JSON-encoded dict string is also accepted. For kind=\"mermaid\", the raw mermaid source string."
-      },
+      "spec": {},
       "title": {
        "default": "",
-       "description": "Short slug used in the auto-generated filename (lowercased and hyphenated).",
        "type": "string"
       },
       "width": {
        "default": 1600,
-       "description": "Logical viewport width in CSS pixels. Default 1600.",
        "type": "integer"
+      },
+      "height": {
+       "default": 900,
+       "type": "integer"
+      },
+      "dpi": {
+       "default": 300,
+       "type": "integer"
+      },
+      "output_path": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null
       }
      },
      "required": [
@@ -539,13 +539,7 @@
      "python_only": [],
      "go_only": [],
      "type_mismatches": [],
-     "optionality_mismatches": [
-      {
-       "param": "output_path",
-       "python_nullable": true,
-       "go_nullable": false
-      }
-     ],
+     "optionality_mismatches": [],
      "required_python": [
       "kind",
       "spec"
@@ -554,12 +548,13 @@
       "kind",
       "spec"
      ]
-    }
+    },
+    "refreshed_round": 6
    },
    "parity": {
     "name": true,
-    "description": false,
-    "input_schema": false,
+    "description": true,
+    "input_schema": true,
     "present_in_go": true
    }
   },
@@ -5466,11 +5461,25 @@
    "go": {
     "present": true,
     "layer": "llm_request",
-    "description_identical": false,
-    "input_schema_identical": false,
-    "description": "Extract title, description, headings, structured data and body text from a URL. Pages that only render with JavaScript return an explicit requires_browser error.",
+    "description_identical": true,
+    "input_schema_identical": true,
+    "description": "Scrape and extract text content from a webpage.\n\nUses a headless browser to render JavaScript and bypass bot detection.\nUse when you need to read the content of a specific URL,\nextract data from a website, or read articles/documentation.\n\nThe extracted text body is **written to a file on disk** rather\nthan returned inline — JSON-wrapping multi-KB page text escapes\nevery newline and quote, which poisons the agent's context. The\nresponse carries only metadata (title, description, headings,\nstructured data, links) plus ``saved_to`` pointing at the raw\ntext file. Use ``terminal_exec(\"cat <saved_to>\")`` (page large\noutput via ``terminal_output_get``) or ``terminal_rg`` on\n``saved_to`` to inspect the body. Length is reported via\n``total_length``.\n\nArgs:\n    url: URL of the webpage to scrape\n    selector: CSS selector to target specific content (e.g., 'article', '.main-content')\n    include_links: When True, links are inlined as `[text](url)` in\n        the saved body and also returned as a `links` list\n    respect_robots_txt: Whether to respect robots.txt rules (default False —\n        operator has authorization for these one-off, low-volume fetches;\n        pass True to re-enable the check for a given call)\n\nReturns:\n    Dict with: url, final_url, title, description, page_type\n    (article|listing|page), total_length, saved_to, headings,\n    structured_data (json_ld + open_graph), and optionally links.\n    On error, returns {\"error\": str, ...} with a hint when applicable.",
     "input_schema": {
      "properties": {
+      "url": {
+       "type": "string"
+      },
+      "selector": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null
+      },
       "include_links": {
        "default": false,
        "type": "boolean"
@@ -5478,38 +5487,30 @@
       "respect_robots_txt": {
        "default": false,
        "type": "boolean"
-      },
-      "selector": {
-       "type": "string"
-      },
-      "url": {
-       "type": "string"
       }
      },
-     "required": [],
+     "required": [
+      "url"
+     ],
      "type": "object"
     },
     "param_diff": {
      "python_only": [],
      "go_only": [],
      "type_mismatches": [],
-     "optionality_mismatches": [
-      {
-       "param": "selector",
-       "python_nullable": true,
-       "go_nullable": false
-      }
-     ],
+     "optionality_mismatches": [],
      "required_python": [
       "url"
      ],
-     "required_go": []
+     "required_go": [
+      "url"
+     ]
     }
    },
    "parity": {
     "name": true,
-    "description": false,
-    "input_schema": false,
+    "description": true,
+    "input_schema": true,
     "present_in_go": true
    }
   },

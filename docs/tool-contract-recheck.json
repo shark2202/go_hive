@@ -1,7 +1,7 @@
 {
  "kind": "hive-tool-contract-recheck",
  "schema_version": 1,
- "generated_at_utc": "2026-11-21T14:08:34Z",
+ "generated_at_utc": "2026-11-21T15:44:58Z",
  "scope": "model-visible tools[] of a default queen_growth session, re-captured after terminal-schema-p0 (b9a85d51) and tool-desc-schema-p1 (85988b03) merged",
  "baseline": {
   "frozen_at_commit": "1b9c458a19244379ac65dabd4827addb891045ef",
@@ -940,7 +940,7 @@
   ]
  },
  "divergence_note": "capture ran on branch tool-contract-recheck @ c8cca067; the python reference checkout (/Users/mac/hive, main) was at 889bbfde during the capture and advanced to 98b3a0ab afterwards (env/config contract + qc commits). None of those touch the tool surface: core/ is still a756b1e5, tools/src still 68b6c230f20e, and the captured Python tools[] is byte-identical to the frozen baseline.",
- "current_round": 5,
+ "current_round": 6,
  "rounds": [
   {
    "round": 1,
@@ -2288,6 +2288,112 @@
       "go-first-tools.json": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/captures/go-first-tools.prefix.json",
       "reproduced_residual": "normalized 40/41, failed=[run_playbook], go_only_params={run_playbook: [action, run_id]} (identical to round 4)"
      }
+    }
+   }
+  },
+  {
+   "round": 6,
+   "label": "round 6 @ chart-envelope-parity（chart_render envelope 值级收口：theme 移除、错误字段/顺序/文案对齐）",
+   "generated_at_utc": "2026-11-21T15:44:58Z",
+   "scope": "Close the two model-visible value-level chart_render differences registered in docs/chart-render.md §8 items 6-7 (Go-only `theme` field; renderer error wording source), align the error envelope's field set and field order, and make the raw Go tool definition byte-equal to the Python reference (description + input_schema, including output_path's string|null union). Method: in-process contract comparison, not a new dual-runtime gateway capture. Python's handler was exercised directly: success shape with a deterministic render stub (no Playwright browser bundle on this host), failure cases through the real ChartRenderer with system Chrome via executable_path. Go's envelope was captured through ExecuteTool against real Chrome. All other tools are unchanged and remain at round 5.",
+   "baseline": {
+    "round": 5,
+    "note": "Round 5 closed the same-name schema surface for the other 40 shared tools. chart_render was the remaining desc❌/schema❌ row: round-1 target snapshot text, one optionality mismatch (output_path python-nullable vs go string), and a Go-only theme field in the output envelope."
+   },
+   "recheck": {
+    "python": {
+     "role": "reference",
+     "version": "1.0.14",
+     "checkout": "/Users/mac/hive",
+     "interpreter": "/Users/mac/hive/.venv/bin/python",
+     "source_commits": {
+      "core": "a756b1e51765bc75b0a40e362859452a0a54081b",
+      "tools": "68b6c23095aef8bc9a0dcbc05aeb16e61b1ba8db"
+     },
+     "method": "tools/src/chart_tools/tools.py::chart_render invoked through a FastMCP registration; success envelope with _render_async stubbed to fixed PNG bytes, failure envelopes through the real ChartRenderer (playwright chromium.launch(executable_path=<system Chrome>) because the ms-playwright bundle is absent)."
+    },
+    "go": {
+     "role": "target",
+     "worktree": "/Users/mac/hive/.wt/chart-envelope-parity",
+     "branch": "chart-envelope-parity",
+     "base": "98120156",
+     "build": "CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go build ./internal/charts/ ./internal/cli/",
+     "method": "internal/charts.ExecuteTool against the host Chrome 158, HIVE_DESKTOP_THEME=light, fresh HIVE_HOME"
+    },
+    "statistics": {
+     "chart_render": {
+      "description_identical": true,
+      "input_schema_identical": true,
+      "params_python_go": "7/7",
+      "python_only_params": 0,
+      "go_only_params": 0,
+      "type_mismatches": 0,
+      "optionality_mismatches": 0,
+      "required_identical": true,
+      "success_envelope_fields": [
+       "kind",
+       "spec",
+       "file_path",
+       "file_url",
+       "width",
+       "height",
+       "dpi",
+       "bytes",
+       "title",
+       "runtime_ms"
+      ],
+      "success_envelope_theme_field": false,
+      "error_envelope_fields": [
+       "error",
+       "kind",
+       "spec"
+      ],
+      "error_envelope_retried_field": true
+     },
+     "same_name_frozen_41": {
+      "description_identical": 41,
+      "input_schema_identical": 41,
+      "optionality_mismatches": 0
+     },
+     "manifest_statistics_after_refresh": {
+      "description_identical": 14,
+      "description_different": 27,
+      "schema_identical": 9,
+      "schema_different": 32,
+      "optionality_mismatches": 10
+     }
+    },
+    "changes": [
+     "internal/charts/charts.go: Result/success envelope no longer carries theme; success and error envelopes are encoded from structs in upstream dict insertion order; invalid-kind message uses Python repr semantics; kind is validated before size checks.",
+     "internal/charts/html.go: mermaid-not-loaded records the exact upstream literal; ECharts markReady can no longer flip an error status to ok.",
+     "internal/charts/chrome.go: data-chart-error wins over a racing data-chart-status=ok (upstream evaluate returns {ok:false}).",
+     "internal/charts/charts.go ToolDef: description and input_schema copied verbatim from contracts/tool-definitions.json (output_path anyOf string|null, default null).",
+     "contracts/tool-definitions.json: chart_render go block refreshed (go.refreshed_round=6); statistics recomputed; all other go snapshots unchanged.",
+     "docs/chart-render.md §2/§3/§7/§8 updated; docs/tool-contract-diff.md §3/§4.1 refreshed and §15 appended; docs/tool-parity-matrix.html rows updated."
+    ],
+    "exceptions": [
+     "JSON decode detail text differs (Python json.loads vs Go encoding/json); the upstream frame 'spec was a string but not valid JSON: <detail>. Pass the spec as a dict, not a JSON-encoded string.' is byte-identical.",
+     "Python's FastMCP validates arguments before the tool body; Go returns an in-tool error envelope with Go-side wording (spec is required / kind must be a string, got %T / width: must be an integer).",
+     "Go transport errors (no Chrome, chrome timeout, chrome stderr, page status missing, non-PNG output) have no upstream message counterpart.",
+     "Nested objects inside the echoed spec are marshaled with sorted keys in Go (JSON objects are unordered; values unchanged).",
+     "Renderer process model, no CDN fallback, screenshot area, font wait, Chromium-version subpixel differences, width/height/dpi<=0 and concurrency remain as documented in docs/chart-render.md §8."
+    ],
+    "evidence": {
+     "envelopes": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/chart-envelope-parity/{python_chart_envelope.txt,go_chart_envelope.txt,chart_parity_compare.txt}",
+     "tests": [
+      "TestToolDefMatchesUpstreamContract",
+      "TestSuccessEnvelopeMatchesUpstreamFieldOrder",
+      "TestErrorEnvelopeMatchesUpstreamFieldOrder",
+      "TestInvalidKindMessageUsesPythonRepr",
+      "TestInvalidKindWinsOverBadSizes",
+      "TestSmallPNGErrorMatchesUpstreamWording",
+      "TestPageOutcomeErrorWinsOverRacingOkStatus",
+      "TestRacedPageErrorSurfacesAsRenderFailure"
+     ],
+     "commands": [
+      "CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test ./internal/charts/ ./internal/cli/",
+      "python3 go_hive/scripts/freeze_tool_contract.py check"
+     ]
     }
    }
   }

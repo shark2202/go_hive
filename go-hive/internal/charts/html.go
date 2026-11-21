@@ -143,11 +143,15 @@ try {
   }
 
   // chart.on('finished') fires once the layout pass has settled. With
-  // animation off this is typically synchronous; the double-rAF fallback
-  // keeps empty-series edge cases from hanging.
+  // animation off this is typically synchronous, but ECharts may still
+  // deliver it on a later frame. A render error is final: renderer.py's
+  // evaluate returns {ok:false} before any later 'finished', so this handler
+  // must never overwrite the error status.
   function markReady() {
     window.__chartReady = true;
-    document.documentElement.setAttribute('data-chart-status', 'ok');
+    if (document.documentElement.getAttribute('data-chart-status') !== 'error') {
+      document.documentElement.setAttribute('data-chart-status', 'ok');
+    }
   }
   chart.on('finished', markReady);
   chart.setOption(sanitized);
@@ -175,7 +179,12 @@ window.__chartReady = false;
 (async () => {
   try {
     if (typeof mermaid === 'undefined') {
-      throw new Error('mermaid not loaded');
+      // renderer.py returns the literal 'mermaid not loaded' (not a thrown
+      // Error), and that string is what the agent sees after the prefix.
+      window.__chartError = 'mermaid not loaded';
+      document.documentElement.setAttribute('data-chart-error', 'mermaid not loaded');
+      document.documentElement.setAttribute('data-chart-status', 'error');
+      return;
     }
     mermaid.initialize({
       startOnLoad: false,

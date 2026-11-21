@@ -91,7 +91,7 @@ func newBatch3Registry(opts ...batch3Option) *Registry {
 	}
 	registry.addImpl("pdf_read", "pdf_read", pdfReadAction)
 	registry.addImpl("web_scrape", "web_scrape", func(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-		return webScrapeAction(ctx, rt, input, deps.scrapeResolver)
+		return webScrapeAction(ctx, rt, input, deps.scrapeResolver, deps.scrapeRenderer)
 	})
 	return registry
 }

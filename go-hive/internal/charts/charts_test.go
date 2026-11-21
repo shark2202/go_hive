@@ -225,7 +225,37 @@ func TestPixelSizeScalesByDPI(t *testing.T) {
 
 // ── argument validation / error envelopes ────────────────────────────
 
-// Parity: tools/tests/test_chart_tools_smoke.py::test_render_echarts_invalid_kind_returns_error
+// jsonKeyOrder decodes a JSON object and returns its keys in document order.
+func jsonKeyOrder(t *testing.T, raw string) []string {
+	t.Helper()
+	decoder := json.NewDecoder(strings.NewReader(raw))
+	token, err := decoder.Token()
+	if err != nil {
+		t.Fatalf("decode %q: %v", raw, err)
+	}
+	if delim, ok := token.(json.Delim); !ok || delim != '{' {
+		t.Fatalf("not a JSON object: %q", raw)
+	}
+	keys := []string{}
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			t.Fatal(err)
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			t.Fatalf("non-string key %v in %q", keyToken, raw)
+		}
+		keys = append(keys, key)
+		var value any
+		if err := decoder.Decode(&value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return keys
+}
+
+// Parity: tools/src/chart_tools/tools.py::chart_render
 func TestRenderEChartsInvalidKindReturnsError(t *testing.T) {
 	chartsTestHome(t)
 	result := Envelope(context.Background(), Options{Kind: "bogus", Spec: map[string]any{}, Title: "x"})
@@ -235,24 +265,95 @@ func TestRenderEChartsInvalidKindReturnsError(t *testing.T) {
 	if result["kind"] != "bogus" {
 		t.Fatalf("kind = %v", result["kind"])
 	}
-	if message, _ := result["error"].(string); !strings.Contains(message, "kind must be 'echarts' or 'mermaid', got 'bogus'") {
-		t.Fatalf("error = %q", message)
+	want := "kind must be 'echarts' or 'mermaid', got 'bogus'"
+	if message, _ := result["error"].(string); message != want {
+		t.Fatalf("error = %q, want %q", message, want)
 	}
 	if result["retried"] != nil {
 		t.Fatalf("validation errors must not report retried: %#v", result)
 	}
+	if len(result) != 3 {
+		t.Fatalf("error envelope fields = %d, want 3 (error, kind, spec): %#v", len(result), result)
+	}
 }
 
-// Parity: tools/tests/test_chart_tools_smoke.py::test_render_echarts_accepts_string_spec
+// Parity: tools/src/chart_tools/tools.py::chart_render
+func TestInvalidKindMessageUsesPythonRepr(t *testing.T) {
+	chartsTestHome(t)
+	prefix := "kind must be 'echarts' or 'mermaid', got "
+	cases := []struct {
+		kind string
+		want string
+	}{
+		{"bogus", "'bogus'"},
+		{"it's", `"it's"`},
+		{`a'b"c`, `'a\'b"c'`},
+		{"a\nb", `'a\nb'`},
+		{"", "''"},
+	}
+	for _, test := range cases {
+		result := Envelope(context.Background(), Options{Kind: test.kind, Spec: map[string]any{}})
+		if message, _ := result["error"].(string); message != prefix+test.want {
+			t.Fatalf("kind %q => %q, want %q", test.kind, message, prefix+test.want)
+		}
+	}
+}
+
+// Parity: tools/src/chart_tools/tools.py::chart_render
+func TestInvalidKindWinsOverBadSizes(t *testing.T) {
+	chartsTestHome(t)
+	// Upstream checks kind first, before it ever coerces width/height/dpi.
+	result := Envelope(context.Background(), Options{Kind: "bogus", Spec: map[string]any{}, Width: -5, Height: -5, DPI: -5})
+	want := "kind must be 'echarts' or 'mermaid', got 'bogus'"
+	if message, _ := result["error"].(string); message != want {
+		t.Fatalf("error = %q, want the kind error %q", message, want)
+	}
+}
+
+// TestRenderEChartsStringSpecInvalidJSONReturnsError pins the upstream frame
+// (`spec was a string but not valid JSON: … Pass the spec as a dict …`); the
+// decoder's own detail text differs between json.loads and encoding/json.
+//
+// Parity: tools/src/chart_tools/tools.py::chart_render
 func TestRenderEChartsStringSpecInvalidJSONReturnsError(t *testing.T) {
 	chartsTestHome(t)
 	result := Envelope(context.Background(), Options{Kind: "echarts", Spec: "not-json", Title: "x"})
 	message, _ := result["error"].(string)
-	if !strings.Contains(message, "not valid JSON") || !strings.Contains(message, "Pass the spec as a dict") {
+	if !strings.HasPrefix(message, "spec was a string but not valid JSON: ") ||
+		!strings.HasSuffix(message, ". Pass the spec as a dict, not a JSON-encoded string.") {
 		t.Fatalf("error = %q", message)
 	}
 	if result["spec"] != "not-json" {
 		t.Fatalf("spec echo = %#v", result["spec"])
+	}
+	if result["retried"] != nil {
+		t.Fatalf("validation errors must not report retried: %#v", result)
+	}
+	if len(result) != 3 {
+		t.Fatalf("error envelope fields = %d, want 3: %#v", len(result), result)
+	}
+}
+
+// Parity: tools/src/chart_tools/tools.py::chart_render
+func TestSmallPNGErrorMatchesUpstreamWording(t *testing.T) {
+	chartsTestHome(t)
+	stubChrome(t, func(args []string) ([]byte, []byte, error) {
+		for _, arg := range args {
+			if strings.HasPrefix(arg, "--screenshot=") {
+				if err := os.WriteFile(strings.TrimPrefix(arg, "--screenshot="), []byte("\x89PNG\r\n\x1a\n"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		return okDOM(), nil, nil
+	})
+	result := Envelope(context.Background(), Options{Kind: "echarts", Spec: map[string]any{}, Title: "tiny"})
+	want := "render produced suspiciously small PNG (8 bytes)"
+	if message, _ := result["error"].(string); message != want {
+		t.Fatalf("error = %q, want %q", message, want)
+	}
+	if result["retried"] != nil {
+		t.Fatalf("small-PNG errors must not report retried: %#v", result)
 	}
 }
 
@@ -337,6 +438,39 @@ func TestPageErrorSurfacesInEnvelope(t *testing.T) {
 	}
 }
 
+// Parity: tools/src/chart_tools/renderer.py::_render_in_page
+func TestPageOutcomeErrorWinsOverRacingOkStatus(t *testing.T) {
+	// ECharts can fire 'finished' after the catch recorded the failure; the
+	// dump then carries status="ok" next to the error text. Upstream's
+	// evaluate returns {ok:false} regardless, so the error must win.
+	status, message := pageOutcome([]byte(`<!DOCTYPE html><html data-chart-status="ok" data-chart-error="TypeError: boom">`))
+	if status != "error" || message != "TypeError: boom" {
+		t.Fatalf("pageOutcome = (%q, %q), want (error, TypeError: boom)", status, message)
+	}
+	// A clean success is untouched.
+	status, message = pageOutcome(okDOM())
+	if status != "ok" || message != "" {
+		t.Fatalf("clean success = (%q, %q)", status, message)
+	}
+}
+
+// Parity: tools/src/chart_tools/renderer.py::_render_in_page
+func TestRacedPageErrorSurfacesAsRenderFailure(t *testing.T) {
+	chartsTestHome(t)
+	stubChrome(t, func(args []string) ([]byte, []byte, error) {
+		return []byte(`<!DOCTYPE html><html data-chart-status="ok" ` +
+			`data-chart-error="TypeError: Cannot read properties of undefined (reading &quot;get&quot;)">`), nil, nil
+	})
+	result := Envelope(context.Background(), Options{Kind: "echarts", Spec: map[string]any{}, Title: "raced"})
+	want := `ECharts render failed: TypeError: Cannot read properties of undefined (reading "get")`
+	if message, _ := result["error"].(string); message != want {
+		t.Fatalf("error = %q, want %q", message, want)
+	}
+	if result["retried"] != true {
+		t.Fatalf("expected retried marker: %#v", result)
+	}
+}
+
 // ── Chrome invocation contract ───────────────────────────────────────
 
 // Parity-exempt: the flag set is the Go replacement for Playwright's
@@ -403,20 +537,137 @@ func TestExecuteToolSerializesEnvelope(t *testing.T) {
 	envelope := ExecuteToolJSON(t, map[string]any{
 		"kind": "echarts", "spec": map[string]any{"series": []any{}}, "title": "Envelope Check", "dpi": float64(96),
 	})
-	for _, key := range []string{"kind", "spec", "title", "file_path", "file_url", "width", "height", "dpi", "bytes", "theme", "runtime_ms"} {
+	for _, key := range []string{"kind", "spec", "title", "file_path", "file_url", "width", "height", "dpi", "bytes", "runtime_ms"} {
 		if _, ok := envelope[key]; !ok {
 			t.Fatalf("envelope missing %q: %#v", key, envelope)
 		}
 	}
+	if _, hasTheme := envelope["theme"]; hasTheme {
+		t.Fatalf("theme is renderer input, not an envelope field: %#v", envelope)
+	}
 	if envelope["title"] != "Envelope Check" {
 		t.Fatalf("title = %v", envelope["title"])
-	}
-	if envelope["theme"] != "light" {
-		t.Fatalf("theme = %v", envelope["theme"])
 	}
 	if !strings.HasSuffix(envelope["file_path"].(string), "-envelope-check.png") {
 		t.Fatalf("file_path = %v", envelope["file_path"])
 	}
+}
+
+// Parity: tools/src/chart_tools/tools.py::chart_render
+func TestSuccessEnvelopeMatchesUpstreamFieldOrder(t *testing.T) {
+	chartsTestHome(t)
+	stubChrome(t, func(args []string) ([]byte, []byte, error) {
+		for _, arg := range args {
+			if strings.HasPrefix(arg, "--screenshot=") {
+				writeStubPNG(t, strings.TrimPrefix(arg, "--screenshot="), 600, 400)
+			}
+		}
+		return okDOM(), nil, nil
+	})
+	content, isError := ExecuteTool(context.Background(), map[string]any{
+		"kind": "echarts", "spec": map[string]any{"series": []any{}}, "title": "order", "dpi": float64(96),
+	}, t.TempDir())
+	if isError {
+		t.Fatalf("unexpected tool error: %s", content)
+	}
+	// Python's chart_render returns this dict, and JSON-RPC preserves its order.
+	want := []string{"kind", "spec", "file_path", "file_url", "width", "height", "dpi", "bytes", "title", "runtime_ms"}
+	if got := jsonKeyOrder(t, content); !reflect.DeepEqual(got, want) {
+		t.Fatalf("success field order = %v, want %v", got, want)
+	}
+}
+
+// Parity: tools/src/chart_tools/tools.py::chart_render
+func TestErrorEnvelopeMatchesUpstreamFieldOrder(t *testing.T) {
+	chartsTestHome(t)
+	// Validation error: {"error", "kind", "spec"} with no retried marker.
+	content, isError := ExecuteTool(context.Background(), map[string]any{
+		"kind": "bogus", "spec": map[string]any{"series": []any{}},
+	}, t.TempDir())
+	if !isError {
+		t.Fatalf("invalid kind reported success: %s", content)
+	}
+	if got := jsonKeyOrder(t, content); !reflect.DeepEqual(got, []string{"error", "kind", "spec"}) {
+		t.Fatalf("error field order = %v", got)
+	}
+	if !strings.Contains(content, `"error":"kind must be 'echarts' or 'mermaid', got 'bogus'"`) {
+		t.Fatalf("error text = %s", content)
+	}
+
+	// Render failure after the retry: retried is appended last, as upstream does.
+	stubChrome(t, func(args []string) ([]byte, []byte, error) {
+		return []byte(`<!DOCTYPE html><html data-chart-status="error" data-chart-error="boom">`), nil, nil
+	})
+	content, isError = ExecuteTool(context.Background(), map[string]any{
+		"kind": "echarts", "spec": map[string]any{}, "title": "retry",
+	}, t.TempDir())
+	if !isError {
+		t.Fatalf("render failure reported success: %s", content)
+	}
+	if got := jsonKeyOrder(t, content); !reflect.DeepEqual(got, []string{"error", "kind", "spec", "retried"}) {
+		t.Fatalf("retried error field order = %v (%s)", got, content)
+	}
+}
+
+// Parity: tools/src/chart_tools/tools.py::chart_render
+func TestToolDefMatchesUpstreamContract(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "contracts", "tool-definitions.json")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Skipf("contract manifest not present (%v)", err)
+	}
+	var manifest struct {
+		Tools []struct {
+			Name        string         `json:"name"`
+			Description string         `json:"description"`
+			InputSchema map[string]any `json:"input_schema"`
+		} `json:"tools"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatalf("contract manifest unreadable: %v", err)
+	}
+	var reference *struct {
+		Description string
+		InputSchema map[string]any
+	}
+	for _, tool := range manifest.Tools {
+		if tool.Name == ToolName {
+			reference = &struct {
+				Description string
+				InputSchema map[string]any
+			}{tool.Description, tool.InputSchema}
+			break
+		}
+	}
+	if reference == nil {
+		t.Fatalf("%s missing from the contract manifest", ToolName)
+	}
+
+	def := ToolDef()
+	if def.Name != ToolName {
+		t.Fatalf("name = %q", def.Name)
+	}
+	if def.Description != reference.Description {
+		t.Fatalf("description differs from the upstream reference:\nwant %q\ngot  %q", reference.Description, def.Description)
+	}
+	if got, want := canonicalJSON(t, def.Parameters), canonicalJSON(t, reference.InputSchema); !reflect.DeepEqual(got, want) {
+		t.Fatalf("input_schema differs from the upstream reference:\nwant %#v\ngot  %#v", want, got)
+	}
+}
+
+// canonicalJSON round-trips through encoding/json so Go ints and the JSON
+// decoder's float64 compare as the same JSON value.
+func canonicalJSON(t *testing.T, value any) any {
+	t.Helper()
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out any
+	if err := json.Unmarshal(encoded, &out); err != nil {
+		t.Fatal(err)
+	}
+	return out
 }
 
 // ── real Chrome renders ──────────────────────────────────────────────
@@ -449,8 +700,8 @@ func TestRenderEChartsBarChart(t *testing.T) {
 	if bytesValue, _ := result["bytes"].(int); bytesValue <= 1000 {
 		t.Fatalf("bytes = %v, want > 1000", result["bytes"])
 	}
-	if result["theme"] != "light" {
-		t.Fatalf("theme = %v", result["theme"])
+	if result["theme"] != nil {
+		t.Fatalf("envelope must not carry theme: %#v", result)
 	}
 
 	path := result["file_path"].(string)
@@ -540,9 +791,6 @@ func TestRenderMermaidDarkTheme(t *testing.T) {
 	result := Envelope(context.Background(), Options{Kind: "mermaid", Spec: src, Title: "dark-flow", Width: 600, Height: 400, DPI: 96})
 	if result["error"] != nil {
 		t.Fatalf("unexpected error: %v", result)
-	}
-	if result["theme"] != "dark" {
-		t.Fatalf("theme = %v", result["theme"])
 	}
 	path := result["file_path"].(string)
 	_, _, _, _, counts := pngStats(t, path)

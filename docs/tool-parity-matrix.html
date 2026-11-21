@@ -728,10 +728,10 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 </tr>
 <tr data-search="web_scrape_tool web_scrape web_scrape">
 <td><code>web_scrape_tool</code></td>
-<td><code>web_scrape</code><div class="small">scrape.go</div></td>
+<td><code>web_scrape</code><div class="small">scrape.go + scrape_browser.go</div></td>
 <td class="num">1</td><td class="num">1</td>
 <td><span class="pill ok">已实现</span></td>
-<td><details><summary>1 action</summary><div class="small">上游：web_scrape</div><div class="small">Go：单工具调用</div></details></td>
+<td><details><summary>1 action</summary><div class="small">上游：web_scrape</div><div class="small">Go：单工具调用；rod + 系统 Chrome headless 渲染 JS（无 Chrome 返回 browser_unavailable）</div></details></td>
 </tr>
 <tr data-search="web_search_tool web_search web_search">
 <td><code>web_search_tool</code></td>
@@ -827,7 +827,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr data-search="tracker_sql tracker sql tracker tools 已实现 "><td><code>tracker_sql</code></td><td>tracker SQL</td><td><code>tracker tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
 <tr data-search="tracker_upsert tracker 写入 tracker tools 已实现 "><td><code>tracker_upsert</code></td><td>tracker 写入</td><td><code>tracker tools</code></td><td><span class="pill ok">已实现</span></td><td></td></tr>
 <tr data-search="ask_user 向用户提问并停车 queen_lifecycle/overseer 已实现 chat/overseer 共用 park"><td><code>ask_user</code></td><td>向用户提问并停车</td><td><code>queen_lifecycle/overseer</code></td><td><span class="pill ok">已实现</span></td><td>chat/overseer 共用 park</td></tr>
-<tr data-search="chart_render echarts/mermaid 渲染 tools/src/chart_tools 已实现 chrome 无头渲染 png"><td><code>chart_render</code></td><td>ECharts/Mermaid 渲染</td><td><code>tools/src/chart_tools</code></td><td><span class="pill ok">已实现</span></td><td>Chrome 无头渲染 → PNG；证据 <code>docs/e2e-assets/chart-render-*.png</code>；差异见 docs/chart-render.md</td></tr>
+<tr data-search="chart_render echarts/mermaid 渲染 tools/src/chart_tools 已实现 chrome 无头渲染 png envelope theme 字段级 逐字 round6"><td><code>chart_render</code></td><td>ECharts/Mermaid 渲染</td><td><code>tools/src/chart_tools</code></td><td><span class="pill ok">已实现</span></td><td>Chrome 无头渲染 → PNG；证据 <code>docs/e2e-assets/chart-render-*.png</code>；成功/错误 envelope 字段级对齐（round 6：无 <code>theme</code>、字段顺序与错误文案逐字），残余差异见 docs/chart-render.md §8、docs/tool-contract-diff.md §15</td></tr>
 </tbody></table></div>
 <div class="callout info"><b>已补齐：</b>上游 <code>file_ops</code> 的 4 个文件工具现在 Go 都有（<code>read_file</code>、<code>write_file</code>、<code>edit_file</code>、<code>search_files</code>）。仍存残差：读路径仍受 root 限制、系统 deny list 未逐条复刻；<code>hashline</code>、stale-edit guard、<code>write_safe_root</code> 已补齐。</div>
 </section>
@@ -924,7 +924,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td>colony_template_*（4）</td><td>Python 与 Go 都定义了 <code>colony_template_add/update/remove/list</code>，但两侧均无调用方、不在冻结工具契约中——属上游预留未接线，不是 Go 缺口，验收时按「同形未接线」登记</td></tr>
 <tr><td><code>csv_sql</code> / <code>excel_sql</code></td><td>上游用 DuckDB（native）；纯 Go 无 cgo 不引入，明确返回 unknown action，不伪造</td></tr>
 <tr><td>file_ops 残差</td><td><code>hashline</code>、stale-edit guard、<code>write_safe_root</code> 已补齐；读路径仍严格限 root、上游系统 deny list 未逐条复刻</td></tr>
-<tr><td>chart_render</td><td>已实现（Chrome 无头渲染 ECharts/Mermaid → PNG）；与上游差异见 docs/chart-render.md</td></tr>
+<tr><td>chart_render</td><td>已实现（Chrome 无头渲染 ECharts/Mermaid → PNG）；返回值字段级对齐（round 6：无 <code>theme</code>、成功/错误 envelope 字段顺序与错误文案逐字、工具定义 desc/schema 逐字）；残余（进程模型、无 CDN 回退、参数校验位置、解码器细则等）见 docs/chart-render.md §8</td></tr>
 <tr><td>Browser Bridge</td><td>22/22 active + CLI + serve 托管 + control RPC 14831/空闲退出 + notify 注入 + 3 条面板代理已对齐；残余：快照 ref/注解图、CLI 错误码等形状差异</td></tr>
 <tr><td>Claude Code queen</td><td>运行器/MCP/回复闭环 + 真实 dashboard 列表/transcript 已实现并经真实 <code>claude -p</code> 验证；真实模型主动调 <code>message_queen</code> 未联调</td></tr>
 <tr><td>Soul 自动演化</td><td>每日反思 + <code>POST /soul/reflect</code> 已接通（202/409/review/auto；真实二进制 E2E 用脚本化模型 PASS）；真实模型日调度未跑；差异见 docs/soul-daily-reflection.md</td></tr>

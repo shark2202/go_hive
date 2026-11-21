@@ -37,11 +37,19 @@ func (t *batch3RewriteTransport) RoundTrip(request *http.Request) (*http.Respons
 
 // batch3TestRegistry builds the batch-3 registry with a public-result DNS
 // stub and, when serverURL is set, a transport that reaches the fake server.
+// The default scrape renderer returns the pre-flight body, so extraction tests
+// never launch a browser; renderer-specific tests override it via
+// withBatch3Renderer.
 func batch3TestRegistry(t *testing.T, serverURL string, opts ...batch3Option) *Registry {
 	t.Helper()
-	options := []batch3Option{withBatch3Resolver(func(ctx context.Context, host string) ([]string, error) {
-		return []string{"93.184.216.34"}, nil
-	})}
+	options := []batch3Option{
+		withBatch3Resolver(func(ctx context.Context, host string) ([]string, error) {
+			return []string{"93.184.216.34"}, nil
+		}),
+		withBatch3Renderer(func(_ context.Context, _, staticHTML string) (string, error) {
+			return staticHTML, nil
+		}),
+	}
 	options = append(options, opts...)
 	registry := newBatch3Registry(options...)
 	if serverURL != "" {
