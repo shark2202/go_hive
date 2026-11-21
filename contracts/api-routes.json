@@ -1,26 +1,26 @@
 {
   "schema": "hive-api-routes/1",
   "description": "Frozen HTTP route tables. The contract reference is the Python hive checkout (reference=python@<commit>); go_hive is the target being aligned (target=go_hive@<commit>). Static extraction; path parameters are compared by shape, original spelling preserved.",
-  "reference_id": "python@059f4afe0c977ee8ca7ee998b911a5ce8f19416d",
-  "target_id": "go_hive@059f4afe0c977ee8ca7ee998b911a5ce8f19416d",
+  "reference_id": "python@e702559a631424313374b56659621d74d9965bb6",
+  "target_id": "go_hive@e702559a631424313374b56659621d74d9965bb6",
   "reference": {
     "implementation": "python",
     "version": "1.0.14",
-    "commit": "059f4afe0c977ee8ca7ee998b911a5ce8f19416d",
-    "last_core_commit": "856854659269aa4c9fcfc8ae89ff956eaff75b66",
+    "commit": "e702559a631424313374b56659621d74d9965bb6",
+    "last_core_commit": "8dcaa569684ffe021037105dee7f0a4776bcce1c",
     "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd",
     "source_root": "core/framework/server"
   },
   "target": {
     "implementation": "go_hive",
     "version": "1.0.26-go.1",
-    "commit": "059f4afe0c977ee8ca7ee998b911a5ce8f19416d",
+    "commit": "e702559a631424313374b56659621d74d9965bb6",
     "source_root": "go_hive/go-hive/internal/server"
   },
-  "generated_at": "2026-11-21T14:15:40+08:00",
+  "generated_at": "2026-11-22T02:36:22+08:00",
   "python": {
     "version": "1.0.14",
-    "commit": "059f4afe0c977ee8ca7ee998b911a5ce8f19416d",
+    "commit": "e702559a631424313374b56659621d74d9965bb6",
     "source_root": "core/framework/server",
     "route_count": 217,
     "routes": [
@@ -1768,7 +1768,7 @@
   },
   "go": {
     "version": "1.0.26-go.1",
-    "commit": "059f4afe0c977ee8ca7ee998b911a5ce8f19416d",
+    "commit": "e702559a631424313374b56659621d74d9965bb6",
     "source_root": "go_hive/go-hive/internal/server",
     "route_count": 220,
     "routes": [
@@ -1921,7 +1921,7 @@
         "path": "/api/colonies/tools-index",
         "path_shape": "/api/colonies/tools-index",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_tools.go:45",
+        "source": "go_hive/go-hive/internal/server/routes_colony_tools.go:47",
         "kind": "api"
       },
       {
@@ -2057,7 +2057,7 @@
         "path": "/api/colony/{colony_id}/tools",
         "path_shape": "/api/colony/{}/tools",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_tools.go:48",
+        "source": "go_hive/go-hive/internal/server/routes_colony_tools.go:50",
         "kind": "api"
       },
       {
@@ -2065,7 +2065,7 @@
         "path": "/api/colony/{colony_id}/tools",
         "path_shape": "/api/colony/{}/tools",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_tools.go:51",
+        "source": "go_hive/go-hive/internal/server/routes_colony_tools.go:53",
         "kind": "api"
       },
       {
@@ -2321,7 +2321,7 @@
         "path": "/api/crm/changed",
         "path_shape": "/api/crm/changed",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_events.go:73",
+        "source": "go_hive/go-hive/internal/server/routes_events.go:74",
         "kind": "api"
       },
       {
@@ -2417,7 +2417,7 @@
         "path": "/api/events/global",
         "path_shape": "/api/events/global",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_events.go:70",
+        "source": "go_hive/go-hive/internal/server/routes_events.go:71",
         "kind": "api"
       },
       {

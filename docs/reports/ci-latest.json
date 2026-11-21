@@ -1,9 +1,9 @@
 {
- "wave": 27,
- "at": "2026-11-22 02:28",
- "head": "faa7cf26",
+ "wave": 28,
+ "at": "2026-11-22 02:36",
+ "head": "1bfb106a",
  "ci": 2,
  "qc": 0,
  "publish": 0,
- "note": "四 lane 合并 + registry 重生成后"
+ "note": "ledger/wiring 锚点修复后"
 }
