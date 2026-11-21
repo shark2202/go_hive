@@ -97,7 +97,8 @@
       {
         "id": "g2-support-matrix",
         "label": "G2 支持矩阵与无损替换声明",
-        "hours": 2
+        "hours": 2,
+        "done": true
       }
     ],
     "G3": [

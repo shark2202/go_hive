@@ -30,8 +30,8 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
   <h1>交付治理板：<span>目标 / 时间 / 效率 / 质量</span></h1>
   <p class="lede">本页是 go_hive 对 Hive 字段级逐字一致的交付控制面：三个门槛（G1 字段级、G2 无损替换 RC、G3 商业外发布）、WIP 与合并节奏、质量门禁、时间台账与风险登记。日期是条件日期，取决于外部依赖（Windows 实机、Actions 权限）；未验证项不记为通过。</p>
   <div class="meta">
-    <span>更新：<b>2026-11-21 14:30 CST</b></span>
-    <span>main：<code>059f4afe</code>（+ wave12；G1 闭包验收、G2 证据齐备）</span>
+    <span>更新：<b>2026-11-21 14:35 CST</b></span>
+    <span>main：<code>d99a7a85</code>（G1 闭包、G2 文档齐备）</span>
     <span>CI：<b>5,306 测试 / 5,709 refs</b>（HEAD parity 复跑；CI 日志 5,687）</span>
     <span>QC：<b>8/8</b>（默认项；C3 smoke 复跑 13/13）</span>
     <span>磁盘：可用 <b>240Gi</b>（46%）</span>
@@ -42,7 +42,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <div class="grid g3">
   <div class="card"><div class="k">G1 · 字段级逐字一致</div><div class="v">已闭包 · 11-22</div><div class="d">独立闭包验收通过（8/8 条件，例外已登记）：契约 <code>--check</code> + 双跑 golden + smoke 13/13。报告 <a href="g1-closure-report.md">g1-closure-report.md</a>。</div></div>
   <div class="card"><div class="k">G2 · 老用户无损替换 RC</div><div class="v" style="color:var(--ok)">证据齐备 · 11-22</div><div class="d">数据级无损（v1-rich 50/50、v2-rich 99/99 文件）、凭据互读、回滚 0 删除/0 覆盖、升级实测通过；1 项行为差异 <b>P0-G2-1 待决策</b>（v1 exports 基准，未改行为）。</div></div>
-  <div class="card"><div class="k">G3 · 商业外发布</div><div class="v">目标 12-18</div><div class="d">G2 + Windows 实机、GitHub Actions release 执行、govulncheck/安全审查、六平台归档与安装/升级脚本复验。</div></div>
+  <div class="card"><div class="k">G3 · 商业外发布</div><div class="v">目标 11-22</div><div class="d">G2 + Windows 实机、GitHub Actions release 执行、govulncheck/安全审查、六平台归档与安装/升级脚本复验。</div></div>
 </div>
 <div class="callout info"><b>口径：</b>“字段级”= 名称/类型/默认值/可空/enum/required/读取行为一致；值级差异必须 canonicalize 后比较；字节级、时序、运行期值列为例外，不冒充一致。</div>
 </section>
