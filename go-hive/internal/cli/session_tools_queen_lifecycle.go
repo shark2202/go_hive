@@ -27,25 +27,34 @@ func enableQueenSessionTools(tools *sessionToolCatalogue, manager *hiveserver.Se
 // enableQueenLifecycleTools puts the ten lifecycle tools on a queen session's
 // catalogue. Called only for queen chat sessions (created, resumed, or the
 // preloaded colony session) — never for a worker's declared-tool catalogue.
+//
+// These defs are appended after newSessionToolCatalogue already applied the
+// same-name model-visible contract overlay, so the appended batch is passed
+// through the same overlay here. The parity manifest freezes five of these
+// names (remove_trigger / reply_to_worker / set_trigger / update_worker_profile
+// / run_playbook) against the Python source definitions; without this call the
+// manifest would govern every catalogue owner except the lifecycle table
+// (docs/tool-contract-diff.md §13).
 func enableQueenLifecycleTools(tools *sessionToolCatalogue, session *hiveserver.Session, home hivehome.Home) {
 	if tools == nil || session == nil || tools.queenLifecycle != nil {
 		return
 	}
 	binding := hiveserver.NewQueenLifecycleBinding(session, home)
-	added := 0
+	defs := make([]llm.ToolDef, 0, len(hiveserver.QueenLifecycleToolDefs()))
 	for _, def := range hiveserver.QueenLifecycleToolDefs() {
 		if _, taken := tools.builtinNames[def.Name]; taken {
 			continue
 		}
-		tools.defs = append(tools.defs, llm.ToolDef{
+		defs = append(defs, llm.ToolDef{
 			Name:            def.Name,
 			Description:     def.Description,
 			Parameters:      def.Parameters,
 			ConcurrencySafe: def.ConcurrencySafe,
 		})
-		added++
 	}
-	if added > 0 {
-		tools.queenLifecycle = binding
+	if len(defs) == 0 {
+		return
 	}
+	tools.defs = append(tools.defs, applyToolContractParity(defs)...)
+	tools.queenLifecycle = binding
 }

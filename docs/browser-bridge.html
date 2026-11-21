@@ -98,9 +98,9 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <section id="ports"><h2><span class="num">02</span>端口与协议</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:14%">端口</th><th style="width:26%">用途</th><th>说明</th></tr></thead><tbody>
 <tr><td><code>14829</code></td><td>扩展中继 WebSocket</td><td>路径 <code>/bridge</code>；扩展主动连入；主通道。</td></tr>
-<tr><td><code>14830</code></td><td>HTTP 状态 / 代理 API</td><td><code>/health</code>、<code>/status</code>、<code>/profiles</code>、<code>/contexts</code>、<code>/command</code>、<code>/tabs/{id}/health</code>、<code>/tabs/{id}/actions</code>、adopt/release、star default。</td></tr>
+<tr><td><code>14830</code></td><td>HTTP 状态 / 代理 API</td><td>Python 侧：<code>/status</code>、<code>/profiles</code>、<code>/contexts</code>、<code>/tabs/{id}/health</code>、<code>/tabs/{id}/actions</code>、adopt/release、star default。<b>Go 侧另有</b> <code>/health</code>、<code>/command</code>、<code>/tabs</code>、<code>/contexts/close</code> 四条 additive 端点（本地 CLI/探针用，不是上游公共 API）。</td></tr>
 <tr><td><code>14831</code></td><td>控制 RPC WebSocket</td><td><code>BRIDGE_PORT + 2</code>；<code>BridgeClient</code> ↔ 桥；JSON-RPC 形状 <code>{rpc_id, method, args, params}</code>。</td></tr>
-<tr><td><code>9229 / 9230</code></td><td>legacy 中继 / 状态</td><td>迁移窗口内保留；旧版扩展仍拨 9229。Hive server 的 status 探测默认就是 9230。</td></tr>
+<tr><td><code>9229 / 9230</code></td><td>legacy 中继 / 状态</td><td>迁移窗口内保留；旧版扩展仍拨 9229。Python 桥同时监听 9229（WS）与 9230（状态）；<b>Go 桥只监听 9229</b>，Hive server 的状态探针优先 14830、把 9230 仅作 fallback。</td></tr>
 <tr><td><code>4002</code></td><td>GCU MCP server HTTP</td><td>可选 HTTP transport（<code>python -m gcu.server --port 4002</code>）；与浏览器桥不是同一个进程。</td></tr>
 </tbody></table></div>
 <h3>2.1 这是标准接口吗？</h3>
@@ -185,8 +185,10 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td><code>script --skill S --script F.py --args '{...}'</code></td><td>跑 skill 自带的 <code>run(ctx)</code> 编排脚本。</td></tr>
 </tbody></table></div>
 <p class="sub"><b>退出码：</b>0 ok · 2 not_connected · 3 not_started · 4 not_found · 6 bad_args · 7 pending_dialog · 8 rate_limited。</p>
-<h3>5.4 直接调 HTTP（调试/集成）</h3>
-<pre>curl -s http://127.0.0.1:14830/command \
+<p class="sub"><b>Go 侧增量：</b><code>hive-browser</code> 另提供 5 个 legacy 动词 <code>click</code> / <code>type</code> / <code>type-focused</code> / <code>press</code> / <code>scroll</code>（对应 <code>interactions.py</code> 里上游从未注册的定义）与 Go 自有的 <code>--bridge</code> 开关（覆盖 14830 地址）。两者都没有上游对应路径，属于记录在案的兼容增量，不是对齐缺口。</p>
+<h3>5.4 直接调 HTTP（本地/内部通道，不是公共 API）</h3>
+<p class="sub"><code>/command</code> 与 <code>/health</code> 是 Go 桥自有的本地通道（CLI 的传输层与探针），上游 Python 桥不实现；Python 的 CLI 走 14831 RPC。外部集成请用 <code>hive-browser</code> CLI 或 Hive server 的 <code>/api/browser/*</code> 代理。</p>
+<pre>curl -s http://127.0.0.1:14830/command \\
   -H 'Content-Type: application/json' \
   -d '{"type":"browser_tabs","params":{"browser_profile":"work"}}'
 
@@ -197,9 +199,13 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <h3>5.5 Go 开发者</h3>
 <pre>cd go_hive/browserbridge
 go build ./...
-go test ./...        # 本机实测：bridge 3.03s + ws 0.85s，全部 ok
+go test ./...        # 本机实测：bridge 15.5s + ws 1.0s，全部 ok
 
-# 作为库嵌入（当前 lane 没有 cmd/ 入口）：
+# 独立二进制（发布四件套之一；hive serve 会从自身目录托管拉起 sidecar）：
+go build -o dist/browserbridge ./cmd/browserbridge
+./dist/browserbridge -ws 127.0.0.1:14829 -http 127.0.0.1:14830 -control 127.0.0.1:14831
+
+# 也可作为库嵌入：
 b := browserbridge.New(browserbridge.Config{ /* … */ })
 go b.Start(ctx)</pre>
 </section>
@@ -240,7 +246,7 @@ go b.Start(ctx)</pre>
 </section>
 
 <section id="goparity"><h2><span class="num">07</span>Go 移植现状（诚实版）</h2>
-<p class="sub">Go 侧 <code>go_hive/browserbridge</code> 是一个<b>独立 module、零外部依赖</b>的库（没有 <code>cmd/</code> 入口），覆盖 L0/L1/L2：WS 传输、hello/多 profile、路由/错误、核心命令、context/tab-group 注册表、adopt/release、事件消费、30s 清扫、健康、telemetry、限流、side-panel HTTP。它<b>尚未被主 go-hive module 引用</b>（<code>grep aden-hive/hive-go/browserbridge</code> 在 <code>go_hive/go-hive</code> 下 0 命中），所以生产 Go hive 目前不会启动它。</p>
+<p class="sub">Go 侧 <code>go_hive/browserbridge</code> 是一个<b>独立 module、零外部依赖</b>的实现，覆盖 L0/L1/L2/L3：WS 传输、hello/多 profile、路由/错误、核心命令、context/tab-group 注册表、adopt/release、事件消费、30s 清扫、健康、telemetry、限流、side-panel HTTP，以及 <code>cmd/browserbridge</code> 入口与 14831 control RPC。它由 <code>hive serve</code> 托管拉起（<code>internal/cli/browser_supervisor.go</code>），发布四件套之一。逐项状态以 <code>go_hive/browserbridge/PARITY.md</code> 与 <a href="browser-bridge-surface-audit.html">外观审计页</a>为准。</p>
 <div class="tablewrap"><table><thead><tr><th style="width:24%">维度</th><th style="width:30%">Python（上游）</th><th style="width:26%">Go browserbridge</th><th>判定</th></tr></thead><tbody>
 <tr><td>扩展源码</td><td>1.7.4 / protocol 6</td><td>逐字节复制</td><td><span class="pill ok">已对齐</span></td></tr>
 <tr><td>WS 传输 / 多 profile / 心跳</td><td>完整</td><td>完整（fake-extension 测试）</td><td><span class="pill ok">已移植</span></td></tr>
@@ -248,12 +254,12 @@ go b.Start(ctx)</pre>
 <tr><td>核心交互面 <code>browser_interact</code></td><td>active 主入口（click/type/key/scroll/drag/screenshot/upload…）</td><td>13 个 action 全部移植；参数相关性守卫、分数坐标、修饰键、HTML5 drag、zoom crop、auto-snapshot</td><td><span class="pill ok">已移植</span></td></tr>
 <tr><td>setup / status / stop 工具包装</td><td>有</td><td>已实现：<code>browser_setup</code> / <code>browser_status</code> / <code>browser_stop</code> + <code>hive-browser</code> CLI</td><td><span class="pill ok">已移植</span></td></tr>
 <tr><td>shadow DOM / select / console / html / upload / drag / dialog</td><td>有</td><td>已移植：shadow query（<code>&gt;&gt;&gt;</code> piercing）、select、console、html 落盘、upload（含 picker 拦截）、drag、dialog respond；均过真实 Chrome 验证</td><td><span class="pill ok">已移植</span></td></tr>
-<tr><td>artifact spill / refs / annotation / region 截图</td><td>有</td><td>部分：html 已落盘；快照 ref/href、注解截图、坐标动作图仍为 Go-native 形状</td><td><span class="pill warn">部分</span></td></tr>
+<tr><td>artifact spill / refs / annotation / region 截图</td><td>有</td><td>已移植：html/快照落盘、快照 refs（<code>[ref=eN]</code>+<code>[href]</code>+DOM fallback）、800px JPEG 截图、坐标动作注解图、zoom crop</td><td><span class="pill ok">已移植</span></td></tr>
 <tr><td>RPC 控制面 / <code>/tabs/{id}/reveal</code> / <code>/shutdown</code></td><td>有</td><td>已移植：14831 control RPC（46 方法白名单、client_hello、30s 空闲退出）</td><td><span class="pill ok">已移植</span></td></tr>
 <tr><td>真实 Chrome 验证</td><td>—</td><td>已做：Chrome 158.0.8127.37 + 扩展 1.7.4，19 步 E2E PASS；<code>scripts/real_chrome_e2e.sh</code></td><td><span class="pill ok">已验证</span></td></tr>
 <tr><td>主服务接线</td><td>runtime 自动拉起 bridge_host</td><td>已接线：<code>hive serve</code> 自动拉起/回收桥；3 条 <code>/api/browser/*</code> 面板代理 + notify 注入会话</td><td><span class="pill ok">已接线</span></td></tr>
 </tbody></table></div>
-<div class="callout bad"><b>口径：</b>“Go 模块能 build、测试全绿”只证明协议层和 fake extension 用例通过，<b>不等于</b>真实 Chrome 可用，也不等于生产入口可达。逐条状态见 <a href="tool-parity-matrix.html">tool-parity-matrix.html</a> 与 <code>go_hive/browserbridge/PARITY.md</code>（22/22 active 已移植；残差为快照 ref/注解图形状与 CLI 退出码）。</div>
+<div class="callout bad"><b>口径：</b>“Go 模块能 build、测试全绿”只证明协议层和 fake extension 用例通过，<b>不等于</b>真实 Chrome 可用，也不等于生产入口可达。逐条状态见 <a href="tool-parity-matrix.html">tool-parity-matrix.html</a> 与 <code>go_hive/browserbridge/PARITY.md</code>（22/22 active 已移植；外观残差已全部收口，<a href="browser-bridge-surface-audit.html">审计页</a>现只剩已量化的图像近似与有记录的值级差异）。</div>
 </section>
 
 <section id="repro"><h2><span class="num">08</span>复现与证据</h2>
@@ -268,5 +274,5 @@ go b.Start(ctx)</pre>
 <div class="callout info"><b>相关文档：</b><a href="tool-parity-matrix.html">Hive ↔ go_hive 工具追踪矩阵</a> · <a href="surface-tracking-matrix.html">外观对齐追踪矩阵</a> · <a href="alignment-dimensions.html">对齐维度矩阵</a> · <a href="module-interfaces.html">接口不变量</a> · <code>go_hive/browserbridge/README.md</code> · <code>go_hive/browserbridge/PARITY.md</code> · <code>tools/browser-extension/README.md</code>。</div>
 </section>
 
-<footer>生成：2026-11-20 22:55 CST · 依据：本地源码 + <code>go_hive/browserbridge</code> 实测 build/test + 真实 Chrome 19 步 E2E + <code>PARITY.md</code> · 版本：扩展 1.7.4 / protocol 6 · 说明：active 工具与主服务接线已验证；快照 ref/注解图、CLI 退出码仍有形状差异。</footer>
+<footer>生成：2026-11-20 22:55 CST（2026-11-21 残差轮更新：R09–R14 收口，帧上限/并发锁/status 字段声明改为现状）· 依据：本地源码 + <code>go_hive/browserbridge</code> 实测 build/test + 真实 Chrome 19 步 E2E + <code>PARITY.md</code> + <a href="browser-bridge-surface-audit.html">外观审计页</a>（§04.9 真桥 + 假扩展残差实测）· 版本：扩展 1.7.4 / protocol 6 · 说明：active 工具、面板路由、主服务接线、截图/快照/注解与 CLI 退出码均已实测；剩余为已量化近似（图像编码字节、dpr&gt;1 注解宽度、isHiveGroup 值级）</footer>
 </div></body></html>

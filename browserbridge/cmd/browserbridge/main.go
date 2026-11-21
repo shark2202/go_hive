@@ -24,7 +24,7 @@ import (
 	"github.com/aden-hive/hive-go/browserbridge"
 )
 
-const version = "0.3.0-l3a"
+const version = browserbridge.BridgeVersion
 
 type options struct {
 	ws           string
@@ -97,6 +97,10 @@ func (o options) config() browserbridge.Config {
 		ExtensionDir:     o.extension,
 		SkillDirs:        splitList(o.skills),
 		ScriptCommand:    splitList(o.scriptCmd),
+		// /status bridge_version. runtime_version stays null unless an
+		// embedder passes one, exactly like upstream's production bridge
+		// (BeelineBridge(runtime_version=None)).
+		BridgeVersion: version,
 	}
 	if o.noLegacy {
 		cfg.LegacyAddr = ""

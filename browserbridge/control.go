@@ -165,21 +165,22 @@ func newControlRPC(b *Bridge) *controlRPC {
 	}
 }
 
-// start binds the control port. A bind failure is logged, not fatal: the
-// extension relay and the HTTP API keep working, and a supervised restart gets
-// another chance at the singleton port.
-func (c *controlRPC) start(addr string) {
+// start binds the control port and returns the bind error (nil when bound or
+// already started). A bind failure is logged, not fatal: the extension relay
+// and the HTTP API keep working, and a supervised restart gets another chance
+// at the singleton port. The failure is also recorded for /status bind_errors.
+func (c *controlRPC) start(addr string) error {
 	c.mu.Lock()
 	if c.started {
 		c.mu.Unlock()
-		return
+		return nil
 	}
 	c.mu.Unlock()
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		c.logf("control rpc %s unavailable (continuing): %v", addr, err)
-		return
+		return err
 	}
 	srv := &ws.Server{
 		Path:    controlPath,
@@ -199,6 +200,7 @@ func (c *controlRPC) start(addr string) {
 	}()
 	go c.reapLoop()
 	c.logf("control rpc listening: ws://%s%s", c.addr, controlPath)
+	return nil
 }
 
 // stop closes the listener and every client socket, and stops the reaper.

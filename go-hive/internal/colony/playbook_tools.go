@@ -73,65 +73,40 @@ type playbookRuntime interface {
 }
 
 // RunPlaybookToolDef is the upstream tool schema (playbook / playbook_path /
-// playbook_name / args), with the execution model stated honestly: this build
-// cannot execute Python `.play.py` scripts.
+// playbook_name / args) plus this port's folded playbook-control parameters
+// (`action` / `run_id` — Python exposes get_playbook_status / stop_playbook as
+// separate tools, the flat surface routes those names onto these actions).
+//
+// The description is the Python reference text verbatim (RunPlaybookDescription,
+// byte-exact from the frozen contract): this port now executes Python `.play.py`
+// scripts on an external interpreter and notifies completion in the background,
+// so the old hand-written "PYTHON IS NOT EXECUTABLE / no [PLAYBOOK_COMPLETE]"
+// text was stale. The schema stays a documented exception to byte equality
+// because of the two folded control parameters; see docs/tool-contract-diff.md §13.
 //
 // Parity: core/framework/tools/playbook_tools.py::register_playbook_tools
 func RunPlaybookToolDef() llm.ToolDef {
 	return llm.ToolDef{
-		Name: RunPlaybookToolName,
-		Description: "Run a colony playbook — a deterministic converge loop over a tracker table: query the " +
-			"undone rows, dispatch workers, re-query, repeat. Use it when the goal has row shape; use " +
-			"run_worker for one-off heterogeneous tasks. Re-running is resume: rows already marked done drop " +
-			"out of the pending query, so a second run only does the gap.\n\n" +
-			"PYTHON PLAYBOOKS: a `.play.py` script (inline, by path, or saved in the colony library) runs on " +
-			"an external Python 3.8+ interpreter found on the host PATH (`python3`, then `python`, or " +
-			"HIVE_PYTHON). The script sees the upstream hooks — converge / worker / tracker_query / " +
-			"tracker_count / lane / deadletter / log / phase — and returns the upstream envelope " +
-			"(meta/result/logs/deadletter/dispatched). If no interpreter is available the call returns " +
-			"status='unsupported' with zero workers dispatched; it never fakes a run. Scripts are trusted " +
-			"author code, as upstream. The run is synchronous in this port: the call returns when the " +
-			"convergence loop finishes or is stopped (no [PLAYBOOK_COMPLETE] callback).\n\n" +
-			"SUPPORTED FORM — native JSON playbook:\n" +
-			"{\"name\": \"...\", \"description\": \"...\", \"concurrency\": 4,\n" +
-			" \"pending_sql\": \"SELECT id, job FROM t WHERE done_at IS NULL\",\n" +
-			" \"task\": \"Fix {job}\", \"goal\": \"Fixing {job}\",\n" +
-			" \"data_columns\": [\"id\", \"job\"],\n" +
-			" \"retries\": 1, \"backoff\": \"exp\", \"timeout_seconds\": 600,\n" +
-			" \"max_rounds\": 3}\n\n" +
-			"Supply exactly one of `playbook` (inline JSON, saved to " +
-			"playbooks/<name>.play.json), `playbook_path` (a JSON/`.play.py` file on disk), or " +
-			"`playbook_name` (a saved playbook by meta name — the resume path).\n\n" +
-			"REQUIRED FIELDS: name, pending_sql, task. `pending_sql` MUST select the undone ROWS (not " +
-			"COUNT(*)); `task`/`goal` are {column} templates. Optional: concurrency (default 8, max 32; " +
-			"also bounded by the colony's max_concurrent_workers), data_columns (defaults to the whole row), " +
-			"profile, skill, retries, backoff (exp|linear), timeout_seconds, max_rounds (default 1), " +
-			"chunk, circuit_breaker.\n\n" +
-			"The Go port runs the loop synchronously and returns the final result (no background " +
-			"[PLAYBOOK_COMPLETE] notification). Run logs go to the colony's colony.db playbook_runs table.\n\n" +
-			"CONTROL: `action` (default 'run') selects what the call does. action='status' lists the runs " +
-			"executing right now in this colony plus the recent history from colony.db — use it before " +
-			"re-running something that may still be in flight. action='stop' cancels one run by `run_id`: " +
-			"no further rows are dispatched, rows already done stay done, and re-running the playbook " +
-			"resumes the gap.",
+		Name:        RunPlaybookToolName,
+		Description: RunPlaybookDescription,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"playbook": map[string]any{
 					"type":        "string",
-					"description": "Inline playbook: a Python script (saved as playbooks/<meta-name>.play.py) or native JSON (saved as .play.json). Pass exactly one of playbook / playbook_name / playbook_path.",
+					"description": "Inline playbook script (Python). Saved to the colony library at playbooks/<meta-name>.play.py. Pass exactly one of playbook / playbook_name / playbook_path.",
 				},
 				"playbook_name": map[string]any{
 					"type":        "string",
-					"description": "Re-run a SAVED playbook by its meta name (playbooks/<name>.play.json, falling back to .play.py) — the normal way to resume or re-run without re-sending the script.",
+					"description": "Re-run a SAVED playbook by its meta name (the colony library) — the normal way to resume or re-run without re-sending the script.",
 				},
 				"playbook_path": map[string]any{
 					"type":        "string",
-					"description": "Path to a playbook file on disk (a Python `.play.py` script or native JSON).",
+					"description": "Path to a playbook script file on disk.",
 				},
 				"args": map[string]any{
 					"type":        "object",
-					"description": "Optional JSON object passed to the native playbook entrypoint.",
+					"description": "Optional JSON object passed to the script's run(args) entrypoint.",
 				},
 				"action": map[string]any{
 					"type": "string",

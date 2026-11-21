@@ -8,7 +8,7 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-21T12:27:19+08:00",
+  "captured_at": "2026-11-21T14:04:18+08:00",
   "canonical": {
     "base_dir": "<base_dir>",
     "body": "---\nname: administrative-behavior-skill\ndescription: |\n  管理行为（赫伯特·西蒙《Administrative Behavior》，诺贝尔奖作品）。当用户要理解\"有限理性\"与\"满意准则\"（管理人 vs 经济人）、要把决策拆成\"事实要素与价值要素\"（手段-目的链）、要理解决策的层级系统、要用\"诱因-贡献\"分析组织均衡、要理解权威与影响/权威的限度、或要理解效率准则与组织认同时，按意图路由到 6 张能力卡。核心定位：决策制定过程是理解组织现象的关键——组织是决策的系统，人是\"有限理性\"的，不追求最优而追求满意。覆盖：有限理性与满意准则、决策的事实要素与价值要素、决策层级系统、组织均衡（诱因-贡献）、权威的角色、效率准则与组织认同。\nmetadata:\n  cangjie.generated-by: cangjie-tools v2.5.0\n  cangjie.variant: single\n  cangjie.bundle-id: bundle.administrative-behavior\n  cangjie.capability-count: 6\n  cangjie.entrypoint-count: 1\n---\n# 管理行为：有限理性与决策制定 — 全书能力入口\n\n> 本书回答：**组织是什么？如何理解组织中的人如何做决策？…[+1737 chars sha256:3e63397b077d]",

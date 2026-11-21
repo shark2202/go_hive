@@ -1,6 +1,6 @@
 {
  "provenance": {
-  "purpose": "Python ⇄ Go model-visible tool contract for the 42 same-name core tools (P1 lane)",
+  "purpose": "Python ⇄ Go model-visible tool contract for the 47 same-name tools (42 core + 5 queen lifecycle)",
   "python_default_tools": 270,
   "python_all_tools": 857,
   "harness_groups": {
@@ -10,6 +10,14 @@
    "memory-tools": 1,
    "hive_tools": 13
   },
+  "queen_lifecycle_tools": [
+   "remove_trigger",
+   "reply_to_worker",
+   "run_playbook",
+   "set_trigger",
+   "update_worker_profile"
+  ],
+  "queen_lifecycle_source": "core/framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools (recording registry + mock session; playbook_tools.py registers run_playbook)",
   "context_params_stripped": [
    "agent_id",
    "colony_id",
@@ -22,7 +30,7 @@
   "excluded_schema_keys": [
    "title"
   ],
-  "description_rule": "harness tools use inspect.cleandoc(docstring); aden_tools tools use the raw FastMCP docstring; file_ops tools use their explicit *_DOC constants",
+  "description_rule": "harness tools use inspect.cleandoc(docstring); aden_tools tools use the raw FastMCP docstring; file_ops tools use their explicit *_DOC constants; queen lifecycle tools use the registered Tool(...) text",
   "generator": "go_hive/scripts/gen_tool_contract_parity.py"
  },
  "tools": {
@@ -1782,6 +1790,164 @@
      "content"
     ],
     "type": "object"
+   }
+  },
+  "remove_trigger": {
+   "status": "aligned",
+   "source": "queen_lifecycle:queen_lifecycle_tools.py",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Deactivate an active trigger. The trigger stops firing but remains available for re-activation.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "trigger_id": {
+      "type": "string",
+      "description": "ID of the trigger to deactivate"
+     }
+    },
+    "required": [
+     "trigger_id"
+    ]
+   }
+  },
+  "reply_to_worker": {
+   "status": "aligned",
+   "source": "queen_lifecycle:queen_lifecycle_tools.py",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Reply to a specific worker escalation. The reply is injected into the identified worker's conversation so it can resume. Use list_worker_questions() to discover pending request_ids.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "request_id": {
+      "type": "string",
+      "description": "The escalation request_id from list_worker_questions."
+     },
+     "reply": {
+      "type": "string",
+      "description": "Guidance or answer text to hand back to the worker."
+     }
+    },
+    "required": [
+     "request_id",
+     "reply"
+    ]
+   }
+  },
+  "run_playbook": {
+   "status": "partial",
+   "source": "queen_lifecycle:queen_lifecycle_tools.py",
+   "reason": "The description is already the Python text (pinned by TestRunPlaybookDescriptionMatchesFrozenContract). The schema keeps this port's folded playbook-control parameters: Go folds Python's standalone get_playbook_status / stop_playbook tools onto run_playbook(action=...) and adds the native-JSON form, so the model-visible schema carries action/run_id on top of the four Python parameters, which are byte-equal.",
+   "apply_description": false,
+   "apply_parameters": false,
+   "description": "Run a colony playbook — a deterministic Python script that drives a tracker table to convergence: query the undone work, dispatch workers on it, re-query, repeat. Use it whenever the goal has row shape; reach for run_worker only for one-off heterogeneous tasks. ASYNC: returns a run_id immediately and notifies you via [PLAYBOOK_COMPLETE]; the convergence loop absorbs routine worker outcomes. Re-running is resume — done rows drop out of the pending query, so a second run only does the gap.\n\nSUPPLY THE SCRIPT (exactly one):\n• `playbook` — inline; saved to the colony library at playbooks/<meta-name>.play.py (returned as name+path).\n• `playbook_name` — run a saved playbook by meta name (the normal way to resume or re-run).\n• `playbook_path` — a script file on disk.\nIterate by editing the saved file (or re-sending inline with the same meta name, which overwrites) and re-running by name.\n\nSCRIPT SHAPE: define `meta` (name, description, optional `concurrency` = workers running at once; default 8, max 32; lanes throttle per-account within it) and `async def run(args)`. Injected in-script functions (NOT tools): converge / worker / tracker_query / tracker_count / lane / deadletter / log / phase. There is no mid-run escalation — a worker unsure about a row records that on the row (e.g. status='needs_review') for you to review after the run.\n\nGive every worker() a `goal` — one sentence in plain end-user language saying what that worker is doing; the UI shows it as the worker's title (it is not shown to the worker).\n\nTHE WORK-LIST: `pending()` returns one dict per worker dispatch. For cheap-per-row work (most campaigns), each dict should be a CHUNK of 5-10 rows grouped in plain Python — every worker pays a ~2-3k-token orientation tax before its first useful action, so one-row-per-worker multiplies that tax by N. Reserve one-row dispatches for rows that are individually large jobs. Chunking and convergence compose: done rows drop out of the next round's query and stragglers re-group. Give a chunked worker a `timeout` covering the whole slice, and a task string telling it to process rows as consecutive tool calls, upserting each row right after acting on it — rate pacing happens inside the tool layer, so a worker never needs a turn per row and a partial slice re-queues cleanly.\n\nCONTRACT — get these right or the playbook silently dispatches 0 workers:\n• tracker_query(sql) / tracker_count(sql) are SYNCHRONOUS — no await. tracker_query returns a LIST OF ROW DICTS; index a row's column (row['url']). A SELECT COUNT(*) is for counting — never the pending list.\n• converge(...) and worker(...) are ASYNC: `await converge(pending=..., dispatch=lambda unit, i: worker(...))` — converge awaits the worker coroutines and owns parallelism. worker() in a bare loop without await dispatches NOTHING; `for u in units: await worker(...)` runs serially and defeats meta['concurrency']. Parallel dispatch happens ONLY through converge.\n\nEXAMPLE (chunked — the default for cheap-per-row work):\n  meta = {\"name\": \"enrich\", \"description\": \"...\", \"concurrency\": 4}\n  RECEIPT = {\"type\":\"object\",\"required\":[\"processed\"],\"properties\":{\"processed\":{\"type\":\"array\"}}}\n  CHUNK = 8\n  async def run(args):\n      def pending():\n          rows = tracker_query(\"SELECT id, url FROM leads WHERE done_at IS NULL\")\n          return [{\"ids\": [r['id'] for r in rows[i:i+CHUNK]],\n                   \"urls\": [r['url'] for r in rows[i:i+CHUNK]]}\n                  for i in range(0, len(rows), CHUNK)]\n      await converge(\n          pending=pending,\n          dispatch=lambda chunk, i: worker(\n              task=f\"Enrich EACH of these, upserting its row + done_at as you go: {chunk['urls']}\",\n              goal=f\"Researching {len(chunk['ids'])} leads' websites\",\n              profile=\"acct-1\", skill=\"enrich\", schema=RECEIPT,\n              timeout=120 * len(chunk['ids'])),\n          max_rounds=3)\n      return {\"remaining\": tracker_count(\"SELECT 1 FROM leads WHERE done_at IS NULL\")}",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "playbook": {
+      "type": "string",
+      "description": "Inline playbook script (Python). Saved to the colony library at playbooks/<meta-name>.play.py. Pass exactly one of playbook / playbook_name / playbook_path."
+     },
+     "playbook_name": {
+      "type": "string",
+      "description": "Re-run a SAVED playbook by its meta name (the colony library) — the normal way to resume or re-run without re-sending the script."
+     },
+     "playbook_path": {
+      "type": "string",
+      "description": "Path to a playbook script file on disk."
+     },
+     "args": {
+      "type": "object",
+      "description": "Optional JSON object passed to the script's run(args) entrypoint."
+     }
+    }
+   }
+  },
+  "set_trigger": {
+   "status": "aligned",
+   "source": "queen_lifecycle:queen_lifecycle_tools.py",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Activate a trigger (timer) so it fires periodically. Use trigger_id of an available trigger, or provide trigger_type + trigger_config to create a custom one. A task must be configured before activation — either pre-set on the trigger or provided here.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "trigger_id": {
+      "type": "string",
+      "description": "ID of the trigger to activate (from list_triggers) or a new custom ID"
+     },
+     "trigger_type": {
+      "type": "string",
+      "description": "Type of trigger ('timer'). Only needed for custom triggers."
+     },
+     "trigger_config": {
+      "type": "object",
+      "description": "Config for the trigger. Timer: {cron: '*/5 * * * *'} or {interval_minutes: 5}. Only needed for custom triggers."
+     },
+     "task": {
+      "type": "string",
+      "description": "The task/instructions for the worker when this trigger fires (e.g. 'Process inbox emails using saved rules'). Required if not already configured on the trigger."
+     }
+    },
+    "required": [
+     "trigger_id"
+    ]
+   }
+  },
+  "update_worker_profile": {
+   "status": "aligned",
+   "source": "queen_lifecycle:queen_lifecycle_tools.py",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Insert or update one worker profile on an existing colony. Use this to swap a profile's account alias (e.g. 'switch slack-work to use alias work-2'), bind it to a specific Chrome profile via browser_profile (a connected label from list_browser_profiles), or add a profile after the colony was forked. Existing siblings are preserved. Pass only the fields you want to change.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "colony_id": {
+      "type": "string"
+     },
+     "profile_name": {
+      "type": "string"
+     },
+     "integrations": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      }
+     },
+     "task": {
+      "type": "string"
+     },
+     "skill_name": {
+      "type": "string"
+     },
+     "concurrency_hint": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "prompt_override": {
+      "type": "string"
+     },
+     "tool_filter": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "browser_profile": {
+      "type": "string",
+      "description": "Chrome profile label this profile's browser tools target (from list_browser_profiles). Empty clears it."
+     }
+    },
+    "required": [
+     "colony_id",
+     "profile_name"
+    ]
    }
   }
  }

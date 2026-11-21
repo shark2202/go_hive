@@ -210,7 +210,10 @@ if the listener is misconfigured.
 Connection/protocol/tab counts. Field names overlap the upstream `/status`
 where possible, plus `tabs`/`tabs_total`. Tab counts are refreshed with a short
 live `tab.list` per profile (750 ms budget); failures fall back to the cached
-count.
+count. `bridge_version` is this binary's version, `runtime_version` stays
+`null` unless an embedder sets one (upstream's production default), and
+`bind_errors` names any optional listener (`legacy_ws`, `control_rpc`) that
+failed to bind, so a port conflict is reported as exactly that.
 
 ```json
 {
@@ -229,14 +232,20 @@ count.
     "tabs": 3
   }],
   "uptime_ms": 4000,
+  "bridge_version": "0.3.0-l3a",
+  "runtime_version": null,
   "tabs": {"work": 3},
   "tabs_total": 3,
   "profiles": ["work"],
-  "listening": {"ws": true, "status": true, "legacy_ws": true},
+  "listening": {"ws": true, "status": true, "control_rpc": true, "legacy_ws": true, "legacy_status": false},
   "capabilities": ["browser_tabs", "..."],
-  "system_blocker": null
+  "system_blocker": null,
+  "bind_errors": {}
 }
 ```
+
+`listening.legacy_status` is always `false`: this port does not run the
+upstream legacy 9230 status listener.
 
 ### `GET /profiles`
 

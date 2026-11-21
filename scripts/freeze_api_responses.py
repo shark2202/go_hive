@@ -80,17 +80,12 @@ MISSING_SESSION_ID = "session_20990101_000000_deadbeef"
 BRIDGE_PROBE_PORT = "19229"
 
 # Endpoints with a declared, documented difference: every diff is reported but
-# does not fail the freeze (the value ledger collapses the same endpoints).
+# does not fail the freeze (the value ledger declares the same paths).
+# session_live_tools is no longer here: the REST-created session attaches both
+# its phase state (tool surface) and its queen tool registry (admission-gate
+# diagnostic), so the endpoint's shape matches the reference. The remaining
+# value-level universe counts are declared in value-golden.json.
 ENDPOINT_DECLARATIONS: dict[str, dict[str, str]] = {
-    "session_live_tools": {
-        "class": "runtime-state-gap",
-        "reason": (
-            "REST-created Go sessions carry no PhaseState (only CLI / preloaded / resumed "
-            "sessions attach one), so actual_tools / expected_tools / framework_added and the "
-            "registry diagnostic are empty while the Python reference attaches a queen phase "
-            "state at creation. The key/type shape is pinned; the values are a known gap."
-        ),
-    },
     "config_models": {
         "class": "non-verbatim-numeric",
         "reason": (

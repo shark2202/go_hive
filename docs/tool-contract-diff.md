@@ -589,3 +589,96 @@ Go 侧仍是 144 个工具，只有本节的残留工具定义变化。
 
 证据：`/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolresidual/`
 （`captures/`、`out/`、`capture.py`、`recheck2.py`、`matrix2.py`、`emit_round2.py`、`out/gate-*.log`）。
+
+## 13. round 4 @ tool-schema-residuals（2026-11-21，同名 desc/schema 残差收口）
+
+> 本节由 `tool-schema-residuals` 车道追加。**§1–§12 与 `contracts/tool-definitions.json`、
+> `contracts/tool-types.proto` 是既有轮次的冻结记录，未改动**；本节是收口后的当前事实，
+> 机器可读版见 `docs/tool-contract-recheck.json` 的 `rounds[3]`（`current_round=4`）。
+
+### 13.1 口径与抓取
+
+- **reference** 不变：Python 1.0.14 冻结抓取（core `a756b1e5` / tools `68b6c230`，自冻结以来两份源码未变）。
+  唯一新增的参考来源：5 个 lifecycle 工具改用**注册到 queen 会话的 Python `Tool(...)` 对象**
+  （`core/framework/tools/queen_lifecycle_tools.py`，其中 `run_playbook` 由 `playbook_tools.py` 注册）。
+  抓包的 Tool Library 行只渲染 name+description、schema 为空对象，源码定义才是模型实际面对的契约。
+  这 5 份定义已逐字冻结进 `go-hive/internal/cli/tool_contract_parity.json`（source `queen_lifecycle`）。
+- **target** = 本车道（base `main 59d89b86` + 改动），`CGO_ENABLED=0 GOPROXY=off make build`。
+- **抓取**：脚本化假网关；临时 `HIVE_HOME`；POST queen_growth session → POST chat；
+  网关两步各返回一次 `search_tools(select:<全部 51 个 deferred>)`，逐步记录请求体
+  （`toolresid3/capture_residual.py` + `toolflat-lazy/fake_gateway_scripted.py`）。
+- **不变量**：首轮 `tools[]` = **24**，名称与顺序与 Python 首轮逐字相同，
+  且 **sha256 与延迟层车道抓取的 `go-lazy-first-tools.json` 逐字节相同**（首轮未变）；
+  加载后下一次请求 = **75** = 24 + 51（15 lifecycle/colony + 36 目录层），无多余名、无缺失名。
+
+### 13.2 同名工具矩阵（41，含源码口径）
+
+| 维度 | round 2 `tool-residual-align` | round 4（本车道） |
+| --- | --- | --- |
+| description 逐字一致 | 40/41 | **41/41** |
+| input_schema 逐字（raw） | 32/41 | 32/41（抓包参考）/ **36/41**（lifecycle 5 改源码参考） |
+| 剥 CONTEXT_PARAMS | 36/41 | 36/41（抓包）/ **40/41**（源码） |
+| 归一化（再剥 title、空 `required`≡缺省、数值等价） | 36/41 | 36/41（抓包）/ **40/41**（源码） |
+| 参数类型不一致 | 0 | 0 |
+| 可选性（nullable）不一致 | 0 | 0 |
+| `required` 不一致 | 4 | **0**（源码参考；抓包参考仍 4，原因同下） |
+| 仅 Python 参数 | 4 | **4**（全部是 `session_cwd`，层差异） |
+| 仅 Go 参数 | 22 | **2**（`run_playbook.action` / `run_playbook.run_id`） |
+| 参数总数 py/go | 156/174 | 176/174（py 侧 lifecycle 5 取源码 schema） |
+
+「抓包参考」与「源码参考」的差额只来自 lifecycle 层 5 个工具（参考无 schema，非 Go 漂移）。
+目标「desc 41/41」达成；「schema 归一 ≥40/41 或明确例外」达成：**40/41，唯一例外 `run_playbook`**。
+
+### 13.3 lifecycle 5 逐个定性
+
+| 工具 | 定性 | 说明 |
+| --- | --- | --- |
+| `remove_trigger` | 可修→已对齐 | 描述与 schema 与 Python 源码 `Tool` 定义**逐字一致**（`trigger_id` + `required`）。 |
+| `reply_to_worker` | 可修→已对齐 | 2 参数 + `required: ["request_id","reply"]` 逐字一致。 |
+| `set_trigger` | 可修→已对齐 | 4 参数 + `required: ["trigger_id"]` 逐字一致。 |
+| `update_worker_profile` | 可修→已对齐 | 9 参数 + `required: ["colony_id","profile_name"]` 逐字一致；`colony_id` 是模型实参（Python 只对 MCP 转换的工具剥 context 参数）。 |
+| `run_playbook` | 部分（唯一 schema 例外） | 描述 = Python 逐字（3978 chars，独立常量 `RunPlaybookDescription`）；4 个共享参数（含参数说明）逐字一致；Go 多 `action`/`run_id` 两个折叠控制参数（Python 把 `get_playbook_status`/`stop_playbook` 作为独立工具，扁平面把这 3 个名字路由到这两个 action）。 |
+
+- 四个已对齐项现由 parity manifest 冻结、overlay 覆盖 lifecycle 批次（`enableQueenLifecycleTools`
+  补一次 `applyToolContractParity`，值不变、只补齐与其余 owner 一致的合同层）。
+- `run_playbook` 的旧 Go 描述声称「Python 脚本不可执行 / 无 [PLAYBOOK_COMPLETE]」——在外部解释器
+  车道（`19362eab`）与后台通知（`playbook_notify.go`）落地后**已过期**；本轮直接采用 Python 文本，
+  既到 desc 41/41，也修正对模型的能力描述。manifest 条目 `status: partial`、
+  `apply_description/apply_parameters: false`（与「partial 不自动应用」不变量一致），由源码常量 + 测试钉住。
+
+### 13.4 session_cwd 4（结构不适用，保持）
+
+`edit_file` / `read_file` / `terminal_job_start` / `terminal_pty_open`：Python 参考在 Tool Library 层带
+框架注入的 `session_cwd`，模型请求层与 Go 一样会剥掉；剥掉后逐字一致（源码口径 ctx 40/41 已计入）。
+raw 差异是层差异，不是 Go 缺陷。terminal 两个的请求形状另有
+`TestTerminalToolsRequestShapeMatchesPythonContract` 守门。
+
+### 13.5 exa_search（结构不适用，记录）
+
+Go 注册 7-action 聚合模块（`required: ["action"]`，parameter 是各 action 并集；`exa_search` action 的
+10 个参数已带 Python 的 enum/默认值），Python 是扁平工具（`required: ["query"]`）。扁平化会孤立其余
+6 个 action，属另一波；manifest 记为 `partial`。共享参数的 `anyOf [T, null] + default: null` 属 §7 的
+`default-vs-missing` 类，只能在 JSON Schema 层显式化，涉及运行时行为，本 lane 不动。
+
+### 13.6 例外清单（最终）
+
+| 类别 | 项 | 理由 |
+| --- | --- | --- |
+| schema 归一 | `run_playbook` | 折叠控制参数 `action`/`run_id`（Python 侧是独立工具）；描述与 4 个共享参数逐字一致 |
+| 层差异（非缺陷） | `edit_file` `read_file` `terminal_job_start` `terminal_pty_open` | Python 参考在 Tool Library 层带 `session_cwd`；请求层同样剥除，剥后逐字一致 |
+| 结构不适用 | `exa_search` | Go 7-action 模块 vs Python 扁平工具；扁平化另立车道 |
+| 不在 41 同名集（记录） | `get_worker_status` `inject_message` `run_worker` | Python 侧只有 lifecycle 渲染文本；Go 文本按本移植的 worker/colony 语义改写（`stop_worker` 逐字一致）。colony 相位工具，不参与 41 同名口径 |
+
+### 13.7 钉住测试与证据
+
+- `TestSameNameToolDescriptionsMatchFrozenContract`：41/41 描述逐字（含合成 `ask_user`）。
+- `TestQueenLifecycleDefinitionsMatchPythonSource`：5 个 lifecycle 定义 vs manifest——4 个整体逐字；
+  `run_playbook` 共享参数逐字 + 额外参数白名单（`action`/`run_id`）+ `required` 等价。
+- `TestRunPlaybookDescriptionMatchesFrozenContract`：`run_playbook` 描述 vs 冻结契约逐字。
+- `TestToolContractParityManifestShape` / `TestToolContractParityAlignedDefsMatchManifest` /
+  `TestToolContractParityRemainingGaps`：manifest 47 条（35 aligned / 2 partial / 10 dependency），
+  剩余 gap = `exa_search` + `run_playbook`。
+- `TestFlatSurfaceSchemasMatchFrozenContract`：39 默认面 27 逐字 + 8 P1（含 5 lifecycle）+ 4 lifecycle-kept = 39。
+- 证据：`/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolresid3/`
+  （`capture_residual.py`、`captures/`、`out/go-gateway-residual.jsonl`、`out/summary.json`；sha256 见 recheck JSON）。
+

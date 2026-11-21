@@ -96,15 +96,16 @@ terminal_output_get terminal_rg update_worker_profile write_skill
   - 分组集成模块（`airtable` + `action` 形状）**不进**延迟层：它们不是扁平 name，
     继续留在注册表与 `grouped` 形态。
 - **schema 例外（保留现状，不改写）**：
-  1. P1 对齐表（`tool_contract_parity.json`）覆盖的 12 个默认工具
-     （`attach_file`、`get_account_info`、`get_current_time`、`image_generate`、
-     `pdf_read`、`search_messages`、terminal 6 个）——它们已由 P1/terminal 车道
-     冻结，逐字 schema 以现场定义为准；
-  2. lifecycle 层在 Python Tool Library 里只渲染 name+description（无
-     input_schema，manifest 里是空对象），Go 侧的真实 schema 信息量更大且是
-     执行契约（`run_playbook`/`run_worker`/10 个 lifecycle、`write_skill` 除
-     外——它是 `llm_request`+`lifecycle`，有真实 schema，按 manifest 应用）。
-     这是层间不可比（§11.4 已记录），不是缺陷。
+  1. P1 对齐表（`tool_contract_parity.json`）覆盖的默认工具——P1/terminal 车道冻结的
+     12 个（`attach_file`、`get_account_info`、`get_current_time`、`image_generate`、
+     `pdf_read`、`search_messages`、terminal 6 个），加上 lifecycle 源码口径新冻结的
+     5 个（`remove_trigger`、`reply_to_worker`、`run_playbook`、`set_trigger`、
+     `update_worker_profile`，见 `docs/tool-contract-diff.md` §13）——逐字 schema 以现场定义为准；
+  2. 其余 lifecycle-only 条目（`get_worker_status`、`inject_message`、`run_worker`、
+     `stop_worker`）在 Python Tool Library 里只渲染 name+description（无 input_schema，
+     manifest 里是空对象），Go 侧的真实 schema 是执行契约。这是层间不可比
+     （§11.4 已记录），不是缺陷；`write_skill` 属 `llm_request`+`lifecycle`，有真实
+     schema，按冻结契约应用。
 
 ## 4. 执行路由（不改变既有实现）
 

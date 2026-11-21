@@ -1,6 +1,7 @@
 package cli
 
-// Model-visible tool-contract parity for the 42 same-name core tools.
+// Model-visible tool-contract parity for the 47 same-name tools (42 core
+// tools + 5 queen lifecycle tools).
 //
 // The Python reference (core/framework/tools/harness_tools.py groups plus the
 // aden_tools registries) publishes full docstrings as descriptions and richer
@@ -8,6 +9,14 @@ package cli
 // merged newlines, lost the `required` list on single-action tools and
 // flattened list item types. Tool-contract parity means the model sees the
 // same description and the same input contract on both runtimes.
+//
+// The five queen lifecycle tools are dumped from the registered Python Tool
+// objects (queen_lifecycle_tools.py + playbook_tools.py): the captured Tool
+// Library renders those rows without an input schema, so the source definition
+// is the model-visible contract there. Four are byte-aligned with the Go
+// definitions; run_playbook is the one recorded partial (Go folds Python's
+// standalone playbook-control tools onto run_playbook(action=...), so its
+// schema carries action/run_id on top of the four Python parameters).
 //
 // The manifest (tool_contract_parity.json) is generated from the live Python
 // registries by go_hive/scripts/gen_tool_contract_parity.py and frozen here:

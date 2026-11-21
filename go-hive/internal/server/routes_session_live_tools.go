@@ -504,7 +504,11 @@ func safeWorkersView(session *Session) []map[string]any {
 }
 
 func sortedStrings(values []string) []string {
-	out := append([]string(nil), values...)
+	// A nil input still renders as an empty JSON array, matching Python's
+	// sorted(set()) — proto3 JSON folds null and unset together, so the
+	// diagnostic must not answer null here.
+	out := make([]string, len(values))
+	copy(out, values)
 	sort.Strings(out)
 	return out
 }

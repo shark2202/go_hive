@@ -29,10 +29,10 @@ canonical 响应值，逐条比对后写入 golden；差异只有三类——已
 | SSE canonical 帧 | reference 113 / target 148 | 同一剧本：创建 → 开场回合 → 普通消息 → ask_user → 回答 → 重连 replay → DELETE |
 | SSE 比较帧（去文档化变换后） | live 34/34、replay 17/17、history 42/42、stop 18/17 | 变换：丢弃 Go-only 每回合信封 36 帧 + 异步 title 位置不参与顺序 |
 | REST 端点 | 77/77 PASS（74 形状/语义全等 + 3 已声明差异） | 56 成功路径 + 21 失败路径；第一批 17 端点 + 第二批 60 条探针 |
-| REST 值路径 | 8678 条 | 0 未声明差异；45 条已声明差异 + 1 个端点级折叠例外（`session_live_tools` 418 条） |
+| REST 值路径 | 8678 条 | 0 未声明差异；209 条已声明差异（0 端点级折叠；`session_live_tools` 已转逐值对照） |
 | 未知路径 fallback | 3 路径 × 2 侧 | Python SPA 200 HTML / Go 404；仅证据，不计入比较（§6.4） |
 | SSE 例外 | 11 条 | 见 `contracts/sse-frames/diff.json.exceptions` |
-| REST 例外规则 | 12 条 + 1 端点级 | 见 `value-golden.json.exceptions` / `ENDPOINT_EXCEPTIONS`（§6.3） |
+| REST 例外规则 | 14 条（0 端点级） | 见 `value-golden.json.exceptions`（§6.3） |
 
 ## 2. SSE canonicalizer（`go_hive/scripts/sse_frames_canonical.py`）
 
@@ -104,10 +104,31 @@ JSON 字节（`Marshal(cost_usd) == "0.0042"`）。
 `freeze_api_responses.py` 新增 3 条失败探针（§6），并在 `diff_endpoint` 里把
 「状态码相等」「期望失败码」「error 文案相等」加入语义检查；当前 17/17 PASS、状态码不一致 0。
 
+### 4.5 REST 会话挂 PhaseState 工具面（`session_live_tools` 转逐值对照）
+
+会话注册点（`SessionManager.AddSession`）现在把 chat runtime 的 tool tier（`chatToolTier` /
+`tools.ToolTierState`）接到会话的 `QueenPhaseState` 上，等价于上游「Queen phase state 自带工具档」：
+`/api/sessions/{id}/live_tools` 的 `actual_tools` / `expected_tools` / `framework_added`、
+`phase_state_ready`、`mcp_tool_count_registered` 与 `diagnostic.phase_state` 全部按相位真实取值，
+不再对 REST 创建会话返回空面。接线只包装既有 runtime（不重复构造），创建/预加载/恢复/分叉路径同源。
+
+- 相位工具视图：`internal/server/phase_tool_surface.go`（`PhaseToolSurface` + `Session.attachPhaseToolSurface`）、
+  `internal/server/queen_phase_state.go`（字段与转发方法）。
+- lazy 语义保持：eager 仍由 24 个 always-on 名字决定（扣除 4 个相位门控）；searchable 按可行
+  的 per-queen allowlist 过滤（与上游 `_filtered_tools_for_current_phase` 同序）；平铺面的
+  `collect_result` / `credentials` / `sentinel_setup` 无执行器（advertised-without-executor shim）
+  不进相位工具表，`ask_user` 由路由作为 `framework_added` 报告。
+- 回归测试：`internal/server/phase_tool_surface_test.go`（注册路径 → `/live_tools` 逐名对照、
+  allowlist 过滤、会话列表相位；无 runtime 时的空面）、
+  `internal/cli/loader_phase_tool_surface_test.go`（REST 创建路径 + allowlist 解析）。
+- 残留（已在 §6.3 声明）：registry 侧 diagnostic 需要 live queen tool registry（Go 未挂载），
+  MCP 宇宙计数 33 vs 28（Go harness 面含 excel_* / browser 组，Python 侧未注册）。
+
+
 ## 5. 例外清单（结构化 + 值级；不进对齐目标）
 
 SSE（`contracts/sse-frames/diff.json.exceptions`，11 条）与 REST
-（`contracts/api-responses/value-golden.json.exceptions`，12 条路径规则 + 1 个端点级折叠）的关系：
+（`contracts/api-responses/value-golden.json.exceptions`，14 条路径规则，0 端点级折叠）的关系：
 
 | 类别 | 例外 | 归因 |
 | --- | --- | --- |
@@ -142,7 +163,7 @@ queens、sentinel、maintenance。
 | 端点 | 方法 | 成功状态 | 值路径 | 备注 |
 | --- | --- | --- | --- | --- |
 | `/api/sessions/history` | GET | 200 | 14 | 冷/热会话列表 |
-| `/api/sessions/{session}/live_tools` | GET | 200 | 433 | 已声明差异：Go REST 会话无 PhaseState（见 §6.3） |
+| `/api/sessions/{session}/live_tools` | GET | 200 | 433 | 逐值对照；残留为 registry 侧 diagnostic + MCP 宇宙计数（§6.3） |
 | `/api/sessions/{session}/triggers` | GET | 200 | 0 | 空列表 |
 | `/api/sessions/{session}/workers` | GET | 200 | 0 | 空列表 |
 | `/api/sessions/{session}/skill-installs` | GET | 200 | 0 | 空列表 |
@@ -213,11 +234,12 @@ queens、sentinel、maintenance。
 
 | 例外 | 端点 | 类 | 说明 |
 | --- | --- | --- | --- |
-| 端点级折叠（418 条） | `session_live_tools` | runtime-state-gap | Go REST 会话不挂 PhaseState（只有 CLI/预加载/恢复会话挂），工具面与 diagnostic 为空；形状仍比较 |
+| `live-tools-registry-diagnostic` | `session_live_tools` | 已修复 | Go REST 会话已挂 `QueenToolRegistry`；`dropped_by_provider` 与参考逐值一致，仅余 `registry_mcp_total` 及派生计数（见下一行） |
+| `live-tools-mcp-universe`（3 条） | `session_live_tools` | value-level | MCP 宇宙计数 33 vs 28（Go harness 面含 excel_* 与 browser 组；Python 探测环境未注册），`independent_tools_total` 随之为 40 vs 35；模型面真正受制的 allowlist 过滤计数一致（22 filtered / 15 allowed） |
 | `config-models-pricing-float` | `config_models` | non-verbatim-numeric | 整数定价 `5.0` vs `5`（NV-02） |
 | `browser-contexts-empty-state` | `browser_contexts` | empty-state-divergence | Python 读进程内 gcu 注册表（available:true/count:0）；Go 代理桥（available:false/reason） |
 | `browser-tabs-reason-text` | `browser_tabs` | env-dependent-value | 同为 available:false，`reason` 文案实现相关 |
-| `config-llm-put-swapped-count` | `config_llm_put` | runtime-state-gap | 与 `session_live_tools` 同源：Python 会计入会话的 ColonyRuntime LLM |
+| `config-llm-put-swapped-count` | `config_llm_put` | runtime-state-gap | Python 会计入会话的 ColonyRuntime LLM（2），Go REST 会话未绑 colony runtime（1）；colony 绑定面独立对齐项 |
 
 其它既有例外见 §5（工具描述文本、SSE model/sha、`event_bus.subscriptions` 等）。
 
@@ -239,7 +261,10 @@ queens、sentinel、maintenance。
 
 ### 6.5 结果
 
-- 77/77 PASS（74 全等 + 3 已声明差异），8678 条值路径，45 条已声明差异 + 1 个端点级折叠例外（418 条），0 未声明。
+- 77/77 PASS（74 全等 + 3 已声明差异），8678 条值路径，209 条已声明差异（0 端点级折叠），0 未声明。
+- 本批把 `session_live_tools` 从端点级折叠（418 条）转为逐值对照：433 条路径全部参与比较，
+  工具面（21 条 `actual_tools` / 32 条 `expected_tools` 含描述与状态、`framework_added`、
+  `phase_state_ready`、`phase_state` 诊断半边）逐值一致；余下 165 条为两个声明族（§6.3）。
 - `pythonFloat` 修复后，`session_events` / `session_events_history` 的 `cost_usd` 已从差异清单消失。
 - 本批顺带修复：Go `GET /api/queen/{id}/llm` 的 `default_model` 接线（serve 未传 `DefaultModel` 钩子，
   恒为空串）；Go `POST /api/sessions/{id}/chat` 未知会话 404 文案改为与 `resolve_session` 一致的
@@ -280,5 +305,6 @@ uv run python go_hive/scripts/sse_frames_canonical.py --check
     属功能面差异，`/api/health` 已被现有 golden 覆盖。
 - `api.proto` 尚未为第二批端点写 message（`check_api_proto.py` 报 `unmapped-endpoint` 警告，
   0 error，不失败）；下批可批量补 proto message 或维持「新端点只进 shape/值账本」的口径。
-- 会话运行时会话构造（PhaseState / ColonyRuntime）对齐后，`session_live_tools`、
-  `config_llm_put.sessions_swapped`、colony 工具/技能面可升级为严格比较。
+- 会话运行时会话构造：PhaseState 工具面本批已挂（§4.5），`session_live_tools` 已转逐值对照；
+  剩余为 registry 侧 admission-gate 诊断（需挂载 live queen tool registry）与 ColonyRuntime 绑定面
+  （`config_llm_put.sessions_swapped`、colony 工具/技能面），对齐后可再升级为严格比较。

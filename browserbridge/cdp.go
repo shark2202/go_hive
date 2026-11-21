@@ -14,6 +14,16 @@ func (b *Bridge) cdp(ctx context.Context, conn *Connection, tabID int, method st
 	if params == nil {
 		params = map[string]any{}
 	}
+	// Upstream _cdp serializes every command for one tab with _tab_lock, so
+	// two agents accidentally sharing a tab cannot interleave
+	// attach/sendCommand and corrupt the CDP session (R09). The lock is taken
+	// before ensureAttached because the lazy attach is part of the critical
+	// section upstream's lock protects.
+	release, err := b.acquireTabLock(ctx, tabID)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	fresh, err := conn.ensureAttached(ctx, tabID)
 	if err != nil {
 		b.refreshBlockersFromError(tabID, AsError(err).Message)

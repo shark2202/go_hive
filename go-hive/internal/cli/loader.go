@@ -552,6 +552,7 @@ func (r *Runner) createSessionWithRuntime(
 	} else {
 		toolbox := builtin.New("")
 		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
+		record.QueenToolRegistry = tools.Registry()
 		onTurnStart := r.enableQueenTools(tools, manager, sessionID, record, home, liveMu, live, defaultModel)
 		// Flat lazy layer: first request advertises the Python reference's 24
 		// always-on names; the rest of the default surface and the flat
@@ -566,6 +567,7 @@ func (r *Runner) createSessionWithRuntime(
 			DeferredTools:     deferredTools,
 			ManifestToolNames: manifestNames,
 			ManifestFiltered:  manifestFiltered,
+			MCPToolNamesAll:   tools.CatalogueMCPToolNamesAll(),
 			Execute:           tools.Execute,
 			ExecuteBlocks:     tools.ExecuteBlocks,
 			Root:              sessionDir,

@@ -823,6 +823,71 @@ func (r *ToolRegistry) computeMCPGateCredSnapshot() *mcpGateSnapshot {
 	}
 }
 
+// SetMCPGateCredSnapshotProvider wires the process's credential snapshot for
+// the MCP admission gate and the live-tools diagnostic: the tool→credential
+// provider map plus the providers with a live account (upstream
+// CredentialStoreAdapter.default().get_tool_provider_map() /
+// get_all_account_info()). Nil restores the dormant empty snapshot.
+func SetMCPGateCredSnapshotProvider(fn func() (map[string]string, []string)) {
+	if fn == nil {
+		gateCredSnapshotFn = nil
+		return
+	}
+	gateCredSnapshotFn = func() *mcpGateSnapshot {
+		providers, live := fn()
+		if providers == nil {
+			providers = map[string]string{}
+		}
+		liveSet := make(map[string]struct{}, len(live))
+		for _, provider := range live {
+			if provider != "" {
+				liveSet[provider] = struct{}{}
+			}
+		}
+		return &mcpGateSnapshot{toolProviders: providers, liveProviders: liveSet}
+	}
+}
+
+// ComputeMCPGateCredSnapshot re-runs the admission-gate snapshot now and
+// exposes it to the live-tools diagnostic as (tool → provider map, sorted live
+// providers). Mirrors ToolRegistry._compute_mcp_gate_cred_snapshot.
+func (r *ToolRegistry) ComputeMCPGateCredSnapshot() (map[string]string, []string) {
+	snapshot := r.computeMCPGateCredSnapshot()
+	providers := map[string]string{}
+	live := []string{}
+	if snapshot != nil {
+		for name, provider := range snapshot.toolProviders {
+			providers[name] = provider
+		}
+		for provider := range snapshot.liveProviders {
+			live = append(live, provider)
+		}
+	}
+	sort.Strings(live)
+	return providers, live
+}
+
+// MCPServerTools is the per-server tool-name map the live-tools diagnostic
+// walks (upstream ToolRegistry._mcp_server_tools): recorded harness groups and
+// every registered MCP server, each list sorted for deterministic output.
+func (r *ToolRegistry) MCPServerTools() map[string][]string {
+	if r == nil {
+		return map[string][]string{}
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make(map[string][]string, len(r.mcpServerTools))
+	for server, names := range r.mcpServerTools {
+		list := make([]string, 0, len(names))
+		for name := range names {
+			list = append(list, name)
+		}
+		sort.Strings(list)
+		out[server] = list
+	}
+	return out
+}
+
 func (r *ToolRegistry) buildMCPAdmissionGate(client MCPClient) (func(string) bool, func(string) bool, map[string]string) {
 	verifiedNames := map[string]struct{}{}
 	manifestPresent := false

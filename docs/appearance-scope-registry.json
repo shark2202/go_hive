@@ -1,10 +1,10 @@
 {
   "schema": "hive-appearance-scope-registry/1",
-  "generated_at": "2026-11-21T11:20:00+08:00",
-  "generated_by": "api-ws-canonical lane（API/SSE 帧级 canonical golden：sse 维度冻结 + api-routes 值级账本）",
-  "worktree": "/Users/mac/hive/.wt/api-ws-canonical",
-  "branch": "api-ws-canonical",
-  "base_commit": "72a7308e",
+  "generated_at": "2026-11-21T13:46:05+08:00",
+  "generated_by": "tool-schema-residuals lane（同名工具 schema/desc 残差收口：desc 41/41、lifecycle 源码口径 schema 归一 40/41）",
+  "worktree": "/Users/mac/hive/.wt/tool-schema-residuals",
+  "branch": "tool-schema-residuals",
+  "base_commit": "59d89b86",
   "baseline": {
     "python": "hive 1.0.14（core 树当前 checkout）",
     "go": "1.0.26-go.1",
@@ -183,18 +183,23 @@
           "path": "go_hive/docs/integrations-evidence-audit.md",
           "kind": "measured",
           "note": "集成证据审计：102 模块 / 854 action + senders 9 = 863；A 12 / B 90 / C 1 / D 1 / E 0；1230 个测试；0 个真实第三方 API 调用"
+        },
+        {
+          "path": "go_hive/docs/tool-contract-diff.md",
+          "kind": "measured",
+          "note": "round 4 @ tool-schema-residuals：41 同名；desc 41/41；schema raw 32/41（抓包）/ 36/41（源码）、剥 CONTEXT 36/41（抓包）/ 40/41（源码）、归一 36/41（抓包）/ 40/41（源码）；类型/可选性/required 不一致 0；仅 Python 参数 4（session_cwd，层差异）；仅 Go 参数 2（run_playbook action/run_id，记录例外）；5 个 lifecycle 定义按注册 Python Tool 逐字冻结（4 逐字 + run_playbook partial）"
         }
       ],
       "status": "partial",
-      "status_basis": "模块/action 覆盖 103/103、863/865；首轮 24 名称逐字一致；同名 desc 40/41、schema 归一 36/41（余 lifecycle 层、session_cwd、exa_search）；工具输出/失败文案仍无 golden 对照，集成 91 个 B 类未真实调用。",
+      "status_basis": "模块/action 覆盖 103/103、863/865；首轮 24 名称逐字一致（首轮 tools[] 与延迟层抓取 sha256 相同）；同名 desc 41/41；schema 归一 36/41（抓包口径）/ 40/41（lifecycle 5 取 Python 源码 Tool 定义，唯一例外 run_playbook 的折叠控制参数 action/run_id）；session_cwd 4 为 Tool Library 层差异、exa_search 为结构例外（7-action 模块 vs 扁平工具）；工具输出/失败文案仍无 golden 对照，集成 91 个 B 类未真实调用。",
       "contract_state": "frozen_contract",
-      "measured_now": "2026-11-21：默认会话首轮 tools[] 35→24（与 Python 逐字）；search_tools(select:…) 可加载并真实执行；colony 绑定恢复 39；HIVE_TOOL_SURFACE=grouped=150。",
+      "measured_now": "2026-11-21：默认会话首轮 tools[] 35→24（与 Python 逐字）；search_tools(select:…) 可加载并真实执行；colony 绑定恢复 39；HIVE_TOOL_SURFACE=grouped=150；round 4：加载全部 51 个 deferred 后 tools[]=75，同名 desc 41/41、schema 归一 36→40/41（源码口径），required 不一致 4→0，仅 Go 参数 22→2（run_playbook）。",
       "lane": "tool-schema",
-      "lane_state": "suggested",
+      "lane_state": "measured",
       "next": [
-        "把默认扁平工具面的 11 个保留例外（terminal 6 + lifecycle 5）写成支持口径或逐条收敛",
-        "补工具调用结果的 golden 对照（成功 + 失败路径各若干）",
-        "exa_search 扁平化与 run_playbook 文案口径定调"
+        "run_playbook 折叠控制参数（action/run_id）写成支持口径，或随扁平面改版收敛",
+        "exa_search 扁平化（7-action 模块 → 扁平工具）另立车道",
+        "补工具调用结果的 golden 对照（成功 + 失败路径各若干）"
       ],
       "priority": "P1"
     },

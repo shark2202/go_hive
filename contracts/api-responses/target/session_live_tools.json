@@ -8,31 +8,1109 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-21T12:27:19+08:00",
+  "captured_at": "2026-11-21T14:04:18+08:00",
   "canonical": {
     "actual_tools": [
+      {
+        "description": "Loads tool schemas so you can call them. Tools in the <searchable_tools> block of your system prompt are listed by name only — their schemas are not loaded, so they cannot be called until you load them here. Once loaded, a tool is callable on your next step exactly like an always-on tool, and stays loaded for the rest of the session.\n\nQuery forms:\n- \"inventory\" — report loaded, searchable, disabled, and unavailable tools without loading anything. Use before describing your capabilities.\n- \"select:name_a,name_b\" — load these exact tools by name (no limit). Preferred: the <searchable_tools> list…[+161 chars sha256:bf95b9ddbf80]",
+        "kind": "lifecycle",
+        "name": "search_tools"
+      },
+      {
+        "description": "Use this tool to create a structured task list for your current session. The list renders as a live widget in the user's right-rail panel — it helps the user understand progress on their request and demonstrates thoroughness.\n\n**Always takes a `tasks` array — one entry or many, created atomically (all-or-none).** Replying to 5 posts is ONE `task_create` with 5 entries. A single one-off mid-run addition is ONE `task_create` with a 1-entry array.\n\n## When to use this tool\n\nUse this tool proactively in these scenarios:\n- **Multi-step requests** — when a request requires 2+ distinct atomic actions…[+1955 chars sha256:083bb7a6d1cc]",
+        "kind": "lifecycle",
+        "name": "task_create"
+      },
+      {
+        "description": "Read the full record of one task (description, metadata, timestamps) from your own session task list. Use this to refresh your view of a task before updating it if you're not sure of current fields.",
+        "kind": "lifecycle",
+        "name": "task_get"
+      },
+      {
+        "description": "Show your session task list, sorted by id ascending. Internal tasks (metadata._internal=true), resolved blockers, and archived tasks are filtered out by default; pass include_archived=true to also see archived tasks (e.g. to restore one). **Prefer working on tasks in id order** (lowest first) — earlier tasks usually set up context for later ones.",
+        "kind": "lifecycle",
+        "name": "task_list"
+      },
+      {
+        "description": "Update ONE task on your own session task list. There is no batch update tool by design — every `completed` transition is a discrete progress signal to the user.\n\nWorkflow:\n- Mark a task `in_progress` BEFORE you start working on it.\n- Mark it `completed` AS SOON as you finish it — do not let multiple finished tasks pile up unmarked before flushing them at the end of the run.\n- Send these in the same response as your next real tool call (one response can carry several calls): a response that only updates tasks makes the user wait a whole model turn for nothing.\n- Archive tasks: when the user ask…[+953 chars sha256:3597b0f4593f]",
+        "kind": "lifecycle",
+        "name": "task_update"
+      },
+      {
+        "description": "Write or replace a skill, or install one (yours, a downloaded one, an existing skill folder). This is the way to add a skill: don't write SKILL.md into a skills folder with the terminal or write_file, since a skill put there by hand isn't loaded until a new session and skips the user's approval.\n\nSCOPE (who sees it):\n  - 'queen' (default outside a colony): your own skills. In your skills catalog from your next turn and in your colonies'; no other queen sees it. A skill the user made in your skills can't be replaced.\n  - 'colony' (default inside a colony): THIS colony's workers only. Use it BEF…[+1384 chars sha256:c6b020685e2a]",
+        "kind": "lifecycle",
+        "name": "write_skill"
+      },
+      {
+        "description": "Surface one or more local files to the user as clickable chips\nin chat. **Any file type is accepted.**\n\nUse this whenever the user has asked for a file — a report, a\nspreadsheet, a config, a zip, anything. Never rename, zip, or\npaste the contents inline as a workaround \"because the tool\ndoesn't support this format\" — it does.\n\nUse this on a PDF that ``pdf_read`` returned with\n``needs_vision_pages`` (scanned / image-based) — the PDF is sent\nas ImageContent so vision can read the rendered pages directly.\nDo NOT reach for tesseract / pdftoppm first; ``attach_file`` on\nthe original PDF replaces th…[+1628 chars sha256:8ecca78d3964]",
+        "kind": "mcp",
+        "name": "attach_file"
+      },
+      {
+        "description": "Get everything you need to drive the web browser. The browser is controlled from the terminal via the `hive-browser` CLI — run its commands with terminal_exec, ALWAYS with `--json`. Call this first before any browser work: it returns the command surface and how to check the extension connection. Then run `hive-browser setup --json` in the terminal to confirm the Hive browser extension is connected (it returns the Chrome Web Store install steps if not) and to list the connected Chrome profiles.",
+        "kind": "mcp",
+        "name": "browser_setup"
+      },
+      {
+        "description": "List connected accounts and their identities.\n\nCall with no arguments to see all connected accounts.\nCall with provider=\"google\" to filter by provider type.\n\nReturns account IDs, provider types, and identity labels\n(email, username, workspace) for each connected account.",
+        "kind": "mcp",
+        "name": "get_account_info"
+      },
+      {
+        "description": "Get the current date and time.\n\nUse this tool when you need accurate current time, especially in\nlong-running sessions or when precision matters (e.g., scheduling,\nchecking availability, time-sensitive operations).\n\nArgs:\n    timezone: IANA timezone name (e.g., \"UTC\", \"America/New_York\",\n             \"Asia/Kolkata\", \"Europe/London\"). Defaults to \"UTC\".\n\nReturns:\n    Dictionary with datetime info:\n    - datetime: Full ISO 8601 datetime string\n    - date: Date in YYYY-MM-DD format\n    - time: Time in HH:MM:SS format\n    - timezone: The timezone used\n    - day_of_week: Full day name (e.g., \"Monda…[+62 chars sha256:b84b98b3ada2]",
+        "kind": "mcp",
+        "name": "get_current_time"
+      },
+      {
+        "description": "Generate or edit an image from a text prompt. Billed to Hive credits.\n\nRoutes through the Hive image service (OpenAI ``gpt-image-2``). The cost\nis charged to the user's credits like an LLM call — no API key needed.\n\nProvide ``reference_images`` to edit / compose from existing images\n(e.g. restyle a product photo, combine elements, keep a character's\nidentity); the model conditions on them at high fidelity. Without them\nit's pure text-to-image.\n\nArgs:\n    prompt: What to draw. Be specific about subject, style, composition,\n        colors, and any text to render.\n    reference_images: Up to 10 l…[+876 chars sha256:372a5d183db8]",
+        "kind": "mcp",
+        "name": "image_generate"
+      },
+      {
+        "description": "Read and extract text from one or many PDF files.\n\nSingle-file mode (``file_path``) returns a flat result:\n``{path, name, total_pages, pages_extracted, content, char_count,\npages: [{number, text, needs_vision}], needs_vision_pages?, metadata?}``.\n\nMulti-file mode (``files``, up to 10) returns ``{pdfs: [...]}`` with\neach entry in the single-file shape. Pages below 200 chars of\nextracted text are flagged ``needs_vision: true``; the result also\ncarries a ``next_step`` field telling the caller to use\n``attach_file`` on the original PDF — it sends the pages as\nImageContent so vision reads them dire…[+469 chars sha256:c0471437107b]",
+        "kind": "mcp",
+        "name": "pdf_read"
+      },
+      {
+        "description": "Recall what was said in any past session — yours and the user's.\n\nThis is your long-term memory. Your active context only holds\nthe current session (and even that gets compacted as it grows).\nEverything the user told you, every answer you gave, every\ntool result you saw across every previous session lives in\nthis index. Reach for this tool whenever you can't see\nsomething in your active context but suspect it happened.\n\nCALL THIS when the user says any of:\n    • \"remember…\" / \"do you remember…\"\n    • \"last time\" / \"before\" / \"earlier\" / \"previously\"\n    • \"what did I ask about…\" / \"what did we…[+873 chars sha256:5b9f12c4e2cd]",
+        "kind": "mcp",
+        "name": "search_messages"
+      },
+      {
+        "description": "Run a shell command and capture its output.\n\nPast auto_background_after_sec, the call auto-promotes to a background\njob and returns immediately with `auto_backgrounded=True, job_id=...`\n— poll with terminal_job_logs(job_id, since_offset=...) to read the rest.\nSet auto_background_after_sec=0 to force pure foreground (kill on\ntimeout_sec).\n\nThe agent loop may first return a bg_* handle; use collect_result for\nthat handle, then terminal_job_logs for any job_id in the result.\nPOSIX uses bash when shell=True; Windows selects Git Bash, PowerShell,\nthen cmd. Read shell_kind before choosing platform-s…[+1240 chars sha256:b1921e412ee4]",
+        "kind": "mcp",
+        "name": "terminal_exec"
+      },
+      {
+        "description": "Find files by name/glob under `path` — the Glob tool.\n\nUse this to locate files by name, in the project tree or raw/arbitrary\npaths (/var/log, /etc, archive contents). Relative paths resolve against\nthe session workdir. For mtime/size/type predicate queries, drop to\nterminal_exec(\"find ...\") — see references/find_predicates.md.\n\nPattern handling (so bare stems Just Work):\n    \"lk_scan_post_reactors\" -> matched as **/*lk_scan_post_reactors*\n    \"*.py\"                  -> matched as **/*.py (recursive)\n    \"src/**/*.py\"           -> used verbatim\nThe glob actually run is returned as `expanded_pa…[+533 chars sha256:42245c342183]",
+        "kind": "mcp",
+        "name": "terminal_glob"
+      },
+      {
+        "description": "Read job output at an offset. Combined read + status + wait primitive.\n\nTrack next_offset across calls to avoid replaying data. When\nwait_until_exit=True, waits until the job exits, a new message for you\narrives, or wait_timeout_sec elapses, then returns logs and status.\n\nArgs:\n    job_id: From terminal_job_start (or auto-promoted from terminal_exec).\n    stream: \"stdout\" | \"stderr\" | \"merged\". Use \"merged\" only when the\n        job was started with merge_stderr=True.\n    since_offset: Absolute byte offset to start reading from. Pass 0\n        on first call; pass next_offset on subsequent call…[+635 chars sha256:078c6f6e67cc]",
+        "kind": "mcp",
+        "name": "terminal_job_logs"
+      },
+      {
+        "description": "List jobs, send signals, or write to job stdin.\n\nSingle tool covering job-control side effects. The action argument\npicks the operation:\n\n- \"capabilities\": return platform, supported_actions and signal semantics.\nNo job_id required. Check this before choosing a signal.\n- \"list\": list active + recently-exited jobs. job_id ignored.\n- \"signal_term\" | \"signal_kill\" | \"signal_int\" | \"signal_hup\"\n| \"signal_usr1\" | \"signal_usr2\": send the named signal. Requires job_id.\n- \"stdin\": write `data` to the job's stdin. Requires job_id and data.\n- \"close_stdin\": close the job's stdin pipe (e.g. to flush a to…[+502 chars sha256:fe37077ba4e3]",
+        "kind": "mcp",
+        "name": "terminal_job_manage"
+      },
+      {
+        "description": "Retrieve a slice of truncated output by handle.\n\nWhen terminal_exec or terminal_job_logs returns more output than fits inline,\nyou'll see `output_handle: \"out_<hex>\"`. Pass it here with successive\noffsets to paginate. The full output is preserved (combined stdout+stderr\nwith `--- stdout ---` / `--- stderr ---` separators) for 5 minutes.\n\nArgs:\n    output_handle: From a prior tool's envelope.\n    since_offset: Pass 0 first, then next_offset from the previous call.\n    max_kb: Max KB to return per call.\n\nReturns: {data, offset, next_offset, eof, expired}",
+        "kind": "mcp",
+        "name": "terminal_output_get"
+      },
+      {
+        "description": "Run ripgrep on `path` for `pattern` — the content-search tool.\n\nUse this for all content (regex) search, whether project code or raw\npaths (system configs, /var/log, archive contents); it exposes the full\nrg flag surface. Relative paths resolve against the session workdir.\n\nArgs:\n    pattern: Regex pattern.\n    path: Directory or file to search. Relative paths resolve against\n        the session workdir; default is the session workdir itself.\n    glob: Filename glob (e.g. \"*.py\").\n    type_filter: rg filetype shortcut (e.g. \"py\", \"rust\", \"md\").\n    ignore_case: Case-insensitive search.\n    con…[+855 chars sha256:c5b75a3ff55b]",
+        "kind": "mcp",
+        "name": "terminal_rg"
+      },
       {
         "description": "Ask the user a question.",
         "kind": "synthetic",
         "name": "ask_user"
+      },
+      {
+        "description": "Propose forking this session into a colony. Call this when the current work needs parallelization, scheduling, background/recurring execution, or otherwise should outlive this chat. The frontend opens a 'Create Colony' popup pre-filled with this colony_id and the current queen auto-selected; the user reviews and confirms. On accept, this chat's conversation is compacted into the new colony's queen seed and this session locks — so make sure you've left the conversation in a self-contained state. On dismiss the chat continues normally. Do NOT call this for one-shot work the user wants finished i…[+66 chars sha256:7f6cc86bf298]",
+        "kind": "synthetic",
+        "name": "suggest_colony"
       }
     ],
     "connected_providers": [],
     "diagnostic": {
+      "admitted_by_provider": {},
+      "dropped_by_provider": {
+        "airtable_pat": {
+          "count": 9,
+          "sample": [
+            "airtable_create_records",
+            "airtable_delete_records",
+            "airtable_get_base_schema",
+            "airtable_get_record",
+            "airtable_list_bases"
+          ]
+        },
+        "apify": {
+          "count": 6,
+          "sample": [
+            "apify_get_dataset_items",
+            "apify_get_kv_store_record",
+            "apify_get_run",
+            "apify_list_actors",
+            "apify_list_runs"
+          ]
+        },
+        "apollo": {
+          "count": 7,
+          "sample": [
+            "apollo_bulk_enrich_people",
+            "apollo_enrich_company",
+            "apollo_enrich_person",
+            "apollo_get_person_activities",
+            "apollo_list_email_accounts"
+          ]
+        },
+        "asana": {
+          "count": 9,
+          "sample": [
+            "asana_add_comment",
+            "asana_create_subtask",
+            "asana_create_task",
+            "asana_get_task",
+            "asana_list_projects"
+          ]
+        },
+        "attio": {
+          "count": 15,
+          "sample": [
+            "attio_list_entries_get",
+            "attio_list_entry_create",
+            "attio_list_entry_delete",
+            "attio_list_lists",
+            "attio_member_get"
+          ]
+        },
+        "aws_secret_key": {
+          "count": 8,
+          "sample": [
+            "s3_copy_object",
+            "s3_delete_object",
+            "s3_generate_presigned_url",
+            "s3_get_object",
+            "s3_get_object_metadata"
+          ]
+        },
+        "azure_subscription_id": {
+          "count": 5,
+          "sample": [
+            "azure_sql_get_database",
+            "azure_sql_get_server",
+            "azure_sql_list_databases",
+            "azure_sql_list_firewall_rules",
+            "azure_sql_list_servers"
+          ]
+        },
+        "bigquery_project": {
+          "count": 2,
+          "sample": [
+            "describe_dataset",
+            "run_bigquery_query"
+          ]
+        },
+        "brave_search": {
+          "count": 1,
+          "sample": [
+            "web_search"
+          ]
+        },
+        "brevo": {
+          "count": 9,
+          "sample": [
+            "brevo_create_contact",
+            "brevo_delete_contact",
+            "brevo_get_contact",
+            "brevo_get_email_stats",
+            "brevo_list_contacts"
+          ]
+        },
+        "calcom": {
+          "count": 9,
+          "sample": [
+            "calcom_cancel_booking",
+            "calcom_create_booking",
+            "calcom_get_availability",
+            "calcom_get_booking",
+            "calcom_get_event_type"
+          ]
+        },
+        "calendly_pat": {
+          "count": 8,
+          "sample": [
+            "calendly_cancel_event",
+            "calendly_get_current_user",
+            "calendly_get_event_type",
+            "calendly_get_scheduled_event",
+            "calendly_list_event_types"
+          ]
+        },
+        "cloudflare": {
+          "count": 54,
+          "sample": [
+            "cloudflare_check_domain_dns_health",
+            "cloudflare_create_access_policy",
+            "cloudflare_create_dns_record",
+            "cloudflare_create_firewall_rule",
+            "cloudflare_create_worker_route"
+          ]
+        },
+        "cloudinary_secret": {
+          "count": 8,
+          "sample": [
+            "cloudinary_add_tag",
+            "cloudinary_delete_resource",
+            "cloudinary_get_resource",
+            "cloudinary_get_usage",
+            "cloudinary_list_resources"
+          ]
+        },
+        "confluence_token": {
+          "count": 8,
+          "sample": [
+            "confluence_create_page",
+            "confluence_delete_page",
+            "confluence_get_page",
+            "confluence_get_page_children",
+            "confluence_list_pages"
+          ]
+        },
+        "databricks": {
+          "count": 8,
+          "sample": [
+            "databricks_get_run",
+            "databricks_list_clusters",
+            "databricks_list_jobs",
+            "databricks_list_workspace",
+            "databricks_run_job"
+          ]
+        },
+        "discord": {
+          "count": 7,
+          "sample": [
+            "discord_create_reaction",
+            "discord_delete_message",
+            "discord_get_channel",
+            "discord_get_messages",
+            "discord_list_channels"
+          ]
+        },
+        "docker_hub": {
+          "count": 7,
+          "sample": [
+            "docker_hub_delete_tag",
+            "docker_hub_get_repo",
+            "docker_hub_get_tag_detail",
+            "docker_hub_list_repos",
+            "docker_hub_list_tags"
+          ]
+        },
+        "exa_search": {
+          "count": 7,
+          "sample": [
+            "exa_answer",
+            "exa_find_similar",
+            "exa_get_contents",
+            "exa_search",
+            "exa_search_companies"
+          ]
+        },
+        "finlight": {
+          "count": 1,
+          "sample": [
+            "news_sentiment"
+          ]
+        },
+        "freshdesk_domain": {
+          "count": 17,
+          "sample": [
+            "freshdesk_add_ticket_reply",
+            "freshdesk_create_contact",
+            "freshdesk_create_ticket",
+            "freshdesk_filter_tickets",
+            "freshdesk_get_agent"
+          ]
+        },
+        "github": {
+          "count": 19,
+          "sample": [
+            "github_create_issue",
+            "github_create_pull_request",
+            "github_create_release",
+            "github_get_branch",
+            "github_get_issue"
+          ]
+        },
+        "gitlab_token": {
+          "count": 9,
+          "sample": [
+            "gitlab_create_issue",
+            "gitlab_create_merge_request_note",
+            "gitlab_get_issue",
+            "gitlab_get_merge_request",
+            "gitlab_get_project"
+          ]
+        },
+        "google": {
+          "count": 41,
+          "sample": [
+            "calendar_check_availability",
+            "calendar_create_event",
+            "calendar_delete_event",
+            "calendar_get_calendar",
+            "calendar_get_event"
+          ]
+        },
+        "google_analytics": {
+          "count": 7,
+          "sample": [
+            "ga_get_conversion_events",
+            "ga_get_landing_pages",
+            "ga_get_realtime",
+            "ga_get_top_pages",
+            "ga_get_traffic_sources"
+          ]
+        },
+        "google_cse": {
+          "count": 1,
+          "sample": [
+            "google_search"
+          ]
+        },
+        "google_maps": {
+          "count": 6,
+          "sample": [
+            "maps_directions",
+            "maps_distance_matrix",
+            "maps_geocode",
+            "maps_place_details",
+            "maps_place_search"
+          ]
+        },
+        "google_search_console": {
+          "count": 8,
+          "sample": [
+            "gsc_delete_sitemap",
+            "gsc_inspect_url",
+            "gsc_list_sitemaps",
+            "gsc_list_sites",
+            "gsc_search_analytics"
+          ]
+        },
+        "google_vision": {
+          "count": 9,
+          "sample": [
+            "vision_detect_faces",
+            "vision_detect_labels",
+            "vision_detect_landmarks",
+            "vision_detect_logos",
+            "vision_detect_text"
+          ]
+        },
+        "greenhouse_token": {
+          "count": 9,
+          "sample": [
+            "greenhouse_add_candidate_note",
+            "greenhouse_get_application",
+            "greenhouse_get_candidate",
+            "greenhouse_get_job",
+            "greenhouse_list_applications"
+          ]
+        },
+        "hubspot": {
+          "count": 15,
+          "sample": [
+            "hubspot_create_association",
+            "hubspot_create_company",
+            "hubspot_create_contact",
+            "hubspot_create_deal",
+            "hubspot_delete_object"
+          ]
+        },
+        "huggingface": {
+          "count": 9,
+          "sample": [
+            "huggingface_get_dataset",
+            "huggingface_get_model",
+            "huggingface_list_inference_endpoints",
+            "huggingface_run_embedding",
+            "huggingface_run_inference"
+          ]
+        },
+        "intercom": {
+          "count": 11,
+          "sample": [
+            "intercom_add_note",
+            "intercom_add_tag",
+            "intercom_assign_conversation",
+            "intercom_close_conversation",
+            "intercom_create_contact"
+          ]
+        },
+        "jira_token": {
+          "count": 9,
+          "sample": [
+            "jira_add_comment",
+            "jira_create_issue",
+            "jira_get_issue",
+            "jira_get_project",
+            "jira_list_projects"
+          ]
+        },
+        "kafka_cluster_id": {
+          "count": 6,
+          "sample": [
+            "kafka_create_topic",
+            "kafka_get_consumer_group_lag",
+            "kafka_get_topic",
+            "kafka_list_consumer_groups",
+            "kafka_list_topics"
+          ]
+        },
+        "langfuse_secret_key": {
+          "count": 6,
+          "sample": [
+            "langfuse_create_score",
+            "langfuse_get_prompt",
+            "langfuse_get_trace",
+            "langfuse_list_prompts",
+            "langfuse_list_scores"
+          ]
+        },
+        "linear": {
+          "count": 21,
+          "sample": [
+            "linear_cycles_list",
+            "linear_issue_add_comment",
+            "linear_issue_comments_list",
+            "linear_issue_create",
+            "linear_issue_delete"
+          ]
+        },
+        "lusha_api_key": {
+          "count": 8,
+          "sample": [
+            "lusha_bulk_enrich_persons",
+            "lusha_enrich_company",
+            "lusha_enrich_person",
+            "lusha_get_technologies",
+            "lusha_get_usage"
+          ]
+        },
+        "mattermost_url": {
+          "count": 7,
+          "sample": [
+            "mattermost_create_reaction",
+            "mattermost_delete_post",
+            "mattermost_get_channel",
+            "mattermost_get_posts",
+            "mattermost_list_channels"
+          ]
+        },
+        "microsoft_graph": {
+          "count": 11,
+          "sample": [
+            "onedrive_download_file",
+            "onedrive_list_files",
+            "onedrive_search_files",
+            "onedrive_upload_file",
+            "outlook_get_message"
+          ]
+        },
+        "mongodb_data_source": {
+          "count": 6,
+          "sample": [
+            "mongodb_aggregate",
+            "mongodb_delete_one",
+            "mongodb_find",
+            "mongodb_find_one",
+            "mongodb_insert_one"
+          ]
+        },
+        "n8n_base_url": {
+          "count": 6,
+          "sample": [
+            "n8n_activate_workflow",
+            "n8n_deactivate_workflow",
+            "n8n_get_execution",
+            "n8n_get_workflow",
+            "n8n_list_executions"
+          ]
+        },
+        "newsdata": {
+          "count": 6,
+          "sample": [
+            "news_by_company",
+            "news_by_source",
+            "news_by_topic",
+            "news_headlines",
+            "news_latest"
+          ]
+        },
+        "notion": {
+          "count": 13,
+          "sample": [
+            "notion_append_blocks",
+            "notion_create_database",
+            "notion_create_page",
+            "notion_delete_block",
+            "notion_get_block"
+          ]
+        },
+        "obsidian": {
+          "count": 6,
+          "sample": [
+            "obsidian_append_note",
+            "obsidian_get_active",
+            "obsidian_list_files",
+            "obsidian_read_note",
+            "obsidian_search"
+          ]
+        },
+        "pagerduty_api_key": {
+          "count": 5,
+          "sample": [
+            "pagerduty_get_incident",
+            "pagerduty_list_escalation_policies",
+            "pagerduty_list_incidents",
+            "pagerduty_list_oncalls",
+            "pagerduty_list_services"
+          ]
+        },
+        "pagerduty_from_email": {
+          "count": 3,
+          "sample": [
+            "pagerduty_add_incident_note",
+            "pagerduty_create_incident",
+            "pagerduty_update_incident"
+          ]
+        },
+        "pinecone": {
+          "count": 9,
+          "sample": [
+            "pinecone_create_index",
+            "pinecone_delete_index",
+            "pinecone_delete_vectors",
+            "pinecone_describe_index",
+            "pinecone_fetch_vectors"
+          ]
+        },
+        "pipedrive": {
+          "count": 13,
+          "sample": [
+            "pipedrive_add_note",
+            "pipedrive_create_activity",
+            "pipedrive_create_deal",
+            "pipedrive_create_person",
+            "pipedrive_get_deal"
+          ]
+        },
+        "plaid_secret": {
+          "count": 6,
+          "sample": [
+            "plaid_get_accounts",
+            "plaid_get_balance",
+            "plaid_get_institution",
+            "plaid_get_transactions",
+            "plaid_search_institutions"
+          ]
+        },
+        "postgres": {
+          "count": 8,
+          "sample": [
+            "pg_describe_table",
+            "pg_explain",
+            "pg_get_foreign_keys",
+            "pg_get_table_stats",
+            "pg_list_indexes"
+          ]
+        },
+        "powerbi_token": {
+          "count": 5,
+          "sample": [
+            "powerbi_get_refresh_history",
+            "powerbi_list_datasets",
+            "powerbi_list_reports",
+            "powerbi_list_workspaces",
+            "powerbi_refresh_dataset"
+          ]
+        },
+        "prometheus": {
+          "count": 2,
+          "sample": [
+            "prometheus_query",
+            "prometheus_query_range"
+          ]
+        },
+        "pushover": {
+          "count": 7,
+          "sample": [
+            "pushover_cancel_receipt",
+            "pushover_check_receipt",
+            "pushover_get_limits",
+            "pushover_list_sounds",
+            "pushover_send"
+          ]
+        },
+        "quickbooks_realm_id": {
+          "count": 8,
+          "sample": [
+            "quickbooks_create_customer",
+            "quickbooks_create_invoice",
+            "quickbooks_create_payment",
+            "quickbooks_get_company_info",
+            "quickbooks_get_customer"
+          ]
+        },
+        "razorpay_secret": {
+          "count": 6,
+          "sample": [
+            "razorpay_create_payment_link",
+            "razorpay_create_refund",
+            "razorpay_get_invoice",
+            "razorpay_get_payment",
+            "razorpay_list_invoices"
+          ]
+        },
+        "reddit_secret": {
+          "count": 7,
+          "sample": [
+            "reddit_get_comments",
+            "reddit_get_post_detail",
+            "reddit_get_posts",
+            "reddit_get_subreddit_info",
+            "reddit_get_user"
+          ]
+        },
+        "redis": {
+          "count": 11,
+          "sample": [
+            "redis_delete",
+            "redis_get",
+            "redis_hgetall",
+            "redis_hset",
+            "redis_info"
+          ]
+        },
+        "redshift_secret_key": {
+          "count": 5,
+          "sample": [
+            "redshift_describe_statement",
+            "redshift_execute_sql",
+            "redshift_get_results",
+            "redshift_list_databases",
+            "redshift_list_tables"
+          ]
+        },
+        "salesforce_instance_url": {
+          "count": 9,
+          "sample": [
+            "salesforce_create_record",
+            "salesforce_delete_record",
+            "salesforce_describe_object",
+            "salesforce_get_record",
+            "salesforce_get_record_count"
+          ]
+        },
+        "sap_password": {
+          "count": 5,
+          "sample": [
+            "sap_get_purchase_order",
+            "sap_list_business_partners",
+            "sap_list_products",
+            "sap_list_purchase_orders",
+            "sap_list_sales_orders"
+          ]
+        },
+        "serpapi": {
+          "count": 8,
+          "sample": [
+            "patents_get_details",
+            "patents_search",
+            "scholar_cited_by",
+            "scholar_get_author",
+            "scholar_get_citations"
+          ]
+        },
+        "shopify_store_name": {
+          "count": 9,
+          "sample": [
+            "shopify_create_draft_order",
+            "shopify_get_customer",
+            "shopify_get_order",
+            "shopify_get_product",
+            "shopify_list_customers"
+          ]
+        },
+        "similarweb": {
+          "count": 29,
+          "sample": [
+            "similarweb_v5_ad_networks",
+            "similarweb_v5_audience_interests",
+            "similarweb_v5_audience_overlap",
+            "similarweb_v5_company_info",
+            "similarweb_v5_deduplicated_audience"
+          ]
+        },
+        "slack": {
+          "count": 51,
+          "sample": [
+            "slack_add_bookmark",
+            "slack_add_reaction",
+            "slack_archive_channel",
+            "slack_create_canvas",
+            "slack_create_channel"
+          ]
+        },
+        "snowflake_token": {
+          "count": 3,
+          "sample": [
+            "snowflake_cancel_statement",
+            "snowflake_execute_sql",
+            "snowflake_get_statement_status"
+          ]
+        },
+        "stripe": {
+          "count": 54,
+          "sample": [
+            "stripe_cancel_payment_intent",
+            "stripe_cancel_subscription",
+            "stripe_capture_charge",
+            "stripe_confirm_payment_intent",
+            "stripe_create_checkout_session"
+          ]
+        },
+        "supabase": {
+          "count": 7,
+          "sample": [
+            "supabase_auth_signin",
+            "supabase_auth_signup",
+            "supabase_delete",
+            "supabase_edge_invoke",
+            "supabase_insert"
+          ]
+        },
+        "telegram": {
+          "count": 13,
+          "sample": [
+            "telegram_delete_message",
+            "telegram_edit_message",
+            "telegram_forward_message",
+            "telegram_get_chat",
+            "telegram_get_chat_member_count"
+          ]
+        },
+        "tfc_token": {
+          "count": 5,
+          "sample": [
+            "terraform_create_run",
+            "terraform_get_run",
+            "terraform_get_workspace",
+            "terraform_list_runs",
+            "terraform_list_workspaces"
+          ]
+        },
+        "tines_api_key": {
+          "count": 5,
+          "sample": [
+            "tines_get_action",
+            "tines_get_action_logs",
+            "tines_get_story",
+            "tines_list_actions",
+            "tines_list_stories"
+          ]
+        },
+        "trello_token": {
+          "count": 12,
+          "sample": [
+            "trello_add_attachment",
+            "trello_add_comment",
+            "trello_create_card",
+            "trello_create_list",
+            "trello_get_card"
+          ]
+        },
+        "twilio_token": {
+          "count": 7,
+          "sample": [
+            "twilio_delete_message",
+            "twilio_get_message",
+            "twilio_list_calls",
+            "twilio_list_messages",
+            "twilio_list_phone_numbers"
+          ]
+        },
+        "vercel": {
+          "count": 7,
+          "sample": [
+            "vercel_create_env_var",
+            "vercel_get_deployment",
+            "vercel_get_project",
+            "vercel_list_deployments",
+            "vercel_list_env_vars"
+          ]
+        },
+        "wandb_api_key": {
+          "count": 6,
+          "sample": [
+            "wandb_get_run",
+            "wandb_get_run_metrics",
+            "wandb_get_summary",
+            "wandb_list_artifacts",
+            "wandb_list_projects"
+          ]
+        },
+        "x_bearer_token": {
+          "count": 7,
+          "sample": [
+            "twitter_get_list_tweets",
+            "twitter_get_tweet",
+            "twitter_get_tweet_replies",
+            "twitter_get_user",
+            "twitter_get_user_followers"
+          ]
+        },
+        "youtube": {
+          "count": 8,
+          "sample": [
+            "youtube_get_channel",
+            "youtube_get_playlist",
+            "youtube_get_video_categories",
+            "youtube_get_video_comments",
+            "youtube_get_video_details"
+          ]
+        },
+        "zendesk_token": {
+          "count": 8,
+          "sample": [
+            "zendesk_add_ticket_comment",
+            "zendesk_create_ticket",
+            "zendesk_get_ticket",
+            "zendesk_get_ticket_comments",
+            "zendesk_list_tickets"
+          ]
+        },
+        "zoho_crm": {
+          "count": 6,
+          "sample": [
+            "zoho_crm_add_note",
+            "zoho_crm_create_record",
+            "zoho_crm_get_record",
+            "zoho_crm_list_modules",
+            "zoho_crm_list_records"
+          ]
+        },
+        "zoom": {
+          "count": 9,
+          "sample": [
+            "zoom_create_meeting",
+            "zoom_delete_meeting",
+            "zoom_get_meeting",
+            "zoom_get_user",
+            "zoom_list_meeting_participants"
+          ]
+        }
+      },
+      "gate_live_providers_now": [],
+      "gate_tool_provider_map_size": 817,
+      "google_admitted_sample": [],
       "phase_state": {
-        "allowlist_is_none": true,
-        "allowlist_total": null,
-        "filtered_independent_total": 0,
+        "allowlist_is_none": false,
+        "allowlist_total": 25,
+        "filtered_independent_total": 22,
         "google_admitted_total": 0,
-        "google_in_allowlist": null,
+        "google_in_allowlist": 0,
         "google_in_filtered": 0,
         "google_in_independent_tools": 0,
         "google_in_mcp_names_all": 0,
-        "independent_tools_total": 0,
-        "mcp_tool_names_all_total": 0
-      }
+        "independent_tools_total": 40,
+        "mcp_tool_names_all_total": 33
+      },
+      "registry_mcp_total": 33
     },
-    "expected_tools": [],
+    "expected_tools": [
+      {
+        "description": "Loads tool schemas so you can call them. Tools in the <searchable_tools> block of your system prompt are listed by name only — their schemas are not loaded, so they cannot be called until you load them here. Once loaded, a tool is callable on your next step exactly like an always-on tool, and stays loaded for the rest of the session.\n\nQuery forms:\n- \"inventory\" — report loaded, searchable, disabled, and unavailable tools without loading anything. Use before describing your capabilities.\n- \"select:name_a,name_b\" — load these exact tools by name (no limit). Preferred: the <searchable_tools> list…[+161 chars sha256:bf95b9ddbf80]",
+        "kind": "lifecycle",
+        "name": "search_tools",
+        "status": "callable"
+      },
+      {
+        "description": "Use this tool to create a structured task list for your current session. The list renders as a live widget in the user's right-rail panel — it helps the user understand progress on their request and demonstrates thoroughness.\n\n**Always takes a `tasks` array — one entry or many, created atomically (all-or-none).** Replying to 5 posts is ONE `task_create` with 5 entries. A single one-off mid-run addition is ONE `task_create` with a 1-entry array.\n\n## When to use this tool\n\nUse this tool proactively in these scenarios:\n- **Multi-step requests** — when a request requires 2+ distinct atomic actions…[+1955 chars sha256:083bb7a6d1cc]",
+        "kind": "lifecycle",
+        "name": "task_create",
+        "status": "callable"
+      },
+      {
+        "description": "Read the full record of one task (description, metadata, timestamps) from your own session task list. Use this to refresh your view of a task before updating it if you're not sure of current fields.",
+        "kind": "lifecycle",
+        "name": "task_get",
+        "status": "callable"
+      },
+      {
+        "description": "Show your session task list, sorted by id ascending. Internal tasks (metadata._internal=true), resolved blockers, and archived tasks are filtered out by default; pass include_archived=true to also see archived tasks (e.g. to restore one). **Prefer working on tasks in id order** (lowest first) — earlier tasks usually set up context for later ones.",
+        "kind": "lifecycle",
+        "name": "task_list",
+        "status": "callable"
+      },
+      {
+        "description": "Update ONE task on your own session task list. There is no batch update tool by design — every `completed` transition is a discrete progress signal to the user.\n\nWorkflow:\n- Mark a task `in_progress` BEFORE you start working on it.\n- Mark it `completed` AS SOON as you finish it — do not let multiple finished tasks pile up unmarked before flushing them at the end of the run.\n- Send these in the same response as your next real tool call (one response can carry several calls): a response that only updates tasks makes the user wait a whole model turn for nothing.\n- Archive tasks: when the user ask…[+953 chars sha256:3597b0f4593f]",
+        "kind": "lifecycle",
+        "name": "task_update",
+        "status": "callable"
+      },
+      {
+        "description": "Write or replace a skill, or install one (yours, a downloaded one, an existing skill folder). This is the way to add a skill: don't write SKILL.md into a skills folder with the terminal or write_file, since a skill put there by hand isn't loaded until a new session and skips the user's approval.\n\nSCOPE (who sees it):\n  - 'queen' (default outside a colony): your own skills. In your skills catalog from your next turn and in your colonies'; no other queen sees it. A skill the user made in your skills can't be replaced.\n  - 'colony' (default inside a colony): THIS colony's workers only. Use it BEF…[+1384 chars sha256:c6b020685e2a]",
+        "kind": "lifecycle",
+        "name": "write_skill",
+        "status": "callable"
+      },
+      {
+        "description": "Surface one or more local files to the user as clickable chips\nin chat. **Any file type is accepted.**\n\nUse this whenever the user has asked for a file — a report, a\nspreadsheet, a config, a zip, anything. Never rename, zip, or\npaste the contents inline as a workaround \"because the tool\ndoesn't support this format\" — it does.\n\nUse this on a PDF that ``pdf_read`` returned with\n``needs_vision_pages`` (scanned / image-based) — the PDF is sent\nas ImageContent so vision can read the rendered pages directly.\nDo NOT reach for tesseract / pdftoppm first; ``attach_file`` on\nthe original PDF replaces th…[+1628 chars sha256:8ecca78d3964]",
+        "kind": "mcp",
+        "name": "attach_file",
+        "status": "callable"
+      },
+      {
+        "description": "Get everything you need to drive the web browser. The browser is controlled from the terminal via the `hive-browser` CLI — run its commands with terminal_exec, ALWAYS with `--json`. Call this first before any browser work: it returns the command surface and how to check the extension connection. Then run `hive-browser setup --json` in the terminal to confirm the Hive browser extension is connected (it returns the Chrome Web Store install steps if not) and to list the connected Chrome profiles.",
+        "kind": "mcp",
+        "name": "browser_setup",
+        "status": "callable"
+      },
+      {
+        "description": "List connected accounts and their identities.\n\nCall with no arguments to see all connected accounts.\nCall with provider=\"google\" to filter by provider type.\n\nReturns account IDs, provider types, and identity labels\n(email, username, workspace) for each connected account.",
+        "kind": "mcp",
+        "name": "get_account_info",
+        "status": "callable"
+      },
+      {
+        "description": "Get the current date and time.\n\nUse this tool when you need accurate current time, especially in\nlong-running sessions or when precision matters (e.g., scheduling,\nchecking availability, time-sensitive operations).\n\nArgs:\n    timezone: IANA timezone name (e.g., \"UTC\", \"America/New_York\",\n             \"Asia/Kolkata\", \"Europe/London\"). Defaults to \"UTC\".\n\nReturns:\n    Dictionary with datetime info:\n    - datetime: Full ISO 8601 datetime string\n    - date: Date in YYYY-MM-DD format\n    - time: Time in HH:MM:SS format\n    - timezone: The timezone used\n    - day_of_week: Full day name (e.g., \"Monda…[+62 chars sha256:b84b98b3ada2]",
+        "kind": "mcp",
+        "name": "get_current_time",
+        "status": "callable"
+      },
+      {
+        "description": "Generate or edit an image from a text prompt. Billed to Hive credits.\n\nRoutes through the Hive image service (OpenAI ``gpt-image-2``). The cost\nis charged to the user's credits like an LLM call — no API key needed.\n\nProvide ``reference_images`` to edit / compose from existing images\n(e.g. restyle a product photo, combine elements, keep a character's\nidentity); the model conditions on them at high fidelity. Without them\nit's pure text-to-image.\n\nArgs:\n    prompt: What to draw. Be specific about subject, style, composition,\n        colors, and any text to render.\n    reference_images: Up to 10 l…[+876 chars sha256:372a5d183db8]",
+        "kind": "mcp",
+        "name": "image_generate",
+        "status": "callable"
+      },
+      {
+        "description": "Read and extract text from one or many PDF files.\n\nSingle-file mode (``file_path``) returns a flat result:\n``{path, name, total_pages, pages_extracted, content, char_count,\npages: [{number, text, needs_vision}], needs_vision_pages?, metadata?}``.\n\nMulti-file mode (``files``, up to 10) returns ``{pdfs: [...]}`` with\neach entry in the single-file shape. Pages below 200 chars of\nextracted text are flagged ``needs_vision: true``; the result also\ncarries a ``next_step`` field telling the caller to use\n``attach_file`` on the original PDF — it sends the pages as\nImageContent so vision reads them dire…[+469 chars sha256:c0471437107b]",
+        "kind": "mcp",
+        "name": "pdf_read",
+        "status": "callable"
+      },
+      {
+        "description": "Recall what was said in any past session — yours and the user's.\n\nThis is your long-term memory. Your active context only holds\nthe current session (and even that gets compacted as it grows).\nEverything the user told you, every answer you gave, every\ntool result you saw across every previous session lives in\nthis index. Reach for this tool whenever you can't see\nsomething in your active context but suspect it happened.\n\nCALL THIS when the user says any of:\n    • \"remember…\" / \"do you remember…\"\n    • \"last time\" / \"before\" / \"earlier\" / \"previously\"\n    • \"what did I ask about…\" / \"what did we…[+873 chars sha256:5b9f12c4e2cd]",
+        "kind": "mcp",
+        "name": "search_messages",
+        "status": "callable"
+      },
+      {
+        "description": "Run a shell command and capture its output.\n\nPast auto_background_after_sec, the call auto-promotes to a background\njob and returns immediately with `auto_backgrounded=True, job_id=...`\n— poll with terminal_job_logs(job_id, since_offset=...) to read the rest.\nSet auto_background_after_sec=0 to force pure foreground (kill on\ntimeout_sec).\n\nThe agent loop may first return a bg_* handle; use collect_result for\nthat handle, then terminal_job_logs for any job_id in the result.\nPOSIX uses bash when shell=True; Windows selects Git Bash, PowerShell,\nthen cmd. Read shell_kind before choosing platform-s…[+1240 chars sha256:b1921e412ee4]",
+        "kind": "mcp",
+        "name": "terminal_exec",
+        "status": "callable"
+      },
+      {
+        "description": "Find files by name/glob under `path` — the Glob tool.\n\nUse this to locate files by name, in the project tree or raw/arbitrary\npaths (/var/log, /etc, archive contents). Relative paths resolve against\nthe session workdir. For mtime/size/type predicate queries, drop to\nterminal_exec(\"find ...\") — see references/find_predicates.md.\n\nPattern handling (so bare stems Just Work):\n    \"lk_scan_post_reactors\" -> matched as **/*lk_scan_post_reactors*\n    \"*.py\"                  -> matched as **/*.py (recursive)\n    \"src/**/*.py\"           -> used verbatim\nThe glob actually run is returned as `expanded_pa…[+533 chars sha256:42245c342183]",
+        "kind": "mcp",
+        "name": "terminal_glob",
+        "status": "callable"
+      },
+      {
+        "description": "Read job output at an offset. Combined read + status + wait primitive.\n\nTrack next_offset across calls to avoid replaying data. When\nwait_until_exit=True, waits until the job exits, a new message for you\narrives, or wait_timeout_sec elapses, then returns logs and status.\n\nArgs:\n    job_id: From terminal_job_start (or auto-promoted from terminal_exec).\n    stream: \"stdout\" | \"stderr\" | \"merged\". Use \"merged\" only when the\n        job was started with merge_stderr=True.\n    since_offset: Absolute byte offset to start reading from. Pass 0\n        on first call; pass next_offset on subsequent call…[+635 chars sha256:078c6f6e67cc]",
+        "kind": "mcp",
+        "name": "terminal_job_logs",
+        "status": "callable"
+      },
+      {
+        "description": "List jobs, send signals, or write to job stdin.\n\nSingle tool covering job-control side effects. The action argument\npicks the operation:\n\n- \"capabilities\": return platform, supported_actions and signal semantics.\nNo job_id required. Check this before choosing a signal.\n- \"list\": list active + recently-exited jobs. job_id ignored.\n- \"signal_term\" | \"signal_kill\" | \"signal_int\" | \"signal_hup\"\n| \"signal_usr1\" | \"signal_usr2\": send the named signal. Requires job_id.\n- \"stdin\": write `data` to the job's stdin. Requires job_id and data.\n- \"close_stdin\": close the job's stdin pipe (e.g. to flush a to…[+502 chars sha256:fe37077ba4e3]",
+        "kind": "mcp",
+        "name": "terminal_job_manage",
+        "status": "callable"
+      },
+      {
+        "description": "Retrieve a slice of truncated output by handle.\n\nWhen terminal_exec or terminal_job_logs returns more output than fits inline,\nyou'll see `output_handle: \"out_<hex>\"`. Pass it here with successive\noffsets to paginate. The full output is preserved (combined stdout+stderr\nwith `--- stdout ---` / `--- stderr ---` separators) for 5 minutes.\n\nArgs:\n    output_handle: From a prior tool's envelope.\n    since_offset: Pass 0 first, then next_offset from the previous call.\n    max_kb: Max KB to return per call.\n\nReturns: {data, offset, next_offset, eof, expired}",
+        "kind": "mcp",
+        "name": "terminal_output_get",
+        "status": "callable"
+      },
+      {
+        "description": "Run ripgrep on `path` for `pattern` — the content-search tool.\n\nUse this for all content (regex) search, whether project code or raw\npaths (system configs, /var/log, archive contents); it exposes the full\nrg flag surface. Relative paths resolve against the session workdir.\n\nArgs:\n    pattern: Regex pattern.\n    path: Directory or file to search. Relative paths resolve against\n        the session workdir; default is the session workdir itself.\n    glob: Filename glob (e.g. \"*.py\").\n    type_filter: rg filetype shortcut (e.g. \"py\", \"rust\", \"md\").\n    ignore_case: Case-insensitive search.\n    con…[+855 chars sha256:c5b75a3ff55b]",
+        "kind": "mcp",
+        "name": "terminal_rg",
+        "status": "callable"
+      },
+      {
+        "description": "Propose forking this session into a colony. Call this when the current work needs parallelization, scheduling, background/recurring execution, or otherwise should outlive this chat. The frontend opens a 'Create Colony' popup pre-filled with this colony_id and the current queen auto-selected; the user reviews and confirms. On accept, this chat's conversation is compacted into the new colony's queen seed and this session locks — so make sure you've left the conversation in a self-contained state. On dismiss the chat continues normally. Do NOT call this for one-shot work the user wants finished i…[+66 chars sha256:7f6cc86bf298]",
+        "kind": "synthetic",
+        "name": "suggest_colony",
+        "status": "callable"
+      },
+      {
+        "description": "Render a chart or diagram to a high-DPI PNG and return a rich\nenvelope so the chat can also render the chart live.\n\nThis single tool drives both the live in-chat embedding (chat\nreads `result.spec` and mounts the same lib in the bubble) and\nthe downloadable file (chat shows `result.file_url` as a link).\nCalling this tool IS the embedding — there is no separate\n\"show in chat\" step.\n\nArgs:\n    kind: \"echarts\" for ECharts JSON specs (general BI: bar, line,\n          area, scatter, candlestick, heatmap, treemap, sankey,\n          parallel, calendar, gauge, pie, sunburst, geo maps).\n          \"merm…[+1593 chars sha256:39dc1d30c79b]",
+        "kind": "mcp",
+        "name": "chart_render",
+        "status": "searchable"
+      },
+      {
+        "description": "Scrape and extract text content from a webpage.\n\nUses a headless browser to render JavaScript and bypass bot detection.\nUse when you need to read the content of a specific URL,\nextract data from a website, or read articles/documentation.\n\nThe extracted text body is **written to a file on disk** rather\nthan returned inline — JSON-wrapping multi-KB page text escapes\nevery newline and quote, which poisons the agent's context. The\nresponse carries only metadata (title, description, headings,\nstructured data, links) plus ``saved_to`` pointing at the raw\ntext file. Use ``terminal_exec(\"cat <saved_to…[+891 chars sha256:a479a54a2eb0]",
+        "kind": "mcp",
+        "name": "web_scrape",
+        "status": "searchable"
+      },
+      {
+        "description": "",
+        "kind": "lifecycle",
+        "name": "adjust_sender",
+        "status": "unregistered"
+      },
+      {
+        "description": "",
+        "kind": "lifecycle",
+        "name": "list_senders",
+        "status": "unregistered"
+      },
+      {
+        "description": "",
+        "kind": "lifecycle",
+        "name": "list_suppressed",
+        "status": "unregistered"
+      },
+      {
+        "description": "",
+        "kind": "lifecycle",
+        "name": "pick_sender",
+        "status": "unregistered"
+      },
+      {
+        "description": "",
+        "kind": "lifecycle",
+        "name": "search_timeline",
+        "status": "unregistered"
+      },
+      {
+        "description": "",
+        "kind": "lifecycle",
+        "name": "send_campaign",
+        "status": "unregistered"
+      },
+      {
+        "description": "",
+        "kind": "lifecycle",
+        "name": "send_from_sender",
+        "status": "unregistered"
+      },
+      {
+        "description": "",
+        "kind": "lifecycle",
+        "name": "sender_history",
+        "status": "unregistered"
+      },
+      {
+        "description": "",
+        "kind": "lifecycle",
+        "name": "setup_email_sender",
+        "status": "unregistered"
+      },
+      {
+        "description": "",
+        "kind": "lifecycle",
+        "name": "suppress_recipient",
+        "status": "unregistered"
+      }
+    ],
     "framework_added": [
       {
         "description": "Ask the user a question.",
@@ -40,15 +1118,115 @@
         "name": "ask_user"
       }
     ],
-    "mcp_tool_count_registered": 0,
+    "mcp_tool_count_registered": 33,
     "phase": "independent",
-    "phase_state_ready": false,
+    "phase_state_ready": true,
     "session_id": "<session_id>",
     "tools": [
+      {
+        "description": "Loads tool schemas so you can call them. Tools in the <searchable_tools> block of your system prompt are listed by name only — their schemas are not loaded, so they cannot be called until you load them here. Once loaded, a tool is callable on your next step exactly like an always-on tool, and stays loaded for the rest of the session.\n\nQuery forms:\n- \"inventory\" — report loaded, searchable, disabled, and unavailable tools without loading anything. Use before describing your capabilities.\n- \"select:name_a,name_b\" — load these exact tools by name (no limit). Preferred: the <searchable_tools> list…[+161 chars sha256:bf95b9ddbf80]",
+        "kind": "lifecycle",
+        "name": "search_tools"
+      },
+      {
+        "description": "Use this tool to create a structured task list for your current session. The list renders as a live widget in the user's right-rail panel — it helps the user understand progress on their request and demonstrates thoroughness.\n\n**Always takes a `tasks` array — one entry or many, created atomically (all-or-none).** Replying to 5 posts is ONE `task_create` with 5 entries. A single one-off mid-run addition is ONE `task_create` with a 1-entry array.\n\n## When to use this tool\n\nUse this tool proactively in these scenarios:\n- **Multi-step requests** — when a request requires 2+ distinct atomic actions…[+1955 chars sha256:083bb7a6d1cc]",
+        "kind": "lifecycle",
+        "name": "task_create"
+      },
+      {
+        "description": "Read the full record of one task (description, metadata, timestamps) from your own session task list. Use this to refresh your view of a task before updating it if you're not sure of current fields.",
+        "kind": "lifecycle",
+        "name": "task_get"
+      },
+      {
+        "description": "Show your session task list, sorted by id ascending. Internal tasks (metadata._internal=true), resolved blockers, and archived tasks are filtered out by default; pass include_archived=true to also see archived tasks (e.g. to restore one). **Prefer working on tasks in id order** (lowest first) — earlier tasks usually set up context for later ones.",
+        "kind": "lifecycle",
+        "name": "task_list"
+      },
+      {
+        "description": "Update ONE task on your own session task list. There is no batch update tool by design — every `completed` transition is a discrete progress signal to the user.\n\nWorkflow:\n- Mark a task `in_progress` BEFORE you start working on it.\n- Mark it `completed` AS SOON as you finish it — do not let multiple finished tasks pile up unmarked before flushing them at the end of the run.\n- Send these in the same response as your next real tool call (one response can carry several calls): a response that only updates tasks makes the user wait a whole model turn for nothing.\n- Archive tasks: when the user ask…[+953 chars sha256:3597b0f4593f]",
+        "kind": "lifecycle",
+        "name": "task_update"
+      },
+      {
+        "description": "Write or replace a skill, or install one (yours, a downloaded one, an existing skill folder). This is the way to add a skill: don't write SKILL.md into a skills folder with the terminal or write_file, since a skill put there by hand isn't loaded until a new session and skips the user's approval.\n\nSCOPE (who sees it):\n  - 'queen' (default outside a colony): your own skills. In your skills catalog from your next turn and in your colonies'; no other queen sees it. A skill the user made in your skills can't be replaced.\n  - 'colony' (default inside a colony): THIS colony's workers only. Use it BEF…[+1384 chars sha256:c6b020685e2a]",
+        "kind": "lifecycle",
+        "name": "write_skill"
+      },
+      {
+        "description": "Surface one or more local files to the user as clickable chips\nin chat. **Any file type is accepted.**\n\nUse this whenever the user has asked for a file — a report, a\nspreadsheet, a config, a zip, anything. Never rename, zip, or\npaste the contents inline as a workaround \"because the tool\ndoesn't support this format\" — it does.\n\nUse this on a PDF that ``pdf_read`` returned with\n``needs_vision_pages`` (scanned / image-based) — the PDF is sent\nas ImageContent so vision can read the rendered pages directly.\nDo NOT reach for tesseract / pdftoppm first; ``attach_file`` on\nthe original PDF replaces th…[+1628 chars sha256:8ecca78d3964]",
+        "kind": "mcp",
+        "name": "attach_file"
+      },
+      {
+        "description": "Get everything you need to drive the web browser. The browser is controlled from the terminal via the `hive-browser` CLI — run its commands with terminal_exec, ALWAYS with `--json`. Call this first before any browser work: it returns the command surface and how to check the extension connection. Then run `hive-browser setup --json` in the terminal to confirm the Hive browser extension is connected (it returns the Chrome Web Store install steps if not) and to list the connected Chrome profiles.",
+        "kind": "mcp",
+        "name": "browser_setup"
+      },
+      {
+        "description": "List connected accounts and their identities.\n\nCall with no arguments to see all connected accounts.\nCall with provider=\"google\" to filter by provider type.\n\nReturns account IDs, provider types, and identity labels\n(email, username, workspace) for each connected account.",
+        "kind": "mcp",
+        "name": "get_account_info"
+      },
+      {
+        "description": "Get the current date and time.\n\nUse this tool when you need accurate current time, especially in\nlong-running sessions or when precision matters (e.g., scheduling,\nchecking availability, time-sensitive operations).\n\nArgs:\n    timezone: IANA timezone name (e.g., \"UTC\", \"America/New_York\",\n             \"Asia/Kolkata\", \"Europe/London\"). Defaults to \"UTC\".\n\nReturns:\n    Dictionary with datetime info:\n    - datetime: Full ISO 8601 datetime string\n    - date: Date in YYYY-MM-DD format\n    - time: Time in HH:MM:SS format\n    - timezone: The timezone used\n    - day_of_week: Full day name (e.g., \"Monda…[+62 chars sha256:b84b98b3ada2]",
+        "kind": "mcp",
+        "name": "get_current_time"
+      },
+      {
+        "description": "Generate or edit an image from a text prompt. Billed to Hive credits.\n\nRoutes through the Hive image service (OpenAI ``gpt-image-2``). The cost\nis charged to the user's credits like an LLM call — no API key needed.\n\nProvide ``reference_images`` to edit / compose from existing images\n(e.g. restyle a product photo, combine elements, keep a character's\nidentity); the model conditions on them at high fidelity. Without them\nit's pure text-to-image.\n\nArgs:\n    prompt: What to draw. Be specific about subject, style, composition,\n        colors, and any text to render.\n    reference_images: Up to 10 l…[+876 chars sha256:372a5d183db8]",
+        "kind": "mcp",
+        "name": "image_generate"
+      },
+      {
+        "description": "Read and extract text from one or many PDF files.\n\nSingle-file mode (``file_path``) returns a flat result:\n``{path, name, total_pages, pages_extracted, content, char_count,\npages: [{number, text, needs_vision}], needs_vision_pages?, metadata?}``.\n\nMulti-file mode (``files``, up to 10) returns ``{pdfs: [...]}`` with\neach entry in the single-file shape. Pages below 200 chars of\nextracted text are flagged ``needs_vision: true``; the result also\ncarries a ``next_step`` field telling the caller to use\n``attach_file`` on the original PDF — it sends the pages as\nImageContent so vision reads them dire…[+469 chars sha256:c0471437107b]",
+        "kind": "mcp",
+        "name": "pdf_read"
+      },
+      {
+        "description": "Recall what was said in any past session — yours and the user's.\n\nThis is your long-term memory. Your active context only holds\nthe current session (and even that gets compacted as it grows).\nEverything the user told you, every answer you gave, every\ntool result you saw across every previous session lives in\nthis index. Reach for this tool whenever you can't see\nsomething in your active context but suspect it happened.\n\nCALL THIS when the user says any of:\n    • \"remember…\" / \"do you remember…\"\n    • \"last time\" / \"before\" / \"earlier\" / \"previously\"\n    • \"what did I ask about…\" / \"what did we…[+873 chars sha256:5b9f12c4e2cd]",
+        "kind": "mcp",
+        "name": "search_messages"
+      },
+      {
+        "description": "Run a shell command and capture its output.\n\nPast auto_background_after_sec, the call auto-promotes to a background\njob and returns immediately with `auto_backgrounded=True, job_id=...`\n— poll with terminal_job_logs(job_id, since_offset=...) to read the rest.\nSet auto_background_after_sec=0 to force pure foreground (kill on\ntimeout_sec).\n\nThe agent loop may first return a bg_* handle; use collect_result for\nthat handle, then terminal_job_logs for any job_id in the result.\nPOSIX uses bash when shell=True; Windows selects Git Bash, PowerShell,\nthen cmd. Read shell_kind before choosing platform-s…[+1240 chars sha256:b1921e412ee4]",
+        "kind": "mcp",
+        "name": "terminal_exec"
+      },
+      {
+        "description": "Find files by name/glob under `path` — the Glob tool.\n\nUse this to locate files by name, in the project tree or raw/arbitrary\npaths (/var/log, /etc, archive contents). Relative paths resolve against\nthe session workdir. For mtime/size/type predicate queries, drop to\nterminal_exec(\"find ...\") — see references/find_predicates.md.\n\nPattern handling (so bare stems Just Work):\n    \"lk_scan_post_reactors\" -> matched as **/*lk_scan_post_reactors*\n    \"*.py\"                  -> matched as **/*.py (recursive)\n    \"src/**/*.py\"           -> used verbatim\nThe glob actually run is returned as `expanded_pa…[+533 chars sha256:42245c342183]",
+        "kind": "mcp",
+        "name": "terminal_glob"
+      },
+      {
+        "description": "Read job output at an offset. Combined read + status + wait primitive.\n\nTrack next_offset across calls to avoid replaying data. When\nwait_until_exit=True, waits until the job exits, a new message for you\narrives, or wait_timeout_sec elapses, then returns logs and status.\n\nArgs:\n    job_id: From terminal_job_start (or auto-promoted from terminal_exec).\n    stream: \"stdout\" | \"stderr\" | \"merged\". Use \"merged\" only when the\n        job was started with merge_stderr=True.\n    since_offset: Absolute byte offset to start reading from. Pass 0\n        on first call; pass next_offset on subsequent call…[+635 chars sha256:078c6f6e67cc]",
+        "kind": "mcp",
+        "name": "terminal_job_logs"
+      },
+      {
+        "description": "List jobs, send signals, or write to job stdin.\n\nSingle tool covering job-control side effects. The action argument\npicks the operation:\n\n- \"capabilities\": return platform, supported_actions and signal semantics.\nNo job_id required. Check this before choosing a signal.\n- \"list\": list active + recently-exited jobs. job_id ignored.\n- \"signal_term\" | \"signal_kill\" | \"signal_int\" | \"signal_hup\"\n| \"signal_usr1\" | \"signal_usr2\": send the named signal. Requires job_id.\n- \"stdin\": write `data` to the job's stdin. Requires job_id and data.\n- \"close_stdin\": close the job's stdin pipe (e.g. to flush a to…[+502 chars sha256:fe37077ba4e3]",
+        "kind": "mcp",
+        "name": "terminal_job_manage"
+      },
+      {
+        "description": "Retrieve a slice of truncated output by handle.\n\nWhen terminal_exec or terminal_job_logs returns more output than fits inline,\nyou'll see `output_handle: \"out_<hex>\"`. Pass it here with successive\noffsets to paginate. The full output is preserved (combined stdout+stderr\nwith `--- stdout ---` / `--- stderr ---` separators) for 5 minutes.\n\nArgs:\n    output_handle: From a prior tool's envelope.\n    since_offset: Pass 0 first, then next_offset from the previous call.\n    max_kb: Max KB to return per call.\n\nReturns: {data, offset, next_offset, eof, expired}",
+        "kind": "mcp",
+        "name": "terminal_output_get"
+      },
+      {
+        "description": "Run ripgrep on `path` for `pattern` — the content-search tool.\n\nUse this for all content (regex) search, whether project code or raw\npaths (system configs, /var/log, archive contents); it exposes the full\nrg flag surface. Relative paths resolve against the session workdir.\n\nArgs:\n    pattern: Regex pattern.\n    path: Directory or file to search. Relative paths resolve against\n        the session workdir; default is the session workdir itself.\n    glob: Filename glob (e.g. \"*.py\").\n    type_filter: rg filetype shortcut (e.g. \"py\", \"rust\", \"md\").\n    ignore_case: Case-insensitive search.\n    con…[+855 chars sha256:c5b75a3ff55b]",
+        "kind": "mcp",
+        "name": "terminal_rg"
+      },
       {
         "description": "Ask the user a question.",
         "kind": "synthetic",
         "name": "ask_user"
+      },
+      {
+        "description": "Propose forking this session into a colony. Call this when the current work needs parallelization, scheduling, background/recurring execution, or otherwise should outlive this chat. The frontend opens a 'Create Colony' popup pre-filled with this colony_id and the current queen auto-selected; the user reviews and confirms. On accept, this chat's conversation is compacted into the new colony's queen seed and this session locks — so make sure you've left the conversation in a self-contained state. On dismiss the chat continues normally. Do NOT call this for one-shot work the user wants finished i…[+66 chars sha256:7f6cc86bf298]",
+        "kind": "synthetic",
+        "name": "suggest_colony"
       }
     ],
     "workers": []
@@ -60,18 +1238,348 @@
     "actual_tools[].name": "string",
     "connected_providers": "array",
     "diagnostic": "object",
+    "diagnostic.admitted_by_provider": "object",
+    "diagnostic.dropped_by_provider": "object",
+    "diagnostic.dropped_by_provider.airtable_pat": "object",
+    "diagnostic.dropped_by_provider.airtable_pat.count": "number(int)",
+    "diagnostic.dropped_by_provider.airtable_pat.sample": "array",
+    "diagnostic.dropped_by_provider.airtable_pat.sample[]": "string",
+    "diagnostic.dropped_by_provider.apify": "object",
+    "diagnostic.dropped_by_provider.apify.count": "number(int)",
+    "diagnostic.dropped_by_provider.apify.sample": "array",
+    "diagnostic.dropped_by_provider.apify.sample[]": "string",
+    "diagnostic.dropped_by_provider.apollo": "object",
+    "diagnostic.dropped_by_provider.apollo.count": "number(int)",
+    "diagnostic.dropped_by_provider.apollo.sample": "array",
+    "diagnostic.dropped_by_provider.apollo.sample[]": "string",
+    "diagnostic.dropped_by_provider.asana": "object",
+    "diagnostic.dropped_by_provider.asana.count": "number(int)",
+    "diagnostic.dropped_by_provider.asana.sample": "array",
+    "diagnostic.dropped_by_provider.asana.sample[]": "string",
+    "diagnostic.dropped_by_provider.attio": "object",
+    "diagnostic.dropped_by_provider.attio.count": "number(int)",
+    "diagnostic.dropped_by_provider.attio.sample": "array",
+    "diagnostic.dropped_by_provider.attio.sample[]": "string",
+    "diagnostic.dropped_by_provider.aws_secret_key": "object",
+    "diagnostic.dropped_by_provider.aws_secret_key.count": "number(int)",
+    "diagnostic.dropped_by_provider.aws_secret_key.sample": "array",
+    "diagnostic.dropped_by_provider.aws_secret_key.sample[]": "string",
+    "diagnostic.dropped_by_provider.azure_subscription_id": "object",
+    "diagnostic.dropped_by_provider.azure_subscription_id.count": "number(int)",
+    "diagnostic.dropped_by_provider.azure_subscription_id.sample": "array",
+    "diagnostic.dropped_by_provider.azure_subscription_id.sample[]": "string",
+    "diagnostic.dropped_by_provider.bigquery_project": "object",
+    "diagnostic.dropped_by_provider.bigquery_project.count": "number(int)",
+    "diagnostic.dropped_by_provider.bigquery_project.sample": "array",
+    "diagnostic.dropped_by_provider.bigquery_project.sample[]": "string",
+    "diagnostic.dropped_by_provider.brave_search": "object",
+    "diagnostic.dropped_by_provider.brave_search.count": "number(int)",
+    "diagnostic.dropped_by_provider.brave_search.sample": "array",
+    "diagnostic.dropped_by_provider.brave_search.sample[]": "string",
+    "diagnostic.dropped_by_provider.brevo": "object",
+    "diagnostic.dropped_by_provider.brevo.count": "number(int)",
+    "diagnostic.dropped_by_provider.brevo.sample": "array",
+    "diagnostic.dropped_by_provider.brevo.sample[]": "string",
+    "diagnostic.dropped_by_provider.calcom": "object",
+    "diagnostic.dropped_by_provider.calcom.count": "number(int)",
+    "diagnostic.dropped_by_provider.calcom.sample": "array",
+    "diagnostic.dropped_by_provider.calcom.sample[]": "string",
+    "diagnostic.dropped_by_provider.calendly_pat": "object",
+    "diagnostic.dropped_by_provider.calendly_pat.count": "number(int)",
+    "diagnostic.dropped_by_provider.calendly_pat.sample": "array",
+    "diagnostic.dropped_by_provider.calendly_pat.sample[]": "string",
+    "diagnostic.dropped_by_provider.cloudflare": "object",
+    "diagnostic.dropped_by_provider.cloudflare.count": "number(int)",
+    "diagnostic.dropped_by_provider.cloudflare.sample": "array",
+    "diagnostic.dropped_by_provider.cloudflare.sample[]": "string",
+    "diagnostic.dropped_by_provider.cloudinary_secret": "object",
+    "diagnostic.dropped_by_provider.cloudinary_secret.count": "number(int)",
+    "diagnostic.dropped_by_provider.cloudinary_secret.sample": "array",
+    "diagnostic.dropped_by_provider.cloudinary_secret.sample[]": "string",
+    "diagnostic.dropped_by_provider.confluence_token": "object",
+    "diagnostic.dropped_by_provider.confluence_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.confluence_token.sample": "array",
+    "diagnostic.dropped_by_provider.confluence_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.databricks": "object",
+    "diagnostic.dropped_by_provider.databricks.count": "number(int)",
+    "diagnostic.dropped_by_provider.databricks.sample": "array",
+    "diagnostic.dropped_by_provider.databricks.sample[]": "string",
+    "diagnostic.dropped_by_provider.discord": "object",
+    "diagnostic.dropped_by_provider.discord.count": "number(int)",
+    "diagnostic.dropped_by_provider.discord.sample": "array",
+    "diagnostic.dropped_by_provider.discord.sample[]": "string",
+    "diagnostic.dropped_by_provider.docker_hub": "object",
+    "diagnostic.dropped_by_provider.docker_hub.count": "number(int)",
+    "diagnostic.dropped_by_provider.docker_hub.sample": "array",
+    "diagnostic.dropped_by_provider.docker_hub.sample[]": "string",
+    "diagnostic.dropped_by_provider.exa_search": "object",
+    "diagnostic.dropped_by_provider.exa_search.count": "number(int)",
+    "diagnostic.dropped_by_provider.exa_search.sample": "array",
+    "diagnostic.dropped_by_provider.exa_search.sample[]": "string",
+    "diagnostic.dropped_by_provider.finlight": "object",
+    "diagnostic.dropped_by_provider.finlight.count": "number(int)",
+    "diagnostic.dropped_by_provider.finlight.sample": "array",
+    "diagnostic.dropped_by_provider.finlight.sample[]": "string",
+    "diagnostic.dropped_by_provider.freshdesk_domain": "object",
+    "diagnostic.dropped_by_provider.freshdesk_domain.count": "number(int)",
+    "diagnostic.dropped_by_provider.freshdesk_domain.sample": "array",
+    "diagnostic.dropped_by_provider.freshdesk_domain.sample[]": "string",
+    "diagnostic.dropped_by_provider.github": "object",
+    "diagnostic.dropped_by_provider.github.count": "number(int)",
+    "diagnostic.dropped_by_provider.github.sample": "array",
+    "diagnostic.dropped_by_provider.github.sample[]": "string",
+    "diagnostic.dropped_by_provider.gitlab_token": "object",
+    "diagnostic.dropped_by_provider.gitlab_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.gitlab_token.sample": "array",
+    "diagnostic.dropped_by_provider.gitlab_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.google": "object",
+    "diagnostic.dropped_by_provider.google.count": "number(int)",
+    "diagnostic.dropped_by_provider.google.sample": "array",
+    "diagnostic.dropped_by_provider.google.sample[]": "string",
+    "diagnostic.dropped_by_provider.google_analytics": "object",
+    "diagnostic.dropped_by_provider.google_analytics.count": "number(int)",
+    "diagnostic.dropped_by_provider.google_analytics.sample": "array",
+    "diagnostic.dropped_by_provider.google_analytics.sample[]": "string",
+    "diagnostic.dropped_by_provider.google_cse": "object",
+    "diagnostic.dropped_by_provider.google_cse.count": "number(int)",
+    "diagnostic.dropped_by_provider.google_cse.sample": "array",
+    "diagnostic.dropped_by_provider.google_cse.sample[]": "string",
+    "diagnostic.dropped_by_provider.google_maps": "object",
+    "diagnostic.dropped_by_provider.google_maps.count": "number(int)",
+    "diagnostic.dropped_by_provider.google_maps.sample": "array",
+    "diagnostic.dropped_by_provider.google_maps.sample[]": "string",
+    "diagnostic.dropped_by_provider.google_search_console": "object",
+    "diagnostic.dropped_by_provider.google_search_console.count": "number(int)",
+    "diagnostic.dropped_by_provider.google_search_console.sample": "array",
+    "diagnostic.dropped_by_provider.google_search_console.sample[]": "string",
+    "diagnostic.dropped_by_provider.google_vision": "object",
+    "diagnostic.dropped_by_provider.google_vision.count": "number(int)",
+    "diagnostic.dropped_by_provider.google_vision.sample": "array",
+    "diagnostic.dropped_by_provider.google_vision.sample[]": "string",
+    "diagnostic.dropped_by_provider.greenhouse_token": "object",
+    "diagnostic.dropped_by_provider.greenhouse_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.greenhouse_token.sample": "array",
+    "diagnostic.dropped_by_provider.greenhouse_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.hubspot": "object",
+    "diagnostic.dropped_by_provider.hubspot.count": "number(int)",
+    "diagnostic.dropped_by_provider.hubspot.sample": "array",
+    "diagnostic.dropped_by_provider.hubspot.sample[]": "string",
+    "diagnostic.dropped_by_provider.huggingface": "object",
+    "diagnostic.dropped_by_provider.huggingface.count": "number(int)",
+    "diagnostic.dropped_by_provider.huggingface.sample": "array",
+    "diagnostic.dropped_by_provider.huggingface.sample[]": "string",
+    "diagnostic.dropped_by_provider.intercom": "object",
+    "diagnostic.dropped_by_provider.intercom.count": "number(int)",
+    "diagnostic.dropped_by_provider.intercom.sample": "array",
+    "diagnostic.dropped_by_provider.intercom.sample[]": "string",
+    "diagnostic.dropped_by_provider.jira_token": "object",
+    "diagnostic.dropped_by_provider.jira_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.jira_token.sample": "array",
+    "diagnostic.dropped_by_provider.jira_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.kafka_cluster_id": "object",
+    "diagnostic.dropped_by_provider.kafka_cluster_id.count": "number(int)",
+    "diagnostic.dropped_by_provider.kafka_cluster_id.sample": "array",
+    "diagnostic.dropped_by_provider.kafka_cluster_id.sample[]": "string",
+    "diagnostic.dropped_by_provider.langfuse_secret_key": "object",
+    "diagnostic.dropped_by_provider.langfuse_secret_key.count": "number(int)",
+    "diagnostic.dropped_by_provider.langfuse_secret_key.sample": "array",
+    "diagnostic.dropped_by_provider.langfuse_secret_key.sample[]": "string",
+    "diagnostic.dropped_by_provider.linear": "object",
+    "diagnostic.dropped_by_provider.linear.count": "number(int)",
+    "diagnostic.dropped_by_provider.linear.sample": "array",
+    "diagnostic.dropped_by_provider.linear.sample[]": "string",
+    "diagnostic.dropped_by_provider.lusha_api_key": "object",
+    "diagnostic.dropped_by_provider.lusha_api_key.count": "number(int)",
+    "diagnostic.dropped_by_provider.lusha_api_key.sample": "array",
+    "diagnostic.dropped_by_provider.lusha_api_key.sample[]": "string",
+    "diagnostic.dropped_by_provider.mattermost_url": "object",
+    "diagnostic.dropped_by_provider.mattermost_url.count": "number(int)",
+    "diagnostic.dropped_by_provider.mattermost_url.sample": "array",
+    "diagnostic.dropped_by_provider.mattermost_url.sample[]": "string",
+    "diagnostic.dropped_by_provider.microsoft_graph": "object",
+    "diagnostic.dropped_by_provider.microsoft_graph.count": "number(int)",
+    "diagnostic.dropped_by_provider.microsoft_graph.sample": "array",
+    "diagnostic.dropped_by_provider.microsoft_graph.sample[]": "string",
+    "diagnostic.dropped_by_provider.mongodb_data_source": "object",
+    "diagnostic.dropped_by_provider.mongodb_data_source.count": "number(int)",
+    "diagnostic.dropped_by_provider.mongodb_data_source.sample": "array",
+    "diagnostic.dropped_by_provider.mongodb_data_source.sample[]": "string",
+    "diagnostic.dropped_by_provider.n8n_base_url": "object",
+    "diagnostic.dropped_by_provider.n8n_base_url.count": "number(int)",
+    "diagnostic.dropped_by_provider.n8n_base_url.sample": "array",
+    "diagnostic.dropped_by_provider.n8n_base_url.sample[]": "string",
+    "diagnostic.dropped_by_provider.newsdata": "object",
+    "diagnostic.dropped_by_provider.newsdata.count": "number(int)",
+    "diagnostic.dropped_by_provider.newsdata.sample": "array",
+    "diagnostic.dropped_by_provider.newsdata.sample[]": "string",
+    "diagnostic.dropped_by_provider.notion": "object",
+    "diagnostic.dropped_by_provider.notion.count": "number(int)",
+    "diagnostic.dropped_by_provider.notion.sample": "array",
+    "diagnostic.dropped_by_provider.notion.sample[]": "string",
+    "diagnostic.dropped_by_provider.obsidian": "object",
+    "diagnostic.dropped_by_provider.obsidian.count": "number(int)",
+    "diagnostic.dropped_by_provider.obsidian.sample": "array",
+    "diagnostic.dropped_by_provider.obsidian.sample[]": "string",
+    "diagnostic.dropped_by_provider.pagerduty_api_key": "object",
+    "diagnostic.dropped_by_provider.pagerduty_api_key.count": "number(int)",
+    "diagnostic.dropped_by_provider.pagerduty_api_key.sample": "array",
+    "diagnostic.dropped_by_provider.pagerduty_api_key.sample[]": "string",
+    "diagnostic.dropped_by_provider.pagerduty_from_email": "object",
+    "diagnostic.dropped_by_provider.pagerduty_from_email.count": "number(int)",
+    "diagnostic.dropped_by_provider.pagerduty_from_email.sample": "array",
+    "diagnostic.dropped_by_provider.pagerduty_from_email.sample[]": "string",
+    "diagnostic.dropped_by_provider.pinecone": "object",
+    "diagnostic.dropped_by_provider.pinecone.count": "number(int)",
+    "diagnostic.dropped_by_provider.pinecone.sample": "array",
+    "diagnostic.dropped_by_provider.pinecone.sample[]": "string",
+    "diagnostic.dropped_by_provider.pipedrive": "object",
+    "diagnostic.dropped_by_provider.pipedrive.count": "number(int)",
+    "diagnostic.dropped_by_provider.pipedrive.sample": "array",
+    "diagnostic.dropped_by_provider.pipedrive.sample[]": "string",
+    "diagnostic.dropped_by_provider.plaid_secret": "object",
+    "diagnostic.dropped_by_provider.plaid_secret.count": "number(int)",
+    "diagnostic.dropped_by_provider.plaid_secret.sample": "array",
+    "diagnostic.dropped_by_provider.plaid_secret.sample[]": "string",
+    "diagnostic.dropped_by_provider.postgres": "object",
+    "diagnostic.dropped_by_provider.postgres.count": "number(int)",
+    "diagnostic.dropped_by_provider.postgres.sample": "array",
+    "diagnostic.dropped_by_provider.postgres.sample[]": "string",
+    "diagnostic.dropped_by_provider.powerbi_token": "object",
+    "diagnostic.dropped_by_provider.powerbi_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.powerbi_token.sample": "array",
+    "diagnostic.dropped_by_provider.powerbi_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.prometheus": "object",
+    "diagnostic.dropped_by_provider.prometheus.count": "number(int)",
+    "diagnostic.dropped_by_provider.prometheus.sample": "array",
+    "diagnostic.dropped_by_provider.prometheus.sample[]": "string",
+    "diagnostic.dropped_by_provider.pushover": "object",
+    "diagnostic.dropped_by_provider.pushover.count": "number(int)",
+    "diagnostic.dropped_by_provider.pushover.sample": "array",
+    "diagnostic.dropped_by_provider.pushover.sample[]": "string",
+    "diagnostic.dropped_by_provider.quickbooks_realm_id": "object",
+    "diagnostic.dropped_by_provider.quickbooks_realm_id.count": "number(int)",
+    "diagnostic.dropped_by_provider.quickbooks_realm_id.sample": "array",
+    "diagnostic.dropped_by_provider.quickbooks_realm_id.sample[]": "string",
+    "diagnostic.dropped_by_provider.razorpay_secret": "object",
+    "diagnostic.dropped_by_provider.razorpay_secret.count": "number(int)",
+    "diagnostic.dropped_by_provider.razorpay_secret.sample": "array",
+    "diagnostic.dropped_by_provider.razorpay_secret.sample[]": "string",
+    "diagnostic.dropped_by_provider.reddit_secret": "object",
+    "diagnostic.dropped_by_provider.reddit_secret.count": "number(int)",
+    "diagnostic.dropped_by_provider.reddit_secret.sample": "array",
+    "diagnostic.dropped_by_provider.reddit_secret.sample[]": "string",
+    "diagnostic.dropped_by_provider.redis": "object",
+    "diagnostic.dropped_by_provider.redis.count": "number(int)",
+    "diagnostic.dropped_by_provider.redis.sample": "array",
+    "diagnostic.dropped_by_provider.redis.sample[]": "string",
+    "diagnostic.dropped_by_provider.redshift_secret_key": "object",
+    "diagnostic.dropped_by_provider.redshift_secret_key.count": "number(int)",
+    "diagnostic.dropped_by_provider.redshift_secret_key.sample": "array",
+    "diagnostic.dropped_by_provider.redshift_secret_key.sample[]": "string",
+    "diagnostic.dropped_by_provider.salesforce_instance_url": "object",
+    "diagnostic.dropped_by_provider.salesforce_instance_url.count": "number(int)",
+    "diagnostic.dropped_by_provider.salesforce_instance_url.sample": "array",
+    "diagnostic.dropped_by_provider.salesforce_instance_url.sample[]": "string",
+    "diagnostic.dropped_by_provider.sap_password": "object",
+    "diagnostic.dropped_by_provider.sap_password.count": "number(int)",
+    "diagnostic.dropped_by_provider.sap_password.sample": "array",
+    "diagnostic.dropped_by_provider.sap_password.sample[]": "string",
+    "diagnostic.dropped_by_provider.serpapi": "object",
+    "diagnostic.dropped_by_provider.serpapi.count": "number(int)",
+    "diagnostic.dropped_by_provider.serpapi.sample": "array",
+    "diagnostic.dropped_by_provider.serpapi.sample[]": "string",
+    "diagnostic.dropped_by_provider.shopify_store_name": "object",
+    "diagnostic.dropped_by_provider.shopify_store_name.count": "number(int)",
+    "diagnostic.dropped_by_provider.shopify_store_name.sample": "array",
+    "diagnostic.dropped_by_provider.shopify_store_name.sample[]": "string",
+    "diagnostic.dropped_by_provider.similarweb": "object",
+    "diagnostic.dropped_by_provider.similarweb.count": "number(int)",
+    "diagnostic.dropped_by_provider.similarweb.sample": "array",
+    "diagnostic.dropped_by_provider.similarweb.sample[]": "string",
+    "diagnostic.dropped_by_provider.slack": "object",
+    "diagnostic.dropped_by_provider.slack.count": "number(int)",
+    "diagnostic.dropped_by_provider.slack.sample": "array",
+    "diagnostic.dropped_by_provider.slack.sample[]": "string",
+    "diagnostic.dropped_by_provider.snowflake_token": "object",
+    "diagnostic.dropped_by_provider.snowflake_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.snowflake_token.sample": "array",
+    "diagnostic.dropped_by_provider.snowflake_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.stripe": "object",
+    "diagnostic.dropped_by_provider.stripe.count": "number(int)",
+    "diagnostic.dropped_by_provider.stripe.sample": "array",
+    "diagnostic.dropped_by_provider.stripe.sample[]": "string",
+    "diagnostic.dropped_by_provider.supabase": "object",
+    "diagnostic.dropped_by_provider.supabase.count": "number(int)",
+    "diagnostic.dropped_by_provider.supabase.sample": "array",
+    "diagnostic.dropped_by_provider.supabase.sample[]": "string",
+    "diagnostic.dropped_by_provider.telegram": "object",
+    "diagnostic.dropped_by_provider.telegram.count": "number(int)",
+    "diagnostic.dropped_by_provider.telegram.sample": "array",
+    "diagnostic.dropped_by_provider.telegram.sample[]": "string",
+    "diagnostic.dropped_by_provider.tfc_token": "object",
+    "diagnostic.dropped_by_provider.tfc_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.tfc_token.sample": "array",
+    "diagnostic.dropped_by_provider.tfc_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.tines_api_key": "object",
+    "diagnostic.dropped_by_provider.tines_api_key.count": "number(int)",
+    "diagnostic.dropped_by_provider.tines_api_key.sample": "array",
+    "diagnostic.dropped_by_provider.tines_api_key.sample[]": "string",
+    "diagnostic.dropped_by_provider.trello_token": "object",
+    "diagnostic.dropped_by_provider.trello_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.trello_token.sample": "array",
+    "diagnostic.dropped_by_provider.trello_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.twilio_token": "object",
+    "diagnostic.dropped_by_provider.twilio_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.twilio_token.sample": "array",
+    "diagnostic.dropped_by_provider.twilio_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.vercel": "object",
+    "diagnostic.dropped_by_provider.vercel.count": "number(int)",
+    "diagnostic.dropped_by_provider.vercel.sample": "array",
+    "diagnostic.dropped_by_provider.vercel.sample[]": "string",
+    "diagnostic.dropped_by_provider.wandb_api_key": "object",
+    "diagnostic.dropped_by_provider.wandb_api_key.count": "number(int)",
+    "diagnostic.dropped_by_provider.wandb_api_key.sample": "array",
+    "diagnostic.dropped_by_provider.wandb_api_key.sample[]": "string",
+    "diagnostic.dropped_by_provider.x_bearer_token": "object",
+    "diagnostic.dropped_by_provider.x_bearer_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.x_bearer_token.sample": "array",
+    "diagnostic.dropped_by_provider.x_bearer_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.youtube": "object",
+    "diagnostic.dropped_by_provider.youtube.count": "number(int)",
+    "diagnostic.dropped_by_provider.youtube.sample": "array",
+    "diagnostic.dropped_by_provider.youtube.sample[]": "string",
+    "diagnostic.dropped_by_provider.zendesk_token": "object",
+    "diagnostic.dropped_by_provider.zendesk_token.count": "number(int)",
+    "diagnostic.dropped_by_provider.zendesk_token.sample": "array",
+    "diagnostic.dropped_by_provider.zendesk_token.sample[]": "string",
+    "diagnostic.dropped_by_provider.zoho_crm": "object",
+    "diagnostic.dropped_by_provider.zoho_crm.count": "number(int)",
+    "diagnostic.dropped_by_provider.zoho_crm.sample": "array",
+    "diagnostic.dropped_by_provider.zoho_crm.sample[]": "string",
+    "diagnostic.dropped_by_provider.zoom": "object",
+    "diagnostic.dropped_by_provider.zoom.count": "number(int)",
+    "diagnostic.dropped_by_provider.zoom.sample": "array",
+    "diagnostic.dropped_by_provider.zoom.sample[]": "string",
+    "diagnostic.gate_live_providers_now": "array",
+    "diagnostic.gate_tool_provider_map_size": "number(int)",
+    "diagnostic.google_admitted_sample": "array",
     "diagnostic.phase_state": "object",
     "diagnostic.phase_state.allowlist_is_none": "boolean",
-    "diagnostic.phase_state.allowlist_total": "null",
+    "diagnostic.phase_state.allowlist_total": "number(int)",
     "diagnostic.phase_state.filtered_independent_total": "number(int)",
     "diagnostic.phase_state.google_admitted_total": "number(int)",
-    "diagnostic.phase_state.google_in_allowlist": "null",
+    "diagnostic.phase_state.google_in_allowlist": "number(int)",
     "diagnostic.phase_state.google_in_filtered": "number(int)",
     "diagnostic.phase_state.google_in_independent_tools": "number(int)",
     "diagnostic.phase_state.google_in_mcp_names_all": "number(int)",
     "diagnostic.phase_state.independent_tools_total": "number(int)",
     "diagnostic.phase_state.mcp_tool_names_all_total": "number(int)",
+    "diagnostic.registry_mcp_total": "number(int)",
     "expected_tools": "array",
+    "expected_tools[].description": "string",
+    "expected_tools[].kind": "string",
+    "expected_tools[].name": "string",
+    "expected_tools[].status": "string",
     "framework_added": "array",
     "framework_added[].description": "string",
     "framework_added[].kind": "string",
@@ -87,11 +1595,13 @@
     "workers": "array"
   },
   "counts": {
-    "actual_tools": 1,
+    "actual_tools": 21,
     "connected_providers": 0,
-    "expected_tools": 0,
+    "diagnostic.gate_live_providers_now": 0,
+    "diagnostic.google_admitted_sample": 0,
+    "expected_tools": 32,
     "framework_added": 1,
-    "tools": 1,
+    "tools": 21,
     "workers": 0
   },
   "shape_ignore": [],

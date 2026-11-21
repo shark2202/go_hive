@@ -352,7 +352,10 @@ canonical command 全部可达；supervisor 测试用测试二进制自身充当
 | 用法错误退出码 | argparse=2 | **已对齐**（2026-11-20） | 未知子命令/flag、缺必填参数、非法 choice/类型（`--action`、`--mode`、`--wait-until`、`--scroll-direction`、`--auto-snapshot-mode`、`--coordinate`/`--region`、`--duration`、`--timeout-s`、`tab_id`）一律 2，与上游 argparse 实测一致；仍走本地 6 的只剩 evaluate/script 参数校验与 Go 自有 `type` 动词（见 §2 表）。upload 文件不存在自 2026-11-21 起走桥侧 `File not found` → 4（R07） |
 | `interact screenshot/zoom` 缺 intent | 工具层 `ok:false` → 1 | **已对齐**（2026-11-20） | 本地预检已移除：桥返回 `screenshot requires intent` / `zoom requires region`，分类为 1（真 Chrome 实测） |
 | 独立 `screenshot` 缺 `--intent` | `render_screenshot(intent=None)` → 连上时 0 | **已对齐**（2026-11-21） | 本地 `--intent` 预检与桥侧强制一并移除：连上 0 / 无桥 2 / 未开标签 3；`interact --action screenshot` 仍要求 intent（上一行） |
-| 父进程死亡后的桥寿命 | `_watch_parent`：桌面 PID 消失即退出（5s × 2 次确认） | **已对齐（实测 ≤2s）** | 桥新增 `-parent-check`（默认 400ms，2 次确认）监视 `HIVE_DESKTOP_PARENT_PID`，父死约 0.8s 退出；原空闲看门狗（10s 轮询 + 30s grace，约 30–40s）保留为兜底；serve 侧 `ensure()`/run 循环在 owner 死后不再复活（对应上游 `_run_supervisor` 的 parent watchdog） |
+| 父进程死亡后的桥寿命 | `_watch_parent`：桌面 PID 消失即退出（5s × 2 次确认） | **有意加速（实测 0.78–0.87s）** | 桥新增 `-parent-check`（默认 400ms，2 次确认）监视 `HIVE_DESKTOP_PARENT_PID`，父死约 0.8s 退出；**比上游更快，不是同值**（上游 5–10s，且上游是 worker SIGTERM supervisor 的握手，桥这里是 exit 0 park）；原空闲看门狗（10s 轮询 + 30s grace，约 30–40s）保留为兜底；serve 侧 `ensure()`/run 循环在 owner 死后不再复活（对应上游 `_run_supervisor` 的 parent watchdog） |
+| 同 tab CDP 并发 | `_tab_lock`：每个 tab 一把 `asyncio.Lock`，串行 attach/cdp/retry | **已对齐**（2026-11-21，R09） | 桥为每个 tab 维护一把锁（`browserbridge/state.go::tabLock`），`cdp()` 在 `ensureAttached` 之前取锁，等待者可被 ctx 取消；tab 关闭/`removed` 时回收锁条目（同上游 `_tab_locks.pop`）。真桥 + 假扩展驱动并发 `_cdp` 实测（`go_hive/scripts/e2e_browser_residuals.sh`） |
+| WS 帧上限 | `websockets.serve(max_size=50*1024*1024)` | **已对齐**（2026-11-21，R10） | `ws.DefaultMaxRead = 50 << 20`，扩展中继 / control RPC / legacy 三个监听共用；e2e 以 17 MiB 帧实测接受并转发，显式调小上限仍会拒绝 |
+| `/status` 字段集 | `bridge_version`/`runtime_version`/`bind_errors`/`listening.legacy_status`（side panel 文案来源） | **已对齐**（2026-11-21，R11） | 三类字段齐全：`bridge_version` 为二进制版本、`runtime_version` 无嵌入方时输出 `null`（同上游生产默认）、`bind_errors` 记录 legacy_ws/control_rpc 绑定失败；`listening.legacy_status` 恒 false（Go 不绑 9230）。Go 另有 `tabs`/`tabs_total`/`profiles`/`capabilities`/`viewport_scale` 等 additive 字段，不替代上游字段 |
 | `--head` / `--no-annotate` | 上游工具侧处理 | **已对齐（2026-11-21）**：`--head` 读快照 artifact 的前 N 字符；`--no-annotate` 透传给桥（有高亮时注入 overlay，否则不加图） | 快照结果给 `saved_to`（无内联 `tree`）；截图结果给 `saved_to` + `_image` |
 | `hive-browser script` 技能解析 | skill 名 → 目录（skills 根注入） | 桥侧 `-skills` 未由 supervisor 注入 | 指定 `HIVE_BROWSERBRIDGE_ARGS="-skills <dir>"` 可补上 |
 | 发布归档成员 | hive-desktop 侧打包扩展 | 归档含 `hive`/`hive-cred`/`hive-browser`/`browserbridge`（1.0.26 起）；Chrome 扩展未随包，`chromeloader` 可从源码树侧载 | 见 §4 |
@@ -383,6 +386,9 @@ dpr>1 主机上注解图为 800 CSS px × dpr 设备像素）与动作 dict 沿�
 `offscreen.js::BRIDGE_PORTS`，其余为原样扩展）。
 
 ### 7.1 父进程死亡 → 桥退出时延
+
+> 口径：这一项是**有意加速**——Go 用 400ms × 2 次确认代替上游的 5s × 2 次确认，
+> 父死约 0.8s 退出（上游约 5–10s）。行为更快且可预期，但不是同值对齐。
 
 | 场景 | 命令 | 实测 |
 | --- | --- | --- |

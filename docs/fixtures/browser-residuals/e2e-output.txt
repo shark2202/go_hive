@@ -1,0 +1,17 @@
+== build ==
+== real bridge + fake extension ==
+== R09/R10/R11 driver ==
+PASS: R09 slow cdp reached the extension
+PASS: R09 same-tab cdp serialized: quick frame did not reach the extension before slow finished
+PASS: R09 slow cdp ok ({'result': {'value': 'slow-result'}})
+PASS: R09 quick cdp ok ({'result': {'value': 'ok'}})
+PASS: R09 quick frame arrived only after the slow reply was released (['slow-arrived', 'slow-released', 'cdp'])
+PASS: R10 17 MiB extension frame accepted and relayed (17825792 bytes)
+PASS: R10 extension connection survived the 17 MiB frame
+PASS: R11 /status connected:true with the extension attached
+PASS: R11 bridge_version='0.3.0-l3a' wants '0.3.0-l3a'
+PASS: R11 runtime_version present and null (no embedder value)
+PASS: R11 bind_errors empty on a healthy bridge ({})
+PASS: R11 listening block shape ({'ws': True, 'status': True, 'control_rpc': True, 'legacy_ws': False, 'legacy_status': False})
+ALL PASS
+PASS: all residual probes against the real bridge binary (version 0.3.0-l3a)

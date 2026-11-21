@@ -82,6 +82,9 @@ var toolLibraryMissingPlaybookTools = map[string]string{
 // newServeAppDeps wires the Tool Library projection into the HTTP app. Called
 // once from the serve path; the loader file keeps its frozen line budget.
 func newServeAppDeps(home hivehome.Home, deps hiveserver.AppDeps) hiveserver.AppDeps {
+	// The live-tools diagnostic and the MCP admission gate both read this
+	// process's credential snapshot; install it before any session exists.
+	wireMCPGateCredSnapshot(home)
 	library := NewQueenToolLibrary(home)
 	deps.QueenToolCatalog = library.Catalog
 	deps.QueenLifecycleTools = library.Lifecycle

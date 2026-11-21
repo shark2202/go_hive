@@ -1,19 +1,30 @@
 #!/usr/bin/env python3
 """Generate the model-visible tool-contract parity manifest for the Go port.
 
-The manifest is the frozen Python side of the P1 contract audit: for the 36
-tools both runtimes expose under the same name it records the *model-visible*
-description and input schema, and whether this lane applies them.
+The manifest is the frozen Python side of the tool-contract audit: for every
+same-name tool it records the *model-visible* description and input schema,
+and whether this lane applies them. Two reference sources are covered:
+
+  - the 42 core tools (harness_tools groups + the aden_tools registries);
+  - the five queen-lifecycle tools whose Tool Library rows render no schema
+    (queen_lifecycle_tools.py, which also registers playbook_tools.py's
+    run_playbook). Those are dumped from the registered Tool objects with a
+    recording registry and a mock session — the source definition is the
+    model-visible contract there, not the schema-less Tool Library row.
 
 Description rule (verified against the Python sources, not just the registry):
   - harness tools (core/framework/tools/harness_tools.py) : inspect.cleandoc
   - aden_tools tools (FastMCP default/all registry)       : raw docstring
   - the four file tools (aden_tools/file_ops.py)          : explicit *_DOC
     constants passed to @register_tool(description=...).
+  - queen lifecycle tools                                 : the Tool(...) text,
+    which equals the captured lifecycle-layer description byte for byte.
 
 Model-visible schema = upstream input_schema minus CONTEXT_PARAMS
 (agent_id, colony_id, data_dir, principal, profile, profile_display_name,
-session_cwd) and minus pydantic ``title`` keys.
+session_cwd) and minus pydantic ``title`` keys. Queen lifecycle schemas are
+hand-written Tool(...) dicts: they are used as-is (no titles to strip, and
+colony_id is a real model argument there, not an injected context param).
 
 Usage (from a checkout that also contains core/ and tools/):
     cd tools && uv run python ../go_hive/scripts/gen_tool_contract_parity.py
@@ -58,6 +69,19 @@ TERMINAL_TOOLS = {
     "terminal_pty_close", "terminal_pty_open", "terminal_pty_run",
     "terminal_rg",
 }
+
+# The five same-name tools whose reference is a queen-session Tool object
+# (queen_lifecycle_tools.py registers four of them and playbook_tools.py the
+# other). The captured Tool Library renders these rows with a name and
+# description but no input schema, so this generator dumps the registered
+# definitions instead: that is the contract the model is called with.
+QUEEN_LIFECYCLE_TOOLS = [
+    "remove_trigger",
+    "reply_to_worker",
+    "run_playbook",
+    "set_trigger",
+    "update_worker_profile",
+]
 
 HARNESS_GROUPS = ("files-tools", "terminal-tools", "chart-tools", "memory-tools", "hive_tools")
 
@@ -136,9 +160,44 @@ def dump_aden_tools():
     return asyncio.run(collect(False)), asyncio.run(collect(True))
 
 
+def dump_queen_lifecycle():
+    """Dump the queen-session Tool objects (registered definitions, not the
+    schema-less Tool Library rendering).
+
+    The registration function only builds Tool objects here; a recording
+    registry and a bare mock session are enough (handlers never run).
+    """
+    sys.path.insert(0, str(REPO_ROOT / "core"))
+    from framework.tools.queen_lifecycle_tools import register_queen_lifecycle_tools  # noqa: PLC0415
+
+    class RecordingRegistry:
+        def __init__(self):
+            self.tools = {}
+
+        def register(self, name, tool, handler):
+            self.tools[name] = tool
+
+    class MockSession:
+        pass
+
+    registry = RecordingRegistry()
+    register_queen_lifecycle_tools(registry, session=MockSession(), session_id="parity-manifest")
+    missing = [name for name in QUEEN_LIFECYCLE_TOOLS if name not in registry.tools]
+    if missing:
+        raise SystemExit(f"queen lifecycle tools missing from the registry dump: {missing}")
+    return {
+        name: {
+            "description": registry.tools[name].description or "",
+            "inputSchema": registry.tools[name].parameters,
+        }
+        for name in QUEEN_LIFECYCLE_TOOLS
+    }
+
+
 def main() -> None:
     harness, group_of, counts = dump_harness()
     py_default, py_all = dump_aden_tools()
+    queen_lifecycle = dump_queen_lifecycle()
 
     tools = {}
     for name in CORE_TOOLS:
@@ -171,15 +230,50 @@ def main() -> None:
             "parameters": visible(py["inputSchema"], ensure_required=name in REQUEST_REQUIRED_MATERIALIZED),
         }
 
+    # Queen lifecycle tools: the reference is the registered Tool object (the
+    # Tool Library layer has no schema for these names). Four are byte-aligned
+    # with the Go definitions; run_playbook keeps the port's folded
+    # playbook-control parameters (action / run_id), so only its description is
+    # applied.
+    for name, py in queen_lifecycle.items():
+        if name == "run_playbook":
+            status, reason = "partial", (
+                "The description is already the Python text (pinned by "
+                "TestRunPlaybookDescriptionMatchesFrozenContract). The schema keeps "
+                "this port's folded playbook-control parameters: Go folds Python's "
+                "standalone get_playbook_status / stop_playbook tools onto "
+                "run_playbook(action=...) and adds the native-JSON form, so the "
+                "model-visible schema carries action/run_id on top of the four "
+                "Python parameters, which are byte-equal.")
+        else:
+            status, reason = "aligned", ""
+        tools[name] = {
+            "status": status,
+            "source": "queen_lifecycle:queen_lifecycle_tools.py",
+            "reason": reason,
+            "apply_description": status == "aligned",
+            "apply_parameters": status == "aligned",
+            "description": py["description"],
+            "parameters": py["inputSchema"],
+        }
+
     manifest = {
         "provenance": {
-            "purpose": "Python ⇄ Go model-visible tool contract for the 42 same-name core tools (P1 lane)",
+            "purpose": (
+                "Python ⇄ Go model-visible tool contract for the 47 same-name tools "
+                "(42 core + 5 queen lifecycle)"
+            ),
             "python_default_tools": len(py_default),
             "python_all_tools": len(py_all),
             "harness_groups": counts,
+            "queen_lifecycle_tools": list(QUEEN_LIFECYCLE_TOOLS),
+            "queen_lifecycle_source": (
+                "core/framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools "
+                "(recording registry + mock session; playbook_tools.py registers run_playbook)"
+            ),
             "context_params_stripped": sorted(CONTEXT_PARAMS),
             "excluded_schema_keys": ["title"],
-            "description_rule": "harness tools use inspect.cleandoc(docstring); aden_tools tools use the raw FastMCP docstring; file_ops tools use their explicit *_DOC constants",
+            "description_rule": "harness tools use inspect.cleandoc(docstring); aden_tools tools use the raw FastMCP docstring; file_ops tools use their explicit *_DOC constants; queen lifecycle tools use the registered Tool(...) text",
             "generator": "go_hive/scripts/gen_tool_contract_parity.py",
         },
         "tools": tools,

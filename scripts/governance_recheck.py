@@ -102,8 +102,8 @@ def compute(targets: dict, backlog: dict, lh_per_day: float) -> tuple[dict, dict
     cumulative = 0.0
     for gate in ("G1", "G2", "G3"):
         items = gates.get(gate, [])
-        non_external = [i for i in items if not i.get("external")]
-        external = [i for i in items if i.get("external")]
+        non_external = [i for i in items if not i.get("external") and not i.get("done")]
+        external = [i for i in items if i.get("external") and not i.get("done")]
         cumulative += sum(float(i.get("hours", 0)) for i in non_external)
         if external:
             # 外部依赖不压缩日期：保持既有日期，风险标注

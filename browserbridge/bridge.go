@@ -27,6 +27,11 @@ const (
 	// DefaultHTTPAddr is the local-only agent API.
 	DefaultHTTPAddr = "127.0.0.1:14830"
 
+	// BridgeVersion is this bridge's own version, reported as /status
+	// bridge_version (upstream reports its gcu package version there). Keep
+	// it in lockstep with cmd/browserbridge's -version output.
+	BridgeVersion = "0.3.0-l3a"
+
 	defaultCommandTimeout = 30 * time.Second
 	defaultPingInterval   = 5 * time.Second
 	defaultPongTimeout    = 12 * time.Second
@@ -56,6 +61,15 @@ type Config struct {
 	// reaper runs every 10 s). Tests shorten them.
 	ControlIdentifyGrace time.Duration
 	ControlReapInterval  time.Duration
+
+	// BridgeVersion is reported as /status bridge_version (upstream's gcu
+	// package version). Empty uses the package const BridgeVersion.
+	BridgeVersion string
+	// RuntimeVersion is reported as /status runtime_version. Nil renders as
+	// null, matching upstream's BeelineBridge(runtime_version=None) when the
+	// embedding app passes nothing (its production default); an embedder that
+	// knows the Hive app version may set it explicitly.
+	RuntimeVersion *string
 
 	// ViewportScale is the GCU viewport scale this bridge reports
 	// (framework/config.py::get_gcu_viewport_scale via the parent's
@@ -124,7 +138,12 @@ func (c Config) withDefaults() Config {
 		c.HelloTimeout = defaultHelloTimeout
 	}
 	if c.MaxMessageSize <= 0 {
-		c.MaxMessageSize = 16 << 20
+		// Upstream websockets.serve(max_size=50*1024*1024); keep the two
+		// listeners (extension relay + control RPC) on that same ceiling.
+		c.MaxMessageSize = ws.DefaultMaxRead
+	}
+	if c.BridgeVersion == "" {
+		c.BridgeVersion = BridgeVersion
 	}
 	if c.Logf == nil {
 		c.Logf = log.Printf
@@ -190,7 +209,14 @@ type Bridge struct {
 	contextActiveTab map[string]int
 	hiveWindowByConn map[string]int
 	windowLocks      map[string]*sync.Mutex
-	starredDefault   string
+	// tabLocks serializes CDP commands per tab id (upstream _tab_locks /
+	// bridge.py::_tab_lock). Entries are dropped when a tab closes/reports
+	// removed so the keyspace stays bounded by live tabs.
+	tabLocks       map[int]chan struct{}
+	starredDefault string
+	// bindErrors records optional-listener bind failures for /status
+	// (upstream _bind_errors). Guarded by stateMu.
+	bindErrors map[string]string
 
 	sweepStop    chan struct{}
 	sweepDone    chan struct{}
@@ -237,6 +263,8 @@ func New(cfg Config) *Bridge {
 		contextActiveTab: make(map[string]int),
 		hiveWindowByConn: make(map[string]int),
 		windowLocks:      make(map[string]*sync.Mutex),
+		tabLocks:         make(map[int]chan struct{}),
+		bindErrors:       make(map[string]string),
 		sweepStop:        make(chan struct{}),
 		sweepDone:        make(chan struct{}),
 	}
@@ -303,7 +331,9 @@ func (b *Bridge) Start(ctx context.Context) error {
 	b.serverMu.Lock()
 	b.control = control
 	b.serverMu.Unlock()
-	control.start(b.cfg.ControlAddr)
+	if err := control.start(b.cfg.ControlAddr); err != nil {
+		b.recordBindError("control_rpc", b.cfg.ControlAddr, err)
+	}
 	if !b.cfg.SweepDisabled {
 		b.sweepRunning.Store(true)
 		go b.sweepLoop()
@@ -316,6 +346,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 func (b *Bridge) startLegacy(addr string) {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
+		b.recordBindError("legacy_ws", addr, err)
 		b.cfg.Logf("legacy websocket %s unavailable (continuing): %v", addr, err)
 		return
 	}
@@ -676,6 +707,9 @@ func (b *Bridge) handleTabEvent(conn *Connection, msg map[string]json.RawMessage
 		delete(b.tabActions, tabID)
 		delete(b.hiveTabs, tabID)
 		delete(b.ungroupedSeen, tabID)
+		// Upstream evicts the per-tab CDP lock on "removed" too: most tabs
+		// close via this event, not the close_tab tool.
+		delete(b.tabLocks, tabID)
 		b.stateMu.Unlock()
 		return
 	}

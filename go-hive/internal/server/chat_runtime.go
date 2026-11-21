@@ -134,6 +134,11 @@ type ChatRuntimeDeps struct {
 	// Parity: framework/agents/queen/queen_tools_config.py::load_queen_tools_config
 	ManifestToolNames []string
 	ManifestFiltered  bool
+	// MCPToolNamesAll is the phase's MCP-origin tool-name universe: every tool
+	// registered by the in-process harness groups plus any connected MCP
+	// server. It is upstream's QueenPhaseState.mcp_tool_names_all — the set
+	// the per-queen allowlist gates and the live-tools diagnostic counts.
+	MCPToolNamesAll []string
 	// Phase reports the queen's current phase ("independent" / "colony") for
 	// the node_loop_iteration payload, mirroring the upstream loop's
 	// iteration_metadata_provider. Nil leaves the iteration phase-less.

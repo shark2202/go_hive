@@ -33,8 +33,13 @@ const (
 )
 
 const (
-	acceptGUID     = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-	defaultMaxRead = 16 << 20 // 16 MiB, comfortably above the bridge's JSON frames
+	acceptGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+	// DefaultMaxRead mirrors the Python bridge's websockets max_size
+	// (bridge.py: `max_size=50 * 1024 * 1024`) — CDP responses such as a full
+	// accessibility tree or a screenshot can be large. The Go port used to cap
+	// this at 16 MiB (R10), which a big AX tree can exceed before the
+	// extension's own frame ever reaches the bridge.
+	DefaultMaxRead int64 = 50 << 20 // 50 MiB
 )
 
 // CloseError reports a closing handshake initiated by the peer.
@@ -140,7 +145,7 @@ func (c *Conn) ReadMessage() (Opcode, []byte, error) {
 		maxRead = c.maxRead
 	)
 	if maxRead <= 0 {
-		maxRead = defaultMaxRead
+		maxRead = DefaultMaxRead
 	}
 
 	for {
@@ -243,7 +248,7 @@ func (c *Conn) readFrame() (bool, Opcode, []byte, error) {
 	}
 	maxRead := c.maxRead
 	if maxRead <= 0 {
-		maxRead = defaultMaxRead
+		maxRead = DefaultMaxRead
 	}
 	if length > maxRead {
 		return false, 0, nil, c.protocolError("frame too large")

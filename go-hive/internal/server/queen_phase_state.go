@@ -22,6 +22,7 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/atomicfs"
 	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/aden-hive/hive-go/internal/tools"
 )
 
 const (
@@ -59,6 +60,11 @@ type QueenPhaseState struct {
 	queenProfile map[string]any
 	metaPath     string
 	bus          *eventbus.EventBus
+	// toolSurface is the session's live tool tier (PhaseToolSurface): the
+	// get_current_tools / searchable / allowlist views upstream's phase state
+	// owns directly. Attached when the session registers its chat runtime;
+	// every reader degrades to empty when it was never attached.
+	toolSurface *PhaseToolSurface
 }
 
 // NewQueenPhaseState builds a phase state for an already-resolved phase.
@@ -130,6 +136,68 @@ func (p *QueenPhaseState) MetaPath() string {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.metaPath
+}
+
+// SetToolSurface attaches the session's live tool tier. Re-attaching replaces
+// the previous surface (the chat runtime is the single source of tier state).
+func (p *QueenPhaseState) SetToolSurface(surface *PhaseToolSurface) {
+	if p == nil {
+		return
+	}
+	p.mu.Lock()
+	p.toolSurface = surface
+	p.mu.Unlock()
+}
+
+// phaseSurface returns the attached tool surface, or nil.
+func (p *QueenPhaseState) phaseSurface() *PhaseToolSurface {
+	if p == nil {
+		return nil
+	}
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.toolSurface
+}
+
+// The tool-tier getters below mirror the upstream QueenPhaseState methods the
+// debug routes duck-type. A session with no attached runtime surfaces an empty
+// view rather than hiding the method, matching Python (the methods always
+// exist; the tier is just empty).
+
+// GetCurrentTools is the eager (callable-now) tool set of the phase.
+func (p *QueenPhaseState) GetCurrentTools() []tools.Tool {
+	return p.phaseSurface().GetCurrentTools()
+}
+
+// GetSearchableTools is the allowlist-filtered searchable tier.
+func (p *QueenPhaseState) GetSearchableTools() []tools.Tool {
+	return p.phaseSurface().GetSearchableTools()
+}
+
+// UnregisteredAllowlistedNames are allowlisted names with no live MCP server.
+func (p *QueenPhaseState) UnregisteredAllowlistedNames() map[string]struct{} {
+	return p.phaseSurface().UnregisteredAllowlistedNames()
+}
+
+// MCPToolNamesAll is the MCP-origin name universe of the phase.
+func (p *QueenPhaseState) MCPToolNamesAll() map[string]struct{} {
+	return p.phaseSurface().MCPToolNamesAll()
+}
+
+// EnabledMCPTools exposes the per-queen allowlist (isNone = allow every MCP
+// tool), upstream's enabled_mcp_tools None semantics.
+func (p *QueenPhaseState) EnabledMCPTools() ([]string, bool) {
+	return p.phaseSurface().EnabledMCPTools()
+}
+
+// IndependentTools is the phase's membership list before the allowlist gate.
+func (p *QueenPhaseState) IndependentTools() []tools.Tool {
+	return p.phaseSurface().IndependentTools()
+}
+
+// FilteredIndependentTools is IndependentTools after the allowlist gate.
+func (p *QueenPhaseState) FilteredIndependentTools() []tools.Tool {
+	return p.phaseSurface().FilteredIndependentTools()
 }
 
 // SetQueenIdentity stamps the identity the phase runs under, as the upstream

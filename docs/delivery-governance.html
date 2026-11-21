@@ -40,8 +40,8 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 
 <section id="g1"><h2><span class="num">01</span>目标与门槛</h2>
 <div class="grid g3">
-  <div class="card"><div class="k">G1 · 字段级逐字一致</div><div class="v">目标 11-24</div><div class="d">API/WS 字段形状、tools/skill/MCP 定义、env 89/118、config 134 键、存储字段；不可达项列例外。验收：契约 <code>--check</code> + 双跑 golden。</div></div>
-  <div class="card"><div class="k">G2 · 老用户无损替换 RC</div><div class="v">目标 11-27</div><div class="d">旧 Python HIVE_HOME 直接启动、自动迁移、数据不丢、可回滚；sessions/colonies/tracker/credentials/memories/senders/skills 全量双跑。</div></div>
+  <div class="card"><div class="k">G1 · 字段级逐字一致</div><div class="v">目标 11-22</div><div class="d">API/WS 字段形状、tools/skill/MCP 定义、env 89/118、config 134 键、存储字段；不可达项列例外。验收：契约 <code>--check</code> + 双跑 golden。</div></div>
+  <div class="card"><div class="k">G2 · 老用户无损替换 RC</div><div class="v">目标 11-22</div><div class="d">旧 Python HIVE_HOME 直接启动、自动迁移、数据不丢、可回滚；sessions/colonies/tracker/credentials/memories/senders/skills 全量双跑。</div></div>
   <div class="card"><div class="k">G3 · 商业外发布</div><div class="v">目标 12-18</div><div class="d">G2 + Windows 实机、GitHub Actions release 执行、govulncheck/安全审查、六平台归档与安装/升级脚本复验。</div></div>
 </div>
 <div class="callout info"><b>口径：</b>“字段级”= 名称/类型/默认值/可空/enum/required/读取行为一致；值级差异必须 canonicalize 后比较；字节级、时序、运行期值列为例外，不冒充一致。</div>

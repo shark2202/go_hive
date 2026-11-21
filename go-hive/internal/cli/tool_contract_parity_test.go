@@ -21,14 +21,17 @@ import (
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 )
 
-// parityCatalogueDefs builds the real session catalogue and indexes its
+// parityCatalogueDefs builds the real session catalogue (queen lifecycle table
+// included, the way a queen chat session gets it) and indexes its
 // model-visible definitions. Duplicate names would make a model-facing surface
 // ambiguous, so they fail here.
 func parityCatalogueDefs(t *testing.T) map[string]llm.ToolDef {
 	t.Helper()
 	root := t.TempDir()
 	t.Setenv("HIVE_MEMORY_TIMELINE", "")
-	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+	home := hivehome.Home{Root: root}
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
+	enableQueenLifecycleTools(catalogue, &hiveserver.Session{}, home)
 	defs := make(map[string]llm.ToolDef, len(catalogue.Defs()))
 	for _, def := range catalogue.Defs() {
 		if _, exists := defs[def.Name]; exists {
@@ -111,8 +114,8 @@ func parityEnum(t *testing.T, prop map[string]any) []string {
 // frozen fixture itself.
 func TestToolContractParityManifestShape(t *testing.T) {
 	manifest := toolContractParityManifestData()
-	if len(manifest.Tools) != 42 {
-		t.Fatalf("manifest holds %d tools, want the 42 audited same-name tools", len(manifest.Tools))
+	if len(manifest.Tools) != 47 {
+		t.Fatalf("manifest holds %d tools, want the 47 audited same-name tools (42 core + 5 queen lifecycle)", len(manifest.Tools))
 	}
 	counts := map[string]int{}
 	for name, entry := range manifest.Tools {
@@ -136,8 +139,8 @@ func TestToolContractParityManifestShape(t *testing.T) {
 			t.Fatalf("%s: %s entry has no recorded reason", name, entry.Status)
 		}
 	}
-	if counts["aligned"] != 31 || counts["partial"] != 1 || counts["dependency"] != 10 {
-		t.Fatalf("manifest status counts = %v, want aligned 31 / partial 1 / dependency 10", counts)
+	if counts["aligned"] != 35 || counts["partial"] != 2 || counts["dependency"] != 10 {
+		t.Fatalf("manifest status counts = %v, want aligned 35 / partial 2 / dependency 10", counts)
 	}
 }
 
@@ -356,20 +359,19 @@ func TestRequestSchemaSerializationMatchesPythonContract(t *testing.T) {
 	}
 }
 
-// Parity-exempt: the known-gap list is the P1 lane's recorded delivery state,
-// not a Python unit test. The comparison runs on the model-visible surface
-// (context params stripped) and on serialized JSON, so it measures what the
-// provider request carries rather than Go's internal map typing.
+// Parity-exempt: the known-gap list is the recorded delivery state, not a
+// Python unit test. The comparison runs on the catalogue definitions that
+// feed the request pipeline (builtin defs are context-stripped at source,
+// mirroring upstream's MCP conversion; queen lifecycle defs are not, because
+// upstream registers those as plain Tool objects and never strips them) and on
+// serialized JSON, so it measures what the provider request carries rather
+// than Go's internal map typing.
 func TestToolContractParityRemainingGaps(t *testing.T) {
-	catalogue := newSessionToolCatalogue(t.TempDir(), builtin.New(t.TempDir()), hivehome.Home{})
-	visible := map[string]llm.ToolDef{}
-	for _, def := range tools.StripContextParams(catalogue.Defs()) {
-		visible[def.Name] = def
-	}
+	defs := parityCatalogueDefs(t)
 	manifest := toolContractParityManifestData()
 	var gaps []string
 	for name, entry := range manifest.Tools {
-		def, ok := visible[name]
+		def, ok := defs[name]
 		if !ok {
 			t.Fatalf("%s: manifest tool missing from the session catalogue", name)
 		}
@@ -379,10 +381,15 @@ func TestToolContractParityRemainingGaps(t *testing.T) {
 		gaps = append(gaps, name)
 	}
 	sort.Strings(gaps)
-	// exa_search is the one recorded partial: Go registers Exa as a 7-action
-	// module tool (required `action`) while Python exposes a flat tool
-	// (required `query`). Flattening is its own lane, not a schema-shape gap.
-	want := []string{"exa_search"}
+	// Two recorded partials:
+	//   exa_search    — Go registers Exa as a 7-action module tool (required
+	//                   `action`) while Python exposes a flat tool (required
+	//                   `query`). Flattening is its own lane.
+	//   run_playbook  — Go folds Python's standalone playbook-control tools
+	//                   onto run_playbook(action=...) and adds the native-JSON
+	//                   form, so the schema carries action/run_id on top of the
+	//                   Python contract's four parameters.
+	want := []string{"exa_search", "run_playbook"}
 	if !reflect.DeepEqual(gaps, want) {
 		t.Fatalf("remaining gaps = %v\nwant (recorded) = %v", gaps, want)
 	}

@@ -940,7 +940,7 @@
   ]
  },
  "divergence_note": "capture ran on branch tool-contract-recheck @ c8cca067; the python reference checkout (/Users/mac/hive, main) was at 889bbfde during the capture and advanced to 98b3a0ab afterwards (env/config contract + qc commits). None of those touch the tool surface: core/ is still a756b1e5, tools/src still 68b6c230f20e, and the captured Python tools[] is byte-identical to the frozen baseline.",
- "current_round": 3,
+ "current_round": 4,
  "rounds": [
   {
    "round": 1,
@@ -2014,6 +2014,160 @@
      "toolflat-lazy/captures/go-grouped-first-tools.json: HIVE_TOOL_SURFACE=grouped keeps the full pool (150 names on this base, airtable/slack/stripe present)"
     ],
     "divergence_note": "The lazy layer reproduces the Python split for the independent phase (24 eager). Grouped integration modules (module+action shape) are not part of the deferred flat manifest - they are not flat names and remain reachable via HIVE_TOOL_SURFACE=grouped. After a colony binds, Go restores the colony-phase eager surface (39) matching the pre-lazy behavior, while deferred directory tools stay searchable."
+   }
+  },
+  {
+   "round": 4,
+   "label": "round 4 @ tool-schema-residuals (同名 desc 41/41；lifecycle 源码口径 schema 归一 40/41)",
+   "generated_at_utc": "2026-11-21T05:42:30Z",
+   "scope": "Definition-level closure of the same-name tool residuals on the current build: the five queen-lifecycle tools are re-referenced from the registered Python Tool objects (their Tool Library rows carry no schema), all 51 deferred tools are loaded through search_tools on the live build, and the 41 same-name definitions are compared with the freeze-lane normalization. First request (24 eager) and the deferred loading mechanism are unchanged.",
+   "baseline": {
+    "round": 2,
+    "statistics": {
+     "shared": 41,
+     "description_identical": 40,
+     "input_schema_raw_identical": 32,
+     "input_schema_ctx_stripped_identical": 36,
+     "input_schema_normalized_identical": 36,
+     "python_params": 156,
+     "go_params": 174,
+     "python_only_params": 4,
+     "go_only_params": 22,
+     "type_mismatches": 0,
+     "optionality_mismatches": 0,
+     "required_mismatches": 4
+    },
+    "note": "Round 2 measured the pre-lazy request surface (Go 144 tools). The capture-layer reference renders lifecycle rows as name+description only, which is what the 5 normalized failures were."
+   },
+   "recheck": {
+    "python": {
+     "role": "reference",
+     "version": "1.0.14",
+     "checkout": "/Users/mac/hive",
+     "frozen_contract": "go_hive/contracts/tool-definitions.json",
+     "source_commits": {
+      "core": "a756b1e51765bc75b0a40e362859452a0a54081b",
+      "tools": "68b6c23095aef8bc9a0dcbc05aeb16e61b1ba8db"
+     },
+     "note": "The captured tools[] is content-identical to rounds 1-3; core/tools are unchanged since the freeze. The five lifecycle tools' reference is now the registered Python Tool object (queen_lifecycle_tools.py + playbook_tools.py), frozen verbatim in go_hive/go-hive/internal/cli/tool_contract_parity.json (source queen_lifecycle)."
+    },
+    "go": {
+     "role": "target",
+     "version": "1.0.26-go.1",
+     "branch": "tool-schema-residuals (from main 59d89b86) + lane changes",
+     "build": "CGO_ENABLED=0 GOPROXY=off make build (dist/hive)",
+     "capture": "scripted fake gateway (toolresid3/capture_residual.py + toolflat-lazy/fake_gateway_scripted.py): temporary HIVE_HOME; POST /api/queen/queen_growth/session; POST /api/sessions/<id>/chat; two search_tools(select:...) steps load all 51 deferred names; every request body recorded."
+    },
+    "capture_files": {
+     "captures/go-first-tools.json": "0658b3081e61328717d543fa4539d6201b50b5828ec22b004959218c62040f41",
+     "captures/go-all-tools.json": "250d861c8d04a1b299e2fd20fddb3b9046d11ac96ef002c8abf76088a6e350f9",
+     "out/go-gateway-residual.jsonl": "da27ca2129c61365e58c1f73d6db5a406a7fecf729e48074e199dccff75d19ec"
+    },
+    "capture_notes": {
+     "first_request_count": 24,
+     "first_request_order_identical_to_python": true,
+     "first_request_tools_byte_identical_to_lazy_lane_capture": true,
+     "deferred_loaded": 51,
+     "tools_after_loading": 75,
+     "unexpected_names_after_loading": []
+    },
+    "statistics": {
+     "python_surface": 54,
+     "shared": 41,
+     "description_identical": 41,
+     "input_schema_raw_identical_capture_reference": 32,
+     "input_schema_ctx_stripped_identical_capture_reference": 36,
+     "input_schema_normalized_identical_capture_reference": 36,
+     "input_schema_raw_identical_source_reference": 36,
+     "input_schema_ctx_stripped_identical_source_reference": 40,
+     "input_schema_normalized_identical_source_reference": 40,
+     "python_params": 176,
+     "go_params": 174,
+     "python_only_params": 4,
+     "go_only_params": 2,
+     "type_mismatches": 0,
+     "optionality_mismatches": 0,
+     "required_mismatches_capture_reference": 4,
+     "required_mismatches_source_reference": 0
+    },
+    "matrix": {
+     "capture_reference_failures": {
+      "normalized": [
+       "remove_trigger",
+       "reply_to_worker",
+       "run_playbook",
+       "set_trigger",
+       "update_worker_profile"
+      ],
+      "cause": "Tool Library lifecycle rows carry no input_schema (name + description only)"
+     },
+     "source_reference_failures": {
+      "normalized": [
+       "run_playbook"
+      ],
+      "cause": "Go adds the folded playbook-control parameters action/run_id; the four shared parameters and the description are byte-equal"
+     },
+     "python_only_params": [
+      "edit_file.session_cwd",
+      "read_file.session_cwd",
+      "terminal_job_start.session_cwd",
+      "terminal_pty_open.session_cwd"
+     ],
+     "go_only_params": [
+      "run_playbook.action",
+      "run_playbook.run_id"
+     ]
+    },
+    "residual_exceptions": [
+     {
+      "tool": "run_playbook",
+      "class": "schema",
+      "reason": "Go folds Python's standalone get_playbook_status/stop_playbook onto run_playbook(action=...) and supports the native-JSON form; schema = Python's 4 parameters (byte-equal) + action/run_id, required absent on both sides."
+     },
+     {
+      "tools": [
+       "edit_file",
+       "read_file",
+       "terminal_job_start",
+       "terminal_pty_open"
+      ],
+      "class": "layer",
+      "reason": "Python reference is the Tool Library layer with the injected session_cwd; the model-visible request strips it exactly as Go does. Byte-equal after stripping."
+     },
+     {
+      "tool": "exa_search",
+      "class": "structural",
+      "reason": "Go registers Exa as a 7-action module (required action, union schema); Python exposes a flat tool (required query). Shared action params carry the enum/items/defaults fix; flattening is a separate lane."
+     },
+     {
+      "tools": [
+       "get_worker_status",
+       "inject_message",
+       "run_worker"
+      ],
+      "class": "out_of_scope",
+      "reason": "Not in the 41 same-name set (Python renders them as lifecycle text only); the Go text describes this port's worker/colony semantics. stop_worker is byte-equal."
+     }
+    ],
+    "tests": [
+     "TestSameNameToolDescriptionsMatchFrozenContract",
+     "TestQueenLifecycleDefinitionsMatchPythonSource",
+     "TestRunPlaybookDescriptionMatchesFrozenContract",
+     "TestToolContractParityManifestShape",
+     "TestToolContractParityRemainingGaps",
+     "TestFlatSurfaceSchemasMatchFrozenContract"
+    ],
+    "evidence": {
+     "dir": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolresid3",
+     "files": [
+      "capture_residual.py",
+      "captures/go-first-tools.json",
+      "captures/go-all-tools.json",
+      "out/go-gateway-residual.jsonl",
+      "out/summary.json"
+     ]
+    },
+    "divergence_note": "The only schema divergence left among the 41 is run_playbook's two folded control parameters. The lifecycle description residual is closed at the source: the old Go run_playbook text claimed Python scripts were not executable and no [PLAYBOOK_COMPLETE] notification existed, both false since the external-interpreter and background-notify lanes landed."
    }
   }
  ]

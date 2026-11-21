@@ -3,6 +3,7 @@ package browserbridge
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -25,18 +26,27 @@ type ConnectionStatus struct {
 // Status is the GET /status payload. Field names intentionally follow the
 // upstream Python bridge where they overlap so the shipped extension side
 // panel can keep rendering its basic connection rail.
+//
+// Field set vs upstream bridge.py::status_payload: the three fields the side
+// panel's footer/connection rail reads (bridge_version, runtime_version) and
+// the per-listener bind_errors diagnostic are now carried (R11). The remaining
+// Go additions (tabs, tabs_total, profiles, capabilities, viewport_scale and
+// connections[].tabs) are documented additive extensions used by the local
+// panel routes and probes; they do not replace any upstream field.
 type Status struct {
-	Bridge        string             `json:"bridge"`
-	Port          int                `json:"port"`
-	Connected     bool               `json:"connected"`
-	Connections   []ConnectionStatus `json:"connections"`
-	UptimeMS      int64              `json:"uptime_ms"`
-	Tabs          map[string]int     `json:"tabs"`
-	TabsTotal     int                `json:"tabs_total"`
-	Profiles      []string           `json:"profiles"`
-	Listening     ListeningStatus    `json:"listening"`
-	Capabilities  []string           `json:"capabilities"`
-	SystemBlocker *Blocker           `json:"system_blocker"`
+	Bridge         string             `json:"bridge"`
+	Port           int                `json:"port"`
+	Connected      bool               `json:"connected"`
+	Connections    []ConnectionStatus `json:"connections"`
+	UptimeMS       int64              `json:"uptime_ms"`
+	BridgeVersion  *string            `json:"bridge_version"`
+	RuntimeVersion *string            `json:"runtime_version"`
+	Tabs           map[string]int     `json:"tabs"`
+	TabsTotal      int                `json:"tabs_total"`
+	Profiles       []string           `json:"profiles"`
+	Listening      ListeningStatus    `json:"listening"`
+	Capabilities   []string           `json:"capabilities"`
+	SystemBlocker  *Blocker           `json:"system_blocker"`
 	// ControlRPCClients is the live count of control-RPC consumers, the same
 	// signal the idle watchdog reads. RuntimeAlive is true/false when there is
 	// evidence either way and null when no client has identified yet.
@@ -48,6 +58,14 @@ type Status struct {
 	// extension-based browser replaced the launched one, so capture geometry
 	// is unchanged.
 	ViewportScale float64 `json:"viewport_scale"`
+	// BindErrors maps a listener role to its bind failure ("<addr> — <err>"),
+	// mirroring upstream's _bind_errors: it lets a caller tell "listener never
+	// bound (port conflict)" apart from "bound, extension idle". The fatal
+	// listeners (ws/status) never appear here — a bridge that cannot bind them
+	// does not start. Optional listeners report under "legacy_ws" and
+	// "control_rpc" (upstream's "legacy_status" has no Go counterpart: the
+	// bridge does not run the legacy 9230 status listener).
+	BindErrors map[string]string `json:"bind_errors"`
 }
 
 // ListeningStatus reports which listeners are bound.
@@ -56,6 +74,34 @@ type ListeningStatus struct {
 	Status     bool `json:"status"`
 	ControlRPC bool `json:"control_rpc"`
 	LegacyWS   bool `json:"legacy_ws"`
+	// LegacyStatus is always false in the Go bridge: the upstream legacy
+	// migration window also served status on 9230, which this port does not
+	// implement (Hive server probes 14830 first and 9230 only as a fallback).
+	LegacyStatus bool `json:"legacy_status"`
+}
+
+// recordBindError stores one optional listener's bind failure for /status.
+// Mirrors upstream _bind_errors writes in start(): the address and the error
+// travel together so the side panel can name the conflicting port.
+func (b *Bridge) recordBindError(role, addr string, err error) {
+	if err == nil {
+		return
+	}
+	b.stateMu.Lock()
+	b.bindErrors[role] = fmt.Sprintf("%s — %v", addr, err)
+	b.stateMu.Unlock()
+}
+
+// bindErrorSnapshot copies the bind-error map so /status never serializes a
+// map a concurrent start() is still writing.
+func (b *Bridge) bindErrorSnapshot() map[string]string {
+	b.stateMu.Lock()
+	defer b.stateMu.Unlock()
+	out := make(map[string]string, len(b.bindErrors))
+	for role, msg := range b.bindErrors {
+		out[role] = msg
+	}
+	return out
 }
 
 // Status collects connection state and refreshes tab counts with a short
@@ -110,6 +156,8 @@ func (b *Bridge) Status(ctx context.Context) Status {
 		Status:     b.httpServer != nil,
 		ControlRPC: controlListening,
 		LegacyWS:   b.legacyWSS != nil,
+		// No legacy 9230 status listener in the Go bridge (see type comment).
+		LegacyStatus: false,
 	}
 	wsAddr := b.wsAddr
 	b.serverMu.Unlock()
@@ -143,12 +191,15 @@ func (b *Bridge) Status(ctx context.Context) Status {
 	sortStrings(profiles)
 
 	tabs, total := b.countTabs()
+	bridgeVersion := b.cfg.BridgeVersion
 	return Status{
 		Bridge:            "running",
 		Port:              portOf(wsAddr),
 		Connected:         len(conns) > 0,
 		Connections:       conns,
 		UptimeMS:          now.Sub(b.started).Milliseconds(),
+		BridgeVersion:     &bridgeVersion,
+		RuntimeVersion:    b.cfg.RuntimeVersion,
 		Tabs:              tabs,
 		TabsTotal:         total,
 		Profiles:          profiles,
@@ -158,6 +209,7 @@ func (b *Bridge) Status(ctx context.Context) Status {
 		ControlRPCClients: b.ControlClients(),
 		RuntimeAlive:      b.RuntimeAlive(),
 		ViewportScale:     b.cfg.ViewportScale,
+		BindErrors:        b.bindErrorSnapshot(),
 	}
 }
 

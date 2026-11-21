@@ -1,6 +1,6 @@
 {
   "schema": "hive-api-fallback-probe/1",
-  "generated_at": "2026-11-21T12:27:19+08:00",
+  "generated_at": "2026-11-21T14:04:18+08:00",
   "note": "未知路径 fallback（待定口径，不改）：Python 的 SPA fallback 对未注册的 /api/* GET 返回 200 text/html + index.html；Go 路由返回 404 JSON。",
   "probes": [
     {

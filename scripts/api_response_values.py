@@ -166,7 +166,22 @@ VALUE_EXCEPTIONS: list[dict[str, str]] = [
         "reason": (
             "The hot-swap count walks session.llm plus the session's eager ColonyRuntime LLM; "
             "Python attaches a colony runtime to the queen session (2), the Go REST session has "
-            "none (1). Same root cause as the session_live_tools / colony-tools gap."
+            "none (1). Same root cause as the colony-tools gap."
+        ),
+    },
+    {
+        "id": "live-tools-mcp-universe",
+        "endpoint": "session_live_tools",
+        "path_regex": r"^(mcp_tool_count_registered|diagnostic\.registry_mcp_total|diagnostic\.phase_state\.(mcp_tool_names_all_total|independent_tools_total))$",
+        "class": "value-level",
+        "reason": (
+            "Go's harness catalog records 33 MCP-origin names against the reference's 28: the Go "
+            "hive_tools group implements the excel_* tools and keeps a browser group the Python "
+            "probe's installed extras do not register, while Python lists csv_sql which this build "
+            "leaves unimplemented. The universe size, the registry MCP total and the independent "
+            "total derived from them differ by exactly that surplus (33/40 vs 28/35); the gate "
+            "snapshot (817 credentialed tools, 80 providers) and every allowlist-filtered count the "
+            "model surface gates on match exactly."
         ),
     },
 ]
@@ -174,19 +189,12 @@ VALUE_EXCEPTIONS: list[dict[str, str]] = [
 # Endpoints whose difference is a declared, documented gap: every differing
 # path is collapsed into a single ledger entry (count + sample) instead of
 # failing the check or bloating the ledger with hundreds of rows.
-ENDPOINT_EXCEPTIONS: list[dict[str, Any]] = [
-    {
-        "endpoint": "session_live_tools",
-        "class": "runtime-state-gap",
-        "reason": (
-            "REST-created Go sessions carry no PhaseState (only CLI / preloaded / resumed "
-            "sessions attach one), so actual_tools / expected_tools / framework_added and the "
-            "registry diagnostic are empty while the Python reference attaches a queen phase "
-            "state at creation. Shapes (keys/types) still compare; only values are collapsed."
-        ),
-        "sample": 12,
-    },
-]
+#
+# Empty since session_live_tools moved to per-value comparison: both its tool
+# surface and its registry-side admission-gate diagnostic now match the
+# reference, and the remaining MCP-universe counts are declared in
+# VALUE_EXCEPTIONS above.
+ENDPOINT_EXCEPTIONS: list[dict[str, Any]] = []
 
 # Paths not compared at all, with the reason recorded in the ledger.
 VALUE_IGNORED: list[dict[str, str]] = [

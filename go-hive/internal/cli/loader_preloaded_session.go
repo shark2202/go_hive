@@ -189,6 +189,9 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	}
 	toolbox := builtin.New("")
 	tools := newSessionToolCatalogue(sessionDir, toolbox, home)
+	// Same live registry handle a created session carries, so the diagnosis
+	// endpoints and the Tool Library see this session's MCP bookkeeping.
+	record.QueenToolRegistry = tools.Registry()
 	skillsCatalog := liveSkillsCatalog(record, home, chatSessionQueenScope(record.QueenName))
 	// A preloaded colony session is still a queen chat session: it gets the
 	// same queen-mail and session-bound lifecycle tools a created one does.
@@ -206,13 +209,16 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 		DeferredTools:     deferredTools,
 		ManifestToolNames: manifestNames,
 		ManifestFiltered:  manifestFiltered,
-		Execute:           tools.Execute,
-		ExecuteBlocks:     tools.ExecuteBlocks,
-		Root:              sessionDir,
-		Bus:               record.EventBus,
-		SessionID:         record.ID,
-		QueenName:         record.QueenName,
-		HomeRoot:          home.Root,
+		// Same phase MCP universe a created session gets, so the preloaded
+		// colony session's /live_tools surface is just as real.
+		MCPToolNamesAll: tools.CatalogueMCPToolNamesAll(),
+		Execute:         tools.Execute,
+		ExecuteBlocks:   tools.ExecuteBlocks,
+		Root:            sessionDir,
+		Bus:             record.EventBus,
+		SessionID:       record.ID,
+		QueenName:       record.QueenName,
+		HomeRoot:        home.Root,
 		// The preloaded path must announce the same queen skills catalog a
 		// created session does: without it the skills_catalog reminder source
 		// stays silent for the whole `serve --colony` session.

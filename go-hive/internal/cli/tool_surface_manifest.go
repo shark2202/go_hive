@@ -18,9 +18,11 @@ package cli
 // Parity: framework/tools/queen_lifecycle_tools.py::QueenPhaseState.get_searchable_tools
 
 import (
+	"sort"
 	"strings"
 
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
+	"github.com/aden-hive/hive-go/internal/tools"
 )
 
 // SearchableManifestNames returns the per-queen allowlist that bounds the
@@ -48,4 +50,39 @@ func (c *sessionToolCatalogue) SearchableManifestNames(queenName string) (names 
 		return nil, false
 	}
 	return resolved, true
+}
+
+// CatalogueMCPToolNamesAll returns the union of MCP-origin tool names the
+// catalogue's registry recorded — the in-process harness groups plus any
+// connected MCP server — upstream's QueenPhaseState.mcp_tool_names_all. It is
+// the universe the per-queen allowlist gates and the live-tools diagnostic
+// counts. Sorted so downstream iteration is deterministic.
+func (c *sessionToolCatalogue) CatalogueMCPToolNamesAll() []string {
+	if c == nil || c.registry == nil {
+		return nil
+	}
+	names := map[string]struct{}{}
+	for _, entries := range c.registry.GetFullMCPCatalog() {
+		for _, entry := range entries {
+			if name, _ := entry["name"].(string); name != "" {
+				names[name] = struct{}{}
+			}
+		}
+	}
+	out := make([]string, 0, len(names))
+	for name := range names {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// Registry is the catalogue's tool registry. The live-tools diagnostic and the
+// Tool Library route read its MCP bookkeeping, upstream
+// Session._queen_tool_registry.
+func (c *sessionToolCatalogue) Registry() *tools.ToolRegistry {
+	if c == nil {
+		return nil
+	}
+	return c.registry
 }

@@ -1,6 +1,7 @@
 package browserbridge
 
 import (
+	"context"
 	"sort"
 	"sync"
 	"time"
@@ -93,6 +94,7 @@ func (b *Bridge) forgetTabState(tabID int) {
 	delete(b.tabActiveMS, tabID)
 	delete(b.tabActions, tabID)
 	delete(b.hiveTabs, tabID)
+	delete(b.tabLocks, tabID)
 }
 
 // recordAction appends to the bounded per-tab ring buffer. Missing/zero tab
@@ -394,6 +396,40 @@ func (b *Bridge) windowLock(label string) *sync.Mutex {
 		b.windowLocks[label] = mu
 	}
 	return mu
+}
+
+// tabLock returns the per-tab CDP serialization lock, lazily created.
+// Mirrors bridge.py::_tab_lock: one entry per tab for the bridge's lifetime;
+// entries are dropped on tab close/removed so the map stays bounded by live
+// tabs. Eviction is inlined where stateMu is already held (forgetTabState and
+// the tab_event "removed" branch); existing holders/waiters keep their channel
+// reference, like upstream popping _tab_locks, and a reused id lazily creates
+// a fresh lock. A buffered channel is used instead of sync.Mutex so a waiter
+// can give up when its command context is cancelled.
+func (b *Bridge) tabLock(tabID int) chan struct{} {
+	b.stateMu.Lock()
+	defer b.stateMu.Unlock()
+	lock := b.tabLocks[tabID]
+	if lock == nil {
+		lock = make(chan struct{}, 1)
+		b.tabLocks[tabID] = lock
+	}
+	return lock
+}
+
+// acquireTabLock waits for this tab's CDP slot and returns its release func.
+// Upstream serializes every CDP command for one tab with _tab_lock so two
+// agents accidentally sharing a tab cannot interleave attach/sendCommand and
+// corrupt the CDP session (R09).
+func (b *Bridge) acquireTabLock(ctx context.Context, tabID int) (func(), error) {
+	lock := b.tabLock(tabID)
+	select {
+	case lock <- struct{}{}:
+		return func() { <-lock }, nil
+	case <-ctx.Done():
+		return nil, newError(CodeTimeout,
+			"The command was cancelled while waiting for another action on the same tab", false)
+	}
 }
 
 func (b *Bridge) setPendingDialog(tabID int, dialog map[string]any) {

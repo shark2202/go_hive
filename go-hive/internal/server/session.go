@@ -491,6 +491,11 @@ func (m *SessionManager) AddSession(session *Session) {
 	// A session created with a colony already attached (the colony fork path)
 	// binds its queen before the first turn can call run_worker.
 	session.BindChatColony()
+	// The chat runtime's live tool tier is the phase's tool surface: attach it
+	// once per registration so /live_tools and the phase-aware routes read the
+	// phase state, as upstream (QueenPhaseState owns the tiers). This wraps the
+	// runtime already built for the session — it never constructs a second one.
+	session.attachPhaseToolSurface()
 	// Arm the loop-level guards once per session: the stall-check subscription
 	// and the doom-loop park sink. Both are no-ops without a bus or a home, and
 	// startLoopGuards is idempotent for the repeated session lookups below.

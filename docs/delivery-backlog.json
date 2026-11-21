@@ -6,7 +6,7 @@
         "id": "api-probe-matrix",
         "label": "扩大 REST 端点值级/失败矩阵",
         "hours": 6,
-        "in_flight": true
+        "done": true
       },
       {
         "id": "tool-output-golden",
@@ -29,12 +29,14 @@
       {
         "id": "schema-residuals",
         "label": "lifecycle/session_cwd/exa schema 残差",
-        "hours": 3
+        "hours": 3,
+        "done": true
       },
       {
         "id": "tool-desc-residual",
         "label": "同名 desc 40/41 与输出文案",
-        "hours": 2
+        "hours": 2,
+        "done": true
       },
       {
         "id": "queen-prompt-assembly",
@@ -46,38 +48,55 @@
         "id": "searchable-manifest",
         "label": "search_tools 清单 307 vs 1029 收敛",
         "hours": 3,
-        "in_flight": true
+        "done": true
       },
       {
         "id": "runtime-state-gap",
         "label": "REST 会话挂 PhaseState（session_live_tools 空面）",
-        "hours": 3
+        "hours": 3,
+        "done": true
+      },
+      {
+        "id": "browser-ws-residuals",
+        "label": "Browser WS 残差 R09–R14（并发/帧上限/低风险）",
+        "hours": 5,
+        "done": true
       }
     ],
     "G2": [
       {
         "id": "old-home-e2e",
         "label": "真实旧 HIVE_HOME 全量双跑",
-        "hours": 8
+        "hours": 8,
+        "done": true
       },
       {
         "id": "rollback-drill",
         "label": "Go→Python 回滚演练",
-        "hours": 4
+        "hours": 4,
+        "done": true
       },
       {
         "id": "install-upgrade",
         "label": "安装/升级演练与脚本",
-        "hours": 4
+        "hours": 4,
+        "done": true
       },
       {
         "id": "sidecar-parity",
         "label": "session meta/tasks/colony sidecar",
-        "hours": 4
+        "hours": 4,
+        "done": true
       },
       {
         "id": "g2-docs",
         "label": "无损替换文档与支持矩阵",
+        "hours": 2,
+        "done": true
+      },
+      {
+        "id": "g2-support-matrix",
+        "label": "G2 支持矩阵与无损替换声明",
         "hours": 2
       }
     ],

@@ -14,6 +14,10 @@ handlers), real-Chrome verification, and artifact spill for `browser_html`.
 The control-plane pass adds the 14831 RPC server + allowlist, `client_hello`
 identity, server-pushed notify frames, the idle-exit watchdog with the
 serve-side keepalive, and the last four bridge methods plus two HTTP routes.
+The residuals round adds per-tab CDP serialization (R09), the upstream 50 MiB
+WS frame ceiling (R10), and the side-panel `/status` fields
+`bridge_version`/`runtime_version`/`bind_errors` (R11); see §12 for the
+real-binary probe.
 Rows marked 未移植 are not available through any fallback, alias, or hidden
 compatibility shim unless the row says otherwise.
 
@@ -61,7 +65,7 @@ definitions for compatibility and are not the active path). The six remaining
 | 17 | `browser_click` | `(selector, tab_id=None, profile=None, button="left", double_click=False, timeout_ms=5000, auto_snapshot_mode="simple")` | click result `{ok,action:"click",selector,x,y,method,focused_element?}` plus `snapshot`/`snapshot_error` | legacy | 已移植 | Pointer click + auto-snapshot; no highlight overlay, focused-element descriptor, or JS fallback. |
 | 18 | `browser_click_coordinate` | `(x, y, tab_id=None, profile=None, button="left")` | `list[TextContent(click result), ImageContent]` | legacy | 未移植 | Not registered upstream; the active path is `browser_interact` with `coordinate`. |
 | 19 | `browser_type` | `(selector, text, tab_id=None, profile=None, delay_ms=1, clear_first=True, timeout_ms=30000, use_insert_text=True, auto_snapshot_mode="simple")` | type result `{ok,action:"type",selector,length}` plus `snapshot`/`snapshot_error` | legacy | 已移植 | `Input.insertText` default; per-keystroke path when `use_insert_text=false`. |
-| 20 | `browser_type_focused` | `(text, tab_id=None, profile=None, delay_ms=1, clear_first=True, use_insert_text=True, auto_snapshot_mode="simple")` | type result with `selector=null` plus snapshot | active | 已移植 | Types into the focused element; no pointer click. |
+| 20 | `browser_type_focused` | `(text, tab_id=None, profile=None, delay_ms=1, clear_first=True, use_insert_text=True, auto_snapshot_mode="simple")` | type result with `selector=null` plus snapshot | legacy | 已移植 | Types into the focused element; no pointer click. (`interactions.py` definition — not registered upstream; the `hive-browser type-focused` verb is a Go-side extra.) |
 | 21 | `browser_press` | `(key, selector=None, tab_id=None, profile=None, modifiers=None)` | press result `{ok,action:"press",...}` | legacy | 已移植 | Key map for Enter/Tab/Escape/arrows/etc.; modifier bitmask. |
 | 22 | `browser_hover` | `(selector, tab_id=None, profile=None, timeout_ms=30000)` | `{ok,action:"hover",...}` | legacy | 未移植 | Not registered upstream; `browser_interact` `hover` covers it. |
 | 23 | `browser_hover_coordinate` | `(x, y, tab_id=None, profile=None)` | `list[TextContent, ImageContent]` | legacy | 未移植 | Not registered upstream; `browser_interact` `hover` + `coordinate` covers it. |
@@ -143,7 +147,7 @@ included here). Signatures are copied from the upstream AST.
 
 | # | Feature | Status | Notes |
 |---|---|---|---|
-| 1 | RFC 6455 server handshake/frames/fragmentation | 已移植 | Standard-library implementation in `ws/`; client masking required, 16 MiB cap. |
+| 1 | RFC 6455 server handshake/frames/fragmentation | 已移植 | Standard-library implementation in `ws/`; client masking required; 50 MiB frame cap matching upstream `websockets.serve(max_size=50*1024*1024)` (R10). |
 | 2 | `/bridge` endpoint on 14829 | 已移植 | Wrong paths get HTTP 404. |
 | 3 | Legacy 9229 listener | 已移植 | Default enabled, best-effort bind; disable with empty `-legacy`. |
 | 4 | `hello` parse (version/extensionId/protocolVersion/profileLabel) | 已移植 | Synthetic `profile-<8>` fallback for protocol ≥5 without a label. |
@@ -166,7 +170,7 @@ included here). Signatures are copied from the upstream AST.
 | 21 | Health blockers / `tab_health` | 已移植 | `health.py` rules ported (privileged scheme, Web Store, foreign extension, DevTools, enterprise policy, file access); connection rollup in `/status`. |
 | 22 | Telemetry JSONL | 已移植 | Daily `browser-YYYY-MM-DD.jsonl` under `TelemetryDir` (opt-in): tool_call, connection_event, context_event, cdp_event, viewport_event, attach_canary; redaction + truncation. |
 | 23 | Social rate-limit hook | 已移植 | Upstream limit table + env/config overrides; navigate-time LinkedIn/Instagram `profile_view` check/record. Opt-in (`EnableRateLimits`). JSON store, not SQLite. |
-| 24 | HTTP agent API on 127.0.0.1:14830 (`/health`, `/status`, `/profiles`, `/command`) | 已移植 | Loopback-only middleware; `/status` refreshes tab counts with a 750 ms live `tab.list`; `system_blocker` included. |
+| 24 | HTTP agent API on 127.0.0.1:14830 (`/health`, `/status`, `/profiles`, `/command`) | 已移植 | Loopback-only middleware; `/status` refreshes tab counts with a 750 ms live `tab.list`; `system_blocker` included, plus the side-panel fields `bridge_version`, `runtime_version` (null unless an embedder sets one, like upstream's production bridge), `bind_errors` and `listening.legacy_status` (R11). `/health`, `/command`, `/tabs`, `/contexts/close` are Go additions; the upstream bridge does not implement them. |
 | 25 | Upstream read/control HTTP surface (`GET /contexts`, `GET/POST /profiles/default`, `GET /tabs/{id}/health`, `GET /tabs/{id}/actions`, adopt/release POSTs) | 已移植 | Field names follow upstream; adopt conflict returns 409. |
 | 26 | Upstream remaining HTTP surface (`POST /tabs/{id}/reveal`, `POST /shutdown`) | 已移植 | Reveal returns the extension payload (or `fallback:"activate"`); `/shutdown` answers 202 `{"ok":true,"message":"Bridge shutdown initiated."}` and invokes `Config.ShutdownRequest`, which the supervised binary wires to a graceful exit (exit 0 = intentional, so the supervisor does not respawn). |
 | 26b | Panel support endpoints (`GET /tabs`, `POST /contexts/close`) | 已移植 | Additive to the upstream HTTP API: `/tabs` returns the extension's unfiltered `tab.list` rows, `/contexts/close` implements the upstream body contract `{profile}` / `{all:true}` and returns `{"closed":[{profile,ok,status,…}]}`. They exist so the Go server's three panel proxies pass through real data instead of re-implementing the registry. |
@@ -178,6 +182,7 @@ included here). Signatures are copied from the upstream AST.
 | 32 | Exact `networkidle` semantics | 未移植 | Approximated as `readyState=complete` + 500 ms. |
 | 33 | Tab-group protocol v5/v6 features (saved-group recycle, regroup, listUngrouped) | 已移植 | Persisted-chip recycle on create, `regrouped` event attribution, protocol-6 ungrouped reaper. Regroup is extension-driven; no bridge-issued `tabGroup.move`. |
 | 34 | Process entry point (`cmd/browserbridge`) | 已移植 | Flags for WS/HTTP/legacy, sweep, telemetry, rate limits, artifacts, skills, script command; `-no-legacy`; SIGINT/SIGTERM graceful shutdown; JSON ready line; `-probe` health check; `-version`; `-parent-check` for the `HIVE_DESKTOP_PARENT_PID` watch (upstream `_watch_parent`). |
+| 35 | Per-tab CDP serialization (`_tab_lock`) | 已移植 | Every `cdp()` command for one tab runs under a lazily-created per-tab lock (buffered channel); the lock is taken before `ensureAttached` so attach/cdp/retry cannot interleave, and entries are evicted on tab close/`removed` like upstream `_tab_locks` (R09). A waiter aborts when its context is cancelled. |
 
 ## 4. Upstream test mapping
 
@@ -185,7 +190,7 @@ Upstream test files live in `tools/tests/`. Go equivalents are in this module.
 
 | Upstream file | What it covers | Go equivalent | Status |
 |---|---|---|---|
-| `test_bridge_host_lifetime.py` | Parent-process watch dog shuts the bridge down / debounces a miss | `cmd/browserbridge` `TestIdleWatchdog*` (idle exit, desktop-parent hold, control-client hold) + `TestDesktopParentWatchExits` (`_watch_parent`: parent died → exit ≤2s) + `internal/cli` `TestBrowserSupervisorParksOnIdleExit` (exit 0 parks, `ensure()` respawns) + `TestBrowserSupervisorRefusesRespawnAfterRuntimeDeath` (no restart into a dead runtime) | 已移植 |
+| `test_bridge_host_lifetime.py` | Parent-process watch dog shuts the bridge down / debounces a miss | `cmd/browserbridge` `TestIdleWatchdog*` (idle exit, desktop-parent hold, control-client hold) + `TestDesktopParentWatchExits` (`_watch_parent` semantics; exits in ~0.8 s, intentionally faster than upstream's 5 s × 2 checks) + `internal/cli` `TestBrowserSupervisorParksOnIdleExit` (exit 0 parks, `ensure()` respawns) + `TestBrowserSupervisorRefusesRespawnAfterRuntimeDeath` (no restart into a dead runtime) | 已移植 |
 | `test_bridge_multiconnection.py` | Two connections, default/sole/starred resolution, explicit routing, tab routing, unknown profile, ping-loop registration, disconnect isolation | `TestAppPingPongKeepsConnectionAlive`, `TestPingTimeoutDisconnects`, `TestFirstComeClaimsDefault`, `TestStarredDefaultWinsOverFirstCome`, `TestTabRoutingAcrossProfiles`, `TestDisconnectFailsInFlightRequest`, `TestDisconnectSoftPrunesContextSlice` | 已移植 |
 | `test_bridge_rpc_allowlist.py` | Every forwarded bridge method is allowlisted; unknown method error | `TestRPCAllowlistCoversDispatch` (46 names + every one has a dispatcher), `TestRPCUnknownMethodIsRejected`, `TestRPCClientHelloRegistersOwnerAndCounts`, `TestRPCDispatchAgainstFakeExtension`, `TestRPCNotifyOnlyReachesSubscribers`, `TestRPCConcurrentCallsAreMultiplexed`, `TestRPCReaperClosesZombies`, `TestControlNotifyOnHandover` | 已移植 |
 | `test_browser_cleanup_phase1.py` | Context close dead-letter, forward/ungrouped orphan reapers, group recycle, window affinity | `TestStaleSweepSoftPrunesAndReapsOrphanGroup`, `TestUngroupedOrphanReap`, window/recycle paths in `TestAdoptTabLazyGroupRecreateAfterSoftPrune`; dead-letter queue absent | 未移植 |
@@ -200,13 +205,14 @@ Upstream test files live in `tools/tests/`. Go equivalents are in this module.
 - `bridge.py` methods: 55 total — 51 已移植, 4 未移植, 0 未验证.
   (Remaining: `has_public_listeners`, `highlight_rect`, `highlight_point`,
   `clear_highlight`.)
-- Runtime features: 34 total — 33 已移植, 1 未移植, 0 未验证.
+- Runtime features: 35 total — 34 已移植, 1 未移植, 0 未验证.
   (Remaining: exact `networkidle` semantics. Screenshot resize/annotate/spill
   and AX refs/`eN` were ported in the 2026-11-21 return-contract round; the
   remaining approximation there is the browser-native image codec, quantified
-  in `docs/fixtures/browser-return-contract/`.)
+  in `docs/fixtures/browser-return-contract/`. Per-tab CDP serialization was
+  added in the residuals round, R09.)
 - Upstream test files: 7 total — 3 已移植, 4 未移植, 0 未验证.
-- **Grand total: 129 rows — 114 已移植, 15 未移植, 0 未验证.**
+- **Grand total: 130 rows — 115 已移植, 15 未移植, 0 未验证.**
 
 Control-plane delta (vs the L3a 103/26): +9 已移植, −9 未移植 — reveal/shutdown
 HTTP, the RPC control plane, five former bridge methods (reveal, cdp_detach,
@@ -398,6 +404,10 @@ surface against the fake extension) and `cmd/browserbridge/main_test.go` (flags,
 listener binding, signal/cancel shutdown, probe). The control plane adds
 `control_test.go` (allowlist/hello/notify/concurrency/reaper), `history_http_test.go`
 (reveal/shutdown/history/attribute/detach) and the cmd idle-watchdog tests.
+The residuals round adds `cdp_concurrency_test.go` (wire-level per-tab
+serialization, different-tab independence, waiter cancellation),
+`status_fields_test.go` (status wire shape + per-listener bind errors) and
+`ws/ws_test.go` frame-limit cases (17 MiB accepted, lower cap still enforced).
 Gate: `go test -race ./...`, `go vet ./...`, `gofmt -l .`.
 
 ## 10. L3a real-Chrome evidence
@@ -467,7 +477,7 @@ Unit (fake extension + fake control clients, `go test -race ./...`):
 | `TestPanelCloseContextsHTTPClosesProfileAndAll` | `POST /contexts/close` closes one profile through `context.destroy` (registry entry dropped) and reports `{"closed":[]}` for `all` with nothing registered; a body without `profile`/`all` is the upstream 400 |
 | `cmd/... TestIdleWatchdogExits` | No control client + no `HIVE_DESKTOP_PARENT_PID` → the binary exits 0 after the grace |
 | `cmd/... TestIdleWatchdogHoldsWhileDesktopAlive` / `...HoldsWhileControlClientConnected` | A live desktop parent or one control client suppresses the exit |
-| `cmd/... TestDesktopParentWatchExits` | Upstream `_watch_parent`: with `HIVE_DESKTOP_PARENT_PID` dead the binary exits on its own inside the ≤2s budget, even with the idle watchdog disabled (measured 0.09s in-test at `-parent-check 20ms`; 783–866ms real-machine at the 400ms default) |
+| `cmd/... TestDesktopParentWatchExits` | Upstream `_watch_parent`: with `HIVE_DESKTOP_PARENT_PID` dead the binary exits on its own, even with the idle watchdog disabled — an intentional acceleration (400 ms × 2 vs upstream's 5 s × 2; measured 0.09s in-test at `-parent-check 20ms`, 783–866ms real-machine at the 400ms default). Not a same-value alignment. |
 | `cmd/... TestShutdownRouteEndsTheProcess` | `POST /shutdown` answers 202 and the process exits 0 |
 | `internal/cli` `TestBrowserSupervisorParksOnIdleExit` | Exit code 0 parks the supervisor (no restart counter); `ensure()` starts a fresh child |
 | `internal/cli` `TestBrowserSupervisorRefusesRespawnAfterRuntimeDeath` | Once the runtime owner is gone, `ensure()` is a no-op and a stale wake cannot restart the loop (`runtimeGone`), matching upstream's never-respawn-into-a-dead-runtime guard |
@@ -502,3 +512,33 @@ Process-level (`go_hive/scripts/e2e_browser_host.sh`, macOS 26.7.1, real Chrome
 (Google Chrome 158.0.8127.37)` — the 22 active tools did not regress. The
 script now passes `-no-idle-exit` because it holds no control client (the idle
 watchdog is covered by the host E2E step above and the cmd tests).
+
+## 12. Residuals evidence (R09 per-tab lock / R10 frame ceiling / R11 status)
+
+`go_hive/scripts/e2e_browser_residuals.sh` builds `cmd/browserbridge`, attaches
+a fake extension over the real WS protocol (one goroutine per command, so a
+held command cannot mask whether the bridge sent the next one) and drives
+concurrent `_cdp` calls through control RPC 14831. Raw output:
+`docs/fixtures/browser-residuals/e2e-output.txt`.
+
+- **R09**: the extension records `slow-arrived`; a second `_cdp` on the same
+  tab stays off the wire for 500 ms; after the slow reply is released the
+  event order is `slow-arrived, slow-released, cdp` and both RPCs return `ok`.
+  Unit negative control: removing the `acquireTabLock` call in `cdp.go` makes
+  `TestCDPSerializesCommandsOnSameTab` fail with the second frame observed
+  before the first finished.
+- **R10**: a 17 MiB `Runtime.evaluate` result is accepted by the extension
+  relay, relayed intact to the RPC client (`17825792` bytes) and the
+  connection survives a follow-up command. Unit tests pin
+  `ws.DefaultMaxRead == 50<<20` and that an explicit lower cap still rejects.
+- **R11**: `/status` reports `bridge_version=0.3.0-l3a`, `runtime_version=null`
+  (no embedder value, like upstream's production bridge), `bind_errors={}` on a
+  healthy bridge and the five-key `listening` block. With the legacy port held
+  by another process, `bind_errors.legacy_ws` names the address and error
+  (`docs/fixtures/browser-residuals/status-bind-error.json`).
+
+Not changed by this round: the Skia-vs-PIL JPEG byte difference and the dpr>1
+annotation width (quantified in `docs/fixtures/browser-return-contract/`), the
+`isHiveGroup` value-level difference (upstream reads a key that its own row
+does not carry; see `docs/browser-bridge.html` §04 note), and the legacy 9230
+status listener (Go does not implement it; Hive server probes 14830 first).
