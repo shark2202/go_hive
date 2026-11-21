@@ -88,9 +88,9 @@ Go 代码与配套文档在 `go_hive/` 下：`go-hive/`（模块）、`contracts
 | 门禁 | 命令 | 通过标准 | 当前状态 |
 | --- | --- | --- | --- |
 | 格式/静态 | `make fmt-check && make vet` | 无输出 | 通过 |
-| 单元测试 | `make test` | 全部包 `ok` | 通过（`-count=1` 改造进行中） |
+| 单元测试 | `make test` | 全部包 `ok` | 通过（Makefile 已固化 `TEST_FLAGS ?= -count=1`） |
 | 交叉编译 | `make cross` | 6 平台 | 通过 |
-| parity 注解 | `make parity` | 退出码 0 | 通过：**5,498/5,498** |
+| parity 注解 | `make parity` | 退出码 0 | 通过：**5,505/5,505**（qmail 拆包 + queenmail-mcp 合并后） |
 | parity 引用 | `make parity-targets` | 退出码 0 | 通过：5,934 条引用，0 missing |
 | 接线 | `make wiring-check` | 退出码 0 | 通过 |
 | 升级兼容 | `make compat-check` | 12 项全过 | 通过（C1–C12；C12 = 271 条登记 0 未登记） |

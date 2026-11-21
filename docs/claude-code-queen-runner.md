@@ -81,7 +81,7 @@ Go 实现分布：
 - `args`: `["queen-mail-mcp"]`
 - `env`: `HIVE_QUEEN_MAIL_URL`（serve 监听地址，启动后回填）、`HIVE_QUEEN_MAIL_TOKEN`（**只对该会话有效**，HMAC 派生）、`HIVE_QUEEN_MAIL_FROM`（会话 ref）
 
-参数上体现为 `--mcp-config <path> --strict-mcp-config`；`permission_mode` 不是 `bypassPermissions` 时自动把 `mcp__hive__list_queens`、`mcp__hive__message_queen` 加进 `--allowedTools`。`hive queen-mail-mcp` 是一个 stdio JSON-RPC server：支持 `initialize`、`ping`、`tools/list`、`tools/call`（两个工具），HTTP 回连 `/api/queen-mail/queens` 与 `/api/queen-mail/letters`，超时 180s；HTTP 失败或 Hive 的拒绝都会原样变成工具结果文本（不假装成功）。
+参数上体现为 `--mcp-config <path> --strict-mcp-config`；`permission_mode` 不是 `bypassPermissions` 时自动把 `mcp__hive__list_queens`、`mcp__hive__message_queen` 加进 `--allowedTools`。`hive queen-mail-mcp` 是一个 stdio JSON-RPC server：支持 `initialize`、`ping`、`tools/list`、`tools/call`（两个工具）以及 FastMCP 同形的 `resources/list`、`prompts/list` 空面（能力、schema 与错误码的逐字段对拍见 `docs/queen-mail.md` §6），HTTP 回连 `/api/queen-mail/queens` 与 `/api/queen-mail/letters`，超时 180s；HTTP 失败或 Hive 的拒绝都会原样变成工具结果文本（不假装成功）。
 
 ## 5. 失败与超时的文案（与上游逐字一致）
 

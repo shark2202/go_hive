@@ -1,9 +1,9 @@
 {
- "wave": 19,
- "at": "2026-11-22 00:24",
- "head": "b25c697c",
+ "wave": 22,
+ "at": "2026-11-22 01:09",
+ "head": "77c99126",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "w20/w21 增量验证通过（C10/C12 修复），wave-22 运行中"
+ "note": "qmail 拆包后基线（pipeline/queenmail 合并前）"
 }

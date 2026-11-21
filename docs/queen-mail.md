@@ -138,6 +138,29 @@ Parity 注解指向 `core/framework/server/tests/test_queen_mail.py` 与 `test_c
 
 ## 6. 已知差异 / 未验证
 
+### 6.1 Claude Code MCP stdio 协议面（2026-11-21 双跑、2026-11-22 收口复跑；FastMCP 1.26.0）
+
+对拍方法：`docs/e2e-assets/queen-mail-mcp/probe.py` 用同一个本地 queen-mail fixture 分别以 stdio 启动 Python `framework.server.queen_mail_mcp` 与 Go `hive queen-mail-mcp`，发送同一组 `initialize` / `tools/list` / `tools/call` / `resources/list` / `prompts/list` / 未知方法 / `logging/setLevel` / `ping` 请求，逐字段比较；原始回答留档 `docs/e2e-assets/queen-mail-mcp/handshake.json`。除 ⑤ 外，两侧逐字段相同（`unexpected diffs: 0`）。
+
+| # | 字段 | Python FastMCP 1.26.0 | Go | 状态 |
+| --- | --- | --- | --- | --- |
+| ① | `message_queen.description` | 原始 `__doc__`：4 行，续行以 `\n` + 4 空格开头，337 字节 | 逐字节相同（`list_queens` 84 字节单行同样一致） | 已修 |
+| ② | `inputSchema.title` | schema 为 `<tool>Arguments`；每个参数另有 title（`queen_id` → `Queen Id`，`message` → `Message`，pydantic 规则 `name.title().replace('_', ' ')`） | 同左 | 已修 |
+| ③ | `outputSchema` | `<tool>Output`：`{result: {type: string, title: Result}}`、`required: ["result"]`（FastMCP 对 `-> str` 的包装） | 同左 | 已修 |
+| ④ | `initialize.capabilities` | `experimental: {}`、`prompts: {listChanged: false}`、`resources: {subscribe: false, listChanged: false}`、`tools: {listChanged: false}` | 同左；并补齐能力所宣称的 `resources/list`、`resources/templates/list`、`prompts/list` 空列表与 `prompts/get`、`resources/read` 的未知对象错误（实测为 error code 0） | 已修 |
+| ⑤ | `serverInfo.version` | `1.26.0`（FastMCP 库版本，来自 `importlib.metadata`） | `1.0.26-go.1`（`internal/version.Version`） | **例外**：Go 二进制没有 FastMCP 库版本；报库版本会错误描述构建，按自身版本才语义正确 |
+| ⑥ | `tools/call` 结果 | `content` 文本 + `structuredContent: {result: <text>}` + `isError: false` | 同左 | 已修 |
+| ⑦ | 未知工具 | 工具级结果：文本 `Unknown tool: <name>` + `isError: true`（无 `structuredContent`），不是 JSON-RPC 错误 | 同左 | 已修 |
+| ⑧ | 未知方法 | JSON-RPC `-32602`、`message: "Invalid request parameters"`、`data: ""`；已知但无 handler 的方法（`logging/setLevel`、`completion/complete`、`resources/subscribe\|unsubscribe`、`tasks/list\|get\|result\|cancel`）仍为 `-32601 "Method not found"` | 同左 | 已修 |
+
+相邻项（不在上述 8 条内，本次一并收口 / 登记）：
+
+- **协议版本协商**：客户端版本在 `["2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"]` 内原样回显，否则回 latest `2025-11-25`；缺 `protocolVersion` 时按 FastMCP 的请求校验返回 `-32602`。与实测一致。
+- **工具结果文本的序列化**：Go 用 `encoding/json`（紧凑分隔符、键排序），Python 用 `json.dumps`（`, `/`: ` 分隔、插入序）；JSON 对象的键序与空白不承载语义，按 JSON 语义比较而不是逐字节比较。传输失败时外层 `Can't reach Hive: ...` 相同，内层错误文本（`urlopen error ...` vs Go `net/http`）随运行时不同。
+- **参数校验**：FastMCP 在调用前用 pydantic 校验参数——缺必填（`queen_id`、`message`）或类型不是 string 时返回工具级 `isError: true`，正文是 pydantic 的 `Error executing tool ...: N validation error ...` 文本（含 Python `repr`）；额外参数被忽略。Go 不做本地校验：缺参/非 string 按空串继续调用 Hive 路由，得到 Hive 的 `{error}`（`isError: false`）。pydantic 的校验文本无法逐字复刻，正常路径（Claude Code 按 `inputSchema` 传 string）不受影响——登记为已声明差异。
+
+### 6.2 其它已知差异 / 未验证
+
 - **信件附件**：上游 `message_queen` 只有 `queen_id`、`message` 两个参数，没有附件参数；本实现保持同形。回复方向的 `attach_file` 附件会以 `(She attached: ...)` 文本回传（上游 `_reply_text` 的 `files` 分支）。
 - **Claude Code queen 运行器**：已实现（`internal/claudecode/claude_runner*.go` + `hive queen-mail-mcp`），配置、回合、超时、回复回写、MCP 注入与测试见 `docs/claude-code-queen-runner.md`；只读 dashboard 路由（`GET /api/claude-code-queens` 与 transcript）读真实配置、会话记录与 Claude Code 会话文件，见 `docs/claude-code-dashboard.md`。
 - **配置生效时机**：Go 在 `hive serve` 启动时构造服务；开关变化需要重启。上游在每次注册/发送时重读配置。

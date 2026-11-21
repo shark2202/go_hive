@@ -2528,7 +2528,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/tools/integrations/scrape.go",
-            "line": 506,
+            "line": 596,
             "symbol": "batch3ScrapeArtifactDir",
             "parse": "string",
             "snippet": "home := strings.TrimSpace(os.Getenv(\"HIVE_HOME\"))",
@@ -2538,7 +2538,7 @@
         "dev_reads": [],
         "test_reads": 47,
         "writes": [],
-        "mentions": 208,
+        "mentions": 211,
         "comments": 92
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
@@ -3797,7 +3797,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/playbook/python.go",
-            "line": 131,
+            "line": 142,
             "symbol": "ResolvePythonInterpreter",
             "parse": "string",
             "snippet": "if override := strings.TrimSpace(os.Getenv(\"HIVE_PYTHON\")); override != \"\" {",
@@ -3805,7 +3805,7 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 5,
+        "test_reads": 6,
         "writes": [],
         "mentions": 12,
         "comments": 3
@@ -4701,7 +4701,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/tools/integrations/scrape.go",
-            "line": 503,
+            "line": 593,
             "symbol": "batch3ScrapeArtifactDir",
             "parse": "string",
             "snippet": "if storage := strings.TrimSpace(os.Getenv(\"HIVE_STORAGE_PATH\")); storage != \"\" {",
