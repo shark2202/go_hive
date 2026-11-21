@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 4bcc2a211cb0
+// 源：architecture/model.yaml + go list -json ./... · commit 8029f7735f82
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -45,12 +45,13 @@ digraph go_hive {
     label="编排层（orchestration）";
     style="rounded,filled"; fillcolor="#fef3c7"; color="#b45309"; fontsize=11;
     "internal/agents" [fillcolor="white", color="#b45309"];
+    "internal/claudecode" [fillcolor="white", color="#b45309"];
     "internal/colony" [fillcolor="white", color="#b45309"];
     "internal/host" [fillcolor="white", color="#b45309"];
     "internal/longmemeval" [fillcolor="white", color="#b45309"];
     "internal/playbook" [fillcolor="white", color="#b45309"];
-    "internal/qmail" [fillcolor="white", color="#b45309"];
     "internal/queen" [fillcolor="white", color="#b45309"];
+    "internal/queenmail" [fillcolor="white", color="#b45309"];
     "internal/sentinel" [fillcolor="white", color="#b45309"];
     "internal/session" [fillcolor="white", color="#b45309"];
     "internal/sessionreport" [fillcolor="white", color="#b45309"];
@@ -141,6 +142,9 @@ digraph go_hive {
   "internal/agents" -> "internal/schemas";
   "internal/charts" -> "internal/hivehome";
   "internal/charts" -> "internal/llm";
+  "internal/claudecode" -> "internal/hivehome";
+  "internal/claudecode" -> "internal/mcpregistry/nativecli";
+  "internal/claudecode" -> "internal/queenmail";
   "internal/cli" -> "internal/agentloop";
   "internal/cli" -> "internal/agents";
   "internal/cli" -> "internal/arghelp";
@@ -158,8 +162,8 @@ digraph go_hive {
   "internal/cli" -> "internal/maintenance";
   "internal/cli" -> "internal/mcpregistry";
   "internal/cli" -> "internal/memory";
-  "internal/cli" -> "internal/qmail";
   "internal/cli" -> "internal/queen";
+  "internal/cli" -> "internal/queenmail";
   "internal/cli" -> "internal/resources";
   "internal/cli" -> "internal/server";
   "internal/cli" -> "internal/session";
@@ -215,10 +219,9 @@ digraph go_hive {
   "internal/memory" -> "internal/hivehome";
   "internal/memory" -> "internal/llm";
   "internal/playbook" -> "internal/pyenv";
-  "internal/qmail" -> "internal/hivehome";
-  "internal/qmail" -> "internal/mcpregistry/nativecli";
-  "internal/qmail" -> "internal/queen";
-  "internal/qmail" -> "internal/version";
+  "internal/queenmail" -> "internal/hivehome";
+  "internal/queenmail" -> "internal/queen";
+  "internal/queenmail" -> "internal/version";
   "internal/ratelimit" -> "internal/hivehome";
   "internal/resources" -> "internal/pyenv";
   "internal/senders" -> "internal/atomicfs";
@@ -233,6 +236,7 @@ digraph go_hive {
   "internal/server" -> "internal/agents";
   "internal/server" -> "internal/atomicfs";
   "internal/server" -> "internal/attachments";
+  "internal/server" -> "internal/claudecode";
   "internal/server" -> "internal/colony";
   "internal/server" -> "internal/credentials";
   "internal/server" -> "internal/eventbus";
@@ -247,8 +251,8 @@ digraph go_hive {
   "internal/server" -> "internal/platform";
   "internal/server" -> "internal/playbook";
   "internal/server" -> "internal/pyenv";
-  "internal/server" -> "internal/qmail";
   "internal/server" -> "internal/queen";
+  "internal/server" -> "internal/queenmail";
   "internal/server" -> "internal/ratelimit";
   "internal/server" -> "internal/resources";
   "internal/server" -> "internal/runtimehealth";

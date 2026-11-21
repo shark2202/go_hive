@@ -1,4 +1,4 @@
-package qmail
+package claudecode
 
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens
 //
@@ -9,7 +9,7 @@ package qmail
 // ends with goes back the way a Hive queen's words do.
 //
 // The conversations themselves (HIVE_HOME/claude_code/<id>/conversations.json)
-// live in ClaudeStore; this file turns the letters waiting in her inbox into
+// live in Store; this file turns the letters waiting in her inbox into
 // turns, at most queen_mail.max_parallel_turns at a time, each in its own
 // process tree.
 
@@ -19,17 +19,22 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // claudeMCPTools are the tools of the `hive` MCP server, as Claude Code names
 // them.
 var claudeMCPTools = []string{"mcp__hive__list_queens", "mcp__hive__message_queen"}
 
-// ClaudeRunner runs the turns of the queens configured under
+// Runner runs the turns of the queens configured under
 // queen_mail.claude_code. One per server; attached to the Mail service with
-// Mail.SetClaudeRunner.
-type ClaudeRunner struct {
-	mail *Mail
+// Mail.SetClaudeRunner and paired with the Store its inboxes live in.
+type Runner struct {
+	mail *queenmail.Mail
+	// store is where her conversations and inboxes live: the same Store Mail
+	// delivers letters through.
+	store *Store
 
 	mu      sync.Mutex
 	running map[string]bool
@@ -42,46 +47,53 @@ type ClaudeRunner struct {
 	limit chan struct{}
 
 	// turnTimeout is one turn's clock; a field so tests can shorten it.
-	turnTimeout func(ClaudeQueen) time.Duration
+	turnTimeout func(queenmail.ClaudeQueen) time.Duration
 	// observe sees every run's raw outcome (tests record stderr and cost).
 	observe func(claudeTurnRun)
 	logf    func(format string, args ...any)
 }
 
-// NewClaudeRunner builds the runner for a queen-mail service.
-func NewClaudeRunner(mail *Mail) *ClaudeRunner {
-	workers := DefaultMaxParallelTurns
+// Runner implements queenmail.ClaudeRunner: Mail wakes it when a letter lands.
+var _ queenmail.ClaudeRunner = (*Runner)(nil)
+
+// NewRunner builds the runner for a queen-mail service and the store holding
+// the configured queens' conversations and inboxes.
+func NewRunner(mail *queenmail.Mail, store *Store) *Runner {
+	workers := queenmail.DefaultMaxParallelTurns
 	if mail != nil && mail.Config().MaxParallelTurns > 0 {
 		workers = mail.Config().MaxParallelTurns
 	}
-	return &ClaudeRunner{
-		mail:        mail,
-		running:     map[string]bool{},
-		warned:      map[string]bool{},
-		procs:       map[*exec.Cmd]bool{},
-		limit:       make(chan struct{}, workers),
-		turnTimeout: func(queen ClaudeQueen) time.Duration { return time.Duration(queen.TimeoutMinutes) * time.Minute },
-		logf:        log.Printf,
+	return &Runner{
+		mail:    mail,
+		store:   store,
+		running: map[string]bool{},
+		warned:  map[string]bool{},
+		procs:   map[*exec.Cmd]bool{},
+		limit:   make(chan struct{}, workers),
+		turnTimeout: func(queen queenmail.ClaudeQueen) time.Duration {
+			return time.Duration(queen.TimeoutMinutes) * time.Minute
+		},
+		logf: log.Printf,
 	}
 }
 
 // Notify checks whether queenID has letters waiting and starts a turn for each
 // conversation that has none running. It returns at once.
-func (r *ClaudeRunner) Notify(queenID string) {
+func (r *Runner) Notify(queenID string) {
 	if r == nil || r.mail == nil || queenID == "" {
 		return
 	}
 	if _, configured := r.mail.Config().Claude(queenID); !configured {
 		return
 	}
-	for _, ref := range r.mail.Claude().PendingRefs(queenID) {
+	for _, ref := range r.store.PendingRefs(queenID) {
 		r.kick(ref)
 	}
 }
 
 // NotifyAll starts turns for every waiting letter of every configured Claude
 // Code queen: what SetBaseURL and a fresh runner use to catch up.
-func (r *ClaudeRunner) NotifyAll() {
+func (r *Runner) NotifyAll() {
 	if r == nil || r.mail == nil {
 		return
 	}
@@ -91,7 +103,7 @@ func (r *ClaudeRunner) NotifyAll() {
 }
 
 // kick starts one conversation's worker unless it is already running.
-func (r *ClaudeRunner) kick(ref string) {
+func (r *Runner) kick(ref string) {
 	r.mu.Lock()
 	if r.closed || r.running[ref] {
 		r.mu.Unlock()
@@ -106,14 +118,14 @@ func (r *ClaudeRunner) kick(ref string) {
 // for the next one and goes in together.
 //
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens._work
-func (r *ClaudeRunner) work(ref string) {
+func (r *Runner) work(ref string) {
 	for {
-		batch := r.mail.Claude().TakePending(ref)
+		batch := r.store.TakePending(ref)
 		if len(batch) == 0 {
 			r.mu.Lock()
 			// Re-check under the lock Notify's kick takes: a letter that
 			// arrived between the take and here must not be left behind.
-			if !r.closed && r.mail.Claude().HasPending(ref) {
+			if !r.closed && r.store.HasPending(ref) {
 				r.mu.Unlock()
 				continue
 			}
@@ -124,7 +136,7 @@ func (r *ClaudeRunner) work(ref string) {
 		if r.stopped() {
 			return
 		}
-		conversation, ok := r.mail.Claude().Find(ref)
+		conversation, ok := r.store.Find(ref)
 		if !ok {
 			r.logf("claude code queen: no conversation record for %s; %d letter(s) dropped", ref, len(batch))
 			continue
@@ -141,9 +153,9 @@ func (r *ClaudeRunner) work(ref string) {
 //
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens._work (the
 // batch's cause, route and reply hand-off)
-func (r *ClaudeRunner) runBatch(conversation *Conversation, batch []Letter) {
+func (r *Runner) runBatch(conversation *Conversation, batch []queenmail.Letter) {
 	cause := batchCause(batch)
-	r.mail.Claude().SetCause(conversation.Ref, cause)
+	r.store.SetCause(conversation.Ref, cause)
 	prompt := batchPrompt(batch)
 	r.acquire()
 	if r.stopped() {
@@ -161,13 +173,13 @@ func (r *ClaudeRunner) runBatch(conversation *Conversation, batch []Letter) {
 	}
 }
 
-func (r *ClaudeRunner) acquire() {
+func (r *Runner) acquire() {
 	if r.limit != nil {
 		r.limit <- struct{}{}
 	}
 }
 
-func (r *ClaudeRunner) release() {
+func (r *Runner) release() {
 	if r.limit != nil {
 		<-r.limit
 	}
@@ -177,7 +189,7 @@ func (r *ClaudeRunner) release() {
 // running turn is killed.
 //
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens.close
-func (r *ClaudeRunner) Close() {
+func (r *Runner) Close() {
 	if r == nil {
 		return
 	}
@@ -199,7 +211,7 @@ func (r *ClaudeRunner) Close() {
 	}
 }
 
-func (r *ClaudeRunner) stopped() bool {
+func (r *Runner) stopped() bool {
 	if r == nil {
 		return true
 	}
@@ -212,7 +224,7 @@ func (r *ClaudeRunner) stopped() bool {
 // the dashboard's "running" dot for that conversation.
 //
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens.conversations
-func (r *ClaudeRunner) Running(ref string) bool {
+func (r *Runner) Running(ref string) bool {
 	if r == nil {
 		return false
 	}
@@ -222,7 +234,7 @@ func (r *ClaudeRunner) Running(ref string) bool {
 }
 
 // warnOnce reports whether this is the first warning for queenID.
-func (r *ClaudeRunner) warnOnce(queenID string) bool {
+func (r *Runner) warnOnce(queenID string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.warned[queenID] {
@@ -232,7 +244,7 @@ func (r *ClaudeRunner) warnOnce(queenID string) bool {
 	return true
 }
 
-func (r *ClaudeRunner) track(command *exec.Cmd) {
+func (r *Runner) track(command *exec.Cmd) {
 	r.procsMu.Lock()
 	defer r.procsMu.Unlock()
 	if r.procs == nil {
@@ -241,7 +253,7 @@ func (r *ClaudeRunner) track(command *exec.Cmd) {
 	r.procs[command] = true
 }
 
-func (r *ClaudeRunner) untrack(command *exec.Cmd) {
+func (r *Runner) untrack(command *exec.Cmd) {
 	r.procsMu.Lock()
 	defer r.procsMu.Unlock()
 	delete(r.procs, command)
@@ -249,7 +261,7 @@ func (r *ClaudeRunner) untrack(command *exec.Cmd) {
 
 // trackedCount is how many turns' process trees are running (tests and a
 // graceful stop watch it).
-func (r *ClaudeRunner) trackedCount() int {
+func (r *Runner) trackedCount() int {
 	r.procsMu.Lock()
 	defer r.procsMu.Unlock()
 	return len(r.procs)
@@ -257,33 +269,33 @@ func (r *ClaudeRunner) trackedCount() int {
 
 // batchPrompt is what one turn is handed: the letters' texts, in order, with
 // the way a Hive queen reads them.
-func batchPrompt(batch []Letter) string {
+func batchPrompt(batch []queenmail.Letter) string {
 	parts := make([]string, 0, len(batch))
 	for _, letter := range batch {
-		if letter.Kind == KindReply {
-			parts = append(parts, ReplyText(letter.FromName, letter.From, letter.Text))
+		if letter.Kind == queenmail.KindReply {
+			parts = append(parts, queenmail.ReplyText(letter.FromName, letter.From, letter.Text))
 			continue
 		}
-		parts = append(parts, LetterText(letter.FromName, letter.From, letter.Text))
+		parts = append(parts, queenmail.LetterText(letter.FromName, letter.From, letter.Text))
 	}
 	return strings.Join(parts, "\n\n")
 }
 
 // batchCause is what set off the turn: the newest letter's hop, and how deep
 // the chain had come.
-func batchCause(batch []Letter) *Cause {
+func batchCause(batch []queenmail.Letter) *queenmail.Cause {
 	deepest := 0
 	for _, letter := range batch {
 		if letter.Depth > deepest {
 			deepest = letter.Depth
 		}
 	}
-	return &Cause{Hop: batch[len(batch)-1].ID, Depth: deepest}
+	return &queenmail.Cause{Hop: batch[len(batch)-1].ID, Depth: deepest}
 }
 
 // batchRoute is where her words go: the writer's session the newest letter in
 // the batch came from, else the conversation's latest return address.
-func batchRoute(batch []Letter, conversation *Conversation) string {
+func batchRoute(batch []queenmail.Letter, conversation *Conversation) string {
 	for index := len(batch) - 1; index >= 0; index-- {
 		if batch[index].FromSession != "" {
 			return batch[index].FromSession

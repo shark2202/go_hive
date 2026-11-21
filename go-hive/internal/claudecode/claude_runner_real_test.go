@@ -1,4 +1,4 @@
-package qmail
+package claudecode
 
 // The live check of the runner against the real Claude Code binary: a temp
 // HIVE_HOME, a real letter to a configured queen, a real `claude -p` turn and
@@ -16,6 +16,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // paritySecret is what a stray credential looks like in output this test
@@ -80,8 +82,8 @@ func TestClaudeCodeQueenRealTurnWhenClaudeIsConfigured(t *testing.T) {
 	config.ClaudeCode[claude] = queen
 
 	deliverer := &fakeDeliverer{}
-	mail := New(home, config, deliverer)
-	runner := NewClaudeRunner(mail)
+	mail, store := newQueenMailService(t, home, config, deliverer)
+	runner := NewRunner(mail, store)
 	mail.SetClaudeRunner(runner)
 	t.Cleanup(runner.Close)
 
@@ -159,13 +161,13 @@ func TestClaudeCodeQueenRealTurnWhenClaudeIsConfigured(t *testing.T) {
 	if err := json.Unmarshal(saved, &stored); err != nil {
 		t.Fatal(err)
 	}
-	entry := stored.Conversations[strings.TrimPrefix(conversation, ConversationPrefix+claude+":")]
+	entry := stored.Conversations[strings.TrimPrefix(conversation, queenmail.ConversationPrefix+claude+":")]
 	if !entry.Started {
 		t.Fatalf("conversations.json = %s", saved)
 	}
 	records := mail.Store().ReadAudit()
 	last := records[len(records)-1]
-	if last.Kind != KindReply || last.From != claude || last.To != ava || !strings.Contains(last.ToSession, "session_ava") {
+	if last.Kind != queenmail.KindReply || last.From != claude || last.To != ava || !strings.Contains(last.ToSession, "session_ava") {
 		t.Fatalf("reply audit = %#v", last)
 	}
 }

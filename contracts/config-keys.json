@@ -50,7 +50,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader.go",
-              "line": 309,
+              "line": 312,
               "snippet": "for _, name := range hiveserver.UnhostedChannels(home) {"
             }
           ],
@@ -698,7 +698,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/agentloop/loop_config.go",
-              "line": 132,
+              "line": 152,
               "snippet": "MaxToolResultChars:    30_000,"
             },
             {
@@ -1194,7 +1194,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 120,
               "snippet": "config.Enabled = section[\"enabled\"] == true"
             }
@@ -1216,7 +1216,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 122,
               "snippet": "if rawQueens, present := section[\"queens\"]; present {"
             }
@@ -1238,7 +1238,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 134,
               "snippet": "config.DailyLimit = positiveInt(section[\"daily_limit\"], config.DailyLimit)"
             }
@@ -1260,7 +1260,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 135,
               "snippet": "config.MaxDepth = positiveInt(section[\"max_depth\"], config.MaxDepth)"
             }
@@ -1282,7 +1282,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 136,
               "snippet": "config.MaxParallelTurns = positiveInt(section[\"max_parallel_turns\"], config.MaxParallelTurns)"
             }
@@ -1304,7 +1304,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 157,
               "snippet": "Name:            textOr(entry[\"name\"], queenID),"
             }
@@ -1326,7 +1326,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 158,
               "snippet": "Title:           textOr(entry[\"title\"], DefaultClaudeTitle),"
             }
@@ -1348,7 +1348,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 159,
               "snippet": "Command:         commandOf(entry[\"command\"]),"
             }
@@ -1370,7 +1370,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 160,
               "snippet": "Auth:            authOf(entry[\"auth\"]),"
             }
@@ -1392,7 +1392,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 161,
               "snippet": "APIKey:          textOr(entry[\"api_key\"], \"\"),"
             }
@@ -1414,7 +1414,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 162,
               "snippet": "APIBase:         textOr(entry[\"api_base\"], \"\"),"
             }
@@ -1436,7 +1436,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 163,
               "snippet": "ConfigDir:       textOr(entry[\"config_dir\"], \"\"),"
             }
@@ -1458,7 +1458,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 164,
               "snippet": "Cwd:             textOr(entry[\"cwd\"], \"\"),"
             }
@@ -1480,7 +1480,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 165,
               "snippet": "PermissionMode:  textOr(entry[\"permission_mode\"], DefaultClaudePermissionMode),"
             }
@@ -1502,7 +1502,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 166,
               "snippet": "AllowedTools:    stringsList(entry[\"allowed_tools\"]),"
             }
@@ -1524,7 +1524,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 167,
               "snippet": "DisallowedTools: stringsList(entry[\"disallowed_tools\"]),"
             }
@@ -1546,7 +1546,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 168,
               "snippet": "AddDirs:         stringsList(entry[\"add_dirs\"]),"
             }
@@ -1568,7 +1568,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 169,
               "snippet": "Model:           textOr(entry[\"model\"], \"\"),"
             }
@@ -1590,7 +1590,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 170,
               "snippet": "TimeoutMinutes:  positiveInt(entry[\"timeout_minutes\"], DefaultClaudeTimeoutMinutes),"
             }
@@ -1612,7 +1612,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 171,
               "snippet": "SystemPrompt:    textOr(entry[\"system_prompt\"], \"\"),"
             }
@@ -1634,7 +1634,7 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/qmail/config.go",
+              "file": "go_hive/go-hive/internal/queenmail/config.go",
               "line": 172,
               "snippet": "Env:             envMap(entry[\"env\"]),"
             }
@@ -3136,7 +3136,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/colony/runtime.go",
-              "line": 65,
+              "line": 64,
               "snippet": "// worker_llm separately)."
             },
             {

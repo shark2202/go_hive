@@ -6,22 +6,24 @@ package server
 // (queen_mail.claude_code). It is built from the same queen-mail service the
 // queen routes use: the configured queens come from its configuration, and
 // each one's conversations, letters and transcripts from her own record
-// (HIVE_HOME/claude_code/<id>/conversations.json) and from Claude Code's
-// session files.
+// (HIVE_HOME/claude_code/<id>/conversations.json, internal/claudecode) and
+// from Claude Code's session files.
 
 import (
 	"sort"
 
-	"github.com/aden-hive/hive-go/internal/qmail"
+	"github.com/aden-hive/hive-go/internal/claudecode"
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // NewClaudeCodeQueenRouteDeps builds the dashboard's view of the Claude Code
-// queens from the process's queen-mail service. A nil service leaves the list
-// empty and every transcript a 404, as upstream's `mail is None` does; with
-// queen mail merely switched off the list is empty but a configured queen's
-// transcript still reads, which is what upstream's two handlers do.
-func NewClaudeCodeQueenRouteDeps(mail *qmail.Mail) ClaudeCodeQueenRouteDeps {
-	if mail == nil {
+// queens from the process's queen-mail service, its store of conversations
+// and its runner. A nil service leaves the list empty and every transcript a
+// 404, as upstream's `mail is None` does; with queen mail merely switched off
+// the list is empty but a configured queen's transcript still reads, which is
+// what upstream's two handlers do.
+func NewClaudeCodeQueenRouteDeps(mail *queenmail.Mail, store *claudecode.Store, runner *claudecode.Runner) ClaudeCodeQueenRouteDeps {
+	if mail == nil || store == nil {
 		return ClaudeCodeQueenRouteDeps{}
 	}
 	config := mail.Config()
@@ -49,18 +51,18 @@ func NewClaudeCodeQueenRouteDeps(mail *qmail.Mail) ClaudeCodeQueenRouteDeps {
 				// configured; she is in the list only while she is.
 				return []map[string]any{}, nil
 			}
-			return claudeConversations(mail, queen), nil
+			return claudeConversations(mail, store, runner, queen), nil
 		},
 		Transcript: func(queenID, sessionID string) ([]map[string]any, bool) {
 			queen, configured := config.Claude(queenID)
 			if !configured {
 				return nil, false
 			}
-			if _, known := mail.Claude().Find(qmail.ConversationRef(queenID, sessionID)); !known {
+			if _, known := store.Find(queenmail.ConversationRef(queenID, sessionID)); !known {
 				return nil, false
 			}
-			path := mail.Claude().SessionFile(queen, sessionID)
-			return claudeTranscriptEntries(qmail.ReadTranscript(path)), true
+			path := store.SessionFile(queen, sessionID)
+			return claudeTranscriptEntries(claudecode.ReadTranscript(path)), true
 		},
 	}
 }
@@ -68,13 +70,13 @@ func NewClaudeCodeQueenRouteDeps(mail *qmail.Mail) ClaudeCodeQueenRouteDeps {
 // sortedClaudeQueens is the configured queens in id order. Upstream keeps the
 // configuration's own order; Go's configuration parse keeps them in a map, so
 // the list is sorted to stay the same from one request to the next.
-func sortedClaudeQueens(configured map[string]qmail.ClaudeQueen) []qmail.ClaudeQueen {
+func sortedClaudeQueens(configured map[string]queenmail.ClaudeQueen) []queenmail.ClaudeQueen {
 	ids := make([]string, 0, len(configured))
 	for id := range configured {
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
-	queens := make([]qmail.ClaudeQueen, 0, len(ids))
+	queens := make([]queenmail.ClaudeQueen, 0, len(ids))
 	for _, id := range ids {
 		queens = append(queens, configured[id])
 	}
@@ -86,17 +88,15 @@ func sortedClaudeQueens(configured map[string]qmail.ClaudeQueen) []qmail.ClaudeQ
 // it holds and when the last thing in it happened.
 //
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens.conversations
-func claudeConversations(mail *qmail.Mail, queen qmail.ClaudeQueen) []map[string]any {
-	store := mail.Claude()
-	runner := mail.ClaudeRunner()
+func claudeConversations(mail *queenmail.Mail, store *claudecode.Store, runner *claudecode.Runner, queen queenmail.ClaudeQueen) []map[string]any {
 	type activity struct {
-		conversation *qmail.Conversation
-		entries      []qmail.TranscriptEntry
+		conversation *claudecode.Conversation
+		entries      []claudecode.TranscriptEntry
 		lastAt       string
 	}
 	found := make([]activity, 0)
 	for _, conversation := range store.Conversations(queen.ID) {
-		entries := qmail.ReadTranscript(store.SessionFile(queen, conversation.SessionID))
+		entries := claudecode.ReadTranscript(store.SessionFile(queen, conversation.SessionID))
 		item := activity{conversation: conversation, entries: entries}
 		if len(entries) > 0 {
 			item.lastAt = entries[len(entries)-1].At
@@ -133,7 +133,7 @@ func claudeConversations(mail *qmail.Mail, queen qmail.ClaudeQueen) []map[string
 // claudeTranscriptEntries renders a read transcript as the route's JSON
 // entries: every entry has at/kind/text, a tool call names its tool, and a
 // tool result says whether it failed.
-func claudeTranscriptEntries(entries []qmail.TranscriptEntry) []map[string]any {
+func claudeTranscriptEntries(entries []claudecode.TranscriptEntry) []map[string]any {
 	out := make([]map[string]any, 0, len(entries))
 	for _, entry := range entries {
 		row := map[string]any{"at": entry.At, "kind": entry.Kind, "text": entry.Text}

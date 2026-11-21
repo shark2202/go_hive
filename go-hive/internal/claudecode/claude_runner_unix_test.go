@@ -1,6 +1,6 @@
 //go:build unix
 
-package qmail
+package claudecode
 
 // The process-tree guarantees of a turn are OS-level (upstream starts runs in
 // their own session and kills the group); this file exercises them for real.
@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // Parity-exempt: 上游用 start_new_session + os.killpg 实现进程树终止，但没有
@@ -16,11 +18,11 @@ import (
 // 回合被杀。
 func TestTurnTimeoutKillsTheWholeProcessTree(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "child-survived")
-	h := newClaudeHarness(t, func(_ *Config, queen *ClaudeQueen) {
+	h := newClaudeHarness(t, func(_ *queenmail.Config, queen *queenmail.ClaudeQueen) {
 		queen.Env["FAKE_CLAUDE_SLEEP"] = "30"
 		queen.Env["FAKE_CLAUDE_CHILD_MARKER"] = marker
 	})
-	h.runner.turnTimeout = func(ClaudeQueen) time.Duration { return 250 * time.Millisecond }
+	h.runner.turnTimeout = func(queenmail.ClaudeQueen) time.Duration { return 250 * time.Millisecond }
 
 	if _, err := h.mail.Send(ava, "session_ava", claude, "Hello?", nil); err != nil {
 		t.Fatal(err)

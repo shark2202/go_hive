@@ -1,4 +1,4 @@
-package qmail
+package claudecode
 
 import (
 	"encoding/json"
@@ -9,7 +9,12 @@ import (
 	"sync"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
+
+// Store implements queenmail.ClaudeInboxes: Mail hands it a letter and reads
+// back which conversation it landed in.
+var _ queenmail.ClaudeInboxes = (*Store)(nil)
 
 // Conversation is one Claude Code queen's conversation with a writer: her
 // Claude Code session id, who she is writing with, and where what she says
@@ -23,7 +28,7 @@ type Conversation struct {
 	Started   bool
 	// Cause is what set off the turn now queued in this conversation; only in
 	// memory, as upstream keeps it.
-	Cause *Cause
+	Cause *queenmail.Cause
 }
 
 // storedConversation keeps pointers for peer/reply_to so a missing field is
@@ -38,21 +43,21 @@ type storedConversations struct {
 	Conversations map[string]storedConversation `json:"conversations"`
 }
 
-// ClaudeStore keeps the conversations of the queens run by Claude Code, and the
+// Store keeps the conversations of the queens run by Claude Code, and the
 // letters each has waiting for her next turn. It mirrors
 // framework/server/claude_code_queens.py's on-disk record
 // (HIVE_HOME/claude_code/<queen>/conversations.json), so conversations written
 // by the Python server stay readable.
-type ClaudeStore struct {
+type Store struct {
 	home          hivehome.Home
 	mu            sync.Mutex
 	loaded        map[string]bool
 	conversations map[string]*Conversation
 }
 
-// NewClaudeStore roots the conversation records at a Hive home.
-func NewClaudeStore(home hivehome.Home) *ClaudeStore {
-	return &ClaudeStore{
+// NewStore roots the conversation records at a Hive home.
+func NewStore(home hivehome.Home) *Store {
+	return &Store{
 		home:          home,
 		loaded:        map[string]bool{},
 		conversations: map[string]*Conversation{},
@@ -72,7 +77,7 @@ func validClaudePathSegment(id string) bool {
 }
 
 // Home is one queen's Claude Code folder: HIVE_HOME/claude_code/<queen id>.
-func (c *ClaudeStore) Home(queenID string) string {
+func (c *Store) Home(queenID string) string {
 	if !validClaudePathSegment(queenID) {
 		return filepath.Join(c.home.Root, "claude_code", "__invalid__")
 	}
@@ -80,24 +85,24 @@ func (c *ClaudeStore) Home(queenID string) string {
 }
 
 // Inbox is where letters to a queen wait for a run of hers.
-func (c *ClaudeStore) Inbox(queenID string) string {
+func (c *Store) Inbox(queenID string) string {
 	return filepath.Join(c.Home(queenID), "inbox")
 }
 
 // InboxFile lists the hops waiting for a queen's next turn.
-func (c *ClaudeStore) InboxFile(queenID string) string {
+func (c *Store) InboxFile(queenID string) string {
 	return filepath.Join(c.Home(queenID), "inbox.jsonl")
 }
 
 // Load reads one queen's conversations.json once. A malformed or absent file
 // leaves her with no conversations, which the routes answer 404 for.
-func (c *ClaudeStore) Load(queenID string) {
+func (c *Store) Load(queenID string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.loadLocked(queenID)
 }
 
-func (c *ClaudeStore) loadLocked(queenID string) {
+func (c *Store) loadLocked(queenID string) {
 	if c.loaded[queenID] {
 		return
 	}
@@ -115,7 +120,7 @@ func (c *ClaudeStore) loadLocked(queenID string) {
 			continue
 		}
 		conversation := &Conversation{
-			Ref:       ConversationRef(queenID, sessionID),
+			Ref:       queenmail.ConversationRef(queenID, sessionID),
 			QueenID:   queenID,
 			SessionID: sessionID,
 			Peer:      *entry.Peer,
@@ -129,13 +134,13 @@ func (c *ClaudeStore) loadLocked(queenID string) {
 }
 
 // Save writes one queen's conversations.json back, atomically.
-func (c *ClaudeStore) Save(queenID string) error {
+func (c *Store) Save(queenID string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.saveLocked(queenID)
 }
 
-func (c *ClaudeStore) saveLocked(queenID string) error {
+func (c *Store) saveLocked(queenID string) error {
 	stored := storedConversations{Conversations: map[string]storedConversation{}}
 	for _, conversation := range c.conversations {
 		if conversation.QueenID != queenID {
@@ -161,11 +166,11 @@ func (c *ClaudeStore) saveLocked(queenID string) error {
 
 // Find resolves a conversation ref, loading the queen's record on first use.
 // Unknown refs and refs to queens no longer configured resolve false.
-func (c *ClaudeStore) Find(ref string) (*Conversation, bool) {
-	if !IsConversationRef(ref) {
+func (c *Store) Find(ref string) (*Conversation, bool) {
+	if !queenmail.IsConversationRef(ref) {
 		return nil, false
 	}
-	queenID := QueenIDOfRef(ref)
+	queenID := queenmail.QueenIDOfRef(ref)
 	if queenID == "" {
 		return nil, false
 	}
@@ -182,10 +187,10 @@ func (c *ClaudeStore) Find(ref string) (*Conversation, bool) {
 
 // CauseOf is what set off the turn now queued in ref, read under the store's
 // lock because delivery updates it.
-func (c *ClaudeStore) CauseOf(ref string) *Cause {
+func (c *Store) CauseOf(ref string) *queenmail.Cause {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if queenID := QueenIDOfRef(ref); queenID != "" {
+	if queenID := queenmail.QueenIDOfRef(ref); queenID != "" {
 		c.loadLocked(queenID)
 	}
 	conversation, ok := c.conversations[ref]
@@ -197,7 +202,7 @@ func (c *ClaudeStore) CauseOf(ref string) *Cause {
 }
 
 // QueenOf names the queen behind a conversation ref while she is configured.
-func (c *ClaudeStore) QueenOf(ref string) (string, bool) {
+func (c *Store) QueenOf(ref string) (string, bool) {
 	conversation, ok := c.Find(ref)
 	if !ok {
 		return "", false
@@ -208,7 +213,7 @@ func (c *ClaudeStore) QueenOf(ref string) (string, bool) {
 // Letter queues a letter from writer in queenID's conversation with writer,
 // opening one if this is their first letter, and returns that conversation.
 // Her answer goes to replyTo until a newer letter moves it.
-func (c *ClaudeStore) Letter(queenID, writer, replyTo string, letter Letter) (*Conversation, error) {
+func (c *Store) Letter(queenID, writer, replyTo string, letter queenmail.Letter) (*Conversation, error) {
 	c.mu.Lock()
 	c.loadLocked(queenID)
 	var conversation *Conversation
@@ -221,11 +226,11 @@ func (c *ClaudeStore) Letter(queenID, writer, replyTo string, letter Letter) (*C
 	if conversation == nil {
 		conversation = &Conversation{
 			QueenID:   queenID,
-			SessionID: NewSessionID(),
+			SessionID: queenmail.NewSessionID(),
 			Peer:      writer,
 			ReplyTo:   replyTo,
 		}
-		conversation.Ref = ConversationRef(queenID, conversation.SessionID)
+		conversation.Ref = queenmail.ConversationRef(queenID, conversation.SessionID)
 		c.conversations[conversation.Ref] = conversation
 	}
 	conversation.ReplyTo = replyTo
@@ -234,7 +239,7 @@ func (c *ClaudeStore) Letter(queenID, writer, replyTo string, letter Letter) (*C
 		return nil, err
 	}
 	letter.ToSession = conversation.Ref
-	letter.State = StateStored
+	letter.State = queenmail.StateStored
 	err := c.enqueueLocked(queenID, letter)
 	c.mu.Unlock()
 	if err != nil {
@@ -243,21 +248,38 @@ func (c *ClaudeStore) Letter(queenID, writer, replyTo string, letter Letter) (*C
 	return conversation, nil
 }
 
+// DeliverLetter queues letter in queenID's conversation with writer (opening
+// one if this is their first letter) and returns that conversation's ref, as
+// the mail engine's queenmail.ClaudeInboxes needs it.
+func (c *Store) DeliverLetter(queenID, writer, replyTo string, letter queenmail.Letter) (string, error) {
+	conversation, err := c.Letter(queenID, writer, replyTo, letter)
+	if err != nil {
+		return "", err
+	}
+	return conversation.Ref, nil
+}
+
+// DeliverReply queues a reply from another queen in the conversation ref
+// names; false when the ref is unknown.
+func (c *Store) DeliverReply(ref string, letter queenmail.Letter) bool {
+	return c.Reply(ref, letter)
+}
+
 // Reply queues a reply from another queen in the conversation ref names.
-func (c *ClaudeStore) Reply(ref string, letter Letter) bool {
+func (c *Store) Reply(ref string, letter queenmail.Letter) bool {
 	conversation, ok := c.Find(ref)
 	if !ok {
 		return false
 	}
 	c.mu.Lock()
 	letter.ToSession = ref
-	letter.State = StateStored
+	letter.State = queenmail.StateStored
 	err := c.enqueueLocked(conversation.QueenID, letter)
 	c.mu.Unlock()
 	return err == nil
 }
 
-func (c *ClaudeStore) enqueueLocked(queenID string, letter Letter) error {
+func (c *Store) enqueueLocked(queenID string, letter queenmail.Letter) error {
 	inbox := c.Inbox(queenID)
 	if err := os.MkdirAll(inbox, 0o755); err != nil {
 		return err
@@ -279,7 +301,7 @@ func (c *ClaudeStore) enqueueLocked(queenID string, letter Letter) error {
 }
 
 // Pending lists the letters waiting for one queen's next turn, oldest first.
-func (c *ClaudeStore) Pending(queenID string) []Letter {
+func (c *Store) Pending(queenID string) []queenmail.Letter {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.pendingLocked(queenID)
@@ -287,12 +309,12 @@ func (c *ClaudeStore) Pending(queenID string) []Letter {
 
 // pendingLocked reads the letters one queen's inbox file names; the caller
 // holds the store lock. Missing files and unreadable lines are skipped.
-func (c *ClaudeStore) pendingLocked(queenID string) []Letter {
+func (c *Store) pendingLocked(queenID string) []queenmail.Letter {
 	data, err := os.ReadFile(c.InboxFile(queenID))
 	if err != nil {
 		return nil
 	}
-	var letters []Letter
+	var letters []queenmail.Letter
 	seen := map[string]bool{}
 	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSuffix(line, "\r")
@@ -300,14 +322,14 @@ func (c *ClaudeStore) pendingLocked(queenID string) []Letter {
 			continue
 		}
 		seen[line] = true
-		if !validLetterID(line) {
+		if !validInboxID(line) {
 			continue
 		}
 		raw, err := os.ReadFile(filepath.Join(c.Inbox(queenID), line+".json"))
 		if err != nil {
 			continue
 		}
-		var letter Letter
+		var letter queenmail.Letter
 		if err := json.Unmarshal(raw, &letter); err != nil {
 			continue
 		}
@@ -319,15 +341,15 @@ func (c *ClaudeStore) pendingLocked(queenID string) []Letter {
 // TakePending removes and returns the letters waiting in conversation ref, in
 // the order they arrived: one turn's batch. Letters for other conversations of
 // the same queen stay in the inbox.
-func (c *ClaudeStore) TakePending(ref string) []Letter {
-	queenID := QueenIDOfRef(ref)
+func (c *Store) TakePending(ref string) []queenmail.Letter {
+	queenID := queenmail.QueenIDOfRef(ref)
 	if queenID == "" {
 		return nil
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.loadLocked(queenID)
-	var taken, kept []Letter
+	var taken, kept []queenmail.Letter
 	for _, letter := range c.pendingLocked(queenID) {
 		if letter.ToSession == ref {
 			taken = append(taken, letter)
@@ -344,7 +366,7 @@ func (c *ClaudeStore) TakePending(ref string) []Letter {
 
 // removePendingLocked deletes the taken letters and rewrites the inbox file
 // with the ones still waiting. The caller holds the store lock.
-func (c *ClaudeStore) removePendingLocked(queenID string, taken, kept []Letter) {
+func (c *Store) removePendingLocked(queenID string, taken, kept []queenmail.Letter) {
 	for _, letter := range taken {
 		_ = os.Remove(filepath.Join(c.Inbox(queenID), letter.ID+".json"))
 	}
@@ -357,8 +379,8 @@ func (c *ClaudeStore) removePendingLocked(queenID string, taken, kept []Letter) 
 }
 
 // HasPending reports whether conversation ref has letters waiting.
-func (c *ClaudeStore) HasPending(ref string) bool {
-	queenID := QueenIDOfRef(ref)
+func (c *Store) HasPending(ref string) bool {
+	queenID := queenmail.QueenIDOfRef(ref)
 	if queenID == "" {
 		return false
 	}
@@ -374,7 +396,7 @@ func (c *ClaudeStore) HasPending(ref string) bool {
 
 // PendingRefs lists the conversations of one queen with letters waiting, in
 // the order the first of each arrived.
-func (c *ClaudeStore) PendingRefs(queenID string) []string {
+func (c *Store) PendingRefs(queenID string) []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var refs []string
@@ -391,10 +413,10 @@ func (c *ClaudeStore) PendingRefs(queenID string) []string {
 
 // SetCause records what set off the turn now running in ref (the hop a letter
 // she writes in it follows). Only in memory, as upstream keeps it.
-func (c *ClaudeStore) SetCause(ref string, cause *Cause) {
+func (c *Store) SetCause(ref string, cause *queenmail.Cause) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if queenID := QueenIDOfRef(ref); queenID != "" {
+	if queenID := queenmail.QueenIDOfRef(ref); queenID != "" {
 		c.loadLocked(queenID)
 	}
 	if conversation, ok := c.conversations[ref]; ok {
@@ -404,10 +426,10 @@ func (c *ClaudeStore) SetCause(ref string, cause *Cause) {
 
 // SetStarted records whether her Claude Code session exists, and writes the
 // conversations record so a restart resumes rather than starts again.
-func (c *ClaudeStore) SetStarted(ref string, started bool) {
+func (c *Store) SetStarted(ref string, started bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if queenID := QueenIDOfRef(ref); queenID != "" {
+	if queenID := queenmail.QueenIDOfRef(ref); queenID != "" {
 		c.loadLocked(queenID)
 	}
 	conversation, ok := c.conversations[ref]
@@ -419,7 +441,7 @@ func (c *ClaudeStore) SetStarted(ref string, started bool) {
 }
 
 // Conversations lists a queen's conversations, newest session id first.
-func (c *ClaudeStore) Conversations(queenID string) []*Conversation {
+func (c *Store) Conversations(queenID string) []*Conversation {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.loadLocked(queenID)

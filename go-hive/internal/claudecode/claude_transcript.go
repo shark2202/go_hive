@@ -1,4 +1,4 @@
-package qmail
+package claudecode
 
 // Parity: framework/server/claude_code_queens.py::_read_transcript
 //
@@ -19,6 +19,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/aden-hive/hive-go/internal/mcpregistry/nativecli"
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // TranscriptEntry is one thing in one of her conversations: what she was
@@ -44,7 +45,7 @@ const (
 // is config_dir, or HIVE_HOME/claude_code/<id>/config as the runner uses it.
 //
 // Parity: framework/server/claude_code_queens.py::_session_file
-func (c *ClaudeStore) SessionFile(queen ClaudeQueen, sessionID string) string {
+func (c *Store) SessionFile(queen queenmail.ClaudeQueen, sessionID string) string {
 	configDir := queen.ConfigDir
 	if configDir == "" {
 		configDir = filepath.Join(c.Home(queen.ID), "config")

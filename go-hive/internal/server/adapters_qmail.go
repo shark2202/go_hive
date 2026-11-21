@@ -15,9 +15,10 @@ import (
 	"sync"
 
 	"github.com/aden-hive/hive-go/internal/atomicfs"
+	"github.com/aden-hive/hive-go/internal/claudecode"
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/qmail"
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // QueenMailAdapterOptions wires the queen-mail service to the server. Home and
@@ -34,13 +35,19 @@ type QueenMailAdapterOptions struct {
 }
 
 // QueenMailAdapter is the server's queen mail: the QueenMailBackend the routes
-// call, backed by a qmail.Mail and by Hive session injection.
+// call, backed by a queenmail.Mail and by Hive session injection.
 type QueenMailAdapter struct {
 	home          hivehome.Home
 	manager       *SessionManager
 	createSession func(CreateSessionParams) (*Session, error)
 	sessionDir    func(*Session) string
-	mail          *qmail.Mail
+	mail          *queenmail.Mail
+	// claude is the conversations and inboxes of the queens run by Claude
+	// Code, and claudeRunner the runner of their `claude -p` turns. The mail
+	// service holds them as interfaces (queenmail must not import
+	// claudecode); the adapter keeps the concrete values for the dashboard.
+	claude       *claudecode.Store
+	claudeRunner *claudecode.Runner
 
 	// replySubs marks the thread sessions whose words are taken back to their
 	// writers: one subscription per live conversation, however many letters
@@ -70,8 +77,11 @@ func NewQueenMailAdapter(options QueenMailAdapterOptions) *QueenMailAdapter {
 		sessionDir:    options.SessionDir,
 		replySubs:     map[string]*eventbus.EventBus{},
 	}
-	adapter.mail = qmail.New(home, qmail.ConfigFromHive(HiveConfig(home)), adapter)
-	adapter.mail.SetClaudeRunner(qmail.NewClaudeRunner(adapter.mail))
+	adapter.mail = queenmail.New(home, queenmail.ConfigFromHive(HiveConfig(home)), adapter)
+	adapter.claude = claudecode.NewStore(home)
+	adapter.mail.SetClaudeInboxes(adapter.claude)
+	adapter.claudeRunner = claudecode.NewRunner(adapter.mail, adapter.claude)
+	adapter.mail.SetClaudeRunner(adapter.claudeRunner)
 	return adapter
 }
 
@@ -85,11 +95,29 @@ func (a *QueenMailAdapter) Close() {
 }
 
 // Mail is the service behind the adapter (tokens, inboxes, queue).
-func (a *QueenMailAdapter) Mail() *qmail.Mail {
+func (a *QueenMailAdapter) Mail() *queenmail.Mail {
 	if a == nil {
 		return nil
 	}
 	return a.mail
+}
+
+// ClaudeStore is the conversations and inboxes of the queens run by Claude
+// Code: the dashboard reads them through the adapter.
+func (a *QueenMailAdapter) ClaudeStore() *claudecode.Store {
+	if a == nil {
+		return nil
+	}
+	return a.claude
+}
+
+// ClaudeRunner runs the `claude -p` turns of the configured Claude Code
+// queens; the dashboard reads its "running" marks.
+func (a *QueenMailAdapter) ClaudeRunner() *claudecode.Runner {
+	if a == nil {
+		return nil
+	}
+	return a.claudeRunner
 }
 
 // TokenFor is the token a Claude Code run writes from conversation ref with.
@@ -132,7 +160,7 @@ func (a *QueenMailAdapter) SendFromConversation(ref, toQueen, message string) (m
 	}
 	sent, err := a.mail.SendFromConversation(ref, toQueen, message)
 	if err != nil {
-		var refusal *qmail.Error
+		var refusal *queenmail.Error
 		if errors.As(err, &refusal) {
 			return nil, &QueenMailError{Message: refusal.Message}
 		}
@@ -145,9 +173,9 @@ func (a *QueenMailAdapter) SendFromConversation(ref, toQueen, message string) (m
 // resuming that thread when it isn't live.
 //
 // Parity: framework/server/queen_mail.py::QueenMail._send_to_hive_queen
-func (a *QueenMailAdapter) Deliver(ctx context.Context, toQueen, writer, fromRef string, letter qmail.Letter) (string, error) {
+func (a *QueenMailAdapter) Deliver(ctx context.Context, toQueen, writer, fromRef string, letter queenmail.Letter) (string, error) {
 	if a == nil || a.manager == nil {
-		return "", qmailError(toQueen + " can't take letters now")
+		return "", queenMailError(toQueen + " can't take letters now")
 	}
 	threadID, threadExists := a.threadOf(toQueen, writer)
 	var session *Session
@@ -156,7 +184,7 @@ func (a *QueenMailAdapter) Deliver(ctx context.Context, toQueen, writer, fromRef
 	}
 	if session == nil {
 		if a.createSession == nil {
-			return "", qmailError(toQueen + " can't take letters now")
+			return "", queenMailError(toQueen + " can't take letters now")
 		}
 		params := CreateSessionParams{QueenName: &toQueen}
 		if threadExists {
@@ -164,25 +192,25 @@ func (a *QueenMailAdapter) Deliver(ctx context.Context, toQueen, writer, fromRef
 		}
 		created, err := a.createSession(params)
 		if err != nil {
-			return "", qmailError(toQueen + " can't take letters now: " + err.Error())
+			return "", queenMailError(toQueen + " can't take letters now: " + err.Error())
 		}
 		session = created
 	}
 	if session == nil {
-		return "", qmailError(toQueen + " can't take letters now")
+		return "", queenMailError(toQueen + " can't take letters now")
 	}
 	if session.QueenName != "" && session.QueenName != toQueen {
-		return "", qmailError(toQueen + " can't take letters now")
+		return "", queenMailError(toQueen + " can't take letters now")
 	}
 	if queenMailLocked(session) {
-		return "", qmailError(toQueen + " can't take letters now: the conversation is in a colony")
+		return "", queenMailError(toQueen + " can't take letters now: the conversation is in a colony")
 	}
 	a.markThread(session, toQueen, writer, fromRef, letter.FromName)
 	// Subscribe before the letter enters the turn: a fast answer must not miss
 	// the events that carry it back.
 	a.subscribeReplies(session, toQueen, writer)
-	if err := queenMailInject(session, qmail.LetterText(letter.FromName, letter.From, letter.Text)); err != nil {
-		return "", qmailError(toQueen + " can't take letters now: " + err.Error())
+	if err := queenMailInject(session, queenmail.LetterText(letter.FromName, letter.From, letter.Text)); err != nil {
+		return "", queenMailError(toQueen + " can't take letters now: " + err.Error())
 	}
 	return session.ID, nil
 }
@@ -191,33 +219,33 @@ func (a *QueenMailAdapter) Deliver(ctx context.Context, toQueen, writer, fromRef
 // stopped), so the queen whose letter is answered wakes with it.
 //
 // Parity: framework/server/queen_mail.py::QueenMail._reachable
-func (a *QueenMailAdapter) DeliverReply(ctx context.Context, replyTo, queenID, writer string, letter qmail.Letter) (string, error) {
+func (a *QueenMailAdapter) DeliverReply(ctx context.Context, replyTo, queenID, writer string, letter queenmail.Letter) (string, error) {
 	if a == nil || a.manager == nil || replyTo == "" {
-		return "", qmailError("the conversation is unreachable")
+		return "", queenMailError("the conversation is unreachable")
 	}
 	session := a.manager.GetSession(replyTo)
 	if session == nil {
 		if a.createSession == nil {
-			return "", qmailError("the conversation is unreachable")
+			return "", queenMailError("the conversation is unreachable")
 		}
 		params := CreateSessionParams{QueenName: &writer, QueenResumeFrom: &replyTo}
 		created, err := a.createSession(params)
 		if err != nil {
-			return "", qmailError("the conversation is unreachable: " + err.Error())
+			return "", queenMailError("the conversation is unreachable: " + err.Error())
 		}
 		session = created
 	}
 	if session == nil {
-		return "", qmailError("the conversation is unreachable")
+		return "", queenMailError("the conversation is unreachable")
 	}
 	if session.QueenName != "" && session.QueenName != writer {
-		return "", qmailError("the conversation is unreachable")
+		return "", queenMailError("the conversation is unreachable")
 	}
 	if queenMailLocked(session) {
-		return "", qmailError("the conversation is unreachable")
+		return "", queenMailError("the conversation is unreachable")
 	}
-	if err := queenMailInject(session, qmail.ReplyText(letter.FromName, letter.From, letter.Text)); err != nil {
-		return "", qmailError("the conversation is unreachable: " + err.Error())
+	if err := queenMailInject(session, queenmail.ReplyText(letter.FromName, letter.From, letter.Text)); err != nil {
+		return "", queenMailError("the conversation is unreachable: " + err.Error())
 	}
 	return session.ID, nil
 }
@@ -337,8 +365,8 @@ func queenMailInject(session *Session, text string) error {
 	return errors.New("the queen isn't running")
 }
 
-func qmailError(message string) *qmail.Error {
-	return &qmail.Error{Message: message}
+func queenMailError(message string) *queenmail.Error {
+	return &queenmail.Error{Message: message}
 }
 
 // subscribeReplies takes what the queen says in her thread session with writer

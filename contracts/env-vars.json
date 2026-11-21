@@ -103,7 +103,7 @@
       "python_only": 6
     },
     "python_read_sites": 138,
-    "go_read_sites": 103
+    "go_read_sites": 104
   },
   "inventory": {
     "common": [
@@ -412,7 +412,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 31,
+            "line": 30,
             "symbol": null,
             "parse": "int",
             "helper": "colonyEnvInt",
@@ -454,7 +454,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 30,
+            "line": 29,
             "symbol": null,
             "parse": "int",
             "helper": "colonyEnvInt",
@@ -503,7 +503,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 29,
+            "line": 28,
             "symbol": null,
             "parse": "bool",
             "helper": "colonyEnvBool",
@@ -666,7 +666,7 @@
         "dev_reads": [],
         "test_reads": 2,
         "writes": [],
-        "mentions": 22,
+        "mentions": 24,
         "comments": 1
       }
     },
@@ -920,7 +920,7 @@
         "dev_reads": [],
         "test_reads": 6,
         "writes": [],
-        "mentions": 9,
+        "mentions": 10,
         "comments": 0
       }
     },
@@ -981,7 +981,7 @@
         "dev_reads": [],
         "test_reads": 13,
         "writes": [],
-        "mentions": 14,
+        "mentions": 15,
         "comments": 8
       }
     },
@@ -1001,10 +1001,10 @@
       "go": {
         "prod_reads": [],
         "dev_reads": [],
-        "test_reads": 4,
+        "test_reads": 6,
         "writes": [],
-        "mentions": 7,
-        "comments": 0
+        "mentions": 10,
+        "comments": 1
       }
     },
     {
@@ -1046,7 +1046,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/browser_cli.go",
-            "line": 254,
+            "line": 268,
             "symbol": "profile",
             "parse": "helper",
             "helper": "env",
@@ -1056,7 +1056,7 @@
         "dev_reads": [],
         "test_reads": 4,
         "writes": [],
-        "mentions": 8,
+        "mentions": 9,
         "comments": 2
       }
     },
@@ -1616,7 +1616,7 @@
         "dev_reads": [],
         "test_reads": 15,
         "writes": [],
-        "mentions": 29,
+        "mentions": 37,
         "comments": 5
       }
     },
@@ -1653,10 +1653,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 1,
         "writes": [],
         "mentions": 1,
-        "comments": 1
+        "comments": 6
       }
     },
     {
@@ -1797,7 +1797,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/credentials/keys.go",
-            "line": 175,
+            "line": 174,
             "symbol": "readFromShellConfig",
             "parse": "bool_eq_1",
             "snippet": "if os.Getenv(\"HIVE_DESKTOP_MODE\") == \"1\" {",
@@ -1915,7 +1915,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1075,
+            "line": 1078,
             "symbol": "runtimeOwnerPID",
             "parse": "string",
             "snippet": "owner := os.Getenv(\"HIVE_DESKTOP_PARENT_PID\")",
@@ -1927,7 +1927,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1078,
+            "line": 1081,
             "scope": "runtime"
           }
         ],
@@ -2000,7 +2000,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 264,
+            "line": 267,
             "symbol": "defaultServe",
             "parse": "string",
             "snippet": "if !isLoopbackListenHost(host) && strings.TrimSpace(os.Getenv(\"HIVE_DESKTOP_TOKEN\")) == \"\" {",
@@ -2496,7 +2496,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/browser_cli.go",
-            "line": 338,
+            "line": 352,
             "symbol": "statePath",
             "parse": "helper",
             "helper": "env",
@@ -2536,10 +2536,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 44,
+        "test_reads": 47,
         "writes": [],
-        "mentions": 183,
-        "comments": 91
+        "mentions": 208,
+        "comments": 92
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -3338,13 +3338,21 @@
             "parse": "int",
             "helper": "envPositiveInt",
             "snippet": "if cap, ok := envPositiveInt(\"HIVE_MAX_ITER\"); ok {"
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/session_start_events.go",
+            "line": 159,
+            "symbol": "sessionStartMaxIterations",
+            "parse": "int",
+            "helper": "envPositiveInt",
+            "snippet": "if cap, ok := envPositiveInt(\"HIVE_MAX_ITER\"); ok {"
           }
         ],
         "dev_reads": [],
-        "test_reads": 2,
+        "test_reads": 4,
         "writes": [],
-        "mentions": 9,
-        "comments": 4
+        "mentions": 14,
+        "comments": 9
       },
       "notes": "py: int(raw) only when raw.isdigit(), else 999_999; go: envPositiveInt trims and requires > 0, else the configured loop default. Zero/negative/padded values differ."
     },
@@ -3600,7 +3608,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 2,
+        "mentions": 3,
         "comments": 0
       },
       "notes": "default 6 on both (DefaultMicrocompactKeepRecent)."
@@ -3858,7 +3866,7 @@
       "go": {
         "prod_reads": [
           {
-            "file": "go_hive/go-hive/internal/qmail/mcp_stdio.go",
+            "file": "go_hive/go-hive/internal/queenmail/mcp_stdio.go",
             "line": 162,
             "symbol": "callQueenMailTool",
             "parse": "helper",
@@ -3898,7 +3906,7 @@
       "go": {
         "prod_reads": [
           {
-            "file": "go_hive/go-hive/internal/qmail/mcp_stdio.go",
+            "file": "go_hive/go-hive/internal/queenmail/mcp_stdio.go",
             "line": 161,
             "symbol": "callQueenMailTool",
             "parse": "helper",
@@ -3938,7 +3946,7 @@
       "go": {
         "prod_reads": [
           {
-            "file": "go_hive/go-hive/internal/qmail/mcp_stdio.go",
+            "file": "go_hive/go-hive/internal/queenmail/mcp_stdio.go",
             "line": 160,
             "symbol": "callQueenMailTool",
             "parse": "helper",
@@ -4479,7 +4487,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 269,
+            "line": 272,
             "scope": "runtime"
           }
         ],
@@ -4576,7 +4584,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 589,
+            "line": 588,
             "symbol": "splitWorkerEventsEnabled",
             "parse": "string",
             "snippet": "switch strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_SPLIT_WORKER_EVENTS\"))) {",
@@ -5308,7 +5316,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 4,
+        "mentions": 5,
         "comments": 3
       }
     },

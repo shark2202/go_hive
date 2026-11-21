@@ -1,6 +1,6 @@
 # 业务能力 ↔ 技术模块对照（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `4bcc2a211cb0`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `8029f7735f82`
 > 这是业务视图与技术视图的接缝：左边是人关心的结果，右边是代码里真实存在的包、入口与落盘文件。
 
 ## 成熟度与审批口径
@@ -26,7 +26,7 @@
 | **Tracker、计划与证据**<br/>`evidence-tracker` | 每一行结果都可追溯：worker 写共享账本，Queen 查询账本，任务计划跨回合存活，报告可按会话打包。 | `internal/tracker`<br>`internal/tasks`<br>`internal/colony`<br>`internal/server`<br>`internal/sessionreport` | tool tracker_upsert\|tracker_query\|tracker_sql<br>tool task_create\|task_update\|task_list\|task_get<br>HTTP GET /api/sessions/{session_id}/tasks<br>HTTP POST /api/sessions/{session_id}/report-bundle | ~/.hive/colonies/{colony}/tracker/tracker.db (SQLite WAL)<br>{session\|worker}/tasks.json<br>{session}/reminder_state.json | no | tested | tracker 写入是 worker 的自愿行为，漏写只能从报告文本恢复；SQLite 单写者，跨进程并发写需靠 WAL 与重试。 |
 | **触发器与 Sentinel 自治**<br/>`triggers-sentinel` | 定时或事件触发能自动唤醒会话；Queen 停泊但目标未完成时，由 Sentinel 决定继续推、升级给人还是不动。 | `internal/triggers`<br>`internal/sentinel`<br>`internal/server`<br>`internal/eventbus` | HTTP POST /api/sessions/{session_id}/triggers<br>HTTP POST /api/sessions/{session_id}/triggers/{trigger_id}/run<br>HTTP PUT /api/config/sentinel<br>进程内 timer ticker | {session}/triggers.json<br>~/.hive/colonies/{colony}/notifications.json<br>~/.hive/colonies/{colony}/escalations/ | partial | tested | 定时器只在服务进程存活时运行；错过的触发需要 resolve_missed 决策，不会自动补跑；escalate 依赖外部渠道可达。 |
 | **通知与提醒**<br/>`notifications` | 到点提醒、worker 报告与升级消息被送到人所在的渠道，并且有发送记录可查。 | `internal/agentloop`<br>`internal/server`<br>`internal/senders`<br>`internal/sentinel`<br>`internal/tasks` | 进程内 ReminderHub ticker<br>HTTP GET\|DELETE /api/sessions/{session_id}/reminders<br>HTTP GET /api/colony/{colony_id}/notifications<br>HTTP POST /api/sentinel/telegram/detect-chat | {session}/reminder_state.json<br>~/.hive/colonies/{colony}/notifications.json<br>senders 发送日志（sendlog） | no | tested | 提醒依赖进程内 ticker，重启只恢复状态，不补发错过的时点；抑制列表会静默丢弃被抑制的收件人。 |
-| **渠道与仪表盘**<br/>`channels-dashboard` | 同一套会话既能从 Web Dashboard 看，也能从 CLI 或聊天渠道接入；状态与事件对操作者可见。 | `internal/server`<br>`internal/server/uiembed`<br>`internal/runtimehealth`<br>`internal/resources`<br>`internal/senders`<br>`internal/qmail`<br>`internal/globaldb` | CLI hive serve<br>CLI hive open<br>HTTP GET /api/channels<br>HTTP GET /api/events/global (SSE) | ~/.hive/queens/{queen}/sessions/{session}/（元数据与事件）<br>~/.hive/event_logs/events.jsonl<br>~/.hive/colonies/{colony}/notifications.json | no | tested | 渠道 webhook 需外网可达；embed_ui 需要构建标签，否则回退到磁盘前端产物。 |
+| **渠道与仪表盘**<br/>`channels-dashboard` | 同一套会话既能从 Web Dashboard 看，也能从 CLI 或聊天渠道接入；状态与事件对操作者可见。 | `internal/server`<br>`internal/server/uiembed`<br>`internal/runtimehealth`<br>`internal/resources`<br>`internal/senders`<br>`internal/queenmail`<br>`internal/claudecode`<br>`internal/globaldb` | CLI hive serve<br>CLI hive open<br>HTTP GET /api/channels<br>HTTP GET /api/events/global (SSE) | ~/.hive/queens/{queen}/sessions/{session}/（元数据与事件）<br>~/.hive/event_logs/events.jsonl<br>~/.hive/colonies/{colony}/notifications.json | no | tested | 渠道 webhook 需外网可达；embed_ui 需要构建标签，否则回退到磁盘前端产物。 |
 | **发布与质量门禁**<br/>`release-quality` | 每次交付可验证：九门禁、架构漂移检查与发布清单都能在本地和 CI 复现，结论可签字。 | `internal/quality`<br>`internal/version`<br>`internal/maintenance`<br>`internal/envcontract` | make ci（fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check）<br>python3 scripts/qc_check.py<br>go test ./internal/quality<br>python3 scripts/gen_arch.py --check | go_hive/QC_REPORT.md<br>go_hive/RELEASE_CHECKLIST.md<br>go_hive/architecture/graph.json | yes | tested | 门禁是仓库内脚本与 go test，不覆盖部署环境；架构漂移由 make ci 的 arch-check 阻断，契约自洽由 compat-check 阻断。 |
 
 ## 模块 → 能力 反向索引
@@ -36,6 +36,7 @@
 | `internal/agentloop` | runtime | Queen 分诊与对话、Worker 派发与回报、目标与结果、记忆与沉淀、通知与提醒 |
 | `internal/attachments` | capability | Queen 分诊与对话 |
 | `internal/charts` | capability | 工具与凭据边界 |
+| `internal/claudecode` | orchestration | 渠道与仪表盘 |
 | `internal/colony` | orchestration | Colony 部署单元、Tracker、计划与证据、Worker 派发与回报、技能与 Playbook、目标与结果 |
 | `internal/credentials` | capability | 工具与凭据边界 |
 | `internal/envcontract` | foundation | 发布与质量门禁 |
@@ -50,9 +51,9 @@
 | `internal/mcpregistry/nativecli` | capability | 工具与凭据边界 |
 | `internal/memory` | capability | Queen 分诊与对话、记忆与沉淀 |
 | `internal/playbook` | orchestration | 技能与 Playbook |
-| `internal/qmail` | orchestration | 渠道与仪表盘 |
 | `internal/quality` | foundation | 发布与质量门禁 |
 | `internal/queen` | orchestration | Queen 分诊与对话 |
+| `internal/queenmail` | orchestration | 渠道与仪表盘 |
 | `internal/ratelimit` | foundation | 工具与凭据边界 |
 | `internal/resources` | foundation | 渠道与仪表盘 |
 | `internal/runtimehealth` | transport | 渠道与仪表盘 |

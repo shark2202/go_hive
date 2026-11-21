@@ -9,13 +9,13 @@ Go 实现分布：
 
 | 层 | 文件 |
 | --- | --- |
-| 配置解析（`queen_mail.claude_code.<id>`） | `internal/qmail/config.go` |
-| 会话记录与收件箱（`conversations.json`） | `internal/qmail/conversations.go` |
-| 会话文件发现与解析（transcript） | `internal/qmail/claude_transcript.go` |
-| 「正在运行」标记 | `internal/qmail/claude_runner.go::ClaudeRunner.Running` |
+| 配置解析（`queen_mail.claude_code.<id>`） | `internal/queenmail/config.go` |
+| 会话记录与收件箱（`conversations.json`） | `internal/claudecode/conversations.go` |
+| 会话文件发现与解析（transcript） | `internal/claudecode/claude_transcript.go` |
+| 「正在运行」标记 | `internal/claudecode/claude_runner.go::Runner.Running` |
 | HTTP 路由（schema、404 文案、py repr） | `internal/server/routes_queens_claude_code.go` |
 | deps 构造（配置 + 会话 + transcript + running） | `internal/server/claude_code_queens.go` |
-| 接线（每进程的 `qmail.Mail`，与 `/api/queen-mail/*` 同一个实例） | `internal/server/app.go` |
+| 接线（每进程的 `queenmail.Mail`，与 `/api/queen-mail/*` 同一个实例） | `internal/server/app.go` |
 
 ## 1. 数据来源
 

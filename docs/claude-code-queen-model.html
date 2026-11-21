@@ -83,7 +83,7 @@
     本页把这些问题按"事实—证据—边界"逐个回答清楚，作为《Claude Code Queen 特性说明书》（<a href="claude-code-queen.html">claude-code-queen.html</a>）的补充页。
   </p>
   <div class="meta">
-    <span>依据：<b>claude_code_queens.py · queen_mail.py · config.py</b>（上游）与 <b>go_hive/internal/qmail</b>（对位）</span>
+    <span>依据：<b>claude_code_queens.py · queen_mail.py · config.py</b>（上游）与 <b>go_hive/internal/queenmail + go_hive/internal/claudecode</b>（对位）</span>
     <span>撰写：<b>2026-11-21 19:10 CST</b></span>
     <span>性质：<b>关系/语义说明（有源码证据）</b></span>
   </div>
@@ -261,7 +261,7 @@
     <li>运行器与回合语义：<a href="claude-code-queen-runner.md">claude-code-queen-runner.md</a>（§1 配置、§2 回合生命周期、§3 隔离、§4 MCP、§5 失败文案、§8 已知差异）</li>
     <li>只读 dashboard：<a href="claude-code-dashboard.md">claude-code-dashboard.md</a>；前端只读声明：<code>core/frontend/src/pages/claude-code-queen.tsx:8</code></li>
     <li>上游代码：<code>core/framework/config.py:1090-1110</code>（<code>claude_code</code> map、<code>max_parallel_turns</code>、daily_limit/max_depth）；<code>server/claude_code_queens.py:117-128</code>（按 peer 建会话）；<code>server/queen_mail.py:97-102</code>（HMAC token）、<code>:232-246</code>（Hive queen 投递）、<code>:461</code>（信件格式）；<code>agents/queen/queen_profiles.py:188</code>（queen 目录不含 CC queen）；<code>tools/queen_lifecycle_tools.py:3994-3997</code>（邮件工具 queen-only 注册）</li>
-    <li>Go 对位：<code>internal/qmail/config.go:95-96/144</code>（map 解析）、<code>claude_runner.go:53-55/88</code>（全局并发 + 逐 queen watcher）；org chart 合并：<code>core/frontend/src/pages/org-chart.tsx:340/533</code></li>
+    <li>Go 对位：<code>internal/queenmail/config.go:95-96/144</code>（map 解析）、<code>claude_runner.go:53-55/88</code>（全局并发 + 逐 queen watcher）；org chart 合并：<code>core/frontend/src/pages/org-chart.tsx:340/533</code></li>
   </ul>
   <h3>未验证项 / 边界</h3>
   <ul>
@@ -270,7 +270,7 @@
     <li>Windows 进程树仅在 Unix 有完整杀树；Windows 为已知差异。</li>
     <li>配置热重载：Go 启动读一次、上游每回合重读——登记差异。</li>
   </ul>
-  <p class="sub">相关页：《<a href="claude-code-queen.html">Claude Code Queen 特性说明书</a>》· <a href="acp-queen-spec.html">ACP Queen 需求说明书（详细版）</a> · <a href="agent-runner-protocol.html">Agent Runner 协议与适配规范（草案）</a> · <a href="module-interfaces.html">模块接口不变量</a> · <a href="hive-core-designs.html">Hive 核心设计调研</a></p>
+  <p class="sub">相关页：《<a href="claude-code-queen.html">Claude Code Queen 特性说明书</a>》· <a href="acp-queen-spec.html">ACP Queen 需求说明书（详细版）</a> · <a href="agent-runner-protocol.html">Agent Runner 协议与适配规范（草案）</a> · <a href="module-interfaces.html">模块接口不变量</a> · <a href="hive-package-atlas.html">Hive 包结构与架构地图</a> · <a href="hive-core-designs.html">Hive 核心设计调研</a></p>
 </section>
 
 <footer>go_hive / docs · claude-code-queen-model.html · 撰写 2026-11-21 19:10 CST · 证据来自本机 checkout（上游 core 与 go_hive），未验证项已逐条列出。</footer>

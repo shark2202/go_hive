@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "4bcc2a211cb0",
+  "generated_at_commit": "8029f7735f82",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 70,
-    "package_edges": 183,
+    "packages": 71,
+    "package_edges": 186,
     "capabilities": 12,
-    "capability_edges": 84,
+    "capability_edges": 85,
     "layers": 8,
     "contracts": 34,
     "http_routes": 220,
@@ -78,12 +78,13 @@
       "description": "Queen / Colony / Worker 的生命周期与协调：派发、报告、计划、账本、触发器、看护。",
       "packages": [
         "internal/agents",
+        "internal/claudecode",
         "internal/colony",
         "internal/host",
         "internal/longmemeval",
         "internal/playbook",
-        "internal/qmail",
         "internal/queen",
+        "internal/queenmail",
         "internal/sentinel",
         "internal/session",
         "internal/sessionreport",
@@ -91,7 +92,7 @@
         "internal/tracker",
         "internal/triggers"
       ],
-      "package_count": 13
+      "package_count": 14
     },
     {
       "id": "runtime",
@@ -384,7 +385,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 36,
+      "direct_dependencies": 37,
       "dependents": 1
     },
     {
@@ -410,6 +411,18 @@
       "note": "",
       "direct_dependencies": 2,
       "dependents": 3
+    },
+    {
+      "id": "pkg:internal/claudecode",
+      "kind": "technical",
+      "package": "internal/claudecode",
+      "layer": "orchestration",
+      "responsibility": "Claude Code queen 运行时：会话记录与收件箱、claude -p 回合、转录读取与进程树管理。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 3,
+      "dependents": 1
     },
     {
       "id": "pkg:internal/colony",
@@ -460,18 +473,6 @@
       "dependents": 2
     },
     {
-      "id": "pkg:internal/qmail",
-      "kind": "technical",
-      "package": "internal/qmail",
-      "layer": "orchestration",
-      "responsibility": "Queen 之间的信件存储、待投递队列与 queens/mail.jsonl 审计日志。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 4,
-      "dependents": 2
-    },
-    {
       "id": "pkg:internal/queen",
       "kind": "technical",
       "package": "internal/queen",
@@ -482,6 +483,18 @@
       "note": "",
       "direct_dependencies": 0,
       "dependents": 4
+    },
+    {
+      "id": "pkg:internal/queenmail",
+      "kind": "technical",
+      "package": "internal/queenmail",
+      "layer": "orchestration",
+      "responsibility": "Queen 之间的信件引擎：信件存储、待投递队列、queens/mail.jsonl 审计日志与 hive MCP stdio 面。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 3,
+      "dependents": 3
     },
     {
       "id": "pkg:internal/sentinel",
@@ -877,7 +890,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 19
+      "dependents": 20
     },
     {
       "id": "pkg:internal/logging",
@@ -1379,7 +1392,8 @@
         "internal/runtimehealth",
         "internal/resources",
         "internal/senders",
-        "internal/qmail",
+        "internal/queenmail",
+        "internal/claudecode",
         "internal/globaldb"
       ],
       "operates": [
@@ -1609,6 +1623,21 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/claudecode",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/claudecode",
+      "to": "pkg:internal/mcpregistry/nativecli",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/claudecode",
+      "to": "pkg:internal/queenmail",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/cli",
       "to": "pkg:internal/agentloop",
       "kind": "depends"
@@ -1695,12 +1724,12 @@
     },
     {
       "from": "pkg:internal/cli",
-      "to": "pkg:internal/qmail",
+      "to": "pkg:internal/queen",
       "kind": "depends"
     },
     {
       "from": "pkg:internal/cli",
-      "to": "pkg:internal/queen",
+      "to": "pkg:internal/queenmail",
       "kind": "depends"
     },
     {
@@ -1979,22 +2008,17 @@
       "kind": "depends"
     },
     {
-      "from": "pkg:internal/qmail",
+      "from": "pkg:internal/queenmail",
       "to": "pkg:internal/hivehome",
       "kind": "depends"
     },
     {
-      "from": "pkg:internal/qmail",
-      "to": "pkg:internal/mcpregistry/nativecli",
-      "kind": "depends"
-    },
-    {
-      "from": "pkg:internal/qmail",
+      "from": "pkg:internal/queenmail",
       "to": "pkg:internal/queen",
       "kind": "depends"
     },
     {
-      "from": "pkg:internal/qmail",
+      "from": "pkg:internal/queenmail",
       "to": "pkg:internal/version",
       "kind": "depends"
     },
@@ -2070,6 +2094,11 @@
     },
     {
       "from": "pkg:internal/server",
+      "to": "pkg:internal/claudecode",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
       "to": "pkg:internal/colony",
       "kind": "depends"
     },
@@ -2140,12 +2169,12 @@
     },
     {
       "from": "pkg:internal/server",
-      "to": "pkg:internal/qmail",
+      "to": "pkg:internal/queen",
       "kind": "depends"
     },
     {
       "from": "pkg:internal/server",
-      "to": "pkg:internal/queen",
+      "to": "pkg:internal/queenmail",
       "kind": "depends"
     },
     {
@@ -2389,6 +2418,11 @@
       "kind": "realizes"
     },
     {
+      "from": "pkg:internal/claudecode",
+      "to": "cap:channels-dashboard",
+      "kind": "realizes"
+    },
+    {
       "from": "pkg:internal/colony",
       "to": "cap:colony-unit",
       "kind": "realizes"
@@ -2494,11 +2528,6 @@
       "kind": "realizes"
     },
     {
-      "from": "pkg:internal/qmail",
-      "to": "cap:channels-dashboard",
-      "kind": "realizes"
-    },
-    {
       "from": "pkg:internal/quality",
       "to": "cap:release-quality",
       "kind": "realizes"
@@ -2506,6 +2535,11 @@
     {
       "from": "pkg:internal/queen",
       "to": "cap:queen-triage",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/queenmail",
+      "to": "cap:channels-dashboard",
       "kind": "realizes"
     },
     {
@@ -3155,7 +3189,8 @@
         "internal/runtimehealth",
         "internal/resources",
         "internal/senders",
-        "internal/qmail",
+        "internal/queenmail",
+        "internal/claudecode",
         "internal/globaldb"
       ],
       "operates": [

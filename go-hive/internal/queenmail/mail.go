@@ -1,4 +1,4 @@
-package qmail
+package queenmail
 
 import (
 	"context"
@@ -37,7 +37,7 @@ type Mail struct {
 	config    Config
 	store     *Store
 	queue     *Queue
-	claude    *ClaudeStore
+	claude    ClaudeInboxes
 	deliverer HiveDeliverer
 	secret    []byte
 
@@ -46,7 +46,7 @@ type Mail struct {
 	baseURL string
 	// claudeRunner turns the letters waiting for a Claude Code queen into
 	// `claude -p` turns. Nil leaves those letters waiting.
-	claudeRunner *ClaudeRunner
+	claudeRunner ClaudeRunner
 
 	mu          sync.Mutex
 	day         string
@@ -86,7 +86,6 @@ func New(home hivehome.Home, config Config, deliverer HiveDeliverer) *Mail {
 		config:    config,
 		store:     store,
 		queue:     NewQueue(store),
-		claude:    NewClaudeStore(home),
 		deliverer: deliverer,
 		secret:    newSecret(),
 		sent:      map[string]int{},
@@ -108,7 +107,16 @@ func (m *Mail) Store() *Store { return m.store }
 func (m *Mail) Queue() *Queue { return m.queue }
 
 // Claude is the conversations and inboxes of the Claude Code queens.
-func (m *Mail) Claude() *ClaudeStore { return m.claude }
+func (m *Mail) Claude() ClaudeInboxes { return m.claude }
+
+// SetClaudeInboxes attaches the conversations and inboxes of the queens run
+// by Claude Code: a letter to one of them lands in her conversation with the
+// writer. Without it such a letter waits, as with a missing deliverer.
+func (m *Mail) SetClaudeInboxes(inboxes ClaudeInboxes) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.claude = inboxes
+}
 
 // SetBaseURL records where a Claude Code queen's runs reach this server, and
 // catches up on letters already waiting for her. The serve entry point calls
@@ -116,8 +124,9 @@ func (m *Mail) Claude() *ClaudeStore { return m.claude }
 func (m *Mail) SetBaseURL(url string) {
 	m.mu.Lock()
 	m.baseURL = url
+	runner := m.claudeRunner
 	m.mu.Unlock()
-	if runner := m.ClaudeRunner(); runner != nil {
+	if runner != nil {
 		runner.NotifyAll()
 	}
 }
@@ -132,7 +141,7 @@ func (m *Mail) BaseURL() string {
 
 // SetClaudeRunner attaches the runner that turns the letters waiting for a
 // Claude Code queen into `claude -p` turns.
-func (m *Mail) SetClaudeRunner(runner *ClaudeRunner) {
+func (m *Mail) SetClaudeRunner(runner ClaudeRunner) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.claudeRunner = runner
@@ -140,7 +149,7 @@ func (m *Mail) SetClaudeRunner(runner *ClaudeRunner) {
 
 // ClaudeRunner is the runner of the Claude Code queens, or nil when none is
 // attached (letters then simply wait in her inbox).
-func (m *Mail) ClaudeRunner() *ClaudeRunner {
+func (m *Mail) ClaudeRunner() ClaudeRunner {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.claudeRunner
@@ -241,12 +250,18 @@ func (m *Mail) QueenOf(ref string) (string, bool) {
 	if _, configured := m.config.Claude(QueenIDOfRef(ref)); !configured {
 		return "", false
 	}
+	if m.claude == nil {
+		return "", false
+	}
 	return m.claude.QueenOf(ref)
 }
 
 // CauseOf is what set off the turn now queued in a conversation ref.
 func (m *Mail) CauseOf(ref string) *Cause {
 	if _, configured := m.config.Claude(QueenIDOfRef(ref)); !configured {
+		return nil
+	}
+	if m.claude == nil {
 		return nil
 	}
 	return m.claude.CauseOf(ref)
@@ -333,13 +348,16 @@ func (m *Mail) Send(writer, fromRef, toQueen, text string, cause *Cause) (map[st
 // conversation (and inbox), a Hive queen through the deliverer.
 func (m *Mail) deliver(letter Letter) (string, error) {
 	if _, ok := m.config.Claude(letter.To); ok {
-		conversation, err := m.claude.Letter(letter.To, letter.From, letter.FromSession, letter)
+		if m.claude == nil {
+			return "", &Error{Message: letter.To + " can't take letters now"}
+		}
+		ref, err := m.claude.DeliverLetter(letter.To, letter.From, letter.FromSession, letter)
 		if err != nil {
 			return "", err
 		}
-		m.claude.SetCause(conversation.Ref, &Cause{Hop: letter.ID, Depth: letter.Depth})
+		m.claude.SetCause(ref, &Cause{Hop: letter.ID, Depth: letter.Depth})
 		m.notifyClaude(letter.To)
-		return conversation.Ref, nil
+		return ref, nil
 	}
 	if m.deliverer == nil {
 		return "", &Error{Message: letter.To + " can't take letters now"}
@@ -384,7 +402,7 @@ func (m *Mail) DeliverReply(replyTo, queenID, writer, fromRef, text string, caus
 		FromName:    name,
 	}
 	if IsConversationRef(replyTo) {
-		if !m.claude.Reply(replyTo, letter) {
+		if m.claude == nil || !m.claude.DeliverReply(replyTo, letter) {
 			m.logDropped(KindReply, queenID, writer, fromRef, replyTo, causedBy, depth, Chars(text), "unreachable")
 			return nil
 		}

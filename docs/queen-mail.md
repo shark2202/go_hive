@@ -7,7 +7,7 @@ Go 实现分布：
 
 | 层 | 文件 |
 | --- | --- |
-| 引擎（信件、队列、日限、深度、审计） | `internal/qmail/` |
+| 引擎（信件、队列、日限、深度、审计） | `internal/queenmail/` |
 | 服务器适配（投递、线程会话、回复唤醒） | `internal/server/adapters_qmail.go` |
 | HTTP 路由（Claude Code queen 的 `list_queens` / 写信入口） | `internal/server/routes_queens_mail.go` |
 | 会话工具（`list_queens` / `message_queen`） | `internal/cli/session_tools_queen_mail.go` |
@@ -139,7 +139,7 @@ Parity 注解指向 `core/framework/server/tests/test_queen_mail.py` 与 `test_c
 ## 6. 已知差异 / 未验证
 
 - **信件附件**：上游 `message_queen` 只有 `queen_id`、`message` 两个参数，没有附件参数；本实现保持同形。回复方向的 `attach_file` 附件会以 `(She attached: ...)` 文本回传（上游 `_reply_text` 的 `files` 分支）。
-- **Claude Code queen 运行器**：已实现（`internal/qmail/claude_runner*.go` + `hive queen-mail-mcp`），配置、回合、超时、回复回写、MCP 注入与测试见 `docs/claude-code-queen-runner.md`；只读 dashboard 路由（`GET /api/claude-code-queens` 与 transcript）读真实配置、会话记录与 Claude Code 会话文件，见 `docs/claude-code-dashboard.md`。
+- **Claude Code queen 运行器**：已实现（`internal/claudecode/claude_runner*.go` + `hive queen-mail-mcp`），配置、回合、超时、回复回写、MCP 注入与测试见 `docs/claude-code-queen-runner.md`；只读 dashboard 路由（`GET /api/claude-code-queens` 与 transcript）读真实配置、会话记录与 Claude Code 会话文件，见 `docs/claude-code-dashboard.md`。
 - **配置生效时机**：Go 在 `hive serve` 启动时构造服务；开关变化需要重启。上游在每次注册/发送时重读配置。
 - **fork / superseded 会话**：上游 `_newest_successor` 会跟随 `superseded_by` 把回复送到新会话；Go 适配器按会话 id 恢复，未跟随 fork 后的新 id。
 

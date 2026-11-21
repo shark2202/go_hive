@@ -1,4 +1,4 @@
-package qmail
+package claudecode
 
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens._turn
 //
@@ -18,6 +18,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // claudeTurnRun is one execution of Claude Code.
@@ -31,7 +33,7 @@ type claudeTurnRun struct {
 
 // turn runs one turn on prompt; it returns what she ended it with, or why it
 // failed (the writer is told either way).
-func (r *ClaudeRunner) turn(conversation *Conversation, prompt string) string {
+func (r *Runner) turn(conversation *Conversation, prompt string) string {
 	config, ok := r.mail.Config().Claude(conversation.QueenID)
 	if !ok {
 		r.logf(
@@ -45,7 +47,7 @@ func (r *ClaudeRunner) turn(conversation *Conversation, prompt string) string {
 	if problem != "" {
 		return problem
 	}
-	home := r.mail.Claude().Home(conversation.QueenID)
+	home := r.store.Home(conversation.QueenID)
 	cwd := config.Cwd
 	if cwd == "" {
 		cwd = filepath.Join(home, "workspace")
@@ -79,12 +81,12 @@ func (r *ClaudeRunner) turn(conversation *Conversation, prompt string) string {
 		if result == nil && code != 0 && attempt == 1 {
 			if started && strings.Contains(stderrText, "No conversation found") {
 				started = false
-				r.mail.Claude().SetStarted(conversation.Ref, false)
+				r.store.SetStarted(conversation.Ref, false)
 				continue
 			}
 			if !started && strings.Contains(stderrText, "already in use") {
 				started = true
-				r.mail.Claude().SetStarted(conversation.Ref, true)
+				r.store.SetStarted(conversation.Ref, true)
 				continue
 			}
 		}
@@ -96,7 +98,7 @@ func (r *ClaudeRunner) turn(conversation *Conversation, prompt string) string {
 	}
 	if !boolValue(result["is_error"]) || intValue(result["num_turns"]) > 0 {
 		// The session exists now; from here on it is resumed.
-		r.mail.Claude().SetStarted(conversation.Ref, true)
+		r.store.SetStarted(conversation.Ref, true)
 	}
 	if boolValue(result["is_error"]) {
 		return "(Her reply failed: " + firstNonEmpty(stringValue(result["result"]), stringValue(result["subtype"]), "error") + ")"
@@ -106,7 +108,7 @@ func (r *ClaudeRunner) turn(conversation *Conversation, prompt string) string {
 
 // runClaude starts Claude Code, waits for it (killing its process tree when
 // the clock runs out) and reports its exit code and output.
-func (r *ClaudeRunner) runClaude(args []string, prompt, cwd string, env []string, timeout time.Duration) claudeTurnRun {
+func (r *Runner) runClaude(args []string, prompt, cwd string, env []string, timeout time.Duration) claudeTurnRun {
 	run := r.executeClaude(args, prompt, cwd, env, timeout)
 	if r.observe != nil {
 		r.observe(run)
@@ -115,7 +117,7 @@ func (r *ClaudeRunner) runClaude(args []string, prompt, cwd string, env []string
 }
 
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens._run
-func (r *ClaudeRunner) executeClaude(args []string, prompt, cwd string, env []string, timeout time.Duration) claudeTurnRun {
+func (r *Runner) executeClaude(args []string, prompt, cwd string, env []string, timeout time.Duration) claudeTurnRun {
 	if len(args) == 0 {
 		return claudeTurnRun{startErr: errors.New("no command")}
 	}
@@ -164,11 +166,11 @@ func (r *ClaudeRunner) executeClaude(args []string, prompt, cwd string, env []st
 // the writer is told.
 //
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens._env
-func (r *ClaudeRunner) turnEnv(config ClaudeQueen) ([]string, string) {
+func (r *Runner) turnEnv(config queenmail.ClaudeQueen) ([]string, string) {
 	values := inheritedClaudeEnv(os.Environ())
 	configDir := config.ConfigDir
 	if configDir == "" {
-		configDir = filepath.Join(r.mail.Claude().Home(config.ID), "config")
+		configDir = filepath.Join(r.store.Home(config.ID), "config")
 	}
 	values["CLAUDE_CONFIG_DIR"] = configDir
 	switch {
@@ -249,10 +251,10 @@ func inheritedClaudeEnv(environ []string) map[string]string {
 // turnArgs is the command line of one turn.
 //
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens._args
-func (r *ClaudeRunner) turnArgs(config ClaudeQueen, sessionID string, started bool, mcpPath string) []string {
+func (r *Runner) turnArgs(config queenmail.ClaudeQueen, sessionID string, started bool, mcpPath string) []string {
 	command := config.Command
 	if len(command) == 0 {
-		command = []string{DefaultClaudeCommand}
+		command = []string{queenmail.DefaultClaudeCommand}
 	}
 	program := command[0]
 	if resolved, err := exec.LookPath(program); err == nil {
@@ -307,7 +309,7 @@ func (r *ClaudeRunner) turnArgs(config ClaudeQueen, sessionID string, started bo
 // deleted when the run ends. Empty while Hive has no address yet.
 //
 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens._mcp_config
-func (r *ClaudeRunner) claudeMCPConfig(conversation *Conversation) string {
+func (r *Runner) claudeMCPConfig(conversation *Conversation) string {
 	baseURL := r.mail.BaseURL()
 	if baseURL == "" {
 		r.logf("claude code queen: no server address yet, so %s can't write letters this turn", conversation.QueenID)
@@ -329,7 +331,7 @@ func (r *ClaudeRunner) claudeMCPConfig(conversation *Conversation) string {
 		r.logf("claude code queen: couldn't write the MCP config for %s: %v", conversation.QueenID, err)
 		return ""
 	}
-	path := filepath.Join(r.mail.Claude().Home(conversation.QueenID), "mcp", conversation.SessionID+".json")
+	path := filepath.Join(r.store.Home(conversation.QueenID), "mcp", conversation.SessionID+".json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		r.logf("claude code queen: couldn't write the MCP config for %s: %v", conversation.QueenID, err)
 		return ""

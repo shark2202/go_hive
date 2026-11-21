@@ -1,4 +1,4 @@
-package qmail
+package claudecode
 
 import (
 	"encoding/json"
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // The fake Claude Code script stands in for the real binary: it records what
@@ -83,8 +84,9 @@ type fakeRun struct {
 // fake Claude Code, in a fresh Hive home.
 type claudeHarness struct {
 	home       hivehome.Home
-	mail       *Mail
-	runner     *ClaudeRunner
+	mail       *queenmail.Mail
+	store      *Store
+	runner     *Runner
 	deliverer  *fakeDeliverer
 	recordDir  string
 	repliesDir string
@@ -102,7 +104,7 @@ func writeFakeClaude(t *testing.T) string {
 
 // newClaudeHarness builds the service, its runner and the recording fake. tune
 // may adjust the section and her entry before the service is built.
-func newClaudeHarness(t *testing.T, tune func(*Config, *ClaudeQueen)) *claudeHarness {
+func newClaudeHarness(t *testing.T, tune func(*queenmail.Config, *queenmail.ClaudeQueen)) *claudeHarness {
 	t.Helper()
 	home := newMailHome(t)
 	recordDir := t.TempDir()
@@ -126,14 +128,15 @@ func newClaudeHarness(t *testing.T, tune func(*Config, *ClaudeQueen)) *claudeHar
 	}
 	config.ClaudeCode[claude] = queen
 	deliverer := &fakeDeliverer{}
-	mail := New(home, config, deliverer)
+	mail, store := newQueenMailService(t, home, config, deliverer)
 	mail.SetBaseURL("http://127.0.0.1:9")
-	runner := NewClaudeRunner(mail)
+	runner := NewRunner(mail, store)
 	mail.SetClaudeRunner(runner)
 	t.Cleanup(runner.Close)
 	return &claudeHarness{
 		home:       home,
 		mail:       mail,
+		store:      store,
 		runner:     runner,
 		deliverer:  deliverer,
 		recordDir:  recordDir,
@@ -363,7 +366,7 @@ func TestALetterToHerRunsATurnAndHerAnswerGoesBack(t *testing.T) {
 		t.Fatalf("sent = %#v", sent)
 	}
 	reply := audit[1]
-	if reply.Kind != KindReply || reply.From != claude || reply.To != ava || reply.Depth != 2 {
+	if reply.Kind != queenmail.KindReply || reply.From != claude || reply.To != ava || reply.Depth != 2 {
 		t.Fatalf("reply audit = %#v", reply)
 	}
 }
@@ -395,7 +398,7 @@ func TestHerConversationWithAWriterIsResumedNextTime(t *testing.T) {
 
 // Parity: framework/server/tests/test_claude_code_queens.py::test_letters_that_arrive_during_a_turn_go_in_together
 func TestLettersThatArriveDuringATurnGoInTogether(t *testing.T) {
-	h := newClaudeHarness(t, func(_ *Config, queen *ClaudeQueen) {
+	h := newClaudeHarness(t, func(_ *queenmail.Config, queen *queenmail.ClaudeQueen) {
 		queen.Env["FAKE_CLAUDE_SLEEP"] = "0.6"
 	})
 	if _, err := h.mail.Send(ava, "session_ava", claude, "One", nil); err != nil {
@@ -442,7 +445,7 @@ func TestSheWritesToAHiveQueenAndHerAnswerComesBackToTheConversation(t *testing.
 		t.Fatal(err)
 	}
 	replyHop := sent["sent"].(string)
-	if err := h.mail.DeliverReply(conversation, ivy, claude, "session_ivy", "Not yet.", &Cause{Hop: replyHop, Depth: 2}); err != nil {
+	if err := h.mail.DeliverReply(conversation, ivy, claude, "session_ivy", "Not yet.", &queenmail.Cause{Hop: replyHop, Depth: 2}); err != nil {
 		t.Fatal(err)
 	}
 	h.waitReplies(t, 2)
@@ -468,11 +471,11 @@ func TestSheWritesToAHiveQueenAndHerAnswerComesBackToTheConversation(t *testing.
 		got = append(got, hop{record.Kind, record.From, record.To, record.Depth})
 	}
 	want := []hop{
-		{KindMessage, ava, claude, 1},
-		{KindReply, claude, ava, 2},
-		{KindMessage, claude, ivy, 2},
-		{KindReply, ivy, claude, 3},
-		{KindReply, claude, ava, 4},
+		{queenmail.KindMessage, ava, claude, 1},
+		{queenmail.KindReply, claude, ava, 2},
+		{queenmail.KindMessage, claude, ivy, 2},
+		{queenmail.KindReply, ivy, claude, 3},
+		{queenmail.KindReply, claude, ava, 4},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("hops = %#v", got)
@@ -500,10 +503,10 @@ func TestAFailedTurnTellsTheWriter(t *testing.T) {
 
 // Parity: framework/server/tests/test_claude_code_queens.py::test_a_turn_that_runs_out_of_time_tells_the_writer
 func TestATurnThatRunsOutOfTimeTellsTheWriter(t *testing.T) {
-	h := newClaudeHarness(t, func(_ *Config, queen *ClaudeQueen) {
+	h := newClaudeHarness(t, func(_ *queenmail.Config, queen *queenmail.ClaudeQueen) {
 		queen.Env["FAKE_CLAUDE_SLEEP"] = "5"
 	})
-	h.runner.turnTimeout = func(ClaudeQueen) time.Duration { return 300 * time.Millisecond }
+	h.runner.turnTimeout = func(queenmail.ClaudeQueen) time.Duration { return 300 * time.Millisecond }
 	started := time.Now()
 
 	if _, err := h.mail.Send(ava, "session_ava", claude, "Hello?", nil); err != nil {

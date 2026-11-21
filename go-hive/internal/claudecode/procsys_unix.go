@@ -1,6 +1,6 @@
 //go:build unix
 
-package qmail
+package claudecode
 
 import (
 	"os/exec"

@@ -1,4 +1,4 @@
-package qmail
+package claudecode
 
 import (
 	"fmt"
@@ -8,6 +8,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // Parity: framework/server/tests/test_claude_code_queens.py::test_her_runs_use_her_api_key_and_get_the_hive_mcp_server
@@ -94,7 +96,7 @@ func TestHerRunsUseHerAPIKeyAndGetTheHiveMCPServer(t *testing.T) {
 
 // Parity: framework/server/tests/test_claude_code_queens.py::test_with_full_permissions_the_mcp_tools_need_no_allowlist
 func TestWithFullPermissionsTheMCPToolsNeedNoAllowlist(t *testing.T) {
-	h := newClaudeHarness(t, func(_ *Config, queen *ClaudeQueen) {
+	h := newClaudeHarness(t, func(_ *queenmail.Config, queen *queenmail.ClaudeQueen) {
 		queen.PermissionMode = "bypassPermissions"
 	})
 	h.queueResult(t, "Noted.")
@@ -115,7 +117,7 @@ func TestWithFullPermissionsTheMCPToolsNeedNoAllowlist(t *testing.T) {
 
 // Parity: framework/server/tests/test_claude_code_queens.py::test_a_gateway_in_front_of_the_api_is_her_base_url
 func TestAGatewayInFrontOfTheAPIIsHerBaseURL(t *testing.T) {
-	h := newClaudeHarness(t, func(_ *Config, queen *ClaudeQueen) {
+	h := newClaudeHarness(t, func(_ *queenmail.Config, queen *queenmail.ClaudeQueen) {
 		queen.APIBase = "https://gateway.example.invalid"
 	})
 	h.queueResult(t, "Noted.")
@@ -134,7 +136,7 @@ func TestAGatewayInFrontOfTheAPIIsHerBaseURL(t *testing.T) {
 // Parity: framework/server/tests/test_claude_code_queens.py::test_without_an_api_key_she_doesnt_run_and_the_writer_is_told_why
 func TestWithoutAnAPIKeySheDoesntRunAndTheWriterIsToldWhy(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "a-key-that-isnt-hers")
-	h := newClaudeHarness(t, func(_ *Config, queen *ClaudeQueen) {
+	h := newClaudeHarness(t, func(_ *queenmail.Config, queen *queenmail.ClaudeQueen) {
 		queen.APIKey = ""
 	})
 
@@ -153,7 +155,7 @@ func TestWithoutAnAPIKeySheDoesntRunAndTheWriterIsToldWhy(t *testing.T) {
 // Parity: framework/server/tests/test_claude_code_queens.py::test_a_subscription_is_used_only_when_chosen_and_the_risk_is_logged_once
 func TestASubscriptionIsUsedOnlyWhenChosenAndTheRiskIsLoggedOnce(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "a-key-that-isnt-hers")
-	h := newClaudeHarness(t, func(_ *Config, queen *ClaudeQueen) {
+	h := newClaudeHarness(t, func(_ *queenmail.Config, queen *queenmail.ClaudeQueen) {
 		queen.APIKey = ""
 		queen.Auth = "subscription"
 	})
@@ -318,7 +320,7 @@ func TestAnAnswerThatHappensToSayAlreadyInUseIsKept(t *testing.T) {
 
 // Parity: framework/server/tests/test_claude_code_queens.py::test_closing_kills_a_running_turn
 func TestClosingKillsARunningTurn(t *testing.T) {
-	h := newClaudeHarness(t, func(_ *Config, queen *ClaudeQueen) {
+	h := newClaudeHarness(t, func(_ *queenmail.Config, queen *queenmail.ClaudeQueen) {
 		queen.Env["FAKE_CLAUDE_SLEEP"] = "30"
 	})
 	if _, err := h.mail.Send(ava, "session_ava", claude, "Take your time.", nil); err != nil {
@@ -342,7 +344,7 @@ func TestClosingKillsARunningTurn(t *testing.T) {
 // times the fake binary's overlaps itself.
 func TestClaudeRunnerLimitsParallelTurns(t *testing.T) {
 	counterDir := t.TempDir()
-	h := newClaudeHarness(t, func(config *Config, queen *ClaudeQueen) {
+	h := newClaudeHarness(t, func(config *queenmail.Config, queen *queenmail.ClaudeQueen) {
 		config.MaxParallelTurns = 1
 		queen.Env["FAKE_CLAUDE_COUNTER"] = counterDir
 		queen.Env["FAKE_CLAUDE_SLEEP"] = "0.3"

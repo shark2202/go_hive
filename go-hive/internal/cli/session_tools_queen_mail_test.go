@@ -14,7 +14,7 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/qmail"
+	"github.com/aden-hive/hive-go/internal/queenmail"
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 )
@@ -31,14 +31,14 @@ type queenMailDeliverer struct {
 	toRef string
 }
 
-func (d *queenMailDeliverer) Deliver(_ context.Context, _, _, _ string, _ qmail.Letter) (string, error) {
+func (d *queenMailDeliverer) Deliver(_ context.Context, _, _, _ string, _ queenmail.Letter) (string, error) {
 	if d.toRef == "" {
-		return "", &qmail.Error{Message: "no deliverer session"}
+		return "", &queenmail.Error{Message: "no deliverer session"}
 	}
 	return d.toRef, nil
 }
 
-func (d *queenMailDeliverer) DeliverReply(_ context.Context, replyTo, _, _ string, _ qmail.Letter) (string, error) {
+func (d *queenMailDeliverer) DeliverReply(_ context.Context, replyTo, _, _ string, _ queenmail.Letter) (string, error) {
 	return replyTo, nil
 }
 
@@ -73,10 +73,10 @@ func queenMailConfig(t *testing.T, body string) string {
 
 // queenMailCatalogue builds a session catalogue with queen mail enabled, the
 // way the loader does for a queen chat session.
-func queenMailCatalogue(t *testing.T, home hivehome.Home, queenName, sessionID string) (*sessionToolCatalogue, *qmail.Mail) {
+func queenMailCatalogue(t *testing.T, home hivehome.Home, queenName, sessionID string) (*sessionToolCatalogue, *queenmail.Mail) {
 	t.Helper()
 	deliverer := &queenMailDeliverer{toRef: "session_thread_" + queenName}
-	mail := qmail.New(home, qmail.ConfigFromHive(hiveserver.HiveConfig(home)), deliverer)
+	mail := queenmail.New(home, queenmail.ConfigFromHive(hiveserver.HiveConfig(home)), deliverer)
 	root := t.TempDir()
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 	catalogue.enableQueenMail(mail, sessionID, queenName)
@@ -110,7 +110,7 @@ func callQueenMailTool(t *testing.T, catalogue *sessionToolCatalogue, name strin
 // Parity: framework/server/tests/test_queen_mail.py::test_the_tools_are_off_until_queen_mail_is_on
 func TestQueenMailToolsAreOffUntilQueenMailIsOn(t *testing.T) {
 	home := queenMailTestHome(t, `{}`)
-	mail := qmail.New(home, qmail.ConfigFromHive(hiveserver.HiveConfig(home)), &queenMailDeliverer{})
+	mail := queenmail.New(home, queenmail.ConfigFromHive(hiveserver.HiveConfig(home)), &queenMailDeliverer{})
 	root := t.TempDir()
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 	catalogue.enableQueenMail(mail, "session_ava", queenMailAva)
@@ -264,7 +264,7 @@ func TestQueenMailToolsRespectMaxDepth(t *testing.T) {
 	home := queenMailTestHome(t, queenMailConfig(t, `{"enabled": true, "queens": ["queen_ava", "queen_ivy"], "max_depth": 1}`))
 	root := t.TempDir()
 	deliverer := &queenMailDeliverer{toRef: "session_ava"}
-	mail := qmail.New(home, qmail.ConfigFromHive(hiveserver.HiveConfig(home)), deliverer)
+	mail := queenmail.New(home, queenmail.ConfigFromHive(hiveserver.HiveConfig(home)), deliverer)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 	catalogue.enableQueenMail(mail, "session_ava", queenMailAva)
 

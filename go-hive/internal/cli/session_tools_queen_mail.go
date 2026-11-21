@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/qmail"
+	"github.com/aden-hive/hive-go/internal/queenmail"
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
 )
 
@@ -28,7 +28,7 @@ const (
 // shared service (also behind the routes) and the caller a letter is
 // attributed to.
 type queenMailToolBinding struct {
-	mail      *qmail.Mail
+	mail      *queenmail.Mail
 	sessionID string
 	queenID   string
 }
@@ -37,18 +37,18 @@ type queenMailToolBinding struct {
 // catalogue when queen_mail is on and the session's queen takes part. It is
 // called only for queen chat sessions: a colony worker's catalogue never
 // enables them, matching upstream, where the tools are the queens' alone.
-func (c *sessionToolCatalogue) enableQueenMail(mail *qmail.Mail, sessionID, queenName string) {
+func (c *sessionToolCatalogue) enableQueenMail(mail *queenmail.Mail, sessionID, queenName string) {
 	if c == nil || c.queenMail != nil {
 		return
 	}
-	config := qmail.DefaultConfig()
+	config := queenmail.DefaultConfig()
 	if mail != nil {
 		config = mail.Config()
 	} else if c.home.Root != "" {
 		// A server whose queen mail isn't running still advertises the tools
 		// when configuration.json turns the feature on; each call then says so
 		// instead of the queen silently losing the capability.
-		config = qmail.ConfigFromHive(hiveserver.HiveConfig(c.home))
+		config = queenmail.ConfigFromHive(hiveserver.HiveConfig(c.home))
 	}
 	queenID := strings.TrimSpace(queenName)
 	// A session whose queen is picked later (no queen_name yet) is checked
@@ -120,7 +120,7 @@ func (b *queenMailToolBinding) execute(name string, input map[string]any) (strin
 // can write to at session start appended (list_queens has it as it is now).
 //
 // Parity: framework/tools/queen_mail_tools.py::_roster
-func messageQueenDescription(mail *qmail.Mail, queenID string) string {
+func messageQueenDescription(mail *queenmail.Mail, queenID string) string {
 	description := "Write to another queen. It returns at once; her answer arrives later as a message from her, " +
 		"\"[Name(queen_id)]: ...\", and each time you write she goes on with the same conversation with you. " +
 		"When another queen writes to you, just answer: your reply goes back to her without this tool. " +

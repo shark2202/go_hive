@@ -32,7 +32,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -186,8 +185,8 @@ type PythonOptions struct {
 	DefaultTimeout *time.Duration
 	// StallTimeout bounds how long the bridge may stay silent (no line from the
 	// child and no event) before Execute kills it and reports the stall. Zero
-	// means "use DefaultTimeout + pythonStallGrace"; HIVE_PLAYBOOK_STALL_TIMEOUT
-	// (seconds) overrides when this field is nil.
+	// means "use DefaultTimeout + pythonStallGrace". Deliberately not an env
+	// var: the Go side ships no env surface the Python reference lacks.
 	StallTimeout   *time.Duration
 	ConcurrencyCap *int
 }
@@ -339,8 +338,6 @@ func StartPythonPlaybook(ctx context.Context, script string, opts PythonOptions)
 	stallTimeout := defaultTimeout + pythonStallGrace
 	if opts.StallTimeout != nil && *opts.StallTimeout > 0 {
 		stallTimeout = *opts.StallTimeout
-	} else if envSeconds, ok := pythonStallTimeoutFromEnv(); ok {
-		stallTimeout = envSeconds
 	}
 	runID := opts.RunID
 	if runID == "" {
@@ -942,19 +939,6 @@ func (p *PythonPlaybook) stallRemaining(limit time.Duration) time.Duration {
 		left = time.Second
 	}
 	return left
-}
-
-// pythonStallTimeoutFromEnv reads HIVE_PLAYBOOK_STALL_TIMEOUT (seconds).
-func pythonStallTimeoutFromEnv() (time.Duration, bool) {
-	raw := strings.TrimSpace(os.Getenv("HIVE_PLAYBOOK_STALL_TIMEOUT"))
-	if raw == "" {
-		return 0, false
-	}
-	seconds, err := strconv.ParseFloat(raw, 64)
-	if err != nil || seconds <= 0 {
-		return 0, false
-	}
-	return time.Duration(seconds * float64(time.Second)), true
 }
 
 // trackRequest records an in-flight bridge request (the child asked, the host

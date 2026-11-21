@@ -125,7 +125,7 @@
 - `llm.api_key_env_var`：the env var named here is a fallback AFTER the credential store for Python's get_api_key; Go's MainSlotKey (session build) and llm_config (status/hot swap) follow the same order.
 - `llm.max_tokens`：missing -> model catalog -> DEFAULT_MAX_TOKENS=8192. Go consumes it for the queen turn budget (chatTurnMaxTokens → agentCtx.MaxTokens) with the same fallback chain, not only in the REST readback; the fallback chain and the built session's MaxTokens are pinned by TestChatTurnMaxTokensFollowsTheMainSlot / TestChatRuntimeBudgetsTheQueenTurnFromTheMainSlot.
 - `llm.max_context_tokens`：missing -> catalog -> 32000 (DEFAULT_MAX_CONTEXT_TOKENS). A queen without her own section budgets her loop by this value first (QueenMaxContextTokens falls through the main slot), matching get_queen_max_context_tokens.
-- `llm.aux_max_tokens`：both read the JSON int, else min(8192, llm.max_tokens). Wired: serve installs it process-wide with llm.SetAuxMaxTokens, and the recall/judge/sentinel/skill-test/title-namer call sites read llm.AuxMaxTokens() (the namer used to keep an 8192 placeholder; the limits lane wired it to the same knob and pinned it with TestTitleBudgetFollowsConfiguredAuxMaxTokens). Pinned by TestConfiguredAuxMaxTokensReachesTheJudge.
+- `llm.aux_max_tokens`：both read the JSON int, else min(8192, llm.max_tokens). Wired: serve installs it process-wide with llm.SetAuxMaxTokens, and the recall/judge/sentinel/skill-test call sites read llm.AuxMaxTokens(). Pinned by TestConfiguredAuxMaxTokensReachesTheJudge.
 - `llm.endpoint`：named endpoint must exist in model_endpoints; its stored credential (or its never-ambient placeholder) wins over ambient keys on both sides. Go's MainSlotKey checks it first, exactly like _endpoint_key.
 - `llm.extra_body`：non-object/empty -> not sent; copied verbatim into every request body. Go's MainSlotProvider installs it as the provider's extra kwargs at session build (upstream get_llm_extra_kwargs does the same), and a section PUT carries it to the rebuilt transport.
 - `llm.num_ctx`：only sent for provider=ollama on both sides. Go reads a JSON integer (json.Number included) and defaults to 16384; a non-integer/absent value keeps the default.
@@ -140,7 +140,7 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `loop.max_tool_result_chars` | int | 30000 | — | `core/framework/config.py:714` | `go_hive/go-hive/internal/agentloop/loop_config.go:132` (+1) | aligned |
+| `loop.max_tool_result_chars` | int | 30000 | — | `core/framework/config.py:714` | `go_hive/go-hive/internal/agentloop/loop_config.go:152` (+1) | aligned |
 
 - `loop.max_tool_result_chars`：both read the JSON int and fall back to the call site's value (30_000 global default). Wired: hiveconf.MaxToolResultChars applies to the queen chat loop (chatLoopConfig) and to each colony worker loop (BuildWorkerLoopConfig), so a pinned threshold moves the spillover point.
 
@@ -212,27 +212,27 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `queen_mail.enabled` | bool | false | — | `core/framework/config.py:1127` | `go_hive/go-hive/internal/qmail/config.go:120` | aligned |
-| `queen_mail.queens` | list[string] | null | — | `core/framework/config.py:1128` | `go_hive/go-hive/internal/qmail/config.go:122` | aligned |
-| `queen_mail.daily_limit` | int >= 1 | 100 | — | `core/framework/config.py:1100` | `go_hive/go-hive/internal/qmail/config.go:134` | aligned |
-| `queen_mail.max_depth` | int >= 1 | 8 | — | `core/framework/config.py:1102` | `go_hive/go-hive/internal/qmail/config.go:135` | aligned |
-| `queen_mail.max_parallel_turns` | int >= 1 | 2 | — | `core/framework/config.py:1106` | `go_hive/go-hive/internal/qmail/config.go:136` | aligned |
-| `queen_mail.claude_code.<id>.name` | string | id | — | `core/framework/config.py:1162` | `go_hive/go-hive/internal/qmail/config.go:157` | aligned |
-| `queen_mail.claude_code.<id>.title` | string | Claude Code | — | `core/framework/config.py:1163` | `go_hive/go-hive/internal/qmail/config.go:158` | aligned |
-| `queen_mail.claude_code.<id>.command` | string \| list[string] | ["claude"] | — | `core/framework/config.py:1156` | `go_hive/go-hive/internal/qmail/config.go:159` | aligned |
-| `queen_mail.claude_code.<id>.auth` | "api_key" \| "subscription" | api_key | — | `core/framework/config.py:1165` | `go_hive/go-hive/internal/qmail/config.go:160` | aligned |
-| `queen_mail.claude_code.<id>.api_key` | string | null | — | `core/framework/config.py:1166` | `go_hive/go-hive/internal/qmail/config.go:161` | aligned |
-| `queen_mail.claude_code.<id>.api_base` | string | null | — | `core/framework/config.py:1167` | `go_hive/go-hive/internal/qmail/config.go:162` | aligned |
-| `queen_mail.claude_code.<id>.config_dir` | string | HIVE_HOME/claude_code/<id>/config | — | `core/framework/config.py:1168` | `go_hive/go-hive/internal/qmail/config.go:163` | aligned |
-| `queen_mail.claude_code.<id>.cwd` | string | HIVE_HOME/claude_code/<id>/workspace | — | `core/framework/config.py:1169` | `go_hive/go-hive/internal/qmail/config.go:164` | aligned |
-| `queen_mail.claude_code.<id>.permission_mode` | string | default | — | `core/framework/config.py:1170` | `go_hive/go-hive/internal/qmail/config.go:165` | aligned |
-| `queen_mail.claude_code.<id>.allowed_tools` | list[string] | [] | — | `core/framework/config.py:1171` | `go_hive/go-hive/internal/qmail/config.go:166` | aligned |
-| `queen_mail.claude_code.<id>.disallowed_tools` | list[string] | [] | — | `core/framework/config.py:1172` | `go_hive/go-hive/internal/qmail/config.go:167` | aligned |
-| `queen_mail.claude_code.<id>.add_dirs` | list[string] | [] | — | `core/framework/config.py:1173` | `go_hive/go-hive/internal/qmail/config.go:168` | aligned |
-| `queen_mail.claude_code.<id>.model` | string | null | — | `core/framework/config.py:1174` | `go_hive/go-hive/internal/qmail/config.go:169` | aligned |
-| `queen_mail.claude_code.<id>.timeout_minutes` | int >= 1 | 30 | — | `core/framework/config.py:1082` | `go_hive/go-hive/internal/qmail/config.go:170` | aligned |
-| `queen_mail.claude_code.<id>.system_prompt` | string | null | — | `core/framework/config.py:1176` | `go_hive/go-hive/internal/qmail/config.go:171` | aligned |
-| `queen_mail.claude_code.<id>.env` | object str->str | {} | — | `core/framework/config.py:1177` | `go_hive/go-hive/internal/qmail/config.go:172` | aligned |
+| `queen_mail.enabled` | bool | false | — | `core/framework/config.py:1127` | `go_hive/go-hive/internal/queenmail/config.go:120` | aligned |
+| `queen_mail.queens` | list[string] | null | — | `core/framework/config.py:1128` | `go_hive/go-hive/internal/queenmail/config.go:122` | aligned |
+| `queen_mail.daily_limit` | int >= 1 | 100 | — | `core/framework/config.py:1100` | `go_hive/go-hive/internal/queenmail/config.go:134` | aligned |
+| `queen_mail.max_depth` | int >= 1 | 8 | — | `core/framework/config.py:1102` | `go_hive/go-hive/internal/queenmail/config.go:135` | aligned |
+| `queen_mail.max_parallel_turns` | int >= 1 | 2 | — | `core/framework/config.py:1106` | `go_hive/go-hive/internal/queenmail/config.go:136` | aligned |
+| `queen_mail.claude_code.<id>.name` | string | id | — | `core/framework/config.py:1162` | `go_hive/go-hive/internal/queenmail/config.go:157` | aligned |
+| `queen_mail.claude_code.<id>.title` | string | Claude Code | — | `core/framework/config.py:1163` | `go_hive/go-hive/internal/queenmail/config.go:158` | aligned |
+| `queen_mail.claude_code.<id>.command` | string \| list[string] | ["claude"] | — | `core/framework/config.py:1156` | `go_hive/go-hive/internal/queenmail/config.go:159` | aligned |
+| `queen_mail.claude_code.<id>.auth` | "api_key" \| "subscription" | api_key | — | `core/framework/config.py:1165` | `go_hive/go-hive/internal/queenmail/config.go:160` | aligned |
+| `queen_mail.claude_code.<id>.api_key` | string | null | — | `core/framework/config.py:1166` | `go_hive/go-hive/internal/queenmail/config.go:161` | aligned |
+| `queen_mail.claude_code.<id>.api_base` | string | null | — | `core/framework/config.py:1167` | `go_hive/go-hive/internal/queenmail/config.go:162` | aligned |
+| `queen_mail.claude_code.<id>.config_dir` | string | HIVE_HOME/claude_code/<id>/config | — | `core/framework/config.py:1168` | `go_hive/go-hive/internal/queenmail/config.go:163` | aligned |
+| `queen_mail.claude_code.<id>.cwd` | string | HIVE_HOME/claude_code/<id>/workspace | — | `core/framework/config.py:1169` | `go_hive/go-hive/internal/queenmail/config.go:164` | aligned |
+| `queen_mail.claude_code.<id>.permission_mode` | string | default | — | `core/framework/config.py:1170` | `go_hive/go-hive/internal/queenmail/config.go:165` | aligned |
+| `queen_mail.claude_code.<id>.allowed_tools` | list[string] | [] | — | `core/framework/config.py:1171` | `go_hive/go-hive/internal/queenmail/config.go:166` | aligned |
+| `queen_mail.claude_code.<id>.disallowed_tools` | list[string] | [] | — | `core/framework/config.py:1172` | `go_hive/go-hive/internal/queenmail/config.go:167` | aligned |
+| `queen_mail.claude_code.<id>.add_dirs` | list[string] | [] | — | `core/framework/config.py:1173` | `go_hive/go-hive/internal/queenmail/config.go:168` | aligned |
+| `queen_mail.claude_code.<id>.model` | string | null | — | `core/framework/config.py:1174` | `go_hive/go-hive/internal/queenmail/config.go:169` | aligned |
+| `queen_mail.claude_code.<id>.timeout_minutes` | int >= 1 | 30 | — | `core/framework/config.py:1082` | `go_hive/go-hive/internal/queenmail/config.go:170` | aligned |
+| `queen_mail.claude_code.<id>.system_prompt` | string | null | — | `core/framework/config.py:1176` | `go_hive/go-hive/internal/queenmail/config.go:171` | aligned |
+| `queen_mail.claude_code.<id>.env` | object str->str | {} | — | `core/framework/config.py:1177` | `go_hive/go-hive/internal/queenmail/config.go:172` | aligned |
 
 - `queen_mail.enabled`：only JSON true enables it; 1/"true" do not.
 - `queen_mail.queens`：absent -> every queen; non-list -> every queen; empty entries dropped.

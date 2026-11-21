@@ -298,10 +298,10 @@ claude          # 然后在交互界面里 /login</code></pre>
   <table>
     <thead><tr><th style="width:40%">能力</th><th style="width:16%">Python 上游</th><th style="width:16%">go_hive</th><th>证据 / 说明</th></tr></thead>
     <tbody>
-      <tr><td>配置解析 <code>claude_code</code></td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td><code>internal/qmail/config.go</code> 覆盖 command/auth/api_key/api_base/config_dir/cwd/permission_mode/tools/add_dirs/model/timeout/system_prompt/env。</td></tr>
-      <tr><td>会话记录 <code>conversations.json</code></td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td><code>internal/qmail/conversations.go</code> 持久化 peer/reply_to/started，与 Python 版可互读。</td></tr>
-      <tr><td>只读 dashboard 路由</td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td><code>internal/server/claude_code_queens.go</code>（deps：配置 + <code>conversations.json</code> + 会话文件 + running）与 <code>internal/qmail/claude_transcript.go</code>；<code>GET /api/claude-code-queens</code>、transcript 200/404/400 与上游一致，见 <code>docs/claude-code-dashboard.md</code>。</td></tr>
-      <tr><td><code>claude -p</code> 回合</td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td><code>internal/qmail/claude_runner.go</code> / <code>claude_runner_turn.go</code>：stdin prompt、JSON 结果、失败/超时文案。</td></tr>
+      <tr><td>配置解析 <code>claude_code</code></td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td><code>internal/queenmail/config.go</code> 覆盖 command/auth/api_key/api_base/config_dir/cwd/permission_mode/tools/add_dirs/model/timeout/system_prompt/env。</td></tr>
+      <tr><td>会话记录 <code>conversations.json</code></td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td><code>internal/claudecode/conversations.go</code> 持久化 peer/reply_to/started，与 Python 版可互读。</td></tr>
+      <tr><td>只读 dashboard 路由</td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td><code>internal/server/claude_code_queens.go</code>（deps：配置 + <code>conversations.json</code> + 会话文件 + running）与 <code>internal/claudecode/claude_transcript.go</code>；<code>GET /api/claude-code-queens</code>、transcript 200/404/400 与上游一致，见 <code>docs/claude-code-dashboard.md</code>。</td></tr>
+      <tr><td><code>claude -p</code> 回合</td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td><code>internal/claudecode/claude_runner.go</code> / <code>claude_runner_turn.go</code>：stdin prompt、JSON 结果、失败/超时文案。</td></tr>
       <tr><td>会话创建/恢复（--session-id / --resume）</td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td>首轮 <code>--session-id</code>，成功后 <code>--resume</code>；lost/taken 记录修正并重试一次。</td></tr>
       <tr><td>MCP 注入与单会话 token</td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td><code>hive queen-mail-mcp</code>（stdio JSON-RPC，list_queens/message_queen）；配置 0600、回合结束删除。</td></tr>
       <tr><td>队列合并 / 回信 / 失败回传</td><td><span class="pill ok">已实现</span></td><td><span class="pill ok">已实现</span></td><td><code>max_parallel_turns</code> 生效；回合中到达的信合并到下一回合；回复按 <code>reply_to</code> 回写；丢弃写 <code>dropped</code> 审计。</td></tr>
@@ -313,7 +313,7 @@ claude          # 然后在交互界面里 /login</code></pre>
 
 <section id="checklist">
   <h2><span class="num">10</span>验收清单与当前状态</h2>
-  <p class="sub">2026-11-20：第 1、2、3、5、6、7、8、9、10 项已有自动化测试（<code>internal/qmail/claude_runner*_test.go</code>、<code>mcp_stdio_test.go</code>、<code>claude_transcript_test.go</code>、<code>internal/server/claude_code_queens_test.go</code>）与一次真实 <code>claude -p</code> 联调；第 4 项的工具契约由 fake CLI + MCP httptest 覆盖，真实模型主动调用未联调。</p>
+  <p class="sub">2026-11-20：第 1、2、3、5、6、7、8、9、10 项已有自动化测试（<code>internal/claudecode/claude_runner*_test.go</code>、<code>mcp_stdio_test.go</code>、<code>claude_transcript_test.go</code>、<code>internal/server/claude_code_queens_test.go</code>）与一次真实 <code>claude -p</code> 联调；第 4 项的工具契约由 fake CLI + MCP httptest 覆盖，真实模型主动调用未联调。</p>
   <table>
     <thead><tr><th style="width:8%">#</th><th style="width:34%">验收项</th><th>判定标准</th></tr></thead>
     <tbody>
@@ -337,8 +337,8 @@ claude          # 然后在交互界面里 /login</code></pre>
 </section>
 
 <footer>
-  <p>生成于 2026-11-20 · 来源：<span class="mono">docs/configuration.md</span>、<span class="mono">core/framework/server/claude_code_queens.py</span>、<span class="mono">go_hive/go-hive/internal/qmail/*</span>、<span class="mono">internal/server/routes_queens_claude_code.go</span>。</p>
-  <p>本文件为静态说明；“已实现/未实现”以 <span class="mono">internal/qmail/claude_runner*_test.go</span>、<span class="mono">internal/server/claude_code_queens_test.go</span>、<span class="mono">make ci</span> 与 2026-11-20 的真实 <span class="mono">claude -p</span> 联调为准，细节见 <span class="mono">docs/claude-code-queen-runner.md</span> 与 <span class="mono">docs/claude-code-dashboard.md</span>。</p>
+  <p>生成于 2026-11-20 · 来源：<span class="mono">docs/configuration.md</span>、<span class="mono">core/framework/server/claude_code_queens.py</span>、<span class="mono">go_hive/go-hive/internal/queenmail/*</span>、<span class="mono">go_hive/go-hive/internal/claudecode/*</span>、<span class="mono">internal/server/routes_queens_claude_code.go</span>。</p>
+  <p>本文件为静态说明；“已实现/未实现”以 <span class="mono">internal/claudecode/claude_runner*_test.go</span>、<span class="mono">internal/server/claude_code_queens_test.go</span>、<span class="mono">make ci</span> 与 2026-11-20 的真实 <span class="mono">claude -p</span> 联调为准，细节见 <span class="mono">docs/claude-code-queen-runner.md</span> 与 <span class="mono">docs/claude-code-dashboard.md</span>。</p>
 </footer>
 
 </div>

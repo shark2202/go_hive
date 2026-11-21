@@ -9,13 +9,13 @@ Go 实现分布：
 
 | 层 | 文件 |
 | --- | --- |
-| 配置解析（完整 entry） | `internal/qmail/config.go` |
-| 运行器（队列、回合、环境、参数、MCP 配置、结果解析） | `internal/qmail/claude_runner.go`、`internal/qmail/claude_runner_turn.go` |
-| 会话记录与收件箱（conversations.json、inbox） | `internal/qmail/conversations.go` |
-| 进程组创建 / 进程树终止 | `internal/qmail/procsys_unix.go`、`internal/qmail/procsys_windows.go` |
-| `hive` MCP server（stdio JSON-RPC） | `internal/qmail/mcp_stdio.go` |
+| 配置解析（完整 entry） | `internal/queenmail/config.go` |
+| 运行器（队列、回合、环境、参数、MCP 配置、结果解析） | `internal/claudecode/claude_runner.go`、`internal/claudecode/claude_runner_turn.go` |
+| 会话记录与收件箱（conversations.json、inbox） | `internal/claudecode/conversations.go` |
+| 进程组创建 / 进程树终止 | `internal/claudecode/procsys_unix.go`、`internal/claudecode/procsys_windows.go` |
+| `hive` MCP server（stdio JSON-RPC） | `internal/queenmail/mcp_stdio.go` |
 | CLI 子命令 `hive queen-mail-mcp` | `internal/cli/queen_mail_mcp.go` |
-| 只读 dashboard 视图（`/api/claude-code-queens`） | `internal/qmail/claude_transcript.go`、`internal/server/claude_code_queens.go`、`internal/server/routes_queens_claude_code.go`（见 `docs/claude-code-dashboard.md`） |
+| 只读 dashboard 视图（`/api/claude-code-queens`） | `internal/claudecode/claude_transcript.go`、`internal/server/claude_code_queens.go`、`internal/server/routes_queens_claude_code.go`（见 `docs/claude-code-dashboard.md`） |
 | 接线（每进程一个运行器；serve 监听后回填 base_url） | `internal/server/adapters_qmail.go`、`internal/cli/loader.go` |
 
 ## 1. 配置
@@ -120,14 +120,14 @@ Go 实现分布：
 | `TestQueenMailMCPCommandServesJSONRPC` | `hive queen-mail-mcp` 子命令真的接通 |
 | `TestClaudeCodeQueenRealTurnWhenClaudeIsConfigured` | 真实 `claude -p` 联调（默认 skip，`HIVE_CLAUDE_REAL_TEST=1` 开启，见下） |
 
-绝大多数测试用 `internal/qmail/claude_runner_test.go` 里的 fake `claude` 脚本（记录 args/stdin/cwd/env/MCP 配置、按序输出预置结果、可 sleep、可产出 lost/taken/error）；Parity 注解指向 `core/framework/server/tests/test_claude_code_queens.py` 的同名用例，Go 特有测试带 `Parity-exempt` 理由。
+绝大多数测试用 `internal/claudecode/claude_runner_test.go` 里的 fake `claude` 脚本（记录 args/stdin/cwd/env/MCP 配置、按序输出预置结果、可 sleep、可产出 lost/taken/error）；Parity 注解指向 `core/framework/server/tests/test_claude_code_queens.py` 的同名用例，Go 特有测试带 `Parity-exempt` 理由。
 
 ## 7. 真实 Claude Code 联调（已验证，2026-11-20）
 
 `TestClaudeCodeQueenRealTurnWhenClaudeIsConfigured` 使用**临时 HIVE_HOME**、真实配置解析、真实 `claude -p` 进程：`hive` 的写信人（fake deliverer 记录回信）→ 信件 → 运行器回合 → 回复回写 + `conversations.json started=true`。**该用例默认 skip**（避免 `make test` 依赖外网与机器登录态）；要真实跑需显式开启：
 
 ```bash
-HIVE_CLAUDE_REAL_TEST=1 go test ./internal/qmail/ -run TestClaudeCodeQueenRealTurnWhenClaudeIsConfigured -v
+HIVE_CLAUDE_REAL_TEST=1 go test ./internal/claudecode/ -run TestClaudeCodeQueenRealTurnWhenClaudeIsConfigured -v
 ```
 
 本机结果（2026-11-20，`HIVE_CLAUDE_REAL_TEST=1` 时）：
@@ -151,8 +151,8 @@ HIVE_CLAUDE_REAL_TEST=1 go test ./internal/qmail/ -run TestClaudeCodeQueenRealTu
 
 ```bash
 cd go_hive/go-hive
-go test ./internal/qmail/ -run Claude -v -count=1          # fake CLI 全套
-go test ./internal/qmail/ -run RealTurn -v -count=1         # 真实 claude -p（计费一次小回合）
+go test ./internal/claudecode/ -run Claude -v -count=1     # fake CLI 全套
+go test ./internal/claudecode/ -run RealTurn -v -count=1    # 真实 claude -p（计费一次小回合）
 bash ../scripts/check_parity.sh . && bash ../scripts/check_parity_targets.sh . ../../core
 make ci
 ```

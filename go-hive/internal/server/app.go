@@ -304,7 +304,7 @@ func NewApp(deps AppDeps) *App {
 		Home:    deps.Home,
 		Manager: deps.Manager,
 	})
-	// Queen mail runs on the ported qmail backend: tokens, inboxes, queue and
+	// Queen mail runs on the ported queenmail backend: tokens, inboxes, queue and
 	// delivery through the same session-create hook as the queen routes. With
 	// the feature off the adapter keeps the routes' own 401 contract. The
 	// adapter is recorded on the manager so chat sessions register the two
@@ -325,7 +325,7 @@ func NewApp(deps AppDeps) *App {
 	// ones, their conversations and the transcript of one, from the same
 	// queen-mail service the routes above use (her runner included, for the
 	// "running" mark).
-	RegisterClaudeCodeQueenRoutes(mux, NewClaudeCodeQueenRouteDeps(queenMail.Mail()))
+	RegisterClaudeCodeQueenRoutes(mux, NewClaudeCodeQueenRouteDeps(queenMail.Mail(), queenMail.ClaudeStore(), queenMail.ClaudeRunner()))
 
 	if app.HasFrontend() {
 		mux.HandleFunc("GET /", app.handleSPA)

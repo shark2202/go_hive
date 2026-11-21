@@ -1,12 +1,9 @@
-package qmail
+package queenmail
 
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
-
-	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
 // Parity-exempt: letter ids are Go-side filenames; a tampered queue/inbox line
@@ -22,11 +19,6 @@ func TestStoreRejectsTraversalLetterID(t *testing.T) {
 	}
 	if got := validLetterID("hop_0123456789ab"); !got {
 		t.Fatal("generated hop id rejected")
-	}
-	claude := NewClaudeStore(hivehome.Home{Root: root})
-	home := claude.Home("../../escape")
-	if !strings.HasPrefix(home, filepath.Join(root, "claude_code")+string(filepath.Separator)) {
-		t.Fatalf("ClaudeStore.Home escaped: %q", home)
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aden-hive/hive-go/internal/qmail"
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // queenMailMCPCommands is the hidden plumbing command; it is not part of a
@@ -26,7 +26,7 @@ func (r *Runner) queenMailMCPCommands() []*commandSpec {
 		// verb itself stays fully callable (the queen-mail runner needs it).
 		Hidden: true,
 		Run: func(*parsedArgs) int {
-			if err := qmail.ServeQueenMailMCP(r.Stdin, r.Stdout, os.Getenv); err != nil {
+			if err := queenmail.ServeQueenMailMCP(r.Stdin, r.Stdout, os.Getenv); err != nil {
 				fmt.Fprintf(r.Stderr, "queen-mail-mcp: %v\n", err)
 				return 1
 			}

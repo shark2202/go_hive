@@ -1,9 +1,9 @@
-// Package qmail carries letters between queens: a durable letter store, a
+// Package queenmail carries letters between queens: a durable letter store, a
 // pending-delivery queue, delivery to Hive queens (through a port the server
 // adapter implements) and the audit log at queens/mail.jsonl.
 //
 // Parity: framework/server/queen_mail.py
-package qmail
+package queenmail
 
 import (
 	"encoding/json"

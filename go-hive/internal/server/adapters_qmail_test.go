@@ -14,7 +14,7 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/qmail"
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 type queenMailRouteNode struct {
@@ -222,7 +222,7 @@ func TestQueenMailAdapterWakesAStoppedWritersSession(t *testing.T) {
 			return session, nil
 		},
 	})
-	letter := qmail.Letter{ID: "hop_1", Kind: qmail.KindReply, From: "queen_ivy", To: "queen_ava", FromName: "Ivy", Text: "North shore done.", Depth: 2}
+	letter := queenmail.Letter{ID: "hop_1", Kind: queenmail.KindReply, From: "queen_ivy", To: "queen_ava", FromName: "Ivy", Text: "North shore done.", Depth: 2}
 	sessionID, err := adapter.DeliverReply(context.Background(), "session_ava", "queen_ivy", "queen_ava", letter)
 	if err != nil || sessionID != "session_ava" {
 		t.Fatalf("session = %q, err = %v", sessionID, err)
@@ -307,7 +307,7 @@ func TestQueenMailRepliesGoBackToTheWriterAndContinueTheChain(t *testing.T) {
 
 	// The reply continued the chain: her next letter is hop 3. The delivery
 	// worker records the cause right after the reply lands, so poll for it.
-	var cause *qmail.Cause
+	var cause *queenmail.Cause
 	for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); {
 		if cause = adapter.Mail().CauseFor("session_ava"); cause != nil {
 			break

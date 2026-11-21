@@ -1,4 +1,4 @@
-package qmail
+package claudecode
 
 import (
 	"os"
@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 // claudeSessionLines mirrors the session file upstream's dashboard test writes
@@ -56,7 +58,7 @@ func TestReadTranscriptShowsLettersSpeechToolsAndResults(t *testing.T) {
 // Parity: framework/server/claude_code_queens.py::_session_file
 func TestSessionFileFindsHerProjectSession(t *testing.T) {
 	home := newMailHome(t)
-	store := NewClaudeStore(home)
+	store := NewStore(home)
 	configDir := filepath.Join(t.TempDir(), "claude-config")
 	// Two project folders hold a session of the same id: upstream sorts the
 	// paths and takes the first.
@@ -64,7 +66,7 @@ func TestSessionFileFindsHerProjectSession(t *testing.T) {
 	want := filepath.Join(configDir, "projects", "a-project", "cc-session-1.jsonl")
 	writeSessionFile(t, want, []string{`{}`})
 
-	queen := ClaudeQueen{ID: claude, ConfigDir: configDir}
+	queen := queenmail.ClaudeQueen{ID: claude, ConfigDir: configDir}
 	if got := store.SessionFile(queen, "cc-session-1"); got != want {
 		t.Fatalf("session file = %q, want %q", got, want)
 	}
@@ -74,7 +76,7 @@ func TestSessionFileFindsHerProjectSession(t *testing.T) {
 	// Without config_dir it is her Hive home folder, as the runner uses it.
 	defaultFile := filepath.Join(home.Root, "claude_code", claude, "config", "projects", "p", "cc-session-2.jsonl")
 	writeSessionFile(t, defaultFile, []string{`{}`})
-	if got := store.SessionFile(ClaudeQueen{ID: claude}, "cc-session-2"); got != defaultFile {
+	if got := store.SessionFile(queenmail.ClaudeQueen{ID: claude}, "cc-session-2"); got != defaultFile {
 		t.Fatalf("default session file = %q, want %q", got, defaultFile)
 	}
 }
@@ -129,7 +131,7 @@ func TestReadTranscriptOfMissingOrBrokenFileIsEmpty(t *testing.T) {
 // Parity-exempt: 上游没有对 worker 存活状态的直接单测（dashboard 测试只断言 running=false）；
 // 这里用 fake claude 钉住「回合在跑」的会话被标记，跑完又落回。
 func TestRunningMarksAConversationWithATurnInFlight(t *testing.T) {
-	h := newClaudeHarness(t, func(_ *Config, queen *ClaudeQueen) {
+	h := newClaudeHarness(t, func(_ *queenmail.Config, queen *queenmail.ClaudeQueen) {
 		queen.Env["FAKE_CLAUDE_SLEEP"] = "1"
 	})
 	if h.runner.Running("claude_code:queen_claude:nope") {
@@ -139,7 +141,7 @@ func TestRunningMarksAConversationWithATurnInFlight(t *testing.T) {
 	if _, err := h.mail.Send(ava, "session_ava", claude, "Where is the north shore?", nil); err != nil {
 		t.Fatal(err)
 	}
-	conversations := h.mail.Claude().Conversations(claude)
+	conversations := h.store.Conversations(claude)
 	if len(conversations) != 1 {
 		t.Fatalf("conversations = %#v", conversations)
 	}

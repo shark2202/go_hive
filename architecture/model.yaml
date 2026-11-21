@@ -136,9 +136,13 @@ packages:
     layer: orchestration
     responsibility: "Playbook 定义与带并发上限的 lane 执行器。"
     stability: evolving
-  - package: internal/qmail
+  - package: internal/queenmail
     layer: orchestration
-    responsibility: "Queen 之间的信件存储、待投递队列与 queens/mail.jsonl 审计日志。"
+    responsibility: "Queen 之间的信件引擎：信件存储、待投递队列、queens/mail.jsonl 审计日志与 hive MCP stdio 面。"
+    stability: evolving
+  - package: internal/claudecode
+    layer: orchestration
+    responsibility: "Claude Code queen 运行时：会话记录与收件箱、claude -p 回合、转录读取与进程树管理。"
     stability: evolving
   - package: internal/longmemeval
     layer: orchestration
@@ -483,7 +487,7 @@ capabilities:
     name: "渠道与仪表盘"
     business_outcome: "同一套会话既能从 Web Dashboard 看，也能从 CLI 或聊天渠道接入；状态与事件对操作者可见。"
     actors: ["客户", "值班人", "Dashboard"]
-    modules: ["internal/server", "internal/server/uiembed", "internal/runtimehealth", "internal/resources", "internal/senders", "internal/qmail", "internal/globaldb"]
+    modules: ["internal/server", "internal/server/uiembed", "internal/runtimehealth", "internal/resources", "internal/senders", "internal/queenmail", "internal/claudecode", "internal/globaldb"]
     operates: ["internal/server", "internal/cli"]
     entrypoints: ["CLI hive serve", "CLI hive open", "HTTP GET /api/channels", "HTTP GET /api/events/global (SSE)"]
     state_artifacts: ["~/.hive/queens/{queen}/sessions/{session}/（元数据与事件）", "~/.hive/event_logs/events.jsonl", "~/.hive/colonies/{colony}/notifications.json"]

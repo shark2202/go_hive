@@ -1,4 +1,4 @@
-package qmail
+package queenmail
 
 import (
 	"crypto/rand"

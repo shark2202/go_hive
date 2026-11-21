@@ -12,7 +12,7 @@ import (
 )
 
 // Parity-exempt: 上游以 pytest 直接调用 queen_mail_mcp 模块；Go 侧另测命令装配
-// —— `hive queen-mail-mcp` 必须真的把 stdio JSON-RPC 接到 qmail.ServeQueenMailMCP。
+// —— `hive queen-mail-mcp` 必须真的把 stdio JSON-RPC 接到 queenmail.ServeQueenMailMCP。
 func TestQueenMailMCPCommandServesJSONRPC(t *testing.T) {
 	var seenToken string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

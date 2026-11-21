@@ -1,4 +1,4 @@
-package qmail
+package queenmail
 
 // Parity: framework/server/queen_mail_mcp.py
 //

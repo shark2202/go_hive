@@ -11,8 +11,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aden-hive/hive-go/internal/claudecode"
 	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/qmail"
+	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
 const (
@@ -69,8 +70,10 @@ func writeTestFile(t *testing.T, path, body string) {
 // the same service NewApp wires.
 func dashboardMux(t *testing.T, home hivehome.Home) *http.ServeMux {
 	t.Helper()
-	mail := qmail.New(home, qmail.ConfigFromHive(HiveConfig(home)), nil)
-	return claudeCodeTestMux(NewClaudeCodeQueenRouteDeps(mail))
+	mail := queenmail.New(home, queenmail.ConfigFromHive(HiveConfig(home)), nil)
+	store := claudecode.NewStore(home)
+	mail.SetClaudeInboxes(store)
+	return claudeCodeTestMux(NewClaudeCodeQueenRouteDeps(mail, store, nil))
 }
 
 // Parity: framework/server/tests/test_claude_code_queens.py::test_the_dashboard_lists_her_conversations_and_reads_one
@@ -201,7 +204,7 @@ func TestTheDashboardIsEmptyWithQueenMailOffYetReadsAConfiguredQueensTranscript(
 
 // Parity-exempt: Go 装配分支；没有 queen-mail 服务时等同上游 `mail is None`。
 func TestTheDashboardWithoutQueenMailRuntimeIsEmpty(t *testing.T) {
-	mux := claudeCodeTestMux(NewClaudeCodeQueenRouteDeps(nil))
+	mux := claudeCodeTestMux(NewClaudeCodeQueenRouteDeps(nil, nil, nil))
 
 	listed := httptest.NewRecorder()
 	mux.ServeHTTP(listed, httptest.NewRequest(http.MethodGet, "/api/claude-code-queens", nil))

@@ -1,6 +1,6 @@
 //go:build windows
 
-package qmail
+package claudecode
 
 import (
 	"os/exec"
