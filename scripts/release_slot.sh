@@ -117,14 +117,35 @@ prev_slot_dir="$(ls -1d "$SLOTS"/20*-* 2>/dev/null | sort | while read -r d; do
 done | tail -1)"
 compat_status="skipped"
 compat_detail="no previous slot with a hive binary"
+# 孤儿测试 serve 会占住 889x 端口（lane 探针被 kill 后 PPID=1，HIVE_HOME 在 scratch）。
+# 只清 HIVE_HOME 指向 cache/scratch 的进程；主 serve 与用户 home 不受影响。
+for pid in $(lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | awk '$9 ~ /:(88|89)[0-9][0-9]$/ {print $2}' | sort -u); do
+  home="$(ps eww -p "$pid" 2>/dev/null | tr " " "\n" | grep "^HIVE_HOME=" | head -1)"
+  case "$home" in
+    *cache/scratch/*) kill "$pid" 2>/dev/null && echo "release-slot: killed orphan test serve pid=$pid ($home)" >>"$log" ;;
+  esac
+done
+# 端口基址：默认 8890；被占则自动上移（或 HIVE_SLOT_COMPAT_PORT_BASE 覆盖）。
+pick_port_base() {
+  local base="${HIVE_SLOT_COMPAT_PORT_BASE:-8890}" i
+  for _ in 1 2 3 4 5 6; do
+    for i in 0 1 2 3 4 5 6 7 8 9; do
+      if lsof -nP -iTCP:$((base + i)) -sTCP:LISTEN >/dev/null 2>&1; then break; fi
+      [ "$i" = 9 ] && { echo "$base"; return 0; }
+    done
+    base=$((base + 20))
+  done
+  echo "${HIVE_SLOT_COMPAT_PORT_BASE:-8890}"
+}
 if [ -n "$prev_slot_dir" ]; then
   compat_work="$SLOTS/.compat/$slot_id"
   rm -rf "$compat_work"; mkdir -p "$compat_work"
-  echo "release-slot: upgrade-compat vs $(basename "$prev_slot_dir")" >>"$log"
+  compat_port_base="$(pick_port_base)"
+  echo "release-slot: upgrade-compat vs $(basename "$prev_slot_dir") (port-base $compat_port_base)" >>"$log"
   if bash "$GO_ROOT/scripts/upgrade_compat_check.sh" \
       --old-dir "$prev_slot_dir" --new-dir "$out" \
       --work "$compat_work" --out "$out/compat.json" \
-      --label "slot-$slot_id" --port-base 8890 >>"$log" 2>&1; then
+      --label "slot-$slot_id" --port-base "$compat_port_base" >>"$log" 2>&1; then
     compat_status="ok"
     compat_detail="PASS vs $(basename "$prev_slot_dir")"
   else
