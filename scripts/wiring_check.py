@@ -91,7 +91,7 @@ WIRING: tuple[WiringPoint, ...] = (
         path="internal/cli/loader_colony_host.go",
         description="colony 宿主：queen/worker 模型槽位与 worker 工具 keep-set 接线",
         requirements=(
-            Requirement("queen provider 构造", r"queenAwareChatProvider\(home, model, colonyQueenName\(home, colonyID\)\)"),
+            Requirement("queen provider 构造", r"queenAwareChatProvider\(home, model, queenID\)"),
             Requirement("worker provider 构造", r"workerChatProvider\(home\)"),
             Requirement("WorkerKeepSet 接线", r"WorkerKeepSet:\s*hiveserver\.WorkerKeepSetFromConfig\(home\)"),
         ),
