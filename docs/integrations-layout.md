@@ -168,7 +168,7 @@ cd go_hive/go-hive
 go test ./...        # 全绿
 go vet ./...         # 0
 gofmt -l .           # 空
-make ci              # fmt-check vet test cross parity parity-targets wiring-check
+make ci              # fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check
 ```
 
 九门禁（`make ci`）：`fmt-check`、`vet`、`test`、`cross`、`parity`、

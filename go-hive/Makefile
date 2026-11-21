@@ -16,7 +16,7 @@
 #   make cross      CGO_ENABLED=0 交叉编译 6 个平台到 dist/
 #   make parity          每个 Test 必须带 // Parity: 或 // Parity-exempt:
 #   make parity-targets  // Parity: 引用的 Python 测试必须真实存在
-#   make ci              依次执行 fmt-check vet test cross parity parity-targets
+#   make ci              依次执行 fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check
 #
 # 入口约定：./cmd/... 是 CLI 入口目录。当前该目录尚未落地 main 包，
 # 因此 build/cross 只做编译验证，不会产出二进制；等 cmd/hive 落地后
@@ -54,7 +54,7 @@ help:
 	@echo "  make cli-surface-check    CLI 对外面契约重采 + 对拍（递归 --help + 退出码探针）"
 	@echo "  make compat-check         冻结契约自洽门禁（env/config/storage/DB schema/API 路由/工具面）"
 	@echo "  make upgrade-compat-check 升级兼容门禁（PREV_SLOT=<上一交付二进制目录> [NEW_SLOT=...]）"
-	@echo "  make ci          fmt-check + vet + test + cross + parity + parity-targets + wiring + compat-check"
+	@echo "  make ci          fmt-check + vet + test + cross + parity + parity-targets + wiring + compat-check + arch-check"
 
 test:
 	$(OFFLINE) $(GO) test ./...

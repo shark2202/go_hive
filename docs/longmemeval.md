@@ -113,7 +113,7 @@ go build ./cmd/hive-longmemeval && ./hive-longmemeval run \
 
 - `internal/longmemeval`：数据拆分/截断拒绝、id 校验、选题分层与确定性、judge prompt 逐段断言 + 官方请求设置 + 重试/温度回退、结果行与尾部修复、断点续跑、汇总口径（含 Wilson 区间数值）、rejudge、fixture 端到端（脚本化 asker + `httptest` fake judge）、seed 后真实 `search_messages` 可搜到证据会话。
 - `internal/cli`：真实 `ChatRuntime` + 完整工具目录 + 冻结时钟 + seed 历史的会话级测试（脚本化 provider 触发 `search_messages` 并断言搜索命中）。
-- 七门禁：`make ci`（fmt-check / vet / test / cross / parity / parity-targets / wiring-check）全过；所有新测试带 `// Parity:` 或 `// Parity-exempt:` 注解。`make cross` 的 `go build ./...` 覆盖新命令。
+- 九门禁：`make ci`（fmt-check / vet / test / cross / parity / parity-targets / wiring-check / compat-check / arch-check）全过；所有新测试带 `// Parity:` 或 `// Parity-exempt:` 注解。`make cross` 的 `go build ./...` 覆盖新命令。
 
 ```bash
 # fixture 确定性测试（无网络、无凭据）
