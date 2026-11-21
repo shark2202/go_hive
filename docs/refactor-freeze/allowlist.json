@@ -1,0 +1,4 @@
+{
+  "note": "Intentional frozen-surface changes for structural refactors. Each entry names the artifact and why the digest is expected to move; anything not listed fails refactor_freeze.sh compare. Keep this list short and delete entries once the baseline is re-captured.",
+  "allowed": []
+}

@@ -1,0 +1,16 @@
+{
+  "label": "wave15-base",
+  "git_rev": "98120156276d484a6402cd36ee083245faea836a",
+  "artifacts": {
+    "go_hive/contracts/tool-definitions.json": {"sha256": "d80fdad38329e65826fc26e21a4cf33e9a8cfd29188950baa9cb9c44e984ea67", "count": 54},
+    "go_hive/contracts/cli-surface.json": {"sha256": "cd00ada01e821442617a3cdb3a1f0e2a331ea2bc9baf4fb68e416523c3dd8c4e", "count": 0},
+    "go_hive/contracts/api-routes.json": {"sha256": "59b62789b240e643a3f788bac1a6b939f98da27ffbcd05b6acc85633bb3c6775", "count": 0},
+    "go_hive/contracts/storage-fields.json": {"sha256": "missing", "count": 0},
+    "contracts/module-inventory.json": {"sha256": "b324b0a4ee9cd38bd82cf3db856758e5616d89211e2fa1cb8241d4974b033452", "count": 271},
+    "go_hive/docs/tool-contract-recheck.json": {"sha256": "0288c8f1f782f4f3e252e03fbcf70446700a242c6ab41250d6d44f7f0b847818", "count": 0},
+    "go_hive/docs/appearance-scope-registry.json": {"sha256": "0d8f2227c4d1709160871b5e3cebf74e0be9fcbabed3bbaa0bfd9089d913641f", "count": 0},
+    "go_hive/docs/cli-surface-alignment.json": {"sha256": "5ccf28faec970e7249526ce725023a46916a8ee2f8099806e53719b086e90c28", "count": 0},
+    "go_hive/docs/skills-parity-report.json": {"sha256": "44ee5c3870a6560e5cc548ca8eeab1601692c85e08fb918eb18764e6125fe2df", "count": 0},
+    "go_hive/docs/tool-contract-diff.md": {"sha256": "f210a2037512cebeaaabc74e65adde84c58107368c9e75c72ec9464796523d24", "count": 0}
+  }
+}
