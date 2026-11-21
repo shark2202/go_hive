@@ -15,13 +15,13 @@ Queen 的记忆全部是**纯文件**，没有向量数据库。目录结构见 
 
 每个记忆是一个 `.md` 文件，可带 YAML frontmatter（`name`、`type`、`description`）。
 
-硬约束：
+硬约束（扫描与写入工具都执行）：
 
-- 每个目录最多 `MAX_FILES = 200` 个文件。
-- 单文件最多 `MAX_FILE_SIZE_BYTES = 4 KB`。
-- 全局记忆的类别：`profile`、`preference`、`environment`、`feedback`。
+- 每个目录最多 `MAX_FILES = 200` 个文件：扫描按 mtime 取最新 200；`write_memory_file` 在目录已满时拒绝新建。
+- 单文件最多 `MAX_FILE_SIZE_BYTES = 4 KB`：写入工具超限直接报错。
+- 全局记忆的类别：`profile`、`preference`、`environment`、`feedback`（其它 type 由写入工具拒绝）。
 
-这三层分别回答：「关于用户/业务我长期知道什么」「这个 Colony 的上下文是什么」「这个 Queen 自己的经验是什么」。
+真正进入 Queen 对话上下文的是 **global + 该 queen 自己的 `agents/queens/{name}`**：每回合 recall 对这两个作用域各发一次选择请求，memory 反思工具也只能读写这两个作用域。`colonies/{name}/` 与 `agents/{agent}/` 有磁盘布局、Memory API（`/api/memories`）可浏览/编辑，但 queen DM 的自动召回不会读取它们；上游代码里 `colony_memory_dir` / `agent_memory_dir` 只有布局定义，没有召回或反思消费者。把「Colony 的上下文」写成会自动注入的能力会高估现状。
 
 ## 2. 记忆的三种用法
 
@@ -29,10 +29,10 @@ Queen 的记忆全部是**纯文件**，没有向量数据库。目录结构见 
 
 文件：`agents/queen/reflection_agent.py`、`queen_memory_v2.py`、`soul_reflection.py`
 
-- 每隔若干回合，反思步骤把值得长期保留的结论写成 Markdown。
-- 有冷却（cooldown）机制，避免每次模型调用都反思。
-- 1.0.11 起改为「每几次回复」而不是「每次模型调用」。
-- 反思写入是增量文件，而不是重写一份大记忆。
+- 触发是**计数**，不是时间冷却：每个完成的 queen turn 计数，达到 `memory_reflection.every_turns`（默认 6）跑一次短反思；每 `long_every`（默认 4）次短反思后再跑一次长反思（合并/去重/清理）；反思进行中到达的触发直接跳过；会话停止时补跑一次短反思；上下文压缩后（`CONTEXT_COMPACTED`）跑一次长反思。
+- 短反思把值得长期保留的结论写成 Markdown 记忆文件（`write_memory_file` / `delete_memory_file` 工具）；长反思只整理已有文件，不发明新事实。
+- 写入是**按文件的增量更新**：每次只改相关文件，不会重写一份大记忆；单文件 4 KB、每个作用域 200 个文件的上限由工具强制。
+- 反思失败只写 `.reflection_error.txt` 与日志，不阻塞主对话。
 
 ### 2.2 Recall（召回）
 
@@ -40,31 +40,31 @@ Queen 的记忆全部是**纯文件**，没有向量数据库。目录结构见 
 
 每回合开始前：
 
-1. 扫描一个或多个记忆目录（每个上限 200 个 `.md`）。
+1. 扫描作用域目录（global 与 queen；每目录上限 200 个 `.md`）。
 2. 读取 frontmatter 与前 30 行，生成清单。
-3. 用一次 LLM 调用（结构化 JSON 输出）选出最多 5 个最相关的记忆。
-4. 注入系统提示。
+3. 每个作用域一次 LLM 调用（结构化 JSON 输出），最多选 5 个（queen 对话路径每作用域上限 3 个）。
+4. 注入为 `<system-reminder>` 用户消息（不是系统提示）：当前轮先用缓存块，后台刷新后内容变化再注入；内容没变不重复注入。
 
 关键约束：
 
 - **只看用户当前查询字符串**，不看完整对话，保持便宜和快。
-- 任何错误都被捕获并返回 `[]`，绝不阻塞主对话。
+- 选择失败时回退到 pinned 的 `type: profile` 记忆，任何错误都不阻塞主对话。
 
 这是一种「低成本、可失败、不阻塞」的召回设计。
 
 ### 2.3 Past conversations（历史对话召回）
 
-- 每回合前，最多 6 段相关历史会话摘要（带日期）被放入上下文。
-- 来源是按关键词检索的历史索引（`tools/src/memory_tools/recall.py`、`turn_index.py`）。
-- Queen 也可以主动调用 `search_messages` 搜索。
-- 1.0.14 的改进：召回窗口选择「包含最多查询词」的片段，助手回复给 500 字符（原 300），一个命中对话可额外带回最多 2 个匹配回合（共 4 个）；最终回复现在也会被索引。
+- 会话开始与每次用户输入时，最多 6 段相关历史会话摘要（带日期）被放入上下文（`<system-reminder>`）。
+- 来源是按关键词检索的历史索引（`tools/src/memory_tools/recall.py`、`turn_index.py`）；窗口选「包含最多查询词」的片段，用户与助手预算都是 500 字符；一个已命中对话可再带回最多 2 个匹配回合（总数上限 4）。
+- Queen 也可以主动调用 `search_messages` 搜索；最终 assistant 回复也会被索引。
 
 ### 2.4 Timeline（可选）
 
 文件：`agents/queen/timeline.py`
 
-- 由 `memory_timeline` 功能开关控制，**默认关闭**。
-- 每次会话、停止时、以及历史回填时，用 Queen 自己的模型从**用户消息**中抽取事件/事实/计划，并解析相对日期（“昨天”“上周”）。
+- 由 `memory_timeline` 功能开关控制，**默认关闭**（`configuration.json` 的 `memory_timeline: true` 或 `HIVE_MEMORY_TIMELINE`）。
+- 只读**用户消息**，用 Queen 自己的模型抽取事件/事实/计划，并解析相对日期（“昨天”“上周”）。
+- 触发：会话进行中每新增 3 条用户消息或 300 秒冷却后（`HIVE_TIMELINE_BATCH` / `HIVE_TIMELINE_COOLDOWN`）、会话停止时 flush、启动时回填最近 10 个历史会话。
 - 存储为：
   - `<session_dir>/timeline.jsonl`
   - `<session_dir>/timeline_meta.json`（抽取游标）

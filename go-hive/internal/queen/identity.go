@@ -91,7 +91,13 @@ func FormatQueenIdentityPrompt(profile map[string]any, maxExamples *int) string 
 	if !ok {
 		title = "Senior Advisor"
 	}
-	core := profile["core_traits"]
+	// Python's profile.get("core_traits", "") yields "" when the key is absent
+	// and the rendered value when it is present (a None becomes "None"), so a
+	// minimal profile must render an empty line, not the string "None".
+	core := ""
+	if value, exists := profile["core_traits"]; exists {
+		core = identityString(value)
+	}
 	bg := asMap(profile["hidden_background"])
 	psych := asMap(profile["psychological_profile"])
 	triggers := asList(profile["behavior_triggers"])

@@ -140,15 +140,32 @@ uv run --no-project python .wt/memory-e2e/go_hive/scripts/memory_e2e_compare.py 
    返回同一组条目，因此 `timeline.jsonl` 会出现重复条目（Go 6 条、Python 9 条，取决于触发时序）。这是
    fixture 模型“不会只返回新增条目”的产物，不是读取端 bug；断言按语义集合与必含条目检查，不按行数。
 
+## 真实模型复跑（2026-11-21）
+
+工具：`go_hive/scripts/memory_soul_real_e2e.py`（Go `hive serve` ⇄ Python `hive serve`，同一批 seeded 聊天、
+真实 `deepseek-flash-1017`；本地透传录制代理不记录 Authorization）。证据：`go_hive/docs/e2e-assets/memory-soul-real/**`。
+
+- **逐字节相同**：timeline system prompt、recall system/user（同 queen scope）、memory-reflection system prompt、
+  soul system+user（两个 queen）。
+- **schema / 落盘相同**：timeline item 与 meta；soul proposal 的空列表（`applied`/`probes` 为 `[]` 而非 `null`）；
+  state 的 `cursors/last_run/last_result/attempts`。
+- **作用域**：两侧 selector manifest 只含 global + 本 queen 文件；colony/worker 文件不出现在 manifest 或注入块
+  （queen DM 的召回不读 colony，属上游语义）。
+- **修复的差异**：past-conversation 注入改用 upstream `wrap_reminder` 包装（原 Go 自定义 header）；reflection
+  prompt 缺一空行；minimal queen profile 的 `<core_identity>` 渲染 `None`；soul proposal 写 `null` 列表。
+- **NOTE（非代码差异）**：Python 的 alpha recall 块在部分运行里未被 drain 进 transcript（上游缓存注入时序），
+  该轮以 NOTE 记录；selector manifest 与 beta 块证明作用域一致。真实慢模型下 turn 边界仍会变化。
+- **仍开放**：Go `ReflectionScheduler.OnCompaction` 是死代码——`CONTEXT_COMPACTED` 从未发布，压缩触发的
+  长记忆反思未接线。
+
 ## 未验证项
 
-- **真实 LLM 的抽取质量**：本次用确定性网关验证链路、prompt、schema 与落盘，不评价真实模型的抽取准确率。
+- **真实 LLM 的抽取质量**：2026-11-21 已用真实模型跑通链路与 schema，但抽取准确率仍不评分。
 - **UI 路径**：未通过 dashboard 触发聊天/记忆；只走 HTTP API。
 - **cooldown 到期路径**：live 抽取的“未满 batch 等 cooldown”分支（等 300s 后由下一次 turn 触发）未在 e2e 中真实等待。
 - **`SubscribeTimelineTriggers`（memory 包内的旧入口）**：生产路径已由 chat runtime 自己的订阅替代；该函数
   仍保留 `lastRun` 零值语义，未单独验证。
-- **worker / colony 会话的记忆路径**、多 queen 作用域、Soul 每日反思、LongMemEval 均不在本次双跑范围。
-- Python 侧的注入时序差异只在本地网关（毫秒级返回）下观察；真实慢模型下缓存命中的 turn 边界还会变化。
+- **LongMemEval**：见 `docs/longmemeval.md`（已有真实数据 20 题双跑，不在本文件范围）。
 
 ## 证据文件（`go_hive/docs/e2e-assets/memory-e2e/`）
 

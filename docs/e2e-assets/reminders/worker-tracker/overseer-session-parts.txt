@@ -1,0 +1,4 @@
+0000000000.json assistant "[overseer] Hey. You caught me mid-deploy — good timing. What's on your mind?"
+0000000001.json user "[2026-11-21 16:07 CST] <system-reminder>\nAvailable skills catalog:\n## Skills (mandatory)\nBefore replying: scan <available_skills> <name> entries.\n- If the user message contains <read_skill>NAME</read_skill> tags: these are\n  explicit requests. Read EVERY tagged skill's SKILL.md with\n  `terminal_exec"
+0000000002.json assistant '[overseer] worker_1'
+0000000003.json assistant '[overseer] worker_1 — success, 10.4s, exit 0, stdout `worker-ok`.'

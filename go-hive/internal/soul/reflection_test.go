@@ -645,6 +645,47 @@ func TestWhenTheReflectionIsDue(t *testing.T) {
 	}
 }
 
+// Parity-exempt: proposal files are compared between the Go and Python runs;
+// Python's dataclass writes [] for these lists on a not-yet-decided proposal,
+// so Go must persist the same shape instead of null.
+func TestASavedProposalWritesEmptyListsNotNull(t *testing.T) {
+	home := newReflectionTestHome(t)
+	pending := &Proposal{
+		ID:          "2026-10-20-040000",
+		CreatedAt:   "2026-10-20T04:00:00+08:00",
+		BaseVersion: 0,
+		Edits: []Edit{{
+			Op: "remove", Section: "now", Old: "an old line", Reason: "older than 14 days", Expired: true,
+		}},
+		Status: "pending",
+	}
+	if err := SaveProposal(home.queensDir, reflectionTestQueen, pending); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(SoulDir(home.queensDir, reflectionTestQueen), "proposals", pending.ID+".json"))
+	if err != nil {
+		t.Fatalf("read saved proposal: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("decode saved proposal: %v", err)
+	}
+	for _, key := range []string{"applied", "probes", "sources"} {
+		list, ok := decoded[key].([]any)
+		if !ok || len(list) != 0 {
+			t.Fatalf("%s = %#v, want an empty list (Python writes [] not null): %s", key, decoded[key], raw)
+		}
+	}
+	edits, _ := decoded["edits"].([]any)
+	if len(edits) != 1 {
+		t.Fatalf("edits = %#v", decoded["edits"])
+	}
+	edit, _ := edits[0].(map[string]any)
+	if evidence, ok := edit["evidence"].([]any); !ok || len(evidence) != 0 {
+		t.Fatalf("edit evidence = %#v, want an empty list", edit["evidence"])
+	}
+}
+
 // Parity: core/tests/test_soul_reflection.py::test_a_pending_proposal_holds_the_next_reflection_in_review_mode
 func TestAPendingProposalHoldsTheNextReflectionInReviewMode(t *testing.T) {
 	home := newReflectionTestHome(t)

@@ -1,0 +1,18 @@
+2026-11-21T16:04:48.049796 reminder_injected {"detail": "session_start", "meta": {"point": "session_start"}, "source": "point:session_start"}
+2026-11-21T16:04:48.105070 stream_ttft_exceeded {"limit_seconds": 0.002, "ttft_seconds": 0.002274208}
+2026-11-21T16:04:48.108809 stream_nudge_sent {"nudge_count": 1, "reason": "ttft"}
+2026-11-21T16:04:48.111776 reminder_injected {"detail": "ttft", "meta": {"elapsed": 0.002274208, "nudge_count": 1, "reason": "ttft"}, "source": "stream_stall"}
+2026-11-21T16:04:48.127797 execution_failed {"error": "llm: stream ttft for 0s (limit 0s)"}
+2026-11-21T16:04:49.075657 client_input_received {"content": "Say hello in one short sentence.", "image_count": 0}
+2026-11-21T16:04:49.135370 stream_ttft_exceeded {"limit_seconds": 0.002, "ttft_seconds": 0.00216275}
+2026-11-21T16:04:49.138957 stream_nudge_sent {"nudge_count": 1, "reason": "ttft"}
+2026-11-21T16:04:49.142917 reminder_injected {"detail": "ttft", "meta": {"elapsed": 0.00216275, "nudge_count": 1, "reason": "ttft"}, "source": "stream_stall"}
+2026-11-21T16:04:49.161934 execution_failed {"error": "llm: stream ttft for 0s (limit 0s)"}
+2026-11-21T16:05:23.086049 stream_ttft_exceeded {"limit_seconds": 0.002, "ttft_seconds": 0.002088375}
+2026-11-21T16:05:23.089653 stream_nudge_sent {"nudge_count": 1, "reason": "ttft"}
+2026-11-21T16:05:23.092659 reminder_injected {"detail": "ttft", "meta": {"elapsed": 0.002088375, "nudge_count": 1, "reason": "ttft"}, "source": "stream_stall"}
+2026-11-21T16:05:23.113629 execution_failed {"error": "llm: stream ttft for 0s (limit 0s)"}
+2026-11-21T16:05:58.085224 stream_ttft_exceeded {"limit_seconds": 0.002, "ttft_seconds": 0.002124125}
+2026-11-21T16:05:58.088744 stream_nudge_sent {"nudge_count": 1, "reason": "ttft"}
+2026-11-21T16:05:58.092692 reminder_injected {"detail": "ttft", "meta": {"elapsed": 0.002124125, "nudge_count": 1, "reason": "ttft"}, "source": "stream_stall"}
+2026-11-21T16:05:58.111779 execution_failed {"error": "llm: stream ttft for 0s (limit 0s)"}

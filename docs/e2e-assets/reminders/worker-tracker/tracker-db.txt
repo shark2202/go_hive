@@ -1,0 +1,3 @@
+db: /Users/mac/.hive-go/reminders-verify/home-normal/colonies/demo_wt/tracker/tracker.db
+tables: ['_tracker_changes', '_tracker_meta', '_tracker_registry', 'notes']
+notes rows: [(1, 'kickoff: verify worker_tracker_snapshot')]

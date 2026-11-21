@@ -1,0 +1,7 @@
+LongMemEval-S through Hive - 1 question(s), reader deepseek-flash-1017, judge deepseek-v4-pro
+overall 100.0% (95% CI 20.7-100.0), task-averaged 100.0%
+type                            n  correct  searched  evidence
+knowledge-update                1   100.0%    100.0%    100.0%
+ALL                             1   100.0%    100.0%    100.0%
+median seconds per question: 9
+searched = called search_messages or search_timeline; evidence = an answer session appeared in their results (auto-injected excerpts don't count, so 'correct' can exceed both)

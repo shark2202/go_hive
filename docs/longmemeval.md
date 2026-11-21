@@ -3,7 +3,7 @@
 > 上游事实源：`core/tests/e2e/longmemeval.py`（789 行）、`core/tests/e2e/test_longmemeval.py`、`core/tests/e2e/conftest.py`（`run_queen` 驱动）、`docs/memory-benchmark.md`。
 > Go 实现：`internal/longmemeval/`（数据集、选题、seed、judge、结果、汇总）、`internal/cli/longmemeval.go`（一题一次真实 queen 会话）、`cmd/hive-longmemeval/`（命令）、`internal/hiveclock/`（时钟冻结 seam）。
 >
-> 口径：本页所有「实测」表示在本仓库工作树里真跑过并留了输出；「代码路径」表示由实现直接确认、但没有单独实跑。**本移植尚未产生任何 LongMemEval 分数**——见第 7 节。
+> 口径：本页所有「实测」表示在本仓库工作树里真跑过并留了输出；「代码路径」表示由实现直接确认、但没有单独实跑。**2026-11-21：S 数据集已真实下载/拆分，Go 与 Python 两侧在同一 20 题子集上用真实模型各跑了一次并记录分数（见第 7 节）；题目/评分口径的字段级一致性见 `docs/e2e-assets/longmemeval/`。官方 judge（gpt-4o-2024-08-06）在本机仍不可得，故这些分数是自建基线，不是发布分。**
 
 ## 1. 命令面
 
@@ -37,6 +37,15 @@ go build ./cmd/hive-longmemeval && ./hive-longmemeval run \
 
 `hive-longmemeval` 不内嵌任何数据：数据集始终从 `--data` / `$HIVE_LME_DATA` 读，缺文件且 `--download` 时才走网络。
 
+命令面与上游 pytest 驱动有两处「缺省值」差异（其余 env/口径逐项一致）：
+
+| 项 | 上游 pytest（`test_longmemeval.py` + `conftest.py`） | Go |
+| --- | --- | --- |
+| 答题模型/端点 | `HIVE_LIVE_MODEL` 缺省 `gpt-6.1-sol`、`HIVE_LIVE_API_BASE` 缺省 `http://127.0.0.1:8790/v1` | `--model/--api-base` 缺省 `$HIVE_LME_*` / `$HIVE_LIVE_*`；都不设时用每个题目 home 的 `configuration.json` |
+| judge 模型 | `HIVE_LME_JUDGE_MODEL` 缺省 = 答题模型（即 `harness.MODEL`） | 缺省 = 官方 `gpt-4o-2024-08-06`（需要 OpenAI key；跨实现对比请显式传同一 judge 模型） |
+
+两处都不影响产物字段；侧重点是「不设 judge 时 Go 会去要官方 judge」。
+
 ## 2. 数据格式
 
 官方 2025 cleaned 版（`longmemeval_s_cleaned.json` ≈ 277 MB，`longmemeval_m_cleaned.json` ≈ 2.7 GB）是一个 JSON 数组，元素字段与上游一致：
@@ -57,6 +66,7 @@ go build ./cmd/hive-longmemeval && ./hive-longmemeval run \
 - 首次使用把数组**流式**拆成 `$CACHE/<variant>_cleaned/index.json` + 每题一个 `<question_id>.json`（S 277 MB / M 2.7 GB 不会整文件进内存）；`index.json` 存在就直接复用。
 - `question_id` 会被校验为安全文件名（拒绝路径分隔符），`haystack_*` 三个数组长度必须一致，日期必须是 `YYYY/MM/DD (周几) HH:MM`，否则整份数据报错而不是静默丢题。
 - 仓库内的脱敏 fixture：`internal/longmemeval/testdata/fixture_cleaned.json`（3 题：single-session-user / knowledge-update / 一道 `_abs` 弃权题），字段与 cleaned 版同构，可直接 `--data internal/longmemeval/testdata/fixture_cleaned.json` 使用（测试里如此跑）。
+- **`answer` 是字符串或数字**：官方 S 的 500 题里有 32 题（如 `0a995998`）的 `answer` 是裸 JSON 数字（`3`）。`Item.Answer` 用 `AnswerValue` 保类型：judge/reader prompt 按 Python `str.format` 的渲染（数字 → 字面量）插值，拆分文件与 results 行的 `answer` 仍是数字，与 Python 侧一致（2026-11-21 实测：拆分 500/500、prompt 逐字节一致，见 `docs/e2e-assets/longmemeval/`）。
 
 ## 3. 运行目录与产物
 
@@ -77,7 +87,7 @@ go build ./cmd/hive-longmemeval && ./hive-longmemeval run \
 ## 4. 每题是怎么跑的
 
 1. **隔离 home**：为每题新建 `<run-dir>/homes/<id>`，把该题历史按 `haystack_dates` 写成**真实 queen 会话**（`queens/<queen>/sessions/session_YYYYMMDD_HHMMSS_xxxxxxxx/{events.jsonl,meta.json}`，事件形状与运行时写入的完全一致，`search_messages` 直接可搜；seed 测试用真实 `memory.SearchMessages` 验证）。
-2. **冻结时钟**：题目日期写入 `HIVE_FAKE_NOW`（RFC3339），`internal/hiveclock` 只在三处读取——消息 `[YYYY-MM-DD HH:MM TZ]` 戳（`chat_runtime.go`）、`get_current_time` 工具（`local_time_csv.go`）、循环内部时间戳（`agentloop`）——即上游 `freeze_clock` 补丁的那几处；变量不设置时 `Now()` 就是 `time.Now()`。
+2. **冻结时钟**：题目日期写入 `HIVE_FAKE_NOW`（RFC3339），`internal/hiveclock` 只在四个面读取——消息 `[YYYY-MM-DD HH:MM TZ]` 戳（`chat_runtime.go`）、系统提示里的当前日期（`agentloop/prompting.go`）、`get_current_time` 工具（`local_time_csv.go`）、循环内部时间戳（`agentloop/loop.go`）——对应上游 `freeze_clock` 补丁的 `prompting` / `agent_loop` / `cursor_persistence` / `time_tool` 模块；变量不设置时 `Now()` 就是 `time.Now()`。
 3. **真实 queen 会话**：走与 `POST /api/sessions` 相同的装配路径——`chatProviderFactory` 解析 provider、`newSessionToolCatalogue` 安装完整工具目录（含 `search_messages`/`search_timeline`）、`enableQueenSessionTools`、`hiveserver.NewChatRuntime`（内存 recall、会话事件日志、反思调度都在）。题目以真实用户消息投递，等 `execution_completed` / `execution_failed` 后从会话 transcript 取最终回答、工具调用与搜索结果（溢出结果按 `Full result at:` 指针读全文）。
 4. **官方 judge**：per-type prompt 逐字移植（含 temporal off-by-one 段、knowledge-update 段、preference rubric 段、`_abs` 弃权段），`temperature=0`；`gpt-4o-2024-08-06` 自动加官方 10-token cap，其他模型不加。429/500/502/503/504 指数退避重试 8 次；端点报 temperature 不支持时去掉该字段重试一次（与上游 `_chat` 相同）。
 5. **顺序执行**：单进程逐题（上游是 pytest + xdist 多 worker）。断点续跑用 `--resume`。
@@ -112,17 +122,23 @@ CGO_ENABLED=0 go test ./internal/longmemeval/ ./internal/cli/
 
 ## 7. 已验证 / 未验证
 
-**已验证（本工作树实跑）**
+**已验证（本工作树实跑，2026-11-21）**
 
-- fixture 全链路命令级 smoke（`hive-longmemeval run/rejudge/summary --resume`，queen 与 judge 都指向本地脚本化 OpenAI-compatible 端点）：3 题全部产出结果行、transcript、`summary.txt/json`；结果行含 `searched=true`、`search_calls`、`evidence_retrieved=true`；`rejudge` 生成 `rejudged-fake-judge/`；`--resume` 不追加行。**这是管线验证，不是分数**（模型与 judge 都是脚本化的）。
-- 数据层：fixture 拆分/重载、截断数组报错、`--data` 指 raw 文件或 split 目录两种形态、缺文件且 `--download=false` 时明确报错。
-- 门禁：见第 6 节。
+- **真实数据集**：S cleaned（277,383,467 B，sha256 `d6f21ea9…c3a442`）从 HuggingFace 真实下载并拆分为 500 题（`s_cleaned/index.json`）。首次拆分曾因 32 题的 `answer` 是 JSON 数字而整份报错；`AnswerValue` 修复后 500/500 拆分成功，且拆分文件里的数字类型与 Python 一致。
+- **真实模型跑分（同一 20 题子集，两侧各一次）**：
+  - Go `hive-longmemeval run`：17/20 = **85.0%**（95% CI 64.0–94.8），task-averaged 88.9%，0 error，0 ungraded，中位 7s/题。
+  - Python `pytest tests/e2e/test_longmemeval.py -m live -n 4`（同一 20 个 id）：18/20 = **90.0%**（95% CI 69.9–97.2），task-averaged 77.8%，中位 7s/题。
+  - 两边都用真实 `deepseek-flash-1017` 答题、真实 `deepseek-v4-pro` 判分（**非官方 judge**，故这是自建基线，不是发布分）。3 处分歧全部来自答案/判分措辞波动（详见 `docs/e2e-assets/longmemeval/2026-11-21-20q-real-run.md`）。
+- **产物/字段一致性**：同一题的 1 题 smoke 两侧都 correct+searched+evidence；results 行 key/类型一致；`summary.txt` 在归一化 `median seconds` 行后逐字节相同。Go 额外产出 `summary.json` 与 `homes/`（后者默认删除）。
+- **reader/judge prompt 逐字节一致**：Go `ReaderPrompt`/`JudgePrompt` 与 Python `reader_prompt`/`judge_prompt` 在 4 题（含 `_abs` 与数字 answer 题）上 `cmp` 全等；证据见 `docs/e2e-assets/longmemeval/2026-11-21-prompt-byte-parity.txt`。
+- **子命令实测**：`rejudge`（真实 judge 二次判分，写 `rejudged-<model>/`，`original_judge` 保留）、`reference oracle`（真实 reader+judge，`condition=oracle`）均产出结果行。
+- fixture 全链路命令级 smoke（脚本化端点）与数据层负例、门禁：见第 6 节/`internal/longmemeval` 测试。
 
-**未验证（环境阻塞，故本移植不声称任何 LongMemEval 分数）**
+**未验证 / 环境限制**
 
-- **真实数据集下载**：本机无外网出口——`curl -sS -m 20 https://huggingface.co/` 与 `https://api.openai.com/v1/models` 都在 20s 超时（`curl: (28) Connection timed out`）。因此 S/M cleaned 文件与官方 judge 端点均未触达；下载与真实数据拆分只有代码路径与 fixture 实证。
-- **真实 judge / 真实 queen 模型**：同上无凭据、无出口。本机 `127.0.0.1:8790` 返回的是 Hive 面板 HTML（`/v1/models` 也是 HTML），不是 OpenAI-compatible 模型端点；未发现其它本地网关。发布分所需的 `gpt-4o-2024-08-06` judge + 10-token cap 已按官方设置实现，但从未对真实题目调用过。
-- 因此：`docs/memory-benchmark.md` 上游的 88.4% / 82.0% 等数字**未被复现、也未被引用为本移植结果**；在网络与凭据就绪后按第 1 节命令即可复跑，届时 `summary.json` 里才会有真实分数。
+- **官方 judge**：本机无 `OPENAI_API_KEY`（`api.openai.com` 可达但 401），因此 `gpt-4o-2024-08-06` 的官方判定与 10-token cap 仍只有代码路径与测试，没有被真实题目调用过。发布的 88.4% / 82.0% 等数字**未被复现、也未被引用**；上面 85%/90% 只能与同 judge 的自建基线比较。
+- **上游完全相同条件**：上游发布分用的答题模型是 `gpt-6.1-sol`；本机只有 tokenbroad 的 `deepseek-flash-1017`，故即使 judge 一致也不是同一条件。
+- 早前「本机无外网出口」的记载已过时：本次 `huggingface.co` 返回 200，数据下载与拆分均真实完成。
 
 ## 8. 复现上游发布分的条件（留给有出口/凭据的环境）
 

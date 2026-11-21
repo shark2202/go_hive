@@ -191,6 +191,15 @@ OpenAI 兼容网关（`e2e/soulgw`，按提示词回 tool_call），其余全是
 真实 HTTP 传输（请求里带 4 个反思工具与聊天正文）、真实 `events.jsonl`、真实 proposal/state 落盘。
 局限照实标注：网关不是开放权重模型，模型质量类行为（乱编、拒答、超长输出）未被真实模型覆盖。
 
+## 8.1 真实模型实测（2026-11-21）
+
+`go_hive/scripts/memory_soul_real_e2e.py` 用真实 `deepseek-flash-1017` 对两个 queen 跑完整链路
+（review + auto）：soul system/user prompt 两侧逐字节相同；review 提案 `pending→approved` 与 `history/v1.json`
+一致；auto 无 decision 直接应用；state 字段 `cursors/last_run/last_result/attempts` 一致；proposal 空列表
+为 `[]`（修复了 Go 写 `null` 的差异）。证据：`go_hive/docs/e2e-assets/memory-soul-real/**`。
+
+仍未接线：压缩触发的长记忆反思（`CONTEXT_COMPACTED` 无生产者）。
+
 ## 8. 未对齐项（已知差异）
 
 1. `model: worker` 不启用独立的 worker 模型（Go 无进程级 worker LLM 构建入口），回落配置主模型；

@@ -1,0 +1,27 @@
+{
+  "id": "2026-11-21-170421",
+  "created_at": "2026-11-21T17:04:21+08:00",
+  "base_version": 0,
+  "edits": [
+    {
+      "op": "remove",
+      "section": "now",
+      "text": "",
+      "old": "I used to keep a notebook of harbour sketches.",
+      "date": "",
+      "evidence": [],
+      "reason": "older than 14 days",
+      "expired": true
+    }
+  ],
+  "summary": "Nothing changed. The only conversation was a single exchange in which the owner told me they had finally asked Maya for help with the mural; one remark from one person is not enough to change how I see anyone, and I could not record anything about my own part in it without inventing evidence. The harbour-sketches note expired today and I left it to drop, since no conversation below bears it out.",
+  "status": "applied",
+  "applied": [
+    0
+  ],
+  "sources": [
+    "The mural"
+  ],
+  "bootstrap": false,
+  "probes": []
+}

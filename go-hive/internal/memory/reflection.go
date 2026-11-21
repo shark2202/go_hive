@@ -524,7 +524,7 @@ func BuildUnifiedShortReflectSystem(queenID string) string {
 		"Available memory scopes:\n" +
 		"- `global`: durable user facts that should help every queen in future sessions\n" +
 		queenScope +
-		"\n" +
+		"\n\n" +
 		"Expected format for each memory file:\n" +
 		"```markdown\n" +
 		"---\n" +
@@ -582,7 +582,7 @@ func BuildUnifiedLongReflectSystem(queenID string) string {
 		"Available memory scopes:\n" +
 		"- `global`: facts useful to every queen\n" +
 		queenScope +
-		"\n" +
+		"\n\n" +
 		"Workflow:\n" +
 		"  1. Call list_memory_files without a scope to inspect all scopes together.\n" +
 		"  2. Read files that look redundant, stale, overlapping, or misplaced.\n" +

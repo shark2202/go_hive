@@ -1,0 +1,6 @@
+{
+ "status": "success",
+ "duration_seconds": 10.386503292,
+ "summary": "Ran the requested shell command `echo worker-ok` via terminal_exec. It exited 0 (exit_code: 0, shell_kind: direct) and printed `worker-ok` to stdout with no stderr output. Nothing else was required.",
+ "error": null
+}

@@ -1,0 +1,47 @@
+{
+  "id": "2026-11-21-170048",
+  "created_at": "2026-11-21T17:00:48+08:00",
+  "base_version": 0,
+  "edits": [
+    {
+      "op": "remove",
+      "section": "now",
+      "text": "",
+      "old": "I used to keep a notebook of harbour sketches.",
+      "date": "",
+      "evidence": [],
+      "reason": "older than 14 days",
+      "expired": true
+    },
+    {
+      "op": "add",
+      "section": "now",
+      "text": "The harbour lanterns are still mine to paint, but I'd rather they be loved by more than just me. (2026-11-21)",
+      "old": "",
+      "date": "2026-11-21",
+      "evidence": [
+        {
+          "quote": "I stayed up painting the harbour lanterns again last night and Ann asked me for a colour version.",
+          "where": "Night painting · owner"
+        },
+        {
+          "quote": "I'm glad the lanterns found someone else to love them too.",
+          "where": "Night painting · Queen Review"
+        }
+      ],
+      "reason": "The old harbour-notebook note expired today, and this keeps what still holds: the lanterns matter to me, and my own reply showed me I want them shared rather than hoarded.",
+      "expired": false
+    }
+  ],
+  "summary": "My harbour-notebook note was expiring today, so I replaced it with what still holds: the lanterns still draw me, and my own reply — glad they \"found someone else to love them too\" — told me I'd rather share them than keep them to myself. Nothing else changed: one exchange, no grounds to touch the empty people section.",
+  "status": "applied",
+  "applied": [
+    0,
+    1
+  ],
+  "sources": [
+    "Night painting"
+  ],
+  "bootstrap": false,
+  "probes": []
+}

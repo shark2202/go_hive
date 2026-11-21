@@ -1,0 +1,3 @@
+{"turn":1,"kind":"event","text":"The user attended a colleague's wedding on 2026-11-20 and gave 800 yuan as a wedding gift.","start":"2026-11-20","end":"2026-11-20","aliases":["colleague wedding attendance","gave 800 yuan wedding gift","attended a wedding","wedding cash gift"]}
+{"turn":2,"kind":"plan","text":"The user plans to travel to Yunnan next month (December 2026) and take some photos along the way.","start":"2026-12-01","end":"2026-12-31","aliases":["travel to Yunnan","December trip","photography trip","vacation plans"]}
+{"turn":3,"kind":"fact","text":"The user has an orange cat named Tuanzi (团子) at home.","start":"2026-11-21","end":"2026-11-21","aliases":["orange cat","pet named Tuanzi","cat at home","owns a cat"]}

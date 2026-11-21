@@ -236,6 +236,10 @@ func Rollback(queensDir string, cfg *SoulConfig, queenID string, version int, au
 }
 
 func SaveProposal(queensDir, queenID string, proposal *Proposal) error {
+	if proposal == nil {
+		return &SoulError{Message: "soul: no proposal to save"}
+	}
+	proposal.normalizeShape()
 	return writeJSONFile(filepath.Join(SoulDir(queensDir, queenID), "proposals", proposal.ID+".json"), proposal)
 }
 

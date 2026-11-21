@@ -1,0 +1,24 @@
+[2026-11-21 17:01 CST] [External event] <system-reminder>
+Recalled memories relevant to the latest user message (supersedes earlier recall reminders):
+
+--- Global Memories ---
+
+### user-profile.md
+
+---
+name: user profile
+description: stable facts about the user and their reply preferences
+type: profile
+---
+
+## User Identity
+
+- name: Lin
+- role: product designer
+
+## Communication Preferences
+
+用户偏好简洁、直接的回复，先说结论。
+
+--- End Global Memories ---
+</system-reminder>

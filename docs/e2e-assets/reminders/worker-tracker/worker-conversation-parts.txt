@@ -1,0 +1,10 @@
+0000000000.json user 'Run the shell command `echo worker-ok` using terminal_exec, then report the output and finish.'
+0000000001.json assistant "I'll run that command now."
+0000000002.json tool "exit_code: 0\nshell_kind: direct\nstdout:\nworker-ok\nstderr:\n\n\n<system-reminder>\nTracker state right now:\n  - notes: 1 row\n\nBefore you continue, persist your progress so far via tracker_upsert. Older tool results that are not in the tracker can be lost. If you get stuck and can't finish the job, it is okay to report early and explain why you failed.\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>"
+0000000003.json assistant ''
+0000000004.json tool '{"columns":["id","body"],"kind":"rows","rowcount":1,"rows":[[1,"kickoff: verify worker_tracker_snapshot"]],"success":true,"truncated":false}'
+0000000005.json assistant ''
+0000000006.json tool '{"columns":["name","type"],"kind":"rows","rowcount":4,"rows":[["_tracker_registry","table"],["_tracker_meta","table"],["_tracker_changes","table"],["notes","table"]],"success":true,"truncated":false}'
+0000000007.json user '<system-reminder>\n[final iteration] Your iteration budget is exhausted. This is your LAST turn. Call report_to_parent(status=<success|partial|failed>, summary=<one paragraph>, data=<optional>) NOW to deliver your results.\n\nIf you still need to persist findings to shared state you may also call tracker_upsert or task_update. ALL OTHER TOOLS WILL BE SKIPPED — do not start new work; consolidate what you have and report.\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>'
+0000000008.json assistant ''
+0000000009.json tool "Report delivered to the overseer.\n\n<system-reminder>\nTracker state right now:\n  - notes: 1 row\n\nBefore you continue, persist your progress so far via tracker_upsert. Older tool results that are not in the tracker can be lost. If you get stuck and can't finish the job, it is okay to report early and explain why you failed.\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>"

@@ -72,7 +72,7 @@ func JudgePrompt(item Item, response string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("question %s: no judge prompt for type %q", item.QuestionID, item.QuestionType)
 	}
-	return fillTemplate(template, item.Question, item.Answer, response), nil
+	return fillTemplate(template, item.Question, item.Answer.Text(), response), nil
 }
 
 // fillTemplate substitutes the template's positional {} placeholders in

@@ -850,6 +850,11 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		if request.trigger == nil {
 			r.fireReminderPoint(agentloop.USER_PROMPT_SUBMIT, message, nil)
 		}
+		// The past-conversations source fires at that same point upstream, so
+		// its excerpts land ahead of the user's message rather than after it.
+		if request.clientInput {
+			r.injectPastConversationRecall(message)
+		}
 		stamped := "[" + stamp + "] " + message
 		switch {
 		case request.trigger != nil:
@@ -888,7 +893,6 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	// consume (or re-query) the queen's memory. Reminders still ride along.
 	if request.clientInput {
 		r.injectRecall(message, stamp)
-		r.injectPastConversationRecall(message, stamp)
 	}
 	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.toolsForTurn())
 	if err != nil {

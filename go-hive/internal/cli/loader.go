@@ -884,6 +884,15 @@ func (l *colonyLifecycle) CreateColonyFromSource(params hiveserver.CreateColonyF
 		return nil, &hiveserver.ColonyForkError{Message: "failed to start colony session: " + createErr.Error(), Status: http.StatusInternalServerError}
 	}
 
+	// 2a. Record the session the colony resumes under, exactly like
+	// upstream's fork metadata (routes_execution.fork_session_into_colony
+	// writes metadata["queen_session_id"] = colony_session_id). The loader's
+	// `serve --colony` restart resolves that id and continues the same
+	// transcript; without it a restart mints a fresh session and strands the
+	// fork's history. Best-effort: a failed write only costs a fresh id on the
+	// next boot.
+	recordColonyQueenSessionID(colonyPath, session.ID, queenName)
+
 	// 3. Lock the source session. Without this marker a second fork would be
 	//    accepted, so a persist failure tears the fork back down.
 	if lockErr := persistSessionColonySpawn(source, colonyID); lockErr != nil {

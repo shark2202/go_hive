@@ -3,7 +3,9 @@
 本文回答 `queen-worker-colony-parity-audit.html` 维度 #12（Reminders / idle tick）与 GAP-06 的
 修复情况：Go 侧 reminder source 的注册矩阵、触发/抑制边界、会话启停生命周期，以及预载
 colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `reminders-coverage` 分支；
-上游参考为 `core/framework`（hive 1.0.14）。
+上游参考为 `core/framework`（hive 1.0.14）。**2026-11-21 在本工作树（main@c4eb266d）逐条
+复核了生产代码并做了真实 serve 实测（§8.1），其中 past_conversations 的注入顺序/包装已按
+上游修正；审查记录见 `docs/e2e-assets/reminders/2026-11-21-audit.md`。**
 
 ## 1. 结论
 
@@ -17,9 +19,11 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
 - 预载 colony 会话不再固定 `default` queen scope：从 colony `metadata.json` 的 `queen_name`
   解析（与上游 `_create_session_for_existing_colony` 一致），会话目录、记忆目录与 skills
   catalog 一并按该 queen 落位。
-- 残余（见 §7）：`past_conversations` 在 Go 由 runtime 直接注入、未搬进 hub；
-  overseer 的 skills catalog 走既有 relay；worker 没有 searchable_tools tier。
-  这三项均不改变上游语义，但登记为「实现形态差异」而非静默缺口。
+- **2026-11-21 修正**：`past_conversations` 仍在 hub 外直接注入，但注入顺序已对齐上游
+  `USER_PROMPT_SUBMIT`（提醒帧在用户消息**之前**）且改用共享 `WrapReminder` 包装
+  （去掉 Go 专有标题 / `[External event]` 前缀，补回 hub footer）。残余（见 §7）：
+  仍不在 hub、SESSION_START 不重复召回、overseer 的 skills catalog 走既有 relay、
+  worker 没有 searchable_tools tier。这些均登记为「实现形态差异」而非静默缺口。
 
 ## 2. 上游 source 全量清单
 
@@ -50,6 +54,9 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
 - `past_conversations` 与 `turn_context` 的 provider 由 queen_orchestrator 在创建会话时接线
   （`queen_skills_catalog_provider` / `colony_binding_provider` / `active_workers_provider` /
   `colony_stats_provider` / `turn_context_provider`）。
+- `sentinel_escalation` 的 `applies_to` 还额外要求该 colony 在 notifications config 里
+  opt-in（`core/framework/sentinel/escalation_source.py:101-111`）；文档原表只写到
+  「queen + 已绑定 colony」。
 
 ## 3. 注册矩阵
 
@@ -68,7 +75,7 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
 | idle_nudge | ✅ | ✅ | ticker 随会话启停 |
 | sentinel_escalation | ✅ | ✅ | `sentinel_runtime.go` 注册 |
 | stream_stall | ❌（零注册） | ✅ | 本分支补 + 真实触发 |
-| past_conversations | 注入在 hub 外 | 注入在 hub 外 | 形态差异，§7 |
+| past_conversations | 注入在 hub 外 | 注入在 hub 外 | 形态差异；2026-11-21 已把顺序/包装对齐上游（§7） |
 
 ### 3.2 Colony worker（`internal/colony/worker_reminders.go`）
 
@@ -169,8 +176,9 @@ default scope 的 probe 不出现）、`TestPreloadedColonySessionRestartReusesI
 ## 7. 残余 / 未实现项（显式登记）
 
 1. **past_conversations 未搬进 hub**：Go 在 `runTurn` 里对客户端输入调用
-   `injectPastConversationRecall`（USER_PROMPT_SUBMIT 等价时机），行为与上游 source 对齐，
-   但不在 ReminderHub 注册矩阵里；SESSION_START 时不会重复召回（上游会两个 point 都触发）。
+   `injectPastConversationRecall`。2026-11-21 起顺序与包装已对齐上游
+   (`USER_PROMPT_SUBMIT` → 提醒帧在用户消息之前；共享 `WrapReminder` 包装 + hub footer)，
+   但仍不在 ReminderHub 注册矩阵里；SESSION_START 时不会重复召回（上游会两个 point 都触发）。
 2. **worker 的 searchable_tools**：Go worker 没有分层工具表（无 `search_tools`），上游的
    `applies_to` 也只在 provider 存在时绑定，因此不注册；若将来给 worker 加 tier，需要同时接线
    `SearchableToolsProvider`。
@@ -199,6 +207,17 @@ default scope 的 probe 不出现）、`TestPreloadedColonySessionRestartReusesI
 | `TestOverseerReminderWiringRegistersQueenSources` | overseer hub 5 个 queen-role 源 + 无 ticker |
 | `TestColonyWorkerSnapshotGatesAndBody` / `TestWorkerTrackerSnapshotCadenceAndGates` | 触发/抑制边界 |
 | `TestPreloadedColonySessionInjectsSkillsCatalog` / `...RestartReusesID` | queen scope 解析 |
+
+### 8.1 真实 serve 实测（2026-11-21，无假组件）
+
+真实 `hive serve`（scratch HIVE_HOME + 真实 llm 槽 tokenbroad/deepseek-flash-1017）：
+
+| 项 | 实测结果 | 证据 |
+| --- | --- | --- |
+| STREAM_STALLED 触发 | `HIVE_LLM_STREAM_TTFT_TIMEOUT_SECONDS=0.002` 下真实会话事件：`stream_ttft_exceeded` → `stream_nudge_sent(nudge_count=1)` → `reminder_injected(stream_stall)` → 重试仍 stall → `execution_failed`；会话 parts 含注入的 `<system-reminder>The previous stream stalled ...` | `docs/e2e-assets/reminders/stream-stall/trigger-events.txt`、`trigger-conversation-parts.txt` |
+| STREAM_STALLED 抑制（cap / enabled=false） | 首 stall 用满 `HIVE_CONTINUE_NUDGE_MAX_PER_TURN=1` 后第二次不再注入；`HIVE_CONTINUE_NUDGE_ENABLED=false` 时完全无 `stream_*`/`reminder_injected(stream_stall)` 事件 | 同上 + `suppressed-events.txt` |
+| worker_tracker_snapshot 注入 | 真实 `run_worker` 派生的 SpawnBatch worker，第一次工具批次后工具结果尾部出现 `Tracker state right now: - notes: 1 row ... tracker_upsert` | `docs/e2e-assets/reminders/worker-tracker/` |
+| past_conversations 位置 | 修正前：用户消息之后 + Go 专有标题；修正后：用户消息之前 + 与上游 `wrap_reminder` 相同的包装 | `docs/e2e-assets/reminders/past-conversations/before-fix-parts.txt` / `after-fix-parts.txt` |
 
 复现：
 

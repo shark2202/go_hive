@@ -82,6 +82,36 @@ func colonyToolsFor(queenName string) []string {
 	return []string{}
 }
 
+// recordColonyQueenSessionID stamps the session id a forked colony resumes
+// under, mirroring upstream's fork metadata (routes_execution writes
+// metadata["queen_session_id"] = colony_session_id). The loader's
+// `serve --colony` restart adopts a recorded id when its session directory
+// still exists, so the fork continues the same transcript instead of stranding
+// it under an id nothing addresses. An existing non-empty id is preserved (the
+// first fork owns the colony session); a failed write only costs a fresh id on
+// the next boot.
+//
+// Parity: framework/server/routes_execution.py::fork_session_into_colony
+func recordColonyQueenSessionID(colonyPath, sessionID, queenName string) {
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return
+	}
+	path := filepath.Join(colonyPath, "metadata.json")
+	meta, ok := readJSONObject(path)
+	if !ok || meta == nil {
+		meta = map[string]any{}
+	}
+	if existing, present := meta["queen_session_id"].(string); present && strings.TrimSpace(existing) != "" {
+		return
+	}
+	meta["queen_session_id"] = sessionID
+	if _, present := meta["queen_name"]; !present && queenName != "" {
+		meta["queen_name"] = queenName
+	}
+	_ = atomicfs.WriteJSON(path, meta, 0o644)
+}
+
 // colonyWorkerToolSurface assembles the colony worker's tool wiring: the
 // builtin base surface every worker keeps, the declared-tool pool a
 // worker.json "tools" list selects from (the session integration catalogue),

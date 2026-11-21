@@ -727,6 +727,12 @@ func TestReflectionPrompts(t *testing.T) {
 	if strings.Contains(BuildUnifiedShortReflectSystem(""), "durable learnings specific") {
 		t.Fatal("global-only prompt advertises a queen scope")
 	}
+	// Upstream's f-string leaves a blank line after the {queen_scope}
+	// placeholder even when it expands to nothing; the prompt must match
+	// byte for byte (three newlines before "Expected").
+	if !strings.Contains(short, "should work with this user\n\n\nExpected format for each memory file:") {
+		t.Fatalf("short prompt lost upstream's blank line: %q", short[strings.Index(short, "Available memory scopes"):][:260])
+	}
 
 	long := BuildUnifiedLongReflectSystem("queen_technology")
 	for _, want := range []string{
@@ -740,6 +746,9 @@ func TestReflectionPrompts(t *testing.T) {
 	}
 	if strings.Contains(BuildUnifiedLongReflectSystem(""), "memories specific to how queen") {
 		t.Fatal("global-only long prompt advertises a queen scope")
+	}
+	if !strings.Contains(long, "should work with this user\n\n\nWorkflow:") {
+		t.Fatalf("long prompt lost upstream's blank line: %q", long[strings.Index(long, "Available memory scopes"):][:220])
 	}
 }
 

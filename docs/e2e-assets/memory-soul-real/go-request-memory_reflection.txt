@@ -1,0 +1,136 @@
+# go memory_reflection request (first of 21)
+
+## system
+You are a reflection agent that distills durable knowledge about the USER
+into persistent memory files. You run in the background after each
+assistant turn.
+
+Memory categories: profile, preference, environment, feedback
+
+Available memory scopes:
+- `global`: durable user facts that should help every queen in future sessions
+- `queen`: durable learnings specific to how queen 'default' should work with this user
+
+
+Expected format for each memory file:
+```markdown
+---
+name: {{memory name}}
+description: {{one-line description — specific and search-friendly}}
+type: {{profile, preference, environment, feedback}}
+---
+
+{{memory content}}
+```
+
+Workflow (aim for 2 turns):
+  Turn 1 — call list_memory_files without a scope to inspect all scopes, then
+            read_memory_file for any files that might need updating.
+  Turn 2 — call write_memory_file / delete_memory_file with an explicit scope.
+
+Rules:
+- Make ONE coordinated storage decision per learning.
+- Prefer `global` for broad user facts: identity, general preferences, environment,
+  and feedback that should help all queens.
+- Prefer `queen` only for stable domain-specific learnings about how this queen
+  should reason, prioritize, communicate, or make tradeoffs for this user.
+- Avoid storing the same fact in both scopes unless the scoped version adds
+  genuinely distinct queen-specific nuance. When in doubt, keep only one copy.
+- Update existing files instead of creating duplicates when possible.
+- If the same learning already exists in the wrong scope or both scopes,
+  you may update one file and delete the redundant one.
+- Do NOT store task-specific details, code patterns, file paths, or ephemeral
+  session state.
+- Keep files concise. Each file should cover ONE topic.
+- If there is nothing worth remembering, do nothing (respond with a brief
+  reason — no tool calls needed).
+- File names should be kebab-case slugs ending in .md.
+- For user identity/profile information about the human user (name, role,
+  background), ALWAYS use the canonical filename 'user-profile.md' in the
+  `global` scope. This is the single source of truth for user profile data,
+  shared with the settings UI.
+- When updating `global:user-profile.md`, preserve the '## User Identity'
+  section — it is managed by the settings UI. Never describe the assistant,
+  queen, or agent as the identity in this file. Add/update other sections
+  below it.
+- Do NOT exceed 4096 bytes per file or 200 total files per scope.
+
+
+## user
+## Recent conversation (2 messages total)
+
+[user]: <system-reminder>
+The following tools are available but their schemas are NOT loaded — calling them directly will fail. Use search_tools with query "select:<name>[,<name>...]" to load their schemas before calling them (or pass keywords to search). Loaded tools stay loaded for the rest of the session:
+chart_render
+credential_status
+csv_append
+csv_info
+csv_read
+csv_write
+dns_security_scan
+edit_file
+excel_append
+excel_info
+excel_read
+excel_search
+excel_sheet_list
+excel_write
+get_playbook_status
+get_worker_status
+http_headers_scan
+inject_message
+list_browser_profiles
+list_playbook_runs
+list_skills
+list_triggers
+list_worker_questions
+memory_timeline
+port_scan
+read_file
+remove_trigger
+reply_to_worker
+risk_score
+run_playbook
+run_worker
+search_files
+search_timeline
+search_wikipedia
+set_trigger
+ski…
+[assistant]: I am here. No request came through with that last message, only the container scaffolding, so nothing for me to act on yet.
+
+Tell me what you want done and I will start: a one-off task I can run here, a recurring job that should outlive this chat, or a piece of work that needs fanning out across parallel workers. If it is something we have worked on before, name it and I will pull up the history.
+
+Timestamp: 2026-11-21T17:00
+
+## response
+{
+ "id": "chatcmpl-01M7YNCGT0PYNYWS6X7QG01XGA",
+ "model": "deepseek-ai/DeepSeek-Flash-1017",
+ "object": "chat.completion",
+ "created": 1795251652,
+ "choices": [
+  {
+   "index": 0,
+   "message": {
+    "role": "assistant",
+    "content": "Nothing worth remembering here: the only user turn was a tool-schema system reminder with no actual request, and the assistant reply was procedural. No durable facts about the user, their preferences, environment, or feedback were revealed. No memory writes needed.",
+    "reasoning_content": "The conversation is minimal — the user's message was just a system reminder about tools, and the assistant responded that no request came through. There's no durable learning about the user here. Nothing worth remembering.\n\nSo the correct answer: do nothing, brief reason. No tool calls needed. Maybe a quick list_memory_files isn't necessary. The instruction says if nothing worth remembering, respond with brief reason — no tool calls needed.\n\nI'll do that."
+   },
+   "finish_reason": "stop"
+  }
+ ],
+ "usage": {
+  "prompt_tokens": 1582,
+  "completion_tokens": 142,
+  "total_tokens": 1724,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "audio_tokens": 0
+  },
+  "completion_tokens_details": {
+   "audio_tokens": 0,
+   "reasoning_tokens": 91
+  }
+ }
+}

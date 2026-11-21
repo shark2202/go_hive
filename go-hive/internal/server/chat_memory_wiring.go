@@ -144,12 +144,16 @@ func envBool(name string) (bool, bool) {
 }
 
 // injectPastConversationRecall appends the dated excerpts of earlier
-// conversations that match the latest user message. It runs after the memory
-// recall block and before ExecuteTurn, so related history is in front of the
-// model even when it does not call search_messages.
+// conversations that match the latest user message. It runs before the user
+// message joins the conversation — upstream's USER_PROMPT_SUBMIT ordering,
+// where the reminder frame precedes the queued request — so related history is
+// in front of the model even when it does not call search_messages.
 //
 // Parity: core/framework/agent_loop/past_conversations_reminder.py::PastConversationsReminderSource
-func (r *ChatRuntime) injectPastConversationRecall(query, stamp string) {
+// Parity: core/framework/agent_loop/agent_loop.py::_fire_reminder (the hub
+// wraps a bare source body in the shared <system-reminder> envelope) and
+// core/framework/agent_loop/reminders.py::wrap_reminder.
+func (r *ChatRuntime) injectPastConversationRecall(query string) {
 	if r == nil || r.conv == nil || r.deps.HomeRoot == "" || r.deps.Root == "" {
 		return
 	}
@@ -169,10 +173,12 @@ func (r *ChatRuntime) injectPastConversationRecall(query, stamp string) {
 	if block == "" {
 		return
 	}
-	reminder := "<system-reminder>\nRecalled past conversation excerpts relevant to the latest " +
-		"user message (supersedes earlier excerpt reminders):\n\n" + block + "\n</system-reminder>"
+	reminder := agentloop.WrapReminder([]string{block})
+	if reminder == "" {
+		return
+	}
 	// Excerpt recall is context, never a reason to fail a turn.
-	_, _ = r.conv.AddUserMessage("["+stamp+"] [External event] "+reminder, agentloop.UserMessageOptions{})
+	_, _ = r.conv.AddUserMessage(reminder, agentloop.UserMessageOptions{IsSystemReminder: true})
 }
 
 // startTimeline enables the per-session timeline writer when the feature flag

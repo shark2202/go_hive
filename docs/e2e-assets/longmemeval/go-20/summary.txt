@@ -1,0 +1,13 @@
+LongMemEval-S through Hive - 20 question(s), reader deepseek-flash-1017, judge deepseek-v4-pro
+overall 85.0% (95% CI 64.0-94.8), task-averaged 88.9%
+type                            n  correct  searched  evidence
+knowledge-update                3    66.7%    100.0%    100.0%
+multi-session                   6    66.7%     83.3%     80.0%
+single-session-assistant        2   100.0%     50.0%     50.0%
+single-session-preference       1   100.0%      0.0%      0.0%
+single-session-user             3   100.0%      0.0%      0.0%
+temporal-reasoning              5   100.0%     60.0%     60.0%
+ALL                            20    85.0%     60.0%     55.6%
+abstention questions: 0.0% of 2
+median seconds per question: 7
+searched = called search_messages or search_timeline; evidence = an answer session appeared in their results (auto-injected excerpts don't count, so 'correct' can exceed both)

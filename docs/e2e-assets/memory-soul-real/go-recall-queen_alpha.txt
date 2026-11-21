@@ -1,0 +1,55 @@
+[2026-11-21 17:01 CST] [External event] <system-reminder>
+Recalled memories relevant to the latest user message (supersedes earlier recall reminders):
+
+--- Global Memories ---
+
+### project_atlas.md
+
+---
+name: Atlas project
+description: deployment notes for project Atlas, including its port
+type: environment
+---
+
+Atlas 部署在 8080 端口。
+
+---
+
+### user-profile.md
+
+---
+name: user profile
+description: stable facts about the user, timezone, and their reply preferences
+type: profile
+---
+
+## User Identity
+
+- name: Lin
+- role: product designer
+
+## Communication Preferences
+
+用户偏好简洁、直接的回复，先说结论。
+
+## Context
+
+- 时区：CST（中国标准时间，UTC+8）；消息时间戳按此理解（如“昨天”指前一自然日）。
+- 中文交流，日常会随口汇报生活事件（如人情往来、随礼），并期望这些事件被记住、可日后对账。
+
+--- End Global Memories ---
+
+--- Queen Memories: queen_alpha ---
+
+### alpha_notes.md
+
+---
+name: alpha notes
+description: working notes that belong to queen_alpha only
+type: preference
+---
+
+queen_alpha 负责 Atlas 项目的部署验证。
+
+--- End Queen Memories: queen_alpha ---
+</system-reminder>

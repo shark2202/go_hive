@@ -1,0 +1,5 @@
+0000000000.json user  '<system-reminder>\nThe following tools are available but their schemas are NOT loaded — calling them directly will fail. Use search_tools with query "select:<name>[,<name>...]" to load their schemas before calling them (or pass keywords to search). Loaded tools'
+0000000001.json assistant  'Ready when you are. What are we shipping?\n\nGive me the goal in one line: what "done" looks like, any deadline, and whether there\'s existing code or a blank page. If there\'s a folder or repo I should be in, point me at it. I\'ll lay out a plan and start cutting.'
+0000000002.json user  <-- RECALL "<system-reminder>\nExcerpts from earlier conversations that may relate to the user's latest message (matched by keyword, so possibly incomplete; search_messages and search_timeline go deeper):\n- 2026-11-21 (Sat), session_20261121_160630_9ae41e6f\n  user: My favo"
+0000000003.json user  <-- USER MESSAGE '[2026-11-21 16:07 CST] What tea do I like? Answer from memory if you can.'
+0000000004.json assistant  'Jasmine. Filed that from our last session.\n\nNow, what are we building?'

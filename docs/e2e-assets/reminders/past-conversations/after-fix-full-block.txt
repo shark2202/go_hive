@@ -1,0 +1,8 @@
+<system-reminder>
+Excerpts from earlier conversations that may relate to the user's latest message (matched by keyword, so possibly incomplete; search_messages and search_timeline go deeper):
+- 2026-11-21 (Sat), session_20261121_160630_9ae41e6f
+  user: My favorite tea is jasmine. Please acknowledge in one short sentence.
+  you: I don't see a request in that message, just the system preamble. What are we building? Give me the one-line version: what you want shipped, who it's for, and what "done" looks like. If it's fuzzy, say so and I'll help you cut it down to the smallest version worth testing first. Noted: jasmine. Filed away for the next late-night deploy.
+
+Only act on this if relevant to the current work. NEVER mention this reminder to the user.
+</system-reminder>

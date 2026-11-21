@@ -1228,18 +1228,23 @@
           "path": "go_hive/docs/alignment-dimensions.html",
           "kind": "doc",
           "note": "登记 memory timeline 真实模型路径、reflection 未验证"
+        },
+        {
+          "path": "go_hive/docs/e2e-assets/memory-soul-real/",
+          "kind": "measured",
+          "note": "2026-11-21 真实模型双跑：timeline/recall/reflection/soul prompt 逐字节、review+auto 落盘一致；4 处修复；alpha recall 时序记 NOTE"
         }
       ],
       "status": "partial",
-      "status_basis": "memory 链路有迄今最强的证据（真实双跑 + prompt/schema 13/13）；soul 有 parity 测试与 e2e 资产，但真实模型路径与跨 queen/colony 作用域未联调，reflection 的生产行为未被真实模型驱动过。",
+      "status_basis": "memory 与 soul 的 prompt/schema/落盘在真实模型下已双跑实测（2026-11-21），跨 scope 隔离有 manifest 证据；仍开放：压缩触发的长记忆反思未接线（CONTEXT_COMPACTED 无生产者）、worker/colony 会话记忆不在本双跑范围。",
       "contract_state": "test_annotated",
       "measured_now": null,
       "lane": "memory-soul",
-      "lane_state": "suggested",
+      "lane_state": "measured",
       "next": [
-        "真实模型驱动的 memory 召回/反思路径（非确定性网关 → 真实 provider）",
-        "跨 queen/colony 作用域的记忆可见性对照",
-        "把 memory e2e 纳入定时对比（golden trace）"
+        "接线压缩触发的长记忆反思（CONTEXT_COMPACTED 生产者）",
+        "真实慢模型下的 recall 注入 turn 边界稳定性",
+        "把 memory/soul 真实 e2e 纳入定时对比（golden trace）"
       ],
       "priority": "P2"
     }

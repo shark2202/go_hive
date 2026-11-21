@@ -1,0 +1,29 @@
+LongMemEval dataset + split evidence (2026-11-21, worktree .wt/longmemeval-reminders)
+
+Network status re-checked this session: huggingface.co reachable (HTTP 200),
+api.openai.com reachable but 401 without a key.  The earlier "no network egress"
+note in go_hive/docs/longmemeval.md is stale for this machine.
+
+Raw download (doc §2 URL, same as upstream):
+  file   : /Users/mac/.hive-go/longmemeval-data/longmemeval_s_cleaned.json
+  bytes  : 277383467  (≈277 MB, matches the documented S size)
+  sha256 : d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442
+
+Split (Go `hive-longmemeval run --data <raw> --questions <unknown id>`; the split
+runs before question selection, then the command exits on the unknown id):
+  dir    : /Users/mac/.hive-go/longmemeval-data/s_cleaned/
+  index  : 500 questions, first entry
+           {'question_id': 'e47becba', 'question_type': 'single-session-user',
+            'question_date': '2023/05/30 (Tue) 23:40', 'sessions': 53}
+  note   : the first split attempt FAILED before the answer-type fix:
+           "decode question: json: cannot unmarshal number into Go struct field
+            Item.answer of type string".  32 of the 500 S answers are bare JSON
+           numbers (e.g. 0a995998 has answer 3).  Fixed by dataset.go's
+           AnswerValue (accepts string | number, preserves JSON type); the
+           re-run split all 500 and the per-question file still carries
+           "answer": 3 as a number, matching Python's split.
+
+Field-type scan of the raw S release (Python streaming parse):
+  question_id str 500 | question_type str 500 | question str 500
+  question_date str 500 | answer str 468 / int 32 | the three haystack_* arrays
+  500 each | answer_session_ids 500

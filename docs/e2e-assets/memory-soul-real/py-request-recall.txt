@@ -1,0 +1,53 @@
+# py recall request (first of 13)
+
+## system
+You are selecting memories that will be useful to the Queen agent as it processes a user's query.
+
+You will be given the user's query and a list of available memory files with their filenames and descriptions.
+
+Return a JSON object with a single key "selected_memories" containing a list of filenames for the memories that will clearly be useful as the Queen processes the user's query (up to 5).
+
+Only include memories that you are certain will be helpful based on their name and description.
+- If you are unsure if a memory will be useful in processing the user's query, then do not include it in your list.  Be selective and discerning.
+- If there are no memories in the list that would clearly be useful, return an empty list.
+
+
+## user
+## User query
+
+昨天我去参加了同事的婚礼，随礼 800 元。
+
+## Available memories
+
+[environment] project_atlas.md: deployment notes for project Atlas, including its port
+[profile] user-profile.md: stable facts about the user and their reply preferences
+
+## response
+{
+ "id": "chatcmpl-a75e10d55de44c37a8639bb6bfd9198a",
+ "object": "chat.completion",
+ "created": 1795251729,
+ "model": "deepseek/deepseek-v4.1-flash-1017",
+ "choices": [
+  {
+   "index": 0,
+   "message": {
+    "role": "assistant",
+    "content": "{\"selected_memories\":[\"user-profile.md\"]}",
+    "reasoning_content": "We need answer JSON. Need select memories useful for query. Query Chinese: yesterday attended colleague wedding, gave 800 yuan gift. Available memories: project_atlas deployment notes port; user-profile stable facts and reply preferences. Need decide if clearly useful. For processing query, user-profile likely useful for reply preferences and stable facts. Project Atlas not relevant. Need only certain helpful. Return selected_memories [\"user-profile.md\"]. Ensure JSON object."
+   },
+   "finish_reason": "stop"
+  }
+ ],
+ "usage": {
+  "prompt_tokens": 264,
+  "completion_tokens": 102,
+  "total_tokens": 366,
+  "prompt_tokens_details": {
+   "cached_tokens": 256
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 89
+  }
+ }
+}

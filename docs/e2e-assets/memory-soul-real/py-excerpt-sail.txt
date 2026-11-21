@@ -1,0 +1,11 @@
+<system-reminder>
+Excerpts from earlier conversations that may relate to the user's latest message (matched by keyword, so possibly incomplete; search_messages and search_timeline go deeper):
+- 2025-11-11 (Tue), session_20251111_090000_topsail01
+  user: 我在第 1 次帆船训练中完成了绕标。
+- 2025-11-12 (Wed), session_20251112_090000_topsail02
+  user: 我在第 2 次帆船训练中完成了绕标。
+- 2025-11-13 (Thu), session_20251113_090000_topsail03
+  user: 我在第 3 次帆船训练中完成了绕标。
+
+Only act on this if relevant to the current work. NEVER mention this reminder to the user.
+</system-reminder>

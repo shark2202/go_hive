@@ -1,0 +1,66 @@
+# py timeline request (first of 12)
+
+## system
+You build a dated timeline of what a user has told an assistant about their life.
+
+The input is one or more conversation sessions. Each has a label, the date it took place, and the user's messages, numbered.
+
+Extract every concrete event, fact and plan the user states about themselves or the people and things in
+their life: what they did, bought, sold, attended, visited, made, fixed, learned, received, spent, counted or
+measured; facts about their situation (work, home, possessions, routines, health, relationships, pets,
+preferences, quantities); and plans. One item per distinct occurrence: two separate weddings are two items.
+Skip requests, questions and chit-chat that state nothing about the user.
+
+For each item give:
+- "session": the session label, e.g. "S2"
+- "turn": the number of the message it came from
+- "kind": "event" (it happened), "fact" (a state or preference as of that date) or "plan" (intended, future)
+- "text": one self-contained sentence about "the user" (never "I") naming what, where, with whom, and any
+  number, amount, price or duration exactly as stated
+- "start", "end": the dates (YYYY-MM-DD) it happened or holds, resolved against the session date.
+  "yesterday" is the day before; "last week" is the previous Monday to Sunday; "two weeks ago" is that week;
+  "this month" is the 1st through the session date; "recently" or "just" is the 7 days up to the session date.
+  With no time given, use the session date for both. For plans, use the intended date if stated, otherwise
+  the session date.
+- "aliases": 2 to 4 short rephrasings in different words (synonyms, the category it belongs to) so a keyword
+  search finds it
+
+Reply with JSON only: {"items": [...]}, or {"items": []} when there is nothing.
+
+Please respond with a valid JSON object.
+
+## user
+Session S1, 2026-11-21 (Saturday)
+[1] 昨天我去参加了同事的婚礼，随礼 800 元。
+
+## response
+{
+ "id": "chatcmpl-01c27c9cc9b940c899d47ee3623ecb47",
+ "object": "chat.completion",
+ "created": 1795251732,
+ "model": "deepseek/deepseek-v4.1-flash-1017",
+ "choices": [
+  {
+   "index": 0,
+   "message": {
+    "role": "assistant",
+    "content": "{\"items\":[{\"session\":\"S1\",\"turn\":1,\"kind\":\"event\",\"text\":\"The user attended a colleague's wedding on 2026-11-20 and gave 800 yuan as a gift.\",\"start\":\"2026-11-20\",\"end\":\"2026-11-20\",\"aliases\":[\"参加同事婚礼\",\"随礼800元\",\"出席婚礼\",\"同事结婚\"]}]}",
+    "reasoning_content": "We need answer JSON only. Need extract items from session S1 date 2026-11-21 Saturday. Message [1]: \"昨天我去参加了同事的婚礼，随礼 800 元。\" Means yesterday I attended colleague's wedding, gave 800 yuan gift money. Need item event, turn 1, text self-contained about user, start/end yesterday = 2026-11-20. aliases 2-4 short rephrasings. Need JSON only. One item. Ensure Chinese? Text can be English? It says one self-contained sentence about \"the user\" never \"I\" naming what where with whom number. Could write in English or Chinese. Since input Chinese, likely Chinese okay. Need \"the user attended a colleague's wedding yesterday and gave 800 yuan as a gift.\" But timeline item should be self-contained sentence about the user. Need exact number. Dates resolved. \"start\": \"2026-11-20\", \"end\": \"2026-11-20\". aliases in Chinese maybe [\"参加同事婚礼\",\"随礼800元\",\"婚礼出席\",\"同事结婚\"]. Need 2-4 short rephrasings. JSON valid."
+   },
+   "finish_reason": "stop"
+  }
+ ],
+ "usage": {
+  "prompt_tokens": 509,
+  "completion_tokens": 328,
+  "total_tokens": 837,
+  "prompt_tokens_details": {
+   "cached_tokens": 256,
+   "text_tokens": 509
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 243,
+   "text_tokens": 84
+  }
+ }
+}

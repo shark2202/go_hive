@@ -58,7 +58,7 @@ func TestPrepareSplitsFixtureAndReloads(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadItem: %v", err)
 	}
-	if item.QuestionType != "single-session-user" || !strings.Contains(item.Answer, "45 minutes") {
+	if item.QuestionType != "single-session-user" || !strings.Contains(item.Answer.Text(), "45 minutes") {
 		t.Fatalf("item = %+v", item)
 	}
 	// A second Prepare trusts the existing index instead of re-splitting.
@@ -147,6 +147,42 @@ func TestFixtureRoundTripsThroughJSON(t *testing.T) {
 	}
 	if decoded.QuestionID != items[0].QuestionID || len(decoded.HaystackSessions) != 2 {
 		t.Fatalf("decoded = %+v", decoded)
+	}
+}
+
+// Parity-exempt: the 2025 cleaned release stores 32 of S's 500 answers as bare
+// JSON numbers (e.g. "3"). Python's json.loads keeps the int and only formats
+// it; the Go Item must accept that shape instead of aborting the whole split.
+func TestAnswerAcceptsNumericJSONAndKeepsType(t *testing.T) {
+	raw := `[{"question_id":"numeric_answer","question_type":"knowledge-update",
+		"question":"How many?","answer":3,"question_date":"2023/05/30 (Tue) 23:40",
+		"haystack_session_ids":["s1"],"haystack_dates":["2023/05/29 (Mon) 10:00"],
+		"haystack_sessions":[[{"role":"user","content":"three"}]],"answer_session_ids":["s1"]}]`
+	dir := t.TempDir()
+	path := filepath.Join(dir, rawFileName(VariantS))
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatalf("write raw: %v", err)
+	}
+	splitDir, err := Prepare(context.Background(), SourceConfig{Variant: VariantS, DataPath: dir, Download: false})
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	item, err := LoadItem(splitDir, "numeric_answer")
+	if err != nil {
+		t.Fatalf("LoadItem: %v", err)
+	}
+	if item.Answer.Text() != "3" {
+		t.Fatalf("Answer.Text() = %q, want %q", item.Answer.Text(), "3")
+	}
+	if got, ok := item.Answer.Value().(float64); !ok || got != 3 {
+		t.Fatalf("Answer.Value() = %#v, want the numeric 3", item.Answer.Value())
+	}
+	encoded, err := json.Marshal(item)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !strings.Contains(string(encoded), `"answer":3`) {
+		t.Fatalf("split file lost the numeric type: %s", encoded)
 	}
 }
 

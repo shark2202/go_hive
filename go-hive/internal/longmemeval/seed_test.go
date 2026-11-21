@@ -83,7 +83,7 @@ func TestSeedHaystackSkipsEmptySessions(t *testing.T) {
 		QuestionID:         "fixture_empty",
 		QuestionType:       "single-session-user",
 		Question:           "q",
-		Answer:             "a",
+		Answer:             longmemeval.TextAnswer("a"),
 		QuestionDate:       "2023/05/20 (Sat) 10:00",
 		HaystackSessionIDs: []string{"empty", "full"},
 		HaystackDates:      []string{"2023/05/18 (Thu) 08:12", "2023/05/19 (Fri) 09:00"},

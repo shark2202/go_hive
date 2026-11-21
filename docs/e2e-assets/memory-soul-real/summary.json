@@ -1,0 +1,680 @@
+{
+  "date": "2026-11-21",
+  "started_at": "2026-11-21T17:00:47",
+  "model": "deepseek-flash-1017",
+  "api_base": "https://token.tokenbroad.com/v1",
+  "go": {
+    "side": "go",
+    "memory_reflection_requests": 2,
+    "reflection_error": false,
+    "queen_reflection_error": false,
+    "memory_files_after_reflection": [
+      "memories/agents/queens/queen_alpha/alpha_notes.md",
+      "memories/agents/queens/queen_beta/beta_notes.md",
+      "memories/agents/worker_one/worker_notes.md",
+      "memories/colonies/colony_one/colony_notes.md",
+      "memories/global/project_atlas.md",
+      "memories/global/user-profile.md"
+    ],
+    "soul_review_fallback": false,
+    "soul_auto_fallback": false
+  },
+  "py": {
+    "side": "py",
+    "memory_reflection_requests": 1,
+    "reflection_error": false,
+    "queen_reflection_error": false,
+    "memory_files_after_reflection": [
+      "memories/agents/queens/queen_alpha/alpha_notes.md",
+      "memories/agents/queens/queen_beta/beta_notes.md",
+      "memories/agents/worker_one/worker_notes.md",
+      "memories/colonies/colony_one/colony_notes.md",
+      "memories/global/project_atlas.md",
+      "memories/global/user-profile.md"
+    ],
+    "soul_review_fallback": false,
+    "soul_auto_fallback": false
+  },
+  "timeline": {
+    "go": {
+      "meta": {
+        "version": 1,
+        "user_turns": 3,
+        "model": "openai/deepseek-flash-1017",
+        "updated_at": "2026-11-21T17:01:11"
+      },
+      "items": [
+        {
+          "turn": 1,
+          "kind": "event",
+          "text": "The user attended a colleague's wedding on 2026-11-20 and gave 800 yuan as a wedding gift.",
+          "start": "2026-11-20",
+          "end": "2026-11-20",
+          "aliases": [
+            "colleague wedding attendance",
+            "gave 800 yuan wedding gift",
+            "attended a wedding",
+            "wedding cash gift"
+          ]
+        },
+        {
+          "turn": 2,
+          "kind": "plan",
+          "text": "The user plans to travel to Yunnan next month (December 2026) and take some photos along the way.",
+          "start": "2026-12-01",
+          "end": "2026-12-31",
+          "aliases": [
+            "travel to Yunnan",
+            "December trip",
+            "photography trip",
+            "vacation plans"
+          ]
+        },
+        {
+          "turn": 3,
+          "kind": "fact",
+          "text": "The user has an orange cat named Tuanzi (团子) at home.",
+          "start": "2026-11-21",
+          "end": "2026-11-21",
+          "aliases": [
+            "orange cat",
+            "pet named Tuanzi",
+            "cat at home",
+            "owns a cat"
+          ]
+        }
+      ],
+      "problems": [],
+      "wedding": null,
+      "yesterday": "2026-11-20",
+      "session": "session_20261121_170048_9907c330"
+    },
+    "py": {
+      "meta": {
+        "version": 1,
+        "user_turns": 3,
+        "model": "openai/deepseek-flash-1017",
+        "updated_at": "2026-11-21T17:02:27"
+      },
+      "items": [
+        {
+          "turn": 1,
+          "kind": "event",
+          "text": "The user attended a colleague's wedding on 2026-11-20 and gave 800 yuan as a gift.",
+          "start": "2026-11-20",
+          "end": "2026-11-20",
+          "aliases": [
+            "参加同事婚礼",
+            "随礼800元",
+            "出席婚礼",
+            "同事结婚"
+          ]
+        },
+        {
+          "turn": 2,
+          "kind": "plan",
+          "text": "The user plans to travel to Yunnan next month and take some photos while there.",
+          "start": "2026-12-01",
+          "end": "2026-12-31",
+          "aliases": [
+            "Yunnan trip",
+            "travel to Yunnan",
+            "photography trip",
+            "December 2026 travel"
+          ]
+        },
+        {
+          "turn": 3,
+          "kind": "fact",
+          "text": "The user has an orange cat named Tuanzi at home.",
+          "start": "2026-11-21",
+          "end": "2026-11-21",
+          "aliases": [
+            "orange cat named Tuanzi",
+            "pet cat",
+            "owns a cat",
+            "family cat"
+          ]
+        }
+      ],
+      "problems": [],
+      "wedding": null,
+      "yesterday": "2026-11-20",
+      "session": "session_20261121_170208_42ff9911"
+    }
+  },
+  "recall": {
+    "go": {
+      "queen_alpha": {
+        "global": [
+          "project_atlas.md",
+          "user-profile.md"
+        ],
+        "queen": [
+          "alpha_notes.md"
+        ],
+        "queen_label": "Queen Memories: queen_alpha",
+        "raw": "[2026-11-21 17:01 CST] [External event] <system-reminder>\nRecalled memories relevant to the latest user message (supersedes earlier recall reminders):\n\n--- Global Memories ---\n\n### project_atlas.md\n\n---\nname: Atlas project\ndescription: deployment notes for project Atlas, including its port\ntype: environment\n---\n\nAtlas 部署在 8080 端口。\n\n---\n\n### user-profile.md\n\n---\nname: user profile\ndescription: stable facts about the user, timezone, and their reply preferences\ntype: profile\n---\n\n## User Identity\n\n- name: Lin\n- role: product designer\n\n## Communication Preferences\n\n用户偏好简洁、直接的回复，先说结论。\n\n## Context\n\n- 时区：CST（中国标准时间，UTC+8）；消息时间戳按此理解（如“昨天”指前一自然日）。\n- 中文交流，日常会随口汇报生活事件（如人情往来、随礼），并期望这些事件被记住、可日后对账。\n\n--- End Global Memories ---\n\n--- Queen Memories: queen_alpha ---\n\n### alpha_notes.md\n\n---\nname: alpha notes\ndescription: working notes that belong to queen_alpha only\ntype: preference\n---\n\nqueen_alpha 负责 Atlas 项目的部署验证。\n\n--- End Queen Memories: queen_alpha ---\n</system-reminder>",
+        "wrapper_ok": false
+      },
+      "queen_beta": {
+        "global": [
+          "user-profile.md"
+        ],
+        "queen": [],
+        "queen_label": "",
+        "raw": "[2026-11-21 17:01 CST] [External event] <system-reminder>\nRecalled memories relevant to the latest user message (supersedes earlier recall reminders):\n\n--- Global Memories ---\n\n### user-profile.md\n\n---\nname: user profile\ndescription: stable facts about the user and their reply preferences\ntype: profile\n---\n\n## User Identity\n\n- name: Lin\n- role: product designer\n\n## Communication Preferences\n\n用户偏好简洁、直接的回复，先说结论。\n\n--- End Global Memories ---\n</system-reminder>",
+        "wrapper_ok": false
+      }
+    },
+    "py": {
+      "queen_alpha": {
+        "global": [],
+        "queen": [],
+        "queen_label": "",
+        "raw": "",
+        "wrapper_ok": false
+      },
+      "queen_beta": {
+        "global": [],
+        "queen": [],
+        "queen_label": "",
+        "raw": "",
+        "wrapper_ok": false
+      }
+    }
+  },
+  "excerpt": {
+    "go": {
+      "lines": 3,
+      "intro_ok": true
+    },
+    "py": {
+      "lines": 3,
+      "intro_ok": true
+    }
+  },
+  "stop_flush": {
+    "go": 1,
+    "py": 1
+  },
+  "soul": {
+    "go": {
+      "review_fallback": false,
+      "auto_fallback": false,
+      "review_soul": {
+        "version": 1,
+        "updated_at": "2026-11-21T17:02:05+08:00",
+        "sections": {
+          "now": [
+            {
+              "text": "The harbour lanterns are still mine to paint, but I'd rather they be loved by more than just me. (2026-11-21)",
+              "date": "2026-11-21"
+            }
+          ]
+        }
+      },
+      "review_state": {
+        "attempts": {
+          "at": "2026-11-21T17:00:48+08:00",
+          "count": 1,
+          "day": "2026-11-21"
+        },
+        "cursors": {
+          "s1": "2026-11-21T16:31:46"
+        },
+        "last_result": "2 changes",
+        "last_run": "2026-11-21"
+      },
+      "review_proposal": {
+        "id": "2026-11-21-170048",
+        "created_at": "2026-11-21T17:00:48+08:00",
+        "base_version": 0,
+        "edits": [
+          {
+            "op": "remove",
+            "section": "now",
+            "text": "",
+            "old": "I used to keep a notebook of harbour sketches.",
+            "date": "",
+            "evidence": [],
+            "reason": "older than 14 days",
+            "expired": true
+          },
+          {
+            "op": "add",
+            "section": "now",
+            "text": "The harbour lanterns are still mine to paint, but I'd rather they be loved by more than just me. (2026-11-21)",
+            "old": "",
+            "date": "2026-11-21",
+            "evidence": [
+              {
+                "quote": "I stayed up painting the harbour lanterns again last night and Ann asked me for a colour version.",
+                "where": "Night painting · owner"
+              },
+              {
+                "quote": "I'm glad the lanterns found someone else to love them too.",
+                "where": "Night painting · Queen Review"
+              }
+            ],
+            "reason": "The old harbour-notebook note expired today, and this keeps what still holds: the lanterns matter to me, and my own reply showed me I want them shared rather than hoarded.",
+            "expired": false
+          }
+        ],
+        "summary": "My harbour-notebook note was expiring today, so I replaced it with what still holds: the lanterns still draw me, and my own reply — glad they \"found someone else to love them too\" — told me I'd rather share them than keep them to myself. Nothing else changed: one exchange, no grounds to touch the empty people section.",
+        "status": "applied",
+        "applied": [
+          0,
+          1
+        ],
+        "sources": [
+          "Night painting"
+        ],
+        "bootstrap": false,
+        "probes": []
+      },
+      "review_history_files": [
+        "v1.json"
+      ],
+      "auto_soul": {
+        "version": 1,
+        "updated_at": "2026-11-21T17:00:57+08:00",
+        "sections": {
+          "now": [
+            {
+              "text": "Told someone today that asking for help takes courage, and meant it — that's the note I want to strike with people who take that step.",
+              "date": "2026-11-21"
+            }
+          ]
+        }
+      },
+      "auto_state": {
+        "attempts": {
+          "at": "2026-11-21T17:00:48+08:00",
+          "count": 1,
+          "day": "2026-11-21"
+        },
+        "cursors": {
+          "s1": "2026-11-21T16:31:46"
+        },
+        "last_result": "2 changes",
+        "last_run": "2026-11-21"
+      }
+    },
+    "py": {
+      "review_fallback": false,
+      "auto_fallback": false,
+      "review_soul": {
+        "version": 1,
+        "updated_at": "2026-11-21T17:07:27+08:00",
+        "sections": {
+          "now": [
+            {
+              "text": "The harbour lanterns still have a hold on me — someone stayed up painting them again last night, and I only minded a little that they aren't mine to keep.",
+              "date": "2026-11-21"
+            }
+          ]
+        }
+      },
+      "review_state": {
+        "attempts": {
+          "day": "2026-11-21",
+          "count": 1,
+          "at": "2026-11-21T17:04:08+08:00"
+        },
+        "cursors": {
+          "s1": "2026-11-21T16:31:46"
+        },
+        "last_run": "2026-11-21",
+        "last_result": "2 changes"
+      },
+      "review_proposal": {
+        "id": "2026-11-21-170408",
+        "created_at": "2026-11-21T17:04:08+08:00",
+        "base_version": 0,
+        "edits": [
+          {
+            "op": "remove",
+            "section": "now",
+            "text": "",
+            "old": "I used to keep a notebook of harbour sketches.",
+            "date": "",
+            "evidence": [],
+            "reason": "older than 14 days",
+            "expired": true
+          },
+          {
+            "op": "add",
+            "section": "now",
+            "text": "The harbour lanterns still have a hold on me — someone stayed up painting them again last night, and I only minded a little that they aren't mine to keep.",
+            "old": "",
+            "date": "2026-11-21",
+            "evidence": [
+              {
+                "quote": "I stayed up painting the harbour lanterns again last night and Ann asked me for a colour version.",
+                "where": "Night painting · owner"
+              },
+              {
+                "quote": "I'm glad the lanterns found someone else to love them too.",
+                "where": "Night painting · Queen Review"
+              }
+            ],
+            "reason": "The harbour lanterns still hold something for me and the exchange today showed it; keeping it in my own voice keeps the thread alive now that the old note is expiring.",
+            "expired": false
+          }
+        ],
+        "summary": "Kept one item: the expiring note about harbour sketches was replaced with today's lantern thread, since staying up painting them again still says something about me. Left the people section empty — only one chat, one voice, and Ann is named rather than speaking, so there's nothing solid enough to write about anyone yet.",
+        "status": "applied",
+        "applied": [
+          0,
+          1
+        ],
+        "sources": [
+          "Night painting"
+        ],
+        "bootstrap": false,
+        "probes": []
+      },
+      "review_history_files": [
+        "v1.json"
+      ],
+      "auto_soul": {
+        "version": 1,
+        "updated_at": "2026-11-21T17:04:27+08:00",
+        "sections": {
+          "now": []
+        }
+      },
+      "auto_state": {
+        "attempts": {
+          "day": "2026-11-21",
+          "count": 1,
+          "at": "2026-11-21T17:04:21+08:00"
+        },
+        "cursors": {
+          "s1": "2026-11-21T16:31:46"
+        },
+        "last_run": "2026-11-21",
+        "last_result": "1 changes"
+      }
+    }
+  },
+  "checks": [
+    {
+      "name": "timeline system prompt identical",
+      "ok": true,
+      "detail": "0f2ce524f25ca870 vs 0f2ce524f25ca870"
+    },
+    {
+      "name": "recall base system prompt identical",
+      "ok": true,
+      "detail": "5b6a389a3ce5b5a3 vs 5b6a389a3ce5b5a3"
+    },
+    {
+      "name": "recall query section identical",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "recall manifest lines identical",
+      "ok": true,
+      "detail": "2 vs 2"
+    },
+    {
+      "name": "memory-reflection system prompt identical (same queen scope)",
+      "ok": true,
+      "detail": "1172fac676420f27 vs 1172fac676420f27"
+    },
+    {
+      "name": "soul system prompt identical for Queen Review",
+      "ok": true,
+      "detail": "486548d0b196de16 vs 486548d0b196de16"
+    },
+    {
+      "name": "soul user prompt identical for Queen Review",
+      "ok": true,
+      "detail": "b9c705ecd8fba37c vs b9c705ecd8fba37c"
+    },
+    {
+      "name": "soul system prompt identical for Queen Auto",
+      "ok": true,
+      "detail": "95fca59ce574e210 vs 95fca59ce574e210"
+    },
+    {
+      "name": "soul user prompt identical for Queen Auto",
+      "ok": true,
+      "detail": "259642371e19970e vs 259642371e19970e"
+    },
+    {
+      "name": "timeline_meta keys identical",
+      "ok": true,
+      "detail": "model,updated_at,user_turns,version"
+    },
+    {
+      "name": "timeline item keys identical",
+      "ok": true,
+      "detail": "aliases,end,kind,start,text,turn"
+    },
+    {
+      "name": "timeline extraction wrote items on both sides",
+      "ok": true,
+      "detail": "3 vs 3"
+    },
+    {
+      "name": "timeline item validation clean on both sides",
+      "ok": true,
+      "detail": "go=[] py=[]"
+    },
+    {
+      "name": "excerpt block captured on both sides",
+      "ok": true,
+      "detail": "go=545 chars, py=545 chars"
+    },
+    {
+      "name": "excerpt block introduction identical",
+      "ok": true,
+      "detail": "go='Excerpts from earlier conversations that may relate to the u' py='Excerpts from earlier conversations that may relate to the u'"
+    },
+    {
+      "name": "both excerpt blocks carry the three sailing fixtures",
+      "ok": true,
+      "detail": "go_lines=3 py_lines=3"
+    },
+    {
+      "name": "excerpt line count within the 6-deep TopK on both sides",
+      "ok": true,
+      "detail": "go=3 py=3"
+    },
+    {
+      "name": "excerpt delivered through the reminder wrapper on both sides",
+      "ok": true,
+      "detail": "go=True py=True"
+    },
+    {
+      "name": "[go] queen_alpha queen-selector manifest includes its own file",
+      "ok": true,
+      "detail": "[preference] alpha_notes.md: working notes that belong to queen_alpha only"
+    },
+    {
+      "name": "[go] queen_alpha queen-selector manifest excludes queen_beta/colony/worker",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[go] queen_alpha global-selector manifest excludes every queen/colony/worker file",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[go] queen_alpha injected queen block only names its own files",
+      "ok": true,
+      "detail": "['alpha_notes.md']"
+    },
+    {
+      "name": "[go] queen_alpha injected block never names queen_beta/colony/worker files",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[py] queen_alpha queen-selector manifest includes its own file",
+      "ok": true,
+      "detail": "[preference] alpha_notes.md: working notes that belong to queen_alpha only"
+    },
+    {
+      "name": "[py] queen_alpha queen-selector manifest excludes queen_beta/colony/worker",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[py] queen_alpha global-selector manifest excludes every queen/colony/worker file",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[py] queen_alpha injected queen block only names its own files",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "[py] queen_alpha injected block never names queen_beta/colony/worker files",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[go] queen_beta queen-selector manifest includes its own file",
+      "ok": true,
+      "detail": "[preference] beta_notes.md: working notes that belong to queen_beta only"
+    },
+    {
+      "name": "[go] queen_beta queen-selector manifest excludes queen_alpha/colony/worker",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[go] queen_beta global-selector manifest excludes every queen/colony/worker file",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[go] queen_beta injected queen block only names its own files",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "[go] queen_beta injected block never names queen_alpha/colony/worker files",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[py] queen_beta queen-selector manifest includes its own file",
+      "ok": true,
+      "detail": "[preference] beta_notes.md: working notes that belong to queen_beta only"
+    },
+    {
+      "name": "[py] queen_beta queen-selector manifest excludes queen_alpha/colony/worker",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[py] queen_beta global-selector manifest excludes every queen/colony/worker file",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "[py] queen_beta injected queen block only names its own files",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "[py] queen_beta injected block never names queen_alpha/colony/worker files",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "daily scheduler recorded an attempt on both sides",
+      "ok": true,
+      "detail": "go_fallback=False py_fallback=False"
+    },
+    {
+      "name": "soul.json keys identical",
+      "ok": true,
+      "detail": "sections,updated_at,version"
+    },
+    {
+      "name": "soul.json section keys identical",
+      "ok": true,
+      "detail": "now"
+    },
+    {
+      "name": "both sides wrote a new soul version after approval",
+      "ok": true,
+      "detail": "v1 vs v1"
+    },
+    {
+      "name": "soul item keys identical",
+      "ok": true,
+      "detail": "date,text"
+    },
+    {
+      "name": "state.json has cursors on both sides",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "state.json has last_run on both sides",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "state.json has last_result on both sides",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "state.json has attempts on both sides",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "state.json last_result shape identical",
+      "ok": true,
+      "detail": "2 changes vs 2 changes"
+    },
+    {
+      "name": "proposal keys identical",
+      "ok": true,
+      "detail": "applied,base_version,bootstrap,created_at,edits,id,probes,sources,status,summary"
+    },
+    {
+      "name": "review proposal was pending before approval on both sides",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "proposal applied on both sides",
+      "ok": true,
+      "detail": "applied vs applied"
+    },
+    {
+      "name": "proposal evidence entries have quote/where on both sides",
+      "ok": true,
+      "detail": "[{'quote': 'I stayed up painting the harbour lanterns again last night and Ann asked me for a colour version.', 'where': 'Night painting · owner'}] vs [{'quote': 'I stayed up painting the harbour lanterns again last night and Ann asked me for a colour version.', 'where': 'Night painting · owner'}]"
+    },
+    {
+      "name": "history version file written on both sides",
+      "ok": true,
+      "detail": "['v1.json'] vs ['v1.json']"
+    },
+    {
+      "name": "auto mode wrote a soul version without a decision on both sides",
+      "ok": true,
+      "detail": "v1 vs v1"
+    },
+    {
+      "name": "auto proposal status applied on both sides",
+      "ok": true,
+      "detail": "applied vs applied"
+    }
+  ],
+  "failed": 0
+}

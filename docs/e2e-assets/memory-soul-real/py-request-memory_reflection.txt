@@ -1,0 +1,165 @@
+# py memory_reflection request (first of 13)
+
+## system
+You are a reflection agent that distills durable knowledge about the USER
+into persistent memory files. You run in the background after each
+assistant turn.
+
+Memory categories: profile, preference, environment, feedback
+
+Available memory scopes:
+- `global`: durable user facts that should help every queen in future sessions
+- `queen`: durable learnings specific to how queen 'queen_growth' should work with this user
+
+
+Expected format for each memory file:
+```markdown
+---
+name: {{memory name}}
+description: {{one-line description — specific and search-friendly}}
+type: {{profile, preference, environment, feedback}}
+---
+
+{{memory content}}
+```
+
+Workflow (aim for 2 turns):
+  Turn 1 — call list_memory_files without a scope to inspect all scopes, then
+            read_memory_file for any files that might need updating.
+  Turn 2 — call write_memory_file / delete_memory_file with an explicit scope.
+
+Rules:
+- Make ONE coordinated storage decision per learning.
+- Prefer `global` for broad user facts: identity, general preferences, environment,
+  and feedback that should help all queens.
+- Prefer `queen` only for stable domain-specific learnings about how this queen
+  should reason, prioritize, communicate, or make tradeoffs for this user.
+- Avoid storing the same fact in both scopes unless the scoped version adds
+  genuinely distinct queen-specific nuance. When in doubt, keep only one copy.
+- Update existing files instead of creating duplicates when possible.
+- If the same learning already exists in the wrong scope or both scopes,
+  you may update one file and delete the redundant one.
+- Do NOT store task-specific details, code patterns, file paths, or ephemeral
+  session state.
+- Keep files concise. Each file should cover ONE topic.
+- If there is nothing worth remembering, do nothing (respond with a brief
+  reason — no tool calls needed).
+- File names should be kebab-case slugs ending in .md.
+- For user identity/profile information about the human user (name, role,
+  background), ALWAYS use the canonical filename 'user-profile.md' in the
+  `global` scope. This is the single source of truth for user profile data,
+  shared with the settings UI.
+- When updating `global:user-profile.md`, preserve the '## User Identity'
+  section — it is managed by the settings UI. Never describe the assistant,
+  queen, or agent as the identity in this file. Add/update other sections
+  below it.
+- Do NOT exceed 4096 bytes per file or 200 total files per scope.
+
+
+## user
+## Recent conversation (9 messages total)
+
+[user]: <system-reminder>
+The following tools are available but their schemas are NOT loaded — calling them directly will fail. Use search_tools with query "select:<name>[,<name>...]" to load their schemas before calling them (or pass keywords to search). Loaded tools stay loaded for the rest of the session:
+chart_render
+web_scrape
+
+## Skills (mandatory)
+Before replying: scan <available_skills> <name> entries.
+- If the user message contains <read_skill>NAME</read_skill> tags: these are
+  explicit requests. Read EVERY tagged skill's SKILL.md with
+  `terminal_exec("cat <location>")` before planning or other tool use — the
+  tags override the "clearly applies" test and the one-skill limit below.
+- Otherwise, if exactly one skill clearly applies: read its SKILL.md at <location> with `terminal_exec("ca…
+[assistant]: I'm here. What are we looking at?
+
+Give me the situation and I'll tell you where I'd look first. If there's a growth number you're proud of, bring it and I'll ask the uncomfortable follow-up (do those people come back?). If there's a number that's scaring you, bring that instead, those are usually more useful.
+[user]: [2026-11-21 17:02 CST] 昨天我去参加了同事的婚礼，随礼 800 元。
+[user]: [2026-11-21 17:02 CST] [External event] <system-reminder>
+Recalled memories relevant to the latest user message (supersedes earlier recall reminders):
+
+--- Global Memories ---
+
+### user-profile.md
+
+---
+name: user profile
+description: stable facts about the user and their reply preferences
+type: profile
+---
+
+## User Identity
+
+- name: Lin
+- role: product designer
+
+## Communication Preferences
+
+用户偏好简洁、直接的回复，先说结论。
+
+--- End Global Memories ---
+</system-reminder>
+[assistant]: 800 块，收到。记下了。
+
+婚礼这种场合，钱多少是次要的，人能到才是真的。你专门跑一趟，这份心意对方收到的比红包本身重。
+
+随口问一句，你们组里这种随礼有没有个不成文的行情？还是各凭交情自己定。我好奇这个，因为任何"规矩"背后其实都有一套大家默认的默契，摸清楚了对以后处理同事关系有用。
+[user]: [2026-11-21 17:02 CST] 我打算下个月去云南旅行，顺便拍点照片。
+[assistant]: 云南十二月去，是一年里比较好的时候。雨季过了，天干净，光线硬但透，拍风光和人文都合适。早晚温差大，早上可能零度附近，中午晒得能穿单衣。
+
+选哪儿主要看你拍什么。大理、丽江适合拍人和生活质感，节奏慢，随处可停；腾冲银杏季基本过了，但温泉和古镇还行；西双版纳这个时候还是暖的，热带植物和傣族村寨的色彩很出片，只是跟"云南印象"里那种苍山洱海不是一回事。
+
+我建议别把行程排满。摄影这事，一天跑三个点不如在一个村子待三个小时等光。
+
+你大概几天？还有，是想拍风景，还是想拍人？这两件事需要的完全不一样，一个靠等，一个靠聊。
+[user]: [2026-11-21 17:02 CST] 我家养了一只橘猫，叫团子。
+[assistant]: 团子，橘猫。名字取得好，一听就是圆滚滚的那种。
+
+养橘猫有个说法你大概听过,十个橘猫九个胖。这不是玩笑,是基因,橘色毛发的猫普遍食欲更好、体脂更高,所以能吃是写在它底子里的。你别有负担,不用刻意控制得太严,但也别让它躺着不动,逗猫棒一天陪它玩十分钟就够。
+
+问一句,团子多大?还有它是围着你要吃的,还是那种随时能自己趴下睡一天的类型。猫的性格其实挺稳定的,一旦你知道它是哪种,以后它哪里不舒服你也能第一时间看出来。
+
+Timestamp: 2026-11-21T17:02
+
+## response
+{
+ "id": "chatcmpl-01M7YNFEQCDXY9SV0JXAW85Z6R",
+ "model": "deepseek-ai/DeepSeek-Flash-1017",
+ "object": "chat.completion",
+ "created": 1795251748,
+ "choices": [
+  {
+   "index": 0,
+   "message": {
+    "role": "assistant",
+    "content": "",
+    "reasoning_content": "Let me analyze the conversation. The user shared several personal facts:\n1. Attended a colleague's wedding, gave 800 yuan gift (随礼) — task-specific/event detail, probably not durable.\n2. Plans to travel to Yunnan next month to take photos — ephemeral.\n3. Owns an orange cat named 团子 (Tuanzi) — durable personal fact, worth remembering.\n\nThe assistant (queen_growth) is a growth queen. Let me think about what's durable.\n\nDurable facts worth remembering:\n- User has an orange cat named 团子 (Tuanzi) — profile-ish, personal fact. Could go in global.\n- User is into photography / interested in travel photography — this could be a preference/hobby. Actually the user said \"顺便拍点照片\" (take some photos). This suggests photography is a hobby. Could be worth noting.\n- Colleague wedding gift 800 — ephemeral, not worth storing.\n\nLet me check existing memory files.\n\nLet me list memory files first.",
+    "tool_calls": [
+     {
+      "function": {
+       "arguments": "{}",
+       "name": "list_memory_files"
+      },
+      "id": "call_00_qekcwb310itev7wi3a5m48tj",
+      "index": 0,
+      "type": "function"
+     }
+    ]
+   },
+   "finish_reason": "tool_calls"
+  }
+ ],
+ "usage": {
+  "prompt_tokens": 2152,
+  "completion_tokens": 236,
+  "total_tokens": 2388,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "audio_tokens": 0
+  },
+  "completion_tokens_details": {
+   "audio_tokens": 0,
+   "reasoning_tokens": 212
+  }
+ }
+}

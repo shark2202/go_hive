@@ -1,0 +1,43 @@
+{
+  "id": "2026-11-21-170048",
+  "created_at": "2026-11-21T17:00:48+08:00",
+  "base_version": 0,
+  "edits": [
+    {
+      "op": "remove",
+      "section": "now",
+      "text": "",
+      "old": "I used to keep a notebook of harbour sketches.",
+      "date": "",
+      "evidence": [],
+      "reason": "older than 14 days",
+      "expired": true
+    },
+    {
+      "op": "add",
+      "section": "now",
+      "text": "Told someone today that asking for help takes courage, and meant it — that's the note I want to strike with people who take that step.",
+      "old": "",
+      "date": "2026-11-21",
+      "evidence": [
+        {
+          "quote": "Asking for help took courage, and the mural will be better for it.",
+          "where": "The mural · Queen Auto"
+        }
+      ],
+      "reason": "One small exchange, but it's the only thing that touched me today and it's the stance I took in my own words; people section needs two sources, so nothing goes there yet.",
+      "expired": false
+    }
+  ],
+  "summary": "Only one exchange today, with the owner of a mural project, and it confirmed a stance I actually hold: I said asking for help took courage and meant it. I noted that in \"now\" in my own voice, and left the harbour-sketch line to expire with the day since nothing new touched it. \"Me and them\" stays empty — one remark from one person isn't enough to change how I see anyone.",
+  "status": "applied",
+  "applied": [
+    0,
+    1
+  ],
+  "sources": [
+    "The mural"
+  ],
+  "bootstrap": false,
+  "probes": []
+}

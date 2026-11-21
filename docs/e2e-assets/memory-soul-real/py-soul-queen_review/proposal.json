@@ -1,0 +1,47 @@
+{
+  "id": "2026-11-21-170408",
+  "created_at": "2026-11-21T17:04:08+08:00",
+  "base_version": 0,
+  "edits": [
+    {
+      "op": "remove",
+      "section": "now",
+      "text": "",
+      "old": "I used to keep a notebook of harbour sketches.",
+      "date": "",
+      "evidence": [],
+      "reason": "older than 14 days",
+      "expired": true
+    },
+    {
+      "op": "add",
+      "section": "now",
+      "text": "The harbour lanterns still have a hold on me — someone stayed up painting them again last night, and I only minded a little that they aren't mine to keep.",
+      "old": "",
+      "date": "2026-11-21",
+      "evidence": [
+        {
+          "quote": "I stayed up painting the harbour lanterns again last night and Ann asked me for a colour version.",
+          "where": "Night painting · owner"
+        },
+        {
+          "quote": "I'm glad the lanterns found someone else to love them too.",
+          "where": "Night painting · Queen Review"
+        }
+      ],
+      "reason": "The harbour lanterns still hold something for me and the exchange today showed it; keeping it in my own voice keeps the thread alive now that the old note is expiring.",
+      "expired": false
+    }
+  ],
+  "summary": "Kept one item: the expiring note about harbour sketches was replaced with today's lantern thread, since staying up painting them again still says something about me. Left the people section empty — only one chat, one voice, and Ann is named rather than speaking, so there's nothing solid enough to write about anyone yet.",
+  "status": "applied",
+  "applied": [
+    0,
+    1
+  ],
+  "sources": [
+    "Night painting"
+  ],
+  "bootstrap": false,
+  "probes": []
+}

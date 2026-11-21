@@ -120,6 +120,13 @@ func (p *Proposal) normalize(source map[string]any) {
 	if _, present := source["status"]; !present {
 		p.Status = "pending"
 	}
+	p.normalizeShape()
+}
+
+// normalizeShape fills the list fields with empty slices, the same shape the
+// Python dataclass defaults write: a not-yet-decided proposal persists
+// "applied": [] and "probes": [], not Go's null.
+func (p *Proposal) normalizeShape() {
 	if p.Edits == nil {
 		p.Edits = []Edit{}
 	}

@@ -1,0 +1,16 @@
+Reader/judge prompt byte parity: Go internal/longmemeval vs Python core/tests/e2e/longmemeval.py
+Generated 2026-11-21T08:18:20Z from the same split (s_cleaned/
+per-question files; the Go probe and Python both read those files).
+
+5a4f22c0   reader  IDENTICAL  sha256=90fadda8374c477437dd7b6a34b39eb8c9220e0a2ced15efc55b95b9f0ac2c5e
+5a4f22c0   judge   IDENTICAL  sha256=7ba8e338b96c966df87804de7127db834042ffb2a01ad85382f396dc35dcecd8
+6aeb4375_abs reader  IDENTICAL  sha256=92a5318b872b96323d2490e914d7f2ecc896de4dd445f6c5a0681c69a7320466
+6aeb4375_abs judge   IDENTICAL  sha256=ba1f27b5fd0f51547b84364c6e5744cfa0514c53a67281a3de1b8700e410eddb
+0bc8ad93   reader  IDENTICAL  sha256=36925a2048cf9bcc95da87c83f743e171fa959e9546def03c1d89d7201e27fad
+0bc8ad93   judge   IDENTICAL  sha256=39db21f38df91939bdd485caae7e51a1e7d1ac29c8a66ef48736a4b98c586879
+0a995998   reader  IDENTICAL  sha256=e8e55d91f9c2dca80fe6b7932177ac95b90757dbd52afb68648842f10202531b
+0a995998   judge   IDENTICAL  sha256=880b552e9558999491e56a3ee0736e9e01ed7968d82c01935f3fa7348bc04d73
+
+0a995998 is one of the 32 numeric-answer questions: Go Answer.Value() preserves
+the JSON number; the judge/reader prompts are still byte-identical to Python
+(Python str.format(3) == Go Answer.Text() == "3").

@@ -173,6 +173,22 @@ func TestCreateColonyFromSourceMarksSourceAndStartsOverseer(t *testing.T) {
 		t.Fatalf("created colony started=%v overseer=%v", built.Started(), built.OverseerRunning())
 	}
 
+	// The fork records the session it resumes under (queen_session_id), exactly
+	// like upstream's fork metadata: a `serve --colony` restart resolves that id
+	// and continues the same transcript instead of minting a fresh session.
+	// Parity: framework/server/routes_execution.py::fork_session_into_colony
+	metaRaw, err := os.ReadFile(filepath.Join(fixture.home.ColonyDir("forked"), "metadata.json"))
+	if err != nil {
+		t.Fatalf("read forked metadata.json: %v", err)
+	}
+	var forkMeta map[string]any
+	if err := json.Unmarshal(metaRaw, &forkMeta); err != nil {
+		t.Fatalf("decode forked metadata.json: %v", err)
+	}
+	if recorded, _ := forkMeta["queen_session_id"].(string); recorded != sessionID {
+		t.Fatalf("forked metadata queen_session_id = %q, want %q", recorded, sessionID)
+	}
+
 	workerData, err := os.ReadFile(filepath.Join(fixture.home.ColonyDir("forked"), "worker.json"))
 	if err != nil {
 		t.Fatalf("read forked worker.json: %v", err)

@@ -1,0 +1,57 @@
+# go recall request (first of 15)
+
+## system
+You are selecting memories that will be useful to the Queen agent as it processes a user's query.
+
+You will be given the user's query and a list of available memory files with their filenames and descriptions.
+
+Return a JSON object with a single key "selected_memories" containing a list of filenames for the memories that will clearly be useful as the Queen processes the user's query (up to 5).
+
+Only include memories that you are certain will be helpful based on their name and description.
+- If you are unsure if a memory will be useful in processing the user's query, then do not include it in your list.  Be selective and discerning.
+- If there are no memories in the list that would clearly be useful, return an empty list.
+
+
+Please respond with a valid JSON object.
+
+## user
+## User query
+
+昨天我去参加了同事的婚礼，随礼 800 元。
+
+## Available memories
+
+[environment] project_atlas.md: deployment notes for project Atlas, including its port
+[profile] user-profile.md: stable facts about the user and their reply preferences
+
+## response
+{
+ "id": "chatcmpl-01M7YNCGTXF4NBJ960ZYT34QZW",
+ "model": "deepseek-ai/DeepSeek-Flash-1017",
+ "object": "chat.completion",
+ "created": 1795251652,
+ "choices": [
+  {
+   "index": 0,
+   "message": {
+    "role": "assistant",
+    "content": "{\"selected_memories\":[\"user-profile.md\"]}",
+    "reasoning_content": "We need answer JSON only. Need select memories useful for user query. Query: \"昨天我去参加了同事的婚礼，随礼 800 元。\" Chinese: Yesterday I attended colleague's wedding, gave 800 yuan gift money.\n\nAvailable memories:\n- environment project_atlas.md: deployment notes for project Atlas, including its port\n- profile user-profile.md: stable facts about the user and their reply preferences\n\nWhich clearly useful? Query is personal anecdote about wedding gift. User-profile may contain stable facts and reply preferences, could be useful to know user context/preferences. Project Atlas deployment notes not relevant. So select user-profile.md only. Need return JSON object with selected_memories list.\n\nEnsure valid JSON."
+   },
+   "finish_reason": "stop"
+  }
+ ],
+ "usage": {
+  "prompt_tokens": 250,
+  "completion_tokens": 158,
+  "total_tokens": 408,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "audio_tokens": 0
+  },
+  "completion_tokens_details": {
+   "audio_tokens": 0,
+   "reasoning_tokens": 145
+  }
+ }
+}

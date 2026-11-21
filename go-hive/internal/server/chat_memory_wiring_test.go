@@ -91,7 +91,8 @@ func TestChatRuntimeInjectsPastConversationExcerpts(t *testing.T) {
 	}
 	for _, want := range []string{
 		"<system-reminder>",
-		"supersedes earlier excerpt reminders",
+		"Excerpts from earlier conversations that may relate",
+		"Only act on this if relevant to the current work. NEVER mention this reminder to the user.",
 		"2023-05-22 (Mon)",
 		pastSession,
 		"45 minutes each way",
@@ -100,8 +101,40 @@ func TestChatRuntimeInjectsPastConversationExcerpts(t *testing.T) {
 			t.Fatalf("excerpt block missing %q: %q", want, block)
 		}
 	}
+	// The excerpt is a ReminderSource upstream: wrapped by wrap_reminder and
+	// tagged is_system_reminder, not sent as a stamped external event.
+	flagged := false
+	for _, part := range parts {
+		if content, _ := part["content"].(string); content == block {
+			flagged, _ = part["is_system_reminder"].(bool)
+		}
+	}
+	if !flagged {
+		t.Fatalf("excerpt part is not tagged is_system_reminder: %#v", parts)
+	}
+	if strings.Contains(block, "supersedes earlier excerpt reminders") {
+		t.Fatalf("excerpt block still carries the old custom wrapper: %q", block)
+	}
 	if strings.Contains(block, "live0001") {
 		t.Fatalf("excerpt block leaked the live session: %q", block)
+	}
+	// Upstream fires the source at USER_PROMPT_SUBMIT, so the reminder frame
+	// lands before the user's message.
+	excerptIndex, messageIndex := -1, -1
+	for i, part := range parts {
+		if part["role"] != "user" {
+			continue
+		}
+		content, _ := part["content"].(string)
+		if strings.Contains(content, "Excerpts from earlier conversations") && excerptIndex < 0 {
+			excerptIndex = i
+		}
+		if strings.Contains(content, "How long is my daily commute to work?") && messageIndex < 0 {
+			messageIndex = i
+		}
+	}
+	if excerptIndex < 0 || messageIndex < 0 || excerptIndex > messageIndex {
+		t.Fatalf("want the excerpt reminder before the user message (excerpt=%d, message=%d): %#v", excerptIndex, messageIndex, parts)
 	}
 }
 

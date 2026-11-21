@@ -225,7 +225,7 @@ func referenceRow(ctx context.Context, opts ReferenceOptions, questionID, condit
 		"question_type": item.QuestionType,
 		"abstention":    IsAbstention(item.QuestionID),
 		"question":      item.Question,
-		"answer":        item.Answer,
+		"answer":        item.Answer.Value(),
 		"hypothesis":    hypothesis,
 		"correct":       verdict.Correct,
 		"judge":         verdict.Raw,

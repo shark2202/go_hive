@@ -11,6 +11,7 @@ package longmemeval
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -22,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -40,15 +42,83 @@ const (
 
 // Item is one LongMemEval question with its haystack of past sessions.
 type Item struct {
-	QuestionID         string   `json:"question_id"`
-	QuestionType       string   `json:"question_type"`
-	Question           string   `json:"question"`
-	Answer             string   `json:"answer"`
-	QuestionDate       string   `json:"question_date"`
-	HaystackSessionIDs []string `json:"haystack_session_ids"`
-	HaystackDates      []string `json:"haystack_dates"`
-	HaystackSessions   [][]Turn `json:"haystack_sessions"`
-	AnswerSessionIDs   []string `json:"answer_session_ids"`
+	QuestionID         string      `json:"question_id"`
+	QuestionType       string      `json:"question_type"`
+	Question           string      `json:"question"`
+	Answer             AnswerValue `json:"answer"`
+	QuestionDate       string      `json:"question_date"`
+	HaystackSessionIDs []string    `json:"haystack_session_ids"`
+	HaystackDates      []string    `json:"haystack_dates"`
+	HaystackSessions   [][]Turn    `json:"haystack_sessions"`
+	AnswerSessionIDs   []string    `json:"answer_session_ids"`
+}
+
+// AnswerValue is one question's `answer`: a JSON string on most questions, but
+// a bare number on 32 of S's 500 (the Python harness keeps the int and only
+// formats it). The raw JSON is preserved so split files and result rows carry
+// the same JSON type as the upstream harness, while Text() renders the string
+// the judge prompt interpolates (Python's str.format renders 3 and "3"
+// identically).
+type AnswerValue struct {
+	Raw json.RawMessage
+}
+
+// TextAnswer builds an AnswerValue from a plain string (fixtures and tests).
+func TextAnswer(text string) AnswerValue {
+	encoded, _ := json.Marshal(text)
+	return AnswerValue{Raw: encoded}
+}
+
+// UnmarshalJSON accepts a JSON string or number and keeps the literal bytes.
+func (a *AnswerValue) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 {
+		return errors.New("empty answer")
+	}
+	if trimmed[0] != '"' && !bytes.Equal(trimmed, []byte("null")) {
+		if _, err := strconv.ParseFloat(string(trimmed), 64); err != nil {
+			return fmt.Errorf("answer must be a string or number, got %.60s", trimmed)
+		}
+	}
+	a.Raw = append(json.RawMessage(nil), trimmed...)
+	return nil
+}
+
+// MarshalJSON writes the answer back in its original JSON form.
+func (a AnswerValue) MarshalJSON() ([]byte, error) {
+	if len(bytes.TrimSpace(a.Raw)) == 0 {
+		return []byte(`""`), nil
+	}
+	return a.Raw, nil
+}
+
+// Text renders the answer the way the judge prompt needs it.
+func (a AnswerValue) Text() string {
+	trimmed := strings.TrimSpace(string(a.Raw))
+	if trimmed == "" || trimmed == "null" {
+		return ""
+	}
+	if trimmed[0] == '"' {
+		var decoded string
+		if err := json.Unmarshal(a.Raw, &decoded); err == nil {
+			return decoded
+		}
+		return ""
+	}
+	return trimmed
+}
+
+// Value decodes the answer for result rows, preserving the JSON type.
+func (a AnswerValue) Value() any {
+	trimmed := strings.TrimSpace(string(a.Raw))
+	if trimmed == "" || trimmed == "null" {
+		return ""
+	}
+	var decoded any
+	if err := json.Unmarshal(a.Raw, &decoded); err != nil {
+		return a.Text()
+	}
+	return decoded
 }
 
 // Turn is one message inside a haystack session.

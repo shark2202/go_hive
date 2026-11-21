@@ -1,0 +1,3 @@
+2026-11-21T16:05:43.208219 reminder_injected {"detail": "session_start", "meta": {"point": "session_start"}, "source": "point:session_start"}
+2026-11-21T16:05:43.274223 execution_failed {"error": "llm: stream ttft for 0s (limit 0s)"}
+event counts: {'queen_identity_selected': 1, 'reminder_injected': 1, 'node_loop_started': 1, 'node_loop_iteration': 1, 'context_usage_updated': 1, 'client_input_requested': 1, 'loop_state_changed': 1, 'execution_failed': 1}

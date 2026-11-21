@@ -13,7 +13,7 @@ func recordItem() Item {
 		QuestionID:         "fixture_commute_01",
 		QuestionType:       "single-session-user",
 		Question:           "How long is my commute?",
-		Answer:             "45 minutes",
+		Answer:             TextAnswer("45 minutes"),
 		QuestionDate:       "2023/05/20 (Sat) 10:00",
 		HaystackSessionIDs: []string{"fixture_s1"},
 		HaystackDates:      []string{"2023/05/18 (Thu) 08:12"},

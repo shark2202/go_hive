@@ -15,7 +15,7 @@ func judgeItem() Item {
 		QuestionID:   "fixture_commute_01",
 		QuestionType: "single-session-user",
 		Question:     "How long is my commute?",
-		Answer:       "45 minutes",
+		Answer:       TextAnswer("45 minutes"),
 		QuestionDate: "2023/05/20 (Sat) 10:00",
 	}
 }
@@ -51,7 +51,7 @@ func TestJudgePromptUsesOfficialTemplates(t *testing.T) {
 		if strings.Contains(prompt, "{}") {
 			t.Fatalf("%s: placeholder left unfilled", tc.qtype)
 		}
-		if !strings.Contains(prompt, item.Question) || !strings.Contains(prompt, item.Answer) {
+		if !strings.Contains(prompt, item.Question) || !strings.Contains(prompt, item.Answer.Text()) {
 			t.Fatalf("%s: prompt lacks question/answer", tc.qtype)
 		}
 		for _, want := range tc.wants {
