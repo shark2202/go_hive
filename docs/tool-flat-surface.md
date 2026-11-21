@@ -81,9 +81,12 @@ terminal_output_get terminal_rg update_worker_profile write_skill
     （`chart_render`、`web_scrape`、`web_search`、`read_file`/`write_file`/`edit_file`/
     `search_files`、`tracker_*`、`skill_view`/`list_skills`、`credential_status`、
     `terminal_job_start`/`terminal_pty_*`、`csv_*`/`excel_*` 别名、网络扫描器等）；
-  - 首轮请求只含 24 个 eager 全量 schema；51 个 deferred 以
-    `<searchable_tools>` 提醒按 name 一行宣布（上游 `SearchableToolsReminderSource`
-    同文案），**不在 `tools[]` 内**；
+  - 首轮请求只含 24 个 eager 全量 schema；deferred 中属于 **per-queen allowlist**
+    的部分以 `<searchable_tools>` 提醒按 name 一行宣布（上游 `SearchableToolsReminderSource`
+    同文案），**不在 `tools[]` 内**。播报集与上游同规则 = `enabled_mcp_tools ∩ deferred − eager`：
+    queen_growth 是 2 个（`chart_render`、`web_scrape`，清单 307 chars 逐字）；
+    其余 deferred（lifecycle/colony 15 个 + 角色默认未授予的目录层工具）不播报但**仍可**加载，
+    server 侧由 `chatManifestFilter` 只收窄提醒视图，`ToolTierState` 不变；
   - `search_tools(query="select:name_a,name_b")` 或关键词搜索 → `promote_searched_tools`
     → 下一轮 `tools[]` 追加已加载名称（eager 前缀顺序不变），会话内持久化到
     `<session>/tool_tiers.json`；
@@ -129,6 +132,8 @@ terminal_output_get terminal_rg update_worker_profile write_skill
 | 默认扁平面 `ModelDefs()`（queen 会话） | **39**（= manifest 三层并集） |
 | 默认首轮请求（未绑定 colony，本车道后） | **24** = manifest `llm_request` 层，name 与顺序逐字同 Python（§5.2 实测） |
 | 延迟层（searchable，首轮不出现） | **51** = 默认面其余 15（lifecycle/colony）+ 36 扁平目录层 |
+| 首轮 manifest 播报 name（`<searchable_tools>`） | **2**（queen_growth：`chart_render`、`web_scrape`；上游 per-queen allowlist − eager 规则）|
+| `search_tools` 可加载 | **51**（播报集只是可加载集的子集；select/keywords/inventory 与未加载守卫不变）|
 | colony 绑定后 eager | **39** = `toolsForTurn()` 的全量默认面（保持改动前 colony 行为） |
 | `HIVE_TOOL_SURFACE=grouped` | 完整池（本基线上实测 **150**：143 注册表 + 10 queen lifecycle + `ask_user` − 4 门控；`tool-flat-surface` 基线 @40945349 实测 144，差异来自 main 新增工具，非本车道） |
 
@@ -161,7 +166,7 @@ terminal_output_get terminal_rg update_worker_profile write_skill
 | #0 首轮 | **24**，name 与顺序与 Python 抓包（`toolresidual/out/py-gateway.jsonl` row 0）**逐字相同**（`first_matches_python_order=true`） | 24 vs 35：本车道修复的直接对照；deferred 名不在其中 |
 | #1 search_tools 之后 | **26** = 24 + `list_triggers` + `read_file`（`second_added` 实测） | 加载后下一轮出现 |
 | #2 read_file 之后 | 继承 #1；messages 携带工具结果 `1  lazy probe file content`（`read_file_result_seen=true`） | 已加载工具**真实执行**并回灌模型 |
-| 首轮 messages | 含 searchable-tools 提醒，逐行列出 51 个 deferred name（`searchable_refusal_seen=true`） | 未加载面可发现；调用未加载工具由 loop 拒绝并提示 `select:<name>` |
+| 首轮 messages | 含 searchable-tools 提醒；per-queen allowlist 规则下逐行列出 2 个 name（queen_growth），51 个 deferred 全部可 `search_tools` 加载 | 未加载面可发现；调用未加载工具由 loop 拒绝并提示 `select:<name>` |
 | `HIVE_TOOL_SURFACE=grouped`（`capture_grouped.py`） | **150**（本基线完整池；`airtable`/`slack`/`stripe` 等分组名回归） | grouped 回退不受延迟层影响 |
 
 ## 6. 测试
@@ -194,6 +199,19 @@ terminal_output_get terminal_rg update_worker_profile write_skill
   真实收到该调用；`search_tools` 结果在后续请求的 transcript 中；
 - `TestChatToolTierColonyBindingRestoresEagerSurface`：绑定 colony 后 eager 恢复为
   `toolsForTurn()` 全量，目录层仍 searchable。
+
+`internal/server/chat_manifest_filter_test.go` 与 `internal/cli/tool_surface_manifest_test.go`
+（searchable-manifest 车道）：
+
+- `TestSearchableManifestAnnouncesPythonAllowlistOnly`：真实 `ChatRuntime` 首轮 messages 的
+  searchable manifest == Python golden（307 chars，`testdata/prompt/searchable-manifest.python.txt`），
+  且不出现 `read_file`/`csv_read`/`tracker_upsert`/`run_playbook`；
+- `TestSearchableManifestFilterKeepsDeferredToolsLoadable`：`inventory` 仍列出全部 deferred，
+  `search_tools(select:csv_read)` 仍可加载并进入下一轮 `tools[]`（过滤器只改播报文本）；
+- `TestSearchableManifestFilterKeepsDeferredGuard`：未加载直调 deferred 工具仍被 loop 拒绝，执行器不触发；
+- cli 侧四个用例：role-default 分类解析（`@server:chart-tools` → `chart_render`）、
+  `tools.json` sidecar 优先（含空 allowlist → 不播报）、默认 queen allow-all 回退、
+  未知 queen 按上游 allow-all 从 catalog 解析。
 
 ## 7. 复现 / 再生
 
@@ -229,7 +247,8 @@ uv run --no-project python ~/.hermes/profiles/omh-tui/cache/scratch/toolflat-laz
   返回 `already_loaded` 提示。
 - `HIVE_TOOL_SURFACE` 是 `tool-flat-surface` 车道新增的环境变量；env 契约
   （`contracts/env-vars.json`，report-only 门禁）由 env 车道冻结，本车道未改。
-- **模型侧代价**：首轮 messages 的 searchable-tools 提醒从 35-name 面收敛为 51 行
+- **模型侧代价**：首轮 messages 的 searchable-tools 提醒按上游 per-queen allowlist 规则播报
+  （queen_growth 2 行 / 307 chars，逐字同 Python），更宽的 flat 目录层保持可加载但不首轮播报
   name（无 schema），`tools[]` 从 35 个全量 schema 降到 24，prompt 体积明显下降；
   被加载工具在后续请求追加 schema，只为其实际使用付费。
 

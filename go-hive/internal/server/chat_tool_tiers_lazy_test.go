@@ -241,7 +241,7 @@ func TestChatToolTierColonyBindingRestoresEagerSurface(t *testing.T) {
 		}
 		return lazySourceDefs()
 	}
-	tier := newChatToolTier(t.TempDir(), source, lazyAlwaysOn, lazyDeferredDefs(), func() bool { return bound })
+	tier := newChatToolTier(t.TempDir(), source, lazyAlwaysOn, lazyDeferredDefs(), chatManifestFilter{}, func() bool { return bound })
 
 	first := toolNamesOf(tier.toolDefs())
 	if len(first) != len(lazyAlwaysOn) {

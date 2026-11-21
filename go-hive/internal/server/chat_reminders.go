@@ -52,7 +52,10 @@ func (r *ChatRuntime) configureReminderProviders() {
 	// one (independent phase: 24 always-on + searchable remainder); a colony
 	// binding makes the colony-phase surface eager again, matching upstream's
 	// phase lists. Without those deps it keeps the legacy MCP-only split.
-	if tier := newChatToolTier(r.deps.Root, r.toolsForTurn, r.deps.AlwaysOnToolNames, r.deps.DeferredTools, func() bool {
+	if tier := newChatToolTier(r.deps.Root, r.toolsForTurn, r.deps.AlwaysOnToolNames, r.deps.DeferredTools, chatManifestFilter{
+		Names:    r.deps.ManifestToolNames,
+		Filtered: r.deps.ManifestFiltered,
+	}, func() bool {
 		return r.boundColonyRuntime() != nil
 	}); tier != nil {
 		r.toolTier = tier

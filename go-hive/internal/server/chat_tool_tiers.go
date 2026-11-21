@@ -27,12 +27,45 @@ import (
 	"github.com/aden-hive/hive-go/internal/tools"
 )
 
+// chatManifestFilter narrows what the searchable-tools reminder announces
+// without narrowing the loadable tier.
+//
+// Upstream announces exactly the per-queen allowlist minus the eager set, so
+// the reference's first-turn manifest lists two names (chart_render,
+// web_scrape). The Go deferred layer is wider on purpose — everything the
+// build can execute stays loadable through search_tools — so the manifest
+// announces the Python-equivalent subset while the tier keeps every deferred
+// definition. Filtered=false is the allow-all fall-through: announce
+// everything, which is what an unknown queen (or a session with no allowlist)
+// gets upstream too.
+type chatManifestFilter struct {
+	Names    []string
+	Filtered bool
+}
+
+// includes reports whether one deferred tool may be announced.
+func (f chatManifestFilter) includes(name string) bool {
+	if !f.Filtered {
+		return true
+	}
+	for _, allowed := range f.Names {
+		if allowed == name {
+			return true
+		}
+	}
+	return false
+}
+
 // chatToolTier owns one ToolTierState for a chat session and refreshes its
 // split when the advertised tool names change.
 type chatToolTier struct {
 	mu     sync.Mutex
 	source func() []llm.ToolDef
 	state  *tools.ToolTierState
+	// manifest bounds the searchable-tools reminder to the Python reference's
+	// per-queen allowlist; the tier's own searchable set stays complete so
+	// search_tools can still load every deferred tool.
+	manifest chatManifestFilter
 
 	// Flat lazy layer (Python Tool Library parity). alwaysOn is the ordered
 	// eager surface of an independent session; deferred are the loadable flat
@@ -60,7 +93,7 @@ type chatToolTier struct {
 // first-request order + the loadable remainder). colonyBound flips the eager
 // set to the colony-phase surface, matching upstream's phase lists: a bound
 // colony advertises the whole default surface again.
-func newChatToolTier(root string, source func() []llm.ToolDef, alwaysOn []string, deferred []llm.ToolDef, colonyBound func() bool) *chatToolTier {
+func newChatToolTier(root string, source func() []llm.ToolDef, alwaysOn []string, deferred []llm.ToolDef, manifest chatManifestFilter, colonyBound func() bool) *chatToolTier {
 	if source == nil {
 		return nil
 	}
@@ -90,6 +123,7 @@ func newChatToolTier(root string, source func() []llm.ToolDef, alwaysOn []string
 	return &chatToolTier{
 		source:      source,
 		state:       state,
+		manifest:    manifest,
 		alwaysOn:    append([]string(nil), alwaysOn...),
 		deferred:    append([]llm.ToolDef(nil), deferred...),
 		colonyBound: colonyBound,
@@ -285,7 +319,10 @@ func (c *chatToolTier) toolDefs() []llm.ToolDef {
 	return out
 }
 
-// searchableTools is the reminder's view of the deferred MCP tools.
+// searchableTools is the reminder's view of the deferred tools. It announces
+// the Python-equivalent subset when the session carries a per-queen allowlist,
+// so the first-turn manifest reads like the reference's; the tier itself keeps
+// every deferred definition, so search_tools still loads and promotes the rest.
 func (c *chatToolTier) searchableTools() []agentloop.Tool {
 	state := c.statePtr()
 	if state == nil {
@@ -294,6 +331,9 @@ func (c *chatToolTier) searchableTools() []agentloop.Tool {
 	searchable := state.GetSearchableTools()
 	out := make([]agentloop.Tool, 0, len(searchable))
 	for _, tool := range searchable {
+		if !c.manifest.includes(tool.Name) {
+			continue
+		}
 		out = append(out, agentloop.Tool{Name: tool.Name, Description: tool.Description})
 	}
 	return out

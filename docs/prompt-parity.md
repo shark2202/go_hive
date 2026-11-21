@@ -135,19 +135,27 @@ delegation loop/operating rules + 共享规则），由 golden 与段序测试�
 - `<system-reminder>` 包装逐字一致：`<system-reminder>\n{joined}\n\n{footer}\n</system-reminder>`，
   footer 为 `Only act on this if relevant to the current work. NEVER mention this reminder to the user.`
   （golden `reminder.block`，222 chars；两侧 hub 的 join/trim 语义一致）。
-- 首轮 messages 的**唯一**残余差异是 searchable-tools manifest（`first-turn-messages.diff` 只有工具名行）：
-  - Python：307 chars，首轮只播报 2 个非 eager 的 allowlisted 工具（`chart_render`、`web_scrape`）。
+- 首轮 messages 的 searchable-tools manifest **逐字一致**（307 / 307 chars；`reminder-searchable.diff`
+  与 `first-turn-messages.diff` 均 0 字节）：
+  - Python：首轮只播报 2 个非 eager 的 allowlisted 工具（`chart_render`、`web_scrape`）。
     运行时日志：`allowlist=25, always_enabled=13, gateable=28, independent=35 -> allowed=22, eager=20`，
     searchable = allowed − eager = 2。
-  - Go：1,029 chars，播报 51 个 flat directory 工具（含 `csv_*`、`excel_*`、`edit_file`、`read_file`、
-    `terminal_job_*`、`tracker_*` 等）。这是 `tool_surface_flat.go` 的既定 lazy 层设计：
-    「everything else the build can execute is deferred」。
-  - 开场轮 messages 差 722 chars（4,344 vs 5,066），逐字等于该 manifest 差（1,029 − 307）。
-- 结论：**结构差异（工具面策略）**，不是渲染 bug，也未随本轮 queen 提示词移植收敛（两者装配点不同：
-  manifest 来自 `LazySurfaceDeps` 的 flat 目录，提示词来自 `chatQueenStaticPrompt`）。
-  收敛需要把 Go 的 lazy 层收缩到 Python 的 per-queen allowlist，会删掉 49 个当前可 load/可执行的工具路由，
-  与「不删减模型必需内容」冲突；登记为下一车道（§6 P-04 给出具体收敛点）。
+  - Go：lazy 层**仍可加载** 51 个 flat 工具，但**播报集**按同一规则收窄——per-queen allowlist
+    （`tools.json` sidecar 优先，否则 role-default 分类经 MCP catalog 展开，`@server:chart-tools` →
+    `chart_render`）∩ deferred − eager = 同样的 2 个。
+  - 收敛点在**清单文本层**，不在工具面：`search_tools` 的 `select:` / keywords / `inventory` 仍覆盖全部
+    51 个 deferred 定义，「schema 未加载」守卫也仍对每个 deferred 工具生效。Go-only 的 49 个 flat 目录工具
+    从「首轮播报」变成「可搜索加载」，能力没有删减。
 - 工具**调用面**（首轮 `tools[]`）两侧 24 个 name 已在既有 `tool-flat-surface.md` 对齐；本文只覆盖 reminder 文本。
+
+### 4.1 manifest 过滤实现
+
+| 层 | 位置 | 作用 |
+| --- | --- | --- |
+| 解析 per-queen allowlist | `internal/cli/tool_surface_manifest.go::SearchableManifestNames` → `server.QueenToolsAllowlist`（复用 `load_queen_tools_config`） | `tools.json` sidecar 优先，否则 role-default 分类 × MCP catalog；未知 queen 按上游 allow-all 从 catalog 解析；共享默认 queen 无 role default → 不过滤 |
+| 收窄播报 | `internal/server/chat_tool_tiers.go::chatManifestFilter`（`chatToolTier.searchableTools`） | 只过滤 reminder 的 searchable 视图；`ToolTierState` 与 `GetSearchableTools` 不变 |
+| 注入 | `internal/cli/loader.go` / `loader_preloaded_session.go` → `ChatRuntimeDeps.ManifestToolNames` / `ManifestFiltered` | 创建会话与 preload 会话同一口径；`Filtered` 区分「空 allowlist（不播报）」与「不过滤（全量播报）」 |
+| golden / 回归 | `internal/server/testdata/prompt/searchable-manifest.python.txt`、`internal/server/chat_manifest_filter_test.go`、`internal/cli/tool_surface_manifest_test.go` | 逐字钉住 307 chars；并断言 inventory 仍列全量 deferred、`select:csv_read` 仍可加载并进入下一轮 `tools[]`、未加载直调仍被拒 |
 
 ## 5. turn_context：配置键、注入正文与位置
 
@@ -188,7 +196,7 @@ delegation loop/operating rules + 共享规则），由 golden 与段序测试�
 | P-01 | Python queen 基础提示词（组合文本 18,820 chars：character core / INDEPENDENT role / tools / System Rules / communication / memory）未移植 | 结构（内容缺失） | **已修复**：`gen_queen_prompt_sections.py` 逐字生成 + `internal/queen/static_prompt.go` 拼装；live 抓包 21,584 chars 逐字一致 |
 | P-02 | Python `# Credentials` 段（184 chars）未移植 | 结构（内容缺失） | **已修复**：`CredentialsSummaryBlock` + loader 注入账户快照；两种形态（无/有账户）都有 Python golden |
 | P-03 | Go tool-gated 预激注入 2 个整篇 skill body（59,618 chars） | 结构（装配路径不同） | **已修复**：queen chat 会话改走 `chatQueenStaticPrompt`，不再经过 `BuildSystemPromptForContext`；worker/colony 路径的预激保留（上游同款） |
-| P-04 | searchable-tools manifest：Python 2 个非 eager 工具 vs Go 51 个 lazy 工具（307 vs 1,029 chars） | 结构（工具面策略） | **保留**。下一车道收敛点：在 `internal/cli/tool_surface_flat.go::LazyModelDefs` 之前，按 queen profile 的 tool categories（`queen.DefaultToolsFor`）→ per-queen allowlist 过滤 deferred 定义，并补上 Python `enabled_mcp_tools ∩ phase_tools − eager` 的同款映射；需产品决策是否接受这 49 个 flat 工具不再可 `search_tools` 加载 |
+| P-04 | searchable-tools manifest：Python 2 个非 eager 工具（307 chars）vs Go 51 个 lazy 工具（1,029 chars） | 结构（工具面策略） | **已修复**：`internal/cli/tool_surface_manifest.go::SearchableManifestNames` 按上游规则解析 per-queen allowlist（`tools.json` sidecar 优先，否则 role-default 分类 × MCP catalog），`chatToolTier` 的 `chatManifestFilter` 只收窄**播报文本**；tier 仍持有全部 51 个 deferred 定义，`search_tools` 的 select/keywords/inventory 与「schema 未加载」守卫不变。live 双跑 manifest 307/307、opening messages 4,344/4,344 逐字一致 |
 | P-05 | turn_context 安装面：Python entry point vs Go 编译期 registry | 结构（平台机制） | 正文/位置已验证一致；live Go 未链接 package 属预期（`prompt_system_parity.py` 的 `go_injected=false`） |
 | P-06 | Go overseer catalog 走 relay 包装（`Available skills catalog:`，无 footer） | 结构（已登记 `reminders-coverage.md` §7） | 维持登记；colony 会话（非 chat queen）路径，不在本轮 queen 静态提示词范围内 |
 | P-07 | 静态提示词的 credentials 段在 Go 侧是**会话构建/恢复时快照**（上游每轮 TTL 重算，attach/detach 下一轮可见） | 结构（构建时机） | **新增登记**：段文本逐字一致，差异只在刷新时机。Go 的 system prompt 目前整段在 `NewChatRuntime`/resume 时构建一次（上游靠 `dynamic_prompt_provider` 每轮重建；Go 的 loop 尚无该钩子，恢复它需要同时解决 cached prefix 失效）。下一 lane：给 `ChatRuntimeDeps` 增加每轮提示词重建时，credentials 段随其它动态段一起接上 |
@@ -221,7 +229,11 @@ go test ./internal/cli ./internal/skills ./internal/server ./internal/agentloop 
 `internal/queen/static_prompt_test.go`（段 golden、段序、无预激 body、credentials 两种形态、拼装次序）、
 `internal/server/chat_queen_prompt_test.go`（整段首轮提示词逐字对齐 Python capture、相位切换、真实
 `NewChatRuntime` 下 `browser_*`/`terminal_*` 工具不再拉入整篇 skill body）、
-`internal/skills/catalog_prompt_parity_test.go`（catalog 渲染 golden）。
+`internal/skills/catalog_prompt_parity_test.go`（catalog 渲染 golden）、
+`internal/server/chat_manifest_filter_test.go`（searchable manifest 307-char golden，且 inventory /
+`select:` 加载 / 未加载守卫不复位）、
+`internal/cli/tool_surface_manifest_test.go`（per-queen allowlist 解析：role-default 分类、`tools.json`
+sidecar 优先、空 allowlist、allow-all 回退）。
 
 正常路径（默认测试）无需任何外部服务：catalog / reminder / turn-context / queen 提示词的 golden 是固定 fixture +
 逐字文本；live 探针是 opt-in，不纳入 `make ci`。
@@ -236,6 +248,9 @@ go test ./internal/cli ./internal/skills ./internal/server ./internal/agentloop 
   Go 独有的 59,618 chars 整篇 skill 预激注入已从 queen 路径移除（通用 worker/colony 路径保留）。
   工具调用面不变（首轮 `tools[]` 24 个 name 一致）。
 - turn_context 的配置键、正文、包装与位置逐字一致；安装面为已知平台差异。
-- 残余：searchable-tools manifest（P-04，307 vs 1,029 chars，工具面策略，需产品决策）、
-  credentials 段的刷新时机（P-07）、colony 相位无 live 抓包（P-08）、overseer catalog relay（P-06）。
-  第一项是首轮 messages 唯一的剩余文本差；其余不影响独立相位首轮 system prompt 的逐字一致性。
+- **首轮 opening messages 整段逐字一致**：4,344 / 4,344 chars，`first-turn-messages.diff` 0 字节。
+  首轮非 system 内容 = 单一 `<system-reminder>`（searchable-tools manifest 307 chars + skills catalog
+  3,985 chars），两段都逐字对齐。
+- 残余：credentials 段的刷新时机（P-07）、colony 相位无 live 抓包（P-08）、overseer catalog relay（P-06）、
+  turn_context live 安装面（P-05）。它们都不影响独立相位首轮 system prompt / opening messages 的逐字一致性；
+  用户轮的唯一文本残余是 Python-only 的 turn_context 注入（45 chars，`user-turn-messages.diff`）。

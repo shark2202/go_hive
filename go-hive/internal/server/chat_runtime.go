@@ -121,6 +121,19 @@ type ChatRuntimeDeps struct {
 	//
 	// Parity: framework/tools/tool_tiers.py::ToolTierState.get_searchable_tools
 	DeferredTools []llm.ToolDef
+	// ManifestToolNames is the Python reference's per-queen allowlist, which
+	// bounds what the searchable-tools manifest may announce (upstream
+	// announces allowed − eager; for queen_growth that is chart_render and
+	// web_scrape). It narrows the ANNOUNCEMENT only: every DeferredTool stays
+	// loadable through search_tools, so the wider Go lazy layer keeps working.
+	// ManifestFiltered marks the list authoritative — including an empty one,
+	// which is a queen whose allowlist leaves nothing to announce. Nil with
+	// ManifestFiltered false is the allow-all fall-through (announce the whole
+	// deferred layer).
+	//
+	// Parity: framework/agents/queen/queen_tools_config.py::load_queen_tools_config
+	ManifestToolNames []string
+	ManifestFiltered  bool
 	// Phase reports the queen's current phase ("independent" / "colony") for
 	// the node_loop_iteration payload, mirroring the upstream loop's
 	// iteration_metadata_provider. Nil leaves the iteration phase-less.

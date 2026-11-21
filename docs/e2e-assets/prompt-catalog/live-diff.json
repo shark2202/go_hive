@@ -22,8 +22,8 @@
     }
   },
   "opening_messages": {
-    "go_chars": 5066,
-    "identical": false,
+    "go_chars": 4344,
+    "identical": true,
     "python_chars": 4344
   },
   "reminder_catalog": {
@@ -32,8 +32,8 @@
     "python_chars": 3985
   },
   "reminder_searchable": {
-    "go_chars": 1029,
-    "identical": false,
+    "go_chars": 307,
+    "identical": true,
     "python_chars": 307
   },
   "system_prompt": {
@@ -47,7 +47,7 @@
     "python_chars": 45
   },
   "user_turn_messages": {
-    "go_chars": 5151,
+    "go_chars": 4429,
     "identical": false,
     "python_chars": 4604
   }

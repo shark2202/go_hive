@@ -36,7 +36,7 @@ XML 转义、YAML colon 修复、visibility 相位、跨 scope 重名、symlink 
 | `system-prompt.sections.{json,txt}` | 分段归因：公共前缀 / Python 独有段 / Go 独有段 / CJK 计数 |
 | `first-turn-messages.{python,go}.txt` | 开场轮 messages（system 之外；含 `<system-reminder>` 注入块） |
 | `reminder-catalog.{python,go}.txt` | 注入块中的 skills catalog 段（当前逐字一致） |
-| `reminder-searchable.{python,go}.txt` | 注入块中的 searchable-tools manifest 段（结构差异，见下） |
+| `reminder-searchable.{python,go}.txt` | 注入块中的 searchable-tools manifest 段（当前逐字一致，307 chars） |
 | `user-turn-messages.{python,go}.txt` | 第一条用户消息轮：turn-context 注入位置证据 |
 | `turn-context-live.{python,go}.txt` | live turn_context 正文（Python 有，Go 无：无编译期注册的 package） |
 | `turn-context-live.diff` | 上者的 unified diff |
@@ -51,9 +51,12 @@ XML 转义、YAML colon 修复、visibility 相位、跨 scope 重名、symlink 
   （`browser-automation` 48,944 + `terminal-tools-foundations` 10,674 整篇被 tool-gating 预激注入）
   已从 queen 路径移除，`browser-automation` / `terminal-tools-foundations` 回到 catalog 按需读取。
   两侧均无 CJK 字符。详见 `prompt-parity.md` §3。
-- live searchable manifest：Python 307 chars（2 个非 eager allowlisted 工具）vs Go 1,029 chars（51 个 flat
-  directory 工具）——工具面策略差异（Python 的 queen allowlist ∩ 相位池 vs Go lazy 层公布全部可执行 flat 工具），
-  见 `prompt-parity.md` §4。
+- live searchable manifest：**逐字一致（307 / 307 chars）**——两侧都播报 per-queen allowlist − eager 的 2 个
+  工具（`chart_render`、`web_scrape`）。Go 的 lazy 层仍可加载 51 个 flat 工具，但播报集按上游规则收窄；
+  `search_tools` 的 select/keywords/inventory 与「schema 未加载」守卫不变。见 `prompt-parity.md` §4 / §4.1。
+- 首轮 opening messages：**逐字一致（4,344 / 4,344 chars，`first-turn-messages.diff` 0 字节）**——
+  非 system 内容只有那一个 `<system-reminder>`（manifest + catalog）。用户轮残余只剩 Python-only 的
+  turn_context 注入（45 chars，P-05）。
 - turn_context：配置键 `turn_context.<name>.enabled` 两侧一致（1 键）；注入正文/包装逐字一致（45 chars）；
   live 注入面 Python=entry point 包、Go=编译期 registry（本次 Go 未链接任何 package，故 live 不注入），
   见 `prompt-parity.md` §5。

@@ -400,6 +400,29 @@ func loadQueenToolsConfig(deps QueenToolRouteDeps, queenID string, catalog map[s
 	return augmentQueenRoleDefaultWithConnectedOAuth(deps, list, catalog)
 }
 
+// QueenToolsAllowlist resolves the queen's per-queen MCP tool allowlist the way
+// session boot does upstream: the tools.json sidecar when present, else the
+// role-default categories expanded against the MCP catalog (an unknown queen
+// gets every credential-less catalog tool). Nil means allow every tool.
+//
+// The tools routes resolve the same thing through their deps; this entry point
+// is for callers that hold only a home and a catalog snapshot — the chat
+// loader's searchable-manifest filter. Credentialed-tool dropping and OAuth
+// augmentation are the route-layer's additions (they need a live credential
+// view); a session-boot caller passes neither, which is what upstream's
+// boot-time load_queen_tools_config sees too.
+//
+// Parity: framework/agents/queen/queen_tools_config.py::load_queen_tools_config
+func QueenToolsAllowlist(home hivehome.Home, queenID string, catalog map[string][]map[string]any) []string {
+	deps := QueenToolRouteDeps{Home: home}
+	enabled := loadQueenToolsConfig(deps, queenID, catalog)
+	names, ok := enabled.([]string)
+	if !ok {
+		return nil
+	}
+	return names
+}
+
 // renderQueenMCPServers shapes catalog entries for the Tool Library.
 func renderQueenMCPServers(deps QueenToolRouteDeps, catalog map[string][]map[string]any, enabled any) []map[string]any {
 	var allowed map[string]struct{}

@@ -195,13 +195,17 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	// A session whose queen was not picked yet registers them and is refused
 	// when it writes.
 	onTurnStart := enableQueenSessionTools(tools, manager, record.ID, record, home)
-	// Same flat lazy split a created session gets (24 always-on + deferred).
+	// Same flat lazy split a created session gets (24 always-on + deferred),
+	// with the same searchable-manifest filter.
 	alwaysOnTools, deferredTools := tools.LazySurfaceDeps()
+	manifestNames, manifestFiltered := tools.SearchableManifestNames(chatSessionQueenScope(record.QueenName))
 	built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 		LLM:               provider,
 		Tools:             tools.ModelDefs(),
 		AlwaysOnToolNames: alwaysOnTools,
 		DeferredTools:     deferredTools,
+		ManifestToolNames: manifestNames,
+		ManifestFiltered:  manifestFiltered,
 		Execute:           tools.Execute,
 		ExecuteBlocks:     tools.ExecuteBlocks,
 		Root:              sessionDir,

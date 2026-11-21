@@ -546,11 +546,14 @@ func (r *Runner) createSessionWithRuntime(
 		// directory tools load on demand via search_tools. Grouped mode
 		// returns nils and keeps the full catalogue.
 		alwaysOnTools, deferredTools := tools.LazySurfaceDeps()
+		manifestNames, manifestFiltered := sessionManifestNames(tools, queenScope)
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 			LLM:               provider,
 			Tools:             tools.ModelDefs(),
 			AlwaysOnToolNames: alwaysOnTools,
 			DeferredTools:     deferredTools,
+			ManifestToolNames: manifestNames,
+			ManifestFiltered:  manifestFiltered,
 			Execute:           tools.Execute,
 			ExecuteBlocks:     tools.ExecuteBlocks,
 			Root:              sessionDir,

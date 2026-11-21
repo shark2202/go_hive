@@ -1,6 +1,6 @@
 first-turn prompt parity (canonicalized)
   system prompt:        IDENTICAL (python=21584 chars, go=21584 chars)
-  opening messages:     DIFF (python=4344 chars, go=5066 chars)
+  opening messages:     IDENTICAL (python=4344 chars, go=4344 chars)
   skills catalog block: IDENTICAL (python=3985 chars, go=3985 chars)
-  searchable manifest:  DIFF (python=307 chars, go=1029 chars)
+  searchable manifest:  IDENTICAL (python=307 chars, go=307 chars)
   turn_context:         python_injected=True go_injected=False (keys python=['probe'] go=['probe'])
