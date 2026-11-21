@@ -427,23 +427,24 @@ func TestRunPublishesColonyLifecycleEvents(t *testing.T) {
 		t.Fatalf("Wait: %v", err)
 	}
 
+	// EventBus 异步派发：run.Wait 返回后 lifecycle 事件可能仍在投递，等到再断言。
 	var started, completed *eventbus.AgentEvent
-	for _, event := range lifecycle.snapshot() {
-		if event.ExecutionID == nil || *event.ExecutionID != run.ID() {
-			continue
+	if !waitForColony(t, 2*time.Second, func() bool {
+		started, completed = nil, nil
+		for _, event := range lifecycle.snapshot() {
+			if event.ExecutionID == nil || *event.ExecutionID != run.ID() {
+				continue
+			}
+			switch event.Type {
+			case eventbus.EventExecutionStarted:
+				started = event
+			case eventbus.EventExecutionCompleted:
+				completed = event
+			}
 		}
-		switch event.Type {
-		case eventbus.EventExecutionStarted:
-			started = event
-		case eventbus.EventExecutionCompleted:
-			completed = event
-		}
-	}
-	if started == nil {
-		t.Fatal("no execution_started event for the colony run")
-	}
-	if completed == nil {
-		t.Fatal("no execution_completed event for the colony run")
+		return started != nil && completed != nil
+	}) {
+		t.Fatal("no execution_started/completed event for the colony run within timeout")
 	}
 	if started.ColonyID == nil || *started.ColonyID != "run_test_colony" {
 		t.Fatalf("started colony_id = %v, want run_test_colony", started.ColonyID)

@@ -352,10 +352,12 @@ func TestWorkerReportEmitsSubagentReportEvent(t *testing.T) {
 		t.Fatal("GetWorker returned nil for a spawned worker")
 	}
 
+	// EventBus 以 goroutine 派发 handler：SUBAGENT_REPORT 与 lifecycle 事件到达
+	// 顺序不定，快照前两者都要等到（与 overseer_park_test 同一竞态类）。
 	if !eventually(t, 5*time.Second, func() bool {
-		return !worker.IsActive() && reports.count() > 0
+		return !worker.IsActive() && reports.count() > 0 && lifecycle.count() > 0
 	}) {
-		t.Fatal("worker did not finish and publish its report within timeout")
+		t.Fatal("worker did not finish and publish its report+lifecycle event within timeout")
 	}
 
 	events := reports.snapshot()

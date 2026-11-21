@@ -215,8 +215,8 @@ func TestWorkerDoomLoopEscalatesOnceAndResumesWithGuidance(t *testing.T) {
 	// worker's own stream, with the repeating call in the upstream description
 	// payload. The escalation and the event are one detection, not two
 	// independent producers.
-	if got := doomLoops.count(); got != 1 {
-		t.Fatalf("node_tool_doom_loop events = %d, want exactly 1 for the same detection", got)
+	if !waitForColony(t, 2*time.Second, func() bool { return doomLoops.count() == 1 }) {
+		t.Fatalf("node_tool_doom_loop events = %d, want exactly 1 for the same detection", doomLoops.count())
 	}
 	doomEvent := doomLoops.snapshot()[0]
 	if doomEvent.StreamID != worker.StreamID {

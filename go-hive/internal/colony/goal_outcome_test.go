@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/eventbus"
@@ -90,7 +91,7 @@ func TestWorkerRunExecutesGoalCriteriaIntoResultAndReport(t *testing.T) {
 	}
 
 	// The goal_progress event carries the weighted score and per-criterion status.
-	if progress.count() != 1 {
+	if !waitForColony(t, 2*time.Second, func() bool { return progress.count() == 1 }) {
 		t.Fatalf("goal_progress events = %d, want 1", progress.count())
 	}
 	event := progress.snapshot()[0]
@@ -104,7 +105,7 @@ func TestWorkerRunExecutesGoalCriteriaIntoResultAndReport(t *testing.T) {
 
 	// The [WORKER_REPORT] payload carries the same verdict, both top-level and
 	// inside data (the block FormatWorkerReport renders into <data>).
-	if reports.count() != 1 {
+	if !waitForColony(t, 2*time.Second, func() bool { return reports.count() == 1 }) {
 		t.Fatalf("worker reports = %d, want 1", reports.count())
 	}
 	payload := reports.snapshot()[0].Data
@@ -256,7 +257,7 @@ func TestWorkerRunReportsCustomCriterionUnsupported(t *testing.T) {
 		t.Fatalf("unsupported = %v, want [hook]", evaluation.Unsupported)
 	}
 
-	if reports.count() != 1 {
+	if !waitForColony(t, 2*time.Second, func() bool { return reports.count() == 1 }) {
 		t.Fatalf("worker reports = %d, want 1", reports.count())
 	}
 	payload := reports.snapshot()[0].Data
@@ -322,7 +323,7 @@ func TestWorkerRunDetectsEmptyTrackerTable(t *testing.T) {
 	if table, _ := detected.Evidence["table"].(string); table != "tasks" {
 		t.Fatalf("signal table = %v, want tasks", detected.Evidence["table"])
 	}
-	if reports.count() != 1 {
+	if !waitForColony(t, 2*time.Second, func() bool { return reports.count() == 1 }) {
 		t.Fatalf("worker reports = %d, want 1", reports.count())
 	}
 	if signals, _ := reports.snapshot()[0].Data["improvement_signals"].([]any); len(signals) == 0 {
