@@ -1,9 +1,9 @@
 {
- "wave": 30,
- "at": "2026-11-22 02:50",
- "head": "23d98383",
- "ci": 0,
+ "wave": 31,
+ "at": "2026-11-22 03:22",
+ "head": "6a6d568f",
+ "ci": 2,
  "qc": 0,
  "publish": 0,
- "note": "claudecode WaitDelay + env/config 契约重刷后"
+ "note": "integrations-p2 两 lane 合并后"
 }

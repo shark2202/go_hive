@@ -125,6 +125,14 @@ func renderWithChrome(ctx context.Context, kind string, spec any, width, height,
 	stdout, stderr, runErr := chartRunChrome(runCtx, chrome, args)
 
 	if runErr != nil {
+		// Chrome's teardown watchdog can exit nonzero *after* the page already
+		// reported its outcome (macOS flakes: "Teardown watchdog expired").
+		// When the page itself reported a render failure, that deterministic
+		// message is what upstream's RendererError surfaces; otherwise this
+		// stays a chrome-level failure.
+		if status, message := pageOutcome(stdout); status == "error" {
+			return nil, &RenderError{Message: chartKindLabel(kind) + " render failed: " + message}
+		}
 		if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
 			return nil, &RenderError{Message: fmt.Sprintf("chrome render timed out after %s", chromeRenderTimeout)}
 		}
