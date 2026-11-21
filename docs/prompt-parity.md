@@ -3,6 +3,7 @@
 > 状态：**已实测**（2026-11-21，双跑探针 + 本地 recording stub LLM；不触外网）
 > 探针：`go_hive/scripts/prompt_catalog_parity.py`（渲染 golden）、`go_hive/scripts/prompt_system_parity.py`（live 双跑）、
 > `go_hive/scripts/prompt_system_sections.py`（分段归因）
+> 生成器：`go_hive/scripts/gen_queen_prompt_sections.py`（从上游模块生成 queen 静态提示词段 + golden）
 > 证据：`go_hive/docs/e2e-assets/prompt-catalog/`
 > 关联：`skills-api.md`（catalog 渲染）、`reminders-coverage.md`（reminder 矩阵）、`sse-payload-parity.md` §4.6
 > （`system_prefix_sha` 的值级差异即本文 §3 的系统提示词文本差）
@@ -19,7 +20,8 @@
 3. Python：`uv run --offline hive serve`；Go：`hive serve`。`POST /api/sessions {"queen_name":"queen_growth"}`
    → 抓开场轮请求；再发一条用户消息 → 抓用户轮请求。
 4. 归一化：`<HIVE_HOME>` / `<HOME>` / `<BUNDLED>` / `<REPO>` / `<SESSION_ID>` / `<TIMESTAMP>` / `<PORT>`，
-   语义文本逐字保留。
+   语义文本逐字保留。macOS 上探针根目录在 `/var/folders` 下，运行时可能持 `/private/var/...` 拼写，
+   两种拼写都先归一（否则 capture 会随 `TMPDIR` 漂移 112 chars 的 `/private` 前缀）。
 
 渲染 golden（不经服务器）：按 `queen_orchestrator` 同款 `SkillsManagerConfig`（queen_id、queen overrides、
 `queen_ui` extra scope、无 project root、skip community）渲染 `none / independent / colony` 三个相位；
@@ -61,64 +63,90 @@ live 抓包里的 **skills catalog 段**（independent 相位，20 skills）：�
 
 修复只改渲染口径，不合并不删减技能、不改 catalog 内容。
 
-## 3. 首轮 system prompt：分段归因（未改内容，列为结构差异）
+## 3. 首轮 system prompt：逐段逐字一致（P-01/P-02/P-03 已修复）
 
-live 双跑（同一 queen `queen_growth`、同一 fixture）：Python **21,584 chars**，Go **62,196 chars**。
-分段归因见 `system-prompt.sections.{json,txt}`：
+live 双跑（同一 queen `queen_growth`、同一 fixture）：Python **21,584 chars**，Go **21,584 chars**，
+**整段逐字一致**——分段归因显示 `common prefix = 21,584`（即全文），Python-only 段 0 chars / Go-only 段 0 chars，
+`system-prompt.diff` 0 字节。分段归因见 `system-prompt.sections.{json,txt}`。
 
-| 段 | chars | 归属 | 说明 |
-| --- | ---: | --- | --- |
-| queen identity + soul（`<core_identity>` … `<core_skills>`） | 2,578 | **两侧逐字一致** | `FormatQueenIdentityPrompt` + `soul.prompt_for/PromptFor` 渲染完全对齐（含 trigger 反应转写、负向约束、world lore） |
-| `queen_character_core` | 529 | Python 独有 | 校准/标点/记忆总纲 |
-| `queen_role_independent` | 2,013 | Python 独有 | INDEPENDENT 模式职责、`suggest_colony`、`write_skill` 契约 |
-| `queen_tools_independent` | 1,788 | Python 独有 | `# Tools`（planning / file I/O / browser / colony handoff） |
-| `queen_system_rules` | 11,050 | Python 独有 | `# System Rules`（`ask_user` / `task_create` / pivot / 文件 / 分享 / 起草规则） |
-| `queen_communication` | 1,332 | Python 独有 | `## Communicating with the user` |
-| `queen_memory_instructions` | 2,110 | Python 独有 | `## Your Memory` |
-| `credentials_block` | 184 | Python 独有 | `# Credentials`（`_render_credentials_block`） |
-| `pre_activated:hive.browser-automation` | 48,944 | Go 独有 | 整篇 SKILL.md body 被 tool-gating 预激注入静态提示词 |
-| `pre_activated:hive.terminal-tools-foundations` | 10,674 | Go 独有 | 同上 |
-| CJK 字符 | 0 / 0 | — | 两侧系统提示词均无中文，i18n 不是本差异来源 |
+| 段 | Python | Go before | Go after | 状态 |
+| --- | ---: | ---: | ---: | --- |
+| queen identity + soul（`<core_identity>` … `<core_skills>`） | 2,576 | 2,576 | 2,576 | 逐字一致 |
+| `queen_character_core`（对齐/标点/记忆总纲） | 529 | 0 | 529 | 逐字一致 |
+| `queen_role_independent`（INDEPENDENT 职责、`suggest_colony`、`write_skill`） | 2,012 | 0 | 2,012 | 逐字一致 |
+| `queen_tools_independent`（`# Tools`：planning / file I/O / browser / colony handoff） | 1,788 | 0 | 1,788 | 逐字一致 |
+| `queen_behavior_always`（`# System Rules` + task plan + `<pivot>` + file/share/draft + `## Communicating with the user` + `## Your Memory`） | 13,404 | 0 | 13,404 | 逐字一致 |
+| `queen_behavior_independent`（large-scale 规则 + `<ask_user_for_colony_scope>`） | 1,087 | 0 | 1,087 | 逐字一致 |
+| `credentials_block`（`# Credentials`，provider 计数摘要） | 184 | 0 | 184 | 逐字一致 |
+| `pre_activated:hive.browser-automation` | 0 | 48,944 | 0 | 已移除（上游从不注入） |
+| `pre_activated:hive.terminal-tools-foundations` | 0 | 10,674 | 0 | 已移除（同上） |
+| **合计** | **21,584** | **62,196** | **21,584** | **逐字一致** |
 
-**归因**：
+> 分项之和 21,580，加 identity / base / credentials 之间的两个 `\n\n` 分隔符（4 chars）= 21,584。
+> 段名与 `system-prompt.sections.txt` 对应：文中的 `queen_system_rules` / `queen_communication` /
+> `queen_memory_instructions` 三段合起来就是 Go 常量 `queenBehaviorAlways`（上游在模块层把它们拼成
+> `_queen_behavior_always` 后整体拼进相位提示词，Go 保留同一粒度）。
+> 本 build 的 `CRM_IN_THIS_BUILD=False`（`framework.crm` 不在构建内），因此系统提示词不含 CRM 段；
+> 生成器直接从上游模块取值，构建开关翻转时重新生成即同步。
 
-- Python 的 queen 系统提示词由 `QueenPhaseState.get_static_prompt()` 组装（`dynamic_prompt_provider`）：
-  identity + soul + 相位基础提示词 + credentials + `mcp_cli_prompt` + protocols。当前版本
-  `protocols_prompt == ""`（progressive disclosure），`mcp_cli_prompt` 为空。
-- Go 的 chat queen 走通用 `agentloop.BuildSystemPrompt`：只有 identity（含 soul），再叠加通用 builder 的
-  **tool-gated pre-activation**（`skills.AugmentCatalogForTools` 对 `AvailableTools` 里匹配前缀的 skill
-  追加整篇 body）。
-- 因此两边都不是「同一段文本的渲染差异」：Python 独有的是**尚未移植的 queen 基础提示词与 credentials 段**；
-  Go 独有的是**通用 builder 的预激注入**（Python 的 queen 静态提示词路径不跑这段）。
-  这两项都直接改变模型可见文本，属结构性差异，不在「保持模型行为不变」的渲染修复范围内。
+### 3.1 装配实现
 
-**建议（后续车道，需产品/提示词评审）**：
+1. **段文本（逐字来源）**：`go_hive/scripts/gen_queen_prompt_sections.py` 导入上游
+   `framework.agents.queen.nodes` 与 `framework.orchestrator.prompting`，把每个相位段写成 Go 源码
+   `go_hive/go-hive/internal/queen/prompt_sections.go`（逐行字面量，文件头标注 `Code generated … DO NOT EDIT`）。
+   生成器还会：
+   - 断言上游段里**没有** `<!-- vision-only -->` 标记（出现即报错，要求先实现 `finalize_queen_prompt(has_vision)`）；
+   - 把 Python 渲染的相位提示词与 credentials 段冻结成 golden（`internal/queen/testdata/prompt/`）；
+   - **重新推导**上游整段首轮提示词（profile identity + `\n\n` + 相位段 + `\n\n` + credentials），与
+     `system-prompt.python.txt` live capture 逐字比对后写出 `internal/server/testdata/prompt/queen_growth.independent.python.txt`。
+     `--check` 可判定这些产物是否过期。
+2. **相位拼装**：`internal/queen/static_prompt.go` 移植
+   `QueenPhaseState.get_static_prompt` + `queen_orchestrator.create_queen` 的两段拼装：
+   `PhasePrompt(phase)`（INDEPENDENT = character core + role + tools + always + independent；
+   COLONY = character core + role + tools + behavior_colony + always，共享规则在后）、
+   `StaticPrompt`（identity / soul / base / credentials / mcp_cli / protocols，空段丢弃，`\n\n` 连接；base 永不省略）。
+   `mcp_cli_prompt` 已接线（`ChatRuntimeDeps.MCPCLI` ← `mcpregistry.RegistryCLIServersPrompt`，
+   上游 `registry_cli_servers_prompt` 的移植）：本 build 的 fixture 未配 CLI-mode server，两侧都为空段；
+   `protocols_prompt` 在当前版本为空（progressive disclosure），Go 侧以空输入保留位次。
+3. **queen chat 会话改走该拼装**：`internal/server/chat_runtime.go::chatQueenStaticPrompt` 取代通用
+   `agentloop.BuildSystemPromptForContext`。通用 builder 会执行 tool-gated 预激（`AugmentCatalogForTools`
+   把整篇 skill body 追加到 catalog 段），而**上游 queen 路径从不经过它**：`get_static_prompt` 作为
+   `dynamic_prompt_provider` 直接绕过 spec 构造（`agent_loop.py` 有 provider 即不重建 spec）。
+   通用 worker/colony 路径的预激**保留不动**（`internal/agentloop/prompting.go`、`internal/skills/tool_gating.go`）。
+   工具能力不变：首轮 `tools[]` 两侧仍是 24 个 name（`live-diff.json` meta 一致），
+   browser/terminal 指南改为上游位置——`# Tools` 段的 `hive-browser open <url> --json` 入口 +
+   `MUST Follow the browser-automation skill protocol` 指针，技能本体留在 catalog 里按需 `cat` 读取。
+4. **credentials 段**：`internal/queen/static_prompt.go::CredentialsSummaryBlock` 逐字移植
+   `build_credentials_summary`（provider 计数、`sorted` 排序、多账户 `name (n)`、无账户文案）；
+   loader 注入真实账户快照（`ChatRuntimeDeps.Credentials` ← `buildSessionCredentialAdapter`，与凭据路由同一 store）。
+   上游该段每轮 TTL 缓存重算，Go 在会话构建/恢复时快照一次（见 §6 P-07）。
+5. **测试**：`internal/queen/static_prompt_test.go`（golden 逐字、段序、无预激 body、credentials 两种形态、
+   拼装次序）与 `internal/server/chat_queen_prompt_test.go`（**整段首轮提示词 == Python capture 逐字**、
+   相位切换、真实 `NewChatRuntime` + `browser_*`/`terminal_*` 工具下无预激 body、连接账户摘要）。
 
-1. 移植 queen 基础提示词（`core/framework/agents/queen/nodes/__init__.py` 的
-   `_queen_character_core` / `_queen_role_independent` / `_queen_tools_independent` / `_queen_behavior_*`
-   / `_queen_communication` / `_queen_memory_instructions`）与 `_render_credentials_block`，在 Go 侧实现
-   等价 `QueenPhaseState.get_static_prompt`（identity + soul + 相位基础段 + credentials + protocols）。
-2. 迁移后让 chat queen 走 queen 专用静态提示词构建器，并**对 queen 路径跳过
-   `AugmentCatalogForTools`**（通用 worker/agent 路径保留），避免与 catalog 的按需加载重复
-   （browser-automation / terminal-tools-foundations 已在 catalog 中，可 `cat` 读取）。
-3. 在完成 1 之前，Go 当前内容全部保留（不为了缩短而删减模型必需的工具指南）；本车道只登记数值与证据。
+### 3.2 colony 相位
+
+colony 相位 base prompt 同样由生成器逐字生成（20,869 chars：character core + COLONY role + COLONY tools +
+delegation loop/operating rules + 共享规则），由 golden 与段序测试钉住；但本车道未跑 colony 相位的 live 抓包
+（探针只建 DM 会话），登记为 P-07。
 
 ## 4. reminder 与 searchable-tools manifest
 
 - `<system-reminder>` 包装逐字一致：`<system-reminder>\n{joined}\n\n{footer}\n</system-reminder>`，
   footer 为 `Only act on this if relevant to the current work. NEVER mention this reminder to the user.`
   （golden `reminder.block`，222 chars；两侧 hub 的 join/trim 语义一致）。
-- 开场轮 messages 的差异**仅**来自 searchable-tools manifest（`first-turn-messages.diff` 只有新增工具名）：
+- 首轮 messages 的**唯一**残余差异是 searchable-tools manifest（`first-turn-messages.diff` 只有工具名行）：
   - Python：307 chars，首轮只播报 2 个非 eager 的 allowlisted 工具（`chart_render`、`web_scrape`）。
     运行时日志：`allowlist=25, always_enabled=13, gateable=28, independent=35 -> allowed=22, eager=20`，
     searchable = allowed − eager = 2。
   - Go：1,029 chars，播报 51 个 flat directory 工具（含 `csv_*`、`excel_*`、`edit_file`、`read_file`、
     `terminal_job_*`、`tracker_*` 等）。这是 `tool_surface_flat.go` 的既定 lazy 层设计：
     「everything else the build can execute is deferred」。
-- 结论：**结构差异（工具面策略）**，不是渲染 bug。收敛为逐字需要把 Go 的 lazy 层收缩到 Python 的
-  per-queen allowlist（会删掉 49 个当前可 load/可执行的工具路由），与「不删减模型必需内容」冲突；
-  建议单独以工具面车道决策（若要对齐，应在 `LazyModelDefs` 前套用与 Python 相同的
-  `enabled_mcp_tools ∩ phase_tools − eager` 过滤，并补 queen profile 类别→allowlist 的同一映射）。
+  - 开场轮 messages 差 722 chars（4,344 vs 5,066），逐字等于该 manifest 差（1,029 − 307）。
+- 结论：**结构差异（工具面策略）**，不是渲染 bug，也未随本轮 queen 提示词移植收敛（两者装配点不同：
+  manifest 来自 `LazySurfaceDeps` 的 flat 目录，提示词来自 `chatQueenStaticPrompt`）。
+  收敛需要把 Go 的 lazy 层收缩到 Python 的 per-queen allowlist，会删掉 49 个当前可 load/可执行的工具路由，
+  与「不删减模型必需内容」冲突；登记为下一车道（§6 P-04 给出具体收敛点）。
 - 工具**调用面**（首轮 `tools[]`）两侧 24 个 name 已在既有 `tool-flat-surface.md` 对齐；本文只覆盖 reminder 文本。
 
 ## 5. turn_context：配置键、注入正文与位置
@@ -153,40 +181,61 @@ live 双跑（同一 queen `queen_growth`、同一 fixture）：Python **21,584 
 「静态 prompt 段 + 标准 reminder」路径不同。这是 `reminders-coverage.md` §7 已登记的
 「实现形态差异」，本文复核后维持登记，不在本车道改。
 
-## 6. 例外清单（本车道不改）
+## 6. 残余例外清单
 
 | ID | 差异 | 类型 | 处理 |
 | --- | --- | --- | --- |
-| P-01 | Python queen 基础提示词（18,822 chars：character core / INDEPENDENT role / tools / System Rules / communication / memory）未移植 | 结构（内容缺失） | 登记 + §3 建议；不删 Go 现有内容 |
-| P-02 | Python `# Credentials` 段（184 chars）未移植 | 结构（内容缺失） | 同上；Go 的 credentials 走工具 + CLI |
-| P-03 | Go tool-gated 预激注入 2 个整篇 skill body（59,618 chars） | 结构（装配路径不同） | 保留；建议随 P-01 迁移后对 queen 路径关闭 |
-| P-04 | searchable-tools manifest：Python 2 个非 eager 工具 vs Go 51 个 lazy 工具 | 结构（工具面策略） | 登记；按 §4 建议单独立项 |
-| P-05 | turn_context 安装面：Python entry point vs Go 编译期 registry | 结构（平台机制） | 正文/位置已验证一致；live Go 未链接 package 属预期 |
-| P-06 | Go overseer catalog 走 relay 包装（`Available skills catalog:`，无 footer） | 结构（已登记 `reminders-coverage.md` §7） | 维持登记 |
+| P-01 | Python queen 基础提示词（组合文本 18,820 chars：character core / INDEPENDENT role / tools / System Rules / communication / memory）未移植 | 结构（内容缺失） | **已修复**：`gen_queen_prompt_sections.py` 逐字生成 + `internal/queen/static_prompt.go` 拼装；live 抓包 21,584 chars 逐字一致 |
+| P-02 | Python `# Credentials` 段（184 chars）未移植 | 结构（内容缺失） | **已修复**：`CredentialsSummaryBlock` + loader 注入账户快照；两种形态（无/有账户）都有 Python golden |
+| P-03 | Go tool-gated 预激注入 2 个整篇 skill body（59,618 chars） | 结构（装配路径不同） | **已修复**：queen chat 会话改走 `chatQueenStaticPrompt`，不再经过 `BuildSystemPromptForContext`；worker/colony 路径的预激保留（上游同款） |
+| P-04 | searchable-tools manifest：Python 2 个非 eager 工具 vs Go 51 个 lazy 工具（307 vs 1,029 chars） | 结构（工具面策略） | **保留**。下一车道收敛点：在 `internal/cli/tool_surface_flat.go::LazyModelDefs` 之前，按 queen profile 的 tool categories（`queen.DefaultToolsFor`）→ per-queen allowlist 过滤 deferred 定义，并补上 Python `enabled_mcp_tools ∩ phase_tools − eager` 的同款映射；需产品决策是否接受这 49 个 flat 工具不再可 `search_tools` 加载 |
+| P-05 | turn_context 安装面：Python entry point vs Go 编译期 registry | 结构（平台机制） | 正文/位置已验证一致；live Go 未链接 package 属预期（`prompt_system_parity.py` 的 `go_injected=false`） |
+| P-06 | Go overseer catalog 走 relay 包装（`Available skills catalog:`，无 footer） | 结构（已登记 `reminders-coverage.md` §7） | 维持登记；colony 会话（非 chat queen）路径，不在本轮 queen 静态提示词范围内 |
+| P-07 | 静态提示词的 credentials 段在 Go 侧是**会话构建/恢复时快照**（上游每轮 TTL 重算，attach/detach 下一轮可见） | 结构（构建时机） | **新增登记**：段文本逐字一致，差异只在刷新时机。Go 的 system prompt 目前整段在 `NewChatRuntime`/resume 时构建一次（上游靠 `dynamic_prompt_provider` 每轮重建；Go 的 loop 尚无该钩子，恢复它需要同时解决 cached prefix 失效）。下一 lane：给 `ChatRuntimeDeps` 增加每轮提示词重建时，credentials 段随其它动态段一起接上 |
+| P-08 | colony 相位 base prompt（20,869 chars）无 live 抓包 | 证据缺口 | 文本由同一生成器逐字生成并有 golden/段序测试；探针只建 DM 会话，未覆盖 colony fork 后的 system prompt。下一 lane：给 `prompt_system_parity.py` 加 colony 剧本（`POST /api/sessions` with `colony_id`）后按本节口径归因 |
+
+> 编号沿用 `prompt-parity.md` 既有 P-01…P-06（P-04 = searchable manifest，P-06 = overseer relay）；
+> `skills-parity-report.json` 的 `structural_exceptions` 已同步为剩余项。
 
 ## 7. 复现与门禁
 
 ```bash
+# 生成/校验 queen 静态提示词段与 golden（从上游 Python 模块取值）
+uv run --offline python go_hive/scripts/gen_queen_prompt_sections.py
+uv run --offline python go_hive/scripts/gen_queen_prompt_sections.py --check   # 期望 exit 0
+
 uv run --offline python go_hive/scripts/prompt_catalog_parity.py      # 期望 10/10 identical，exit 0
-uv run --offline python go_hive/scripts/prompt_system_parity.py       # 期望 catalog 段 IDENTICAL
+uv run --offline python go_hive/scripts/prompt_system_parity.py       # 期望 system prompt + catalog 段 IDENTICAL
 uv run --offline python go_hive/scripts/prompt_system_sections.py \
     --python go_hive/docs/e2e-assets/prompt-catalog/system-prompt.python.txt \
     --go go_hive/docs/e2e-assets/prompt-catalog/system-prompt.go.txt \
     --out go_hive/docs/e2e-assets/prompt-catalog
 
 cd go_hive/go-hive
-gofmt -l internal/cli internal/skills internal/server internal/agentloop
-go vet ./internal/cli ./internal/skills ./internal/server ./internal/agentloop
-go test ./internal/cli ./internal/skills ./internal/server ./internal/agentloop -count=1
+gofmt -l internal/cli internal/skills internal/server internal/agentloop internal/queen
+go vet ./internal/cli ./internal/skills ./internal/server ./internal/agentloop ./internal/queen
+go test ./internal/cli ./internal/skills ./internal/server ./internal/agentloop ./internal/queen -count=1
 ```
 
-正常路径（默认测试）无需任何外部服务：catalog / reminder / turn-context 的 golden 是固定 fixture +
+提示词相关的新测试（默认路径，无需外部服务）：
+`internal/queen/static_prompt_test.go`（段 golden、段序、无预激 body、credentials 两种形态、拼装次序）、
+`internal/server/chat_queen_prompt_test.go`（整段首轮提示词逐字对齐 Python capture、相位切换、真实
+`NewChatRuntime` 下 `browser_*`/`terminal_*` 工具不再拉入整篇 skill body）、
+`internal/skills/catalog_prompt_parity_test.go`（catalog 渲染 golden）。
+
+正常路径（默认测试）无需任何外部服务：catalog / reminder / turn-context / queen 提示词的 golden 是固定 fixture +
 逐字文本；live 探针是 opt-in，不纳入 `make ci`。
 
 ## 8. 结论
 
 - Skill catalog（含相位过滤、description 截断、symlink location、compact 回退、XML 转义、排序、分隔符）
   已**逐字一致**：渲染 golden 10/10，live catalog 段 3,985 chars 逐字一致。
+- **首轮 system prompt 整段逐字一致**：21,584 / 21,584 chars，`system-prompt.diff` 0 字节
+  （identity+soul 2,576 + queen 基础提示词 18,820 + credentials 184，再加 2 个 `\n\n` 分隔符）。
+  Python 独有的 queen 段已移植，
+  Go 独有的 59,618 chars 整篇 skill 预激注入已从 queen 路径移除（通用 worker/colony 路径保留）。
+  工具调用面不变（首轮 `tools[]` 24 个 name 一致）。
 - turn_context 的配置键、正文、包装与位置逐字一致；安装面为已知平台差异。
-- 首轮 system prompt 的公共前缀（identity + soul，2,578 chars）逐字一致；其余差异按 §3 分段归因为
-  「Python 未移植段」与「Go 预激注入段」两类结构差异，附后续迁移建议，本车道未删改模型必需内容。
+- 残余：searchable-tools manifest（P-04，307 vs 1,029 chars，工具面策略，需产品决策）、
+  credentials 段的刷新时机（P-07）、colony 相位无 live 抓包（P-08）、overseer catalog relay（P-06）。
+  第一项是首轮 messages 唯一的剩余文本差；其余不影响独立相位首轮 system prompt 的逐字一致性。

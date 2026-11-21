@@ -6,6 +6,7 @@ Usage:
 """
 from __future__ import annotations
 
+import json
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -14,11 +15,35 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "release-cadence.html"
 
 START = datetime(2026, 11, 21, 12, 0)
-GATES = [
-    ("G1", datetime(2026, 11, 24, 23, 59), "字段级逐字一致（契约 --check + 双跑 golden）"),
-    ("G2", datetime(2026, 12, 4, 23, 59), "老用户无损替换 RC（SC-01 接线 + 旧 home 全量双跑 + 回滚验证）"),
-    ("G3", datetime(2026, 12, 18, 23, 59), "商业外发布（Windows 实机 + Actions release + govulncheck）"),
-]
+TARGETS_FILE = ROOT / "docs" / "delivery-targets.json"
+
+
+def gate_dates() -> dict:
+    """Read current deadlines from delivery-targets.json (rule: never later)."""
+    defaults = {"G1": "2026-11-24", "G2": "2026-12-04", "G3": "2026-12-18"}
+    try:
+        data = json.loads(TARGETS_FILE.read_text())
+        current = data.get("current", {})
+        return {g: current.get(g, d) for g, d in defaults.items()}
+    except Exception:
+        return defaults
+
+
+def build_gates() -> list[tuple[str, datetime, str]]:
+    dates = gate_dates()
+    specs = [
+        ("G1", "字段级逐字一致（契约 --check + 双跑 golden）"),
+        ("G2", "老用户无损替换 RC（SC-01 接线 + 旧 home 全量双跑 + 回滚验证）"),
+        ("G3", "商业外发布（Windows 实机 + Actions release + govulncheck）"),
+    ]
+    out = []
+    for name, desc in specs:
+        day = datetime.strptime(dates[name], "%Y-%m-%d").replace(hour=23, minute=59)
+        out.append((name, day, desc))
+    return out
+
+
+GATES = build_gates()
 SLOT_HOURS = [8, 10, 12, 14, 16, 18, 20, 22]
 
 CSS = """
@@ -130,9 +155,9 @@ def build() -> str:
 
 <section><h2><span class="num">04</span>门槛完成判定</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:14%">门槛</th><th>完成条件（全部满足才算）</th></tr></thead><tbody>
-<tr><td><b>G1</b> 11-24</td><td>env/config lane 合并；工具输出/失败 golden；5 个 schema 残差；skill catalog 文本双跑；MCP 双跑；API/WS canonical golden；<code>make ci</code> 七门禁 + QC 8/8；例外清单落盘</td></tr>
-<tr><td><b>G2</b> 12-04</td><td>SC-01 接线实测；真实旧 HIVE_HOME 全量迁移双跑（sessions/colonies/tracker/credentials/memories/senders/skills）；回滚测试；安装/升级脚本；无损替换声明有证据</td></tr>
-<tr><td><b>G3</b> 12-18</td><td>G2 + Windows 实机；GitHub Actions release 实际执行；govulncheck/安全审查；六平台归档与安装脚本复验；支持矩阵未验证项如实标注</td></tr>
+<tr><td><b>G1</b> {gate_dates()["G1"][5:]}</td><td>env/config lane 合并；工具输出/失败 golden；5 个 schema 残差；skill catalog 文本双跑；MCP 双跑；API/WS canonical golden；<code>make ci</code> 七门禁 + QC 8/8；例外清单落盘</td></tr>
+<tr><td><b>G2</b> {gate_dates()["G2"][5:]}</td><td>SC-01 接线实测；真实旧 HIVE_HOME 全量迁移双跑（sessions/colonies/tracker/credentials/memories/senders/skills）；回滚测试；安装/升级脚本；无损替换声明有证据</td></tr>
+<tr><td><b>G3</b> {gate_dates()["G3"][5:]}</td><td>G2 + Windows 实机；GitHub Actions release 实际执行；govulncheck/安全审查；六平台归档与安装脚本复验；支持矩阵未验证项如实标注</td></tr>
 </tbody></table></div>
 </section>
 

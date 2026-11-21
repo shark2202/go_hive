@@ -1,6 +1,6 @@
 # API / 仓库表面审计
 
-- 生成时间：2026-11-21T11:42:51+08:00
+- 生成时间：2026-11-21T12:10:30+08:00
 - 根目录：`/Users/mac/hive`
 - 豁免清单：`/Users/mac/hive/go_hive/scripts/surface_audit_allowlist.json`
 - 重新生成：`uv run python go_hive/scripts/surface_audit.py --write-report`

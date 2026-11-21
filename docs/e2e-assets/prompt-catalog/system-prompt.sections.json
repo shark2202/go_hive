@@ -1,64 +1,17 @@
 {
   "python_chars": 21584,
-  "go_chars": 62196,
-  "common_prefix_chars": 2578,
+  "go_chars": 21584,
+  "common_prefix_chars": 21584,
   "common_prefix_tail": {
-    "python": "Before every response, internally calibrate for relationship, context, sentiment",
-    "go": "--- Pre-Activated Skill: hive.browser-automation ---\n# GCU Browser Automation\n\nA"
+    "python": "",
+    "go": ""
   },
-  "python_only_sections": [
-    {
-      "name": "queen_character_core",
-      "chars": 529,
-      "preview": "Before every response, internally calibrate for relationship, context, sentiment, posture,"
-    },
-    {
-      "name": "queen_role_independent",
-      "chars": 2013,
-      "preview": "You are in INDEPENDENT mode. You have full coding tools via the terminal (terminal_exec, p"
-    },
-    {
-      "name": "queen_tools_independent",
-      "chars": 1788,
-      "preview": "# Tools"
-    },
-    {
-      "name": "queen_system_rules",
-      "chars": 11050,
-      "preview": "# System Rules"
-    },
-    {
-      "name": "queen_communication",
-      "chars": 1332,
-      "preview": "## Communicating with the user"
-    },
-    {
-      "name": "queen_memory_instructions",
-      "chars": 2110,
-      "preview": "## Your Memory"
-    },
-    {
-      "name": "credentials_block",
-      "chars": 184,
-      "preview": "# Credentials"
-    }
-  ],
-  "go_only_sections": [
-    {
-      "name": "pre_activated:hive.browser-automation",
-      "chars": 48944,
-      "preview": "--- Pre-Activated Skill: hive.browser-automation ---"
-    },
-    {
-      "name": "pre_activated:hive.terminal-tools-foundations",
-      "chars": 10674,
-      "preview": "--- Pre-Activated Skill: hive.terminal-tools-foundations ---"
-    }
-  ],
+  "python_only_sections": [],
+  "go_only_sections": [],
   "cjk_chars": {
     "python": 0,
     "go": 0
   },
-  "python_only_chars": 19006,
-  "go_only_chars": 59618
+  "python_only_chars": 0,
+  "go_only_chars": 0
 }

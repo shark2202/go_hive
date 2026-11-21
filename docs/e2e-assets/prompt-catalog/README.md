@@ -45,9 +45,11 @@ XML 转义、YAML colon 修复、visibility 相位、跨 scope 重名、symlink 
 
 - 渲染 golden：**10/10 identical**（catalog small/edge ×3 相位、caps full/compact、reminder wrapper、turn-context 正文）。
 - live skills catalog 段：**逐字一致**（3,985 chars / 20 skills，independent 相位）。
-- live system prompt：**分段归因后为结构差异**——公共前缀（queen identity + soul）2,578 chars 逐字一致；
-  Python 独有 19,006 chars（queen 基础提示词 18,822 + credentials 184）；Go 独有 59,618 chars
-  （`browser-automation` 48,944 + `terminal-tools-foundations` 10,674 整篇被 tool-gating 预激注入）。
+- live system prompt：**整段逐字一致**（21,584 / 21,584 chars，`system-prompt.diff` 0 字节）——
+  identity+soul 2,576 + queen 基础提示词 18,820 + credentials 184（+2 个 `\n\n` 分隔符）。
+  Python 独有的 19,004 chars 已移植；Go 独有的 59,618 chars
+  （`browser-automation` 48,944 + `terminal-tools-foundations` 10,674 整篇被 tool-gating 预激注入）
+  已从 queen 路径移除，`browser-automation` / `terminal-tools-foundations` 回到 catalog 按需读取。
   两侧均无 CJK 字符。详见 `prompt-parity.md` §3。
 - live searchable manifest：Python 307 chars（2 个非 eager allowlisted 工具）vs Go 1,029 chars（51 个 flat
   directory 工具）——工具面策略差异（Python 的 queen allowlist ∩ 相位池 vs Go lazy 层公布全部可执行 flat 工具），

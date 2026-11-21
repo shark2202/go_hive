@@ -28,6 +28,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	colonyhost "github.com/aden-hive/hive-go/internal/host"
 	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/aden-hive/hive-go/internal/mcpregistry"
 	"github.com/aden-hive/hive-go/internal/queen"
 	"github.com/aden-hive/hive-go/internal/resources"
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
@@ -572,6 +573,17 @@ func (r *Runner) createSessionWithRuntime(
 			// The queen's phase rides node_loop_iteration, as upstream's
 			// iteration_metadata_provider reports it.
 			Phase: func() string { return hiveserver.SessionPhaseLabel(record) },
+			// The ambient "# Credentials" block of her static prompt: the
+			// same store the credential routes read, snapshotted when the
+			// session's prompt is built.
+			//
+			// Parity: framework/server/queen_orchestrator.py::_build_credentials_provider
+			Credentials: sessionCredentialsProvider(home),
+			// The command-line MCP servers she runs with terminal_exec, right
+			// after the credentials block.
+			//
+			// Parity: framework/loader/mcp_cli.py::registry_cli_servers_prompt
+			MCPCLI: mcpregistry.RegistryCLIServersPrompt,
 		})
 		if err != nil {
 			fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, err)

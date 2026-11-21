@@ -125,6 +125,17 @@ type ChatRuntimeDeps struct {
 	// the node_loop_iteration payload, mirroring the upstream loop's
 	// iteration_metadata_provider. Nil leaves the iteration phase-less.
 	Phase func() string
+	// Credentials reports the accounts connected in the session's home. It
+	// renders into the static prompt's ambient "# Credentials" block (provider
+	// names and counts, as upstream's summary does). Nil means "nothing
+	// connected": the block still renders, so she knows the credentials tool
+	// exists. The loader injects the same adapter the credential routes read.
+	Credentials func() []map[string]any
+	// MCPCLI reports the command-line MCP servers configured in the registry
+	// ("hive mcp run …" list). It renders into the static prompt right after
+	// the credentials block. Nil (or an empty return) drops the segment, which
+	// is what upstream sees when the registry has no CLI-mode server.
+	MCPCLI func() string
 }
 
 // chatTurnRequest is one queued turn: a real client message, an external
@@ -393,7 +404,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		StreamID:       "queen",
 		MaxTokens:      maxTokens,
 	}
-	systemPrompt := agentloop.BuildSystemPromptForContext(agentCtx, agentloop.PromptOverrides{})
+	systemPrompt := chatQueenStaticPrompt(deps, runtime.queenName)
 
 	conv, err := agentloop.RestoreConversation(store, nil, nil)
 	if err != nil {

@@ -397,6 +397,11 @@ def reminder_text(conversation: str) -> str:
 
 
 def canonicalize(text: str, hive_home: Path, user_home: Path, session_id: str, port: int) -> str:
+    # macOS resolves a probe root under /var/folders to /private/var/folders, and
+    # the runtime may carry either spelling; paste that spelling away first so
+    # the captures do not depend on which TMPDIR the probe was handed.
+    text = text.replace("/private" + str(hive_home), "<HIVE_HOME>")
+    text = text.replace("/private" + str(user_home), "<HOME>")
     text = text.replace(str(hive_home), "<HIVE_HOME>")
     text = text.replace(str(user_home), "<HOME>")
     # Bundled skills: Python renders the checkout path, Go a temp extraction

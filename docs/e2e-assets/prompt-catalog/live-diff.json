@@ -4,7 +4,7 @@
       "opening_messages": 2,
       "opening_tools": 24,
       "queen_requests": 2,
-      "system_chars": 62212,
+      "system_chars": 21584,
       "turn_context_injected": false,
       "turn_context_keys": [
         "probe"
@@ -37,8 +37,8 @@
     "python_chars": 307
   },
   "system_prompt": {
-    "go_chars": 62196,
-    "identical": false,
+    "go_chars": 21584,
+    "identical": true,
     "python_chars": 21584
   },
   "turn_context": {

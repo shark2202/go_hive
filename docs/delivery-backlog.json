@@ -5,7 +5,8 @@
       {
         "id": "api-probe-matrix",
         "label": "扩大 REST 端点值级/失败矩阵",
-        "hours": 6
+        "hours": 6,
+        "in_flight": true
       },
       {
         "id": "tool-output-golden",
@@ -38,12 +39,14 @@
       {
         "id": "queen-prompt-assembly",
         "label": "queen system prompt 结构与文本对齐",
-        "hours": 8
+        "hours": 8,
+        "done": true
       },
       {
         "id": "searchable-manifest",
         "label": "search_tools 清单 307 vs 1029 收敛",
-        "hours": 3
+        "hours": 3,
+        "in_flight": true
       }
     ],
     "G2": [

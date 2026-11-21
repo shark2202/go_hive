@@ -205,12 +205,40 @@
   "evidence": "go_hive/docs/e2e-assets/prompt-catalog/",
   "report": "go_hive/docs/prompt-parity.md",
   "structural_exceptions": [
-   "P-01 python queen base prompt unported",
-   "P-02 credentials block unported",
-   "P-03 go tool-gated pre-activation",
-   "P-04 searchable-tools manifest policy",
+   "P-04 searchable-tools manifest policy (residual, next lane)",
    "P-05 turn_context install surface",
-   "P-06 overseer catalog relay"
-  ]
+   "P-06 overseer catalog relay",
+   "P-07 credentials block refresh timing (Go snapshots at session build/resume)",
+   "P-08 colony-phase base prompt has no live capture"
+  ],
+  "system_prompt_parity": {
+   "method": "go_hive/scripts/prompt_system_parity.py (live dual run, canonicalized) + prompt_system_sections.py",
+   "identical": true,
+   "chars": {
+    "python": 21584,
+    "go": 21584
+   },
+   "sections": {
+    "identity_soul": 2576,
+    "queen_character_core": 529,
+    "queen_role_independent": 2012,
+    "queen_tools_independent": 1788,
+    "queen_behavior_always": 13404,
+    "queen_behavior_independent": 1087,
+    "credentials_block": 184
+   },
+   "removed_go_only": {
+    "pre_activated:hive.browser-automation": 48944,
+    "pre_activated:hive.terminal-tools-foundations": 10674
+   },
+   "generator": "go_hive/scripts/gen_queen_prompt_sections.py",
+   "go_sections": "go_hive/go-hive/internal/queen/prompt_sections.go",
+   "go_composition": "go_hive/go-hive/internal/queen/static_prompt.go",
+   "tests": [
+    "go_hive/go-hive/internal/queen/static_prompt_test.go",
+    "go_hive/go-hive/internal/server/chat_queen_prompt_test.go"
+   ]
+  },
+  "residual_first_turn_diff": "searchable-tools manifest only (P-04): 307 vs 1029 chars"
  }
 }
