@@ -113,6 +113,11 @@ func TestOverseerAskUserParksAndPublishesQuestion(t *testing.T) {
 		defer mu.Unlock()
 		return append([]*eventbus.AgentEvent(nil), requested...)
 	}
+	// Handlers run on their own goroutines (EventBus.executeHandlers), so the
+	// park can be visible before the subscriber observes the event under load.
+	if !waitForColony(t, 2*time.Second, func() bool { return len(snapshotRequested()) > 0 }) {
+		t.Fatal("client_input_requested event never reached subscribers")
+	}
 	events := snapshotRequested()
 	if len(events) != 1 {
 		t.Fatalf("client_input_requested count = %d, want 1", len(events))

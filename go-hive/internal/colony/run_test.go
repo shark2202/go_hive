@@ -476,10 +476,12 @@ func TestFinishWorkerStoppedPreservesExplicitReport(t *testing.T) {
 	if report := worker.ExplicitReport(); report == nil || report["summary"] != "finished just before the stop" {
 		t.Fatalf("explicit report lost: %v", report)
 	}
-	events := reports.snapshot()
-	if len(events) != 1 {
-		t.Fatalf("reports = %d, want 1", len(events))
+	// Event handlers are dispatched on their own goroutines; wait for delivery
+	// before asserting the count so this does not race under a loaded CI run.
+	if !waitForColony(t, 2*time.Second, func() bool { return reports.count() == 1 }) {
+		t.Fatalf("reports = %d, want 1", reports.count())
 	}
+	events := reports.snapshot()
 	if events[0].Data["status"] != "success" {
 		t.Fatalf("report status = %v, want success", events[0].Data["status"])
 	}
