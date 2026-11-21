@@ -535,6 +535,63 @@ provider，不会形成循环依赖。
   `gen_tool_surface_flat.py --check`、`refactor_freeze.sh compare wave15-base`、
   `gen_arch.py --check` 全部通过。
 
+### 5.9 pdf 子包落地（P2 领域拆分 lane `int-p2-pdf`）
+
+基线 `45aa262e`。`pdf.go`（2,008 行）整体下沉为
+`internal/tools/integrations/pdf/`，根包只保留薄入口
+`integrations/pdf_install.go`。
+
+| 新文件 | 内容 | 行数 |
+| --- | --- | ---: |
+| `pdf/doc.go` | 包注释：单工具 pdf_read 的契约、刻意限制与迁移说明 | 37 |
+| `pdf/kit.go` | `Tool`/`Action`/`Runtime`/`Registry`/`Option` 等 kit 别名与 schema/参数转发 | 53 |
+| `pdf/register.go` | `NewRegistry`/`Register`、上限常量、解析错误与 terminal hint | 59 |
+| `pdf/pdf_read.go` | pdf_read catalog + action 实现 + 页范围解析 | 290 |
+| `pdf/fetch.go` | 本地路径/URL 输入、下载、失败 envelope | 186 |
+| `pdf/ssrf.go` | DNS 级 SSRF 守卫（与根包 scrape.go 同构，含重定向逐跳复核） | 84 |
+| `pdf/parse.go` | 文档模型、xref 表/流、对象扫描、trailer/catalog 解析 | 477 |
+| `pdf/streams.go` | FlateDecode / ASCIIHexDecode、PNG predictor、有界 inflate | 184 |
+| `pdf/pages.go` | 页树遍历、页内容解码与文本抽取 | 84 |
+| `pdf/info.go` | Info 字典投影 + 共享值/字符串 helper | 78 |
+| `pdf/lexer.go` | PDF 词法：数字/字典/数组/字符串/名字/间接引用 | 280 |
+| `pdf/text.go` | 内容流文本解释器（操作符/换行/字距） | 137 |
+| `pdf/fonts.go` | ToUnicode CMap、WinAnsi 编码与 UTF-16 helper | 290 |
+| `pdf/digest_test.go` | pdf_read catalog surface digest 冻结（迁移前基线） | 72 |
+| `integrations/pdf_install.go` | 根包薄入口：`InstallBatch3Doc`/`newBatch3Registry`（`pdf.Register` + web_scrape） | 45 |
+
+行数对照：`pdf.go` 2,008 行 → 子包生产代码 2,239 行 + 根包入口 45 行
+（新增文件头、包注释与 import 块；工具定义的字符串字面量逐字节未改，工具
+定义块在改名后与迁移前逐字节相同）；子包最大文件 `parse.go` 477 行，低于
+800 行门禁。
+
+行为与工具面：
+
+- 1 个工具 / 1 个 action（pdf_read，7 个参数）的
+  name/description/input_schema 逐字节不变：迁移前后 `{names, actions,
+  entries}` JSON 探针均为 614 字节，sha256 均为
+  `a973b88d8824c80ef1c16e91e415c86792715928c8bea55be377e988180a020e`；
+  子包 `digest_test.go` 冻结该值（并把 614 字节作为回归断言）。
+- 根包 `InstallBatch3Doc` 签名不变，仍注册 pdf_read + web_scrape、返回 2；
+  `newBatch3Registry` 保留原 Runtime 构造与可注入的 scrape resolver /
+  renderer，改为 `pdf.Register(registry)` 组合子包的 pdf 工具后再挂
+  `web_scrape`。566 行的 `pdf_test.go` 与 scrape 用例未改动即全绿；
+  `tool_output_golden_test.go` 的 3 个 pdf 场景改走
+  `pdf.NewRegistry().Execute(...)`（行为等价），断言未改。
+- 依赖方向：`integrations → pdf → integrationkit`；子包不 import 根包或
+  `internal/tools`。`batch3PDF*` 标识符全部改为领域名（`pdfReadTool`、
+  `pdfOptions`、`defaultMaxPages`、`hardMaxPages`、`terminalHint` …）；
+  lane 前缀标识符 876 → 867（Δ−9），`lane_prefix_waiver.json` 的 limit 随
+  实测下调至 867（只减不增）。
+- `ssrf.go` 的 DNS 级守卫与根包 `scrape.go` 的实现同构（直接地址判定、
+  DNS 解析复核、重定向逐跳复核），因为子包不能 import 根包且 `scrape.go`
+  属 web-scrape lane；待 scrape 拆分后应把该守卫下沉 integrationkit 共用。
+- `internal/quality/size_test.go` 删除 `pdf.go` 的 2,014 行 waiver；子包
+  最大文件 477 行，低于 800 行门禁。
+- 验收：`go build ./...`、`go test -count=1 ./internal/tools/integrations/...
+  ./internal/server/ ./internal/quality/`、`gen_tool_surface_flat.py --check`、
+  `refactor_freeze.sh compare wave15-base`、`gen_arch.py`（重生成 82 包 /
+  214 边，再 `--check`）全部通过。
+
 ## 6. 验证
 
 ```bash

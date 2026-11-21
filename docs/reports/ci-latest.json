@@ -1,9 +1,9 @@
 {
- "wave": 38,
- "at": "2026-11-22 05:12",
- "head": "b95b70e1",
- "ci": 2,
+ "wave": 39,
+ "at": "2026-11-22 05:23",
+ "head": "025e0387",
+ "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "size_test gofmt 修复后（P2 八领域）"
+ "note": "claudecode 超时回报有界化后"
 }

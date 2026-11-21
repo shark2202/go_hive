@@ -6,6 +6,7 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/toolgolden"
 	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/aden-hive/hive-go/internal/tools/integrations/pdf"
 )
 
 // goldenReportPath is the committed capture report: canonical tool-result
@@ -70,7 +71,7 @@ func TestToolOutputGoldenAgainstCapture(t *testing.T) {
 		{
 			id: "pdf_read_missing",
 			run: func(t *testing.T) string {
-				value, err := pdfReadAction(ctx, nil, map[string]any{"file_path": "missing.pdf"})
+				value, err := pdf.NewRegistry().Execute(ctx, "pdf_read", map[string]any{"file_path": "missing.pdf"})
 				if err != nil {
 					t.Fatalf("pdf_read: %v", err)
 				}
@@ -80,7 +81,7 @@ func TestToolOutputGoldenAgainstCapture(t *testing.T) {
 		{
 			id: "pdf_read_both_args",
 			run: func(t *testing.T) string {
-				value, err := pdfReadAction(ctx, nil, map[string]any{
+				value, err := pdf.NewRegistry().Execute(ctx, "pdf_read", map[string]any{
 					"file_path": "probe.pdf",
 					"files":     []any{"probe.pdf"},
 				})
@@ -93,7 +94,7 @@ func TestToolOutputGoldenAgainstCapture(t *testing.T) {
 		{
 			id: "pdf_read_bad_pages",
 			run: func(t *testing.T) string {
-				value, err := pdfReadAction(ctx, nil, map[string]any{"file_path": "probe.pdf", "pages": "abc"})
+				value, err := pdf.NewRegistry().Execute(ctx, "pdf_read", map[string]any{"file_path": "probe.pdf", "pages": "abc"})
 				if err != nil {
 					t.Fatalf("pdf_read: %v", err)
 				}

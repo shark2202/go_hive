@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "4810576d234e",
+  "generated_at_commit": "45aa262ebd54",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 81,
-    "package_edges": 212,
+    "packages": 82,
+    "package_edges": 214,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -136,12 +136,13 @@
         "internal/tools/integrations/enrichment",
         "internal/tools/integrations/excel",
         "internal/tools/integrations/infra",
+        "internal/tools/integrations/pdf",
         "internal/tools/integrations/schedchat",
         "internal/tools/integrations/social",
         "internal/tools/integrations/webintel",
         "internal/visionfallback"
       ],
-      "package_count": 28
+      "package_count": 29
     },
     {
       "id": "foundation",
@@ -816,7 +817,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 1,
-      "dependents": 10
+      "dependents": 11
     },
     {
       "id": "pkg:internal/tools/integrations",
@@ -827,7 +828,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 13,
+      "direct_dependencies": 14,
       "dependents": 1
     },
     {
@@ -896,6 +897,18 @@
       "package": "internal/tools/integrations/infra",
       "layer": "capability",
       "responsibility": "基础设施自动化领域子包（第七个领域子包）：Terraform / PagerDuty / Prometheus / Kafka / n8n / Tines 的目录、32 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/pdf",
+      "kind": "technical",
+      "package": "internal/tools/integrations/pdf",
+      "layer": "capability",
+      "responsibility": "PDF 读取领域子包（第十个领域子包）：pdf_read 工具目录、单 action 实现与从零实现的解析栈（xref/流解码/词法/文本抽取/字体编码）；只 import integrationkit。",
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
@@ -2574,6 +2587,11 @@
     },
     {
       "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/pdf",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/tools/integrations/schedchat",
       "kind": "depends"
     },
@@ -2614,6 +2632,11 @@
     },
     {
       "from": "pkg:internal/tools/integrations/infra",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/pdf",
       "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
     },

@@ -228,8 +228,8 @@
     "id": "integrations-structure-p2",
     "label": "integrations 包结构重构（二）：9 大领域文件迁子包、1908 个 batch 前缀标识符改名、248 个重复 helper 收敛、豁免清单清零",
     "hours": 10,
-    "done": false,
-    "note": "进展 2026-11-22：devops 子包拆分完成（939e4fb9，最大文件 643 行）；batch 前缀改名 200 个 + 165 helper 收敛入 integrationkit（f5e84600，前缀 1901→1535）；剩余 8 领域拆子包 + waivers 清零。 | 阶段2 进展（2026-11-22）：已拆子包 devops/ai/social/enrichment 四个领域（工具面 sha 均逐字节不变）；前缀 1901→1172（limit 同步降）；剩余：cloudflare/infra_automation/web_intelligence/scheduling_chat + pdf/excel/scrape 拆分 + waivers 清零。 | 领域子包八/八完成（2026-11-22 深夜波）：devops/ai/social/enrichment/cloudflare/infra/webintel/schedchat 全部迁出，工具面 sha 逐字节不变；前缀 1901→876（limit 876）；剩余：pdf/excel/scrape 拆分 + waivers 清零（本项 -1h 收尾）。"
+    "done": true,
+    "note": "进展 2026-11-22：devops 子包拆分完成（939e4fb9，最大文件 643 行）；batch 前缀改名 200 个 + 165 helper 收敛入 integrationkit（f5e84600，前缀 1901→1535）；剩余 8 领域拆子包 + waivers 清零。 | 阶段2 进展（2026-11-22）：已拆子包 devops/ai/social/enrichment 四个领域（工具面 sha 均逐字节不变）；前缀 1901→1172（limit 同步降）；剩余：cloudflare/infra_automation/web_intelligence/scheduling_chat + pdf/excel/scrape 拆分 + waivers 清零。 | 领域子包八/八完成（2026-11-22 深夜波）：devops/ai/social/enrichment/cloudflare/infra/webintel/schedchat 全部迁出，工具面 sha 逐字节不变；前缀 1901→876（limit 876）；剩余：pdf/excel/scrape 拆分 + waivers 清零（本项 -1h 收尾）。 | DONE 2026-11-22：八领域子包（devops/ai/social/enrichment/cloudflare/infra/webintel/schedchat）+ pdf 子包全部迁出；200+ 前缀标识符改语义名、165 helper 收敛；integrations size waiver 仅剩 catalog_gen（生成文件，设计保留）；前缀 1901→867（limit 867）；工具面 sha 全部逐字节不变。"
    },
    {
     "id": "queen-mail-mcp-parity",
@@ -292,6 +292,20 @@
     "hours": 2,
     "done": false,
     "note": "2026-11-22 观察：go test -count=2 ./internal/cli/ 时 TestCredLogFileMatchesPythonLineFormat 偶发读到其它用例的 serve-log 探针行；-count=1 全包 5 轮全绿，CI 用 -count=1，不阻塞；修法方向=日志输出按 test 作用域隔离（或该测试改用独立 sink 断言）。"
+   },
+   {
+    "id": "server-relay-flake",
+    "label": "server 包 TestChatRuntimeRelaysClientMessageToOverseer 偶发失败（1/3）：中继顺序断言，pristine 45aa262e 上可复现",
+    "hours": 2,
+    "done": false,
+    "note": "2026-11-22 观察（int-p2-mid lane 主席）：失败签名与 docs/judge-parity.md §6 登记一致；修法方向=等中继落定再断言（与 EventBus 异步派发同类）。"
+   },
+   {
+    "id": "integrations-evidence-audit-anchors",
+    "label": "docs/integrations-evidence-audit.json 四处 file:line 锚点漂移（GA 96/623、GW 192、freshdesk 285）",
+    "hours": 1,
+    "done": false,
+    "note": "无门禁校验该文件；随文件拆分/改名刷新锚点或加 --check。"
    }
   ]
  }

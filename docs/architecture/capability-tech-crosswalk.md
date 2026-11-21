@@ -1,6 +1,6 @@
 # 业务能力 ↔ 技术模块对照（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `4810576d234e`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `45aa262ebd54`
 > 这是业务视图与技术视图的接缝：左边是人关心的结果，右边是代码里真实存在的包、入口与落盘文件。
 
 ## 成熟度与审批口径
@@ -79,7 +79,7 @@
 
 ## 未被业务能力直接引用的模块
 
-共 38 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
+共 39 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
 
 | 模块 | 层 | 说明 |
 | --- | --- | --- |
@@ -91,6 +91,7 @@
 | `internal/tools/integrations/enrichment` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/excel` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/infra` | capability | 能力层未映射，建议补充 modules |
+| `internal/tools/integrations/pdf` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/schedchat` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/social` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/webintel` | capability | 能力层未映射，建议补充 modules |

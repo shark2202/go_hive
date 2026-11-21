@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 4810576d234e
+// 源：architecture/model.yaml + go list -json ./... · commit 45aa262ebd54
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -93,6 +93,7 @@ digraph go_hive {
     "internal/tools/integrations/enrichment" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/excel" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/infra" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/pdf" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/schedchat" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/social" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/webintel" [fillcolor="white", color="#7e22ce"];
@@ -316,6 +317,7 @@ digraph go_hive {
   "internal/tools/integrations" -> "internal/tools/integrations/enrichment";
   "internal/tools/integrations" -> "internal/tools/integrations/excel";
   "internal/tools/integrations" -> "internal/tools/integrations/infra";
+  "internal/tools/integrations" -> "internal/tools/integrations/pdf";
   "internal/tools/integrations" -> "internal/tools/integrations/schedchat";
   "internal/tools/integrations" -> "internal/tools/integrations/social";
   "internal/tools/integrations" -> "internal/tools/integrations/webintel";
@@ -325,6 +327,7 @@ digraph go_hive {
   "internal/tools/integrations/enrichment" -> "internal/tools/integrationkit";
   "internal/tools/integrations/excel" -> "internal/tools/integrationkit";
   "internal/tools/integrations/infra" -> "internal/tools/integrationkit";
+  "internal/tools/integrations/pdf" -> "internal/tools/integrationkit";
   "internal/tools/integrations/schedchat" -> "internal/tools/integrationkit";
   "internal/tools/integrations/social" -> "internal/tools/integrationkit";
   "internal/tools/integrations/webintel" -> "internal/tools/integrationkit";

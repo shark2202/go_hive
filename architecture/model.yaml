@@ -217,6 +217,10 @@ packages:
     layer: capability
     responsibility: "调度/聊天领域子包（第九个领域子包）：Brevo / Cal.com / Calendly / Discord / Mattermost 的目录、40 个 action 实现与共享 helper；只 import integrationkit。"
     stability: evolving
+  - package: internal/tools/integrations/pdf
+    layer: capability
+    responsibility: "PDF 读取领域子包（第十个领域子包）：pdf_read 工具目录、单 action 实现与从零实现的解析栈（xref/流解码/词法/文本抽取/字体编码）；只 import integrationkit。"
+    stability: evolving
   - package: internal/llm
     layer: capability
     responsibility: "LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。"

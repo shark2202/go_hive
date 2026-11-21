@@ -39,7 +39,6 @@ type sizeWaiver struct {
 
 // fileWaivers: module-relative path -> frozen ceiling + why it is tolerated.
 var fileWaivers = map[string]sizeWaiver{
-	"internal/tools/integrations/pdf.go":         {2014, "PDF 工具整批移植（action 定义 + 参数 schema + 错误映射）；拆分列入后续重构，上限冻结"},
 	"internal/tools/integrations/catalog_gen.go": {2074, "生成文件（gen_catalog.py 产出，DO NOT EDIT）：工具目录表的行数由上游 @mcp.tool 数量决定，不应手改"},
 	"internal/credentials/specs_gen.go":          {2523, "生成文件（gen_credential_specs.py 产出，DO NOT EDIT）：85 个模块的凭据规格表，行数由上游注册表决定"},
 	"internal/orchestrator/safe_eval.go":         {2734, "安全求值器的运算符与内建函数分派表集中在一个文件：表驱动结构改动一处就要整批对照，拆分的收益低于保持单表可审"},
@@ -53,17 +52,8 @@ var fileWaivers = map[string]sizeWaiver{
 // internal/tools/integrations/ that sit above the 800-line subtree budget but
 // below the global 1500-line budget. The 800-line rule binds new/refactored
 // files; these existing ones are frozen here (only-decrease) until phase 2
-// splits them. scrape.go is owned by the web-scrape lane and must not be
-// reshaped from here.
-var integrationSizeWaivers = map[string]sizeWaiver{
-	"internal/tools/integrations/freshdesk.go":        {808, "既有实现（>800 但 ≤1500）：800 行上限只约束新建/拆分文件，该文件拆分列入第二阶段，上限冻结只减不增"},
-	"internal/tools/integrations/google_analytics.go": {921, "既有实现（>800 但 ≤1500）：800 行上限只约束新建/拆分文件，该文件拆分列入第二阶段，上限冻结只减不增"},
-	"internal/tools/integrations/google_workspace.go": {922, "既有实现（>800 但 ≤1500）：800 行上限只约束新建/拆分文件，该文件拆分列入第二阶段，上限冻结只减不增"},
-	"internal/tools/integrations/linear.go":           {1163, "既有实现（>800 但 ≤1500）：800 行上限只约束新建/拆分文件，该文件拆分列入第二阶段，上限冻结只减不增"},
-	"internal/tools/integrations/notion.go":           {1098, "既有实现（>800 但 ≤1500）：800 行上限只约束新建/拆分文件，该文件拆分列入第二阶段，上限冻结只减不增"},
-	"internal/tools/integrations/pgwire.go":           {1023, "既有实现（>800 但 ≤1500）：800 行上限只约束新建/拆分文件，该文件拆分列入第二阶段，上限冻结只减不增"},
-	"internal/tools/integrations/scrape.go":           {1136, "web-scrape lane 负责拆分；800 行上限只约束新建/拆分文件，本分支不动该文件，上限冻结只减不增"},
-}
+// splits them.
+var integrationSizeWaivers = map[string]sizeWaiver{}
 
 // funcWaivers: "<module-relative file>::<func label>" -> frozen ceiling + why.
 var funcWaivers = map[string]sizeWaiver{
@@ -71,7 +61,6 @@ var funcWaivers = map[string]sizeWaiver{
 	"internal/agentloop/loop.go::(*AgentLoop).ExecuteTurn":          {321, "一轮对话的主流程（模型调用、工具分派、事件发布、judge 钩子）共享同一条错误路径；拆分需先稳定阶段接口"},
 	"internal/maintenance/janitor.go::RunOnce":                      {239, "janitor 单轮清理按类别顺序执行，共享同一份报告与安全上下文；按类别拆分改的是行为顺序"},
 	"internal/server/routes_session_create.go::handleCreateSession": {227, "会话创建路由：参数校验、home 解析、事件总线接线在同一事务边界内"},
-	"internal/tools/integrations/scrape.go::webScrapeAction":        {217, "抓取工具的 fetch/解析/截断分支集中在一处；拆分需先抽出抓取器"},
 }
 
 // scanInternalFileSizes returns module-relative path -> line count for every

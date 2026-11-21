@@ -166,36 +166,9 @@ func webScrapeAction(ctx context.Context, rt *Runtime, input map[string]any, res
 		}
 	}
 
-	status, header, body, finalURL, fetchErr := batch3Fetch(ctx, rt, target, resolver)
-	if fetchErr != nil {
-		var blocked *batch3SSRFError
-		if errors.As(fetchErr, &blocked) {
-			return map[string]any{"error": blocked.Error(), "blocked_by_ssrf_protection": true, "url": blocked.url}, nil
-		}
-		if ctx.Err() != nil || errTimeout(fetchErr) {
-			return map[string]any{"error": "Request timed out"}, nil
-		}
-		return map[string]any{"error": "Scraping failed: " + fetchErr.Error()}, nil
-	}
-	if status != http.StatusOK {
-		hint := "Resource may not exist or server may be down."
-		if status == 401 || status == 403 || status == 429 {
-			hint = "Site likely requires auth, blocks bots, or is rate-limiting."
-		}
-		return map[string]any{
-			"error":  fmt.Sprintf("HTTP %d: Failed to fetch URL", status),
-			"url":    target,
-			"status": status,
-			"hint":   hint,
-		}, nil
-	}
-	contentType := strings.ToLower(header.Get("Content-Type"))
-	if !strings.Contains(contentType, "text/html") && !strings.Contains(contentType, "application/xhtml+xml") {
-		return map[string]any{
-			"error":   "Skipping non-HTML content (Content-Type: " + contentType + ")",
-			"url":     target,
-			"skipped": true,
-		}, nil
+	body, finalURL, fetchBlock := scrapeFetchPreflight(ctx, rt, target, resolver)
+	if fetchBlock != nil {
+		return fetchBlock, nil
 	}
 
 	// Render the final URL in the shared headless browser. Upstream does this
@@ -456,6 +429,47 @@ func batch3Fetch(ctx context.Context, rt *Runtime, target string, resolver batch
 		return response.StatusCode, response.Header, body, current, nil
 	}
 	return 0, nil, nil, current, errors.New("too many redirects")
+}
+
+// scrapeFetchPreflight runs the pre-flight GET and its HTTP-level checks:
+// batch3Fetch already re-validates every redirect target, and this wrapper
+// maps fetch failures, non-200 responses and non-HTML content to the
+// action's early-return payload, byte-identical to the inline branches it
+// replaced. A non-nil result means webScrapeAction must return it as-is;
+// body/finalURL are only consumed when the result is nil.
+func scrapeFetchPreflight(ctx context.Context, rt *Runtime, target string, resolver batch3Resolver) ([]byte, string, map[string]any) {
+	status, header, body, finalURL, fetchErr := batch3Fetch(ctx, rt, target, resolver)
+	if fetchErr != nil {
+		var blocked *batch3SSRFError
+		if errors.As(fetchErr, &blocked) {
+			return nil, "", map[string]any{"error": blocked.Error(), "blocked_by_ssrf_protection": true, "url": blocked.url}
+		}
+		if ctx.Err() != nil || errTimeout(fetchErr) {
+			return nil, "", map[string]any{"error": "Request timed out"}
+		}
+		return nil, "", map[string]any{"error": "Scraping failed: " + fetchErr.Error()}
+	}
+	if status != http.StatusOK {
+		hint := "Resource may not exist or server may be down."
+		if status == 401 || status == 403 || status == 429 {
+			hint = "Site likely requires auth, blocks bots, or is rate-limiting."
+		}
+		return nil, "", map[string]any{
+			"error":  fmt.Sprintf("HTTP %d: Failed to fetch URL", status),
+			"url":    target,
+			"status": status,
+			"hint":   hint,
+		}
+	}
+	contentType := strings.ToLower(header.Get("Content-Type"))
+	if !strings.Contains(contentType, "text/html") && !strings.Contains(contentType, "application/xhtml+xml") {
+		return nil, "", map[string]any{
+			"error":   "Skipping non-HTML content (Content-Type: " + contentType + ")",
+			"url":     target,
+			"skipped": true,
+		}
+	}
+	return body, finalURL, nil
 }
 
 // jsonLDBlocks collects <script type="application/ld+json"> payloads before
