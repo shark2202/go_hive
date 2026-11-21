@@ -30,6 +30,11 @@ Protocol (one JSON object per line):
                       {"type": "fatal",     "error": {...}}
     host  -> bridge   {"id": 1, "result": [...]}  /  {"id": 1, "error": "..."}
 
+Responses are matched by ``id``. The pending slot/future is registered before
+the request is written, so an immediate host reply can never arrive before
+there is somewhere to deliver it (that race used to drop the reply and hang
+the run).
+
 Script ``print()`` is redirected to stderr so it cannot corrupt the RPC
 stream; stdout belongs to the protocol.
 """
@@ -271,24 +276,53 @@ def _reader() -> None:
                 slot = _pending.pop(msg["id"], None)
             if slot is not None:
                 _deliver(slot, msg)
+            else:
+                # No registration for this id (a client-ordering bug, not a
+                # normal case): make it visible instead of silently dropping
+                # the reply and letting the caller wait forever. The
+                # diagnostic itself must never kill the reader thread.
+                try:
+                    print(
+                        f"playbook bridge: response for unknown id {msg.get('id')!r} dropped",
+                        file=sys.stderr,
+                    )
+                except Exception:
+                    pass
             continue
         _control.put(msg)
 
 
-def _rpc_send(method: str, params: dict[str, Any]) -> int:
+def _new_request_id() -> int:
     global _next_id
     with _id_lock:
         _next_id += 1
-        request_id = _next_id
+        return _next_id
+
+
+def _send_request(request_id: int, method: str, params: dict[str, Any]) -> None:
     _emit({"id": request_id, "method": method, "params": params})
-    return request_id
+
+
+def _drop_request(request_id: int) -> None:
+    with _pending_lock:
+        _pending.pop(request_id, None)
 
 
 def _rpc_sync(method: str, params: dict[str, Any]) -> Any:
+    # Register the slot BEFORE writing the request. The host can answer within
+    # microseconds (a tracker SELECT over a local DB), and a response read
+    # before there is a slot for it is indistinguishable from a dropped one:
+    # the reader thread has to discard it, leaving this call waiting forever.
+    # Registration-first closes that window by construction.
     slot = _SyncSlot()
-    request_id = _rpc_send(method, params)
+    request_id = _new_request_id()
     with _pending_lock:
         _pending[request_id] = slot
+    try:
+        _send_request(request_id, method, params)
+    except BaseException:
+        _drop_request(request_id)
+        raise
     slot.event.wait()
     if slot.error is not None:
         raise BridgeError(str(slot.error))
@@ -300,9 +334,16 @@ async def _rpc_async(method: str, params: dict[str, Any]) -> Any:
     if loop is None:  # pragma: no cover - async hooks only run under run()
         raise BridgeError("playbook bridge: event loop not initialized")
     fut = loop.create_future()
-    request_id = _rpc_send(method, params)
+    request_id = _new_request_id()
+    # Same ordering rule as _rpc_sync: the future must exist before the request
+    # is on the wire, or an immediate host reply is dropped and await fut hangs.
     with _pending_lock:
         _pending[request_id] = fut
+    try:
+        _send_request(request_id, method, params)
+    except BaseException:
+        _drop_request(request_id)
+        raise
     return await fut
 
 

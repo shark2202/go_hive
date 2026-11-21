@@ -146,9 +146,41 @@ async def run(args):
 - **进程组**：`python3` 以独立进程组启动；run 结束/取消时先对进程组发 `SIGTERM`，`2s` 后 `SIGKILL`，并 `Wait` 回收。脚本自己再 fork 的子进程也在这个组里。
 - **临时目录**：内嵌 bootstrap 写入 `os.MkdirTemp("", "hive-playbook-*")`，`Close` 时删除；`PYTHONDONTWRITEBYTECODE=1` 避免 `__pycache__`。
 - **最小环境**：子进程只拿 `PATH`、`HOME`、locale、`TMPDIR` 等基础变量与解释器变量（`PYTHONUNBUFFERED/PYTHONDONTWRITEBYTECODE/PYTHONIOENCODING`）；不继承 `HIVE_*` 配置开关、provider API key 或凭据。
-- **加载超时**：`load` 阶段最长 120s（模块级死循环的兜底）；`run` 阶段没有人为总时限，靠工具 `action="stop"` / 会话取消终止。
+- **加载超时**：`load` 阶段最长 120s（模块级死循环的兜底）；`run` 阶段有**父侧静默守护**（默认 = worker 默认 timeout + 300s，桥保持静默超过该预算即杀进程组并返回可诊断错误；任何一行桥输出都会重置预算，见 §7.1）；工具 `action="stop"` / 会话取消仍然有效。
 - **信任模型**：与上游一致——playbook 是 Queen（可信作者）写的进程内代码，`exec`/子进程都不是安全沙箱；不要执行不可信来源的脚本。
 - **协议失败**：非 JSON 输出、意外退出、无结果退出都返回 `PythonBridgeError`，附带退出码与 stderr 尾部，不当作成功。
+
+### 7.1 超时与故障处置（父侧静默守护）
+
+`Execute` 有**父侧静默守护**（不是整段 run 的总时限——上游 `run()` 本身无总时限）：预算默认 = worker 默认 timeout（`PythonOptions.DefaultTimeout`，未设置时 600s，同一数值也写进 init 交给 bootstrap 作为「脚本未指定 timeout 的 worker」默认值）**+ 300s 静默宽限**，即默认 900s；可用 `PythonOptions.StallTimeout` 或环境变量 `HIVE_PLAYBOOK_STALL_TIMEOUT`（秒）覆盖。桥**每产生一行输出都会重置预算**（`touchActivity`），所以一个合法但很长的批次只要还在推进就不会被切；连续静默超过整个预算（典型：回复被丢、reader 线程卡死、脚本自己的钩子死锁）才判定停摆：
+
+1. 对子进程**进程组**发 `SIGTERM`；2s（`pythonKillGrace`）后仍存活则 `SIGKILL`；
+2. 等在 `cmd.Wait` 上回收子进程，并等 `readLoop` / `drainStderr` 读到 EOF 退出（都带界，不无限等待）；
+3. 返回 `PythonBridgeError`，文案（可直接读）形如：
+
+```text
+python playbook: no bridge activity for 900s (bridge stalled); the interpreter did not answer and was
+terminated; bridge requests served=7; in-flight=[8:dispatch_one]; stderr: <子进程 stderr 最后 20 行>
+```
+
+- `served` / `in-flight` 是**父侧视角**的桥请求计数：`served` = 已写回回答的 `query_rows` / `dispatch_one` 请求数；`in-flight` = 已收到、还没写回答的请求（`id:method`）。子进程卡在某个 hook 上时 `in-flight` 会点名它；`in-flight=[]` 而 `served>0` 则说明父侧该做的都做了（典型是子进程内部等待/死锁）。老实现里这类停摆表现为**父侧 `Execute` 永远等事件**（工具调用或后台完成 goroutine 一直挂着），现在最多等一个 run 时限。
+- **返回前子进程必已回收**：超时路径先杀进程组再返回（`cmd.ProcessState != nil`），不留孤儿；脚本自己 fork 的子进程也在同一进程组内（Windows 例外见 §10/§11）。
+- **写入也有限**：写 `run`（或 init）时若子进程不再读 stdin、管道写满，父侧最多等到同一个静默预算，然后 `SIGTERM` 并返回 `cannot start the run: bridge write did not complete within …`，不会卡在管道写里。
+- **与 `ctx` 取消的关系**：`ctx` 取消仍立即 `terminate` 并按 `ctx.Err()` 返回（调用方 `Close` 负责回收）；父侧时限只兜「没人取消、桥又不回应」这一态。
+- **行为边界（与上游一致）**：worker 的 timeout 语义不变（默认 600s/个，见 §8 表）。静默守护只在「桥连续 N 秒没有任何输出」时触发，合法长批次（worker 在跑、完成会回一行）不受影响；确实是脚本内部静默死循环的场景会被如实终止并报错。要改变静默预算用 `StallTimeout` / `HIVE_PLAYBOOK_STALL_TIMEOUT`，**不要**为了这个去放大 `DefaultTimeout`（那会改变 worker 超时口径）。
+- **工具层表现**：快速 grace 窗口内，该错误按上游格式返回成 `status="failed"`（`playbook failed — <concise>` + traceback）；超出窗口的后台 run 用同一错误写 `playbook_runs` 行并发 `[PLAYBOOK_COMPLETE]`（`<status>error</status>` + `<error>`），不再存在「永远 running」的 run。
+
+**根因（已修，2026-11-21）**：子进程在**发送请求之前**没有登记等待槽——`_rpc_sync` / `_rpc_async` 先 `_emit` 请求、后写 `_pending[id]`。宿主侧回答 `query_rows` / `dispatch_one` 只需几微秒（本地假 colony 尤其快）；机器负载高时，回复可能在子进程完成登记前就被 reader 线程读到，找不到槽只能丢弃，请求方于是永久阻塞（父侧表现就是 `Execute` 等事件、子进程活着但不说话）。实测证据：一次 40s 超时转储中，同批 8 次跑有 3~5 次挂；对挂住的子进程做多线程 Python 栈转储，主线程停在 `_rpc_sync → threading.Event.wait`，reader 线程正常停在 stdin read；诊断日志记录到 `response for unknown id=1/3/4/5 arrived before registration (DROPPED)`。修复：**先登记、后发送**（`python_bootstrap.py`），并在 reader 收到「无主回复」时向 stderr 打一条诊断（老行为是静默丢弃）。
+
+**测试夹具无责**：`bridgeFakeColony` 行为正确，问题在桥的请求/响应顺序，与夹具无关。
+
+| 现象 | 判定 | 文案/行为 |
+| --- | --- | --- |
+| 子进程退出、未给结果 | 桥退出 | `python playbook exited before producing a result (exit code N)` + stderr 尾部 |
+| stdout 出现非 JSON / 协议错 | 协议失败 | `cannot parse interpreter output …` + 选中行 |
+| 连续静默超过预算 | 桥停摆（父侧杀进程组） | `no bridge activity for Ns (bridge stalled)` + 请求计数 + stderr 尾部 |
+
+回归测试：`TestPythonBridgePendingRequestRegisteredBeforeSend`（确定性探针：回复与登记同时发生时旧实现必挂、新实现必过）、`TestPythonBridgeRunDeadlineStopsStalledChild`（故意不回包的 stub 子进程）、`TestPythonBridgeRunDeadlineCutsSilentLiveBridge`（真实 bootstrap + 正常但不出结果的脚本）、`TestPythonPlaybookCloseIsIdempotent`（并发重复 `Close`）。
 
 ## 8. 与上游 runner 的逐项对表
 
@@ -250,6 +282,7 @@ PATH= HIVE_PYTHON= go test ./internal/colony -run TestRunPlaybookPythonWithoutIn
 | `playbook failed — NameError: ... (playbook line N)` | `run()` 内运行时错误 | 修脚本；`traceback` 字段有完整栈 |
 | `Python 3.8+ required` / `PythonVersionError` | 解释器过旧 | 换 3.8+ 或设 `HIVE_PYTHON` |
 | `cannot parse interpreter output ...` | 解释器/脚本往 stdout 写了非协议内容 | 不要直接写 fd 1；用 `log()` |
+| `no bridge activity for 900s (bridge stalled); ... served=N; in-flight=[...]; stderr: ...` | 桥连续静默超过守护预算（回复被丢、reader 卡死、脚本钩子死锁） | 先看 `in-flight` 点名的是哪个 hook、再看 stderr 尾巴；需要更长静默预算用 `HIVE_PLAYBOOK_STALL_TIMEOUT`（见 §7.1） |
 
 ## 13. 相关文档
 

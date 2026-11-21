@@ -660,6 +660,175 @@ func TestPythonBridgeRejectsGarbageOutput(t *testing.T) {
 	}
 }
 
+// Parity-exempt: upstream runs the playbook in-process, so it has no child
+// process that can stall. This pins the Go port's parent-side run deadline: a
+// child that never answers the run command must not park Execute forever — the
+// deadline fires, the child is killed, and the error names the stall.
+func TestPythonBridgeRunDeadlineStopsStalledChild(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake interpreter is POSIX-only")
+	}
+	dir := t.TempDir()
+	fake := filepath.Join(dir, "stalled-python")
+	// Answer the handshake, consume the run command, then never speak again.
+	stub := `#!/bin/sh
+read -r _init
+printf '{"type":"loaded","meta":{"name":"stalled"},"python_version":"3.9"}\n'
+read -r _run
+exec sleep 600
+`
+	if err := os.WriteFile(fake, []byte(stub), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HIVE_PYTHON", fake)
+	colony := newBridgeFakeColony("a")
+	limit := 300 * time.Millisecond
+	handle, err := StartPythonPlaybook(context.Background(),
+		"meta = {\"name\": \"stalled\"}\nasync def run(args):\n    return {}\n",
+		PythonOptions{
+			DispatchOne:  colony.dispatchOne,
+			QueryRows:    colony.queryRows,
+			RunID:        "stalled-run",
+			StallTimeout: &limit,
+		})
+	if err != nil {
+		t.Fatalf("StartPythonPlaybook: %v", err)
+	}
+	defer handle.Close()
+
+	started := time.Now()
+	out, err := handle.Execute(context.Background(), nil, 1)
+	elapsed := time.Since(started)
+	if err == nil {
+		t.Fatalf("Execute = %#v, want a stall error (the child never answered)", out)
+	}
+	var bridgeErr *PythonBridgeError
+	if !errors.As(err, &bridgeErr) {
+		t.Fatalf("err = %T %v, want *PythonBridgeError", err, err)
+	}
+	text := err.Error()
+	if !strings.Contains(text, "no bridge activity for 300ms") || !strings.Contains(text, "bridge stalled") {
+		t.Fatalf("error = %q, want the run-deadline diagnosis", text)
+	}
+	if elapsed > 5*time.Second {
+		t.Fatalf("Execute held for %v, want the deadline to fire promptly", elapsed)
+	}
+	// The stall path must not return while the child still runs: a non-nil
+	// ProcessState means cmd.Wait returned, i.e. the process group was
+	// terminated and reaped before Execute came back.
+	if handle.cmd == nil || handle.cmd.ProcessState == nil {
+		t.Fatal("interpreter process was not reaped after the run deadline")
+	}
+	select {
+	case <-handle.readDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("readLoop did not exit after the stalled child was killed")
+	}
+}
+
+// Parity-exempt: upstream runs in-process; this pins that a live but silent
+// bridge (the interpreter is healthy, the run just produces no terminal event)
+// is still cut at the parent-side limit and killed.
+func TestPythonBridgeRunDeadlineCutsSilentLiveBridge(t *testing.T) {
+	requirePythonBridge(t)
+	colony := newBridgeFakeColony()
+	script := "import asyncio\nmeta = {\"name\": \"quiet\"}\nasync def run(args):\n    await asyncio.sleep(600)\n    return {}\n"
+	limit := 300 * time.Millisecond
+	handle, err := StartPythonPlaybook(context.Background(), script, PythonOptions{
+		DispatchOne:  colony.dispatchOne,
+		QueryRows:    colony.queryRows,
+		RunID:        "quiet-run",
+		StallTimeout: &limit,
+	})
+	if err != nil {
+		t.Fatalf("StartPythonPlaybook: %v", err)
+	}
+	defer handle.Close()
+
+	started := time.Now()
+	_, err = handle.Execute(context.Background(), nil, 1)
+	elapsed := time.Since(started)
+	if err == nil {
+		t.Fatal("Execute succeeded, want the run deadline to fire")
+	}
+	if !strings.Contains(err.Error(), "no bridge activity for 300ms") {
+		t.Fatalf("error = %q, want the run-deadline message", err.Error())
+	}
+	if elapsed > 5*time.Second {
+		t.Fatalf("Execute held for %v, want the deadline to fire promptly", elapsed)
+	}
+	if handle.cmd == nil || handle.cmd.ProcessState == nil {
+		t.Fatal("interpreter process was not reaped after the run deadline")
+	}
+}
+
+// Parity-exempt: upstream calls its hooks as closures inside one process, so it
+// has no request/response ordering window at all. This pins the Go port's rule
+// that a reply may never be dropped for arriving before the child registered
+// the pending request — the ordering that used to hang real runs (the host
+// answers tracker_query/dispatch_one fast enough to win that race).
+func TestPythonBridgePendingRequestRegisteredBeforeSend(t *testing.T) {
+	interpreter, err := ResolvePythonInterpreter()
+	if err != nil {
+		t.Skipf("Python interpreter unavailable: %v", err)
+	}
+	bootstrapPath := filepath.Join(t.TempDir(), "bootstrap.py")
+	if err := os.WriteFile(bootstrapPath, []byte(pythonBootstrapSource), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, interpreter, "-u",
+		filepath.Join("testdata", "bridge_race_probe.py"), bootstrapPath)
+	out, err := cmd.CombinedOutput()
+	if ctx.Err() != nil {
+		t.Fatalf("race probe hung (a reply was dropped before registration):\n%s", out)
+	}
+	if err != nil {
+		t.Fatalf("race probe failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "OK:") {
+		t.Fatalf("race probe output = %q, want the OK marker", out)
+	}
+}
+
+// Parity-exempt: upstream has no child process to close, so there is no
+// re-entrancy question there. This pins that the Go handle's Close can be
+// called repeatedly and from several goroutines (Execute's kill path and the
+// caller's deferred Close can overlap) without leaking the child or the
+// bootstrap directory.
+func TestPythonPlaybookCloseIsIdempotent(t *testing.T) {
+	requirePythonBridge(t)
+	colony := newBridgeFakeColony()
+	handle, err := StartPythonPlaybook(context.Background(),
+		"meta = {\"name\": \"close-me\"}\nasync def run(args):\n    return {}\n",
+		PythonOptions{
+			DispatchOne: colony.dispatchOne,
+			QueryRows:   colony.queryRows,
+			RunID:       "close-run",
+		})
+	if err != nil {
+		t.Fatalf("StartPythonPlaybook: %v", err)
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			handle.Close()
+		}()
+	}
+	wg.Wait()
+	handle.Close()
+
+	if handle.cmd == nil || handle.cmd.ProcessState == nil {
+		t.Fatal("interpreter process was not reaped by Close")
+	}
+	if _, err := os.Stat(handle.workDir); !os.IsNotExist(err) {
+		t.Fatalf("bootstrap dir %q survived Close: %v", handle.workDir, err)
+	}
+}
+
 // Parity-exempt: process-group cancellation is a Go-process boundary concern;
 // upstream cancels an asyncio task instead.
 func TestPythonBridgeCancellationTerminatesProcess(t *testing.T) {

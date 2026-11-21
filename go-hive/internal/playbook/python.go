@@ -31,6 +31,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -44,6 +46,16 @@ const (
 	// module scope + meta validation). A module-level infinite loop is the case
 	// this exists for; a real script's imports finish far inside it.
 	pythonLoadTimeout = 120 * time.Second
+	// pythonDefaultTimeout is the per-worker dispatch default the bootstrap
+	// receives (upstream PlaybookRun(default_timeout=600)). It is NOT a cap on
+	// the whole run: upstream never bounds run() as a whole, and a legit batch
+	// can outlive any per-worker budget.
+	pythonDefaultTimeout = 600 * time.Second
+	// pythonStallGrace is added to the worker timeout to form the default
+	// no-activity budget. A dispatch_one answer can legitimately stay silent for
+	// a full worker timeout, so the silence guard must sit above it; anything
+	// beyond that is a stalled bridge, not a slow worker.
+	pythonStallGrace = 300 * time.Second
 	// pythonMaxLineBytes caps one protocol line. Results carrying a large row
 	// batch are legitimate, so this is generous.
 	pythonMaxLineBytes = 32 << 20
@@ -172,6 +184,11 @@ type PythonOptions struct {
 	RunID          string
 	Interpreter    string
 	DefaultTimeout *time.Duration
+	// StallTimeout bounds how long the bridge may stay silent (no line from the
+	// child and no event) before Execute kills it and reports the stall. Zero
+	// means "use DefaultTimeout + pythonStallGrace"; HIVE_PLAYBOOK_STALL_TIMEOUT
+	// (seconds) overrides when this field is nil.
+	StallTimeout   *time.Duration
 	ConcurrencyCap *int
 }
 
@@ -186,17 +203,28 @@ type PythonPlaybook struct {
 	dispatchOne    DispatchOne
 	queryRows      QueryRows
 	defaultTimeout time.Duration
+	stallTimeout   time.Duration
+	lastActivity   time.Time
 
-	cmd       *exec.Cmd
-	stdin     io.WriteCloser
-	workDir   string
-	stderr    *pythonTailBuffer
-	events    chan bridgeEvent
-	closed    chan struct{}
-	waitDone  chan struct{}
-	closeOnce sync.Once
-	termOnce  sync.Once
-	writeMu   sync.Mutex
+	cmd        *exec.Cmd
+	stdin      io.WriteCloser
+	workDir    string
+	stderr     *pythonTailBuffer
+	events     chan bridgeEvent
+	closed     chan struct{}
+	waitDone   chan struct{}
+	readDone   chan struct{}
+	stderrDone chan struct{}
+	closeOnce  sync.Once
+	termOnce   sync.Once
+	writeMu    sync.Mutex
+
+	// reqMu guards the bridge-request bookkeeping used by a stall report:
+	// served counts answered child requests, reqInFlight names the ones whose
+	// answer has not been written yet.
+	reqMu       sync.Mutex
+	reqServed   int
+	reqInFlight map[int64]string
 
 	ctxMu sync.Mutex
 	ctx   context.Context
@@ -304,9 +332,15 @@ func StartPythonPlaybook(ctx context.Context, script string, opts PythonOptions)
 		return nil, fmt.Errorf("python playbook: stderr pipe: %w", err)
 	}
 
-	defaultTimeout := 600 * time.Second
+	defaultTimeout := pythonDefaultTimeout
 	if opts.DefaultTimeout != nil && *opts.DefaultTimeout > 0 {
 		defaultTimeout = *opts.DefaultTimeout
+	}
+	stallTimeout := defaultTimeout + pythonStallGrace
+	if opts.StallTimeout != nil && *opts.StallTimeout > 0 {
+		stallTimeout = *opts.StallTimeout
+	} else if envSeconds, ok := pythonStallTimeoutFromEnv(); ok {
+		stallTimeout = envSeconds
 	}
 	runID := opts.RunID
 	if runID == "" {
@@ -318,12 +352,16 @@ func StartPythonPlaybook(ctx context.Context, script string, opts PythonOptions)
 		dispatchOne:    opts.DispatchOne,
 		queryRows:      opts.QueryRows,
 		defaultTimeout: defaultTimeout,
+		stallTimeout:   stallTimeout,
+		lastActivity:   time.Now(),
 		workDir:        workDir,
 		stdin:          stdinW,
 		stderr:         newPythonTailBuffer(pythonMaxStderrBytes),
 		events:         make(chan bridgeEvent, 8),
 		closed:         make(chan struct{}),
 		waitDone:       make(chan struct{}),
+		readDone:       make(chan struct{}),
+		stderrDone:     make(chan struct{}),
 		ctx:            ctx,
 	}
 
@@ -358,13 +396,15 @@ func StartPythonPlaybook(ctx context.Context, script string, opts PythonOptions)
 	go p.drainStderr(stderrR)
 	go p.readLoop(stdoutR)
 
-	if err := p.send(map[string]any{
+	// The init write is bounded too: a child that never reads stdin would
+	// otherwise park the caller in a full pipe before any timeout can arm.
+	if err := p.sendWithin(map[string]any{
 		"type":            "init",
 		"script":          script,
 		"run_id":          runID,
 		"default_timeout": defaultTimeout.Seconds(),
 		"concurrency_cap": opts.ConcurrencyCap,
-	}); err != nil {
+	}, pythonLoadTimeout); err != nil {
 		p.Close()
 		return nil, &PythonBridgeError{
 			Message: "python playbook: cannot send the script to the interpreter: " + err.Error(),
@@ -423,27 +463,52 @@ func StartPythonPlaybook(ctx context.Context, script string, opts PythonOptions)
 // script's own chunk/lane concurrency composes with the colony scheduler.
 func (p *PythonPlaybook) Execute(ctx context.Context, args any, concurrencyCap int) (map[string]any, error) {
 	p.setContext(ctx)
+	// Parent-side hard limit for the whole run. The bootstrap bounds one
+	// worker dispatch; nothing else bounds "the bridge went silent" (a dropped
+	// reply, a wedged script, a dead reader thread) — which is exactly how a
+	// run used to hang its caller forever. The same budget also bounds the
+	// run-command write, so a child that stopped reading stdin cannot park the
+	// caller in a full pipe.
+	// Parent-side silence guard (not a whole-run cap: upstream run() is
+	// unbounded). Any line from the child resets the budget below; a bridge that
+	// goes silent for the whole budget is killed and reported, so a dropped
+	// reply can never park the caller forever while slow-but-live batches run on.
+	stallLimit := p.stallTimeout
+	if stallLimit <= 0 {
+		stallLimit = p.defaultTimeout + pythonStallGrace
+	}
+	deadline := time.Now().Add(stallLimit)
 	var capPayload any
 	if concurrencyCap > 0 {
 		capPayload = concurrencyCap
 	}
-	if err := p.send(map[string]any{
+	if err := p.sendWithin(map[string]any{
 		"type":            "run",
 		"args":            args,
 		"concurrency_cap": capPayload,
-	}); err != nil {
+	}, time.Until(deadline)); err != nil {
 		return nil, &PythonBridgeError{
 			Message: "python playbook: cannot start the run: " + err.Error(),
 			Stderr:  p.stderr.String(),
 		}
 	}
+	runTimer := time.NewTimer(p.stallRemaining(stallLimit))
+	defer runTimer.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			p.terminate()
 			return nil, ctx.Err()
+		case <-runTimer.C:
+			// A run with no terminal event inside the budget is over: kill the
+			// child's process group, reap it, and report why. Returning while
+			// the child lived on is what left queen tool calls and background
+			// finishers parked indefinitely.
+			p.stopProcess()
+			return nil, p.runTimeoutError(stallLimit)
 		case event, ok := <-p.events:
 			if !ok {
+				p.stopProcess()
 				return nil, p.exitError()
 			}
 			switch event.Type {
@@ -492,6 +557,28 @@ func (p *PythonPlaybook) Close() {
 	}
 	p.closeOnce.Do(func() {
 		close(p.closed)
+		p.stopProcess()
+		if p.stdin != nil {
+			_ = p.stdin.Close()
+		}
+		if p.workDir != "" {
+			_ = os.RemoveAll(p.workDir)
+		}
+	})
+}
+
+// stopProcess terminates the child's process group (SIGTERM, then SIGKILL
+// after pythonKillGrace), waits for the reaper, and then waits — bounded — for
+// the protocol readers to hit EOF. terminate/forceKill are idempotent and
+// guarded by waitDone/termOnce, so this is safe to call repeatedly and from
+// several goroutines (Execute's deadline path and Close can overlap).
+func (p *PythonPlaybook) stopProcess() {
+	if p == nil || p.cmd == nil {
+		return
+	}
+	select {
+	case <-p.waitDone:
+	default:
 		p.terminate()
 		select {
 		case <-p.waitDone:
@@ -502,13 +589,29 @@ func (p *PythonPlaybook) Close() {
 			case <-time.After(pythonKillGrace):
 			}
 		}
-		if p.stdin != nil {
-			_ = p.stdin.Close()
+	}
+	p.waitStreams(pythonKillGrace)
+}
+
+// waitStreams waits (bounded) for readLoop and drainStderr to exit. Both end at
+// EOF, which stopProcess's kill guarantees; the bound only stops a pathological
+// pipe from delaying the caller.
+func (p *PythonPlaybook) waitStreams(limit time.Duration) {
+	if limit <= 0 {
+		return
+	}
+	timer := time.NewTimer(limit)
+	defer timer.Stop()
+	for _, done := range []chan struct{}{p.readDone, p.stderrDone} {
+		if done == nil {
+			continue
 		}
-		if p.workDir != "" {
-			_ = os.RemoveAll(p.workDir)
+		select {
+		case <-done:
+		case <-timer.C:
+			return
 		}
-	})
+	}
 }
 
 func (p *PythonPlaybook) setContext(ctx context.Context) {
@@ -561,6 +664,29 @@ func (p *PythonPlaybook) send(payload any) error {
 	return err
 }
 
+// sendWithin writes one protocol message, giving up after limit. A pipe write
+// blocks once the child stops reading; the timer plus the SIGTERM that follows
+// keeps that from parking the caller forever (the write fails with a closed
+// pipe once the child is gone).
+func (p *PythonPlaybook) sendWithin(payload any, limit time.Duration) error {
+	if limit <= 0 {
+		return p.send(payload)
+	}
+	done := make(chan error, 1)
+	go func() {
+		done <- p.send(payload)
+	}()
+	timer := time.NewTimer(limit)
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		return err
+	case <-timer.C:
+		p.terminate()
+		return fmt.Errorf("bridge write did not complete within %s", limit)
+	}
+}
+
 func (p *PythonPlaybook) respond(id int64, result any) {
 	if err := p.send(map[string]any{"id": id, "result": result}); err != nil {
 		// The host is gone or the child is dying; the run will surface the
@@ -579,6 +705,7 @@ func (p *PythonPlaybook) waitLoop() {
 }
 
 func (p *PythonPlaybook) drainStderr(pipe io.ReadCloser) {
+	defer close(p.stderrDone)
 	defer pipe.Close()
 	buf := make([]byte, 4096)
 	for {
@@ -593,6 +720,7 @@ func (p *PythonPlaybook) drainStderr(pipe io.ReadCloser) {
 }
 
 func (p *PythonPlaybook) readLoop(pipe io.ReadCloser) {
+	defer close(p.readDone)
 	defer pipe.Close()
 	defer close(p.events)
 	reader := bufio.NewReaderSize(pipe, 64*1024)
@@ -614,6 +742,7 @@ func (p *PythonPlaybook) readLoop(pipe io.ReadCloser) {
 }
 
 func (p *PythonPlaybook) handleLine(line []byte) bool {
+	p.touchActivity()
 	if len(line) > pythonMaxLineBytes {
 		p.emitEvent(bridgeEvent{
 			Type: "protocol_error",
@@ -663,6 +792,8 @@ func (p *PythonPlaybook) emitEvent(event bridgeEvent) {
 }
 
 func (p *PythonPlaybook) handleRequest(message bridgeMessage) {
+	p.trackRequest(message.ID, message.Method)
+	defer p.untrackRequest(message.ID)
 	switch message.Method {
 	case "query_rows":
 		var params struct {
@@ -745,17 +876,129 @@ func (p *PythonPlaybook) waitEvent(ctx context.Context, timeout time.Duration) (
 }
 
 func (p *PythonPlaybook) exitError() error {
-	<-p.waitDone
+	reaped := true
+	select {
+	case <-p.waitDone:
+	case <-time.After(pythonKillGrace):
+		// stopProcess was already called (or the child ignored SIGKILL); do
+		// not wait forever for a reaper that will not come.
+		reaped = false
+	}
 	code := -1
-	if p.cmd != nil && p.cmd.ProcessState != nil {
+	// ProcessState is written by cmd.Wait; only read it once waitDone proves
+	// the write happened (otherwise this would race the reaper).
+	if reaped && p.cmd != nil && p.cmd.ProcessState != nil {
 		code = p.cmd.ProcessState.ExitCode()
 	}
+	message := "python playbook exited before producing a result"
+	if !reaped {
+		message = "python playbook stopped producing output and did not exit"
+	}
 	return &PythonBridgeError{
-		Message:  "python playbook exited before producing a result",
+		Message:  message,
 		Stderr:   p.stderr.String(),
 		ExitCode: code,
 		HasExit:  code >= 0,
 	}
+}
+
+// runTimeoutError is the terminal answer when a run exceeds the parent-side
+// limit. It names the budget, what the host last did on the wire, and the
+// child's stderr tail, so a stall is diagnosable from the tool payload alone.
+func (p *PythonPlaybook) runTimeoutError(limit time.Duration) error {
+	served, inFlight := p.requestSnapshot()
+	message := fmt.Sprintf("python playbook: no bridge activity for %s (bridge stalled)", limit)
+	message += "; the interpreter did not answer and was terminated"
+	message += fmt.Sprintf("; bridge requests served=%d", served)
+	if len(inFlight) > 0 {
+		message += "; in-flight=[" + strings.Join(inFlight, ", ") + "]"
+	} else {
+		message += "; in-flight=[]"
+	}
+	return &PythonBridgeError{
+		Message: message,
+		Stderr:  tailLines(p.stderr.String(), 20),
+	}
+}
+
+// touchActivity records that the bridge produced a line; the silence guard
+// measures from here, so a healthy long batch keeps resetting the budget.
+func (p *PythonPlaybook) touchActivity() {
+	p.reqMu.Lock()
+	p.lastActivity = time.Now()
+	p.reqMu.Unlock()
+}
+
+// stallRemaining is the time left before the silence budget expires.
+func (p *PythonPlaybook) stallRemaining(limit time.Duration) time.Duration {
+	p.reqMu.Lock()
+	last := p.lastActivity
+	p.reqMu.Unlock()
+	if last.IsZero() {
+		return limit
+	}
+	left := limit - time.Since(last)
+	if left < time.Second {
+		left = time.Second
+	}
+	return left
+}
+
+// pythonStallTimeoutFromEnv reads HIVE_PLAYBOOK_STALL_TIMEOUT (seconds).
+func pythonStallTimeoutFromEnv() (time.Duration, bool) {
+	raw := strings.TrimSpace(os.Getenv("HIVE_PLAYBOOK_STALL_TIMEOUT"))
+	if raw == "" {
+		return 0, false
+	}
+	seconds, err := strconv.ParseFloat(raw, 64)
+	if err != nil || seconds <= 0 {
+		return 0, false
+	}
+	return time.Duration(seconds * float64(time.Second)), true
+}
+
+// trackRequest records an in-flight bridge request (the child asked, the host
+// has not answered yet) so a stall report can name what was outstanding.
+func (p *PythonPlaybook) trackRequest(id int64, method string) {
+	p.reqMu.Lock()
+	if p.reqInFlight == nil {
+		p.reqInFlight = map[int64]string{}
+	}
+	p.reqInFlight[id] = method
+	p.reqMu.Unlock()
+}
+
+// untrackRequest marks a bridge request answered (whatever the answer was).
+func (p *PythonPlaybook) untrackRequest(id int64) {
+	p.reqMu.Lock()
+	if _, ok := p.reqInFlight[id]; ok {
+		delete(p.reqInFlight, id)
+		p.reqServed++
+	}
+	p.reqMu.Unlock()
+}
+
+func (p *PythonPlaybook) requestSnapshot() (int, []string) {
+	p.reqMu.Lock()
+	defer p.reqMu.Unlock()
+	inFlight := make([]string, 0, len(p.reqInFlight))
+	for id, method := range p.reqInFlight {
+		inFlight = append(inFlight, fmt.Sprintf("%d:%s", id, method))
+	}
+	sort.Strings(inFlight)
+	return p.reqServed, inFlight
+}
+
+// tailLines returns the last n lines of text for a one-message diagnosis.
+func tailLines(text string, n int) string {
+	if text == "" || n <= 0 {
+		return ""
+	}
+	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (p *PythonPlaybook) scriptError(event bridgeEvent, stage string) error {
