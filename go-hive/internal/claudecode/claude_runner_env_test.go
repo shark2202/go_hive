@@ -321,7 +321,7 @@ func TestAnAnswerThatHappensToSayAlreadyInUseIsKept(t *testing.T) {
 // Parity: framework/server/tests/test_claude_code_queens.py::test_closing_kills_a_running_turn
 func TestClosingKillsARunningTurn(t *testing.T) {
 	h := newClaudeHarness(t, func(_ *queenmail.Config, queen *queenmail.ClaudeQueen) {
-		queen.Env["FAKE_CLAUDE_SLEEP"] = "30"
+		queen.Env["FAKE_CLAUDE_SLEEP"] = "300"
 	})
 	if _, err := h.mail.Send(ava, "session_ava", claude, "Take your time.", nil); err != nil {
 		t.Fatal(err)
@@ -330,7 +330,15 @@ func TestClosingKillsARunningTurn(t *testing.T) {
 	waitFor(t, "her process tree", func() bool { return h.runner.trackedCount() > 0 })
 
 	h.runner.Close()
-	waitFor(t, "her killed process tree", func() bool { return h.runner.trackedCount() == 0 })
+	// 杀掉进程树 + 回收的预算放宽到 60s（满载 CI 下 SIGKILL→Wait 收尾可能排队）；
+	// fake 睡 300s，远大于该预算，所以「被杀掉」与「自然跑完」仍严格可区分。
+	deadline := time.Now().Add(60 * time.Second)
+	for time.Now().Before(deadline) && h.runner.trackedCount() > 0 {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if h.runner.trackedCount() != 0 {
+		t.Fatalf("timed out waiting for her killed process tree")
+	}
 	time.Sleep(200 * time.Millisecond)
 	h.deliverer.mu.Lock()
 	defer h.deliverer.mu.Unlock()

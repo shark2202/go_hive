@@ -695,7 +695,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/routes_colony_tools.go",
-            "line": 75,
+            "line": 77,
             "symbol": "appVersion",
             "parse": "string",
             "snippet": "if value := os.Getenv(\"HIVE_APP_VERSION\"); value != \"\" {",
@@ -703,7 +703,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/server/routes_colony_tools.go",
-            "line": 345,
+            "line": 347,
             "symbol": "appVersionFromEnv",
             "parse": "string",
             "snippet": "if value := os.Getenv(\"HIVE_APP_VERSION\"); value != \"\" {",
@@ -1133,7 +1133,7 @@
         "dev_reads": [],
         "test_reads": 1,
         "writes": [],
-        "mentions": 5,
+        "mentions": 7,
         "comments": 5
       },
       "go": {
@@ -3564,9 +3564,9 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 13,
+        "test_reads": 14,
         "writes": [],
-        "mentions": 10,
+        "mentions": 11,
         "comments": 0
       },
       "notes": "env > configuration.json > false."
@@ -4584,7 +4584,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 626,
+            "line": 639,
             "symbol": "splitWorkerEventsEnabled",
             "parse": "string",
             "snippet": "switch strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_SPLIT_WORKER_EVENTS\"))) {",

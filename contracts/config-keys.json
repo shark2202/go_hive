@@ -2733,7 +2733,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/skills/discovery.go",
-              "line": 216,
+              "line": 218,
               "snippet": "raw, _ := cfg[\"external_skills\"].([]any)"
             }
           ],

@@ -129,6 +129,10 @@ func (r *Runner) executeClaude(args []string, prompt, cwd string, env []string, 
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 	configureProcessGroup(command)
+	// 杀掉进程树后 Wait() 仍要收尾 I/O 拷贝 goroutine：若某个后代短暂持有
+	// stdout/stderr 管道，默认会一直等 EOF。WaitDelay 给出确定上限（上游用
+	// communicate(timeout)+kill 同样有界），保证被停止的回合不会悬挂。
+	command.WaitDelay = 5 * time.Second
 	if err := command.Start(); err != nil {
 		return claudeTurnRun{startErr: err}
 	}
