@@ -1,0 +1,21 @@
+{
+  "endpoint": "skill_detail_missing",
+  "label": "技能不存在",
+  "method": "GET",
+  "path": "/api/skills/does-not-exist-probe",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 404,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "error": "skill 'does-not-exist-probe' not found"
+  },
+  "shape": {
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

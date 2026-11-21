@@ -1,0 +1,21 @@
+{
+  "endpoint": "session_delete_missing",
+  "label": "删除-会话不存在",
+  "method": "DELETE",
+  "path": "/api/sessions/session_20990101_000000_deadbeef",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 404,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "error": "Session '<session_id>' not found"
+  },
+  "shape": {
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

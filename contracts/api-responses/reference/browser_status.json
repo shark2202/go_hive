@@ -1,0 +1,29 @@
+{
+  "endpoint": "browser_status",
+  "label": "浏览器桥状态",
+  "method": "GET",
+  "path": "/api/browser/status",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "bridge": false,
+    "connected": false,
+    "connections": [],
+    "health": "offline"
+  },
+  "shape": {
+    "bridge": "boolean",
+    "connected": "boolean",
+    "connections": "array",
+    "health": "string"
+  },
+  "counts": {
+    "connections": 0
+  },
+  "shape_ignore": [],
+  "notes": []
+}

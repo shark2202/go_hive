@@ -1,0 +1,9 @@
+{
+  "endpoint": "queen_llm",
+  "shape": {
+    "default_model": "string",
+    "queen_id": "string",
+    "section": "null"
+  },
+  "counts": {}
+}

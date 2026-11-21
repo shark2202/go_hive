@@ -1,0 +1,33 @@
+{
+  "endpoint": "skills_scopes",
+  "label": "技能作用域",
+  "method": "GET",
+  "path": "/api/skills/scopes",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "colonies": [],
+    "queens": [
+      {
+        "id": "queen_growth",
+        "name": "queen_growth"
+      }
+    ]
+  },
+  "shape": {
+    "colonies": "array",
+    "queens": "array",
+    "queens[].id": "string",
+    "queens[].name": "string"
+  },
+  "counts": {
+    "colonies": 0,
+    "queens": 1
+  },
+  "shape_ignore": [],
+  "notes": []
+}

@@ -1,0 +1,21 @@
+{
+  "endpoint": "config_llm_put_list_body",
+  "label": "写回配置-非对象体",
+  "method": "PUT",
+  "path": "/api/config/llm",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 500,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "error": "Internal server error"
+  },
+  "shape": {
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

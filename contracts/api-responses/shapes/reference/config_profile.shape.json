@@ -1,0 +1,11 @@
+{
+  "endpoint": "config_profile",
+  "shape": {
+    "about": "string",
+    "density": "string",
+    "displayName": "string",
+    "prompt_library_sort": "null",
+    "theme": "string"
+  },
+  "counts": {}
+}

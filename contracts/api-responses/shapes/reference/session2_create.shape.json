@@ -1,0 +1,21 @@
+{
+  "endpoint": "session2_create",
+  "shape": {
+    "agent_path": "string",
+    "colony_id": "null",
+    "colony_spawned": "boolean",
+    "description": "string",
+    "goal": "string",
+    "has_worker": "boolean",
+    "loaded_at": "number(float)",
+    "node_count": "number(int)",
+    "queen_id": "string",
+    "queen_name": "string",
+    "queen_phase": "string",
+    "queen_supports_images": "boolean",
+    "session_id": "string",
+    "spawned_colony_id": "null",
+    "uptime_seconds": "number(float)"
+  },
+  "counts": {}
+}

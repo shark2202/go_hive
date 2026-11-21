@@ -1,0 +1,15 @@
+{
+  "endpoint": "config_llm_put",
+  "shape": {
+    "active_subscription": "null",
+    "api_base": "string",
+    "api_key_env_var": "string",
+    "has_api_key": "boolean",
+    "max_context_tokens": "null",
+    "max_tokens": "null",
+    "model": "string",
+    "provider": "string",
+    "sessions_swapped": "number(int)"
+  },
+  "counts": {}
+}

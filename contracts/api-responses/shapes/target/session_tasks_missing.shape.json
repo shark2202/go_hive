@@ -1,0 +1,11 @@
+{
+  "endpoint": "session_tasks_missing",
+  "shape": {
+    "error": "string",
+    "session_id": "string",
+    "tasks": "array"
+  },
+  "counts": {
+    "tasks": 0
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "endpoint": "session_skill_installs",
+  "shape": {
+    "requests": "array"
+  },
+  "counts": {
+    "requests": 0
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "endpoint": "colonies_tools_index",
+  "shape": {
+    "colonies": "array"
+  },
+  "counts": {
+    "colonies": 0
+  }
+}

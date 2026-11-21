@@ -1,0 +1,17 @@
+{
+  "endpoint": "config_external_skills",
+  "shape": {
+    "paths": "array",
+    "resolved": "array",
+    "suggestions": "array",
+    "suggestions[].exists": "boolean",
+    "suggestions[].path": "string",
+    "suggestions[].resolved": "string",
+    "suggestions[].skills": "number(int)"
+  },
+  "counts": {
+    "paths": 0,
+    "resolved": 0,
+    "suggestions": 2
+  }
+}

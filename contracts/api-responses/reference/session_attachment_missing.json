@@ -1,0 +1,19 @@
+{
+  "endpoint": "session_attachment_missing",
+  "label": "附件不存在",
+  "method": "GET",
+  "path": "/api/sessions/{session}/attachment/nope.txt",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 404,
+  "content_type": "text/plain; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": "Attachment not found",
+  "shape": {},
+  "counts": {},
+  "shape_ignore": [],
+  "notes": [
+    "non-JSON body"
+  ]
+}

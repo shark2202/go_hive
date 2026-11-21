@@ -1,0 +1,37 @@
+{
+  "endpoint": "config_llm_put",
+  "label": "写回 LLM 配置",
+  "method": "PUT",
+  "path": "/api/config/llm",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "active_subscription": null,
+    "api_base": "http://127.0.0.1:63937/v1",
+    "api_key_env_var": "HIVE_CONTRACT_PROBE_KEY",
+    "has_api_key": true,
+    "max_context_tokens": null,
+    "max_tokens": null,
+    "model": "contract-probe-model",
+    "provider": "openai",
+    "sessions_swapped": 2
+  },
+  "shape": {
+    "active_subscription": "null",
+    "api_base": "string",
+    "api_key_env_var": "string",
+    "has_api_key": "boolean",
+    "max_context_tokens": "null",
+    "max_tokens": "null",
+    "model": "string",
+    "provider": "string",
+    "sessions_swapped": "number(int)"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

@@ -1,0 +1,23 @@
+{
+  "endpoint": "session_chat",
+  "label": "发送消息(临时会话)",
+  "method": "POST",
+  "path": "/api/sessions/{session2}/chat",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "delivered": true,
+    "status": "queen"
+  },
+  "shape": {
+    "delivered": "boolean",
+    "status": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

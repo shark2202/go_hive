@@ -1,0 +1,9 @@
+{
+  "endpoint": "queen_removed",
+  "shape": {
+    "queens": "array"
+  },
+  "counts": {
+    "queens": 0
+  }
+}

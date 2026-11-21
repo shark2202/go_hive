@@ -1,0 +1,27 @@
+{
+  "endpoint": "queen_skills",
+  "shape": {
+    "all_defaults_disabled": "boolean",
+    "queen_id": "string",
+    "skills": "array",
+    "skills[].base_dir": "string",
+    "skills[].created_at": "null",
+    "skills[].created_by": "null",
+    "skills[].deletable": "boolean",
+    "skills[].description": "string",
+    "skills[].editable": "boolean",
+    "skills[].enabled": "boolean",
+    "skills[].location": "string",
+    "skills[].name": "string",
+    "skills[].notes": "null",
+    "skills[].param_overrides": "object",
+    "skills[].provenance": "string",
+    "skills[].source_scope": "string",
+    "skills[].trust": "null",
+    "skills[].visibility": "null",
+    "skills[].visibility[]": "string"
+  },
+  "counts": {
+    "skills": 195
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "endpoint": "session_tasks",
+  "label": "会话任务清单",
+  "method": "GET",
+  "path": "/api/sessions/{session}/tasks",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "meta": {
+      "created_at": 0.0,
+      "creator_agent_id": null,
+      "goal": "contract probe",
+      "role": "session",
+      "schema_version": 1
+    },
+    "role": "session",
+    "session_id": "<session_id>",
+    "tasks": [
+      {
+        "active_form": null,
+        "blocked_by": [],
+        "blocks": [],
+        "created_at": 0.0,
+        "description": "Seeded by the API contract probe",
+        "id": 1,
+        "metadata": {},
+        "owner": null,
+        "status": "pending",
+        "subject": "Probe task",
+        "updated_at": 0.0
+      }
+    ]
+  },
+  "shape": {
+    "meta": "object",
+    "meta.created_at": "number(float)",
+    "meta.creator_agent_id": "null",
+    "meta.goal": "string",
+    "meta.role": "string",
+    "meta.schema_version": "number(int)",
+    "role": "string",
+    "session_id": "string",
+    "tasks": "array",
+    "tasks[].active_form": "null",
+    "tasks[].blocked_by": "array",
+    "tasks[].blocks": "array",
+    "tasks[].created_at": "number(float)",
+    "tasks[].description": "string",
+    "tasks[].id": "number(int)",
+    "tasks[].metadata": "object",
+    "tasks[].owner": "null",
+    "tasks[].status": "string",
+    "tasks[].subject": "string",
+    "tasks[].updated_at": "number(float)"
+  },
+  "counts": {
+    "tasks": 1
+  },
+  "shape_ignore": [],
+  "notes": []
+}

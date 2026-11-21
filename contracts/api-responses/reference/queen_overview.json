@@ -1,0 +1,39 @@
+{
+  "endpoint": "queen_overview",
+  "label": "Queen 总览",
+  "method": "GET",
+  "path": "/api/queen/queen_growth/overview",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "memory": {
+      "by_type": {},
+      "count": 0,
+      "limit": 200
+    },
+    "queen_id": "queen_growth",
+    "sessions": {
+      "count": 1,
+      "first": "2026-11-21",
+      "last_active": "2026-11-21T12:26+08:00"
+    }
+  },
+  "shape": {
+    "memory": "object",
+    "memory.by_type": "object",
+    "memory.count": "number(int)",
+    "memory.limit": "number(int)",
+    "queen_id": "string",
+    "sessions": "object",
+    "sessions.count": "number(int)",
+    "sessions.first": "string",
+    "sessions.last_active": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

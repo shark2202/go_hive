@@ -1,0 +1,7 @@
+{
+  "endpoint": "skill_detail_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

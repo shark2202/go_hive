@@ -1,0 +1,11 @@
+{
+  "endpoint": "browser_contexts",
+  "shape": {
+    "available": "boolean",
+    "contexts": "array",
+    "count": "number(int)"
+  },
+  "counts": {
+    "contexts": 0
+  }
+}

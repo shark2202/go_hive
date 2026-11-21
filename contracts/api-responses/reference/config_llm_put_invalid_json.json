@@ -1,0 +1,21 @@
+{
+  "endpoint": "config_llm_put_invalid_json",
+  "label": "写回配置-非法 JSON",
+  "method": "PUT",
+  "path": "/api/config/llm",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 400,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "error": "Invalid JSON body"
+  },
+  "shape": {
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

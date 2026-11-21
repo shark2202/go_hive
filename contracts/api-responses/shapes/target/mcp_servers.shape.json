@@ -1,0 +1,19 @@
+{
+  "endpoint": "mcp_servers",
+  "shape": {
+    "servers": "array",
+    "servers[].description": "string",
+    "servers[].enabled": "boolean",
+    "servers[].last_error": "null",
+    "servers[].last_health_check_at": "null",
+    "servers[].last_health_status": "null",
+    "servers[].name": "string",
+    "servers[].removable": "boolean",
+    "servers[].source": "string",
+    "servers[].tool_count": "null",
+    "servers[].transport": "string"
+  },
+  "counts": {
+    "servers": 5
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "schema": "hive-api-fallback-probe/1",
+  "generated_at": "2026-11-21T12:27:19+08:00",
+  "note": "未知路径 fallback（待定口径，不改）：Python 的 SPA fallback 对未注册的 /api/* GET 返回 200 text/html + index.html；Go 路由返回 404 JSON。",
+  "probes": [
+    {
+      "path": "/api/__contract_probe_unknown__",
+      "sides": {
+        "reference": {
+          "status": 200,
+          "content_type": "text/html",
+          "json": false,
+          "body_prefix": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-w"
+        },
+        "target": {
+          "status": 404,
+          "content_type": "text/plain; charset=utf-8",
+          "json": false,
+          "body_prefix": "404 page not found\n"
+        }
+      }
+    },
+    {
+      "path": "/api/models",
+      "sides": {
+        "reference": {
+          "status": 200,
+          "content_type": "text/html",
+          "json": false,
+          "body_prefix": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-w"
+        },
+        "target": {
+          "status": 404,
+          "content_type": "text/plain; charset=utf-8",
+          "json": false,
+          "body_prefix": "404 page not found\n"
+        }
+      }
+    },
+    {
+      "path": "/api/org-chart",
+      "sides": {
+        "reference": {
+          "status": 200,
+          "content_type": "text/html",
+          "json": false,
+          "body_prefix": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-w"
+        },
+        "target": {
+          "status": 404,
+          "content_type": "text/plain; charset=utf-8",
+          "json": false,
+          "body_prefix": "404 page not found\n"
+        }
+      }
+    }
+  ]
+}

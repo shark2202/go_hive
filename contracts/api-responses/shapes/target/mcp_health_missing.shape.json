@@ -1,0 +1,11 @@
+{
+  "endpoint": "mcp_health_missing",
+  "shape": {
+    "code": "string",
+    "error": "string",
+    "fix": "string",
+    "what": "string",
+    "why": "string"
+  },
+  "counts": {}
+}

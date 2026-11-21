@@ -1,0 +1,130 @@
+{
+  "endpoint": "config_rate_limits",
+  "label": "速率限制",
+  "method": "GET",
+  "path": "/api/config/rate-limits",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "limits": [
+      {
+        "action_type": "profile_view",
+        "daily": 150,
+        "daily_default": 150,
+        "daily_max": 400,
+        "hourly": 25,
+        "hourly_default": 25,
+        "hourly_max": 100,
+        "min_delay_s": 5,
+        "platform": "linkedin"
+      },
+      {
+        "action_type": "invite",
+        "daily": 50,
+        "daily_default": 50,
+        "daily_max": 125,
+        "hourly": 10,
+        "hourly_default": 10,
+        "hourly_max": 25,
+        "min_delay_s": 30,
+        "platform": "linkedin",
+        "weekly": 200,
+        "weekly_default": 200,
+        "weekly_max": 500
+      },
+      {
+        "action_type": "message",
+        "daily": 60,
+        "daily_default": 60,
+        "daily_max": 200,
+        "hourly": 20,
+        "hourly_default": 20,
+        "hourly_max": 80,
+        "min_delay_s": 15,
+        "platform": "linkedin"
+      },
+      {
+        "action_type": "comment",
+        "daily": 50,
+        "daily_default": 50,
+        "daily_max": 150,
+        "hourly": 8,
+        "hourly_default": 8,
+        "hourly_max": 30,
+        "min_delay_s": 20,
+        "platform": "linkedin"
+      },
+      {
+        "action_type": "reply",
+        "daily": 50,
+        "daily_default": 50,
+        "daily_max": 150,
+        "hourly": 10,
+        "hourly_default": 10,
+        "hourly_max": 30,
+        "min_delay_s": 30,
+        "platform": "x"
+      },
+      {
+        "action_type": "dm",
+        "daily": 60,
+        "daily_default": 60,
+        "daily_max": 200,
+        "hourly": 20,
+        "hourly_default": 20,
+        "hourly_max": 80,
+        "min_delay_s": 20,
+        "platform": "x"
+      },
+      {
+        "action_type": "post",
+        "daily": 30,
+        "daily_default": 30,
+        "daily_max": 125,
+        "hourly": 5,
+        "hourly_default": 5,
+        "hourly_max": 25,
+        "min_delay_s": 60,
+        "platform": "x"
+      },
+      {
+        "action_type": "dm",
+        "daily": 80,
+        "daily_default": 80,
+        "daily_max": 150,
+        "hourly": 16,
+        "hourly_default": 16,
+        "hourly_max": 40,
+        "min_delay_s": 45,
+        "platform": "instagram",
+        "weekly": 300,
+        "weekly_default": 300,
+        "weekly_max": 500
+      }
+    ]
+  },
+  "shape": {
+    "limits": "array",
+    "limits[].action_type": "string",
+    "limits[].daily": "number(int)",
+    "limits[].daily_default": "number(int)",
+    "limits[].daily_max": "number(int)",
+    "limits[].hourly": "number(int)",
+    "limits[].hourly_default": "number(int)",
+    "limits[].hourly_max": "number(int)",
+    "limits[].min_delay_s": "number(int)",
+    "limits[].platform": "string",
+    "limits[].weekly": "number(int)",
+    "limits[].weekly_default": "number(int)",
+    "limits[].weekly_max": "number(int)"
+  },
+  "counts": {
+    "limits": 8
+  },
+  "shape_ignore": [],
+  "notes": []
+}

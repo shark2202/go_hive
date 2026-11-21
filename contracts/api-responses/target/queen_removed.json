@@ -1,0 +1,23 @@
+{
+  "endpoint": "queen_removed",
+  "label": "已移除 Queen",
+  "method": "GET",
+  "path": "/api/queen/removed",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "queens": []
+  },
+  "shape": {
+    "queens": "array"
+  },
+  "counts": {
+    "queens": 0
+  },
+  "shape_ignore": [],
+  "notes": []
+}

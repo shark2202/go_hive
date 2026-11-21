@@ -1,0 +1,7 @@
+{
+  "endpoint": "session_chat_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

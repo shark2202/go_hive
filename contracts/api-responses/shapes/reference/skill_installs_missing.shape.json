@@ -1,0 +1,7 @@
+{
+  "endpoint": "skill_installs_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

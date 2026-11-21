@@ -1,9 +1,12 @@
 # API / SSE 帧级 canonical golden
 
-> 状态：**已实测**（2026-11-21，api-ws-canonical 车道；双跑探测 + 帧级 golden + REST 值级账本，全部 PASS）
+> 状态：**已实测**（2026-11-21；REST 值级 golden 已扩到 77 端点 / 21 失败路径，
+> 未知路径 fallback 双跑记录为待定口径）
 > 产物：
 > - `go_hive/contracts/sse-frames/`（reference/target 帧级 golden + `diff.json` + `index.json` + `summary.txt`）
-> - `go_hive/contracts/api-responses/value-golden.json`（14 成功端点 + 3 失败路径的值级差异账本）
+> - `go_hive/contracts/api-responses/value-golden.json`（56 成功端点 + 21 失败路径的值级差异账本）
+> - `go_hive/contracts/api-responses/fallback-probe.json`（未知路径 fallback 双跑证据，不计入比较）
+> - `go_hive/docs/api-contract-diff.md`（形状/语义差异报告，含 fallback 小节）
 > 生成 / 校验：
 > ```bash
 > uv run python go_hive/scripts/sse_frames_canonical.py            # 写入帧级 golden
@@ -18,16 +21,18 @@
 ## 1. 口径与覆盖
 
 此前 API 侧只比较「单个响应体的形状」（14 端点 0 差异），SSE 侧是脚本报告（无帧级 golden）。
-本页冻结的是**帧级/值级**契约：同一剧本下，两侧客户端收到的每一帧、以及 14 个端点的
+本页冻结的是**帧级/值级**契约：同一剧本下，两侧客户端收到的每一帧、以及全部端点的
 canonical 响应值，逐条比对后写入 golden；差异只有三类——已修、已声明例外、未声明（未声明即 FAIL）。
 
 | 覆盖 | 数量 | 说明 |
 | --- | --- | --- |
 | SSE canonical 帧 | reference 113 / target 148 | 同一剧本：创建 → 开场回合 → 普通消息 → ask_user → 回答 → 重连 replay → DELETE |
 | SSE 比较帧（去文档化变换后） | live 34/34、replay 17/17、history 42/42、stop 18/17 | 变换：丢弃 Go-only 每回合信封 36 帧 + 异步 title 位置不参与顺序 |
-| REST 成功端点 | 14/14 PASS | `contracts/api-responses/{reference,target}/` canonical 载荷 |
-| REST 失败路径 | 3/3 PASS（400/404/409） | 状态码 + `error` 字段逐字对照（见 §6） |
-| REST 值路径 | 4910 条 | 0 未声明差异；37 条已声明差异（§5） |
+| REST 端点 | 77/77 PASS（74 形状/语义全等 + 3 已声明差异） | 56 成功路径 + 21 失败路径；第一批 17 端点 + 第二批 60 条探针 |
+| REST 值路径 | 8678 条 | 0 未声明差异；45 条已声明差异 + 1 个端点级折叠例外（`session_live_tools` 418 条） |
+| 未知路径 fallback | 3 路径 × 2 侧 | Python SPA 200 HTML / Go 404；仅证据，不计入比较（§6.4） |
+| SSE 例外 | 11 条 | 见 `contracts/sse-frames/diff.json.exceptions` |
+| REST 例外规则 | 12 条 + 1 端点级 | 见 `value-golden.json.exceptions` / `ENDPOINT_EXCEPTIONS`（§6.3） |
 
 ## 2. SSE canonicalizer（`go_hive/scripts/sse_frames_canonical.py`）
 
@@ -102,14 +107,14 @@ JSON 字节（`Marshal(cost_usd) == "0.0042"`）。
 ## 5. 例外清单（结构化 + 值级；不进对齐目标）
 
 SSE（`contracts/sse-frames/diff.json.exceptions`，11 条）与 REST
-（`contracts/api-responses/value-golden.json.exceptions`，8 条规则）的关系：
+（`contracts/api-responses/value-golden.json.exceptions`，12 条路径规则 + 1 个端点级折叠）的关系：
 
 | 类别 | 例外 | 归因 |
 | --- | --- | --- |
 | 有意结构（应当保留） | `node_loop_started.max_iterations` 999999 vs 50；`node_loop_iteration/llm_turn_complete/client_output_delta.iteration` 会话累计 vs 每回合；`node_loop_completed.iterations`、`execution_*` 的 `input`/`output`（随信封整体剔除） | Python 是永久 loop、Go 是每回合 bounded loop（`sse-payload-parity.md` §4.1/§4.2 既有结论）。快照 `is_executing` 与前端 spinner 依赖该信封，**不硬改**；若要统一 loop 语义需单独立项确认 |
 | 值级（提示词 / 语料车道） | `llm_turn_complete.model`（litellm 前缀 `openai/…`）；`system_prefix_sha`；`context_usage_updated` 的 `usage_ratio/usage_pct/estimated_tokens/message_count/breakdown.*`；REST 侧同路径 + `queen_tools` 24 条工具描述 | 系统提示词与工具描述文本仍在对齐（prompt / tool-description 车道）。字段集合、类型、发射点、枚举值不受影响 |
 | 值级（开场结构） | `context_usage_updated.message_count` 开场 1 vs 0 | 开场块消息结构与提示词车道同源；后续读数已一致（§4.1 钉住 7/7/8） |
-| 运行期内部 | REST `session_stats.event_bus.subscriptions`（9 vs 1）；`health.resources.*`（比较时忽略） | 进程内读数，不属 HTTP 契约 |
+| 运行期内部 | REST `session_stats.event_bus.subscriptions`（9 vs 3，逐次运行可变）；`health.resources.*`（比较时忽略） | 进程内读数，不属 HTTP 契约 |
 | 非契约 | `session_title_updated` 位置；`stop` 停机尾巴 | 异步任务 / 关停竞态，两侧都可能漂移 |
 
 > 未声明差异 = FAIL：`--check`（SSE / REST）都会在出现新差异或旧例外失效时退出 1。
@@ -122,24 +127,130 @@ SSE（`contracts/sse-frames/diff.json.exceptions`，11 条）与 REST
   冻结时从 shape 中剔除（`shape_ignore`），canonical 载荷仍保留作为证据，避免快照门禁要求每次运行都出现。
 - **展开规则**：递归展开为叶子路径；数组带稳定身份键（`credential_id`/`skill_id`/`tool_name`/`id`/`name`）
   时按该键排序后逐项比较（map 迭代序不算契约变化）；纯标量数组按多重集；其余按位置。
-- **失败路径对照**（新增探针）：
+- **路径类易变值**：`location`/`path`/`base_dir`/`home`/`root`/`cwd` 等键按占位符比较（`base_dir` 于本批加入：
+  Python 侧读 checkout、Go 侧内置技能物化在进程临时目录，属部署差异而非契约值）。
+- **失败路径语义**：状态码 + `error` 文案逐字比较；纯文本错误体（如附件 404 的 `Attachment not found`）
+  按文本比较（本次为此修正了 freeze 的非 JSON 体处理）。
 
-| 端点 | 方法 | 状态 | error 文案 |
+### 6.1 第二批端点（60 条新探针：42 成功 + 18 失败）
+
+覆盖范围：sessions 生命周期（delete / live_tools / history / triggers / workers / skill-installs /
+tasks / title / chat / attachment / upload）、config GET/PUT、credentials 列表与元数据（仅元数据，
+值用占位 `probe-dummy-value`，响应不含任何密钥值）、skills、MCP、browser panel/status、colonies、
+queens、sentinel、maintenance。
+
+| 端点 | 方法 | 成功状态 | 值路径 | 备注 |
+| --- | --- | --- | --- | --- |
+| `/api/sessions/history` | GET | 200 | 14 | 冷/热会话列表 |
+| `/api/sessions/{session}/live_tools` | GET | 200 | 433 | 已声明差异：Go REST 会话无 PhaseState（见 §6.3） |
+| `/api/sessions/{session}/triggers` | GET | 200 | 0 | 空列表 |
+| `/api/sessions/{session}/workers` | GET | 200 | 0 | 空列表 |
+| `/api/sessions/{session}/skill-installs` | GET | 200 | 0 | 空列表 |
+| `/api/sessions/{session}/tasks` | GET | 200 | 15 | 探针在两侧 temp home 写入同构 `tasks.json` 后读取 |
+| `/api/sessions/{session}/upload-attachment` | POST | 200 | 6 | multipart；两侧返回同名文件 + `extracted_text` |
+| `/api/sessions/{session}/attachment/{file}` | GET | 200 | 5 | 下载头（Content-Type/Length/Cache-Control）+ 正文逐字 |
+| `/api/sessions/{session}/title` | PATCH | 200 | 2 | 第二会话（临时）写入 |
+| `/api/sessions/{session}/chat` | POST | 200 | 2 | `{"status":"queen","delivered":true}` |
+| `/api/sessions/{session}`（删除后） | GET | 200 | 9 | 冷会话详情分支 |
+| `/api/sessions/{session}` | DELETE | 200 | 2 | `{"session_id","stopped":true}` |
+| `/api/config/features` | GET | 200 | 4 | |
+| `/api/config/models` | GET | 200 | 268 | 已声明差异：整数定价 `5.0` vs `5`（NV-02） |
+| `/api/config/profile` | GET | 200 | 5 | |
+| `/api/config/sentinel` | GET | 200 | 0 | |
+| `/api/config/rate-limits` | GET | 200 | 78 | |
+| `/api/config/llm-sections` | GET | 200 | 7 | |
+| `/api/config/external-skills` | GET | 200 | 8 | |
+| `/api/config/provider-library` | GET | 200 | 0 | |
+| `/api/config/llm` | PUT | 200 | 9 | custom 模式回写同一 model；`sessions_swapped` 已声明差异 |
+| `/api/credentials` | GET | 200 | 5 | 仅元数据（id/type/key_names/时间），无密钥值 |
+| `/api/credentials` | POST | 201 | 1 | 占位值写入 temp home |
+| `/api/credentials/airtable_pat` | GET | 200 | 5 | 单条元数据 |
+| `/api/credentials/oauth-status` | GET | 200 | 2 | 在写入凭据之前采样（空 registry） |
+| `/api/sentinel/credentials` | GET | 200 | 3 | |
+| `/api/skills/scopes` | GET | 200 | 2 | |
+| `/api/skills/{name}` | GET | 200 | 7 | |
+| `/api/queen/{id}/skills` | GET | 200 | 2732 | 195 条技能（`base_dir` 已占位） |
+| `/api/mcp/servers` | GET | 200 | 50 | |
+| `/api/browser/status` | GET | 200 | 3 | 探针把两侧 `HIVE_BRIDGE_PORT` 指到关闭端口避免宿主桥串扰 |
+| `/api/browser/contexts` | GET | 200 | 3 | 已声明差异（无桥时空态形状，见 §6.3） |
+| `/api/browser/tabs` | GET | 200 | 2 | `reason` 文案值级差异（已声明） |
+| `/api/colonies/tools-index` | GET | 200 | 0 | |
+| `/api/queen/removed` | GET | 200 | 0 | |
+| `/api/queen/{id}/overview` | GET | 200 | 6 | |
+| `/api/queen/{id}/profile` | GET | 200 | 17 | |
+| `/api/queen/{id}/llm` | GET | 200 | 3 | `default_model` 经接线修复后与 reference 一致 |
+| `/api/queen/{id}/persona` | GET | 200 | 18 | |
+| `/api/queen/{id}/soul` | GET | 200 | 2 | |
+| `/api/maintenance/janitor/report` | GET | 200 | 1 | |
+
+### 6.2 失败路径矩阵（21 条，全部 PASS）
+
+| 端点 | 方法 | 状态 | 对照物 |
 | --- | --- | --- | --- |
-| `/api/sessions/session_…deadbeef` | GET | 404/404 | `Session '<session_id>' not found`（id 已掩码） |
+| `/api/sessions/session_…deadbeef` | GET | 404/404 | `Session '<id>' not found` |
 | `/api/sessions`（body=`[]`） | POST | 400/400 | `Request body must be a JSON object` |
 | `/api/sessions/{session}/colony/resolve_missed` | POST | 409/409 | `Colony not loaded` |
+| `/api/sessions/{missing}/live_tools` | GET | 404/404 | `session '<id>' not found` |
+| `/api/sessions/{missing}/tasks` | GET | 404/404 | `Task list for session … not found` + 空 tasks |
+| `/api/sessions/{missing}/triggers` | GET | 404/404 | `Session '<id>' not found` |
+| `/api/sessions/{missing}/workers` | GET | 404/404 | `Session '<id>' not found` |
+| `/api/sessions/{missing}/skill-installs` | GET | 404/404 | `session not found` |
+| `/api/sessions/{missing}/upload-attachment` | POST | 404/404 | `session not found` |
+| `/api/sessions/{missing}/chat` | POST | 404/404 | `Session '<id>' not found`（本批修复 Go 文案） |
+| `/api/sessions/{missing}/title` | PATCH | 404/404 | `No such queen conversation` |
+| `/api/sessions/{missing}` | DELETE | 404/404 | `Session '<id>' not found` |
+| `/api/sessions/{session}/attachment/nope.txt` | GET | 404/404 | 纯文本 `Attachment not found` |
+| `/api/credentials/nope_probe` | GET | 404/404 | `Credential 'nope_probe' not found` |
+| `/api/skills/does-not-exist-probe` | GET | 404/404 | `skill 'does-not-exist-probe' not found` |
+| `/api/queen/queen_nope/overview` | GET | 404/404 | `Queen 'queen_nope' not found` |
+| `/api/mcp/servers/nope/health` | POST | 404/404 | `{"code","error","what","why","fix"}` 五键错误体 |
+| `/api/sentinel/telegram/validate`（空体） | POST | 400/400 | `{"error":"no token provided or saved","ok":false}` |
+| `/api/credentials`（空体） | POST | 400/400 | `credential_id and keys are required` |
+| `/api/config/llm`（非法 JSON） | PUT | 400/400 | `Invalid JSON body` |
+| `/api/config/llm`（body=`[]`） | PUT | 500/500 | 两侧同为 500（非对象体在两侧都抛错）；**记录现状而非期望行为** |
 
-- **结果**：17/17 PASS（14 成功 + 3 失败），4910 条值路径，37 条已声明差异（24 工具描述 +
-  2 SSE 帧 model/sha + 10 history 数值/结构 + 1 运行期内部），0 未声明。
+### 6.3 值级/形状差异（已声明，不进对齐目标）
+
+| 例外 | 端点 | 类 | 说明 |
+| --- | --- | --- | --- |
+| 端点级折叠（418 条） | `session_live_tools` | runtime-state-gap | Go REST 会话不挂 PhaseState（只有 CLI/预加载/恢复会话挂），工具面与 diagnostic 为空；形状仍比较 |
+| `config-models-pricing-float` | `config_models` | non-verbatim-numeric | 整数定价 `5.0` vs `5`（NV-02） |
+| `browser-contexts-empty-state` | `browser_contexts` | empty-state-divergence | Python 读进程内 gcu 注册表（available:true/count:0）；Go 代理桥（available:false/reason） |
+| `browser-tabs-reason-text` | `browser_tabs` | env-dependent-value | 同为 available:false，`reason` 文案实现相关 |
+| `config-llm-put-swapped-count` | `config_llm_put` | runtime-state-gap | 与 `session_live_tools` 同源：Python 会计入会话的 ColonyRuntime LLM |
+
+其它既有例外见 §5（工具描述文本、SSE model/sha、`event_bus.subscriptions` 等）。
+
+### 6.4 未知路径 fallback（实测，待定口径，**不改行为**）
+
+两侧同输入探测未注册的 `/api/*` GET（证据：`contracts/api-responses/fallback-probe.json`）：
+
+| 路径 | reference（Python） | target（Go） |
+| --- | --- | --- |
+| `/api/__contract_probe_unknown__` | 200 `text/html`（index.html） | 404 `text/plain`（`404 page not found`） |
+| `/api/models` | 200 `text/html`（index.html） | 404 `text/plain` |
+| `/api/org-chart` | 200 `text/html`（index.html） | 404 `text/plain` |
+
+- Python 的 SPA catch-all（`app.router.add_get("/{path:.*}", handle_spa)`）只在 `core/frontend/dist/index.html`
+  存在时注册；存在时未注册的 `/api/*` 会拿到 200 HTML（前端因此把「缺路由」当页面加载）。
+  没有 dist 时的实测同样是 404 文本（body 前缀 `404: Not Found`），与 Go 的 `404 page not found` 仅文案差异。
+- **口径未定**：是否要 Go 也回 200 HTML（与 SPA 行为一致），还是 Python 收窄 catch-all 对 `/api/*` 回 404 JSON，
+  属产品决策；本批只记录两侧现状，**未改任何行为**。前端 `api/*.ts` 已核对的路径不受影响（路由面 217/220）。
+
+### 6.5 结果
+
+- 77/77 PASS（74 全等 + 3 已声明差异），8678 条值路径，45 条已声明差异 + 1 个端点级折叠例外（418 条），0 未声明。
 - `pythonFloat` 修复后，`session_events` / `session_events_history` 的 `cost_usd` 已从差异清单消失。
+- 本批顺带修复：Go `GET /api/queen/{id}/llm` 的 `default_model` 接线（serve 未传 `DefaultModel` 钩子，
+  恒为空串）；Go `POST /api/sessions/{id}/chat` 未知会话 404 文案改为与 `resolve_session` 一致的
+  `Session '<id>' not found`；canonicalizer 把 `base_dir` 纳入占位键；freeze 失败语义支持纯文本错误体。
 
 ## 7. 复现与门禁
 
 ```bash
 # 刷新双跑证据 + 帧级 golden（先删旧二进制；脚本会自动删）
 uv run python go_hive/scripts/sse_frames_canonical.py --refresh
-# 刷新 REST 形状/语义冻结（含 3 条失败路径）
+# 刷新 REST 形状/语义冻结 + 值级探针证据（先删旧二进制）
 rm -f go_hive/go-hive/dist/hive-contract && uv run python go_hive/scripts/freeze_api_responses.py
 # 写/验值级账本与帧级 golden
 uv run python go_hive/scripts/api_response_values.py
@@ -147,9 +258,12 @@ uv run python go_hive/scripts/api_response_values.py --check
 uv run python go_hive/scripts/sse_frames_canonical.py --check
 ```
 
-探针与 golden 均只监听 127.0.0.1、只用本地 stub，不访问外部服务；**不纳入 `make ci`**，
-按需手动跑。本车道门禁只跑受影响范围（gofmt / vet / 目标包测试 / parity / 外观矩阵 --check），
-不跑全量 `make ci`。
+- `freeze_api_responses.py` 起两个临时实例（各自 temp `HIVE_HOME`、空闲端口、本地 stub LLM），
+  探针含写操作（删会话、写凭据、写配置、上传附件）全部落在临时 home；浏览器探针把两侧
+  `HIVE_BRIDGE_PORT` 指到关闭端口并关掉 Go 桥 supervisor，避免宿主上的 14830 桥串扰。
+- fallback 小节要求 Python 侧存在 `core/frontend/dist`（构建前端后）；没有 dist 时两侧都回 404 文本。
+- 探针与 golden 均只监听 127.0.0.1、只用本地 stub，不访问外部服务；**不纳入 `make ci`**，
+  按需手动跑。本车道门禁只跑受影响范围（gofmt / vet / 目标包测试 / parity），不跑全量 `make ci`。
 
 ## 8. 未覆盖 / 后续
 
@@ -157,3 +271,14 @@ uv run python go_hive/scripts/sse_frames_canonical.py --check
 - 多工具批的金句序：单工具批已被 golden + 单测钉住；多工具批的 `tool_call_completed →
   post_tool_call` 交替顺序由同一段代码保证，但未纳入本剧本。
 - `system_prefix_sha` / `model` / 工具描述等提示词语料的追平（prompt / tool-description 车道）。
+- **候选调查未纳入本批**（已实测、记录口径，不作为 golden 端点）：
+  - `/api/sessions/{id}/colony/tools`、`/api/sessions/{id}/colony/skills`：Python 挂载急切实时
+    ColonyRuntime 返回完整工具/技能目录，Go REST 会话返回 `[]`（与 `session_live_tools` 同源）；
+    纳入会把数百条数组元素差异带进账本，留待运行时会话构造对齐后补探针。
+  - `/api/health/resources`：两侧实现不同（Python 渲染器采样器 shape `{available,history,interval_s,
+    thresholds,verdict}`；Go 资源监控 rollup `{available,chrome,components,context,history,…}`），
+    属功能面差异，`/api/health` 已被现有 golden 覆盖。
+- `api.proto` 尚未为第二批端点写 message（`check_api_proto.py` 报 `unmapped-endpoint` 警告，
+  0 error，不失败）；下批可批量补 proto message 或维持「新端点只进 shape/值账本」的口径。
+- 会话运行时会话构造（PhaseState / ColonyRuntime）对齐后，`session_live_tools`、
+  `config_llm_put.sessions_swapped`、colony 工具/技能面可升级为严格比较。

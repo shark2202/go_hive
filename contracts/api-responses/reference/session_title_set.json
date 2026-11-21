@@ -1,0 +1,23 @@
+{
+  "endpoint": "session_title_set",
+  "label": "设置会话标题",
+  "method": "PATCH",
+  "path": "/api/sessions/{session2}/title",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "session_id": "<session_id>",
+    "title": "Probe title"
+  },
+  "shape": {
+    "session_id": "string",
+    "title": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

@@ -1,0 +1,13 @@
+{
+  "endpoint": "skill_detail",
+  "shape": {
+    "base_dir": "string",
+    "body": "string",
+    "description": "string",
+    "location": "string",
+    "name": "string",
+    "source_scope": "string",
+    "visibility": "null"
+  },
+  "counts": {}
+}

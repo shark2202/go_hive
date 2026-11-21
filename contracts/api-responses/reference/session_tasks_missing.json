@@ -1,0 +1,27 @@
+{
+  "endpoint": "session_tasks_missing",
+  "label": "会话不存在-任务",
+  "method": "GET",
+  "path": "/api/sessions/session_20990101_000000_deadbeef/tasks",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 404,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "error": "Task list for session '<session_id>' not found",
+    "session_id": "<session_id>",
+    "tasks": []
+  },
+  "shape": {
+    "error": "string",
+    "session_id": "string",
+    "tasks": "array"
+  },
+  "counts": {
+    "tasks": 0
+  },
+  "shape_ignore": [],
+  "notes": []
+}

@@ -63,6 +63,10 @@ type AppDeps struct {
 
 	CreateSession          func(CreateSessionParams) (*Session, error)
 	CreateColonyFromSource func(CreateColonyFromSourceParams) (*Session, error)
+	// DefaultModel is the main-slot model reported by GET /api/queen/{id}/llm
+	// (Python's manager model, else the provider-prefixed preferred model).
+	// Nil leaves the route reporting an empty default.
+	DefaultModel func() string
 	// ColonyRuntimeFor resolves the live colony runtime behind a session for
 	// the worker/sentinel read surfaces. Nil falls back to inspecting
 	// Session.Colony itself.
@@ -279,6 +283,7 @@ func NewApp(deps AppDeps) *App {
 		Home:          deps.Home,
 		Manager:       deps.Manager,
 		CreateSession: queenCreateSessionAdapter(deps.CreateSession),
+		DefaultModel:  deps.DefaultModel,
 	})
 	RegisterQueenToolRoutes(mux, QueenToolRouteDeps{
 		Home:    deps.Home,

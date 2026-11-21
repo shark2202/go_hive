@@ -1,0 +1,23 @@
+{
+  "endpoint": "session_skill_installs",
+  "label": "待批准技能安装",
+  "method": "GET",
+  "path": "/api/sessions/{session}/skill-installs",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "requests": []
+  },
+  "shape": {
+    "requests": "array"
+  },
+  "counts": {
+    "requests": 0
+  },
+  "shape_ignore": [],
+  "notes": []
+}

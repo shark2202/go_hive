@@ -1,0 +1,23 @@
+{
+  "endpoint": "sentinel_telegram_validate_empty",
+  "label": "Telegram 校验-空参",
+  "method": "POST",
+  "path": "/api/sentinel/telegram/validate",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 400,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "error": "no token provided or saved",
+    "ok": false
+  },
+  "shape": {
+    "error": "string",
+    "ok": "boolean"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

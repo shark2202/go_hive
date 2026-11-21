@@ -1,0 +1,9 @@
+{
+  "endpoint": "session_workers",
+  "shape": {
+    "workers": "array"
+  },
+  "counts": {
+    "workers": 0
+  }
+}

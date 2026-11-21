@@ -1,0 +1,37 @@
+{
+  "endpoint": "session_detail_cold",
+  "label": "删除后(冷会话)详情",
+  "method": "GET",
+  "path": "/api/sessions/{session2}",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "agent_name": null,
+    "agent_path": null,
+    "cold": true,
+    "colony_spawned": false,
+    "created_at": 0.0,
+    "has_messages": true,
+    "live": false,
+    "session_id": "<session_id>",
+    "spawned_colony_id": null
+  },
+  "shape": {
+    "agent_name": "null",
+    "agent_path": "null",
+    "cold": "boolean",
+    "colony_spawned": "boolean",
+    "created_at": "number(float)",
+    "has_messages": "boolean",
+    "live": "boolean",
+    "session_id": "string",
+    "spawned_colony_id": "null"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

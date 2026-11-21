@@ -1,0 +1,23 @@
+{
+  "endpoint": "session_delete",
+  "label": "删除临时会话",
+  "method": "DELETE",
+  "path": "/api/sessions/{session2}",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "session_id": "<session_id>",
+    "stopped": true
+  },
+  "shape": {
+    "session_id": "string",
+    "stopped": "boolean"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

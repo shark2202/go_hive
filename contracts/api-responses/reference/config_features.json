@@ -1,0 +1,30 @@
+{
+  "endpoint": "config_features",
+  "label": "功能开关",
+  "method": "GET",
+  "path": "/api/config/features",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "features": {
+      "adaptive_tool_budget": true,
+      "email_senders": false,
+      "memory_timeline": false,
+      "stall_check": false
+    }
+  },
+  "shape": {
+    "features": "object",
+    "features.adaptive_tool_budget": "boolean",
+    "features.email_senders": "boolean",
+    "features.memory_timeline": "boolean",
+    "features.stall_check": "boolean"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

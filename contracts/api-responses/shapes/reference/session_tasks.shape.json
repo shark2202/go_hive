@@ -1,0 +1,28 @@
+{
+  "endpoint": "session_tasks",
+  "shape": {
+    "meta": "object",
+    "meta.created_at": "number(float)",
+    "meta.creator_agent_id": "null",
+    "meta.goal": "string",
+    "meta.role": "string",
+    "meta.schema_version": "number(int)",
+    "role": "string",
+    "session_id": "string",
+    "tasks": "array",
+    "tasks[].active_form": "null",
+    "tasks[].blocked_by": "array",
+    "tasks[].blocks": "array",
+    "tasks[].created_at": "number(float)",
+    "tasks[].description": "string",
+    "tasks[].id": "number(int)",
+    "tasks[].metadata": "object",
+    "tasks[].owner": "null",
+    "tasks[].status": "string",
+    "tasks[].subject": "string",
+    "tasks[].updated_at": "number(float)"
+  },
+  "counts": {
+    "tasks": 1
+  }
+}

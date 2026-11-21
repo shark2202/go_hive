@@ -1,0 +1,27 @@
+{
+  "endpoint": "queen_persona",
+  "shape": {
+    "persona": "object",
+    "persona.behavior_triggers": "array",
+    "persona.behavior_triggers[].reaction": "string",
+    "persona.behavior_triggers[].trigger": "string",
+    "persona.core_traits": "string",
+    "persona.hidden_background": "object",
+    "persona.hidden_background.behavioral_mapping": "string",
+    "persona.hidden_background.deep_motive": "string",
+    "persona.hidden_background.past_wound": "string",
+    "persona.name": "string",
+    "persona.psychological_profile": "object",
+    "persona.psychological_profile.anti_stereotype": "string",
+    "persona.psychological_profile.social_masks": "string",
+    "persona.skills": "string",
+    "persona.title": "string",
+    "persona.world_lore": "object",
+    "persona.world_lore.habitat": "string",
+    "persona.world_lore.lexicon": "string",
+    "queen_id": "string"
+  },
+  "counts": {
+    "persona.behavior_triggers": 3
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "endpoint": "session_upload_missing_session",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

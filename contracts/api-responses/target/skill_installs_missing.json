@@ -1,0 +1,21 @@
+{
+  "endpoint": "skill_installs_missing",
+  "label": "会话不存在-技能安装",
+  "method": "GET",
+  "path": "/api/sessions/session_20990101_000000_deadbeef/skill-installs",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 404,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "error": "session not found"
+  },
+  "shape": {
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

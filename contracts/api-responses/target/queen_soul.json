@@ -1,0 +1,23 @@
+{
+  "endpoint": "queen_soul",
+  "label": "Queen Soul",
+  "method": "GET",
+  "path": "/api/queen/queen_growth/soul",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "enabled": false,
+    "queen_id": "queen_growth"
+  },
+  "shape": {
+    "enabled": "boolean",
+    "queen_id": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

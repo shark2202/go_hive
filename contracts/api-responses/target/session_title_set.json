@@ -1,0 +1,23 @@
+{
+  "endpoint": "session_title_set",
+  "label": "设置会话标题",
+  "method": "PATCH",
+  "path": "/api/sessions/{session2}/title",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "session_id": "<session_id>",
+    "title": "Probe title"
+  },
+  "shape": {
+    "session_id": "string",
+    "title": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

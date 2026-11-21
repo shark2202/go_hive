@@ -1,0 +1,14 @@
+{
+  "endpoint": "config_llm_sections",
+  "shape": {
+    "judge": "null",
+    "llm": "object",
+    "llm.api_base": "string",
+    "llm.api_key_env_var": "string",
+    "llm.model": "string",
+    "llm.provider": "string",
+    "vision_fallback": "null",
+    "worker_llm": "null"
+  },
+  "counts": {}
+}

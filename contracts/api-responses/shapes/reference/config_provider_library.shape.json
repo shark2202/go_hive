@@ -1,0 +1,7 @@
+{
+  "endpoint": "config_provider_library",
+  "shape": {
+    "library": "object"
+  },
+  "counts": {}
+}

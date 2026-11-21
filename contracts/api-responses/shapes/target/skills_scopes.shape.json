@@ -1,0 +1,13 @@
+{
+  "endpoint": "skills_scopes",
+  "shape": {
+    "colonies": "array",
+    "queens": "array",
+    "queens[].id": "string",
+    "queens[].name": "string"
+  },
+  "counts": {
+    "colonies": 0,
+    "queens": 1
+  }
+}

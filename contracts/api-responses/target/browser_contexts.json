@@ -1,0 +1,27 @@
+{
+  "endpoint": "browser_contexts",
+  "label": "浏览器上下文",
+  "method": "GET",
+  "path": "/api/browser/contexts",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "available": false,
+    "contexts": [],
+    "reason": "browser bridge not reachable at http://127.0.0.1:19230"
+  },
+  "shape": {
+    "available": "boolean",
+    "contexts": "array",
+    "reason": "string"
+  },
+  "counts": {
+    "contexts": 0
+  },
+  "shape_ignore": [],
+  "notes": []
+}

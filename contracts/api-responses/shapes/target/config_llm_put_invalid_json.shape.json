@@ -1,0 +1,7 @@
+{
+  "endpoint": "config_llm_put_invalid_json",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

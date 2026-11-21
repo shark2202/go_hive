@@ -1,0 +1,25 @@
+{
+  "endpoint": "queen_llm",
+  "label": "Queen 模型槽位",
+  "method": "GET",
+  "path": "/api/queen/queen_growth/llm",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "default_model": "openai/contract-probe-model",
+    "queen_id": "queen_growth",
+    "section": null
+  },
+  "shape": {
+    "default_model": "string",
+    "queen_id": "string",
+    "section": "null"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

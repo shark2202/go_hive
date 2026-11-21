@@ -59,7 +59,9 @@ func handleSessionChat(w http.ResponseWriter, r *http.Request, deps ChatRouteDep
 	sessionID := r.PathValue("session_id")
 	session := chatSession(deps, sessionID)
 	if session == nil {
-		writeJSON(w, http.StatusNotFound, map[string]any{"error": "session not found"})
+		// Upstream resolves the session through resolve_session, whose 404
+		// envelope names the id; keep that wording for the chat route too.
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "Session '" + sessionID + "' not found"})
 		return
 	}
 

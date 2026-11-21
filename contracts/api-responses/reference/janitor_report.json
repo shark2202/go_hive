@@ -1,0 +1,21 @@
+{
+  "endpoint": "janitor_report",
+  "label": "Janitor 报告",
+  "method": "GET",
+  "path": "/api/maintenance/janitor/report",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "report": null
+  },
+  "shape": {
+    "report": "null"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

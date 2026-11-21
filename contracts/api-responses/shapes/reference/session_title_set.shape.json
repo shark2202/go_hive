@@ -1,0 +1,8 @@
+{
+  "endpoint": "session_title_set",
+  "shape": {
+    "session_id": "string",
+    "title": "string"
+  },
+  "counts": {}
+}

@@ -8,7 +8,7 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "text/event-stream",
-  "captured_at": "2026-11-21T11:24:30+08:00",
+  "captured_at": "2026-11-21T12:27:19+08:00",
   "canonical": {
     "content_type": "text/event-stream",
     "event_names": [],
@@ -81,7 +81,7 @@
             "model": "contract-probe-model",
             "output_tokens": 0,
             "stop_reason": "stop",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           },
           "execution_id": "<execution_id>",

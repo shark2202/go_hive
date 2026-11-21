@@ -1,0 +1,7 @@
+{
+  "endpoint": "session_delete_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

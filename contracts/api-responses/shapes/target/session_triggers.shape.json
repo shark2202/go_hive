@@ -1,0 +1,9 @@
+{
+  "endpoint": "session_triggers",
+  "shape": {
+    "triggers": "array"
+  },
+  "counts": {
+    "triggers": 0
+  }
+}

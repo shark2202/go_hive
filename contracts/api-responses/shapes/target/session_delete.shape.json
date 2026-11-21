@@ -1,0 +1,8 @@
+{
+  "endpoint": "session_delete",
+  "shape": {
+    "session_id": "string",
+    "stopped": "boolean"
+  },
+  "counts": {}
+}

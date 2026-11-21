@@ -1,0 +1,29 @@
+{
+  "endpoint": "config_profile",
+  "label": "用户档案",
+  "method": "GET",
+  "path": "/api/config/profile",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "about": "",
+    "density": "",
+    "displayName": "",
+    "prompt_library_sort": null,
+    "theme": ""
+  },
+  "shape": {
+    "about": "string",
+    "density": "string",
+    "displayName": "string",
+    "prompt_library_sort": "null",
+    "theme": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

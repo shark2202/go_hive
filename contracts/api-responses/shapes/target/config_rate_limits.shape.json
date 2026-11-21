@@ -1,0 +1,21 @@
+{
+  "endpoint": "config_rate_limits",
+  "shape": {
+    "limits": "array",
+    "limits[].action_type": "string",
+    "limits[].daily": "number(int)",
+    "limits[].daily_default": "number(int)",
+    "limits[].daily_max": "number(int)",
+    "limits[].hourly": "number(int)",
+    "limits[].hourly_default": "number(int)",
+    "limits[].hourly_max": "number(int)",
+    "limits[].min_delay_s": "number(int)",
+    "limits[].platform": "string",
+    "limits[].weekly": "number(int)",
+    "limits[].weekly_default": "number(int)",
+    "limits[].weekly_max": "number(int)"
+  },
+  "counts": {
+    "limits": 8
+  }
+}

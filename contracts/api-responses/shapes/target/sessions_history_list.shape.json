@@ -1,0 +1,23 @@
+{
+  "endpoint": "sessions_history_list",
+  "shape": {
+    "sessions": "array",
+    "sessions[].agent_name": "null",
+    "sessions[].agent_path": "null",
+    "sessions[].channel": "null",
+    "sessions[].cold": "boolean",
+    "sessions[].created_at": "number(float)",
+    "sessions[].forked_from": "null",
+    "sessions[].has_messages": "boolean",
+    "sessions[].last_active_at": "number(float)",
+    "sessions[].last_message": "string",
+    "sessions[].live": "boolean",
+    "sessions[].message_count": "number(int)",
+    "sessions[].queen_id": "string",
+    "sessions[].session_id": "string",
+    "sessions[].title": "null"
+  },
+  "counts": {
+    "sessions": 1
+  }
+}

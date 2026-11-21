@@ -1,0 +1,7 @@
+{
+  "endpoint": "config_llm_put_list_body",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

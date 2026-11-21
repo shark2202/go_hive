@@ -44,6 +44,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -69,6 +70,55 @@ HEALTH_WAIT_S = 180.0
 SETTLE_TIMEOUT_S = 25.0
 SETTLE_STABLE_S = 1.5
 MIN_EVENTS = 5
+
+# A session id that cannot exist on either side, used by the 404 failure probes.
+MISSING_SESSION_ID = "session_20990101_000000_deadbeef"
+
+# The browser-status probe must not see a real bridge on the host; both sides
+# get the same closed port so the payload stays deterministic (temp homes and
+# a host with a bridge on 14830 would otherwise split the two sides).
+BRIDGE_PROBE_PORT = "19229"
+
+# Endpoints with a declared, documented difference: every diff is reported but
+# does not fail the freeze (the value ledger collapses the same endpoints).
+ENDPOINT_DECLARATIONS: dict[str, dict[str, str]] = {
+    "session_live_tools": {
+        "class": "runtime-state-gap",
+        "reason": (
+            "REST-created Go sessions carry no PhaseState (only CLI / preloaded / resumed "
+            "sessions attach one), so actual_tools / expected_tools / framework_added and the "
+            "registry diagnostic are empty while the Python reference attaches a queen phase "
+            "state at creation. The key/type shape is pinned; the values are a known gap."
+        ),
+    },
+    "config_models": {
+        "class": "non-verbatim-numeric",
+        "reason": (
+            "Three integer-valued prices render as JSON 5.0 (Python) vs 5 (Go); both are "
+            "JSON numbers and proto double accepts either (documented NV-02). Values are "
+            "otherwise identical."
+        ),
+    },
+    "browser_contexts": {
+        "class": "empty-state-divergence",
+        "reason": (
+            "Python reports its in-process gcu lifecycle registry (available:true, count:0) "
+            "while Go proxies the bridge's /contexts and reports the unavailable envelope "
+            "(available:false, reason) when no bridge/extension is present. Both shapes are "
+            "UI-handled; pinned here as a known empty-state difference."
+        ),
+    },
+}
+
+# Unknown-path fallback probes: evidence only, not part of the compared set.
+# Python's SPA fallback answers unregistered /api/* GETs with 200 HTML; the Go
+# router answers 404 JSON.  Pinned as an open question (behavior unchanged).
+FALLBACK_PROBES: list[str] = [
+    "/api/__contract_probe_unknown__",
+    "/api/models",
+    "/api/org-chart",
+]
+FALLBACK_PATH = "fallback-probe.json"
 
 
 class StubLLMHandler(BaseHTTPRequestHandler):
@@ -206,6 +256,166 @@ PROBES: list[dict[str, Any]] = [
         "kind": "failure",
         "expect_status": 409,
     },
+    # ------------------------------------------------------------------
+    # Second batch: sessions lifecycle reads, config/credentials/skills/
+    # mcp/browser/queen/maintenance surfaces, attachment headers, and the
+    # session2 write lifecycle.  Read-only probes stay on the session the
+    # first batch created; anything that mutates state runs against a
+    # second, throwaway session (temp HIVE_HOME).
+    # ------------------------------------------------------------------
+    {"id": "sessions_history_list", "label": "历史会话列表", "method": "GET", "path": "/api/sessions/history"},
+    {"id": "session_live_tools", "label": "会话可调用工具", "method": "GET", "path": "/api/sessions/{session}/live_tools"},
+    {"id": "session_triggers", "label": "会话触发器", "method": "GET", "path": "/api/sessions/{session}/triggers"},
+    {"id": "session_workers", "label": "会话 Worker 列表", "method": "GET", "path": "/api/sessions/{session}/workers"},
+    {"id": "session_skill_installs", "label": "待批准技能安装", "method": "GET", "path": "/api/sessions/{session}/skill-installs"},
+    {"id": "session_tasks", "label": "会话任务清单", "method": "GET", "path": "/api/sessions/{session}/tasks", "seed": "task_list"},
+    {"id": "config_features", "label": "功能开关", "method": "GET", "path": "/api/config/features"},
+    {"id": "config_models", "label": "模型目录", "method": "GET", "path": "/api/config/models"},
+    {"id": "config_profile", "label": "用户档案", "method": "GET", "path": "/api/config/profile"},
+    {"id": "config_sentinel", "label": "Sentinel 配置", "method": "GET", "path": "/api/config/sentinel"},
+    {"id": "config_rate_limits", "label": "速率限制", "method": "GET", "path": "/api/config/rate-limits"},
+    {"id": "config_llm_sections", "label": "LLM 槽位配置", "method": "GET", "path": "/api/config/llm-sections"},
+    {"id": "config_external_skills", "label": "外部技能路径", "method": "GET", "path": "/api/config/external-skills"},
+    {"id": "config_provider_library", "label": "Provider 库", "method": "GET", "path": "/api/config/provider-library"},
+    # These two read the stored-credential registry; capture them while it is
+    # still empty (saving a credential below would make Python list it as an
+    # OAuth account while Go only lists real OAuth tokens).
+    {"id": "credentials_oauth_status", "label": "OAuth 状态", "method": "GET", "path": "/api/credentials/oauth-status"},
+    {"id": "sentinel_credentials", "label": "Sentinel 凭据状态", "method": "GET", "path": "/api/sentinel/credentials"},
+    {
+        "id": "credentials_save",
+        "label": "保存凭据(占位值)",
+        "method": "POST",
+        "path": "/api/credentials",
+        "body": {"credential_id": "airtable_pat", "keys": {"api_key": "probe-dummy-value"}},
+    },
+    {"id": "credentials_list", "label": "凭据元数据列表", "method": "GET", "path": "/api/credentials"},
+    {"id": "credentials_detail", "label": "单条凭据元数据", "method": "GET", "path": "/api/credentials/airtable_pat"},
+    {"id": "skills_scopes", "label": "技能作用域", "method": "GET", "path": "/api/skills/scopes"},
+    {"id": "skill_detail", "label": "技能详情", "method": "GET", "path": "/api/skills/administrative-behavior-skill"},
+    {"id": "queen_skills", "label": "Queen 技能目录", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/skills"},
+    {"id": "mcp_servers", "label": "MCP 服务器列表", "method": "GET", "path": "/api/mcp/servers"},
+    {"id": "browser_status", "label": "浏览器桥状态", "method": "GET", "path": "/api/browser/status"},
+    {"id": "browser_contexts", "label": "浏览器上下文", "method": "GET", "path": "/api/browser/contexts"},
+    {"id": "browser_tabs", "label": "浏览器标签", "method": "GET", "path": "/api/browser/tabs"},
+    {"id": "colonies_tools_index", "label": "Colony 列表", "method": "GET", "path": "/api/colonies/tools-index"},
+    {"id": "queen_removed", "label": "已移除 Queen", "method": "GET", "path": "/api/queen/removed"},
+    {"id": "queen_overview", "label": "Queen 总览", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/overview"},
+    {"id": "queen_profile", "label": "Queen 档案详情", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/profile"},
+    {"id": "queen_llm", "label": "Queen 模型槽位", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/llm"},
+    {"id": "queen_persona", "label": "Queen 人格", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/persona"},
+    {"id": "queen_soul", "label": "Queen Soul", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/soul"},
+    {"id": "janitor_report", "label": "Janitor 报告", "method": "GET", "path": "/api/maintenance/janitor/report"},
+    {
+        "id": "session_upload_attachment",
+        "label": "上传附件",
+        "method": "POST",
+        "path": "/api/sessions/{session}/upload-attachment",
+        "multipart": {
+            "field": "file",
+            "filename": "probe-note.txt",
+            "content_type": "text/plain",
+            "content": "contract probe attachment\n",
+        },
+    },
+    {
+        "id": "session_attachment",
+        "label": "附件下载头",
+        "method": "GET",
+        "path": "/api/sessions/{session}/attachment/probe-note.txt",
+        "capture_body": True,
+        "capture_headers": ["Content-Type", "Content-Length", "Cache-Control", "Content-Disposition"],
+    },
+    # Config write runs while a single session is live so the hot-swap count
+    # is deterministic (Python reports 2 once session2 exists).
+    {
+        "id": "config_llm_put",
+        "label": "写回 LLM 配置",
+        "method": "PUT",
+        "path": "/api/config/llm",
+        "body": {"custom": True, "provider": LLM_PROVIDER, "model": LLM_MODEL},
+    },
+    {
+        "id": "session2_create",
+        "label": "创建第二会话",
+        "method": "POST",
+        "path": "/api/sessions",
+        "body": {"queen_name": QUEEN_ID},
+        "creates_session": True,
+        "session_var": "session2",
+    },
+    {
+        "id": "session_title_set",
+        "label": "设置会话标题",
+        "method": "PATCH",
+        "path": "/api/sessions/{session2}/title",
+        "body": {"title": "Probe title"},
+    },
+    {
+        "id": "session_chat",
+        "label": "发送消息(临时会话)",
+        "method": "POST",
+        "path": "/api/sessions/{session2}/chat",
+        "body": {"message": "contract probe message"},
+    },
+    {
+        "id": "session_delete",
+        "label": "删除临时会话",
+        "method": "DELETE",
+        "path": "/api/sessions/{session2}",
+    },
+    {
+        "id": "session_detail_cold",
+        "label": "删除后(冷会话)详情",
+        "method": "GET",
+        "path": "/api/sessions/{session2}",
+    },
+    # ------------------------------------------------------------------
+    # Failure paths: 404 / 400 / 409 / 500 as reachable, pinned to one
+    # route each.
+    # ------------------------------------------------------------------
+    {"id": "session_live_tools_missing", "label": "会话不存在-工具", "method": "GET", "path": f"/api/sessions/{MISSING_SESSION_ID}/live_tools", "kind": "failure", "expect_status": 404},
+    {"id": "session_tasks_missing", "label": "会话不存在-任务", "method": "GET", "path": f"/api/sessions/{MISSING_SESSION_ID}/tasks", "kind": "failure", "expect_status": 404},
+    {"id": "session_triggers_missing", "label": "会话不存在-触发器", "method": "GET", "path": f"/api/sessions/{MISSING_SESSION_ID}/triggers", "kind": "failure", "expect_status": 404},
+    {"id": "session_workers_missing", "label": "会话不存在-Worker", "method": "GET", "path": f"/api/sessions/{MISSING_SESSION_ID}/workers", "kind": "failure", "expect_status": 404},
+    {"id": "skill_installs_missing", "label": "会话不存在-技能安装", "method": "GET", "path": f"/api/sessions/{MISSING_SESSION_ID}/skill-installs", "kind": "failure", "expect_status": 404},
+    {"id": "session_attachment_missing", "label": "附件不存在", "method": "GET", "path": "/api/sessions/{session}/attachment/nope.txt", "kind": "failure", "expect_status": 404},
+    {
+        "id": "session_upload_missing_session",
+        "label": "上传-会话不存在",
+        "method": "POST",
+        "path": f"/api/sessions/{MISSING_SESSION_ID}/upload-attachment",
+        "multipart": {"field": "file", "filename": "probe-note.txt", "content_type": "text/plain", "content": "x"},
+        "kind": "failure",
+        "expect_status": 404,
+    },
+    {"id": "session_chat_missing", "label": "发消息-会话不存在", "method": "POST", "path": f"/api/sessions/{MISSING_SESSION_ID}/chat", "body": {"message": "hi"}, "kind": "failure", "expect_status": 404},
+    {"id": "session_title_missing", "label": "标题-会话不存在", "method": "PATCH", "path": f"/api/sessions/{MISSING_SESSION_ID}/title", "body": {"title": "x"}, "kind": "failure", "expect_status": 404},
+    {"id": "session_delete_missing", "label": "删除-会话不存在", "method": "DELETE", "path": f"/api/sessions/{MISSING_SESSION_ID}", "kind": "failure", "expect_status": 404},
+    {"id": "credentials_detail_missing", "label": "凭据不存在", "method": "GET", "path": "/api/credentials/nope_probe", "kind": "failure", "expect_status": 404},
+    {"id": "skill_detail_missing", "label": "技能不存在", "method": "GET", "path": "/api/skills/does-not-exist-probe", "kind": "failure", "expect_status": 404},
+    {"id": "queen_overview_missing", "label": "Queen 不存在", "method": "GET", "path": "/api/queen/queen_nope/overview", "kind": "failure", "expect_status": 404},
+    {"id": "mcp_health_missing", "label": "MCP 服务器不存在", "method": "POST", "path": "/api/mcp/servers/nope/health", "body": {}, "kind": "failure", "expect_status": 404},
+    {"id": "sentinel_telegram_validate_empty", "label": "Telegram 校验-空参", "method": "POST", "path": "/api/sentinel/telegram/validate", "body": {}, "kind": "failure", "expect_status": 400},
+    {"id": "credentials_save_invalid", "label": "保存凭据-缺字段", "method": "POST", "path": "/api/credentials", "body": {}, "kind": "failure", "expect_status": 400},
+    {
+        "id": "config_llm_put_invalid_json",
+        "label": "写回配置-非法 JSON",
+        "method": "PUT",
+        "path": "/api/config/llm",
+        "raw_text": "not-json{",
+        "kind": "failure",
+        "expect_status": 400,
+    },
+    {
+        "id": "config_llm_put_list_body",
+        "label": "写回配置-非对象体",
+        "method": "PUT",
+        "path": "/api/config/llm",
+        "body": [],
+        "kind": "failure",
+        "expect_status": 500,
+    },
 ]
 
 # Applied after the probe table: older Go routes may be absent.
@@ -247,6 +457,7 @@ class HttpResult:
     raw: str
     content_type: str = ""
     error: str = ""
+    headers: dict[str, str] = field(default_factory=dict)
 
     @property
     def json_ok(self) -> bool:
@@ -257,29 +468,105 @@ class HttpResult:
         return "application/json" in self.content_type.lower()
 
 
-def http_request(method: str, url: str, body: Any | None = None, timeout: float = 90.0) -> HttpResult:
+def http_request(
+    method: str,
+    url: str,
+    body: Any | None = None,
+    timeout: float = 90.0,
+    raw_text: str | None = None,
+    content_type: str = "application/json",
+) -> HttpResult:
     data = None
     headers = {"Accept": "application/json"}
     if body is not None:
         data = json.dumps(body).encode("utf-8")
         headers["Content-Type"] = "application/json"
+    elif raw_text is not None:
+        data = raw_text.encode("utf-8")
+        headers["Content-Type"] = content_type
     request = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             raw = response.read().decode("utf-8", errors="replace")
             status = response.status
-            content_type = response.headers.get("Content-Type", "")
+            content_type_value = response.headers.get("Content-Type", "")
+            response_headers = {key: value for key, value in response.headers.items()}
     except urllib.error.HTTPError as exc:
         raw = exc.read().decode("utf-8", errors="replace")
         status = exc.code
-        content_type = exc.headers.get("Content-Type", "") if exc.headers else ""
+        content_type_value = exc.headers.get("Content-Type", "") if exc.headers else ""
+        response_headers = {key: value for key, value in (exc.headers or {}).items()}
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         return HttpResult(status=0, payload=None, raw="", error=str(exc))
     try:
         payload = json.loads(raw) if raw.strip() else None
     except json.JSONDecodeError:
-        return HttpResult(status=status, payload=None, raw=raw, content_type=content_type, error="non-JSON body")
-    return HttpResult(status=status, payload=payload, raw=raw, content_type=content_type)
+        return HttpResult(
+            status=status,
+            payload=None,
+            raw=raw,
+            content_type=content_type_value,
+            error="non-JSON body",
+            headers=response_headers,
+        )
+    return HttpResult(
+        status=status,
+        payload=payload,
+        raw=raw,
+        content_type=content_type_value,
+        headers=response_headers,
+    )
+
+
+def multipart_request(
+    method: str,
+    url: str,
+    field_name: str,
+    filename: str,
+    content: str,
+    content_type: str,
+    timeout: float = 120.0,
+) -> HttpResult:
+    """POST one multipart/form-data file field (upload-attachment probes)."""
+    boundary = "----hive-contract-" + uuid.uuid4().hex
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{field_name}"; filename="{filename}"\r\n'
+        f"Content-Type: {content_type}\r\n\r\n"
+    ).encode("utf-8") + content.encode("utf-8") + f"\r\n--{boundary}--\r\n".encode("utf-8")
+    request = urllib.request.Request(
+        url,
+        data=body,
+        method=method,
+        headers={
+            "Accept": "application/json",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw = response.read().decode("utf-8", errors="replace")
+            status = response.status
+            content_type_value = response.headers.get("Content-Type", "")
+            response_headers = {key: value for key, value in response.headers.items()}
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        status = exc.code
+        content_type_value = exc.headers.get("Content-Type", "") if exc.headers else ""
+        response_headers = {key: value for key, value in (exc.headers or {}).items()}
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return HttpResult(status=0, payload=None, raw="", error=str(exc))
+    try:
+        payload = json.loads(raw) if raw.strip() else None
+    except json.JSONDecodeError:
+        payload = None
+    return HttpResult(
+        status=status,
+        payload=payload,
+        raw=raw,
+        content_type=content_type_value,
+        headers=response_headers,
+    )
 
 
 @dataclass
@@ -389,6 +676,7 @@ class Side:
     log_handle: Any = None
     version: str = ""
     session_id: str = ""
+    session_ids: dict[str, str] = field(default_factory=dict)
     results: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -550,6 +838,11 @@ class Freezer:
         go_port = self.args.port_target or free_port()
         while go_port == ref_port:
             go_port = free_port()
+        reserved = {int(BRIDGE_PROBE_PORT), int(BRIDGE_PROBE_PORT) + 1}
+        while ref_port in reserved:
+            ref_port = free_port()
+        while go_port in reserved or go_port == ref_port:
+            go_port = free_port()
 
         self.reference = Side("reference", "Python reference", "python", ref_port, ref_home, self.root / "logs" / "reference.log")
         self.target = Side("target", "Go target", "go_hive", go_port, go_home, self.root / "logs" / "target.log")
@@ -561,6 +854,11 @@ class Freezer:
         }
         base_env["PYTHONUNBUFFERED"] = "1"
         base_env[LLM_KEY_ENV] = "contract-probe-dummy"
+        # Browser-domain isolation: a host bridge on 14830 would leak into the
+        # status probe, and the Go supervisor would spawn a sidecar of its own.
+        # Both sides probe the same closed port and neither spawns a bridge.
+        base_env["HIVE_BRIDGE_PORT"] = BRIDGE_PROBE_PORT
+        base_env["HIVE_BROWSER_BRIDGE"] = "0"
 
         ref_env = dict(base_env)
         ref_env["HIVE_HOME"] = str(ref_home)
@@ -597,19 +895,79 @@ class Freezer:
 
     def _url(self, side: Side, probe: dict[str, Any]) -> str:
         path = probe["path"]
-        if "{session}" in path:
-            if not side.session_id:
-                raise FreezeError(f"{side.label} has no session id for {probe['id']}")
-            path = path.replace("{session}", side.session_id)
+
+        def substitute(match: re.Match[str]) -> str:
+            name = match.group(1)
+            if name == "session":
+                value = side.session_id
+            else:
+                value = side.session_ids.get(name, "")
+            if not value:
+                raise FreezeError(f"{side.label} has no session id for {{{name}}} in {probe['id']}")
+            return value
+
+        path = re.sub(r"\{([a-z0-9_]+)\}", substitute, path)
         return side.base_url + path
 
     def probe_one(self, side: Side, probe: dict[str, Any]) -> Any:
         url = self._url(side, probe)
         if probe.get("sse"):
             return SseCollector(url, self.args.sse_seconds).run()
-        return http_request(probe["method"], url, body=probe.get("body"), timeout=120)
+        multipart = probe.get("multipart")
+        if multipart:
+            return multipart_request(
+                probe["method"],
+                url,
+                field_name=multipart.get("field", "file"),
+                filename=multipart.get("filename", "probe-file.txt"),
+                content=multipart.get("content", "probe"),
+                content_type=multipart.get("content_type", "application/octet-stream"),
+                timeout=120.0,
+            )
+        return http_request(
+            probe["method"],
+            url,
+            body=probe.get("body"),
+            timeout=120,
+            raw_text=probe.get("raw_text"),
+        )
 
-    def wait_for_events(self) -> None:
+    def seed(self, side: Side, probe: dict[str, Any]) -> None:
+        """Write probe fixtures into the side's temp home before capture."""
+        if probe.get("seed") != "task_list":
+            return
+        if not side.session_id:
+            raise FreezeError(f"{side.label}: cannot seed a task list before the session exists")
+        session_dir = side.home / "queens" / QUEEN_ID / "sessions" / side.session_id
+        session_dir.mkdir(parents=True, exist_ok=True)
+        document = {
+            "meta": {
+                "role": "session",
+                "creator_agent_id": None,
+                "goal": "contract probe",
+                "created_at": 1700000000.0,
+                "schema_version": 1,
+            },
+            "highwatermark": 1,
+            "tasks": [
+                {
+                    "id": 1,
+                    "subject": "Probe task",
+                    "description": "Seeded by the API contract probe",
+                    "active_form": None,
+                    "owner": None,
+                    "status": "pending",
+                    "blocks": [],
+                    "blocked_by": [],
+                    "metadata": {},
+                    "created_at": 1700000000.0,
+                    "updated_at": 1700000000.0,
+                }
+            ],
+        }
+        (session_dir / "tasks.json").write_text(json.dumps(document), encoding="utf-8")
+
+    def wait_for_events(self, session_var: str = "session") -> None:
         """Wait until both history logs stop growing (kickoff turns settle).
 
         Both servers run the same opening turn that calls the stub model:
@@ -625,7 +983,8 @@ class Freezer:
         while time.time() < deadline:
             totals: dict[str, int] = {}
             for side in (self.reference, self.target):
-                result = http_request("GET", f"{side.base_url}/api/sessions/{side.session_id}/events/history", timeout=15)
+                sid = side.session_id if session_var == "session" else side.session_ids.get(session_var, "")
+                result = http_request("GET", f"{side.base_url}/api/sessions/{sid}/events/history", timeout=15)
                 total = result.payload.get("total") if isinstance(result.payload, dict) else None
                 totals[side.key] = total if isinstance(total, int) else -1
             if totals == last and all(value >= MIN_EVENTS for value in totals.values()):
@@ -643,19 +1002,27 @@ class Freezer:
         assert self.reference and self.target
         sides = (self.reference, self.target)
         for probe in PROBES:
-            if probe["id"] == "session_create":
+            if probe.get("creates_session"):
+                session_var = probe.get("session_var", "session")
                 for side in sides:
                     result = self.probe_one(side, probe)
                     side.results[probe["id"]] = result
                     if isinstance(result, HttpResult) and isinstance(result.payload, dict):
                         session_id = result.payload.get("session_id")
-                        if isinstance(session_id, str):
-                            side.session_id = session_id
-                    if not side.session_id:
-                        raise FreezeError(f"{side.label}: POST /api/sessions did not return session_id")
-                self.wait_for_events()
+                        if isinstance(session_id, str) and session_id:
+                            side.session_ids[session_var] = session_id
+                            if session_var == "session":
+                                side.session_id = session_id
+                    if not side.session_ids.get(session_var):
+                        raise FreezeError(
+                            f"{side.label}: POST /api/sessions did not return session_id "
+                            f"(probe {probe['id']}, var {session_var})"
+                        )
+                self.wait_for_events(session_var)
+                print(f"[freeze] captured {probe['id']} ({session_var})")
                 continue
             for side in sides:
+                self.seed(side, probe)
                 side.results[probe["id"]] = self.probe_one(side, probe)
             print(f"[freeze] captured {probe['id']}")
 
@@ -688,7 +1055,23 @@ class Freezer:
             content_type = result.content_type
             if result.error:
                 notes.append(result.error)
-            payload = result.payload
+            if probe.get("capture_body"):
+                # Binary/raw download: the HTTP body is not JSON, so compare the
+                # selected response headers plus the body text instead.
+                wanted = [name.lower() for name in probe.get("capture_headers", [])]
+                selected = {
+                    key.lower(): value
+                    for key, value in result.headers.items()
+                    if key.lower() in wanted
+                }
+                payload = {"status": status, "headers": selected, "body": result.raw}
+                notes.append("raw download compared by selected headers + body text")
+            elif result.error == "non-JSON body":
+                # Plain-text failure bodies (e.g. "Attachment not found") are
+                # part of the contract too; keep the text, not None.
+                payload = result.raw
+            else:
+                payload = result.payload
 
         canonical = lib.canonicalize(payload)
         shape_source = lib.strip_paths(canonical, probe.get("shape_ignore", []))
@@ -745,7 +1128,8 @@ class Freezer:
         totals = {
             "endpoints": len(endpoints),
             "pass": sum(1 for e in endpoints if e["verdict"] == "PASS"),
-            "fail": sum(1 for e in endpoints if e["verdict"] != "PASS"),
+            "declared": sum(1 for e in endpoints if e["verdict"] == "DECLARED"),
+            "fail": sum(1 for e in endpoints if e["verdict"] == "FAIL"),
             "success_paths": sum(1 for e in endpoints if e.get("kind", "success") == "success"),
             "failure_paths": sum(1 for e in endpoints if e.get("kind") == "failure"),
             "status_mismatch": sum(1 for e in endpoints if e["reference_status"] != e["target_status"]),
@@ -790,6 +1174,7 @@ class Freezer:
         }
 
     def write_index(self, records: dict[str, dict[str, Any]], diff: dict[str, Any]) -> None:
+        verdicts = {entry["endpoint"]: entry["verdict"] for entry in diff["endpoints"]}
         index = {
             "schema": "hive-api-responses/1",
             "generated_at": now_iso(),
@@ -811,6 +1196,7 @@ class Freezer:
                     "target_shape": f"shapes/target/{probe['id']}.shape.json",
                     "kind": probe.get("kind", "success"),
                     "expect_status": probe.get("expect_status"),
+                    "verdict": verdicts.get(probe["id"], ""),
                 }
                 for probe in PROBES
             ],
@@ -819,8 +1205,48 @@ class Freezer:
         (RESPONSES_DIR / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         (RESPONSES_DIR / "diff.json").write_text(json.dumps(diff, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    def report(self, diff: dict[str, Any], index: dict[str, Any]) -> str:
-        return render_markdown(diff, index, self.route_manifest)
+    def fallback_capture(self) -> dict[str, Any]:
+        """Probe unregistered paths on both sides: evidence for the open question.
+
+        Python's SPA fallback serves index.html (200, text/html) for any
+        unregistered /api/* GET; the Go router answers 404 JSON.  The result is
+        recorded as evidence only — it is not part of the compared endpoint set
+        and no behavior is changed.
+        """
+        assert self.reference and self.target
+        probes: list[dict[str, Any]] = []
+        for path in FALLBACK_PROBES:
+            row: dict[str, Any] = {"path": path, "sides": {}}
+            for side in (self.reference, self.target):
+                result = http_request("GET", side.base_url + path, timeout=30)
+                row["sides"][side.key] = {
+                    "status": result.status,
+                    "content_type": result.content_type,
+                    "json": result.error == "",
+                    "body_prefix": (result.raw or "")[:120],
+                }
+            probes.append(row)
+            print(
+                f"[freeze] fallback {path}: "
+                f"reference={row['sides']['reference']['status']} "
+                f"target={row['sides']['target']['status']}"
+            )
+        document = {
+            "schema": "hive-api-fallback-probe/1",
+            "generated_at": now_iso(),
+            "note": (
+                "未知路径 fallback（待定口径，不改）：Python 的 SPA fallback 对未注册的 "
+                "/api/* GET 返回 200 text/html + index.html；Go 路由返回 404 JSON。"
+            ),
+            "probes": probes,
+        }
+        (RESPONSES_DIR / FALLBACK_PATH).write_text(
+            json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        return document
+
+    def report(self, diff: dict[str, Any], index: dict[str, Any], fallback: dict[str, Any] | None = None) -> str:
+        return render_markdown(diff, index, self.route_manifest, fallback)
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -831,23 +1257,27 @@ class Freezer:
             records = self.records()
             diff = self.diff(records)
             self.write_index(records, diff)
+            fallback = self.fallback_capture()
             index = json.loads((RESPONSES_DIR / "index.json").read_text(encoding="utf-8"))
             report_path = Path(self.args.report).expanduser()
             report_path.parent.mkdir(parents=True, exist_ok=True)
-            report_path.write_text(self.report(diff, index), encoding="utf-8")
+            report_path.write_text(self.report(diff, index, fallback), encoding="utf-8")
             totals = diff["totals"]
             print("")
             print(f"[freeze] responses: {RESPONSES_DIR}")
             print(f"[freeze] report:    {report_path}")
             print(
                 f"[freeze] endpoints: {totals['pass']}/{totals['endpoints']} PASS; "
+                f"declared={totals.get('declared', 0)}; "
                 f"missing_in_target={totals['missing_in_target']} extra_in_target={totals['extra_in_target']} "
                 f"type_mismatch={totals['type_mismatch']} count_mismatch={totals['count_mismatch']} "
                 f"semantic_failures={totals['semantic_failures']}"
             )
             for entry in diff["endpoints"]:
-                if entry["verdict"] != "PASS":
+                if entry["verdict"] == "FAIL":
                     print(f"[freeze]   FAIL {entry['method']} {entry['path']} ({entry['diff_count']} diffs)")
+                elif entry["verdict"] == "DECLARED":
+                    print(f"[freeze]   DECLARED {entry['method']} {entry['path']} ({entry['diff_count']} diffs)")
             if self.args.fail_on_diff and totals["fail"]:
                 return 1
             return 0
@@ -1019,11 +1449,11 @@ def diff_endpoint(
         semantic.append(
             {
                 "check": "error message equal",
-                "ok": _values_at(reference["canonical"], "error") == _values_at(target["canonical"], "error")
-                and isinstance(_values_at(reference["canonical"], "error"), str),
+                "ok": _error_text(reference["canonical"]) == _error_text(target["canonical"])
+                and isinstance(_error_text(reference["canonical"]), str),
                 "detail": (
-                    f"reference={_values_at(reference['canonical'], 'error')!r} "
-                    f"target={_values_at(target['canonical'], 'error')!r}"
+                    f"reference={_error_text(reference['canonical'])!r} "
+                    f"target={_error_text(target['canonical'])!r}"
                 ),
             }
         )
@@ -1048,6 +1478,11 @@ def diff_endpoint(
     diff_count = len(missing) + len(extra) + len(type_mismatch) + len(count_mismatch) + sum(
         1 for check in semantic if not check["ok"]
     )
+    declared = ENDPOINT_DECLARATIONS.get(endpoint)
+    verdict = "PASS" if diff_count == 0 else "FAIL"
+    if diff_count > 0 and declared is not None:
+        verdict = "DECLARED"
+        notes.append(f"已声明差异（{declared['class']}）：{declared['reason']}")
     return {
         "endpoint": endpoint,
         "label": probe["label"],
@@ -1059,7 +1494,9 @@ def diff_endpoint(
         "target_status": target["status"],
         "reference_content_type": reference["content_type"],
         "target_content_type": target["content_type"],
-        "verdict": "PASS" if diff_count == 0 else "FAIL",
+        "verdict": verdict,
+        "declared_class": declared["class"] if declared else None,
+        "declared_reason": declared["reason"] if declared else None,
         "diff_count": diff_count,
         "missing_in_target": missing,
         "extra_in_target": extra,
@@ -1078,6 +1515,15 @@ def _values_at(payload: Any, dotted: str) -> Any:
         else:
             return None
     return current
+
+
+def _error_text(payload: Any) -> Any:
+    """Error body text: ``{"error": ...}`` envelopes or plain-text responses."""
+    if isinstance(payload, dict):
+        return payload.get("error")
+    if isinstance(payload, str):
+        return payload
+    return None
 
 
 def _names(items: Any, key: str = "name") -> list[str]:
@@ -1271,7 +1717,12 @@ NON_VERBATIM = [
 ]
 
 
-def render_markdown(diff: dict[str, Any], index: dict[str, Any], route_manifest: dict[str, Any]) -> str:
+def render_markdown(
+    diff: dict[str, Any],
+    index: dict[str, Any],
+    route_manifest: dict[str, Any],
+    fallback: dict[str, Any] | None = None,
+) -> str:
     totals = diff["totals"]
     lines: list[str] = []
     lines.append("# API 契约差异（reference=python → target=go_hive）")
@@ -1289,7 +1740,7 @@ def render_markdown(diff: dict[str, Any], index: dict[str, Any], route_manifest:
     lines.append("> Go 侧只作为 target 量化差异。易变值（session id、时间戳、端口、临时路径、资源读数）已替换为占位符，")
     lines.append("> 但键的存在性（null vs 缺失）保留。")
     lines.append("")
-    lines.append(f"**端点：{totals['pass']}/{totals['endpoints']} PASS，{totals['fail']} FAIL。**")
+    lines.append(f"**端点：{totals['pass']}/{totals['endpoints']} PASS，{totals.get('declared', 0)} DECLARED（已声明差异），{totals['fail']} FAIL。**")
     lines.append(
         f"**路径：成功 {totals.get('success_paths', totals['endpoints'])}，失败路径 "
         f"{totals.get('failure_paths', 0)}（400/404/409 字段对照）；状态码不一致 {totals.get('status_mismatch', 0)}。**"
@@ -1314,12 +1765,36 @@ def render_markdown(diff: dict[str, Any], index: dict[str, Any], route_manifest:
         lines.append("- 明细：`go_hive/contracts/api-routes.json`（每条 Go 多余路由带 `annotation` 标注是否为扩展/别名）。")
         lines.append("")
 
+    if fallback:
+        lines.append("## 未知路径 fallback（待定口径，不改）")
+        lines.append("")
+        lines.append(fallback.get("note", ""))
+        lines.append("")
+        lines.append("| 路径 | reference 状态 | reference Content-Type | target 状态 | target Content-Type |")
+        lines.append("|------|----------------|------------------------|-------------|---------------------|")
+        for row in fallback.get("probes", []):
+            ref = row["sides"].get("reference", {})
+            tgt = row["sides"].get("target", {})
+            lines.append(
+                f"| `{row['path']}` | {ref.get('status')} | `{ref.get('content_type')}` | "
+                f"{tgt.get('status')} | `{tgt.get('content_type')}` |"
+            )
+        lines.append("")
+        lines.append("原始证据：`go_hive/contracts/api-responses/fallback-probe.json`；口径讨论见 `docs/api-ws-golden.md`。")
+        lines.append("")
+
     lines.append("## 端点汇总")
     lines.append("")
     lines.append("| # | 端点 | 方法 | 状态码 (reference/target) | 判定 | 差异数 |")
     lines.append("|---|------|------|---------------------------|------|--------|")
     for idx, entry in enumerate(diff["endpoints"], 1):
-        verdict = "**PASS**" if entry["verdict"] == "PASS" else "**FAIL**"
+        verdict = (
+            "**PASS**"
+            if entry["verdict"] == "PASS"
+            else "**DECLARED**"
+            if entry["verdict"] == "DECLARED"
+            else "**FAIL**"
+        )
         lines.append(
             f"| {idx} | `{entry['path']}` | {entry['method']} | "
             f"{entry['reference_status']}/{entry['target_status']} | {verdict} | {entry['diff_count']} |"

@@ -1,0 +1,35 @@
+{
+  "endpoint": "session_attachment",
+  "label": "附件下载头",
+  "method": "GET",
+  "path": "/api/sessions/{session}/attachment/probe-note.txt",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "text/plain",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "body": "contract probe attachment\n",
+    "headers": {
+      "cache-control": "no-store",
+      "content-length": "26",
+      "content-type": "text/plain"
+    },
+    "status": 200
+  },
+  "shape": {
+    "body": "string",
+    "headers": "object",
+    "headers.cache-control": "string",
+    "headers.content-length": "string",
+    "headers.content-type": "string",
+    "status": "number(int)"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": [
+    "non-JSON body",
+    "raw download compared by selected headers + body text"
+  ]
+}

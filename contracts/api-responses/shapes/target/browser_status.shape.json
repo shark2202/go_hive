@@ -1,0 +1,12 @@
+{
+  "endpoint": "browser_status",
+  "shape": {
+    "bridge": "boolean",
+    "connected": "boolean",
+    "connections": "array",
+    "health": "string"
+  },
+  "counts": {
+    "connections": 0
+  }
+}

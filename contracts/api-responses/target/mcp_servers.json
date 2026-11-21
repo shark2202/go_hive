@@ -1,0 +1,94 @@
+{
+  "endpoint": "mcp_servers",
+  "label": "MCP 服务器列表",
+  "method": "GET",
+  "path": "/api/mcp/servers",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "servers": [
+      {
+        "description": "Terminal: command execution, background jobs, PTY sessions, ripgrep/glob search",
+        "enabled": true,
+        "last_error": null,
+        "last_health_check_at": null,
+        "last_health_status": null,
+        "name": "terminal-tools",
+        "removable": false,
+        "source": "built-in",
+        "tool_count": null,
+        "transport": "harness"
+      },
+      {
+        "description": "File system: read, write, edit and search files",
+        "enabled": true,
+        "last_error": null,
+        "last_health_check_at": null,
+        "last_health_status": null,
+        "name": "files-tools",
+        "removable": false,
+        "source": "built-in",
+        "tool_count": null,
+        "transport": "harness"
+      },
+      {
+        "description": "BI/financial chart + diagram rendering: ECharts, Mermaid",
+        "enabled": true,
+        "last_error": null,
+        "last_health_check_at": null,
+        "last_health_status": null,
+        "name": "chart-tools",
+        "removable": false,
+        "source": "built-in",
+        "tool_count": null,
+        "transport": "harness"
+      },
+      {
+        "description": "System memory: regex search across a queen/colony's messages",
+        "enabled": true,
+        "last_error": null,
+        "last_health_check_at": null,
+        "last_health_status": null,
+        "name": "memory-tools",
+        "removable": false,
+        "source": "built-in",
+        "tool_count": null,
+        "transport": "harness"
+      },
+      {
+        "description": "Core Hive tools: attachments, PDFs, web scraping, spreadsheets, image generation",
+        "enabled": true,
+        "last_error": null,
+        "last_health_check_at": null,
+        "last_health_status": null,
+        "name": "hive_tools",
+        "removable": false,
+        "source": "built-in",
+        "tool_count": null,
+        "transport": "harness"
+      }
+    ]
+  },
+  "shape": {
+    "servers": "array",
+    "servers[].description": "string",
+    "servers[].enabled": "boolean",
+    "servers[].last_error": "null",
+    "servers[].last_health_check_at": "null",
+    "servers[].last_health_status": "null",
+    "servers[].name": "string",
+    "servers[].removable": "boolean",
+    "servers[].source": "string",
+    "servers[].tool_count": "null",
+    "servers[].transport": "string"
+  },
+  "counts": {
+    "servers": 5
+  },
+  "shape_ignore": [],
+  "notes": []
+}

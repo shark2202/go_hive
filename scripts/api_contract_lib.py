@@ -37,6 +37,10 @@ VOLATILE_KEYS = {
     "agent_path",
     "location",
     "path",
+    # Absolute directory a skill was loaded from: the Python reference reads
+    # the checkout, the Go target materializes its built-ins under the
+    # process temp dir, so the value is deployment-specific, not contract.
+    "base_dir",
     "home",
     "root",
     "cwd",

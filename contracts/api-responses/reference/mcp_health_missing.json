@@ -1,0 +1,29 @@
+{
+  "endpoint": "mcp_health_missing",
+  "label": "MCP 服务器不存在",
+  "method": "POST",
+  "path": "/api/mcp/servers/nope/health",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 404,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "code": "MCP_HEALTH_FAILED",
+    "error": "Cannot health-check server 'nope'",
+    "fix": "Run: hive mcp list  — to see installed servers.",
+    "what": "Cannot health-check server 'nope'",
+    "why": "Server is not installed."
+  },
+  "shape": {
+    "code": "string",
+    "error": "string",
+    "fix": "string",
+    "what": "string",
+    "why": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

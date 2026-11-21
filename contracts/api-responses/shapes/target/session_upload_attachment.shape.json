@@ -1,0 +1,15 @@
+{
+  "endpoint": "session_upload_attachment",
+  "shape": {
+    "content_type": "string",
+    "extracted_text": "string",
+    "filename": "string",
+    "original_name": "string",
+    "page_images": "array",
+    "path": "string",
+    "session_id": "string"
+  },
+  "counts": {
+    "page_images": 0
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "endpoint": "session_chat",
+  "shape": {
+    "delivered": "boolean",
+    "status": "string"
+  },
+  "counts": {}
+}

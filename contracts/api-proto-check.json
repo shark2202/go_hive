@@ -6,12 +6,493 @@
   "checked_fields": 1322,
   "summary": {
     "errors": 0,
-    "warnings": 0,
+    "warnings": 120,
     "undeclared_reference": 0,
     "kind_mismatch": 0
   },
   "errors": [],
-  "warnings": [],
+  "warnings": [
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "browser_contexts"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "browser_status"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "browser_tabs"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_tools_index"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_external_skills"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_features"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_llm_put"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_llm_put_invalid_json"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_llm_put_list_body"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_llm_sections"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_models"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_profile"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_provider_library"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_rate_limits"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_sentinel"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_detail"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_detail_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_list"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_oauth_status"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_save"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_save_invalid"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "janitor_report"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "mcp_health_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "mcp_servers"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_llm"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_overview"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_overview_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_persona"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_profile"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_removed"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_skills"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_soul"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "sentinel_credentials"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "sentinel_telegram_validate_empty"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session2_create"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_attachment"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_attachment_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_chat"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_chat_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_delete"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_delete_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_detail_cold"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_live_tools"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_live_tools_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_skill_installs"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_tasks"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_tasks_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_title_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_title_set"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_triggers"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_triggers_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_upload_attachment"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_upload_missing_session"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_workers"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_workers_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "sessions_history_list"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "skill_detail"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "skill_detail_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "skill_installs_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "skills_scopes"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "browser_contexts"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "browser_status"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "browser_tabs"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_tools_index"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_external_skills"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_features"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_llm_put"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_llm_put_invalid_json"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_llm_put_list_body"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_llm_sections"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_models"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_profile"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_provider_library"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_rate_limits"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "config_sentinel"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_detail"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_detail_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_list"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_oauth_status"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_save"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "credentials_save_invalid"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "janitor_report"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "mcp_health_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "mcp_servers"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_llm"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_overview"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_overview_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_persona"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_profile"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_removed"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_skills"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_soul"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "sentinel_credentials"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "sentinel_telegram_validate_empty"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session2_create"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_attachment"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_attachment_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_chat"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_chat_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_delete"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_delete_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_detail_cold"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_live_tools"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_live_tools_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_skill_installs"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_tasks"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_tasks_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_title_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_title_set"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_triggers"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_triggers_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_upload_attachment"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_upload_missing_session"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_workers"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_workers_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "sessions_history_list"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "skill_detail"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "skill_detail_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "skill_installs_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "skills_scopes"
+    }
+  ],
   "fields": [
     {
       "side": "reference",

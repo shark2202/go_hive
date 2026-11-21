@@ -355,6 +355,7 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 		Colony:                 lifecycle,
 		CreateColonyFromSource: lifecycle.CreateColonyFromSource,
 		CreateSession:          createSession,
+		DefaultModel:           func() string { return hiveserver.MainSlotModel(home, args.str("model")) },
 		QueenMail:              queenMail,
 		SoulProbeAnswerFor:     soulProbeAnswerFor,
 		SoulReflect:            newSoulReflectFor(home, args.str("model")),

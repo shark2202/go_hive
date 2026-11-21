@@ -1,0 +1,8 @@
+{
+  "endpoint": "queen_soul",
+  "shape": {
+    "enabled": "boolean",
+    "queen_id": "string"
+  },
+  "counts": {}
+}

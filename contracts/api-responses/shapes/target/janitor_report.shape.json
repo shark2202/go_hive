@@ -1,0 +1,7 @@
+{
+  "endpoint": "janitor_report",
+  "shape": {
+    "report": "null"
+  },
+  "counts": {}
+}

@@ -8,7 +8,7 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-21T11:24:30+08:00",
+  "captured_at": "2026-11-21T12:27:19+08:00",
   "canonical": {
     "events": [
       {
@@ -78,15 +78,15 @@
             "conversation_chars": 0,
             "image_blocks": 0,
             "image_tokens": 0,
-            "system_chars": 62554,
+            "system_chars": 21692,
             "tool_defs_chars": 52587
           },
-          "estimated_tokens": 38380,
+          "estimated_tokens": 24759,
           "max_context_tokens": 180000,
           "message_count": 0,
           "trigger": "iteration_start",
-          "usage_pct": 21,
-          "usage_ratio": 0.2132
+          "usage_pct": 14,
+          "usage_ratio": 0.1376
         },
         "execution_id": null,
         "node_id": "queen",
@@ -125,7 +125,7 @@
           "model": "contract-probe-model",
           "output_tokens": 0,
           "stop_reason": "stop",
-          "system_prefix_sha": "885285cb1ffe",
+          "system_prefix_sha": "692b774c98c7",
           "system_suffix_sha": "e3b0c44298fc"
         },
         "execution_id": "<execution_id>",

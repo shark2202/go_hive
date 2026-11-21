@@ -1,0 +1,12 @@
+{
+  "endpoint": "session_attachment",
+  "shape": {
+    "body": "string",
+    "headers": "object",
+    "headers.cache-control": "string",
+    "headers.content-length": "string",
+    "headers.content-type": "string",
+    "status": "number(int)"
+  },
+  "counts": {}
+}

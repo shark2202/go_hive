@@ -1,0 +1,15 @@
+{
+  "endpoint": "queen_overview",
+  "shape": {
+    "memory": "object",
+    "memory.by_type": "object",
+    "memory.count": "number(int)",
+    "memory.limit": "number(int)",
+    "queen_id": "string",
+    "sessions": "object",
+    "sessions.count": "number(int)",
+    "sessions.first": "string",
+    "sessions.last_active": "string"
+  },
+  "counts": {}
+}

@@ -1,0 +1,54 @@
+{
+  "endpoint": "sessions_history_list",
+  "label": "历史会话列表",
+  "method": "GET",
+  "path": "/api/sessions/history",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "sessions": [
+      {
+        "agent_name": null,
+        "agent_path": null,
+        "channel": null,
+        "cold": false,
+        "created_at": 0.0,
+        "forked_from": null,
+        "has_messages": true,
+        "last_active_at": 0.0,
+        "last_message": "CONTRACT_OK",
+        "live": true,
+        "message_count": 2,
+        "queen_id": "queen_growth",
+        "session_id": "<session_id>",
+        "title": null
+      }
+    ]
+  },
+  "shape": {
+    "sessions": "array",
+    "sessions[].agent_name": "null",
+    "sessions[].agent_path": "null",
+    "sessions[].channel": "null",
+    "sessions[].cold": "boolean",
+    "sessions[].created_at": "number(float)",
+    "sessions[].forked_from": "null",
+    "sessions[].has_messages": "boolean",
+    "sessions[].last_active_at": "number(float)",
+    "sessions[].last_message": "string",
+    "sessions[].live": "boolean",
+    "sessions[].message_count": "number(int)",
+    "sessions[].queen_id": "string",
+    "sessions[].session_id": "string",
+    "sessions[].title": "null"
+  },
+  "counts": {
+    "sessions": 1
+  },
+  "shape_ignore": [],
+  "notes": []
+}

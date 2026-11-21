@@ -1,0 +1,36 @@
+{
+  "endpoint": "config_llm_sections",
+  "label": "LLM 槽位配置",
+  "method": "GET",
+  "path": "/api/config/llm-sections",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "judge": null,
+    "llm": {
+      "api_base": "http://127.0.0.1:63937/v1",
+      "api_key_env_var": "HIVE_CONTRACT_PROBE_KEY",
+      "model": "contract-probe-model",
+      "provider": "openai"
+    },
+    "vision_fallback": null,
+    "worker_llm": null
+  },
+  "shape": {
+    "judge": "null",
+    "llm": "object",
+    "llm.api_base": "string",
+    "llm.api_key_env_var": "string",
+    "llm.model": "string",
+    "llm.provider": "string",
+    "vision_fallback": "null",
+    "worker_llm": "null"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

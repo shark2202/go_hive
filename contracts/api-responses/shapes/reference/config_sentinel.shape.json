@@ -1,0 +1,7 @@
+{
+  "endpoint": "config_sentinel",
+  "shape": {
+    "sentinel": "object"
+  },
+  "counts": {}
+}

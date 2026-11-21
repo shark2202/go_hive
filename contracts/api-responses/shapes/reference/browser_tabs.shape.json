@@ -1,0 +1,11 @@
+{
+  "endpoint": "browser_tabs",
+  "shape": {
+    "available": "boolean",
+    "reason": "string",
+    "tabs": "array"
+  },
+  "counts": {
+    "tabs": 0
+  }
+}

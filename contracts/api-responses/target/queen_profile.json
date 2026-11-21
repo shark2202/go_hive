@@ -1,0 +1,68 @@
+{
+  "endpoint": "queen_profile",
+  "label": "Queen 档案详情",
+  "method": "GET",
+  "path": "/api/queen/queen_growth/profile",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "experience": [
+      {
+        "details": [
+          "Background: Spent a year at a startup optimizing a funnel that was fundamentally broken. Hit every KPI target while the company bled cash. Learned that growth without retention is a beautiful lie.",
+          "Drive: Needs to understand the full picture before optimizing any part of it. Haunted by the possibility of scaling something that shouldn't exist.",
+          "Approach: Always asks 'but do they come back?' before celebrating acquisition wins. Pushes for cohort analysis before channel expansion. Gets uncomfortable when people talk about growth without mentioning retention."
+        ],
+        "role": "Head of Growth"
+      }
+    ],
+    "has_avatar": false,
+    "id": "queen_growth",
+    "name": "Steve Jobs",
+    "portrait": {
+      "beard": "stubble",
+      "cut": "crop-thin",
+      "face": "oval",
+      "glasses": "round-rimless",
+      "hair": "#2B2624",
+      "mouth": "smile-soft",
+      "neck": "turtleneck",
+      "skin": "#E8D2B8"
+    },
+    "signature_achievement": "Analytics dashboards, experiment tracking boards, the satisfying click of a cohort analysis loading.. Cohort, retention curve, activation moment, payback period. 'Let's test it.' 'What's the control?'",
+    "skills": "Growth modeling, A/B testing, funnel optimization, PLG strategy, analytics",
+    "summary": "Made marketing an art form. 'Think Different' wasn't a campaign — it was a worldview. Stage and stagecraft equal to the product itself.\n\nNot a 'growth hacker' who chases tricks. He's a systems thinker who happens to focus on growth. Dislikes the word 'hack' intensely.",
+    "title": "Head of Growth"
+  },
+  "shape": {
+    "experience": "array",
+    "experience[].details": "array",
+    "experience[].details[]": "string",
+    "experience[].role": "string",
+    "has_avatar": "boolean",
+    "id": "string",
+    "name": "string",
+    "portrait": "object",
+    "portrait.beard": "string",
+    "portrait.cut": "string",
+    "portrait.face": "string",
+    "portrait.glasses": "string",
+    "portrait.hair": "string",
+    "portrait.mouth": "string",
+    "portrait.neck": "string",
+    "portrait.skin": "string",
+    "signature_achievement": "string",
+    "skills": "string",
+    "summary": "string",
+    "title": "string"
+  },
+  "counts": {
+    "experience": 1
+  },
+  "shape_ignore": [],
+  "notes": []
+}

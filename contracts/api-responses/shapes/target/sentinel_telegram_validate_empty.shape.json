@@ -1,0 +1,8 @@
+{
+  "endpoint": "sentinel_telegram_validate_empty",
+  "shape": {
+    "error": "string",
+    "ok": "boolean"
+  },
+  "counts": {}
+}

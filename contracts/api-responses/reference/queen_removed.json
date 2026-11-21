@@ -1,0 +1,23 @@
+{
+  "endpoint": "queen_removed",
+  "label": "已移除 Queen",
+  "method": "GET",
+  "path": "/api/queen/removed",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "queens": []
+  },
+  "shape": {
+    "queens": "array"
+  },
+  "counts": {
+    "queens": 0
+  },
+  "shape_ignore": [],
+  "notes": []
+}

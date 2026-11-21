@@ -1,0 +1,11 @@
+{
+  "endpoint": "config_features",
+  "shape": {
+    "features": "object",
+    "features.adaptive_tool_budget": "boolean",
+    "features.email_senders": "boolean",
+    "features.memory_timeline": "boolean",
+    "features.stall_check": "boolean"
+  },
+  "counts": {}
+}

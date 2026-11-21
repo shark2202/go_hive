@@ -1,0 +1,46 @@
+{
+  "endpoint": "config_external_skills",
+  "label": "外部技能路径",
+  "method": "GET",
+  "path": "/api/config/external-skills",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "paths": [],
+    "resolved": [],
+    "suggestions": [
+      {
+        "exists": true,
+        "path": "<path>",
+        "resolved": "<home-path>",
+        "skills": 52
+      },
+      {
+        "exists": true,
+        "path": "<path>",
+        "resolved": "<home-path>",
+        "skills": 18
+      }
+    ]
+  },
+  "shape": {
+    "paths": "array",
+    "resolved": "array",
+    "suggestions": "array",
+    "suggestions[].exists": "boolean",
+    "suggestions[].path": "string",
+    "suggestions[].resolved": "string",
+    "suggestions[].skills": "number(int)"
+  },
+  "counts": {
+    "paths": 0,
+    "resolved": 0,
+    "suggestions": 2
+  },
+  "shape_ignore": [],
+  "notes": []
+}

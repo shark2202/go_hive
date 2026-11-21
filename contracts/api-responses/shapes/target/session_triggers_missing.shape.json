@@ -1,0 +1,7 @@
+{
+  "endpoint": "session_triggers_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

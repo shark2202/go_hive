@@ -1,0 +1,21 @@
+{
+  "endpoint": "queen_overview_missing",
+  "label": "Queen 不存在",
+  "method": "GET",
+  "path": "/api/queen/queen_nope/overview",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 404,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T12:27:19+08:00",
+  "canonical": {
+    "error": "Queen 'queen_nope' not found"
+  },
+  "shape": {
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}
