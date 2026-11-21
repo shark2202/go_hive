@@ -26,6 +26,12 @@ type argSpec struct {
 	Help    string
 	Action  string
 	Metavar string
+	// Hidden keeps the flag fully parseable but out of every rendered help
+	// surface (usage line, options block). It mirrors argparse's
+	// `help=argparse.SUPPRESS`: upstream hides `--profile` that way, and Go
+	// hides its own internal extensions (`--bridge`) so the two help surfaces
+	// match token for token.
+	Hidden bool
 }
 
 type positionalSpec struct {
@@ -45,6 +51,11 @@ type commandSpec struct {
 	Dest        string
 	Run         func(*parsedArgs) int
 	Passthrough bool
+	// Hidden keeps the command resolvable by name (parse, run, and error
+	// handling all work as before) but out of the parent's usage choice set
+	// and commands block. It is for internal extensions that have no upstream
+	// counterpart (hive queen-mail-mcp, the legacy browser verbs).
+	Hidden bool
 }
 
 type parsedArgs struct {
@@ -384,6 +395,11 @@ func progTail(prog string) string {
 func quotedNames(specs []*commandSpec) string {
 	names := make([]string, 0, len(specs))
 	for _, spec := range specs {
+		if spec.Hidden {
+			// Hidden commands stay out of the invalid-choice listing too: the
+			// message is part of the observable help surface.
+			continue
+		}
 		names = append(names, "'"+progTail(spec.Prog)+"'")
 	}
 	return strings.Join(names, ", ")
@@ -410,6 +426,9 @@ func (c *commandSpec) helpText() string {
 	} else {
 		builder.WriteString(c.Prog + " [-h]")
 		for _, flag := range c.Flags {
+			if flag.Hidden {
+				continue
+			}
 			fmt.Fprintf(&builder, " [%s]", flagLabel(flag))
 		}
 		for _, positional := range c.Positionals {
@@ -430,6 +449,9 @@ func (c *commandSpec) helpText() string {
 	if len(c.Subcommands) > 0 {
 		builder.WriteString("\ncommands:\n")
 		for _, sub := range c.Subcommands {
+			if sub.Hidden {
+				continue
+			}
 			fmt.Fprintf(&builder, "  %s\n", padRight(progTail(sub.Prog), 16)+sub.Help)
 		}
 	}
@@ -442,6 +464,9 @@ func (c *commandSpec) helpText() string {
 	builder.WriteString("\noptions:\n")
 	builder.WriteString("  -h, --help            show this help message and exit\n")
 	for _, flag := range c.Flags {
+		if flag.Hidden {
+			continue
+		}
 		fmt.Fprintf(&builder, "  %s\n", padRight(flagLabel(flag), 22)+flag.Help)
 	}
 	if c.Epilog != "" {
@@ -459,6 +484,9 @@ func (c *commandSpec) helpText() string {
 func subcommandNames(specs []*commandSpec) string {
 	names := make([]string, 0, len(specs))
 	for _, spec := range specs {
+		if spec.Hidden {
+			continue
+		}
 		names = append(names, progTail(spec.Prog))
 	}
 	return strings.Join(names, ",")

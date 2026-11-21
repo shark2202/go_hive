@@ -114,7 +114,8 @@ defer stopBrowserBridge()
 
 22 个上游 `browser_*` MCP 工具全部有对应动词；另外把 22 之外的 5 个桥内 L3 动词
 （`click`/`type`/`type_focused`/`press`/`scroll`）也做成了子命令，因此 CLI 覆盖
-桥的 **27 个 canonical command**。
+桥的 **27 个 canonical command**。这 5 个动词是 Go 兼容扩展，在 `--help` 面标记为
+Hidden：不出现在 usage / commands 列表（仍可直接调用）。
 
 | CLI | 桥命令 | 关键参数 |
 | --- | --- | --- |
@@ -150,6 +151,8 @@ defer stopBrowserBridge()
 `--json`、`--profile <session>`
 （默认取 `$HIVE_BROWSER_SESSION`，再退回 `default`）、`--bridge <base-url>`（默认
 `$HIVE_BROWSERBRIDGE_HTTP` 或 `http://127.0.0.1:14830`；Go 自有开关，只在子命令之后）。
+`--profile` 与 `--bridge` 不渲染进 help（上游 `--profile` 是 argparse.SUPPRESS，
+`--bridge` 是 Go 扩展），但两者仍可正常解析。
 
 ### 退出码（agent 的机器契约）
 

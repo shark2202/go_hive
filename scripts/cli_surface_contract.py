@@ -1299,9 +1299,15 @@ def git_head(repo: Path) -> str:
 
 
 def strip_volatile(contract: dict) -> dict:
-    """Projection compared by --check: drops provenance and message heads."""
+    """Projection compared by --check: drops provenance and message heads.
+
+    `baseline_commit` is provenance (the HEAD the surface was captured at), not
+    contract: comparing it would make --check fail as soon as the regenerated
+    contract is committed, because the commit itself moves HEAD. The report
+    still prints it for traceability.
+    """
     stable = json.loads(json.dumps(contract))
-    for key in ("generated_at", "python_bin", "python_skip"):
+    for key in ("generated_at", "baseline_commit", "python_bin", "python_skip"):
         stable["meta"].pop(key, None)
     for block in stable["clis"].values():
         for side in ("go", "python"):

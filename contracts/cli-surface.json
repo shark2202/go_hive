@@ -1,9 +1,9 @@
 {
   "schema": "hive-cli-surface-contract/1",
   "meta": {
-    "generated_at": "2026-11-21T16:26:02+08:00",
+    "generated_at": "2026-11-21T18:19:04+08:00",
     "generator": "go_hive/scripts/cli_surface_contract.py",
-    "baseline_commit": "f8aa5fe9",
+    "baseline_commit": "6b63f9a5",
     "reference": "python: core/framework/cli.py, tools/src/gcu/cli.py",
     "target": "go: go_hive/go-hive/cmd/hive, cmd/hive-browser",
     "method": "recursive --help capture + no-side-effect exit-code battery",
@@ -2976,7 +2976,7 @@
       "go": {
         "commands": {
           "": {
-            "usage": "hive [-h] [options] {serve,open,queen,colony,session,chat,skill,debugger,mcp,janitor,queen-mail-mcp} ...",
+            "usage": "hive [-h] {serve,open,queen,colony,session,chat,skill,debugger,mcp,janitor} ...",
             "description": "Aden Hive — Queens, colonies, and live agent sessions",
             "text_block": "Aden Hive — Queens, colonies, and live agent sessions",
             "subcommands": [
@@ -2989,8 +2989,7 @@
               "skill",
               "debugger",
               "mcp",
-              "janitor",
-              "queen-mail-mcp"
+              "janitor"
             ],
             "flags": {
               "--help": {
@@ -3030,11 +3029,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "b69e2615fc87b9dd60d2bc5bc14e82a547d3b58afd4fff0d5edd4d1fe62a34a6",
+            "help_sha256": "2452139575005225add233351c644a6909f09af0c2c9dd25cfc68ef100ba6e38",
             "help_exit_code": 0
           },
           "serve": {
-            "usage": "hive serve [-h]",
+            "usage": "hive serve [-h] [--host HOST] [--port, -p PORT] [--colony, -c COLONY] [--model, -m MODEL] [--open] [--verbose, -v] [--debug]",
             "description": "Start the aiohttp server exposing REST + SSE for queens, colonies, and sessions.",
             "text_block": "Start the aiohttp server exposing REST + SSE for queens, colonies, and sessions. Start the HTTP API server",
             "subcommands": [],
@@ -3135,11 +3134,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "b7a0b22a680b42397943616243e0ce6d233a95b3b67cb11fec03e4ebc3343573",
+            "help_sha256": "fa6a62431bc132f147880a4fc6d50f8d0cb6dfa717b65bdeb2c869a79c52b0e7",
             "help_exit_code": 0
           },
           "open": {
-            "usage": "hive open [-h]",
+            "usage": "hive open [-h] [--host HOST] [--port, -p PORT] [--colony, -c COLONY] [--model, -m MODEL] [--verbose, -v] [--debug]",
             "description": "Shortcut for 'hive serve --open'.",
             "text_block": "Shortcut for 'hive serve --open'. Start the server and open the dashboard",
             "subcommands": [],
@@ -3229,11 +3228,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "066ab16a2639a6ec9d8da90a780acd8b43abfb0dbd88b1e075962c15bbab6d9e",
+            "help_sha256": "a05211c3025b8942a16a859439918cc7d5dedd602c67d433d016334efdaf2e82",
             "help_exit_code": 0
           },
           "queen": {
-            "usage": "hive queen [-h] [options] {list,show,sessions} ...",
+            "usage": "hive queen [-h] {list,show,sessions} ...",
             "description": "List, inspect, and explore queen identities.",
             "text_block": "List, inspect, and explore queen identities. Manage queen profiles",
             "subcommands": [
@@ -3257,11 +3256,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "361516ccb87ed3ff076d512875bb309f582208d5142ebcb29004b641b8f599af",
+            "help_sha256": "23249ce3f943815a8b7f96d8ce056d6cd4f8eeba5bde847194aa563a851e5b7b",
             "help_exit_code": 0
           },
           "colony": {
-            "usage": "hive colony [-h] [options] {list,info,delete} ...",
+            "usage": "hive colony [-h] {list,info,delete} ...",
             "description": "List, inspect, and delete colonies on disk.",
             "text_block": "List, inspect, and delete colonies on disk. Manage colonies",
             "subcommands": [
@@ -3285,11 +3284,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "50c32fe116526047433573125ca7219e8377b5bfae72d11e38648c84ebcac057",
+            "help_sha256": "d08ca65236105067b4d4646ea82a05c526227ff1d8386ebfc6118b7d5fe5313b",
             "help_exit_code": 0
           },
           "session": {
-            "usage": "hive session [-h] [options] {list,stop} ...",
+            "usage": "hive session [-h] {list,stop} ...",
             "description": "List live and cold sessions, stop running sessions.",
             "text_block": "List live and cold sessions, stop running sessions. Manage sessions",
             "subcommands": [
@@ -3312,11 +3311,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "88fc29f6993c121a9e398d8e189b01a20159149bce8ec91f36bf4ba93a21460f",
+            "help_sha256": "03365417c9586e01c06faafc115b1ecce1ad353a08c4b1c9fc09dd4eac22219e",
             "help_exit_code": 0
           },
           "chat": {
-            "usage": "hive chat [-h] session_id message",
+            "usage": "hive chat [-h] [--server SERVER] session_id message",
             "description": "POST a chat message to a running session via the HTTP API.",
             "text_block": "POST a chat message to a running session via the HTTP API. Send a message to a live queen session",
             "subcommands": [],
@@ -3353,11 +3352,11 @@
               "session_id",
               "message"
             ],
-            "help_sha256": "2ce85fc56df2aac11249df3d1067f95f778ac7c71bb82b8e2f30e72ccac0fa2b",
+            "help_sha256": "6916bd6810340d1e73e0fdf7cbfd7fb1352b6928dfd72839abd7bc90697d3307",
             "help_exit_code": 0
           },
           "skill": {
-            "usage": "hive skill [-h] [options] {list,install,remove,info,init,validate,doctor,update,search,fork,test,trust} ...",
+            "usage": "hive skill [-h] {list,install,remove,info,init,validate,doctor,update,search,fork,test,trust} ...",
             "description": "Manage skills",
             "text_block": "Manage skills",
             "subcommands": [
@@ -3390,11 +3389,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "1ee22a59671d8c8311d794412e5cd7a6f4c40172f1341fe888e077b26d1108f3",
+            "help_sha256": "fe08551ff9e05bdfd6750de8198c98bed205c3974416dcac5c72c18da7929760",
             "help_exit_code": 0
           },
           "debugger": {
-            "usage": "hive debugger [-h]",
+            "usage": "hive debugger [-h] [--session SESSION] [--port PORT] [--logs-dir LOGS_DIR] [--limit-files LIMIT_FILES] [--output OUTPUT] [--no-open] [--include-tests]",
             "description": "Start a local server that lets you browse LLM debug sessions recorded in ~/.hive/llm_logs. Sessions are loaded on demand so the browser stays responsive.",
             "text_block": "Start a local server that lets you browse LLM debug sessions recorded in ~/.hive/llm_logs. Sessions are loaded on demand so the browser stays responsive. Open the LLM debug log viewer",
             "subcommands": [],
@@ -3491,7 +3490,7 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "36d33ecee1d5ef6fa7230b758548da88dda886c06176db792d850e49367c0ae3",
+            "help_sha256": "5f9f0f319ee636478fb35fabaaef2fd469972c96d210d75019450c8fc7a4961f",
             "help_exit_code": 0
           },
           "mcp": {
@@ -3538,7 +3537,7 @@
             "help_exit_code": 0
           },
           "janitor": {
-            "usage": "hive janitor [-h] [options] {run,status} ...",
+            "usage": "hive janitor [-h] {run,status} ...",
             "description": "Prune aged debug logs, finished-worker transcripts, and cold-session bloat from HIVE_HOME.",
             "text_block": "Prune aged debug logs, finished-worker transcripts, and cold-session bloat from HIVE_HOME. Data-retention janitor (dry-run by default)",
             "subcommands": [
@@ -3561,35 +3560,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "b516ace19d70ca104416654b9f052b459f60b6caf44b54dae68b118c76f7bf07",
-            "help_exit_code": 0
-          },
-          "queen-mail-mcp": {
-            "usage": "hive queen-mail-mcp",
-            "description": "Runs the MCP server a Claude Code queen's runs are given, writing through HIVE_QUEEN_MAIL_URL with HIVE_QUEEN_MAIL_TOKEN as the conversation HIVE_QUEEN_MAIL_FROM.",
-            "text_block": "Runs the MCP server a Claude Code queen's runs are given, writing through HIVE_QUEEN_MAIL_URL with HIVE_QUEEN_MAIL_TOKEN as the conversation HIVE_QUEEN_MAIL_FROM. Serve the hive MCP server (list_queens, message_queen) on stdio",
-            "subcommands": [],
-            "flags": {
-              "--help": {
-                "key": "--help",
-                "names": [
-                  "-h",
-                  "--help"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "show this help message and exit"
-              }
-            },
-            "positionals": [],
-            "required_positionals": [],
-            "help_sha256": "ed7d34c47cc75d90d3364c8d7b106c0ef7616ce6e33bd918d446d6b9d4b0df0d",
+            "help_sha256": "66fdbf5ec53c2163f6a3dd01d0e411348a2b39947f46c8f825e4068de4b72d97",
             "help_exit_code": 0
           },
           "queen list": {
-            "usage": "hive queen list [-h]",
+            "usage": "hive queen list [-h] [--json]",
             "description": "List all queen profiles",
             "text_block": "List all queen profiles",
             "subcommands": [],
@@ -3620,11 +3595,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "85f6cd1cbe8046381e6f32148193b204eace8dc7dabebcb90a3b7160210fe7f3",
+            "help_sha256": "1bc66546751d09c98c597ea6bdc85e8f0ed2aff11ff261efc60b778b35308754",
             "help_exit_code": 0
           },
           "queen show": {
-            "usage": "hive queen show [-h] queen_id",
+            "usage": "hive queen show [-h] [--json] queen_id",
             "description": "Show a queen profile",
             "text_block": "Show a queen profile",
             "subcommands": [],
@@ -3659,11 +3634,11 @@
             "required_positionals": [
               "queen_id"
             ],
-            "help_sha256": "84042f594accd51cafbc7c322e3741ead16103663986875134a2fa27fc18ab10",
+            "help_sha256": "e0485bc6eb49738e2dedd4e3600ef399cf4ca3cde748c52027fcffa36a0e26ca",
             "help_exit_code": 0
           },
           "queen sessions": {
-            "usage": "hive queen sessions [-h] queen_id",
+            "usage": "hive queen sessions [-h] [--json] queen_id",
             "description": "List sessions belonging to a queen",
             "text_block": "List sessions belonging to a queen",
             "subcommands": [],
@@ -3698,11 +3673,11 @@
             "required_positionals": [
               "queen_id"
             ],
-            "help_sha256": "a303bed9db7845bdb73a2a167148b5ad33545b61aee8e29c650d9325c2ae2ef0",
+            "help_sha256": "fd411057b7c3569692c32bc246f172da7357eb27ecc1e50ea38dcb3ceeba2dc5",
             "help_exit_code": 0
           },
           "colony list": {
-            "usage": "hive colony list [-h]",
+            "usage": "hive colony list [-h] [--json]",
             "description": "List all colonies",
             "text_block": "List all colonies",
             "subcommands": [],
@@ -3733,11 +3708,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "df1e9366f3bfc7ebaff41f9570607f1af87203520c8f06fab89fddcaa35e230b",
+            "help_sha256": "5eed642c55c7428aa72c703dd0fe0b37e579a17e94592cadfd51b65c9ea01432",
             "help_exit_code": 0
           },
           "colony info": {
-            "usage": "hive colony info [-h] name",
+            "usage": "hive colony info [-h] [--json] name",
             "description": "Show colony details",
             "text_block": "Show colony details",
             "subcommands": [],
@@ -3772,11 +3747,11 @@
             "required_positionals": [
               "name"
             ],
-            "help_sha256": "01fb99e6a8314024929d6153fafd702cc35ee5ee07a4db380f532fab2961752c",
+            "help_sha256": "3ce22024e79b293b57cf46851996781077496ff88441abbaf7b7d60e496c106f",
             "help_exit_code": 0
           },
           "colony delete": {
-            "usage": "hive colony delete [-h] name",
+            "usage": "hive colony delete [-h] [--purge-storage] [--yes, -y] name",
             "description": "Delete a colony from disk",
             "text_block": "Delete a colony from disk",
             "subcommands": [],
@@ -3823,11 +3798,11 @@
             "required_positionals": [
               "name"
             ],
-            "help_sha256": "b36d03ac7c6ab95fb0065199981097397df1ab907a7fe038b540ce10740adef5",
+            "help_sha256": "0958890cb8353b0062ac38986c79fed836a6f5fe40e90cd1c7307ff446c0f1d6",
             "help_exit_code": 0
           },
           "session list": {
-            "usage": "hive session list [-h]",
+            "usage": "hive session list [-h] [--cold] [--server SERVER] [--json]",
             "description": "List sessions",
             "text_block": "List sessions",
             "subcommands": [],
@@ -3880,11 +3855,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "034e4d7d34e7551578dc62465dde2cdb0b58c94c492bbd00873aa3e2146e0c94",
+            "help_sha256": "753b601d94e56e6e4e6f8bdf8b69cb37d8de0f3a261a2216b6380e1ef7f6997a",
             "help_exit_code": 0
           },
           "session stop": {
-            "usage": "hive session stop [-h] session_id",
+            "usage": "hive session stop [-h] [--server SERVER] session_id",
             "description": "Stop a live session",
             "text_block": "Stop a live session",
             "subcommands": [],
@@ -3919,11 +3894,11 @@
             "required_positionals": [
               "session_id"
             ],
-            "help_sha256": "5e5ca36535b6abbdb27c11da1d630cb230b8a075e5a233376570d1f993a9fa7f",
+            "help_sha256": "37486cfcd5ade376c17a737f9f7c566fc6b0d4457ad61946804e426fdff471e3",
             "help_exit_code": 0
           },
           "skill list": {
-            "usage": "hive skill list [-h]",
+            "usage": "hive skill list [-h] [--project-dir PROJECT_DIR] [--json]",
             "description": "List discovered skills across all scopes",
             "text_block": "List discovered skills across all scopes",
             "subcommands": [],
@@ -3965,11 +3940,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "252831c62371de2171fe30d9d2a9c6ef8d259c494864d2c57b2486a3252203eb",
+            "help_sha256": "4b9423b762a42d9ecd78b3af7b240282709f729239598d9701266342aca3d938",
             "help_exit_code": 0
           },
           "skill install": {
-            "usage": "hive skill install [-h] [name_or_url]",
+            "usage": "hive skill install [-h] [--version VERSION] [--from FROM] [--pack PACK] [--name NAME] [--json] [name_or_url]",
             "description": "Install a skill from the registry or a git URL",
             "text_block": "Install a skill from the registry or a git URL",
             "subcommands": [],
@@ -4046,11 +4021,11 @@
               "name_or_url"
             ],
             "required_positionals": [],
-            "help_sha256": "9bd11c3426eaed8544485ff06a5d947214faf67d70f53671c685129f4c956d18",
+            "help_sha256": "ba66cf174a6a4c9d7a48a48a21e786d8170a43a132a8de44a30fb9c0000a9022",
             "help_exit_code": 0
           },
           "skill remove": {
-            "usage": "hive skill remove [-h] name",
+            "usage": "hive skill remove [-h] [--json] name",
             "description": "Uninstall a skill",
             "text_block": "Uninstall a skill",
             "subcommands": [],
@@ -4085,11 +4060,11 @@
             "required_positionals": [
               "name"
             ],
-            "help_sha256": "2b43524429a9abeddb12b5e3f6449a39889ea05ab5e12fb9a32229c9fcd27f0c",
+            "help_sha256": "06dacc5d0e484fd327dbb91860ff05b5298e3e39dc4118eaa55d526ca959f7e1",
             "help_exit_code": 0
           },
           "skill info": {
-            "usage": "hive skill info [-h] name",
+            "usage": "hive skill info [-h] [--project-dir PROJECT_DIR] [--json] name",
             "description": "Show skill details",
             "text_block": "Show skill details",
             "subcommands": [],
@@ -4135,11 +4110,11 @@
             "required_positionals": [
               "name"
             ],
-            "help_sha256": "b65e8b7301b44a592404fec1f6236e42cbb23769504690c1c68a4bf1ca43e58f",
+            "help_sha256": "11c9f09b1ff8948903858178aff9f3bf66f51e7f289391f283f9ee4c78831f33",
             "help_exit_code": 0
           },
           "skill init": {
-            "usage": "hive skill init [-h]",
+            "usage": "hive skill init [-h] [--name NAME] [--dir DIR]",
             "description": "Scaffold a new skill directory with a SKILL.md template",
             "text_block": "Scaffold a new skill directory with a SKILL.md template",
             "subcommands": [],
@@ -4181,11 +4156,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "4e15b9abf6ceb447b778ae517e7f80835b987a4aa20f9925c40357f1652d2caa",
+            "help_sha256": "80cf1a20bb001a71f6819969d5af51a45da720bfe4c9e26ded925f45ce26d266",
             "help_exit_code": 0
           },
           "skill validate": {
-            "usage": "hive skill validate [-h] path",
+            "usage": "hive skill validate [-h] [--json] path",
             "description": "Strictly validate a SKILL.md against the Agent Skills spec",
             "text_block": "Strictly validate a SKILL.md against the Agent Skills spec",
             "subcommands": [],
@@ -4220,11 +4195,11 @@
             "required_positionals": [
               "path"
             ],
-            "help_sha256": "0ffef4b6db00e646494885aba4229df25f1a6a6dd3098726a412d1430cd4503c",
+            "help_sha256": "d8f9e9fb9a3a0c63b21c2656a10a5e929ca34acf7b4a53c4f91d465d68d33dbd",
             "help_exit_code": 0
           },
           "skill doctor": {
-            "usage": "hive skill doctor [-h] [name]",
+            "usage": "hive skill doctor [-h] [--defaults] [--project-dir PROJECT_DIR] [--json] [name]",
             "description": "Health-check skills (parseable, scripts executable, tools available)",
             "text_block": "Health-check skills (parseable, scripts executable, tools available)",
             "subcommands": [],
@@ -4279,11 +4254,11 @@
               "name"
             ],
             "required_positionals": [],
-            "help_sha256": "bdc0a4a450d908382fa65468846cd8d780b4e12089d4429fbcb0cdbd379a371e",
+            "help_sha256": "ce6dfa3911d45eb7ecbf6d6b964b585d74028e6dce9f5aa93138c5fc2edc318c",
             "help_exit_code": 0
           },
           "skill update": {
-            "usage": "hive skill update [-h] [name]",
+            "usage": "hive skill update [-h] [--json] [name]",
             "description": "Refresh registry cache or re-install a specific skill",
             "text_block": "Refresh registry cache or re-install a specific skill",
             "subcommands": [],
@@ -4316,11 +4291,11 @@
               "name"
             ],
             "required_positionals": [],
-            "help_sha256": "199140b48fc74681bcc23dbf5ea55f63f412a7dfe7617b0d64f325b0d16ca30e",
+            "help_sha256": "ace1e68e8583c4625ab343715384cd0d48398a6d28b130cf4018ccdb982fd01d",
             "help_exit_code": 0
           },
           "skill search": {
-            "usage": "hive skill search [-h] query",
+            "usage": "hive skill search [-h] [--json] query",
             "description": "Search the skill registry by name, tag, or description",
             "text_block": "Search the skill registry by name, tag, or description",
             "subcommands": [],
@@ -4355,11 +4330,11 @@
             "required_positionals": [
               "query"
             ],
-            "help_sha256": "25c4e020c9010aaff214a0bdcdbc8ad7714d9c54e2335a19b19f9a9f834a9cad",
+            "help_sha256": "fcdb26eeb2b587d2679b5e6e95140c6a8dddae7307e2165e26e527851d062296",
             "help_exit_code": 0
           },
           "skill fork": {
-            "usage": "hive skill fork [-h] name",
+            "usage": "hive skill fork [-h] [--name NAME] [--dir DIR] [--yes] [--project-dir PROJECT_DIR] [--json] name",
             "description": "Create a local editable copy of a skill",
             "text_block": "Create a local editable copy of a skill",
             "subcommands": [],
@@ -4438,11 +4413,11 @@
             "required_positionals": [
               "name"
             ],
-            "help_sha256": "332b5d6ce46e3005cc452e2387242b9e14b4f6c9558eff1eb91f7291f323adb8",
+            "help_sha256": "1177be449bd7fb457de8d156e5808de912c3b2fd3d72f137e8c195647f337ff9",
             "help_exit_code": 0
           },
           "skill test": {
-            "usage": "hive skill test [-h] path",
+            "usage": "hive skill test [-h] [--input INPUT] [--model MODEL] [--json] path",
             "description": "Run a skill in isolation or execute its eval suite (CLI-9)",
             "text_block": "Run a skill in isolation or execute its eval suite (CLI-9)",
             "subcommands": [],
@@ -4499,7 +4474,7 @@
             "required_positionals": [
               "path"
             ],
-            "help_sha256": "cf163e1b2bb6dabbdaeb30770d0b33c0ab0d2a78449a8424085b788c5224849b",
+            "help_sha256": "35668629c502123c2c37819a46e17e1ccf5d934cedf94f202f5fe3a7b3ed4aec",
             "help_exit_code": 0
           },
           "skill trust": {
@@ -4881,7 +4856,7 @@
             "recursion_stopped": "identical_to_parent_help"
           },
           "janitor run": {
-            "usage": "hive janitor run [-h]",
+            "usage": "hive janitor run [-h] [--execute] [--tiers TIERS] [--legacy] [--junk] [--no-archive] [--port PORT] [--verbose, -v]",
             "description": "Run a janitor pass (dry-run unless --execute)",
             "text_block": "Run a janitor pass (dry-run unless --execute)",
             "subcommands": [],
@@ -4979,11 +4954,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "9932c90e0006984e16e3f4e4f0b70d7f6f4188b0c6ce576e532cd76171498ff1",
+            "help_sha256": "02d8368fad9e37f77b3e104619410f66d8cd045607f222c87351756e8f18262c",
             "help_exit_code": 0
           },
           "janitor status": {
-            "usage": "hive janitor status",
+            "usage": "hive janitor status [-h]",
             "description": "Show the last janitor report",
             "text_block": "Show the last janitor report",
             "subcommands": [],
@@ -5003,7 +4978,7 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "14bc422759e8a88572f3a59151ae7ecdc0e75cf644fe3d35059daa6c0fae70b7",
+            "help_sha256": "7049fe27e6747435619e74625249683075e9a79e2e891b83ccfe3870b7b1bbf0",
             "help_exit_code": 0
           }
         },
@@ -5343,14 +5318,6 @@
           },
           {
             "argv": [
-              "queen-mail-mcp",
-              "--no-such-flag-9f3"
-            ],
-            "probe": "unknown_flag",
-            "exit": 2
-          },
-          {
-            "argv": [
               "serve",
               "--no-such-flag-9f3"
             ],
@@ -5602,7 +5569,7 @@
             "probe": "unknown_command",
             "exit": 2,
             "stdout_head": "",
-            "stderr_head": "argument command: invalid choice: \"nosuchcmd\" (choose from 'serve', 'open', 'queen', 'colony', 'session', 'chat', 'skill', 'debugger', 'mcp', 'janitor', 'queen-mail-mcp')"
+            "stderr_head": "argument command: invalid choice: \"nosuchcmd\" (choose from 'serve', 'open', 'queen', 'colony', 'session', 'chat', 'skill', 'debugger', 'mcp', 'janitor')"
           },
           {
             "argv": [
@@ -5648,42 +5615,11 @@
       "diff": {
         "totals": {
           "paths_python": 47,
-          "paths_go": 48,
+          "paths_go": 47,
           "paths_shared": 47,
           "python_only": [],
-          "go_only": [
-            "queen-mail-mcp"
-          ],
-          "subcommand_mismatch": [
-            {
-              "command": "",
-              "python": [
-                "serve",
-                "open",
-                "queen",
-                "colony",
-                "session",
-                "chat",
-                "skill",
-                "debugger",
-                "mcp",
-                "janitor"
-              ],
-              "go": [
-                "serve",
-                "open",
-                "queen",
-                "colony",
-                "session",
-                "chat",
-                "skill",
-                "debugger",
-                "mcp",
-                "janitor",
-                "queen-mail-mcp"
-              ]
-            }
-          ],
+          "go_only": [],
+          "subcommand_mismatch": [],
           "positional_mismatch": [
             {
               "command": "mcp",
@@ -6268,11 +6204,6 @@
             "probe": "unknown_flag mcp run --no-such-flag-9f3",
             "python": 2,
             "go": 1
-          },
-          {
-            "probe": "unknown_flag queen-mail-mcp --no-such-flag-9f3",
-            "python": null,
-            "go": 2
           }
         ],
         "battery": []
@@ -8524,7 +8455,7 @@
             "probe": "help_unknown_topic",
             "exit": 1,
             "stdout_head": "",
-            "stderr_head": "Traceback (most recent call last): File \"<frozen runpy>\", line 198, in _run_module_as_main File \"<frozen runpy>\", line 88, in _run_code File \"/Users/mac/hive/.wt/appearance-cli-help/tools/src/gcu/cli."
+            "stderr_head": "Traceback (most recent call last): File \"<frozen runpy>\", line 198, in _run_module_as_main File \"<frozen runpy>\", line 88, in _run_code File \"/Users/mac/hive/.wt/cli-hidden-extras/tools/src/gcu/cli.py"
           },
           {
             "argv": [
@@ -8654,7 +8585,7 @@
       "go": {
         "commands": {
           "": {
-            "usage": "hive-browser [-h] [options] {help,setup,status,stop,open,navigate,reload,interact,select,upload,screenshot,evaluate,script,click,type,type-focused,press,scroll,tab,page,dialog} ...",
+            "usage": "hive-browser [-h] {help,setup,status,stop,open,navigate,reload,interact,select,upload,screenshot,evaluate,script,tab,page,dialog} ...",
             "description": "Drive the Hive browser (Hive Browser Bridge extension) from the terminal. Replaces the retired browser_* MCP tools; agents invoke it with --json.",
             "text_block": "Drive the Hive browser (Hive Browser Bridge extension) from the terminal. Replaces the retired browser_* MCP tools; agents invoke it with --json.",
             "subcommands": [
@@ -8671,11 +8602,6 @@
               "screenshot",
               "evaluate",
               "script",
-              "click",
-              "type",
-              "type-focused",
-              "press",
-              "scroll",
               "tab",
               "page",
               "dialog"
@@ -8703,26 +8629,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "765a461fd2b6489fd30139416a1b6a651c862f1aded38e8cbd4562ddb4aa28d8",
+            "help_sha256": "bc9b88afeae33165109ce2460777a83d44534784e2d0b1b75e1b596570fcaba3",
             "help_exit_code": 0
           },
           "help": {
-            "usage": "hive-browser help [-h] [topic]",
+            "usage": "hive-browser help [-h] [--json] [topic]",
             "description": "usage for the CLI or one command: `hive-browser help [cmd]`",
             "text_block": "usage for the CLI or one command: `hive-browser help [cmd]`",
             "subcommands": [],
@@ -8749,39 +8664,17 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
               "topic"
             ],
             "required_positionals": [],
-            "help_sha256": "b1107c9b4066bbbbceb33130fa02821f2049b74a1385c5179b652152afd28536",
+            "help_sha256": "3566cdf83e216d7745002a9689a41ca5a4c18fe7ddf68871475ee917453cf0d4",
             "help_exit_code": 0
           },
           "setup": {
-            "usage": "hive-browser setup [-h]",
+            "usage": "hive-browser setup [-h] [--json]",
             "description": "check the extension/bridge and show install steps",
             "text_block": "check the extension/bridge and show install steps",
             "subcommands": [],
@@ -8808,37 +8701,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "7ecc2f43218e39e12458c610106453e89e0432ad30817a7ae05c39f5b88219ac",
+            "help_sha256": "1b70710b58815dfea954c72122f0378d7b01a826cbb328f9244d7fea7d880ada",
             "help_exit_code": 0
           },
           "status": {
-            "usage": "hive-browser status [-h]",
+            "usage": "hive-browser status [-h] [--tab TAB] [--json]",
             "description": "connection + running state + connected Chrome profiles",
             "text_block": "connection + running state + connected Chrome profiles",
             "subcommands": [],
@@ -8876,37 +8747,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "135c36ad7ab282298c6e94d8f070799afe54916f2c46e4dc503f8e4627c928f2",
+            "help_sha256": "694a12f83ce2f6912d274d155696f3abc094c359c16bab62256b0853d228b1fe",
             "help_exit_code": 0
           },
           "stop": {
-            "usage": "hive-browser stop [-h]",
+            "usage": "hive-browser stop [-h] [--json]",
             "description": "close this session's tab group (all its tabs)",
             "text_block": "close this session's tab group (all its tabs)",
             "subcommands": [],
@@ -8933,37 +8782,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "84bf4f32a65f0406b70744e1fb069a43e0664c583bf2cb0e32a9aeb572a4c02a",
+            "help_sha256": "fd596d581f28fdea4b6bb794c7ee1180446f5bb4ef3bcc30e4e4d4a72f509436",
             "help_exit_code": 0
           },
           "open": {
-            "usage": "hive-browser open [-h] url",
+            "usage": "hive-browser open [-h] [--background] [--browser-profile BROWSER_PROFILE] [--json] url",
             "description": "open a tab at <url> (cold-start entry point)",
             "text_block": "open a tab at <url> (cold-start entry point)",
             "subcommands": [],
@@ -9012,28 +8839,6 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
@@ -9042,11 +8847,11 @@
             "required_positionals": [
               "url"
             ],
-            "help_sha256": "17455bf96d0f88ef42c84c12391e18bae570763eb5c508837d43b3eb8728e5cd",
+            "help_sha256": "8f40d42d5a51f4c6ebe76455a3a1632d776a9305865834e4f0a2fa79c50bd13e",
             "help_exit_code": 0
           },
           "navigate": {
-            "usage": "hive-browser navigate [-h] url",
+            "usage": "hive-browser navigate [-h] [--tab TAB] [--wait-until WAIT_UNTIL] [--timeout-ms TIMEOUT_MS] [--browser-profile BROWSER_PROFILE] [--json] url",
             "description": "redirect an existing tab to <url>",
             "text_block": "redirect an existing tab to <url>",
             "subcommands": [],
@@ -9122,28 +8927,6 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
@@ -9152,11 +8935,11 @@
             "required_positionals": [
               "url"
             ],
-            "help_sha256": "4dbae23768352b7fc61edffe6dcb64bfd33dcd600da185c88b3710dcbb09a303",
+            "help_sha256": "c6753ccd696d8187df99191c423d9cfac040a05465a049930c1208518589b218",
             "help_exit_code": 0
           },
           "reload": {
-            "usage": "hive-browser reload [-h]",
+            "usage": "hive-browser reload [-h] [--tab TAB] [--json]",
             "description": "reload the current page",
             "text_block": "reload the current page",
             "subcommands": [],
@@ -9194,37 +8977,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "6ce6f2f74ec411bd9d4a6cb4961f79ca08edbe7e028c72a5d714354064927dab",
+            "help_sha256": "54ecba7fda19fea4c7d76a21cada2a5c030be0f48bbfe193ef4126d0bc6fd807",
             "help_exit_code": 0
           },
           "interact": {
-            "usage": "hive-browser interact [-h]",
+            "usage": "hive-browser interact [-h] [--action ACTION] [--tab TAB] [--selector SELECTOR] [--coordinate COORDINATE] [--start-selector START_SELECTOR] [--start-coordinate START_COORDINATE] [--text TEXT] [--no-clear-first] [--no-insert-text] [--modifiers MODIFIERS] [--repeat REPEAT] [--scroll-direction SCROLL_DIRECTION] [--scroll-amount SCROLL_AMOUNT] [--intent INTENT] [--full-page] [--no-annotate] [--region REGION] [--duration DURATION] [--wait-for-selector WAIT_FOR_SELECTOR] [--wait-for-text WAIT_FOR_TEXT] [--timeout-ms TIMEOUT_MS] [--auto-snapshot-mode AUTO_SNAPSHOT_MODE] [--wait-after-ms WAIT_AFTER_MS] [--json]",
             "description": "click / type / key / scroll / drag / screenshot / zoom / wait",
             "text_block": "click / type / key / scroll / drag / screenshot / zoom / wait",
             "subcommands": [],
@@ -9528,37 +9289,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "7bf9e19da2f6ea2a16ddfe5bd35caab3ff7a0c503ff05e071b304a21146cfc64",
+            "help_sha256": "cf786b64683cfece6e442cce1dbdf008ac17c65bfb04fb377b2944de10fac6f1",
             "help_exit_code": 0
           },
           "select": {
-            "usage": "hive-browser select [-h] selector",
+            "usage": "hive-browser select [-h] [--value VALUE] [--tab TAB] [--json] selector",
             "description": "select option(s) in a <select> dropdown",
             "text_block": "select option(s) in a <select> dropdown",
             "subcommands": [],
@@ -9607,28 +9346,6 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
@@ -9637,11 +9354,11 @@
             "required_positionals": [
               "selector"
             ],
-            "help_sha256": "4d653ed0771922c91a3e3545f67652ba5477f274a1da005068fae155dbbfcb97",
+            "help_sha256": "1ae4778dcfc67464e72f32638869a33d1c5cae78786d677a6e195c321c88bda6",
             "help_exit_code": 0
           },
           "upload": {
-            "usage": "hive-browser upload [-h] selector",
+            "usage": "hive-browser upload [-h] [--file FILE] [--trigger-selector TRIGGER_SELECTOR] [--timeout-ms TIMEOUT_MS] [--tab TAB] [--json] selector",
             "description": "set files on a file input (direct or via trigger)",
             "text_block": "set files on a file input (direct or via trigger)",
             "subcommands": [],
@@ -9712,28 +9429,6 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
@@ -9742,11 +9437,11 @@
             "required_positionals": [
               "selector"
             ],
-            "help_sha256": "6102a065e103c88e2cae46cc47fbe936c81384fa9fe5ef1ed4543788452bb3c0",
+            "help_sha256": "955e6371cc235912379ed9e62896e62aa0148b64a6fe5a90290b30ed78d0d670",
             "help_exit_code": 0
           },
           "screenshot": {
-            "usage": "hive-browser screenshot [-h]",
+            "usage": "hive-browser screenshot [-h] [--intent INTENT] [--full-page] [--selector SELECTOR] [--no-annotate] [--timeout-ms TIMEOUT_MS] [--tab TAB] [--json]",
             "description": "capture the tab (JPEG spilled to a file, path returned)",
             "text_block": "capture the tab (JPEG spilled to a file, path returned)",
             "subcommands": [],
@@ -9839,37 +9534,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "7a3c46110ad042cbbabb7d19641930c9de645380ae692e9548f2d050e653223c",
+            "help_sha256": "008648132d18092c67bec5e6982eac95de7b486399911fee6d9749351900b056",
             "help_exit_code": 0
           },
           "evaluate": {
-            "usage": "hive-browser evaluate [-h]",
+            "usage": "hive-browser evaluate [-h] [--js JS] [--script SCRIPT] [--tab TAB] [--json]",
             "description": "run JavaScript in the page (value of last expression)",
             "text_block": "run JavaScript in the page (value of last expression)",
             "subcommands": [],
@@ -9929,37 +9602,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "335b7a20143f994f9b8bebf56d1592c42ff1b54395bdbcfca08cdb7dbd678dd2",
+            "help_sha256": "d73f6e5dd3d3e132f2bb453e1fe4241bbb2d6692e52e95695276d94fec01598c",
             "help_exit_code": 0
           },
           "script": {
-            "usage": "hive-browser script [-h]",
+            "usage": "hive-browser script [-h] [--skill SKILL] [--script SCRIPT] [--args ARGS] [--timeout-s TIMEOUT_S] [--browser-profile BROWSER_PROFILE] [--tab TAB] [--json]",
             "description": "run a skill-bundled run(ctx) orchestration script",
             "text_block": "run a skill-bundled run(ctx) orchestration script",
             "subcommands": [],
@@ -10052,617 +9703,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "0efc2012c71d8d5c6bf056b9e2ea16acb82675695f6618891f681bd01c271917",
-            "help_exit_code": 0
-          },
-          "click": {
-            "usage": "hive-browser click [-h] selector",
-            "description": "click an element via CDP (browser_click)",
-            "text_block": "click an element via CDP (browser_click)",
-            "subcommands": [],
-            "flags": {
-              "--help": {
-                "key": "--help",
-                "names": [
-                  "-h",
-                  "--help"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "show this help message and exit"
-              },
-              "--button": {
-                "key": "--button",
-                "names": [
-                  "--button"
-                ],
-                "takes_value": true,
-                "placeholder": "BUTTON",
-                "choices": [
-                  "left",
-                  "right",
-                  "middle"
-                ],
-                "default_in_help": null,
-                "help": "left | right | middle"
-              },
-              "--double": {
-                "key": "--double",
-                "names": [
-                  "--double"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "double click"
-              },
-              "--auto-snapshot-mode": {
-                "key": "--auto-snapshot-mode",
-                "names": [
-                  "--auto-snapshot-mode"
-                ],
-                "takes_value": true,
-                "placeholder": "AUTO_SNAPSHOT_MODE",
-                "choices": [
-                  "simple",
-                  "default",
-                  "interactive",
-                  "off"
-                ],
-                "default_in_help": null,
-                "help": "simple | default | interactive | off"
-              },
-              "--tab": {
-                "key": "--tab",
-                "names": [
-                  "--tab"
-                ],
-                "takes_value": true,
-                "placeholder": "TAB",
-                "choices": null,
-                "default_in_help": "this profile's active tab",
-                "help": "tab id (default: this profile's active tab)"
-              },
-              "--json": {
-                "key": "--json",
-                "names": [
-                  "--json"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
-              }
-            },
-            "positionals": [
-              "selector"
-            ],
-            "required_positionals": [
-              "selector"
-            ],
-            "help_sha256": "9a0475e44b8db581a85db8dfd83470e61dfdf130c619b609a854e373f2b6540d",
-            "help_exit_code": 0
-          },
-          "type": {
-            "usage": "hive-browser type [-h] selector",
-            "description": "type into an element via CDP (browser_type)",
-            "text_block": "type into an element via CDP (browser_type)",
-            "subcommands": [],
-            "flags": {
-              "--help": {
-                "key": "--help",
-                "names": [
-                  "-h",
-                  "--help"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "show this help message and exit"
-              },
-              "--text": {
-                "key": "--text",
-                "names": [
-                  "--text"
-                ],
-                "takes_value": true,
-                "placeholder": "TEXT",
-                "choices": null,
-                "default_in_help": null,
-                "help": "text to type"
-              },
-              "--no-clear-first": {
-                "key": "--no-clear-first",
-                "names": [
-                  "--no-clear-first"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "type without clearing first"
-              },
-              "--no-insert-text": {
-                "key": "--no-insert-text",
-                "names": [
-                  "--no-insert-text"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "use key events instead of insertText"
-              },
-              "--delay-ms": {
-                "key": "--delay-ms",
-                "names": [
-                  "--delay-ms"
-                ],
-                "takes_value": true,
-                "placeholder": "DELAY_MS",
-                "choices": null,
-                "default_in_help": null,
-                "help": "per-character delay (ms)"
-              },
-              "--timeout-ms": {
-                "key": "--timeout-ms",
-                "names": [
-                  "--timeout-ms"
-                ],
-                "takes_value": true,
-                "placeholder": "TIMEOUT_MS",
-                "choices": null,
-                "default_in_help": null,
-                "help": "how long typing may take (ms)"
-              },
-              "--tab": {
-                "key": "--tab",
-                "names": [
-                  "--tab"
-                ],
-                "takes_value": true,
-                "placeholder": "TAB",
-                "choices": null,
-                "default_in_help": "this profile's active tab",
-                "help": "tab id (default: this profile's active tab)"
-              },
-              "--json": {
-                "key": "--json",
-                "names": [
-                  "--json"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
-              }
-            },
-            "positionals": [
-              "selector"
-            ],
-            "required_positionals": [
-              "selector"
-            ],
-            "help_sha256": "062a7b3b8ece7ba21fa330eb99c676f9ef2a6e3b3a28a36caed07a3bf1658490",
-            "help_exit_code": 0
-          },
-          "type-focused": {
-            "usage": "hive-browser type-focused [-h]",
-            "description": "type into the focused element (browser_type_focused)",
-            "text_block": "type into the focused element (browser_type_focused)",
-            "subcommands": [],
-            "flags": {
-              "--help": {
-                "key": "--help",
-                "names": [
-                  "-h",
-                  "--help"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "show this help message and exit"
-              },
-              "--text": {
-                "key": "--text",
-                "names": [
-                  "--text"
-                ],
-                "takes_value": true,
-                "placeholder": "TEXT",
-                "choices": null,
-                "default_in_help": null,
-                "help": "text to type"
-              },
-              "--no-clear-first": {
-                "key": "--no-clear-first",
-                "names": [
-                  "--no-clear-first"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "type without clearing first"
-              },
-              "--no-insert-text": {
-                "key": "--no-insert-text",
-                "names": [
-                  "--no-insert-text"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "use key events instead of insertText"
-              },
-              "--delay-ms": {
-                "key": "--delay-ms",
-                "names": [
-                  "--delay-ms"
-                ],
-                "takes_value": true,
-                "placeholder": "DELAY_MS",
-                "choices": null,
-                "default_in_help": null,
-                "help": "per-character delay (ms)"
-              },
-              "--timeout-ms": {
-                "key": "--timeout-ms",
-                "names": [
-                  "--timeout-ms"
-                ],
-                "takes_value": true,
-                "placeholder": "TIMEOUT_MS",
-                "choices": null,
-                "default_in_help": null,
-                "help": "how long typing may take (ms)"
-              },
-              "--tab": {
-                "key": "--tab",
-                "names": [
-                  "--tab"
-                ],
-                "takes_value": true,
-                "placeholder": "TAB",
-                "choices": null,
-                "default_in_help": "this profile's active tab",
-                "help": "tab id (default: this profile's active tab)"
-              },
-              "--json": {
-                "key": "--json",
-                "names": [
-                  "--json"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
-              }
-            },
-            "positionals": [],
-            "required_positionals": [],
-            "help_sha256": "48a5a0d7eba481e32c427d14f453017cc6c4792c16bda89ba1a0a33693fdf7ba",
-            "help_exit_code": 0
-          },
-          "press": {
-            "usage": "hive-browser press [-h] key",
-            "description": "press a key, optionally on an element (browser_press)",
-            "text_block": "press a key, optionally on an element (browser_press)",
-            "subcommands": [],
-            "flags": {
-              "--help": {
-                "key": "--help",
-                "names": [
-                  "-h",
-                  "--help"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "show this help message and exit"
-              },
-              "--selector": {
-                "key": "--selector",
-                "names": [
-                  "--selector"
-                ],
-                "takes_value": true,
-                "placeholder": "SELECTOR",
-                "choices": null,
-                "default_in_help": null,
-                "help": "element to focus first"
-              },
-              "--modifiers": {
-                "key": "--modifiers",
-                "names": [
-                  "--modifiers"
-                ],
-                "takes_value": true,
-                "placeholder": "MODIFIERS",
-                "choices": null,
-                "default_in_help": null,
-                "help": "e.g. Meta+A"
-              },
-              "--tab": {
-                "key": "--tab",
-                "names": [
-                  "--tab"
-                ],
-                "takes_value": true,
-                "placeholder": "TAB",
-                "choices": null,
-                "default_in_help": "this profile's active tab",
-                "help": "tab id (default: this profile's active tab)"
-              },
-              "--json": {
-                "key": "--json",
-                "names": [
-                  "--json"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
-              }
-            },
-            "positionals": [
-              "key"
-            ],
-            "required_positionals": [
-              "key"
-            ],
-            "help_sha256": "a08a75c7d164c6c746e45f8f07dd0dbd46746e562a0f2fb4ad3deba2a264973f",
-            "help_exit_code": 0
-          },
-          "scroll": {
-            "usage": "hive-browser scroll [-h]",
-            "description": "scroll the page or an element (browser_scroll)",
-            "text_block": "scroll the page or an element (browser_scroll)",
-            "subcommands": [],
-            "flags": {
-              "--help": {
-                "key": "--help",
-                "names": [
-                  "-h",
-                  "--help"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "show this help message and exit"
-              },
-              "--direction": {
-                "key": "--direction",
-                "names": [
-                  "--direction"
-                ],
-                "takes_value": true,
-                "placeholder": "DIRECTION",
-                "choices": [
-                  "up",
-                  "down",
-                  "left",
-                  "right"
-                ],
-                "default_in_help": null,
-                "help": "up | down | left | right"
-              },
-              "--amount": {
-                "key": "--amount",
-                "names": [
-                  "--amount"
-                ],
-                "takes_value": true,
-                "placeholder": "AMOUNT",
-                "choices": null,
-                "default_in_help": null,
-                "help": "distance in px"
-              },
-              "--selector": {
-                "key": "--selector",
-                "names": [
-                  "--selector"
-                ],
-                "takes_value": true,
-                "placeholder": "SELECTOR",
-                "choices": null,
-                "default_in_help": null,
-                "help": "element to scroll"
-              },
-              "--auto-snapshot-mode": {
-                "key": "--auto-snapshot-mode",
-                "names": [
-                  "--auto-snapshot-mode"
-                ],
-                "takes_value": true,
-                "placeholder": "AUTO_SNAPSHOT_MODE",
-                "choices": [
-                  "simple",
-                  "default",
-                  "interactive",
-                  "off"
-                ],
-                "default_in_help": null,
-                "help": "simple | default | interactive | off"
-              },
-              "--tab": {
-                "key": "--tab",
-                "names": [
-                  "--tab"
-                ],
-                "takes_value": true,
-                "placeholder": "TAB",
-                "choices": null,
-                "default_in_help": "this profile's active tab",
-                "help": "tab id (default: this profile's active tab)"
-              },
-              "--json": {
-                "key": "--json",
-                "names": [
-                  "--json"
-                ],
-                "takes_value": false,
-                "placeholder": null,
-                "choices": null,
-                "default_in_help": null,
-                "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
-              }
-            },
-            "positionals": [],
-            "required_positionals": [],
-            "help_sha256": "1a6f865cdd97c296d03f0469e45e1f469ca8a1a9737d9085619f8375e5e67460",
+            "help_sha256": "90f9e603ad4ab16ed50323ef4c1a3da517dade80b5cb78fb0ff046c5e36529fa",
             "help_exit_code": 0
           },
           "tab": {
-            "usage": "hive-browser tab [-h] [options] {list,close,activate} ...",
+            "usage": "hive-browser tab [-h] {list,close,activate} ...",
             "description": "Manage the tabs this browser session opened.",
             "text_block": "Manage the tabs this browser session opened. tab-group management: list / close / activate",
             "subcommands": [
@@ -10686,11 +9735,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "24c0e5592b3b9ccee07a7187d64997162bea125e8ba48631dd1860f6f79c92c8",
+            "help_sha256": "2fc24b936821758ddbe6df428c4f38e41c4e17f9847e3d608006043daf0c5fdc",
             "help_exit_code": 0
           },
           "page": {
-            "usage": "hive-browser page [-h] [options] {html,snapshot,text,shadow-query,console,resize} ...",
+            "usage": "hive-browser page [-h] {html,snapshot,text,shadow-query,console,resize} ...",
             "description": "Read the page or change the viewport.",
             "text_block": "Read the page or change the viewport. page reads + viewport: html / snapshot / text / shadow-query / console / resize",
             "subcommands": [
@@ -10717,11 +9766,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "e53170b54a634c54ac417c152dcee866efcfebdb7490ca62c0dde30b250c6697",
+            "help_sha256": "e43d75f04056952ee2f887b27a9db5795515c2669b28a96c123192af78ce18eb",
             "help_exit_code": 0
           },
           "dialog": {
-            "usage": "hive-browser dialog [-h] [options] {respond} ...",
+            "usage": "hive-browser dialog [-h] {respond} ...",
             "description": "Answer a native dialog that is blocking the page.",
             "text_block": "Answer a native dialog that is blocking the page. native dialogs: respond",
             "subcommands": [
@@ -10743,11 +9792,11 @@
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "34803e4c95e2b43f78e07b1e6ce2f04a787f1a00a89fbe9b8f4712cd6029100e",
+            "help_sha256": "d12cb18ddd8f5ec221a42832bb1cafe6887ef4d2e891e4fc0b11c47fd471317c",
             "help_exit_code": 0
           },
           "tab list": {
-            "usage": "hive-browser tab list [-h]",
+            "usage": "hive-browser tab list [-h] [--json]",
             "description": "list tabs in this session's group",
             "text_block": "list tabs in this session's group",
             "subcommands": [],
@@ -10764,17 +9813,6 @@
                 "default_in_help": null,
                 "help": "show this help message and exit"
               },
-              "--tab": {
-                "key": "--tab",
-                "names": [
-                  "--tab"
-                ],
-                "takes_value": true,
-                "placeholder": "TAB",
-                "choices": null,
-                "default_in_help": "this profile's active tab",
-                "help": "tab id (default: this profile's active tab)"
-              },
               "--json": {
                 "key": "--json",
                 "names": [
@@ -10785,37 +9823,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "c01055119824ac84937925a7c0e99eff64968652ec14c6133db54efa7d3bc4c4",
+            "help_sha256": "9d9405faacf7448124419451f32e015b190eda3d66209bd15e0194f32fcf71ab",
             "help_exit_code": 0
           },
           "tab close": {
-            "usage": "hive-browser tab close [-h] [tab_id]",
+            "usage": "hive-browser tab close [-h] [--json] [tab_id]",
             "description": "close a tab (default: the active tab)",
             "text_block": "close a tab (default: the active tab)",
             "subcommands": [],
@@ -10832,17 +9848,6 @@
                 "default_in_help": null,
                 "help": "show this help message and exit"
               },
-              "--tab": {
-                "key": "--tab",
-                "names": [
-                  "--tab"
-                ],
-                "takes_value": true,
-                "placeholder": "TAB",
-                "choices": null,
-                "default_in_help": "this profile's active tab",
-                "help": "tab id (default: this profile's active tab)"
-              },
               "--json": {
                 "key": "--json",
                 "names": [
@@ -10853,39 +9858,17 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
               "tab_id"
             ],
             "required_positionals": [],
-            "help_sha256": "831ba887cde85e907c95d77de928a5c8e026b1f3dc7fc9fdc47b576036d978b2",
+            "help_sha256": "512913e05f7948e43381e0c3bd9333a1aa06ba29fd96763aec21acd322507a21",
             "help_exit_code": 0
           },
           "tab activate": {
-            "usage": "hive-browser tab activate [-h] tab_id",
+            "usage": "hive-browser tab activate [-h] [--json] tab_id",
             "description": "bring a tab to the foreground",
             "text_block": "bring a tab to the foreground",
             "subcommands": [],
@@ -10902,17 +9885,6 @@
                 "default_in_help": null,
                 "help": "show this help message and exit"
               },
-              "--tab": {
-                "key": "--tab",
-                "names": [
-                  "--tab"
-                ],
-                "takes_value": true,
-                "placeholder": "TAB",
-                "choices": null,
-                "default_in_help": "this profile's active tab",
-                "help": "tab id (default: this profile's active tab)"
-              },
               "--json": {
                 "key": "--json",
                 "names": [
@@ -10923,28 +9895,6 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
@@ -10953,11 +9903,11 @@
             "required_positionals": [
               "tab_id"
             ],
-            "help_sha256": "2551c23bc5439f967611905a869da3919cc62333ec4b71e55e0271fe91a6758c",
+            "help_sha256": "9e9c506bf5d4acb1c331d7b2da4b1f81110215f14f5e1ed96ecfd1223d088d95",
             "help_exit_code": 0
           },
           "page html": {
-            "usage": "hive-browser page html [-h] [selector]",
+            "usage": "hive-browser page html [-h] [--head HEAD] [--tab TAB] [--json] [selector]",
             "description": "page or element outerHTML (spilled to a file)",
             "text_block": "page or element outerHTML (spilled to a file)",
             "subcommands": [],
@@ -11006,39 +9956,17 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
               "selector"
             ],
             "required_positionals": [],
-            "help_sha256": "de9ab6d49cf2e7b2a2983c949a0eaa69838b0a0650105c2110bd8fa9c943e2f5",
+            "help_sha256": "fcd17baa347955412b254305362f2cf020de5ec61b37f90b28a55738c4859d95",
             "help_exit_code": 0
           },
           "page snapshot": {
-            "usage": "hive-browser page snapshot [-h]",
+            "usage": "hive-browser page snapshot [-h] [--mode MODE] [--head HEAD] [--tab TAB] [--json]",
             "description": "accessibility tree (spilled to a file)",
             "text_block": "accessibility tree (spilled to a file)",
             "subcommands": [],
@@ -11102,37 +10030,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "05a9a10ef7e5c9b0fdc5ace747dec1ed3d5388d1f7c3bd7389feaf5601d9d96b",
+            "help_sha256": "333e16d94aaa55310eb78cb32d9946d40c7bd9e89e6804582455aeb5daff32cf",
             "help_exit_code": 0
           },
           "page text": {
-            "usage": "hive-browser page text [-h] selector",
+            "usage": "hive-browser page text [-h] [--timeout-ms TIMEOUT_MS] [--tab TAB] [--json] selector",
             "description": "text content of an element",
             "text_block": "text content of an element",
             "subcommands": [],
@@ -11181,28 +10087,6 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
@@ -11211,11 +10095,11 @@
             "required_positionals": [
               "selector"
             ],
-            "help_sha256": "3cdf6ee9698b02dd5defd62a36172b37be10dec3e90d03223e5a5d52b56c0348",
+            "help_sha256": "5c56a6cca2d8b422f42190a7e14f3bf61e76499f42578e6dfd48e7af28f8c4e3",
             "help_exit_code": 0
           },
           "page shadow-query": {
-            "usage": "hive-browser page shadow-query [-h] selector",
+            "usage": "hive-browser page shadow-query [-h] [--tab TAB] [--json] selector",
             "description": "element rect as viewport fractions (pierces shadow DOM with ' >>> ')",
             "text_block": "element rect as viewport fractions (pierces shadow DOM with ' >>> ')",
             "subcommands": [],
@@ -11253,28 +10137,6 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
@@ -11283,11 +10145,11 @@
             "required_positionals": [
               "selector"
             ],
-            "help_sha256": "1485744fe25c8baf874ba2e0426f0079b2b2e407ece0e28459bb5f42a52047c9",
+            "help_sha256": "f55b22a2a801c6eb1a841fb0a23b6acb228f28cd441daf4a8a1f885132d237fd",
             "help_exit_code": 0
           },
           "page console": {
-            "usage": "hive-browser page console [-h]",
+            "usage": "hive-browser page console [-h] [--level LEVEL] [--tab TAB] [--json]",
             "description": "console messages (stub — use `evaluate`)",
             "text_block": "console messages (stub — use `evaluate`)",
             "subcommands": [],
@@ -11341,37 +10203,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "f13dc061e1fca0de7d12368d16ab56cb10faf548ef99897884311b17109973eb",
+            "help_sha256": "d2bc3c4a484edb96ddc104349f28c933bf75f85d4d1c2adeb9673e14d6c1ff56",
             "help_exit_code": 0
           },
           "page resize": {
-            "usage": "hive-browser page resize [-h]",
+            "usage": "hive-browser page resize [-h] [--width WIDTH] [--height HEIGHT] [--tab TAB] [--json]",
             "description": "resize the viewport",
             "text_block": "resize the viewport",
             "subcommands": [],
@@ -11431,37 +10271,15 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [],
             "required_positionals": [],
-            "help_sha256": "d237b044524d59ecea07e69cf89ee073d0294d1e07087eae4a4df8c2d9451b99",
+            "help_sha256": "ff4feedb02a22c10781095d57c6f9ec6be3115140a7311648eed7d6647fdcb41",
             "help_exit_code": 0
           },
           "dialog respond": {
-            "usage": "hive-browser dialog respond [-h] action",
+            "usage": "hive-browser dialog respond [-h] [--prompt-text PROMPT_TEXT] [--tab TAB] [--json] action",
             "description": "accept/dismiss a pending native dialog",
             "text_block": "accept/dismiss a pending native dialog",
             "subcommands": [],
@@ -11510,28 +10328,6 @@
                 "choices": null,
                 "default_in_help": null,
                 "help": "machine output (agent mode)"
-              },
-              "--profile": {
-                "key": "--profile",
-                "names": [
-                  "--profile"
-                ],
-                "takes_value": true,
-                "placeholder": "PROFILE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSER_SESSION, else \"default\"",
-                "help": "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"
-              },
-              "--bridge": {
-                "key": "--bridge",
-                "names": [
-                  "--bridge"
-                ],
-                "takes_value": true,
-                "placeholder": "BRIDGE",
-                "choices": null,
-                "default_in_help": "$HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830",
-                "help": "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"
               }
             },
             "positionals": [
@@ -11540,7 +10336,7 @@
             "required_positionals": [
               "action"
             ],
-            "help_sha256": "e0a65085eea5bece091c1c58ba038407df1a54b8e040d5d9be13e8ecd16c5000",
+            "help_sha256": "92e85fc639f1392eb1d3970fd0c91c40f3ad8eb2c535111cccc51821ca2ca2d8",
             "help_exit_code": 0
           }
         },
@@ -11555,21 +10351,6 @@
               "--no-such-flag-9f3"
             ],
             "probe": "unknown_flag",
-            "exit": 2
-          },
-          {
-            "argv": [
-              "click",
-              "--no-such-flag-9f3"
-            ],
-            "probe": "unknown_flag",
-            "exit": 2
-          },
-          {
-            "argv": [
-              "click"
-            ],
-            "probe": "missing_required",
             "exit": 2
           },
           {
@@ -11745,21 +10526,6 @@
           },
           {
             "argv": [
-              "press",
-              "--no-such-flag-9f3"
-            ],
-            "probe": "unknown_flag",
-            "exit": 2
-          },
-          {
-            "argv": [
-              "press"
-            ],
-            "probe": "missing_required",
-            "exit": 2
-          },
-          {
-            "argv": [
               "reload",
               "--no-such-flag-9f3"
             ],
@@ -11777,14 +10543,6 @@
           {
             "argv": [
               "script",
-              "--no-such-flag-9f3"
-            ],
-            "probe": "unknown_flag",
-            "exit": 2
-          },
-          {
-            "argv": [
-              "scroll",
               "--no-such-flag-9f3"
             ],
             "probe": "unknown_flag",
@@ -11881,29 +10639,6 @@
           },
           {
             "argv": [
-              "type",
-              "--no-such-flag-9f3"
-            ],
-            "probe": "unknown_flag",
-            "exit": 2
-          },
-          {
-            "argv": [
-              "type"
-            ],
-            "probe": "missing_required",
-            "exit": 2
-          },
-          {
-            "argv": [
-              "type-focused",
-              "--no-such-flag-9f3"
-            ],
-            "probe": "unknown_flag",
-            "exit": 2
-          },
-          {
-            "argv": [
               "upload",
               "--no-such-flag-9f3"
             ],
@@ -11925,7 +10660,7 @@
             ],
             "probe": "help",
             "exit": 0,
-            "stdout_head": "usage: hive-browser [-h] [options] {help,setup,status,stop,open,navigate,reload,interact,select,upload,screenshot,evaluate,script,click,type,type-focused,press,scroll,tab,page,dialog} ... Drive the Hi",
+            "stdout_head": "usage: hive-browser [-h] {help,setup,status,stop,open,navigate,reload,interact,select,upload,screenshot,evaluate,script,tab,page,dialog} ... Drive the Hive browser (Hive Browser Bridge extension) from",
             "stderr_head": ""
           },
           {
@@ -11945,7 +10680,7 @@
             ],
             "probe": "help_topic",
             "exit": 0,
-            "stdout_head": "usage: hive-browser upload [-h] selector set files on a file input (direct or via trigger) positional arguments: selector selector of the file input options: -h, --help show this help message and exit",
+            "stdout_head": "usage: hive-browser upload [-h] [--file FILE] [--trigger-selector TRIGGER_SELECTOR] [--timeout-ms TIMEOUT_MS] [--tab TAB] [--json] selector set files on a file input (direct or via trigger) positional",
             "stderr_head": ""
           },
           {
@@ -12040,7 +10775,7 @@
             "probe": "status",
             "exit": 2,
             "stdout_head": "",
-            "stderr_head": "hive-browser: browser bridge not reachable at http://http://127.0.0.1:56361: Post \"http://http//127.0.0.1:56361/command\": EOF start the bridge with `hive serve` (or `browserbridge`) and retry"
+            "stderr_head": "hive-browser: browser bridge not reachable at http://http://127.0.0.1:56342: Post \"http://http//127.0.0.1:56342/command\": EOF start the bridge with `hive serve` (or `browserbridge`) and retry"
           },
           {
             "argv": [
@@ -12050,7 +10785,7 @@
             "probe": "tab_list",
             "exit": 2,
             "stdout_head": "",
-            "stderr_head": "hive-browser: browser bridge not reachable at http://http://127.0.0.1:56361: Post \"http://http//127.0.0.1:56361/command\": EOF start the bridge with `hive serve` (or `browserbridge`) and retry"
+            "stderr_head": "hive-browser: browser bridge not reachable at http://http://127.0.0.1:56342: Post \"http://http//127.0.0.1:56342/command\": EOF start the bridge with `hive serve` (or `browserbridge`) and retry"
           },
           {
             "argv": [
@@ -12066,62 +10801,11 @@
       "diff": {
         "totals": {
           "paths_python": 27,
-          "paths_go": 32,
+          "paths_go": 27,
           "paths_shared": 27,
           "python_only": [],
-          "go_only": [
-            "click",
-            "press",
-            "scroll",
-            "type",
-            "type-focused"
-          ],
-          "subcommand_mismatch": [
-            {
-              "command": "",
-              "python": [
-                "help",
-                "setup",
-                "status",
-                "stop",
-                "open",
-                "navigate",
-                "reload",
-                "interact",
-                "select",
-                "upload",
-                "screenshot",
-                "evaluate",
-                "script",
-                "tab",
-                "page",
-                "dialog"
-              ],
-              "go": [
-                "help",
-                "setup",
-                "status",
-                "stop",
-                "open",
-                "navigate",
-                "reload",
-                "interact",
-                "select",
-                "upload",
-                "screenshot",
-                "evaluate",
-                "script",
-                "click",
-                "type",
-                "type-focused",
-                "press",
-                "scroll",
-                "tab",
-                "page",
-                "dialog"
-              ]
-            }
-          ],
+          "go_only": [],
+          "subcommand_mismatch": [],
           "positional_mismatch": [
             {
               "command": "dialog respond",
@@ -12149,9 +10833,6 @@
             "shared": [
               "--help",
               "--json"
-            ],
-            "go_only": [
-              "--profile"
             ]
           },
           "dialog": {
@@ -12168,10 +10849,6 @@
               "--json",
               "--prompt-text",
               "--tab"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ],
             "default_mismatch": [
               {
@@ -12201,10 +10878,6 @@
               "--script",
               "--tab"
             ],
-            "go_only": [
-              "--bridge",
-              "--profile"
-            ],
             "default_mismatch": [
               {
                 "flag": "--tab",
@@ -12229,10 +10902,6 @@
             "shared": [
               "--help",
               "--json"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ]
           },
           "interact": {
@@ -12262,10 +10931,6 @@
               "--wait-after-ms",
               "--wait-for-selector",
               "--wait-for-text"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ],
             "default_mismatch": [
               {
@@ -12396,10 +11061,6 @@
               "--timeout-ms",
               "--wait-until"
             ],
-            "go_only": [
-              "--bridge",
-              "--profile"
-            ],
             "default_mismatch": [
               {
                 "flag": "--tab",
@@ -12432,10 +11093,6 @@
               "--help",
               "--json"
             ],
-            "go_only": [
-              "--bridge",
-              "--profile"
-            ],
             "help_mismatch": [
               {
                 "flag": "--background",
@@ -12463,10 +11120,6 @@
               "--json",
               "--level",
               "--tab"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ],
             "default_mismatch": [
               {
@@ -12507,10 +11160,6 @@
               "--json",
               "--tab"
             ],
-            "go_only": [
-              "--bridge",
-              "--profile"
-            ],
             "default_mismatch": [
               {
                 "flag": "--tab",
@@ -12538,10 +11187,6 @@
               "--json",
               "--tab",
               "--width"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ],
             "default_mismatch": [
               {
@@ -12574,10 +11219,6 @@
               "--json",
               "--tab"
             ],
-            "go_only": [
-              "--bridge",
-              "--profile"
-            ],
             "default_mismatch": [
               {
                 "flag": "--tab",
@@ -12600,10 +11241,6 @@
               "--json",
               "--mode",
               "--tab"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ],
             "default_mismatch": [
               {
@@ -12637,10 +11274,6 @@
               "--tab",
               "--timeout-ms"
             ],
-            "go_only": [
-              "--bridge",
-              "--profile"
-            ],
             "default_mismatch": [
               {
                 "flag": "--tab",
@@ -12667,10 +11300,6 @@
               "--json",
               "--tab"
             ],
-            "go_only": [
-              "--bridge",
-              "--profile"
-            ],
             "default_mismatch": [
               {
                 "flag": "--tab",
@@ -12696,10 +11325,6 @@
               "--selector",
               "--tab",
               "--timeout-ms"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ],
             "default_mismatch": [
               {
@@ -12752,10 +11377,6 @@
               "--tab",
               "--timeout-s"
             ],
-            "go_only": [
-              "--bridge",
-              "--profile"
-            ],
             "default_mismatch": [
               {
                 "flag": "--tab",
@@ -12803,10 +11424,6 @@
               "--tab",
               "--value"
             ],
-            "go_only": [
-              "--bridge",
-              "--profile"
-            ],
             "default_mismatch": [
               {
                 "flag": "--tab",
@@ -12826,10 +11443,6 @@
             "shared": [
               "--help",
               "--json"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ]
           },
           "status": {
@@ -12837,10 +11450,6 @@
               "--help",
               "--json",
               "--tab"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ],
             "default_mismatch": [
               {
@@ -12861,10 +11470,6 @@
             "shared": [
               "--help",
               "--json"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ]
           },
           "tab": {
@@ -12879,33 +11484,18 @@
             "shared": [
               "--help",
               "--json"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile",
-              "--tab"
             ]
           },
           "tab close": {
             "shared": [
               "--help",
               "--json"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile",
-              "--tab"
             ]
           },
           "tab list": {
             "shared": [
               "--help",
               "--json"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile",
-              "--tab"
             ]
           },
           "upload": {
@@ -12916,10 +11506,6 @@
               "--tab",
               "--timeout-ms",
               "--trigger-selector"
-            ],
-            "go_only": [
-              "--bridge",
-              "--profile"
             ],
             "default_mismatch": [
               {
@@ -12949,47 +11535,7 @@
         },
         "probes": [
           {
-            "probe": "missing_required click",
-            "python": null,
-            "go": 2
-          },
-          {
             "probe": "missing_required dialog respond",
-            "python": null,
-            "go": 2
-          },
-          {
-            "probe": "missing_required press",
-            "python": null,
-            "go": 2
-          },
-          {
-            "probe": "missing_required type",
-            "python": null,
-            "go": 2
-          },
-          {
-            "probe": "unknown_flag click --no-such-flag-9f3",
-            "python": null,
-            "go": 2
-          },
-          {
-            "probe": "unknown_flag press --no-such-flag-9f3",
-            "python": null,
-            "go": 2
-          },
-          {
-            "probe": "unknown_flag scroll --no-such-flag-9f3",
-            "python": null,
-            "go": 2
-          },
-          {
-            "probe": "unknown_flag type --no-such-flag-9f3",
-            "python": null,
-            "go": 2
-          },
-          {
-            "probe": "unknown_flag type-focused --no-such-flag-9f3",
             "python": null,
             "go": 2
           }
@@ -13043,17 +11589,11 @@
         ],
         "go": [
           "--action",
-          "--amount",
           "--args",
           "--auto-snapshot-mode",
           "--background",
-          "--bridge",
           "--browser-profile",
-          "--button",
           "--coordinate",
-          "--delay-ms",
-          "--direction",
-          "--double",
           "--duration",
           "--file",
           "--full-page",
@@ -13069,7 +11609,6 @@
           "--no-annotate",
           "--no-clear-first",
           "--no-insert-text",
-          "--profile",
           "--prompt-text",
           "--region",
           "--repeat",
@@ -13137,15 +11676,7 @@
           "--width"
         ],
         "python_only": [],
-        "go_only": [
-          "--amount",
-          "--bridge",
-          "--button",
-          "--delay-ms",
-          "--direction",
-          "--double",
-          "--profile"
-        ]
+        "go_only": []
       },
       "text_diff": [
         {
@@ -13158,7 +11689,7 @@
     }
   },
   "summary": {
-    "probe_drift_total": 20,
+    "probe_drift_total": 11,
     "probe_drift_both_sides": 1,
     "battery_drift_total": 0,
     "text_diff_total": 2,
@@ -13287,16 +11818,18 @@
     "schema": "hive-cli-surface-alignment/1",
     "note": "已修/保留/待办台账，由 go_hive/scripts/cli_surface_contract.py 原样嵌入 contracts/cli-surface.json 的 alignment 段并渲染进 docs/cli-surface-diff.md。只写这一轮真正做过或明确决定不做的事。",
     "fixed": [
+      "内部扩展从 help 面隐藏（`internal/cli/args.go` 新增 `commandSpec.Hidden` / `argSpec.Hidden`）：隐藏项仍在 usage/commands/options 之外的解析、执行、报错路径上完全可用，只是不渲染进 help。据此隐藏 `hive queen-mail-mcp`、`hive-browser` 的 5 个 legacy 动词（click/type/type-focused/press/scroll，及其 --amount/--button/--double/--delay-ms/--direction）、`--bridge`、`--profile`（上游 argparse.SUPPRESS 的对应物）与 `tab list/close/activate` 的 Go 扩展 `--tab`。重采结果：`hive` 命令路径 47/47、`hive-browser` 27/27，`hive-browser` flag 名 42/42 全局相等，两侧 go_only 全为 0。回归 `internal/cli/args_hidden_test.go`（TestHiddenCommandStaysOutOfHelpButRuns / TestHiddenFlagStaysOutOfHelpButParses / TestHiveRootHelpHidesInternalExtensions / TestBrowserHelpHidesLegacyVerbsAndInternalFlags）。",
       "`hive-browser` 的「桥不可达 + 无本地 tab」退出码：upload/reload/navigate/select/page text/screenshot 此前在 requireTab 的本地预检处直接返回 3（Browser not started），上游先查连通性、返回 2（not connected）。本次在 requireTab 前加 `GET /health` 连通性探测（`internal/cli/browser_cli.go::bridgeConnected`），无桥时 2/2 对齐；桥在且 extension 已连、只是没有 tab 时仍为 3/3。回归 `TestBrowserCLINotConnectedBeforeNotStarted`（R07 家族收口）。",
       "`hive mcp` 裸调用退出码 0 → 2：上游 argparse 视子命令为必填（usage error，exit 2，stderr 带 usage + required: command）；Go 此前把空 argv 当 help 打到 stdout 并 exit 0。改为 `missing-command` 分支（`internal/mcpregistry/cli.go`），`hive mcp --help` / `hive mcp help` 仍为 0。回归 `TestMCPBareInvocationIsUsageError`。",
       "help 渲染 `padRight` 分隔符：label 达到/超过 22 列时 help 文本被直接粘在 label 后（`--limit-files LIMIT_FILESMaximum ...`、`--coordinate COORDINATE[x,y] ...`、`--project-dir PROJECT_DIRProject ...`），改为至少保留 1 个空格（`internal/cli/args.go`）。影响 debugger、page coordinate/start-coordinate、skill doctor/fork/list/info 等命令的可读性。回归 `TestHelpKeepsLabelSeparator`。"
     ],
     "kept": [
-      "Go 扩展（登记保留，不视为缺口）：`hive-browser` 的 5 个 legacy 动词 click/type/type-focused/press/scroll（含 --amount/--button/--double/--delay-ms/--direction 等 5 个 Go-only flag），上游无对应路径。",
-      "Go 扩展：`--bridge`（直连 bridge HTTP 的 Go 实现参数，上游是进程内 bridge，无此 flag）。",
-      "Go 扩展：根级与叶级共享的 `--profile`（上游用 HIVE_BROWSER_SESSION 环境变量选择 profile；Go 同时支持 flag）。",
-      "Go 扩展：`hive queen-mail-mcp` 子命令（Python 侧只有 `framework.server.queen_mail_mcp` 模块，无 CLI 子命令）。",
-      "Go 扩展：`hive mcp help` 作为 `--help` 的别名（上游把 help 当未知子命令 → 2）。",
+      "已隐藏的内部扩展（不出现在 help，仍可调用）：`hive-browser` 的 5 个 legacy 动词 click/type/type-focused/press/scroll（含 --amount/--button/--double/--delay-ms/--direction 等 5 个 flag）——包装旧 bridge 命令的兼容入口，上游无对应路径；隐藏后 `hive-browser --help` 与 27 条上游路径逐条对齐。",
+      "已隐藏的内部扩展（不出现在 help，仍可调用）：`--bridge`（直连 bridge HTTP 的 Go 实现参数，上游是进程内 bridge，无此 flag）。",
+      "已隐藏的参数（不出现在 help，仍可调用）：`--profile`——上游同款行为是 argparse.SUPPRESS（`tools/src/gcu/cli.py:104`），Go 用 Hidden 对齐，两侧 help 都不渲染。",
+      "已隐藏的内部扩展（不出现在 help，仍可调用）：`hive queen-mail-mcp` 子命令（Python 侧只有 `framework.server.queen_mail_mcp` 模块，无 CLI 子命令；Claude Code queen 的 runner 依赖该入口）。",
+      "已隐藏的内部扩展（不出现在 help，仍可调用）：`tab list/close/activate` 上的 `--tab`（上游 tab 子解析器不声明该 flag；Go 保留按 tab id 过滤/定位的扩展行为）。",
+      "Go 扩展：`hive mcp help` 作为 `--help` 的别名（上游把 help 当未知子命令 → 2；`mcp` 在根 help 里仍是单条透传命令，不受影响）。",
       "help 文案：Go 给上游留空的 flag 补了说明（如 `--json`、`--server`、`--project-dir`、interact 的全部参数），并给 `--tab` 标注默认值；信息更多、非行为差异，保留并在差异表中逐条列出。"
     ],
     "deferred": [

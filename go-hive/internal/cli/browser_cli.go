@@ -107,11 +107,12 @@ func (c *browserCLI) rootCommand() *commandSpec {
 }
 
 // browserGroupFlags are the shared flags the root accepts before a subcommand
-// (upstream's `common` parent parser: --json and --profile).
+// (upstream's `common` parent parser: --json and --profile, the latter hidden
+// with argparse.SUPPRESS upstream — mirrored here so the rendered help matches).
 func browserGroupFlags() []argSpec {
 	return []argSpec{
 		{Dest: "json", Long: "json", Kind: kindBool, Help: "machine output (agent mode)"},
-		{Dest: "profile", Long: "profile", Kind: kindString,
+		{Dest: "profile", Long: "profile", Kind: kindString, Hidden: true,
 			Help: "browser session profile (default: $HIVE_BROWSER_SESSION, else \"default\")"},
 	}
 }
@@ -122,7 +123,7 @@ func browserGroupFlags() []argSpec {
 // subcommand that also declares the flag; `hive-browser status --json` (flag
 // after the command) is the documented form.
 func browserCommonFlags() []argSpec {
-	return append(browserGroupFlags(), argSpec{Dest: "bridge", Long: "bridge", Kind: kindString,
+	return append(browserGroupFlags(), argSpec{Dest: "bridge", Long: "bridge", Kind: kindString, Hidden: true,
 		Help: "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"})
 }
 

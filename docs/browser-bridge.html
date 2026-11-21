@@ -185,7 +185,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td><code>script --skill S --script F.py --args '{...}'</code></td><td>跑 skill 自带的 <code>run(ctx)</code> 编排脚本。</td></tr>
 </tbody></table></div>
 <p class="sub"><b>退出码：</b>0 ok · 2 not_connected · 3 not_started · 4 not_found · 6 bad_args · 7 pending_dialog · 8 rate_limited。</p>
-<p class="sub"><b>Go 侧增量：</b><code>hive-browser</code> 另提供 5 个 legacy 动词 <code>click</code> / <code>type</code> / <code>type-focused</code> / <code>press</code> / <code>scroll</code>（对应 <code>interactions.py</code> 里上游从未注册的定义）与 Go 自有的 <code>--bridge</code> 开关（覆盖 14830 地址）。两者都没有上游对应路径，属于记录在案的兼容增量，不是对齐缺口。</p>
+<p class="sub"><b>Go 侧增量：</b><code>hive-browser</code> 另提供 5 个 legacy 动词 <code>click</code> / <code>type</code> / <code>type-focused</code> / <code>press</code> / <code>scroll</code>（对应 <code>interactions.py</code> 里上游从未注册的定义）与 Go 自有的 <code>--bridge</code> 开关（覆盖 14830 地址）。两者都没有上游对应路径，属于记录在案的兼容增量，不是对齐缺口；两者现已在 CLI help 面标记 <code>Hidden</code>（不出现在 usage / commands / options，仍可正常调用），因此 <code>hive-browser --help</code> 的命令路径与 flag 集合与上游逐条一致。</p>
 <h3>5.4 直接调 HTTP（本地/内部通道，不是公共 API）</h3>
 <p class="sub"><code>/command</code> 与 <code>/health</code> 是 Go 桥自有的本地通道（CLI 的传输层与探针），上游 Python 桥不实现；Python 的 CLI 走 14831 RPC。外部集成请用 <code>hive-browser</code> CLI 或 Hive server 的 <code>/api/browser/*</code> 代理。</p>
 <pre>curl -s http://127.0.0.1:14830/command \\

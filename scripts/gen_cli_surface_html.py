@@ -28,6 +28,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import tomllib
 from pathlib import Path
 
@@ -781,7 +782,7 @@ def render_cred_section(number: str, cred: dict, stats: dict) -> str:
     stats["cred_help_identical"] = identical_help
     header = (
         f'<p class="sub">实时捕获（不来自契约 JSON）：Python 侧 <code>{esc(cli_display(cred["python_cmd"]))}</code> · '
-        f'Go 侧 <code>{esc(cli_display(cred["go_cmd"]))}</code>（<code>go build ./cmd/hive-cred</code>）。'
+        f'Go 侧 <code>{esc(cred.get("go_display") or cli_display(cred["go_cmd"]))}</code>（<code>go build ./cmd/hive-cred</code>）。'
         f"共 {len(order)} 条路径：usage 行逐字一致 {identical_usage} 条，help 全文一致 {identical_help} 条；"
         "不一致处按原文并列，不做归因。</p>"
     )
@@ -1060,7 +1061,10 @@ def capture_hive_cred(repo: Path, scratch: Path, args) -> dict:
         go_error = None if go_cmd else f"{args.cred_go} 不存在"
     else:
         go_cmd, go_error = build_go_cred(scratch / "bin", args.go_bin_dir)
-    result: dict = {"python_cmd": py_cmd, "go_cmd": go_cmd, "error": None}
+    # Never render the per-run scratch path: it would make the page
+    # non-deterministic (and leak a temp dir into a committed doc).
+    go_display = str(go_cmd[0]) if (go_cmd and args.cred_go) else "<scratch>/bin/hive-cred"
+    result: dict = {"python_cmd": py_cmd, "go_cmd": go_cmd, "go_display": go_display, "error": None}
     if py_cmd is None or go_cmd is None:
         result["error"] = py_error or go_error
         return result
@@ -1093,7 +1097,9 @@ def main() -> int:
     repo = Path(args.repo).resolve()
     contract_path = Path(args.contract)
     output_path = Path(args.output)
-    scratch = Path(args.scratch) if args.scratch else REPO / "go_hive" / ".cli-surface-scratch" / "cli-surface-html"
+    # Keep scratch outside the repo: empty dirs under go_hive/ trip the
+    # surface-audit hygiene gate (C8).
+    scratch = Path(args.scratch) if args.scratch else Path(tempfile.mkdtemp(prefix="cli-surface-html-"))
 
     if args.python_bin:
         os.environ["CLI_SURFACE_PYTHON"] = args.python_bin

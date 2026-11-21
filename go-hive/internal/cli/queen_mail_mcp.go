@@ -21,6 +21,10 @@ func (r *Runner) queenMailMCPCommands() []*commandSpec {
 		Description: "Runs the MCP server a Claude Code queen's runs are given, writing through " +
 			"HIVE_QUEEN_MAIL_URL with HIVE_QUEEN_MAIL_TOKEN as the conversation HIVE_QUEEN_MAIL_FROM.",
 		Dest: "queen_mail_mcp",
+		// Internal extension with no Python CLI counterpart: hidden from
+		// help/usage so `hive --help` matches core/framework/cli.py, while the
+		// verb itself stays fully callable (the queen-mail runner needs it).
+		Hidden: true,
 		Run: func(*parsedArgs) int {
 			if err := qmail.ServeQueenMailMCP(r.Stdin, r.Stdout, os.Getenv); err != nil {
 				fmt.Fprintf(r.Stderr, "queen-mail-mcp: %v\n", err)

@@ -1,6 +1,6 @@
 # CLI 对外面契约对照（维度 7：CLI 子命令 / flags / 退出码）
 
-生成：2026-11-21T16:26:02+08:00 · 工作树基线 `f8aa5fe9` · 生成器 `go_hive/scripts/cli_surface_contract.py` · 契约 `go_hive/contracts/cli-surface.json`
+生成：2026-11-21T18:19:04+08:00 · 工作树基线 `6b63f9a5` · 生成器 `go_hive/scripts/cli_surface_contract.py` · 契约 `go_hive/contracts/cli-surface.json`
 
 ## 方法与范围
 
@@ -13,11 +13,11 @@
 
 | 项 | Python | Go | 共有 | Python 独有 | Go 独有 |
 | --- | --- | --- | --- | --- | --- |
-| `hive` 命令路径 | 47 | 48 | 47 | 0 | 1 |
+| `hive` 命令路径 | 47 | 47 | 47 | 0 | 0 |
 | `hive` flag 名 | 44 | 32 | 32 | 12 | 0 |
-| `hive-browser` 命令路径 | 27 | 32 | 27 | 0 | 5 |
-| `hive-browser` flag 名 | 42 | 49 | 42 | 0 | 7 |
-| 退出码探针漂移（总/两侧可探测） | 20 / 1 | | | | |
+| `hive-browser` 命令路径 | 27 | 27 | 27 | 0 | 0 |
+| `hive-browser` flag 名 | 42 | 42 | 42 | 0 | 0 |
+| 退出码探针漂移（总/两侧可探测） | 11 / 1 | | | | |
 | 命令行为探针漂移 | 0 | | | | |
 | help 文案差异（命令级） | 2 | | | | |
 | flag help 文案差异（非阻断） | 68 | | | | |
@@ -28,11 +28,7 @@
 
 - 共用命令路径 47 条。
 - 仅 Python：无。
-- 仅 Go（登记为 Go 扩展或缺口）：`queen-mail-mcp`
-
-| 命令 | Python 子命令 | Go 子命令 |
-| --- | --- | --- |
-| `<root>` | `serve`, `open`, `queen`, `colony`, `session`, `chat`, `skill`, `debugger`, `mcp`, `janitor` | `serve`, `open`, `queen`, `colony`, `session`, `chat`, `skill`, `debugger`, `mcp`, `janitor`, `queen-mail-mcp` |
+- 仅 Go：无。
 
 ### flags
 
@@ -85,9 +81,8 @@
 | `missing_required mcp run` | 2 | None | Go 侧未生成该探针：`hive mcp <verb>` 的 help 折叠为组 help，位置参数未声明 |
 | `missing_required mcp search` | 2 | None | Go 侧未生成该探针：`hive mcp <verb>` 的 help 折叠为组 help，位置参数未声明 |
 | `unknown_flag mcp run --no-such-flag-9f3` | 2 | 1 | 退出码不一致 |
-| `unknown_flag queen-mail-mcp --no-such-flag-9f3` | None | 2 | Go 扩展命令，Python 侧无对应 |
 
-其中单侧可探测（另一侧 help 未声明该命令的该参数/命令，属探测面差异）10 条；两侧都可探测且退出码不同 1 条。
+其中单侧可探测（另一侧 help 未声明该命令的该参数/命令，属探测面差异）9 条；两侧都可探测且退出码不同 1 条。
 
 命令行为探针：
 
@@ -105,63 +100,35 @@
 
 - 共用命令路径 27 条。
 - 仅 Python：无。
-- 仅 Go（登记为 Go 扩展或缺口）：`click`, `press`, `scroll`, `type`, `type-focused`
-
-| 命令 | Python 子命令 | Go 子命令 |
-| --- | --- | --- |
-| `<root>` | `help`, `setup`, `status`, `stop`, `open`, `navigate`, `reload`, `interact`, `select`, `upload`, `screenshot`, `evaluate`, `script`, `tab`, `page`, `dialog` | `help`, `setup`, `status`, `stop`, `open`, `navigate`, `reload`, `interact`, `select`, `upload`, `screenshot`, `evaluate`, `script`, `click`, `type`, `type-focused`, `press`, `scroll`, `tab`, `page`, `dialog` |
+- 仅 Go：无。
 
 ### flags
 
 - 全局 flag 名：共有 42（`--action`, `--args`, `--auto-snapshot-mode`, `--background`, `--browser-profile`, `--coordinate`, `--duration`, `--file`, `--full-page`, `--head`, `--height`, `--help`, `--intent`, `--js`, `--json`, `--level`, `--mode`, `--modifiers`, `--no-annotate`, `--no-clear-first`, `--no-insert-text`, `--prompt-text`, `--region`, `--repeat`, `--script`, `--scroll-amount`, `--scroll-direction`, `--selector`, `--skill`, `--start-coordinate`, `--start-selector`, `--tab`, `--text`, `--timeout-ms`, `--timeout-s`, `--trigger-selector`, `--value`, `--wait-after-ms`, `--wait-for-selector`, `--wait-for-text`, `--wait-until`, `--width`）。
 - Python 独有：无。
-- Go 独有：`--amount`, `--bridge`, `--button`, `--delay-ms`, `--direction`, `--double`, `--profile`。
+- Go 独有：无。
 
 | 命令 | 项 | 明细 |
 | --- | --- | --- |
-| `<root>` | Go 独有 flag | `--profile` |
 | `dialog` | Python 独有 flag | `--json` |
-| `dialog respond` | Go 独有 flag | `--bridge`, `--profile` |
 | `dialog respond` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `evaluate` | Go 独有 flag | `--bridge`, `--profile` |
 | `evaluate` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `help` | Go 独有 flag | `--bridge`, `--profile` |
-| `interact` | Go 独有 flag | `--bridge`, `--profile` |
 | `interact` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `navigate` | Go 独有 flag | `--bridge`, `--profile` |
 | `navigate` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `open` | Go 独有 flag | `--bridge`, `--profile` |
 | `page` | Python 独有 flag | `--json` |
-| `page console` | Go 独有 flag | `--bridge`, `--profile` |
 | `page console` | 可选值集合不一致 | `--level`：Python `None` vs Go `['error', 'warn', 'log', 'all']` |
 | `page console` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `page html` | Go 独有 flag | `--bridge`, `--profile` |
 | `page html` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `page resize` | Go 独有 flag | `--bridge`, `--profile` |
 | `page resize` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `page shadow-query` | Go 独有 flag | `--bridge`, `--profile` |
 | `page shadow-query` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `page snapshot` | Go 独有 flag | `--bridge`, `--profile` |
 | `page snapshot` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `page text` | Go 独有 flag | `--bridge`, `--profile` |
 | `page text` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `reload` | Go 独有 flag | `--bridge`, `--profile` |
 | `reload` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `screenshot` | Go 独有 flag | `--bridge`, `--profile` |
 | `screenshot` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `script` | Go 独有 flag | `--bridge`, `--profile` |
 | `script` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `select` | Go 独有 flag | `--bridge`, `--profile` |
 | `select` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `setup` | Go 独有 flag | `--bridge`, `--profile` |
-| `status` | Go 独有 flag | `--bridge`, `--profile` |
 | `status` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
-| `stop` | Go 独有 flag | `--bridge`, `--profile` |
 | `tab` | Python 独有 flag | `--json` |
-| `tab activate` | Go 独有 flag | `--bridge`, `--profile`, `--tab` |
-| `tab close` | Go 独有 flag | `--bridge`, `--profile`, `--tab` |
-| `tab list` | Go 独有 flag | `--bridge`, `--profile`, `--tab` |
-| `upload` | Go 独有 flag | `--bridge`, `--profile` |
 | `upload` | 默认值（help 声明）不一致 | `--tab`：Python `None` vs Go `this profile's active tab` |
 
 ### 位置参数
@@ -176,17 +143,9 @@
 
 | 探针 | Python | Go | 备注 |
 | --- | --- | --- | --- |
-| `missing_required click` | None | 2 | Go 扩展命令，Python 侧无对应 |
 | `missing_required dialog respond` | None | 2 | Python 侧未生成该探针（argparse 把 choices 渲染成无名位置参数） |
-| `missing_required press` | None | 2 | Go 扩展命令，Python 侧无对应 |
-| `missing_required type` | None | 2 | Go 扩展命令，Python 侧无对应 |
-| `unknown_flag click --no-such-flag-9f3` | None | 2 | Go 扩展命令，Python 侧无对应 |
-| `unknown_flag press --no-such-flag-9f3` | None | 2 | Go 扩展命令，Python 侧无对应 |
-| `unknown_flag scroll --no-such-flag-9f3` | None | 2 | Go 扩展命令，Python 侧无对应 |
-| `unknown_flag type --no-such-flag-9f3` | None | 2 | Go 扩展命令，Python 侧无对应 |
-| `unknown_flag type-focused --no-such-flag-9f3` | None | 2 | Go 扩展命令，Python 侧无对应 |
 
-其中单侧可探测（另一侧 help 未声明该命令的该参数/命令，属探测面差异）9 条；两侧都可探测且退出码不同 0 条。
+其中单侧可探测（另一侧 help 未声明该命令的该参数/命令，属探测面差异）1 条；两侧都可探测且退出码不同 0 条。
 
 命令行为探针：
 
@@ -214,17 +173,19 @@
 
 ## 已修 / 保留
 
+- 已修：内部扩展从 help 面隐藏（`internal/cli/args.go` 新增 `commandSpec.Hidden` / `argSpec.Hidden`）：隐藏项仍在 usage/commands/options 之外的解析、执行、报错路径上完全可用，只是不渲染进 help。据此隐藏 `hive queen-mail-mcp`、`hive-browser` 的 5 个 legacy 动词（click/type/type-focused/press/scroll，及其 --amount/--button/--double/--delay-ms/--direction）、`--bridge`、`--profile`（上游 argparse.SUPPRESS 的对应物）与 `tab list/close/activate` 的 Go 扩展 `--tab`。重采结果：`hive` 命令路径 47/47、`hive-browser` 27/27，`hive-browser` flag 名 42/42 全局相等，两侧 go_only 全为 0。回归 `internal/cli/args_hidden_test.go`（TestHiddenCommandStaysOutOfHelpButRuns / TestHiddenFlagStaysOutOfHelpButParses / TestHiveRootHelpHidesInternalExtensions / TestBrowserHelpHidesLegacyVerbsAndInternalFlags）。
 - 已修：`hive-browser` 的「桥不可达 + 无本地 tab」退出码：upload/reload/navigate/select/page text/screenshot 此前在 requireTab 的本地预检处直接返回 3（Browser not started），上游先查连通性、返回 2（not connected）。本次在 requireTab 前加 `GET /health` 连通性探测（`internal/cli/browser_cli.go::bridgeConnected`），无桥时 2/2 对齐；桥在且 extension 已连、只是没有 tab 时仍为 3/3。回归 `TestBrowserCLINotConnectedBeforeNotStarted`（R07 家族收口）。
 - 已修：`hive mcp` 裸调用退出码 0 → 2：上游 argparse 视子命令为必填（usage error，exit 2，stderr 带 usage + required: command）；Go 此前把空 argv 当 help 打到 stdout 并 exit 0。改为 `missing-command` 分支（`internal/mcpregistry/cli.go`），`hive mcp --help` / `hive mcp help` 仍为 0。回归 `TestMCPBareInvocationIsUsageError`。
 - 已修：help 渲染 `padRight` 分隔符：label 达到/超过 22 列时 help 文本被直接粘在 label 后（`--limit-files LIMIT_FILESMaximum ...`、`--coordinate COORDINATE[x,y] ...`、`--project-dir PROJECT_DIRProject ...`），改为至少保留 1 个空格（`internal/cli/args.go`）。影响 debugger、page coordinate/start-coordinate、skill doctor/fork/list/info 等命令的可读性。回归 `TestHelpKeepsLabelSeparator`。
 - 已核对：`--timeout-ms` 逐命令默认值（人工核对源码 + help）：navigate 30000、upload 30000、screenshot 5000、page text 5000、interact 无默认（Python None / Go 0，均交给 bridge 侧语义），两侧一致。
 - 已核对：`--host` 127.0.0.1、`--server` http://127.0.0.1:8787、`--mode` default、`--wait-until` load：源码字面量默认值两侧逐值相同（契约 defaults.literal_compared，0 处不一致）。
 - 已核对：`--port` 8787、`--limit-files` 200、`--tiers` 1,2,3、`--logs-dir` ~/.hive/llm_logs：两侧 help 文本声明的默认值逐字相同（见 contracts/cli-surface.json 各命令 flags[].default_in_help）。
-- 保留：Go 扩展（登记保留，不视为缺口）：`hive-browser` 的 5 个 legacy 动词 click/type/type-focused/press/scroll（含 --amount/--button/--double/--delay-ms/--direction 等 5 个 Go-only flag），上游无对应路径。
-- 保留：Go 扩展：`--bridge`（直连 bridge HTTP 的 Go 实现参数，上游是进程内 bridge，无此 flag）。
-- 保留：Go 扩展：根级与叶级共享的 `--profile`（上游用 HIVE_BROWSER_SESSION 环境变量选择 profile；Go 同时支持 flag）。
-- 保留：Go 扩展：`hive queen-mail-mcp` 子命令（Python 侧只有 `framework.server.queen_mail_mcp` 模块，无 CLI 子命令）。
-- 保留：Go 扩展：`hive mcp help` 作为 `--help` 的别名（上游把 help 当未知子命令 → 2）。
+- 保留：已隐藏的内部扩展（不出现在 help，仍可调用）：`hive-browser` 的 5 个 legacy 动词 click/type/type-focused/press/scroll（含 --amount/--button/--double/--delay-ms/--direction 等 5 个 flag）——包装旧 bridge 命令的兼容入口，上游无对应路径；隐藏后 `hive-browser --help` 与 27 条上游路径逐条对齐。
+- 保留：已隐藏的内部扩展（不出现在 help，仍可调用）：`--bridge`（直连 bridge HTTP 的 Go 实现参数，上游是进程内 bridge，无此 flag）。
+- 保留：已隐藏的参数（不出现在 help，仍可调用）：`--profile`——上游同款行为是 argparse.SUPPRESS（`tools/src/gcu/cli.py:104`），Go 用 Hidden 对齐，两侧 help 都不渲染。
+- 保留：已隐藏的内部扩展（不出现在 help，仍可调用）：`hive queen-mail-mcp` 子命令（Python 侧只有 `framework.server.queen_mail_mcp` 模块，无 CLI 子命令；Claude Code queen 的 runner 依赖该入口）。
+- 保留：已隐藏的内部扩展（不出现在 help，仍可调用）：`tab list/close/activate` 上的 `--tab`（上游 tab 子解析器不声明该 flag；Go 保留按 tab id 过滤/定位的扩展行为）。
+- 保留：Go 扩展：`hive mcp help` 作为 `--help` 的别名（上游把 help 当未知子命令 → 2；`mcp` 在根 help 里仍是单条透传命令，不受影响）。
 - 保留：help 文案：Go 给上游留空的 flag 补了说明（如 `--json`、`--server`、`--project-dir`、interact 的全部参数），并给 `--tab` 标注默认值；信息更多、非行为差异，保留并在差异表中逐条列出。
 
 ## 高风险待办（未改，附估算）

@@ -39,16 +39,25 @@ func (c *browserCLI) subcommands() []*commandSpec {
 		c.screenshotCommand(),
 		c.evaluateCommand(),
 		c.scriptCommand(),
-		c.clickCommand(),
-		c.typeCommand(),
-		c.typeFocusedCommand(),
-		c.pressCommand(),
-		c.scrollCommand(),
+		hiddenVerb(c.clickCommand()),
+		hiddenVerb(c.typeCommand()),
+		hiddenVerb(c.typeFocusedCommand()),
+		hiddenVerb(c.pressCommand()),
+		hiddenVerb(c.scrollCommand()),
 		c.tabCommand(),
 		c.pageCommand(),
 		c.dialogCommand(),
 	}
 	return specs
+}
+
+// hiddenVerb marks a Go-only verb: still callable by name (scripts and agents
+// wrap the old bridge commands through it), but kept out of every help surface
+// so the `hive-browser --help` tree matches tools/src/gcu/cli.py, which has no
+// click / type / type-focused / press / scroll verbs.
+func hiddenVerb(spec *commandSpec) *commandSpec {
+	spec.Hidden = true
+	return spec
 }
 
 // helpCommand is `hive-browser help [topic]` — pure local text, no bridge.
@@ -640,6 +649,15 @@ func (c *browserCLI) scrollCommand() *commandSpec {
 
 // --- tab (noun) -------------------------------------------------------------
 
+// hiddenTabFlag is the per-command tab selector Go accepts on the `tab` noun's
+// subcommands. Upstream's tab subparsers do not define --tab, so it is a Go
+// extension: still parsed and forwarded, but kept out of help.
+func hiddenTabFlag() argSpec {
+	flag := tabFlag()
+	flag.Hidden = true
+	return flag
+}
+
 func (c *browserCLI) tabCommand() *commandSpec {
 	return &commandSpec{
 		Prog:        "hive-browser tab",
@@ -648,13 +666,13 @@ func (c *browserCLI) tabCommand() *commandSpec {
 		Description: "Manage the tabs this browser session opened.",
 		Subcommands: []*commandSpec{
 			c.leaf("hive-browser tab list", "list tabs in this session's group",
-				[]argSpec{tabFlag()}, nil, "browser_tabs", func(args *parsedArgs) (map[string]any, int) {
+				[]argSpec{hiddenTabFlag()}, nil, "browser_tabs", func(args *parsedArgs) (map[string]any, int) {
 					params := map[string]any{}
 					c.optTab(args, params)
 					return params, browserExitOK
 				}, nil),
 			c.leaf("hive-browser tab close", "close a tab (default: the active tab)",
-				[]argSpec{tabFlag()}, []positionalSpec{{Dest: "tab_id", Help: "tab id (default: active tab)"}},
+				[]argSpec{hiddenTabFlag()}, []positionalSpec{{Dest: "tab_id", Help: "tab id (default: active tab)"}},
 				"browser_close", func(args *parsedArgs) (map[string]any, int) {
 					params := map[string]any{}
 					if args.wasProvided("tab_id") && strings.TrimSpace(args.str("tab_id")) != "" {
@@ -680,7 +698,7 @@ func (c *browserCLI) tabCommand() *commandSpec {
 					forgetBrowserCLITab(c.statePath(), c.profile(args), closed)
 				}),
 			c.leaf("hive-browser tab activate", "bring a tab to the foreground",
-				[]argSpec{tabFlag()}, []positionalSpec{{Dest: "tab_id", Required: true, Help: "tab id"}},
+				[]argSpec{hiddenTabFlag()}, []positionalSpec{{Dest: "tab_id", Required: true, Help: "tab id"}},
 				"browser_activate_tab", func(args *parsedArgs) (map[string]any, int) {
 					tab, err := parsePositiveInt(args.str("tab_id"))
 					if err != nil {

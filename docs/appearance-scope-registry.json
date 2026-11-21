@@ -402,54 +402,61 @@
         {
           "path": "go_hive/contracts/cli-surface.json",
           "kind": "contract",
-          "note": "两侧递归 --help 冻结面 + 退出码探针：命令树/flags/位置参数/help 文案/声明默认值；逐命令 diff 与探针记录"
+          "note": "两侧递归 `--help` 冻结面 + 退出码探针（2026-11-21 重采 @4af5b375）：`hive` 47/47 命令路径（内部扩展 `queen-mail-mcp` 已隐藏）、`hive-browser` 27/27（5 个 legacy 动词已隐藏）；flag 名 `hive` 32 共有/12 Python 独有/0 Go 独有，`hive-browser` 42/42/0；命令行为探针漂移 0，逐命令探针 11 条（10 条为 Go `hive mcp <verb>` help 折叠导致的单侧可探测，1 条为 `mcp run --unknown-flag` 1 vs 2）。"
         },
         {
           "path": "go_hive/scripts/cli_surface_contract.py",
           "kind": "checker",
-          "note": "生成/校验器：并行递归 --help + 无副作用退出码探针 + 源码字面量默认值对拍；--check 对拍冻结契约"
+          "note": "生成/校验器：并行递归 `--help`（子命令树、flags、取值占位符、choices、help 文案、help 声明默认值、位置参数必填性）+ 无副作用退出码探针 + 源码字面量默认值对拍；`--check` 对拍冻结契约。"
         },
         {
           "path": "go_hive/docs/cli-surface-diff.md",
           "kind": "report",
-          "note": "逐命令 diff 报告：命令树/flags/退出码矩阵/help 行差异/默认值核对/已修·保留·待办"
-        },
-        {
-          "path": "go_hive/docs/cli-surface.html",
-          "kind": "doc",
-          "note": "由 `go_hive/scripts/gen_cli_surface_html.py` 从 `contracts/cli-surface.json` + 实时 `hive-cred --help` 生成：入口清单（两侧 CLI + browserbridge）、`hive`/`hive-browser` 递归命令树（usage/参数/placeholder/choices/默认/位置参数，差异与 Go 内部扩展打标）、`hive-cred` 两侧 help 对照、summary/probes/battery/defaults/alignment 与复现命令；`--check` 防漂移。"
+          "note": "逐命令 diff 报告（命令树/flags/位置参数/退出码矩阵/help 行差异/默认值核对/已修·保留·待办）。"
         },
         {
           "path": "go_hive/docs/cli-surface-alignment.json",
           "kind": "doc",
-          "note": "已修 3 项（requireTab 退出码、hive mcp 裸调用 2、padRight 分隔符）、保留 6 项 Go 扩展、待办 5 项（含估算）"
-        },
-        {
-          "path": "go_hive/go-hive/internal/cli/cli_test.go",
-          "kind": "measured",
-          "note": "TestHelpKeepsLabelSeparator 钉住 help 分隔符；mcpregistry TestMCPBareInvocationIsUsageError 钉住裸调用 → 2"
-        },
-        {
-          "path": "go_hive/go-hive/internal/cli/browser_cli_test.go",
-          "kind": "measured",
-          "note": "TestBrowserCLINotConnectedBeforeNotStarted / TestBrowserCLIUploadMissingFileMatchesUpstream 钉住 upload 等 2/3/4 分类"
+          "note": "已修 4 项（含 help 面 Hidden 机制：内部扩展不出现在 usage/commands/options）、已核对 3 组默认值、保留 7 项（已隐藏的内部扩展 + help 文案）、待办 5 项（含估算）。"
         },
         {
           "path": "go_hive/docs/browser-bridge-surface-audit.html",
           "kind": "measured",
-          "note": "browser CLI R05/R06/R07/R08 已对齐；R07 家族「无桥可连」状态 3→2（battery 0 漂移）"
+          "note": "§2.6/§04.3：browser CLI R05/R06/R07/R08 已对齐；本轮把 R07 家族的「无桥可连」状态从 3 收到 2（battery 0 漂移）。"
+        },
+        {
+          "path": "go_hive/go-hive/internal/cli/browser_cli_test.go",
+          "kind": "measured",
+          "note": "TestBrowserCLINotConnectedBeforeNotStarted / TestBrowserCLIUploadMissingFileMatchesUpstream 钉住 upload 等命令的 2/3/4 分类。"
+        },
+        {
+          "path": "go_hive/go-hive/internal/cli/cli_test.go",
+          "kind": "measured",
+          "note": "TestHelpKeepsLabelSeparator 钉住 help 分隔符；mcpregistry TestMCPBareInvocationIsUsageError 钉住 `hive mcp` 裸调用 → 2。"
+        },
+        {
+          "path": "go_hive/go-hive/internal/tracker/errors.go",
+          "kind": "source",
+          "note": "tracker 退出码分类 0/1/2/3/4/5/6/7/9/10，与 core/framework/trackerdb/errors.py 同名同义（本轮未改动，沿用既有测量）。"
+        },
+        {
+          "path": "core/framework/trackerdb/errors.py",
+          "kind": "source",
+          "note": "两侧 tracker 退出码常量逐值一致；CLI 探针覆盖 argparse 口径（0/2）与 browser 分类（0–8）。"
         }
       ],
       "status": "partial",
-      "status_basis": "契约冻结（contracts/cli-surface.json）：`hive` 命令路径 47(Python)/48(Go)、`hive-browser` 27/32；flag 名 `hive` 32 共有 / 12 Python 独有（全部来自 Go `hive mcp <verb>` help 折叠）/ 0 Go 独有，`hive-browser` 42 共有 / 0 / 7；命令行为探针漂移 0（upload/screenshot 等无桥 2/2、有桥无 tab 3/3、文件不存在 4/4）；逐命令退出码探针 20 条，仅 1 条两侧可探测且不同（`hive mcp run --unknown-flag` Go 1 vs Python 2）；默认值 4 个 flag 字面量逐值相同、0 不一致。结构缺口（未验证项）：Go 14 个 `hive mcp` 动词无 per-command help，上游 usage/flags 在 Go help 面不可见——12 个 Python 独有 flag 名与 68 条 flag help 文案差异同源于此；`hive mcp <verb>` 必填 name 以 `-` 开头的 usage error 口径未统一。",
+      "status_basis": "命令路径：`hive` 47/47、`hive-browser` 27/27 逐条共有；Go 的 `queen-mail-mcp`、5 个 legacy 动词（click/type/type-focused/press/scroll）、`--bridge`、`--profile`（上游同款为 argparse.SUPPRESS）与 tab 子命令的 `--tab` 均标记 Hidden：仍可正常解析/执行/报错，但不出现在 usage 行、commands 列表与 options 列表。flag 名集合：`hive` 32 共有 / 12 Python 独有（全部来自 Go `hive mcp <verb>` help 折叠）/ 0 Go 独有；`hive-browser` 42 共有 / 0 / 0（全局集合逐名相等）。退出码：逐命令探针 11 条（10 条单侧可探测，1 条两侧都可探测且不同：`hive mcp run --unknown-flag` Go 1 vs Python 2）；命令行为探针 0 漂移（upload/screenshot 等无桥场景 2/2、有桥无 tab 3/3、文件不存在 4/4）。仍可见的差异只剩两类，均非 Go 扩展：① Go 的 14 个 `hive mcp` 动词没有 per-command help（12 个 Python-only flag 与 10 条单侧探针的来源）；② `tab`/`page`/`dialog` 组命令的 `--json` 只在上游父解析器渲染（Python-only 渲染差）。",
       "contract_state": "frozen_contract",
-      "measured_now": "本次复核：cli-surface.json 覆盖 hive 47/48、hive-browser 27/32 路径；行为探针漂移 0、逐命令探针 20 条（两侧可探测 1 条）；help 文案差异 2 命令级 + 68 flag 级（以 Go 补文档为主）。",
+      "measured_now": "本次实测（2026-11-21，工作树 cli-hidden-extras，基线 4af5b375）：重采 contracts/cli-surface.json —— `hive` 47/47 路径、`hive-browser` 27/27 路径；flag 全局集合 `hive-browser` 42=42 逐名相等、`hive` 32 共有（12 Python 独有来自 `hive mcp` help 折叠）；两侧 go_only 0，按命令的 go_only 也全为 0；命令行为探针漂移 0，逐命令探针 11 条（两侧可探测 1 条）；help 文案差异 2 条命令级 + 68 条 flag 级（以 Go 补文档为主，非阻断）；默认值：4 个 flag 字面量两侧逐值相同、0 不一致。",
       "lane": "cli-surface",
       "lane_state": "measured",
       "next": [
-        "Go `hive mcp` 14 个动词补 per-command help（对齐上游 usage/flags；估算 0.5–1 人日）",
-        "`hive mcp <verb>` 必填 name 以 `-` 开头时统一返回 usage error 2（上游 argparse 口径）",
-        "把 cli-surface-check 接进需要的车道门禁（全量重采约 2–3 分钟，不进 make ci）"
+        "内部扩展继续按 Hidden 口径维护：新增 Go-only 命令/flag 一律标 Hidden，并重跑 `make cli-surface-check`",
+        "Go `hive mcp` 14 个动词补 per-command help（对齐上游 usage/flags；估算 0.5–1 人日，中风险）",
+        "`hive mcp <verb>` 必填 name 以 `-` 开头时统一返回 usage error 2（上游 argparse 口径；估算 2–3 小时）",
+        "help 文案 68 条 flag 级差异按命令分批收敛（多为上游留空、Go 已补说明，收益低，单独车道）",
+        "把 `cli-surface-check` 接进需要的车道门禁（全量重采约 2–3 分钟，不进 `make ci`）"
       ],
       "priority": "P0"
     },
