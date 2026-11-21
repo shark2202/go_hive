@@ -1,6 +1,8 @@
 package cli
 
-// Parity: core/framework/cli.py + framework/loader/cli.py + framework/skills/cli.py
+// Parity: core/framework/cli.py::main
+// Parity: core/framework/loader/cli.py::register_commands
+// Parity: core/framework/skills/cli.py::register_skill_commands
 //
 // The error surface of an argparse CLI, measured against the Python side at
 // COLUMNS=100. Everything argparse prints for a parse failure goes to stderr
