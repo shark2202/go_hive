@@ -40,6 +40,7 @@ func newShapeCLI(t *testing.T) (*CLI, *bytes.Buffer) {
 	return cli, stderr
 }
 
+// Parity: core/framework/loader/mcp_registry_cli.py::register_mcp_commands
 func TestMCPUsageErrorShape(t *testing.T) {
 	cases := []struct {
 		name string

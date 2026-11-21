@@ -29,6 +29,7 @@ func renderJudgeTemplate() string {
 	return buildPrompt("%s", "%s", "%s", "%s")
 }
 
+// Parity: core/framework/testing/llm_judge.py::LLMJudge.evaluate
 func TestJudgePromptMatchesPythonGolden(t *testing.T) {
 	golden, err := os.ReadFile(filepath.Join(judgePromptGoldenPath))
 	if err != nil {
@@ -47,6 +48,7 @@ func TestJudgePromptMatchesPythonGolden(t *testing.T) {
 // TestJudgePromptKeepsTheContractSections guards the structure the golden pins:
 // dropping a section would otherwise only surface as a behaviour change at the
 // model, not as a build failure.
+// Parity: core/framework/testing/llm_judge.py::LLMJudge.evaluate
 func TestJudgePromptKeepsTheContractSections(t *testing.T) {
 	rendered := renderJudgeTemplate()
 	for _, section := range []string{

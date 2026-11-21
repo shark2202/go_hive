@@ -36,6 +36,7 @@ func newUsageShapeRunner(t *testing.T) (*Runner, *bytes.Buffer, *bytes.Buffer) {
 const rootUsageTwoLines = "usage: hive [-h] [--version] [--model MODEL]\n" +
 	"            {serve,open,queen,colony,session,chat,skill,debugger,mcp,janitor} ...\n"
 
+// Parity: core/framework/cli.py::main
 func TestUsageErrorShape(t *testing.T) {
 	cases := []struct {
 		name string
