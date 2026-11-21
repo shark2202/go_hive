@@ -33,8 +33,8 @@ else
   slot_id="$(date +%Y%m%d)-$(printf '%02d' "$hour")"
 fi
 slot_hour=${slot_id##*-}
-case "$slot_hour" in 08|10|12|14|16|18|20|22) ;; *)
-  echo "release-slot: $slot_id 不在 08..22 偶数小时窗口，跳过"; exit 0 ;;
+case "$slot_hour" in 00|02|04|06|08|10|12|14|16|18|20|22) ;; *)
+  echo "release-slot: $slot_id 不在偶数小时窗口（00..22），跳过"; exit 0 ;;
 esac
 
 mkdir -p "$SLOTS"
@@ -42,7 +42,7 @@ lockdir="$SLOTS/.lock.d"
 if ! mkdir "$lockdir" 2>/dev/null; then
   oldpid=$(cat "$lockdir/pid" 2>/dev/null || echo "")
   if [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null; then
-    echo "release-slot: 另一个 slot 构建在进行（pid $oldpid），跳过 $slot_id"; exit 0
+    echo "release-slot: 另一个 slot 构建在进行（pid ${oldpid}），跳过 $slot_id"; exit 0
   fi
   rm -rf "$lockdir"
   mkdir "$lockdir" 2>/dev/null || { echo "release-slot: 锁竞争，跳过 $slot_id"; exit 0; }

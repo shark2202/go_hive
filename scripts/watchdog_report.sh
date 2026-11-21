@@ -15,6 +15,7 @@ REPORT="${WATCHDOG_REPORT:-$REPO/go_hive/WATCHDOG_REPORT.md}"
 STATE="${WATCHDOG_STATE:-$REPO/go_hive/.watchdog_report_state}"
 INTERVAL="${1:-300}"
 ALERT_COOLDOWN="${ALERT_COOLDOWN:-900}"
+ALERT_LOG="${WATCHDOG_ALERT_LOG:-$REPO/go_hive/WATCHDOG_ALERTS.log}"
 PORT="${WATCHDOG_PORT:-8788}"
 SERVE_PATTERN="${WATCHDOG_SERVE_PATTERN:-hive-embed serve}"
 ONCE="${WATCHDOG_ONCE:-0}"
@@ -50,7 +51,16 @@ alert() {
   echo "⚠️ ALERT [$key] $message"
   notify "Hive 看门狗" "$message"
   echo "- ⚠️ ALERT $message" >> "$REPORT"
+  # 告警审计：即使通知被系统静音，也有独立可查的落盘通道。
+  printf '%s\t[%s] %s\n' "$(date '+%F %T')" "$key" "$message" >> "$ALERT_LOG"
 }
+
+if [ "${WATCHDOG_SELFTEST:-0}" = "1" ]; then
+  # 通道自检：发一条真实告警（macOS 通知 + 审计日志 + 报告），证明告警链路可用。
+  alert selftest "看门狗通道自检 $(date '+%F %T')：如果你看到这条通知，说明告警链路正常。"
+  echo "[watchdog $(date '+%F %T')] self-test alert emitted (see WATCHDOG_ALERTS.log)"
+  exit 0
+fi
 
 while true; do
   cycle_start=$(date +%s)
@@ -148,7 +158,16 @@ PY
   if [ "$gov_age" != "?" ] && [ "$gov_age" -gt 24000 ] 2>/dev/null; then
     alert governance "治理重算超过 6h40m 未更新（${gov_age}s）；检查 governance_recheck_loop.sh / dist/slots/governance.log"
   fi
-  [ "$dirty" -ge 3 ] 2>/dev/null && alert dirty "go_hive 区有 ${dirty} 个未提交改动（total=${dirty_total}），检查是否有 lane 写进主线"
+  # dirty 告警防抖：合并/落盘瞬间的抖动属正常；要求 dirty>=3 持续 2 个采样周期（≈10 分钟），
+  # 或一次性 >=10 才立即告警。持久化计数在 state 里。
+  if [ "$dirty" -ge 3 ] 2>/dev/null; then
+    dirty_streak=$(state_get dirty_streak); dirty_streak=$(( ${dirty_streak:-0} + 1 )); state_set dirty_streak "$dirty_streak"
+    if [ "$dirty" -ge 10 ] || [ "$dirty_streak" -ge 2 ]; then
+      alert dirty "go_hive 区有 ${dirty} 个未提交改动（total=${dirty_total}，连续 ${dirty_streak} 个采样），检查是否有 lane 写进主线"
+    fi
+  else
+    state_set dirty_streak 0
+  fi
   if [ "$sleep_gap" != 1 ] && [ "$ledger_age" != "?" ] && [ "$ledger_age" -gt 900 ] 2>/dev/null; then
     alert ledger "时间台账超过 $((ledger_age / 60)) 分钟未更新（timegov 可能挂了）"
   fi

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 2 小时 slot 版调度器：在 08/10/.../22 点的 slot 窗口内各触发一次
+# 2 小时 slot 版调度器：全天 00/02/04/.../22 每个偶数小时触发一次
 # scripts/release_slot.sh；已做过的 slot 不重复。短睡眠循环避免宿主机
 # idle sleep 冻结一整个长 sleep。
 set -u
@@ -27,7 +27,7 @@ PY
 
 while true; do
   hour=$((10#$(date +%H)))
-  if [ "$hour" -ge 8 ] && [ "$hour" -lt 24 ]; then
+  if [ "$hour" -ge 0 ] && [ "$hour" -lt 24 ]; then
     slot=$(slot_now)
     last=$(current_last)
     # 每个 slot 在整点后 2 分钟起可构建；整点前不抢跑

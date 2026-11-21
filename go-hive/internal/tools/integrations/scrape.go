@@ -223,31 +223,8 @@ func webScrapeAction(ctx context.Context, rt *Runtime, input map[string]any, res
 
 	// Structured data is extracted before boilerplate removal because JSON-LD
 	// lives in <script>, which the text walker ignores.
-	jsonLD := []any{}
-	for _, script := range batch3FindAll(doc, "script") {
-		if !strings.EqualFold(strings.TrimSpace(script.attrs["type"]), "application/ld+json") {
-			continue
-		}
-		payload := strings.TrimSpace(batch3RawText(script))
-		if payload == "" {
-			continue
-		}
-		var decoded any
-		if err := json.Unmarshal([]byte(payload), &decoded); err == nil {
-			jsonLD = append(jsonLD, decoded)
-		}
-	}
-	openGraph := map[string]any{}
-	for _, meta := range batch3FindAll(doc, "meta") {
-		property := strings.TrimSpace(meta.attrs["property"])
-		if !strings.HasPrefix(strings.ToLower(property), "og:") {
-			continue
-		}
-		value := strings.TrimSpace(meta.attrs["content"])
-		if value != "" {
-			openGraph[strings.TrimPrefix(strings.ToLower(property), "og:")] = value
-		}
-	}
+	jsonLD := batch3JSONLD(doc)
+	openGraph := batch3OpenGraph(doc)
 
 	title := ""
 	if node := batch3FirstTag(doc, "title"); node != nil {
@@ -479,6 +456,42 @@ func batch3Fetch(ctx context.Context, rt *Runtime, target string, resolver batch
 		return response.StatusCode, response.Header, body, current, nil
 	}
 	return 0, nil, nil, current, errors.New("too many redirects")
+}
+
+// batch3JSONLD collects <script type="application/ld+json"> payloads before
+// boilerplate removal: JSON-LD lives in a script tag the text walker ignores.
+func batch3JSONLD(doc *batch3Node) []any {
+	out := []any{}
+	for _, script := range batch3FindAll(doc, "script") {
+		if !strings.EqualFold(strings.TrimSpace(script.attrs["type"]), "application/ld+json") {
+			continue
+		}
+		payload := strings.TrimSpace(batch3RawText(script))
+		if payload == "" {
+			continue
+		}
+		var decoded any
+		if err := json.Unmarshal([]byte(payload), &decoded); err == nil {
+			out = append(out, decoded)
+		}
+	}
+	return out
+}
+
+// batch3OpenGraph maps og:* meta tags to their bare names.
+func batch3OpenGraph(doc *batch3Node) map[string]any {
+	out := map[string]any{}
+	for _, meta := range batch3FindAll(doc, "meta") {
+		property := strings.TrimSpace(meta.attrs["property"])
+		if !strings.HasPrefix(strings.ToLower(property), "og:") {
+			continue
+		}
+		value := strings.TrimSpace(meta.attrs["content"])
+		if value != "" {
+			out[strings.TrimPrefix(strings.ToLower(property), "og:")] = value
+		}
+	}
+	return out
 }
 
 // -------------------------------------------------------------- robots ------
