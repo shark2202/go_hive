@@ -41,7 +41,11 @@ func TestSingleActionSchemaCarriesRequired(t *testing.T) {
 // Parity-exempt: schema-shape fix; guards that the single-action rule does not
 // leak per-action required arguments into a multi-action tool's shared schema.
 func TestMultiActionSchemaOnlyRequiresAction(t *testing.T) {
-	schema := batch7Lane5ExaTool.Schema()
+	tool, ok := batch7Lane5NewRegistry().Lookup("exa_search")
+	if !ok {
+		t.Fatal("exa_search: not registered")
+	}
+	schema := tool.Schema()
 	got, _ := schema["required"].([]string)
 	if !reflect.DeepEqual(got, []string{"action"}) {
 		t.Fatalf("exa_search module required = %v, want [action]", got)

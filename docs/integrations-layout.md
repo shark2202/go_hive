@@ -1,6 +1,6 @@
 # integrations 包目录与 integrationkit 边界
 
-> 状态：P1（纯改名）、P2（共享层试点）与领域子包试点（excel、devops）已落地。
+> 状态：P1（纯改名）、P2（共享层试点）与领域子包试点（excel、devops、social）已落地。
 > 行为、错误文案、对外符号与测试断言不变。
 > 适用模块：`go_hive/go-hive`，包 `internal/tools/integrations` 与 `internal/tools/integrationkit`。
 
@@ -27,7 +27,7 @@
 | --- | --- | --- |
 | 单 provider 模块 | `<module>.go`，与上游模块名一致；测试 `<module>_test.go` | `jira.go`、`quickbooks.go`、`cloudflare.go` |
 | 多模块领域注册表 | `<domain>.go`：该领域的 Registry 构造、模块配置与共享 helper | `data_platform.go`、`google_workspace.go` |
-| 领域子包 | `<domain>/`：单领域 catalog + action + `register.go`，只 import `integrationkit` | `excel/`、`devops/` |
+| 领域子包 | `<domain>/`：单领域 catalog + action + `register.go`，只 import `integrationkit` | `excel/`、`devops/`、`social/` |
 | 共享 helper | 按用途命名，避免裸 `helpers.go` | `http_fetch.go`、`crm_common.go`、`pgwire.go` |
 | 批次安装器 | 文件名跟领域，**导出符号不改**（`InstallBatch5Lane1` 等保持原样） | `atlassian_asana.go` 仍导出 `InstallBatch5Lane1` |
 | 生成文件 | 保持 `catalog_gen.go`，由 `gen_catalog.py` 生成，不手改 | — |
@@ -153,11 +153,11 @@ provider，不会形成循环依赖。
 
 ## 5. P4：超大文件拆分与可选子包化（预估 3–5 人日）
 
-1. ✅ `devops_hosting.go` 已拆入 `devops/` 子包（2,270 行 → 8 个文件，见 §5.1）。
+1. ✅ `devops_hosting.go` 已拆入 `devops/` 子包（2,270 行 → 8 个文件，见 §5.1）；
+   ✅ `ai_platform.go` 已拆入 `ai/` 子包（2,846 行 → 9 个生产文件 + digest 测试，见 §5.2）。
+   ✅ `social_media.go` 已拆入 `social/` 子包（2,443 行 → 8 个生产文件，见 §5.3）。
+   ✅ `enrichment_search.go` 已拆入 `enrichment/` 子包（2,677 行 → 9 个文件，见 §5.4）。
    其余仍待拆：`cloudflare.go`（1,973 → zones / dns / security / workers）、
-   `ai_platform.go`（3,031 → pinecone / wandb / langfuse / huggingface / vision）、
-   `enrichment_search.go`（2,848 → apify / apollo / lusha / serpapi / exa）、
-   `social_media.go`（2,532 → youtube / reddit / twitter / twilio / pushover）、
    `web_intelligence.go`、`infra_automation.go`、`scheduling_chat.go`。
 2. 拆 `pdf.go`（解析器/文本抽取/表单）、`excel.go`（OOXML 读写/样式/工作表）、
    `scrape.go`（抓取/HTML 解析/SSRF 校验）。目标是移除 `size_test.go` 的 10 条
@@ -207,6 +207,137 @@ provider，不会形成循环依赖。
   `s3SignRequest`、`dockerHubListTags` …），lane 前缀标识符 1,902 → 1,818。
 - `internal/quality/size_test.go` 删除 `devops_hosting.go` 的 2,276 行 waiver；
   子包最大文件 643 行，低于 800 行门禁。
+- 验收：`go build ./...`、`go test ./internal/tools/integrations/...
+  ./internal/server/ ./internal/quality/`、`gen_tool_surface_flat.py --check`、
+  `refactor_freeze.sh compare wave15-base`、`gen_arch.py --check` 全部通过。
+
+### 5.2 ai 子包落地（P2 领域拆分 lane `int-p2-ai`）
+
+基线 `63aacb15`。`ai_platform.go`（2,846 行）整体下沉为
+`internal/tools/integrations/ai/`，根包只保留薄入口
+`integrations/ai_install.go`。
+
+| 新文件 | 内容 | 行数 |
+| --- | --- | ---: |
+| `ai/doc.go` | 包注释：5 个模块的契约、刻意限制与迁移说明 | 37 |
+| `ai/kit.go` | `Tool`/`Action`/`Runtime`/`Registry`/`Option`/`ModuleConfig` 等 kit 别名 | 23 |
+| `ai/register.go` | `NewRegistry`/`Register`、7 个 `ModuleConfig` 与上限常量 | 112 |
+| `ai/common.go` | 共享 helper：`doRequest`/`httpReply`/JSON 访问器/数值读取，转发 integrationkit | 225 |
+| `ai/pinecone.go` | Pinecone catalog + 9 个 action + 控制面/数据面 helper | 562 |
+| `ai/wandb.go` | Weights & Biases catalog + GraphQL helper + 6 个 action | 490 |
+| `ai/langfuse.go` | Langfuse catalog + 6 个 action | 462 |
+| `ai/huggingface.go` | Hugging Face catalog + Hub/Inference/Endpoints helper + 9 个 action | 590 |
+| `ai/vision.go` | Google Cloud Vision catalog + 9 个 action | 510 |
+| `ai/digest_test.go` | 五工具 catalog digest 冻结（迁移前基线） | 51 |
+| `integrations/ai_install.go` | 根包薄入口：`InstallAIPlatform`/`newAIPlatformRegistry` | 26 |
+
+行数对照：`ai_platform.go` 2,846 行 → 子包生产代码 3,011 行 + 根包入口 26 行
+
+### 5.3 social 子包落地（P2 领域拆分 lane `int-p2-social`）
+
+基线 `63aacb15`。`social_media.go`（2,443 行）整体下沉为
+`internal/tools/integrations/social/`，根包只保留薄入口
+`integrations/social_install.go`。
+
+| 新文件 | 内容 | 行数 |
+| --- | --- | ---: |
+| `social/doc.go` | 包注释：5 个模块的契约、刻意限制与迁移说明 | 32 |
+| `social/kit.go` | `Tool`/`Action`/`Runtime`/`Registry`/`Option`/`ModuleConfig` 别名 + option/参数读取 helper | 60 |
+| `social/register.go` | `NewRegistry`/`Register`、5 个 `ModuleConfig` 与上限/默认端点常量 | 93 |
+| `social/common.go` | 共享 helper：`doRequest`/`providerRequest`/`providerResponse`/JSON 访问器 | 265 |
+| `social/youtube.go` | YouTube catalog + 8 个 action + `humanizeDuration` | 533 |
+| `social/reddit.go` | Reddit catalog + OAuth token 流程 + 7 个 action | 451 |
+| `social/twitter.go` | Twitter/X catalog + 7 个 action | 398 |
+| `social/twilio.go` | Twilio catalog + Basic-auth 请求路径 + 7 个 action | 383 |
+| `social/pushover.go` | Pushover catalog + form/query token + 7 个 action | 390 |
+| `social/digest_test.go` | 五工具 catalog surface digest 冻结（迁移前基线） | 62 |
+| `social/social_media_test.go` | 原 `social_media_test.go` 随实现移动（断言不变，helper 改语义名） | 1,305 |
+| `integrations/social_install.go` | 根包薄入口：`InstallBatch7Lane7` | 16 |
+
+行数对照：`social_media.go` 2,443 行 → 子包生产代码 2,605 行 + 根包入口 16 行
+（新增文件头、包注释与 import 块；工具定义的字符串字面量逐字节未改）。
+
+行为与工具面：
+
+- 5 个工具 / 39 个 action（pinecone 9、wandb 6、langfuse 6、huggingface 9、
+  vision 9）的 name/description/input_schema 逐字节不变：迁移前后探针导出的
+  `{names, actions, entries}` JSON 的 sha256 均为
+  `9d2617358b6e6707bdf38f2c56c24a6a1ac42b778c32cedbaa12b3bab581e0ae`
+  （entries-only：`9a7b572bc04f7e1368fa327c8326923c241bd0cccdcbff131c419baac3b78571`）；
+  子包 `digest_test.go` 冻结 entries-only 值。
+- 根包入口改为语义名 `InstallAIPlatform`/`newAIPlatformRegistry`（原
+  `InstallBatch7Lane4`/`newBatch7Lane4Registry`），签名与行为不变：CLI 装配表
+  `session_tools.go` 同步函数引用，注册标签 `batch7-lane4` 保持不变；
+  2,434 行的 `ai_platform_test.go`（71 个用例）仅随两处入口改名与一个常量引用
+  （`ai.VisionMaxBytes`）调整，其余未动即全绿。
+- 依赖方向：`integrations → ai → integrationkit`；子包不 import 根包或
+  `internal/tools`。`batch7Lane4*` 标识符全部改为领域名（`pineconeControl`/
+  `pineconeData`、`wandbCall`、`langfuseCall`、`huggingFaceGet`、`visionCall` …），
+  lane 前缀标识符 1,452 → 1,360（Δ−92）。
+- `internal/quality/size_test.go` 删除 `ai_platform.go` 的 3,031 行 waiver，
+  `lane_prefix_waiver.json` 的 limit 由 1,535 下调至实测值 1,360（只减不增）；
+  子包最大文件 590 行，低于 800 行门禁。
+- 验收：`go build ./...`、`go test -count=1 ./internal/tools/integrations/...
+  ./internal/server/ ./internal/quality/`、`gen_tool_surface_flat.py --check`、
+  `refactor_freeze.sh compare wave15-base`、`gen_arch.py`（重生成 + `--check`）
+  全部通过。
+- 5 个工具 / 36 个 action（youtube 8、reddit 7、twitter 7、twilio 7、pushover 7）的
+  name/description/input_schema 逐字节不变：迁移前后 `{names, actions, entries}` JSON
+  均为 8,205 字节，sha256 均为
+  `595c1719268b3027c4e2b8e3545e4a5857ed847dc68221ec8388a0819b674cf0`；
+  子包 `digest_test.go` 冻结该值。
+- 根包 `InstallBatch7Lane7` 签名不变，改调 `social.NewRegistry().Install(target)`。
+  原 1,305 行测试套件随实现迁入子包（它断言未导出的 module ID 与
+  `humanizeDuration`/`intValue`）；断言未改，12 个顶层测试全绿。
+- 依赖方向：`integrations → social → integrationkit`；子包不 import 根包或
+  `internal/tools`。`batch7Lane7*` 标识符全部改为领域名（`youtubeGET`、
+  `redditAccessToken`、`doRequest`、`humanizeDuration` …），lane 前缀标识符
+  本 lane 单独测量 1,452 → 1,357（95 个标识符迁出并改名；与 ai lane 合并后以
+  `internal/quality` 门禁实测为准）。
+- `internal/quality/size_test.go` 删除 `social_media.go` 的 2,532 行 waiver；
+  子包最大文件 533 行，低于 800 行门禁。
+
+### 5.4 enrichment 子包落地（P2 领域拆分 lane `int-p2-enrichment`）
+
+基线 `63aacb15`。`enrichment_search.go`（2,677 行）整体下沉为
+`internal/tools/integrations/enrichment/`，根包只保留薄入口
+`integrations/enrichment_install.go`。
+
+| 新文件 | 内容 | 行数 |
+| --- | --- | ---: |
+| `enrichment/doc.go` | 包注释：5 个模块的契约、刻意限制与迁移说明 | 32 |
+| `enrichment/kit.go` | `Tool`/`Action`/`Runtime`/`Registry`/`Option`/`ModuleConfig` 等 kit 别名 | 17 |
+| `enrichment/register.go` | `NewRegistry`/`Register`、5 个 `ModuleConfig`、上限常量与 `RetrySleep` 钩子 | 90 |
+| `enrichment/common.go` | 共享 helper：`doJSON`/`httpReply`、模块 URL 与凭据解析、JSON 访问器 | 190 |
+| `enrichment/apify.go` | Apify catalog + 6 个 action + `apifyCall` | 404 |
+| `enrichment/apollo.go` | Apollo.io catalog + 7 个 action + `apolloCall` | 577 |
+| `enrichment/lusha.go` | Lusha catalog + 8 个 action + `lushaCall` | 463 |
+| `enrichment/serpapi.go` | SerpAPI catalog + 8 个 action + `serpapiCall` | 569 |
+| `enrichment/exa.go` | Exa catalog + 7 个 action + 429 重试 `exaCall` | 489 |
+| `enrichment/digest_test.go` | 五工具 catalog digest 冻结（迁移前基线） | 68 |
+| `integrations/enrichment_install.go` | 根包薄入口：`Batch7Lane5Install`/`batch7Lane5NewRegistry` | 22 |
+
+行数对照：`enrichment_search.go` 2,677 行 → 子包生产代码 2,831 行 + 根包入口
+22 行（新增文件头、包注释与 import 块；工具定义的字符串字面量逐字节未改）。
+
+行为与工具面：
+
+- 5 个工具 / 36 个 action（apify 6、apollo 7、lusha 8、serpapi 8、exa_search 7）的
+  name/description/input_schema 逐字节不变：迁移前后 `{names, actions, entries}`
+  JSON 探针的 sha256 均为
+  `8bd792d97cda598dc3902b9579ccec63e4292b0db4a9307a0ba42bd1c6f9e758`；
+  子包 `digest_test.go` 冻结该值。
+- 根包 `Batch7Lane5Install` 签名不变，改调 `enrichment.NewRegistry().Install(target)`；
+  测试用 `batch7Lane5NewRegistry` 转发 `enrichment.NewRegistry`。两处测试随钩子/
+  内部符号迁移调整：`enrichment_search_test.go` 的 Exa 重试钩子改指
+  `enrichment.RetrySleep`（3 行），`tool_schema_p1_test.go` 的 exa schema 断言改走
+  `batch7Lane5NewRegistry().Lookup("exa_search")`。
+- 依赖方向：`integrations → enrichment → integrationkit`；子包不 import 根包或
+  `internal/tools`。`batch7Lane5*` 标识符全部改为领域名（`apifyCall`、`apolloCall`、
+  `exaCall` …）；lane 前缀标识符 1,452 → 1,359。
+- `internal/quality/size_test.go` 删除 `enrichment_search.go` 的 2,848 行 waiver，
+  `lane_prefix_waiver.json` 上限随实测下调到 1,359；子包最大文件 577 行，低于
+  800 行门禁。
 - 验收：`go build ./...`、`go test ./internal/tools/integrations/...
   ./internal/server/ ./internal/quality/`、`gen_tool_surface_flat.py --check`、
   `refactor_freeze.sh compare wave15-base`、`gen_arch.py --check` 全部通过。

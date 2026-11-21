@@ -1,4 +1,4 @@
-package integrations
+package social
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ import (
 
 // --------------------------------------------------------------- test kit ---
 
-type batch7Lane7RecordedRequest struct {
+type recordedRequest struct {
 	Method string
 	Path   string
 	Query  url.Values
@@ -28,18 +28,18 @@ type batch7Lane7RecordedRequest struct {
 	Body   string
 }
 
-type batch7Lane7Recorder struct {
+type requestRecorder struct {
 	mu       sync.Mutex
-	requests []batch7Lane7RecordedRequest
+	requests []recordedRequest
 }
 
-func (rec *batch7Lane7Recorder) wrap(next http.HandlerFunc) http.HandlerFunc {
+func (rec *requestRecorder) wrap(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		raw, _ := io.ReadAll(r.Body)
 		r.Body = io.NopCloser(bytes.NewReader(raw))
 		form, _ := url.ParseQuery(string(raw))
 		rec.mu.Lock()
-		rec.requests = append(rec.requests, batch7Lane7RecordedRequest{
+		rec.requests = append(rec.requests, recordedRequest{
 			Method: r.Method,
 			Path:   r.URL.Path,
 			Query:  r.URL.Query(),
@@ -52,7 +52,7 @@ func (rec *batch7Lane7Recorder) wrap(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (rec *batch7Lane7Recorder) at(t *testing.T, index int) batch7Lane7RecordedRequest {
+func (rec *requestRecorder) at(t *testing.T, index int) recordedRequest {
 	t.Helper()
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
@@ -62,7 +62,7 @@ func (rec *batch7Lane7Recorder) at(t *testing.T, index int) batch7Lane7RecordedR
 	return rec.requests[index]
 }
 
-func (rec *batch7Lane7Recorder) last(t *testing.T) batch7Lane7RecordedRequest {
+func (rec *requestRecorder) last(t *testing.T) recordedRequest {
 	t.Helper()
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
@@ -72,29 +72,29 @@ func (rec *batch7Lane7Recorder) last(t *testing.T) batch7Lane7RecordedRequest {
 	return rec.requests[len(rec.requests)-1]
 }
 
-func batch7Lane7WriteJSON(w http.ResponseWriter, status int, body any) {
+func writeJSONResponse(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
 }
 
-func batch7Lane7StatusHandler(status int, body any) http.HandlerFunc {
+func statusHandler(status int, body any) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		batch7Lane7WriteJSON(w, status, body)
+		writeJSONResponse(w, status, body)
 	}
 }
 
-// batch7Lane7TestRegistry points one module at a fake upstream and injects
+// newTestRegistry points one module at a fake upstream and injects
 // credentials through the runtime environment lookup.
-func batch7Lane7TestRegistry(
+func newTestRegistry(
 	t *testing.T,
 	module string,
 	env map[string]string,
 	handler http.HandlerFunc,
 	opts ...Option,
-) (*Registry, *batch7Lane7Recorder) {
+) (*Registry, *requestRecorder) {
 	t.Helper()
-	recorder := &batch7Lane7Recorder{}
+	recorder := &requestRecorder{}
 	server := httptest.NewServer(recorder.wrap(handler))
 	t.Cleanup(server.Close)
 	options := []Option{
@@ -103,10 +103,10 @@ func batch7Lane7TestRegistry(
 		WithGetenv(func(name string) string { return env[name] }),
 	}
 	options = append(options, opts...)
-	return newBatch7Lane7Registry(options...), recorder
+	return NewRegistry(options...), recorder
 }
 
-func batch7Lane7Run(t *testing.T, registry *Registry, tool string, input map[string]any) map[string]any {
+func runAction(t *testing.T, registry *Registry, tool string, input map[string]any) map[string]any {
 	t.Helper()
 	result, err := registry.Execute(context.Background(), tool, input)
 	if err != nil {
@@ -119,14 +119,14 @@ func batch7Lane7Run(t *testing.T, registry *Registry, tool string, input map[str
 	return object
 }
 
-func batch7Lane7WantOK(t *testing.T, result map[string]any) {
+func requireOK(t *testing.T, result map[string]any) {
 	t.Helper()
 	if message, failed := result["error"]; failed {
 		t.Fatalf("unexpected error: %v", message)
 	}
 }
 
-func batch7Lane7ErrorText(t *testing.T, result map[string]any) string {
+func errorText(t *testing.T, result map[string]any) string {
 	t.Helper()
 	text, ok := result["error"].(string)
 	if !ok {
@@ -135,7 +135,7 @@ func batch7Lane7ErrorText(t *testing.T, result map[string]any) string {
 	return text
 }
 
-func batch7Lane7FieldMap(t *testing.T, object map[string]any, name string) map[string]any {
+func fieldMap(t *testing.T, object map[string]any, name string) map[string]any {
 	t.Helper()
 	value, ok := object[name].(map[string]any)
 	if !ok {
@@ -144,7 +144,7 @@ func batch7Lane7FieldMap(t *testing.T, object map[string]any, name string) map[s
 	return value
 }
 
-func batch7Lane7FieldSlice(t *testing.T, object map[string]any, name string) []any {
+func fieldSlice(t *testing.T, object map[string]any, name string) []any {
 	t.Helper()
 	value, ok := object[name].([]any)
 	if !ok {
@@ -153,7 +153,7 @@ func batch7Lane7FieldSlice(t *testing.T, object map[string]any, name string) []a
 	return value
 }
 
-func batch7Lane7FieldString(t *testing.T, object map[string]any, name string) string {
+func fieldString(t *testing.T, object map[string]any, name string) string {
 	t.Helper()
 	value, ok := object[name].(string)
 	if !ok {
@@ -162,9 +162,9 @@ func batch7Lane7FieldString(t *testing.T, object map[string]any, name string) st
 	return value
 }
 
-func batch7Lane7FieldInt(t *testing.T, object map[string]any, name string) int {
+func fieldInt(t *testing.T, object map[string]any, name string) int {
 	t.Helper()
-	return batch7Lane7Int(object[name])
+	return intValue(object[name])
 }
 
 // ---------------------------------------------------------------- YouTube ---
@@ -173,12 +173,12 @@ func batch7Lane7FieldInt(t *testing.T, object map[string]any, name string) int {
 // comments/duration through class-style tests; the remaining actions
 // (list_channel_videos, search_channels, video_categories) have no upstream
 // unit test, so this table exercises all eight actions against a fake upstream.
-func TestBatch7Lane7YouTubeActions(t *testing.T) {
+func TestYouTubeActions(t *testing.T) {
 	env := map[string]string{"YOUTUBE_API_KEY": "test-key"}
 
 	t.Run("youtube_search_videos", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7YouTubeModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{
+		registry, recorder := newTestRegistry(t, youtubeModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{
 				"pageInfo": map[string]any{"totalResults": 2},
 				"items": []any{
 					map[string]any{
@@ -193,16 +193,16 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 				},
 			})
 		})
-		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_search_videos", "query": "go"})
-		batch7Lane7WantOK(t, result)
-		if got := len(batch7Lane7FieldSlice(t, result, "results")); got != 2 {
+		result := runAction(t, registry, "youtube", map[string]any{"action": "youtube_search_videos", "query": "go"})
+		requireOK(t, result)
+		if got := len(fieldSlice(t, result, "results")); got != 2 {
 			t.Fatalf("results = %d, want 2", got)
 		}
-		if got := batch7Lane7FieldInt(t, result, "total_results"); got != 2 {
+		if got := fieldInt(t, result, "total_results"); got != 2 {
 			t.Fatalf("total_results = %d, want 2", got)
 		}
-		first := asMap(batch7Lane7FieldSlice(t, result, "results")[0])
-		if got := batch7Lane7FieldString(t, first, "videoId"); got != "v1" {
+		first := asMap(fieldSlice(t, result, "results")[0])
+		if got := fieldString(t, first, "videoId"); got != "v1" {
 			t.Fatalf("videoId = %q", got)
 		}
 		request := recorder.last(t)
@@ -215,8 +215,8 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 	})
 
 	t.Run("youtube_get_video_details", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7YouTubeModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
+		registry, _ := newTestRegistry(t, youtubeModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
 				"id": "v1",
 				"snippet": map[string]any{
 					"title": "Video", "description": "Body", "channelTitle": "Chan", "channelId": "c1",
@@ -227,30 +227,30 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 				"statistics":     map[string]any{"viewCount": "123", "likeCount": "7", "commentCount": "2"},
 			}}})
 		})
-		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_get_video_details", "video_ids": "v1"})
-		batch7Lane7WantOK(t, result)
-		videos := batch7Lane7FieldSlice(t, result, "videos")
+		result := runAction(t, registry, "youtube", map[string]any{"action": "youtube_get_video_details", "video_ids": "v1"})
+		requireOK(t, result)
+		videos := fieldSlice(t, result, "videos")
 		if len(videos) != 1 {
 			t.Fatalf("videos = %d", len(videos))
 		}
 		video := asMap(videos[0])
-		if got := batch7Lane7FieldString(t, video, "duration"); got != "1h2m3s" {
+		if got := fieldString(t, video, "duration"); got != "1h2m3s" {
 			t.Fatalf("duration = %q", got)
 		}
-		if got := batch7Lane7FieldString(t, video, "duration_raw"); got != "PT1H2M3S" {
+		if got := fieldString(t, video, "duration_raw"); got != "PT1H2M3S" {
 			t.Fatalf("duration_raw = %q", got)
 		}
-		if got := batch7Lane7FieldInt(t, video, "viewCount"); got != 123 {
+		if got := fieldInt(t, video, "viewCount"); got != 123 {
 			t.Fatalf("viewCount = %d", got)
 		}
-		if got := len(batch7Lane7FieldSlice(t, video, "tags")); got != 2 {
+		if got := len(fieldSlice(t, video, "tags")); got != 2 {
 			t.Fatalf("tags = %d", got)
 		}
 	})
 
 	t.Run("youtube_get_channel", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7YouTubeModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
+		registry, recorder := newTestRegistry(t, youtubeModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
 				"id": "UC1",
 				"snippet": map[string]any{
 					"title": "Channel", "description": "About", "customUrl": "@chan",
@@ -261,12 +261,12 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 				"contentDetails": map[string]any{"relatedPlaylists": map[string]any{"uploads": "UU1"}},
 			}}})
 		})
-		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_get_channel", "handle": "chan"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldString(t, result, "uploadsPlaylistId"); got != "UU1" {
+		result := runAction(t, registry, "youtube", map[string]any{"action": "youtube_get_channel", "handle": "chan"})
+		requireOK(t, result)
+		if got := fieldString(t, result, "uploadsPlaylistId"); got != "UU1" {
 			t.Fatalf("uploadsPlaylistId = %q", got)
 		}
-		if got := batch7Lane7FieldInt(t, result, "subscriberCount"); got != 1000 {
+		if got := fieldInt(t, result, "subscriberCount"); got != 1000 {
 			t.Fatalf("subscriberCount = %d", got)
 		}
 		if got := recorder.last(t).Query.Get("forHandle"); got != "chan" {
@@ -275,15 +275,15 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 	})
 
 	t.Run("youtube_list_channel_videos", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7YouTubeModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"items": []any{
+		registry, recorder := newTestRegistry(t, youtubeModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"items": []any{
 				map[string]any{"id": map[string]any{"videoId": "v1"}, "snippet": map[string]any{"title": "One", "publishedAt": "2024-01-01", "description": "d"}},
 				map[string]any{"id": map[string]any{"videoId": "v2"}, "snippet": map[string]any{"title": "Two"}},
 			}})
 		})
-		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_list_channel_videos", "channel_id": "UC1"})
-		batch7Lane7WantOK(t, result)
-		if got := len(batch7Lane7FieldSlice(t, result, "videos")); got != 2 {
+		result := runAction(t, registry, "youtube", map[string]any{"action": "youtube_list_channel_videos", "channel_id": "UC1"})
+		requireOK(t, result)
+		if got := len(fieldSlice(t, result, "videos")); got != 2 {
 			t.Fatalf("videos = %d", got)
 		}
 		if got := recorder.last(t).Query.Get("channelId"); got != "UC1" {
@@ -292,16 +292,16 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 	})
 
 	t.Run("youtube_get_playlist", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7YouTubeModule, env, func(w http.ResponseWriter, r *http.Request) {
+		registry, recorder := newTestRegistry(t, youtubeModuleID, env, func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/playlists":
-				batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
+				writeJSONResponse(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
 					"id":             "PL1",
 					"snippet":        map[string]any{"title": "Playlist", "description": "Desc", "channelTitle": "Chan"},
 					"contentDetails": map[string]any{"itemCount": 2},
 				}}})
 			case "/playlistItems":
-				batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
+				writeJSONResponse(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
 					"snippet": map[string]any{
 						"resourceId":             map[string]any{"videoId": "v1"},
 						"title":                  "First",
@@ -314,13 +314,13 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 				t.Errorf("unexpected path %s", r.URL.Path)
 			}
 		})
-		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_get_playlist", "playlist_id": "PL1"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "itemCount"); got != 2 {
+		result := runAction(t, registry, "youtube", map[string]any{"action": "youtube_get_playlist", "playlist_id": "PL1"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "itemCount"); got != 2 {
 			t.Fatalf("itemCount = %d", got)
 		}
-		items := batch7Lane7FieldSlice(t, result, "items")
-		if len(items) != 1 || batch7Lane7FieldString(t, asMap(items[0]), "videoId") != "v1" {
+		items := fieldSlice(t, result, "items")
+		if len(items) != 1 || fieldString(t, asMap(items[0]), "videoId") != "v1" {
 			t.Fatalf("items = %v", items)
 		}
 		if got := recorder.at(t, 0).Path; got != "/playlists" {
@@ -332,16 +332,16 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 	})
 
 	t.Run("youtube_search_channels", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7YouTubeModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
+		registry, recorder := newTestRegistry(t, youtubeModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
 				"id":      map[string]any{"channelId": "UC9"},
 				"snippet": map[string]any{"title": "Chan", "description": "About"},
 			}}})
 		})
-		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_search_channels", "query": "hive"})
-		batch7Lane7WantOK(t, result)
-		results := batch7Lane7FieldSlice(t, result, "results")
-		if len(results) != 1 || batch7Lane7FieldString(t, asMap(results[0]), "channelId") != "UC9" {
+		result := runAction(t, registry, "youtube", map[string]any{"action": "youtube_search_channels", "query": "hive"})
+		requireOK(t, result)
+		results := fieldSlice(t, result, "results")
+		if len(results) != 1 || fieldString(t, asMap(results[0]), "channelId") != "UC9" {
 			t.Fatalf("results = %v", results)
 		}
 		if got := recorder.last(t).Query.Get("type"); got != "channel" {
@@ -350,8 +350,8 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 	})
 
 	t.Run("youtube_get_video_comments", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7YouTubeModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
+		registry, recorder := newTestRegistry(t, youtubeModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"items": []any{map[string]any{
 				"snippet": map[string]any{
 					"totalReplyCount": 3,
 					"topLevelComment": map[string]any{"snippet": map[string]any{
@@ -361,14 +361,14 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 				},
 			}}})
 		})
-		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_get_video_comments", "video_id": "v1"})
-		batch7Lane7WantOK(t, result)
-		comments := batch7Lane7FieldSlice(t, result, "comments")
+		result := runAction(t, registry, "youtube", map[string]any{"action": "youtube_get_video_comments", "video_id": "v1"})
+		requireOK(t, result)
+		comments := fieldSlice(t, result, "comments")
 		if len(comments) != 1 {
 			t.Fatalf("comments = %d", len(comments))
 		}
 		comment := asMap(comments[0])
-		if got := batch7Lane7FieldInt(t, comment, "replyCount"); got != 3 {
+		if got := fieldInt(t, comment, "replyCount"); got != 3 {
 			t.Fatalf("replyCount = %d", got)
 		}
 		if got := recorder.last(t).Query.Get("textFormat"); got != "plainText" {
@@ -377,15 +377,15 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 	})
 
 	t.Run("youtube_get_video_categories", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7YouTubeModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"items": []any{
+		registry, recorder := newTestRegistry(t, youtubeModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"items": []any{
 				map[string]any{"id": "10", "snippet": map[string]any{"title": "Music"}},
 				map[string]any{"id": "20", "snippet": map[string]any{"title": "Gaming"}},
 			}})
 		})
-		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_get_video_categories"})
-		batch7Lane7WantOK(t, result)
-		if got := len(batch7Lane7FieldSlice(t, result, "categories")); got != 2 {
+		result := runAction(t, registry, "youtube", map[string]any{"action": "youtube_get_video_categories"})
+		requireOK(t, result)
+		if got := len(fieldSlice(t, result, "categories")); got != 2 {
 			t.Fatalf("categories = %d", got)
 		}
 		if got := recorder.last(t).Query.Get("regionCode"); got != "US" {
@@ -395,7 +395,7 @@ func TestBatch7Lane7YouTubeActions(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_youtube_tool.py::TestParseDuration
-func TestBatch7Lane7YouTubeParseDuration(t *testing.T) {
+func TestYouTubeParseDuration(t *testing.T) {
 	cases := map[string]string{
 		"PT1H2M3S": "1h2m3s",
 		"PT1H":     "1h",
@@ -406,7 +406,7 @@ func TestBatch7Lane7YouTubeParseDuration(t *testing.T) {
 		"P1D":      "P1D",
 	}
 	for input, want := range cases {
-		if got := batch7Lane7ParseDuration(input); got != want {
+		if got := humanizeDuration(input); got != want {
 			t.Fatalf("%q -> %q, want %q", input, got, want)
 		}
 	}
@@ -414,7 +414,7 @@ func TestBatch7Lane7YouTubeParseDuration(t *testing.T) {
 
 // ----------------------------------------------------------------- Reddit ---
 
-func batch7Lane7RedditPostChild(id, title, author, subreddit string) map[string]any {
+func redditPostChild(id, title, author, subreddit string) map[string]any {
 	return map[string]any{
 		"kind": "t3",
 		"data": map[string]any{
@@ -426,16 +426,16 @@ func batch7Lane7RedditPostChild(id, title, author, subreddit string) map[string]
 	}
 }
 
-func batch7Lane7RedditListing(children ...any) map[string]any {
+func redditListing(children ...any) map[string]any {
 	return map[string]any{"data": map[string]any{"children": children}}
 }
 
 // Parity-exempt: test_reddit_tool.py covers search/posts/comments/user through
 // class-style tests; subreddit_info, post_detail and user_posts have no
 // upstream unit test, so this table exercises all seven actions.
-func TestBatch7Lane7RedditActions(t *testing.T) {
+func TestRedditActions(t *testing.T) {
 	const token = "reddit-token"
-	opts := []Option{WithCredential(batch7Lane7RedditModule, token)}
+	opts := []Option{WithCredential(redditModuleID, token)}
 	checkAuth := func(t *testing.T, header http.Header) {
 		t.Helper()
 		if got := header.Get("Authorization"); got != "bearer "+token {
@@ -444,17 +444,17 @@ func TestBatch7Lane7RedditActions(t *testing.T) {
 	}
 
 	t.Run("reddit_search", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7RedditModule, nil, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, batch7Lane7RedditListing(
-				batch7Lane7RedditPostChild("p1", "Post", "alice", "golang"),
+		registry, recorder := newTestRegistry(t, redditModuleID, nil, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, redditListing(
+				redditPostChild("p1", "Post", "alice", "golang"),
 				map[string]any{"kind": "t1", "data": map[string]any{"id": "c1"}},
 			))
 		}, opts...)
-		result := batch7Lane7Run(t, registry, "reddit", map[string]any{
+		result := runAction(t, registry, "reddit", map[string]any{
 			"action": "reddit_search", "query": "go", "subreddit": "golang",
 		})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+		requireOK(t, result)
+		if got := fieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
 		request := recorder.last(t)
@@ -468,16 +468,16 @@ func TestBatch7Lane7RedditActions(t *testing.T) {
 	})
 
 	t.Run("reddit_get_posts", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7RedditModule, nil, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, batch7Lane7RedditListing(
-				batch7Lane7RedditPostChild("p1", "Post", "alice", "golang"),
+		registry, recorder := newTestRegistry(t, redditModuleID, nil, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, redditListing(
+				redditPostChild("p1", "Post", "alice", "golang"),
 			))
 		}, opts...)
-		result := batch7Lane7Run(t, registry, "reddit", map[string]any{
+		result := runAction(t, registry, "reddit", map[string]any{
 			"action": "reddit_get_posts", "subreddit": "golang",
 		})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+		requireOK(t, result)
+		if got := fieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
 		request := recorder.last(t)
@@ -488,10 +488,10 @@ func TestBatch7Lane7RedditActions(t *testing.T) {
 	})
 
 	t.Run("reddit_get_comments", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7RedditModule, nil, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, []any{
-				batch7Lane7RedditListing(batch7Lane7RedditPostChild("p1", "Post", "alice", "golang")),
-				batch7Lane7RedditListing(map[string]any{
+		registry, recorder := newTestRegistry(t, redditModuleID, nil, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, []any{
+				redditListing(redditPostChild("p1", "Post", "alice", "golang")),
+				redditListing(map[string]any{
 					"kind": "t1",
 					"data": map[string]any{
 						"id": "c1", "author": "bob", "body": "hello", "score": 3,
@@ -500,15 +500,15 @@ func TestBatch7Lane7RedditActions(t *testing.T) {
 				}),
 			})
 		}, opts...)
-		result := batch7Lane7Run(t, registry, "reddit", map[string]any{
+		result := runAction(t, registry, "reddit", map[string]any{
 			"action": "reddit_get_comments", "post_id": "p1", "subreddit": "golang",
 		})
-		batch7Lane7WantOK(t, result)
-		post := batch7Lane7FieldMap(t, result, "post")
-		if got := batch7Lane7FieldString(t, post, "title"); got != "Post" {
+		requireOK(t, result)
+		post := fieldMap(t, result, "post")
+		if got := fieldString(t, post, "title"); got != "Post" {
 			t.Fatalf("post title = %q", got)
 		}
-		if got := batch7Lane7FieldInt(t, result, "comment_count"); got != 1 {
+		if got := fieldInt(t, result, "comment_count"); got != 1 {
 			t.Fatalf("comment_count = %d", got)
 		}
 		if got := recorder.last(t).Path; got != "/r/golang/comments/p1" {
@@ -517,15 +517,15 @@ func TestBatch7Lane7RedditActions(t *testing.T) {
 	})
 
 	t.Run("reddit_get_user", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7RedditModule, nil, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"data": map[string]any{
+		registry, _ := newTestRegistry(t, redditModuleID, nil, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"data": map[string]any{
 				"name": "alice", "link_karma": 10, "comment_karma": 20,
 				"total_karma": 30, "created_utc": 1600000000, "is_gold": true,
 			}})
 		}, opts...)
-		result := batch7Lane7Run(t, registry, "reddit", map[string]any{"action": "reddit_get_user", "username": "alice"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "total_karma"); got != 30 {
+		result := runAction(t, registry, "reddit", map[string]any{"action": "reddit_get_user", "username": "alice"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "total_karma"); got != 30 {
 			t.Fatalf("total_karma = %d", got)
 		}
 		if !asBool(result["is_gold"]) {
@@ -534,32 +534,32 @@ func TestBatch7Lane7RedditActions(t *testing.T) {
 	})
 
 	t.Run("reddit_get_subreddit_info", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7RedditModule, nil, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"data": map[string]any{
+		registry, _ := newTestRegistry(t, redditModuleID, nil, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"data": map[string]any{
 				"display_name": "golang", "title": "Go", "public_description": "The Go language",
 				"subscribers": 100, "accounts_active": 5, "created_utc": 1200000000,
 				"over18": false, "subreddit_type": "public", "submission_type": "any",
 			}})
 		}, opts...)
-		result := batch7Lane7Run(t, registry, "reddit", map[string]any{"action": "reddit_get_subreddit_info", "subreddit": "golang"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldString(t, result, "name"); got != "golang" {
+		result := runAction(t, registry, "reddit", map[string]any{"action": "reddit_get_subreddit_info", "subreddit": "golang"})
+		requireOK(t, result)
+		if got := fieldString(t, result, "name"); got != "golang" {
 			t.Fatalf("name = %q", got)
 		}
-		if got := batch7Lane7FieldInt(t, result, "subscribers"); got != 100 {
+		if got := fieldInt(t, result, "subscribers"); got != 100 {
 			t.Fatalf("subscribers = %d", got)
 		}
 	})
 
 	t.Run("reddit_get_post_detail", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7RedditModule, nil, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, batch7Lane7RedditListing(
-				batch7Lane7RedditPostChild("p1", "Full", "alice", "golang"),
+		registry, recorder := newTestRegistry(t, redditModuleID, nil, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, redditListing(
+				redditPostChild("p1", "Full", "alice", "golang"),
 			))
 		}, opts...)
-		result := batch7Lane7Run(t, registry, "reddit", map[string]any{"action": "reddit_get_post_detail", "post_id": "p1"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldString(t, result, "title"); got != "Full" {
+		result := runAction(t, registry, "reddit", map[string]any{"action": "reddit_get_post_detail", "post_id": "p1"})
+		requireOK(t, result)
+		if got := fieldString(t, result, "title"); got != "Full" {
 			t.Fatalf("title = %q", got)
 		}
 		if got := recorder.last(t).Path; got != "/by_id/t3_p1" {
@@ -568,14 +568,14 @@ func TestBatch7Lane7RedditActions(t *testing.T) {
 	})
 
 	t.Run("reddit_get_user_posts", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7RedditModule, nil, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, batch7Lane7RedditListing(
-				batch7Lane7RedditPostChild("p1", "Mine", "alice", "golang"),
+		registry, recorder := newTestRegistry(t, redditModuleID, nil, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, redditListing(
+				redditPostChild("p1", "Mine", "alice", "golang"),
 			))
 		}, opts...)
-		result := batch7Lane7Run(t, registry, "reddit", map[string]any{"action": "reddit_get_user_posts", "username": "alice"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+		result := runAction(t, registry, "reddit", map[string]any{"action": "reddit_get_user_posts", "username": "alice"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
 		request := recorder.last(t)
@@ -586,8 +586,8 @@ func TestBatch7Lane7RedditActions(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_reddit_tool.py::TestRedditGetPosts
-func TestBatch7Lane7RedditTokenFlow(t *testing.T) {
-	recorder := &batch7Lane7Recorder{}
+func TestRedditTokenFlow(t *testing.T) {
+	recorder := &requestRecorder{}
 	server := httptest.NewServer(recorder.wrap(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v1/access_token":
@@ -598,13 +598,13 @@ func TestBatch7Lane7RedditTokenFlow(t *testing.T) {
 			if got := r.FormValue("grant_type"); got != "client_credentials" {
 				t.Errorf("grant_type = %q", got)
 			}
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"access_token": "acquired-token"})
+			writeJSONResponse(w, http.StatusOK, map[string]any{"access_token": "acquired-token"})
 		case "/r/golang/hot":
 			if got := r.Header.Get("Authorization"); got != "bearer acquired-token" {
 				t.Errorf("api Authorization = %q", got)
 			}
-			batch7Lane7WriteJSON(w, http.StatusOK, batch7Lane7RedditListing(
-				batch7Lane7RedditPostChild("p1", "Post", "alice", "golang"),
+			writeJSONResponse(w, http.StatusOK, redditListing(
+				redditPostChild("p1", "Post", "alice", "golang"),
 			))
 		default:
 			t.Errorf("unexpected path %s", r.URL.Path)
@@ -616,14 +616,14 @@ func TestBatch7Lane7RedditTokenFlow(t *testing.T) {
 		"REDDIT_CLIENT_SECRET": "client-secret",
 		"REDDIT_TOKEN_URL":     server.URL + "/api/v1/access_token",
 	}
-	registry := newBatch7Lane7Registry(
-		WithBaseURL(batch7Lane7RedditModule, server.URL),
+	registry := NewRegistry(
+		WithBaseURL(redditModuleID, server.URL),
 		WithHTTPClient(server.Client()),
 		WithGetenv(func(name string) string { return env[name] }),
 	)
-	result := batch7Lane7Run(t, registry, "reddit", map[string]any{"action": "reddit_get_posts", "subreddit": "golang"})
-	batch7Lane7WantOK(t, result)
-	if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+	result := runAction(t, registry, "reddit", map[string]any{"action": "reddit_get_posts", "subreddit": "golang"})
+	requireOK(t, result)
+	if got := fieldInt(t, result, "count"); got != 1 {
 		t.Fatalf("count = %d", got)
 	}
 	if got := recorder.at(t, 0).Path; got != "/api/v1/access_token" {
@@ -636,9 +636,9 @@ func TestBatch7Lane7RedditTokenFlow(t *testing.T) {
 
 // Parity-exempt: upstream unit tests mock the whole client; this Go-side test
 // pins the OAuth client-credentials failure path to the upstream error string.
-func TestBatch7Lane7RedditTokenFailure(t *testing.T) {
-	recorder := &batch7Lane7Recorder{}
-	server := httptest.NewServer(recorder.wrap(batch7Lane7StatusHandler(
+func TestRedditTokenFailure(t *testing.T) {
+	recorder := &requestRecorder{}
+	server := httptest.NewServer(recorder.wrap(statusHandler(
 		http.StatusUnauthorized, map[string]any{"error": "invalid_client"},
 	)))
 	t.Cleanup(server.Close)
@@ -647,13 +647,13 @@ func TestBatch7Lane7RedditTokenFailure(t *testing.T) {
 		"REDDIT_CLIENT_SECRET": "client-secret",
 		"REDDIT_TOKEN_URL":     server.URL + "/api/v1/access_token",
 	}
-	registry := newBatch7Lane7Registry(
-		WithBaseURL(batch7Lane7RedditModule, server.URL),
+	registry := NewRegistry(
+		WithBaseURL(redditModuleID, server.URL),
 		WithHTTPClient(server.Client()),
 		WithGetenv(func(name string) string { return env[name] }),
 	)
-	result := batch7Lane7Run(t, registry, "reddit", map[string]any{"action": "reddit_get_posts", "subreddit": "golang"})
-	if got := batch7Lane7ErrorText(t, result); got != "Failed to acquire Reddit access token" {
+	result := runAction(t, registry, "reddit", map[string]any{"action": "reddit_get_posts", "subreddit": "golang"})
+	if got := errorText(t, result); got != "Failed to acquire Reddit access token" {
 		t.Fatalf("error = %q", got)
 	}
 }
@@ -663,12 +663,12 @@ func TestBatch7Lane7RedditTokenFailure(t *testing.T) {
 // Parity-exempt: test_twitter_tool.py covers search/user/user_tweets/tweet;
 // followers, replies and list_tweets have no upstream unit test, so this
 // table exercises all seven actions.
-func TestBatch7Lane7TwitterActions(t *testing.T) {
+func TestTwitterActions(t *testing.T) {
 	env := map[string]string{"X_BEARER_TOKEN": "bearer-token"}
 
 	t.Run("twitter_search_tweets", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwitterModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{
+		registry, recorder := newTestRegistry(t, twitterModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{
 				"data": []any{map[string]any{
 					"id": "t1", "text": "hello", "author_id": "u1", "created_at": "2024-01-01",
 					"lang": "en", "public_metrics": map[string]any{"retweet_count": 2, "reply_count": 1, "like_count": 9, "impression_count": 100},
@@ -677,13 +677,13 @@ func TestBatch7Lane7TwitterActions(t *testing.T) {
 				"meta":     map[string]any{"result_count": 1},
 			})
 		})
-		result := batch7Lane7Run(t, registry, "twitter", map[string]any{"action": "twitter_search_tweets", "query": "go"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+		result := runAction(t, registry, "twitter", map[string]any{"action": "twitter_search_tweets", "query": "go"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
-		tweet := asMap(batch7Lane7FieldSlice(t, result, "tweets")[0])
-		if got := batch7Lane7FieldString(t, tweet, "author_username"); got != "alice" {
+		tweet := asMap(fieldSlice(t, result, "tweets")[0])
+		if got := fieldString(t, tweet, "author_username"); got != "alice" {
 			t.Fatalf("author_username = %q", got)
 		}
 		request := recorder.last(t)
@@ -696,31 +696,31 @@ func TestBatch7Lane7TwitterActions(t *testing.T) {
 	})
 
 	t.Run("twitter_get_user", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7TwitterModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"data": map[string]any{
+		registry, _ := newTestRegistry(t, twitterModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"data": map[string]any{
 				"id": "u1", "name": "Alice", "username": "alice", "description": "hi",
 				"created_at": "2020-01-01", "profile_image_url": "https://img", "verified": true,
 				"public_metrics": map[string]any{"followers_count": 10, "following_count": 2, "tweet_count": 5},
 			}})
 		})
-		result := batch7Lane7Run(t, registry, "twitter", map[string]any{"action": "twitter_get_user", "username": "alice"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "followers_count"); got != 10 {
+		result := runAction(t, registry, "twitter", map[string]any{"action": "twitter_get_user", "username": "alice"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "followers_count"); got != 10 {
 			t.Fatalf("followers_count = %d", got)
 		}
 	})
 
 	t.Run("twitter_get_user_tweets", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwitterModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"data": []any{map[string]any{
+		registry, recorder := newTestRegistry(t, twitterModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"data": []any{map[string]any{
 				"id": "t1", "text": "hello", "public_metrics": map[string]any{"like_count": 3},
 			}}})
 		})
-		result := batch7Lane7Run(t, registry, "twitter", map[string]any{
+		result := runAction(t, registry, "twitter", map[string]any{
 			"action": "twitter_get_user_tweets", "user_id": "u1", "max_results": 1,
 		})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+		requireOK(t, result)
+		if got := fieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
 		request := recorder.last(t)
@@ -733,29 +733,29 @@ func TestBatch7Lane7TwitterActions(t *testing.T) {
 	})
 
 	t.Run("twitter_get_tweet", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7TwitterModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{
+		registry, _ := newTestRegistry(t, twitterModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{
 				"data":     map[string]any{"id": "t1", "text": "hello", "author_id": "u1"},
 				"includes": map[string]any{"users": []any{map[string]any{"id": "u1", "name": "Alice", "username": "alice"}}},
 			})
 		})
-		result := batch7Lane7Run(t, registry, "twitter", map[string]any{"action": "twitter_get_tweet", "tweet_id": "t1"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldString(t, result, "author_name"); got != "Alice" {
+		result := runAction(t, registry, "twitter", map[string]any{"action": "twitter_get_tweet", "tweet_id": "t1"})
+		requireOK(t, result)
+		if got := fieldString(t, result, "author_name"); got != "Alice" {
 			t.Fatalf("author_name = %q", got)
 		}
 	})
 
 	t.Run("twitter_get_user_followers", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwitterModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"data": []any{map[string]any{
+		registry, recorder := newTestRegistry(t, twitterModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"data": []any{map[string]any{
 				"id": "u2", "name": "Bob", "username": "bob", "description": "desc", "verified": false,
 				"public_metrics": map[string]any{"followers_count": 4, "following_count": 1},
 			}}})
 		})
-		result := batch7Lane7Run(t, registry, "twitter", map[string]any{"action": "twitter_get_user_followers", "user_id": "u1"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+		result := runAction(t, registry, "twitter", map[string]any{"action": "twitter_get_user_followers", "user_id": "u1"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
 		if got := recorder.last(t).Path; got != "/users/u1/followers" {
@@ -764,15 +764,15 @@ func TestBatch7Lane7TwitterActions(t *testing.T) {
 	})
 
 	t.Run("twitter_get_tweet_replies", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwitterModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{
+		registry, recorder := newTestRegistry(t, twitterModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{
 				"data":     []any{map[string]any{"id": "t2", "text": "reply", "author_id": "u1"}},
 				"includes": map[string]any{"users": []any{map[string]any{"id": "u1", "name": "Alice", "username": "alice"}}},
 			})
 		})
-		result := batch7Lane7Run(t, registry, "twitter", map[string]any{"action": "twitter_get_tweet_replies", "tweet_id": "t1"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+		result := runAction(t, registry, "twitter", map[string]any{"action": "twitter_get_tweet_replies", "tweet_id": "t1"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
 		if got := recorder.last(t).Query.Get("query"); got != "conversation_id:t1 is:reply" {
@@ -781,15 +781,15 @@ func TestBatch7Lane7TwitterActions(t *testing.T) {
 	})
 
 	t.Run("twitter_get_list_tweets", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwitterModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{
+		registry, recorder := newTestRegistry(t, twitterModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{
 				"data":     []any{map[string]any{"id": "t1", "text": "list", "author_id": "u1"}},
 				"includes": map[string]any{"users": []any{map[string]any{"id": "u1", "name": "Alice", "username": "alice"}}},
 			})
 		})
-		result := batch7Lane7Run(t, registry, "twitter", map[string]any{"action": "twitter_get_list_tweets", "list_id": "list1"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+		result := runAction(t, registry, "twitter", map[string]any{"action": "twitter_get_list_tweets", "list_id": "list1"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
 		if got := recorder.last(t).Path; got != "/lists/list1/tweets" {
@@ -803,7 +803,7 @@ func TestBatch7Lane7TwitterActions(t *testing.T) {
 // Parity-exempt: test_twilio_tool.py covers send_sms/send_whatsapp/
 // list_messages/get_message; phone_numbers, calls and delete have no upstream
 // unit test, so this table exercises all seven actions.
-func TestBatch7Lane7TwilioActions(t *testing.T) {
+func TestTwilioActions(t *testing.T) {
 	env := map[string]string{
 		"TWILIO_ACCOUNT_SID": "AC123",
 		"TWILIO_AUTH_TOKEN":  "secret",
@@ -822,14 +822,14 @@ func TestBatch7Lane7TwilioActions(t *testing.T) {
 	}
 
 	t.Run("twilio_send_sms", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusCreated, message)
+		registry, recorder := newTestRegistry(t, twilioModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusCreated, message)
 		})
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{
+		result := runAction(t, registry, "twilio", map[string]any{
 			"action": "twilio_send_sms", "to": "+15550001", "from_number": "+15550002", "body": "hi",
 		})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldString(t, result, "sid"); got != "SM1" {
+		requireOK(t, result)
+		if got := fieldString(t, result, "sid"); got != "SM1" {
 			t.Fatalf("sid = %q", got)
 		}
 		request := recorder.last(t)
@@ -846,13 +846,13 @@ func TestBatch7Lane7TwilioActions(t *testing.T) {
 	})
 
 	t.Run("twilio_send_whatsapp", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusCreated, message)
+		registry, recorder := newTestRegistry(t, twilioModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusCreated, message)
 		})
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{
+		result := runAction(t, registry, "twilio", map[string]any{
 			"action": "twilio_send_whatsapp", "to": "+15550001", "from_number": "+15550002", "body": "hi",
 		})
-		batch7Lane7WantOK(t, result)
+		requireOK(t, result)
 		form := recorder.last(t).Form
 		if got := form.Get("To"); got != "whatsapp:+15550001" {
 			t.Fatalf("To = %q", got)
@@ -863,12 +863,12 @@ func TestBatch7Lane7TwilioActions(t *testing.T) {
 	})
 
 	t.Run("twilio_list_messages", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"messages": []any{message}})
+		registry, recorder := newTestRegistry(t, twilioModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"messages": []any{message}})
 		})
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{"action": "twilio_list_messages"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+		result := runAction(t, registry, "twilio", map[string]any{"action": "twilio_list_messages"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
 		request := recorder.last(t)
@@ -878,27 +878,27 @@ func TestBatch7Lane7TwilioActions(t *testing.T) {
 	})
 
 	t.Run("twilio_get_message", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, message)
+		registry, recorder := newTestRegistry(t, twilioModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, message)
 		})
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{"action": "twilio_get_message", "message_sid": "SM1"})
-		batch7Lane7WantOK(t, result)
+		result := runAction(t, registry, "twilio", map[string]any{"action": "twilio_get_message", "message_sid": "SM1"})
+		requireOK(t, result)
 		if got := recorder.last(t).Path; got != "/2010-04-01/Accounts/AC123/Messages/SM1.json" {
 			t.Fatalf("path = %q", got)
 		}
 	})
 
 	t.Run("twilio_list_phone_numbers", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"incoming_phone_numbers": []any{map[string]any{
+		registry, recorder := newTestRegistry(t, twilioModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"incoming_phone_numbers": []any{map[string]any{
 				"sid": "PN1", "phone_number": "+15550003", "friendly_name": "Main",
 				"capabilities": map[string]any{"sms": true, "voice": true, "mms": false},
 				"date_created": "2020-01-01",
 			}}})
 		})
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{"action": "twilio_list_phone_numbers"})
-		batch7Lane7WantOK(t, result)
-		numbers := batch7Lane7FieldSlice(t, result, "phone_numbers")
+		result := runAction(t, registry, "twilio", map[string]any{"action": "twilio_list_phone_numbers"})
+		requireOK(t, result)
+		numbers := fieldSlice(t, result, "phone_numbers")
 		if len(numbers) != 1 {
 			t.Fatalf("phone_numbers = %d", len(numbers))
 		}
@@ -912,16 +912,16 @@ func TestBatch7Lane7TwilioActions(t *testing.T) {
 	})
 
 	t.Run("twilio_list_calls", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"calls": []any{map[string]any{
+		registry, recorder := newTestRegistry(t, twilioModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"calls": []any{map[string]any{
 				"sid": "CA1", "to": "+15550001", "from": "+15550002", "status": "completed",
 				"direction": "outbound-api", "duration": "5", "price": "-0.01",
 				"start_time": "2024-01-01", "end_time": "2024-01-01",
 			}}})
 		})
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{"action": "twilio_list_calls", "status": "completed"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "count"); got != 1 {
+		result := runAction(t, registry, "twilio", map[string]any{"action": "twilio_list_calls", "status": "completed"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "count"); got != 1 {
 			t.Fatalf("count = %d", got)
 		}
 		if got := recorder.last(t).Query.Get("Status"); got != "completed" {
@@ -930,12 +930,12 @@ func TestBatch7Lane7TwilioActions(t *testing.T) {
 	})
 
 	t.Run("twilio_delete_message", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, env, func(w http.ResponseWriter, _ *http.Request) {
+		registry, recorder := newTestRegistry(t, twilioModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		})
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{"action": "twilio_delete_message", "message_sid": "SM1"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldString(t, result, "status"); got != "deleted" {
+		result := runAction(t, registry, "twilio", map[string]any{"action": "twilio_delete_message", "message_sid": "SM1"})
+		requireOK(t, result)
+		if got := fieldString(t, result, "status"); got != "deleted" {
 			t.Fatalf("status = %q", got)
 		}
 		request := recorder.last(t)
@@ -950,18 +950,18 @@ func TestBatch7Lane7TwilioActions(t *testing.T) {
 // Parity-exempt: test_pushover_tool.py covers send/validate/sounds/receipt;
 // cancel_receipt, send_glance and get_limits have no upstream unit test, so
 // this table exercises all seven actions.
-func TestBatch7Lane7PushoverActions(t *testing.T) {
+func TestPushoverActions(t *testing.T) {
 	env := map[string]string{"PUSHOVER_API_TOKEN": "app-token"}
 
 	t.Run("pushover_send", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7PushoverModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"status": 1, "request": "req1"})
+		registry, recorder := newTestRegistry(t, pushoverModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"status": 1, "request": "req1"})
 		})
-		result := batch7Lane7Run(t, registry, "pushover", map[string]any{
+		result := runAction(t, registry, "pushover", map[string]any{
 			"action": "pushover_send", "user_key": "user1", "message": "hello", "title": "Hi",
 		})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldString(t, result, "status"); got != "sent" {
+		requireOK(t, result)
+		if got := fieldString(t, result, "status"); got != "sent" {
 			t.Fatalf("status = %q", got)
 		}
 		form := recorder.last(t).Form
@@ -974,30 +974,30 @@ func TestBatch7Lane7PushoverActions(t *testing.T) {
 	})
 
 	t.Run("pushover_validate_user", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7PushoverModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{
+		registry, _ := newTestRegistry(t, pushoverModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{
 				"status": 1, "devices": []any{"phone", "tablet"}, "group": 1,
 			})
 		})
-		result := batch7Lane7Run(t, registry, "pushover", map[string]any{"action": "pushover_validate_user", "user_key": "user1"})
-		batch7Lane7WantOK(t, result)
+		result := runAction(t, registry, "pushover", map[string]any{"action": "pushover_validate_user", "user_key": "user1"})
+		requireOK(t, result)
 		if !asBool(result["is_valid"]) || !asBool(result["is_group"]) {
 			t.Fatalf("result = %v", result)
 		}
-		if got := len(batch7Lane7FieldSlice(t, result, "devices")); got != 2 {
+		if got := len(fieldSlice(t, result, "devices")); got != 2 {
 			t.Fatalf("devices = %d", got)
 		}
 	})
 
 	t.Run("pushover_list_sounds", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7PushoverModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{
+		registry, recorder := newTestRegistry(t, pushoverModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{
 				"status": 1, "sounds": map[string]any{"pushover": "Pushover (default)", "bike": "Bike"},
 			})
 		})
-		result := batch7Lane7Run(t, registry, "pushover", map[string]any{"action": "pushover_list_sounds"})
-		batch7Lane7WantOK(t, result)
-		if got := len(batch7Lane7FieldMap(t, result, "sounds")); got != 2 {
+		result := runAction(t, registry, "pushover", map[string]any{"action": "pushover_list_sounds"})
+		requireOK(t, result)
+		if got := len(fieldMap(t, result, "sounds")); got != 2 {
 			t.Fatalf("sounds = %d", got)
 		}
 		request := recorder.last(t)
@@ -1007,15 +1007,15 @@ func TestBatch7Lane7PushoverActions(t *testing.T) {
 	})
 
 	t.Run("pushover_check_receipt", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7PushoverModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{
+		registry, recorder := newTestRegistry(t, pushoverModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{
 				"status": 1, "acknowledged": 1, "acknowledged_by": "user1",
 				"acknowledged_at": 1700000000, "last_delivered_at": 1699999999,
 				"expired": 0, "called_back": 1,
 			})
 		})
-		result := batch7Lane7Run(t, registry, "pushover", map[string]any{"action": "pushover_check_receipt", "receipt": "r1"})
-		batch7Lane7WantOK(t, result)
+		result := runAction(t, registry, "pushover", map[string]any{"action": "pushover_check_receipt", "receipt": "r1"})
+		requireOK(t, result)
 		if !asBool(result["acknowledged"]) || !asBool(result["called_back"]) {
 			t.Fatalf("result = %v", result)
 		}
@@ -1025,12 +1025,12 @@ func TestBatch7Lane7PushoverActions(t *testing.T) {
 	})
 
 	t.Run("pushover_cancel_receipt", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7PushoverModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"status": 1})
+		registry, recorder := newTestRegistry(t, pushoverModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"status": 1})
 		})
-		result := batch7Lane7Run(t, registry, "pushover", map[string]any{"action": "pushover_cancel_receipt", "receipt": "r1"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldString(t, result, "status"); got != "cancelled" {
+		result := runAction(t, registry, "pushover", map[string]any{"action": "pushover_cancel_receipt", "receipt": "r1"})
+		requireOK(t, result)
+		if got := fieldString(t, result, "status"); got != "cancelled" {
 			t.Fatalf("status = %q", got)
 		}
 		if got := recorder.last(t).Path; got != "/receipts/r1/cancel.json" {
@@ -1039,14 +1039,14 @@ func TestBatch7Lane7PushoverActions(t *testing.T) {
 	})
 
 	t.Run("pushover_send_glance", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7PushoverModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"status": 1, "request": "req2"})
+		registry, recorder := newTestRegistry(t, pushoverModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"status": 1, "request": "req2"})
 		})
-		result := batch7Lane7Run(t, registry, "pushover", map[string]any{
+		result := runAction(t, registry, "pushover", map[string]any{
 			"action": "pushover_send_glance", "user_key": "user1", "title": "Build",
 			"count": 1200, "percent": 150,
 		})
-		batch7Lane7WantOK(t, result)
+		requireOK(t, result)
 		form := recorder.last(t).Form
 		if got := form.Get("count"); got != "999" {
 			t.Fatalf("count = %q", got)
@@ -1057,12 +1057,12 @@ func TestBatch7Lane7PushoverActions(t *testing.T) {
 	})
 
 	t.Run("pushover_get_limits", func(t *testing.T) {
-		registry, recorder := batch7Lane7TestRegistry(t, batch7Lane7PushoverModule, env, func(w http.ResponseWriter, _ *http.Request) {
-			batch7Lane7WriteJSON(w, http.StatusOK, map[string]any{"status": 1, "limit": 10000, "remaining": 9000, "reset": 1700000000})
+		registry, recorder := newTestRegistry(t, pushoverModuleID, env, func(w http.ResponseWriter, _ *http.Request) {
+			writeJSONResponse(w, http.StatusOK, map[string]any{"status": 1, "limit": 10000, "remaining": 9000, "reset": 1700000000})
 		})
-		result := batch7Lane7Run(t, registry, "pushover", map[string]any{"action": "pushover_get_limits"})
-		batch7Lane7WantOK(t, result)
-		if got := batch7Lane7FieldInt(t, result, "remaining"); got != 9000 {
+		result := runAction(t, registry, "pushover", map[string]any{"action": "pushover_get_limits"})
+		requireOK(t, result)
+		if got := fieldInt(t, result, "remaining"); got != 9000 {
 			t.Fatalf("remaining = %d", got)
 		}
 		if got := recorder.last(t).Path; got != "/apps/limits.json" {
@@ -1075,53 +1075,53 @@ func TestBatch7Lane7PushoverActions(t *testing.T) {
 
 // Parity-exempt: error-status mapping is exercised per action against a fake
 // upstream; the upstream classes only pin a subset of the 401/404/429 strings.
-func TestBatch7Lane7UpstreamErrors(t *testing.T) {
+func TestUpstreamErrors(t *testing.T) {
 	t.Run("youtube_quota", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7YouTubeModule, map[string]string{"YOUTUBE_API_KEY": "key"},
-			batch7Lane7StatusHandler(http.StatusForbidden, map[string]any{
+		registry, _ := newTestRegistry(t, youtubeModuleID, map[string]string{"YOUTUBE_API_KEY": "key"},
+			statusHandler(http.StatusForbidden, map[string]any{
 				"error": map[string]any{"errors": []any{map[string]any{"reason": "quotaExceeded"}}},
 			}))
-		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_search_videos", "query": "go"})
-		if got := batch7Lane7ErrorText(t, result); !strings.Contains(got, "quota exceeded") {
+		result := runAction(t, registry, "youtube", map[string]any{"action": "youtube_search_videos", "query": "go"})
+		if got := errorText(t, result); !strings.Contains(got, "quota exceeded") {
 			t.Fatalf("error = %q", got)
 		}
 	})
 
 	t.Run("youtube_401", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7YouTubeModule, map[string]string{"YOUTUBE_API_KEY": "key"},
-			batch7Lane7StatusHandler(http.StatusUnauthorized, map[string]any{"error": "bad key"}))
-		result := batch7Lane7Run(t, registry, "youtube", map[string]any{"action": "youtube_search_videos", "query": "go"})
-		if got := batch7Lane7ErrorText(t, result); !strings.Contains(got, "YouTube API error 401") {
+		registry, _ := newTestRegistry(t, youtubeModuleID, map[string]string{"YOUTUBE_API_KEY": "key"},
+			statusHandler(http.StatusUnauthorized, map[string]any{"error": "bad key"}))
+		result := runAction(t, registry, "youtube", map[string]any{"action": "youtube_search_videos", "query": "go"})
+		if got := errorText(t, result); !strings.Contains(got, "YouTube API error 401") {
 			t.Fatalf("error = %q", got)
 		}
 	})
 
 	t.Run("reddit_401", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7RedditModule, nil,
-			batch7Lane7StatusHandler(http.StatusUnauthorized, map[string]any{"message": "unauthorized"}),
-			WithCredential(batch7Lane7RedditModule, "token"))
-		result := batch7Lane7Run(t, registry, "reddit", map[string]any{"action": "reddit_get_posts", "subreddit": "golang"})
-		if got := batch7Lane7ErrorText(t, result); got != "Unauthorized. Reddit token may be expired." {
+		registry, _ := newTestRegistry(t, redditModuleID, nil,
+			statusHandler(http.StatusUnauthorized, map[string]any{"message": "unauthorized"}),
+			WithCredential(redditModuleID, "token"))
+		result := runAction(t, registry, "reddit", map[string]any{"action": "reddit_get_posts", "subreddit": "golang"})
+		if got := errorText(t, result); got != "Unauthorized. Reddit token may be expired." {
 			t.Fatalf("error = %q", got)
 		}
 	})
 
 	t.Run("reddit_403", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7RedditModule, nil,
-			batch7Lane7StatusHandler(http.StatusForbidden, map[string]any{"message": "forbidden"}),
-			WithCredential(batch7Lane7RedditModule, "token"))
-		result := batch7Lane7Run(t, registry, "reddit", map[string]any{"action": "reddit_get_posts", "subreddit": "golang"})
-		if got := batch7Lane7ErrorText(t, result); got != "Forbidden. Check Reddit app permissions." {
+		registry, _ := newTestRegistry(t, redditModuleID, nil,
+			statusHandler(http.StatusForbidden, map[string]any{"message": "forbidden"}),
+			WithCredential(redditModuleID, "token"))
+		result := runAction(t, registry, "reddit", map[string]any{"action": "reddit_get_posts", "subreddit": "golang"})
+		if got := errorText(t, result); got != "Forbidden. Check Reddit app permissions." {
 			t.Fatalf("error = %q", got)
 		}
 	})
 
 	t.Run("reddit_429", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7RedditModule, nil,
-			batch7Lane7StatusHandler(http.StatusTooManyRequests, map[string]any{"message": "slow down"}),
-			WithCredential(batch7Lane7RedditModule, "token"))
-		result := batch7Lane7Run(t, registry, "reddit", map[string]any{"action": "reddit_get_posts", "subreddit": "golang"})
-		if got := batch7Lane7ErrorText(t, result); !strings.Contains(got, "Reddit API error 429") {
+		registry, _ := newTestRegistry(t, redditModuleID, nil,
+			statusHandler(http.StatusTooManyRequests, map[string]any{"message": "slow down"}),
+			WithCredential(redditModuleID, "token"))
+		result := runAction(t, registry, "reddit", map[string]any{"action": "reddit_get_posts", "subreddit": "golang"})
+		if got := errorText(t, result); !strings.Contains(got, "Reddit API error 429") {
 			t.Fatalf("error = %q", got)
 		}
 	})
@@ -1129,80 +1129,80 @@ func TestBatch7Lane7UpstreamErrors(t *testing.T) {
 	for _, status := range []int{http.StatusUnauthorized, http.StatusNotFound, http.StatusTooManyRequests} {
 		status := status
 		t.Run(fmt.Sprintf("twitter_%d", status), func(t *testing.T) {
-			registry, _ := batch7Lane7TestRegistry(t, batch7Lane7TwitterModule, map[string]string{"X_BEARER_TOKEN": "token"},
-				batch7Lane7StatusHandler(status, map[string]any{"error": "provider"}))
-			result := batch7Lane7Run(t, registry, "twitter", map[string]any{"action": "twitter_get_user", "username": "alice"})
-			if got := batch7Lane7ErrorText(t, result); !strings.Contains(got, fmt.Sprintf("HTTP %d", status)) {
+			registry, _ := newTestRegistry(t, twitterModuleID, map[string]string{"X_BEARER_TOKEN": "token"},
+				statusHandler(status, map[string]any{"error": "provider"}))
+			result := runAction(t, registry, "twitter", map[string]any{"action": "twitter_get_user", "username": "alice"})
+			if got := errorText(t, result); !strings.Contains(got, fmt.Sprintf("HTTP %d", status)) {
 				t.Fatalf("error = %q", got)
 			}
 		})
 	}
 
 	t.Run("twilio_401", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, map[string]string{
+		registry, _ := newTestRegistry(t, twilioModuleID, map[string]string{
 			"TWILIO_ACCOUNT_SID": "AC1", "TWILIO_AUTH_TOKEN": "token",
-		}, batch7Lane7StatusHandler(http.StatusUnauthorized, map[string]any{"message": "unauthorized"}))
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{
+		}, statusHandler(http.StatusUnauthorized, map[string]any{"message": "unauthorized"}))
+		result := runAction(t, registry, "twilio", map[string]any{
 			"action": "twilio_send_sms", "to": "+1", "from_number": "+2", "body": "hi",
 		})
-		if got := batch7Lane7ErrorText(t, result); got != "Unauthorized. Check your Twilio credentials." {
+		if got := errorText(t, result); got != "Unauthorized. Check your Twilio credentials." {
 			t.Fatalf("error = %q", got)
 		}
 	})
 
 	t.Run("twilio_404", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, map[string]string{
+		registry, _ := newTestRegistry(t, twilioModuleID, map[string]string{
 			"TWILIO_ACCOUNT_SID": "AC1", "TWILIO_AUTH_TOKEN": "token",
-		}, batch7Lane7StatusHandler(http.StatusNotFound, map[string]any{"message": "missing"}))
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{"action": "twilio_get_message", "message_sid": "SM1"})
-		if got := batch7Lane7ErrorText(t, result); got != "Resource not found." {
+		}, statusHandler(http.StatusNotFound, map[string]any{"message": "missing"}))
+		result := runAction(t, registry, "twilio", map[string]any{"action": "twilio_get_message", "message_sid": "SM1"})
+		if got := errorText(t, result); got != "Resource not found." {
 			t.Fatalf("error = %q", got)
 		}
 	})
 
 	t.Run("twilio_429", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, map[string]string{
+		registry, _ := newTestRegistry(t, twilioModuleID, map[string]string{
 			"TWILIO_ACCOUNT_SID": "AC1", "TWILIO_AUTH_TOKEN": "token",
-		}, batch7Lane7StatusHandler(http.StatusTooManyRequests, map[string]any{"message": "slow"}))
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{"action": "twilio_list_messages"})
-		if got := batch7Lane7ErrorText(t, result); got != "Rate limited. Try again shortly." {
+		}, statusHandler(http.StatusTooManyRequests, map[string]any{"message": "slow"}))
+		result := runAction(t, registry, "twilio", map[string]any{"action": "twilio_list_messages"})
+		if got := errorText(t, result); got != "Rate limited. Try again shortly." {
 			t.Fatalf("error = %q", got)
 		}
 	})
 
 	t.Run("twilio_delete_404", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7TwilioModule, map[string]string{
+		registry, _ := newTestRegistry(t, twilioModuleID, map[string]string{
 			"TWILIO_ACCOUNT_SID": "AC1", "TWILIO_AUTH_TOKEN": "token",
-		}, batch7Lane7StatusHandler(http.StatusNotFound, map[string]any{"message": "missing"}))
-		result := batch7Lane7Run(t, registry, "twilio", map[string]any{"action": "twilio_delete_message", "message_sid": "SM1"})
-		if got := batch7Lane7ErrorText(t, result); got != "Message not found." {
+		}, statusHandler(http.StatusNotFound, map[string]any{"message": "missing"}))
+		result := runAction(t, registry, "twilio", map[string]any{"action": "twilio_delete_message", "message_sid": "SM1"})
+		if got := errorText(t, result); got != "Message not found." {
 			t.Fatalf("error = %q", got)
 		}
 	})
 
 	t.Run("pushover_401", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7PushoverModule, map[string]string{"PUSHOVER_API_TOKEN": "token"},
-			batch7Lane7StatusHandler(http.StatusUnauthorized, map[string]any{"status": 0, "errors": []any{"invalid token"}}))
-		result := batch7Lane7Run(t, registry, "pushover", map[string]any{"action": "pushover_send", "user_key": "u", "message": "hi"})
-		if got := batch7Lane7ErrorText(t, result); got != "Pushover error: invalid token" {
+		registry, _ := newTestRegistry(t, pushoverModuleID, map[string]string{"PUSHOVER_API_TOKEN": "token"},
+			statusHandler(http.StatusUnauthorized, map[string]any{"status": 0, "errors": []any{"invalid token"}}))
+		result := runAction(t, registry, "pushover", map[string]any{"action": "pushover_send", "user_key": "u", "message": "hi"})
+		if got := errorText(t, result); got != "Pushover error: invalid token" {
 			t.Fatalf("error = %q", got)
 		}
 	})
 
 	t.Run("pushover_404", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7PushoverModule, map[string]string{"PUSHOVER_API_TOKEN": "token"},
-			batch7Lane7StatusHandler(http.StatusNotFound, map[string]any{"status": 0, "errors": []any{"receipt not found"}}))
-		result := batch7Lane7Run(t, registry, "pushover", map[string]any{"action": "pushover_check_receipt", "receipt": "r1"})
-		if got := batch7Lane7ErrorText(t, result); !strings.Contains(got, "Receipt check failed") {
+		registry, _ := newTestRegistry(t, pushoverModuleID, map[string]string{"PUSHOVER_API_TOKEN": "token"},
+			statusHandler(http.StatusNotFound, map[string]any{"status": 0, "errors": []any{"receipt not found"}}))
+		result := runAction(t, registry, "pushover", map[string]any{"action": "pushover_check_receipt", "receipt": "r1"})
+		if got := errorText(t, result); !strings.Contains(got, "Receipt check failed") {
 			t.Fatalf("error = %q", got)
 		}
 	})
 
 	t.Run("pushover_429", func(t *testing.T) {
-		registry, _ := batch7Lane7TestRegistry(t, batch7Lane7PushoverModule, map[string]string{"PUSHOVER_API_TOKEN": "token"},
-			batch7Lane7StatusHandler(http.StatusTooManyRequests, map[string]any{"status": 0, "errors": []any{"rate limited"}}))
-		result := batch7Lane7Run(t, registry, "pushover", map[string]any{"action": "pushover_list_sounds"})
-		if got := batch7Lane7ErrorText(t, result); !strings.Contains(got, "Failed to list sounds") {
+		registry, _ := newTestRegistry(t, pushoverModuleID, map[string]string{"PUSHOVER_API_TOKEN": "token"},
+			statusHandler(http.StatusTooManyRequests, map[string]any{"status": 0, "errors": []any{"rate limited"}}))
+		result := runAction(t, registry, "pushover", map[string]any{"action": "pushover_list_sounds"})
+		if got := errorText(t, result); !strings.Contains(got, "Failed to list sounds") {
 			t.Fatalf("error = %q", got)
 		}
 	})
@@ -1210,8 +1210,8 @@ func TestBatch7Lane7UpstreamErrors(t *testing.T) {
 
 // Parity-exempt: missing-credential short-circuits are Go-side contracts; the
 // upstream credential store returns equivalent help dicts.
-func TestBatch7Lane7CredentialErrors(t *testing.T) {
-	registry := newBatch7Lane7Registry(WithGetenv(func(string) string { return "" }))
+func TestCredentialErrors(t *testing.T) {
+	registry := NewRegistry(WithGetenv(func(string) string { return "" }))
 	cases := []struct {
 		tool  string
 		input map[string]any
@@ -1224,8 +1224,8 @@ func TestBatch7Lane7CredentialErrors(t *testing.T) {
 		{"pushover", map[string]any{"action": "pushover_send", "user_key": "u", "message": "hi"}, "PUSHOVER_API_TOKEN not set"},
 	}
 	for _, tc := range cases {
-		result := batch7Lane7Run(t, registry, tc.tool, tc.input)
-		if got := batch7Lane7ErrorText(t, result); got != tc.want {
+		result := runAction(t, registry, tc.tool, tc.input)
+		if got := errorText(t, result); got != tc.want {
 			t.Fatalf("%s error = %q, want %q", tc.tool, got, tc.want)
 		}
 	}
@@ -1235,8 +1235,8 @@ func TestBatch7Lane7CredentialErrors(t *testing.T) {
 
 // Parity-exempt: catalog/install invariants are Go-side contracts; upstream
 // tests exercise MCP tool functions, not the registry surface.
-func TestBatch7Lane7RegistrySurface(t *testing.T) {
-	registry := newBatch7Lane7Registry()
+func TestRegistrySurface(t *testing.T) {
+	registry := NewRegistry()
 	if got := len(registry.Names()); got != 5 {
 		t.Fatalf("tools = %d, want 5 (%v)", got, registry.Names())
 	}
@@ -1271,7 +1271,7 @@ func TestBatch7Lane7RegistrySurface(t *testing.T) {
 	}
 
 	shared := tools.NewToolRegistry()
-	if got := InstallBatch7Lane7(shared); got != 5 {
+	if got := NewRegistry().Install(shared); got != 5 {
 		t.Fatalf("installed = %d, want 5", got)
 	}
 	for name, count := range expected {

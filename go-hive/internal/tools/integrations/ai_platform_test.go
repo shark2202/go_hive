@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/aden-hive/hive-go/internal/tools/integrations/ai"
 )
 
 // --------------------------------------------------------------- test kit ---
@@ -104,7 +105,7 @@ func batch7Lane4Fake(
 		options = append(options, WithBaseURL(module, server.URL))
 	}
 	options = append(options, opts...)
-	return newBatch7Lane4Registry(options...), recorder, server.URL
+	return newAIPlatformRegistry(options...), recorder, server.URL
 }
 
 // batch7Lane4EnvOption installs a fixed environment map.
@@ -239,7 +240,7 @@ func batch7Lane4ErrorTable(
 // Parity-exempt: catalog/install invariants are Go-side contracts; upstream
 // tests exercise MCP tool functions, not the registry surface.
 func TestBatch7Lane4CatalogIntegrity(t *testing.T) {
-	registry := newBatch7Lane4Registry()
+	registry := newAIPlatformRegistry()
 	if got := len(registry.Names()); got != 5 {
 		t.Fatalf("tools = %d, want 5 (%v)", got, registry.Names())
 	}
@@ -279,9 +280,9 @@ func TestBatch7Lane4CatalogIntegrity(t *testing.T) {
 }
 
 // Parity-exempt: installation into the shared registry is a Go-side contract.
-func TestInstallBatch7Lane4(t *testing.T) {
+func TestInstallAIPlatform(t *testing.T) {
 	shared := tools.NewToolRegistry()
-	if installed := InstallBatch7Lane4(shared); installed != 5 {
+	if installed := InstallAIPlatform(shared); installed != 5 {
 		t.Fatalf("installed = %d, want 5", installed)
 	}
 	for _, name := range []string{"pinecone", "wandb", "langfuse", "huggingface", "vision"} {
@@ -311,7 +312,7 @@ func TestInstallBatch7Lane4(t *testing.T) {
 
 // Parity-exempt: schema shape is a Go-side contract with tools.ToolRegistry.
 func TestBatch7Lane4SchemaShape(t *testing.T) {
-	registry := newBatch7Lane4Registry()
+	registry := newAIPlatformRegistry()
 	for _, tool := range registry.Tools() {
 		schema := tool.Schema()
 		if schema["type"] != "object" {
@@ -337,7 +338,7 @@ func TestBatch7Lane4SchemaShape(t *testing.T) {
 
 // Parity-exempt: unknown-action dispatch is a Go-side registry contract.
 func TestBatch7Lane4UnknownAction(t *testing.T) {
-	registry := newBatch7Lane4Registry()
+	registry := newAIPlatformRegistry()
 	_, err := registry.Execute(t.Context(), "vision", map[string]any{"action": "nope"})
 	if err == nil {
 		t.Fatal("expected unknown action error")
@@ -396,7 +397,7 @@ func TestBatch7Lane4PineconeListIndexes(t *testing.T) {
 
 // Parity: tools/tests/tools/test_pinecone_tool.py::TestPineconeListIndexes::test_missing_token
 func TestBatch7Lane4PineconeMissingToken(t *testing.T) {
-	registry := newBatch7Lane4Registry(WithGetenv(func(string) string { return "" }))
+	registry := newAIPlatformRegistry(WithGetenv(func(string) string { return "" }))
 	result := batch7Lane4Execute(t, registry, "pinecone", map[string]any{
 		"action": "pinecone_list_indexes",
 	})
@@ -759,7 +760,7 @@ func batch7Lane4WandbEnv() map[string]string {
 
 // Parity: tools/tests/tools/test_wandb_tool.py::TestWandbTool::test_missing_credentials_returns_error
 func TestBatch7Lane4WandbMissingCredentials(t *testing.T) {
-	registry := newBatch7Lane4Registry(WithGetenv(func(string) string { return "" }))
+	registry := newAIPlatformRegistry(WithGetenv(func(string) string { return "" }))
 	result := batch7Lane4Execute(t, registry, "wandb", map[string]any{
 		"action": "wandb_list_projects", "entity": "test-entity",
 	})
@@ -1146,7 +1147,7 @@ func batch7Lane4LangfuseEnv() map[string]string {
 
 // Parity: tools/tests/tools/test_langfuse_tool.py::TestLangfuseListTraces::test_missing_credentials
 func TestBatch7Lane4LangfuseMissingCredentials(t *testing.T) {
-	registry := newBatch7Lane4Registry(WithGetenv(func(string) string { return "" }))
+	registry := newAIPlatformRegistry(WithGetenv(func(string) string { return "" }))
 	result := batch7Lane4Execute(t, registry, "langfuse", map[string]any{
 		"action": "langfuse_list_traces",
 	})
@@ -1452,7 +1453,7 @@ func batch7Lane4HuggingFaceEnv() map[string]string {
 
 // Parity: tools/tests/tools/test_huggingface_tool.py::TestHuggingFaceSearchModels::test_missing_token
 func TestBatch7Lane4HuggingFaceMissingToken(t *testing.T) {
-	registry := newBatch7Lane4Registry(WithGetenv(func(string) string { return "" }))
+	registry := newAIPlatformRegistry(WithGetenv(func(string) string { return "" }))
 	result := batch7Lane4Execute(t, registry, "huggingface", map[string]any{
 		"action": "huggingface_search_models",
 	})
@@ -1910,7 +1911,7 @@ func batch7Lane4VisionFeatures(t *testing.T, request batch7Lane4Request) []any {
 
 // Parity: tools/tests/tools/test_vision_tool.py::test_missing_credentials
 func TestBatch7Lane4VisionMissingKey(t *testing.T) {
-	registry := newBatch7Lane4Registry(WithGetenv(func(string) string { return "" }))
+	registry := newAIPlatformRegistry(WithGetenv(func(string) string { return "" }))
 	result := batch7Lane4Execute(t, registry, "vision", map[string]any{
 		"action": "vision_detect_labels", "image_source": "https://example.com/image.jpg",
 	})
@@ -2323,7 +2324,7 @@ func TestBatch7Lane4VisionFileErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create large file: %v", err)
 	}
-	if err := file.Truncate(int64(batch7Lane4VisionMaxBytes) + 1024*1024); err != nil {
+	if err := file.Truncate(int64(ai.VisionMaxBytes) + 1024*1024); err != nil {
 		t.Fatalf("truncate large file: %v", err)
 	}
 	_ = file.Close()

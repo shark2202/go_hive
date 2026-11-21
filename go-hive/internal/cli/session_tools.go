@@ -337,7 +337,7 @@ var sessionIntegrationInstallers = []struct {
 	{"batch7-lane1", integrations.InstallBatch7Lane1, nil},
 	{"batch7-lane2", integrations.InstallBatch7Lane2, nil},
 	{"batch7-lane3", integrations.InstallBatch7Lane3, nil},
-	{"batch7-lane4", integrations.InstallBatch7Lane4, nil},
+	{"batch7-lane4", integrations.InstallAIPlatform, nil},
 	{"batch7-lane6", integrations.InstallBatch7Lane6, nil},
 	{"batch7-lane7", integrations.InstallBatch7Lane7, nil},
 	{"batch7-lane8", integrations.InstallBatch7Lane8, nil},

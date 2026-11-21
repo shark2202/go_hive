@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit a955c3b61e00
+// 源：architecture/model.yaml + go list -json ./... · commit 49fb8349b083
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -87,8 +87,11 @@ digraph go_hive {
     "internal/tools/builtin" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrationkit" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/ai" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/devops" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/enrichment" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/excel" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/social" [fillcolor="white", color="#7e22ce"];
     "internal/visionfallback" [fillcolor="white", color="#7e22ce"];
   }
   subgraph cluster_foundation {
@@ -303,10 +306,16 @@ digraph go_hive {
   "internal/tools/integrations" -> "internal/hiveclock";
   "internal/tools/integrations" -> "internal/tools";
   "internal/tools/integrations" -> "internal/tools/integrationkit";
+  "internal/tools/integrations" -> "internal/tools/integrations/ai";
   "internal/tools/integrations" -> "internal/tools/integrations/devops";
+  "internal/tools/integrations" -> "internal/tools/integrations/enrichment";
   "internal/tools/integrations" -> "internal/tools/integrations/excel";
+  "internal/tools/integrations" -> "internal/tools/integrations/social";
+  "internal/tools/integrations/ai" -> "internal/tools/integrationkit";
   "internal/tools/integrations/devops" -> "internal/tools/integrationkit";
+  "internal/tools/integrations/enrichment" -> "internal/tools/integrationkit";
   "internal/tools/integrations/excel" -> "internal/tools/integrationkit";
+  "internal/tools/integrations/social" -> "internal/tools/integrationkit";
   "internal/triggers" -> "internal/atomicfs";
   "internal/visionfallback" -> "internal/llm";
 }

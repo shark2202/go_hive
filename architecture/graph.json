@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "a955c3b61e00",
+  "generated_at_commit": "49fb8349b083",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 74,
-    "package_edges": 198,
+    "packages": 77,
+    "package_edges": 204,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -130,11 +130,14 @@
         "internal/tools/builtin",
         "internal/tools/integrationkit",
         "internal/tools/integrations",
+        "internal/tools/integrations/ai",
         "internal/tools/integrations/devops",
+        "internal/tools/integrations/enrichment",
         "internal/tools/integrations/excel",
+        "internal/tools/integrations/social",
         "internal/visionfallback"
       ],
-      "package_count": 21
+      "package_count": 24
     },
     {
       "id": "foundation",
@@ -809,7 +812,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 1,
-      "dependents": 3
+      "dependents": 6
     },
     {
       "id": "pkg:internal/tools/integrations",
@@ -820,7 +823,19 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 6,
+      "direct_dependencies": 9,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/ai",
+      "kind": "technical",
+      "package": "internal/tools/integrations/ai",
+      "layer": "capability",
+      "responsibility": "AI 平台领域子包：Pinecone / Weights & Biases / Langfuse / Hugging Face / Google Cloud Vision 的目录、39 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
       "dependents": 1
     },
     {
@@ -836,11 +851,35 @@
       "dependents": 1
     },
     {
+      "id": "pkg:internal/tools/integrations/enrichment",
+      "kind": "technical",
+      "package": "internal/tools/integrations/enrichment",
+      "layer": "capability",
+      "responsibility": "Enrichment/search 领域子包（第五个领域子包）：Apify / Apollo.io / Lusha / SerpAPI / Exa 的目录、36 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
       "id": "pkg:internal/tools/integrations/excel",
       "kind": "technical",
       "package": "internal/tools/integrations/excel",
       "layer": "capability",
       "responsibility": "Excel 领域子包（结构试点）：工具目录、OOXML 读写与 6 个 action 实现；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/social",
+      "kind": "technical",
+      "package": "internal/tools/integrations/social",
+      "layer": "capability",
+      "responsibility": "社交媒体领域子包（第四个领域子包）：YouTube / Reddit / Twitter-X / Twilio / Pushover 的目录、36 个 action 实现与共享 helper；只 import integrationkit。",
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
@@ -2453,7 +2492,17 @@
     },
     {
       "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/ai",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/tools/integrations/devops",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/enrichment",
       "kind": "depends"
     },
     {
@@ -2462,12 +2511,32 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/social",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/ai",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools/integrations/devops",
       "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools/integrations/enrichment",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools/integrations/excel",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/social",
       "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
     },

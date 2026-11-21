@@ -41,10 +41,7 @@ type sizeWaiver struct {
 var fileWaivers = map[string]sizeWaiver{
 	"internal/tools/integrations/cloudflare.go":        {1973, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
 	"internal/tools/integrations/infra_automation.go":  {2086, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/ai_platform.go":       {3031, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/enrichment_search.go": {2848, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
 	"internal/tools/integrations/web_intelligence.go":  {1838, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
-	"internal/tools/integrations/social_media.go":      {2532, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
 	"internal/tools/integrations/scheduling_chat.go":   {2255, "wave 7 工具移植按领域整批落地：一个文件是一批 action 的定义与参数 schema，拆分列入后续重构；上限冻结，只减不增"},
 	"internal/tools/integrations/pdf.go":               {2014, "PDF 工具整批移植（action 定义 + 参数 schema + 错误映射）；拆分列入后续重构，上限冻结"},
 	"internal/tools/integrations/catalog_gen.go":       {2074, "生成文件（gen_catalog.py 产出，DO NOT EDIT）：工具目录表的行数由上游 @mcp.tool 数量决定，不应手改"},

@@ -229,7 +229,7 @@
     "label": "integrations 包结构重构（二）：9 大领域文件迁子包、1908 个 batch 前缀标识符改名、248 个重复 helper 收敛、豁免清单清零",
     "hours": 10,
     "done": false,
-    "note": "进展 2026-11-22：devops 子包拆分完成（939e4fb9，最大文件 643 行）；batch 前缀改名 200 个 + 165 helper 收敛入 integrationkit（f5e84600，前缀 1901→1535）；剩余 8 领域拆子包 + waivers 清零。"
+    "note": "进展 2026-11-22：devops 子包拆分完成（939e4fb9，最大文件 643 行）；batch 前缀改名 200 个 + 165 helper 收敛入 integrationkit（f5e84600，前缀 1901→1535）；剩余 8 领域拆子包 + waivers 清零。 | 阶段2 进展（2026-11-22）：已拆子包 devops/ai/social/enrichment 四个领域（工具面 sha 均逐字节不变）；前缀 1901→1172（limit 同步降）；剩余：cloudflare/infra_automation/web_intelligence/scheduling_chat + pdf/excel/scrape 拆分 + waivers 清零。"
    },
    {
     "id": "queen-mail-mcp-parity",

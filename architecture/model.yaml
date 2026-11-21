@@ -189,6 +189,18 @@ packages:
     layer: capability
     responsibility: "DevOps/hosting 领域子包（第二个领域子包）：GitLab / AWS S3 / Vercel / Docker Hub 的目录、31 个 action 实现与共享 helper；只 import integrationkit。"
     stability: evolving
+  - package: internal/tools/integrations/ai
+    layer: capability
+    responsibility: "AI 平台领域子包：Pinecone / Weights & Biases / Langfuse / Hugging Face / Google Cloud Vision 的目录、39 个 action 实现与共享 helper；只 import integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/social
+    layer: capability
+    responsibility: "社交媒体领域子包（第四个领域子包）：YouTube / Reddit / Twitter-X / Twilio / Pushover 的目录、36 个 action 实现与共享 helper；只 import integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/enrichment
+    layer: capability
+    responsibility: "Enrichment/search 领域子包（第五个领域子包）：Apify / Apollo.io / Lusha / SerpAPI / Exa 的目录、36 个 action 实现与共享 helper；只 import integrationkit。"
+    stability: evolving
   - package: internal/llm
     layer: capability
     responsibility: "LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。"

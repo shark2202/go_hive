@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/aden-hive/hive-go/internal/tools/integrations/enrichment"
 )
 
 // --------------------------------------------------------------- test kit ---
@@ -1627,9 +1628,9 @@ func TestBatch7Lane5ExaGetContentsValidation(t *testing.T) {
 // Parity-exempt: upstream test_exa_search_tool.py mocks httpx and does not
 // assert the ported status mapping (including the 429 retry budget).
 func TestBatch7Lane5ExaErrorStatuses(t *testing.T) {
-	originalSleep := batch7Lane5RetrySleep
-	batch7Lane5RetrySleep = func(time.Duration) {}
-	t.Cleanup(func() { batch7Lane5RetrySleep = originalSleep })
+	originalSleep := enrichment.RetrySleep
+	enrichment.RetrySleep = func(time.Duration) {}
+	t.Cleanup(func() { enrichment.RetrySleep = originalSleep })
 
 	cases := []map[string]any{
 		{"action": "exa_search", "query": "q"},
