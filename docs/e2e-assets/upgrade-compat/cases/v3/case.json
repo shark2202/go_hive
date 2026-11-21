@@ -1,0 +1,63 @@
+{
+  "case": "v3",
+  "fixture": "v3",
+  "home": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/home",
+  "work": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run",
+  "old": {
+    "binary": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/old-release/hive",
+    "version": "hive 1.0.26-go.1",
+    "sha256": "6a0edde9fe323ada45d57febc060946d238e4818a3616f14ea539efb7e06f56a"
+  },
+  "new": {
+    "binary": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/new-head/hive",
+    "version": "hive 1.0.26-go.1",
+    "sha256": "0aacfa14f0126a8c3bc42bdc624f281e8c344dc93e8013b9a3451727627caa57"
+  },
+  "v3_prepared_by": "new (previous binary has no startup migration)",
+  "seeded_credential_id": "upgrade_compat_key",
+  "credential_seed_reason": "",
+  "expect_cold_sessions": [
+    "session_20260201_000001_bbbbbbbb"
+  ],
+  "expect_colony": "alpha",
+  "expect_markers_after_new": {
+    ".migrated-v2": true,
+    ".migrated-v3": true,
+    "colony_sessions_v1": true
+  },
+  "expect_markers_after_new2": {
+    ".migrated-v2": true,
+    ".migrated-v3": true,
+    "colony_sessions_v1": true
+  },
+  "snapshots": {
+    "s0": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/s0.json",
+    "s1": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/s1.json",
+    "s2": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/s2.json",
+    "s3": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/s3.json",
+    "s4": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/s4.json",
+    "s5": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/s5.json"
+  },
+  "diffs": {
+    "new1": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/d_new1.json",
+    "new2": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/d_new2.json",
+    "old_read": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/d_old_read.json",
+    "old_serve": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/d_old_serve.json"
+  },
+  "old_read": {
+    "rc_session": 0,
+    "rc_colony": 0,
+    "rc_queen": 0,
+    "evidence": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/probes",
+    "cold_evidence": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/old-cold.json",
+    "colony_evidence": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/old-colony.json"
+  },
+  "old_cold_sessions": [
+    "session_20260201_000001_bbbbbbbb"
+  ],
+  "old_colonies": [
+    ".migrations",
+    "alpha",
+    "beta"
+  ]
+}

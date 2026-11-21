@@ -1,0 +1,22 @@
+{
+ "slot": "20261121-20",
+ "built_at": "2026-11-21 18:12:17",
+ "head": "d99bd7f7",
+ "version": "1.0.26-go.1",
+ "build_version": "1.0.26-go.1+build.2026112120",
+ "platform": "darwin-arm64",
+ "artifact": "/Users/mac/hive/.wt/upgrade-compat-gate/go_hive/dist/slots/20261121-20/hive-1.0.26-go.1+build.2026112120-darwin-arm64.tar.gz",
+ "sha256": "0e7085dbf5964bd9b2fc913b3e73cbd5bbdc5ff9ec467775f90559d7e44de3ac",
+ "bytes": 48924506,
+ "binaries": [
+  "hive",
+  "hive-cred",
+  "hive-browser",
+  "browserbridge"
+ ],
+ "upgrade_compat": {
+  "status": "compat_failed",
+  "detail": "FAILED vs 20261121-18; see /Users/mac/hive/.wt/upgrade-compat-gate/go_hive/dist/slots/20261121-20/compat.json"
+ },
+ "note": "slot build; six-platform release archives remain gated by scripts/release.sh"
+}

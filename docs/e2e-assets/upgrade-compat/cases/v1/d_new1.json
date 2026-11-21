@@ -1,0 +1,193 @@
+{
+  "probe": "g2-rollback-diff",
+  "before": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v1/s0.json",
+  "after": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v1/s1.json",
+  "added": [
+    {
+      "path": ".migrated-v2",
+      "size": 2
+    },
+    {
+      "path": ".migrated-v3",
+      "size": 2
+    },
+    {
+      "path": "colonies/.migrations/colony_sessions_v1",
+      "size": 2
+    },
+    {
+      "path": "colonies/.migrations/tracker/tracker.db",
+      "size": 28672
+    },
+    {
+      "path": "colonies/legacy_colony/metadata.json",
+      "size": 86
+    },
+    {
+      "path": "colonies/legacy_colony/worker.json",
+      "size": 162
+    },
+    {
+      "path": "colonies/legacy_colony/tracker/tracker.db",
+      "size": 36864
+    },
+    {
+      "path": "logs/hive-server.log",
+      "size": 921
+    },
+    {
+      "path": "mcp_registry/config.json",
+      "size": 140
+    },
+    {
+      "path": "mcp_registry/installed.json",
+      "size": 20
+    },
+    {
+      "path": "memories/global/global.md",
+      "size": 42
+    },
+    {
+      "path": "memories/global/work.md",
+      "size": 36
+    },
+    {
+      "path": "queens/default/sessions/session_20260101_000001_aaaaaaaa/meta.json",
+      "size": 169
+    },
+    {
+      "path": "queens/default/sessions/session_20260101_000001_aaaaaaaa/state.json",
+      "size": 1432
+    },
+    {
+      "path": "queens/default/sessions/session_20260101_000001_aaaaaaaa/summary.json",
+      "size": 99
+    },
+    {
+      "path": "queens/default/sessions/session_20260101_000001_aaaaaaaa/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "queens/default/sessions/session_20260101_000001_aaaaaaaa/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "queens/default/sessions/session_20260101_000001_aaaaaaaa/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "queens/default/sessions/session_20260101_000001_aaaaaaaa/conversations/parts/0000000001.json",
+      "size": 85
+    }
+  ],
+  "removed": [
+    {
+      "path": "queen/global_memory/global.md",
+      "size": 42
+    },
+    {
+      "path": "queen/global_memory/work.md",
+      "size": 36
+    },
+    {
+      "path": "queen/session/session_20260101_000001_aaaaaaaa/meta.json",
+      "size": 169
+    },
+    {
+      "path": "queen/session/session_20260101_000001_aaaaaaaa/state.json",
+      "size": 1432
+    },
+    {
+      "path": "queen/session/session_20260101_000001_aaaaaaaa/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "queen/session/session_20260101_000001_aaaaaaaa/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "queen/session/session_20260101_000001_aaaaaaaa/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "queen/session/session_20260101_000001_aaaaaaaa/conversations/parts/0000000001.json",
+      "size": 85
+    }
+  ],
+  "modified": [],
+  "sqlite_changes": {
+    "colonies/.migrations/tracker/tracker.db": {
+      "_tracker_changes": {
+        "before": null,
+        "after": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      "_tracker_meta": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "a19128879d776ef0d9b60ba22c3b9a54a397dca3aded52716f613198e04338a4"
+        }
+      },
+      "_tracker_registry": {
+        "before": null,
+        "after": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      }
+    },
+    "colonies/legacy_colony/tracker/tracker.db": {
+      "_tracker_changes": {
+        "before": null,
+        "after": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      "_tracker_meta": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        }
+      },
+      "_tracker_registry": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        }
+      },
+      "leads": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        }
+      }
+    }
+  },
+  "marker_changes": {
+    ".migrated-v2": {
+      "before": false,
+      "after": true
+    },
+    ".migrated-v3": {
+      "before": false,
+      "after": true
+    },
+    "colony_sessions_v1": {
+      "before": false,
+      "after": true
+    }
+  },
+  "summary": {
+    "added": 19,
+    "removed": 8,
+    "modified": 0,
+    "sqlite_changed": 2
+  }
+}

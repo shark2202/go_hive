@@ -1,0 +1,11 @@
+{
+ "last_slot": "20261121-18",
+ "last_time": "2026-11-21 18:13:28",
+ "last_epoch": 1795256008,
+ "last_status": "ok",
+ "last_head": "4646507b",
+ "last_artifact": "/Users/mac/hive/.wt/upgrade-compat-gate/go_hive/dist/slots/20261121-18/hive-1.0.26-go.1+build.2026112118-darwin-arm64.tar.gz",
+ "last_detail": "sha256=8a23167efeafe7d665862f3b5f970d9f314ee184ad180ff8c54a4b8fb99ca017 bytes=48924506; compat=ok (PASS vs 20261121-16)",
+ "last_compat": "ok",
+ "slot_seconds": 7200
+}

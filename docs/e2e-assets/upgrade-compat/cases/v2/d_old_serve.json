@@ -1,0 +1,16 @@
+{
+  "probe": "g2-rollback-diff",
+  "before": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v2/s4.json",
+  "after": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v2/s5.json",
+  "added": [],
+  "removed": [],
+  "modified": [],
+  "sqlite_changes": {},
+  "marker_changes": {},
+  "summary": {
+    "added": 0,
+    "removed": 0,
+    "modified": 0,
+    "sqlite_changed": 0
+  }
+}

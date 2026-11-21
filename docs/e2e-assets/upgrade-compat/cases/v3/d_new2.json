@@ -1,0 +1,24 @@
+{
+  "probe": "g2-rollback-diff",
+  "before": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/s1.json",
+  "after": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/s2.json",
+  "added": [],
+  "removed": [],
+  "modified": [
+    {
+      "path": "logs/hive-server.log",
+      "before_sha256": "9f9c42a3ba4ec405f1ef9b3c7018d57bf7c8d34c1b606809c122e4b3cb217ad9",
+      "after_sha256": "88306bd8a843c0a26f1f8b885b2088efbadfab86909013b75e14e677d7db8403",
+      "before_size": 1279,
+      "after_size": 1652
+    }
+  ],
+  "sqlite_changes": {},
+  "marker_changes": {},
+  "summary": {
+    "added": 0,
+    "removed": 0,
+    "modified": 1,
+    "sqlite_changed": 0
+  }
+}

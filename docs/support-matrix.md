@@ -71,6 +71,7 @@
 | 凭据互读 | 通过：两侧同为标准 Fernet（`credentials/credentials/<id>.enc` + `metadata/index.json` 2.0）；Python 写 Go 读、Go 写 Python 读，值/`expires_at`/metadata 保留。**格式兼容 ≠ 真实第三方 token 可用**（G2 用假值） | `../../docs/storage-compat/credentials-crossread.json`、G2 双跑的 `*-credentials-verify.json` |
 | 回滚可行（Go 写过的 home → Python） | 通过：Python CLI/API/`serve` 读取会话/历史/凭据/colony/tracker 全一致；0 删除、0 覆盖；仅新增 `summary.json` 读缓存与追加共享日志；Go 二次启动幂等 | `upgrade-and-rollback.md` §3、`e2e-assets/g2-rollback/` |
 | 升级实测（v1.0.25 → 1.0.26） | 通过：旧二进制建的 v2 home 由新二进制启动即迁移（health 200、内嵌 `/` 200）；`install.sh` 原地升级四二进制并 SHA256 校验；升级后旧二进制回读 0 写入；`verify_release_archive.sh` 13/13 | `upgrade-and-rollback.md` §4、`e2e-assets/g2-rollback/summary.json` |
+| 升级兼容**常设门禁**（每个交付） | 已实现：`upgrade_compat_check.sh` 对 v1/v2/v3 夹具验证「候选启动迁移 → health/读 API（sessions/colonies/credentials 元数据）→ 二次启动幂等 → 旧二进制回读 0 写入 → 旧二进制 serve 回滚」，任一 FAIL 非 0；`release_slot.sh` 出 slot 后自动对上一 slot 跑，失败记 `compat_failed` 并告警；`make compat-check` 进 `make ci`。首次实测（归档 1.0.26 旧二进制 → HEAD 4646507b 候选）3 夹具 **57/57 PASS** | `compatibility-policy.md`、`e2e-assets/upgrade-compat/REPORT.md` |
 
 **已知例外（逐条）**：
 

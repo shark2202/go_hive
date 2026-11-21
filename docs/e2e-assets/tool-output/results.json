@@ -699,7 +699,7 @@
     "trailer": "",
     "reminder": false
    },
-   "exception": "envelope: an oversized result spills at the same threshold on both sides; 'Full result at:' + the grep recovery hint + the sampling warning + 'Preview (truncated):' are now the same shape on both sides (the 2026-11-21 limits lane added Go's grep hint). Remaining: Python also emits a 'Data structure:' digest and an array-aware preview, Go slices raw text. Reviewed and kept: different preview shaping, each self-consistent."
+   "exception": "envelope: an oversized result spills on both sides, but Python emits a structural digest + grep hint and Go emits a bounded preview with a sampling warning. Reviewed and kept: different spillover designs, each self-consistent."
   },
   "terminal_exec_ok": {
    "tool": "terminal_exec",

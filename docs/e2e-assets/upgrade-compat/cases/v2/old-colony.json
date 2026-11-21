@@ -1,0 +1,26 @@
+[
+  {
+    "created_at": "",
+    "name": ".migrations",
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v2/home/colonies/.migrations",
+    "queen_name": "",
+    "queen_session_id": "",
+    "workers": 0
+  },
+  {
+    "created_at": 1767225600,
+    "name": "alpha",
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v2/home/colonies/alpha",
+    "queen_name": "queen_growth",
+    "queen_session_id": "",
+    "workers": 2
+  },
+  {
+    "created_at": 1767225600,
+    "name": "beta",
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v2/home/colonies/beta",
+    "queen_name": "",
+    "queen_session_id": "",
+    "workers": 0
+  }
+]

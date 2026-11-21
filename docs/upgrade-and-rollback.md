@@ -1,5 +1,11 @@
 # 升级与回滚（G2）：Go↔Python 无损替换、安装/升级演练
 
+> **2026-11-21 起升级为常设门禁**：本文是一次性演练证据；后续每个交付由
+> `scripts/upgrade_compat_check.sh`（v1/v2/v3 夹具、旧二进制 0 写入回读、slot 联动）
+> 与 `make compat-check`（契约自洽，已进 `make ci`）持续验证。政策、破坏性变更
+> 定义、迁移/弃用窗口与发布检查清单见 **`compatibility-policy.md`**；首次门禁实测
+> 见 `e2e-assets/upgrade-compat/REPORT.md`。
+
 - 基线：`main` `13e6a4bb`；工作树 `.wt/g2-rollback-install`
 - 被测版本：Go `1.0.26-go.1`（HEAD 构建）；上一发布 `v1.0.25-go.1`（用于“老用户”）
 - 证据目录：`docs/e2e-assets/g2-rollback/`（快照 manifest、逐步 diff、命令输出、归档校验）

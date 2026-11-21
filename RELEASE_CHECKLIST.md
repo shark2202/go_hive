@@ -19,6 +19,12 @@
 | R9 | 发布流程 | tag、release notes、CI release job、制品上传 | **workflow 已对齐，Actions 未跑** | `python3 -c "import yaml,pathlib; yaml.safe_load(pathlib.Path('.github/workflows/release.yml').read_text())"`；`go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/release.yml`；本机逐步仿真（见本次结果） | `release.yml` 已按现行 `release.sh` 契约重写：4 job（meta/build/verify/publish），`VERSION/DIST/RELEASE_DIR/FRONTEND_DIST` 环境变量 + 仓库根调用 `go_hive/scripts/release.sh`，产物为六平台归档 + `SHA256SUMS`，发布资产里的 `install.sh` 取自 `go_hive/install.sh`；YAML 解析 OK、actionlint 0 问题、本机逐步仿真全 PASS（六平台归档构建、`sha256sum -c`、归档冒烟 13/13、内嵌 dashboard `/` 200、`install.sh` 安装成功）；**GitHub Actions 从未运行**，未打 tag、未上传制品，不得按通过处理 |
 | R10 | 真实集成验证 | 关键模块至少各有一条真实凭据的端到端记录 | **不适用（用户决定 2026-11-19）** | 本阶段不提供第三方工具凭据，仅提供 LLM 凭据；以支持矩阵的「未验证」声明为准 | 无任何真实第三方调用记录；全部集成仅对假上游验证 |
 
+> **2026-11-21 起补充**：R8 的 `make ci` 增加 `compat-check`（契约自洽：env/config/
+> storage/DB schema/API 路由/响应形状/工具面）；发布前另需对上一交付跑
+> `bash go_hive/scripts/upgrade_compat_check.sh --old-dir <上一交付> --new-dir <候选>`
+> （或 `make upgrade-compat-check PREV_SLOT=…`），并在发布说明记录窗口/回退结论。
+> 规则见 `docs/compatibility-policy.md` §2/§5。
+
 ## 2. 发布产物（本机实测）
 
 2026-11-20 在本工作树（`release-ci-contract`，main `853a15e9` 之上）按 `release.yml` 的调用方式重跑。目录：`dist/release/`（`release.sh` 默认输出在 `go_hive/go-hive/dist/release/`）。生成命令（仓库根）：

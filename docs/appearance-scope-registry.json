@@ -415,6 +415,11 @@
           "note": "逐命令 diff 报告：命令树/flags/退出码矩阵/help 行差异/默认值核对/已修·保留·待办"
         },
         {
+          "path": "go_hive/docs/cli-surface.html",
+          "kind": "doc",
+          "note": "由 `go_hive/scripts/gen_cli_surface_html.py` 从 `contracts/cli-surface.json` + 实时 `hive-cred --help` 生成：入口清单（两侧 CLI + browserbridge）、`hive`/`hive-browser` 递归命令树（usage/参数/placeholder/choices/默认/位置参数，差异与 Go 内部扩展打标）、`hive-cred` 两侧 help 对照、summary/probes/battery/defaults/alignment 与复现命令；`--check` 防漂移。"
+        },
+        {
           "path": "go_hive/docs/cli-surface-alignment.json",
           "kind": "doc",
           "note": "已修 3 项（requireTab 退出码、hive mcp 裸调用 2、padRight 分隔符）、保留 6 项 Go 扩展、待办 5 项（含估算）"

@@ -143,6 +143,8 @@ PY
   [ "$servers" -eq 0 ] 2>/dev/null && alert serve "serve 进程（${SERVE_PATTERN}）为 0"
   case "$gate_line" in *FAIL*|*MISSING*) alert gate "最近门禁异常：$gate_line" ;; esac
   [ "$release_stale" = "1" ] && alert release "2 小时 slot 版未按时更新（${release_line}）；检查 release_cadence_loop.sh / dist/slots/cadence.log"
+  # 升级兼容门禁失败（release_slot.sh 写入 compat_failed）：slot 版本不得视为可交付。
+  case "$release_line" in *status=compat_failed*) alert compat "slot 升级兼容门禁失败（${release_line}）；见 go_hive/dist/slots/<slot>/compat.json" ;; esac
   if [ "$gov_age" != "?" ] && [ "$gov_age" -gt 24000 ] 2>/dev/null; then
     alert governance "治理重算超过 6h40m 未更新（${gov_age}s）；检查 governance_recheck_loop.sh / dist/slots/governance.log"
   fi

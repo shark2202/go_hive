@@ -3,7 +3,8 @@
 # scripts/release_slot.sh；已做过的 slot 不重复。短睡眠循环避免宿主机
 # idle sleep 冻结一整个长 sleep。
 set -u
-REPO=/Users/mac/hive
+# 仓库根按脚本位置解析（主检出即 /Users/mac/hive；工作树即该工作树）。
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SLOTS="$REPO/go_hive/dist/slots"
 CADENCE="$SLOTS/cadence.json"
 LOG="$SLOTS/cadence.log"

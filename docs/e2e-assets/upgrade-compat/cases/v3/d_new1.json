@@ -1,0 +1,37 @@
+{
+  "probe": "g2-rollback-diff",
+  "before": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/s0.json",
+  "after": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v3/s1.json",
+  "added": [
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/summary.json",
+      "size": 98
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/summary.json",
+      "size": 98
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/summary.json",
+      "size": 99
+    }
+  ],
+  "removed": [],
+  "modified": [
+    {
+      "path": "logs/hive-server.log",
+      "before_sha256": "724b17fb1a5fc3d7add81498f590d732d74433ff3f8e66abcb1a8c9f2bd61b09",
+      "after_sha256": "9f9c42a3ba4ec405f1ef9b3c7018d57bf7c8d34c1b606809c122e4b3cb217ad9",
+      "before_size": 373,
+      "after_size": 1279
+    }
+  ],
+  "sqlite_changes": {},
+  "marker_changes": {},
+  "summary": {
+    "added": 3,
+    "removed": 0,
+    "modified": 1,
+    "sqlite_changed": 0
+  }
+}

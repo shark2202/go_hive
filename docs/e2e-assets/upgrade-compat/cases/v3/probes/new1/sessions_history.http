@@ -1,0 +1,2 @@
+status=200
+{"sessions":[{"agent_name":null,"agent_path":null,"channel":null,"cold":true,"created_at":"2026-01-01T00:00:00+00:00","forked_from":null,"has_messages":true,"last_active_at":1795255984.760112,"last_message":"hi there","live":false,"message_count":2,"queen_id":"queen_growth","session_id":"session_20260201_000001_bbbbbbbb","title":null}]}

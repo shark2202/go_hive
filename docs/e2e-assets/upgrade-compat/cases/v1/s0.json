@@ -1,0 +1,115 @@
+{
+  "probe": "g2-rollback-manifest",
+  "version": 1,
+  "home": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v1/home",
+  "file_count": 16,
+  "dir_count": 13,
+  "markers": {
+    ".migrated-v2": false,
+    ".migrated-v3": false,
+    "colony_sessions_v1": false
+  },
+  "files": {
+    "configuration.json": {
+      "sha256": "ac81cca5f7fa4b18851d2ece37dd89662959290dea4e675f0ac84d17667c3383",
+      "size": 87
+    },
+    "trusted_repos.json": {
+      "sha256": "567accd5cc9e296436ccc2a8b996ecd5bdac0f3a3e086178e7322acca230d00f",
+      "size": 17
+    },
+    "credentials/credentials/upgrade_compat_key.enc": {
+      "sha256": "2dd1ad65667020593db4dc8ed107e031e3cc0667eed4ade70bd51dfef15bb1a5",
+      "size": 780
+    },
+    "credentials/metadata/index.json": {
+      "sha256": "2b227fa636f38b506b5c527e902f86d94720bf0bea5a4e0dee1cc812ae9efa7c",
+      "size": 643
+    },
+    "exports/legacy_colony/metadata.json": {
+      "sha256": "566b7bcb0deab0a6ea63bc0ab836312b7cc8ccc8d32c6aeff47b765258208d1a",
+      "size": 86
+    },
+    "exports/legacy_colony/worker.json": {
+      "sha256": "f9548c207dd25d76ffb19be0cb52b49d2bde07e61ed29c5f1664ed482f5249de",
+      "size": 162
+    },
+    "exports/legacy_colony/data/tracker.db": {
+      "sha256": "bf5a521a6f7ede17d7f6217752d9fa1c21cd2f8173fc7a231f750dd901056a81",
+      "size": 36864
+    },
+    "queen/global_memory/global.md": {
+      "sha256": "9ecf06f64779eca1d6ec87fa4e4ab15a7b07d259e3b03643c14a84c0c6906995",
+      "size": 42
+    },
+    "queen/global_memory/work.md": {
+      "sha256": "1e1a63cc0e7591150476763c71f806d46a71bcb605d1e7f80790cf142eefdb42",
+      "size": 36
+    },
+    "queen/session/session_20260101_000001_aaaaaaaa/meta.json": {
+      "sha256": "b1d133e0bd1ce41e436b19b4b102872e5a6c1aee2a95bb81e49231d1cc954dae",
+      "size": 169
+    },
+    "queen/session/session_20260101_000001_aaaaaaaa/state.json": {
+      "sha256": "f5e9b02a6edc252293545082fd492854d26ff81813c9d9c368802d6825656675",
+      "size": 1432
+    },
+    "queen/session/session_20260101_000001_aaaaaaaa/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "queen/session/session_20260101_000001_aaaaaaaa/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "queen/session/session_20260101_000001_aaaaaaaa/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "queen/session/session_20260101_000001_aaaaaaaa/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "secrets/credential_key": {
+      "sha256": "fa948ea79c5d65f7ca0f481cd656f92402e037f66d13d5f9ef789bdf24bc053e",
+      "size": 44
+    }
+  },
+  "dirs": [
+    "credentials",
+    "credentials/credentials",
+    "credentials/metadata",
+    "exports",
+    "exports/legacy_colony",
+    "exports/legacy_colony/data",
+    "queen",
+    "queen/global_memory",
+    "queen/session",
+    "queen/session/session_20260101_000001_aaaaaaaa",
+    "queen/session/session_20260101_000001_aaaaaaaa/conversations",
+    "queen/session/session_20260101_000001_aaaaaaaa/conversations/parts",
+    "secrets"
+  ],
+  "sqlite": {
+    "exports/legacy_colony/data/tracker.db": {
+      "tables": {
+        "_tracker_changes": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "_tracker_meta": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        },
+        "_tracker_registry": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        },
+        "leads": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        }
+      }
+    }
+  }
+}

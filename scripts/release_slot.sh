@@ -8,7 +8,9 @@
 # 台账: dist/slots/cadence.json（watchdog 读取）
 set -uo pipefail
 
-REPO=/Users/mac/hive
+# 仓库根按脚本位置解析：从主检出运行得到 /Users/mac/hive，从工作树运行得到
+# 该工作树——避免在工作树里误用别处的源码/产物。
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GO_ROOT="$REPO/go_hive"
 MODULE="$GO_ROOT/go-hive"
 BRIDGE="$GO_ROOT/browserbridge"
@@ -48,10 +50,10 @@ fi
 echo $$ >"$lockdir/pid"
 trap 'rm -rf "$lockdir"' EXIT
 
-write_cadence() { # status head artifact detail
-  python3 - "$CADENCE" "$slot_id" "$1" "$2" "$3" "$4" <<'PY'
+write_cadence() { # status head artifact detail [compat]
+  python3 - "$CADENCE" "$slot_id" "$1" "$2" "$3" "$4" "${5:-}" <<'PY'
 import json, sys, time
-path, slot, status, head, artifact, detail = sys.argv[1:7]
+path, slot, status, head, artifact, detail, compat = sys.argv[1:8]
 try:
     data = json.load(open(path))
 except Exception:
@@ -64,6 +66,7 @@ data.update({
     "last_head": head,
     "last_artifact": artifact,
     "last_detail": detail,
+    "last_compat": compat,
     "slot_seconds": 7200,
 })
 json.dump(data, open(path, "w"), ensure_ascii=False, indent=1)
@@ -74,7 +77,7 @@ head=$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo "?")
 dirty=$(git -C "$REPO" status --porcelain --untracked-files=no -- go_hive/go-hive 2>/dev/null | wc -l | tr -d ' ')
 if [ "${dirty:-0}" != "0" ]; then
   write_cadence blocked_dirty "$head" "" "go_hive/go-hive 有 ${dirty} 个未提交改动，slot 版不构建"
-  notify "Hive slot 版被跳过" "$slot_id：主线 go_hive/go-hive 有未提交改动"
+  notify "Hive slot 版被跳过" "${slot_id}：主线 go_hive/go-hive 有未提交改动"
   echo "release-slot: blocked_dirty ($dirty)"; exit 1
 fi
 
@@ -105,9 +108,34 @@ tar -czf "$artifact" -C "$out" hive hive-cred hive-browser browserbridge >>"$log
 sha=$(shasum -a 256 "$artifact" | awk '{print $1}')
 size=$(stat -f%z "$artifact" 2>/dev/null || wc -c <"$artifact")
 
-python3 - "$out/manifest.json" "$slot_id" "$head" "$version" "$build_version" "$artifact" "$sha" "$size" <<'PY'
+# 门禁：新 slot 的二进制必须能无损升级上一 slot 写出的 home，且上一 slot
+# 二进制能在升级后的 home 上回读而不写入。失败 → 状态 compat_failed + 告警，
+# 看门狗（watchdog_report.sh）按 last_status 再次告警。
+prev_slot_dir="$(ls -1d "$SLOTS"/20*-* 2>/dev/null | sort | while read -r d; do
+  [ "$(basename "$d")" = "$slot_id" ] && continue
+  [ -x "$d/hive" ] && echo "$d"
+done | tail -1)"
+compat_status="skipped"
+compat_detail="no previous slot with a hive binary"
+if [ -n "$prev_slot_dir" ]; then
+  compat_work="$SLOTS/.compat/$slot_id"
+  rm -rf "$compat_work"; mkdir -p "$compat_work"
+  echo "release-slot: upgrade-compat vs $(basename "$prev_slot_dir")" >>"$log"
+  if bash "$GO_ROOT/scripts/upgrade_compat_check.sh" \
+      --old-dir "$prev_slot_dir" --new-dir "$out" \
+      --work "$compat_work" --out "$out/compat.json" \
+      --label "slot-$slot_id" --port-base 8890 >>"$log" 2>&1; then
+    compat_status="ok"
+    compat_detail="PASS vs $(basename "$prev_slot_dir")"
+  else
+    compat_status="compat_failed"
+    compat_detail="FAILED vs $(basename "$prev_slot_dir"); see $out/compat.json"
+  fi
+fi
+
+python3 - "$out/manifest.json" "$slot_id" "$head" "$version" "$build_version" "$artifact" "$sha" "$size" "$compat_status" "$compat_detail" <<'PY'
 import json, sys, time
-path, slot, head, version, build_version, artifact, sha, size = sys.argv[1:9]
+path, slot, head, version, build_version, artifact, sha, size, compat_status, compat_detail = sys.argv[1:11]
 json.dump({
     "slot": slot,
     "built_at": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -119,19 +147,30 @@ json.dump({
     "sha256": sha,
     "bytes": int(size),
     "binaries": ["hive", "hive-cred", "hive-browser", "browserbridge"],
+    "upgrade_compat": {"status": compat_status, "detail": compat_detail},
     "note": "slot build; six-platform release archives remain gated by scripts/release.sh",
 }, open(path, "w"), ensure_ascii=False, indent=1)
 PY
 
-write_cadence ok "$head" "$artifact" "sha256=$sha bytes=$size"
-notify "Hive slot 版完成" "$slot_id · ${version} · ${head}"
+if [ "$compat_status" = "compat_failed" ]; then
+  write_cadence compat_failed "$head" "$artifact" "sha256=$sha bytes=$size; $compat_detail" "$compat_status"
+  notify "Hive slot 版升级兼容门禁失败" "${slot_id}：${compat_detail}"
+  echo "release-slot: compat_failed $artifact ($compat_detail)"
+  exit 1
+fi
 
-# 只保留最近 KEEP 个 slot，避免每 2 小时累积占盘
+write_cadence ok "$head" "$artifact" "sha256=$sha bytes=$size; compat=$compat_status ($compat_detail)" "$compat_status"
+notify "Hive slot 版完成" "$slot_id · ${version} · ${head} · compat=$compat_status"
+
+# 只保留最近 KEEP 个 slot，避免每 2 小时累积占盘（compat 工作区同步清理）
 list=$(mktemp)
 ls -1d "$SLOTS"/20*-* 2>/dev/null | sort >"$list"
 count=$(wc -l <"$list" | tr -d ' ')
 if [ "${count:-0}" -gt "$KEEP" ]; then
-  head -n $((count - KEEP)) "$list" | while read -r old; do rm -rf "$old"; done
+  head -n $((count - KEEP)) "$list" | while read -r old; do
+    rm -rf "$old"
+    rm -rf "$SLOTS/.compat/$(basename "$old")"
+  done
 fi
 rm -f "$list"
 

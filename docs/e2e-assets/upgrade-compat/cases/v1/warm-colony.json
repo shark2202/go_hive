@@ -1,0 +1,18 @@
+[
+  {
+    "created_at": "",
+    "name": ".migrations",
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v1/home/colonies/.migrations",
+    "queen_name": "",
+    "queen_session_id": "",
+    "workers": 0
+  },
+  {
+    "created_at": 1767225600,
+    "name": "legacy_colony",
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v1/home/colonies/legacy_colony",
+    "queen_name": "default",
+    "queen_session_id": "",
+    "workers": 1
+  }
+]

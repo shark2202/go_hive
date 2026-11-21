@@ -43,6 +43,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
   <li>保留策略：<code>dist/slots/</code> 只留最近 6 个 slot（约 300MB），更旧的自动清理。</li>
   <li>看门狗：<code>WATCHDOG_REPORT</code> 行内带 <code>release="slot=… status=… age=…s"</code>；超过 2h20m 报警并弹 macOS 通知。</li>
   <li>slot 构建失败或漏拍：写入 <code>cadence.json</code> 的 <code>last_status</code>，并记 <code>dist/slots/cadence.log</code>。</li>
+  <li>升级兼容门禁：每个 slot 出包后自动对<b>上一 slot</b> 跑 <code>upgrade_compat_check.sh</code>（v1/v2/v3 夹具：候选迁移、读 API、二次启动幂等、上一 slot 二进制回读 0 写入）；失败写 <code>last_status=compat_failed</code> 并告警，该 slot 不得视为可交付。规则见 <code>docs/compatibility-policy.md</code>。</li>
 </ul>
 </section>
 

@@ -1,0 +1,206 @@
+{
+  "probe": "g2-rollback-manifest",
+  "version": 1,
+  "home": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/ucg/evidence-run/cases/v1/home",
+  "file_count": 27,
+  "dir_count": 24,
+  "markers": {
+    ".migrated-v2": true,
+    ".migrated-v3": true,
+    "colony_sessions_v1": true
+  },
+  "files": {
+    ".migrated-v2": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size": 2
+    },
+    ".migrated-v3": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size": 2
+    },
+    "configuration.json": {
+      "sha256": "ac81cca5f7fa4b18851d2ece37dd89662959290dea4e675f0ac84d17667c3383",
+      "size": 87
+    },
+    "trusted_repos.json": {
+      "sha256": "567accd5cc9e296436ccc2a8b996ecd5bdac0f3a3e086178e7322acca230d00f",
+      "size": 17
+    },
+    "colonies/.migrations/colony_sessions_v1": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size": 2
+    },
+    "colonies/.migrations/tracker/tracker.db": {
+      "sha256": "5bde70c5e85f8047cbcb0c93239c78aea8839f1b67d897664b659d26cee0f614",
+      "size": 28672
+    },
+    "colonies/legacy_colony/metadata.json": {
+      "sha256": "566b7bcb0deab0a6ea63bc0ab836312b7cc8ccc8d32c6aeff47b765258208d1a",
+      "size": 86
+    },
+    "colonies/legacy_colony/worker.json": {
+      "sha256": "f9548c207dd25d76ffb19be0cb52b49d2bde07e61ed29c5f1664ed482f5249de",
+      "size": 162
+    },
+    "colonies/legacy_colony/tracker/tracker.db": {
+      "sha256": "08542ce94c741dd3d2005595e97c35a950baec0d24f38c40cbe49aa9813747e4",
+      "size": 36864
+    },
+    "credentials/credentials/upgrade_compat_key.enc": {
+      "sha256": "2dd1ad65667020593db4dc8ed107e031e3cc0667eed4ade70bd51dfef15bb1a5",
+      "size": 780
+    },
+    "credentials/metadata/index.json": {
+      "sha256": "2b227fa636f38b506b5c527e902f86d94720bf0bea5a4e0dee1cc812ae9efa7c",
+      "size": 643
+    },
+    "exports/legacy_colony/metadata.json": {
+      "sha256": "566b7bcb0deab0a6ea63bc0ab836312b7cc8ccc8d32c6aeff47b765258208d1a",
+      "size": 86
+    },
+    "exports/legacy_colony/worker.json": {
+      "sha256": "f9548c207dd25d76ffb19be0cb52b49d2bde07e61ed29c5f1664ed482f5249de",
+      "size": 162
+    },
+    "exports/legacy_colony/data/tracker.db": {
+      "sha256": "bf5a521a6f7ede17d7f6217752d9fa1c21cd2f8173fc7a231f750dd901056a81",
+      "size": 36864
+    },
+    "logs/hive-server.log": {
+      "sha256": "4d02ed7bf6d0a7fa409957667084377b6439e100a3dd6c4a9380611aef42bd30",
+      "size": 1294
+    },
+    "mcp_registry/config.json": {
+      "sha256": "a86622287b5681d381d62cd6135cfcb0afd3e85218e83c1a8758938edc61e05a",
+      "size": 140
+    },
+    "mcp_registry/installed.json": {
+      "sha256": "ccd376d91a60545d0dbe2f89377847d29ea93b0cbac5b650ccaa3e300708fefe",
+      "size": 20
+    },
+    "memories/global/global.md": {
+      "sha256": "9ecf06f64779eca1d6ec87fa4e4ab15a7b07d259e3b03643c14a84c0c6906995",
+      "size": 42
+    },
+    "memories/global/work.md": {
+      "sha256": "1e1a63cc0e7591150476763c71f806d46a71bcb605d1e7f80790cf142eefdb42",
+      "size": 36
+    },
+    "queens/default/sessions/session_20260101_000001_aaaaaaaa/meta.json": {
+      "sha256": "b1d133e0bd1ce41e436b19b4b102872e5a6c1aee2a95bb81e49231d1cc954dae",
+      "size": 169
+    },
+    "queens/default/sessions/session_20260101_000001_aaaaaaaa/state.json": {
+      "sha256": "f5e9b02a6edc252293545082fd492854d26ff81813c9d9c368802d6825656675",
+      "size": 1432
+    },
+    "queens/default/sessions/session_20260101_000001_aaaaaaaa/summary.json": {
+      "sha256": "636af764f8e6db0635efc4167d9c8f752a93d9910b59130daa875f656ef11844",
+      "size": 99
+    },
+    "queens/default/sessions/session_20260101_000001_aaaaaaaa/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "queens/default/sessions/session_20260101_000001_aaaaaaaa/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "queens/default/sessions/session_20260101_000001_aaaaaaaa/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "queens/default/sessions/session_20260101_000001_aaaaaaaa/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "secrets/credential_key": {
+      "sha256": "fa948ea79c5d65f7ca0f481cd656f92402e037f66d13d5f9ef789bdf24bc053e",
+      "size": 44
+    }
+  },
+  "dirs": [
+    "colonies",
+    "colonies/.migrations",
+    "colonies/.migrations/tracker",
+    "colonies/legacy_colony",
+    "colonies/legacy_colony/tracker",
+    "credentials",
+    "credentials/credentials",
+    "credentials/metadata",
+    "exports",
+    "exports/legacy_colony",
+    "exports/legacy_colony/data",
+    "logs",
+    "maintenance",
+    "mcp_registry",
+    "mcp_registry/cache",
+    "memories",
+    "memories/global",
+    "queens",
+    "queens/default",
+    "queens/default/sessions",
+    "queens/default/sessions/session_20260101_000001_aaaaaaaa",
+    "queens/default/sessions/session_20260101_000001_aaaaaaaa/conversations",
+    "queens/default/sessions/session_20260101_000001_aaaaaaaa/conversations/parts",
+    "secrets"
+  ],
+  "sqlite": {
+    "colonies/.migrations/tracker/tracker.db": {
+      "tables": {
+        "_tracker_changes": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "_tracker_meta": {
+          "rows": 1,
+          "row_sha256": "a19128879d776ef0d9b60ba22c3b9a54a397dca3aded52716f613198e04338a4"
+        },
+        "_tracker_registry": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      }
+    },
+    "colonies/legacy_colony/tracker/tracker.db": {
+      "tables": {
+        "_tracker_changes": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "_tracker_meta": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        },
+        "_tracker_registry": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        },
+        "leads": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        }
+      }
+    },
+    "exports/legacy_colony/data/tracker.db": {
+      "tables": {
+        "_tracker_changes": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "_tracker_meta": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        },
+        "_tracker_registry": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        },
+        "leads": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        }
+      }
+    }
+  }
+}

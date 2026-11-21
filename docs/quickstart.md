@@ -388,5 +388,6 @@ Sessions:   1 colony, 0 queen-only
 | --- | --- |
 | `HIVE_HOME` 每个目录是什么、模型/凭据怎么解析 | `configuration.md` |
 | 哪些集成已实现、哪些没移植、平台/离线限制 | `support-matrix.md` |
+| 后续交付如何保证旧用户无损升级、什么算破坏性变更 | `compatibility-policy.md` |
 | 本版本包含什么、已知缺口 | `CHANGELOG.md` |
 | 构建与质量门禁 | `../README.md`、`../14-quality-assurance.md` |
