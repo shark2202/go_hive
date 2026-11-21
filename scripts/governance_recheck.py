@@ -42,12 +42,16 @@ def measure() -> dict:
     worktrees = sh(f"git -C {REPO} worktree list | wc -l").strip()
     df = sh("df -k /System/Volumes/Data | awk 'NR==2{print $4}'").strip()
     free_gib = round(int(df) / 1048576, 1) if df.isdigit() else None
+    # tests 口径：parity 注解覆盖数（全仓实测），不再依赖不存在的 /tmp/main_ci_*.log
+    # （2026-11-22 修复：曾长期读到过期日志里的 5383，与实测偏差 200+）。
     tests = 0
-    for log in sorted(Path("/tmp").glob("main_ci_*.log"), key=lambda p: p.stat().st_mtime, reverse=True):
-        m = re.search(r"TOTAL\s+(\d+)", log.read_text(errors="ignore"))
+    try:
+        out = sh(f"bash {GH}/scripts/check_parity.sh {GH}/go-hive | tail -1")
+        m = re.search(r"(\d+)\s*个测试", out)
         if m:
             tests = int(m.group(1))
-            break
+    except Exception:
+        pass
     qc = "unknown"
     qc_report = GH / "QC_REPORT.md"
     if qc_report.exists():
@@ -58,7 +62,12 @@ def measure() -> dict:
     cadence = GH / "dist" / "slots" / "cadence.json"
     if cadence.exists():
         d = json.loads(cadence.read_text())
-        slot = f"{d.get('last_slot','?')}:{d.get('last_status','?')}"
+        arts = d.get("last_artifact") or ""
+        slot_id = ""
+        for part in str(arts).split("/"):
+            if re.fullmatch(r"20\d{6}-\d{2}", part):
+                slot_id = part
+        slot = f"{slot_id or '?'}:{d.get('last_status','?')}"
     return {
         "at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "commits_today": int(commits or 0),

@@ -1,0 +1,1146 @@
+{
+ "V1_official_tail": {
+  "agree": 30,
+  "n": 40,
+  "recs": [
+   {
+    "side": "go",
+    "qid": "5a4f22c0",
+    "old": true,
+    "p": 0.5803135232653984,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6aeb4375_abs",
+    "old": false,
+    "p": 0.7902535832335036,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6a1eabeb",
+    "old": true,
+    "p": 0.7773455902272414,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "cc06de0d",
+    "old": true,
+    "p": 0.6784748404770962,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "81507db6",
+    "old": true,
+    "p": 0.5075131349530156,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "2318644b",
+    "old": true,
+    "p": 0.800733656164144,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "aae3761f",
+    "old": true,
+    "p": 0.8435305268054624,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "80ec1f4f_abs",
+    "old": false,
+    "p": 0.8745014501952146,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_194be4b3",
+    "old": false,
+    "p": 0.1910573374824129,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "5809eb10",
+    "old": true,
+    "p": 0.808062996747602,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "ceb54acb",
+    "old": true,
+    "p": 0.780473931662201,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "afdc33df",
+    "old": true,
+    "p": 0.7427420388775633,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "3d86fd0a",
+    "old": true,
+    "p": 0.06320407704235388,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "1faac195",
+    "old": true,
+    "p": 0.8584102236587667,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6b168ec8",
+    "old": true,
+    "p": 0.9413543876136699,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "bbf86515",
+    "old": true,
+    "p": 0.8865722798216534,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_7bc6cf22",
+    "old": true,
+    "p": 0.9041183871007029,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "0bc8ad93",
+    "old": true,
+    "p": 0.6428462018421428,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_8c8961ae",
+    "old": true,
+    "p": 0.7959842534979229,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_6dc9b45b",
+    "old": true,
+    "p": 0.40855171590178885,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "6a1eabeb",
+    "old": true,
+    "p": 0.668769232941266,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "5a4f22c0",
+    "old": true,
+    "p": 0.668674464699057,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "aae3761f",
+    "old": true,
+    "p": 0.873132179275427,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "cc06de0d",
+    "old": true,
+    "p": 0.233028381725233,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "81507db6",
+    "old": true,
+    "p": 0.6300070579418083,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "6aeb4375_abs",
+    "old": false,
+    "p": 0.857664253857222,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "2318644b",
+    "old": true,
+    "p": 0.4732570998780703,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_194be4b3",
+    "old": true,
+    "p": 0.5519556260794155,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "3d86fd0a",
+    "old": true,
+    "p": 0.2673920455361247,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "5809eb10",
+    "old": true,
+    "p": 0.8112014128386433,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "80ec1f4f_abs",
+    "old": true,
+    "p": 0.8346700989423749,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "6b168ec8",
+    "old": true,
+    "p": 0.8368245465478946,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "1faac195",
+    "old": true,
+    "p": 0.6303517259472347,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "ceb54acb",
+    "old": true,
+    "p": 0.7553579049122817,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "afdc33df",
+    "old": false,
+    "p": 0.757504917541323,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_7bc6cf22",
+    "old": true,
+    "p": 0.808329313655777,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "bbf86515",
+    "old": true,
+    "p": 0.9291685920727353,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_8c8961ae",
+    "old": true,
+    "p": 0.8402707944821203,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_6dc9b45b",
+    "old": true,
+    "p": 0.7593304465750648,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "0bc8ad93",
+    "old": true,
+    "p": 0.34374030370241954,
+    "new": false
+   }
+  ]
+ },
+ "V2_contains": {
+  "agree": 31,
+  "n": 40,
+  "recs": [
+   {
+    "side": "go",
+    "qid": "5a4f22c0",
+    "old": true,
+    "p": 0.6015484492199732,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6aeb4375_abs",
+    "old": false,
+    "p": 0.8069513172087484,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6a1eabeb",
+    "old": true,
+    "p": 0.7845956355574927,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "cc06de0d",
+    "old": true,
+    "p": 0.7535507283746365,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "81507db6",
+    "old": true,
+    "p": 0.5404799241996004,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "2318644b",
+    "old": true,
+    "p": 0.7970350571871161,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "aae3761f",
+    "old": true,
+    "p": 0.8448159973414893,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "80ec1f4f_abs",
+    "old": false,
+    "p": 0.9029051261790281,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_194be4b3",
+    "old": false,
+    "p": 0.23673045965632858,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "5809eb10",
+    "old": true,
+    "p": 0.8195919528237969,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "ceb54acb",
+    "old": true,
+    "p": 0.8085407602974812,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "afdc33df",
+    "old": true,
+    "p": 0.804142450330052,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "3d86fd0a",
+    "old": true,
+    "p": 0.09213847267189763,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "1faac195",
+    "old": true,
+    "p": 0.8865851295440613,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6b168ec8",
+    "old": true,
+    "p": 0.9348242933141457,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "bbf86515",
+    "old": true,
+    "p": 0.8571285001536298,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_7bc6cf22",
+    "old": true,
+    "p": 0.8838689499032193,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "0bc8ad93",
+    "old": true,
+    "p": 0.6936267154626846,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_8c8961ae",
+    "old": true,
+    "p": 0.8230587294568571,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_6dc9b45b",
+    "old": true,
+    "p": 0.40818023913658225,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "6a1eabeb",
+    "old": true,
+    "p": 0.7191327539567745,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "5a4f22c0",
+    "old": true,
+    "p": 0.6433159078099336,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "aae3761f",
+    "old": true,
+    "p": 0.8800405088388492,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "cc06de0d",
+    "old": true,
+    "p": 0.26985632305825613,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "81507db6",
+    "old": true,
+    "p": 0.6448210355300308,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "6aeb4375_abs",
+    "old": false,
+    "p": 0.8528148455206443,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "2318644b",
+    "old": true,
+    "p": 0.507840307966878,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_194be4b3",
+    "old": true,
+    "p": 0.6042971827392327,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "3d86fd0a",
+    "old": true,
+    "p": 0.39982503666225927,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "5809eb10",
+    "old": true,
+    "p": 0.8052434892330166,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "80ec1f4f_abs",
+    "old": true,
+    "p": 0.8606680534986302,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "6b168ec8",
+    "old": true,
+    "p": 0.8337910882313851,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "1faac195",
+    "old": true,
+    "p": 0.7143673326906531,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "ceb54acb",
+    "old": true,
+    "p": 0.7793878199556165,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "afdc33df",
+    "old": false,
+    "p": 0.7993239397542452,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_7bc6cf22",
+    "old": true,
+    "p": 0.8000334300061973,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "bbf86515",
+    "old": true,
+    "p": 0.9178796626090128,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_8c8961ae",
+    "old": true,
+    "p": 0.8616897295142433,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_6dc9b45b",
+    "old": true,
+    "p": 0.7456102268254108,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "0bc8ad93",
+    "old": true,
+    "p": 0.44547836127887697,
+    "new": false
+   }
+  ]
+ },
+ "V3_no_instructions": {
+  "agree": 29,
+  "n": 40,
+  "recs": [
+   {
+    "side": "go",
+    "qid": "5a4f22c0",
+    "old": true,
+    "p": 0.6039777750910361,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6aeb4375_abs",
+    "old": false,
+    "p": 0.8144489570756466,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6a1eabeb",
+    "old": true,
+    "p": 0.8189073543607663,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "cc06de0d",
+    "old": true,
+    "p": 0.644679411573372,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "81507db6",
+    "old": true,
+    "p": 0.48264210874403335,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "2318644b",
+    "old": true,
+    "p": 0.7809667383932857,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "aae3761f",
+    "old": true,
+    "p": 0.8464666578615594,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "80ec1f4f_abs",
+    "old": false,
+    "p": 0.8992160107454794,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_194be4b3",
+    "old": false,
+    "p": 0.17511065737339462,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "5809eb10",
+    "old": true,
+    "p": 0.7534621717807436,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "ceb54acb",
+    "old": true,
+    "p": 0.7901099882192972,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "afdc33df",
+    "old": true,
+    "p": 0.8834854367876285,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "3d86fd0a",
+    "old": true,
+    "p": 0.058970152401668356,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "1faac195",
+    "old": true,
+    "p": 0.7501821369824158,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6b168ec8",
+    "old": true,
+    "p": 0.9560963153036354,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "bbf86515",
+    "old": true,
+    "p": 0.8860739871171598,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_7bc6cf22",
+    "old": true,
+    "p": 0.9143985892091587,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "0bc8ad93",
+    "old": true,
+    "p": 0.6885914666795863,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_8c8961ae",
+    "old": true,
+    "p": 0.8208139402391802,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_6dc9b45b",
+    "old": true,
+    "p": 0.4649442854408177,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "6a1eabeb",
+    "old": true,
+    "p": 0.707969090823441,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "5a4f22c0",
+    "old": true,
+    "p": 0.5918385698284389,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "aae3761f",
+    "old": true,
+    "p": 0.9059058023028523,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "cc06de0d",
+    "old": true,
+    "p": 0.20774773563053509,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "81507db6",
+    "old": true,
+    "p": 0.6046215379645059,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "6aeb4375_abs",
+    "old": false,
+    "p": 0.8638304091632094,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "2318644b",
+    "old": true,
+    "p": 0.41222699707938515,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_194be4b3",
+    "old": true,
+    "p": 0.5218113763178568,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "3d86fd0a",
+    "old": true,
+    "p": 0.2119338520227513,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "5809eb10",
+    "old": true,
+    "p": 0.7917224980159213,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "80ec1f4f_abs",
+    "old": true,
+    "p": 0.7975620131129251,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "6b168ec8",
+    "old": true,
+    "p": 0.8473839874069016,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "1faac195",
+    "old": true,
+    "p": 0.6074251648255727,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "ceb54acb",
+    "old": true,
+    "p": 0.7980502300873239,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "afdc33df",
+    "old": false,
+    "p": 0.8758639202008903,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_7bc6cf22",
+    "old": true,
+    "p": 0.8066689010169058,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "bbf86515",
+    "old": true,
+    "p": 0.912370829156448,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_8c8961ae",
+    "old": true,
+    "p": 0.8612916982487522,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_6dc9b45b",
+    "old": true,
+    "p": 0.7620121389032742,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "0bc8ad93",
+    "old": true,
+    "p": 0.39480903751393476,
+    "new": false
+   }
+  ]
+ },
+ "V4_current": {
+  "agree": 25,
+  "n": 40,
+  "recs": [
+   {
+    "side": "go",
+    "qid": "5a4f22c0",
+    "old": true,
+    "p": 0.3846067175401711,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "6aeb4375_abs",
+    "old": false,
+    "p": 0.7788488436591051,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6a1eabeb",
+    "old": true,
+    "p": 0.7325539385036168,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "cc06de0d",
+    "old": true,
+    "p": 0.6064452698228436,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "81507db6",
+    "old": true,
+    "p": 0.4436628333023833,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "2318644b",
+    "old": true,
+    "p": 0.7407395241854259,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "aae3761f",
+    "old": true,
+    "p": 0.8035613949533921,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "80ec1f4f_abs",
+    "old": false,
+    "p": 0.8388865214622513,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_194be4b3",
+    "old": false,
+    "p": 0.15724038273526045,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "5809eb10",
+    "old": true,
+    "p": 0.6803938560569266,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "ceb54acb",
+    "old": true,
+    "p": 0.7183738275319693,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "afdc33df",
+    "old": true,
+    "p": 0.80966309263539,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "3d86fd0a",
+    "old": true,
+    "p": 0.045684458929781575,
+    "new": false
+   },
+   {
+    "side": "go",
+    "qid": "1faac195",
+    "old": true,
+    "p": 0.658879641195021,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "6b168ec8",
+    "old": true,
+    "p": 0.9238414032152263,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "bbf86515",
+    "old": true,
+    "p": 0.8646615461825684,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_7bc6cf22",
+    "old": true,
+    "p": 0.8801808039374447,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "0bc8ad93",
+    "old": true,
+    "p": 0.5976620761652188,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_8c8961ae",
+    "old": true,
+    "p": 0.7737562587265463,
+    "new": true
+   },
+   {
+    "side": "go",
+    "qid": "gpt4_6dc9b45b",
+    "old": true,
+    "p": 0.38909293833026437,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "6a1eabeb",
+    "old": true,
+    "p": 0.5779128960836027,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "5a4f22c0",
+    "old": true,
+    "p": 0.48509667078170865,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "aae3761f",
+    "old": true,
+    "p": 0.8713328107428954,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "cc06de0d",
+    "old": true,
+    "p": 0.17784347743694534,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "81507db6",
+    "old": true,
+    "p": 0.5771464018851974,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "6aeb4375_abs",
+    "old": false,
+    "p": 0.8302137860487798,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "2318644b",
+    "old": true,
+    "p": 0.3708902969859615,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_194be4b3",
+    "old": true,
+    "p": 0.42657191661819827,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "3d86fd0a",
+    "old": true,
+    "p": 0.15773634095502448,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "5809eb10",
+    "old": true,
+    "p": 0.6696746231100564,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "80ec1f4f_abs",
+    "old": true,
+    "p": 0.7372746229224647,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "6b168ec8",
+    "old": true,
+    "p": 0.6154629841761696,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "1faac195",
+    "old": true,
+    "p": 0.43161213344006516,
+    "new": false
+   },
+   {
+    "side": "py",
+    "qid": "ceb54acb",
+    "old": true,
+    "p": 0.7238909672314253,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "afdc33df",
+    "old": false,
+    "p": 0.8203619558647991,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_7bc6cf22",
+    "old": true,
+    "p": 0.7774529861071293,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "bbf86515",
+    "old": true,
+    "p": 0.9093301724251031,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_8c8961ae",
+    "old": true,
+    "p": 0.8018837006360452,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "gpt4_6dc9b45b",
+    "old": true,
+    "p": 0.7386021522516029,
+    "new": true
+   },
+   {
+    "side": "py",
+    "qid": "0bc8ad93",
+    "old": true,
+    "p": 0.3306855578229338,
+    "new": false
+   }
+  ]
+ }
+}

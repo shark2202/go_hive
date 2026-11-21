@@ -851,8 +851,14 @@ func cmdScreenshot(ctx context.Context, b *Bridge, profile string, params map[st
 	// max_width asks Chrome to render the clip at the target output width —
 	// same 800px-wide result as upstream's PIL resize, resampled by the
 	// browser's compositor instead of Lanczos.
+	//
+	// clip.scale is in CSS px but Chrome returns clip.width × scale × dpr
+	// device pixels, so the requested scale is divided by dpr: upstream PIL
+	// always resizes the raw capture (already device px) down to max_width
+	// IMAGE px, and without the division a dpr=2 host produced a 1600px-wide
+	// annotated image (the registered dpr>1 annotation-width exception).
 	if maxWidth > 0 && baseWidth > 0 {
-		scale := float64(maxWidth) / baseWidth
+		scale := float64(maxWidth) / (baseWidth * dpr)
 		if clip != nil {
 			if existing := paramFloat(clip, "scale", 1); existing < scale {
 				scale = existing

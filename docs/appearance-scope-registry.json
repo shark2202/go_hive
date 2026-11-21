@@ -1403,7 +1403,7 @@
         {
           "path": "go_hive/scripts/wiring_check.py",
           "kind": "checker",
-          "note": "新增 6 个接线点 / 17 项要求（judge.go、loop.go、worker_stall.go、colony/runtime.go、chat_runtime.go、chat_implicit_judge.go、llmjudge/judge.go）；门禁 19 文件 64 要求全命中，self-test 通过"
+          "note": "新增 6 个接线点 / 17 项要求（judge.go、loop.go、worker_stall.go、colony/runtime.go、chat_runtime.go、chat_implicit_judge.go、llmjudge/judge.go）；门禁 19 文件 64 要求全命中，self-test 通过（judge-j2 车道再增 2 条后现为 66）"
         },
         {
           "path": "go_hive/go-hive/internal/agentloop/judge_test.go",
@@ -1424,7 +1424,7 @@
       "status": "partial",
       "status_basis": "6 个机制逐条定归属（2026-11-21 judge-graph-scope 车道，基线 00eeecc8）：3 已对齐（J1 skip_judge 隐式 verdict、J2 判定缝 + LLM criteria judge、J6 停滞检查概率判官）、1 未对齐（J3 Level 2 output-key 门：Go 无 accumulator/set_output 接线，且参考侧该门输入恒空——accumulator.set 0 调用点、set_output 被活循环拒绝、outputs_set 0 写入点）、2 范围外（J4 conversation_judge 会话质量判官：唯一调用点 judge_pipeline.py:130，触发条件是 graph 节点 success_criteria，而 Go 无 graph 运行时——internal/orchestrator 只有 buffer/safe_eval/validator 且全仓 0 引用；J5 SubagentJudge + 迭代余量 urgency：参考侧仅测试构造、无生产调用方，Go 的迭代预算位置由已对齐的 grace 收尾占用）。本车道未新增 Go 生产代码（三条待移植机制都没有『有触发语义的活位置』），补的是可核对性：静态/动态探针、prompt golden、接线门禁 judge 组。详见 go_hive/docs/judge-parity.md。",
       "contract_state": "test_annotated",
-      "measured_now": "2026-11-21：静态探针 16/16 PASS（canary 注入后 2 条 FAIL，删除后恢复）；动态探针 3/3（Level 2b judge_calls=2/model_turns=2/accept=True；无 criteria judge_calls=0；output-key 门 accept=False）；golden 检查 OK（205 字符），1 字符漂移被 TestJudgePromptMatchesPythonGolden 拦住；wiring_check 19 文件/64 要求 OK + self-test OK；go test ./internal/{llmjudge,agentloop,colony,server} 通过（另有 4 个与 judge 无关的既有 flake，复现率与根因见 judge-parity.md §6）。",
+      "measured_now": "2026-11-21：静态探针 16/16 PASS（canary 注入后 2 条 FAIL，删除后恢复）；动态探针 3/3（Level 2b judge_calls=2/model_turns=2/accept=True；无 criteria judge_calls=0；output-key 门 accept=False）；golden 检查 OK（205 字符），1 字符漂移被 TestJudgePromptMatchesPythonGolden 拦住；wiring_check 19 文件/64 要求 OK + self-test OK；go test ./internal/{llmjudge,agentloop,colony,server} 通过（另有 4 个与 judge 无关的既有 flake，复现率与根因见 judge-parity.md §6）。2026-11-22 judge-j2：J2 失败回落矩阵双侧实跑（Python 7/7、Go 7/7 子用例）并修复对齐；go test -count=2 ./internal/agentloop OK；wiring_check 19 文件/66 要求 OK + self-test OK。",
       "lane": "judge-graph-scope",
       "lane_state": "measured",
       "lane_base_commit": "00eeecc8",
@@ -1432,7 +1432,7 @@
         "J4 重启条件：Go 出现 graph 运行时或 phase/accumulator 宿主时，重开 conversation_judge 的归属审计",
         "J5 重启条件：上游把 SubagentJudge 接进任一活循环（或 Go 出现 output-key accumulator）时，按『judge 反馈 + 迭代余量』一起移植",
         "J3 上游若给 output key 接上写入点（set_output 复活或新通道），judge-python-probe 用例 3 会失败并提醒重开",
-        "J2 的失败回落语义差异（Python 重试后 ACCEPT vs Go 归一为 RETRY + 'Judge evaluation failed'）需专门 lane 决策，不在本车道改",
+        "J2 失败回落语义已由 judge-j2 车道实测对齐（探针 judge_j2_probe.py ↔ judge_j2_parity_test.go：瞬态重试→耗尽回退 ACCEPT、非瞬态上抛）；上游改 _judge_turn 的预算/分类/回退文案时以探针为红点重开",
         "judge prompt golden 纳入常规门禁（judge_prompt_golden.py --check）；若上游改 prompt，先重生成 golden 再改 Go"
       ],
       "priority": "P2",
@@ -1458,14 +1458,16 @@
           "inputs": "assistant_text / tool_calls / output_accumulator / accumulator / iteration / conversation_summary / output_keys / missing_keys",
           "host_path": "缝在两条路径上都存在；Python 侧无生产注入方（仅测试注入）",
           "go_status": "measured_aligned",
-          "go_ref": "agentloop/judge.go:52 Judge 接口、:92-103 ConfigureJudge、llm_judge.go:57 默认适配器、loop.go:776-779 与 worker_stall.go:151-152 调用、loop_judge.go:17 应用；criteria 来源补 colony goal 回落（colony/runtime.go:1195-1200、:1290-1296）与 chat 继承（chat_runtime.go:1316-1328，Parity-exempt）",
-          "verdict": "已对齐；Go 侧是同一缝的生产实现（Python 侧缝无注入方）。失败回落语义存在差异，见 docs/judge-parity.md §3.2 末条",
+          "go_ref": "agentloop/judge.go:58 Judge 接口、:98-109 ConfigureJudge、:169 evaluateJudgeWithRetry（_judge_turn 失败回落契约）、llm_judge.go:57 默认适配器、loop.go:777-782 与 worker_stall.go:152-157 调用、loop_judge.go:17 应用；criteria 来源补 colony goal 回落（colony/runtime.go:1195-1200、:1290-1296）与 chat 继承（chat_runtime.go:1316-1328，Parity-exempt）",
+          "verdict": "已对齐；Go 侧是同一缝的生产实现（Python 侧缝无注入方）。失败回落语义经 judge-j2 车道实测后对齐（重试瞬态→耗尽回退 ACCEPT、非瞬态上抛），见 docs/judge-parity.md §3.2 末条与 §6.2",
           "evidence": [
             "probe:go-judge-wired",
             "probe:go-judge-gated",
             "probe:py-no-custom-judge-injection",
             "golden:judge.prompt.txt",
             "test:agentloop/judge_test.go",
+            "test:agentloop/judge_j2_parity_test.go",
+            "probe:judge_j2_probe.py",
             "test:colony/judge_wiring_test.go"
           ]
         },

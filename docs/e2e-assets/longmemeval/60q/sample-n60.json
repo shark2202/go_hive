@@ -1,0 +1,513 @@
+{
+ "dataset": "longmemeval_s_cleaned (HuggingFace xiaowu0162/longmemeval-cleaned, 500 questions)",
+ "data_dir": "~/.hive-go/longmemeval-data",
+ "selection": {
+  "seed": 0,
+  "rng": "CPython random.Random(0)",
+  "method": "for each question_type (sorted by type name): ids = sorted(ids); rng.shuffle(ids); take first 10",
+  "per_type": 10,
+  "n": 60,
+  "types_covered": [
+   "knowledge-update",
+   "multi-session",
+   "single-session-assistant",
+   "single-session-preference",
+   "single-session-user",
+   "temporal-reasoning"
+  ],
+  "type_counts": {
+   "knowledge-update": 10,
+   "multi-session": 10,
+   "single-session-assistant": 10,
+   "single-session-preference": 10,
+   "single-session-user": 10,
+   "temporal-reasoning": 10
+  },
+  "note": "all six question types in the dataset are covered with equal quotas; 2 of the 60 are _abs abstention questions"
+ },
+ "question_ids": [
+  "60d45044",
+  "d52b4f67",
+  "f4f1d8a4_abs",
+  "8e9d538c",
+  "66f24dbb",
+  "86f00804",
+  "76d63226",
+  "c5e8278d",
+  "bc8a6e93",
+  "6b168ec8",
+  "e48988bc",
+  "cc539528",
+  "8cf51dda",
+  "0e5e2d1a",
+  "7a8d0b71",
+  "4388e9dd",
+  "fca762bc",
+  "65240037",
+  "f523d9fe",
+  "2bf43736",
+  "60472f9c",
+  "f35224e0",
+  "46a3abf7",
+  "2788b940",
+  "3a704032",
+  "edced276",
+  "7024f17c",
+  "0a995998",
+  "4f54b7c9",
+  "5025383b",
+  "gpt4_d31cdae3",
+  "gpt4_b4a80587",
+  "gpt4_fa19884d",
+  "8c18457d",
+  "gpt4_1a1dc16d",
+  "0bc8ad93",
+  "c8090214",
+  "b46e15ee",
+  "6e984301",
+  "eac54add",
+  "41698283",
+  "cc5ded98",
+  "e66b632c",
+  "affe2881",
+  "8fb83627",
+  "2133c1b5_abs",
+  "e61a7584",
+  "b01defab",
+  "9bbe84a2",
+  "4b24c848",
+  "1a1907b4",
+  "afdc33df",
+  "b0479f84",
+  "505af2f5",
+  "07b6f563",
+  "06f04340",
+  "caf03d32",
+  "32260d93",
+  "a89d7624",
+  "b6025781"
+ ],
+ "ids_sha256": "90c275b3eba1cccfbdaf4f980cebe879f9e390ea4380b4378995b7e97bfa8934",
+ "questions": [
+  {
+   "question_id": "60d45044",
+   "question_type": "single-session-user",
+   "question_date": "2023/05/30 (Tue) 20:46",
+   "abstention": false,
+   "sessions": 51
+  },
+  {
+   "question_id": "d52b4f67",
+   "question_type": "single-session-user",
+   "question_date": "2023/05/30 (Tue) 23:57",
+   "abstention": false,
+   "sessions": 52
+  },
+  {
+   "question_id": "f4f1d8a4_abs",
+   "question_type": "single-session-user",
+   "question_date": "2023/05/30 (Tue) 21:51",
+   "abstention": true,
+   "sessions": 50
+  },
+  {
+   "question_id": "8e9d538c",
+   "question_type": "single-session-user",
+   "question_date": "2023/05/30 (Tue) 18:03",
+   "abstention": false,
+   "sessions": 48
+  },
+  {
+   "question_id": "66f24dbb",
+   "question_type": "single-session-user",
+   "question_date": "2023/05/30 (Tue) 17:09",
+   "abstention": false,
+   "sessions": 50
+  },
+  {
+   "question_id": "86f00804",
+   "question_type": "single-session-user",
+   "question_date": "2023/05/30 (Tue) 18:40",
+   "abstention": false,
+   "sessions": 43
+  },
+  {
+   "question_id": "76d63226",
+   "question_type": "single-session-user",
+   "question_date": "2023/05/30 (Tue) 16:56",
+   "abstention": false,
+   "sessions": 48
+  },
+  {
+   "question_id": "c5e8278d",
+   "question_type": "single-session-user",
+   "question_date": "2023/05/30 (Tue) 22:36",
+   "abstention": false,
+   "sessions": 44
+  },
+  {
+   "question_id": "bc8a6e93",
+   "question_type": "single-session-user",
+   "question_date": "2023/05/30 (Tue) 13:46",
+   "abstention": false,
+   "sessions": 48
+  },
+  {
+   "question_id": "6b168ec8",
+   "question_type": "single-session-user",
+   "question_date": "2023/05/30 (Tue) 20:24",
+   "abstention": false,
+   "sessions": 50
+  },
+  {
+   "question_id": "e48988bc",
+   "question_type": "single-session-assistant",
+   "question_date": "2023/05/30 (Tue) 23:26",
+   "abstention": false,
+   "sessions": 50
+  },
+  {
+   "question_id": "cc539528",
+   "question_type": "single-session-assistant",
+   "question_date": "2023/05/30 (Tue) 19:20",
+   "abstention": false,
+   "sessions": 48
+  },
+  {
+   "question_id": "8cf51dda",
+   "question_type": "single-session-assistant",
+   "question_date": "2023/05/30 (Tue) 22:24",
+   "abstention": false,
+   "sessions": 46
+  },
+  {
+   "question_id": "0e5e2d1a",
+   "question_type": "single-session-assistant",
+   "question_date": "2023/05/30 (Tue) 18:13",
+   "abstention": false,
+   "sessions": 46
+  },
+  {
+   "question_id": "7a8d0b71",
+   "question_type": "single-session-assistant",
+   "question_date": "2023/05/30 (Tue) 22:31",
+   "abstention": false,
+   "sessions": 45
+  },
+  {
+   "question_id": "4388e9dd",
+   "question_type": "single-session-assistant",
+   "question_date": "2023/05/30 (Tue) 20:43",
+   "abstention": false,
+   "sessions": 43
+  },
+  {
+   "question_id": "fca762bc",
+   "question_type": "single-session-assistant",
+   "question_date": "2023/05/30 (Tue) 21:25",
+   "abstention": false,
+   "sessions": 42
+  },
+  {
+   "question_id": "65240037",
+   "question_type": "single-session-assistant",
+   "question_date": "2023/05/30 (Tue) 23:54",
+   "abstention": false,
+   "sessions": 51
+  },
+  {
+   "question_id": "f523d9fe",
+   "question_type": "single-session-assistant",
+   "question_date": "2023/05/30 (Tue) 22:00",
+   "abstention": false,
+   "sessions": 50
+  },
+  {
+   "question_id": "2bf43736",
+   "question_type": "single-session-assistant",
+   "question_date": "2023/05/30 (Tue) 21:49",
+   "abstention": false,
+   "sessions": 44
+  },
+  {
+   "question_id": "60472f9c",
+   "question_type": "multi-session",
+   "question_date": "2023/05/30 (Tue) 23:41",
+   "abstention": false,
+   "sessions": 45
+  },
+  {
+   "question_id": "f35224e0",
+   "question_type": "multi-session",
+   "question_date": "2023/05/30 (Tue) 23:58",
+   "abstention": false,
+   "sessions": 53
+  },
+  {
+   "question_id": "46a3abf7",
+   "question_type": "multi-session",
+   "question_date": "2023/05/30 (Tue) 21:36",
+   "abstention": false,
+   "sessions": 50
+  },
+  {
+   "question_id": "2788b940",
+   "question_type": "multi-session",
+   "question_date": "2023/05/30 (Tue) 20:00",
+   "abstention": false,
+   "sessions": 47
+  },
+  {
+   "question_id": "3a704032",
+   "question_type": "multi-session",
+   "question_date": "2023/05/30 (Tue) 21:51",
+   "abstention": false,
+   "sessions": 48
+  },
+  {
+   "question_id": "edced276",
+   "question_type": "multi-session",
+   "question_date": "2023/05/30 (Tue) 14:53",
+   "abstention": false,
+   "sessions": 46
+  },
+  {
+   "question_id": "7024f17c",
+   "question_type": "multi-session",
+   "question_date": "2023/05/30 (Tue) 21:24",
+   "abstention": false,
+   "sessions": 47
+  },
+  {
+   "question_id": "0a995998",
+   "question_type": "multi-session",
+   "question_date": "2023/02/15 (Wed) 23:50",
+   "abstention": false,
+   "sessions": 44
+  },
+  {
+   "question_id": "4f54b7c9",
+   "question_type": "multi-session",
+   "question_date": "2023/05/30 (Tue) 23:47",
+   "abstention": false,
+   "sessions": 45
+  },
+  {
+   "question_id": "5025383b",
+   "question_type": "multi-session",
+   "question_date": "2023/05/30 (Tue) 19:49",
+   "abstention": false,
+   "sessions": 46
+  },
+  {
+   "question_id": "gpt4_d31cdae3",
+   "question_type": "temporal-reasoning",
+   "question_date": "2023/05/22 (Mon) 16:56",
+   "abstention": false,
+   "sessions": 50
+  },
+  {
+   "question_id": "gpt4_b4a80587",
+   "question_type": "temporal-reasoning",
+   "question_date": "2023/05/23 (Tue) 04:05",
+   "abstention": false,
+   "sessions": 47
+  },
+  {
+   "question_id": "gpt4_fa19884d",
+   "question_type": "temporal-reasoning",
+   "question_date": "2023/04/05 (Wed) 19:25",
+   "abstention": false,
+   "sessions": 50
+  },
+  {
+   "question_id": "8c18457d",
+   "question_type": "temporal-reasoning",
+   "question_date": "2023/03/29 (Wed) 13:43",
+   "abstention": false,
+   "sessions": 41
+  },
+  {
+   "question_id": "gpt4_1a1dc16d",
+   "question_type": "temporal-reasoning",
+   "question_date": "2023/05/09 (Tue) 10:01",
+   "abstention": false,
+   "sessions": 46
+  },
+  {
+   "question_id": "0bc8ad93",
+   "question_type": "temporal-reasoning",
+   "question_date": "2023/03/11 (Sat) 05:28",
+   "abstention": false,
+   "sessions": 47
+  },
+  {
+   "question_id": "c8090214",
+   "question_type": "temporal-reasoning",
+   "question_date": "2023/12/10 (Sun) 17:17",
+   "abstention": false,
+   "sessions": 47
+  },
+  {
+   "question_id": "b46e15ee",
+   "question_type": "temporal-reasoning",
+   "question_date": "2023/04/18 (Tue) 18:34",
+   "abstention": false,
+   "sessions": 42
+  },
+  {
+   "question_id": "6e984301",
+   "question_type": "temporal-reasoning",
+   "question_date": "2023/04/01 (Sat) 18:55",
+   "abstention": false,
+   "sessions": 50
+  },
+  {
+   "question_id": "eac54add",
+   "question_type": "temporal-reasoning",
+   "question_date": "2023/03/28 (Tue) 20:35",
+   "abstention": false,
+   "sessions": 43
+  },
+  {
+   "question_id": "41698283",
+   "question_type": "knowledge-update",
+   "question_date": "2023/09/21 (Thu) 08:41",
+   "abstention": false,
+   "sessions": 45
+  },
+  {
+   "question_id": "cc5ded98",
+   "question_type": "knowledge-update",
+   "question_date": "2023/06/13 (Tue) 01:30",
+   "abstention": false,
+   "sessions": 53
+  },
+  {
+   "question_id": "e66b632c",
+   "question_type": "knowledge-update",
+   "question_date": "2023/08/25 (Fri) 05:19",
+   "abstention": false,
+   "sessions": 47
+  },
+  {
+   "question_id": "affe2881",
+   "question_type": "knowledge-update",
+   "question_date": "2023/06/07 (Wed) 02:42",
+   "abstention": false,
+   "sessions": 44
+  },
+  {
+   "question_id": "8fb83627",
+   "question_type": "knowledge-update",
+   "question_date": "2023/08/14 (Mon) 23:19",
+   "abstention": false,
+   "sessions": 44
+  },
+  {
+   "question_id": "2133c1b5_abs",
+   "question_type": "knowledge-update",
+   "question_date": "2023/10/15 (Sun) 10:21",
+   "abstention": true,
+   "sessions": 50
+  },
+  {
+   "question_id": "e61a7584",
+   "question_type": "knowledge-update",
+   "question_date": "2023/11/30 (Thu) 12:46",
+   "abstention": false,
+   "sessions": 50
+  },
+  {
+   "question_id": "b01defab",
+   "question_type": "knowledge-update",
+   "question_date": "2023/04/12 (Wed) 06:37",
+   "abstention": false,
+   "sessions": 50
+  },
+  {
+   "question_id": "9bbe84a2",
+   "question_type": "knowledge-update",
+   "question_date": "2023/10/08 (Sun) 15:29",
+   "abstention": false,
+   "sessions": 48
+  },
+  {
+   "question_id": "4b24c848",
+   "question_type": "knowledge-update",
+   "question_date": "2023/10/20 (Fri) 08:09",
+   "abstention": false,
+   "sessions": 51
+  },
+  {
+   "question_id": "1a1907b4",
+   "question_type": "single-session-preference",
+   "question_date": "2023/05/30 (Tue) 22:31",
+   "abstention": false,
+   "sessions": 48
+  },
+  {
+   "question_id": "afdc33df",
+   "question_type": "single-session-preference",
+   "question_date": "2023/05/30 (Tue) 19:03",
+   "abstention": false,
+   "sessions": 46
+  },
+  {
+   "question_id": "b0479f84",
+   "question_type": "single-session-preference",
+   "question_date": "2023/05/30 (Tue) 22:56",
+   "abstention": false,
+   "sessions": 48
+  },
+  {
+   "question_id": "505af2f5",
+   "question_type": "single-session-preference",
+   "question_date": "2023/05/30 (Tue) 20:16",
+   "abstention": false,
+   "sessions": 53
+  },
+  {
+   "question_id": "07b6f563",
+   "question_type": "single-session-preference",
+   "question_date": "2023/05/30 (Tue) 21:46",
+   "abstention": false,
+   "sessions": 52
+  },
+  {
+   "question_id": "06f04340",
+   "question_type": "single-session-preference",
+   "question_date": "2023/05/30 (Tue) 21:35",
+   "abstention": false,
+   "sessions": 55
+  },
+  {
+   "question_id": "caf03d32",
+   "question_type": "single-session-preference",
+   "question_date": "2023/05/30 (Tue) 23:44",
+   "abstention": false,
+   "sessions": 51
+  },
+  {
+   "question_id": "32260d93",
+   "question_type": "single-session-preference",
+   "question_date": "2023/05/30 (Tue) 23:43",
+   "abstention": false,
+   "sessions": 46
+  },
+  {
+   "question_id": "a89d7624",
+   "question_type": "single-session-preference",
+   "question_date": "2023/05/30 (Tue) 21:17",
+   "abstention": false,
+   "sessions": 49
+  },
+  {
+   "question_id": "b6025781",
+   "question_type": "single-session-preference",
+   "question_date": "2023/05/30 (Tue) 21:41",
+   "abstention": false,
+   "sessions": 47
+  }
+ ]
+}

@@ -90,7 +90,7 @@ Go 代码与配套文档在 `go_hive/` 下：`go-hive/`（模块）、`contracts
 | 格式/静态 | `make fmt-check && make vet` | 无输出 | 通过 |
 | 单元测试 | `make test` | 全部包 `ok` | 通过（Makefile 已固化 `TEST_FLAGS ?= -count=1`） |
 | 交叉编译 | `make cross` | 6 平台 | 通过 |
-| parity 注解 | `make parity` | 退出码 0 | 通过：**5,602/5,602**（第二轮 flake/门禁/残余登记合并后） |
+| parity 注解 | `make parity` | 退出码 0 | 通过：**5,608/5,608**（judge J2/dpr/导出备忘/LM60 合并后） |
 | parity 引用 | `make parity-targets` | 退出码 0 | 通过：5,934 条引用，0 missing |
 | 接线 | `make wiring-check` | 退出码 0 | 通过 |
 | 升级兼容 | `make compat-check` | 12 项全过 | 通过（C1–C12；C12 = 271 条登记 0 未登记：ported 202 / partial 10 / out_of_scope 7 / unported 52；config 135 键 / 21 section） |

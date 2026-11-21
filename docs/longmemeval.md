@@ -129,6 +129,11 @@ CGO_ENABLED=0 go test ./internal/longmemeval/ ./internal/cli/
   - Go `hive-longmemeval run`：17/20 = **85.0%**（95% CI 64.0–94.8），task-averaged 88.9%，0 error，0 ungraded，中位 7s/题。
   - Python `pytest tests/e2e/test_longmemeval.py -m live -n 4`（同一 20 个 id）：18/20 = **90.0%**（95% CI 69.9–97.2），task-averaged 77.8%，中位 7s/题。
   - 两边都用真实 `deepseek-flash-1017` 答题、真实 `deepseek-v4-pro` 判分（**非官方 judge**，故这是自建基线，不是发布分）。3 处分歧全部来自答案/判分措辞波动（详见 `docs/e2e-assets/longmemeval/2026-11-21-20q-real-run.md`）。
+- **n=60 同子集双侧跑分（2026-11-22）**：显式同一份 60 题（六类各 10 题等额配额，含 2 道 `_abs`）两侧各一次：
+  Go 52/60 = **86.7%**（95% CI 75.8–93.1），Python 51/60 = **85.0%**（95% CI 73.9–91.9），配对差异 4:3（精确 McNemar
+  p=1.000），0 error / 0 ungraded / 未限流、无重试。主判仍 `deepseek-v4-pro`；本机 0.8B judge 槽
+  （TypeSafe `/systemone`）另作次判：Go 47 vs Py 46，go +1 的方向不变。逐题表、差异题失败模式与复算命令见
+  `docs/e2e-assets/longmemeval/2026-11-22-60q-real-run.md`（产物在 `.../60q/`）。
 - **产物/字段一致性**：同一题的 1 题 smoke 两侧都 correct+searched+evidence；results 行 key/类型一致；`summary.txt` 在归一化 `median seconds` 行后逐字节相同。Go 额外产出 `summary.json` 与 `homes/`（后者默认删除）。
 - **reader/judge prompt 逐字节一致**：Go `ReaderPrompt`/`JudgePrompt` 与 Python `reader_prompt`/`judge_prompt` 在 4 题（含 `_abs` 与数字 answer 题）上 `cmp` 全等；证据见 `docs/e2e-assets/longmemeval/2026-11-21-prompt-byte-parity.txt`。
 - **子命令实测**：`rejudge`（真实 judge 二次判分，写 `rejudged-<model>/`，`original_judge` 保留）、`reference oracle`（真实 reader+judge，`condition=oracle`）均产出结果行。

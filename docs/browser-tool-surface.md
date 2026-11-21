@@ -49,6 +49,12 @@ CLI help，**没有 tool schema 层**（`docs/browser-bridge-surface-audit.html`
   framework 版 `browser_setup`。**这是有意口径，不是遗漏。**
 - `focused_element`：上游 `bridge.click/click_coordinate` 的可选返回字段
   （读 `document.activeElement`）未移植；不影响动作 dict 的必选键集。
+- **dpr>1 注解图宽度（2026-11-22 已修 + 实测）**：`clip.scale` 以 CSS px 计、
+  Chrome 位图按 device px 返回（`clip.width × scale × dpr`），Go 之前按
+  `max_width/cssWidth` 取值，dpr>1 主机上注解图宽 = 800×dpr（实测 1600/2400），
+  上游 PIL 恒为 800 图像像素。现按 `max_width/(cssWidth×dpr)` 取值，三种 dpr
+  输出均为 800×450、矩形边与 PIL 偏差 ≤1 px；**残留**是标签字体/alpha/编码字节
+  （见 §4.1 与 `docs/fixtures/browser-dpr-probe/README.md`），不声称完全一致。
 
 ## 3. tier：延迟层，不挤进首轮 24
 
@@ -91,6 +97,35 @@ CLI help，**没有 tool schema 层**（`docs/browser-bridge-surface-audit.html`
 - **CLI artifact 命名**：动作 dict 不再带 `tabId`，`hive-browser interact`
   的坐标动作图按上游同款 tab0 兜底命名（zoom/screenshot 元数据仍带 tabId）。
 
+### 4.1 dpr>1 注解图宽度（2026-11-22 实测 + 收口）
+
+审计页 D08 登记的「dpr>1 注解图宽度」差异：固定输入（1280×720 CSS、
+`#probe-target` 240,300,640,120、注解文本 `(150,188) #probe-target`）、
+`dpr∈{1,2,3}`，真实 Chrome 158 + 真桥双跑，同一 raw PNG 喂上游
+`_resize_and_annotate` 对照（fixtures：`docs/fixtures/browser-dpr-probe/`）：
+
+| dpr | Python PIL（参考） | Go 修复前 | Go 修复后 |
+| --- | --- | --- | --- |
+| 1 | 800×450；rect (150,187,550,262) | 800×450；rect (150,187,549,262) | 800×450；rect (150,187,549,262) |
+| 2 | 800×450；rect (149,187,550,262) | **1600×900**；rect (300,375,1099,524) | 800×450；rect (150,187,549,262) |
+| 3 | 800×450；rect (150,187,550,262) | **2400×1350**；rect (450,562,1649,787) | 800×450；rect (150,187,549,262) |
+
+- 根因：`Page.captureScreenshot` 的 `clip.scale` 以 CSS px 计，位图按 device px
+  返回（`clip.width × scale × dpr`）；Go 原取值 `max_width/cssWidth`，dpr>1 时注解图
+  宽 = 800×dpr。修复：取值改为 `max_width/(cssWidth×dpr)`（`cmdBrowserScreenshot`），
+  任意 dpr 输出恒为 800 图像像素，与上游 PIL 一致；**工具面 sha 与描述不变**
+  （`TestBrowserToolDefinitionGolden` 22/22）。
+- 修复后几何：矩形的 fill/outline 区域边与 PIL 最大偏差 **1 px**（左边 150 vs 149–150、
+  右边 549 vs 550；DOM 边框 2 CSS px≈1.25 图像像素 + JPEG 抗锯齿）；矩形宽 399 vs 400–401；
+  矩形内外区域均值两侧一致口径（内 (62,81,124) vs (55,84,128)，外均 (255,255,255)）。
+- **仍不对齐（登记，不声称完全一致）**：标签字体度量——Go 是页面 `11px sans-serif`
+  （CSS px，800px 输出下 ≈6.9 图像像素，标签盒 81×7），PIL 固定 11 图像像素
+  （本机回退 `load_default()`，Linux 生产为 DejaVuSans-Bold；标签盒 116×15）；
+  alpha 混合与 JPEG 编码字节（Skia vs PIL）仍属已接受例外。回归：
+  `TestScreenshotMaxWidthIsDprIndependent`（dpr 1/2/3）与
+  `TestScreenshotMaxWidthJpegsAt800`（dpr 2 假页 = 真实 Chrome 语义：
+  `clip.width × scale × dpr`）。
+
 ## 5. 测试与复跑
 
 ```bash
@@ -104,6 +139,11 @@ cd go_hive/go-hive && go test ./internal/server/ -run TestChatToolTier -v   # �
 # 行为残差
 cd go_hive/browserbridge && go test ./ -run 'TestBrowserTabless|TestBrowserTabs|TestBrowserOpenAndNavigate|TestBrowserInteractReturnKeySets|TestBrowserSelectReturnKeySet' -v
 
+# dpr 注解宽度（新增：假页 dpr 1/2/3 + 真实 Chrome 双跑探针）
+cd go_hive/browserbridge && go test ./ -run 'TestScreenshotMaxWidth' -v
+bash go_hive/scripts/browser_dpr_probe.sh <evidence-dir>   # 真实 Chrome + 真桥，dpr 1/2/3
+uv run --offline --project tools python go_hive/scripts/browser_dpr_probe_analyze.py <evidence-dir>
+
 # 定义漂移门禁（重新从 Python 抽取并逐字比对）
 uv run python go_hive/scripts/gen_browser_tool_defs.py --check
 ```
@@ -114,6 +154,8 @@ uv run python go_hive/scripts/gen_browser_tool_defs.py --check
 - `TestBrowserToolsAreDeferredNotFirstRequest` → `24 eager (first request) + 72 deferred (incl. 22 browser tools)`
 - `internal/server` → `first request tools = 24 in Python order`（既有用例）
 - browserbridge 行为用例全绿；`go_hive/browserbridge` 全包 `go test ./...` 绿。
+- `browser_dpr_probe.sh`（真实 Chrome 158）→ dpr 1/2/3 注解图均 800×450、矩形边与
+  PIL 最大偏差 1 px；修复前为 800/1600/2400 宽（2026-11-22，见 §4.1）。
 
 ## 6. 已知不做（not-doing）
 

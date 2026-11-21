@@ -1,0 +1,131 @@
+{
+  "text": {
+    "py_sha256": "30e73cca8add7a930cb8806115e4d07354aad25d3b66c9e77cc548df7a4dab37",
+    "go_sha256": "30e73cca8add7a930cb8806115e4d07354aad25d3b66c9e77cc548df7a4dab37",
+    "equal": true,
+    "py_exit": "0",
+    "go_exit": "0"
+  },
+  "json": {
+    "py_sha256": "21a9829e82246e888ed57414fce0e7ae979754170fd08f763b393c7bc6438ece",
+    "go_sha256": "b7797006fc2c0ccdc5e2bc4f48bdb0e58c0c763eca186f9fed421091faf36e4b",
+    "literal_equal": false,
+    "semantic_equal": true,
+    "py_key_order_rows": [
+      [
+        "name",
+        "queen_name",
+        "queen_session_id",
+        "workers",
+        "created_at",
+        "path"
+      ],
+      [
+        "name",
+        "queen_name",
+        "queen_session_id",
+        "workers",
+        "created_at",
+        "path"
+      ],
+      [
+        "name",
+        "queen_name",
+        "queen_session_id",
+        "workers",
+        "created_at",
+        "path"
+      ],
+      [
+        "name",
+        "queen_name",
+        "queen_session_id",
+        "workers",
+        "created_at",
+        "path"
+      ]
+    ],
+    "go_key_order_rows": [
+      [
+        "created_at",
+        "name",
+        "path",
+        "queen_name",
+        "queen_session_id",
+        "workers"
+      ],
+      [
+        "created_at",
+        "name",
+        "path",
+        "queen_name",
+        "queen_session_id",
+        "workers"
+      ],
+      [
+        "created_at",
+        "name",
+        "path",
+        "queen_name",
+        "queen_session_id",
+        "workers"
+      ],
+      [
+        "created_at",
+        "name",
+        "path",
+        "queen_name",
+        "queen_session_id",
+        "workers"
+      ]
+    ],
+    "names_py": [
+      ".migrations",
+      ".stray_dotdir",
+      "alpha",
+      "beta"
+    ],
+    "names_go": [
+      ".migrations",
+      ".stray_dotdir",
+      "alpha",
+      "beta"
+    ],
+    "migrations_row_py": {
+      "name": ".migrations",
+      "queen_name": "",
+      "queen_session_id": "",
+      "workers": 0,
+      "created_at": "",
+      "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/emoh/work/list-home/colonies/.migrations"
+    },
+    "migrations_row_go": {
+      "created_at": "",
+      "name": ".migrations",
+      "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/emoh/work/list-home/colonies/.migrations",
+      "queen_name": "",
+      "queen_session_id": "",
+      "workers": 0
+    },
+    "empty_variants_equal": true,
+    "empty_py": "No colonies found. / []",
+    "empty_go": "No colonies found. / []"
+  },
+  "api_surfaces": {
+    "python_tools_index_ids": [
+      "alpha",
+      "beta"
+    ],
+    "python_discover": {
+      "Your Agents": [
+        "Alpha"
+      ]
+    },
+    "go_discover": {
+      "Your Agents": [
+        "Alpha"
+      ]
+    },
+    "discover_equal": true
+  }
+}

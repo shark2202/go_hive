@@ -1,0 +1,9 @@
+py	m1_cwd_repo	PermissionError: [Errno 13] error while attempting to bind on address ('127.0.0.1', 1): permission d
+py	m2_cwd_home	PermissionError: [Errno 13] error while attempting to bind on address ('127.0.0.1', 1): permission d
+py	m3_cwd_tmp	PermissionError: [Errno 13] error while attempting to bind on address ('127.0.0.1', 1): permission d
+py	m4_cwd_neutral	PermissionError: [Errno 13] error while attempting to bind on address ('127.0.0.1', 1): permission d
+py	m4w_repo_wrapper	Error: hive must be run from the project directory.
+go	m1_cwd_repo	Error: listen tcp 127.0.0.1:1: bind: permission denied
+go	m2_cwd_home	Error: listen tcp 127.0.0.1:1: bind: permission denied
+go	m3_cwd_tmp	Error: listen tcp 127.0.0.1:1: bind: permission denied
+go	m4_cwd_neutral	Error: listen tcp 127.0.0.1:1: bind: permission denied

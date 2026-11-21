@@ -49,6 +49,18 @@ type LoopConfig struct {
 	ToolCallLifetimeBudget int
 	// Parity: framework/agent_loop/internals/types.py::LoopConfig.judge_every_n_turns.
 	JudgeEveryNTurns int
+	// MaxStreamRetries, StreamRetryBackoffBase and StreamRetryMaxDelay mirror
+	// the upstream LoopConfig fields of the same names. Go's stream path
+	// recovers stalls with the continue-nudge loop instead of a retry count,
+	// so today they drive the judge seam's retry budget (upstream
+	// _judge_turn): max(1, MaxStreamRetries) attempts with
+	// min(base*2**attempt, max delay) waits, then the fail-open ACCEPT.
+	//
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.max_stream_retries,
+	// ::LoopConfig.stream_retry_backoff_base, ::LoopConfig.stream_retry_max_delay
+	MaxStreamRetries       int
+	StreamRetryBackoffBase float64
+	StreamRetryMaxDelay    float64
 	// Parity: framework/agent_loop/internals/types.py
 	SessionIdleNudgeSeconds float64
 	// Parity: framework/agent_loop/internals/types.py
@@ -125,11 +137,16 @@ func DefaultLoopConfig() LoopConfig {
 		// 0/unbounded default, so this is the port's fix for the audit gap
 		// ("Queen 30/50 软检查点"): without it softBudgetCheckpointBlock never
 		// fires in a chat session. Worker profiles override both fields.
-		ToolCallBudget:                  30,
-		ToolCallHardLimit:               50,
-		ToolCallHardMultiple:            5,
-		ToolCallLifetimeBudget:          0,
-		JudgeEveryNTurns:                1,
+		ToolCallBudget:         30,
+		ToolCallHardLimit:      50,
+		ToolCallHardMultiple:   5,
+		ToolCallLifetimeBudget: 0,
+		JudgeEveryNTurns:       1,
+		// Upstream LoopConfig's stream-retry trio; the judge seam consumes
+		// them for its attempt budget and backoff.
+		MaxStreamRetries:                5,
+		StreamRetryBackoffBase:          2.0,
+		StreamRetryMaxDelay:             60.0,
 		SessionIdleNudgeSeconds:         120.0,
 		SessionIdleNudgeMaxPerSession:   3,
 		SessionIdleNudgeAwaitingSeconds: 120.0,

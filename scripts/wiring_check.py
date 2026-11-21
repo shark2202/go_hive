@@ -178,7 +178,9 @@ WIRING: tuple[WiringPoint, ...] = (
             Requirement("criteria/skip_judge 门控", r"spec\.SkipJudge \|\| !hasSuccessCriteria\(spec\)"),
             Requirement("默认 LLM judge 适配器接线", r"NewLLMJudgeAdapterFromCompleter\(completer\)"),
             Requirement("判定事件 judge_type", r"\"custom\","),
-            Requirement("RETRY 无反馈兜底", r"Judge returned RETRY without feedback\."),
+            Requirement("RETRY 无反馈兜底", r"Custom judge returned RETRY\."),
+            Requirement("失败回落契约（_judge_turn）", r"func \(l \*AgentLoop\) evaluateJudgeWithRetry\("),
+            Requirement("瞬态分类（is_transient_error 移植）", r"func isTransientJudgeError\("),
         ),
     ),
     WiringPoint(

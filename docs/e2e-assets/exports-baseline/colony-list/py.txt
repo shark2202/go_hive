@@ -1,0 +1,6 @@
+NAME                      QUEEN                         WORKERS   CREATED
+------------------------------------------------------------------------------------------
+.migrations                                             0         
+.stray_dotdir                                           0         
+alpha                     queenie                       2         2026-01-02T03:04:05
+beta                      beta-q                        0         2026-02-03T00:00:00

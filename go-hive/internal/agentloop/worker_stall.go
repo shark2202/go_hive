@@ -149,7 +149,13 @@ func (l *AgentLoop) settleTextOnlyTurn(ctx context.Context, agentCtx *AgentConte
 	result.FinalText = completion.Content
 	result.InnerTurns = inner + 1
 	if l.shouldJudge(agentCtx, inner, true, false) {
-		verdict := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, result.ToolResults, inner)
+		verdict, judgeErr := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, result.ToolResults, inner)
+		if judgeErr != nil {
+			// Parity: framework/agent_loop/agent_loop.py::_judge_turn — a
+			// non-transient judge failure ends the turn with that error.
+			result.Success = false
+			return true, judgeErr
+		}
 		// Parity: framework/agent_loop/agent_loop.py::execute (6i judge
 		// verdict branches for a text-only turn): log the step before acting.
 		l.logRuntimeStep(agentCtx, runtimelogs.StepInput{

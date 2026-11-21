@@ -773,14 +773,8 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 		loggedCalls := runtimeLogToolCalls(records, timings)
 		iterLatencyMS := stepLatencyMS(iterStart)
-		if l.shouldJudge(agentCtx, inner, false, toolFailure) {
-			verdict := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, records, inner)
-			l.logRuntimeVerdict(agentCtx, verdict, completion, loggedCalls, inner, iterLatencyMS)
-			if stop, judgeErr := applyJudgeVerdict(conv, verdict, completion, inner, &result); stop {
-				return result, judgeErr
-			}
-		} else {
-			l.logRuntimeNonJudgedStep(agentCtx, completion, loggedCalls, inner, iterLatencyMS)
+		if stop, judgeErr := l.runJudgeStep(ctx, agentCtx, conv, completion, records, inner, toolFailure, loggedCalls, iterLatencyMS, &result); stop {
+			return result, judgeErr
 		}
 
 		if _, err := l.injectQueuedInput(reminderCtx, conv); err != nil {

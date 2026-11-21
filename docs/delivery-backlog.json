@@ -61,6 +61,20 @@
     "id": "installer-verify",
     "label": "六平台安装器复验",
     "hours": 2
+   },
+   {
+    "id": "longmemeval-60q-evidence",
+    "label": "LongMemEval n=60 两侧真实 LLM 对比（Go 86.7% vs Py 85.0%，McNemar p=1.000）",
+    "hours": 3,
+    "done": true,
+    "note": "DONE 2026-11-22：docs/e2e-assets/longmemeval/2026-11-22-60q-real-run.md，逐题 JSON+sha 落盘；判分敏感性 TypeSafe 0.8B 次判 Go+1 方向一致；失败模式 7 分歧+5 双错已归类。"
+   },
+   {
+    "id": "exports-baseline-decision",
+    "label": "exports/ 基准差异决策（Python=CWD vs Go=HIVe_HOME）；备忘已产，待用户拍板 Q1/Q2",
+    "hours": 1,
+    "done": false,
+    "note": "备忘：docs/exports-baseline-decision.md（选项 A/B/C/C′/D，推荐 A，若必须自动迁移则 C′）。F4 .migrations 已复核：colony list 两侧逐字一致（sha 30e73cca），登记为行为对齐无需修。"
    }
   ],
   "G1": [

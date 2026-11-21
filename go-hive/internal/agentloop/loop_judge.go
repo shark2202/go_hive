@@ -6,10 +6,32 @@ package agentloop
 // Parity: framework/agent_loop/agent_loop.py::execute (6i verdict branches)
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/aden-hive/hive-go/internal/runtimelogs"
 )
+
+// runJudgeStep 执行一轮的 judge 钩子：未触发时仅记 runtime 日志；
+// 非瞬态 judge 失败上抛（对齐上游 re-raise），否则按 verdict 收束回合。
+// 从 ExecuteTurn 抽出以守住函数规模预算。
+// Parity: framework/agent_loop/agent_loop.py::_judge_turn
+func (l *AgentLoop) runJudgeStep(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, completion llm.Completion, records []ToolCallRecord, inner int, toolFailure bool, loggedCalls []runtimelogs.ToolCallInput, iterLatencyMS int, result *TurnResult) (bool, error) {
+	if !l.shouldJudge(agentCtx, inner, false, toolFailure) {
+		l.logRuntimeNonJudgedStep(agentCtx, completion, loggedCalls, inner, iterLatencyMS)
+		return false, nil
+	}
+	verdict, judgeErr := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, records, inner)
+	if judgeErr != nil {
+		// Parity: framework/agent_loop/agent_loop.py::_judge_turn —
+		// a non-transient judge failure re-raises, ending the turn.
+		result.Success = false
+		return true, judgeErr
+	}
+	l.logRuntimeVerdict(agentCtx, verdict, completion, loggedCalls, inner, iterLatencyMS)
+	return applyJudgeVerdict(conv, verdict, completion, inner, result)
+}
 
 // applyJudgeVerdict applies one normalized judge verdict to the turn:
 // ACCEPT/ESCALATE finalize the result and stop the loop (an ESCALATE carries

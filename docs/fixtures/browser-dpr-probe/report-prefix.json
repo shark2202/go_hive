@@ -1,0 +1,449 @@
+[
+  {
+    "dpr": 1,
+    "raw_png": {
+      "size": [
+        1280,
+        720
+      ],
+      "expected": [
+        1280,
+        720
+      ],
+      "match": true
+    },
+    "highlight": {
+      "kind": "rect",
+      "label": "#probe-target",
+      "x": 240,
+      "y": 300,
+      "w": 640,
+      "h": 120
+    },
+    "go_meta": {
+      "imageWidth": 800,
+      "imageHeight": 450,
+      "cssWidth": 1280,
+      "cssHeight": 720,
+      "devicePixelRatio": 1,
+      "capturedWidth": 1280,
+      "capturedHeight": 720,
+      "physicalScale": 1.6,
+      "annotated": true
+    },
+    "raw_meta": {
+      "imageWidth": 1280,
+      "imageHeight": 720,
+      "cssWidth": 1280,
+      "cssHeight": 720,
+      "devicePixelRatio": 1,
+      "capturedWidth": 1280,
+      "capturedHeight": 720,
+      "physicalScale": 1,
+      "annotated": false
+    },
+    "python_physical_scale": 1.6,
+    "python": {
+      "image": [
+        800,
+        450
+      ],
+      "scale": [
+        0.625,
+        0.625
+      ],
+      "expected": [
+        150.0,
+        187.5,
+        550.0,
+        262.5
+      ],
+      "rect_edges": {
+        "left": 150,
+        "top": 187,
+        "right": 550,
+        "bottom": 262
+      },
+      "rect_px": [
+        400,
+        75
+      ],
+      "rect_fraction": {
+        "x0": 0.1875,
+        "y0": 0.4156,
+        "w": 0.5,
+        "h": 0.1667
+      },
+      "inside_mean": [
+        55.0,
+        84.0,
+        128.0
+      ],
+      "outside_mean": [
+        255.0,
+        255.0,
+        255.0
+      ],
+      "label_box": [
+        147,
+        169,
+        263,
+        184
+      ],
+      "label_gap_above_rect": 3
+    },
+    "go": {
+      "image": [
+        800,
+        450
+      ],
+      "scale": [
+        0.625,
+        0.625
+      ],
+      "expected": [
+        150.0,
+        187.5,
+        550.0,
+        262.5
+      ],
+      "rect_edges": {
+        "left": 150,
+        "top": 187,
+        "right": 549,
+        "bottom": 262
+      },
+      "rect_px": [
+        399,
+        75
+      ],
+      "rect_fraction": {
+        "x0": 0.1875,
+        "y0": 0.4156,
+        "w": 0.4988,
+        "h": 0.1667
+      },
+      "inside_mean": [
+        62.0,
+        81.0,
+        124.0
+      ],
+      "outside_mean": [
+        255.0,
+        255.0,
+        255.0
+      ],
+      "label_box": [
+        151,
+        177,
+        232,
+        184
+      ],
+      "label_gap_above_rect": 3
+    },
+    "go_minus_py_edges": {
+      "left": 0,
+      "top": 0,
+      "right": -1,
+      "bottom": 0
+    }
+  },
+  {
+    "dpr": 2,
+    "raw_png": {
+      "size": [
+        2560,
+        1440
+      ],
+      "expected": [
+        2560,
+        1440
+      ],
+      "match": true
+    },
+    "highlight": {
+      "kind": "rect",
+      "label": "#probe-target",
+      "x": 240,
+      "y": 300,
+      "w": 640,
+      "h": 120
+    },
+    "go_meta": {
+      "imageWidth": 1600,
+      "imageHeight": 900,
+      "cssWidth": 1280,
+      "cssHeight": 720,
+      "devicePixelRatio": 2,
+      "capturedWidth": 2560,
+      "capturedHeight": 1440,
+      "physicalScale": 3.2,
+      "annotated": true
+    },
+    "raw_meta": {
+      "imageWidth": 2560,
+      "imageHeight": 1440,
+      "cssWidth": 1280,
+      "cssHeight": 720,
+      "devicePixelRatio": 2,
+      "capturedWidth": 2560,
+      "capturedHeight": 1440,
+      "physicalScale": 1,
+      "annotated": false
+    },
+    "python_physical_scale": 3.2,
+    "python": {
+      "image": [
+        800,
+        450
+      ],
+      "scale": [
+        0.625,
+        0.625
+      ],
+      "expected": [
+        150.0,
+        187.5,
+        550.0,
+        262.5
+      ],
+      "rect_edges": {
+        "left": 149,
+        "top": 187,
+        "right": 550,
+        "bottom": 262
+      },
+      "rect_px": [
+        401,
+        75
+      ],
+      "rect_fraction": {
+        "x0": 0.1862,
+        "y0": 0.4156,
+        "w": 0.5012,
+        "h": 0.1667
+      },
+      "inside_mean": [
+        55.0,
+        84.0,
+        128.0
+      ],
+      "outside_mean": [
+        255.0,
+        255.0,
+        255.0
+      ],
+      "label_box": [
+        147,
+        169,
+        263,
+        184
+      ],
+      "label_gap_above_rect": 3
+    },
+    "go": {
+      "image": [
+        1600,
+        900
+      ],
+      "scale": [
+        1.25,
+        1.25
+      ],
+      "expected": [
+        300.0,
+        375.0,
+        1100.0,
+        525.0
+      ],
+      "rect_edges": {
+        "left": 300,
+        "top": 375,
+        "right": 1099,
+        "bottom": 524
+      },
+      "rect_px": [
+        799,
+        149
+      ],
+      "rect_fraction": {
+        "x0": 0.1875,
+        "y0": 0.4167,
+        "w": 0.4994,
+        "h": 0.1656
+      },
+      "inside_mean": [
+        62.0,
+        81.0,
+        124.0
+      ],
+      "outside_mean": [
+        255.0,
+        255.0,
+        255.0
+      ],
+      "label_box": [
+        302,
+        354,
+        465,
+        372
+      ],
+      "label_gap_above_rect": 3
+    },
+    "go_minus_py_edges": {
+      "left": 151,
+      "top": 188,
+      "right": 549,
+      "bottom": 262
+    }
+  },
+  {
+    "dpr": 3,
+    "raw_png": {
+      "size": [
+        3840,
+        2160
+      ],
+      "expected": [
+        3840,
+        2160
+      ],
+      "match": true
+    },
+    "highlight": {
+      "kind": "rect",
+      "label": "#probe-target",
+      "x": 240,
+      "y": 300,
+      "w": 640,
+      "h": 120
+    },
+    "go_meta": {
+      "imageWidth": 2400,
+      "imageHeight": 1350,
+      "cssWidth": 1280,
+      "cssHeight": 720,
+      "devicePixelRatio": 3,
+      "capturedWidth": 3840,
+      "capturedHeight": 2160,
+      "physicalScale": 4.8,
+      "annotated": true
+    },
+    "raw_meta": {
+      "imageWidth": 3840,
+      "imageHeight": 2160,
+      "cssWidth": 1280,
+      "cssHeight": 720,
+      "devicePixelRatio": 3,
+      "capturedWidth": 3840,
+      "capturedHeight": 2160,
+      "physicalScale": 1,
+      "annotated": false
+    },
+    "python_physical_scale": 4.8,
+    "python": {
+      "image": [
+        800,
+        450
+      ],
+      "scale": [
+        0.625,
+        0.625
+      ],
+      "expected": [
+        150.0,
+        187.5,
+        550.0,
+        262.5
+      ],
+      "rect_edges": {
+        "left": 150,
+        "top": 187,
+        "right": 550,
+        "bottom": 262
+      },
+      "rect_px": [
+        400,
+        75
+      ],
+      "rect_fraction": {
+        "x0": 0.1875,
+        "y0": 0.4156,
+        "w": 0.5,
+        "h": 0.1667
+      },
+      "inside_mean": [
+        55.0,
+        84.0,
+        128.0
+      ],
+      "outside_mean": [
+        255.0,
+        255.0,
+        255.0
+      ],
+      "label_box": [
+        147,
+        169,
+        263,
+        184
+      ],
+      "label_gap_above_rect": 3
+    },
+    "go": {
+      "image": [
+        2400,
+        1350
+      ],
+      "scale": [
+        1.875,
+        1.875
+      ],
+      "expected": [
+        450.0,
+        562.5,
+        1650.0,
+        787.5
+      ],
+      "rect_edges": {
+        "left": 450,
+        "top": 562,
+        "right": 1649,
+        "bottom": 787
+      },
+      "rect_px": [
+        1199,
+        225
+      ],
+      "rect_fraction": {
+        "x0": 0.1875,
+        "y0": 0.4163,
+        "w": 0.4996,
+        "h": 0.1667
+      },
+      "inside_mean": [
+        62.0,
+        81.0,
+        124.0
+      ],
+      "outside_mean": [
+        255.0,
+        255.0,
+        255.0
+      ],
+      "label_box": [
+        453,
+        532,
+        698,
+        559
+      ],
+      "label_gap_above_rect": 3
+    },
+    "go_minus_py_edges": {
+      "left": 300,
+      "top": 375,
+      "right": 1099,
+      "bottom": 525
+    }
+  }
+]

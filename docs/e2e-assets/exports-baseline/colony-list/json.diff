@@ -1,0 +1,49 @@
+--- python colony list --json
++++ go colony list --json
+@@ -1,34 +1,34 @@
+ [
+   {
++    "created_at": "",
+     "name": ".migrations",
++    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/emoh/work/list-home/colonies/.migrations",
+     "queen_name": "",
+     "queen_session_id": "",
+-    "workers": 0,
+-    "created_at": "",
+-    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/emoh/work/list-home/colonies/.migrations"
++    "workers": 0
+   },
+   {
++    "created_at": "",
+     "name": ".stray_dotdir",
++    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/emoh/work/list-home/colonies/.stray_dotdir",
+     "queen_name": "",
+     "queen_session_id": "",
+-    "workers": 0,
+-    "created_at": "",
+-    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/emoh/work/list-home/colonies/.stray_dotdir"
++    "workers": 0
+   },
+   {
++    "created_at": "2026-01-02T03:04:05.123456",
+     "name": "alpha",
++    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/emoh/work/list-home/colonies/alpha",
+     "queen_name": "queenie",
+     "queen_session_id": "sess-1",
+-    "workers": 2,
+-    "created_at": "2026-01-02T03:04:05.123456",
+-    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/emoh/work/list-home/colonies/alpha"
++    "workers": 2
+   },
+   {
++    "created_at": "2026-02-03T00:00:00",
+     "name": "beta",
++    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/emoh/work/list-home/colonies/beta",
+     "queen_name": "beta-q",
+     "queen_session_id": "",
+-    "workers": 0,
+-    "created_at": "2026-02-03T00:00:00",
+-    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/emoh/work/list-home/colonies/beta"
++    "workers": 0
+   }
+ ]

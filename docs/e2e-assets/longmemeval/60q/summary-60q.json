@@ -1,0 +1,313 @@
+{
+ "go": {
+  "questions": 60,
+  "correct": 52,
+  "accuracy": 0.8666666666666667,
+  "wilson95": [
+   0.7583460540992789,
+   0.9308597302169036
+  ],
+  "by_type": {
+   "single-session-user": {
+    "n": 10,
+    "correct": 10
+   },
+   "single-session-assistant": {
+    "n": 10,
+    "correct": 10
+   },
+   "multi-session": {
+    "n": 10,
+    "correct": 7
+   },
+   "temporal-reasoning": {
+    "n": 10,
+    "correct": 10
+   },
+   "knowledge-update": {
+    "n": 10,
+    "correct": 9
+   },
+   "single-session-preference": {
+    "n": 10,
+    "correct": 6
+   }
+  },
+  "abstention": {
+   "n": 2,
+   "correct": 1
+  },
+  "errors": 0,
+  "ungraded": 0,
+  "median_seconds": 7.190553916500001,
+  "ids": [
+   "06f04340",
+   "07b6f563",
+   "0a995998",
+   "0bc8ad93",
+   "0e5e2d1a",
+   "1a1907b4",
+   "2133c1b5_abs",
+   "2788b940",
+   "2bf43736",
+   "32260d93",
+   "3a704032",
+   "41698283",
+   "4388e9dd",
+   "46a3abf7",
+   "4b24c848",
+   "4f54b7c9",
+   "5025383b",
+   "505af2f5",
+   "60472f9c",
+   "60d45044",
+   "65240037",
+   "66f24dbb",
+   "6b168ec8",
+   "6e984301",
+   "7024f17c",
+   "76d63226",
+   "7a8d0b71",
+   "86f00804",
+   "8c18457d",
+   "8cf51dda",
+   "8e9d538c",
+   "8fb83627",
+   "9bbe84a2",
+   "a89d7624",
+   "afdc33df",
+   "affe2881",
+   "b01defab",
+   "b0479f84",
+   "b46e15ee",
+   "b6025781",
+   "bc8a6e93",
+   "c5e8278d",
+   "c8090214",
+   "caf03d32",
+   "cc539528",
+   "cc5ded98",
+   "d52b4f67",
+   "e48988bc",
+   "e61a7584",
+   "e66b632c",
+   "eac54add",
+   "edced276",
+   "f35224e0",
+   "f4f1d8a4_abs",
+   "f523d9fe",
+   "fca762bc",
+   "gpt4_1a1dc16d",
+   "gpt4_b4a80587",
+   "gpt4_d31cdae3",
+   "gpt4_fa19884d"
+  ]
+ },
+ "py": {
+  "questions": 60,
+  "correct": 51,
+  "accuracy": 0.85,
+  "wilson95": [
+   0.7388517410884038,
+   0.9190265075770431
+  ],
+  "by_type": {
+   "single-session-user": {
+    "n": 10,
+    "correct": 10
+   },
+   "single-session-assistant": {
+    "n": 10,
+    "correct": 10
+   },
+   "multi-session": {
+    "n": 10,
+    "correct": 7
+   },
+   "temporal-reasoning": {
+    "n": 10,
+    "correct": 10
+   },
+   "knowledge-update": {
+    "n": 10,
+    "correct": 8
+   },
+   "single-session-preference": {
+    "n": 10,
+    "correct": 6
+   }
+  },
+  "abstention": {
+   "n": 2,
+   "correct": 1
+  },
+  "errors": 0,
+  "ungraded": 0,
+  "median_seconds": 7.300000000000001,
+  "ids": [
+   "06f04340",
+   "07b6f563",
+   "0a995998",
+   "0bc8ad93",
+   "0e5e2d1a",
+   "1a1907b4",
+   "2133c1b5_abs",
+   "2788b940",
+   "2bf43736",
+   "32260d93",
+   "3a704032",
+   "41698283",
+   "4388e9dd",
+   "46a3abf7",
+   "4b24c848",
+   "4f54b7c9",
+   "5025383b",
+   "505af2f5",
+   "60472f9c",
+   "60d45044",
+   "65240037",
+   "66f24dbb",
+   "6b168ec8",
+   "6e984301",
+   "7024f17c",
+   "76d63226",
+   "7a8d0b71",
+   "86f00804",
+   "8c18457d",
+   "8cf51dda",
+   "8e9d538c",
+   "8fb83627",
+   "9bbe84a2",
+   "a89d7624",
+   "afdc33df",
+   "affe2881",
+   "b01defab",
+   "b0479f84",
+   "b46e15ee",
+   "b6025781",
+   "bc8a6e93",
+   "c5e8278d",
+   "c8090214",
+   "caf03d32",
+   "cc539528",
+   "cc5ded98",
+   "d52b4f67",
+   "e48988bc",
+   "e61a7584",
+   "e66b632c",
+   "eac54add",
+   "edced276",
+   "f35224e0",
+   "f4f1d8a4_abs",
+   "f523d9fe",
+   "fca762bc",
+   "gpt4_1a1dc16d",
+   "gpt4_b4a80587",
+   "gpt4_d31cdae3",
+   "gpt4_fa19884d"
+  ]
+ },
+ "comparison": {
+  "shared_questions": 60,
+  "both_correct": 48,
+  "both_wrong": 5,
+  "go_only": 4,
+  "py_only": 3,
+  "mcnemar_exact_p": 1.0,
+  "missing_in_go": [],
+  "missing_in_py": [],
+  "disagreements": [
+   {
+    "question_id": "07b6f563",
+    "question_type": "single-session-preference",
+    "go_correct": false,
+    "py_correct": true,
+    "go_seconds": 8.657974875,
+    "py_seconds": 8.8,
+    "go_hypothesis": "Depends entirely on the phone and what you actually do with it. A case and a charger for one person is a gimbal and a field recorder for another. So give me two things: which phone (iPhone/Android, model), and your top use cases (photos, travel, work calls, gaming, battery anxiety).\n\nMeanwhile, here's the short list of things that earn their keep for almost everyone, in rough order of payoff:\n\n- A quality case plus tempered-glass screen protector. Cheap insurance against the one drop that ruins your week.\n- A GaN fast charger (65W+) and a braided USB-C cable. One brick that charges your phone, laptop, and earbuds beats a drawer of slow adapters.\n- A MagSafe/Ring-style phone grip or magnetic mount, especially for your car or desk.\n- A 10,000mAh power bank that supports the same fast-charge standard as your phone. Skip the 20,000mAh bricks unless you're off-grid.\n- Wireless earbuds you won't cry about losing.\n\nThings people buy that mostly don't help: stylus knockoffs, \"signal booster\" stickers, camera lens \"protection\" kits, and the third case. Tell me the phone and use case and I'll cut this down to the 3 that matter for you.",
+    "py_hypothesis": "Three of these actually matter, the rest is noise. You're on an iPhone 13 Pro, so build around MagSafe and Lightning and skip anything that adds a dongle.\n\n**Buy these first**\n- **20W USB-C power adapter plus a MagSafe puck.** Apple stopped shipping chargers in the box, so if you have not bought one, you are charging at 5W off a laptop port. This is the single highest-value $45 you will spend. On the 13 Pro MagSafe gets you 15W.\n- **A second braided USB-C to Lightning cable.** One at the desk, one in the bag. Cables fail at the strain relief, not the wire, so buy Anker or Belkin braided, not the $8 gas-station one.\n- **A 10,000mAh USB-C PD power bank.** Charges the phone roughly twice. MagSafe battery packs are convenient but heavy and slow, the cabled one wins on trips.\n\n**Worth it depending on how you move**\n- **MagSafe car vent mount.** No clipping, no fumbling, phone snaps on. Only if you drive and use navigation.\n- **Desk stand with MagSafe.** Turns the phone into a bedside or desk display for StandBy-style widgets and video calls. Nice, not essential.\n- **AirTag for keys or bag.** Cheap, and you stop losing things, which is the actual problem most accessories pretend to solve.\n\n**Do not buy**\nLens kits, battery cases, seven-in-one hub dongles, \"gaming\" cooling fans. They solve problems you do not have and most of them block the port you need.\n\nPair all of this with a decent case and a screen protector, since you were already looking at wallet cases and those do double duty.\n\nWhat is the main context here, travel, desk, or car? That changes the answer more than budget does.",
+    "expect": "The user would prefer suggestions of accessories that are compatible with an iPhone 13 Pro, such as high-quality screen protectors, durable cases, portable power banks, or phone wallet cases. They may not prefer suggestions of accessories that are not compatible with Apple products or do not enhance the functionality or protection of their phone.",
+    "go_judge": "no",
+    "py_judge": "yes"
+   },
+   {
+    "question_id": "3a704032",
+    "question_type": "multi-session",
+    "go_correct": true,
+    "py_correct": false,
+    "go_seconds": 40.911770041,
+    "py_seconds": 51.6,
+    "go_hypothesis": "Two.\n\nHere's the trail from what you've told me:\n\n| Plant | When | Source |\n|---|---|---|\n| Peace lily | ~May 6 | Bought at a nursery (you said \"two weeks ago\" on May 20) |\n| Succulent | ~May 6 | Same nursery run, picked up alongside the peace lily |\n\nThat trip is the one real acquisition event inside the last 30 days (roughly April 30 to today, May 30).\n\nOne judgment call worth flagging: your snake plant came from your sister \"last month\" (you mentioned it May 25), so that lands in April and sits just outside the window, plus it was a gift, not something you acquired by buying. If you count gifts and stretch \"last month\" to mean April, the number goes to three.\n\nYour fern, spider plant, basil, and orchid show up in our conversations too, but you never tied a purchase date to any of them, so I can't place them in that window.\n\nWant me to keep a running plant log going forward, so next time this is a one-line answer instead of a dig?",
+    "py_hypothesis": "Two. Going by the last 30 days (roughly May 1 to May 30), the two you picked up are a peace lily and a succulent: on May 20 you told me you'd gotten both from the nursery \"two weeks ago,\" which lands around May 6, so both are inside the window.\n\nThe tempting third one doesn't count. Your snake plant, the one you got from your sister, you described on May 25 as having come \"last month,\" which points at April, and that's just outside the last month. So it's 2 for the last month (3 if you loosen the window to include the snake plant).\n\nThe rest of the collection, the fern, orchid, African violets, spider plant, and basil, you never tied to a purchase date, so I read those as older plants you already had, not new acquisitions.",
+    "expect": 3,
+    "go_judge": "yes",
+    "py_judge": "No"
+   },
+   {
+    "question_id": "505af2f5",
+    "question_type": "single-session-preference",
+    "go_correct": true,
+    "py_correct": false,
+    "go_seconds": 6.815580125,
+    "py_seconds": 9.5,
+    "go_hypothesis": "You've already got the base that works, almond milk plus vanilla plus honey. Don't rewrite it. Two variations worth trying this week, both drop the sugar load without losing the body:\n\n**Date and cinnamon.** One cup almond milk, one pitted Medjool date, half a teaspoon cinnamon, pinch of salt. Blend 30 seconds. The date does the sweetening and adds thickness honey can't, and it doesn't taste like a compromise.\n\n**Coconut cardamom.** One cup almond milk, one tablespoon coconut cream, quarter teaspoon ground cardamom, half teaspoon vanilla, pinch of salt. The coconut cream is the trick here, fat gives you the mouthfeel that low sugar creamers always lack.\n\nThree things that matter more than the recipe. Salt, a real pinch, kills the flat bitterness people try to fix with more sweetener. Blend instead of stirring, the hydrocolloids in almond milk separate and a whisk won't fix it. And make it as a concentrate, roughly two parts milk to the flavor components, so you're not watering down your coffee every morning.\n\nKeeps five days in the fridge, shake before you pour.\n\nWhat's the actual goal here, less sugar, or just bored of the current one? Changes what I'd recommend next.",
+    "py_hypothesis": "Homemade creamer is the right call, and honestly it's a solved problem. The simplest version that works: pick a fat, a sweetener, and a flavor. That's it. Nail the ratio once and you can riff forever.\n\nBase (makes about 2 cups):\n\n- 1 can (13.5 oz) full-fat coconut milk, or 1.5 cups unsweetened almond milk if you want it lighter\n- 2 to 3 tablespoons maple syrup or honey (dial down to 1 if you're cutting sugar)\n- 2 teaspoons vanilla extract\n- Pinch of salt (do not skip this, it makes everything else taste bigger)\n\nWhisk it cold, keep it in a glass jar, it holds 7 to 10 days in the fridge. Coconut milk gives you that creamy texture without the additives in the store-bought stuff, which is the whole point.\n\nNow the fun part, flavors. Since you liked the Lemon Ginger direction last time, try these:\n\n- Lemon Ginger: 1 tsp grated fresh ginger, zest of half a lemon, steep it in the warm base for 10 minutes then strain.\n- Cinnamon Vanilla: 1 tsp cinnamon, extra vanilla. Tastes like a bakery smells.\n- Mocha: 1 tbsp cocoa powder plus a little extra sweetener.\n- Lavender Honey: 1 tsp dried culinary lavender, steep and strain. Go easy, too much tastes like soap.\n\nOne first-principles tip: warm the base gently before adding flavorings, it extracts way more out of spices and zest. Then cool it back down before it goes in the jar.\n\nWhat's the current favorite in your rotation, so I can point you somewhere new instead of sideways?",
+    "expect": "The user would prefer responses that suggest variations on their existing almond milk, vanilla extract, and honey creamer recipe or new ideas that align with their goals of reducing sugar intake and saving money. They might not prefer responses that recommend commercial creamer products or recipes that are high in sugar or expensive.",
+    "go_judge": "yes",
+    "py_judge": "no"
+   },
+   {
+    "question_id": "b0479f84",
+    "question_type": "single-session-preference",
+    "go_correct": true,
+    "py_correct": false,
+    "go_seconds": 6.480409208,
+    "py_seconds": 14.9,
+    "go_hypothesis": "You liked the character-driven ones as much as the nature stuff (Free Solo and Tiger King are really just obsession stories), so let me split it.\n\nIf you want the wild, single-minded pursuit angle again: \"The Alpinist\" is the closest thing to Free Solo I know. Climber, no ropes, no cameras, and he keeps disappearing on the film crew. Then \"McCartney 3,2,1\" if you want something looser, two guys in a room pulling apart how records get made.\n\nIf it's the \"wait, is this real, how did nobody stop them\" itch Tiger King scratched: \"Wild Wild Country\" (a cult builds a whole city in rural Oregon) or \"The Puppet Master\" (genuinely stranger than fiction, go in blind).\n\nFor the nature slot, skip the obvious sequels. \"My Octopus Teacher\" hits way harder than its premise sounds, and \"Fire of Love\" is two volcanologists who loved eruptions more than they loved safety, gorgeous footage, tragic ending.\n\nWhat's the mood tonight, do you want to think, or just watch something that makes you say \"what\" out loud?",
+    "py_hypothesis": "Been a minute since the last doc binge. Last time I pointed you at the BBC nature stuff and the Theranos/Fyre true-crime lane, so let me not repeat myself.\n\nFor tonight, three directions depending on what mood you're in:\n\n**If you want nature but with a pulse:** My Octopus Teacher. It's intimate and weird and quietly devastating, very different from the Our Planet scope, more like a character study of one animal that trusts a diver. Pairs with a slower night than a Free Solo adrenaline hit.\n\n**If you want true crime that actually unsettles you:** Don't F**k with Cats. Starts as an internet-sleuth rabbit hole, ends somewhere much darker. Wild Wild Country too if you want the cult/guru slow burn, six episodes and it earns the runtime.\n\n**If you want craft and obsession:** Jiro Dreams of Sushi, or Abstract: The Art of Design if you want shorter episodes. Both are the founder-brain version of a documentary, people who refused to ship anything less than perfect and it cost them. You'll either love it or find it triggering.\n\nIf I had to pick one to start right now: My Octopus Teacher. It's the shortest emotional payoff and it won't keep you up till 2am. Well, it might, but in a good way.\n\nWhat's the flavor tonight, nature, crime, or human-obsession? I'll narrow from there.",
+    "expect": "The user would prefer documentary recommendations that are similar in style and theme to 'Our Planet', 'Free Solo', and 'Tiger King', which they have previously enjoyed. They might not prefer recommendations of documentaries that are vastly different in tone or subject matter from these titles. The preferred response utilizes the user's previously mentioned viewing history to suggest documentaries that cater to their tastes.",
+    "go_judge": "yes",
+    "py_judge": "no"
+   },
+   {
+    "question_id": "caf03d32",
+    "question_type": "single-session-preference",
+    "go_correct": false,
+    "py_correct": true,
+    "go_seconds": 8.70570975,
+    "py_seconds": 8.2,
+    "go_hypothesis": "Slow cookers are simple machines, which is exactly why most disappointing results come down to two variables you can actually measure: temperature and moisture. Everything else is noise. Here's how I'd debug it.\n\nFirst, verify the machine. Fill your slow cooker two-thirds with water, set it to low, and check the water temp after four hours with an instant-read thermometer. Low should land somewhere around 190 to 200 F and hold there. Plenty of cheap cookers overshoot into a rolling simmer, which is what turns chicken stringy and vegetables to mush. If yours runs hot, cook on the warm setting or use a timer that cuts the power early. Warm should sit around 165 to 175 F, which is actually fine for most braises if you give it more time.\n\nSecond, cut your pieces bigger than feels right. Root vegetables at two inches, meat in three-inch chunks. Small pieces surrender all texture by hour three.\n\nThird, layer with intent. Root vegetables and aromatics on the bottom, where the heat is, meat above. Never fill past two-thirds, and add liquid only to about a third of the way up the food. Slow cookers make their own liquid, and swimming vegetables steam instead of caramelize.\n\nFourth, sear meat and bloom spices in a pan first if you care about flavor depth. It costs ten minutes and buys back most of what the slow cooker takes away.\n\nFifth, leave the lid alone. Every peek dumps twenty minutes of accumulated heat, and the recovery costs you texture.\n\nLast, thicken and season at the end, not the start. Salt early pulls moisture out of everything. A slurry of cornstarch or a knob of butter stirred in during the final ten minutes does more than any recipe tweak.\n\nWhat specifically is going wrong? Dry meat, bland liquid, mushy vegetables, or something burning at the edges? Tell me which and I'll get surgical. Tuning beats guessing, and soup doesn't need another rewrite.",
+    "py_hypothesis": "Nine times out of ten it's the same three things, so let's start there.\n\n**Too much liquid.** A slow cooker is a sealed box. Nothing evaporates, so whatever goes in stays in, and what you get is soup where you wanted stew. Cut your liquid by a third to a half versus whatever the recipe says, then reduce the sauce on the stove at the end if it's still loose. That one change fixes most slow cooker disappointment.\n\n**You're not opening the lid.** Every time you peek you dump heat and add 20+ minutes back onto the cook. Set it, walk away, trust the machine.\n\n**You're using the wrong cut.** Slow cooking is a braise, not a boil. Chuck, shoulder, brisket, chicken thighs, pork butt. Lean cuts turn to sawdust no matter how long you cook them.\n\nBeyond that, three cheap wins: brown your meat and sweat your onions in a pan first (the maillard reaction doesn't happen inside a slow cooker, and that's most of your flavor), hold dairy and fresh herbs until the last 15 minutes because they break down, and season at the end, not the start, since the long cook mutes salt and spice. If you want a thicker sauce, whisk a cornstarch slurry in during the last half hour with the lid off on high.\n\nFor the yogurt specifically, that one is a different animal: it's all temperature discipline. Hold it around 110°F and nothing else matters nearly as much. If your cashew batches are separating or tasting sour, your incubation ran hot or too long, and I'd shorten the window before I changed anything else.\n\nWhich recipe is actually failing on you? Tell me what it looks like when it comes out wrong and I'll point at the real cause instead of the usual suspects.",
+    "expect": "The user would prefer responses that provide tips and advice specifically tailored to their slow cooker experiences, utilizing their recent success with beef stew and interest in making yogurt in the slow cooker. They might not prefer general slow cooker recipes or advice unrelated to their specific experiences and interests.",
+    "go_judge": "no",
+    "py_judge": "Yes"
+   },
+   {
+    "question_id": "e61a7584",
+    "question_type": "knowledge-update",
+    "go_correct": true,
+    "py_correct": false,
+    "go_seconds": 4.987734875,
+    "py_seconds": 3.1,
+    "go_hypothesis": "About nine months. You told me that back in late November 2023, when you were setting up Luna's playtime routine (the cat tree she loves climbing, the weekly toy rotation). So if you're counting from today, that puts her homecoming somewhere around late February or early March of that year.\n\nWant me to pin down the exact date? If you told me when you actually brought her home in an earlier chat, I can dig it out.",
+    "py_hypothesis": "About nine months, as of our last chat on November 30, 2023. You told me then you'd had Luna for roughly nine months, which puts her homecoming around late February or early March 2023. Today that's closer to a year and a half together. Still brushing her daily and rotating the toys?",
+    "expect": "9 months",
+    "go_judge": "yes",
+    "py_judge": "no"
+   },
+   {
+    "question_id": "edced276",
+    "question_type": "multi-session",
+    "go_correct": false,
+    "py_correct": true,
+    "go_seconds": 8.671976542,
+    "py_seconds": 11.9,
+    "go_hypothesis": "You told me about both trips, but only one of them came with a number attached.\n\nNew York City: five days solo, hostel plus local cafes, cheap and good. That's on record from our May 21 conversation.\n\nHawaii: you mentioned getting back from an island-hopping trip with your family, and you brought it up again while we were weighing solo versus family travel. You never said how long you were there, and I don't see it anywhere else in our history.\n\nSo the honest total is five days confirmed, plus an unknown number of Hawaii days. Give me the Hawaii length (nights or days, whichever you remember) and I'll add it in.",
+    "py_hypothesis": "Pulled it from our history:\n\n- **New York City:** 5 days (solo, hostel plus local cafes)\n- **Hawaii:** 10 days (island-hopping with family, and you said the 10-day plan had to be locked in way in advance)\n\n**Total: 15 days** across the two trips.\n\nOne flag: the New York number is explicit (\"five days\"), and the Hawaii one comes from you mentioning \"the 10-day\" in our family-versus-solo conversation, so that's solid. If either trip actually ran longer than the plan you described, tell me and I'll correct the tally.",
+    "expect": "15 days",
+    "go_judge": "no",
+    "py_judge": "yes"
+   }
+  ]
+ }
+}

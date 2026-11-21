@@ -1,0 +1,1098 @@
+{
+ "go": {
+  "n": 60,
+  "correct": 47,
+  "agree_with_primary": 49,
+  "agreement": 0.8166666666666667,
+  "rows": [
+   {
+    "question_id": "60d45044",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8620357151465425,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "d52b4f67",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7736405400941849,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "f4f1d8a4_abs",
+    "question_type": "single-session-user",
+    "abstention": true,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.39169729164220246,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "8e9d538c",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.9572882684001836,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "66f24dbb",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.44675937155970497,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "86f00804",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5186419807364283,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "76d63226",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7435131674738752,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "c5e8278d",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7839742631763185,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "bc8a6e93",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.9353351607717063,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "6b168ec8",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.9231556087099849,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "e48988bc",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8609418995900946,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "cc539528",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.6771250162836191,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "8cf51dda",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.861448500394557,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "0e5e2d1a",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7759393110986308,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "7a8d0b71",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8446128120498517,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "4388e9dd",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7507236255484243,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "fca762bc",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8477805976762142,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "65240037",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.6108702631545975,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "f523d9fe",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5403131582196733,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "2bf43736",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8560836115310847,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "60472f9c",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5371560264591375,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "f35224e0",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5165734181477379,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "46a3abf7",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.816456758596038,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "2788b940",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.6029877723036732,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "3a704032",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.4058480067111595,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "edced276",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.20862301501841388,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "7024f17c",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.3654882920553572,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "0a995998",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.34566553550829504,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "4f54b7c9",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.4090228237787567,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "5025383b",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.9378895314062828,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "gpt4_d31cdae3",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8267318397405429,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "gpt4_b4a80587",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7007469510587799,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "gpt4_fa19884d",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.041226746074419736,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "8c18457d",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8053024536702913,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "gpt4_1a1dc16d",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.6610135740806019,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "0bc8ad93",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.33580906832586466,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "c8090214",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.6166275887637482,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "b46e15ee",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5146601081638956,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "6e984301",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8767891811140424,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "eac54add",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.47836108281457407,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "41698283",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.9135227455151228,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "cc5ded98",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7145499106403234,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "e66b632c",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5595790148985063,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "affe2881",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8827180039251687,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "8fb83627",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8884392567920818,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "2133c1b5_abs",
+    "question_type": "knowledge-update",
+    "abstention": true,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.4092691814783195,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "e61a7584",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.43059173676830714,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "b01defab",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7314943858042101,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "9bbe84a2",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.594506908184335,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "4b24c848",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5918777358687347,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "1a1907b4",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7068130569677182,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "afdc33df",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.6843512089663124,
+    "typesafe_correct": true,
+    "agree": false
+   },
+   {
+    "question_id": "b0479f84",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5205027770811359,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "505af2f5",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7341373425936343,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "07b6f563",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.6086315798412721,
+    "typesafe_correct": true,
+    "agree": false
+   },
+   {
+    "question_id": "06f04340",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.6816953939949377,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "caf03d32",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.8498031291748649,
+    "typesafe_correct": true,
+    "agree": false
+   },
+   {
+    "question_id": "32260d93",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.2967674878389547,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "a89d7624",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5444533760673914,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "b6025781",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8180772235731173,
+    "typesafe_correct": true,
+    "agree": true
+   }
+  ]
+ },
+ "py": {
+  "n": 60,
+  "correct": 46,
+  "agree_with_primary": 49,
+  "agreement": 0.8166666666666667,
+  "rows": [
+   {
+    "question_id": "60d45044",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7788684076730377,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "76d63226",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8111787545242107,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "6b168ec8",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7932478245916871,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "8e9d538c",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8534866148501933,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "c5e8278d",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.3650238277191771,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "d52b4f67",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7034563250478564,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "e48988bc",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.6509262598602443,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "bc8a6e93",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7298182235479326,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "66f24dbb",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.317735811849412,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "cc539528",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.758912029266897,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "f4f1d8a4_abs",
+    "question_type": "single-session-user",
+    "abstention": true,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7304395750621301,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "8cf51dda",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7481477487744986,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "65240037",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5402315920323466,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "0e5e2d1a",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.841267929372483,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "f523d9fe",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7431912612430114,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "f35224e0",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.27525565054677414,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "86f00804",
+    "question_type": "single-session-user",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.4699190505122052,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "2bf43736",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.9451056629613039,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "46a3abf7",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7830235477590874,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "7a8d0b71",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.9345677899262662,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "60472f9c",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.795686504806043,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "4388e9dd",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.6209749314544983,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "2788b940",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7604384036358179,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "0a995998",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.28275458886976707,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "fca762bc",
+    "question_type": "single-session-assistant",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8343016074022432,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "gpt4_d31cdae3",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8981345064814775,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "gpt4_b4a80587",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.6493775659579302,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "4f54b7c9",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.687266013859297,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "gpt4_1a1dc16d",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7806767178869101,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "gpt4_fa19884d",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.057071330223349086,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "5025383b",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8235301508332276,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "3a704032",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.3910449915192507,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "8c18457d",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8683058731865996,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "c8090214",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8874656344600079,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "0bc8ad93",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.3827460275318116,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "edced276",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8900211619954349,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "b46e15ee",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5599913149122604,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "cc5ded98",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7335277614264508,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "eac54add",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.34081273299617415,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "6e984301",
+    "question_type": "temporal-reasoning",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.4799893501130356,
+    "typesafe_correct": false,
+    "agree": false
+   },
+   {
+    "question_id": "8fb83627",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7484986548804039,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "41698283",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.6590993875854934,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "e66b632c",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8060565185827294,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "e61a7584",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.4114417427678252,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "b01defab",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8009564571135088,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "2133c1b5_abs",
+    "question_type": "knowledge-update",
+    "abstention": true,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.2902576363260296,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "4b24c848",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7253518107269268,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "1a1907b4",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7427326746185543,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "9bbe84a2",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7508029002187531,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "afdc33df",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.7344556452474272,
+    "typesafe_correct": true,
+    "agree": false
+   },
+   {
+    "question_id": "07b6f563",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7829282088633028,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "b0479f84",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.47309291819850985,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "505af2f5",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.7746936113378557,
+    "typesafe_correct": true,
+    "agree": false
+   },
+   {
+    "question_id": "7024f17c",
+    "question_type": "multi-session",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.6117834280861157,
+    "typesafe_correct": true,
+    "agree": false
+   },
+   {
+    "question_id": "affe2881",
+    "question_type": "knowledge-update",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.8310878882684866,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "06f04340",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5713844671098046,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "b6025781",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7363684358409696,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "32260d93",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": false,
+    "typesafe_p_yes": 0.487360165407421,
+    "typesafe_correct": false,
+    "agree": true
+   },
+   {
+    "question_id": "caf03d32",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.7795603168742339,
+    "typesafe_correct": true,
+    "agree": true
+   },
+   {
+    "question_id": "a89d7624",
+    "question_type": "single-session-preference",
+    "abstention": false,
+    "primary_correct": true,
+    "typesafe_p_yes": 0.5166991178607903,
+    "typesafe_correct": true,
+    "agree": true
+   }
+  ]
+ }
+}

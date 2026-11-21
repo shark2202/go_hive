@@ -9,10 +9,12 @@ package browserbridge
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
 	"image/png"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -75,11 +77,14 @@ func contractCDP(t *testing.T) func(fakeCommand) (any, string) {
 				if format == "" {
 					format = "png"
 				}
-				width, height := 1600, 1000
+				// Chrome returns device pixels: clip.width × scale × dpr. This
+				// fake page is dpr 2 (measured on real Chrome: an 800-CSS-px
+				// clip at dpr 2 comes back 1600 px wide).
+				width, height := 1600*2, 1000*2
 				if clip, ok := inner["clip"].(map[string]any); ok {
 					scale := paramFloat(clip, "scale", 1)
-					width = int(paramFloat(clip, "width", 1600) * scale)
-					height = int(paramFloat(clip, "height", 1000) * scale)
+					width = int(paramFloat(clip, "width", 1600) * scale * 2)
+					height = int(paramFloat(clip, "height", 1000) * scale * 2)
 				}
 				return map[string]any{"data": encodeTestImage(t, format, width, height)}, ""
 			case "Runtime.evaluate":
@@ -175,11 +180,92 @@ func TestScreenshotMaxWidthJpegsAt800(t *testing.T) {
 	}
 	capture := lastCDPParams(f, "Page.captureScreenshot")
 	clip, ok := capture["clip"].(map[string]any)
-	if !ok || paramFloat(clip, "scale", 0) != 0.5 {
+	// clip.scale doubles as the CSS→device divisor: Chrome returns
+	// width × scale × dpr device pixels, so an 800px IMAGE needs
+	// 800/(1600×2) here (the fake page is 1600 CSS px at dpr 2).
+	if !ok || paramFloat(clip, "scale", 0) != 0.25 {
 		t.Fatalf("capture clip=%+v", capture["clip"])
 	}
 	if capture["format"] != "jpeg" || toFloatMust(t, capture["quality"]) != 75 {
 		t.Fatalf("capture params=%+v", capture)
+	}
+}
+
+// dprCDP is the contractCDP fake re-parameterised to (dpr, cssW, cssH) and
+// modelling Chrome's capture bitmap size: clip.width × scale × dpr device px.
+func dprCDP(t *testing.T, dpr, cssW, cssH float64) func(fakeCommand) (any, string) {
+	t.Helper()
+	base := contractCDP(t)
+	return func(cmd fakeCommand) (any, string) {
+		if cmd.Type == "cdp" {
+			method, _ := cmd.Params["method"].(string)
+			inner, _ := cmd.Params["params"].(map[string]any)
+			switch method {
+			case "Runtime.evaluate":
+				expr, _ := inner["expression"].(string)
+				if strings.Contains(expr, "devicePixelRatio") {
+					return map[string]any{"result": map[string]any{"value": map[string]any{
+						"url": "https://example.com/", "dpr": dpr, "cssWidth": cssW, "cssHeight": cssH,
+					}}}, ""
+				}
+			case "Page.captureScreenshot":
+				format, _ := inner["format"].(string)
+				if format == "" {
+					format = "png"
+				}
+				width, height := int(cssW*dpr), int(cssH*dpr)
+				if clip, ok := inner["clip"].(map[string]any); ok {
+					scale := paramFloat(clip, "scale", 1)
+					width = int(paramFloat(clip, "width", cssW) * scale * dpr)
+					height = int(paramFloat(clip, "height", cssH) * scale * dpr)
+				}
+				return map[string]any{"data": encodeTestImage(t, format, width, height)}, ""
+			}
+		}
+		return base(cmd)
+	}
+}
+
+// TestScreenshotMaxWidthIsDprIndependent pins the dpr compensation on the
+// max_width path: clip.scale is in CSS px while Chrome's bitmap is in device
+// px, so the requested scale is max_width/(cssWidth×dpr) and the returned
+// image is max_width px wide on every dpr — the same 800px-wide image
+// upstream's PIL resize always produces. Without it, a dpr=2 host returned a
+// 1600px-wide annotated screenshot (the registered dpr>1 exception).
+//
+// Parity: tools/src/gcu/browser/tools/inspection.py::_resize_and_annotate
+func TestScreenshotMaxWidthIsDprIndependent(t *testing.T) {
+	const cssW, cssH = 1280.0, 720.0
+	for _, dpr := range []float64{1, 2, 3} {
+		t.Run(fmt.Sprintf("dpr=%g", dpr), func(t *testing.T) {
+			b := newTestBridge(t, Config{CommandTimeout: 5 * time.Second, ArtifactDir: t.TempDir()})
+			f := startFakeExtension(t, b.WSAddr(), helloFor("alpha"), dprCDP(t, dpr, cssW, cssH))
+			waitFor(t, 2*time.Second, func() bool {
+				_, err := b.resolve("alpha", nil)
+				return err == nil
+			}, "hello")
+			res := execTool(t, b, "browser_screenshot", map[string]any{
+				"tab_id": 11, "format": "jpeg", "quality": 75, "max_width": 800,
+			})
+			if res["imageWidth"] != 800 || res["imageHeight"] != 450 {
+				t.Fatalf("dpr=%g image=%vx%v, want 800x450", dpr, res["imageWidth"], res["imageHeight"])
+			}
+			if w, h := imageDimensions(decodeBase64Image(stringOf(res["data"]))); w != 800 || h != 450 {
+				t.Fatalf("dpr=%g decoded jpeg=%dx%d, want 800x450", dpr, w, h)
+			}
+			capture := lastCDPParams(f, "Page.captureScreenshot")
+			clip, _ := capture["clip"].(map[string]any)
+			want := 800.0 / (cssW * dpr)
+			if got := paramFloat(clip, "scale", 0); math.Abs(got-want) > 1e-9 {
+				t.Fatalf("dpr=%g clip.scale=%v, want %v", dpr, got, want)
+			}
+			if got := toIntMust(t, res["capturedWidth"]); got != int(cssW*dpr) {
+				t.Fatalf("dpr=%g capturedWidth=%d, want %d", dpr, got, int(cssW*dpr))
+			}
+			if got := toFloatMust(t, res["physicalScale"]); got != round4(cssW*dpr/800) {
+				t.Fatalf("dpr=%g physicalScale=%v, want %v", dpr, got, round4(cssW*dpr/800))
+			}
+		})
 	}
 }
 
