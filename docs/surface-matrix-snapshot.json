@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-21 00:19 CST",
-  "commit": "40945349",
+  "generated_at": "2026-11-21 09:00 CST",
+  "commit": "8c691881",
   "versions": {
     "python": "1.0.14",
     "go": "1.0.26-go.1"
@@ -45,7 +45,7 @@
     "actions": 865
   },
   "audit": {
-    "generated_at": "2026-11-21T00:19:27+08:00",
+    "generated_at": "2026-11-21T09:00:00+08:00",
     "frontend_missing": 0,
     "python_missing": 0,
     "python_pending": 0,
@@ -54,15 +54,8 @@
   },
   "probe": {
     "total": 18,
-    "passed": 11,
+    "passed": 13,
     "failed": [
-      {
-        "name": "凭据规格目录",
-        "path": "GET /api/credentials/specs",
-        "py": 200,
-        "go": 200,
-        "diff": 4
-      },
       {
         "name": "模型列表（占位）",
         "path": "GET /api/models",
@@ -76,13 +69,6 @@
         "py": 200,
         "go": 404,
         "diff": 2
-      },
-      {
-        "name": "技能目录",
-        "path": "GET /api/skills",
-        "py": 200,
-        "go": 200,
-        "diff": 1
       },
       {
         "name": "创建会话",
@@ -140,8 +126,8 @@
         "path": "/api/credentials/specs",
         "py": 200,
         "go": 200,
-        "ok": false,
-        "diff": 4
+        "ok": true,
+        "diff": 0
       },
       {
         "name": "Queen 档案",
@@ -185,8 +171,8 @@
         "path": "/api/skills",
         "py": 200,
         "go": 200,
-        "ok": false,
-        "diff": 1
+        "ok": true,
+        "diff": 0
       },
       {
         "name": "MCP 服务器",
@@ -270,7 +256,7 @@
         "diff": 0
       }
     ],
-    "python_start_s": 2.3,
+    "python_start_s": 2.6,
     "go_start_s": 0.26
   }
 }

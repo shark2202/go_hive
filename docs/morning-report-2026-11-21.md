@@ -76,4 +76,4 @@
 
 ---
 
-生成：2026-11-21 07:45 CST · 数据源：git log、`make ci`、`qc_check.py`、`TIME_EVENTS.csv`、各审计页 · HTML 版：`morning-report-2026-11-21.html`
+生成：2026-11-21 07:45 CST · 数据源：git log、`make ci`、`qc_check.py`、`TIME_EVENTS.csv`、各审计页 · HTML 版：`morning-report-2026-11-21.html` · 09:00 自动刷新原文：`morning-report-2026-11-21-auto.md`
