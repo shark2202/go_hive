@@ -130,8 +130,20 @@ func renderWithChrome(ctx context.Context, kind string, spec any, width, height,
 		// When the page itself reported a render failure, that deterministic
 		// message is what upstream's RendererError surfaces; otherwise this
 		// stays a chrome-level failure.
-		if status, message := pageOutcome(stdout); status == "error" {
+		status, message := pageOutcome(stdout)
+		if status == "error" {
 			return nil, &RenderError{Message: chartKindLabel(kind) + " render failed: " + message}
+		}
+		// Chrome's normal macOS teardown crash (CVDisplayLink noise +
+		// "Teardown watchdog expired") also fires *after* a complete render:
+		// the page already reported ok and the screenshot is on disk. Accept
+		// that artifact instead of failing a successful chart (wave-40 flake).
+		if status == "ok" {
+			if data, readErr := os.ReadFile(pngPath); readErr == nil && len(data) >= MinPNGBytes {
+				if w, h, ok := pngDimensions(data); ok && w > 0 && h > 0 {
+					return data, nil
+				}
+			}
 		}
 		if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
 			return nil, &RenderError{Message: fmt.Sprintf("chrome render timed out after %s", chromeRenderTimeout)}

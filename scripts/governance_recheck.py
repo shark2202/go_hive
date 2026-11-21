@@ -168,13 +168,26 @@ def main() -> int:
     notify = f"G1 {new_dates['G1']} · G2 {new_dates['G2']} · G3 {new_dates['G3']}"
     sh(f"osascript -e 'display notification \"{notify}\" with title \"Hive 治理重算\"'")
     # 6h 治理汇报留档：docs/reports/governance-<ts>.md（gen_report.py 内部提交）
-    try:
-        subprocess.run(
-            [sys.executable or "python3", str(Path(__file__).parent / "gen_report.py"), "governance"],
-            timeout=300, check=False,
-        )
-    except Exception as exc:  # noqa: BLE001
-        print(f"[governance] report generation failed: {exc}", file=sys.stderr)
+    # capture_output：子进程被 timeout kill 时其块缓冲输出会全部丢失
+    # （2026-11-22 06:10 事故：report 静默失踪），所以显式捕获并回放。
+    report_py = str(Path(__file__).parent / "gen_report.py")
+    for attempt in (1, 2):
+        try:
+            proc = subprocess.run(
+                [sys.executable or "python3", report_py, "governance"],
+                timeout=240, capture_output=True, text=True,
+            )
+            sys.stdout.write(proc.stdout or "")
+            sys.stderr.write(proc.stderr or "")
+            if proc.returncode == 0:
+                break
+            print(f"[governance] report generation rc={proc.returncode} (attempt {attempt})", file=sys.stderr)
+        except subprocess.TimeoutExpired as exc:
+            sys.stdout.write((exc.stdout or b"").decode() if isinstance(exc.stdout, bytes) else (exc.stdout or ""))
+            print(f"[governance] report generation timed out (attempt {attempt})", file=sys.stderr)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[governance] report generation failed: {exc}", file=sys.stderr)
+    print("[governance] governance report step done", file=sys.stdout)
     return 0
 
 

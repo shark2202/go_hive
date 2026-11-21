@@ -1,9 +1,9 @@
 {
- "wave": 39,
- "at": "2026-11-22 05:23",
- "head": "025e0387",
- "ci": 0,
+ "wave": 40,
+ "at": "2026-11-22 06:01",
+ "head": "df2baca3",
+ "ci": 2,
  "qc": 0,
  "publish": 0,
- "note": "claudecode 超时回报有界化后"
+ "note": "P2 收尾（pdf+包内拆分+waivers 清零）后"
 }
