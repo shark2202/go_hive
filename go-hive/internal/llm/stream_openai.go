@@ -96,6 +96,17 @@ func (p *Provider) openAIChatCompletionStream(
 	// provider tolerates the OpenAI usage field, and it is the only way to
 	// report tokens for a streamed turn.
 	body["stream_options"] = map[string]any{"include_usage": true}
+	// Ask for parallel tool calls so one response can batch several calls
+	// (the reference does this on every non-Anthropic streaming request with
+	// tools). A provider that rejects the parameter latches it off below and
+	// the request is retried without it.
+	//
+	// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+	if _, hasTools := body["tools"]; hasTools && !IsAnthropicModel(model) && p.RequestParallelToolCalls(true) {
+		if _, ok := body["parallel_tool_calls"]; !ok {
+			body["parallel_tool_calls"] = true
+		}
+	}
 
 	encoded, err := json.Marshal(body)
 	if err != nil {
@@ -127,6 +138,18 @@ func (p *Provider) openAIChatCompletionStream(
 			detail, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
 			_ = response.Body.Close()
 			providerErr := newProviderHTTPError(openAIStreamLabel, response, detail)
+			// A gateway that rejects the parallel_tool_calls parameter is
+			// retried once without it (the latch keeps later requests clean).
+			//
+			// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+			if p.NoteError(providerErr) {
+				delete(body, "parallel_tool_calls")
+				encoded, err = json.Marshal(body)
+				if err != nil {
+					return Completion{}, fmt.Errorf("llm: encode %s request: %w", openAIStreamLabel, err)
+				}
+				continue
+			}
 			if response.StatusCode == http.StatusTooManyRequests && attempts < RateLimitMaxRetries {
 				if ctxErr := ctx.Err(); ctxErr != nil {
 					return Completion{}, ctxErr
@@ -289,6 +312,7 @@ func emitStreamTail(result streamResult, emit func(StreamEvent)) {
 		CacheCreationTokens: result.completion.CacheCreationTokens,
 		CostUSD:             result.completion.CostUSD,
 		Model:               result.completion.Model,
+		ReasoningContent:    result.completion.ReasoningContent,
 	})
 }
 
@@ -351,6 +375,7 @@ func (p *Provider) parseOpenAIStream(ctx context.Context, reader io.Reader, requ
 	var (
 		dataLines   []string
 		text        strings.Builder
+		reasoning   strings.Builder
 		model       = requestedModel
 		stopReason  string
 		usage       *Usage
@@ -389,6 +414,16 @@ func (p *Provider) parseOpenAIStream(ctx context.Context, reader io.Reader, requ
 		if content := decodeMessageContent(choice.Delta.Content); content != "" {
 			text.WriteString(content)
 			emit(TextDeltaEvent{Content: content, Snapshot: text.String()})
+		}
+		// Reasoning models (DeepSeek, Qwen, GLM) stream their thinking as the
+		// OpenAI-compatible `delta.reasoning_content` string. Surface it so
+		// the UI gets reasoning_delta events and the agent loop can echo it
+		// back on this turn's later steps, exactly like the reference.
+		//
+		// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+		if delta := choice.Delta.ReasoningContent; delta != "" {
+			reasoning.WriteString(delta)
+			emit(ReasoningDeltaEvent{Content: delta})
 		}
 		for _, call := range choice.Delta.ToolCalls {
 			idx := 0
@@ -467,9 +502,10 @@ scan:
 	}
 
 	completion := Completion{
-		Content:    text.String(),
-		Model:      model,
-		StopReason: stopReason,
+		Content:          text.String(),
+		Model:            model,
+		StopReason:       stopReason,
+		ReasoningContent: reasoning.String(),
 	}
 	if usage != nil {
 		completion.InputTokens = usage.PromptTokens

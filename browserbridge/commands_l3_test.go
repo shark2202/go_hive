@@ -172,6 +172,8 @@ func (h *l3Fake) cdpResponse(method string, params map[string]any) (any, string)
 
 func (h *l3Fake) eval(expr string) (any, string) {
 	switch {
+	case strings.Contains(expr, "document.readyState"):
+		return "complete", ""
 	case strings.Contains(expr, "innerWidth"):
 		return map[string]any{"w": h.innerW, "h": h.innerH}, ""
 	case strings.Contains(expr, "_shadowQuery"):

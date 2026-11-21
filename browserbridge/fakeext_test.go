@@ -22,11 +22,15 @@ type fakeExtension struct {
 	mu     sync.Mutex
 	cmds   []fakeCommand
 	pongs  atomic.Int64
+	// wsPongs counts WS-layer pong answers; a real Chrome answers them from
+	// the socket stack without the page seeing anything.
+	wsPongs atomic.Int64
 
-	ignorePings bool
-	handler     func(fakeCommand) (any, string)
-	ready       chan struct{}
-	done        chan struct{}
+	ignorePings   bool
+	ignoreWSPings atomic.Bool
+	handler       func(fakeCommand) (any, string)
+	ready         chan struct{}
+	done          chan struct{}
 }
 
 func startFakeExtension(t *testing.T, wsAddr string, hello map[string]any, handler func(fakeCommand) (any, string)) *fakeExtension {
@@ -66,6 +70,14 @@ func (f *fakeExtension) loop() {
 		op, data, err := f.client.ReadMessage()
 		if err != nil {
 			return
+		}
+		if op == 0x9 { // WS-layer ping: the browser answers these itself
+			if f.ignoreWSPings.Load() {
+				continue
+			}
+			f.wsPongs.Add(1)
+			_ = f.client.Pong(data)
+			continue
 		}
 		if op != 0x1 {
 			continue

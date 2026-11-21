@@ -3,6 +3,7 @@ package ws_test
 import (
 	"bufio"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"net/http"
@@ -162,6 +163,120 @@ func TestRejectsPlainHTTPAndWrongPath(t *testing.T) {
 				t.Fatalf("content-type=%q", resp.Header.Get("Content-Type"))
 			}
 		})
+	}
+}
+
+// startKeepaliveEcho serves the echo endpoint with the WS-layer keepalive
+// ticker enabled, so a test can prove the server pings and fails silent peers.
+func startKeepaliveEcho(t *testing.T, interval, timeout time.Duration) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := &ws.Server{
+		Path:         "/bridge",
+		PingInterval: interval,
+		PingTimeout:  timeout,
+		Handler: func(c *ws.Conn) {
+			for {
+				_, data, err := c.ReadMessage()
+				if err != nil {
+					return
+				}
+				if err := c.WriteText(append([]byte("echo:"), data...)); err != nil {
+					return
+				}
+			}
+		},
+	}
+	go func() { _ = srv.Serve(ln) }()
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	})
+	return ln.Addr().String()
+}
+
+// TestKeepaliveClosesPeerThatNeverPongs ports the Python bridge's
+// websockets.serve(ping_interval=20, ping_timeout=20) failure mode: a peer
+// that lets the WS-layer pings go unanswered is closed with 1011
+// "keepalive ping timeout" (websockets' CloseCode.INTERNAL_ERROR).
+func TestKeepaliveClosesPeerThatNeverPongs(t *testing.T) {
+	addr := startKeepaliveEcho(t, 40*time.Millisecond, 40*time.Millisecond)
+	c, err := wstest.Dial("ws://"+addr+"/bridge", 2*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Kill()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		_ = c.SetReadDeadline(deadline)
+		op, payload, err := c.ReadMessage()
+		if op == 0x8 { // close frame
+			code := 1005
+			reason := ""
+			if len(payload) >= 2 {
+				code = int(binary.BigEndian.Uint16(payload[:2]))
+				reason = string(payload[2:])
+			}
+			if code != 1011 {
+				t.Fatalf("close code = %d, want 1011 (internal error)", code)
+			}
+			if !strings.Contains(reason, "keepalive ping timeout") {
+				t.Fatalf("close reason = %q, want keepalive ping timeout", reason)
+			}
+			return
+		}
+		if err != nil {
+			t.Fatalf("connection died without a close frame: %v", err)
+		}
+	}
+	t.Fatal("server never closed a connection that ignored its pings")
+}
+
+// TestKeepalivePongsKeepConnectionAlive is the other half: a peer that answers
+// the WS-layer pings stays connected across many heartbeat cycles and keeps
+// carrying messages.
+func TestKeepalivePongsKeepConnectionAlive(t *testing.T) {
+	addr := startKeepaliveEcho(t, 30*time.Millisecond, 30*time.Millisecond)
+	c, err := wstest.Dial("ws://"+addr+"/bridge", 2*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Kill()
+	replies := make(chan string, 1)
+	go func() {
+		for {
+			op, payload, err := c.ReadMessage()
+			if err != nil {
+				return
+			}
+			switch op {
+			case 0x9:
+				_ = c.Pong(payload)
+			case 0x1:
+				select {
+				case replies <- string(payload):
+				default:
+				}
+			}
+		}
+	}()
+	// Five heartbeat cycles: the app-level ping cannot explain survival here,
+	// only the pong answers can.
+	time.Sleep(150 * time.Millisecond)
+	if err := c.WriteText([]byte("alive")); err != nil {
+		t.Fatalf("write after heartbeats: %v", err)
+	}
+	select {
+	case got := <-replies:
+		if got != "echo:alive" {
+			t.Fatalf("reply = %q, want echo:alive", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("connection did not answer after the WS-layer heartbeats")
 	}
 }
 

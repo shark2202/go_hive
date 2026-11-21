@@ -100,12 +100,12 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td><code>14829</code></td><td>扩展中继 WebSocket</td><td>路径 <code>/bridge</code>；扩展主动连入；主通道。</td></tr>
 <tr><td><code>14830</code></td><td>HTTP 状态 / 代理 API</td><td>Python 侧：<code>/status</code>、<code>/profiles</code>、<code>/contexts</code>、<code>/tabs/{id}/health</code>、<code>/tabs/{id}/actions</code>、adopt/release、star default。<b>Go 侧另有</b> <code>/health</code>、<code>/command</code>、<code>/tabs</code>、<code>/contexts/close</code> 四条 additive 端点（本地 CLI/探针用，不是上游公共 API）。</td></tr>
 <tr><td><code>14831</code></td><td>控制 RPC WebSocket</td><td><code>BRIDGE_PORT + 2</code>；<code>BridgeClient</code> ↔ 桥；JSON-RPC 形状 <code>{rpc_id, method, args, params}</code>。</td></tr>
-<tr><td><code>9229 / 9230</code></td><td>legacy 中继 / 状态</td><td>迁移窗口内保留；旧版扩展仍拨 9229。Python 桥同时监听 9229（WS）与 9230（状态）；<b>Go 桥只监听 9229</b>，Hive server 的状态探针优先 14830、把 9230 仅作 fallback。</td></tr>
+<tr><td><code>9229 / 9230</code></td><td>legacy 中继 / 状态</td><td>迁移窗口内保留；旧版扩展仍拨 9229。两边都同时监听 9229（WS）与 9230（状态，同一个 status handler）；Go 侧 R17 起补齐 9230，Hive server 的状态探针优先 14830、把 9230 仅作 fallback。</td></tr>
 <tr><td><code>4002</code></td><td>GCU MCP server HTTP</td><td>可选 HTTP transport（<code>python -m gcu.server --port 4002</code>）；与浏览器桥不是同一个进程。</td></tr>
 </tbody></table></div>
 <h3>2.1 这是标准接口吗？</h3>
 <div class="tablewrap"><table><thead><tr><th style="width:20%">层</th><th style="width:16%">标准性</th><th>说明</th></tr></thead><tbody>
-<tr><td>传输</td><td><span class="pill ok">标准</span></td><td>RFC 6455 WebSocket，JSON 文本帧，扩展主动连 <code>ws://127.0.0.1:14829/bridge</code>；WS 层 ping/pong 由协议自带。</td></tr>
+<tr><td>传输</td><td><span class="pill ok">标准</span></td><td>RFC 6455 WebSocket，JSON 文本帧，扩展主动连 <code>ws://127.0.0.1:14829/bridge</code>；WS 层 ping/pong 由协议自带，两边都跑 20s/20s keepalive（无 pong 以 1011 <code>keepalive ping timeout</code> 关闭）。</td></tr>
 <tr><td>信封与命令词表</td><td><span class="pill warn">Hive 私有</span></td><td><code>hello{version,protocolVersion,extensionId,profileLabel}</code>、<code>ping/pong</code>、<code>{id,type,...params}</code> → <code>{id,result|error}</code>、<code>tab.*</code>/<code>cdp.attach</code>/<code>cdp</code>、<code>cdp_event</code>/<code>tab_event</code>/<code>tab_group_event</code>。有版本协商（当前 protocol 6）和同 label 顶替（close 4002），但不是公开规范，没有第三方 SDK/多实现生态。</td></tr>
 <tr><td>页面动作语义</td><td><span class="pill ok">事实标准</span></td><td><code>cdp</code> 命令把 Chrome DevTools Protocol 的 <code>method</code>/<code>params</code> 原样透传给 <code>chrome.debugger.sendCommand</code>；点击/输入/截图最终都是 CDP。这层是标准的，“怎么跟桥说话”那层是私有的。</td></tr>
 </tbody></table></div>

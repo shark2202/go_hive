@@ -31,6 +31,7 @@ type options struct {
 	httpAddr     string
 	controlAddr  string
 	legacy       string
+	legacyStatus string
 	noLegacy     bool
 	sweep        time.Duration
 	noSweep      bool
@@ -47,6 +48,8 @@ type options struct {
 	idleCheck    time.Duration
 	noIdleExit   bool
 	parentCheck  time.Duration
+	wsPing       time.Duration
+	wsPong       time.Duration
 }
 
 func parseFlags(args []string) (options, error) {
@@ -57,7 +60,8 @@ func parseFlags(args []string) (options, error) {
 	fs.StringVar(&o.httpAddr, "http", browserbridge.DefaultHTTPAddr, "local agent HTTP listen address")
 	fs.StringVar(&o.controlAddr, "control", browserbridge.DefaultControlAddr, "control RPC listen address (14831)")
 	fs.StringVar(&o.legacy, "legacy", browserbridge.DefaultLegacyAddr, "legacy WebSocket listen address (ignored with -no-legacy)")
-	fs.BoolVar(&o.noLegacy, "no-legacy", false, "do not bind the legacy 9229 listener")
+	fs.StringVar(&o.legacyStatus, "legacy-status", browserbridge.DefaultLegacyStatusAddr, "legacy HTTP status listen address (ignored with -no-legacy)")
+	fs.BoolVar(&o.noLegacy, "no-legacy", false, "do not bind the legacy 9229/9230 listeners")
 	fs.DurationVar(&o.sweep, "sweep", 30*time.Second, "stale-context sweep interval")
 	fs.BoolVar(&o.noSweep, "no-sweep", false, "disable the stale-context sweep")
 	fs.StringVar(&o.telemetryDir, "telemetry-dir", "", "write daily telemetry JSONL here (default: off)")
@@ -74,6 +78,10 @@ func parseFlags(args []string) (options, error) {
 	fs.BoolVar(&o.noIdleExit, "no-idle-exit", false, "never exit on idle (manual/dev runs)")
 	fs.DurationVar(&o.parentCheck, "parent-check", desktopParentCheckDefault,
 		"poll cadence for HIVE_DESKTOP_PARENT_PID liveness (2 consecutive misses exit the bridge)")
+	fs.DurationVar(&o.wsPing, "ws-ping", browserbridge.DefaultWSPingInterval,
+		"WS-layer keepalive ping interval (websockets ping_interval; 0 uses the default)")
+	fs.DurationVar(&o.wsPong, "ws-pong", browserbridge.DefaultWSPingTimeout,
+		"WS-layer keepalive pong timeout (websockets ping_timeout; 0 uses the default)")
 	if err := fs.Parse(args); err != nil {
 		return o, err
 	}
@@ -97,6 +105,9 @@ func (o options) config() browserbridge.Config {
 		ExtensionDir:     o.extension,
 		SkillDirs:        splitList(o.skills),
 		ScriptCommand:    splitList(o.scriptCmd),
+		LegacyStatusAddr: o.legacyStatus,
+		WSPingInterval:   o.wsPing,
+		WSPingTimeout:    o.wsPong,
 		// /status bridge_version. runtime_version stays null unless an
 		// embedder passes one, exactly like upstream's production bridge
 		// (BeelineBridge(runtime_version=None)).
@@ -104,6 +115,7 @@ func (o options) config() browserbridge.Config {
 	}
 	if o.noLegacy {
 		cfg.LegacyAddr = ""
+		cfg.LegacyStatusAddr = ""
 	}
 	return cfg
 }
@@ -181,10 +193,11 @@ func idleExitRequested(ctx context.Context, b *browserbridge.Bridge, grace, chec
 // watchdog stays as the fallback for a bridge started without a parent hint.
 //
 // Two consecutive misses debounce a one-off probe glitch, like upstream's
-// _PARENT_DEATH_CONFIRMATIONS. The 400 ms cadence keeps the observed exit
-// comfortably inside the ≤2 s contract.
+// _PARENT_DEATH_CONFIRMATIONS, and the cadence is upstream's 5 s
+// (_PARENT_CHECK_INTERVAL_S): the parent death takes effect after 5–10 s, the
+// same window Python has. -parent-check shortens it for tests/dev runs.
 const (
-	desktopParentCheckDefault = 400 * time.Millisecond
+	desktopParentCheckDefault = 5 * time.Second
 	desktopParentMisses       = 2
 )
 
@@ -260,18 +273,21 @@ func run(ctx context.Context, o options) error {
 		}()
 	}
 	legacy := ""
+	legacyStatus := ""
 	if !o.noLegacy {
 		legacy = b.LegacyAddr()
+		legacyStatus = b.LegacyStatusAddr()
 	}
 	ready := map[string]any{
-		"ok":      true,
-		"ready":   true,
-		"version": version,
-		"pid":     os.Getpid(),
-		"ws":      b.WSAddr(),
-		"http":    b.HTTPAddr(),
-		"control": b.ControlAddr(),
-		"legacy":  legacy,
+		"ok":            true,
+		"ready":         true,
+		"version":       version,
+		"pid":           os.Getpid(),
+		"ws":            b.WSAddr(),
+		"http":          b.HTTPAddr(),
+		"control":       b.ControlAddr(),
+		"legacy":        legacy,
+		"legacy_status": legacyStatus,
 	}
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetEscapeHTML(false)

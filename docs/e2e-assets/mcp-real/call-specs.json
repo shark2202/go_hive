@@ -1,0 +1,81 @@
+[
+  {
+    "label": "echo",
+    "tool": "echo",
+    "arguments": {
+      "message": "Hello MCP"
+    }
+  },
+  {
+    "label": "get-sum",
+    "tool": "get-sum",
+    "arguments": {
+      "a": 19,
+      "b": 23
+    }
+  },
+  {
+    "label": "get-sum-error",
+    "tool": "get-sum",
+    "arguments": {
+      "a": 1
+    }
+  },
+  {
+    "label": "get-tiny-image",
+    "tool": "get-tiny-image",
+    "arguments": {}
+  },
+  {
+    "label": "get-structured-content",
+    "tool": "get-structured-content",
+    "arguments": {
+      "location": "Chicago"
+    }
+  },
+  {
+    "label": "get_current_time",
+    "tool": "get_current_time",
+    "arguments": {
+      "timezone": "Asia/Shanghai"
+    }
+  },
+  {
+    "label": "convert_time",
+    "tool": "convert_time",
+    "arguments": {
+      "time": "15:30",
+      "source_timezone": "Asia/Shanghai",
+      "target_timezone": "America/New_York"
+    }
+  },
+  {
+    "label": "echo_text",
+    "tool": "echo_text",
+    "arguments": {
+      "text": "Hello MCP",
+      "count": 2,
+      "mode": "upper"
+    }
+  },
+  {
+    "label": "get-resource-links",
+    "tool": "get-resource-links",
+    "arguments": {
+      "count": 2
+    }
+  },
+  {
+    "label": "trigger-log-messages",
+    "tool": "trigger-log-messages",
+    "arguments": {}
+  },
+  {
+    "label": "trigger-long-running-operation",
+    "tool": "trigger-long-running-operation",
+    "arguments": {
+      "duration": 2,
+      "steps": 2
+    }
+  }
+]

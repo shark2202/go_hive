@@ -1,0 +1,23 @@
+{
+  "servers": [
+    {
+      "package": "@modelcontextprotocol/server-everything",
+      "version": "2.3.1",
+      "registry": "npm"
+    },
+    {
+      "package": "mcp-server-time",
+      "version": "2026.11.18",
+      "registry": "pypi"
+    },
+    {
+      "package": "mcp-proxy",
+      "version": "0.15.0",
+      "registry": "pypi",
+      "role": "stdio->SSE bridge"
+    }
+  ],
+  "node": "v24.21.0",
+  "uv": "0.12.18",
+  "network": "npmjs + pypi reachable (real downloads, no vendored fixtures)"
+}

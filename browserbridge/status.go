@@ -62,9 +62,8 @@ type Status struct {
 	// mirroring upstream's _bind_errors: it lets a caller tell "listener never
 	// bound (port conflict)" apart from "bound, extension idle". The fatal
 	// listeners (ws/status) never appear here — a bridge that cannot bind them
-	// does not start. Optional listeners report under "legacy_ws" and
-	// "control_rpc" (upstream's "legacy_status" has no Go counterpart: the
-	// bridge does not run the legacy 9230 status listener).
+	// does not start. Optional listeners report under "legacy_ws",
+	// "legacy_status" and "control_rpc", the same roles upstream records.
 	BindErrors map[string]string `json:"bind_errors"`
 }
 
@@ -74,9 +73,8 @@ type ListeningStatus struct {
 	Status     bool `json:"status"`
 	ControlRPC bool `json:"control_rpc"`
 	LegacyWS   bool `json:"legacy_ws"`
-	// LegacyStatus is always false in the Go bridge: the upstream legacy
-	// migration window also served status on 9230, which this port does not
-	// implement (Hive server probes 14830 first and 9230 only as a fallback).
+	// LegacyStatus reports the legacy 9229+1 status listener (upstream's
+	// LEGACY_STATUS_PORT 9230), bound whenever the legacy pair is enabled.
 	LegacyStatus bool `json:"legacy_status"`
 }
 
@@ -152,12 +150,11 @@ func (b *Bridge) Status(ctx context.Context) Status {
 	// Read the control field directly: ControlListening() takes serverMu.
 	controlListening := b.control != nil && b.control.listening()
 	listening := ListeningStatus{
-		WS:         b.wss != nil,
-		Status:     b.httpServer != nil,
-		ControlRPC: controlListening,
-		LegacyWS:   b.legacyWSS != nil,
-		// No legacy 9230 status listener in the Go bridge (see type comment).
-		LegacyStatus: false,
+		WS:           b.wss != nil,
+		Status:       b.httpServer != nil,
+		ControlRPC:   controlListening,
+		LegacyWS:     b.legacyWSS != nil,
+		LegacyStatus: b.legacyStatusSrv != nil,
 	}
 	wsAddr := b.wsAddr
 	b.serverMu.Unlock()

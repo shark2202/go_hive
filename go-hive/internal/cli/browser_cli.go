@@ -164,6 +164,11 @@ func (c *browserCLI) call(args *parsedArgs, typ string, params map[string]any, p
 	}
 	base := c.bridgeBase(args)
 	profile := c.profile(args)
+	// Upstream's errors.run wraps every command in _run_with_bridge, which
+	// calls ensure_bridge_host_running() before the op. Spawn-on-demand is
+	// what makes a cold `hive-browser open …` work without a prior
+	// `hive serve`; an explicit --bridge opts out (see ensureBridge).
+	_ = c.ensureBridge(args)
 	result, err := c.post(base, profile, typ, params)
 	if err != nil {
 		var refusal *browserBridgeRefusal

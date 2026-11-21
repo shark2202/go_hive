@@ -1,0 +1,4 @@
+{"seq": 1, "kind": "queen", "auth": null, "messages": 2, "has_reminder": false}
+{"seq": 2, "kind": "queen", "auth": null, "messages": 4, "has_reminder": false}
+{"seq": 3, "kind": "queen", "auth": null, "messages": 6, "has_reminder": false}
+{"seq": 4, "kind": "title", "auth": null, "messages": 2, "has_reminder": false}

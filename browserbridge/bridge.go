@@ -24,6 +24,11 @@ const (
 	// DefaultLegacyAddr is the pre-migration endpoint still probed by the
 	// shipped extension (offscreen.js rotates 14829 -> 9229).
 	DefaultLegacyAddr = "127.0.0.1:9229"
+	// DefaultLegacyStatusAddr is the pre-migration status endpoint
+	// (LEGACY_BRIDGE_PORT + 1). Upstream's start() binds the same status
+	// handler on 9229+1 beside the legacy WS listener, and the shipped side
+	// panel plus the runtime's bridge probe still dial it.
+	DefaultLegacyStatusAddr = "127.0.0.1:9230"
 	// DefaultHTTPAddr is the local-only agent API.
 	DefaultHTTPAddr = "127.0.0.1:14830"
 
@@ -37,6 +42,13 @@ const (
 	defaultPongTimeout    = 12 * time.Second
 	defaultHelloTimeout   = 10 * time.Second
 	minProtocolVersion    = 1
+
+	// WS-layer keepalive, the websockets.serve(ping_interval=…,
+	// ping_timeout=…) values from bridge.py: _WS_PING_INTERVAL_S /
+	// _WS_PING_TIMEOUT_S. The app-level 5s/12s ping stays on top — this one
+	// catches a half-open TCP path that the JSON pong cannot.
+	DefaultWSPingInterval = 20 * time.Second
+	DefaultWSPingTimeout  = 20 * time.Second
 )
 
 // Config configures a Bridge. Zero values get the upstream defaults.
@@ -50,6 +62,15 @@ type Config struct {
 	PongTimeout    time.Duration
 	HelloTimeout   time.Duration
 	MaxMessageSize int64
+	// LegacyStatusAddr is the HTTP status endpoint that accompanies
+	// LegacyAddr (upstream LEGACY_STATUS_PORT 9230). Empty means
+	// DefaultLegacyStatusAddr whenever LegacyAddr is enabled; it is not
+	// bound at all when LegacyAddr is empty (the binary's -no-legacy switch).
+	LegacyStatusAddr string
+	// WSPingInterval / WSPingTimeout are the WS-layer keepalive
+	// (websockets ping_interval / ping_timeout). Zero uses 20s/20s.
+	WSPingInterval time.Duration
+	WSPingTimeout  time.Duration
 	Logf           func(format string, args ...any)
 	Events         EventSink
 	Telemetry      Telemetry
@@ -136,6 +157,17 @@ func (c Config) withDefaults() Config {
 	}
 	if c.HelloTimeout <= 0 {
 		c.HelloTimeout = defaultHelloTimeout
+	}
+	if c.WSPingInterval <= 0 {
+		c.WSPingInterval = DefaultWSPingInterval
+	}
+	if c.WSPingTimeout <= 0 {
+		c.WSPingTimeout = DefaultWSPingTimeout
+	}
+	// The legacy status listener is part of the legacy migration pair: it is
+	// only meaningful (and only bound) while the legacy WS port is enabled.
+	if c.LegacyAddr != "" && c.LegacyStatusAddr == "" {
+		c.LegacyStatusAddr = DefaultLegacyStatusAddr
 	}
 	if c.MaxMessageSize <= 0 {
 		// Upstream websockets.serve(max_size=50*1024*1024); keep the two
@@ -227,11 +259,15 @@ type Bridge struct {
 	wss        *ws.Server
 	legacyWSS  *ws.Server
 	httpServer *http.Server
-	control    *controlRPC
-	wsAddr     string
-	httpAddr   string
-	legacyAddr string
-	shutdown   atomic.Bool
+	// legacyStatusSrv is the 9229+1 status endpoint that mirrors upstream's
+	// legacy migration pair. Guarded by serverMu like the other listeners.
+	legacyStatusSrv  *http.Server
+	control          *controlRPC
+	wsAddr           string
+	httpAddr         string
+	legacyAddr       string
+	legacyStatusAddr string
+	shutdown         atomic.Bool
 }
 
 // New creates a bridge; call Start to bind listeners.
@@ -284,18 +320,20 @@ func New(cfg Config) *Bridge {
 	return b
 }
 
-// Start binds the WebSocket and HTTP listeners. The legacy 9229 listener is
-// best-effort: a port conflict is logged rather than aborting startup.
+// Start binds the WebSocket and HTTP listeners. The legacy 9229/9230 listeners
+// are best-effort: a port conflict is logged rather than aborting startup.
 func (b *Bridge) Start(ctx context.Context) error {
 	wsLn, err := net.Listen("tcp", b.cfg.WSAddr)
 	if err != nil {
 		return fmt.Errorf("listen websocket %s: %w", b.cfg.WSAddr, err)
 	}
 	wss := &ws.Server{
-		Path:    "/bridge",
-		Handler: b.handleWS,
-		MaxRead: b.cfg.MaxMessageSize,
-		Logger:  b.cfg.Logf,
+		Path:         "/bridge",
+		Handler:      b.handleWS,
+		MaxRead:      b.cfg.MaxMessageSize,
+		Logger:       b.cfg.Logf,
+		PingInterval: b.cfg.WSPingInterval,
+		PingTimeout:  b.cfg.WSPingTimeout,
 	}
 	httpLn, err := net.Listen("tcp", b.cfg.HTTPAddr)
 	if err != nil {
@@ -322,8 +360,18 @@ func (b *Bridge) Start(ctx context.Context) error {
 		}
 	}()
 
-	if b.cfg.LegacyAddr != "" {
+	b.serverMu.Lock()
+	primaryWS := b.wsAddr
+	b.serverMu.Unlock()
+	if b.cfg.LegacyAddr != "" && b.cfg.LegacyAddr != primaryWS {
+		// Upstream's `if port != LEGACY_BRIDGE_PORT` guard: when the primary
+		// relay already sits on the legacy port there is no second pair to
+		// bind (the attempt would just collide with itself).
 		b.startLegacy(b.cfg.LegacyAddr)
+		// Upstream binds the status handler on LEGACY_STATUS_PORT beside the
+		// legacy WS listener (bridge.py start()); the probes that still dial
+		// 9230 expect the same payload.
+		b.startLegacyStatus(b.cfg.LegacyStatusAddr)
 	}
 	// Control RPC (14831): the out-of-process method surface. A bind failure
 	// is logged, not fatal — the relay and HTTP API stay usable.
@@ -351,10 +399,12 @@ func (b *Bridge) startLegacy(addr string) {
 		return
 	}
 	srv := &ws.Server{
-		Path:    "/bridge",
-		Handler: b.handleWS,
-		MaxRead: b.cfg.MaxMessageSize,
-		Logger:  b.cfg.Logf,
+		Path:         "/bridge",
+		Handler:      b.handleWS,
+		MaxRead:      b.cfg.MaxMessageSize,
+		Logger:       b.cfg.Logf,
+		PingInterval: b.cfg.WSPingInterval,
+		PingTimeout:  b.cfg.WSPingTimeout,
 	}
 	b.serverMu.Lock()
 	b.legacyWSS = srv
@@ -364,6 +414,41 @@ func (b *Bridge) startLegacy(addr string) {
 	go func() {
 		if err := srv.Serve(ln); err != nil {
 			b.cfg.Logf("legacy websocket stopped: %v", err)
+		}
+	}()
+}
+
+// startLegacyStatus binds the legacy 9229+1 status listener. It serves the
+// same handler as the primary 14830 API (upstream reuses one
+// _http_status_handler for both ports), so a probe that falls back to 9230
+// gets the full status payload instead of a connection refusal. Mirrors
+// upstream's `if port != LEGACY_BRIDGE_PORT` guard: a primary API already on
+// the legacy status port skips the second bind.
+func (b *Bridge) startLegacyStatus(addr string) {
+	if addr == "" {
+		return
+	}
+	b.serverMu.Lock()
+	primaryHTTP := b.httpAddr
+	b.serverMu.Unlock()
+	if addr == primaryHTTP {
+		return
+	}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		b.recordBindError("legacy_status", addr, err)
+		b.cfg.Logf("legacy status %s unavailable (continuing): %v", addr, err)
+		return
+	}
+	srv := &http.Server{Handler: NewHTTPHandler(b)}
+	b.serverMu.Lock()
+	b.legacyStatusSrv = srv
+	b.legacyStatusAddr = ln.Addr().String()
+	b.serverMu.Unlock()
+	b.cfg.Logf("legacy status listening: http://%s/status", ln.Addr())
+	go func() {
+		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
+			b.cfg.Logf("legacy status stopped: %v", err)
 		}
 	}()
 }
@@ -388,6 +473,14 @@ func (b *Bridge) LegacyAddr() string {
 	b.serverMu.Lock()
 	defer b.serverMu.Unlock()
 	return b.legacyAddr
+}
+
+// LegacyStatusAddr returns the bound legacy HTTP status address (empty when the
+// legacy pair is disabled or the best-effort bind failed).
+func (b *Bridge) LegacyStatusAddr() string {
+	b.serverMu.Lock()
+	defer b.serverMu.Unlock()
+	return b.legacyStatusAddr
 }
 
 // ControlAddr returns the bound control-RPC address (empty when the control
@@ -476,7 +569,7 @@ func (b *Bridge) Shutdown(ctx context.Context) error {
 	}
 
 	b.serverMu.Lock()
-	wss, legacy, httpSrv := b.wss, b.legacyWSS, b.httpServer
+	wss, legacy, legacyStatus, httpSrv := b.wss, b.legacyWSS, b.legacyStatusSrv, b.httpServer
 	b.serverMu.Unlock()
 	b.serverMu.Lock()
 	control := b.control
@@ -493,6 +586,11 @@ func (b *Bridge) Shutdown(ctx context.Context) error {
 	}
 	if legacy != nil {
 		if err := legacy.Shutdown(ctx); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	if legacyStatus != nil {
+		if err := legacyStatus.Shutdown(ctx); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}

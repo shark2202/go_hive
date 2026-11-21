@@ -91,7 +91,7 @@ func RecordPlaybookRun(dbPath string, in PlaybookRunInput) error {
 		logs = []string{}
 	}
 	logsJSON := pyJSONDumps(logs)
-	createdAt := time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00")
+	createdAt := pyTimestampNow()
 
 	_, err = db.Exec(`
 INSERT OR REPLACE INTO playbook_runs
@@ -135,6 +135,20 @@ func ListPlaybookRuns(dbPath string, limit int) ([]PlaybookRun, error) {
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+// pyTimestampNow formats the current UTC time the way upstream's
+// `datetime.now(UTC).isoformat()` does: microsecond precision, and NO
+// fractional part when the microsecond is zero. The playbook_runs.created_at
+// column is compared as TEXT by both implementations, so the two forms must
+// agree.
+func pyTimestampNow() string {
+	now := time.Now().UTC()
+	base := now.Format("2006-01-02T15:04:05")
+	if now.Nanosecond()/1000 == 0 {
+		return base + "+00:00"
+	}
+	return now.Format("2006-01-02T15:04:05.000000+00:00")
 }
 
 func pyJSONDumps(value any) string {

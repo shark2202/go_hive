@@ -1,0 +1,15 @@
+case py-no-user
+session session_20261121_160732_ed70fe37
+
+chat_status=None judge_requests=0
+reminder_in_transcript=False
+reminder_reached_model=False
+queen calls:
+  seq=1 kind=queen messages=2 reminder=False
+  seq=2 kind=queen messages=4 reminder=False
+transcript:
+    0 user      client_input=False content='<system-reminder>\nThe following tools are available but their schemas are NOT loaded — calling them directly will fail. Use search_tools with query "select:<nam'
+    1 assistant client_input=False content='（后台）收到。'
+    2 user      client_input=False content='[2026-11-21 16:07 CST] [External event] [external] 系统时钟同步完成，请回复一句确认。'
+    3 assistant client_input=False content='（后台）收到。'
+sse event types: session_snapshot, client_output_delta, llm_turn_complete, client_input_requested, loop_state_changed, node_loop_iteration, context_usage_updated, client_output_delta, llm_turn_complete, client_input_requested, loop_state_changed

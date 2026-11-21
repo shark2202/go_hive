@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -66,8 +67,12 @@ func TypesafeJudge(slot map[string]any, question string, state map[string]any, c
 	if len(criteria) > 0 {
 		answer["criteria"] = criteria
 	}
+	stateJSON, err := marshalJudgeState(state)
+	if err != nil {
+		return 0, err
+	}
 	payload := map[string]any{
-		"state":     state,
+		"state":     json.RawMessage(stateJSON),
 		"model":     slot["model"],
 		"questions": map[string]any{"answer": answer},
 	}
@@ -123,4 +128,70 @@ func pyStrOr(value any, fallback string) string {
 		return pyStr(value)
 	}
 	return pyStr(fallback)
+}
+
+// judgeStateKeyOrder lists the stall-check state keys in the order the Python
+// reference inserts them (framework/server/stall_check.py::check). The real
+// TypeSafe service renders the state in the order it arrives, so sending the
+// same semantic state from a Go map (whose JSON encoding sorts keys) yields a
+// slightly different noul for the same turn: measured on startlux-decide,
+// 0.9233 sorted vs 0.9365 in upstream order for one stall turn. Emit known
+// keys in upstream order; any other key keeps sorted order for other judge
+// consumers.
+var judgeStateKeyOrder = []string{
+	"previous_turn",
+	"user_message",
+	"assistant_reasoning_tail",
+	"assistant_reply",
+	"tools_called_this_turn",
+}
+
+// marshalJudgeState encodes a judge state object with the upstream key order.
+func marshalJudgeState(state map[string]any) ([]byte, error) {
+	var buffer bytes.Buffer
+	buffer.WriteByte('{')
+	first := true
+	seen := make(map[string]bool, len(state))
+	write := func(key string, value any) error {
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		if !first {
+			buffer.WriteByte(',')
+		}
+		first = false
+		keyJSON, err := json.Marshal(key)
+		if err != nil {
+			return err
+		}
+		buffer.Write(keyJSON)
+		buffer.WriteByte(':')
+		buffer.Write(encoded)
+		seen[key] = true
+		return nil
+	}
+	for _, key := range judgeStateKeyOrder {
+		value, present := state[key]
+		if !present {
+			continue
+		}
+		if err := write(key, value); err != nil {
+			return nil, err
+		}
+	}
+	rest := make([]string, 0, len(state))
+	for key := range state {
+		if !seen[key] {
+			rest = append(rest, key)
+		}
+	}
+	sort.Strings(rest)
+	for _, key := range rest {
+		if err := write(key, state[key]); err != nil {
+			return nil, err
+		}
+	}
+	buffer.WriteByte('}')
+	return buffer.Bytes(), nil
 }

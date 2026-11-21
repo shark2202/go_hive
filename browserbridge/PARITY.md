@@ -149,12 +149,12 @@ included here). Signatures are copied from the upstream AST.
 |---|---|---|---|
 | 1 | RFC 6455 server handshake/frames/fragmentation | 已移植 | Standard-library implementation in `ws/`; client masking required; 50 MiB frame cap matching upstream `websockets.serve(max_size=50*1024*1024)` (R10). |
 | 2 | `/bridge` endpoint on 14829 | 已移植 | Wrong paths get HTTP 404. |
-| 3 | Legacy 9229 listener | 已移植 | Default enabled, best-effort bind; disable with empty `-legacy`. |
+| 3 | Legacy 9229 listener | 已移植 | Default enabled, best-effort bind; disable with empty `-legacy`/`-no-legacy`. The upstream migration pair is complete: the 9229 WS relay **and** the 9229+1 (9230) HTTP status endpoint (same handler as 14830), guarded against a duplicate bind when the primary listener already owns the legacy address (upstream `port != LEGACY_BRIDGE_PORT`). |
 | 4 | `hello` parse (version/extensionId/protocolVersion/profileLabel) | 已移植 | Synthetic `profile-<8>` fallback for protocol ≥5 without a label. |
 | 5 | Multi-profile connection registry | 已移植 | `map[label]*Connection`, per-connection pending/counter/attach cache. |
 | 6 | Same-label reconnect displacement (close 4002) | 已移植 | Old pending fails with `connection_lost`. |
 | 7 | App-level two-way ping/pong (5 s / 12 s) | 已移植 | Bridge pings; extension pings are answered; timeout closes 4001. |
-| 8 | WebSocket ping/pong control frames | 已移植 | Server answers pings; does not run its own WS-level ping ticker. |
+| 8 | WebSocket ping/pong control frames | 已移植 | Server answers pings, and now runs the **WS-layer keepalive** on both extension listeners: ping every `DefaultWSPingInterval` (20 s, upstream `_WS_PING_INTERVAL_S`) and close with `1011 keepalive ping timeout` when no pong arrives within `DefaultWSPingTimeout` (20 s, `_WS_PING_TIMEOUT_S`) — the code/reason the Python `websockets` library uses. `/ws-ping`/`/ws-pong` override both for tests; the control-RPC listener has no ticker (upstream's `bridge_rpc.py` runs none). |
 | 9 | Request id → result/error routing | 已移植 | `{id,type,...params}` out; `{id,result|error}` back. |
 | 10 | Structured error codes | 已移植 | `bad_request`, `unknown_command`, `not_connected`, `no_browser_profile`, `ambiguous_profile` (legacy constant), `timeout`, `connection_lost`, `extension_error`, `cdp_error`, `not_found`, `invalid_state`, `conflict`, `no_such_profile`, `unsupported_extension`, `create_failed`, `ungroup_no_op`, `rate_limited`. |
 | 11 | Disconnect fails all in-flight requests | 已移植 | Per-connection scope; other profiles untouched. |
@@ -170,7 +170,7 @@ included here). Signatures are copied from the upstream AST.
 | 21 | Health blockers / `tab_health` | 已移植 | `health.py` rules ported (privileged scheme, Web Store, foreign extension, DevTools, enterprise policy, file access); connection rollup in `/status`. |
 | 22 | Telemetry JSONL | 已移植 | Daily `browser-YYYY-MM-DD.jsonl` under `TelemetryDir` (opt-in): tool_call, connection_event, context_event, cdp_event, viewport_event, attach_canary; redaction + truncation. |
 | 23 | Social rate-limit hook | 已移植 | Upstream limit table + env/config overrides; navigate-time LinkedIn/Instagram `profile_view` check/record. Opt-in (`EnableRateLimits`). JSON store, not SQLite. |
-| 24 | HTTP agent API on 127.0.0.1:14830 (`/health`, `/status`, `/profiles`, `/command`) | 已移植 | Loopback-only middleware; `/status` refreshes tab counts with a 750 ms live `tab.list`; `system_blocker` included, plus the side-panel fields `bridge_version`, `runtime_version` (null unless an embedder sets one, like upstream's production bridge), `bind_errors` and `listening.legacy_status` (R11). `/health`, `/command`, `/tabs`, `/contexts/close` are Go additions; the upstream bridge does not implement them. |
+| 24 | HTTP agent API on 127.0.0.1:14830 (`/health`, `/status`, `/profiles`, `/command`) | 已移植 | Loopback-only middleware; `/status` refreshes tab counts with a 750 ms live `tab.list`; `system_blocker` included, plus the side-panel fields `bridge_version`, `runtime_version` (null unless an embedder sets one, like upstream's production bridge), `bind_errors` and `listening.legacy_status` (R11; the flag is now live — the legacy 9230 listener exists, see #3). `/health`, `/command`, `/tabs`, `/contexts/close` are Go additions; the upstream bridge does not implement them. |
 | 25 | Upstream read/control HTTP surface (`GET /contexts`, `GET/POST /profiles/default`, `GET /tabs/{id}/health`, `GET /tabs/{id}/actions`, adopt/release POSTs) | 已移植 | Field names follow upstream; adopt conflict returns 409. |
 | 26 | Upstream remaining HTTP surface (`POST /tabs/{id}/reveal`, `POST /shutdown`) | 已移植 | Reveal returns the extension payload (or `fallback:"activate"`); `/shutdown` answers 202 `{"ok":true,"message":"Bridge shutdown initiated."}` and invokes `Config.ShutdownRequest`, which the supervised binary wires to a graceful exit (exit 0 = intentional, so the supervisor does not respawn). |
 | 26b | Panel support endpoints (`GET /tabs`, `POST /contexts/close`) | 已移植 | Additive to the upstream HTTP API: `/tabs` returns the extension's unfiltered `tab.list` rows, `/contexts/close` implements the upstream body contract `{profile}` / `{all:true}` and returns `{"closed":[{profile,ok,status,…}]}`. They exist so the Go server's three panel proxies pass through real data instead of re-implementing the registry. |
@@ -181,7 +181,7 @@ included here). Signatures are copied from the upstream AST.
 | 31 | Real Chrome extension integration | 已移植 | `scripts/real_chrome_e2e.sh` loads the real 1.7.4 extension into Google Chrome 158 (throwaway profile, `cmd/chromeloader` + `Extensions.loadUnpacked`) and drives the full tool flow. Evidence in §10. |
 | 32 | Exact `networkidle` semantics | 未移植 | Approximated as `readyState=complete` + 500 ms. |
 | 33 | Tab-group protocol v5/v6 features (saved-group recycle, regroup, listUngrouped) | 已移植 | Persisted-chip recycle on create, `regrouped` event attribution, protocol-6 ungrouped reaper. Regroup is extension-driven; no bridge-issued `tabGroup.move`. |
-| 34 | Process entry point (`cmd/browserbridge`) | 已移植 | Flags for WS/HTTP/legacy, sweep, telemetry, rate limits, artifacts, skills, script command; `-no-legacy`; SIGINT/SIGTERM graceful shutdown; JSON ready line; `-probe` health check; `-version`; `-parent-check` for the `HIVE_DESKTOP_PARENT_PID` watch (upstream `_watch_parent`). |
+| 34 | Process entry point (`cmd/browserbridge`) | 已移植 | Flags for WS/HTTP/legacy (+`-legacy-status`), sweep, telemetry, rate limits, artifacts, skills, script command; `-no-legacy`; SIGINT/SIGTERM graceful shutdown; JSON ready line (now includes `legacy_status`); `-probe` health check; `-version`; `-parent-check` (default 5 s, upstream's `_PARENT_CHECK_INTERVAL_S`, two misses) for the `HIVE_DESKTOP_PARENT_PID` watch (upstream `_watch_parent`); `-ws-ping`/`-ws-pong` for the WS-layer keepalive. |
 | 35 | Per-tab CDP serialization (`_tab_lock`) | 已移植 | Every `cdp()` command for one tab runs under a lazily-created per-tab lock (buffered channel); the lock is taken before `ensureAttached` so attach/cdp/retry cannot interleave, and entries are evicted on tab close/`removed` like upstream `_tab_locks` (R09). A waiter aborts when its context is cancelled. |
 
 ## 4. Upstream test mapping
@@ -190,7 +190,7 @@ Upstream test files live in `tools/tests/`. Go equivalents are in this module.
 
 | Upstream file | What it covers | Go equivalent | Status |
 |---|---|---|---|
-| `test_bridge_host_lifetime.py` | Parent-process watch dog shuts the bridge down / debounces a miss | `cmd/browserbridge` `TestIdleWatchdog*` (idle exit, desktop-parent hold, control-client hold) + `TestDesktopParentWatchExits` (`_watch_parent` semantics; exits in ~0.8 s, intentionally faster than upstream's 5 s × 2 checks) + `internal/cli` `TestBrowserSupervisorParksOnIdleExit` (exit 0 parks, `ensure()` respawns) + `TestBrowserSupervisorRefusesRespawnAfterRuntimeDeath` (no restart into a dead runtime) | 已移植 |
+| `test_bridge_host_lifetime.py` | Parent-process watch dog shuts the bridge down / debounces a miss | `cmd/browserbridge` `TestIdleWatchdog*` (idle exit, desktop-parent hold, control-client hold) + `TestDesktopParentWatchExits` (`_watch_parent` semantics at a shortened `-parent-check`) + `TestDesktopParentCheckDefaultMatchesUpstream` (default is upstream's 5 s × 2) + `internal/cli` `TestBrowserSupervisorParksOnIdleExit` (exit 0 parks, `ensure()` respawns) + `TestBrowserSupervisorRefusesRespawnAfterRuntimeDeath` (no restart into a dead runtime) | 已移植 |
 | `test_bridge_multiconnection.py` | Two connections, default/sole/starred resolution, explicit routing, tab routing, unknown profile, ping-loop registration, disconnect isolation | `TestAppPingPongKeepsConnectionAlive`, `TestPingTimeoutDisconnects`, `TestFirstComeClaimsDefault`, `TestStarredDefaultWinsOverFirstCome`, `TestTabRoutingAcrossProfiles`, `TestDisconnectFailsInFlightRequest`, `TestDisconnectSoftPrunesContextSlice` | 已移植 |
 | `test_bridge_rpc_allowlist.py` | Every forwarded bridge method is allowlisted; unknown method error | `TestRPCAllowlistCoversDispatch` (46 names + every one has a dispatcher), `TestRPCUnknownMethodIsRejected`, `TestRPCClientHelloRegistersOwnerAndCounts`, `TestRPCDispatchAgainstFakeExtension`, `TestRPCNotifyOnlyReachesSubscribers`, `TestRPCConcurrentCallsAreMultiplexed`, `TestRPCReaperClosesZombies`, `TestControlNotifyOnHandover` | 已移植 |
 | `test_browser_cleanup_phase1.py` | Context close dead-letter, forward/ungrouped orphan reapers, group recycle, window affinity | `TestStaleSweepSoftPrunesAndReapsOrphanGroup`, `TestUngroupedOrphanReap`, window/recycle paths in `TestAdoptTabLazyGroupRecreateAfterSoftPrune`; dead-letter queue absent | 未移植 |
@@ -477,7 +477,13 @@ Unit (fake extension + fake control clients, `go test -race ./...`):
 | `TestPanelCloseContextsHTTPClosesProfileAndAll` | `POST /contexts/close` closes one profile through `context.destroy` (registry entry dropped) and reports `{"closed":[]}` for `all` with nothing registered; a body without `profile`/`all` is the upstream 400 |
 | `cmd/... TestIdleWatchdogExits` | No control client + no `HIVE_DESKTOP_PARENT_PID` → the binary exits 0 after the grace |
 | `cmd/... TestIdleWatchdogHoldsWhileDesktopAlive` / `...HoldsWhileControlClientConnected` | A live desktop parent or one control client suppresses the exit |
-| `cmd/... TestDesktopParentWatchExits` | Upstream `_watch_parent`: with `HIVE_DESKTOP_PARENT_PID` dead the binary exits on its own, even with the idle watchdog disabled — an intentional acceleration (400 ms × 2 vs upstream's 5 s × 2; measured 0.09s in-test at `-parent-check 20ms`, 783–866ms real-machine at the 400ms default). Not a same-value alignment. |
+| `cmd/... TestDesktopParentWatchExits` | Upstream `_watch_parent`: with `HIVE_DESKTOP_PARENT_PID` dead the binary exits on its own, even with the idle watchdog disabled. The test drives the same path at `-parent-check 20ms`; the untouched default is upstream's 5 s × 2 (`TestDesktopParentCheckDefaultMatchesUpstream`), measured 5–10 s on the real binary with the idle watchdog disabled. |
+| `ws/... TestKeepaliveClosesPeerThatNeverPongs` / `TestKeepalivePongsKeepConnectionAlive` | The WS-layer keepalive: a peer that never pongs is closed with `1011 keepalive ping timeout`; a ponging peer survives many heartbeat cycles and keeps carrying messages. |
+| `TestBridgeWSKeepaliveClosesExtensionThatIgnoresPings` / `TestBridgeWSKeepaliveKeepsPongingExtensionConnected` / `TestLegacyListenerRunsWSKeepalive` / `TestBridgeWSKeepaliveDefaultsMatchUpstream` | The same ticker wired into the bridge on both extension listeners, with the 20 s/20 s default pinned. |
+| `TestLegacyStatusListenerServesStatus` / `TestLegacyStatusJSONShape` / `TestLegacyStatusDisabledWithLegacyWS` / `TestStatusReportsBindErrorsForOptionalListeners` | The legacy 9229+1 status listener: binds with the legacy pair, serves the same `/status`/`/profiles` payload, reports `listening.legacy_status`, records `bind_errors.legacy_status` on conflict, and is skipped entirely with `-no-legacy`. |
+| `TestLegacyListenersSkippedWhenPrimarySharesTheAddress` | Upstream's `port != LEGACY_BRIDGE_PORT` guard: a primary listener that already owns the legacy address does not attempt a duplicate bind. |
+| `internal/cli` `TestBrowserCLIEnsuresBridgeWithoutFlag` + `TestEnsureBrowserBridgeReusesHealthyEndpoint` / `...GivesUpWhenSpawnFails` / `TestBrowserCLIExplicitBridgeOptsOutOfEnsure` | CLI ensure parity with `ensure_bridge_host_running()`: a cold command spawns the bridge detached and reaches it; a healthy endpoint is reused; the wait is bounded; an explicit `--bridge` opts out. |
+| `internal/cli` `TestBrowserCLIExitCodes` (bad_request family) | A bridge `bad_request`/`unknown_command` is classified by the upstream **text** taxonomy (fragment-less → 1, "not found" → 4), while exit 6 stays for the CLI's own prechecks (`TestBrowserCLIBadArgs`). |
 | `cmd/... TestShutdownRouteEndsTheProcess` | `POST /shutdown` answers 202 and the process exits 0 |
 | `internal/cli` `TestBrowserSupervisorParksOnIdleExit` | Exit code 0 parks the supervisor (no restart counter); `ensure()` starts a fresh child |
 | `internal/cli` `TestBrowserSupervisorRefusesRespawnAfterRuntimeDeath` | Once the runtime owner is gone, `ensure()` is a no-op and a stale wake cannot restart the loop (`runtimeGone`), matching upstream's never-respawn-into-a-dead-runtime guard |
@@ -500,12 +506,33 @@ Process-level (`go_hive/scripts/e2e_browser_host.sh`, macOS 26.7.1, real Chrome
 - step 09: a bare `browserbridge` with **no** control client and **no** desktop
   parent (2 s grace for the test) exits on its own with code 0, logging
   `no control RPC clients and desktop is gone — starting 2s grace before self-exit`.
-- 2026-11-20 parent-death run (isolated ports, `kill -9` on the desktop parent):
-  a bare bridge exits in **783 ms** with the default `-parent-check 400ms`
-  (baseline before the watch: **40 023 ms**), 866 ms with `-no-idle-exit`, and
-  815 ms under `hive serve` with **no respawn** (`Browser bridge: runtime gone —
-  not restarting`). Real-Chrome CLI negatives: missing `--intent` / `--region`
-  → exit 1; usage errors → exit 2 (full table: `docs/browser-host.md` §7).
+- 2026-11-21 transport/lifecycle run (`go_hive/scripts/e2e_browser_transport.sh`,
+  real binary + real `hive-browser`, full output archived at
+  `docs/fixtures/browser-transport-parity/e2e-output.txt`, 23 assertions all
+  PASS):
+  - WS keepalive at `-ws-ping 200ms -ws-pong 200ms`: a raw peer that ignores
+    the pings is closed with `1011 "keepalive ping timeout"`; a peer that
+    pongs answers 6 heartbeat cycles and an app-level ping.
+  - legacy pair: `GET 9230/status` serves the primary payload
+    (`listening.legacy_status:true`), `9229` accepts a hello (label visible in
+    `/status.connections`); the primary-owns-the-legacy-address case starts
+    with no `bind_errors` self-collision.
+  - CLI ensure: `hive-browser status --json` with nothing listening and no
+    `--bridge` spawned a detached bridge, answered through it within 0.62 s
+    (2 with no extension / 0 with a fake extension connected).
+  - exit codes: local precheck 6; bridge `bad_request` text decides (upload
+    `File not found` → 4; the bridge really refuses an unknown command with
+    HTTP 400 `unknown_command`).
+  - parent death (default `-parent-check`, idle watchdog disabled): bridge
+    exited **0** after **10.04–10.06 s**, upstream's 5 s × 2 window (the old
+    deliberate acceleration was 0.78–0.87 s; baseline without any watch was
+    40 s).
+- 2026-11-20 parent-death run (isolated ports, `kill -9` on the desktop parent,
+  historical — the default was 400 ms then): a bare bridge exited in **783 ms**,
+  866 ms with `-no-idle-exit`, and 815 ms under `hive serve` with **no respawn**
+  (`Browser bridge: runtime gone — not restarting`). Real-Chrome CLI negatives:
+  missing `--intent` / `--region` → exit 1; usage errors → exit 2 (full table:
+  `docs/browser-host.md` §7).
 
 `go_hive/browserbridge/scripts/real_chrome_e2e.sh` was re-run after the change:
 29 assertions, all `ok`, `PASS: all steps succeeded against real Chrome
@@ -538,7 +565,9 @@ concurrent `_cdp` calls through control RPC 14831. Raw output:
   (`docs/fixtures/browser-residuals/status-bind-error.json`).
 
 Not changed by this round: the Skia-vs-PIL JPEG byte difference and the dpr>1
-annotation width (quantified in `docs/fixtures/browser-return-contract/`), the
-`isHiveGroup` value-level difference (upstream reads a key that its own row
-does not carry; see `docs/browser-bridge.html` §04 note), and the legacy 9230
-status listener (Go does not implement it; Hive server probes 14830 first).
+annotation width (quantified in `docs/fixtures/browser-return-contract/`), and
+the `isHiveGroup` value-level difference (upstream reads a key that its own row
+does not carry; see `docs/browser-bridge.html` §04 note). Closed by the
+transport/lifecycle round (R16–R20, 2026-11-21): the WS-layer keepalive, the
+legacy 9230 status listener, CLI auto-ensure, the `bad_request` exit-code
+classification, and the parent-death default.

@@ -263,11 +263,21 @@ func batch6Lane4DatabricksListJobs(ctx context.Context, rt *Runtime, input map[s
 	for _, rawJob := range batch4AsSlice(data["jobs"]) {
 		job := batch4AsMap(rawJob)
 		settings := batch4AsMap(job["settings"])
+		// Upstream reads job.get("job_id", 0) / job.get("created_time", 0): a
+		// missing key must render as 0, not JSON null.
+		jobID := job["job_id"]
+		if jobID == nil {
+			jobID = 0
+		}
+		createdTime := job["created_time"]
+		if createdTime == nil {
+			createdTime = 0
+		}
 		jobs = append(jobs, map[string]any{
-			"job_id":       job["job_id"],
+			"job_id":       jobID,
 			"name":         batch6Lane4StringOr(settings, "name", ""),
 			"creator":      batch6Lane4StringOr(job, "creator_user_name", ""),
-			"created_time": job["created_time"],
+			"created_time": createdTime,
 		})
 	}
 	return map[string]any{"jobs": jobs}, nil
@@ -308,12 +318,25 @@ func batch6Lane4DatabricksGetRun(ctx context.Context, rt *Runtime, input map[str
 		return failure, nil
 	}
 	state := batch4AsMap(data["state"])
+	// Upstream reads data.get(...) with 0 defaults for run_id/job_id/start_time.
+	runIDValue := data["run_id"]
+	if runIDValue == nil {
+		runIDValue = 0
+	}
+	jobIDValue := data["job_id"]
+	if jobIDValue == nil {
+		jobIDValue = 0
+	}
+	startTime := data["start_time"]
+	if startTime == nil {
+		startTime = 0
+	}
 	return map[string]any{
-		"run_id":       data["run_id"],
-		"job_id":       data["job_id"],
+		"run_id":       runIDValue,
+		"job_id":       jobIDValue,
 		"state":        batch6Lane4StringOr(state, "life_cycle_state", ""),
 		"result_state": batch6Lane4StringOr(state, "result_state", ""),
-		"start_time":   data["start_time"],
+		"start_time":   startTime,
 		"run_page_url": batch6Lane4StringOr(data, "run_page_url", ""),
 	}, nil
 }
@@ -330,13 +353,18 @@ func batch6Lane4DatabricksListClusters(ctx context.Context, rt *Runtime, input m
 	clusters := make([]any, 0)
 	for _, rawCluster := range batch4AsSlice(data["clusters"]) {
 		cluster := batch4AsMap(rawCluster)
+		// Upstream reads c.get("num_workers", 0).
+		numWorkers := cluster["num_workers"]
+		if numWorkers == nil {
+			numWorkers = 0
+		}
 		clusters = append(clusters, map[string]any{
 			"cluster_id":    batch6Lane4StringOr(cluster, "cluster_id", ""),
 			"cluster_name":  batch6Lane4StringOr(cluster, "cluster_name", ""),
 			"state":         batch6Lane4StringOr(cluster, "state", ""),
 			"spark_version": batch6Lane4StringOr(cluster, "spark_version", ""),
 			"creator":       batch6Lane4StringOr(cluster, "creator_user_name", ""),
-			"num_workers":   cluster["num_workers"],
+			"num_workers":   numWorkers,
 		})
 	}
 	return map[string]any{"clusters": clusters}, nil

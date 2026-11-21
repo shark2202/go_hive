@@ -1,0 +1,2354 @@
+{
+  "hive_home": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/mcp-real-work/py-home",
+  "python_version": "3.11.16",
+  "servers": [
+    {
+      "crash": {
+        "call_after_kill": {
+          "ok": true,
+          "tool": "echo",
+          "value": "Echo: Hello MCP"
+        },
+        "call_before_kill": {
+          "ok": true,
+          "tool": "echo",
+          "value": "Echo: Hello MCP"
+        },
+        "connected_after_kill": true,
+        "kill": {
+          "killed": [
+            {
+              "command": "npm exec @modelcontextprotocol/server-everything@2.3.1",
+              "pid": 53173
+            },
+            {
+              "command": "node /tmp/npmcache/_npx/9dfc9565351e114d/node_modules/.bin/mcp-server-everything",
+              "pid": 53198
+            },
+            {
+              "command": "npm exec @modelcontextprotocol/server-everything@2.3.1",
+              "pid": 52968
+            },
+            {
+              "command": "node /tmp/npmcache/_npx/9dfc9565351e114d/node_modules/.bin/mcp-server-everything",
+              "pid": 53014
+            }
+          ]
+        },
+        "killed_count": 4,
+        "probe_tool": "echo"
+      },
+      "entry": {
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-everything@2.3.1"
+        ],
+        "command": "npx",
+        "crash_marker": "server-everything",
+        "name": "everything-stdio",
+        "transport": "stdio"
+      },
+      "entry_sha256": "cd7113d6d428d813cce3b9e782afa312cee6af3a45c2d5ae9a26278d545f4f9c",
+      "installed_entry": {
+        "auto_update": false,
+        "enabled": true,
+        "installed_at": "2026-11-21T08:12:21.854718+00:00",
+        "installed_by": "hive mcp add",
+        "last_error": null,
+        "last_health_check_at": null,
+        "last_health_status": null,
+        "last_used_at": null,
+        "last_validated_with_hive_version": null,
+        "manifest": {
+          "description": "real server cross-check",
+          "name": "everything-stdio",
+          "stdio": {
+            "args": [
+              "-y",
+              "@modelcontextprotocol/server-everything@2.3.1"
+            ],
+            "command": "npx",
+            "cwd": null,
+            "env": {}
+          },
+          "transport": {
+            "default": "stdio",
+            "supported": [
+              "stdio"
+            ]
+          }
+        },
+        "manifest_version": "0.0.0",
+        "mode": "tools",
+        "name": "everything-stdio",
+        "overrides": {
+          "env": {},
+          "headers": {}
+        },
+        "pinned": false,
+        "resolved_package_version": null,
+        "source": "local",
+        "transport": "stdio"
+      },
+      "lifecycle": {
+        "disabled_resolved": [],
+        "disabled_tool_count": 0,
+        "reenabled_resolved": [
+          "everything-stdio"
+        ],
+        "reenabled_tool_count": 16,
+        "registry_has_reload_method": false
+      },
+      "name": "everything-stdio",
+      "raw": {
+        "calls": {
+          "echo": {
+            "ok": true,
+            "shape": "str",
+            "value": "Echo: Hello MCP"
+          },
+          "get-resource-links": {
+            "ok": true,
+            "shape": "str",
+            "value": "Here are 2 resource links to resources available in this server:"
+          },
+          "get-structured-content": {
+            "ok": true,
+            "shape": "str",
+            "value": "{\"temperature\":36,\"conditions\":\"Light rain / drizzle\",\"humidity\":82}"
+          },
+          "get-sum": {
+            "ok": true,
+            "shape": "str",
+            "value": "The sum of 19 and 23 is 42."
+          },
+          "get-sum-error": {
+            "error": "[Server: everything-stdio] [Transport: stdio] Tool 'get-sum' failed: Input validation error: Invalid arguments for tool get-sum: b: Invalid input: expected number, received undefined",
+            "error_type": "RuntimeError",
+            "ok": false
+          },
+          "get-tiny-image": {
+            "image_blocks": 1,
+            "image_types": [
+              "image_url"
+            ],
+            "ok": true,
+            "shape": "text+images",
+            "text": "Here's the image you requested:\nThe image above is the MCP logo."
+          },
+          "trigger-log-messages": {
+            "ok": true,
+            "shape": "str",
+            "value": "Sent one log message at each of 8 levels (debug, info, notice, warning, error, critical, alert, emergency). The ones below this request's log level were dropped."
+          },
+          "trigger-long-running-operation": {
+            "ok": true,
+            "shape": "str",
+            "value": "Long running operation completed. Duration: 2 seconds, Steps: 2."
+          }
+        },
+        "connected": true,
+        "tool_names": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ],
+        "tools": [
+          {
+            "description": "Echoes back the input string",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "message": {
+                  "description": "Message to echo",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            },
+            "name": "echo"
+          },
+          {
+            "description": "Demonstrates how annotations can be used to provide metadata about content.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "includeImage": {
+                  "default": false,
+                  "description": "Whether to include an example image",
+                  "type": "boolean"
+                },
+                "messageType": {
+                  "description": "Type of message to demonstrate different annotation patterns",
+                  "enum": [
+                    "error",
+                    "success",
+                    "debug"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "messageType"
+              ],
+              "type": "object"
+            },
+            "name": "get-annotated-message"
+          },
+          {
+            "description": "Returns all environment variables, helpful for debugging MCP server configuration. Values of credential-like names (a KEY, TOKEN, SECRET, PASSWORD, PASSWD, CREDENTIAL, AUTH or COOKIE name segment) are masked as \"<redacted>\" unless GET_ENV_INCLUDE_SECRETS is set to 1 or true in the server's environment.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {},
+              "type": "object"
+            },
+            "name": "get-env"
+          },
+          {
+            "description": "Returns its region argument and the Mcp-Param-Region HTTP header it arrived in. Demonstrates x-mcp-header (a 2026-07-28 Streamable HTTP client mirrors the argument into the header) and JSON Schema 2020-12 input and output schemas.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "additionalProperties": false,
+              "properties": {
+                "region": {
+                  "description": "A region name, e.g. eu-west. Mirrored into the Mcp-Param-Region HTTP header.",
+                  "type": "string",
+                  "x-mcp-header": "Region"
+                },
+                "repeat": {
+                  "default": 1,
+                  "description": "How many times to repeat the region in the result (1-3)",
+                  "maximum": 3,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "region"
+              ],
+              "type": "object"
+            },
+            "name": "get-header-params"
+          },
+          {
+            "description": "Returns up to ten resource links that reference different types of resources",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "count": {
+                  "default": 3,
+                  "description": "Number of resource links to return (1-10)",
+                  "maximum": 10,
+                  "minimum": 1,
+                  "type": "number"
+                }
+              },
+              "type": "object"
+            },
+            "name": "get-resource-links"
+          },
+          {
+            "description": "Returns a resource reference that can be used by MCP clients",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "resourceId": {
+                  "default": 1,
+                  "description": "ID of the text or blob resource to fetch, a positive integer",
+                  "type": "number"
+                },
+                "resourceType": {
+                  "default": "Text",
+                  "description": "Whether to reference a text resource or a blob resource",
+                  "enum": [
+                    "Text",
+                    "Blob"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "name": "get-resource-reference"
+          },
+          {
+            "description": "Returns structured content along with an output schema for client data validation",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "location": {
+                  "description": "Choose city",
+                  "enum": [
+                    "New York",
+                    "Chicago",
+                    "Los Angeles"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "location"
+              ],
+              "type": "object"
+            },
+            "name": "get-structured-content"
+          },
+          {
+            "description": "Returns the sum of two numbers",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "a": {
+                  "description": "First number",
+                  "type": "number"
+                },
+                "b": {
+                  "description": "Second number",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "a",
+                "b"
+              ],
+              "type": "object"
+            },
+            "name": "get-sum"
+          },
+          {
+            "description": "Returns a tiny MCP logo image.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {},
+              "type": "object"
+            },
+            "name": "get-tiny-image"
+          },
+          {
+            "description": "Compresses a single file using gzip compression. Depending upon the selected output type, returns either the compressed data as a gzipped resource or a resource link, allowing it to be downloaded in a subsequent request: during the current session for a 2025-era client, or for ten minutes at a minted URI on protocol version 2026-07-28.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "data": {
+                  "default": "https://raw.githubusercontent.com/modelcontextprotocol/servers/refs/heads/main/README.md",
+                  "description": "URL or data URI of the file content to compress",
+                  "format": "uri",
+                  "type": "string"
+                },
+                "name": {
+                  "default": "README.md.gz",
+                  "description": "Name of the output file (at most 255 characters)",
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "outputType": {
+                  "default": "resourceLink",
+                  "description": "How the resulting gzipped file should be returned. 'resourceLink' returns a link to a resource that can be read later, 'resource' returns a full resource object.",
+                  "enum": [
+                    "resourceLink",
+                    "resource"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "name": "gzip-file-as-resource"
+          },
+          {
+            "description": "Sends a notifications/<list>/list_changed for the tool, prompt or resource list. On protocol version 2026-07-28 it is delivered on each subscriptions/listen stream that asked for that list; a 2025-era client receives it unsolicited.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "list": {
+                  "description": "Which list to announce as changed",
+                  "enum": [
+                    "tools",
+                    "prompts",
+                    "resources"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "list"
+              ],
+              "type": "object"
+            },
+            "name": "trigger-list-changed"
+          },
+          {
+            "description": "Sends one log message at each logging level during the call. On protocol version 2026-07-28 only the messages at or above the level the request names in _meta (io.modelcontextprotocol/logLevel) are sent, and none if it names no level; a 2025-era client gets those at or above the level it set with logging/setLevel. Deprecated: logging is deprecated as of protocol version 2026-07-28.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {},
+              "type": "object"
+            },
+            "name": "trigger-log-messages"
+          },
+          {
+            "description": "Demonstrates a long running operation with progress updates.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "duration": {
+                  "default": 10,
+                  "description": "Duration of the operation in seconds",
+                  "type": "number"
+                },
+                "steps": {
+                  "default": 5,
+                  "description": "Number of steps in the operation",
+                  "type": "number"
+                }
+              },
+              "type": "object"
+            },
+            "name": "trigger-long-running-operation"
+          },
+          {
+            "description": "Sends a notifications/resources/updated for a resource URI. On protocol version 2026-07-28 it is delivered on each subscriptions/listen stream whose resourceSubscriptions name the URI; a 2025-era client receives it once it has called resources/subscribe for the URI.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "uri": {
+                  "description": "The URI of the resource to announce as updated, e.g. demo://resource/dynamic/text/1",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "uri"
+              ],
+              "type": "object"
+            },
+            "name": "trigger-resource-update"
+          },
+          {
+            "description": "Toggles simulated, random-leveled logging on or off. Deprecated: 2025-era clients only, since protocol version 2026-07-28 removes logging/setLevel; use trigger-log-messages with a per-request log level instead.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {},
+              "type": "object"
+            },
+            "name": "toggle-simulated-logging"
+          },
+          {
+            "description": "Toggles simulated resource subscription updates on or off. Deprecated: 2025-era clients only, since protocol version 2026-07-28 removes resources/subscribe; use trigger-resource-update with a subscriptions/listen stream instead.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {},
+              "type": "object"
+            },
+            "name": "toggle-subscriber-updates"
+          }
+        ],
+        "tools_sha256": {
+          "echo": "4a6f1d80dd32a868acb53bc3f646137490f6afa4f07e9aa02ccffb19e8e6e882",
+          "get-annotated-message": "bc22cf770c4be6e686c1b1d90a37178d09a4932c74c1ee98d7ef273d31a4b420",
+          "get-env": "da4e54ad1fd495ea6af2c688b8d466d624d76183de62aac4e130927ced6e6f25",
+          "get-header-params": "4f804018268567d7261c21b6da0cd539cc1f4b88986bf03f4397a7b18699b58e",
+          "get-resource-links": "8e283dbbdb5d1b1fd7de82ae8280f598621d51aae4e9d3702af123c1710b5f77",
+          "get-resource-reference": "468396fad6baf9d8356f054f46de7d40f9ab2121255b54e60c47e04166a07cb4",
+          "get-structured-content": "dff13d337029846392e05bda40c57e36813af3fe5cd36d337b436e60f129f31e",
+          "get-sum": "4017544366b1a5b7f0d89539b07541487fa5bfb7938aa76ee23812cce1242939",
+          "get-tiny-image": "fb1536a2765bfe89cbd766dcb20203d5ebf7e6293bea531b0dc916295a991940",
+          "gzip-file-as-resource": "73973bd83fd543f8cabbc735a5bf6fcb984c9572fb924b5d8214c695c327c0c1",
+          "toggle-simulated-logging": "1105f8fbdb052ca8e6bd8b0b4be8e656a7f080fbbde4f06ec5135c5ef54b3986",
+          "toggle-subscriber-updates": "d621e9b9eaa66c730ea15788bead0616a6fedce9581c76b501a9569f180029b4",
+          "trigger-list-changed": "8299aee9db72651d34221b355f6beae65ccc2e62b73c413c88e0c3efc951a059",
+          "trigger-log-messages": "806e017d7b2e4145bc66400e2b06df60d036c9bb3432a0c0f4fb779c9d51aff5",
+          "trigger-long-running-operation": "fa09ad95c8341681bde9f4b74d7c39bfd253399254f4f5830cb9661f8a60ca3c",
+          "trigger-resource-update": "da13a4c38ef7c73fa97f55d0a42b9bcb8eac1b4daf19e8f68e208b102be30460"
+        },
+        "unknown_tool": {
+          "error": "[MCP_TOOL_NOT_FOUND]\nWhat failed: Tool 'no_such_tool_xyz' not found on server 'everything-stdio'\nWhy: The server 'everything-stdio' does not expose a tool named 'no_such_tool_xyz'.\nFix: Run 'hive mcp inspect everything-stdio' to view available tools.",
+          "error_type": "MCPToolNotFoundError",
+          "ok": false,
+          "raised": true
+        }
+      },
+      "registry_added": true,
+      "resolved_configs": [
+        {
+          "args": [
+            "-y",
+            "@modelcontextprotocol/server-everything@2.3.1"
+          ],
+          "command": "npx",
+          "cwd": null,
+          "description": "real server cross-check",
+          "env": {},
+          "headers": {},
+          "name": "everything-stdio",
+          "socket_path": null,
+          "transport": "stdio",
+          "url": null
+        }
+      ],
+      "side": "python",
+      "surface": {
+        "calls": {
+          "echo": {
+            "content": "Echo: Hello MCP",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get-resource-links": {
+            "content": "Here are 2 resource links to resources available in this server:",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get-structured-content": {
+            "content": "{\"temperature\":36,\"conditions\":\"Light rain / drizzle\",\"humidity\":82}",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get-sum": {
+            "content": "The sum of 19 and 23 is 42.",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get-sum-error": {
+            "content": "{\"error\": \"[Server: everything-stdio] [Transport: stdio] Tool 'get-sum' failed: Input validation error: Invalid arguments for tool get-sum: b: Invalid input: expected number, received undefined\"}",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get-tiny-image": {
+            "content": "Here's the image you requested:\nThe image above is the MCP logo.",
+            "image_blocks": 1,
+            "image_kinds": [
+              "image_url"
+            ],
+            "is_error": false,
+            "ok": true
+          },
+          "trigger-log-messages": {
+            "content": "Sent one log message at each of 8 levels (debug, info, notice, warning, error, critical, alert, emergency). The ones below this request's log level were dropped.",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "trigger-long-running-operation": {
+            "content": "Long running operation completed. Duration: 2 seconds, Steps: 2.",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          }
+        },
+        "load_summary": [
+          {
+            "server": "everything-stdio",
+            "status": "loaded",
+            "tools_loaded": 16
+          }
+        ],
+        "namespace_prefix": null,
+        "server_tool_names": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ],
+        "tools": [
+          {
+            "description": "Echoes back the input string",
+            "description_sha256": "4d00e170dfb2475b38d7c595d6b83ddc873f4119814d8c3e96321a53aaf18fca",
+            "parameters": {
+              "properties": {
+                "message": {
+                  "description": "Message to echo",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "4f14eaa302b4fa12dc231859df526dae09d437406f3d186f2a36d9312e5e4cf0",
+            "registered_name": "echo"
+          },
+          {
+            "description": "Demonstrates how annotations can be used to provide metadata about content.",
+            "description_sha256": "6050c40378a145a00c1912f5904b37edb1266ce1c43fa430b6655a6f302d5222",
+            "parameters": {
+              "properties": {
+                "includeImage": {
+                  "default": false,
+                  "description": "Whether to include an example image",
+                  "type": "boolean"
+                },
+                "messageType": {
+                  "description": "Type of message to demonstrate different annotation patterns",
+                  "enum": [
+                    "error",
+                    "success",
+                    "debug"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "messageType"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "22ea30f85425548e789ff1db19f18cbb6d249ad6c106d60b7f502ecba006b70b",
+            "registered_name": "get-annotated-message"
+          },
+          {
+            "description": "Returns all environment variables, helpful for debugging MCP server configuration. Values of credential-like names (a KEY, TOKEN, SECRET, PASSWORD, PASSWD, CREDENTIAL, AUTH or COOKIE name segment) are masked as \"<redacted>\" unless GET_ENV_INCLUDE_SECRETS is set to 1 or true in the server's environment.",
+            "description_sha256": "f0990fb78daf0d1b9a16bfc796fffa0cf15980244131138c9dd6d12abcb4f230",
+            "parameters": {
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699",
+            "registered_name": "get-env"
+          },
+          {
+            "description": "Returns its region argument and the Mcp-Param-Region HTTP header it arrived in. Demonstrates x-mcp-header (a 2026-07-28 Streamable HTTP client mirrors the argument into the header) and JSON Schema 2020-12 input and output schemas.",
+            "description_sha256": "99454fc6cf95f4321874021de7bb74db0830a9073ee1f71698bf0f892ffa1768",
+            "parameters": {
+              "properties": {
+                "region": {
+                  "description": "A region name, e.g. eu-west. Mirrored into the Mcp-Param-Region HTTP header.",
+                  "type": "string",
+                  "x-mcp-header": "Region"
+                },
+                "repeat": {
+                  "default": 1,
+                  "description": "How many times to repeat the region in the result (1-3)",
+                  "maximum": 3,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "region"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "b8ad370af8c186eacba40a6d97ad9a64c614455525267b0b8d815ffbdb8a964b",
+            "registered_name": "get-header-params"
+          },
+          {
+            "description": "Returns up to ten resource links that reference different types of resources",
+            "description_sha256": "0574c9e3571c77380de27d3927dbac8133e68c558150b8f0b95d2e884403613c",
+            "parameters": {
+              "properties": {
+                "count": {
+                  "default": 3,
+                  "description": "Number of resource links to return (1-10)",
+                  "maximum": 10,
+                  "minimum": 1,
+                  "type": "number"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "93b07124483bf2bb19c009349b15056d74d0128cde629a4713b40dd61cc7d1a8",
+            "registered_name": "get-resource-links"
+          },
+          {
+            "description": "Returns a resource reference that can be used by MCP clients",
+            "description_sha256": "f65488ea8977f68a7680a0ba04efa98d742a3007664649c9e00899f43f1d89de",
+            "parameters": {
+              "properties": {
+                "resourceId": {
+                  "default": 1,
+                  "description": "ID of the text or blob resource to fetch, a positive integer",
+                  "type": "number"
+                },
+                "resourceType": {
+                  "default": "Text",
+                  "description": "Whether to reference a text resource or a blob resource",
+                  "enum": [
+                    "Text",
+                    "Blob"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "4cd262d220304a5de5537fce751c061f3dc1185273cbce605e4ae057808cab02",
+            "registered_name": "get-resource-reference"
+          },
+          {
+            "description": "Returns structured content along with an output schema for client data validation",
+            "description_sha256": "276d76ef534072c914d17df7855f06d6c44a8c5be3ee2b8eb686afdeb357d88c",
+            "parameters": {
+              "properties": {
+                "location": {
+                  "description": "Choose city",
+                  "enum": [
+                    "New York",
+                    "Chicago",
+                    "Los Angeles"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "location"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "2d18b6ddb44fa7a8bb51ccc8055e8d191ff747e72c1744acfea07f52bf356057",
+            "registered_name": "get-structured-content"
+          },
+          {
+            "description": "Returns the sum of two numbers",
+            "description_sha256": "98b4e89d761c05f63a8acce7100a3950f49ca67537dea3716c0ba2a9431316f9",
+            "parameters": {
+              "properties": {
+                "a": {
+                  "description": "First number",
+                  "type": "number"
+                },
+                "b": {
+                  "description": "Second number",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "a",
+                "b"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "da5f1f0b8644e305e612b8a7d53e838cc94a54591fc1cc001b19f440feca165f",
+            "registered_name": "get-sum"
+          },
+          {
+            "description": "Returns a tiny MCP logo image.",
+            "description_sha256": "7eba2275ba1ae93a58102c84bcd8f1fb29126fb998d3cbd2947457cdbe685bde",
+            "parameters": {
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699",
+            "registered_name": "get-tiny-image"
+          },
+          {
+            "description": "Compresses a single file using gzip compression. Depending upon the selected output type, returns either the compressed data as a gzipped resource or a resource link, allowing it to be downloaded in a subsequent request: during the current session for a 2025-era client, or for ten minutes at a minted URI on protocol version 2026-07-28.",
+            "description_sha256": "d85af6e05a3e61510e67b34e1b265ffb06b142a33b1b3db49d5a9f1328519c70",
+            "parameters": {
+              "properties": {
+                "data": {
+                  "default": "https://raw.githubusercontent.com/modelcontextprotocol/servers/refs/heads/main/README.md",
+                  "description": "URL or data URI of the file content to compress",
+                  "format": "uri",
+                  "type": "string"
+                },
+                "name": {
+                  "default": "README.md.gz",
+                  "description": "Name of the output file (at most 255 characters)",
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "outputType": {
+                  "default": "resourceLink",
+                  "description": "How the resulting gzipped file should be returned. 'resourceLink' returns a link to a resource that can be read later, 'resource' returns a full resource object.",
+                  "enum": [
+                    "resourceLink",
+                    "resource"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "d0d2e8780c5a215273f32dd8955711e3aa46c98b539a1afe160b4a124d98d447",
+            "registered_name": "gzip-file-as-resource"
+          },
+          {
+            "description": "Toggles simulated, random-leveled logging on or off. Deprecated: 2025-era clients only, since protocol version 2026-07-28 removes logging/setLevel; use trigger-log-messages with a per-request log level instead.",
+            "description_sha256": "a045b23f4caccaabc684257fd3153bd5180b4ef41ebdb1d9cfaf961a7c30b31e",
+            "parameters": {
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699",
+            "registered_name": "toggle-simulated-logging"
+          },
+          {
+            "description": "Toggles simulated resource subscription updates on or off. Deprecated: 2025-era clients only, since protocol version 2026-07-28 removes resources/subscribe; use trigger-resource-update with a subscriptions/listen stream instead.",
+            "description_sha256": "b90588504eb5fcb83950b82c899eeb52c0275a2bb988ba84b0c9420f5f69f421",
+            "parameters": {
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699",
+            "registered_name": "toggle-subscriber-updates"
+          },
+          {
+            "description": "Sends a notifications/<list>/list_changed for the tool, prompt or resource list. On protocol version 2026-07-28 it is delivered on each subscriptions/listen stream that asked for that list; a 2025-era client receives it unsolicited.",
+            "description_sha256": "dff60ff65fd1736c88f5f33a4e11873a941c2a981387f0153d76f878231b7034",
+            "parameters": {
+              "properties": {
+                "list": {
+                  "description": "Which list to announce as changed",
+                  "enum": [
+                    "tools",
+                    "prompts",
+                    "resources"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "list"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "a5a99370bb9822aaf565eb8c075fc164844684e8970a5ba448d44e55a073c9d5",
+            "registered_name": "trigger-list-changed"
+          },
+          {
+            "description": "Sends one log message at each logging level during the call. On protocol version 2026-07-28 only the messages at or above the level the request names in _meta (io.modelcontextprotocol/logLevel) are sent, and none if it names no level; a 2025-era client gets those at or above the level it set with logging/setLevel. Deprecated: logging is deprecated as of protocol version 2026-07-28.",
+            "description_sha256": "74a348e35250bdd377fed89ac9e2bca2d5cb7aae02186037c378a47b6695bcb4",
+            "parameters": {
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699",
+            "registered_name": "trigger-log-messages"
+          },
+          {
+            "description": "Demonstrates a long running operation with progress updates.",
+            "description_sha256": "d047c3fcbcb25a9255d0bd7584d019509a8aa5a181ce7e3c6109d76ea820d125",
+            "parameters": {
+              "properties": {
+                "duration": {
+                  "default": 10,
+                  "description": "Duration of the operation in seconds",
+                  "type": "number"
+                },
+                "steps": {
+                  "default": 5,
+                  "description": "Number of steps in the operation",
+                  "type": "number"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "39b1e8b148ccd711c82facdf3c5ed2c35a42467fbc5957e4be44ba027e5514dc",
+            "registered_name": "trigger-long-running-operation"
+          },
+          {
+            "description": "Sends a notifications/resources/updated for a resource URI. On protocol version 2026-07-28 it is delivered on each subscriptions/listen stream whose resourceSubscriptions name the URI; a 2025-era client receives it once it has called resources/subscribe for the URI.",
+            "description_sha256": "a06bc3a856dd6ad7f9a06c1dd1136a0f6a74e2170be36330e90f6f485cb753f8",
+            "parameters": {
+              "properties": {
+                "uri": {
+                  "description": "The URI of the resource to announce as updated, e.g. demo://resource/dynamic/text/1",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "uri"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "406cc338c6077a98f69015b2e58d99a25162f0a0d0ab43746195037bfe03bb0a",
+            "registered_name": "trigger-resource-update"
+          }
+        ],
+        "unknown_tool": {
+          "content": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        }
+      },
+      "transport": "stdio"
+    },
+    {
+      "crash": {
+        "call_after_kill": {
+          "ok": true,
+          "tool": "get_current_time",
+          "value": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"2026-11-21T16:12:32+08:00\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}"
+        },
+        "call_before_kill": {
+          "ok": true,
+          "tool": "get_current_time",
+          "value": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"2026-11-21T16:12:31+08:00\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}"
+        },
+        "connected_after_kill": true,
+        "kill": {
+          "killed": [
+            {
+              "command": "/Users/mac/.local/bin/uv tool uvx mcp-server-time==2026.11.18",
+              "pid": 53245
+            },
+            {
+              "command": "/Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/python /Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/mcp-server-time",
+              "pid": 53246
+            },
+            {
+              "command": "/Users/mac/.local/bin/uv tool uvx mcp-server-time==2026.11.18",
+              "pid": 53231
+            },
+            {
+              "command": "/Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/python /Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/mcp-server-time",
+              "pid": 53232
+            }
+          ]
+        },
+        "killed_count": 4,
+        "probe_tool": "get_current_time"
+      },
+      "entry": {
+        "args": [
+          "mcp-server-time==2026.11.18"
+        ],
+        "command": "uvx",
+        "crash_marker": "mcp-server-time",
+        "name": "time-stdio",
+        "transport": "stdio"
+      },
+      "entry_sha256": "dde2efd409203da3604e078cdb159ec46e80310d4d2315f84d894f6013248223",
+      "installed_entry": {
+        "auto_update": false,
+        "enabled": true,
+        "installed_at": "2026-11-21T08:12:30.704202+00:00",
+        "installed_by": "hive mcp add",
+        "last_error": null,
+        "last_health_check_at": null,
+        "last_health_status": null,
+        "last_used_at": null,
+        "last_validated_with_hive_version": null,
+        "manifest": {
+          "description": "real server cross-check",
+          "name": "time-stdio",
+          "stdio": {
+            "args": [
+              "mcp-server-time==2026.11.18"
+            ],
+            "command": "uvx",
+            "cwd": null,
+            "env": {}
+          },
+          "transport": {
+            "default": "stdio",
+            "supported": [
+              "stdio"
+            ]
+          }
+        },
+        "manifest_version": "0.0.0",
+        "mode": "tools",
+        "name": "time-stdio",
+        "overrides": {
+          "env": {},
+          "headers": {}
+        },
+        "pinned": false,
+        "resolved_package_version": null,
+        "source": "local",
+        "transport": "stdio"
+      },
+      "lifecycle": {
+        "disabled_resolved": [],
+        "disabled_tool_count": 0,
+        "reenabled_resolved": [
+          "time-stdio"
+        ],
+        "reenabled_tool_count": 3,
+        "registry_has_reload_method": false
+      },
+      "name": "time-stdio",
+      "raw": {
+        "calls": {
+          "convert_time": {
+            "ok": true,
+            "shape": "str",
+            "value": "{\n  \"source\": {\n    \"timezone\": \"Asia/Shanghai\",\n    \"datetime\": \"2026-11-21T15:30:00+08:00\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"target\": {\n    \"timezone\": \"America/New_York\",\n    \"datetime\": \"2026-11-21T02:30:00-05:00\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"time_difference\": \"-13.0h\",\n  \"later_occurrence\": null\n}"
+          },
+          "get_current_time": {
+            "ok": true,
+            "shape": "str",
+            "value": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"2026-11-21T16:12:31+08:00\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}"
+          }
+        },
+        "connected": true,
+        "tool_names": [
+          "convert_time",
+          "get_current_time",
+          "get_time_ago"
+        ],
+        "tools": [
+          {
+            "description": "Get current time in a specific timezone",
+            "inputSchema": {
+              "properties": {
+                "timezone": {
+                  "default": "Asia/Shanghai",
+                  "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                  "title": "Timezone",
+                  "type": "string"
+                }
+              },
+              "title": "get_current_timeArguments",
+              "type": "object"
+            },
+            "name": "get_current_time"
+          },
+          {
+            "description": "Convert time between timezones",
+            "inputSchema": {
+              "properties": {
+                "source_timezone": {
+                  "default": "Asia/Shanghai",
+                  "description": "Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                  "title": "Source Timezone",
+                  "type": "string"
+                },
+                "target_timezone": {
+                  "default": "Asia/Shanghai",
+                  "description": "Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                  "title": "Target Timezone",
+                  "type": "string"
+                },
+                "time": {
+                  "description": "Time to convert in 24-hour format (HH:MM)",
+                  "title": "Time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "time"
+              ],
+              "title": "convert_timeArguments",
+              "type": "object"
+            },
+            "name": "convert_time"
+          },
+          {
+            "description": "Get the time a given number of days, hours, minutes and seconds ago in a specific timezone",
+            "inputSchema": {
+              "properties": {
+                "days_ago": {
+                  "default": 0,
+                  "description": "Whole days before now",
+                  "minimum": 0,
+                  "title": "Days Ago",
+                  "type": "integer"
+                },
+                "hours_ago": {
+                  "default": 0,
+                  "description": "Whole hours before now",
+                  "minimum": 0,
+                  "title": "Hours Ago",
+                  "type": "integer"
+                },
+                "minutes_ago": {
+                  "default": 0,
+                  "description": "Whole minutes before now",
+                  "minimum": 0,
+                  "title": "Minutes Ago",
+                  "type": "integer"
+                },
+                "seconds_ago": {
+                  "default": 0,
+                  "description": "Whole seconds before now",
+                  "minimum": 0,
+                  "title": "Seconds Ago",
+                  "type": "integer"
+                },
+                "timezone": {
+                  "default": "Asia/Shanghai",
+                  "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                  "title": "Timezone",
+                  "type": "string"
+                }
+              },
+              "title": "get_time_agoArguments",
+              "type": "object"
+            },
+            "name": "get_time_ago"
+          }
+        ],
+        "tools_sha256": {
+          "convert_time": "ae0643f6f31e4bee4d6a9cdcd1961c41c60e07c0469ff0cd276e2930c2292f09",
+          "get_current_time": "60b7062f4cadb20e30d35e96eea675d85dcc0cf29c667281b92fd7f68e26a994",
+          "get_time_ago": "34d2856413c6dd8b5c06df3158ea8abf30bb7fcd5270d08ea3abbfb4e214c808"
+        },
+        "unknown_tool": {
+          "error": "[MCP_TOOL_NOT_FOUND]\nWhat failed: Tool 'no_such_tool_xyz' not found on server 'time-stdio'\nWhy: The server 'time-stdio' does not expose a tool named 'no_such_tool_xyz'.\nFix: Run 'hive mcp inspect time-stdio' to view available tools.",
+          "error_type": "MCPToolNotFoundError",
+          "ok": false,
+          "raised": true
+        }
+      },
+      "registry_added": true,
+      "resolved_configs": [
+        {
+          "args": [
+            "mcp-server-time==2026.11.18"
+          ],
+          "command": "uvx",
+          "cwd": null,
+          "description": "real server cross-check",
+          "env": {},
+          "headers": {},
+          "name": "time-stdio",
+          "socket_path": null,
+          "transport": "stdio",
+          "url": null
+        }
+      ],
+      "side": "python",
+      "surface": {
+        "calls": {
+          "convert_time": {
+            "content": "{\n  \"source\": {\n    \"timezone\": \"Asia/Shanghai\",\n    \"datetime\": \"2026-11-21T15:30:00+08:00\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"target\": {\n    \"timezone\": \"America/New_York\",\n    \"datetime\": \"2026-11-21T02:30:00-05:00\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"time_difference\": \"-13.0h\",\n  \"later_occurrence\": null\n}",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get_current_time": {
+            "content": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"2026-11-21T16:12:31+08:00\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          }
+        },
+        "load_summary": [
+          {
+            "server": "time-stdio",
+            "status": "loaded",
+            "tools_loaded": 3
+          }
+        ],
+        "namespace_prefix": null,
+        "server_tool_names": [
+          "convert_time",
+          "get_current_time",
+          "get_time_ago"
+        ],
+        "tools": [
+          {
+            "description": "Convert time between timezones",
+            "description_sha256": "6e9686a4f2f1f637bb2763db5cf76e7215ea4e3fc35880b2459d3f0107729279",
+            "parameters": {
+              "properties": {
+                "source_timezone": {
+                  "default": "Asia/Shanghai",
+                  "description": "Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                  "title": "Source Timezone",
+                  "type": "string"
+                },
+                "target_timezone": {
+                  "default": "Asia/Shanghai",
+                  "description": "Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                  "title": "Target Timezone",
+                  "type": "string"
+                },
+                "time": {
+                  "description": "Time to convert in 24-hour format (HH:MM)",
+                  "title": "Time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "time"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "d43762fa1b6396e3c8107281bdb6f553c881508a650ebfe8b6608c3b2a13770b",
+            "registered_name": "convert_time"
+          },
+          {
+            "description": "Get current time in a specific timezone",
+            "description_sha256": "da13938235c57c946a615b750016a79e2f3b1d93e83b33b77d2412889da18a89",
+            "parameters": {
+              "properties": {
+                "timezone": {
+                  "default": "Asia/Shanghai",
+                  "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                  "title": "Timezone",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "6d0ce8bd0d8d8eb2ea12c82d152d27bac00f090dc2a2b76de316c3c9f638cad1",
+            "registered_name": "get_current_time"
+          },
+          {
+            "description": "Get the time a given number of days, hours, minutes and seconds ago in a specific timezone",
+            "description_sha256": "4a0f439f035baaf3f18fc12fd0fd5d938b322963dbfb9939044c2ec0bfa01c29",
+            "parameters": {
+              "properties": {
+                "days_ago": {
+                  "default": 0,
+                  "description": "Whole days before now",
+                  "minimum": 0,
+                  "title": "Days Ago",
+                  "type": "integer"
+                },
+                "hours_ago": {
+                  "default": 0,
+                  "description": "Whole hours before now",
+                  "minimum": 0,
+                  "title": "Hours Ago",
+                  "type": "integer"
+                },
+                "minutes_ago": {
+                  "default": 0,
+                  "description": "Whole minutes before now",
+                  "minimum": 0,
+                  "title": "Minutes Ago",
+                  "type": "integer"
+                },
+                "seconds_ago": {
+                  "default": 0,
+                  "description": "Whole seconds before now",
+                  "minimum": 0,
+                  "title": "Seconds Ago",
+                  "type": "integer"
+                },
+                "timezone": {
+                  "default": "Asia/Shanghai",
+                  "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                  "title": "Timezone",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "f57c503b4e0c93cc699d56b38f3cf3b975dec08739799415af37b3da77753b1f",
+            "registered_name": "get_time_ago"
+          }
+        ],
+        "unknown_tool": {
+          "content": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        }
+      },
+      "transport": "stdio"
+    },
+    {
+      "crash": {},
+      "entry": {
+        "name": "everything-sse",
+        "transport": "sse",
+        "url": "http://127.0.0.1:64788/sse"
+      },
+      "entry_sha256": "1fd62623e2aa173a8505b3de1b959f0ea264502522ef77e7df945e92bdfe372d",
+      "installed_entry": {
+        "auto_update": false,
+        "enabled": true,
+        "installed_at": "2026-11-21T08:12:32.400263+00:00",
+        "installed_by": "hive mcp add",
+        "last_error": null,
+        "last_health_check_at": null,
+        "last_health_status": null,
+        "last_used_at": null,
+        "last_validated_with_hive_version": null,
+        "manifest": {
+          "description": "real server cross-check",
+          "name": "everything-sse",
+          "sse": {
+            "url": "http://127.0.0.1:64788/sse"
+          },
+          "transport": {
+            "default": "sse",
+            "supported": [
+              "sse"
+            ]
+          }
+        },
+        "manifest_version": "0.0.0",
+        "mode": "tools",
+        "name": "everything-sse",
+        "overrides": {
+          "env": {},
+          "headers": {}
+        },
+        "pinned": false,
+        "resolved_package_version": null,
+        "source": "local",
+        "transport": "sse"
+      },
+      "lifecycle": {
+        "disabled_resolved": [],
+        "disabled_tool_count": 0,
+        "reenabled_resolved": [
+          "everything-sse"
+        ],
+        "reenabled_tool_count": 16,
+        "registry_has_reload_method": false
+      },
+      "name": "everything-sse",
+      "raw": {
+        "calls": {
+          "echo": {
+            "ok": true,
+            "shape": "str",
+            "value": "Echo: Hello MCP"
+          },
+          "get-resource-links": {
+            "ok": true,
+            "shape": "str",
+            "value": "Here are 2 resource links to resources available in this server:"
+          },
+          "get-structured-content": {
+            "ok": true,
+            "shape": "str",
+            "value": "{\"temperature\":36,\"conditions\":\"Light rain / drizzle\",\"humidity\":82}"
+          },
+          "get-sum": {
+            "ok": true,
+            "shape": "str",
+            "value": "The sum of 19 and 23 is 42."
+          },
+          "get-sum-error": {
+            "error": "[Server: everything-sse] [Transport: sse] Tool 'get-sum' failed: Input validation error: Invalid arguments for tool get-sum: b: Invalid input: expected number, received undefined",
+            "error_type": "RuntimeError",
+            "ok": false
+          },
+          "get-tiny-image": {
+            "image_blocks": 1,
+            "image_types": [
+              "image_url"
+            ],
+            "ok": true,
+            "shape": "text+images",
+            "text": "Here's the image you requested:\nThe image above is the MCP logo."
+          },
+          "trigger-log-messages": {
+            "ok": true,
+            "shape": "str",
+            "value": "Sent one log message at each of 8 levels (debug, info, notice, warning, error, critical, alert, emergency). The ones below this request's log level were dropped."
+          },
+          "trigger-long-running-operation": {
+            "ok": true,
+            "shape": "str",
+            "value": "Long running operation completed. Duration: 2 seconds, Steps: 2."
+          }
+        },
+        "connected": true,
+        "tool_names": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ],
+        "tools": [
+          {
+            "description": "Echoes back the input string",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "message": {
+                  "description": "Message to echo",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            },
+            "name": "echo"
+          },
+          {
+            "description": "Demonstrates how annotations can be used to provide metadata about content.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "includeImage": {
+                  "default": false,
+                  "description": "Whether to include an example image",
+                  "type": "boolean"
+                },
+                "messageType": {
+                  "description": "Type of message to demonstrate different annotation patterns",
+                  "enum": [
+                    "error",
+                    "success",
+                    "debug"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "messageType"
+              ],
+              "type": "object"
+            },
+            "name": "get-annotated-message"
+          },
+          {
+            "description": "Returns all environment variables, helpful for debugging MCP server configuration. Values of credential-like names (a KEY, TOKEN, SECRET, PASSWORD, PASSWD, CREDENTIAL, AUTH or COOKIE name segment) are masked as \"<redacted>\" unless GET_ENV_INCLUDE_SECRETS is set to 1 or true in the server's environment.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {},
+              "type": "object"
+            },
+            "name": "get-env"
+          },
+          {
+            "description": "Returns its region argument and the Mcp-Param-Region HTTP header it arrived in. Demonstrates x-mcp-header (a 2026-07-28 Streamable HTTP client mirrors the argument into the header) and JSON Schema 2020-12 input and output schemas.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "additionalProperties": false,
+              "properties": {
+                "region": {
+                  "description": "A region name, e.g. eu-west. Mirrored into the Mcp-Param-Region HTTP header.",
+                  "type": "string",
+                  "x-mcp-header": "Region"
+                },
+                "repeat": {
+                  "default": 1,
+                  "description": "How many times to repeat the region in the result (1-3)",
+                  "maximum": 3,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "region"
+              ],
+              "type": "object"
+            },
+            "name": "get-header-params"
+          },
+          {
+            "description": "Returns up to ten resource links that reference different types of resources",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "count": {
+                  "default": 3,
+                  "description": "Number of resource links to return (1-10)",
+                  "maximum": 10,
+                  "minimum": 1,
+                  "type": "number"
+                }
+              },
+              "type": "object"
+            },
+            "name": "get-resource-links"
+          },
+          {
+            "description": "Returns a resource reference that can be used by MCP clients",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "resourceId": {
+                  "default": 1,
+                  "description": "ID of the text or blob resource to fetch, a positive integer",
+                  "type": "number"
+                },
+                "resourceType": {
+                  "default": "Text",
+                  "description": "Whether to reference a text resource or a blob resource",
+                  "enum": [
+                    "Text",
+                    "Blob"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "name": "get-resource-reference"
+          },
+          {
+            "description": "Returns structured content along with an output schema for client data validation",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "location": {
+                  "description": "Choose city",
+                  "enum": [
+                    "New York",
+                    "Chicago",
+                    "Los Angeles"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "location"
+              ],
+              "type": "object"
+            },
+            "name": "get-structured-content"
+          },
+          {
+            "description": "Returns the sum of two numbers",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "a": {
+                  "description": "First number",
+                  "type": "number"
+                },
+                "b": {
+                  "description": "Second number",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "a",
+                "b"
+              ],
+              "type": "object"
+            },
+            "name": "get-sum"
+          },
+          {
+            "description": "Returns a tiny MCP logo image.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {},
+              "type": "object"
+            },
+            "name": "get-tiny-image"
+          },
+          {
+            "description": "Compresses a single file using gzip compression. Depending upon the selected output type, returns either the compressed data as a gzipped resource or a resource link, allowing it to be downloaded in a subsequent request: during the current session for a 2025-era client, or for ten minutes at a minted URI on protocol version 2026-07-28.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "data": {
+                  "default": "https://raw.githubusercontent.com/modelcontextprotocol/servers/refs/heads/main/README.md",
+                  "description": "URL or data URI of the file content to compress",
+                  "format": "uri",
+                  "type": "string"
+                },
+                "name": {
+                  "default": "README.md.gz",
+                  "description": "Name of the output file (at most 255 characters)",
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "outputType": {
+                  "default": "resourceLink",
+                  "description": "How the resulting gzipped file should be returned. 'resourceLink' returns a link to a resource that can be read later, 'resource' returns a full resource object.",
+                  "enum": [
+                    "resourceLink",
+                    "resource"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "name": "gzip-file-as-resource"
+          },
+          {
+            "description": "Sends a notifications/<list>/list_changed for the tool, prompt or resource list. On protocol version 2026-07-28 it is delivered on each subscriptions/listen stream that asked for that list; a 2025-era client receives it unsolicited.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "list": {
+                  "description": "Which list to announce as changed",
+                  "enum": [
+                    "tools",
+                    "prompts",
+                    "resources"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "list"
+              ],
+              "type": "object"
+            },
+            "name": "trigger-list-changed"
+          },
+          {
+            "description": "Sends one log message at each logging level during the call. On protocol version 2026-07-28 only the messages at or above the level the request names in _meta (io.modelcontextprotocol/logLevel) are sent, and none if it names no level; a 2025-era client gets those at or above the level it set with logging/setLevel. Deprecated: logging is deprecated as of protocol version 2026-07-28.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {},
+              "type": "object"
+            },
+            "name": "trigger-log-messages"
+          },
+          {
+            "description": "Demonstrates a long running operation with progress updates.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "duration": {
+                  "default": 10,
+                  "description": "Duration of the operation in seconds",
+                  "type": "number"
+                },
+                "steps": {
+                  "default": 5,
+                  "description": "Number of steps in the operation",
+                  "type": "number"
+                }
+              },
+              "type": "object"
+            },
+            "name": "trigger-long-running-operation"
+          },
+          {
+            "description": "Sends a notifications/resources/updated for a resource URI. On protocol version 2026-07-28 it is delivered on each subscriptions/listen stream whose resourceSubscriptions name the URI; a 2025-era client receives it once it has called resources/subscribe for the URI.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {
+                "uri": {
+                  "description": "The URI of the resource to announce as updated, e.g. demo://resource/dynamic/text/1",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "uri"
+              ],
+              "type": "object"
+            },
+            "name": "trigger-resource-update"
+          },
+          {
+            "description": "Toggles simulated, random-leveled logging on or off. Deprecated: 2025-era clients only, since protocol version 2026-07-28 removes logging/setLevel; use trigger-log-messages with a per-request log level instead.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {},
+              "type": "object"
+            },
+            "name": "toggle-simulated-logging"
+          },
+          {
+            "description": "Toggles simulated resource subscription updates on or off. Deprecated: 2025-era clients only, since protocol version 2026-07-28 removes resources/subscribe; use trigger-resource-update with a subscriptions/listen stream instead.",
+            "inputSchema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "properties": {},
+              "type": "object"
+            },
+            "name": "toggle-subscriber-updates"
+          }
+        ],
+        "tools_sha256": {
+          "echo": "4a6f1d80dd32a868acb53bc3f646137490f6afa4f07e9aa02ccffb19e8e6e882",
+          "get-annotated-message": "bc22cf770c4be6e686c1b1d90a37178d09a4932c74c1ee98d7ef273d31a4b420",
+          "get-env": "da4e54ad1fd495ea6af2c688b8d466d624d76183de62aac4e130927ced6e6f25",
+          "get-header-params": "4f804018268567d7261c21b6da0cd539cc1f4b88986bf03f4397a7b18699b58e",
+          "get-resource-links": "8e283dbbdb5d1b1fd7de82ae8280f598621d51aae4e9d3702af123c1710b5f77",
+          "get-resource-reference": "468396fad6baf9d8356f054f46de7d40f9ab2121255b54e60c47e04166a07cb4",
+          "get-structured-content": "dff13d337029846392e05bda40c57e36813af3fe5cd36d337b436e60f129f31e",
+          "get-sum": "4017544366b1a5b7f0d89539b07541487fa5bfb7938aa76ee23812cce1242939",
+          "get-tiny-image": "fb1536a2765bfe89cbd766dcb20203d5ebf7e6293bea531b0dc916295a991940",
+          "gzip-file-as-resource": "73973bd83fd543f8cabbc735a5bf6fcb984c9572fb924b5d8214c695c327c0c1",
+          "toggle-simulated-logging": "1105f8fbdb052ca8e6bd8b0b4be8e656a7f080fbbde4f06ec5135c5ef54b3986",
+          "toggle-subscriber-updates": "d621e9b9eaa66c730ea15788bead0616a6fedce9581c76b501a9569f180029b4",
+          "trigger-list-changed": "8299aee9db72651d34221b355f6beae65ccc2e62b73c413c88e0c3efc951a059",
+          "trigger-log-messages": "806e017d7b2e4145bc66400e2b06df60d036c9bb3432a0c0f4fb779c9d51aff5",
+          "trigger-long-running-operation": "fa09ad95c8341681bde9f4b74d7c39bfd253399254f4f5830cb9661f8a60ca3c",
+          "trigger-resource-update": "da13a4c38ef7c73fa97f55d0a42b9bcb8eac1b4daf19e8f68e208b102be30460"
+        },
+        "unknown_tool": {
+          "error": "[MCP_TOOL_NOT_FOUND]\nWhat failed: Tool 'no_such_tool_xyz' not found on server 'everything-sse'\nWhy: The server 'everything-sse' does not expose a tool named 'no_such_tool_xyz'.\nFix: Run 'hive mcp inspect everything-sse' to view available tools.",
+          "error_type": "MCPToolNotFoundError",
+          "ok": false,
+          "raised": true
+        }
+      },
+      "registry_added": true,
+      "resolved_configs": [
+        {
+          "args": [],
+          "command": null,
+          "cwd": null,
+          "description": "real server cross-check",
+          "env": {},
+          "headers": {},
+          "name": "everything-sse",
+          "socket_path": null,
+          "transport": "sse",
+          "url": "http://127.0.0.1:64788/sse"
+        }
+      ],
+      "side": "python",
+      "surface": {
+        "calls": {
+          "echo": {
+            "content": "Echo: Hello MCP",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get-resource-links": {
+            "content": "Here are 2 resource links to resources available in this server:",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get-structured-content": {
+            "content": "{\"temperature\":36,\"conditions\":\"Light rain / drizzle\",\"humidity\":82}",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get-sum": {
+            "content": "The sum of 19 and 23 is 42.",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get-sum-error": {
+            "content": "{\"error\": \"[Server: everything-sse] [Transport: sse] Tool 'get-sum' failed: Input validation error: Invalid arguments for tool get-sum: b: Invalid input: expected number, received undefined\"}",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "get-tiny-image": {
+            "content": "Here's the image you requested:\nThe image above is the MCP logo.",
+            "image_blocks": 1,
+            "image_kinds": [
+              "image_url"
+            ],
+            "is_error": false,
+            "ok": true
+          },
+          "trigger-log-messages": {
+            "content": "Sent one log message at each of 8 levels (debug, info, notice, warning, error, critical, alert, emergency). The ones below this request's log level were dropped.",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          },
+          "trigger-long-running-operation": {
+            "content": "Long running operation completed. Duration: 2 seconds, Steps: 2.",
+            "image_blocks": 0,
+            "image_kinds": [],
+            "is_error": false,
+            "ok": true
+          }
+        },
+        "load_summary": [
+          {
+            "server": "everything-sse",
+            "status": "loaded",
+            "tools_loaded": 16
+          }
+        ],
+        "namespace_prefix": null,
+        "server_tool_names": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ],
+        "tools": [
+          {
+            "description": "Echoes back the input string",
+            "description_sha256": "4d00e170dfb2475b38d7c595d6b83ddc873f4119814d8c3e96321a53aaf18fca",
+            "parameters": {
+              "properties": {
+                "message": {
+                  "description": "Message to echo",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "4f14eaa302b4fa12dc231859df526dae09d437406f3d186f2a36d9312e5e4cf0",
+            "registered_name": "echo"
+          },
+          {
+            "description": "Demonstrates how annotations can be used to provide metadata about content.",
+            "description_sha256": "6050c40378a145a00c1912f5904b37edb1266ce1c43fa430b6655a6f302d5222",
+            "parameters": {
+              "properties": {
+                "includeImage": {
+                  "default": false,
+                  "description": "Whether to include an example image",
+                  "type": "boolean"
+                },
+                "messageType": {
+                  "description": "Type of message to demonstrate different annotation patterns",
+                  "enum": [
+                    "error",
+                    "success",
+                    "debug"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "messageType"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "22ea30f85425548e789ff1db19f18cbb6d249ad6c106d60b7f502ecba006b70b",
+            "registered_name": "get-annotated-message"
+          },
+          {
+            "description": "Returns all environment variables, helpful for debugging MCP server configuration. Values of credential-like names (a KEY, TOKEN, SECRET, PASSWORD, PASSWD, CREDENTIAL, AUTH or COOKIE name segment) are masked as \"<redacted>\" unless GET_ENV_INCLUDE_SECRETS is set to 1 or true in the server's environment.",
+            "description_sha256": "f0990fb78daf0d1b9a16bfc796fffa0cf15980244131138c9dd6d12abcb4f230",
+            "parameters": {
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699",
+            "registered_name": "get-env"
+          },
+          {
+            "description": "Returns its region argument and the Mcp-Param-Region HTTP header it arrived in. Demonstrates x-mcp-header (a 2026-07-28 Streamable HTTP client mirrors the argument into the header) and JSON Schema 2020-12 input and output schemas.",
+            "description_sha256": "99454fc6cf95f4321874021de7bb74db0830a9073ee1f71698bf0f892ffa1768",
+            "parameters": {
+              "properties": {
+                "region": {
+                  "description": "A region name, e.g. eu-west. Mirrored into the Mcp-Param-Region HTTP header.",
+                  "type": "string",
+                  "x-mcp-header": "Region"
+                },
+                "repeat": {
+                  "default": 1,
+                  "description": "How many times to repeat the region in the result (1-3)",
+                  "maximum": 3,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "region"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "b8ad370af8c186eacba40a6d97ad9a64c614455525267b0b8d815ffbdb8a964b",
+            "registered_name": "get-header-params"
+          },
+          {
+            "description": "Returns up to ten resource links that reference different types of resources",
+            "description_sha256": "0574c9e3571c77380de27d3927dbac8133e68c558150b8f0b95d2e884403613c",
+            "parameters": {
+              "properties": {
+                "count": {
+                  "default": 3,
+                  "description": "Number of resource links to return (1-10)",
+                  "maximum": 10,
+                  "minimum": 1,
+                  "type": "number"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "93b07124483bf2bb19c009349b15056d74d0128cde629a4713b40dd61cc7d1a8",
+            "registered_name": "get-resource-links"
+          },
+          {
+            "description": "Returns a resource reference that can be used by MCP clients",
+            "description_sha256": "f65488ea8977f68a7680a0ba04efa98d742a3007664649c9e00899f43f1d89de",
+            "parameters": {
+              "properties": {
+                "resourceId": {
+                  "default": 1,
+                  "description": "ID of the text or blob resource to fetch, a positive integer",
+                  "type": "number"
+                },
+                "resourceType": {
+                  "default": "Text",
+                  "description": "Whether to reference a text resource or a blob resource",
+                  "enum": [
+                    "Text",
+                    "Blob"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "4cd262d220304a5de5537fce751c061f3dc1185273cbce605e4ae057808cab02",
+            "registered_name": "get-resource-reference"
+          },
+          {
+            "description": "Returns structured content along with an output schema for client data validation",
+            "description_sha256": "276d76ef534072c914d17df7855f06d6c44a8c5be3ee2b8eb686afdeb357d88c",
+            "parameters": {
+              "properties": {
+                "location": {
+                  "description": "Choose city",
+                  "enum": [
+                    "New York",
+                    "Chicago",
+                    "Los Angeles"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "location"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "2d18b6ddb44fa7a8bb51ccc8055e8d191ff747e72c1744acfea07f52bf356057",
+            "registered_name": "get-structured-content"
+          },
+          {
+            "description": "Returns the sum of two numbers",
+            "description_sha256": "98b4e89d761c05f63a8acce7100a3950f49ca67537dea3716c0ba2a9431316f9",
+            "parameters": {
+              "properties": {
+                "a": {
+                  "description": "First number",
+                  "type": "number"
+                },
+                "b": {
+                  "description": "Second number",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "a",
+                "b"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "da5f1f0b8644e305e612b8a7d53e838cc94a54591fc1cc001b19f440feca165f",
+            "registered_name": "get-sum"
+          },
+          {
+            "description": "Returns a tiny MCP logo image.",
+            "description_sha256": "7eba2275ba1ae93a58102c84bcd8f1fb29126fb998d3cbd2947457cdbe685bde",
+            "parameters": {
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699",
+            "registered_name": "get-tiny-image"
+          },
+          {
+            "description": "Compresses a single file using gzip compression. Depending upon the selected output type, returns either the compressed data as a gzipped resource or a resource link, allowing it to be downloaded in a subsequent request: during the current session for a 2025-era client, or for ten minutes at a minted URI on protocol version 2026-07-28.",
+            "description_sha256": "d85af6e05a3e61510e67b34e1b265ffb06b142a33b1b3db49d5a9f1328519c70",
+            "parameters": {
+              "properties": {
+                "data": {
+                  "default": "https://raw.githubusercontent.com/modelcontextprotocol/servers/refs/heads/main/README.md",
+                  "description": "URL or data URI of the file content to compress",
+                  "format": "uri",
+                  "type": "string"
+                },
+                "name": {
+                  "default": "README.md.gz",
+                  "description": "Name of the output file (at most 255 characters)",
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "outputType": {
+                  "default": "resourceLink",
+                  "description": "How the resulting gzipped file should be returned. 'resourceLink' returns a link to a resource that can be read later, 'resource' returns a full resource object.",
+                  "enum": [
+                    "resourceLink",
+                    "resource"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "d0d2e8780c5a215273f32dd8955711e3aa46c98b539a1afe160b4a124d98d447",
+            "registered_name": "gzip-file-as-resource"
+          },
+          {
+            "description": "Toggles simulated, random-leveled logging on or off. Deprecated: 2025-era clients only, since protocol version 2026-07-28 removes logging/setLevel; use trigger-log-messages with a per-request log level instead.",
+            "description_sha256": "a045b23f4caccaabc684257fd3153bd5180b4ef41ebdb1d9cfaf961a7c30b31e",
+            "parameters": {
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699",
+            "registered_name": "toggle-simulated-logging"
+          },
+          {
+            "description": "Toggles simulated resource subscription updates on or off. Deprecated: 2025-era clients only, since protocol version 2026-07-28 removes resources/subscribe; use trigger-resource-update with a subscriptions/listen stream instead.",
+            "description_sha256": "b90588504eb5fcb83950b82c899eeb52c0275a2bb988ba84b0c9420f5f69f421",
+            "parameters": {
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699",
+            "registered_name": "toggle-subscriber-updates"
+          },
+          {
+            "description": "Sends a notifications/<list>/list_changed for the tool, prompt or resource list. On protocol version 2026-07-28 it is delivered on each subscriptions/listen stream that asked for that list; a 2025-era client receives it unsolicited.",
+            "description_sha256": "dff60ff65fd1736c88f5f33a4e11873a941c2a981387f0153d76f878231b7034",
+            "parameters": {
+              "properties": {
+                "list": {
+                  "description": "Which list to announce as changed",
+                  "enum": [
+                    "tools",
+                    "prompts",
+                    "resources"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "list"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "a5a99370bb9822aaf565eb8c075fc164844684e8970a5ba448d44e55a073c9d5",
+            "registered_name": "trigger-list-changed"
+          },
+          {
+            "description": "Sends one log message at each logging level during the call. On protocol version 2026-07-28 only the messages at or above the level the request names in _meta (io.modelcontextprotocol/logLevel) are sent, and none if it names no level; a 2025-era client gets those at or above the level it set with logging/setLevel. Deprecated: logging is deprecated as of protocol version 2026-07-28.",
+            "description_sha256": "74a348e35250bdd377fed89ac9e2bca2d5cb7aae02186037c378a47b6695bcb4",
+            "parameters": {
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699",
+            "registered_name": "trigger-log-messages"
+          },
+          {
+            "description": "Demonstrates a long running operation with progress updates.",
+            "description_sha256": "d047c3fcbcb25a9255d0bd7584d019509a8aa5a181ce7e3c6109d76ea820d125",
+            "parameters": {
+              "properties": {
+                "duration": {
+                  "default": 10,
+                  "description": "Duration of the operation in seconds",
+                  "type": "number"
+                },
+                "steps": {
+                  "default": 5,
+                  "description": "Number of steps in the operation",
+                  "type": "number"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "parameters_sha256": "39b1e8b148ccd711c82facdf3c5ed2c35a42467fbc5957e4be44ba027e5514dc",
+            "registered_name": "trigger-long-running-operation"
+          },
+          {
+            "description": "Sends a notifications/resources/updated for a resource URI. On protocol version 2026-07-28 it is delivered on each subscriptions/listen stream whose resourceSubscriptions name the URI; a 2025-era client receives it once it has called resources/subscribe for the URI.",
+            "description_sha256": "a06bc3a856dd6ad7f9a06c1dd1136a0f6a74e2170be36330e90f6f485cb753f8",
+            "parameters": {
+              "properties": {
+                "uri": {
+                  "description": "The URI of the resource to announce as updated, e.g. demo://resource/dynamic/text/1",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "uri"
+              ],
+              "type": "object"
+            },
+            "parameters_sha256": "406cc338c6077a98f69015b2e58d99a25162f0a0d0ab43746195037bfe03bb0a",
+            "registered_name": "trigger-resource-update"
+          }
+        ],
+        "unknown_tool": {
+          "content": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        }
+      },
+      "transport": "sse"
+    },
+    {
+      "crash": {},
+      "entry": {
+        "name": "time-http",
+        "transport": "http",
+        "url": "http://127.0.0.1:64789/mcp"
+      },
+      "entry_sha256": "fb9016b33862dadc62bb54bead0bf6af6f08c46702713af16845c334b99a0fbf",
+      "installed_entry": {
+        "auto_update": false,
+        "enabled": true,
+        "installed_at": "2026-11-21T08:12:36.548378+00:00",
+        "installed_by": "hive mcp add",
+        "last_error": null,
+        "last_health_check_at": null,
+        "last_health_status": null,
+        "last_used_at": null,
+        "last_validated_with_hive_version": null,
+        "manifest": {
+          "description": "real server cross-check",
+          "http": {
+            "headers": {},
+            "url": "http://127.0.0.1:64789/mcp"
+          },
+          "name": "time-http",
+          "transport": {
+            "default": "http",
+            "supported": [
+              "http"
+            ]
+          }
+        },
+        "manifest_version": "0.0.0",
+        "mode": "tools",
+        "name": "time-http",
+        "overrides": {
+          "env": {},
+          "headers": {}
+        },
+        "pinned": false,
+        "resolved_package_version": null,
+        "source": "local",
+        "transport": "http"
+      },
+      "lifecycle": {
+        "disabled_resolved": [],
+        "disabled_tool_count": 0,
+        "reenabled_resolved": [
+          "time-http"
+        ],
+        "reenabled_tool_count": 0,
+        "registry_has_reload_method": false
+      },
+      "name": "time-http",
+      "raw": {
+        "connect_error": {
+          "error": "Failed to list tools via HTTP: Client error '404 Not Found' for url 'http://127.0.0.1:64789/mcp/mcp/v1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+          "error_type": "RuntimeError",
+          "ok": false
+        },
+        "connected": false
+      },
+      "registry_added": true,
+      "resolved_configs": [
+        {
+          "args": [],
+          "command": null,
+          "cwd": null,
+          "description": "real server cross-check",
+          "env": {},
+          "headers": {},
+          "name": "time-http",
+          "socket_path": null,
+          "transport": "http",
+          "url": "http://127.0.0.1:64789/mcp"
+        }
+      ],
+      "side": "python",
+      "surface": {
+        "calls": {},
+        "load_summary": [
+          {
+            "server": "time-http",
+            "status": "skipped",
+            "tools_loaded": 0
+          }
+        ],
+        "namespace_prefix": null,
+        "server_tool_names": [],
+        "tools": [],
+        "unknown_tool": {
+          "content": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        }
+      },
+      "transport": "http"
+    },
+    {
+      "crash": {},
+      "entry": {
+        "name": "everything-http",
+        "transport": "http",
+        "url": "http://127.0.0.1:64788/mcp"
+      },
+      "entry_sha256": "a83211abf4d5ab339d07bfb2e9cc62b4eda550ad3f549e6fac86283aa15a16e8",
+      "installed_entry": {
+        "auto_update": false,
+        "enabled": true,
+        "installed_at": "2026-11-21T08:12:40.624949+00:00",
+        "installed_by": "hive mcp add",
+        "last_error": null,
+        "last_health_check_at": null,
+        "last_health_status": null,
+        "last_used_at": null,
+        "last_validated_with_hive_version": null,
+        "manifest": {
+          "description": "real server cross-check",
+          "http": {
+            "headers": {},
+            "url": "http://127.0.0.1:64788/mcp"
+          },
+          "name": "everything-http",
+          "transport": {
+            "default": "http",
+            "supported": [
+              "http"
+            ]
+          }
+        },
+        "manifest_version": "0.0.0",
+        "mode": "tools",
+        "name": "everything-http",
+        "overrides": {
+          "env": {},
+          "headers": {}
+        },
+        "pinned": false,
+        "resolved_package_version": null,
+        "source": "local",
+        "transport": "http"
+      },
+      "lifecycle": {
+        "disabled_resolved": [],
+        "disabled_tool_count": 0,
+        "reenabled_resolved": [
+          "everything-http"
+        ],
+        "reenabled_tool_count": 0,
+        "registry_has_reload_method": false
+      },
+      "name": "everything-http",
+      "raw": {
+        "connect_error": {
+          "error": "Failed to list tools via HTTP: Client error '406 Not Acceptable' for url 'http://127.0.0.1:64788/mcp/mcp/v1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/406",
+          "error_type": "RuntimeError",
+          "ok": false
+        },
+        "connected": false
+      },
+      "registry_added": true,
+      "resolved_configs": [
+        {
+          "args": [],
+          "command": null,
+          "cwd": null,
+          "description": "real server cross-check",
+          "env": {},
+          "headers": {},
+          "name": "everything-http",
+          "socket_path": null,
+          "transport": "http",
+          "url": "http://127.0.0.1:64788/mcp"
+        }
+      ],
+      "side": "python",
+      "surface": {
+        "calls": {},
+        "load_summary": [
+          {
+            "server": "everything-http",
+            "status": "skipped",
+            "tools_loaded": 0
+          }
+        ],
+        "namespace_prefix": null,
+        "server_tool_names": [],
+        "tools": [],
+        "unknown_tool": {
+          "content": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        }
+      },
+      "transport": "http"
+    }
+  ],
+  "side": "python"
+}

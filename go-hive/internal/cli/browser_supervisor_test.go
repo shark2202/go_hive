@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -46,6 +47,11 @@ func browserBridgeStubMain() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "listen http %s: %v\n", addr, err)
 		os.Exit(1)
+	}
+	// A detached spawn (the CLI's ensure path) has no supervisor to reap it;
+	// the test that started it kills the pid from this file.
+	if path := os.Getenv("HIVE_TEST_STUB_PIDFILE"); path != "" {
+		_ = os.WriteFile(path, []byte(strconv.Itoa(os.Getpid())), 0o644)
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

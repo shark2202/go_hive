@@ -581,7 +581,12 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		toolCalls := completion.ToolCalls
 		callDicts := toolCallDicts(toolCalls)
 		if completion.Content != "" || len(callDicts) > 0 {
-			if _, err := conv.AddAssistantMessage(completion.Content, callDicts, AssistantMessageOptions{}); err != nil {
+			assistantOptions := AssistantMessageOptions{}
+			if completion.ReasoningContent != "" {
+				reasoning := completion.ReasoningContent
+				assistantOptions.ReasoningContent = &reasoning
+			}
+			if _, err := conv.AddAssistantMessage(completion.Content, callDicts, assistantOptions); err != nil {
 				return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 			}
 		}
@@ -1199,52 +1204,14 @@ func toChatMessages(messages []map[string]any) []llm.ChatMessage {
 				chat.ToolCalls = append(chat.ToolCalls, chatToolCall(rawCall))
 			}
 		}
+		// Reasoning rides assistant steps only; reasoningForThisTurn has
+		// already dropped it from earlier turns upstream of this projection.
+		if reasoning, ok := message["reasoning_content"].(string); ok {
+			chat.ReasoningContent = reasoning
+		}
 		out = append(out, chat)
 	}
 	return out
-}
-
-func chatToolCall(raw map[string]any) llm.ToolCall {
-	call := llm.ToolCall{}
-	if id, ok := raw["id"].(string); ok {
-		call.ID = id
-	}
-	if function, ok := raw["function"].(map[string]any); ok {
-		call.Name, _ = function["name"].(string)
-		call.Arguments, _ = function["arguments"].(string)
-	}
-	return call
-}
-
-func contentString(content any) string {
-	switch value := content.(type) {
-	case nil:
-		return ""
-	case string:
-		return value
-	case []map[string]any:
-		return joinContentBlocks(value)
-	case []any:
-		blocks := make([]map[string]any, 0, len(value))
-		for _, item := range value {
-			if block, ok := item.(map[string]any); ok {
-				blocks = append(blocks, block)
-			}
-		}
-		return joinContentBlocks(blocks)
-	default:
-		return fmt.Sprint(value)
-	}
-}
-
-func joinContentBlocks(blocks []map[string]any) string {
-	texts := make([]string, 0, len(blocks))
-	for _, block := range blocks {
-		if text, ok := block["text"].(string); ok {
-			texts = append(texts, text)
-		}
-	}
-	return strings.Join(texts, "\n")
 }
 
 // NewReminderAgentContext is the AgentContext -> reminder-source view the hub

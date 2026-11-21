@@ -1,0 +1,744 @@
+{
+  "calls": {
+    "convert_time": {
+      "id": 4,
+      "jsonrpc": "2.0",
+      "result": {
+        "content": [
+          {
+            "text": "{\n  \"source\": {\n    \"timezone\": \"Asia/Shanghai\",\n    \"datetime\": \"2026-11-21T15:30:00+08:00\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"target\": {\n    \"timezone\": \"America/New_York\",\n    \"datetime\": \"2026-11-21T02:30:00-05:00\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"time_difference\": \"-13.0h\",\n  \"later_occurrence\": null\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "later_occurrence": null,
+          "source": {
+            "datetime": "2026-11-21T15:30:00+08:00",
+            "day_of_week": "Saturday",
+            "is_dst": false,
+            "timezone": "Asia/Shanghai"
+          },
+          "target": {
+            "datetime": "2026-11-21T02:30:00-05:00",
+            "day_of_week": "Saturday",
+            "is_dst": false,
+            "timezone": "America/New_York"
+          },
+          "time_difference": "-13.0h"
+        }
+      }
+    },
+    "get_current_time": {
+      "id": 3,
+      "jsonrpc": "2.0",
+      "result": {
+        "content": [
+          {
+            "text": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"2026-11-21T16:13:36+08:00\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "datetime": "2026-11-21T16:13:36+08:00",
+          "day_of_week": "Saturday",
+          "is_dst": false,
+          "timezone": "Asia/Shanghai"
+        }
+      }
+    },
+    "unknown_tool": {
+      "error": {
+        "code": -32602,
+        "message": "Unknown tool: no_such_tool_xyz"
+      },
+      "id": 5,
+      "jsonrpc": "2.0"
+    }
+  },
+  "exchanges": [
+    {
+      "request": {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "method": "initialize",
+        "params": {
+          "capabilities": {},
+          "clientInfo": {
+            "name": "hive-real-crosscheck-raw",
+            "version": "1.0"
+          },
+          "protocolVersion": "2025-06-18"
+        }
+      },
+      "response": {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+          "capabilities": {
+            "prompts": {
+              "listChanged": false
+            },
+            "resources": {
+              "listChanged": false,
+              "subscribe": false
+            },
+            "tools": {
+              "listChanged": false
+            }
+          },
+          "protocolVersion": "2025-06-18",
+          "serverInfo": {
+            "name": "mcp-time",
+            "version": "2026.11.18"
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "id": 2,
+        "jsonrpc": "2.0",
+        "method": "tools/list",
+        "params": {}
+      },
+      "response": {
+        "id": 2,
+        "jsonrpc": "2.0",
+        "result": {
+          "tools": [
+            {
+              "annotations": {
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false,
+                "readOnlyHint": true
+              },
+              "description": "Get current time in a specific timezone",
+              "inputSchema": {
+                "properties": {
+                  "timezone": {
+                    "default": "Asia/Shanghai",
+                    "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                    "title": "Timezone",
+                    "type": "string"
+                  }
+                },
+                "title": "get_current_timeArguments",
+                "type": "object"
+              },
+              "name": "get_current_time",
+              "outputSchema": {
+                "properties": {
+                  "datetime": {
+                    "title": "Datetime",
+                    "type": "string"
+                  },
+                  "day_of_week": {
+                    "title": "Day Of Week",
+                    "type": "string"
+                  },
+                  "is_dst": {
+                    "title": "Is Dst",
+                    "type": "boolean"
+                  },
+                  "timezone": {
+                    "title": "Timezone",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "timezone",
+                  "datetime",
+                  "day_of_week",
+                  "is_dst"
+                ],
+                "title": "TimeResult",
+                "type": "object"
+              }
+            },
+            {
+              "annotations": {
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false,
+                "readOnlyHint": true
+              },
+              "description": "Convert time between timezones",
+              "inputSchema": {
+                "properties": {
+                  "source_timezone": {
+                    "default": "Asia/Shanghai",
+                    "description": "Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                    "title": "Source Timezone",
+                    "type": "string"
+                  },
+                  "target_timezone": {
+                    "default": "Asia/Shanghai",
+                    "description": "Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                    "title": "Target Timezone",
+                    "type": "string"
+                  },
+                  "time": {
+                    "description": "Time to convert in 24-hour format (HH:MM)",
+                    "title": "Time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "time"
+                ],
+                "title": "convert_timeArguments",
+                "type": "object"
+              },
+              "name": "convert_time",
+              "outputSchema": {
+                "$defs": {
+                  "LaterOccurrence": {
+                    "description": "The second reading of an ambiguous source time (#5196).",
+                    "properties": {
+                      "note": {
+                        "title": "Note",
+                        "type": "string"
+                      },
+                      "source": {
+                        "$ref": "#/$defs/TimeResult"
+                      },
+                      "target": {
+                        "$ref": "#/$defs/TimeResult"
+                      },
+                      "time_difference": {
+                        "title": "Time Difference",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "note",
+                      "source",
+                      "target",
+                      "time_difference"
+                    ],
+                    "title": "LaterOccurrence",
+                    "type": "object"
+                  },
+                  "TimeResult": {
+                    "properties": {
+                      "datetime": {
+                        "title": "Datetime",
+                        "type": "string"
+                      },
+                      "day_of_week": {
+                        "title": "Day Of Week",
+                        "type": "string"
+                      },
+                      "is_dst": {
+                        "title": "Is Dst",
+                        "type": "boolean"
+                      },
+                      "timezone": {
+                        "title": "Timezone",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "timezone",
+                      "datetime",
+                      "day_of_week",
+                      "is_dst"
+                    ],
+                    "title": "TimeResult",
+                    "type": "object"
+                  }
+                },
+                "properties": {
+                  "later_occurrence": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/LaterOccurrence"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "description": "Set only when the source time occurs twice on this date because a clock change repeats it (a DST fall-back): the same conversion at its second occurrence. source and target are the first."
+                  },
+                  "source": {
+                    "$ref": "#/$defs/TimeResult"
+                  },
+                  "target": {
+                    "$ref": "#/$defs/TimeResult"
+                  },
+                  "time_difference": {
+                    "title": "Time Difference",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source",
+                  "target",
+                  "time_difference"
+                ],
+                "title": "TimeConversionResult",
+                "type": "object"
+              }
+            },
+            {
+              "annotations": {
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false,
+                "readOnlyHint": true
+              },
+              "description": "Get the time a given number of days, hours, minutes and seconds ago in a specific timezone",
+              "inputSchema": {
+                "properties": {
+                  "days_ago": {
+                    "default": 0,
+                    "description": "Whole days before now",
+                    "minimum": 0,
+                    "title": "Days Ago",
+                    "type": "integer"
+                  },
+                  "hours_ago": {
+                    "default": 0,
+                    "description": "Whole hours before now",
+                    "minimum": 0,
+                    "title": "Hours Ago",
+                    "type": "integer"
+                  },
+                  "minutes_ago": {
+                    "default": 0,
+                    "description": "Whole minutes before now",
+                    "minimum": 0,
+                    "title": "Minutes Ago",
+                    "type": "integer"
+                  },
+                  "seconds_ago": {
+                    "default": 0,
+                    "description": "Whole seconds before now",
+                    "minimum": 0,
+                    "title": "Seconds Ago",
+                    "type": "integer"
+                  },
+                  "timezone": {
+                    "default": "Asia/Shanghai",
+                    "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                    "title": "Timezone",
+                    "type": "string"
+                  }
+                },
+                "title": "get_time_agoArguments",
+                "type": "object"
+              },
+              "name": "get_time_ago",
+              "outputSchema": {
+                "properties": {
+                  "datetime": {
+                    "title": "Datetime",
+                    "type": "string"
+                  },
+                  "day_of_week": {
+                    "title": "Day Of Week",
+                    "type": "string"
+                  },
+                  "is_dst": {
+                    "title": "Is Dst",
+                    "type": "boolean"
+                  },
+                  "timezone": {
+                    "title": "Timezone",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "timezone",
+                  "datetime",
+                  "day_of_week",
+                  "is_dst"
+                ],
+                "title": "TimeResult",
+                "type": "object"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "id": 3,
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "arguments": {
+            "timezone": "Asia/Shanghai"
+          },
+          "name": "get_current_time"
+        }
+      },
+      "response": {
+        "id": 3,
+        "jsonrpc": "2.0",
+        "result": {
+          "content": [
+            {
+              "text": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"2026-11-21T16:13:36+08:00\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}",
+              "type": "text"
+            }
+          ],
+          "isError": false,
+          "structuredContent": {
+            "datetime": "2026-11-21T16:13:36+08:00",
+            "day_of_week": "Saturday",
+            "is_dst": false,
+            "timezone": "Asia/Shanghai"
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "id": 4,
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "arguments": {
+            "source_timezone": "Asia/Shanghai",
+            "target_timezone": "America/New_York",
+            "time": "15:30"
+          },
+          "name": "convert_time"
+        }
+      },
+      "response": {
+        "id": 4,
+        "jsonrpc": "2.0",
+        "result": {
+          "content": [
+            {
+              "text": "{\n  \"source\": {\n    \"timezone\": \"Asia/Shanghai\",\n    \"datetime\": \"2026-11-21T15:30:00+08:00\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"target\": {\n    \"timezone\": \"America/New_York\",\n    \"datetime\": \"2026-11-21T02:30:00-05:00\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"time_difference\": \"-13.0h\",\n  \"later_occurrence\": null\n}",
+              "type": "text"
+            }
+          ],
+          "isError": false,
+          "structuredContent": {
+            "later_occurrence": null,
+            "source": {
+              "datetime": "2026-11-21T15:30:00+08:00",
+              "day_of_week": "Saturday",
+              "is_dst": false,
+              "timezone": "Asia/Shanghai"
+            },
+            "target": {
+              "datetime": "2026-11-21T02:30:00-05:00",
+              "day_of_week": "Saturday",
+              "is_dst": false,
+              "timezone": "America/New_York"
+            },
+            "time_difference": "-13.0h"
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "id": 5,
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "arguments": {},
+          "name": "no_such_tool_xyz"
+        }
+      },
+      "response": {
+        "error": {
+          "code": -32602,
+          "message": "Unknown tool: no_such_tool_xyz"
+        },
+        "id": 5,
+        "jsonrpc": "2.0"
+      }
+    }
+  ],
+  "protocol_version": "2025-06-18",
+  "server_entry": {
+    "args": [
+      "mcp-server-time==2026.11.18"
+    ],
+    "command": "uvx",
+    "crash_marker": "mcp-server-time",
+    "name": "time-stdio",
+    "transport": "stdio"
+  },
+  "server_entry_sha256": "dde2efd409203da3604e078cdb159ec46e80310d4d2315f84d894f6013248223",
+  "server_info": {
+    "name": "mcp-time",
+    "version": "2026.11.18"
+  },
+  "tools_list": {
+    "id": 2,
+    "jsonrpc": "2.0",
+    "result": {
+      "tools": [
+        {
+          "annotations": {
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false,
+            "readOnlyHint": true
+          },
+          "description": "Get current time in a specific timezone",
+          "inputSchema": {
+            "properties": {
+              "timezone": {
+                "default": "Asia/Shanghai",
+                "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                "title": "Timezone",
+                "type": "string"
+              }
+            },
+            "title": "get_current_timeArguments",
+            "type": "object"
+          },
+          "name": "get_current_time",
+          "outputSchema": {
+            "properties": {
+              "datetime": {
+                "title": "Datetime",
+                "type": "string"
+              },
+              "day_of_week": {
+                "title": "Day Of Week",
+                "type": "string"
+              },
+              "is_dst": {
+                "title": "Is Dst",
+                "type": "boolean"
+              },
+              "timezone": {
+                "title": "Timezone",
+                "type": "string"
+              }
+            },
+            "required": [
+              "timezone",
+              "datetime",
+              "day_of_week",
+              "is_dst"
+            ],
+            "title": "TimeResult",
+            "type": "object"
+          }
+        },
+        {
+          "annotations": {
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false,
+            "readOnlyHint": true
+          },
+          "description": "Convert time between timezones",
+          "inputSchema": {
+            "properties": {
+              "source_timezone": {
+                "default": "Asia/Shanghai",
+                "description": "Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                "title": "Source Timezone",
+                "type": "string"
+              },
+              "target_timezone": {
+                "default": "Asia/Shanghai",
+                "description": "Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                "title": "Target Timezone",
+                "type": "string"
+              },
+              "time": {
+                "description": "Time to convert in 24-hour format (HH:MM)",
+                "title": "Time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "time"
+            ],
+            "title": "convert_timeArguments",
+            "type": "object"
+          },
+          "name": "convert_time",
+          "outputSchema": {
+            "$defs": {
+              "LaterOccurrence": {
+                "description": "The second reading of an ambiguous source time (#5196).",
+                "properties": {
+                  "note": {
+                    "title": "Note",
+                    "type": "string"
+                  },
+                  "source": {
+                    "$ref": "#/$defs/TimeResult"
+                  },
+                  "target": {
+                    "$ref": "#/$defs/TimeResult"
+                  },
+                  "time_difference": {
+                    "title": "Time Difference",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "note",
+                  "source",
+                  "target",
+                  "time_difference"
+                ],
+                "title": "LaterOccurrence",
+                "type": "object"
+              },
+              "TimeResult": {
+                "properties": {
+                  "datetime": {
+                    "title": "Datetime",
+                    "type": "string"
+                  },
+                  "day_of_week": {
+                    "title": "Day Of Week",
+                    "type": "string"
+                  },
+                  "is_dst": {
+                    "title": "Is Dst",
+                    "type": "boolean"
+                  },
+                  "timezone": {
+                    "title": "Timezone",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "timezone",
+                  "datetime",
+                  "day_of_week",
+                  "is_dst"
+                ],
+                "title": "TimeResult",
+                "type": "object"
+              }
+            },
+            "properties": {
+              "later_occurrence": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/LaterOccurrence"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Set only when the source time occurs twice on this date because a clock change repeats it (a DST fall-back): the same conversion at its second occurrence. source and target are the first."
+              },
+              "source": {
+                "$ref": "#/$defs/TimeResult"
+              },
+              "target": {
+                "$ref": "#/$defs/TimeResult"
+              },
+              "time_difference": {
+                "title": "Time Difference",
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "target",
+              "time_difference"
+            ],
+            "title": "TimeConversionResult",
+            "type": "object"
+          }
+        },
+        {
+          "annotations": {
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false,
+            "readOnlyHint": true
+          },
+          "description": "Get the time a given number of days, hours, minutes and seconds ago in a specific timezone",
+          "inputSchema": {
+            "properties": {
+              "days_ago": {
+                "default": 0,
+                "description": "Whole days before now",
+                "minimum": 0,
+                "title": "Days Ago",
+                "type": "integer"
+              },
+              "hours_ago": {
+                "default": 0,
+                "description": "Whole hours before now",
+                "minimum": 0,
+                "title": "Hours Ago",
+                "type": "integer"
+              },
+              "minutes_ago": {
+                "default": 0,
+                "description": "Whole minutes before now",
+                "minimum": 0,
+                "title": "Minutes Ago",
+                "type": "integer"
+              },
+              "seconds_ago": {
+                "default": 0,
+                "description": "Whole seconds before now",
+                "minimum": 0,
+                "title": "Seconds Ago",
+                "type": "integer"
+              },
+              "timezone": {
+                "default": "Asia/Shanghai",
+                "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Optional: defaults to the server's local timezone, 'Asia/Shanghai', when omitted.",
+                "title": "Timezone",
+                "type": "string"
+              }
+            },
+            "title": "get_time_agoArguments",
+            "type": "object"
+          },
+          "name": "get_time_ago",
+          "outputSchema": {
+            "properties": {
+              "datetime": {
+                "title": "Datetime",
+                "type": "string"
+              },
+              "day_of_week": {
+                "title": "Day Of Week",
+                "type": "string"
+              },
+              "is_dst": {
+                "title": "Is Dst",
+                "type": "boolean"
+              },
+              "timezone": {
+                "title": "Timezone",
+                "type": "string"
+              }
+            },
+            "required": [
+              "timezone",
+              "datetime",
+              "day_of_week",
+              "is_dst"
+            ],
+            "title": "TimeResult",
+            "type": "object"
+          }
+        }
+      ]
+    }
+  },
+  "tools_list_sha256": "6595ef09d55f44b6694a4b48acb82db79f883e538fd88677a70ccd21bf123c17",
+  "transport": "stdio"
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "seq": 0,
+    "role": "user",
+    "tool_use_id": null,
+    "tool_calls": null,
+    "is_client_input": false,
+    "is_system_reminder": true,
+    "is_trigger": false,
+    "content": "<system-reminder>\nThe following tools are available but their schemas are NOT loaded — calling them directly will fail. Use search_tools with query \"select:<name>[,<name>...]\" to load their schemas before calling them (or pass keywords to search). Loaded tools stay loaded for the rest of the session:\nchart_render\ncredential_status\ncsv_append\ncsv_info\ncsv_read\ncsv_write\ndns_security_scan\nedit_file\nexcel_append\nexcel_info\nexcel_read\nexcel_search\nexcel_sheet_list\nexcel_write\nget_playbook_status\nget_worker_status\nhttp_headers_scan\ninject_message\nlist_browser_profiles\nlist_playbook_runs\nlist_skills\nlist_triggers\nlist_worker_questions\nport_scan\nread_file\nremove_trigger\nreply_to_worker\nrisk_score\nrun_playbook\nrun_worker\nsearch_files\nsearch_wikipedia\nset_trigger\nskill_view\nssl_tls_scan\nstop_playbook\nstop_worker\nsubdomain_enumerate\ntech_stack_detect\nterminal_job_start\nterminal_pty_close\nterminal_pty_open\nterminal_pty_run\ntracker_query\ntracker_register_writable\ntracker_sql\ntracker_upsert\nupdate_worker_profile\nweb_scrape\nweb_search\nwrite_file\n\n## Skills (mandatory)\nBefore replying: scan <available_skills> <name> entries.\n- If the user message contains <read_skill>NAME</read_skill> tags: these are\n  explicit requests. Read EVERY tagged skill's SKILL.md with\n  `terminal_exec(\"cat <location>\")` before planning or other tool use — the\n  tags override the \"clearly applies\" test and the one-skill limit below.\n- Otherwise, if exactly one skill clearly applies: read its SKILL.md at <location> with `terminal_exec(\"cat <location>\")`, then follow it.\n- If multiple could apply: choose the most specific one, then read/follow it.\n- If none clearly apply: do not read any SKILL.md.\n- The read prevails over ask pressure: reading SKILL.md is pre-flight, not\n  real work. Do it BEFORE any clarifying question (ask_user) and before any\n  task plan — never defer it behind either.\nConstraints: never read more than one skill up front unless <read_skill> tags name more; only read after selecting.\n- When a skill drives external API writes (Gmail, Calendar, GitHub, etc.),\n  assume rate limits: prefer fewer larger writes, avoid tight one-item loops,\n  serialize bursts when possible, and respect 429/Retry-After.\n- When a selected skill references a relative path, resolve it against the\n  skill directory (parent of SKILL.md) and use that absolute path in tool commands.\n\n<available_skills>\n  <skill>\n    <name>administrative-behavior-skill</name>\n    <location>/Users/mac/.agents/skills/administrative-behavior-skill/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>ai-cangjie-skill</name>\n    <location>/Users/mac/.agents/skills/ai-cangjie-skill/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>ai-native-orchestration-skill</name>\n    <location>/Users/mac/.agents/skills/ai-native-orchestration-skill/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>ai-native-org-skill</name>\n    <location>/Users/mac/.agents/skills/ai-native-org-skill/ai-native-org-skill/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>ai-native-ralph-skill</name>\n    <location>/Users/mac/.agents/skills/ai-native-ralph-skill/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>ai-native-swarm-skill</name>\n    <location>/Users/mac/.agents/skills/ai-native-swarm-skill/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>architecture-diagram</name>\n    <location>/Users/mac/.agents/skills/architecture-diagram/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>ask-right-questions</name>\n    <location>/Users/mac/.agents/skills/ask-right-questions-skill/ask-right-questions/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>attention-management</name>\n    <location>/Users/mac/.agents/skills/cognitive-dividend-skill/attention-management/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>audit-pipeline</name>\n    <location>/Users/mac/.agents/skills/ask-right-questions-skill/audit-pipeline/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>beyond-the-label-skill</name>\n    <location>/Users/mac/.agents/skills/beyond-"
+  },
+  {
+    "seq": 1,
+    "role": "assistant",
+    "tool_use_id": null,
+    "tool_calls": null,
+    "is_client_input": false,
+    "is_system_reminder": false,
+    "is_trigger": false,
+    "content": "（后台）收到。"
+  },
+  {
+    "seq": 2,
+    "role": "user",
+    "tool_use_id": null,
+    "tool_calls": null,
+    "is_client_input": false,
+    "is_system_reminder": false,
+    "is_trigger": false,
+    "content": "[2026-11-21 16:08 CST] [External event] [external] 系统时钟同步完成，请回复一句确认。"
+  },
+  {
+    "seq": 3,
+    "role": "assistant",
+    "tool_use_id": null,
+    "tool_calls": null,
+    "is_client_input": false,
+    "is_system_reminder": false,
+    "is_trigger": false,
+    "content": "（后台）收到。"
+  }
+]

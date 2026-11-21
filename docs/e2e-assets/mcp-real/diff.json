@@ -1,0 +1,1085 @@
+{
+  "dimensions": {
+    "everything-http": {
+      "calls": {
+        "skipped": "both sides failed to connect"
+      },
+      "crash": {},
+      "inventory": {
+        "skipped": "both sides failed to connect"
+      },
+      "lifecycle": {
+        "verdict": {
+          "skipped": "both sides failed to connect"
+        }
+      },
+      "schema": {
+        "skipped": "both sides failed to connect"
+      },
+      "transport": {
+        "go_connect_error": "Failed to list tools via HTTP: HTTP 406: {\"jsonrpc\":\"2.0\",\"id\":\"server-error\",\"error\":{\"code\":-32600,\"message\":\"Not Acceptable: Client must accept application/json\"}}",
+        "go_connected": false,
+        "go_tool_count": 0,
+        "python_connect_error": "Failed to list tools via HTTP: Client error '406 Not Acceptable' for url 'http://127.0.0.1:64788/mcp/mcp/v1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/406",
+        "python_connected": false,
+        "python_tool_count": 0,
+        "raw_server_info": {
+          "name": "mcp-servers/everything",
+          "version": "2.3.1"
+        },
+        "raw_tool_count": 16,
+        "transport": "http"
+      }
+    },
+    "everything-sse": {
+      "calls": {
+        "mismatched": [],
+        "rows": [
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Echo: Hello MCP"
+            },
+            "label": "echo",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Echo: Hello MCP"
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "The sum of 19 and 23 is 42."
+            },
+            "label": "get-sum",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "The sum of 19 and 23 is 42."
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "[Server: everything-sse] [Transport: sse] Tool 'get-sum' failed: Input validation error: Invalid arguments for tool get-sum: b: Invalid input: expected number, received undefined"
+            },
+            "label": "get-sum-error",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "[Server: everything-sse] [Transport: sse] Tool 'get-sum' failed: Input validation error: Invalid arguments for tool get-sum: b: Invalid input: expected number, received undefined"
+            },
+            "raw_error": "Input validation error: Invalid arguments for tool get-sum: b: Invalid input: expected number, received undefined",
+            "raw_error_text_in_both": true,
+            "raw_ok": false,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 1,
+              "image_kinds": [
+                "image_url"
+              ],
+              "ok": true,
+              "text": "Here's the image you requested:\nThe image above is the MCP logo."
+            },
+            "label": "get-tiny-image",
+            "python": {
+              "image_blocks": 1,
+              "image_kinds": [
+                "image_url"
+              ],
+              "ok": true,
+              "text": "Here's the image you requested:\nThe image above is the MCP logo."
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "{\"temperature\":36,\"conditions\":\"Light rain / drizzle\",\"humidity\":82}"
+            },
+            "label": "get-structured-content",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "{\"temperature\":36,\"conditions\":\"Light rain / drizzle\",\"humidity\":82}"
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Here are 2 resource links to resources available in this server:"
+            },
+            "label": "get-resource-links",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Here are 2 resource links to resources available in this server:"
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Sent one log message at each of 8 levels (debug, info, notice, warning, error, critical, alert, emergency). The ones below this request's log level were dropped."
+            },
+            "label": "trigger-log-messages",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Sent one log message at each of 8 levels (debug, info, notice, warning, error, critical, alert, emergency). The ones below this request's log level were dropped."
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Long running operation completed. Duration: 2 seconds, Steps: 2."
+            },
+            "label": "trigger-long-running-operation",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Long running operation completed. Duration: 2 seconds, Steps: 2."
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          }
+        ]
+      },
+      "crash": {
+        "go": {},
+        "python": {}
+      },
+      "inventory": {
+        "go_namespace_prefix": "mcp__everything_sse__",
+        "go_registered": 16,
+        "go_remote_names": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ],
+        "names_match_raw": {
+          "go": true,
+          "python": true
+        },
+        "python_names": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ],
+        "python_registered": 16,
+        "raw_names": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ]
+      },
+      "lifecycle": {
+        "go": {
+          "disabled_resolved": 0,
+          "disabled_status_count": 0,
+          "disabled_tool_count": 0,
+          "reenabled_resolved": 1,
+          "reenabled_status_count": 1,
+          "reenabled_tool_count": 16
+        },
+        "python": {
+          "disabled_resolved": [],
+          "disabled_tool_count": 0,
+          "reenabled_resolved": [
+            "everything-sse"
+          ],
+          "reenabled_tool_count": 16,
+          "registry_has_reload_method": false
+        },
+        "verdict": {
+          "disabled_zero_both": true,
+          "reenabled_equal_both": true,
+          "reenabled_equals_inventory": true
+        }
+      },
+      "schema": {
+        "go_vs_raw": [],
+        "matched": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ],
+        "python_vs_go": [],
+        "python_vs_raw": []
+      },
+      "transport": {
+        "go_connect_error": null,
+        "go_connected": true,
+        "go_tool_count": 16,
+        "python_connect_error": null,
+        "python_connected": true,
+        "python_tool_count": 16,
+        "raw_server_info": {
+          "name": "mcp-servers/everything",
+          "version": "2.3.1"
+        },
+        "transport": "sse"
+      },
+      "unknown_tool": {
+        "go": {
+          "content": "{\"error\": \"Unknown tool: mcp__everything_sse__no_such_tool_xyz. Did you mean 'mcp__everything_sse__echo'?\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        },
+        "python": {
+          "content": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        }
+      }
+    },
+    "everything-stdio": {
+      "calls": {
+        "mismatched": [],
+        "rows": [
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Echo: Hello MCP"
+            },
+            "label": "echo",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Echo: Hello MCP"
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "The sum of 19 and 23 is 42."
+            },
+            "label": "get-sum",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "The sum of 19 and 23 is 42."
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "[Server: everything-stdio] [Transport: stdio] Tool 'get-sum' failed: Input validation error: Invalid arguments for tool get-sum: b: Invalid input: expected number, received undefined"
+            },
+            "label": "get-sum-error",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "[Server: everything-stdio] [Transport: stdio] Tool 'get-sum' failed: Input validation error: Invalid arguments for tool get-sum: b: Invalid input: expected number, received undefined"
+            },
+            "raw_error": "Input validation error: Invalid arguments for tool get-sum: b: Invalid input: expected number, received undefined",
+            "raw_error_text_in_both": true,
+            "raw_ok": false,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 1,
+              "image_kinds": [
+                "image_url"
+              ],
+              "ok": true,
+              "text": "Here's the image you requested:\nThe image above is the MCP logo."
+            },
+            "label": "get-tiny-image",
+            "python": {
+              "image_blocks": 1,
+              "image_kinds": [
+                "image_url"
+              ],
+              "ok": true,
+              "text": "Here's the image you requested:\nThe image above is the MCP logo."
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "{\"temperature\":36,\"conditions\":\"Light rain / drizzle\",\"humidity\":82}"
+            },
+            "label": "get-structured-content",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "{\"temperature\":36,\"conditions\":\"Light rain / drizzle\",\"humidity\":82}"
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Here are 2 resource links to resources available in this server:"
+            },
+            "label": "get-resource-links",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Here are 2 resource links to resources available in this server:"
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Sent one log message at each of 8 levels (debug, info, notice, warning, error, critical, alert, emergency). The ones below this request's log level were dropped."
+            },
+            "label": "trigger-log-messages",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Sent one log message at each of 8 levels (debug, info, notice, warning, error, critical, alert, emergency). The ones below this request's log level were dropped."
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Long running operation completed. Duration: 2 seconds, Steps: 2."
+            },
+            "label": "trigger-long-running-operation",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "Long running operation completed. Duration: 2 seconds, Steps: 2."
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          }
+        ]
+      },
+      "crash": {
+        "go": {
+          "call_after_kill": {
+            "ok": true,
+            "tool": "echo",
+            "value": "Echo: Hello MCP"
+          },
+          "call_before_kill": {
+            "ok": true,
+            "tool": "echo",
+            "value": "Echo: Hello MCP"
+          },
+          "connected_after_kill": true,
+          "kill": {
+            "killed": [
+              {
+                "command": "npm exec @modelcontextprotocol/server-everything@2.3.1",
+                "pid": 5800
+              },
+              {
+                "command": "node /tmp/npmcache/_npx/9dfc9565351e114d/node_modules/.bin/mcp-server-everything",
+                "pid": 7148
+              },
+              {
+                "command": "npm exec @modelcontextprotocol/server-everything@2.3.1",
+                "pid": 4428
+              },
+              {
+                "command": "node /tmp/npmcache/_npx/9dfc9565351e114d/node_modules/.bin/mcp-server-everything",
+                "pid": 5694
+              }
+            ]
+          },
+          "killed_count": 4,
+          "probe_tool": "echo"
+        },
+        "python": {
+          "call_after_kill": {
+            "ok": true,
+            "tool": "echo",
+            "value": "Echo: Hello MCP"
+          },
+          "call_before_kill": {
+            "ok": true,
+            "tool": "echo",
+            "value": "Echo: Hello MCP"
+          },
+          "connected_after_kill": true,
+          "kill": {
+            "killed": [
+              {
+                "command": "npm exec @modelcontextprotocol/server-everything@2.3.1",
+                "pid": 53173
+              },
+              {
+                "command": "node /tmp/npmcache/_npx/9dfc9565351e114d/node_modules/.bin/mcp-server-everything",
+                "pid": 53198
+              },
+              {
+                "command": "npm exec @modelcontextprotocol/server-everything@2.3.1",
+                "pid": 52968
+              },
+              {
+                "command": "node /tmp/npmcache/_npx/9dfc9565351e114d/node_modules/.bin/mcp-server-everything",
+                "pid": 53014
+              }
+            ]
+          },
+          "killed_count": 4,
+          "probe_tool": "echo"
+        },
+        "verdict": {
+          "both_recovered": true,
+          "go_connected_after": true,
+          "go_killed": 4,
+          "go_recovered": true,
+          "python_connected_after": true,
+          "python_killed": 4,
+          "python_recovered": true,
+          "sides_agree": true
+        }
+      },
+      "inventory": {
+        "go_namespace_prefix": "mcp__everything_stdio__",
+        "go_registered": 16,
+        "go_remote_names": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ],
+        "names_match_raw": {
+          "go": true,
+          "python": true
+        },
+        "python_names": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ],
+        "python_registered": 16,
+        "raw_names": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ]
+      },
+      "lifecycle": {
+        "go": {
+          "disabled_resolved": 0,
+          "disabled_status_count": 0,
+          "disabled_tool_count": 0,
+          "reenabled_resolved": 1,
+          "reenabled_status_count": 1,
+          "reenabled_tool_count": 16
+        },
+        "python": {
+          "disabled_resolved": [],
+          "disabled_tool_count": 0,
+          "reenabled_resolved": [
+            "everything-stdio"
+          ],
+          "reenabled_tool_count": 16,
+          "registry_has_reload_method": false
+        },
+        "verdict": {
+          "disabled_zero_both": true,
+          "reenabled_equal_both": true,
+          "reenabled_equals_inventory": true
+        }
+      },
+      "schema": {
+        "go_vs_raw": [],
+        "matched": [
+          "echo",
+          "get-annotated-message",
+          "get-env",
+          "get-header-params",
+          "get-resource-links",
+          "get-resource-reference",
+          "get-structured-content",
+          "get-sum",
+          "get-tiny-image",
+          "gzip-file-as-resource",
+          "toggle-simulated-logging",
+          "toggle-subscriber-updates",
+          "trigger-list-changed",
+          "trigger-log-messages",
+          "trigger-long-running-operation",
+          "trigger-resource-update"
+        ],
+        "python_vs_go": [],
+        "python_vs_raw": []
+      },
+      "transport": {
+        "go_connect_error": null,
+        "go_connected": true,
+        "go_tool_count": 16,
+        "python_connect_error": null,
+        "python_connected": true,
+        "python_tool_count": 16,
+        "raw_server_info": {
+          "icons": [
+            {
+              "mimeType": "image/svg+xml",
+              "sizes": [
+                "any"
+              ],
+              "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxRjI5MzciIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSIzIiB5PSI0IiB3aWR0aD0iMTgiIGhlaWdodD0iNyIgcng9IjIiLz48cmVjdCB4PSIzIiB5PSIxMyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjciIHJ4PSIyIi8+PHBhdGggZD0iTTcgNy41aC4wMU03IDE2LjVoLjAxIi8+PC9zdmc+",
+              "theme": "light"
+            },
+            {
+              "mimeType": "image/svg+xml",
+              "sizes": [
+                "any"
+              ],
+              "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNGOUZBRkIiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSIzIiB5PSI0IiB3aWR0aD0iMTgiIGhlaWdodD0iNyIgcng9IjIiLz48cmVjdCB4PSIzIiB5PSIxMyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjciIHJ4PSIyIi8+PHBhdGggZD0iTTcgNy41aC4wMU03IDE2LjVoLjAxIi8+PC9zdmc+",
+              "theme": "dark"
+            }
+          ],
+          "name": "mcp-servers/everything",
+          "title": "Everything Reference Server",
+          "version": "2.3.1"
+        },
+        "transport": "stdio"
+      },
+      "unknown_tool": {
+        "go": {
+          "content": "{\"error\": \"Unknown tool: mcp__everything_stdio__no_such_tool_xyz. Did you mean 'mcp__everything_stdio__echo'?\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        },
+        "python": {
+          "content": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        }
+      }
+    },
+    "time-http": {
+      "calls": {
+        "skipped": "both sides failed to connect"
+      },
+      "crash": {},
+      "inventory": {
+        "skipped": "both sides failed to connect"
+      },
+      "lifecycle": {
+        "verdict": {
+          "skipped": "both sides failed to connect"
+        }
+      },
+      "schema": {
+        "skipped": "both sides failed to connect"
+      },
+      "transport": {
+        "go_connect_error": "Failed to list tools via HTTP: HTTP 404: Not Found",
+        "go_connected": false,
+        "go_tool_count": 0,
+        "python_connect_error": "Failed to list tools via HTTP: Client error '404 Not Found' for url 'http://127.0.0.1:64789/mcp/mcp/v1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+        "python_connected": false,
+        "python_tool_count": 0,
+        "raw_server_info": {
+          "name": "mcp-time",
+          "version": "2026.11.18"
+        },
+        "raw_tool_count": 3,
+        "transport": "http"
+      }
+    },
+    "time-stdio": {
+      "calls": {
+        "mismatched": [],
+        "rows": [
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"<timestamp>\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}"
+            },
+            "label": "get_current_time",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"<timestamp>\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}"
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          },
+          {
+            "go": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "{\n  \"source\": {\n    \"timezone\": \"Asia/Shanghai\",\n    \"datetime\": \"<timestamp>\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"target\": {\n    \"timezone\": \"America/New_York\",\n    \"datetime\": \"<timestamp>\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"time_difference\": \"-13.0h\",\n  \"later_occurrence\": null\n}"
+            },
+            "label": "convert_time",
+            "python": {
+              "image_blocks": 0,
+              "image_kinds": [],
+              "ok": true,
+              "text": "{\n  \"source\": {\n    \"timezone\": \"Asia/Shanghai\",\n    \"datetime\": \"<timestamp>\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"target\": {\n    \"timezone\": \"America/New_York\",\n    \"datetime\": \"<timestamp>\",\n    \"day_of_week\": \"Saturday\",\n    \"is_dst\": false\n  },\n  \"time_difference\": \"-13.0h\",\n  \"later_occurrence\": null\n}"
+            },
+            "raw_error": null,
+            "raw_ok": true,
+            "raw_text_in_both": true,
+            "verdict": "match"
+          }
+        ]
+      },
+      "crash": {
+        "go": {
+          "call_after_kill": {
+            "ok": true,
+            "tool": "get_current_time",
+            "value": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"2026-11-21T16:13:29+08:00\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}"
+          },
+          "call_before_kill": {
+            "ok": true,
+            "tool": "get_current_time",
+            "value": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"2026-11-21T16:13:28+08:00\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}"
+          },
+          "connected_after_kill": true,
+          "kill": {
+            "killed": [
+              {
+                "command": "/Users/mac/.local/bin/uv tool uvx mcp-server-time==2026.11.18",
+                "pid": 9678
+              },
+              {
+                "command": "/Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/python /Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/mcp-server-time",
+                "pid": 9679
+              },
+              {
+                "command": "/Users/mac/.local/bin/uv tool uvx mcp-server-time==2026.11.18",
+                "pid": 9567
+              },
+              {
+                "command": "/Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/python /Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/mcp-server-time",
+                "pid": 9586
+              }
+            ]
+          },
+          "killed_count": 4,
+          "probe_tool": "get_current_time"
+        },
+        "python": {
+          "call_after_kill": {
+            "ok": true,
+            "tool": "get_current_time",
+            "value": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"2026-11-21T16:12:32+08:00\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}"
+          },
+          "call_before_kill": {
+            "ok": true,
+            "tool": "get_current_time",
+            "value": "{\n  \"timezone\": \"Asia/Shanghai\",\n  \"datetime\": \"2026-11-21T16:12:31+08:00\",\n  \"day_of_week\": \"Saturday\",\n  \"is_dst\": false\n}"
+          },
+          "connected_after_kill": true,
+          "kill": {
+            "killed": [
+              {
+                "command": "/Users/mac/.local/bin/uv tool uvx mcp-server-time==2026.11.18",
+                "pid": 53245
+              },
+              {
+                "command": "/Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/python /Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/mcp-server-time",
+                "pid": 53246
+              },
+              {
+                "command": "/Users/mac/.local/bin/uv tool uvx mcp-server-time==2026.11.18",
+                "pid": 53231
+              },
+              {
+                "command": "/Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/python /Users/mac/.cache/uv/archive-v0/h39ejrT94MK3Exm5/bin/mcp-server-time",
+                "pid": 53232
+              }
+            ]
+          },
+          "killed_count": 4,
+          "probe_tool": "get_current_time"
+        },
+        "verdict": {
+          "both_recovered": true,
+          "go_connected_after": true,
+          "go_killed": 4,
+          "go_recovered": true,
+          "python_connected_after": true,
+          "python_killed": 4,
+          "python_recovered": true,
+          "sides_agree": true
+        }
+      },
+      "inventory": {
+        "go_namespace_prefix": "mcp__time_stdio__",
+        "go_registered": 3,
+        "go_remote_names": [
+          "convert_time",
+          "get_current_time",
+          "get_time_ago"
+        ],
+        "names_match_raw": {
+          "go": true,
+          "python": true
+        },
+        "python_names": [
+          "convert_time",
+          "get_current_time",
+          "get_time_ago"
+        ],
+        "python_registered": 3,
+        "raw_names": [
+          "convert_time",
+          "get_current_time",
+          "get_time_ago"
+        ]
+      },
+      "lifecycle": {
+        "go": {
+          "disabled_resolved": 0,
+          "disabled_status_count": 0,
+          "disabled_tool_count": 0,
+          "reenabled_resolved": 1,
+          "reenabled_status_count": 1,
+          "reenabled_tool_count": 3
+        },
+        "python": {
+          "disabled_resolved": [],
+          "disabled_tool_count": 0,
+          "reenabled_resolved": [
+            "time-stdio"
+          ],
+          "reenabled_tool_count": 3,
+          "registry_has_reload_method": false
+        },
+        "verdict": {
+          "disabled_zero_both": true,
+          "reenabled_equal_both": true,
+          "reenabled_equals_inventory": true
+        }
+      },
+      "schema": {
+        "go_vs_raw": [],
+        "matched": [
+          "convert_time",
+          "get_current_time",
+          "get_time_ago"
+        ],
+        "python_vs_go": [],
+        "python_vs_raw": []
+      },
+      "transport": {
+        "go_connect_error": null,
+        "go_connected": true,
+        "go_tool_count": 3,
+        "python_connect_error": null,
+        "python_connected": true,
+        "python_tool_count": 3,
+        "raw_server_info": {
+          "name": "mcp-time",
+          "version": "2026.11.18"
+        },
+        "transport": "stdio"
+      },
+      "unknown_tool": {
+        "go": {
+          "content": "{\"error\": \"Unknown tool: mcp__time_stdio__no_such_tool_xyz. Did you mean 'mcp__time_stdio__get_time_ago'?\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        },
+        "python": {
+          "content": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+          "is_error": true,
+          "ok": false,
+          "raised": false
+        }
+      }
+    }
+  },
+  "exceptions": [
+    {
+      "dimension": "tool_name_sanitization",
+      "go": [
+        "get_annotated_message",
+        "get_env",
+        "get_header_params",
+        "get_resource_links",
+        "get_resource_reference",
+        "get_structured_content",
+        "get_sum",
+        "get_tiny_image",
+        "gzip_file_as_resource",
+        "toggle_simulated_logging",
+        "toggle_subscriber_updates",
+        "trigger_list_changed",
+        "trigger_log_messages",
+        "trigger_long_running_operation",
+        "trigger_resource_update"
+      ],
+      "python": [
+        "get-annotated-message",
+        "get-env",
+        "get-header-params",
+        "get-resource-links",
+        "get-resource-reference",
+        "get-structured-content",
+        "get-sum",
+        "get-tiny-image",
+        "gzip-file-as-resource",
+        "toggle-simulated-logging",
+        "toggle-subscriber-updates",
+        "trigger-list-changed",
+        "trigger-log-messages",
+        "trigger-long-running-operation",
+        "trigger-resource-update"
+      ],
+      "reason": "Go's NamespacedMCPToolName collapses every run of characters outside [A-Za-z0-9_] to '_' in the tool name too, so the model sees <server tool with '_'>; Python registers the server's own name. Execution still targets the server's real tool name in both implementations. Collisions are possible in Go when a server advertises names that differ only in those characters.",
+      "server": "everything-stdio"
+    },
+    {
+      "dimension": "unknown_tool_message",
+      "go": "{\"error\": \"Unknown tool: mcp__everything_stdio__no_such_tool_xyz. Did you mean 'mcp__everything_stdio__echo'?\"}",
+      "python": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+      "reason": "Go reports the namespaced tool name it looked up and a did-you-mean candidate; Python reports the remote name. The remote names differ by design (Go registers mcp__<server>__<tool>).",
+      "server": "everything-stdio"
+    },
+    {
+      "dimension": "unknown_tool_message",
+      "go": "{\"error\": \"Unknown tool: mcp__time_stdio__no_such_tool_xyz. Did you mean 'mcp__time_stdio__get_time_ago'?\"}",
+      "python": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+      "reason": "Go reports the namespaced tool name it looked up and a did-you-mean candidate; Python reports the remote name. The remote names differ by design (Go registers mcp__<server>__<tool>).",
+      "server": "time-stdio"
+    },
+    {
+      "dimension": "tool_name_sanitization",
+      "go": [
+        "get_annotated_message",
+        "get_env",
+        "get_header_params",
+        "get_resource_links",
+        "get_resource_reference",
+        "get_structured_content",
+        "get_sum",
+        "get_tiny_image",
+        "gzip_file_as_resource",
+        "toggle_simulated_logging",
+        "toggle_subscriber_updates",
+        "trigger_list_changed",
+        "trigger_log_messages",
+        "trigger_long_running_operation",
+        "trigger_resource_update"
+      ],
+      "python": [
+        "get-annotated-message",
+        "get-env",
+        "get-header-params",
+        "get-resource-links",
+        "get-resource-reference",
+        "get-structured-content",
+        "get-sum",
+        "get-tiny-image",
+        "gzip-file-as-resource",
+        "toggle-simulated-logging",
+        "toggle-subscriber-updates",
+        "trigger-list-changed",
+        "trigger-log-messages",
+        "trigger-long-running-operation",
+        "trigger-resource-update"
+      ],
+      "reason": "Go's NamespacedMCPToolName collapses every run of characters outside [A-Za-z0-9_] to '_' in the tool name too, so the model sees <server tool with '_'>; Python registers the server's own name. Execution still targets the server's real tool name in both implementations. Collisions are possible in Go when a server advertises names that differ only in those characters.",
+      "server": "everything-sse"
+    },
+    {
+      "dimension": "unknown_tool_message",
+      "go": "{\"error\": \"Unknown tool: mcp__everything_sse__no_such_tool_xyz. Did you mean 'mcp__everything_sse__echo'?\"}",
+      "python": "{\"error\": \"Unknown tool: no_such_tool_xyz\"}",
+      "reason": "Go reports the namespaced tool name it looked up and a did-you-mean candidate; Python reports the remote name. The remote names differ by design (Go registers mcp__<server>__<tool>).",
+      "server": "everything-sse"
+    }
+  ],
+  "unexpected": []
+}

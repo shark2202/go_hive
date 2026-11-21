@@ -7,6 +7,12 @@ Evidence sources: `docs/tool-contract-diff.md` §11（recheck @ c8cca067）+
 `docs/tool-consistency-audit.html`（P0「名称形状：87 分组 vs 857 扁平」）+
 本车道抓包（§5.2）.
 
+> **2026-11-21 增量（`browser-tool-surface` 车道）**：gcu 的 22 个 active
+> 浏览器工具已按 Python FastMCP 定义逐字冻结并注册进延迟/目录层
+> （`browser_setup` 已在首轮 24 内，其余 21 个新增），延迟层由 51 → **72**；
+> 首轮 `tools[]` 仍为 **24**、名称/顺序不变。逐字口径、行为对齐与证据见
+> `docs/browser-tool-surface.md`。
+
 ## 1. 问题
 
 | 侧 | 默认会话模型可见 `tools[]` | 形状 |

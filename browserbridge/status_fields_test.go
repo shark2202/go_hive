@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -64,21 +65,27 @@ func TestStatusReportsBindErrorsForOptionalListeners(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer legacyLn.Close()
+	legacyStatusLn, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer legacyStatusLn.Close()
 	controlLn, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer controlLn.Close()
 
-	// Both optional listeners are held by other processes: the bridge must
-	// still start and report exactly which port failed, like upstream's
+	// All three optional listeners are held by other processes: the bridge
+	// must still start and report exactly which port failed, like upstream's
 	// _bind_errors, instead of looking merely "disconnected".
 	b := New(Config{
-		WSAddr:      "127.0.0.1:0",
-		HTTPAddr:    "127.0.0.1:0",
-		ControlAddr: controlLn.Addr().String(),
-		LegacyAddr:  legacyLn.Addr().String(),
-		Logf:        t.Logf,
+		WSAddr:           "127.0.0.1:0",
+		HTTPAddr:         "127.0.0.1:0",
+		ControlAddr:      controlLn.Addr().String(),
+		LegacyAddr:       legacyLn.Addr().String(),
+		LegacyStatusAddr: legacyStatusLn.Addr().String(),
+		Logf:             t.Logf,
 	})
 	if err := b.Start(context.Background()); err != nil {
 		t.Fatal(err)
@@ -93,22 +100,90 @@ func TestStatusReportsBindErrorsForOptionalListeners(t *testing.T) {
 	if st.BindErrors["legacy_ws"] == "" {
 		t.Fatalf("bind_errors missing legacy_ws: %v", st.BindErrors)
 	}
+	if st.BindErrors["legacy_status"] == "" {
+		t.Fatalf("bind_errors missing legacy_status: %v", st.BindErrors)
+	}
 	if st.BindErrors["control_rpc"] == "" {
 		t.Fatalf("bind_errors missing control_rpc: %v", st.BindErrors)
 	}
-	if len(st.BindErrors) != 2 {
+	if len(st.BindErrors) != 3 {
 		t.Fatalf("bind_errors has unexpected roles: %v", st.BindErrors)
 	}
-	if st.Listening.LegacyWS || st.Listening.ControlRPC {
+	if st.Listening.LegacyWS || st.Listening.LegacyStatus || st.Listening.ControlRPC {
 		t.Fatalf("listeners reported bound while ports were held: %+v", st.Listening)
-	}
-	if st.Listening.LegacyStatus {
-		t.Fatalf("legacy_status must stay false: the Go bridge has no 9230 listener")
 	}
 
 	// Healthy bridge: no bind failures at all.
 	clean := newTestBridge(t, Config{})
 	if got := clean.Status(context.Background()).BindErrors; len(got) != 0 {
 		t.Fatalf("healthy bridge bind_errors=%v want empty", got)
+	}
+}
+
+// TestLegacyStatusListenerServesStatus pins the legacy 9229+1 pair: with the
+// legacy listener enabled the bridge also binds the status endpoint there and
+// answers the same payload as the primary 14830 API (upstream's
+// LEGACY_STATUS_PORT, bridge.py::start).
+//
+// Parity: tools/src/gcu/browser/bridge.py::start + _http_status_handler
+func TestLegacyStatusListenerServesStatus(t *testing.T) {
+	b := New(Config{
+		WSAddr:           "127.0.0.1:0",
+		HTTPAddr:         "127.0.0.1:0",
+		ControlAddr:      "127.0.0.1:0",
+		LegacyAddr:       "127.0.0.1:0",
+		LegacyStatusAddr: "127.0.0.1:0",
+		Logf:             t.Logf,
+	})
+	if err := b.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = b.Shutdown(ctx)
+	})
+	addr := b.LegacyStatusAddr()
+	if addr == "" {
+		t.Fatalf("legacy status listener did not bind (bind_errors=%v)", b.Status(context.Background()).BindErrors)
+	}
+	if !b.Status(context.Background()).Listening.LegacyStatus {
+		t.Fatalf("listening.legacy_status = false while the listener is bound")
+	}
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	for _, path := range []string{"/health", "/status", "/profiles"} {
+		resp, err := client.Get("http://" + addr + path)
+		if err != nil {
+			t.Fatalf("GET %s on the legacy status port: %v", path, err)
+		}
+		var payload map[string]any
+		decodeErr := json.NewDecoder(resp.Body).Decode(&payload)
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusOK || decodeErr != nil {
+			t.Fatalf("GET %s = HTTP %d, decode %v", path, resp.StatusCode, decodeErr)
+		}
+		if path == "/status" {
+			if payload["bridge"] != "running" {
+				t.Fatalf("/status payload on 9230 = %v", payload)
+			}
+			listening, _ := payload["listening"].(map[string]any)
+			if listening["legacy_status"] != true {
+				t.Fatalf("legacy /status listening = %v", payload["listening"])
+			}
+		}
+	}
+}
+
+// TestLegacyStatusDisabledWithLegacyWS keeps the -no-legacy contract: no
+// legacy WS listener means no 9230 listener either (option defaultValue not
+// invented from LegacyAddr when it is disabled).
+func TestLegacyStatusDisabledWithLegacyWS(t *testing.T) {
+	b := newTestBridge(t, Config{})
+	if got := b.LegacyStatusAddr(); got != "" {
+		t.Fatalf("legacy status addr = %q with the legacy pair disabled", got)
+	}
+	if b.Status(context.Background()).Listening.LegacyStatus {
+		t.Fatal("listening.legacy_status = true with the legacy pair disabled")
 	}
 }

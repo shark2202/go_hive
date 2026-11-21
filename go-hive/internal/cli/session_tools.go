@@ -333,6 +333,9 @@ var sessionIntegrationInstallers = []struct {
 	// tools, and the browser discovery tool.
 	{"spreadsheet-aliases", integrations.InstallSpreadsheetAliases},
 	{"browser-setup", integrations.InstallBrowserSetup},
+	// The 22 active browser tools (gcu FastMCP surface). They register after
+	// browser_setup so the shared "browser" group is extended, not redefined.
+	{"browser-tools", integrations.InstallBrowserTools},
 }
 
 // installIntegrationBatches publishes every ported batch into registry and

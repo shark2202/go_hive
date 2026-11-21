@@ -524,6 +524,13 @@ func SubscribeQueenReportsWithWorker(runtime *ColonyRuntime, sink func(workerID,
 			if workerID == "" {
 				return
 			}
+			// A playbook completion notice carries its own upstream-verbatim
+			// [PLAYBOOK_COMPLETE] text; wrapping it in [WORKER_REPORT] would
+			// both misrepresent the event and change the bytes the queen sees.
+			if stringValue(data["playbook_run_id"]) != "" {
+				sink(workerID, stringValue(data["summary"]))
+				return
+			}
 			remaining := runtime.BatchRemaining(stringValue(data["batch_id"]), workerID)
 			sink(workerID, FormatWorkerReport(data, remaining))
 		},

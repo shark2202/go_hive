@@ -76,6 +76,9 @@ type Worker struct {
 	// Goal is the plain-language title the dashboard shows for this worker.
 	// Metadata only: it is never part of the worker's prompt.
 	Goal string
+	// ReportSchema is the playbook receipt contract this worker was spawned
+	// with (worker(schema=...)). Empty means the colony's own report schema.
+	ReportSchema map[string]any
 
 	// StoragePath is the worker's on-disk home (<colony>/workers/<id>).
 	// OutputFile is the transcript path a report points the queen at.

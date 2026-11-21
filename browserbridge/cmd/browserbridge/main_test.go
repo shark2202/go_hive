@@ -32,12 +32,53 @@ func TestParseFlagsDefaults(t *testing.T) {
 	if o.legacy != browserbridge.DefaultLegacyAddr || o.noLegacy {
 		t.Fatalf("legacy defaults=%+v", o)
 	}
+	if o.legacyStatus != browserbridge.DefaultLegacyStatusAddr {
+		t.Fatalf("legacy status default=%q, want %q", o.legacyStatus, browserbridge.DefaultLegacyStatusAddr)
+	}
 	cfg := o.config()
 	if cfg.LegacyAddr != browserbridge.DefaultLegacyAddr {
 		t.Fatalf("config legacy=%q", cfg.LegacyAddr)
 	}
+	if cfg.LegacyStatusAddr != browserbridge.DefaultLegacyStatusAddr {
+		t.Fatalf("config legacy status=%q", cfg.LegacyStatusAddr)
+	}
+	// The WS-layer keepalive is a Config zero-value default (20s/20s in
+	// browserbridge.withDefaults); the flags must carry that default through.
+	if cfg.WSPingInterval != browserbridge.DefaultWSPingInterval || cfg.WSPingTimeout != browserbridge.DefaultWSPingTimeout {
+		t.Fatalf("WS keepalive flags = %v/%v, want %v/%v", cfg.WSPingInterval, cfg.WSPingTimeout,
+			browserbridge.DefaultWSPingInterval, browserbridge.DefaultWSPingTimeout)
+	}
 	if cfg.ArtifactDir != "" || len(cfg.SkillDirs) != 0 || len(cfg.ScriptCommand) != 0 {
 		t.Fatalf("unexpected config=%+v", cfg)
+	}
+}
+
+// TestDesktopParentCheckDefaultMatchesUpstream pins parity item 5: the parent
+// death budget is upstream's 5s × 2 confirmations (bridge_host.py
+// _PARENT_CHECK_INTERVAL_S / _PARENT_DEATH_CONFIRMATIONS), not the old 400ms
+// deliberate acceleration. -parent-check still overrides it.
+//
+// Parity: tools/src/gcu/bridge_host.py::_watch_parent
+func TestDesktopParentCheckDefaultMatchesUpstream(t *testing.T) {
+	if desktopParentCheckDefault != 5*time.Second {
+		t.Fatalf("desktopParentCheckDefault = %s, want upstream's 5s", desktopParentCheckDefault)
+	}
+	if desktopParentMisses != 2 {
+		t.Fatalf("desktopParentMisses = %d, want upstream's 2 confirmations", desktopParentMisses)
+	}
+	o, err := parseFlags([]string{"-ws", "127.0.0.1:0", "-http", "127.0.0.1:0", "-no-legacy", "-no-sweep"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o.parentCheck != desktopParentCheckDefault {
+		t.Fatalf("parseFlags default parent-check = %s, want %s", o.parentCheck, desktopParentCheckDefault)
+	}
+	short, err := parseFlags([]string{"-ws", "127.0.0.1:0", "-http", "127.0.0.1:0", "-no-legacy", "-no-sweep", "-parent-check", "20ms"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if short.parentCheck != 20*time.Millisecond {
+		t.Fatalf("-parent-check override = %s, want 20ms", short.parentCheck)
 	}
 }
 
@@ -53,6 +94,9 @@ func TestParseFlagsDisablesLegacyAndParsesLists(t *testing.T) {
 	cfg := o.config()
 	if cfg.LegacyAddr != "" {
 		t.Fatalf("legacy should be disabled, got %q", cfg.LegacyAddr)
+	}
+	if cfg.LegacyStatusAddr != "" {
+		t.Fatalf("legacy status should be disabled, got %q", cfg.LegacyStatusAddr)
 	}
 	if len(cfg.SkillDirs) != 2 || cfg.SkillDirs[1] != "/b/skills" {
 		t.Fatalf("skills=%+v", cfg.SkillDirs)

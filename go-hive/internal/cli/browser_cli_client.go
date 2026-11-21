@@ -174,13 +174,22 @@ func classifyBrowserResult(result map[string]any) int {
 
 // classifyBrowserError maps the bridge's structured error code (the HTTP
 // failure path) onto the same taxonomy.
+//
+// Upstream's CLI never sees structured codes: every op returns a result dict
+// and classify_result reads its error text. The Go bridge's refusal payload
+// carries a code, but the code is not a licence to invent exit codes —
+// `bad_request` used to map to 6 while upstream, classifying the same text,
+// lands on 1. The bad_request family therefore defers to the text taxonomy
+// here, and 6 stays reserved for the CLI's own prechecks (evaluate/script/type
+// argument validation), which run before any bridge round-trip.
 func classifyBrowserError(code, message string) int {
 	low := strings.ToLower(message)
+	byText := classifyBrowserResult(map[string]any{"ok": false, "error": message})
 	switch code {
+	case "bad_request", "unknown_command", "no_browser_profile", "no_such_profile", "unsupported_extension":
+		return byText
 	case "not_connected":
 		return browserExitNotConnected
-	case "bad_request", "unknown_command", "no_browser_profile", "no_such_profile", "unsupported_extension":
-		return browserExitBadArgs
 	case "not_found":
 		return browserExitNotFound
 	case "ambiguous_profile":

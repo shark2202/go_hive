@@ -366,6 +366,39 @@ func TestBrowseListsAccountsButNeverAValue(t *testing.T) {
 	}
 }
 
+// Parity: framework/credentials/catalog.py::browse (connectable list cap + truncation)
+func TestBrowseConnectableUsesCatalogSpecs(t *testing.T) {
+	useCredAdapter(t, &fakeCredAdapter{store: nil})
+
+	code, stdout, stderr := runCred(t, "browse", "--json")
+	if code != 0 {
+		t.Fatalf("Run(browse --json) = %d, want 0 (stderr %q)", code, stderr)
+	}
+	body := decodeCredJSON(t, stdout)
+	connectable, ok := body["connectable"].([]any)
+	if !ok {
+		t.Fatalf("connectable = %#v, want an array", body["connectable"])
+	}
+	// Upstream caps the list at 40 and reports the rest via
+	// connectable_truncated; the row set is the merged CREDENTIAL_SPECS dict.
+	if len(connectable) != 40 {
+		t.Fatalf("connectable length = %d, want 40", len(connectable))
+	}
+	truncated, _ := body["connectable_truncated"].(float64)
+	if truncated <= 0 {
+		t.Fatalf("connectable_truncated = %v, want > 0", body["connectable_truncated"])
+	}
+	previous := ""
+	for _, item := range connectable {
+		entry, _ := item.(map[string]any)
+		id, _ := entry["credential_id"].(string)
+		if id == "" || previous > id {
+			t.Fatalf("connectable ids must be sorted, got %q after %q", id, previous)
+		}
+		previous = id
+	}
+}
+
 // Parity: tests/test_hive_cred_cli.py::test_inspect_shows_key_names_not_values
 func TestInspectShowsKeyNamesNotValues(t *testing.T) {
 	useCredAdapter(t, accountsFixture(t))

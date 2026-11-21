@@ -1,0 +1,31 @@
+== build ==
+browserbridge: 0.3.0-l3a
+hive-browser built
+== probe ==
+workdir: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/browser-transport-e2e.ou8swf6n
+PASS: WS keepalive closes a silent peer with 1011 (got 1011)
+PASS: WS keepalive close reason (got 'keepalive ping timeout')
+PASS: bridge sent WS-layer pings (answered 6)
+PASS: a ponging peer stays connected and answers an app-level ping
+PASS: ready line reports the legacy status listener (127.0.0.1:65087)
+PASS: legacy status endpoint answers /status
+PASS: listening.legacy_status is true on the legacy endpoint
+PASS: listening.legacy_ws is true on the legacy endpoint
+PASS: legacy status endpoint answers /profiles
+PASS: legacy 9229 WS accepts a hello (labels=['legacy-e2e'])
+PASS: primary/legacy same address: bridge still starts
+PASS: no self-collision bind errors ({})
+PASS: legacy WS skipped when the primary owns the port
+PASS: cold CLI status reaches the spawned bridge and reports not-connected (exit 2)
+PASS: the spawned bridge answered the status command (stderr='')
+PASS: ensure waited inside upstream's 8s budget (0.73s)
+PASS: CLI status exits 0 once the extension is connected (got 0: )
+PASS: connected status result ({'connected': True, 'connected_profiles': [{'is_default': True, 'label': 'cli-ensure', 'protocol_version': 6, 'starred': False, 'version': '0.0.0-e2e'}], 'ok': True, 'profile': 'default', 'running': False, 'tabs': 0})
+PASS: spawned bridge logged its pid (99072)
+PASS: local precheck still exits 6 (got 6)
+PASS: bridge bad_request text ('File not found') exits 4 (got 4: )
+PASS: bridge refuses an unknown command as bad_request (HTTP 400, unknown_command)
+PASS: bridge exits 0 after the desktop parent dies (got 0)
+PASS: parent-death window is upstream's 5–10s (measured 10.06s)
+
+RESULT: all transport/lifecycle probes passed

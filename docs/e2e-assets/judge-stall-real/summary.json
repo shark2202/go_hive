@@ -1,0 +1,806 @@
+{
+  "generated": "2026-11-21 16:09:42 CST",
+  "judge_url": "http://127.0.0.1:18099",
+  "judge_health": {
+    "path": "/v1/health",
+    "body": {
+      "status": "ok",
+      "model": "0.8B-Instant-MLX-4bit",
+      "kind": "instant",
+      "images": true,
+      "prompt_attention": "bidirectional",
+      "engine": {
+        "name": "mlx",
+        "prompt_attention": "bidirectional",
+        "images": true,
+        "quantization": {
+          "group_size": 64,
+          "bits": 4,
+          "mode": "affine"
+        },
+        "mlx": "0.32.4",
+        "mlx_vlm": "0.8.0",
+        "prompt_attention_check": {
+          "first_position_change": 0.45654296875,
+          "full_attention_layers": 6,
+          "layers": 24
+        }
+      },
+      "defaults": {
+        "think_mode": "never",
+        "gate": 0.6,
+        "think_budget": 4096,
+        "mix": 0.75,
+        "thought_generation": null
+      },
+      "max_think_budget": 4096,
+      "context_length": 65536
+    }
+  },
+  "cases": [
+    {
+      "side": "py",
+      "case": "stall-0.5",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160631_5ed9c2c5",
+      "judge_requests": 1,
+      "p": 0.9364579444806242,
+      "reminder_in_transcript": true,
+      "reminder_reached_model": true,
+      "reminded": true,
+      "assistant_parts": 3,
+      "tool_parts": 0,
+      "queen_calls": 4,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "tall-e2e-model'}, accumulator={}\n2026-11-21 16:06:32 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:32 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: blocking for user input (auto=True)...\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [access] GET /api/config/features -> 200 (1ms)\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m SSE connected: session='session_20261121_160631_5ed9c2c5', sub_id='sub_10', types=49\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m SSE replayed 3 buffered events for session='session_20261121_160631_5ed9c2c5' (snapshot seq=9, suppressed 0 resolved questions)\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m SSE first event: session='session_20261121_160631_5ed9c2c5', type='session_snapshot'\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [access] POST /api/sessions/session_20261121_160631_5ed9c2c5/chat -> 200 (5ms)\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: unblocked, got_input=True\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: 6i should_judge=True\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: judge verdict=RETRY feedback=''\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=True, images=0): 帮我把今天的待办事项整理一下，整理完告诉我结果。\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: running LLM turn (msgs=3)\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=4 max_tokens=8192 tools=24 stream\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (8ms): text='好的，我这就去整理，整理完马上告诉你。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: LLM done (9ms) — text=19 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=0\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: blocking for user input (auto=True)...\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m stall check: p=0.94 >= 0.50, reminding the queen to do the work she talked about\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: unblocked, got_input=True\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: 6i should_judge=True\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: judge verdict=RETRY feedback=''\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=False, images=0): <system-reminder>\nYour last reply talked about work to do now (announced or promised it, or agreed to a change the user asked for), but you ended the turn without calling any tool to do it, so nothing\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=2: running LLM turn (msgs=5)\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=6 max_tokens=8192 tools=24 stream\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (7ms): text='整理好了。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=2: LLM done (8ms) — text=5 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=2: blocking for user input (auto=True)...\n"
+    },
+    {
+      "side": "py",
+      "case": "stall-0.7",
+      "threshold": 0.7,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160638_802ef2f5",
+      "judge_requests": 1,
+      "p": 0.9364579444806242,
+      "reminder_in_transcript": true,
+      "reminder_reached_model": true,
+      "reminded": true,
+      "assistant_parts": 3,
+      "tool_parts": 0,
+      "queen_calls": 4,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "tall-e2e-model'}, accumulator={}\n2026-11-21 16:06:38 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:38 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: blocking for user input (auto=True)...\n2026-11-21 16:06:39 \u001b[32m[INFO    ]\u001b[0m [access] GET /api/config/features -> 200 (1ms)\n2026-11-21 16:06:39 \u001b[32m[INFO    ]\u001b[0m SSE connected: session='session_20261121_160638_802ef2f5', sub_id='sub_10', types=49\n2026-11-21 16:06:39 \u001b[32m[INFO    ]\u001b[0m SSE replayed 3 buffered events for session='session_20261121_160638_802ef2f5' (snapshot seq=9, suppressed 0 resolved questions)\n2026-11-21 16:06:39 \u001b[32m[INFO    ]\u001b[0m SSE first event: session='session_20261121_160638_802ef2f5', type='session_snapshot'\n2026-11-21 16:06:39 \u001b[32m[INFO    ]\u001b[0m [access] POST /api/sessions/session_20261121_160638_802ef2f5/chat -> 200 (4ms)\n2026-11-21 16:06:39 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: unblocked, got_input=True\n2026-11-21 16:06:39 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: 6i should_judge=True\n2026-11-21 16:06:39 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: judge verdict=RETRY feedback=''\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=True, images=0): 帮我把今天的待办事项整理一下，整理完告诉我结果。\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: running LLM turn (msgs=3)\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=4 max_tokens=8192 tools=24 stream\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (8ms): text='好的，我这就去整理，整理完马上告诉你。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: LLM done (9ms) — text=19 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=0\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: blocking for user input (auto=True)...\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m stall check: p=0.94 >= 0.70, reminding the queen to do the work she talked about\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: unblocked, got_input=True\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: 6i should_judge=True\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: judge verdict=RETRY feedback=''\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=False, images=0): <system-reminder>\nYour last reply talked about work to do now (announced or promised it, or agreed to a change the user asked for), but you ended the turn without calling any tool to do it, so nothing\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] iter=2: running LLM turn (msgs=5)\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=6 max_tokens=8192 tools=24 stream\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (7ms): text='整理好了。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] iter=2: LLM done (8ms) — text=5 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:40 \u001b[32m[INFO    ]\u001b[0m [queen] iter=2: blocking for user input (auto=True)...\n"
+    },
+    {
+      "side": "py",
+      "case": "borderline-0.5",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160646_20d5fff0",
+      "judge_requests": 1,
+      "p": 0.6723943374151702,
+      "reminder_in_transcript": true,
+      "reminder_reached_model": true,
+      "reminded": true,
+      "assistant_parts": 3,
+      "tool_parts": 0,
+      "queen_calls": 4,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:06:47 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:47 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: blocking for user input (auto=True)...\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [access] GET /api/config/features -> 200 (0ms)\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m SSE connected: session='session_20261121_160646_20d5fff0', sub_id='sub_10', types=49\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m SSE replayed 3 buffered events for session='session_20261121_160646_20d5fff0' (snapshot seq=9, suppressed 0 resolved questions)\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m SSE first event: session='session_20261121_160646_20d5fff0', type='session_snapshot'\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [access] POST /api/sessions/session_20261121_160646_20d5fff0/chat -> 200 (1ms)\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: unblocked, got_input=True\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: 6i should_judge=True\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: judge verdict=RETRY feedback=''\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=True, images=0): 帮我把今天的待办事项整理一下，整理完告诉我结果。\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: running LLM turn (msgs=3)\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=4 max_tokens=8192 tools=24 stream\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (7ms): text='收到，我先看看。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: LLM done (8ms) — text=8 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=0\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: blocking for user input (auto=True)...\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m stall check: p=0.67 >= 0.50, reminding the queen to do the work she talked about\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: unblocked, got_input=True\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: 6i should_judge=True\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: judge verdict=RETRY feedback=''\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=False, images=0): <system-reminder>\nYour last reply talked about work to do now (announced or promised it, or agreed to a change the user asked for), but you ended the turn without calling any tool to do it, so nothing\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=2: running LLM turn (msgs=5)\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=6 max_tokens=8192 tools=24 stream\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (6ms): text='整理好了。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=2: LLM done (7ms) — text=5 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:48 \u001b[32m[INFO    ]\u001b[0m [queen] iter=2: blocking for user input (auto=True)...\n"
+    },
+    {
+      "side": "py",
+      "case": "borderline-0.7",
+      "threshold": 0.7,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160655_452d2df8",
+      "judge_requests": 1,
+      "p": 0.6723943374151702,
+      "reminder_in_transcript": false,
+      "reminder_reached_model": false,
+      "reminded": false,
+      "assistant_parts": 2,
+      "tool_parts": 0,
+      "queen_calls": 3,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "ty_open', 'terminal_pty_run', 'terminal_pty_close', 'terminal_rg', 'terminal_glob', 'terminal_output_get', 'chart_render', 'search_messages', 'search_tools', 'stop_worker', 'run_worker', 'write_skill', 'update_worker_profile', 'list_browser_profiles', 'get_worker_status', 'inject_message', 'list_worker_questions', 'reply_to_worker', 'set_trigger', 'remove_trigger', 'list_triggers', 'run_playbook', 'get_playbook_status', 'stop_playbook', 'list_playbook_runs', 'task_create', 'task_update', 'task_list', 'task_get', 'tracker_sql', 'tracker_register_writable', 'tracker_upsert', 'tracker_query', 'browser_setup', 'collect_result', 'ask_user', 'credentials', 'sentinel_setup'] | direct_user_io=True | judge=None | hidden_image_tools=[]\n2026-11-21 16:06:55 \u001b[32m[INFO    ]\u001b[0m [queen] Dynamic prompt updated (split)\n2026-11-21 16:06:55 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: running LLM turn (msgs=1)\n2026-11-21 16:06:55 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=24 stream\n2026-11-21 16:06:55 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:06:55 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (126ms): text='（后台）收到。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:06:55 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: LLM done (129ms) — text=7 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:06:55 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:55 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: blocking for user input (auto=True)...\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m [access] GET /api/config/features -> 200 (1ms)\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m SSE connected: session='session_20261121_160655_452d2df8', sub_id='sub_10', types=49\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m SSE replayed 3 buffered events for session='session_20261121_160655_452d2df8' (snapshot seq=9, suppressed 0 resolved questions)\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m SSE first event: session='session_20261121_160655_452d2df8', type='session_snapshot'\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m [access] POST /api/sessions/session_20261121_160655_452d2df8/chat -> 200 (1ms)\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: unblocked, got_input=True\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: 6i should_judge=True\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: judge verdict=RETRY feedback=''\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=True, images=0): 帮我把今天的待办事项整理一下，整理完告诉我结果。\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: running LLM turn (msgs=3)\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=4 max_tokens=8192 tools=24 stream\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:06:56 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (9ms): text='收到，我先看看。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:06:57 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: LLM done (11ms) — text=8 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:06:57 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:06:57 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=0\n2026-11-21 16:06:57 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: blocking for user input (auto=True)...\n2026-11-21 16:07:00 \u001b[32m[INFO    ]\u001b[0m [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)\n"
+    },
+    {
+      "side": "py",
+      "case": "tool-0.5",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160704_18a16922",
+      "judge_requests": 1,
+      "p": 0.020912385518779168,
+      "reminder_in_transcript": false,
+      "reminder_reached_model": false,
+      "reminded": false,
+      "assistant_parts": 3,
+      "tool_parts": 1,
+      "queen_calls": 4,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": " 'collect_result', 'ask_user', 'credentials', 'sentinel_setup'] | direct_user_io=True | judge=None | hidden_image_tools=[]\n2026-11-21 16:07:05 \u001b[32m[INFO    ]\u001b[0m [queen] Dynamic prompt updated (split)\n2026-11-21 16:07:05 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: running LLM turn (msgs=1)\n2026-11-21 16:07:05 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=24 stream\n2026-11-21 16:07:05 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:07:05 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (123ms): text='（后台）收到。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:07:05 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: LLM done (124ms) — text=7 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:07:05 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:07:05 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: blocking for user input (auto=True)...\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [access] GET /api/config/features -> 200 (1ms)\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m SSE connected: session='session_20261121_160704_18a16922', sub_id='sub_10', types=49\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m SSE replayed 3 buffered events for session='session_20261121_160704_18a16922' (snapshot seq=9, suppressed 0 resolved questions)\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m SSE first event: session='session_20261121_160704_18a16922', type='session_snapshot'\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [access] POST /api/sessions/session_20261121_160704_18a16922/chat -> 200 (3ms)\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: unblocked, got_input=True\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: 6i should_judge=True\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: judge verdict=RETRY feedback=''\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=True, images=0): 帮我把今天的待办事项整理一下，整理完告诉我结果。\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: running LLM turn (msgs=3)\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=4 max_tokens=8192 tools=24 stream\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (8ms): text='(empty)' tool_calls=['get_current_time'] stop=tool_calls model=openai/stall-e2e-model\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [queen] tool_call: get_current_time({})\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m Tool result saved to file: get_current_time (166 chars → get_current_time_1.txt, no trailer)\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=6 max_tokens=8192 tools=24 stream\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (5ms): text='现在是下午 4 点 05 分。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: LLM done (18ms) — text=15 chars, real_tools=0, outputs_set=[], tokens={'input': 2, 'output': 2, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=0\n2026-11-21 16:07:06 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: blocking for user input (auto=True)...\n2026-11-21 16:07:10 \u001b[32m[INFO    ]\u001b[0m [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)\n"
+    },
+    {
+      "side": "py",
+      "case": "switch-off",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160714_d80905e4",
+      "judge_requests": 0,
+      "p": null,
+      "reminder_in_transcript": false,
+      "reminder_reached_model": false,
+      "reminded": false,
+      "assistant_parts": 2,
+      "tool_parts": 0,
+      "queen_calls": 3,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": false
+      },
+      "server_log_tail": "terminal_pty_run', 'terminal_pty_close', 'terminal_rg', 'terminal_glob', 'terminal_output_get', 'chart_render', 'search_messages', 'search_tools', 'stop_worker', 'run_worker', 'write_skill', 'update_worker_profile', 'list_browser_profiles', 'get_worker_status', 'inject_message', 'list_worker_questions', 'reply_to_worker', 'set_trigger', 'remove_trigger', 'list_triggers', 'run_playbook', 'get_playbook_status', 'stop_playbook', 'list_playbook_runs', 'task_create', 'task_update', 'task_list', 'task_get', 'tracker_sql', 'tracker_register_writable', 'tracker_upsert', 'tracker_query', 'browser_setup', 'collect_result', 'ask_user', 'credentials', 'sentinel_setup'] | direct_user_io=True | judge=None | hidden_image_tools=[]\n2026-11-21 16:07:15 \u001b[32m[INFO    ]\u001b[0m [queen] Dynamic prompt updated (split)\n2026-11-21 16:07:15 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: running LLM turn (msgs=1)\n2026-11-21 16:07:15 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=24 stream\n2026-11-21 16:07:15 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:07:15 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (134ms): text='（后台）收到。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:07:15 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: LLM done (136ms) — text=7 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:07:15 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:07:15 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: blocking for user input (auto=True)...\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [access] GET /api/config/features -> 200 (0ms)\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m SSE connected: session='session_20261121_160714_d80905e4', sub_id='sub_10', types=49\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m SSE replayed 3 buffered events for session='session_20261121_160714_d80905e4' (snapshot seq=9, suppressed 0 resolved questions)\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m SSE first event: session='session_20261121_160714_d80905e4', type='session_snapshot'\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [access] POST /api/sessions/session_20261121_160714_d80905e4/chat -> 200 (1ms)\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: unblocked, got_input=True\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: 6i should_judge=True\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: judge verdict=RETRY feedback=''\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=True, images=0): 帮我把今天的待办事项整理一下，整理完告诉我结果。\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: running LLM turn (msgs=3)\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=4 max_tokens=8192 tools=24 stream\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (6ms): text='好的，我这就去整理，整理完马上告诉你。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: LLM done (7ms) — text=19 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=0\n2026-11-21 16:07:16 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: blocking for user input (auto=True)...\n2026-11-21 16:07:20 \u001b[32m[INFO    ]\u001b[0m [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)\n"
+    },
+    {
+      "side": "py",
+      "case": "judge-dead",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160723_01f55efe",
+      "judge_requests": 0,
+      "p": null,
+      "reminder_in_transcript": false,
+      "reminder_reached_model": false,
+      "reminded": false,
+      "assistant_parts": 2,
+      "tool_parts": 0,
+      "queen_calls": 3,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "der', 'search_messages', 'search_tools', 'stop_worker', 'run_worker', 'write_skill', 'update_worker_profile', 'list_browser_profiles', 'get_worker_status', 'inject_message', 'list_worker_questions', 'reply_to_worker', 'set_trigger', 'remove_trigger', 'list_triggers', 'run_playbook', 'get_playbook_status', 'stop_playbook', 'list_playbook_runs', 'task_create', 'task_update', 'task_list', 'task_get', 'tracker_sql', 'tracker_register_writable', 'tracker_upsert', 'tracker_query', 'browser_setup', 'collect_result', 'ask_user', 'credentials', 'sentinel_setup'] | direct_user_io=True | judge=None | hidden_image_tools=[]\n2026-11-21 16:07:23 \u001b[32m[INFO    ]\u001b[0m [queen] Dynamic prompt updated (split)\n2026-11-21 16:07:23 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: running LLM turn (msgs=1)\n2026-11-21 16:07:23 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=24 stream\n2026-11-21 16:07:23 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:07:23 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (124ms): text='（后台）收到。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:07:23 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: LLM done (125ms) — text=7 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:07:23 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:07:23 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: blocking for user input (auto=True)...\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [access] GET /api/config/features -> 200 (0ms)\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m SSE connected: session='session_20261121_160723_01f55efe', sub_id='sub_10', types=49\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m SSE replayed 3 buffered events for session='session_20261121_160723_01f55efe' (snapshot seq=9, suppressed 0 resolved questions)\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m SSE first event: session='session_20261121_160723_01f55efe', type='session_snapshot'\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [access] POST /api/sessions/session_20261121_160723_01f55efe/chat -> 200 (2ms)\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: unblocked, got_input=True\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: 6i should_judge=True\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: judge verdict=RETRY feedback=''\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=True, images=0): 帮我把今天的待办事项整理一下，整理完告诉我结果。\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: running LLM turn (msgs=3)\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=4 max_tokens=8192 tools=24 stream\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (7ms): text='好的，我这就去整理，整理完马上告诉你。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: LLM done (7ms) — text=19 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=0\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: blocking for user input (auto=True)...\n2026-11-21 16:07:24 \u001b[32m[INFO    ]\u001b[0m judge: unavailable (ConnectError: All connection attempts failed)\n2026-11-21 16:07:28 \u001b[32m[INFO    ]\u001b[0m [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)\n"
+    },
+    {
+      "side": "py",
+      "case": "no-user",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160732_ed70fe37",
+      "judge_requests": 0,
+      "p": null,
+      "reminder_in_transcript": false,
+      "reminder_reached_model": false,
+      "reminded": false,
+      "assistant_parts": 2,
+      "tool_parts": 0,
+      "queen_calls": 2,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "'terminal_exec', 'terminal_job_start', 'terminal_job_logs', 'terminal_job_manage', 'terminal_pty_open', 'terminal_pty_run', 'terminal_pty_close', 'terminal_rg', 'terminal_glob', 'terminal_output_get', 'chart_render', 'search_messages', 'search_tools', 'stop_worker', 'run_worker', 'write_skill', 'update_worker_profile', 'list_browser_profiles', 'get_worker_status', 'inject_message', 'list_worker_questions', 'reply_to_worker', 'set_trigger', 'remove_trigger', 'list_triggers', 'run_playbook', 'get_playbook_status', 'stop_playbook', 'list_playbook_runs', 'task_create', 'task_update', 'task_list', 'task_get', 'tracker_sql', 'tracker_register_writable', 'tracker_upsert', 'tracker_query', 'browser_setup', 'collect_result', 'ask_user', 'credentials', 'sentinel_setup'] | direct_user_io=True | judge=None | hidden_image_tools=[]\n2026-11-21 16:07:33 \u001b[32m[INFO    ]\u001b[0m [queen] Dynamic prompt updated (split)\n2026-11-21 16:07:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: running LLM turn (msgs=1)\n2026-11-21 16:07:33 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=2 max_tokens=8192 tools=24 stream\n2026-11-21 16:07:33 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:07:33 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (126ms): text='（后台）收到。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:07:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: LLM done (128ms) — text=7 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:07:33 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:07:33 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: blocking for user input (auto=True)...\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [access] GET /api/config/features -> 200 (0ms)\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m SSE connected: session='session_20261121_160732_ed70fe37', sub_id='sub_10', types=49\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m SSE replayed 3 buffered events for session='session_20261121_160732_ed70fe37' (snapshot seq=9, suppressed 0 resolved questions)\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m SSE first event: session='session_20261121_160732_ed70fe37', type='session_snapshot'\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [access] POST /api/sessions/session_20261121_160732_ed70fe37/queen-context -> 200 (0ms)\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: unblocked, got_input=True\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: 6i should_judge=True\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [queen] iter=0: judge verdict=RETRY feedback=''\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [drain] injected message (client_input=False, images=0): [external] 系统时钟同步完成，请回复一句确认。\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: running LLM turn (msgs=3)\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [llm] → model=openai/stall-e2e-model msgs=4 max_tokens=8192 tools=24 stream\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [credits] agent_loop FinishEvent: credits=None model=openai/stall-e2e-model\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [queen] LLM response (59ms): text='（后台）收到。' tool_calls=[] stop=stop model=openai/stall-e2e-model\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: LLM done (60ms) — text=7 chars, real_tools=0, outputs_set=[], tokens={'input': 1, 'output': 1, 'cached': 0, 'cache_creation': 0, 'cost': 0.0, 'credits': None, 'stop_reason': 'stop', 'model': 'openai/stall-e2e-model'}, accumulator={}\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [credits] emit_llm_turn_complete: credits=None model=openai/stall-e2e-model data_has_credits_key=False\n2026-11-21 16:07:34 \u001b[32m[INFO    ]\u001b[0m [queen] iter=1: blocking for user input (auto=True)...\n2026-11-21 16:07:38 \u001b[32m[INFO    ]\u001b[0m [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)\n"
+    },
+    {
+      "side": "go",
+      "case": "stall-0.5",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160740_fa19d06e",
+      "judge_requests": 1,
+      "p": 0.9364579444806242,
+      "reminder_in_transcript": true,
+      "reminder_reached_model": true,
+      "reminded": true,
+      "assistant_parts": 3,
+      "tool_parts": 0,
+      "queen_calls": 4,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "2026/11/21 16:07:39 [sentinel] manager starting (0 open escalations)\nBrowser bridge: reusing the instance on 127.0.0.1:14830\n2026/11/21 16:07:39 turn context \"probe\" is installed but off: set turn_context.probe.enabled in configuration.json\n\nHive API server running on http://127.0.0.1:62761\nHealth:     http://127.0.0.1:62761/api/health\nSessions:   0 colony, 0 queen-only\n\nPress Ctrl+C to stop\nBrowser bridge: control connected on 127.0.0.1:14831\n2026/11/21 16:07:39 runtime-resources verdict init->ok | avail=NoneMB renderers=8 chrome_rss=358MB hive_rss=28MB workers=<nil> | \n2026/11/21 16:07:40 [access] GET /api/health -> 200 (0ms)\n2026/11/21 16:07:40 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:07:40 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:07:40 [sentinel] applies_to: is_queen_stream=true colony_id=\"\" opted_in=false (stream_id=\"session_20261121_160740_fa19d06e\") — sentinel SKIPS this stream\n2026/11/21 16:07:40 [access] POST /api/sessions -> 201 (37ms)\n2026/11/21 16:07:40 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.\n2026/11/21 16:07:40 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.\n2026/11/21 16:07:40 skill_startup name=hive.writing-hive-skills scope=framework status=loaded\n2026/11/21 16:07:40 skill_startup name=hive.browser-automation scope=framework status=loaded\n2026/11/21 16:07:40 skill_startup name=hive.pdf scope=framework status=loaded\n2026/11/21 16:07:40 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf\n2026/11/21 16:07:40 Skills: 3 default (3 active, 0 disabled, 0 error)\n2026/11/21 16:07:40 Skill system ready: catalog=28862 chars\n2026/11/21 16:07:41 [access] GET /api/config/features -> 200 (1ms)\n2026/11/21 16:07:41 [access] POST /api/sessions/session_20261121_160740_fa19d06e/chat -> 200 (7ms)\n2026/11/21 16:07:41 stall check: p=0.94 >= 0.50, reminding the queen to do the work she talked about\n"
+    },
+    {
+      "side": "go",
+      "case": "stall-0.7",
+      "threshold": 0.7,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160744_b9f6e262",
+      "judge_requests": 1,
+      "p": 0.9364579444806242,
+      "reminder_in_transcript": true,
+      "reminder_reached_model": true,
+      "reminded": true,
+      "assistant_parts": 3,
+      "tool_parts": 0,
+      "queen_calls": 4,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "2026/11/21 16:07:43 [sentinel] manager starting (0 open escalations)\nBrowser bridge: reusing the instance on 127.0.0.1:14830\n2026/11/21 16:07:43 turn context \"probe\" is installed but off: set turn_context.probe.enabled in configuration.json\n\nHive API server running on http://127.0.0.1:62799\nHealth:     http://127.0.0.1:62799/api/health\nSessions:   0 colony, 0 queen-only\n\nPress Ctrl+C to stop\nBrowser bridge: control connected on 127.0.0.1:14831\n2026/11/21 16:07:43 runtime-resources verdict init->ok | avail=NoneMB renderers=8 chrome_rss=358MB hive_rss=29MB workers=<nil> | \n2026/11/21 16:07:44 [access] GET /api/health -> 200 (0ms)\n2026/11/21 16:07:44 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:07:44 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:07:44 [sentinel] applies_to: is_queen_stream=true colony_id=\"\" opted_in=false (stream_id=\"session_20261121_160744_b9f6e262\") — sentinel SKIPS this stream\n2026/11/21 16:07:44 [access] POST /api/sessions -> 201 (43ms)\n2026/11/21 16:07:44 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.\n2026/11/21 16:07:44 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.\n2026/11/21 16:07:44 skill_startup name=hive.writing-hive-skills scope=framework status=loaded\n2026/11/21 16:07:44 skill_startup name=hive.browser-automation scope=framework status=loaded\n2026/11/21 16:07:44 skill_startup name=hive.pdf scope=framework status=loaded\n2026/11/21 16:07:44 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf\n2026/11/21 16:07:44 Skills: 3 default (3 active, 0 disabled, 0 error)\n2026/11/21 16:07:44 Skill system ready: catalog=28874 chars\n2026/11/21 16:07:45 [access] GET /api/config/features -> 200 (0ms)\n2026/11/21 16:07:45 [access] POST /api/sessions/session_20261121_160744_b9f6e262/chat -> 200 (12ms)\n2026/11/21 16:07:45 stall check: p=0.94 >= 0.70, reminding the queen to do the work she talked about\n"
+    },
+    {
+      "side": "go",
+      "case": "borderline-0.5",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160748_abea909f",
+      "judge_requests": 1,
+      "p": 0.6723943374151702,
+      "reminder_in_transcript": true,
+      "reminder_reached_model": true,
+      "reminded": true,
+      "assistant_parts": 3,
+      "tool_parts": 0,
+      "queen_calls": 4,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "2026/11/21 16:07:47 [sentinel] manager starting (0 open escalations)\nBrowser bridge: reusing the instance on 127.0.0.1:14830\n2026/11/21 16:07:47 turn context \"probe\" is installed but off: set turn_context.probe.enabled in configuration.json\nBrowser bridge: control connected on 127.0.0.1:14831\n\nHive API server running on http://127.0.0.1:62824\nHealth:     http://127.0.0.1:62824/api/health\nSessions:   0 colony, 0 queen-only\n\nPress Ctrl+C to stop\n2026/11/21 16:07:47 runtime-resources verdict init->ok | avail=NoneMB renderers=8 chrome_rss=358MB hive_rss=28MB workers=<nil> | \n2026/11/21 16:07:48 [access] GET /api/health -> 200 (0ms)\n2026/11/21 16:07:48 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:07:48 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:07:48 [sentinel] applies_to: is_queen_stream=true colony_id=\"\" opted_in=false (stream_id=\"session_20261121_160748_abea909f\") — sentinel SKIPS this stream\n2026/11/21 16:07:48 [access] POST /api/sessions -> 201 (54ms)\n2026/11/21 16:07:48 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.\n2026/11/21 16:07:48 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.\n2026/11/21 16:07:48 skill_startup name=hive.writing-hive-skills scope=framework status=loaded\n2026/11/21 16:07:48 skill_startup name=hive.browser-automation scope=framework status=loaded\n2026/11/21 16:07:48 skill_startup name=hive.pdf scope=framework status=loaded\n2026/11/21 16:07:48 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf\n2026/11/21 16:07:48 Skills: 3 default (3 active, 0 disabled, 0 error)\n2026/11/21 16:07:48 Skill system ready: catalog=28862 chars\n2026/11/21 16:07:49 [access] GET /api/config/features -> 200 (1ms)\n2026/11/21 16:07:49 [access] POST /api/sessions/session_20261121_160748_abea909f/chat -> 200 (7ms)\n2026/11/21 16:07:49 stall check: p=0.67 >= 0.50, reminding the queen to do the work she talked about\n"
+    },
+    {
+      "side": "go",
+      "case": "borderline-0.7",
+      "threshold": 0.7,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160752_2f558171",
+      "judge_requests": 1,
+      "p": 0.6723943374151702,
+      "reminder_in_transcript": false,
+      "reminder_reached_model": false,
+      "reminded": false,
+      "assistant_parts": 2,
+      "tool_parts": 0,
+      "queen_calls": 3,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "2026/11/21 16:07:51 [sentinel] manager starting (0 open escalations)\nBrowser bridge: reusing the instance on 127.0.0.1:14830\n2026/11/21 16:07:51 turn context \"probe\" is installed but off: set turn_context.probe.enabled in configuration.json\n\nHive API server running on http://127.0.0.1:62861\nHealth:     http://127.0.0.1:62861/api/health\nSessions:   0 colony, 0 queen-only\n\nPress Ctrl+C to stop\nBrowser bridge: control connected on 127.0.0.1:14831\n2026/11/21 16:07:51 runtime-resources verdict init->ok | avail=NoneMB renderers=8 chrome_rss=360MB hive_rss=29MB workers=<nil> | \n2026/11/21 16:07:52 [access] GET /api/health -> 200 (0ms)\n2026/11/21 16:07:52 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:07:52 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:07:52 [sentinel] applies_to: is_queen_stream=true colony_id=\"\" opted_in=false (stream_id=\"session_20261121_160752_2f558171\") — sentinel SKIPS this stream\n2026/11/21 16:07:52 [access] POST /api/sessions -> 201 (39ms)\n2026/11/21 16:07:52 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.\n2026/11/21 16:07:52 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.\n2026/11/21 16:07:52 skill_startup name=hive.writing-hive-skills scope=framework status=loaded\n2026/11/21 16:07:52 skill_startup name=hive.browser-automation scope=framework status=loaded\n2026/11/21 16:07:52 skill_startup name=hive.pdf scope=framework status=loaded\n2026/11/21 16:07:52 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf\n2026/11/21 16:07:52 Skills: 3 default (3 active, 0 disabled, 0 error)\n2026/11/21 16:07:52 Skill system ready: catalog=28862 chars\n2026/11/21 16:07:53 [access] GET /api/config/features -> 200 (1ms)\n2026/11/21 16:07:53 [access] POST /api/sessions/session_20261121_160752_2f558171/chat -> 200 (9ms)\n2026/11/21 16:07:53 stall check: p=0.67 < 0.70, turn is fine\n2026/11/21 16:07:57 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)\n"
+    },
+    {
+      "side": "go",
+      "case": "tool-0.5",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160758_16b17a3b",
+      "judge_requests": 1,
+      "p": 0.020912385518779168,
+      "reminder_in_transcript": false,
+      "reminder_reached_model": false,
+      "reminded": false,
+      "assistant_parts": 3,
+      "tool_parts": 1,
+      "queen_calls": 4,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "2026/11/21 16:07:57 [sentinel] manager starting (0 open escalations)\nBrowser bridge: reusing the instance on 127.0.0.1:14830\n2026/11/21 16:07:57 turn context \"probe\" is installed but off: set turn_context.probe.enabled in configuration.json\n\nHive API server running on http://127.0.0.1:62913\nHealth:     http://127.0.0.1:62913/api/health\nSessions:   0 colony, 0 queen-only\n\nPress Ctrl+C to stop\nBrowser bridge: control connected on 127.0.0.1:14831\n2026/11/21 16:07:57 runtime-resources verdict init->ok | avail=NoneMB renderers=9 chrome_rss=471MB hive_rss=29MB workers=<nil> | \n2026/11/21 16:07:58 [access] GET /api/health -> 200 (0ms)\n2026/11/21 16:07:58 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:07:58 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:07:58 [sentinel] applies_to: is_queen_stream=true colony_id=\"\" opted_in=false (stream_id=\"session_20261121_160758_16b17a3b\") — sentinel SKIPS this stream\n2026/11/21 16:07:58 [access] POST /api/sessions -> 201 (36ms)\n2026/11/21 16:07:58 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.\n2026/11/21 16:07:58 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.\n2026/11/21 16:07:58 skill_startup name=hive.writing-hive-skills scope=framework status=loaded\n2026/11/21 16:07:58 skill_startup name=hive.browser-automation scope=framework status=loaded\n2026/11/21 16:07:58 skill_startup name=hive.pdf scope=framework status=loaded\n2026/11/21 16:07:58 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf\n2026/11/21 16:07:58 Skills: 3 default (3 active, 0 disabled, 0 error)\n2026/11/21 16:07:58 Skill system ready: catalog=28862 chars\n2026/11/21 16:07:59 [access] GET /api/config/features -> 200 (0ms)\n2026/11/21 16:07:59 [access] POST /api/sessions/session_20261121_160758_16b17a3b/chat -> 200 (6ms)\n2026/11/21 16:07:59 stall check: p=0.02 < 0.50, turn is fine\n2026/11/21 16:08:03 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)\n"
+    },
+    {
+      "side": "go",
+      "case": "switch-off",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160804_e7f070a5",
+      "judge_requests": 0,
+      "p": null,
+      "reminder_in_transcript": false,
+      "reminder_reached_model": false,
+      "reminded": false,
+      "assistant_parts": 2,
+      "tool_parts": 0,
+      "queen_calls": 3,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": false
+      },
+      "server_log_tail": "2026/11/21 16:08:03 [sentinel] manager starting (0 open escalations)\nBrowser bridge: reusing the instance on 127.0.0.1:14830\n2026/11/21 16:08:04 turn context \"probe\" is installed but off: set turn_context.probe.enabled in configuration.json\n\nHive API server running on http://127.0.0.1:62954\nHealth:     http://127.0.0.1:62954/api/health\nSessions:   0 colony, 0 queen-only\n\nPress Ctrl+C to stop\nBrowser bridge: control connected on 127.0.0.1:14831\n2026/11/21 16:08:04 runtime-resources verdict init->ok | avail=NoneMB renderers=9 chrome_rss=468MB hive_rss=29MB workers=<nil> | \n2026/11/21 16:08:04 [access] GET /api/health -> 200 (0ms)\n2026/11/21 16:08:04 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:08:04 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:08:04 [sentinel] applies_to: is_queen_stream=true colony_id=\"\" opted_in=false (stream_id=\"session_20261121_160804_e7f070a5\") — sentinel SKIPS this stream\n2026/11/21 16:08:04 [access] POST /api/sessions -> 201 (38ms)\n2026/11/21 16:08:04 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.\n2026/11/21 16:08:04 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.\n2026/11/21 16:08:04 skill_startup name=hive.writing-hive-skills scope=framework status=loaded\n2026/11/21 16:08:04 skill_startup name=hive.browser-automation scope=framework status=loaded\n2026/11/21 16:08:04 skill_startup name=hive.pdf scope=framework status=loaded\n2026/11/21 16:08:04 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf\n2026/11/21 16:08:04 Skills: 3 default (3 active, 0 disabled, 0 error)\n2026/11/21 16:08:04 Skill system ready: catalog=28874 chars\n2026/11/21 16:08:05 [access] GET /api/config/features -> 200 (0ms)\n2026/11/21 16:08:05 [access] POST /api/sessions/session_20261121_160804_e7f070a5/chat -> 200 (8ms)\n2026/11/21 16:08:09 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)\n"
+    },
+    {
+      "side": "go",
+      "case": "judge-dead",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160810_ad046fa4",
+      "judge_requests": 0,
+      "p": null,
+      "reminder_in_transcript": false,
+      "reminder_reached_model": false,
+      "reminded": false,
+      "assistant_parts": 2,
+      "tool_parts": 0,
+      "queen_calls": 3,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "2026/11/21 16:08:10 [sentinel] manager starting (0 open escalations)\nBrowser bridge: reusing the instance on 127.0.0.1:14830\n2026/11/21 16:08:10 turn context \"probe\" is installed but off: set turn_context.probe.enabled in configuration.json\n\nHive API server running on http://127.0.0.1:63010\nHealth:     http://127.0.0.1:63010/api/health\nSessions:   0 colony, 0 queen-only\n\nPress Ctrl+C to stop\nBrowser bridge: control connected on 127.0.0.1:14831\n2026/11/21 16:08:10 runtime-resources verdict init->ok | avail=NoneMB renderers=9 chrome_rss=468MB hive_rss=28MB workers=<nil> | \n2026/11/21 16:08:10 [access] GET /api/health -> 200 (0ms)\n2026/11/21 16:08:10 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:08:10 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:08:10 [sentinel] applies_to: is_queen_stream=true colony_id=\"\" opted_in=false (stream_id=\"session_20261121_160810_ad046fa4\") — sentinel SKIPS this stream\n2026/11/21 16:08:10 [access] POST /api/sessions -> 201 (41ms)\n2026/11/21 16:08:10 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.\n2026/11/21 16:08:10 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.\n2026/11/21 16:08:10 skill_startup name=hive.writing-hive-skills scope=framework status=loaded\n2026/11/21 16:08:10 skill_startup name=hive.browser-automation scope=framework status=loaded\n2026/11/21 16:08:10 skill_startup name=hive.pdf scope=framework status=loaded\n2026/11/21 16:08:10 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf\n2026/11/21 16:08:10 Skills: 3 default (3 active, 0 disabled, 0 error)\n2026/11/21 16:08:10 Skill system ready: catalog=28874 chars\n2026/11/21 16:08:11 [access] GET /api/config/features -> 200 (1ms)\n2026/11/21 16:08:11 [access] POST /api/sessions/session_20261121_160810_ad046fa4/chat -> 200 (7ms)\n2026/11/21 16:08:11 judge: unavailable (Post \"http://127.0.0.1:9/v1/systemone\": dial tcp 127.0.0.1:9: connect: connection refused)\n2026/11/21 16:08:15 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)\n"
+    },
+    {
+      "side": "go",
+      "case": "no-user",
+      "threshold": 0.5,
+      "verdict": {
+        "judge_requests_ok": true,
+        "reminder_ok": true,
+        "pass": true
+      },
+      "session": "session_20261121_160816_145f0f43",
+      "judge_requests": 0,
+      "p": null,
+      "reminder_in_transcript": false,
+      "reminder_reached_model": false,
+      "reminded": false,
+      "assistant_parts": 2,
+      "tool_parts": 0,
+      "queen_calls": 2,
+      "features": {
+        "adaptive_tool_budget": true,
+        "email_senders": false,
+        "memory_timeline": false,
+        "stall_check": true
+      },
+      "server_log_tail": "2026/11/21 16:08:16 [sentinel] manager starting (0 open escalations)\nBrowser bridge: reusing the instance on 127.0.0.1:14830\n2026/11/21 16:08:16 turn context \"probe\" is installed but off: set turn_context.probe.enabled in configuration.json\nBrowser bridge: control connected on 127.0.0.1:14831\n\nHive API server running on http://127.0.0.1:63033\nHealth:     http://127.0.0.1:63033/api/health\nSessions:   0 colony, 0 queen-only\n\nPress Ctrl+C to stop\n2026/11/21 16:08:16 runtime-resources verdict init->ok | avail=NoneMB renderers=9 chrome_rss=475MB hive_rss=29MB workers=<nil> | \n2026/11/21 16:08:16 [access] GET /api/health -> 200 (0ms)\n2026/11/21 16:08:16 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:08:16 credentials: generated a new encryption key; set HIVE_CREDENTIAL_KEY to persist credentials across restarts\n2026/11/21 16:08:16 [sentinel] applies_to: is_queen_stream=true colony_id=\"\" opted_in=false (stream_id=\"session_20261121_160816_145f0f43\") — sentinel SKIPS this stream\n2026/11/21 16:08:16 [access] POST /api/sessions -> 201 (44ms)\n2026/11/21 16:08:16 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.\n2026/11/21 16:08:16 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.\n2026/11/21 16:08:16 skill_startup name=hive.writing-hive-skills scope=framework status=loaded\n2026/11/21 16:08:16 skill_startup name=hive.browser-automation scope=framework status=loaded\n2026/11/21 16:08:16 skill_startup name=hive.pdf scope=framework status=loaded\n2026/11/21 16:08:16 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf\n2026/11/21 16:08:16 Skills: 3 default (3 active, 0 disabled, 0 error)\n2026/11/21 16:08:16 Skill system ready: catalog=28874 chars\n2026/11/21 16:08:17 [access] GET /api/config/features -> 200 (0ms)\n2026/11/21 16:08:17 [access] POST /api/sessions/session_20261121_160816_145f0f43/queen-context -> 200 (0ms)\n2026/11/21 16:08:21 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)\n"
+    }
+  ],
+  "body_comparisons": [
+    {
+      "case": "borderline-0.5",
+      "equal": true,
+      "python": {
+        "state": {
+          "previous_turn": {
+            "assistant_reply": "（后台）收到。",
+            "tools_called": []
+          },
+          "user_message": "帮我把今天的待办事项整理一下，整理完告诉我结果。",
+          "assistant_reasoning_tail": "",
+          "assistant_reply": "收到，我先看看。",
+          "tools_called_this_turn": []
+        },
+        "model": "0.8B-Instant-MLX-4bit",
+        "questions": {
+          "answer": {
+            "type": "noul",
+            "instructions": "This turn left undone work the assistant should have done in it: its reply announced or promised an action (run a command, call a tool, draw or send an image, look something up), or the user asked for something to be done or redone (including by pointing out what is wrong with work the assistant delivered) and the reply only agreed or described what should change; and no tool call in this turn did it.",
+            "criteria": {
+              "true": "The reply talks about work it should be doing now (announces it, promises it, or agrees to a correction and says what should change) and no tool call this turn does that work.",
+              "false": "Nothing the user wants done now was left undone: the reply is conversation; answers a question; asks something it needs to know first; declines or argues against the request, even while admitting a mistake or offering an alternative; responds to the user disputing or explaining something rather than asking for new work; or the tools called this turn did the work, even if the result is imperfect and the reply lists flaws that remain."
+            }
+          }
+        }
+      },
+      "go": {
+        "model": "0.8B-Instant-MLX-4bit",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "false": "Nothing the user wants done now was left undone: the reply is conversation; answers a question; asks something it needs to know first; declines or argues against the request, even while admitting a mistake or offering an alternative; responds to the user disputing or explaining something rather than asking for new work; or the tools called this turn did the work, even if the result is imperfect and the reply lists flaws that remain.",
+              "true": "The reply talks about work it should be doing now (announces it, promises it, or agrees to a correction and says what should change) and no tool call this turn does that work."
+            },
+            "instructions": "This turn left undone work the assistant should have done in it: its reply announced or promised an action (run a command, call a tool, draw or send an image, look something up), or the user asked for something to be done or redone (including by pointing out what is wrong with work the assistant delivered) and the reply only agreed or described what should change; and no tool call in this turn did it.",
+            "type": "noul"
+          }
+        },
+        "state": {
+          "previous_turn": {
+            "assistant_reply": "（后台）收到。",
+            "tools_called": []
+          },
+          "user_message": "帮我把今天的待办事项整理一下，整理完告诉我结果。",
+          "assistant_reasoning_tail": "",
+          "assistant_reply": "收到，我先看看。",
+          "tools_called_this_turn": []
+        }
+      },
+      "python_p": 0.6723943374151702,
+      "go_p": 0.6723943374151702
+    },
+    {
+      "case": "borderline-0.7",
+      "equal": true,
+      "python": {
+        "state": {
+          "previous_turn": {
+            "assistant_reply": "（后台）收到。",
+            "tools_called": []
+          },
+          "user_message": "帮我把今天的待办事项整理一下，整理完告诉我结果。",
+          "assistant_reasoning_tail": "",
+          "assistant_reply": "收到，我先看看。",
+          "tools_called_this_turn": []
+        },
+        "model": "0.8B-Instant-MLX-4bit",
+        "questions": {
+          "answer": {
+            "type": "noul",
+            "instructions": "This turn left undone work the assistant should have done in it: its reply announced or promised an action (run a command, call a tool, draw or send an image, look something up), or the user asked for something to be done or redone (including by pointing out what is wrong with work the assistant delivered) and the reply only agreed or described what should change; and no tool call in this turn did it.",
+            "criteria": {
+              "true": "The reply talks about work it should be doing now (announces it, promises it, or agrees to a correction and says what should change) and no tool call this turn does that work.",
+              "false": "Nothing the user wants done now was left undone: the reply is conversation; answers a question; asks something it needs to know first; declines or argues against the request, even while admitting a mistake or offering an alternative; responds to the user disputing or explaining something rather than asking for new work; or the tools called this turn did the work, even if the result is imperfect and the reply lists flaws that remain."
+            }
+          }
+        }
+      },
+      "go": {
+        "model": "0.8B-Instant-MLX-4bit",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "false": "Nothing the user wants done now was left undone: the reply is conversation; answers a question; asks something it needs to know first; declines or argues against the request, even while admitting a mistake or offering an alternative; responds to the user disputing or explaining something rather than asking for new work; or the tools called this turn did the work, even if the result is imperfect and the reply lists flaws that remain.",
+              "true": "The reply talks about work it should be doing now (announces it, promises it, or agrees to a correction and says what should change) and no tool call this turn does that work."
+            },
+            "instructions": "This turn left undone work the assistant should have done in it: its reply announced or promised an action (run a command, call a tool, draw or send an image, look something up), or the user asked for something to be done or redone (including by pointing out what is wrong with work the assistant delivered) and the reply only agreed or described what should change; and no tool call in this turn did it.",
+            "type": "noul"
+          }
+        },
+        "state": {
+          "previous_turn": {
+            "assistant_reply": "（后台）收到。",
+            "tools_called": []
+          },
+          "user_message": "帮我把今天的待办事项整理一下，整理完告诉我结果。",
+          "assistant_reasoning_tail": "",
+          "assistant_reply": "收到，我先看看。",
+          "tools_called_this_turn": []
+        }
+      },
+      "python_p": 0.6723943374151702,
+      "go_p": 0.6723943374151702
+    },
+    {
+      "case": "stall-0.5",
+      "equal": true,
+      "python": {
+        "state": {
+          "previous_turn": {
+            "assistant_reply": "（后台）收到。",
+            "tools_called": []
+          },
+          "user_message": "帮我把今天的待办事项整理一下，整理完告诉我结果。",
+          "assistant_reasoning_tail": "",
+          "assistant_reply": "好的，我这就去整理，整理完马上告诉你。",
+          "tools_called_this_turn": []
+        },
+        "model": "0.8B-Instant-MLX-4bit",
+        "questions": {
+          "answer": {
+            "type": "noul",
+            "instructions": "This turn left undone work the assistant should have done in it: its reply announced or promised an action (run a command, call a tool, draw or send an image, look something up), or the user asked for something to be done or redone (including by pointing out what is wrong with work the assistant delivered) and the reply only agreed or described what should change; and no tool call in this turn did it.",
+            "criteria": {
+              "true": "The reply talks about work it should be doing now (announces it, promises it, or agrees to a correction and says what should change) and no tool call this turn does that work.",
+              "false": "Nothing the user wants done now was left undone: the reply is conversation; answers a question; asks something it needs to know first; declines or argues against the request, even while admitting a mistake or offering an alternative; responds to the user disputing or explaining something rather than asking for new work; or the tools called this turn did the work, even if the result is imperfect and the reply lists flaws that remain."
+            }
+          }
+        }
+      },
+      "go": {
+        "model": "0.8B-Instant-MLX-4bit",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "false": "Nothing the user wants done now was left undone: the reply is conversation; answers a question; asks something it needs to know first; declines or argues against the request, even while admitting a mistake or offering an alternative; responds to the user disputing or explaining something rather than asking for new work; or the tools called this turn did the work, even if the result is imperfect and the reply lists flaws that remain.",
+              "true": "The reply talks about work it should be doing now (announces it, promises it, or agrees to a correction and says what should change) and no tool call this turn does that work."
+            },
+            "instructions": "This turn left undone work the assistant should have done in it: its reply announced or promised an action (run a command, call a tool, draw or send an image, look something up), or the user asked for something to be done or redone (including by pointing out what is wrong with work the assistant delivered) and the reply only agreed or described what should change; and no tool call in this turn did it.",
+            "type": "noul"
+          }
+        },
+        "state": {
+          "previous_turn": {
+            "assistant_reply": "（后台）收到。",
+            "tools_called": []
+          },
+          "user_message": "帮我把今天的待办事项整理一下，整理完告诉我结果。",
+          "assistant_reasoning_tail": "",
+          "assistant_reply": "好的，我这就去整理，整理完马上告诉你。",
+          "tools_called_this_turn": []
+        }
+      },
+      "python_p": 0.9364579444806242,
+      "go_p": 0.9364579444806242
+    },
+    {
+      "case": "stall-0.7",
+      "equal": true,
+      "python": {
+        "state": {
+          "previous_turn": {
+            "assistant_reply": "（后台）收到。",
+            "tools_called": []
+          },
+          "user_message": "帮我把今天的待办事项整理一下，整理完告诉我结果。",
+          "assistant_reasoning_tail": "",
+          "assistant_reply": "好的，我这就去整理，整理完马上告诉你。",
+          "tools_called_this_turn": []
+        },
+        "model": "0.8B-Instant-MLX-4bit",
+        "questions": {
+          "answer": {
+            "type": "noul",
+            "instructions": "This turn left undone work the assistant should have done in it: its reply announced or promised an action (run a command, call a tool, draw or send an image, look something up), or the user asked for something to be done or redone (including by pointing out what is wrong with work the assistant delivered) and the reply only agreed or described what should change; and no tool call in this turn did it.",
+            "criteria": {
+              "true": "The reply talks about work it should be doing now (announces it, promises it, or agrees to a correction and says what should change) and no tool call this turn does that work.",
+              "false": "Nothing the user wants done now was left undone: the reply is conversation; answers a question; asks something it needs to know first; declines or argues against the request, even while admitting a mistake or offering an alternative; responds to the user disputing or explaining something rather than asking for new work; or the tools called this turn did the work, even if the result is imperfect and the reply lists flaws that remain."
+            }
+          }
+        }
+      },
+      "go": {
+        "model": "0.8B-Instant-MLX-4bit",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "false": "Nothing the user wants done now was left undone: the reply is conversation; answers a question; asks something it needs to know first; declines or argues against the request, even while admitting a mistake or offering an alternative; responds to the user disputing or explaining something rather than asking for new work; or the tools called this turn did the work, even if the result is imperfect and the reply lists flaws that remain.",
+              "true": "The reply talks about work it should be doing now (announces it, promises it, or agrees to a correction and says what should change) and no tool call this turn does that work."
+            },
+            "instructions": "This turn left undone work the assistant should have done in it: its reply announced or promised an action (run a command, call a tool, draw or send an image, look something up), or the user asked for something to be done or redone (including by pointing out what is wrong with work the assistant delivered) and the reply only agreed or described what should change; and no tool call in this turn did it.",
+            "type": "noul"
+          }
+        },
+        "state": {
+          "previous_turn": {
+            "assistant_reply": "（后台）收到。",
+            "tools_called": []
+          },
+          "user_message": "帮我把今天的待办事项整理一下，整理完告诉我结果。",
+          "assistant_reasoning_tail": "",
+          "assistant_reply": "好的，我这就去整理，整理完马上告诉你。",
+          "tools_called_this_turn": []
+        }
+      },
+      "python_p": 0.9364579444806242,
+      "go_p": 0.9364579444806242
+    },
+    {
+      "case": "tool-0.5",
+      "equal": true,
+      "python": {
+        "state": {
+          "previous_turn": {
+            "assistant_reply": "（后台）收到。",
+            "tools_called": []
+          },
+          "user_message": "帮我把今天的待办事项整理一下，整理完告诉我结果。",
+          "assistant_reasoning_tail": "",
+          "assistant_reply": "现在是下午 4 点 05 分。",
+          "tools_called_this_turn": [
+            "get_current_time"
+          ]
+        },
+        "model": "0.8B-Instant-MLX-4bit",
+        "questions": {
+          "answer": {
+            "type": "noul",
+            "instructions": "This turn left undone work the assistant should have done in it: its reply announced or promised an action (run a command, call a tool, draw or send an image, look something up), or the user asked for something to be done or redone (including by pointing out what is wrong with work the assistant delivered) and the reply only agreed or described what should change; and no tool call in this turn did it.",
+            "criteria": {
+              "true": "The reply talks about work it should be doing now (announces it, promises it, or agrees to a correction and says what should change) and no tool call this turn does that work.",
+              "false": "Nothing the user wants done now was left undone: the reply is conversation; answers a question; asks something it needs to know first; declines or argues against the request, even while admitting a mistake or offering an alternative; responds to the user disputing or explaining something rather than asking for new work; or the tools called this turn did the work, even if the result is imperfect and the reply lists flaws that remain."
+            }
+          }
+        }
+      },
+      "go": {
+        "model": "0.8B-Instant-MLX-4bit",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "false": "Nothing the user wants done now was left undone: the reply is conversation; answers a question; asks something it needs to know first; declines or argues against the request, even while admitting a mistake or offering an alternative; responds to the user disputing or explaining something rather than asking for new work; or the tools called this turn did the work, even if the result is imperfect and the reply lists flaws that remain.",
+              "true": "The reply talks about work it should be doing now (announces it, promises it, or agrees to a correction and says what should change) and no tool call this turn does that work."
+            },
+            "instructions": "This turn left undone work the assistant should have done in it: its reply announced or promised an action (run a command, call a tool, draw or send an image, look something up), or the user asked for something to be done or redone (including by pointing out what is wrong with work the assistant delivered) and the reply only agreed or described what should change; and no tool call in this turn did it.",
+            "type": "noul"
+          }
+        },
+        "state": {
+          "previous_turn": {
+            "assistant_reply": "（后台）收到。",
+            "tools_called": []
+          },
+          "user_message": "帮我把今天的待办事项整理一下，整理完告诉我结果。",
+          "assistant_reasoning_tail": "",
+          "assistant_reply": "现在是下午 4 点 05 分。",
+          "tools_called_this_turn": [
+            "get_current_time"
+          ]
+        }
+      },
+      "python_p": 0.020912385518779168,
+      "go_p": 0.020912385518779168
+    }
+  ],
+  "stability": {
+    "py-stall-0.5": [
+      {
+        "repeat": 1,
+        "status": 200,
+        "noul": 0.9364579444806242,
+        "ms": 199
+      },
+      {
+        "repeat": 2,
+        "status": 200,
+        "noul": 0.9364579444806242,
+        "ms": 60
+      },
+      {
+        "repeat": 3,
+        "status": 200,
+        "noul": 0.9364579444806242,
+        "ms": 58
+      }
+    ],
+    "py-borderline-0.5": [
+      {
+        "repeat": 1,
+        "status": 200,
+        "noul": 0.6723943374151702,
+        "ms": 107
+      },
+      {
+        "repeat": 2,
+        "status": 200,
+        "noul": 0.6723943374151702,
+        "ms": 51
+      },
+      {
+        "repeat": 3,
+        "status": 200,
+        "noul": 0.6723943374151702,
+        "ms": 59
+      }
+    ],
+    "go-stall-0.5": [
+      {
+        "repeat": 1,
+        "status": 200,
+        "noul": 0.9364579444806242,
+        "ms": 58
+      },
+      {
+        "repeat": 2,
+        "status": 200,
+        "noul": 0.9364579444806242,
+        "ms": 61
+      },
+      {
+        "repeat": 3,
+        "status": 200,
+        "noul": 0.9364579444806242,
+        "ms": 65
+      }
+    ],
+    "go-borderline-0.5": [
+      {
+        "repeat": 1,
+        "status": 200,
+        "noul": 0.6723943374151702,
+        "ms": 52
+      },
+      {
+        "repeat": 2,
+        "status": 200,
+        "noul": 0.6723943374151702,
+        "ms": 54
+      },
+      {
+        "repeat": 3,
+        "status": 200,
+        "noul": 0.6723943374151702,
+        "ms": 52
+      }
+    ]
+  }
+}

@@ -66,7 +66,21 @@ type Conn struct {
 	closeSent atomic.Bool
 	closed    atomic.Bool
 	maxRead   int64
+
+	// done is closed when the connection is torn down (peer close, server
+	// shutdown, or the keepalive timeout). It lets the keepalive goroutine
+	// stop without polling.
+	done     chan struct{}
+	doneOnce sync.Once
+
+	// pongs receives one signal per peer pong when the server runs the
+	// keepalive ticker (nil otherwise). Set before the read loop starts.
+	pongs chan struct{}
 }
+
+// closeDone releases the keepalive goroutine. Safe to call repeatedly and
+// from any goroutine.
+func (c *Conn) closeDone() { c.doneOnce.Do(func() { close(c.done) }) }
 
 // NetConn exposes the underlying network connection (for deadlines and
 // Close). Callers should not read or write raw bytes through it.
@@ -78,6 +92,7 @@ func (c *Conn) SetReadDeadline(t time.Time) error { return c.conn.SetReadDeadlin
 // Close tears down the TCP connection without sending a close frame.
 func (c *Conn) Close() error {
 	c.closed.Store(true)
+	c.closeDone()
 	return c.conn.Close()
 }
 
@@ -161,6 +176,14 @@ func (c *Conn) ReadMessage() (Opcode, []byte, error) {
 			}
 			continue
 		case Pong:
+			// The keepalive ticker waits on this signal; a connection without
+			// a ticker (pongs == nil) just drops the frame.
+			if c.pongs != nil {
+				select {
+				case c.pongs <- struct{}{}:
+				default:
+				}
+			}
 			continue
 		case Close:
 			code, reason := parseClosePayload(payload)
@@ -285,6 +308,16 @@ type Server struct {
 	Logger    func(format string, args ...any)
 	Handshake time.Duration
 
+	// PingInterval, when > 0, runs the WS-layer keepalive on every
+	// connection: ping at this cadence and give the peer PingTimeout to pong
+	// before closing with 1011 "keepalive ping timeout". It mirrors the
+	// Python bridge's websockets.serve(ping_interval=…, ping_timeout=…):
+	// the WS-layer heartbeat catches a half-open TCP path (NAT reaper,
+	// laptop sleep) that the app-level JSON ping cannot see. Zero disables
+	// the ticker (the control-RPC listener and unit tests).
+	PingInterval time.Duration
+	PingTimeout  time.Duration
+
 	mu       sync.Mutex
 	ln       net.Listener
 	conns    map[*Conn]struct{}
@@ -381,7 +414,7 @@ func (s *Server) handle(nc net.Conn) {
 	_ = nc.SetWriteDeadline(time.Time{})
 	_ = nc.SetReadDeadline(time.Time{})
 
-	c := &Conn{conn: nc, br: br, maxRead: s.MaxRead}
+	c := &Conn{conn: nc, br: br, maxRead: s.MaxRead, done: make(chan struct{})}
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()
@@ -402,10 +435,56 @@ func (s *Server) handle(nc net.Conn) {
 		s.mu.Lock()
 		delete(s.conns, c)
 		s.mu.Unlock()
+		c.closeDone()
 		_ = nc.Close()
 	}()
+	if s.PingInterval > 0 {
+		c.pongs = make(chan struct{}, 1)
+		go s.keepalive(c)
+	}
 	if s.Handler != nil {
 		s.Handler(c)
+	}
+}
+
+// keepalive is the WS-layer heartbeat, websockets' keepalive() ported: sleep
+// PingInterval, send a ping, and fail the connection with 1011 "keepalive ping
+// timeout" when no pong arrives within PingTimeout (the code and reason the
+// Python websockets library uses, so both bridges fail alike).
+func (s *Server) keepalive(c *Conn) {
+	interval := s.PingInterval
+	timeout := s.PingTimeout
+	if timeout <= 0 {
+		timeout = interval
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-c.done:
+			return
+		case <-ticker.C:
+		}
+		// A pong from before this tick proves nothing about the ping below;
+		// drain it so the wait measures "pong after ping".
+		select {
+		case <-c.pongs:
+		default:
+		}
+		if err := c.Ping(nil); err != nil {
+			s.logf("keepalive ping failed: %v", err)
+			return
+		}
+		select {
+		case <-c.done:
+			return
+		case <-c.pongs:
+		case <-time.After(timeout):
+			s.logf("keepalive ping timeout — closing connection")
+			_ = c.WriteClose(1011, "keepalive ping timeout")
+			_ = c.Close()
+			return
+		}
 	}
 }
 

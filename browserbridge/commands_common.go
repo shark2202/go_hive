@@ -26,6 +26,13 @@ func (b *Bridge) resolveTabTarget(profile string, params map[string]any) (int, e
 	} else if ok {
 		return id, nil
 	}
+	// Upstream defaults to ctx["activeTabId"]: the context registered for the
+	// agent profile, or for the Chrome profile a caller named instead.
+	if name, _, ok := b.toolContext(profile, params); ok {
+		if id := b.contextActiveTabFor(name); id > 0 {
+			return id, nil
+		}
+	}
 	if id := b.activeTabForProfile(profile); id > 0 {
 		return id, nil
 	}
@@ -171,7 +178,7 @@ func (b *Bridge) hoverElement(ctx context.Context, conn *Connection, tabID int, 
 		"label": selector, "kind": "rect",
 	})
 	return map[string]any{
-		"ok": true, "action": "hover", "tabId": tabID, "selector": selector,
+		"ok": true, "action": "hover", "selector": selector,
 		"x": rect.X, "y": rect.Y,
 	}, nil
 }
@@ -188,7 +195,7 @@ func (b *Bridge) hoverPoint(ctx context.Context, conn *Connection, tabID int, x,
 		"label": "hover (" + pyFloat(x) + "," + pyFloat(y) + ")", "kind": "point",
 	})
 	return map[string]any{
-		"ok": true, "action": "hover_coordinate", "tabId": tabID, "x": x, "y": y,
+		"ok": true, "action": "hover_coordinate", "x": x, "y": y,
 	}, nil
 }
 
@@ -228,7 +235,7 @@ func (b *Bridge) pressKeyAt(ctx context.Context, conn *Connection, tabID int, x,
 		"label": def.key + " (" + pyFloat(x) + "," + pyFloat(y) + ")", "kind": "point",
 	})
 	return map[string]any{
-		"ok": true, "action": "press_at", "tabId": tabID, "key": def.key, "x": x, "y": y,
+		"ok": true, "action": "press_at", "key": def.key, "x": x, "y": y,
 	}, nil
 }
 

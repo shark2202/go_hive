@@ -30,7 +30,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </style></head><body><div class="wrap">
 <header><div class="eyebrow">Hive · Guardrails</div><h1>judge 槽与 <span>stall check</span></h1>
 <p class="lede">补上 Hive 目前缺的那页文档：<b>judge</b> 是一个只回答概率的模型槽，<b>stall check</b> 是它的第一个消费者——抓 queen「嘴上说要做、回合结束却没调用工具」的情况。本页写清怎么配、怎么判定、影响什么、怎么排障；机制以代码为准（Python 与 Go 同语义）。</p>
-<div class="meta"><span>生成：<b>2026-11-20 22:32 CST</b></span><span>状态：<b>已实现并有测试；默认关</b></span><span>Python：<code>server/stall_check.py</code> · <code>server/judge.py</code></span><span>Go：<code>internal/server/stall_check.go</code> · <code>judge.go</code></span></div>
+<div class="meta"><span>生成：<b>2026-11-20 22:32 CST</b></span><span>状态：<b>已实现并有测试；默认关</b></span><span>真实 judge 实测：<b>2026-11-21</b> · <a href="stall-check-parity.md">Python/Go parity 证据</a></span><span>Python：<code>server/stall_check.py</code> · <code>server/judge.py</code></span><span>Go：<code>internal/server/stall_check.go</code> · <code>judge.go</code></span></div>
 <div class="toc"><a href="#what">是什么</a><a href="#config">怎么配</a><a href="#flow">判定流程</a><a href="#impact">影响面</a><a href="#verify">验证排障</a><a href="#docs">文档现状</a><a href="#refs">索引</a></div></header>
 
 <section id="what"><h2><span class="num">00</span>是什么（两个东西，一个目的）</h2>
@@ -118,6 +118,8 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <li><b>人为复现：</b>让 queen 说"好的，我马上改"但停住不动（或临时把 threshold 降到 0.1 放大触发），观察是否多出一轮补做。</li>
 <li><b>开关灰掉：</b>先配 judge（需要 api_base + api_key）；环境变量强开不会绕过这个可用性检查，只会 no-op。</li>
 </ol>
+<h3>4.1 真实 judge 实测（2026-11-21）</h3>
+<div class="callout info"><b>本机 startlux-decide 上已跑通双实现对照：</b>同一脚本化女王回合下，Python 与 Go 的 judge 请求体逐字段相等、p 逐位相等（stall=0.936458、阈值间回复=0.672394、工具回合=0.020912）；提醒注入、第二轮补做、开关关闭、judge 不可达 no-op、无用户消息不判定均一致；同一回复阈值为 0.5 时触发提醒、0.7 时不触发。差异：Go 原先的 state 键序会让真实 judge 输出不同 p（0.9233 vs 0.9365），已按上游插入序修复并加单测。用例与证据见 <a href="stall-check-parity.md">stall-check-parity.md</a> 与 <code>e2e-assets/judge-stall-real/</code>。</div>
 </section>
 
 <section id="docs"><h2><span class="num">05</span>文档现状（为什么有这页）</h2>
@@ -135,5 +137,5 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <div class="callout info"><a href="module-interfaces.html">接口不变量</a>（模型槽/协议）· <a href="alignment-dimensions.html">对齐维度矩阵</a> · <a href="platform-support.html">平台支持矩阵</a> · <a href="hive-inbox.html">Hive Inbox 协议</a> · <code>docs/releases/v1.0.8.md</code> · <code>docs/releases/v1.0.9.md</code> · <code>go_hive/docs/configuration.md</code>。</div>
 </section>
 
-<footer>生成：2026-11-20 22:32 CST · 依据：Python/Go 源码 + Settings UI + 发布注记 · 状态：实现与测试存在、默认关；本机未配置 judge（无 live 判定样本）· 本页补缺，不替代代码。</footer>
+<footer>生成：2026-11-20 22:32 CST · 更新：2026-11-21 真实 judge 实测（见 <a href="stall-check-parity.md">stall-check-parity.md</a>）· 依据：Python/Go 源码 + Settings UI + 发布注记 + 本机 startlux-decide 实跑 · 状态：实现与测试存在、默认关；真实 judge（0.8B-Instant-MLX-4bit）已实测双实现一致 · 本页补缺，不替代代码。</footer>
 </div></body></html>

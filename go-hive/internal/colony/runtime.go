@@ -97,6 +97,10 @@ type BatchTask struct {
 	// PreloadTools promotes the named tools into the worker's eager set at
 	// spawn, skipping its search_tools round trip. Unknown names are ignored.
 	PreloadTools []string
+	// ReportSchema is the playbook receipt contract (worker(schema=...)):
+	// it specializes the worker's report_to_parent `data` parameter and its
+	// system prompt — upstream's spawn_batch `report_schema` entry.
+	ReportSchema map[string]any
 }
 
 type SpawnBatchOptions struct {
@@ -116,6 +120,9 @@ type WorkerBuildOptions struct {
 	InputData    map[string]any
 	// ProfileName tags the worker with its colony worker profile.
 	ProfileName string
+	// ReportSchema specializes report_to_parent and the worker prompt for a
+	// playbook dispatch (upstream spawn spec `report_schema`).
+	ReportSchema map[string]any
 }
 
 type SeedMessage struct {
@@ -163,7 +170,10 @@ type ColonyRuntime struct {
 	wg       sync.WaitGroup
 
 	maxConcurrent int
-	workerSlots   chan struct{}
+	// workerSlots is the admission gate every spawned worker enters through.
+	// Its capacity follows maxConcurrent: a playbook run raises both while it
+	// executes (upstream parity, see worker_slots.go).
+	workerSlots *workerSlotGate
 
 	adaptiveEnabled bool
 
@@ -216,7 +226,7 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 		keepSet:       opts.WorkerKeepSet,
 		workers:       map[string]*Worker{},
 		maxConcurrent: maxConcurrent,
-		workerSlots:   make(chan struct{}, maxConcurrent),
+		workerSlots:   newWorkerSlotGate(maxConcurrent),
 	}
 	runtime.adaptiveEnabled = DefaultAdaptiveToolBudget
 	if opts.AdaptiveToolBudget != nil {
@@ -256,15 +266,6 @@ func (r *ColonyRuntime) Goal() *schemas.Goal { return r.goal }
 
 func (r *ColonyRuntime) StreamID() string { return r.streamID }
 
-// MaxConcurrentWorkers reports the colony's worker admission cap. run_worker
-// echoes it so the queen can tell running-now from queued peers.
-func (r *ColonyRuntime) MaxConcurrentWorkers() int {
-	if r == nil {
-		return 0
-	}
-	return r.maxConcurrent
-}
-
 // Parity: framework/server/routes_sessions.py::_active_worker_count
 func (r *ColonyRuntime) ActiveWorkerCount() int {
 	if r == nil {
@@ -286,6 +287,7 @@ func (r *ColonyRuntime) GetStats() map[string]any {
 	r.mu.Lock()
 	running := r.running
 	total := len(r.workers)
+	maxConcurrent := r.maxConcurrent
 	active := 0
 	queued := 0
 	for _, worker := range r.workers {
@@ -307,7 +309,7 @@ func (r *ColonyRuntime) GetStats() map[string]any {
 		"colony_id":              r.streamID,
 		"active_workers":         active,
 		"queued_workers":         queued,
-		"max_concurrent_workers": r.maxConcurrent,
+		"max_concurrent_workers": maxConcurrent,
 		"total_workers":          total,
 		"triggers":               0,
 		"event_bus":              eventBusStats,
@@ -394,9 +396,10 @@ func (r *ColonyRuntime) BuildWorker(opts WorkerBuildOptions) *Worker {
 	}
 	worker := NewWorker(opts.WorkerID, opts.Task, streamID)
 	worker.ProfileName = opts.ProfileName
+	worker.ReportSchema = opts.ReportSchema
 	worker.StoragePath = storage
 	worker.OutputFile = filepath.Join(storage, workerConversationsDir)
-	worker.Context = r.buildWorkerContext(worker, r.agentSpec, spawnTools, storage, opts.PreloadTools)
+	worker.Context = r.buildWorkerContext(worker, r.specForWorker(worker), spawnTools, storage, opts.PreloadTools)
 	if opts.InputData != nil {
 		worker.Context.InputData = opts.InputData
 		if binding := tracker.BindingFromInputData(opts.InputData); binding != nil {
@@ -689,6 +692,7 @@ func (r *ColonyRuntime) spawnBatchOn(runCtx context.Context, tasks []BatchTask, 
 			InputData:    r.workerInputData(task.Data, ids[index], task.Task),
 			ProfileName:  task.ProfileName,
 			PreloadTools: task.PreloadTools,
+			ReportSchema: task.ReportSchema,
 		})
 		worker.Goal = task.Goal
 		worker.BatchID = batchID
@@ -916,6 +920,33 @@ func (r *ColonyRuntime) buildContext(worker *Worker, spec agentloop.AgentSpec) *
 	return ctx
 }
 
+// specForWorker is the agent spec a worker runs under: the colony's spec with
+// the playbook receipt schema overlaid when the dispatch carried one
+// (upstream's spawn_batch `report_schema` entry specializes the worker's
+// report tool AND its system prompt).
+func (r *ColonyRuntime) specForWorker(worker *Worker) agentloop.AgentSpec {
+	if r == nil {
+		return agentloop.AgentSpec{}
+	}
+	spec := r.agentSpec
+	if worker != nil && len(worker.ReportSchema) > 0 {
+		spec.ReportSchema = worker.ReportSchema
+	}
+	return spec
+}
+
+// reportSchemaFor is the receipt schema the worker's report_to_parent tool
+// advertises: the dispatch's schema when present, else the colony's.
+func (r *ColonyRuntime) reportSchemaFor(worker *Worker) map[string]any {
+	if worker != nil && len(worker.ReportSchema) > 0 {
+		return worker.ReportSchema
+	}
+	if r == nil {
+		return nil
+	}
+	return r.agentSpec.ReportSchema
+}
+
 // workerCompleter is the completer a worker and its judge use: the colony's
 // worker model when configured, otherwise the colony completer.
 func (r *ColonyRuntime) workerCompleter() llm.Completer {
@@ -947,7 +978,7 @@ func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 	// durable progress channel and tracker_query their read surface. The
 	// queen-only pair stays out.
 	tools = appendMissingToolDefs(tools, trackerToolDefs("worker")...)
-	tools = appendMissingToolDefs(tools, agentloop.BuildReportToParentTool(r.agentSpec.ReportSchema))
+	tools = appendMissingToolDefs(tools, agentloop.BuildReportToParentTool(r.reportSchemaFor(worker)))
 	// Parallel workers fail fast, not escalate. Upstream 1.0.14 only ships the
 	// escalate tool to the legacy primary worker (stream_id="worker", no
 	// colon); a worker that reports to a parent (stream_id="worker:<id>", the
@@ -1068,22 +1099,11 @@ func (r *ColonyRuntime) runGatedWorker(ctx context.Context, worker *Worker) {
 }
 
 func (r *ColonyRuntime) acquireWorkerSlot(ctx context.Context) bool {
-	if r.workerSlots == nil {
-		return true
-	}
-	select {
-	case r.workerSlots <- struct{}{}:
-		return true
-	case <-ctx.Done():
-		return false
-	}
+	return r.workerSlots.acquire(ctx)
 }
 
 func (r *ColonyRuntime) releaseWorkerSlot() {
-	if r.workerSlots == nil {
-		return
-	}
-	<-r.workerSlots
+	r.workerSlots.release()
 }
 
 func (r *ColonyRuntime) finishWorkerStopped(worker *Worker, summary string) {
@@ -1126,7 +1146,7 @@ func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
 		return
 	}
 
-	spec := r.agentSpec
+	spec := r.specForWorker(worker)
 	if worker.Context == nil {
 		worker.Context = r.buildWorkerContext(worker, spec, r.workerToolDefs(), r.workerStorage(worker.ID), nil)
 	}

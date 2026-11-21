@@ -359,7 +359,7 @@ func TestInteractCoordinateClickAttachesAnnotatedImage(t *testing.T) {
 	res := execTool(t, b, "browser_interact", map[string]any{
 		"action": "left_click", "coordinate": []any{0.5, 0.5}, "tab_id": 11,
 	})
-	if res["ok"] != true || res["action"] != "click" || res["button"] != "left" {
+	if res["ok"] != true || res["action"] != "click_coordinate" {
 		t.Fatalf("action result=%+v", res)
 	}
 	if res["mimeType"] != "image/jpeg" {
@@ -476,7 +476,7 @@ func TestInteractCoordinateImageFailureDegradesToActionResult(t *testing.T) {
 	res := execTool(t, b, "browser_interact", map[string]any{
 		"action": "left_click", "coordinate": []any{0.5, 0.5}, "tab_id": 11,
 	})
-	if res["ok"] != true || res["action"] != "click" {
+	if res["ok"] != true || res["action"] != "click_coordinate" {
 		t.Fatalf("interaction must survive a capture failure: %+v", res)
 	}
 	if _, present := res["data"]; present {

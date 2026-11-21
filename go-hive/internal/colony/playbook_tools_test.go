@@ -65,6 +65,8 @@ func (f *fakePlaybookRuntime) WaitForWorkerReports(_ context.Context, ids []stri
 
 func (f *fakePlaybookRuntime) GetWorker(string) *Worker { return nil }
 func (f *fakePlaybookRuntime) MaxConcurrentWorkers() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	if f.max <= 0 {
 		return 4
 	}

@@ -37,6 +37,14 @@ func browserBridgeSysProcAttr() *syscall.SysProcAttr {
 	return &syscall.SysProcAttr{Setpgid: true}
 }
 
+// browserBridgeDetachedSysProcAttr starts a bridge that must outlive the
+// one-shot CLI that spawned it (upstream's `start_new_session=True`): the
+// child gets its own session, so a Ctrl+C or a closed terminal does not take
+// it down before the next command reuses it.
+func browserBridgeDetachedSysProcAttr() *syscall.SysProcAttr {
+	return &syscall.SysProcAttr{Setsid: true}
+}
+
 // browserBridgeSignal signals the child's process group, falling back to the
 // single process when the group is already gone.
 func browserBridgeSignal(process *os.Process, sig syscall.Signal) error {

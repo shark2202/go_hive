@@ -22,7 +22,7 @@ type credAdapter interface {
 }
 
 var credAdapterDefault = func() (credAdapter, error) {
-	return credentials.DefaultAdapter(nil)
+	return credentials.DefaultAdapter(credentials.CatalogNamedSpecs())
 }
 
 type CredRunner struct {
@@ -37,10 +37,15 @@ func NewCredRunner() *CredRunner {
 func setupCredLogging() {
 	path := os.Getenv("HIVE_CRED_LOG")
 	if path == "" {
+		// Upstream installs a NullHandler when HIVE_CRED_LOG is unset, so the
+		// command's stderr stays clean; the Go default logger would leak
+		// package log lines (e.g. encryption-key notices) onto stderr.
+		log.SetOutput(io.Discard)
 		return
 	}
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
+		log.SetOutput(io.Discard)
 		return
 	}
 	log.SetOutput(file)
@@ -209,7 +214,7 @@ func cmdCredBrowse(args *parsedArgs) (any, error) {
 	if adapter == nil {
 		return nil, unavailableError(errors.New("no adapter"))
 	}
-	return credentials.Browse(adapter, args.str("query"), nil), nil
+	return credentials.Browse(adapter, args.str("query"), credentials.CatalogNamedSpecs()), nil
 }
 
 func cmdCredInspect(args *parsedArgs) (any, error) {
@@ -320,9 +325,16 @@ func credCommand() *commandSpec {
 		Positionals: []positionalSpec{{Dest: "credential_id", Required: true, Help: "provider / credential id, e.g. google, apollo"}},
 		Flags: []argSpec{
 			{Dest: "json", Long: "json", Kind: kindBool, Help: "emit a JSON envelope on stdout"},
-			{Dest: "account", Long: "account", Kind: kindString, Default: "", Help: "connected-account alias, e.g. email3 (required when several are connected)"},
-			{Dest: "key", Long: "key", Kind: kindString, Default: "", Help: "which key to print (default: the credential's primary key, e.g. access_token)"},
+			{Dest: "account", Long: "account", Kind: kindString, Default: "", Metavar: "ALIAS", Help: "connected-account alias, e.g. email3 (required when several are connected)"},
+			{Dest: "key", Long: "key", Kind: kindString, Default: "", Metavar: "NAME", Help: "which key to print (default: the credential's primary key, e.g. access_token)"},
 		},
+		Epilog: "Call this right before each request rather than once per script: the value printed is\n" +
+			"fresh now, and OAuth access tokens last about an hour.\n" +
+			"\n" +
+			"examples:\n" +
+			"  TOK=$(hive-cred token google --account email3)\n" +
+			"  hive-cred token google --account email3 --json     # adds expires_at / expires_in_seconds\n" +
+			"  hive-cred token apollo --key api_key",
 	}
 	browse := &commandSpec{
 		Prog:        "hive-cred browse",
@@ -332,6 +344,7 @@ func credCommand() *commandSpec {
 		Flags: []argSpec{
 			{Dest: "json", Long: "json", Kind: kindBool, Help: "emit a JSON envelope on stdout"},
 		},
+		Epilog: "examples:\n  hive-cred browse --json\n  hive-cred browse google",
 	}
 	inspect := &commandSpec{
 		Prog:        "hive-cred inspect",
@@ -340,8 +353,9 @@ func credCommand() *commandSpec {
 		Positionals: []positionalSpec{{Dest: "credential_id", Required: true, Help: "provider / credential id, e.g. google"}},
 		Flags: []argSpec{
 			{Dest: "json", Long: "json", Kind: kindBool, Help: "emit a JSON envelope on stdout"},
-			{Dest: "account", Long: "account", Kind: kindString, Default: "", Help: "restrict to one connected-account alias"},
+			{Dest: "account", Long: "account", Kind: kindString, Default: "", Metavar: "ALIAS", Help: "restrict to one connected-account alias"},
 		},
+		Epilog: "examples:\n  hive-cred inspect google --json\n  hive-cred inspect google --account email3",
 	}
 	return &commandSpec{
 		Prog:        "hive-cred",

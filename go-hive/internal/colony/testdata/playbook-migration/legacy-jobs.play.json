@@ -1,0 +1,13 @@
+{
+  "name": "legacy-jobs",
+  "description": "legacy native playbook saved by an older Go build",
+  "concurrency": 2,
+  "pending_sql": "SELECT id, name FROM jobs WHERE done=0",
+  "task": "Process job {name} (id {id})",
+  "goal": "Processing {name}",
+  "data_columns": ["id", "name"],
+  "retries": 1,
+  "backoff": "exp",
+  "timeout_seconds": 60,
+  "max_rounds": 1
+}

@@ -9,12 +9,16 @@ the main `go_hive/go-hive` module.
 
 Current scope is **L0/L1/L2/L3a**:
 
-- RFC 6455 WebSocket server on `127.0.0.1:14829/bridge` (optional legacy
-  `9229`), compatible with the shipped 1.7.4 extension's hello/ping/pong and
-  `{id,type,...params}` / `{id,result|error}` protocol.
+- RFC 6455 WebSocket server on `127.0.0.1:14829/bridge` (optional legacy pair
+  `9229` WS + `9230` status), compatible with the shipped 1.7.4 extension's
+  hello/ping/pong and `{id,type,...params}` / `{id,result|error}` protocol.
+  The relay runs the same WS-layer keepalive as upstream's
+  `websockets.serve(ping_interval=20, ping_timeout=20)`: an unresponsive peer
+  is closed with `1011 keepalive ping timeout`.
 - Multi-profile connection registry keyed by `profileLabel`, same-label
-  displacement (`4002`), app-level heartbeat, request routing, structured
-  errors, in-flight failure on disconnect.
+  displacement (`4002`), app-level heartbeat (5 s ping / 12 s timeout) on top
+  of the WS-layer keepalive, request routing, structured errors, in-flight
+  failure on disconnect.
 - **All 22 active upstream MCP tools**: lifecycle, tabs, navigation, inspection,
   `browser_interact` (13 actions), `browser_select`, advanced tools and
   `browser_script`.
@@ -87,8 +91,8 @@ go vet ./...
 Run the bridge:
 
 ```bash
-go run ./cmd/browserbridge                  # ws 14829, legacy 9229, http 14830
-go run ./cmd/browserbridge -no-legacy       # skip the pre-migration 9229 port
+go run ./cmd/browserbridge                  # ws 14829, legacy 9229/9230, http 14830
+go run ./cmd/browserbridge -no-legacy       # skip the pre-migration 9229/9230 pair
 go run ./cmd/browserbridge -help            # all flags
 go run ./cmd/browserbridge -probe http://127.0.0.1:14830   # health check, exit code
 ```
@@ -98,7 +102,8 @@ gracefully on SIGINT/SIGTERM:
 
 ```json
 {"ok":true,"ready":true,"version":"0.3.0-l3a","pid":1234,
- "ws":"127.0.0.1:14829","http":"127.0.0.1:14830","legacy":"127.0.0.1:9229"}
+ "ws":"127.0.0.1:14829","http":"127.0.0.1:14830","legacy":"127.0.0.1:9229",
+ "legacy_status":"127.0.0.1:9230"}
 ```
 
 Useful flags: `-artifacts` (spill directory for `browser_html`),
@@ -130,14 +135,21 @@ stable:
 
 | Property | Contract the supervisor relies on |
 |---|---|
-| Listeners | `-http <addr>` (default `127.0.0.1:14830`), `-control <addr>` (default `127.0.0.1:14831`), WS `14829`, legacy `9229` best-effort |
+| Listeners | `-http <addr>` (default `127.0.0.1:14830`), `-control <addr>` (default `127.0.0.1:14831`), WS `14829`, legacy pair `9229` WS + `9230` status best-effort |
 | Readiness | `GET <http>/health` answers `200` within the start budget (10 s); the JSON ready line on stdout is informational |
 | Shutdown | `SIGTERM` stops the process promptly (the `signal.NotifyContext` path); `SIGKILL` after a 5 s grace |
-| Parent watch | `_watch_parent` parity: with a live `HIVE_DESKTOP_PARENT_PID`, `-parent-check` (default 400 ms) polls it and two consecutive misses exit the bridge gracefully (exit 0) — measured 783–866 ms real-machine. Keep the idle row below as the fallback for a bridge started without the hint |
+| Parent watch | `_watch_parent` parity: with a live `HIVE_DESKTOP_PARENT_PID`, `-parent-check` (default **5 s**, upstream's `_PARENT_CHECK_INTERVAL_S`) polls it and two consecutive misses exit the bridge gracefully (exit 0) — measured 5–10 s, the same window upstream has. Keep the idle row below as the fallback for a bridge started without the hint |
+| WS keepalive | `-ws-ping`/`-ws-pong` (default 20 s/20 s, upstream's websockets values): the relay pings every connection and closes a silent one with `1011 keepalive ping timeout` — measured telemetry in `docs/browser-bridge-surface-audit.html` §04.10 |
 | Idle exit | Exit code **0** after `-idle-grace` (30 s) with zero live control clients *and* no live `HIVE_DESKTOP_PARENT_PID`. The supervisor treats exit 0 as intentional: it parks instead of restarting and starts a fresh child on the next `ensure()` (the keepalive's next reconnect) |
 | Output | stdout/stderr are appended to `$HIVE_HOME/browserbridge.log` |
 | Home | `HIVE_HOME` is passed through; `-artifacts` points at `$HIVE_HOME/tool-artifacts` |
 | Restart | a non-zero exit restarts with 500 ms/1 s/2 s backoff up to 3 times; a busy port stops the loop instead of restarting |
+
+The `hive-browser` CLI also starts this binary on demand (upstream
+`ensure_bridge_host_running`): no bridge answering `/health`, no explicit
+`--bridge`, and the CLI spawns a detached child, waits up to 8 s, and logs it to
+`$HIVE_HOME/bridge_host.log`. Extra flags travel through
+`HIVE_BROWSERBRIDGE_ARGS`, exactly as they do for the serve supervisor.
 
 The supervisor itself still lives in the main module
 (`internal/cli/browser_supervisor.go`); this binary owns the worker-side idle
@@ -212,8 +224,9 @@ where possible, plus `tabs`/`tabs_total`. Tab counts are refreshed with a short
 live `tab.list` per profile (750 ms budget); failures fall back to the cached
 count. `bridge_version` is this binary's version, `runtime_version` stays
 `null` unless an embedder sets one (upstream's production default), and
-`bind_errors` names any optional listener (`legacy_ws`, `control_rpc`) that
-failed to bind, so a port conflict is reported as exactly that.
+`bind_errors` names any optional listener (`legacy_ws`, `legacy_status`,
+`control_rpc`) that failed to bind, so a port conflict is reported as exactly
+that.
 
 ```json
 {
@@ -237,15 +250,19 @@ failed to bind, so a port conflict is reported as exactly that.
   "tabs": {"work": 3},
   "tabs_total": 3,
   "profiles": ["work"],
-  "listening": {"ws": true, "status": true, "control_rpc": true, "legacy_ws": true, "legacy_status": false},
+  "listening": {"ws": true, "status": true, "control_rpc": true, "legacy_ws": true, "legacy_status": true},
   "capabilities": ["browser_tabs", "..."],
   "system_blocker": null,
   "bind_errors": {}
 }
 ```
 
-`listening.legacy_status` is always `false`: this port does not run the
-upstream legacy 9230 status listener.
+`listening.legacy_status` is `true` whenever the legacy pair is bound: the
+bridge serves the same status payload on `9229 + 1` (upstream's
+`LEGACY_STATUS_PORT`), which is the endpoint later runtimes still probe as a
+fallback. `-no-legacy` skips both legacy listeners; a primary listener that
+already owns the legacy address skips the duplicate bind (upstream's
+`port != LEGACY_BRIDGE_PORT` guard).
 
 ### `GET /profiles`
 

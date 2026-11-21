@@ -1,10 +1,13 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -137,5 +140,69 @@ func TestTheTypesafeJudgeDoesNotFollowRedirects(t *testing.T) {
 	}
 	if hits.Load() != 0 {
 		t.Fatalf("redirect target was hit %d times, want 0", hits.Load())
+	}
+}
+
+// The real TypeSafe service renders the state in the order the JSON carries it
+// (verified against startlux-decide: the same semantic state sorted gives a
+// different noul than upstream's insertion order). The wire bytes must
+// therefore keep the order framework/server/stall_check.py inserts.
+// Parity: core/framework/server/judge.py::typesafe
+func TestTheTypesafeJudgeKeepsTheUpstreamStateKeyOrder(t *testing.T) {
+	var raw []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read judge request: %v", err)
+		}
+		raw = body
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"answers":{"answer":{"noul":0.75}}}`))
+	}))
+	defer server.Close()
+
+	slot := judgeTestSlot(map[string]any{"api_base": server.URL})
+	state := map[string]any{
+		"tools_called_this_turn":   []any{},
+		"assistant_reply":          "On it.",
+		"user_message":             "draw",
+		"assistant_reasoning_tail": "I will draw.",
+		"previous_turn":            map[string]any{"assistant_reply": "Hi.", "tools_called": []any{}},
+		"zeta":                     "tail",
+		"alpha":                    "head",
+	}
+	p, err := TypesafeJudge(slot, "question", state, nil)
+	if err != nil {
+		t.Fatalf("TypesafeJudge: %v", err)
+	}
+	if p != 0.75 {
+		t.Fatalf("TypesafeJudge = %v, want 0.75", p)
+	}
+
+	var envelope struct {
+		State json.RawMessage `json:"state"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		t.Fatalf("decode judge request: %v", err)
+	}
+	encoded := string(envelope.State)
+	want := []string{
+		"previous_turn",
+		"user_message",
+		"assistant_reasoning_tail",
+		"assistant_reply",
+		"tools_called_this_turn",
+		"alpha",
+		"zeta",
+	}
+	// Search from after the last hit: a key name can also appear nested
+	// inside a value ("assistant_reply" inside previous_turn).
+	cursor := 0
+	for _, key := range want {
+		at := strings.Index(encoded[cursor:], `"`+key+`":`)
+		if at < 0 {
+			t.Fatalf("state %s lacks key %q after offset %d", encoded, key, cursor)
+		}
+		cursor += at + len(key) + 3
 	}
 }

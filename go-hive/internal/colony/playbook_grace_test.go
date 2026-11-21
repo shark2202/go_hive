@@ -2,7 +2,6 @@ package colony
 
 import (
 	"context"
-	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -110,8 +109,8 @@ func TestPlaybookDefaultGraceWaitsOutShortRuns(t *testing.T) {
 	}
 }
 
-// Parity-exempt: the notification is the Go port's [PLAYBOOK_COMPLETE] channel;
-// upstream injects the turn directly, and has no test for it.
+// Parity: framework/tools/playbook_tools.py::_notify_complete (the notice data
+// and its rendered [PLAYBOOK_COMPLETE] text).
 func TestNotifyPlaybookCompletePublishesOnTheColonyBus(t *testing.T) {
 	bus := eventbus.NewEventBus()
 	runtime := NewColonyRuntime(RuntimeOptions{
@@ -129,8 +128,8 @@ func TestNotifyPlaybookCompletePublishesOnTheColonyBus(t *testing.T) {
 	}
 	defer runtime.Unsubscribe(subscriptionID)
 
-	payload, _ := json.Marshal(map[string]any{"status": "completed", "dispatched": 3, "hint": "done rows are skipped"})
-	runtime.NotifyPlaybookComplete("pb_123", "slow-jobs", string(payload))
+	notice := playbookCompleteNoticeFields("pb_123", "slow-jobs", "done", "/tmp/colony.db", "", "hint text", `{"remaining": 0}`, 3, 1, []string{"phase: work", "round 1: 3 dispatched, 3 ok, 0 failed"})
+	runtime.NotifyPlaybookComplete(notice)
 	if received == nil {
 		t.Fatal("no completion event published")
 	}
@@ -140,11 +139,35 @@ func TestNotifyPlaybookCompletePublishesOnTheColonyBus(t *testing.T) {
 	if received.Data["playbook_run_id"] != "pb_123" || received.Data["playbook_name"] != "slow-jobs" {
 		t.Fatalf("event data = %#v", received.Data)
 	}
-	summary, _ := received.Data["summary"].(string)
-	if !strings.HasPrefix(summary, "[PLAYBOOK_COMPLETE]") || !strings.Contains(summary, "dispatched=3") {
-		t.Fatalf("summary = %q", summary)
+	want := "[PLAYBOOK_COMPLETE]\n" +
+		"<run_id>pb_123</run_id>\n" +
+		"<status>done</status>\n" +
+		"<log_db>/tmp/colony.db</log_db>\n" +
+		"<dispatched>3</dispatched>\n" +
+		"<dead_lettered>1</dead_lettered>\n" +
+		"<result>{\"remaining\": 0}</result>\n" +
+		"<hint>hint text</hint>\n" +
+		"<log_tail>\nphase: work\nround 1: 3 dispatched, 3 ok, 0 failed\n</log_tail>"
+	if got := received.Data["summary"]; got != want {
+		t.Fatalf("summary = %q\nwant    = %q", got, want)
 	}
 	if remaining := runtime.BatchRemaining("", "playbook:pb_123"); remaining != 0 {
 		t.Fatalf("batch remaining = %d", remaining)
+	}
+}
+
+// Parity: framework/tools/playbook_tools.py::_notify_complete (error branch)
+func TestPlaybookCompleteNoticeErrorBranchIsUpstreamShaped(t *testing.T) {
+	notice := playbookCompleteNoticeForError("pb_err", "jobs", "/tmp/colony.db", "KeyError: 0 (playbook line 16)")
+	want := "[PLAYBOOK_COMPLETE]\n" +
+		"<run_id>pb_err</run_id>\n" +
+		"<status>error</status>\n" +
+		"<log_db>/tmp/colony.db</log_db>\n" +
+		"<error>KeyError: 0 (playbook line 16)</error>"
+	if got := notice["summary"]; got != want {
+		t.Fatalf("summary = %q\nwant    = %q", got, want)
+	}
+	if _, present := notice["dispatched"]; present {
+		t.Fatalf("error notice must not carry dispatched: %#v", notice)
 	}
 }

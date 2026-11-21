@@ -1,0 +1,50 @@
+data: {"colony_id":null,"correlation_id":null,"data":{"activity":"awaiting_user","awaiting_input":true,"current_execution_id":null,"current_tool_calls":[],"interrupt_cause":null,"interrupted":false,"is_executing":false,"last_event_at":"2026-11-21T16:07:58.264731","last_event_seq":8,"last_queen_event_at":"2026-11-21T16:07:58.264731","park_reason":"turn_done","pending_questions":null,"queen_busy_reason":"awaiting_input","snapshot_seq":9},"execution_id":null,"node_id":"queen","seq":0,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.217814","type":"session_snapshot"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"content":"（后台）收到。","inner_turn":0,"iteration":0,"snapshot":"（后台）收到。"},"execution_id":"session_20261121_160758_16b17a3b","node_id":"queen","seq":6,"stream_id":"queen","timestamp":"2026-11-21T16:07:58.243424","type":"client_output_delta"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"cache_creation_tokens":0,"cached_tokens":0,"cost_usd":0.0,"history_anchor_idx":-1,"input_tokens":1,"iteration":0,"message_count":1,"model":"stall-e2e-model","output_tokens":1,"stop_reason":"stop","system_prefix_sha":"7b1042e025db","system_suffix_sha":"e3b0c44298fc"},"execution_id":"session_20261121_160758_16b17a3b","node_id":"queen","seq":7,"stream_id":"queen","timestamp":"2026-11-21T16:07:58.251835","type":"llm_turn_complete"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"session_20261121_160758_16b17a3b","node_id":"queen","seq":8,"stream_id":"queen","timestamp":"2026-11-21T16:07:58.260537","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":"fea9f1cd53e6af2f1821e6593e20c583","data":{"content":"帮我把今天的待办事项整理一下，整理完告诉我结果。","image_count":0},"execution_id":"session_20261121_160758_16b17a3b","node_id":"queen","seq":10,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.422253","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"帮我把今天的待办事项整理一下，整理完告诉我结果。"}},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":null,"seq":11,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.428499","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"activity":"executing","interrupt_cause":null,"park_reason":null,"questions":null},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":12,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.432466","type":"loop_state_changed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"max_iterations":50},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":13,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.436314","type":"node_loop_started"}
+
+data: {"colony_id":null,"correlation_id":"fea9f1cd53e6af2f1821e6593e20c583","data":{"seq":2},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":15,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.468020","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"iteration":1,"phase":"independent"},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":16,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.472888","type":"node_loop_iteration"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"breakdown":{"conversation_chars":28924,"image_blocks":0,"image_tokens":0,"system_chars":19322,"tool_defs_chars":53992},"estimated_tokens":34079,"max_context_tokens":180000,"message_count":3,"trigger":"iteration_start","usage_pct":19,"usage_ratio":0.1893},"execution_id":null,"node_id":"queen","seq":17,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.477199","type":"context_usage_updated"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"tool_index":1,"tool_input":{},"tool_name":"get_current_time","tool_use_id":"call_stallgw_tool"},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":18,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.498658","type":"tool_call_started"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"is_error":false,"result":"{\"date\": \"2026-11-21\", \"datetime\": \"2026-11-21T08:07:59.501565+00:00\", \"day_of_week\": \"Saturday\", \"time\": \"08:07:59\", \"timezone\": \"UTC\", \"unix_timestamp\": 1795248479}","tool_index":1,"tool_name":"get_current_time","tool_use_id":"call_stallgw_tool"},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":19,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.518003","type":"tool_call_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"breakdown":{"conversation_chars":29108,"image_blocks":0,"image_tokens":0,"system_chars":19322,"tool_defs_chars":53992},"estimated_tokens":34140,"max_context_tokens":180000,"message_count":5,"trigger":"post_tool_call","usage_pct":19,"usage_ratio":0.1897},"execution_id":null,"node_id":"queen","seq":20,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.521973","type":"context_usage_updated"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"breakdown":{"conversation_chars":29108,"image_blocks":0,"image_tokens":0,"system_chars":19322,"tool_defs_chars":53992},"estimated_tokens":34140,"max_context_tokens":180000,"message_count":5,"trigger":"post_tool_results","usage_pct":19,"usage_ratio":0.1897},"execution_id":null,"node_id":"queen","seq":21,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.524590","type":"context_usage_updated"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"cache_creation_tokens":0,"cached_tokens":0,"cost_usd":0.0,"history_anchor_idx":-1,"input_tokens":1,"iteration":1,"message_count":3,"model":"stall-e2e-model","output_tokens":1,"stop_reason":"tool_calls","system_prefix_sha":"7b1042e025db","system_suffix_sha":"e3b0c44298fc"},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":22,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.528439","type":"llm_turn_complete"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"iteration":2,"phase":"independent"},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":23,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.532358","type":"node_loop_iteration"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"breakdown":{"conversation_chars":29108,"image_blocks":0,"image_tokens":0,"system_chars":19322,"tool_defs_chars":53992},"estimated_tokens":34140,"max_context_tokens":180000,"message_count":5,"trigger":"iteration_start","usage_pct":19,"usage_ratio":0.1897},"execution_id":null,"node_id":"queen","seq":24,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.535815","type":"context_usage_updated"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"content":"现在是下午 4 点 05 分。","inner_turn":0,"iteration":2,"snapshot":"现在是下午 4 点 05 分。"},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":25,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.544122","type":"client_output_delta"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"cache_creation_tokens":0,"cached_tokens":0,"cost_usd":0.0,"history_anchor_idx":-1,"input_tokens":1,"iteration":2,"message_count":5,"model":"stall-e2e-model","output_tokens":1,"stop_reason":"stop","system_prefix_sha":"7b1042e025db","system_suffix_sha":"e3b0c44298fc"},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":26,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.553877","type":"llm_turn_complete"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"iterations":2},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":27,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.562505","type":"node_loop_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":28,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.566294","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"activity":"awaiting_user","interrupt_cause":null,"park_reason":"turn_done","questions":null},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":"queen","seq":29,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.570345","type":"loop_state_changed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"dbe70677f5397e7ceadb94e18ee7ab0a","node_id":null,"seq":30,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.575323","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"session_id":"session_20261121_160758_16b17a3b","title":"待办整理"},"execution_id":null,"node_id":null,"seq":31,"stream_id":"queen","timestamp":"2026-11-21T16:07:59.583544","type":"session_title_updated"}
+

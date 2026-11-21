@@ -1,0 +1,38 @@
+{
+  "servers": [
+    {
+      "name": "everything-stdio",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-everything@2.3.1"
+      ],
+      "crash_marker": "server-everything"
+    },
+    {
+      "name": "time-stdio",
+      "transport": "stdio",
+      "command": "uvx",
+      "args": [
+        "mcp-server-time==2026.11.18"
+      ],
+      "crash_marker": "mcp-server-time"
+    },
+    {
+      "name": "everything-sse",
+      "transport": "sse",
+      "url": "http://127.0.0.1:64788/sse"
+    },
+    {
+      "name": "time-http",
+      "transport": "http",
+      "url": "http://127.0.0.1:64789/mcp"
+    },
+    {
+      "name": "everything-http",
+      "transport": "http",
+      "url": "http://127.0.0.1:64788/mcp"
+    }
+  ]
+}

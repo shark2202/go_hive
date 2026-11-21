@@ -2,7 +2,6 @@ package browserbridge
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 )
@@ -12,22 +11,37 @@ import (
 // tools/src/gcu/browser/tools/*.py; see PARITY.md for the per-tool status.
 
 func cmdBrowserTabs(ctx context.Context, b *Bridge, profile string, params map[string]any) (any, error) {
-	res, err := cmdTabsList(ctx, b, routeProfile(profile, params), params)
+	send := params
+	contextName, meta, hasContext := b.toolContext(profile, params)
+	if hasContext && meta.GroupID > 0 {
+		// Upstream lists the ctx's own tab group; a caller without a context
+		// keeps the profile-wide listing.
+		send = map[string]any{}
+		for key, value := range params {
+			send[key] = value
+		}
+		send["group_id"] = meta.GroupID
+	}
+	res, err := cmdTabsList(ctx, b, routeProfile(profile, params), send)
 	if err != nil {
 		return nil, err
 	}
 	m, _ := res.(map[string]any)
 	tabs, _ := m["tabs"].([]any)
+	var active any
+	if hasContext {
+		if id := b.contextActiveTabFor(contextName); id > 0 {
+			active = id
+		}
+	}
 	out := map[string]any{
 		"ok":          true,
 		"total":       len(tabs),
-		"activeTabId": nil,
+		"activeTabId": active,
 		"tabs":        tabs,
 	}
-	if len(tabs) > 3 {
-		out["tabsHint"] = fmt.Sprintf(
-			"You have %d tabs open in this group. Close tabs you no longer need with browser_close(tab_id=...) before opening or navigating more — too many open tabs slow the browser, consume memory, and have empirically caused workers to fail their task.",
-			len(tabs))
+	if hint := tabOverflowHint(len(tabs)); hint != "" {
+		out["tabsHint"] = hint
 	}
 	return out, nil
 }
@@ -52,24 +66,40 @@ func cmdBrowserOpen(ctx context.Context, b *Bridge, profile string, params map[s
 	}
 	label = conn.Label()
 
-	internal := map[string]any{"url": url}
-	if gid, ok := params["group_id"]; ok {
-		internal["groupId"] = gid
-	} else if gid, ok := params["groupId"]; ok {
-		internal["groupId"] = gid
+	// Upstream browser_open is the cold-start entry point: the profile's
+	// context (tab group + seed tab) is created on first use, and the seed tab
+	// is reused for this open instead of leaving an about:blank orphan. A
+	// caller that pins group_id is already group-scoped (no context needed).
+	contextName, meta, seedTab, hasContext := "", ContextMeta{}, 0, false
+	if groupID <= 0 {
+		contextName, meta, seedTab, hasContext = b.ensureToolContext(ctx, profile, params)
+		if hasContext {
+			groupID = meta.GroupID
+		}
 	}
-	created, err := cmdTabOpen(ctx, b, label, internal)
-	if err != nil {
-		return nil, err
-	}
-	m, _ := created.(map[string]any)
-	tabID, _ := toInt(m["tabId"])
+
+	tabID := seedTab
 	if tabID <= 0 {
-		return nil, newError(CodeExtensionError, "tab.create returned no tabId", false)
+		internal := map[string]any{"url": url}
+		if groupID > 0 {
+			internal["groupId"] = groupID
+		}
+		created, err := cmdTabOpen(ctx, b, label, internal)
+		if err != nil {
+			return nil, err
+		}
+		m, _ := created.(map[string]any)
+		tabID, _ = toInt(m["tabId"])
+		if tabID <= 0 {
+			return nil, newError(CodeExtensionError, "tab.create returned no tabId", false)
+		}
 	}
 	if !background {
 		if _, err := conn.Call(ctx, "tab.activate", map[string]any{"tabId": tabID}, b.cfg.CommandTimeout); err != nil {
 			return nil, err
+		}
+		if hasContext {
+			b.setContextActiveTab(contextName, tabID)
 		}
 	}
 	title := ""
@@ -99,27 +129,36 @@ func cmdBrowserOpen(ctx context.Context, b *Bridge, profile string, params map[s
 		}
 	}
 	b.recordAction(tabID, "open", url, true, 0)
-	return map[string]any{
+	out := map[string]any{
 		"ok":              true,
 		"tabId":           tabID,
 		"url":             url,
 		"title":           title,
 		"background":      background,
 		"browser_profile": label,
-	}, nil
+	}
+	if hasContext {
+		if meta, ok := b.contexts.Get(contextName); ok {
+			for key, value := range b.groupSummary(ctx, contextName, meta) {
+				out[key] = value
+			}
+		}
+	}
+	return out, nil
 }
 
 func cmdBrowserClose(ctx context.Context, b *Bridge, profile string, params map[string]any) (any, error) {
-	tabID, ok, err := paramTabIDOptional(params)
+	// Upstream browser_close(tab_id=None) closes the context's active tab.
+	tabID, err := b.resolveTabTarget(profile, params)
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
-		return nil, newError(CodeInvalidState,
-			"No tab to close: tab_id is required because active-tab context tracking is not ported", false)
-	}
+	contextName, meta, hasContext := b.toolContext(profile, params)
 	if _, err := cmdTabClose(ctx, b, routeProfile(profile, params), map[string]any{"tabId": tabID}); err != nil {
 		return nil, err
+	}
+	if hasContext {
+		b.closeActiveTabFollowup(ctx, contextName, meta, tabID)
 	}
 	return map[string]any{"ok": true, "closed": tabID}, nil
 }
@@ -136,14 +175,13 @@ func cmdBrowserActivateTab(ctx context.Context, b *Bridge, profile string, param
 	if _, err := conn.Call(ctx, "tab.activate", map[string]any{"tabId": tabID}, b.cfg.CommandTimeout); err != nil {
 		return nil, err
 	}
+	if contextName, _, ok := b.toolContext(profile, params); ok {
+		b.setContextActiveTab(contextName, tabID)
+	}
 	return map[string]any{"ok": true, "tabId": tabID}, nil
 }
 
 func cmdBrowserNavigate(ctx context.Context, b *Bridge, profile string, params map[string]any) (any, error) {
-	tabID, err := paramTabID(params)
-	if err != nil {
-		return nil, err
-	}
 	url, _ := paramString(params, "url")
 	if strings.TrimSpace(url) == "" {
 		return nil, badRequest("missing required parameter 'url'")
@@ -154,6 +192,13 @@ func cmdBrowserNavigate(ctx context.Context, b *Bridge, profile string, params m
 	}
 	if waitUntil == "" {
 		waitUntil = "load"
+	}
+	// Upstream navigate ensures the context first (cold start), then resolves
+	// the explicit tab_id or the context's active tab.
+	contextName, meta, _, hasContext := b.ensureToolContext(ctx, profile, params)
+	tabID, err := b.resolveTabTarget(profile, params)
+	if err != nil {
+		return nil, err
 	}
 	label := routeProfile(profile, params)
 	conn, err := b.resolve(label, &tabID)
@@ -178,13 +223,25 @@ func cmdBrowserNavigate(ctx context.Context, b *Bridge, profile string, params m
 	if plan != nil {
 		plan.record(b.rateLimiter)
 	}
-	return map[string]any{
+	out := map[string]any{
 		"ok":              true,
 		"tabId":           tabID,
 		"url":             m["url"],
 		"title":           m["title"],
 		"browser_profile": label,
-	}, nil
+	}
+	if hasContext {
+		if current, ok := b.contexts.Get(contextName); ok {
+			for key, value := range b.groupSummary(ctx, contextName, current) {
+				out[key] = value
+			}
+		} else if meta.GroupID > 0 {
+			for key, value := range b.groupSummary(ctx, contextName, meta) {
+				out[key] = value
+			}
+		}
+	}
+	return out, nil
 }
 
 func cmdBrowserClick(ctx context.Context, b *Bridge, profile string, params map[string]any) (any, error) {
@@ -355,7 +412,8 @@ func cmdBrowserEvaluate(ctx context.Context, b *Bridge, profile string, params m
 }
 
 func cmdBrowserReload(ctx context.Context, b *Bridge, profile string, params map[string]any) (any, error) {
-	tabID, err := paramTabID(params)
+	// Upstream browser_reload(tab_id=None) reloads the context's active tab.
+	tabID, err := b.resolveTabTarget(profile, params)
 	if err != nil {
 		return nil, err
 	}

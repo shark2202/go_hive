@@ -127,6 +127,9 @@ func (c *browserCLI) spillActionImage(result map[string]any, intent string, hasI
 	if err != nil {
 		return
 	}
+	// The action dict carries no tabId (upstream's click/type/hover results do
+	// not either), so the artifact name uses upstream's tab0 fallback: the
+	// metadata block of a zoom/screenshot call still names its tab.
 	tabID := intOf(result["tabId"])
 	path, err := writeBrowserCLIArtifact(c.env, "browser_interact", tabID, raw, ".jpg")
 	if err != nil {

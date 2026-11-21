@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -57,6 +58,21 @@ type Options struct {
 	Title string
 	// StallProbability is the judge's noul answer: 1 = stalled, 0 = fine.
 	StallProbability float64
+	// ToolCallName, when set, makes the first queen turn call this tool with
+	// empty arguments instead of answering with the announcement: the turn
+	// that did work. Queen turns after the tool result answer ToolCallReply.
+	ToolCallName string
+	// ToolCallReply answers the queen turn that follows the tool result.
+	ToolCallReply string
+	// LogPath, when set, appends one JSON record per request to that file.
+	LogPath string
+	// ReplyWhen, when set, restricts the scripted queen turns to requests
+	// whose body carries the marker (the run's user message): other queen
+	// calls — session-start turns, for one — answer FillerReply and leave
+	// the script untouched.
+	ReplyWhen string
+	// FillerReply answers queen calls that do not carry ReplyWhen.
+	FillerReply string
 }
 
 // Server is an http.Handler plus its request recorder.
@@ -82,6 +98,9 @@ func New(opts Options) *Server {
 	}
 	if opts.Title == "" {
 		opts.Title = "Fox drawing"
+	}
+	if opts.FillerReply == "" {
+		opts.FillerReply = "（后台）收到。"
 	}
 	return &Server{opts: opts}
 }
@@ -116,8 +135,18 @@ func (s *Server) RequestsOfKind(kind Kind) []Record {
 func (s *Server) record(kind Kind, r *http.Request, body string) {
 	s.mu.Lock()
 	s.seq++
-	s.records = append(s.records, Record{Seq: s.seq, Kind: kind, Path: r.URL.Path, Auth: r.Header.Get("Authorization"), Body: body})
+	record := Record{Seq: s.seq, Kind: kind, Path: r.URL.Path, Auth: r.Header.Get("Authorization"), Body: body}
+	s.records = append(s.records, record)
+	logPath := s.opts.LogPath
 	s.mu.Unlock()
+	if logPath != "" {
+		if encoded, err := json.Marshal(record); err == nil {
+			if file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
+				_, _ = file.Write(append(encoded, '\n'))
+				_ = file.Close()
+			}
+		}
+	}
 }
 
 func readPayload(w http.ResponseWriter, r *http.Request) (string, map[string]any, bool) {
@@ -145,15 +174,23 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 	system := systemPrompt(payload)
 	kind := KindQueen
 	content := ""
+	toolCall := ""
 	s.mu.Lock()
 	if strings.Contains(system, "You name chat conversations") {
 		kind = KindTitle
 		content = s.opts.Title
+	} else if s.opts.ReplyWhen != "" && !strings.Contains(raw, s.opts.ReplyWhen) {
+		content = s.opts.FillerReply
 	} else {
 		s.queenTurns++
-		if s.queenTurns == 1 {
+		switch {
+		case s.queenTurns == 1 && s.opts.ToolCallName != "":
+			toolCall = s.opts.ToolCallName
+		case s.queenTurns == 1:
 			content = s.opts.Announcement
-		} else {
+		case s.queenTurns == 2 && s.opts.ToolCallName != "":
+			content = s.opts.ToolCallReply
+		default:
 			content = s.opts.LaterReply
 		}
 	}
@@ -165,7 +202,22 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 		if options, ok := payload["stream_options"].(map[string]any); ok {
 			includeUsage, _ = options["include_usage"].(bool)
 		}
+		if toolCall != "" {
+			s.streamToolCall(w, toolCall, includeUsage)
+			return
+		}
 		s.streamCompletion(w, content, includeUsage)
+		return
+	}
+	if toolCall != "" {
+		writeCompletion(w, s.opts.Model, map[string]any{
+			"role": "assistant",
+			"tool_calls": []any{map[string]any{
+				"id":       "call_stallgw_tool",
+				"type":     "function",
+				"function": map[string]any{"name": toolCall, "arguments": "{}"},
+			}},
+		}, "tool_calls")
 		return
 	}
 	writeCompletion(w, s.opts.Model, map[string]any{
@@ -255,6 +307,66 @@ func (s *Server) streamCompletion(w http.ResponseWriter, content string, include
 	chunk(map[string]any{"role": "assistant"}, nil)
 	chunk(map[string]any{"content": content}, nil)
 	chunk(map[string]any{}, "stop")
+	if includeUsage {
+		send(map[string]any{
+			"id":      id,
+			"object":  "chat.completion.chunk",
+			"created": created,
+			"model":   s.opts.Model,
+			"choices": []any{},
+			"usage":   map[string]any{"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+		})
+	}
+	_, _ = io.WriteString(w, "data: [DONE]\n\n")
+	if flusher != nil {
+		flusher.Flush()
+	}
+}
+
+// streamToolCall answers a `stream: true` request with the OpenAI
+// tool_calls delta shape: the scripted turn that did work.
+func (s *Server) streamToolCall(w http.ResponseWriter, name string, includeUsage bool) {
+	flusher, _ := w.(http.Flusher)
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(http.StatusOK)
+	created := time.Now().Unix()
+	id := "chatcmpl-stallgw-tool"
+	send := func(payload map[string]any) {
+		encoded, _ := json.Marshal(payload)
+		_, _ = fmt.Fprintf(w, "data: %s\n\n", encoded)
+		if flusher != nil {
+			flusher.Flush()
+		}
+	}
+	chunk := func(delta map[string]any, finish any) {
+		send(map[string]any{
+			"id":      id,
+			"object":  "chat.completion.chunk",
+			"created": created,
+			"model":   s.opts.Model,
+			"choices": []any{map[string]any{
+				"index":         0,
+				"delta":         delta,
+				"finish_reason": finish,
+			}},
+		})
+	}
+	chunk(map[string]any{"role": "assistant"}, nil)
+	chunk(map[string]any{"tool_calls": []any{map[string]any{
+		"index": 0,
+		"id":    "call_stallgw_tool",
+		"type":  "function",
+		"function": map[string]any{
+			"name":      name,
+			"arguments": "",
+		},
+	}}}, nil)
+	chunk(map[string]any{"tool_calls": []any{map[string]any{
+		"index":    0,
+		"function": map[string]any{"arguments": "{}"},
+	}}}, nil)
+	chunk(map[string]any{}, "tool_calls")
 	if includeUsage {
 		send(map[string]any{
 			"id":      id,

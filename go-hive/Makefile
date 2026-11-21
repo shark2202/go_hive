@@ -33,7 +33,7 @@ PY_ROOT   ?= ../../core
 OFFLINE    = CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod
 PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check tool-output-check ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check ci clean help
 
 all: ci
 
@@ -131,6 +131,16 @@ tool-surface-check:
 		cd .. && uv run --no-project python scripts/gen_tool_surface_flat.py --check; \
 	else \
 		echo "tool-surface-check: SKIP — uv 不可用"; \
+	fi
+
+# 浏览器工具定义（browser_tool_defs.json）与上游 gcu FastMCP 注册的漂移检查：
+# 重新从 tools/src/gcu/browser/tools/*.py 抽取 22 个 active 工具的
+# name/description/inputSchema，与内嵌产物逐字比对（含 per-tool sha256）。
+browser-tool-check:
+	@if command -v uv >/dev/null 2>&1; then \
+		cd .. && uv run python scripts/gen_browser_tool_defs.py --check; \
+	else \
+		echo "browser-tool-check: SKIP — uv 不可用"; \
 	fi
 
 # 工具输出 golden（docs/e2e-assets/tool-output/）的自洽检查：从已提交的

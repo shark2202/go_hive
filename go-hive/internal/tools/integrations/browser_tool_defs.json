@@ -1,0 +1,1352 @@
+{
+ "schema_version": "1.0",
+ "kind": "hive-browser-tool-definitions",
+ "provenance": {
+  "purpose": "Model-visible browser tool definitions served by the Go tool registry; field-level copy of the Python gcu FastMCP registration",
+  "source_package": "tools/src/gcu/browser/tools",
+  "source_modules": [
+   "tools/src/gcu/browser/tools/lifecycle.py",
+   "tools/src/gcu/browser/tools/tabs.py",
+   "tools/src/gcu/browser/tools/navigation.py",
+   "tools/src/gcu/browser/tools/inspection.py",
+   "tools/src/gcu/browser/tools/interact.py",
+   "tools/src/gcu/browser/tools/advanced.py",
+   "tools/src/gcu/browser/tools/script.py"
+  ],
+  "source_sha256": {
+   "tools/src/gcu/browser/tools/lifecycle.py": "e4285fc3eae801f4916f000408a6bb57dcc97e17648289db6d0eb23e3af89d5d",
+   "tools/src/gcu/browser/tools/tabs.py": "bfad1db235724ca54bc9c06d0cebde177afc5cde16eda9c4ff6276e17cba1946",
+   "tools/src/gcu/browser/tools/navigation.py": "49241ff7711f15ea7e5c5863831ce68459f4f7848e8fe2b6a9b951656952e6d4",
+   "tools/src/gcu/browser/tools/inspection.py": "1dee0166e790f22cb0a901f09a1760eb0d6de9b862c9a8a4f9249121791b64a1",
+   "tools/src/gcu/browser/tools/interact.py": "a091f91a3bb706ef611e75d92f6636cca3c377596c6b5adfbc89aca5188b8aed",
+   "tools/src/gcu/browser/tools/advanced.py": "e52669da4e25f045b305fd4da7fbf113fb9dfd4e52bbae2529c9e08edd159ed0",
+   "tools/src/gcu/browser/tools/script.py": "43d742682035346da1f89dadeec9e6aad14066ccbbc6d70f24bc82c54b4d04b4"
+  },
+  "extraction": "FastMCP ToolManager after gcu.browser.register_tools(server)",
+  "generator": "go_hive/scripts/gen_browser_tool_defs.py",
+  "canonical_order": "bytewise by name",
+  "sha_rule": "sha256 of {name, description, input_schema} as sorted-key compact JSON (UTF-8)",
+  "counts": {
+   "active": 22
+  }
+ },
+ "tools": [
+  {
+   "name": "browser_activate_tab",
+   "description": "Switch the active browser tab to the given tab ID.\n\nUse this to bring an existing tab to the foreground before interacting\nwith it. The ``tab_id`` argument is required and must be an integer\nreturned by ``browser_tabs``; passing null/None is not supported (use\n``browser_tabs`` to discover a valid ID first).\n\nReturns a dict with activation status.",
+   "input_schema": {
+    "properties": {
+     "tab_id": {
+      "description": "REQUIRED. Integer Chrome tab ID of the tab to switch to. Must be a concrete integer (not null). Call browser_tabs first to list available tabs and their IDs.",
+      "title": "Tab Id",
+      "type": "integer"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     }
+    },
+    "required": [
+     "tab_id"
+    ],
+    "title": "browser_activate_tabArguments",
+    "type": "object"
+   },
+   "sha256": "68499770793e1bf8a3c6d64c57c42cd874198bb4d0e92bf1b3e7af8839c00279"
+  },
+  {
+   "name": "browser_close",
+   "description": "Close a browser tab.\n\nReturns a dict with close status.",
+   "input_schema": {
+    "properties": {
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID to close (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     }
+    },
+    "title": "browser_closeArguments",
+    "type": "object"
+   },
+   "sha256": "19cd7721930af1a8fde7718664eb377a86211f632e2720ceef402509c56c95fa"
+  },
+  {
+   "name": "browser_console",
+   "description": "Get console messages from the browser.\n\nNote: Console capture requires Runtime.enable and event handling.\nCurrently returns a message indicating this feature needs implementation.\n\nReturns a dict with console messages.",
+   "input_schema": {
+    "properties": {
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     },
+     "level": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Filter by level (log, info, warn, error) (optional)",
+      "title": "Level"
+     }
+    },
+    "title": "browser_consoleArguments",
+    "type": "object"
+   },
+   "sha256": "b86ee385f5075d2ba137ca2aa5740deb55bb1ac2f3494d15c6d23629d5e949cd"
+  },
+  {
+   "name": "browser_dialog_respond",
+   "description": "\n        Respond to the pending native browser dialog on a tab.\n\n        Use this when a navigation/reload/back tool returns\n        ``{\"ok\": false, \"pending_dialog\": {...}}``. The agent picks\n        ``action=\"accept\"`` to proceed (e.g. leave the page and lose\n        unsaved work) or ``action=\"dismiss\"`` to cancel (stay on the\n        page). The pending dialog's ``type`` and ``message`` are\n        included in that return envelope so the agent has context to\n        decide.\n\n        Args:\n            action: \"accept\" or \"dismiss\".\n            tab_id: Chrome tab ID (default: active tab).\n            profile: Browser profile name (default: \"default\").\n            prompt_text: Only used when the pending dialog is a\n                ``window.prompt`` and ``action=\"accept\"``.\n\n        Returns:\n            ``{\"ok\": true, \"tab_id\": ..., \"dialog\": {...resolved dialog...}}``\n            on success. ``{\"ok\": false, \"error\": \"...\"}`` if no dialog\n            is pending or the tab can't be resolved.\n        ",
+   "input_schema": {
+    "properties": {
+     "action": {
+      "description": "How to resolve the dialog. 'accept' clicks the affirmative button: for `beforeunload` this DISCARDS work and leaves the page; for `confirm` returns true; for `prompt` returns `prompt_text`. 'dismiss' cancels the dialog: for `beforeunload` the page stays.",
+      "enum": [
+       "accept",
+       "dismiss"
+      ],
+      "title": "Action",
+      "type": "string"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Profile"
+     },
+     "prompt_text": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Response text for `window.prompt` dialogs only. Ignored otherwise.",
+      "title": "Prompt Text"
+     }
+    },
+    "required": [
+     "action"
+    ],
+    "title": "browser_dialog_respondArguments",
+    "type": "object"
+   },
+   "sha256": "fff61f9157656233208caa43697e0a6a29d026d319de24dc71eff19ae076029a"
+  },
+  {
+   "name": "browser_evaluate",
+   "description": "Execute JavaScript in a browser tab and return the result.\n\nRuns in the page context; the value of the last expression is returned. Use\nit to read state or drive the page when no semantic tool fits — e.g. element\nattributes (`el.getAttribute('href')`), history navigation (`history.back()` /\n`history.forward()`), computed styles, or scroll position.\n\nReturns a dict with the evaluation result.",
+   "input_schema": {
+    "properties": {
+     "script": {
+      "description": "The JavaScript code to execute. The code will be evaluated in the page context. The result of the last expression will be returned automatically. Do NOT use 'return' statements - just write the expression you want to evaluate (e.g., 'window.myData.value' not 'return window.myData.value'). You can access and modify the DOM, call page functions, and interact with page variables.",
+      "title": "Script",
+      "type": "string"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID. Defaults to the active tab.",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name. Defaults to \"default\".",
+      "title": "Profile"
+     }
+    },
+    "required": [
+     "script"
+    ],
+    "title": "browser_evaluateArguments",
+    "type": "object"
+   },
+   "sha256": "9392af33c9666e59cb4df8fb017fe21ccfa52f01483f6f3ea4d43f5ea4efce29"
+  },
+  {
+   "name": "browser_get_text",
+   "description": "Get text content of an element.\n\nReturns a dict with the element text content.",
+   "input_schema": {
+    "properties": {
+     "selector": {
+      "description": "CSS selector",
+      "title": "Selector",
+      "type": "string"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     },
+     "timeout_ms": {
+      "default": 30000,
+      "description": "Timeout in milliseconds (default: 30000)",
+      "title": "Timeout Ms",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "selector"
+    ],
+    "title": "browser_get_textArguments",
+    "type": "object"
+   },
+   "sha256": "a207d82529bafd0b2f7fd9bcde8d56cc2502deefff499ccd11bbe19e57db3331"
+  },
+  {
+   "name": "browser_html",
+   "description": "Get the HTML content of the page or a specific element.\n\nReturns a dict with HTML content.",
+   "input_schema": {
+    "properties": {
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     },
+     "selector": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "CSS selector to get specific element HTML (optional)",
+      "title": "Selector"
+     }
+    },
+    "title": "browser_htmlArguments",
+    "type": "object"
+   },
+   "sha256": "31bb10c5ee0dae4a6bbb7d049bbfa0e4fbcd0c25bbaa2217fb923611bd775f34"
+  },
+  {
+   "name": "browser_interact",
+   "description": "Interact with a web browser tab: click, type, press keys, hover,\nscroll, drag, screenshot, zoom, and wait — all through one ``action``.\nIf you don't have a valid tab_id, call browser_tabs first.\n\nTARGETING — most actions accept either:\n* ``selector``: a CSS selector (preferred — robust to layout shifts).\n  Supports ' >>> ' to pierce Shadow DOM.\n* ``coordinate``: [x, y] as FRACTIONS of the viewport (0..1, NOT\n  pixels). (0.5, 0.5) is the centre. Read a target's proportional\n  position off a screenshot, or pass rect.cx / rect.cy from\n  browser_shadow_query (it returns fractions).\nIf both are given, ``selector`` wins. ``type`` and ``key`` with neither\ntarget act on the currently focused element.\n\nACTIONS\n* left_click / right_click / middle_click — click ``selector`` or\n  ``coordinate``.\n* double_click / triple_click — multi-click ``selector`` or\n  ``coordinate``.\n* hover — move the cursor to ``selector`` or ``coordinate`` without\n  clicking (reveals tooltips / menus).\n* type — type ``text`` into ``selector`` (or the focused element).\n  ``clear_first`` (default true) overwrites existing content.\n* key — press ``text`` as a key, e.g. \"Enter\", \"ArrowDown\", or with\n  modifiers \"cmd+a\" / \"ctrl+shift+Tab\". ``modifiers`` may also be\n  passed separately. ``repeat`` repeats the press. Targets\n  ``coordinate`` first if given (routes through native hit-testing),\n  else ``selector``, else the focused element. Modifiers work on the\n  selector / focused path only — combining them with a ``coordinate``\n  is rejected with an error, not silently dropped.\n* scroll — scroll ``scroll_direction`` by ``scroll_amount`` PIXELS, in\n  ``selector`` (a scrollable container) or the page. For lazy feeds\n  pass a large amount (3000-6000) and a container selector.\n* drag — drag from ``start_selector`` / ``start_coordinate`` to\n  ``selector`` / ``coordinate``.\n* screenshot — capture the tab (800px JPEG). ``intent`` is required:\n  name the entity, the target element, and your planned action.\n  Optional ``full_page`` or element ``selector``.\n* zoom — capture ``region`` ([x0, y0, x1, y1] viewport fractions) at\n  higher resolution for close inspection of small UI. A position read\n  off a zoom image is crop-relative — use zoom to *read*; for an exact\n  clickable coordinate use ``browser_shadow_query`` or a plain\n  screenshot. The result carries a ``crop_box`` for mapping back.\n* wait — pause for ``duration`` seconds, or until ``wait_for_selector``\n  / ``wait_for_text`` appears.\n\nNOTES\n* Before clicking by coordinate, take a screenshot to locate the\n  element; the post-action screenshot shows a marker so you can\n  self-correct a near-miss.\n* For navigation, tab management, page reads (HTML / text /\n  accessibility snapshot), dropdowns (browser_select), uploads, and\n  dialogs, use the dedicated browser_* tools — this tool covers input\n  and visual capture only.\n\nReturns a list of content blocks: a JSON text block, plus an image\nblock for screenshot / zoom and for coordinate click / hover / key.",
+   "input_schema": {
+    "properties": {
+     "action": {
+      "description": "The interaction to perform. See the tool description for each action.",
+      "enum": [
+       "left_click",
+       "right_click",
+       "middle_click",
+       "double_click",
+       "triple_click",
+       "hover",
+       "type",
+       "key",
+       "scroll",
+       "drag",
+       "screenshot",
+       "zoom",
+       "wait"
+      ],
+      "title": "Action",
+      "type": "string"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID. Defaults to the active tab.",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name. Defaults to \"default\".",
+      "title": "Profile"
+     },
+     "selector": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "CSS selector for the target element. ' >>> ' pierces Shadow DOM. For drag this is the end element; for screenshot it captures just that element.",
+      "title": "Selector"
+     },
+     "coordinate": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "[x, y] as fractions of the viewport (0..1), not pixels. Target for click / hover / key; end point for drag.",
+      "title": "Coordinate"
+     },
+     "start_selector": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "CSS selector for the drag start element.",
+      "title": "Start Selector"
+     },
+     "start_coordinate": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "[x, y] viewport fractions (0..1) for the drag start point.",
+      "title": "Start Coordinate"
+     },
+     "text": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "For type: the string to type. For key: the key to press, optionally with modifiers joined by \"+\" (e.g. \"Enter\", \"cmd+a\").",
+      "title": "Text"
+     },
+     "clear_first": {
+      "default": true,
+      "description": "For type: clear the field before typing. Default true.",
+      "title": "Clear First",
+      "type": "boolean"
+     },
+     "use_insert_text": {
+      "default": true,
+      "description": "For type: use CDP Input.insertText (default true — reliable for rich-text editors). Set false for per-keystroke dispatch (e.g. Monaco).",
+      "title": "Use Insert Text",
+      "type": "boolean"
+     },
+     "modifiers": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Modifier keys for the key action, e.g. \"ctrl\" or \"cmd+shift\". Applies on the selector / focused path only.",
+      "title": "Modifiers"
+     },
+     "repeat": {
+      "default": 1,
+      "description": "For key: repeat the press this many times (1-100). Default 1.",
+      "title": "Repeat",
+      "type": "integer"
+     },
+     "scroll_direction": {
+      "default": "down",
+      "description": "Direction for the scroll action.",
+      "enum": [
+       "up",
+       "down",
+       "left",
+       "right"
+      ],
+      "title": "Scroll Direction",
+      "type": "string"
+     },
+     "scroll_amount": {
+      "default": 500,
+      "description": "For scroll: distance in pixels (default 500). For lazy feeds use 3000-6000.",
+      "title": "Scroll Amount",
+      "type": "integer"
+     },
+     "intent": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Required for screenshot: one phrase naming the entity, the target element, and the action you plan to take.",
+      "title": "Intent"
+     },
+     "full_page": {
+      "default": false,
+      "description": "For screenshot: capture the full scrollable page. Default false.",
+      "title": "Full Page",
+      "type": "boolean"
+     },
+     "annotate": {
+      "default": true,
+      "description": "For screenshot: draw the last interaction's marker on the image. Default true.",
+      "title": "Annotate",
+      "type": "boolean"
+     },
+     "region": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "For zoom: [x0, y0, x1, y1] viewport fractions (0..1) of the rectangle to capture.",
+      "title": "Region"
+     },
+     "duration": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "For wait: seconds to pause (max 10) when no condition is given.",
+      "title": "Duration"
+     },
+     "wait_for_selector": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "For wait: pause until this CSS selector appears.",
+      "title": "Wait For Selector"
+     },
+     "wait_for_text": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "For wait: pause until this text appears on the page.",
+      "title": "Wait For Text"
+     },
+     "timeout_ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Timeout for resolving a selector target or a wait condition. Per-action defaults apply when omitted (5000 for clicks/waits, 30000 for type/drag).",
+      "title": "Timeout Ms"
+     },
+     "auto_snapshot_mode": {
+      "default": "simple",
+      "description": "Accessibility snapshot attached after a state-changing action: \"simple\" (default), \"default\" (full tree), \"interactive\" (controls only), \"off\" (skip — use when batching interactions).",
+      "enum": [
+       "default",
+       "simple",
+       "interactive",
+       "off"
+      ],
+      "title": "Auto Snapshot Mode",
+      "type": "string"
+     },
+     "wait_after_ms": {
+      "default": 0,
+      "description": "Pause this many ms after the action before snapshotting (animations / lazy fetches). Default 0.",
+      "title": "Wait After Ms",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "action"
+    ],
+    "title": "browser_interactArguments",
+    "type": "object"
+   },
+   "sha256": "20af2773f0dfd463fef391427e1888fa5a39fc6d5528f44cfc2658621365ce96"
+  },
+  {
+   "name": "browser_navigate",
+   "description": "Navigate a tab to a URL.\n\nLazy-creates a browser context if none exists; when no ``tab_id``\nis given and the context was just created, navigation lands on\nthe seed tab. Prefer ``browser_open`` when you specifically want\na new tab — ``browser_navigate`` is for redirecting an existing tab.\n\nWaits for the page to reach the ``wait_until`` condition before\nreturning.\n\nReturns a dict with navigation result (url, title).",
+   "input_schema": {
+    "properties": {
+     "url": {
+      "description": "URL to navigate to",
+      "title": "Url",
+      "type": "string"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     },
+     "wait_until": {
+      "default": "load",
+      "description": "Wait condition - one of: commit, domcontentloaded, load (default), networkidle",
+      "enum": [
+       "commit",
+       "domcontentloaded",
+       "load",
+       "networkidle"
+      ],
+      "title": "Wait Until",
+      "type": "string"
+     },
+     "profile_display_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Profile Display Name"
+     },
+     "browser_profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Which Chrome profile to act in — a connected profile label from list_browser_profiles. Set it to target a specific logged-in account; omit to use the starred/sole connected profile.",
+      "title": "Browser Profile"
+     }
+    },
+    "required": [
+     "url"
+    ],
+    "title": "browser_navigateArguments",
+    "type": "object"
+   },
+   "sha256": "cfeb649ddf101bae744c5d9a32be42f8dbc08ebffa9269cb9325f2b218e89113"
+  },
+  {
+   "name": "browser_open",
+   "description": "Open a browser tab at the given URL — preferred entry point.\n\nThis is the agent's primary \"go to a page\" tool and the cold-start\nentry point — if no browser context exists yet for the profile,\none is created transparently. The first call after a fresh\ncontext reuses the seed ``about:blank`` tab; subsequent calls\nopen new tabs in the agent's tab group. Waits for the page to\nload before returning.\n\nReturns a dict with new tab info (id, url, title).",
+   "input_schema": {
+    "properties": {
+     "url": {
+      "description": "URL to navigate to",
+      "title": "Url",
+      "type": "string"
+     },
+     "background": {
+      "default": false,
+      "description": "Open in background without stealing focus (default: False)",
+      "title": "Background",
+      "type": "boolean"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     },
+     "profile_display_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Profile Display Name"
+     },
+     "browser_profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Which Chrome profile to open in — a connected profile label from list_browser_profiles (the name shown in that profile's Hive extension side panel, or its auto 3-word id). Set this to act in a specific logged-in account; omit to use the starred/sole connected profile. The result echoes the profile actually used so you can verify it.",
+      "title": "Browser Profile"
+     }
+    },
+    "required": [
+     "url"
+    ],
+    "title": "browser_openArguments",
+    "type": "object"
+   },
+   "sha256": "d54011b71b10746593c0a86970f162462d1877aa2722eb095acbbd8f52a59aab"
+  },
+  {
+   "name": "browser_reload",
+   "description": "Reload the current page.\n\nReturns a dict with reload result.",
+   "input_schema": {
+    "properties": {
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     }
+    },
+    "title": "browser_reloadArguments",
+    "type": "object"
+   },
+   "sha256": "8fcf64a9c833ac3cce3bcbaeeaafb9fa1425b9ac4ff379af604c88307ed4c698"
+  },
+  {
+   "name": "browser_resize",
+   "description": "Resize the browser viewport.\n\nReturns a dict with the resize result.",
+   "input_schema": {
+    "properties": {
+     "width": {
+      "description": "Viewport width in pixels",
+      "title": "Width",
+      "type": "integer"
+     },
+     "height": {
+      "description": "Viewport height in pixels",
+      "title": "Height",
+      "type": "integer"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     }
+    },
+    "required": [
+     "width",
+     "height"
+    ],
+    "title": "browser_resizeArguments",
+    "type": "object"
+   },
+   "sha256": "ceb19693853af7d5cfdc6ffb2ae0d4bf6f35f3d4364c7bfad77178f93e1f473b"
+  },
+  {
+   "name": "browser_screenshot",
+   "description": "Take a screenshot of the current page.\n\nImage is 800 px wide (JPEG quality 75, ~50–120 KB). All\ncoordinate tools work in **fractions of the viewport (0..1)**,\nnot pixels — so read a target's proportional position off this\nimage (\"~35 % from the left, ~20 % from the top\") and pass\n``[0.35, 0.20]`` as the ``coordinate`` of a ``browser_interact``\nleft_click / hover / key action. ``browser_shadow_query``\nlikewise returns coordinates as fractions.\n\nReturns a list of content blocks: text metadata + image.",
+   "input_schema": {
+    "properties": {
+     "intent": {
+      "description": "What you are looking for in this screenshot. Must mention: (1) the entity name (person, page title, post author), (2) the target element (submit button, text input, dropdown, etc.), (3) the action you plan to take. Example: \"Jamie Davidson's OpenAI post — looking for the Comment submit button to post my reply\".",
+      "title": "Intent",
+      "type": "string"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     },
+     "full_page": {
+      "default": false,
+      "description": "Capture full scrollable page (default: False). Note: full_page images extend beyond the viewport, so fractions read off them do NOT map cleanly to viewport-space clicks. Use for reading / overview only, not for pointing.",
+      "title": "Full Page",
+      "type": "boolean"
+     },
+     "selector": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "CSS selector to screenshot a specific element (optional)",
+      "title": "Selector"
+     },
+     "annotate": {
+      "default": true,
+      "description": "Draw bounding box of last interaction on image (default: True)",
+      "title": "Annotate",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "intent"
+    ],
+    "title": "browser_screenshotArguments",
+    "type": "object"
+   },
+   "sha256": "abfb17e993e1ceb59813922ec68e1567a23dbe8041a7aa378195d955025e31c0"
+  },
+  {
+   "name": "browser_script",
+   "description": "Run a bundled Python orchestration script from a skill, in-process,\nagainst THIS agent's tab group.\n\nUse this instead of stitching together many ``browser_*`` calls when a\nflow is multi-step and deterministic (e.g. \"reply to a LinkedIn DM\",\n\"accept N pending connection requests\"). The script encodes verified\nselectors, waits, and retries; the agent only chooses whether to call\nit and what to pass.\n\nArguments\n* ``skill``: the skill's declared ``name`` frontmatter OR its directory\n  name (e.g. ``\"hive.linkedin-messaging\"`` or ``\"linkedin-messaging\"``).\n* ``script``: a ``.py`` file under ``<skill>/scripts/`` (no path\n  separators, no ``..``).\n* ``args``: a dict passed to the script as ``ctx.args``. Validate\n  shape inside the script — this tool does not enforce a schema.\n* ``timeout_s``: max wall time before the script is cancelled. Default\n  60, hard cap 300.\n* ``tab_id``: optional Chrome tab id to expose as ``ctx.tab_id``.\n  Defaults to the profile's active tab. Only set if the script's docs\n  say to — most scripts assume the active tab.\n\nReturns a dict shaped like::\n\n    {\"ok\": true,  \"result\": <whatever the script returned>, \"duration_ms\": ...}\n    {\"ok\": false, \"error\": \"<reason>\", \"duration_ms\": ..., ...}\n\nOn exception inside the script::\n\n    {\"ok\": false, \"error\": \"<exception message>\", \"exception_type\": \"...\",\n     \"traceback\": \"<tail>\", \"duration_ms\": ...}\n\nDiscover available scripts by reading the calling skill's SKILL.md —\neach script's contract (args, return shape, failure modes) is\ndocumented there alongside the canonical flow.",
+   "input_schema": {
+    "properties": {
+     "skill": {
+      "description": "Skill identifier. Use the SKILL.md `name:` frontmatter (e.g. 'hive.linkedin-messaging') or the directory name (e.g. 'linkedin-messaging').",
+      "title": "Skill",
+      "type": "string"
+     },
+     "script": {
+      "description": "Script filename, ending in .py, located in the skill's scripts/ directory. No path separators or '..'.",
+      "title": "Script",
+      "type": "string"
+     },
+     "args": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Arbitrary JSON-serializable args passed to the script as ctx.args. Shape is per-script — see the skill's SKILL.md.",
+      "title": "Args"
+     },
+     "timeout_s": {
+      "default": 60.0,
+      "description": "Wall-time cap, seconds. Default 60, max 300.",
+      "title": "Timeout S",
+      "type": "number"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID to expose as ctx.tab_id. Defaults to the profile's active tab. Only set this if the script's docs say to — most scripts assume the active tab.",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\"). Framework-injected.",
+      "title": "Profile"
+     },
+     "profile_display_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Profile Display Name"
+     },
+     "browser_profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Which Chrome profile to run in — a connected profile label from list_browser_profiles. Set it to target a specific logged-in account; omit to use the starred/sole connected profile.",
+      "title": "Browser Profile"
+     }
+    },
+    "required": [
+     "skill",
+     "script"
+    ],
+    "title": "browser_scriptArguments",
+    "type": "object"
+   },
+   "sha256": "fcf8093a09b9ba0c3694c72fb8389e5bec1a637ef1e52d53f5ac198af00afa37"
+  },
+  {
+   "name": "browser_select",
+   "description": "Select option(s) in a dropdown/select element.\n\nReturns a dict with the select result.",
+   "input_schema": {
+    "properties": {
+     "selector": {
+      "description": "CSS selector for the select element",
+      "title": "Selector",
+      "type": "string"
+     },
+     "values": {
+      "description": "List of values to select",
+      "items": {
+       "type": "string"
+      },
+      "title": "Values",
+      "type": "array"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     }
+    },
+    "required": [
+     "selector",
+     "values"
+    ],
+    "title": "browser_selectArguments",
+    "type": "object"
+   },
+   "sha256": "4e9863c62145bc414e5ac2790eef16d5e6fdac41c0472fc6419bd0c181cf283b"
+  },
+  {
+   "name": "browser_setup",
+   "description": "Check browser extension status and show installation instructions if needed.\n\nCall this first if browser tools are not working. Returns the Chrome Web Store\ninstall link when the extension isn't connected.",
+   "input_schema": {
+    "properties": {},
+    "title": "browser_setupArguments",
+    "type": "object"
+   },
+   "sha256": "2ffeb08666f1974e5d38311c7187f049d993cc86e238e4fb471f1f6a19c6bf1e"
+  },
+  {
+   "name": "browser_shadow_query",
+   "description": "Locate an element by CSS selector and return its bounding rect.\n\nWorks with ordinary selectors AND '>>>' shadow-piercing syntax —\njoining selectors with ' >>> ' traverses shadow roots to reach\nelements inside closed/open shadow DOM, overlays, and virtual-rendered\ncomponents (e.g. LinkedIn's #interop-outlet). Use it whenever you need\nan element's exact position to act on it.\n\nReturns the rect as **fractions of the viewport (0..1)** — feed\n``rect.cx`` / ``rect.cy`` straight into a browser_interact left_click /\nhover / key action as the ``coordinate``.\n\nReturns a dict with ``rect`` block (x, y, w, h, cx, cy) as fractions,\nplus ``cssWidth`` / ``cssHeight`` for reference.",
+   "input_schema": {
+    "properties": {
+     "selector": {
+      "description": "CSS selector. Join selectors with ' >>> ' to pierce shadow roots — e.g. 'button.submit' or '#interop-outlet >>> #ember37 >>> p'",
+      "title": "Selector",
+      "type": "string"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     }
+    },
+    "required": [
+     "selector"
+    ],
+    "title": "browser_shadow_queryArguments",
+    "type": "object"
+   },
+   "sha256": "a85a787d5166a141448185874d586144e70811b568b5a4665e50ebb41cc44e7f"
+  },
+  {
+   "name": "browser_snapshot",
+   "description": "Get an accessibility snapshot of the page.\n\nUses CDP Accessibility.getFullAXTree to build a compact, readable\ntree of the page's interactive elements. Ideal for LLM consumption.\n\nOutput format example:\n    - navigation \"Main\":\n      - link \"Home\" [ref=e1]\n      - link \"About\" [ref=e2]\n    - main:\n      - heading \"Welcome\"\n      - textbox \"Search\" [ref=e3]\n\nReturns a dict with the snapshot text tree, URL, and tab ID.",
+   "input_schema": {
+    "properties": {
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     },
+     "mode": {
+      "default": "default",
+      "description": "Snapshot filtering mode (default: \"default\")\n    - \"default\": full accessibility tree\n    - \"simple\": interactive + content nodes, skip unnamed structural nodes\n    - \"interactive\": only interactive nodes (buttons, links, inputs, etc.)",
+      "enum": [
+       "default",
+       "simple",
+       "interactive"
+      ],
+      "title": "Mode",
+      "type": "string"
+     }
+    },
+    "title": "browser_snapshotArguments",
+    "type": "object"
+   },
+   "sha256": "c3e009e1e1cb71bb7bedc0f619cebc7b62b269c39559ccb66a112fd9d83f1431"
+  },
+  {
+   "name": "browser_status",
+   "description": "Get the current status of the browser.\n\nReturns a dict with browser status.",
+   "input_schema": {
+    "properties": {
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     }
+    },
+    "title": "browser_statusArguments",
+    "type": "object"
+   },
+   "sha256": "8d966a78dae6702154ae44175d5aac85fea7c4922dbe234b7beca2ce01e29659"
+  },
+  {
+   "name": "browser_stop",
+   "description": "Stop the browser context and close all tabs in the group.\n\nReturns a dict with stop status.",
+   "input_schema": {
+    "properties": {
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     }
+    },
+    "title": "browser_stopArguments",
+    "type": "object"
+   },
+   "sha256": "699934ea1263e2f750084d38b4cfb470ff3a110d022593aa182c652e50b97643"
+  },
+  {
+   "name": "browser_tabs",
+   "description": "List all open browser tabs in the agent's tab group.\n\nEach tab includes:\n- ``id``: Chrome tab ID (integer)\n- ``url``: Current URL\n- ``title``: Page title\n- ``groupId``: Chrome tab group ID\n\nReturns a dict with list of tabs and counts.",
+   "input_schema": {
+    "properties": {
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     }
+    },
+    "title": "browser_tabsArguments",
+    "type": "object"
+   },
+   "sha256": "d1a6f4401449fc8616af24616fb3ea710cf07aa614d461faffed239e1ccca45a"
+  },
+  {
+   "name": "browser_upload",
+   "description": "Upload files to a file input element.\n\nTwo modes:\n- Direct (default): the `<input type=file>` already exists in the DOM. Pass its\n  CSS `selector` and the files are set on it.\n- Triggered (`trigger_selector`): for sites that create the file input on demand\n  and open the native OS file picker (e.g. Google Drive's \"New > File upload\").\n  The native picker is intercepted via CDP so it never blocks; the tool clicks\n  `trigger_selector`, waits for the resulting input (matched by `selector`,\n  default `input[type=file]`), and sets the files on it.\n\nReturns a dict with the upload result. The `accepted` field is the acceptance\nsignal: `accepted.change_fired` is True when the page's `change` handler ran\n(i.e. the site observed the upload), and `accepted.files` is what the input\nholds afterwards (often empty for sites that clear it after consuming the\nfiles). `accepted` is None if it couldn't be read back.",
+   "input_schema": {
+    "properties": {
+     "selector": {
+      "description": "CSS selector for the file input. In triggered mode this matches the input created after the click (commonly input[type=file]).",
+      "title": "Selector",
+      "type": "string"
+     },
+     "file_paths": {
+      "description": "List of file paths to upload",
+      "items": {
+       "type": "string"
+      },
+      "title": "File Paths",
+      "type": "array"
+     },
+     "trigger_selector": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Optional CSS selector for the element to click to open the file picker (button / label / menu item). When set, the native OS picker is intercepted so it never blocks.",
+      "title": "Trigger Selector"
+     },
+     "tab_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Chrome tab ID (default: active tab)",
+      "title": "Tab Id"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Browser profile name (default: \"default\")",
+      "title": "Profile"
+     },
+     "timeout_ms": {
+      "default": 30000,
+      "description": "Timeout in ms (default: 30000)",
+      "title": "Timeout Ms",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "selector",
+     "file_paths"
+    ],
+    "title": "browser_uploadArguments",
+    "type": "object"
+   },
+   "sha256": "640f97f664680eaa5c7ba087202d419130702d5f43cd852a8fd0394eccbdcc40"
+  }
+ ]
+}

@@ -152,6 +152,51 @@ func TestBatch6Lane4DatabricksGetRun(t *testing.T) {
 	}
 }
 
+// Parity: tools/tests/tools/test_databricks_tool.py::TestDatabricksListJobs::test_successful_list (get(...,0) defaults)
+func TestBatch6Lane4DatabricksListJobsDefaultsZero(t *testing.T) {
+	registry, _ := batch6Lane4TokenRegistry(t, "databricks_tool", nil,
+		func(w http.ResponseWriter, r *http.Request, body map[string]any) {
+			if r.URL.Path != "/api/2.0/jobs/list" {
+				t.Fatalf("path = %s", r.URL.Path)
+			}
+			// A job without job_id/created_time: upstream .get(key, 0) must
+			// surface as 0, never as null.
+			batch4WriteJSON(w, http.StatusOK, map[string]any{"jobs": []any{
+				map[string]any{"settings": map[string]any{"name": "NoId"}},
+			}})
+		})
+	result := batch4Execute(t, registry, "databricks", map[string]any{
+		"action": "databricks_list_jobs", "max_results": 10,
+	})
+	jobs := batch4BodySlice(t, result["jobs"])
+	if len(jobs) != 1 {
+		t.Fatalf("jobs = %v", jobs)
+	}
+	job := batch4BodyMap(t, jobs[0])
+	if job["job_id"] != 0 || job["created_time"] != 0 {
+		t.Fatalf("defaults must be 0 (not null), got job = %v", job)
+	}
+}
+
+// Parity: tools/tests/tools/test_databricks_tool.py::TestDatabricksGetRun::test_successful_get (get(...,0) defaults)
+func TestBatch6Lane4DatabricksGetRunDefaultsZero(t *testing.T) {
+	registry, _ := batch6Lane4TokenRegistry(t, "databricks_tool", nil,
+		func(w http.ResponseWriter, r *http.Request, body map[string]any) {
+			if r.URL.Path != "/api/2.0/jobs/runs/get" {
+				t.Fatalf("path = %s", r.URL.Path)
+			}
+			batch4WriteJSON(w, http.StatusOK, map[string]any{
+				"state": map[string]any{"life_cycle_state": "TERMINATED"},
+			})
+		})
+	result := batch4Execute(t, registry, "databricks", map[string]any{"action": "databricks_get_run", "run_id": 42})
+	for _, key := range []string{"run_id", "job_id", "start_time"} {
+		if result[key] != 0 {
+			t.Fatalf("%s must default to 0, got result = %v", key, result)
+		}
+	}
+}
+
 // Parity: tools/tests/tools/test_databricks_tool.py::TestDatabricksListClusters::test_successful_list
 func TestBatch6Lane4DatabricksListClusters(t *testing.T) {
 	registry, _ := batch6Lane4TokenRegistry(t, "databricks_tool", nil,

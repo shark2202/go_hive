@@ -19,6 +19,11 @@ func browserBridgeExecutableName() string { return "browserbridge" }
 
 func browserBridgeSysProcAttr() *syscall.SysProcAttr { return nil }
 
+// browserBridgeDetachedSysProcAttr mirrors upstream's start_new_session=True,
+// which on Windows is a no-op (CPython ignores the flag there): the detached
+// child already survives this process because nothing signals it.
+func browserBridgeDetachedSysProcAttr() *syscall.SysProcAttr { return nil }
+
 // browserProcessAlive reports whether pid still exists. Windows has no
 // signal-0 probe; os.FindProcess opens a handle and fails for a PID that no
 // longer exists. The supervisor uses it to refuse a respawn into a dead

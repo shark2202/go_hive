@@ -74,6 +74,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/aden-hive/hive-go/internal/tools/integrations"
 )
 
 const (
@@ -273,13 +274,33 @@ func flatSurfaceEagerNameSet() map[string]struct{} {
 // a flat one-action tool. The lazy layer carries flat names only, matching
 // the Python one-tool-per-action shape; grouped modules keep their grouped
 // surface and stay out of the deferred manifest.
+//
+// The browser tools are flat by construction even though browser_interact and
+// browser_dialog_respond legitimately take an `action` argument — the gcu
+// surface registers one tool per operation, so they are exempt from the
+// module heuristic.
 func flatSurfaceGroupedModule(def llm.ToolDef) bool {
+	if _, flat := flatSurfaceActionNamedFlatNames()[def.Name]; flat {
+		return false
+	}
 	properties, ok := def.Parameters["properties"].(map[string]any)
 	if !ok {
 		return false
 	}
 	_, grouped := properties["action"]
 	return grouped
+}
+
+var flatSurfaceActionNamedFlatOnce = sync.OnceValue(func() map[string]struct{} {
+	names := map[string]struct{}{}
+	for _, name := range integrations.BrowserToolNames() {
+		names[name] = struct{}{}
+	}
+	return names
+})
+
+func flatSurfaceActionNamedFlatNames() map[string]struct{} {
+	return flatSurfaceActionNamedFlatOnce()
 }
 
 // EagerModelDefNames returns the always-on flat names this catalogue actually

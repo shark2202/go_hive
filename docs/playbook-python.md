@@ -2,16 +2,19 @@
 
 > 适用：`go_hive`（纯 Go 主二进制，`CGO_ENABLED=0`）  
 > 上游契约：`core/framework/host/playbook/runner.py`（`PlaybookRun`）、`core/framework/tools/playbook_tools.py`（`run_playbook`）  
-> 实现：`internal/playbook/python.go`、内嵌 `internal/playbook/python_bootstrap.py`、`internal/colony/playbook_tools.go`  
+> 实现：`internal/playbook/python.go`、内嵌 `internal/playbook/python_bootstrap.py`、`internal/colony/playbook_tools.go`、`internal/colony/playbook_verbatim.go`、`internal/colony/playbook_notify.go`、`internal/colony/worker_slots.go`  
 > 记录日期：2026-11-21（本机实测 Python 3.9.6（系统 `python3`）与 3.14.7（`HIVE_PYTHON`）/ Darwin arm64）
 
 ## 1. 结论
 
-`go_hive` 现在可以执行上游格式的 Python playbook（`.play.py`），**脚本字节不变**：
+`go_hive` 现在可以执行上游格式的 Python playbook（`.play.py`），**脚本字节不变**，并且**对外字段与上游逐字一致**：
 
 - 入口：会话工具 `run_playbook` 的 `playbook`（inline）/ `playbook_path` / `playbook_name`（saved，`playbooks/<name>.play.py`）。
 - 脚本契约与上游一致：`meta` dict（至少 `name`）+ `async def run(args)`，命名空间注入 `converge / worker / tracker_query / tracker_count / lane / deadletter / log / phase`。
-- 返回值与上游 runner 一致：`{meta, result, logs, deadletter, dispatched}`；工具 payload 也沿用上游快路径形状（`status / run_id / concurrency / dispatched / dead_lettered / result / log_db / playbook_name / playbook_path`）。
+- 返回值与上游 runner 一致：`{meta, result, logs, deadletter, dispatched}`；工具 payload（`status / run_id / concurrency / dispatched / dead_lettered / result / log_db / playbook_name / playbook_path` + 0 派发 `hint`）、`started` 异步应答全文、`[PLAYBOOK_COMPLETE]` 通知文本、`playbook_runs` 行、解析/保存/`playbook_name` 库先例都被逐字段核对过。
+- 对齐不是靠人工对照：`go_hive/scripts/playbook_verbatim_compare.py` 用**真实上游工具**（真实 `PlaybookRun` + 真实 `colony_db`）与**真实 Go 工具**跑同一夹具，逐字段 diff；5 个场景 120/120 检查一致（含 `[PLAYBOOK_COMPLETE]` 全文与 `playbook_runs` 行），真 LLM 端到端 19/19 一致。证据见 `docs/e2e-assets/playbook-verbatim/REPORT.md` 与 `REPORT-real-llm.md`。
+- 旧 playbook **无损迁移**：Go 历史保存的 `playbooks/<name>.play.json` 与上游 `playbooks/<name>.play.py` 都能按名直接加载运行，文件不改名、不重写、不要求用户改动；写入保持各自原有格式（native 仍写 `.play.json`，Python 仍写 `.play.py`）。见 §8 迁移矩阵。
+- run 期间临时抬高 colony 并发上限（上游 `max(original, concurrency)`，结束恢复）已按上游同形实现；`worker(schema=...)` 的 receipt schema 现在会落到 worker spawn spec（`report_to_parent` 的 `data` 参数 + system prompt）。
 - 需要宿主机上存在 **Python 3.8+**（`python3` → `python` 顺序查 PATH，或 `HIVE_PYTHON` 指定）。没找到解释器时返回 `status="unsupported"`、`dispatched=0` 并说明原因，**不会假成功**。
 - Go 主二进制不链接 libpython、不引入 cgo、不加任何第三方 Go 依赖；Python 只是一个按需启动的外部子进程。
 
@@ -28,6 +31,7 @@ Queen / run_playbook tool (Go)
           → 发送 init(script)     ──────────────┐
           ← loaded(meta) / load_error          │ 行式 JSON-RPC
           → 校验 meta concurrency（Go 侧策略）  │ stdin/stdout
+          → 抬高 colony 并发上限（结束恢复）    │
           → 发送 run(args, concurrency_cap)     │
           ← {"id":N,"method":"query_rows"}      │
           → 查 tracker → {"id":N,"result":rows} │
@@ -36,6 +40,7 @@ Queen / run_playbook tool (Go)
           → {"id":N,"result":report}            │
           ← result{meta,result,logs,deadletter,dispatched}
       → 落盘 colony.db 的 playbook_runs
+      → （超出 grace 的长批次）后台完成 → [PLAYBOOK_COMPLETE] 通知
 ```
 
 要点：
@@ -44,6 +49,7 @@ Queen / run_playbook tool (Go)
 - **RPC 并发**：Go 对每个 `dispatch_one` 请求开独立 goroutine，因此脚本侧 `converge` 的 `chunk` / lane 并发是真正并行的；响应按 `id` 关联。
 - **stdout 专用**：bootstrap 把脚本的 `sys.stdout` 指向 stderr，脚本里的 `print()` 不会破坏协议。Go 侧遇到非 JSON 行会明确报 `cannot parse interpreter output`，不静默跳过。
 - **一次性进程**：每次工具调用 = 一次 `python3` 子进程；脚本的 `load`（编译+执行模块级代码+校验 `meta`/`run`）在 `loaded` 应答前同步完成，所以语法错误、缺 `meta`、缺 `run` 会在任何 worker 派发之前返回真实错误。
+- **快速结果 grace 窗口**：与上游一致，工具等待 `HIVE_PLAYBOOK_FAST_GRACE`（默认 1.5s）；窗口内失败/完成直接返回真实结果，长批次返回 `started` 并在后台完成时发 `[PLAYBOOK_COMPLETE]`。
 
 ## 3. 解释器解析
 
@@ -88,7 +94,7 @@ async def run(args):
 | Hook | 语义 | 跨进程 |
 | --- | --- | --- |
 | `converge(pending=, dispatch=, max_rounds=1, circuit_breaker=None, chunk=None)` | 每轮查 pending → 并发派发 → 再查；未解决行进入 deadletter | 否（bootstrap 内） |
-| `worker(task, *, profile, lane, skill, retries, backoff, timeout, schema, phase, data, goal)` | 派一个 worker 并等报告；仅对生命周期失败重试；每次尝试计入 `dispatched` | **是**（`dispatch_one`） |
+| `worker(task, *, profile, lane, skill, retries, backoff, timeout, schema, phase, data, goal)` | 派一个 worker 并等报告；仅对生命周期失败重试；每次尝试计入 `dispatched`；`schema` 落到 worker spawn spec | **是**（`dispatch_one`） |
 | `tracker_query(sql)` / `tracker_count(sql)` | 同步查询，返回行 dict 列表 / 行数 | **是**（`query_rows`） |
 | `lane(name, *, concurrency=1, rate_per_min=None)` | 同时并发上限 + 启动速率门（`>= 60/rate_per_min` 秒一个） | 否 |
 | `deadletter` | `.add(item)` / `.list()` / `.size` / `len()` | 否 |
@@ -98,7 +104,7 @@ async def run(args):
 
 ```json
 {
-  "meta": {"name": "...", "...": "..."},
+  "meta": {"name": "...", "..." : "..."},
   "result": "<run() 的返回值>",
   "logs": ["phase: ...", "round 1: ...", "..."],
   "deadletter": [{"row": {...}, "reason": "unresolved after 1 round(s)"}],
@@ -106,7 +112,23 @@ async def run(args):
 }
 ```
 
-## 5. 解析与保存规则
+## 5. 工具 payload（上游逐字）
+
+所有 payload 的键名、键序无关的键集合与文本都由 `internal/colony/playbook_verbatim.go` 按上游源码逐字构建：
+
+| 场景 | payload |
+| --- | --- |
+| 快速路径完成 | `{status:"completed", run_id, concurrency, dispatched, dead_lettered, result, log_db, playbook_name, playbook_path}`，`dispatched==0` 时追加上游原文 `hint` |
+| 加载失败 | `{status:"failed", run_id, error:"playbook did not start — <concise>", traceback}` |
+| 并发超限 | `{status:"failed", run_id, error:"meta['concurrency']=N exceeds the maximum M. Lower it, split the batch, or raise HIVE_MAX_PLAYBOOK_CONCURRENCY."}` |
+| 运行失败（快速路径） | `{status:"failed", run_id, error:"playbook failed — <concise>", traceback, log_db}` |
+| 长批次 | `{status:"started", run_id, concurrency, log_db, playbook_name, playbook_path, message}`，`message` 为上游原文（含 `get_playbook_status(run_id='…')` / `stop_playbook(run_id='…')`；这两个名字在本移植里由扁平工具面路由到 `run_playbook` 的 `action`） |
+| `[PLAYBOOK_COMPLETE]` | 上游 `_notify_complete` 文本：`<run_id>/<status>/<log_db>/<dispatched>/<dead_lettered>/<result>/<hint?>/<log_tail>`；失败/停止为 `<status>error</status>` + `<error>concise</error>`。Go 端发布到 colony bus，queen 报告订阅对 playbook 通知**原样透传**（不再套 `[WORKER_REPORT]`） |
+| 解析/装载错误 | 上游 `_resolve_script` 原文，含 `Pass exactly ONE of …`、`no saved playbook named 'x'. Saved playbooks in this colony: [...]`（Python 列表 repr；Go 会同时列出 `.play.json` 旧库） |
+
+**并发上限**：run 开始（load → persist → concurrency 校验之后）把 colony 上限写成 `max(原值, meta['concurrency'])`，run 结束（快速路径返回前 / 后台完成 finally）恢复原值。数值、时机、甚至「concurrency ≤ 原值时也写一次 no-op」都与上游一致；Go 的 admission gate 改为可调容量（`worker_slots.go`），所以声明的并发真的会被放行。
+
+## 6. 解析与保存规则
 
 | 输入 | 判定 |
 | --- | --- |
@@ -114,12 +136,12 @@ async def run(args):
 | `playbook_path` 以 `.play.json` 结尾 | 原生 JSON（即使正文不是合法 JSON，也报 JSON 错误） |
 | inline `playbook` 正文是 JSON object | 原生 JSON |
 | inline `playbook` 其它正文 | Python |
-| `playbook_name` | 先找 `playbooks/<sanitized>.play.json`，再找 `.play.py` |
+| `playbook_name` | 先找 `playbooks/<sanitized>.play.json`，再找 `.play.py`（见 §8 迁移矩阵） |
 
 - inline Python 在 `load` 成功后按 `meta["name"]` 保存为 `<colony>/playbooks/<sanitized>.play.py`（与上游 `_persist_script` 一致），因此下一次 `run_playbook(playbook_name=…)` 就是 resume：`done` 行不在 pending 查询里。
 - 原生 JSON playbook 仍保存为 `.play.json`，两条路径互不影响。
 
-## 6. 生命周期、取消与安全
+## 7. 生命周期、取消与安全
 
 - **进程组**：`python3` 以独立进程组启动；run 结束/取消时先对进程组发 `SIGTERM`，`2s` 后 `SIGKILL`，并 `Wait` 回收。脚本自己再 fork 的子进程也在这个组里。
 - **临时目录**：内嵌 bootstrap 写入 `os.MkdirTemp("", "hive-playbook-*")`，`Close` 时删除；`PYTHONDONTWRITEBYTECODE=1` 避免 `__pycache__`。
@@ -128,9 +150,9 @@ async def run(args):
 - **信任模型**：与上游一致——playbook 是 Queen（可信作者）写的进程内代码，`exec`/子进程都不是安全沙箱；不要执行不可信来源的脚本。
 - **协议失败**：非 JSON 输出、意外退出、无结果退出都返回 `PythonBridgeError`，附带退出码与 stderr 尾部，不当作成功。
 
-## 7. 与上游 runner 的逐项对表
+## 8. 与上游 runner 的逐项对表
 
-| 行为 | 上游 `runner.py` | 本实现 | 证据 |
+| 行为 | 上游 `runner.py` / `playbook_tools.py` | 本实现 | 证据 |
 | --- | --- | --- | --- |
 | `meta` / `run` 校验 | `load()` 同步 | bootstrap `load()` 同步，错误经 `load_error` 回传 | `TestPythonBridgeMissingMeta/MissingRun/SyntaxError` |
 | converge 收敛 / 再查 | `converge()` | bootstrap 同实现 | `TestPythonBridgeConvergesAllRows` |
@@ -143,49 +165,76 @@ async def run(args):
 | resume（重跑只做 gap） | tracker 为事实源 | 同 | `TestRunPlaybookSavedPythonNameResumes`、`TestPythonBridgeRerunIsResume` |
 | 根因 + playbook 行号 | `_error_detail` | bootstrap 同实现（`<playbook>` 行号） | `TestPythonBridgeRuntimeErrorSurfaces` |
 | `goal` 透传 | 设置才转发 | 同（未设置不出现） | `TestPythonBridgeGoalPassesThrough` |
+| 快速路径 payload | 见 §5 表 | 逐字 | `TestPlaybookVerbatimCompletedPayloadFields`、双侧 harness `converge`/`load_error`/`run_error` |
+| 0 派发 `hint` | `_zero_dispatch_hint` | 逐字 | `TestPlaybookVerbatimZeroDispatchHintMatchesUpstream` |
+| `started` 异步应答 | 原文 message | 逐字 | `TestPlaybookVerbatimStartedPayloadAndMessage`、harness `started` |
+| `[PLAYBOOK_COMPLETE]` | `_notify_complete` 文本 | 逐字（bus 透传） | `TestNotifyPlaybookCompletePublishesOnTheColonyBus`、harness `started` + 真 LLM 重放 |
+| run 期间抬高 colony 并发上限 | `max(original, concurrency)`，结束恢复 | 同（可调 gate） | `TestPlaybookVerbatimConcurrencyCapRaiseAndRestore`、`TestPlaybookCapRaiseAdmitsDeclaredConcurrency`、harness `colony.cap_moves` |
+| `schema` 落到 spawn spec | `entry["report_schema"]` | `BatchTask.ReportSchema` → `report_to_parent.data` + prompt 指令 | `TestPlaybookVerbatimSchemaRidesSpawnSpec`、`TestPlaybookSchemaSpecializesWorkerSurface`、harness `spawn.report_schema` |
+| `playbook_runs` 行 | `record_playbook_run` | 同 schema/字段；错误行 `name=NULL`、`created_at` 用 Python isoformat（`+00:00`，微秒为 0 时省略） | `TestPlaybookRunLogErrorRowHasNullName`、harness `runs[*]` |
+| 按名解析 / 保存 | `_resolve_script` / `_persist_script` | 同字符串、同保存位置；按名先 `.play.json` 后 `.play.py` | §8 迁移矩阵 + `TestPlaybookMigration*` |
 
-## 8. 已知差异（有意）
+## 9. 迁移矩阵（旧 playbook → 新二进制）
 
-1. **同步工具调用**：本移植在工具调用内跑完整个收敛循环并直接返回结果/失败；上游是「先返回 `started` + `run_id`，后台完成再注入 `[PLAYBOOK_COMPLETE]`」。长批次会占住一轮工具调用；`action="status"` 可看历史、`action="stop"` 可按 `run_id` 取消（取消后已 done 行保留，重跑即 resume）。
-2. **colony 并发上限不临时抬高**：上游 tool 在 run 期间把 colony 的 `max_concurrent_workers` 抬到 `max(原值, meta concurrency)`，结束后恢复。Go 的 admission 通道在 runtime 构造时固定，本次未改；`meta["concurrency"]` 仍决定 bootstrap 的 `chunk` 默认值与 lane 警告，但实际同时运行的 worker 数仍受 colony `max_concurrent_workers` 约束（超出部分排队）。这是与原生 JSON playbook 相同的现有边界。
-3. **`schema` 未落到 worker spawn spec**：`BatchTask` 没有 `report_schema` 字段；worker 仍拿到原生 `report_to_parent` 面。上游会把 schema 注入 worker 的 prompt/工具。
-4. **结果值 JSON 化**：非 JSON 类型（`datetime`、`set` 等）在传输时用 `str()` 转换；上游快路径会因 `json.dumps` 失败而报错。这里选择让 run 成功返回字符串化结果。
-5. **`print()` 去 stderr**：防止破坏 RPC；上游的 `print()` 直接进宿主 stdout，不进 `logs`。
+判定：**0 改名、0 语义改动、0 用户动作**。两代 playbook 都是原文件直接跑。
 
-## 9. 未验证项
+| 旧来源 | 盘上形态 | 新二进制行为 | 写回 | 证据 |
+| --- | --- | --- | --- | --- |
+| Go 历史（native JSON） | `colonies/<id>/playbooks/<name>.play.json`（历史任何版本写出的字段集合；`nativePlaybookSpec` 自引入以来未变） | `run_playbook(playbook_name="<name>")` 直接加载；`playbook_path` 指向该文件；converge/重试/退避/死信/resume 语义不变 | **同名同格式**：inline native 仍写 `.play.json`，字节等于传入正文；run 不重写已存在的文件 | `TestPlaybookMigrationLegacyNativeJsonRunsUnchanged`、`TestPlaybookMigrationNativeWritesKeepFormat` |
+| 上游 Python | `colonies/<id>/playbooks/<name>.play.py`（上游 `_persist_script` 的字节） | 直接加载执行（外部解释器），`playbook_name`/`playbook_path` 字段指向原文件；lane/deadletter 等上游钩子可用 | 不产生 `.play.json` 影子文件、不改写 | `TestPlaybookMigrationUpstreamPlayPyRunsUnchanged`（夹具 `internal/colony/testdata/playbook-migration/upstream-lanes.play.py`） |
+| 两边同名共存 | 同名 `.play.json` + `.play.py` | 按名解析优先级：`.play.json`（旧 native）→ `.play.py`；另一个仍可用 `playbook_path` 直接跑。库列表诊断两种都列出 | 不改动任何一个 | `TestPlaybookMigrationBothFormatsResolveDeterministically` |
+| `colony.db` 历史行 | `playbook_runs` 旧行 | 只读展示（`action="status"`）；不迁移、不回填 | 不动 | 表 schema 与上游一致（`colony_db.go`） |
+
+注：`.play.py` 与 `.play.json` 同名共存时按名优先旧 native 文件，是为了让历史入口不被静默改变；要切到 Python 版，删掉 `.play.json` 或用 `playbook_path` 指定即可（两者都不需要改文件内容）。
+
+## 10. 已知例外（有意，非字段缺失）
+
+1. **无解释器 → `status="unsupported"`**：上游进程内执行，没有「没有 Python」这一态；Go 侧如实报告能力缺失、`dispatched=0`，绝不假成功。
+2. **`action` / `run_id` 折叠参数**：上游把 `get_playbook_status` / `stop_playbook` / `list_playbook_runs` 作为独立工具；本移植是一个工具 + 两个折叠参数，扁平工具面把这三个名字路由到对应 action。工具 schema 的这一处例外记录在 `docs/tool-contract-diff.md` §13；`status`/`stop` 自己的 payload 属于折叠面。
+3. **无 colony / 无 binding 的错误文案**：Go 的绑定模型与 `session.colony` 不同，文案如实描述本移植的接线错误。
+4. **JSON 对象键序**：`result_json` / 通知里的 `<result>` 由 Go 排序键输出，上游按插入序；解析后字段等价（同上，无插入序可用）。
+5. **`traceback` 栈帧**：其余内容（root cause、`(playbook line N)`）一致；栈帧本身必然一侧是 `runner.py`、一侧是 `bootstrap.py`。
+6. **Windows**：进程清理只有 `Process.Kill()`（无进程组语义），脚本自己 fork 的子进程可能残留（见 §11）。
+
+## 11. 未验证项
 
 - **Windows 无 Python**：`python3`/`python` 查找与 `HIVE_PYTHON` 逻辑已写好，但未在无 Python 的 Windows 上实跑；Windows 的进程清理只用 `Process.Kill()`（无进程组语义），脚本自己 fork 的子进程可能残留。这是本次明确的未验证边界。
 - **任意第三方 import**：bootstrap 不做包枚举，脚本继承宿主 `python3` 的 `sys.path` / site-packages；没有在本机验证「某个特定第三方包」可用性（取决于宿主环境）。
 - **其他模型/provider**：真实模型 E2E 只跑了本机配置的 `deepseek-flash-1017`（OpenAI 兼容网关）；其他 provider 的工具调用格式未逐一验证。
 - **超大结果 / 超长单行**：协议单行上限 32 MiB，未做压力测试。
-- **Python 3.8/3.10/3.12 等全版本矩阵**：本机实测 3.9.6（系统）与 3.14.7（`HIVE_PYTHON`，桥测试与工具层测试均通过）；bootstrap 只断言 `>= 3.8`，没有覆盖所有版本组合。
+- **Python 3.8/3.10/3.12 等全版本矩阵**：本机实测 3.9.6（系统）与 3.14.7（`HIVE_PYTHON`）；bootstrap 只断言 `>= 3.8`，没有覆盖所有版本组合。
 
 ### 真实 LLM 端到端（已跑通）
 
-`internal/cli/playbook_real_llm_e2e_test.go` 用真实模型跑完整链路：`RunPlaybook → Python bridge → dispatch_one → colony worker → 真实 LLM → report_to_parent → bridge result`。
+`internal/cli/playbook_real_llm_e2e_test.go` 与 `playbook_verbatim_e2e_test.go` 用真实模型跑完整链路：`RunPlaybook → Python bridge → dispatch_one → colony worker → 真实 LLM → report_to_parent → bridge result`。
 
 - 本机配置：`HIVE_HOME=~/.hive-go`，模型 `deepseek-flash-1017`（OpenAI 兼容网关）。
-- 结果（2026-11-21）：**PASS**；真实模型返回 `tool_calls=[report_to_parent {"status":"success","summary":"REAL_LLM_E2E_OK","data":{"marker":"REAL_LLM_E2E_OK"}}]`，bridge 信封 `status=completed, dispatched=1, receipt={"marker":"REAL_LLM_E2E_OK"}`。
+- `TestRealLLMPlaybookPythonWorkerE2E`（2026-11-21）：**PASS**；真实模型返回 `tool_calls=[report_to_parent {"status":"success","summary":"REAL_LLM_E2E_OK",...}]`。
+- `TestRealLLMPlaybookVerbatimConvergeDeadletterE2E`（2026-11-21）：**PASS**；2 行 converge 各派一个真实模型 worker（`dispatched=2`），无人标记 done → `dead_lettered=2`；工具返回上游原文 `started`，后台完成发出与上游逐字的 `[PLAYBOOK_COMPLETE]`（`<dispatched>2</dispatched>`、`<dead_lettered>2</dead_lettered>`、`<log_tail>` 含 `converge finished`）；cap 恢复为 1。
+  - 记录的真实 prompt/报告被 `playbook_verbatim_compare.py --real-llm` 重放进真实上游工具，19/19 字段一致（见 `docs/e2e-assets/playbook-verbatim/REPORT-real-llm.md`）。
 - 该测试是 opt-in，默认 skip，不拖垮 CI：
 
 ```bash
 HIVE_HOME=~/.hive-go HIVE_REAL_LLM_E2E=1 \
-  go test ./internal/cli -run TestRealLLMPlaybookPythonWorkerE2E -v -count=1 -timeout 12m
+  go test ./internal/cli -run TestRealLLMPlaybook -v -count=1 -timeout 12m
 ```
 
-- 同一模型也已独立验证多模态输入：发送 512px 字母图，模型返回「H，绿色」；说明 worker 的 LLM 通道支持图像块，但 playbook 目前没有自动把图像传给 worker 的入口。
-- 进程内多模态链路也已用真实模型跑通（`hive serve` 8788，2026-11-21）：会话 `session_20261121_012728_ea41d806`，模型调用 `attach_file({"paths":["…/shot.png"]})`，工具结果 `inline=image_block`，下一轮模型输出「图片里是一个绿色的字母 **H**」。
-
-## 10. 复现与排障
+## 12. 复现与排障
 
 ```bash
 cd go_hive/go-hive
 
-# 真实 python3 的桥测试（19 个用例）
+# 真实 python3 的桥测试
 go test ./internal/playbook -run 'TestPython|TestResolvePython' -v -count=1
 
-# 工具层：inline / saved / load error / 无解释器（4 个新用例 + 原生回归）
-go test ./internal/colony -run 'TestRunPlaybook' -v -count=1
+# 工具层：payload/迁移/并发上限/schema/spawn spec
+go test ./internal/colony -run 'TestRunPlaybook|TestPlaybookVerbatim|TestPlaybookMigration|TestPlaybookCapRaise|TestWorkerSlotGate|TestNotifyPlaybookComplete' -v -count=1
+
+# 字段级双侧对照（真实上游工具 vs 真实 Go 工具）
+cd ../..
+PYTHONPATH=core uv run --project core python go_hive/scripts/playbook_verbatim_compare.py
+# 真 LLM 记录重放（先跑上面的 opt-in E2E）
+PYTHONPATH=core uv run --project core python go_hive/scripts/playbook_verbatim_compare.py --real-llm
 
 # 无解释器行为（应 status=unsupported、dispatched=0）
 PATH= HIVE_PYTHON= go test ./internal/colony -run TestRunPlaybookPythonWithoutInterpreterIsUnsupported -v
@@ -202,8 +251,10 @@ PATH= HIVE_PYTHON= go test ./internal/colony -run TestRunPlaybookPythonWithoutIn
 | `Python 3.8+ required` / `PythonVersionError` | 解释器过旧 | 换 3.8+ 或设 `HIVE_PYTHON` |
 | `cannot parse interpreter output ...` | 解释器/脚本往 stdout 写了非协议内容 | 不要直接写 fd 1；用 `log()` |
 
-## 11. 相关文档
+## 13. 相关文档
 
 - `docs/support-matrix.md` — 支持矩阵中的「Python `.play.py` playbook」行
 - `docs/queen-lifecycle-tools.md` — `run_playbook` 控制动作
+- `docs/tool-contract-diff.md` §13 — `run_playbook` 的 schema 例外（折叠参数）
+- `docs/e2e-assets/playbook-verbatim/` — 双侧字段对照报告、真 LLM 记录与夹具
 - 仓库根 `docs/playbook-spec.md` — 上游 playbook 契约（Python 版）

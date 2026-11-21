@@ -25,6 +25,7 @@ type argSpec struct {
 	Default any
 	Help    string
 	Action  string
+	Metavar string
 }
 
 type positionalSpec struct {
@@ -37,6 +38,7 @@ type commandSpec struct {
 	Prog        string
 	Help        string
 	Description string
+	Epilog      string
 	Flags       []argSpec
 	Positionals []positionalSpec
 	Subcommands []*commandSpec
@@ -402,11 +404,13 @@ func (c *commandSpec) helpText() string {
 	var builder strings.Builder
 	builder.WriteString("usage: ")
 	if len(c.Subcommands) > 0 {
-		fmt.Fprintf(&builder, "%s [-h] [options] {%s} ...\n", c.Prog, subcommandNames(c.Subcommands))
+		// argparse lists the subcommand metavar right after [-h]; an explicit
+		// [options] word is not part of the upstream usage line.
+		fmt.Fprintf(&builder, "%s [-h] {%s} ...\n", c.Prog, subcommandNames(c.Subcommands))
 	} else {
-		builder.WriteString(c.Prog)
-		if len(c.Flags) > 0 || len(c.Positionals) > 0 {
-			builder.WriteString(" [-h]")
+		builder.WriteString(c.Prog + " [-h]")
+		for _, flag := range c.Flags {
+			fmt.Fprintf(&builder, " [%s]", flagLabel(flag))
 		}
 		for _, positional := range c.Positionals {
 			if positional.Required {
@@ -440,6 +444,15 @@ func (c *commandSpec) helpText() string {
 	for _, flag := range c.Flags {
 		fmt.Fprintf(&builder, "  %s\n", padRight(flagLabel(flag), 22)+flag.Help)
 	}
+	if c.Epilog != "" {
+		// argparse prints the epilog after the options block; RawDescription
+		// formatters keep its line breaks verbatim.
+		builder.WriteString("\n")
+		builder.WriteString(c.Epilog)
+		if !strings.HasSuffix(c.Epilog, "\n") {
+			builder.WriteString("\n")
+		}
+	}
 	return builder.String()
 }
 
@@ -460,12 +473,12 @@ func flagLabel(flag argSpec) string {
 		label += ", -" + flag.Short
 	}
 	switch flag.Kind {
-	case kindString:
-		label += " " + strings.ToUpper(strings.ReplaceAll(flag.Long, "-", "_"))
-	case kindInt:
-		label += " " + strings.ToUpper(strings.ReplaceAll(flag.Long, "-", "_"))
-	case kindAppend:
-		label += " " + strings.ToUpper(strings.ReplaceAll(flag.Long, "-", "_"))
+	case kindString, kindInt, kindAppend:
+		metavar := flag.Metavar
+		if metavar == "" {
+			metavar = strings.ToUpper(strings.ReplaceAll(flag.Long, "-", "_"))
+		}
+		label += " " + metavar
 	}
 	return label
 }

@@ -171,7 +171,7 @@ func RunPlaybook(ctx context.Context, spawner RunWorkerSpawner, input map[string
 		filepath.Join(binding.Dir, "playbooks"),
 	)
 	if err != nil {
-		return jsonPayload(map[string]any{"error": "run_playbook: " + err.Error()}, true)
+		return jsonPayload(map[string]any{"error": err.Error()}, true)
 	}
 
 	if isPythonPlaybook(sourcePath, scriptText) {
@@ -231,7 +231,8 @@ func RunPlaybook(ctx context.Context, spawner RunWorkerSpawner, input map[string
 		// without error; the record still has to say it was stopped.
 		runErr = errPlaybookStopped
 	}
-	logDB := recordPlaybookRun(binding, runID, spec.Name, out, runErr)
+	recordPlaybookRun(binding, runID, spec.Name, out, runErr)
+	logDB := filepath.Join(binding.Dir, "colony.db")
 	if stopped {
 		// A stop is an outcome, not a failure: the queen asked for it.
 		payload := playbookRunInfo(runID, spec.Name, savedPath, dispatchedCount(out))
@@ -291,9 +292,12 @@ func isPythonPlaybook(sourcePath, scriptText string) bool {
 // runPythonPlaybook executes the `.play.py` form: resolve the interpreter,
 // load the script synchronously (compile + exec + meta validation), persist an
 // inline script to the colony library, then drive the bridge's RPC hooks. The
-// payload mirrors the native path and upstream's fast-path result shape.
+// payloads are upstream's, field for field (see playbook_verbatim.go): load
+// failure, concurrency failure, fast-path completion/failure, the async
+// "started" acknowledgement, and the [PLAYBOOK_COMPLETE] notice.
 func runPythonPlaybook(ctx context.Context, runtime playbookRuntime, binding *tracker.Binding, input map[string]any, scriptText, sourcePath string) (string, bool) {
 	runID := newPlaybookRunID()
+	logDB := filepath.Join(binding.Dir, "colony.db")
 	executor := &workerDispatchExecutor{runtime: runtime, runID: runID}
 	handle, err := playbook.StartPythonPlaybook(ctx, scriptText, playbook.PythonOptions{
 		DispatchOne: executor.dispatchOne,
@@ -309,42 +313,66 @@ func runPythonPlaybook(ctx context.Context, runtime playbookRuntime, binding *tr
 		if errors.As(err, &scriptErr) && scriptErr.Stage == "load" {
 			// Upstream: "playbook did not start — <root cause>" before any
 			// worker exists.
-			return jsonPayload(map[string]any{
-				"status":        "failed",
-				"run_id":        runID,
-				"error":         "run_playbook: playbook did not start — " + concise,
-				"traceback":     full,
-				"playbook_path": sourcePath,
-			}, true)
+			return jsonPayload(playbookFailedStartPayload(runID, concise, full), true)
 		}
+		// A transport/handshake failure has no upstream counterpart (upstream
+		// runs in-process); report it without pretending it is a script error.
 		return jsonPayload(map[string]any{
 			"status":    "failed",
 			"run_id":    runID,
-			"error":     "run_playbook: " + concise,
+			"error":     concise,
 			"traceback": full,
 		}, true)
 	}
 
 	meta := handle.Meta
 	name := strings.TrimSpace(stringValue(meta["name"]))
+	// Upstream `saved_name = (run._meta or {}).get("name")` is the raw value;
+	// keep the trimmed name for internal routing and the raw one for payloads.
+	payloadName := stringValue(meta["name"])
+
+	// ---- persist the script (this is how resume works) --------------------
+	// Upstream order: load -> persist -> resolve concurrency. An inline script
+	// is saved even when its meta['concurrency'] is invalid; the concurrency
+	// error is a separate, later rejection.
+	var savedPath *string
+	if sourcePath != "" {
+		sourceCopy := sourcePath
+		savedPath = &sourceCopy
+	} else if path, ok := playbook.PersistScript(binding.Dir, name, scriptText); ok {
+		savedPath = &path
+	}
+
+	// ---- concurrency: queen-declared, honored, rejected only if too big ----
 	concurrency, concurrencyErr := playbook.ResolveConcurrency(meta)
 	if concurrencyErr != nil {
 		handle.Close()
-		return jsonPayload(map[string]any{
-			"status": "failed",
-			"run_id": runID,
-			"error":  "run_playbook: " + concurrencyErr.Error(),
-		}, true)
+		return jsonPayload(playbookConcurrencyErrorPayload(runID, concurrencyErr.Error()), true)
 	}
 
-	// Persist an inline script so a later run_playbook(playbook_name=…)
-	// resumes from the tracker without re-sending it (upstream saves
-	// playbooks/<meta-name>.play.py; running from a path/name already lives
-	// there).
-	savedPath := sourcePath
-	if strings.TrimSpace(stringValue(input["playbook"])) != "" {
-		if path, ok := playbook.PersistScript(binding.Dir, name, scriptText); ok {
-			savedPath = path
+	// ---- raise the colony admission cap for this run ----------------------
+	// Upstream: colony_config.max_concurrent_workers =
+	//     max(original_colony_cap, concurrency)
+	// set before the run starts and restored when it finishes. The port's gate
+	// is resizable (worker_slots.go) so the declared concurrency is actually
+	// admitted; a runtime double without the setter keeps its own cap.
+	originalCap := runtime.MaxConcurrentWorkers()
+	restoreCap := func() {}
+	if setter, ok := runtime.(playbookCapRuntime); ok {
+		// Upstream assigns unconditionally (max(original, concurrency) — often
+		// a no-op write) and restores the original when the run finishes.
+		raised := concurrency
+		if originalCap > raised {
+			raised = originalCap
+		}
+		setter.SetMaxConcurrentWorkers(raised)
+		restored := false
+		restoreCap = func() {
+			if restored {
+				return
+			}
+			restored = true
+			setter.SetMaxConcurrentWorkers(originalCap)
 		}
 	}
 
@@ -385,60 +413,49 @@ func runPythonPlaybook(ctx context.Context, runtime playbookRuntime, binding *tr
 		}
 	}
 
-	// finish records the run and builds the terminal payload. It is shared by
-	// the in-window path and the background finisher so both report identically.
-	finish := func(out map[string]any, runErr error) (string, bool) {
+	// finish records the run, builds the terminal payload, and (for a
+	// background finish) the [PLAYBOOK_COMPLETE] notice data. It is shared by
+	// the in-window path and the background finisher so both report
+	// identically.
+	finish := func(out map[string]any, runErr error) (string, bool, map[string]any) {
 		stopped := playbookRunWasStopped(runID)
 		if stopped {
-			// Upstream records a stopped run as "stopped by stop_playbook"; the
-			// underlying context.Canceled is the mechanism, not the outcome.
+			// Upstream records a stopped run as "stopped by stop_playbook";
+			// the underlying context.Canceled is the mechanism, not the outcome.
 			runErr = errPlaybookStopped
 		}
-		logDB := recordPlaybookRun(binding, runID, name, out, runErr)
+		recordPlaybookRun(binding, runID, name, out, runErr)
 		if stopped {
 			// A stop is an outcome, not a failure: the queen asked for it.
-			payload := playbookRunInfo(runID, name, savedPath, dispatchedCount(out))
+			// This payload belongs to the folded control surface, not to
+			// upstream's run_playbook result shape.
+			payload := playbookRunInfo(runID, name, playbookPathString(savedPath), dispatchedCount(out))
 			payload["log_db"] = logDB
-			payload["playbook_path"] = savedPath
-			return jsonPayload(payload, false)
+			text, isError := jsonPayload(payload, false)
+			return text, isError, playbookCompleteNoticeForError(runID, name, logDB, "stopped by request")
 		}
 		if runErr != nil {
 			concise, full := playbook.ErrorDetail(runErr)
-			return jsonPayload(map[string]any{
-				"status":        "failed",
-				"run_id":        runID,
-				"error":         "playbook failed — " + concise,
-				"traceback":     full,
-				"log_db":        logDB,
-				"playbook_name": name,
-				"playbook_path": savedPath,
-				"dispatched":    dispatchedCount(out),
-			}, true)
+			// Upstream's background notice carries the concise cause; the
+			// tool payload carries the "playbook failed — " prefix and the
+			// full traceback.
+			text, isError := jsonPayload(playbookFailedPayload(runID, concise, full, logDB), true)
+			return text, isError, playbookCompleteNoticeForError(runID, name, logDB, concise)
 		}
-		dead := deadLetterCount(out)
-		payload := map[string]any{
-			"status":        "completed",
-			"run_id":        runID,
-			"concurrency":   concurrency,
-			"dispatched":    dispatchedCount(out),
-			"dead_lettered": dead,
-			"result":        out["result"],
-			"log_db":        logDB,
-			"playbook_name": name,
-			"playbook_path": savedPath,
-		}
-		if dispatchedCount(out) == 0 {
-			payload["hint"] = "dispatched 0 workers. If the table is already converged this is correct; to " +
-				"continue later, re-run with run_playbook(playbook_name=…) — done rows are skipped."
-		}
-		return jsonPayload(payload, false)
+		payload := playbookCompletedPayloadWithHint(
+			runID, concurrency, dispatchedCount(out), deadLetterCount(out),
+			out["result"], logDB, payloadName, savedPath, out)
+		text, isError := jsonPayload(payload, false)
+		return text, isError, playbookCompleteNoticeForDone(runID, name, logDB, out)
 	}
 
 	if finishedInGrace {
 		defer cancel()
 		defer unregisterPlaybookRun(runID)
 		defer handle.Close()
-		return finish(outcome.out, outcome.err)
+		restoreCap()
+		payload, isError, _ := finish(outcome.out, outcome.err)
+		return payload, isError
 	}
 
 	// Still running: finish in the background, record the outcome, and notify
@@ -448,27 +465,15 @@ func runPythonPlaybook(ctx context.Context, runtime playbookRuntime, binding *tr
 		defer cancel()
 		defer unregisterPlaybookRun(runID)
 		defer handle.Close()
+		defer restoreCap()
 		outcome := <-done
-		payload, _ := finish(outcome.out, outcome.err)
-		if notifier, ok := runtime.(playbookRunNotifier); ok {
-			notifier.NotifyPlaybookComplete(runID, name, payload)
+		_, _, notice := finish(outcome.out, outcome.err)
+		if notifier, ok := runtime.(playbookRunNotifier); ok && notice != nil {
+			notifier.NotifyPlaybookComplete(notice)
 		}
 	}()
 
-	return jsonPayload(map[string]any{
-		"status":        "started",
-		"run_id":        runID,
-		"concurrency":   concurrency,
-		"log_db":        filepath.Join(binding.Dir, "colony.db"),
-		"playbook_name": name,
-		"playbook_path": savedPath,
-		"message": "Playbook is dispatching workers in the background, " + strconv.Itoa(concurrency) +
-			" at a time (your meta['concurrency']). Routine outcomes (retry, dead-letter) are handled " +
-			"by the convergence loop; you'll receive a [PLAYBOOK_COMPLETE] notification when it finishes. " +
-			"Check progress anytime with run_playbook(action=\"status\") or kill it with " +
-			"run_playbook(action=\"stop\", run_id=…). Saved to the colony library as '" + name +
-			"' — to resume, call run_playbook(playbook_name=…); done rows are skipped.",
-	}, false)
+	return jsonPayload(playbookStartedPayload(runID, concurrency, logDB, payloadName, savedPath), false)
 }
 
 // unsupportedPythonInterpreterPayload is the honest terminal answer when the
@@ -679,18 +684,20 @@ type workerDispatchExecutor struct {
 // like upstream's colony dispatch closure. It serves both runners: the native
 // JSON path calls it through Hooks.Worker, and the Python bridge calls it
 // through the `dispatch_one` RPC (where the shim owns retry/backoff/lanes).
-// Schema forwarding is absent because the Go BatchTask has no report_schema
-// field; the worker still receives its native report_to_parent surface.
+// The playbook's `schema` rides the spawn spec (BatchTask.ReportSchema), which
+// specializes the worker's report_to_parent tool and system prompt — upstream's
+// `entry["report_schema"] = schema`.
 func (e *workerDispatchExecutor) dispatchOne(ctx context.Context, task string, opts playbook.DispatchOptions) (map[string]any, error) {
 	goal := ""
 	if opts.Goal != nil {
 		goal = *opts.Goal
 	}
 	ids, err := e.runtime.SpawnBatchWithOptions(ctx, []BatchTask{{
-		Task:        task,
-		Data:        opts.Data,
-		ProfileName: opts.Profile,
-		Goal:        goal,
+		Task:         task,
+		Data:         opts.Data,
+		ProfileName:  opts.Profile,
+		Goal:         goal,
+		ReportSchema: opts.Schema,
 	}}, SpawnBatchOptions{BatchID: e.runID})
 	if err != nil {
 		return nil, err
@@ -762,27 +769,28 @@ func resultColumns(raw any) []string {
 }
 
 // resolvePlaybookScript accepts exactly one of inline / path / saved name.
-// Saved names prefer the native .play.json extension and fall back to
-// .play.py so a Python-era library still resolves (and now executes on the
-// external-interpreter path).
+// The diagnostics are upstream's (`_resolve_script`), byte for byte, including
+// the Python-style name list. Saved names prefer the native .play.json
+// extension and fall back to .play.py so a Python-era library still resolves
+// (and now executes on the external-interpreter path).
 func resolvePlaybookScript(inline, path, name, playbooksDir string) (script, sourcePath string, err error) {
 	given := 0
 	for _, value := range []string{inline, path, name} {
-		if strings.TrimSpace(value) != "" {
+		if value != "" {
 			given++
 		}
 	}
 	if given > 1 {
-		return "", "", fmt.Errorf("pass exactly ONE of `playbook` (inline), `playbook_path`, or `playbook_name`")
+		return "", "", fmt.Errorf("Pass exactly ONE of `playbook` (inline), `playbook_path`, or `playbook_name`.")
 	}
-	if strings.TrimSpace(inline) != "" {
+	if inline != "" {
 		return inline, "", nil
 	}
-	if strings.TrimSpace(path) != "" {
+	if path != "" {
 		expanded := expandPlaybookHome(path)
 		info, statErr := os.Stat(expanded)
 		if statErr != nil || info.IsDir() {
-			return "", "", fmt.Errorf("playbook_path '%s' does not exist or is not a file", path)
+			return "", "", fmt.Errorf("playbook_path '%s' does not exist or is not a file.", path)
 		}
 		data, readErr := os.ReadFile(expanded)
 		if readErr != nil {
@@ -790,7 +798,7 @@ func resolvePlaybookScript(inline, path, name, playbooksDir string) (script, sou
 		}
 		return string(data), expanded, nil
 	}
-	if strings.TrimSpace(name) != "" {
+	if name != "" {
 		base := filepath.Join(playbooksDir, playbook.SanitizeName(name))
 		for _, candidate := range []string{base + ".play.json", base + ".play.py"} {
 			info, statErr := os.Stat(candidate)
@@ -803,14 +811,26 @@ func resolvePlaybookScript(inline, path, name, playbooksDir string) (script, sou
 			}
 			return string(data), candidate, nil
 		}
-		saved := playbook.SavedPlaybookNames(playbooksDir)
-		list := "(none yet)"
-		if len(saved) > 0 {
-			list = fmt.Sprint(saved)
-		}
-		return "", "", fmt.Errorf("no saved playbook named '%s'. Saved playbooks in this colony: %s", name, list)
+		return "", "", fmt.Errorf("no saved playbook named '%s'. Saved playbooks in this colony: %s.",
+			name, playbookSavedNamesRepr(playbooksDir))
 	}
-	return "", "", fmt.Errorf("provide `playbook` (inline), `playbook_path`, or `playbook_name`")
+	return "", "", fmt.Errorf("Provide `playbook` (inline script), `playbook_path`, or `playbook_name`.")
+}
+
+// playbookSavedNamesRepr renders the saved-name list the way upstream's
+// f-string does (`saved or '(none yet)'`, where saved is a Python list of
+// strings). The port lists both library formats it can run (.play.py and the
+// legacy .play.json); an upstream-only library prints identically.
+func playbookSavedNamesRepr(playbooksDir string) string {
+	names := playbook.SavedPlaybookNames(playbooksDir)
+	if len(names) == 0 {
+		return "(none yet)"
+	}
+	quoted := make([]string, len(names))
+	for i, name := range names {
+		quoted[i] = "'" + name + "'"
+	}
+	return "[" + strings.Join(quoted, ", ") + "]"
 }
 
 func persistNativePlaybook(colonyDir, name, script string) (string, bool) {
@@ -829,19 +849,31 @@ func persistNativePlaybook(colonyDir, name, script string) (string, bool) {
 // status/dispatched/dead_lettered/error/result_json/logs_json). This is the
 // upstream colony.db shape, chosen over a separate JSONL so one store answers
 // "what ran" and "what did it log".
-func recordPlaybookRun(binding *tracker.Binding, runID, name string, out map[string]any, runErr error) string {
+//
+// Field parity with upstream `_record_run`: a failed/stopped row keeps
+// name=NULL (upstream passes name=None on the error path), while the success
+// row carries the playbook name parsed from out["meta"]["name"].
+func recordPlaybookRun(binding *tracker.Binding, runID, name string, out map[string]any, runErr error) {
 	dbPath := filepath.Join(binding.Dir, "colony.db")
 	status := "done"
 	var errorText *string
+	var namePtr *string
 	if runErr != nil {
 		status = "error"
 		_, full := playbook.ErrorDetail(runErr)
 		errorText = &full
+	} else {
+		if meta, ok := out["meta"].(map[string]any); ok {
+			if metaName, ok := meta["name"].(string); ok && metaName != "" {
+				name = metaName
+			}
+		}
+		nameCopy := name
+		namePtr = &nameCopy
 	}
-	nameCopy := name
 	in := PlaybookRunInput{
 		RunID:        runID,
-		Name:         &nameCopy,
+		Name:         namePtr,
 		Status:       status,
 		Dispatched:   dispatchedCount(out),
 		DeadLettered: deadLetterCount(out),
@@ -851,10 +883,7 @@ func recordPlaybookRun(binding *tracker.Binding, runID, name string, out map[str
 	if out != nil {
 		in.Result = out["result"]
 	}
-	if err := RecordPlaybookRun(dbPath, in); err != nil {
-		return ""
-	}
-	return dbPath
+	_ = RecordPlaybookRun(dbPath, in)
 }
 
 func dispatchedCount(out map[string]any) int {

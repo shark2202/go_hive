@@ -122,6 +122,12 @@ func ChatMessagesToMaps(messages []ChatMessage) []map[string]any {
 				entry["content"] = nil
 			}
 		}
+		// Reasoning models (DeepSeek, Qwen, GLM) read their own prior
+		// reasoning_content back when it rides the current turn's assistant
+		// step. Parity: framework/agent_loop/conversation.py Message.to_llm_dict.
+		if message.ReasoningContent != "" {
+			entry["reasoning_content"] = message.ReasoningContent
+		}
 		out = append(out, entry)
 	}
 	return out

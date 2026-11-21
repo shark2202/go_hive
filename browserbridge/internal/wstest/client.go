@@ -199,6 +199,9 @@ func (c *Client) readFrame() (byte, []byte, bool, error) {
 // Ping sends a WebSocket ping.
 func (c *Client) Ping(payload []byte) error { return c.WriteFrame(true, 0x9, payload) }
 
+// Pong answers a WebSocket ping (a real browser does this from the stack).
+func (c *Client) Pong(payload []byte) error { return c.WriteFrame(true, 0xA, payload) }
+
 // Close sends a close frame and tears down TCP.
 func (c *Client) Close(code int, reason string) error {
 	c.mu.Lock()

@@ -212,7 +212,14 @@ func TestBrowserCLIExitCodes(t *testing.T) {
 		{name: "domain failure", response: map[string]any{"ok": true, "result": map[string]any{"ok": false, "error": "tab.create returned no tabId"}}, want: browserExitDomain},
 		{name: "http not found code", response: map[string]any{"ok": false, "code": "not_found", "message": "no such tab"}, status: http.StatusNotFound, want: browserExitNotFound},
 		{name: "http not connected code", response: map[string]any{"ok": false, "code": "not_connected", "message": "no extension"}, status: http.StatusServiceUnavailable, want: browserExitNotConnected},
-		{name: "http bad request code", response: map[string]any{"ok": false, "code": "bad_request", "message": "missing selector"}, status: http.StatusBadRequest, want: browserExitBadArgs},
+		// The bridge's bad_request family carries no upstream structured
+		// counterpart: upstream classifies the error TEXT, so a message with
+		// no fragment lands on 1 and one that names a missing thing on 4.
+		// Exit 6 is only for the CLI's own prechecks (see TestBrowserCLIBadArgs).
+		{name: "http bad request code", response: map[string]any{"ok": false, "code": "bad_request", "message": "missing selector"}, status: http.StatusBadRequest, want: browserExitDomain},
+		{name: "http unknown command code", response: map[string]any{"ok": false, "code": "unknown_command", "message": "unknown command 'browser_frobnicate'"}, status: http.StatusBadRequest, want: browserExitDomain},
+		{name: "http bad request with not-found text", response: map[string]any{"ok": false, "code": "bad_request", "message": "Element not found: #nope"}, status: http.StatusBadRequest, want: browserExitNotFound},
+		{name: "http no-browser-profile code", response: map[string]any{"ok": false, "code": "no_browser_profile", "message": "The Hive browser extension isn't connected."}, status: http.StatusBadRequest, want: browserExitNotConnected},
 		{name: "http rate limit code", response: map[string]any{"ok": false, "code": "rate_limited", "message": "view cap"}, status: http.StatusTooManyRequests, want: browserExitRateLimited},
 	}
 	home := t.TempDir()

@@ -1,0 +1,28 @@
+data: {"type": "session_snapshot", "stream_id": "queen", "node_id": "queen", "execution_id": null, "data": {"snapshot_seq": 9, "activity": "awaiting_user", "is_executing": false, "awaiting_input": true, "interrupted": false, "interrupt_cause": null, "current_execution_id": null, "current_tool_calls": [], "queen_busy_reason": "awaiting_input", "park_reason": "turn_done", "pending_questions": null, "last_event_seq": 8, "last_event_at": "2026-11-21T16:06:55.911025", "last_queen_event_at": "2026-11-21T16:06:55.911025"}, "timestamp": "2026-11-21T16:06:56.776802", "correlation_id": null, "colony_id": null, "seq": 0}
+
+data: {"type": "client_output_delta", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"content": "\uff08\u540e\u53f0\uff09\u6536\u5230\u3002", "snapshot": "\uff08\u540e\u53f0\uff09\u6536\u5230\u3002", "inner_turn": 0, "iteration": 0}, "timestamp": "2026-11-21T16:06:55.898527", "correlation_id": null, "colony_id": null, "seq": 6}
+
+data: {"type": "llm_turn_complete", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"stop_reason": "stop", "model": "openai/stall-e2e-model", "input_tokens": 1, "output_tokens": 1, "cached_tokens": 0, "cache_creation_tokens": 0, "cost_usd": 0.0, "iteration": 0, "system_prefix_sha": "692b774c98c7", "system_suffix_sha": "e3b0c44298fc", "history_anchor_idx": -1, "message_count": 1}, "timestamp": "2026-11-21T16:06:55.908926", "correlation_id": null, "colony_id": null, "seq": 7}
+
+data: {"type": "client_input_requested", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"park_reason": "turn_done"}, "timestamp": "2026-11-21T16:06:55.910724", "correlation_id": null, "colony_id": null, "seq": 8}
+
+data: {"type": "client_input_received", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"content": "\u5e2e\u6211\u628a\u4eca\u5929\u7684\u5f85\u529e\u4e8b\u9879\u6574\u7406\u4e00\u4e0b\uff0c\u6574\u7406\u5b8c\u544a\u8bc9\u6211\u7ed3\u679c\u3002", "image_count": 0}, "timestamp": "2026-11-21T16:06:56.978392", "correlation_id": "eb234b415234414ab38eb16d40db26ee", "colony_id": null, "seq": 10}
+
+data: {"type": "loop_state_changed", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"activity": "executing", "park_reason": null, "interrupt_cause": null, "questions": null}, "timestamp": "2026-11-21T16:06:56.979629", "correlation_id": null, "colony_id": null, "seq": 11}
+
+data: {"type": "client_input_committed", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"seq": 2}, "timestamp": "2026-11-21T16:06:56.988154", "correlation_id": "eb234b415234414ab38eb16d40db26ee", "colony_id": null, "seq": 13}
+
+data: {"type": "node_loop_iteration", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"iteration": 1, "phase": "independent"}, "timestamp": "2026-11-21T16:06:56.988504", "correlation_id": null, "colony_id": null, "seq": 14}
+
+data: {"type": "context_usage_updated", "stream_id": "queen", "node_id": "queen", "execution_id": null, "data": {"usage_ratio": 0.1755, "usage_pct": 18, "message_count": 3, "estimated_tokens": 31597, "max_context_tokens": 180000, "trigger": "iteration_start", "breakdown": {"conversation_chars": 28038, "system_chars": 21584, "tool_defs_chars": 45171, "image_blocks": 0, "image_tokens": 0}}, "timestamp": "2026-11-21T16:06:56.988928", "correlation_id": null, "colony_id": null, "seq": 15}
+
+data: {"type": "client_output_delta", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"content": "\u6536\u5230\uff0c\u6211\u5148\u770b\u770b\u3002", "snapshot": "\u6536\u5230\uff0c\u6211\u5148\u770b\u770b\u3002", "inner_turn": 0, "iteration": 1}, "timestamp": "2026-11-21T16:06:56.996602", "correlation_id": null, "colony_id": null, "seq": 16}
+
+data: {"type": "llm_turn_complete", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"stop_reason": "stop", "model": "openai/stall-e2e-model", "input_tokens": 1, "output_tokens": 1, "cached_tokens": 0, "cache_creation_tokens": 0, "cost_usd": 0.0, "iteration": 1, "system_prefix_sha": "692b774c98c7", "system_suffix_sha": "e3b0c44298fc", "history_anchor_idx": -1, "message_count": 3}, "timestamp": "2026-11-21T16:06:57.001298", "correlation_id": null, "colony_id": null, "seq": 17}
+
+data: {"type": "session_title_updated", "stream_id": "queen", "node_id": null, "execution_id": null, "data": {"session_id": "session_20261121_160655_452d2df8", "title": "\u5f85\u529e\u6574\u7406"}, "timestamp": "2026-11-21T16:06:57.006204", "correlation_id": null, "colony_id": null, "seq": 18}
+
+data: {"type": "client_input_requested", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"park_reason": "turn_done"}, "timestamp": "2026-11-21T16:06:57.007564", "correlation_id": null, "colony_id": null, "seq": 19}
+
+data: {"type": "loop_state_changed", "stream_id": "queen", "node_id": "queen", "execution_id": "session_20261121_160655_452d2df8", "data": {"activity": "awaiting_user", "park_reason": "turn_done", "interrupt_cause": null, "questions": null}, "timestamp": "2026-11-21T16:06:57.014091", "correlation_id": null, "colony_id": null, "seq": 20}
+

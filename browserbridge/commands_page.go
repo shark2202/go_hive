@@ -167,12 +167,16 @@ func cmdClick(ctx context.Context, b *Bridge, profile string, params map[string]
 			"label": "click (" + pyFloat(px) + "," + pyFloat(py) + ")", "kind": "point",
 		})
 	}
-	out := map[string]any{
-		"ok": true, "action": "click", "tabId": tabID, "x": px, "y": py,
-		"button": button, "clickCount": clickCount, "method": "cdp",
-	}
+	out := map[string]any{"ok": true, "x": px, "y": py}
 	if hasSelector {
+		// Upstream bridge.click response shape (tools/interact.py left_click
+		// selector path returns this dict verbatim).
+		out["action"] = "click"
 		out["selector"] = selector
+		out["method"] = "cdp"
+	} else {
+		// Upstream bridge.click_coordinate response shape.
+		out["action"] = "click_coordinate"
 	}
 	return out, nil
 }
@@ -224,7 +228,8 @@ func cmdType(ctx context.Context, b *Bridge, profile string, params map[string]a
 			}
 		}
 	}
-	out := map[string]any{"ok": true, "action": "type", "tabId": tabID, "chars": chars, "length": chars}
+	// Upstream bridge.type_text response shape.
+	out := map[string]any{"ok": true, "action": "type", "length": chars}
 	if hasSelector {
 		out["selector"] = selector
 	}
@@ -323,7 +328,7 @@ func cmdKeypress(ctx context.Context, b *Bridge, profile string, params map[stri
 	}
 
 	def := keyDefinition(key)
-	mask, modNames := modifierMask(mods)
+	mask, _ := modifierMask(mods)
 	if mask&(1|2|4) != 0 {
 		def.text = "" // Ctrl+A must not also type "a"
 	}
@@ -354,8 +359,14 @@ func cmdKeypress(ctx context.Context, b *Bridge, profile string, params map[stri
 	}, 10*time.Second); err != nil {
 		return nil, err
 	}
+	// Upstream bridge.press_key response shape: the caller's modifier list
+	// (empty when none), not the normalized CDP names.
+	reportedMods := mods
+	if reportedMods == nil {
+		reportedMods = []string{}
+	}
 	return map[string]any{
-		"ok": true, "action": "press", "tabId": tabID, "key": def.key, "modifiers": modNames,
+		"ok": true, "action": "press", "key": def.key, "modifiers": reportedMods,
 	}, nil
 }
 
@@ -506,9 +517,16 @@ func cmdScroll(ctx context.Context, b *Bridge, profile string, params map[string
 	}, 15*time.Second); err != nil {
 		return nil, err
 	}
+	// Upstream bridge.scroll response shape. The Go port scrolls with one CDP
+	// wheel event, so method/container/steps report that truthfully (upstream's
+	// "unknown" container fallback is reused when no element tag is known).
+	container := "unknown"
+	if selector, ok := paramString(params, "selector"); ok && selector != "" {
+		container = selector
+	}
 	return map[string]any{
-		"ok": true, "action": "scroll", "tabId": tabID, "direction": direction, "amount": amount,
-		"deltaX": dx, "deltaY": dy, "method": "cdp",
+		"ok": true, "action": "scroll", "direction": direction, "amount": amount,
+		"method": "cdp", "container": container, "steps": 1,
 	}, nil
 }
 

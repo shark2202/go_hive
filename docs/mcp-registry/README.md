@@ -13,7 +13,9 @@
 ## 运行时语义（本契约约束的行为）
 
 `installed.json` 只描述「装了什么」；真正决定模型能看到什么的是装载路径。以下行为已在
-`docs/mcp-crosscheck.md` 的 Python ↔ Go 双跑中实测（基线 `85595e30`）：
+`docs/mcp-crosscheck.md` 的 Python ↔ Go 双跑中实测：自建夹具（基线 `85595e30`，§1–§7）与
+**真实第三方 server**（基线 `c4eb266d`，§8；`server-everything` 2.3.1 / `mcp-server-time`
+2026.11.18，stdio + HTTP+SSE + streamable-HTTP 三条传输）。
 
 - **enabled**：`enabled:false` 的 registry 条目不装载（两侧都遵守）。Go 额外允许
   `configuration.json` 的 `mcp.servers[]` 条目写 `enabled:false`，用来覆盖/剔除同名 registry 条目
@@ -29,6 +31,9 @@
   > 240s；Python 只有 env（import 时读一次），没有 `configuration.json` 的 MCP 块。
 - **transport**：两侧共有 `stdio` / `http` / `unix` / `sse`；`harness` 是 Python 的进程内组表示，
   Go 侧由 `HarnessGroupNames` 按 server 名分派，不写进 `transport` 字段。
+  **`http` 指的是 Hive 自家 `/mcp/v1` JSON-RPC 桥，不是 MCP 的 streamable HTTP**：两侧 tools 路径
+  对标准 `POST /mcp` 端点都会失败（实测 404/406，两侧一致）。要连标准 streamable-HTTP server 用
+  CLI 模式（`hive mcp run`，两侧同一份 mcp2cli 语义，实测各拿到 16 个工具）。
 
 ## 校验
 

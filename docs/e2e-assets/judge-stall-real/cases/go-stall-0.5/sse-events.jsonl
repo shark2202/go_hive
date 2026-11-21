@@ -1,0 +1,58 @@
+data: {"colony_id":null,"correlation_id":null,"data":{"activity":"awaiting_user","awaiting_input":true,"current_execution_id":null,"current_tool_calls":[],"interrupt_cause":null,"interrupted":false,"is_executing":false,"last_event_at":"2026-11-21T16:07:40.117019","last_event_seq":8,"last_queen_event_at":"2026-11-21T16:07:40.117019","park_reason":"turn_done","pending_questions":null,"queen_busy_reason":"awaiting_input","snapshot_seq":9},"execution_id":null,"node_id":"queen","seq":0,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.067542","type":"session_snapshot"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"content":"（后台）收到。","inner_turn":0,"iteration":0,"snapshot":"（后台）收到。"},"execution_id":"session_20261121_160740_fa19d06e","node_id":"queen","seq":6,"stream_id":"queen","timestamp":"2026-11-21T16:07:40.096159","type":"client_output_delta"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"cache_creation_tokens":0,"cached_tokens":0,"cost_usd":0.0,"history_anchor_idx":-1,"input_tokens":1,"iteration":0,"message_count":1,"model":"stall-e2e-model","output_tokens":1,"stop_reason":"stop","system_prefix_sha":"7b1042e025db","system_suffix_sha":"e3b0c44298fc"},"execution_id":"session_20261121_160740_fa19d06e","node_id":"queen","seq":7,"stream_id":"queen","timestamp":"2026-11-21T16:07:40.104427","type":"llm_turn_complete"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"session_20261121_160740_fa19d06e","node_id":"queen","seq":8,"stream_id":"queen","timestamp":"2026-11-21T16:07:40.113029","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":"fccf127803a8dabcd73d8422aa4b858a","data":{"content":"帮我把今天的待办事项整理一下，整理完告诉我结果。","image_count":0},"execution_id":"session_20261121_160740_fa19d06e","node_id":"queen","seq":10,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.272093","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"帮我把今天的待办事项整理一下，整理完告诉我结果。"}},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":null,"seq":11,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.278891","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"activity":"executing","interrupt_cause":null,"park_reason":null,"questions":null},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":"queen","seq":12,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.282442","type":"loop_state_changed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"max_iterations":50},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":"queen","seq":13,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.286208","type":"node_loop_started"}
+
+data: {"colony_id":null,"correlation_id":"fccf127803a8dabcd73d8422aa4b858a","data":{"seq":2},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":"queen","seq":15,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.309332","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"iteration":1,"phase":"independent"},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":"queen","seq":16,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.313304","type":"node_loop_iteration"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"breakdown":{"conversation_chars":28924,"image_blocks":0,"image_tokens":0,"system_chars":19322,"tool_defs_chars":53992},"estimated_tokens":34079,"max_context_tokens":180000,"message_count":3,"trigger":"iteration_start","usage_pct":19,"usage_ratio":0.1893},"execution_id":null,"node_id":"queen","seq":17,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.317279","type":"context_usage_updated"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"content":"好的，我这就去整理，整理完马上告诉你。","inner_turn":0,"iteration":1,"snapshot":"好的，我这就去整理，整理完马上告诉你。"},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":"queen","seq":18,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.321212","type":"client_output_delta"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"cache_creation_tokens":0,"cached_tokens":0,"cost_usd":0.0,"history_anchor_idx":-1,"input_tokens":1,"iteration":1,"message_count":3,"model":"stall-e2e-model","output_tokens":1,"stop_reason":"stop","system_prefix_sha":"7b1042e025db","system_suffix_sha":"e3b0c44298fc"},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":"queen","seq":19,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.331953","type":"llm_turn_complete"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"iterations":1},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":"queen","seq":20,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.342263","type":"node_loop_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":"queen","seq":21,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.345206","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"activity":"awaiting_user","interrupt_cause":null,"park_reason":"turn_done","questions":null},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":"queen","seq":22,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.349168","type":"loop_state_changed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"f81e4d497edbfeb00425e72c4fad29b0","node_id":null,"seq":23,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.355265","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"session_id":"session_20261121_160740_fa19d06e","title":"待办整理"},"execution_id":null,"node_id":null,"seq":24,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.352535","type":"session_title_updated"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"\u003csystem-reminder\u003e\nYour last reply talked about work to do now (announced or promised it, or agreed to a change the user asked for), but you ended the turn without calling any tool to do it, so nothing was done. If it should be done, call the tools now. If not, carry on. Don't mention this reminder.\n\u003c/system-reminder\u003e"}},"execution_id":"19a58d3b3decb2f18c5186395203d3da","node_id":null,"seq":25,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.540526","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"activity":"executing","interrupt_cause":null,"park_reason":null,"questions":null},"execution_id":"19a58d3b3decb2f18c5186395203d3da","node_id":"queen","seq":26,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.543902","type":"loop_state_changed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"max_iterations":50},"execution_id":"19a58d3b3decb2f18c5186395203d3da","node_id":"queen","seq":27,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.547782","type":"node_loop_started"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"iteration":1,"phase":"independent"},"execution_id":"19a58d3b3decb2f18c5186395203d3da","node_id":"queen","seq":29,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.570339","type":"node_loop_iteration"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"breakdown":{"conversation_chars":29339,"image_blocks":0,"image_tokens":0,"system_chars":19322,"tool_defs_chars":53992},"estimated_tokens":34217,"max_context_tokens":180000,"message_count":5,"trigger":"iteration_start","usage_pct":19,"usage_ratio":0.1901},"execution_id":null,"node_id":"queen","seq":30,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.574036","type":"context_usage_updated"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"content":"整理好了。","inner_turn":0,"iteration":1,"snapshot":"整理好了。"},"execution_id":"19a58d3b3decb2f18c5186395203d3da","node_id":"queen","seq":31,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.579848","type":"client_output_delta"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"cache_creation_tokens":0,"cached_tokens":0,"cost_usd":0.0,"history_anchor_idx":-1,"input_tokens":1,"iteration":1,"message_count":5,"model":"stall-e2e-model","output_tokens":1,"stop_reason":"stop","system_prefix_sha":"7b1042e025db","system_suffix_sha":"e3b0c44298fc"},"execution_id":"19a58d3b3decb2f18c5186395203d3da","node_id":"queen","seq":32,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.589014","type":"llm_turn_complete"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"iterations":1},"execution_id":"19a58d3b3decb2f18c5186395203d3da","node_id":"queen","seq":33,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.607060","type":"node_loop_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"19a58d3b3decb2f18c5186395203d3da","node_id":"queen","seq":34,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.612819","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"activity":"awaiting_user","interrupt_cause":null,"park_reason":"turn_done","questions":null},"execution_id":"19a58d3b3decb2f18c5186395203d3da","node_id":"queen","seq":35,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.616115","type":"loop_state_changed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"19a58d3b3decb2f18c5186395203d3da","node_id":null,"seq":36,"stream_id":"queen","timestamp":"2026-11-21T16:07:41.619941","type":"execution_completed"}
+

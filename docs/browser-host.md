@@ -26,7 +26,10 @@ hive serve（supervisor + keepalive：browser_supervisor.go / browser_control.go
 
 - 主模块**不 import** browserbridge module（后者自带 `go.mod`），两者只通过
   进程边界 + 固定端口 + `GET /health` + `ws://…:14831/control` 契约耦合。
-- `hive-browser` 是纯客户端：一次调用 = 一次 `POST /command`，不自己拉桥、不常驻。
+- `hive-browser` 是**一次性客户端**：一次调用 = 一次 `POST /command`，不常驻；桥没起时
+  按上游 `ensure_bridge_host_running()` 的形状自动拉起一个**分离会话**的
+  `browserbridge`（探 `GET /health` → spawn → 最多等 8s，日志 `$HIVE_HOME/bridge_host.log`）。
+  显式 `--bridge` 是 Go 自有覆盖，指向别人管理的端点时**不**触发 spawn。
 - control RPC（14831）已移植：`hive serve` 常驻一条连接（`client_hello(owner_pid)`
   + `subscribe_notifications`），桥在「零控制客户端且 desktop parent 已消失」时
   空闲 30s 自行退出（exit 0，supervisor 视为有意退出并停住，等下一次 ensure()），
@@ -77,7 +80,7 @@ defer stopBrowserBridge()
 | 身份 | `client_hello(owner_pid)`：owner = `HIVE_DESKTOP_PARENT_PID`（desktop 起 serve 时是 Electron 的 pid，否则 serve 自己，`_runtime_owner_pid` 语义）。reaper 每 10s 清理「owner 已死」与「30s 内未 identify」的僵尸连接；`active_client_count` 只算这两类之外的连接 |
 | 推送 | `subscribe_notifications` 后，adopt/release（from_user）经 `Bridge.NotifyClients` 推 `{type:"notify",profile,text,tabId,action}`；serve 侧接收后打印 `Browser panel: notify for …` 并注入匹配会话（§2.2） |
 | serve 侧 | `browser_control.go` 的 keepalive 常驻一条连接（hello → subscribe → 持有），桥重启/空闲退出后 1s 指数退避重连并唤醒 supervisor；serve 停止时先关这条连接再 SIGTERM 子进程 |
-| 父进程监视 | `cmd/browserbridge` 的 `desktopParentWentAway`（上游 `_watch_parent` 的对应物）：`HIVE_DESKTOP_PARENT_PID` 存在时每 `-parent-check`（默认 400ms）探测，连续 2 次失败即优雅退出（exit 0），父死约 0.8s 生效（实测 783–866 ms） |
+| 父进程监视 | `cmd/browserbridge` 的 `desktopParentWentAway`（上游 `_watch_parent` 的对应物）：`HIVE_DESKTOP_PARENT_PID` 存在时每 `-parent-check`（默认 **5s**，上游 `_PARENT_CHECK_INTERVAL_S`）探测，连续 2 次失败即优雅退出（exit 0），父死 5–10s 生效（实测 10.04–10.06 s，§7.1） |
 | 空闲退出 | `cmd/browserbridge` 的 `idleExitRequested`（无父进程提示时的兜底）：`-idle-check`（默认 10s）轮询，`control 客户端 == 0` 且 `HIVE_DESKTOP_PARENT_PID` 已死，持续 `-idle-grace`（默认 30s）后优雅退出（exit 0）。`-no-idle-exit` 供不持控制连接的调试/脚本使用 |
 | 可观测 | `GET /status`：`listening.control_rpc`、`control_rpc_clients`、`runtime_alive`；`POST /tabs/{id}/reveal`（激活并抬升 Chrome 窗口，老扩展回退 `tab.activate` 并带 `fallback:"activate"`）、`POST /shutdown`（202 + 优雅退出） |
 
@@ -158,7 +161,7 @@ defer stopBrowserBridge()
 | 3 | not started | 该 profile 还没有标签页 → `run hive-browser open <url> first` |
 | 4 | not found | 元素/标签页不存在 |
 | 5 | ambiguous | 选择器多匹配、多 Chrome profile 未指定 |
-| 6 | bad args（Go 自己的本地校验） | 上传文件不存在、`evaluate` 缺 `--js`、`script` 缺 `--skill/--script` 或 `--args` 非 JSON、Go 独有的 `click`/`type`/`press`/`scroll` 动词 |
+| 6 | bad args（本地预检） | `evaluate` 缺 `--js`、`script` 缺 `--skill/--script` 或 `--args` 非 JSON、Go 独有的 `click`/`type`/`press`/`scroll` 动词参数校验。桥侧返回的 `bad_request` **不再**固定落 6：按上游 `classify_result` 的文本片段分类（无片段→1，`not found`→4 等），upload 文件不存在即走这条（桥返回 `File not found` → 4） |
 | 7 | pending dialog | 结果带 `pending_dialog` → `hive-browser dialog respond` |
 | 8 | rate limited | 桥返回 `rate_limited`（社交平台浏览上限） |
 
@@ -172,6 +175,10 @@ defer stopBrowserBridge()
   独立 `screenshot` 动词的 `--intent` 同样可选（2026-11-21 起）：连上桥时 capture 成功退 **0**，
   无桥 **2**、未开标签 **3**，与上游 `render_screenshot(intent=None)` 一致；桥侧
   `browser_screenshot` 也接受缺省 intent。
+* 桥侧结构化 `bad_request`/`unknown_command`（HTTP 400）不再映射为 6：上游 CLI 只看
+  结果里的 error 文本，Go 侧因此让**文本分类优先**，无片段落 **1**、含 `not found` 落 **4**；
+  6 只保留给本地预检（上表第 6 行）。实测：`upload` 缺文件 → 桥 `File not found` → **4**；
+  未知命令 `browser_frobnicate` → HTTP 400 `unknown_command`（`scripts/e2e_browser_transport.sh`）。
 
 ### 会话/标签状态
 
@@ -346,16 +353,18 @@ canonical command 全部可达；supervisor 测试用测试二进制自身充当
 | control RPC 14831 + `client_hello(owner_pid)` | 有；serve 持连接，桥零客户端时 30s 退出 | **已对齐** | 白名单 46 条与上游一致；空闲退出 + exit 0 停住/ensure() 重启（上游是 worker SIGTERM supervisor 的握手）；`/tabs/{id}/reveal`、`/shutdown` 同样对齐 |
 | notify 落到 agent 会话 | 上游把 notify 路由到 `inject_event`（queen 按 session.id、worker 按 worker.id） | **已对齐** | `SessionManager.DeliverBrowserNotify` 按同一顺序注入；真 `ChatRuntime`（fake LLM）测试证明文本作为 user 消息落进 transcript，worker 走 `ColonyRuntime.InjectInput`，无匹配只记录 |
 | 面板 3 路由 | `GET /api/browser/contexts`、`GET /api/browser/tabs`、`POST /api/browser/contexts/close`；无 bridge 时 200 + `available:false` | **已对齐**（2026-11-21） | 三条路由按上游 `handle_browser_contexts`/`handle_browser_tabs`/`handle_close_browser_context` 逐字段 reshape，桥不可达/未连扩展统一 200 `available:false`；真桥 + 假扩展实测见审计页 §04.2 与 `go_hive/scripts/e2e_browser_panel.sh` |
-| CLI 自动 ensure 桥 | `errors.run` 里 `ensure_bridge_host_running()`，CLI 会拉起 `bridge_host` | **不拉** | 桥归 `hive serve` 管，避免 CLI 留下孤儿进程；桥没起时明确退出 2 并提示 `hive serve` |
+| CLI 自动 ensure 桥 | `errors.run` 里 `ensure_bridge_host_running()`，CLI 会拉起 `bridge_host` | **已对齐**（2026-11-21，R18） | 无桥（`GET /health` 不通）且未给显式 `--bridge` 时，CLI 以分离会话 spawn `browserbridge`（`HIVE_BROWSERBRIDGE_BIN`/同目录/`$PATH` 解析，`HIVE_BROWSERBRIDGE_ARGS` 透传额外 flag），最多等 8s（上游 `wait_s`）、0.2s 轮询（上游同值），日志 `$HIVE_HOME/bridge_host.log`；已在运行则复用（幂等）。实测冷启动 0.62–0.93s 内拿到桥的答案（`scripts/e2e_browser_transport.sh`）。孤儿风险由桥自身空闲看门狗兜底（无控制客户端且无 desktop parent → 30s grace 后 exit 0） |
 | `browser_setup`/`browser_status` 的 `connected_profiles` | 来自 `_connected_profiles` | 来自 Go 桥 `connectedProfiles` | 字段一致（label/is_default/starred/version/protocol_version） |
 | profile→tab 索引 | 桥侧 contexts + 客户端 `browser_contexts.json` 重水化 | 客户端 `browser_cli_state.json`（只存 tabId） | 桥侧 contexts 未持久化，CLI 用本地索引补足 tab 解析 |
 | 用法错误退出码 | argparse=2 | **已对齐**（2026-11-20） | 未知子命令/flag、缺必填参数、非法 choice/类型（`--action`、`--mode`、`--wait-until`、`--scroll-direction`、`--auto-snapshot-mode`、`--coordinate`/`--region`、`--duration`、`--timeout-s`、`tab_id`）一律 2，与上游 argparse 实测一致；仍走本地 6 的只剩 evaluate/script 参数校验与 Go 自有 `type` 动词（见 §2 表）。upload 文件不存在自 2026-11-21 起走桥侧 `File not found` → 4（R07） |
 | `interact screenshot/zoom` 缺 intent | 工具层 `ok:false` → 1 | **已对齐**（2026-11-20） | 本地预检已移除：桥返回 `screenshot requires intent` / `zoom requires region`，分类为 1（真 Chrome 实测） |
 | 独立 `screenshot` 缺 `--intent` | `render_screenshot(intent=None)` → 连上时 0 | **已对齐**（2026-11-21） | 本地 `--intent` 预检与桥侧强制一并移除：连上 0 / 无桥 2 / 未开标签 3；`interact --action screenshot` 仍要求 intent（上一行） |
-| 父进程死亡后的桥寿命 | `_watch_parent`：桌面 PID 消失即退出（5s × 2 次确认） | **有意加速（实测 0.78–0.87s）** | 桥新增 `-parent-check`（默认 400ms，2 次确认）监视 `HIVE_DESKTOP_PARENT_PID`，父死约 0.8s 退出；**比上游更快，不是同值**（上游 5–10s，且上游是 worker SIGTERM supervisor 的握手，桥这里是 exit 0 park）；原空闲看门狗（10s 轮询 + 30s grace，约 30–40s）保留为兜底；serve 侧 `ensure()`/run 循环在 owner 死后不再复活（对应上游 `_run_supervisor` 的 parent watchdog） |
+| 父进程死亡后的桥寿命 | `_watch_parent`：桌面 PID 消失即退出（5s × 2 次确认，5–10s 生效） | **已对齐**（2026-11-21，R20） | `-parent-check` 默认改为上游同值 **5s**（2 次确认，`_PARENT_CHECK_INTERVAL_S`/`_PARENT_DEATH_CONFIRMATIONS`），实测默认下 **10.04–10.06s** 退出（exit 0）；旧口径的 400ms 有意加速取消，flag 仍可调（测试用 20ms）。原空闲看门狗（10s 轮询 + 30s grace）保留为无 parent hint 的兜底；serve 侧 `ensure()`/run 循环在 owner 死后不再复活（对应上游 `_run_supervisor` 的 parent watchdog） |
 | 同 tab CDP 并发 | `_tab_lock`：每个 tab 一把 `asyncio.Lock`，串行 attach/cdp/retry | **已对齐**（2026-11-21，R09） | 桥为每个 tab 维护一把锁（`browserbridge/state.go::tabLock`），`cdp()` 在 `ensureAttached` 之前取锁，等待者可被 ctx 取消；tab 关闭/`removed` 时回收锁条目（同上游 `_tab_locks.pop`）。真桥 + 假扩展驱动并发 `_cdp` 实测（`go_hive/scripts/e2e_browser_residuals.sh`） |
 | WS 帧上限 | `websockets.serve(max_size=50*1024*1024)` | **已对齐**（2026-11-21，R10） | `ws.DefaultMaxRead = 50 << 20`，扩展中继 / control RPC / legacy 三个监听共用；e2e 以 17 MiB 帧实测接受并转发，显式调小上限仍会拒绝 |
-| `/status` 字段集 | `bridge_version`/`runtime_version`/`bind_errors`/`listening.legacy_status`（side panel 文案来源） | **已对齐**（2026-11-21，R11） | 三类字段齐全：`bridge_version` 为二进制版本、`runtime_version` 无嵌入方时输出 `null`（同上游生产默认）、`bind_errors` 记录 legacy_ws/control_rpc 绑定失败；`listening.legacy_status` 恒 false（Go 不绑 9230）。Go 另有 `tabs`/`tabs_total`/`profiles`/`capabilities`/`viewport_scale` 等 additive 字段，不替代上游字段 |
+| `/status` 字段集 | `bridge_version`/`runtime_version`/`bind_errors`/`listening.legacy_status`（side panel 文案来源） | **已对齐**（2026-11-21，R11 + R17） | 三类字段齐全：`bridge_version` 为二进制版本、`runtime_version` 无嵌入方时输出 `null`（同上游生产默认）、`bind_errors` 记录 legacy_ws/legacy_status/control_rpc 绑定失败；`listening.legacy_status` 现为**真实绑定状态**（R17 起桥同时监听 9230，见下一行）。Go 另有 `tabs`/`tabs_total`/`profiles`/`capabilities`/`viewport_scale` 等 additive 字段，不替代上游字段 |
+| legacy 9229/9230 监听对 | 同时监听 9229 WS 与 9230 HTTP status（`LEGACY_STATUS_PORT`，同一个 `_http_status_handler`） | **已对齐**（2026-11-21，R17） | 桥沿用主 HTTP handler 绑定 9229+1（`-legacy-status` 可改/配合 `-no-legacy` 关闭），/status、/profiles 与 14830 同形；主监听已占用 legacy 地址时跳过重复绑定（上游 `port != LEGACY_BRIDGE_PORT` 守卫）。实测见 `scripts/e2e_browser_transport.sh` 与审计页 §04.10 |
+| WS 层心跳 | `websockets.serve(ping_interval=20, ping_timeout=20)`（`_WS_PING_INTERVAL_S/_WS_PING_TIMEOUT_S`） | **已对齐**（2026-11-21，R16） | 两个扩展监听都跑 20s ping / 20s pong 超时，超时以 **1011 `keepalive ping timeout`** 关连接（Python websockets 同码同因）；应用层 5s/12s ping 保留叠加；`-ws-ping`/`-ws-pong` 可调（测试用 200ms）。control RPC 监听不带 ticker（上游 bridge_rpc.py 也没有）。实测：静默对端 1011、应答对端跨 6 个心跳周期仍在（§04.10） |
 | `--head` / `--no-annotate` | 上游工具侧处理 | **已对齐（2026-11-21）**：`--head` 读快照 artifact 的前 N 字符；`--no-annotate` 透传给桥（有高亮时注入 overlay，否则不加图） | 快照结果给 `saved_to`（无内联 `tree`）；截图结果给 `saved_to` + `_image` |
 | `hive-browser script` 技能解析 | skill 名 → 目录（skills 根注入） | 桥侧 `-skills` 未由 supervisor 注入 | 指定 `HIVE_BROWSERBRIDGE_ARGS="-skills <dir>"` 可补上 |
 | 发布归档成员 | hive-desktop 侧打包扩展 | 归档含 `hive`/`hive-cred`/`hive-browser`/`browserbridge`（1.0.26 起）；Chrome 扩展未随包，`chromeloader` 可从源码树侧载 | 见 §4 |
@@ -387,15 +396,18 @@ dpr>1 主机上注解图为 800 CSS px × dpr 设备像素）与动作 dict 沿�
 
 ### 7.1 父进程死亡 → 桥退出时延
 
-> 口径：这一项是**有意加速**——Go 用 400ms × 2 次确认代替上游的 5s × 2 次确认，
-> 父死约 0.8s 退出（上游约 5–10s）。行为更快且可预期，但不是同值对齐。
+> 口径（2026-11-21 起）：默认 `-parent-check` = 上游同值 **5s**，2 次确认，
+> 父死 **5–10s** 生效。2026-11-20 的 400ms 有意加速已取消（flag 保留，测试可缩短）。
 
 | 场景 | 命令 | 实测 |
 | --- | --- | --- |
-| 修改前（基线） | 裸 `browserbridge`（默认空闲看门狗），`kill -9` 父 PID | **40 023 ms**（10s 轮询 + 30s grace） |
-| 修改后 | 同上，`-parent-check` 默认 400ms | **783 ms** |
-| 修改后（隔离父监视） | 同上 + `-no-idle-exit`（只剩父监视） | **866 ms** |
-| 修改后（serve 监督） | `hive serve` 拉起桥，`kill -9` desktop parent | **815 ms**，且 6s 内无复活进程；serve 日志 `Browser bridge: runtime gone — not restarting` |
+| 无父监视基线（历史） | 裸 `browserbridge`（仅空闲看门狗），`kill -9` 父 PID | **40 023 ms**（10s 轮询 + 30s grace） |
+| 有意加速（历史，400ms 默认） | `-parent-check` 默认 400ms | **783 ms**（隔离 866 ms；serve 监督 815 ms，无复活） |
+| **当前默认（上游同值）** | 裸 `browserbridge -no-idle-exit`（只剩父监视），`-parent-check` 默认 5s | **10.04–10.06 s**（两次独立运行；exit 0） |
+| 测试用缩短 | `-parent-check 20ms` | 90 ms 级（`TestDesktopParentWatchExits`，断言 ≤2s） |
+
+证据归档：`docs/fixtures/browser-transport-parity/e2e-output.txt`
+（`scripts/e2e_browser_transport.sh` probe 5）。
 
 桥日志：`browserbridge: runtime pid <N> is gone — shutting down the bridge with the runtime`，
 之后 `{"ok":true,"stopped":true}`，退出码 0（supervisor 视为 intentional）。
@@ -422,6 +434,16 @@ fixed:6  baseline:6  | hive-browser evaluate
 fixed:6  baseline:6  | hive-browser type '#i'
 fixed:6  baseline:6  | hive-browser help nosuchcmd
 ```
+
+桥侧 `bad_request`/`unknown_command` 的退出码（2026-11-21，R19）：
+
+```
+fixed:1  | 桥返回 {"code":"bad_request","message":"missing selector"}       (无文本片段 → 1)
+fixed:1  | 桥返回 {"code":"unknown_command", …}                              (无文本片段 → 1)
+fixed:4  | 桥返回 bad_request "File not found: <path>"                       (含 not found → 4)
+```
+
+证据：`docs/fixtures/browser-transport-parity/e2e-output.txt`（真桥 + 真 CLI）。
 
 真 Chrome + 真扩展下的 intent 路径：
 

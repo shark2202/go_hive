@@ -599,7 +599,7 @@ func (b *Bridge) doDrag(ctx context.Context, conn *Connection, tabID int, req dr
 		return nil, err
 	}
 	return map[string]any{
-		"ok": true, "action": "drag", "tabId": tabID,
+		"ok": true, "action": "drag",
 		"fromCoords": map[string]any{"x": sx, "y": sy},
 		"toCoords":   map[string]any{"x": ex, "y": ey},
 	}, nil

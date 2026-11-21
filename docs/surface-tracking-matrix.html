@@ -218,7 +218,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td>时间 / ID / 分页格式</td><td>未追踪：时间戳格式、事件 seq、session id 格式、分页 meta</td><td><span class="pill info">P2</span></td><td>客户端解析与排序。</td></tr>
 <tr><td>发布产物</td><td>P0 已知（release 归档缺 browserbridge/hive-browser）但未进矩阵行</td><td><span class="pill info">P2</span></td><td>安装/升级路径。</td></tr>
 <tr><td>日志 / 可观测</td><td>未追踪：日志级别、格式、文件位置、LLM 调试日志</td><td><span class="pill info">P2</span></td><td>运维诊断与反馈闭环。</td></tr>
-<tr><td>调度 / 触发器 / playbook 运行时</td><td>未追踪（playbook 格式差异在别处记录）</td><td><span class="pill info">P2</span></td><td>自动化流程的可移植性。</td></tr>
+<tr><td>调度 / 触发器 / playbook 运行时</td><td><b>playbook 运行时已实测</b>（2026-11-21 双侧夹具 + 真 LLM）：`.play.py` 工具 payload / `started` 文案 / `[PLAYBOOK_COMPLETE]` 全文 / `playbook_runs` 行 / 解析报错与上游逐字；run 期间 colony 并发上限临时抬高与恢复、`worker(schema=…)` 落 spawn spec 均已对齐；旧 `.play.json` 与上游 `.play.py` 无损加载（5 场景 120/120 + 真模型重放 19/19 字段一致，见 <code>docs/playbook-python.md</code> 与 <code>docs/e2e-assets/playbook-verbatim/</code>）。触发器调度面仍未追踪</td><td><span class="pill ok">已实测（playbook）</span></td><td>自动化流程的可移植性；playbook 字段级对齐后有机器证据，触发器调度部分仍是残差。</td></tr>
 <tr><td>桌面壳 / 数据迁移 / 限额</td><td>未追踪：Electron IPC 与 <code>HIVE_DESKTOP_*</code>、schema version 升级路径、输出/并发上限</td><td><span class="pill info">P2</span></td><td>桌面模式、升级兼容与稳定性边界。</td></tr>
 </tbody></table></div>
 <div class="callout bad"><b>交付口径：</b>本矩阵证明的是“对外接口外形对齐”。P0/P1 未清零之前，不能把“路由全绿 / 门禁通过 / 能打包”当作与 Python 版行为对齐，也不能据此宣称交付完成。</div>
