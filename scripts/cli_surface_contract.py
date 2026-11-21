@@ -38,6 +38,7 @@ import re
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -50,7 +51,11 @@ DEFAULT_REPORT = REPO / "go_hive" / "docs" / "cli-surface-diff.md"
 SCHEMA = "hive-cli-surface-contract/1"
 
 # Script-relative scratch: never the system temp dir.
-SCRATCH_ROOT = Path(os.environ.get("CLI_SURFACE_SCRATCH", str(HERE.parent / ".cli-surface-scratch")))
+# Scratch lives outside the repo: empty dirs under go_hive/ trip the
+# surface-audit hygiene gate (C8). Override with CLI_SURFACE_SCRATCH.
+SCRATCH_ROOT = Path(
+    os.environ.get("CLI_SURFACE_SCRATCH", str(Path(tempfile.gettempdir()) / "hive-cli-surface"))
+)
 
 MAX_DEPTH = 4
 HELP_TIMEOUT = 60

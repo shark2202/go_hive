@@ -50,6 +50,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import tarfile
 from pathlib import Path
 
@@ -632,7 +633,10 @@ def check_cli_surface(root: Path) -> None:
         record(cid, title, "SKIP", f"基线提交 {baseline[:8]} 不在本地克隆（浅克隆？）— 旧 vs 新未验证")
         return
 
-    scratch = root / "go_hive" / ".cli-surface-scratch" / "compat-c11"
+    # Keep the temporary tree outside the repo (C8 flags empty dirs here).
+    scratch = Path(
+        os.environ.get("COMPAT_C11_SCRATCH", str(Path(tempfile.gettempdir()) / "hive-compat-c11"))
+    )
     home = scratch / "home"
     home.mkdir(parents=True, exist_ok=True)
     env = cs.build_env(home, "compat-c11", f"http://127.0.0.1:{cs.free_port()}")
