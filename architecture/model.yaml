@@ -23,6 +23,10 @@ layers:
     name: "入口层"
     depth: 0
     description: "进程入口，只做 argv 解析与退出码转换，不含业务逻辑。"
+  - id: harness
+    name: "测试与评测装置"
+    depth: 0
+    description: "不随发布物交付的测试装置：e2e 确定性假上游、契约对照工具与发布脚本测试；只被测试与内部评测入口引用。"
   - id: assembly
     name: "装配层"
     depth: 1
@@ -59,6 +63,16 @@ packages:
     layer: entry
     responsibility: "凭证 CLI 入口（hive-cred）：复用 internal/cli 的凭证子命令。"
     stability: stable
+    entrypoint: true
+  - package: cmd/hive-browser
+    layer: entry
+    responsibility: "浏览器 CLI 客户端（hive-browser）：解析动词与 flag，转发给独立的 Browser Bridge 服务端。"
+    stability: stable
+    entrypoint: true
+  - package: cmd/hive-longmemeval
+    layer: entry
+    responsibility: "LongMemEval 评测入口（内部工具）：用真实 queen 会话跑基准，并按基准自带判分提示评分。"
+    stability: evolving
     entrypoint: true
 
   # ---------------- assembly ----------------
@@ -126,6 +140,10 @@ packages:
     layer: orchestration
     responsibility: "Queen 之间的信件存储、待投递队列与 queens/mail.jsonl 审计日志。"
     stability: evolving
+  - package: internal/longmemeval
+    layer: orchestration
+    responsibility: "LongMemEval 基准运行器：数据集读取、题目选择、会话播种、判分与结果汇总（内部评测工具）。"
+    stability: evolving
   - package: internal/agents
     layer: orchestration
     responsibility: "Agent 规格与发现：读取 agents 目录、worker 元数据与能力描述。"
@@ -175,6 +193,7 @@ packages:
     layer: capability
     responsibility: "Queen 的 soul：分区、字符上限、版本历史、提案与回滚。"
     stability: evolving
+    note: "已知反向依赖：反思模块读取内层 profile（internal/queen.LoadQueenProfile / FormatQueenIdentityPrompt）。治理方向是把 profile 读取拆到低层包，暂列 warning 不阻断。"
   - package: internal/mcpregistry
     layer: capability
     responsibility: "MCP 服务器注册表 CLI 后端：索引、安装/启用、健康检查与清单渲染。"
@@ -200,6 +219,22 @@ packages:
     responsibility: "chart_render 的纯 Go 渲染实现（SVG 生成 + 可选 PNG 栅格化）。"
     stability: evolving
     note: "未接线：chart_render 尚未注册进 ToolRegistry。"
+  - package: internal/hiveconf
+    layer: capability
+    responsibility: "全局 configuration.json 的类型严格读取（与 Python 参考同规则），供装配与编排层取配置。"
+    stability: evolving
+  - package: internal/mcpregistry/nativecli
+    layer: capability
+    responsibility: "mcp2cli 3.8.0 的 Go 子集实现：MCP 服务器注册表 native CLI 后端。"
+    stability: evolving
+  - package: internal/tools/integrationkit
+    layer: capability
+    responsibility: "集成工具的共享原语：传输、凭据与参数 schema 复用件，供 internal/tools/integrations 各模块使用。"
+    stability: evolving
+  - package: internal/visionfallback
+    layer: capability
+    responsibility: "文本主模型下的图像转述回退：为工具结果里的图片生成 caption。"
+    stability: evolving
   - package: internal/maintenance
     layer: capability
     responsibility: "Janitor：孤儿会话、缓存、工件与事件日志的清理规则与报告。"
@@ -238,9 +273,84 @@ packages:
     layer: foundation
     responsibility: "调用限速：LLM 请求与工具调用的桶式限流器（rate_limits 配置）。"
     stability: stable
+  - package: internal/envcontract
+    layer: foundation
+    responsibility: "环境变量 / configuration.json 冻结契约的只读守卫（报告模式）。"
+    stability: stable
+    expected_orphan: true
+  - package: internal/hiveclock
+    layer: foundation
+    responsibility: "可注入时钟：供基准与测试冻结对外可见时间。"
+    stability: stable
+  - package: internal/logging
+    layer: foundation
+    responsibility: "serve 路径共享的进程日志 sink（时间戳前缀、目标选择）。"
+    stability: stable
+  - package: internal/pyenv
+    layer: foundation
+    responsibility: "以 Python 语义解析环境变量覆盖，保证 Go 读取方与参考实现得到同一个值。"
+    stability: stable
+  - package: internal/resources
+    layer: foundation
+    responsibility: "进程与宿主内存资源读取（darwin/linux 分离实现）。"
+    stability: stable
   - package: internal/quality
     layer: foundation
     responsibility: "仓库静态质量门禁：分层 import 检查与文件大小检查，以 go test 形式运行。"
+    stability: stable
+    expected_orphan: true
+
+  # ---------------- harness ----------------
+  - package: e2e/cmd/memgw
+    layer: harness
+    responsibility: "确定性 OpenAI 兼容假上游的启动命令（memory e2e）。"
+    stability: stable
+    expected_orphan: true
+  - package: e2e/cmd/recordproxy
+    layer: harness
+    responsibility: "录制转发代理命令：把真实上游流量录成 e2e 夹具。"
+    stability: stable
+    expected_orphan: true
+  - package: e2e/cmd/stallgw
+    layer: harness
+    responsibility: "确定性假上游命令（stream stall e2e）。"
+    stability: stable
+    expected_orphan: true
+  - package: e2e/cmd/storagecompat
+    layer: harness
+    responsibility: "HIVE_HOME 存储兼容 / G2 无损迁移夹具的 Go 侧命令。"
+    stability: stable
+    expected_orphan: true
+  - package: e2e/escalationgw
+    layer: harness
+    responsibility: "worker 升级 e2e 的确定性假上游网关。"
+    stability: stable
+    expected_orphan: true
+  - package: e2e/memgw
+    layer: harness
+    responsibility: "memory e2e 的确定性假上游网关。"
+    stability: stable
+  - package: e2e/recordproxy
+    layer: harness
+    responsibility: "录制转发代理：真实上游流量 → 可回放夹具。"
+    stability: stable
+  - package: e2e/soulgw
+    layer: harness
+    responsibility: "soul 反思测试的确定性假上游网关。"
+    stability: stable
+    expected_orphan: true
+  - package: e2e/stallgw
+    layer: harness
+    responsibility: "stream stall e2e 的确定性假上游网关（可注入停滞）。"
+    stability: stable
+  - package: internal/release
+    layer: harness
+    responsibility: "发布脚本（release_slot 等）的回归测试。"
+    stability: stable
+    expected_orphan: true
+  - package: internal/toolgolden
+    layer: harness
+    responsibility: "工具结果文本的规范化，用于两侧运行时对照。"
     stability: stable
     expected_orphan: true
 
@@ -264,7 +374,7 @@ capabilities:
     name: "Queen 分诊与对话"
     business_outcome: "用户消息在同一个会话内被理解、追问或分诊为直接回答、工具执行或派工，并以流式事件回放。"
     actors: ["客户", "Queen", "Dashboard"]
-    modules: ["internal/server", "internal/queen", "internal/agentloop", "internal/llm", "internal/soul", "internal/skills", "internal/memory", "internal/attachments"]
+    modules: ["internal/server", "internal/queen", "internal/agentloop", "internal/llm", "internal/hiveconf", "internal/soul", "internal/skills", "internal/memory", "internal/attachments"]
     operates: ["internal/server", "internal/cli"]
     entrypoints: ["HTTP POST /api/sessions/{session_id}/chat", "HTTP GET /api/sessions/{session_id}/events (SSE)", "CLI hive chat", "CLI hive serve"]
     state_artifacts: ["~/.hive/queens/{queen}/sessions/{session}/（parts、cursor.json、meta.json）", "~/.hive/queens/{queen}/soul/soul.json"]
@@ -348,7 +458,7 @@ capabilities:
     name: "工具与凭据边界"
     business_outcome: "模型只看见按 tier 过滤后的工具；外部系统的凭据在边界内注入，缺失时停下来等人填，而不是猜。"
     actors: ["模型", "客户", "运维/开发者"]
-    modules: ["internal/tools", "internal/tools/builtin", "internal/tools/integrations", "internal/mcpregistry", "internal/credentials", "internal/ratelimit", "internal/llm"]
+    modules: ["internal/tools", "internal/tools/builtin", "internal/tools/integrations", "internal/tools/integrationkit", "internal/mcpregistry", "internal/mcpregistry/nativecli", "internal/credentials", "internal/ratelimit", "internal/llm", "internal/charts", "internal/visionfallback"]
     operates: ["internal/tools", "internal/cli"]
     entrypoints: ["CLI hive mcp install|list|doctor", "HTTP GET|PUT /api/credentials", "HTTP GET /api/mcp/servers", "tool search_tools"]
     state_artifacts: ["~/.hive/credentials/（规格与存储）", "~/.hive/secrets/", "~/.hive/mcp_registry/", "~/.hive/configuration.json（rate_limits）"]
@@ -360,7 +470,7 @@ capabilities:
     name: "渠道与仪表盘"
     business_outcome: "同一套会话既能从 Web Dashboard 看，也能从 CLI 或聊天渠道接入；状态与事件对操作者可见。"
     actors: ["客户", "值班人", "Dashboard"]
-    modules: ["internal/server", "internal/server/uiembed", "internal/runtimehealth", "internal/senders", "internal/qmail"]
+    modules: ["internal/server", "internal/server/uiembed", "internal/runtimehealth", "internal/resources", "internal/senders", "internal/qmail", "internal/globaldb"]
     operates: ["internal/server", "internal/cli"]
     entrypoints: ["CLI hive serve", "CLI hive open", "HTTP GET /api/channels", "HTTP GET /api/events/global (SSE)"]
     state_artifacts: ["~/.hive/queens/{queen}/sessions/{session}/（元数据与事件）", "~/.hive/event_logs/events.jsonl", "~/.hive/colonies/{colony}/notifications.json"]
@@ -382,15 +492,15 @@ capabilities:
 
   - id: release-quality
     name: "发布与质量门禁"
-    business_outcome: "每次交付可验证：七门禁、架构漂移检查与发布清单都能在本地和 CI 复现，结论可签字。"
+    business_outcome: "每次交付可验证：九门禁、架构漂移检查与发布清单都能在本地和 CI 复现，结论可签字。"
     actors: ["开发者", "评审人", "CI"]
-    modules: ["internal/quality", "internal/version"]
+    modules: ["internal/quality", "internal/version", "internal/maintenance", "internal/envcontract"]
     operates: ["internal/quality"]
-    entrypoints: ["make ci（fmt-check vet test cross parity parity-targets wiring-check）", "python3 scripts/qc_check.py", "go test ./internal/quality", "python3 scripts/gen_arch.py --check"]
+    entrypoints: ["make ci（fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check）", "python3 scripts/qc_check.py", "go test ./internal/quality", "python3 scripts/gen_arch.py --check"]
     state_artifacts: ["go_hive/QC_REPORT.md", "go_hive/RELEASE_CHECKLIST.md", "go_hive/architecture/graph.json"]
     human_approval: yes
     maturity: tested
-    limits: "门禁是仓库内脚本与 go test，不覆盖部署环境；架构漂移检查需手动或 CI 显式调用，不会自动阻断提交。"
+    limits: "门禁是仓库内脚本与 go test，不覆盖部署环境；架构漂移由 make ci 的 arch-check 阻断，契约自洽由 compat-check 阻断。"
 
 # 接口与契约：模块之间靠什么约束交互。
 # kind 七类：go-interface / http / sse / event / disk / tool-schema / cli。

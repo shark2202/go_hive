@@ -8,6 +8,8 @@
 两份视图在 `capability-tech-crosswalk.md` 里对齐：每一条业务能力都落到具体的包、HTTP/CLI/工具入口和磁盘证据。图不是手绘的，源是 `architecture/model.yaml` + `go list`，改代码后重新生成即可。
 
 > 正文里的路径相对 `go_hive/`；命令行示例假定在仓库根执行，所以带 `go_hive/` 前缀。
+>
+> 最近同步：2026-11-21 —— **67 包 / 8 层 / 178 条内部依赖 / 220 条 HTTP 路由 / 77 种事件 / 34 条契约**；`make arch-check` 已并入 `make ci`，文档漂移会阻断 CI。
 
 ```text
 architecture/model.yaml ──┐
@@ -19,14 +21,14 @@ go list -json ./...  ─────┘                       └─→ 5 张图
 
 | 文件 | 谁读 | 说明 |
 | --- | --- | --- |
-| `architecture/model.yaml` | 维护者 | **唯一手写源**：层、包职责、12 条业务能力、业务主链路、接口契约与磁盘格式 |
+| `architecture/model.yaml` | 维护者 | **唯一手写源**：8 层、67 包职责、12 条业务能力、业务主链路、接口契约与磁盘格式 |
 | `architecture/graph.json` | AI agent / 工具 | 业务 + 技术 + 契约的机器可读图（节点、边、能力、contracts、warnings） |
 | `docs/architecture/capability-map.mmd` | 人 | 业务能力关系图，标注人工审批点 |
 | `docs/architecture/capability-tech-crosswalk.md` | 人 + agent | 业务能力 ↔ 模块 ↔ 入口 ↔ 落盘证据 ↔ 成熟度 |
 | `docs/architecture/contracts.md` | 人 + agent | 七类契约明细 + 全量 HTTP 路由表 + EventType 表 + 磁盘格式表 |
 | `docs/architecture/dependency-map.mmd` | 人 | Mermaid 分层依赖图 |
 | `docs/architecture/dependency-map.dot` | 人 | Graphviz 版本，便于导出大图 |
-| `docs/architecture/MODULES.md` | 人 | 44 个包的模块表与分层检查结果 |
+| `docs/architecture/MODULES.md` | 人 | 67 个包的模块表与分层检查结果 |
 
 > `capability-map.mmd`、`dependency-map.*`、`MODULES.md`、`capability-tech-crosswalk.md`、`contracts.md`、`graph.json` 都是生成物。改分层、能力或契约请改 `model.yaml`，不要手改生成物。
 
@@ -119,7 +121,7 @@ flowchart LR
 | 9 | 工具与凭据边界 | 工具按 tier 可见，凭据在边界内注入 | yes | live |
 | 10 | 渠道与仪表盘 | Dashboard / CLI / 渠道看到同一会话 | no | tested |
 | 11 | 通知与提醒 | 到点提醒与升级送到人，且有发送记录 | no | tested |
-| 12 | 发布与质量门禁 | 七门禁 + 漂移检查 + 发布清单可复现 | yes | tested |
+| 12 | 发布与质量门禁 | 九门禁 + 漂移检查 + 发布清单可复现 | yes | tested |
 
 ---
 
@@ -173,7 +175,7 @@ flowchart LR
 # 三、技术视图：分层依赖
 
 ```mermaid
-%% 完整 44 包版本见 docs/architecture/dependency-map.mmd（本图只画层间主要流向）
+%% 完整 67 包版本见 docs/architecture/dependency-map.mmd（本图只画层间主要流向）
 flowchart TB
   subgraph entry["入口层 entry"]
     cmd_hive["cmd/hive"]
@@ -238,10 +240,10 @@ flowchart TB
 ## 怎么读这张图
 
 - **箭头 A --> B 读作 "A imports B"，依赖指向下方**。一个小箭头就是一次编译期依赖；改 B 的导出标识符会波及 A。
-- **层是严格有序的**：`entry(0) → assembly(1) → transport(2) → orchestration(3) → runtime(4) → capability(5) → foundation(6)`。生成器会检查每条 import 边，从深层指向浅层就写进 `warnings`。
+- **层是严格有序的**：`entry(0) / harness(0) → assembly(1) → transport(2) → orchestration(3) → runtime(4) → capability(5) → foundation(6)`。`harness` 是测试与评测装置（e2e 假上游、契约对照工具），不随发布物交付；与 `entry` 同为 depth 0，只被测试和内部评测入口引用。生成器会检查每条 import 边，从深层指向浅层就写进 `warnings`。
 - **同层依赖是允许的**（例如 `colony → tracker`）：它们是一组协作的编排组件，不是分层违规。
 - **入度高的包是改动放大器**：`internal/hivehome`（15 个包依赖）、`internal/eventbus`、`internal/schemas`、`internal/agentloop` 改一次要考虑的面很大。具体数字在 `MODULES.md`。
-- **当前分层检查结果**：124 条 import 边，0 条反向依赖；2 个包没有内部导入方（`internal/charts`、`internal/orchestrator`，均为未接线代码）。`internal/quality` 是纯门禁包，按约定不计入未接线。
+- **当前分层检查结果**：178 条 import 边，**1 条反向依赖**（`internal/soul` → `internal/queen`：反思模块读取 profile 身份提示；治理方向是拆出低层 profile 包，现列入 warning 不阻断）；**1 个包没有内部导入方**（`internal/orchestrator`，未接线）。`internal/quality`、`internal/envcontract` 与 e2e 命令按 `expected_orphan` 约定不计入。
 
 层定义、每包职责、依赖/被依赖计数与入口标记，全部在 [`MODULES.md`](./MODULES.md)。
 
@@ -271,11 +273,13 @@ flowchart TB
 | --- | --- | --- | --- |
 | Go 编译器 | 接口实现、结构体字段、import 类型检查 | `go-interface` 的签名；改方法/字段立刻编译失败 | 字符串协议：事件 `type`、JSON key、HTTP 路径 |
 | `go test ./...` + `go-hive/e2e/` | 单元、集成、端到端测试 | handler、colony 生命周期、session 恢复、SSE 帧 | 前端与 Go 的类型一致性；真实外部服务 |
-| 七门禁 `make ci` | `fmt-check vet test cross parity parity-targets wiring-check` | 格式、静态检查、测试、6 平台交叉编译、parity 注解、Python 目标存在、关键接线点 | 运行期行为、部署环境、并发竞争 |
+| `make ci`（九门禁） | `fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check` | 格式、静态检查、测试、6 平台交叉编译、parity 注解、Python 目标存在、关键接线点、冻结契约自洽、架构文档同步 | 运行期行为、部署环境、并发竞争 |
 | `make race` | `go test -race`（单独目标，不在 `ci` 里） | 并发数据竞争 | 非并发逻辑 |
 | parity 注解 + `parity-targets` | 每个 `Test` 必须带 `// Parity:` 或 `// Parity-exempt:`，引用的 Python 测试必须真实存在 | 上游行为有对应测试；port 没漏测试 | 行为等价性本身——注解只证明“有对应”，不证明“等价” |
 | `wiring-check` | 静态扫描关键装配调用点（memory 注入、事件日志、会话工具安装） | 防止“编译通过但没接线”的静默退化 | 未列入 `WIRING` 的接线 |
-| `gen_arch.py --check` | 7 个生成物逐字节比较；路由表与事件表随代码更新 | 文档/图/契约清单与 `model.yaml` + 代码不漂移 | 契约文本的语义正确性；前端类型 |
+| `make compat-check`（C1–C11） | 冻结契约自洽 + 升级兼容（新旧构建 × 3 夹具 × 读写/回滚/幂等/CLI 面）；C11 校验 CLI 外观 | env/config、storage、API 形状与值、工具定义、CLI 面 | 真实第三方服务、未安装的 OS 平台 |
+| `make cli-surface-check` | 递归采集两侧 `--help`（子命令树 / flag / 取值 / 默认值 / 文案）并与 `contracts/cli-surface.json` 对拍 | CLI 对外面（`hive` / `hive-browser` / `hive-cred`） | 行为语义；help 的 80 列折行仍是已知文案差异 |
+| `make arch-check`（`gen_arch.py --check`） | 7 个生成物逐字节比较；路由表与事件表随代码更新 | 文档/图/契约清单与 `model.yaml` + 代码不漂移 | 契约文本的语义正确性；README 手写段；前端类型 |
 | `python3 -m py_compile scripts/gen_arch.py` | 生成器自身语法 | 生成器可执行 | 生成逻辑正确性 |
 
 `gen_arch.py --check` 的语义：用 `graph.json` 里记录的 commit 重新渲染，所以“提交生成物”本身不会造成假漂移；只有模型或代码真的变了才 exit 1。路由表从 `internal/server` 的 `mux.HandleFunc("METHOD /path", ...)` 提取，事件表从 `internal/eventbus/event_type.go` 提取，两者都不需要额外依赖。
@@ -294,6 +298,8 @@ flowchart TB
 8. **MCP 工具 schema 来自外部 server**：本地只做命名空间与参数透传，不校验远端 `inputSchema` 是否合法；MCP 子进程继承当前用户权限，没有 OS 级沙箱。
 9. **契约只覆盖 Go 内部与 HTTP/SSE/磁盘**：没有跨语言 IDL、没有消息队列、没有数据库外键级的跨模块约束；前端与外部调用方不在编译期检查范围内。
 10. **只有 tracker 有迁移机制**：`PRAGMA user_version=3` + bootstrap/backfill 是唯一的库级迁移；JSON 文件没有迁移框架，字段改名只能靠读旧写新或一次性脚本。
+11. **CLI help 仍有文案级差异**：`hive mcp` 的 per-verb 帮助、部分 flag 说明与 argparse 的 80 列折行尚未逐字对齐；行为与退出码面已由 `cli-surface-check` 冻结。
+12. **值级 API 探针未覆盖全部路由**：约 200 条路由只有形状断言；`registry_mcp_total`、`system_prefix_sha` 等个别值与运行环境相关，已在 `contracts/api-responses/` 标注。新增路由需同步补探针。
 
 ## 4.4 变更规则
 
@@ -304,11 +310,11 @@ flowchart TB
   3. 同一个 PR 里更新 `model.yaml` 的 `contracts:`、生成物、受影响的前端与测试；
   4. 在 PR 描述里写明弃用期与移除版本。
 - **版本化变更（versioned）**：`soul.json` 的 `version:int` 与 `tracker.db` 的 `PRAGMA user_version` 是仅有的两个显式版本号；升版本必须同时提供迁移与回滚说明，不能只改常量。
-- **提交前最低验证**：`make ci`（七门禁）+ `python3 scripts/gen_arch.py --check`；改并发路径再加 `make race`。架构文档漂移不是 CI 的默认阻断项，需要显式调用 `--check`。
+- **提交前最低验证**：`make ci`（九门禁，已含 `arch-check` 与 `compat-check`）；改并发路径再加 `make race`。架构文档或生成物漂移会直接阻断 CI。
 
 ## 4.5 生成物与读法
 
-`contracts.md` 包含五块：按 kind 的汇总表、每条契约的明细、全量 HTTP 路由表（当前 198 条 method+path）、EventType 表（当前 77 个）、人工维护的磁盘格式表。`graph.json` 的 `contracts` 数组是同一份数据的机器可读版本，`stats` 里同时给出 `contracts` / `http_routes` / `event_types` 计数。
+`contracts.md` 包含五块：按 kind 的汇总表、每条契约的明细、全量 HTTP 路由表（当前 220 条 method+path）、EventType 表（当前 77 个）、人工维护的磁盘格式表。`graph.json` 的 `contracts` 数组是同一份数据的机器可读版本，`stats` 里同时给出 `contracts` / `http_routes` / `event_types` 计数。
 
 改契约的流程：改 `model.yaml` 的 `contracts:` 或 `disk_formats:` → 在 `go_hive/` 下运行 `python3 scripts/gen_arch.py` → 提交 `model.yaml`、`graph.json` 与 `docs/architecture/contracts.md`。不要手改生成物。
 
@@ -565,7 +571,7 @@ python3 scripts/gen_arch.py --check   # 幂等检查：有差异 exit 1
 python3 -m py_compile scripts/gen_arch.py
 ```
 
-`--check` 的语义：用仓库内 `graph.json` 已经记录的 commit 重新渲染一遍，逐字节比较 7 个生成物。提交生成物本身不会造成假漂移；只有模型或代码真的变了才会 exit 1。适合放进 CI：
+`--check` 的语义：用仓库内 `graph.json` 已经记录的 commit 重新渲染一遍，逐字节比较 7 个生成物。提交生成物本身不会造成假漂移；只有模型或代码真的变了才会 exit 1。它已通过 `make arch-check` 并入 `make ci`（也可在 CI 里单独调用）：
 
 ```bash
 python3 go_hive/scripts/gen_arch.py --check || {
@@ -604,8 +610,9 @@ python3 go_hive/scripts/gen_arch.py --check || {
 
 ## 已知限制
 
-- `internal/charts` 与 `internal/orchestrator` 没有任何内部导入方，属于未接线代码；生成器以 `no_importer` 列为 info，不阻断。
-- 12 条能力里只有 `queen-triage` 与 `tools-credentials` 有端到端证据（`go-hive/e2e/`），其余是单元/集成测试级，标为 `tested` 而不是 `live`。
+- `internal/orchestrator` 没有任何内部导入方，属于未接线代码；生成器以 `no_importer` 列为 info，不阻断。e2e 命令与部分测试网关按 `expected_orphan` 约定不报。
+- 存在 1 条已知反向依赖：`internal/soul`（capability）导入 `internal/queen`（orchestration）读取 profile 身份提示；修复方向是拆出低层 profile 包，当前作为 warning 记录。
+- 12 条能力里已有真实模型端到端证据的包括 `queen-triage`、`tools-credentials`、`memory-sediment`、`worker-dispatch` 与部分 `triggers-sentinel`（`go-hive/e2e/` 与 `docs/e2e-assets/`）；其余为单元/集成测试级，标为 `tested` 而不是 `live`。
 - 依赖图只表达编译期 import，不表达运行时的 goroutine、事件订阅或 HTTP 调用；那部分看序列图与 `capability-tech-crosswalk.md` 的入口列，接口边界看 `contracts.md`。
 - 契约层的强约束只到 Go 编译器与测试为止：事件 `data`、HTTP 请求体、前端 TS 类型、磁盘 JSON 都没有 schema 校验，详见 4.3 节的缺口清单。
 - 业务能力的成熟度是**审计判断**，不是运行时指标；改了判断要有证据。

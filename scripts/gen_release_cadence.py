@@ -122,7 +122,7 @@ def build() -> str:
 <header>
   <div class="eyebrow">GO_HIVE · RELEASE CADENCE</div>
   <h1>每 2 小时一个版：<span>倒排排期</span></h1>
-  <p class="lede">从 {START:%Y-%m-%d %H:%M} 起，每天 08/10/12/14/16/18/20/22 共 8 个 slot，每个 slot 产出一个可运行的主机版（四二进制 + manifest + sha256），产物保留最近 6 个；六个平台完整归档与镜像发布仍由门槛控制。节奏由 <code>release_cadence_loop.sh</code> 自动触发，<code>watchdog_report.sh</code> 在最近 slot 超过 2h20m 未更新时主动告警。</p>
+  <p class="lede">从 {START:%Y-%m-%d %H:%M} 起，每天 08/10/12/14/16/18/20/22 共 8 个 slot，每个 slot 产出一个可运行的主机版（四二进制 + manifest + sha256），产物保留最近 6 个；六个平台完整归档与镜像发布仍由门槛控制。节奏由 <code>release_cadence_loop.sh</code> 自动触发（launchd <code>com.hive.release-cadence</code> 托管，进程死亡自动拉起），<code>watchdog_report.sh</code> 在最近 slot 超过 2h20m 未更新时主动告警；每次出 slot 后自动对上一 slot 跑升级兼容检查，失败即告警。</p>
   <div class="meta">
     <span>下一 slot：<b>{(all_slots[0] if all_slots else START):%Y-%m-%d %H:%M}</b></span>
     <span>到 G3 总 slots：<b>{total}</b></span>

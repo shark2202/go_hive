@@ -210,7 +210,17 @@ upgrade-compat-check:
 	@bash ../scripts/upgrade_compat_check.sh --old-dir "$(PREV_SLOT)" \
 		$(if $(NEW_SLOT),--new-dir "$(NEW_SLOT)",) --work "$${WORK:-$$(mktemp -d "$${TMPDIR:-/tmp}/upgrade-compat.XXXXXX")}"
 
-ci: fmt-check vet test cross parity parity-targets wiring-check compat-check
+# 架构文档同步门禁：architecture/model.yaml + go list 重渲染全部生成物并逐字节比较。
+# 纯 stdlib + 本地 go，离线可跑；产物有一处漂移即 exit 1。
+arch-check:
+	@if command -v python3 >/dev/null 2>&1; then \
+		cd .. && python3 scripts/gen_arch.py --check; \
+	else \
+		echo "arch-check: BLOCKED — python3 unavailable; architecture docs NOT verified"; \
+		exit 1; \
+	fi
+
+ci: fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check
 
 clean:
 	rm -rf $(DIST) internal/server/uiembed/dist

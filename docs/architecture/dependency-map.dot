@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 059f4afe0c97
+// 源：architecture/model.yaml + go list -json ./... · commit 4582e56f790b
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -9,7 +9,24 @@ digraph go_hive {
     label="入口层（entry）";
     style="rounded,filled"; fillcolor="#eef2ff"; color="#4338ca"; fontsize=11;
     "cmd/hive" [fillcolor="white", color="#4338ca"];
+    "cmd/hive-browser" [fillcolor="white", color="#4338ca"];
     "cmd/hive-cred" [fillcolor="white", color="#4338ca"];
+    "cmd/hive-longmemeval" [fillcolor="white", color="#4338ca"];
+  }
+  subgraph cluster_harness {
+    label="测试与评测装置（harness）";
+    style="rounded,filled"; fillcolor="#ffe4e6"; color="#be123c"; fontsize=11;
+    "e2e/cmd/memgw" [fillcolor="white", color="#be123c"];
+    "e2e/cmd/recordproxy" [fillcolor="white", color="#be123c"];
+    "e2e/cmd/stallgw" [fillcolor="white", color="#be123c"];
+    "e2e/cmd/storagecompat" [fillcolor="white", color="#be123c"];
+    "e2e/escalationgw" [fillcolor="white", color="#be123c"];
+    "e2e/memgw" [fillcolor="white", color="#be123c"];
+    "e2e/recordproxy" [fillcolor="white", color="#be123c"];
+    "e2e/soulgw" [fillcolor="white", color="#be123c"];
+    "e2e/stallgw" [fillcolor="white", color="#be123c"];
+    "internal/release" [fillcolor="white", color="#be123c"];
+    "internal/toolgolden" [fillcolor="white", color="#be123c"];
   }
   subgraph cluster_assembly {
     label="装配层（assembly）";
@@ -29,6 +46,7 @@ digraph go_hive {
     "internal/agents" [fillcolor="white", color="#b45309"];
     "internal/colony" [fillcolor="white", color="#b45309"];
     "internal/host" [fillcolor="white", color="#b45309"];
+    "internal/longmemeval" [fillcolor="white", color="#b45309"];
     "internal/playbook" [fillcolor="white", color="#b45309"];
     "internal/qmail" [fillcolor="white", color="#b45309"];
     "internal/queen" [fillcolor="white", color="#b45309"];
@@ -53,53 +71,38 @@ digraph go_hive {
     "internal/charts" [fillcolor="white", color="#7e22ce"];
     "internal/credentials" [fillcolor="white", color="#7e22ce"];
     "internal/globaldb" [fillcolor="white", color="#7e22ce"];
+    "internal/hiveconf" [fillcolor="white", color="#7e22ce"];
     "internal/llm" [fillcolor="white", color="#7e22ce"];
     "internal/maintenance" [fillcolor="white", color="#7e22ce"];
     "internal/mcpregistry" [fillcolor="white", color="#7e22ce"];
+    "internal/mcpregistry/nativecli" [fillcolor="white", color="#7e22ce"];
     "internal/memory" [fillcolor="white", color="#7e22ce"];
     "internal/senders" [fillcolor="white", color="#7e22ce"];
     "internal/skills" [fillcolor="white", color="#7e22ce"];
     "internal/soul" [fillcolor="white", color="#7e22ce"];
     "internal/tools" [fillcolor="white", color="#7e22ce"];
     "internal/tools/builtin" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrationkit" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations" [fillcolor="white", color="#7e22ce"];
+    "internal/visionfallback" [fillcolor="white", color="#7e22ce"];
   }
   subgraph cluster_foundation {
     label="基础层（foundation）";
     style="rounded,filled"; fillcolor="#f1f5f9"; color="#475569"; fontsize=11;
     "internal/atomicfs" [fillcolor="white", color="#475569"];
+    "internal/envcontract" [fillcolor="white", color="#475569"];
     "internal/eventbus" [fillcolor="white", color="#475569"];
+    "internal/hiveclock" [fillcolor="white", color="#475569"];
     "internal/hivehome" [fillcolor="white", color="#475569"];
+    "internal/logging" [fillcolor="white", color="#475569"];
     "internal/platform" [fillcolor="white", color="#475569"];
+    "internal/pyenv" [fillcolor="white", color="#475569"];
     "internal/quality" [fillcolor="white", color="#475569"];
     "internal/ratelimit" [fillcolor="white", color="#475569"];
+    "internal/resources" [fillcolor="white", color="#475569"];
     "internal/schemas" [fillcolor="white", color="#475569"];
     "internal/storage" [fillcolor="white", color="#475569"];
     "internal/version" [fillcolor="white", color="#475569"];
-  }
-  subgraph cluster_unmapped {
-    label="未映射层（unmapped）";
-    style="rounded,filled"; fillcolor="#ffe4e6"; color="#be123c"; fontsize=11;
-    "cmd/hive-browser" [fillcolor="white", color="#be123c"];
-    "cmd/hive-longmemeval" [fillcolor="white", color="#be123c"];
-    "e2e/cmd/memgw" [fillcolor="white", color="#be123c"];
-    "e2e/cmd/storagecompat" [fillcolor="white", color="#be123c"];
-    "e2e/escalationgw" [fillcolor="white", color="#be123c"];
-    "e2e/memgw" [fillcolor="white", color="#be123c"];
-    "e2e/soulgw" [fillcolor="white", color="#be123c"];
-    "e2e/stallgw" [fillcolor="white", color="#be123c"];
-    "internal/envcontract" [fillcolor="white", color="#be123c"];
-    "internal/hiveclock" [fillcolor="white", color="#be123c"];
-    "internal/hiveconf" [fillcolor="white", color="#be123c"];
-    "internal/logging" [fillcolor="white", color="#be123c"];
-    "internal/longmemeval" [fillcolor="white", color="#be123c"];
-    "internal/mcpregistry/nativecli" [fillcolor="white", color="#be123c"];
-    "internal/pyenv" [fillcolor="white", color="#be123c"];
-    "internal/release" [fillcolor="white", color="#be123c"];
-    "internal/resources" [fillcolor="white", color="#be123c"];
-    "internal/toolgolden" [fillcolor="white", color="#be123c"];
-    "internal/tools/integrationkit" [fillcolor="white", color="#be123c"];
-    "internal/visionfallback" [fillcolor="white", color="#be123c"];
   }
   "cmd/hive" -> "internal/cli";
   "cmd/hive-browser" -> "internal/cli";
@@ -107,6 +110,8 @@ digraph go_hive {
   "cmd/hive-longmemeval" -> "internal/cli";
   "cmd/hive-longmemeval" -> "internal/longmemeval";
   "e2e/cmd/memgw" -> "e2e/memgw";
+  "e2e/cmd/recordproxy" -> "e2e/recordproxy";
+  "e2e/cmd/stallgw" -> "e2e/stallgw";
   "e2e/cmd/storagecompat" -> "internal/agentloop";
   "e2e/cmd/storagecompat" -> "internal/agents";
   "e2e/cmd/storagecompat" -> "internal/colony";

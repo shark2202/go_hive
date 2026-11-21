@@ -64,7 +64,7 @@ ENFORCEMENT_VALUES = {"compile", "test", "gate", "checker"}
 ENFORCEMENT_LABELS = {
     "compile": "编译器 / 接口实现",
     "test": "单元、集成或 e2e 测试",
-    "gate": "七门禁 / wiring-check / parity",
+    "gate": "九门禁 / wiring-check / parity（含 compat-check 与 arch-check）",
     "checker": "gen_arch --check 防漂移",
 }
 
@@ -1082,8 +1082,8 @@ def render_crosswalk_md(graph: dict) -> str:
         "| --- | --- | --- |",
     ]
     for node in sorted(uncovered, key=lambda n: (n["layer"], n["package"])):
-        if node["layer"] in ("foundation", "entry"):
-            reason = "基础/入口层，预期不挂业务能力"
+        if node["layer"] in ("foundation", "entry", "harness"):
+            reason = "基础/入口/测试装置层，预期不挂业务能力"
         elif node["layer"] in ("assembly", "transport"):
             reason = "装配/传输面，通常只体现在能力的入口列"
         elif node["layer"] == "capability":

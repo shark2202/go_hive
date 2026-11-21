@@ -16,7 +16,7 @@
 - `integrations` 中不再有 `batch*.go` / `lane*.go` 文件名。
 - provider 文件不再直接访问 `integrationkit` 的未导出字段/方法。
 - 新增依赖为 0；`integrationkit` 只依赖标准库。
-- 七门禁全部通过（见 §6）。
+- 九门禁全部通过（见 §6）。
 
 ## 2. 命名规则
 
@@ -171,7 +171,7 @@ gofmt -l .           # 空
 make ci              # fmt-check vet test cross parity parity-targets wiring-check
 ```
 
-七门禁（`make ci`）：`fmt-check`、`vet`、`test`、`cross`、`parity`、
+九门禁（`make ci`）：`fmt-check`、`vet`、`test`、`cross`、`parity`、
 `parity-targets`、`wiring-check`，全部退出码 0。
 
 行为不变量：

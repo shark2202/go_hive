@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "059f4afe0c97",
+  "generated_at_commit": "4582e56f790b",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 64,
-    "package_edges": 176,
+    "packages": 67,
+    "package_edges": 178,
     "capabilities": 12,
-    "capability_edges": 75,
+    "capability_edges": 84,
     "layers": 8,
     "contracts": 34,
     "http_routes": 220,
     "event_types": 77,
-    "warnings": 50
+    "warnings": 2
   },
   "layers": [
     {
@@ -22,9 +22,31 @@
       "description": "进程入口，只做 argv 解析与退出码转换，不含业务逻辑。",
       "packages": [
         "cmd/hive",
-        "cmd/hive-cred"
+        "cmd/hive-browser",
+        "cmd/hive-cred",
+        "cmd/hive-longmemeval"
       ],
-      "package_count": 2
+      "package_count": 4
+    },
+    {
+      "id": "harness",
+      "name": "测试与评测装置",
+      "depth": 0,
+      "description": "不随发布物交付的测试装置：e2e 确定性假上游、契约对照工具与发布脚本测试；只被测试与内部评测入口引用。",
+      "packages": [
+        "e2e/cmd/memgw",
+        "e2e/cmd/recordproxy",
+        "e2e/cmd/stallgw",
+        "e2e/cmd/storagecompat",
+        "e2e/escalationgw",
+        "e2e/memgw",
+        "e2e/recordproxy",
+        "e2e/soulgw",
+        "e2e/stallgw",
+        "internal/release",
+        "internal/toolgolden"
+      ],
+      "package_count": 11
     },
     {
       "id": "assembly",
@@ -57,6 +79,7 @@
         "internal/agents",
         "internal/colony",
         "internal/host",
+        "internal/longmemeval",
         "internal/playbook",
         "internal/qmail",
         "internal/queen",
@@ -67,7 +90,7 @@
         "internal/tracker",
         "internal/triggers"
       ],
-      "package_count": 12
+      "package_count": 13
     },
     {
       "id": "runtime",
@@ -91,18 +114,22 @@
         "internal/charts",
         "internal/credentials",
         "internal/globaldb",
+        "internal/hiveconf",
         "internal/llm",
         "internal/maintenance",
         "internal/mcpregistry",
+        "internal/mcpregistry/nativecli",
         "internal/memory",
         "internal/senders",
         "internal/skills",
         "internal/soul",
         "internal/tools",
         "internal/tools/builtin",
-        "internal/tools/integrations"
+        "internal/tools/integrationkit",
+        "internal/tools/integrations",
+        "internal/visionfallback"
       ],
-      "package_count": 14
+      "package_count": 18
     },
     {
       "id": "foundation",
@@ -111,45 +138,21 @@
       "description": "无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。",
       "packages": [
         "internal/atomicfs",
+        "internal/envcontract",
         "internal/eventbus",
+        "internal/hiveclock",
         "internal/hivehome",
+        "internal/logging",
         "internal/platform",
+        "internal/pyenv",
         "internal/quality",
         "internal/ratelimit",
+        "internal/resources",
         "internal/schemas",
         "internal/storage",
         "internal/version"
       ],
-      "package_count": 9
-    },
-    {
-      "id": "unmapped",
-      "name": "未映射层",
-      "depth": 99,
-      "description": "生成器为 model.yaml 尚未登记的包临时创建的层；补齐后应消失。",
-      "packages": [
-        "cmd/hive-browser",
-        "cmd/hive-longmemeval",
-        "e2e/cmd/memgw",
-        "e2e/cmd/storagecompat",
-        "e2e/escalationgw",
-        "e2e/memgw",
-        "e2e/soulgw",
-        "e2e/stallgw",
-        "internal/envcontract",
-        "internal/hiveclock",
-        "internal/hiveconf",
-        "internal/logging",
-        "internal/longmemeval",
-        "internal/mcpregistry/nativecli",
-        "internal/pyenv",
-        "internal/release",
-        "internal/resources",
-        "internal/toolgolden",
-        "internal/tools/integrationkit",
-        "internal/visionfallback"
-      ],
-      "package_count": 20
+      "package_count": 14
     }
   ],
   "nodes": [
@@ -166,6 +169,18 @@
       "dependents": 0
     },
     {
+      "id": "pkg:cmd/hive-browser",
+      "kind": "technical",
+      "package": "cmd/hive-browser",
+      "layer": "entry",
+      "responsibility": "浏览器 CLI 客户端（hive-browser）：解析动词与 flag，转发给独立的 Browser Bridge 服务端。",
+      "stability": "stable",
+      "entrypoint": true,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
       "id": "pkg:cmd/hive-cred",
       "kind": "technical",
       "package": "cmd/hive-cred",
@@ -175,6 +190,150 @@
       "entrypoint": true,
       "note": "",
       "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:cmd/hive-longmemeval",
+      "kind": "technical",
+      "package": "cmd/hive-longmemeval",
+      "layer": "entry",
+      "responsibility": "LongMemEval 评测入口（内部工具）：用真实 queen 会话跑基准，并按基准自带判分提示评分。",
+      "stability": "evolving",
+      "entrypoint": true,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/cmd/memgw",
+      "kind": "technical",
+      "package": "e2e/cmd/memgw",
+      "layer": "harness",
+      "responsibility": "确定性 OpenAI 兼容假上游的启动命令（memory e2e）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/cmd/recordproxy",
+      "kind": "technical",
+      "package": "e2e/cmd/recordproxy",
+      "layer": "harness",
+      "responsibility": "录制转发代理命令：把真实上游流量录成 e2e 夹具。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/cmd/stallgw",
+      "kind": "technical",
+      "package": "e2e/cmd/stallgw",
+      "layer": "harness",
+      "responsibility": "确定性假上游命令（stream stall e2e）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/cmd/storagecompat",
+      "kind": "technical",
+      "package": "e2e/cmd/storagecompat",
+      "layer": "harness",
+      "responsibility": "HIVE_HOME 存储兼容 / G2 无损迁移夹具的 Go 侧命令。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 10,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/escalationgw",
+      "kind": "technical",
+      "package": "e2e/escalationgw",
+      "layer": "harness",
+      "responsibility": "worker 升级 e2e 的确定性假上游网关。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/memgw",
+      "kind": "technical",
+      "package": "e2e/memgw",
+      "layer": "harness",
+      "responsibility": "memory e2e 的确定性假上游网关。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:e2e/recordproxy",
+      "kind": "technical",
+      "package": "e2e/recordproxy",
+      "layer": "harness",
+      "responsibility": "录制转发代理：真实上游流量 → 可回放夹具。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:e2e/soulgw",
+      "kind": "technical",
+      "package": "e2e/soulgw",
+      "layer": "harness",
+      "responsibility": "soul 反思测试的确定性假上游网关。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/stallgw",
+      "kind": "technical",
+      "package": "e2e/stallgw",
+      "layer": "harness",
+      "responsibility": "stream stall e2e 的确定性假上游网关（可注入停滞）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/release",
+      "kind": "technical",
+      "package": "internal/release",
+      "layer": "harness",
+      "responsibility": "发布脚本（release_slot 等）的回归测试。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:internal/toolgolden",
+      "kind": "technical",
+      "package": "internal/toolgolden",
+      "layer": "harness",
+      "responsibility": "工具结果文本的规范化，用于两侧运行时对照。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
       "dependents": 0
     },
     {
@@ -260,6 +419,18 @@
       "note": "",
       "direct_dependencies": 7,
       "dependents": 1
+    },
+    {
+      "id": "pkg:internal/longmemeval",
+      "kind": "technical",
+      "package": "internal/longmemeval",
+      "layer": "orchestration",
+      "responsibility": "LongMemEval 基准运行器：数据集读取、题目选择、会话播种、判分与结果汇总（内部评测工具）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 2
     },
     {
       "id": "pkg:internal/playbook",
@@ -454,6 +625,18 @@
       "dependents": 1
     },
     {
+      "id": "pkg:internal/hiveconf",
+      "kind": "technical",
+      "package": "internal/hiveconf",
+      "layer": "capability",
+      "responsibility": "全局 configuration.json 的类型严格读取（与 Python 参考同规则），供装配与编排层取配置。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 2
+    },
+    {
       "id": "pkg:internal/llm",
       "kind": "technical",
       "package": "internal/llm",
@@ -487,6 +670,18 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 5,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/mcpregistry/nativecli",
+      "kind": "technical",
+      "package": "internal/mcpregistry/nativecli",
+      "layer": "capability",
+      "responsibility": "mcp2cli 3.8.0 的 Go 子集实现：MCP 服务器注册表 native CLI 后端。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
       "dependents": 2
     },
     {
@@ -533,7 +728,7 @@
       "responsibility": "Queen 的 soul：分区、字符上限、版本历史、提案与回滚。",
       "stability": "evolving",
       "entrypoint": false,
-      "note": "",
+      "note": "已知反向依赖：反思模块读取内层 profile（internal/queen.LoadQueenProfile / FormatQueenIdentityPrompt）。治理方向是把 profile 读取拆到低层包，暂列 warning 不阻断。",
       "direct_dependencies": 2,
       "dependents": 2
     },
@@ -562,6 +757,18 @@
       "dependents": 1
     },
     {
+      "id": "pkg:internal/tools/integrationkit",
+      "kind": "technical",
+      "package": "internal/tools/integrationkit",
+      "layer": "capability",
+      "responsibility": "集成工具的共享原语：传输、凭据与参数 schema 复用件，供 internal/tools/integrations 各模块使用。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
       "id": "pkg:internal/tools/integrations",
       "kind": "technical",
       "package": "internal/tools/integrations",
@@ -572,6 +779,18 @@
       "note": "",
       "direct_dependencies": 4,
       "dependents": 1
+    },
+    {
+      "id": "pkg:internal/visionfallback",
+      "kind": "technical",
+      "package": "internal/visionfallback",
+      "layer": "capability",
+      "responsibility": "文本主模型下的图像转述回退：为工具结果里的图片生成 caption。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 2
     },
     {
       "id": "pkg:internal/atomicfs",
@@ -586,6 +805,18 @@
       "dependents": 15
     },
     {
+      "id": "pkg:internal/envcontract",
+      "kind": "technical",
+      "package": "internal/envcontract",
+      "layer": "foundation",
+      "responsibility": "环境变量 / configuration.json 冻结契约的只读守卫（报告模式）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
       "id": "pkg:internal/eventbus",
       "kind": "technical",
       "package": "internal/eventbus",
@@ -596,6 +827,18 @@
       "note": "",
       "direct_dependencies": 0,
       "dependents": 5
+    },
+    {
+      "id": "pkg:internal/hiveclock",
+      "kind": "technical",
+      "package": "internal/hiveclock",
+      "layer": "foundation",
+      "responsibility": "可注入时钟：供基准与测试冻结对外可见时间。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 3
     },
     {
       "id": "pkg:internal/hivehome",
@@ -610,6 +853,18 @@
       "dependents": 19
     },
     {
+      "id": "pkg:internal/logging",
+      "kind": "technical",
+      "package": "internal/logging",
+      "layer": "foundation",
+      "responsibility": "serve 路径共享的进程日志 sink（时间戳前缀、目标选择）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 2
+    },
+    {
       "id": "pkg:internal/platform",
       "kind": "technical",
       "package": "internal/platform",
@@ -620,6 +875,18 @@
       "note": "",
       "direct_dependencies": 0,
       "dependents": 1
+    },
+    {
+      "id": "pkg:internal/pyenv",
+      "kind": "technical",
+      "package": "internal/pyenv",
+      "layer": "foundation",
+      "responsibility": "以 Python 语义解析环境变量覆盖，保证 Go 读取方与参考实现得到同一个值。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 6
     },
     {
       "id": "pkg:internal/quality",
@@ -644,6 +911,18 @@
       "note": "",
       "direct_dependencies": 1,
       "dependents": 3
+    },
+    {
+      "id": "pkg:internal/resources",
+      "kind": "technical",
+      "package": "internal/resources",
+      "layer": "foundation",
+      "responsibility": "进程与宿主内存资源读取（darwin/linux 分离实现）。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 2
     },
     {
       "id": "pkg:internal/schemas",
@@ -680,246 +959,6 @@
       "note": "",
       "direct_dependencies": 0,
       "dependents": 3
-    },
-    {
-      "id": "pkg:cmd/hive-browser",
-      "kind": "technical",
-      "package": "cmd/hive-browser",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 1,
-      "dependents": 0
-    },
-    {
-      "id": "pkg:cmd/hive-longmemeval",
-      "kind": "technical",
-      "package": "cmd/hive-longmemeval",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 2,
-      "dependents": 0
-    },
-    {
-      "id": "pkg:e2e/cmd/memgw",
-      "kind": "technical",
-      "package": "e2e/cmd/memgw",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 1,
-      "dependents": 0
-    },
-    {
-      "id": "pkg:e2e/cmd/storagecompat",
-      "kind": "technical",
-      "package": "e2e/cmd/storagecompat",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 10,
-      "dependents": 0
-    },
-    {
-      "id": "pkg:e2e/escalationgw",
-      "kind": "technical",
-      "package": "e2e/escalationgw",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 0,
-      "dependents": 0
-    },
-    {
-      "id": "pkg:e2e/memgw",
-      "kind": "technical",
-      "package": "e2e/memgw",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 0,
-      "dependents": 1
-    },
-    {
-      "id": "pkg:e2e/soulgw",
-      "kind": "technical",
-      "package": "e2e/soulgw",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 0,
-      "dependents": 0
-    },
-    {
-      "id": "pkg:e2e/stallgw",
-      "kind": "technical",
-      "package": "e2e/stallgw",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 0,
-      "dependents": 0
-    },
-    {
-      "id": "pkg:internal/envcontract",
-      "kind": "technical",
-      "package": "internal/envcontract",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 0,
-      "dependents": 0
-    },
-    {
-      "id": "pkg:internal/hiveclock",
-      "kind": "technical",
-      "package": "internal/hiveclock",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 0,
-      "dependents": 3
-    },
-    {
-      "id": "pkg:internal/hiveconf",
-      "kind": "technical",
-      "package": "internal/hiveconf",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 2,
-      "dependents": 2
-    },
-    {
-      "id": "pkg:internal/logging",
-      "kind": "technical",
-      "package": "internal/logging",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 1,
-      "dependents": 2
-    },
-    {
-      "id": "pkg:internal/longmemeval",
-      "kind": "technical",
-      "package": "internal/longmemeval",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 1,
-      "dependents": 2
-    },
-    {
-      "id": "pkg:internal/mcpregistry/nativecli",
-      "kind": "technical",
-      "package": "internal/mcpregistry/nativecli",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 2,
-      "dependents": 2
-    },
-    {
-      "id": "pkg:internal/pyenv",
-      "kind": "technical",
-      "package": "internal/pyenv",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 0,
-      "dependents": 6
-    },
-    {
-      "id": "pkg:internal/release",
-      "kind": "technical",
-      "package": "internal/release",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 0,
-      "dependents": 0
-    },
-    {
-      "id": "pkg:internal/resources",
-      "kind": "technical",
-      "package": "internal/resources",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 1,
-      "dependents": 2
-    },
-    {
-      "id": "pkg:internal/toolgolden",
-      "kind": "technical",
-      "package": "internal/toolgolden",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 0,
-      "dependents": 0
-    },
-    {
-      "id": "pkg:internal/tools/integrationkit",
-      "kind": "technical",
-      "package": "internal/tools/integrationkit",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 0,
-      "dependents": 1
-    },
-    {
-      "id": "pkg:internal/visionfallback",
-      "kind": "technical",
-      "package": "internal/visionfallback",
-      "layer": "unmapped",
-      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
-      "stability": "evolving",
-      "entrypoint": false,
-      "note": "",
-      "direct_dependencies": 1,
-      "dependents": 2
     },
     {
       "id": "cap:goal-outcome",
@@ -971,6 +1010,7 @@
         "internal/queen",
         "internal/agentloop",
         "internal/llm",
+        "internal/hiveconf",
         "internal/soul",
         "internal/skills",
         "internal/memory",
@@ -1113,10 +1153,14 @@
         "internal/tools",
         "internal/tools/builtin",
         "internal/tools/integrations",
+        "internal/tools/integrationkit",
         "internal/mcpregistry",
+        "internal/mcpregistry/nativecli",
         "internal/credentials",
         "internal/ratelimit",
-        "internal/llm"
+        "internal/llm",
+        "internal/charts",
+        "internal/visionfallback"
       ],
       "operates": [
         "internal/tools",
@@ -1294,8 +1338,10 @@
         "internal/server",
         "internal/server/uiembed",
         "internal/runtimehealth",
+        "internal/resources",
         "internal/senders",
-        "internal/qmail"
+        "internal/qmail",
+        "internal/globaldb"
       ],
       "operates": [
         "internal/server",
@@ -1321,7 +1367,7 @@
       "capability": "release-quality",
       "kind": "business",
       "name": "发布与质量门禁",
-      "business_outcome": "每次交付可验证：七门禁、架构漂移检查与发布清单都能在本地和 CI 复现，结论可签字。",
+      "business_outcome": "每次交付可验证：九门禁、架构漂移检查与发布清单都能在本地和 CI 复现，结论可签字。",
       "actors": [
         "开发者",
         "评审人",
@@ -1329,13 +1375,15 @@
       ],
       "modules": [
         "internal/quality",
-        "internal/version"
+        "internal/version",
+        "internal/maintenance",
+        "internal/envcontract"
       ],
       "operates": [
         "internal/quality"
       ],
       "entrypoints": [
-        "make ci（fmt-check vet test cross parity parity-targets wiring-check）",
+        "make ci（fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check）",
         "python3 scripts/qc_check.py",
         "go test ./internal/quality",
         "python3 scripts/gen_arch.py --check"
@@ -1347,7 +1395,7 @@
       ],
       "human_approval": "yes",
       "maturity": "tested",
-      "limits": "门禁是仓库内脚本与 go test，不覆盖部署环境；架构漂移检查需手动或 CI 显式调用，不会自动阻断提交。"
+      "limits": "门禁是仓库内脚本与 go test，不覆盖部署环境；架构漂移由 make ci 的 arch-check 阻断，契约自洽由 compat-check 阻断。"
     }
   ],
   "edges": [
@@ -1379,6 +1427,16 @@
     {
       "from": "pkg:e2e/cmd/memgw",
       "to": "pkg:e2e/memgw",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/recordproxy",
+      "to": "pkg:e2e/recordproxy",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/stallgw",
+      "to": "pkg:e2e/stallgw",
       "kind": "depends"
     },
     {
@@ -2262,6 +2320,11 @@
       "kind": "realizes"
     },
     {
+      "from": "pkg:internal/charts",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
       "from": "pkg:internal/colony",
       "to": "cap:colony-unit",
       "kind": "realizes"
@@ -2292,6 +2355,11 @@
       "kind": "realizes"
     },
     {
+      "from": "pkg:internal/envcontract",
+      "to": "cap:release-quality",
+      "kind": "realizes"
+    },
+    {
       "from": "pkg:internal/eventbus",
       "to": "cap:triggers-sentinel",
       "kind": "realizes"
@@ -2299,6 +2367,16 @@
     {
       "from": "pkg:internal/eventbus",
       "to": "cap:worker-dispatch",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/globaldb",
+      "to": "cap:channels-dashboard",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/hiveconf",
+      "to": "cap:queen-triage",
       "kind": "realizes"
     },
     {
@@ -2322,7 +2400,17 @@
       "kind": "realizes"
     },
     {
+      "from": "pkg:internal/maintenance",
+      "to": "cap:release-quality",
+      "kind": "realizes"
+    },
+    {
       "from": "pkg:internal/mcpregistry",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/mcpregistry/nativecli",
       "to": "cap:tools-credentials",
       "kind": "realizes"
     },
@@ -2359,6 +2447,11 @@
     {
       "from": "pkg:internal/ratelimit",
       "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/resources",
+      "to": "cap:channels-dashboard",
       "kind": "realizes"
     },
     {
@@ -2497,6 +2590,11 @@
       "kind": "realizes"
     },
     {
+      "from": "pkg:internal/tools/integrationkit",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
       "from": "pkg:internal/tools/integrations",
       "to": "cap:tools-credentials",
       "kind": "realizes"
@@ -2514,6 +2612,11 @@
     {
       "from": "pkg:internal/version",
       "to": "cap:release-quality",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/visionfallback",
+      "to": "cap:tools-credentials",
       "kind": "realizes"
     },
     {
@@ -2658,6 +2761,7 @@
         "internal/queen",
         "internal/agentloop",
         "internal/llm",
+        "internal/hiveconf",
         "internal/soul",
         "internal/skills",
         "internal/memory",
@@ -2800,10 +2904,14 @@
         "internal/tools",
         "internal/tools/builtin",
         "internal/tools/integrations",
+        "internal/tools/integrationkit",
         "internal/mcpregistry",
+        "internal/mcpregistry/nativecli",
         "internal/credentials",
         "internal/ratelimit",
-        "internal/llm"
+        "internal/llm",
+        "internal/charts",
+        "internal/visionfallback"
       ],
       "operates": [
         "internal/tools",
@@ -2981,8 +3089,10 @@
         "internal/server",
         "internal/server/uiembed",
         "internal/runtimehealth",
+        "internal/resources",
         "internal/senders",
-        "internal/qmail"
+        "internal/qmail",
+        "internal/globaldb"
       ],
       "operates": [
         "internal/server",
@@ -3008,7 +3118,7 @@
       "capability": "release-quality",
       "kind": "business",
       "name": "发布与质量门禁",
-      "business_outcome": "每次交付可验证：七门禁、架构漂移检查与发布清单都能在本地和 CI 复现，结论可签字。",
+      "business_outcome": "每次交付可验证：九门禁、架构漂移检查与发布清单都能在本地和 CI 复现，结论可签字。",
       "actors": [
         "开发者",
         "评审人",
@@ -3016,13 +3126,15 @@
       ],
       "modules": [
         "internal/quality",
-        "internal/version"
+        "internal/version",
+        "internal/maintenance",
+        "internal/envcontract"
       ],
       "operates": [
         "internal/quality"
       ],
       "entrypoints": [
-        "make ci（fmt-check vet test cross parity parity-targets wiring-check）",
+        "make ci（fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check）",
         "python3 scripts/qc_check.py",
         "go test ./internal/quality",
         "python3 scripts/gen_arch.py --check"
@@ -3034,7 +3146,7 @@
       ],
       "human_approval": "yes",
       "maturity": "tested",
-      "limits": "门禁是仓库内脚本与 go test，不覆盖部署环境；架构漂移检查需手动或 CI 显式调用，不会自动阻断提交。"
+      "limits": "门禁是仓库内脚本与 go test，不覆盖部署环境；架构漂移由 make ci 的 arch-check 阻断，契约自洽由 compat-check 阻断。"
     }
   ],
   "contracts": [
@@ -3833,252 +3945,12 @@
     {
       "code": "reverse_dependency",
       "severity": "warning",
-      "message": "反向依赖：cmd/hive-browser（unmapped）导入了更高层 internal/cli（assembly）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：cmd/hive-longmemeval（unmapped）导入了更高层 internal/cli（assembly）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/agentloop（runtime）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/agents（orchestration）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/colony（orchestration）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/credentials（capability）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/hivehome（foundation）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/schemas（foundation）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/senders（capability）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/session（orchestration）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/storage（foundation）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/tracker（orchestration）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：internal/hiveconf（unmapped）导入了更高层 internal/hivehome（foundation）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：internal/hiveconf（unmapped）导入了更高层 internal/llm（capability）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：internal/longmemeval（unmapped）导入了更高层 internal/session（orchestration）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：internal/mcpregistry/nativecli（unmapped）导入了更高层 internal/hivehome（foundation）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：internal/mcpregistry/nativecli（unmapped）导入了更高层 internal/tools（capability）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
       "message": "反向依赖：internal/soul（capability）导入了更高层 internal/queen（orchestration）"
-    },
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：internal/visionfallback（unmapped）导入了更高层 internal/llm（capability）"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 cmd/hive-browser 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 cmd/hive-longmemeval 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 e2e/cmd/memgw 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 e2e/cmd/storagecompat 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 e2e/escalationgw 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 e2e/memgw 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 e2e/soulgw 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 e2e/stallgw 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/envcontract 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/hiveclock 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/hiveconf 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/logging 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/longmemeval 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/mcpregistry/nativecli 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/pyenv 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/release 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/resources 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/toolgolden 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/tools/integrationkit 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "unmapped_package",
-      "severity": "warning",
-      "message": "包 internal/visionfallback 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
-    },
-    {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 cmd/hive-browser 没有任何内部导入方（可能是未接线代码或纯入口约定）"
-    },
-    {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 cmd/hive-longmemeval 没有任何内部导入方（可能是未接线代码或纯入口约定）"
-    },
-    {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 e2e/cmd/memgw 没有任何内部导入方（可能是未接线代码或纯入口约定）"
-    },
-    {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 e2e/cmd/storagecompat 没有任何内部导入方（可能是未接线代码或纯入口约定）"
-    },
-    {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 e2e/escalationgw 没有任何内部导入方（可能是未接线代码或纯入口约定）"
-    },
-    {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 e2e/soulgw 没有任何内部导入方（可能是未接线代码或纯入口约定）"
-    },
-    {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 e2e/stallgw 没有任何内部导入方（可能是未接线代码或纯入口约定）"
-    },
-    {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 internal/envcontract 没有任何内部导入方（可能是未接线代码或纯入口约定）"
     },
     {
       "code": "no_importer",
       "severity": "info",
       "message": "包 internal/orchestrator 没有任何内部导入方（可能是未接线代码或纯入口约定）"
-    },
-    {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 internal/release 没有任何内部导入方（可能是未接线代码或纯入口约定）"
-    },
-    {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 internal/toolgolden 没有任何内部导入方（可能是未接线代码或纯入口约定）"
     }
   ]
 }

@@ -98,11 +98,16 @@ cd /Users/mac/hive/go_hive && SKIP_FRONTEND_BUILD=1 bash scripts/embed_ui.sh
 bash /Users/mac/hive/go_hive/scripts/publish_go_hive.sh
 cd /Users/mac/.publish-go-hive/repo && git ls-remote origin main   # 校验远端 ref
 
-# 6) 看门狗 / 时间台账 / 晨报
-bash go_hive/scripts/watchdog_report.sh 300   # 后台 persist
-bash go_hive/scripts/timegov_record.sh 300    # 后台 persist
-bash go_hive/scripts/release_cadence_loop.sh # 2 小时 slot 版调度（后台 persist）
-bash go_hive/scripts/governance_recheck_loop.sh # 每 6 小时治理重算（后台 persist）
+# 6) 看门狗 / 时间台账 / 晨报（由 launchd 托管，重启后自动恢复）
+#    LaunchAgent：~/Library/LaunchAgents/com.hive.{serve-keepalive,release-cadence,governance-recheck,watchdog,timegov}.plist
+launchctl list | grep com.hive                      # 五个守护应均为运行态
+launchctl kickstart -k gui/$(id -u)/com.hive.watchdog          # 需要时单独重启
+launchctl kickstart -k gui/$(id -u)/com.hive.release-cadence
+launchctl kickstart -k gui/$(id -u)/com.hive.governance-recheck
+launchctl kickstart -k gui/$(id -u)/com.hive.timegov
+launchctl kickstart -k gui/$(id -u)/com.hive.serve-keepalive   # 8788 health 连续失败自动拉起 serve
+# 注意：launchd 的 PATH 必须含 ~/.vfox/sdks/golang/bin（go）与 ~/.local/bin（uv），
+# 已在 plist 的 EnvironmentVariables 里固定；否则 slot 构建 rc=127。
 bash go_hive/scripts/morning_report.sh
 ```
 
