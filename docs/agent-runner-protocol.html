@@ -195,7 +195,7 @@ A→C  v1：prompt 响应带 stopReason；v2：prompt 立即确认 + idle state_
 
 <section id="s07"><h2><span class="num">07</span>落地路线（建议顺序）</h2>
 <ol>
-<li><b>抽 Runner 接口</b>：把现有 Claude 适配器改成第一个实现，行为零变化——现有 <code>internal/qmail/claude_runner_*</code> 测试全绿是验收线。</li>
+<li><b>抽 Runner 接口</b>：把现有 Claude 适配器改成第一个实现，行为零变化——现有 <code>internal/claudecode/claude_runner_*</code> 测试全绿是验收线。</li>
 <li><b>接 Codex</b>（本机 0.162.1 可实测）：JSONL 映射 + resume UUID 存储 + 隔离 CODEX_HOME；补 fake-codex 夹具与真实回合 smoke。</li>
 <li><b>接 Hermes（走 ACP）</b>：同时把 ACP client 落地——这一步同时交付「ACP 统一层」的最小可用版本。</li>
 <li><b>OpenCode</b>（需先安装）：优先 <code>opencode acp</code>；若走 server API，补版本探测与事件归一。</li>

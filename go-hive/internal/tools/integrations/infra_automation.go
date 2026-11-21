@@ -82,12 +82,7 @@ func newBatch7Lane3Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	catalog := []*Tool{
 		batch7Lane3TerraformTool,
 		batch7Lane3PagerDutyTool,
@@ -97,8 +92,7 @@ func newBatch7Lane3Registry(opts ...Option) *Registry {
 		batch7Lane3TinesTool,
 	}
 	for _, tool := range catalog {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	impls := []struct {
 		tool  string
@@ -113,7 +107,7 @@ func newBatch7Lane3Registry(opts ...Option) *Registry {
 	}
 	for _, entry := range impls {
 		for action, impl := range entry.funcs {
-			registry.addImpl(entry.tool, action, impl)
+			registry.AddImpl(entry.tool, action, impl)
 		}
 	}
 	return registry

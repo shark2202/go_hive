@@ -1,27 +1,45 @@
 // Package integrations ports the upstream aden_tools integration surface to
-// Go as model-facing tools.
+// Go as model-facing tools. This file is the structural map of the package;
+// the long-form version (ownership table, migration plan, gate numbers) lives
+// in go_hive/docs/integrations-package-structure.md.
 //
-// Ported modules (10 / 165 actions):
+// Layout:
 //
-//	account_info 1  credential-store view (AccountSource)
-//	airtable   9   declarative REST, fake-server tested
-//	csv        4   local filesystem (csv_sql excluded: DuckDB dependency)
-//	github    19   declarative REST + 3 composite actions
-//	risk_score 1   pure Go port of the weighted grading tables
-//	slack     51   declarative Web API + 5 composite actions
-//	stripe    54   declarative REST/form + 2 composite actions
-//	telegram  13   declarative Bot API
-//	time       1   local clock + IANA zones
-//	trello    12   declarative REST with query credentials
+//	internal/tools/integrationkit/   shared kernel: Registry, Runtime,
+//	                                 Tool/Action/RestSpec, credentials/OAuth,
+//	                                 parameter readers, schema builders,
+//	                                 bounded HTTP helpers, file helpers.
+//	internal/tools/integrations/     assembly root: generated catalog
+//	                                 (catalog_gen.go, DO NOT EDIT), per-provider
+//	                                 files, New/InstallBatch* entrypoints,
+//	                                 kit_aliases.go compatibility seam.
+//	internal/tools/integrations/excel/  pilot domain subpackage: catalog +
+//	                                 OOXML reader/writer + tests, registering
+//	                                 through integrationkit only.
 //
-// Parity scope: parameter names, types, defaults, action names and source
-// anchors are generated from the upstream Python AST (gen_catalog.py). REST
-// actions mirror the upstream method, path, authentication, and body/query
-// placement. Provider object shaping is passed through: upstream tools often
-// project a subset of fields (for example Stripe's _format_customer) while
-// this port returns the provider object as received. Composite actions
-// (Slack DM/upload/analysis/workflow, GitHub repo/email/workflow branches,
-// Stripe subscription status/cancel) are hand-written against the same
-// endpoints. These are the known deviations to close before claiming
-// byte-level parity.
+// Dependency rules (enforced by internal/quality + review):
+//
+//   - Domain subpackages import internal/tools/integrationkit and the standard
+//     library only (production code). They never import this package or
+//     internal/tools, so a subpackage can be moved or tested standalone; test
+//     files may import internal/tools to assert against the shared registry.
+//   - The root imports subpackages (assembly direction); subpackages never
+//     import the root, which keeps the graph acyclic.
+//   - New provider code goes into the domain file for its family; new families
+//     should be born as subpackages, not as another root file.
+//
+// Migration status: excel is the pilot (phase 1). The remaining 50+ root
+// provider files and their lane-prefixed helpers are phase 2; the lane-prefix
+// and 800-line gates in internal/quality ratchet that work down.
+//
+// Ported modules and parity scope: parameter names, types, defaults, action
+// names and source anchors are generated from the upstream Python AST
+// (gen_catalog.py). REST actions mirror the upstream method, path,
+// authentication and body/query placement. Provider object shaping is passed
+// through: upstream tools often project a subset of fields (for example
+// Stripe's _format_customer) while this port returns the provider object as
+// received. Composite actions (Slack DM/upload/analysis/workflow, GitHub
+// repo/email/workflow branches, Stripe subscription status/cancel) are
+// hand-written against the same endpoints. These remain the known deviations
+// to close before claiming byte-level parity.
 package integrations

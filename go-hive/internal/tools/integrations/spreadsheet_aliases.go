@@ -22,6 +22,7 @@ import (
 	"context"
 
 	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/aden-hive/hive-go/internal/tools/integrations/excel"
 )
 
 // spreadsheetAliasAction couples one upstream per-tool name with the aggregate
@@ -32,8 +33,9 @@ type spreadsheetAliasAction struct {
 }
 
 // spreadsheetAggregates returns the aggregate tools the aliases mirror: "csv"
-// from the generated provider catalog and "excel" from batch 3. A module that
-// is not linked into this build is skipped rather than half-registered.
+// from the generated provider catalog and "excel" from its domain subpackage.
+// A module that is not linked into this build is skipped rather than
+// half-registered.
 func spreadsheetAggregates() []*Tool {
 	out := make([]*Tool, 0, 2)
 	for _, tool := range builtinCatalog {
@@ -42,7 +44,7 @@ func spreadsheetAggregates() []*Tool {
 			break
 		}
 	}
-	out = append(out, batch3ExcelCatalog...)
+	out = append(out, excel.Catalog()...)
 	return out
 }
 

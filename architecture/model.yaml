@@ -179,7 +179,11 @@ packages:
     stability: stable
   - package: internal/tools/integrations
     layer: capability
-    responsibility: "集成工具集：研究、天气、行情、媒体、网络扫描等外部系统的工具模块与参数 schema。"
+    responsibility: "集成工具集（装配根）：生成目录、领域实现与 InstallBatch* 入口；领域实现按 internal/tools/integrations/<domain> 子包迁出，子包只依赖 integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/excel
+    layer: capability
+    responsibility: "Excel 领域子包（结构试点）：工具目录、OOXML 读写与 6 个 action 实现；只 import integrationkit。"
     stability: evolving
   - package: internal/llm
     layer: capability

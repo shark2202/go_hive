@@ -167,6 +167,14 @@ def main() -> int:
     update_governance_html(new_dates)
     notify = f"G1 {new_dates['G1']} · G2 {new_dates['G2']} · G3 {new_dates['G3']}"
     sh(f"osascript -e 'display notification \"{notify}\" with title \"Hive 治理重算\"'")
+    # 6h 治理汇报留档：docs/reports/governance-<ts>.md（gen_report.py 内部提交）
+    try:
+        subprocess.run(
+            [sys.executable or "python3", str(Path(__file__).parent / "gen_report.py"), "governance"],
+            timeout=300, check=False,
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"[governance] report generation failed: {exc}", file=sys.stderr)
     return 0
 
 

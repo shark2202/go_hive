@@ -10,53 +10,37 @@ import (
 
 // registerREST attaches the declarative provider specs.
 func registerREST(r *Registry) {
-	r.addSpecs("stripe", stripeSpecs())
-	r.addSpecs("slack", slackSpecs())
-	r.addSpecs("github", githubSpecs())
-	r.addSpecs("telegram", telegramSpecs())
-	r.addSpecs("trello", trelloSpecs())
-	r.addSpecs("airtable", airtableSpecs())
+	r.AddSpecs("stripe", stripeSpecs())
+	r.AddSpecs("slack", slackSpecs())
+	r.AddSpecs("github", githubSpecs())
+	r.AddSpecs("telegram", telegramSpecs())
+	r.AddSpecs("trello", trelloSpecs())
+	r.AddSpecs("airtable", airtableSpecs())
 }
 
 // registerLocal attaches the hand-written implementations: local file tools,
 // risk scoring, and the composite provider actions that need more than one
 // HTTP round-trip.
 func registerLocal(r *Registry) {
-	r.addImpl("get_current_time", "get_current_time", getCurrentTime)
-	r.addImpl("get_account_info", "get_account_info", getAccountInfo)
-	r.addImpl("stripe", "stripe_get_subscription_status", stripeSubscriptionStatus)
-	r.addImpl("stripe", "stripe_cancel_subscription", stripeCancelSubscription)
-	r.addImpl("csv", "csv_read", csvRead)
-	r.addImpl("csv", "csv_write", csvWrite)
-	r.addImpl("csv", "csv_append", csvAppend)
-	r.addImpl("csv", "csv_info", csvInfo)
-	r.addImpl("risk_score", "risk_score", riskScore)
+	r.AddImpl("get_current_time", "get_current_time", getCurrentTime)
+	r.AddImpl("get_account_info", "get_account_info", getAccountInfo)
+	r.AddImpl("stripe", "stripe_get_subscription_status", stripeSubscriptionStatus)
+	r.AddImpl("stripe", "stripe_cancel_subscription", stripeCancelSubscription)
+	r.AddImpl("csv", "csv_read", csvRead)
+	r.AddImpl("csv", "csv_write", csvWrite)
+	r.AddImpl("csv", "csv_append", csvAppend)
+	r.AddImpl("csv", "csv_info", csvInfo)
+	r.AddImpl("risk_score", "risk_score", riskScore)
 
-	r.addImpl("slack", "slack_send_dm", slackSendDM)
-	r.addImpl("slack", "slack_upload_file", slackUploadFile)
-	r.addImpl("slack", "slack_get_messages_for_analysis", slackMessagesForAnalysis)
-	r.addImpl("slack", "slack_get_conversation_context", slackConversationContext)
-	r.addImpl("slack", "slack_trigger_workflow", slackTriggerWorkflow)
+	r.AddImpl("slack", "slack_send_dm", slackSendDM)
+	r.AddImpl("slack", "slack_upload_file", slackUploadFile)
+	r.AddImpl("slack", "slack_get_messages_for_analysis", slackMessagesForAnalysis)
+	r.AddImpl("slack", "slack_get_conversation_context", slackConversationContext)
+	r.AddImpl("slack", "slack_trigger_workflow", slackTriggerWorkflow)
 
-	r.addImpl("github", "github_list_repos", githubListRepos)
-	r.addImpl("github", "github_get_user_emails", githubUserEmails)
-	r.addImpl("github", "github_list_workflow_runs", githubWorkflowRuns)
-}
-
-func (r *Registry) addSpecs(tool string, specs map[string]RestSpec) {
-	if r.specs[tool] == nil {
-		r.specs[tool] = map[string]RestSpec{}
-	}
-	for action, spec := range specs {
-		r.specs[tool][action] = spec
-	}
-}
-
-func (r *Registry) addImpl(tool, action string, fn ActionFunc) {
-	if r.impls[tool] == nil {
-		r.impls[tool] = map[string]ActionFunc{}
-	}
-	r.impls[tool][action] = fn
+	r.AddImpl("github", "github_list_repos", githubListRepos)
+	r.AddImpl("github", "github_get_user_emails", githubUserEmails)
+	r.AddImpl("github", "github_list_workflow_runs", githubWorkflowRuns)
 }
 
 // slackCall performs one Slack Web API call and surfaces provider errors.

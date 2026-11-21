@@ -88,7 +88,7 @@ func TestBatch7Lane9Catalog(t *testing.T) {
 			if action.Source == "" || action.Summary == "" {
 				t.Fatalf("%s.%s missing source/summary", tool.Name, action.Name)
 			}
-			if registry.impls[tool.Name][action.Name] == nil {
+			if registry.Impls(tool.Name)[action.Name] == nil {
 				t.Fatalf("%s.%s has no implementation", tool.Name, action.Name)
 			}
 		}

@@ -83,12 +83,7 @@ func newBatch7Lane8Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{
 		batch7Lane8BrevoTool,
 		batch7Lane8CalcomTool,
@@ -96,8 +91,7 @@ func newBatch7Lane8Registry(opts ...Option) *Registry {
 		batch7Lane8DiscordTool,
 		batch7Lane8MattermostTool,
 	} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	for tool, actions := range map[string]map[string]ActionFunc{
 		"brevo":      batch7Lane8BrevoImpls(),
@@ -107,7 +101,7 @@ func newBatch7Lane8Registry(opts ...Option) *Registry {
 		"mattermost": batch7Lane8MattermostImpls(),
 	} {
 		for action, impl := range actions {
-			registry.addImpl(tool, action, impl)
+			registry.AddImpl(tool, action, impl)
 		}
 	}
 	return registry

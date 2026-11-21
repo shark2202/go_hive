@@ -13,6 +13,7 @@ import (
 )
 
 type (
+	Registry       = integrationkit.Registry
 	Runtime        = integrationkit.Runtime
 	Option         = integrationkit.Option
 	AccountSource  = integrationkit.AccountSource
@@ -49,6 +50,41 @@ func WithGetenv(fn func(string) string) Option { return integrationkit.WithGeten
 
 // DefaultMaxPages is the declarative pagination walk cap.
 const DefaultMaxPages = integrationkit.DefaultMaxPages
+
+var (
+	// ErrUnknownTool is returned when no integration owns the requested name.
+	ErrUnknownTool = integrationkit.ErrUnknownTool
+	// ErrUnknownAction is returned when a tool has no such action.
+	ErrUnknownAction = integrationkit.ErrUnknownAction
+)
+
+// NewRegistry builds the kernel registry for one runtime (thin forward so
+// provider files keep constructing registries by their historical name).
+func NewRegistry(rt *Runtime) *Registry { return integrationkit.NewRegistry(rt) }
+
+// param builds a JSON-schema property with only a type.
+func param(typ string) map[string]any { return integrationkit.Param(typ) }
+
+// paramDefault builds a JSON-schema property with an upstream default.
+func paramDefault(typ string, value any) map[string]any {
+	return integrationkit.ParamDefault(typ, value)
+}
+
+// paramItems builds an array property whose items carry the upstream element
+// type (Python list[str] / list[dict]).
+func paramItems(typ, itemType string) map[string]any {
+	return integrationkit.ParamItems(typ, itemType)
+}
+
+// paramEnumDefault builds an enum property with an upstream default and the
+// upstream Literal member order (Python Literal[...]).
+func paramEnumDefault(typ string, value any, values []string) map[string]any {
+	return integrationkit.ParamEnumDefault(typ, value, values)
+}
+
+// paramArrayOfObjects is the upstream list[dict] shape: an array whose items
+// are free-form objects (additionalProperties: true).
+func paramArrayOfObjects() map[string]any { return integrationkit.ParamArrayOfObjects() }
 
 func stringArg(input map[string]any, name string) string {
 	return integrationkit.StringArg(input, name)

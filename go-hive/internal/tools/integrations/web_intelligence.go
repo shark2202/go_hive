@@ -76,19 +76,13 @@ func newBatch7Lane6Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{
 		batch7Lane6SimilarWebTool,
 		batch7Lane6NewsTool,
 		batch7Lane6GoogleMapsTool,
 	} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	for _, entry := range []struct {
 		tool  string
@@ -99,7 +93,7 @@ func newBatch7Lane6Registry(opts ...Option) *Registry {
 		{"google_maps", batch7Lane6GoogleMapsImpls()},
 	} {
 		for action, impl := range entry.funcs {
-			registry.addImpl(entry.tool, action, impl)
+			registry.AddImpl(entry.tool, action, impl)
 		}
 	}
 	return registry

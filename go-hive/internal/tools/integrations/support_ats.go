@@ -64,32 +64,26 @@ func newBatch6Lane2Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{
 		batch6Lane2IntercomTool,
 		batch6Lane2ZendeskTool,
 		batch6Lane2FreshdeskTool,
 		batch6Lane2GreenhouseTool,
 	} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	for action, impl := range batch6Lane2IntercomImpls() {
-		registry.addImpl("intercom", action, impl)
+		registry.AddImpl("intercom", action, impl)
 	}
 	for action, impl := range batch6Lane2ZendeskImpls() {
-		registry.addImpl("zendesk", action, impl)
+		registry.AddImpl("zendesk", action, impl)
 	}
 	for action, impl := range batch6Lane2FreshdeskImpls() {
-		registry.addImpl("freshdesk", action, impl)
+		registry.AddImpl("freshdesk", action, impl)
 	}
 	for action, impl := range batch6Lane2GreenhouseImpls() {
-		registry.addImpl("greenhouse", action, impl)
+		registry.AddImpl("greenhouse", action, impl)
 	}
 	return registry
 }

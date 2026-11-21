@@ -1,4 +1,4 @@
-package integrations
+package excel
 
 import (
 	"archive/zip"
@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/aden-hive/hive-go/internal/tools/integrationkit"
 )
 
 // ---------------------------------------------------------------------------
@@ -26,7 +27,7 @@ import (
 func newExcelTestRegistry(t *testing.T) (*Registry, string) {
 	t.Helper()
 	dir := t.TempDir()
-	return newBatch3ExcelRegistry(withBatch3ExcelRoots(dir)), dir
+	return NewRegistry(WithRoots(dir)), dir
 }
 
 // excelAction executes one Excel action and requires a map result.
@@ -355,8 +356,8 @@ func readZipPart(t *testing.T, target, name string) []byte {
 
 // Parity-exempt: catalog/install invariants are Go-side contracts; upstream
 // tests call the MCP tool functions, not a registry surface.
-func TestBatch3ExcelCatalogIntegrity(t *testing.T) {
-	registry := newBatch3ExcelRegistry()
+func TestExcelCatalogIntegrity(t *testing.T) {
+	registry := NewRegistry()
 	if names := registry.Names(); len(names) != 1 || names[0] != "excel" {
 		t.Fatalf("names = %v", names)
 	}
@@ -374,7 +375,7 @@ func TestBatch3ExcelCatalogIntegrity(t *testing.T) {
 		t.Fatalf("tool identity = %+v", tool)
 	}
 	for _, action := range tool.Actions {
-		if registry.impls[tool.Name][action.Name] == nil {
+		if registry.Impls(tool.Name)[action.Name] == nil {
 			t.Fatalf("%s has no implementation", action.Name)
 		}
 		if action.Source != "excel_tool/excel_tool.py" {
@@ -386,15 +387,15 @@ func TestBatch3ExcelCatalogIntegrity(t *testing.T) {
 	}
 	// excel_sql needs DuckDB upstream; the port excludes it instead of
 	// shipping a stub, mirroring gen_catalog.py's csv_sql exclusion.
-	if _, err := registry.Execute(context.Background(), "excel", map[string]any{"action": "excel_sql"}); !errors.Is(err, ErrUnknownAction) {
+	if _, err := registry.Execute(context.Background(), "excel", map[string]any{"action": "excel_sql"}); !errors.Is(err, integrationkit.ErrUnknownAction) {
 		t.Fatalf("excel_sql err = %v, want ErrUnknownAction", err)
 	}
 }
 
 // Parity-exempt: installation into the shared registry is a Go-side contract.
-func TestInstallBatch3Excel(t *testing.T) {
+func TestInstall(t *testing.T) {
 	shared := tools.NewToolRegistry()
-	if installed := InstallBatch3Excel(shared); installed != 1 {
+	if installed := NewRegistry().Install(shared); installed != 1 {
 		t.Fatalf("installed = %d, want 1", installed)
 	}
 	if !shared.HasTool("excel") {
@@ -434,7 +435,7 @@ func TestInstallBatch3Excel(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_read_basic_xlsx
-func TestBatch3ExcelReadBasic(t *testing.T) {
+func TestExcelReadBasic(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_read", map[string]any{"path": "basic.xlsx"})
 	if result["success"] != true {
@@ -457,7 +458,7 @@ func TestBatch3ExcelReadBasic(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_read_specific_sheet
-func TestBatch3ExcelReadSpecificSheet(t *testing.T) {
+func TestExcelReadSpecificSheet(t *testing.T) {
 	registry, _ := excelMultiSheetFixture(t)
 	result := excelAction(t, registry, "excel_read", map[string]any{"path": "multi_sheet.xlsx", "sheet": "Products"})
 	excelWantString(t, result, "sheet_name", "Products")
@@ -472,14 +473,14 @@ func TestBatch3ExcelReadSpecificSheet(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_read_nonexistent_sheet_error
-func TestBatch3ExcelReadMissingSheet(t *testing.T) {
+func TestExcelReadMissingSheet(t *testing.T) {
 	registry, _ := excelMultiSheetFixture(t)
 	result := excelAction(t, registry, "excel_read", map[string]any{"path": "multi_sheet.xlsx", "sheet": "NonExistent"})
 	excelWantError(t, result, "not found", "Available sheets", "Employees")
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_read_with_limit, tools/tests/tools/test_excel_tool.py::test_read_with_offset
-func TestBatch3ExcelReadLimitAndOffset(t *testing.T) {
+func TestExcelReadLimitAndOffset(t *testing.T) {
 	registry, dir := excelBasicFixture(t)
 
 	limited := excelAction(t, registry, "excel_read", map[string]any{"path": "basic.xlsx", "limit": 2})
@@ -512,7 +513,7 @@ func TestBatch3ExcelReadLimitAndOffset(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_offset_beyond_rows
-func TestBatch3ExcelReadOffsetBeyondRows(t *testing.T) {
+func TestExcelReadOffsetBeyondRows(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_read", map[string]any{"path": "basic.xlsx", "offset": 100})
 	if result["success"] != true {
@@ -526,7 +527,7 @@ func TestBatch3ExcelReadOffsetBeyondRows(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_file_not_found
-func TestBatch3ExcelReadMissingFile(t *testing.T) {
+func TestExcelReadMissingFile(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_read", map[string]any{"path": "nonexistent.xlsx"})
 	excelWantError(t, result, "not found")
@@ -534,7 +535,7 @@ func TestBatch3ExcelReadMissingFile(t *testing.T) {
 
 // Parity-exempt: openpyxl raises BadZipFile for a non-workbook; this pins the
 // equivalent Go error being reported instead of panicking.
-func TestBatch3ExcelReadCorruptWorkbook(t *testing.T) {
+func TestExcelReadCorruptWorkbook(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	if err := os.WriteFile(filepath.Join(dir, "broken.xlsx"), []byte("not a zip"), 0o644); err != nil {
 		t.Fatal(err)
@@ -544,7 +545,7 @@ func TestBatch3ExcelReadCorruptWorkbook(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_non_xlsx_extension
-func TestBatch3ExcelReadRejectsExtension(t *testing.T) {
+func TestExcelReadRejectsExtension(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	if err := os.WriteFile(filepath.Join(dir, "data.txt"), []byte("name,age\nAlice,30\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -554,7 +555,7 @@ func TestBatch3ExcelReadRejectsExtension(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_empty_xlsx_file
-func TestBatch3ExcelReadEmptyWorkbook(t *testing.T) {
+func TestExcelReadEmptyWorkbook(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	buildFixtureWorkbook(t, filepath.Join(dir, "empty.xlsx"), []fixtureSheet{{name: "Sheet1"}}, nil)
 	result := excelAction(t, registry, "excel_read", map[string]any{"path": "empty.xlsx"})
@@ -568,7 +569,7 @@ func TestBatch3ExcelReadEmptyWorkbook(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_headers_only_xlsx
-func TestBatch3ExcelReadHeadersOnly(t *testing.T) {
+func TestExcelReadHeadersOnly(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	buildFixtureWorkbook(t, filepath.Join(dir, "headers_only.xlsx"), []fixtureSheet{
 		{name: "Sheet1", rows: [][]fixtureCell{{fxText("name"), fxText("age"), fxText("city")}}},
@@ -585,7 +586,7 @@ func TestBatch3ExcelReadHeadersOnly(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_negative_limit, tools/tests/tools/test_excel_tool.py::test_negative_offset
-func TestBatch3ExcelReadNegativePaging(t *testing.T) {
+func TestExcelReadNegativePaging(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	for _, input := range []map[string]any{
 		{"path": "basic.xlsx", "limit": -1},
@@ -597,7 +598,7 @@ func TestBatch3ExcelReadNegativePaging(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_read_with_dates
-func TestBatch3ExcelReadDates(t *testing.T) {
+func TestExcelReadDates(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	stamp := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
 	buildFixtureWorkbook(t, filepath.Join(dir, "dates.xlsx"), []fixtureSheet{
@@ -619,7 +620,7 @@ func TestBatch3ExcelReadDates(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_path_traversal_blocked
-func TestBatch3ExcelReadPathTraversalBlocked(t *testing.T) {
+func TestExcelReadPathTraversalBlocked(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_read", map[string]any{"path": "../../../etc/passwd.xlsx"})
 	excelWantError(t, result, "denied")
@@ -628,7 +629,7 @@ func TestBatch3ExcelReadPathTraversalBlocked(t *testing.T) {
 // Parity-exempt: openpyxl returns cached formula results under data_only=True;
 // this asserts the same contract in the Go reader, which never evaluates
 // formulas itself.
-func TestBatch3ExcelReadCachedFormulaAndBlankCells(t *testing.T) {
+func TestExcelReadCachedFormulaAndBlankCells(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	buildFixtureWorkbook(t, filepath.Join(dir, "formulas.xlsx"), []fixtureSheet{
 		{name: "Sheet1", rows: [][]fixtureCell{
@@ -669,7 +670,7 @@ func TestBatch3ExcelReadCachedFormulaAndBlankCells(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_write_new_xlsx
-func TestBatch3ExcelWriteNewFile(t *testing.T) {
+func TestExcelWriteNewFile(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_write", map[string]any{
 		"path":    "output.xlsx",
@@ -685,7 +686,7 @@ func TestBatch3ExcelWriteNewFile(t *testing.T) {
 	excelWantInt(t, result, "rows_written", 2)
 	excelWantInt(t, result, "column_count", 3)
 	excelWantString(t, result, "sheet_name", "Sheet1")
-	if !fileExists(filepath.Join(dir, "output.xlsx")) {
+	if !integrationkit.FileExists(filepath.Join(dir, "output.xlsx")) {
 		t.Fatal("output.xlsx was not written")
 	}
 	read := excelAction(t, registry, "excel_read", map[string]any{"path": "output.xlsx"})
@@ -696,7 +697,7 @@ func TestBatch3ExcelWriteNewFile(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_write_with_custom_sheet_name
-func TestBatch3ExcelWriteCustomSheet(t *testing.T) {
+func TestExcelWriteCustomSheet(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_write", map[string]any{
 		"path":    "output.xlsx",
@@ -712,7 +713,7 @@ func TestBatch3ExcelWriteCustomSheet(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_write_creates_parent_directories
-func TestBatch3ExcelWriteCreatesParentDirs(t *testing.T) {
+func TestExcelWriteCreatesParentDirs(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_write", map[string]any{
 		"path":    "subdir/nested/output.xlsx",
@@ -722,13 +723,13 @@ func TestBatch3ExcelWriteCreatesParentDirs(t *testing.T) {
 	if result["success"] != true {
 		t.Fatalf("result = %#v", result)
 	}
-	if !fileExists(filepath.Join(dir, "subdir", "nested", "output.xlsx")) {
+	if !integrationkit.FileExists(filepath.Join(dir, "subdir", "nested", "output.xlsx")) {
 		t.Fatal("nested workbook missing")
 	}
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_write_empty_columns_error
-func TestBatch3ExcelWriteEmptyColumns(t *testing.T) {
+func TestExcelWriteEmptyColumns(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_write", map[string]any{
 		"path":    "output.xlsx",
@@ -739,7 +740,7 @@ func TestBatch3ExcelWriteEmptyColumns(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_write_non_xlsx_extension_error
-func TestBatch3ExcelWriteRejectsExtension(t *testing.T) {
+func TestExcelWriteRejectsExtension(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_write", map[string]any{
 		"path":    "output.txt",
@@ -750,7 +751,7 @@ func TestBatch3ExcelWriteRejectsExtension(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_write_empty_rows
-func TestBatch3ExcelWriteEmptyRows(t *testing.T) {
+func TestExcelWriteEmptyRows(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_write", map[string]any{
 		"path":    "output.xlsx",
@@ -770,7 +771,7 @@ func TestBatch3ExcelWriteEmptyRows(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_append_to_existing_xlsx
-func TestBatch3ExcelAppendRows(t *testing.T) {
+func TestExcelAppendRows(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_append", map[string]any{
 		"path": "basic.xlsx",
@@ -793,7 +794,7 @@ func TestBatch3ExcelAppendRows(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_append_to_specific_sheet
-func TestBatch3ExcelAppendSpecificSheet(t *testing.T) {
+func TestExcelAppendSpecificSheet(t *testing.T) {
 	registry, dir := excelMultiSheetFixture(t)
 	target := filepath.Join(dir, "multi_sheet.xlsx")
 	beforeEmployees := readZipPart(t, target, "xl/worksheets/sheet1.xml")
@@ -822,7 +823,7 @@ func TestBatch3ExcelAppendSpecificSheet(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_append_file_not_found
-func TestBatch3ExcelAppendMissingFile(t *testing.T) {
+func TestExcelAppendMissingFile(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_append", map[string]any{
 		"path": "nonexistent.xlsx",
@@ -832,14 +833,14 @@ func TestBatch3ExcelAppendMissingFile(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_append_empty_rows_error
-func TestBatch3ExcelAppendEmptyRows(t *testing.T) {
+func TestExcelAppendEmptyRows(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_append", map[string]any{"path": "basic.xlsx", "rows": []map[string]any{}})
 	excelWantError(t, result, "empty")
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_append_non_xlsx_extension_error
-func TestBatch3ExcelAppendRejectsExtension(t *testing.T) {
+func TestExcelAppendRejectsExtension(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	if err := os.WriteFile(filepath.Join(dir, "data.txt"), []byte("name\nAlice\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -856,7 +857,7 @@ func TestBatch3ExcelAppendRejectsExtension(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_get_info_basic_xlsx
-func TestBatch3ExcelInfoBasic(t *testing.T) {
+func TestExcelInfoBasic(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_info", map[string]any{"path": "basic.xlsx"})
 	if result["success"] != true {
@@ -883,7 +884,7 @@ func TestBatch3ExcelInfoBasic(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_get_info_multi_sheet_xlsx
-func TestBatch3ExcelInfoMultiSheet(t *testing.T) {
+func TestExcelInfoMultiSheet(t *testing.T) {
 	registry, _ := excelMultiSheetFixture(t)
 	result := excelAction(t, registry, "excel_info", map[string]any{"path": "multi_sheet.xlsx"})
 	excelWantInt(t, result, "sheet_count", 3)
@@ -906,14 +907,14 @@ func TestBatch3ExcelInfoMultiSheet(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_get_info_file_not_found
-func TestBatch3ExcelInfoMissingFile(t *testing.T) {
+func TestExcelInfoMissingFile(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_info", map[string]any{"path": "nonexistent.xlsx"})
 	excelWantError(t, result, "not found")
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_get_info_non_xlsx_extension_error
-func TestBatch3ExcelInfoRejectsExtension(t *testing.T) {
+func TestExcelInfoRejectsExtension(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	if err := os.WriteFile(filepath.Join(dir, "data.txt"), []byte("name\nAlice\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -923,7 +924,7 @@ func TestBatch3ExcelInfoRejectsExtension(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_list_sheets_basic
-func TestBatch3ExcelSheetListBasic(t *testing.T) {
+func TestExcelSheetListBasic(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_sheet_list", map[string]any{"path": "basic.xlsx"})
 	if names := excelStrings(t, result, "sheet_names"); len(names) != 1 || names[0] != "Sheet1" {
@@ -933,7 +934,7 @@ func TestBatch3ExcelSheetListBasic(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_list_sheets_multi_sheet
-func TestBatch3ExcelSheetListMultiSheet(t *testing.T) {
+func TestExcelSheetListMultiSheet(t *testing.T) {
 	registry, _ := excelMultiSheetFixture(t)
 	result := excelAction(t, registry, "excel_sheet_list", map[string]any{"path": "multi_sheet.xlsx"})
 	excelWantInt(t, result, "sheet_count", 3)
@@ -943,14 +944,14 @@ func TestBatch3ExcelSheetListMultiSheet(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_list_sheets_file_not_found
-func TestBatch3ExcelSheetListMissingFile(t *testing.T) {
+func TestExcelSheetListMissingFile(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_sheet_list", map[string]any{"path": "nonexistent.xlsx"})
 	excelWantError(t, result, "not found")
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_list_sheets_non_xlsx_extension_error
-func TestBatch3ExcelSheetListRejectsExtension(t *testing.T) {
+func TestExcelSheetListRejectsExtension(t *testing.T) {
 	registry, dir := newExcelTestRegistry(t)
 	if err := os.WriteFile(filepath.Join(dir, "data.txt"), []byte("name\nAlice\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -964,7 +965,7 @@ func TestBatch3ExcelSheetListRejectsExtension(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_basic_contains
-func TestBatch3ExcelSearchContains(t *testing.T) {
+func TestExcelSearchContains(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{"path": "basic.xlsx", "search_term": "Alice"})
 	matches, _ := result["matches"].([]map[string]any)
@@ -980,7 +981,7 @@ func TestBatch3ExcelSearchContains(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_case_insensitive
-func TestBatch3ExcelSearchCaseInsensitive(t *testing.T) {
+func TestExcelSearchCaseInsensitive(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{
 		"path": "basic.xlsx", "search_term": "alice", "case_sensitive": false,
@@ -989,7 +990,7 @@ func TestBatch3ExcelSearchCaseInsensitive(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_case_sensitive
-func TestBatch3ExcelSearchCaseSensitive(t *testing.T) {
+func TestExcelSearchCaseSensitive(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{
 		"path": "basic.xlsx", "search_term": "alice", "case_sensitive": true,
@@ -998,7 +999,7 @@ func TestBatch3ExcelSearchCaseSensitive(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_exact_match
-func TestBatch3ExcelSearchExact(t *testing.T) {
+func TestExcelSearchExact(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{
 		"path": "basic.xlsx", "search_term": "NYC", "match_type": "exact",
@@ -1011,7 +1012,7 @@ func TestBatch3ExcelSearchExact(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_starts_with
-func TestBatch3ExcelSearchStartsWith(t *testing.T) {
+func TestExcelSearchStartsWith(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{
 		"path": "basic.xlsx", "search_term": "Ch", "match_type": "starts_with",
@@ -1020,7 +1021,7 @@ func TestBatch3ExcelSearchStartsWith(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_across_sheets
-func TestBatch3ExcelSearchAcrossSheets(t *testing.T) {
+func TestExcelSearchAcrossSheets(t *testing.T) {
 	registry, _ := excelMultiSheetFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{"path": "multi_sheet.xlsx", "search_term": "Alice"})
 	if searched := excelStrings(t, result, "sheets_searched"); len(searched) != 3 {
@@ -1032,7 +1033,7 @@ func TestBatch3ExcelSearchAcrossSheets(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_specific_sheet
-func TestBatch3ExcelSearchSpecificSheet(t *testing.T) {
+func TestExcelSearchSpecificSheet(t *testing.T) {
 	registry, _ := excelMultiSheetFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{
 		"path": "multi_sheet.xlsx", "search_term": "Widget", "sheet": "Products",
@@ -1046,7 +1047,7 @@ func TestBatch3ExcelSearchSpecificSheet(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_skips_header_row
-func TestBatch3ExcelSearchSkipsHeader(t *testing.T) {
+func TestExcelSearchSkipsHeader(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{
 		"path": "basic.xlsx", "search_term": "name", "match_type": "exact",
@@ -1055,7 +1056,7 @@ func TestBatch3ExcelSearchSkipsHeader(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_no_matches
-func TestBatch3ExcelSearchNoMatches(t *testing.T) {
+func TestExcelSearchNoMatches(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{"path": "basic.xlsx", "search_term": "ZZZZNOTFOUND"})
 	excelWantInt(t, result, "match_count", 0)
@@ -1065,14 +1066,14 @@ func TestBatch3ExcelSearchNoMatches(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_empty_term_error
-func TestBatch3ExcelSearchEmptyTerm(t *testing.T) {
+func TestExcelSearchEmptyTerm(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{"path": "basic.xlsx", "search_term": ""})
 	excelWantError(t, result, "empty")
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_invalid_match_type
-func TestBatch3ExcelSearchInvalidMatchType(t *testing.T) {
+func TestExcelSearchInvalidMatchType(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{
 		"path": "basic.xlsx", "search_term": "test", "match_type": "invalid",
@@ -1081,7 +1082,7 @@ func TestBatch3ExcelSearchInvalidMatchType(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_search_file_not_found
-func TestBatch3ExcelSearchMissingFile(t *testing.T) {
+func TestExcelSearchMissingFile(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	result := excelAction(t, registry, "excel_search", map[string]any{"path": "nonexistent.xlsx", "search_term": "test"})
 	excelWantError(t, result, "not found")
@@ -1092,7 +1093,7 @@ func TestBatch3ExcelSearchMissingFile(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_write_then_read
-func TestBatch3ExcelWriteThenRead(t *testing.T) {
+func TestExcelWriteThenRead(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	write := excelAction(t, registry, "excel_write", map[string]any{
 		"path":    "test.xlsx",
@@ -1126,7 +1127,7 @@ func TestBatch3ExcelWriteThenRead(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_excel_tool.py::test_write_append_read
-func TestBatch3ExcelWriteAppendRead(t *testing.T) {
+func TestExcelWriteAppendRead(t *testing.T) {
 	registry, _ := newExcelTestRegistry(t)
 	excelAction(t, registry, "excel_write", map[string]any{
 		"path":    "test.xlsx",
@@ -1154,14 +1155,14 @@ func TestBatch3ExcelWriteAppendRead(t *testing.T) {
 
 // Parity-exempt: excel_sql is intentionally absent (DuckDB dependency); this
 // pins the documented gap so a later lane cannot claim it silently.
-func TestBatch3ExcelSqlNotPorted(t *testing.T) {
+func TestExcelSqlNotPorted(t *testing.T) {
 	registry, _ := excelBasicFixture(t)
 	_, err := registry.Execute(context.Background(), "excel", map[string]any{
 		"action": "excel_sql",
 		"path":   "basic.xlsx",
 		"query":  "SELECT * FROM data",
 	})
-	if !errors.Is(err, ErrUnknownAction) {
+	if !errors.Is(err, integrationkit.ErrUnknownAction) {
 		t.Fatalf("err = %v, want ErrUnknownAction", err)
 	}
 	tool, _ := registry.Lookup("excel")

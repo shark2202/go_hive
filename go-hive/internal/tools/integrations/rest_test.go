@@ -136,7 +136,7 @@ func TestEveryDeclarativeActionExecutes(t *testing.T) {
 		t.Run(module.tool, func(t *testing.T) {
 			executed := 0
 			for _, action := range tool.Actions {
-				if _, ok := scoped.specs[module.tool][action.Name]; !ok {
+				if _, ok := scoped.Specs(module.tool)[action.Name]; !ok {
 					continue
 				}
 				input := map[string]any{"action": action.Name}

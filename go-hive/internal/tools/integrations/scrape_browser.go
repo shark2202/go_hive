@@ -64,34 +64,34 @@ import (
 )
 
 const (
-	// batch3ChromeNavTimeout mirrors upstream page.goto(timeout=30000).
-	batch3ChromeNavTimeout = 30 * time.Second
-	// batch3ChromeIdleWait mirrors wait_for_load_state("networkidle",
+	// chromeNavTimeout mirrors upstream page.goto(timeout=30000).
+	chromeNavTimeout = 30 * time.Second
+	// chromeIdleWait mirrors wait_for_load_state("networkidle",
 	// timeout=3000); its timeout is swallowed upstream too.
-	batch3ChromeIdleWait = 3 * time.Second
-	// batch3ChromeIdleWindow is the quiet period rod needs to call the network
+	chromeIdleWait = 3 * time.Second
+	// chromeIdleWindow is the quiet period rod needs to call the network
 	// idle. Playwright's networkidle uses the same 500ms convention.
-	batch3ChromeIdleWindow = 500 * time.Millisecond
-	// batch3ChromeRenderTimeout bounds launch + navigation + DOM read for one
+	chromeIdleWindow = 500 * time.Millisecond
+	// chromeRenderTimeout bounds launch + navigation + DOM read for one
 	// scrape. It sits above goto's 30s so the navigation timeout wins inside
 	// the call, like upstream's 30s goto inside the agent-loop budget.
-	batch3ChromeRenderTimeout = 45 * time.Second
-	// batch3ChromeHealthCheck bounds the CDP round-trip that decides whether
+	chromeRenderTimeout = 45 * time.Second
+	// chromeHealthCheck bounds the CDP round-trip that decides whether
 	// the shared browser is still alive, so a wedged process cannot block the
 	// pool mutex indefinitely.
-	batch3ChromeHealthCheck = 2 * time.Second
+	chromeHealthCheck = 2 * time.Second
 )
 
-// batch3ChromeCandidates mirrors internal/charts/chrome.go's discovery order:
+// chromeCandidates mirrors internal/charts/chrome.go's discovery order:
 // $CHROME_PATH, the macOS bundles, then PATH names. The charts package owns
 // that list; web_scrape repeats it instead of importing a sibling lane's
 // package (see the lane report).
-var batch3ChromeCandidates = []string{
+var chromeCandidates = []string{
 	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 	"/Applications/Chromium.app/Contents/MacOS/Chromium",
 }
 
-var batch3ChromePathNames = []string{
+var chromePathNames = []string{
 	"google-chrome",
 	"google-chrome-stable",
 	"chromium",
@@ -99,11 +99,11 @@ var batch3ChromePathNames = []string{
 	"chrome",
 }
 
-// batch3FindChrome resolves the browser binary. Tests replace it to drive the
+// findScrapeChrome resolves the browser binary. Tests replace it to drive the
 // no-browser path without touching the host.
-var batch3FindChrome = findScrapeChrome
+var findScrapeChrome = locateChrome
 
-func findScrapeChrome() (string, error) {
+func locateChrome() (string, error) {
 	if override := strings.TrimSpace(os.Getenv("CHROME_PATH")); override != "" {
 		path, err := exec.LookPath(override)
 		if err != nil {
@@ -111,46 +111,46 @@ func findScrapeChrome() (string, error) {
 		}
 		return path, nil
 	}
-	for _, candidate := range batch3ChromeCandidates {
+	for _, candidate := range chromeCandidates {
 		if path, err := exec.LookPath(candidate); err == nil && path != "" {
 			return path, nil
 		}
 	}
-	for _, name := range batch3ChromePathNames {
+	for _, name := range chromePathNames {
 		if path, err := exec.LookPath(name); err == nil && path != "" {
 			return path, nil
 		}
 	}
 	return "", fmt.Errorf("no Chrome/Chromium found: set CHROME_PATH or install Google Chrome "+
 		"(looked for %s and PATH entries %s)",
-		strings.Join(batch3ChromeCandidates, ", "), strings.Join(batch3ChromePathNames, ", "))
+		strings.Join(chromeCandidates, ", "), strings.Join(chromePathNames, ", "))
 }
 
-// batch3BrowserUnavailableError marks "no usable Chrome/Chromium". Upstream's
+// browserUnavailableError marks "no usable Chrome/Chromium". Upstream's
 // equivalent is Playwright being absent, where the tool is simply not
 // registered; a Go catalogue cannot drop a tool at call time, so the call
 // returns this explicit, recognizable error instead of faking a result.
-type batch3BrowserUnavailableError struct{ reason string }
+type browserUnavailableError struct{ reason string }
 
-func (e *batch3BrowserUnavailableError) Error() string {
+func (e *browserUnavailableError) Error() string {
 	return "Browser unavailable: " + e.reason
 }
 
-// batch3BrowserPool owns the one headless browser process shared by every
+// browserPool owns the one headless browser process shared by every
 // scrape call (lazy start, mutex-guarded, recycled on timeout/failure).
-type batch3BrowserPool struct {
+type browserPool struct {
 	mu       sync.Mutex
 	browser  *rod.Browser
 	launcher *launcher.Launcher
 }
 
-var batch3ChromePool batch3BrowserPool
+var chromePool browserPool
 
-// batch3NewChromeLauncher builds the launcher for a system Chrome binary.
+// newChromeLauncher builds the launcher for a system Chrome binary.
 // Every flag here is a deliberate Playwright-parity or stealth choice; the
 // binary is always set explicitly so launcher never falls back to rod's
 // browser download.
-func batch3NewChromeLauncher(chromePath string) *launcher.Launcher {
+func newChromeLauncher(chromePath string) *launcher.Launcher {
 	return launcher.New().
 		Bin(chromePath).
 		HeadlessNew(true).
@@ -159,19 +159,19 @@ func batch3NewChromeLauncher(chromePath string) *launcher.Launcher {
 		Set("disable-setuid-sandbox").
 		Set("disable-dev-shm-usage").
 		Set("disable-blink-features", "AutomationControlled").
-		Set("user-agent", batch3BrowserUserAgent).
+		Set("user-agent", browserUserAgent).
 		Set("window-size", "1920", "1080").
 		Set("lang", "en-US").
 		Set("accept-lang", "en-US,en")
 }
 
-func (pool *batch3BrowserPool) acquire(ctx context.Context) (*rod.Browser, error) {
+func (pool *browserPool) acquire(ctx context.Context) (*rod.Browser, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	if pool.browser != nil {
 		// A cheap CDP round-trip tells us whether the process is still alive;
 		// a dead browser is replaced instead of being handed out.
-		healthCtx, cancel := context.WithTimeout(ctx, batch3ChromeHealthCheck)
+		healthCtx, cancel := context.WithTimeout(ctx, chromeHealthCheck)
 		_, err := pool.browser.Context(healthCtx).Version()
 		cancel()
 		if err == nil {
@@ -179,21 +179,21 @@ func (pool *batch3BrowserPool) acquire(ctx context.Context) (*rod.Browser, error
 		}
 		pool.closeLocked()
 	}
-	chrome, err := batch3FindChrome()
+	chrome, err := findScrapeChrome()
 	if err != nil {
-		return nil, &batch3BrowserUnavailableError{reason: err.Error()}
+		return nil, &browserUnavailableError{reason: err.Error()}
 	}
-	launch := batch3NewChromeLauncher(chrome).Context(ctx)
+	launch := newChromeLauncher(chrome).Context(ctx)
 	controlURL, err := launch.Launch()
 	if err != nil {
 		launch.Kill()
-		return nil, &batch3BrowserUnavailableError{reason: "Chrome could not be launched: " + err.Error()}
+		return nil, &browserUnavailableError{reason: "Chrome could not be launched: " + err.Error()}
 	}
 	browser := rod.New().ControlURL(controlURL)
 	if err := browser.Connect(); err != nil {
 		launch.Kill()
 		launch.Cleanup()
-		return nil, &batch3BrowserUnavailableError{reason: "Chrome could not be reached over CDP: " + err.Error()}
+		return nil, &browserUnavailableError{reason: "Chrome could not be reached over CDP: " + err.Error()}
 	}
 	pool.browser = browser
 	pool.launcher = launch
@@ -202,7 +202,7 @@ func (pool *batch3BrowserPool) acquire(ctx context.Context) (*rod.Browser, error
 
 // closeLocked shuts the shared browser down and removes its profile. Callers
 // hold pool.mu.
-func (pool *batch3BrowserPool) closeLocked() {
+func (pool *browserPool) closeLocked() {
 	if pool.browser != nil {
 		_ = pool.browser.Close()
 		pool.browser = nil
@@ -215,38 +215,38 @@ func (pool *batch3BrowserPool) closeLocked() {
 }
 
 // recycle drops the shared browser so the next call starts a fresh process.
-func (pool *batch3BrowserPool) recycle() {
+func (pool *browserPool) recycle() {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	pool.closeLocked()
 }
 
-// batch3CloseBrowser is the test/shutdown hook for the shared browser.
-func batch3CloseBrowser() {
-	batch3ChromePool.recycle()
+// closeBrowser is the test/shutdown hook for the shared browser.
+func closeBrowser() {
+	chromePool.recycle()
 }
 
-// batch3BrowserRenderer adapts the shared headless browser to the scrape
+// browserRenderer adapts the shared headless browser to the scrape
 // renderer signature; staticHTML exists only for the test seam.
-func batch3BrowserRenderer(ctx context.Context, target, _ string) (string, error) {
-	return batch3RenderWithBrowser(ctx, target)
+func browserRenderer(ctx context.Context, target, _ string) (string, error) {
+	return renderWithBrowser(ctx, target)
 }
 
-// batch3RenderWithBrowser renders target and returns the post-JavaScript DOM.
-func batch3RenderWithBrowser(ctx context.Context, target string) (string, error) {
-	renderCtx, cancel := context.WithTimeout(ctx, batch3ChromeRenderTimeout)
+// renderWithBrowser renders target and returns the post-JavaScript DOM.
+func renderWithBrowser(ctx context.Context, target string) (string, error) {
+	renderCtx, cancel := context.WithTimeout(ctx, chromeRenderTimeout)
 	defer cancel()
 	if err := renderCtx.Err(); err != nil {
 		return "", fmt.Errorf("render budget already exhausted: %w", context.DeadlineExceeded)
 	}
-	browser, err := batch3ChromePool.acquire(renderCtx)
+	browser, err := chromePool.acquire(renderCtx)
 	if err != nil {
 		return "", err
 	}
-	html, err := batch3RenderHTML(renderCtx, browser, target)
+	html, err := renderHTML(renderCtx, browser, target)
 	if err != nil {
 		if renderCtx.Err() != nil || errors.Is(err, context.DeadlineExceeded) || errTimeout(err) {
-			batch3ChromePool.recycle()
+			chromePool.recycle()
 			return "", fmt.Errorf("page render timed out: %w", context.DeadlineExceeded)
 		}
 		return "", err
@@ -254,8 +254,8 @@ func batch3RenderWithBrowser(ctx context.Context, target string) (string, error)
 	return html, nil
 }
 
-// batch3RenderHTML drives one navigation on a fresh page and reads the DOM.
-func batch3RenderHTML(ctx context.Context, browser *rod.Browser, target string) (string, error) {
+// renderHTML drives one navigation on a fresh page and reads the DOM.
+func renderHTML(ctx context.Context, browser *rod.Browser, target string) (string, error) {
 	page, err := stealth.Page(browser)
 	if err != nil {
 		return "", fmt.Errorf("could not open a browser page: %w", err)
@@ -264,12 +264,12 @@ func batch3RenderHTML(ctx context.Context, browser *rod.Browser, target string) 
 		// Close with a fresh context: navCtx is cancelled by the defer below,
 		// and a CDP call on a cancelled context would leave the tab open in
 		// the shared browser.
-		closeCtx, closeCancel := context.WithTimeout(context.Background(), batch3ChromeHealthCheck)
+		closeCtx, closeCancel := context.WithTimeout(context.Background(), chromeHealthCheck)
 		defer closeCancel()
 		_ = page.Context(closeCtx).Close()
 	}()
 
-	navCtx, cancel := context.WithTimeout(ctx, batch3ChromeNavTimeout)
+	navCtx, cancel := context.WithTimeout(ctx, chromeNavTimeout)
 	defer cancel()
 	page = page.Context(navCtx)
 
@@ -281,15 +281,15 @@ func batch3RenderHTML(ctx context.Context, browser *rod.Browser, target string) 
 	}
 	if err := page.Wait(rod.Eval(`() => document.readyState !== "loading"`)); err != nil {
 		if navCtx.Err() != nil {
-			return "", fmt.Errorf("page did not reach domcontentloaded in %s: %w", batch3ChromeNavTimeout, context.DeadlineExceeded)
+			return "", fmt.Errorf("page did not reach domcontentloaded in %s: %w", chromeNavTimeout, context.DeadlineExceeded)
 		}
 		return "", fmt.Errorf("waiting for domcontentloaded failed: %w", err)
 	}
 
 	// Playwright: wait_for_load_state("networkidle", timeout=3000) with the
 	// timeout swallowed. The DOM is taken as-is when the quiet window expires.
-	idleCtx, cancelIdle := context.WithTimeout(ctx, batch3ChromeIdleWait)
-	page.Context(idleCtx).WaitRequestIdle(batch3ChromeIdleWindow, nil, nil, nil)()
+	idleCtx, cancelIdle := context.WithTimeout(ctx, chromeIdleWait)
+	page.Context(idleCtx).WaitRequestIdle(chromeIdleWindow, nil, nil, nil)()
 	cancelIdle()
 
 	html, err := page.Context(ctx).HTML()

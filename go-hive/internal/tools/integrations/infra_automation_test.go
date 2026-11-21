@@ -82,7 +82,7 @@ func TestBatch7Lane3Catalog(t *testing.T) {
 	}
 	for _, tool := range registry.Tools() {
 		for _, action := range tool.Actions {
-			if registry.impls[tool.Name][action.Name] == nil {
+			if registry.Impls(tool.Name)[action.Name] == nil {
 				t.Fatalf("%s.%s has no implementation", tool.Name, action.Name)
 			}
 		}

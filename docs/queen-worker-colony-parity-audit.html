@@ -159,7 +159,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 
 <tr><td class="num">14</td><td><b>Queen Mail / Claude Code Queen</b></td>
 <td><code>tools/queen_mail_tools.py</code>、<code>server/queen_mail.py</code>、<code>channels.py</code>；每次注册/发送重读配置；CC queen 走 <code>claude -p</code>，MCP 注入 <code>list_queens</code>/<code>message_queen</code>。</td>
-<td><code>internal/qmail/*</code>（引擎/日限/深度/审计）、<code>adapters_qmail.go</code>（线程会话/回复唤醒）、<code>session_tools_queen_mail.go</code>（两个会话工具、queen-only）、CC runner + MCP stdio（<code>qmail/claude_runner*.go</code>、<code>hive queen-mail-mcp</code>）。</td>
+<td><code>internal/queenmail/*</code>（引擎/日限/深度/审计）、<code>adapters_qmail.go</code>（线程会话/回复唤醒）、<code>session_tools_queen_mail.go</code>（两个会话工具、queen-only）、CC runner + MCP stdio（<code>claudecode/claude_runner*.go</code>、<code>hive queen-mail-mcp</code>）。</td>
 <td><span class="pill warn">部分</span></td>
 <td>L：真实双 queen E2E（depth 1→4，<code>docs/queen-mail.md</code> §7）+ 真实 <code>claude -p</code> 回合；C/T：<code>TestQueenMailRepliesGoBackToTheWriterAndContinueTheChain</code>、<code>TestQueenMailAdapterWakesAStoppedWritersSession</code></td>
 <td>配置只在 <code>hive serve</code> 启动时读一次（上游每次重读，改配置需重启）；fork/superseded 会话不跟随 <code>_newest_successor</code>；CC queen 的<b>真实模型主动调 <code>message_queen</code> 未联调</b>（runner/回复闭环已验）；CC 配置只在启动读取；只支持 Claude Code（不支持 Codex/OpenCode 等）。</td></tr>
@@ -325,8 +325,8 @@ go test ./internal/agentloop -run 'TestColonyParallelNudge|TestSessionStartRemin
 go test ./internal/sentinel -count=1
 
 # #14 Queen Mail / CC queen
-go test ./internal/qmail ./internal/server -run 'TestQueenMail' -count=1
-# 真实 CC 回合（需已登录 claude CLI）：HIVE_CLAUDE_REAL_TEST=1 PATH=$HOME/.npm-global/bin:$PATH go test ./internal/qmail -run TestClaudeCodeQueenRealTurn -v
+go test ./internal/queenmail ./internal/claudecode ./internal/server -run 'TestQueenMail' -count=1
+# 真实 CC 回合（需已登录 claude CLI）：HIVE_CLAUDE_REAL_TEST=1 PATH=$HOME/.npm-global/bin:$PATH go test ./internal/claudecode -run TestClaudeCodeQueenRealTurn -v
 
 # #21/#22/#23 Memory / Skills / Soul
 go test ./internal/memory ./internal/skills ./internal/soul -count=1

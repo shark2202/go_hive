@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/aden-hive/hive-go/internal/tools/integrationkit"
 )
@@ -109,40 +108,14 @@ func anyField(record []string) bool {
 }
 
 // mapRows accepts the shapes JSON and Go callers produce for a list of objects.
-func mapRows(value any) []map[string]any {
-	switch typed := value.(type) {
-	case []map[string]any:
-		return typed
-	case []any:
-		out := make([]map[string]any, 0, len(typed))
-		for _, item := range typed {
-			if row, ok := item.(map[string]any); ok {
-				out = append(out, row)
-			}
-		}
-		return out
-	case map[string]any:
-		return []map[string]any{typed}
-	default:
-		return nil
-	}
-}
+func mapRows(value any) []map[string]any { return integrationkit.MapRows(value) }
 
-func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
-}
+func fileExists(path string) bool { return integrationkit.FileExists(path) }
 
-func fileSize(path string) (int64, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return 0, err
-	}
-	return info.Size(), nil
-}
+func fileSize(path string) (int64, error) { return integrationkit.FileSize(path) }
 
 func hasSuffixFold(value, suffix string) bool {
-	return len(value) >= len(suffix) && strings.EqualFold(value[len(value)-len(suffix):], suffix)
+	return integrationkit.HasSuffixFold(value, suffix)
 }
 
 // defaultRoots keeps the historical package helper as a thin alias for the

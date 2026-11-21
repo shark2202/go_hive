@@ -77,32 +77,26 @@ func newBatch7Lane1Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{
 		batch7Lane1GitLabTool,
 		batch7Lane1S3Tool,
 		batch7Lane1VercelTool,
 		batch7Lane1DockerHubTool,
 	} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	for action, impl := range batch7Lane1GitLabImpls() {
-		registry.addImpl("gitlab", action, impl)
+		registry.AddImpl("gitlab", action, impl)
 	}
 	for action, impl := range batch7Lane1S3Impls() {
-		registry.addImpl("aws_s3", action, impl)
+		registry.AddImpl("aws_s3", action, impl)
 	}
 	for action, impl := range batch7Lane1VercelImpls() {
-		registry.addImpl("vercel", action, impl)
+		registry.AddImpl("vercel", action, impl)
 	}
 	for action, impl := range batch7Lane1DockerHubImpls() {
-		registry.addImpl("docker_hub", action, impl)
+		registry.AddImpl("docker_hub", action, impl)
 	}
 	return registry
 }

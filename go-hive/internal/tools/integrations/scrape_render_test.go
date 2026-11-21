@@ -69,17 +69,17 @@ func TestBatch3WebScrapeRendersJavaScript(t *testing.T) {
 // a tool at call time, so the call returns this explicit envelope instead.
 func TestBatch3WebScrapeBrowserUnavailable(t *testing.T) {
 	batch3ScrapeEnv(t)
-	batch3CloseBrowser()
-	oldFind := batch3FindChrome
+	closeBrowser()
+	oldFind := findScrapeChrome
 	t.Cleanup(func() {
-		batch3FindChrome = oldFind
-		batch3CloseBrowser()
+		findScrapeChrome = oldFind
+		closeBrowser()
 	})
-	batch3FindChrome = func() (string, error) {
+	findScrapeChrome = func() (string, error) {
 		return "", errors.New("no Chrome/Chromium found: set CHROME_PATH or install Google Chrome")
 	}
 	server := batch3HTMLServer(t, `<html><body><p>Static text</p></body></html>`)
-	registry := batch3TestRegistry(t, server.URL, withBatch3Renderer(batch3BrowserRenderer))
+	registry := batch3TestRegistry(t, server.URL, withBatch3Renderer(browserRenderer))
 
 	result := batch3Execute(t, registry, "web_scrape", map[string]any{"url": "https://example.com/page"})
 	if result["browser_unavailable"] != true {
@@ -140,7 +140,7 @@ func TestBatch3WebScrapeRenderTimeout(t *testing.T) {
 // Python suite has no unit test for launch configuration.
 func TestBatch3ScrapeChromeLauncherFlags(t *testing.T) {
 	path := "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-	launch := batch3NewChromeLauncher(path)
+	launch := newChromeLauncher(path)
 	if got := launch.Get(flags.Bin); got != path {
 		t.Fatalf("launcher bin = %q, want the system Chrome path", got)
 	}
@@ -151,7 +151,7 @@ func TestBatch3ScrapeChromeLauncherFlags(t *testing.T) {
 		"--disable-setuid-sandbox",
 		"--disable-dev-shm-usage",
 		"--disable-blink-features=AutomationControlled",
-		"--user-agent=" + batch3BrowserUserAgent,
+		"--user-agent=" + browserUserAgent,
 		"--window-size=1920,1080",
 		"--lang=en-US",
 	}
@@ -250,8 +250,8 @@ func TestBatch3WebScrapeRealChromeRendersJS(t *testing.T) {
 	}
 	chromePath, _ := findScrapeChrome()
 	t.Logf("system browser: %s", chromePath)
-	batch3CloseBrowser()
-	t.Cleanup(batch3CloseBrowser)
+	closeBrowser()
+	t.Cleanup(closeBrowser)
 
 	staticPage := `<html><body><main><h1>Static</h1><p>Server-rendered text.</p></main></body></html>`
 	jsShell := `<html><body><div id="root"></div><noscript>You need to enable JavaScript.</noscript>` +
@@ -270,7 +270,7 @@ func TestBatch3WebScrapeRealChromeRendersJS(t *testing.T) {
 	defer server.Close()
 
 	ctx := context.Background()
-	staticDOM, err := batch3RenderWithBrowser(ctx, server.URL+"/static")
+	staticDOM, err := renderWithBrowser(ctx, server.URL+"/static")
 	if err != nil {
 		t.Fatalf("render static page: %v", err)
 	}
@@ -285,7 +285,7 @@ func TestBatch3WebScrapeRealChromeRendersJS(t *testing.T) {
 		t.Fatalf("JS shell must be empty without rendering, got %q", jsOffBody)
 	}
 	// JS on: the real browser must execute the inline script.
-	jsDOM, err := batch3RenderWithBrowser(ctx, server.URL+"/js")
+	jsDOM, err := renderWithBrowser(ctx, server.URL+"/js")
 	if err != nil {
 		t.Fatalf("render JS page: %v", err)
 	}
@@ -296,9 +296,9 @@ func TestBatch3WebScrapeRealChromeRendersJS(t *testing.T) {
 	}
 
 	// The shared browser process is reused, not relaunched per call.
-	batch3ChromePool.mu.Lock()
-	first := batch3ChromePool.browser
-	batch3ChromePool.mu.Unlock()
+	chromePool.mu.Lock()
+	first := chromePool.browser
+	chromePool.mu.Unlock()
 	if first == nil {
 		t.Fatal("shared browser missing after a successful render")
 	}

@@ -42,21 +42,15 @@ func newBatch5Lane4Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{batch5HubSpotTool, batch5ObsidianTool} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	for action, impl := range batch5HubSpotImpls() {
-		registry.addImpl("hubspot", action, impl)
+		registry.AddImpl("hubspot", action, impl)
 	}
 	for action, impl := range batch5ObsidianImpls() {
-		registry.addImpl("obsidian", action, impl)
+		registry.AddImpl("obsidian", action, impl)
 	}
 	return registry
 }

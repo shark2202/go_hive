@@ -79,18 +79,12 @@ func newBatch3Registry(opts ...batch3Option) *Registry {
 		Getenv:      os.Getenv,
 		ResolveHost: deps.scrapeResolver,
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{batch3PDFTool, batch3ScrapeTool} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
-	registry.addImpl("pdf_read", "pdf_read", pdfReadAction)
-	registry.addImpl("web_scrape", "web_scrape", func(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	registry.AddImpl("pdf_read", "pdf_read", pdfReadAction)
+	registry.AddImpl("web_scrape", "web_scrape", func(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 		return webScrapeAction(ctx, rt, input, deps.scrapeResolver, deps.scrapeRenderer)
 	})
 	return registry

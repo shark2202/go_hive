@@ -77,15 +77,9 @@ func newBatch8FinalRegistry(opts ...batch8Option) *Registry {
 		Modules: modules,
 		Getenv:  os.Getenv,
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range batch8Catalog {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	impls := map[string]map[string]ActionFunc{
 		"attach_file":         {"attach_file": attachFile},
@@ -94,7 +88,7 @@ func newBatch8FinalRegistry(opts ...batch8Option) *Registry {
 	}
 	for tool, actions := range impls {
 		for action, fn := range actions {
-			registry.addImpl(tool, action, fn)
+			registry.AddImpl(tool, action, fn)
 		}
 	}
 	return registry

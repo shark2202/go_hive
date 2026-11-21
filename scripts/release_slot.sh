@@ -25,6 +25,12 @@ notify() {
   osascript -e "display notification \"${2//\"/\\\"}\" with title \"${1//\"/\\\"}\"" >/dev/null 2>&1 || true
 }
 
+# 2h 汇报与交付留档：五段式报告 → docs/reports/slot-<slot>.md（gen_report.py 内部提交）
+gen_slot_report() {
+  python3 "$GO_ROOT/scripts/gen_report.py" slot "$slot_id" >>"$SLOTS/report_gen.log" 2>&1 \
+    || notify "Hive slot 汇报生成失败" "$slot_id：见 dist/slots/report_gen.log"
+}
+
 now_epoch=$(date +%s)
 if [ $# -ge 1 ]; then
   slot_id="$1"
@@ -176,12 +182,14 @@ PY
 if [ "$compat_status" = "compat_failed" ]; then
   write_cadence compat_failed "$head" "$artifact" "sha256=$sha bytes=$size; $compat_detail" "$compat_status"
   notify "Hive slot 版升级兼容门禁失败" "${slot_id}：${compat_detail}"
+  gen_slot_report
   echo "release-slot: compat_failed $artifact ($compat_detail)"
   exit 1
 fi
 
 write_cadence ok "$head" "$artifact" "sha256=$sha bytes=$size; compat=$compat_status ($compat_detail)" "$compat_status"
 notify "Hive slot 版完成" "$slot_id · ${version} · ${head} · compat=$compat_status"
+gen_slot_report
 
 # 只保留最近 KEEP 个 slot，避免每 2 小时累积占盘（compat 工作区同步清理）
 list=$(mktemp)

@@ -32,8 +32,12 @@ PARITY_TARGETS ?= ../scripts/check_parity_targets.sh
 PY_ROOT   ?= ../../core
 OFFLINE    = CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod
 PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
+# -count=1 关闭 go test 缓存：缓存会复用旧的 PASS。2026-11-21 曾因此把
+# internal/playbook 的挂起伪装成 cached ok（实际 -count=1 会 hang），CI 的
+# test 门禁必须每次真跑。
+TEST_FLAGS ?= -count=1
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest module-inventory-check module-inventory-selftest upgrade-compat-check vulncheck install-verify arch-check ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest module-inventory-check module-inventory-selftest upgrade-compat-check vulncheck install-verify arch-check refactor-freeze ci clean help
 
 all: ci
 
@@ -59,13 +63,14 @@ help:
 	@echo "  make upgrade-compat-check 升级兼容门禁（PREV_SLOT=<上一交付二进制目录> [NEW_SLOT=...]）"
 	@echo "  make vulncheck          依赖漏洞门禁（govulncheck；离线降级明确 UNVERIFIED，退出码 3）"
 	@echo "  make install-verify     安装/升级端到端复验（SLOT_DIR=<slot 目录> [OLD_DIR=...]）"
+	@echo "  make refactor-freeze  结构重构的行为冻结验收（compare wave15-base；不进 ci）"
 	@echo "  make ci          fmt-check + vet + test + cross + parity + parity-targets + wiring + compat-check + arch-check"
 
 test:
-	$(OFFLINE) $(GO) test ./...
+	$(OFFLINE) $(GO) test $(TEST_FLAGS) ./...
 
 test-v:
-	$(OFFLINE) $(GO) test -v ./...
+	$(OFFLINE) $(GO) test $(TEST_FLAGS) -v ./...
 
 vet:
 	$(OFFLINE) $(GO) vet ./...
@@ -261,6 +266,13 @@ arch-check:
 		echo "arch-check: BLOCKED — python3 unavailable; architecture docs NOT verified"; \
 		exit 1; \
 	fi
+
+# 结构重构（package 拆分 / 文件移动 / 重命名）的行为冻结验收：对比
+# docs/refactor-freeze/wave15-base.json 记录的契约文件 sha256（10 个），
+# 漂移且未在 allowlist.json 说明即失败。合法 parity 变更会移动契约，所以
+# 本目标不进 ci；重构 lane 必须手动跑并在报告里贴输出。
+refactor-freeze:
+	@bash ../scripts/refactor_freeze.sh compare wave15-base
 
 ci: fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check
 

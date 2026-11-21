@@ -55,24 +55,18 @@ func newBatch5Lane1Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{batch5Lane1JiraTool, batch5Lane1ConfluenceTool, batch5Lane1AsanaTool} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	for action, impl := range batch5Lane1JiraImpls() {
-		registry.addImpl("jira", action, impl)
+		registry.AddImpl("jira", action, impl)
 	}
 	for action, impl := range batch5Lane1ConfluenceImpls() {
-		registry.addImpl("confluence", action, impl)
+		registry.AddImpl("confluence", action, impl)
 	}
 	for action, impl := range batch5Lane1AsanaImpls() {
-		registry.addImpl("asana", action, impl)
+		registry.AddImpl("asana", action, impl)
 	}
 	return registry
 }

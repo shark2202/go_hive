@@ -66,7 +66,7 @@ func TestBatch5Lane3Catalog(t *testing.T) {
 			t.Fatalf("%s actions = %d, want %d", name, len(tool.Actions), count)
 		}
 		for _, action := range tool.Actions {
-			if registry.impls[name][action.Name] == nil {
+			if registry.Impls(name)[action.Name] == nil {
 				t.Fatalf("%s.%s has no implementation", name, action.Name)
 			}
 		}
@@ -84,7 +84,8 @@ func TestBatch5Lane3Catalog(t *testing.T) {
 func TestBatch5Lane3MissingCredentials(t *testing.T) {
 	registry := newBatch5Lane3Registry(WithGetenv(func(string) string { return "" }))
 	for _, tool := range []string{"google_sheets", "google_docs", "gmail", "calendar"} {
-		action := registry.tools[tool].Actions[0].Name
+		toolDef, _ := registry.Lookup(tool)
+		action := toolDef.Actions[0].Name
 		result := batch4Execute(t, registry, tool, map[string]any{"action": action})
 		if _, ok := result["error"]; !ok {
 			t.Fatalf("%s without credential = %v", tool, result)

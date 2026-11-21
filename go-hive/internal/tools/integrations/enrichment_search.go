@@ -65,12 +65,7 @@ func batch7Lane5NewRegistry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, item := range []*Tool{
 		batch7Lane5ApifyTool,
 		batch7Lane5ApolloTool,
@@ -78,8 +73,7 @@ func batch7Lane5NewRegistry(opts ...Option) *Registry {
 		batch7Lane5SerpapiTool,
 		batch7Lane5ExaTool,
 	} {
-		registry.tools[item.Name] = item
-		registry.order = append(registry.order, item.Name)
+		registry.AddTool(item)
 	}
 	for name, impls := range map[string]map[string]ActionFunc{
 		"apify":      batch7Lane5ApifyImpls(),
@@ -89,7 +83,7 @@ func batch7Lane5NewRegistry(opts ...Option) *Registry {
 		"exa_search": batch7Lane5ExaImpls(),
 	} {
 		for action, impl := range impls {
-			registry.addImpl(name, action, impl)
+			registry.AddImpl(name, action, impl)
 		}
 	}
 	return registry

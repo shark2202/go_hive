@@ -1509,7 +1509,7 @@ func TestBatch7Lane5ExaSearchNews(t *testing.T) {
 			})
 		},
 	)
-	registry.runtime.Now = func() time.Time { return time.Date(2026, time.November, 19, 12, 0, 0, 0, time.UTC) }
+	registry.Runtime().Now = func() time.Time { return time.Date(2026, time.November, 19, 12, 0, 0, 0, time.UTC) }
 	result := batch7Lane5Execute(t, registry, "exa_search", map[string]any{
 		"action": "exa_search_news", "query": "AI news", "days_back": 7,
 	})
@@ -1700,7 +1700,7 @@ func TestBatch7Lane5CatalogIntegrity(t *testing.T) {
 			if action.Source == "" {
 				t.Fatalf("%s.%s missing source", name, action.Name)
 			}
-			if registry.impls[name][action.Name] == nil {
+			if registry.Impls(name)[action.Name] == nil {
 				t.Fatalf("%s.%s has no implementation", name, action.Name)
 			}
 		}

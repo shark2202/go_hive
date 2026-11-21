@@ -77,15 +77,9 @@ func newBatch2Registry(opts ...batch2Option) *Registry {
 		Modules: batch2Modules(),
 		Getenv:  os.Getenv,
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range batch2Catalog {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 
 	impls := map[string]map[string]ActionFunc{
@@ -133,7 +127,7 @@ func newBatch2Registry(opts ...batch2Option) *Registry {
 	}
 	for tool, actions := range impls {
 		for action, fn := range actions {
-			registry.addImpl(tool, action, fn)
+			registry.AddImpl(tool, action, fn)
 		}
 	}
 	return registry
@@ -164,36 +158,6 @@ func batch2BaseURL(rt *Runtime, moduleID string, vars map[string]string) string 
 		base = strings.ReplaceAll(base, "{"+name+"}", value)
 	}
 	return base
-}
-
-// param builds a JSON-schema property with only a type.
-func param(typ string) map[string]any { return map[string]any{"type": typ} }
-
-// paramDefault builds a JSON-schema property with an upstream default.
-func paramDefault(typ string, value any) map[string]any {
-	return map[string]any{"type": typ, "default": value}
-}
-
-// paramItems builds an array property whose items carry the upstream element
-// type (Python list[str] / list[dict]). The Go port keeps the same schema so a
-// model that respects item types behaves identically on both runtimes.
-func paramItems(typ, itemType string) map[string]any {
-	return map[string]any{"type": typ, "items": param(itemType)}
-}
-
-// paramEnumDefault builds an enum property with an upstream default and the
-// upstream Literal member order (Python Literal[...]).
-func paramEnumDefault(typ string, value any, values []string) map[string]any {
-	return map[string]any{"type": typ, "default": value, "enum": values}
-}
-
-// paramArrayOfObjects is the upstream list[dict] shape: an array whose items
-// are free-form objects (additionalProperties: true).
-func paramArrayOfObjects() map[string]any {
-	return map[string]any{
-		"type":  "array",
-		"items": map[string]any{"type": "object", "additionalProperties": true},
-	}
 }
 
 // batch2Catalog mirrors gen_catalog.py output for the ten batch-2 modules.

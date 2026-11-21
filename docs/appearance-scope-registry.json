@@ -1298,7 +1298,8 @@
       "go": [
         "go_hive/go-hive/internal/colony/",
         "go_hive/go-hive/internal/host/",
-        "go_hive/go-hive/internal/qmail/",
+        "go_hive/go-hive/internal/queenmail/",
+        "go_hive/go-hive/internal/claudecode/",
         "go_hive/go-hive/internal/queen/"
       ],
       "evidence": [

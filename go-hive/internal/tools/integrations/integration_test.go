@@ -39,8 +39,8 @@ func TestCatalogIntegrity(t *testing.T) {
 			if _, ok := tool.Action(action.Name); !ok {
 				t.Fatalf("%s missing action %s", tool.Name, action.Name)
 			}
-			_, hasSpec := registry.specs[tool.Name][action.Name]
-			hasImpl := registry.impls[tool.Name][action.Name] != nil
+			_, hasSpec := registry.Specs(tool.Name)[action.Name]
+			hasImpl := registry.Impls(tool.Name)[action.Name] != nil
 			if !hasSpec && !hasImpl {
 				t.Fatalf("%s.%s has neither spec nor implementation", tool.Name, action.Name)
 			}

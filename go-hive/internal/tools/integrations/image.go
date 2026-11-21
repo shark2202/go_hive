@@ -168,20 +168,14 @@ func newBatch3MediaRegistry(opts ...batch3MediaOption) *Registry {
 		Modules: modules,
 		Getenv:  deps.getenv,
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{batch3ImageTool(), batch3WebSearchTool()} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
-	registry.addImpl("image_generate", "image_generate", func(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	registry.AddImpl("image_generate", "image_generate", func(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 		return imageGenerate(ctx, rt, input, deps)
 	})
-	registry.addImpl("web_search", "web_search", func(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	registry.AddImpl("web_search", "web_search", func(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 		return webSearch(ctx, rt, input, deps)
 	})
 	return registry

@@ -76,32 +76,26 @@ func newBatch5Lane2Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{
 		batch5Lane2PostgresTool,
 		batch5Lane2RedisTool,
 		batch5Lane2MongoTool,
 		batch5Lane2SupabaseTool,
 	} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	for action, impl := range batch5Lane2PostgresImpls() {
-		registry.addImpl("postgres", action, impl)
+		registry.AddImpl("postgres", action, impl)
 	}
 	for action, impl := range batch5Lane2RedisImpls() {
-		registry.addImpl("redis", action, impl)
+		registry.AddImpl("redis", action, impl)
 	}
 	for action, impl := range batch5Lane2MongoImpls() {
-		registry.addImpl("mongodb", action, impl)
+		registry.AddImpl("mongodb", action, impl)
 	}
 	for action, impl := range batch5Lane2SupabaseImpls() {
-		registry.addImpl("supabase", action, impl)
+		registry.AddImpl("supabase", action, impl)
 	}
 	return registry
 }

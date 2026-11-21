@@ -1,5 +1,5 @@
 %% go_hive 分层依赖图（生成物，勿手改）
-%% 源：architecture/model.yaml + go list -json ./... · commit 8029f7735f82
+%% 源：architecture/model.yaml + go list -json ./... · commit 0654903779c3
 %% 只画包级 import 边；箭头 A --> B 读作 A imports B（A 依赖 B）。
 flowchart TB
   subgraph layer_entry["入口层（entry）"]
@@ -76,6 +76,7 @@ flowchart TB
     n_internal_tools_builtin["internal/tools/builtin"]
     n_internal_tools_integrationkit["internal/tools/integrationkit"]
     n_internal_tools_integrations["internal/tools/integrations"]
+    n_internal_tools_integrations_excel["internal/tools/integrations/excel"]
     n_internal_visionfallback["internal/visionfallback"]
   end
   subgraph layer_foundation["基础层（foundation）"]
@@ -277,10 +278,13 @@ flowchart TB
   n_internal_tools_builtin --> n_internal_atomicfs
   n_internal_tools_builtin --> n_internal_llm
   n_internal_tools_builtin --> n_internal_tools
+  n_internal_tools_integrationkit --> n_internal_tools
   n_internal_tools_integrations --> n_internal_attachments
   n_internal_tools_integrations --> n_internal_hiveclock
   n_internal_tools_integrations --> n_internal_tools
   n_internal_tools_integrations --> n_internal_tools_integrationkit
+  n_internal_tools_integrations --> n_internal_tools_integrations_excel
+  n_internal_tools_integrations_excel --> n_internal_tools_integrationkit
   n_internal_triggers --> n_internal_atomicfs
   n_internal_visionfallback --> n_internal_llm
 
@@ -297,6 +301,6 @@ flowchart TB
   classDef style_runtime fill:#fee2e2,stroke:#b91c1c,color:#0f172a;
   class n_internal_agentloop,n_internal_llmjudge,n_internal_orchestrator style_runtime;
   classDef style_capability fill:#f3e8ff,stroke:#7e22ce,color:#0f172a;
-  class n_internal_attachments,n_internal_charts,n_internal_credentials,n_internal_globaldb,n_internal_hiveconf,n_internal_llm,n_internal_maintenance,n_internal_mcpregistry,n_internal_mcpregistry_nativecli,n_internal_memory,n_internal_senders,n_internal_skills,n_internal_soul,n_internal_tools,n_internal_tools_builtin,n_internal_tools_integrationkit,n_internal_tools_integrations,n_internal_visionfallback style_capability;
+  class n_internal_attachments,n_internal_charts,n_internal_credentials,n_internal_globaldb,n_internal_hiveconf,n_internal_llm,n_internal_maintenance,n_internal_mcpregistry,n_internal_mcpregistry_nativecli,n_internal_memory,n_internal_senders,n_internal_skills,n_internal_soul,n_internal_tools,n_internal_tools_builtin,n_internal_tools_integrationkit,n_internal_tools_integrations,n_internal_tools_integrations_excel,n_internal_visionfallback style_capability;
   classDef style_foundation fill:#f1f5f9,stroke:#475569,color:#0f172a;
   class n_internal_arghelp,n_internal_atomicfs,n_internal_envcontract,n_internal_eventbus,n_internal_hiveclock,n_internal_hivehome,n_internal_logging,n_internal_platform,n_internal_pyenv,n_internal_quality,n_internal_ratelimit,n_internal_resources,n_internal_runtimelogs,n_internal_schemas,n_internal_storage,n_internal_version style_foundation;

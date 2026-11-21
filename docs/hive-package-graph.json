@@ -1,0 +1,2684 @@
+{
+ "generated_at": "2026-11-22 00:17 ",
+ "baseline": "cd55193e",
+ "totals": {
+  "python_files": 349,
+  "non_test_files": 293,
+  "test_files": 56,
+  "non_test_loc": 122669,
+  "test_loc": 12987,
+  "packages": 24,
+  "core_tests_files": 178,
+  "core_tests_loc": 51079
+ },
+ "packages": {
+  "(root)": {
+   "files": 6,
+   "loc": 2063,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     1499,
+     "config.py"
+    ],
+    [
+     361,
+     "rate_limiter.py"
+    ],
+    [
+     102,
+     "cli.py"
+    ]
+   ],
+   "doc": "Hive Agent Framework. Core classes: ColonyRuntime -- orchestrates parallel worker clones in a colony AgentLoop -- the LLM + tool execution loop (one per worker) AgentLoader -- loads agent config from disk, builds pipeline DecisionTracker -- records decisions f",
+   "role": "顶层模块：config.py（全局配置/HIVE_HOME，导入枢纽）、cli.py（hive 命令入口）、__main__.py、rate_limiter、cloud_sync_hooks。"
+  },
+  "pipeline": {
+   "files": 12,
+   "loc": 787,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     115,
+     "pipeline/runner.py"
+    ],
+    [
+     104,
+     "pipeline/stages/mcp_registry.py"
+    ],
+    [
+     104,
+     "pipeline/registry.py"
+    ]
+   ],
+   "doc": "Pipeline middleware for the agent runtime. Stages run in order when :meth:`AgentRuntime.trigger` receives a request. Each stage can pass the context through, transform the input data, or reject the request entirely. This is the runtime-level analogue of AstrBo",
+   "role": "触发期中间件链：stage/runner/registry + 7 个内置 stage（限流、校验、成本闸、凭据、LLM、MCP、skills）。"
+  },
+  "tasks": {
+   "files": 13,
+   "loc": 3102,
+   "test_files": 7,
+   "test_loc": 2551,
+   "largest": [
+    [
+     859,
+     "tasks/store.py"
+    ],
+    [
+     777,
+     "tasks/tools/session_tools.py"
+    ],
+    [
+     604,
+     "tasks/reminders.py"
+    ]
+   ],
+   "doc": "File-backed task tracker for the hive agent loop. Each session owns exactly one task list — a single ``tasks.json`` document beside the rest of that session's data. Lists are keyed by ``session_id`` (globally unique: ``session_<timestamp>_<uuid>``); the on-dis",
+   "role": "文件型任务清单：每会话一份 tasks.json（session/colony 两类 list id）、事件、reminders、hooks、四个 session 工具。"
+  },
+  "tools": {
+   "files": 11,
+   "loc": 7213,
+   "test_files": 1,
+   "test_loc": 0,
+   "largest": [
+    [
+     4000,
+     "tools/queen_lifecycle_tools.py"
+    ],
+    [
+     980,
+     "tools/tracker_tools.py"
+    ],
+    [
+     931,
+     "tools/playbook_tools.py"
+    ]
+   ],
+   "doc": "",
+   "role": "内置/女王工具面：queen 生命周期与 tracker/playbook/tool_tiers/harness 注册、queen mail 工具。"
+  },
+  "llm": {
+   "files": 12,
+   "loc": 6146,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     3678,
+     "llm/litellm.py"
+    ],
+    [
+     740,
+     "llm/antigravity.py"
+    ],
+    [
+     367,
+     "llm/key_check.py"
+    ]
+   ],
+   "doc": "LLM provider abstraction.",
+   "role": "LLM 抽象：provider（litellm/anthropic/mock）、stream events、capabilities、model catalog、key check/pool。"
+  },
+  "host": {
+   "files": 24,
+   "loc": 13272,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     2935,
+     "host/colony_runtime.py"
+    ],
+    [
+     2269,
+     "host/event_bus.py"
+    ],
+    [
+     1879,
+     "host/agent_host.py"
+    ]
+   ],
+   "doc": "Host layer -- how agents are triggered and hosted. Imported when first used, so ``framework.host.event_bus`` can be used without loading the colony runtime.",
+   "role": "托管执行层：ColonyRuntime（当前，无图）、Worker、EventBus、triggers/webhook、tracker_db；同时保留旧 AgentHost/ExecutionManager（图时代）。"
+  },
+  "global_db": {
+   "files": 5,
+   "loc": 713,
+   "test_files": 2,
+   "test_loc": 189,
+   "largest": [
+    [
+     217,
+     "global_db/grid_query.py"
+    ],
+    [
+     154,
+     "global_db/count_cache.py"
+    ],
+    [
+     154,
+     "global_db/client.py"
+    ]
+   ],
+   "doc": "Runtime client for the cloud team global DB (hive-backend ``/v1/global-db/*``). The shared, cross-colony GTM tracker lives in the backend's Postgres (schema-per-team), not on local disk. ``scope=\"global\"`` tracker calls and the ``hive-global-db`` CLI route thr",
+   "role": "云端团队共享库客户端（hive-backend /v1/global-db/*，跨 colony GTM 数据）。"
+  },
+  "trackerdb": {
+   "files": 2,
+   "loc": 151,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     141,
+     "trackerdb/errors.py"
+    ],
+    [
+     10,
+     "trackerdb/__init__.py"
+    ]
+   ],
+   "doc": "Shared plumbing for Hive's terminal CLIs. * :mod:`~framework.trackerdb.errors` — exit-code taxonomy + dispatch harness, used by ``hive-cred`` (:mod:`framework.credentials.cli`). The path matches hive-desktop-runtime, where this package also holds the ``hive-tr",
+   "role": "terminal CLI 共用的退出码分类与错误分发（不是 tracker 数据库）。"
+  },
+  "agents": {
+   "files": 18,
+   "loc": 6708,
+   "test_files": 4,
+   "test_loc": 237,
+   "largest": [
+    [
+     970,
+     "agents/queen/reflection_agent.py"
+    ],
+    [
+     923,
+     "agents/queen/queen_profiles.py"
+    ],
+    [
+     793,
+     "agents/queen/nodes/__init__.py"
+    ]
+   ],
+   "doc": "Framework-provided agents.",
+   "role": "框架内置 agent 定义：13 个 Queen persona、worker_definition、记忆/反思/召回/时间线。"
+  },
+  "server": {
+   "files": 42,
+   "loc": 26782,
+   "test_files": 32,
+   "test_loc": 7687,
+   "largest": [
+    [
+     3265,
+     "server/routes_sessions.py"
+    ],
+    [
+     2350,
+     "server/routes_execution.py"
+    ],
+    [
+     2270,
+     "server/session_manager.py"
+    ]
+   ],
+   "doc": "HTTP API server for the Hive agent framework.",
+   "role": "HTTP/SSE 门面与会话生命周期：aiohttp app、37 个 routes_*、SessionManager、QueenOrchestrator、judge/stall/channels/queen mail。"
+  },
+  "utils": {
+   "files": 5,
+   "loc": 179,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     92,
+     "utils/task_registry.py"
+    ],
+    [
+     36,
+     "utils/io.py"
+    ],
+    [
+     31,
+     "utils/python_env.py"
+    ]
+   ],
+   "doc": "Utility functions for the Hive framework.",
+   "role": "文本/环境/IO/异步小工具。"
+  },
+  "tracker": {
+   "files": 6,
+   "loc": 1368,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     405,
+     "tracker/decision_tracker.py"
+    ],
+    [
+     329,
+     "tracker/runtime_logger.py"
+    ],
+    [
+     308,
+     "tracker/runtime_log_store.py"
+    ]
+   ],
+   "doc": "Tracker layer -- decision/run logging for Builder analysis.",
+   "role": "运行/决策日志（Builder 分析用），注意与 host/tracker_db.py 的 colony tracker 不是一回事。"
+  },
+  "observability": {
+   "files": 2,
+   "loc": 432,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     409,
+     "observability/logging.py"
+    ],
+    [
+     23,
+     "observability/__init__.py"
+    ]
+   ],
+   "doc": "Observability module for automatic trace correlation and structured logging. This module provides zero-friction observability: - Automatic trace context propagation via ContextVar - Structured JSON logging for production - Human-readable logging for developmen",
+   "role": "trace 关联与结构化日志。"
+  },
+  "schemas": {
+   "files": 7,
+   "loc": 1281,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     320,
+     "schemas/session_state.py"
+    ],
+    [
+     259,
+     "schemas/run.py"
+    ],
+    [
+     206,
+     "schemas/agent_config.py"
+    ]
+   ],
+   "doc": "Schema definitions for runtime data.",
+   "role": "Pydantic 运行时模型：Goal/SuccessCriterion、session state 等。"
+  },
+  "agent_loop": {
+   "files": 29,
+   "loc": 17457,
+   "test_files": 2,
+   "test_loc": 74,
+   "largest": [
+    [
+     7497,
+     "agent_loop/agent_loop.py"
+    ],
+    [
+     1873,
+     "agent_loop/conversation.py"
+    ],
+    [
+     1014,
+     "agent_loop/internals/compaction.py"
+    ]
+   ],
+   "doc": "Agent loop -- the core agent execution primitive.",
+   "role": "唯一执行原语 AgentLoop（流式多轮 + 工具执行 + 预算），以及 reminders/compaction/judge_pipeline/stall/cursor 等内部件。"
+  },
+  "storage": {
+   "files": 9,
+   "loc": 2279,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     493,
+     "storage/concurrent.py"
+    ],
+    [
+     352,
+     "storage/migrate_v3.py"
+    ],
+    [
+     323,
+     "storage/checkpoint_store.py"
+    ]
+   ],
+   "doc": "Storage backends for runtime data.",
+   "role": "会话/运行时数据存储：SessionStore、并发存储、迁移辅助。"
+  },
+  "sentinel": {
+   "files": 9,
+   "loc": 2090,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     437,
+     "sentinel/manager.py"
+    ],
+    [
+     381,
+     "sentinel/escalation_source.py"
+    ],
+    [
+     339,
+     "sentinel/store.py"
+    ]
+   ],
+   "doc": "Sentinel — colony-queen autopilot (nudge / escalate-to-human / resume). Promotes the idle-nudge into a per-colony autopilot: when the queen pauses before its goal is done, decide whether to nudge it onward, escalate a genuine blocker to the user over Telegram/",
+   "role": "停车自动驾驶：分类器、升级记录、通知/回信（nudge / escalate / resume）。"
+  },
+  "testing": {
+   "files": 6,
+   "loc": 1159,
+   "test_files": 3,
+   "test_loc": 518,
+   "largest": [
+    [
+     284,
+     "testing/approval_cli.py"
+    ],
+    [
+     278,
+     "testing/debug_tool.py"
+    ],
+    [
+     238,
+     "testing/categorizer.py"
+    ]
+   ],
+   "doc": "Goal-Based Testing Framework A framework where tests are written based on success_criteria and constraints, then run with pytest and debugged with LLM assistance. ## Core Flow 1. **Goal Stage**: Define success_criteria and constraints 2. **Agent Stage**: Build",
+   "role": "目标驱动测试与评测：llm_judge、test case/result、skill evals 的基础设施。"
+  },
+  "loader": {
+   "files": 11,
+   "loc": 8878,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     2082,
+     "loader/agent_loader.py"
+    ],
+    [
+     1720,
+     "loader/tool_registry.py"
+    ],
+    [
+     1140,
+     "loader/mcp_client.py"
+    ]
+   ],
+   "doc": "Loader layer -- agent loading from disk (JSON config, MCP, credentials).",
+   "role": "从磁盘装配 agent：agent 配置/worker.json、ToolRegistry、MCP registry、凭据、skills、pipeline 组装。"
+  },
+  "debugger": {
+   "files": 2,
+   "loc": 98,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     98,
+     "debugger/cli.py"
+    ],
+    [
+     0,
+     "debugger/__init__.py"
+    ]
+   ],
+   "doc": "",
+   "role": "LLM 调试日志查看器（hive debugger）。"
+  },
+  "maintenance": {
+   "files": 5,
+   "loc": 1834,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     1173,
+     "maintenance/retention.py"
+    ],
+    [
+     399,
+     "maintenance/janitor.py"
+    ],
+    [
+     166,
+     "maintenance/cli.py"
+    ]
+   ],
+   "doc": "Data-retention janitor for the per-user HIVE_HOME data directory. Manual-trigger only (CLI ``hive janitor ...`` or ``POST /api/maintenance/janitor/run``); there is no background scheduler. See ``retention.py`` for the policy engine and ``janitor.py`` for run o",
+   "role": "HIVE_HOME 数据保留与清理（hive janitor，手动触发）。"
+  },
+  "skills": {
+   "files": 19,
+   "loc": 5004,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     1447,
+     "skills/cli.py"
+    ],
+    [
+     483,
+     "skills/trust.py"
+    ],
+    [
+     438,
+     "skills/manager.py"
+    ]
+   ],
+   "doc": "Hive Agent Skills — discovery, parsing, trust gating, and injection of SKILL.md packages. Implements the open Agent Skills standard (agentskills.io) for portable skill discovery and activation, plus built-in default skills for runtime operational discipline, a",
+   "role": "SKILL.md 技能体系：发现/解析/信任门控/prompt 注入/热重载/写入。"
+  },
+  "orchestrator": {
+   "files": 13,
+   "loc": 5751,
+   "test_files": 0,
+   "test_loc": 0,
+   "largest": [
+    [
+     1740,
+     "orchestrator/orchestrator.py"
+    ],
+    [
+     812,
+     "orchestrator/node_worker.py"
+    ],
+    [
+     675,
+     "orchestrator/node.py"
+    ]
+   ],
+   "doc": "Orchestrator layer -- how agents are composed via graphs. Lazy imports to avoid circular dependencies with graph/event_loop/*.",
+   "role": "旧图执行引擎：GraphSpec/Orchestrator/Node/Validator/Goal（懒加载避免循环依赖；colony 运行时已不再使用图）。"
+  },
+  "credentials": {
+   "files": 25,
+   "loc": 7922,
+   "test_files": 4,
+   "test_loc": 1551,
+   "largest": [
+    [
+     872,
+     "credentials/store.py"
+    ],
+    [
+     651,
+     "credentials/setup.py"
+    ],
+    [
+     636,
+     "credentials/storage.py"
+    ]
+   ],
+   "doc": "Credential Store - Production-ready credential management for Hive. This module provides secure credential storage with: - Key-vault structure: Credentials as objects with multiple keys - Template-based usage: {{cred.key}} patterns for injection - Bipartisan m",
+   "role": "凭据底座：Fernet 加密库 + key 管理、CredentialSpec 目录、解析/刷新、hive-cred CLI、Aden 云与 OAuth2。"
+  },
+  "runtime": {
+   "files": 0,
+   "loc": 0,
+   "test_files": 1,
+   "test_loc": 180,
+   "largest": [],
+   "doc": "",
+   "role": "空壳目录：无 __init__.py、零代码，只剩一个旧 ExecutionManager 回归测试。"
+  }
+ },
+ "edges": [
+  {
+   "from": "server",
+   "to": "(root)",
+   "n": 88
+  },
+  {
+   "from": "server",
+   "to": "host",
+   "n": 70
+  },
+  {
+   "from": "server",
+   "to": "agents",
+   "n": 50
+  },
+  {
+   "from": "tools",
+   "to": "host",
+   "n": 23
+  },
+  {
+   "from": "server",
+   "to": "agent_loop",
+   "n": 21
+  },
+  {
+   "from": "server",
+   "to": "loader",
+   "n": 20
+  },
+  {
+   "from": "server",
+   "to": "credentials",
+   "n": 19
+  },
+  {
+   "from": "agents",
+   "to": "(root)",
+   "n": 18
+  },
+  {
+   "from": "server",
+   "to": "tools",
+   "n": 17
+  },
+  {
+   "from": "host",
+   "to": "(root)",
+   "n": 16
+  },
+  {
+   "from": "agent_loop",
+   "to": "llm",
+   "n": 15
+  },
+  {
+   "from": "(root)",
+   "to": "loader",
+   "n": 13
+  },
+  {
+   "from": "server",
+   "to": "tasks",
+   "n": 13
+  },
+  {
+   "from": "server",
+   "to": "global_db",
+   "n": 13
+  },
+  {
+   "from": "loader",
+   "to": "orchestrator",
+   "n": 13
+  },
+  {
+   "from": "llm",
+   "to": "(root)",
+   "n": 12
+  },
+  {
+   "from": "server",
+   "to": "skills",
+   "n": 12
+  },
+  {
+   "from": "server",
+   "to": "llm",
+   "n": 11
+  },
+  {
+   "from": "orchestrator",
+   "to": "agent_loop",
+   "n": 11
+  },
+  {
+   "from": "server",
+   "to": "storage",
+   "n": 10
+  },
+  {
+   "from": "agent_loop",
+   "to": "sentinel",
+   "n": 10
+  },
+  {
+   "from": "host",
+   "to": "storage",
+   "n": 9
+  },
+  {
+   "from": "host",
+   "to": "pipeline",
+   "n": 9
+  },
+  {
+   "from": "host",
+   "to": "orchestrator",
+   "n": 9
+  },
+  {
+   "from": "agent_loop",
+   "to": "host",
+   "n": 9
+  },
+  {
+   "from": "loader",
+   "to": "(root)",
+   "n": 9
+  },
+  {
+   "from": "skills",
+   "to": "(root)",
+   "n": 9
+  },
+  {
+   "from": "tools",
+   "to": "llm",
+   "n": 7
+  },
+  {
+   "from": "tools",
+   "to": "skills",
+   "n": 7
+  },
+  {
+   "from": "agent_loop",
+   "to": "tasks",
+   "n": 7
+  },
+  {
+   "from": "tools",
+   "to": "loader",
+   "n": 6
+  },
+  {
+   "from": "tools",
+   "to": "(root)",
+   "n": 6
+  },
+  {
+   "from": "host",
+   "to": "schemas",
+   "n": 6
+  },
+  {
+   "from": "host",
+   "to": "skills",
+   "n": 6
+  },
+  {
+   "from": "agent_loop",
+   "to": "orchestrator",
+   "n": 6
+  },
+  {
+   "from": "host",
+   "to": "agents",
+   "n": 5
+  },
+  {
+   "from": "server",
+   "to": "maintenance",
+   "n": 5
+  },
+  {
+   "from": "agent_loop",
+   "to": "(root)",
+   "n": 5
+  },
+  {
+   "from": "storage",
+   "to": "utils",
+   "n": 5
+  },
+  {
+   "from": "sentinel",
+   "to": "(root)",
+   "n": 5
+  },
+  {
+   "from": "loader",
+   "to": "credentials",
+   "n": 5
+  },
+  {
+   "from": "loader",
+   "to": "pipeline",
+   "n": 5
+  },
+  {
+   "from": "credentials",
+   "to": "(root)",
+   "n": 5
+  },
+  {
+   "from": "host",
+   "to": "agent_loop",
+   "n": 4
+  },
+  {
+   "from": "host",
+   "to": "llm",
+   "n": 4
+  },
+  {
+   "from": "host",
+   "to": "tasks",
+   "n": 4
+  },
+  {
+   "from": "host",
+   "to": "tools",
+   "n": 4
+  },
+  {
+   "from": "server",
+   "to": "utils",
+   "n": 4
+  },
+  {
+   "from": "agent_loop",
+   "to": "tracker",
+   "n": 4
+  },
+  {
+   "from": "agent_loop",
+   "to": "credentials",
+   "n": 4
+  },
+  {
+   "from": "loader",
+   "to": "tools",
+   "n": 4
+  },
+  {
+   "from": "loader",
+   "to": "host",
+   "n": 4
+  },
+  {
+   "from": "orchestrator",
+   "to": "(root)",
+   "n": 4
+  },
+  {
+   "from": "pipeline",
+   "to": "llm",
+   "n": 3
+  },
+  {
+   "from": "tools",
+   "to": "server",
+   "n": 3
+  },
+  {
+   "from": "tools",
+   "to": "agent_loop",
+   "n": 3
+  },
+  {
+   "from": "host",
+   "to": "tracker",
+   "n": 3
+  },
+  {
+   "from": "agents",
+   "to": "host",
+   "n": 3
+  },
+  {
+   "from": "agents",
+   "to": "llm",
+   "n": 3
+  },
+  {
+   "from": "server",
+   "to": "sentinel",
+   "n": 3
+  },
+  {
+   "from": "storage",
+   "to": "schemas",
+   "n": 3
+  },
+  {
+   "from": "storage",
+   "to": "(root)",
+   "n": 3
+  },
+  {
+   "from": "testing",
+   "to": "llm",
+   "n": 3
+  },
+  {
+   "from": "loader",
+   "to": "server",
+   "n": 3
+  },
+  {
+   "from": "orchestrator",
+   "to": "storage",
+   "n": 3
+  },
+  {
+   "from": "orchestrator",
+   "to": "tracker",
+   "n": 3
+  },
+  {
+   "from": "orchestrator",
+   "to": "llm",
+   "n": 3
+  },
+  {
+   "from": "orchestrator",
+   "to": "loader",
+   "n": 3
+  },
+  {
+   "from": "(root)",
+   "to": "llm",
+   "n": 2
+  },
+  {
+   "from": "pipeline",
+   "to": "loader",
+   "n": 2
+  },
+  {
+   "from": "pipeline",
+   "to": "orchestrator",
+   "n": 2
+  },
+  {
+   "from": "pipeline",
+   "to": "skills",
+   "n": 2
+  },
+  {
+   "from": "tasks",
+   "to": "utils",
+   "n": 2
+  },
+  {
+   "from": "tasks",
+   "to": "loader",
+   "n": 2
+  },
+  {
+   "from": "tasks",
+   "to": "llm",
+   "n": 2
+  },
+  {
+   "from": "tools",
+   "to": "credentials",
+   "n": 2
+  },
+  {
+   "from": "tools",
+   "to": "global_db",
+   "n": 2
+  },
+  {
+   "from": "agents",
+   "to": "schemas",
+   "n": 2
+  },
+  {
+   "from": "server",
+   "to": "crm",
+   "n": 2
+  },
+  {
+   "from": "tracker",
+   "to": "observability",
+   "n": 2
+  },
+  {
+   "from": "tracker",
+   "to": "schemas",
+   "n": 2
+  },
+  {
+   "from": "loader",
+   "to": "llm",
+   "n": 2
+  },
+  {
+   "from": "loader",
+   "to": "observability",
+   "n": 2
+  },
+  {
+   "from": "loader",
+   "to": "sentinel",
+   "n": 2
+  },
+  {
+   "from": "loader",
+   "to": "agents",
+   "n": 2
+  },
+  {
+   "from": "loader",
+   "to": "skills",
+   "n": 2
+  },
+  {
+   "from": "maintenance",
+   "to": "server",
+   "n": 2
+  },
+  {
+   "from": "maintenance",
+   "to": "utils",
+   "n": 2
+  },
+  {
+   "from": "orchestrator",
+   "to": "skills",
+   "n": 2
+  },
+  {
+   "from": "credentials",
+   "to": "orchestrator",
+   "n": 2
+  },
+  {
+   "from": "(root)",
+   "to": "credentials",
+   "n": 1
+  },
+  {
+   "from": "(root)",
+   "to": "agent_loop",
+   "n": 1
+  },
+  {
+   "from": "(root)",
+   "to": "host",
+   "n": 1
+  },
+  {
+   "from": "(root)",
+   "to": "tracker",
+   "n": 1
+  },
+  {
+   "from": "(root)",
+   "to": "utils",
+   "n": 1
+  },
+  {
+   "from": "(root)",
+   "to": "skills",
+   "n": 1
+  },
+  {
+   "from": "(root)",
+   "to": "debugger",
+   "n": 1
+  },
+  {
+   "from": "(root)",
+   "to": "maintenance",
+   "n": 1
+  },
+  {
+   "from": "(root)",
+   "to": "cloud_sync",
+   "n": 1
+  },
+  {
+   "from": "pipeline",
+   "to": "(root)",
+   "n": 1
+  },
+  {
+   "from": "tasks",
+   "to": "host",
+   "n": 1
+  },
+  {
+   "from": "tasks",
+   "to": "agent_loop",
+   "n": 1
+  },
+  {
+   "from": "tasks",
+   "to": "(root)",
+   "n": 1
+  },
+  {
+   "from": "tools",
+   "to": "agents",
+   "n": 1
+  },
+  {
+   "from": "tools",
+   "to": "tasks",
+   "n": 1
+  },
+  {
+   "from": "llm",
+   "to": "tasks",
+   "n": 1
+  },
+  {
+   "from": "llm",
+   "to": "server",
+   "n": 1
+  },
+  {
+   "from": "llm",
+   "to": "credentials",
+   "n": 1
+  },
+  {
+   "from": "host",
+   "to": "loader",
+   "n": 1
+  },
+  {
+   "from": "host",
+   "to": "utils",
+   "n": 1
+  },
+  {
+   "from": "host",
+   "to": "crm",
+   "n": 1
+  },
+  {
+   "from": "host",
+   "to": "credentials",
+   "n": 1
+  },
+  {
+   "from": "host",
+   "to": "observability",
+   "n": 1
+  },
+  {
+   "from": "agents",
+   "to": "tracker",
+   "n": 1
+  },
+  {
+   "from": "agents",
+   "to": "storage",
+   "n": 1
+  },
+  {
+   "from": "agents",
+   "to": "server",
+   "n": 1
+  },
+  {
+   "from": "agents",
+   "to": "orchestrator",
+   "n": 1
+  },
+  {
+   "from": "server",
+   "to": "schemas",
+   "n": 1
+  },
+  {
+   "from": "server",
+   "to": "observability",
+   "n": 1
+  },
+  {
+   "from": "server",
+   "to": "orchestrator",
+   "n": 1
+  },
+  {
+   "from": "server",
+   "to": "tracker",
+   "n": 1
+  },
+  {
+   "from": "tracker",
+   "to": "storage",
+   "n": 1
+  },
+  {
+   "from": "tracker",
+   "to": "(root)",
+   "n": 1
+  },
+  {
+   "from": "observability",
+   "to": "(root)",
+   "n": 1
+  },
+  {
+   "from": "schemas",
+   "to": "orchestrator",
+   "n": 1
+  },
+  {
+   "from": "agent_loop",
+   "to": "tools",
+   "n": 1
+  },
+  {
+   "from": "agent_loop",
+   "to": "skills",
+   "n": 1
+  },
+  {
+   "from": "sentinel",
+   "to": "agent_loop",
+   "n": 1
+  },
+  {
+   "from": "sentinel",
+   "to": "llm",
+   "n": 1
+  },
+  {
+   "from": "sentinel",
+   "to": "credentials",
+   "n": 1
+  },
+  {
+   "from": "testing",
+   "to": "(root)",
+   "n": 1
+  },
+  {
+   "from": "loader",
+   "to": "schemas",
+   "n": 1
+  },
+  {
+   "from": "loader",
+   "to": "tracker",
+   "n": 1
+  },
+  {
+   "from": "debugger",
+   "to": "(root)",
+   "n": 1
+  },
+  {
+   "from": "skills",
+   "to": "llm",
+   "n": 1
+  },
+  {
+   "from": "skills",
+   "to": "testing",
+   "n": 1
+  },
+  {
+   "from": "skills",
+   "to": "credentials",
+   "n": 1
+  },
+  {
+   "from": "orchestrator",
+   "to": "credentials",
+   "n": 1
+  },
+  {
+   "from": "orchestrator",
+   "to": "observability",
+   "n": 1
+  },
+  {
+   "from": "orchestrator",
+   "to": "schemas",
+   "n": 1
+  },
+  {
+   "from": "orchestrator",
+   "to": "utils",
+   "n": 1
+  },
+  {
+   "from": "orchestrator",
+   "to": "host",
+   "n": 1
+  },
+  {
+   "from": "credentials",
+   "to": "loader",
+   "n": 1
+  },
+  {
+   "from": "credentials",
+   "to": "trackerdb",
+   "n": 1
+  }
+ ],
+ "fan_in": [
+  [
+   "(root)",
+   186
+  ],
+  [
+   "host",
+   112
+  ],
+  [
+   "agents",
+   58
+  ],
+  [
+   "llm",
+   57
+  ],
+  [
+   "loader",
+   48
+  ],
+  [
+   "agent_loop",
+   42
+  ],
+  [
+   "credentials",
+   36
+  ],
+  [
+   "orchestrator",
+   35
+  ],
+  [
+   "skills",
+   33
+  ],
+  [
+   "tasks",
+   26
+  ],
+  [
+   "tools",
+   26
+  ],
+  [
+   "storage",
+   24
+  ],
+  [
+   "utils",
+   16
+  ],
+  [
+   "schemas",
+   16
+  ],
+  [
+   "global_db",
+   15
+  ],
+  [
+   "sentinel",
+   15
+  ],
+  [
+   "tracker",
+   14
+  ],
+  [
+   "pipeline",
+   14
+  ],
+  [
+   "server",
+   10
+  ],
+  [
+   "observability",
+   7
+  ],
+  [
+   "maintenance",
+   6
+  ],
+  [
+   "crm",
+   3
+  ],
+  [
+   "debugger",
+   1
+  ],
+  [
+   "cloud_sync",
+   1
+  ],
+  [
+   "testing",
+   1
+  ],
+  [
+   "trackerdb",
+   1
+  ]
+ ],
+ "fan_out": [
+  [
+   "server",
+   362
+  ],
+  [
+   "host",
+   84
+  ],
+  [
+   "agent_loop",
+   62
+  ],
+  [
+   "tools",
+   61
+  ],
+  [
+   "loader",
+   55
+  ],
+  [
+   "orchestrator",
+   34
+  ],
+  [
+   "agents",
+   30
+  ],
+  [
+   "(root)",
+   24
+  ],
+  [
+   "llm",
+   15
+  ],
+  [
+   "skills",
+   12
+  ],
+  [
+   "storage",
+   11
+  ],
+  [
+   "pipeline",
+   10
+  ],
+  [
+   "tasks",
+   9
+  ],
+  [
+   "credentials",
+   9
+  ],
+  [
+   "sentinel",
+   8
+  ],
+  [
+   "tracker",
+   6
+  ],
+  [
+   "testing",
+   4
+  ],
+  [
+   "maintenance",
+   4
+  ],
+  [
+   "observability",
+   1
+  ],
+  [
+   "schemas",
+   1
+  ],
+  [
+   "debugger",
+   1
+  ]
+ ],
+ "sccs": [
+  [
+   "(root)",
+   "agent_loop",
+   "agents",
+   "credentials",
+   "debugger",
+   "host",
+   "llm",
+   "loader",
+   "maintenance",
+   "observability",
+   "orchestrator",
+   "pipeline",
+   "schemas",
+   "sentinel",
+   "server",
+   "skills",
+   "storage",
+   "tasks",
+   "testing",
+   "tools",
+   "tracker"
+  ]
+ ],
+ "cyclic_pairs": [
+  {
+   "a": "agents",
+   "b": "server",
+   "ab": 1,
+   "ba": 50
+  },
+  {
+   "a": "host",
+   "b": "tools",
+   "ab": 4,
+   "ba": 23
+  },
+  {
+   "a": "loader",
+   "b": "server",
+   "ab": 3,
+   "ba": 20
+  },
+  {
+   "a": "(root)",
+   "b": "loader",
+   "ab": 13,
+   "ba": 9
+  },
+  {
+   "a": "server",
+   "b": "tools",
+   "ab": 17,
+   "ba": 3
+  },
+  {
+   "a": "(root)",
+   "b": "host",
+   "ab": 1,
+   "ba": 16
+  },
+  {
+   "a": "agent_loop",
+   "b": "orchestrator",
+   "ab": 6,
+   "ba": 11
+  },
+  {
+   "a": "loader",
+   "b": "orchestrator",
+   "ab": 13,
+   "ba": 3
+  },
+  {
+   "a": "(root)",
+   "b": "llm",
+   "ab": 2,
+   "ba": 12
+  },
+  {
+   "a": "agent_loop",
+   "b": "host",
+   "ab": 9,
+   "ba": 4
+  },
+  {
+   "a": "llm",
+   "b": "server",
+   "ab": 1,
+   "ba": 11
+  },
+  {
+   "a": "agent_loop",
+   "b": "sentinel",
+   "ab": 10,
+   "ba": 1
+  },
+  {
+   "a": "(root)",
+   "b": "skills",
+   "ab": 1,
+   "ba": 9
+  },
+  {
+   "a": "host",
+   "b": "orchestrator",
+   "ab": 9,
+   "ba": 1
+  },
+  {
+   "a": "loader",
+   "b": "tools",
+   "ab": 4,
+   "ba": 6
+  },
+  {
+   "a": "agent_loop",
+   "b": "tasks",
+   "ab": 7,
+   "ba": 1
+  },
+  {
+   "a": "agents",
+   "b": "host",
+   "ab": 3,
+   "ba": 5
+  },
+  {
+   "a": "loader",
+   "b": "pipeline",
+   "ab": 5,
+   "ba": 2
+  },
+  {
+   "a": "maintenance",
+   "b": "server",
+   "ab": 2,
+   "ba": 5
+  },
+  {
+   "a": "(root)",
+   "b": "agent_loop",
+   "ab": 1,
+   "ba": 5
+  },
+  {
+   "a": "(root)",
+   "b": "credentials",
+   "ab": 1,
+   "ba": 5
+  },
+  {
+   "a": "credentials",
+   "b": "loader",
+   "ab": 1,
+   "ba": 5
+  },
+  {
+   "a": "host",
+   "b": "loader",
+   "ab": 1,
+   "ba": 4
+  },
+  {
+   "a": "host",
+   "b": "tasks",
+   "ab": 4,
+   "ba": 1
+  },
+  {
+   "a": "agent_loop",
+   "b": "tools",
+   "ab": 1,
+   "ba": 3
+  },
+  {
+   "a": "credentials",
+   "b": "orchestrator",
+   "ab": 2,
+   "ba": 1
+  },
+  {
+   "a": "llm",
+   "b": "tasks",
+   "ab": 1,
+   "ba": 2
+  },
+  {
+   "a": "(root)",
+   "b": "debugger",
+   "ab": 1,
+   "ba": 1
+  },
+  {
+   "a": "(root)",
+   "b": "tracker",
+   "ab": 1,
+   "ba": 1
+  },
+  {
+   "a": "orchestrator",
+   "b": "schemas",
+   "ab": 1,
+   "ba": 1
+  }
+ ],
+ "upward": [
+  {
+   "from": "tools",
+   "to": "host",
+   "n": 23,
+   "sites": [
+    "core/framework/tools/playbook_tools.py:265",
+    "core/framework/tools/playbook_tools.py:267",
+    "core/framework/tools/playbook_tools.py:320"
+   ]
+  },
+  {
+   "from": "agent_loop",
+   "to": "host",
+   "n": 9,
+   "sites": [
+    "core/framework/agent_loop/agent_loop.py:107",
+    "core/framework/agent_loop/agent_loop.py:2127",
+    "core/framework/agent_loop/agent_loop.py:2263"
+   ]
+  },
+  {
+   "from": "tools",
+   "to": "loader",
+   "n": 6,
+   "sites": [
+    "core/framework/tools/harness_tools.py:148",
+    "core/framework/tools/queen_lifecycle_tools.py:32",
+    "core/framework/tools/queen_lifecycle_tools.py:37"
+   ]
+  },
+  {
+   "from": "tools",
+   "to": "server",
+   "n": 3,
+   "sites": [
+    "core/framework/tools/queen_mail_tools.py:16",
+    "core/framework/tools/playbook_tools.py:826",
+    "core/framework/tools/queen_lifecycle_tools.py:1478"
+   ]
+  },
+  {
+   "from": "testing",
+   "to": "llm",
+   "n": 3,
+   "sites": [
+    "core/framework/testing/llm_judge.py:15",
+    "core/framework/testing/llm_judge.py:54",
+    "core/framework/testing/llm_judge.py:64"
+   ]
+  },
+  {
+   "from": "loader",
+   "to": "server",
+   "n": 3,
+   "sites": [
+    "core/framework/loader/cli.py:106",
+    "core/framework/loader/cli.py:782",
+    "core/framework/loader/cli.py:907"
+   ]
+  },
+  {
+   "from": "orchestrator",
+   "to": "loader",
+   "n": 3,
+   "sites": [
+    "core/framework/orchestrator/orchestrator.py:661",
+    "core/framework/orchestrator/orchestrator.py:669",
+    "core/framework/orchestrator/orchestrator.py:691"
+   ]
+  },
+  {
+   "from": "pipeline",
+   "to": "loader",
+   "n": 2,
+   "sites": [
+    "core/framework/pipeline/stages/mcp_registry.py:40",
+    "core/framework/pipeline/stages/mcp_registry.py:43"
+   ]
+  },
+  {
+   "from": "tasks",
+   "to": "loader",
+   "n": 2,
+   "sites": [
+    "core/framework/tasks/tools/register.py:11",
+    "core/framework/tasks/tools/_context.py:12"
+   ]
+  },
+  {
+   "from": "maintenance",
+   "to": "server",
+   "n": 2,
+   "sites": [
+    "core/framework/maintenance/retention.py:38",
+    "core/framework/maintenance/retention.py:42"
+   ]
+  },
+  {
+   "from": "credentials",
+   "to": "orchestrator",
+   "n": 2,
+   "sites": [
+    "core/framework/credentials/setup.py:39",
+    "core/framework/credentials/setup.py:602"
+   ]
+  },
+  {
+   "from": "tasks",
+   "to": "host",
+   "n": 1,
+   "sites": [
+    "core/framework/tasks/events.py:17"
+   ]
+  },
+  {
+   "from": "tasks",
+   "to": "agent_loop",
+   "n": 1,
+   "sites": [
+    "core/framework/tasks/reminders.py:33"
+   ]
+  },
+  {
+   "from": "tools",
+   "to": "agents",
+   "n": 1,
+   "sites": [
+    "core/framework/tools/queen_lifecycle_tools.py:432"
+   ]
+  },
+  {
+   "from": "llm",
+   "to": "server",
+   "n": 1,
+   "sites": [
+    "core/framework/llm/litellm.py:2004"
+   ]
+  },
+  {
+   "from": "agents",
+   "to": "server",
+   "n": 1,
+   "sites": [
+    "core/framework/agents/queen/soul_reflection.py:644"
+   ]
+  },
+  {
+   "from": "schemas",
+   "to": "orchestrator",
+   "n": 1,
+   "sites": [
+    "core/framework/schemas/session_state.py:15"
+   ]
+  },
+  {
+   "from": "sentinel",
+   "to": "agent_loop",
+   "n": 1,
+   "sites": [
+    "core/framework/sentinel/escalation_source.py:29"
+   ]
+  },
+  {
+   "from": "orchestrator",
+   "to": "host",
+   "n": 1,
+   "sites": [
+    "core/framework/orchestrator/orchestrator.py:1229"
+   ]
+  },
+  {
+   "from": "credentials",
+   "to": "loader",
+   "n": 1,
+   "sites": [
+    "core/framework/credentials/setup.py:556"
+   ]
+  }
+ ],
+ "external": [
+  [
+   "__future__",
+   198
+  ],
+  [
+   "logging",
+   182
+  ],
+  [
+   "typing",
+   182
+  ],
+  [
+   "json",
+   115
+  ],
+  [
+   "pathlib",
+   105
+  ],
+  [
+   "datetime",
+   87
+  ],
+  [
+   "os",
+   80
+  ],
+  [
+   "dataclasses",
+   79
+  ],
+  [
+   "asyncio",
+   79
+  ],
+  [
+   "time",
+   60
+  ],
+  [
+   "collections",
+   55
+  ],
+  [
+   "aden_tools",
+   50
+  ],
+  [
+   "re",
+   45
+  ],
+  [
+   "aiohttp",
+   36
+  ],
+  [
+   "urllib",
+   27
+  ],
+  [
+   "pydantic",
+   26
+  ],
+  [
+   "uuid",
+   22
+  ],
+  [
+   "enum",
+   21
+  ],
+  [
+   "shutil",
+   21
+  ],
+  [
+   "sys",
+   20
+  ]
+ ],
+ "aden_by_pkg": [
+  [
+   "server",
+   6
+  ],
+  [
+   "credentials",
+   6
+  ],
+  [
+   "agents",
+   2
+  ],
+  [
+   "agent_loop",
+   2
+  ],
+  [
+   "loader",
+   2
+  ],
+  [
+   "pipeline",
+   1
+  ],
+  [
+   "tools",
+   1
+  ],
+  [
+   "llm",
+   1
+  ],
+  [
+   "host",
+   1
+  ]
+ ],
+ "root_imports": [
+  [
+   "config",
+   180
+  ],
+  [
+   "cloud_sync_hooks",
+   5
+  ],
+  [
+   "rate_limiter",
+   3
+  ],
+  [
+   "cli",
+   1
+  ]
+ ],
+ "root_edges": [
+  {
+   "from": "server",
+   "module": "config",
+   "n": 80
+  },
+  {
+   "from": "agents",
+   "module": "config",
+   "n": 18
+  },
+  {
+   "from": "host",
+   "module": "config",
+   "n": 16
+  },
+  {
+   "from": "llm",
+   "module": "config",
+   "n": 12
+  },
+  {
+   "from": "loader",
+   "module": "config",
+   "n": 9
+  },
+  {
+   "from": "skills",
+   "module": "config",
+   "n": 9
+  },
+  {
+   "from": "tools",
+   "module": "config",
+   "n": 6
+  },
+  {
+   "from": "server",
+   "module": "cloud_sync_hooks",
+   "n": 5
+  },
+  {
+   "from": "agent_loop",
+   "module": "config",
+   "n": 5
+  },
+  {
+   "from": "sentinel",
+   "module": "config",
+   "n": 5
+  },
+  {
+   "from": "credentials",
+   "module": "config",
+   "n": 5
+  },
+  {
+   "from": "orchestrator",
+   "module": "config",
+   "n": 4
+  },
+  {
+   "from": "server",
+   "module": "rate_limiter",
+   "n": 3
+  },
+  {
+   "from": "storage",
+   "module": "config",
+   "n": 3
+  },
+  {
+   "from": "(root)",
+   "module": "config",
+   "n": 2
+  },
+  {
+   "from": "(root)",
+   "module": "cli",
+   "n": 1
+  },
+  {
+   "from": "pipeline",
+   "module": "config",
+   "n": 1
+  },
+  {
+   "from": "tasks",
+   "module": "config",
+   "n": 1
+  },
+  {
+   "from": "tracker",
+   "module": "config",
+   "n": 1
+  },
+  {
+   "from": "observability",
+   "module": "config",
+   "n": 1
+  },
+  {
+   "from": "testing",
+   "module": "config",
+   "n": 1
+  },
+  {
+   "from": "debugger",
+   "module": "config",
+   "n": 1
+  }
+ ],
+ "sites": {
+  "(root)->credentials": [
+   "core/framework/config.py:267"
+  ],
+  "(root)->llm": [
+   "core/framework/config.py:344",
+   "core/framework/config.py:535"
+  ],
+  "(root)->loader": [
+   "core/framework/config.py:405",
+   "core/framework/config.py:415",
+   "core/framework/config.py:425"
+  ],
+  "(root)->agent_loop": [
+   "core/framework/__init__.py:19"
+  ],
+  "(root)->host": [
+   "core/framework/__init__.py:20"
+  ],
+  "(root)->tracker": [
+   "core/framework/__init__.py:22"
+  ],
+  "(root)->utils": [
+   "core/framework/cli.py:50"
+  ],
+  "(root)->skills": [
+   "core/framework/cli.py:76"
+  ],
+  "(root)->debugger": [
+   "core/framework/cli.py:81"
+  ],
+  "(root)->maintenance": [
+   "core/framework/cli.py:91"
+  ],
+  "(root)->cloud_sync": [
+   "core/framework/cloud_sync_hooks.py:26"
+  ],
+  "pipeline->loader": [
+   "core/framework/pipeline/stages/mcp_registry.py:40",
+   "core/framework/pipeline/stages/mcp_registry.py:43"
+  ],
+  "pipeline->orchestrator": [
+   "core/framework/pipeline/stages/mcp_registry.py:45",
+   "core/framework/pipeline/stages/credential_resolver.py:36"
+  ],
+  "pipeline->(root)": [
+   "core/framework/pipeline/stages/llm_provider.py:38"
+  ],
+  "pipeline->llm": [
+   "core/framework/pipeline/stages/llm_provider.py:49",
+   "core/framework/pipeline/stages/llm_provider.py:61",
+   "core/framework/pipeline/stages/llm_provider.py:70"
+  ],
+  "pipeline->skills": [
+   "core/framework/pipeline/stages/skill_registry.py:41",
+   "core/framework/pipeline/stages/skill_registry.py:42"
+  ],
+  "tasks->utils": [
+   "core/framework/tasks/store.py:42",
+   "core/framework/tasks/reminders.py:37"
+  ],
+  "tasks->host": [
+   "core/framework/tasks/events.py:17"
+  ],
+  "tasks->agent_loop": [
+   "core/framework/tasks/reminders.py:33"
+  ],
+  "tasks->loader": [
+   "core/framework/tasks/tools/register.py:11",
+   "core/framework/tasks/tools/_context.py:12"
+  ],
+  "tasks->llm": [
+   "core/framework/tasks/tools/colony_tools.py:16",
+   "core/framework/tasks/tools/session_tools.py:24"
+  ],
+  "tasks->(root)": [
+   "core/framework/tasks/tools/session_tools.py:22"
+  ],
+  "tools->loader": [
+   "core/framework/tools/harness_tools.py:148",
+   "core/framework/tools/queen_lifecycle_tools.py:32",
+   "core/framework/tools/queen_lifecycle_tools.py:37"
+  ],
+  "tools->(root)": [
+   "core/framework/tools/harness_tools.py:282",
+   "core/framework/tools/queen_mail_tools.py:14",
+   "core/framework/tools/queen_lifecycle_tools.py:2133"
+  ],
+  "tools->llm": [
+   "core/framework/tools/queen_mail_tools.py:15",
+   "core/framework/tools/playbook_tools.py:251",
+   "core/framework/tools/queen_lifecycle_tools.py:1015"
+  ],
+  "tools->server": [
+   "core/framework/tools/queen_mail_tools.py:16",
+   "core/framework/tools/playbook_tools.py:826",
+   "core/framework/tools/queen_lifecycle_tools.py:1478"
+  ],
+  "tools->host": [
+   "core/framework/tools/playbook_tools.py:265",
+   "core/framework/tools/playbook_tools.py:267",
+   "core/framework/tools/playbook_tools.py:320"
+  ],
+  "tools->credentials": [
+   "core/framework/tools/queen_lifecycle_tools.py:29",
+   "core/framework/tools/queen_lifecycle_tools.py:1086"
+  ],
+  "tools->agents": [
+   "core/framework/tools/queen_lifecycle_tools.py:432"
+  ],
+  "tools->agent_loop": [
+   "core/framework/tools/queen_lifecycle_tools.py:727",
+   "core/framework/tools/queen_lifecycle_tools.py:812",
+   "core/framework/tools/queen_lifecycle_tools.py:925"
+  ],
+  "tools->skills": [
+   "core/framework/tools/queen_lifecycle_tools.py:2135",
+   "core/framework/tools/queen_lifecycle_tools.py:2136",
+   "core/framework/tools/queen_lifecycle_tools.py:2326"
+  ],
+  "tools->global_db": [
+   "core/framework/tools/tracker_tools.py:44",
+   "core/framework/tools/tracker_tools.py:45"
+  ],
+  "tools->tasks": [
+   "core/framework/tools/tracker_tools.py:58"
+  ],
+  "llm->(root)": [
+   "core/framework/llm/provider.py:199",
+   "core/framework/llm/litellm.py:39",
+   "core/framework/llm/litellm.py:597"
+  ],
+  "llm->tasks": [
+   "core/framework/llm/litellm.py:1656"
+  ],
+  "llm->server": [
+   "core/framework/llm/litellm.py:2004"
+  ],
+  "llm->credentials": [
+   "core/framework/llm/endpoints.py:84"
+  ],
+  "host->loader": [
+   "core/framework/host/worker.py:332"
+  ],
+  "host->utils": [
+   "core/framework/host/worker.py:373"
+  ],
+  "host->crm": [
+   "core/framework/host/worker.py:414"
+  ],
+  "host->agent_loop": [
+   "core/framework/host/colony_runtime.py:24",
+   "core/framework/host/colony_runtime.py:99",
+   "core/framework/host/colony_runtime.py:1427"
+  ],
+  "host->(root)": [
+   "core/framework/host/colony_runtime.py:26",
+   "core/framework/host/colony_runtime.py:682",
+   "core/framework/host/colony_runtime.py:707"
+  ],
+  "host->schemas": [
+   "core/framework/host/colony_runtime.py:36",
+   "core/framework/host/outcome_aggregator.py:2",
+   "core/framework/host/execution_manager.py:1030"
+  ],
+  "host->storage": [
+   "core/framework/host/colony_runtime.py:37",
+   "core/framework/host/colony_runtime.py:38",
+   "core/framework/host/colony_runtime.py:1428"
+  ],
+  "host->llm": [
+   "core/framework/host/colony_runtime.py:41",
+   "core/framework/host/colony_runtime.py:1517",
+   "core/framework/host/agent_host.py:30"
+  ],
+  "host->skills": [
+   "core/framework/host/colony_runtime.py:42",
+   "core/framework/host/colony_runtime.py:351",
+   "core/framework/host/colony_runtime.py:708"
+  ],
+  "host->tracker": [
+   "core/framework/host/colony_runtime.py:43",
+   "core/framework/host/agent_host.py:27",
+   "core/framework/host/execution_manager.py:686"
+  ],
+  "host->agents": [
+   "core/framework/host/colony_runtime.py:100",
+   "core/framework/host/colony_runtime.py:706",
+   "core/framework/host/colony_runtime.py:983"
+  ],
+  "host->pipeline": [
+   "core/framework/host/colony_runtime.py:350",
+   "core/framework/host/colony_runtime.py:683",
+   "core/framework/host/colony_runtime.py:684"
+  ],
+  "host->tasks": [
+   "core/framework/host/colony_runtime.py:413",
+   "core/framework/host/colony_runtime.py:613",
+   "core/framework/host/colony_runtime.py:1799"
+  ],
+  "host->tools": [
+   "core/framework/host/colony_runtime.py:630",
+   "core/framework/host/colony_runtime.py:645",
+   "core/framework/host/colony_runtime.py:658"
+  ],
+  "host->credentials": [
+   "core/framework/host/colony_runtime.py:1720"
+  ],
+  "host->orchestrator": [
+   "core/framework/host/agent_host.py:23",
+   "core/framework/host/agent_host.py:24",
+   "core/framework/host/agent_host.py:31"
+  ],
+  "host->observability": [
+   "core/framework/host/stream_runtime.py:14"
+  ],
+  "agents->(root)": [
+   "core/framework/agents/discovery.py:109",
+   "core/framework/agents/discovery.py:133",
+   "core/framework/agents/discovery.py:196"
+  ],
+  "agents->host": [
+   "core/framework/agents/queen/timeline.py:382",
+   "core/framework/agents/queen/reflection_agent.py:849",
+   "core/framework/agents/queen/tools_ga_migration.py:34"
+  ],
+  "agents->schemas": [
+   "core/framework/agents/queen/worker_definition.py:28",
+   "core/framework/agents/queen/agent.py:6"
+  ],
+  "agents->llm": [
+   "core/framework/agents/queen/reflection_agent.py:40",
+   "core/framework/agents/queen/soul_reflection.py:32",
+   "core/framework/agents/queen/queen_profiles.py:28"
+  ],
+  "agents->tracker": [
+   "core/framework/agents/queen/reflection_agent.py:41"
+  ],
+  "agents->storage": [
+   "core/framework/agents/queen/reflection_agent.py:599"
+  ],
+  "agents->server": [
+   "core/framework/agents/queen/soul_reflection.py:644"
+  ],
+  "agents->orchestrator": [
+   "core/framework/agents/queen/nodes/__init__.py:6"
+  ],
+  "server->tasks": [
+   "core/framework/server/routes_tasks.py:13",
+   "core/framework/server/routes_tasks.py:15",
+   "core/framework/server/routes_sessions.py:538"
+  ],
+  "server->host": [
+   "core/framework/server/routes_colony_tools.py:32",
+   "core/framework/server/routes_colony_tools.py:34",
+   "core/framework/server/routes_colony_tools.py:316"
+  ],
+  "server->agent_loop": [
+   "core/framework/server/routes_colony_tools.py:47",
+   "core/framework/server/routes_sessions.py:519",
+   "core/framework/server/routes_sessions.py:521"
+  ],
+  "server->(root)": [
+   "core/framework/server/claude_code_queens.py:43",
+   "core/framework/server/claude_code_queens.py:293",
+   "core/framework/server/claude_code_queens.py:427"
+  ],
+  "server->loader": [
+   "core/framework/server/routes_mcp.py:26",
+   "core/framework/server/routes_mcp.py:28",
+   "core/framework/server/session_manager.py:1736"
+  ],
+  "server->tools": [
+   "core/framework/server/routes_mcp.py:57",
+   "core/framework/server/routes_sessions.py:142",
+   "core/framework/server/routes_sessions.py:1314"
+  ],
+  "server->utils": [
+   "core/framework/server/routes_sessions.py:40",
+   "core/framework/server/session_manager.py:27",
+   "core/framework/server/routes_execution.py:13"
+  ],
+  "server->llm": [
+   "core/framework/server/routes_sessions.py:51",
+   "core/framework/server/routes_credentials.py:681",
+   "core/framework/server/session_manager.py:463"
+  ],
+  "server->credentials": [
+   "core/framework/server/routes_sessions.py:82",
+   "core/framework/server/routes_credentials.py:9",
+   "core/framework/server/routes_credentials.py:11"
+  ],
+  "server->agents": [
+   "core/framework/server/routes_sessions.py:141",
+   "core/framework/server/routes_sessions.py:522",
+   "core/framework/server/routes_sessions.py:2417"
+  ],
+  "server->global_db": [
+   "core/framework/server/routes_colony_workers.py:1273",
+   "core/framework/server/routes_colony_workers.py:1333",
+   "core/framework/server/routes_colony_workers.py:1342"
+  ],
+  "server->crm": [
+   "core/framework/server/routes_colony_workers.py:1299",
+   "core/framework/server/queen_orchestrator.py:1570"
+  ],
+  "server->maintenance": [
+   "core/framework/server/routes_maintenance.py:27",
+   "core/framework/server/routes_maintenance.py:28",
+   "core/framework/server/routes_maintenance.py:92"
+  ],
+  "server->storage": [
+   "core/framework/server/session_manager.py:403",
+   "core/framework/server/session_manager.py:413",
+   "core/framework/server/session_manager.py:423"
+  ],
+  "server->schemas": [
+   "core/framework/server/session_manager.py:1653"
+  ],
+  "server->skills": [
+   "core/framework/server/routes_skills.py:48",
+   "core/framework/server/routes_skills.py:49",
+   "core/framework/server/routes_skills.py:50"
+  ],
+  "server->sentinel": [
+   "core/framework/server/routes_config.py:841",
+   "core/framework/server/routes_sentinel.py:27",
+   "core/framework/server/routes_sentinel.py:120"
+  ],
+  "server->observability": [
+   "core/framework/server/routes_logs.py:15"
+  ],
+  "server->orchestrator": [
+   "core/framework/server/queen_orchestrator.py:259"
+  ],
+  "server->tracker": [
+   "core/framework/server/queen_orchestrator.py:1619"
+  ],
+  "tracker->observability": [
+   "core/framework/tracker/runtime_logger.py:28",
+   "core/framework/tracker/decision_tracker.py:15"
+  ],
+  "tracker->schemas": [
+   "core/framework/tracker/decision_tracker.py:17",
+   "core/framework/tracker/decision_tracker.py:18"
+  ],
+  "tracker->storage": [
+   "core/framework/tracker/decision_tracker.py:19"
+  ],
+  "tracker->(root)": [
+   "core/framework/tracker/llm_debug_logger.py:38"
+  ],
+  "observability->(root)": [
+   "core/framework/observability/logging.py:292"
+  ],
+  "schemas->orchestrator": [
+   "core/framework/schemas/session_state.py:15"
+  ],
+  "agent_loop->llm": [
+   "core/framework/agent_loop/conversation.py:10",
+   "core/framework/agent_loop/agent_loop.py:108",
+   "core/framework/agent_loop/agent_loop.py:109"
+  ],
+  "agent_loop->orchestrator": [
+   "core/framework/agent_loop/conversation.py:439",
+   "core/framework/agent_loop/internals/judge_pipeline.py:10",
+   "core/framework/agent_loop/internals/judge_pipeline.py:128"
+  ],
+  "agent_loop->(root)": [
+   "core/framework/agent_loop/agent_loop.py:106",
+   "core/framework/agent_loop/agent_loop.py:2072",
+   "core/framework/agent_loop/internals/vision_fallback.py:34"
+  ],
+  "agent_loop->host": [
+   "core/framework/agent_loop/agent_loop.py:107",
+   "core/framework/agent_loop/agent_loop.py:2127",
+   "core/framework/agent_loop/agent_loop.py:2263"
+  ],
+  "agent_loop->tracker": [
+   "core/framework/agent_loop/agent_loop.py:117",
+   "core/framework/agent_loop/types.py:18",
+   "core/framework/agent_loop/internals/vision_fallback.py:396"
+  ],
+  "agent_loop->credentials": [
+   "core/framework/agent_loop/agent_loop.py:463",
+   "core/framework/agent_loop/internals/sentinel_tool.py:162",
+   "core/framework/agent_loop/internals/sentinel_tool.py:164"
+  ],
+  "agent_loop->tasks": [
+   "core/framework/agent_loop/agent_loop.py:915",
+   "core/framework/agent_loop/agent_loop.py:1023",
+   "core/framework/agent_loop/agent_loop.py:1024"
+  ],
+  "agent_loop->sentinel": [
+   "core/framework/agent_loop/agent_loop.py:948",
+   "core/framework/agent_loop/agent_loop.py:1013",
+   "core/framework/agent_loop/agent_loop.py:1150"
+  ],
+  "agent_loop->tools": [
+   "core/framework/agent_loop/agent_loop.py:1623"
+  ],
+  "agent_loop->skills": [
+   "core/framework/agent_loop/prompting.py:69"
+  ],
+  "storage->schemas": [
+   "core/framework/storage/checkpoint_store.py:12",
+   "core/framework/storage/concurrent.py:18",
+   "core/framework/storage/session_store.py:13"
+  ],
+  "storage->utils": [
+   "core/framework/storage/checkpoint_store.py:14",
+   "core/framework/storage/session_summary.py:28",
+   "core/framework/storage/concurrent.py:20"
+  ],
+  "storage->(root)": [
+   "core/framework/storage/migrate_colony_sessions.py:32",
+   "core/framework/storage/migrate_v3.py:30",
+   "core/framework/storage/migrate_v2.py:17"
+  ],
+  "sentinel->agent_loop": [
+   "core/framework/sentinel/escalation_source.py:29"
+  ],
+  "sentinel->(root)": [
+   "core/framework/sentinel/store.py:29",
+   "core/framework/sentinel/classifier.py:24",
+   "core/framework/sentinel/token.py:30"
+  ],
+  "sentinel->llm": [
+   "core/framework/sentinel/classifier.py:28"
+  ],
+  "sentinel->credentials": [
+   "core/framework/sentinel/notifier.py:46"
+  ],
+  "testing->(root)": [
+   "core/framework/testing/llm_judge.py:11"
+  ],
+  "testing->llm": [
+   "core/framework/testing/llm_judge.py:15",
+   "core/framework/testing/llm_judge.py:54",
+   "core/framework/testing/llm_judge.py:64"
+  ],
+  "loader->tools": [
+   "core/framework/loader/mcp_registry.py:24",
+   "core/framework/loader/tool_registry.py:803",
+   "core/framework/loader/tool_registry.py:902"
+  ],
+  "loader->(root)": [
+   "core/framework/loader/mcp_registry.py:78",
+   "core/framework/loader/mcp_cli.py:94",
+   "core/framework/loader/tool_registry.py:192"
+  ],
+  "loader->llm": [
+   "core/framework/loader/tool_registry.py:15",
+   "core/framework/loader/agent_loader.py:18"
+  ],
+  "loader->observability": [
+   "core/framework/loader/cli.py:105",
+   "core/framework/loader/agent_loader.py:1481"
+  ],
+  "loader->server": [
+   "core/framework/loader/cli.py:106",
+   "core/framework/loader/cli.py:782",
+   "core/framework/loader/cli.py:907"
+  ],
+  "loader->sentinel": [
+   "core/framework/loader/cli.py:245",
+   "core/framework/loader/cli.py:284"
+  ],
+  "loader->agents": [
+   "core/framework/loader/cli.py:499",
+   "core/framework/loader/cli.py:519"
+  ],
+  "loader->credentials": [
+   "core/framework/loader/agent_loader.py:13",
+   "core/framework/loader/agent_loader.py:1680",
+   "core/framework/loader/preload_validation.py:69"
+  ],
+  "loader->host": [
+   "core/framework/loader/agent_loader.py:16",
+   "core/framework/loader/agent_loader.py:17",
+   "core/framework/loader/agent_loader.py:1565"
+  ],
+  "loader->orchestrator": [
+   "core/framework/loader/agent_loader.py:21",
+   "core/framework/loader/agent_loader.py:22",
+   "core/framework/loader/agent_loader.py:27"
+  ],
+  "loader->schemas": [
+   "core/framework/loader/agent_loader.py:894"
+  ],
+  "loader->pipeline": [
+   "core/framework/loader/agent_loader.py:1482",
+   "core/framework/loader/agent_loader.py:1483",
+   "core/framework/loader/agent_loader.py:1484"
+  ],
+  "loader->skills": [
+   "core/framework/loader/agent_loader.py:1486",
+   "core/framework/loader/agent_loader.py:1487"
+  ],
+  "loader->tracker": [
+   "core/framework/loader/agent_loader.py:1567"
+  ],
+  "debugger->(root)": [
+   "core/framework/debugger/cli.py:63"
+  ],
+  "maintenance->server": [
+   "core/framework/maintenance/retention.py:38",
+   "core/framework/maintenance/retention.py:42"
+  ],
+  "maintenance->utils": [
+   "core/framework/maintenance/retention.py:39",
+   "core/framework/maintenance/janitor.py:27"
+  ],
+  "skills->(root)": [
+   "core/framework/skills/discovery.py:146",
+   "core/framework/skills/discovery.py:164",
+   "core/framework/skills/registry.py:29"
+  ],
+  "skills->llm": [
+   "core/framework/skills/cli.py:1069"
+  ],
+  "skills->testing": [
+   "core/framework/skills/cli.py:1144"
+  ],
+  "skills->credentials": [
+   "core/framework/skills/trust.py:418"
+  ],
+  "orchestrator->(root)": [
+   "core/framework/orchestrator/edge.py:31",
+   "core/framework/orchestrator/edge.py:394",
+   "core/framework/orchestrator/node_worker.py:808"
+  ],
+  "orchestrator->agent_loop": [
+   "core/framework/orchestrator/node_worker.py:354",
+   "core/framework/orchestrator/node_worker.py:577",
+   "core/framework/orchestrator/node_worker.py:578"
+  ],
+  "orchestrator->storage": [
+   "core/framework/orchestrator/node_worker.py:583",
+   "core/framework/orchestrator/orchestrator.py:34",
+   "core/framework/orchestrator/orchestrator.py:743"
+  ],
+  "orchestrator->credentials": [
+   "core/framework/orchestrator/prompting.py:13"
+  ],
+  "orchestrator->skills": [
+   "core/framework/orchestrator/prompting.py:223",
+   "core/framework/orchestrator/context.py:98"
+  ],
+  "orchestrator->tracker": [
+   "core/framework/orchestrator/context.py:20",
+   "core/framework/orchestrator/orchestrator.py:35",
+   "core/framework/orchestrator/node.py:28"
+  ],
+  "orchestrator->llm": [
+   "core/framework/orchestrator/orchestrator.py:20",
+   "core/framework/orchestrator/conversation_judge.py:19",
+   "core/framework/orchestrator/node.py:26"
+  ],
+  "orchestrator->observability": [
+   "core/framework/orchestrator/orchestrator.py:21"
+  ],
+  "orchestrator->schemas": [
+   "core/framework/orchestrator/orchestrator.py:33"
+  ],
+  "orchestrator->utils": [
+   "core/framework/orchestrator/orchestrator.py:36"
+  ],
+  "orchestrator->loader": [
+   "core/framework/orchestrator/orchestrator.py:661",
+   "core/framework/orchestrator/orchestrator.py:669",
+   "core/framework/orchestrator/orchestrator.py:691"
+  ],
+  "orchestrator->host": [
+   "core/framework/orchestrator/orchestrator.py:1229"
+  ],
+  "credentials->(root)": [
+   "core/framework/credentials/store.py:750",
+   "core/framework/credentials/store.py:855",
+   "core/framework/credentials/key_storage.py:22"
+  ],
+  "credentials->orchestrator": [
+   "core/framework/credentials/setup.py:39",
+   "core/framework/credentials/setup.py:602"
+  ],
+  "credentials->loader": [
+   "core/framework/credentials/setup.py:556"
+  ],
+  "credentials->trackerdb": [
+   "core/framework/credentials/cli.py:41"
+  ]
+ }
+}

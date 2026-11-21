@@ -128,25 +128,29 @@
         "id": "cron-seconds",
         "label": "croniter 6 字段/秒级 cron（Python 可调度、Go 现拒绝）",
         "hours": 3,
-        "done": false
+        "done": true,
+        "note": "merged"
       },
       {
         "id": "cli-usage-error-shape",
         "label": "usage 错误前缀/usage 行形状（argparse root vs leaf）",
         "hours": 2,
-        "done": false
+        "done": true,
+        "note": "merged"
       },
       {
         "id": "judge-conversation-level2",
         "label": "conversation_judge.py（Level2 会话质量门）移植或显式范围外声明",
         "hours": 4,
-        "done": false
+        "done": true,
+        "note": "登记范围外（judge-parity J4）"
       },
       {
         "id": "judge-subagent-urgency",
         "label": "SubagentJudge 迭代余量 URGENT/WARNING 层",
         "hours": 2,
-        "done": false
+        "done": true,
+        "note": "登记不移植（judge-parity J5）"
       },
       {
         "id": "goal-marshal-parity",
@@ -193,6 +197,80 @@
       {
         "id": "browser-audit-d02-refresh",
         "label": "browser 审计页 D02 文案与 tool-surface 22/22 sha 证据不一致，需刷新口径",
+        "hours": 1,
+        "done": false
+      },
+      {
+        "id": "memory-tools-defs",
+        "label": "memory 工具定义逐字+契约覆盖：search_messages desc/3 条 nullable、search_timeline 入契约、memory 文件四工具（list/read/write/delete_memory_file）入契约或登记",
+        "hours": 4,
+        "done": false
+      },
+      {
+        "id": "tool-desc-residual-7",
+        "label": "tool-contract-diff 当前 description 34/41（7 条未逐字）+ schema 归一 20/41 收口",
+        "hours": 2,
+        "done": false
+      },
+      {
+        "id": "integrations-structure-p1",
+        "label": "integrations 包结构重构（一）：内核下沉 integrationkit + 类型别名骨架 + 目录文档 + lane 前缀只减不增门禁 + 1 个领域子包试点",
+        "hours": 6,
+        "done": true,
+        "note": "delivered 33837a81（待合并）"
+      },
+      {
+        "id": "integrations-structure-p2",
+        "label": "integrations 包结构重构（二）：9 大领域文件迁子包、1908 个 batch 前缀标识符改名、248 个重复 helper 收敛、豁免清单清零",
+        "hours": 10,
+        "done": false
+      },
+      {
+        "id": "queen-mail-mcp-parity",
+        "label": "queen-mail MCP stdio 协议面收口：description 逐字/title/outputSchema/structuredContent+isError/错误码，capabilities 与 serverInfo.version 登记例外；docs/queen-mail.md §6 补录",
+        "hours": 3,
+        "done": false
+      },
+      {
+        "id": "qmail-package-split",
+        "label": "拆包：internal/qmail → internal/queenmail（信件引擎+MCP 面）+ internal/claudecode（runner/transcript/procsys/conversations）；去交叉耦合、arch/docs 同步、行为零变化",
+        "hours": 5,
+        "done": true,
+        "note": "merged 986628d5"
+      },
+      {
+        "id": "reflection-atomic-write",
+        "label": "reflection.go:302 os.WriteFile 非原子写 → temp+rename，消除 TestChatRuntimeTurnDoneReflectsIntoQueenMemory flake 根因",
+        "hours": 1,
+        "done": false
+      },
+      {
+        "id": "soul-queen-reverse-dep",
+        "label": "结构：消除 internal/soul → internal/queen 反向依赖（QueenProfile 格式化下沉/注入），arch 仅剩 0 条反向边",
+        "hours": 2,
+        "done": false
+      },
+      {
+        "id": "skills-worker-scope",
+        "label": "worker 技能可见面：补齐 queen scope 对其名下 colony 的可见性（GAP-07），或登记为有意偏差",
+        "hours": 3,
+        "done": false
+      },
+      {
+        "id": "colony-audit-refresh",
+        "label": "刷新 queen-worker-colony-parity-audit.html：GAP-04 playbook 已修、GAP-09 LongMemEval 已有 n=20、turn_context P-05 已注入等过时条目",
+        "hours": 1,
+        "done": false
+      },
+      {
+        "id": "qmail-split-frozen-surfaces",
+        "label": "qmail→queenmail 后刷新冻结面引用：module-inventory/appearance registry/矩阵中的旧包路径（走 allowlist/重生流程）",
+        "hours": 1,
+        "done": false
+      },
+      {
+        "id": "tool-metric-unify",
+        "label": "统一 tool 一致度口径：冻结快照 diff（§3: desc 15/41）vs 实时 recheck（34/41）两套数字并存，需单一权威指标并写入治理页",
         "hours": 1,
         "done": false
       }

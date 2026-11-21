@@ -192,7 +192,7 @@ func TestBatch7Lane6CatalogIntegrity(t *testing.T) {
 				t.Fatalf("%s.%s duplicated", name, action.Name)
 			}
 			seen[action.Name] = true
-			if registry.impls[name][action.Name] == nil {
+			if registry.Impls(name)[action.Name] == nil {
 				t.Fatalf("%s.%s has no implementation", name, action.Name)
 			}
 		}

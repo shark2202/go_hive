@@ -67,11 +67,11 @@ func TestBatch7Lane8Catalog(t *testing.T) {
 		if len(tool.Actions) != wantActions[tool.Name] {
 			t.Fatalf("%s actions = %d, want %d", tool.Name, len(tool.Actions), wantActions[tool.Name])
 		}
-		if len(registry.impls[tool.Name]) != len(tool.Actions) {
-			t.Fatalf("%s impls = %d, want %d", tool.Name, len(registry.impls[tool.Name]), len(tool.Actions))
+		if len(registry.Impls(tool.Name)) != len(tool.Actions) {
+			t.Fatalf("%s impls = %d, want %d", tool.Name, len(registry.Impls(tool.Name)), len(tool.Actions))
 		}
 		for _, action := range tool.Actions {
-			if registry.impls[tool.Name][action.Name] == nil {
+			if registry.Impls(tool.Name)[action.Name] == nil {
 				t.Fatalf("%s.%s has no implementation", tool.Name, action.Name)
 			}
 		}

@@ -187,7 +187,7 @@ func TestBatch4CatalogIntegrity(t *testing.T) {
 			if action.Source == "" {
 				t.Fatalf("%s.%s missing source", tool.Name, action.Name)
 			}
-			if registry.impls[tool.Name][action.Name] == nil {
+			if registry.Impls(tool.Name)[action.Name] == nil {
 				t.Fatalf("%s.%s has no implementation", tool.Name, action.Name)
 			}
 		}

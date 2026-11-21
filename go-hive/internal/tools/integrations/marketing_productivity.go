@@ -92,12 +92,7 @@ func newBatch7Lane9Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{
 		batch7Lane9ZoomTool,
 		batch7Lane9GoogleAnalyticsTool,
@@ -106,8 +101,7 @@ func newBatch7Lane9Registry(opts ...Option) *Registry {
 		batch7Lane9GraphTool,
 		batch7Lane9EmailTool,
 	} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	for tool, impls := range map[string]map[string]ActionFunc{
 		"zoom":                  batch7Lane9ZoomImpls(),
@@ -118,7 +112,7 @@ func newBatch7Lane9Registry(opts ...Option) *Registry {
 		"email":                 batch7Lane9EmailImpls(),
 	} {
 		for action, impl := range impls {
-			registry.addImpl(tool, action, impl)
+			registry.AddImpl(tool, action, impl)
 		}
 	}
 	return registry

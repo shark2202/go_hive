@@ -386,7 +386,7 @@ func TestBatch7Lane2Catalog(t *testing.T) {
 		if action.Source == "" {
 			t.Fatalf("%s missing source", action.Name)
 		}
-		if registry.impls["cloudflare"][action.Name] == nil {
+		if registry.Impls("cloudflare")[action.Name] == nil {
 			t.Fatalf("%s has no implementation", action.Name)
 		}
 		if _, present := batch7Lane2ExpectedRoutes[action.Name]; !present {

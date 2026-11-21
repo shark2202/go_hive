@@ -94,8 +94,8 @@
 
 ### W5-SEC-06（Medium）qmail 信件 ID / Claude queen 目录穿越
 
-- 位置：`internal/qmail/store.go:42`、`:54`、`:69`；
-  `internal/qmail/conversations.go:63`、`:74`、`:281`
+- 位置：`internal/queenmail/store.go:42`、`:54`、`:69`；
+  `internal/claudecode/conversations.go:63`、`:74`、`:281`
 - 问题：`Store.Load/Save` 用 `id + ".json"` 直接拼路径；`queue.jsonl` / `inbox.jsonl`
   被本地篡改后可读写 letters 目录之外。`ClaudeStore.Home` 直接拼配置里的 queen id。
 - 修复：`validLetterID`（单段、≤128、非 `.`/`..`、不含分隔符/NUL）用于 Save/Load 与
@@ -118,7 +118,7 @@
 
 - 位置：`internal/credentials/storage.go:108`、`:272`；`internal/senders/store.go:56`；
   `internal/hivehome/home.go:68`；`internal/sentinel/token.go:88`、`:123`；
-  `internal/qmail/store.go:197`
+  `internal/queenmail/store.go:197`
 - 问题与修复：
   - `EncryptedFileStorage.ensureDirs` 原为 0755；`index.json` 原为 0644。改为 0700（并 chmod 已存在目录）、
     index 0600；`.enc` 原本就是 0600。
@@ -253,7 +253,7 @@
 
 ### 5. qmail 鉴权与内容
 
-- 位置：`internal/qmail/mail.go:110`（`Authorizes`）、`internal/qmail/ref.go`
+- 位置：`internal/queenmail/mail.go:110`（`Authorizes`）、`internal/queenmail/ref.go`
 - 结论：conversation ref 的 token 是 HMAC-SHA256 + `hmac.Equal`；信件文本进入模型上下文前用
   `Said()` 打断 `]:`，降低“冒名”注入。未发现 shell/路径注入（新增 ID 校验后）。
 

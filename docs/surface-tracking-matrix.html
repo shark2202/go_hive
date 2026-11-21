@@ -30,7 +30,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 </style></head><body><div class="wrap">
 <header><div class="eyebrow">Hive · Surface Parity</div><h1>Hive ↔ go_hive <span>外观对齐追踪矩阵</span></h1>
 <p class="lede">把「对外可观测面」逐项对齐：<b>API 路由、工具 schema、技能接口、配置接口、环境变量、前端 UI</b>。数字来自本机现场实测；<b>外观对齐不等于行为对齐</b>，未验证或未接生产链的能力不写成可用。</p>
-<div class="meta"><span>生成：<b>2026-11-21 17:40 CST</b></span><span>Python hive：<b>1.0.14</b></span><span>Go hive：<b>1.0.26-go.1</b></span><span>Go HEAD：<b>4af5b375</b></span><span>证据：<b>surface_audit.py + api_parity.py + 各维度双跑证据（见 §07 回链）</b></span></div>
+<div class="meta"><span>生成：<b>2026-11-22 00:56 CST</b></span><span>Python hive：<b>1.0.14</b></span><span>Go hive：<b>1.0.26-go.1</b></span><span>Go HEAD：<b>428b47bb</b></span><span>证据：<b>surface_audit.py + api_parity.py + 各维度双跑证据（见 §07 回链）</b></span></div>
 <div class="toc"><a href="#summary">总览</a><a href="#api">API</a><a href="#tools">Tools</a><a href="#skills">Skills</a><a href="#config">Config</a><a href="#env">环境变量</a><a href="#ui">UI</a><a href="#gaps">缺口</a><a href="#repro">复现</a></div></header>
 
 <section id="summary"><h2><span class="num">00</span>总览</h2>
@@ -46,13 +46,13 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <!-- SNAPSHOT:START -->
 <h3>最近一次自动刷新</h3>
 <div class="tablewrap"><table><thead><tr><th style="width:26%">指标</th><th>最近一次自动刷新的实测值</th></tr></thead><tbody>
-<tr><td>刷新时间</td><td>2026-11-21 15:49 CST（脚本 refresh_surface_matrix.py）</td></tr>
+<tr><td>刷新时间</td><td>2026-11-22 00:56 CST（脚本 refresh_surface_matrix.py）</td></tr>
 <tr><td>路由注册 / 完全一致</td><td>Go 220 · Python 216 · 完全一致 213</td></tr>
 <tr><td>skills / config 路由</td><td>skills 17/17 · config 20/20（method+path 完全一致）</td></tr>
 <tr><td>surface_audit</td><td>前端→Go 缺失 0；Python→Go 缺失 0（待修 0，全部豁免）</td></tr>
 <tr><td>端点契约（严格，18 条）</td><td>18 / 18 PASS</td></tr>
 <tr><td>失败端点</td><td><div class="small">无</div></td></tr>
-<tr><td>前端源码</td><td>同路径 1106 · Go 独有 10 · 内容不同 63（Python 独有 0）</td></tr>
+<tr><td>前端源码</td><td>同路径 1106 · Go 独有 10 · 内容不同 62（Python 独有 0）</td></tr>
 <tr><td>工具面</td><td>模块 103 / 103 · action 863 / 865 · 默认会话工具 143（矩阵生成值，未重算）</td></tr>
 </tbody></table></div>
 <div class="small">本区块由 <code>go_hive/scripts/refresh_surface_matrix.py</code> 定时重写；正文各表是人工维护的基线快照，两者不一致时以本区块为准。机器可读：<code>go_hive/docs/surface-matrix-snapshot.json</code>。</div>
@@ -238,5 +238,5 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <div class="callout info"><b>版本说明：</b>Python 侧是当前 checkout 的 <code>hive 1.0.14</code>，Go 侧是 <code>1.0.26-go.1</code>（HEAD 见页头）。路由数按原始注册条目统计；<code>surface_audit.py</code> 会解析常量注册，口径略窄（Python 207 条），但结论相同：前端调用 0 缺失、Python→Go 0 缺失。</div>
 </section>
 
-<footer>生成：2026-11-21 17:40 CST（缺口/现状行同步刷新） · 快照：Go HEAD <code>4af5b375</code> · 证据：各维度双跑证据（见 §07 回链） · 下次更新：路由 / 工具 / 技能 / 配置变更后重跑 §07 并回填本页 · 维度视角：<a href="alignment-dimensions.html">alignment-dimensions.html</a> · 外观总览：<a href="appearance-master-matrix.html">appearance-master-matrix.html</a> · 接口不变量：<a href="module-interfaces.html">module-interfaces.html</a> · 平台支持：<a href="platform-support.html">platform-support.html</a>。</footer>
+<footer>生成：2026-11-22 00:56 CST（缺口/现状行同步刷新） · 快照：Go HEAD <code>428b47bb</code> · 证据：各维度双跑证据（见 §07 回链） · 下次更新：路由 / 工具 / 技能 / 配置变更后重跑 §07 并回填本页 · 维度视角：<a href="alignment-dimensions.html">alignment-dimensions.html</a> · 外观总览：<a href="appearance-master-matrix.html">appearance-master-matrix.html</a> · 接口不变量：<a href="module-interfaces.html">module-interfaces.html</a> · 平台支持：<a href="platform-support.html">platform-support.html</a>。</footer>
 </div></body></html>

@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "8029f7735f82",
+  "generated_at_commit": "0654903779c3",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 71,
-    "package_edges": 186,
+    "packages": 72,
+    "package_edges": 189,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -129,9 +129,10 @@
         "internal/tools/builtin",
         "internal/tools/integrationkit",
         "internal/tools/integrations",
+        "internal/tools/integrations/excel",
         "internal/visionfallback"
       ],
-      "package_count": 18
+      "package_count": 19
     },
     {
       "id": "foundation",
@@ -770,7 +771,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 10
+      "dependents": 11
     },
     {
       "id": "pkg:internal/tools/builtin",
@@ -793,19 +794,31 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 0,
-      "dependents": 1
+      "direct_dependencies": 1,
+      "dependents": 2
     },
     {
       "id": "pkg:internal/tools/integrations",
       "kind": "technical",
       "package": "internal/tools/integrations",
       "layer": "capability",
-      "responsibility": "集成工具集：研究、天气、行情、媒体、网络扫描等外部系统的工具模块与参数 schema。",
+      "responsibility": "集成工具集（装配根）：生成目录、领域实现与 InstallBatch* 入口；领域实现按 internal/tools/integrations/<domain> 子包迁出，子包只依赖 integrationkit。",
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 4,
+      "direct_dependencies": 5,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/excel",
+      "kind": "technical",
+      "package": "internal/tools/integrations/excel",
+      "layer": "capability",
+      "responsibility": "Excel 领域子包（结构试点）：工具目录、OOXML 读写与 6 个 action 实现；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
       "dependents": 1
     },
     {
@@ -2353,6 +2366,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools/integrationkit",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/attachments",
       "kind": "depends"
@@ -2369,6 +2387,16 @@
     },
     {
       "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/excel",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/excel",
       "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
     },

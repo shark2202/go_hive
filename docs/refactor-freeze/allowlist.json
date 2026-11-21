@@ -1,4 +1,29 @@
 {
   "note": "Intentional frozen-surface changes for structural refactors. Each entry names the artifact and why the digest is expected to move; anything not listed fails refactor_freeze.sh compare. Keep this list short and delete entries once the baseline is re-captured.",
-  "allowed": []
+  "allowed": [
+    {
+      "path": "contracts/module-inventory.json",
+      "reason": "integrations-structure-p1 + qmail-split：Registry 从 integrations/integration.go:114 移到 integrationkit/registry.go:127（内核下沉），且 qmail 拆为 queenmail/claudecode 后 15 处 go_counterpart/basis/evidence 路径刷新；仅路径/行号变化，271 条登记、状态与映射语义不变。"
+    },
+    {
+      "path": "go_hive/contracts/tool-definitions.json",
+      "reason": "chart-envelope-parity round 6 刷新 chart_render 目标侧快照 + web-scrape-chrome-render 刷新 web_scrape 目标侧快照（description 1495B 逐字、schema nullable 对齐），统计随之重算；属已验收的定义对齐变更，非结构漂移。"
+    },
+    {
+      "path": "go_hive/docs/tool-contract-recheck.json",
+      "reason": "同上：附 round 6 recheck 记录（chart_render 快照刷新）。"
+    },
+    {
+      "path": "go_hive/docs/tool-contract-diff.md",
+      "reason": "同上：§3 统计与 chart_render/web_scrape 行随目标侧快照刷新重算。"
+    },
+    {
+      "path": "go_hive/docs/appearance-scope-registry.json",
+      "reason": "qmail-split 收尾：编排维度 go 侧包列表 qmail → queenmail + claudecode（拆包后两包并存）；仅路径刷新，维度口径与证据不动。随附 appearance-master-matrix.html 由生成器同步重出（110,085 B / 24 维度）。"
+    },
+    {
+      "path": "go_hive/docs/appearance-master-matrix.html",
+      "reason": "同上：由 gen_appearance_master_matrix.py 从 registry 重生成。"
+    }
+  ]
 }

@@ -69,17 +69,11 @@ func batch7Lane2NewRegistry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	tool := batch7Lane2Tool()
-	registry.tools[tool.Name] = tool
-	registry.order = append(registry.order, tool.Name)
+	registry.AddTool(tool)
 	for _, action := range batch7Lane2Actions {
-		registry.addImpl(tool.Name, action.Name, batch7Lane2Impl(action))
+		registry.AddImpl(tool.Name, action.Name, batch7Lane2Impl(action))
 	}
 	return registry
 }

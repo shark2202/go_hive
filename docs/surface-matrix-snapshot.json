@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-11-21 15:49 CST",
-  "commit": "f8aa5fe9",
+  "generated_at": "2026-11-22 00:56 CST",
+  "commit": "428b47bb",
   "versions": {
     "python": "1.0.14",
     "go": "1.0.26-go.1"
   },
-  "repo": "/Users/mac/hive/.wt/appearance-api-strict",
+  "repo": "/Users/mac/hive",
   "routes": {
     "go_total": 220,
     "python_total": 216,
@@ -33,7 +33,7 @@
     "shared_paths": 1106,
     "go_only": 10,
     "python_only": 0,
-    "content_diff": 63
+    "content_diff": 62
   },
   "tools": {
     "modules": "103 / 103",
@@ -45,7 +45,7 @@
     "actions": 865
   },
   "audit": {
-    "generated_at": "2026-11-21T15:49:46+08:00",
+    "generated_at": "2026-11-22T00:56:03+08:00",
     "frontend_missing": 0,
     "python_missing": 0,
     "python_pending": 0,
@@ -106,8 +106,8 @@
         "name": "模型列表（占位）",
         "method": "GET",
         "path": "/api/models",
-        "py": 404,
-        "go": 404,
+        "py": 200,
+        "go": 200,
         "ok": true,
         "diff": 0
       },
@@ -124,8 +124,8 @@
         "name": "组织架构图（占位）",
         "method": "GET",
         "path": "/api/org-chart",
-        "py": 404,
-        "go": 404,
+        "py": 200,
+        "go": 200,
         "ok": true,
         "diff": 0
       },
@@ -220,7 +220,7 @@
         "diff": 0
       }
     ],
-    "python_start_s": 2.55,
+    "python_start_s": 8.38,
     "go_start_s": 0.26
   }
 }

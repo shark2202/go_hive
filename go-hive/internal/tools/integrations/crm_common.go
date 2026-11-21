@@ -60,20 +60,14 @@ func newBatch6Lane1Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	for _, tool := range []*Tool{
 		batch6SalesforceTool,
 		batch6PipedriveTool,
 		batch6ZohoCRMTool,
 		batch6AttioTool,
 	} {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	for tool, actions := range map[string]map[string]ActionFunc{
 		"salesforce": batch6SalesforceImpls(),
@@ -82,7 +76,7 @@ func newBatch6Lane1Registry(opts ...Option) *Registry {
 		"attio":      batch6AttioImpls(),
 	} {
 		for action, impl := range actions {
-			registry.addImpl(tool, action, impl)
+			registry.AddImpl(tool, action, impl)
 		}
 	}
 	return registry

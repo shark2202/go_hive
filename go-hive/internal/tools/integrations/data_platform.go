@@ -63,12 +63,7 @@ func newBatch6Lane4Registry(opts ...Option) *Registry {
 	for _, opt := range opts {
 		opt(runtime)
 	}
-	registry := &Registry{
-		runtime: runtime,
-		tools:   map[string]*Tool{},
-		specs:   map[string]map[string]RestSpec{},
-		impls:   map[string]map[string]ActionFunc{},
-	}
+	registry := NewRegistry(runtime)
 	tools := []*Tool{
 		batch6Lane4SnowflakeTool,
 		batch6Lane4BigQueryTool,
@@ -79,8 +74,7 @@ func newBatch6Lane4Registry(opts ...Option) *Registry {
 		batch6Lane4SAPTool,
 	}
 	for _, tool := range tools {
-		registry.tools[tool.Name] = tool
-		registry.order = append(registry.order, tool.Name)
+		registry.AddTool(tool)
 	}
 	impls := []struct {
 		tool  string
@@ -96,7 +90,7 @@ func newBatch6Lane4Registry(opts ...Option) *Registry {
 	}
 	for _, entry := range impls {
 		for action, impl := range entry.funcs {
-			registry.addImpl(entry.tool, action, impl)
+			registry.AddImpl(entry.tool, action, impl)
 		}
 	}
 	return registry

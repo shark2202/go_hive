@@ -189,7 +189,7 @@ func TestBatch6Lane1CatalogIntegrity(t *testing.T) {
 			t.Fatalf("%s has %d actions, want %d", tool.Name, len(tool.Actions), want[tool.Name])
 		}
 		for _, action := range tool.Actions {
-			if registry.impls[tool.Name][action.Name] == nil {
+			if registry.Impls(tool.Name)[action.Name] == nil {
 				t.Fatalf("%s.%s has no implementation", tool.Name, action.Name)
 			}
 		}

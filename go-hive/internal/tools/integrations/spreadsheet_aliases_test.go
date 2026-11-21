@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/aden-hive/hive-go/internal/tools/integrations/excel"
 )
 
 // aliasProbeRegistry assembles the session view of the spreadsheet surface:
@@ -22,8 +23,8 @@ func aliasProbeRegistry(t *testing.T, root string) *tools.ToolRegistry {
 	if count := csv.Install(probe); count == 0 {
 		t.Fatal("csv aggregate installed no tools")
 	}
-	excel := newBatch3ExcelRegistry(withBatch3ExcelRoots(root))
-	if count := excel.Install(probe); count == 0 {
+	excelRegistry := excel.NewRegistry(excel.WithRoots(root))
+	if count := excelRegistry.Install(probe); count == 0 {
 		t.Fatal("excel aggregate installed no tools")
 	}
 	if count := InstallSpreadsheetAliases(probe); count != 10 {

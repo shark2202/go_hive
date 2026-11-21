@@ -1,0 +1,8 @@
+{
+  "metric": "packages from `go list ./...` with/without a `// Package <name>` doc comment (module go-hive)",
+  "stated_baseline_missing": 51,
+  "stated_baseline_documented": 19,
+  "missing_limit": 47,
+  "documented_floor": 24,
+  "note": "只减不增：缺注释的包数不得超过 missing_limit，带注释的包数不得低于 documented_floor。brief 标称基线 51 缺 / 19 有；用本门禁的口径（go list 包集合 + 文件头 `// Package` 注释）在 98120156 实测为 47 缺 / 23 有（70 个包），差值为计数口径不同（brief 的快照未包含 e2e/cmd 的 Command 文档等）。excel 子包迁入并带包文档后为 47 缺 / 24 有，documented_floor 已上调到 24。"
+}

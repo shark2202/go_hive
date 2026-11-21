@@ -67,7 +67,7 @@ func TestBatch2CatalogIntegrity(t *testing.T) {
 			t.Fatalf("tool missing identity: %+v", tool)
 		}
 		for _, action := range tool.Actions {
-			if registry.impls[tool.Name][action.Name] == nil {
+			if registry.Impls(tool.Name)[action.Name] == nil {
 				t.Fatalf("%s.%s has no implementation", tool.Name, action.Name)
 			}
 			if action.Source == "" {

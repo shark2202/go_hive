@@ -55,7 +55,8 @@ func TestBatch5Lane2RegistrySurface(t *testing.T) {
 	if len(setAction.Required) != 2 {
 		t.Fatalf("redis_set required = %v", setAction.Required)
 	}
-	description := registry.tools["postgres"].Description()
+	postgres, _ := registry.Lookup("postgres")
+	description := postgres.Description()
 	for _, want := range []string{"pg_query", "pg_get_foreign_keys", "required: sql"} {
 		if !strings.Contains(description, want) {
 			t.Fatalf("description missing %q:\n%s", want, description)
