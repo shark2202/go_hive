@@ -1,5 +1,5 @@
 %% go_hive 分层依赖图（生成物，勿手改）
-%% 源：architecture/model.yaml + go list -json ./... · commit 4c198a558dfd
+%% 源：architecture/model.yaml + go list -json ./... · commit 059f4afe0c97
 %% 只画包级 import 边；箭头 A --> B 读作 A imports B（A 依赖 B）。
 flowchart TB
   subgraph layer_entry["入口层（entry）"]
@@ -67,20 +67,63 @@ flowchart TB
     n_internal_storage["internal/storage"]
     n_internal_version["internal/version"]
   end
+  subgraph layer_unmapped["未映射层（unmapped）"]
+    direction TB
+    n_cmd_hive_browser["cmd/hive-browser"]
+    n_cmd_hive_longmemeval["cmd/hive-longmemeval"]
+    n_e2e_cmd_memgw["e2e/cmd/memgw"]
+    n_e2e_cmd_storagecompat["e2e/cmd/storagecompat"]
+    n_e2e_escalationgw["e2e/escalationgw"]
+    n_e2e_memgw["e2e/memgw"]
+    n_e2e_soulgw["e2e/soulgw"]
+    n_e2e_stallgw["e2e/stallgw"]
+    n_internal_envcontract["internal/envcontract"]
+    n_internal_hiveclock["internal/hiveclock"]
+    n_internal_hiveconf["internal/hiveconf"]
+    n_internal_logging["internal/logging"]
+    n_internal_longmemeval["internal/longmemeval"]
+    n_internal_mcpregistry_nativecli["internal/mcpregistry/nativecli"]
+    n_internal_pyenv["internal/pyenv"]
+    n_internal_release["internal/release"]
+    n_internal_resources["internal/resources"]
+    n_internal_toolgolden["internal/toolgolden"]
+    n_internal_tools_integrationkit["internal/tools/integrationkit"]
+    n_internal_visionfallback["internal/visionfallback"]
+  end
   n_cmd_hive --> n_internal_cli
+  n_cmd_hive_browser --> n_internal_cli
   n_cmd_hive_cred --> n_internal_cli
+  n_cmd_hive_longmemeval --> n_internal_cli
+  n_cmd_hive_longmemeval --> n_internal_longmemeval
+  n_e2e_cmd_memgw --> n_e2e_memgw
+  n_e2e_cmd_storagecompat --> n_internal_agentloop
+  n_e2e_cmd_storagecompat --> n_internal_agents
+  n_e2e_cmd_storagecompat --> n_internal_colony
+  n_e2e_cmd_storagecompat --> n_internal_credentials
+  n_e2e_cmd_storagecompat --> n_internal_hivehome
+  n_e2e_cmd_storagecompat --> n_internal_schemas
+  n_e2e_cmd_storagecompat --> n_internal_senders
+  n_e2e_cmd_storagecompat --> n_internal_session
+  n_e2e_cmd_storagecompat --> n_internal_storage
+  n_e2e_cmd_storagecompat --> n_internal_tracker
+  n_internal_agentloop --> n_internal_hiveclock
+  n_internal_agentloop --> n_internal_hivehome
   n_internal_agentloop --> n_internal_llm
   n_internal_agentloop --> n_internal_llmjudge
+  n_internal_agentloop --> n_internal_pyenv
   n_internal_agentloop --> n_internal_ratelimit
   n_internal_agentloop --> n_internal_schemas
   n_internal_agentloop --> n_internal_skills
   n_internal_agentloop --> n_internal_tools
+  n_internal_agentloop --> n_internal_visionfallback
   n_internal_agents --> n_internal_agentloop
   n_internal_agents --> n_internal_schemas
   n_internal_charts --> n_internal_hivehome
+  n_internal_charts --> n_internal_llm
   n_internal_cli --> n_internal_agentloop
   n_internal_cli --> n_internal_agents
   n_internal_cli --> n_internal_atomicfs
+  n_internal_cli --> n_internal_charts
   n_internal_cli --> n_internal_colony
   n_internal_cli --> n_internal_credentials
   n_internal_cli --> n_internal_eventbus
@@ -88,22 +131,29 @@ flowchart TB
   n_internal_cli --> n_internal_host
   n_internal_cli --> n_internal_llm
   n_internal_cli --> n_internal_llmjudge
+  n_internal_cli --> n_internal_logging
+  n_internal_cli --> n_internal_longmemeval
   n_internal_cli --> n_internal_maintenance
   n_internal_cli --> n_internal_mcpregistry
   n_internal_cli --> n_internal_memory
+  n_internal_cli --> n_internal_qmail
   n_internal_cli --> n_internal_queen
+  n_internal_cli --> n_internal_resources
   n_internal_cli --> n_internal_server
   n_internal_cli --> n_internal_session
   n_internal_cli --> n_internal_skills
+  n_internal_cli --> n_internal_soul
   n_internal_cli --> n_internal_tasks
   n_internal_cli --> n_internal_tools
   n_internal_cli --> n_internal_tools_builtin
   n_internal_cli --> n_internal_tools_integrations
   n_internal_cli --> n_internal_tracker
   n_internal_cli --> n_internal_version
+  n_internal_cli --> n_internal_visionfallback
   n_internal_colony --> n_internal_agentloop
   n_internal_colony --> n_internal_atomicfs
   n_internal_colony --> n_internal_eventbus
+  n_internal_colony --> n_internal_hiveconf
   n_internal_colony --> n_internal_hivehome
   n_internal_colony --> n_internal_llm
   n_internal_colony --> n_internal_playbook
@@ -114,6 +164,8 @@ flowchart TB
   n_internal_colony --> n_internal_tracker
   n_internal_credentials --> n_internal_atomicfs
   n_internal_credentials --> n_internal_hivehome
+  n_internal_hiveconf --> n_internal_hivehome
+  n_internal_hiveconf --> n_internal_llm
   n_internal_host --> n_internal_agentloop
   n_internal_host --> n_internal_colony
   n_internal_host --> n_internal_eventbus
@@ -125,24 +177,35 @@ flowchart TB
   n_internal_llm --> n_internal_hivehome
   n_internal_llm --> n_internal_ratelimit
   n_internal_llmjudge --> n_internal_llm
+  n_internal_logging --> n_internal_pyenv
+  n_internal_longmemeval --> n_internal_session
   n_internal_maintenance --> n_internal_atomicfs
   n_internal_maintenance --> n_internal_hivehome
   n_internal_mcpregistry --> n_internal_atomicfs
   n_internal_mcpregistry --> n_internal_hivehome
+  n_internal_mcpregistry --> n_internal_mcpregistry_nativecli
   n_internal_mcpregistry --> n_internal_tools
   n_internal_mcpregistry --> n_internal_version
+  n_internal_mcpregistry_nativecli --> n_internal_hivehome
+  n_internal_mcpregistry_nativecli --> n_internal_tools
   n_internal_memory --> n_internal_atomicfs
   n_internal_memory --> n_internal_hivehome
   n_internal_memory --> n_internal_llm
+  n_internal_playbook --> n_internal_pyenv
   n_internal_qmail --> n_internal_hivehome
+  n_internal_qmail --> n_internal_mcpregistry_nativecli
   n_internal_qmail --> n_internal_queen
+  n_internal_qmail --> n_internal_version
   n_internal_ratelimit --> n_internal_hivehome
+  n_internal_resources --> n_internal_pyenv
   n_internal_senders --> n_internal_atomicfs
   n_internal_senders --> n_internal_tools
   n_internal_sentinel --> n_internal_agentloop
   n_internal_sentinel --> n_internal_atomicfs
   n_internal_sentinel --> n_internal_hivehome
   n_internal_sentinel --> n_internal_llm
+  n_internal_sentinel --> n_internal_logging
+  n_internal_sentinel --> n_internal_pyenv
   n_internal_server --> n_internal_agentloop
   n_internal_server --> n_internal_agents
   n_internal_server --> n_internal_atomicfs
@@ -151,15 +214,20 @@ flowchart TB
   n_internal_server --> n_internal_credentials
   n_internal_server --> n_internal_eventbus
   n_internal_server --> n_internal_globaldb
+  n_internal_server --> n_internal_hiveclock
+  n_internal_server --> n_internal_hiveconf
   n_internal_server --> n_internal_hivehome
   n_internal_server --> n_internal_llm
   n_internal_server --> n_internal_maintenance
   n_internal_server --> n_internal_mcpregistry
   n_internal_server --> n_internal_memory
   n_internal_server --> n_internal_platform
+  n_internal_server --> n_internal_playbook
+  n_internal_server --> n_internal_pyenv
   n_internal_server --> n_internal_qmail
   n_internal_server --> n_internal_queen
   n_internal_server --> n_internal_ratelimit
+  n_internal_server --> n_internal_resources
   n_internal_server --> n_internal_runtimehealth
   n_internal_server --> n_internal_senders
   n_internal_server --> n_internal_sentinel
@@ -179,6 +247,8 @@ flowchart TB
   n_internal_skills --> n_internal_atomicfs
   n_internal_skills --> n_internal_hivehome
   n_internal_skills --> n_internal_llm
+  n_internal_soul --> n_internal_llm
+  n_internal_soul --> n_internal_queen
   n_internal_storage --> n_internal_atomicfs
   n_internal_storage --> n_internal_hivehome
   n_internal_storage --> n_internal_schemas
@@ -186,11 +256,16 @@ flowchart TB
   n_internal_tasks --> n_internal_atomicfs
   n_internal_tasks --> n_internal_eventbus
   n_internal_tools --> n_internal_hivehome
+  n_internal_tools --> n_internal_llm
   n_internal_tools_builtin --> n_internal_atomicfs
   n_internal_tools_builtin --> n_internal_llm
+  n_internal_tools_builtin --> n_internal_tools
   n_internal_tools_integrations --> n_internal_attachments
+  n_internal_tools_integrations --> n_internal_hiveclock
   n_internal_tools_integrations --> n_internal_tools
+  n_internal_tools_integrations --> n_internal_tools_integrationkit
   n_internal_triggers --> n_internal_atomicfs
+  n_internal_visionfallback --> n_internal_llm
 
   classDef style_entry fill:#eef2ff,stroke:#4338ca,color:#0f172a;
   class n_cmd_hive,n_cmd_hive_cred style_entry;
@@ -206,3 +281,5 @@ flowchart TB
   class n_internal_attachments,n_internal_charts,n_internal_credentials,n_internal_globaldb,n_internal_llm,n_internal_maintenance,n_internal_mcpregistry,n_internal_memory,n_internal_senders,n_internal_skills,n_internal_soul,n_internal_tools,n_internal_tools_builtin,n_internal_tools_integrations style_capability;
   classDef style_foundation fill:#f1f5f9,stroke:#475569,color:#0f172a;
   class n_internal_atomicfs,n_internal_eventbus,n_internal_hivehome,n_internal_platform,n_internal_quality,n_internal_ratelimit,n_internal_schemas,n_internal_storage,n_internal_version style_foundation;
+  classDef style_unmapped fill:#ffe4e6,stroke:#be123c,color:#0f172a;
+  class n_cmd_hive_browser,n_cmd_hive_longmemeval,n_e2e_cmd_memgw,n_e2e_cmd_storagecompat,n_e2e_escalationgw,n_e2e_memgw,n_e2e_soulgw,n_e2e_stallgw,n_internal_envcontract,n_internal_hiveclock,n_internal_hiveconf,n_internal_logging,n_internal_longmemeval,n_internal_mcpregistry_nativecli,n_internal_pyenv,n_internal_release,n_internal_resources,n_internal_toolgolden,n_internal_tools_integrationkit,n_internal_visionfallback style_unmapped;

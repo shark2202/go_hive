@@ -1,6 +1,6 @@
 # 业务能力 ↔ 技术模块对照（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `4c198a558dfd`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `059f4afe0c97`
 > 这是业务视图与技术视图的接缝：左边是人关心的结果，右边是代码里真实存在的包、入口与落盘文件。
 
 ## 成熟度与审批口径
@@ -69,7 +69,7 @@
 
 ## 未被业务能力直接引用的模块
 
-共 11 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
+共 31 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
 
 | 模块 | 层 | 说明 |
 | --- | --- | --- |
@@ -84,6 +84,26 @@
 | `internal/platform` | foundation | 基础/入口层，预期不挂业务能力 |
 | `internal/agents` | orchestration | 编排/运行时组件，可按需挂到能力 |
 | `internal/orchestrator` | runtime | 编排/运行时组件，可按需挂到能力 |
+| `cmd/hive-browser` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `cmd/hive-longmemeval` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `e2e/cmd/memgw` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `e2e/cmd/storagecompat` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `e2e/escalationgw` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `e2e/memgw` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `e2e/soulgw` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `e2e/stallgw` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/envcontract` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/hiveclock` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/hiveconf` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/logging` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/longmemeval` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/mcpregistry/nativecli` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/pyenv` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/release` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/resources` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/toolgolden` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/tools/integrationkit` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/visionfallback` | unmapped | 编排/运行时组件，可按需挂到能力 |
 
 ## 业务链路的读法
 

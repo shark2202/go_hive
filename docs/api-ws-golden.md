@@ -28,11 +28,11 @@ canonical 响应值，逐条比对后写入 golden；差异只有三类——已
 | --- | --- | --- |
 | SSE canonical 帧 | reference 113 / target 148 | 同一剧本：创建 → 开场回合 → 普通消息 → ask_user → 回答 → 重连 replay → DELETE |
 | SSE 比较帧（去文档化变换后） | live 34/34、replay 17/17、history 42/42、stop 18/17 | 变换：丢弃 Go-only 每回合信封 36 帧 + 异步 title 位置不参与顺序 |
-| REST 端点 | 77/77 PASS（74 形状/语义全等 + 3 已声明差异） | 56 成功路径 + 21 失败路径；第一批 17 端点 + 第二批 60 条探针 |
-| REST 值路径 | 8678 条 | 0 未声明差异；209 条已声明差异（0 端点级折叠；`session_live_tools` 已转逐值对照） |
+| REST 端点 | 77/77（75 形状/语义全等 + 2 端点级已声明差异，0 FAIL） | 56 成功路径 + 21 失败路径；第一批 17 端点 + 第二批 60 条探针 |
+| REST 值路径 | 8678 条 | 0 未声明差异；48 条已声明差异（0 端点级折叠；`session_live_tools` 已转逐值对照） |
 | 未知路径 fallback | 3 路径 × 2 侧 | Python SPA 200 HTML / Go 404；仅证据，不计入比较（§6.4） |
 | SSE 例外 | 11 条 | 见 `contracts/sse-frames/diff.json.exceptions` |
-| REST 例外规则 | 14 条（0 端点级） | 见 `value-golden.json.exceptions`（§6.3） |
+| REST 例外规则 | 13 条（0 端点级） | 见 `value-golden.json.exceptions`（§6.3） |
 
 ## 2. SSE canonicalizer（`go_hive/scripts/sse_frames_canonical.py`）
 
@@ -128,7 +128,7 @@ JSON 字节（`Marshal(cost_usd) == "0.0042"`）。
 ## 5. 例外清单（结构化 + 值级；不进对齐目标）
 
 SSE（`contracts/sse-frames/diff.json.exceptions`，11 条）与 REST
-（`contracts/api-responses/value-golden.json.exceptions`，14 条路径规则，0 端点级折叠）的关系：
+（`contracts/api-responses/value-golden.json.exceptions`，13 条路径规则，0 端点级折叠）的关系：
 
 | 类别 | 例外 | 归因 |
 | --- | --- | --- |
@@ -235,7 +235,7 @@ queens、sentinel、maintenance。
 | 例外 | 端点 | 类 | 说明 |
 | --- | --- | --- | --- |
 | `live-tools-registry-diagnostic` | `session_live_tools` | 已修复 | Go REST 会话已挂 `QueenToolRegistry`；`dropped_by_provider` 与参考逐值一致，仅余 `registry_mcp_total` 及派生计数（见下一行） |
-| `live-tools-mcp-universe`（3 条） | `session_live_tools` | value-level | MCP 宇宙计数 33 vs 28（Go harness 面含 excel_* 与 browser 组；Python 探测环境未注册），`independent_tools_total` 随之为 40 vs 35；模型面真正受制的 allowlist 过滤计数一致（22 filtered / 15 allowed） |
+| `live-tools-mcp-universe`（4 条） | `session_live_tools` | value-level | MCP 宇宙计数 33 vs 28（Go harness 面含 excel_* 与 browser 组；Python 探测环境未注册），`independent_tools_total` 随之为 40 vs 35；模型面真正受制的 allowlist 过滤计数一致（22 filtered / 15 allowed） |
 | `config-models-pricing-float` | `config_models` | non-verbatim-numeric | 整数定价 `5.0` vs `5`（NV-02） |
 | `browser-contexts-empty-state` | `browser_contexts` | empty-state-divergence | Python 读进程内 gcu 注册表（available:true/count:0）；Go 代理桥（available:false/reason） |
 | `browser-tabs-reason-text` | `browser_tabs` | env-dependent-value | 同为 available:false，`reason` 文案实现相关 |
@@ -261,10 +261,10 @@ queens、sentinel、maintenance。
 
 ### 6.5 结果
 
-- 77/77 PASS（74 全等 + 3 已声明差异），8678 条值路径，209 条已声明差异（0 端点级折叠），0 未声明。
+- 77/77（75 全等 + 2 端点级已声明差异），8678 条值路径，48 条已声明差异（0 端点级折叠），0 未声明。
 - 本批把 `session_live_tools` 从端点级折叠（418 条）转为逐值对照：433 条路径全部参与比较，
   工具面（21 条 `actual_tools` / 32 条 `expected_tools` 含描述与状态、`framework_added`、
-  `phase_state_ready`、`phase_state` 诊断半边）逐值一致；余下 165 条为两个声明族（§6.3）。
+  `phase_state_ready`、`phase_state` 诊断半边）逐值一致；余下 4 个值差异属 `live-tools-mcp-universe` 声明族（§6.3）。
 - `pythonFloat` 修复后，`session_events` / `session_events_history` 的 `cost_usd` 已从差异清单消失。
 - 本批顺带修复：Go `GET /api/queen/{id}/llm` 的 `default_model` 接线（serve 未传 `DefaultModel` 钩子，
   恒为空串）；Go `POST /api/sessions/{id}/chat` 未知会话 404 文案改为与 `resolve_session` 一致的

@@ -1,0 +1,15 @@
+{
+ "schema": "hive-g1-tool-recheck/1",
+ "captured_at": "2026-11-21T14:26:00+08:00",
+ "head": "059f4afe",
+ "method": "rerun of toolresid3/capture_residual.py against worktree build dist/hive (CGO_ENABLED=0), scripted fake gateway; first request tools[] copied verbatim as g1-recheck-first-tools.json",
+ "first_tools_sha256": "0658b3081e61328717d543fa4539d6201b50b5828ec22b004959218c62040f41",
+ "recorded_sha256_in_docs/tool-contract-recheck.json": "0658b3081e61328717d543fa4539d6201b50b5828ec22b004959218c62040f41",
+ "sha_matches_recorded": true,
+ "first_count": 24,
+ "first_matches_python_eager": true,
+ "last_count": 75,
+ "deferred_loaded": 51,
+ "loading_complete": true,
+ "unexpected_extra": []
+}

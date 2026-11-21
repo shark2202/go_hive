@@ -50,7 +50,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader.go",
-              "line": 296,
+              "line": 303,
               "snippet": "for _, name := range hiveserver.UnhostedChannels(home) {"
             }
           ],
@@ -1662,7 +1662,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/routes_queens_tools.go",
-              "line": 494,
+              "line": 517,
               "snippet": "if section, ok := HiveConfig(deps.Home)[\"queen_tools\"].(map[string]any); ok {"
             }
           ],
@@ -2706,7 +2706,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/skills/discovery.go",
-              "line": 212,
+              "line": 216,
               "snippet": "raw, _ := cfg[\"external_skills\"].([]any)"
             }
           ],

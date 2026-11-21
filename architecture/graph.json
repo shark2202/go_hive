@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "4c198a558dfd",
+  "generated_at_commit": "059f4afe0c97",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 44,
-    "package_edges": 124,
+    "packages": 64,
+    "package_edges": 176,
     "capabilities": 12,
     "capability_edges": 75,
-    "layers": 7,
+    "layers": 8,
     "contracts": 34,
-    "http_routes": 198,
+    "http_routes": 220,
     "event_types": 77,
-    "warnings": 2
+    "warnings": 50
   },
   "layers": [
     {
@@ -121,6 +121,35 @@
         "internal/version"
       ],
       "package_count": 9
+    },
+    {
+      "id": "unmapped",
+      "name": "未映射层",
+      "depth": 99,
+      "description": "生成器为 model.yaml 尚未登记的包临时创建的层；补齐后应消失。",
+      "packages": [
+        "cmd/hive-browser",
+        "cmd/hive-longmemeval",
+        "e2e/cmd/memgw",
+        "e2e/cmd/storagecompat",
+        "e2e/escalationgw",
+        "e2e/memgw",
+        "e2e/soulgw",
+        "e2e/stallgw",
+        "internal/envcontract",
+        "internal/hiveclock",
+        "internal/hiveconf",
+        "internal/logging",
+        "internal/longmemeval",
+        "internal/mcpregistry/nativecli",
+        "internal/pyenv",
+        "internal/release",
+        "internal/resources",
+        "internal/toolgolden",
+        "internal/tools/integrationkit",
+        "internal/visionfallback"
+      ],
+      "package_count": 20
     }
   ],
   "nodes": [
@@ -157,8 +186,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 23,
-      "dependents": 2
+      "direct_dependencies": 30,
+      "dependents": 4
     },
     {
       "id": "pkg:internal/runtimehealth",
@@ -181,7 +210,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 30,
+      "direct_dependencies": 35,
       "dependents": 1
     },
     {
@@ -206,7 +235,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 2
+      "dependents": 3
     },
     {
       "id": "pkg:internal/colony",
@@ -217,8 +246,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 11,
-      "dependents": 3
+      "direct_dependencies": 12,
+      "dependents": 4
     },
     {
       "id": "pkg:internal/host",
@@ -241,8 +270,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 0,
-      "dependents": 1
+      "direct_dependencies": 1,
+      "dependents": 2
     },
     {
       "id": "pkg:internal/qmail",
@@ -253,8 +282,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 2,
-      "dependents": 1
+      "direct_dependencies": 4,
+      "dependents": 2
     },
     {
       "id": "pkg:internal/queen",
@@ -266,7 +295,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 3
+      "dependents": 4
     },
     {
       "id": "pkg:internal/sentinel",
@@ -277,7 +306,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 4,
+      "direct_dependencies": 6,
       "dependents": 1
     },
     {
@@ -290,7 +319,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 2
+      "dependents": 4
     },
     {
       "id": "pkg:internal/sessionreport",
@@ -326,7 +355,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 3
+      "dependents": 4
     },
     {
       "id": "pkg:internal/triggers",
@@ -349,8 +378,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 6,
-      "dependents": 7
+      "direct_dependencies": 10,
+      "dependents": 8
     },
     {
       "id": "pkg:internal/llmjudge",
@@ -397,8 +426,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "未接线：chart_render 尚未注册进 ToolRegistry。",
-      "direct_dependencies": 1,
-      "dependents": 0
+      "direct_dependencies": 2,
+      "dependents": 1
     },
     {
       "id": "pkg:internal/credentials",
@@ -410,7 +439,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 3
+      "dependents": 4
     },
     {
       "id": "pkg:internal/globaldb",
@@ -434,7 +463,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 10
+      "dependents": 15
     },
     {
       "id": "pkg:internal/maintenance",
@@ -457,7 +486,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 4,
+      "direct_dependencies": 5,
       "dependents": 2
     },
     {
@@ -482,7 +511,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 1
+      "dependents": 2
     },
     {
       "id": "pkg:internal/skills",
@@ -505,8 +534,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 0,
-      "dependents": 1
+      "direct_dependencies": 2,
+      "dependents": 2
     },
     {
       "id": "pkg:internal/tools",
@@ -517,8 +546,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 1,
-      "dependents": 8
+      "direct_dependencies": 2,
+      "dependents": 10
     },
     {
       "id": "pkg:internal/tools/builtin",
@@ -529,7 +558,7 @@
       "stability": "stable",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 2,
+      "direct_dependencies": 3,
       "dependents": 1
     },
     {
@@ -541,7 +570,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 2,
+      "direct_dependencies": 4,
       "dependents": 1
     },
     {
@@ -578,7 +607,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 15
+      "dependents": 19
     },
     {
       "id": "pkg:internal/platform",
@@ -626,7 +655,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 5
+      "dependents": 6
     },
     {
       "id": "pkg:internal/storage",
@@ -638,7 +667,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 2
+      "dependents": 3
     },
     {
       "id": "pkg:internal/version",
@@ -650,6 +679,246 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
+      "dependents": 3
+    },
+    {
+      "id": "pkg:cmd/hive-browser",
+      "kind": "technical",
+      "package": "cmd/hive-browser",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:cmd/hive-longmemeval",
+      "kind": "technical",
+      "package": "cmd/hive-longmemeval",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/cmd/memgw",
+      "kind": "technical",
+      "package": "e2e/cmd/memgw",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/cmd/storagecompat",
+      "kind": "technical",
+      "package": "e2e/cmd/storagecompat",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 10,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/escalationgw",
+      "kind": "technical",
+      "package": "e2e/escalationgw",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/memgw",
+      "kind": "technical",
+      "package": "e2e/memgw",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:e2e/soulgw",
+      "kind": "technical",
+      "package": "e2e/soulgw",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/stallgw",
+      "kind": "technical",
+      "package": "e2e/stallgw",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:internal/envcontract",
+      "kind": "technical",
+      "package": "internal/envcontract",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:internal/hiveclock",
+      "kind": "technical",
+      "package": "internal/hiveclock",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 3
+    },
+    {
+      "id": "pkg:internal/hiveconf",
+      "kind": "technical",
+      "package": "internal/hiveconf",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/logging",
+      "kind": "technical",
+      "package": "internal/logging",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/longmemeval",
+      "kind": "technical",
+      "package": "internal/longmemeval",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/mcpregistry/nativecli",
+      "kind": "technical",
+      "package": "internal/mcpregistry/nativecli",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/pyenv",
+      "kind": "technical",
+      "package": "internal/pyenv",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 6
+    },
+    {
+      "id": "pkg:internal/release",
+      "kind": "technical",
+      "package": "internal/release",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:internal/resources",
+      "kind": "technical",
+      "package": "internal/resources",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/toolgolden",
+      "kind": "technical",
+      "package": "internal/toolgolden",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:internal/tools/integrationkit",
+      "kind": "technical",
+      "package": "internal/tools/integrationkit",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/visionfallback",
+      "kind": "technical",
+      "package": "internal/visionfallback",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
       "dependents": 2
     },
     {
@@ -1088,8 +1357,88 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:cmd/hive-browser",
+      "to": "pkg:internal/cli",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:cmd/hive-cred",
       "to": "pkg:internal/cli",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:cmd/hive-longmemeval",
+      "to": "pkg:internal/cli",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:cmd/hive-longmemeval",
+      "to": "pkg:internal/longmemeval",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/memgw",
+      "to": "pkg:e2e/memgw",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/agentloop",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/agents",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/colony",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/credentials",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/schemas",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/senders",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/session",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/storage",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/tracker",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/hiveclock",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/hivehome",
       "kind": "depends"
     },
     {
@@ -1100,6 +1449,11 @@
     {
       "from": "pkg:internal/agentloop",
       "to": "pkg:internal/llmjudge",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/pyenv",
       "kind": "depends"
     },
     {
@@ -1123,6 +1477,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/visionfallback",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/agents",
       "to": "pkg:internal/agentloop",
       "kind": "depends"
@@ -1138,6 +1497,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/charts",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/cli",
       "to": "pkg:internal/agentloop",
       "kind": "depends"
@@ -1150,6 +1514,11 @@
     {
       "from": "pkg:internal/cli",
       "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/charts",
       "kind": "depends"
     },
     {
@@ -1189,6 +1558,16 @@
     },
     {
       "from": "pkg:internal/cli",
+      "to": "pkg:internal/logging",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/longmemeval",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
       "to": "pkg:internal/maintenance",
       "kind": "depends"
     },
@@ -1204,7 +1583,17 @@
     },
     {
       "from": "pkg:internal/cli",
+      "to": "pkg:internal/qmail",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
       "to": "pkg:internal/queen",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/resources",
       "kind": "depends"
     },
     {
@@ -1220,6 +1609,11 @@
     {
       "from": "pkg:internal/cli",
       "to": "pkg:internal/skills",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/soul",
       "kind": "depends"
     },
     {
@@ -1253,6 +1647,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/visionfallback",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/colony",
       "to": "pkg:internal/agentloop",
       "kind": "depends"
@@ -1265,6 +1664,11 @@
     {
       "from": "pkg:internal/colony",
       "to": "pkg:internal/eventbus",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/hiveconf",
       "kind": "depends"
     },
     {
@@ -1315,6 +1719,16 @@
     {
       "from": "pkg:internal/credentials",
       "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/hiveconf",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/hiveconf",
+      "to": "pkg:internal/llm",
       "kind": "depends"
     },
     {
@@ -1373,6 +1787,16 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/logging",
+      "to": "pkg:internal/pyenv",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/longmemeval",
+      "to": "pkg:internal/session",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/maintenance",
       "to": "pkg:internal/atomicfs",
       "kind": "depends"
@@ -1390,6 +1814,11 @@
     {
       "from": "pkg:internal/mcpregistry",
       "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/mcpregistry",
+      "to": "pkg:internal/mcpregistry/nativecli",
       "kind": "depends"
     },
     {
@@ -1400,6 +1829,16 @@
     {
       "from": "pkg:internal/mcpregistry",
       "to": "pkg:internal/version",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/mcpregistry/nativecli",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/mcpregistry/nativecli",
+      "to": "pkg:internal/tools",
       "kind": "depends"
     },
     {
@@ -1418,8 +1857,18 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/playbook",
+      "to": "pkg:internal/pyenv",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/qmail",
       "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/qmail",
+      "to": "pkg:internal/mcpregistry/nativecli",
       "kind": "depends"
     },
     {
@@ -1428,8 +1877,18 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/qmail",
+      "to": "pkg:internal/version",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/ratelimit",
       "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/resources",
+      "to": "pkg:internal/pyenv",
       "kind": "depends"
     },
     {
@@ -1460,6 +1919,16 @@
     {
       "from": "pkg:internal/sentinel",
       "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/sentinel",
+      "to": "pkg:internal/logging",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/sentinel",
+      "to": "pkg:internal/pyenv",
       "kind": "depends"
     },
     {
@@ -1504,6 +1973,16 @@
     },
     {
       "from": "pkg:internal/server",
+      "to": "pkg:internal/hiveclock",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/hiveconf",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
       "to": "pkg:internal/hivehome",
       "kind": "depends"
     },
@@ -1534,6 +2013,16 @@
     },
     {
       "from": "pkg:internal/server",
+      "to": "pkg:internal/playbook",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/pyenv",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
       "to": "pkg:internal/qmail",
       "kind": "depends"
     },
@@ -1545,6 +2034,11 @@
     {
       "from": "pkg:internal/server",
       "to": "pkg:internal/ratelimit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/resources",
       "kind": "depends"
     },
     {
@@ -1643,6 +2137,16 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/soul",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/soul",
+      "to": "pkg:internal/queen",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/storage",
       "to": "pkg:internal/atomicfs",
       "kind": "depends"
@@ -1678,6 +2182,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools/builtin",
       "to": "pkg:internal/atomicfs",
       "kind": "depends"
@@ -1688,8 +2197,18 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools/builtin",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/attachments",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/hiveclock",
       "kind": "depends"
     },
     {
@@ -1698,8 +2217,18 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/triggers",
       "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/visionfallback",
+      "to": "pkg:internal/llm",
       "kind": "depends"
     },
     {
@@ -3302,14 +3831,254 @@
   },
   "warnings": [
     {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：cmd/hive-browser（unmapped）导入了更高层 internal/cli（assembly）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：cmd/hive-longmemeval（unmapped）导入了更高层 internal/cli（assembly）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/agentloop（runtime）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/agents（orchestration）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/colony（orchestration）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/credentials（capability）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/hivehome（foundation）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/schemas（foundation）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/senders（capability）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/session（orchestration）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/storage（foundation）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：e2e/cmd/storagecompat（unmapped）导入了更高层 internal/tracker（orchestration）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：internal/hiveconf（unmapped）导入了更高层 internal/hivehome（foundation）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：internal/hiveconf（unmapped）导入了更高层 internal/llm（capability）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：internal/longmemeval（unmapped）导入了更高层 internal/session（orchestration）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：internal/mcpregistry/nativecli（unmapped）导入了更高层 internal/hivehome（foundation）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：internal/mcpregistry/nativecli（unmapped）导入了更高层 internal/tools（capability）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：internal/soul（capability）导入了更高层 internal/queen（orchestration）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：internal/visionfallback（unmapped）导入了更高层 internal/llm（capability）"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 cmd/hive-browser 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 cmd/hive-longmemeval 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 e2e/cmd/memgw 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 e2e/cmd/storagecompat 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 e2e/escalationgw 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 e2e/memgw 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 e2e/soulgw 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 e2e/stallgw 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/envcontract 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/hiveclock 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/hiveconf 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/logging 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/longmemeval 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/mcpregistry/nativecli 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/pyenv 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/release 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/resources 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/toolgolden 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/tools/integrationkit 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/visionfallback 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
       "code": "no_importer",
       "severity": "info",
-      "message": "包 internal/charts 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+      "message": "包 cmd/hive-browser 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    },
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 cmd/hive-longmemeval 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    },
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 e2e/cmd/memgw 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    },
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 e2e/cmd/storagecompat 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    },
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 e2e/escalationgw 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    },
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 e2e/soulgw 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    },
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 e2e/stallgw 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    },
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 internal/envcontract 没有任何内部导入方（可能是未接线代码或纯入口约定）"
     },
     {
       "code": "no_importer",
       "severity": "info",
       "message": "包 internal/orchestrator 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    },
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 internal/release 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+    },
+    {
+      "code": "no_importer",
+      "severity": "info",
+      "message": "包 internal/toolgolden 没有任何内部导入方（可能是未接线代码或纯入口约定）"
     }
   ]
 }

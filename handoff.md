@@ -120,7 +120,7 @@ bash go_hive/scripts/morning_report.sh
 
 1. env：剩余 GCU 类键实现或平台差异登记；每键默认值/类型/解析对照测试
 2. config：134 键逐键消费证据；`channels.*`（python_only）与 `mcp.*`（go_only）定性；unread 1 键
-3. 存储：SC-01 已接线（`.wt/migrate-on-serve`，serve 启动执行 v2 → v3 → colony_sessions → tracker ensure，失败非致命；真实 serve 实测见 `docs/storage-compat/serve-startup-go.json`）；凭据 Fernet 双向互读结论仍待写入支持矩阵
+3. 存储/G2：**已完成**——SC-01 已接线（serve 启动执行 v2 → v3 → colony_sessions → tracker ensure，失败非致命；真实 serve 实测见 `docs/storage-compat/serve-startup-go.json`）；非空旧 home 双跑、凭据 Fernet 双向互读、回滚与升级演练均实测通过，结论已写入 `go_hive/docs/support-matrix.md` §1.1 与 `go_hive/docs/g2-lossless-replacement.html`；剩余 P0-G2-1（exports 基准）与 F4/F6 待决策，详见 §10
 4. LLM 侧：工具输出/失败文案 golden；lifecycle 层 5、`session_cwd` 4、`exa_search` 1 的 schema 残差；skill catalog 渲染文本双跑；MCP 同注册表双跑（命名空间/transport/reload）
 5. API/WS：值级 canonical golden（`system_prefix_sha`、`max_iterations` 999999 vs 50、普通回合 execution 信封、context_usage 粒度）
 6. 集成：91 个 B 类仅假服务；OAuth 7 模块、分页 2 模块；senders ESP 不真实投递；LongMemEval 零分不得引用
@@ -155,3 +155,16 @@ bash go_hive/scripts/morning_report.sh
 - 不要用 fake/stub 冒充真实端到端；LongMemEval 无真实数据/judge 时不得输出分数
 - 不要提交密钥、`~/.hive-go/env`、凭据值
 - 不要为对齐实现 `csv_sql`/`excel_sql` 而破坏纯 Go / 无 cgo 约束
+
+## 10. G2 状态更新（2026-11-21 14:15）
+
+G2「老用户无损替换」证据齐备（基线 main `059f4afe`；取证 lane `.wt/g2-home-e2e`、`.wt/g2-rollback-install` 均已合并）。结论：**数据级无损、凭据互读、可回滚、升级实测通过**；数据级无损 ≠ 逐字节一致。
+
+| 验收项 | 结论 | 证据 |
+| --- | --- | --- |
+| 数据级无损（非空旧 home 双跑） | v1-rich 50/50、v2-rich 99/99 文件；逐字节 47/95；JSON 字段 / SQLite schema+行 / 读探针 / API 探针差异均 0 | `docs/g2-lossless-migration.md`、`docs/e2e-assets/g2-home-e2e/summary.json` |
+| 凭据互读 | 两侧标准 Fernet，双向互读值/`expires_at`/metadata 一致（假值；真实第三方 token 未测） | `docs/storage-compat/credentials-crossread.json` |
+| 回滚可行 | Python CLI/API/`serve` 读回 Go 迁移后的 home；0 删除 / 0 覆盖；仅 `summary.json` 缓存与共享日志追加；Go 二次启动幂等 | `go_hive/docs/upgrade-and-rollback.md` §3、`go_hive/docs/e2e-assets/g2-rollback/` |
+| 升级实测 | v1.0.25 v2 home → 1.0.26 启动即迁移；health / `/` 200；install.sh 四二进制；旧二进制回读 0 写入；归档自验 13/13 | `go_hive/docs/upgrade-and-rollback.md` §4、`go_hive/docs/e2e-assets/g2-rollback/summary.json` |
+
+例外：**P0-G2-1（v1 `exports/` 基准：Python=CWD vs Go=`$HIVE_HOME`）待用户决策，本次未改 exports 行为**；F4（`.migrations` 被当作 colony）待两侧联合决策；F5（迁移前旧二进制看不到 v2 会话）已文档化；F6（CLI 数字序列化）归 value-parity lane。落盘：`go_hive/docs/support-matrix.md` §1.1、`go_hive/docs/g2-lossless-replacement.html`；门禁复跑 gofmt/vet 目标包/parity 5306/5306 全绿（未跑全量 CI）。

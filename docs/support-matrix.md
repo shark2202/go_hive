@@ -11,6 +11,8 @@
 > 证据列里的 `实测` 指本次发布任务用真实二进制跑过；`测试` 指仓库内 Go 测试；`代码` 指只读了实现，没有运行。
 >
 > **2026-11-21 增量**：Python `.play.py` playbook 已从「unsupported」改为「已实现（需外部 python3）」——外部解释器 + stdio JSON-RPC，脚本字节不变；见 §1 对应行与 `docs/playbook-python.md`。
+>
+> **2026-11-21 增量 2（G2）**：新增「老用户无损替换」判定（§1.1）——v1/v2 非空旧 `HIVE_HOME` 双跑数据级无损、凭据 Fernet 双向互读、Go→Python 回滚与 v1.0.25→1.0.26 升级演练均实测通过。1 项行为差异 **P0-G2-1（v1 `exports/` 解析基准：Python=CWD、Go=`$HIVE_HOME`）待用户决策**，本次未改 exports 行为。证据：`../../docs/g2-lossless-migration.md`、`upgrade-and-rollback.md`、本页 §1.1、`g2-lossless-replacement.html`。
 
 ## 1. 总览
 
@@ -19,6 +21,7 @@
 | 构建（无 cgo、离线） | 已实现 | `make build`、`make ci` 实测；`CGO_ENABLED=0 GOPROXY=off` |
 | `hive --version` | 已实现 | 实测（发布包解压后）`hive 1.0.26-go.1` |
 | `hive serve` + `/api/health` | 已实现 | 实测默认 `127.0.0.1:8787`；发布包实测 `--port 8797` 健康检查 200 |
+| 老用户无损替换（旧 v1/v2 `HIVE_HOME` → Go 1.0.26） | 已实现（数据级无损；P0-G2-1 待决策） | 2026-11-21 同起点双跑：v1-rich 50/50、v2-rich 99/99 文件；JSON 字段差异 0、SQLite schema/行差异 0、读/API 探针差异 0；凭据 Fernet 双向互读；Go→Python 回滚 0 删除/0 覆盖；v1.0.25→1.0.26 升级 health 与内嵌 `/` 均 200，且迁移后旧二进制可回读。例外与决策见 §1.1 |
 | 创建会话 `POST /api/sessions` | 已实现 | 实测 201，返回 `session_id` |
 | 会话投递 `POST /api/sessions/{id}/chat` | 已实现 | 实测 200；无 key 时 503；未知会话 404；空消息 400 |
 | 会话列表 `GET /api/sessions` / `hive session list` | 已实现 | 实测 |
@@ -57,6 +60,32 @@
 | `hive-cred` | 已实现 | 实测 `browse` / `inspect` |
 | MCP 注册表与 CLI | 部分 | 14 个子命令注册；未对真实 MCP server 验证 |
 | 在线 CVE 扫描 | 未实现 | Makefile 与 `.github/workflows/` 均无 `govulncheck` / OSV / nancy；见 §6 |
+
+### 1.1 老用户无损替换（G2：旧 `HIVE_HOME` → Go 1.0.26）
+
+结论：**数据级无损、凭据互读、可回滚、升级实测通过**；未发现需要修复的数据损坏。判定依据是同一份非空旧 home 的双跑、Go 写过的 home 用 Python 读回、以及 v1.0.25→1.0.26 的升级/回退演练（主机 darwin/arm64，2026-11-21）。「无损」指数据级（文件/字段/SQLite 结构/可见值），**不等于逐字节一致**。
+
+| 验收项 | 结论 | 关键证据 |
+| --- | --- | --- |
+| 数据级无损（迁移双跑） | 通过：v1-rich 50/50、v2-rich 99/99 文件；逐字节相同 47/95；唯一 1 个字节差异是 `worker.json` 键序（字段等价）；JSON 字段、SQLite schema+行、读探针、API 探针差异均为 0；交叉消费 manifest 前后不变 | `../../docs/g2-lossless-migration.md` §1/§4、`../../docs/e2e-assets/g2-home-e2e/summary.json` |
+| 凭据互读 | 通过：两侧同为标准 Fernet（`credentials/credentials/<id>.enc` + `metadata/index.json` 2.0）；Python 写 Go 读、Go 写 Python 读，值/`expires_at`/metadata 保留。**格式兼容 ≠ 真实第三方 token 可用**（G2 用假值） | `../../docs/storage-compat/credentials-crossread.json`、G2 双跑的 `*-credentials-verify.json` |
+| 回滚可行（Go 写过的 home → Python） | 通过：Python CLI/API/`serve` 读取会话/历史/凭据/colony/tracker 全一致；0 删除、0 覆盖；仅新增 `summary.json` 读缓存与追加共享日志；Go 二次启动幂等 | `upgrade-and-rollback.md` §3、`e2e-assets/g2-rollback/` |
+| 升级实测（v1.0.25 → 1.0.26） | 通过：旧二进制建的 v2 home 由新二进制启动即迁移（health 200、内嵌 `/` 200）；`install.sh` 原地升级四二进制并 SHA256 校验；升级后旧二进制回读 0 写入；`verify_release_archive.sh` 13/13 | `upgrade-and-rollback.md` §4、`e2e-assets/g2-rollback/summary.json` |
+
+**已知例外（逐条）**：
+
+| 编号 | 例外 | 性质 / 影响 | 状态 |
+| --- | --- | --- | --- |
+| **P0-G2-1** | v1 `exports/` 解析基准：Python `migrate_v2` 用 CWD 相对 `exports/`，Go 锚定 `$HIVE_HOME/exports` | 行为差异：Python 从 `core/` 启动时会给旧 v1 home 写 `.migrated-v2` 但不搬 colony（数据滞留风险）；Go 无此问题，替换方向更安全 | **待用户决策**：是否要求 Go 逐行为复刻 Python 的 CWD 语义；本次未改 exports 行为，发布说明须注明 |
+| F4 | `colonies/.migrations/` 被 `hive colony list` 当作 colony（Python 同行为） | 展示层；存在误 `colony delete .migrations` 的风险 | **待决策**：需两侧联合过滤点目录，单改 Go 会破坏对齐 |
+| F5 | 迁移前旧二进制看不到 v2 布局会话 | 用户感知；非数据损坏。新版本启动迁移后可读，且迁移后旧二进制仍可读 | 文档化前提（升级即迁移） |
+| F6 | CLI JSON 数字序列化：Python `1767225600.0` vs Go `1767225600` | 值级；严格字符串比对会差，读取无影响 | 归 value-parity lane（未修） |
+| R-G2-1 | `colonies/alpha/worker.json` 的 `input_data.binding` 键序（Python 插入序 vs Go map 排序） | 排版级；解析后字段/值一致，交叉消费不重写 | 不修 |
+| R-G2-2 | 新建/重建的 `*.db` 字节不同（SQLite 页布局） | 设计内；schema/行/触发器/`user_version` 全等 | 不修（按结构验证） |
+| R-G2-3/4 | `/api/health.resources` 运行期指标；读探针归一化时间戳/epoch | 非存储数据 | 不纳入数据比较 |
+| R-G2-5 | `provider_id`：Python `null` vs Go `""` | 空值语义；存储回写不丢 | 已记录，未修 |
+
+值格式级残余（JSON 排版/键序、时间戳 `+00:00` vs `Z`、凭据目录权限更严、`provider_id`）与覆盖缺口见 `../../docs/storage-contract-diff.md` §5。**未验证边界**：真实用户数据长尾（超大 parts、损坏 JSON、权限错误）、Windows/Linux 实机、真实 OAuth 刷新/第三方 token、sessions/history 的 HTTP 端点抓取；G2 双跑只覆盖 macOS arm64 与假凭据。
 
 ## 2. 集成工具（按 INTEGRATION_BACKLOG.md）
 
@@ -200,6 +229,9 @@ Windows 已知未验证点：
 | 在线 CVE 扫描 | **仓库没有做**：Makefile/CI 中没有 `govulncheck`、OSV、nancy 或等价步骤 | 依赖漏洞状态未知；只能确认依赖锁定、无 cgo、无运行时下载 |
 | `hive janitor run --execute` | 会删除数据，未在发布验证中执行 | 只验证了 `status` |
 | `hive colony delete` | 破坏性操作，未执行 | 只验证了 `list`/`info` |
+| G2 真实用户数据长尾 | 双跑夹具是「非空且字段完整」的代表样本 | 超大 parts、损坏 JSON、权限错误的极端形状未覆盖 |
+| G2 凭据真实第三方可用性 | G2/存储双跑使用假值凭据 | 格式兼容与双向互读已实测；真实 OAuth 刷新/第三方 token 未验证 |
+| G2 平台覆盖 | 回滚/升级演练只在 macOS arm64 | Windows/Linux 未实机（与 §3.2 口径一致） |
 
 ## 6. 质量门禁实测
 
@@ -241,6 +273,16 @@ CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -tags e2e -count=
 | 契约冻结自洽 | `freeze_env_config_contract.py --check` OK；`check_env_config_contract.py --strict` OK —— env：Python 89 / Go 105 / 共有 70 / Python 独有 19 / Go 独有 35；config：134 键（aligned 125 / go_partial 4 / python_only 0 / go_only 4 / unread 1） |
 | 文件规模门禁 | `internal/quality` 通过：`loader.go` 1754 行（≤1936）、`loop.go` 1486 行（拆分 vision caption 与 parseToolInput 后 ≤1500）、`conversation.go` 1535 行（≤1549 allowlist）、`chat_runtime.go` 1498 行（≤1500） |
 
+2026-11-21（G2 无损替换收口复跑；本工作树只改文档，按派工要求不跑全量 CI）：
+
+| 项 | 结果 |
+| --- | --- |
+| `gofmt -l .` | 空 |
+| `go vet`（server/storage/tracker/credentials/session/agents/cli） | 退出码 0，无输出 |
+| 目标包测试 | `internal/{storage,tracker,credentials,session,agents}` 全 `ok`；`internal/server -run TestStorageStartup` `ok` |
+| `make parity` | 5,306/5,306 测试带 parity 注解，0 missing |
+| `make parity-targets` | 5,687 refs（4,213 test + 1,474 prod），0 missing |
+
 发布包本身另有一轮验证（`hive --version`、`shasum -a 256 -c SHA256SUMS`、解压 darwin-arm64 后 `/` 200）记录在 `release-notes-v1.0.26-go.1.md`。
 
 ## 7. 复现
@@ -272,3 +314,12 @@ hive --version && hive serve
 ```
 
 `quickstart.md` 有完整的分步流程与无 key 行为；`configuration.md` 有模型、凭据与 colony 配置的解析优先级；`release-notes-v1.0.26-go.1.md` 有发布包清单与升级说明。
+
+G2（无损替换 / 回滚）一键复现：
+
+```bash
+bash go_hive/scripts/g2_home_e2e_run.sh --work /tmp/g2-home-e2e
+bash go_hive/scripts/g2_rollback_drill.sh --work /tmp/g2-rollback
+```
+
+产物分别写入仓库根 `docs/e2e-assets/g2-home-e2e/` 与 `go_hive/docs/e2e-assets/g2-rollback/`；说明见 `../../docs/g2-lossless-migration.md` 与 `upgrade-and-rollback.md`。

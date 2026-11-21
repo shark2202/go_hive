@@ -875,7 +875,7 @@
         "dev_reads": [],
         "test_reads": 6,
         "writes": [],
-        "mentions": 5,
+        "mentions": 6,
         "comments": 7
       },
       "notes": "py int() raises at import on garbage; go parses per site and keeps the default. Per-site defaults (14829/9229) match upstream."
@@ -1003,7 +1003,7 @@
         "dev_reads": [],
         "test_reads": 4,
         "writes": [],
-        "mentions": 5,
+        "mentions": 7,
         "comments": 0
       }
     },
@@ -1616,7 +1616,7 @@
         "dev_reads": [],
         "test_reads": 15,
         "writes": [],
-        "mentions": 22,
+        "mentions": 26,
         "comments": 5
       }
     },
@@ -1915,7 +1915,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1026,
+            "line": 1067,
             "symbol": "runtimeOwnerPID",
             "parse": "string",
             "snippet": "owner := os.Getenv(\"HIVE_DESKTOP_PARENT_PID\")",
@@ -1927,7 +1927,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1029,
+            "line": 1070,
             "scope": "runtime"
           }
         ],
@@ -2000,7 +2000,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 262,
+            "line": 264,
             "symbol": "defaultServe",
             "parse": "string",
             "snippet": "if !isLoopbackListenHost(host) && strings.TrimSpace(os.Getenv(\"HIVE_DESKTOP_TOKEN\")) == \"\" {",
@@ -2018,7 +2018,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 9,
+        "mentions": 10,
         "comments": 0
       }
     },
@@ -2538,8 +2538,8 @@
         "dev_reads": [],
         "test_reads": 41,
         "writes": [],
-        "mentions": 96,
-        "comments": 80
+        "mentions": 145,
+        "comments": 85
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -3497,9 +3497,20 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 1,
-        "writes": [],
-        "mentions": 10,
+        "test_reads": 3,
+        "writes": [
+          {
+            "file": "go_hive/go-hive/internal/cli/mcp_crosscheck_dump_test.go",
+            "line": 303,
+            "scope": "test"
+          },
+          {
+            "file": "go_hive/go-hive/internal/cli/mcp_crosscheck_dump_test.go",
+            "line": 308,
+            "scope": "test"
+          }
+        ],
+        "mentions": 15,
         "comments": 4
       },
       "notes": "both default 240s; garbage/<=0 -> 240s."
@@ -3788,7 +3799,7 @@
         "dev_reads": [],
         "test_reads": 5,
         "writes": [],
-        "mentions": 13,
+        "mentions": 12,
         "comments": 3
       }
     },
@@ -4009,7 +4020,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/app.go",
-            "line": 488,
+            "line": 493,
             "symbol": "requestExecutorMax",
             "parse": "string",
             "snippet": "if value := os.Getenv(\"HIVE_REQUEST_EXECUTOR_MAX\"); value != \"\" {",
@@ -4468,11 +4479,11 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 267,
+            "line": 269,
             "scope": "runtime"
           }
         ],
-        "mentions": 3,
+        "mentions": 4,
         "comments": 0
       }
     },
@@ -4674,7 +4685,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/tools/integrations/attach_file.go",
-            "line": 114,
+            "line": 115,
             "symbol": "attachFileResolve",
             "parse": "string",
             "snippet": "storagePath = os.Getenv(\"HIVE_STORAGE_PATH\")",
@@ -5297,7 +5308,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 3,
+        "mentions": 4,
         "comments": 3
       }
     },

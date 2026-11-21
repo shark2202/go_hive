@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>G2 老用户无损替换 · go_hive × Hive</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:1040px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1000px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr}} @media(max-width:560px){.g3,.g4{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px;overflow-wrap:anywhere;word-break:break-word}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:880px}}
+</style></head><body><div class="wrap">
+<header>
+  <div class="eyebrow">GO_HIVE · G2 LOSSLESS REPLACEMENT</div>
+  <h1>老用户 <span>无损替换</span>：数据级无损 · 可回滚 · 升级实测</h1>
+  <p class="lede">一个非空旧版（v1 / v2 布局）<code>HIVE_HOME</code> 能否直接交给 Go 版 <code>hive serve</code>：自动迁移、数据不丢、字段不坏、可回滚、可升级。判定基于同一份旧 home 的 Python/Go 双跑、Go 写过的 home 用 Python 读回，以及 v1.0.25 → 1.0.26 的升级/回退演练。<b>数据级无损 ≠ 逐字节一致</b>；已知例外逐条列出，其中 P0-G2-1 待用户决策。</p>
+  <div class="meta"><span>更新：<b>2026-11-21 14:15 CST</b></span><span>基线：<b>main 059f4afe</b></span><span>被测：<b>Go 1.0.26-go.1</b> / Python 1.0.14</span><span>主机：<b>darwin/arm64</b></span><span>结论：<b>GREEN（数据级）</b></span></div>
+  <div class="toc"><a href="#verdict">结论</a><a href="#fixtures">夹具与双跑</a><a href="#rollback">回滚矩阵</a><a href="#upgrade">升级步骤</a><a href="#exceptions">例外与回滚指南</a><a href="#evidence">证据</a></div>
+</header>
+
+<section id="verdict"><h2><span class="num">01</span>结论</h2>
+<div class="grid g4">
+  <div class="card"><div class="k">数据级无损</div><div class="v" style="color:var(--ok)">GREEN</div><div class="d">v1-rich 50/50、v2-rich 99/99 文件；JSON 字段、SQLite schema/行、读探针、API 探针差异均为 0。</div></div>
+  <div class="card"><div class="k">凭据互读</div><div class="v" style="color:var(--ok)">双向 PASS</div><div class="d">两侧同为标准 Fernet；Python 写 Go 读、Go 写 Python 读，值 / <code>expires_at</code> / metadata 保留。真实第三方 token 未测。</div></div>
+  <div class="card"><div class="k">回滚可行</div><div class="v" style="color:var(--ok)">0 删除 / 0 覆盖</div><div class="d">Python CLI / API / <code>serve</code> 读回 Go 迁移后的 home；仅新增 <code>summary.json</code> 读缓存与追加共享日志。</div></div>
+  <div class="card"><div class="k">升级实测</div><div class="v" style="color:var(--ok)">通过</div><div class="d">v1.0.25 v2 home → 1.0.26 启动即迁移（health / <code>/</code> 200）；<code>install.sh</code> 四二进制；归档自验 13/13。</div></div>
+</div>
+<div class="callout info"><b>一句话：</b>旧 v1/v2 <code>HIVE_HOME</code> 可以交给 Go 版直接启动；迁移按 v2 → v3 → colony_sessions → tracker ensure 执行，任一步失败只告警不阻断。回滚方向是只读的，两个方向都没有数据损坏。<b>未发现需要「回滚迁移」或修复数据的情况。</b></div>
+<div class="callout"><b>待决策（P0-G2-1）：</b>v1 <code>exports/</code> 的解析基准，Python 用 CWD 相对路径、Go 锚定 <code>$HIVE_HOME/exports</code>。Python 从 <code>core/</code> 启动时会写 <code>.migrated-v2</code> 却不搬 colony；Go 无此问题。<b>本次未改 exports 行为</b>；是否要求 Go 逐行为复刻 Python 的 CWD 语义，需用户拍板并在发布说明注明。</div>
+</section>
+
+<section id="fixtures"><h2><span class="num">02</span>夹具与双跑统计</h2>
+<p>夹具由 <code>go_hive/scripts/g2_home_fixture.py</code> 生成（仅标准库），同一模板复制两份，各自重写绝对路径、冻结 summary mtime；Python 侧调用 <code>SessionManager.__init__</code> 同一迁移序列，Go 侧调用同一序列的导出函数；再用 <code>storage_compat_diff.py</code> 做路径归一后的 sha256、逐 JSON 字段路径+类型、逐 DB schema/索引/触发器/行比较。<b>同起点、同输入、各自实现</b>。</p>
+
+<h3>2.1 非空旧 home 双跑（G2 主夹具）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:13%">夹具</th><th>迁移前文件</th><th>迁移后 py/go</th><th>逐字节相同</th><th>排版级差异</th><th>语义差异</th><th>单侧文件</th><th>JSON 字段</th><th>SQLite schema/行</th><th>读探针</th><th>API 探针</th><th>凭据四视图</th><th>交叉消费</th></tr></thead><tbody>
+<tr><td><code>v1-rich</code><br><span class="small">v2→v3 全链</span></td><td class="num">40</td><td class="num">50 / 50</td><td class="num">47</td><td class="num">0</td><td class="num">0</td><td class="num">0 / 0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td><span class="pill ok">一致</span></td><td><span class="pill ok">干净</span></td></tr>
+<tr><td><code>v2-rich</code><br><span class="small">v3 + colony_sessions</span></td><td class="num">98</td><td class="num">99 / 99</td><td class="num">95</td><td class="num">1</td><td class="num">0</td><td class="num">0 / 0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td><span class="pill ok">一致</span></td><td><span class="pill ok">干净</span></td></tr>
+</tbody></table></div>
+<p class="sub">每个夹具另有 3 个 <code>*.db</code> 按设计字节不同（SQLite 页布局），按 schema + 行 + 触发器 + <code>user_version</code> 验证全等；v1 的 <code>exports/*/data/tracker.db</code> 只被复制、不被重写，仍逐字节相同。v2 唯一的「字节不同」是 <code>colonies/alpha/worker.json</code> 的 <code>input_data.binding</code> 键序（Go map 排序 vs Python 插入序），解析后字段与值完全一致。</p>
+
+<h3>2.2 存储逐字双跑（storage-verbatim，四组 run）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">run</th><th>文件 py/go</th><th>逐字节相同</th><th>非 DB 差异</th><th>唯一文件 py/go</th><th>JSON 字段差异</th><th>SQLite schema/行</th><th>判定</th></tr></thead><tbody>
+<tr><td><code>v1</code>（v2→v3 全链）</td><td class="num">20 / 20</td><td class="num">18</td><td class="num">0</td><td class="num">0 / 0</td><td class="num">0</td><td class="num">0</td><td><span class="pill ok">等价</span></td></tr>
+<tr><td><code>v2</code>（v3 + colony_sessions）</td><td class="num">59 / 59</td><td class="num">56</td><td class="num">0</td><td class="num">0 / 0</td><td class="num">0</td><td class="num">0</td><td><span class="pill ok">等价</span></td></tr>
+<tr><td><code>colony-fork</code>（仅 colony_sessions）</td><td class="num">32 / 32</td><td class="num">30</td><td class="num">0</td><td class="num">0 / 0</td><td class="num">0</td><td class="num">0</td><td><span class="pill ok">等价</span></td></tr>
+<tr><td>写入探针（各自真实写入 API）</td><td class="num">14 / 14</td><td class="num">1</td><td class="num">10（值/排版级）</td><td class="num">0 / 0</td><td class="num">0</td><td class="num">0</td><td><span class="pill ok">等价</span><span class="small">差异见 storage-contract-diff §5</span></td></tr>
+</tbody></table></div>
+<p class="sub">「opaque」= <code>*.db</code> / <code>*.enc</code>：不同引擎写出的 SQLite 页布局与 Fernet 随机 IV 天生不同，逐字节比对无意义，改按 schema+行（DB）与互读（凭据）验证。</p>
+
+<h3>2.3 读探针与 API 覆盖</h3>
+<ul>
+  <li><b>v1-rich</b>：冷会话 2、history 2（parts 4/2）、tasks 2；legacy/ops colony 发现与 tracker（deals 2 行、v0→v3、2 触发器）；记忆 3 文件（含合并分支）、senders 2 行、skills 3 文件——逐文件 sha256 一致。</li>
+  <li><b>v2-rich</b>：冷会话 3 + colony 会话 alpha 3 / beta 1；history 8（最多 6 parts，含 tool calls / <code>is_skill_content</code> / spillover）；alpha/beta tracker（leads 3、invoices 2、activity 2、change log 3、4 触发器、JOIN 聚合一致）；colony.db 2 条 playbook_runs；记忆 6、skills 用户/queen/colony 各 2——两侧 0 差异。</li>
+  <li><b>API</b>：两侧真实二进制在未迁移夹具上启动，<code>/api/discover</code>、<code>/api/colonies/&lt;c&gt;/data/{tables,rows,changes}</code> 载荷归一化后 0 差异；启动迁移树文件集合一致（v1 50、v2 99 文件，markers 相同）。</li>
+  <li><b>交叉消费</b>：对 Python 迁移后的 home 原地跑 Go 迁移，manifest 前后逐文件相同（不重写）；双向读 diff 0/0/0。</li>
+</ul>
+</section>
+
+<section id="rollback"><h2><span class="num">03</span>回滚矩阵</h2>
+<p>回滚演练用可生成的 v2 旧 home（54 文件）：Go 真实 <code>serve</code> 迁移 + 生产写入 API 写 1 个会话与 2 条凭据，然后逐步用 Python CLI / Python API / Python <code>serve</code> / Go CLI / Go 二次启动读回。每一步之间对整 home 做快照（文件 sha256+size、SQLite 逻辑行摘要、markers），再归类 added / removed / modified。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:7%">#</th><th style="width:26%">动作</th><th>读取面 / 结果</th><th style="width:26%">相对上一快照的写入</th><th style="width:10%">判定</th></tr></thead><tbody>
+<tr><td class="num">S0</td><td>生成 v2 夹具</td><td>54 文件；DM/overseer 会话、colony worker 子树、tracker、colony_fork 残留</td><td>—</td><td>起点</td></tr>
+<tr><td class="num">1</td><td>Go <code>serve</code> #1 + Go 写探针</td><td><code>.migrated-v3</code>、<code>colony_sessions_v1</code>；<code>tracker_db: ensured 3</code>；health 200；<code>maintenance/server.lock</code> present → 退出后 absent</td><td>+59 / -40 / modified 0（<code>agents/</code> 搬移，tracker <code>data/</code> → <code>tracker/</code>）</td><td><span class="pill ok">契约内</span></td></tr>
+<tr><td class="num">2</td><td>Python CLI 冷读</td><td><code>session list --cold</code> 2 条（迁移 DM + Go 探针），消息数 2/1；queen sessions、colony list 正常</td><td>+2（两处 <code>summary.json</code> 缓存）；modified 0 / removed 0</td><td><span class="pill ok">不破坏</span></td></tr>
+<tr><td class="num">3</td><td>Python API 读</td><td>DM 历史 2 parts（hello → hi there）；Go 探针会话 3 parts；tracker <code>schema_version=3</code>；<code>demo_api_key</code>/<code>demo_oauth</code> 解密一致</td><td>+4（colony 会话 <code>summary.json</code>）；modified 0 / removed 0</td><td><span class="pill ok">不破坏</span></td></tr>
+<tr><td class="num">4</td><td>Python <code>serve</code>（同 home）</td><td>health 200、<code>/api/sessions</code> 200；无迁移告警（markers 生效）；marker 自写自清</td><td>modified 1：<code>logs/hive-server.log</code> 追加（append-only）</td><td><span class="pill ok">不破坏</span></td></tr>
+<tr><td class="num">5</td><td>Go CLI 冷读</td><td>与 Python 输出逐字段一致（session_id / message_count / queen_id 全等）；读 Python 写的 <code>summary.json</code> 不重写</td><td><b>0 变化</b></td><td><span class="pill ok">双向缓存兼容</span></td></tr>
+<tr><td class="num">6</td><td>Go <code>serve</code> #2</td><td>health 200；marker present → 退出 absent</td><td>modified 1：同一日志追加；无残留</td><td><span class="pill ok">幂等</span></td></tr>
+</tbody></table></div>
+<div class="callout info"><b>破坏性写入：0。</b>良性写入只有三类：<code>summary.json</code> 读缓存（两侧同 schema/过期规则，缺失才重建）、共享 <code>logs/hive-server.log</code>（append-only）、<code>maintenance/server.lock</code>（serve 生命周期，pid-scoped 自清）。没有观察到会话目录/凭据/tracker 的删除或覆盖，markers 不被重写。</div>
+<p class="sub">环境前提：回滚段用 plain <code>go build</code>（无 <code>-tags embed_ui</code>）且 CWD 无 <code>frontend/dist</code> 时，<code>GET /</code> 404 属构建形态；把预构建 dashboard 放到 CWD 后同一二进制 <code>/</code>=200，数据面始终 health 200。</p>
+</section>
+
+<section id="upgrade"><h2><span class="num">04</span>升级步骤</h2>
+<h3>4.1 固定步骤</h3>
+<ol>
+  <li><b>先整目录备份</b>（唯一可靠的回退路径）：<code>cp -a "$HIVE_HOME" "$HIVE_HOME.bak-$(date +%Y%m%d-%H%M%S)"</code>。</li>
+  <li><b>安装/校验归档</b>：<code>bash go_hive/install.sh --from &lt;release-dir&gt;</code>；脚本校验 SHA256 与归档内容，落盘 <code>hive</code> / <code>hive-cred</code> / <code>hive-browser</code> / <code>browserbridge</code> 四二进制并逐个跑 <code>--version</code>/<code>--help</code>。</li>
+  <li><b>首次启动新版本</b>：<code>HIVE_HOME="$HIVE_HOME" hive serve --port 8788</code>。确认 <code>GET /api/health</code> 200；磁盘上出现 <code>.migrated-v2</code> / <code>.migrated-v3</code> / <code>colonies/.migrations/colony_sessions_v1</code>；日志出现 <code>tracker_db: ensured N</code>。</li>
+  <li><b>抽查数据</b>：<code>hive session list --cold</code>、<code>hive queen sessions &lt;queen&gt;</code>、<code>hive colony list</code>；<code>hive-cred inspect &lt;id&gt;</code>；tracker <code>schema_version=3</code>。</li>
+  <li><b>需要回退二进制</b>：直接用旧二进制启动同一 home（已实测 0 写入、可读迁移后会话）；迁移前旧二进制看不到 v2 布局会话（F5），这是升级前提，不是损坏。</li>
+  <li><b>需要恢复迁移前布局</b>：停 serve → 用备份目录整体恢复 <code>HIVE_HOME</code> → 启动旧版本；<b>不要手工改/删 <code>.migrated-*</code> markers</b>。</li>
+</ol>
+
+<h3>4.2 老用户升级 / 回退实测（v1.0.25 → 1.0.26）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">步骤</th><th>实测</th><th style="width:28%">证据</th></tr></thead><tbody>
+<tr><td>旧二进制 serve（v2 home）</td><td>health <b>200</b>；<code>session list --cold</code> 为空（v2 的 DM/overseer 会话在 <code>agents/queens/…</code>，旧版本按 v3 路径读）</td><td><code>upgrade/output/old-session-list.json</code></td></tr>
+<tr><td>新二进制 serve（同 home）</td><td>启动即迁移（<code>.migrated-v3</code>、<code>colony_sessions_v1</code>、<code>tracker_db: ensured 3</code>）；health <b>200</b>、内嵌 <code>/</code> <b>200</b>、<code>/api/sessions</code> 200；<code>+45 / -40 / modified 0</code>、sqlite changed 5</td><td><code>upgrade/snap/DU-upgrade-migration.json</code></td></tr>
+<tr><td>升级后会话可读</td><td>出现迁移后的 DM 会话 <code>session_20260201_000001_bbbbbbbb</code>（message_count=2，last_message=<code>hi there</code>）；<code>queen sessions queen_growth</code> 同步可读</td><td><code>upgrade/output/new-session-list-after-upgrade.json</code></td></tr>
+<tr><td>升级后回退旧二进制</td><td>health <b>200</b>、能读同一会话；全 home <b>0 added / 0 removed / 0 modified / 0 sqlite changed</b></td><td><code>upgrade/snap/DU2-old-binary-reads.json</code></td></tr>
+<tr><td>新二进制二次启动</td><td>health 200、<code>/</code> 200；仅日志追加（幂等）</td><td><code>upgrade/snap/DU3-new-serve2.json</code></td></tr>
+<tr><td><code>install.sh</code> 原地升级</td><td>1.0.25 → 1.0.26；四二进制落盘；SHA256 校验；<code>hive --version</code> = <code>1.0.26-go.1</code>；安装目录 serve health 200、<code>/</code> 200</td><td><code>upgrade/output/install-sh.log.txt</code></td></tr>
+<tr><td>归档（darwin/arm64）</td><td><code>hive-1.0.26-go.1-darwin-arm64.tar.gz</code> 28,209,800 B；外层 <code>SHA256SUMS</code> OK；包内 8 项 sha OK；<code>verify_release_archive.sh</code> <b>13/13 PASS</b></td><td><code>upgrade/output/release-build.log.txt</code>、<code>verify-release-archive.txt</code></td></tr>
+</tbody></table></div>
+<p class="sub">归档路径与校验细节见 <a href="upgrade-and-rollback.md"><code>upgrade-and-rollback.md</code></a> §4；六平台归档属发布面（RELEASE_CHECKLIST），本演练只取宿主平台以减少噪声。</p>
+</section>
+
+<section id="exceptions"><h2><span class="num">05</span>例外与回滚指南</h2>
+<h3>5.1 已知例外（逐条）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:11%">编号</th><th style="width:37%">例外</th><th>性质 / 影响</th><th style="width:22%">状态</th></tr></thead><tbody>
+<tr><td><b>P0-G2-1</b></td><td>v1 <code>exports/</code> 解析基准：Python <code>migrate_v2</code> 用 CWD 相对 <code>exports/</code>，Go 锚定 <code>$HIVE_HOME/exports</code></td><td>Python 从 <code>core/</code> 启动时给旧 v1 home 写 <code>.migrated-v2</code> 但不搬 colony（数据滞留风险）；Go 无此问题，替换方向更安全</td><td><span class="pill warn">待用户决策</span><br><span class="small">是否逐行为复刻 CWD 语义；本次未改 exports 行为，发布说明须注明</span></td></tr>
+<tr><td>F4</td><td><code>colonies/.migrations/</code> 被 <code>hive colony list</code> 当作 colony（Python 同行为）</td><td>展示层；存在误 <code>colony delete .migrations</code> 的风险</td><td><span class="pill warn">待决策</span><br><span class="small">需两侧联合过滤点目录，单改 Go 破坏对齐</span></td></tr>
+<tr><td>F5</td><td>迁移前旧二进制看不到 v2 布局会话</td><td>用户感知；非数据损坏。新版本启动迁移后可读，迁移后旧二进制仍可读</td><td><span class="pill info">文档化前提</span></td></tr>
+<tr><td>F6</td><td>CLI JSON 数字序列化：Python <code>1767225600.0</code> vs Go <code>1767225600</code></td><td>值相等；严格字符串比对会差，读取无影响</td><td><span class="pill info">归 value-parity lane</span></td></tr>
+<tr><td>R-G2-1</td><td><code>colonies/alpha/worker.json</code> 的 <code>input_data.binding</code> 键序</td><td>排版级；字段/值一致，交叉消费不重写</td><td><span class="pill ok">不修</span></td></tr>
+<tr><td>R-G2-2</td><td>新建/重建的 <code>*.db</code> 字节不同（SQLite 页布局）</td><td>设计内；schema/行/触发器/<code>user_version</code> 全等</td><td><span class="pill ok">按结构验证</span></td></tr>
+<tr><td>R-G2-3/4</td><td><code>/api/health.resources</code> 运行期指标；读探针归一化时间戳/epoch</td><td>非存储数据；展示值</td><td><span class="pill ok">不纳入比较</span></td></tr>
+<tr><td>R-G2-5</td><td><code>provider_id</code>：Python <code>null</code> vs Go <code>""</code></td><td>空值语义；存储回写不丢，影响仅显示层</td><td><span class="pill info">已记录</span></td></tr>
+<tr><td>R2/R3/R4</td><td>JSON 排版（键序/缩进）、时间戳渲染（<code>+00:00</code> vs <code>Z</code>）、凭据目录权限（Go 更严）</td><td>值格式级/安全姿态；两侧解析互认</td><td><span class="pill ok">不修</span></td></tr>
+</tbody></table></div>
+<p class="sub">未验证边界：真实用户数据长尾（超大 parts、损坏 JSON、权限错误）、Windows/Linux 实机、真实 OAuth 刷新/第三方 token、sessions/history 的 HTTP 端点抓取。G2 双跑只覆盖 macOS arm64 与假凭据。</p>
+
+<h3>5.2 回滚指南（按场景）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">场景</th><th>操作</th></tr></thead><tbody>
+<tr><td>还没启动过新版本</td><td>无需回滚；保留备份即可。旧二进制照常读旧 home。</td></tr>
+<tr><td>已启动新版本，想换回旧二进制</td><td>直接用旧二进制启动同一 home：实测 health 200、会话可读、<b>0 写入</b>。注意迁移前旧版本看不到 v2 布局会话（F5）。</td></tr>
+<tr><td>已迁移，想恢复迁移前布局</td><td>停 serve → 用完整备份恢复 <code>HIVE_HOME</code> → 启动旧版本。<b>不要手工改/删 <code>.migrated-*</code> markers</b>；迁移只新增 marker/tracker 与按布局搬移，不删除用户数据。</td></tr>
+<tr><td>数据异常 / 读不到</td><td>立即停 serve，保留现场（再 <code>cp -a</code> 一份），按 §5.1 逐条例外核对；无法解释时恢复备份再复现。不要继续在异常 home 上跑写入。</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>禁止：</b>不备份就对真实 home 跑迁移；用「删 markers 再重跑迁移」代替恢复备份；在迁移进行中并发启动第二个 serve 或离线 janitor（serve 已写 <code>maintenance/server.lock</code> 做互斥）。</div>
+</section>
+
+<section id="evidence"><h2><span class="num">06</span>证据与相关文档</h2>
+<ul>
+  <li><b>G2 双跑报告</b>：<a href="../../docs/g2-lossless-migration.md"><code>docs/g2-lossless-migration.md</code></a>（夹具规模、方法、分类证据、残余 R-G2-1…5、P0-G2-1）</li>
+  <li><b>G2 双跑产物</b>：<a href="../../docs/e2e-assets/g2-home-e2e/"><code>docs/e2e-assets/g2-home-e2e/</code></a>（<code>summary.json</code>、<code>summary.md</code>、<code>commands.md</code> + 每步 tree/field/sqlite/read/api/credentials diff）</li>
+  <li><b>回滚/升级报告</b>：<a href="upgrade-and-rollback.md"><code>go_hive/docs/upgrade-and-rollback.md</code></a>（回滚矩阵、升级/安装演练、F1…F7 发现）</li>
+  <li><b>回滚/升级产物</b>：<a href="e2e-assets/g2-rollback/"><code>go_hive/docs/e2e-assets/g2-rollback/</code></a>（<code>README.md</code>、<code>summary.json</code>、<code>run.txt</code>、<code>rollback/snap/*</code>、<code>upgrade/snap/*</code>）</li>
+  <li><b>存储逐字兼容</b>：<a href="../../docs/storage-contract-diff.md"><code>docs/storage-contract-diff.md</code></a> · <a href="../../docs/storage-compat/"><code>docs/storage-compat/</code></a> · <a href="storage-compat.html"><code>storage-compat.html</code></a></li>
+  <li><b>支持矩阵</b>：<a href="support-matrix.md"><code>support-matrix.md</code></a> §1.1「老用户无损替换」；发布治理板 <a href="delivery-governance.html"><code>delivery-governance.html</code></a></li>
+  <li><b>复现脚本</b>：<code>bash go_hive/scripts/g2_home_e2e_run.sh --work &lt;scratch&gt;</code> · <code>bash go_hive/scripts/g2_rollback_drill.sh --work &lt;scratch&gt;</code>（<code>--skip-upgrade</code> 只跑回滚段）</li>
+</ul>
+</section>
+
+<footer>G2 无损替换 · 手工维护页面（2026-11-21）· 数字来自实测产物；未验证项不写成通过；数据级无损不等于逐字节一致。</footer>
+</div></body></html>
