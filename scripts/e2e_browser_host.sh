@@ -165,7 +165,7 @@ for _ in $(seq 1 60); do
   sleep 0.5
 done
 if grep -q "Browser bridge: ready on 127.0.0.1:$HTTP_PORT" "$OUT/serve.log"; then
-  BRIDGE_PID="$(sed -n "s/.*Browser bridge: ready on 127.0.0.1:$HTTP_PORT (pid \([0-9]*\)).*/\1/p" "$OUT/serve.log" | tail -1)"
+  BRIDGE_PID="$(sed -n "s/.*Browser bridge: ready on 127.0.0.1:$HTTP_PORT (pid \([0-9][0-9]*\).*/\1/p" "$OUT/serve.log" | tail -1)"
   check 0 "serve announced the bridge: $(grep 'Browser bridge: ready' "$OUT/serve.log" | tail -1)"
 else
   check 1 "serve never announced a ready bridge (see $OUT/serve.log)"

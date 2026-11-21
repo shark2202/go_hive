@@ -1,0 +1,15 @@
+tracker_db: ensured 4 colony tracker DB(s) at startup
+2026/11/21 13:04:58 [sentinel] manager starting (0 open escalations)
+
+Hive API server running on http://127.0.0.1:8801
+Dashboard:  http://127.0.0.1:8801
+Health:     http://127.0.0.1:8801/api/health
+Sessions:   0 colony, 0 queen-only
+
+Press Ctrl+C to stop
+2026/11/21 13:04:58 runtime-resources verdict init->ok | avail=NoneMB renderers=1 chrome_rss=48MB hive_rss=30MB workers=<nil> | 
+2026/11/21 13:04:58 [access] GET /api/health -> 200 (0ms)
+2026/11/21 13:04:58 [access] GET / -> 200 (4ms)
+2026/11/21 13:04:58 [access] GET /api/sessions -> 200 (0ms)
+
+Received SIGTERM, shutting down gracefully… (press Ctrl+C again to force quit)

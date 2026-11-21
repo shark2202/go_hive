@@ -28,6 +28,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	colonyhost "github.com/aden-hive/hive-go/internal/host"
 	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/aden-hive/hive-go/internal/maintenance"
 	"github.com/aden-hive/hive-go/internal/mcpregistry"
 	"github.com/aden-hive/hive-go/internal/queen"
 	"github.com/aden-hive/hive-go/internal/resources"
@@ -364,6 +365,16 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Error: %v\n", err)
 		return 1
+	}
+	// Upstream writes maintenance/server.lock from create_app's on_startup
+	// hook and clears it on shutdown: an offline janitor refuses destructive
+	// tiers while a runtime owns the home, but the port probe alone misses
+	// non-default / desktop ephemeral ports. Only announce after the listener
+	// bound, so a failed bind leaves no marker behind; ClearServerMarker is
+	// pid-scoped and only removes this process's file.
+	if home.Root != "" {
+		maintenance.WriteServerMarker(home, nil)
+		defer maintenance.ClearServerMarker(home)
 	}
 	server := &http.Server{
 		Handler:           app.Handler(),

@@ -1,0 +1,14 @@
+2026/11/21 13:05:13 [sentinel] manager starting (0 open escalations)
+
+Hive API server running on http://127.0.0.1:8804
+Dashboard:  http://127.0.0.1:8804
+Health:     http://127.0.0.1:8804/api/health
+Sessions:   0 colony, 0 queen-only
+
+Press Ctrl+C to stop
+2026/11/21 13:05:13 runtime-resources verdict init->ok | avail=NoneMB renderers=1 chrome_rss=48MB hive_rss=28MB workers=<nil> | 
+2026/11/21 13:05:14 [access] GET /api/health -> 200 (0ms)
+2026/11/21 13:05:14 [access] GET / -> 200 (2ms)
+2026/11/21 13:05:14 [access] GET /api/sessions -> 200 (0ms)
+
+Received SIGTERM, shutting down gracefully… (press Ctrl+C again to force quit)

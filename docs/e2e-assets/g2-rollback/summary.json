@@ -1,0 +1,73 @@
+{
+  "probe": "g2-rollback-summary",
+  "baseline": "13e6a4bb",
+  "worktree": ".wt/g2-rollback-install",
+  "host": "darwin/arm64",
+  "new_version": "1.0.26-go.1",
+  "old_version": "v1.0.25-go.1",
+  "generated_by": "go_hive/scripts/g2_rollback_drill.sh",
+  "rollback": {
+    "fixture": "v2",
+    "files_s0": 54,
+    "python_cold_sessions": [
+      {"session_id": "session_20260201_000001_bbbbbbbb", "message_count": 2, "queen_id": "queen_growth"},
+      {"session_id": "session_compat_probe_go", "message_count": 1, "queen_id": "queen_growth"}
+    ],
+    "go_cold_list_matches_python": true,
+    "credentials_read": ["demo_api_key", "demo_oauth"],
+    "colonies_tracker_schema_version": {"alpha": "3", "beta": "3", "probe_colony": "3"},
+    "markers_after_go": {".migrated-v2": true, ".migrated-v3": true, "colony_sessions_v1": true},
+    "serve_marker_observed": {
+      "go_serve_1": {"during": "present", "after_graceful_stop": "absent"},
+      "py_serve": {"during": "present", "after_graceful_stop": "absent"},
+      "go_serve_2": {"during": "present", "after_graceful_stop": "absent"},
+      "go_serve_ui": {"during": "present", "after_graceful_stop": "absent"}
+    },
+    "diffs": {
+      "D0-go1-migration": {"added": 59, "removed": 40, "modified": 0, "sqlite_changed": 6},
+      "D1a-py-cli": {"added": 2, "removed": 0, "modified": 0, "sqlite_changed": 0},
+      "D1b-py-read": {"added": 4, "removed": 0, "modified": 0, "sqlite_changed": 0},
+      "D2-py-serve": {"added": 0, "removed": 0, "modified": 1, "sqlite_changed": 0},
+      "D3-go-cli": {"added": 0, "removed": 0, "modified": 0, "sqlite_changed": 0},
+      "D4-go2": {"added": 0, "removed": 0, "modified": 1, "sqlite_changed": 0},
+      "D5-go-ui": {"added": 0, "removed": 0, "modified": 1, "sqlite_changed": 0}
+    },
+    "destructive_writes": [],
+    "benign_writes": [
+      "summary.json cache (read path, both implementations, schema-compatible)",
+      "logs/hive-server.log append (shared path, append-only)",
+      "maintenance/server.lock write+clear around serve lifetime"
+    ]
+  },
+  "upgrade": {
+    "archive": "hive-1.0.26-go.1-darwin-arm64.tar.gz",
+    "archive_bytes": 28209800,
+    "archive_sha_ok": true,
+    "member_sha_ok": true,
+    "old_home_read_before_upgrade": [],
+    "sessions_after_upgrade": [
+      {"session_id": "session_20260201_000001_bbbbbbbb", "message_count": 2, "queen_id": "queen_growth"}
+    ],
+    "old_binary_reads_migrated_home": true,
+    "install_sh_upgrade": {"from": "1.0.25-go.1", "to": "1.0.26-go.1", "binaries": ["hive", "hive-cred", "hive-browser", "browserbridge"]},
+    "verify_release_archive": {"pass": 13, "fail": 0},
+    "diffs": {
+      "DU-upgrade-migration": {"added": 45, "removed": 40, "modified": 0, "sqlite_changed": 5},
+      "DU2-old-binary-reads": {"added": 0, "removed": 0, "modified": 0, "sqlite_changed": 0},
+      "DU3-new-serve2": {"added": 0, "removed": 0, "modified": 1, "sqlite_changed": 0}
+    }
+  },
+  "environment_premises": [
+    "plain go build + no frontend/dist in CWD -> GET / is 404; /api/health and all data reads unaffected",
+    "release archive embeds the dashboard -> GET / is 200 from any CWD"
+  ],
+  "findings": [
+    {"id": "F1", "risk": "low", "status": "fixed", "summary": "verify_release_archive.sh / e2e_browser_host.sh bridge-pid sed did not match the serve line '(pid N, viewport scale S)' -> false FAIL; now 13/13 PASS"},
+    {"id": "F2", "risk": "low", "status": "accepted", "summary": "cold-session reads add summary.json caches; both implementations share schema/staleness rule; zero overwrite/delete"},
+    {"id": "F3", "risk": "low", "status": "accepted", "summary": "logs/hive-server.log is append-only and shared by both implementations"},
+    {"id": "F4", "risk": "low", "status": "deferred", "summary": "colonies/.migrations is listed as a colony by `hive colony list` in both implementations; needs a joint parity decision"},
+    {"id": "F5", "risk": "medium", "status": "documented", "summary": "pre-migration binaries cannot see v2-layout sessions until a new build runs the startup migration; old binaries still read the migrated home with zero writes"},
+    {"id": "F6", "risk": "low", "status": "deferred", "summary": "CLI JSON number formatting differs (Python 1767225600.0 vs Go 1767225600); values equal"},
+    {"id": "F7", "risk": "medium", "status": "fixed", "summary": "Go serve did not write maintenance/server.lock (janitor live-runtime guard); wired WriteServerMarker/ClearServerMarker into defaultServe; marker present during run, absent after graceful stop"}
+  ]
+}

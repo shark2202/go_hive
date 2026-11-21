@@ -30,9 +30,9 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
   <h1>交付治理板：<span>目标 / 时间 / 效率 / 质量</span></h1>
   <p class="lede">本页是 go_hive 对 Hive 字段级逐字一致的交付控制面：三个门槛（G1 字段级、G2 无损替换 RC、G3 商业外发布）、WIP 与合并节奏、质量门禁、时间台账与风险登记。日期是条件日期，取决于外部依赖（Windows 实机、Actions 权限）；未验证项不记为通过。</p>
   <div class="meta">
-    <span>更新：<b>2026-11-21 12:38 CST</b></span>
-    <span>main：<code>75d0323a</code>（+ searchable manifest 逐字）</span>
-    <span>CI：<b>5,293 测试 / 5,667 refs</b></span>
+    <span>更新：<b>2026-11-21 12:42 CST</b></span>
+    <span>main：<code>e5f52ee9</code>（+ REST 77 端点值级）</span>
+    <span>CI：<b>5,294 测试 / 5,668 refs</b></span>
     <span>QC：<b>8/8</b></span>
     <span>磁盘：可用 <b>69Gi</b>（85%）</span>
   </div>
@@ -94,7 +94,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <section id="metrics"><h2><span class="num">05</span>当前度量（实测）</h2>
 <div class="tablewrap"><table><thead><tr><th>指标</th><th>值</th><th>来源</th></tr></thead><tbody>
 <tr><td>今日提交 / 合并</td><td>112 / 30</td><td><code>git log --since</code></td></tr>
-<tr><td>测试 / parity refs</td><td>5,293 / 5,667（missing 0）</td><td>CI 日志</td></tr>
+<tr><td>测试 / parity refs</td><td>5,294 / 5,668（missing 0）</td><td>CI 日志</td></tr>
 <tr><td>QC</td><td>8/8 PASS</td><td><code>QC_REPORT.md</code></td></tr>
 <tr><td>lane-hours（今日）</td><td>约 4.1h（10 条 lane）</td><td>delegation 实测时长</td></tr>
 <tr><td>吞吐</td><td>约 10.9 提交/小时</td><td>112 / 10h17m</td></tr>

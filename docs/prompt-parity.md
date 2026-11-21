@@ -168,21 +168,25 @@ delegation loop/operating rules + 共享规则），由 golden 与段序测试�
 - **配置键口径**：`turn_context.<name>.enabled`（1 个键路径）；section 必须是对象且 `enabled` 为真值才启动。
   两侧读取/启动语义一致（`server/turn_context.go` ↔ `framework/server/turn_context.py`），既有
   `configuration.md` 已列为 aligned。
-- **安装面差异（结构）**：Python 通过 `hive.turn_context` entry point 发现并启动（本次探针在
+- **安装面（entry-point 等价物）**：Python 通过 `hive.turn_context` entry point 发现并启动（本次探针在
   `PYTHONPATH` 放了一个 fake dist-info 包，日志 `turn context 'probe' started`）；Go 无 entry point 机制，
-  用 `RegisterTurnContextProvider` 在编译期注册。本次 Go 二进制未链接任何 package → live 不注入
-  （`go_injected=false`，且 runtime 保持空、不阻塞回合）；Python live 注入成功。
+  以编译期注册表承载安装面——二进制内置 `probe` 包（`internal/server/turn_context_probe.go`，
+  `init()` 调 `RegisterTurnContextProvider`），同一份 `turn_context.probe.enabled=true` 配置在两侧都启动
+  一个同名包。未配置/未启用时内置包不启动、不注入（`TestChatRuntimeTurnContextUnconfiguredDoesNotInject`
+  钉住，启动日志按上游口径报 `installed but off`）。
 - **注入正文与位置（逐字一致）**：
   - Python live 抓包：用户轮注入独立 `<system-reminder>`，正文
     `Turn-context probe body for the parity probe.`，位置在 `[timestamp] PARITY_PROBE_MESSAGE` 之前
     （`user-turn-messages.python.txt`）。开场轮因 `user_text` 为空值守卫不注入（两侧同规则）。
-  - Go：`TestTurnContextBodyParityGolden` 走真实启动路径
-    （`configuration.json` → `StartTurnContexts` → `Runtime.Context`），正文与 Python `context_for` 输出
-    逐字一致（golden 45 chars；`prompt_catalog_parity.py` 的 `turn-context` case）。
+  - Go live 抓包（本次）：同样在用户消息前注入同一正文（`turn-context-live.go.txt` 45 chars；
+    `user-turn-messages.diff` 0 字节）。两条连续 user 消息（reminder 块 + 带时间戳的用户文本）由
+    `sanitizeForAPI` 以 `\n` 合并，与 Python `_sanitize_for_api` 的合并口径一致。
+  - Go 真实启动路径：`configuration.json` → `StartTurnContexts` → `Runtime.Context` 的正文与 Python
+    `context_for` 输出逐字一致（golden 45 chars；`prompt_catalog_parity.py` 的 `turn-context` case）。
   - 包装：两侧都是同一 reminder footer（§4），Go 的 `fireReminderPoint` 把 block 作为
     user message（`IsSystemReminder`）放在用户消息前，与 Python `_fire_reminder` 的位置语义一致
-    （既有 `agentloop/turn_context_reminder_test.go` 钉住 points/applies/render；Python 侧
-    `framework/server/tests/test_turn_context.py`）。
+    （`agentloop/turn_context_reminder_test.go` 钉住 points/applies/render；`turn_context_parity_test.go`
+    的 `TestChatRuntimeBuiltinProbeInjectsBeforeUserMessage` 钉住完整消息体与位置）。
 
 **例外**：Go 的 overseer（colony 会话）catalog 仍走 `relaySkillsCatalogBlock`（手写
 `<system-reminder>\nAvailable skills catalog: …`，无 footer），与 Python overseer 的
@@ -197,7 +201,7 @@ delegation loop/operating rules + 共享规则），由 golden 与段序测试�
 | P-02 | Python `# Credentials` 段（184 chars）未移植 | 结构（内容缺失） | **已修复**：`CredentialsSummaryBlock` + loader 注入账户快照；两种形态（无/有账户）都有 Python golden |
 | P-03 | Go tool-gated 预激注入 2 个整篇 skill body（59,618 chars） | 结构（装配路径不同） | **已修复**：queen chat 会话改走 `chatQueenStaticPrompt`，不再经过 `BuildSystemPromptForContext`；worker/colony 路径的预激保留（上游同款） |
 | P-04 | searchable-tools manifest：Python 2 个非 eager 工具（307 chars）vs Go 51 个 lazy 工具（1,029 chars） | 结构（工具面策略） | **已修复**：`internal/cli/tool_surface_manifest.go::SearchableManifestNames` 按上游规则解析 per-queen allowlist（`tools.json` sidecar 优先，否则 role-default 分类 × MCP catalog），`chatToolTier` 的 `chatManifestFilter` 只收窄**播报文本**；tier 仍持有全部 51 个 deferred 定义，`search_tools` 的 select/keywords/inventory 与「schema 未加载」守卫不变。live 双跑 manifest 307/307、opening messages 4,344/4,344 逐字一致 |
-| P-05 | turn_context 安装面：Python entry point vs Go 编译期 registry | 结构（平台机制） | 正文/位置已验证一致；live Go 未链接 package 属预期（`prompt_system_parity.py` 的 `go_injected=false`） |
+| P-05 | turn_context 安装面：Python entry point vs Go 编译期 registry | 结构（平台机制） | **已修复**：Go 二进制内置 `probe` 包（`internal/server/turn_context_probe.go`，init 注册 = entry-point 等价物），同一 `turn_context.probe.enabled=true` 配置两侧都启动并注入；live 双跑 `go_injected=true`、正文 45/45、`user-turn-messages.diff` 0 字节；未配置时不启动不注入 |
 | P-06 | Go overseer catalog 走 relay 包装（`Available skills catalog:`，无 footer） | 结构（已登记 `reminders-coverage.md` §7） | 维持登记；colony 会话（非 chat queen）路径，不在本轮 queen 静态提示词范围内 |
 | P-07 | 静态提示词的 credentials 段在 Go 侧是**会话构建/恢复时快照**（上游每轮 TTL 重算，attach/detach 下一轮可见） | 结构（构建时机） | **新增登记**：段文本逐字一致，差异只在刷新时机。Go 的 system prompt 目前整段在 `NewChatRuntime`/resume 时构建一次（上游靠 `dynamic_prompt_provider` 每轮重建；Go 的 loop 尚无该钩子，恢复它需要同时解决 cached prefix 失效）。下一 lane：给 `ChatRuntimeDeps` 增加每轮提示词重建时，credentials 段随其它动态段一起接上 |
 | P-08 | colony 相位 base prompt（20,869 chars）无 live 抓包 | 证据缺口 | 文本由同一生成器逐字生成并有 golden/段序测试；探针只建 DM 会话，未覆盖 colony fork 后的 system prompt。下一 lane：给 `prompt_system_parity.py` 加 colony 剧本（`POST /api/sessions` with `colony_id`）后按本节口径归因 |
@@ -233,7 +237,10 @@ go test ./internal/cli ./internal/skills ./internal/server ./internal/agentloop 
 `internal/server/chat_manifest_filter_test.go`（searchable manifest 307-char golden，且 inventory /
 `select:` 加载 / 未加载守卫不复位）、
 `internal/cli/tool_surface_manifest_test.go`（per-queen allowlist 解析：role-default 分类、`tools.json`
-sidecar 优先、空 allowlist、allow-all 回退）。
+sidecar 优先、空 allowlist、allow-all 回退）、
+`internal/server/turn_context_parity_test.go`（内置 `probe` 包经真实启动路径的正文 golden；
+`TestChatRuntimeBuiltinProbeInjectsBeforeUserMessage` 钉住注入块逐字与「用户消息前」位置；
+`TestChatRuntimeTurnContextUnconfiguredDoesNotInject` 钉住未配置时不注入）。
 
 正常路径（默认测试）无需任何外部服务：catalog / reminder / turn-context / queen 提示词的 golden 是固定 fixture +
 逐字文本；live 探针是 opt-in，不纳入 `make ci`。
@@ -247,10 +254,12 @@ sidecar 优先、空 allowlist、allow-all 回退）。
   Python 独有的 queen 段已移植，
   Go 独有的 59,618 chars 整篇 skill 预激注入已从 queen 路径移除（通用 worker/colony 路径保留）。
   工具调用面不变（首轮 `tools[]` 24 个 name 一致）。
-- turn_context 的配置键、正文、包装与位置逐字一致；安装面为已知平台差异。
+- turn_context 的配置键、正文、包装与位置逐字一致；**live 注入两侧一致**（`go_injected=true`）：
+  Go 二进制内置 `probe` 包承载 entry-point 安装面，`turn-context-live.{python,go}.txt` 45/45 chars，
+  `user-turn-messages.diff` 0 字节；未配置时不启动不注入。
 - **首轮 opening messages 整段逐字一致**：4,344 / 4,344 chars，`first-turn-messages.diff` 0 字节。
   首轮非 system 内容 = 单一 `<system-reminder>`（searchable-tools manifest 307 chars + skills catalog
   3,985 chars），两段都逐字对齐。
-- 残余：credentials 段的刷新时机（P-07）、colony 相位无 live 抓包（P-08）、overseer catalog relay（P-06）、
-  turn_context live 安装面（P-05）。它们都不影响独立相位首轮 system prompt / opening messages 的逐字一致性；
-  用户轮的唯一文本残余是 Python-only 的 turn_context 注入（45 chars，`user-turn-messages.diff`）。
+- 残余：credentials 段的刷新时机（P-07）、colony 相位无 live 抓包（P-08）、overseer catalog relay（P-06）。
+  它们都不影响独立相位首轮 system prompt / opening messages 的逐字一致性；用户轮文本已无残余
+  （turn_context 注入两侧逐字一致，`user-turn-messages.diff` 0 字节）。

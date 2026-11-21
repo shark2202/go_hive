@@ -1,0 +1,479 @@
+{
+  "probe": "g2-rollback-manifest",
+  "version": 1,
+  "home": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home",
+  "file_count": 79,
+  "dir_count": 65,
+  "markers": {
+    ".migrated-v2": true,
+    ".migrated-v3": true,
+    "colony_sessions_v1": true
+  },
+  "files": {
+    ".migrated-v2": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size": 2
+    },
+    ".migrated-v3": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size": 2
+    },
+    "configuration.json": {
+      "sha256": "ac81cca5f7fa4b18851d2ece37dd89662959290dea4e675f0ac84d17667c3383",
+      "size": 87
+    },
+    "trusted_repos.json": {
+      "sha256": "363e34732c8e438884e9bfddca0dbb87994537ecd5b202384412a8ec46aa6969",
+      "size": 60
+    },
+    "colonies/.migrations/colony_sessions_v1": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size": 2
+    },
+    "colonies/.migrations/tracker/tracker.db": {
+      "sha256": "0830b27a8375766aa3331d9c0f97940173c6a80e50fb849fccbb756a60eb9e6f",
+      "size": 28672
+    },
+    "colonies/alpha/colony.db": {
+      "sha256": "da2c859f2d05bd7f4ecd7a65babf2560a36053de6ac99223ffb024137acf5559",
+      "size": 12288
+    },
+    "colonies/alpha/metadata.json": {
+      "sha256": "e29733dbf16961af3b5ba7677528eeea8ec5abb5788dcfc6fa310914a6f554d8",
+      "size": 186
+    },
+    "colonies/alpha/tools.json": {
+      "sha256": "503255f721e2e69d3c662075e7de83be6f95db199f89f9f3444861858d7bf12c",
+      "size": 108
+    },
+    "colonies/alpha/triggers.json": {
+      "sha256": "a5fe5e110f9090fc27184fa113dab6863005b220c4d88b095bcfe6178e262051",
+      "size": 307
+    },
+    "colonies/alpha/worker.json": {
+      "sha256": "174accd81013386cbc6a7997bd0bb5e6ce52cfd956b9c265ad4a3e3383189e5c",
+      "size": 93
+    },
+    "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/meta.json": {
+      "sha256": "0b4788a3bd62dccb774bdd21aada45eb0b6684e4cea5bf720b041ee03143ed64",
+      "size": 336
+    },
+    "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/meta.json": {
+      "sha256": "ecea220d3eb0abe19135984bbca6a049f65ab80973ca934e1ecac6273efbdf3c",
+      "size": 313
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/summary.json": {
+      "sha256": "648bf2a2124fcd9b1c0e10b4d4c49f50a7af7662d4c57ea983d410aeb123be0f",
+      "size": 106
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/meta.json": {
+      "sha256": "8f01e0e6449471090ddbca8dee8ecd0ebace3af2e60394142dedfeb8b6bed5b3",
+      "size": 336
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/summary.json": {
+      "sha256": "3fc1eef39608c32de76af7b3281158fb6ff3092bf8ab6f092fb8d0c45e47d7f8",
+      "size": 106
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/meta.json": {
+      "sha256": "0f8f939cad7e2ed861277d138289e29ade7370f6abd82aed410e7aac04c57701",
+      "size": 336
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/summary.json": {
+      "sha256": "1d0c5d4a24610453c6ef04e76aa413cedba8e808eb68342745eeb95f0bd5336f",
+      "size": 106
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000002_11111111/events.jsonl": {
+      "sha256": "3fa846b8793a8caa2a6872aa7059c3f4949af545b85884c1c1fb8b25e38cbb95",
+      "size": 41
+    },
+    "colonies/alpha/seed_conversation/cursor.json": {
+      "sha256": "60317667196e17e55b377078454c389b812775ee4f220c56325a1c71464358b5",
+      "size": 19
+    },
+    "colonies/alpha/seed_conversation/meta.json": {
+      "sha256": "f7fc90b487d18d6140e95d252870a83e21bb497eb27364a9c29b20bd248d099d",
+      "size": 70
+    },
+    "colonies/alpha/seed_conversation/parts/0000000000.json": {
+      "sha256": "deeb5ff3ddd3594b91fb4e422c39c064fe7d5145857d6cb1432c3840eafdba06",
+      "size": 80
+    },
+    "colonies/alpha/skills/briefing/SKILL.md": {
+      "sha256": "31c0633d9ed4a5861218bd42924fc14e168e310a87fff8a8468015d82376055f",
+      "size": 18
+    },
+    "colonies/alpha/tracker/tracker.db": {
+      "sha256": "08542ce94c741dd3d2005595e97c35a950baec0d24f38c40cbe49aa9813747e4",
+      "size": 36864
+    },
+    "colonies/alpha/workers/scout/worker.json": {
+      "sha256": "a98c452c85b3d9b487fbd83a1f4a3b77e921e40c4c5ab6e86c82b505867ca98a",
+      "size": 57
+    },
+    "colonies/alpha/workers/scout/sessions/session_20260201_000004_eeeeeeee/state.json": {
+      "sha256": "ef9d3585c37653ded51349cd273c38f37fd71891aa7ca3f3dbc97fc1e8473c2b",
+      "size": 1433
+    },
+    "colonies/beta/metadata.json": {
+      "sha256": "ff48a18f5889682ba3a3395c1e1951e8a6a078ce6dfb18d5f2e54799dfae47ca",
+      "size": 50
+    },
+    "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/meta.json": {
+      "sha256": "9b019389dcb95af8f366b3bfaadcffe55932264fba8a4fe1cafc484a016875ca",
+      "size": 171
+    },
+    "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/summary.json": {
+      "sha256": "daa5642801c78a0778ed6c18c75a5e8e338eebfcbffa0a473c675eba503cc250",
+      "size": 106
+    },
+    "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "colonies/beta/tracker/tracker.db": {
+      "sha256": "08542ce94c741dd3d2005595e97c35a950baec0d24f38c40cbe49aa9813747e4",
+      "size": 36864
+    },
+    "colonies/probe_colony/metadata.json": {
+      "sha256": "4110b52d2c2289118c53020fa126d12dbfbd9f094db6903920c50210ed3c03f9",
+      "size": 52
+    },
+    "colonies/probe_colony/tracker/tracker.db": {
+      "sha256": "4e99dd67e0564040aa1ed6de303625c5fc58838af9a0ae25434c3f0b6d0672dc",
+      "size": 28672
+    },
+    "credentials/credentials/demo_api_key.enc": {
+      "sha256": "510307e903dd4972ec9c259585d30e840f7f149d8a1a33b598f62d0788ece4f2",
+      "size": 504
+    },
+    "credentials/credentials/demo_oauth.enc": {
+      "sha256": "c54c1d4dd413fd27e4bbf3c388c264645f9e55661484e8f447aa0ddd6e20a045",
+      "size": 844
+    },
+    "credentials/metadata/index.json": {
+      "sha256": "97b856deac93d439c26b16e216ed8fdff03638aab972686e29bdb20a3dc8383f",
+      "size": 1108
+    },
+    "logs/hive-server.log": {
+      "sha256": "6e3a978aedfaa2089ebc70d9f26facd7bee51234f6e1e6cc1fbdb51c446bef40",
+      "size": 1366
+    },
+    "mcp_registry/config.json": {
+      "sha256": "a86622287b5681d381d62cd6135cfcb0afd3e85218e83c1a8758938edc61e05a",
+      "size": 140
+    },
+    "mcp_registry/installed.json": {
+      "sha256": "e92d879856e90f035e33ddf3023400002ba73a5e62a384276b52f722b966ba25",
+      "size": 19
+    },
+    "memories/agents/queens/queen_growth/profile.md": {
+      "sha256": "2c14db497720e836e4282405b3c02c4ea4467a9105a1ef53eb6754d1e9c99b86",
+      "size": 23
+    },
+    "memories/global/global.md": {
+      "sha256": "eeae630fb77c250fc6aa072a14e53b3162b32df53b97ef98c356e822b564443b",
+      "size": 9
+    },
+    "queens/queen_growth/profile.yaml": {
+      "sha256": "7917c2d998580e4b35fa2b2c326f504cd6ce5af580a7246caa48c17eef7d4e0d",
+      "size": 32
+    },
+    "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/meta.json": {
+      "sha256": "8ad1f885df8d44ba6c1babd1d501dd3152249dbcc2b2664d459a76e6de7170c3",
+      "size": 174
+    },
+    "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/state.json": {
+      "sha256": "f7adc1277ece5747cb7bb8de8f003c80cd99d59a48bd091e1a27d73438d57522",
+      "size": 1437
+    },
+    "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/summary.json": {
+      "sha256": "8c5f0a02c8b847d860c74e69962f45ddab5a35fabf6aca62e33bd8acbabab98b",
+      "size": 106
+    },
+    "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "queens/queen_growth/sessions/session_compat_probe_go/state.json": {
+      "sha256": "2357b16359d6d79624ee1a407d1c6b70fdc3035878217c37b3bbfd44335c1603",
+      "size": 1438
+    },
+    "queens/queen_growth/sessions/session_compat_probe_go/summary.json": {
+      "sha256": "b603bdc69cf94fa744f449146691bcdd2f38fa441cf9bb95a3beaf1d1210a064",
+      "size": 100
+    },
+    "queens/queen_growth/sessions/session_compat_probe_go/checkpoints/cp_node_complete_start_20260101T000000.json": {
+      "sha256": "17dd76270a4624cdd8eb3c0d7c22ff612f9785d5583ee5a25eb4c7585dd07791",
+      "size": 494
+    },
+    "queens/queen_growth/sessions/session_compat_probe_go/checkpoints/index.json": {
+      "sha256": "2b9a3287d32bd4656c4f40564008cfc8069dd5f928b59e3405cf13ee2abbaee7",
+      "size": 447
+    },
+    "queens/queen_growth/sessions/session_compat_probe_go/conversations/cursor.json": {
+      "sha256": "2416d1ede7aa9f7577dbb2c376a2ec760f2881cf7e2d3d777380a97235e43857",
+      "size": 14
+    },
+    "queens/queen_growth/sessions/session_compat_probe_go/conversations/meta.json": {
+      "sha256": "1b62857592ad6d0383eed4d3c42f98f47c0836065609a3e9842239f2b37ab1e3",
+      "size": 216
+    },
+    "queens/queen_growth/sessions/session_compat_probe_go/conversations/parts/0000000000.json": {
+      "sha256": "ba74cc589e2a71d390fc76aecda3c5e37a78cdcb294d6ecf8d6027e84d8bff14",
+      "size": 64
+    },
+    "queens/queen_growth/sessions/session_compat_probe_go/conversations/parts/0000000001.json": {
+      "sha256": "3fb7285b28797d25e49933df136f8e955c086f98a86a164b5a52d9fc971865d4",
+      "size": 190
+    },
+    "queens/queen_growth/sessions/session_compat_probe_go/conversations/parts/0000000002.json": {
+      "sha256": "4fa5f2cc4250eda97677e6d07eae7f782f8e6d6027c878928e328cc0a60f89e2",
+      "size": 269
+    },
+    "queens/queen_growth/skills/briefing/SKILL.md": {
+      "sha256": "f2f15b19dea9d64c3d959fae5805949a9c566d32562421719c4c585404e4a0c5",
+      "size": 11
+    },
+    "secrets/credential_key": {
+      "sha256": "0bd95f740b14177ee396003fad3b92bc6b8ad08f00612fd7c3a2142d11cfc915",
+      "size": 44
+    }
+  },
+  "dirs": [
+    "colonies",
+    "colonies/.migrations",
+    "colonies/.migrations/tracker",
+    "colonies/alpha",
+    "colonies/alpha/legacy_fork_snapshots",
+    "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111",
+    "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/conversations",
+    "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/conversations/parts",
+    "colonies/alpha/queens",
+    "colonies/alpha/queens/queen_growth",
+    "colonies/alpha/queens/queen_growth/sessions",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/parts",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/parts",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/parts",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000002_11111111",
+    "colonies/alpha/seed_conversation",
+    "colonies/alpha/seed_conversation/parts",
+    "colonies/alpha/skills",
+    "colonies/alpha/skills/briefing",
+    "colonies/alpha/tracker",
+    "colonies/alpha/workers",
+    "colonies/alpha/workers/scout",
+    "colonies/alpha/workers/scout/sessions",
+    "colonies/alpha/workers/scout/sessions/session_20260201_000004_eeeeeeee",
+    "colonies/beta",
+    "colonies/beta/queens",
+    "colonies/beta/queens/queen_ops",
+    "colonies/beta/queens/queen_ops/sessions",
+    "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222",
+    "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/conversations",
+    "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/conversations/parts",
+    "colonies/beta/tracker",
+    "colonies/probe_colony",
+    "colonies/probe_colony/tracker",
+    "credentials",
+    "credentials/credentials",
+    "credentials/metadata",
+    "logs",
+    "maintenance",
+    "mcp_registry",
+    "mcp_registry/cache",
+    "memories",
+    "memories/agents",
+    "memories/agents/queens",
+    "memories/agents/queens/queen_growth",
+    "memories/global",
+    "queens",
+    "queens/queen_growth",
+    "queens/queen_growth/sessions",
+    "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb",
+    "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations",
+    "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/parts",
+    "queens/queen_growth/sessions/session_compat_probe_go",
+    "queens/queen_growth/sessions/session_compat_probe_go/checkpoints",
+    "queens/queen_growth/sessions/session_compat_probe_go/conversations",
+    "queens/queen_growth/sessions/session_compat_probe_go/conversations/parts",
+    "queens/queen_growth/skills",
+    "queens/queen_growth/skills/briefing",
+    "secrets"
+  ],
+  "sqlite": {
+    "colonies/.migrations/tracker/tracker.db": {
+      "tables": {
+        "_tracker_changes": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "_tracker_meta": {
+          "rows": 1,
+          "row_sha256": "1c28ce9a36a494c04ae96e21c1926637b9d5205bbde4619af852c52edadbcc0b"
+        },
+        "_tracker_registry": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      }
+    },
+    "colonies/alpha/colony.db": {
+      "tables": {
+        "playbook_runs": {
+          "rows": 1,
+          "row_sha256": "634d2b1b83e9dcd8df6588e3bb620bfc53328c7d2b63f1af9ede215e09e189be"
+        }
+      }
+    },
+    "colonies/alpha/tracker/tracker.db": {
+      "tables": {
+        "_tracker_changes": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "_tracker_meta": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        },
+        "_tracker_registry": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        },
+        "leads": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        }
+      }
+    },
+    "colonies/beta/tracker/tracker.db": {
+      "tables": {
+        "_tracker_changes": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "_tracker_meta": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        },
+        "_tracker_registry": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        },
+        "leads": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        }
+      }
+    },
+    "colonies/probe_colony/tracker/tracker.db": {
+      "tables": {
+        "_tracker_changes": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "_tracker_meta": {
+          "rows": 1,
+          "row_sha256": "bc152e9bee1ed761d7c7c0c01332b8ca8b920ef5d7b59aef7e24efe9398a45ce"
+        },
+        "_tracker_registry": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      }
+    }
+  }
+}

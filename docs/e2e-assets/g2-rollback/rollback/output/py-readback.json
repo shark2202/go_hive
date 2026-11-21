@@ -1,0 +1,500 @@
+{
+  "probe": "g2-rollback-read",
+  "home": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home",
+  "markers": {
+    ".migrated-v2": true,
+    ".migrated-v3": true,
+    "colony_sessions_v1": true
+  },
+  "queens": {
+    "queen_growth": {
+      "profile_yaml": "name: queen_growth\nrole: growth\n",
+      "sessions": {
+        "session_20260201_000001_bbbbbbbb": {
+          "meta": {
+            "session_id": "session_20260201_000001_bbbbbbbb",
+            "created_at": "2026-01-01T00:00:00+00:00",
+            "updated_at": "2026-01-01T00:10:00+00:00",
+            "queen_id": "queen_growth"
+          },
+          "state": {
+            "schema_version": "1.1",
+            "session_id": "session_20260201_000001_bbbbbbbb",
+            "stream_id": "",
+            "correlation_id": "",
+            "status": "paused",
+            "goal_id": "goal_dm",
+            "agent_id": "queen_growth",
+            "entry_point": "start",
+            "timestamps": {
+              "started_at": "2026-01-01T00:00:00+00:00",
+              "updated_at": "2026-01-01T00:10:00+00:00",
+              "completed_at": null,
+              "paused_at_time": null
+            },
+            "progress": {
+              "current_node": null,
+              "paused_at": null,
+              "resume_from": null,
+              "steps_executed": 2,
+              "total_tokens": 42,
+              "total_latency_ms": 1234,
+              "path": [
+                "start"
+              ],
+              "total_retries": 0,
+              "nodes_with_failures": [],
+              "retry_details": {},
+              "had_partial_failures": false,
+              "execution_quality": "clean",
+              "node_visit_counts": {
+                "start": 1
+              }
+            },
+            "result": {
+              "success": null,
+              "error": null,
+              "output": {}
+            },
+            "data_buffer": {},
+            "metrics": {
+              "decision_count": 0,
+              "problem_count": 0,
+              "total_input_tokens": 0,
+              "total_output_tokens": 0,
+              "nodes_executed": [],
+              "edges_traversed": []
+            },
+            "problems": [],
+            "decisions": [],
+            "input_data": {},
+            "current_run_id": null,
+            "pid": null,
+            "isolation_level": "shared",
+            "checkpoint_enabled": false,
+            "latest_checkpoint_id": null,
+            "active_triggers": [],
+            "trigger_tasks": {},
+            "worker_configured": false,
+            "duration_ms": 0,
+            "is_resumable": false,
+            "is_resumable_from_checkpoint": false
+          },
+          "events_lines": 0,
+          "conversation": {
+            "meta_ok": true,
+            "cursor": {
+              "next_seq": 2
+            },
+            "part_count": 2,
+            "parts": [
+              {
+                "seq": 0,
+                "role": "user",
+                "content": "hello"
+              },
+              {
+                "seq": 1,
+                "role": "assistant",
+                "content": "hi there"
+              }
+            ]
+          }
+        },
+        "session_compat_probe_go": {
+          "meta": null,
+          "state": {
+            "schema_version": "1.1",
+            "session_id": "session_compat_probe_go",
+            "stream_id": "",
+            "correlation_id": "",
+            "status": "paused",
+            "goal_id": "goal_compat",
+            "agent_id": "queen_growth",
+            "entry_point": "start",
+            "timestamps": {
+              "started_at": "2026-01-01T00:00:00Z",
+              "updated_at": "2026-01-01T00:05:00Z",
+              "completed_at": null,
+              "paused_at_time": null
+            },
+            "progress": {
+              "current_node": "start",
+              "paused_at": null,
+              "resume_from": null,
+              "steps_executed": 1,
+              "total_tokens": 0,
+              "total_latency_ms": 0,
+              "path": [
+                "start"
+              ],
+              "total_retries": 0,
+              "nodes_with_failures": [],
+              "retry_details": {},
+              "had_partial_failures": false,
+              "execution_quality": "clean",
+              "node_visit_counts": {}
+            },
+            "result": {
+              "success": null,
+              "error": null,
+              "output": {}
+            },
+            "data_buffer": {},
+            "metrics": {
+              "decision_count": 0,
+              "problem_count": 0,
+              "total_input_tokens": 0,
+              "total_output_tokens": 0,
+              "nodes_executed": [],
+              "edges_traversed": []
+            },
+            "problems": [],
+            "decisions": [],
+            "input_data": {},
+            "current_run_id": null,
+            "pid": null,
+            "isolation_level": "shared",
+            "checkpoint_enabled": false,
+            "latest_checkpoint_id": null,
+            "active_triggers": [
+              "trg-1"
+            ],
+            "trigger_tasks": {
+              "trg-1": "check"
+            },
+            "worker_configured": true,
+            "duration_ms": 0,
+            "is_resumable": false,
+            "is_resumable_from_checkpoint": false
+          },
+          "events_lines": 0,
+          "conversation": {
+            "meta_ok": true,
+            "cursor": {
+              "next_seq": 3
+            },
+            "part_count": 3,
+            "parts": [
+              {
+                "seq": 0,
+                "role": "user",
+                "content": "hello"
+              },
+              {
+                "seq": 1,
+                "role": "assistant",
+                "content": "let me look"
+              },
+              {
+                "seq": 2,
+                "role": "tool",
+                "content": "file contents"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "colonies": {
+    "alpha": {
+      "metadata": {
+        "name": "alpha",
+        "created_at": 1767225600.0,
+        "queen_name": "queen_growth",
+        "worker_profiles": [
+          {
+            "name": "default",
+            "description": "Default worker"
+          }
+        ]
+      },
+      "tracker_db": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/colonies/alpha/tracker/tracker.db",
+      "tracker_exists": true,
+      "colony_db_exists": true,
+      "tracker_meta": {
+        "schema_version": "3"
+      },
+      "tracker_tables": [
+        "_tracker_changes",
+        "_tracker_meta",
+        "_tracker_registry",
+        "leads"
+      ],
+      "queen_sessions": {
+        "queen_growth": [
+          "session_20260201_000002_cccccccc",
+          "session_20260201_000003_dddddddd",
+          "session_20260202_000001_ffffffff",
+          "session_20260202_000002_11111111"
+        ]
+      }
+    },
+    "beta": {
+      "metadata": {
+        "name": "beta",
+        "created_at": 1767225600.0
+      },
+      "tracker_db": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/colonies/beta/tracker/tracker.db",
+      "tracker_exists": true,
+      "colony_db_exists": false,
+      "tracker_meta": {
+        "schema_version": "3"
+      },
+      "tracker_tables": [
+        "_tracker_changes",
+        "_tracker_meta",
+        "_tracker_registry",
+        "leads"
+      ],
+      "queen_sessions": {
+        "queen_ops": [
+          "session_20260203_000001_22222222"
+        ]
+      }
+    },
+    "probe_colony": {
+      "metadata": {
+        "name": "probe_colony",
+        "created_at": 1767225600.0
+      },
+      "tracker_db": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/colonies/probe_colony/tracker/tracker.db",
+      "tracker_exists": true,
+      "colony_db_exists": false,
+      "tracker_meta": {
+        "schema_version": "3"
+      },
+      "tracker_tables": [
+        "_tracker_changes",
+        "_tracker_meta",
+        "_tracker_registry"
+      ]
+    }
+  },
+  "cold_sessions": [
+    {
+      "session_id": "session_compat_probe_go",
+      "title": null,
+      "channel": null,
+      "forked_from": null,
+      "cold": true,
+      "live": false,
+      "has_messages": true,
+      "created_at": 1795237486.1359024,
+      "last_active_at": 1795237486.1359024,
+      "agent_name": null,
+      "agent_path": null,
+      "last_message": null,
+      "message_count": 1,
+      "queen_id": "queen_growth"
+    },
+    {
+      "session_id": "session_20260201_000001_bbbbbbbb",
+      "title": null,
+      "channel": null,
+      "forked_from": null,
+      "cold": true,
+      "live": false,
+      "has_messages": true,
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "last_active_at": 1795237482.7872634,
+      "agent_name": null,
+      "agent_path": null,
+      "last_message": "hi there",
+      "message_count": 2,
+      "queen_id": "queen_growth"
+    }
+  ],
+  "colony_sessions": {
+    "alpha": [
+      {
+        "session_id": "session_20260202_000002_11111111",
+        "title": null,
+        "channel": null,
+        "forked_from": null,
+        "cold": true,
+        "live": false,
+        "has_messages": false,
+        "created_at": 1795237482.7949681,
+        "last_active_at": 1795237482.7949681,
+        "agent_name": null,
+        "agent_path": null,
+        "last_message": null,
+        "message_count": 0,
+        "queen_id": "queen_growth"
+      },
+      {
+        "session_id": "session_20260202_000001_ffffffff",
+        "title": null,
+        "channel": null,
+        "forked_from": null,
+        "cold": true,
+        "live": false,
+        "has_messages": true,
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "last_active_at": 1795237482.7943833,
+        "agent_name": null,
+        "agent_path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/colonies/alpha",
+        "last_message": "hi there",
+        "message_count": 2,
+        "queen_id": "queen_growth"
+      },
+      {
+        "session_id": "session_20260201_000003_dddddddd",
+        "title": null,
+        "channel": null,
+        "forked_from": null,
+        "cold": true,
+        "live": false,
+        "has_messages": true,
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "last_active_at": 1795237482.7880888,
+        "agent_name": null,
+        "agent_path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/colonies/alpha",
+        "last_message": "hi there",
+        "message_count": 2,
+        "queen_id": "queen_growth"
+      },
+      {
+        "session_id": "session_20260201_000002_cccccccc",
+        "title": null,
+        "channel": null,
+        "forked_from": null,
+        "cold": true,
+        "live": false,
+        "has_messages": true,
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "last_active_at": 1795237482.7876801,
+        "agent_name": null,
+        "agent_path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/colonies/alpha",
+        "last_message": "hi there",
+        "message_count": 2,
+        "queen_id": "queen_growth"
+      }
+    ],
+    "beta": [
+      {
+        "session_id": "session_20260203_000001_22222222",
+        "title": null,
+        "channel": null,
+        "forked_from": null,
+        "cold": true,
+        "live": false,
+        "has_messages": true,
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "last_active_at": 1795237482.7954237,
+        "agent_name": null,
+        "agent_path": null,
+        "last_message": "hi there",
+        "message_count": 2,
+        "queen_id": "queen_ops"
+      }
+    ],
+    "probe_colony": []
+  },
+  "credentials": {
+    "ids": [
+      "demo_api_key",
+      "demo_oauth"
+    ],
+    "credentials": {
+      "demo_api_key": {
+        "credential_type": "api_key",
+        "provider_id": null,
+        "auto_refresh": false,
+        "description": "demo api key",
+        "tags": [
+          "demo",
+          "compat"
+        ],
+        "keys": {
+          "api_key": {
+            "value": "sk-demo-123",
+            "expires_at": null,
+            "metadata": {
+              "scope": "read"
+            }
+          }
+        }
+      },
+      "demo_oauth": {
+        "credential_type": "oauth2",
+        "provider_id": "oauth2",
+        "auto_refresh": true,
+        "description": "demo oauth",
+        "tags": [],
+        "keys": {
+          "access_token": {
+            "value": "at-demo",
+            "expires_at": "2026-12-31T00:00:00+00:00",
+            "metadata": {}
+          },
+          "refresh_token": {
+            "value": "rt-demo",
+            "expires_at": null,
+            "metadata": {}
+          },
+          "_alias": {
+            "value": "work",
+            "expires_at": null,
+            "metadata": {}
+          },
+          "_integration_type": {
+            "value": "google",
+            "expires_at": null,
+            "metadata": {}
+          },
+          "_identity_email": {
+            "value": "demo@example.com",
+            "expires_at": null,
+            "metadata": {}
+          }
+        }
+      }
+    },
+    "index": {
+      "version": "2.0",
+      "store_path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/credentials",
+      "generated_at": "2026-11-21T05:04:43.942928Z",
+      "credentials": {
+        "demo_api_key": {
+          "credential_type": "api_key",
+          "provider": null,
+          "alias": null,
+          "identity": {},
+          "key_names": [
+            "api_key"
+          ],
+          "created_at": "2026-11-21T05:04:43.930545Z",
+          "updated_at": "2026-11-21T05:04:43.930547Z",
+          "last_refreshed": null,
+          "expires_at": null,
+          "auto_refresh": false,
+          "tags": [
+            "demo",
+            "compat"
+          ]
+        },
+        "demo_oauth": {
+          "credential_type": "oauth2",
+          "provider": "google",
+          "alias": "work",
+          "identity": {
+            "email": "demo@example.com"
+          },
+          "key_names": [
+            "access_token",
+            "refresh_token"
+          ],
+          "created_at": "2026-11-21T05:04:43.938569Z",
+          "updated_at": "2026-11-21T05:04:43.938572Z",
+          "last_refreshed": null,
+          "expires_at": "2026-12-31T00:00:00Z",
+          "auto_refresh": true,
+          "tags": []
+        }
+      }
+    }
+  }
+}

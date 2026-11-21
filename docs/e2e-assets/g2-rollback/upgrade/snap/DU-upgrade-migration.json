@@ -1,0 +1,511 @@
+{
+  "probe": "g2-rollback-diff",
+  "before": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/U0-oldhome-before-new.json",
+  "after": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/U1-after-new-serve.json",
+  "added": [
+    {
+      "path": ".migrated-v3",
+      "size": 2
+    },
+    {
+      "path": "colonies/.migrations/colony_sessions_v1",
+      "size": 2
+    },
+    {
+      "path": "colonies/.migrations/tracker/tracker.db",
+      "size": 28672
+    },
+    {
+      "path": "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/meta.json",
+      "size": 338
+    },
+    {
+      "path": "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "colonies/alpha/legacy_fork_snapshots/session_20260202_000002_11111111/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/meta.json",
+      "size": 315
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/meta.json",
+      "size": 338
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/meta.json",
+      "size": 338
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "colonies/alpha/queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "colonies/alpha/seed_conversation/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "colonies/alpha/seed_conversation/meta.json",
+      "size": 70
+    },
+    {
+      "path": "colonies/alpha/seed_conversation/parts/0000000000.json",
+      "size": 80
+    },
+    {
+      "path": "colonies/alpha/tracker/tracker.db",
+      "size": 36864
+    },
+    {
+      "path": "colonies/alpha/workers/scout/worker.json",
+      "size": 57
+    },
+    {
+      "path": "colonies/alpha/workers/scout/sessions/session_20260201_000004_eeeeeeee/state.json",
+      "size": 1433
+    },
+    {
+      "path": "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/meta.json",
+      "size": 171
+    },
+    {
+      "path": "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "colonies/beta/queens/queen_ops/sessions/session_20260203_000001_22222222/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "colonies/beta/tracker/tracker.db",
+      "size": 36864
+    },
+    {
+      "path": "logs/hive-server.log",
+      "size": 295
+    },
+    {
+      "path": "queens/queen_growth/profile.yaml",
+      "size": 32
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/meta.json",
+      "size": 174
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/state.json",
+      "size": 1437
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/summary.json",
+      "size": 99
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "queens/queen_growth/skills/briefing/SKILL.md",
+      "size": 11
+    }
+  ],
+  "removed": [
+    {
+      "path": "agents/alpha/scout/worker.json",
+      "size": 57
+    },
+    {
+      "path": "agents/alpha/scout/sessions/session_20260201_000004_eeeeeeee/state.json",
+      "size": 1433
+    },
+    {
+      "path": "agents/alpha/worker/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "agents/alpha/worker/conversations/meta.json",
+      "size": 70
+    },
+    {
+      "path": "agents/alpha/worker/conversations/parts/0000000000.json",
+      "size": 80
+    },
+    {
+      "path": "agents/queens/queen_growth/profile.yaml",
+      "size": 32
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/meta.json",
+      "size": 174
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/state.json",
+      "size": 1437
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/meta.json",
+      "size": 315
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/meta.json",
+      "size": 338
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "agents/queens/queen_growth/skills/briefing/SKILL.md",
+      "size": 11
+    },
+    {
+      "path": "colonies/alpha/data/tracker.db",
+      "size": 36864
+    },
+    {
+      "path": "colonies/beta/data/tracker.db",
+      "size": 36864
+    },
+    {
+      "path": "colonies/beta/queen/session_20260203_000001_22222222/meta.json",
+      "size": 171
+    },
+    {
+      "path": "colonies/beta/queen/session_20260203_000001_22222222/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "colonies/beta/queen/session_20260203_000001_22222222/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "colonies/beta/queen/session_20260203_000001_22222222/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "colonies/beta/queen/session_20260203_000001_22222222/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260202_000001_ffffffff/meta.json",
+      "size": 338
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/parts/0000000001.json",
+      "size": 85
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260202_000002_11111111/meta.json",
+      "size": 338
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260202_000002_11111111/conversations/cursor.json",
+      "size": 19
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260202_000002_11111111/conversations/meta.json",
+      "size": 239
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260202_000002_11111111/conversations/parts/0000000000.json",
+      "size": 104
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_20260202_000002_11111111/conversations/parts/0000000001.json",
+      "size": 85
+    }
+  ],
+  "modified": [],
+  "sqlite_changes": {
+    "colonies/.migrations/tracker/tracker.db": {
+      "_tracker_changes": {
+        "before": null,
+        "after": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      "_tracker_meta": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "2fc97b9ce8faf95124a2f604decbf2798add451cf4cd2063ce7844130ce34157"
+        }
+      },
+      "_tracker_registry": {
+        "before": null,
+        "after": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      }
+    },
+    "colonies/alpha/data/tracker.db": {
+      "_tracker_changes": {
+        "before": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "after": null
+      },
+      "_tracker_meta": {
+        "before": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        },
+        "after": null
+      },
+      "_tracker_registry": {
+        "before": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        },
+        "after": null
+      },
+      "leads": {
+        "before": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        },
+        "after": null
+      }
+    },
+    "colonies/alpha/tracker/tracker.db": {
+      "_tracker_changes": {
+        "before": null,
+        "after": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      "_tracker_meta": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        }
+      },
+      "_tracker_registry": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        }
+      },
+      "leads": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        }
+      }
+    },
+    "colonies/beta/data/tracker.db": {
+      "_tracker_changes": {
+        "before": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "after": null
+      },
+      "_tracker_meta": {
+        "before": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        },
+        "after": null
+      },
+      "_tracker_registry": {
+        "before": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        },
+        "after": null
+      },
+      "leads": {
+        "before": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        },
+        "after": null
+      }
+    },
+    "colonies/beta/tracker/tracker.db": {
+      "_tracker_changes": {
+        "before": null,
+        "after": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      "_tracker_meta": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        }
+      },
+      "_tracker_registry": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        }
+      },
+      "leads": {
+        "before": null,
+        "after": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        }
+      }
+    }
+  },
+  "marker_changes": {
+    ".migrated-v3": {
+      "before": false,
+      "after": true
+    },
+    "colony_sessions_v1": {
+      "before": false,
+      "after": true
+    }
+  },
+  "summary": {
+    "added": 45,
+    "removed": 40,
+    "modified": 0,
+    "sqlite_changed": 5
+  }
+}

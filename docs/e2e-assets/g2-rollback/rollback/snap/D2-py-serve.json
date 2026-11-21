@@ -1,0 +1,24 @@
+{
+  "probe": "g2-rollback-diff",
+  "before": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S2b-after-py-read.json",
+  "after": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S2c-after-py-serve.json",
+  "added": [],
+  "removed": [],
+  "modified": [
+    {
+      "path": "logs/hive-server.log",
+      "before_sha256": "57fe1bba24c3afe3593958c6b16c4f34e2753af53f5ee6f137159c625776ea73",
+      "after_sha256": "6e3a978aedfaa2089ebc70d9f26facd7bee51234f6e1e6cc1fbdb51c446bef40",
+      "before_size": 295,
+      "after_size": 1366
+    }
+  ],
+  "sqlite_changes": {},
+  "marker_changes": {},
+  "summary": {
+    "added": 0,
+    "removed": 0,
+    "modified": 1,
+    "sqlite_changed": 0
+  }
+}

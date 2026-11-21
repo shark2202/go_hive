@@ -256,12 +256,14 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </tbody></table></div>
 <div class="callout ok"><b>提示词文本对照（prompt-parity 车道，2026-11-21）：</b>skill catalog 渲染 golden 10/10 逐字一致
 （live 首轮注入的 catalog 段两侧各 3,985 chars 逐字）；相位过滤、description 截断（含 NBSP）、symlink location
-已修；turn_context 注入正文/包装逐字一致（45 chars）；<b>首轮 system prompt 整段逐字一致</b>
+已修；turn_context 注入正文/包装逐字一致（45 chars），live 双跑两侧都注入（Go 侧为编译期链接的内置
+<code>probe</code> 包，P-05 关闭）；<b>首轮 system prompt 整段逐字一致</b>
 （21,584 / 21,584 chars，queen 基础提示词 + credentials 段已移植，queen 路径不再注入整篇 skill body）；
 <b>首轮 opening messages 也整段逐字一致</b>（4,344 / 4,344 chars，<code>first-turn-messages.diff</code> 0 字节）——
 非 system 内容只有那一个 <code>&lt;system-reminder&gt;</code>：searchable-tools manifest 307 chars
-（per-queen allowlist − eager 的 2 个名称）+ skills catalog 3,985 chars。见
-<code>docs/prompt-parity.md</code> §3/§4/§6。证据：<code>docs/e2e-assets/prompt-catalog/</code>。</div>
+（per-queen allowlist − eager 的 2 个名称）+ skills catalog 3,985 chars；<b>用户轮 messages 亦逐字一致</b>
+（4,604 / 4,604 chars，<code>user-turn-messages.diff</code> 0 字节）。见
+<code>docs/prompt-parity.md</code> §3/§4/§5/§6。证据：<code>docs/e2e-assets/prompt-catalog/</code>。</div>
 </section>
 
 <section id="gaps"><h2><span class="num">04</span>缺口 / 未验证清单（按严重度）</h2>

@@ -1,0 +1,24 @@
+{
+  "probe": "g2-rollback-diff",
+  "before": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S3-after-go2.json",
+  "after": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S4-after-go-ui.json",
+  "added": [],
+  "removed": [],
+  "modified": [
+    {
+      "path": "logs/hive-server.log",
+      "before_sha256": "e334ec42638339de8f8ca0955fd095869f9bf527e77ae9d241015fbc587e3ebb",
+      "after_sha256": "4f3529c26d9bf83ec18a2fed288e8707f8197a200740643281beda8812652f40",
+      "before_size": 1661,
+      "after_size": 1956
+    }
+  ],
+  "sqlite_changes": {},
+  "marker_changes": {},
+  "summary": {
+    "added": 0,
+    "removed": 0,
+    "modified": 1,
+    "sqlite_changed": 0
+  }
+}

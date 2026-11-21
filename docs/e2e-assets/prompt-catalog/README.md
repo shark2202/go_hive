@@ -37,9 +37,9 @@ XML 转义、YAML colon 修复、visibility 相位、跨 scope 重名、symlink 
 | `first-turn-messages.{python,go}.txt` | 开场轮 messages（system 之外；含 `<system-reminder>` 注入块） |
 | `reminder-catalog.{python,go}.txt` | 注入块中的 skills catalog 段（当前逐字一致） |
 | `reminder-searchable.{python,go}.txt` | 注入块中的 searchable-tools manifest 段（当前逐字一致，307 chars） |
-| `user-turn-messages.{python,go}.txt` | 第一条用户消息轮：turn-context 注入位置证据 |
-| `turn-context-live.{python,go}.txt` | live turn_context 正文（Python 有，Go 无：无编译期注册的 package） |
-| `turn-context-live.diff` | 上者的 unified diff |
+| `user-turn-messages.{python,go}.txt` | 第一条用户消息轮：turn-context 注入位置证据（当前逐字一致） |
+| `turn-context-live.{python,go}.txt` | live turn_context 正文（两侧一致，45 chars） |
+| `turn-context-live.diff` | 上者的 unified diff（0 字节） |
 
 ## 当前结论
 
@@ -55,8 +55,9 @@ XML 转义、YAML colon 修复、visibility 相位、跨 scope 重名、symlink 
   工具（`chart_render`、`web_scrape`）。Go 的 lazy 层仍可加载 51 个 flat 工具，但播报集按上游规则收窄；
   `search_tools` 的 select/keywords/inventory 与「schema 未加载」守卫不变。见 `prompt-parity.md` §4 / §4.1。
 - 首轮 opening messages：**逐字一致（4,344 / 4,344 chars，`first-turn-messages.diff` 0 字节）**——
-  非 system 内容只有那一个 `<system-reminder>`（manifest + catalog）。用户轮残余只剩 Python-only 的
-  turn_context 注入（45 chars，P-05）。
-- turn_context：配置键 `turn_context.<name>.enabled` 两侧一致（1 键）；注入正文/包装逐字一致（45 chars）；
-  live 注入面 Python=entry point 包、Go=编译期 registry（本次 Go 未链接任何 package，故 live 不注入），
-  见 `prompt-parity.md` §5。
+  非 system 内容只有那一个 `<system-reminder>`（manifest + catalog）。
+- 用户轮：**逐字一致（4,604 / 4,604 chars，`user-turn-messages.diff` 0 字节）**——turn-context 注入
+  两侧都有，正文 45 chars 相同，位置都在带时间戳的用户消息之前。
+- turn_context：配置键 `turn_context.<name>.enabled` 两侧一致（1 键）；live 注入面 Python=entry point 包、
+  Go=编译期链接的内置 `probe` 包（`internal/server/turn_context_probe.go`），`go_injected=true` 且
+  正文/包装逐字一致；未配置时不启动不注入。见 `prompt-parity.md` §5。

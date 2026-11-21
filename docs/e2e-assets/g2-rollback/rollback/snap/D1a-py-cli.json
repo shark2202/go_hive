@@ -1,0 +1,25 @@
+{
+  "probe": "g2-rollback-diff",
+  "before": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S1-after-go1.json",
+  "after": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S2a-after-py-cli.json",
+  "added": [
+    {
+      "path": "queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/summary.json",
+      "size": 106
+    },
+    {
+      "path": "queens/queen_growth/sessions/session_compat_probe_go/summary.json",
+      "size": 100
+    }
+  ],
+  "removed": [],
+  "modified": [],
+  "sqlite_changes": {},
+  "marker_changes": {},
+  "summary": {
+    "added": 2,
+    "removed": 0,
+    "modified": 0,
+    "sqlite_changed": 0
+  }
+}

@@ -205,8 +205,6 @@
   "evidence": "go_hive/docs/e2e-assets/prompt-catalog/",
   "report": "go_hive/docs/prompt-parity.md",
   "structural_exceptions": [
-   "P-04 searchable-tools manifest policy (residual, next lane)",
-   "P-05 turn_context install surface",
    "P-06 overseer catalog relay",
    "P-07 credentials block refresh timing (Go snapshots at session build/resume)",
    "P-08 colony-phase base prompt has no live capture"
@@ -239,6 +237,16 @@
     "go_hive/go-hive/internal/server/chat_queen_prompt_test.go"
    ]
   },
-  "residual_first_turn_diff": "searchable-tools manifest only (P-04): 307 vs 1029 chars"
+  "residual_first_turn_diff": "none (opening messages 4344/4344, user-turn messages 4604/4604 verbatim)",
+  "turn_context_parity": {
+   "python_injected": true,
+   "go_injected": true,
+   "chars": {
+    "python": 45,
+    "go": 45
+   },
+   "user_turn_messages_identical": true,
+   "package": "probe (Python: fake dist-info on PYTHONPATH; Go: built-in provider internal/server/turn_context_probe.go)"
+  }
  }
 }

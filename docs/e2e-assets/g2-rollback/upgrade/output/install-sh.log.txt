@@ -1,0 +1,21 @@
+install: using local archive: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/release/hive-1.0.26-go.1-darwin-arm64.tar.gz
+install: verified SHA256: hive-1.0.26-go.1-darwin-arm64.tar.gz
+install: verified archive contents
+install: installed hive -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/install-bin/hive
+install: installed hive-cred -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/install-bin/hive-cred
+install: installed hive-browser -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/install-bin/hive-browser
+install: installed browserbridge -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/install-bin/browserbridge
+hive 1.0.26-go.1
+install: verified hive-cred --help
+install: verified hive-browser help
+install: verified browserbridge -version
+
+Add the install directory to PATH:
+  export PATH="/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/install-bin:$PATH"
+total 142904
+drwxr-xr-x@  6 mac  staff       192 Nov 21 13:05 .
+drwxr-xr-x@ 13 mac  staff       416 Nov 21 13:05 ..
+-rwxr-xr-x@  1 mac  staff   7419762 Nov 21 13:05 browserbridge
+-rwxr-xr-x@  1 mac  staff  40953090 Nov 21 13:05 hive
+-rwxr-xr-x@  1 mac  staff  12382370 Nov 21 13:05 hive-browser
+-rwxr-xr-x@  1 mac  staff  12401954 Nov 21 13:05 hive-cred

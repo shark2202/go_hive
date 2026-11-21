@@ -1,11 +1,11 @@
-// Command storagecompat is the Go half of the HIVE_HOME storage-compat
-// double run. It is a test harness (not a shipped binary): the Python half
-// lives in go_hive/scripts/storage_compat_probes.py and both sides are
-// driven by go_hive/scripts/storage_compat_run.sh.
+// Command storagecompat is the Go half of the HIVE_HOME storage-compat /
+// G2 lossless-migration harness. It is a test harness (not a shipped binary):
+// the Python half lives in go_hive/scripts/storage_compat_probes.py and both
+// sides are driven by go_hive/scripts/{storage_compat,g2_home_e2e}_run.sh.
 //
-// Go migration functions are invoked explicitly here: production `hive serve`
-// does not call them today (see docs/storage-contract-diff.md), so an
-// old-layout HIVE_HOME is only migrated when something explicitly runs them.
+// Go migration functions are invoked explicitly here with the same sequence
+// production `hive serve` runs at startup (SC-01: v2 -> v3 -> colony_sessions
+// -> EnsureAllColonyTrackerDBs; see internal/server/storage_startup.go).
 //
 // Subcommands:
 //
@@ -15,21 +15,34 @@
 //	write-probes --home <d>  write state.json / conversations / checkpoints /
 //	                         credentials / fresh tracker.db through the real
 //	                         writer APIs for field-level comparison
-//	read-credential --dir <d> --key <path> --id <id>   decrypt one credential
+//	read-probes --home <d>   report what the Go APIs see in a migrated home:
+//	                         session lists/histories, colony discovery, tracker
+//	                         query output, sidecars, senders, skills, memories,
+//	                         credentials
+//	read-credential --dir <d> --key <path> --id <id> [--all]   decrypt one
+//	                         credential (or the whole store) with Fernet
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/aden-hive/hive-go/internal/agents"
+	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/credentials"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/schemas"
+	"github.com/aden-hive/hive-go/internal/senders"
+	"github.com/aden-hive/hive-go/internal/session"
 	"github.com/aden-hive/hive-go/internal/storage"
 	"github.com/aden-hive/hive-go/internal/tracker"
 )
@@ -224,12 +237,29 @@ func cmdReadCredential(args []string) {
 	dir := fs.String("dir", "", "credentials base dir")
 	keyPath := fs.String("key", "", "path to the fernet key file")
 	id := fs.String("id", "", "credential id (empty = list all)")
+	all := fs.Bool("all", false, "emit every credential using the read-probe shape")
 	_ = fs.Parse(args)
 
 	raw, err := os.ReadFile(*keyPath)
 	fail(err)
 	store, err := credentials.NewEncryptedFileStorage(*dir, trimSpace(string(raw)))
 	fail(err)
+
+	if *all {
+		ids, err := store.ListAll()
+		fail(err)
+		sort.Strings(ids)
+		creds := []any{}
+		for _, cid := range ids {
+			cred, err := store.Load(cid)
+			if err != nil || cred == nil {
+				continue
+			}
+			creds = append(creds, credentialProbe(cred))
+		}
+		out(map[string]any{"dir": *dir, "ids": ids, "credentials": creds})
+		return
+	}
 
 	ids, err := store.ListAll()
 	fail(err)
@@ -277,6 +307,522 @@ func cmdReadCredential(args []string) {
 }
 
 // ---------------------------------------------------------------------------
+// read probes (G2): what each implementation sees in a migrated home
+// ---------------------------------------------------------------------------
+
+func fileSHA16(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])[:16]
+}
+
+func fileInventory(root, homeRoot string) map[string]any {
+	out := map[string]any{}
+	info, err := os.Stat(root)
+	if err != nil || !info.IsDir() {
+		return out
+	}
+	_ = filepath.Walk(root, func(path string, entry os.FileInfo, walkErr error) error {
+		if walkErr != nil || entry.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(homeRoot, path)
+		if err != nil {
+			return nil
+		}
+		out[rel] = fileSHA16(path)
+		return nil
+	})
+	return out
+}
+
+func readJSONOrNil(path string) any {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var value any
+	if err := json.Unmarshal(data, &value); err != nil {
+		return nil
+	}
+	return value
+}
+
+func probeBool(value any) bool {
+	switch typed := value.(type) {
+	case nil:
+		return false
+	case bool:
+		return typed
+	case string:
+		return typed != ""
+	case float64:
+		return typed != 0
+	case int:
+		return typed != 0
+	}
+	return true
+}
+
+func probeString(value any) string {
+	if text, ok := value.(string); ok {
+		return text
+	}
+	return ""
+}
+
+// nilIfEmpty mirrors Python's “str | None“ provider ids on the wire: the
+// credential model tags provider_id with omitempty, so "no provider" reads
+// back as absent/null rather than an empty string.
+func nilIfEmpty(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
+}
+
+func probePartSummary(part map[string]any) map[string]any {
+	content := "<non-string content>"
+	if text, ok := part["content"].(string); ok {
+		content = text
+	} else if part["content"] == nil {
+		content = ""
+	}
+	if len(content) > 200 {
+		content = content[:200]
+	}
+	toolCalls := []any{}
+	if calls, ok := part["tool_calls"].([]any); ok {
+		for _, call := range calls {
+			entry, _ := call.(map[string]any)
+			if entry == nil {
+				continue
+			}
+			fn, _ := entry["function"].(map[string]any)
+			if fn == nil {
+				continue
+			}
+			toolCalls = append(toolCalls, fn["name"])
+		}
+	}
+	var reasoning any
+	if text := probeString(part["reasoning_content"]); text != "" {
+		if len(text) > 120 {
+			text = text[:120]
+		}
+		reasoning = text
+	}
+	return map[string]any{
+		"seq":               intOrNil(part["seq"]),
+		"role":              part["role"],
+		"content":           content,
+		"tool_use_id":       part["tool_use_id"],
+		"tool_calls":        toolCalls,
+		"is_skill_content":  probeBool(part["is_skill_content"]),
+		"reasoning_content": reasoning,
+		"spillover_path":    part["spillover_path"],
+	}
+}
+
+func intOrNil(value any) any {
+	switch typed := value.(type) {
+	case float64:
+		return int64(typed)
+	case int64:
+		return typed
+	case int:
+		return int64(typed)
+	}
+	return nil
+}
+
+func probeSessionDirs(h hivehome.Home) []string {
+	seen := map[string]struct{}{}
+	var dirs []string
+	for _, pattern := range []string{
+		"queens/*/sessions/*",
+		"colonies/*/queens/*/sessions/*",
+		"colonies/*/workers/*/sessions/*",
+	} {
+		matches, _ := filepath.Glob(filepath.Join(h.Root, pattern))
+		for _, match := range matches {
+			info, err := os.Stat(match)
+			if err != nil || !info.IsDir() {
+				continue
+			}
+			if _, ok := seen[match]; ok {
+				continue
+			}
+			seen[match] = struct{}{}
+			dirs = append(dirs, match)
+		}
+	}
+	sort.Strings(dirs)
+	return dirs
+}
+
+func probeState(sessionDir string) any {
+	store := storage.NewSessionStore(filepath.Dir(filepath.Dir(sessionDir)))
+	state, err := store.ReadState(filepath.Base(sessionDir))
+	if err != nil {
+		return map[string]any{"error": err.Error()}
+	}
+	if state == nil {
+		return nil
+	}
+	var updated any
+	if !state.Timestamps.UpdatedAt.IsZero() {
+		updated = state.Timestamps.UpdatedAt.Time.UTC().Format(time.RFC3339)
+	}
+	return map[string]any{
+		"status":         string(state.Status),
+		"goal_id":        state.GoalID,
+		"agent_id":       state.AgentID,
+		"updated_at":     updated,
+		"steps_executed": state.Progress.StepsExecuted,
+	}
+}
+
+func readHistories(h hivehome.Home) map[string]any {
+	out := map[string]any{}
+	for _, dir := range probeSessionDirs(h) {
+		rel, err := filepath.Rel(h.Root, dir)
+		if err != nil {
+			continue
+		}
+		entry := map[string]any{"state": probeState(dir)}
+		summary := readJSONOrNil(filepath.Join(dir, "summary.json"))
+		entry["summary"] = summary
+		entry["tasks"] = readJSONOrNil(filepath.Join(dir, "tasks.json"))
+		parts := []any{}
+		convs := filepath.Join(dir, "conversations")
+		if info, err := os.Stat(convs); err == nil && info.IsDir() {
+			store := agentloop.NewFileConversationStore(convs)
+			if rows, err := store.ReadParts(); err != nil {
+				parts = append(parts, map[string]any{"error": err.Error()})
+			} else {
+				for _, row := range rows {
+					parts = append(parts, probePartSummary(row))
+				}
+			}
+		}
+		entry["parts"] = parts
+		out[rel] = entry
+	}
+	return out
+}
+
+func readDiscover(h hivehome.Home) []any {
+	out := []any{}
+	groups := agents.DiscoverAgents(h.ColoniesDir())
+	categories := make([]string, 0, len(groups))
+	for category := range groups {
+		categories = append(categories, category)
+	}
+	sort.Strings(categories)
+	for _, category := range categories {
+		for _, entry := range groups[category] {
+			rel := entry.Path
+			roots := []string{h.Root}
+			if resolved, err := filepath.EvalSymlinks(h.Root); err == nil {
+				roots = append(roots, resolved)
+			}
+			for _, root := range roots {
+				if r, err := filepath.Rel(root, entry.Path); err == nil && !strings.HasPrefix(r, "..") {
+					rel = r
+					break
+				}
+			}
+			workers := []any{}
+			for _, worker := range entry.Workers {
+				workers = append(workers, map[string]any{
+					"name":        worker.Name,
+					"description": worker.Description,
+					"tool_count":  worker.ToolCount,
+					"task":        worker.Task,
+				})
+			}
+			var lastActive any
+			if entry.LastActive != nil {
+				lastActive = *entry.LastActive
+			}
+			out = append(out, map[string]any{
+				"category":      category,
+				"name":          entry.Name,
+				"path":          rel,
+				"description":   entry.Description,
+				"session_count": entry.SessionCount,
+				"run_count":     entry.RunCount,
+				"node_count":    entry.NodeCount,
+				"tool_count":    entry.ToolCount,
+				"last_active":   lastActive,
+				"created_at":    entry.CreatedAt,
+				"icon":          entry.Icon,
+				"workers":       workers,
+			})
+		}
+	}
+	return out
+}
+
+func probeTrackerQuery(dbPath, sqlText string) map[string]any {
+	result, err := tracker.ExecuteSQL(dbPath, sqlText, 1000)
+	if err != nil {
+		return map[string]any{"error": err.Error()}
+	}
+	return result
+}
+
+func readTrackerProbe(h hivehome.Home, colonyDir string) any {
+	dbPath := filepath.Join(colonyDir, "tracker", "tracker.db")
+	if _, err := os.Stat(dbPath); err != nil {
+		return nil
+	}
+	rel, err := filepath.Rel(h.Root, dbPath)
+	if err != nil {
+		rel = dbPath
+	}
+	probe := map[string]any{"db": rel}
+	probe["tables"] = probeTrackerQuery(dbPath, "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+	probe["registry"] = probeTrackerQuery(dbPath, "SELECT table_name, write_columns, key_columns, mode FROM _tracker_registry ORDER BY table_name")
+	probe["meta"] = probeTrackerQuery(dbPath, "SELECT key, value FROM _tracker_meta ORDER BY key")
+	probe["changes"] = probeTrackerQuery(dbPath, "SELECT table_name, pk, op FROM _tracker_changes ORDER BY id")
+
+	names := []string{}
+	if tables, ok := probe["tables"].(map[string]any); ok && tables["kind"] == "rows" {
+		if rows, ok := tables["rows"].([]any); ok {
+			for _, row := range rows {
+				values, _ := row.([]any)
+				if len(values) == 1 {
+					if name, ok := values[0].(string); ok {
+						names = append(names, name)
+					}
+				}
+			}
+		}
+	}
+	userRows := map[string]any{}
+	for _, name := range names {
+		if strings.HasPrefix(name, "_") {
+			continue
+		}
+		userRows[name] = probeTrackerQuery(dbPath, fmt.Sprintf("SELECT * FROM %q ORDER BY rowid", name))
+	}
+	probe["user_rows"] = userRows
+	hasLead, hasInvoice := false, false
+	for _, name := range names {
+		if name == "leads" {
+			hasLead = true
+		}
+		if name == "invoices" {
+			hasInvoice = true
+		}
+	}
+	if hasLead && hasInvoice {
+		probe["join"] = probeTrackerQuery(dbPath, "SELECT l.id, l.name, COUNT(i.id) AS invoice_count FROM leads l LEFT JOIN invoices i ON i.lead_id = l.id GROUP BY l.id, l.name ORDER BY l.id")
+	} else {
+		probe["join"] = nil
+	}
+	return probe
+}
+
+func readColoniesProbe(h hivehome.Home) map[string]any {
+	out := map[string]any{}
+	entries, err := os.ReadDir(h.ColoniesDir())
+	if err != nil {
+		return out
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		colonyDir := filepath.Join(h.ColoniesDir(), name)
+		item := map[string]any{"colony": name}
+		item["metadata"] = readJSONOrNil(filepath.Join(colonyDir, "metadata.json"))
+
+		workers := map[string]any{}
+		configs, err := os.ReadDir(colonyDir)
+		if err == nil {
+			for _, cfg := range configs {
+				if cfg.IsDir() || !strings.HasSuffix(cfg.Name(), ".json") {
+					continue
+				}
+				data, ok := readJSONOrNil(filepath.Join(colonyDir, cfg.Name())).(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := data["system_prompt"]; !has {
+					continue
+				}
+				workers[cfg.Name()] = map[string]any{
+					"name":       data["name"],
+					"input_data": data["input_data"],
+					"tools":      data["tools"],
+				}
+			}
+		}
+		item["workers"] = workers
+		item["triggers"] = readJSONOrNil(filepath.Join(colonyDir, "triggers.json"))
+
+		skills := []any{}
+		skillsDir := filepath.Join(colonyDir, "skills")
+		if info, err := os.Stat(skillsDir); err == nil && info.IsDir() {
+			_ = filepath.Walk(skillsDir, func(path string, fi os.FileInfo, walkErr error) error {
+				if walkErr != nil || fi.IsDir() || filepath.Base(path) != "SKILL.md" {
+					return nil
+				}
+				if rel, err := filepath.Rel(h.Root, path); err == nil {
+					skills = append(skills, rel)
+				}
+				return nil
+			})
+			sort.Slice(skills, func(i, j int) bool { return skills[i].(string) < skills[j].(string) })
+		}
+		item["skills"] = skills
+
+		var runs any
+		dbPath := filepath.Join(colonyDir, "colony.db")
+		if _, err := os.Stat(dbPath); err == nil {
+			rows, err := colony.ListPlaybookRuns(dbPath, 1000)
+			if err == nil {
+				list := []any{}
+				for _, run := range rows {
+					list = append(list, map[string]any{"run_id": run.RunID, "name": run.Name, "status": run.Status, "error": run.Error})
+				}
+				sort.Slice(list, func(i, j int) bool {
+					return list[i].(map[string]any)["run_id"].(string) < list[j].(map[string]any)["run_id"].(string)
+				})
+				runs = list
+			} else {
+				runs = map[string]any{"error": err.Error()}
+			}
+		}
+		item["playbook_runs"] = runs
+		item["tracker"] = readTrackerProbe(h, colonyDir)
+		out[name] = item
+	}
+	return out
+}
+
+func readSendersProbe(h hivehome.Home) map[string]any {
+	path := filepath.Join(h.Root, "senders", "senders.json")
+	if _, err := os.Stat(path); err != nil {
+		return map[string]any{"present": false, "senders": []any{}}
+	}
+	var raw struct {
+		Version int              `json:"version"`
+		Senders []senders.Sender `json:"senders"`
+	}
+	data, err := os.ReadFile(path)
+	if err != nil || json.Unmarshal(data, &raw) != nil {
+		return map[string]any{"present": true, "error": "unreadable"}
+	}
+	views := []any{}
+	for _, row := range raw.Senders {
+		views = append(views, row.PublicView())
+	}
+	return map[string]any{"present": true, "version": raw.Version, "senders": views}
+}
+
+func credentialProbe(cred *credentials.CredentialObject) map[string]any {
+	keys := map[string]any{}
+	for _, keyName := range cred.Keys.Names() {
+		key := cred.Keys.Get(keyName)
+		var expires any
+		if key.ExpiresAt != nil {
+			expires = key.ExpiresAt.UTC().Format(time.RFC3339Nano)
+		}
+		keys[keyName] = map[string]any{
+			"value":      key.GetSecretValue(),
+			"expires_at": expires,
+			"metadata":   key.Metadata,
+		}
+	}
+	return map[string]any{
+		"id":              cred.ID,
+		"credential_type": string(cred.CredentialType),
+		"provider_id":     nilIfEmpty(cred.ProviderID),
+		"auto_refresh":    cred.AutoRefresh,
+		"description":     cred.Description,
+		"tags":            cred.Tags,
+		"keys":            keys,
+	}
+}
+
+func readCredentialsProbe(h hivehome.Home) []any {
+	keyPath := filepath.Join(h.SecretsDir(), "credential_key")
+	raw, err := os.ReadFile(keyPath)
+	if err != nil {
+		return []any{}
+	}
+	store, err := credentials.NewEncryptedFileStorage(h.CredentialsDir(), trimSpace(string(raw)))
+	if err != nil {
+		return []any{map[string]any{"error": err.Error()}}
+	}
+	ids, err := store.ListAll()
+	if err != nil {
+		return []any{map[string]any{"error": err.Error()}}
+	}
+	sort.Strings(ids)
+	out := []any{}
+	for _, id := range ids {
+		cred, err := store.Load(id)
+		if err != nil || cred == nil {
+			continue
+		}
+		out = append(out, credentialProbe(cred))
+	}
+	return out
+}
+
+func cmdReadProbes(args []string) {
+	fs := flag.NewFlagSet("read-probes", flag.ExitOnError)
+	home := fs.String("home", "", "HIVE_HOME root")
+	_ = fs.Parse(args)
+	h := mustHome(*home)
+
+	report := map[string]any{"home": h.Root}
+	report["cold_sessions"] = session.ListColdSessions(h.QueensDir())
+
+	colonySessions := map[string]any{}
+	if entries, err := os.ReadDir(h.ColoniesDir()); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				colonySessions[entry.Name()] = session.ListColonySessions(filepath.Join(h.ColoniesDir(), entry.Name(), "queens"))
+			}
+		}
+	}
+	report["colony_sessions"] = colonySessions
+
+	report["histories"] = readHistories(h)
+	report["discover"] = readDiscover(h)
+	report["colonies"] = readColoniesProbe(h)
+	report["senders"] = readSendersProbe(h)
+	report["skills_user"] = fileInventory(filepath.Join(h.Root, "skills"), h.Root)
+
+	queenSkills := map[string]any{}
+	if entries, err := os.ReadDir(h.QueensDir()); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			dir := filepath.Join(h.QueensDir(), entry.Name(), "skills")
+			if info, err := os.Stat(dir); err == nil && info.IsDir() {
+				queenSkills[entry.Name()] = fileInventory(dir, h.Root)
+			}
+		}
+	}
+	report["skills_queens"] = queenSkills
+	report["memories"] = fileInventory(h.MemoriesDir(), h.Root)
+	report["credentials"] = readCredentialsProbe(h)
+	out(report)
+}
+
+// ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
 
@@ -305,6 +851,8 @@ func main() {
 		cmdProbes(os.Args[2:])
 	case "read-credential":
 		cmdReadCredential(os.Args[2:])
+	case "read-probes":
+		cmdReadProbes(os.Args[2:])
 	default:
 		fmt.Fprintln(os.Stderr, "unknown subcommand:", os.Args[1])
 		os.Exit(2)

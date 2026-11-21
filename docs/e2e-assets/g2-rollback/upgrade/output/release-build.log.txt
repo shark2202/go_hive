@@ -1,0 +1,16 @@
+release: version: 1.0.26-go.1
+release: platforms: darwin/arm64
+release: output: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/release
+release: building hive-embed (dashboard embedded; npm build may run once)
+embed-ui: staging /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/frontend-dist -> /Users/mac/hive/.wt/g2-rollback-install/go_hive/go-hive/internal/server/uiembed/dist
+embed-ui: building /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/hive-embed (-tags embed_ui)
+embed-ui: wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/hive-embed
+release: hive-embed ready: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/hive-embed
+release: building darwin/arm64 (embed_ui)
+release: packaged hive-1.0.26-go.1-darwin-arm64.tar.gz
+release: verified SHA256SUMS
+release: release artifacts:
+  hive-1.0.26-go.1-darwin-arm64.tar.gz                     28209800 bytes
+  SHA256SUMS                                          
+
+release: install locally with: /Users/mac/hive/.wt/g2-rollback-install/go_hive/install.sh --from "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/release"

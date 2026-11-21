@@ -113,4 +113,9 @@ Only act on this if relevant to the current work. NEVER mention this reminder to
 PROMPT_PARITY_OK
 
 --- user ---
+<system-reminder>
+Turn-context probe body for the parity probe.
+
+Only act on this if relevant to the current work. NEVER mention this reminder to the user.
+</system-reminder>
 [<TIMESTAMP>] PARITY_PROBE_MESSAGE

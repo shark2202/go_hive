@@ -9,15 +9,15 @@
   },
   "edge.colony": {
     "chars": 4169,
-    "raw_chars": 5865
+    "raw_chars": 5858
   },
   "edge.independent": {
     "chars": 3893,
-    "raw_chars": 5448
+    "raw_chars": 5442
   },
   "edge.none": {
     "chars": 4987,
-    "raw_chars": 7036
+    "raw_chars": 7024
   },
   "reminder.block": {
     "chars": 222,

@@ -1,0 +1,21 @@
+2026-11-21 13:04:55 [32m[INFO    ][0m ADEN_API_KEY not set, using local-only credential storage
+2026-11-21 13:04:55 [32m[INFO    ][0m tracker_db: ensured 4 colony tracker DB(s) at startup
+2026-11-21 13:04:55 [32m[INFO    ][0m Parent watchdog armed for PID 91896
+2026-11-21 13:04:55 [32m[INFO    ][0m resource sampler started
+2026-11-21 13:04:55 [32m[INFO    ][0m streamtoken_refresh: disabled (no HIVE_CLOUD_BASE — runtime not in cloud mode)
+2026-11-21 13:04:55 [32m[INFO    ][0m [sentinel] manager starting (0 open escalations)
+
+Hive API server running on http://127.0.0.1:8799
+Health:     http://127.0.0.1:8799/api/health
+Sessions:   0 colony, 0 queen-only
+
+Press Ctrl+C to stop
+2026-11-21 13:04:55 [32m[INFO    ][0m [access] GET /api/health -> 200 (0ms)
+2026-11-21 13:04:55 [33m[WARNING ][0m [access] GET / -> 404 (0ms)
+2026-11-21 13:04:55 [32m[INFO    ][0m [access] GET /api/sessions -> 200 (0ms)
+
+Received SIGTERM, shutting down gracefully… (press Ctrl+C again to force quit)
+2026-11-21 13:04:55 [32m[INFO    ][0m All sessions stopped
+2026-11-21 13:04:55 [32m[INFO    ][0m All sessions stopped
+2026-11-21 13:04:55 [32m[INFO    ][0m gcu bridge mode: client (RemoteBridge → bridge_host process)
+2026-11-21 13:04:55 [32m[INFO    ][0m Cleaning up 0 pooled MCP connections

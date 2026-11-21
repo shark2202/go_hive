@@ -1,14 +1,14 @@
 {
   "small.colony": {
     "chars": 4808,
-    "raw_chars": 5624
+    "raw_chars": 5617
   },
   "small.independent": {
     "chars": 4394,
-    "raw_chars": 5157
+    "raw_chars": 5151
   },
   "small.none": {
     "chars": 3615,
-    "raw_chars": 4696
+    "raw_chars": 4684
   }
 }

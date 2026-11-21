@@ -281,9 +281,10 @@ def make_home(root: Path, name: str, api_base: str, user_home: Path) -> Path:
             "api_key_env_var": LLM_KEY_ENV,
         },
         # Both sides get the same turn_context section. On the Python side a
-        # fake installed package below answers it; the Go build has no
-        # `hive.turn_context` factories linked in, so its registry starts empty
-        # (the section is accepted, the gate is aligned, nothing to start).
+        # fake installed package below answers it; the Go build links the same
+        # package name as a built-in provider (internal/server/
+        # turn_context_probe.go), so the configuration gate starts one package
+        # per side and the injected text is comparable.
         "turn_context": {TURN_CONTEXT_NAME: {"enabled": True}},
     }
     (home / "configuration.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
@@ -298,8 +299,10 @@ def write_python_turn_context_plugin(root: Path) -> Path:
 
     Python discovers turn-context packages through importlib.metadata entry
     points; a dist-info directory on PYTHONPATH is enough for the server to see
-    an installed package named ``probe``. The Go analogue is a factory passed
-    to RegisterTurnContextProvider at link time (covered by the Go parity test).
+    an installed package named ``probe``. The Go analogue is the built-in
+    ``probe`` package linked into the binary (internal/server/
+    turn_context_probe.go), so the same configuration starts a package on both
+    sides.
     """
     plugin_dir = root / "python-turn-context-plugins"
     plugin_dir.mkdir(parents=True, exist_ok=True)
@@ -524,7 +527,7 @@ def main() -> int:
     logs = root / "logs"
     logs.mkdir(exist_ok=True)
 
-    if not args.no_build and not GO_BINARY.is_file():
+    if not args.no_build:
         log("building Go target")
         build = subprocess.run(
             ["go", "build", "-o", str(GO_BINARY), "./cmd/hive"],
@@ -738,6 +741,7 @@ def main() -> int:
         f"(python={result['reminder_searchable']['python_chars']} chars, go={result['reminder_searchable']['go_chars']} chars)",
         f"  turn_context:         python_injected={python_capture['meta']['turn_context_injected']} "
         f"go_injected={go_capture['meta']['turn_context_injected']} "
+        f"body={'IDENTICAL' if result['turn_context']['identical'] else 'DIFF'} "
         f"(keys python={python_capture['meta']['turn_context_keys']} go={go_capture['meta']['turn_context_keys']})",
     ]
     (out / "live-summary.txt").write_text("\n".join(summary) + "\n", encoding="utf-8")

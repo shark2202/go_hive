@@ -5,7 +5,7 @@
       "opening_tools": 24,
       "queen_requests": 2,
       "system_chars": 21584,
-      "turn_context_injected": false,
+      "turn_context_injected": true,
       "turn_context_keys": [
         "probe"
       ]
@@ -42,13 +42,13 @@
     "python_chars": 21584
   },
   "turn_context": {
-    "go_chars": 0,
-    "identical": false,
+    "go_chars": 45,
+    "identical": true,
     "python_chars": 45
   },
   "user_turn_messages": {
-    "go_chars": 4429,
-    "identical": false,
+    "go_chars": 4604,
+    "identical": true,
     "python_chars": 4604
   }
 }

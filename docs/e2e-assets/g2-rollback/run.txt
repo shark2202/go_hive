@@ -1,0 +1,253 @@
+
+=== stage 1: build current binaries
+hive 1.0.26-go.1
+
+=== stage 1: v2 fixture -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home
+{"built": "v2", "dest": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home", "files": 54}
+{"fixed": 4}
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S0-fixture.json
+
+=== stage 1: Go serve #1 (startup migration)
+go-serve-1 health=200
+go-serve-1 root=404
+{"sessions":[]}
+
+go-serve-1 marker=present {"pid":91804,"port":null,"started_at":1795237482.910623}
+go-serve-1 marker-after=absent
+
+=== stage 1: Go write-probes (session + credentials + probe colony)
+{
+  "credentials": {
+    "key_path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/secrets/credential_key",
+    "saved": [
+      "demo_api_key",
+      "demo_oauth"
+    ]
+  },
+  "probes": "written",
+  "session_dir": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/queens/queen_growth/sessions/session_compat_probe_go"
+}
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S1-after-go1.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/D0-go1-migration.json
+
+=== stage 1: Python CLI reads
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S2a-after-py-cli.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/D1a-py-cli.json
+
+=== stage 1: Python API read-back (history / credentials / tracker)
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/logs/py-readback.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S2b-after-py-read.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/D1b-py-read.json
+
+=== stage 1: Python serve on the Go home
+py-serve health=200
+py-serve root=404
+{"sessions": []}
+py-serve marker=present {"pid": 91896, "port": null, "started_at": 1795237495.315479}
+go_hive/scripts/g2_rollback_drill.sh: line 153: 91891 Terminated: 15          ( cd "$REPO/core" && uv run --no-sync hive serve --port "$port" ) > "$logf" 2>&1
+py-serve marker-after=absent
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S2c-after-py-serve.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/D2-py-serve.json
+
+=== stage 1: Go CLI cold read (of Python-written summaries)
+[
+  {
+    "agent_name": null,
+    "agent_path": null,
+    "channel": null,
+    "cold": true,
+    "created_at": 1795237486.1359024,
+    "forked_from": null,
+    "has_messages": true,
+    "last_active_at": 1795237486.1359024,
+    "last_message": null,
+    "live": false,
+    "message_count": 1,
+    "queen_id": "queen_growth",
+    "session_id": "session_compat_probe_go",
+    "title": null
+  },
+  {
+    "agent_name": null,
+    "agent_path": null,
+    "channel": null,
+    "cold": true,
+    "created_at": "2026-01-01T00:00:00+00:00",
+    "forked_from": null,
+    "has_messages": true,
+    "last_active_at": 1795237482.7872634,
+    "last_message": "hi there",
+    "live": false,
+    "message_count": 2,
+    "queen_id": "queen_growth",
+    "session_id": "session_20260201_000001_bbbbbbbb",
+    "title": null
+  }
+]
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S2d-after-go-cli.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/D3-go-cli.json
+
+=== stage 1: Go serve #2 (idempotency)
+go-serve-2 health=200
+go-serve-2 root=404
+{"sessions":[]}
+
+go-serve-2 marker=present {"pid":91950,"port":null,"started_at":1795237497.399232}
+go-serve-2 marker-after=absent
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S3-after-go2.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/D4-go2.json
+
+=== stage 1: plain binary + on-disk dashboard (root check)
+go-serve-ui health=200
+go-serve-ui root=200
+{"sessions":[]}
+
+go-serve-ui marker=present {"pid":91990,"port":null,"started_at":1795237498.328467}
+go-serve-ui marker-after=absent
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/S4-after-go-ui.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/D5-go-ui.json
+
+=== stage 2: build v1.0.25-go.1 binaries (old user)
+hive 1.0.25-go.1
+
+=== stage 2: build release archive (release.sh)
+release: version: 1.0.26-go.1
+release: platforms: darwin/arm64
+release: output: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/release
+release: building hive-embed (dashboard embedded; npm build may run once)
+embed-ui: staging /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/frontend-dist -> /Users/mac/hive/.wt/g2-rollback-install/go_hive/go-hive/internal/server/uiembed/dist
+embed-ui: building /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/hive-embed (-tags embed_ui)
+embed-ui: wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/hive-embed
+release: hive-embed ready: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/hive-embed
+release: building darwin/arm64 (embed_ui)
+release: packaged hive-1.0.26-go.1-darwin-arm64.tar.gz
+release: verified SHA256SUMS
+release: release artifacts:
+  hive-1.0.26-go.1-darwin-arm64.tar.gz                     28209800 bytes
+  SHA256SUMS                                          
+
+release: install locally with: /Users/mac/hive/.wt/g2-rollback-install/go_hive/install.sh --from "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/release"
+hive-1.0.26-go.1-darwin-arm64.tar.gz: OK
+hive: OK
+hive-cred: OK
+hive-browser: OK
+browserbridge: OK
+LICENSE: OK
+NOTICE: OK
+README.md: OK
+THIRD_PARTY_NOTICES.md: OK
+hive 1.0.26-go.1
+
+=== stage 2: old user home (v2 fixture) + v1.0.25-go.1 serve
+{"built": "v2", "dest": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/upgrade/oldhome", "files": 54}
+{"fixed": 4}
+old-serve-1 health=200
+old-serve-1 root=404
+{"sessions":[]}
+
+old-serve-1 marker=absent
+old-serve-1 marker-after=absent
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/U0-oldhome-before-new.json
+
+=== stage 2: new binary serve on the old home (startup migration)
+new-serve-1 health=200
+new-serve-1 root=200
+{"sessions":[]}
+
+new-serve-1 marker=present {"pid":92347,"port":null,"started_at":1795237508.6800761}
+new-serve-1 marker-after=absent
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/U1-after-new-serve.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/DU-upgrade-migration.json
+
+=== stage 2: previous binary reads the migrated home
+old-serve-2 health=200
+old-serve-2 root=404
+{"sessions":[]}
+
+old-serve-2 marker=absent
+old-serve-2 marker-after=absent
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/U2-after-old-binary.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/DU2-old-binary-reads.json
+
+=== stage 2: new binary serve #2 (idempotency)
+new-serve-2 health=200
+new-serve-2 root=200
+{"sessions":[]}
+
+new-serve-2 marker=present {"pid":92426,"port":null,"started_at":1795237509.946558}
+new-serve-2 marker-after=absent
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/U3-after-new-serve2.json
+wrote /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/snap/DU3-new-serve2.json
+
+=== stage 2: install.sh upgrade in place
+hive 1.0.25-go.1
+install: using local archive: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/release/hive-1.0.26-go.1-darwin-arm64.tar.gz
+install: verified SHA256: hive-1.0.26-go.1-darwin-arm64.tar.gz
+install: verified archive contents
+install: installed hive -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/install-bin/hive
+install: installed hive-cred -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/install-bin/hive-cred
+install: installed hive-browser -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/install-bin/hive-browser
+install: installed browserbridge -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/install-bin/browserbridge
+hive 1.0.26-go.1
+install: verified hive-cred --help
+install: verified hive-browser help
+install: verified browserbridge -version
+
+Add the install directory to PATH:
+  export PATH="/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/install-bin:$PATH"
+total 142904
+drwxr-xr-x@  6 mac  staff       192 Nov 21 13:05 .
+drwxr-xr-x@ 13 mac  staff       416 Nov 21 13:05 ..
+-rwxr-xr-x@  1 mac  staff   7419762 Nov 21 13:05 browserbridge
+-rwxr-xr-x@  1 mac  staff  40953090 Nov 21 13:05 hive
+-rwxr-xr-x@  1 mac  staff  12382370 Nov 21 13:05 hive-browser
+-rwxr-xr-x@  1 mac  staff  12401954 Nov 21 13:05 hive-cred
+hive 1.0.26-go.1
+
+=== stage 2: installed binaries serve health
+install-serve health=200
+install-serve root=200
+{"sessions":[]}
+
+install-serve marker=present {"pid":92574,"port":null,"started_at":1795237513.528755}
+install-serve marker-after=absent
+
+=== stage 2: verify_release_archive.sh
+archive : /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/dist/release/hive-1.0.26-go.1-darwin-arm64.tar.gz
+workdir : /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-release-verify.YyaZFw
+members : browserbridge hive hive-browser hive-cred LICENSE NOTICE README.md SHA256SUMS THIRD_PARTY_NOTICES.md 
+target  : darwin/arm64; bridge=127.0.0.1:14940 ws=127.0.0.1:14939 serve=127.0.0.1:8810
+env     : HIVE_BROWSERBRIDGE_BIN unset (sibling resolution is under test)
+
+  ok  : extracted hive is executable
+  ok  : extracted hive-cred is executable
+  ok  : extracted hive-browser is executable
+  ok  : extracted browserbridge is executable
+  ok  : serve announced: Browser bridge: ready on 127.0.0.1:14940 (pid 92624, viewport scale 0.8)
+  bridge child: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-release-verify.YyaZFw/extract/browserbridge -http 127.0.0.1:14940 -control 127.0.0.1:14831 -artifacts /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-release-verify.YyaZFw/home/tool-artifacts -ws 127.0.0.1:14939 -no-legacy
+  ok  : bridge (pid 92624) is a child of serve (pid 92617)
+  ok  : child command resolves to the extracted archive binary
+  ok  : GET http://127.0.0.1:14940/health -> 200 {"connected":false,"connections":0,"ok":true,"status":"ok","uptime_ms":417}
+  ok  : hive-browser status --json exit=2 (not_connected)
+  ok  : status --json reports connected=false
+  ok  : serve exited on SIGTERM
+  ok  : bridge child 92624 reaped with serve (SIGTERM)
+  ok  : nothing answers http://127.0.0.1:14940/health after shutdown
+
+PASS: release archive brings up and reaps the browser bridge (13 checks)
+evidence: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-release-verify.YyaZFw
+
+=== all diffs
+D0-go1-migration.json            {'added': 59, 'removed': 40, 'modified': 0, 'sqlite_changed': 6}
+D1a-py-cli.json                  {'added': 2, 'removed': 0, 'modified': 0, 'sqlite_changed': 0}
+D1b-py-read.json                 {'added': 4, 'removed': 0, 'modified': 0, 'sqlite_changed': 0}
+D2-py-serve.json                 {'added': 0, 'removed': 0, 'modified': 1, 'sqlite_changed': 0}
+D3-go-cli.json                   {'added': 0, 'removed': 0, 'modified': 0, 'sqlite_changed': 0}
+D4-go2.json                      {'added': 0, 'removed': 0, 'modified': 1, 'sqlite_changed': 0}
+D5-go-ui.json                    {'added': 0, 'removed': 0, 'modified': 1, 'sqlite_changed': 0}
+DU-upgrade-migration.json        {'added': 45, 'removed': 40, 'modified': 0, 'sqlite_changed': 5}
+DU2-old-binary-reads.json        {'added': 0, 'removed': 0, 'modified': 0, 'sqlite_changed': 0}
+DU3-new-serve2.json              {'added': 0, 'removed': 0, 'modified': 1, 'sqlite_changed': 0}
+
+=== work dir: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6
+EXIT=0

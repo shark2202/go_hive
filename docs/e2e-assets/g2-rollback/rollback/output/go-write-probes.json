@@ -1,0 +1,11 @@
+{
+  "credentials": {
+    "key_path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/secrets/credential_key",
+    "saved": [
+      "demo_api_key",
+      "demo_oauth"
+    ]
+  },
+  "probes": "written",
+  "session_dir": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/queens/queen_growth/sessions/session_compat_probe_go"
+}

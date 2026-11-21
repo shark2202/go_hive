@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Python half of the HIVE_HOME storage-compat double run.
+"""Python half of the HIVE_HOME storage-compat / G2 double run.
 
 Subcommands (all take --home; set HIVE_HOME before importing framework):
 
@@ -10,20 +10,26 @@ Subcommands (all take --home; set HIVE_HOME before importing framework):
             writer APIs (state.json, conversations/*, checkpoints/*,
             credentials, tracker.db for a fresh colony), for field-level
             comparison with the Go harness.
+  read-probes  Report what the Python APIs see in a migrated home: cold /
+            colony session lists, per-session history (parts/state/summary/
+            tasks), colony discovery, tracker query output, senders, skills,
+            memories, credentials. Mirrors `storagecompat read-probes`.
   creds-save  Encrypt fake credentials into <home>/credentials (Fernet key
             from <home>/secrets/credential_key, generated if absent).
   creds-load  Decrypt every credential in <home>/credentials and print it.
 
 Run from the `core/` directory with the project venv, e.g.:
-  cd core && uv run --no-sync python ../go_hive/scripts/storage_compat_probes.py migrate --home /tmp/fx
+  cd core && uv run python ../go_hive/scripts/storage_compat_probes.py migrate --home /tmp/fx
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -273,6 +279,270 @@ def cmd_creds_save(args) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# read probes (G2): what each implementation sees in a migrated home
+# ---------------------------------------------------------------------------
+
+
+def _sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+
+
+def _file_inventory(root: Path, home: Path) -> dict[str, str]:
+    if not root.is_dir():
+        return {}
+    return {str(p.relative_to(home)): _sha(p) for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+def _part_summary(part: dict) -> dict:
+    content = part.get("content")
+    if not isinstance(content, str):
+        content = json.dumps(content, sort_keys=True, ensure_ascii=False) if content is not None else ""
+    return {
+        "seq": part.get("seq"),
+        "role": part.get("role"),
+        "content": content[:200],
+        "tool_use_id": part.get("tool_use_id"),
+        "tool_calls": [tc.get("function", {}).get("name") for tc in (part.get("tool_calls") or [])],
+        "is_skill_content": bool(part.get("is_skill_content")),
+        "reasoning_content": (part.get("reasoning_content") or "")[:120] or None,
+        "spillover_path": part.get("spillover_path"),
+    }
+
+
+def _session_dirs(home: Path) -> list[Path]:
+    dirs: list[Path] = []
+    for pattern in (
+        "queens/*/sessions/*",
+        "colonies/*/queens/*/sessions/*",
+        "colonies/*/workers/*/sessions/*",
+    ):
+        for d in sorted(home.glob(pattern)):
+            if d.is_dir():
+                dirs.append(d)
+    return sorted(set(dirs))
+
+
+def _read_state(home: Path, session_dir: Path) -> dict | None:
+    from framework.storage.session_store import SessionStore
+
+    store = SessionStore(session_dir.parent.parent)
+    try:
+        state = asyncio.run(store.read_state(session_dir.name))
+    except Exception as exc:  # noqa: BLE001 - probe reports instead of raising
+        return {"error": str(exc)}
+    if state is None:
+        return None
+    return {
+        "status": str(state.status),
+        "goal_id": state.goal_id,
+        "agent_id": state.agent_id,
+        "updated_at": state.timestamps.updated_at,
+        "steps_executed": state.progress.steps_executed,
+    }
+
+
+def _read_histories(home: Path) -> dict:
+    from framework.storage.conversation_store import FileConversationStore
+
+    histories = {}
+    for session_dir in _session_dirs(home):
+        rel = str(session_dir.relative_to(home))
+        convs = session_dir / "conversations"
+        parts: list[dict] = []
+        if convs.is_dir():
+            store = FileConversationStore(convs)
+            try:
+                parts = [_part_summary(p) for p in asyncio.run(store.read_parts())]
+            except Exception as exc:  # noqa: BLE001
+                parts = [{"error": str(exc)}]
+        histories[rel] = {
+            "state": _read_state(home, session_dir),
+            "summary": json.loads((session_dir / "summary.json").read_text(encoding="utf-8")) if (session_dir / "summary.json").exists() else None,
+            "tasks": json.loads((session_dir / "tasks.json").read_text(encoding="utf-8")) if (session_dir / "tasks.json").exists() else None,
+            "parts": parts,
+        }
+    return histories
+
+
+def _serialize_discover(home: Path) -> list[dict]:
+    from framework.agents.discovery import discover_agents
+
+    entries = []
+    for category, group in sorted(discover_agents().items()):
+        for entry in group:
+            entries.append(
+                {
+                    "category": category,
+                    "name": entry.name,
+                    "path": str(entry.path.relative_to(home)) if entry.path.is_relative_to(home) else str(entry.path),
+                    "description": entry.description,
+                    "session_count": entry.session_count,
+                    "run_count": entry.run_count,
+                    "node_count": entry.node_count,
+                    "tool_count": entry.tool_count,
+                    "last_active": entry.last_active,
+                    "created_at": entry.created_at,
+                    "icon": entry.icon,
+                    "workers": [{"name": w.name, "description": w.description, "tool_count": w.tool_count, "task": w.task} for w in entry.workers],
+                }
+            )
+    return entries
+
+
+def _tracker_probe(home: Path, colony_dir: Path) -> dict | None:
+    from framework.host.tracker_db import execute_sql
+
+    db_path = colony_dir / "tracker" / "tracker.db"
+    if not db_path.exists():
+        return None
+    probe: dict = {"db": str(db_path.relative_to(home))}
+
+    def query(sql: str) -> dict:
+        try:
+            return execute_sql(db_path, sql, row_cap=1000)
+        except Exception as exc:  # noqa: BLE001
+            return {"error": str(exc)}
+
+    probe["tables"] = query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+    probe["registry"] = query("SELECT table_name, write_columns, key_columns, mode FROM _tracker_registry ORDER BY table_name")
+    probe["meta"] = query("SELECT key, value FROM _tracker_meta ORDER BY key")
+    probe["changes"] = query("SELECT table_name, pk, op FROM _tracker_changes ORDER BY id")
+    names = []
+    tables_result = probe["tables"]
+    if tables_result.get("kind") == "rows":
+        names = [row[0] for row in tables_result.get("rows", [])]
+    probe["user_rows"] = {}
+    for name in names:
+        if name.startswith("_"):
+            continue
+        probe["user_rows"][name] = query(f'SELECT * FROM "{name}" ORDER BY rowid')
+    if {"leads", "invoices"} <= set(names):
+        probe["join"] = query(
+            "SELECT l.id, l.name, COUNT(i.id) AS invoice_count FROM leads l"
+            " LEFT JOIN invoices i ON i.lead_id = l.id GROUP BY l.id, l.name ORDER BY l.id"
+        )
+    else:
+        probe["join"] = None
+    return probe
+
+
+def _public_sender(row: dict) -> dict:
+    return {
+        "id": row.get("id"),
+        "name": row.get("name"),
+        "provider": row.get("provider"),
+        "auth_type": row.get("auth_type"),
+        "from_email": row.get("from_email"),
+        "from_name": row.get("from_name") or None,
+        "weight": row.get("weight"),
+        "daily_limit": row.get("daily_limit"),
+        "enabled": row.get("enabled"),
+        "tags": row.get("tags") or [],
+        "can_receive": row.get("can_receive"),
+    }
+
+
+def _read_senders(home: Path) -> dict:
+    path = home / "senders" / "senders.json"
+    if not path.exists():
+        return {"present": False, "senders": []}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {"present": True, "version": data.get("version"), "senders": [_public_sender(row) for row in data.get("senders", [])]}
+
+
+def _read_credentials(home: Path) -> list[dict]:
+    from framework.credentials.storage import EncryptedFileStorage
+
+    if not (home / "secrets" / "credential_key").exists():
+        return []
+    storage = EncryptedFileStorage(home / "credentials", encryption_key=_load_key(home).encode())
+    creds = []
+    for cid in sorted(storage.list_all()):
+        cred = storage.load(cid)
+        if cred is None:
+            continue
+        keys = {
+            name: {
+                "value": key.get_secret_value(),
+                "expires_at": key.expires_at.isoformat() if key.expires_at else None,
+                "metadata": key.metadata,
+            }
+            for name, key in sorted(cred.keys.items())
+        }
+        creds.append(
+            {
+                "id": cred.id,
+                "credential_type": cred.credential_type.value,
+                "provider_id": cred.provider_id,
+                "auto_refresh": cred.auto_refresh,
+                "description": cred.description,
+                "tags": list(cred.tags),
+                "keys": keys,
+            }
+        )
+    return creds
+
+
+def cmd_read_probes(args) -> int:
+    home = Path(args.home).resolve()
+    bootstrap(home)
+
+    # Import after HIVE_HOME is set: framework.config resolves paths at import.
+    from framework.config import COLONIES_DIR
+    from framework.server.session_manager import SessionManager
+
+    report: dict = {"home": str(home)}
+
+    report["cold_sessions"] = SessionManager.list_cold_sessions()
+    colony_sessions = {}
+    for colony_dir in sorted(COLONIES_DIR.iterdir()) if COLONIES_DIR.is_dir() else []:
+        if colony_dir.is_dir():
+            colony_sessions[colony_dir.name] = SessionManager.list_colony_sessions(colony_dir.name)
+    report["colony_sessions"] = colony_sessions
+
+    report["histories"] = _read_histories(home)
+    report["discover"] = _serialize_discover(home)
+
+    colonies = {}
+    for colony_dir in sorted(COLONIES_DIR.iterdir()) if COLONIES_DIR.is_dir() else []:
+        if not colony_dir.is_dir():
+            continue
+        entry: dict = {"colony": colony_dir.name}
+        meta_path = colony_dir / "metadata.json"
+        entry["metadata"] = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else None
+        entry["workers"] = {}
+        for cfg in sorted(colony_dir.glob("*.json")):
+            data = json.loads(cfg.read_text(encoding="utf-8")) if cfg.is_file() else None
+            if isinstance(data, dict) and "system_prompt" in data:
+                entry["workers"][cfg.name] = {
+                    "name": data.get("name"),
+                    "input_data": data.get("input_data"),
+                    "tools": data.get("tools"),
+                }
+        entry["triggers"] = json.loads((colony_dir / "triggers.json").read_text(encoding="utf-8")) if (colony_dir / "triggers.json").exists() else None
+        entry["skills"] = sorted(str(p.relative_to(home)) for p in (colony_dir / "skills").rglob("SKILL.md")) if (colony_dir / "skills").is_dir() else []
+        runs = None
+        if (colony_dir / "colony.db").exists():
+            con = sqlite3.connect(str(colony_dir / "colony.db"))
+            try:
+                runs = [{"run_id": row[0], "name": row[1], "status": row[2], "error": row[5]} for row in con.execute("SELECT run_id, name, status, dispatched, dead_lettered, error FROM playbook_runs ORDER BY run_id")]
+            finally:
+                con.close()
+        entry["playbook_runs"] = runs
+        entry["tracker"] = _tracker_probe(home, colony_dir)
+        colonies[colony_dir.name] = entry
+    report["colonies"] = colonies
+
+    report["senders"] = _read_senders(home)
+    report["skills_user"] = _file_inventory(home / "skills", home)
+    report["skills_queens"] = {q.name: _file_inventory(q / "skills", home) for q in sorted((home / "queens").iterdir()) if q.is_dir() and (q / "skills").is_dir()} if (home / "queens").is_dir() else {}
+    report["memories"] = _file_inventory(home / "memories", home)
+    report["credentials"] = _read_credentials(home)
+    out(report)
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -293,6 +563,10 @@ def main() -> int:
     p = sub.add_parser("creds-load")
     p.add_argument("--home", required=True)
     p.set_defaults(func=cmd_creds_load)
+
+    p = sub.add_parser("read-probes")
+    p.add_argument("--home", required=True)
+    p.set_defaults(func=cmd_read_probes)
 
     args = parser.parse_args()
     return args.func(args)

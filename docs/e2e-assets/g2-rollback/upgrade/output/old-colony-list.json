@@ -1,0 +1,18 @@
+[
+  {
+    "created_at": 1767225600,
+    "name": "alpha",
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/upgrade/oldhome/colonies/alpha",
+    "queen_name": "queen_growth",
+    "queen_session_id": "",
+    "workers": 2
+  },
+  {
+    "created_at": 1767225600,
+    "name": "beta",
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/upgrade/oldhome/colonies/beta",
+    "queen_name": "",
+    "queen_session_id": "",
+    "workers": 0
+  }
+]

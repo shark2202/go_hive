@@ -47,6 +47,11 @@
         "label": "search_tools 清单 307 vs 1029 收敛",
         "hours": 3,
         "in_flight": true
+      },
+      {
+        "id": "runtime-state-gap",
+        "label": "REST 会话挂 PhaseState（session_live_tools 空面）",
+        "hours": 3
       }
     ],
     "G2": [

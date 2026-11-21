@@ -1,0 +1,34 @@
+[
+  {
+    "name": ".migrations",
+    "queen_name": "",
+    "queen_session_id": "",
+    "workers": 0,
+    "created_at": "",
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/colonies/.migrations"
+  },
+  {
+    "name": "alpha",
+    "queen_name": "queen_growth",
+    "queen_session_id": "",
+    "workers": 2,
+    "created_at": 1767225600.0,
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/colonies/alpha"
+  },
+  {
+    "name": "beta",
+    "queen_name": "",
+    "queen_session_id": "",
+    "workers": 0,
+    "created_at": 1767225600.0,
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/colonies/beta"
+  },
+  {
+    "name": "probe_colony",
+    "queen_name": "",
+    "queen_session_id": "",
+    "workers": 0,
+    "created_at": 1767225600.0,
+    "path": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback/run6/rollback/home/colonies/probe_colony"
+  }
+]

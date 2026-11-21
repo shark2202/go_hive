@@ -1,0 +1,12 @@
+2026/11/21 13:05:08 [sentinel] manager starting (0 open escalations)
+
+Hive API server running on http://127.0.0.1:8802
+Health:     http://127.0.0.1:8802/api/health
+Sessions:   0 colony, 0 queen-only
+
+Press Ctrl+C to stop
+2026/11/21 13:05:08 [access] GET /api/health -> 200 (0ms)
+2026/11/21 13:05:08 [access] GET / -> 404 (0ms)
+2026/11/21 13:05:08 [access] GET /api/sessions -> 200 (0ms)
+
+Received SIGTERM, shutting down gracefully… (press Ctrl+C again to force quit)

@@ -129,7 +129,7 @@ else
 	tail -5 "$serve_log"
 fi
 
-BRIDGE_PID="$(sed -n "s/.*Browser bridge: ready on 127.0.0.1:$BRIDGE_PORT (pid \([0-9]*\)).*/\1/p" "$serve_log" | tail -1)"
+BRIDGE_PID="$(sed -n "s/.*Browser bridge: ready on 127.0.0.1:$BRIDGE_PORT (pid \([0-9][0-9]*\).*/\1/p" "$serve_log" | tail -1)"
 if [ -n "$BRIDGE_PID" ] && ps -p "$BRIDGE_PID" -o pid= >/dev/null 2>&1; then
 	ppid="$(ps -p "$BRIDGE_PID" -o ppid= | tr -d ' ')"
 	cmdline="$(ps -p "$BRIDGE_PID" -o command= | tr -d '\n')"
