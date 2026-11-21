@@ -167,15 +167,16 @@ func sessionStartContextUsage(session *Session) map[string]any {
 			maxContextTokens = session.Chat.loop.Config.MaxContextTokens
 		}
 	}
-	return composeContextUsage(conv, maxContextTokens, tools)
+	return composeContextUsage(conv, maxContextTokens, tools, "iteration_start")
 }
 
 // composeContextUsage is the shared char-based context projection: the
-// session-start block and every later iteration_start readout carry the same
-// payload shape.
+// session-start block and every later readout (iteration_start,
+// post_tool_call, post_tool_results) carry the same payload shape; only the
+// trigger differs.
 //
 // Parity: framework/agent_loop/internals/event_publishing.py::publish_context_usage
-func composeContextUsage(conv *agentloop.NodeConversation, maxContextTokens int, tools []llm.ToolDef) map[string]any {
+func composeContextUsage(conv *agentloop.NodeConversation, maxContextTokens int, tools []llm.ToolDef, trigger string) map[string]any {
 	conversationChars, imageBlocks, systemChars, toolDefsChars := 0, 0, 0, 0
 	messageCount := 0
 	if conv != nil {
@@ -202,7 +203,7 @@ func composeContextUsage(conv *agentloop.NodeConversation, maxContextTokens int,
 		"message_count":      messageCount,
 		"estimated_tokens":   estimatedTokens,
 		"max_context_tokens": maxContextTokens,
-		"trigger":            "iteration_start",
+		"trigger":            trigger,
 		"breakdown": map[string]any{
 			"conversation_chars": conversationChars,
 			"system_chars":       systemChars,

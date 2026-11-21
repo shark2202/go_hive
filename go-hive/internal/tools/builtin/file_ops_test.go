@@ -425,7 +425,8 @@ func TestFilePathPolicyCredentialPathDenied(t *testing.T) {
 		t.Fatalf("ssh write = %+v", write)
 	}
 	read := execTool(t, tb, ToolReadFile, map[string]any{"path": "~/.ssh/id_rsa"})
-	if !read.IsError || !strings.Contains(read.Content, "escapes the sandbox root") {
+	// Read refusals are plain text; the credential must not come back.
+	if !strings.Contains(read.Content, "escapes the sandbox root") || strings.Contains(read.Content, "PRIVATE KEY") {
 		t.Fatalf("ssh read = %+v", read)
 	}
 }
@@ -466,7 +467,9 @@ func TestFilePathPolicyWriteInsideRootAllowed(t *testing.T) {
 func TestFilePathPolicyReadOutsideRootDenied(t *testing.T) {
 	tb := New(t.TempDir())
 	res := execTool(t, tb, ToolReadFile, map[string]any{"path": "/etc/hosts"})
-	if !res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
+	// file_ops.py returns its policy message as plain text; the refusal, not
+	// the is_error bit, is what the model reads.
+	if !strings.Contains(res.Content, "escapes the sandbox root") || strings.Contains(res.Content, "localhost") {
 		t.Fatalf("outside read = %+v", res)
 	}
 }

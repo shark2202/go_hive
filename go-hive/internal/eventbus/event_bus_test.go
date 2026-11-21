@@ -2,6 +2,8 @@ package eventbus
 
 import (
 	"context"
+	"encoding/json"
+	"math"
 	"reflect"
 	"strings"
 	"sync"
@@ -794,12 +796,49 @@ func TestEmitLLMTurnComplete(t *testing.T) {
 		"output_tokens":         50,
 		"cached_tokens":         30,
 		"cache_creation_tokens": 10,
-		"cost_usd":              0.0042,
 		"iteration":             3,
 	}
 	for key, want := range checks {
 		if !reflect.DeepEqual(data[key], want) {
 			t.Fatalf("%s = %#v, want %#v", key, data[key], want)
+		}
+	}
+	// cost_usd stays a JSON number, and a whole-number cost keeps Python's
+	// float spelling (0.0042 here, 0.0 for a zero cost) so the SSE frame
+	// matches the reference byte for byte.
+	encoded, err := json.Marshal(data["cost_usd"])
+	if err != nil || string(encoded) != "0.0042" {
+		t.Fatalf("cost_usd marshals to %s (err=%v), want 0.0042", encoded, err)
+	}
+}
+
+// TestPythonFloatKeepsPythonSpelling pins the shared float renderer used for
+// cost_usd / credits: whole numbers keep the trailing .0 (Python's json
+// spelling) and exponent notation only appears where Python would use it, so
+// the session SSE payload matches the Python reference token for token.
+//
+// Parity-exempt: the expected strings are stdlib behaviour (CPython json /
+// repr float formatting), not a function of the Python hive checkout.
+func TestPythonFloatKeepsPythonSpelling(t *testing.T) {
+	cases := []struct {
+		input float64
+		want  string
+	}{
+		{0, "0.0"},
+		{math.Copysign(0, -1), "-0.0"},
+		{0.0042, "0.0042"},
+		{1234567, "1234567.0"},
+		{0.00001, "1e-05"},
+		{1e20, "1e+20"},
+		{2.5, "2.5"},
+	}
+	for _, testCase := range cases {
+		encoded, err := json.Marshal(pythonFloat(testCase.input))
+		if err != nil {
+			t.Fatalf("pythonFloat(%v) marshal: %v", testCase.input, err)
+		}
+		if string(encoded) != testCase.want {
+			t.Fatalf("pythonFloat(%v) = %s, want %s", testCase.input, encoded, testCase.want)
 		}
 	}
 }

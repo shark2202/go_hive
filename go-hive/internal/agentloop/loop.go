@@ -668,7 +668,12 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 		l.executeToolBatch(ctx, agentCtx, pending, results, tools)
 
-		toolFailure, doomLoopReminder, doomPark := l.observeToolBatch(agentCtx, pending, results, completion, inner)
+		toolFailure, doomLoopReminder, doomPark := l.observeToolBatch(agentCtx, pending, results)
+
+		started := make([]bool, len(toolCalls))
+		for _, item := range pending {
+			started[item.index] = true
+		}
 
 		if len(graceSkippedIdx) > 0 {
 			l.bumpBy("grace_iteration_skipped", len(graceSkippedIdx))
@@ -712,9 +717,15 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 				tail = tail + "\n\n" + doomLoopReminder
 			}
 		}
-		records, err := l.storeToolBatch(ctx, agentCtx, conv, toolCalls, results, tail)
+		records, err := l.storeToolBatch(ctx, agentCtx, conv, toolCalls, results, tail, started)
 		if err != nil {
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
+		}
+		// Parity: framework/agent_loop/agent_loop.py::execute — llm_turn_complete
+		// follows the stored batch (and its context readouts), before any park
+		// or judge the batch triggers.
+		if agentCtx.Observer != nil {
+			agentCtx.Observer.LLMTurnComplete(completion, inner+1)
 		}
 		result.ToolResults = append(result.ToolResults, records...)
 		l.logLLMTurn(agentCtx, conv, inner+1, requestMessages, completion, callDicts, records, tools)
@@ -898,16 +909,15 @@ func allToolsConcurrencySafe(pending []pendingToolCall, tools []llm.ToolDef) boo
 }
 
 // observeToolBatch consumes a finished batch in call order: it flags failures,
-// runs the deterministic doom-loop guard, and publishes completed events. Doing
-// this after the batch (rather than inside each goroutine) keeps event and
-// reminder order stable even when executeToolBatch ran concurrently.
+// runs the deterministic doom-loop guard, and reports the batch's failure state
+// to the caller. Tool completion and the trailing llm_turn_complete are
+// published by storeToolBatch, after each result has landed in the
+// conversation: upstream emits tool_call_completed, the post_tool_call context
+// readout and finally llm_turn_complete in that order, and a subscriber must
+// see the conversation grow before the readout claims its size.
 //
-// It also publishes the iteration's llm_turn_complete after the batch's
-// tool_call_completed frames: upstream emits it when _run_turn_loop returns,
-// i.e. after the tool results, and before any park or judge the batch triggers.
-//
-// Parity: framework/agent_loop/agent_loop.py::execute (llm_turn_complete after _run_turn_loop)
-func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult, completion llm.Completion, iteration int) (bool, string, doomLoopPark) {
+// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (per-tool publication)
+func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult) (bool, string, doomLoopPark) {
 	toolFailure := false
 	doomLoopReminder := ""
 	park := doomLoopPark{}
@@ -935,12 +945,6 @@ func (l *AgentLoop) observeToolBatch(agentCtx *AgentContext, pending []pendingTo
 		if !park.parked && l.DoomLoop.ShouldPark() {
 			park = doomLoopPark{tool: item.call.Name, streak: l.DoomLoop.Streak(), parked: true}
 		}
-		if agentCtx.Observer != nil {
-			agentCtx.Observer.ToolCallCompleted(item.call, results[item.index])
-		}
-	}
-	if agentCtx.Observer != nil {
-		agentCtx.Observer.LLMTurnComplete(completion, iteration+1)
 	}
 	return toolFailure, doomLoopReminder, park
 }
@@ -1421,7 +1425,18 @@ func modelName(agentCtx *AgentContext) string {
 // adds every result to the conversation, appending the reminder tail to the
 // last non-parking call. Extracted from ExecuteTurn so the turn body stays
 // within the repo's function-size budget.
-func (l *AgentLoop) storeToolBatch(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, toolCalls []llm.ToolCall, results []ToolResult, tail string) ([]ToolCallRecord, error) {
+//
+// It also publishes, in call order, the completion and context readouts
+// upstream emits while its tool loop drains: for every executed call
+// tool_call_completed immediately followed by context_usage_updated
+// (trigger=post_tool_call), then one context_usage_updated
+// (trigger=post_tool_results) after the whole batch. Only calls that started
+// (started[i]) are announced: a deferred or grace-skipped call never left a
+// started frame to complete.
+//
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (per-tool publication)
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_context_usage
+func (l *AgentLoop) storeToolBatch(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, toolCalls []llm.ToolCall, results []ToolResult, tail string, started []bool) ([]ToolCallRecord, error) {
 	records := make([]ToolCallRecord, 0, len(toolCalls))
 	for i, tc := range toolCalls {
 		records = append(records, ToolCallRecord{
@@ -1467,6 +1482,18 @@ func (l *AgentLoop) storeToolBatch(ctx context.Context, agentCtx *AgentContext, 
 			return records, err
 		}
 		records[i].Content = stored
+		if agentCtx.Observer != nil && i < len(started) && started[i] {
+			agentCtx.Observer.ToolCallCompleted(
+				ToolCallRequest{ID: tc.ID, Name: tc.Name, Input: records[i].ToolInput},
+				results[i],
+			)
+			if observer, ok := agentCtx.Observer.(ToolBatchContextObserver); ok {
+				observer.ToolResultStored()
+			}
+		}
+	}
+	if observer, ok := agentCtx.Observer.(ToolBatchContextObserver); ok {
+		observer.ToolBatchStored()
 	}
 	return records, nil
 }

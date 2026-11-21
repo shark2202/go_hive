@@ -13,6 +13,7 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/tasks"
+	"github.com/aden-hive/hive-go/internal/toolgolden"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 )
 
@@ -191,5 +192,120 @@ func TestSessionTaskToolsRequireGoalOnFreshList(t *testing.T) {
 	listed := runTaskTool(t, catalogue, tasks.TaskList, map[string]any{})
 	if listed["count"].(float64) != 0 {
 		t.Fatalf("rejected create left %v tasks behind", listed["count"])
+	}
+}
+
+// Parity-exempt: the upstream task tools get this validation from pydantic
+// before the tool body runs, so there is no Python test target to cite.
+//
+// TestSessionTaskToolsValidateArgumentsLikePython pins the two tool-surface
+// validations the output-contract lane added: Python's task tools are pydantic
+// models, so a bad id or an unknown status raises before the store is touched
+// and reaches the model as an is_error JSON envelope. The port used to coerce
+// a non-numeric id to 0 and to accept any status string.
+func TestSessionTaskToolsValidateArgumentsLikePython(t *testing.T) {
+	homeRoot := t.TempDir()
+	catalogue, _ := newTaskCatalogue(t, homeRoot, "default", "sess_validate")
+
+	cases := []struct {
+		name      string
+		tool      string
+		input     map[string]any
+		wantError string
+	}{
+		{
+			name:      "unknown status",
+			tool:      tasks.TaskUpdate,
+			input:     map[string]any{"id": "1", "status": "bogus"},
+			wantError: "'bogus' is not a valid TaskStatus",
+		},
+		{
+			name:      "non-numeric id",
+			tool:      tasks.TaskGet,
+			input:     map[string]any{"id": "no-such-task"},
+			wantError: "invalid task id: 'no-such-task' (expected an integer)",
+		},
+		{
+			name:      "fractional id",
+			tool:      tasks.TaskUpdate,
+			input:     map[string]any{"id": 1.5, "status": "completed"},
+			wantError: "invalid task id: 1.5 (expected an integer)",
+		},
+		{
+			name:      "missing id",
+			tool:      tasks.TaskGet,
+			input:     map[string]any{},
+			wantError: "invalid task id: missing (expected an integer)",
+		},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			output, isError, err := catalogue.Execute(context.Background(), testCase.tool, testCase.input)
+			if err != nil {
+				t.Fatalf("%s: transport error: %v", testCase.tool, err)
+			}
+			if !isError {
+				t.Fatalf("%s(%v) = %q, want an is_error result", testCase.tool, testCase.input, output)
+			}
+			var payload map[string]any
+			if jsonErr := json.Unmarshal([]byte(output), &payload); jsonErr != nil {
+				t.Fatalf("%s: output is not JSON (%q): %v", testCase.tool, output, jsonErr)
+			}
+			if payload["error"] != testCase.wantError {
+				t.Fatalf("%s error = %v, want %q", testCase.tool, payload["error"], testCase.wantError)
+			}
+		})
+	}
+
+	// A numeric string id stays valid: Python's int("999") succeeds and the
+	// not-found envelope is a normal (non-error) result.
+	payload := runTaskTool(t, catalogue, tasks.TaskGet, map[string]any{"id": "999"})
+	if payload["success"] != false || payload["task_id"].(float64) != 999 {
+		t.Fatalf("numeric-string id payload = %v", payload)
+	}
+}
+
+// Parity-exempt: Go-side golden harness; replays the captured task scenarios in
+// docs/tool-output-contract.md.
+//
+// TestTaskToolErrorsMatchCapturedGolden compares the two validation envelopes
+// with the committed capture: the bad-status text is byte-identical to Python's
+// pydantic message, the bad-id envelope is the reviewed divergence
+// (docs/tool-output-contract.md).
+func TestTaskToolErrorsMatchCapturedGolden(t *testing.T) {
+	scenarios, err := toolgolden.LoadScenarios("../../../docs/e2e-assets/tool-output/results.json")
+	if err != nil {
+		t.Fatalf("load golden: %v", err)
+	}
+	homeRoot := t.TempDir()
+	catalogue, _ := newTaskCatalogue(t, homeRoot, "default", "sess_golden")
+
+	cases := []struct {
+		id    string
+		tool  string
+		input map[string]any
+	}{
+		{id: "task_update_bad_status", tool: tasks.TaskUpdate, input: map[string]any{"id": "2", "status": "bogus"}},
+		{id: "task_get_bad_id", tool: tasks.TaskGet, input: map[string]any{"id": "no-such-task"}},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.id, func(t *testing.T) {
+			golden, ok := scenarios[testCase.id]
+			if !ok {
+				t.Fatalf("scenario %s missing from the capture", testCase.id)
+			}
+			output, isError, err := catalogue.Execute(context.Background(), testCase.tool, testCase.input)
+			if err != nil {
+				t.Fatalf("%s: %v", testCase.tool, err)
+			}
+			content := output
+			if isError {
+				content = "ERROR: " + output
+			}
+			got := toolgolden.Canonicalize(content, toolgolden.DefaultOptions())
+			if !got.Equal(golden.Go) {
+				t.Fatalf("canonical envelope drifted from the capture.\n got: %#v\nwant: %#v", got, golden.Go)
+			}
+		})
 	}
 }

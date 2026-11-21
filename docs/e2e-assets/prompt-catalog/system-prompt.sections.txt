@@ -1,0 +1,18 @@
+first-turn system prompt — section attribution (canonicalized)
+  python=21584 chars  go=62196 chars
+  common prefix (queen identity + soul): 2578 chars, byte-identical
+
+  Python-only sections (19006 chars):
+       529  queen_character_core
+      2013  queen_role_independent
+      1788  queen_tools_independent
+     11050  queen_system_rules
+      1332  queen_communication
+      2110  queen_memory_instructions
+       184  credentials_block
+
+  Go-only sections (59618 chars):
+     48944  pre_activated:hive.browser-automation
+     10674  pre_activated:hive.terminal-tools-foundations
+
+  CJK characters: python=0 go=0

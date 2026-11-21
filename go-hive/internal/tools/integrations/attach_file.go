@@ -15,18 +15,19 @@
 //  1. Upstream returns one TextContent summary plus one ImageContent block per
 //     pdf/image and one TextContent block per text file. Go's tools.ToolResult
 //     carries a single Content string plus content blocks, so:
-//     - text previews are embedded in the summary JSON as "inline_preview"
-//     instead of a trailing text block. A trailing body would break
-//     agentloop.collectAttachFileChipURLs, which parses the whole content as
-//     JSON to harvest hive_attachment_url.
+//     - text previews are appended to the summary as a trailing block
+//     ("\n[attached <name> (<mime>)]\n\n<body>"), byte-identical to the
+//     upstream TextContent the model receives. Everything that consumes the
+//     summary (agentloop.collectAttachFileChipURLs, PublishAttachFileResult)
+//     reads the leading JSON document and keeps the rest verbatim.
 //     - real images (png/jpg/jpeg/webp/gif) become image_url content blocks.
 //     - PDFs become provider-neutral `file` blocks (LiteLLM/OpenAI shape);
 //     the Anthropic transport remaps them to `document` blocks. Upstream
 //     forwards the same file block through mcp_client.
 //  2. Blocks above a provider-independent size cap are not emitted: the entry
-//     says so explicitly in "inline"/"inline_error" instead of shipping bytes
-//     no endpoint accepts (no silent drop). Each entry says which path it took
-//     in "inline" ("text_preview" | "image_block" | "file_block" | "none").
+//     says so explicitly in "inline_error" instead of shipping bytes no
+//     endpoint accepts (no silent drop). That key is Go-only — upstream has no
+//     such cap, so it always ships the block.
 //  3. "session_cwd"/"storage_path" are hidden context inputs injected by the
 //     session catalogue (upstream passes session_cwd as a CONTEXT_PARAM); they
 //     are deliberately absent from the model-facing schema.
@@ -219,6 +220,7 @@ func attachFile(_ context.Context, _ *Runtime, input map[string]any) (any, error
 	problems := make([]map[string]any, 0)
 	refs := make([]tools.AttachmentRef, 0, len(paths))
 	imageBlocks := make([]map[string]any, 0, len(paths))
+	previews := make([]string, 0, len(paths))
 	notes := make([]string, 0, 2)
 
 	for _, rawPath := range paths {
@@ -254,12 +256,11 @@ func attachFile(_ context.Context, _ *Runtime, input map[string]any) (any, error
 			"mime":     mime,
 			"bytes":    size,
 			"filename": filepath.Base(resolved),
-			"inline":   "none",
 		}
 		switch kind {
 		case "text":
-			entry["inline"] = "text_preview"
-			entry["inline_preview"] = attachFileTextPreview(rawBytes)
+			previews = append(previews, fmt.Sprintf("[attached %s (%s)]\n\n%s",
+				filepath.Base(resolved), mime, attachFileTextPreview(rawBytes)))
 		case "image":
 			if size > attachFileImageBlockMaxBytes {
 				entry["inline_error"] = fmt.Sprintf(
@@ -267,7 +268,6 @@ func attachFile(_ context.Context, _ *Runtime, input map[string]any) (any, error
 					size, attachFileImageBlockMaxBytes)
 				notes = append(notes, attachFileTooLargeNote)
 			} else {
-				entry["inline"] = "image_block"
 				imageBlocks = append(imageBlocks, attachFileImageBlock(mime, rawBytes))
 			}
 		case "pdf":
@@ -277,7 +277,6 @@ func attachFile(_ context.Context, _ *Runtime, input map[string]any) (any, error
 					size, attachFilePDFBlockMaxBytes)
 				notes = append(notes, attachFileTooLargeNote)
 			} else {
-				entry["inline"] = "file_block"
 				imageBlocks = append(imageBlocks, attachFilePDFBlock(filepath.Base(resolved), rawBytes))
 			}
 		}
@@ -293,24 +292,32 @@ func attachFile(_ context.Context, _ *Runtime, input map[string]any) (any, error
 		})
 	}
 
-	// Say exactly which files rode along as model blocks and which did not;
-	// the model must never believe it saw bytes that were not sent.
+	// Say exactly which files did NOT ride along as model blocks; a file that
+	// was sent never needs a note (the block itself is the evidence), so the
+	// success path stays byte-identical to upstream's {"attached", "errors"}.
 	payload := map[string]any{
 		"attached": attached,
 		"errors":   problems,
-	}
-	if len(imageBlocks) > 0 {
-		payload["content_blocks"] = len(imageBlocks)
-		notes = append(notes, "Attached images/PDFs were returned as model content blocks; a model/transport that cannot accept them is told so explicitly instead of silently dropping them.")
 	}
 	if len(notes) > 0 {
 		payload["note"] = strings.Join(notes, " ")
 	}
 	return tools.ToolResult{
-		Content:      jsonString(payload),
+		// Upstream joins its summary TextContent and the per-file blocks with
+		// "\n"; the text previews are the trailing TextContent blocks.
+		Content:      attachFileJoinBlocks(jsonString(payload), previews),
 		ImageContent: imageBlocks,
 		Attachments:  refs,
 	}, nil
+}
+
+// attachFileJoinBlocks appends the trailing text blocks to the JSON summary,
+// mirroring how the upstream MCP client concatenates a content list.
+func attachFileJoinBlocks(summary string, blocks []string) string {
+	if len(blocks) == 0 {
+		return summary
+	}
+	return summary + "\n" + strings.Join(blocks, "\n")
 }
 
 // attachFileImageBlock is the image content block (data URL), the same shape
@@ -351,7 +358,7 @@ func PublishAttachFileResult(content string, refs []tools.AttachmentRef, session
 	if len(refs) == 0 {
 		return content, false
 	}
-	payload, ok := attachFileParseSummary(content)
+	payload, trailing, ok := attachFileParseSummary(content)
 	if !ok {
 		return attachFilePublishFailure("tool result is not a JSON summary"), true
 	}
@@ -396,20 +403,26 @@ func PublishAttachFileResult(content string, refs []tools.AttachmentRef, session
 		}
 		return attachFilePublishFailure(reason), true
 	}
-	return jsonString(payload), false
+	// Re-serialise the (now chip-URL-bearing) summary and keep whatever
+	// followed it — the text preview blocks upstream carries as trailing
+	// TextContent entries.
+	return jsonString(payload) + trailing, false
 }
 
-// attachFileParseSummary decodes the summary JSON that starts the content.
-func attachFileParseSummary(content string) (map[string]any, bool) {
-	leading := strings.TrimLeft(content, " \t\r\n")
+// attachFileParseSummary decodes the summary JSON that starts the content and
+// returns the byte offset where it ends, so callers can carry the trailing
+// text-preview blocks through untouched.
+func attachFileParseSummary(content string) (map[string]any, string, bool) {
+	leading := strings.TrimLeft(content, " 	\r\n")
 	if !strings.HasPrefix(leading, "{") {
-		return nil, false
+		return nil, "", false
 	}
+	decoder := json.NewDecoder(strings.NewReader(leading))
 	var payload map[string]any
-	if err := json.Unmarshal([]byte(leading), &payload); err != nil {
-		return nil, false
+	if err := decoder.Decode(&payload); err != nil {
+		return nil, "", false
 	}
-	return payload, true
+	return payload, leading[decoder.InputOffset():], true
 }
 
 // attachFileEntry finds the summary entry that belongs to a ref. The tool emits

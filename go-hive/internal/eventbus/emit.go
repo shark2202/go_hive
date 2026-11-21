@@ -2,6 +2,40 @@ package eventbus
 
 // Parity: framework/host/event_bus.py (CONVENIENCE PUBLISHERS)
 
+import (
+	"encoding/json"
+	"math"
+	"strconv"
+	"strings"
+)
+
+// pythonFloat renders a float64 the way Python's json encoder does, so a
+// whole-number cost keeps its decimal point (0.0 rather than 0). Both
+// literals are the same JSON number, but the session SSE frames are compared
+// against the Python reference value-for-value, and encoding/json's float
+// formatter drops the trailing .0. NaN/Infinity stay raw floats: Python
+// writes non-standard bare literals for them, and preserving the float keeps
+// encoding/json failing loudly instead of inventing a number.
+func pythonFloat(value float64) any {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return value
+	}
+	text := strconv.FormatFloat(value, 'g', -1, 64)
+	if index := strings.IndexAny(text, "eE"); index >= 0 {
+		// Python switches to exponent notation below 1e-4 and at/above 1e16;
+		// Go's 'g' switches earlier (once the exponent reaches the shortest
+		// digit count), so re-render those in fixed notation when Python
+		// would.
+		if exponent, err := strconv.Atoi(text[index+1:]); err == nil && exponent >= -4 && exponent < 16 {
+			text = strconv.FormatFloat(value, 'f', -1, 64)
+		}
+	}
+	if !strings.ContainsAny(text, ".eE") {
+		text += ".0"
+	}
+	return json.Number(text)
+}
+
 func orEmptyMap(m map[string]any) map[string]any {
 	if m == nil {
 		return map[string]any{}
@@ -183,10 +217,10 @@ func (b *EventBus) EmitLLMTurnComplete(
 		"output_tokens":         outputTokens,
 		"cached_tokens":         cachedTokens,
 		"cache_creation_tokens": cacheCreationTokens,
-		"cost_usd":              costUSD,
+		"cost_usd":              pythonFloat(costUSD),
 	}
 	if credits != nil {
-		data["credits"] = *credits
+		data["credits"] = pythonFloat(*credits)
 	}
 	if iteration != nil {
 		data["iteration"] = *iteration

@@ -286,3 +286,18 @@ reload 让运行中的 catalog 跟上磁盘。两条 reload 端点都返回一�
     `live` 块（前端 `skills.ts` 只读 `ok`，多余字段无影响）；`POST /api/skills/reload`
     是 Go 独有入口（上游只有 queen 作用域的重载），用于共享库变更后的一次全量扇出，
     响应为 `{"ok":true,"kind":"library","live":{...}}`。
+
+## catalog 渲染逐字对照（prompt-parity）
+
+catalog 文本（名称/描述/顺序/分隔符/字符数/compact 回退/相位过滤）已与 Python 参考逐字对照：
+
+- 渲染 golden 10/10 identical：固定 fixture
+  （`go-hive/internal/skills/testdata/prompt-catalog/fixture.json`）覆盖 description 首句与
+  300/304 字符截断（含 NBSP 尾随空白）、XML 转义、YAML colon 修复、`visibility` 相位过滤、
+  跨 scope 重名、symlink location、full/compact 两种渲染与 `<system-reminder>` 包装。
+- live 双跑里会话首轮注入的 catalog 段两侧各 3,985 chars，逐字一致（independent 相位，20 skills）。
+- 本页相关修复：会话 catalog 现按 live 相位过滤（`queenSkillsCatalog.CatalogForPhase`，
+  与 `QueenPhaseState.render_skills_catalog` 同语义）；description 截断改用 Python
+  `str.strip/rstrip` 的空白集合；skill `location`/`base_dir` 解析符号链接（对齐 `Path.resolve()`）。
+- 证据与例外清单：`docs/prompt-parity.md`、`docs/e2e-assets/prompt-catalog/`、
+  `skills-parity-report.json` 的 `catalog_rendering`。

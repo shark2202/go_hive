@@ -289,9 +289,9 @@ func writePythonJSON(b *strings.Builder, v any) {
 	case uint64:
 		b.WriteString(strconv.FormatUint(value, 10))
 	case float32:
-		b.WriteString(strconv.FormatFloat(float64(value), 'g', -1, 32))
+		b.WriteString(FormatPyFloat(float64(value)))
 	case float64:
-		b.WriteString(strconv.FormatFloat(value, 'g', -1, 64))
+		b.WriteString(FormatPyFloat(value))
 	case []any:
 		b.WriteByte('[')
 		for i, item := range value {

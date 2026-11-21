@@ -22,6 +22,52 @@ func writeQueenSkill(t *testing.T, home hivehome.Home, queen, name, description 
 	}
 }
 
+// writeQueenSkillWithVisibility materialises one queen-scoped skill carrying a
+// metadata.visibility list.
+func writeQueenSkillWithVisibility(t *testing.T, home hivehome.Home, queen, name, description, visibility string) {
+	t.Helper()
+	dir := filepath.Join(home.QueenDir(queen), "skills", name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir skill dir: %v", err)
+	}
+	body := "---\nname: " + name + "\ndescription: " + description + "\nmetadata:\n  visibility: [" + visibility + "]\n---\n\nProbe body.\n"
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(body), 0o644); err != nil {
+		t.Fatalf("write SKILL.md: %v", err)
+	}
+}
+
+// Parity: framework/tools/queen_lifecycle_tools.py::QueenPhaseState.render_skills_catalog
+// (the queen's reminder announces the phase-filtered catalog).
+func TestQueenSkillsCatalogForPhaseFiltersVisibility(t *testing.T) {
+	home := hivehome.Home{Root: t.TempDir()}
+	writeQueenSkill(t, home, "queen_alpha", "always-on-skill", "All phases.")
+	writeQueenSkillWithVisibility(t, home, "queen_alpha", "colony-only-skill", "Colony only.", "colony")
+	writeQueenSkillWithVisibility(t, home, "queen_alpha", "worker-only-skill", "Worker only.", "worker")
+
+	catalog := queenSkillsCatalogAt(home, "queen_alpha", t.TempDir())
+
+	independent := catalog.CatalogForPhase("independent")
+	if !strings.Contains(independent, "<name>always-on-skill</name>") {
+		t.Fatalf("independent catalog missing the always-on skill: %q", independent)
+	}
+	if strings.Contains(independent, "colony-only-skill") || strings.Contains(independent, "worker-only-skill") {
+		t.Fatalf("independent catalog leaked phase-only skills: %q", independent)
+	}
+
+	colony := catalog.CatalogForPhase("colony")
+	if !strings.Contains(colony, "<name>colony-only-skill</name>") {
+		t.Fatalf("colony catalog missing the colony skill: %q", colony)
+	}
+	if strings.Contains(colony, "worker-only-skill") {
+		t.Fatalf("colony catalog leaked the worker skill: %q", colony)
+	}
+
+	// An empty phase keeps the unfiltered catalog (the holder's default).
+	if unfiltered := catalog.CatalogForPhase(""); unfiltered != catalog.Catalog() {
+		t.Fatal("empty phase should return the unfiltered catalog")
+	}
+}
+
 // Parity: tests/test_skill_integration.py::test_skills_catalog_in_prompt
 func TestQueenSkillsCatalogProviderReadsQueenSkillsDir(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}

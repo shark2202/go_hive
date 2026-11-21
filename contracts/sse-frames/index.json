@@ -1,0 +1,77 @@
+{
+  "canonical_rules": [
+    "volatile leaves (seq, ids, timestamps, durations) -> <key> placeholders; presence and type kept",
+    "frame order, event names, field sets and enum values kept verbatim",
+    "numeric values kept verbatim (int vs float spelling is observable)",
+    "session_title_updated position is non-contract; payload and multiplicity are"
+  ],
+  "captures": {
+    "reference": {
+      "file": "go_hive/docs/e2e-assets/sse-payload-parity/capture-reference.json",
+      "sha256": "7c75f66dff772486229bf5c2280777c9c46c398dc82981ae86dd4ff26204c5d4"
+    },
+    "target": {
+      "file": "go_hive/docs/e2e-assets/sse-payload-parity/capture-target.json",
+      "sha256": "e8c4956b894c5bf3123a6146a205c34b825ab77563d7ad80ff0316f13301e70e"
+    }
+  },
+  "generated_at": "2026-11-21T11:12:43+08:00",
+  "reference": {
+    "implementation": "python",
+    "version": "hive 1.0.14"
+  },
+  "scenario": "create queen session -> opening turn settles -> subscribe -> text turn -> ask_user turn -> answer -> reconnect replay -> stop",
+  "schema": "hive-sse-frames/1",
+  "streams": {
+    "history": {
+      "reference_core_frames": 42,
+      "reference_frames": 43,
+      "target_core_frames": 42,
+      "target_frames": 55
+    },
+    "live": {
+      "reference_core_frames": 34,
+      "reference_frames": 35,
+      "target_core_frames": 34,
+      "target_frames": 47
+    },
+    "replay": {
+      "reference_core_frames": 17,
+      "reference_frames": 17,
+      "target_core_frames": 17,
+      "target_frames": 23
+    },
+    "stop": {
+      "reference_core_frames": 18,
+      "reference_frames": 18,
+      "target_core_frames": 17,
+      "target_frames": 23
+    }
+  },
+  "target": {
+    "implementation": "go_hive",
+    "version": "hive 1.0.26-go.1"
+  },
+  "totals": {
+    "core_frames_reference": 111,
+    "core_frames_target": 110,
+    "dropped_go_envelope": 36,
+    "frames_reference": 113,
+    "frames_target": 148
+  },
+  "transforms": {
+    "async_position_types": [
+      "session_title_updated"
+    ],
+    "go_only_envelope_types": [
+      "execution_started",
+      "execution_completed",
+      "execution_failed",
+      "execution_paused",
+      "node_loop_started",
+      "node_loop_completed"
+    ],
+    "rule": "Drop Go-only envelope frames that appear after the first client_input_received (the session-start block precedes it); keep everything else in captured order."
+  },
+  "verdict": "PASS"
+}

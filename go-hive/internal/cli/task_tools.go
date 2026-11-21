@@ -8,9 +8,11 @@ package cli
 // the per-session tool catalogue.
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -137,10 +139,20 @@ func (s *taskToolSet) Has(name string) bool {
 // same way the integration registry serialises tool results, and a rejected
 // operation stays a normal (non-error) result carrying success=false, matching
 // upstream's json.dumps payload with is_error=False.
+//
+// Argument validation is the exception: the Python task tools are pydantic
+// models, so a bad `id` or an unknown `status` raises before the store is
+// touched and reaches the model as an is_error result. The port validates the
+// same two fields here (the tool-surface layer, where the upstream schema
+// lives) so the is_error semantics match instead of silently coercing the
+// value — a coerced id used to answer "Task #0 not found.".
 func (s *taskToolSet) Execute(name string, input map[string]any) (string, bool, error) {
 	tool, ok := s.byName[name]
 	if !ok {
 		return "", true, fmt.Errorf("unknown task tool %q", name)
+	}
+	if problem := taskToolArgumentProblem(name, input); problem != "" {
+		return tools.PythonJSONDumps(map[string]any{"error": problem}), true, nil
 	}
 	taskToolExecutionMu.Lock()
 	defer taskToolExecutionMu.Unlock()
@@ -150,4 +162,73 @@ func (s *taskToolSet) Execute(name string, input map[string]any) (string, bool, 
 	})
 	defer restore()
 	return tools.PythonJSONDumps(tool.Execute(input)), false, nil
+}
+
+// taskToolArgumentProblem mirrors the pydantic validation the Python task tools
+// get for free: `id` must be an integer (the schema says so; Python converts
+// the value and raises on anything else) and `status` must be a TaskStatus
+// member. Returns "" when the call is well-formed.
+func taskToolArgumentProblem(name string, input map[string]any) string {
+	if name != tasks.TaskGet && name != tasks.TaskUpdate {
+		return ""
+	}
+	if raw, present := input["id"]; present {
+		if _, ok := taskToolInt(raw); !ok {
+			return fmt.Sprintf("invalid task id: %s (expected an integer)", taskToolRenderValue(raw))
+		}
+	} else {
+		// The schema declares `id` required; a call without it must not fall
+		// through to task #0.
+		return "invalid task id: missing (expected an integer)"
+	}
+	if name == tasks.TaskUpdate {
+		if raw, present := input["status"]; present && raw != nil {
+			status, ok := raw.(string)
+			if !ok {
+				return fmt.Sprintf("invalid task status: %s (expected a string)", taskToolRenderValue(raw))
+			}
+			if !tasks.ValidTaskStatus(status) {
+				// Byte-identical to the StrEnum error the Python tool raises.
+				return fmt.Sprintf("'%s' is not a valid TaskStatus", status)
+			}
+		}
+	}
+	return ""
+}
+
+// taskToolInt accepts every integer spelling a model can produce for a JSON
+// integer: a number, an integral float, or a numeric string (Python's int()).
+func taskToolInt(value any) (int, bool) {
+	switch typed := value.(type) {
+	case int:
+		return typed, true
+	case int64:
+		return int(typed), true
+	case float64:
+		if typed != float64(int(typed)) {
+			return 0, false
+		}
+		return int(typed), true
+	case json.Number:
+		if parsed, err := typed.Int64(); err == nil {
+			return int(parsed), true
+		}
+		return 0, false
+	case string:
+		parsed, err := strconv.Atoi(strings.TrimSpace(typed))
+		if err != nil {
+			return 0, false
+		}
+		return parsed, true
+	}
+	return 0, false
+}
+
+// taskToolRenderValue quotes strings the way the Python error messages do and
+// falls back to the Go rendering for anything else.
+func taskToolRenderValue(value any) string {
+	if text, ok := value.(string); ok {
+		return fmt.Sprintf("'%s'", text)
+	}
+	return fmt.Sprintf("%v", value)
 }

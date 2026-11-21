@@ -49,9 +49,10 @@ type chatTurnEmitter struct {
 	// phase is the queen phase stamped on every node_loop_iteration, as the
 	// upstream loop's iteration_metadata_provider reports it.
 	phase func() string
-	// contextUsage builds the per-iteration context_usage_updated payload.
-	// Upstream publishes it on every iteration start; nil skips the readout.
-	contextUsage func() map[string]any
+	// contextUsage builds the context_usage_updated payload for a trigger.
+	// Upstream publishes it on every iteration start, after each tool result
+	// and once per tool batch; nil skips the readout.
+	contextUsage func(trigger string) map[string]any
 	// requestMessages is the size of the request the provider received for the
 	// current iteration. llm_turn_complete is published after the tool batch
 	// (upstream's timing), so the conversation has already grown by then; the
@@ -134,20 +135,20 @@ func (e *chatTurnEmitter) IterationStarted(iteration int) {
 		}
 		rebased := iteration - 1
 		e.bus.EmitNodeLoopIteration(e.streamID, e.nodeID, rebased, &e.executionID, extra)
-		e.emitContextUsage()
+		e.emitContextUsage("iteration_start")
 		return
 	}
 	e.bus.EmitNodeLoopIteration(e.streamID, e.nodeID, iteration, &e.executionID, extra)
-	e.emitContextUsage()
+	e.emitContextUsage("iteration_start")
 }
 
-// emitContextUsage publishes the iteration_start context readout upstream's
+// emitContextUsage publishes the per-iteration context readout upstream's
 // loop emits before each LLM call.
-func (e *chatTurnEmitter) emitContextUsage() {
+func (e *chatTurnEmitter) emitContextUsage(trigger string) {
 	if e == nil || e.contextUsage == nil {
 		return
 	}
-	payload := e.contextUsage()
+	payload := e.contextUsage(trigger)
 	if payload == nil {
 		return
 	}
@@ -155,6 +156,26 @@ func (e *chatTurnEmitter) emitContextUsage() {
 	event.NodeID = eventbus.StrPtr(e.nodeID)
 	event.Data = payload
 	e.bus.Publish(event)
+}
+
+// ToolResultStored publishes the per-tool context readout upstream emits right
+// after one tool result lands in the conversation
+// (publish_context_usage trigger=post_tool_call). It is the optional
+// agentloop.ToolBatchContextObserver seam; the loop calls it after the
+// matching tool_call_completed, so a subscriber sees the pair in call order.
+//
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (post_tool_call)
+func (e *chatTurnEmitter) ToolResultStored() {
+	e.emitContextUsage("post_tool_call")
+}
+
+// ToolBatchStored publishes the batch-end context readout upstream emits once
+// every result of a tool batch is stored
+// (publish_context_usage trigger=post_tool_results).
+//
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (post_tool_results)
+func (e *chatTurnEmitter) ToolBatchStored() {
+	e.emitContextUsage("post_tool_results")
 }
 
 // Parity: framework/agent_loop/internals/event_publishing.py::publish_text_delta

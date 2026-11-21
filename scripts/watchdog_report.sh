@@ -93,7 +93,14 @@ PY
     [ "$hour_now" -ge 10 ] && release_stale=1
   fi
 
-  summary="[watchdog $ts] health=$health HEAD=$head dirty_hive=${dirty} total=${dirty_total} worktrees=$worktrees serve=$servers ledger_age=${ledger_age}s release=\"$release_line\" gate=\"$gate_line\""
+  # 每 6 小时治理重算：governance.json 由 governance_recheck_loop.sh 维护。
+  gov_age="?"
+  gov_state="$REPO/go_hive/dist/slots/governance.json"
+  if [ -f "$gov_state" ]; then
+    gov_age=$(( $(date +%s) - $(stat -f %m "$gov_state") ))
+  fi
+
+  summary="[watchdog $ts] health=$health HEAD=$head dirty_hive=${dirty} total=${dirty_total} worktrees=$worktrees serve=$servers ledger_age=${ledger_age}s release=\"$release_line\" gov_age=${gov_age}s gate=\"$gate_line\""
   echo "$summary"
 
   {
@@ -125,6 +132,9 @@ PY
   [ "$servers" -eq 0 ] 2>/dev/null && alert serve "hive-embed serve 进程为 0"
   case "$gate_line" in *FAIL*|*MISSING*) alert gate "最近门禁异常：$gate_line" ;; esac
   [ "$release_stale" = "1" ] && alert release "2 小时 slot 版未按时更新（$release_line）；检查 release_cadence_loop.sh / dist/slots/cadence.log"
+  if [ "$gov_age" != "?" ] && [ "$gov_age" -gt 24000 ] 2>/dev/null; then
+    alert governance "治理重算超过 6h40m 未更新（${gov_age}s）；检查 governance_recheck_loop.sh / dist/slots/governance.log"
+  fi
   [ "$dirty" -ge 3 ] 2>/dev/null && alert dirty "go_hive 区有 ${dirty} 个未提交改动（total=${dirty_total}），检查是否有 lane 写进主线"
   if [ "$sleep_gap" != 1 ] && [ "$ledger_age" != "?" ] && [ "$ledger_age" -gt 900 ] 2>/dev/null; then
     alert ledger "时间台账超过 $((ledger_age / 60)) 分钟未更新（timegov 可能挂了）"

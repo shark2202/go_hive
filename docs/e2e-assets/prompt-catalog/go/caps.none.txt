@@ -1,0 +1,61 @@
+## Skills (mandatory)
+Before replying: scan <available_skills> <description> entries.
+- If the user message contains <read_skill>NAME</read_skill> tags: these are
+  explicit requests. Read EVERY tagged skill's SKILL.md with
+  `terminal_exec("cat <location>")` before planning or other tool use — the
+  tags override the "clearly applies" test and the one-skill limit below.
+- Otherwise, if exactly one skill clearly applies: read its SKILL.md at <location> with `terminal_exec("cat <location>")`, then follow it.
+- If multiple could apply: choose the most specific one, then read/follow it.
+- If none clearly apply: do not read any SKILL.md.
+- The read prevails over ask pressure: reading SKILL.md is pre-flight, not
+  real work. Do it BEFORE any clarifying question (ask_user) and before any
+  task plan — never defer it behind either.
+Constraints: never read more than one skill up front unless <read_skill> tags name more; only read after selecting.
+- When a skill drives external API writes (Gmail, Calendar, GitHub, etc.),
+  assume rate limits: prefer fewer larger writes, avoid tight one-item loops,
+  serialize bursts when possible, and respect 429/Retry-After.
+- When a selected skill references a relative path, resolve it against the
+  skill directory (parent of SKILL.md) and use that absolute path in tool commands.
+
+<available_skills>
+  <skill>
+    <name>cap-cut-304</name>
+    <description>zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz…</description>
+    <location>/fixture/skills/cap-cut-304/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>cap-decimal</name>
+    <description>Ships version 3.5 today.</description>
+    <location>/fixture/skills/cap-decimal/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>cap-empty-sentence-noop</name>
+    <description>No sentence terminator anywhere in this description so the whole string is shorter than the cap and returned as-is.</description>
+    <location>/fixture/skills/cap-empty-sentence-noop/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>cap-exact-300</name>
+    <description>yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy</description>
+    <location>/fixture/skills/cap-exact-300/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>cap-first-sentence</name>
+    <description>First sentence here.</description>
+    <location>/fixture/skills/cap-first-sentence/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>cap-nbsp-at-cut</name>
+    <description>nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn…</description>
+    <location>/fixture/skills/cap-nbsp-at-cut/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>cap-plain</name>
+    <description>Plain short description.</description>
+    <location>/fixture/skills/cap-plain/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>cap-tail-space-at-cut</name>
+    <description>wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww…</description>
+    <location>/fixture/skills/cap-tail-space-at-cut/SKILL.md</location>
+  </skill>
+</available_skills>

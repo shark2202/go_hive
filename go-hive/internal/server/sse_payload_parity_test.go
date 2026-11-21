@@ -5,6 +5,8 @@ package server
 // the dual-run probe (scripts/sse_payload_parity.py) found missing.
 
 import (
+	"context"
+	"strings"
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/eventbus"
@@ -424,5 +426,95 @@ func TestImplicitJudgeVerdictFollowsThePreviousTurn(t *testing.T) {
 	if verdictPos <= secondStart || verdictPos >= secondCommit {
 		t.Fatalf("judge_verdict at %d, want after the second execution_started (%d) and before its client_input_committed (%d)",
 			verdictPos, secondStart, secondCommit)
+	}
+}
+
+// TestToolBatchPublishesPostToolContextReadouts pins the per-tool context
+// granularity the sse-frames golden found missing: upstream publishes a
+// context_usage_updated readout after every tool result lands in the
+// conversation (trigger=post_tool_call) and one more at the batch boundary
+// (trigger=post_tool_results), both after tool_call_completed and before the
+// batch's llm_turn_complete. The readouts carry no execution id (upstream's
+// publish_context_usage does not stamp one), and they must see the stored
+// result: the per-tool readout's message_count counts the assistant tool-call
+// message and the tool result that were just appended.
+//
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (publish_context_usage)
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_context_usage
+func TestToolBatchPublishesPostToolContextReadouts(t *testing.T) {
+	model := &scriptedChatLLM{responses: []llm.Completion{
+		{
+			ToolCalls: []llm.ToolCall{{
+				ID:        "tool-1",
+				Name:      "echo_tool",
+				Arguments: `{"value":"x"}`,
+			}},
+		},
+		{Content: "final answer"},
+	}}
+	execute := func(_ context.Context, name string, _ map[string]any) (string, bool, error) {
+		if name != "echo_tool" {
+			t.Fatalf("unexpected tool %q", name)
+		}
+		return "tool-ok", false, nil
+	}
+	tools := []llm.ToolDef{{Name: "echo_tool", Description: "echoes"}}
+	runtime, bus := newBusChatRuntime(t, model, tools, execute)
+	recorder := recordChatEvents(bus)
+
+	if err := runtime.Deliver("use the tool"); err != nil {
+		t.Fatalf("Deliver: %v", err)
+	}
+	waitForChatEvents(t, recorder, eventbus.EventExecutionCompleted, 1)
+
+	// The batch's frames, in order: the completion is followed immediately by
+	// the per-tool readout, then the batch readout, then llm_turn_complete.
+	batch := []string{}
+	usageByTrigger := map[string]*eventbus.AgentEvent{}
+	for _, event := range recorder.snapshot() {
+		switch event.Type {
+		case eventbus.EventToolCallCompleted:
+			batch = append(batch, "tool_call_completed")
+		case eventbus.EventContextUsageUpdated:
+			trigger, _ := event.Data["trigger"].(string)
+			batch = append(batch, "context_usage_updated:"+trigger)
+			if _, seen := usageByTrigger[trigger]; !seen {
+				usageByTrigger[trigger] = event
+			}
+		case eventbus.EventLLMTurnComplete:
+			batch = append(batch, "llm_turn_complete")
+		}
+	}
+	wantBatch := []string{
+		"tool_call_completed",
+		"context_usage_updated:post_tool_call",
+		"context_usage_updated:post_tool_results",
+		"llm_turn_complete",
+	}
+	if joined := strings.Join(batch, ","); !strings.Contains(joined, strings.Join(wantBatch, ",")) {
+		t.Fatalf("tool-batch frames = %v, want %v in order", batch, wantBatch)
+	}
+
+	for _, trigger := range []string{"post_tool_call", "post_tool_results"} {
+		frame := usageByTrigger[trigger]
+		if frame == nil {
+			t.Fatalf("no context_usage_updated frame for trigger %q; frames: %v", trigger, batch)
+		}
+		if frame.ExecutionID != nil {
+			t.Fatalf("context_usage_updated(%s) execution_id = %v, want null", trigger, *frame.ExecutionID)
+		}
+		if frame.Data["message_count"] != 3 {
+			t.Fatalf("context_usage_updated(%s) message_count = %#v, want 3 (user + assistant call + tool result)", trigger, frame.Data["message_count"])
+		}
+	}
+	// The batch boundary emits exactly one post_tool_results readout.
+	postBatch := 0
+	for _, name := range batch {
+		if name == "context_usage_updated:post_tool_results" {
+			postBatch++
+		}
+	}
+	if postBatch != 1 {
+		t.Fatalf("post_tool_results frames = %d, want 1; frames: %v", postBatch, batch)
 	}
 }

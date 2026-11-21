@@ -1336,8 +1336,11 @@ func collectAttachFileChipURLs(messages []Message) []map[string]any {
 		if !strings.Contains(content, "hive_attachment_url") || !strings.Contains(content, `"attached"`) {
 			continue
 		}
+		// attach_file appends its text preview blocks after the JSON summary
+		// (upstream ships them as separate TextContent blocks), so parse the
+		// leading document and ignore the trailing text.
 		var data map[string]any
-		if err := json.Unmarshal([]byte(content), &data); err != nil {
+		if err := json.NewDecoder(strings.NewReader(content)).Decode(&data); err != nil {
 			continue
 		}
 		attached, ok := data["attached"].([]any)

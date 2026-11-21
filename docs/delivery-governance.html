@@ -41,7 +41,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <section id="g1"><h2><span class="num">01</span>目标与门槛</h2>
 <div class="grid g3">
   <div class="card"><div class="k">G1 · 字段级逐字一致</div><div class="v">目标 11-24</div><div class="d">API/WS 字段形状、tools/skill/MCP 定义、env 89/118、config 134 键、存储字段；不可达项列例外。验收：契约 <code>--check</code> + 双跑 golden。</div></div>
-  <div class="card"><div class="k">G2 · 老用户无损替换 RC</div><div class="v">目标 12-04</div><div class="d">旧 Python HIVE_HOME 直接启动、自动迁移、数据不丢、可回滚；sessions/colonies/tracker/credentials/memories/senders/skills 全量双跑。</div></div>
+  <div class="card"><div class="k">G2 · 老用户无损替换 RC</div><div class="v">目标 11-27</div><div class="d">旧 Python HIVE_HOME 直接启动、自动迁移、数据不丢、可回滚；sessions/colonies/tracker/credentials/memories/senders/skills 全量双跑。</div></div>
   <div class="card"><div class="k">G3 · 商业外发布</div><div class="v">目标 12-18</div><div class="d">G2 + Windows 实机、GitHub Actions release 执行、govulncheck/安全审查、六平台归档与安装/升级脚本复验。</div></div>
 </div>
 <div class="callout info"><b>口径：</b>“字段级”= 名称/类型/默认值/可空/enum/required/读取行为一致；值级差异必须 canonicalize 后比较；字节级、时序、运行期值列为例外，不冒充一致。</div>
@@ -76,6 +76,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
   <li>lane 只改自己名下文件；共享装配（路由、registry、文档计数）由 integrator 处理。</li>
   <li>发现 flake 先三连跑复现；同一文件门禁失败 3 次即停，交回 integrator。</li>
   <li>磁盘低于 20Gi 时暂停新 lane；先清已合并 worktree 与 Go 构建缓存。</li>
+  <li>每 6 小时由 <code>governance_recheck_loop.sh</code> 重算交付日期（只提前不延后，超 6h40m 看门狗告警；台账 <code>GOVERNANCE_LEDGER.csv</code>）。</li>
   <li>每 2 小时 slot 版由 <code>release_cadence_loop.sh</code> 自动触发（08–22 偶数小时），看门狗监控 &gt;2h20m 未更新即告警；倒排排期见 <a href="release-cadence.html">release-cadence.html</a>。</li>
 </ul>
 </section>

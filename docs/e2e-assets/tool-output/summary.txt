@@ -1,0 +1,47 @@
+tool output golden — Python reference vs go_hive
+
+scenarios: 38
+aligned:   25
+shape-aligned (tool libraries differ): 1
+recorded divergences (reviewed exceptions): 12
+different (unexplained): 0
+
+scenario                               tool               status           differs
+search_tools_inventory                 search_tools       shape-aligned    
+search_tools_load                      search_tools       aligned          
+search_tools_keyword                   search_tools       aligned          
+search_tools_already_loaded            search_tools       aligned          
+search_tools_load_read_file            search_tools       recorded         
+get_current_time_utc                   get_current_time   aligned          
+get_current_time_offset                get_current_time   aligned          
+get_current_time_bad_tz                get_current_time   aligned          
+task_create_missing_goal               task_create        aligned          
+task_create_ok                         task_create        aligned          
+task_create_second                     task_create        aligned          
+task_list_after_create                 task_list          aligned          
+task_get_found                         task_get           aligned          
+task_get_missing_numeric               task_get           aligned          
+task_get_bad_id                        task_get           recorded         
+task_update_completed                  task_update        aligned          
+task_update_bad_status                 task_update        aligned          
+read_file_ok                           read_file          aligned          
+read_file_missing                      read_file          aligned          
+read_file_escape                       read_file          recorded         
+read_file_dir                          read_file          aligned          
+attach_file_ok                         attach_file        aligned          
+attach_file_missing                    attach_file        aligned          
+pdf_read_missing                       pdf_read           aligned          
+pdf_read_both_args                     pdf_read           aligned          
+pdf_read_ok                            pdf_read           aligned          
+pdf_read_ok_multi                      pdf_read           aligned          
+pdf_read_bad_pages                     pdf_read           aligned          
+search_messages_none                   search_messages    aligned          
+search_messages_spill                  search_messages    recorded         
+terminal_exec_ok                       terminal_exec      recorded         
+skill_view_missing                     skill_view         recorded         
+credentials_list                       credentials        recorded         
+credentials_usage                      credentials        recorded         
+sentinel_setup                         sentinel_setup     recorded         
+collect_result                         collect_result     recorded         
+suggest_colony                         suggest_colony     recorded         
+unloaded_tool_call                     excel_read         recorded         

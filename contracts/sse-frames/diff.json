@@ -1,0 +1,883 @@
+{
+  "assertions": [
+    {
+      "detail": "live: 34 reference vs 34 target frames after the documented transforms",
+      "id": "live-core-equal",
+      "ok": true,
+      "required": true
+    },
+    {
+      "detail": "replay: 17 reference vs 17 target frames after the documented transforms",
+      "id": "replay-core-equal",
+      "ok": true,
+      "required": true
+    },
+    {
+      "detail": "history: 42 reference vs 42 target frames after the documented transforms",
+      "id": "history-core-equal",
+      "ok": true,
+      "required": true
+    },
+    {
+      "detail": "DELETE is a shutdown tail: the reference permanent loop may publish a final loop_state_changed after the last parked state; Go has already closed its bounded turn. Canonical frames are stored, order is not contractual.",
+      "id": "stop-tail-informational",
+      "ok": true,
+      "required": false
+    },
+    {
+      "detail": "first replayed frame: reference='session_snapshot' target='session_snapshot'",
+      "id": "replay-first-frame-snapshot",
+      "ok": true,
+      "required": true
+    },
+    {
+      "detail": "reference: every replayed frame appears in history, in order",
+      "id": "replay-subsequence-of-history-reference",
+      "ok": true,
+      "required": true
+    },
+    {
+      "detail": "target: every replayed frame appears in history, in order",
+      "id": "replay-subsequence-of-history-target",
+      "ok": true,
+      "required": true
+    },
+    {
+      "detail": "reference=[{'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 0}, {'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 1}, {'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 2}] target=[{'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 0}, {'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 1}, {'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 2}]",
+      "id": "judge-verdicts-equal",
+      "ok": true,
+      "required": true
+    },
+    {
+      "detail": "session_title_updated payload/multiplicity match; positions are non-contract (reference=[{'stream': 'live', 'index': 11, 'type': 'session_title_updated'}, {'stream': 'history', 'index': 17, 'type': 'session_title_updated'}] target=[{'stream': 'live', 'index': 17, 'type': 'session_title_updated'}, {'stream': 'history', 'index': 23, 'type': 'session_title_updated'}])",
+      "id": "async-title-multiset-equal",
+      "ok": true,
+      "required": true
+    },
+    {
+      "detail": "loop-max-iterations: ref=1 tgt=1; loop-iteration-counter: ref=7 tgt=7; turn-complete-iteration: ref=16 tgt=16; output-delta-iteration: ref=12 tgt=12; model-provider-prefix: ref=16 tgt=16; system-prefix-sha: ref=16 tgt=16; context-usage-ratio: ref=11 tgt=11; context-usage-pct: ref=11 tgt=11; context-usage-estimated-tokens: ref=11 tgt=11; context-usage-message-count: ref=11 tgt=11; context-usage-breakdown: ref=11 tgt=11",
+      "id": "exceptions-observed",
+      "ok": true,
+      "required": true
+    }
+  ],
+  "detail": {
+    "reference": {
+      "history": {
+        "async_position_frames": [
+          {
+            "index": 17,
+            "type": "session_title_updated"
+          }
+        ],
+        "client_input_cutoff": 9,
+        "dropped_go_envelope": [],
+        "frames_after": 42,
+        "frames_before": 43,
+        "side": "reference",
+        "stream": "history"
+      },
+      "live": {
+        "async_position_frames": [
+          {
+            "index": 11,
+            "type": "session_title_updated"
+          }
+        ],
+        "client_input_cutoff": 4,
+        "dropped_go_envelope": [],
+        "frames_after": 34,
+        "frames_before": 35,
+        "side": "reference",
+        "stream": "live"
+      },
+      "replay": {
+        "async_position_frames": [],
+        "client_input_cutoff": 3,
+        "dropped_go_envelope": [],
+        "frames_after": 17,
+        "frames_before": 17,
+        "side": "reference",
+        "stream": "replay"
+      },
+      "stop": {
+        "async_position_frames": [],
+        "client_input_cutoff": 3,
+        "dropped_go_envelope": [],
+        "frames_after": 18,
+        "frames_before": 18,
+        "side": "reference",
+        "stream": "stop"
+      }
+    },
+    "target": {
+      "history": {
+        "async_position_frames": [
+          {
+            "index": 23,
+            "type": "session_title_updated"
+          }
+        ],
+        "client_input_cutoff": 9,
+        "dropped_go_envelope": [
+          {
+            "index": 10,
+            "type": "execution_started"
+          },
+          {
+            "index": 12,
+            "type": "node_loop_started"
+          },
+          {
+            "index": 19,
+            "type": "node_loop_completed"
+          },
+          {
+            "index": 22,
+            "type": "execution_completed"
+          },
+          {
+            "index": 25,
+            "type": "execution_started"
+          },
+          {
+            "index": 27,
+            "type": "node_loop_started"
+          },
+          {
+            "index": 37,
+            "type": "node_loop_completed"
+          },
+          {
+            "index": 40,
+            "type": "execution_completed"
+          },
+          {
+            "index": 42,
+            "type": "execution_started"
+          },
+          {
+            "index": 44,
+            "type": "node_loop_started"
+          },
+          {
+            "index": 51,
+            "type": "node_loop_completed"
+          },
+          {
+            "index": 54,
+            "type": "execution_completed"
+          }
+        ],
+        "frames_after": 42,
+        "frames_before": 55,
+        "side": "target",
+        "stream": "history"
+      },
+      "live": {
+        "async_position_frames": [
+          {
+            "index": 17,
+            "type": "session_title_updated"
+          }
+        ],
+        "client_input_cutoff": 4,
+        "dropped_go_envelope": [
+          {
+            "index": 5,
+            "type": "execution_started"
+          },
+          {
+            "index": 7,
+            "type": "node_loop_started"
+          },
+          {
+            "index": 13,
+            "type": "node_loop_completed"
+          },
+          {
+            "index": 16,
+            "type": "execution_completed"
+          },
+          {
+            "index": 19,
+            "type": "execution_started"
+          },
+          {
+            "index": 21,
+            "type": "node_loop_started"
+          },
+          {
+            "index": 30,
+            "type": "node_loop_completed"
+          },
+          {
+            "index": 33,
+            "type": "execution_completed"
+          },
+          {
+            "index": 35,
+            "type": "execution_started"
+          },
+          {
+            "index": 37,
+            "type": "node_loop_started"
+          },
+          {
+            "index": 43,
+            "type": "node_loop_completed"
+          },
+          {
+            "index": 46,
+            "type": "execution_completed"
+          }
+        ],
+        "frames_after": 34,
+        "frames_before": 47,
+        "side": "target",
+        "stream": "live"
+      },
+      "replay": {
+        "async_position_frames": [],
+        "client_input_cutoff": 3,
+        "dropped_go_envelope": [
+          {
+            "index": 4,
+            "type": "execution_started"
+          },
+          {
+            "index": 8,
+            "type": "execution_completed"
+          },
+          {
+            "index": 10,
+            "type": "execution_started"
+          },
+          {
+            "index": 15,
+            "type": "execution_completed"
+          },
+          {
+            "index": 17,
+            "type": "execution_started"
+          },
+          {
+            "index": 22,
+            "type": "execution_completed"
+          }
+        ],
+        "frames_after": 17,
+        "frames_before": 23,
+        "side": "target",
+        "stream": "replay"
+      },
+      "stop": {
+        "async_position_frames": [],
+        "client_input_cutoff": 3,
+        "dropped_go_envelope": [
+          {
+            "index": 4,
+            "type": "execution_started"
+          },
+          {
+            "index": 8,
+            "type": "execution_completed"
+          },
+          {
+            "index": 10,
+            "type": "execution_started"
+          },
+          {
+            "index": 15,
+            "type": "execution_completed"
+          },
+          {
+            "index": 17,
+            "type": "execution_started"
+          },
+          {
+            "index": 22,
+            "type": "execution_completed"
+          }
+        ],
+        "frames_after": 17,
+        "frames_before": 23,
+        "side": "target",
+        "stream": "stop"
+      }
+    }
+  },
+  "exceptions": [
+    {
+      "class": "intentional-structural",
+      "frame_type": "node_loop_started",
+      "id": "loop-max-iterations",
+      "observed": true,
+      "path": "data.max_iterations",
+      "reason": "Python's permanent queen loop reports 999999; Go's per-turn bounded loop reports its configured cap (50). Same field, same type.",
+      "reference_frames_matched": 1,
+      "reference_values": [
+        "999999"
+      ],
+      "target_frames_matched": 1,
+      "target_values": [
+        "50"
+      ],
+      "values_equal_this_run": false
+    },
+    {
+      "class": "intentional-structural",
+      "frame_type": "node_loop_iteration",
+      "id": "loop-iteration-counter",
+      "observed": true,
+      "path": "data.iteration",
+      "reason": "Python counts iterations across the whole session; Go restarts the per-turn loop, so its iteration resets each turn.",
+      "reference_frames_matched": 7,
+      "reference_values": [
+        "0",
+        "1",
+        "2",
+        "3"
+      ],
+      "target_frames_matched": 7,
+      "target_values": [
+        "0",
+        "1"
+      ],
+      "values_equal_this_run": false
+    },
+    {
+      "class": "intentional-structural",
+      "frame_type": "llm_turn_complete",
+      "id": "turn-complete-iteration",
+      "observed": true,
+      "path": "data.iteration",
+      "reason": "Same counter as loop-iteration-counter: session-cumulative vs per-turn.",
+      "reference_frames_matched": 16,
+      "reference_values": [
+        "0",
+        "1",
+        "2",
+        "3"
+      ],
+      "target_frames_matched": 16,
+      "target_values": [
+        "0",
+        "1"
+      ],
+      "values_equal_this_run": false
+    },
+    {
+      "class": "intentional-structural",
+      "frame_type": "client_output_delta",
+      "id": "output-delta-iteration",
+      "observed": true,
+      "path": "data.iteration",
+      "reason": "Same counter as loop-iteration-counter: session-cumulative vs per-turn.",
+      "reference_frames_matched": 12,
+      "reference_values": [
+        "0",
+        "1",
+        "3"
+      ],
+      "target_frames_matched": 12,
+      "target_values": [
+        "0",
+        "1"
+      ],
+      "values_equal_this_run": false
+    },
+    {
+      "class": "value-level",
+      "frame_type": "llm_turn_complete",
+      "id": "model-provider-prefix",
+      "observed": true,
+      "path": "data.model",
+      "reason": "Python reports the litellm-normalised name (provider/model); Go reports the configured model string without the provider prefix.",
+      "reference_frames_matched": 16,
+      "reference_values": [
+        "\"openai/sse-parity-probe-model\""
+      ],
+      "target_frames_matched": 16,
+      "target_values": [
+        "\"sse-parity-probe-model\""
+      ],
+      "values_equal_this_run": false
+    },
+    {
+      "class": "value-level",
+      "frame_type": "llm_turn_complete",
+      "id": "system-prefix-sha",
+      "observed": true,
+      "path": "data.system_prefix_sha",
+      "reason": "Hash of the rendered static system prompt; the prompt text still differs (prompt-parity lane), so the fingerprint differs.",
+      "reference_frames_matched": 16,
+      "reference_values": [
+        "\"692b774c98c7\""
+      ],
+      "target_frames_matched": 16,
+      "target_values": [
+        "\"885285cb1ffe\""
+      ],
+      "values_equal_this_run": false
+    },
+    {
+      "class": "value-level",
+      "frame_type": "context_usage_updated",
+      "id": "context-usage-ratio",
+      "observed": true,
+      "path": "data.usage_ratio",
+      "reason": "Derived from the prompt/tool-definition char counts, which still differ.",
+      "reference_frames_matched": 11,
+      "reference_values": [
+        "0.1754",
+        "0.1756",
+        "0.1757",
+        "0.1759",
+        "0.176"
+      ],
+      "target_frames_matched": 11,
+      "target_values": [
+        "0.2132",
+        "0.2689",
+        "0.269",
+        "0.2693"
+      ],
+      "values_equal_this_run": false
+    },
+    {
+      "class": "value-level",
+      "frame_type": "context_usage_updated",
+      "id": "context-usage-pct",
+      "observed": true,
+      "path": "data.usage_pct",
+      "reason": "Rounded usage_ratio; see context-usage-ratio.",
+      "reference_frames_matched": 11,
+      "reference_values": [
+        "18"
+      ],
+      "target_frames_matched": 11,
+      "target_values": [
+        "21",
+        "27"
+      ],
+      "values_equal_this_run": false
+    },
+    {
+      "class": "value-level",
+      "frame_type": "context_usage_updated",
+      "id": "context-usage-estimated-tokens",
+      "observed": true,
+      "path": "data.estimated_tokens",
+      "reason": "Char-based projection of the still-divergent prompt and tool definitions.",
+      "reference_frames_matched": 11,
+      "reference_values": [
+        "31579",
+        "31599",
+        "31623",
+        "31670",
+        "31679"
+      ],
+      "target_frames_matched": 11,
+      "target_values": [
+        "38380",
+        "48401",
+        "48425",
+        "48472",
+        "48481"
+      ],
+      "values_equal_this_run": false
+    },
+    {
+      "class": "value-level",
+      "frame_type": "context_usage_updated",
+      "id": "context-usage-message-count",
+      "observed": true,
+      "path": "data.message_count",
+      "reason": "The opening readout sees one seeded message on the Python side and zero on the Go side; every later readout matches (pinned by the post_tool_call/post_tool_results frame positions).",
+      "reference_frames_matched": 11,
+      "reference_values": [
+        "1",
+        "3",
+        "5",
+        "7",
+        "8"
+      ],
+      "target_frames_matched": 11,
+      "target_values": [
+        "0",
+        "3",
+        "5",
+        "7",
+        "8"
+      ],
+      "values_equal_this_run": false
+    },
+    {
+      "class": "value-level",
+      "frame_type": "context_usage_updated",
+      "id": "context-usage-breakdown",
+      "observed": true,
+      "path": "data.breakdown.*",
+      "reason": "Component char counts of the prompt/tool definitions; the system prompt and tool JSON still differ (prompt/tool parity lanes).",
+      "reference_frames_matched": 11,
+      "reference_values": [
+        "0",
+        "21584",
+        "27984",
+        "28044",
+        "28114",
+        "28256",
+        "28283",
+        "45171"
+      ],
+      "target_frames_matched": 11,
+      "target_values": [
+        "0",
+        "30064",
+        "30134",
+        "30276",
+        "30303",
+        "52587",
+        "62554"
+      ],
+      "values_equal_this_run": false
+    }
+  ],
+  "generated_at": "2026-11-21T11:12:43+08:00",
+  "reference": {
+    "implementation": "python",
+    "version": "hive 1.0.14"
+  },
+  "schema": "hive-sse-frames-diff/1",
+  "streams": {
+    "history": {
+      "equal_after_documented_transforms": true,
+      "reference_frames": 42,
+      "reference_types": [
+        "queen_identity_selected",
+        "reminder_injected",
+        "node_loop_started",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "judge_verdict",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "judge_verdict",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "tool_call_started",
+        "tool_call_completed",
+        "context_usage_updated",
+        "context_usage_updated",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "judge_verdict",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed"
+      ],
+      "sequence_ops": [],
+      "stream": "history",
+      "target_frames": 42,
+      "target_types": [
+        "queen_identity_selected",
+        "reminder_injected",
+        "node_loop_started",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "judge_verdict",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "judge_verdict",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "tool_call_started",
+        "tool_call_completed",
+        "context_usage_updated",
+        "context_usage_updated",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "judge_verdict",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed"
+      ],
+      "undeclared_diffs": []
+    },
+    "live": {
+      "equal_after_documented_transforms": true,
+      "reference_frames": 34,
+      "reference_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "tool_call_started",
+        "tool_call_completed",
+        "context_usage_updated",
+        "context_usage_updated",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed"
+      ],
+      "sequence_ops": [],
+      "stream": "live",
+      "target_frames": 34,
+      "target_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "tool_call_started",
+        "tool_call_completed",
+        "context_usage_updated",
+        "context_usage_updated",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed",
+        "client_input_received",
+        "loop_state_changed",
+        "client_input_committed",
+        "node_loop_iteration",
+        "context_usage_updated",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed"
+      ],
+      "undeclared_diffs": []
+    },
+    "replay": {
+      "equal_after_documented_transforms": true,
+      "reference_frames": 17,
+      "reference_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "tool_call_started",
+        "tool_call_completed",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested"
+      ],
+      "sequence_ops": [],
+      "stream": "replay",
+      "target_frames": 17,
+      "target_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "tool_call_started",
+        "tool_call_completed",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested"
+      ],
+      "undeclared_diffs": []
+    },
+    "stop": {
+      "equal_after_documented_transforms": false,
+      "reference_frames": 18,
+      "reference_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "tool_call_started",
+        "tool_call_completed",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested",
+        "loop_state_changed"
+      ],
+      "sequence_ops": [
+        {
+          "op": "delete",
+          "reference": [
+            "loop_state_changed"
+          ],
+          "target": []
+        }
+      ],
+      "stream": "stop",
+      "target_frames": 17,
+      "target_types": [
+        "session_snapshot",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "tool_call_started",
+        "tool_call_completed",
+        "llm_turn_complete",
+        "client_input_received",
+        "client_input_committed",
+        "client_output_delta",
+        "llm_turn_complete",
+        "client_input_requested"
+      ],
+      "undeclared_diffs": [
+        {
+          "op": "delete",
+          "reference": {
+            "data": {
+              "activity": "executing",
+              "interrupt_cause": null,
+              "park_reason": null,
+              "questions": null
+            },
+            "envelope": {
+              "colony_id": null,
+              "correlation_id": null,
+              "execution_id": "<execution_id>",
+              "node_id": "queen",
+              "run_id": "<run_id>",
+              "seq": "<seq>",
+              "stream_id": "queen",
+              "timestamp": "<timestamp>"
+            },
+            "index": 17,
+            "type": "loop_state_changed"
+          },
+          "target": null
+        }
+      ]
+    }
+  },
+  "target": {
+    "implementation": "go_hive",
+    "version": "hive 1.0.26-go.1"
+  },
+  "totals": {
+    "core_frames_reference": 111,
+    "core_frames_target": 110,
+    "dropped_go_envelope": 36,
+    "frames_reference": 113,
+    "frames_target": 148
+  },
+  "transforms": {
+    "async_position_types": [
+      "session_title_updated"
+    ],
+    "go_only_envelope_types": [
+      "execution_started",
+      "execution_completed",
+      "execution_failed",
+      "execution_paused",
+      "node_loop_started",
+      "node_loop_completed"
+    ],
+    "rule": "Drop Go-only envelope frames that appear after the first client_input_received (the session-start block precedes it); keep everything else in captured order."
+  },
+  "verdict": "PASS"
+}

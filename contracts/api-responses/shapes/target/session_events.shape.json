@@ -38,7 +38,7 @@
     "frames[].envelope.data.snapshot": "string",
     "frames[].envelope.data.cache_creation_tokens": "number(int)",
     "frames[].envelope.data.cached_tokens": "number(int)",
-    "frames[].envelope.data.cost_usd": "number(int)",
+    "frames[].envelope.data.cost_usd": "number(float)",
     "frames[].envelope.data.history_anchor_idx": "number(int)",
     "frames[].envelope.data.input_tokens": "number(int)",
     "frames[].envelope.data.message_count": "number(int)",

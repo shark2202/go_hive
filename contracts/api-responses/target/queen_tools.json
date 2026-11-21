@@ -8,7 +8,7 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-21T00:58:55+08:00",
+  "captured_at": "2026-11-21T11:24:30+08:00",
   "canonical": {
     "categories": [
       {
@@ -265,7 +265,7 @@
         "name": "reply_to_worker"
       },
       {
-        "description": "Run a colony playbook — a deterministic converge loop over a tracker table: query the undone rows, dispatch workers, re-query, repeat. Use it when the goal has row shape; use run_worker for one-off heterogeneous tasks. Re-running is resume: rows already marked done drop out of the pending query, so a second run only does the gap.\n\nPYTHON IS NOT EXECUTABLE IN THIS BUILD. A `.play.py` script (inline, by path, or saved in the colony library) is resolved and then returned with status='unsupported' and ZERO workers dispatched. Do not retry it expecting a different result.\n\nSUPPORTED FORM — native J…[+1442 chars sha256:f899ce174b0c]",
+        "description": "Run a colony playbook — a deterministic converge loop over a tracker table: query the undone rows, dispatch workers, re-query, repeat. Use it when the goal has row shape; use run_worker for one-off heterogeneous tasks. Re-running is resume: rows already marked done drop out of the pending query, so a second run only does the gap.\n\nPYTHON PLAYBOOKS: a `.play.py` script (inline, by path, or saved in the colony library) runs on an external Python 3.8+ interpreter found on the host PATH (`python3`, then `python`, or HIVE_PYTHON). The script sees the upstream hooks — converge / worker / tracker_que…[+1904 chars sha256:8d686c7cfc1b]",
         "editable": false,
         "name": "run_playbook"
       },
@@ -1891,5 +1891,6 @@
     "mcp_servers": 4,
     "synthetic": 1
   },
+  "shape_ignore": [],
   "notes": []
 }

@@ -1,0 +1,962 @@
+{
+  "endpoints": [
+    {
+      "compared_paths": 6,
+      "declared_differences": [],
+      "endpoint": "health",
+      "expect_status": null,
+      "ignored_paths": 3,
+      "kind": "success",
+      "label": "健康检查",
+      "method": "GET",
+      "path": "/api/health",
+      "path_digest": "fc04dfb1d6b30f4b",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 145,
+      "declared_differences": [],
+      "endpoint": "queen_profiles",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "Queen 档案",
+      "method": "GET",
+      "path": "/api/queen/profiles",
+      "path_digest": "1ef67b25cd619f1c",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 614,
+      "declared_differences": [
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "lifecycle[get_playbook_status].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 404,
+              "preview": "\"Check a playbook run by its run_id (the handle run_playbook returned). If still running, returns live progress (dispatched count, dead-lettered, phase, recent ",
+              "sha256": "8a98edb4e5937ec6"
+            }
+          ],
+          "target": [
+            {
+              "chars": 206,
+              "preview": "\"Unavailable as a standalone tool in this build. Use run_playbook(action='status', run_id=...) — it reports the run's live progress (dispatched, dead-lettered, ",
+              "sha256": "d0d73f39fbaece51"
+            }
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "lifecycle[get_worker_status].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 505,
+              "preview": "\"Check on the loaded graph. Returns a brief prose summary by default. Use 'focus' to drill into specifics:\\n- activity: current node, transitions, latest LLM ou",
+              "sha256": "83c6b491453e6890"
+            }
+          ],
+          "target": [
+            {
+              "chars": 509,
+              "preview": "\"Check on the colony's workers. Returns a brief prose summary by default. Use 'focus' to drill into specifics:\\n- activity: current node, transitions, latest LL",
+              "sha256": "2dc57c498c96ffcd"
+            }
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "lifecycle[inject_message].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            "\"Send a message to the running graph. The message is injected into the graph's active node conversation. Use this to relay user instructions or concerns. The graph must be running.\""
+          ],
+          "target": [
+            {
+              "chars": 211,
+              "preview": "\"Send a message to the colony's live workers. The message is injected into each active worker's conversation as a user turn. Use this to relay user instructions",
+              "sha256": "fc1ecf57c5ea011f"
+            }
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "lifecycle[list_playbook_runs].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 347,
+              "preview": "\"Read the playbook run-log for this colony (from colony.db, the colony bookkeeping store — separate from the domain tracker). Returns recent runs most-recent-fi",
+              "sha256": "f3fb583fa33157b6"
+            }
+          ],
+          "target": [
+            "\"Unavailable as a standalone tool in this build. run_playbook(action='status') lists the colony's runs (live and recent history from colony.db).\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "lifecycle[run_playbook].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 639,
+              "preview": "\"Run a colony playbook — a deterministic Python script that drives a tracker table to convergence: query the undone work, dispatch workers on it, re-query, repe",
+              "sha256": "6dcc1aa3161da5eb"
+            }
+          ],
+          "target": [
+            {
+              "chars": 638,
+              "preview": "\"Run a colony playbook — a deterministic converge loop over a tracker table: query the undone rows, dispatch workers, re-query, repeat. Use it when the goal has",
+              "sha256": "3f7a6e69175d1240"
+            }
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "lifecycle[run_worker].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 638,
+              "preview": "\"Lower-level fan-out — PREFER run_playbook for row-shaped work. For N units of the same job over a tracker table, run_playbook converges the table deterministic",
+              "sha256": "f2c0349bd1d31934"
+            }
+          ],
+          "target": [
+            {
+              "chars": 640,
+              "preview": "\"Fan out a batch of tasks to parallel workers and RETURN IMMEDIATELY. Workers run in the background; each one reports back to you as a [WORKER_REPORT] user turn",
+              "sha256": "0cb6b240e18e8538"
+            }
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "lifecycle[stop_playbook].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 430,
+              "preview": "\"Kill a RUNNING playbook by its run_id: stops the convergence loop (no more rows dispatched) and stops its in-flight workers. Use it to halt a run that's going ",
+              "sha256": "72fa92c49a72da24"
+            }
+          ],
+          "target": [
+            "\"Unavailable as a standalone tool in this build. Use run_playbook(action='stop', run_id=...) — it cancels one run; rows already marked done stay done and re-running resumes the gap.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[chart-tools].tools[chart_render].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 654,
+              "preview": "\"Render a chart or diagram to a high-DPI PNG and return a rich\\nenvelope so the chat can also render the chart live.\\n\\nThis single tool drives both the live in",
+              "sha256": "30ab461156946604"
+            }
+          ],
+          "target": [
+            {
+              "chars": 646,
+              "preview": "\"Render a chart or diagram to a high-DPI PNG and return a rich envelope so the chat can also render the chart live.\\n\\nThis single tool drives both the live in-",
+              "sha256": "ce5506231c6ddb17"
+            }
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[files-tools].tools[edit_file].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 321,
+              "preview": "\"Edit files: one string in one file (replace mode), or many edits across many files (patch mode). Use this instead of `sed`, `awk`, or shell redirects. Returns ",
+              "sha256": "a63b3f551c87984b"
+            }
+          ],
+          "target": [
+            {
+              "chars": 402,
+              "preview": "\"Edit files: one string in one file (replace mode), or many edits across many files (patch mode). Use this instead of `sed`, `awk`, or shell redirects. Returns ",
+              "sha256": "5f2f439793c4073f"
+            }
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[files-tools].tools[read_file].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 270,
+              "preview": "\"Read file contents with line numbers. Use this instead of `cat`. Binary files are detected and rejected. Large files are auto-truncated at 2000 lines or 50KB —",
+              "sha256": "f4497fae5cebedb0"
+            }
+          ],
+          "target": [
+            {
+              "chars": 217,
+              "preview": "\"Read a UTF-8 text file from the workspace and return it as numbered lines. Relative paths are resolved against the workspace root; absolute paths must stay ins",
+              "sha256": "eedd01ed023973bc"
+            }
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[files-tools].tools[search_files].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 404,
+              "preview": "\"Search file contents OR find files by name. Use this instead of grep, find, or ls. target='content' (default) regex-greps inside files; target='files' globs fi",
+              "sha256": "c09ddde24bc92419"
+            }
+          ],
+          "target": [
+            {
+              "chars": 450,
+              "preview": "\"Search file contents OR find files by name. Use this instead of grep, find, or ls. target='content' (default) regex-greps inside files; target='files' globs fi",
+              "sha256": "6abc96b03d83a697"
+            }
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[files-tools].tools[write_file].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 324,
+              "preview": "\"Create or overwrite a file with the given content. Parent directories are created automatically. Use this instead of `cat > file` or shell redirects. For targe",
+              "sha256": "8e1fdb10b5475c20"
+            }
+          ],
+          "target": [
+            "\"Create or overwrite a UTF-8 text file inside the workspace. Parent directories are created automatically and the write is atomic. Paths outside the workspace root are refused.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[attach_file].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 650,
+              "preview": "\"Surface one or more local files to the user as clickable chips\\nin chat. **Any file type is accepted.**\\n\\nUse this whenever the user has asked for a file — a ",
+              "sha256": "91c937fb9b3c4c8a"
+            }
+          ],
+          "target": [
+            {
+              "chars": 558,
+              "preview": "\"Attach local files so the user gets a clickable download chip. Any file type is accepted. Text files also get an inline preview in the result (capped at 8 KiB)",
+              "sha256": "a08cac5ef3879797"
+            }
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[csv_append].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 221,
+              "preview": "\"Append rows to an existing CSV file.\\n\\nArgs:\\n    path: Absolute path to the CSV file\\n    rows: List of dictionaries to append, keys should match existing co",
+              "sha256": "fa2d5aa9966e9580"
+            }
+          ],
+          "target": [
+            "\"Append rows to an existing CSV file.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[csv_info].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            "\"Get metadata about a CSV file without reading all data.\\n\\nArgs:\\n    path: Absolute path to the CSV file\\n\\nReturns:\\n    dict with file metadata (columns, row count, file size)\""
+          ],
+          "target": [
+            "\"Get metadata about a CSV file without reading all data.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[csv_read].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 272,
+              "preview": "\"Read a CSV file and return its contents.\\n\\nArgs:\\n    path: Absolute path to the CSV file\\n    limit: Maximum number of rows to return (None = all rows)\\n    ",
+              "sha256": "40968e3256598cde"
+            }
+          ],
+          "target": [
+            "\"Read a CSV file and return its contents.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[csv_sql].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 397,
+              "preview": "\"Query a CSV file using SQL (powered by DuckDB).\\n\\nThe CSV file is loaded as a table named 'data'. Use standard SQL syntax.\\n\\nArgs:\\n    path: Absolute path t",
+              "sha256": "ede39c466c87901c"
+            }
+          ],
+          "target": [
+            "\"Query a CSV file using SQL (DuckDB). NOT AVAILABLE IN THIS BUILD: DuckDB is not ported, so this call is not supported and dispatches nothing. Read the file with csv_read and filter the rows instead.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[csv_write].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 243,
+              "preview": "\"Write data to a new CSV file.\\n\\nArgs:\\n    path: Absolute path to the CSV file\\n    columns: List of column names for the header\\n    rows: List of dictionari",
+              "sha256": "5ada962d78b5ea9f"
+            }
+          ],
+          "target": [
+            "\"Write data to a new CSV file.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[get_account_info].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 281,
+              "preview": "\"List connected accounts and their identities.\\n\\nCall with no arguments to see all connected accounts.\\nCall with provider=\\\"google\\\" to filter by provider typ",
+              "sha256": "cbd29fe1156a09da"
+            }
+          ],
+          "target": [
+            "\"List connected accounts and their identities.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[get_current_time].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 661,
+              "preview": "\"Get the current date and time.\\n\\nUse this tool when you need accurate current time, especially in\\nlong-running sessions or when precision matters (e.g., sche",
+              "sha256": "a69f3511b42a6b8e"
+            }
+          ],
+          "target": [
+            "\"Get the current date and time.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[image_generate].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 648,
+              "preview": "\"Generate or edit an image from a text prompt. Billed to Hive credits.\\n\\nRoutes through the Hive image service (OpenAI ``gpt-image-2``). The cost\\nis charged t",
+              "sha256": "f41f928ed94bf129"
+            }
+          ],
+          "target": [
+            "\"Generate or edit an image from a text prompt, billed to Hive credits. Provide reference images to edit or compose from existing pictures.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[pdf_read].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 646,
+              "preview": "\"Read and extract text from one or many PDF files.\\n\\nSingle-file mode (``file_path``) returns a flat result:\\n``{path, name, total_pages, pages_extracted, cont",
+              "sha256": "4ea331b508bd6089"
+            }
+          ],
+          "target": [
+            "\"Extract per-page text and metadata from a text-layer PDF. Scanned PDFs return an explicit needs_vision error; encrypted PDFs return an explicit error.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "mcp_servers[hive_tools].tools[web_scrape].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 647,
+              "preview": "\"Scrape and extract text content from a webpage.\\n\\nUses a headless browser to render JavaScript and bypass bot detection.\\nUse when you need to read the conten",
+              "sha256": "fe55343d99273f07"
+            }
+          ],
+          "target": [
+            "\"Extract title, description, headings, structured data and body text from a URL. Pages that only render with JavaScript return an explicit requires_browser error.\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "tool-description-text",
+          "path": "synthetic[ask_user].description",
+          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
+          "reference": [
+            {
+              "chars": 652,
+              "preview": "\"Use this tool when you need to ask the user questions during execution. Reach for it when:\\n\\n- The task is ambiguous and the user needs to choose an approach\\",
+              "sha256": "22778e993f141356"
+            }
+          ],
+          "target": [
+            "\"Pause and ask the user a structured question.\""
+          ]
+        }
+      ],
+      "endpoint": "queen_tools",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "Queen 工具库",
+      "method": "GET",
+      "path": "/api/queen/queen_growth/tools",
+      "path_digest": "0e044391ecd98cfb",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 2139,
+      "declared_differences": [],
+      "endpoint": "skills",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "技能目录",
+      "method": "GET",
+      "path": "/api/skills",
+      "path_digest": "5509b66f5830e993",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 55,
+      "declared_differences": [],
+      "endpoint": "config_llm",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "LLM 配置",
+      "method": "GET",
+      "path": "/api/config/llm",
+      "path_digest": "de7efbdc340c8c8e",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 294,
+      "declared_differences": [],
+      "endpoint": "models_overview",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "模型总览",
+      "method": "GET",
+      "path": "/api/models/overview",
+      "path_digest": "06052e0ef8f1f0f3",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 1379,
+      "declared_differences": [],
+      "endpoint": "credentials_specs",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "凭据规格目录",
+      "method": "GET",
+      "path": "/api/credentials/specs",
+      "path_digest": "bc1279b69eceef06",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 15,
+      "declared_differences": [],
+      "endpoint": "session_create",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "创建会话",
+      "method": "POST",
+      "path": "/api/sessions",
+      "path_digest": "5d9d00f222432356",
+      "reference_status": 201,
+      "status_equal": true,
+      "target_status": 201,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 15,
+      "declared_differences": [],
+      "endpoint": "sessions_list",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "会话列表",
+      "method": "GET",
+      "path": "/api/sessions",
+      "path_digest": "f9f19828df7ae731",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 15,
+      "declared_differences": [],
+      "endpoint": "session_detail",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "会话详情",
+      "method": "GET",
+      "path": "/api/sessions/{session}",
+      "path_digest": "5d9d00f222432356",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 77,
+      "declared_differences": [
+        {
+          "class": "value-level",
+          "exception_id": "sse-frame-model",
+          "path": "frames[2].envelope.data.model",
+          "reason": "Same litellm provider-prefix difference as the SSE frame golden.",
+          "reference": [
+            "\"openai/contract-probe-model\""
+          ],
+          "target": [
+            "\"contract-probe-model\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "sse-frame-system-prefix-sha",
+          "path": "frames[2].envelope.data.system_prefix_sha",
+          "reason": "System prompt text still differs (prompt-parity lane).",
+          "reference": [
+            "\"692b774c98c7\""
+          ],
+          "target": [
+            "\"885285cb1ffe\""
+          ]
+        }
+      ],
+      "endpoint": "session_events",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "会话事件流",
+      "method": "GET",
+      "path": "/api/sessions/{session}/events",
+      "path_digest": "86b02204eda419fc",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 121,
+      "declared_differences": [
+        {
+          "class": "intentional-structural",
+          "exception_id": "history-loop-max-iterations",
+          "path": "events[2].data.max_iterations",
+          "reason": "Python's permanent queen loop reports 999999; Go's per-turn loop reports its configured cap (50). Same field, same type.",
+          "reference": [
+            "999999"
+          ],
+          "target": [
+            "50"
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "history-context-usage",
+          "path": "events[4].data.breakdown.conversation_chars",
+          "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden.",
+          "reference": [
+            "27984"
+          ],
+          "target": [
+            "0"
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "history-context-usage",
+          "path": "events[4].data.breakdown.system_chars",
+          "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden.",
+          "reference": [
+            "21584"
+          ],
+          "target": [
+            "62554"
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "history-context-usage",
+          "path": "events[4].data.breakdown.tool_defs_chars",
+          "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden.",
+          "reference": [
+            "45171"
+          ],
+          "target": [
+            "52587"
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "history-context-usage",
+          "path": "events[4].data.estimated_tokens",
+          "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden.",
+          "reference": [
+            "31579"
+          ],
+          "target": [
+            "38380"
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "history-context-usage",
+          "path": "events[4].data.message_count",
+          "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden.",
+          "reference": [
+            "1"
+          ],
+          "target": [
+            "0"
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "history-context-usage",
+          "path": "events[4].data.usage_pct",
+          "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden.",
+          "reference": [
+            "18"
+          ],
+          "target": [
+            "21"
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "history-context-usage",
+          "path": "events[4].data.usage_ratio",
+          "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden.",
+          "reference": [
+            "0.1754"
+          ],
+          "target": [
+            "0.2132"
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "history-model",
+          "path": "events[6].data.model",
+          "reason": "Same litellm provider-prefix difference as the SSE frame golden.",
+          "reference": [
+            "\"openai/contract-probe-model\""
+          ],
+          "target": [
+            "\"contract-probe-model\""
+          ]
+        },
+        {
+          "class": "value-level",
+          "exception_id": "history-system-prefix-sha",
+          "path": "events[6].data.system_prefix_sha",
+          "reason": "System prompt text still differs (prompt-parity lane).",
+          "reference": [
+            "\"692b774c98c7\""
+          ],
+          "target": [
+            "\"885285cb1ffe\""
+          ]
+        }
+      ],
+      "endpoint": "session_events_history",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "事件历史",
+      "method": "GET",
+      "path": "/api/sessions/{session}/events/history",
+      "path_digest": "cc061a9582b0ba32",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 13,
+      "declared_differences": [],
+      "endpoint": "session_snapshot",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "会话快照",
+      "method": "GET",
+      "path": "/api/sessions/{session}/snapshot",
+      "path_digest": "71d1af172b34d94b",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 19,
+      "declared_differences": [
+        {
+          "class": "runtime-internal",
+          "exception_id": "event-bus-subscriptions",
+          "path": "event_bus.subscriptions",
+          "reason": "Number of live EventBus subscribers: scheduling/internal, not part of the HTTP contract (the existing semantic check already excludes it).",
+          "reference": [
+            "9"
+          ],
+          "target": [
+            "3"
+          ]
+        }
+      ],
+      "endpoint": "session_stats",
+      "expect_status": null,
+      "ignored_paths": 0,
+      "kind": "success",
+      "label": "会话统计",
+      "method": "GET",
+      "path": "/api/sessions/{session}/stats",
+      "path_digest": "8eb109a4322e6adf",
+      "reference_status": 200,
+      "status_equal": true,
+      "target_status": 200,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 1,
+      "declared_differences": [],
+      "endpoint": "session_detail_missing",
+      "expect_status": 404,
+      "ignored_paths": 0,
+      "kind": "failure",
+      "label": "会话不存在",
+      "method": "GET",
+      "path": "/api/sessions/session_20990101_000000_deadbeef",
+      "path_digest": "ca00fccfb408989e",
+      "reference_status": 404,
+      "status_equal": true,
+      "target_status": 404,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 1,
+      "declared_differences": [],
+      "endpoint": "session_create_invalid_body",
+      "expect_status": 400,
+      "ignored_paths": 0,
+      "kind": "failure",
+      "label": "创建会话-非对象体",
+      "method": "POST",
+      "path": "/api/sessions",
+      "path_digest": "ca00fccfb408989e",
+      "reference_status": 400,
+      "status_equal": true,
+      "target_status": 400,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    },
+    {
+      "compared_paths": 1,
+      "declared_differences": [],
+      "endpoint": "session_resolve_missed_conflict",
+      "expect_status": 409,
+      "ignored_paths": 0,
+      "kind": "failure",
+      "label": "未加载 Colony",
+      "method": "POST",
+      "path": "/api/sessions/{session}/colony/resolve_missed",
+      "path_digest": "ca00fccfb408989e",
+      "reference_status": 409,
+      "status_equal": true,
+      "target_status": 409,
+      "undeclared_differences": [],
+      "verdict": "PASS"
+    }
+  ],
+  "exceptions": [
+    {
+      "class": "value-level",
+      "endpoint": "queen_tools",
+      "id": "tool-description-text",
+      "path_regex": "(^|\\.)description$",
+      "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly."
+    },
+    {
+      "class": "value-level",
+      "endpoint": "session_events",
+      "id": "sse-frame-model",
+      "path_regex": "^frames\\[\\d+\\]\\.envelope\\.data\\.model$",
+      "reason": "Same litellm provider-prefix difference as the SSE frame golden."
+    },
+    {
+      "class": "value-level",
+      "endpoint": "session_events",
+      "id": "sse-frame-system-prefix-sha",
+      "path_regex": "^frames\\[\\d+\\]\\.envelope\\.data\\.system_prefix_sha$",
+      "reason": "System prompt text still differs (prompt-parity lane)."
+    },
+    {
+      "class": "value-level",
+      "endpoint": "session_events_history",
+      "id": "history-model",
+      "path_regex": "^events\\[\\d+\\]\\.data\\.model$",
+      "reason": "Same litellm provider-prefix difference as the SSE frame golden."
+    },
+    {
+      "class": "value-level",
+      "endpoint": "session_events_history",
+      "id": "history-system-prefix-sha",
+      "path_regex": "^events\\[\\d+\\]\\.data\\.system_prefix_sha$",
+      "reason": "System prompt text still differs (prompt-parity lane)."
+    },
+    {
+      "class": "intentional-structural",
+      "endpoint": "session_events_history",
+      "id": "history-loop-max-iterations",
+      "path_regex": "^events\\[\\d+\\]\\.data\\.max_iterations$",
+      "reason": "Python's permanent queen loop reports 999999; Go's per-turn loop reports its configured cap (50). Same field, same type."
+    },
+    {
+      "class": "value-level",
+      "endpoint": "session_events_history",
+      "id": "history-context-usage",
+      "path_regex": "^events\\[\\d+\\]\\.data\\.(usage_ratio|usage_pct|estimated_tokens|message_count|breakdown\\..*)$",
+      "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden."
+    },
+    {
+      "class": "runtime-internal",
+      "endpoint": "session_stats",
+      "id": "event-bus-subscriptions",
+      "path_regex": "^event_bus\\.subscriptions$",
+      "reason": "Number of live EventBus subscribers: scheduling/internal, not part of the HTTP contract (the existing semantic check already excludes it)."
+    }
+  ],
+  "generated_at": "2026-11-21T11:24:46+08:00",
+  "ignored": [
+    {
+      "class": "runtime-internal",
+      "endpoint": "health",
+      "id": "health-resources",
+      "path_regex": "^resources\\.",
+      "reason": "Per-process resource gauges (memory/renderer sampling), not API contract fields."
+    }
+  ],
+  "reference": {
+    "commit": "72a7308e470c32996d14d4e4b3c0538150332046",
+    "implementation": "python",
+    "last_core_commit": "856854659269aa4c9fcfc8ae89ff956eaff75b66",
+    "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd",
+    "version": "hive 1.0.14"
+  },
+  "schema": "hive-api-values/1",
+  "target": {
+    "commit": "72a7308e470c32996d14d4e4b3c0538150332046",
+    "implementation": "go_hive",
+    "version": "hive 1.0.26-go.1"
+  },
+  "totals": {
+    "declared_differences": 37,
+    "endpoints": 17,
+    "fail": 0,
+    "failure_paths": 3,
+    "ignored_paths": 3,
+    "pass": 17,
+    "paths_compared": 4910,
+    "success_paths": 14,
+    "undeclared_differences": 0
+  },
+  "verdict": "PASS"
+}

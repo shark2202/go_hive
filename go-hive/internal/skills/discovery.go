@@ -62,7 +62,11 @@ var (
 
 func bundledSkillsRoot() (string, error) {
 	bundledOnce.Do(func() {
-		root, err := os.MkdirTemp("", "hive-bundled-skills-")
+		// The catalog's compact-mode threshold (5000 chars) counts absolute
+		// locations, so keep the extraction root short: a long TMPDIR prefix
+		// (e.g. macOS /private/var/folders/...) otherwise flips the default
+		// bundled catalog to compact, hiding every description.
+		root, err := os.MkdirTemp("", "hive-sk-")
 		if err != nil {
 			bundledErr = err
 			return

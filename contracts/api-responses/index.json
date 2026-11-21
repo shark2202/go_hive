@@ -1,25 +1,25 @@
 {
   "schema": "hive-api-responses/1",
-  "generated_at": "2026-11-21T00:58:55+08:00",
+  "generated_at": "2026-11-21T11:24:30+08:00",
   "direction": "reference(python) -> target(go_hive)",
   "reference": {
     "implementation": "python",
     "version": "hive 1.0.14",
-    "commit": "445494a3033c3036eaea044505b838d101257b56",
-    "last_core_commit": "a756b1e51765bc75b0a40e362859452a0a54081b",
+    "commit": "72a7308e470c32996d14d4e4b3c0538150332046",
+    "last_core_commit": "856854659269aa4c9fcfc8ae89ff956eaff75b66",
     "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd"
   },
   "target": {
     "implementation": "go_hive",
     "version": "hive 1.0.26-go.1",
-    "commit": "445494a3033c3036eaea044505b838d101257b56"
+    "commit": "72a7308e470c32996d14d4e4b3c0538150332046"
   },
   "probe": {
     "queen_id": "queen_growth",
     "llm": {
       "provider": "openai",
       "model": "contract-probe-model",
-      "api_base": "http://127.0.0.1:59422/v1",
+      "api_base": "http://127.0.0.1:58772/v1",
       "key_env": "HIVE_CONTRACT_PROBE_KEY",
       "note": "local OpenAI-compatible stub; deterministic kickoff turn, no vendor call, no network"
     },
@@ -36,7 +36,9 @@
       "reference_file": "reference/health.json",
       "target_file": "target/health.json",
       "reference_shape": "shapes/reference/health.shape.json",
-      "target_shape": "shapes/target/health.shape.json"
+      "target_shape": "shapes/target/health.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "queen_profiles",
@@ -48,7 +50,9 @@
       "reference_file": "reference/queen_profiles.json",
       "target_file": "target/queen_profiles.json",
       "reference_shape": "shapes/reference/queen_profiles.shape.json",
-      "target_shape": "shapes/target/queen_profiles.shape.json"
+      "target_shape": "shapes/target/queen_profiles.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "queen_tools",
@@ -60,7 +64,9 @@
       "reference_file": "reference/queen_tools.json",
       "target_file": "target/queen_tools.json",
       "reference_shape": "shapes/reference/queen_tools.shape.json",
-      "target_shape": "shapes/target/queen_tools.shape.json"
+      "target_shape": "shapes/target/queen_tools.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "skills",
@@ -72,7 +78,9 @@
       "reference_file": "reference/skills.json",
       "target_file": "target/skills.json",
       "reference_shape": "shapes/reference/skills.shape.json",
-      "target_shape": "shapes/target/skills.shape.json"
+      "target_shape": "shapes/target/skills.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "config_llm",
@@ -84,7 +92,9 @@
       "reference_file": "reference/config_llm.json",
       "target_file": "target/config_llm.json",
       "reference_shape": "shapes/reference/config_llm.shape.json",
-      "target_shape": "shapes/target/config_llm.shape.json"
+      "target_shape": "shapes/target/config_llm.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "models_overview",
@@ -96,7 +106,9 @@
       "reference_file": "reference/models_overview.json",
       "target_file": "target/models_overview.json",
       "reference_shape": "shapes/reference/models_overview.shape.json",
-      "target_shape": "shapes/target/models_overview.shape.json"
+      "target_shape": "shapes/target/models_overview.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "credentials_specs",
@@ -108,7 +120,9 @@
       "reference_file": "reference/credentials_specs.json",
       "target_file": "target/credentials_specs.json",
       "reference_shape": "shapes/reference/credentials_specs.shape.json",
-      "target_shape": "shapes/target/credentials_specs.shape.json"
+      "target_shape": "shapes/target/credentials_specs.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "session_create",
@@ -120,7 +134,9 @@
       "reference_file": "reference/session_create.json",
       "target_file": "target/session_create.json",
       "reference_shape": "shapes/reference/session_create.shape.json",
-      "target_shape": "shapes/target/session_create.shape.json"
+      "target_shape": "shapes/target/session_create.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "sessions_list",
@@ -132,7 +148,9 @@
       "reference_file": "reference/sessions_list.json",
       "target_file": "target/sessions_list.json",
       "reference_shape": "shapes/reference/sessions_list.shape.json",
-      "target_shape": "shapes/target/sessions_list.shape.json"
+      "target_shape": "shapes/target/sessions_list.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "session_detail",
@@ -144,7 +162,9 @@
       "reference_file": "reference/session_detail.json",
       "target_file": "target/session_detail.json",
       "reference_shape": "shapes/reference/session_detail.shape.json",
-      "target_shape": "shapes/target/session_detail.shape.json"
+      "target_shape": "shapes/target/session_detail.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "session_events",
@@ -156,7 +176,9 @@
       "reference_file": "reference/session_events.json",
       "target_file": "target/session_events.json",
       "reference_shape": "shapes/reference/session_events.shape.json",
-      "target_shape": "shapes/target/session_events.shape.json"
+      "target_shape": "shapes/target/session_events.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "session_events_history",
@@ -168,7 +190,9 @@
       "reference_file": "reference/session_events_history.json",
       "target_file": "target/session_events_history.json",
       "reference_shape": "shapes/reference/session_events_history.shape.json",
-      "target_shape": "shapes/target/session_events_history.shape.json"
+      "target_shape": "shapes/target/session_events_history.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "session_snapshot",
@@ -180,7 +204,9 @@
       "reference_file": "reference/session_snapshot.json",
       "target_file": "target/session_snapshot.json",
       "reference_shape": "shapes/reference/session_snapshot.shape.json",
-      "target_shape": "shapes/target/session_snapshot.shape.json"
+      "target_shape": "shapes/target/session_snapshot.shape.json",
+      "kind": "success",
+      "expect_status": null
     },
     {
       "endpoint": "session_stats",
@@ -192,13 +218,60 @@
       "reference_file": "reference/session_stats.json",
       "target_file": "target/session_stats.json",
       "reference_shape": "shapes/reference/session_stats.shape.json",
-      "target_shape": "shapes/target/session_stats.shape.json"
+      "target_shape": "shapes/target/session_stats.shape.json",
+      "kind": "success",
+      "expect_status": null
+    },
+    {
+      "endpoint": "session_detail_missing",
+      "label": "会话不存在",
+      "method": "GET",
+      "path": "/api/sessions/session_20990101_000000_deadbeef",
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_file": "reference/session_detail_missing.json",
+      "target_file": "target/session_detail_missing.json",
+      "reference_shape": "shapes/reference/session_detail_missing.shape.json",
+      "target_shape": "shapes/target/session_detail_missing.shape.json",
+      "kind": "failure",
+      "expect_status": 404
+    },
+    {
+      "endpoint": "session_create_invalid_body",
+      "label": "创建会话-非对象体",
+      "method": "POST",
+      "path": "/api/sessions",
+      "reference_status": 400,
+      "target_status": 400,
+      "reference_file": "reference/session_create_invalid_body.json",
+      "target_file": "target/session_create_invalid_body.json",
+      "reference_shape": "shapes/reference/session_create_invalid_body.shape.json",
+      "target_shape": "shapes/target/session_create_invalid_body.shape.json",
+      "kind": "failure",
+      "expect_status": 400
+    },
+    {
+      "endpoint": "session_resolve_missed_conflict",
+      "label": "未加载 Colony",
+      "method": "POST",
+      "path": "/api/sessions/{session}/colony/resolve_missed",
+      "reference_status": 409,
+      "target_status": 409,
+      "reference_file": "reference/session_resolve_missed_conflict.json",
+      "target_file": "target/session_resolve_missed_conflict.json",
+      "reference_shape": "shapes/reference/session_resolve_missed_conflict.shape.json",
+      "target_shape": "shapes/target/session_resolve_missed_conflict.shape.json",
+      "kind": "failure",
+      "expect_status": 409
     }
   ],
   "totals": {
-    "endpoints": 14,
-    "pass": 14,
+    "endpoints": 17,
+    "pass": 17,
     "fail": 0,
+    "success_paths": 14,
+    "failure_paths": 3,
+    "status_mismatch": 0,
     "missing_in_target": 0,
     "extra_in_target": 0,
     "type_mismatch": 0,

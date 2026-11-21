@@ -8,7 +8,7 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-21T00:58:55+08:00",
+  "captured_at": "2026-11-21T11:24:30+08:00",
   "canonical": {
     "events": [
       {
@@ -79,14 +79,14 @@
             "image_blocks": 0,
             "image_tokens": 0,
             "system_chars": 62554,
-            "tool_defs_chars": 52075
+            "tool_defs_chars": 52587
           },
-          "estimated_tokens": 38209,
+          "estimated_tokens": 38380,
           "max_context_tokens": 180000,
           "message_count": 0,
           "trigger": "iteration_start",
           "usage_pct": 21,
-          "usage_ratio": 0.2123
+          "usage_ratio": 0.2132
         },
         "execution_id": null,
         "node_id": "queen",
@@ -117,7 +117,7 @@
         "data": {
           "cache_creation_tokens": 0,
           "cached_tokens": 0,
-          "cost_usd": 0,
+          "cost_usd": 0.0,
           "history_anchor_idx": -1,
           "input_tokens": 0,
           "iteration": 0,
@@ -212,7 +212,7 @@
     "events[].data.snapshot": "string",
     "events[].data.cache_creation_tokens": "number(int)",
     "events[].data.cached_tokens": "number(int)",
-    "events[].data.cost_usd": "number(int)",
+    "events[].data.cost_usd": "number(float)",
     "events[].data.history_anchor_idx": "number(int)",
     "events[].data.input_tokens": "number(int)",
     "events[].data.model": "string",
@@ -236,5 +236,6 @@
   "counts": {
     "events": 9
   },
+  "shape_ignore": [],
   "notes": []
 }

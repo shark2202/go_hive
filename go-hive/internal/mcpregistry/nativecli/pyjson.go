@@ -15,6 +15,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/aden-hive/hive-go/internal/tools"
 )
 
 // Field is one member of an Ordered object.
@@ -251,45 +253,10 @@ func appendPyString(builder *strings.Builder, value string) {
 
 // formatPyFloat mirrors Python's repr(float): the shortest round-tripping
 // decimal, rendered positionally for exponents in [-4, 16) and in exponent
-// form otherwise.
+// form otherwise. The formatter itself lives in internal/tools so the tool
+// result serializer and this CLI marshaller cannot drift apart.
 func formatPyFloat(value float64) string {
-	shortest := strconv.FormatFloat(value, 'g', -1, 64)
-	if !strings.ContainsAny(shortest, "eE") {
-		if !strings.Contains(shortest, ".") {
-			return shortest + ".0"
-		}
-		return shortest
-	}
-	exponent, err := strconv.Atoi(shortest[strings.IndexAny(shortest, "eE")+1:])
-	if err != nil || exponent < -4 || exponent >= 16 {
-		normalized := strconv.FormatFloat(value, 'e', -1, 64)
-		return fixExponent(normalized)
-	}
-	positional := strconv.FormatFloat(value, 'f', -1, 64)
-	if !strings.Contains(positional, ".") {
-		positional += ".0"
-	}
-	return positional
-}
-
-// fixExponent pads the exponent to at least two digits ("1e+6" -> "1e+06"),
-// which is what Python prints.
-func fixExponent(value string) string {
-	index := strings.IndexAny(value, "eE")
-	if index < 0 {
-		return value
-	}
-	mantissa := value[:index]
-	exponent := value[index+1:]
-	sign := ""
-	if strings.HasPrefix(exponent, "+") || strings.HasPrefix(exponent, "-") {
-		sign = exponent[:1]
-		exponent = exponent[1:]
-	}
-	if len(exponent) == 1 {
-		exponent = "0" + exponent
-	}
-	return mantissa + "e" + sign + exponent
+	return tools.FormatPyFloat(value)
 }
 
 func sortedObject(source map[string]any) Ordered {

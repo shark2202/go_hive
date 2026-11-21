@@ -1,0 +1,420 @@
+{
+ "search_tools_inventory": {
+  "tool_call_id": "call_0",
+  "tool": "search_tools",
+  "arguments": "{\"query\": \"inventory\"}",
+  "content": "{\"disabled\":[],\"loaded\":[\"ask_user\",\"attach_file\",\"browser_setup\",\"collect_result\",\"credentials\",\"get_account_info\",\"get_current_time\",\"image_generate\",\"pdf_read\",\"search_messages\",\"search_tools\",\"sentinel_setup\",\"suggest_colony\",\"task_create\",\"task_get\",\"task_list\",\"task_update\",\"terminal_exec\",\"terminal_glob\",\"terminal_job_logs\",\"terminal_job_manage\",\"terminal_output_get\",\"terminal_rg\",\"write_skill\"],\"note\":\"Current session configuration only. Loaded tools are callable; searchable tools need loading; disabled tools are excluded by the allowlist; unavailable tools are configured but not registered. This does not verify credentials or service connectivity.\",\"searchable\":[\"chart_render\",\"credential_status\",\"csv_append\",\"csv_info\",\"csv_read\",\"csv_write\",\"dns_security_scan\",\"edit_file\",\"excel_append\",\"excel_info\",\"excel_read\",\"excel_search\",\"excel_sheet_list\",\"excel_write\",\"get_playbook_status\",\"get_worker_status\",\"http_headers_scan\",\"inject_message\",\"list_browser_profiles\",\"list_playbook_runs\",\"list_skills\",\"list_triggers\",\"list_worker_questions\",\"port_scan\",\"read_file\",\"remove_trigger\",\"reply_to_worker\",\"risk_score\",\"run_playbook\",\"run_worker\",\"search_files\",\"search_wikipedia\",\"set_trigger\",\"skill_view\",\"ssl_tls_scan\",\"stop_playbook\",\"stop_worker\",\"subdomain_enumerate\",\"tech_stack_detect\",\"terminal_job_start\",\"terminal_pty_close\",\"terminal_pty_open\",\"terminal_pty_run\",\"tracker_query\",\"tracker_register_writable\",\"tracker_sql\",\"tracker_upsert\",\"update_worker_profile\",\"web_scrape\",\"web_search\",\"write_file\"],\"unavailable\":[]}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "search_tools_load": {
+  "tool_call_id": "call_1",
+  "tool": "search_tools",
+  "arguments": "{\"query\": \"select:chart_render,web_scrape\"}",
+  "content": "{\"already_loaded\":[],\"loaded\":[\"chart_render\",\"web_scrape\"],\"note\":\"Loaded. These tools are callable from your next step and stay loaded for the rest of this session.\",\"tools\":[{\"description\":\"Render a chart or diagram to a high-DPI PNG and return a rich\",\"name\":\"chart_render\"},{\"description\":\"Scrape and extract text content from a webpage.\",\"name\":\"web_scrape\"}]}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "search_tools_keyword": {
+  "tool_call_id": "call_2",
+  "tool": "search_tools",
+  "arguments": "{\"query\": \"chart\"}",
+  "content": "{\"already_loaded\":[\"chart_render\"],\"loaded\":[],\"note\":\"chart_render is already loaded and callable right now — invoke it directly on your next step. No search_tools call is needed.\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "search_tools_already_loaded": {
+  "tool_call_id": "call_3",
+  "tool": "search_tools",
+  "arguments": "{\"query\": \"select:chart_render\"}",
+  "content": "{\"already_loaded\":[\"chart_render\"],\"loaded\":[],\"note\":\"chart_render is already loaded and callable right now — invoke it directly on your next step. No search_tools call is needed.\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "search_tools_load_read_file": {
+  "tool_call_id": "call_4",
+  "tool": "search_tools",
+  "arguments": "{\"query\": \"select:read_file,skill_view\"}",
+  "content": "{\"already_loaded\":[],\"loaded\":[\"read_file\",\"skill_view\"],\"note\":\"Loaded. These tools are callable from your next step and stay loaded for the rest of this session.\",\"tools\":[{\"description\":\"Read file contents with line numbers. Use this instead of `cat`. Binary files are detected and rejected. Large files are auto-truncated at 2000 lines or 50KB —…\",\"name\":\"read_file\"},{\"description\":\"Read one skill's SKILL.md, or a supporting file inside its folder. Use it after list_skills (or when the task names a skill) to load the operational procedure…\",\"name\":\"skill_view\"}]}\n\n<system-reminder>\n[task_reminder] You've done several steps of real work but haven't created any tasks. If this is multi-step work, track it: create tasks with task_create and keep their status current (in_progress when you start, completed the moment a step is done). One task per atomic action/batch — don't umbrella-track.\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "get_current_time_utc": {
+  "tool_call_id": "call_5",
+  "tool": "get_current_time",
+  "arguments": "{\"timezone\": \"UTC\"}",
+  "content": "{\"date\": \"2026-11-21\", \"datetime\": \"2026-11-21T03:19:00.193627+00:00\", \"day_of_week\": \"Saturday\", \"time\": \"03:19:00\", \"timezone\": \"UTC\", \"unix_timestamp\": 1795231140}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "get_current_time_offset": {
+  "tool_call_id": "call_6",
+  "tool": "get_current_time",
+  "arguments": "{\"timezone\": \"Asia/Kolkata\"}",
+  "content": "{\"date\": \"2026-11-21\", \"datetime\": \"2026-11-21T08:49:00.235851+05:30\", \"day_of_week\": \"Saturday\", \"time\": \"08:49:00\", \"timezone\": \"Asia/Kolkata\", \"unix_timestamp\": 1795231140}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "get_current_time_bad_tz": {
+  "tool_call_id": "call_7",
+  "tool": "get_current_time",
+  "arguments": "{\"timezone\": \"Not/AZone\"}",
+  "content": "{\"error\": \"Invalid timezone: Not/AZone\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "task_create_missing_goal": {
+  "tool_call_id": "call_8",
+  "tool": "task_create",
+  "arguments": "{\"tasks\": [{\"subject\": \"Probe task\", \"description\": \"golden probe\"}]}",
+  "content": "{\"error\": \"task_create on a fresh task list requires a `goal` — one sentence describing what this plan is for, in the user's terms. The goal anchors the plan so a later batch that drifts from it can be recognised as a real pivot. Call task_create again with `goal` set.\", \"success\": false}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "task_create_ok": {
+  "tool_call_id": "call_9",
+  "tool": "task_create",
+  "arguments": "{\"goal\": \"Probe the tool output contract\", \"tasks\": [{\"subject\": \"Probe task\", \"description\": \"golden probe\"}]}",
+  "content": "{\"message\": \"Created 1 task(s): #1. Mark #1 in_progress before starting it.\", \"session_id\": \"session_20261121_111859_146f653a\", \"success\": true, \"task_ids\": [1], \"tasks\": [{\"active_form\": null, \"blocked_by\": [], \"blocks\": [], \"created_at\": 1795231140.37288, \"description\": \"golden probe\", \"id\": 1, \"metadata\": {}, \"owner\": null, \"status\": \"pending\", \"subject\": \"Probe task\", \"updated_at\": 1795231140.37288}]}\n\n<system-reminder>\nGoal: Probe the tool output contract\n\nHere are the existing tasks:\n\n#1. [pending] Probe task\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "task_create_second": {
+  "tool_call_id": "call_10",
+  "tool": "task_create",
+  "arguments": "{\"tasks\": [{\"subject\": \"Second probe task\", \"description\": \"golden probe 2\"}]}",
+  "content": "{\"message\": \"Created 1 task(s): #2. Mark #2 in_progress before starting it.\", \"session_id\": \"session_20261121_111859_146f653a\", \"success\": true, \"task_ids\": [2], \"tasks\": [{\"active_form\": null, \"blocked_by\": [], \"blocks\": [], \"created_at\": 1795231140.424001, \"description\": \"golden probe 2\", \"id\": 2, \"metadata\": {}, \"owner\": null, \"status\": \"pending\", \"subject\": \"Second probe task\", \"updated_at\": 1795231140.424001}]}\n\n<system-reminder>\nGoal: Probe the tool output contract\n\nHere are the existing tasks:\n\n#1. [pending] Probe task\n#2. [pending] Second probe task\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "task_list_after_create": {
+  "tool_call_id": "call_11",
+  "tool": "task_list",
+  "arguments": "{}",
+  "content": "{\"count\": 2, \"goal\": \"Probe the tool output contract\", \"lines\": [\"Goal: Probe the tool output contract\", \"#1 [pending] Probe task\", \"#2 [pending] Second probe task\"], \"session_id\": \"session_20261121_111859_146f653a\", \"success\": true, \"tasks\": [{\"active_form\": null, \"blocked_by\": [], \"blocks\": [], \"created_at\": 1795231140.37288, \"description\": \"golden probe\", \"id\": 1, \"metadata\": {}, \"owner\": null, \"status\": \"pending\", \"subject\": \"Probe task\", \"updated_at\": 1795231140.37288}, {\"active_form\": null, \"blocked_by\": [], \"blocks\": [], \"created_at\": 1795231140.424001, \"description\": \"golden probe 2\", \"id\": 2, \"metadata\": {}, \"owner\": null, \"status\": \"pending\", \"subject\": \"Second probe task\", \"updated_at\": 1795231140.424001}]}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "task_get_found": {
+  "tool_call_id": "call_12",
+  "tool": "task_get",
+  "arguments": "{\"id\": \"1\"}",
+  "content": "{\"session_id\": \"session_20261121_111859_146f653a\", \"success\": true, \"task\": {\"active_form\": null, \"blocked_by\": [], \"blocks\": [], \"created_at\": 1795231140.37288, \"description\": \"golden probe\", \"id\": 1, \"metadata\": {}, \"owner\": null, \"status\": \"pending\", \"subject\": \"Probe task\", \"updated_at\": 1795231140.37288}, \"task_id\": 1}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "task_get_missing_numeric": {
+  "tool_call_id": "call_13",
+  "tool": "task_get",
+  "arguments": "{\"id\": \"999\"}",
+  "content": "{\"message\": \"Task #999 not found.\", \"session_id\": \"session_20261121_111859_146f653a\", \"success\": false, \"task_id\": 999}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "task_get_bad_id": {
+  "tool_call_id": "call_14",
+  "tool": "task_get",
+  "arguments": "{\"id\": \"no-such-task\"}",
+  "content": "ERROR: {\"error\": \"invalid task id: 'no-such-task' (expected an integer)\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "task_update_completed": {
+  "tool_call_id": "call_15",
+  "tool": "task_update",
+  "arguments": "{\"id\": \"1\", \"status\": \"completed\"}",
+  "content": "{\"fields\": [\"status\"], \"message\": \"Task #1 updated. Fields changed: status. Next pending: #2 — \\\"Second probe task\\\". Mark it in_progress before starting.\", \"session_id\": \"session_20261121_111859_146f653a\", \"success\": true, \"task\": {\"active_form\": null, \"blocked_by\": [], \"blocks\": [], \"created_at\": 1795231140.37288, \"description\": \"golden probe\", \"id\": 1, \"metadata\": {}, \"owner\": null, \"status\": \"completed\", \"subject\": \"Probe task\", \"updated_at\": 1795231140.640921}, \"task_id\": 1}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "task_update_bad_status": {
+  "tool_call_id": "call_16",
+  "tool": "task_update",
+  "arguments": "{\"id\": \"2\", \"status\": \"bogus\"}",
+  "content": "ERROR: {\"error\": \"'bogus' is not a valid TaskStatus\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "read_file_ok": {
+  "tool_call_id": "call_17",
+  "tool": "read_file",
+  "arguments": "{\"path\": \"/tmp/tool-output-capture/ws/probe.txt\"}",
+  "content": "     1\tprobe file content\n     2\tsecond line\n\n<system-reminder>\nGoal: Probe the tool output contract\n\nHere are the existing tasks:\n\n#1. [completed] Probe task\n#2. [pending] Second probe task\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "read_file_missing": {
+  "tool_call_id": "call_18",
+  "tool": "read_file",
+  "arguments": "{\"path\": \"/tmp/tool-output-capture/ws/missing.txt\"}",
+  "content": "Error: File not found: /tmp/tool-output-capture/ws/missing.txt",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "read_file_escape": {
+  "tool_call_id": "call_19",
+  "tool": "read_file",
+  "arguments": "{\"path\": \"../../../../../../etc/passwd\"}",
+  "content": "Error: path escapes the sandbox root: ../../../../../../etc/passwd",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "read_file_dir": {
+  "tool_call_id": "call_20",
+  "tool": "read_file",
+  "arguments": "{\"path\": \"/tmp/tool-output-capture/ws\"}",
+  "content": "Directory: /tmp/tool-output-capture/ws (2 entries)\n  probe.pdf\n  probe.txt",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "attach_file_ok": {
+  "tool_call_id": "call_21",
+  "tool": "attach_file",
+  "arguments": "{\"paths\": [\"probe.txt\"]}",
+  "content": "{\"attached\":[{\"bytes\":31,\"filename\":\"probe.txt\",\"hive_attachment_url\":\"hive-attachment://data/attachments/probe.txt\",\"kind\":\"text\",\"mime\":\"text/plain\",\"path\":\"probe.txt\",\"resolved\":\"/tmp/tool-output-capture/go-home/queens/queen_growth/sessions/session_20261121_111859_146f653a/data/attachments/probe.txt\"}],\"errors\":[]}\n[attached probe.txt (text/plain)]\n\nprobe file content\nsecond line\n",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "attach_file_missing": {
+  "tool_call_id": "call_22",
+  "tool": "attach_file",
+  "arguments": "{\"paths\": [\"missing.png\"]}",
+  "content": "{\"attached\":[],\"errors\":[{\"error\":\"file not found\",\"path\":\"missing.png\"}]}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "pdf_read_missing": {
+  "tool_call_id": "call_23",
+  "tool": "pdf_read",
+  "arguments": "{\"file_path\": \"missing.pdf\"}",
+  "content": "{\"error\": \"PDF file not found: missing.pdf\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "pdf_read_both_args": {
+  "tool_call_id": "call_24",
+  "tool": "pdf_read",
+  "arguments": "{\"file_path\": \"probe.pdf\", \"files\": [\"probe.pdf\"]}",
+  "content": "{\"error\": \"Pass either file_path or files, not both.\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "pdf_read_ok": {
+  "tool_call_id": "call_25",
+  "tool": "pdf_read",
+  "arguments": "{\"file_path\": \"probe.pdf\"}",
+  "content": "{\"char_count\": 31, \"content\": \"--- Page 1 ---\\nGolden probe PDF\", \"metadata\": {\"author\": null, \"created\": null, \"creator\": null, \"modified\": null, \"producer\": null, \"subject\": null, \"title\": null}, \"name\": \"probe.pdf\", \"needs_vision_pages\": [1], \"next_step\": \"Pages with little or no text were flagged needs_vision. Attach the original PDF to a vision-capable model for those pages.\", \"pages\": [{\"needs_vision\": true, \"number\": 1, \"text\": \"Golden probe PDF\"}], \"pages_extracted\": 1, \"path\": \"/private/tmp/tool-output-capture/ws/probe.pdf\", \"terminal_hint\": \"pdftotext '\\u003cpath\\u003e' - | head -200        text extraction (whole file)\\n  pdfinfo '\\u003cpath\\u003e'                        page count + metadata\\n  pdfimages -list '\\u003cpath\\u003e'                image inventory (scanned docs)\\n  qpdf --decrypt '\\u003cpath\\u003e' /tmp/decrypted.pdf  decrypt first when encrypted\", \"total_pages\": 1}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "pdf_read_ok_multi": {
+  "tool_call_id": "call_26",
+  "tool": "pdf_read",
+  "arguments": "{\"files\": [\"probe.pdf\", \"probe.pdf\"]}",
+  "content": "{\"pdfs\": [{\"char_count\": 31, \"content\": \"--- Page 1 ---\\nGolden probe PDF\", \"metadata\": {\"author\": null, \"created\": null, \"creator\": null, \"modified\": null, \"producer\": null, \"subject\": null, \"title\": null}, \"name\": \"probe.pdf\", \"needs_vision_pages\": [1], \"next_step\": \"Pages with little or no text were flagged needs_vision. Attach the original PDF to a vision-capable model for those pages.\", \"pages\": [{\"needs_vision\": true, \"number\": 1, \"text\": \"Golden probe PDF\"}], \"pages_extracted\": 1, \"path\": \"/private/tmp/tool-output-capture/ws/probe.pdf\", \"terminal_hint\": \"pdftotext '\\u003cpath\\u003e' - | head -200        text extraction (whole file)\\n  pdfinfo '\\u003cpath\\u003e'                        page count + metadata\\n  pdfimages -list '\\u003cpath\\u003e'                image inventory (scanned docs)\\n  qpdf --decrypt '\\u003cpath\\u003e' /tmp/decrypted.pdf  decrypt first when encrypted\", \"total_pages\": 1}, {\"char_count\": 31, \"content\": \"--- Page 1 ---\\nGolden probe PDF\", \"metadata\": {\"author\": null, \"created\": null, \"creator\": null, \"modified\": null, \"producer\": null, \"subject\": null, \"title\": null}, \"name\": \"probe.pdf\", \"needs_vision_pages\": [1], \"next_step\": \"Pages with little or no text were flagged needs_vision. Attach the original PDF to a vision-capable model for those pages.\", \"pages\": [{\"needs_vision\": true, \"number\": 1, \"text\": \"Golden probe PDF\"}], \"pages_extracted\": 1, \"path\": \"/private/tmp/tool-output-capture/ws/probe.pdf\", \"terminal_hint\": \"pdftotext '\\u003cpath\\u003e' - | head -200        text extraction (whole file)\\n  pdfinfo '\\u003cpath\\u003e'                        page count + metadata\\n  pdfimages -list '\\u003cpath\\u003e'                image inventory (scanned docs)\\n  qpdf --decrypt '\\u003cpath\\u003e' /tmp/decrypted.pdf  decrypt first when encrypted\", \"total_pages\": 1}]}\n\n<system-reminder>\n[task_reminder] The task tools haven't been used in several turns. If you're working on tasks that would benefit from tracked progress:\n  - Mark the in_progress task `completed` THE MOMENT it's done, in the same response as the next step's tool call. Don't batch completions.\n  - If you've finished work that wasn't on the list, add a task_create + task_update completed pair so the panel reflects it.\n  - If you're umbrella-tracking ('reply to all posts' as one task), break it into one task per atomic action — one `task_create` call with one entry/batch per action.\n  - If any open task no longer applies (user pivoted, scope shifted, created in error), delete it via `task_update` with status='deleted'. Don't leave stale items on the list.\n\nGoal: Probe the tool output contract\n\nHere are the existing tasks:\n\n#1. [completed] Probe task\n#2. [pending] Second probe task\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "pdf_read_bad_pages": {
+  "tool_call_id": "call_27",
+  "tool": "pdf_read",
+  "arguments": "{\"file_path\": \"probe.pdf\", \"pages\": \"abc\"}",
+  "content": "{\"error\": \"Invalid page format: 'abc'. Use 'all', '5', '1-10', or '1,3,5'.\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "search_messages_none": {
+  "tool_call_id": "call_28",
+  "tool": "search_messages",
+  "arguments": "{\"pattern\": \"zzz-no-such-token-zzz\"}",
+  "content": "{\"matches\": [], \"total_matches\": 0}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "search_messages_spill": {
+  "tool_call_id": "call_29",
+  "tool": "search_messages",
+  "arguments": "{\"pattern\": \"probe\"}",
+  "content": "Tool `search_messages` returned 58,338 characters (too large for context). Full result at: /tmp/tool-output-capture/go-home/queens/queen_growth/sessions/session_20261121_111859_146f653a/data/search_messages_1.txt\nWARNING: the preview below is a SAMPLE only — do NOT draw counts, totals, or conclusions from it.\n\nPreview (truncated):\n{\"matches\": [{\"session\":\"session_20261121_111859_146f653a\",\"session_started_at\":\"2026-11-21T11:18:59\",\"turn\":[{\"role\":\"user\",\"content\":\"run the capture sequence\"},{\"role\":\"tool\",\"content\":\"{\\\"disabled\\\":[],\\\"loaded\\\":[\\\"ask_user\\\",\\\"attach_file\\\",\\\"browser_setup\\\",\\\"collect_result\\\",\\\"credentials\\\",\\\"get_account_info\\\",\\\"get_current_time\\\",\\\"image_generate\\\",\\\"pdf_read\\\",\\\"search_messages\\\",…[417 chars omitted]…open\\\",\\\"terminal_pty_run\\\",\\\"tracker_query\\\",\\\"tracker_register_writable\\\",\\\"tracker_sql\\\",\\\"tracker_upsert\\\",\\\"update_worker_profile\\\",\\\"web_scrape\\\",\\\"web_search\\\",\\\"write_file\\\"],\\\"unavailable\\\":[]}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[],\\\"loaded\\\":[\\\"chart_render\\\",\\\"web_scrape\\\"],\\\"note\\\":\\\"Loaded. T…[191 chars omitted]…ion\\\":\\\"Scrape and extract text content from a webpage.\\\",\\\"name\\\":\\\"web_scrape\\\"}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[\\\"chart_render\\\"],\\\"loaded\\\":[],\\\"note\\\":\\\"chart_render is…[22 chars omitted]…nvoke it directly on your next step. No search_tools call is needed.\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[\\\"chart_render\\\"],\\\"loaded\\\":[],\\\"note\\\":\\\"chart_render is…[22 chars omitted]…nvoke it directly on your next step. No search_tools call is needed.\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[],\\\"loaded\\\":[\\\"read_file\\\",\\\"skill_view\\\"],\\\"note\\\":\\\"Loaded. These tools are callable from your next step and stay…[297 chars omitted]…ts folder. Use it after list_skills (or when the task names a skill) to load the operational procedure…\\\",\\\"name\\\":\\\"skill_view\\\"}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"date\\\": \\\"2026-11-21\\\", \\\"datetime\\\": \\\"2026-11-21T03:19:00.193627+00:00\\\",…[6 chars omitted]…\\\", \\\"time\\\": \\\"03:19:00\\\", \\\"timezone\\\": \\\"UTC\\\", \\\"unix_timestamp\\\": 1795231140}\"},{\"role\":\"tool\",\"content\":\"{\\\"date\\\": \\\"2026-11-21\\\", \\\"datetime\\\": \\\"2026-11-21T08:49:00.235851+05:30\\\",…[15 chars omitted]… \\\"08:49:00\\\", \\\"timezone\\\": \\\"Asia/Kolkata\\\", \\\"unix_timestamp\\\": 1795231140}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"Invalid timezone: Not/AZone\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"task_create on a fresh task list requires a `goal` — one s…[129 chars omitted]…eal pivot. Call task_create again with `goal` set.\\\", \\\"success\\\": false}\"},{\"role\":\"tool\",\"content\":\"…[249 chars omitted]…0.37288, \\\"description\\\": \\\"golden probe\\\", \\\"id\\\": 1, \\\"metadata\\\": {}, \\\"own…[90 chars omitted]…\",\"is_hit\":true},{\"role\":\"tool\",\"content\":\"{\\\"message\\\": \\\"Created 1 task(s): #2. Mark #2 in_progress before starting it.\\\", \\\"session_id\\\"…[218 chars omitted]…l, \\\"status\\\": \\\"pending\\\", \\\"subject\\\": \\\"Second probe task\\\", \\\"updated_at\\\": 1795231140.424001}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"count\\\": 2, \\\"goal\\\": \\\"Probe the tool output contract\\\", \\\"lines\\\": [\\\"Goal: Probe the tool output contract\\\", \\\"#1 [pending] Probe task\\\", \\\"#2 [pending] Second probe task…[379 chars omitted]…01, \\\"description\\\": \\\"golden probe 2\\\", \\\"id\\\": 2, \\\"metadata\\\": {}, \\\"owner\\\": null, \\\"status\\\": \\\"pending\\\", \\\"subject\\\": \\\"Second probe task\\\", \\\"updated_at\\\": 1795231140.424001}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"session_id\\\": \\\"session_20261121_111859_146f653a\\\", \\\"success\\\": true, \\\"…[165 chars omitted]…subject\\\": \\\"Probe task\\\", \\\"updated_at\\\": 1795231140.37288}, \\\"task_id\\\": 1}\"},{\"role\":\"tool\",\"content\":\"{\\\"message\\\": \\\"Task #999 not found.\\\", \\\"session_id\\\": \\\"session_20261121_111859_146f653a\\\", \\\"success\\\": false, \\\"task_id\\\": 999}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"invalid task id: 'no-such-task' (expected an integer)\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"fields\\\": [\\\"status\\\"], \\\"message\\\": \\\"Task #1 updated. Fields changed: status. Next pending: #2 — \\\\\\\"Second p…[252 chars omitted]…er\\\": null, \\\"status\\\": \\\"completed\\\", \\\"subject\\\": \\\"Probe task\\\", \\\"updated_at\\\": 1795231140.640921}, \\\"task_id\\\": 1}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"'bogus' is not a valid TaskStatus\\\"}\"},{\"role\":\"tool\",\"content\":\"     1\\tprobe file content\\n     2\\tsecond line\"},{\"role\":\"tool\",\"content\":\"Error: File not found: /tmp/tool-output-capture/ws/missing.txt\"},{\"role\":\"tool\",\"content\":\"Error: path escapes the sandbox root: ../../../../../../etc/passwd\"},{\"role\":\"tool\",\"content\":\"Directory: /tmp/tool-output-capture/ws (2 entries)\\n  probe.pdf\\n  probe.txt\"},{\"role\":\"tool\",\"content\":\"{\\\"attached\\\":[{\\\"bytes\\\":31,\\\"filename\\\":\\\"probe.txt\\\",\\\"hive_attachment_url\\\":\\\"hive-attach…[201 chars omitted]…}],\\\"errors\\\":[]}\\n[attached probe.txt (text/plain)]\\n\\nprobe file content\\nsecond line\\n\"},{\"role\":\"tool\",\"content\":\"{\\\"attached\\\":[],\\\"errors\\\":[{\\\"error\\\":\\\"file not found\\\",\\\"path\\\":\\\"missing.png\\\"}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"PDF file not found: missing.pdf\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"Pass either file_path or files, not both.\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"char_count\\\": 31, \\\"content\\\": \\\"--- Page 1 ---\\\\nGolden probe PDF\\\", \\\"metadata\\\": {\\\"author\\\": null, \\\"created\\\": null, \\\"creator\\\": null, \\\"modified\\\": null, \\\"producer\\\": null, \\\"subject\\\": null,…[417 chars …",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "terminal_exec_ok": {
+  "tool_call_id": "call_30",
+  "tool": "terminal_exec",
+  "arguments": "{\"command\": \"printf 'hi\\\\n'\"}",
+  "content": "exit_code: 0\nshell_kind: direct\nstdout:\nhi\nstderr:\n",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "skill_view_missing": {
+  "tool_call_id": "call_31",
+  "tool": "skill_view",
+  "arguments": "{\"name\": \"no-such-skill\"}",
+  "content": "ERROR: {\"available\":[],\"error\":\"skill_view: skill 'no-such-skill' was not found in the colony or queen skills directories\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "credentials_list": {
+  "tool_call_id": "call_32",
+  "tool": "credentials",
+  "arguments": "{\"action\": \"list\"}",
+  "content": "ERROR: {\"error\": \"not_implemented\", \"message\": \"credentials is not ported as a model tool in this build. Use the `hive-cred` CLI from terminal_exec instead: `hive-cred browse --json`, `hive-cred inspect \\u003cid\\u003e --json`, `hive-cred token \\u003cid\\u003e --account \\u003calias\\u003e`.\", \"tool\": \"credentials\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "credentials_usage": {
+  "tool_call_id": "call_33",
+  "tool": "credentials",
+  "arguments": "{}",
+  "content": "ERROR: {\"error\": \"not_implemented\", \"message\": \"credentials is not ported as a model tool in this build. Use the `hive-cred` CLI from terminal_exec instead: `hive-cred browse --json`, `hive-cred inspect \\u003cid\\u003e --json`, `hive-cred token \\u003cid\\u003e --account \\u003calias\\u003e`.\", \"tool\": \"credentials\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "sentinel_setup": {
+  "tool_call_id": "call_34",
+  "tool": "sentinel_setup",
+  "arguments": "{\"channel\": \"email\"}",
+  "content": "ERROR: {\"error\": \"not_implemented\", \"message\": \"sentinel_setup is not ported as a model tool in this build. Sentinel notifications are configured through the desktop/UI connector for the colony.\", \"tool\": \"sentinel_setup\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "collect_result": {
+  "tool_call_id": "call_35",
+  "tool": "collect_result",
+  "arguments": "{\"handle\": \"probe\"}",
+  "content": "ERROR: {\"error\": \"not_implemented\", \"message\": \"collect_result is part of the Python default surface, but this build does not run background tool handles. Long-running terminal work is collected with terminal_job_logs(job_id, wait_until_exit=true), or terminal_job_manage to stop it.\", \"tool\": \"collect_result\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "suggest_colony": {
+  "tool_call_id": "call_36",
+  "tool": "suggest_colony",
+  "arguments": "{}",
+  "content": "ERROR: {\"error\": \"not_implemented\", \"message\": \"suggest_colony is not ported as a model tool in this build. Create the colony from the UI; this chat keeps working in place.\", \"tool\": \"suggest_colony\"}\n\n<system-reminder>\n[task_reminder] The task tools haven't been used in several turns. If you're working on tasks that would benefit from tracked progress:\n  - Mark the in_progress task `completed` THE MOMENT it's done, in the same response as the next step's tool call. Don't batch completions.\n  - If you've finished work that wasn't on the list, add a task_create + task_update completed pair so the panel reflects it.\n  - If you're umbrella-tracking ('reply to all posts' as one task), break it into one task per atomic action — one `task_create` call with one entry/batch per action.\n  - If any open task no longer applies (user pivoted, scope shifted, created in error), delete it via `task_update` with status='deleted'. Don't leave stale items on the list.\n\nGoal: Probe the tool output contract\n\nHere are the existing tasks:\n\n#1. [completed] Probe task\n#2. [pending] Second probe task\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ },
+ "unloaded_tool_call": {
+  "tool_call_id": "call_37",
+  "tool": "excel_read",
+  "arguments": "{\"path\": \"probe.xlsx\"}",
+  "content": "ERROR: {\"error\":\"Tool 'excel_read' is available but its schema is not loaded yet. Call search_tools(query=\\\"select:excel_read\\\") first, then retry — it stays loaded for the rest of the session.\"}",
+  "message_keys": [
+   "content",
+   "role",
+   "tool_call_id"
+  ]
+ }
+}

@@ -33,7 +33,7 @@ PY_ROOT   ?= ../../core
 OFFLINE    = CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod
 PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check tool-output-check ci clean help
 
 all: ci
 
@@ -50,6 +50,7 @@ help:
 	@echo "  make parity-targets 校验注解引用的 Python 测试真实存在"
 	@echo "  make tool-contract-check  校验 contracts/tool-definitions.json 自洽"
 	@echo "  make tool-contract-report 对拍冻结契约与当前工具面（只报告，不阻断）"
+	@echo "  make tool-output-check    工具输出 golden 产物自洽检查（docs/e2e-assets/tool-output）"
 	@echo "  make ci          fmt-check + vet + test + cross + parity + parity-targets"
 
 test:
@@ -130,6 +131,16 @@ tool-surface-check:
 		cd .. && uv run --no-project python scripts/gen_tool_surface_flat.py --check; \
 	else \
 		echo "tool-surface-check: SKIP — uv 不可用"; \
+	fi
+
+# 工具输出 golden（docs/e2e-assets/tool-output/）的自洽检查：从已提交的
+# raw 抓取重新规范化，results.json / diff.json / summary.txt 任一漂移即失败。
+# 重新抓取两侧运行时见 go_hive/scripts/capture_tool_output.py（需要两侧可执行）。
+tool-output-check:
+	@if command -v uv >/dev/null 2>&1; then \
+		cd .. && uv run --no-project python scripts/tool_output_golden.py report --check; \
+	else \
+		echo "tool-output-check: SKIP — uv 不可用"; \
 	fi
 
 # 接线守护：关键运行时调用点（内存注入、事件日志、会话工具安装）缺失即失败。

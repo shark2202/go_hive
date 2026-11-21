@@ -217,6 +217,23 @@ type RequestMessageRecorder interface {
 	NoteRequestMessages(count int)
 }
 
+// ToolBatchContextObserver is the optional companion seam to LoopObserver for
+// the context readouts upstream publishes while a tool batch drains: one
+// post_tool_call frame after each tool result lands in the conversation, and
+// one post_tool_results frame once the whole batch is stored. The frames are
+// emitted in call order after the corresponding tool_call_completed, matching
+// upstream's in-loop publication; observers that do not implement the seam
+// simply skip the readouts.
+//
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (publish_context_usage)
+// Parity: framework/agent_loop/internals/event_publishing.py::publish_context_usage
+type ToolBatchContextObserver interface {
+	// ToolResultStored fires after one executed tool result was appended.
+	ToolResultStored()
+	// ToolBatchStored fires once after the batch's results were appended.
+	ToolBatchStored()
+}
+
 type CurrentToolNamer interface {
 	CurrentToolNames() []string
 }

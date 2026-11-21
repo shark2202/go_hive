@@ -8,7 +8,7 @@
   "version": "hive 1.0.14",
   "status": 200,
   "content_type": "application/json; charset=utf-8",
-  "captured_at": "2026-11-21T00:58:55+08:00",
+  "captured_at": "2026-11-21T11:24:30+08:00",
   "canonical": {
     "activity": "awaiting_user",
     "awaiting_input": true,
@@ -44,5 +44,6 @@
   "counts": {
     "current_tool_calls": 0
   },
+  "shape_ignore": [],
   "notes": []
 }

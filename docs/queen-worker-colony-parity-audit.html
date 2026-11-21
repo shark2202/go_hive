@@ -254,6 +254,11 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td class="num">18</td><td>Improvement · Reflexion</td><td>工具错误回注 + <code>[Judge feedback]</code>；<code>TestJudgeRetryRunsOneMoreTurn</code></td></tr>
 <tr><td class="num">21</td><td>Memory 三层 + reflection/recall/past/timeline</td><td>上限 200/4KB、EveryTurns=6、每轮 ≤6 条摘录、timeline 写侧接通（flag 门控）</td></tr>
 </tbody></table></div>
+<div class="callout ok"><b>提示词文本对照（prompt-parity 车道，2026-11-21）：</b>skill catalog 渲染 golden 10/10 逐字一致
+（live 首轮注入的 catalog 段两侧各 3,985 chars 逐字）；相位过滤、description 截断（含 NBSP）、symlink location
+已修；turn_context 注入正文/包装逐字一致（45 chars）；queen identity+soul 前缀 2,578 chars 逐字。
+首轮 system prompt 的剩余差异是结构项（未移植的 queen 基础提示词 / Go 预激注入），见 GAP-12 与
+<code>docs/prompt-parity.md</code>。证据：<code>docs/e2e-assets/prompt-catalog/</code>。</div>
 </section>
 
 <section id="gaps"><h2><span class="num">04</span>缺口 / 未验证清单（按严重度）</h2>
@@ -280,6 +285,8 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td>GAP-10</td><td><span class="pill info">P2</span></td><td><b>破坏性操作未实机</b>（#17）：<code>janitor run --execute</code>、colony delete（purge）在发布验证中未执行。</td><td>真实数据上的删除/归档语义（保留结构、失败回滚、活跃会话下挂）只有 fake 服务单测。</td><td><code>support-matrix.md</code> §5；T</td></tr>
 
 <tr><td>GAP-11</td><td><span class="pill info">P2</span></td><td><b>文档旧口径</b>：<code>docs/support-matrix.md:30</code> 写「<code>resume_worker_ids</code> 未实现」（与代码不符）；<code>11-product-requirements.md</code> 是 2026-11-18 历史快照（自述「历史快照」），引用其「Colony 进行中」会误判当前状态。</td><td>按旧文档排期会重复劳动或漏报；建议修 support-matrix 那一行并注明快照日期。</td><td>⌕ 文档对照</td></tr>
+
+<tr><td>GAP-12</td><td><span class="pill warn">P1</span></td><td><b>首轮 system prompt 装配不同</b>（prompt-parity 车道）：Python queen 的静态提示词 = identity+soul+相位基础提示词（character core / INDEPENDENT role / tools / System Rules / communication / memory，18,822 chars）+ credentials 段（184）；Go chat queen 只发 identity+soul，再叠加通用 builder 的 tool-gated 预激注入（browser-automation 48,944 + terminal-tools-foundations 10,674 chars）。</td><td>Python 独有段缺失使 Go queen 缺少 plan/ask_user/pivot/记忆/沟通等行为契约；Go 独有段把两篇 skill body 每轮塞进静态前缀（context 成本、且与 catalog 按需加载重复）。公共前缀（identity+soul，2,578 chars）已逐字一致；两侧均无 CJK。</td><td>C + live 双跑：<code>docs/prompt-parity.md</code> §3、<code>docs/e2e-assets/prompt-catalog/system-prompt.sections.json</code>、<code>system-prompt.{python,go}.txt</code></td></tr>
 
 </tbody></table></div>
 <p class="sub">另有两项「已知差异而非缺口」，保留口径：MiniMax 非流式（明确回退）；81 个第三方凭据模块未验证（无凭据，用户已定不阻塞）。</p>
@@ -317,6 +324,12 @@ go test ./internal/qmail ./internal/server -run 'TestQueenMail' -count=1
 
 # #21/#22/#23 Memory / Skills / Soul
 go test ./internal/memory ./internal/skills ./internal/soul -count=1
+
+# prompt-parity：catalog/reminder/turn_context 渲染 golden + live 双跑（GAP-12 的阴性/阳性证据）
+cd /Users/mac/hive  # 或本 worktree 根
+uv run --offline python go_hive/scripts/prompt_catalog_parity.py      # 期望 10/10 identical，exit 0
+uv run --offline python go_hive/scripts/prompt_system_parity.py       # 期望 catalog 段 IDENTICAL
+cd go_hive/go-hive && go test ./internal/skills ./internal/agentloop ./internal/server -run 'ParityGolden|TurnContextBody' -count=1
 
 # #24 LongMemEval（fixture 管线；真实分数需要数据集与 judge 凭据）
 go test ./internal/longmemeval ./internal/cli -count=1

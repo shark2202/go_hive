@@ -166,6 +166,34 @@ def count_arrays(value: Any, prefix: str = "", out: dict[str, int] | None = None
     return out
 
 
+def strip_paths(value: Any, dotted_paths: list[str]) -> Any:
+    """Return a copy with the given dotted paths removed.
+
+    Used to drop probe-declared non-contract fields (per-process sampler
+    readings) from the frozen shape: a field that only exists when the sampler
+    happens to fire must not become part of the contract, or the committed
+    snapshot would demand it from every later run.
+    """
+    if not dotted_paths:
+        return value
+    removals = [path.split(".") for path in dotted_paths]
+    return _strip_paths(value, removals)
+
+
+def _strip_paths(value: Any, removals: list[list[str]]) -> Any:
+    if isinstance(value, dict):
+        out: dict[str, Any] = {}
+        for key, item in value.items():
+            if any(len(path) == 1 and path[0] == key for path in removals):
+                continue
+            nested = [path[1:] for path in removals if len(path) > 1 and path[0] == key]
+            out[key] = _strip_paths(item, nested) if nested else item
+        return out
+    if isinstance(value, list):
+        return [_strip_paths(item, removals) for item in value]
+    return value
+
+
 def array_container(path: str) -> str:
     index = path.rfind("[]")
     return path[:index] if index >= 0 else ""
@@ -369,6 +397,10 @@ ENDPOINT_MESSAGES: dict[str, str] = {
     "session_events_history": "EventsHistoryResponse",
     "session_snapshot": "SnapshotResponse",
     "session_stats": "SessionStatsResponse",
+    # Failure paths share the `{"error": "..."}` body.
+    "session_detail_missing": "ErrorResponse",
+    "session_create_invalid_body": "ErrorResponse",
+    "session_resolve_missed_conflict": "ErrorResponse",
 }
 
 # Struct-typed fields accept arbitrary sub-paths (free-form JSON maps).

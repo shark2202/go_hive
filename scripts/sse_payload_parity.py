@@ -23,6 +23,12 @@ Outputs (default ``go_hive/docs/e2e-assets/sse-payload-parity``):
   diff.json                per-type field matrix + sequence diff
   summary.txt              one-screen human summary
 
+``history`` is captured before the session is stopped (the contractual log);
+``history_after_stop`` keeps the shutdown tail as evidence but is never
+compared. Frame-level golden assertions live in
+``go_hive/contracts/sse-frames/`` and are replayed by
+``scripts/sse_frames_canonical.py --check``.
+
 The probe is opt-in: it is not part of ``make ci`` and never touches the
 network beyond 127.0.0.1. Run it by hand:
 
@@ -830,6 +836,15 @@ class Probe:
             side.captures["replay"] = replay[side.key].stop()
             print(f"[sse-parity] {side.label}: replay frames={len(side.captures['replay'].frames)}")
 
+        # 5. full history for the payload matrix, captured BEFORE the session
+        #    is stopped: the log then ends on the settled scenario. The
+        #    shutdown tail is read again below as separate evidence, so it can
+        #    never leak a racy stop frame into the contractual history.
+        for side in sides:
+            events = self.history_events(side)
+            side.captures["history"] = [normalise_history_event(event) for event in (events or [])]
+            print(f"[sse-parity] {side.label}: history events={len(side.captures['history'])}")
+
         # 6. replay capture stays closed; stop the session (its live tail is
         #    recorded from a second short capture so shutdown noise does not
         #    contaminate the settled replay sequence).
@@ -846,13 +861,13 @@ class Probe:
             side.captures["stop"] = tail[side.key].stop()
             print(f"[sse-parity] {side.label}: stop-tail frames={len(side.captures['stop'].frames)}")
 
-        # 7. full history for the payload matrix (includes the opening block
-        #    that is never replayed to subscribers). History events are
-        #    normalised exactly like streamed frames.
+        # 7. post-stop history: shutdown-tail evidence only, never compared.
         for side in sides:
             events = self.history_events(side)
-            side.captures["history"] = [normalise_history_event(event) for event in (events or [])]
-            print(f"[sse-parity] {side.label}: history events={len(side.captures['history'])}")
+            side.captures["history_after_stop"] = [normalise_history_event(event) for event in (events or [])]
+            print(
+                f"[sse-parity] {side.label}: history_after_stop events={len(side.captures['history_after_stop'])}"
+            )
 
     # -- outputs -----------------------------------------------------------
 
@@ -877,6 +892,7 @@ class Probe:
                 if isinstance(capture, SseCapture)
             },
             "history": side.captures.get("history", []),
+            "history_after_stop": side.captures.get("history_after_stop", []),
         }
         path = self.out_dir / f"capture-{side.key}.json"
         path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

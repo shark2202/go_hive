@@ -1,0 +1,76 @@
+{
+  "cases": {
+    "caps.compact": {
+      "go_chars": 3088,
+      "go_lines": 85,
+      "identical": true,
+      "python_chars": 3088,
+      "python_lines": 85
+    },
+    "caps.none": {
+      "go_chars": 3966,
+      "go_lines": 61,
+      "identical": true,
+      "python_chars": 3966,
+      "python_lines": 61
+    },
+    "edge.colony": {
+      "go_chars": 4169,
+      "go_lines": 109,
+      "identical": true,
+      "python_chars": 4169,
+      "python_lines": 109
+    },
+    "edge.independent": {
+      "go_chars": 3893,
+      "go_lines": 101,
+      "identical": true,
+      "python_chars": 3893,
+      "python_lines": 101
+    },
+    "edge.none": {
+      "go_chars": 4987,
+      "go_lines": 133,
+      "identical": true,
+      "python_chars": 4987,
+      "python_lines": 133
+    },
+    "reminder.block": {
+      "go_chars": 222,
+      "go_lines": 8,
+      "identical": true,
+      "python_chars": 222,
+      "python_lines": 8
+    },
+    "small.colony": {
+      "go_chars": 4808,
+      "go_lines": 81,
+      "identical": true,
+      "python_chars": 4808,
+      "python_lines": 81
+    },
+    "small.independent": {
+      "go_chars": 4394,
+      "go_lines": 76,
+      "identical": true,
+      "python_chars": 4394,
+      "python_lines": 76
+    },
+    "small.none": {
+      "go_chars": 3615,
+      "go_lines": 89,
+      "identical": true,
+      "python_chars": 3615,
+      "python_lines": 89
+    },
+    "turn-context": {
+      "go_chars": 45,
+      "go_lines": 1,
+      "identical": true,
+      "python_chars": 45,
+      "python_lines": 1
+    }
+  },
+  "identical": 10,
+  "total": 10
+}

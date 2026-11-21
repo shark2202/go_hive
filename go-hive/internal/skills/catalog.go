@@ -138,7 +138,7 @@ func renderSkillXML(skills []*ParsedSkill, compact bool) string {
 }
 
 func CapDescription(description string) string {
-	text := strings.TrimSpace(description)
+	text := pyStrip(description)
 	if text == "" {
 		return text
 	}
@@ -157,7 +157,28 @@ func CapDescription(description string) string {
 	if len(runes) <= DescriptionCapChars {
 		return text
 	}
-	return strings.TrimRight(string(runes[:DescriptionCapChars-1]), " \t\n\r\f\v") + "…"
+	return pyRStrip(string(runes[:DescriptionCapChars-1])) + "…"
+}
+
+// pyStrip / pyRStrip mirror Python str.strip() / str.rstrip() (no-argument)
+// for the description cap. Go's strings.TrimSpace uses unicode.IsSpace, which
+// omits the C0 separators U+001C..U+001F that Python's str.isspace() also
+// strips. The catalog text must be byte-identical to the Python reference, so
+// the cap trims with Python's whitespace set (this fixed a trailing NBSP kept
+// in the truncated description).
+func pyStrip(text string) string {
+	return strings.TrimFunc(text, pyIsSpace)
+}
+
+func pyRStrip(text string) string {
+	return strings.TrimRightFunc(text, pyIsSpace)
+}
+
+func pyIsSpace(r rune) bool {
+	if r >= 0x1c && r <= 0x1f {
+		return true
+	}
+	return unicode.IsSpace(r)
 }
 
 func xmlEscape(s string) string {

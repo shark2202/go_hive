@@ -1,0 +1,420 @@
+{
+  "frame_count": 17,
+  "frames": [
+    {
+      "data": {
+        "activity": "awaiting_user",
+        "awaiting_input": true,
+        "current_execution_id": null,
+        "current_tool_calls": [],
+        "interrupt_cause": null,
+        "interrupted": false,
+        "is_executing": false,
+        "last_event_at": "<last_event_at>",
+        "last_event_seq": "<last_event_seq>",
+        "last_queen_event_at": "<last_queen_event_at>",
+        "park_reason": "turn_done",
+        "pending_questions": null,
+        "queen_busy_reason": "awaiting_input",
+        "snapshot_seq": "<snapshot_seq>"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": null,
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 0,
+      "stream": "replay",
+      "type": "session_snapshot"
+    },
+    {
+      "data": {
+        "content": "PAYLOAD_PARITY_OK",
+        "inner_turn": 0,
+        "iteration": 0,
+        "snapshot": "PAYLOAD_PARITY_OK"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 1,
+      "stream": "replay",
+      "type": "client_output_delta"
+    },
+    {
+      "data": {
+        "cache_creation_tokens": 0,
+        "cached_tokens": 0,
+        "cost_usd": 0.0,
+        "history_anchor_idx": -1,
+        "input_tokens": 0,
+        "iteration": 0,
+        "message_count": 1,
+        "model": "openai/sse-parity-probe-model",
+        "output_tokens": 0,
+        "stop_reason": "stop",
+        "system_prefix_sha": "692b774c98c7",
+        "system_suffix_sha": "e3b0c44298fc"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 2,
+      "stream": "replay",
+      "type": "llm_turn_complete"
+    },
+    {
+      "data": {
+        "content": "payload parity probe",
+        "image_count": 0
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": "<correlation_id>",
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 3,
+      "stream": "replay",
+      "type": "client_input_received"
+    },
+    {
+      "data": {
+        "seq": "<seq>"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": "<correlation_id>",
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 4,
+      "stream": "replay",
+      "type": "client_input_committed"
+    },
+    {
+      "data": {
+        "content": "PAYLOAD_PARITY_OK",
+        "inner_turn": 0,
+        "iteration": 1,
+        "snapshot": "PAYLOAD_PARITY_OK"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 5,
+      "stream": "replay",
+      "type": "client_output_delta"
+    },
+    {
+      "data": {
+        "cache_creation_tokens": 0,
+        "cached_tokens": 0,
+        "cost_usd": 0.0,
+        "history_anchor_idx": -1,
+        "input_tokens": 0,
+        "iteration": 1,
+        "message_count": 3,
+        "model": "openai/sse-parity-probe-model",
+        "output_tokens": 0,
+        "stop_reason": "stop",
+        "system_prefix_sha": "692b774c98c7",
+        "system_suffix_sha": "e3b0c44298fc"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 6,
+      "stream": "replay",
+      "type": "llm_turn_complete"
+    },
+    {
+      "data": {
+        "content": "ASK_ME payload parity question",
+        "image_count": 0
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": "<correlation_id>",
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 7,
+      "stream": "replay",
+      "type": "client_input_received"
+    },
+    {
+      "data": {
+        "seq": "<seq>"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": "<correlation_id>",
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 8,
+      "stream": "replay",
+      "type": "client_input_committed"
+    },
+    {
+      "data": {
+        "tool_index": 1,
+        "tool_input": {
+          "questions": [
+            {
+              "id": "<id>",
+              "options": [
+                "blue",
+                "green"
+              ],
+              "prompt": "Which color should the probe use?"
+            }
+          ]
+        },
+        "tool_name": "ask_user",
+        "tool_use_id": "<tool_use_id>"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 9,
+      "stream": "replay",
+      "type": "tool_call_started"
+    },
+    {
+      "data": {
+        "is_error": false,
+        "result": "Waiting for user input...",
+        "tool_index": 1,
+        "tool_name": "ask_user",
+        "tool_use_id": "<tool_use_id>"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 10,
+      "stream": "replay",
+      "type": "tool_call_completed"
+    },
+    {
+      "data": {
+        "cache_creation_tokens": 0,
+        "cached_tokens": 0,
+        "cost_usd": 0.0,
+        "history_anchor_idx": -1,
+        "input_tokens": 0,
+        "iteration": 2,
+        "message_count": 5,
+        "model": "openai/sse-parity-probe-model",
+        "output_tokens": 0,
+        "stop_reason": "tool_calls",
+        "system_prefix_sha": "692b774c98c7",
+        "system_suffix_sha": "e3b0c44298fc"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 11,
+      "stream": "replay",
+      "type": "llm_turn_complete"
+    },
+    {
+      "data": {
+        "content": "blue",
+        "image_count": 0
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": "<correlation_id>",
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 12,
+      "stream": "replay",
+      "type": "client_input_received"
+    },
+    {
+      "data": {
+        "seq": "<seq>"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": "<correlation_id>",
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 13,
+      "stream": "replay",
+      "type": "client_input_committed"
+    },
+    {
+      "data": {
+        "content": "PAYLOAD_PARITY_OK",
+        "inner_turn": 0,
+        "iteration": 3,
+        "snapshot": "PAYLOAD_PARITY_OK"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 14,
+      "stream": "replay",
+      "type": "client_output_delta"
+    },
+    {
+      "data": {
+        "cache_creation_tokens": 0,
+        "cached_tokens": 0,
+        "cost_usd": 0.0,
+        "history_anchor_idx": -1,
+        "input_tokens": 0,
+        "iteration": 3,
+        "message_count": 8,
+        "model": "openai/sse-parity-probe-model",
+        "output_tokens": 0,
+        "stop_reason": "stop",
+        "system_prefix_sha": "692b774c98c7",
+        "system_suffix_sha": "e3b0c44298fc"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 15,
+      "stream": "replay",
+      "type": "llm_turn_complete"
+    },
+    {
+      "data": {
+        "park_reason": "turn_done"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": "<execution_id>",
+        "node_id": "queen",
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 16,
+      "stream": "replay",
+      "type": "client_input_requested"
+    }
+  ],
+  "implementation": "python",
+  "schema": "hive-sse-frames/1",
+  "side": "reference",
+  "stream": "replay",
+  "version": "hive 1.0.14"
+}

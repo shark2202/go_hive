@@ -1,0 +1,159 @@
+--- user ---
+<system-reminder>
+The following tools are available but their schemas are NOT loaded — calling them directly will fail. Use search_tools with query "select:<name>[,<name>...]" to load their schemas before calling them (or pass keywords to search). Loaded tools stay loaded for the rest of the session:
+chart_render
+credential_status
+csv_append
+csv_info
+csv_read
+csv_write
+dns_security_scan
+edit_file
+excel_append
+excel_info
+excel_read
+excel_search
+excel_sheet_list
+excel_write
+get_playbook_status
+get_worker_status
+http_headers_scan
+inject_message
+list_browser_profiles
+list_playbook_runs
+list_skills
+list_triggers
+list_worker_questions
+port_scan
+read_file
+remove_trigger
+reply_to_worker
+risk_score
+run_playbook
+run_worker
+search_files
+search_wikipedia
+set_trigger
+skill_view
+ssl_tls_scan
+stop_playbook
+stop_worker
+subdomain_enumerate
+tech_stack_detect
+terminal_job_start
+terminal_pty_close
+terminal_pty_open
+terminal_pty_run
+tracker_query
+tracker_register_writable
+tracker_sql
+tracker_upsert
+update_worker_profile
+web_scrape
+web_search
+write_file
+
+## Skills (mandatory)
+Before replying: scan <available_skills> <name> entries.
+- If the user message contains <read_skill>NAME</read_skill> tags: these are
+  explicit requests. Read EVERY tagged skill's SKILL.md with
+  `terminal_exec("cat <location>")` before planning or other tool use — the
+  tags override the "clearly applies" test and the one-skill limit below.
+- Otherwise, if exactly one skill clearly applies: read its SKILL.md at <location> with `terminal_exec("cat <location>")`, then follow it.
+- If multiple could apply: choose the most specific one, then read/follow it.
+- If none clearly apply: do not read any SKILL.md.
+- The read prevails over ask pressure: reading SKILL.md is pre-flight, not
+  real work. Do it BEFORE any clarifying question (ask_user) and before any
+  task plan — never defer it behind either.
+Constraints: never read more than one skill up front unless <read_skill> tags name more; only read after selecting.
+- When a skill drives external API writes (Gmail, Calendar, GitHub, etc.),
+  assume rate limits: prefer fewer larger writes, avoid tight one-item loops,
+  serialize bursts when possible, and respect 429/Retry-After.
+- When a selected skill references a relative path, resolve it against the
+  skill directory (parent of SKILL.md) and use that absolute path in tool commands.
+
+<available_skills>
+  <skill>
+    <name>alpha-plain</name>
+    <location><HIVE_HOME>/skills/alpha-plain/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>cjk-描述</name>
+    <location><HIVE_HOME>/skills/cjk-描述/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>colon-fixup</name>
+    <location><HIVE_HOME>/skills/colon-fixup/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>cross-agent-demo</name>
+    <location><HOME>/.agents/skills/cross-agent-demo/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>cut-304</name>
+    <location><HIVE_HOME>/skills/cut-304/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>decimal-version</name>
+    <location><HIVE_HOME>/skills/decimal-version/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>dup-name</name>
+    <location><HIVE_HOME>/queens/queen_growth/skills/dup-name/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>escaped-xml</name>
+    <location><HIVE_HOME>/skills/escaped-xml/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>exact-300</name>
+    <location><HIVE_HOME>/skills/exact-300/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.browser-automation</name>
+    <location><BUNDLED>/_default_skills/browser-automation/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.image-generation</name>
+    <location><BUNDLED>/_default_skills/image-generation/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.pdf</name>
+    <location><BUNDLED>/_default_skills/pdf/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.slack-notifications-setup</name>
+    <location><BUNDLED>/_default_skills/slack-notifications-setup/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.telegram-notifications-setup</name>
+    <location><BUNDLED>/_default_skills/telegram-notifications-setup/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.writing-hive-skills</name>
+    <location><BUNDLED>/_default_skills/writing-hive-skills/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>long-single-sentence</name>
+    <location><HIVE_HOME>/skills/long-single-sentence/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>multi-sentence</name>
+    <location><HIVE_HOME>/skills/multi-sentence/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>nbsp-at-cut</name>
+    <location><HIVE_HOME>/skills/nbsp-at-cut/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>queen-scope-skill</name>
+    <location><HIVE_HOME>/queens/queen_growth/skills/queen-scope-skill/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>symlink-target</name>
+    <location><HIVE_HOME>/skills/symlink-target/SKILL.md</location>
+  </skill>
+</available_skills>
+
+Only act on this if relevant to the current work. NEVER mention this reminder to the user.
+</system-reminder>

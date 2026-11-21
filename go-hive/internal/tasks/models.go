@@ -16,6 +16,17 @@ const (
 	TaskStatusArchived   TaskStatus = "archived"
 )
 
+// ValidTaskStatus reports whether value is a TaskStatus member. Python's task
+// tools take the status as a StrEnum, so anything else raises
+// "'<value>' is not a valid TaskStatus" before the store is touched.
+func ValidTaskStatus(value string) bool {
+	switch TaskStatus(value) {
+	case TaskStatusPending, TaskStatusInProgress, TaskStatusCompleted, TaskStatusAbandoned, TaskStatusArchived:
+		return true
+	}
+	return false
+}
+
 const IdleTaskThresholdSeconds float64 = 30 * 60
 
 type TaskRecord struct {

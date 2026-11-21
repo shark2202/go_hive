@@ -53,11 +53,25 @@ func batch8AttachResult(t *testing.T, registry *Registry, input map[string]any) 
 
 func batch8AttachSummary(t *testing.T, content string) map[string]any {
 	t.Helper()
+	// attach_file appends text preview blocks after the JSON summary, the way
+	// upstream returns the summary TextContent followed by the body blocks.
 	var payload map[string]any
-	if err := json.Unmarshal([]byte(content), &payload); err != nil {
+	if err := json.NewDecoder(strings.NewReader(content)).Decode(&payload); err != nil {
 		t.Fatalf("summary is not JSON (%q): %v", content, err)
 	}
 	return payload
+}
+
+// batch8AttachTrailer returns everything after the leading JSON summary — the
+// upstream text-preview blocks.
+func batch8AttachTrailer(t *testing.T, content string) string {
+	t.Helper()
+	decoder := json.NewDecoder(strings.NewReader(content))
+	var payload map[string]any
+	if err := decoder.Decode(&payload); err != nil {
+		t.Fatalf("summary is not JSON (%q): %v", content, err)
+	}
+	return content[decoder.InputOffset():]
 }
 
 func batch8AttachedEntries(t *testing.T, payload map[string]any) []map[string]any {
@@ -99,9 +113,10 @@ func TestBatch8AttachFileSinglePDF(t *testing.T) {
 		t.Fatalf("bytes = %v", entry["bytes"])
 	}
 	// Upstream forwards the pdf bytes as ImageContent; here they travel as the
-	// provider-neutral `file` block the OpenAI/Python transports speak.
-	if entry["inline"] != "file_block" {
-		t.Fatalf("inline = %v, want file_block", entry["inline"])
+	// provider-neutral `file` block the OpenAI/Python transports speak. The
+	// entry itself keeps upstream's shape — the block is the signal.
+	if _, present := entry["inline"]; present {
+		t.Fatalf("inline = %v, want the key absent (upstream entry shape)", entry["inline"])
 	}
 	if len(result.ImageContent) != 1 {
 		t.Fatalf("pdf produced %d content blocks, want 1", len(result.ImageContent))
@@ -158,8 +173,8 @@ func TestBatch8AttachFileImageBlockOverCap(t *testing.T) {
 	if len(entries) != 1 {
 		t.Fatalf("attached = %v", entries)
 	}
-	if entries[0]["inline"] != "none" {
-		t.Fatalf("inline = %v, want none", entries[0]["inline"])
+	if _, present := entries[0]["inline"]; present {
+		t.Fatalf("inline = %v, want the key absent (upstream entry shape)", entries[0]["inline"])
 	}
 	inlineError, _ := entries[0]["inline_error"].(string)
 	if !strings.Contains(inlineError, "NOT sent to the model") {
@@ -177,21 +192,28 @@ func TestBatch8AttachFileImageBlockOverCap(t *testing.T) {
 	}
 }
 
-// Parity-exempt: the block-path note is Go-side wording; upstream reports the
-// same fact by returning the blocks themselves.
-func TestBatch8AttachFileBlockNoteNamesThePath(t *testing.T) {
+// Parity-exempt: the previous Go build reported "content_blocks"/"note" on the
+// success path; upstream sends the blocks themselves and says nothing, so the
+// summary must stay {"attached", "errors"} and the block must be on the result.
+func TestBatch8AttachFileBlockSuccessKeepsUpstreamShape(t *testing.T) {
 	dir := t.TempDir()
 	png := filepath.Join(dir, "pic.png")
 	_ = os.WriteFile(png, batch8TinyPNG, 0o600)
 
 	result := batch8AttachResult(t, newBatch8FinalRegistry(), map[string]any{"paths": png})
 	summary := batch8AttachSummary(t, result.Content)
-	if summary["content_blocks"].(float64) != 1 {
-		t.Fatalf("content_blocks = %v", summary["content_blocks"])
+	if len(result.ImageContent) != 1 {
+		t.Fatalf("image blocks = %d, want 1", len(result.ImageContent))
 	}
-	note, _ := summary["note"].(string)
-	if !strings.Contains(note, "model content blocks") {
-		t.Fatalf("note = %q", note)
+	if _, present := summary["content_blocks"]; present {
+		t.Fatalf("content_blocks = %v, want the key absent (upstream summary)", summary["content_blocks"])
+	}
+	if _, present := summary["note"]; present {
+		t.Fatalf("note = %q, want the key absent on the success path", summary["note"])
+	}
+	entries := batch8AttachedEntries(t, summary)
+	if len(entries) != 1 || entries[0]["kind"] != "image" {
+		t.Fatalf("attached = %v", entries)
 	}
 }
 
@@ -208,8 +230,8 @@ func TestBatch8AttachFileSinglePNG(t *testing.T) {
 	if len(entries) != 1 || entries[0]["kind"] != "image" || entries[0]["mime"] != "image/png" {
 		t.Fatalf("entries = %v", entries)
 	}
-	if entries[0]["inline"] != "image_block" {
-		t.Fatalf("inline = %v", entries[0]["inline"])
+	if _, present := entries[0]["inline"]; present {
+		t.Fatalf("inline = %v, want the key absent (upstream entry shape)", entries[0]["inline"])
 	}
 	if len(result.ImageContent) != 1 {
 		t.Fatalf("image blocks = %d, want 1", len(result.ImageContent))
@@ -441,13 +463,15 @@ func TestBatch8AttachFileUnknownTextIsText(t *testing.T) {
 	plain := filepath.Join(dir, "Dockerfile")
 	_ = os.WriteFile(plain, []byte("FROM python:3.12\nRUN echo hi\n"), 0o600)
 
-	entries := batch8AttachedEntries(t, batch8AttachSummary(t,
-		batch8AttachResult(t, newBatch8FinalRegistry(), map[string]any{"paths": plain}).Content))
+	content := batch8AttachResult(t, newBatch8FinalRegistry(), map[string]any{"paths": plain}).Content
+	entries := batch8AttachedEntries(t, batch8AttachSummary(t, content))
 	if len(entries) != 1 || entries[0]["kind"] != "text" || entries[0]["mime"] != "text/plain" {
 		t.Fatalf("entry = %v", entries)
 	}
-	if preview, _ := entries[0]["inline_preview"].(string); !strings.Contains(preview, "FROM python") {
-		t.Fatalf("inline_preview = %q", entries[0]["inline_preview"])
+	// Upstream ships the body as a TextContent block after the summary.
+	trailer := batch8AttachTrailer(t, content)
+	if !strings.Contains(trailer, "[attached Dockerfile (text/plain)]") || !strings.Contains(trailer, "FROM python") {
+		t.Fatalf("trailer = %q", trailer)
 	}
 }
 
@@ -505,7 +529,7 @@ func TestBatch8AttachFileTextPreviewCapped(t *testing.T) {
 	if len(entries) != 1 || entries[0]["kind"] != "text" {
 		t.Fatalf("entry = %v", entries)
 	}
-	preview, _ := entries[0]["inline_preview"].(string)
+	preview := batch8AttachTrailer(t, result.Content)
 	if !strings.Contains(preview, "preview truncated") {
 		t.Fatalf("preview is not truncated: %d chars", len(preview))
 	}

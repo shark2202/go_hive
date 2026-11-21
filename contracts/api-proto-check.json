@@ -1,9 +1,9 @@
 {
   "schema": "hive-api-proto-check/1",
   "proto": "go_hive/contracts/api.proto",
-  "messages": 41,
+  "messages": 42,
   "enums": 2,
-  "checked_fields": 1281,
+  "checked_fields": 1322,
   "summary": {
     "errors": 0,
     "warnings": 0,
@@ -3748,6 +3748,14 @@
     },
     {
       "side": "reference",
+      "endpoint": "session_create_invalid_body",
+      "field": "error",
+      "json_type": "string",
+      "proto": "string",
+      "status": "ok"
+    },
+    {
+      "side": "reference",
       "endpoint": "session_detail",
       "field": "agent_path",
       "json_type": "string",
@@ -3874,6 +3882,14 @@
       "field": "uptime_seconds",
       "json_type": "number(float)",
       "proto": "double",
+      "status": "ok"
+    },
+    {
+      "side": "reference",
+      "endpoint": "session_detail_missing",
+      "field": "error",
+      "json_type": "string",
+      "proto": "string",
       "status": "ok"
     },
     {
@@ -4719,6 +4735,14 @@
       "field": "truncated",
       "json_type": "boolean",
       "proto": "bool",
+      "status": "ok"
+    },
+    {
+      "side": "reference",
+      "endpoint": "session_resolve_missed_conflict",
+      "field": "error",
+      "json_type": "string",
+      "proto": "string",
       "status": "ok"
     },
     {
@@ -9040,6 +9064,14 @@
     },
     {
       "side": "target",
+      "endpoint": "session_create_invalid_body",
+      "field": "error",
+      "json_type": "string",
+      "proto": "string",
+      "status": "ok"
+    },
+    {
+      "side": "target",
       "endpoint": "session_detail",
       "field": "agent_path",
       "json_type": "string",
@@ -9170,6 +9202,14 @@
     },
     {
       "side": "target",
+      "endpoint": "session_detail_missing",
+      "field": "error",
+      "json_type": "string",
+      "proto": "string",
+      "status": "ok"
+    },
+    {
+      "side": "target",
       "endpoint": "session_events",
       "field": "content_type",
       "json_type": "string",
@@ -9181,14 +9221,6 @@
       "endpoint": "session_events",
       "field": "event_names",
       "json_type": "array",
-      "proto": "repeated string",
-      "status": "ok"
-    },
-    {
-      "side": "target",
-      "endpoint": "session_events",
-      "field": "event_names[]",
-      "json_type": "string",
       "proto": "repeated string",
       "status": "ok"
     },
@@ -9246,7 +9278,7 @@
       "side": "target",
       "endpoint": "session_events",
       "field": "frames[].envelope.data.activity",
-      "json_type": "null",
+      "json_type": "string",
       "proto": "google.protobuf.Struct",
       "status": "ok"
     },
@@ -9255,6 +9287,38 @@
       "endpoint": "session_events",
       "field": "frames[].envelope.data.awaiting_input",
       "json_type": "boolean",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.cache_creation_tokens",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.cached_tokens",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.content",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.cost_usd",
+      "json_type": "number(float)",
       "proto": "google.protobuf.Struct",
       "status": "ok"
     },
@@ -9271,6 +9335,30 @@
       "endpoint": "session_events",
       "field": "frames[].envelope.data.current_tool_calls",
       "json_type": "array",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.history_anchor_idx",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.inner_turn",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.input_tokens",
+      "json_type": "number(int)",
       "proto": "google.protobuf.Struct",
       "status": "ok"
     },
@@ -9301,6 +9389,14 @@
     {
       "side": "target",
       "endpoint": "session_events",
+      "field": "frames[].envelope.data.iteration",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
       "field": "frames[].envelope.data.last_event_at",
       "json_type": "string",
       "proto": "google.protobuf.Struct",
@@ -9310,7 +9406,7 @@
       "side": "target",
       "endpoint": "session_events",
       "field": "frames[].envelope.data.last_event_seq",
-      "json_type": "null",
+      "json_type": "number(float)",
       "proto": "google.protobuf.Struct",
       "status": "ok"
     },
@@ -9325,8 +9421,32 @@
     {
       "side": "target",
       "endpoint": "session_events",
+      "field": "frames[].envelope.data.message_count",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.model",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.output_tokens",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
       "field": "frames[].envelope.data.park_reason",
-      "json_type": "null",
+      "json_type": "string",
       "proto": "google.protobuf.Struct",
       "status": "ok"
     },
@@ -9342,7 +9462,15 @@
       "side": "target",
       "endpoint": "session_events",
       "field": "frames[].envelope.data.queen_busy_reason",
-      "json_type": "null",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.snapshot",
+      "json_type": "string",
       "proto": "google.protobuf.Struct",
       "status": "ok"
     },
@@ -9357,11 +9485,34 @@
     {
       "side": "target",
       "endpoint": "session_events",
+      "field": "frames[].envelope.data.stop_reason",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.system_prefix_sha",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
+      "field": "frames[].envelope.data.system_suffix_sha",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events",
       "field": "frames[].envelope.execution_id",
-      "json_type": "null",
+      "json_type": "string",
       "proto": "optional string",
-      "status": "ok",
-      "note": "null (unset)"
+      "status": "ok"
     },
     {
       "side": "target",
@@ -9407,9 +9558,10 @@
       "side": "target",
       "endpoint": "session_events",
       "field": "frames[].event",
-      "json_type": "string",
+      "json_type": "null",
       "proto": "optional string",
-      "status": "ok"
+      "status": "ok",
+      "note": "null (unset)"
     },
     {
       "side": "target",
@@ -9480,6 +9632,14 @@
     {
       "side": "target",
       "endpoint": "session_events_history",
+      "field": "events[].data.activity",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
       "field": "events[].data.breakdown",
       "json_type": "object",
       "proto": "google.protobuf.Struct",
@@ -9528,6 +9688,38 @@
     {
       "side": "target",
       "endpoint": "session_events_history",
+      "field": "events[].data.cache_creation_tokens",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.cached_tokens",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.content",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.cost_usd",
+      "json_type": "number(float)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
       "field": "events[].data.detail",
       "json_type": "string",
       "proto": "google.protobuf.Struct",
@@ -9538,6 +9730,38 @@
       "endpoint": "session_events_history",
       "field": "events[].data.estimated_tokens",
       "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.history_anchor_idx",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.inner_turn",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.input_tokens",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.interrupt_cause",
+      "json_type": "null",
       "proto": "google.protobuf.Struct",
       "status": "ok"
     },
@@ -9592,7 +9816,31 @@
     {
       "side": "target",
       "endpoint": "session_events_history",
+      "field": "events[].data.model",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
       "field": "events[].data.name",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.output_tokens",
+      "json_type": "number(int)",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.park_reason",
       "json_type": "string",
       "proto": "google.protobuf.Struct",
       "status": "ok"
@@ -9616,7 +9864,47 @@
     {
       "side": "target",
       "endpoint": "session_events_history",
+      "field": "events[].data.questions",
+      "json_type": "null",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.snapshot",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
       "field": "events[].data.source",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.stop_reason",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.system_prefix_sha",
+      "json_type": "string",
+      "proto": "google.protobuf.Struct",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_events_history",
+      "field": "events[].data.system_suffix_sha",
       "json_type": "string",
       "proto": "google.protobuf.Struct",
       "status": "ok"
@@ -9657,10 +9945,9 @@
       "side": "target",
       "endpoint": "session_events_history",
       "field": "events[].execution_id",
-      "json_type": "null",
+      "json_type": "string",
       "proto": "optional string",
-      "status": "ok",
-      "note": "null (unset)"
+      "status": "ok"
     },
     {
       "side": "target",
@@ -9768,12 +10055,19 @@
     },
     {
       "side": "target",
+      "endpoint": "session_resolve_missed_conflict",
+      "field": "error",
+      "json_type": "string",
+      "proto": "string",
+      "status": "ok"
+    },
+    {
+      "side": "target",
       "endpoint": "session_snapshot",
       "field": "activity",
-      "json_type": "null",
+      "json_type": "string",
       "proto": "optional string",
-      "status": "ok",
-      "note": "null (unset)"
+      "status": "ok"
     },
     {
       "side": "target",
@@ -9837,10 +10131,9 @@
       "side": "target",
       "endpoint": "session_snapshot",
       "field": "last_event_seq",
-      "json_type": "null",
+      "json_type": "number(float)",
       "proto": "optional int64",
-      "status": "ok",
-      "note": "null (unset)"
+      "status": "ok"
     },
     {
       "side": "target",
@@ -9854,10 +10147,9 @@
       "side": "target",
       "endpoint": "session_snapshot",
       "field": "park_reason",
-      "json_type": "null",
+      "json_type": "string",
       "proto": "optional string",
-      "status": "ok",
-      "note": "null (unset)"
+      "status": "ok"
     },
     {
       "side": "target",
@@ -9872,10 +10164,9 @@
       "side": "target",
       "endpoint": "session_snapshot",
       "field": "queen_busy_reason",
-      "json_type": "null",
+      "json_type": "string",
       "proto": "optional string",
-      "status": "ok",
-      "note": "null (unset)"
+      "status": "ok"
     },
     {
       "side": "target",
@@ -9953,7 +10244,39 @@
     {
       "side": "target",
       "endpoint": "session_stats",
+      "field": "event_bus.events_by_type.client_input_requested",
+      "json_type": "number(int)",
+      "proto": "map<string, int64>",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_stats",
+      "field": "event_bus.events_by_type.client_output_delta",
+      "json_type": "number(int)",
+      "proto": "map<string, int64>",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_stats",
       "field": "event_bus.events_by_type.context_usage_updated",
+      "json_type": "number(int)",
+      "proto": "map<string, int64>",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_stats",
+      "field": "event_bus.events_by_type.llm_turn_complete",
+      "json_type": "number(int)",
+      "proto": "map<string, int64>",
+      "status": "ok"
+    },
+    {
+      "side": "target",
+      "endpoint": "session_stats",
+      "field": "event_bus.events_by_type.loop_state_changed",
       "json_type": "number(int)",
       "proto": "map<string, int64>",
       "status": "ok"

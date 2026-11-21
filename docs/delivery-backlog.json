@@ -1,0 +1,101 @@
+{
+  "note": "剩余工作项（lane-hours 估算）。done 项不计入；external 项不计入速度换算，只保留基线日期。",
+  "gates": {
+    "G1": [
+      {
+        "id": "api-probe-matrix",
+        "label": "扩大 REST 端点值级/失败矩阵",
+        "hours": 6
+      },
+      {
+        "id": "tool-output-golden",
+        "label": "工具输出/失败路径 golden",
+        "hours": 4,
+        "done": true
+      },
+      {
+        "id": "api-ws-canonical",
+        "label": "API/SSE 帧级 golden 收口",
+        "hours": 2,
+        "done": true
+      },
+      {
+        "id": "prompt-skill-catalog",
+        "label": "system prompt/catalog/turn_context 收敛",
+        "hours": 6,
+        "done": true
+      },
+      {
+        "id": "schema-residuals",
+        "label": "lifecycle/session_cwd/exa schema 残差",
+        "hours": 3
+      },
+      {
+        "id": "tool-desc-residual",
+        "label": "同名 desc 40/41 与输出文案",
+        "hours": 2
+      },
+      {
+        "id": "queen-prompt-assembly",
+        "label": "queen system prompt 结构与文本对齐",
+        "hours": 8
+      },
+      {
+        "id": "searchable-manifest",
+        "label": "search_tools 清单 307 vs 1029 收敛",
+        "hours": 3
+      }
+    ],
+    "G2": [
+      {
+        "id": "old-home-e2e",
+        "label": "真实旧 HIVE_HOME 全量双跑",
+        "hours": 8
+      },
+      {
+        "id": "rollback-drill",
+        "label": "Go→Python 回滚演练",
+        "hours": 4
+      },
+      {
+        "id": "install-upgrade",
+        "label": "安装/升级演练与脚本",
+        "hours": 4
+      },
+      {
+        "id": "sidecar-parity",
+        "label": "session meta/tasks/colony sidecar",
+        "hours": 4
+      },
+      {
+        "id": "g2-docs",
+        "label": "无损替换文档与支持矩阵",
+        "hours": 2
+      }
+    ],
+    "G3": [
+      {
+        "id": "windows-real",
+        "label": "Windows 实机验证",
+        "hours": 8,
+        "external": true
+      },
+      {
+        "id": "actions-release",
+        "label": "GitHub Actions release 执行",
+        "hours": 4,
+        "external": true
+      },
+      {
+        "id": "govulncheck",
+        "label": "govulncheck + 安全审查",
+        "hours": 2
+      },
+      {
+        "id": "installer-verify",
+        "label": "六平台安装器复验",
+        "hours": 2
+      }
+    ]
+  }
+}

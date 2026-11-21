@@ -118,6 +118,26 @@ func (c *queenSkillsCatalog) SkillsCatalogPrompt() string {
 // Catalog is the provider handle the chat runtime deps receive.
 func (c *queenSkillsCatalog) Catalog() string { return c.SkillsCatalogPrompt() }
 
+// CatalogForPhase renders the session's catalog filtered for a queen phase
+// ("independent" / "colony"): skills whose metadata.visibility list is present
+// and excludes the phase drop out. The queen's reminder reads the LIVE phase on
+// every render, exactly like upstream's QueenPhaseState.render_skills_catalog
+// (skills_catalog_prompt_for_phase(self.phase)) — a session that forks mid-life
+// re-announces the colony catalog on the next turn.
+//
+// Parity: framework/tools/queen_lifecycle_tools.py::QueenPhaseState.render_skills_catalog
+func (c *queenSkillsCatalog) CatalogForPhase(phase string) string {
+	manager := c.managerInstance()
+	if manager == nil {
+		return ""
+	}
+	value := strings.TrimSpace(phase)
+	if value == "" {
+		return manager.SkillsCatalogPrompt()
+	}
+	return manager.SkillsCatalogPromptForPhase(&value)
+}
+
 // Reload rebuilds the catalog from disk. Callers hold MutationLock, matching
 // the ReloadableSkillsManager contract.
 func (c *queenSkillsCatalog) Reload() error {

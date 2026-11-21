@@ -1202,11 +1202,10 @@ func (r *ChatRuntime) toolsForTurn() []llm.ToolDef {
 	return out
 }
 
-// turnContextUsage builds the per-iteration context readout the upstream loop
-// publishes on every iteration start (publish_context_usage with
-// trigger=iteration_start), using the same char-based projection as the
-// session-start block.
-func (r *ChatRuntime) turnContextUsage() map[string]any {
+// turnContextUsage builds the context readout the upstream loop publishes on
+// every context tick (iteration start, after each tool result, after the tool
+// batch), using the same char-based projection as the session-start block.
+func (r *ChatRuntime) turnContextUsage(trigger string) map[string]any {
 	if r == nil || r.conv == nil {
 		return nil
 	}
@@ -1214,7 +1213,7 @@ func (r *ChatRuntime) turnContextUsage() map[string]any {
 	if r.loop != nil {
 		maxContextTokens = r.loop.Config.MaxContextTokens
 	}
-	return composeContextUsage(r.conv, maxContextTokens, r.toolsForTurn())
+	return composeContextUsage(r.conv, maxContextTokens, r.toolsForTurn(), trigger)
 }
 
 // BindColony attaches (or clears) this session's colony runtime. Attaching

@@ -1,0 +1,21 @@
+{
+  "endpoint": "session_resolve_missed_conflict",
+  "label": "未加载 Colony",
+  "method": "POST",
+  "path": "/api/sessions/{session}/colony/resolve_missed",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 409,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T11:24:30+08:00",
+  "canonical": {
+    "error": "Colony not loaded"
+  },
+  "shape": {
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

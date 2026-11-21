@@ -521,7 +521,8 @@ func TestWriteSafeRootDoesNotWidenReads(t *testing.T) {
 	}
 
 	res := execTool(t, tb, ToolReadFile, map[string]any{"path": filepath.Join(other, "secret.txt")})
-	if !res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
+	// A read refusal is plain text (file_ops.py policy branch), never content.
+	if !strings.Contains(res.Content, "escapes the sandbox root") || strings.Contains(res.Content, "not yours") {
 		t.Fatalf("read through ceiling = %+v", res)
 	}
 }

@@ -38,7 +38,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td>name</td><td><span class="pill bad">不一致</span></td><td>同名工具仅 <b>36</b> 个；集成层 Go 是 <b>87 个模块分组工具</b>（<code>airtable</code> + <code>action</code> 枚举，839 个 action），Python 是 <b>857 个扁平工具</b>（<code>airtable_create_records</code>…）。命名形状本身不同，逐工具同名不成立。</td></tr>
 <tr><td>desc</td><td><span class="pill bad">不一致</span></td><td>36 个同名工具 <b>0 个逐字相同</b>；首段/首句相同 <b>14/36</b>。集成 action 的单行描述与 Python docstring 首行逐字一致 <b>747/837（89.3%）</b>。</td></tr>
 <tr><td>input</td><td><span class="pill bad">不一致</span></td><td>36 个同名工具：原始 JSON Schema 完全相等 <b>3/36</b>；按 JSON Schema/protobuf 类型语义归一后 <b>16/36</b>；required 相等 <b>30/36</b>。Go 集成工具 schema 仅 <code>action</code> 必填，其余必填只写在描述文本里。</td></tr>
-<tr><td>output</td><td><span class="pill warn">无法校验</span></td><td>双方都<b>没有声明输出 schema</b>：Python <code>outputSchema</code> 0/857；Go <code>llm.ToolDef</code> 无输出字段。输出契约只能靠运行样例（golden output），当前没有覆盖 857 个工具。</td></tr>
+<tr><td>output</td><td><span class="pill warn">部分校验</span></td><td>双方都<b>没有声明输出 schema</b>：Python <code>outputSchema</code> 0/857；Go <code>llm.ToolDef</code> 无输出字段。输出契约改用<b>运行样例 golden</b>：默认会话可离线执行的 <b>38 个场景</b>（成功/失败信封，含纯文本、JSON、<code>not_implemented</code>、溢出信封）已双侧抓取并 canonical 对拍，见 <code>docs/tool-output-contract.md</code>（25 逐字一致 / 1 形状一致 / 12 记录例外 / 0 未归因）。集成模块与需要网络的工具仍未覆盖。</td></tr>
 </tbody></table></div>
 <div class="callout bad"><b>结论：</b>「Skill 逐字一致」已达标；「工具的 name/desc/input 完全一致」<b>未达标</b>，且存在明确缺陷（见 §07），其中 <code>terminal_exec</code> 的输入 schema 少了 8 个参数、Go 把隐藏参数 <code>session_cwd</code> 暴露给模型，属于功能性不一致，不是文字差异。</div>
 <div class="callout info"><b>2026-11-21 更新（默认可见面 / 延迟层）：</b>默认 queen 会话的首轮 <code>tools[]</code> 已从 Go 的 144（<code>tool-flat-surface</code> 后 35）收敛为与 Python 相同的 <b>24</b>，name 与顺序逐字一致（假网关抓包，见 <code>docs/tool-flat-surface.md</code> §5.2、<code>docs/tool-contract-recheck.json</code> round 3）。其余 51 个可执行扁平工具（15 lifecycle/colony + 36 目录层）进入 <code>search_tools</code> 延迟层，按名加载后下一轮出现在 <code>tools[]</code> 并真实执行；87 个分组模块仍保持 module+action 形态（<code>HIVE_TOOL_SURFACE=grouped</code> 可整体回退）。下方 §03–§05 的 857 / 137 / 36 统计是全量注册表口径，未随默认面变化重算。</div>
@@ -115,9 +115,11 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <div class="tablewrap"><table><thead><tr><th style="width:30%">检查</th><th style="width:18%">结果</th><th>说明</th></tr></thead><tbody>
 <tr><td>Python 是否声明 outputSchema</td><td class="num">0 / 857</td><td>FastMCP Tool 只有 <code>parameters</code>，没有输出 schema</td></tr>
 <tr><td>Go 是否声明输出 schema</td><td class="num">0</td><td><code>llm.ToolDef</code> 字段为 Name/Description/Parameters/ProducesImage/ConcurrencySafe</td></tr>
-<tr><td>输出内容逐字对比</td><td><span class="pill warn">未覆盖</span></td><td>需要 golden-output 夹具（同一输入跑两侧、比对序列化文本）；当前只对少数工具做过行为验证（file_ops、terminal、chart_render、browser）</td></tr>
+<tr><td>输出内容逐字对比</td><td><span class="pill ok">已建 golden</span></td><td>同一输入跑两侧、比对 canonical 后的 <code>role: tool</code> 文本：<b>38 场景</b>（默认面可离线执行的工具 + 缺文件、参数错、路径越界、未加载工具、未知 action 等失败路径），<b>25 逐字一致 / 1 形状一致 / 12 记录例外 / 0 未归因</b>。产物 <code>docs/e2e-assets/tool-output/</code>，规则与例外见 <code>docs/tool-output-contract.md</code></td></tr>
+<tr><td>本轮修掉的输出形状差异</td><td class="num">6</td><td><code>get_current_time.datetime</code> 改为 Python <code>isoformat()</code> 形状；float 序列化改用 <code>repr(float)</code> 语义（不再出现 <code>1.79e+09</code>）；<code>read_file</code> 文件失败改为普通文本并补目录列表；<code>attach_file</code> 去掉 Go 专有键、文本预览改为尾随块；<code>task_update</code> 补 status 枚举校验；<code>task_get</code>/<code>task_update</code> 不再静默把非整数 id 当 0</td></tr>
 </tbody></table></div>
-<div class="callout"><b>建议：</b>输出一致性不能靠静态比对达成。要么给两侧补 <code>outputSchema</code>（MCP 标准字段），要么为每个 action 建立 golden fixture（输入 + 期望输出 JSON），纳入 parity 测试。当前两条都没有。</div>
+<div class="callout"><b>建议：</b>输出一致性不能靠静态比对达成。要么给两侧补 <code>outputSchema</code>（MCP 标准字段），要么为每个 action 建立 golden fixture（输入 + 期望输出 JSON），纳入 parity 测试。</div>
+<div class="callout info"><b>2026-11-21 更新（输出 golden）：</b>第二条路已落地一部分——<b>38 个场景</b>的双侧 golden（含成功/失败信封、<code>not_implemented</code>、溢出信封）已入库为 <code>docs/e2e-assets/tool-output/</code>，规范化规则、6 项已修形状差异与 13 条已归因例外见 <code>docs/tool-output-contract.md</code>；Go 侧由 <code>internal/toolgolden</code> + 3 个包的 golden 对照测试守门。<code>outputSchema</code> 仍未声明（第二条路未做）；<code>terminal_exec</code> 的输出信封与溢出信封仍是记录在案的差异。</div>
 </section>
 
 <section id="defects"><h2><span class="num">07</span>缺陷清单（按修复顺序）</h2>
@@ -129,7 +131,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td><span class="pill warn">P1</span></td><td>required 缺失 / 注解不一致</td><td>4 个工具 required 为空；3 个 action 注解不一致；3 个 action 无注解但必填。schema 层应在 Go 侧补 required。</td></tr>
 <tr><td><span class="pill warn">P1</span></td><td>类型放宽</td><td>20 个模块 <code>ARRAY&lt;ANY&gt;</code> / 裸 <code>STRING</code>；按 JSON Schema 语义不等价。需要按 action 拆 schema，或在 Go 侧做 per-action 校验。</td></tr>
 <tr><td><span class="pill warn">P2</span></td><td>extra / 未注册</td><td>Go 多 2 个 openmeteo action；Python 侧模块未注册。属于「Go 超前」而非缺失，但同样破坏逐字对齐。</td></tr>
-<tr><td><span class="pill warn">P2</span></td><td>输出契约</td><td>双方 0 个 outputSchema；补声明或 golden fixture。</td></tr>
+<tr><td><span class="pill warn">P2</span></td><td>输出契约</td><td>双方 0 个 outputSchema；<b>golden fixture 一半已落地</b>：38 场景双侧 golden + 规范化规则 + 3 个包的守门测试（<code>docs/tool-output-contract.md</code>）。剩余：补 <code>outputSchema</code> 声明，并把 golden 扩到集成模块/需要网络与交互的工具。</td></tr>
 </tbody></table></div>
 </section>
 

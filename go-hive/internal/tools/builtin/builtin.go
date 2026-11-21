@@ -43,13 +43,20 @@ const (
 	DefaultCommandTimeout = 60 * time.Second
 	// MaxCommandTimeout is the largest accepted timeout_seconds.
 	MaxCommandTimeout = 600 * time.Second
+	// maxDirectoryListingEntries caps a read_file directory listing, matching
+	// file_ops.py::read_file's entries[:200].
+	maxDirectoryListingEntries = 200
 )
 
 // Result is the outcome of one tool call. Content is shown to the model;
-// IsError marks expected tool-level failures (missing file, non-zero exit,
-// path escape) that the model should see and recover from. Infrastructure
-// failures (unknown tool, cancelled context, unkillable process) are
-// returned as the error value instead.
+// IsError marks expected tool-level failures (non-zero exit, a refused path,
+// an unreadable file) that the model should see and recover from.
+// Infrastructure failures (unknown tool, cancelled context, unkillable
+// process) are returned as the error value instead.
+//
+// The file-operation tools are the exception: file_ops.py returns its
+// not-found / policy messages as ordinary text ("Error: File not found: …"),
+// so read_file mirrors that and leaves IsError false for those outcomes.
 type Result struct {
 	Content string
 	IsError bool

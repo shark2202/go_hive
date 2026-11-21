@@ -8,7 +8,7 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-21T00:58:55+08:00",
+  "captured_at": "2026-11-21T11:24:30+08:00",
   "canonical": {
     "active_workers": 0,
     "adaptive_tool_budget": {
@@ -29,7 +29,7 @@
         "queen_identity_selected": 1,
         "reminder_injected": 1
       },
-      "subscriptions": 1,
+      "subscriptions": 3,
       "total_events": 9
     },
     "running": true,
@@ -61,5 +61,6 @@
     "triggers": "number(int)"
   },
   "counts": {},
+  "shape_ignore": [],
   "notes": []
 }

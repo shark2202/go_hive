@@ -213,9 +213,13 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 		// stays silent for the whole `serve --colony` session.
 		//
 		// Parity: core/framework/server/queen_orchestrator.py::create_queen
-		SkillsCatalog: skillsCatalog.Catalog,
-		Colony:        record.Colony,
-		OnTurnStart:   onTurnStart,
+		// The catalog is phase-filtered at render time, like upstream's
+		// QueenPhaseState.render_skills_catalog.
+		SkillsCatalog: func() string {
+			return skillsCatalog.CatalogForPhase(hiveserver.SessionPhaseLabel(record))
+		},
+		Colony:      record.Colony,
+		OnTurnStart: onTurnStart,
 		// Same vision-fallback captioning a created session gets.
 		VisionCaptioner: visionCaptionerFor(home),
 		// The queen's phase rides node_loop_iteration, as upstream's

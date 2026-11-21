@@ -8,7 +8,7 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-21T00:58:55+08:00",
+  "captured_at": "2026-11-21T11:24:30+08:00",
   "canonical": {
     "agents_loaded": 0,
     "request_executor": {
@@ -17,7 +17,9 @@
       "queued": 0
     },
     "resources": {
-      "verdict": "unknown"
+      "avail_mb": null,
+      "renderers": 1,
+      "verdict": "ok"
     },
     "sessions": 0,
     "status": "ok"
@@ -34,5 +36,9 @@
     "status": "string"
   },
   "counts": {},
+  "shape_ignore": [
+    "resources.avail_mb",
+    "resources.renderers"
+  ],
   "notes": []
 }

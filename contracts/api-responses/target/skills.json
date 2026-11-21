@@ -8,7 +8,7 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-21T00:58:55+08:00",
+  "captured_at": "2026-11-21T11:24:30+08:00",
   "canonical": {
     "colonies": [],
     "queens": [
@@ -3553,5 +3553,6 @@
     "queens": 1,
     "skills": 195
   },
+  "shape_ignore": [],
   "notes": []
 }

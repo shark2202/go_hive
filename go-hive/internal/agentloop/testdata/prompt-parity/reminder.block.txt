@@ -1,0 +1,8 @@
+<system-reminder>
+Turn context example body for the parity probe.
+
+Searchable tools manifest example.
+beta-tool
+
+Only act on this if relevant to the current work. NEVER mention this reminder to the user.
+</system-reminder>

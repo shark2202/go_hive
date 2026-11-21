@@ -46,27 +46,32 @@ func (t *Toolbox) readFile(ctx context.Context, input map[string]any) (Result, e
 	}
 	path, err := resolvePath(root, raw)
 	if err != nil {
-		return fail("read_file: %v", err), nil
+		// Parity: tools/src/aden_tools/file_ops.py::read_file returns the
+		// policy message as plain text ("Error: …"), not as a tool error — the
+		// model sees the same non-error result the Python file server produces.
+		return Result{Content: fmt.Sprintf("Error: %v", err)}, nil
 	}
 	if err := ctx.Err(); err != nil {
 		return Result{}, err
 	}
 
+	info, statErr := os.Stat(path)
+	if statErr == nil && info.IsDir() {
+		return Result{Content: formatDirectoryListing(raw, path)}, nil
+	}
+
 	f, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return fail("read_file: file not found: %s", raw), nil
+		return Result{Content: fmt.Sprintf("Error: File not found: %s", raw)}, nil
 	}
 	if err != nil {
 		return fail("read_file: cannot open %s: %v", raw, err), nil
 	}
 	defer f.Close()
 
-	info, err := f.Stat()
+	info, err = f.Stat()
 	if err != nil {
 		return fail("read_file: cannot stat %s: %v", raw, err), nil
-	}
-	if info.IsDir() {
-		return fail("read_file: %s is a directory, not a file", raw), nil
 	}
 	if !info.Mode().IsRegular() {
 		return fail("read_file: %s is not a regular file", raw), nil
@@ -93,6 +98,29 @@ func (t *Toolbox) readFile(ctx context.Context, input map[string]any) (Result, e
 	// included) so a later edit can detect external writes.
 	t.readState().recordRead(path, data)
 	return Result{Content: formatReadOutput(content, offset, limit, hashline)}, nil
+}
+
+// formatDirectoryListing ports the branch of file_ops.py::read_file that
+// answers a directory with its entries instead of an error: the raw path (not
+// the resolved one), the entry count before truncation, and up to 200 entries
+// with a trailing "/" on subdirectories.
+func formatDirectoryListing(raw, resolved string) string {
+	children, err := os.ReadDir(resolved)
+	if err != nil {
+		return fmt.Sprintf("Error: cannot list directory %s: %v", raw, err)
+	}
+	entries := make([]string, 0, len(children))
+	for _, child := range children {
+		suffix := ""
+		if child.IsDir() {
+			suffix = "/"
+		}
+		entries = append(entries, "  "+child.Name()+suffix)
+	}
+	if len(entries) > maxDirectoryListingEntries {
+		entries = entries[:maxDirectoryListingEntries]
+	}
+	return fmt.Sprintf("Directory: %s (%d entries)\n", raw, len(children)) + strings.Join(entries, "\n")
 }
 
 // isBinary reports whether data looks binary: a NUL byte in the leading

@@ -38,7 +38,7 @@
     "events[].data.snapshot": "string",
     "events[].data.cache_creation_tokens": "number(int)",
     "events[].data.cached_tokens": "number(int)",
-    "events[].data.cost_usd": "number(int)",
+    "events[].data.cost_usd": "number(float)",
     "events[].data.history_anchor_idx": "number(int)",
     "events[].data.input_tokens": "number(int)",
     "events[].data.model": "string",

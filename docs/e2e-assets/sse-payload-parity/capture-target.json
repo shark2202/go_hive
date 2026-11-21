@@ -3,7 +3,7 @@
   "implementation": "go_hive",
   "version": "hive 1.0.26-go.1",
   "session_id": "<session_id>",
-  "captured_at": "2026-11-21T09:23:53+08:00",
+  "captured_at": "2026-11-21T11:12:40+08:00",
   "responses": {
     "session_create": {
       "status": 201,
@@ -14,15 +14,15 @@
         "description": "",
         "goal": "",
         "has_worker": false,
-        "loaded_at": 1795224151.1916852,
+        "loaded_at": 1795230676.755649,
         "node_count": 0,
         "queen_id": "queen_growth",
         "queen_name": "Steve Jobs",
         "queen_phase": "independent",
         "queen_supports_images": true,
-        "session_id": "session_20261121_092231_5e4335c1",
+        "session_id": "session_20261121_111116_e786486c",
         "spawned_colony_id": null,
-        "uptime_seconds": 0
+        "uptime_seconds": 0.1
       },
       "error": ""
     },
@@ -53,7 +53,7 @@
     "session_stop": {
       "status": 200,
       "payload": {
-        "session_id": "session_20261121_092231_5e4335c1",
+        "session_id": "session_20261121_111116_e786486c",
         "stopped": true
       },
       "error": ""
@@ -63,7 +63,7 @@
     "live": {
       "status": 200,
       "content_type": "text/event-stream",
-      "frame_count": 45,
+      "frame_count": 47,
       "frames": [
         {
           "event": null,
@@ -84,9 +84,9 @@
             "interrupt_cause": null,
             "interrupted": false,
             "is_executing": false,
-            "last_event_at": "2026-11-21T09:22:31.278196",
+            "last_event_at": "2026-11-21T11:11:16.866278",
             "last_event_seq": 8,
-            "last_queen_event_at": "2026-11-21T09:22:31.278196",
+            "last_queen_event_at": "2026-11-21T11:11:16.866278",
             "park_reason": "turn_done",
             "pending_questions": null,
             "queen_busy_reason": "awaiting_input",
@@ -125,7 +125,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 0,
@@ -262,18 +262,18 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 29019,
+              "conversation_chars": 30064,
               "image_blocks": 0,
               "image_tokens": 0,
               "system_chars": 62554,
               "tool_defs_chars": 52587
             },
-            "estimated_tokens": 48053,
+            "estimated_tokens": 48401,
             "max_context_tokens": 180000,
             "message_count": 3,
             "trigger": "iteration_start",
             "usage_pct": 27,
-            "usage_ratio": 0.267
+            "usage_ratio": 0.2689
           }
         },
         {
@@ -308,7 +308,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 1,
@@ -511,18 +511,18 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 29089,
+              "conversation_chars": 30134,
               "image_blocks": 0,
               "image_tokens": 0,
               "system_chars": 62554,
               "tool_defs_chars": 52587
             },
-            "estimated_tokens": 48076,
+            "estimated_tokens": 48425,
             "max_context_tokens": 180000,
             "message_count": 5,
             "trigger": "iteration_start",
             "usage_pct": 27,
-            "usage_ratio": 0.2671
+            "usage_ratio": 0.269
           }
         },
         {
@@ -575,6 +575,60 @@
         },
         {
           "event": null,
+          "type": "context_usage_updated",
+          "stream_id": "queen",
+          "node_id": "queen",
+          "execution_id": null,
+          "correlation_id": null,
+          "colony_id": null,
+          "run_id": "<absent>",
+          "seq": "<seq>",
+          "timestamp": "<timestamp>",
+          "data": {
+            "breakdown": {
+              "conversation_chars": 30276,
+              "image_blocks": 0,
+              "image_tokens": 0,
+              "system_chars": 62554,
+              "tool_defs_chars": 52587
+            },
+            "estimated_tokens": 48472,
+            "max_context_tokens": 180000,
+            "message_count": 7,
+            "trigger": "post_tool_call",
+            "usage_pct": 27,
+            "usage_ratio": 0.2693
+          }
+        },
+        {
+          "event": null,
+          "type": "context_usage_updated",
+          "stream_id": "queen",
+          "node_id": "queen",
+          "execution_id": null,
+          "correlation_id": null,
+          "colony_id": null,
+          "run_id": "<absent>",
+          "seq": "<seq>",
+          "timestamp": "<timestamp>",
+          "data": {
+            "breakdown": {
+              "conversation_chars": 30276,
+              "image_blocks": 0,
+              "image_tokens": 0,
+              "system_chars": 62554,
+              "tool_defs_chars": 52587
+            },
+            "estimated_tokens": 48472,
+            "max_context_tokens": 180000,
+            "message_count": 7,
+            "trigger": "post_tool_results",
+            "usage_pct": 27,
+            "usage_ratio": 0.2693
+          }
+        },
+        {
+          "event": null,
           "type": "llm_turn_complete",
           "stream_id": "queen",
           "node_id": "queen",
@@ -587,7 +641,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 1,
@@ -784,18 +838,18 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 29258,
+              "conversation_chars": 30303,
               "image_blocks": 0,
               "image_tokens": 0,
               "system_chars": 62554,
               "tool_defs_chars": 52587
             },
-            "estimated_tokens": 48133,
+            "estimated_tokens": 48481,
             "max_context_tokens": 180000,
             "message_count": 8,
             "trigger": "iteration_start",
             "usage_pct": 27,
-            "usage_ratio": 0.2674
+            "usage_ratio": 0.2693
           }
         },
         {
@@ -830,7 +884,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 1,
@@ -937,13 +991,13 @@
             "interrupt_cause": null,
             "interrupted": false,
             "is_executing": false,
-            "last_event_at": "2026-11-21T09:22:36.397918",
-            "last_event_seq": 51,
-            "last_queen_event_at": "2026-11-21T09:22:36.397918",
+            "last_event_at": "2026-11-21T11:11:23.139054",
+            "last_event_seq": 53,
+            "last_queen_event_at": "2026-11-21T11:11:23.139054",
             "park_reason": "turn_done",
             "pending_questions": null,
             "queen_busy_reason": "awaiting_input",
-            "snapshot_seq": 53
+            "snapshot_seq": 55
           }
         },
         {
@@ -978,7 +1032,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 0,
@@ -1070,7 +1124,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 1,
@@ -1209,7 +1263,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 1,
@@ -1318,7 +1372,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 1,
@@ -1390,13 +1444,13 @@
             "interrupt_cause": null,
             "interrupted": false,
             "is_executing": false,
-            "last_event_at": "2026-11-21T09:22:36.397918",
-            "last_event_seq": 51,
-            "last_queen_event_at": "2026-11-21T09:22:36.397918",
+            "last_event_at": "2026-11-21T11:11:23.139054",
+            "last_event_seq": 53,
+            "last_queen_event_at": "2026-11-21T11:11:23.139054",
             "park_reason": "turn_done",
             "pending_questions": null,
             "queen_busy_reason": "awaiting_input",
-            "snapshot_seq": 53
+            "snapshot_seq": 55
           }
         },
         {
@@ -1431,7 +1485,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 0,
@@ -1523,7 +1577,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 1,
@@ -1662,7 +1716,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 1,
@@ -1771,7 +1825,7 @@
           "data": {
             "cache_creation_tokens": 0,
             "cached_tokens": 0,
-            "cost_usd": 0,
+            "cost_usd": 0.0,
             "history_anchor_idx": -1,
             "input_tokens": 0,
             "iteration": 1,
@@ -1947,7 +2001,7 @@
       "data": {
         "cache_creation_tokens": 0,
         "cached_tokens": 0,
-        "cost_usd": 0,
+        "cost_usd": 0.0,
         "history_anchor_idx": -1,
         "input_tokens": 0,
         "iteration": 0,
@@ -2120,18 +2174,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 29019,
+          "conversation_chars": 30064,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 62554,
           "tool_defs_chars": 52587
         },
-        "estimated_tokens": 48053,
+        "estimated_tokens": 48401,
         "max_context_tokens": 180000,
         "message_count": 3,
         "trigger": "iteration_start",
         "usage_pct": 27,
-        "usage_ratio": 0.267
+        "usage_ratio": 0.2689
       }
     },
     {
@@ -2166,7 +2220,7 @@
       "data": {
         "cache_creation_tokens": 0,
         "cached_tokens": 0,
-        "cost_usd": 0,
+        "cost_usd": 0.0,
         "history_anchor_idx": -1,
         "input_tokens": 0,
         "iteration": 1,
@@ -2387,18 +2441,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 29089,
+          "conversation_chars": 30134,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 62554,
           "tool_defs_chars": 52587
         },
-        "estimated_tokens": 48076,
+        "estimated_tokens": 48425,
         "max_context_tokens": 180000,
         "message_count": 5,
         "trigger": "iteration_start",
         "usage_pct": 27,
-        "usage_ratio": 0.2671
+        "usage_ratio": 0.269
       }
     },
     {
@@ -2451,6 +2505,60 @@
     },
     {
       "event": null,
+      "type": "context_usage_updated",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "breakdown": {
+          "conversation_chars": 30276,
+          "image_blocks": 0,
+          "image_tokens": 0,
+          "system_chars": 62554,
+          "tool_defs_chars": 52587
+        },
+        "estimated_tokens": 48472,
+        "max_context_tokens": 180000,
+        "message_count": 7,
+        "trigger": "post_tool_call",
+        "usage_pct": 27,
+        "usage_ratio": 0.2693
+      }
+    },
+    {
+      "event": null,
+      "type": "context_usage_updated",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "breakdown": {
+          "conversation_chars": 30276,
+          "image_blocks": 0,
+          "image_tokens": 0,
+          "system_chars": 62554,
+          "tool_defs_chars": 52587
+        },
+        "estimated_tokens": 48472,
+        "max_context_tokens": 180000,
+        "message_count": 7,
+        "trigger": "post_tool_results",
+        "usage_pct": 27,
+        "usage_ratio": 0.2693
+      }
+    },
+    {
+      "event": null,
       "type": "llm_turn_complete",
       "stream_id": "queen",
       "node_id": "queen",
@@ -2463,7 +2571,7 @@
       "data": {
         "cache_creation_tokens": 0,
         "cached_tokens": 0,
-        "cost_usd": 0,
+        "cost_usd": 0.0,
         "history_anchor_idx": -1,
         "input_tokens": 0,
         "iteration": 1,
@@ -2678,18 +2786,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 29258,
+          "conversation_chars": 30303,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 62554,
           "tool_defs_chars": 52587
         },
-        "estimated_tokens": 48133,
+        "estimated_tokens": 48481,
         "max_context_tokens": 180000,
         "message_count": 8,
         "trigger": "iteration_start",
         "usage_pct": 27,
-        "usage_ratio": 0.2674
+        "usage_ratio": 0.2693
       }
     },
     {
@@ -2724,7 +2832,1043 @@
       "data": {
         "cache_creation_tokens": 0,
         "cached_tokens": 0,
-        "cost_usd": 0,
+        "cost_usd": 0.0,
+        "history_anchor_idx": -1,
+        "input_tokens": 0,
+        "iteration": 1,
+        "message_count": 8,
+        "model": "sse-parity-probe-model",
+        "output_tokens": 0,
+        "stop_reason": "stop",
+        "system_prefix_sha": "885285cb1ffe",
+        "system_suffix_sha": "e3b0c44298fc"
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_completed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "iterations": 1
+      }
+    },
+    {
+      "event": null,
+      "type": "client_input_requested",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "park_reason": "turn_done"
+      }
+    },
+    {
+      "event": null,
+      "type": "loop_state_changed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "activity": "awaiting_user",
+        "interrupt_cause": null,
+        "park_reason": "turn_done",
+        "questions": null
+      }
+    },
+    {
+      "event": null,
+      "type": "execution_completed",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "output": {
+          "status": "completed"
+        }
+      }
+    }
+  ],
+  "history_after_stop": [
+    {
+      "event": null,
+      "type": "queen_identity_selected",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "name": "Steve Jobs",
+        "queen_id": "queen_growth",
+        "title": "Head of Growth"
+      }
+    },
+    {
+      "event": null,
+      "type": "reminder_injected",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "detail": "session_start",
+        "meta": {
+          "point": "session_start"
+        },
+        "source": "point:session_start"
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_started",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "max_iterations": 50
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_iteration",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "iteration": 0,
+        "phase": "independent"
+      }
+    },
+    {
+      "event": null,
+      "type": "context_usage_updated",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "breakdown": {
+          "conversation_chars": 0,
+          "image_blocks": 0,
+          "image_tokens": 0,
+          "system_chars": 62554,
+          "tool_defs_chars": 52587
+        },
+        "estimated_tokens": 38380,
+        "max_context_tokens": 180000,
+        "message_count": 0,
+        "trigger": "iteration_start",
+        "usage_pct": 21,
+        "usage_ratio": 0.2132
+      }
+    },
+    {
+      "event": null,
+      "type": "client_output_delta",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "content": "PAYLOAD_PARITY_OK",
+        "inner_turn": 0,
+        "iteration": 0,
+        "snapshot": "PAYLOAD_PARITY_OK"
+      }
+    },
+    {
+      "event": null,
+      "type": "llm_turn_complete",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "cache_creation_tokens": 0,
+        "cached_tokens": 0,
+        "cost_usd": 0.0,
+        "history_anchor_idx": -1,
+        "input_tokens": 0,
+        "iteration": 0,
+        "message_count": 1,
+        "model": "sse-parity-probe-model",
+        "output_tokens": 0,
+        "stop_reason": "stop",
+        "system_prefix_sha": "885285cb1ffe",
+        "system_suffix_sha": "e3b0c44298fc"
+      }
+    },
+    {
+      "event": null,
+      "type": "client_input_requested",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "park_reason": "turn_done"
+      }
+    },
+    {
+      "event": null,
+      "type": "loop_state_changed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "activity": "awaiting_user",
+        "interrupt_cause": null,
+        "park_reason": "turn_done",
+        "questions": null
+      }
+    },
+    {
+      "event": null,
+      "type": "client_input_received",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": "<correlation_id>",
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "content": "payload parity probe",
+        "image_count": 0
+      }
+    },
+    {
+      "event": null,
+      "type": "execution_started",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "input": {
+          "message": "payload parity probe"
+        }
+      }
+    },
+    {
+      "event": null,
+      "type": "loop_state_changed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "activity": "executing",
+        "interrupt_cause": null,
+        "park_reason": null,
+        "questions": null
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_started",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "max_iterations": 50
+      }
+    },
+    {
+      "event": null,
+      "type": "judge_verdict",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "action": "RETRY",
+        "feedback": "",
+        "iteration": 0,
+        "judge_type": "implicit"
+      }
+    },
+    {
+      "event": null,
+      "type": "client_input_committed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": "<correlation_id>",
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "seq": "<seq>"
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_iteration",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "iteration": 1,
+        "phase": "independent"
+      }
+    },
+    {
+      "event": null,
+      "type": "context_usage_updated",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "breakdown": {
+          "conversation_chars": 30064,
+          "image_blocks": 0,
+          "image_tokens": 0,
+          "system_chars": 62554,
+          "tool_defs_chars": 52587
+        },
+        "estimated_tokens": 48401,
+        "max_context_tokens": 180000,
+        "message_count": 3,
+        "trigger": "iteration_start",
+        "usage_pct": 27,
+        "usage_ratio": 0.2689
+      }
+    },
+    {
+      "event": null,
+      "type": "client_output_delta",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "content": "PAYLOAD_PARITY_OK",
+        "inner_turn": 0,
+        "iteration": 1,
+        "snapshot": "PAYLOAD_PARITY_OK"
+      }
+    },
+    {
+      "event": null,
+      "type": "llm_turn_complete",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "cache_creation_tokens": 0,
+        "cached_tokens": 0,
+        "cost_usd": 0.0,
+        "history_anchor_idx": -1,
+        "input_tokens": 0,
+        "iteration": 1,
+        "message_count": 3,
+        "model": "sse-parity-probe-model",
+        "output_tokens": 0,
+        "stop_reason": "stop",
+        "system_prefix_sha": "885285cb1ffe",
+        "system_suffix_sha": "e3b0c44298fc"
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_completed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "iterations": 1
+      }
+    },
+    {
+      "event": null,
+      "type": "client_input_requested",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "park_reason": "turn_done"
+      }
+    },
+    {
+      "event": null,
+      "type": "loop_state_changed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "activity": "awaiting_user",
+        "interrupt_cause": null,
+        "park_reason": "turn_done",
+        "questions": null
+      }
+    },
+    {
+      "event": null,
+      "type": "execution_completed",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "output": {
+          "status": "completed"
+        }
+      }
+    },
+    {
+      "event": null,
+      "type": "session_title_updated",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "session_id": "<session_id>",
+        "title": "PAYLOAD_PARITY_OK"
+      }
+    },
+    {
+      "event": null,
+      "type": "client_input_received",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": "<correlation_id>",
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "content": "ASK_ME payload parity question",
+        "image_count": 0
+      }
+    },
+    {
+      "event": null,
+      "type": "execution_started",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "input": {
+          "message": "ASK_ME payload parity question"
+        }
+      }
+    },
+    {
+      "event": null,
+      "type": "loop_state_changed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "activity": "executing",
+        "interrupt_cause": null,
+        "park_reason": null,
+        "questions": null
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_started",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "max_iterations": 50
+      }
+    },
+    {
+      "event": null,
+      "type": "judge_verdict",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "action": "RETRY",
+        "feedback": "",
+        "iteration": 1,
+        "judge_type": "implicit"
+      }
+    },
+    {
+      "event": null,
+      "type": "client_input_committed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": "<correlation_id>",
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "seq": "<seq>"
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_iteration",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "iteration": 1,
+        "phase": "independent"
+      }
+    },
+    {
+      "event": null,
+      "type": "context_usage_updated",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "breakdown": {
+          "conversation_chars": 30134,
+          "image_blocks": 0,
+          "image_tokens": 0,
+          "system_chars": 62554,
+          "tool_defs_chars": 52587
+        },
+        "estimated_tokens": 48425,
+        "max_context_tokens": 180000,
+        "message_count": 5,
+        "trigger": "iteration_start",
+        "usage_pct": 27,
+        "usage_ratio": 0.269
+      }
+    },
+    {
+      "event": null,
+      "type": "tool_call_started",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "tool_index": 1,
+        "tool_input": {
+          "questions": [
+            {
+              "id": "<id>",
+              "options": [
+                "blue",
+                "green"
+              ],
+              "prompt": "Which color should the probe use?"
+            }
+          ]
+        },
+        "tool_name": "ask_user",
+        "tool_use_id": "<tool_use_id>"
+      }
+    },
+    {
+      "event": null,
+      "type": "tool_call_completed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "is_error": false,
+        "result": "Waiting for user input...",
+        "tool_index": 1,
+        "tool_name": "ask_user",
+        "tool_use_id": "<tool_use_id>"
+      }
+    },
+    {
+      "event": null,
+      "type": "context_usage_updated",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "breakdown": {
+          "conversation_chars": 30276,
+          "image_blocks": 0,
+          "image_tokens": 0,
+          "system_chars": 62554,
+          "tool_defs_chars": 52587
+        },
+        "estimated_tokens": 48472,
+        "max_context_tokens": 180000,
+        "message_count": 7,
+        "trigger": "post_tool_call",
+        "usage_pct": 27,
+        "usage_ratio": 0.2693
+      }
+    },
+    {
+      "event": null,
+      "type": "context_usage_updated",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "breakdown": {
+          "conversation_chars": 30276,
+          "image_blocks": 0,
+          "image_tokens": 0,
+          "system_chars": 62554,
+          "tool_defs_chars": 52587
+        },
+        "estimated_tokens": 48472,
+        "max_context_tokens": 180000,
+        "message_count": 7,
+        "trigger": "post_tool_results",
+        "usage_pct": 27,
+        "usage_ratio": 0.2693
+      }
+    },
+    {
+      "event": null,
+      "type": "llm_turn_complete",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "cache_creation_tokens": 0,
+        "cached_tokens": 0,
+        "cost_usd": 0.0,
+        "history_anchor_idx": -1,
+        "input_tokens": 0,
+        "iteration": 1,
+        "message_count": 5,
+        "model": "sse-parity-probe-model",
+        "output_tokens": 0,
+        "stop_reason": "tool_calls",
+        "system_prefix_sha": "885285cb1ffe",
+        "system_suffix_sha": "e3b0c44298fc"
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_completed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "iterations": 1
+      }
+    },
+    {
+      "event": null,
+      "type": "client_input_requested",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "park_reason": "ask_user",
+        "questions": [
+          {
+            "id": "<id>",
+            "options": [
+              "blue",
+              "green"
+            ],
+            "prompt": "Which color should the probe use?"
+          }
+        ]
+      }
+    },
+    {
+      "event": null,
+      "type": "loop_state_changed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "activity": "awaiting_user",
+        "interrupt_cause": null,
+        "park_reason": "ask_user",
+        "questions": null
+      }
+    },
+    {
+      "event": null,
+      "type": "execution_completed",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "output": {
+          "status": "completed"
+        }
+      }
+    },
+    {
+      "event": null,
+      "type": "client_input_received",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": "<correlation_id>",
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "content": "blue",
+        "image_count": 0
+      }
+    },
+    {
+      "event": null,
+      "type": "execution_started",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "input": {
+          "message": "blue"
+        }
+      }
+    },
+    {
+      "event": null,
+      "type": "loop_state_changed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "activity": "executing",
+        "interrupt_cause": null,
+        "park_reason": null,
+        "questions": null
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_started",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "max_iterations": 50
+      }
+    },
+    {
+      "event": null,
+      "type": "judge_verdict",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "action": "RETRY",
+        "feedback": "",
+        "iteration": 2,
+        "judge_type": "implicit"
+      }
+    },
+    {
+      "event": null,
+      "type": "client_input_committed",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": "<correlation_id>",
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "seq": "<seq>"
+      }
+    },
+    {
+      "event": null,
+      "type": "node_loop_iteration",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "iteration": 1,
+        "phase": "independent"
+      }
+    },
+    {
+      "event": null,
+      "type": "context_usage_updated",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "breakdown": {
+          "conversation_chars": 30303,
+          "image_blocks": 0,
+          "image_tokens": 0,
+          "system_chars": 62554,
+          "tool_defs_chars": 52587
+        },
+        "estimated_tokens": 48481,
+        "max_context_tokens": 180000,
+        "message_count": 8,
+        "trigger": "iteration_start",
+        "usage_pct": 27,
+        "usage_ratio": 0.2693
+      }
+    },
+    {
+      "event": null,
+      "type": "client_output_delta",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "content": "PAYLOAD_PARITY_OK",
+        "inner_turn": 0,
+        "iteration": 1,
+        "snapshot": "PAYLOAD_PARITY_OK"
+      }
+    },
+    {
+      "event": null,
+      "type": "llm_turn_complete",
+      "stream_id": "queen",
+      "node_id": "queen",
+      "execution_id": "<execution_id>",
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "cache_creation_tokens": 0,
+        "cached_tokens": 0,
+        "cost_usd": 0.0,
         "history_anchor_idx": -1,
         "input_tokens": 0,
         "iteration": 1,

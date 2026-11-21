@@ -448,3 +448,11 @@ message SseFrame {
     string raw_data = 4;
   }
 }
+
+// Shared body of the frozen failure paths: invalid body (400), unknown
+// session (404) and missing colony precondition (409) all answer
+// `{"error": "<message>"}`. The status code is part of the contract; the
+// message text is compared verbatim after volatile ids are masked.
+message ErrorResponse {
+  string error = 1;
+}

@@ -244,8 +244,8 @@ func TestSkillsRouteListQueenSkills(t *testing.T) {
 	if row["editable"] != true || row["deletable"] != true {
 		t.Fatalf("visible row edit flags = %#v", row)
 	}
-	if row["base_dir"] != visibleDir {
-		t.Fatalf("base_dir = %#v, want %q", row["base_dir"], visibleDir)
+	if row["base_dir"] != resolveSkillsTestPath(t, visibleDir) {
+		t.Fatalf("base_dir = %#v, want %q", row["base_dir"], resolveSkillsTestPath(t, visibleDir))
 	}
 	visibility, _ := row["visibility"].([]any)
 	if len(visibility) != 1 || visibility[0] != "queen_ui" {
@@ -464,7 +464,7 @@ func TestSkillsRouteGetQueenSkillBody(t *testing.T) {
 	if body["editable"] != true || body["source_scope"] != "queen_ui" {
 		t.Fatalf("editable/scope = %#v/%#v", body["editable"], body["source_scope"])
 	}
-	if body["base_dir"] != filepath.Join(queenDir, "skills", "ops-a") {
+	if body["base_dir"] != resolveSkillsTestPath(t, filepath.Join(queenDir, "skills", "ops-a")) {
 		t.Fatalf("base_dir = %#v", body["base_dir"])
 	}
 
@@ -728,7 +728,7 @@ func TestSkillsRouteGetSkillDetail(t *testing.T) {
 	if !strings.Contains(text, "name: queen-skill") || !strings.Contains(text, "body text") {
 		t.Fatalf("body text = %#v", body["body"])
 	}
-	if body["base_dir"] != filepath.Join(queenDir, "skills", "queen-skill") {
+	if body["base_dir"] != resolveSkillsTestPath(t, filepath.Join(queenDir, "skills", "queen-skill")) {
 		t.Fatalf("base_dir = %#v", body["base_dir"])
 	}
 	if _, present := body["editable"]; present {
@@ -991,4 +991,15 @@ func TestSkillsRouteDenySkillInstall(t *testing.T) {
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("invalid JSON status = %d", recorder.Code)
 	}
+}
+
+// resolveSkillsTestPath mirrors ParsedSkill.Location/BaseDir's Path.resolve()
+// semantics (skills.resolveSkillPath): expectations built from t.TempDir()
+// must resolve /var -> /private/var on macOS the same way the parser does.
+func resolveSkillsTestPath(t *testing.T, path string) string {
+	t.Helper()
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		return resolved
+	}
+	return path
 }

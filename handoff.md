@@ -102,6 +102,7 @@ cd /Users/mac/.publish-go-hive/repo && git ls-remote origin main   # 校验远�
 bash go_hive/scripts/watchdog_report.sh 300   # 后台 persist
 bash go_hive/scripts/timegov_record.sh 300    # 后台 persist
 bash go_hive/scripts/release_cadence_loop.sh # 2 小时 slot 版调度（后台 persist）
+bash go_hive/scripts/governance_recheck_loop.sh # 每 6 小时治理重算（后台 persist）
 bash go_hive/scripts/morning_report.sh
 ```
 
@@ -137,6 +138,7 @@ bash go_hive/scripts/morning_report.sh
 
 ## 8. 关键文档 / 脚本
 
+- 治理台账：`go_hive/GOVERNANCE_LEDGER.csv`、`go_hive/docs/delivery-targets.json`（截止时间只提前不延后，`scripts/governance_recheck.py`）
 - 2 小时 slot 版排期：`go_hive/docs/release-cadence.html`（`scripts/gen_release_cadence.py --check`）；调度 `scripts/release_cadence_loop.sh`
 - 交付治理板：`go_hive/docs/delivery-governance.html`（G1/G2/G3、WIP、门禁、度量、风险）
 - 配置参考（HTML，自动生成）：`go_hive/docs/configuration.html`（`scripts/gen_configuration_html.py --check`）

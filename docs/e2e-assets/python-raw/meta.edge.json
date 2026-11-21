@@ -1,0 +1,30 @@
+{
+  "caps.compact": {
+    "chars": 3088,
+    "raw_chars": 3088
+  },
+  "caps.none": {
+    "chars": 3966,
+    "raw_chars": 3966
+  },
+  "edge.colony": {
+    "chars": 4169,
+    "raw_chars": 5865
+  },
+  "edge.independent": {
+    "chars": 3893,
+    "raw_chars": 5448
+  },
+  "edge.none": {
+    "chars": 4987,
+    "raw_chars": 7036
+  },
+  "reminder.block": {
+    "chars": 222,
+    "raw_chars": 222
+  },
+  "turn-context": {
+    "chars": 45,
+    "raw_chars": 45
+  }
+}

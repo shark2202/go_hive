@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-21T09:23:53+08:00",
+  "generated_at": "2026-11-21T11:12:40+08:00",
   "reference": {
     "version": "hive 1.0.14",
     "session_id": "<session_id>"
@@ -780,7 +780,7 @@
     "context_usage_updated": {
       "live": {
         "reference_count": 5,
-        "target_count": 3,
+        "target_count": 5,
         "reference_present": true,
         "target_present": true,
         "missing_in_target": [],
@@ -884,7 +884,7 @@
       },
       "history": {
         "reference_count": 6,
-        "target_count": 4,
+        "target_count": 6,
         "reference_present": true,
         "target_present": true,
         "missing_in_target": [],
@@ -1062,9 +1062,10 @@
           ],
           "target": [
             "0",
-            "29019",
-            "29089",
-            "29258"
+            "30064",
+            "30134",
+            "30276",
+            "30303"
           ]
         },
         "breakdown.system_chars": {
@@ -1093,9 +1094,10 @@
           ],
           "target": [
             "38380",
-            "48053",
-            "48076",
-            "48133"
+            "48401",
+            "48425",
+            "48472",
+            "48481"
           ]
         },
         "message_count": {
@@ -1110,17 +1112,8 @@
             "0",
             "3",
             "5",
+            "7",
             "8"
-          ]
-        },
-        "trigger": {
-          "reference": [
-            "\"iteration_start\"",
-            "\"post_tool_call\"",
-            "\"post_tool_results\""
-          ],
-          "target": [
-            "\"iteration_start\""
           ]
         },
         "usage_pct": {
@@ -1142,9 +1135,9 @@
           ],
           "target": [
             "0.2132",
-            "0.267",
-            "0.2671",
-            "0.2674"
+            "0.2689",
+            "0.269",
+            "0.2693"
           ]
         }
       }
@@ -1549,19 +1542,8 @@
         "target_present": true,
         "missing_in_target": [],
         "extra_in_target": [],
-        "type_mismatch": [
-          "cost_usd"
-        ],
-        "type_details": {
-          "cost_usd": {
-            "reference": [
-              "float"
-            ],
-            "target": [
-              "int"
-            ]
-          }
-        },
+        "type_mismatch": [],
+        "type_details": {},
         "reference_keys": [
           "cache_creation_tokens",
           "cached_tokens",
@@ -1636,7 +1618,7 @@
             "int"
           ],
           "cost_usd": [
-            "int"
+            "float"
           ],
           "history_anchor_idx": [
             "int"
@@ -1674,19 +1656,8 @@
         "target_present": true,
         "missing_in_target": [],
         "extra_in_target": [],
-        "type_mismatch": [
-          "cost_usd"
-        ],
-        "type_details": {
-          "cost_usd": {
-            "reference": [
-              "float"
-            ],
-            "target": [
-              "int"
-            ]
-          }
-        },
+        "type_mismatch": [],
+        "type_details": {},
         "reference_keys": [
           "cache_creation_tokens",
           "cached_tokens",
@@ -1761,7 +1732,7 @@
             "int"
           ],
           "cost_usd": [
-            "int"
+            "float"
           ],
           "history_anchor_idx": [
             "int"
@@ -1799,19 +1770,8 @@
         "target_present": true,
         "missing_in_target": [],
         "extra_in_target": [],
-        "type_mismatch": [
-          "cost_usd"
-        ],
-        "type_details": {
-          "cost_usd": {
-            "reference": [
-              "float"
-            ],
-            "target": [
-              "int"
-            ]
-          }
-        },
+        "type_mismatch": [],
+        "type_details": {},
         "reference_keys": [
           "cache_creation_tokens",
           "cached_tokens",
@@ -1886,7 +1846,7 @@
             "int"
           ],
           "cost_usd": [
-            "int"
+            "float"
           ],
           "history_anchor_idx": [
             "int"
@@ -1983,14 +1943,6 @@
         }
       },
       "history_value_diff": {
-        "cost_usd": {
-          "reference": [
-            "0.0"
-          ],
-          "target": [
-            "0"
-          ]
-        },
         "iteration": {
           "reference": [
             "0",
@@ -2075,7 +2027,7 @@
         }
       },
       "history": {
-        "reference_count": 8,
+        "reference_count": 7,
         "target_count": 7,
         "reference_present": true,
         "target_present": true,
@@ -3835,7 +3787,7 @@
     "live": {
       "capture": "live",
       "reference_count": 35,
-      "target_count": 45,
+      "target_count": 47,
       "reference_types": [
         "session_snapshot",
         "client_output_delta",
@@ -3901,6 +3853,8 @@
         "context_usage_updated",
         "tool_call_started",
         "tool_call_completed",
+        "context_usage_updated",
+        "context_usage_updated",
         "llm_turn_complete",
         "node_loop_completed",
         "client_input_requested",
@@ -3966,14 +3920,6 @@
           "target": [
             "node_loop_started"
           ]
-        },
-        {
-          "op": "delete",
-          "reference": [
-            "context_usage_updated",
-            "context_usage_updated"
-          ],
-          "target": []
         },
         {
           "op": "insert",
@@ -4115,8 +4061,8 @@
     },
     "history": {
       "capture": "history",
-      "reference_count": 44,
-      "target_count": 53,
+      "reference_count": 43,
+      "target_count": 55,
       "reference_types": [
         "queen_identity_selected",
         "reminder_injected",
@@ -4160,7 +4106,6 @@
         "client_output_delta",
         "llm_turn_complete",
         "client_input_requested",
-        "loop_state_changed",
         "loop_state_changed"
       ],
       "target_types": [
@@ -4198,6 +4143,8 @@
         "context_usage_updated",
         "tool_call_started",
         "tool_call_completed",
+        "context_usage_updated",
+        "context_usage_updated",
         "llm_turn_complete",
         "node_loop_completed",
         "client_input_requested",
@@ -4266,14 +4213,6 @@
           ]
         },
         {
-          "op": "delete",
-          "reference": [
-            "context_usage_updated",
-            "context_usage_updated"
-          ],
-          "target": []
-        },
-        {
           "op": "insert",
           "reference": [],
           "target": [
@@ -4309,10 +4248,8 @@
           ]
         },
         {
-          "op": "replace",
-          "reference": [
-            "loop_state_changed"
-          ],
+          "op": "insert",
+          "reference": [],
           "target": [
             "execution_completed"
           ]
@@ -4322,7 +4259,7 @@
     "live_without_go_envelope": {
       "capture": "live_without_go_envelope",
       "reference_count": 35,
-      "target_count": 33,
+      "target_count": 35,
       "reference_types": [
         "session_snapshot",
         "client_output_delta",
@@ -4382,6 +4319,8 @@
         "context_usage_updated",
         "tool_call_started",
         "tool_call_completed",
+        "context_usage_updated",
+        "context_usage_updated",
         "llm_turn_complete",
         "client_input_requested",
         "loop_state_changed",
@@ -4410,14 +4349,6 @@
           "target": [
             "session_title_updated"
           ]
-        },
-        {
-          "op": "delete",
-          "reference": [
-            "context_usage_updated",
-            "context_usage_updated"
-          ],
-          "target": []
         }
       ]
     }
@@ -4618,59 +4549,6 @@
         ],
         "type_mismatch": [],
         "type_details": {}
-      }
-    },
-    "llm_turn_complete": {
-      "live": {
-        "missing_in_target": [],
-        "extra_in_target": [],
-        "type_mismatch": [
-          "cost_usd"
-        ],
-        "type_details": {
-          "cost_usd": {
-            "reference": [
-              "float"
-            ],
-            "target": [
-              "int"
-            ]
-          }
-        }
-      },
-      "replay": {
-        "missing_in_target": [],
-        "extra_in_target": [],
-        "type_mismatch": [
-          "cost_usd"
-        ],
-        "type_details": {
-          "cost_usd": {
-            "reference": [
-              "float"
-            ],
-            "target": [
-              "int"
-            ]
-          }
-        }
-      },
-      "history": {
-        "missing_in_target": [],
-        "extra_in_target": [],
-        "type_mismatch": [
-          "cost_usd"
-        ],
-        "type_details": {
-          "cost_usd": {
-            "reference": [
-              "float"
-            ],
-            "target": [
-              "int"
-            ]
-          }
-        }
       }
     },
     "node_loop_completed": {

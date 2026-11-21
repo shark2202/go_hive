@@ -111,8 +111,10 @@ func TestReadFileRejectsMissingBinaryAndOversized(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if !res.IsError || !strings.Contains(res.Content, "file not found") {
-		t.Fatalf("missing file result = %+v, want error mentioning not found", res)
+	// file_ops.py answers a missing file with plain text, so read_file does
+	// too (no is_error marker the model has to decode).
+	if res.IsError || !strings.Contains(res.Content, "File not found") {
+		t.Fatalf("missing file result = %+v, want the upstream not-found text", res)
 	}
 
 	if err := os.WriteFile(filepath.Join(dir, "blob.bin"), []byte{'a', 0, 'b'}, 0o644); err != nil {
@@ -153,8 +155,9 @@ func TestReadFileRejectsMissingBinaryAndOversized(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if !res.IsError || !strings.Contains(res.Content, "directory") {
-		t.Fatalf("directory result = %+v, want directory error", res)
+	// file_ops.py::read_file answers a directory with its entries, not an error.
+	if res.IsError || !strings.HasPrefix(res.Content, "Directory: . (") {
+		t.Fatalf("directory result = %+v, want the upstream listing", res)
 	}
 }
 
@@ -238,8 +241,10 @@ func TestPathTraversalAndAbsoluteEscapeRejected(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read %s: %v", raw, err)
 		}
-		if !res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
-			t.Fatalf("read %s result = %+v, want sandbox escape error", raw, res)
+		// Read refusals are plain text (file_ops.py policy branch); the
+		// security property is that no content comes back.
+		if !strings.Contains(res.Content, "escapes the sandbox root") || strings.Contains(res.Content, "nope") {
+			t.Fatalf("read %s result = %+v, want the sandbox escape refusal", raw, res)
 		}
 	}
 	if _, err := os.Stat(filepath.Join(outside, "escape.txt")); !os.IsNotExist(err) {
@@ -266,8 +271,8 @@ func TestSymlinkEscapeRejected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if !res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
-		t.Fatalf("symlink read result = %+v, want escape error", res)
+	if !strings.Contains(res.Content, "escapes the sandbox root") || strings.Contains(res.Content, "secret") {
+		t.Fatalf("symlink read result = %+v, want the escape refusal without content", res)
 	}
 
 	res, err = tb.Execute(context.Background(), ToolWriteFile, map[string]any{

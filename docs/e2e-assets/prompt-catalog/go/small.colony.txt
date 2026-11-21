@@ -1,0 +1,81 @@
+## Skills (mandatory)
+Before replying: scan <available_skills> <description> entries.
+- If the user message contains <read_skill>NAME</read_skill> tags: these are
+  explicit requests. Read EVERY tagged skill's SKILL.md with
+  `terminal_exec("cat <location>")` before planning or other tool use — the
+  tags override the "clearly applies" test and the one-skill limit below.
+- Otherwise, if exactly one skill clearly applies: read its SKILL.md at <location> with `terminal_exec("cat <location>")`, then follow it.
+- If multiple could apply: choose the most specific one, then read/follow it.
+- If none clearly apply: do not read any SKILL.md.
+- The read prevails over ask pressure: reading SKILL.md is pre-flight, not
+  real work. Do it BEFORE any clarifying question (ask_user) and before any
+  task plan — never defer it behind either.
+Constraints: never read more than one skill up front unless <read_skill> tags name more; only read after selecting.
+- When a skill drives external API writes (Gmail, Calendar, GitHub, etc.),
+  assume rate limits: prefer fewer larger writes, avoid tight one-item loops,
+  serialize bursts when possible, and respect 429/Retry-After.
+- When a selected skill references a relative path, resolve it against the
+  skill directory (parent of SKILL.md) and use that absolute path in tool commands.
+
+<available_skills>
+  <skill>
+    <name>alpha-plain</name>
+    <description>Plain short description.</description>
+    <location><HIVE_HOME>/skills/alpha-plain/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.browser-automation</name>
+    <description>Required before any hive-browser CLI command.</description>
+    <location><BUNDLED>/_default_skills/browser-automation/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.image-generation</name>
+    <description>Required before calling image_generate.</description>
+    <location><BUNDLED>/_default_skills/image-generation/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.pdf</name>
+    <description>Read, write, merge, split, rotate, watermark, encrypt, and OCR PDF files using Python (pypdf, pdfplumber, reportlab, pypdfium2) and command-line tools (poppler-utils, qpdf).</description>
+    <location><BUNDLED>/_default_skills/pdf/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.slack-notifications-setup</name>
+    <description>Set up a Slack notification channel (Sentinel) for a colony by driving the browser — reuse or create the "Hive Sentinel" Slack app from a JSON manifest, install it, capture the bot + app tokens, create/select the channel via the Slack API, and turn Sentinel on so the colony can ping the user on Sla…</description>
+    <location><BUNDLED>/_default_skills/slack-notifications-setup/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.telegram-notifications-setup</name>
+    <description>Set up a Telegram notification channel (Sentinel) for a colony by driving the browser — create a bot via @BotFather in Telegram Web, store its token, detect the chat to notify, and turn Sentinel on so the colony can ping the user on Telegram and accept replies.</description>
+    <location><BUNDLED>/_default_skills/telegram-notifications-setup/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.worker-delegation</name>
+    <description>Concrete patterns for breaking colony work into parallel worker jobs via run_playbook — when fan-out helps, how to model the goal as a tracker table, write the worker skill, author the playbook, pilot, and let convergence retry/resume the gap.</description>
+    <location><BUNDLED>/_default_skills/worker-delegation/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>hive.writing-hive-skills</name>
+    <description>Author a new Agent Skill for a Hive agent that conforms to the Agent Skills specification (SKILL.md with YAML frontmatter, optional scripts/references/assets directories).</description>
+    <location><BUNDLED>/_default_skills/writing-hive-skills/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>small-bravo</name>
+    <description>Skill small-bravo exists to keep the small profile compact.</description>
+    <location><HIVE_HOME>/skills/small-bravo/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>small-charlie</name>
+    <description>Skill small-charlie exists to keep the small profile compact.</description>
+    <location><HIVE_HOME>/skills/small-charlie/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>small-delta</name>
+    <description>Skill small-delta exists to keep the small profile compact.</description>
+    <location><HIVE_HOME>/skills/small-delta/SKILL.md</location>
+  </skill>
+  <skill>
+    <name>small-echo</name>
+    <description>Skill small-echo exists to keep the small profile compact.</description>
+    <location><HIVE_HOME>/skills/small-echo/SKILL.md</location>
+  </skill>
+</available_skills>

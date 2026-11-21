@@ -1,0 +1,13 @@
+skill-catalog / reminder rendering parity (canonicalized, verbatim)
+cases: 10/10 identical
+
+  small.none           IDENTICAL python=3615 chars go=3615 chars
+  small.independent    IDENTICAL python=4394 chars go=4394 chars
+  small.colony         IDENTICAL python=4808 chars go=4808 chars
+  edge.none            IDENTICAL python=4987 chars go=4987 chars
+  edge.independent     IDENTICAL python=3893 chars go=3893 chars
+  edge.colony          IDENTICAL python=4169 chars go=4169 chars
+  caps.none            IDENTICAL python=3966 chars go=3966 chars
+  caps.compact         IDENTICAL python=3088 chars go=3088 chars
+  turn-context         IDENTICAL python=45 chars go=45 chars
+  reminder.block       IDENTICAL python=222 chars go=222 chars

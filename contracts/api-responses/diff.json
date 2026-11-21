@@ -1,36 +1,39 @@
 {
   "schema": "hive-api-contract-diff/1",
-  "generated_at": "2026-11-21T00:58:55+08:00",
+  "generated_at": "2026-11-21T11:24:30+08:00",
   "direction": "reference(python) -> target(go_hive)",
-  "reference_id": "python@445494a3033c3036eaea044505b838d101257b56",
-  "target_id": "go_hive@445494a3033c3036eaea044505b838d101257b56",
+  "reference_id": "python@72a7308e470c32996d14d4e4b3c0538150332046",
+  "target_id": "go_hive@72a7308e470c32996d14d4e4b3c0538150332046",
   "reference": {
     "implementation": "python",
     "version": "hive 1.0.14",
-    "commit": "445494a3033c3036eaea044505b838d101257b56",
-    "last_core_commit": "a756b1e51765bc75b0a40e362859452a0a54081b",
+    "commit": "72a7308e470c32996d14d4e4b3c0538150332046",
+    "last_core_commit": "856854659269aa4c9fcfc8ae89ff956eaff75b66",
     "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd"
   },
   "target": {
     "implementation": "go_hive",
     "version": "hive 1.0.26-go.1",
-    "commit": "445494a3033c3036eaea044505b838d101257b56"
+    "commit": "72a7308e470c32996d14d4e4b3c0538150332046"
   },
   "probe": {
     "queen_id": "queen_growth",
     "llm": {
       "provider": "openai",
       "model": "contract-probe-model",
-      "api_base": "http://127.0.0.1:59422/v1",
+      "api_base": "http://127.0.0.1:58772/v1",
       "key_env": "HIVE_CONTRACT_PROBE_KEY",
       "note": "local OpenAI-compatible stub; deterministic kickoff turn, no vendor call, no network"
     },
     "sse_seconds": 3.0
   },
   "totals": {
-    "endpoints": 14,
-    "pass": 14,
+    "endpoints": 17,
+    "pass": 17,
     "fail": 0,
+    "success_paths": 14,
+    "failure_paths": 3,
+    "status_mismatch": 0,
     "missing_in_target": 0,
     "extra_in_target": 0,
     "type_mismatch": 0,
@@ -43,6 +46,8 @@
       "label": "健康检查",
       "method": "GET",
       "path": "/api/health",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -54,6 +59,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "status == ok",
           "ok": true,
@@ -69,6 +79,8 @@
       "label": "Queen 档案",
       "method": "GET",
       "path": "/api/queen/profiles",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -80,6 +92,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "queen id set equal",
           "ok": true,
@@ -93,6 +110,8 @@
       "label": "Queen 工具库",
       "method": "GET",
       "path": "/api/queen/queen_growth/tools",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -104,6 +123,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "queen_id equal",
           "ok": true,
@@ -122,6 +146,8 @@
       "label": "技能目录",
       "method": "GET",
       "path": "/api/skills",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -133,6 +159,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "skill name set equal",
           "ok": true,
@@ -146,6 +177,8 @@
       "label": "LLM 配置",
       "method": "GET",
       "path": "/api/config/llm",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -157,6 +190,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "provider equal",
           "ok": true,
@@ -180,6 +218,8 @@
       "label": "模型总览",
       "method": "GET",
       "path": "/api/models/overview",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -191,6 +231,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "slots.llm.provider equal",
           "ok": true,
@@ -209,6 +254,8 @@
       "label": "凭据规格目录",
       "method": "GET",
       "path": "/api/credentials/specs",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -220,6 +267,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "credential_id set equal",
           "ok": true,
@@ -233,6 +285,8 @@
       "label": "创建会话",
       "method": "POST",
       "path": "/api/sessions",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 201,
       "target_status": 201,
       "reference_content_type": "application/json; charset=utf-8",
@@ -244,6 +298,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=201 target=201"
+        },
         {
           "check": "queen_id equal",
           "ok": true,
@@ -267,6 +326,8 @@
       "label": "会话列表",
       "method": "GET",
       "path": "/api/sessions",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -278,6 +339,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "session count equal",
           "ok": true,
@@ -291,6 +357,8 @@
       "label": "会话详情",
       "method": "GET",
       "path": "/api/sessions/{session}",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -302,6 +370,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "queen_id equal",
           "ok": true,
@@ -315,6 +388,8 @@
       "label": "会话事件流",
       "method": "GET",
       "path": "/api/sessions/{session}/events",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "text/event-stream",
@@ -326,6 +401,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "content type is event-stream",
           "ok": true,
@@ -356,6 +436,8 @@
       "label": "事件历史",
       "method": "GET",
       "path": "/api/sessions/{session}/events/history",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -367,6 +449,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "event type sequence equal",
           "ok": true,
@@ -392,6 +479,8 @@
       "label": "会话快照",
       "method": "GET",
       "path": "/api/sessions/{session}/snapshot",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -403,6 +492,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "snapshot keys equal",
           "ok": true,
@@ -416,6 +510,8 @@
       "label": "会话统计",
       "method": "GET",
       "path": "/api/sessions/{session}/stats",
+      "kind": "success",
+      "expect_status": null,
       "reference_status": 200,
       "target_status": 200,
       "reference_content_type": "application/json; charset=utf-8",
@@ -427,6 +523,11 @@
       "type_mismatch": [],
       "count_mismatch": [],
       "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        },
         {
           "check": "stats keys equal",
           "ok": true,
@@ -440,7 +541,115 @@
         {
           "check": "event_bus.subscriptions is runtime-internal (not compared)",
           "ok": true,
-          "detail": "reference=9 target=1"
+          "detail": "reference=9 target=3"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "session_detail_missing",
+      "label": "会话不存在",
+      "method": "GET",
+      "path": "/api/sessions/session_20990101_000000_deadbeef",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference=\"Session '<session_id>' not found\" target=\"Session '<session_id>' not found\""
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "session_create_invalid_body",
+      "label": "创建会话-非对象体",
+      "method": "POST",
+      "path": "/api/sessions",
+      "kind": "failure",
+      "expect_status": 400,
+      "reference_status": 400,
+      "target_status": 400,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=400 target=400"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=400 reference=400 target=400"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='Request body must be a JSON object' target='Request body must be a JSON object'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "session_resolve_missed_conflict",
+      "label": "未加载 Colony",
+      "method": "POST",
+      "path": "/api/sessions/{session}/colony/resolve_missed",
+      "kind": "failure",
+      "expect_status": 409,
+      "reference_status": 409,
+      "target_status": 409,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=409 target=409"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=409 reference=409 target=409"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='Colony not loaded' target='Colony not loaded'"
         }
       ],
       "notes": []

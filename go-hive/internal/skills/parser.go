@@ -165,8 +165,8 @@ func ParseSkillMD(path string, sourceScope string) *ParsedSkill {
 		}
 	}
 
-	location, _ := filepath.Abs(path)
-	baseDir, _ := filepath.Abs(filepath.Dir(path))
+	location := resolveSkillPath(path)
+	baseDir := resolveSkillPath(filepath.Dir(path))
 
 	return &ParsedSkill{
 		Name:          name,
@@ -181,6 +181,22 @@ func ParseSkillMD(path string, sourceScope string) *ParsedSkill {
 		AllowedTools:  stringList(rawTools),
 		Visibility:    visibility,
 	}
+}
+
+// resolveSkillPath mirrors Python's Path.resolve(): a skill installed as a
+// symlinked directory (e.g. ~/.agents/skills/ego-browser -> an app bundle)
+// announces its REAL location in the catalog <location> text and allowlists
+// its real base dir. filepath.Abs alone kept the link path, so the catalog
+// diverged from the Python reference on every symlinked skill.
+func resolveSkillPath(path string) string {
+	resolved := path
+	if evaluated, err := filepath.EvalSymlinks(path); err == nil {
+		resolved = evaluated
+	}
+	if abs, err := filepath.Abs(resolved); err == nil {
+		return abs
+	}
+	return resolved
 }
 
 func decodeYAML(raw string) (map[string]any, bool) {

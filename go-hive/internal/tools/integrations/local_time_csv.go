@@ -9,6 +9,10 @@ import (
 )
 
 // getCurrentTime ports time_tool.get_current_time.
+//
+// `datetime` is Python's datetime.isoformat(): microsecond precision when the
+// clock has sub-second component, and a numeric UTC offset ("+00:00"), never
+// the "Z" that time.RFC3339 emits for UTC.
 func getCurrentTime(_ context.Context, _ *Runtime, input map[string]any) (any, error) {
 	name := stringArg(input, "timezone")
 	if name == "" {
@@ -20,13 +24,24 @@ func getCurrentTime(_ context.Context, _ *Runtime, input map[string]any) (any, e
 	}
 	now := hiveclock.Now().In(location)
 	return map[string]any{
-		"datetime":       now.Format(time.RFC3339),
+		"datetime":       pythonISODatetime(now),
 		"date":           now.Format("2006-01-02"),
 		"time":           now.Format("15:04:05"),
 		"timezone":       name,
 		"day_of_week":    now.Weekday().String(),
 		"unix_timestamp": now.Unix(),
 	}, nil
+}
+
+// pythonISODatetime renders t the way datetime.isoformat() does for an aware
+// datetime: "2006-01-02T15:04:05.ffffff+07:00", with the fractional part
+// omitted when the microsecond component is zero.
+func pythonISODatetime(t time.Time) string {
+	rendered := t.Format("2006-01-02T15:04:05")
+	if micro := t.Nanosecond() / 1000; micro != 0 {
+		rendered += fmt.Sprintf(".%06d", micro)
+	}
+	return rendered + t.Format("-07:00")
 }
 
 // csvPath validates the upstream two-part precondition (a .csv path inside an

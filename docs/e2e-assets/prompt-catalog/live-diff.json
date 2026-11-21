@@ -1,0 +1,54 @@
+{
+  "meta": {
+    "go": {
+      "opening_messages": 2,
+      "opening_tools": 24,
+      "queen_requests": 2,
+      "system_chars": 62212,
+      "turn_context_injected": false,
+      "turn_context_keys": [
+        "probe"
+      ]
+    },
+    "python": {
+      "opening_messages": 2,
+      "opening_tools": 24,
+      "queen_requests": 2,
+      "system_chars": 21584,
+      "turn_context_injected": true,
+      "turn_context_keys": [
+        "probe"
+      ]
+    }
+  },
+  "opening_messages": {
+    "go_chars": 5066,
+    "identical": false,
+    "python_chars": 4344
+  },
+  "reminder_catalog": {
+    "go_chars": 3985,
+    "identical": true,
+    "python_chars": 3985
+  },
+  "reminder_searchable": {
+    "go_chars": 1029,
+    "identical": false,
+    "python_chars": 307
+  },
+  "system_prompt": {
+    "go_chars": 62196,
+    "identical": false,
+    "python_chars": 21584
+  },
+  "turn_context": {
+    "go_chars": 0,
+    "identical": false,
+    "python_chars": 45
+  },
+  "user_turn_messages": {
+    "go_chars": 5151,
+    "identical": false,
+    "python_chars": 4604
+  }
+}

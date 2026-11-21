@@ -147,7 +147,18 @@ def start_stub_llm() -> tuple[ThreadingHTTPServer, str]:
 # Probes are executed in this order.  ``session`` paths substitute the id the
 # side returned from POST /api/sessions.
 PROBES: list[dict[str, Any]] = [
-    {"id": "health", "label": "健康检查", "method": "GET", "path": "/api/health", "ignore_prefixes": ["resources."]},
+    {
+        "id": "health",
+        "label": "健康检查",
+        "method": "GET",
+        "path": "/api/health",
+        "ignore_prefixes": ["resources."],
+        # Conditional sampler readings: they only appear when the host sampler
+        # fires during the freeze, so they must not be written into the frozen
+        # shape (the shape snapshot test treats every frozen field as always
+        # present). `resources.verdict` is stable and stays.
+        "shape_ignore": ["resources.avail_mb", "resources.renderers"],
+    },
     {"id": "queen_profiles", "label": "Queen 档案", "method": "GET", "path": "/api/queen/profiles"},
     {"id": "queen_tools", "label": "Queen 工具库", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/tools"},
     {"id": "skills", "label": "技能目录", "method": "GET", "path": "/api/skills"},
@@ -168,6 +179,33 @@ PROBES: list[dict[str, Any]] = [
     {"id": "session_events_history", "label": "事件历史", "method": "GET", "path": "/api/sessions/{session}/events/history"},
     {"id": "session_snapshot", "label": "会话快照", "method": "GET", "path": "/api/sessions/{session}/snapshot"},
     {"id": "session_stats", "label": "会话统计", "method": "GET", "path": "/api/sessions/{session}/stats"},
+    # Failure paths: same routes, invalid input, pinned status + error body.
+    {
+        "id": "session_detail_missing",
+        "label": "会话不存在",
+        "method": "GET",
+        "path": "/api/sessions/session_20990101_000000_deadbeef",
+        "kind": "failure",
+        "expect_status": 404,
+    },
+    {
+        "id": "session_create_invalid_body",
+        "label": "创建会话-非对象体",
+        "method": "POST",
+        "path": "/api/sessions",
+        "body": [],
+        "kind": "failure",
+        "expect_status": 400,
+    },
+    {
+        "id": "session_resolve_missed_conflict",
+        "label": "未加载 Colony",
+        "method": "POST",
+        "path": "/api/sessions/{session}/colony/resolve_missed",
+        "body": {"decisions": {}},
+        "kind": "failure",
+        "expect_status": 409,
+    },
 ]
 
 # Applied after the probe table: older Go routes may be absent.
@@ -653,8 +691,9 @@ class Freezer:
             payload = result.payload
 
         canonical = lib.canonicalize(payload)
-        shape = lib.shape_of(canonical) if canonical is not None else {}
-        counts = lib.count_arrays(canonical) if canonical is not None else {}
+        shape_source = lib.strip_paths(canonical, probe.get("shape_ignore", []))
+        shape = lib.shape_of(shape_source) if shape_source is not None else {}
+        counts = lib.count_arrays(shape_source) if shape_source is not None else {}
         record = {
             "endpoint": probe["id"],
             "label": probe["label"],
@@ -669,6 +708,7 @@ class Freezer:
             "canonical": canonical,
             "shape": shape,
             "counts": counts,
+            "shape_ignore": probe.get("shape_ignore", []),
             "notes": notes,
         }
         (side_dir / f"{probe['id']}.json").write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -706,6 +746,9 @@ class Freezer:
             "endpoints": len(endpoints),
             "pass": sum(1 for e in endpoints if e["verdict"] == "PASS"),
             "fail": sum(1 for e in endpoints if e["verdict"] != "PASS"),
+            "success_paths": sum(1 for e in endpoints if e.get("kind", "success") == "success"),
+            "failure_paths": sum(1 for e in endpoints if e.get("kind") == "failure"),
+            "status_mismatch": sum(1 for e in endpoints if e["reference_status"] != e["target_status"]),
             "missing_in_target": sum(len(e["missing_in_target"]) for e in endpoints),
             "extra_in_target": sum(len(e["extra_in_target"]) for e in endpoints),
             "type_mismatch": sum(len(e["type_mismatch"]) for e in endpoints),
@@ -766,6 +809,8 @@ class Freezer:
                     "target_file": f"target/{probe['id']}.json",
                     "reference_shape": f"shapes/reference/{probe['id']}.shape.json",
                     "target_shape": f"shapes/target/{probe['id']}.shape.json",
+                    "kind": probe.get("kind", "success"),
+                    "expect_status": probe.get("expect_status"),
                 }
                 for probe in PROBES
             ],
@@ -955,7 +1000,34 @@ def diff_endpoint(
             }
         )
 
-    semantic = semantic_checks(endpoint, reference["canonical"], target["canonical"])
+    semantic = [
+        {
+            "check": "status equal",
+            "ok": reference["status"] == target["status"],
+            "detail": f"reference={reference['status']} target={target['status']}",
+        }
+    ]
+    if probe.get("kind") == "failure":
+        expected = probe.get("expect_status")
+        semantic.append(
+            {
+                "check": "expected failure status",
+                "ok": expected is None or (reference["status"] == expected and target["status"] == expected),
+                "detail": f"expect={expected} reference={reference['status']} target={target['status']}",
+            }
+        )
+        semantic.append(
+            {
+                "check": "error message equal",
+                "ok": _values_at(reference["canonical"], "error") == _values_at(target["canonical"], "error")
+                and isinstance(_values_at(reference["canonical"], "error"), str),
+                "detail": (
+                    f"reference={_values_at(reference['canonical'], 'error')!r} "
+                    f"target={_values_at(target['canonical'], 'error')!r}"
+                ),
+            }
+        )
+    semantic.extend(semantic_checks(endpoint, reference["canonical"], target["canonical"]))
 
     notes: list[str] = []
     if ignore_prefixes:
@@ -981,6 +1053,8 @@ def diff_endpoint(
         "label": probe["label"],
         "method": probe["method"],
         "path": probe["path"],
+        "kind": probe.get("kind", "success"),
+        "expect_status": probe.get("expect_status"),
         "reference_status": reference["status"],
         "target_status": target["status"],
         "reference_content_type": reference["content_type"],
@@ -1216,6 +1290,10 @@ def render_markdown(diff: dict[str, Any], index: dict[str, Any], route_manifest:
     lines.append("> 但键的存在性（null vs 缺失）保留。")
     lines.append("")
     lines.append(f"**端点：{totals['pass']}/{totals['endpoints']} PASS，{totals['fail']} FAIL。**")
+    lines.append(
+        f"**路径：成功 {totals.get('success_paths', totals['endpoints'])}，失败路径 "
+        f"{totals.get('failure_paths', 0)}（400/404/409 字段对照）；状态码不一致 {totals.get('status_mismatch', 0)}。**"
+    )
     lines.append(
         f"**差异计数：missing_in_target={totals['missing_in_target']}，extra_in_target={totals['extra_in_target']}，"
         f"type_mismatch={totals['type_mismatch']}，count_mismatch={totals['count_mismatch']}，"

@@ -557,8 +557,15 @@ func (r *Runner) createSessionWithRuntime(
 			SessionID:         sessionID,
 			QueenName:         record.QueenName,
 			HomeRoot:          home.Root,
-			SkillsCatalog:     skillsCatalog.Catalog,
-			OnTurnStart:       onTurnStart,
+			// The catalog is phase-filtered at render time: an independent queen
+			// drops worker/colony-only skills, a colony-bound queen announces the
+			// colony view. Reads the live phase so a mid-session fork re-announces.
+			//
+			// Parity: framework/tools/queen_lifecycle_tools.py::QueenPhaseState.render_skills_catalog
+			SkillsCatalog: func() string {
+				return skillsCatalog.CatalogForPhase(hiveserver.SessionPhaseLabel(record))
+			},
+			OnTurnStart: onTurnStart,
 			// A text-only main model gets its tool images captioned by the
 			// vision_fallback slot; nil when there is none to use.
 			VisionCaptioner: visionCaptionerFor(home),

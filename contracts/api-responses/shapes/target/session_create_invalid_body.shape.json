@@ -1,0 +1,7 @@
+{
+  "endpoint": "session_create_invalid_body",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

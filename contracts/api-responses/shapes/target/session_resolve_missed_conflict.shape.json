@@ -1,0 +1,7 @@
+{
+  "endpoint": "session_resolve_missed_conflict",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

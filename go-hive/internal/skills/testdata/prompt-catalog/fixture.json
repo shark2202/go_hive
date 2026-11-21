@@ -1,0 +1,198 @@
+{
+  "description": "Shared fixture for the prompt/skill-catalog parity probe. Read by BOTH sides: go_hive/scripts/prompt_catalog_render.py (Python reference) and go_hive/go-hive/internal/skills/catalog_prompt_parity_test.go (Go target). Each profile is materialized as a temp HIVE_HOME + HOME pair so discovery, ordering, description capping and the compact fallback are exercised end to end. Symlinks (symlink-view -> symlink-target) cover Path.resolve() location parity.",
+  "profiles": {
+    "small": {
+      "hive_skills": {
+        "alpha-plain": {
+          "description": "Plain short description."
+        },
+        "small-bravo": {
+          "description": "Skill small-bravo exists to keep the small profile compact. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. "
+        },
+        "small-charlie": {
+          "description": "Skill small-charlie exists to keep the small profile compact. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. "
+        },
+        "small-delta": {
+          "description": "Skill small-delta exists to keep the small profile compact. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. "
+        },
+        "small-echo": {
+          "description": "Skill small-echo exists to keep the small profile compact. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. Keeps the small profile past the compact threshold on both sides so the case is root-length independent. "
+        }
+      },
+      "queen_skills": {},
+      "agents_skills": {}
+    },
+    "edge": {
+      "hive_skills": {
+        "alpha-plain": {
+          "description": "Plain short description."
+        },
+        "long-single-sentence": {
+          "description": "Squeeze this sentence well past the description cap because the first-sentence rule has to fall back to the hard character budget once a single sentence outruns it, and this one keeps going well beyond any reasonable preview length so the fallback is guaranteed to fire, and it still has not reached a sentence boundary anywhere near the cap"
+        },
+        "nbsp-at-cut": {
+          "description": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn tail text beyond the cap to force the truncation branch"
+        },
+        "multi-sentence": {
+          "description": "First sentence here. Second one."
+        },
+        "decimal-version": {
+          "description": "Ships version 3.5 today. Second sentence."
+        },
+        "escaped-xml": {
+          "description": "Use <angle> & \"quotes\" in paths."
+        },
+        "cjk-描述": {
+          "description": "第一句. 第二句."
+        },
+        "exact-300": {
+          "description": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+        },
+        "cut-304": {
+          "description": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+        },
+        "visibility-colony-only": {
+          "description": "Colony phase only.",
+          "metadata": {
+            "visibility": [
+              "colony"
+            ]
+          }
+        },
+        "worker-phase-only": {
+          "description": "Worker phase only.",
+          "metadata": {
+            "visibility": [
+              "worker"
+            ]
+          }
+        },
+        "colon-fixup": {
+          "raw_frontmatter": "name: colon-fixup\ndescription: Research: deep dive."
+        },
+        "dup-name": {
+          "description": "User copy loses."
+        },
+        "symlink-target": {
+          "description": "Symlink target skill."
+        },
+        "symlink-view": {
+          "symlink_to": "../symlink-target"
+        }
+      },
+      "queen_skills": {
+        "queen-scope-skill": {
+          "description": "Queen UI scope skill."
+        },
+        "dup-name": {
+          "description": "Queen copy wins."
+        }
+      },
+      "agents_skills": {
+        "cross-agent-demo": {
+          "description": "Cross-agent directory skill."
+        }
+      }
+    }
+  },
+  "caps": [
+    {
+      "name": "cap-plain",
+      "description": "Plain short description."
+    },
+    {
+      "name": "cap-first-sentence",
+      "description": "First sentence here. Second one."
+    },
+    {
+      "name": "cap-decimal",
+      "description": "Ships version 3.5 today. Second sentence."
+    },
+    {
+      "name": "cap-exact-300",
+      "description": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+    },
+    {
+      "name": "cap-cut-304",
+      "description": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+    },
+    {
+      "name": "cap-nbsp-at-cut",
+      "description": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn tail text beyond the cap to force the truncation branch"
+    },
+    {
+      "name": "cap-tail-space-at-cut",
+      "description": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww tail text beyond the cap to force the truncation branch"
+    },
+    {
+      "name": "cap-empty-sentence-noop",
+      "description": "No sentence terminator anywhere in this description so the whole string is shorter than the cap and returned as-is."
+    }
+  ],
+  "caps_compact": [
+    {
+      "name": "bigcap-00",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-01",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-02",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-03",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-04",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-05",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-06",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-07",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-08",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-09",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-10",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-11",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-12",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-13",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-14",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    },
+    {
+      "name": "bigcap-15",
+      "description": "A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table A reasonably long description that renders a wide entry in the synthetic table"
+    }
+  ]
+}
