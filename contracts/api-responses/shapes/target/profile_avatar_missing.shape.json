@@ -1,0 +1,7 @@
+{
+  "endpoint": "profile_avatar_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

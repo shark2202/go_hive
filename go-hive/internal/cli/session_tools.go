@@ -135,7 +135,7 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 	// the process's integration entry point, so every installed batch reads it.
 	registry.SetAccountSource(newSessionAccountSource(home))
 	installed := integrations.New(integrations.WithRoots(root)).Install(registry)
-	installed += installIntegrationBatches(registry)
+	installed += installIntegrationBatches(registry, home)
 	if senders, err := hiveserver.RegisterSenderTools(registry, home); err != nil {
 		// A broken sender store costs the senders tool, not the whole
 		// catalogue; the feature gate itself returns (0, nil).
@@ -304,50 +304,68 @@ func (c *sessionToolCatalogue) recordFilesToolGroup() {
 var sessionIntegrationInstallers = []struct {
 	name    string
 	install func(*tools.ToolRegistry) int
+	// gate, when set, decides whether the installer runs for the session
+	// being built. The browser tool definitions follow the bridge switch:
+	// with the feature off their executor has no bridge to POST to, so the
+	// catalogue must not advertise or record them (upstream retires its
+	// bundled gcu-tools server the same way).
+	gate func(hivehome.Home) bool
 }{
-	{"batch2", integrations.InstallBatch2},
-	{"batch3-doc", integrations.InstallBatch3Doc},
-	{"batch3-excel", integrations.InstallBatch3Excel},
-	{"batch3-media", integrations.InstallBatch3Media},
-	{"batch4", integrations.InstallBatch4},
-	{"batch5-lane1", integrations.InstallBatch5Lane1},
-	{"batch5-lane2", integrations.InstallBatch5Lane2},
-	{"batch5-lane3", integrations.InstallBatch5Lane3},
-	{"batch5-lane4", integrations.InstallBatch5Lane4},
-	{"batch6-lane1", integrations.InstallBatch6Lane1},
-	{"batch6-lane2", integrations.InstallBatch6Lane2},
-	{"batch6-lane3", integrations.InstallBatch6Lane3},
-	{"batch6-lane4", integrations.InstallBatch6Lane4},
+	{"batch2", integrations.InstallBatch2, nil},
+	{"batch3-doc", integrations.InstallBatch3Doc, nil},
+	{"batch3-excel", integrations.InstallBatch3Excel, nil},
+	{"batch3-media", integrations.InstallBatch3Media, nil},
+	{"batch4", integrations.InstallBatch4, nil},
+	{"batch5-lane1", integrations.InstallBatch5Lane1, nil},
+	{"batch5-lane2", integrations.InstallBatch5Lane2, nil},
+	{"batch5-lane3", integrations.InstallBatch5Lane3, nil},
+	{"batch5-lane4", integrations.InstallBatch5Lane4, nil},
+	{"batch6-lane1", integrations.InstallBatch6Lane1, nil},
+	{"batch6-lane2", integrations.InstallBatch6Lane2, nil},
+	{"batch6-lane3", integrations.InstallBatch6Lane3, nil},
+	{"batch6-lane4", integrations.InstallBatch6Lane4, nil},
 	// Lane 5 predates the Install prefix; keep its published name.
-	{"batch7-lane5", integrations.Batch7Lane5Install},
-	{"batch7-lane1", integrations.InstallBatch7Lane1},
-	{"batch7-lane2", integrations.InstallBatch7Lane2},
-	{"batch7-lane3", integrations.InstallBatch7Lane3},
-	{"batch7-lane4", integrations.InstallBatch7Lane4},
-	{"batch7-lane6", integrations.InstallBatch7Lane6},
-	{"batch7-lane7", integrations.InstallBatch7Lane7},
-	{"batch7-lane8", integrations.InstallBatch7Lane8},
-	{"batch7-lane9", integrations.InstallBatch7Lane9},
-	{"batch8-final", integrations.InstallBatch8Final},
+	{"batch7-lane5", integrations.Batch7Lane5Install, nil},
+	{"batch7-lane1", integrations.InstallBatch7Lane1, nil},
+	{"batch7-lane2", integrations.InstallBatch7Lane2, nil},
+	{"batch7-lane3", integrations.InstallBatch7Lane3, nil},
+	{"batch7-lane4", integrations.InstallBatch7Lane4, nil},
+	{"batch7-lane6", integrations.InstallBatch7Lane6, nil},
+	{"batch7-lane7", integrations.InstallBatch7Lane7, nil},
+	{"batch7-lane8", integrations.InstallBatch7Lane8, nil},
+	{"batch7-lane9", integrations.InstallBatch7Lane9, nil},
+	{"batch8-final", integrations.InstallBatch8Final, nil},
 	// Upstream per-tool spreadsheet names on top of the aggregate csv/excel
 	// tools, and the browser discovery tool.
-	{"spreadsheet-aliases", integrations.InstallSpreadsheetAliases},
-	{"browser-setup", integrations.InstallBrowserSetup},
-	// The 22 active browser tools (gcu FastMCP surface). They register after
-	// browser_setup so the shared "browser" group is extended, not redefined.
-	{"browser-tools", integrations.InstallBrowserTools},
+	{"spreadsheet-aliases", integrations.InstallSpreadsheetAliases, nil},
+	{"browser-setup", integrations.InstallBrowserSetup, nil},
+	// The 22 active browser tools (gcu FastMCP surface) are a lazy-tier
+	// extension of the Go bridge, not part of the reference registry: only
+	// install them while the browser feature is on (browserToolsEnabled).
+	{"browser-tools", integrations.InstallBrowserTools, browserToolsEnabled},
 }
 
 // installIntegrationBatches publishes every ported batch into registry and
 // returns the number of tools registered. The network scanners are registered
 // like every other batch: upstream has no opt-in gate for them, so the Go
-// session surface keeps the same seven default tools.
-func installIntegrationBatches(registry *tools.ToolRegistry) int {
+// session surface keeps the same seven default tools. A batch whose gate
+// declines (the browser tools, while the bridge switch is off) is skipped.
+func installIntegrationBatches(registry *tools.ToolRegistry, home hivehome.Home) int {
 	installed := 0
 	for _, installer := range sessionIntegrationInstallers {
+		if installer.gate != nil && !installer.gate(home) {
+			continue
+		}
 		installed += installer.install(registry)
 	}
 	return installed
+}
+
+// browserToolsEnabled is the session-catalogue gate for the gcu browser tool
+// definitions: the same switch the bridge supervisor obeys (HIVE_BROWSER_BRIDGE
+// env, then configuration.json's gcu_enabled, default on).
+func browserToolsEnabled(home hivehome.Home) bool {
+	return browserBridgeRequested(home, nil)
 }
 
 // Defs returns the tool definitions advertised to the model.

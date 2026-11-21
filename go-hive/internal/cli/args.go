@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/aden-hive/hive-go/internal/arghelp"
 )
 
 type argKind int
@@ -26,6 +28,14 @@ type argSpec struct {
 	Help    string
 	Action  string
 	Metavar string
+	// Choices restricts the value to a fixed set, rendered argparse-style as
+	// `--flag {a,b,c}` in the usage line and the options block. Upstream
+	// declares them with add_argument(choices=...).
+	Choices []string
+	// Required marks a flag argparse renders without brackets in the usage
+	// line (`--action {left_click,...}`). Behavior (the missing-flag error)
+	// stays with the command's own validation, as upstream.
+	Required bool
 	// Hidden keeps the flag fully parseable but out of every rendered help
 	// surface (usage line, options block). It mirrors argparse's
 	// `help=argparse.SUPPRESS`: upstream hides `--profile` that way, and Go
@@ -38,6 +48,12 @@ type positionalSpec struct {
 	Dest     string
 	Required bool
 	Help     string
+	// Metavar overrides the rendered name (argparse's metavar=); an empty
+	// value renders Dest.
+	Metavar string
+	// Choices renders an argparse positional choice set (`{accept,dismiss}`)
+	// instead of a named slot.
+	Choices []string
 }
 
 type commandSpec struct {
@@ -45,12 +61,15 @@ type commandSpec struct {
 	Help        string
 	Description string
 	Epilog      string
-	Flags       []argSpec
-	Positionals []positionalSpec
-	Subcommands []*commandSpec
-	Dest        string
-	Run         func(*parsedArgs) int
-	Passthrough bool
+	// RawDescription mirrors argparse's RawDescriptionHelpFormatter: the
+	// description and epilog keep their line breaks instead of wrapping.
+	RawDescription bool
+	Flags          []argSpec
+	Positionals    []positionalSpec
+	Subcommands    []*commandSpec
+	Dest           string
+	Run            func(*parsedArgs) int
+	Passthrough    bool
 	// Hidden keeps the command resolvable by name (parse, run, and error
 	// handling all work as before) but out of the parent's usage choice set
 	// and commands block. It is for internal extensions that have no upstream
@@ -416,69 +435,120 @@ func displayDest(dest string) string {
 	return dest
 }
 
+// helpText renders the page the way argparse's HelpFormatter would: usage
+// (wrapped at the terminal width), description, `positional arguments:` with
+// subcommand choices, `options:` with a dynamic label column, then the epilog.
+// It is the one help renderer for `hive`, `hive-browser` and `hive-cred`.
 func (c *commandSpec) helpText() string {
-	var builder strings.Builder
-	builder.WriteString("usage: ")
-	if len(c.Subcommands) > 0 {
-		// argparse lists the subcommand metavar right after [-h]; an explicit
-		// [options] word is not part of the upstream usage line.
-		fmt.Fprintf(&builder, "%s [-h] {%s} ...\n", c.Prog, subcommandNames(c.Subcommands))
-	} else {
-		builder.WriteString(c.Prog + " [-h]")
-		for _, flag := range c.Flags {
-			if flag.Hidden {
-				continue
-			}
-			fmt.Fprintf(&builder, " [%s]", flagLabel(flag))
-		}
-		for _, positional := range c.Positionals {
-			if positional.Required {
-				fmt.Fprintf(&builder, " %s", displayDest(positional.Dest))
-			} else {
-				fmt.Fprintf(&builder, " [%s]", displayDest(positional.Dest))
-			}
-		}
-		builder.WriteString("\n")
+	return c.helpSpec().Text()
+}
+
+// helpSpec projects the command tree onto arghelp's input model.
+func (c *commandSpec) helpSpec() arghelp.Spec {
+	spec := arghelp.Spec{
+		Prog:           c.Prog,
+		Description:    c.Description,
+		Epilog:         c.Epilog,
+		RawDescription: c.RawDescription,
 	}
-	if c.Description != "" {
-		fmt.Fprintf(&builder, "\n%s\n", c.Description)
-	}
-	if c.Help != "" {
-		fmt.Fprintf(&builder, "\n%s\n", c.Help)
-	}
-	if len(c.Subcommands) > 0 {
-		builder.WriteString("\ncommands:\n")
-		for _, sub := range c.Subcommands {
-			if sub.Hidden {
-				continue
-			}
-			fmt.Fprintf(&builder, "  %s\n", padRight(progTail(sub.Prog), 16)+sub.Help)
-		}
-	}
-	if len(c.Positionals) > 0 {
-		builder.WriteString("\npositional arguments:\n")
-		for _, positional := range c.Positionals {
-			fmt.Fprintf(&builder, "  %s\n", padRight(displayDest(positional.Dest), 22)+positional.Help)
-		}
-	}
-	builder.WriteString("\noptions:\n")
-	builder.WriteString("  -h, --help            show this help message and exit\n")
+	// usage: [-h] then each visible optional, in declaration order (argparse
+	// lists optionals before positionals and the subcommand choice set last).
+	spec.UsageOptionals = append(spec.UsageOptionals, "[-h]")
 	for _, flag := range c.Flags {
 		if flag.Hidden {
 			continue
 		}
-		fmt.Fprintf(&builder, "  %s\n", padRight(flagLabel(flag), 22)+flag.Help)
+		spec.UsageOptionals = append(spec.UsageOptionals, flagUsageParts(flag)...)
 	}
-	if c.Epilog != "" {
-		// argparse prints the epilog after the options block; RawDescription
-		// formatters keep its line breaks verbatim.
-		builder.WriteString("\n")
-		builder.WriteString(c.Epilog)
-		if !strings.HasSuffix(c.Epilog, "\n") {
-			builder.WriteString("\n")
+	if len(c.Subcommands) > 0 {
+		spec.UsagePositionals = append(spec.UsagePositionals, "{"+subcommandNames(c.Subcommands)+"}", "...")
+	}
+	for _, positional := range c.Positionals {
+		spec.UsagePositionals = append(spec.UsagePositionals, usagePositionalLabel(positional))
+	}
+
+	// options: -h first, then the declared flags.
+	spec.Options = append(spec.Options, arghelp.Option{
+		Label: "-h, --help",
+		Help:  "show this help message and exit",
+	})
+	for _, flag := range c.Flags {
+		if flag.Hidden {
+			continue
 		}
+		spec.Options = append(spec.Options, arghelp.Option{Label: flagLabel(flag), Help: flag.Help})
 	}
-	return builder.String()
+
+	// positional arguments: real argv slots, then the choice set.
+	for _, positional := range c.Positionals {
+		spec.Positionals = append(spec.Positionals, arghelp.Positional{
+			Label: positionalLabel(positional),
+			Help:  positional.Help,
+		})
+	}
+	for _, sub := range c.Subcommands {
+		if sub.Hidden {
+			continue
+		}
+		spec.Choices = append(spec.Choices, arghelp.Choice{Name: progTail(sub.Prog), Help: sub.Help})
+	}
+	return spec
+}
+
+// flagUsageParts renders one flag's usage contribution the way argparse's
+// _format_actions_usage does: a bracketed option is one part, while a required
+// option taking a value splits into `--flag` and its metavar so the line can
+// wrap between them.
+func flagUsageParts(flag argSpec) []string {
+	if flag.Kind == kindBool || flag.Action == "version" {
+		if flag.Required {
+			return []string{"-" + shortOrLong(flag)}
+		}
+		return []string{"[" + "-" + shortOrLong(flag) + "]"}
+	}
+	value := flagMetavar(flag)
+	if flag.Required {
+		return []string{"--" + flag.Long, value}
+	}
+	return []string{"[--" + flag.Long + " " + value + "]"}
+}
+
+// shortOrLong prefers the long name, matching the rendered label.
+func shortOrLong(flag argSpec) string {
+	if flag.Long != "" {
+		return "-" + flag.Long
+	}
+	return flag.Short
+}
+
+func usagePositionalLabel(positional positionalSpec) string {
+	label := positionalLabel(positional)
+	if positional.Required {
+		return label
+	}
+	return "[" + label + "]"
+}
+
+func positionalLabel(positional positionalSpec) string {
+	if len(positional.Choices) > 0 {
+		return "{" + strings.Join(positional.Choices, ",") + "}"
+	}
+	if positional.Metavar != "" {
+		return positional.Metavar
+	}
+	return displayDest(positional.Dest)
+}
+
+// flagMetavar renders a flag's value placeholder: an explicit metavar, the
+// choices set, or the upper-cased destination (argparse's default).
+func flagMetavar(flag argSpec) string {
+	if flag.Metavar != "" {
+		return flag.Metavar
+	}
+	if len(flag.Choices) > 0 {
+		return "{" + strings.Join(flag.Choices, ",") + "}"
+	}
+	return strings.ToUpper(strings.ReplaceAll(flag.Long, "-", "_"))
 }
 
 func subcommandNames(specs []*commandSpec) string {
@@ -492,23 +562,29 @@ func subcommandNames(specs []*commandSpec) string {
 	return strings.Join(names, ",")
 }
 
+// flagLabel renders one options-block entry. argparse repeats the metavar for
+// every alias and lists the option strings in declaration order; upstream
+// declares `--long` before `-s` everywhere (`-h, --help` is argparse's own
+// add_help action, which is why help is special-cased to short-first).
 func flagLabel(flag argSpec) string {
-	if flag.Long == "" {
-		return "-" + flag.Short
+	names := make([]string, 0, 2)
+	if flag.Long != "" {
+		names = append(names, "--"+flag.Long)
 	}
-	label := "--" + flag.Long
 	if flag.Short != "" {
-		label += ", -" + flag.Short
+		names = append(names, "-"+flag.Short)
 	}
-	switch flag.Kind {
-	case kindString, kindInt, kindAppend:
-		metavar := flag.Metavar
-		if metavar == "" {
-			metavar = strings.ToUpper(strings.ReplaceAll(flag.Long, "-", "_"))
-		}
-		label += " " + metavar
+	if len(names) == 0 {
+		return ""
 	}
-	return label
+	if flag.Kind == kindBool || flag.Action == "version" {
+		return strings.Join(names, ", ")
+	}
+	metavar := flagMetavar(flag)
+	for index, name := range names {
+		names[index] = name + " " + metavar
+	}
+	return strings.Join(names, ", ")
 }
 
 func padRight(text string, width int) string {

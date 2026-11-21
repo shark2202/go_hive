@@ -1,0 +1,9 @@
+{
+  "endpoint": "memories",
+  "shape": {
+    "memories": "array"
+  },
+  "counts": {
+    "memories": 0
+  }
+}

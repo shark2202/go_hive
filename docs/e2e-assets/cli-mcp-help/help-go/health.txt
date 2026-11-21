@@ -1,0 +1,8 @@
+usage: hive mcp health [-h] [--json] [name]
+
+positional arguments:
+  name        Server name (all if omitted)
+
+options:
+  -h, --help  show this help message and exit
+  --json      Output as JSON

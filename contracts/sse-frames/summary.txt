@@ -1,5 +1,5 @@
 SSE frame golden — Python reference vs Go target
-generated: 2026-11-21T11:12:43+08:00
+generated: 2026-11-21T19:59:26+08:00
 reference: hive 1.0.14    target: hive 1.0.26-go.1
 frames: reference=113 target=148    core: reference=111 target=110    dropped Go envelope=36
 
@@ -19,13 +19,10 @@ PASS replay-first-frame-snapshot: first replayed frame: reference='session_snaps
 PASS replay-subsequence-of-history-reference: reference: every replayed frame appears in history, in order
 PASS replay-subsequence-of-history-target: target: every replayed frame appears in history, in order
 PASS judge-verdicts-equal: reference=[{'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 0}, {'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 1}, {'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 2}] target=[{'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 0}, {'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 1}, {'action': 'RETRY', 'feedback': '', 'judge_type': 'implicit', 'iteration': 2}]
-PASS async-title-multiset-equal: session_title_updated payload/multiplicity match; positions are non-contract (reference=[{'stream': 'live', 'index': 11, 'type': 'session_title_updated'}, {'stream': 'history', 'index': 17, 'type': 'session_title_updated'}] target=[{'stream': 'live', 'index': 17, 'type': 'session_title_updated'}, {'stream': 'history', 'index': 23, 'type': 'session_title_updated'}])
-PASS exceptions-observed: loop-max-iterations: ref=1 tgt=1; loop-iteration-counter: ref=7 tgt=7; turn-complete-iteration: ref=16 tgt=16; output-delta-iteration: ref=12 tgt=12; model-provider-prefix: ref=16 tgt=16; system-prefix-sha: ref=16 tgt=16; context-usage-ratio: ref=11 tgt=11; context-usage-pct: ref=11 tgt=11; context-usage-estimated-tokens: ref=11 tgt=11; context-usage-message-count: ref=11 tgt=11; context-usage-breakdown: ref=11 tgt=11
+PASS async-title-multiset-equal: session_title_updated payload/multiplicity match; positions are non-contract (reference=[{'stream': 'live', 'index': 11, 'type': 'session_title_updated'}, {'stream': 'history', 'index': 17, 'type': 'session_title_updated'}] target=[{'stream': 'live', 'index': 16, 'type': 'session_title_updated'}, {'stream': 'history', 'index': 22, 'type': 'session_title_updated'}])
+PASS exceptions-observed: loop-iteration-counter: ref=7 tgt=7; turn-complete-iteration: ref=16 tgt=16; output-delta-iteration: ref=12 tgt=12; model-provider-prefix: ref=16 tgt=16; context-usage-ratio: ref=11 tgt=11; context-usage-pct: ref=11 tgt=11; context-usage-estimated-tokens: ref=11 tgt=11; context-usage-message-count: ref=11 tgt=11; context-usage-breakdown: ref=11 tgt=11
 
 == declared value-level / structural exceptions ==
-- loop-max-iterations (intentional-structural): node_loop_started.data.max_iterations
-    reference=['999999'] target=['50']
-    Python's permanent queen loop reports 999999; Go's per-turn bounded loop reports its configured cap (50). Same field, same type.
 - loop-iteration-counter (intentional-structural): node_loop_iteration.data.iteration
     reference=['0', '1', '2', '3'] target=['0', '1']
     Python counts iterations across the whole session; Go restarts the per-turn loop, so its iteration resets each turn.
@@ -38,23 +35,20 @@ PASS exceptions-observed: loop-max-iterations: ref=1 tgt=1; loop-iteration-count
 - model-provider-prefix (value-level): llm_turn_complete.data.model
     reference=['"openai/sse-parity-probe-model"'] target=['"sse-parity-probe-model"']
     Python reports the litellm-normalised name (provider/model); Go reports the configured model string without the provider prefix.
-- system-prefix-sha (value-level): llm_turn_complete.data.system_prefix_sha
-    reference=['"692b774c98c7"'] target=['"885285cb1ffe"']
-    Hash of the rendered static system prompt; the prompt text still differs (prompt-parity lane), so the fingerprint differs.
 - context-usage-ratio (value-level): context_usage_updated.data.usage_ratio
-    reference=['0.1754', '0.1756', '0.1757', '0.1759', '0.176'] target=['0.2132', '0.2689', '0.269', '0.2693']
+    reference=['0.1754', '0.1755', '0.1757', '0.1759', '0.176'] target=['0.1402', '0.1923', '0.1924', '0.1927']
     Derived from the prompt/tool-definition char counts, which still differ.
 - context-usage-pct (value-level): context_usage_updated.data.usage_pct
-    reference=['18'] target=['21', '27']
+    reference=['18'] target=['14', '19']
     Rounded usage_ratio; see context-usage-ratio.
 - context-usage-estimated-tokens (value-level): context_usage_updated.data.estimated_tokens
-    reference=['31579', '31599', '31623', '31670', '31679'] target=['38380', '48401', '48425', '48472', '48481']
+    reference=['31573', '31593', '31617', '31664', '31673'] target=['25228', '34612', '34635', '34682', '34691']
     Char-based projection of the still-divergent prompt and tool definitions.
 - context-usage-message-count (value-level): context_usage_updated.data.message_count
     reference=['1', '3', '5', '7', '8'] target=['0', '3', '5', '7', '8']
     The opening readout sees one seeded message on the Python side and zero on the Go side; every later readout matches (pinned by the post_tool_call/post_tool_results frame positions).
 - context-usage-breakdown (value-level): context_usage_updated.data.breakdown.*
-    reference=['0', '21584', '27984', '28044', '28114', '28256', '28283', '45171'] target=['0', '30064', '30134', '30276', '30303', '52587', '62554']
+    reference=['0', '21584', '27966', '28026', '28096', '28238', '28265', '45171'] target=['0', '21692', '28152', '28222', '28364', '28391', '53992']
     Component char counts of the prompt/tool definitions; the system prompt and tool JSON still differ (prompt/tool parity lanes).
 
 VERDICT: PASS

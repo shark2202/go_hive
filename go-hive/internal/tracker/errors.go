@@ -8,6 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
+	"reflect"
+	"runtime"
+	"strings"
 )
 
 const (
@@ -173,7 +177,14 @@ func Run(fn func() (any, error), asJSON bool, render func(any), stdout, stderr i
 	if err != nil {
 		var cliErr *CLIError
 		if !errors.As(err, &cliErr) {
-			cliErr = Domain(err.Error())
+			// Unclassified failure. Upstream's harness (framework/trackerdb/
+			// errors.py::run) catches only TrackerError, so anything else
+			// escapes as an uncaught exception: a traceback on stderr, exit 1,
+			// and no JSON envelope even with --json. Go must not launder a bug
+			// into a domain_error envelope; render the same crash shape with
+			// the real Go frames.
+			writeCrash(stderr, err)
+			return ExitDomain
 		}
 		if asJSON {
 			WriteIndentedJSON(stdout, cliErr.Envelope())
@@ -190,6 +201,63 @@ func Run(fn func() (any, error), asJSON bool, render func(any), stdout, stderr i
 		render(result)
 	}
 	return ExitOK
+}
+
+// writeCrash renders an unclassified error as a Python-style traceback: header,
+// one `File "…", line N, in func` frame per Go frame (outermost first, like
+// CPython), then `<type>: <message>`. Exit code stays 1 (EXIT_DOMAIN), matching
+// Python's uncaught-exception exit.
+func writeCrash(stderr io.Writer, err error) {
+	fmt.Fprintln(stderr, "Traceback (most recent call last):")
+	frames := callerFrames()
+	for index := len(frames) - 1; index >= 0; index-- {
+		frame := frames[index]
+		fmt.Fprintf(stderr, "  File %q, line %d, in %s\n", crashFile(frame.File), frame.Line, frame.Function)
+	}
+	fmt.Fprintf(stderr, "%s: %v\n", errorTypeName(err), err)
+}
+
+func callerFrames() []runtime.Frame {
+	pcs := make([]uintptr, 32)
+	// Skip runtime.Callers, callerFrames and writeCrash themselves.
+	count := runtime.Callers(3, pcs)
+	if count == 0 {
+		return nil
+	}
+	frames := runtime.CallersFrames(pcs[:count])
+	collected := make([]runtime.Frame, 0, count)
+	for {
+		frame, more := frames.Next()
+		if !strings.HasPrefix(frame.Function, "runtime.") {
+			collected = append(collected, frame)
+		}
+		if !more {
+			break
+		}
+	}
+	return collected
+}
+
+// crashFile shortens a source path to the last two elements so the traceback
+// stays readable (Python prints the path it was invoked with; the Go binary
+// only knows the build path, which would leak the builder's checkout).
+func crashFile(path string) string {
+	parts := strings.Split(path, string(filepath.Separator))
+	if len(parts) <= 2 {
+		return path
+	}
+	return filepath.Join(parts[len(parts)-2:]...)
+}
+
+func errorTypeName(err error) string {
+	value := reflect.TypeOf(err)
+	if value == nil {
+		return "Exception"
+	}
+	if value.Kind() == reflect.Pointer {
+		return value.Elem().Name()
+	}
+	return value.Name()
 }
 
 func WriteIndentedJSON(w io.Writer, value any) {

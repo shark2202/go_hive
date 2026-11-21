@@ -131,16 +131,12 @@ MASK = "<exception>"
 # captures (a stale entry fails --check), and masking it must leave the frame
 # sequences identical; anything else is an undeclared difference.
 EXCEPTIONS: list[dict[str, Any]] = [
-    {
-        "id": "loop-max-iterations",
-        "frame_type": "node_loop_started",
-        "path": "data.max_iterations",
-        "class": "intentional-structural",
-        "reason": (
-            "Python's permanent queen loop reports 999999; Go's per-turn bounded "
-            "loop reports its configured cap (50). Same field, same type."
-        ),
-    },
+    # ``loop-max-iterations`` and ``system-prefix-sha`` retired by the
+    # api-value-probes lane: the opening node_loop_started now carries the
+    # reference's persistent-loop bound (999999, or HIVE_MAX_ITER when capped;
+    # the Go-only per-turn frames are dropped by the envelope transform), and
+    # the static system prompt now hashes equal (692b774c98c7 on both sides).
+    # Both paths are compared strictly again — a re-divergence fails the gate.
     {
         "id": "loop-iteration-counter",
         "frame_type": "node_loop_iteration",
@@ -173,16 +169,6 @@ EXCEPTIONS: list[dict[str, Any]] = [
         "reason": (
             "Python reports the litellm-normalised name (provider/model); Go "
             "reports the configured model string without the provider prefix."
-        ),
-    },
-    {
-        "id": "system-prefix-sha",
-        "frame_type": "llm_turn_complete",
-        "path": "data.system_prefix_sha",
-        "class": "value-level",
-        "reason": (
-            "Hash of the rendered static system prompt; the prompt text still "
-            "differs (prompt-parity lane), so the fingerprint differs."
         ),
     },
     {

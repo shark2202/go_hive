@@ -171,7 +171,7 @@ func TestCaptionSplicedBeforeReminderTail(t *testing.T) {
 		ImageContent: []map[string]any{{"type": "image_url", "image_url": map[string]any{"url": "data:image/png;base64,AAAA"}}},
 	}}
 	tail := "<system-reminder>\nreminder body\n</system-reminder>"
-	if _, err := loop.storeToolBatch(context.Background(), agentCtx, conv, toolCalls, results, tail, []bool{true}); err != nil {
+	if _, err := loop.storeToolBatch(context.Background(), agentCtx, conv, toolCalls, results, tail, []bool{true}, nil); err != nil {
 		t.Fatalf("storeToolBatch: %v", err)
 	}
 

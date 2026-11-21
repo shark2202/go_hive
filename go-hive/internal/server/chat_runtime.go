@@ -23,6 +23,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/memory"
 	"github.com/aden-hive/hive-go/internal/queen"
+	"github.com/aden-hive/hive-go/internal/runtimelogs"
 	"github.com/aden-hive/hive-go/internal/sentinel"
 	"github.com/aden-hive/hive-go/internal/soul"
 )
@@ -213,7 +214,13 @@ type ChatRuntime struct {
 
 	bus       *eventbus.EventBus
 	sessionID string
-	model     string
+	// runtimeLogger is the three-level runtime log sink (L1 summary.json /
+	// L2 details.jsonl / L3 tool_logs.jsonl). Non-nil only for session-shaped
+	// roots (see newChatRuntimeLogger); nil keeps the pre-logs behavior for
+	// tests and ad-hoc directories.
+	runtimeLogger       *runtimelogs.RuntimeLogger
+	runtimeLogStartedAt time.Time
+	model               string
 	// pinnedLLM is the session provider pinned for the current turn. A
 	// model-slot PUT rebuilds the session's ProviderSlot in place; the pin
 	// keeps every iteration of an in-flight turn on the provider the turn
@@ -421,6 +428,16 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		InputData:      map[string]any{},
 		StreamID:       "queen",
 		MaxTokens:      maxTokens,
+	}
+	// Three-level runtime logs (L1 summary.json / L2 details.jsonl / L3
+	// tool_logs.jsonl): session-shaped roots (<storage>/sessions/<id>) get the
+	// store upstream's RuntimeLogStore(.../runtime_logs) feeds, keyed by the
+	// session id. The loop writes L3/L2 through AgentContext.RuntimeLogger as
+	// it runs; Close writes the L1 summary.
+	if logger := newChatRuntimeLogger(deps.Root, deps.SessionID); logger != nil {
+		runtime.runtimeLogger = logger
+		runtime.runtimeLogStartedAt = time.Now()
+		agentCtx.RuntimeLogger = logger
 	}
 	systemPrompt := chatQueenStaticPrompt(deps, runtime.queenName)
 
@@ -688,6 +705,9 @@ func (r *ChatRuntime) Close() error {
 	// session directory. Waiting here keeps Close's promise that nothing writes
 	// after it returns (fork/stop then remove that directory).
 	r.timelineWG.Wait()
+	// Parity: framework/orchestrator/orchestrator.py::execute (end_run): the
+	// session's run is over — read L2 back and write the L1 summary.
+	r.finishRuntimeLogs()
 	// The reminder ticker is owned by the session: stop it before tearing the
 	// conversation down so it cannot park (or wake) anything afterwards.
 	if r.hub != nil {

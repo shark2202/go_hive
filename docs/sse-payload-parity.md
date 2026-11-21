@@ -46,7 +46,7 @@ history 里的 `judge_verdict`（action / feedback / judge_type / iteration）�
 | `client_input_requested` | 4/4 | — | — | — | 键一致（`park_reason`；带问题时为 `questions`）；发射时机已对齐（§3） |
 | `loop_state_changed` | 6/6 | — | — | — | 键一致（activity/park_reason/interrupt_cause/questions） |
 | `reminder_injected` | 0/0（仅 history 1/1） | — | — | — | 键一致（source/detail/meta） |
-| `node_loop_started` | 0/3 | — | `max_iterations`（target 独有帧） | — | 见 §4.1、§4.6 |
+| `node_loop_started` | 1/1（开场；per-turn 帧 3 个被变换剔除） | — | — | — | 开场 `max_iterations` 两侧 999999（§4.2 已修）；target per-turn 帧仍 50，随信封剔除 |
 | `node_loop_iteration` | 3/3 | — | — | — | 键一致（iteration+phase） |
 | `node_loop_completed` | 0/3 | — | `iterations`（target 独有帧） | — | 见 §4.1、§4.6 |
 | `execution_started` | 0/3 | — | `input`（target 独有帧） | — | 见 §4.1 |
@@ -127,10 +127,15 @@ node_loop_started/completed ×3）在剔除后两侧逐帧一致（帧级 golden
 的 extra 键（`input`/`output`/`iterations`）只出现在 target-only 帧上。**结论：作为有意差异保留，
 不硬改**；快照（is_executing）与前端 spinner 依赖这组信封，拆掉会破坏 Go 的运行时可观测性。
 
-### 4.2 `max_iterations` 值：999999 vs 50（有意）
+### 4.2 `max_iterations` 值：开场帧已对齐（api-value-probes 车道）
 
-参考永久 loop 报 `999999`，Go 报每回合 loop 的实际上限（默认 50）。字段存在性与类型一致，
-值不同是 4.1 的直接推论。
+参考永久 loop 报 `999999`。Go 的**开场块**现在也报 `999999`（设置 `HIVE_MAX_ITER` 时取该 cap，
+与 `queen_orchestrator.py::_queen_loop` 同口径）：开场块是上游永久 loop 的逐帧移植，报同一个
+bound。Go **每回合 loop** 自己的 `node_loop_started` 帧仍报实际配置的上限（默认 50）——这些
+是 §4.1 的 Go-only 信封，逐帧比较时被整体剔除。帧级 golden 的开场帧随之更新（reference 1 帧 /
+target 开场 1 帧均 999999；per-turn 帧保持 50）；`loop-max-iterations` 例外条目已退役，开场
+路径转回严格比较。回归：`internal/server/session_start_events_test.go::
+TestSessionStartMaxIterationsFollowsQueenLoopBound`。
 
 ### 4.3 `judge_verdict`（本车道已对齐）
 
@@ -170,8 +175,8 @@ node_loop_started/completed ×3）在剔除后两侧逐帧一致（帧级 golden
 
 | 路径 | 参考 | Go | 归类 |
 | --- | --- | --- | --- |
-| `llm_turn_complete.system_prefix_sha` | `692b774c98c7` | `885285cb1ffe` | **值级**：两侧系统提示词文本不同（prompt parity 车道），hash 只是文本指纹 |
-| `node_loop_started.max_iterations` | `999999` | `50` | **有意**：永久 loop vs 每回合 loop（§4.2） |
+| `llm_turn_complete.system_prefix_sha` | `692b774c98c7` | `692b774c98c7` | **已修**：api-value-probes 车道复跑 16/16 帧两侧逐字相等（prompt parity 已收敛），例外退役 |
+| `node_loop_started.max_iterations` | `999999`（开场） | `999999`（开场；per-turn 帧 `50` 随信封剔除） | **已修**：开场帧对齐（§4.2），例外退役 |
 | `node_loop_completed.iterations` | （参考无此帧） | `1` | **有意**：Go-only 每回合信封的 `iterations` 字段（§4.1） |
 | `llm_turn_complete.cost_usd` | `0.0`（float） | `0.0`（float，已修） | **已修**：本车道按 Python 口径渲染 float（§3 最后一行），字面差异消失 |
 | `llm_turn_complete.model` | `openai/sse-parity-probe-model` | `sse-parity-probe-model` | **值级**：provider 前缀由 litellm 归一化；配置层差异 |
@@ -194,7 +199,8 @@ node_loop_started/completed ×3）在剔除后两侧逐帧一致（帧级 golden
   `client_input_requested`（参考 `collect_resolved_request_seqs` / Go
   `CollectResolvedRequestSeqs`），本次场景验证到 replay 只重放最后一条未回答问题。
 - **history**：包含开场 5 条块（identity/reminder/node_loop_started/iteration/context usage），
-  两侧开场块逐字段一致（`session_start_events.go` 既有实现；`max_iterations` 值见 4.2）。
+  两侧开场块逐字段一致（`session_start_events.go` 既有实现；`max_iterations` 开场帧两侧
+  999999，见 §4.2）。
   本复跑 target history 55 条 vs reference 43 条（顺序在 DELETE 之前抓取），差额全部是
   Go-only 每回合信封（+12）；剔除后两侧 42/42 帧逐帧一致（帧级 golden `history-core-equal`）。
   停机后的日志另存 `history_after_stop`（reference 44 / target 55），不参与比较。
@@ -217,17 +223,19 @@ Go 侧二进制构建到 `go_hive/go-hive/dist/hive-sse-parity`（git 忽略）�
 
 ## 7. 门禁
 
-本车道按任务范围只跑受影响门禁（**不跑全量 `make ci`**），全部退出码 0：
+本车道（api-value-probes）按任务范围只跑受影响门禁（**不跑全量 `make ci`**），全部退出码 0：
 
-- `gofmt -l internal/` 空、`go vet ./internal/{server,agentloop,eventbus}` 0、`go build ./...` 通过；
-- `go test ./internal/server ./internal/agentloop ./internal/eventbus` 全绿（新增
-  `TestToolBatchPublishesPostToolContextReadouts`、`TestPythonFloatKeepsPythonSpelling`）；
-- parity 注解 **5261/5261**（基线 5259 + 本车道新增 2）；parity 引用 **5637/5637**
-  （test refs 4188 + prod refs 1449，missing 0）；
-- 外观矩阵 `gen_appearance_master_matrix.py --check` 通过（sse 维度升为 measured_aligned +
-  frozen_contract，api-routes 值级账本入证）；
-- `sse_frames_canonical.py --check`、`api_response_values.py --check`、
-  `check_api_proto.py`（42 消息 / 2 枚举 / 1322 字段，errors=0 warnings=0）全部 PASS。
+- `gofmt -l internal/` 空、`go vet ./...` 0、`go build ./...` 通过；
+- `go test ./internal/server ./internal/cli ./internal/tools/integrations ./internal/eventbus` 全绿
+  （新增 `TestBrowserToolsFollowBridgeSwitch`、`TestSessionStartMaxIterationsFollowsQueenLoopBound`；
+  `TestSessionAddWritesOpeningEvents` 收紧开场 `max_iterations` 断言）；
+- parity 注解 **5385/5385**；parity 引用 **5770/5770**（test refs 4264 + prod refs 1506，missing 0）；
+- 外观矩阵 `gen_appearance_master_matrix.py --check` 通过；
+- `sse_frames_canonical.py --check`（113 reference / 148 target 帧，9 条例外）、
+  `api_response_values.py --check`（107 端点 / 8716 值路径 / 46 已声明 / 0 未声明）PASS；
+- `check_api_proto.py`（42 消息 / 2 枚举 / 1322 字段）errors=0、warnings=180（90 个新增/未映射
+  端点 × 2 侧，additive 口径，不失败）；`export_api_routes.py --check` 当前；
+  `tool-surface-check` / `browser-tool-check` 通过（默认 env 下工具面未变）。
 
 双跑探针与 golden 不在 `make ci` 内（opt-in、本地 stub、不触外网）；帧级 golden 的断言与
 例外清单见 `docs/api-ws-golden.md`。

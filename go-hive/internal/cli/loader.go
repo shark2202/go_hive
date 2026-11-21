@@ -143,7 +143,7 @@ func (r *Runner) queenCommands() *commandSpec {
 
 // Parity: framework/loader/cli.py::_register_colony
 func (r *Runner) colonyCommands() *commandSpec {
-	jsonFlag := argSpec{Dest: "json", Long: "json", Kind: kindBool, Help: "Output as JSON"}
+	jsonFlag := argSpec{Dest: "json", Long: "json", Kind: kindBool}
 	return &commandSpec{
 		Prog:        "hive colony",
 		Help:        "Manage colonies",
@@ -185,6 +185,9 @@ func (r *Runner) colonyCommands() *commandSpec {
 func (r *Runner) sessionCommands() *commandSpec {
 	serverFlag := argSpec{Dest: "server", Long: "server", Kind: kindString,
 		Default: defaultServerURL, Help: "Hive server URL"}
+	// `session stop` declares --server bare upstream (no help text).
+	serverBare := argSpec{Dest: "server", Long: "server", Kind: kindString,
+		Default: defaultServerURL}
 	return &commandSpec{
 		Prog:        "hive session",
 		Help:        "Manage sessions",
@@ -198,7 +201,7 @@ func (r *Runner) sessionCommands() *commandSpec {
 					{Dest: "cold", Long: "cold", Kind: kindBool,
 						Help: "Include cold (on-disk) sessions"},
 					serverFlag,
-					{Dest: "json", Long: "json", Kind: kindBool, Help: "Output as JSON"},
+					{Dest: "json", Long: "json", Kind: kindBool},
 				},
 				Run: r.cmdSessionList,
 			},
@@ -207,7 +210,7 @@ func (r *Runner) sessionCommands() *commandSpec {
 				Help: "Stop a live session",
 				Positionals: []positionalSpec{{Dest: "session_id", Required: true,
 					Help: "Session ID to stop"}},
-				Flags: []argSpec{serverFlag},
+				Flags: []argSpec{serverBare},
 				Run:   r.cmdSessionStop,
 			},
 		},

@@ -1,0 +1,7 @@
+usage: hive mcp remove [-h] name
+
+positional arguments:
+  name        Server name
+
+options:
+  -h, --help  show this help message and exit

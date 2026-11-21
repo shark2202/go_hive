@@ -1,0 +1,8 @@
+usage: hive mcp mode [-h] name {cli,tools}
+
+positional arguments:
+  name         Server name
+  {cli,tools}  cli: agents run `hive mcp run`; tools: load its tools
+
+options:
+  -h, --help   show this help message and exit

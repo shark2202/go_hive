@@ -1,0 +1,7 @@
+{
+  "endpoint": "colony_notifications_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

@@ -33,7 +33,7 @@ PY_ROOT   ?= ../../core
 OFFLINE    = CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod
 PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check upgrade-compat-check ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest upgrade-compat-check vulncheck install-verify arch-check ci clean help
 
 all: ci
 
@@ -52,8 +52,11 @@ help:
 	@echo "  make tool-contract-report 对拍冻结契约与当前工具面（只报告，不阻断）"
 	@echo "  make tool-output-check    工具输出 golden 产物自洽检查（docs/e2e-assets/tool-output）"
 	@echo "  make cli-surface-check    CLI 对外面契约重采 + 对拍（递归 --help + 退出码探针）"
-	@echo "  make compat-check         冻结契约自洽门禁（env/config/storage/DB schema/API 路由/工具面）"
+	@echo "  make compat-check         冻结契约自洽门禁（env/config/storage/DB schema/API 路由/工具面/CLI 外观）"
+	@echo "  make compat-cli-selftest  C11 自检：合成漂移（删 flag / 改 usage 行）必须判定 FAIL"
 	@echo "  make upgrade-compat-check 升级兼容门禁（PREV_SLOT=<上一交付二进制目录> [NEW_SLOT=...]）"
+	@echo "  make vulncheck          依赖漏洞门禁（govulncheck；离线降级明确 UNVERIFIED，退出码 3）"
+	@echo "  make install-verify     安装/升级端到端复验（SLOT_DIR=<slot 目录> [OLD_DIR=...]）"
 	@echo "  make ci          fmt-check + vet + test + cross + parity + parity-targets + wiring + compat-check + arch-check"
 
 test:
@@ -187,9 +190,11 @@ race:
 
 # 冻结契约的自洽门禁：只读已提交的 contracts/ 与源码（stdlib、离线），
 # 覆盖 env/config 清单、配置键锚点、存储字段、tracker DB schema 版本、
-# API 路由/响应形状、工具定义与工具面。冻结产物的逐字节重生成（freeze_*
-# --check）仍由冻结车道负责——行号会随代码移动漂移，不适合作为每次提交的
-# 硬门禁；本目标检查的是语义面（清单/计数/锚点/版本/形状）。
+# API 路由/响应形状、工具定义与工具面，以及 CLI 外观（C11：契约基线旧构建
+# vs 当前树新构建 vs Python，核对 usage 行 + 命令路径/flag 集合；旧构建用
+# git archive + 本地 go build 复现，全程离线）。冻结产物的逐字节重生成
+# （freeze_* --check）仍由冻结车道负责——行号会随代码移动漂移，不适合作为
+# 每次提交的硬门禁；本目标检查的是语义面（清单/计数/锚点/版本/形状/外观）。
 # python3 不可用时明确 BLOCKED 并退出 1：没验过就不能算绿。
 compat-check:
 	@if command -v python3 >/dev/null 2>&1; then \
@@ -198,6 +203,11 @@ compat-check:
 		echo "compat-check: BLOCKED — python3 unavailable; contracts NOT verified"; \
 		exit 1; \
 	fi
+
+# C11 的自检：拿冻结契约的副本合成漂移（删一个 flag、改一个 usage 行），
+# 门禁必须判定 FAIL；基线副本不得误报。纯 stdlib、离线，不做任何构建。
+compat-cli-selftest:
+	@python3 ../scripts/check_compat_contracts.py --self-test
 
 # 升级兼容门禁：PREV_SLOT 放上一交付的二进制目录（解压的发布包或
 # dist/slots/<slot>），NEW_SLOT 放候选二进制目录（省略则现场构建）。
@@ -209,6 +219,23 @@ upgrade-compat-check:
 	@test -n "$(PREV_SLOT)" || (echo "upgrade-compat-check: set PREV_SLOT=<dir with the previous hive binary>"; exit 2)
 	@bash ../scripts/upgrade_compat_check.sh --old-dir "$(PREV_SLOT)" \
 		$(if $(NEW_SLOT),--new-dir "$(NEW_SLOT)",) --work "$${WORK:-$$(mktemp -d "$${TMPDIR:-/tmp}/upgrade-compat.XXXXXX")}"
+
+# 依赖漏洞门禁（G3）：优先 govulncheck（source/symbol 级）；工具缺失时可用
+# `go install` 装到独立缓存（不改 go.mod）。无法扫描时降级为 stdlib-only 的
+# 依赖清单审查并退出 3 = UNVERIFIED，绝不输出绿色通过。CI 里同样调用本目标。
+VULNCHECK ?= ../scripts/vulncheck.sh
+vulncheck:
+	@bash $(VULNCHECK)
+
+# 安装/升级端到端：在临时 HOME 里走 install.sh（SHA256 门禁）装最新 slot 归档，
+# 冷启动 health 200，再用上一 slot 的 1.0.26 home 做原地升级与数据无损比对。
+# 需要真实归档与端口，所以不进 ci；SLOT_DIR/OLD_DIR 省略时自动选 dist/slots。
+SLOT_DIR ?=
+OLD_DIR ?=
+install-verify:
+	@bash ../scripts/install_verify.sh \
+		$(if $(SLOT_DIR),--archive-dir "$(SLOT_DIR)",) \
+		$(if $(OLD_DIR),--old-dir "$(OLD_DIR)",)
 
 # 架构文档同步门禁：architecture/model.yaml + go list 重渲染全部生成物并逐字节比较。
 # 纯 stdlib + 本地 go，离线可跑；产物有一处漂移即 exit 1。

@@ -263,6 +263,12 @@ PROBES: list[dict[str, Any]] = [
     {"id": "session_triggers", "label": "会话触发器", "method": "GET", "path": "/api/sessions/{session}/triggers"},
     {"id": "session_workers", "label": "会话 Worker 列表", "method": "GET", "path": "/api/sessions/{session}/workers"},
     {"id": "session_skill_installs", "label": "待批准技能安装", "method": "GET", "path": "/api/sessions/{session}/skill-installs"},
+    # No-such-object reads: fixed 404 envelopes, safe to run against the
+    # session the first batch created (no worker/transcript exists in the
+    # throwaway home).
+    {"id": "session_worker_detail_missing", "label": "会话 Worker 不存在", "method": "GET", "path": "/api/sessions/{session}/workers/probe-missing", "kind": "failure", "expect_status": 404},
+    {"id": "session_worker_conversation_missing", "label": "Worker 会话不存在", "method": "GET", "path": "/api/sessions/{session}/workers/probe-missing/conversation", "kind": "failure", "expect_status": 404},
+    {"id": "claude_code_conversation_missing", "label": "Claude Code 会话不存在", "method": "GET", "path": "/api/claude-code-queens/queen_growth/conversations/probe-missing", "kind": "failure", "expect_status": 404},
     {"id": "session_tasks", "label": "会话任务清单", "method": "GET", "path": "/api/sessions/{session}/tasks", "seed": "task_list"},
     {"id": "config_features", "label": "功能开关", "method": "GET", "path": "/api/config/features"},
     {"id": "config_models", "label": "模型目录", "method": "GET", "path": "/api/config/models"},
@@ -301,6 +307,38 @@ PROBES: list[dict[str, Any]] = [
     {"id": "queen_persona", "label": "Queen 人格", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/persona"},
     {"id": "queen_soul", "label": "Queen Soul", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/soul"},
     {"id": "janitor_report", "label": "Janitor 报告", "method": "GET", "path": "/api/maintenance/janitor/report"},
+    # ------------------------------------------------------------------
+    # Third batch: deterministic read surfaces that previously had no
+    # value-level assertion. Empty-state lists and fixed error envelopes
+    # only — no probe writes outside the temp homes.
+    # ------------------------------------------------------------------
+    {"id": "prompts", "label": "提示词目录", "method": "GET", "path": "/api/prompts"},
+    {"id": "memories", "label": "记忆目录", "method": "GET", "path": "/api/memories"},
+    {"id": "memories_file_missing", "label": "记忆文件不存在", "method": "GET", "path": "/api/memories/file?path=probe-missing.md", "kind": "failure", "expect_status": 404},
+    {"id": "channels", "label": "频道目录", "method": "GET", "path": "/api/channels"},
+    {"id": "claude_code_queens", "label": "Claude Code Queens", "method": "GET", "path": "/api/claude-code-queens"},
+    {"id": "discover", "label": "能力发现", "method": "GET", "path": "/api/discover"},
+    {"id": "queen_mail_queens", "label": "Queen Mail 列表", "method": "GET", "path": "/api/queen-mail/queens", "kind": "failure", "expect_status": 401},
+    {"id": "profile_avatar_missing", "label": "用户头像不存在", "method": "GET", "path": "/api/config/profile/avatar", "kind": "failure", "expect_status": 404},
+    {"id": "queen_avatar_missing", "label": "Queen 头像不存在", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/avatar", "kind": "failure", "expect_status": 404},
+    {"id": "models_endpoint_missing", "label": "模型端点不存在", "method": "GET", "path": "/api/models/endpoints/probe-missing/models", "kind": "failure", "expect_status": 404},
+    {"id": "queen_skill_body", "label": "Queen 技能正文", "method": "GET", "path": f"/api/queen/{QUEEN_ID}/skills/administrative-behavior-skill/body"},
+    {"id": "global_crm_status", "label": "全局 CRM 状态", "method": "GET", "path": "/api/global/crm/status", "kind": "failure", "expect_status": 501},
+    {"id": "global_data_tables", "label": "全局数据表", "method": "GET", "path": "/api/global/data/tables", "kind": "failure", "expect_status": 401},
+    {"id": "global_data_changes", "label": "全局数据变更", "method": "GET", "path": "/api/global/data/changes", "kind": "failure", "expect_status": 401},
+    {"id": "global_data_foreign_keys", "label": "全局数据外键", "method": "GET", "path": "/api/global/data/foreign-keys", "kind": "failure", "expect_status": 401},
+    {"id": "global_data_table_rows_missing", "label": "全局表行", "method": "GET", "path": "/api/global/data/tables/probe_missing/rows", "kind": "failure", "expect_status": 401},
+    {"id": "crm_grid_schema", "label": "CRM 网格 schema", "method": "GET", "path": "/api/crm/grid/schema", "kind": "failure", "expect_status": 401},
+    {"id": "crm_grid_entity_missing", "label": "CRM 实体不存在", "method": "GET", "path": "/api/crm/grid/account/probe-missing", "kind": "failure", "expect_status": 401},
+    {"id": "colony_notifications_missing", "label": "Colony 通知-不存在", "method": "GET", "path": "/api/colony/queen_growth/notifications", "kind": "failure", "expect_status": 404},
+    {"id": "colony_tools_missing", "label": "Colony 工具-不存在", "method": "GET", "path": "/api/colony/queen_growth/tools", "kind": "failure", "expect_status": 404},
+    {"id": "colonies_sessions", "label": "Colony 会话列表", "method": "GET", "path": "/api/colonies/queen_growth/sessions"},
+    {"id": "colonies_active_session", "label": "Colony 活动会话", "method": "GET", "path": "/api/colonies/queen_growth/active-session"},
+    {"id": "colonies_worker_profiles_missing", "label": "Colony Worker 档案-不存在", "method": "GET", "path": "/api/colonies/queen_growth/worker_profiles", "kind": "failure", "expect_status": 404},
+    {"id": "colonies_data_tables", "label": "Colony 数据表", "method": "GET", "path": "/api/colonies/queen_growth/data/tables"},
+    {"id": "colonies_data_changes", "label": "Colony 数据变更", "method": "GET", "path": "/api/colonies/queen_growth/data/changes?since=0"},
+    {"id": "colonies_data_table_rows_missing", "label": "Colony 表行-无 tracker", "method": "GET", "path": "/api/colonies/queen_growth/data/tables/probe_missing/rows", "kind": "failure", "expect_status": 404},
+    {"id": "colonies_import_status_invalid", "label": "导入状态-非法 ID", "method": "GET", "path": "/api/colonies/import/status/probe-missing", "kind": "failure", "expect_status": 400},
     {
         "id": "session_upload_attachment",
         "label": "上传附件",
@@ -410,6 +448,78 @@ PROBES: list[dict[str, Any]] = [
         "body": [],
         "kind": "failure",
         "expect_status": 500,
+    },
+]
+
+# Reference GET routes deliberately outside the compared set. Every entry
+# carries the class + reason; the freeze writer records them in index.json and
+# the markdown report so a missing endpoint is a decision, never an oversight.
+SKIPPED_PROBES: list[dict[str, str]] = [
+    {
+        "method": "GET",
+        "path": "/api/events/global",
+        "class": "sse-stream",
+        "reason": "Long-lived SSE multiplexer; the stream contract is frozen frame-by-frame in contracts/sse-frames (session_events).",
+    },
+    {
+        "method": "GET",
+        "path": "/api/sessions/live",
+        "class": "sse-stream",
+        "reason": "Long-lived SSE session feed; frame-level coverage lives in contracts/sse-frames.",
+    },
+    {
+        "method": "GET",
+        "path": "/api/sessions/{session}/workers/stream",
+        "class": "sse-stream",
+        "reason": "Long-lived SSE worker feed; needs a live worker to stream, which the throwaway home never has.",
+    },
+    {
+        "method": "GET",
+        "path": "/api/browser/status/stream",
+        "class": "sse-stream",
+        "reason": "Long-lived SSE status feed; /api/browser/status already freezes the snapshot contract.",
+    },
+    {
+        "method": "GET",
+        "path": "/api/health/resources",
+        "class": "documented-functional-gap",
+        "reason": "Python serves its renderer-sampler shape ({available,history,thresholds,verdict}); Go serves the resource-monitor rollup ({available,chrome,components,context,...}). Different feature surfaces, recorded in docs/api-ws-golden.md §8; /api/health already freezes the contract fields.",
+    },
+    {
+        "method": "GET",
+        "path": "/api/startup-status",
+        "class": "runtime-internal",
+        "reason": "Boot-stage history and wall-clock timestamps are per-process samples (Python reports its own boot stages, Go its own); not an HTTP contract value.",
+    },
+    {
+        "method": "GET",
+        "path": "/api/runtime-logs",
+        "class": "runtime-internal",
+        "reason": "Ring buffer of each process's own stdout/stderr; text differs by construction.",
+    },
+    {
+        "method": "GET",
+        "path": "/api/sessions/{session}/colony/tools",
+        "class": "runtime-state-gap",
+        "reason": "Python's REST session binds an eager ColonyRuntime and answers the full tool catalog; the Go REST session has no colony runtime (same root cause as config_llm_put.sessions_swapped). Add the probe once the colony-binding lane lands.",
+    },
+    {
+        "method": "GET",
+        "path": "/api/sessions/{session}/colony/skills",
+        "class": "runtime-state-gap",
+        "reason": "Same colony-runtime binding gap as /colony/tools: Python returns the bound colony's skills, Go returns an empty list.",
+    },
+    {
+        "method": "GET",
+        "path": "/api/sessions/{session}/workers/{worker_id}/reap-timeline",
+        "class": "runtime-state-gap",
+        "reason": "Requires a bound colony to answer: Python resolves the (missing) worker and answers 404, Go answers 503 'No active colony on this session' — a derivative of the colony-binding gap.",
+    },
+    {
+        "method": "GET",
+        "path": "/{path:.*}",
+        "class": "covered-elsewhere",
+        "reason": "SPA fallback; unknown-path behaviour is captured as evidence only in contracts/api-responses/fallback-probe.json (docs/api-ws-golden.md §6.4).",
     },
 ]
 
@@ -1224,6 +1334,7 @@ class Freezer:
                 for probe in PROBES
             ],
             "totals": diff["totals"],
+            "skipped": SKIPPED_PROBES,
         }
         (RESPONSES_DIR / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         (RESPONSES_DIR / "diff.json").write_text(json.dumps(diff, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -1801,6 +1912,17 @@ def render_markdown(
             )
         lines.append("")
         lines.append("原始证据：`go_hive/contracts/api-responses/fallback-probe.json`；口径讨论见 `docs/api-ws-golden.md`。")
+        lines.append("")
+
+    if SKIPPED_PROBES:
+        lines.append("## 显式跳过的端点（值级不比较）")
+        lines.append("")
+        lines.append("| 方法 | 端点 | 类 | 原因 |")
+        lines.append("|------|------|----|------|")
+        for row in SKIPPED_PROBES:
+            lines.append(f"| {row['method']} | `{row['path']}` | {row['class']} | {row['reason']} |")
+        lines.append("")
+        lines.append("机器可读清单：`go_hive/contracts/api-responses/index.json` 的 `skipped` 字段。")
         lines.append("")
 
     lines.append("## 端点汇总")

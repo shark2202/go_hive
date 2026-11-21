@@ -61,6 +61,36 @@
         "label": "Browser WS 残差 R09–R14（并发/帧上限/低风险）",
         "hours": 5,
         "done": true
+      },
+      {
+        "id": "cron-seconds",
+        "label": "croniter 6 字段/秒级 cron（Python 可调度、Go 现拒绝）",
+        "hours": 3,
+        "done": false
+      },
+      {
+        "id": "cli-usage-error-shape",
+        "label": "usage 错误前缀/usage 行形状（argparse root vs leaf）",
+        "hours": 2,
+        "done": false
+      },
+      {
+        "id": "judge-conversation-level2",
+        "label": "conversation_judge.py（Level2 会话质量门）移植或显式范围外声明",
+        "hours": 4,
+        "done": false
+      },
+      {
+        "id": "judge-subagent-urgency",
+        "label": "SubagentJudge 迭代余量 URGENT/WARNING 层",
+        "hours": 2,
+        "done": false
+      },
+      {
+        "id": "goal-marshal-parity",
+        "label": "goal 序列化差异：id 字段 / weight=0 归一 / context 键序",
+        "hours": 3,
+        "done": false
       }
     ],
     "G2": [

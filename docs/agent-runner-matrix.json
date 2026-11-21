@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "kind": "agent_runner_capability_matrix",
+  "generated_at": "2026-11-21T18:55:00+08:00",
+  "basis": "本机实测（--help/--version）+ 官方文档；opencode 未安装，仅文档口径",
+  "machine": {
+    "claude": "2.1.329",
+    "codex": "0.162.1",
+    "pi": "1.5.2",
+    "hermes": "0.21.5+4536.gea114c3",
+    "opencode": null,
+    "gemini": null
+  },
+  "targets": [
+    {
+      "kind": "claude-code",
+      "status": "current",
+      "command": "claude -p --output-format json",
+      "event_stream": false,
+      "event_stream_note": "仅最终 JSON（is_error/result/num_turns）",
+      "resume": "--session-id <uuid>（首轮）/ --resume <uuid>",
+      "mcp_injection": "mcp/<session>.json + --mcp-config --strict-mcp-config",
+      "acp": "adapter: @agentclientprotocol/claude-agent-acp",
+      "auth": ["api_key", "subscription"],
+      "verified_on_machine": true,
+      "source": "core/framework/server/claude_code_queens.py；go_hive/docs/claude-code-queen-runner.md"
+    },
+    {
+      "kind": "codex",
+      "status": "planned",
+      "command": "codex exec --json \"<prompt>\"",
+      "event_stream": true,
+      "event_stream_note": "JSONL: thread.started / turn.started / item.* / turn.completed / turn.failed / error；-o/--output-last-message 取最终文本",
+      "resume": "codex exec resume <SESSION_ID>（或 --last；建议存 UUID）",
+      "mcp_injection": "~/.codex/config.toml [mcp_servers.<name>]（codex mcp add）",
+      "acp": "adapter: @agentclientprotocol/codex-acp",
+      "auth": ["api_key", "chatgpt-login"],
+      "verified_on_machine": true,
+      "verified_note": "codex exec --help 已核 --json/-o/resume/sandbox；未跑真实回合",
+      "source": "learn.chatgpt.com/docs/non-interactive-mode；codex-rs/exec/src/cli.rs"
+    },
+    {
+      "kind": "opencode",
+      "status": "planned",
+      "command": "opencode run --format json \"<prompt>\"；或 opencode serve + HTTP API",
+      "event_stream": true,
+      "event_stream_note": "run --format json = NDJSON；server 提供 OpenAPI（sessions/messages/permissions）",
+      "resume": "--session <id> / --continue / --fork",
+      "mcp_injection": "opencode.json(c) mcp.servers（local/remote）",
+      "acp": "native: opencode acp",
+      "auth": ["provider api key", "oauth"],
+      "verified_on_machine": false,
+      "source": "opencode.ai/docs/cli、/docs/server、/docs/mcp-servers"
+    },
+    {
+      "kind": "pi",
+      "status": "planned",
+      "command": "pi -p \"<prompt>\"；pi --mode json；pi --mode rpc",
+      "event_stream": true,
+      "event_stream_note": "--mode json = JSONL；--mode rpc = LF-delimited JSONL 长连",
+      "resume": "--session <path|id> / --session-id / --fork / --no-session",
+      "mcp_injection": false,
+      "mcp_note": "pi 核心无 MCP（设计上交给扩展层）：queen 可被写信但无法调用 message_queen，除非写扩展或 pi-acp 桥接 MCP",
+      "acp": "community adapter: pi-acp（MCP 桥接待验证）",
+      "auth": ["api_key (provider env)", "login"],
+      "verified_on_machine": true,
+      "verified_note": "pi --help 已核 --mode json/rpc、--session；未跑真实回合",
+      "source": "@mariozechner/pi-coding-agent README / docs/rpc.md"
+    },
+    {
+      "kind": "hermes",
+      "status": "planned",
+      "command": "hermes acp（原生 ACP）；降级 hermes -z \"<prompt>\"",
+      "event_stream": true,
+      "event_stream_note": "ACP 有 session/update；-z 只打印最终文本（--usage-file 另给用量 JSON）",
+      "resume": "ACP session/resume；CLI --resume/--continue",
+      "mcp_injection": "ACP session/new.mcpServers；CLI 侧 mcp_servers 配置",
+      "acp": "native: hermes acp",
+      "auth": ["provider api key", "oauth/portal"],
+      "verified_on_machine": true,
+      "verified_note": "hermes --help 已核 acp/-z/--resume；未跑 ACP 回合",
+      "source": "hermes --help / hermes acp --help（0.21.5）"
+    },
+    {
+      "kind": "acp",
+      "status": "recommended_unifying_layer",
+      "command": "JSON-RPC 2.0 over stdio",
+      "event_stream": true,
+      "event_stream_note": "session/update 通知（message/tool/plan/state）；v1 prompt 响应带 stopReason，v2 用 state_update",
+      "resume": "session/resume（v2 支持 replayFrom；v1 需 loadSession 能力）",
+      "mcp_injection": "session/new { cwd, mcpServers } — 协议内直接带 MCP",
+      "acp": "self",
+      "auth": "agent-specific（initialize 返回 authMethods）",
+      "verified_on_machine": false,
+      "verified_note": "协议文档口径；本机未跑 ACP 客户端",
+      "source": "agentclientprotocol.com/protocol/v1；ACP v2 overview"
+    }
+  ]
+}

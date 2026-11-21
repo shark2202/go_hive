@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Runner 协议与适配规范（草案）— Claude Code / Codex / OpenCode / pi / Hermes / ACP</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1020px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:24px 0 8px;color:#cfdae6} h4{font-size:13.5px;margin:18px 0 6px;color:#b9c7d6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g4,.g3,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:20px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+figure.diagram{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:16px 0}
+figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){.tablewrap table{min-width:760px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">go_hive · Design Spec (Draft)</div><h1>Agent Runner 协议与适配规范：<span>Claude Code · Codex · OpenCode · pi · Hermes · ACP</span></h1>
+<p class="lede">回答一个问题：<b>现在只支持 Claude Code 的 queen runner，能不能扩展到 codex / opencode / pi / Hermes，甚至统一到 ACP？</b> 本页给出<b>现状证据</b>（Claude 适配器实际耦合了什么）、<b>目标协议矩阵</b>（本机实测版本 + 官方文档口径）、<b>统一接口规范草案</b>（Runner 接口 / 事件 schema / 配置 schema / 会话语义）、<b>交互流程</b>（普通进程型与 ACP）、<b>各 provider 适配方案</b>与<b>落地路线</b>。</p>
+<div class="meta"><span>撰写：<b>2026-11-21 18:55 CST</b></span><span>性质：<b>设计草案 + 现状证据（未实现）</b></span><span>本机：<b>claude 2.1.329 / codex 0.162.1 / pi 1.5.2 / hermes 0.21.5</b></span><span>opencode：<b>未安装（仅文档口径）</b></span></div>
+<div class="toc"><a href="#s00">速览</a><a href="#s01">现状耦合面</a><a href="#s02">目标协议矩阵</a><a href="#s03">统一接口规范</a><a href="#s04">交互流程</a><a href="#s05">适配方案</a><a href="#s06">ACP 统一层</a><a href="#s07">落地路线</a><a href="#s08">证据与缺口</a></div></header>
+
+<section id="s00"><h2><span class="num">00</span>速览</h2>
+<div class="grid g3">
+<div class="card"><div class="k">结论</div><div class="v">可以扩展</div><div class="d">但不是加分支：要把「回合驱动」抽成 Runner 接口，把 ACP 作为统一协议层；MCP（queen mail）继续当信件总线。</div></div>
+<div class="card"><div class="k">当前形态</div><div class="v">1 个 Claude 形状的适配器</div><div class="d">8 个耦合点里只有 4 个是通用的（prompt-in/text-out、一封信=一回合、MCP 侧信道、每会话串行+并发上限）。</div></div>
+<div class="card"><div class="k">最省的一条路</div><div class="v">ACP</div><div class="d"><code>session/new</code> 直接带 <code>mcpServers</code>，权限请求变协议内消息；Claude/Codex 有官方适配器，OpenCode/Gemini/Hermes 原生。</div></div>
+</div>
+<div class="callout info"><b>边界声明</b>：本页是<b>设计草案</b>，不是已实现的功能。除 Claude Code 适配器（已实现、已真实验证一回合）外，其余 provider 均为「协议调研 + 适配设计」；本机未跑过 codex / pi / Hermes 的真实 queen 回合，也未实现 ACP 客户端。所有「本机实测」只指 <code>--help/--version</code> 层面已核实。</div>
+</section>
+
+<section id="s01"><h2><span class="num">01</span>现状：Claude Code runner 到底耦合了什么</h2>
+<p>事实源：<code>core/framework/server/claude_code_queens.py</code>、<code>go_hive/docs/claude-code-queen-runner.md</code>（回合生命周期 §2、MCP 注入 §4、失败文案 §5）。拆出 8 个耦合点：</p>
+<div class="tablewrap"><table><thead><tr><th style="width:4%">#</th><th style="width:20%">耦合点</th><th style="width:44%">当前做法</th><th>判定</th></tr></thead><tbody>
+<tr><td>1</td><td>进程调用</td><td><code>claude -p --output-format json</code>；prompt 走 stdin（<code>[Name(id)]: text</code>）；超时杀整个进程树</td><td><span class="pill warn">形状专属</span>（每家参数不同；杀进程树/并发上限通用）</td></tr>
+<tr><td>2</td><td>回合结果解析</td><td>读 stdout <b>最后一个 JSON</b>：<code>is_error</code> / <code>result</code> / <code>num_turns</code>；退出码 + stderr 尾 500 字</td><td><span class="pill bad">Claude 专属</span></td></tr>
+<tr><td>3</td><td>会话续跑</td><td>首轮 <code>--session-id &lt;uuid&gt;</code>，之后 <code>--resume</code>；<code>conversations.json</code> 的 <code>started</code>；lost/taken 各重试一次</td><td><span class="pill ok">语义通用</span>（参数专属）</td></tr>
+<tr><td>4</td><td>MCP 注入</td><td>写 <code>HIVE_HOME/claude_code/&lt;id&gt;/mcp/&lt;session&gt;.json</code>（0600，回合后删）+ <code>--mcp-config --strict-mcp-config</code></td><td><span class="pill ok">格式通用</span>（mcpServers 是 MCP 标准；参数/路径专属）</td></tr>
+<tr><td>5</td><td>权限</td><td><code>--permission-mode</code> + 自动加 <code>--allowedTools mcp__hive__*</code>（非 bypass 时）</td><td><span class="pill bad">Claude 专属</span></td></tr>
+<tr><td>6</td><td>身份/付费</td><td><code>auth=api_key</code>（<code>ANTHROPIC_API_KEY</code>/<code>ANTHROPIC_BASE_URL</code>）或 <code>subscription</code>（config_dir 登录）；env 白名单隔离</td><td><span class="pill bad">Claude 专属</span>（env 白名单机制通用）</td></tr>
+<tr><td>7</td><td>转录/dashboard</td><td>读 Claude 会话文件 <code>projects/*/&lt;session&gt;.jsonl</code>，归一成 letter/text/tool/result，跳过 thinking/isSidechain/isMeta</td><td><span class="pill bad">Claude 专属</span></td></tr>
+<tr><td>8</td><td>失败文案/审计</td><td>6 类逐字文案（无 key/超时/无法启动/is_error/退出码/她已被移除）；<code>queens/mail.jsonl</code> 审计</td><td><span class="pill warn">机制通用、文案专属</span></td></tr>
+</tbody></table></div>
+<figure class="diagram"><pre>一封信的一次回合（现状，Claude Code）
+Mail ──► 按 (queen, peer) 找会话 ──► Runner worker（每会话串行 / 全局 max_parallel_turns）
+                                        │
+              写 mcp/&lt;session&gt;.json ────┤ 组参数：-p/--output-format json/--session-id|--resume/
+              （0600，回合后删）         │        --permission-mode/--allowedTools/--model/--append-system-prompt
+                                        ▼
+                                 claude -p（stdin：信件文本；超时杀进程树）
+                                        │ stdout 最后 JSON：is_error/result/num_turns
+                                        ▼
+                        回合文本 ──► Mail.DeliverReply ──► Hive queen 会话 / 另一 queen 收件箱
+                                        │
+                        转录（Claude JSONL）──► dashboard 两个只读路由</pre>
+<figcaption>图：现状流程（来源：claude-code-queen-runner.md §2–§5）。</figcaption></figure>
+</section>
+
+<section id="s02"><h2><span class="num">02</span>目标协议矩阵（本机实测 + 官方文档）</h2>
+<div class="callout"><b>版本证据（本机）</b>：<code>claude 2.1.329</code>、<code>codex-cli 0.162.1</code>、<code>pi 1.5.2</code>、<code>hermes 0.21.5+4536.gea114c3</code>；<code>opencode</code>/<code>gemini</code> <b>未安装</b>。机读版：<a href="agent-runner-matrix.json"><code>docs/agent-runner-matrix.json</code></a>。</div>
+<div class="tablewrap"><table><thead><tr><th style="width:13%">目标</th><th style="width:22%">非交互驱动</th><th style="width:24%">事件流</th><th style="width:19%">会话续跑</th><th style="width:22%">MCP 注入 / ACP</th></tr></thead><tbody>
+<tr><td><b>Claude Code</b><div class="sub">现状</div></td><td><code>claude -p --output-format json</code></td><td><span class="pill bad">仅最终 JSON</span>（无流式事件）</td><td><code>--session-id</code> / <code>--resume &lt;uuid&gt;</code></td><td><code>--mcp-config</code> 原生；ACP 适配器 <code>claude-acp</code></td></tr>
+<tr><td><b>Codex</b><div class="sub">本机已装</div></td><td><code>codex exec "prompt"</code>（<code>-</code> 读 stdin）</td><td><span class="pill ok">--json → JSONL</span><br><code>thread.started/turn.*/item.*/error</code>；<code>-o</code> 存最终文本</td><td><code>codex exec resume &lt;SESSION_ID&gt;</code>（或 <code>--last</code>）</td><td><code>~/.codex/config.toml [mcp_servers.*]</code>；ACP 适配器 <code>codex-acp</code></td></tr>
+<tr><td><b>OpenCode</b><div class="sub">未安装</div></td><td><code>opencode run "prompt"</code>；或 <code>opencode serve</code> + HTTP</td><td><span class="pill ok">--format json（NDJSON）</span>；server 有 OpenAPI（sessions/messages/permissions）</td><td><code>--session &lt;id&gt;</code> / <code>--continue</code> / <code>--fork</code></td><td><code>opencode.json mcp.servers</code>；<b>原生 <code>opencode acp</code></b></td></tr>
+<tr><td><b>pi</b><div class="sub">本机已装</div></td><td><code>pi -p</code>（只文本）/ <code>pi --mode json</code> / <code>pi --mode rpc</code></td><td><span class="pill ok">--mode json</span>（JSONL）；<code>--mode rpc</code>（LF-JSONL 长连）</td><td><code>--session &lt;id&gt;</code> / <code>--session-id</code> / <code>--fork</code> / <code>--no-session</code></td><td><span class="pill bad">核心无 MCP</span>（扩展层解决）；社区适配器 <code>pi-acp</code>（MCP 桥接待验证）</td></tr>
+<tr><td><b>Hermes</b><div class="sub">本机已装</div></td><td><b><code>hermes acp</code></b>（原生 ACP agent）；降级 <code>hermes -z "prompt"</code></td><td><span class="pill ok">ACP 有 session/update</span>；<code>-z</code> 只打印最终文本（<code>--usage-file</code> 另给用量）</td><td>ACP <code>session/resume</code>；CLI <code>--resume</code>/<code>--continue</code></td><td>ACP <code>session/new.mcpServers</code>；CLI 侧 <code>mcp_servers</code> 配置（<code>hermes codex-runtime migrate</code> 可迁移）</td></tr>
+<tr><td><b>ACP</b><div class="sub">统一层</div></td><td>JSON-RPC 2.0 over stdio</td><td><span class="pill ok">session/update 通知</span>：message/tool/plan/state</td><td><code>session/resume</code>（v2 带 <code>replayFrom</code>）</td><td><b><code>session/new { cwd, mcpServers }</code></b> —— 协议内直带 MCP</td></tr>
+</tbody></table></div>
+<p class="sub">口径说明：Codex 事实来自官方 non-interactive 文档与 <code>codex exec --help</code>；OpenCode 来自官方 CLI/server/mcp 文档（本机未装，未实测）；pi 来自其 README 与 <code>pi --help</code>；Hermes 来自 <code>hermes --help</code> / <code>hermes acp --help</code>；ACP 来自 agentclientprotocol.com 协议文档（v1/v2）。</p>
+</section>
+
+<section id="s03"><h2><span class="num">03</span>统一接口规范（草案）</h2>
+<h3>3.1 Runner 接口（Go）</h3>
+<pre>type Runner interface {
+    Kind() string                                           // "claude-code"|"codex"|"opencode"|"pi"|"hermes"|"acp"
+    Capabilities() Capabilities
+    EnsureSession(ctx, SessionSpec) (SessionHandle, error)  // new / resume（provider_session_id 归一）
+    RunTurn(ctx, TurnRequest, emit func(TurnEvent)) (TurnResult, error)
+    ReadTranscript(ctx, SessionID) ([]Entry, error)         // dashboard；无转录 provider 返回 nil,ErrNoTranscript
+    Close(ctx) error
+}
+
+type Capabilities struct {
+    Streaming, Resume, MCPInjection, PermissionPrompts, Transcript bool
+    AuthModes []string          // api_key | subscription | oauth | none
+}
+
+type TurnRequest struct {
+    QueenID, SessionID, Ref string   // Ref 形如 claude_code:&lt;queen&gt;:&lt;sid&gt; / codex:&lt;queen&gt;:&lt;sid&gt;
+    Prompt     string
+    Cwd        string
+    Env        map[string]string     // 白名单后的环境
+    MCPServers []MCPServer           // 由 Mail 生成：hive + URL/TOKEN/FROM 三元组
+    Timeout    time.Duration
+}</pre>
+<div class="callout"><b>关键纪律</b>：能力是<b>声明式</b>的。pi 的 <code>MCPInjection=false</code>、Hermes <code>-z</code> 的 <code>Streaming=false</code> 必须显式暴露——调度层据此降级（放弃回信工具 / 只取最终文本），<b>不许伪装成功</b>（与现有「不伪造 profile / 不假装成功」的口径一致）。</div>
+
+<h3>3.2 统一事件（归一化）</h3>
+<pre>{"kind":"started","provider":"codex","session_id":"0199a2…"}
+{"kind":"text","text":"…","final":false}
+{"kind":"tool","name":"Bash","input":{…},"status":"running|ok|error"}
+{"kind":"usage","input_tokens":24763,"output_tokens":122,"cost_usd":0.077}
+{"kind":"done","text":"final answer","stop_reason":"end_turn|timeout|error","error":null}</pre>
+<p>映射关系：Claude「最后一个 JSON」→ <code>done</code>；Codex <code>item.completed/agent_message</code> → <code>text</code>、<code>item.*command_execution</code> → <code>tool</code>、<code>turn.completed.usage</code> → <code>usage</code>；OpenCode NDJSON / pi <code>--mode json</code> / ACP <code>session/update</code> 同理各自映射。</p>
+
+<h3>3.3 配置 schema（向后兼容）</h3>
+<pre>"queen_mail": {
+  "enabled": true,
+  "runners": {
+    "codex":  {"queen_cx": {"command":["codex"], "auth":"api_key", "cwd":"…", "sandbox":"workspace-write"}},
+    "hermes": {"queen_h":  {"command":["hermes","acp"]}},
+    "acp":    {"queen_z":  {"command":["npx","@agentclientprotocol/codex-acp"]}}
+  },
+  "claude_code": { … }          // 保留原键，内部映射到 runners["claude-code"]
+}</pre>
+
+<h3>3.4 会话与转录存储（归一）</h3>
+<pre>runners/&lt;kind&gt;/&lt;id&gt;/{conversations.json,inbox/,mcp/}
+conversations.json: {"conversations": {"&lt;peer&gt;": {"provider_session_id":"…","reply_to":"…","started":true}}}
+转录：每 provider 一个 normalizer → 统一 Entry{at,kind,text,tool?,error?}；无转录 → 空，不造条目</pre>
+</section>
+
+<section id="s04"><h2><span class="num">04</span>交互流程</h2>
+<h3>4.1 一次来信（provider 无关）</h3>
+<figure class="diagram"><pre>Mail（信件 + hop/depth）
+  └─► 按 (queen, peer) 取/建会话 ─► EnsureSession(new|resume)
+        └─► 注入 MCP（三形态：config 文件 / ACP session.new.mcpServers / 不可注入→降级）
+              └─► RunTurn(prompt)
+                    ├─ 进程型：spawn → 读 stdout（JSONL 或最后 JSON）→ 超时杀进程树
+                    ├─ server 型（OpenCode）：HTTP message + 事件流
+                    └─ ACP：initialize → session/new|resume → session/prompt → session/update*
+              └─► done.text ─► DeliverReply（Hive queen 会话 / 另一 runner queen 收件箱）
+              └─► ReadTranscript ─► dashboard（provider + 归一 entries）</pre>
+<figcaption>图：扩展后的统一流程（草案）。</figcaption></figure>
+
+<h3>4.2 ACP 回合（推荐统一路径）</h3>
+<pre>C→A  initialize {protocolVersion:1, clientCapabilities:{…}, clientInfo:{…}}
+A→C  {protocolVersion:1, agentCapabilities:{loadSession/promptCapabilities/mcpCapabilities…}, authMethods}
+C→A  session/new { cwd, mcpServers:[ {name:"hive", command:"hive", args:["queen-mail-mcp"],
+                      env:[{name:"HIVE_QUEEN_MAIL_URL"…},{TOKEN},{FROM}]} ] }   ← queen mail 直接进协议
+A→C  { sessionId }
+C→A  session/prompt { sessionId, prompt:[{type:"text", text:"[Ava(queen_ava)]: …"}] }
+A→C  session/update*（agent_message_chunk / tool_call / plan / …）
+C→A  （权限请求）session/request_permission → 由 Hive 策略回答（allowlist/deny/escalate）→ 权限决定回执
+A→C  v1：prompt 响应带 stopReason；v2：prompt 立即确认 + idle state_update 带 stopReason</pre>
+<p class="sub">v1/v2 必须锁一个：v2 把「轮次结束」从 prompt 响应移到 <code>state_update</code>，且 <code>session/load</code> 被 <code>session/resume</code> 取代。混用会得到「永远等不到 stopReason」或「协议版本不匹配」。</p>
+
+<h3>4.3 超时 / 并发 / 错误（沿用现状语义）</h3>
+<ul>
+<li><b>超时</b>：单回合 <code>timeout_minutes</code>（默认 30 分钟）→ 取消/杀整个进程树（Windows 目前只 <code>Process.Kill()</code>，无 <code>taskkill /T</code> 等价物——已知差异）。</li>
+<li><b>并发</b>：同一会话串行；不同会话可并行；全局上限 <code>queen_mail.max_parallel_turns</code>（默认 2）。</li>
+<li><b>错误分类</b>：no_auth / timeout / spawn_failed / provider_error（<code>is_error</code> / 非零退出）/ refused（Hive 侧拒绝）。文案按 provider 归一后仍保留各自原文供排查。</li>
+</ul>
+</section>
+
+<section id="s05"><h2><span class="num">05</span>各 provider 适配方案与风险</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:12%">目标</th><th style="width:30%">最短路径</th><th style="width:32%">必须补的东西</th><th>风险 / 未验证</th></tr></thead><tbody>
+<tr><td><b>Codex</b></td><td><code>codex exec --json</code>；<code>-o</code> 取最终文本；<code>resume &lt;uuid&gt;</code></td><td>JSONL 事件映射（<code>thread.started</code> 存 session id）；每 queen 独立 <code>CODEX_HOME</code> 隔离；<code>--sandbox</code> / <code>--skip-git-repo-check</code> 映射权限模式</td><td>事件 schema 随版本漂移（建议锁版本）；会话名匹配不上会「新建会话」而非报错（必须用 UUID）</td></tr>
+<tr><td><b>OpenCode</b></td><td>优先 <b><code>opencode acp</code></b>；或 <code>run --format json</code>；长线用 <code>opencode serve</code> API</td><td>若走 server：OpenAPI 版本、事件/权限接口、<code>--attach</code> 复用 server 避免 MCP 冷启动</td><td>本机未安装；API/CLI 版本差异未实测</td></tr>
+<tr><td><b>pi</b></td><td><code>pi --mode rpc</code>（长连，最贴近「常驻会话」）或 <code>--mode json</code></td><td>RPC 帧解析（LF-only，禁用 Node readline 式分裂）；<b>MCP 缺口</b>：需写 pi 扩展暴露 <code>list_queens/message_queen</code>，或验证 <code>pi-acp</code> 是否桥接 ACP 的 mcpServers</td><td>核心无 MCP 是设计选择：不补的话 pi queen 只能「被写信」不能「回信」</td></tr>
+<tr><td><b>Hermes</b></td><td><b><code>hermes acp</code></b>（原生 ACP，直接走 §4.2）</td><td>ACP client 实现；权限策略映射；<code>--accept-hooks</code> 等服务端开关</td><td><code>-z</code> 只有最终文本（无事件流）；ACP 行为未实测（本机只核到子命令存在）</td></tr>
+<tr><td><b>ACP 统一</b></td><td>Hive 实现 ACP <b>client</b>，配「适配器注册表」：claude-acp / codex-acp / gemini（原生）/ opencode（原生）/ hermes（原生）/ pi-acp（社区）</td><td>锁 v1 或 v2；permission 策略；<code>session/new</code> 的 mcpServers 注入；stdio 帧解析（LF/JSON-RPC 2.0）</td><td>适配器质量参差；pi-acp 的 MCP 桥接待验证；v2 迁移语义要按文档一次性对齐</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s06"><h2><span class="num">06</span>ACP 作为统一层：为什么</h2>
+<ul>
+<li><b>一次实现，多 agent</b>：ACP 是 Zed 生态的「编辑器↔agent」标准（JSON-RPC 2.0 over stdio）。Hive 只需做 client，agent 侧用现成适配器或原生模式。</li>
+<li><b>MCP 注入在协议内</b>：<code>session/new</code> 自带 <code>mcpServers</code>——queen mail 的 <code>list_queens</code>/<code>message_queen</code> 不用再写每家的配置文件，也不用为 pi 的「无 MCP」另案。</li>
+<li><b>权限可控</b>：权限请求是协议内消息（<code>session/request_permission</code>），Hive 可以统一做无人值守策略（白名单放行 / 拒绝 / 升级给 Sentinel），而不是每家一套 <code>--permission-mode</code>。</li>
+<li><b>事件流统一</b>：<code>session/update</code>（消息/工具/计划/状态）天然映射到 §3.2 的统一事件，dashboard 转录也能从中归一。</li>
+<li><b>已被生态验证</b>：Claude Code、Codex、Gemini CLI、OpenCode、pi、Hermes 都有 ACP 入口或适配器（见 §02 矩阵备注）。</li>
+</ul>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">维度</th><th>v1</th><th>v2</th></tr></thead><tbody>
+<tr><td>prompt 响应</td><td>挂起到回合结束，响应带 <code>stopReason</code></td><td>立即确认（插入 user message），结束时发 idle <code>state_update</code> 带 <code>stopReason</code></td></tr>
+<tr><td>会话恢复</td><td><code>loadSession</code> 能力 + <code>session/load</code>（全量重放）</td><td>只剩 <code>session/resume</code>（可选 <code>replayFrom</code>）</td></tr>
+<tr><td>能力声明</td><td><code>clientCapabilities</code>/<code>agentCapabilities</code> 布尔</td><td>统一 <code>capabilities</code> + <code>info</code>，对象标记</td></tr>
+<tr><td>基线方法</td><td>new/prompt/cancel/update</td><td>+ list/resume/close 成为基线</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s07"><h2><span class="num">07</span>落地路线（建议顺序）</h2>
+<ol>
+<li><b>抽 Runner 接口</b>：把现有 Claude 适配器改成第一个实现，行为零变化——现有 <code>internal/qmail/claude_runner_*</code> 测试全绿是验收线。</li>
+<li><b>接 Codex</b>（本机 0.162.1 可实测）：JSONL 映射 + resume UUID 存储 + 隔离 CODEX_HOME；补 fake-codex 夹具与真实回合 smoke。</li>
+<li><b>接 Hermes（走 ACP）</b>：同时把 ACP client 落地——这一步同时交付「ACP 统一层」的最小可用版本。</li>
+<li><b>OpenCode</b>（需先安装）：优先 <code>opencode acp</code>；若走 server API，补版本探测与事件归一。</li>
+<li><b>pi</b>：先解决 MCP 缺口（扩展 or <code>pi-acp</code> 验证），再上 <code>--mode rpc</code>。</li>
+<li><b>收口 ACP</b>：Claude/Codex 从「原生 CLI 适配」迁移到 <code>claude-acp</code>/<code>codex-acp</code>（原适配保留为 fallback）。</li>
+</ol>
+<h3>验收清单（每接一个 provider 都要过）</h3>
+<ul>
+<li>首轮/续轮：会话 id 落盘、第二封信走 resume、lost/taken 校正重试；</li>
+<li>MCP：queen 真的能调 <code>list_queens</code>/<code>message_queen</code>（或显式声明 MCPInjection=false 并说明降级）；</li>
+<li>失败文案：无 auth / 超时 / 无法启动 / provider 报错 / 配置移除，五类均可达；</li>
+<li>安全：env 白名单（不含 HIVE_CREDENTIAL_KEY 与任何 provider key）、token 只对该会话有效、回合后清理临时配置；</li>
+<li>并发：同会话串行、全局上限生效；超时杀掉整个进程树（≤ Windows 已知差异）；</li>
+<li>观测：统一事件序列可回放、dashboard 转录归一（无转录 provider 返回空）；</li>
+<li>证据：留一条真实回合的落盘记录（请求/事件/最终文本/计费），不以假服务替代。</li>
+</ul>
+</section>
+
+<section id="s08"><h2><span class="num">08</span>证据、未验证项与链接</h2>
+<h3>本页引用的证据</h3>
+<ul>
+<li>现状事实：<a href="claude-code-queen-runner.md">claude-code-queen-runner.md</a>（§2 回合生命周期、§4 MCP 注入、§5 失败文案、§8 已知差异）、<a href="claude-code-dashboard.md">claude-code-dashboard.md</a>、<a href="claude-code-queen.html">claude-code-queen.html</a>。</li>
+<li>机读能力矩阵：<a href="agent-runner-matrix.json"><code>docs/agent-runner-matrix.json</code></a>（本页 §02 的数据源）。</li>
+<li>本机版本与命令面：<code>claude --version</code>、<code>codex --version</code> 与 <code>codex exec --help</code>、<code>pi --help</code>、<code>hermes --help</code> / <code>hermes acp --help</code>（2026-11-21 实测）。</li>
+<li>协议口径：Codex non-interactive 文档（<code>codex exec --json</code>/resume/<code>-o</code>）；OpenCode CLI/server/mcp 文档；pi README 与 rpc 文档；ACP 协议文档（v1/v2）。</li>
+</ul>
+<h3>未验证项（不得按已达成处理）</h3>
+<ul>
+<li>codex / pi / Hermes 的<b>真实 queen 回合</b>未跑（只核到命令面）；OpenCode 未安装；ACP 未跑真实握手。</li>
+<li>各 provider 的转录格式未取样（dashboard 归一规则尚未落地）。</li>
+<li>pi 的 MCP 缺口未解决；<code>pi-acp</code> 的桥接行为未验证。</li>
+<li>Windows 上各家 CLI 的进程树/信号语义未验证（沿用现有 PLAT-* 缺口口径）。</li>
+</ul>
+<p class="sub">相关页：<a href="acp-queen-spec.html">ACP Queen 需求说明书</a> · <a href="claude-code-queen-model.html">Claude Code Queen 关系模型</a> · <a href="claude-code-queen.html">Claude Code Queen 特性说明书</a> · <a href="module-interfaces.html">模块接口不变量</a> · <a href="hive-cred.html">hive-cred</a> · <a href="browser-bridge.html">Browser Bridge</a> · <a href="platform-support.html">平台支持矩阵</a> · <a href="surface-tracking-matrix.html">外观对齐矩阵</a>。</p>
+</section>
+
+<footer>go_hive / docs · agent-runner-protocol.html · 生成于 2026-11-21 18:55 CST · 性质：设计草案（未实现）；现状部分有源码与实测证据，扩展部分为协议调研与适配设计。</footer>
+</div></body></html>

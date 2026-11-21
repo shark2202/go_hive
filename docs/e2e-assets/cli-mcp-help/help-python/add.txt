@@ -1,0 +1,27 @@
+usage: hive mcp add [-h] [--name NAME] [--transport {stdio,http,unix,sse}] [--url URL]
+                    [--command COMMAND] [--args [ARGS ...]] [--socket-path SOCKET_PATH]
+                    [--description DESCRIPTION] [--env KEY=VAL [KEY=VAL ...]] [--cwd CWD]
+                    [--as-cli] [--from FROM_MANIFEST]
+                    [-- COMMAND [ARG ...] ...]
+
+positional arguments:
+  -- COMMAND [ARG ...]  The stdio command and its arguments, after --; arguments may start with -
+
+options:
+  -h, --help            show this help message and exit
+  --name NAME           Server name
+  --transport {stdio,http,unix,sse}
+                        Transport type
+  --url URL             Server URL (http, unix, sse)
+  --command COMMAND     Command to run (stdio)
+  --args [ARGS ...]     Command arguments (stdio)
+  --socket-path SOCKET_PATH
+                        Unix socket path
+  --description DESCRIPTION
+                        Server description
+  --env KEY=VAL [KEY=VAL ...]
+                        Environment variables (stdio)
+  --cwd CWD             Working directory (stdio)
+  --as-cli              Agents run it from the terminal (hive mcp run) instead of loading its
+                        tools
+  --from FROM_MANIFEST  Path to manifest.json

@@ -1,19 +1,19 @@
 # API 契约差异（reference=python → target=go_hive）
 
-- 生成时间：2026-11-21T15:57:24+08:00
-- 基准标识：`reference=python@f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d`，`target=go_hive@f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d`
+- 生成时间：2026-11-21T20:10:41+08:00
+- 基准标识：`reference=python@982136f85e8fb3a956469944622edbfce1caa2ea`，`target=go_hive@982136f85e8fb3a956469944622edbfce1caa2ea`
 - reference（契约基准）：`python` hive 1.0.14，
-  HEAD `f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d`，`core` 最后改动 `856854659269aa4c9fcfc8ae89ff956eaff75b66`，`tools` 最后改动 `68b6c230f20e237953dea7a3af7bb583b9fbe0fd`
-- target（待对齐）：`go_hive` hive 1.0.26-go.1，HEAD `f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d`
-- 探针输入：queen=`queen_growth`；LLM 槽位指向本地 OpenAI 兼容 stub（`http://127.0.0.1:61763/v1`，确定性开场回合，不访问外网），SSE 窗口 3.0s
+  HEAD `982136f85e8fb3a956469944622edbfce1caa2ea`，`core` 最后改动 `16291c8d705d169b473c4ec6e1ec44bf736cff26`，`tools` 最后改动 `68b6c230f20e237953dea7a3af7bb583b9fbe0fd`
+- target（待对齐）：`go_hive` hive 1.0.26-go.1，HEAD `982136f85e8fb3a956469944622edbfce1caa2ea`
+- 探针输入：queen=`queen_growth`；LLM 槽位指向本地 OpenAI 兼容 stub（`http://127.0.0.1:60527/v1`，确定性开场回合，不访问外网），SSE 窗口 3.0s
 - 产物：`go_hive/contracts/api-responses/`（canonical JSON + shape + diff.json）
 
 > 口径：契约基准是 Python 当前 checkout 的抓取结果，所有字段名/类型/数量以 reference 为准；
 > Go 侧只作为 target 量化差异。易变值（session id、时间戳、端口、临时路径、资源读数）已替换为占位符，
 > 但键的存在性（null vs 缺失）保留。
 
-**端点：75/77 PASS，2 DECLARED（已声明差异），0 FAIL。**
-**路径：成功 56，失败路径 21（400/404/409 字段对照）；状态码不一致 0。**
+**端点：105/107 PASS，2 DECLARED（已声明差异），0 FAIL。**
+**路径：成功 66，失败路径 41（400/404/409 字段对照）；状态码不一致 0。**
 **差异计数：missing_in_target=1，extra_in_target=1，type_mismatch=3，count_mismatch=0，semantic_failures=0。**
 
 ## 路由面（静态提取）
@@ -32,6 +32,24 @@
 | `/api/org-chart` | 404 | `text/plain; charset=utf-8` | 404 | `text/plain; charset=utf-8` |
 
 原始证据：`go_hive/contracts/api-responses/fallback-probe.json`；口径讨论见 `docs/api-ws-golden.md`。
+
+## 显式跳过的端点（值级不比较）
+
+| 方法 | 端点 | 类 | 原因 |
+|------|------|----|------|
+| GET | `/api/events/global` | sse-stream | Long-lived SSE multiplexer; the stream contract is frozen frame-by-frame in contracts/sse-frames (session_events). |
+| GET | `/api/sessions/live` | sse-stream | Long-lived SSE session feed; frame-level coverage lives in contracts/sse-frames. |
+| GET | `/api/sessions/{session}/workers/stream` | sse-stream | Long-lived SSE worker feed; needs a live worker to stream, which the throwaway home never has. |
+| GET | `/api/browser/status/stream` | sse-stream | Long-lived SSE status feed; /api/browser/status already freezes the snapshot contract. |
+| GET | `/api/health/resources` | documented-functional-gap | Python serves its renderer-sampler shape ({available,history,thresholds,verdict}); Go serves the resource-monitor rollup ({available,chrome,components,context,...}). Different feature surfaces, recorded in docs/api-ws-golden.md §8; /api/health already freezes the contract fields. |
+| GET | `/api/startup-status` | runtime-internal | Boot-stage history and wall-clock timestamps are per-process samples (Python reports its own boot stages, Go its own); not an HTTP contract value. |
+| GET | `/api/runtime-logs` | runtime-internal | Ring buffer of each process's own stdout/stderr; text differs by construction. |
+| GET | `/api/sessions/{session}/colony/tools` | runtime-state-gap | Python's REST session binds an eager ColonyRuntime and answers the full tool catalog; the Go REST session has no colony runtime (same root cause as config_llm_put.sessions_swapped). Add the probe once the colony-binding lane lands. |
+| GET | `/api/sessions/{session}/colony/skills` | runtime-state-gap | Same colony-runtime binding gap as /colony/tools: Python returns the bound colony's skills, Go returns an empty list. |
+| GET | `/api/sessions/{session}/workers/{worker_id}/reap-timeline` | runtime-state-gap | Requires a bound colony to answer: Python resolves the (missing) worker and answers 404, Go answers 503 'No active colony on this session' — a derivative of the colony-binding gap. |
+| GET | `/{path:.*}` | covered-elsewhere | SPA fallback; unknown-path behaviour is captured as evidence only in contracts/api-responses/fallback-probe.json (docs/api-ws-golden.md §6.4). |
+
+机器可读清单：`go_hive/contracts/api-responses/index.json` 的 `skipped` 字段。
 
 ## 端点汇总
 
@@ -59,61 +77,91 @@
 | 20 | `/api/sessions/{session}/triggers` | GET | 200/200 | **PASS** | 0 |
 | 21 | `/api/sessions/{session}/workers` | GET | 200/200 | **PASS** | 0 |
 | 22 | `/api/sessions/{session}/skill-installs` | GET | 200/200 | **PASS** | 0 |
-| 23 | `/api/sessions/{session}/tasks` | GET | 200/200 | **PASS** | 0 |
-| 24 | `/api/config/features` | GET | 200/200 | **PASS** | 0 |
-| 25 | `/api/config/models` | GET | 200/200 | **DECLARED** | 3 |
-| 26 | `/api/config/profile` | GET | 200/200 | **PASS** | 0 |
-| 27 | `/api/config/sentinel` | GET | 200/200 | **PASS** | 0 |
-| 28 | `/api/config/rate-limits` | GET | 200/200 | **PASS** | 0 |
-| 29 | `/api/config/llm-sections` | GET | 200/200 | **PASS** | 0 |
-| 30 | `/api/config/external-skills` | GET | 200/200 | **PASS** | 0 |
-| 31 | `/api/config/provider-library` | GET | 200/200 | **PASS** | 0 |
-| 32 | `/api/credentials/oauth-status` | GET | 200/200 | **PASS** | 0 |
-| 33 | `/api/sentinel/credentials` | GET | 200/200 | **PASS** | 0 |
-| 34 | `/api/credentials` | POST | 201/201 | **PASS** | 0 |
-| 35 | `/api/credentials` | GET | 200/200 | **PASS** | 0 |
-| 36 | `/api/credentials/airtable_pat` | GET | 200/200 | **PASS** | 0 |
-| 37 | `/api/skills/scopes` | GET | 200/200 | **PASS** | 0 |
-| 38 | `/api/skills/administrative-behavior-skill` | GET | 200/200 | **PASS** | 0 |
-| 39 | `/api/queen/queen_growth/skills` | GET | 200/200 | **PASS** | 0 |
-| 40 | `/api/mcp/servers` | GET | 200/200 | **PASS** | 0 |
-| 41 | `/api/browser/status` | GET | 200/200 | **PASS** | 0 |
-| 42 | `/api/browser/contexts` | GET | 200/200 | **DECLARED** | 2 |
-| 43 | `/api/browser/tabs` | GET | 200/200 | **PASS** | 0 |
-| 44 | `/api/colonies/tools-index` | GET | 200/200 | **PASS** | 0 |
-| 45 | `/api/queen/removed` | GET | 200/200 | **PASS** | 0 |
-| 46 | `/api/queen/queen_growth/overview` | GET | 200/200 | **PASS** | 0 |
-| 47 | `/api/queen/queen_growth/profile` | GET | 200/200 | **PASS** | 0 |
-| 48 | `/api/queen/queen_growth/llm` | GET | 200/200 | **PASS** | 0 |
-| 49 | `/api/queen/queen_growth/persona` | GET | 200/200 | **PASS** | 0 |
-| 50 | `/api/queen/queen_growth/soul` | GET | 200/200 | **PASS** | 0 |
-| 51 | `/api/maintenance/janitor/report` | GET | 200/200 | **PASS** | 0 |
-| 52 | `/api/sessions/{session}/upload-attachment` | POST | 200/200 | **PASS** | 0 |
-| 53 | `/api/sessions/{session}/attachment/probe-note.txt` | GET | 200/200 | **PASS** | 0 |
-| 54 | `/api/config/llm` | PUT | 200/200 | **PASS** | 0 |
-| 55 | `/api/sessions` | POST | 201/201 | **PASS** | 0 |
-| 56 | `/api/sessions/{session2}/title` | PATCH | 200/200 | **PASS** | 0 |
-| 57 | `/api/sessions/{session2}/chat` | POST | 200/200 | **PASS** | 0 |
-| 58 | `/api/sessions/{session2}` | DELETE | 200/200 | **PASS** | 0 |
-| 59 | `/api/sessions/{session2}` | GET | 200/200 | **PASS** | 0 |
-| 60 | `/api/sessions/session_20990101_000000_deadbeef/live_tools` | GET | 404/404 | **PASS** | 0 |
-| 61 | `/api/sessions/session_20990101_000000_deadbeef/tasks` | GET | 404/404 | **PASS** | 0 |
-| 62 | `/api/sessions/session_20990101_000000_deadbeef/triggers` | GET | 404/404 | **PASS** | 0 |
-| 63 | `/api/sessions/session_20990101_000000_deadbeef/workers` | GET | 404/404 | **PASS** | 0 |
-| 64 | `/api/sessions/session_20990101_000000_deadbeef/skill-installs` | GET | 404/404 | **PASS** | 0 |
-| 65 | `/api/sessions/{session}/attachment/nope.txt` | GET | 404/404 | **PASS** | 0 |
-| 66 | `/api/sessions/session_20990101_000000_deadbeef/upload-attachment` | POST | 404/404 | **PASS** | 0 |
-| 67 | `/api/sessions/session_20990101_000000_deadbeef/chat` | POST | 404/404 | **PASS** | 0 |
-| 68 | `/api/sessions/session_20990101_000000_deadbeef/title` | PATCH | 404/404 | **PASS** | 0 |
-| 69 | `/api/sessions/session_20990101_000000_deadbeef` | DELETE | 404/404 | **PASS** | 0 |
-| 70 | `/api/credentials/nope_probe` | GET | 404/404 | **PASS** | 0 |
-| 71 | `/api/skills/does-not-exist-probe` | GET | 404/404 | **PASS** | 0 |
-| 72 | `/api/queen/queen_nope/overview` | GET | 404/404 | **PASS** | 0 |
-| 73 | `/api/mcp/servers/nope/health` | POST | 404/404 | **PASS** | 0 |
-| 74 | `/api/sentinel/telegram/validate` | POST | 400/400 | **PASS** | 0 |
-| 75 | `/api/credentials` | POST | 400/400 | **PASS** | 0 |
-| 76 | `/api/config/llm` | PUT | 400/400 | **PASS** | 0 |
-| 77 | `/api/config/llm` | PUT | 500/500 | **PASS** | 0 |
+| 23 | `/api/sessions/{session}/workers/probe-missing` | GET | 404/404 | **PASS** | 0 |
+| 24 | `/api/sessions/{session}/workers/probe-missing/conversation` | GET | 404/404 | **PASS** | 0 |
+| 25 | `/api/claude-code-queens/queen_growth/conversations/probe-missing` | GET | 404/404 | **PASS** | 0 |
+| 26 | `/api/sessions/{session}/tasks` | GET | 200/200 | **PASS** | 0 |
+| 27 | `/api/config/features` | GET | 200/200 | **PASS** | 0 |
+| 28 | `/api/config/models` | GET | 200/200 | **DECLARED** | 3 |
+| 29 | `/api/config/profile` | GET | 200/200 | **PASS** | 0 |
+| 30 | `/api/config/sentinel` | GET | 200/200 | **PASS** | 0 |
+| 31 | `/api/config/rate-limits` | GET | 200/200 | **PASS** | 0 |
+| 32 | `/api/config/llm-sections` | GET | 200/200 | **PASS** | 0 |
+| 33 | `/api/config/external-skills` | GET | 200/200 | **PASS** | 0 |
+| 34 | `/api/config/provider-library` | GET | 200/200 | **PASS** | 0 |
+| 35 | `/api/credentials/oauth-status` | GET | 200/200 | **PASS** | 0 |
+| 36 | `/api/sentinel/credentials` | GET | 200/200 | **PASS** | 0 |
+| 37 | `/api/credentials` | POST | 201/201 | **PASS** | 0 |
+| 38 | `/api/credentials` | GET | 200/200 | **PASS** | 0 |
+| 39 | `/api/credentials/airtable_pat` | GET | 200/200 | **PASS** | 0 |
+| 40 | `/api/skills/scopes` | GET | 200/200 | **PASS** | 0 |
+| 41 | `/api/skills/administrative-behavior-skill` | GET | 200/200 | **PASS** | 0 |
+| 42 | `/api/queen/queen_growth/skills` | GET | 200/200 | **PASS** | 0 |
+| 43 | `/api/mcp/servers` | GET | 200/200 | **PASS** | 0 |
+| 44 | `/api/browser/status` | GET | 200/200 | **PASS** | 0 |
+| 45 | `/api/browser/contexts` | GET | 200/200 | **DECLARED** | 2 |
+| 46 | `/api/browser/tabs` | GET | 200/200 | **PASS** | 0 |
+| 47 | `/api/colonies/tools-index` | GET | 200/200 | **PASS** | 0 |
+| 48 | `/api/queen/removed` | GET | 200/200 | **PASS** | 0 |
+| 49 | `/api/queen/queen_growth/overview` | GET | 200/200 | **PASS** | 0 |
+| 50 | `/api/queen/queen_growth/profile` | GET | 200/200 | **PASS** | 0 |
+| 51 | `/api/queen/queen_growth/llm` | GET | 200/200 | **PASS** | 0 |
+| 52 | `/api/queen/queen_growth/persona` | GET | 200/200 | **PASS** | 0 |
+| 53 | `/api/queen/queen_growth/soul` | GET | 200/200 | **PASS** | 0 |
+| 54 | `/api/maintenance/janitor/report` | GET | 200/200 | **PASS** | 0 |
+| 55 | `/api/prompts` | GET | 200/200 | **PASS** | 0 |
+| 56 | `/api/memories` | GET | 200/200 | **PASS** | 0 |
+| 57 | `/api/memories/file?path=probe-missing.md` | GET | 404/404 | **PASS** | 0 |
+| 58 | `/api/channels` | GET | 200/200 | **PASS** | 0 |
+| 59 | `/api/claude-code-queens` | GET | 200/200 | **PASS** | 0 |
+| 60 | `/api/discover` | GET | 200/200 | **PASS** | 0 |
+| 61 | `/api/queen-mail/queens` | GET | 401/401 | **PASS** | 0 |
+| 62 | `/api/config/profile/avatar` | GET | 404/404 | **PASS** | 0 |
+| 63 | `/api/queen/queen_growth/avatar` | GET | 404/404 | **PASS** | 0 |
+| 64 | `/api/models/endpoints/probe-missing/models` | GET | 404/404 | **PASS** | 0 |
+| 65 | `/api/queen/queen_growth/skills/administrative-behavior-skill/body` | GET | 200/200 | **PASS** | 0 |
+| 66 | `/api/global/crm/status` | GET | 501/501 | **PASS** | 0 |
+| 67 | `/api/global/data/tables` | GET | 401/401 | **PASS** | 0 |
+| 68 | `/api/global/data/changes` | GET | 401/401 | **PASS** | 0 |
+| 69 | `/api/global/data/foreign-keys` | GET | 401/401 | **PASS** | 0 |
+| 70 | `/api/global/data/tables/probe_missing/rows` | GET | 401/401 | **PASS** | 0 |
+| 71 | `/api/crm/grid/schema` | GET | 401/401 | **PASS** | 0 |
+| 72 | `/api/crm/grid/account/probe-missing` | GET | 401/401 | **PASS** | 0 |
+| 73 | `/api/colony/queen_growth/notifications` | GET | 404/404 | **PASS** | 0 |
+| 74 | `/api/colony/queen_growth/tools` | GET | 404/404 | **PASS** | 0 |
+| 75 | `/api/colonies/queen_growth/sessions` | GET | 200/200 | **PASS** | 0 |
+| 76 | `/api/colonies/queen_growth/active-session` | GET | 200/200 | **PASS** | 0 |
+| 77 | `/api/colonies/queen_growth/worker_profiles` | GET | 404/404 | **PASS** | 0 |
+| 78 | `/api/colonies/queen_growth/data/tables` | GET | 200/200 | **PASS** | 0 |
+| 79 | `/api/colonies/queen_growth/data/changes?since=0` | GET | 200/200 | **PASS** | 0 |
+| 80 | `/api/colonies/queen_growth/data/tables/probe_missing/rows` | GET | 404/404 | **PASS** | 0 |
+| 81 | `/api/colonies/import/status/probe-missing` | GET | 400/400 | **PASS** | 0 |
+| 82 | `/api/sessions/{session}/upload-attachment` | POST | 200/200 | **PASS** | 0 |
+| 83 | `/api/sessions/{session}/attachment/probe-note.txt` | GET | 200/200 | **PASS** | 0 |
+| 84 | `/api/config/llm` | PUT | 200/200 | **PASS** | 0 |
+| 85 | `/api/sessions` | POST | 201/201 | **PASS** | 0 |
+| 86 | `/api/sessions/{session2}/title` | PATCH | 200/200 | **PASS** | 0 |
+| 87 | `/api/sessions/{session2}/chat` | POST | 200/200 | **PASS** | 0 |
+| 88 | `/api/sessions/{session2}` | DELETE | 200/200 | **PASS** | 0 |
+| 89 | `/api/sessions/{session2}` | GET | 200/200 | **PASS** | 0 |
+| 90 | `/api/sessions/session_20990101_000000_deadbeef/live_tools` | GET | 404/404 | **PASS** | 0 |
+| 91 | `/api/sessions/session_20990101_000000_deadbeef/tasks` | GET | 404/404 | **PASS** | 0 |
+| 92 | `/api/sessions/session_20990101_000000_deadbeef/triggers` | GET | 404/404 | **PASS** | 0 |
+| 93 | `/api/sessions/session_20990101_000000_deadbeef/workers` | GET | 404/404 | **PASS** | 0 |
+| 94 | `/api/sessions/session_20990101_000000_deadbeef/skill-installs` | GET | 404/404 | **PASS** | 0 |
+| 95 | `/api/sessions/{session}/attachment/nope.txt` | GET | 404/404 | **PASS** | 0 |
+| 96 | `/api/sessions/session_20990101_000000_deadbeef/upload-attachment` | POST | 404/404 | **PASS** | 0 |
+| 97 | `/api/sessions/session_20990101_000000_deadbeef/chat` | POST | 404/404 | **PASS** | 0 |
+| 98 | `/api/sessions/session_20990101_000000_deadbeef/title` | PATCH | 404/404 | **PASS** | 0 |
+| 99 | `/api/sessions/session_20990101_000000_deadbeef` | DELETE | 404/404 | **PASS** | 0 |
+| 100 | `/api/credentials/nope_probe` | GET | 404/404 | **PASS** | 0 |
+| 101 | `/api/skills/does-not-exist-probe` | GET | 404/404 | **PASS** | 0 |
+| 102 | `/api/queen/queen_nope/overview` | GET | 404/404 | **PASS** | 0 |
+| 103 | `/api/mcp/servers/nope/health` | POST | 404/404 | **PASS** | 0 |
+| 104 | `/api/sentinel/telegram/validate` | POST | 400/400 | **PASS** | 0 |
+| 105 | `/api/credentials` | POST | 400/400 | **PASS** | 0 |
+| 106 | `/api/config/llm` | PUT | 400/400 | **PASS** | 0 |
+| 107 | `/api/config/llm` | PUT | 500/500 | **PASS** | 0 |
 
 ## 逐端点明细
 
@@ -351,7 +399,40 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 23. GET `/api/sessions/{session}/tasks` — PASS
+### 23. GET `/api/sessions/{session}/workers/probe-missing` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference='unknown worker: probe-missing' target='unknown worker: probe-missing'
+
+### 24. GET `/api/sessions/{session}/workers/probe-missing/conversation` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference='unknown worker: probe-missing' target='unknown worker: probe-missing'
+
+### 25. GET `/api/claude-code-queens/queen_growth/conversations/probe-missing` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference="No conversation 'probe-missing' of 'queen_growth'" target="No conversation 'probe-missing' of 'queen_growth'"
+
+### 26. GET `/api/sessions/{session}/tasks` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -360,7 +441,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 24. GET `/api/config/features` — PASS
+### 27. GET `/api/config/features` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -369,7 +450,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 25. GET `/api/config/models` — DECLARED
+### 28. GET `/api/config/models` — DECLARED
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -384,7 +465,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 26. GET `/api/config/profile` — PASS
+### 29. GET `/api/config/profile` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -393,7 +474,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 27. GET `/api/config/sentinel` — PASS
+### 30. GET `/api/config/sentinel` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -402,7 +483,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 28. GET `/api/config/rate-limits` — PASS
+### 31. GET `/api/config/rate-limits` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -411,7 +492,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 29. GET `/api/config/llm-sections` — PASS
+### 32. GET `/api/config/llm-sections` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -420,7 +501,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 30. GET `/api/config/external-skills` — PASS
+### 33. GET `/api/config/external-skills` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -429,7 +510,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 31. GET `/api/config/provider-library` — PASS
+### 34. GET `/api/config/provider-library` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -438,7 +519,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 32. GET `/api/credentials/oauth-status` — PASS
+### 35. GET `/api/credentials/oauth-status` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -447,7 +528,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 33. GET `/api/sentinel/credentials` — PASS
+### 36. GET `/api/sentinel/credentials` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -456,7 +537,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 34. POST `/api/credentials` — PASS
+### 37. POST `/api/credentials` — PASS
 
 - 状态码：reference `201` / target `201`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -465,7 +546,7 @@
 语义检查：
 - ✓ status equal — reference=201 target=201
 
-### 35. GET `/api/credentials` — PASS
+### 38. GET `/api/credentials` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -474,7 +555,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 36. GET `/api/credentials/airtable_pat` — PASS
+### 39. GET `/api/credentials/airtable_pat` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -483,7 +564,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 37. GET `/api/skills/scopes` — PASS
+### 40. GET `/api/skills/scopes` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -492,7 +573,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 38. GET `/api/skills/administrative-behavior-skill` — PASS
+### 41. GET `/api/skills/administrative-behavior-skill` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -501,7 +582,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 39. GET `/api/queen/queen_growth/skills` — PASS
+### 42. GET `/api/queen/queen_growth/skills` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -510,7 +591,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 40. GET `/api/mcp/servers` — PASS
+### 43. GET `/api/mcp/servers` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -519,7 +600,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 41. GET `/api/browser/status` — PASS
+### 44. GET `/api/browser/status` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -528,7 +609,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 42. GET `/api/browser/contexts` — DECLARED
+### 45. GET `/api/browser/contexts` — DECLARED
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -542,7 +623,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 43. GET `/api/browser/tabs` — PASS
+### 46. GET `/api/browser/tabs` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -551,7 +632,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 44. GET `/api/colonies/tools-index` — PASS
+### 47. GET `/api/colonies/tools-index` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -560,7 +641,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 45. GET `/api/queen/removed` — PASS
+### 48. GET `/api/queen/removed` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -569,7 +650,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 46. GET `/api/queen/queen_growth/overview` — PASS
+### 49. GET `/api/queen/queen_growth/overview` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -578,7 +659,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 47. GET `/api/queen/queen_growth/profile` — PASS
+### 50. GET `/api/queen/queen_growth/profile` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -587,7 +668,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 48. GET `/api/queen/queen_growth/llm` — PASS
+### 51. GET `/api/queen/queen_growth/llm` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -596,7 +677,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 49. GET `/api/queen/queen_growth/persona` — PASS
+### 52. GET `/api/queen/queen_growth/persona` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -605,7 +686,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 50. GET `/api/queen/queen_growth/soul` — PASS
+### 53. GET `/api/queen/queen_growth/soul` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -614,7 +695,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 51. GET `/api/maintenance/janitor/report` — PASS
+### 54. GET `/api/maintenance/janitor/report` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -623,7 +704,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 52. POST `/api/sessions/{session}/upload-attachment` — PASS
+### 55. GET `/api/prompts` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -632,7 +713,284 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 53. GET `/api/sessions/{session}/attachment/probe-note.txt` — PASS
+### 56. GET `/api/memories` — PASS
+
+- 状态码：reference `200` / target `200`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=200 target=200
+
+### 57. GET `/api/memories/file?path=probe-missing.md` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference='Memory not found' target='Memory not found'
+
+### 58. GET `/api/channels` — PASS
+
+- 状态码：reference `200` / target `200`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=200 target=200
+
+### 59. GET `/api/claude-code-queens` — PASS
+
+- 状态码：reference `200` / target `200`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=200 target=200
+
+### 60. GET `/api/discover` — PASS
+
+- 状态码：reference `200` / target `200`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=200 target=200
+
+### 61. GET `/api/queen-mail/queens` — PASS
+
+- 状态码：reference `401` / target `401`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=401 target=401
+- ✓ expected failure status — expect=401 reference=401 target=401
+- ✓ error message equal — reference='unauthorized' target='unauthorized'
+
+### 62. GET `/api/config/profile/avatar` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference='No avatar found' target='No avatar found'
+
+### 63. GET `/api/queen/queen_growth/avatar` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference='No avatar found' target='No avatar found'
+
+### 64. GET `/api/models/endpoints/probe-missing/models` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference="There's no endpoint 'probe-missing'" target="There's no endpoint 'probe-missing'"
+
+### 65. GET `/api/queen/queen_growth/skills/administrative-behavior-skill/body` — PASS
+
+- 状态码：reference `200` / target `200`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=200 target=200
+
+### 66. GET `/api/global/crm/status` — PASS
+
+- 状态码：reference `501` / target `501`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=501 target=501
+- ✓ expected failure status — expect=501 reference=501 target=501
+- ✓ error message equal — reference='CRM is not available in this build' target='CRM is not available in this build'
+
+### 67. GET `/api/global/data/tables` — PASS
+
+- 状态码：reference `401` / target `401`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=401 target=401
+- ✓ expected failure status — expect=401 reference=401 target=401
+- ✓ error message equal — reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'
+
+### 68. GET `/api/global/data/changes` — PASS
+
+- 状态码：reference `401` / target `401`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=401 target=401
+- ✓ expected failure status — expect=401 reference=401 target=401
+- ✓ error message equal — reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'
+
+### 69. GET `/api/global/data/foreign-keys` — PASS
+
+- 状态码：reference `401` / target `401`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=401 target=401
+- ✓ expected failure status — expect=401 reference=401 target=401
+- ✓ error message equal — reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'
+
+### 70. GET `/api/global/data/tables/probe_missing/rows` — PASS
+
+- 状态码：reference `401` / target `401`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=401 target=401
+- ✓ expected failure status — expect=401 reference=401 target=401
+- ✓ error message equal — reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'
+
+### 71. GET `/api/crm/grid/schema` — PASS
+
+- 状态码：reference `401` / target `401`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=401 target=401
+- ✓ expected failure status — expect=401 reference=401 target=401
+- ✓ error message equal — reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'
+
+### 72. GET `/api/crm/grid/account/probe-missing` — PASS
+
+- 状态码：reference `401` / target `401`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=401 target=401
+- ✓ expected failure status — expect=401 reference=401 target=401
+- ✓ error message equal — reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'
+
+### 73. GET `/api/colony/queen_growth/notifications` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference="Colony 'queen_growth' not found" target="Colony 'queen_growth' not found"
+
+### 74. GET `/api/colony/queen_growth/tools` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference="Colony 'queen_growth' not found" target="Colony 'queen_growth' not found"
+
+### 75. GET `/api/colonies/queen_growth/sessions` — PASS
+
+- 状态码：reference `200` / target `200`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=200 target=200
+
+### 76. GET `/api/colonies/queen_growth/active-session` — PASS
+
+- 状态码：reference `200` / target `200`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=200 target=200
+
+### 77. GET `/api/colonies/queen_growth/worker_profiles` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference="colony 'queen_growth' not found" target="colony 'queen_growth' not found"
+
+### 78. GET `/api/colonies/queen_growth/data/tables` — PASS
+
+- 状态码：reference `200` / target `200`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=200 target=200
+
+### 79. GET `/api/colonies/queen_growth/data/changes?since=0` — PASS
+
+- 状态码：reference `200` / target `200`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=200 target=200
+
+### 80. GET `/api/colonies/queen_growth/data/tables/probe_missing/rows` — PASS
+
+- 状态码：reference `404` / target `404`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=404 target=404
+- ✓ expected failure status — expect=404 reference=404 target=404
+- ✓ error message equal — reference='no tracker.db' target='no tracker.db'
+
+### 81. GET `/api/colonies/import/status/probe-missing` — PASS
+
+- 状态码：reference `400` / target `400`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=400 target=400
+- ✓ expected failure status — expect=400 reference=400 target=400
+- ✓ error message equal — reference='invalid upload_id' target='invalid upload_id'
+
+### 82. POST `/api/sessions/{session}/upload-attachment` — PASS
+
+- 状态码：reference `200` / target `200`
+- Content-Type：reference `application/json; charset=utf-8` / target `application/json`
+- 字段形状：一致（按 canonical shape 比较）
+
+语义检查：
+- ✓ status equal — reference=200 target=200
+
+### 83. GET `/api/sessions/{session}/attachment/probe-note.txt` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `text/plain` / target `text/plain`
@@ -641,7 +999,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 54. PUT `/api/config/llm` — PASS
+### 84. PUT `/api/config/llm` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -650,7 +1008,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 55. POST `/api/sessions` — PASS
+### 85. POST `/api/sessions` — PASS
 
 - 状态码：reference `201` / target `201`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -659,7 +1017,7 @@
 语义检查：
 - ✓ status equal — reference=201 target=201
 
-### 56. PATCH `/api/sessions/{session2}/title` — PASS
+### 86. PATCH `/api/sessions/{session2}/title` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -668,7 +1026,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 57. POST `/api/sessions/{session2}/chat` — PASS
+### 87. POST `/api/sessions/{session2}/chat` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -677,7 +1035,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 58. DELETE `/api/sessions/{session2}` — PASS
+### 88. DELETE `/api/sessions/{session2}` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -686,7 +1044,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 59. GET `/api/sessions/{session2}` — PASS
+### 89. GET `/api/sessions/{session2}` — PASS
 
 - 状态码：reference `200` / target `200`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -695,7 +1053,7 @@
 语义检查：
 - ✓ status equal — reference=200 target=200
 
-### 60. GET `/api/sessions/session_20990101_000000_deadbeef/live_tools` — PASS
+### 90. GET `/api/sessions/session_20990101_000000_deadbeef/live_tools` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -706,7 +1064,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference="session '<session_id>' not found" target="session '<session_id>' not found"
 
-### 61. GET `/api/sessions/session_20990101_000000_deadbeef/tasks` — PASS
+### 91. GET `/api/sessions/session_20990101_000000_deadbeef/tasks` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -717,7 +1075,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference="Task list for session '<session_id>' not found" target="Task list for session '<session_id>' not found"
 
-### 62. GET `/api/sessions/session_20990101_000000_deadbeef/triggers` — PASS
+### 92. GET `/api/sessions/session_20990101_000000_deadbeef/triggers` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -728,7 +1086,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference="Session '<session_id>' not found" target="Session '<session_id>' not found"
 
-### 63. GET `/api/sessions/session_20990101_000000_deadbeef/workers` — PASS
+### 93. GET `/api/sessions/session_20990101_000000_deadbeef/workers` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -739,7 +1097,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference="Session '<session_id>' not found" target="Session '<session_id>' not found"
 
-### 64. GET `/api/sessions/session_20990101_000000_deadbeef/skill-installs` — PASS
+### 94. GET `/api/sessions/session_20990101_000000_deadbeef/skill-installs` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -750,7 +1108,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference='session not found' target='session not found'
 
-### 65. GET `/api/sessions/{session}/attachment/nope.txt` — PASS
+### 95. GET `/api/sessions/{session}/attachment/nope.txt` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `text/plain; charset=utf-8` / target `text/plain; charset=utf-8`
@@ -761,7 +1119,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference='Attachment not found' target='Attachment not found'
 
-### 66. POST `/api/sessions/session_20990101_000000_deadbeef/upload-attachment` — PASS
+### 96. POST `/api/sessions/session_20990101_000000_deadbeef/upload-attachment` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -772,7 +1130,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference='session not found' target='session not found'
 
-### 67. POST `/api/sessions/session_20990101_000000_deadbeef/chat` — PASS
+### 97. POST `/api/sessions/session_20990101_000000_deadbeef/chat` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -783,7 +1141,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference="Session '<session_id>' not found" target="Session '<session_id>' not found"
 
-### 68. PATCH `/api/sessions/session_20990101_000000_deadbeef/title` — PASS
+### 98. PATCH `/api/sessions/session_20990101_000000_deadbeef/title` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -794,7 +1152,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference='No such queen conversation' target='No such queen conversation'
 
-### 69. DELETE `/api/sessions/session_20990101_000000_deadbeef` — PASS
+### 99. DELETE `/api/sessions/session_20990101_000000_deadbeef` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -805,7 +1163,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference="Session '<session_id>' not found" target="Session '<session_id>' not found"
 
-### 70. GET `/api/credentials/nope_probe` — PASS
+### 100. GET `/api/credentials/nope_probe` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -816,7 +1174,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference="Credential 'nope_probe' not found" target="Credential 'nope_probe' not found"
 
-### 71. GET `/api/skills/does-not-exist-probe` — PASS
+### 101. GET `/api/skills/does-not-exist-probe` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -827,7 +1185,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference="skill 'does-not-exist-probe' not found" target="skill 'does-not-exist-probe' not found"
 
-### 72. GET `/api/queen/queen_nope/overview` — PASS
+### 102. GET `/api/queen/queen_nope/overview` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -838,7 +1196,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference="Queen 'queen_nope' not found" target="Queen 'queen_nope' not found"
 
-### 73. POST `/api/mcp/servers/nope/health` — PASS
+### 103. POST `/api/mcp/servers/nope/health` — PASS
 
 - 状态码：reference `404` / target `404`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -849,7 +1207,7 @@
 - ✓ expected failure status — expect=404 reference=404 target=404
 - ✓ error message equal — reference="Cannot health-check server 'nope'" target="Cannot health-check server 'nope'"
 
-### 74. POST `/api/sentinel/telegram/validate` — PASS
+### 104. POST `/api/sentinel/telegram/validate` — PASS
 
 - 状态码：reference `400` / target `400`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -860,7 +1218,7 @@
 - ✓ expected failure status — expect=400 reference=400 target=400
 - ✓ error message equal — reference='no token provided or saved' target='no token provided or saved'
 
-### 75. POST `/api/credentials` — PASS
+### 105. POST `/api/credentials` — PASS
 
 - 状态码：reference `400` / target `400`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -871,7 +1229,7 @@
 - ✓ expected failure status — expect=400 reference=400 target=400
 - ✓ error message equal — reference='credential_id and keys are required' target='credential_id and keys are required'
 
-### 76. PUT `/api/config/llm` — PASS
+### 106. PUT `/api/config/llm` — PASS
 
 - 状态码：reference `400` / target `400`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`
@@ -882,7 +1240,7 @@
 - ✓ expected failure status — expect=400 reference=400 target=400
 - ✓ error message equal — reference='Invalid JSON body' target='Invalid JSON body'
 
-### 77. PUT `/api/config/llm` — PASS
+### 107. PUT `/api/config/llm` — PASS
 
 - 状态码：reference `500` / target `500`
 - Content-Type：reference `application/json; charset=utf-8` / target `application/json`

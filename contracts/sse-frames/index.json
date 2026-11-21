@@ -8,14 +8,14 @@
   "captures": {
     "reference": {
       "file": "go_hive/docs/e2e-assets/sse-payload-parity/capture-reference.json",
-      "sha256": "7c75f66dff772486229bf5c2280777c9c46c398dc82981ae86dd4ff26204c5d4"
+      "sha256": "fadf64914bafd5515f97e32f8d9cdcb256daa0c5fff14fce2bb98b031b5d60c5"
     },
     "target": {
       "file": "go_hive/docs/e2e-assets/sse-payload-parity/capture-target.json",
-      "sha256": "e8c4956b894c5bf3123a6146a205c34b825ab77563d7ad80ff0316f13301e70e"
+      "sha256": "64425d08e7382aca465e284c5ea1e2802e884b78e00da2c270758d9fef71af87"
     }
   },
-  "generated_at": "2026-11-21T11:12:43+08:00",
+  "generated_at": "2026-11-21T19:59:26+08:00",
   "reference": {
     "implementation": "python",
     "version": "hive 1.0.14"

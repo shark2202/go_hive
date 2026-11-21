@@ -17,5 +17,5 @@ import (
 )
 
 func main() {
-	os.Exit(cli.RunBrowserCLI(os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(cli.GuardMain(func() int { return cli.RunBrowserCLI(os.Args[1:], os.Stdout, os.Stderr) }))
 }

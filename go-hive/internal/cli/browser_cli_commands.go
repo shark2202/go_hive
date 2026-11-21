@@ -64,7 +64,7 @@ func hiddenVerb(spec *commandSpec) *commandSpec {
 func (c *browserCLI) helpCommand() *commandSpec {
 	return &commandSpec{
 		Prog:  "hive-browser help",
-		Help:  "usage for the CLI or one command: `hive-browser help [cmd]`",
+		Help:  "usage for the CLI or a command: `hive-browser help [cmd]`",
 		Flags: withCommon(),
 		Positionals: []positionalSpec{
 			{Dest: "topic", Help: "a command to show help for"},
@@ -88,7 +88,10 @@ func (c *browserCLI) helpCommand() *commandSpec {
 				writeJSONOut(c.stdout, map[string]any{"topic": orDefault(topic, "hive-browser"), "help": text}, true)
 				return browserExitOK
 			}
-			fmt.Fprint(c.stdout, text)
+			// Upstream `_help` returns the text and `_render` prints it, so the
+			// page gains one trailing newline on this path (unlike `--help`,
+			// where argparse writes format_help() verbatim).
+			fmt.Fprintln(c.stdout, text)
 			return browserExitOK
 		},
 	}
@@ -133,10 +136,11 @@ func (c *browserCLI) stopCommand() *commandSpec {
 func (c *browserCLI) openCommand() *commandSpec {
 	return c.leaf("hive-browser open", "open a tab at <url> (cold-start entry point)",
 		[]argSpec{
-			{Dest: "background", Long: "background", Kind: kindBool, Help: "open in the background"},
-			browserProfileFlag(),
+			{Dest: "background", Long: "background", Kind: kindBool},
+			{Dest: "browser_profile", Long: "browser-profile", Kind: kindString,
+				Help: "which connected Chrome profile to open in"},
 		},
-		[]positionalSpec{{Dest: "url", Required: true, Help: "URL to open"}},
+		[]positionalSpec{{Dest: "url", Required: true}},
 		"browser_open", func(args *parsedArgs) (map[string]any, int) {
 			params := map[string]any{
 				"url":        args.str("url"),
@@ -158,11 +162,11 @@ func (c *browserCLI) navigateCommand() *commandSpec {
 		[]argSpec{
 			tabFlag(),
 			{Dest: "wait_until", Long: "wait-until", Kind: kindString, Default: "load",
-				Help: "commit | domcontentloaded | load | networkidle"},
+				Choices: browserWaitUntil},
 			timeoutFlag(30000, "how long to wait for the --wait-until condition (ms)"),
 			browserProfileFlag(),
 		},
-		[]positionalSpec{{Dest: "url", Required: true, Help: "URL to navigate to"}},
+		[]positionalSpec{{Dest: "url", Required: true}},
 		"browser_navigate", func(args *parsedArgs) (map[string]any, int) {
 			waitUntil := strings.TrimSpace(args.str("wait_until"))
 			if !containsStringValue(browserWaitUntil, waitUntil) {
@@ -215,31 +219,32 @@ var browserWaitUntil = []string{"commit", "domcontentloaded", "load", "networkid
 
 func (c *browserCLI) interactCommand() *commandSpec {
 	flags := []argSpec{
-		{Dest: "action", Long: "action", Kind: kindString, Help: "one of: " + strings.Join(browserInteractActions, ", ")},
+		{Dest: "action", Long: "action", Kind: kindString, Required: true, Choices: browserInteractActions},
 		tabFlag(),
-		{Dest: "selector", Long: "selector", Kind: kindString, Help: "CSS selector target"},
-		{Dest: "coordinate", Long: "coordinate", Kind: kindString, Help: "[x,y] viewport fractions 0..1"},
-		{Dest: "start_selector", Long: "start-selector", Kind: kindString, Help: "drag start selector"},
-		{Dest: "start_coordinate", Long: "start-coordinate", Kind: kindString, Help: "[x,y] drag start fractions"},
-		{Dest: "text", Long: "text", Kind: kindString, Help: "text to type"},
-		{Dest: "no_clear_first", Long: "no-clear-first", Kind: kindBool, Help: "type without clearing first"},
-		{Dest: "no_insert_text", Long: "no-insert-text", Kind: kindBool, Help: "type by key events instead of insertText"},
-		{Dest: "modifiers", Long: "modifiers", Kind: kindString, Help: "e.g. Meta+A"},
-		{Dest: "repeat", Long: "repeat", Kind: kindInt, Default: 1, Help: "key repeat count"},
+		{Dest: "selector", Long: "selector", Kind: kindString},
+		{Dest: "coordinate", Long: "coordinate", Kind: kindString, Metavar: "x,y",
+			Help: "[x,y] viewport fractions 0..1"},
+		{Dest: "start_selector", Long: "start-selector", Kind: kindString},
+		{Dest: "start_coordinate", Long: "start-coordinate", Kind: kindString, Metavar: "x,y"},
+		{Dest: "text", Long: "text", Kind: kindString},
+		{Dest: "no_clear_first", Long: "no-clear-first", Kind: kindBool},
+		{Dest: "no_insert_text", Long: "no-insert-text", Kind: kindBool},
+		{Dest: "modifiers", Long: "modifiers", Kind: kindString},
+		{Dest: "repeat", Long: "repeat", Kind: kindInt, Default: 1},
 		{Dest: "scroll_direction", Long: "scroll-direction", Kind: kindString, Default: "down",
-			Help: "up | down | left | right"},
-		{Dest: "scroll_amount", Long: "scroll-amount", Kind: kindInt, Default: 500, Help: "scroll distance in px"},
-		{Dest: "intent", Long: "intent", Kind: kindString, Help: "why this action (screenshot/zoom)"},
-		{Dest: "full_page", Long: "full-page", Kind: kindBool, Help: "screenshot the document, not the viewport"},
-		{Dest: "no_annotate", Long: "no-annotate", Kind: kindBool, Help: "skip screenshot annotations"},
-		{Dest: "region", Long: "region", Kind: kindString, Help: "[x0,y0,x1,y1] fractions (zoom)"},
-		{Dest: "duration", Long: "duration", Kind: kindString, Help: "seconds (wait)"},
-		{Dest: "wait_for_selector", Long: "wait-for-selector", Kind: kindString, Help: "wait until a selector exists"},
-		{Dest: "wait_for_text", Long: "wait-for-text", Kind: kindString, Help: "wait until text appears"},
-		timeoutFlag(0, "how long the action may take (ms)"),
+			Choices: browserScrollDirections},
+		{Dest: "scroll_amount", Long: "scroll-amount", Kind: kindInt, Default: 500},
+		{Dest: "intent", Long: "intent", Kind: kindString},
+		{Dest: "full_page", Long: "full-page", Kind: kindBool},
+		{Dest: "no_annotate", Long: "no-annotate", Kind: kindBool},
+		{Dest: "region", Long: "region", Kind: kindString, Metavar: "x0,y0,x1,y1"},
+		{Dest: "duration", Long: "duration", Kind: kindString},
+		{Dest: "wait_for_selector", Long: "wait-for-selector", Kind: kindString},
+		{Dest: "wait_for_text", Long: "wait-for-text", Kind: kindString},
+		timeoutFlag(0, ""),
 		{Dest: "auto_snapshot_mode", Long: "auto-snapshot-mode", Kind: kindString, Default: "simple",
-			Help: "simple | default | interactive | off"},
-		{Dest: "wait_after_ms", Long: "wait-after-ms", Kind: kindInt, Help: "settle time after the action (ms)"},
+			Choices: browserAutoSnapshotModes},
+		{Dest: "wait_after_ms", Long: "wait-after-ms", Kind: kindInt},
 	}
 	return c.leaf("hive-browser interact", "click / type / key / scroll / drag / screenshot / zoom / wait",
 		flags, nil, "browser_interact", func(args *parsedArgs) (map[string]any, int) {
@@ -359,10 +364,11 @@ func (c *browserCLI) interactCommand() *commandSpec {
 func (c *browserCLI) selectCommand() *commandSpec {
 	return c.leaf("hive-browser select", "select option(s) in a <select> dropdown",
 		[]argSpec{
-			{Dest: "value", Long: "value", Kind: kindAppend, Default: []string{}, Help: "option value (repeatable)"},
+			{Dest: "value", Long: "value", Kind: kindAppend, Default: []string{}, Required: true,
+				Help: "option value (repeatable)"},
 			tabFlag(),
 		},
-		[]positionalSpec{{Dest: "selector", Required: true, Help: "selector of the <select>"}},
+		[]positionalSpec{{Dest: "selector", Required: true}},
 		"browser_select", func(args *parsedArgs) (map[string]any, int) {
 			values := args.list("value")
 			if len(values) == 0 {
@@ -380,12 +386,13 @@ func (c *browserCLI) selectCommand() *commandSpec {
 func (c *browserCLI) uploadCommand() *commandSpec {
 	return c.leaf("hive-browser upload", "set files on a file input (direct or via trigger)",
 		[]argSpec{
-			{Dest: "file", Long: "file", Kind: kindAppend, Default: []string{}, Help: "file path (repeatable)"},
-			{Dest: "trigger_selector", Long: "trigger-selector", Kind: kindString, Help: "element to click first"},
-			timeoutFlag(30000, "how long to wait for the file input (ms)"),
+			{Dest: "file", Long: "file", Kind: kindAppend, Default: []string{}, Required: true,
+				Help: "file path (repeatable)"},
+			{Dest: "trigger_selector", Long: "trigger-selector", Kind: kindString},
 			tabFlag(),
+			timeoutFlag(30000, ""),
 		},
-		[]positionalSpec{{Dest: "selector", Required: true, Help: "selector of the file input"}},
+		[]positionalSpec{{Dest: "selector", Required: true}},
 		"browser_upload", func(args *parsedArgs) (map[string]any, int) {
 			files := args.list("file")
 			if len(files) == 0 {
@@ -417,11 +424,12 @@ func (c *browserCLI) uploadCommand() *commandSpec {
 func (c *browserCLI) screenshotCommand() *commandSpec {
 	return c.leaf("hive-browser screenshot", "capture the tab (JPEG spilled to a file, path returned)",
 		[]argSpec{
-			{Dest: "intent", Long: "intent", Kind: kindString, Help: "why this screenshot"},
-			{Dest: "full_page", Long: "full-page", Kind: kindBool, Help: "capture the document region"},
-			{Dest: "selector", Long: "selector", Kind: kindString, Help: "element to wait for and capture"},
-			{Dest: "no_annotate", Long: "no-annotate", Kind: kindBool, Help: "skip annotations"},
-			timeoutFlag(5000, "selector wait (ms) when --selector is given"),
+			{Dest: "intent", Long: "intent", Kind: kindString},
+			{Dest: "full_page", Long: "full-page", Kind: kindBool,
+				Help: "capture the document region (bounded; downscaled to 800px wide like the default)"},
+			{Dest: "selector", Long: "selector", Kind: kindString},
+			{Dest: "no_annotate", Long: "no-annotate", Kind: kindBool},
+			timeoutFlag(5000, "selector wait (ms) when --selector is given (polls like interact)"),
 			tabFlag(),
 		}, nil, "browser_screenshot", func(args *parsedArgs) (map[string]any, int) {
 			// Upstream's standalone `screenshot` verb passes --intent straight
@@ -458,10 +466,11 @@ func (c *browserCLI) screenshotCommand() *commandSpec {
 }
 
 func (c *browserCLI) evaluateCommand() *commandSpec {
-	return c.leaf("hive-browser evaluate", "run JavaScript in the page (value of last expression)",
+	spec := c.leaf("hive-browser evaluate", "run JavaScript in the page (value of last expression)",
 		[]argSpec{
-			{Dest: "js", Long: "js", Kind: kindString, Help: "JS source: inline, @FILE, or - for stdin"},
-			{Dest: "script", Long: "script", Kind: kindString, Help: "alias for --js"},
+			{Dest: "js", Long: "js", Kind: kindString, Metavar: "SRC|@FILE|-",
+				Help: "JS source: inline, @FILE (read from path), or - (stdin)"},
+			{Dest: "script", Long: "script", Kind: kindString, Metavar: "JS", Help: "alias for --js"},
 			tabFlag(),
 		}, nil, "browser_evaluate", func(args *parsedArgs) (map[string]any, int) {
 			source := args.str("js")
@@ -479,17 +488,32 @@ func (c *browserCLI) evaluateCommand() *commandSpec {
 			}
 			return params, browserExitOK
 		}, nil)
+	// Upstream mounts RawDescriptionHelpFormatter here; the epilog keeps its
+	// line breaks and follows the options block (cli.py:218-230).
+	spec.RawDescription = true
+	spec.Epilog = "Return semantics: a SINGLE expression is returned automatically (e.g.\n" +
+		"'document.title'). For MULTIPLE statements, wrap in an IIFE and `return`\n" +
+		"the value: '(()=>{ const n=[...document.links].length; return n; })()'.\n" +
+		"Bare multi-statement code without a return yields null; a top-level `throw`\n" +
+		"is a parse error (throw inside the IIFE instead).\n" +
+		"\n" +
+		"examples:\n" +
+		"  hive-browser evaluate --js 'document.title' --json\n" +
+		"  hive-browser evaluate --js @/tmp/probe.js --json   # quote-heavy JS: read from a file\n" +
+		"  echo 'location.href' | hive-browser evaluate --js - --json"
+	return spec
 }
 
 func (c *browserCLI) scriptCommand() *commandSpec {
-	return c.leaf("hive-browser script", "run a skill-bundled run(ctx) orchestration script",
+	spec := c.leaf("hive-browser script", "run a skill-bundled run(ctx) orchestration script",
 		[]argSpec{
 			{Dest: "skill", Long: "skill", Kind: kindString, Help: "skill name or dir (e.g. hive.linkedin-core)"},
-			{Dest: "script", Long: "script", Kind: kindString, Help: "a script under <skill>/scripts/"},
-			{Dest: "args", Long: "args", Kind: kindString, Help: "ctx.args as JSON (inline, @file, or -)"},
-			{Dest: "timeout_s", Long: "timeout-s", Kind: kindString, Default: "60", Help: "script timeout (s)"},
-			browserProfileFlag(),
+			{Dest: "script", Long: "script", Kind: kindString, Help: "a script under <skill>/scripts/ (the .py suffix is optional)"},
+			{Dest: "args", Long: "args", Kind: kindString, Metavar: "JSON|@file|-",
+				Help: "ctx.args as JSON (inline, @file, or - for stdin)"},
+			{Dest: "timeout_s", Long: "timeout-s", Kind: kindString, Default: "60"},
 			tabFlag(),
+			browserProfileFlag(),
 		}, nil, "browser_script", func(args *parsedArgs) (map[string]any, int) {
 			skill := strings.TrimSpace(args.str("skill"))
 			script := strings.TrimSpace(args.str("script"))
@@ -518,6 +542,10 @@ func (c *browserCLI) scriptCommand() *commandSpec {
 			c.optTab(args, params)
 			return params, browserExitOK
 		}, nil)
+	// Upstream's epilog renders under the default formatter (collapsed and
+	// wrapped); the contract capture glues it to the last option.
+	spec.Epilog = "example: hive-browser script --skill hive.linkedin-core --script lk_get_identity --args '{}' --json"
+	return spec
 }
 
 // --- bridge-level verbs (beyond the 22 MCP tools) ---------------------------
@@ -660,10 +688,10 @@ func hiddenTabFlag() argSpec {
 
 func (c *browserCLI) tabCommand() *commandSpec {
 	return &commandSpec{
-		Prog:        "hive-browser tab",
-		Help:        "tab-group management: list / close / activate",
-		Dest:        "tab",
-		Description: "Manage the tabs this browser session opened.",
+		Prog:  "hive-browser tab",
+		Help:  "tab-group management: list / close / activate",
+		Dest:  "tab",
+		Flags: browserGroupFlags(),
 		Subcommands: []*commandSpec{
 			c.leaf("hive-browser tab list", "list tabs in this session's group",
 				[]argSpec{hiddenTabFlag()}, nil, "browser_tabs", func(args *parsedArgs) (map[string]any, int) {
@@ -671,8 +699,8 @@ func (c *browserCLI) tabCommand() *commandSpec {
 					c.optTab(args, params)
 					return params, browserExitOK
 				}, nil),
-			c.leaf("hive-browser tab close", "close a tab (default: the active tab)",
-				[]argSpec{hiddenTabFlag()}, []positionalSpec{{Dest: "tab_id", Help: "tab id (default: active tab)"}},
+			c.leaf("hive-browser tab close", "close a tab (default: active)",
+				[]argSpec{hiddenTabFlag()}, []positionalSpec{{Dest: "tab_id"}},
 				"browser_close", func(args *parsedArgs) (map[string]any, int) {
 					params := map[string]any{}
 					if args.wasProvided("tab_id") && strings.TrimSpace(args.str("tab_id")) != "" {
@@ -698,7 +726,7 @@ func (c *browserCLI) tabCommand() *commandSpec {
 					forgetBrowserCLITab(c.statePath(), c.profile(args), closed)
 				}),
 			c.leaf("hive-browser tab activate", "bring a tab to the foreground",
-				[]argSpec{hiddenTabFlag()}, []positionalSpec{{Dest: "tab_id", Required: true, Help: "tab id"}},
+				[]argSpec{hiddenTabFlag()}, []positionalSpec{{Dest: "tab_id", Required: true}},
 				"browser_activate_tab", func(args *parsedArgs) (map[string]any, int) {
 					tab, err := parsePositiveInt(args.str("tab_id"))
 					if err != nil {
@@ -719,15 +747,16 @@ func (c *browserCLI) tabCommand() *commandSpec {
 
 func (c *browserCLI) pageCommand() *commandSpec {
 	tab := tabFlag()
-	head := argSpec{Dest: "head", Long: "head", Kind: kindInt, Help: "also return the first N chars inline"}
 	return &commandSpec{
-		Prog:        "hive-browser page",
-		Help:        "page reads + viewport: html / snapshot / text / shadow-query / console / resize",
-		Dest:        "page",
-		Description: "Read the page or change the viewport.",
+		Prog:  "hive-browser page",
+		Help:  "page reads + viewport: html / snapshot / text / shadow-query / console / resize",
+		Dest:  "page",
+		Flags: browserGroupFlags(),
 		Subcommands: []*commandSpec{
 			c.leaf("hive-browser page html", "page or element outerHTML (spilled to a file)",
-				[]argSpec{head, tab}, []positionalSpec{{Dest: "selector", Help: "CSS selector (omit for the whole page)"}},
+				[]argSpec{{Dest: "head", Long: "head", Kind: kindInt, Metavar: "N",
+					Help: "also return the first N chars of the payload inline"}, tab},
+				[]positionalSpec{{Dest: "selector", Help: "CSS selector (omit for the whole page)"}},
 				"browser_html", func(args *parsedArgs) (map[string]any, int) {
 					params := map[string]any{}
 					if strings.TrimSpace(args.str("selector")) != "" {
@@ -741,8 +770,9 @@ func (c *browserCLI) pageCommand() *commandSpec {
 			c.leaf("hive-browser page snapshot", "accessibility tree (spilled to a file)",
 				[]argSpec{
 					{Dest: "mode", Long: "mode", Kind: kindString, Default: "default",
-						Help: "default | simple | interactive"},
-					head, tab,
+						Choices: browserSnapshotModes},
+					{Dest: "head", Long: "head", Kind: kindInt, Metavar: "N",
+						Help: "also return the first N chars of the tree inline"}, tab,
 				}, nil, "browser_snapshot", func(args *parsedArgs) (map[string]any, int) {
 					mode := strings.TrimSpace(args.str("mode"))
 					if !containsStringValue(browserSnapshotModes, mode) {
@@ -757,8 +787,8 @@ func (c *browserCLI) pageCommand() *commandSpec {
 					return params, browserExitOK
 				}, c.snapshotResultPost),
 			c.leaf("hive-browser page text", "text content of an element",
-				[]argSpec{timeoutFlag(5000, "selector wait (ms)"), tab},
-				[]positionalSpec{{Dest: "selector", Required: true, Help: "CSS selector"}},
+				[]argSpec{tab, timeoutFlag(5000, "")},
+				[]positionalSpec{{Dest: "selector", Required: true}},
 				"browser_get_text", func(args *parsedArgs) (map[string]any, int) {
 					params := map[string]any{
 						"selector":   args.str("selector"),
@@ -770,7 +800,7 @@ func (c *browserCLI) pageCommand() *commandSpec {
 					return params, browserExitOK
 				}, nil),
 			c.leaf("hive-browser page shadow-query", "element rect as viewport fractions (pierces shadow DOM with ' >>> ')",
-				[]argSpec{tab}, []positionalSpec{{Dest: "selector", Required: true, Help: "CSS selector"}},
+				[]argSpec{tab}, []positionalSpec{{Dest: "selector", Required: true}},
 				"browser_shadow_query", func(args *parsedArgs) (map[string]any, int) {
 					params := map[string]any{"selector": args.str("selector")}
 					if code := c.requireTab(args, params); code != browserExitOK {
@@ -780,7 +810,7 @@ func (c *browserCLI) pageCommand() *commandSpec {
 				}, nil),
 			c.leaf("hive-browser page console", "console messages (stub — use `evaluate`)",
 				[]argSpec{
-					{Dest: "level", Long: "level", Kind: kindString, Help: "error | warn | log | all"},
+					{Dest: "level", Long: "level", Kind: kindString},
 					tab,
 				}, nil, "browser_console", func(args *parsedArgs) (map[string]any, int) {
 					params := map[string]any{}
@@ -792,8 +822,8 @@ func (c *browserCLI) pageCommand() *commandSpec {
 				}, nil),
 			c.leaf("hive-browser page resize", "resize the viewport",
 				[]argSpec{
-					{Dest: "width", Long: "width", Kind: kindInt, Help: "viewport width in CSS px"},
-					{Dest: "height", Long: "height", Kind: kindInt, Help: "viewport height in CSS px"},
+					{Dest: "width", Long: "width", Kind: kindInt, Required: true},
+					{Dest: "height", Long: "height", Kind: kindInt, Required: true},
 					tab,
 				}, nil, "browser_resize", func(args *parsedArgs) (map[string]any, int) {
 					width, height := args.intValue("width"), args.intValue("height")
@@ -842,17 +872,17 @@ func (c *browserCLI) spillHead(args *parsedArgs, result map[string]any) {
 
 func (c *browserCLI) dialogCommand() *commandSpec {
 	return &commandSpec{
-		Prog:        "hive-browser dialog",
-		Help:        "native dialogs: respond",
-		Dest:        "dialog",
-		Description: "Answer a native dialog that is blocking the page.",
+		Prog:  "hive-browser dialog",
+		Help:  "native dialogs: respond",
+		Dest:  "dialog",
+		Flags: browserGroupFlags(),
 		Subcommands: []*commandSpec{
 			c.leaf("hive-browser dialog respond", "accept/dismiss a pending native dialog",
 				[]argSpec{
-					{Dest: "prompt_text", Long: "prompt-text", Kind: kindString, Help: "text for a prompt()"},
+					{Dest: "prompt_text", Long: "prompt-text", Kind: kindString},
 					tabFlag(),
 				},
-				[]positionalSpec{{Dest: "action", Required: true, Help: "accept | dismiss"}},
+				[]positionalSpec{{Dest: "action", Required: true, Choices: []string{"accept", "dismiss"}}},
 				"browser_dialog_respond", func(args *parsedArgs) (map[string]any, int) {
 					action := strings.ToLower(strings.TrimSpace(args.str("action")))
 					if action != "accept" && action != "dismiss" {

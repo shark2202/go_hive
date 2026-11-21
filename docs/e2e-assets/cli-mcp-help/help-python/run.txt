@@ -1,0 +1,11 @@
+usage: hive mcp run [-h] name ...
+
+Run an installed MCP server's tools as commands, through mcp2cli. Examples: hive mcp run NAME
+--list; hive mcp run NAME TOOL --help; hive mcp run NAME TOOL --flag value
+
+positional arguments:
+  name          Server name
+  mcp2cli_args  mcp2cli arguments (default: --list)
+
+options:
+  -h, --help    show this help message and exit

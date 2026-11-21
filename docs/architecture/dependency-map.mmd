@@ -1,5 +1,5 @@
 %% go_hive 分层依赖图（生成物，勿手改）
-%% 源：architecture/model.yaml + go list -json ./... · commit 4582e56f790b
+%% 源：architecture/model.yaml + go list -json ./... · commit 4bcc2a211cb0
 %% 只画包级 import 边；箭头 A --> B 读作 A imports B（A 依赖 B）。
 flowchart TB
   subgraph layer_entry["入口层（entry）"]
@@ -13,6 +13,7 @@ flowchart TB
     direction TB
     n_e2e_cmd_memgw["e2e/cmd/memgw"]
     n_e2e_cmd_recordproxy["e2e/cmd/recordproxy"]
+    n_e2e_cmd_runtimelogs["e2e/cmd/runtimelogs"]
     n_e2e_cmd_stallgw["e2e/cmd/stallgw"]
     n_e2e_cmd_storagecompat["e2e/cmd/storagecompat"]
     n_e2e_escalationgw["e2e/escalationgw"]
@@ -78,6 +79,7 @@ flowchart TB
   end
   subgraph layer_foundation["基础层（foundation）"]
     direction TB
+    n_internal_arghelp["internal/arghelp"]
     n_internal_atomicfs["internal/atomicfs"]
     n_internal_envcontract["internal/envcontract"]
     n_internal_eventbus["internal/eventbus"]
@@ -89,6 +91,7 @@ flowchart TB
     n_internal_quality["internal/quality"]
     n_internal_ratelimit["internal/ratelimit"]
     n_internal_resources["internal/resources"]
+    n_internal_runtimelogs["internal/runtimelogs"]
     n_internal_schemas["internal/schemas"]
     n_internal_storage["internal/storage"]
     n_internal_version["internal/version"]
@@ -100,6 +103,7 @@ flowchart TB
   n_cmd_hive_longmemeval --> n_internal_longmemeval
   n_e2e_cmd_memgw --> n_e2e_memgw
   n_e2e_cmd_recordproxy --> n_e2e_recordproxy
+  n_e2e_cmd_runtimelogs --> n_internal_runtimelogs
   n_e2e_cmd_stallgw --> n_e2e_stallgw
   n_e2e_cmd_storagecompat --> n_internal_agentloop
   n_e2e_cmd_storagecompat --> n_internal_agents
@@ -117,6 +121,7 @@ flowchart TB
   n_internal_agentloop --> n_internal_llmjudge
   n_internal_agentloop --> n_internal_pyenv
   n_internal_agentloop --> n_internal_ratelimit
+  n_internal_agentloop --> n_internal_runtimelogs
   n_internal_agentloop --> n_internal_schemas
   n_internal_agentloop --> n_internal_skills
   n_internal_agentloop --> n_internal_tools
@@ -127,6 +132,7 @@ flowchart TB
   n_internal_charts --> n_internal_llm
   n_internal_cli --> n_internal_agentloop
   n_internal_cli --> n_internal_agents
+  n_internal_cli --> n_internal_arghelp
   n_internal_cli --> n_internal_atomicfs
   n_internal_cli --> n_internal_charts
   n_internal_cli --> n_internal_colony
@@ -186,6 +192,7 @@ flowchart TB
   n_internal_longmemeval --> n_internal_session
   n_internal_maintenance --> n_internal_atomicfs
   n_internal_maintenance --> n_internal_hivehome
+  n_internal_mcpregistry --> n_internal_arghelp
   n_internal_mcpregistry --> n_internal_atomicfs
   n_internal_mcpregistry --> n_internal_hivehome
   n_internal_mcpregistry --> n_internal_mcpregistry_nativecli
@@ -234,6 +241,7 @@ flowchart TB
   n_internal_server --> n_internal_ratelimit
   n_internal_server --> n_internal_resources
   n_internal_server --> n_internal_runtimehealth
+  n_internal_server --> n_internal_runtimelogs
   n_internal_server --> n_internal_senders
   n_internal_server --> n_internal_sentinel
   n_internal_server --> n_internal_server_uiembed
@@ -275,7 +283,7 @@ flowchart TB
   classDef style_entry fill:#eef2ff,stroke:#4338ca,color:#0f172a;
   class n_cmd_hive,n_cmd_hive_browser,n_cmd_hive_cred,n_cmd_hive_longmemeval style_entry;
   classDef style_harness fill:#ffe4e6,stroke:#be123c,color:#0f172a;
-  class n_e2e_cmd_memgw,n_e2e_cmd_recordproxy,n_e2e_cmd_stallgw,n_e2e_cmd_storagecompat,n_e2e_escalationgw,n_e2e_memgw,n_e2e_recordproxy,n_e2e_soulgw,n_e2e_stallgw,n_internal_release,n_internal_toolgolden style_harness;
+  class n_e2e_cmd_memgw,n_e2e_cmd_recordproxy,n_e2e_cmd_runtimelogs,n_e2e_cmd_stallgw,n_e2e_cmd_storagecompat,n_e2e_escalationgw,n_e2e_memgw,n_e2e_recordproxy,n_e2e_soulgw,n_e2e_stallgw,n_internal_release,n_internal_toolgolden style_harness;
   classDef style_assembly fill:#e0f2fe,stroke:#0369a1,color:#0f172a;
   class n_internal_cli style_assembly;
   classDef style_transport fill:#dcfce7,stroke:#15803d,color:#0f172a;
@@ -287,4 +295,4 @@ flowchart TB
   classDef style_capability fill:#f3e8ff,stroke:#7e22ce,color:#0f172a;
   class n_internal_attachments,n_internal_charts,n_internal_credentials,n_internal_globaldb,n_internal_hiveconf,n_internal_llm,n_internal_maintenance,n_internal_mcpregistry,n_internal_mcpregistry_nativecli,n_internal_memory,n_internal_senders,n_internal_skills,n_internal_soul,n_internal_tools,n_internal_tools_builtin,n_internal_tools_integrationkit,n_internal_tools_integrations,n_internal_visionfallback style_capability;
   classDef style_foundation fill:#f1f5f9,stroke:#475569,color:#0f172a;
-  class n_internal_atomicfs,n_internal_envcontract,n_internal_eventbus,n_internal_hiveclock,n_internal_hivehome,n_internal_logging,n_internal_platform,n_internal_pyenv,n_internal_quality,n_internal_ratelimit,n_internal_resources,n_internal_schemas,n_internal_storage,n_internal_version style_foundation;
+  class n_internal_arghelp,n_internal_atomicfs,n_internal_envcontract,n_internal_eventbus,n_internal_hiveclock,n_internal_hivehome,n_internal_logging,n_internal_platform,n_internal_pyenv,n_internal_quality,n_internal_ratelimit,n_internal_resources,n_internal_runtimelogs,n_internal_schemas,n_internal_storage,n_internal_version style_foundation;

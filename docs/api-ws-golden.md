@@ -1,10 +1,11 @@
 # API / SSE 帧级 canonical golden
 
-> 状态：**已实测**（2026-11-21；REST 值级 golden 已扩到 77 端点 / 21 失败路径，
-> 未知路径 fallback 双跑记录为待定口径）
+> 状态：**已实测**（2026-11-21；REST 值级 golden 已扩到 107 端点 / 41 失败路径，
+> 未知路径 fallback 双跑记录为待定口径；11 条 GET 端点显式跳过并附原因）
 > 产物：
 > - `go_hive/contracts/sse-frames/`（reference/target 帧级 golden + `diff.json` + `index.json` + `summary.txt`）
-> - `go_hive/contracts/api-responses/value-golden.json`（56 成功端点 + 21 失败路径的值级差异账本）
+> - `go_hive/contracts/api-responses/value-golden.json`（66 成功端点 + 41 失败路径的值级差异账本）
+> - `go_hive/contracts/api-responses/index.json`（端点清单 + `skipped` 显式跳过清单）
 > - `go_hive/contracts/api-responses/fallback-probe.json`（未知路径 fallback 双跑证据，不计入比较）
 > - `go_hive/docs/api-contract-diff.md`（形状/语义差异报告，含 fallback 小节）
 > 生成 / 校验：
@@ -28,11 +29,12 @@ canonical 响应值，逐条比对后写入 golden；差异只有三类——已
 | --- | --- | --- |
 | SSE canonical 帧 | reference 113 / target 148 | 同一剧本：创建 → 开场回合 → 普通消息 → ask_user → 回答 → 重连 replay → DELETE |
 | SSE 比较帧（去文档化变换后） | live 34/34、replay 17/17、history 42/42、stop 18/17 | 变换：丢弃 Go-only 每回合信封 36 帧 + 异步 title 位置不参与顺序 |
-| REST 端点 | 77/77（75 形状/语义全等 + 2 端点级已声明差异，0 FAIL） | 56 成功路径 + 21 失败路径；第一批 17 端点 + 第二批 60 条探针 |
-| REST 值路径 | 8678 条 | 0 未声明差异；48 条已声明差异（0 端点级折叠；`session_live_tools` 已转逐值对照） |
+| REST 端点 | 107/107（105 形状/语义全等 + 2 端点级已声明差异，0 FAIL） | 66 成功路径 + 41 失败路径；第一批 17 端点 + 第二批 60 条 + 第三批 30 条探针 |
+| REST 值路径 | 8716 条 | 0 未声明差异；46 条已声明差异（0 端点级折叠；`session_live_tools` 逐值对照） |
+| REST 显式跳过 | 11 条 | SSE 流 / 进程内部读数 / colony 运行时缺口 / SPA fallback；见 `index.json.skipped` 与 §6.6 |
 | 未知路径 fallback | 3 路径 × 2 侧 | Python SPA 200 HTML / Go 404；仅证据，不计入比较（§6.4） |
-| SSE 例外 | 11 条 | 见 `contracts/sse-frames/diff.json.exceptions` |
-| REST 例外规则 | 13 条（0 端点级） | 见 `value-golden.json.exceptions`（§6.3） |
+| SSE 例外 | 9 条 | 见 `contracts/sse-frames/diff.json.exceptions` |
+| REST 例外规则 | 10 条（0 端点级） | 见 `value-golden.json.exceptions`（§6.3） |
 
 ## 2. SSE canonicalizer（`go_hive/scripts/sse_frames_canonical.py`）
 
@@ -70,7 +72,7 @@ canonicalizer 把每一帧稳定化为 golden 帧：
 | `replay-subsequence-of-history-{side}` | PASS | replay 是 history 的有序子序列（允许被抑制项跳过） |
 | `judge-verdicts-equal` | PASS | 两侧 history 各 3 条 `judge_verdict{RETRY,"",implicit,0/1/2}`，live/replay 均不可见 |
 | `async-title-multiset-equal` | PASS | `session_title_updated` 载荷/数量一致，位置非契约 |
-| `exceptions-observed` | PASS | 11 条 SSE 例外全部在 golden 观测到（陈旧例外会 FAIL） |
+| `exceptions-observed` | PASS | 9 条 SSE 例外全部在 golden 观测到（陈旧例外会 FAIL；`loop-max-iterations` 与 `system-prefix-sha` 已随本车道收敛退役） |
 | `stop-tail-informational` | 记录 | DELETE 停机尾巴：reference 永久 loop 可能多发一帧 `loop_state_changed`，Go 的每回合 loop 已收口；帧已存 golden，顺序不作断言 |
 
 ## 4. 本车道修复（可修项 → 已修）
@@ -121,23 +123,47 @@ JSON 字节（`Marshal(cost_usd) == "0.0042"`）。
 - 回归测试：`internal/server/phase_tool_surface_test.go`（注册路径 → `/live_tools` 逐名对照、
   allowlist 过滤、会话列表相位；无 runtime 时的空面）、
   `internal/cli/loader_phase_tool_surface_test.go`（REST 创建路径 + allowlist 解析）。
-- 残留（已在 §6.3 声明）：registry 侧 diagnostic 需要 live queen tool registry（Go 未挂载），
-  MCP 宇宙计数 33 vs 28（Go harness 面含 excel_* / browser 组，Python 侧未注册）。
+- 残留（已在 §6.3 声明）：registry 侧 diagnostic 的 MCP 宇宙计数 33 vs 28（excel_* 6 个
+  Go 原生实现 - csv_sql 1 个未移植；浏览器工具面已随 §4.7 跟随桥开关，不再计入）。
+
+### 4.6 会话开场 `node_loop_started.max_iterations`（值级 → 已修）
+
+Go 的开场块是上游永久 queen loop 的逐帧移植，此前报 Go 每回合 loop 的配置上限（50）。现在
+`sessionStartMaxIterations` 直接报上游永久 loop 的 bound：默认 `999999`，设置 `HIVE_MAX_ITER`
+时取该 cap（与 `queen_orchestrator.py::_queen_loop` 同口径）。Go 每回合 loop 自己的
+`node_loop_started` 帧仍报实际配置值（50）——那些帧属于 §5 的有意每回合信封，不进比较。
+REST 值账本 `events[2].data.max_iterations` 由 999999/50 转为两侧 999999；SSE 帧级 golden
+的开场帧同步更新，per-turn 帧保持 50。回归：
+`session_start_events_test.go::TestSessionStartMaxIterationsFollowsQueenLoopBound`，
+`TestSessionAddWritesOpeningEvents` 收紧为断言 999999。
+
+### 4.7 浏览器工具面跟随桥开关（registry 计数 → 已修）
+
+`InstallBrowserTools`（22 个 gcu 定义）改为按 `browserBridgeRequested`（`HIVE_BROWSER_BRIDGE`
+env，其次 `configuration.json` 的 `gcu_enabled`，默认开）安装：桥关闭时既不注册也不登记这批
+工具——它们的 executor 只会向桥 POST，没有桥就没有可执行面，上游同样 retired 了 bundled
+gcu-tools server；桥开启时行为不变（延迟层 72 保持）。本冻结探针设 `HIVE_BROWSER_BRIDGE=0`：
+`registry_mcp_total` 54 → 33、`mcp_tool_names_all_total` 54 → 33、`independent_tools_total`
+61 → 40，回到「33 vs 28 = excel_* 6 - csv_sql 1」的既有声明（§6.3）。回归：
+`browser_tools_gate_test.go::TestBrowserToolsFollowBridgeSwitch`。
 
 
 ## 5. 例外清单（结构化 + 值级；不进对齐目标）
 
-SSE（`contracts/sse-frames/diff.json.exceptions`，11 条）与 REST
-（`contracts/api-responses/value-golden.json.exceptions`，13 条路径规则，0 端点级折叠）的关系：
+SSE（`contracts/sse-frames/diff.json.exceptions`，9 条）与 REST
+（`contracts/api-responses/value-golden.json.exceptions`，10 条路径规则，0 端点级折叠）的关系：
 
 | 类别 | 例外 | 归因 |
 | --- | --- | --- |
-| 有意结构（应当保留） | `node_loop_started.max_iterations` 999999 vs 50；`node_loop_iteration/llm_turn_complete/client_output_delta.iteration` 会话累计 vs 每回合；`node_loop_completed.iterations`、`execution_*` 的 `input`/`output`（随信封整体剔除） | Python 是永久 loop、Go 是每回合 bounded loop（`sse-payload-parity.md` §4.1/§4.2 既有结论）。快照 `is_executing` 与前端 spinner 依赖该信封，**不硬改**；若要统一 loop 语义需单独立项确认 |
-| 值级（提示词 / 语料车道） | `llm_turn_complete.model`（litellm 前缀 `openai/…`）；`system_prefix_sha`；`context_usage_updated` 的 `usage_ratio/usage_pct/estimated_tokens/message_count/breakdown.*`；REST 侧同路径 + `queen_tools` 24 条工具描述 | 系统提示词与工具描述文本仍在对齐（prompt / tool-description 车道）。字段集合、类型、发射点、枚举值不受影响 |
+| 有意结构（应当保留） | `node_loop_iteration/llm_turn_complete/client_output_delta.iteration` 会话累计 vs 每回合；`node_loop_completed.iterations`、`execution_*` 的 `input`/`output`（随信封整体剔除） | Python 是永久 loop、Go 是每回合 bounded loop（`sse-payload-parity.md` §4.1/§4.2 既有结论）。快照 `is_executing` 与前端 spinner 依赖该信封，**不硬改**；开场 `node_loop_started.max_iterations` 已独立修复（§4.6），per-turn 帧保持每回合 cap |
+| 值级（提示词 / 语料车道） | `llm_turn_complete.model`（litellm 前缀 `openai/…`）；`context_usage_updated` 的 `usage_ratio/usage_pct/estimated_tokens/message_count/breakdown.*`；REST 侧同路径 + `queen_tools` 24 条工具描述 | 系统提示词与工具描述文本仍在对齐（prompt / tool-description 车道）。字段集合、类型、发射点、枚举值不受影响 |
 | 值级（开场结构） | `context_usage_updated.message_count` 开场 1 vs 0 | 开场块消息结构与提示词车道同源；后续读数已一致（§4.1 钉住 7/7/8） |
 | 运行期内部 | REST `session_stats.event_bus.subscriptions`（9 vs 3，逐次运行可变）；`health.resources.*`（比较时忽略） | 进程内读数，不属 HTTP 契约 |
 | 非契约 | `session_title_updated` 位置；`stop` 停机尾巴 | 异步任务 / 关停竞态，两侧都可能漂移 |
 
+> 本车道退役 5 条已收敛例外规则（SSE 2 条 + REST 3 条，归并为两类路径）：`system_prefix_sha`（REST + SSE 两侧均 692b774c98c7 逐字相等）与
+> `node_loop_started.max_iterations`（开场帧 999999 对齐，§4.6）。
+> 这些路径回到严格比较——再发散即 FAIL。
 > 未声明差异 = FAIL：`--check`（SSE / REST）都会在出现新差异或旧例外失效时退出 1。
 
 ## 6. REST 值级 golden（`api_response_values.py`）
@@ -204,6 +230,44 @@ queens、sentinel、maintenance。
 | `/api/queen/{id}/soul` | GET | 200 | 2 | |
 | `/api/maintenance/janitor/report` | GET | 200 | 1 | |
 
+### 6.1b 第三批端点（30 条新探针：10 成功/空态 + 20 失败/空对象，+38 条值路径）
+
+覆盖范围：此前只有形状断言、没有值级断言的确定性 GET 面——空列表/空对象、固定错误信封、
+无对象读取。全部只读，落在临时 home 的空态上（无 colony、无 worker、无云会话、无桥）。
+
+| 端点 | 方法 | 状态 | 值路径 | 备注 |
+| --- | --- | --- | --- | --- |
+| `/api/prompts` | GET | 200 | 0 | `{"prompts":[]}`，断言空目录 |
+| `/api/memories` | GET | 200 | 0 | `{"memories":[]}` |
+| `/api/memories/file?path=…` | GET | 404 | 1 | `Memory not found` |
+| `/api/channels` | GET | 200 | 0 | `{"channels":[]}` |
+| `/api/claude-code-queens` | GET | 200 | 0 | `{"queens":[]}` |
+| `/api/claude-code-queens/{q}/conversations/{s}` | GET | 404 | 1 | `No conversation '<id>' of '<queen>'` |
+| `/api/discover` | GET | 200 | 0 | `{}` |
+| `/api/queen-mail/queens` | GET | 401 | 1 | 无 mail 凭据：`unauthorized` |
+| `/api/config/profile/avatar` | GET | 404 | 1 | `No avatar found` |
+| `/api/queen/{id}/avatar` | GET | 404 | 1 | `No avatar found` |
+| `/api/models/endpoints/{name}/models` | GET | 404 | 1 | `There's no endpoint '<name>'` |
+| `/api/queen/{id}/skills/{skill}/body` | GET | 200 | 8 | `body` 正文 + `base_dir` 占位 + 元数据 |
+| `/api/global/crm/status` | GET | 501 | 2 | `crm_unavailable`（本 build 无 CRM） |
+| `/api/global/data/tables` | GET | 401 | 2 | `signed_out: true`（无云会话） |
+| `/api/global/data/changes` | GET | 401 | 2 | 同上 |
+| `/api/global/data/foreign-keys` | GET | 401 | 2 | 同上 |
+| `/api/global/data/tables/{table}/rows` | GET | 401 | 2 | 同上 |
+| `/api/crm/grid/schema` | GET | 401 | 2 | 同上 |
+| `/api/crm/grid/{entity}/{id}` | GET | 401 | 2 | 同上 |
+| `/api/colony/{colony}/notifications` | GET | 404 | 1 | `Colony '<id>' not found` |
+| `/api/colony/{colony}/tools` | GET | 404 | 1 | 同上 |
+| `/api/colonies/{colony}/sessions` | GET | 200 | 0 | `{"sessions":[]}` |
+| `/api/colonies/{colony}/active-session` | GET | 200 | 1 | `{"session":null}` |
+| `/api/colonies/{colony}/worker_profiles` | GET | 404 | 1 | `colony '<id>' not found` |
+| `/api/colonies/{colony}/data/tables` | GET | 200 | 0 | `{"tables":[]}` |
+| `/api/colonies/{colony}/data/changes?since=0` | GET | 200 | 2 | `{covered:[],cursor:0,tables:{},truncated:false}` |
+| `/api/colonies/{colony}/data/tables/{table}/rows` | GET | 404 | 1 | `no tracker.db` |
+| `/api/colonies/import/status/{upload_id}` | GET | 400 | 1 | `invalid upload_id` |
+| `/api/sessions/{session}/workers/{worker}` | GET | 404 | 1 | `unknown worker: '<id>'` |
+| `/api/sessions/{session}/workers/{worker}/conversation` | GET | 404 | 1 | `unknown worker: '<id>'` |
+
 ### 6.2 失败路径矩阵（21 条，全部 PASS）
 
 | 端点 | 方法 | 状态 | 对照物 |
@@ -230,12 +294,16 @@ queens、sentinel、maintenance。
 | `/api/config/llm`（非法 JSON） | PUT | 400/400 | `Invalid JSON body` |
 | `/api/config/llm`（body=`[]`） | PUT | 500/500 | 两侧同为 500（非对象体在两侧都抛错）；**记录现状而非期望行为** |
 
+第三批另加 20 条失败/空对象探针（§6.1b：401 无云会话 ×5、501 CRM、404 无对象 ×7、400 非法
+upload_id、401 queen-mail、404 memory/avatar/models-endpoint），状态码与 `error` 文案全部逐字
+一致；失败路径合计 41 条。
+
 ### 6.3 值级/形状差异（已声明，不进对齐目标）
 
 | 例外 | 端点 | 类 | 说明 |
 | --- | --- | --- | --- |
 | `live-tools-registry-diagnostic` | `session_live_tools` | 已修复 | Go REST 会话已挂 `QueenToolRegistry`；`dropped_by_provider` 与参考逐值一致，仅余 `registry_mcp_total` 及派生计数（见下一行） |
-| `live-tools-mcp-universe`（4 条） | `session_live_tools` | value-level | MCP 宇宙计数 33 vs 28（Go harness 面含 excel_* 与 browser 组；Python 探测环境未注册），`independent_tools_total` 随之为 40 vs 35；模型面真正受制的 allowlist 过滤计数一致（22 filtered / 15 allowed） |
+| `live-tools-mcp-universe`（4 条） | `session_live_tools` | value-level | MCP 宇宙计数 33 vs 28 = 6 个 excel_*（Go 原生实现；参考侧要装可选 openpyxl 才注册）减 1 个 csv_sql（Go 未移植 DuckDB）。`independent_tools_total` 随之为 40 vs 35。22 个浏览器 gcu 定义在本探针（`HIVE_BROWSER_BRIDGE=0`）已不进 registry 计数（§4.7）；模型面真正受制的 allowlist 过滤计数一致（22 filtered / 15 allowed） |
 | `config-models-pricing-float` | `config_models` | non-verbatim-numeric | 整数定价 `5.0` vs `5`（NV-02） |
 | `browser-contexts-empty-state` | `browser_contexts` | empty-state-divergence | Python 读进程内 gcu 注册表（available:true/count:0）；Go 代理桥（available:false/reason） |
 | `browser-tabs-reason-text` | `browser_tabs` | env-dependent-value | 同为 available:false，`reason` 文案实现相关 |
@@ -263,9 +331,36 @@ queens、sentinel、maintenance。
   本仓库无 dist 的检出里两侧同为 404；建好 `core/frontend/dist` 后两侧同为 200 index.html。
   前端 `api/*.ts` 已核对的路径不受影响（路由面 217/220）。
 
-### 6.5 结果
+### 6.5 显式跳过的端点（值级不比较）
 
-- 77/77（75 全等 + 2 端点级已声明差异），8678 条值路径，48 条已声明差异（0 端点级折叠），0 未声明。
+`index.json.skipped`（11 条）与 `api-contract-diff.md` 的「显式跳过的端点」表逐条记录方法、
+类与原因；这些端点不是遗漏：
+
+| 类 | 端点 | 原因 |
+| --- | --- | --- |
+| sse-stream | `/api/events/global`、`/api/sessions/live`、`/api/sessions/{session}/workers/stream`、`/api/browser/status/stream` | 长连接流；帧级契约由 `contracts/sse-frames/`（session_events 剧本）覆盖 |
+| documented-functional-gap | `/api/health/resources` | Python 渲染器采样器形状 vs Go 资源监控 rollup，两套功能面（§8） |
+| runtime-internal | `/api/startup-status`、`/api/runtime-logs` | 各自进程的启动阶段时间戳 / stdout 缓冲，逐次运行不同 |
+| runtime-state-gap | `/api/sessions/{session}/colony/tools`、`/colony/skills`、`/workers/{worker_id}/reap-timeline` | Python REST 会话绑了 eager ColonyRuntime，Go 未绑（与 `config_llm_put.sessions_swapped` 同根因）；colony 绑定车道落地后再补探针 |
+| covered-elsewhere | `/{path:.*}` | SPA fallback 由 `fallback-probe.json` 证据覆盖（§6.4） |
+
+Go-only 路由（5 条）无 Python 对端，已在 `contracts/api-routes.json` 逐条带 `extension`/`annotation`
+标注（`POST /api/mcp/reload`、`/api/skills/reload`、reminders 两条、`DELETE /api/sessions/{a}/{b}` alias），
+不进值级账本。
+
+### 6.6 结果
+
+- 107/107（105 全等 + 2 端点级已声明差异），8716 条值路径，46 条已声明差异（0 端点级折叠），0 未声明。
+- 本车道把值级面从 77 端点 / 8678 路径扩到 107 端点 / 8716 路径（+30 探针 / +38 条值路径；
+  10 条成功空态 + 20 条失败/空对象，全部 PASS），并给出 11 条显式跳过（§6.5）。
+- 四条已知值级残差逐项实测：
+  - `registry_mcp_total` 及派生计数：54/54/61 → 33/33/40（Python 28/28/35）。22 个浏览器 gcu
+    定义改为跟随桥开关（§4.7），剩余 33 vs 28 = excel_* 6 - csv_sql 1（§6.3 已声明）。
+  - `system_prefix_sha`：REST 与 SSE 两侧均 `692b774c98c7`（16/16 SSE 帧），逐字相等；例外退役。
+  - `node_loop_started.max_iterations`：开场帧 999999 vs 50 → 两侧 999999（§4.6）；per-turn
+    Go-only 信封仍为 50，随信封整体剔除。
+  - `node_loop_completed.iterations`：Go-only 每回合帧（3 个 live / 3 个 history，值 1），Python
+    永久 loop 不发；保留为有意结构例外（§5），REST 值账本不覆盖该 Go-only 面。
 - 本批把 `session_live_tools` 从端点级折叠（418 条）转为逐值对照：433 条路径全部参与比较，
   工具面（21 条 `actual_tools` / 32 条 `expected_tools` 含描述与状态、`framework_added`、
   `phase_state_ready`、`phase_state` 诊断半边）逐值一致；余下 4 个值差异属 `live-tools-mcp-universe` 声明族（§6.3）。
@@ -299,16 +394,14 @@ uv run python go_hive/scripts/sse_frames_canonical.py --check
 - 真实 provider 冒烟：当前剧本与 stub 固定内容，值级差异在提示词车道收敛后需再复跑。
 - 多工具批的金句序：单工具批已被 golden + 单测钉住；多工具批的 `tool_call_completed →
   post_tool_call` 交替顺序由同一段代码保证，但未纳入本剧本。
-- `system_prefix_sha` / `model` / 工具描述等提示词语料的追平（prompt / tool-description 车道）。
-- **候选调查未纳入本批**（已实测、记录口径，不作为 golden 端点）：
-  - `/api/sessions/{id}/colony/tools`、`/api/sessions/{id}/colony/skills`：Python 挂载急切实时
-    ColonyRuntime 返回完整工具/技能目录，Go REST 会话返回 `[]`（与 `session_live_tools` 同源）；
-    纳入会把数百条数组元素差异带进账本，留待运行时会话构造对齐后补探针。
-  - `/api/health/resources`：两侧实现不同（Python 渲染器采样器 shape `{available,history,interval_s,
-    thresholds,verdict}`；Go 资源监控 rollup `{available,chrome,components,context,history,…}`），
-    属功能面差异，`/api/health` 已被现有 golden 覆盖。
-- `api.proto` 尚未为第二批端点写 message（`check_api_proto.py` 报 `unmapped-endpoint` 警告，
-  0 error，不失败）；下批可批量补 proto message 或维持「新端点只进 shape/值账本」的口径。
-- 会话运行时会话构造：PhaseState 工具面本批已挂（§4.5），`session_live_tools` 已转逐值对照；
+- `model` 前缀 / 工具描述等提示词语料的追平（prompt / tool-description 车道）。`system_prefix_sha`
+  本车道实测两侧逐字相等（REST + SSE），例外已退役。
+- **显式跳过（11 条，`index.json.skipped`，不是遗漏）**：4 条 SSE 流、`/api/health/resources`
+  （两套资源面）、`/api/startup-status`、`/api/runtime-logs`、colony 运行时缺口的 3 条
+  （`colony/tools`、`colony/skills`、`workers/{id}/reap-timeline`）、SPA fallback。colony 绑定车道
+  落地后把 3 条 runtime-state-gap 补进值账本。
+- `api.proto` 只映射 17 个端点；本批新增 30 个端点只进 shape/值账本（`check_api_proto.py` 报
+  `unmapped-endpoint` 警告，0 error，不失败）。下批可批量补 proto message 或维持该口径。
+- 会话运行时构造：PhaseState 工具面本批已挂（§4.5），`session_live_tools` 已转逐值对照；
   剩余为 registry 侧 admission-gate 诊断（需挂载 live queen tool registry）与 ColonyRuntime 绑定面
   （`config_llm_put.sessions_swapped`、colony 工具/技能面），对齐后可再升级为严格比较。

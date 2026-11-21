@@ -67,7 +67,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       },
       "envelope": {
@@ -228,18 +228,18 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 30064,
+          "conversation_chars": 28152,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48401,
+        "estimated_tokens": 34612,
         "max_context_tokens": 180000,
         "message_count": 3,
         "trigger": "iteration_start",
-        "usage_pct": 27,
-        "usage_ratio": 0.2689
+        "usage_pct": 19,
+        "usage_ratio": 0.1923
       },
       "envelope": {
         "colony_id": null,
@@ -290,7 +290,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       },
       "envelope": {
@@ -370,6 +370,26 @@
     },
     {
       "data": {
+        "session_id": "<session_id>",
+        "title": "PAYLOAD_PARITY_OK"
+      },
+      "envelope": {
+        "colony_id": null,
+        "correlation_id": null,
+        "execution_id": null,
+        "node_id": null,
+        "run_id": "<run_id>",
+        "seq": "<seq>",
+        "stream_id": "queen",
+        "timestamp": "<timestamp>"
+      },
+      "event": null,
+      "index": 16,
+      "stream": "live",
+      "type": "session_title_updated"
+    },
+    {
+      "data": {
         "output": {
           "status": "completed"
         }
@@ -385,29 +405,9 @@
         "timestamp": "<timestamp>"
       },
       "event": null,
-      "index": 16,
-      "stream": "live",
-      "type": "execution_completed"
-    },
-    {
-      "data": {
-        "session_id": "<session_id>",
-        "title": "PAYLOAD_PARITY_OK"
-      },
-      "envelope": {
-        "colony_id": null,
-        "correlation_id": null,
-        "execution_id": null,
-        "node_id": null,
-        "run_id": "<run_id>",
-        "seq": "<seq>",
-        "stream_id": "queen",
-        "timestamp": "<timestamp>"
-      },
-      "event": null,
       "index": 17,
       "stream": "live",
-      "type": "session_title_updated"
+      "type": "execution_completed"
     },
     {
       "data": {
@@ -533,18 +533,18 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 30134,
+          "conversation_chars": 28222,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48425,
+        "estimated_tokens": 34635,
         "max_context_tokens": 180000,
         "message_count": 5,
         "trigger": "iteration_start",
-        "usage_pct": 27,
-        "usage_ratio": 0.269
+        "usage_pct": 19,
+        "usage_ratio": 0.1924
       },
       "envelope": {
         "colony_id": null,
@@ -620,18 +620,18 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 30276,
+          "conversation_chars": 28364,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48472,
+        "estimated_tokens": 34682,
         "max_context_tokens": 180000,
         "message_count": 7,
         "trigger": "post_tool_call",
-        "usage_pct": 27,
-        "usage_ratio": 0.2693
+        "usage_pct": 19,
+        "usage_ratio": 0.1927
       },
       "envelope": {
         "colony_id": null,
@@ -651,18 +651,18 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 30276,
+          "conversation_chars": 28364,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48472,
+        "estimated_tokens": 34682,
         "max_context_tokens": 180000,
         "message_count": 7,
         "trigger": "post_tool_results",
-        "usage_pct": 27,
-        "usage_ratio": 0.2693
+        "usage_pct": 19,
+        "usage_ratio": 0.1927
       },
       "envelope": {
         "colony_id": null,
@@ -691,7 +691,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "tool_calls",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       },
       "envelope": {
@@ -924,18 +924,18 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 30303,
+          "conversation_chars": 28391,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48481,
+        "estimated_tokens": 34691,
         "max_context_tokens": 180000,
         "message_count": 8,
         "trigger": "iteration_start",
-        "usage_pct": 27,
-        "usage_ratio": 0.2693
+        "usage_pct": 19,
+        "usage_ratio": 0.1927
       },
       "envelope": {
         "colony_id": null,
@@ -986,7 +986,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       },
       "envelope": {

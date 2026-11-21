@@ -1,0 +1,82 @@
+{
+  "schema": "hive-cli-mcp-help-evidence/1",
+  "python_bin": "<home>/hive/.venv/bin/python",
+  "go_bin": "<scratch>/bin/hive",
+  "pages": {
+    "count": 15,
+    "byte_identical": 15,
+    "help_exit_codes": {
+      "group": {
+        "python": 0,
+        "go": 0
+      },
+      "install": {
+        "python": 0,
+        "go": 0
+      },
+      "add": {
+        "python": 0,
+        "go": 0
+      },
+      "mode": {
+        "python": 0,
+        "go": 0
+      },
+      "run": {
+        "python": 0,
+        "go": 0
+      },
+      "remove": {
+        "python": 0,
+        "go": 0
+      },
+      "enable": {
+        "python": 0,
+        "go": 0
+      },
+      "disable": {
+        "python": 0,
+        "go": 0
+      },
+      "list": {
+        "python": 0,
+        "go": 0
+      },
+      "info": {
+        "python": 0,
+        "go": 0
+      },
+      "config": {
+        "python": 0,
+        "go": 0
+      },
+      "search": {
+        "python": 0,
+        "go": 0
+      },
+      "health": {
+        "python": 0,
+        "go": 0
+      },
+      "init": {
+        "python": 0,
+        "go": 0
+      },
+      "update": {
+        "python": 0,
+        "go": 0
+      }
+    }
+  },
+  "battery": {
+    "cases": 34,
+    "unexpected_exit_mismatches": [],
+    "documented_exceptions": [
+      [
+        "mcp",
+        "help"
+      ]
+    ]
+  },
+  "pass": true
+}

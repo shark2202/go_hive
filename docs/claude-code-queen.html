@@ -76,6 +76,8 @@
   details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:10px 0}
   summary{cursor:pointer;color:#cfdae6;font-weight:600}
   details p{margin:10px 0 0}
+  @media(max-width:560px){nav a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}
+    td .pill{white-space:normal}}
 </style>
 </head>
 <body>
@@ -105,8 +107,9 @@
     <a href="#compare">对比普通 Queen</a>
     <a href="#go">Go 实现状态</a>
     <a href="#checklist">验收清单</a>
+    <a href="claude-code-queen-model.html">关系模型 →</a>
   </nav>
-  <p class="toc-note">单文件 HTML，无外部依赖，可直接离线打开。</p>
+  <p class="toc-note">单文件 HTML，无外部依赖，可直接离线打开。关系模型、colony 位置、多 queen 配置与"人类如何交互"见 <a href="claude-code-queen-model.html">claude-code-queen-model.html</a>。</p>
 </header>
 
 <section id="what">

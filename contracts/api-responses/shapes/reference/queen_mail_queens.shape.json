@@ -1,0 +1,7 @@
+{
+  "endpoint": "queen_mail_queens",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

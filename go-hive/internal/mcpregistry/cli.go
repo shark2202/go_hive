@@ -973,6 +973,9 @@ func (c *CLI) updateServer(name string, registry *Registry) int {
 
 type MCPCommand struct {
 	Kind string
+	// HelpTopic is the verb whose help page was requested (`run`, `install`,
+	// ...); empty means the group page.
+	HelpTopic string
 
 	Install InstallArgs
 	Add     AddArgs
@@ -986,39 +989,16 @@ type MCPCommand struct {
 	Update  UpdateArgs
 
 	Name string
+	// HelpVerb names the verb whose per-command help page to print; empty
+	// means the group page (a bare --help, or the Go-only `hive mcp help`
+	// alias).
+	HelpVerb string
 }
 
 var mcpSubcommands = map[string]bool{
 	"install": true, "add": true, "mode": true, "run": true, "remove": true,
 	"enable": true, "disable": true, "list": true, "info": true, "config": true,
 	"search": true, "health": true, "init": true, "update": true,
-}
-
-func MCPHelpText() string {
-	return strings.Join([]string{
-		"usage: hive mcp <command> [options]",
-		"",
-		"Manage MCP servers",
-		"",
-		"commands:",
-		"  install <name>            Install a server from the registry",
-		"  add                       Register a local/running MCP server",
-		"  mode <name> cli|tools     Reach a server from the terminal or as tools",
-		"  run <name> [args...]      Run a server's tools as commands (mcp2cli)",
-		"  remove <name>             Remove an installed server",
-		"  enable <name>             Enable a disabled server",
-		"  disable <name>            Disable a server without removing it",
-		"  list                      List servers",
-		"  info <name>               Show server details",
-		"  config <name>             Set server configuration overrides",
-		"  search <query>            Search the registry",
-		"  health [name]             Check server health",
-		"  init                      Initialize the local MCP registry",
-		"  update [name]             Update installed servers or refresh the registry index",
-		"",
-		"options:",
-		"  -h, --help                show this help message and exit",
-	}, "\n")
 }
 
 func parseMCPError(format string, args ...any) error {
@@ -1078,39 +1058,64 @@ func ParseMCPArgs(argv []string) (*MCPCommand, error) {
 	}
 	rest := argv[1:]
 
+	var cmd *MCPCommand
+	var err error
 	switch command {
 	case "install":
-		return parseInstall(rest)
+		return withHelpTopic(parseInstall, rest, command)
 	case "add":
-		return parseAdd(rest)
+		return withHelpTopic(parseAdd, rest, command)
 	case "mode":
-		return parseMode(rest)
+		return withHelpTopic(parseMode, rest, command)
 	case "run":
-		return parseRun(rest)
+		return withHelpTopic(parseRun, rest, command)
 	case "remove", "enable", "disable":
-		return parseNameOnly(command, rest)
+		return withHelpTopic(func(values []string) (*MCPCommand, error) {
+			return parseNameOnly(command, values)
+		}, rest, command)
 	case "list":
-		return parseList(rest)
+		return withHelpTopic(parseList, rest, command)
 	case "info":
-		return parseInfo(rest)
+		return withHelpTopic(parseInfo, rest, command)
 	case "config":
-		return parseConfig(rest)
+		return withHelpTopic(parseConfig, rest, command)
 	case "search":
-		return parseSearch(rest)
+		return withHelpTopic(parseSearch, rest, command)
 	case "health":
-		return parseHealth(rest)
+		return withHelpTopic(parseHealth, rest, command)
 	case "init":
 		if len(rest) > 0 && isHelp(rest[0]) {
-			return &MCPCommand{Kind: "help"}, nil
+			return &MCPCommand{Kind: "help", HelpTopic: "init"}, nil
 		}
 		if len(rest) > 0 {
-			return nil, parseMCPError("unrecognized arguments: %s", strings.Join(rest, " "))
+			err = parseMCPError("unrecognized arguments: %s", strings.Join(rest, " "))
+			break
 		}
-		return &MCPCommand{Kind: "init"}, nil
+		cmd = &MCPCommand{Kind: "init"}
 	case "update":
-		return parseUpdate(rest)
+		return withHelpTopic(parseUpdate, rest, command)
 	}
-	return nil, parseMCPError("invalid choice: '%s'", command)
+	if err != nil {
+		return nil, err
+	}
+	if cmd == nil {
+		return nil, parseMCPError("invalid choice: '%s'", command)
+	}
+	if cmd.Kind == "help" && cmd.HelpVerb == "" {
+		// Every verb-level -h/--help renders that verb's argparse page.
+		cmd.HelpVerb = command
+	}
+	return cmd, nil
+}
+
+// withHelpTopic tags a verb's help request so Main can render that verb's own
+// page instead of folding it into the group help.
+func withHelpTopic(parse func([]string) (*MCPCommand, error), rest []string, topic string) (*MCPCommand, error) {
+	cmd, err := parse(rest)
+	if err == nil && cmd != nil && cmd.Kind == "help" {
+		cmd.HelpTopic = topic
+	}
+	return cmd, err
 }
 
 func isHelp(token string) bool { return token == "-h" || token == "--help" }
@@ -1288,11 +1293,22 @@ func parseMode(rest []string) (*MCPCommand, error) {
 }
 
 func parseRun(rest []string) (*MCPCommand, error) {
-	if len(rest) == 0 {
-		return nil, parseMCPError("the following arguments are required: name")
-	}
-	if isHelp(rest[0]) {
+	// argparse sees `run` as `name` plus a REMAINDER. Only a help flag
+	// *before* the name reaches argparse's --help action; anything after the
+	// name is forwarded to mcp2cli (`run NAME --help` runs the tool's help).
+	if len(rest) > 0 && isHelp(rest[0]) {
 		return &MCPCommand{Kind: "help"}, nil
+	}
+	if len(rest) > 0 && rest[0] == "--" {
+		rest = rest[1:]
+	}
+	if len(rest) == 0 {
+		return nil, parseMCPError("the following arguments are required: name, mcp2cli_args")
+	}
+	if strings.HasPrefix(rest[0], "-") {
+		// An unknown flag before the required positionals: argparse reports
+		// the missing arguments and exits 2 instead of forwarding the flag.
+		return nil, parseMCPError("the following arguments are required: name, mcp2cli_args")
 	}
 	return &MCPCommand{Kind: "run", Run: RunArgs{Name: rest[0], Args: append([]string{}, rest[1:]...)}}, nil
 }
@@ -1454,11 +1470,15 @@ func (c *CLI) Main(argv []string) int {
 
 	switch command.Kind {
 	case "help":
-		fmt.Fprintln(c.out(), MCPHelpText())
+		if command.HelpTopic != "" {
+			fmt.Fprint(c.out(), MCPVerbHelpText(command.HelpTopic))
+			return 0
+		}
+		fmt.Fprint(c.out(), MCPHelpText())
 		return 0
 	case "missing-command":
-		fmt.Fprintln(c.errOut(), "usage: hive mcp [-h] {install,add,mode,run,remove,enable,disable,list,info,config,search,health,init,update} ...")
-		fmt.Fprintln(c.errOut(), "hive mcp: error: the following arguments are required: command")
+		fmt.Fprintln(c.errOut(), MCPGroupUsageText())
+		fmt.Fprintln(c.errOut(), "hive mcp: error: the following arguments are required: mcp_command")
 		return 2
 	case "install":
 		return c.Install(command.Install)

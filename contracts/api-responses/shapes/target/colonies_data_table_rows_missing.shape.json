@@ -1,0 +1,7 @@
+{
+  "endpoint": "colonies_data_table_rows_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

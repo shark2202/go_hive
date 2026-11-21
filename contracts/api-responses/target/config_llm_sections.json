@@ -8,11 +8,11 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-21T15:57:24+08:00",
+  "captured_at": "2026-11-21T20:10:41+08:00",
   "canonical": {
     "judge": null,
     "llm": {
-      "api_base": "http://127.0.0.1:61763/v1",
+      "api_base": "http://127.0.0.1:60527/v1",
       "api_key_env_var": "HIVE_CONTRACT_PROBE_KEY",
       "model": "contract-probe-model",
       "provider": "openai"

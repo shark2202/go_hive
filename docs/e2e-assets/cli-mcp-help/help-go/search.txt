@@ -1,0 +1,8 @@
+usage: hive mcp search [-h] [--json] query
+
+positional arguments:
+  query       Search term (name, tag, description, tool name)
+
+options:
+  -h, --help  show this help message and exit
+  --json      Output as JSON

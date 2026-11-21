@@ -1,0 +1,21 @@
+{
+  "endpoint": "claude_code_conversation_missing",
+  "label": "Claude Code 会话不存在",
+  "method": "GET",
+  "path": "/api/claude-code-queens/queen_growth/conversations/probe-missing",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 404,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T20:10:41+08:00",
+  "canonical": {
+    "error": "No conversation 'probe-missing' of 'queen_growth'"
+  },
+  "shape": {
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

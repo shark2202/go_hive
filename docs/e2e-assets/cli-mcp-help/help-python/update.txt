@@ -1,0 +1,7 @@
+usage: hive mcp update [-h] [name]
+
+positional arguments:
+  name        Server name to update (omit to update all registry servers)
+
+options:
+  -h, --help  show this help message and exit

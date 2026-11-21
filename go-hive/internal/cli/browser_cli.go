@@ -91,8 +91,8 @@ func RunBrowserCLI(argv []string, stdout, stderr io.Writer) int {
 func (c *browserCLI) rootCommand() *commandSpec {
 	root := &commandSpec{
 		Prog: "hive-browser",
-		Description: "Drive the Hive browser (Hive Browser Bridge extension) from the terminal. " +
-			"Replaces the retired browser_* MCP tools; agents invoke it with --json.",
+		Description: "Drive the Hive browser (Beeline extension) from the terminal. " +
+			"Replaces the browser_* MCP tools; agents invoke it via terminal_exec with --json.",
 		// Upstream's argparse parent parser also accepts the shared flags
 		// *before* the subcommand (`hive-browser --json status`). argparse lets
 		// the subparser's own default win for a shared dest, so a leading value
@@ -127,19 +127,23 @@ func browserCommonFlags() []argSpec {
 		Help: "bridge HTTP base URL (default: $HIVE_BROWSERBRIDGE_HTTP or http://127.0.0.1:14830)"})
 }
 
-// withCommon appends the shared flags to a leaf's own flags.
+// withCommon prepends the shared flags to a leaf's own flags. Upstream's
+// argparse parent parser declares --json/--profile *before* the leaf's own
+// arguments, so they render first in the usage line and the options block;
+// flag order has no effect on parsing.
 func withCommon(flags ...argSpec) []argSpec {
-	return append(flags, browserCommonFlags()...)
+	return append(browserCommonFlags(), flags...)
 }
 
-// tabFlag is the `--tab` option shared by the tab-scoped commands.
+// tabFlag is the `--tab` option shared by the tab-scoped commands. Upstream
+// declares it bare (`sp.add_argument("--tab", type=int)`), so it renders
+// without help text.
 func tabFlag() argSpec {
-	return argSpec{Dest: "tab", Long: "tab", Kind: kindInt, Help: "tab id (default: this profile's active tab)"}
+	return argSpec{Dest: "tab", Long: "tab", Kind: kindInt}
 }
 
 func browserProfileFlag() argSpec {
-	return argSpec{Dest: "browser_profile", Long: "browser-profile", Kind: kindString,
-		Help: "which connected Chrome profile to use"}
+	return argSpec{Dest: "browser_profile", Long: "browser-profile", Kind: kindString}
 }
 
 func timeoutFlag(def int, help string) argSpec {

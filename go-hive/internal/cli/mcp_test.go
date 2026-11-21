@@ -45,8 +45,14 @@ func TestMCPHelpThroughRootListsEverySubcommand(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run(mcp --help) = %d, want 0", code)
 	}
-	if !strings.Contains(stdout, "Manage MCP servers") {
-		t.Fatalf("stdout missing group description:\n%s", stdout)
+	// argparse renders both the usage line and the verb choices as the
+	// group's positional; the `help="Manage MCP servers"` summary only
+	// appears in the root command list, never on the group page.
+	if !strings.Contains(stdout, "usage: hive mcp [-h]") {
+		t.Fatalf("stdout missing argparse usage:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "{install,add,mode,run,remove,enable,disable,list,info,config,search,health,init,update}") {
+		t.Fatalf("stdout missing argparse-style choice set:\n%s", stdout)
 	}
 	for _, command := range []string{
 		"install", "add", "mode", "run", "remove", "enable", "disable",

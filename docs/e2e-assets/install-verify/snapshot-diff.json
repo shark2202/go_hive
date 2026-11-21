@@ -1,0 +1,15 @@
+{
+  "added": [],
+  "removed": [],
+  "modified": [
+    "logs/hive-server.log"
+  ],
+  "allowlisted_modified": [
+    "logs/hive-server.log"
+  ],
+  "user_data_changes": {
+    "added": [],
+    "removed": [],
+    "modified": []
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "endpoint": "queen_skill_body",
+  "label": "Queen 技能正文",
+  "method": "GET",
+  "path": "/api/queen/queen_growth/skills/administrative-behavior-skill/body",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T20:10:41+08:00",
+  "canonical": {
+    "base_dir": "<base_dir>",
+    "body": "# 管理行为：有限理性与决策制定 — 全书能力入口\n\n> 本书回答：**组织是什么？如何理解组织中的人如何做决策？** 答案 = 决策制定过程是理解组织现象的关键；人是\"有限理性\"的，不追求最优而追求满意。\n\n## 触发与不触发\n\n**适用**：与本书能力域相关的组织决策/理性/权威咨询（见路由表意图列）。\n**不适用**：\n- 纯经济学\"经济人\"最优化模型（本书立场相反：现实人是\"有限理性\"的\"管理人\"）\n- 纯信息查询 / 量化优化\n- 已明确要\"追求最优解\"且拒绝\"满意准则\"视角\n\n## 核心原则（常驻速览）\n\n1. 组织不是\"信息处理机器\"，而是决策制定的系统——理解组织现象的关键是决策制定过程\n2. 经济人追求\"最优\"（从所有备选方案中选最好的）；管理人追求\"满意\"（寻找\"足够好即可\"的行动方案）\n3. 有限理性 = 知识与计算能力的限制——\"组织里的行为是有意理性的，但只是有限的理性\"\n4. \"市场份额\"\"合理利润\"\"公平价格\"都是满意准则，商人耳熟能详，经济学家却陌生\n5. 决策包含事实要素（真伪可判断）与价值要素（好坏需价值判断），二者常混在一起\n6. 手段-目的层级：每一层相对其下层是目的，相对上层是手段；理性体现在不完整、不一致的层级中\n7. 组织均衡 = 诱因与贡献的平衡——\"除非诱因与利益能实现均衡，否则组织无法生存\"\n8. 权威 ≠ 影响；权威有\"限度\"，…[+1193 chars sha256:164d8fee2012]",
+    "description": "管理行为（赫伯特·西蒙《Administrative Behavior》，诺贝尔奖作品）。当用户要理解\"有限理性\"与\"满意准则\"（管理人 vs 经济人）、要把决策拆成\"事实要素与价值要素\"（手段-目的链）、要理解决策的层级系统、要用\"诱因-贡献\"分析组织均衡、要理解权威与影响/权威的限度、或要理解效率准则与组织认同时，按意图路由到 6 张能力卡。核心定位：决策制定过程是理解组织现象的关键——组织是决策的系统，人是\"有限理性\"的，不追求最优而追求满意。覆盖：有限理性与满意准则、决策的事实要素与价值要素、决策层级系统、组织均衡（诱因-贡献）、权威的角色、效率准则与组织认同。",
+    "editable": false,
+    "location": "<location>",
+    "name": "administrative-behavior-skill",
+    "source_scope": "user",
+    "visibility": null
+  },
+  "shape": {
+    "base_dir": "string",
+    "body": "string",
+    "description": "string",
+    "editable": "boolean",
+    "location": "string",
+    "name": "string",
+    "source_scope": "string",
+    "visibility": "null"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

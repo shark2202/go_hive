@@ -1,0 +1,10 @@
+usage: hive mcp install [-h] [--version VERSION] [--transport TRANSPORT] name
+
+positional arguments:
+  name                  Server name in the registry
+
+options:
+  -h, --help            show this help message and exit
+  --version VERSION     Pin to a specific version
+  --transport TRANSPORT
+                        Override default transport (stdio, http, unix, sse)

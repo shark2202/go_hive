@@ -1,0 +1,7 @@
+{
+  "endpoint": "queen_avatar_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

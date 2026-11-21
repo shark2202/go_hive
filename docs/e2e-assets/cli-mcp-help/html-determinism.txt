@@ -1,0 +1,7 @@
+# gen_cli_surface_html.py — two independent runs + --check
+# 2026-11-21T12:00:41Z
+run1: wrote go_hive/docs/cli-surface.html (188214 bytes) · entries=9 (python 3 / go 6) · command blocks=74 · flag rows=343 · positional rows=43 · hive-cred paths=4 (usage 一致 4, help 一致 0)
+run1 sha256: 8f225cf41dbb60efd6938d3f81d9cc3dbcf2cf500ec7c51ec7dce9b2f82a23bd
+run2: wrote go_hive/docs/cli-surface.html (188214 bytes) · entries=9 (python 3 / go 6) · command blocks=74 · flag rows=343 · positional rows=43 · hive-cred paths=4 (usage 一致 4, help 一致 0)
+run2 sha256: 8f225cf41dbb60efd6938d3f81d9cc3dbcf2cf500ec7c51ec7dce9b2f82a23bd
+check: ok: go_hive/docs/cli-surface.html matches go_hive/contracts/cli-surface.json · entries=9 (python 3 / go 6) · command blocks=74 · flag rows=343 · positional rows=43 · hive-cred paths=4 (usage 一致 4, help 一致 0)

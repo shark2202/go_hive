@@ -73,35 +73,11 @@ VALUE_EXCEPTIONS: list[dict[str, str]] = [
         "reason": "Same litellm provider-prefix difference as the SSE frame golden.",
     },
     {
-        "id": "sse-frame-system-prefix-sha",
-        "endpoint": "session_events",
-        "path_regex": r"^frames\[\d+\]\.envelope\.data\.system_prefix_sha$",
-        "class": "value-level",
-        "reason": "System prompt text still differs (prompt-parity lane).",
-    },
-    {
         "id": "history-model",
         "endpoint": "session_events_history",
         "path_regex": r"^events\[\d+\]\.data\.model$",
         "class": "value-level",
         "reason": "Same litellm provider-prefix difference as the SSE frame golden.",
-    },
-    {
-        "id": "history-system-prefix-sha",
-        "endpoint": "session_events_history",
-        "path_regex": r"^events\[\d+\]\.data\.system_prefix_sha$",
-        "class": "value-level",
-        "reason": "System prompt text still differs (prompt-parity lane).",
-    },
-    {
-        "id": "history-loop-max-iterations",
-        "endpoint": "session_events_history",
-        "path_regex": r"^events\[\d+\]\.data\.max_iterations$",
-        "class": "intentional-structural",
-        "reason": (
-            "Python's permanent queen loop reports 999999; Go's per-turn loop "
-            "reports its configured cap (50). Same field, same type."
-        ),
     },
     {
         "id": "history-context-usage",
@@ -175,13 +151,16 @@ VALUE_EXCEPTIONS: list[dict[str, str]] = [
         "path_regex": r"^(mcp_tool_count_registered|diagnostic\.registry_mcp_total|diagnostic\.phase_state\.(mcp_tool_names_all_total|independent_tools_total))$",
         "class": "value-level",
         "reason": (
-            "Go's harness catalog records 33 MCP-origin names against the reference's 28: the Go "
-            "hive_tools group implements the excel_* tools and keeps a browser group the Python "
-            "probe's installed extras do not register, while Python lists csv_sql which this build "
-            "leaves unimplemented. The universe size, the registry MCP total and the independent "
-            "total derived from them differ by exactly that surplus (33/40 vs 28/35); the gate "
-            "snapshot (817 credentialed tools, 80 providers) and every allowlist-filtered count the "
-            "model surface gates on match exactly."
+            "Go's registry bookkeeping still carries a 5-name surplus over the reference, which "
+            "is exactly the six excel_* tools minus csv_sql: Go implements excel_read/write/"
+            "append/info/sheet_list/search natively, while the reference registers them only when "
+            "the optional openpyxl extra is installed (harness_tools.py::_hive_core), and Go leaves "
+            "csv_sql unimplemented (DuckDB is not ported) while the reference advertises it. The 22 "
+            "gcu browser tool definitions are no longer counted with the browser bridge off "
+            "(HIVE_BROWSER_BRIDGE=0 in this probe; upstream retires its bundled gcu-tools server). "
+            "Hence 33 vs 28 and independent_tools_total 40 vs 35; the gate snapshot (817 credentialed "
+            "tools, 80 providers) and every allowlist-filtered count the model surface gates on match "
+            "exactly (22 filtered / 15 allowed)."
         ),
     },
 ]

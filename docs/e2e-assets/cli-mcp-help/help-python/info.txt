@@ -1,0 +1,8 @@
+usage: hive mcp info [-h] [--json] name
+
+positional arguments:
+  name        Server name
+
+options:
+  -h, --help  show this help message and exit
+  --json      Output as JSON

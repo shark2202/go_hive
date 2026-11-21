@@ -1,0 +1,15 @@
+OK  group: stdout identical (1127 bytes), stderr empty: True
+OK  install: stdout identical (369 bytes), stderr empty: True
+OK  add: stdout identical (1258 bytes), stderr empty: True
+OK  mode: stdout identical (219 bytes), stderr empty: True
+OK  run: stdout identical (365 bytes), stderr empty: True
+OK  remove: stdout identical (138 bytes), stderr empty: True
+OK  enable: stdout identical (138 bytes), stderr empty: True
+OK  disable: stdout identical (139 bytes), stderr empty: True
+OK  list: stdout identical (188 bytes), stderr empty: True
+OK  info: stdout identical (174 bytes), stderr empty: True
+OK  config: stdout identical (419 bytes), stderr empty: True
+OK  search: stdout identical (213 bytes), stderr empty: True
+OK  health: stdout identical (195 bytes), stderr empty: True
+OK  init: stdout identical (82 bytes), stderr empty: True
+OK  update: stdout identical (188 bytes), stderr empty: True

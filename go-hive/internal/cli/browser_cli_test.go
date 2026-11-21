@@ -757,7 +757,11 @@ func TestBrowserCLIHelp(t *testing.T) {
 		t.Fatalf("help exit = %d, output = %q", code, stdout)
 	}
 	stdout, _, code = runBrowser(t, "", "help", "tab")
-	if code != browserExitOK || !strings.Contains(stdout, "tab-group management") {
+	// argparse renders a subparser group page as usage + the choice set; the
+	// group's own one-line summary only appears in the parent listing, so the
+	// page carries the per-choice descriptions instead.
+	if code != browserExitOK || !strings.Contains(stdout, "{list,close,activate}") ||
+		!strings.Contains(stdout, "list tabs in this session's group") {
 		t.Fatalf("help tab exit = %d, output = %q", code, stdout)
 	}
 	_, stderr, code := runBrowser(t, "", "help", "nope")

@@ -1,0 +1,21 @@
+{
+  "endpoint": "colonies_import_status_invalid",
+  "label": "导入状态-非法 ID",
+  "method": "GET",
+  "path": "/api/colonies/import/status/probe-missing",
+  "side": "reference",
+  "implementation": "python",
+  "version": "hive 1.0.14",
+  "status": 400,
+  "content_type": "application/json; charset=utf-8",
+  "captured_at": "2026-11-21T20:10:41+08:00",
+  "canonical": {
+    "error": "invalid upload_id"
+  },
+  "shape": {
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

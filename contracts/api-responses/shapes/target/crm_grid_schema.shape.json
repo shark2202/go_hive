@@ -1,0 +1,8 @@
+{
+  "endpoint": "crm_grid_schema",
+  "shape": {
+    "error": "string",
+    "signed_out": "boolean"
+  },
+  "counts": {}
+}

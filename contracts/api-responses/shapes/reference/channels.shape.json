@@ -1,0 +1,9 @@
+{
+  "endpoint": "channels",
+  "shape": {
+    "channels": "array"
+  },
+  "counts": {
+    "channels": 0
+  }
+}

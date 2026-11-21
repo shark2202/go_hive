@@ -1,0 +1,2 @@
+install: using local archive: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run/negative/hive-1.0.26-go.1+build.2026112118-darwin-arm64.tar.gz
+install: ERROR: SHA256 mismatch for hive-1.0.26-go.1+build.2026112118-darwin-arm64.tar.gz (expected 0000000000000000000000000000000000000000000000000000000000000000, got 4962451131dc62458bf9523d70dbfa8ec8c3cd0150c88f838dce9dd254a4b203)

@@ -31,10 +31,16 @@ CLI help，**没有 tool schema 层**（`docs/browser-bridge-surface-audit.html`
 | sha 规则 | `{name, description, input_schema}` 的 sorted-key compact JSON（整数值浮点归一为整数），UTF-8 |
 | 定义数 | **22**（lifecycle 3 / tabs 4 / navigation 2 / inspection 5 / interact 2 / advanced 5 / script 1） |
 | 逐字校验 | **22/22** name+description+input_schema sha 一致（`TestBrowserToolDefinitionGolden`，measured） |
-| 注册 | `integrations.InstallBrowserTools`（`sessionIntegrationInstallers` 的 `browser-tools` 行） |
+| 注册 | `integrations.InstallBrowserTools`（`newSessionToolCatalogue` 构建会话目录时调用，按 `browserBridgeRequested` 开关：`HIVE_BROWSER_BRIDGE` env → `configuration.json` 的 `gcu_enabled` → 默认开） |
 | 执行 | 每个工具的 executor 向桥 `POST /command` 发 `{profile, type, params}`（与 `hive-browser` CLI 同一 transport） |
 
 例外（逐条，不隐藏）：
+
+- **桥开关**：桥关闭（`HIVE_BROWSER_BRIDGE=0` 或 `gcu_enabled: false`）时，22 个定义既不注册也
+  不登记进会话工具注册表——executor 只会向桥 POST，没有桥就没有可执行面。这与上游 retired
+  bundled gcu-tools server 的口径一致：冻结探针（`HIVE_BROWSER_BRIDGE=0`）的
+  `registry_mcp_total` 因此只含 `browser_setup`，不再把 21 个 inactive 定义计成 MCP 宇宙；
+  桥开启时延迟层保持 72。回归：`internal/cli/browser_tools_gate_test.go::TestBrowserToolsFollowBridgeSwitch`。
 
 - `browser_setup`：Python 默认面 24 名里的 `browser_setup` 来自
   `core/framework/tools/browser_tools.py`（framework discovery 工具），不是

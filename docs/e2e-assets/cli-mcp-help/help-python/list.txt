@@ -1,0 +1,6 @@
+usage: hive mcp list [-h] [--available] [--json]
+
+options:
+  -h, --help   show this help message and exit
+  --available  Show available servers from registry
+  --json       Output as JSON

@@ -1,0 +1,16 @@
+tracker_db: ensured 3 colony tracker DB(s) at startup
+2026-11-21 19:44:12 [sentinel] manager starting (0 open escalations)
+2026-11-21 19:44:12 turn context "probe" is installed but off: set turn_context.probe.enabled in configuration.json
+
+Hive API server running on http://127.0.0.1:8942
+Dashboard:  http://127.0.0.1:8942
+Health:     http://127.0.0.1:8942/api/health
+Sessions:   0 colony, 0 queen-only
+
+Press Ctrl+C to stop
+2026-11-21 19:44:12 runtime-resources verdict init->ok | avail=NoneMB renderers=11 chrome_rss=764MB hive_rss=30MB workers=<nil> |
+2026-11-21 19:44:13 [access] GET /api/health -> 200 (0ms)
+2026-11-21 19:44:13 [access] GET /api/sessions/history -> 200 (0ms)
+2026-11-21 19:44:13 [access] GET /api/discover -> 200 (1ms)
+
+Received SIGTERM, shutting down gracefully… (press Ctrl+C again to force quit)

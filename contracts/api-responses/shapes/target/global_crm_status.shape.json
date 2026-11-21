@@ -1,0 +1,8 @@
+{
+  "endpoint": "global_crm_status",
+  "shape": {
+    "code": "string",
+    "error": "string"
+  },
+  "counts": {}
+}

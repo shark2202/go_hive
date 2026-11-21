@@ -294,6 +294,14 @@ packages:
     layer: foundation
     responsibility: "进程与宿主内存资源读取（darwin/linux 分离实现）。"
     stability: stable
+  - package: internal/arghelp
+    layer: foundation
+    responsibility: "argparse HelpFormatter 的 Go 移植：usage 折行、选项列宽、choices 与 section 渲染，供 CLI/MCP 帮助共用。"
+    stability: stable
+  - package: internal/runtimelogs
+    layer: foundation
+    responsibility: "三级运行日志（summary.json / details.jsonl / tool_logs.jsonl）的 schema、原子写与 logger。"
+    stability: evolving
   - package: internal/quality
     layer: foundation
     responsibility: "仓库静态质量门禁：分层 import 检查与文件大小检查，以 go test 形式运行。"
@@ -346,6 +354,11 @@ packages:
   - package: internal/release
     layer: harness
     responsibility: "发布脚本（release_slot 等）的回归测试。"
+    stability: stable
+    expected_orphan: true
+  - package: e2e/cmd/runtimelogs
+    layer: harness
+    responsibility: "三级运行日志双跑的启动命令（e2e）。"
     stability: stable
     expected_orphan: true
   - package: internal/toolgolden

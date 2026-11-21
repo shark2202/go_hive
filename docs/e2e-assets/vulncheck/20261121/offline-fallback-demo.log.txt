@@ -1,0 +1,15 @@
+vulncheck: offline mode: govulncheck scan skipped (no network, no local DB)
+vulncheck: UNVERIFIED (govulncheck unavailable (offline / install disabled / install failed))
+[      PASS] V1 github.com/aden-hive/hive-go: go.mod parsed — module=github.com/aden-hive/hive-go go=1.26.5 toolchain=(unset) requires=12
+[      PASS] V2 github.com/aden-hive/hive-go: go.sum pins — 12 required module(s) pinned; go.mod-hash-only (source not needed in the default build): github.com/ebitengine/purego
+[      PASS] V3 github.com/aden-hive/hive-go: go mod verify — all modules verified
+[      INFO] V4 github.com/aden-hive/hive-go: toolchain — go1.26.5
+[      PASS] V1 github.com/aden-hive/hive-go/browserbridge: go.mod parsed — module=github.com/aden-hive/hive-go/browserbridge go=1.22 toolchain=(unset) requires=0
+[      PASS] V2 github.com/aden-hive/hive-go/browserbridge: go.sum pins — no required modules (nothing to pin)
+[      PASS] V3 github.com/aden-hive/hive-go/browserbridge: go mod verify — all modules verified
+[      INFO] V4 github.com/aden-hive/hive-go/browserbridge: toolchain — go1.26.5
+[UNVERIFIED] V6 advisory / CVE coverage — no OSV/vuln.go.dev data consulted: dependency CVE state is UNKNOWN (run scripts/vulncheck.sh with govulncheck for real coverage)
+
+UNVERIFIED: no CVE/vulnerability database was consulted (offline mode).
+This report is a consistency review, NOT a vulnerability scan pass.
+report: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/vuln-offline-demo/offline-review.json

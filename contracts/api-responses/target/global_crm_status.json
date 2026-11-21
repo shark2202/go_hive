@@ -1,0 +1,23 @@
+{
+  "endpoint": "global_crm_status",
+  "label": "全局 CRM 状态",
+  "method": "GET",
+  "path": "/api/global/crm/status",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 501,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T20:10:41+08:00",
+  "canonical": {
+    "code": "crm_unavailable",
+    "error": "CRM is not available in this build"
+  },
+  "shape": {
+    "code": "string",
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

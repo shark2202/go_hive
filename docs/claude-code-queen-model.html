@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code Queen · 关系模型与交互说明</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121923; --panel2:#0f1620; --line:#233041;
+    --text:#e6edf3; --muted:#8b9bb0; --accent:#f0b429; --accent2:#58a6ff;
+    --ok:#3fb950; --warn:#d29922; --bad:#f85149; --code:#0a0e13;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:auto}
+  body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);
+       font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+       overflow-wrap:anywhere}
+  a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:1120px;margin:0 auto;padding:48px 28px 80px}
+  header{border-bottom:1px solid var(--line);padding-bottom:26px;margin-bottom:34px}
+  .eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+  h1{font-size:36px;line-height:1.2;margin:10px 0 12px;letter-spacing:-.02em}
+  h1 span{color:var(--accent)}
+  .lede{color:var(--muted);max-width:860px;font-size:15.5px}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;color:var(--muted);font-size:12.5px}
+  .meta b{color:var(--text);font-weight:600}
+  nav{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 0}
+  nav a{font-size:12.5px;border:1px solid var(--line);background:var(--panel);padding:6px 10px;border-radius:999px;color:var(--muted)}
+  nav a:hover{color:var(--text);border-color:#3a4b61;text-decoration:none}
+  section{margin:42px 0;scroll-margin-top:20px}
+  h2{font-size:23px;margin:0 0 8px;letter-spacing:-.01em}
+  h2 .num{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:8px;font-size:15px}
+  h3{font-size:16px;margin:26px 0 8px;color:#cfdae6}
+  p{color:#c6d2df;margin:8px 0}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:-2px}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  @media(max-width:860px){.g2,.g3,.g4{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.g2,.g3,.g4{grid-template-columns:1fr}.wrap{padding:32px 18px 60px}h1{font-size:28px}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 16px 14px}
+  .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .card .v{font-size:21px;font-weight:700;margin-top:6px;letter-spacing:-.01em}
+  .card .d{color:var(--muted);font-size:12.5px;margin-top:6px}
+  .card.hot{border-color:#4a3a12;background:linear-gradient(180deg,#1a160c,#121923)}
+  .card.hot .v{color:var(--accent)}
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel2);margin:14px 0}
+  table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13.5px}
+  th,td{border-bottom:1px solid var(--line);padding:10px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word}
+  th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;background:var(--panel2)}
+  tr:hover td{background:#121a25}
+  code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+  code{background:var(--code);border:1px solid #1e2937;border-radius:6px;padding:1px 5px;color:#d7e3f0;overflow-wrap:anywhere}
+  pre{background:var(--code);border:1px solid #1e2937;border-radius:12px;padding:16px;overflow:auto;font-size:12.5px;line-height:1.6;max-width:100%}
+  pre code{background:none;border:0;padding:0}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;border-radius:999px;padding:3px 9px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+  .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13}
+  .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a}
+  .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f}
+  .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+  .callout{border-left:3px solid var(--accent);background:#161207;padding:12px 15px;border-radius:0 10px 10px 0;margin:16px 0;color:#e8d9b4}
+  .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7}
+  .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+  ul,ol{margin:8px 0 8px 20px;padding:0} li{margin:5px 0;color:#c6d2df}
+  .small{font-size:12px;color:var(--muted)}
+  footer{margin-top:50px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12px}
+  figure.diagram{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:16px 0}
+  figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
+  @media(max-width:560px){table{font-size:12.5px}th,td{padding:8px 7px}}
+  @media(max-width:560px){nav a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+  @media(max-width:820px){.tablewrap table{min-width:720px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Hive · External Queen Adapter</div>
+  <h1>Claude Code Queen <span>关系模型与交互说明</span></h1>
+  <p class="lede">
+    她是<b>不是常驻进程？会话和谁共享？在 colony 里站在哪？能不能直接和她对话？可不可以配多位？</b>
+    本页把这些问题按"事实—证据—边界"逐个回答清楚，作为《Claude Code Queen 特性说明书》（<a href="claude-code-queen.html">claude-code-queen.html</a>）的补充页。
+  </p>
+  <div class="meta">
+    <span>依据：<b>claude_code_queens.py · queen_mail.py · config.py</b>（上游）与 <b>go_hive/internal/qmail</b>（对位）</span>
+    <span>撰写：<b>2026-11-21 19:10 CST</b></span>
+    <span>性质：<b>关系/语义说明（有源码证据）</b></span>
+  </div>
+  <nav>
+    <a href="#s00">速览</a>
+    <a href="#s01">与 Hive Queen 对照</a>
+    <a href="#s02">colony 中的关系</a>
+    <a href="#s03">人类如何交互</a>
+    <a href="#s04">多 queen 配置</a>
+    <a href="#s05">常驻性与会话</a>
+    <a href="#s06">何时用哪个</a>
+    <a href="#s07">证据与边界</a>
+  </nav>
+  <p class="small" style="margin-top:10px">单文件 HTML，无外部依赖，可直接离线打开。</p>
+</header>
+
+<section id="s00">
+  <h2><span class="num">00</span>速览：四个"不是"</h2>
+  <div class="grid g4">
+    <div class="card hot"><div class="k">常驻？</div><div class="v">不是进程</div><div class="d">常驻的只有"配置 + 收件箱 + 会话记录"；每封信才 spawn 一次 <code>claude -p</code>，回合结束即退出。</div></div>
+    <div class="card"><div class="k">共享会话？</div><div class="v">按写信人各一条</div><div class="d"><code>conversations.json</code> 是"peer → 一条 Claude session"；Ava 和 Ivy 不共享上下文。</div></div>
+    <div class="card"><div class="k">colony 成员？</div><div class="v">不是</div><div class="d">不在 colony 的组织图里；不能当 colony 的 queen、不能派 worker、不能读写 tracker。</div></div>
+    <div class="card"><div class="k">可以配多位？</div><div class="v">可以</div><div class="d"><code>queen_mail.claude_code</code> 是 id→配置 的 map；各自独立，共享全局并发上限。</div></div>
+  </div>
+  <div class="callout info"><b>一句话</b>：她是"邮局里的外部同行"——<b>按信件召之即来的专家席</b>；Hive queen 才是"一直在线的常驻主管"。二者在 queen mail 里平权（都能收信/写信/受同一套限额与审计），但身体完全不同。</div>
+</section>
+
+<section id="s01">
+  <h2><span class="num">01</span>与 Hive Queen 的异同</h2>
+  <h3>相同点（为什么两者能互通）</h3>
+  <div class="tablewrap"><table><thead><tr><th style="width:30%">相同点</th><th>说明 / 依据</th></tr></thead><tbody>
+  <tr><td>都是 queen mail 的参与方</td><td><code>list_queens</code> 里都有 id/name/title；都能被写、能写信（<code>queen_mail.correspondents()</code> 统一列表）</td></tr>
+  <tr><td>同一套邮件治理</td><td><code>daily_limit=100</code>（回复不计）、<code>max_depth=8</code>、hop 链、<code>queens/mail.jsonl</code> 审计、dropped 语义（<code>config.py:1090-1110</code>）</td></tr>
+  <tr><td>每对 (queen, peer) 一条会话</td><td>Hive queen：<code>_send_to_hive_queen</code> 开带标题 session；CC queen：<code>conversations.json</code> + Claude session（<code>queen_mail.py:232-246</code>）</td></tr>
+  <tr><td>信件同一格式</td><td><code>[Name(id)]: text</code>（同一渲染函数，含 <code>]:</code> 转义；<code>queen_mail.py:461</code>）</td></tr>
+  <tr><td>回合产出回写写信人</td><td><code>deliver_reply</code> 双路：注入 Hive queen 会话 / 写 CC queen 收件箱</td></tr>
+  <tr><td>受同一并发与失败语义约束</td><td>CC queen 同样受 <code>max_parallel_turns</code>（默认 2）；失败对写信人可见（runner.md §5 六类文案）</td></tr>
+  <tr><td>参与规则相同</td><td>CC queen"无论 <code>queens</code> 怎么配都参与"——只要她在 <code>claude_code</code> 里（config 注释）</td></tr>
+  </tbody></table></div>
+
+  <h3>不同点（本质差异）</h3>
+  <div class="tablewrap"><table><thead><tr><th style="width:16%">维度</th><th style="width:42%">Hive Queen</th><th>Claude Code Queen</th></tr></thead><tbody>
+  <tr><td>是什么</td><td>Hive 的常驻 AgentLoop + 13 个 YAML 人设（"调成长时监督的 loop"）</td><td>外部 Claude Code CLI 本身；Hive 只知道她的名字与配置</td></tr>
+  <tr><td>运行形态</td><td>持久 loop，随 serve 常驻；回合由会话驱动</td><td>每封信一次 <code>claude -p</code>；超时 30 分钟杀整个进程树</td></tr>
+  <tr><td>上下文</td><td>同一会话持续累积 + 跨会话 memory/soul/recall + 压缩</td><td>Claude 自己的 session（<code>--session-id</code>→<code>--resume</code>）；<b>不注入</b> Hive 记忆</td></tr>
+  <tr><td>身份/prompt</td><td>queen profile（系统提示词 21,584 字）</td><td><code>list_queens</code> 的 name/title + Hive 的"信件说明" + 可选 <code>system_prompt</code> 追加</td></tr>
+  <tr><td>工具面</td><td>12 个生命周期工具 + 2 个邮件工具 + 全套 Hive 工具</td><td><b>只有 2 个</b>（<code>list_queens</code>/<code>message_queen</code>）+ Claude Code 自己的 Bash/Read/Write…（她的 cwd 内）</td></tr>
+  <tr><td>colony 关系</td><td>可以是 colony 的 overseer：派 worker、读 tracker、管触发器</td><td>与 colony 无关：没有 worker/tracker/trigger</td></tr>
+  <tr><td>模型 / 付费</td><td>Hive 模型槽位（<code>llm</code>/<code>queen_llm</code>，走你配的网关）</td><td>自己的 Anthropic key 或订阅登录；可用 <code>api_base</code> 挂网关</td></tr>
+  <tr><td>状态落盘</td><td><code>queens/&lt;id&gt;/sessions/…</code>（或 <code>colonies/&lt;c&gt;/queens/…</code>）</td><td><code>HIVE_HOME/claude_code/&lt;id&gt;/</code>：<code>conversations.json</code> + <code>inbox/</code> + 每回合 <code>mcp/&lt;session&gt;.json</code>（0600、用后删）</td></tr>
+  <tr><td>UI</td><td>正常聊天界面（你直接跟她对话）</td><td><b>只读</b> dashboard（<code>/api/claude-code-queens</code>）；组织图上虚线卡片</td></tr>
+  <tr><td>权限</td><td>Hive 工具审批 / 凭据回填</td><td>Claude Code <code>--permission-mode</code>/<code>--allowedTools</code>；无人值守默认拒绝要询问的工具</td></tr>
+  <tr><td>等待/失败</td><td>有 park/ask_user，Sentinel 可代催办/升级</td><td>没有 park：成功或失败/超时，文案回给写信人</td></tr>
+  <tr><td>记忆</td><td>文件记忆 + soul + timeline + 召回</td><td>没有：记忆只在 Claude session 里</td></tr>
+  <tr><td>隔离与安全</td><td>同进程；env 自有</td><td>env 白名单（不继承 <code>HIVE_CREDENTIAL_KEY</code>/provider key）+ 独立 <code>CLAUDE_CONFIG_DIR</code>/cwd</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="s02">
+  <h2><span class="num">02</span>colony 中的关系：queen / worker / Claude Code queen</h2>
+  <figure class="diagram"><pre>Colony（容器：目录 + tracker.db + 任务计划 + 事件总线）
+│
+├─ Queen（1 个；在 colony 内 = Overseer，常驻、对外）
+│    ├─ 派发 ──► Worker × N（临时；独立上下文；一个任务；报完即止）
+│    │             └─ 回传：report_to_parent → [WORKER_REPORT] / tracker 行
+│    └─ 写信 ──► Claude Code queen（colony 外；邮件同行）
+│                  └─ 回信：她回合的最终文本 → 回到 colony queen 的会话
+│
+└─ 共享基底：tracker.db（worker 写行、queen 读 SQL）· task plan · event bus · reminders</pre>
+  <figcaption>图：colony 内的两种角色 + colony 外的一位邮件同行。</figcaption></figure>
+
+  <div class="tablewrap"><table><thead><tr><th style="width:20%">维度</th><th>Colony Queen（overseer）</th><th>Worker</th><th>Claude Code queen</th></tr></thead><tbody>
+  <tr><td>属于 colony</td><td>是（1 个）</td><td>是（N 个，由 queen 派）</td><td><b>否</b>（colony 外）</td></tr>
+  <tr><td>生命周期</td><td>常驻（persistent）</td><td>一次性（ephemeral）</td><td>由信件触发的每信一回合</td></tr>
+  <tr><td>能否派 worker</td><td>能</td><td>不能</td><td><b>不能</b></td></tr>
+  <tr><td>tracker 读写</td><td>SQL / upsert 均可</td><td>只能 <code>tracker_upsert</code>（白名单）</td><td><b>不能</b></td></tr>
+  <tr><td>邮件工具</td><td>有（queen-only 注册）</td><td>没有</td><td>有（MCP 2 个工具）</td></tr>
+  <tr><td>记忆</td><td>scoped memory + soul + recall</td><td>无</td><td>无（只在 Claude session 里）</td></tr>
+  <tr><td>你能否直接对话</td><td>能（正常聊天）</td><td>不能</td><td>不能（只读 dashboard）</td></tr>
+  </tbody></table></div>
+
+  <div class="callout bad"><b>三个常见误解</b>
+  <ul>
+    <li><b>"CC queen 是 colony 的 queen"</b>：不是。colony 的 queen 只能从 queen 目录（profile / DEFAULT_QUEENS）里选；CC queen 不在该目录里（<code>queen_profiles.list_queens()</code> 不含她），只存在于 <code>queen_mail.claude_code</code> 配置与邮件名册中。</li>
+    <li><b>"她能指挥 colony 的 worker"</b>：不能。她没有 <code>run_worker</code>，也没有 colony 绑定。</li>
+    <li><b>"worker 可以写信求助"</b>：不能。邮件工具是 queen-only 注册（<code>queen_lifecycle_tools.py:3994-3997</code>）；worker 的升级通道是 doom-loop 自动升级 → <code>list_worker_questions</code>/<code>reply_to_worker</code>。</li>
+  </ul></div>
+
+  <h3>两条边（唯一的两种交互）</h3>
+  <ol>
+    <li><b>Queen ↔ Worker</b>（colony 内部）：下去 <code>run_worker</code>/<code>inject_message</code>/<code>reply_to_worker</code>；上来 <code>report_to_parent</code> → <code>[WORKER_REPORT]</code> + tracker 行。</li>
+    <li><b>Queen ↔ Claude Code queen</b>（跨 colony 边界，只走信件）：colony queen 用 <code>message_queen</code> 外包任务；她回合的最终文本作为回信进入 colony queen 会话；结果要由 colony queen 自己落 tracker。</li>
+  </ol>
+  <p class="sub">Worker 与 CC queen 之间没有任何通道（worker 无邮件工具，CC queen 无 worker 句柄）。</p>
+</section>
+
+<section id="s03">
+  <h2><span class="num">03</span>人类如何与她交互：没有"直接对话"入口</h2>
+  <p>前端源码里写得很直白（<code>claude-code-queen.tsx:8</code>）：<b>"Read only: she lives in Claude Code, and her letters are her input."</b></p>
+  <div class="tablewrap"><table><thead><tr><th style="width:14%">能做</th><th style="width:44%">怎么做</th><th>边界</th></tr></thead><tbody>
+  <tr><td><b>看</b></td><td>组织架构图里她是虚线卡片（<code>claudeIds</code> 判定）；点进去是只读页：会话列表 + transcript（两个只读路由 <code>/api/claude-code-queens</code>、<code>…/conversations/{sid}</code>）</td><td>只看，不能发消息</td></tr>
+  <tr><td><b>配</b></td><td>改 <code>configuration.json</code> 的 <code>queen_mail.claude_code.&lt;id&gt;</code>：name/title/command/auth/api_key/api_base/config_dir/cwd/permission_mode/allowed_tools/disallowed_tools/add_dirs/model/timeout_minutes/system_prompt/env</td><td>Go 在 serve 启动时读一次；上游每回合重读</td></tr>
+  <tr><td><b>自己进她的家</b></td><td><code>CLAUDE_CONFIG_DIR=~/.hive/claude_code/&lt;id&gt;/config</code>、工作目录 <code>…/workspace</code>，自己跑 <code>claude</code>（可 <code>--resume &lt;session-id&gt;</code>，session id 在 <code>conversations.json</code>/dashboard）</td><td>这是绕过 Hive 直接用 Claude Code；会与她被写信时的回合共用同一 Claude 会话，注意并发与权限</td></tr>
+  </tbody></table></div>
+
+  <h3>为什么"必须通过其他 queen"</h3>
+  <p>queen mail 只有两个写入口，都不是给用户的：</p>
+  <ol>
+    <li><b><code>message_queen</code> 工具</b>——只注册在"参与 queen mail"的 queen 会话里（Hive queen 的 <code>queen_mail_tools.py</code>；CC queen 的 MCP server）。</li>
+    <li><b><code>POST /api/queen-mail/letters</code></b>——要求头部 <code>X-Queen-Mail-Token</code>；token = <code>HMAC(secret, ref)</code>，<code>secret</code> 是 serve 进程启动时随机生成的 32 字节（<code>queen_mail.py:97-102</code>）。外部拿不到 → curl 也写不进去；这个路由是<b>她往外写信</b>的通道，不是人类控制通道。</li>
+  </ol>
+  <p>因此要把信送进她的收件箱，<code>from</code> 必须是某个参与 queen mail 的 queen 会话——<b>要么是一位 Hive queen，要么是另一位 Claude Code queen</b>。你的实际路径：打开你的 Hive queen 会话，说"给 queen_claude 写封信，内容是……"。</p>
+  <div class="callout"><b>如果要做"人类直接给她写信"</b>：这是产品扩展，不是现有能力。需要新增 human→queen 的入口（例如 <code>POST /api/claude-code-queens/{id}/letters</code>，把用户当作 writer 开一条会话，并把回复投递回 UI），并明确它是否计入日限/链深、与 <code>message_queen</code> 的权限/审计关系。上游没有此设计，按"只对齐、不新增"原则不应擅自加。</div>
+</section>
+
+<section id="s04">
+  <h2><span class="num">04</span>可以配置多个：`claude_code` 是 map</h2>
+  <pre><code>"queen_mail": {
+  "enabled": true,
+  "claude_code": {
+    "queen_claude":   { "name": "Claude",   "title": "Engineer",     "api_key": "***", "permission_mode": "acceptEdits" },
+    "queen_reviewer": { "name": "Reviewer", "title": "Code Review",  "auth": "subscription",
+                        "cwd": "~/work/review", "permission_mode": "default", "model": "claude-sonnet-…" }
+  },
+  "max_parallel_turns": 2
+}</code></pre>
+  <div class="tablewrap"><table><thead><tr><th style="width:44%">独立</th><th>共享（全局）</th></tr></thead><tbody>
+  <tr><td>id、name、title；<code>command</code>/<code>auth</code>/<code>api_key</code>/<code>api_base</code>；<code>config_dir</code>/<code>cwd</code>（默认按 id 分开）；<code>conversations.json</code>/<code>inbox/</code>/<code>mcp/</code>；<code>permission_mode</code>/<code>allowed_tools</code>/<code>disallowed_tools</code>/<code>add_dirs</code>/<code>model</code>/<code>timeout_minutes</code>/<code>system_prompt</code>/<code>env</code></td><td><code>enabled</code>、<code>daily_limit</code>、<code>max_depth</code>（策略同值；日限按每位 queen 自己计数）、<code>max_parallel_turns</code>（默认 2，指<b>所有</b> CC queen 同时在跑的回合总数）、同一个 Mail 服务与审计 <code>mail.jsonl</code></td></tr>
+  </tbody></table></div>
+  <ul>
+    <li><b>无硬编码数量上限</b>；真实约束是 Anthropic 额度/订阅、机器资源与全局并发上限（配 10 位也只有 2 个回合同时跑）。</li>
+    <li><b>id 天然唯一</b>（JSON 键）；<code>name</code>/<code>title</code> 不做唯一校验——建议别重复，否则 <code>list_queens</code> 里只能靠 id 区分。</li>
+    <li><b>不要手动共用 <code>config_dir</code></b>，除非你确实想让两位共享 Claude 登录/会话；否则会话文件会混在一起。</li>
+    <li><b>Go 在 serve 启动时读一次配置</b>：新增/删除一位 CC queen 需重启（上游每回合重读）——已登记差异（runner.md §8）。</li>
+    <li>它们彼此也能写信：只要都在 <code>claude_code</code> 里、<code>queen_mail.enabled=true</code>，<code>list_queens</code> 会列出彼此。</li>
+  </ul>
+</section>
+
+<section id="s05">
+  <h2><span class="num">05</span>常驻性与会话模型</h2>
+  <div class="tablewrap"><table><thead><tr><th style="width:22%">维度</th><th>Hive Queen</th><th>Claude Code Queen</th><th>Worker</th></tr></thead><tbody>
+  <tr><td>常驻进程</td><td>有（持久 AgentLoop）</td><td><b>没有</b>：每封信 spawn 一次 <code>claude -p</code>，回合结束退出</td><td>没有：一任务一次</td></tr>
+  <tr><td>何时醒</td><td>用户消息 / 信件注入 / 定时器</td><td><b>只有信到收件箱</b></td><td>被 queen 派发时</td></tr>
+  <tr><td>会话记录</td><td><code>queens/&lt;id&gt;/sessions/…</code> 持续累积</td><td>Claude session 文件持久化，靠 <code>--resume</code> 续</td><td>自己的转录，可 resume</td></tr>
+  <tr><td>能否主动醒</td><td>能（trigger/timer）</td><td><b>不能</b>（没有 Hive trigger）</td><td>不能</td></tr>
+  </tbody></table></div>
+
+  <h3>会话：每位写信人一条（不共享）</h3>
+  <pre><code>{"conversations": {
+  "queen_ava": {"peer": "queen_ava", "reply_to": "session_ava", "started": true, "session_id": "…"},
+  "queen_ivy": {"peer": "queen_ivy", "reply_to": "session_ivy", "started": true, "session_id": "…"}
+}}</code></pre>
+  <ul>
+    <li><b>Ava 与 Ivy 各自一条 Claude 会话</b>：她跟 Ava 聊过的内容，Ivy 那条会话里看不到（除非信里写了）——她<b>没有</b>全局共享上下文。</li>
+    <li><b>同一会话内串行</b>：同一 writer 连写两封，第二封等第一封回合结束；<b>回合中到达的信合并进下一回合</b>（runner.md §2.2）。</li>
+    <li><b>不同 writer 可并行</b>（不同 session），但受全局 <code>max_parallel_turns</code>（默认 2）限制。</li>
+    <li>回合记录：Claude session 文件在 <code>config_dir/projects/*/&lt;session&gt;.jsonl</code>；dashboard 只读投影为 letter/text/tool/result。</li>
+  </ul>
+  <div class="callout info"><b>准确说法</b>：<b>"常驻的是状态，不是进程"</b>——收件箱在磁盘、会话在磁盘、配置在磁盘；她的"在线"只是收件箱有信时的一次回合（最长 <code>timeout_minutes</code>，默认 30 分钟，超时杀进程树）。dashboard 的 <code>running</code> 仅回合进行中为 true。</div>
+</section>
+
+<section id="s06">
+  <h2><span class="num">06</span>何时用哪个（设计含义）</h2>
+  <div class="grid g2">
+    <div class="card"><div class="k">Hive Queen</div><div class="v">组织内的常驻主管</div><div class="d">有记忆、有 colony、能派 worker、你能直接对话、你离开后还能继续工作（park/Sentinel/trigger）。她是你"团队"的一部分。</div></div>
+    <div class="card"><div class="k">Claude Code Queen</div><div class="v">邮局里的外部专家席</div><div class="d">自带完整编码工具链与自己的工作目录/账号；适合"派一个能自己写代码/查资料的外部 agent 去干活，干完把结论寄回来"。不共享 Hive 记忆、colony 与生命周期工具。</div></div>
+  </div>
+  <p class="sub">设计原话（<code>docs/key_concepts/the_loop.md:14</code>）："A one-off task and a long-running business overseer are the *same* loop with different settings."——CC queen 是这条原则的<em>外部</em>延伸：Hive 不改变她的运行时，只把她接进同一套邮件与治理。</p>
+</section>
+
+<section id="s07">
+  <h2><span class="num">07</span>证据、未验证项与相关页</h2>
+  <h3>证据（source of truth）</h3>
+  <ul>
+    <li>运行器与回合语义：<a href="claude-code-queen-runner.md">claude-code-queen-runner.md</a>（§1 配置、§2 回合生命周期、§3 隔离、§4 MCP、§5 失败文案、§8 已知差异）</li>
+    <li>只读 dashboard：<a href="claude-code-dashboard.md">claude-code-dashboard.md</a>；前端只读声明：<code>core/frontend/src/pages/claude-code-queen.tsx:8</code></li>
+    <li>上游代码：<code>core/framework/config.py:1090-1110</code>（<code>claude_code</code> map、<code>max_parallel_turns</code>、daily_limit/max_depth）；<code>server/claude_code_queens.py:117-128</code>（按 peer 建会话）；<code>server/queen_mail.py:97-102</code>（HMAC token）、<code>:232-246</code>（Hive queen 投递）、<code>:461</code>（信件格式）；<code>agents/queen/queen_profiles.py:188</code>（queen 目录不含 CC queen）；<code>tools/queen_lifecycle_tools.py:3994-3997</code>（邮件工具 queen-only 注册）</li>
+    <li>Go 对位：<code>internal/qmail/config.go:95-96/144</code>（map 解析）、<code>claude_runner.go:53-55/88</code>（全局并发 + 逐 queen watcher）；org chart 合并：<code>core/frontend/src/pages/org-chart.tsx:340/533</code></li>
+  </ul>
+  <h3>未验证项 / 边界</h3>
+  <ul>
+    <li>本页是<b>语义与关系说明</b>，不是新功能宣告；"人类直接给她写信"的入口在两侧都没实现（上游设计如此）。</li>
+    <li>真实联调只覆盖过一个回合（回复回写）；"她在真实模型回合里主动调用 MCP <code>message_queen</code>"未做真实模型验证（由 fake CLI + httptest 契约覆盖，见 runner.md §8）。</li>
+    <li>Windows 进程树仅在 Unix 有完整杀树；Windows 为已知差异。</li>
+    <li>配置热重载：Go 启动读一次、上游每回合重读——登记差异。</li>
+  </ul>
+  <p class="sub">相关页：《<a href="claude-code-queen.html">Claude Code Queen 特性说明书</a>》· <a href="acp-queen-spec.html">ACP Queen 需求说明书（详细版）</a> · <a href="agent-runner-protocol.html">Agent Runner 协议与适配规范（草案）</a> · <a href="module-interfaces.html">模块接口不变量</a> · <a href="hive-core-designs.html">Hive 核心设计调研</a></p>
+</section>
+
+<footer>go_hive / docs · claude-code-queen-model.html · 撰写 2026-11-21 19:10 CST · 证据来自本机 checkout（上游 core 与 go_hive），未验证项已逐条列出。</footer>
+</div>
+</body>
+</html>

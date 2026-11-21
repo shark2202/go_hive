@@ -27,8 +27,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/aden-hive/hive-go/internal/runtimelogs"
 )
 
 const (
@@ -122,14 +124,14 @@ func (l *AgentLoop) workerStallKindFor(agentCtx *AgentContext) workerStallKind {
 //
 // Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (6h then 6i)
 // Parity: framework/agent_loop/agent_loop.py::execute (llm_turn_complete after _run_turn_loop)
-func (l *AgentLoop) settleTextOnlyTurn(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, reminderCtx *ReminderAgentContext, messages []map[string]any, completion llm.Completion, inner int, tools []llm.ToolDef, result *TurnResult) (done bool, err error) {
+func (l *AgentLoop) settleTextOnlyTurn(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, reminderCtx *ReminderAgentContext, messages []map[string]any, completion llm.Completion, inner int, tools []llm.ToolDef, result *TurnResult, iterStart time.Time) (done bool, err error) {
 	if agentCtx.Observer != nil {
 		agentCtx.Observer.LLMTurnComplete(completion, inner+1)
 	}
 	// A text-only model call is still a model call: log it (no tool results).
 	l.logLLMTurn(agentCtx, conv, inner+1, messages, completion, nil, nil, tools)
 	if kind := l.workerStallKindFor(agentCtx); kind != workerStallNone {
-		stop, stallErr := l.handleWorkerTextOnlyTurn(ctx, agentCtx, conv, reminderCtx, kind, completion.Content)
+		stop, stallErr := l.handleWorkerTextOnlyTurn(ctx, agentCtx, conv, reminderCtx, kind, completion.Content, completion, inner, iterStart)
 		if stallErr != nil {
 			result.Success = false
 			result.InnerTurns = inner + 1
@@ -148,10 +150,37 @@ func (l *AgentLoop) settleTextOnlyTurn(ctx context.Context, agentCtx *AgentConte
 	result.InnerTurns = inner + 1
 	if l.shouldJudge(agentCtx, inner, true, false) {
 		verdict := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, result.ToolResults, inner)
+		// Parity: framework/agent_loop/agent_loop.py::execute (6i judge
+		// verdict branches for a text-only turn): log the step before acting.
+		l.logRuntimeStep(agentCtx, runtimelogs.StepInput{
+			StepIndex:       inner,
+			LLMText:         completion.Content,
+			InputTokens:     completion.InputTokens,
+			OutputTokens:    completion.OutputTokens,
+			LatencyMS:       stepLatencyMS(iterStart),
+			Verdict:         string(verdict.Action),
+			VerdictFeedback: verdict.Feedback,
+		})
 		switch verdict.Action {
 		case JudgeAccept:
+			l.logRuntimeNodeComplete(agentCtx, runtimelogs.NodeCompleteInput{
+				Success:    true,
+				TotalSteps: inner + 1,
+				ExitStatus: "success",
+			})
 			return true, nil
 		case JudgeEscalate:
+			feedback := verdict.Feedback
+			if feedback == "" {
+				feedback = "no feedback"
+			}
+			errMsg := "Judge escalated: " + feedback
+			l.logRuntimeNodeComplete(agentCtx, runtimelogs.NodeCompleteInput{
+				Success:    false,
+				Error:      &errMsg,
+				TotalSteps: inner + 1,
+				ExitStatus: "escalated",
+			})
 			result.Success = false
 			return true, fmt.Errorf("agent loop: judge escalated: %s", verdict.Feedback)
 		default:
@@ -180,7 +209,7 @@ func (l *AgentLoop) workerStallGrace() int {
 // produced no tool calls. stop=true means the turn-loop terminates cleanly
 // (the synthesized report is already delivered); a non-nil error ends the
 // turn with that error (the run was stopped while parked).
-func (l *AgentLoop) handleWorkerTextOnlyTurn(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, reminderCtx *ReminderAgentContext, kind workerStallKind, text string) (stop bool, err error) {
+func (l *AgentLoop) handleWorkerTextOnlyTurn(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, reminderCtx *ReminderAgentContext, kind workerStallKind, text string, completion llm.Completion, inner int, iterStart time.Time) (stop bool, err error) {
 	grace := l.workerStallGrace()
 	l.workerTextOnlyStreak++
 	streak := l.workerTextOnlyStreak
@@ -190,6 +219,17 @@ func (l *AgentLoop) handleWorkerTextOnlyTurn(ctx context.Context, agentCtx *Agen
 		// assistant-tailed conversation gets, exactly like upstream's
 		// defensive continuation prompt.
 		l.bumpBy(stallGraceCounter, 1)
+		// Parity: framework/agent_loop/agent_loop.py::execute (worker stall
+		// grace -> CONTINUE step).
+		l.logRuntimeStep(agentCtx, runtimelogs.StepInput{
+			StepIndex:       inner,
+			LLMText:         completion.Content,
+			InputTokens:     completion.InputTokens,
+			OutputTokens:    completion.OutputTokens,
+			LatencyMS:       stepLatencyMS(iterStart),
+			Verdict:         "CONTINUE",
+			VerdictFeedback: fmt.Sprintf("Worker stall grace (%d/%d)", streak, grace),
+		})
 		return false, nil
 	}
 
@@ -207,6 +247,17 @@ func (l *AgentLoop) handleWorkerTextOnlyTurn(ctx context.Context, agentCtx *Agen
 		HandleReportToParent(input)
 		l.deliverReportToParent(input)
 		l.bumpBy(stallAutoFailedCounter, 1)
+		// Parity: framework/agent_loop/agent_loop.py::execute (parallel-worker
+		// auto-fail -> FAIL step).
+		l.logRuntimeStep(agentCtx, runtimelogs.StepInput{
+			StepIndex:       inner,
+			LLMText:         completion.Content,
+			InputTokens:     completion.InputTokens,
+			OutputTokens:    completion.OutputTokens,
+			LatencyMS:       stepLatencyMS(iterStart),
+			Verdict:         "FAIL",
+			VerdictFeedback: fmt.Sprintf("Auto-failed: stall %d/%d", streak, grace),
+		})
 		return true, nil
 	}
 
@@ -227,6 +278,17 @@ func (l *AgentLoop) handleWorkerTextOnlyTurn(ctx context.Context, agentCtx *Agen
 	l.bumpBy(stallEscalatedCounter, 1)
 	l.markQueenInputRequested(requestID)
 	if !l.settleQueenInputPark(ctx, agentCtx) {
+		// Parity: framework/agent_loop/agent_loop.py::execute ("No queen
+		// input received (shutdown during wait)" — a CONTINUE step).
+		l.logRuntimeStep(agentCtx, runtimelogs.StepInput{
+			StepIndex:       inner,
+			LLMText:         completion.Content,
+			InputTokens:     completion.InputTokens,
+			OutputTokens:    completion.OutputTokens,
+			LatencyMS:       stepLatencyMS(iterStart),
+			Verdict:         "CONTINUE",
+			VerdictFeedback: "No queen input received (shutdown during wait)",
+		})
 		return false, ctx.Err()
 	}
 	// Guidance arrived: drain it into the conversation and reset the streak —
@@ -236,6 +298,17 @@ func (l *AgentLoop) handleWorkerTextOnlyTurn(ctx context.Context, agentCtx *Agen
 		return false, err
 	}
 	l.workerTextOnlyStreak = 0
+	// Parity: framework/agent_loop/agent_loop.py::execute ("Blocked for queen
+	// input (skip judge)" — a CONTINUE step after the park unblocks).
+	l.logRuntimeStep(agentCtx, runtimelogs.StepInput{
+		StepIndex:       inner,
+		LLMText:         completion.Content,
+		InputTokens:     completion.InputTokens,
+		OutputTokens:    completion.OutputTokens,
+		LatencyMS:       stepLatencyMS(iterStart),
+		Verdict:         "CONTINUE",
+		VerdictFeedback: "Blocked for queen input (skip judge)",
+	})
 	return false, nil
 }
 

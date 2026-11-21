@@ -1,0 +1,431 @@
+[
+  {
+    "argv": [
+      "mcp"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp [-h] {install,add,mode,run,remove,enable,disable,list,info,config,search,health,init,update} ... hive mcp: error: the following arguments are re",
+    "go_stderr": "usage: hive mcp [-h] {install,add,mode,run,remove,enable,disable,list,info,config,search,health,init,update} ... hive mcp: error: the following arguments are re"
+  },
+  {
+    "argv": [
+      "mcp",
+      "help"
+    ],
+    "python_exit": 2,
+    "go_exit": 0,
+    "match": false,
+    "known_exception": "Go-only alias for `hive mcp --help`; upstream argparse rejects `help` as an unknown verb (2).",
+    "python_stderr": "usage: hive mcp [-h] {install,add,mode,run,remove,enable,disable,list,info,config,search,health,init,update} ... hive mcp: error: argument mcp_command: invalid ",
+    "go_stderr": ""
+  },
+  {
+    "argv": [
+      "mcp",
+      "foo"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp [-h] {install,add,mode,run,remove,enable,disable,list,info,config,search,health,init,update} ... hive mcp: error: argument mcp_command: invalid ",
+    "go_stderr": "invalid choice: 'foo' (choose from 'install', 'add', 'mode', 'run', 'remove', 'enable', 'disable', 'list', 'info', 'config', 'search', 'health', 'init', 'update"
+  },
+  {
+    "argv": [
+      "mcp",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp [-h] {install,add,mode,run,remove,enable,disable,list,info,config,search,health,init,update} ... hive mcp: error: the following arguments are re",
+    "go_stderr": "invalid choice: '--no-such-flag-9f3' (choose from 'install', 'add', 'mode', 'run', 'remove', 'enable', 'disable', 'list', 'info', 'config', 'search', 'health', "
+  },
+  {
+    "argv": [
+      "mcp",
+      "install",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp install [-h] [--version VERSION] [--transport TRANSPORT] name hive mcp install: error: the following arguments are required: name",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "add",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive [-h] [--version] [--model MODEL] {serve,open,queen,colony,session,chat,skill,debugger,mcp,janitor} ... hive: error: unrecognized arguments: --no-suc",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "mode",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp mode [-h] name {cli,tools} hive mcp mode: error: the following arguments are required: name, mode",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "run",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp run [-h] name ... hive mcp run: error: the following arguments are required: name, mcp2cli_args",
+    "go_stderr": "the following arguments are required: name, mcp2cli_args"
+  },
+  {
+    "argv": [
+      "mcp",
+      "remove",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp remove [-h] name hive mcp remove: error: the following arguments are required: name",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "enable",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp enable [-h] name hive mcp enable: error: the following arguments are required: name",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "disable",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp disable [-h] name hive mcp disable: error: the following arguments are required: name",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "list",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive [-h] [--version] [--model MODEL] {serve,open,queen,colony,session,chat,skill,debugger,mcp,janitor} ... hive: error: unrecognized arguments: --no-suc",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "info",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp info [-h] [--json] name hive mcp info: error: the following arguments are required: name",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "config",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp config [-h] [--set KEY=VAL [KEY=VAL ...]] [--set-header KEY=VAL [KEY=VAL ...]] name hive mcp config: error: the following arguments are required",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "search",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp search [-h] [--json] query hive mcp search: error: the following arguments are required: query",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "health",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive [-h] [--version] [--model MODEL] {serve,open,queen,colony,session,chat,skill,debugger,mcp,janitor} ... hive: error: unrecognized arguments: --no-suc",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "init",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive [-h] [--version] [--model MODEL] {serve,open,queen,colony,session,chat,skill,debugger,mcp,janitor} ... hive: error: unrecognized arguments: --no-suc",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "update",
+      "--no-such-flag-9f3"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive [-h] [--version] [--model MODEL] {serve,open,queen,colony,session,chat,skill,debugger,mcp,janitor} ... hive: error: unrecognized arguments: --no-suc",
+    "go_stderr": "unrecognized arguments: --no-such-flag-9f3"
+  },
+  {
+    "argv": [
+      "mcp",
+      "install"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp install [-h] [--version VERSION] [--transport TRANSPORT] name hive mcp install: error: the following arguments are required: name",
+    "go_stderr": "the following arguments are required: name"
+  },
+  {
+    "argv": [
+      "mcp",
+      "run"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp run [-h] name ... hive mcp run: error: the following arguments are required: name, mcp2cli_args",
+    "go_stderr": "the following arguments are required: name, mcp2cli_args"
+  },
+  {
+    "argv": [
+      "mcp",
+      "mode"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp mode [-h] name {cli,tools} hive mcp mode: error: the following arguments are required: name, mode",
+    "go_stderr": "the following arguments are required: name, mode"
+  },
+  {
+    "argv": [
+      "mcp",
+      "remove"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp remove [-h] name hive mcp remove: error: the following arguments are required: name",
+    "go_stderr": "the following arguments are required: name"
+  },
+  {
+    "argv": [
+      "mcp",
+      "enable"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp enable [-h] name hive mcp enable: error: the following arguments are required: name",
+    "go_stderr": "the following arguments are required: name"
+  },
+  {
+    "argv": [
+      "mcp",
+      "disable"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp disable [-h] name hive mcp disable: error: the following arguments are required: name",
+    "go_stderr": "the following arguments are required: name"
+  },
+  {
+    "argv": [
+      "mcp",
+      "info"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp info [-h] [--json] name hive mcp info: error: the following arguments are required: name",
+    "go_stderr": "the following arguments are required: name"
+  },
+  {
+    "argv": [
+      "mcp",
+      "config"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp config [-h] [--set KEY=VAL [KEY=VAL ...]] [--set-header KEY=VAL [KEY=VAL ...]] name hive mcp config: error: the following arguments are required",
+    "go_stderr": "the following arguments are required: name"
+  },
+  {
+    "argv": [
+      "mcp",
+      "search"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp search [-h] [--json] query hive mcp search: error: the following arguments are required: query",
+    "go_stderr": "the following arguments are required: query"
+  },
+  {
+    "argv": [
+      "mcp",
+      "health"
+    ],
+    "python_exit": 0,
+    "go_exit": 0,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "",
+    "go_stderr": ""
+  },
+  {
+    "argv": [
+      "mcp",
+      "run",
+      "--help"
+    ],
+    "python_exit": 0,
+    "go_exit": 0,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "",
+    "go_stderr": ""
+  },
+  {
+    "argv": [
+      "mcp",
+      "run",
+      "-h"
+    ],
+    "python_exit": 0,
+    "go_exit": 0,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "",
+    "go_stderr": ""
+  },
+  {
+    "argv": [
+      "mcp",
+      "run",
+      "nosuchserver"
+    ],
+    "python_exit": 1,
+    "go_exit": 1,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "Error: no MCP server named 'nosuchserver'. Run: hive mcp list — to see installed servers.",
+    "go_stderr": "Error: no MCP server named 'nosuchserver'. Run: hive mcp list — to see installed servers."
+  },
+  {
+    "argv": [
+      "mcp",
+      "run",
+      "nosuchserver",
+      "--list"
+    ],
+    "python_exit": 1,
+    "go_exit": 1,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "Error: no MCP server named 'nosuchserver'. Run: hive mcp list — to see installed servers.",
+    "go_stderr": "Error: no MCP server named 'nosuchserver'. Run: hive mcp list — to see installed servers."
+  },
+  {
+    "argv": [
+      "mcp",
+      "run",
+      "nosuchserver",
+      "--help"
+    ],
+    "python_exit": 1,
+    "go_exit": 1,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "Error: no MCP server named 'nosuchserver'. Run: hive mcp list — to see installed servers.",
+    "go_stderr": "Error: no MCP server named 'nosuchserver'. Run: hive mcp list — to see installed servers."
+  },
+  {
+    "argv": [
+      "mcp",
+      "run",
+      "--no-such-flag-9f3=junk"
+    ],
+    "python_exit": 2,
+    "go_exit": 2,
+    "match": true,
+    "known_exception": null,
+    "python_stderr": "usage: hive mcp run [-h] name ... hive mcp run: error: the following arguments are required: name, mcp2cli_args",
+    "go_stderr": "the following arguments are required: name, mcp2cli_args"
+  }
+]

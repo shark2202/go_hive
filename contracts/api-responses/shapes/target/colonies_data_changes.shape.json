@@ -1,0 +1,12 @@
+{
+  "endpoint": "colonies_data_changes",
+  "shape": {
+    "covered": "array",
+    "cursor": "number(int)",
+    "tables": "object",
+    "truncated": "boolean"
+  },
+  "counts": {
+    "covered": 0
+  }
+}

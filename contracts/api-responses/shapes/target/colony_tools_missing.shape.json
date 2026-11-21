@@ -1,0 +1,7 @@
+{
+  "endpoint": "colony_tools_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

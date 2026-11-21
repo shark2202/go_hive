@@ -2,7 +2,6 @@ package credentials
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,7 +66,7 @@ func persistKeyIfMissingOrStale(key string) {
 	}
 	if err := saveCredentialKey(key); err != nil {
 		path, _ := CredentialKeyPath()
-		log.Printf(
+		LogWarning("framework.credentials.key_storage",
 			"credentials: failed to persist HIVE_CREDENTIAL_KEY to %s; future restarts without the env var may not decrypt the credential store: %v",
 			path, err,
 		)

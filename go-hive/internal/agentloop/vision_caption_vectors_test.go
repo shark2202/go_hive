@@ -119,7 +119,7 @@ func runParityVector(t *testing.T, vector parityVector) parityResult {
 		Content:      vector.ToolContent,
 		ImageContent: []map[string]any{{"type": "image_url", "image_url": map[string]any{"url": "data:image/png;base64,AAAA"}}},
 	}}
-	if _, err := loop.storeToolBatch(context.Background(), agentCtx, conv, toolCalls, results, "", []bool{true}); err != nil {
+	if _, err := loop.storeToolBatch(context.Background(), agentCtx, conv, toolCalls, results, "", []bool{true}, nil); err != nil {
 		t.Fatalf("%s: store tool batch: %v", vector.ID, err)
 	}
 	message := toolMessage(t, conv)

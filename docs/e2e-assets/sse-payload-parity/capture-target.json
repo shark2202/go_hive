@@ -3,7 +3,7 @@
   "implementation": "go_hive",
   "version": "hive 1.0.26-go.1",
   "session_id": "<session_id>",
-  "captured_at": "2026-11-21T11:12:40+08:00",
+  "captured_at": "2026-11-21T19:57:37+08:00",
   "responses": {
     "session_create": {
       "status": 201,
@@ -14,15 +14,15 @@
         "description": "",
         "goal": "",
         "has_worker": false,
-        "loaded_at": 1795230676.755649,
+        "loaded_at": 1795262175.559702,
         "node_count": 0,
         "queen_id": "queen_growth",
         "queen_name": "Steve Jobs",
         "queen_phase": "independent",
         "queen_supports_images": true,
-        "session_id": "session_20261121_111116_e786486c",
+        "session_id": "session_20261121_195615_fce9cdfa",
         "spawned_colony_id": null,
-        "uptime_seconds": 0.1
+        "uptime_seconds": 0
       },
       "error": ""
     },
@@ -53,7 +53,7 @@
     "session_stop": {
       "status": 200,
       "payload": {
-        "session_id": "session_20261121_111116_e786486c",
+        "session_id": "session_20261121_195615_fce9cdfa",
         "stopped": true
       },
       "error": ""
@@ -84,9 +84,9 @@
             "interrupt_cause": null,
             "interrupted": false,
             "is_executing": false,
-            "last_event_at": "2026-11-21T11:11:16.866278",
+            "last_event_at": "2026-11-21T19:56:15.678753",
             "last_event_seq": 8,
-            "last_queen_event_at": "2026-11-21T11:11:16.866278",
+            "last_queen_event_at": "2026-11-21T19:56:15.678753",
             "park_reason": "turn_done",
             "pending_questions": null,
             "queen_busy_reason": "awaiting_input",
@@ -133,7 +133,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "stop",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -262,18 +262,18 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 30064,
+              "conversation_chars": 28152,
               "image_blocks": 0,
               "image_tokens": 0,
-              "system_chars": 62554,
-              "tool_defs_chars": 52587
+              "system_chars": 21692,
+              "tool_defs_chars": 53992
             },
-            "estimated_tokens": 48401,
+            "estimated_tokens": 34612,
             "max_context_tokens": 180000,
             "message_count": 3,
             "trigger": "iteration_start",
-            "usage_pct": 27,
-            "usage_ratio": 0.2689
+            "usage_pct": 19,
+            "usage_ratio": 0.1923
           }
         },
         {
@@ -316,7 +316,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "stop",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -370,6 +370,22 @@
         },
         {
           "event": null,
+          "type": "session_title_updated",
+          "stream_id": "queen",
+          "node_id": null,
+          "execution_id": null,
+          "correlation_id": null,
+          "colony_id": null,
+          "run_id": "<absent>",
+          "seq": "<seq>",
+          "timestamp": "<timestamp>",
+          "data": {
+            "session_id": "<session_id>",
+            "title": "PAYLOAD_PARITY_OK"
+          }
+        },
+        {
+          "event": null,
           "type": "execution_completed",
           "stream_id": "queen",
           "node_id": null,
@@ -383,22 +399,6 @@
             "output": {
               "status": "completed"
             }
-          }
-        },
-        {
-          "event": null,
-          "type": "session_title_updated",
-          "stream_id": "queen",
-          "node_id": null,
-          "execution_id": null,
-          "correlation_id": null,
-          "colony_id": null,
-          "run_id": "<absent>",
-          "seq": "<seq>",
-          "timestamp": "<timestamp>",
-          "data": {
-            "session_id": "<session_id>",
-            "title": "PAYLOAD_PARITY_OK"
           }
         },
         {
@@ -511,18 +511,18 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 30134,
+              "conversation_chars": 28222,
               "image_blocks": 0,
               "image_tokens": 0,
-              "system_chars": 62554,
-              "tool_defs_chars": 52587
+              "system_chars": 21692,
+              "tool_defs_chars": 53992
             },
-            "estimated_tokens": 48425,
+            "estimated_tokens": 34635,
             "max_context_tokens": 180000,
             "message_count": 5,
             "trigger": "iteration_start",
-            "usage_pct": 27,
-            "usage_ratio": 0.269
+            "usage_pct": 19,
+            "usage_ratio": 0.1924
           }
         },
         {
@@ -586,18 +586,18 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 30276,
+              "conversation_chars": 28364,
               "image_blocks": 0,
               "image_tokens": 0,
-              "system_chars": 62554,
-              "tool_defs_chars": 52587
+              "system_chars": 21692,
+              "tool_defs_chars": 53992
             },
-            "estimated_tokens": 48472,
+            "estimated_tokens": 34682,
             "max_context_tokens": 180000,
             "message_count": 7,
             "trigger": "post_tool_call",
-            "usage_pct": 27,
-            "usage_ratio": 0.2693
+            "usage_pct": 19,
+            "usage_ratio": 0.1927
           }
         },
         {
@@ -613,18 +613,18 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 30276,
+              "conversation_chars": 28364,
               "image_blocks": 0,
               "image_tokens": 0,
-              "system_chars": 62554,
-              "tool_defs_chars": 52587
+              "system_chars": 21692,
+              "tool_defs_chars": 53992
             },
-            "estimated_tokens": 48472,
+            "estimated_tokens": 34682,
             "max_context_tokens": 180000,
             "message_count": 7,
             "trigger": "post_tool_results",
-            "usage_pct": 27,
-            "usage_ratio": 0.2693
+            "usage_pct": 19,
+            "usage_ratio": 0.1927
           }
         },
         {
@@ -649,7 +649,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "tool_calls",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -838,18 +838,18 @@
           "timestamp": "<timestamp>",
           "data": {
             "breakdown": {
-              "conversation_chars": 30303,
+              "conversation_chars": 28391,
               "image_blocks": 0,
               "image_tokens": 0,
-              "system_chars": 62554,
-              "tool_defs_chars": 52587
+              "system_chars": 21692,
+              "tool_defs_chars": 53992
             },
-            "estimated_tokens": 48481,
+            "estimated_tokens": 34691,
             "max_context_tokens": 180000,
             "message_count": 8,
             "trigger": "iteration_start",
-            "usage_pct": 27,
-            "usage_ratio": 0.2693
+            "usage_pct": 19,
+            "usage_ratio": 0.1927
           }
         },
         {
@@ -892,7 +892,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "stop",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -991,9 +991,9 @@
             "interrupt_cause": null,
             "interrupted": false,
             "is_executing": false,
-            "last_event_at": "2026-11-21T11:11:23.139054",
+            "last_event_at": "2026-11-21T19:56:20.824898",
             "last_event_seq": 53,
-            "last_queen_event_at": "2026-11-21T11:11:23.139054",
+            "last_queen_event_at": "2026-11-21T19:56:20.824898",
             "park_reason": "turn_done",
             "pending_questions": null,
             "queen_busy_reason": "awaiting_input",
@@ -1040,7 +1040,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "stop",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -1132,7 +1132,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "stop",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -1271,7 +1271,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "tool_calls",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -1380,7 +1380,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "stop",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -1444,9 +1444,9 @@
             "interrupt_cause": null,
             "interrupted": false,
             "is_executing": false,
-            "last_event_at": "2026-11-21T11:11:23.139054",
+            "last_event_at": "2026-11-21T19:56:20.824898",
             "last_event_seq": 53,
-            "last_queen_event_at": "2026-11-21T11:11:23.139054",
+            "last_queen_event_at": "2026-11-21T19:56:20.824898",
             "park_reason": "turn_done",
             "pending_questions": null,
             "queen_busy_reason": "awaiting_input",
@@ -1493,7 +1493,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "stop",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -1585,7 +1585,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "stop",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -1724,7 +1724,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "tool_calls",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -1833,7 +1833,7 @@
             "model": "sse-parity-probe-model",
             "output_tokens": 0,
             "stop_reason": "stop",
-            "system_prefix_sha": "885285cb1ffe",
+            "system_prefix_sha": "692b774c98c7",
             "system_suffix_sha": "e3b0c44298fc"
           }
         },
@@ -1923,7 +1923,7 @@
       "seq": "<seq>",
       "timestamp": "<timestamp>",
       "data": {
-        "max_iterations": 50
+        "max_iterations": 999999
       }
     },
     {
@@ -1958,15 +1958,15 @@
           "conversation_chars": 0,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 38380,
+        "estimated_tokens": 25228,
         "max_context_tokens": 180000,
         "message_count": 0,
         "trigger": "iteration_start",
-        "usage_pct": 21,
-        "usage_ratio": 0.2132
+        "usage_pct": 14,
+        "usage_ratio": 0.1402
       }
     },
     {
@@ -2009,7 +2009,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       }
     },
@@ -2174,18 +2174,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 30064,
+          "conversation_chars": 28152,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48401,
+        "estimated_tokens": 34612,
         "max_context_tokens": 180000,
         "message_count": 3,
         "trigger": "iteration_start",
-        "usage_pct": 27,
-        "usage_ratio": 0.2689
+        "usage_pct": 19,
+        "usage_ratio": 0.1923
       }
     },
     {
@@ -2228,7 +2228,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       }
     },
@@ -2282,6 +2282,22 @@
     },
     {
       "event": null,
+      "type": "session_title_updated",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "session_id": "<session_id>",
+        "title": "PAYLOAD_PARITY_OK"
+      }
+    },
+    {
+      "event": null,
       "type": "execution_completed",
       "stream_id": "queen",
       "node_id": null,
@@ -2295,22 +2311,6 @@
         "output": {
           "status": "completed"
         }
-      }
-    },
-    {
-      "event": null,
-      "type": "session_title_updated",
-      "stream_id": "queen",
-      "node_id": null,
-      "execution_id": null,
-      "correlation_id": null,
-      "colony_id": null,
-      "run_id": "<absent>",
-      "seq": "<seq>",
-      "timestamp": "<timestamp>",
-      "data": {
-        "session_id": "<session_id>",
-        "title": "PAYLOAD_PARITY_OK"
       }
     },
     {
@@ -2441,18 +2441,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 30134,
+          "conversation_chars": 28222,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48425,
+        "estimated_tokens": 34635,
         "max_context_tokens": 180000,
         "message_count": 5,
         "trigger": "iteration_start",
-        "usage_pct": 27,
-        "usage_ratio": 0.269
+        "usage_pct": 19,
+        "usage_ratio": 0.1924
       }
     },
     {
@@ -2516,18 +2516,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 30276,
+          "conversation_chars": 28364,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48472,
+        "estimated_tokens": 34682,
         "max_context_tokens": 180000,
         "message_count": 7,
         "trigger": "post_tool_call",
-        "usage_pct": 27,
-        "usage_ratio": 0.2693
+        "usage_pct": 19,
+        "usage_ratio": 0.1927
       }
     },
     {
@@ -2543,18 +2543,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 30276,
+          "conversation_chars": 28364,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48472,
+        "estimated_tokens": 34682,
         "max_context_tokens": 180000,
         "message_count": 7,
         "trigger": "post_tool_results",
-        "usage_pct": 27,
-        "usage_ratio": 0.2693
+        "usage_pct": 19,
+        "usage_ratio": 0.1927
       }
     },
     {
@@ -2579,7 +2579,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "tool_calls",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       }
     },
@@ -2786,18 +2786,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 30303,
+          "conversation_chars": 28391,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48481,
+        "estimated_tokens": 34691,
         "max_context_tokens": 180000,
         "message_count": 8,
         "trigger": "iteration_start",
-        "usage_pct": 27,
-        "usage_ratio": 0.2693
+        "usage_pct": 19,
+        "usage_ratio": 0.1927
       }
     },
     {
@@ -2840,7 +2840,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       }
     },
@@ -2959,7 +2959,7 @@
       "seq": "<seq>",
       "timestamp": "<timestamp>",
       "data": {
-        "max_iterations": 50
+        "max_iterations": 999999
       }
     },
     {
@@ -2994,15 +2994,15 @@
           "conversation_chars": 0,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 38380,
+        "estimated_tokens": 25228,
         "max_context_tokens": 180000,
         "message_count": 0,
         "trigger": "iteration_start",
-        "usage_pct": 21,
-        "usage_ratio": 0.2132
+        "usage_pct": 14,
+        "usage_ratio": 0.1402
       }
     },
     {
@@ -3045,7 +3045,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       }
     },
@@ -3210,18 +3210,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 30064,
+          "conversation_chars": 28152,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48401,
+        "estimated_tokens": 34612,
         "max_context_tokens": 180000,
         "message_count": 3,
         "trigger": "iteration_start",
-        "usage_pct": 27,
-        "usage_ratio": 0.2689
+        "usage_pct": 19,
+        "usage_ratio": 0.1923
       }
     },
     {
@@ -3264,7 +3264,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       }
     },
@@ -3318,6 +3318,22 @@
     },
     {
       "event": null,
+      "type": "session_title_updated",
+      "stream_id": "queen",
+      "node_id": null,
+      "execution_id": null,
+      "correlation_id": null,
+      "colony_id": null,
+      "run_id": "<absent>",
+      "seq": "<seq>",
+      "timestamp": "<timestamp>",
+      "data": {
+        "session_id": "<session_id>",
+        "title": "PAYLOAD_PARITY_OK"
+      }
+    },
+    {
+      "event": null,
       "type": "execution_completed",
       "stream_id": "queen",
       "node_id": null,
@@ -3331,22 +3347,6 @@
         "output": {
           "status": "completed"
         }
-      }
-    },
-    {
-      "event": null,
-      "type": "session_title_updated",
-      "stream_id": "queen",
-      "node_id": null,
-      "execution_id": null,
-      "correlation_id": null,
-      "colony_id": null,
-      "run_id": "<absent>",
-      "seq": "<seq>",
-      "timestamp": "<timestamp>",
-      "data": {
-        "session_id": "<session_id>",
-        "title": "PAYLOAD_PARITY_OK"
       }
     },
     {
@@ -3477,18 +3477,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 30134,
+          "conversation_chars": 28222,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48425,
+        "estimated_tokens": 34635,
         "max_context_tokens": 180000,
         "message_count": 5,
         "trigger": "iteration_start",
-        "usage_pct": 27,
-        "usage_ratio": 0.269
+        "usage_pct": 19,
+        "usage_ratio": 0.1924
       }
     },
     {
@@ -3552,18 +3552,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 30276,
+          "conversation_chars": 28364,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48472,
+        "estimated_tokens": 34682,
         "max_context_tokens": 180000,
         "message_count": 7,
         "trigger": "post_tool_call",
-        "usage_pct": 27,
-        "usage_ratio": 0.2693
+        "usage_pct": 19,
+        "usage_ratio": 0.1927
       }
     },
     {
@@ -3579,18 +3579,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 30276,
+          "conversation_chars": 28364,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48472,
+        "estimated_tokens": 34682,
         "max_context_tokens": 180000,
         "message_count": 7,
         "trigger": "post_tool_results",
-        "usage_pct": 27,
-        "usage_ratio": 0.2693
+        "usage_pct": 19,
+        "usage_ratio": 0.1927
       }
     },
     {
@@ -3615,7 +3615,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "tool_calls",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       }
     },
@@ -3822,18 +3822,18 @@
       "timestamp": "<timestamp>",
       "data": {
         "breakdown": {
-          "conversation_chars": 30303,
+          "conversation_chars": 28391,
           "image_blocks": 0,
           "image_tokens": 0,
-          "system_chars": 62554,
-          "tool_defs_chars": 52587
+          "system_chars": 21692,
+          "tool_defs_chars": 53992
         },
-        "estimated_tokens": 48481,
+        "estimated_tokens": 34691,
         "max_context_tokens": 180000,
         "message_count": 8,
         "trigger": "iteration_start",
-        "usage_pct": 27,
-        "usage_ratio": 0.2693
+        "usage_pct": 19,
+        "usage_ratio": 0.1927
       }
     },
     {
@@ -3876,7 +3876,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       }
     },

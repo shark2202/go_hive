@@ -13,6 +13,8 @@
 > **2026-11-21 增量**：Python `.play.py` playbook 已从「unsupported」改为「已实现（需外部 python3）」——外部解释器 + stdio JSON-RPC，脚本字节不变；见 §1 对应行与 `docs/playbook-python.md`。
 >
 > **2026-11-21 增量 2（G2）**：新增「老用户无损替换」判定（§1.1）——v1/v2 非空旧 `HIVE_HOME` 双跑数据级无损、凭据 Fernet 双向互读、Go→Python 回滚与 v1.0.25→1.0.26 升级演练均实测通过。1 项行为差异 **P0-G2-1（v1 `exports/` 解析基准：Python=CWD、Go=`$HIVE_HOME`）待用户决策**，本次未改 exports 行为。证据：`../../docs/g2-lossless-migration.md`、`upgrade-and-rollback.md`、本页 §1.1、`g2-lossless-replacement.html`。
+>
+> **2026-11-21 增量 3（G3 非外部项）**：依赖漏洞门禁 + 安装/升级端到端落地并实测。`make vulncheck` 当前 **FAIL**（govulncheck 命中 23 个 Go 标准库 CVE，修复需把 `go 1.26.5` 升到 ≥1.26.11 并重建）；`make install-verify` **17 PASS / 0 FAIL / 1 SKIP**。离线扫描降级退出码 3=UNVERIFIED，不冒充通过。Windows 实机、Actions 实跑、Sentinel 真实投递仍不在本轮。见 `docs/install-verify.md`、`docs/e2e-assets/vulncheck/20261121/`、`docs/e2e-assets/install-verify/`。
 
 ## 1. 总览
 
@@ -20,6 +22,7 @@
 | --- | --- | --- |
 | 构建（无 cgo、离线） | 已实现 | `make build`、`make ci` 实测；`CGO_ENABLED=0 GOPROXY=off` |
 | `hive --version` | 已实现 | 实测（发布包解压后）`hive 1.0.26-go.1` |
+| 安装 / 升级端到端（`install.sh` + slot 归档） | 已实现（Windows/Linux 未实机） | 2026-11-21 实测 slot `20261121-18`：manifest sha256、install.sh SHA256 门禁（含篡改 SHA256SUMS 被拒的负向对照）、四二进制、`hive --version`、冷启动 health/`/` 200；旧 slot `20261121-16` → 新构建原地升级后旧 v2 home **0 新增 / 0 删除 / 0 用户数据改写**（17 PASS / 0 FAIL / 1 SKIP）。证据 `docs/e2e-assets/install-verify/`、`docs/install-verify.md` §2 |
 | `hive serve` + `/api/health` | 已实现 | 实测默认 `127.0.0.1:8787`；发布包实测 `--port 8797` 健康检查 200 |
 | 老用户无损替换（旧 v1/v2 `HIVE_HOME` → Go 1.0.26） | 已实现（数据级无损；P0-G2-1 待决策） | 2026-11-21 同起点双跑：v1-rich 50/50、v2-rich 99/99 文件；JSON 字段差异 0、SQLite schema/行差异 0、读/API 探针差异 0；凭据 Fernet 双向互读；Go→Python 回滚 0 删除/0 覆盖；v1.0.25→1.0.26 升级 health 与内嵌 `/` 均 200，且迁移后旧二进制可回读。例外与决策见 §1.1 |
 | 创建会话 `POST /api/sessions` | 已实现 | 实测 201，返回 `session_id` |
@@ -59,7 +62,7 @@
 | Janitor | 部分 | `hive janitor status` 实测；`run --execute` 未执行 |
 | `hive-cred` | 已实现 | 实测 `browse` / `inspect` |
 | MCP 注册表与 CLI | 部分 | 14 个子命令注册；未对真实 MCP server 验证 |
-| 在线 CVE 扫描 | 未实现 | Makefile 与 `.github/workflows/` 均无 `govulncheck` / OSV / nancy；见 §6 |
+| 依赖漏洞扫描（govulncheck） | 已实现；当前门禁 **FAIL**（23 个 stdlib CVE） | 2026-11-21 `make vulncheck` 实测：govulncheck v1.10.0 / DB 2026-11-11 / source+symbol；go-hive 23 unique OSV·778 events，browserbridge 23·608，全部 Go 标准库（fixed in go1.26.6–1.26.11），0 第三方模块 finding；发布归档 slot `20261121-18` 二进制 `-mode=binary` 复扫另有 18 个可达 stdlib 漏洞。离线降级 `vulncheck.sh --offline` 退出 3=UNVERIFIED。证据 `docs/e2e-assets/vulncheck/20261121/`、`docs/install-verify.md` §1。修复（未做，属需批准的依赖变更）：`go 1.26.5` → ≥1.26.11 并重建 |
 
 ### 1.1 老用户无损替换（G2：旧 `HIVE_HOME` → Go 1.0.26）
 
@@ -226,8 +229,8 @@ Windows 已知未验证点：
 | Colony 多 worker 闭环 | 需要真实模型与长任务 | 调度/报告/预算有单测，端到端未跑 |
 | Sentinel 通知 | 需要 Telegram/Slack 凭据 | 引擎单测通过，真实投递未验证 |
 | Claude Code queen 真实模型主动调 `message_queen` | 未做真实模型回合联调 | 运行器/回复闭环已验证，但“她自己在回合中调 MCP 工具”只有 fake/契约测试 |
-| Windows 运行 | 无 Windows 机器 | 只有交叉编译 |
-| 在线 CVE 扫描 | **仓库没有做**：Makefile/CI 中没有 `govulncheck`、OSV、nancy 或等价步骤 | 依赖漏洞状态未知；只能确认依赖锁定、无 cgo、无运行时下载 |
+| Windows 运行 / 安装 | 无 Windows 机器 | 只有交叉编译；`install.sh` 的 `zip`/`.exe` 分支与 Windows 冷启动/升级未实机 |
+| CVE 数据库时效 / 未披露问题 | 本次扫描用 vuln.go.dev `2026-11-11` 快照；新披露未覆盖 | `make vulncheck` 每次重新拉取 DB；当前已知 23 个 stdlib CVE，门禁 FAIL（修复待工具链升级） |
 | `hive janitor run --execute` | 会删除数据，未在发布验证中执行 | 只验证了 `status` |
 | `hive colony delete` | 破坏性操作，未执行 | 只验证了 `list`/`info` |
 | G2 真实用户数据长尾 | 双跑夹具是「非空且字段完整」的代表样本 | 超大 parts、损坏 JSON、权限错误的极端形状未覆盖 |
@@ -283,6 +286,15 @@ CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -tags e2e -count=
 | 目标包测试 | `internal/{storage,tracker,credentials,session,agents}` 全 `ok`；`internal/server -run TestStorageStartup` `ok` |
 | `make parity` | 5,306/5,306 测试带 parity 注解，0 missing |
 | `make parity-targets` | 5,687 refs（4,213 test + 1,474 prod），0 missing |
+
+2026-11-21（G3 非外部项：依赖漏洞 + 安装/升级；本工作树实测）：
+
+| 项 | 结果 |
+| --- | --- |
+| `make vulncheck` | **FAIL（exit 1）**：govulncheck v1.10.0 / DB 2026-11-11 / source+symbol / go1.26.5；go-hive 23 unique OSV·778 events、browserbridge 23·608，全部 Go 标准库（fixed in go1.26.6–1.26.11），0 第三方模块 finding；明细 `docs/e2e-assets/vulncheck/20261121/` |
+| `vulncheck.sh --offline` | exit **3 = UNVERIFIED**：V1–V5 清单审查 PASS，V6 明确未查 OSV/CVE；不冒充通过（`offline-fallback-demo.log.txt`） |
+| `make install-verify` | **17 PASS / 0 FAIL / 1 SKIP**：manifest sha256、install.sh SHA256 门禁、四二进制、`hive --version`、冷启动 health 200、篡改 SHA256SUMS 被拒、旧 slot `20261121-16` → 新构建原地升级、v2 home 0 新增/0 删除/0 用户数据改写；证据 `docs/e2e-assets/install-verify/` |
+| CI | `.github/workflows/ci.yml` 新增 `go-vulncheck` job（UNVERIFIED 不假绿）；本环境**未实跑 Actions** |
 
 发布包本身另有一轮验证（`hive --version`、`shasum -a 256 -c SHA256SUMS`、解压 darwin-arm64 后 `/` 200）记录在 `release-notes-v1.0.26-go.1.md`。
 

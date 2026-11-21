@@ -1,0 +1,7 @@
+{
+  "endpoint": "session_worker_conversation_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

@@ -1,6 +1,6 @@
 # 业务能力 ↔ 技术模块对照（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `4582e56f790b`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `4bcc2a211cb0`
 > 这是业务视图与技术视图的接缝：左边是人关心的结果，右边是代码里真实存在的包、入口与落盘文件。
 
 ## 成熟度与审批口径
@@ -78,7 +78,7 @@
 
 ## 未被业务能力直接引用的模块
 
-共 25 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
+共 28 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
 
 | 模块 | 层 | 说明 |
 | --- | --- | --- |
@@ -87,14 +87,17 @@
 | `cmd/hive-browser` | entry | 基础/入口/测试装置层，预期不挂业务能力 |
 | `cmd/hive-cred` | entry | 基础/入口/测试装置层，预期不挂业务能力 |
 | `cmd/hive-longmemeval` | entry | 基础/入口/测试装置层，预期不挂业务能力 |
+| `internal/arghelp` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
 | `internal/atomicfs` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
 | `internal/hiveclock` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
 | `internal/hivehome` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
 | `internal/logging` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
 | `internal/platform` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
 | `internal/pyenv` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
+| `internal/runtimelogs` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
 | `e2e/cmd/memgw` | harness | 基础/入口/测试装置层，预期不挂业务能力 |
 | `e2e/cmd/recordproxy` | harness | 基础/入口/测试装置层，预期不挂业务能力 |
+| `e2e/cmd/runtimelogs` | harness | 基础/入口/测试装置层，预期不挂业务能力 |
 | `e2e/cmd/stallgw` | harness | 基础/入口/测试装置层，预期不挂业务能力 |
 | `e2e/cmd/storagecompat` | harness | 基础/入口/测试装置层，预期不挂业务能力 |
 | `e2e/escalationgw` | harness | 基础/入口/测试装置层，预期不挂业务能力 |

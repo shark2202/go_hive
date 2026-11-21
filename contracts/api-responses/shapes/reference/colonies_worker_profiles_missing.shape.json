@@ -1,0 +1,7 @@
+{
+  "endpoint": "colonies_worker_profiles_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

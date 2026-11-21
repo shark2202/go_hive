@@ -1,0 +1,9 @@
+{
+  "endpoint": "colonies_data_tables",
+  "shape": {
+    "tables": "array"
+  },
+  "counts": {
+    "tables": 0
+  }
+}

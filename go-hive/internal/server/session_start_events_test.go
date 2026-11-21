@@ -155,8 +155,11 @@ func TestSessionAddWritesOpeningEvents(t *testing.T) {
 	if eventString(t, loopStarted, "execution_id") != startEventsSessionID {
 		t.Fatalf("node_loop_started execution_id = %#v, want %q", loopStarted["execution_id"], startEventsSessionID)
 	}
-	if max, _ := eventData(t, loopStarted)["max_iterations"].(float64); int(max) <= 0 {
-		t.Fatalf("node_loop_started max_iterations = %#v", eventData(t, loopStarted)["max_iterations"])
+	// The opening block is upstream's persistent queen loop: its advertised
+	// bound is 999_999, not the Go chat runtime's per-turn cap. HIVE_MAX_ITER
+	// (the single-reply override) is covered by the dedicated test below.
+	if max, _ := eventData(t, loopStarted)["max_iterations"].(float64); int(max) != queenAutonomousMaxIterations {
+		t.Fatalf("node_loop_started max_iterations = %#v, want %d", eventData(t, loopStarted)["max_iterations"], queenAutonomousMaxIterations)
 	}
 
 	iterationData := eventData(t, events[3])
@@ -307,5 +310,24 @@ func TestSessionOpeningEventsNotDuplicatedByFirstTurn(t *testing.T) {
 		"context_usage_updated",
 	}, ",") {
 		t.Fatalf("opening block changed after the first turn: %v", got)
+	}
+}
+
+// TestSessionStartMaxIterationsFollowsQueenLoopBound pins the opening
+// node_loop_started bound to upstream's persistent queen loop: 999_999 by
+// default, HIVE_MAX_ITER when the single-reply cap is configured. The chat
+// runtime's per-turn loops keep their own configured cap — their frames are a
+// separate, Go-only envelope (see sse_payload_parity_test.go).
+//
+// Parity: core/framework/server/queen_orchestrator.py::_queen_loop
+// Parity: core/framework/agent_loop/internals/event_publishing.py::publish_loop_started
+func TestSessionStartMaxIterationsFollowsQueenLoopBound(t *testing.T) {
+	t.Setenv("HIVE_MAX_ITER", "")
+	if got := sessionStartMaxIterations(nil); got != 999999 {
+		t.Fatalf("opening max_iterations = %d, want 999999 (upstream autonomous default)", got)
+	}
+	t.Setenv("HIVE_MAX_ITER", "3")
+	if got := sessionStartMaxIterations(nil); got != 3 {
+		t.Fatalf("opening max_iterations = %d, want 3 (HIVE_MAX_ITER cap)", got)
 	}
 }

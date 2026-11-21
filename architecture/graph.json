@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "4582e56f790b",
+  "generated_at_commit": "4bcc2a211cb0",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 67,
-    "package_edges": 178,
+    "packages": 70,
+    "package_edges": 183,
     "capabilities": 12,
     "capability_edges": 84,
     "layers": 8,
@@ -36,6 +36,7 @@
       "packages": [
         "e2e/cmd/memgw",
         "e2e/cmd/recordproxy",
+        "e2e/cmd/runtimelogs",
         "e2e/cmd/stallgw",
         "e2e/cmd/storagecompat",
         "e2e/escalationgw",
@@ -46,7 +47,7 @@
         "internal/release",
         "internal/toolgolden"
       ],
-      "package_count": 11
+      "package_count": 12
     },
     {
       "id": "assembly",
@@ -137,6 +138,7 @@
       "depth": 6,
       "description": "无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。",
       "packages": [
+        "internal/arghelp",
         "internal/atomicfs",
         "internal/envcontract",
         "internal/eventbus",
@@ -148,11 +150,12 @@
         "internal/quality",
         "internal/ratelimit",
         "internal/resources",
+        "internal/runtimelogs",
         "internal/schemas",
         "internal/storage",
         "internal/version"
       ],
-      "package_count": 14
+      "package_count": 16
     }
   ],
   "nodes": [
@@ -222,6 +225,18 @@
       "package": "e2e/cmd/recordproxy",
       "layer": "harness",
       "responsibility": "录制转发代理命令：把真实上游流量录成 e2e 夹具。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 0
+    },
+    {
+      "id": "pkg:e2e/cmd/runtimelogs",
+      "kind": "technical",
+      "package": "e2e/cmd/runtimelogs",
+      "layer": "harness",
+      "responsibility": "三级运行日志双跑的启动命令（e2e）。",
       "stability": "stable",
       "entrypoint": false,
       "note": "",
@@ -345,7 +360,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 30,
+      "direct_dependencies": 31,
       "dependents": 4
     },
     {
@@ -369,7 +384,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 35,
+      "direct_dependencies": 36,
       "dependents": 1
     },
     {
@@ -549,7 +564,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 10,
+      "direct_dependencies": 11,
       "dependents": 8
     },
     {
@@ -669,7 +684,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 5,
+      "direct_dependencies": 6,
       "dependents": 2
     },
     {
@@ -790,6 +805,18 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 1,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/arghelp",
+      "kind": "technical",
+      "package": "internal/arghelp",
+      "layer": "foundation",
+      "responsibility": "argparse HelpFormatter 的 Go 移植：usage 折行、选项列宽、choices 与 section 渲染，供 CLI/MCP 帮助共用。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
       "dependents": 2
     },
     {
@@ -923,6 +950,18 @@
       "note": "",
       "direct_dependencies": 1,
       "dependents": 2
+    },
+    {
+      "id": "pkg:internal/runtimelogs",
+      "kind": "technical",
+      "package": "internal/runtimelogs",
+      "layer": "foundation",
+      "responsibility": "三级运行日志（summary.json / details.jsonl / tool_logs.jsonl）的 schema、原子写与 logger。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 3
     },
     {
       "id": "pkg:internal/schemas",
@@ -1435,6 +1474,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:e2e/cmd/runtimelogs",
+      "to": "pkg:internal/runtimelogs",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:e2e/cmd/stallgw",
       "to": "pkg:e2e/stallgw",
       "kind": "depends"
@@ -1521,6 +1565,11 @@
     },
     {
       "from": "pkg:internal/agentloop",
+      "to": "pkg:internal/runtimelogs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/agentloop",
       "to": "pkg:internal/schemas",
       "kind": "depends"
     },
@@ -1567,6 +1616,11 @@
     {
       "from": "pkg:internal/cli",
       "to": "pkg:internal/agents",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/arghelp",
       "kind": "depends"
     },
     {
@@ -1866,6 +1920,11 @@
     },
     {
       "from": "pkg:internal/mcpregistry",
+      "to": "pkg:internal/arghelp",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/mcpregistry",
       "to": "pkg:internal/atomicfs",
       "kind": "depends"
     },
@@ -2102,6 +2161,11 @@
     {
       "from": "pkg:internal/server",
       "to": "pkg:internal/runtimehealth",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/runtimelogs",
       "kind": "depends"
     },
     {

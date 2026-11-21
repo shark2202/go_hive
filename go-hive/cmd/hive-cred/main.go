@@ -8,5 +8,5 @@ import (
 )
 
 func main() {
-	os.Exit(cli.NewCredRunner().Run(os.Args[1:]))
+	os.Exit(cli.GuardMain(func() int { return cli.NewCredRunner().Run(os.Args[1:]) }))
 }

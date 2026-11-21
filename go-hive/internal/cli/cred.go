@@ -40,16 +40,22 @@ func setupCredLogging() {
 		// Upstream installs a NullHandler when HIVE_CRED_LOG is unset, so the
 		// command's stderr stays clean; the Go default logger would leak
 		// package log lines (e.g. encryption-key notices) onto stderr.
+		credentials.SetLogSink(nil)
 		log.SetOutput(io.Discard)
 		return
 	}
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
+		credentials.SetLogSink(nil)
 		log.SetOutput(io.Discard)
 		return
 	}
+	// The credential packages write through the Python-format sink; the
+	// standard logger keeps whatever else lands there (dated lines) in the
+	// same file.
+	credentials.SetLogSink(file)
 	log.SetOutput(file)
-	log.SetFlags(log.LstdFlags)
+	log.SetFlags(0)
 }
 
 func (r *CredRunner) Run(argv []string) int {
@@ -319,10 +325,11 @@ func pythonISOFormat(value time.Time) string {
 // Parity: framework/credentials/cli.py::_build_parser
 func credCommand() *commandSpec {
 	token := &commandSpec{
-		Prog:        "hive-cred token",
-		Help:        "print a fresh value (OAuth tokens are refreshed first)",
-		Dest:        "token",
-		Positionals: []positionalSpec{{Dest: "credential_id", Required: true, Help: "provider / credential id, e.g. google, apollo"}},
+		Prog:           "hive-cred token",
+		Help:           "print a fresh value (OAuth tokens are refreshed first)",
+		Dest:           "token",
+		RawDescription: true,
+		Positionals:    []positionalSpec{{Dest: "credential_id", Required: true, Help: "provider / credential id, e.g. google, apollo"}},
 		Flags: []argSpec{
 			{Dest: "json", Long: "json", Kind: kindBool, Help: "emit a JSON envelope on stdout"},
 			{Dest: "account", Long: "account", Kind: kindString, Default: "", Metavar: "ALIAS", Help: "connected-account alias, e.g. email3 (required when several are connected)"},
@@ -337,20 +344,22 @@ func credCommand() *commandSpec {
 			"  hive-cred token apollo --key api_key",
 	}
 	browse := &commandSpec{
-		Prog:        "hive-cred browse",
-		Help:        "list connected accounts and connectable providers (metadata only)",
-		Dest:        "browse",
-		Positionals: []positionalSpec{{Dest: "query", Required: false, Help: "optional filter on provider / alias / identity"}},
+		Prog:           "hive-cred browse",
+		Help:           "list connected accounts and connectable providers (metadata only)",
+		Dest:           "browse",
+		RawDescription: true,
+		Positionals:    []positionalSpec{{Dest: "query", Required: false, Help: "optional filter on provider / alias / identity"}},
 		Flags: []argSpec{
 			{Dest: "json", Long: "json", Kind: kindBool, Help: "emit a JSON envelope on stdout"},
 		},
 		Epilog: "examples:\n  hive-cred browse --json\n  hive-cred browse google",
 	}
 	inspect := &commandSpec{
-		Prog:        "hive-cred inspect",
-		Help:        "show one credential's accounts, key names and type (no values)",
-		Dest:        "inspect",
-		Positionals: []positionalSpec{{Dest: "credential_id", Required: true, Help: "provider / credential id, e.g. google"}},
+		Prog:           "hive-cred inspect",
+		Help:           "show one credential's accounts, key names and type (no values)",
+		Dest:           "inspect",
+		RawDescription: true,
+		Positionals:    []positionalSpec{{Dest: "credential_id", Required: true, Help: "provider / credential id, e.g. google"}},
 		Flags: []argSpec{
 			{Dest: "json", Long: "json", Kind: kindBool, Help: "emit a JSON envelope on stdout"},
 			{Dest: "account", Long: "account", Kind: kindString, Default: "", Metavar: "ALIAS", Help: "restrict to one connected-account alias"},

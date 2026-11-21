@@ -1,0 +1,9 @@
+{
+  "endpoint": "claude_code_queens",
+  "shape": {
+    "queens": "array"
+  },
+  "counts": {
+    "queens": 0
+  }
+}

@@ -334,8 +334,9 @@ def parse_help(text: str, prog: str) -> dict:
     if usage_choices:
         subcommands = usage_choices
     if not subcommands:
-        # Go's mcp group prints `<command> [options]` and lists verbs in the
-        # commands section, one per line (`install <name>  Install ...`).
+        # A Go-style group header may list its verbs in a `commands:` section
+        # instead of a usage choice set (the mcp group used to; kept as a
+        # fallback for any group that renders that way).
         for line in sections.get("commands", []):
             match = re.match(r"^\s{2,}(\S+)", line)
             if match:
@@ -540,9 +541,8 @@ def capture_cli(runner: Runner, cli_name: str) -> dict:
             parsed["help_exit_code"] = code
             parent = node.get(" ".join(path[:-1]))
             if parent is not None and parsed["help_sha256"] == parent["help_sha256"]:
-                # A command that re-prints its parent's help (Go's `hive mcp
-                # <verb> --help` collapses to the group page) has no surface of
-                # its own to recurse into.
+                # A command that re-prints its parent's help has no surface of
+                # its own to recurse into (kept for passthrough groups).
                 parsed["recursion_stopped"] = "identical_to_parent_help"
                 parsed["subcommands"] = []
             node[" ".join(path)] = parsed
@@ -905,6 +905,24 @@ def render_report(contract: dict) -> str:
         "`HIVE_BROWSERBRIDGE_HTTP=http://127.0.0.1:<dead>`、`NO_COLOR=1`。探针不启动服务、不连桥。"
     )
     lines.append("")
+    lines.append("## 门禁保护（C11：CLI 外观逐 slot）")
+    lines.append("")
+    lines.append(
+        "- 本页的 CLI 外观**逐 slot 受门禁保护**：`make compat-check`（`make ci` 已包含）的 C11 用 "
+        "`git archive` + 本地 `go build` 把 `meta.baseline_commit` 复现成旧构建、当前树构建成新构建，"
+        "核对 `hive --help`、`hive-browser --help`、`hive mcp --help`、`hive-cred --help` 的 usage 行，"
+        "以及本契约冻结的命令路径集合与每路径 flag 集合（旧构建 vs 新构建、新构建 vs 契约基线、"
+        "新构建 vs Python）；任一漂移即 FAIL（非 0 退出）。"
+    )
+    lines.append(
+        "- 合成漂移自检：`make compat-cli-selftest`（`check_compat_contracts.py --self-test`）注入"
+        "「删一个 flag」「改一个 usage 行」，必须判定 FAIL；基线副本不得误报。"
+    )
+    lines.append(
+        "- 改本页任何 slot（usage 行 / 子命令 / flag）都必须重采本契约，否则 C11 直接 FAIL；"
+        "全量重采（命令树 + 退出码探针 + help 文案）仍由 `cli_surface_contract.py --check` 在发布时执行。"
+    )
+    lines.append("")
     lines.append("## 汇总")
     lines.append("")
     summary = contract["summary"]
@@ -1130,8 +1148,6 @@ def probe_note(item: dict, go_only_commands: set[str], cli_name: str) -> str:
     if command in go_only_commands:
         return "Go 扩展命令，Python 侧无对应"
     if item["go"] is None:
-        if command == "mcp":
-            return "Go 侧未生成该探针：`hive mcp <verb>` 的 help 折叠为组 help，位置参数未声明"
         return "Go 侧未生成该探针（该命令 help 未声明位置参数）"
     if item["python"] is None:
         if cli_name == "hive-browser":

@@ -1,0 +1,7 @@
+{
+  "endpoint": "colonies_active_session",
+  "shape": {
+    "session": "null"
+  },
+  "counts": {}
+}

@@ -67,7 +67,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       },
       "envelope": {
@@ -179,7 +179,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       },
       "envelope": {
@@ -346,7 +346,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "tool_calls",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       },
       "envelope": {
@@ -479,7 +479,7 @@
         "model": "sse-parity-probe-model",
         "output_tokens": 0,
         "stop_reason": "stop",
-        "system_prefix_sha": "885285cb1ffe",
+        "system_prefix_sha": "692b774c98c7",
         "system_suffix_sha": "e3b0c44298fc"
       },
       "envelope": {

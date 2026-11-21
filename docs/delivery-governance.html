@@ -42,7 +42,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <div class="grid g3">
   <div class="card"><div class="k">G1 · 字段级逐字一致</div><div class="v">已闭包 · 11-22</div><div class="d">独立闭包验收通过（8/8 条件，例外已登记）：契约 <code>--check</code> + 双跑 golden + smoke 13/13。报告 <a href="g1-closure-report.md">g1-closure-report.md</a>。</div></div>
   <div class="card"><div class="k">G2 · 老用户无损替换 RC</div><div class="v" style="color:var(--ok)">证据齐备 · 11-22</div><div class="d">数据级无损（v1-rich 50/50、v2-rich 99/99 文件）、凭据互读、回滚 0 删除/0 覆盖、升级实测通过；1 项行为差异 <b>P0-G2-1 待决策</b>（v1 exports 基准，未改行为）。</div></div>
-  <div class="card"><div class="k">G3 · 商业外发布</div><div class="v">目标 11-22</div><div class="d">G2 + Windows 实机、GitHub Actions release 执行、govulncheck/安全审查、六平台归档与安装/升级脚本复验。</div></div>
+  <div class="card"><div class="k">G3 · 商业外发布</div><div class="v">目标 11-22</div><div class="d">G2 已完成；安全项（govulncheck 门禁 + 安装/升级 E2E）已落地实测——vulncheck 当前 <b>FAIL</b>（23 个 stdlib CVE，待工具链 ≥1.26.11），install-verify 17 PASS/0 FAIL/1 SKIP。Windows 实机、GitHub Actions release 执行仍为外部未验证项。</div></div>
 </div>
 <div class="callout info"><b>口径：</b>“字段级”= 名称/类型/默认值/可空/enum/required/读取行为一致；值级差异必须 canonicalize 后比较；字节级、时序、运行期值列为例外，不冒充一致。</div>
 </section>
@@ -52,7 +52,8 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td>tools 首轮 24 + 延迟层</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>首轮 24 与 Python 抓包逐字；search_tools 51；colony 39；grouped 150</td></tr>
 <tr><td>Browser R15 / doom-loop / 分页 / SSE</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>真 Chrome 19 步、seq 26 事件、GitHub/Stripe 分页、judge 3/3</td></tr>
 <tr><td>存储字段与迁移</td><td>已合并</td><td><span class="pill ok">字段级</span></td><td>v1/v2/colony-fork 全同；凭据双向互读；SC-01 启动迁移已接线并实测</td></tr>
-<tr><td>G2 无损替换 / 回滚 / 升级</td><td>已合并</td><td><span class="pill ok">证据齐备</span></td><td>非空旧 home 双跑 50/50 · 99/99（字段/SQLite/读/API 差异 0）；回滚 0 删除/0 覆盖；v1.0.25→1.0.26 升级与旧二进制回读通过；P0-G2-1 待决策</td></tr>
+<tr><td>G2 回滚 / 升级</td><td>已合并</td><td><span class="pill ok">证据齐备</span></td><td>非空旧 home 双跑 50/50 · 99/99（字段/SQLite/读/API 差异 0）；回滚 0 删除/0 覆盖；v1.0.25→1.0.26 升级与旧二进制回读通过；P0-G2-1 待决策</td></tr>
+<tr><td>G3 依赖漏洞 / 安装升级（非外部项）</td><td>已落地</td><td><span class="pill warn">vulncheck FAIL</span></td><td>2026-11-21 实测：<code>make vulncheck</code> 命中 23 个 Go 标准库 CVE（govulncheck v1.10.0 / DB 2026-11-11 / go1.26.5，fixed ≥1.26.6–1.26.11），0 第三方模块 finding；离线降级 exit 3=UNVERIFIED。<code>make install-verify</code> 17 PASS/0 FAIL/1 SKIP：install.sh SHA256 门禁（篡改被拒）、四二进制、冷启动 health 200、旧 slot→新构建原地升级 0 用户数据改写。见 <a href="install-verify.md"><code>install-verify.md</code></a>、<code>e2e-assets/vulncheck/20261121/</code>、<code>e2e-assets/install-verify/</code></td></tr>
 <tr><td>env 20 变量</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>20/20 收敛：14 接入 + 6 GCU 平台差异；七门禁 5208 测试；Python 89 / Go 118 / 共有 83</td></tr>
 <tr><td>config 134 键</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>125 aligned / 4 partial / 0 python_only / 4 go_only / 1 unread；主槽 llm.* 统一 MainSlotProvider</td></tr>
 <tr><td>SC-01 启动迁移</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>serve 启动按序迁移 + 非致命 warning；v1/v2 夹具真实双层启动与 Python 清单一致；本机 home 实测新增 marker 无数据丢失</td></tr>
@@ -60,7 +61,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td>工具输出/失败文案 golden</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>38 场景：25 逐字 + 1 形状 + 12 记录例外，0 未归因（<code>docs/tool-output-contract.md</code>，<code>make tool-output-check</code>）</td></tr>
 <tr><td>API/WS 值级 canonical</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>REST 77 端点/8,678 值路径（48 已声明/0 未声明）；SSE live 34/34、replay 17/17、history 42/42；11 条例外全观测</td></tr>
 <tr><td>G1 独立闭包验收</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>8/8 条件 PASS（含登记例外）；修复 env/config、路由、arch、cadence 产物陈旧与 3 处文档计数；报告 <a href="g1-closure-report.md"><code>g1-closure-report.md</code></a></td></tr>
-<tr><td>Windows/Actions/安全</td><td>外部依赖</td><td><span class="pill bad">未验证</span></td><td>需 Windows 实机、仓库 Actions 权限；govulncheck 入发布门禁</td></tr>
+<tr><td>Windows/Actions/安全</td><td>部分可执行 / 外部依赖</td><td><span class="pill warn">安全项已落地</span></td><td>安全项实测：<code>make vulncheck</code> 当前 FAIL（23 个 stdlib CVE，待 Go ≥1.26.11 重建；离线降级 exit 3=UNVERIFIED）；<code>make install-verify</code> 17 PASS/0 FAIL/1 SKIP（见 <a href="install-verify.md">install-verify.md</a>、<code>e2e-assets/</code>）。Windows 实机与 Actions 实跑仍外部未验证。</td></tr>
 </tbody></table></div>
 </section>
 
@@ -85,6 +86,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <section id="quality"><h2><span class="num">04</span>质量门禁</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:22%">门禁</th><th>要求</th></tr></thead><tbody>
 <tr><td>七道 CI</td><td><code>fmt-check</code> / <code>vet</code> / <code>test</code> / <code>cross</code> / <code>parity</code> / <code>parity-targets</code> / <code>wiring-check</code> 全部退出 0</td></tr>
+<tr><td>CLI 外观逐 slot 受门禁保护</td><td><code>make compat-check</code> 的 C11 逐 slot 核对 <code>hive --help</code> / <code>hive-browser --help</code> / <code>hive mcp --help</code> / <code>hive-cred --help</code> 的 usage 行与契约命令路径/flag 集合：契约基线旧构建 vs 当前新构建 vs Python，任一漂移 = FAIL（非 0 退出）；合成漂移自检 <code>make compat-cli-selftest</code></td></tr>
 <tr><td>parity 注解</td><td>每个 Go 测试必须 <code>// Parity:</code> 或 <code>// Parity-exempt:</code>；refs missing 必须为 0</td></tr>
 <tr><td>QC 8 项（默认）</td><td>C2 parity、C4 六平台、C4b UI、C4c 四二进制归档、C5 无 cgo、C6 文档口径、C7 回归、C8 surface strict；<code>--full</code> 追加 C1 CI，<code>--smoke</code> 追加 C3 smoke</td></tr>
 <tr><td>真实 E2E</td><td>关键机制用真实 LLM/真实 Chrome 至少一次；opt-in 环境变量，不默认拖垮 CI</td></tr>

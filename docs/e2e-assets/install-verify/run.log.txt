@@ -1,0 +1,24 @@
+  ok  : [I1] manifest.json parses — version=1.0.26-go.1 build=1.0.26-go.1+build.2026112118
+  ok  : [I2] archive sha256/bytes match manifest — sha256=4962451131dc6245… bytes=48956018
+  ok  : [I3] archive carries four executables — hive-1.0.26-go.1+build.2026112118-darwin-arm64.tar.gz
+  skip: [I4] archive-internal SHA256SUMS verifies — slot archive has no inner SHA256SUMS (manifest-level sha256 verified in I2)
+  ok  : [I5] install.sh accepts the archive (SHA256 gate) — log has 'verified SHA256'
+  ok  : [I6] four binaries installed and executable — /Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run/home-new/.local/bin
+  ok  : [I7] installed hive --version == manifest version — hive 1.0.26-go.1
+  ok  : [I7b] hive-cred / hive-browser / browserbridge run — help/-version rc=0
+  ok  : [I8] cold start: health/root/history 200 — health=200 /=200 history=200
+  ok  : [I8b] cold-start serve exits on SIGTERM — pid reaped
+  ok  : [I9] corrupted SHA256SUMS is rejected — installer refused: install: ERROR: SHA256 mismatch for hive-1.0.26-go.1+build.2026112118-darwin-arm64.tar.gz
+  ok  : [I10] previous delivery binary + archive present — hive 1.0.26-go.1 (/Users/mac/hive/go_hive/dist/slots/20261121-16)
+  ok  : [I10b] old archive installs into ~/.local/bin — hive 1.0.26-go.1
+  ok  : [I11] v2 legacy HIVE_HOME fixture built — 56 files
+  ok  : [I11b] old binary migrates + reads fixture home — health 200, session+colony visible
+snapshot: 62 files
+  ok  : [I12] in-place upgrade replaces hive with the new build — binary sha matches archive; hive 1.0.26-go.1
+  ok  : [I13] upgraded binary serves the old home — health 200, sessions+colony+markers intact
+{"added": 0, "removed": 0, "modified": 1, "allowlisted_modified": 1, "user_data_changes": {"added": [], "removed": [], "modified": []}}
+  ok  : [I14] user data lossless across upgrade — 0 added / 0 removed / 0 user-data modified (allowlisted churn: 1)
+
+verdict: PASS(with skips) — pass=17 fail=0 skip=1
+report : /Users/mac/hive/.wt/g3-hardening/go_hive/docs/e2e-assets/install-verify/report.json
+work   : /Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run

@@ -87,13 +87,13 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 27984,
+          "conversation_chars": 27966,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 21584,
           "tool_defs_chars": 45171
         },
-        "estimated_tokens": 31579,
+        "estimated_tokens": 31573,
         "max_context_tokens": 180000,
         "message_count": 1,
         "trigger": "iteration_start",
@@ -314,18 +314,18 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 28044,
+          "conversation_chars": 28026,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 21584,
           "tool_defs_chars": 45171
         },
-        "estimated_tokens": 31599,
+        "estimated_tokens": 31593,
         "max_context_tokens": 180000,
         "message_count": 3,
         "trigger": "iteration_start",
         "usage_pct": 18,
-        "usage_ratio": 0.1756
+        "usage_ratio": 0.1755
       },
       "envelope": {
         "colony_id": null,
@@ -561,13 +561,13 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 28114,
+          "conversation_chars": 28096,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 21584,
           "tool_defs_chars": 45171
         },
-        "estimated_tokens": 31623,
+        "estimated_tokens": 31617,
         "max_context_tokens": 180000,
         "message_count": 5,
         "trigger": "iteration_start",
@@ -648,13 +648,13 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 28256,
+          "conversation_chars": 28238,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 21584,
           "tool_defs_chars": 45171
         },
-        "estimated_tokens": 31670,
+        "estimated_tokens": 31664,
         "max_context_tokens": 180000,
         "message_count": 7,
         "trigger": "post_tool_call",
@@ -679,13 +679,13 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 28256,
+          "conversation_chars": 28238,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 21584,
           "tool_defs_chars": 45171
         },
-        "estimated_tokens": 31670,
+        "estimated_tokens": 31664,
         "max_context_tokens": 180000,
         "message_count": 7,
         "trigger": "post_tool_results",
@@ -894,13 +894,13 @@
     {
       "data": {
         "breakdown": {
-          "conversation_chars": 28283,
+          "conversation_chars": 28265,
           "image_blocks": 0,
           "image_tokens": 0,
           "system_chars": 21584,
           "tool_defs_chars": 45171
         },
-        "estimated_tokens": 31679,
+        "estimated_tokens": 31673,
         "max_context_tokens": 180000,
         "message_count": 8,
         "trigger": "iteration_start",

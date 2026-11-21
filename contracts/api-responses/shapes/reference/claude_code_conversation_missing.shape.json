@@ -1,0 +1,7 @@
+{
+  "endpoint": "claude_code_conversation_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

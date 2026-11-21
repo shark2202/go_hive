@@ -1,5 +1,5 @@
 SSE payload parity — Python reference vs Go target
-generated: 2026-11-21T11:12:40+08:00
+generated: 2026-11-21T19:57:37+08:00
 reference: hive 1.0.14    target: hive 1.0.26-go.1
 
 == live type sets ==
@@ -12,7 +12,7 @@ DIFF (reference=35 target=47)
   insert: reference=[] target=['execution_started']
   insert: reference=[] target=['node_loop_started']
   replace: reference=['session_title_updated'] target=['node_loop_completed']
-  insert: reference=[] target=['execution_completed', 'session_title_updated']
+  insert: reference=[] target=['session_title_updated', 'execution_completed']
   insert: reference=[] target=['execution_started']
   insert: reference=[] target=['node_loop_started']
   insert: reference=[] target=['node_loop_completed']
@@ -36,7 +36,7 @@ DIFF (reference=43 target=55)
   insert: reference=[] target=['execution_started']
   insert: reference=[] target=['node_loop_started']
   replace: reference=['session_title_updated'] target=['node_loop_completed']
-  insert: reference=[] target=['execution_completed', 'session_title_updated']
+  insert: reference=[] target=['session_title_updated', 'execution_completed']
   insert: reference=[] target=['execution_started']
   insert: reference=[] target=['node_loop_started']
   insert: reference=[] target=['node_loop_completed']
@@ -71,13 +71,13 @@ DIFF (reference=35 target=35)
 - client_output_delta
     iteration: reference=['0', '1', '3'] target=['0', '1']
 - context_usage_updated
-    breakdown.conversation_chars: reference=['27984', '28044', '28114', '28256', '28283'] target=['0', '30064', '30134', '30276', '30303']
-    breakdown.system_chars: reference=['21584'] target=['62554']
-    breakdown.tool_defs_chars: reference=['45171'] target=['52587']
-    estimated_tokens: reference=['31579', '31599', '31623', '31670', '31679'] target=['38380', '48401', '48425', '48472', '48481']
+    breakdown.conversation_chars: reference=['27966', '28026', '28096', '28238', '28265'] target=['0', '28152', '28222', '28364', '28391']
+    breakdown.system_chars: reference=['21584'] target=['21692']
+    breakdown.tool_defs_chars: reference=['45171'] target=['53992']
+    estimated_tokens: reference=['31573', '31593', '31617', '31664', '31673'] target=['25228', '34612', '34635', '34682', '34691']
     message_count: reference=['1', '3', '5', '7', '8'] target=['0', '3', '5', '7', '8']
-    usage_pct: reference=['18'] target=['21', '27']
-    usage_ratio: reference=['0.1754', '0.1756', '0.1757', '0.1759', '0.176'] target=['0.2132', '0.2689', '0.269', '0.2693']
+    usage_pct: reference=['18'] target=['14', '19']
+    usage_ratio: reference=['0.1754', '0.1755', '0.1757', '0.1759', '0.176'] target=['0.1402', '0.1923', '0.1924', '0.1927']
 - execution_completed
     output.status: reference=[] target=['"completed"']
 - execution_started
@@ -85,13 +85,12 @@ DIFF (reference=35 target=35)
 - llm_turn_complete
     iteration: reference=['0', '1', '2', '3'] target=['0', '1']
     model: reference=['"openai/sse-parity-probe-model"'] target=['"sse-parity-probe-model"']
-    system_prefix_sha: reference=['"692b774c98c7"'] target=['"885285cb1ffe"']
 - node_loop_completed
     iterations: reference=[] target=['1']
 - node_loop_iteration
     iteration: reference=['0', '1', '2', '3'] target=['0', '1']
 - node_loop_started
-    max_iterations: reference=['999999'] target=['50']
+    max_iterations: reference=['999999'] target=['50', '999999']
 
 == judge verdicts (history-only) ==
 reference (3): [{"action": "RETRY", "feedback": "", "judge_type": "implicit", "iteration": 0}, {"action": "RETRY", "feedback": "", "judge_type": "implicit", "iteration": 1}, {"action": "RETRY", "feedback": "", "judge_type": "implicit", "iteration": 2}]

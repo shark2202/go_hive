@@ -1,0 +1,12 @@
+usage: hive mcp config [-h] [--set KEY=VAL [KEY=VAL ...]] [--set-header KEY=VAL [KEY=VAL ...]]
+                       name
+
+positional arguments:
+  name                  Server name
+
+options:
+  -h, --help            show this help message and exit
+  --set KEY=VAL [KEY=VAL ...]
+                        Set environment variable overrides
+  --set-header KEY=VAL [KEY=VAL ...]
+                        Set header overrides

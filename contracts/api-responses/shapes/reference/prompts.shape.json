@@ -1,0 +1,9 @@
+{
+  "endpoint": "prompts",
+  "shape": {
+    "prompts": "array"
+  },
+  "counts": {
+    "prompts": 0
+  }
+}

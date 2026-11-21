@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 4582e56f790b
+// 源：architecture/model.yaml + go list -json ./... · commit 4bcc2a211cb0
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -18,6 +18,7 @@ digraph go_hive {
     style="rounded,filled"; fillcolor="#ffe4e6"; color="#be123c"; fontsize=11;
     "e2e/cmd/memgw" [fillcolor="white", color="#be123c"];
     "e2e/cmd/recordproxy" [fillcolor="white", color="#be123c"];
+    "e2e/cmd/runtimelogs" [fillcolor="white", color="#be123c"];
     "e2e/cmd/stallgw" [fillcolor="white", color="#be123c"];
     "e2e/cmd/storagecompat" [fillcolor="white", color="#be123c"];
     "e2e/escalationgw" [fillcolor="white", color="#be123c"];
@@ -89,6 +90,7 @@ digraph go_hive {
   subgraph cluster_foundation {
     label="基础层（foundation）";
     style="rounded,filled"; fillcolor="#f1f5f9"; color="#475569"; fontsize=11;
+    "internal/arghelp" [fillcolor="white", color="#475569"];
     "internal/atomicfs" [fillcolor="white", color="#475569"];
     "internal/envcontract" [fillcolor="white", color="#475569"];
     "internal/eventbus" [fillcolor="white", color="#475569"];
@@ -100,6 +102,7 @@ digraph go_hive {
     "internal/quality" [fillcolor="white", color="#475569"];
     "internal/ratelimit" [fillcolor="white", color="#475569"];
     "internal/resources" [fillcolor="white", color="#475569"];
+    "internal/runtimelogs" [fillcolor="white", color="#475569"];
     "internal/schemas" [fillcolor="white", color="#475569"];
     "internal/storage" [fillcolor="white", color="#475569"];
     "internal/version" [fillcolor="white", color="#475569"];
@@ -111,6 +114,7 @@ digraph go_hive {
   "cmd/hive-longmemeval" -> "internal/longmemeval";
   "e2e/cmd/memgw" -> "e2e/memgw";
   "e2e/cmd/recordproxy" -> "e2e/recordproxy";
+  "e2e/cmd/runtimelogs" -> "internal/runtimelogs";
   "e2e/cmd/stallgw" -> "e2e/stallgw";
   "e2e/cmd/storagecompat" -> "internal/agentloop";
   "e2e/cmd/storagecompat" -> "internal/agents";
@@ -128,6 +132,7 @@ digraph go_hive {
   "internal/agentloop" -> "internal/llmjudge";
   "internal/agentloop" -> "internal/pyenv";
   "internal/agentloop" -> "internal/ratelimit";
+  "internal/agentloop" -> "internal/runtimelogs";
   "internal/agentloop" -> "internal/schemas";
   "internal/agentloop" -> "internal/skills";
   "internal/agentloop" -> "internal/tools";
@@ -138,6 +143,7 @@ digraph go_hive {
   "internal/charts" -> "internal/llm";
   "internal/cli" -> "internal/agentloop";
   "internal/cli" -> "internal/agents";
+  "internal/cli" -> "internal/arghelp";
   "internal/cli" -> "internal/atomicfs";
   "internal/cli" -> "internal/charts";
   "internal/cli" -> "internal/colony";
@@ -197,6 +203,7 @@ digraph go_hive {
   "internal/longmemeval" -> "internal/session";
   "internal/maintenance" -> "internal/atomicfs";
   "internal/maintenance" -> "internal/hivehome";
+  "internal/mcpregistry" -> "internal/arghelp";
   "internal/mcpregistry" -> "internal/atomicfs";
   "internal/mcpregistry" -> "internal/hivehome";
   "internal/mcpregistry" -> "internal/mcpregistry/nativecli";
@@ -245,6 +252,7 @@ digraph go_hive {
   "internal/server" -> "internal/ratelimit";
   "internal/server" -> "internal/resources";
   "internal/server" -> "internal/runtimehealth";
+  "internal/server" -> "internal/runtimelogs";
   "internal/server" -> "internal/senders";
   "internal/server" -> "internal/sentinel";
   "internal/server" -> "internal/server/uiembed";

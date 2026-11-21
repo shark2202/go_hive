@@ -6,7 +6,7 @@
   "checked_fields": 1322,
   "summary": {
     "errors": 0,
-    "warnings": 120,
+    "warnings": 180,
     "undeclared_reference": 0,
     "kind_mismatch": 0
   },
@@ -26,7 +26,55 @@
     },
     {
       "kind": "unmapped-endpoint",
+      "detail": "channels"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "claude_code_conversation_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "claude_code_queens"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_active_session"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_data_changes"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_data_table_rows_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_data_tables"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_import_status_invalid"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_sessions"
+    },
+    {
+      "kind": "unmapped-endpoint",
       "detail": "colonies_tools_index"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_worker_profiles_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colony_notifications_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colony_tools_missing"
     },
     {
       "kind": "unmapped-endpoint",
@@ -98,6 +146,38 @@
     },
     {
       "kind": "unmapped-endpoint",
+      "detail": "crm_grid_entity_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "crm_grid_schema"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "discover"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "global_crm_status"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "global_data_changes"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "global_data_foreign_keys"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "global_data_table_rows_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "global_data_tables"
+    },
+    {
+      "kind": "unmapped-endpoint",
       "detail": "janitor_report"
     },
     {
@@ -110,7 +190,35 @@
     },
     {
       "kind": "unmapped-endpoint",
+      "detail": "memories"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "memories_file_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "models_endpoint_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "profile_avatar_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "prompts"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_avatar_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
       "detail": "queen_llm"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_mail_queens"
     },
     {
       "kind": "unmapped-endpoint",
@@ -131,6 +239,10 @@
     {
       "kind": "unmapped-endpoint",
       "detail": "queen_removed"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_skill_body"
     },
     {
       "kind": "unmapped-endpoint",
@@ -223,6 +335,14 @@
     {
       "kind": "unmapped-endpoint",
       "detail": "session_upload_missing_session"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_worker_conversation_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_worker_detail_missing"
     },
     {
       "kind": "unmapped-endpoint",
@@ -266,7 +386,55 @@
     },
     {
       "kind": "unmapped-endpoint",
+      "detail": "channels"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "claude_code_conversation_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "claude_code_queens"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_active_session"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_data_changes"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_data_table_rows_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_data_tables"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_import_status_invalid"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_sessions"
+    },
+    {
+      "kind": "unmapped-endpoint",
       "detail": "colonies_tools_index"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colonies_worker_profiles_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colony_notifications_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "colony_tools_missing"
     },
     {
       "kind": "unmapped-endpoint",
@@ -338,6 +506,38 @@
     },
     {
       "kind": "unmapped-endpoint",
+      "detail": "crm_grid_entity_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "crm_grid_schema"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "discover"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "global_crm_status"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "global_data_changes"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "global_data_foreign_keys"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "global_data_table_rows_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "global_data_tables"
+    },
+    {
+      "kind": "unmapped-endpoint",
       "detail": "janitor_report"
     },
     {
@@ -350,7 +550,35 @@
     },
     {
       "kind": "unmapped-endpoint",
+      "detail": "memories"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "memories_file_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "models_endpoint_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "profile_avatar_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "prompts"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_avatar_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
       "detail": "queen_llm"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_mail_queens"
     },
     {
       "kind": "unmapped-endpoint",
@@ -371,6 +599,10 @@
     {
       "kind": "unmapped-endpoint",
       "detail": "queen_removed"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "queen_skill_body"
     },
     {
       "kind": "unmapped-endpoint",
@@ -463,6 +695,14 @@
     {
       "kind": "unmapped-endpoint",
       "detail": "session_upload_missing_session"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_worker_conversation_missing"
+    },
+    {
+      "kind": "unmapped-endpoint",
+      "detail": "session_worker_detail_missing"
     },
     {
       "kind": "unmapped-endpoint",

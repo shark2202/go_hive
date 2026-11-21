@@ -1,0 +1,13 @@
+install: using local archive: /Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run/stage-hive-1.0.26-go.1+build.2026112118-darwin-arm64/hive-1.0.26-go.1+build.2026112118-darwin-arm64.tar.gz
+install: verified SHA256: hive-1.0.26-go.1+build.2026112118-darwin-arm64.tar.gz
+install: installed hive -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run/home-upgrade/.local/bin/hive
+install: installed hive-cred -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run/home-upgrade/.local/bin/hive-cred
+install: installed hive-browser -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run/home-upgrade/.local/bin/hive-browser
+install: installed browserbridge -> /Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run/home-upgrade/.local/bin/browserbridge
+hive 1.0.26-go.1
+install: verified hive-cred --help
+install: verified hive-browser help
+install: verified browserbridge -version
+
+Add the install directory to PATH:
+  export PATH="/Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run/home-upgrade/.local/bin:$PATH"

@@ -1,0 +1,8 @@
+{
+  "endpoint": "global_data_foreign_keys",
+  "shape": {
+    "error": "string",
+    "signed_out": "boolean"
+  },
+  "counts": {}
+}

@@ -20,7 +20,8 @@
 | R10 | 真实集成验证 | 关键模块至少各有一条真实凭据的端到端记录 | **不适用（用户决定 2026-11-19）** | 本阶段不提供第三方工具凭据，仅提供 LLM 凭据；以支持矩阵的「未验证」声明为准 | 无任何真实第三方调用记录；全部集成仅对假上游验证 |
 
 > **2026-11-21 起补充**：R8 的 `make ci` 增加 `compat-check`（契约自洽：env/config/
-> storage/DB schema/API 路由/响应形状/工具面）；发布前另需对上一交付跑
+> storage/DB schema/API 路由/响应形状/工具面/CLI 外观——CLI 外观由 C11 逐 slot
+> 核对 usage 行与路径/flag 集合，旧构建 vs 新构建 vs Python）；发布前另需对上一交付跑
 > `bash go_hive/scripts/upgrade_compat_check.sh --old-dir <上一交付> --new-dir <候选>`
 > （或 `make upgrade-compat-check PREV_SLOT=…`），并在发布说明记录窗口/回退结论。
 > 规则见 `docs/compatibility-policy.md` §2/§5。

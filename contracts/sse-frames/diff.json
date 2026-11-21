@@ -49,13 +49,13 @@
       "required": true
     },
     {
-      "detail": "session_title_updated payload/multiplicity match; positions are non-contract (reference=[{'stream': 'live', 'index': 11, 'type': 'session_title_updated'}, {'stream': 'history', 'index': 17, 'type': 'session_title_updated'}] target=[{'stream': 'live', 'index': 17, 'type': 'session_title_updated'}, {'stream': 'history', 'index': 23, 'type': 'session_title_updated'}])",
+      "detail": "session_title_updated payload/multiplicity match; positions are non-contract (reference=[{'stream': 'live', 'index': 11, 'type': 'session_title_updated'}, {'stream': 'history', 'index': 17, 'type': 'session_title_updated'}] target=[{'stream': 'live', 'index': 16, 'type': 'session_title_updated'}, {'stream': 'history', 'index': 22, 'type': 'session_title_updated'}])",
       "id": "async-title-multiset-equal",
       "ok": true,
       "required": true
     },
     {
-      "detail": "loop-max-iterations: ref=1 tgt=1; loop-iteration-counter: ref=7 tgt=7; turn-complete-iteration: ref=16 tgt=16; output-delta-iteration: ref=12 tgt=12; model-provider-prefix: ref=16 tgt=16; system-prefix-sha: ref=16 tgt=16; context-usage-ratio: ref=11 tgt=11; context-usage-pct: ref=11 tgt=11; context-usage-estimated-tokens: ref=11 tgt=11; context-usage-message-count: ref=11 tgt=11; context-usage-breakdown: ref=11 tgt=11",
+      "detail": "loop-iteration-counter: ref=7 tgt=7; turn-complete-iteration: ref=16 tgt=16; output-delta-iteration: ref=12 tgt=12; model-provider-prefix: ref=16 tgt=16; context-usage-ratio: ref=11 tgt=11; context-usage-pct: ref=11 tgt=11; context-usage-estimated-tokens: ref=11 tgt=11; context-usage-message-count: ref=11 tgt=11; context-usage-breakdown: ref=11 tgt=11",
       "id": "exceptions-observed",
       "ok": true,
       "required": true
@@ -114,7 +114,7 @@
       "history": {
         "async_position_frames": [
           {
-            "index": 23,
+            "index": 22,
             "type": "session_title_updated"
           }
         ],
@@ -133,7 +133,7 @@
             "type": "node_loop_completed"
           },
           {
-            "index": 22,
+            "index": 23,
             "type": "execution_completed"
           },
           {
@@ -177,7 +177,7 @@
       "live": {
         "async_position_frames": [
           {
-            "index": 17,
+            "index": 16,
             "type": "session_title_updated"
           }
         ],
@@ -196,7 +196,7 @@
             "type": "node_loop_completed"
           },
           {
-            "index": 16,
+            "index": 17,
             "type": "execution_completed"
           },
           {
@@ -310,23 +310,6 @@
   "exceptions": [
     {
       "class": "intentional-structural",
-      "frame_type": "node_loop_started",
-      "id": "loop-max-iterations",
-      "observed": true,
-      "path": "data.max_iterations",
-      "reason": "Python's permanent queen loop reports 999999; Go's per-turn bounded loop reports its configured cap (50). Same field, same type.",
-      "reference_frames_matched": 1,
-      "reference_values": [
-        "999999"
-      ],
-      "target_frames_matched": 1,
-      "target_values": [
-        "50"
-      ],
-      "values_equal_this_run": false
-    },
-    {
-      "class": "intentional-structural",
       "frame_type": "node_loop_iteration",
       "id": "loop-iteration-counter",
       "observed": true,
@@ -406,23 +389,6 @@
     },
     {
       "class": "value-level",
-      "frame_type": "llm_turn_complete",
-      "id": "system-prefix-sha",
-      "observed": true,
-      "path": "data.system_prefix_sha",
-      "reason": "Hash of the rendered static system prompt; the prompt text still differs (prompt-parity lane), so the fingerprint differs.",
-      "reference_frames_matched": 16,
-      "reference_values": [
-        "\"692b774c98c7\""
-      ],
-      "target_frames_matched": 16,
-      "target_values": [
-        "\"885285cb1ffe\""
-      ],
-      "values_equal_this_run": false
-    },
-    {
-      "class": "value-level",
       "frame_type": "context_usage_updated",
       "id": "context-usage-ratio",
       "observed": true,
@@ -431,17 +397,17 @@
       "reference_frames_matched": 11,
       "reference_values": [
         "0.1754",
-        "0.1756",
+        "0.1755",
         "0.1757",
         "0.1759",
         "0.176"
       ],
       "target_frames_matched": 11,
       "target_values": [
-        "0.2132",
-        "0.2689",
-        "0.269",
-        "0.2693"
+        "0.1402",
+        "0.1923",
+        "0.1924",
+        "0.1927"
       ],
       "values_equal_this_run": false
     },
@@ -458,8 +424,8 @@
       ],
       "target_frames_matched": 11,
       "target_values": [
-        "21",
-        "27"
+        "14",
+        "19"
       ],
       "values_equal_this_run": false
     },
@@ -472,19 +438,19 @@
       "reason": "Char-based projection of the still-divergent prompt and tool definitions.",
       "reference_frames_matched": 11,
       "reference_values": [
-        "31579",
-        "31599",
-        "31623",
-        "31670",
-        "31679"
+        "31573",
+        "31593",
+        "31617",
+        "31664",
+        "31673"
       ],
       "target_frames_matched": 11,
       "target_values": [
-        "38380",
-        "48401",
-        "48425",
-        "48472",
-        "48481"
+        "25228",
+        "34612",
+        "34635",
+        "34682",
+        "34691"
       ],
       "values_equal_this_run": false
     },
@@ -524,27 +490,27 @@
       "reference_values": [
         "0",
         "21584",
-        "27984",
-        "28044",
-        "28114",
-        "28256",
-        "28283",
+        "27966",
+        "28026",
+        "28096",
+        "28238",
+        "28265",
         "45171"
       ],
       "target_frames_matched": 11,
       "target_values": [
         "0",
-        "30064",
-        "30134",
-        "30276",
-        "30303",
-        "52587",
-        "62554"
+        "21692",
+        "28152",
+        "28222",
+        "28364",
+        "28391",
+        "53992"
       ],
       "values_equal_this_run": false
     }
   ],
-  "generated_at": "2026-11-21T11:12:43+08:00",
+  "generated_at": "2026-11-21T19:59:26+08:00",
   "reference": {
     "implementation": "python",
     "version": "hive 1.0.14"

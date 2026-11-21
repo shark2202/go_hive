@@ -1,0 +1,23 @@
+usage: hive mcp [-h]
+                {install,add,mode,run,remove,enable,disable,list,info,config,search,health,init,update}
+                ...
+
+positional arguments:
+  {install,add,mode,run,remove,enable,disable,list,info,config,search,health,init,update}
+    install             Install a server from the registry
+    add                 Register a local/running MCP server
+    mode                Reach a server from the terminal (cli) or as tools
+    run                 Run a server's tools as commands
+    remove              Remove an installed server
+    enable              Enable a disabled server
+    disable             Disable a server without removing it
+    list                List servers
+    info                Show server details
+    config              Set server configuration overrides
+    search              Search the registry
+    health              Check server health
+    init                Initialize the local MCP registry and seed built-in servers
+    update              Update installed servers or refresh the registry index
+
+options:
+  -h, --help            show this help message and exit

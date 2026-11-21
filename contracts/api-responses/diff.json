@@ -1,39 +1,39 @@
 {
   "schema": "hive-api-contract-diff/1",
-  "generated_at": "2026-11-21T15:57:24+08:00",
+  "generated_at": "2026-11-21T20:10:41+08:00",
   "direction": "reference(python) -> target(go_hive)",
-  "reference_id": "python@f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d",
-  "target_id": "go_hive@f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d",
+  "reference_id": "python@982136f85e8fb3a956469944622edbfce1caa2ea",
+  "target_id": "go_hive@982136f85e8fb3a956469944622edbfce1caa2ea",
   "reference": {
     "implementation": "python",
     "version": "hive 1.0.14",
-    "commit": "f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d",
-    "last_core_commit": "856854659269aa4c9fcfc8ae89ff956eaff75b66",
+    "commit": "982136f85e8fb3a956469944622edbfce1caa2ea",
+    "last_core_commit": "16291c8d705d169b473c4ec6e1ec44bf736cff26",
     "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd"
   },
   "target": {
     "implementation": "go_hive",
     "version": "hive 1.0.26-go.1",
-    "commit": "f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d"
+    "commit": "982136f85e8fb3a956469944622edbfce1caa2ea"
   },
   "probe": {
     "queen_id": "queen_growth",
     "llm": {
       "provider": "openai",
       "model": "contract-probe-model",
-      "api_base": "http://127.0.0.1:61763/v1",
+      "api_base": "http://127.0.0.1:60527/v1",
       "key_env": "HIVE_CONTRACT_PROBE_KEY",
       "note": "local OpenAI-compatible stub; deterministic kickoff turn, no vendor call, no network"
     },
     "sse_seconds": 3.0
   },
   "totals": {
-    "endpoints": 77,
-    "pass": 75,
+    "endpoints": 107,
+    "pass": 105,
     "declared": 2,
     "fail": 0,
-    "success_paths": 56,
-    "failure_paths": 21,
+    "success_paths": 66,
+    "failure_paths": 41,
     "status_mismatch": 0,
     "missing_in_target": 1,
     "extra_in_target": 1,
@@ -825,6 +825,120 @@
           "check": "status equal",
           "ok": true,
           "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "session_worker_detail_missing",
+      "label": "会话 Worker 不存在",
+      "method": "GET",
+      "path": "/api/sessions/{session}/workers/probe-missing",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='unknown worker: probe-missing' target='unknown worker: probe-missing'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "session_worker_conversation_missing",
+      "label": "Worker 会话不存在",
+      "method": "GET",
+      "path": "/api/sessions/{session}/workers/probe-missing/conversation",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='unknown worker: probe-missing' target='unknown worker: probe-missing'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "claude_code_conversation_missing",
+      "label": "Claude Code 会话不存在",
+      "method": "GET",
+      "path": "/api/claude-code-queens/queen_growth/conversations/probe-missing",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference=\"No conversation 'probe-missing' of 'queen_growth'\" target=\"No conversation 'probe-missing' of 'queen_growth'\""
         }
       ],
       "notes": []
@@ -1684,6 +1798,932 @@
           "check": "status equal",
           "ok": true,
           "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "prompts",
+      "label": "提示词目录",
+      "method": "GET",
+      "path": "/api/prompts",
+      "kind": "success",
+      "expect_status": null,
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "memories",
+      "label": "记忆目录",
+      "method": "GET",
+      "path": "/api/memories",
+      "kind": "success",
+      "expect_status": null,
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "memories_file_missing",
+      "label": "记忆文件不存在",
+      "method": "GET",
+      "path": "/api/memories/file?path=probe-missing.md",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='Memory not found' target='Memory not found'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "channels",
+      "label": "频道目录",
+      "method": "GET",
+      "path": "/api/channels",
+      "kind": "success",
+      "expect_status": null,
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "claude_code_queens",
+      "label": "Claude Code Queens",
+      "method": "GET",
+      "path": "/api/claude-code-queens",
+      "kind": "success",
+      "expect_status": null,
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "discover",
+      "label": "能力发现",
+      "method": "GET",
+      "path": "/api/discover",
+      "kind": "success",
+      "expect_status": null,
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "queen_mail_queens",
+      "label": "Queen Mail 列表",
+      "method": "GET",
+      "path": "/api/queen-mail/queens",
+      "kind": "failure",
+      "expect_status": 401,
+      "reference_status": 401,
+      "target_status": 401,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=401 target=401"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=401 reference=401 target=401"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='unauthorized' target='unauthorized'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "profile_avatar_missing",
+      "label": "用户头像不存在",
+      "method": "GET",
+      "path": "/api/config/profile/avatar",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='No avatar found' target='No avatar found'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "queen_avatar_missing",
+      "label": "Queen 头像不存在",
+      "method": "GET",
+      "path": "/api/queen/queen_growth/avatar",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='No avatar found' target='No avatar found'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "models_endpoint_missing",
+      "label": "模型端点不存在",
+      "method": "GET",
+      "path": "/api/models/endpoints/probe-missing/models",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference=\"There's no endpoint 'probe-missing'\" target=\"There's no endpoint 'probe-missing'\""
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "queen_skill_body",
+      "label": "Queen 技能正文",
+      "method": "GET",
+      "path": "/api/queen/queen_growth/skills/administrative-behavior-skill/body",
+      "kind": "success",
+      "expect_status": null,
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "global_crm_status",
+      "label": "全局 CRM 状态",
+      "method": "GET",
+      "path": "/api/global/crm/status",
+      "kind": "failure",
+      "expect_status": 501,
+      "reference_status": 501,
+      "target_status": 501,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=501 target=501"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=501 reference=501 target=501"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='CRM is not available in this build' target='CRM is not available in this build'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "global_data_tables",
+      "label": "全局数据表",
+      "method": "GET",
+      "path": "/api/global/data/tables",
+      "kind": "failure",
+      "expect_status": 401,
+      "reference_status": 401,
+      "target_status": 401,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=401 target=401"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=401 reference=401 target=401"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "global_data_changes",
+      "label": "全局数据变更",
+      "method": "GET",
+      "path": "/api/global/data/changes",
+      "kind": "failure",
+      "expect_status": 401,
+      "reference_status": 401,
+      "target_status": 401,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=401 target=401"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=401 reference=401 target=401"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "global_data_foreign_keys",
+      "label": "全局数据外键",
+      "method": "GET",
+      "path": "/api/global/data/foreign-keys",
+      "kind": "failure",
+      "expect_status": 401,
+      "reference_status": 401,
+      "target_status": 401,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=401 target=401"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=401 reference=401 target=401"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "global_data_table_rows_missing",
+      "label": "全局表行",
+      "method": "GET",
+      "path": "/api/global/data/tables/probe_missing/rows",
+      "kind": "failure",
+      "expect_status": 401,
+      "reference_status": 401,
+      "target_status": 401,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=401 target=401"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=401 reference=401 target=401"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "crm_grid_schema",
+      "label": "CRM 网格 schema",
+      "method": "GET",
+      "path": "/api/crm/grid/schema",
+      "kind": "failure",
+      "expect_status": 401,
+      "reference_status": 401,
+      "target_status": 401,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=401 target=401"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=401 reference=401 target=401"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "crm_grid_entity_missing",
+      "label": "CRM 实体不存在",
+      "method": "GET",
+      "path": "/api/crm/grid/account/probe-missing",
+      "kind": "failure",
+      "expect_status": 401,
+      "reference_status": 401,
+      "target_status": 401,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=401 target=401"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=401 reference=401 target=401"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).' target='Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "colony_notifications_missing",
+      "label": "Colony 通知-不存在",
+      "method": "GET",
+      "path": "/api/colony/queen_growth/notifications",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference=\"Colony 'queen_growth' not found\" target=\"Colony 'queen_growth' not found\""
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "colony_tools_missing",
+      "label": "Colony 工具-不存在",
+      "method": "GET",
+      "path": "/api/colony/queen_growth/tools",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference=\"Colony 'queen_growth' not found\" target=\"Colony 'queen_growth' not found\""
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "colonies_sessions",
+      "label": "Colony 会话列表",
+      "method": "GET",
+      "path": "/api/colonies/queen_growth/sessions",
+      "kind": "success",
+      "expect_status": null,
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "colonies_active_session",
+      "label": "Colony 活动会话",
+      "method": "GET",
+      "path": "/api/colonies/queen_growth/active-session",
+      "kind": "success",
+      "expect_status": null,
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "colonies_worker_profiles_missing",
+      "label": "Colony Worker 档案-不存在",
+      "method": "GET",
+      "path": "/api/colonies/queen_growth/worker_profiles",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference=\"colony 'queen_growth' not found\" target=\"colony 'queen_growth' not found\""
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "colonies_data_tables",
+      "label": "Colony 数据表",
+      "method": "GET",
+      "path": "/api/colonies/queen_growth/data/tables",
+      "kind": "success",
+      "expect_status": null,
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "colonies_data_changes",
+      "label": "Colony 数据变更",
+      "method": "GET",
+      "path": "/api/colonies/queen_growth/data/changes?since=0",
+      "kind": "success",
+      "expect_status": null,
+      "reference_status": 200,
+      "target_status": 200,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=200 target=200"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "colonies_data_table_rows_missing",
+      "label": "Colony 表行-无 tracker",
+      "method": "GET",
+      "path": "/api/colonies/queen_growth/data/tables/probe_missing/rows",
+      "kind": "failure",
+      "expect_status": 404,
+      "reference_status": 404,
+      "target_status": 404,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=404 target=404"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=404 reference=404 target=404"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='no tracker.db' target='no tracker.db'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "endpoint": "colonies_import_status_invalid",
+      "label": "导入状态-非法 ID",
+      "method": "GET",
+      "path": "/api/colonies/import/status/probe-missing",
+      "kind": "failure",
+      "expect_status": 400,
+      "reference_status": 400,
+      "target_status": 400,
+      "reference_content_type": "application/json; charset=utf-8",
+      "target_content_type": "application/json",
+      "verdict": "PASS",
+      "declared_class": null,
+      "declared_reason": null,
+      "diff_count": 0,
+      "missing_in_target": [],
+      "extra_in_target": [],
+      "type_mismatch": [],
+      "count_mismatch": [],
+      "semantic": [
+        {
+          "check": "status equal",
+          "ok": true,
+          "detail": "reference=400 target=400"
+        },
+        {
+          "check": "expected failure status",
+          "ok": true,
+          "detail": "expect=400 reference=400 target=400"
+        },
+        {
+          "check": "error message equal",
+          "ok": true,
+          "detail": "reference='invalid upload_id' target='invalid upload_id'"
         }
       ],
       "notes": []

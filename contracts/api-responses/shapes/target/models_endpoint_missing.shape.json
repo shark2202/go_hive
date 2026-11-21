@@ -1,0 +1,7 @@
+{
+  "endpoint": "models_endpoint_missing",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

@@ -1,0 +1,23 @@
+{
+  "endpoint": "global_data_tables",
+  "label": "全局数据表",
+  "method": "GET",
+  "path": "/api/global/data/tables",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 401,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T20:10:41+08:00",
+  "canonical": {
+    "error": "Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).",
+    "signed_out": true
+  },
+  "shape": {
+    "error": "string",
+    "signed_out": "boolean"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

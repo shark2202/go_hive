@@ -1,0 +1,7 @@
+{
+  "endpoint": "colonies_import_status_invalid",
+  "shape": {
+    "error": "string"
+  },
+  "counts": {}
+}

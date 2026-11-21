@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "tool": "go_hive/scripts/install_verify.sh",
+  "generated_at": "2026-11-21T11:44:13+00:00",
+  "archive": "/Users/mac/hive/go_hive/dist/slots/20261121-18/hive-1.0.26-go.1+build.2026112118-darwin-arm64.tar.gz",
+  "old_dir": "/Users/mac/hive/go_hive/dist/slots/20261121-16",
+  "work": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run",
+  "pass": 17,
+  "fail": 0,
+  "skip": 1,
+  "verdict": "PASS(with skips)",
+  "checks": [
+    {
+      "id": "I1",
+      "title": "manifest.json parses",
+      "status": "PASS",
+      "detail": "version=1.0.26-go.1 build=1.0.26-go.1+build.2026112118"
+    },
+    {
+      "id": "I2",
+      "title": "archive sha256/bytes match manifest",
+      "status": "PASS",
+      "detail": "sha256=4962451131dc6245… bytes=48956018"
+    },
+    {
+      "id": "I3",
+      "title": "archive carries four executables",
+      "status": "PASS",
+      "detail": "hive-1.0.26-go.1+build.2026112118-darwin-arm64.tar.gz"
+    },
+    {
+      "id": "I4",
+      "title": "archive-internal SHA256SUMS verifies",
+      "status": "SKIP",
+      "detail": "slot archive has no inner SHA256SUMS (manifest-level sha256 verified in I2)"
+    },
+    {
+      "id": "I5",
+      "title": "install.sh accepts the archive (SHA256 gate)",
+      "status": "PASS",
+      "detail": "log has 'verified SHA256'"
+    },
+    {
+      "id": "I6",
+      "title": "four binaries installed and executable",
+      "status": "PASS",
+      "detail": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/install-verify-run/home-new/.local/bin"
+    },
+    {
+      "id": "I7",
+      "title": "installed hive --version == manifest version",
+      "status": "PASS",
+      "detail": "hive 1.0.26-go.1"
+    },
+    {
+      "id": "I7b",
+      "title": "hive-cred / hive-browser / browserbridge run",
+      "status": "PASS",
+      "detail": "help/-version rc=0"
+    },
+    {
+      "id": "I8",
+      "title": "cold start: health/root/history 200",
+      "status": "PASS",
+      "detail": "health=200 /=200 history=200"
+    },
+    {
+      "id": "I8b",
+      "title": "cold-start serve exits on SIGTERM",
+      "status": "PASS",
+      "detail": "pid reaped"
+    },
+    {
+      "id": "I9",
+      "title": "corrupted SHA256SUMS is rejected",
+      "status": "PASS",
+      "detail": "installer refused: install: ERROR: SHA256 mismatch for hive-1.0.26-go.1+build.2026112118-darwin-arm64.tar.gz "
+    },
+    {
+      "id": "I10",
+      "title": "previous delivery binary + archive present",
+      "status": "PASS",
+      "detail": "hive 1.0.26-go.1 (/Users/mac/hive/go_hive/dist/slots/20261121-16)"
+    },
+    {
+      "id": "I10b",
+      "title": "old archive installs into ~/.local/bin",
+      "status": "PASS",
+      "detail": "hive 1.0.26-go.1"
+    },
+    {
+      "id": "I11",
+      "title": "v2 legacy HIVE_HOME fixture built",
+      "status": "PASS",
+      "detail": "56 files"
+    },
+    {
+      "id": "I11b",
+      "title": "old binary migrates + reads fixture home",
+      "status": "PASS",
+      "detail": "health 200, session+colony visible"
+    },
+    {
+      "id": "I12",
+      "title": "in-place upgrade replaces hive with the new build",
+      "status": "PASS",
+      "detail": "binary sha matches archive; hive 1.0.26-go.1"
+    },
+    {
+      "id": "I13",
+      "title": "upgraded binary serves the old home",
+      "status": "PASS",
+      "detail": "health 200, sessions+colony+markers intact"
+    },
+    {
+      "id": "I14",
+      "title": "user data lossless across upgrade",
+      "status": "PASS",
+      "detail": "0 added / 0 removed / 0 user-data modified (allowlisted churn: 1)"
+    }
+  ]
+}

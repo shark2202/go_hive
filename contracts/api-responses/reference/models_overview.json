@@ -8,7 +8,7 @@
   "version": "hive 1.0.14",
   "status": 200,
   "content_type": "application/json; charset=utf-8",
-  "captured_at": "2026-11-21T15:57:24+08:00",
+  "captured_at": "2026-11-21T20:10:41+08:00",
   "canonical": {
     "endpoints": [
       {
@@ -382,7 +382,7 @@
     "queens": [],
     "slots": {
       "llm": {
-        "api_base": "http://127.0.0.1:61763/v1",
+        "api_base": "http://127.0.0.1:60527/v1",
         "endpoint": null,
         "has_extra_body": false,
         "max_context_tokens": null,

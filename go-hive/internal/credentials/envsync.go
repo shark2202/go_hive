@@ -7,7 +7,6 @@ package credentials
 // again after each write.
 
 import (
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -69,14 +68,14 @@ func SyncEnvFromStore(basePath string, bindings []EnvBinding) EnvSyncResult {
 	if basePath == "" {
 		home, err := hivehome.Resolve()
 		if err != nil {
-			log.Printf("credentials: env sync skipped: %v", err)
+			LogWarning("framework.credentials.envsync", "credentials: env sync skipped: %v", err)
 			return result
 		}
 		basePath = home.CredentialsDir()
 	}
 	storage, err := NewEncryptedFileStorage(basePath, "")
 	if err != nil {
-		log.Printf("credentials: env sync skipped: open store: %v", err)
+		LogWarning("framework.credentials.envsync", "credentials: env sync skipped: open store: %v", err)
 		return result
 	}
 
@@ -131,7 +130,7 @@ func SyncEnvFromStore(basePath string, bindings []EnvBinding) EnvSyncResult {
 
 	if len(result.Injected)+len(result.Refreshed)+len(result.Skipped) > 0 {
 		// Names and counts only: the values are credentials.
-		log.Printf(
+		LogInfo("framework.credentials.envsync",
 			"credentials: env sync injected %d, refreshed %d, kept existing %d",
 			len(result.Injected), len(result.Refreshed), len(result.Skipped),
 		)

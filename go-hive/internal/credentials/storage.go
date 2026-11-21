@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -96,7 +95,8 @@ func NewEncryptedFileStorageWithOptions(basePath, encryptionKey, keyEnvVar strin
 			return nil, err
 		}
 		key = generated
-		log.Printf("credentials: generated a new encryption key; set %s to persist credentials across restarts", keyEnvVar)
+		LogWarning("framework.credentials.storage",
+			"credentials: Generated new encryption key. To persist credentials across restarts, set %s", keyEnvVar)
 	}
 	f, err := NewFernet(key)
 	if err != nil {

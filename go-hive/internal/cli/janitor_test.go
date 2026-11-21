@@ -31,8 +31,8 @@ func TestJanitorHelpThroughRootListsRunAndStatus(t *testing.T) {
 		t.Fatalf("Run(janitor --help) = %d, want 0", code)
 	}
 	for _, want := range []string{
-		"Data-retention janitor (dry-run by default)",
 		"Prune aged debug logs",
+		"{run,status}",
 		"run",
 		"status",
 	} {

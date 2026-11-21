@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-21T11:12:40+08:00",
+  "generated_at": "2026-11-21T19:57:37+08:00",
   "reference": {
     "version": "hive 1.0.14",
     "session_id": "<session_id>"
@@ -1054,18 +1054,18 @@
       "history_value_diff": {
         "breakdown.conversation_chars": {
           "reference": [
-            "27984",
-            "28044",
-            "28114",
-            "28256",
-            "28283"
+            "27966",
+            "28026",
+            "28096",
+            "28238",
+            "28265"
           ],
           "target": [
             "0",
-            "30064",
-            "30134",
-            "30276",
-            "30303"
+            "28152",
+            "28222",
+            "28364",
+            "28391"
           ]
         },
         "breakdown.system_chars": {
@@ -1073,7 +1073,7 @@
             "21584"
           ],
           "target": [
-            "62554"
+            "21692"
           ]
         },
         "breakdown.tool_defs_chars": {
@@ -1081,23 +1081,23 @@
             "45171"
           ],
           "target": [
-            "52587"
+            "53992"
           ]
         },
         "estimated_tokens": {
           "reference": [
-            "31579",
-            "31599",
-            "31623",
-            "31670",
-            "31679"
+            "31573",
+            "31593",
+            "31617",
+            "31664",
+            "31673"
           ],
           "target": [
-            "38380",
-            "48401",
-            "48425",
-            "48472",
-            "48481"
+            "25228",
+            "34612",
+            "34635",
+            "34682",
+            "34691"
           ]
         },
         "message_count": {
@@ -1121,23 +1121,23 @@
             "18"
           ],
           "target": [
-            "21",
-            "27"
+            "14",
+            "19"
           ]
         },
         "usage_ratio": {
           "reference": [
             "0.1754",
-            "0.1756",
+            "0.1755",
             "0.1757",
             "0.1759",
             "0.176"
           ],
           "target": [
-            "0.2132",
-            "0.2689",
-            "0.269",
-            "0.2693"
+            "0.1402",
+            "0.1923",
+            "0.1924",
+            "0.1927"
           ]
         }
       }
@@ -1962,14 +1962,6 @@
           "target": [
             "\"sse-parity-probe-model\""
           ]
-        },
-        "system_prefix_sha": {
-          "reference": [
-            "\"692b774c98c7\""
-          ],
-          "target": [
-            "\"885285cb1ffe\""
-          ]
         }
       }
     },
@@ -2519,7 +2511,8 @@
             "999999"
           ],
           "target": [
-            "50"
+            "50",
+            "999999"
           ]
         }
       }
@@ -3842,8 +3835,8 @@
         "node_loop_completed",
         "client_input_requested",
         "loop_state_changed",
-        "execution_completed",
         "session_title_updated",
+        "execution_completed",
         "client_input_received",
         "execution_started",
         "loop_state_changed",
@@ -3903,8 +3896,8 @@
           "op": "insert",
           "reference": [],
           "target": [
-            "execution_completed",
-            "session_title_updated"
+            "session_title_updated",
+            "execution_completed"
           ]
         },
         {
@@ -4131,8 +4124,8 @@
         "node_loop_completed",
         "client_input_requested",
         "loop_state_changed",
-        "execution_completed",
         "session_title_updated",
+        "execution_completed",
         "client_input_received",
         "execution_started",
         "loop_state_changed",
@@ -4194,8 +4187,8 @@
           "op": "insert",
           "reference": [],
           "target": [
-            "execution_completed",
-            "session_title_updated"
+            "session_title_updated",
+            "execution_completed"
           ]
         },
         {

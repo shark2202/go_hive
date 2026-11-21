@@ -24,11 +24,13 @@ type ToolCallRequest struct {
 type ToolExecutor func(ToolCallRequest) (ToolResult, error)
 
 type ToolCallRecord struct {
-	ToolUseID string
-	ToolName  string
-	ToolInput map[string]any
-	Content   string
-	IsError   bool
+	ToolUseID      string
+	ToolName       string
+	ToolInput      map[string]any
+	Content        string
+	IsError        bool
+	StartTimestamp string
+	DurationS      float64
 }
 
 type TurnResult struct {
@@ -151,6 +153,7 @@ type AgentLoop struct {
 	inGrace             bool
 	graceStartIteration *int
 	graceAnnounced      bool
+	runtimeLogState     runtimeLogState
 
 	spillMu      sync.Mutex
 	spillCounter int
@@ -370,6 +373,8 @@ func (l *AgentLoop) compactConversationIfNeeded(ctx context.Context, agentCtx *A
 		return
 	}
 	l.fireReminder(POST_COMPACT, reminderCtx, conv, "")
+	// Parity: framework/agent_loop/internals/compaction.py::log_compaction.
+	l.logCompactionStep(agentCtx, conv, ratioBefore, maxContext)
 	if compactionDebugEnabled() {
 		writeCompactionReport(agentCtx, ratioBefore, conv.UsageRatio(), preInventory)
 	}
@@ -520,6 +525,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 	softBudgetReminders := 0
 
 	for inner := 0; inner < totalIterations; inner++ {
+		iterStart := time.Now()
 		if err := ctx.Err(); err != nil {
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 		}
@@ -566,6 +572,8 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 				inner--
 				continue
 			}
+			// Parity: framework/agent_loop/agent_loop.py::execute (LLM error).
+			l.logRuntimeLLMFailure(agentCtx, ctx, err, iterStart, inner, agentCtx.Attempt)
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 		}
 		// Record spend as soon as the completion lands so the hard cap sees
@@ -603,7 +611,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		}
 
 		if len(toolCalls) == 0 {
-			done, err := l.settleTextOnlyTurn(ctx, agentCtx, conv, reminderCtx, requestMessages, completion, inner, tools, &result)
+			done, err := l.settleTextOnlyTurn(ctx, agentCtx, conv, reminderCtx, requestMessages, completion, inner, tools, &result, iterStart)
 			if err != nil {
 				result.Success = false
 				result.InnerTurns = inner + 1
@@ -674,7 +682,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 			pending = append(pending, pendingToolCall{index: i, call: call})
 		}
 
-		l.executeToolBatch(ctx, agentCtx, pending, results, tools)
+		timings := l.executeToolBatch(ctx, agentCtx, pending, results, tools, len(toolCalls))
 
 		toolFailure, doomLoopReminder, doomPark := l.observeToolBatch(agentCtx, pending, results)
 
@@ -725,7 +733,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 				tail = tail + "\n\n" + doomLoopReminder
 			}
 		}
-		records, err := l.storeToolBatch(ctx, agentCtx, conv, toolCalls, results, tail, started)
+		records, err := l.storeToolBatch(ctx, agentCtx, conv, toolCalls, results, tail, started, timings)
 		if err != nil {
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 		}
@@ -763,24 +771,16 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 			return result, ctx.Err()
 		}
 
+		loggedCalls := runtimeLogToolCalls(records, timings)
+		iterLatencyMS := stepLatencyMS(iterStart)
 		if l.shouldJudge(agentCtx, inner, false, toolFailure) {
 			verdict := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, records, inner)
-			switch verdict.Action {
-			case JudgeAccept:
-				result.FinalText = completion.Content
-				result.InnerTurns = inner + 1
-				return result, nil
-			case JudgeEscalate:
-				result.Success = false
-				result.FinalText = completion.Content
-				result.InnerTurns = inner + 1
-				return result, fmt.Errorf("agent loop: judge escalated: %s", verdict.Feedback)
-			default:
-				if err := injectJudgeFeedback(conv, verdict); err != nil {
-					result.Success = false
-					return result, err
-				}
+			l.logRuntimeVerdict(agentCtx, verdict, completion, loggedCalls, inner, iterLatencyMS)
+			if stop, judgeErr := applyJudgeVerdict(conv, verdict, completion, inner, &result); stop {
+				return result, judgeErr
 			}
+		} else {
+			l.logRuntimeNonJudgedStep(agentCtx, completion, loggedCalls, inner, iterLatencyMS)
 		}
 
 		if _, err := l.injectQueuedInput(reminderCtx, conv); err != nil {
@@ -881,15 +881,16 @@ const parallelReadOnlyCap = 10
 // a serial batch; this Go port keeps the batch together and only goes
 // concurrent when every call is explicitly marked safe. The in-flight ceiling
 // matches upstream's 10.
-func (l *AgentLoop) executeToolBatch(ctx context.Context, agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult, tools []llm.ToolDef) {
+func (l *AgentLoop) executeToolBatch(ctx context.Context, agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult, tools []llm.ToolDef, nCalls int) []toolTiming {
+	timings := make([]toolTiming, nCalls)
 	if len(pending) == 0 {
-		return
+		return timings
 	}
 	if !l.Config.ParallelReadOnlyTools || len(pending) < 2 || !allToolsConcurrencySafe(pending, tools) {
 		for _, item := range pending {
-			results[item.index] = l.executeTool(ctx, agentCtx, item.call)
+			l.runTimedTool(ctx, agentCtx, item, results, timings)
 		}
-		return
+		return timings
 	}
 	sem := make(chan struct{}, parallelReadOnlyCap)
 	var wg sync.WaitGroup
@@ -899,10 +900,11 @@ func (l *AgentLoop) executeToolBatch(ctx context.Context, agentCtx *AgentContext
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			results[item.index] = l.executeTool(ctx, agentCtx, item.call)
+			l.runTimedTool(ctx, agentCtx, item, results, timings)
 		}(item)
 	}
 	wg.Wait()
+	return timings
 }
 
 // allToolsConcurrencySafe reports whether every pending call names a tool the
@@ -1416,16 +1418,14 @@ func modelName(agentCtx *AgentContext) string {
 //
 // Parity: framework/agent_loop/agent_loop.py::_execute_impl (per-tool publication)
 // Parity: framework/agent_loop/internals/event_publishing.py::publish_context_usage
-func (l *AgentLoop) storeToolBatch(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, toolCalls []llm.ToolCall, results []ToolResult, tail string, started []bool) ([]ToolCallRecord, error) {
+func (l *AgentLoop) storeToolBatch(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, toolCalls []llm.ToolCall, results []ToolResult, tail string, started []bool, timings []toolTiming) ([]ToolCallRecord, error) {
 	records := make([]ToolCallRecord, 0, len(toolCalls))
 	for i, tc := range toolCalls {
-		records = append(records, ToolCallRecord{
-			ToolUseID: tc.ID,
-			ToolName:  tc.Name,
-			ToolInput: parseToolInput(tc.Arguments),
-			Content:   results[i].Content,
-			IsError:   results[i].IsError,
-		})
+		record := ToolCallRecord{ToolUseID: tc.ID, ToolName: tc.Name, ToolInput: parseToolInput(tc.Arguments), Content: results[i].Content, IsError: results[i].IsError}
+		if i < len(timings) {
+			record.StartTimestamp, record.DurationS = timings[i].startTimestamp, timings[i].durationS
+		}
+		records = append(records, record)
 	}
 	targetID := ""
 	if tail != "" {

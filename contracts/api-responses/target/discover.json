@@ -1,0 +1,17 @@
+{
+  "endpoint": "discover",
+  "label": "能力发现",
+  "method": "GET",
+  "path": "/api/discover",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 200,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T20:10:41+08:00",
+  "canonical": {},
+  "shape": {},
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

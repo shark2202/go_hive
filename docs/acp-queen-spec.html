@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACP Queen 需求说明书（详细版）· go_hive</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1040px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:24px 0 8px;color:#cfdae6} h4{font-size:13.5px;margin:18px 0 6px;color:#b9c7d6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g4,.g3,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:20px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+figure.diagram{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:16px 0}
+figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
+.fr{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:var(--accent);border:1px solid #4a3a12;background:#161207;border-radius:5px;padding:1px 6px;margin-right:6px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){.tablewrap table{min-width:760px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">go_hive · Requirements Spec v0.1</div><h1>ACP Queen <span>需求说明书（详细版）</span></h1>
+<p class="lede">把任意 <b>ACP（Agent Client Protocol）兼容 agent</b>——Claude Code（claude-acp）、Codex（codex-acp）、Gemini（原生）、OpenCode（原生）、Hermes（原生）、pi（pi-acp）——注册成 Hive 的 queen：像 Claude Code queen 一样在 queen mail 里收信/回信，但驱动面从"每 CLI 一套适配"变成"一套 ACP client"。</p>
+<div class="meta"><span>版本：<b>v0.1 草案</b></span><span>撰写：<b>2026-11-21 19:40 CST</b></span><span>状态：<b>需求说明书（未实现）</b></span><span>归属：<b>go_hive 扩展（上游无此概念）</b></span></div>
+<div class="toc"><a href="#s00">定位与结论</a><a href="#s01">需求来源与参照物</a><a href="#s02">目标 / 非目标</a><a href="#s03">角色与场景</a><a href="#s04">功能需求 FR</a><a href="#s05">协议与接口规范</a><a href="#s06">配置 Schema</a><a href="#s07">磁盘契约与状态</a><a href="#s08">交互流程</a><a href="#s09">非功能需求</a><a href="#s10">验收标准</a><a href="#s11">里程碑</a><a href="#s12">风险与开放问题</a></div></header>
+
+<section id="s00"><h2><span class="num">00</span>定位与结论</h2>
+<div class="grid g3">
+<div class="card"><div class="k">是什么</div><div class="v">ACP queen</div><div class="d">一位 queen 身份 + 一个外部 ACP agent 运行时；在邮局里与其他 queen 平权，在 colony 之外。</div></div>
+<div class="card"><div class="k">为什么</div><div class="v">N 个 agent，一套协议</div><div class="d">Claude Code queen 是"一 CLI 一适配器"；ACP 把"初始化/会话/回合/权限/MCP 注入"标准化，Hive 只做 client。</div></div>
+<div class="card"><div class="k">边界</div><div class="v">不是 colony 成员</div><div class="d">不派 worker、不读写 tracker、没有 Hive 记忆；与 colony 的桥梁仍然只有信件（queen mail）。</div></div>
+</div>
+<div class="callout bad"><b>合规声明（必须先读）</b>：本项<b>上游 Hive 没有</b>——`queen_mail` 只有 `claude_code` 一种外部运行时。按项目现行"只对齐、不新增"的约束，ACP queen 属于<b>声明式扩展</b>，落地前需要产品决策；本说明书只定义"若要做，做成什么样"，不代表已批准或已实现。</div>
+</section>
+
+<section id="s01"><h2><span class="num">01</span>需求来源与参照物</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">来源</th><th>内容</th><th style="width:26%">用途</th></tr></thead><tbody>
+<tr><td>Claude Code queen（上游已实现）</td><td>配置 map、每信一回合、按 (queen, peer) 会话、MCP 注入（<code>queen-mail-mcp</code>）、六类失败文案、HMAC token、dashboard 只读视图</td><td><b>需求参照实现</b>：ACP queen 的语义基线（能对齐的都对齐）</td></tr>
+<tr><td>ACP 规范 v1 与 v2（agentclientprotocol.com）</td><td>JSON-RPC 2.0 over stdio；<code>initialize</code> / <code>session/new</code> / <code>session/prompt</code> / <code>session/update</code> / <code>session/cancel</code> / <code>session/request_permission</code>；<code>session/new</code> 携带 <code>mcpServers</code></td><td><b>协议事实源</b>（远程 transport 是 RFD 草案，不在本版范围）</td></tr>
+<tr><td><code>docs/agent-runner-protocol.html</code></td><td>Runner 接口、统一事件、能力矩阵、适配器清单</td><td>本说明书是它的<u>需求化展开</u></td></tr>
+<tr><td>xufanglin/acp-link（第三方）</td><td>进程池 + FNV-1a topic 路由 + 同会话串行 + 流式节流 + 内嵌 MCP server</td><td>工程模式借鉴（非协议来源）</td></tr>
+<tr><td>本机实测（2026-11-21）</td><td><code>claude 2.1.329</code>、<code>codex-cli 0.162.1</code>、<code>pi 1.5.2</code>、<code>hermes 0.21.5</code>（自带 <code>hermes acp</code>）；opencode/gemini 未装</td><td>验收环境与适配器取证</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s02"><h2><span class="num">02</span>目标 / 非目标</h2>
+<h3>目标</h3>
+<ul>
+<li><b>G1 一协议多 agent</b>：新增一位 ACP queen = 加一段配置；不需要为每个 CLI 改 Hive 代码。</li>
+<li><b>G2 语义对齐</b>：在 queen mail 层与 Claude Code queen 行为一致——收信/回信、日限/链深/审计、每 (queen, peer) 会话、回合中到达的信合并下一回合、六类失败对写信人可见。</li>
+<li><b>G3 可观测</b>：dashboard 能看到会话与归一化转录；每次信件/回合有审计行。</li>
+<li><b>G4 安全默认</b>：无人值守下权限默认拒绝；env 白名单；token 只对该会话有效；进程树可杀。</li>
+</ul>
+<h3>非目标（本版明确不做）</h3>
+<ul>
+<li><b>不实现 ACP 远程传输</b>（Streamable HTTP/WebSocket 仍是 RFD）：agent 进程必须本机可启动；跨机只能用 <code>ssh</code> 包装 stdio。</li>
+<li><b>不改上游</b>：<code>configure.json</code> 的 <code>queen_mail.claude_code</code> 保持原样；ACP 用新的配置段。</li>
+<li><b>不把 ACP queen 变成 colony 成员</b>：不派 worker、不落 tracker、不进 colony 组织图（组织图上按"外部 queen"虚线卡片处理，与 CC queen 一致）。</li>
+<li><b>不做进程常驻</b>：与 CC queen 一致，每回合拉起一次 agent 进程（进程池是后续优化，见 §11 M3）。</li>
+<li><b>不替 agent 做记忆</b>：与 CC queen 一致，没有 Hive memory/soul/recall 注入。</li>
+</ul>
+</section>
+
+<section id="s03"><h2><span class="num">03</span>角色与场景</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">角色</th><th>职责</th><th style="width:30%">交互面</th></tr></thead><tbody>
+<tr><td>用户</td><td>配置 ACP queen；读 dashboard；通过 Hive queen 给她写信</td><td>configuration.json / 组织图虚线卡片 / 只读转录</td></tr>
+<tr><td>Hive queen（写信人/收信人）</td><td>用 <code>message_queen</code> 与她互相写信；可把外部活外包给她</td><td>女王的 <code>list_queens</code>/<code>message_queen</code> 工具</td></tr>
+<tr><td>ACP queen（本项）</td><td>收到信 → 起 ACP agent 回合 → 最终文本回信；可用 <code>message_queen</code> 主动写信</td><td>ACP stdio 协议 + 注入的 <code>hive</code> MCP server</td></tr>
+<tr><td>ACP agent（外部运行时）</td><td>真正干活：claude-acp / codex-acp / gemini / opencode / hermes / pi-acp</td><td>由 Hive 作为 ACP client 驱动</td></tr>
+</tbody></table></div>
+<h3>核心场景</h3>
+<ol>
+<li><b>S1 外包任务</b>：colony queen 写信"It looks like…" → ACP queen 用她自己的工具链干活 → 最终文本回到 colony queen 会话。</li>
+<li><b>S2 双向信件</b>：ACP queen 在回合里调 <code>message_queen</code> 主动写信给第三位 queen；对方回信进入她的收件箱。</li>
+<li><b>S3 多 queen 分工</b>：同时配置 <code>queen_reviewer</code>（codex-acp）与 <code>queen_coder</code>（claude-acp），各自独立配置/目录/账号，互相能写信。</li>
+<li><b>S4 无人值守权限</b>：回合中 agent 请求执行一个需要批准的工具 → 按策略拒绝/放行，并留审计；写作者不被打断。</li>
+</ol>
+</section>
+
+<section id="s04"><h2><span class="num">04</span>功能需求（FR）</h2>
+
+<h3><span class="fr">FR-1</span>配置与注册</h3>
+<ul>
+<li>新增配置段：<code>queen_mail.runners.acp.&lt;id&gt;</code>（替代命名：<code>queen_mail.acp.&lt;id&gt;</code>，二选一在实现前拍板）。字段见 §06；未配置 = 不存在。</li>
+<li>每位 queen 的 <code>id</code> 是 map 键；<code>name</code>/<code>title</code> 进入 <code>list_queens</code>。</li>
+<li>参与规则与 CC queen 相同：只要配置了且 <code>queen_mail.enabled=true</code> 就参与（不受 <code>queens</code> 列表限制）。</li>
+<li>Go 侧配置读取沿用现约定：<code>hive serve</code> 启动时读取一次（与 CC queen 一致；热重载列为后续可选增强，需与上游差异一起登记）。</li>
+</ul>
+
+<h3><span class="fr">FR-2</span>身份与会话模型</h3>
+<ul>
+<li>会话按 <b>(queen, peer)</b> 建立：ref 形如 <code>acp:&lt;queen id&gt;:&lt;uuid&gt;</code>；<code>conversations.json</code> 结构与 CC queen 相同（<code>peer/reply_to/started/provider_session_id</code>）。</li>
+<li>ACP 会话 id 来自 agent 的 <code>session/new</code> 返回；<b>恢复</b>优先用 <code>session/resume</code>（v1 若 agent 未声明 <code>sessionCapabilities.resume</code>，则用 <code>session/load</code> + <code>loadSession</code> 能力；两者都不可用 → 退回新会话并在审计里记 <code>resume_unavailable</code>）。</li>
+<li>ACP 连接是一次的：每回合 <code>spawn → initialize → new/resume → prompt → close</code>；同一会话的并发回合必须串行（队列深度 ≥32，满载行为与 CC queen 一致：等下一轮）。</li>
+</ul>
+
+<h3><span class="fr">FR-3</span>回合驱动</h3>
+<ul>
+<li>收到信件 → 取该会话当前收件箱批次 → 组 prompt：[<code>[Name(id)]: text</code>, …]（与 CC queen 同一渲染函数，含 <code>]:</code> 转义规则）。</li>
+<li>经 <code>session/prompt</code> 发送；期间收到的 <code>session/update</code> 归一为统一事件（§05.3）并写入本会话转录。</li>
+<li>回合结束取"最终文本"：agent 的最后一个完整 assistant 消息（按 ACP update 流拼装）；为空则按失败处理（与 CC 一致：空文本不产生回复）。</li>
+<li>回写路径复用现有 <code>Mail.DeliverReply</code>：写信人是 Hive queen → 注入其会话；是 ACP/CC queen → 进其收件箱；深度/关闭/不可达 → <code>dropped</code> 审计行。</li>
+</ul>
+
+<h3><span class="fr">FR-4</span>MCP 注入（信件通道）</h3>
+<ul>
+<li>在 <code>session/new|resume</code> 的 <code>mcpServers</code> 中注入与 CC queen 完全相同的 <code>hive</code> server：<code>command=&lt;hive 二进制&gt;</code>、<code>args=["queen-mail-mcp"]</code>、env = <code>HIVE_QUEEN_MAIL_URL/TOKEN/FROM</code>。</li>
+<li>token 仍为 <code>HMAC(secret, ref)</code>（secret 每进程随机），只对该会话有效；工具仍只有 <code>list_queens</code>/<code>message_queen</code> 两个，schema 与文案不改（沿用 queen-mail-mcp 的字段级对齐成果）。</li>
+<li>若 agent 声明 <code>mcpCapabilities</code> 不含 stdio → 配置校验期直接报错（该 agent 不能成为 ACP queen），错误写入启动日志与 dashboard。</li>
+</ul>
+
+<h3><span class="fr">FR-5</span>权限策略</h3>
+<ul>
+<li>响应 <code>session/request_permission</code>：按 <code>permission_policy</code> 三档——<code>deny</code>（默认，拒绝一切请求）/ <code>allow_allowlist</code>（命中 <code>allowed_tools</code> 的批准，其余拒绝）/ <code>allow_all</code>（全批准，等同 bypass，配置需显式 opt-in 并在启动日志警告一次）。</li>
+<li>每次裁决写一条审计（会话、工具名、裁决、策略档）；<b>不</b>允许"静默不回"导致 agent 卡死（超时无响应按 <code>deny</code> 回复）。</li>
+<li>与 CC queen 的差异：CC 用 CLI 参数（<code>--permission-mode</code>/<code>--allowedTools</code>）；ACP 是协议内消息。需求上要求<b>语义等价</b>：无人值守默认拒绝；显式白名单自动放行。</li>
+</ul>
+
+<h3><span class="fr">FR-6</span>失败与超时</h3>
+<ul>
+<li>六类对外文案与 CC queen 逐字一致（无凭据/超时/无法启动/agent 报错/非零退出/她被移除），其中 provider 名替换为 "ACP agent"；内部保留 agent 原始错误供排查。</li>
+<li>超时（默认 <code>timeout_minutes=30</code>）：先 <code>session/cancel</code>，宽限 N 秒后杀整个进程树（Unix：进程组 SIGKILL；Windows：已知差异，仅杀直接进程——与 CC queen 同缺口）。</li>
+<li>握手失败（<code>initialize</code> 超时或协议版本不匹配）→ 明确错误，不计入"已尝试回合"的假成功。</li>
+</ul>
+
+<h3><span class="fr">FR-7</span>并发</h3>
+<ul>
+<li>同会话串行；跨会话并行；全局上限沿用 <code>queen_mail.max_parallel_turns</code>（默认 2），并且该上限<b>同时统计 claude_code 与 acp 两类的在跑回合</b>（"所有外部 queen 的回合总数"语义）。</li>
+<li>回合中到达的信合并进下一回合（与 CC 一致）。</li>
+</ul>
+
+<h3><span class="fr">FR-8</span>Dashboard 与转录</h3>
+<ul>
+<li>新增只读路由（命名二选一）：<code>GET /api/acp-queens</code> + <code>GET /api/acp-queens/{id}/conversations/{session_id}</code>，字段沿用现有 CC dashboard 形状并加 <code>provider</code>（如 <code>codex-acp</code>）。</li>
+<li>转录<b>由 Hive 自建</b>：把 <code>session/update</code> 归一写入 <code>runners/acp/&lt;id&gt;/transcripts/&lt;session&gt;.jsonl</code>（letter/text/tool/result 四类），dashboard 读它——不依赖 agent 私有文件格式（CC 是读 Claude 的 JSONL；ACP 生态无统一转录文件）。</li>
+<li>组织架构图把 ACP queen 按"外部 queen"虚线卡片展示（与 CC queen 同一视觉语言，只读）。</li>
+</ul>
+
+<h3><span class="fr">FR-9</span>多 queen</h3>
+<ul>
+<li>map 配置，无数量上限；每位独立 home：<code>HIVE_HOME/acp/&lt;id&gt;/</code>（或 <code>runners/acp/&lt;id&gt;/</code>）含 <code>conversations.json</code>/<code>inbox/</code>/<code>transcripts/</code>/<code>logs/</code>。</li>
+<li>共享项：<code>enabled</code>/<code>daily_limit</code>/<code>max_depth</code>/<code>max_parallel_turns</code>、同一个 Mail 服务与 <code>queens/mail.jsonl</code> 审计。</li>
+<li>ACP queen 之间、与 CC queen 之间、与 Hive queen 之间都可互相写信。</li>
+</ul>
+</section>
+
+<section id="s05"><h2><span class="num">05</span>协议与接口规范</h2>
+<h3>5.1 传输与版本</h3>
+<ul>
+<li><b>传输</b>：stdio（JSON-RPC 2.0，LF 分隔，无内嵌换行；stderr 仅日志）。<b>不</b>实现远程 transport（RFD 未定）。</li>
+<li><b>版本</b>：MVP 锁定 <b>ACP v1</b>，<code>initialize</code> 发 <code>protocolVersion: 1</code>；agent 回不同版本 → 明确报错不降级。v2 支持列入 M2+（需整体切 prompt 生命周期，禁止半 v1 半 v2）。</li>
+<li>能力协商必须读回并记录：<code>loadSession</code> / <code>sessionCapabilities.resume</code> / <code>promptCapabilities</code> / <code>mcpCapabilities</code>；能力缺失时走 FR-2 的降级路径。</li>
+</ul>
+<h3>5.2 方法集（Hive 作为 client 调用）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">方法</th><th>用途</th><th style="width:30%">关键参数/返回</th></tr></thead><tbody>
+<tr><td><code>initialize</code></td><td>握手与能力协商</td><td>→ <code>{protocolVersion, clientCapabilities, clientInfo}</code>；← <code>{agentCapabilities, agentInfo, authMethods}</code></td></tr>
+<tr><td><code>session/new</code></td><td>为 (queen, peer) 建会话</td><td>→ <code>{cwd, mcpServers}</code>；← <code>{sessionId}</code></td></tr>
+<tr><td><code>session/resume</code>（优先）/ <code>session/load</code>（备选）</td><td>恢复既有会话</td><td>→ <code>{sessionId, cwd, mcpServers}</code></td></tr>
+<tr><td><code>session/prompt</code></td><td>发送信件批次</td><td>→ <code>{sessionId, prompt:[{type:"text",text}]}</code>；v1 响应带 <code>stopReason</code></td></tr>
+<tr><td><code>session/update</code>（agent→client 通知）</td><td>流式输出</td><td>message/tool/plan/state 等 update；归一入 §5.3</td></tr>
+<tr><td><code>session/request_permission</code>（agent→client 请求）</td><td>权限裁决</td><td>按 FR-5 策略回答；裁决入审计</td></tr>
+<tr><td><code>session/cancel</code></td><td>超时/关闭</td><td>随后按 FR-6 杀进程树</td></tr>
+</tbody></table></div>
+<h3>5.3 统一事件（归一）</h3>
+<pre>{"kind":"started","provider":"codex-acp","session_id":"sess_…"}
+{"kind":"text","text":"…","final":false}
+{"kind":"tool","name":"Bash","input":{…},"status":"running|ok|error"}
+{"kind":"usage","input_tokens":0,"output_tokens":0,"cost_usd":0.0}   // 有则填，无则省略
+{"kind":"done","text":"final answer","stop_reason":"end_turn|timeout|error","error":null}</pre>
+<h3>5.4 MCP 注入（协议内）</h3>
+<pre>session/new {
+  "cwd": "…",
+  "mcpServers": [
+    {"name":"hive", "command":"&lt;hive binary&gt;", "args":["queen-mail-mcp"],
+     "env":[{"name":"HIVE_QUEEN_MAIL_URL","value":"…"},
+            {"name":"HIVE_QUEEN_MAIL_TOKEN","value":"…"},
+            {"name":"HIVE_QUEEN_MAIL_FROM","value":"acp:&lt;queen&gt;:&lt;sid&gt;"}]}
+  ]
+}</pre>
+<p class="sub">注：field 形状以 ACP v1 schema 为准（<code>env</code> 为 name/value 数组的具体形态在实现时按 schema 校正）；这与 CC queen 的"临时 MCP 配置文件 + <code>--mcp-config</code>"形成对照——ACP 不需要文件。</p>
+</section>
+
+<section id="s06"><h2><span class="num">06</span>配置 Schema</h2>
+<pre>"queen_mail": {
+  "enabled": true,
+  "runners": {
+    "acp": {
+      "queen_reviewer": {
+        "name": "Reviewer",
+        "title": "Code Review",
+        "command": ["npx", "@agentclientprotocol/codex-acp"],
+        "cwd": "/Users/me/work/review",
+        "auth": "env_api_key",
+        "api_key_env": "OPENAI_API_KEY",
+        "permission_policy": "allow_allowlist",
+        "allowed_tools": [],
+        "timeout_minutes": 30,
+        "system_prompt": "",
+        "env": {}
+      }
+    }
+  },
+  "max_parallel_turns": 2
+}</pre>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">键</th><th style="width:12%">必填</th><th>语义 / 默认</th></tr></thead><tbody>
+<tr><td><code>command</code></td><td>是</td><td>agent 或适配器命令（数组或字符串）；如 <code>["hermes","acp"]</code>、<code>["npx","@agentclientprotocol/codex-acp"]</code>、<code>["claude","--acp"]</code>（适配器名以各项目文档为准）</td></tr>
+<tr><td><code>name</code>/<code>title</code></td><td>否</td><td>默认 id / <code>"ACP Agent"</code>；只影响 <code>list_queens</code> 显示</td></tr>
+<tr><td><code>cwd</code></td><td>否</td><td>默认 <code>HIVE_HOME/acp/&lt;id&gt;/workspace</code>；作 <code>session/new</code> 的 <code>cwd</code></td></tr>
+<tr><td><code>auth</code>/<code>api_key_env</code></td><td>否</td><td><code>env_api_key</code>（从环境变量注入到子进程）/ <code>login</code>（用 agent 自己的登录态，如 <code>~/.codex</code>、<code>hermes</code> portal）/ <code>none</code>；默认 <code>login</code></td></tr>
+<tr><td><code>permission_policy</code></td><td>否</td><td><code>deny</code>（默认）/ <code>allow_allowlist</code> / <code>allow_all</code>（需显式；启动警告一次）</td></tr>
+<tr><td><code>allowed_tools</code></td><td>否</td><td><code>allow_allowlist</code> 下自动批准的工具名列表</td></tr>
+<tr><td><code>timeout_minutes</code></td><td>否</td><td>默认 30；超时取消+杀进程树</td></tr>
+<tr><td><code>system_prompt</code></td><td>否</td><td>追加到 <code>session/new</code> 的 systemPrompt（仅当 agent 声明支持时）；默认使用 Hive 的"信件说明"文本（与 CC 同一份）</td></tr>
+<tr><td><code>env</code></td><td>否</td><td>额外环境变量（白名单基础上叠加；不允许覆盖 Hive 保留项）</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s07"><h2><span class="num">07</span>磁盘契约与状态</h2>
+<pre>HIVE_HOME/runners/acp/&lt;id&gt;/
+├── conversations.json      # {"conversations": {"&lt;peer&gt;": {peer, reply_to, started, provider_session_id}}}
+├── inbox/                  # 等待中的信（跨重启保留；取走即移出）
+├── transcripts/&lt;session&gt;.jsonl   # Hive 自建归一转录（letter/text/tool/result）
+└── logs/                   # 回合日志（含 agent stderr 尾部，凭据已清洗）</pre>
+<ul>
+<li><b>兼容性</b>：<code>conversations.json</code> 的字段与 CC queen 版本<b>同形</b>（多一个 <code>provider_session_id</code>，CC 侧已有该语义）；迁移工具可把 CC 记录映射过来（可选）。</li>
+<li><b>审计</b>：每次 hop 仍写共享 <code>queens/mail.jsonl</code>（kind、from、to、depth、dropped 原因），ACP 相关行加 <code>runtime:"acp"</code>。</li>
+<li><b>清理</b>：<code>session_retention</code> 类策略（默认 7 天）作用于 transcripts/inbox；删除前不打断在跑回合。</li>
+</ul>
+</section>
+
+<section id="s08"><h2><span class="num">08</span>交互流程</h2>
+<figure class="diagram"><pre>信件到达 ──► Mail（hop/depth 记账）
+  └─► Runner（每 ACP queen 一个 watcher）
+        ├─ 取会话批次（(queen,peer) 串行）
+        ├─ spawn agent ──► initialize(v1) ──► 能力记录
+        ├─ session/new | session/resume {cwd, mcpServers:[hive]}
+        ├─ session/prompt {text blocks}
+        │     ├─ session/update*  ──► 归一事件 ──► transcripts/*.jsonl
+        │     ├─ request_permission ──► 策略裁决（审计）──► 回执
+        │     └─ （超时）session/cancel ──► 杀进程树
+        ├─ 最终文本 ──► Mail.DeliverReply（Hive queen 会话 / 对方收件箱）
+        └─ 关闭 stdin → agent 退出（回合结束不留常驻进程）</pre>
+<figcaption>图：一次 ACP queen 回合（与 CC queen 流程同构，差异在协议面）。</figcaption></figure>
+<p class="sub">失败路径：agent 无法启动 / initialize 超时 / 协议版本不符 / prompt 报错 / 超时 / 权限全拒导致无产出 —— 六类统一映射到 FR-6 的对外文案。</p>
+</section>
+
+<section id="s09"><h2><span class="num">09</span>非功能需求</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">类别</th><th>要求</th></tr></thead><tbody>
+<tr><td>安全</td><td>env 白名单（不继承 <code>HIVE_CREDENTIAL_KEY</code> 与任何 provider key，除非 <code>api_key_env</code> 显式指定）；token 只对会话有效；权限默认拒绝；进程树可杀；日志清洗凭据</td></tr>
+<tr><td>隔离</td><td>每位 queen 独立 home/cwd；不共享 config_dir（默认）；agent 进程 <code>cwd</code> 即其工作目录</td></tr>
+<tr><td>可观测</td><td>启动/回合/权限裁决/失败均有结构化日志；<code>running</code> 状态可查；dashboard 只读视图</td></tr>
+<tr><td>性能</td><td>冷启动（spawn→initialize）目标 ≤ 10s（本地 agent）；事件到 dashboard 的转发延迟 ≤ 1s；转录写入不阻塞回合</td></tr>
+<tr><td>可靠性</td><td>agent 崩溃/握手失败不挂起队列；重试语义与 CC 一致（记录修正重试一次）；队列满时报明确错误，不静默丢信</td></tr>
+<tr><td>兼容</td><td>ACP v1 全量；v2/远程 transport 以能力探测预留，不做半支持</td></tr>
+<tr><td>发布</td><td>无新增二进制（Hive 当 client）；不改 <code>claude_code</code> 现有行为（回归测试不变）</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s10"><h2><span class="num">10</span>验收标准</h2>
+<h3>10.1 单元/集成（fake ACP agent 夹具）</h3>
+<ul>
+<li>夹具：可脚本化的 stdio JSON-RPC agent（按序回 initialize/new/prompt/update/permission；可产出超时、错误、能力缺失、无法启动）。</li>
+<li>用例：首轮 new / 次轮 resume（含 resume 不可用降级 load/new）；批次合并；最终文本回写；六类失败文案逐字；权限三档裁决与审计；env 白名单（注入 key 与不注入 key 两例）；token 只对会话有效；超时杀进程树；并发上限（跨 claude_code+acp 的全局计数）。</li>
+</ul>
+<h3>10.2 真实 agent 冒烟（本机可跑）</h3>
+<ul>
+<li><b>hermes acp</b>（本机 0.21.5）：单 queen 一条真实回合（信件→回复）落盘证据。</li>
+<li><b>codex-acp</b>（<code>npx @agentclientprotocol/codex-acp</code>，需网络）：同一条证据链；网络不可用则 skip-with-reason（不得假通过）。</li>
+<li>可选：<code>claude-acp</code>（与现有 CC queen 并存对照，验证两套运行时同一 queen mail 服务内共存）。</li>
+</ul>
+<h3>10.3 逐字对齐点（沿用现有纪律）</h3>
+<ul>
+<li><code>list_queens</code>/<code>message_queen</code> 工具 schema 与描述 = queen-mail-mcp 现存版本（不为 ACP 另写一份）。</li>
+<li>六类失败文案、HTTP 回调合同（<code>/api/queen-mail/*</code>）、日限/链深错误文案与既有实现逐字一致。</li>
+<li>审计行字段与 CC 行同形（多 <code>runtime:"acp"</code> 标记）。</li>
+</ul>
+<h3>10.4 反例（必须失败得清楚）</h3>
+<ul>
+<li>agent 不支持 stdio MCP → 配置校验期报错，不启动回合。</li>
+<li>agent 返回不同协议版本 → 明确错误，不降级、不假装成功。</li>
+<li><code>permission_policy=deny</code> 下 agent 全程被拒 → 回合结束时的空产出按失败处理并告知写信人。</li>
+</ul>
+</section>
+
+<section id="s11"><h2><span class="num">11</span>里程碑（建议）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:12%">阶段</th><th style="width:38%">内容</th><th>出口条件</th></tr></thead><tbody>
+<tr><td><b>M1</b></td><td>ACP client 核心（initialize/new/resume/prompt/update/permission/cancel）+ fake agent 全套测试</td><td>夹具全绿；hermes acp 真实回合落盘</td></tr>
+<tr><td><b>M2</b></td><td>邮件接线（inbox/会话/回写/审计）+ 六类文案 + 并发计数</td><td>与 Hive queen 双向往返信；日限/链深用例过</td></tr>
+<tr><td><b>M3</b></td><td>Dashboard 只读视图 + 转录归一 + 组织图虚线卡片</td><td>渲染/断链/溢出检查过（桌面+手机）</td></tr>
+<tr><td><b>M4</b></td><td>codex-acp 适配取证 + 多 queen 用例 + 进程池（可选）</td><td>codex-acp 真实回合；多 queen 互写信</td></tr>
+<tr><td><b>M5</b></td><td>v2/远程传输预留（能力探测、不实现）</td><td>版本不符时的错误路径有测试</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s12"><h2><span class="num">12</span>风险与开放问题</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">风险/问题</th><th>说明</th><th style="width:22%">处置</th></tr></thead><tbody>
+<tr><td><b>上游无此概念</b></td><td>属于"只对齐、不新增"之外的扩展</td><td>产品决策后立项；未决前只保留本说明书</td></tr>
+<tr><td>ACP v1/v2 漂移</td><td>v2 改 prompt 生命周期（state_update/stopReason 位置）</td><td>MVP 锁 v1；v2 单独立项，禁止半切换</td></tr>
+<tr><td>适配器质量参差</td><td>claude-acp/codex-acp/pi-acp 由不同团队维护</td><td>能力探测 + 明确报错；验收以"能真实跑通"为准</td></tr>
+<tr><td>pi 无 MCP</td><td>pi 核心无 MCP → 无法回信</td><td>列为已知能力缺口：可配置但明确"只收不回"或等 pi-acp 桥接验证</td></tr>
+<tr><td>远程传输未定</td><td>RFD 未落地；跨机只能 ssh 包装</td><td>文档写明；不做私有远程协议</td></tr>
+<tr><td>Windows 进程树</td><td>无 Job Object 等价物</td><td>沿用既有 PLAT-* 缺口口径，不隐瞒</td></tr>
+<tr><td>配置热重载</td><td>Go 启动读一次</td><td>与 CC queen 同差异同登记</td></tr>
+<tr><td>凭据边界</td><td>agent 凭据由谁持有/注入</td><td>优先"用 agent 自己的登录态"（login 模式）；API key 走 <code>api_key_env</code>，不落明文</td></tr>
+</tbody></table></div>
+<h3>参考链接</h3>
+<ul>
+<li><a href="agent-runner-protocol.html">Agent Runner 协议与适配规范（草案）</a> · <a href="claude-code-queen.html">Claude Code Queen 特性说明书</a> · <a href="claude-code-queen-model.html">关系模型与交互说明</a> · <a href="claude-code-queen-runner.md">queen 运行器实现说明</a></li>
+<li>ACP 协议：<code>agentclientprotocol.com</code>（v1 Transports / v2 Transports / Streamable HTTP &amp; WebSocket RFD）</li>
+<li>第三方工程模式：<code>github.com/xufanglin/acp-link</code>（IM↔ACP 桥；进程池/流式节流/内嵌 MCP）</li>
+</ul>
+</section>
+
+<footer>go_hive / docs · acp-queen-spec.html · v0.1 草案（2026-11-21 19:40 CST）· 状态：需求说明书（未实现）· 上游无此概念，属声明式扩展，落地需产品决策；验收标准中的"未跑通项"不得按已达成处理。</footer>
+</div></body></html>

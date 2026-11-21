@@ -1,0 +1,8 @@
+{
+  "endpoint": "crm_grid_entity_missing",
+  "shape": {
+    "error": "string",
+    "signed_out": "boolean"
+  },
+  "counts": {}
+}

@@ -139,16 +139,27 @@ func SessionPhaseLabel(session *Session) string {
 	return QueenPhaseIndependent
 }
 
-// sessionStartMaxIterations carries the bound the session's loop actually
-// enforces. Upstream advertises 999_999 in its persistent queen loop; the chat
-// runtime here runs one bounded 50-iteration loop per turn, so the opening
-// event quotes that same configured bound instead of a number the loop would
-// never honour.
-func sessionStartMaxIterations(session *Session) int {
-	if session.Chat != nil && session.Chat.loop != nil && session.Chat.loop.Config.MaxIterations > 0 {
-		return session.Chat.loop.Config.MaxIterations
+// queenAutonomousMaxIterations is the bound upstream's persistent queen loop
+// advertises when nothing overrides it: the queen loop config carries no
+// max_iterations and HIVE_MAX_ITER is unset (queen_orchestrator.py's
+// _default_max_iter = 999_999).
+const queenAutonomousMaxIterations = 999999
+
+// sessionStartMaxIterations is the bound the opening node_loop_started event
+// carries. The opening block is a faithful port of upstream's persistent queen
+// loop frames, so it quotes the bound that loop advertises — HIVE_MAX_ITER when
+// the single-reply cap is set, else the autonomous 999_999 — rather than the
+// chat runtime's per-turn loop cap. The per-turn loop keeps its own honest
+// number: its node_loop_started frames (chat_turn_emitter) still report the
+// configured cap they enforce.
+//
+// Parity: core/framework/server/queen_orchestrator.py::_queen_loop (HIVE_MAX_ITER / 999_999)
+// Parity: core/framework/agent_loop/internals/event_publishing.py::publish_loop_started
+func sessionStartMaxIterations(_ *Session) int {
+	if cap, ok := envPositiveInt("HIVE_MAX_ITER"); ok {
+		return cap
 	}
-	return agentloop.DefaultLoopConfig().MaxIterations
+	return queenAutonomousMaxIterations
 }
 
 // sessionStartContextUsage mirrors publish_context_usage: a char-based

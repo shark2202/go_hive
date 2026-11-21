@@ -8,5 +8,5 @@ import (
 )
 
 func main() {
-	os.Exit(cli.NewRunner().Run(os.Args[1:]))
+	os.Exit(cli.GuardMain(func() int { return cli.NewRunner().Run(os.Args[1:]) }))
 }

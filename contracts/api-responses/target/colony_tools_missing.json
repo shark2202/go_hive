@@ -1,0 +1,21 @@
+{
+  "endpoint": "colony_tools_missing",
+  "label": "Colony 工具-不存在",
+  "method": "GET",
+  "path": "/api/colony/queen_growth/tools",
+  "side": "target",
+  "implementation": "go_hive",
+  "version": "hive 1.0.26-go.1",
+  "status": 404,
+  "content_type": "application/json",
+  "captured_at": "2026-11-21T20:10:41+08:00",
+  "canonical": {
+    "error": "Colony 'queen_growth' not found"
+  },
+  "shape": {
+    "error": "string"
+  },
+  "counts": {},
+  "shape_ignore": [],
+  "notes": []
+}

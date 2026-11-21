@@ -97,7 +97,7 @@ func TestMCPBareInvocationIsUsageError(t *testing.T) {
 	if rc := cli.Main(nil); rc != 2 {
 		t.Fatalf("bare `hive mcp` exit = %d, want 2", rc)
 	}
-	if !strings.Contains(errOut.String(), "required: command") {
+	if !strings.Contains(errOut.String(), "required: mcp_command") {
 		t.Fatalf("stderr = %q, want the argparse-style required-command error", errOut.String())
 	}
 	if strings.Contains(out.String(), "Manage MCP servers") {

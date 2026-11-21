@@ -71,8 +71,8 @@ type structuralReport struct {
 // Parity: framework/skills/cli.py::register_skill_commands
 func (r *Runner) skillCommands() []*commandSpec {
 	jsonFlag := argSpec{Dest: "json", Long: "json", Kind: kindBool, Help: "Output as JSON"}
-	projectDirFlag := argSpec{Dest: "project_dir", Long: "project-dir", Kind: kindString,
-		Help: "Project directory to scan (default: current directory)"}
+	projectDirFlag := argSpec{Dest: "project_dir", Long: "project-dir", Kind: kindString, Metavar: "PATH", Help: "Project directory to scan (default: current directory)"}
+	projectDirBare := argSpec{Dest: "project_dir", Long: "project-dir", Kind: kindString, Metavar: "PATH"} // doctor/fork: bare upstream
 
 	return []*commandSpec{{
 		Prog: "hive skill",
@@ -94,9 +94,9 @@ func (r *Runner) skillCommands() []*commandSpec {
 				Positionals: []positionalSpec{{Dest: "name_or_url", Required: false,
 					Help: "Skill name (from registry) or git URL"}},
 				Flags: []argSpec{
-					{Dest: "version", Long: "version", Kind: kindString,
+					{Dest: "version", Long: "version", Kind: kindString, Metavar: "REF",
 						Help: "Git ref (branch/tag) to install"},
-					{Dest: "from_url", Long: "from", Kind: kindString,
+					{Dest: "from_url", Long: "from", Kind: kindString, Metavar: "URL",
 						Help: "Install from this git URL directly"},
 					{Dest: "pack", Long: "pack", Kind: kindString,
 						Help: "Install a starter pack by name"},
@@ -125,7 +125,7 @@ func (r *Runner) skillCommands() []*commandSpec {
 				Help: "Scaffold a new skill directory with a SKILL.md template",
 				Flags: []argSpec{
 					{Dest: "skill_name", Long: "name", Kind: kindString},
-					{Dest: "target_dir", Long: "dir", Kind: kindString,
+					{Dest: "target_dir", Long: "dir", Kind: kindString, Metavar: "PATH",
 						Help: "Parent directory for the new skill (default: current directory)"},
 				},
 				Run: r.cmdSkillInit,
@@ -146,7 +146,7 @@ func (r *Runner) skillCommands() []*commandSpec {
 				Flags: []argSpec{
 					{Dest: "defaults", Long: "defaults", Kind: kindBool,
 						Help: "Check all 6 framework default skills"},
-					projectDirFlag,
+					projectDirBare,
 					jsonFlag,
 				},
 				Run: r.cmdSkillDoctor,
@@ -171,12 +171,12 @@ func (r *Runner) skillCommands() []*commandSpec {
 				Help:        "Create a local editable copy of a skill",
 				Positionals: []positionalSpec{{Dest: "name", Required: true, Help: "Skill name to fork"}},
 				Flags: []argSpec{
-					{Dest: "new_name", Long: "name", Kind: kindString,
+					{Dest: "new_name", Long: "name", Kind: kindString, Metavar: "NEW_NAME",
 						Help: "Name for the forked skill (default: <name>-fork)"},
-					{Dest: "target_dir", Long: "dir", Kind: kindString,
+					{Dest: "target_dir", Long: "dir", Kind: kindString, Metavar: "PATH",
 						Help: "Parent directory for the fork (default: ~/.hive/skills/)"},
 					{Dest: "yes", Long: "yes", Kind: kindBool, Help: "Skip confirmation prompt"},
-					projectDirFlag,
+					projectDirBare,
 					jsonFlag,
 				},
 				Run: r.cmdSkillFork,
@@ -187,7 +187,7 @@ func (r *Runner) skillCommands() []*commandSpec {
 				Positionals: []positionalSpec{{Dest: "path", Required: true,
 					Help: "Path to SKILL.md or its parent directory"}},
 				Flags: []argSpec{
-					{Dest: "input_json", Long: "input", Kind: kindString,
+					{Dest: "input_json", Long: "input", Kind: kindString, Metavar: "JSON",
 						Help: `JSON input to pass to the skill, e.g. '{"prompt": "..."}'`},
 					{Dest: "model", Long: "model", Kind: kindString,
 						Help: "Override the LLM model (default: claude-haiku-4-5-20251001)"},
