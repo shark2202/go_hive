@@ -1,9 +1,9 @@
 {
- "wave": 24,
- "at": "2026-11-22 01:27",
- "head": "d5dfc8e9",
- "ci": 0,
+ "wave": 25,
+ "at": "2026-11-22 01:42",
+ "head": "73463139",
+ "ci": 2,
  "qc": 0,
  "publish": 0,
- "note": "colony 事件竞态修复后"
+ "note": "三 lane 合并后（pipeline/memory/tool-surface）"
 }
