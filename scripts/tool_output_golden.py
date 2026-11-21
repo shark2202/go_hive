@@ -45,6 +45,9 @@ DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 TIME_RE = re.compile(r"\b\d{2}:\d{2}:\d{2}\b")
 UNIX_RE = re.compile(r"\b1[0-9]{9}\b")
 CHAR_COUNT_RE = re.compile(r"returned [\d,]+ characters")
+# The capture's fixture HTTP server and PTY prompt sentinel are minted per run.
+LOCAL_URL_RE = re.compile(r"http://127\.0\.0\.1:\d+")
+PTY_SENTINEL_RE = re.compile(r"__TERMINALTOOLS_PROMPT_[0-9a-f]+__")
 REMINDER_RE = re.compile(r"\n*<system-reminder>.*?</system-reminder>\s*$", re.S)
 
 # Values keyed by JSON member name. A key is masked only when its value is
@@ -87,6 +90,8 @@ def mask_text(text: str) -> str:
     text = TIME_RE.sub("<TIME>", text)
     text = UNIX_RE.sub("<UNIX_TS>", text)
     text = CHAR_COUNT_RE.sub("returned <CHARS> characters", text)
+    text = LOCAL_URL_RE.sub("<LOCAL_URL>", text)
+    text = PTY_SENTINEL_RE.sub("<PTY_SENTINEL>", text)
     for needle, replacement in PATH_MASKS:
         text = text.replace(needle, replacement)
     text = HOME_RE.sub("<HOME>", text)
@@ -95,7 +100,9 @@ def mask_text(text: str) -> str:
 
 
 def canon_value(key: str, value):
-    if key in KEY_MASKS:
+    # Null stays null: "no handle" / "no job_id" is part of the contract, and
+    # masking it would hide a type/shape difference.
+    if key in KEY_MASKS and value is not None:
         return KEY_MASKS[key]
     if isinstance(value, str):
         return mask_text(value)
@@ -192,6 +199,18 @@ def compare(scenario: dict, python: dict, go: dict) -> tuple[str, list[str]]:
         if shape_python != shape_go:
             return "different", [f"shape: python={shape_python} go={shape_go}"]
         return "shape-aligned", []
+    if mode == "lines":
+        # Same matches, order-insensitive: each runtime walks the tree its own
+        # way (Python shells out to ripgrep, Go walks natively).
+        differences = []
+        for field in ("is_error", "form", "trailer"):
+            if python[field] != go[field]:
+                differences.append(field)
+        py_lines = sorted(line for line in python["payload"].splitlines() if line.strip())
+        go_lines = sorted(line for line in go["payload"].splitlines() if line.strip())
+        if py_lines != go_lines:
+            differences.append("lines")
+        return ("aligned" if not differences else "different"), differences
     differences: list[str] = []
     # `reminder` is loop noise (task reminders), recorded for diagnostics only.
     for field in ("is_error", "form", "payload", "trailer"):

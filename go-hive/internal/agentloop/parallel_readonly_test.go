@@ -2,6 +2,7 @@ package agentloop
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -108,9 +109,10 @@ func runReadOnlyBatch(t *testing.T, parallel bool, markSafe bool) (*AgentLoop, *
 	return loop, &result, observer
 }
 
-// Parity-exempt: upstream executes a tool batch sequentially; this Go-side
-// opt-in is the only concurrent path. The test pins overlap, per-index result
-// order, and event order.
+// Parity-exempt: upstream partitions a batch into a concurrency-safe half and
+// a serial half, both sharing an asyncio.Semaphore(_PARALLEL_CAP = 10); this
+// port keeps the batch together and requires every call to be marked safe.
+// The test pins overlap, per-index result order, and event order.
 func TestParallelReadOnlyBatchRunsConcurrentlyAndKeepsOrder(t *testing.T) {
 	_, result, observer := runReadOnlyBatch(t, true, true)
 	if len(result.ToolResults) != 2 {
@@ -139,4 +141,54 @@ func TestParallelReadOnlyBatchStaysSequentialUnlessExplicitlyOptedIn(t *testing.
 	t.Run("tool not marked safe", func(t *testing.T) {
 		runReadOnlyBatch(t, true, false)
 	})
+}
+
+// Parity-exempt: upstream caps its concurrency-safe batch with
+// asyncio.Semaphore(_PARALLEL_CAP = 10) but has no dedicated test for the
+// ceiling; this pins the port's matching in-flight bound (and proves the
+// concurrent path is still reached).
+func TestParallelReadOnlyBatchCapsInflightAtTen(t *testing.T) {
+	const calls = 25
+	batch := make([]llm.ToolCall, 0, calls)
+	for i := 0; i < calls; i++ {
+		batch = append(batch, llm.ToolCall{
+			ID:        fmt.Sprintf("c%d", i),
+			Name:      "read_safe",
+			Arguments: fmt.Sprintf(`{"i":%d}`, i),
+		})
+	}
+	completer := &scriptedCompleter{scenarios: []scriptedResponse{
+		{toolCalls: batch},
+		{content: "done"},
+	}}
+	var inFlight, peak int32
+	executor := func(req ToolCallRequest) (ToolResult, error) {
+		n := atomic.AddInt32(&inFlight, 1)
+		for {
+			observed := atomic.LoadInt32(&peak)
+			if n <= observed || atomic.CompareAndSwapInt32(&peak, observed, n) {
+				break
+			}
+		}
+		time.Sleep(10 * time.Millisecond)
+		atomic.AddInt32(&inFlight, -1)
+		return ToolResult{Content: "ok"}, nil
+	}
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 3, ParallelReadOnlyTools: true}, executor)
+	ctx := midturnAgentContext(completer)
+	conv := NewNodeConversation("You are a test assistant.")
+	tools := []llm.ToolDef{{Name: "read_safe", ConcurrencySafe: true}}
+	result, err := loop.ExecuteTurn(context.Background(), ctx, conv, tools)
+	if err != nil {
+		t.Fatalf("ExecuteTurn: %v", err)
+	}
+	if len(result.ToolResults) != calls {
+		t.Fatalf("tool results = %d, want %d", len(result.ToolResults), calls)
+	}
+	if got := atomic.LoadInt32(&peak); got > parallelReadOnlyCap {
+		t.Fatalf("max calls in flight = %d, want <= %d", got, parallelReadOnlyCap)
+	}
+	if got := atomic.LoadInt32(&peak); got < 2 {
+		t.Fatalf("max calls in flight = %d, want the concurrent path (>= 2)", got)
+	}
 }

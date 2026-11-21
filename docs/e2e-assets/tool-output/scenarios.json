@@ -1,336 +1,692 @@
 {
- "schema_version": 1,
- "note": "Canonical tool-output scenarios. Identical arguments on both runtimes; fixtures are materialised in the capture workspace (__WS__). `compare`: exact | masked | shape | none. `exception` records a reviewed divergence with its reason; `compare: none` means the pair is recorded but not compared (documented exception).",
- "fixtures": {
-  "probe.txt": "probe file content\nsecond line\n",
-  "probe.pdf": "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>endobj\n4 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\n5 0 obj<</Length 52>>stream\nBT /F1 12 Tf 20 100 Td (Golden probe PDF) Tj ET\nendstream\nendobj\ntrailer<</Root 1 0 R>>\n%%EOF\n"
- },
- "scenarios": [
-  {
-   "id": "search_tools_inventory",
-   "tool": "search_tools",
-   "arguments": {
-    "query": "inventory"
-   },
-   "compare": "shape",
-   "exception": "shape-only: the inventory lists each runtime's own tool library (Python's allowlist disables the file ops and ships senders; Go defers 51 flat names), so only the envelope keys/types are contract."
+  "schema_version": 1,
+  "note": "Same tool calls on both runtimes; compare modes: exact (verbatim after canonicalisation), masked (runtime values placeholder-masked), shape (envelope shape only), none (recorded divergence).",
+  "fixtures": {
+    "probe.txt": "probe file content\nsecond line\n",
+    "probe.pdf": "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>endobj\n4 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\n5 0 obj<</Length 52>>stream\nBT /F1 12 Tf 20 100 Td (Golden probe PDF) Tj ET\nendstream\nendobj\ntrailer<</Root 1 0 R>>\n%%EOF\n",
+    "unread.txt": "untouched content\n",
+    "editable.txt": "alpha\nbeta\ngamma\n",
+    "fixture-page.html": "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Fixture Page</title>\n<meta name=\"description\" content=\"Static fixture page for web_scrape\">\n<meta property=\"og:title\" content=\"Fixture Page\">\n<script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Article\", \"headline\": \"Fixture Page\"}</script>\n</head>\n<body>\n<main>\n<h1>Fixture Page</h1>\n<p>This page exists so both runtimes can be pointed at the same URL.</p>\n<h2>Section</h2>\n<p>A static paragraph with <a href=\"/headers-all\">a link</a>.</p>\n</main>\n</body>\n</html>\n"
   },
-  {
-   "id": "search_tools_load",
-   "tool": "search_tools",
-   "arguments": {
-    "query": "select:chart_render,web_scrape"
-   }
-  },
-  {
-   "id": "search_tools_keyword",
-   "tool": "search_tools",
-   "arguments": {
-    "query": "chart"
-   }
-  },
-  {
-   "id": "search_tools_already_loaded",
-   "tool": "search_tools",
-   "arguments": {
-    "query": "select:chart_render"
-   }
-  },
-  {
-   "id": "search_tools_load_read_file",
-   "tool": "search_tools",
-   "arguments": {
-    "query": "select:read_file,skill_view"
-   },
-   "compare": "none",
-   "exception": "branch: Python reports \"Nothing to load\" (read_file/skill_view are outside its allowlist), Go promotes both. Recorded, not compared — the branches differ by tool library."
-  },
-  {
-   "id": "get_current_time_utc",
-   "tool": "get_current_time",
-   "arguments": {
-    "timezone": "UTC"
-   },
-   "compare": "masked"
-  },
-  {
-   "id": "get_current_time_offset",
-   "tool": "get_current_time",
-   "arguments": {
-    "timezone": "Asia/Kolkata"
-   },
-   "compare": "masked"
-  },
-  {
-   "id": "get_current_time_bad_tz",
-   "tool": "get_current_time",
-   "arguments": {
-    "timezone": "Not/AZone"
-   }
-  },
-  {
-   "id": "task_create_missing_goal",
-   "tool": "task_create",
-   "arguments": {
-    "tasks": [
-     {
-      "subject": "Probe task",
-      "description": "golden probe"
-     }
-    ]
-   }
-  },
-  {
-   "id": "task_create_ok",
-   "tool": "task_create",
-   "arguments": {
-    "goal": "Probe the tool output contract",
-    "tasks": [
-     {
-      "subject": "Probe task",
-      "description": "golden probe"
-     }
-    ]
-   },
-   "compare": "masked"
-  },
-  {
-   "id": "task_create_second",
-   "tool": "task_create",
-   "arguments": {
-    "tasks": [
-     {
-      "subject": "Second probe task",
-      "description": "golden probe 2"
-     }
-    ]
-   },
-   "compare": "masked"
-  },
-  {
-   "id": "task_list_after_create",
-   "tool": "task_list",
-   "arguments": {},
-   "compare": "masked"
-  },
-  {
-   "id": "task_get_found",
-   "tool": "task_get",
-   "arguments": {
-    "id": "1"
-   },
-   "compare": "masked"
-  },
-  {
-   "id": "task_get_missing_numeric",
-   "tool": "task_get",
-   "arguments": {
-    "id": "999"
-   },
-   "compare": "masked"
-  },
-  {
-   "id": "task_get_bad_id",
-   "tool": "task_get",
-   "arguments": {
-    "id": "no-such-task"
-   },
-   "exception": "text-only: Python converts the id with int() and lets the CPython ValueError escape (\"invalid literal for int()\"), Go answers with a typed argument error. Both are is_error JSON envelopes with an error key.",
-   "compare": "none"
-  },
-  {
-   "id": "task_update_completed",
-   "tool": "task_update",
-   "arguments": {
-    "id": "1",
-    "status": "completed"
-   },
-   "compare": "masked"
-  },
-  {
-   "id": "task_update_bad_status",
-   "tool": "task_update",
-   "arguments": {
-    "id": "2",
-    "status": "bogus"
-   }
-  },
-  {
-   "id": "read_file_ok",
-   "tool": "read_file",
-   "arguments": {
-    "path": "__WS__/probe.txt"
-   }
-  },
-  {
-   "id": "read_file_missing",
-   "tool": "read_file",
-   "arguments": {
-    "path": "__WS__/missing.txt"
-   }
-  },
-  {
-   "id": "read_file_escape",
-   "tool": "read_file",
-   "arguments": {
-    "path": "../../../../../../etc/passwd"
-   },
-   "exception": "text-only: Python resolves the path against its session dir and reports a misleading \"File not found\"; Go refuses the escape explicitly. Same outcome (no bytes, plain-text refusal, is_error=false).",
-   "compare": "none"
-  },
-  {
-   "id": "read_file_dir",
-   "tool": "read_file",
-   "arguments": {
-    "path": "__WS__"
-   }
-  },
-  {
-   "id": "attach_file_ok",
-   "tool": "attach_file",
-   "arguments": {
-    "paths": [
-     "probe.txt"
-    ]
-   },
-   "compare": "masked"
-  },
-  {
-   "id": "attach_file_missing",
-   "tool": "attach_file",
-   "arguments": {
-    "paths": [
-     "missing.png"
-    ]
-   }
-  },
-  {
-   "id": "pdf_read_missing",
-   "tool": "pdf_read",
-   "arguments": {
-    "file_path": "missing.pdf"
-   }
-  },
-  {
-   "id": "pdf_read_both_args",
-   "tool": "pdf_read",
-   "arguments": {
-    "file_path": "probe.pdf",
-    "files": [
-     "probe.pdf"
-    ]
-   }
-  },
-  {
-   "id": "pdf_read_ok",
-   "tool": "pdf_read",
-   "arguments": {
-    "file_path": "probe.pdf"
-   },
-   "compare": "masked"
-  },
-  {
-   "id": "pdf_read_ok_multi",
-   "tool": "pdf_read",
-   "arguments": {
-    "files": [
-     "probe.pdf",
-     "probe.pdf"
-    ]
-   },
-   "compare": "masked"
-  },
-  {
-   "id": "pdf_read_bad_pages",
-   "tool": "pdf_read",
-   "arguments": {
-    "file_path": "probe.pdf",
-    "pages": "abc"
-   }
-  },
-  {
-   "id": "search_messages_none",
-   "tool": "search_messages",
-   "arguments": {
-    "pattern": "zzz-no-such-token-zzz"
-   }
-  },
-  {
-   "id": "search_messages_spill",
-   "tool": "search_messages",
-   "arguments": {
-    "pattern": "probe"
-   },
-   "exception": "envelope: an oversized result spills on both sides, but Python emits a structural digest + grep hint and Go emits a bounded preview with a sampling warning. Reviewed and kept: different spillover designs, each self-consistent.",
-   "compare": "none"
-  },
-  {
-   "id": "terminal_exec_ok",
-   "tool": "terminal_exec",
-   "arguments": {
-    "command": "printf 'hi\\n'"
-   },
-   "exception": "envelope: Python returns a JSON result envelope (exit_code/stdout/pid/runtime_ms/semantic_status/...), Go returns a text report (exit_code/shell_kind/stdout/stderr). The terminal output shape is the terminal lane's frozen contract; retargeting it is a terminal-lane change, not an output-shape fix.",
-   "compare": "none"
-  },
-  {
-   "id": "skill_view_missing",
-   "tool": "skill_view",
-   "arguments": {
-    "name": "no-such-skill"
-   },
-   "exception": "tool-set: skill_view exists only on Go (Python answers \"Unknown tool\"). Both are is_error JSON envelopes.",
-   "compare": "none"
-  },
-  {
-   "id": "credentials_list",
-   "tool": "credentials",
-   "arguments": {
-    "action": "list"
-   },
-   "exception": "unported: credentials is a Python-only model tool; Go answers with the explicit not_implemented envelope.",
-   "compare": "none"
-  },
-  {
-   "id": "credentials_usage",
-   "tool": "credentials",
-   "arguments": {},
-   "exception": "unported: see credentials_list.",
-   "compare": "none"
-  },
-  {
-   "id": "sentinel_setup",
-   "tool": "sentinel_setup",
-   "arguments": {
-    "channel": "email"
-   },
-   "exception": "unported: sentinel_setup needs the desktop connector; Go answers with the explicit not_implemented envelope.",
-   "compare": "none"
-  },
-  {
-   "id": "collect_result",
-   "tool": "collect_result",
-   "arguments": {
-    "handle": "probe"
-   },
-   "exception": "unported: Go has no background tool handles; the envelope points at terminal_job_logs instead.",
-   "compare": "none"
-  },
-  {
-   "id": "suggest_colony",
-   "tool": "suggest_colony",
-   "arguments": {},
-   "exception": "unported: suggest_colony drives the colony popup; Go answers with the explicit not_implemented envelope.",
-   "compare": "none"
-  },
-  {
-   "id": "unloaded_tool_call",
-   "tool": "excel_read",
-   "arguments": {
-    "path": "probe.xlsx"
-   },
-   "exception": "tool-set: excel_read does not exist in Python (\"Unknown tool ... Did you mean 'csv_read'?\"); on Go it is a deferred name and the loop refuses it with the select: prompt. Both are actionable is_error envelopes.",
-   "compare": "none"
-  }
- ]
+  "scenarios": [
+    {
+      "id": "search_tools_inventory",
+      "tool": "search_tools",
+      "arguments": {
+        "query": "inventory"
+      },
+      "compare": "shape",
+      "exception": "shape-only: the inventory lists each runtime's own tool library (Python's allowlist disables the file ops and ships senders; Go defers 51 flat names), so only the envelope keys/types are contract.",
+      "batch": 1
+    },
+    {
+      "id": "search_tools_load",
+      "tool": "search_tools",
+      "arguments": {
+        "query": "select:chart_render,web_scrape"
+      },
+      "batch": 1
+    },
+    {
+      "id": "search_tools_keyword",
+      "tool": "search_tools",
+      "arguments": {
+        "query": "chart"
+      },
+      "batch": 1
+    },
+    {
+      "id": "search_tools_already_loaded",
+      "tool": "search_tools",
+      "arguments": {
+        "query": "select:chart_render"
+      },
+      "batch": 1
+    },
+    {
+      "id": "search_tools_load_read_file",
+      "tool": "search_tools",
+      "arguments": {
+        "query": "select:read_file,skill_view"
+      },
+      "compare": "none",
+      "exception": "branch: Python reports \"Nothing to load\" (read_file/skill_view are outside its allowlist), Go promotes both. Recorded, not compared — the branches differ by tool library.",
+      "batch": 1
+    },
+    {
+      "id": "get_current_time_utc",
+      "tool": "get_current_time",
+      "arguments": {
+        "timezone": "UTC"
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "get_current_time_offset",
+      "tool": "get_current_time",
+      "arguments": {
+        "timezone": "Asia/Kolkata"
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "get_current_time_bad_tz",
+      "tool": "get_current_time",
+      "arguments": {
+        "timezone": "Not/AZone"
+      },
+      "batch": 1
+    },
+    {
+      "id": "task_create_missing_goal",
+      "tool": "task_create",
+      "arguments": {
+        "tasks": [
+          {
+            "subject": "Probe task",
+            "description": "golden probe"
+          }
+        ]
+      },
+      "batch": 1
+    },
+    {
+      "id": "task_create_ok",
+      "tool": "task_create",
+      "arguments": {
+        "goal": "Probe the tool output contract",
+        "tasks": [
+          {
+            "subject": "Probe task",
+            "description": "golden probe"
+          }
+        ]
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "task_create_second",
+      "tool": "task_create",
+      "arguments": {
+        "tasks": [
+          {
+            "subject": "Second probe task",
+            "description": "golden probe 2"
+          }
+        ]
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "task_list_after_create",
+      "tool": "task_list",
+      "arguments": {},
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "task_get_found",
+      "tool": "task_get",
+      "arguments": {
+        "id": "1"
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "task_get_missing_numeric",
+      "tool": "task_get",
+      "arguments": {
+        "id": "999"
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "task_get_bad_id",
+      "tool": "task_get",
+      "arguments": {
+        "id": "no-such-task"
+      },
+      "exception": "text-only: Python converts the id with int() and lets the CPython ValueError escape (\"invalid literal for int()\"), Go answers with a typed argument error. Both are is_error JSON envelopes with an error key.",
+      "compare": "none",
+      "batch": 1
+    },
+    {
+      "id": "task_update_completed",
+      "tool": "task_update",
+      "arguments": {
+        "id": "1",
+        "status": "completed"
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "task_update_bad_status",
+      "tool": "task_update",
+      "arguments": {
+        "id": "2",
+        "status": "bogus"
+      },
+      "batch": 1
+    },
+    {
+      "id": "read_file_ok",
+      "tool": "read_file",
+      "arguments": {
+        "path": "__WS__/probe.txt"
+      },
+      "batch": 1
+    },
+    {
+      "id": "read_file_missing",
+      "tool": "read_file",
+      "arguments": {
+        "path": "__WS__/missing.txt"
+      },
+      "batch": 1
+    },
+    {
+      "id": "read_file_escape",
+      "tool": "read_file",
+      "arguments": {
+        "path": "../../../../../../etc/passwd"
+      },
+      "exception": "text-only: Python resolves the path against its session dir and reports a misleading \"File not found\"; Go refuses the escape explicitly. Same outcome (no bytes, plain-text refusal, is_error=false).",
+      "compare": "none",
+      "batch": 1
+    },
+    {
+      "id": "read_file_dir",
+      "tool": "read_file",
+      "arguments": {
+        "path": "__WS__"
+      },
+      "batch": 1
+    },
+    {
+      "id": "attach_file_ok",
+      "tool": "attach_file",
+      "arguments": {
+        "paths": [
+          "probe.txt"
+        ]
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "attach_file_missing",
+      "tool": "attach_file",
+      "arguments": {
+        "paths": [
+          "missing.png"
+        ]
+      },
+      "batch": 1
+    },
+    {
+      "id": "pdf_read_missing",
+      "tool": "pdf_read",
+      "arguments": {
+        "file_path": "missing.pdf"
+      },
+      "batch": 1
+    },
+    {
+      "id": "pdf_read_both_args",
+      "tool": "pdf_read",
+      "arguments": {
+        "file_path": "probe.pdf",
+        "files": [
+          "probe.pdf"
+        ]
+      },
+      "batch": 1
+    },
+    {
+      "id": "pdf_read_ok",
+      "tool": "pdf_read",
+      "arguments": {
+        "file_path": "probe.pdf"
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "pdf_read_ok_multi",
+      "tool": "pdf_read",
+      "arguments": {
+        "files": [
+          "probe.pdf",
+          "probe.pdf"
+        ]
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "pdf_read_bad_pages",
+      "tool": "pdf_read",
+      "arguments": {
+        "file_path": "probe.pdf",
+        "pages": "abc"
+      },
+      "batch": 1
+    },
+    {
+      "id": "search_messages_none",
+      "tool": "search_messages",
+      "arguments": {
+        "pattern": "zzz-no-such-token-zzz"
+      },
+      "batch": 1
+    },
+    {
+      "id": "search_messages_spill",
+      "tool": "search_messages",
+      "arguments": {
+        "pattern": "probe"
+      },
+      "exception": "envelope: an oversized result spills on both sides, but Python emits a structural digest + grep hint and Go emits a bounded preview with a sampling warning. Reviewed and kept: different spillover designs, each self-consistent.",
+      "compare": "none",
+      "batch": 1
+    },
+    {
+      "id": "terminal_exec_ok",
+      "tool": "terminal_exec",
+      "arguments": {
+        "command": "printf 'hi\\n'"
+      },
+      "compare": "masked",
+      "batch": 1
+    },
+    {
+      "id": "skill_view_missing",
+      "tool": "skill_view",
+      "arguments": {
+        "name": "no-such-skill"
+      },
+      "exception": "tool-set: skill_view exists only on Go (Python answers \"Unknown tool\"). Both are is_error JSON envelopes.",
+      "compare": "none",
+      "batch": 1
+    },
+    {
+      "id": "credentials_list",
+      "tool": "credentials",
+      "arguments": {
+        "action": "list"
+      },
+      "exception": "unported: credentials is a Python-only model tool; Go answers with the explicit not_implemented envelope.",
+      "compare": "none",
+      "batch": 1
+    },
+    {
+      "id": "credentials_usage",
+      "tool": "credentials",
+      "arguments": {},
+      "exception": "unported: see credentials_list.",
+      "compare": "none",
+      "batch": 1
+    },
+    {
+      "id": "sentinel_setup",
+      "tool": "sentinel_setup",
+      "arguments": {
+        "channel": "email"
+      },
+      "exception": "unported: sentinel_setup needs the desktop connector; Go answers with the explicit not_implemented envelope.",
+      "compare": "none",
+      "batch": 1
+    },
+    {
+      "id": "collect_result",
+      "tool": "collect_result",
+      "arguments": {
+        "handle": "probe"
+      },
+      "exception": "unported: Go has no background tool handles; the envelope points at terminal_job_logs instead.",
+      "compare": "none",
+      "batch": 1
+    },
+    {
+      "id": "suggest_colony",
+      "tool": "suggest_colony",
+      "arguments": {},
+      "exception": "unported: suggest_colony drives the colony popup; Go answers with the explicit not_implemented envelope.",
+      "compare": "none",
+      "batch": 1
+    },
+    {
+      "id": "unloaded_tool_call",
+      "tool": "excel_read",
+      "arguments": {
+        "path": "probe.xlsx"
+      },
+      "exception": "tool-set: excel_read does not exist in Python (\"Unknown tool ... Did you mean 'csv_read'?\"); on Go it is a deferred name and the loop refuses it with the select: prompt. Both are actionable is_error envelopes.",
+      "compare": "none",
+      "batch": 1
+    },
+    {
+      "id": "terminal_exec_nonzero",
+      "tool": "terminal_exec",
+      "arguments": {
+        "command": "ls /nonexistent-probe-path"
+      },
+      "compare": "masked",
+      "batch": 2
+    },
+    {
+      "id": "terminal_exec_timeout",
+      "tool": "terminal_exec",
+      "arguments": {
+        "command": "sleep 5",
+        "timeout_sec": 1,
+        "auto_background_after_sec": 0
+      },
+      "compare": "masked",
+      "batch": 2
+    },
+    {
+      "id": "terminal_exec_auto_background",
+      "tool": "terminal_exec",
+      "arguments": {
+        "command": "sleep 3",
+        "timeout_sec": 5,
+        "auto_background_after_sec": 1
+      },
+      "compare": "masked",
+      "batch": 2
+    },
+    {
+      "id": "terminal_exec_truncate",
+      "tool": "terminal_exec",
+      "arguments": {
+        "command": "yes x | head -c 4096",
+        "shell": true,
+        "max_output_kb": 1
+      },
+      "compare": "masked",
+      "batch": 2
+    },
+    {
+      "id": "terminal_exec_warning",
+      "tool": "terminal_exec",
+      "arguments": {
+        "command": "rm -rf ./no-such-path"
+      },
+      "compare": "masked",
+      "batch": 2
+    },
+    {
+      "id": "terminal_exec_blocked",
+      "tool": "terminal_exec",
+      "arguments": {
+        "command": "pkill -9 -f chrome"
+      },
+      "compare": "masked",
+      "batch": 2
+    },
+    {
+      "id": "terminal_exec_bad_wait",
+      "tool": "terminal_exec",
+      "arguments": {
+        "command": "true",
+        "timeout_sec": -1
+      },
+      "compare": "masked",
+      "batch": 2
+    },
+    {
+      "id": "surface_load_files_jobs_pty",
+      "tool": "search_tools",
+      "arguments": {
+        "query": "select:write_file,edit_file,search_files,terminal_job_start,terminal_pty_open,terminal_pty_run,terminal_pty_close,http_headers_scan,read_file"
+      },
+      "compare": "none",
+      "batch": 3
+    },
+    {
+      "id": "write_file_new",
+      "tool": "write_file",
+      "arguments": {
+        "path": "__WS__/written.txt",
+        "content": "line one\nline two\n"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "write_file_update",
+      "tool": "write_file",
+      "arguments": {
+        "path": "__WS__/written.txt",
+        "content": "line one\nline two\nline three\n"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "write_file_refused",
+      "tool": "write_file",
+      "arguments": {
+        "path": "__WS__/unread.txt",
+        "content": "clobber"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "write_file_escape",
+      "tool": "write_file",
+      "arguments": {
+        "path": "../escape-written.txt",
+        "content": "x"
+      },
+      "compare": "none",
+      "exception": "sandbox: the Python file tools resolve any path the process can reach (their only ceiling is a credential deny list), while the Go builtin toolbox is rooted at the session workspace and refuses escapes. Both answer plain text (is_error=false); the semantics differ by design.",
+      "batch": 3
+    },
+    {
+      "id": "read_file_editable",
+      "tool": "read_file",
+      "arguments": {
+        "path": "__WS__/editable.txt"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "edit_file_replace",
+      "tool": "edit_file",
+      "arguments": {
+        "path": "__WS__/editable.txt",
+        "old_string": "beta",
+        "new_string": "delta"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "edit_file_no_match",
+      "tool": "edit_file",
+      "arguments": {
+        "path": "__WS__/editable.txt",
+        "old_string": "zzzz-absent-token",
+        "new_string": "x"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "edit_file_missing",
+      "tool": "edit_file",
+      "arguments": {
+        "path": "__WS__/nope.txt",
+        "old_string": "a",
+        "new_string": "b"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "edit_file_bad_mode",
+      "tool": "edit_file",
+      "arguments": {
+        "mode": "bogus",
+        "path": "__WS__/editable.txt"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "search_content",
+      "tool": "search_files",
+      "arguments": {
+        "pattern": "probe",
+        "path": "__WS__"
+      },
+      "compare": "lines",
+      "batch": 3
+    },
+    {
+      "id": "search_files_target",
+      "tool": "search_files",
+      "arguments": {
+        "pattern": "*.txt",
+        "target": "files",
+        "path": "__WS__"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "search_bad_target",
+      "tool": "search_files",
+      "arguments": {
+        "pattern": "x",
+        "target": "bogus"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "job_start",
+      "tool": "terminal_job_start",
+      "arguments": {
+        "command": "printf 'job-line\\n'",
+        "shell": true
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "job_logs_wait",
+      "tool": "terminal_job_logs",
+      "arguments": {
+        "job_id": {
+          "$from": "job_id"
+        },
+        "wait_until_exit": true,
+        "wait_timeout_sec": 5
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "job_manage_list",
+      "tool": "terminal_job_manage",
+      "arguments": {
+        "action": "list"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "pty_open",
+      "tool": "terminal_pty_open",
+      "arguments": {},
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "pty_run_ok",
+      "tool": "terminal_pty_run",
+      "arguments": {
+        "session_id": {
+          "$from": "session_id"
+        },
+        "command": "echo pty-hello"
+      },
+      "compare": "none",
+      "exception": "Python harness: the live loop injects its execution-context session_id over any tool argument named session_id (framework/loader/tool_registry.py::_inject_context), so terminal_pty_run always sees the hive session id and answers 'unknown session_id'. The Go port has no session_id context param, so it runs the command ({\"output\":\"pty-hello\\r\\n\",...}).",
+      "batch": 3
+    },
+    {
+      "id": "pty_close",
+      "tool": "terminal_pty_close",
+      "arguments": {
+        "session_id": {
+          "$from": "session_id"
+        }
+      },
+      "compare": "none",
+      "exception": "Python harness: same session_id injection as pty_run_ok — terminal_pty_close cannot address the opened session and answers 'unknown session_id'; Go closes it and returns exit_code/final_output.",
+      "batch": 3
+    },
+    {
+      "id": "pty_run_unknown",
+      "tool": "terminal_pty_run",
+      "arguments": {
+        "session_id": "pty_doesnotexist",
+        "command": "echo hi"
+      },
+      "compare": "none",
+      "exception": "Python harness: the injected hive session_id replaces the bogus literal, so the error cites session_<ID> instead of pty_doesnotexist. Go echoes the argument it received.",
+      "batch": 3
+    },
+    {
+      "id": "output_get_expired",
+      "tool": "terminal_output_get",
+      "arguments": {
+        "output_handle": "out_doesnotexist"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "web_scrape_loopback",
+      "tool": "web_scrape",
+      "arguments": {
+        "url": "__FIXTURE_URL__/fixture-page.html"
+      },
+      "compare": "masked",
+      "batch": 3
+    },
+    {
+      "id": "http_headers_ok",
+      "tool": "http_headers_scan",
+      "arguments": {
+        "url": "__FIXTURE_URL__/headers-all"
+      },
+      "compare": "none",
+      "exception": "Python harness: http_headers_scan is not registered in the queen chat surface (the capture session answers 'Unknown tool: http_headers_scan'); the tool module itself is compared against this Go result by raw/network-direct.json (direct invocation over the same fixture server).",
+      "batch": 3
+    },
+    {
+      "id": "http_headers_bare",
+      "tool": "http_headers_scan",
+      "arguments": {
+        "url": "__FIXTURE_URL__/headers-missing"
+      },
+      "compare": "none",
+      "exception": "Python harness: http_headers_scan is not registered in the queen chat surface (the capture session answers 'Unknown tool: http_headers_scan'); the tool module itself is compared against this Go result by raw/network-direct.json (direct invocation over the same fixture server).",
+      "batch": 3
+    }
+  ]
 }

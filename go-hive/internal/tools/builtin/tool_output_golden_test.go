@@ -3,6 +3,8 @@ package builtin
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/toolgolden"
@@ -82,7 +84,17 @@ func TestReadFileDirectoryListingFormat(t *testing.T) {
 	mkdirAll(t, workspace+"/sub")
 	box := New(workspace)
 	got := ReadFileContent(t, box, workspace)
-	want := fmt.Sprintf("Directory: %s (3 entries)\n  probe.pdf\n  probe.txt\n  sub/", workspace)
+	names := make([]string, 0, len(fixtures)+1)
+	for name := range fixtures {
+		names = append(names, name)
+	}
+	names = append(names, "sub/")
+	sort.Strings(names)
+	lines := make([]string, 0, len(names))
+	for _, name := range names {
+		lines = append(lines, "  "+name)
+	}
+	want := fmt.Sprintf("Directory: %s (%d entries)\n%s", workspace, len(lines), strings.Join(lines, "\n"))
 	if got != want {
 		t.Fatalf("listing = %q, want %q", got, want)
 	}

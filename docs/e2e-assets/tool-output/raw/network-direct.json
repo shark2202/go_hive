@@ -1,0 +1,220 @@
+{
+ "fixture": "<LOCAL_URL>",
+ "scenarios": {
+  "http_headers_ok": {
+   "url_path": "/headers-all",
+   "python": {
+    "url": "http://127.0.0.1:59645/headers-all",
+    "status_code": 200,
+    "headers_present": [
+     "Content-Security-Policy",
+     "X-Frame-Options",
+     "X-Content-Type-Options",
+     "Referrer-Policy",
+     "Permissions-Policy",
+     "X-XSS-Protection (deprecated)"
+    ],
+    "headers_missing": [
+     {
+      "header": "Strict-Transport-Security",
+      "severity": "high",
+      "description": "No HSTS header. Browsers may connect over plain HTTP, enabling man-in-the-middle attacks.",
+      "remediation": "Add the header: Strict-Transport-Security: max-age=31536000; includeSubDomains"
+     }
+    ],
+    "leaky_headers": [
+     {
+      "header": "Server",
+      "value": "fixture/1.0",
+      "severity": "low",
+      "remediation": "Remove or genericize the Server header to avoid version disclosure."
+     },
+     {
+      "header": "X-Powered-By",
+      "value": "fixture",
+      "severity": "low",
+      "remediation": "Remove the X-Powered-By header to hide the backend framework."
+     }
+    ],
+    "grade_input": {
+     "hsts": false,
+     "csp": true,
+     "x_frame_options": true,
+     "x_content_type_options": true,
+     "referrer_policy": true,
+     "permissions_policy": true,
+     "no_leaky_headers": false
+    }
+   },
+   "go": {
+    "grade_input": {
+     "csp": true,
+     "hsts": false,
+     "no_leaky_headers": false,
+     "permissions_policy": true,
+     "referrer_policy": true,
+     "x_content_type_options": true,
+     "x_frame_options": true
+    },
+    "headers_missing": [
+     {
+      "description": "No HSTS header. Browsers may connect over plain HTTP, enabling man-in-the-middle attacks.",
+      "header": "Strict-Transport-Security",
+      "remediation": "Add the header: Strict-Transport-Security: max-age=31536000; includeSubDomains",
+      "severity": "high"
+     }
+    ],
+    "headers_present": [
+     "Content-Security-Policy",
+     "X-Frame-Options",
+     "X-Content-Type-Options",
+     "Referrer-Policy",
+     "Permissions-Policy",
+     "X-XSS-Protection (deprecated)"
+    ],
+    "leaky_headers": [
+     {
+      "header": "Server",
+      "remediation": "Remove or genericize the Server header to avoid version disclosure.",
+      "severity": "low",
+      "value": "fixture/1.0"
+     },
+     {
+      "header": "X-Powered-By",
+      "remediation": "Remove the X-Powered-By header to hide the backend framework.",
+      "severity": "low",
+      "value": "fixture"
+     }
+    ],
+    "status_code": 200,
+    "url": "http://127.0.0.1:59596/headers-all"
+   },
+   "equal": true
+  },
+  "http_headers_bare": {
+   "url_path": "/headers-missing",
+   "python": {
+    "url": "http://127.0.0.1:59645/headers-missing",
+    "status_code": 200,
+    "headers_present": [],
+    "headers_missing": [
+     {
+      "header": "Strict-Transport-Security",
+      "severity": "high",
+      "description": "No HSTS header. Browsers may connect over plain HTTP, enabling man-in-the-middle attacks.",
+      "remediation": "Add the header: Strict-Transport-Security: max-age=31536000; includeSubDomains"
+     },
+     {
+      "header": "Content-Security-Policy",
+      "severity": "high",
+      "description": "No CSP header. The site is more vulnerable to XSS attacks from inline scripts and untrusted sources.",
+      "remediation": "Add a Content-Security-Policy header. Start restrictive: default-src 'self'; script-src 'self'"
+     },
+     {
+      "header": "X-Frame-Options",
+      "severity": "medium",
+      "description": "No X-Frame-Options header. The site may be vulnerable to clickjacking.",
+      "remediation": "Add the header: X-Frame-Options: DENY (or SAMEORIGIN)"
+     },
+     {
+      "header": "X-Content-Type-Options",
+      "severity": "medium",
+      "description": "No X-Content-Type-Options header. Browsers may MIME-sniff responses, potentially executing malicious content.",
+      "remediation": "Add the header: X-Content-Type-Options: nosniff"
+     },
+     {
+      "header": "Referrer-Policy",
+      "severity": "low",
+      "description": "No Referrer-Policy header. Full URLs (including query params) may leak to third-party sites via the Referer header.",
+      "remediation": "Add the header: Referrer-Policy: strict-origin-when-cross-origin"
+     },
+     {
+      "header": "Permissions-Policy",
+      "severity": "low",
+      "description": "No Permissions-Policy header. Browser features like camera, microphone, and geolocation are not explicitly restricted.",
+      "remediation": "Add the header: Permissions-Policy: camera=(), microphone=(), geolocation=()"
+     }
+    ],
+    "leaky_headers": [
+     {
+      "header": "Server",
+      "value": "fixture/1.0",
+      "severity": "low",
+      "remediation": "Remove or genericize the Server header to avoid version disclosure."
+     }
+    ],
+    "grade_input": {
+     "hsts": false,
+     "csp": false,
+     "x_frame_options": false,
+     "x_content_type_options": false,
+     "referrer_policy": false,
+     "permissions_policy": false,
+     "no_leaky_headers": false
+    }
+   },
+   "go": {
+    "grade_input": {
+     "csp": false,
+     "hsts": false,
+     "no_leaky_headers": false,
+     "permissions_policy": false,
+     "referrer_policy": false,
+     "x_content_type_options": false,
+     "x_frame_options": false
+    },
+    "headers_missing": [
+     {
+      "description": "No HSTS header. Browsers may connect over plain HTTP, enabling man-in-the-middle attacks.",
+      "header": "Strict-Transport-Security",
+      "remediation": "Add the header: Strict-Transport-Security: max-age=31536000; includeSubDomains",
+      "severity": "high"
+     },
+     {
+      "description": "No CSP header. The site is more vulnerable to XSS attacks from inline scripts and untrusted sources.",
+      "header": "Content-Security-Policy",
+      "remediation": "Add a Content-Security-Policy header. Start restrictive: default-src 'self'; script-src 'self'",
+      "severity": "high"
+     },
+     {
+      "description": "No X-Frame-Options header. The site may be vulnerable to clickjacking.",
+      "header": "X-Frame-Options",
+      "remediation": "Add the header: X-Frame-Options: DENY (or SAMEORIGIN)",
+      "severity": "medium"
+     },
+     {
+      "description": "No X-Content-Type-Options header. Browsers may MIME-sniff responses, potentially executing malicious content.",
+      "header": "X-Content-Type-Options",
+      "remediation": "Add the header: X-Content-Type-Options: nosniff",
+      "severity": "medium"
+     },
+     {
+      "description": "No Referrer-Policy header. Full URLs (including query params) may leak to third-party sites via the Referer header.",
+      "header": "Referrer-Policy",
+      "remediation": "Add the header: Referrer-Policy: strict-origin-when-cross-origin",
+      "severity": "low"
+     },
+     {
+      "description": "No Permissions-Policy header. Browser features like camera, microphone, and geolocation are not explicitly restricted.",
+      "header": "Permissions-Policy",
+      "remediation": "Add the header: Permissions-Policy: camera=(), microphone=(), geolocation=()",
+      "severity": "low"
+     }
+    ],
+    "headers_present": [],
+    "leaky_headers": [
+     {
+      "header": "Server",
+      "remediation": "Remove or genericize the Server header to avoid version disclosure.",
+      "severity": "low",
+      "value": "fixture/1.0"
+     }
+    ],
+    "status_code": 200,
+    "url": "http://127.0.0.1:59596/headers-missing"
+   },
+   "equal": true
+  }
+ },
+ "all_equal": true
+}

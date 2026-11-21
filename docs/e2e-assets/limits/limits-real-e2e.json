@@ -1,0 +1,132 @@
+{
+  "model": "deepseek-flash-1017",
+  "api_base": "https://token.tokenbroad.com/v1",
+  "limit": 200,
+  "aux_max_tokens": 512,
+  "results": [
+    {
+      "side": "go",
+      "session": "session_20261121_175407_c786ce7c",
+      "truncation": {
+        "found": true,
+        "visible_chars": 5608,
+        "first_line": "Tool `terminal_exec` returned 12,064 characters (too large for context). Full result at: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/limits-e2e-i3pfhpo6/home-go/queens/queen_growth/sessions/session_20261121_175407_c786ce7c/data/terminal_exec_1.txt",
+        "has_preview_marker": true,
+        "has_grep_hint": true,
+        "has_sample_warning": true,
+        "spill_path": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/limits-e2e-i3pfhpo6/home-go/queens/queen_growth/sessions/session_20261121_175407_c786ce7c/data/terminal_exec_1.txt",
+        "spill_bytes": 12064
+      },
+      "title": {
+        "title": "Run Python command and count characters",
+        "title_source": "auto",
+        "title_requests": [
+          {
+            "max_tokens": 512,
+            "status": 200,
+            "model": "deepseek-flash-1017",
+            "response_content": "Run Python command and count characters"
+          }
+        ]
+      },
+      "max_iter": {
+        "event_types": {
+          "client_input_committed": 1,
+          "client_input_received": 1,
+          "client_input_requested": 2,
+          "client_output_delta": 1,
+          "context_usage_updated": 4,
+          "execution_failed": 1,
+          "execution_started": 1,
+          "judge_verdict": 1,
+          "llm_turn_complete": 2,
+          "loop_state_changed": 3,
+          "node_loop_iteration": 2,
+          "node_loop_started": 2,
+          "queen_identity_selected": 1,
+          "reminder_injected": 1,
+          "session_title_updated": 1,
+          "tool_call_completed": 1,
+          "tool_call_started": 1
+        },
+        "tool_parts": [
+          {
+            "chars": 52,
+            "preview": "exit_code: 0\nshell_kind: direct\nstdout:\none\nstderr:\n"
+          }
+        ],
+        "assistant_texts": [
+          "I'm here. But I don't see a request yet, just setup. So tell me what you're trying to move.\n\nIf it's growth (acquisition, activation, retention, a funnel that looks fine but isn't), bring me the numbe"
+        ],
+        "max_iteration_error_lines": [
+          "{\"colony_id\":null,\"correlation_id\":null,\"data\":{\"max_iterations\":1},\"execution_id\":\"session_20261121_175425_e87aac58\",\"node_id\":\"queen\",\"seq\":3,\"stream_id\":\"queen\",\"timestamp\":\"2026-11-21T17:54:25.587529\",\"type\":\"node_loop_started\"}",
+          "{\"colony_id\":null,\"correlation_id\":null,\"data\":{\"max_iterations\":1},\"execution_id\":\"06a65fac06493c7d8bacd47c407add00\",\"node_id\":\"queen\",\"seq\":80,\"stream_id\":\"queen\",\"timestamp\":\"2026-11-21T17:54:29.868170\",\"type\":\"node_loop_started\"}",
+          "{\"colony_id\":null,\"correlation_id\":null,\"data\":{\"error\":\"agent loop: exceeded 1 inner turns\"},\"execution_id\":\"06a65fac06493c7d8bacd47c407add00\",\"node_id\":null,\"seq\":93,\"stream_id\":\"queen\",\"timestamp\":\"2026-11-21T17:54:33.331730\",\"type\":\"execution_failed\"}"
+        ],
+        "session": "session_20261121_175425_e87aac58"
+      }
+    },
+    {
+      "side": "python",
+      "session": "session_20261121_174126_93fb58c8",
+      "truncation": {
+        "found": true,
+        "visible_chars": 6013,
+        "first_line": "Tool `terminal_exec` returned 12,333 characters (too large for context). Full result at: /private/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/limits-e2e-1nlf28b2/home-python/queens/queen_growth/sessions/session_20261121_174126_93fb58c8/data/terminal_exec_1.txt",
+        "has_preview_marker": true,
+        "has_grep_hint": true,
+        "has_sample_warning": true,
+        "spill_path": "/private/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/limits-e2e-1nlf28b2/home-python/queens/queen_growth/sessions/session_20261121_174126_93fb58c8/data/terminal_exec_1.txt",
+        "spill_bytes": 12367
+      },
+      "title": {
+        "title": "Counting characters from terminal command output",
+        "title_source": "auto",
+        "title_requests": [
+          {
+            "max_tokens": 512,
+            "status": 200,
+            "model": "deepseek-flash-1017",
+            "response_content": "Counting characters from terminal command output"
+          }
+        ]
+      },
+      "max_iter": {
+        "event_types": {
+          "client_input_committed": 1,
+          "client_input_received": 1,
+          "client_input_requested": 1,
+          "client_output_delta": 1,
+          "client_reasoning": 2,
+          "context_usage_updated": 5,
+          "llm_turn_complete": 1,
+          "loop_state_changed": 1,
+          "node_loop_iteration": 1,
+          "node_loop_started": 1,
+          "queen_identity_selected": 1,
+          "reminder_injected": 2,
+          "session_title_updated": 1,
+          "tool_call_completed": 2,
+          "tool_call_started": 2
+        },
+        "tool_parts": [
+          {
+            "chars": 1348,
+            "preview": "Tool `terminal_exec` returned 338 characters (too large for context). Full result at: /private/var/folders/fx/_9b3wvr91j"
+          },
+          {
+            "chars": 1349,
+            "preview": "Tool `terminal_exec` returned 339 characters (too large for context). Full result at: /private/var/folders/fx/_9b3wvr91j"
+          }
+        ],
+        "assistant_texts": [
+          "Both commands ran, in order, and both exited clean.\n\nThe first returned `one`, the second returned `two`."
+        ],
+        "max_iteration_error_lines": [
+          "{\"type\": \"node_loop_started\", \"stream_id\": \"queen\", \"node_id\": \"queen\", \"execution_id\": \"session_20261121_174531_d358adb7\", \"data\": {\"max_iterations\": 999999}, \"timestamp\": \"2026-11-21T17:45:32.402066\", \"correlation_id\": null, \"colony_id\": null, \"seq\": 4}"
+        ],
+        "session": "session_20261121_174531_d358adb7"
+      }
+    }
+  ]
+}

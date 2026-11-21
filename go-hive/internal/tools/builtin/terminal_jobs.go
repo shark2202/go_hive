@@ -592,7 +592,7 @@ func (m *terminalJobManager) shutdownAll(grace time.Duration) {
 func (t *Toolbox) terminalJobStart(ctx context.Context, input map[string]any) (Result, error) {
 	command, ok := stringArg(input, "command")
 	if !ok || strings.TrimSpace(command) == "" {
-		return terminalErr("terminal_job_start: command is required"), nil
+		return terminalArgErr("terminal_job_start: command is required"), nil
 	}
 	if blocked := terminalCheckCommand(command); blocked != "" {
 		return terminalEncode(struct {
@@ -602,7 +602,7 @@ func (t *Toolbox) terminalJobStart(ctx context.Context, input map[string]any) (R
 	}
 	env, ok := terminalEnvMap(input, "env")
 	if !ok {
-		return terminalErr("terminal_job_start: env must map names to strings"), nil
+		return terminalArgErr("terminal_job_start: env must map names to strings"), nil
 	}
 	if principal, ok := stringArg(input, "crm_principal"); ok && strings.TrimSpace(principal) != "" {
 		merged := make(map[string]string, len(env)+1)
@@ -673,7 +673,7 @@ func (t *Toolbox) terminalJobStart(ctx context.Context, input map[string]any) (R
 func (t *Toolbox) terminalJobLogs(ctx context.Context, input map[string]any) (Result, error) {
 	jobID, ok := stringArg(input, "job_id")
 	if !ok || jobID == "" {
-		return terminalErr("terminal_job_logs: job_id is required"), nil
+		return terminalArgErr("terminal_job_logs: job_id is required"), nil
 	}
 	record := terminalJobs.get(jobID)
 	if record == nil {
@@ -688,7 +688,7 @@ func (t *Toolbox) terminalJobLogs(ctx context.Context, input map[string]any) (Re
 	if v, present := input["since_offset"]; present && v != nil {
 		parsed, ok := intArg(input, "since_offset")
 		if !ok {
-			return terminalErr("terminal_job_logs: since_offset must be an integer"), nil
+			return terminalArgErr("terminal_job_logs: since_offset must be an integer"), nil
 		}
 		sinceOffset = parsed
 	}
@@ -699,7 +699,7 @@ func (t *Toolbox) terminalJobLogs(ctx context.Context, input map[string]any) (Re
 	if v, present := input["max_bytes"]; present && v != nil {
 		parsed, ok := intArg(input, "max_bytes")
 		if !ok {
-			return terminalErr("terminal_job_logs: max_bytes must be an integer"), nil
+			return terminalArgErr("terminal_job_logs: max_bytes must be an integer"), nil
 		}
 		maxBytes = parsed
 	}
@@ -712,7 +712,7 @@ func (t *Toolbox) terminalJobLogs(ctx context.Context, input map[string]any) (Re
 		if v, present := input["wait_timeout_sec"]; present && v != nil {
 			parsed, ok := finiteNumberArg(input, "wait_timeout_sec")
 			if !ok {
-				return terminalErr("terminal_job_logs: wait_timeout_sec must be a finite number"), nil
+				return terminalArgErr("terminal_job_logs: wait_timeout_sec must be a finite number"), nil
 			}
 			waitSec = parsed
 		}
@@ -828,7 +828,7 @@ func (c terminalJobCapabilities) signalSemantics(action string) string {
 func (t *Toolbox) terminalJobManage(ctx context.Context, input map[string]any) (Result, error) {
 	action, ok := stringArg(input, "action")
 	if !ok || action == "" {
-		return terminalErr("terminal_job_manage: action is required"), nil
+		return terminalArgErr("terminal_job_manage: action is required"), nil
 	}
 	capabilities := terminalJobControlCapabilities()
 	if action == "capabilities" {

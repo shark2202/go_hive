@@ -18,11 +18,14 @@ package visionfallback
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/aden-hive/hive-go/internal/llm"
 )
@@ -254,12 +257,14 @@ func IntentForTool(toolName string, toolArgs map[string]any, lastAssistantText f
 		assistantText = "<no preceding reasoning>"
 	}
 
+	// Lengths are counted in characters, as upstream's len() does, so a
+	// multi-byte tool call or reasoning block truncates at the same point.
 	head := toolLine + "\n\nReasoning before call:\n"
-	budget := intentMaxChars - len(head)
+	budget := intentMaxChars - utf8.RuneCountInString(head)
 	if budget < 100 {
 		return truncateRunes(head, intentMaxChars)
 	}
-	if len(assistantText) > budget {
+	if utf8.RuneCountInString(assistantText) > budget {
 		assistantText = truncateRunes(assistantText, budget-1) + "…"
 	}
 	return head + assistantText
@@ -272,16 +277,141 @@ func stringArg(args map[string]any, key string) string {
 	return value
 }
 
+// jsonForIntent renders tool args as the reference implementation sends them:
+// Python's json.dumps defaults — ", " / ": " separators and ensure_ascii=True.
+// The intent is prompt text the vision model reads, so the bytes should match
+// what upstream sends for the same tool call. Maps are emitted with sorted
+// keys because Go's map iteration order is random; upstream preserves the
+// model's key order, so a multi-key args object can still order differently.
+//
+// Parity: framework/agent_loop/internals/vision_fallback.py::extract_intent_for_tool
 func jsonForIntent(value any) string {
-	data, err := json.Marshal(value)
-	if err != nil {
-		return "{}"
-	}
-	text := string(data)
-	if len(text) > toolArgsMaxChars {
+	var builder strings.Builder
+	writePythonJSON(&builder, value)
+	text := builder.String()
+	if utf8.RuneCountInString(text) > toolArgsMaxChars {
 		return truncateRunes(text, toolArgsMaxChars) + "…"
 	}
 	return text
+}
+
+func writePythonJSON(builder *strings.Builder, value any) {
+	switch typed := value.(type) {
+	case nil:
+		builder.WriteString("null")
+	case bool:
+		if typed {
+			builder.WriteString("true")
+		} else {
+			builder.WriteString("false")
+		}
+	case string:
+		writePythonJSONString(builder, typed)
+	case json.Number:
+		builder.WriteString(typed.String())
+	case float64:
+		builder.WriteString(pythonNumber(typed))
+	case float32:
+		builder.WriteString(pythonNumber(float64(typed)))
+	case int:
+		builder.WriteString(strconv.Itoa(typed))
+	case int64:
+		builder.WriteString(strconv.FormatInt(typed, 10))
+	case []any:
+		builder.WriteString("[")
+		for index, item := range typed {
+			if index > 0 {
+				builder.WriteString(", ")
+			}
+			writePythonJSON(builder, item)
+		}
+		builder.WriteString("]")
+	case []string:
+		builder.WriteString("[")
+		for index, item := range typed {
+			if index > 0 {
+				builder.WriteString(", ")
+			}
+			writePythonJSONString(builder, item)
+		}
+		builder.WriteString("]")
+	case map[string]any:
+		keys := make([]string, 0, len(typed))
+		for key := range typed {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		builder.WriteString("{")
+		for index, key := range keys {
+			if index > 0 {
+				builder.WriteString(", ")
+			}
+			writePythonJSONString(builder, key)
+			builder.WriteString(": ")
+			writePythonJSON(builder, typed[key])
+		}
+		builder.WriteString("}")
+	default:
+		// Python's json.dumps(default=str) coerces unknown objects with str().
+		writePythonJSONString(builder, fmt.Sprint(value))
+	}
+}
+
+// pythonNumber mirrors Python's float/int repr for the values a JSON-parsed
+// tool call carries: an integral float prints without a trailing ".0" (the
+// common case — the model writes 10, not 10.0), everything else uses the
+// shortest round-trip form.
+func pythonNumber(value float64) string {
+	if math.IsInf(value, 0) || math.IsNaN(value) {
+		return "null"
+	}
+	if value == math.Trunc(value) && math.Abs(value) < 1e16 {
+		return strconv.FormatFloat(value, 'f', 0, 64)
+	}
+	return strconv.FormatFloat(value, 'g', -1, 64)
+}
+
+// writePythonJSONString escapes like Python's json.dumps(ensure_ascii=True):
+// the JSON shortcuts for \n 	 \r \b \f, \u00XX for other control characters,
+// and \uXXXX (lowercase, surrogate pairs above the BMP) for every non-ASCII
+// rune. Go's json.Marshal would keep UTF-8 and escape <, > and & instead.
+func writePythonJSONString(builder *strings.Builder, text string) {
+	builder.WriteByte('"')
+	for _, r := range text {
+		switch r {
+		case '"':
+			builder.WriteString(`\"`)
+		case '\\':
+			builder.WriteString(`\\`)
+		case '\n':
+			builder.WriteString(`\n`)
+		case '\r':
+			builder.WriteString(`\r`)
+		case '	':
+			builder.WriteString("\\t")
+		case '\b':
+			builder.WriteString(`\b`)
+		case '\f':
+			builder.WriteString(`\f`)
+		default:
+			switch {
+			case r < 0x20 || r == 0x7f:
+				// Python's C encoder escapes every non-printable ASCII byte,
+				// including DEL (0x7f).
+				fmt.Fprintf(builder, `\u%04x`, r)
+			case r < 0x80:
+				builder.WriteRune(r)
+			case r <= 0xFFFF:
+				fmt.Fprintf(builder, `\u%04x`, r)
+			default:
+				r -= 0x10000
+				high := 0xD800 + (r >> 10)
+				low := 0xDC00 + (r & 0x3FF)
+				fmt.Fprintf(builder, `\u%04x\u%04x`, high, low)
+			}
+		}
+	}
+	builder.WriteByte('"')
 }
 
 func truncateRunes(text string, limit int) string {

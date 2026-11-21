@@ -1,0 +1,649 @@
+{
+ "meta": {},
+ "python": {
+  "http": {
+   "sessions_post_nonobject": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Request body must be a JSON object\"}",
+    "json": {
+     "error": "Request body must be a JSON object"
+    },
+    "elapsed_s": 0.07
+   },
+   "config_llm_invalid_json": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Invalid JSON body\"}",
+    "json": {
+     "error": "Invalid JSON body"
+    },
+    "elapsed_s": 0.0
+   },
+   "credentials_missing_fields": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"credential_id and keys are required\"}",
+    "json": {
+     "error": "credential_id and keys are required"
+    },
+    "elapsed_s": 0.0
+   },
+   "sentinel_telegram_empty": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"ok\": false, \"error\": \"no token provided or saved\"}",
+    "json": {
+     "ok": false,
+     "error": "no token provided or saved"
+    },
+    "elapsed_s": 0.0
+   },
+   "skills_patch_enabled_not_bool": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"'enabled' must be a bool\"}",
+    "json": {
+     "error": "'enabled' must be a bool"
+    },
+    "elapsed_s": 0.05
+   },
+   "agents_delete_missing_path": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"agent_path is required\"}",
+    "json": {
+     "error": "agent_path is required"
+    },
+    "elapsed_s": 0.0
+   },
+   "import_init_missing_total": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"total_bytes must be an integer\"}",
+    "json": {
+     "error": "total_bytes must be an integer"
+    },
+    "elapsed_s": 0.06
+   },
+   "import_chunk_bad_offset_value": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"offset must be an integer\"}",
+    "json": {
+     "error": "offset must be an integer"
+    },
+    "elapsed_s": 0.0
+   },
+   "import_chunk_negative_offset": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"offset must be >= 0\"}",
+    "json": {
+     "error": "offset must be >= 0"
+    },
+    "elapsed_s": 0.01
+   },
+   "import_chunk_bad_upload_id": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"invalid upload_id\"}",
+    "json": {
+     "error": "invalid upload_id"
+    },
+    "elapsed_s": 0.0
+   },
+   "colony_scaffold_bad_name": {
+    "status": 400,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"colony name must match [a-z0-9_]+\"}",
+    "json": {
+     "error": "colony name must match [a-z0-9_]+"
+    },
+    "elapsed_s": 0.0
+   },
+   "agents_delete_framework": {
+    "status": 403,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Cannot delete framework agents\"}",
+    "json": {
+     "error": "Cannot delete framework agents"
+    },
+    "elapsed_s": 0.0
+   },
+   "skill_put_body_framework": {
+    "status": 403,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"skill 'administrative-behavior-skill' is not editable (provenance=framework)\"}",
+    "json": {
+     "error": "skill 'administrative-behavior-skill' is not editable (provenance=framework)"
+    },
+    "elapsed_s": 0.05
+   },
+   "session_missing": {
+    "status": 404,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Session 'session_20990101_000000_deadbeef' not found\"}",
+    "json": {
+     "error": "Session 'session_20990101_000000_deadbeef' not found"
+    },
+    "elapsed_s": 0.0
+   },
+   "session_tasks_missing": {
+    "status": 404,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Task list for session 'session_20990101_000000_deadbeef' not found\", \"session_id\": \"session_20990101_000000_deadbeef\", \"tasks\": []}",
+    "json": {
+     "error": "Task list for session 'session_20990101_000000_deadbeef' not found",
+     "session_id": "session_20990101_000000_deadbeef",
+     "tasks": []
+    },
+    "elapsed_s": 0.0
+   },
+   "session_triggers_missing": {
+    "status": 404,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Session 'session_20990101_000000_deadbeef' not found\"}",
+    "json": {
+     "error": "Session 'session_20990101_000000_deadbeef' not found"
+    },
+    "elapsed_s": 0.0
+   },
+   "skill_missing": {
+    "status": 404,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"skill 'does-not-exist-probe' not found\"}",
+    "json": {
+     "error": "skill 'does-not-exist-probe' not found"
+    },
+    "elapsed_s": 0.05
+   },
+   "credentials_missing": {
+    "status": 404,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Credential 'nope_probe' not found\"}",
+    "json": {
+     "error": "Credential 'nope_probe' not found"
+    },
+    "elapsed_s": 0.0
+   },
+   "queen_missing": {
+    "status": 404,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Queen 'queen_nope' not found\"}",
+    "json": {
+     "error": "Queen 'queen_nope' not found"
+    },
+    "elapsed_s": 0.0
+   },
+   "mcp_health_missing": {
+    "status": 404,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Cannot health-check server 'nope'\", \"code\": \"MCP_HEALTH_FAILED\", \"what\": \"Cannot health-check server 'nope'\", \"why\": \"Server is not installed.\", \"fix\": \"Run: hive mcp list  \\u2014 to see installed servers.\"}",
+    "json": {
+     "error": "Cannot health-check server 'nope'",
+     "code": "MCP_HEALTH_FAILED",
+     "what": "Cannot health-check server 'nope'",
+     "why": "Server is not installed.",
+     "fix": "Run: hive mcp list  — to see installed servers."
+    },
+    "elapsed_s": 0.0
+   },
+   "attachment_missing": {
+    "status": 404,
+    "ctype": "text/plain; charset=utf-8",
+    "form": "text",
+    "body": "Attachment not found",
+    "json": null,
+    "elapsed_s": 0.0
+   },
+   "import_chunk_unknown_upload": {
+    "status": 404,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"unknown upload_id\"}",
+    "json": {
+     "error": "unknown upload_id"
+    },
+    "elapsed_s": 0.0
+   },
+   "resolve_missed_no_colony": {
+    "status": 409,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Colony not loaded\"}",
+    "json": {
+     "error": "Colony not loaded"
+    },
+    "elapsed_s": 0.0
+   },
+   "import_chunk_offset_mismatch": {
+    "status": 409,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"offset mismatch\", \"declared\": 5, \"received\": 0}",
+    "json": {
+     "error": "offset mismatch",
+     "declared": 5,
+     "received": 0
+    },
+    "elapsed_s": 0.0
+   },
+   "import_finalize_incomplete": {
+    "status": 409,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"upload incomplete\", \"received\": 0, \"total\": 10}",
+    "json": {
+     "error": "upload incomplete",
+     "received": 0,
+     "total": 10
+    },
+    "elapsed_s": 0.0
+   },
+   "config_llm_list_body": {
+    "status": 500,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Internal server error\"}",
+    "json": {
+     "error": "Internal server error"
+    },
+    "elapsed_s": 0.0
+   },
+   "agents_delete_nonstring_path": {
+    "status": 500,
+    "ctype": "application/json; charset=utf-8",
+    "form": "json",
+    "body": "{\"error\": \"Internal server error\"}",
+    "json": {
+     "error": "Internal server error"
+    },
+    "elapsed_s": 0.0
+   }
+  },
+  "session_id": "session_20261121_175207_de82fcfd"
+ },
+ "go": {
+  "http": {
+   "sessions_post_nonobject": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Request body must be a JSON object\"}\n",
+    "json": {
+     "error": "Request body must be a JSON object"
+    },
+    "elapsed_s": 0.0
+   },
+   "config_llm_invalid_json": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Invalid JSON body\"}\n",
+    "json": {
+     "error": "Invalid JSON body"
+    },
+    "elapsed_s": 0.0
+   },
+   "credentials_missing_fields": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"credential_id and keys are required\"}\n",
+    "json": {
+     "error": "credential_id and keys are required"
+    },
+    "elapsed_s": 0.0
+   },
+   "sentinel_telegram_empty": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"no token provided or saved\",\"ok\":false}\n",
+    "json": {
+     "error": "no token provided or saved",
+     "ok": false
+    },
+    "elapsed_s": 0.0
+   },
+   "skills_patch_enabled_not_bool": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"'enabled' must be a bool\"}\n",
+    "json": {
+     "error": "'enabled' must be a bool"
+    },
+    "elapsed_s": 0.01
+   },
+   "agents_delete_missing_path": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"agent_path is required\"}\n",
+    "json": {
+     "error": "agent_path is required"
+    },
+    "elapsed_s": 0.0
+   },
+   "import_init_missing_total": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"total_bytes must be an integer\"}\n",
+    "json": {
+     "error": "total_bytes must be an integer"
+    },
+    "elapsed_s": 0.0
+   },
+   "import_chunk_bad_offset_value": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"offset must be an integer\"}\n",
+    "json": {
+     "error": "offset must be an integer"
+    },
+    "elapsed_s": 0.0
+   },
+   "import_chunk_negative_offset": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"offset must be \\u003e= 0\"}\n",
+    "json": {
+     "error": "offset must be >= 0"
+    },
+    "elapsed_s": 0.0
+   },
+   "import_chunk_bad_upload_id": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"invalid upload_id\"}\n",
+    "json": {
+     "error": "invalid upload_id"
+    },
+    "elapsed_s": 0.0
+   },
+   "colony_scaffold_bad_name": {
+    "status": 400,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"colony name must match [a-z0-9_]+\"}\n",
+    "json": {
+     "error": "colony name must match [a-z0-9_]+"
+    },
+    "elapsed_s": 0.0
+   },
+   "agents_delete_framework": {
+    "status": 403,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Cannot delete framework agents\"}\n",
+    "json": {
+     "error": "Cannot delete framework agents"
+    },
+    "elapsed_s": 0.0
+   },
+   "skill_put_body_framework": {
+    "status": 403,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"skill 'administrative-behavior-skill' is not editable (provenance=framework)\"}\n",
+    "json": {
+     "error": "skill 'administrative-behavior-skill' is not editable (provenance=framework)"
+    },
+    "elapsed_s": 0.01
+   },
+   "session_missing": {
+    "status": 404,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Session 'session_20990101_000000_deadbeef' not found\"}\n",
+    "json": {
+     "error": "Session 'session_20990101_000000_deadbeef' not found"
+    },
+    "elapsed_s": 0.0
+   },
+   "session_tasks_missing": {
+    "status": 404,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Task list for session 'session_20990101_000000_deadbeef' not found\",\"session_id\":\"session_20990101_000000_deadbeef\",\"tasks\":[]}\n",
+    "json": {
+     "error": "Task list for session 'session_20990101_000000_deadbeef' not found",
+     "session_id": "session_20990101_000000_deadbeef",
+     "tasks": []
+    },
+    "elapsed_s": 0.0
+   },
+   "session_triggers_missing": {
+    "status": 404,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Session 'session_20990101_000000_deadbeef' not found\"}\n",
+    "json": {
+     "error": "Session 'session_20990101_000000_deadbeef' not found"
+    },
+    "elapsed_s": 0.0
+   },
+   "skill_missing": {
+    "status": 404,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"skill 'does-not-exist-probe' not found\"}\n",
+    "json": {
+     "error": "skill 'does-not-exist-probe' not found"
+    },
+    "elapsed_s": 0.01
+   },
+   "credentials_missing": {
+    "status": 404,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Credential 'nope_probe' not found\"}\n",
+    "json": {
+     "error": "Credential 'nope_probe' not found"
+    },
+    "elapsed_s": 0.0
+   },
+   "queen_missing": {
+    "status": 404,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Queen 'queen_nope' not found\"}\n",
+    "json": {
+     "error": "Queen 'queen_nope' not found"
+    },
+    "elapsed_s": 0.0
+   },
+   "mcp_health_missing": {
+    "status": 404,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"code\":\"MCP_HEALTH_FAILED\",\"error\":\"Cannot health-check server 'nope'\",\"fix\":\"Run: hive mcp list  — to see installed servers.\",\"what\":\"Cannot health-check server 'nope'\",\"why\":\"Server is not installed.\"}\n",
+    "json": {
+     "code": "MCP_HEALTH_FAILED",
+     "error": "Cannot health-check server 'nope'",
+     "fix": "Run: hive mcp list  — to see installed servers.",
+     "what": "Cannot health-check server 'nope'",
+     "why": "Server is not installed."
+    },
+    "elapsed_s": 0.0
+   },
+   "attachment_missing": {
+    "status": 404,
+    "ctype": "text/plain; charset=utf-8",
+    "form": "text",
+    "body": "Attachment not found",
+    "json": null,
+    "elapsed_s": 0.0
+   },
+   "import_chunk_unknown_upload": {
+    "status": 404,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"unknown upload_id\"}\n",
+    "json": {
+     "error": "unknown upload_id"
+    },
+    "elapsed_s": 0.0
+   },
+   "resolve_missed_no_colony": {
+    "status": 409,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Colony not loaded\"}\n",
+    "json": {
+     "error": "Colony not loaded"
+    },
+    "elapsed_s": 0.0
+   },
+   "import_chunk_offset_mismatch": {
+    "status": 409,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"declared\":5,\"error\":\"offset mismatch\",\"received\":0}\n",
+    "json": {
+     "declared": 5,
+     "error": "offset mismatch",
+     "received": 0
+    },
+    "elapsed_s": 0.0
+   },
+   "import_finalize_incomplete": {
+    "status": 409,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"upload incomplete\",\"received\":0,\"total\":10}\n",
+    "json": {
+     "error": "upload incomplete",
+     "received": 0,
+     "total": 10
+    },
+    "elapsed_s": 0.0
+   },
+   "config_llm_list_body": {
+    "status": 500,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Internal server error\"}\n",
+    "json": {
+     "error": "Internal server error"
+    },
+    "elapsed_s": 0.0
+   },
+   "agents_delete_nonstring_path": {
+    "status": 500,
+    "ctype": "application/json",
+    "form": "json",
+    "body": "{\"error\":\"Internal server error\"}\n",
+    "json": {
+     "error": "Internal server error"
+    },
+    "elapsed_s": 0.0
+   }
+  },
+  "session_id": "session_20261121_175208_e0f5d644"
+ },
+ "tool": {
+  "python": {
+   "read_file_missing": {
+    "tool_call_id": "call_1",
+    "tool": "read_file",
+    "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/missing.txt\"}",
+    "content": "Error: File not found: /private/tmp/hive-errfmt-probe/ws/missing.txt"
+   },
+   "edit_file_mismatch": {
+    "tool_call_id": "call_2",
+    "tool": "edit_file",
+    "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/probe.txt\", \"old_string\": \"no-such-content-xyz\", \"new_string\": \"replacement\"}",
+    "content": "Refusing to edit '/private/tmp/hive-errfmt-probe/ws/probe.txt': call read_file('/private/tmp/hive-errfmt-probe/ws/probe.txt') first so the harness can track its state before you edit it."
+   },
+   "edit_file_missing": {
+    "tool_call_id": "call_3",
+    "tool": "edit_file",
+    "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/missing.txt\", \"old_string\": \"a\", \"new_string\": \"b\"}",
+    "content": "Error: File not found: /private/tmp/hive-errfmt-probe/ws/missing.txt"
+   },
+   "write_file_refusal": {
+    "tool_call_id": "call_4",
+    "tool": "write_file",
+    "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/probe.txt\", \"content\": \"clobbered\\n\"}",
+    "content": "Refusing to overwrite '/private/tmp/hive-errfmt-probe/ws/probe.txt': call read_file('/private/tmp/hive-errfmt-probe/ws/probe.txt') first so the harness can track its state before you replace it. If you intend to discard the current contents, read it first to acknowledge what you are overwriting.\n\n<system-reminder>\n[task_reminder] You've done several steps of real work but haven't created any tasks. If this is multi-step work, track it: create tasks with task_create and keep their status current (in_progress when you start, completed the moment a step is done). One task per atomic action/batch — don't umbrella-track.\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>"
+   },
+   "terminal_exec_nonzero": {
+    "tool_call_id": "call_5",
+    "tool": "terminal_exec",
+    "arguments": "{\"command\": \"sh -c 'echo out; echo err 1>&2; exit 7'\"}",
+    "content": "{\"exit_code\": 7, \"stdout\": \"out\\n\", \"stderr\": \"err\\n\", \"stdout_truncated_bytes\": 0, \"stderr_truncated_bytes\": 0, \"runtime_ms\": 7, \"pid\": 89493, \"output_handle\": null, \"timed_out\": false, \"semantic_status\": \"error\", \"semantic_message\": \"Command failed with exit code 7\", \"warning\": null, \"auto_backgrounded\": false, \"job_id\": null, \"auto_shell\": false, \"shell_kind\": \"direct\"}"
+   },
+   "image_generate_unauthorized": {
+    "tool_call_id": "call_6",
+    "tool": "image_generate",
+    "arguments": "{\"prompt\": \"probe\"}",
+    "content": "{\"error\": \"Image generation unavailable: missing Hive proxy token. Sign in to refresh credentials, then retry.\"}"
+   }
+  },
+  "go": {
+   "read_file_missing": {
+    "tool_call_id": "call_1",
+    "tool": "read_file",
+    "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/missing.txt\"}",
+    "content": "Error: File not found: /private/tmp/hive-errfmt-probe/ws/missing.txt"
+   },
+   "edit_file_mismatch": {
+    "tool_call_id": "call_2",
+    "tool": "edit_file",
+    "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/probe.txt\", \"old_string\": \"no-such-content-xyz\", \"new_string\": \"replacement\"}",
+    "content": "Refusing to edit '/private/tmp/hive-errfmt-probe/ws/probe.txt': call read_file('/private/tmp/hive-errfmt-probe/ws/probe.txt') first so the harness can track its state before you edit it."
+   },
+   "edit_file_missing": {
+    "tool_call_id": "call_3",
+    "tool": "edit_file",
+    "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/missing.txt\", \"old_string\": \"a\", \"new_string\": \"b\"}",
+    "content": "Error: File not found: /private/tmp/hive-errfmt-probe/ws/missing.txt"
+   },
+   "write_file_refusal": {
+    "tool_call_id": "call_4",
+    "tool": "write_file",
+    "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/probe.txt\", \"content\": \"clobbered\\n\"}",
+    "content": "Refusing to overwrite '/private/tmp/hive-errfmt-probe/ws/probe.txt': call read_file('/private/tmp/hive-errfmt-probe/ws/probe.txt') first so the harness can track its state before you replace it. If you intend to discard the current contents, read it first to acknowledge what you are overwriting.\n\n<system-reminder>\n[task_reminder] You've done several steps of real work but haven't created any tasks. If this is multi-step work, track it: create tasks with task_create and keep their status current (in_progress when you start, completed the moment a step is done). One task per atomic action/batch — don't umbrella-track.\n\nOnly act on this if relevant to the current work. NEVER mention this reminder to the user.\n</system-reminder>"
+   },
+   "terminal_exec_nonzero": {
+    "tool_call_id": "call_5",
+    "tool": "terminal_exec",
+    "arguments": "{\"command\": \"sh -c 'echo out; echo err 1>&2; exit 7'\"}",
+    "content": "ERROR: exit_code: 7\nauto_shell: true\nshell_kind: bash\nstdout:\nout\nstderr:\nerr\n"
+   },
+   "image_generate_unauthorized": {
+    "tool_call_id": "call_6",
+    "tool": "image_generate",
+    "arguments": "{\"prompt\": \"probe\"}",
+    "content": "{\"error\": \"Image generation unavailable: missing Hive proxy token. Sign in to refresh credentials, then retry.\", \"status\": 503}"
+   }
+  }
+ }
+}

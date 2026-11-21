@@ -1,9 +1,9 @@
 tool output golden — Python reference vs go_hive
 
-scenarios: 38
-aligned:   25
+scenarios: 69
+aligned:   50
 shape-aligned (tool libraries differ): 1
-recorded divergences (reviewed exceptions): 12
+recorded divergences (reviewed exceptions): 18
 different (unexplained): 0
 
 scenario                               tool               status           differs
@@ -37,7 +37,7 @@ pdf_read_ok_multi                      pdf_read           aligned
 pdf_read_bad_pages                     pdf_read           aligned          
 search_messages_none                   search_messages    aligned          
 search_messages_spill                  search_messages    recorded         
-terminal_exec_ok                       terminal_exec      recorded         
+terminal_exec_ok                       terminal_exec      aligned          
 skill_view_missing                     skill_view         recorded         
 credentials_list                       credentials        recorded         
 credentials_usage                      credentials        recorded         
@@ -45,3 +45,34 @@ sentinel_setup                         sentinel_setup     recorded
 collect_result                         collect_result     recorded         
 suggest_colony                         suggest_colony     recorded         
 unloaded_tool_call                     excel_read         recorded         
+terminal_exec_nonzero                  terminal_exec      aligned          
+terminal_exec_timeout                  terminal_exec      aligned          
+terminal_exec_auto_background          terminal_exec      aligned          
+terminal_exec_truncate                 terminal_exec      aligned          
+terminal_exec_warning                  terminal_exec      aligned          
+terminal_exec_blocked                  terminal_exec      aligned          
+terminal_exec_bad_wait                 terminal_exec      aligned          
+surface_load_files_jobs_pty            search_tools       recorded         
+write_file_new                         write_file         aligned          
+write_file_update                      write_file         aligned          
+write_file_refused                     write_file         aligned          
+write_file_escape                      write_file         recorded         
+read_file_editable                     read_file          aligned          
+edit_file_replace                      edit_file          aligned          
+edit_file_no_match                     edit_file          aligned          
+edit_file_missing                      edit_file          aligned          
+edit_file_bad_mode                     edit_file          aligned          
+search_content                         search_files       aligned          
+search_files_target                    search_files       aligned          
+search_bad_target                      search_files       aligned          
+job_start                              terminal_job_start aligned          
+job_logs_wait                          terminal_job_logs  aligned          
+job_manage_list                        terminal_job_manage aligned          
+pty_open                               terminal_pty_open  aligned          
+pty_run_ok                             terminal_pty_run   recorded         
+pty_close                              terminal_pty_close recorded         
+pty_run_unknown                        terminal_pty_run   recorded         
+output_get_expired                     terminal_output_get aligned          
+web_scrape_loopback                    web_scrape         aligned          
+http_headers_ok                        http_headers_scan  recorded         
+http_headers_bare                      http_headers_scan  recorded         

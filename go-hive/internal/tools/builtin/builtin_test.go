@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -234,7 +235,7 @@ func TestPathTraversalAndAbsoluteEscapeRejected(t *testing.T) {
 		if err != nil {
 			t.Fatalf("write %s: %v", raw, err)
 		}
-		if !res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
+		if res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
 			t.Fatalf("write %s result = %+v, want sandbox escape error", raw, res)
 		}
 		res, err = tb.Execute(context.Background(), ToolReadFile, map[string]any{"path": raw})
@@ -282,7 +283,7 @@ func TestSymlinkEscapeRejected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if !res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
+	if res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
 		t.Fatalf("symlinked dir write result = %+v, want escape error", res)
 	}
 	if _, err := os.Stat(filepath.Join(outside, "planted.txt")); !os.IsNotExist(err) {
@@ -306,17 +307,16 @@ func TestTerminalExecCapturesStreamsAndCwd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if res.IsError {
-		t.Fatalf("unexpected error result: %q", res.Content)
+	payload := decodeExecPayload(t, res.Content)
+	assertExecKeys(t, payload)
+	if payload["exit_code"] != json.Number("0") {
+		t.Fatalf("exit_code = %#v, want 0 in %s", payload["exit_code"], res.Content)
 	}
-	if !strings.Contains(res.Content, "exit_code: 0\n") {
-		t.Fatalf("missing zero exit code: %q", res.Content)
-	}
-	stdout := section(res.Content, "stdout:")
+	stdout := payloadString(t, payload, "stdout")
 	if !strings.Contains(stdout, "hello") || !strings.Contains(stdout, root) {
 		t.Fatalf("stdout = %q, want hello and root %q", stdout, root)
 	}
-	stderr := section(res.Content, "stderr:")
+	stderr := payloadString(t, payload, "stderr")
 	if !strings.Contains(stderr, "oops") {
 		t.Fatalf("stderr = %q, want oops", stderr)
 	}
@@ -331,14 +331,15 @@ func TestTerminalExecNonZeroExit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if !res.IsError {
-		t.Fatalf("non-zero exit not flagged: %+v", res)
+	payload := decodeExecPayload(t, res.Content)
+	if res.IsError {
+		t.Fatalf("nonzero exit must stay a normal result (Python returns a dict): %+v", res)
 	}
-	if !strings.Contains(res.Content, "exit_code: 3") {
-		t.Fatalf("content missing exit code 3: %q", res.Content)
+	if payload["exit_code"] != json.Number("3") {
+		t.Fatalf("exit_code = %#v, want 3", payload["exit_code"])
 	}
-	if !strings.Contains(section(res.Content, "stderr:"), "broken") {
-		t.Fatalf("content missing stderr: %q", res.Content)
+	if !strings.Contains(payloadString(t, payload, "stderr"), "broken") {
+		t.Fatalf("stderr = %q, want broken", payload["stderr"])
 	}
 }
 
@@ -358,14 +359,12 @@ func TestTerminalExecTimeoutKillsProcessGroup(t *testing.T) {
 	if elapsed > 4*time.Second {
 		t.Fatalf("timeout took %s, want process killed near the 300ms deadline", elapsed)
 	}
-	if !res.IsError {
-		t.Fatalf("timeout not flagged as error: %+v", res)
+	payload := decodeExecPayload(t, res.Content)
+	if payload["timed_out"] != true {
+		t.Fatalf("timed_out = %#v, want true", payload["timed_out"])
 	}
-	if !strings.Contains(res.Content, "timed_out: true") {
-		t.Fatalf("content missing timed_out flag: %q", res.Content)
-	}
-	if strings.Contains(res.Content, "never") {
-		t.Fatalf("command produced output after the deadline: %q", res.Content)
+	if strings.Contains(payloadString(t, payload, "stdout"), "never") {
+		t.Fatalf("command produced output after the deadline: %q", payload["stdout"])
 	}
 }
 
@@ -383,15 +382,19 @@ func TestTerminalExecTruncatesOutput(t *testing.T) {
 	if res.IsError {
 		t.Fatalf("unexpected error result: %q", res.Content)
 	}
-	if !strings.Contains(res.Content, "output_truncated: true (limit 128 bytes per stream)") {
-		t.Fatalf("content missing truncation flag: %q", res.Content)
+	payload := decodeExecPayload(t, res.Content)
+	if payload["stdout_truncated_bytes"] != json.Number("1872") {
+		t.Fatalf("stdout_truncated_bytes = %#v, want 1872 (2000 produced - 128 inline)", payload["stdout_truncated_bytes"])
 	}
-	stdout := section(res.Content, "stdout:")
-	if len(stdout) > 256 {
-		t.Fatalf("stdout captured %d bytes, want <= the 128 byte cap plus rendering", len(stdout))
+	stdout := payloadString(t, payload, "stdout")
+	if len(stdout) != 128 {
+		t.Fatalf("stdout captured %d bytes, want exactly the 128 byte cap", len(stdout))
 	}
 	if strings.Contains(stdout, strings.Repeat("0123456789", 13)) {
 		t.Fatalf("stdout was not capped: %q", stdout)
+	}
+	if !strings.HasPrefix(payloadString(t, payload, "output_handle"), "out_") {
+		t.Fatalf("output_handle = %#v, want a handle for the dropped bytes", payload["output_handle"])
 	}
 }
 
@@ -402,8 +405,12 @@ func TestTerminalExecRejectsInvalidArguments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if !res.IsError || !strings.Contains(res.Content, "command is required") {
+	payload := decodeExecPayload(t, res.Content)
+	if payloadString(t, payload, "error") != "terminal_exec: command is required" {
 		t.Fatalf("missing command result = %+v", res)
+	}
+	if payload["semantic_status"] != "error" {
+		t.Fatalf("missing command semantic_status = %#v", payload["semantic_status"])
 	}
 
 	for _, timeout := range []any{-1, "soon"} {
@@ -414,8 +421,13 @@ func TestTerminalExecRejectsInvalidArguments(t *testing.T) {
 		if err != nil {
 			t.Fatalf("timeout %v: %v", timeout, err)
 		}
-		if !res.IsError {
+		payload = decodeExecPayload(t, res.Content)
+		if payload["error"] != terminalExecTimeoutMessage {
 			t.Fatalf("timeout %v accepted: %+v", timeout, res)
+		}
+		// A pre-spawn failure is a normal result upstream (_err_envelope).
+		if res.IsError {
+			t.Fatalf("timeout %v error-marked: %+v", timeout, res)
 		}
 	}
 
@@ -429,7 +441,8 @@ func TestTerminalExecRejectsInvalidArguments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("zero waits: %v", err)
 	}
-	if !res.IsError || !strings.Contains(res.Content, "Foreground wait must be at most 220 seconds") {
+	payload = decodeExecPayload(t, res.Content)
+	if payloadString(t, payload, "error") != terminalExecForegroundMessage {
 		t.Fatalf("zero waits result = %+v, want the foreground-budget error", res)
 	}
 }

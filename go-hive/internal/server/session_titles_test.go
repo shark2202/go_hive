@@ -308,3 +308,24 @@ func TestFailedNamingLeavesNoTitleAndRetries(t *testing.T) {
 		t.Errorf("llm calls = %d, want 2 (failure then retry)", got)
 	}
 }
+
+// Parity-exempt: upstream's session_titles.generate_title sends
+// get_aux_max_tokens() as the namer's max_tokens; no upstream test pins that
+// the configured llm.aux_max_tokens reaches the namer, so this test covers the
+// wiring directly (llm.SetAuxMaxTokens is what serve installs at startup).
+func TestTitleBudgetFollowsConfiguredAuxMaxTokens(t *testing.T) {
+	previous := llm.AuxMaxTokens()
+	llm.SetAuxMaxTokens(1234)
+	defer llm.SetAuxMaxTokens(previous)
+
+	if got := TitleTokenBudget(); got != 1234 {
+		t.Fatalf("TitleTokenBudget = %d, want the configured aux budget 1234", got)
+	}
+	fake := &titleFakeLLM{reply: "Kyoto weekend plan."}
+	if _, err := GenerateTitle(context.Background(), fake, "Plan a weekend in Kyoto", "Here is a two-day plan."); err != nil {
+		t.Fatalf("GenerateTitle: %v", err)
+	}
+	if req := fake.request(0); req.MaxTokens != 1234 {
+		t.Fatalf("namer max_tokens = %d, want 1234", req.MaxTokens)
+	}
+}

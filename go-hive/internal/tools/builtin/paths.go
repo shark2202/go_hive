@@ -153,7 +153,11 @@ func resolveUnder(root, raw, abs string) (string, error) {
 
 	// The path does not exist yet: the deepest existing ancestor still has to
 	// resolve inside the ceiling, otherwise a symlinked parent could redirect
-	// the later open or create.
+	// the later open or create. The returned spelling is the realpath of that
+	// ancestor plus the remaining components, so a path keeps one canonical
+	// form before and after it is created (macOS reports /var and
+	// /private/var for the same directory, and the read-state cache keys on
+	// the resolved string).
 	ancestor, err := deepestExisting(abs)
 	if err != nil {
 		return "", fmt.Errorf("resolve %q: %w", raw, err)
@@ -165,7 +169,11 @@ func resolveUnder(root, raw, abs string) (string, error) {
 	if !isWithin(root, realAncestor) {
 		return "", fmt.Errorf("%w: %s", ErrPathEscape, raw)
 	}
-	return abs, nil
+	remainder, err := filepath.Rel(ancestor, abs)
+	if err != nil {
+		return "", fmt.Errorf("resolve %q: %w", raw, err)
+	}
+	return filepath.Join(realAncestor, remainder), nil
 }
 
 // SetWriteSafeRoots configures the optional write ceiling from file_ops.py's

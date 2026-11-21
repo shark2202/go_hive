@@ -2,11 +2,11 @@
  "schema_version": 1,
  "note": "Canonical tool-result envelopes per scenario (docs/tool-output-contract.md).",
  "counts": {
-  "scenarios": 38,
-  "aligned": 25,
-  "recorded": 12,
+  "scenarios": 69,
+  "aligned": 50,
+  "recorded": 18,
   "shape-aligned": 1,
-  "exceptions": 13
+  "exceptions": 18
  },
  "scenarios": {
   "search_tools_inventory": {
@@ -26,7 +26,7 @@
    "go": {
     "is_error": false,
     "form": "json",
-    "payload": "{\"disabled\":[],\"loaded\":[\"ask_user\",\"attach_file\",\"browser_setup\",\"collect_result\",\"credentials\",\"get_account_info\",\"get_current_time\",\"image_generate\",\"pdf_read\",\"search_messages\",\"search_tools\",\"sentinel_setup\",\"suggest_colony\",\"task_create\",\"task_get\",\"task_list\",\"task_update\",\"terminal_exec\",\"terminal_glob\",\"terminal_job_logs\",\"terminal_job_manage\",\"terminal_output_get\",\"terminal_rg\",\"write_skill\"],\"note\":\"Current session configuration only. Loaded tools are callable; searchable tools need loading; disabled tools are excluded by the allowlist; unavailable tools are configured but not registered. This does not verify credentials or service connectivity.\",\"searchable\":[\"chart_render\",\"credential_status\",\"csv_append\",\"csv_info\",\"csv_read\",\"csv_write\",\"dns_security_scan\",\"edit_file\",\"excel_append\",\"excel_info\",\"excel_read\",\"excel_search\",\"excel_sheet_list\",\"excel_write\",\"get_playbook_status\",\"get_worker_status\",\"http_headers_scan\",\"inject_message\",\"list_browser_profiles\",\"list_playbook_runs\",\"list_skills\",\"list_triggers\",\"list_worker_questions\",\"port_scan\",\"read_file\",\"remove_trigger\",\"reply_to_worker\",\"risk_score\",\"run_playbook\",\"run_worker\",\"search_files\",\"search_wikipedia\",\"set_trigger\",\"skill_view\",\"ssl_tls_scan\",\"stop_playbook\",\"stop_worker\",\"subdomain_enumerate\",\"tech_stack_detect\",\"terminal_job_start\",\"terminal_pty_close\",\"terminal_pty_open\",\"terminal_pty_run\",\"tracker_query\",\"tracker_register_writable\",\"tracker_sql\",\"tracker_upsert\",\"update_worker_profile\",\"web_scrape\",\"web_search\",\"write_file\"],\"unavailable\":[]}",
+    "payload": "{\"disabled\":[],\"loaded\":[\"ask_user\",\"attach_file\",\"browser_setup\",\"collect_result\",\"credentials\",\"get_account_info\",\"get_current_time\",\"image_generate\",\"pdf_read\",\"search_messages\",\"search_tools\",\"sentinel_setup\",\"suggest_colony\",\"task_create\",\"task_get\",\"task_list\",\"task_update\",\"terminal_exec\",\"terminal_glob\",\"terminal_job_logs\",\"terminal_job_manage\",\"terminal_output_get\",\"terminal_rg\",\"write_skill\"],\"note\":\"Current session configuration only. Loaded tools are callable; searchable tools need loading; disabled tools are excluded by the allowlist; unavailable tools are configured but not registered. This does not verify credentials or service connectivity.\",\"searchable\":[\"browser_activate_tab\",\"browser_close\",\"browser_console\",\"browser_dialog_respond\",\"browser_evaluate\",\"browser_get_text\",\"browser_html\",\"browser_interact\",\"browser_navigate\",\"browser_open\",\"browser_reload\",\"browser_resize\",\"browser_screenshot\",\"browser_script\",\"browser_select\",\"browser_shadow_query\",\"browser_snapshot\",\"browser_status\",\"browser_stop\",\"browser_tabs\",\"browser_upload\",\"chart_render\",\"credential_status\",\"csv_append\",\"csv_info\",\"csv_read\",\"csv_write\",\"dns_security_scan\",\"edit_file\",\"excel_append\",\"excel_info\",\"excel_read\",\"excel_search\",\"excel_sheet_list\",\"excel_write\",\"get_playbook_status\",\"get_worker_status\",\"http_headers_scan\",\"inject_message\",\"list_browser_profiles\",\"list_playbook_runs\",\"list_skills\",\"list_triggers\",\"list_worker_questions\",\"port_scan\",\"read_file\",\"remove_trigger\",\"reply_to_worker\",\"risk_score\",\"run_playbook\",\"run_worker\",\"search_files\",\"search_wikipedia\",\"set_trigger\",\"skill_view\",\"ssl_tls_scan\",\"stop_playbook\",\"stop_worker\",\"subdomain_enumerate\",\"tech_stack_detect\",\"terminal_job_start\",\"terminal_pty_close\",\"terminal_pty_open\",\"terminal_pty_run\",\"tracker_query\",\"tracker_register_writable\",\"tracker_sql\",\"tracker_upsert\",\"update_worker_profile\",\"web_scrape\",\"web_search\",\"write_file\"],\"unavailable\":[]}",
     "trailer": "",
     "reminder": false
    },
@@ -479,14 +479,14 @@
    "python": {
     "is_error": false,
     "form": "text",
-    "payload": "Directory: <WS> (2 entries)\n  probe.pdf\n  probe.txt",
+    "payload": "Directory: <WS> (5 entries)\n  editable.txt\n  fixture-page.html\n  probe.pdf\n  probe.txt\n  unread.txt",
     "trailer": "",
     "reminder": false
    },
    "go": {
     "is_error": false,
     "form": "text",
-    "payload": "Directory: <WS> (2 entries)\n  probe.pdf\n  probe.txt",
+    "payload": "Directory: <WS> (5 entries)\n  editable.txt\n  fixture-page.html\n  probe.pdf\n  probe.txt\n  unread.txt",
     "trailer": "",
     "reminder": false
    }
@@ -688,41 +688,40 @@
    "python": {
     "is_error": false,
     "form": "text",
-    "payload": "Tool `search_messages` returned <CHARS> characters (too large for context). Full result at: <HOME>/queens/queen_growth/sessions/session_<ID>/data/search_messages_28.txt\nFor targeted lookup, run `grep -nE \"<pattern>\" \"<HOME>/queens/queen_growth/sessions/session_<ID>/data/search_messages_28.txt\"` via terminal_exec.\n\nData structure:\n  \"matches\": list of 10 items (each item: dict with keys ['session', 'session_started_at', 'turn'])\n  \"total_matches\": int\n\nWARNING: the preview below is a SAMPLE only — do NOT draw counts, totals, or conclusions from it.\n\nPreview (truncated):\n{\"matches\": [{\"session\": \"session_<ID>\", \"session_started_at\": \"<DATE>T11:18:57\", \"turn\": [{\"role\": \"user\", \"content\": \"run the capture sequence\"}, {\"role\": \"tool\", \"content\": \"{\\\"loaded\\\": [\\\"attach_file\\\", \\\"browser_setup\\\", \\\"get_account_info\\\", \\\"get_current_time\\\", \\\"image_generate\\\", \\\"pdf_read\\\", \\\"search_messages\\\", \\\"search_tools\\\", \\\"suggest_colony\\\", \\\"task_create\\\", \\\"task_get\\\"…[395 chars omitted]…e; searchable tools need loading; disabled tools are excluded by the allowlist; unavailable tools are configured but not registered. This does not verify credentials or service connectivity.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"loaded\\\": [\\\"chart_render\\\", \\\"web_scrape\\\"], \\\"already_loaded\\\": [], \\\"tools\\\": [{\\\"name\\\": \\\"c…[188 chars omitted]…tools are callable from your next step and stay loaded for the rest of this session.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"loaded\\\": [], \\\"already_loaded\\\": [\\\"chart_render\\\"], \\\"note\\\": \\\"chart_rend…[32 chars omitted]…nvoke it directly on your next step. No search_tools call is needed.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"loaded\\\": [], \\\"already_loaded\\\": [\\\"chart_render\\\"], \\\"note\\\": \\\"chart_rend…[32 chars omitted]…nvoke it directly on your next step. No search_tools call is needed.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"loaded\\\": [], \\\"note\\\": \\\"Nothing to load \\\\u2014 every tool you are allowed to use is already loaded.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"datetime\\\": \\\"<TIMESTAMP>\\\", \\\"date\\\": \\\"<DATE>\\\",…[6 chars omitted]…ezone\\\": \\\"UTC\\\", \\\"day_of_week\\\": \\\"Saturday\\\", \\\"unix_timestamp\\\": <UNIX_TS>}\"}, {\"role\": \"tool\", \"content\": \"{\\\"datetime\\\": \\\"<TIMESTAMP>\\\", \\\"date\\\": \\\"<DATE>\\\",…[15 chars omitted]…sia/Kolkata\\\", \\\"day_of_week\\\": \\\"Saturday\\\", \\\"unix_timestamp\\\": <UNIX_TS>}\"}, {\"role\": \"tool\", \"content\": \"{\\\"error\\\": \\\"Invalid timezone: Not/AZone\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": false, \\\"error\\\": \\\"task_create on a fresh task list require…[134 chars omitted]… recognised as a real pivot. Call task_create again with `goal` set.\\\"}\"}, {\"role\": \"tool\", \"content\": \"…[198 chars omitted]…e task\\\", \\\"description\\\": \\\"golden probe\\\", \\\"active_form\\\": null, \\\"owner\\\":…[143 chars omitted]…\", \"is_hit\": true}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": true, \\\"session_id\\\": \\\"session_<ID>\\\", \\\"task_ids\\\": [2], \\\"message\\\":…[207 chars omitted]…ked_by\\\": [], \\\"metadata\\\": {}, \\\"created_at\\\": <UNIX_TS>.498847, \\\"updated_at\\\": <UNIX_TS>.498847}]}\"}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": true, \\\"session_id\\\": \\\"session_<ID>\\\", \\\"count\\\": 2, \\\"goal\\\": \\\"Probe the tool output contract\\\", \\\"lines\\\": [\\\"Goal: Probe the tool output contract\\\", \\\"#…[360 chars omitted]…, \\\"active_form\\\": null, \\\"owner\\\": null, \\\"status\\\": \\\"pending\\\", \\\"blocks\\\": [], \\\"blocked_by\\\": [], \\\"metadata\\\": {}, \\\"created_at\\\": <UNIX_TS>.498847, \\\"updated_at\\\": <UNIX_TS>.498847}]}\"}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": true, \\\"session_id\\\": \\\"session_<ID>\\\", \\\"tas…[161 chars omitted]…\\\": {}, \\\"created_at\\\": <UNIX_TS>.482218, \\\"updated_at\\\": <UNIX_TS>.482218}}\"}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": false, \\\"session_id\\\": \\\"session_<ID>\\\", \\\"task_id\\\": 999, \\\"message\\\": \\\"Task #999 not found.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"error\\\": \\\"invalid literal for int() with base 10: 'no-such-task'\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": true, \\\"session_id\\\": \\\"session_<ID>\\\", \\\"task_id\\\": 1, \\\"fields\\\": [\\\"status\\\"], \\\"message\\\"…[242 chars omitted]…\\\"blocks\\\": [], \\\"blocked_by\\\": [], \\\"metadata\\\": {}, \\\"created_at\\\": <UNIX_TS>.482218, \\\"updated_at\\\": <UNIX_TS>.582598}}\"}, {\"role\": \"tool\", \"content\": \"{\\\"error\\\": \\\"'bogus' is not a valid TaskStatus\\\"}\"}, {\"role\": \"tool\", \"content\": \"     1\\tprobe file content\\n     2\\tsecond line\"}, {\"role\": \"tool\", \"content\": \"Error: File not found: <WS>/missing.txt\"}, {\"role\": \"tool\", \"content\": \"Error: File not found: ../../../../../../etc/passwd\"}, {\"role\": \"tool\", \"content\": \"Directory: <WS> (2 entries)\\n  probe.pdf\\n  probe.txt\"}, {\"role\": \"tool\", \"content\": \"{\\\"attached\\\": [{\\\"path\\\": \\\"probe.txt\\\", \\\"resolved\\\": \\\"<HOME>/queens…[200 chars omitted]…robe.txt\\\"}], \\\"errors\\\": []}\\n[attached probe.txt (text/plain)]\\n\\nprobe file content\\nsecond line\\n\"}, {\"role\": \"tool\", \"content\": \"{\\\"attached\\\": [], \\\"errors\\\": [{\\\"path\\\": \\\"missing.png\\\", \\\"error\\\": \\\"file not found\\\"}]}\"}, {\"role\": \"tool\", \"content\": \"{\\\"error\\\": \\\"PDF file not found: missing.pdf\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"error\\\": \\\"Pass either file_path or files, not both.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"path\\\": \\\"<WS>/probe.pdf\\\", \\\"name\\\": \\\"probe.pdf\\\", \\\"total_pages\\\": 1, \\\"pages_extracted\\\": 1, \\\"content\\\": \\\"--- Page 1 ---\\\\nGolden probe PDF\\\", \\\"char_count\\\": …",
+    "payload": "Tool `search_messages` returned <CHARS> characters (too large for context). Full result at: <HOME>/queens/queen_growth/sessions/session_<ID>/data/search_messages_28.txt\nFor targeted lookup, run `grep -nE \"<pattern>\" \"<HOME>/queens/queen_growth/sessions/session_<ID>/data/search_messages_28.txt\"` via terminal_exec.\n\nData structure:\n  \"matches\": list of 10 items (each item: dict with keys ['session', 'session_started_at', 'turn'])\n  \"total_matches\": int\n\nWARNING: the preview below is a SAMPLE only — do NOT draw counts, totals, or conclusions from it.\n\nPreview (truncated):\n{\"matches\": [{\"session\": \"session_<ID>\", \"session_started_at\": \"<DATE>T18:04:36\", \"turn\": [{\"role\": \"user\", \"content\": \"run the capture sequence\"}, {\"role\": \"tool\", \"content\": \"{\\\"loaded\\\": [\\\"attach_file\\\", \\\"browser_setup\\\", \\\"get_account_info\\\", \\\"get_current_time\\\", \\\"image_generate\\\", \\\"pdf_read\\\", \\\"search_messages\\\", \\\"search_tools\\\", \\\"suggest_colony\\\", \\\"task_create\\\", \\\"task_ge…[398 chars omitted]…; searchable tools need loading; disabled tools are excluded by the allowlist; unavailable tools are configured but not registered. This does not verify credentials or service connectivity.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"loaded\\\": [\\\"chart_render\\\", \\\"web_scrape\\\"], \\\"already_loaded\\\": [], \\\"tools\\\": [{\\\"name\\\": \\\"…[190 chars omitted]…ools are callable from your next step and stay loaded for the rest of this session.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"loaded\\\": [], \\\"already_loaded\\\": [\\\"chart_render\\\"], \\\"note\\\": \\\"chart_rend…[32 chars omitted]…nvoke it directly on your next step. No search_tools call is needed.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"loaded\\\": [], \\\"already_loaded\\\": [\\\"chart_render\\\"], \\\"note\\\": \\\"chart_rend…[32 chars omitted]…nvoke it directly on your next step. No search_tools call is needed.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"loaded\\\": [], \\\"note\\\": \\\"Nothing to load \\\\u2014 every tool you are allowed to use is already loaded.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"datetime\\\": \\\"<TIMESTAMP>\\\", \\\"date\\\": \\\"<DATE>\\\",…[6 chars omitted]…ezone\\\": \\\"UTC\\\", \\\"day_of_week\\\": \\\"Saturday\\\", \\\"unix_timestamp\\\": <UNIX_TS>}\"}, {\"role\": \"tool\", \"content\": \"{\\\"datetime\\\": \\\"<TIMESTAMP>\\\", \\\"date\\\": \\\"<DATE>\\\",…[15 chars omitted]…sia/Kolkata\\\", \\\"day_of_week\\\": \\\"Saturday\\\", \\\"unix_timestamp\\\": <UNIX_TS>}\"}, {\"role\": \"tool\", \"content\": \"{\\\"error\\\": \\\"Invalid timezone: Not/AZone\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": false, \\\"error\\\": \\\"task_create on a fresh task list require…[134 chars omitted]… recognised as a real pivot. Call task_create again with `goal` set.\\\"}\"}, {\"role\": \"tool\", \"content\": \"…[198 chars omitted]…e task\\\", \\\"description\\\": \\\"golden probe\\\", \\\"active_form\\\": null, \\\"owner\\\":…[145 chars omitted]…\", \"is_hit\": true}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": true, \\\"session_id\\\": \\\"session_<ID>\\\", \\\"task_ids\\\": [2], \\\"message\\\":…[210 chars omitted]…_by\\\": [], \\\"metadata\\\": {}, \\\"created_at\\\": <UNIX_TS>.2003572, \\\"updated_at\\\": <UNIX_TS>.2003572}]}\"}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": true, \\\"session_id\\\": \\\"session_<ID>\\\", \\\"count\\\": 2, \\\"goal\\\": \\\"Probe the tool output contract\\\", \\\"lines\\\": [\\\"Goal: Probe the tool output contract\\\", \\\"…[365 chars omitted]…\\\"active_form\\\": null, \\\"owner\\\": null, \\\"status\\\": \\\"pending\\\", \\\"blocks\\\": [], \\\"blocked_by\\\": [], \\\"metadata\\\": {}, \\\"created_at\\\": <UNIX_TS>.2003572, \\\"updated_at\\\": <UNIX_TS>.2003572}]}\"}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": true, \\\"session_id\\\": \\\"session_<ID>\\\", \\\"tas…[164 chars omitted]…{}, \\\"created_at\\\": <UNIX_TS>.1812649, \\\"updated_at\\\": <UNIX_TS>.1812649}}\"}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": false, \\\"session_id\\\": \\\"session_<ID>\\\", \\\"task_id\\\": 999, \\\"message\\\": \\\"Task #999 not found.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"error\\\": \\\"invalid literal for int() with base 10: 'no-such-task'\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"success\\\": true, \\\"session_id\\\": \\\"session_<ID>\\\", \\\"task_id\\\": 1, \\\"fields\\\": [\\\"status\\\"], \\\"message\\\"…[244 chars omitted]…locks\\\": [], \\\"blocked_by\\\": [], \\\"metadata\\\": {}, \\\"created_at\\\": <UNIX_TS>.1812649, \\\"updated_at\\\": <UNIX_TS>.295933}}\"}, {\"role\": \"tool\", \"content\": \"{\\\"error\\\": \\\"'bogus' is not a valid TaskStatus\\\"}\"}, {\"role\": \"tool\", \"content\": \"     1\\tprobe file content\\n     2\\tsecond line\"}, {\"role\": \"tool\", \"content\": \"Error: File not found: <WS>/missing.txt\"}, {\"role\": \"tool\", \"content\": \"Error: File not found: ../../../../../../etc/passwd\"}, {\"role\": \"tool\", \"content\": \"Directory: <WS> (5 entries)\\n  editable.txt\\n  fixture-page.html\\n  probe.pdf\\n  probe.txt\\n  unread.txt\"}, {\"role\": \"tool\", \"content\": \"{\\\"attached\\\": [{\\\"path\\\": \\\"probe.txt\\\", \\\"resolved\\\": \\\"<HOME>/queen…[202 chars omitted]…obe.txt\\\"}], \\\"errors\\\": []}\\n[attached probe.txt (text/plain)]\\n\\nprobe file content\\nsecond line\\n\"}, {\"role\": \"tool\", \"content\": \"{\\\"attached\\\": [], \\\"errors\\\": [{\\\"path\\\": \\\"missing.png\\\", \\\"error\\\": \\\"file not found\\\"}]}\"}, {\"role\": \"tool\", \"content\": \"{\\\"error\\\": \\\"PDF file not found: missing.pdf\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"error\\\": \\\"Pass either file_path or files, not both.\\\"}\"}, {\"role\": \"tool\", \"content\": \"{\\\"path\\\": \\\"<WS>/probe.pdf\\\", \\\"name\\\": \\\"probe.pdf\\\", \\\"total_pages\\\": 1, \\\"pages_extracted\\\": 1, \\\"content\\\": \\\"--- Page 1 ---\\\\…",
     "trailer": "",
     "reminder": true
    },
    "go": {
     "is_error": false,
     "form": "text",
-    "payload": "Tool `search_messages` returned <CHARS> characters (too large for context). Full result at: <HOME>/queens/queen_growth/sessions/session_<ID>/data/search_messages_1.txt\nWARNING: the preview below is a SAMPLE only — do NOT draw counts, totals, or conclusions from it.\n\nPreview (truncated):\n{\"matches\": [{\"session\":\"session_<ID>\",\"session_started_at\":\"<DATE>T11:18:59\",\"turn\":[{\"role\":\"user\",\"content\":\"run the capture sequence\"},{\"role\":\"tool\",\"content\":\"{\\\"disabled\\\":[],\\\"loaded\\\":[\\\"ask_user\\\",\\\"attach_file\\\",\\\"browser_setup\\\",\\\"collect_result\\\",\\\"credentials\\\",\\\"get_account_info\\\",\\\"get_current_time\\\",\\\"image_generate\\\",\\\"pdf_read\\\",\\\"search_messages\\\",…[417 chars omitted]…open\\\",\\\"terminal_pty_run\\\",\\\"tracker_query\\\",\\\"tracker_register_writable\\\",\\\"tracker_sql\\\",\\\"tracker_upsert\\\",\\\"update_worker_profile\\\",\\\"web_scrape\\\",\\\"web_search\\\",\\\"write_file\\\"],\\\"unavailable\\\":[]}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[],\\\"loaded\\\":[\\\"chart_render\\\",\\\"web_scrape\\\"],\\\"note\\\":\\\"Loaded. T…[191 chars omitted]…ion\\\":\\\"Scrape and extract text content from a webpage.\\\",\\\"name\\\":\\\"web_scrape\\\"}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[\\\"chart_render\\\"],\\\"loaded\\\":[],\\\"note\\\":\\\"chart_render is…[22 chars omitted]…nvoke it directly on your next step. No search_tools call is needed.\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[\\\"chart_render\\\"],\\\"loaded\\\":[],\\\"note\\\":\\\"chart_render is…[22 chars omitted]…nvoke it directly on your next step. No search_tools call is needed.\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[],\\\"loaded\\\":[\\\"read_file\\\",\\\"skill_view\\\"],\\\"note\\\":\\\"Loaded. These tools are callable from your next step and stay…[297 chars omitted]…ts folder. Use it after list_skills (or when the task names a skill) to load the operational procedure…\\\",\\\"name\\\":\\\"skill_view\\\"}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"date\\\": \\\"<DATE>\\\", \\\"datetime\\\": \\\"<TIMESTAMP>\\\",…[6 chars omitted]…\\\", \\\"time\\\": \\\"<TIME>\\\", \\\"timezone\\\": \\\"UTC\\\", \\\"unix_timestamp\\\": <UNIX_TS>}\"},{\"role\":\"tool\",\"content\":\"{\\\"date\\\": \\\"<DATE>\\\", \\\"datetime\\\": \\\"<TIMESTAMP>\\\",…[15 chars omitted]… \\\"<TIME>\\\", \\\"timezone\\\": \\\"Asia/Kolkata\\\", \\\"unix_timestamp\\\": <UNIX_TS>}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"Invalid timezone: Not/AZone\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"task_create on a fresh task list requires a `goal` — one s…[129 chars omitted]…eal pivot. Call task_create again with `goal` set.\\\", \\\"success\\\": false}\"},{\"role\":\"tool\",\"content\":\"…[249 chars omitted]…0.37288, \\\"description\\\": \\\"golden probe\\\", \\\"id\\\": 1, \\\"metadata\\\": {}, \\\"own…[90 chars omitted]…\",\"is_hit\":true},{\"role\":\"tool\",\"content\":\"{\\\"message\\\": \\\"Created 1 task(s): #2. Mark #2 in_progress before starting it.\\\", \\\"session_id\\\"…[218 chars omitted]…l, \\\"status\\\": \\\"pending\\\", \\\"subject\\\": \\\"Second probe task\\\", \\\"updated_at\\\": <UNIX_TS>.424001}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"count\\\": 2, \\\"goal\\\": \\\"Probe the tool output contract\\\", \\\"lines\\\": [\\\"Goal: Probe the tool output contract\\\", \\\"#1 [pending] Probe task\\\", \\\"#2 [pending] Second probe task…[379 chars omitted]…01, \\\"description\\\": \\\"golden probe 2\\\", \\\"id\\\": 2, \\\"metadata\\\": {}, \\\"owner\\\": null, \\\"status\\\": \\\"pending\\\", \\\"subject\\\": \\\"Second probe task\\\", \\\"updated_at\\\": <UNIX_TS>.424001}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"session_id\\\": \\\"session_<ID>\\\", \\\"success\\\": true, \\\"…[165 chars omitted]…subject\\\": \\\"Probe task\\\", \\\"updated_at\\\": <UNIX_TS>.37288}, \\\"task_id\\\": 1}\"},{\"role\":\"tool\",\"content\":\"{\\\"message\\\": \\\"Task #999 not found.\\\", \\\"session_id\\\": \\\"session_<ID>\\\", \\\"success\\\": false, \\\"task_id\\\": 999}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"invalid task id: 'no-such-task' (expected an integer)\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"fields\\\": [\\\"status\\\"], \\\"message\\\": \\\"Task #1 updated. Fields changed: status. Next pending: #2 — \\\\\\\"Second p…[252 chars omitted]…er\\\": null, \\\"status\\\": \\\"completed\\\", \\\"subject\\\": \\\"Probe task\\\", \\\"updated_at\\\": <UNIX_TS>.640921}, \\\"task_id\\\": 1}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"'bogus' is not a valid TaskStatus\\\"}\"},{\"role\":\"tool\",\"content\":\"     1\\tprobe file content\\n     2\\tsecond line\"},{\"role\":\"tool\",\"content\":\"Error: File not found: <WS>/missing.txt\"},{\"role\":\"tool\",\"content\":\"Error: path escapes the sandbox root: ../../../../../../etc/passwd\"},{\"role\":\"tool\",\"content\":\"Directory: <WS> (2 entries)\\n  probe.pdf\\n  probe.txt\"},{\"role\":\"tool\",\"content\":\"{\\\"attached\\\":[{\\\"bytes\\\":31,\\\"filename\\\":\\\"probe.txt\\\",\\\"hive_attachment_url\\\":\\\"hive-attach…[201 chars omitted]…}],\\\"errors\\\":[]}\\n[attached probe.txt (text/plain)]\\n\\nprobe file content\\nsecond line\\n\"},{\"role\":\"tool\",\"content\":\"{\\\"attached\\\":[],\\\"errors\\\":[{\\\"error\\\":\\\"file not found\\\",\\\"path\\\":\\\"missing.png\\\"}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"PDF file not found: missing.pdf\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"Pass either file_path or files, not both.\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"char_count\\\": 31, \\\"content\\\": \\\"--- Page 1 ---\\\\nGolden probe PDF\\\", \\\"metadata\\\": {\\\"author\\\": null, \\\"created\\\": null, \\\"creator\\\": null, \\\"modified\\\": null, \\\"producer\\\": null, \\\"subject\\\": null,…[417 chars …",
+    "payload": "Tool `search_messages` returned <CHARS> characters (too large for context). Full result at: <HOME>/queens/queen_growth/sessions/session_<ID>/data/search_messages_1.txt\nWARNING: the preview below is a SAMPLE only — do NOT draw counts, totals, or conclusions from it.\n\nPreview (truncated):\n{\"matches\": [{\"session\":\"session_<ID>\",\"session_started_at\":\"<DATE>T18:04:45\",\"turn\":[{\"role\":\"user\",\"content\":\"run the capture sequence\"},{\"role\":\"tool\",\"content\":\"{\\\"disabled\\\":[],\\\"loaded\\\":[\\\"ask_user\\\",\\\"attach_file\\\",\\\"browser_setup\\\",\\\"collect_result\\\",\\\"credentials\\\",\\\"get_account_info\\\",\\\"get_current_time\\\",\\\"image_generate\\\",\\\"pdf_read\\\",\\\"search_messages…[420 chars omitted]…pen\\\",\\\"terminal_pty_run\\\",\\\"tracker_query\\\",\\\"tracker_register_writable\\\",\\\"tracker_sql\\\",\\\"tracker_upsert\\\",\\\"update_worker_profile\\\",\\\"web_scrape\\\",\\\"web_search\\\",\\\"write_file\\\"],\\\"unavailable\\\":[]}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[],\\\"loaded\\\":[\\\"chart_render\\\",\\\"web_scrape\\\"],\\\"note\\\":\\\"Loaded. …[192 chars omitted]…ion\\\":\\\"Scrape and extract text content from a webpage.\\\",\\\"name\\\":\\\"web_scrape\\\"}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[\\\"chart_render\\\"],\\\"loaded\\\":[],\\\"note\\\":\\\"chart_render is…[22 chars omitted]…nvoke it directly on your next step. No search_tools call is needed.\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[\\\"chart_render\\\"],\\\"loaded\\\":[],\\\"note\\\":\\\"chart_render is…[22 chars omitted]…nvoke it directly on your next step. No search_tools call is needed.\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"already_loaded\\\":[],\\\"loaded\\\":[\\\"read_file\\\",\\\"skill_view\\\"],\\\"note\\\":\\\"Loaded. These tools are callable from your next step and sta…[300 chars omitted]… folder. Use it after list_skills (or when the task names a skill) to load the operational procedure…\\\",\\\"name\\\":\\\"skill_view\\\"}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"date\\\": \\\"<DATE>\\\", \\\"datetime\\\": \\\"<TIMESTAMP>\\\",…[6 chars omitted]…\\\", \\\"time\\\": \\\"<TIME>\\\", \\\"timezone\\\": \\\"UTC\\\", \\\"unix_timestamp\\\": <UNIX_TS>}\"},{\"role\":\"tool\",\"content\":\"{\\\"date\\\": \\\"<DATE>\\\", \\\"datetime\\\": \\\"<TIMESTAMP>\\\",…[15 chars omitted]… \\\"<TIME>\\\", \\\"timezone\\\": \\\"Asia/Kolkata\\\", \\\"unix_timestamp\\\": <UNIX_TS>}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"Invalid timezone: Not/AZone\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"task_create on a fresh task list requires a `goal` — one s…[129 chars omitted]…eal pivot. Call task_create again with `goal` set.\\\", \\\"success\\\": false}\"},{\"role\":\"tool\",\"content\":\"…[250 chars omitted]….179659, \\\"description\\\": \\\"golden probe\\\", \\\"id\\\": 1, \\\"metadata\\\": {}, \\\"own…[91 chars omitted]…\",\"is_hit\":true},{\"role\":\"tool\",\"content\":\"{\\\"message\\\": \\\"Created 1 task(s): #2. Mark #2 in_progress before starting it.\\\", \\\"session_id…[221 chars omitted]…, \\\"status\\\": \\\"pending\\\", \\\"subject\\\": \\\"Second probe task\\\", \\\"updated_at\\\": <UNIX_TS>.2296588}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"count\\\": 2, \\\"goal\\\": \\\"Probe the tool output contract\\\", \\\"lines\\\": [\\\"Goal: Probe the tool output contract\\\", \\\"#1 [pending] Probe task\\\", \\\"#2 [pending] Second probe task…[384 chars omitted]…, \\\"description\\\": \\\"golden probe 2\\\", \\\"id\\\": 2, \\\"metadata\\\": {}, \\\"owner\\\": null, \\\"status\\\": \\\"pending\\\", \\\"subject\\\": \\\"Second probe task\\\", \\\"updated_at\\\": <UNIX_TS>.2296588}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"session_id\\\": \\\"session_<ID>\\\", \\\"success\\\": true, \\\"…[167 chars omitted]…ubject\\\": \\\"Probe task\\\", \\\"updated_at\\\": <UNIX_TS>.179659}, \\\"task_id\\\": 1}\"},{\"role\":\"tool\",\"content\":\"{\\\"message\\\": \\\"Task #999 not found.\\\", \\\"session_id\\\": \\\"session_<ID>\\\", \\\"success\\\": false, \\\"task_id\\\": 999}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"invalid task id: 'no-such-task' (expected an integer)\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"fields\\\": [\\\"status\\\"], \\\"message\\\": \\\"Task #1 updated. Fields changed: status. Next pending: #2 — \\\\\\\"Second p…[255 chars omitted]…\\\": null, \\\"status\\\": \\\"completed\\\", \\\"subject\\\": \\\"Probe task\\\", \\\"updated_at\\\": <UNIX_TS>.4636931}, \\\"task_id\\\": 1}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"'bogus' is not a valid TaskStatus\\\"}\"},{\"role\":\"tool\",\"content\":\"     1\\tprobe file content\\n     2\\tsecond line\"},{\"role\":\"tool\",\"content\":\"Error: File not found: <WS>/missing.txt\"},{\"role\":\"tool\",\"content\":\"Error: path escapes the sandbox root: ../../../../../../etc/passwd\"},{\"role\":\"tool\",\"content\":\"Directory: <WS> (5 entries)\\n  editable.txt\\n  fixture-page.html\\n  probe.pdf\\n  probe.txt\\n  unread.txt\"},{\"role\":\"tool\",\"content\":\"{\\\"attached\\\":[{\\\"bytes\\\":31,\\\"filename\\\":\\\"probe.txt\\\",\\\"hive_attachment_url\\\":\\\"hive-attac…[203 chars omitted]…],\\\"errors\\\":[]}\\n[attached probe.txt (text/plain)]\\n\\nprobe file content\\nsecond line\\n\"},{\"role\":\"tool\",\"content\":\"{\\\"attached\\\":[],\\\"errors\\\":[{\\\"error\\\":\\\"file not found\\\",\\\"path\\\":\\\"missing.png\\\"}]}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"PDF file not found: missing.pdf\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"error\\\": \\\"Pass either file_path or files, not both.\\\"}\"},{\"role\":\"tool\",\"content\":\"{\\\"char_count\\\": 31, \\\"content\\\": \\\"--- Page 1 ---\\\\nGolden probe PDF\\\", \\\"metadata\\\": {\\\"author\\\": null, \\\"created\\\": null, \\\"creator\\\": null, \\\"modified\\\": null, \\\"producer\\\":…",
     "trailer": "",
     "reminder": false
    },
-   "exception": "envelope: an oversized result spills on both sides, but Python emits a structural digest + grep hint and Go emits a bounded preview with a sampling warning. Reviewed and kept: different spillover designs, each self-consistent."
+   "exception": "envelope: an oversized result spills at the same threshold on both sides; 'Full result at:' + the grep recovery hint + the sampling warning + 'Preview (truncated):' are now the same shape on both sides (the 2026-11-21 limits lane added Go's grep hint). Remaining: Python also emits a 'Data structure:' digest and an array-aware preview, Go slices raw text. Reviewed and kept: different preview shaping, each self-consistent."
   },
   "terminal_exec_ok": {
    "tool": "terminal_exec",
    "arguments": {
     "command": "printf 'hi\\n'"
    },
-   "compare": "none",
-   "status": "recorded",
+   "compare": "masked",
+   "status": "aligned",
    "python": {
     "is_error": false,
     "form": "json",
-    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":0,\"job_id\":\"<JOB_ID>\",\"output_handle\":\"<HANDLE>\",\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":null,\"semantic_status\":\"ok\",\"shell_kind\":\"direct\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"hi\\n\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":0,\"job_id\":null,\"output_handle\":null,\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":null,\"semantic_status\":\"ok\",\"shell_kind\":\"direct\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"hi\\n\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
     "trailer": "",
     "reminder": false
    },
    "go": {
     "is_error": false,
-    "form": "text",
-    "payload": "exit_code: 0\nshell_kind: direct\nstdout:\nhi\nstderr:",
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":0,\"job_id\":null,\"output_handle\":null,\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":null,\"semantic_status\":\"ok\",\"shell_kind\":\"direct\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"hi\\n\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
     "trailer": "",
     "reminder": false
-   },
-   "exception": "envelope: Python returns a JSON result envelope (exit_code/stdout/pid/runtime_ms/semantic_status/...), Go returns a text report (exit_code/shell_kind/stdout/stderr). The terminal output shape is the terminal lane's frozen contract; retargeting it is a terminal-lane change, not an output-shape fix."
+   }
   },
   "skill_view_missing": {
    "tool": "skill_view",
@@ -880,6 +879,725 @@
     "reminder": false
    },
    "exception": "tool-set: excel_read does not exist in Python (\"Unknown tool ... Did you mean 'csv_read'?\"); on Go it is a deferred name and the loop refuses it with the select: prompt. Both are actionable is_error envelopes."
+  },
+  "terminal_exec_nonzero": {
+   "tool": "terminal_exec",
+   "arguments": {
+    "command": "ls /nonexistent-probe-path"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":1,\"job_id\":null,\"output_handle\":null,\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":\"Command failed with exit code 1\",\"semantic_status\":\"error\",\"shell_kind\":\"direct\",\"stderr\":\"ls: /nonexistent-probe-path: No such file or directory\\n\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":1,\"job_id\":null,\"output_handle\":null,\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":\"Command failed with exit code 1\",\"semantic_status\":\"error\",\"shell_kind\":\"direct\",\"stderr\":\"ls: /nonexistent-probe-path: No such file or directory\\n\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "terminal_exec_timeout": {
+   "tool": "terminal_exec",
+   "arguments": {
+    "command": "sleep 5",
+    "timeout_sec": 1,
+    "auto_background_after_sec": 0
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":-15,\"job_id\":null,\"output_handle\":null,\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":\"Command timed out\",\"semantic_status\":\"error\",\"shell_kind\":\"direct\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":true,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":-15,\"job_id\":null,\"output_handle\":null,\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":\"Command timed out\",\"semantic_status\":\"error\",\"shell_kind\":\"direct\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":true,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "terminal_exec_auto_background": {
+   "tool": "terminal_exec",
+   "arguments": {
+    "command": "sleep 3",
+    "timeout_sec": 5,
+    "auto_background_after_sec": 1
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":true,\"auto_shell\":false,\"exit_code\":null,\"job_id\":\"<JOB_ID>\",\"output_handle\":null,\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":\"Still running\",\"semantic_status\":\"ok\",\"shell_kind\":\"direct\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":true,\"auto_shell\":false,\"exit_code\":null,\"job_id\":\"<JOB_ID>\",\"output_handle\":null,\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":\"Still running\",\"semantic_status\":\"ok\",\"shell_kind\":\"direct\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "terminal_exec_truncate": {
+   "tool": "terminal_exec",
+   "arguments": {
+    "command": "yes x | head -c 4096",
+    "shell": true,
+    "max_output_kb": 1
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":0,\"job_id\":null,\"output_handle\":\"<HANDLE>\",\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":null,\"semantic_status\":\"ok\",\"shell_kind\":\"bash\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"x\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\n\",\"stdout_truncated_bytes\":3072,\"timed_out\":false,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":0,\"job_id\":null,\"output_handle\":\"<HANDLE>\",\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":null,\"semantic_status\":\"ok\",\"shell_kind\":\"bash\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"x\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\nx\\n\",\"stdout_truncated_bytes\":3072,\"timed_out\":false,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "terminal_exec_warning": {
+   "tool": "terminal_exec",
+   "arguments": {
+    "command": "rm -rf ./no-such-path"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":0,\"job_id\":null,\"output_handle\":null,\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":null,\"semantic_status\":\"ok\",\"shell_kind\":\"direct\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":\"may recursively force-remove files\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"exit_code\":0,\"job_id\":null,\"output_handle\":null,\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":null,\"semantic_status\":\"ok\",\"shell_kind\":\"direct\",\"stderr\":\"\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":\"may recursively force-remove files\"}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "terminal_exec_blocked": {
+   "tool": "terminal_exec",
+   "arguments": {
+    "command": "pkill -9 -f chrome"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"blocked\":true,\"error\":\"BLOCKED: this command kills browser/runtime processes by name. The Hive runtime and the user own the browser's lifecycle — the bridge attaches to the user's ALREADY-RUNNING Chrome via an extension, so killing or launching browser processes destroys the user's session and every other agent's work, and there is nothing for an agent to 'start'. If `hive-browser` commands are timing out or erroring, that is a transport issue the runtime recovers from automatically: wait ~30s, retry once, then report_to_parent and move on. Allowed cleanup is limited to your own tabs via `hive-browser tab close`.\",\"exit_code\":null,\"job_id\":null,\"output_handle\":null,\"pid\":null,\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":\"BLOCKED: this command kills browser/runtime processes by name. The Hive runtime and the user own the browser's lifecycle — the bridge attaches to the user's ALREADY-RUNNING Chrome via an extension, so killing or launching browser processes destroys the user's session and every other agent's work, and there is nothing for an agent to 'start'. If `hive-browser` commands are timing out or erroring, that is a transport issue the runtime recovers from automatically: wait ~30s, retry once, then report_to_parent and move on. Allowed cleanup is limited to your own tabs via `hive-browser tab close`.\",\"semantic_status\":\"error\",\"shell_kind\":null,\"stderr\":\"BLOCKED: this command kills browser/runtime processes by name. The Hive runtime and the user own the browser's lifecycle — the bridge attaches to the user's ALREADY-RUNNING Chrome via an extension, so killing or launching browser processes destroys the user's session and every other agent's work, and there is nothing for an agent to 'start'. If `hive-browser` commands are timing out or erroring, that is a transport issue the runtime recovers from automatically: wait ~30s, retry once, then report_to_parent and move on. Allowed cleanup is limited to your own tabs via `hive-browser tab close`.\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"blocked\":true,\"error\":\"BLOCKED: this command kills browser/runtime processes by name. The Hive runtime and the user own the browser's lifecycle — the bridge attaches to the user's ALREADY-RUNNING Chrome via an extension, so killing or launching browser processes destroys the user's session and every other agent's work, and there is nothing for an agent to 'start'. If `hive-browser` commands are timing out or erroring, that is a transport issue the runtime recovers from automatically: wait ~30s, retry once, then report_to_parent and move on. Allowed cleanup is limited to your own tabs via `hive-browser tab close`.\",\"exit_code\":null,\"job_id\":null,\"output_handle\":null,\"pid\":null,\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":\"BLOCKED: this command kills browser/runtime processes by name. The Hive runtime and the user own the browser's lifecycle — the bridge attaches to the user's ALREADY-RUNNING Chrome via an extension, so killing or launching browser processes destroys the user's session and every other agent's work, and there is nothing for an agent to 'start'. If `hive-browser` commands are timing out or erroring, that is a transport issue the runtime recovers from automatically: wait ~30s, retry once, then report_to_parent and move on. Allowed cleanup is limited to your own tabs via `hive-browser tab close`.\",\"semantic_status\":\"error\",\"shell_kind\":null,\"stderr\":\"BLOCKED: this command kills browser/runtime processes by name. The Hive runtime and the user own the browser's lifecycle — the bridge attaches to the user's ALREADY-RUNNING Chrome via an extension, so killing or launching browser processes destroys the user's session and every other agent's work, and there is nothing for an agent to 'start'. If `hive-browser` commands are timing out or erroring, that is a transport issue the runtime recovers from automatically: wait ~30s, retry once, then report_to_parent and move on. Allowed cleanup is limited to your own tabs via `hive-browser tab close`.\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "terminal_exec_bad_wait": {
+   "tool": "terminal_exec",
+   "arguments": {
+    "command": "true",
+    "timeout_sec": -1
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"error\":\"timeout_sec and auto_background_after_sec must be finite and non-negative\",\"exit_code\":null,\"job_id\":null,\"output_handle\":null,\"pid\":null,\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":\"timeout_sec and auto_background_after_sec must be finite and non-negative\",\"semantic_status\":\"error\",\"shell_kind\":null,\"stderr\":\"timeout_sec and auto_background_after_sec must be finite and non-negative\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"auto_backgrounded\":false,\"auto_shell\":false,\"error\":\"timeout_sec and auto_background_after_sec must be finite and non-negative\",\"exit_code\":null,\"job_id\":null,\"output_handle\":null,\"pid\":null,\"runtime_ms\":\"<RUNTIME_MS>\",\"semantic_message\":\"timeout_sec and auto_background_after_sec must be finite and non-negative\",\"semantic_status\":\"error\",\"shell_kind\":null,\"stderr\":\"timeout_sec and auto_background_after_sec must be finite and non-negative\",\"stderr_truncated_bytes\":0,\"stdout\":\"\",\"stdout_truncated_bytes\":0,\"timed_out\":false,\"warning\":null}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "surface_load_files_jobs_pty": {
+   "tool": "search_tools",
+   "arguments": {
+    "query": "select:write_file,edit_file,search_files,terminal_job_start,terminal_pty_open,terminal_pty_run,terminal_pty_close,http_headers_scan,read_file"
+   },
+   "compare": "none",
+   "status": "recorded",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"loaded\":[],\"note\":\"Nothing to load — every tool you are allowed to use is already loaded.\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"already_loaded\":[],\"loaded\":[\"write_file\",\"edit_file\",\"search_files\",\"terminal_job_start\",\"terminal_pty_open\",\"terminal_pty_run\",\"terminal_pty_close\",\"http_headers_scan\"],\"note\":\"Loaded. These tools are callable from your next step and stay loaded for the rest of this session.\",\"tools\":[{\"description\":\"Create or overwrite a file with the given content. Parent directories are created automatically. Use this instead of `cat > file` or shell redirects. For targe…\",\"name\":\"write_file\"},{\"description\":\"Edit files: one string in one file (replace mode), or many edits across many files (patch mode). Use this instead of `sed`, `awk`, or shell redirects. Returns…\",\"name\":\"edit_file\"},{\"description\":\"Search file contents OR find files by name. Use this instead of grep, find, or ls. target='content' (default) regex-greps inside files; target='files' globs fi…\",\"name\":\"search_files\"},{\"description\":\"Spawn a background process. Returns a job_id you poll with terminal_job_logs.\",\"name\":\"terminal_job_start\"},{\"description\":\"Open a persistent /bin/bash session in a PTY.\",\"name\":\"terminal_pty_open\"},{\"description\":\"Run a command in a session, send raw input, or drain output.\",\"name\":\"terminal_pty_run\"},{\"description\":\"Terminate a PTY session. Always do this when you're done — leaked\",\"name\":\"terminal_pty_close\"},{\"description\":\"Scan a URL for OWASP-recommended security headers and information leaks.\",\"name\":\"http_headers_scan\"}]}",
+    "trailer": "",
+    "reminder": true
+   }
+  },
+  "write_file_new": {
+   "tool": "write_file",
+   "arguments": {
+    "path": "__WS__/written.txt",
+    "content": "line one\nline two\n"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Created <WS>/written.txt (18 bytes, 2 lines)",
+    "trailer": "",
+    "reminder": true
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Created <WS>/written.txt (18 bytes, 2 lines)",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "write_file_update": {
+   "tool": "write_file",
+   "arguments": {
+    "path": "__WS__/written.txt",
+    "content": "line one\nline two\nline three\n"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Updated <WS>/written.txt (29 bytes, 3 lines)",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Updated <WS>/written.txt (29 bytes, 3 lines)",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "write_file_refused": {
+   "tool": "write_file",
+   "arguments": {
+    "path": "__WS__/unread.txt",
+    "content": "clobber"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Refusing to overwrite '<WS>/unread.txt': call read_file('<WS>/unread.txt') first so the harness can track its state before you replace it. If you intend to discard the current contents, read it first to acknowledge what you are overwriting.",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Refusing to overwrite '<WS>/unread.txt': call read_file('<WS>/unread.txt') first so the harness can track its state before you replace it. If you intend to discard the current contents, read it first to acknowledge what you are overwriting.",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "write_file_escape": {
+   "tool": "write_file",
+   "arguments": {
+    "path": "../escape-written.txt",
+    "content": "x"
+   },
+   "compare": "none",
+   "status": "recorded",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Created ../escape-written.txt (1 bytes, 1 lines)",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Error: path escapes the sandbox root: ../escape-written.txt",
+    "trailer": "",
+    "reminder": false
+   },
+   "exception": "sandbox: the Python file tools resolve any path the process can reach (their only ceiling is a credential deny list), while the Go builtin toolbox is rooted at the session workspace and refuses escapes. Both answer plain text (is_error=false); the semantics differ by design."
+  },
+  "read_file_editable": {
+   "tool": "read_file",
+   "arguments": {
+    "path": "__WS__/editable.txt"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "     1\talpha\n     2\tbeta\n     3\tgamma",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "     1\talpha\n     2\tbeta\n     3\tgamma",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "edit_file_replace": {
+   "tool": "edit_file",
+   "arguments": {
+    "path": "__WS__/editable.txt",
+    "old_string": "beta",
+    "new_string": "delta"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Replaced 1 occurrence(s) in <WS>/editable.txt\n\n--- <WS>/editable.txt\n+++ <WS>/editable.txt\n@@ -1,3 +1,3 @@\n alpha\n-beta\n+delta\n gamma",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Replaced 1 occurrence(s) in <WS>/editable.txt\n\n--- <WS>/editable.txt\n+++ <WS>/editable.txt\n@@ -1,3 +1,3 @@\n alpha\n-beta\n+delta\n gamma",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "edit_file_no_match": {
+   "tool": "edit_file",
+   "arguments": {
+    "path": "__WS__/editable.txt",
+    "old_string": "zzzz-absent-token",
+    "new_string": "x"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Error: Could not find a unique match for old_string in <WS>/editable.txt. Use read_file to verify the current content, or search_files to locate the text.",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Error: Could not find a unique match for old_string in <WS>/editable.txt. Use read_file to verify the current content, or search_files to locate the text.",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "edit_file_missing": {
+   "tool": "edit_file",
+   "arguments": {
+    "path": "__WS__/nope.txt",
+    "old_string": "a",
+    "new_string": "b"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Error: File not found: <WS>/nope.txt",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Error: File not found: <WS>/nope.txt",
+    "trailer": "",
+    "reminder": true
+   }
+  },
+  "edit_file_bad_mode": {
+   "tool": "edit_file",
+   "arguments": {
+    "mode": "bogus",
+    "path": "__WS__/editable.txt"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Error: unknown mode 'bogus'. Use mode='replace' or mode='patch'.",
+    "trailer": "",
+    "reminder": true
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Error: unknown mode 'bogus'. Use mode='replace' or mode='patch'.",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "search_content": {
+   "tool": "search_files",
+   "arguments": {
+    "pattern": "probe",
+    "path": "__WS__"
+   },
+   "compare": "lines",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "probe.txt:1:probe file content\nprobe.pdf:7:BT /F1 12 Tf 20 100 Td (Golden probe PDF) Tj ET",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "probe.pdf:7:BT /F1 12 Tf 20 100 Td (Golden probe PDF) Tj ET\nprobe.txt:1:probe file content",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "search_files_target": {
+   "tool": "search_files",
+   "arguments": {
+    "pattern": "*.txt",
+    "target": "files",
+    "path": "__WS__"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "editable.txt\nwritten.txt\nunread.txt\nprobe.txt",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "editable.txt\nwritten.txt\nunread.txt\nprobe.txt",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "search_bad_target": {
+   "tool": "search_files",
+   "arguments": {
+    "pattern": "x",
+    "target": "bogus"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Error: invalid target 'bogus'. Use 'content' or 'files'.",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "text",
+    "payload": "Error: invalid target 'bogus'. Use 'content' or 'files'.",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "job_start": {
+   "tool": "terminal_job_start",
+   "arguments": {
+    "command": "printf 'job-line\\n'",
+    "shell": true
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"job_id\":\"<JOB_ID>\",\"merged\":false,\"name\":\"printf\",\"pid\":\"<PID>\",\"started_at\":\"<STARTED_AT>\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"job_id\":\"<JOB_ID>\",\"merged\":false,\"name\":\"printf\",\"pid\":\"<PID>\",\"started_at\":\"<STARTED_AT>\"}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "job_logs_wait": {
+   "tool": "terminal_job_logs",
+   "arguments": {
+    "job_id": {
+     "$from": "job_id"
+    },
+    "wait_until_exit": true,
+    "wait_timeout_sec": 5
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"data\":\"job-line\\n\",\"eof\":true,\"exit_code\":0,\"next_offset\":9,\"offset\":0,\"runtime_ms\":\"<RUNTIME_MS>\",\"status\":\"exited\",\"timed_out\":false,\"truncated_bytes_dropped\":0}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"data\":\"job-line\\n\",\"eof\":true,\"exit_code\":0,\"next_offset\":9,\"offset\":0,\"runtime_ms\":\"<RUNTIME_MS>\",\"status\":\"exited\",\"timed_out\":false,\"truncated_bytes_dropped\":0}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "job_manage_list": {
+   "tool": "terminal_job_manage",
+   "arguments": {
+    "action": "list"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"capabilities\":{\"note\":\"Check exit status with terminal_job_logs after requesting a signal.\",\"platform\":\"posix\",\"signals\":{\"signal_hup\":\"Send SIGHUP to the process group; application-defined behavior.\",\"signal_int\":\"Send SIGINT to the process group; cleanup depends on the application.\",\"signal_kill\":\"Send SIGKILL to the process group; application cleanup handlers are not run.\",\"signal_term\":\"Send SIGTERM to the process group, then force cleanup after up to 2 seconds.\",\"signal_usr1\":\"Send SIGUSR1 to the process group; application-defined behavior.\",\"signal_usr2\":\"Send SIGUSR2 to the process group; application-defined behavior.\"},\"supported_actions\":[\"capabilities\",\"list\",\"stdin\",\"close_stdin\",\"signal_int\",\"signal_term\",\"signal_kill\",\"signal_hup\",\"signal_usr1\",\"signal_usr2\"]},\"jobs\":[{\"adopted\":true,\"command\":[\"sleep\",\"3\"],\"exit_code\":null,\"job_id\":\"<JOB_ID>\",\"merged\":false,\"name\":\"sleep\",\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"started_at\":\"<STARTED_AT>\",\"status\":\"running\",\"stderr_bytes\":0,\"stdout_bytes\":0,\"timed_out\":false},{\"adopted\":false,\"command\":\"printf 'job-line\\\\n'\",\"exit_code\":0,\"job_id\":\"<JOB_ID>\",\"merged\":false,\"name\":\"printf\",\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"started_at\":\"<STARTED_AT>\",\"status\":\"exited\",\"stderr_bytes\":0,\"stdout_bytes\":9,\"timed_out\":false}]}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"capabilities\":{\"note\":\"Check exit status with terminal_job_logs after requesting a signal.\",\"platform\":\"posix\",\"signals\":{\"signal_hup\":\"Send SIGHUP to the process group; application-defined behavior.\",\"signal_int\":\"Send SIGINT to the process group; cleanup depends on the application.\",\"signal_kill\":\"Send SIGKILL to the process group; application cleanup handlers are not run.\",\"signal_term\":\"Send SIGTERM to the process group, then force cleanup after up to 2 seconds.\",\"signal_usr1\":\"Send SIGUSR1 to the process group; application-defined behavior.\",\"signal_usr2\":\"Send SIGUSR2 to the process group; application-defined behavior.\"},\"supported_actions\":[\"capabilities\",\"list\",\"stdin\",\"close_stdin\",\"signal_int\",\"signal_term\",\"signal_kill\",\"signal_hup\",\"signal_usr1\",\"signal_usr2\"]},\"jobs\":[{\"adopted\":true,\"command\":[\"sleep\",\"3\"],\"exit_code\":null,\"job_id\":\"<JOB_ID>\",\"merged\":false,\"name\":\"sleep\",\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"started_at\":\"<STARTED_AT>\",\"status\":\"running\",\"stderr_bytes\":0,\"stdout_bytes\":0,\"timed_out\":false},{\"adopted\":false,\"command\":\"printf 'job-line\\\\n'\",\"exit_code\":0,\"job_id\":\"<JOB_ID>\",\"merged\":false,\"name\":\"printf\",\"pid\":\"<PID>\",\"runtime_ms\":\"<RUNTIME_MS>\",\"started_at\":\"<STARTED_AT>\",\"status\":\"exited\",\"stderr_bytes\":0,\"stdout_bytes\":9,\"timed_out\":false}]}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "pty_open": {
+   "tool": "terminal_pty_open",
+   "arguments": {},
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"pid\":\"<PID>\",\"session_id\":\"<SESSION_ID>\",\"shell\":\"/bin/bash\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"pid\":\"<PID>\",\"session_id\":\"<SESSION_ID>\",\"shell\":\"/bin/bash\"}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "pty_run_ok": {
+   "tool": "terminal_pty_run",
+   "arguments": {
+    "session_id": {
+     "$from": "session_id"
+    },
+    "command": "echo pty-hello"
+   },
+   "compare": "none",
+   "status": "recorded",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"error\":\"unknown session_id: session_<ID>\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"matched_expect\":false,\"next_offset\":336,\"output\":\"pty-hello\\r\\n\",\"prompt_after\":true,\"timed_out\":false}",
+    "trailer": "",
+    "reminder": false
+   },
+   "exception": "Python harness: the live loop injects its execution-context session_id over any tool argument named session_id (framework/loader/tool_registry.py::_inject_context), so terminal_pty_run always sees the hive session id and answers 'unknown session_id'. The Go port has no session_id context param, so it runs the command ({\"output\":\"pty-hello\\r\\n\",...})."
+  },
+  "pty_close": {
+   "tool": "terminal_pty_close",
+   "arguments": {
+    "session_id": {
+     "$from": "session_id"
+    }
+   },
+   "compare": "none",
+   "status": "recorded",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"error\":\"unknown session_id: session_<ID>\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"already_closed\":false,\"exit_code\":0,\"final_output\":\"\\r\\nThe default interactive shell is now zsh.\\r\\nTo update your account to use zsh, please run `chsh -s /bin/zsh`.\\r\\nFor more details, please visit https://support.apple.com/kb/HT208050.\\r\\n\\u001b[?1034h<PTY_SENTINEL>\\r\\n$ echo pty-hello\\r\\npty-hello\\r\\n<PTY_SENTINEL>\\r\\n$ exit\\r\\nexit\\r\\n\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "exception": "Python harness: same session_id injection as pty_run_ok — terminal_pty_close cannot address the opened session and answers 'unknown session_id'; Go closes it and returns exit_code/final_output."
+  },
+  "pty_run_unknown": {
+   "tool": "terminal_pty_run",
+   "arguments": {
+    "session_id": "pty_doesnotexist",
+    "command": "echo hi"
+   },
+   "compare": "none",
+   "status": "recorded",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"error\":\"unknown session_id: session_<ID>\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"error\":\"unknown session_id: pty_doesnotexist\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "exception": "Python harness: the injected hive session_id replaces the bogus literal, so the error cites session_<ID> instead of pty_doesnotexist. Go echoes the argument it received."
+  },
+  "output_get_expired": {
+   "tool": "terminal_output_get",
+   "arguments": {
+    "output_handle": "out_doesnotexist"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"data\":\"\",\"eof\":true,\"expired\":true,\"next_offset\":0,\"offset\":0}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"data\":\"\",\"eof\":true,\"expired\":true,\"next_offset\":0,\"offset\":0}",
+    "trailer": "",
+    "reminder": true
+   }
+  },
+  "web_scrape_loopback": {
+   "tool": "web_scrape",
+   "arguments": {
+    "url": "__FIXTURE_URL__/fixture-page.html"
+   },
+   "compare": "masked",
+   "status": "aligned",
+   "python": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"blocked_by_ssrf_protection\":true,\"error\":\"Blocked: direct request to internal address (127.0.0.1)\",\"url\":\"<LOCAL_URL>/fixture-page.html\"}",
+    "trailer": "",
+    "reminder": true
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"blocked_by_ssrf_protection\":true,\"error\":\"Blocked: direct request to internal address (127.0.0.1)\",\"url\":\"<LOCAL_URL>/fixture-page.html\"}",
+    "trailer": "",
+    "reminder": false
+   }
+  },
+  "http_headers_ok": {
+   "tool": "http_headers_scan",
+   "arguments": {
+    "url": "__FIXTURE_URL__/headers-all"
+   },
+   "compare": "none",
+   "status": "recorded",
+   "python": {
+    "is_error": true,
+    "form": "json",
+    "payload": "{\"error\":\"Unknown tool: http_headers_scan\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"grade_input\":{\"csp\":true,\"hsts\":false,\"no_leaky_headers\":false,\"permissions_policy\":true,\"referrer_policy\":true,\"x_content_type_options\":true,\"x_frame_options\":true},\"headers_missing\":[{\"description\":\"No HSTS header. Browsers may connect over plain HTTP, enabling man-in-the-middle attacks.\",\"header\":\"Strict-Transport-Security\",\"remediation\":\"Add the header: Strict-Transport-Security: max-age=31536000; includeSubDomains\",\"severity\":\"high\"}],\"headers_present\":[\"Content-Security-Policy\",\"X-Frame-Options\",\"X-Content-Type-Options\",\"Referrer-Policy\",\"Permissions-Policy\",\"X-XSS-Protection (deprecated)\"],\"leaky_headers\":[{\"header\":\"Server\",\"remediation\":\"Remove or genericize the Server header to avoid version disclosure.\",\"severity\":\"low\",\"value\":\"fixture/1.0\"},{\"header\":\"X-Powered-By\",\"remediation\":\"Remove the X-Powered-By header to hide the backend framework.\",\"severity\":\"low\",\"value\":\"fixture\"}],\"status_code\":200,\"url\":\"<LOCAL_URL>/headers-all\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "exception": "Python harness: http_headers_scan is not registered in the queen chat surface (the capture session answers 'Unknown tool: http_headers_scan'); the tool module itself is compared against this Go result by raw/network-direct.json (direct invocation over the same fixture server)."
+  },
+  "http_headers_bare": {
+   "tool": "http_headers_scan",
+   "arguments": {
+    "url": "__FIXTURE_URL__/headers-missing"
+   },
+   "compare": "none",
+   "status": "recorded",
+   "python": {
+    "is_error": true,
+    "form": "json",
+    "payload": "{\"error\":\"Unknown tool: http_headers_scan\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "go": {
+    "is_error": false,
+    "form": "json",
+    "payload": "{\"grade_input\":{\"csp\":false,\"hsts\":false,\"no_leaky_headers\":false,\"permissions_policy\":false,\"referrer_policy\":false,\"x_content_type_options\":false,\"x_frame_options\":false},\"headers_missing\":[{\"description\":\"No HSTS header. Browsers may connect over plain HTTP, enabling man-in-the-middle attacks.\",\"header\":\"Strict-Transport-Security\",\"remediation\":\"Add the header: Strict-Transport-Security: max-age=31536000; includeSubDomains\",\"severity\":\"high\"},{\"description\":\"No CSP header. The site is more vulnerable to XSS attacks from inline scripts and untrusted sources.\",\"header\":\"Content-Security-Policy\",\"remediation\":\"Add a Content-Security-Policy header. Start restrictive: default-src 'self'; script-src 'self'\",\"severity\":\"high\"},{\"description\":\"No X-Frame-Options header. The site may be vulnerable to clickjacking.\",\"header\":\"X-Frame-Options\",\"remediation\":\"Add the header: X-Frame-Options: DENY (or SAMEORIGIN)\",\"severity\":\"medium\"},{\"description\":\"No X-Content-Type-Options header. Browsers may MIME-sniff responses, potentially executing malicious content.\",\"header\":\"X-Content-Type-Options\",\"remediation\":\"Add the header: X-Content-Type-Options: nosniff\",\"severity\":\"medium\"},{\"description\":\"No Referrer-Policy header. Full URLs (including query params) may leak to third-party sites via the Referer header.\",\"header\":\"Referrer-Policy\",\"remediation\":\"Add the header: Referrer-Policy: strict-origin-when-cross-origin\",\"severity\":\"low\"},{\"description\":\"No Permissions-Policy header. Browser features like camera, microphone, and geolocation are not explicitly restricted.\",\"header\":\"Permissions-Policy\",\"remediation\":\"Add the header: Permissions-Policy: camera=(), microphone=(), geolocation=()\",\"severity\":\"low\"}],\"headers_present\":[],\"leaky_headers\":[{\"header\":\"Server\",\"remediation\":\"Remove or genericize the Server header to avoid version disclosure.\",\"severity\":\"low\",\"value\":\"fixture/1.0\"}],\"status_code\":200,\"url\":\"<LOCAL_URL>/headers-missing\"}",
+    "trailer": "",
+    "reminder": false
+   },
+   "exception": "Python harness: http_headers_scan is not registered in the queen chat surface (the capture session answers 'Unknown tool: http_headers_scan'); the tool module itself is compared against this Go result by raw/network-direct.json (direct invocation over the same fixture server)."
   }
  }
 }

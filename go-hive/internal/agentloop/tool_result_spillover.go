@@ -102,8 +102,9 @@ func (l *AgentLoop) truncateToolResult(result ToolResult, toolName string) ToolR
 		}
 		header := fmt.Sprintf(
 			"Tool `%s` returned %s characters (too large for context). Full result at: %s\n"+
-				"WARNING: the preview below is a SAMPLE only — do NOT draw counts, totals, or conclusions from it.",
-			toolName, formatThousands(len(result.Content)), abs)
+				"For targeted lookup, run `grep -nE \"<pattern>\" \"%s\"` via terminal_exec.\n"+
+				"\nWARNING: the preview below is a SAMPLE only — do NOT draw counts, totals, or conclusions from it.",
+			toolName, formatThousands(len(result.Content)), abs, abs)
 		result.Content = header + "\n\nPreview (truncated):\n" + preview
 	}
 	result.SpilloverPath = abs

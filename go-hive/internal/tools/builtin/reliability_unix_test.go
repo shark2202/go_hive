@@ -33,7 +33,8 @@ func TestTerminalExecTimeoutKillsBackgroundChildHoldingPipe(t *testing.T) {
 	if elapsed > 5*time.Second {
 		t.Fatalf("timeout took %s; a background child kept the capture pipe open", elapsed)
 	}
-	if !res.IsError || !strings.Contains(res.Content, "timed_out: true") {
+	payload := decodeExecPayload(t, res.Content)
+	if payload["timed_out"] != true {
 		t.Fatalf("result = %+v, want a flagged timeout", res)
 	}
 	raw, err := os.ReadFile(tb.root + "/child.pid")

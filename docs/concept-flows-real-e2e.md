@@ -33,9 +33,9 @@
 |---|---|---|---|
 | `worker_llm` | `newColonyHost` 不传 `WorkerLLM`；worker 恒用主模型 | `loader_model_slots.go::workerChatProvider` 建独立 provider；`loader_colony_host.go:78` 传入；`colony/runtime.go::workerCompleter` 仅 worker/judge 使用 | 配置 `worker_llm.model=cf-probe-worker-model` → worker 请求的 `model` 字段即该 id，上游 503；worker `state.status=failed`；主槽 queen 调用不受影响。两侧一致。 |
 | `queen_llm` | `resolveChatProvider` 只读 `llm`；新建会话用主模型 | `queenAwareChatProvider` 在会话创建期读 `queen_llm.<queen>` 并建 provider（chat / colony host / preloaded session 三入口） | 新建 `queen_name=queen_growth` 会话 + `queen_llm.queen_growth.model=cf-probe-queen-model` → 首个（session-start）请求带探针 id，503；两侧一致。 |
-| `vision_fallback` | 仅角色名常量，无 caption 链 | `visionCaptionerFor` 把 `vision_fallback` 解析成 `visionfallback.Captioner`，经 `ChatRuntimeDeps.VisionCaptioner` 注入；`internal/visionfallback` 是 Python `caption_tool_image` 的移植 | **未 live**：本 lane 没有图像 fixture，caption 链只有代码 + 单测；剩余验证项。 |
+| `vision_fallback` | 仅角色名常量，无 caption 链 | `visionCaptionerFor` 把 `vision_fallback` 解析成 `visionfallback.Captioner`，经 `ChatRuntimeDeps.VisionCaptioner` 注入；`internal/visionfallback` 是 Python `caption_tool_image` 的移植 | **已 live**（本 lane 补）：真实文本主模型 `deepseek-v4-pro` + `attach_file` 真实截图 → 槽位被真实调用（caption 含 viewport 分数坐标，`Submit (0.76, 0.54)` vs 真值 `0.7565, 0.5386`）→ caption 注入后续主模型请求、图片块丢弃；两侧同断言全通过，另有 10/10 固定向量字节相同。见 `docs/vision-caption-parity.md` 与 `docs/e2e-assets/vision-caption/`。 |
 
-结论：#16 从「未对齐」改为「已对齐」（三槽消费均已在生产路径，worker_llm/queen_llm 有真实模型探针；vision caption 的真实图片用例另补）。
+结论：#16 从「未对齐」改为「已对齐」：三槽消费均已在生产路径，`worker_llm`/`queen_llm` 有真实模型探针，`vision_fallback` 的 caption 链有真实图片 E2E 与逐字节对照。
 
 ## 4. #20 escalation：Go 链是「扩展」，不是 Python 逐字对齐
 
@@ -66,10 +66,12 @@
 
 ## 7. 剩余项（不在本 lane 能力内）
 
-- `vision_fallback` 的真实图片 caption（需要图像 fixture 与支持图像的 fallback 模型）。
 - Python replay breaker 的 Go 移植（相同调用第 3 次被拦截并 park；Go 目前是执行后由 doom-loop 升级）。
 - `run_worker` 的「可写 tracker 表」预检（如需与 Python 行为一致）。
 - #13 Sentinel 真实投递、#17 破坏性操作、#24 LongMemEval：与本 lane 无关，仍按审计页的未验证处理。
+
+（原先列在此处的 `vision_fallback` 真实图片 caption 已由 vision-caption-real 车道补齐：
+见 `docs/vision-caption-parity.md` 与 `docs/e2e-assets/vision-caption/`。）
 
 ## 8. 复现
 

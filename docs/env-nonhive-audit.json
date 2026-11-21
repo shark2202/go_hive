@@ -1,0 +1,438 @@
+{
+ "python_files": {
+  "ANTIGRAVITY_CLIENT_ID": [
+   "core/antigravity_auth.py",
+   "core/framework/config.py"
+  ],
+  "ANTIGRAVITY_CLIENT_SECRET": [
+   "core/antigravity_auth.py",
+   "core/framework/config.py"
+  ],
+  "CLAUDE_CODE_ENTRYPOINT": [
+   "core/framework/llm/litellm.py"
+  ],
+  "ANTHROPIC_API_KEY": [
+   "core/framework/llm/anthropic.py",
+   "core/framework/testing/llm_judge.py"
+  ],
+  "PYTEST_CURRENT_TEST": [
+   "core/framework/tracker/llm_debug_logger.py"
+  ],
+  "LOG_FORMAT": [
+   "core/framework/observability/logging.py"
+  ],
+  "ENV": [
+   "core/framework/observability/logging.py"
+  ],
+  "LITELLM_LOG": [
+   "core/framework/observability/logging.py"
+  ],
+  "NO_COLOR": [
+   "core/framework/observability/logging.py"
+  ],
+  "FORCE_COLOR": [
+   "core/framework/observability/logging.py"
+  ],
+  "E2B_SANDBOX_ID": [
+   "core/framework/sentinel/runtime_identity.py"
+  ],
+  "EDITOR": [
+   "core/framework/testing/approval_cli.py"
+  ],
+  "OPENAI_API_KEY": [
+   "core/framework/testing/llm_judge.py"
+  ],
+  "ADEN_API_URL": [
+   "core/framework/credentials/aden/__init__.py",
+   "core/framework/credentials/aden/provider.py",
+   "core/framework/credentials/aden/storage.py",
+   "core/framework/credentials/store.py",
+   "tools/src/aden_tools/credentials/store_adapter.py",
+   "tools/src/aden_tools/senders/registry.py"
+  ],
+  "ZOHO_API_DOMAIN": [
+   "core/framework/credentials/oauth2/zoho_provider.py",
+   "tools/src/aden_tools/credentials/health_check.py"
+  ],
+  "TERMINAL_TOOLS_PORT": [
+   "tools/src/terminal_tools/server.py"
+  ],
+  "CHART_TOOLS_PORT": [
+   "tools/src/chart_tools/server.py"
+  ],
+  "MEMORY_TOOLS_PORT": [
+   "tools/src/memory_tools/server.py"
+  ],
+  "GCU_LOG_FILE": [
+   "tools/src/gcu/bridge_host.py",
+   "tools/src/gcu/cli.py",
+   "tools/src/gcu/server.py"
+  ],
+  "GCU_LOG_LEVEL": [
+   "tools/src/gcu/cli.py",
+   "tools/src/gcu/server.py"
+  ],
+  "GCU_BRIDGE_MODE": [
+   "tools/src/gcu/browser/bridge.py",
+   "tools/src/gcu/server.py"
+  ],
+  "GCU_PORT": [
+   "tools/src/gcu/server.py"
+  ],
+  "TERMINAL_TOOLS_MAX_PTY": [
+   "tools/src/terminal_tools/pty/tools.py"
+  ],
+  "LOCALAPPDATA": [
+   "tools/src/terminal_tools/common/limits.py"
+  ],
+  "CARGO_HOME": [
+   "tools/src/terminal_tools/common/ripgrep.py"
+  ],
+  "TERMINAL_TOOLS_MAX_JOBS": [
+   "tools/src/terminal_tools/jobs/manager.py"
+  ],
+  "SHELL": [
+   "tools/src/aden_tools/credentials/shell_config.py"
+  ],
+  "KAFKA_API_KEY": [
+   "tools/src/aden_tools/tools/kafka_tool/kafka_tool.py"
+  ],
+  "KAFKA_API_SECRET": [
+   "tools/src/aden_tools/tools/kafka_tool/kafka_tool.py"
+  ],
+  "GITLAB_URL": [
+   "tools/src/aden_tools/tools/gitlab_tool/gitlab_tool.py"
+  ],
+  "LANGFUSE_HOST": [
+   "tools/src/aden_tools/tools/langfuse_tool/langfuse_tool.py"
+  ],
+  "PLAID_ENV": [
+   "tools/src/aden_tools/tools/plaid_tool/plaid_tool.py"
+  ],
+  "DOCKER_HUB_USERNAME": [
+   "tools/src/aden_tools/tools/docker_hub_tool/docker_hub_tool.py"
+  ],
+  "OBSIDIAN_REST_BASE_URL": [
+   "tools/src/aden_tools/tools/obsidian_tool/obsidian_tool.py"
+  ],
+  "PROMETHEUS_TOKEN": [
+   "tools/src/aden_tools/tools/prometheus_tool/prometheus_tool.py"
+  ],
+  "PROMETHEUS_USERNAME": [
+   "tools/src/aden_tools/tools/prometheus_tool/prometheus_tool.py"
+  ],
+  "PROMETHEUS_PASSWORD": [
+   "tools/src/aden_tools/tools/prometheus_tool/prometheus_tool.py"
+  ],
+  "TFC_URL": [
+   "tools/src/aden_tools/tools/terraform_tool/terraform_tool.py"
+  ],
+  "PIPEDRIVE_DOMAIN": [
+   "tools/src/aden_tools/tools/pipedrive_tool/pipedrive_tool.py"
+  ],
+  "ZOHO_CRM_DOMAIN": [
+   "tools/src/aden_tools/tools/zoho_crm_tool/zoho_crm_tool.py"
+  ],
+  "AWS_REGION": [
+   "tools/src/aden_tools/tools/aws_s3_tool/aws_s3_tool.py",
+   "tools/src/aden_tools/tools/redshift_tool/redshift_tool.py"
+  ],
+  "SLACK_USER_TOKEN": [
+   "tools/src/aden_tools/tools/slack_tool/slack_tool.py"
+  ],
+  "SUPABASE_URL": [
+   "tools/src/aden_tools/tools/supabase_tool/supabase_tool.py"
+  ],
+  "EMAIL_FROM": [
+   "tools/src/aden_tools/tools/email_tool/email_tool.py"
+  ],
+  "EMAIL_OVERRIDE_TO": [
+   "tools/src/aden_tools/tools/email_tool/email_tool.py"
+  ],
+  "SNOWFLAKE_TOKEN_TYPE": [
+   "tools/src/aden_tools/tools/snowflake_tool/snowflake_tool.py"
+  ],
+  "SNOWFLAKE_DATABASE": [
+   "tools/src/aden_tools/tools/snowflake_tool/snowflake_tool.py"
+  ],
+  "SNOWFLAKE_SCHEMA": [
+   "tools/src/aden_tools/tools/snowflake_tool/snowflake_tool.py"
+  ],
+  "SNOWFLAKE_WAREHOUSE": [
+   "tools/src/aden_tools/tools/snowflake_tool/snowflake_tool.py"
+  ],
+  "QUICKBOOKS_SANDBOX": [
+   "tools/src/aden_tools/tools/quickbooks_tool/quickbooks_tool.py"
+  ],
+  "DATABRICKS_HOST": [
+   "tools/src/aden_tools/tools/databricks_tool/databricks_tool.py"
+  ]
+ },
+ "go_files": {
+  "OPENAI_API_KEY": [
+   "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+   "go_hive/go-hive/internal/llmjudge/judge.go"
+  ],
+  "ANTHROPIC_API_KEY": [
+   "go_hive/go-hive/internal/llm/anthropic.go",
+   "go_hive/go-hive/internal/llmjudge/judge.go"
+  ],
+  "OLLAMA_HOST": [
+   "go_hive/go-hive/internal/llm/transport.go"
+  ],
+  "ANTHROPIC_API_BASE": [
+   "go_hive/go-hive/internal/llm/anthropic.go"
+  ],
+  "ANTHROPIC_BASE_URL": [
+   "go_hive/go-hive/internal/llm/anthropic.go"
+  ],
+  "CHROME_PATH": [
+   "go_hive/go-hive/internal/charts/chrome.go"
+  ],
+  "SHELL": [
+   "go_hive/go-hive/internal/credentials/shell.go"
+  ],
+  "PGHOST": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "PGPORT": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "PGUSER": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "USER": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "PGPASSWORD": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "PGDATABASE": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "LOCALAPPDATA": [
+   "go_hive/go-hive/internal/tools/builtin/terminal_guard.go",
+   "go_hive/go-hive/internal/tools/builtin/terminal_search.go"
+  ],
+  "TERMINAL_TOOLS_MAX_PTY": [
+   "go_hive/go-hive/internal/tools/builtin/terminal_pty.go"
+  ],
+  "CARGO_HOME": [
+   "go_hive/go-hive/internal/tools/builtin/terminal_search.go"
+  ],
+  "TERMINAL_TOOLS_MAX_JOBS": [
+   "go_hive/go-hive/internal/tools/builtin/terminal_jobs.go"
+  ]
+ },
+ "python_non_hive_total": 51,
+ "go_non_hive_total": 17,
+ "common": [
+  "ANTHROPIC_API_KEY",
+  "CARGO_HOME",
+  "LOCALAPPDATA",
+  "OPENAI_API_KEY",
+  "SHELL",
+  "TERMINAL_TOOLS_MAX_JOBS",
+  "TERMINAL_TOOLS_MAX_PTY"
+ ],
+ "python_only": [
+  "ADEN_API_URL",
+  "ANTIGRAVITY_CLIENT_ID",
+  "ANTIGRAVITY_CLIENT_SECRET",
+  "AWS_REGION",
+  "CHART_TOOLS_PORT",
+  "CLAUDE_CODE_ENTRYPOINT",
+  "DATABRICKS_HOST",
+  "DOCKER_HUB_USERNAME",
+  "E2B_SANDBOX_ID",
+  "EDITOR",
+  "EMAIL_FROM",
+  "EMAIL_OVERRIDE_TO",
+  "ENV",
+  "FORCE_COLOR",
+  "GCU_BRIDGE_MODE",
+  "GCU_LOG_FILE",
+  "GCU_LOG_LEVEL",
+  "GCU_PORT",
+  "GITLAB_URL",
+  "KAFKA_API_KEY",
+  "KAFKA_API_SECRET",
+  "LANGFUSE_HOST",
+  "LITELLM_LOG",
+  "LOG_FORMAT",
+  "MEMORY_TOOLS_PORT",
+  "NO_COLOR",
+  "OBSIDIAN_REST_BASE_URL",
+  "PIPEDRIVE_DOMAIN",
+  "PLAID_ENV",
+  "PROMETHEUS_PASSWORD",
+  "PROMETHEUS_TOKEN",
+  "PROMETHEUS_USERNAME",
+  "PYTEST_CURRENT_TEST",
+  "QUICKBOOKS_SANDBOX",
+  "SLACK_USER_TOKEN",
+  "SNOWFLAKE_DATABASE",
+  "SNOWFLAKE_SCHEMA",
+  "SNOWFLAKE_TOKEN_TYPE",
+  "SNOWFLAKE_WAREHOUSE",
+  "SUPABASE_URL",
+  "TERMINAL_TOOLS_PORT",
+  "TFC_URL",
+  "ZOHO_API_DOMAIN",
+  "ZOHO_CRM_DOMAIN"
+ ],
+ "go_only": [
+  "ANTHROPIC_API_BASE",
+  "ANTHROPIC_BASE_URL",
+  "CHROME_PATH",
+  "OLLAMA_HOST",
+  "PGDATABASE",
+  "PGHOST",
+  "PGPASSWORD",
+  "PGPORT",
+  "PGUSER",
+  "USER"
+ ],
+ "python_buckets": {
+  "平台/运行时": [
+   "EDITOR",
+   "ENV",
+   "FORCE_COLOR",
+   "NO_COLOR",
+   "SHELL"
+  ],
+  "代理/网络": [],
+  "厂商密钥": [
+   "ANTHROPIC_API_KEY",
+   "ANTIGRAVITY_CLIENT_SECRET",
+   "KAFKA_API_KEY",
+   "KAFKA_API_SECRET",
+   "OPENAI_API_KEY",
+   "PROMETHEUS_PASSWORD",
+   "PROMETHEUS_TOKEN",
+   "SLACK_USER_TOKEN",
+   "SNOWFLAKE_TOKEN_TYPE"
+  ],
+  "其他控制变量": [
+   "ADEN_API_URL",
+   "ANTIGRAVITY_CLIENT_ID",
+   "AWS_REGION",
+   "CARGO_HOME",
+   "CHART_TOOLS_PORT",
+   "CLAUDE_CODE_ENTRYPOINT",
+   "DATABRICKS_HOST",
+   "DOCKER_HUB_USERNAME",
+   "E2B_SANDBOX_ID",
+   "EMAIL_FROM",
+   "EMAIL_OVERRIDE_TO",
+   "GCU_BRIDGE_MODE",
+   "GCU_LOG_FILE",
+   "GCU_LOG_LEVEL",
+   "GCU_PORT",
+   "GITLAB_URL",
+   "LANGFUSE_HOST",
+   "LITELLM_LOG",
+   "LOCALAPPDATA",
+   "LOG_FORMAT",
+   "MEMORY_TOOLS_PORT",
+   "OBSIDIAN_REST_BASE_URL",
+   "PIPEDRIVE_DOMAIN",
+   "PLAID_ENV",
+   "PROMETHEUS_USERNAME",
+   "PYTEST_CURRENT_TEST",
+   "QUICKBOOKS_SANDBOX",
+   "SNOWFLAKE_DATABASE",
+   "SNOWFLAKE_SCHEMA",
+   "SNOWFLAKE_WAREHOUSE",
+   "SUPABASE_URL",
+   "TERMINAL_TOOLS_MAX_JOBS",
+   "TERMINAL_TOOLS_MAX_PTY",
+   "TERMINAL_TOOLS_PORT",
+   "TFC_URL",
+   "ZOHO_API_DOMAIN",
+   "ZOHO_CRM_DOMAIN"
+  ]
+ },
+ "go_buckets": {
+  "平台/运行时": [
+   "SHELL",
+   "USER"
+  ],
+  "代理/网络": [],
+  "厂商密钥": [
+   "ANTHROPIC_API_KEY",
+   "OPENAI_API_KEY"
+  ],
+  "其他控制变量": [
+   "ANTHROPIC_API_BASE",
+   "ANTHROPIC_BASE_URL",
+   "CARGO_HOME",
+   "CHROME_PATH",
+   "LOCALAPPDATA",
+   "OLLAMA_HOST",
+   "PGDATABASE",
+   "PGHOST",
+   "PGPASSWORD",
+   "PGPORT",
+   "PGUSER",
+   "TERMINAL_TOOLS_MAX_JOBS",
+   "TERMINAL_TOOLS_MAX_PTY"
+  ]
+ },
+ "go_direct": {
+  "OPENAI_API_KEY": [
+   "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+   "go_hive/go-hive/internal/llmjudge/judge.go"
+  ],
+  "ANTHROPIC_API_KEY": [
+   "go_hive/go-hive/internal/llm/anthropic.go",
+   "go_hive/go-hive/internal/llmjudge/judge.go"
+  ],
+  "OLLAMA_HOST": [
+   "go_hive/go-hive/internal/llm/transport.go"
+  ],
+  "ANTHROPIC_API_BASE": [
+   "go_hive/go-hive/internal/llm/anthropic.go"
+  ],
+  "ANTHROPIC_BASE_URL": [
+   "go_hive/go-hive/internal/llm/anthropic.go"
+  ],
+  "CHROME_PATH": [
+   "go_hive/go-hive/internal/charts/chrome.go"
+  ],
+  "SHELL": [
+   "go_hive/go-hive/internal/credentials/shell.go"
+  ],
+  "PGHOST": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "PGPORT": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "PGUSER": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "USER": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "PGPASSWORD": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "PGDATABASE": [
+   "go_hive/go-hive/internal/tools/integrations/pgwire.go"
+  ],
+  "LOCALAPPDATA": [
+   "go_hive/go-hive/internal/tools/builtin/terminal_guard.go",
+   "go_hive/go-hive/internal/tools/builtin/terminal_search.go"
+  ],
+  "TERMINAL_TOOLS_MAX_PTY": [
+   "go_hive/go-hive/internal/tools/builtin/terminal_pty.go"
+  ],
+  "CARGO_HOME": [
+   "go_hive/go-hive/internal/tools/builtin/terminal_search.go"
+  ],
+  "TERMINAL_TOOLS_MAX_JOBS": [
+   "go_hive/go-hive/internal/tools/builtin/terminal_jobs.go"
+  ]
+ }
+}

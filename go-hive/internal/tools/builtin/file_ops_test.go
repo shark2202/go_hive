@@ -109,7 +109,7 @@ func TestSearchFilesNonexistentPath(t *testing.T) {
 		"pattern": "x",
 		"path":    "nonexistent",
 	})
-	if !res.IsError || !strings.Contains(res.Content, "Error") || !strings.Contains(strings.ToLower(res.Content), "not found") {
+	if res.IsError || !strings.Contains(res.Content, "Error") || !strings.Contains(strings.ToLower(res.Content), "not found") {
 		t.Fatalf("missing path error = %+v", res)
 	}
 }
@@ -200,7 +200,7 @@ func TestSearchFilesOutputModes(t *testing.T) {
 	if res := execTool(t, tb, ToolSearchFiles, map[string]any{
 		"pattern":     "hit",
 		"output_mode": "bogus",
-	}); !res.IsError || !strings.Contains(res.Content, "invalid output_mode") {
+	}); res.IsError || !strings.Contains(res.Content, "invalid output_mode") {
 		t.Fatalf("invalid output_mode = %+v", res)
 	}
 }
@@ -272,7 +272,7 @@ func TestSearchFilesInvalidArguments(t *testing.T) {
 	resetSearchTracker()
 	tb := New(t.TempDir())
 
-	if res := execTool(t, tb, ToolSearchFiles, map[string]any{"pattern": "x", "target": "bogus"}); !res.IsError ||
+	if res := execTool(t, tb, ToolSearchFiles, map[string]any{"pattern": "x", "target": "bogus"}); res.IsError ||
 		!strings.Contains(res.Content, "invalid target") {
 		t.Fatalf("invalid target = %+v", res)
 	}
@@ -410,7 +410,7 @@ func TestFilePathPolicySystemWriteDenied(t *testing.T) {
 				input = map[string]any{"mode": "replace", "path": target, "old_string": "a", "new_string": "b"}
 			}
 			res := execTool(t, tb, name, input)
-			if !res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
+			if res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
 				t.Fatalf("%s outside root (%s) = %+v", name, target, res)
 			}
 		}
@@ -421,7 +421,7 @@ func TestFilePathPolicySystemWriteDenied(t *testing.T) {
 func TestFilePathPolicyCredentialPathDenied(t *testing.T) {
 	tb := New(t.TempDir())
 	write := execTool(t, tb, ToolWriteFile, map[string]any{"path": "~/.ssh/authorized_keys", "content": "x"})
-	if !write.IsError || !strings.Contains(write.Content, "escapes the sandbox root") {
+	if write.IsError || !strings.Contains(write.Content, "escapes the sandbox root") {
 		t.Fatalf("ssh write = %+v", write)
 	}
 	read := execTool(t, tb, ToolReadFile, map[string]any{"path": "~/.ssh/id_rsa"})
@@ -441,7 +441,7 @@ func TestFilePathPolicyWriteOutsideRootDenied(t *testing.T) {
 		"path":    filepath.Join(outside, "blocked.txt"),
 		"content": "x",
 	})
-	if !res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
+	if res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
 		t.Fatalf("outside write = %+v", res)
 	}
 	if _, err := os.Stat(filepath.Join(outside, "blocked.txt")); !os.IsNotExist(err) {
@@ -560,7 +560,9 @@ func TestEditFileReplaceMissingFile(t *testing.T) {
 		"old_string": "x",
 		"new_string": "y",
 	})
-	if !res.IsError || !strings.Contains(res.Content, "Error") || !strings.Contains(strings.ToLower(res.Content), "not found") {
+	// Upstream returns a plain "Error: File not found: …" string; the loop must
+	// not add the ERROR: marker on top of it.
+	if res.IsError || !strings.Contains(res.Content, "Error") || !strings.Contains(strings.ToLower(res.Content), "not found") {
 		t.Fatalf("missing file = %+v", res)
 	}
 }
@@ -578,7 +580,7 @@ func TestEditFileReplaceNoMatch(t *testing.T) {
 		"old_string": "zzz",
 		"new_string": "y",
 	})
-	if !res.IsError || !strings.Contains(res.Content, "Error") {
+	if res.IsError || !strings.Contains(res.Content, "Error") {
 		t.Fatalf("no match = %+v", res)
 	}
 	if !strings.Contains(res.Content, "read_file") && !strings.Contains(res.Content, "search_files") {
@@ -595,7 +597,7 @@ func TestEditFileReplaceSystemPathDenied(t *testing.T) {
 		"old_string": "a",
 		"new_string": "b",
 	})
-	if !res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
+	if res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
 		t.Fatalf("system path = %+v", res)
 	}
 }
@@ -692,7 +694,7 @@ func TestEditFileReplaceUniquenessAndReplaceAll(t *testing.T) {
 		"old_string": "x",
 		"new_string": "y",
 	})
-	if !res.IsError || !strings.Contains(res.Content, "unique match") {
+	if res.IsError || !strings.Contains(res.Content, "unique match") {
 		t.Fatalf("ambiguous replace = %+v", res)
 	}
 
@@ -716,7 +718,7 @@ func TestEditFileReplaceUniquenessAndReplaceAll(t *testing.T) {
 		"old_string": "y",
 		"new_string": "y",
 	})
-	if !identical.IsError || !strings.Contains(identical.Content, "identical") {
+	if identical.IsError || !strings.Contains(identical.Content, "identical") {
 		t.Fatalf("identical strings = %+v", identical)
 	}
 }
@@ -827,7 +829,7 @@ func TestEditFilePatchAtomicFailure(t *testing.T) {
 
 	body := "*** Begin Patch\n*** Update File: real.py\n-original\n+changed\n*** Update File: missing.py\n-foo\n+bar\n*** End Patch\n"
 	res := execTool(t, tb, ToolEditFile, map[string]any{"mode": "patch", "patch_text": body})
-	if !res.IsError || !strings.Contains(res.Content, "Patch validation failed (no files were modified)") {
+	if res.IsError || !strings.Contains(res.Content, "Patch validation failed (no files were modified)") {
 		t.Fatalf("patch = %+v", res)
 	}
 	if got := mustRead(t, target); got != "original\n" {
@@ -856,7 +858,7 @@ func TestEditFilePatchLenientMissingMarkers(t *testing.T) {
 func TestEditFilePatchEmptyBodyRejected(t *testing.T) {
 	tb := New(t.TempDir())
 	res := execTool(t, tb, ToolEditFile, map[string]any{"mode": "patch", "patch_text": ""})
-	if !res.IsError || !strings.Contains(res.Content, "Error") {
+	if res.IsError || !strings.Contains(res.Content, "Error") {
 		t.Fatalf("empty patch = %+v", res)
 	}
 }
@@ -865,7 +867,7 @@ func TestEditFilePatchEmptyBodyRejected(t *testing.T) {
 func TestEditFilePatchUnknownMode(t *testing.T) {
 	tb := New(t.TempDir())
 	res := execTool(t, tb, ToolEditFile, map[string]any{"mode": "bogus"})
-	if !res.IsError || !strings.Contains(strings.ToLower(res.Content), "unknown mode") {
+	if res.IsError || !strings.Contains(strings.ToLower(res.Content), "unknown mode") {
 		t.Fatalf("unknown mode = %+v", res)
 	}
 }
@@ -911,7 +913,7 @@ func TestEditFilePatchValidationAtomicallyRefuses(t *testing.T) {
 
 	body := "*** Begin Patch\n*** Update File: keep.txt\n-keep\n+clobbered\n*** Add File: keep.txt\n+x\n*** End Patch\n"
 	res := execTool(t, tb, ToolEditFile, map[string]any{"mode": "patch", "patch_text": body})
-	if !res.IsError || !strings.Contains(res.Content, "already exists") {
+	if res.IsError || !strings.Contains(res.Content, "already exists") {
 		t.Fatalf("duplicate add = %+v", res)
 	}
 	if got := mustRead(t, untouched); got != "keep\n" {
@@ -920,7 +922,7 @@ func TestEditFilePatchValidationAtomicallyRefuses(t *testing.T) {
 
 	body = "*** Begin Patch\n*** Update File: ../escape.txt\n-a\n+b\n*** End Patch\n"
 	res = execTool(t, tb, ToolEditFile, map[string]any{"mode": "patch", "patch_text": body})
-	if !res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
+	if res.IsError || !strings.Contains(res.Content, "escapes the sandbox root") {
 		t.Fatalf("escaping patch = %+v", res)
 	}
 	if _, err := os.Stat(filepath.Join(filepath.Dir(dir), "escape.txt")); !os.IsNotExist(err) {

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -138,15 +139,14 @@ func findToolDef(t *testing.T, catalogue *sessionToolCatalogue, name string) llm
 	return llm.ToolDef{}
 }
 
-// contextStdout returns the stdout section of a builtin terminal envelope.
+// contextStdout returns the stdout field of a builtin terminal_exec envelope
+// (a JSON object since the output-shape alignment).
 func contextStdout(content string) string {
-	idx := strings.Index(content, "stdout:")
-	if idx < 0 {
+	var payload struct {
+		Stdout string `json:"stdout"`
+	}
+	if err := json.Unmarshal([]byte(content), &payload); err != nil {
 		return ""
 	}
-	rest := content[idx+len("stdout:"):]
-	if next := strings.Index(rest, "stderr:"); next >= 0 {
-		rest = rest[:next]
-	}
-	return rest
+	return payload.Stdout
 }

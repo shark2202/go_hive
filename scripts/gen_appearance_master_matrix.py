@@ -29,6 +29,7 @@ STATUS_PILL = {
     "contract_unverified": ("info", "有契约未验证"),
     "not_aligned": ("bad", "未对齐"),
     "unaudited": ("bad", "未审计"),
+    "out_of_scope": ("scope", "范围外（声明）"),
 }
 CONTRACT_LABEL = {
     "frozen_contract": ("ok", "冻结契约"),
@@ -54,7 +55,7 @@ p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
 table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
 td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
 pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
-.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622} .pill.scope{color:var(--muted);border-color:#2b3a4d;background:#0e141c}
 .small{font-size:11.5px;color:var(--muted);margin-top:3px} .ev{display:block;margin:2px 0;font-size:12px;color:#b9c7d6}
 .callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
 .toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
@@ -92,6 +93,10 @@ def evidence_html(items: list[dict]) -> str:
             ref = f'<a href="{esc(path[len("go_hive/docs/"):])}">{esc(path)}</a>'
         elif path.startswith("go_hive/"):
             ref = f'<a href="../{esc(path[len("go_hive/"):])}">{esc(path)}</a>'
+        elif path.startswith("docs/"):
+            ref = f'<a href="../../{esc(path)}">{esc(path)}</a>'
+        elif path.startswith("core/"):
+            ref = f'<a href="../../{esc(path)}">{esc(path)}</a>'
         else:
             ref = f"<code>{esc(path)}</code>"
         out.append(f'<span class="ev">{ref} <span class="small">[{esc(ev.get("kind", ""))}]</span> {note}</span>')
@@ -182,7 +187,7 @@ def render(reg: dict) -> str:
 <style>
 {CSS}</style></head><body><div class="wrap">
 <header><div class="eyebrow">Hive · Appearance Scope Registry</div><h1>Hive ↔ go_hive <span>外观总览矩阵</span></h1>
-<p class="lede">先把「外观」涉及哪些维度/层面/范围定清楚（{s["total"]} 维），再逐维给出状态与证据。状态只回答「等价性证据到哪一步」：<b>已实测一致 / 部分对齐 / 有契约未验证 / 未对齐 / 未审计</b>；每维另标契约形态（冻结契约 / 只有文档 / 测试注解 / 无）。<b>已有文档不等于已对齐</b>：doc_only 的维度最多只到「部分对齐」。</p>
+<p class="lede">先把「外观」涉及哪些维度/层面/范围定清楚（{s["total"]} 维），再逐维给出状态与证据。状态只回答「等价性证据到哪一步」：<b>已实测一致 / 部分对齐 / 有契约未验证 / 未对齐 / 未审计 / 范围外（声明）</b>；每维另标契约形态（冻结契约 / 只有文档 / 测试注解 / 无）。<b>已有文档不等于已对齐</b>：doc_only 的维度最多只到「部分对齐」；范围外（声明）表示该面不在本仓库两侧实现范围内（如桌面壳），既不算对齐也不算未审计。</p>
 <div class="meta"><span>生成：<b>{esc(generated)}</b></span><span>基线：<b>Go {esc(reg["baseline"]["go"])} · Python {esc(reg["baseline"]["python"])}</b></span><span>工作树：<b>{esc(reg["branch"])} @ {esc(reg["base_commit"])}</b></span><span>登记册：<b><a href="appearance-scope-registry.json">appearance-scope-registry.json</a></b></span></div>
 <div class="toc"><a href="#scope">范围与口径</a><a href="#overview">总览</a><a href="#matrix">全维度表</a><a href="#gaps">缺口清单</a><a href="#contracts">契约分层</a><a href="#audits">已有审计</a><a href="#repro">复现</a></div></header>
 
@@ -199,11 +204,12 @@ def render(reg: dict) -> str:
 <section id="overview"><h2><span class="num">01</span>总览</h2>
 <div class="grid g6">
 <div class="card"><div class="k">维度总数</div><div class="v">{s["total"]}</div><div class="d">覆盖任务要求的最小集合 + proto 与 config/env 拆分</div></div>
-<div class="card"><div class="k">已实测一致</div><div class="v" style="color:var(--ok)">{by_status["measured_aligned"]}</div><div class="d">{"、".join(esc(i) for i in s["measured_aligned_ids"])}</div></div>
-<div class="card"><div class="k">部分对齐</div><div class="v" style="color:var(--warn)">{by_status["partial"]}</div><div class="d">主路径可达，差异已量化或边界未验证</div></div>
-<div class="card"><div class="k">有契约未验证</div><div class="v" style="color:var(--accent2)">{by_status["contract_unverified"]}</div><div class="d">{"、".join(esc(i) for i in s["contract_unverified_ids"])}</div></div>
-<div class="card"><div class="k">未对齐</div><div class="v">{by_status["not_aligned"]}</div><div class="d">外观面上暂无「完全缺失」维度（缺口以 partial 形式存在）</div></div>
-<div class="card"><div class="k">未审计</div><div class="v" style="color:var(--bad)">{by_status["unaudited"]}</div><div class="d">{"、".join(esc(i) for i in s["unaudited_ids"])}</div></div>
+<div class="card"><div class="k">已实测一致</div><div class="v" style="color:var(--ok)">{by_status.get("measured_aligned", 0)}</div><div class="d">{"、".join(esc(i) for i in s["measured_aligned_ids"]) or "当前无"}</div></div>
+<div class="card"><div class="k">部分对齐</div><div class="v" style="color:var(--warn)">{by_status.get("partial", 0)}</div><div class="d">主路径可达，差异已量化或边界未验证</div></div>
+<div class="card"><div class="k">有契约未验证</div><div class="v" style="color:var(--accent2)">{by_status.get("contract_unverified", 0)}</div><div class="d">{"、".join(esc(i) for i in s["contract_unverified_ids"]) or "当前无"}</div></div>
+<div class="card"><div class="k">未对齐</div><div class="v">{by_status.get("not_aligned", 0)}</div><div class="d">外观面上暂无「完全缺失」维度（缺口以 partial 形式存在）</div></div>
+<div class="card"><div class="k">未审计</div><div class="v" style="color:var(--bad)">{by_status.get("unaudited", 0)}</div><div class="d">{"、".join(esc(i) for i in s["unaudited_ids"]) or "当前无"}</div></div>
+<div class="card"><div class="k">范围外（声明）</div><div class="v" style="color:var(--muted)">{by_status.get("out_of_scope", 0)}</div><div class="d">{"、".join(esc(i) for i in s["out_of_scope_ids"]) or "当前无"} · 不在本仓库两侧实现范围内，非对齐也非未审计</div></div>
 </div>
 <div class="callout"><b>读法：</b>本页不把「路由存在」「审计写着已接」「测试带注解」当成对齐；每维的 <b>status_basis</b> 写清覆盖边界，<b>本次复算</b> 只在本次真有测量时出现。</div>
 </section>
@@ -224,17 +230,18 @@ def render(reg: dict) -> str:
 <div class="card"><div class="k">有冻结契约（{len(frozen)}）</div><div class="d">{name_list(frozen)}</div><div class="d small">有机器可读产物或可重放校验器，其它 lane 可直接编码依赖；仍不等于行为已验证。</div></div>
 <div class="card"><div class="k">只有文档（{len(doc_only)}）</div><div class="d">{name_list(doc_only)}</div><div class="d small">只有散文/HTML/注释描述，无可执行契约；这些维度状态最高只到「部分对齐」。</div></div>
 <div class="card"><div class="k">仅测试注解（{len(annotated)}）</div><div class="d">{name_list(annotated)}</div><div class="d small">有 parity 测试与 e2e 资产，但没有跨实现契约产物。</div></div>
-<div class="card"><div class="k">无契约（{len(none_contract)}）</div><div class="d">{name_list(none_contract)}</div><div class="d small">既无契约也无逐项证据；其中 desktop / migration 判「未审计」。</div></div>
+<div class="card"><div class="k">无契约（{len(none_contract)}）</div><div class="d">{name_list(none_contract)}</div><div class="d small">既无契约也无逐项证据；其中 desktop 判「范围外（声明）」。</div></div>
 </div>
 </section>
 
 <section id="audits"><h2><span class="num">05</span>已有审计与证据文档</h2>
 <div class="callout info">
-<b>逐点/逐工具：</b><a href="surface-tracking-matrix.html">surface-tracking-matrix.html</a>（接口外形 + 自动快照）· <a href="tool-parity-matrix.html">tool-parity-matrix.html</a>（103 模块逐条）· <a href="tool-consistency-audit.html">tool-consistency-audit.html</a> · <a href="tool-contract-diff.md">tool-contract-diff.md</a> · <a href="api-contract-diff.md">api-contract-diff.md</a> · <a href="env-config-contract-diff.md">env-config-contract-diff.md</a><br>
-<b>范围视角：</b><a href="alignment-dimensions.html">alignment-dimensions.html</a>（18 维）· <a href="module-interfaces.html">module-interfaces.html</a>（进程边界 + 不变量）· <a href="support-matrix.md">support-matrix.md</a>（能力状态 + 未验证清单）· <a href="platform-support.html">platform-support.html</a><br>
+<b>逐点/逐工具：</b><a href="surface-tracking-matrix.html">surface-tracking-matrix.html</a>（接口外形 + 自动快照）· <a href="tool-parity-matrix.html">tool-parity-matrix.html</a>（103 模块逐条）· <a href="tool-consistency-audit.html">tool-consistency-audit.html</a> · <a href="tool-contract-diff.md">tool-contract-diff.md</a> · <a href="tool-output-contract.md">tool-output-contract.md</a> · <a href="api-contract-diff.md">api-contract-diff.md</a> · <a href="cli-surface-diff.md">cli-surface-diff.md</a> · <a href="env-config-contract-diff.md">env-config-contract-diff.md</a><br>
+<b>双跑/帧级对照：</b><a href="api-ws-golden.md">api-ws-golden.md</a>（REST 值级 + SSE 帧级 golden）· <a href="sse-payload-parity.md">sse-payload-parity.md</a> · <a href="prompt-parity.md">prompt-parity.md</a>（21,584 chars 逐字）· <a href="mcp-crosscheck.md">mcp-crosscheck.md</a>（§8 真实 server）· <a href="storage-compat.html">storage-compat.html</a> · <a href="g2-lossless-replacement.html">g2-lossless-replacement.html</a> · <a href="observability-surface-diff.md">observability-surface-diff.md</a> · <a href="../../docs/frontend-surface-diff.md">frontend-surface-diff.md</a> · <a href="../../docs/llm-real-crosscheck.md">llm-real-crosscheck.md</a> · <a href="../../docs/e2e-assets/playbook-verbatim/REPORT.md">playbook-verbatim/REPORT.md</a><br>
+<b>范围视角：</b><a href="alignment-dimensions.html">alignment-dimensions.html</a>（18 维）· <a href="queen-worker-colony-parity-audit.html">queen-worker-colony-parity-audit.html</a>（24 维：12/10/0/2）· <a href="concept-flows-real-e2e.md">concept-flows-real-e2e.md</a> · <a href="module-interfaces.html">module-interfaces.html</a>（进程边界 + 不变量）· <a href="support-matrix.md">support-matrix.md</a>（能力状态 + 未验证清单）· <a href="platform-support.html">platform-support.html</a><br>
 <b>机制接线：</b><a href="../CONCEPT_WIRING_AUDIT.md">CONCEPT_WIRING_AUDIT.md</a>（80/0/0）· <a href="../RUNTIME_SPINE_AUDIT.md">RUNTIME_SPINE_AUDIT.md</a>（70/0/0）· <a href="browser-bridge.html">browser-bridge.html</a> · <a href="browser-host.md">browser-host.md</a> · <a href="memory-e2e.md">memory-e2e.md</a> · <a href="soul-daily-reflection.md">soul-daily-reflection.md</a> · <a href="playbook-python.md">playbook-python.md</a> · <a href="worker-escalation-e2e.md">worker-escalation-e2e.md</a> · <a href="integrations-evidence-audit.html">integrations-evidence-audit.html</a><br>
-<b>契约产物：</b><a href="../contracts/api-routes.json">contracts/api-routes.json</a> · <a href="../contracts/api-responses/">contracts/api-responses/</a> · <a href="../contracts/api.proto">contracts/api.proto</a> · <a href="../contracts/tool-definitions.json">contracts/tool-definitions.json</a> · <a href="../contracts/builtin-skills.json">contracts/builtin-skills.json</a> · <a href="../contracts/env-vars.json">contracts/env-vars.json</a> · <a href="../contracts/config-keys.json">contracts/config-keys.json</a><br>
-<b>浏览器审计：</b><a href="browser-bridge-surface-audit.html">browser-bridge-surface-audit.html</a>（Browser Bridge 13 维：已对齐 3 / 部分 9 / 未对齐 1；R03/R04/R05 已修，残差 R01–R14 剩 9）
+<b>契约产物：</b><a href="../contracts/api-routes.json">contracts/api-routes.json</a> · <a href="../contracts/api-responses/">contracts/api-responses/</a> · <a href="../contracts/api.proto">contracts/api.proto</a> · <a href="../contracts/cli-surface.json">contracts/cli-surface.json</a> · <a href="../contracts/sse-frames/">contracts/sse-frames/</a> · <a href="../contracts/tool-definitions.json">contracts/tool-definitions.json</a> · <a href="../contracts/builtin-skills.json">contracts/builtin-skills.json</a> · <a href="../contracts/env-vars.json">contracts/env-vars.json</a> · <a href="../contracts/config-keys.json">contracts/config-keys.json</a> · <a href="../contracts/config-support-ledger.json">contracts/config-support-ledger.json</a><br>
+<b>浏览器审计：</b><a href="browser-bridge-surface-audit.html">browser-bridge-surface-audit.html</a>（Browser Bridge 13 维：已对齐 9 / 部分 4 / 未对齐 0；残差 R01–R20 已修 20/20，剩余为已量化近似）
 </div>
 </section>
 
@@ -245,11 +252,13 @@ uv run python go_hive/scripts/gen_appearance_master_matrix.py
 # 校验本页与登记册一致（CI 可 gate）
 uv run python go_hive/scripts/gen_appearance_master_matrix.py --check
 
-# 本次复算用到的既有校验器（只读，可重放）
-uv run python go_hive/scripts/check_api_proto.py            # wire-proto：errors=0 / warnings=0
-uv run python go_hive/scripts/check_env_config_contract.py --check
-uv run python go_hive/scripts/surface_audit.py              # 路由可达性（--write-report 才落盘）</pre>
-<p class="sub">本次新增的即席复算（未入脚本）：内置 Skill 25/25 sha256 比对、事件类型常量集合提取、CLI 命令/flags 静态提取、磁盘文件名集合提取、session id 与事件时间戳格式核对、退出码分类与 playbook 并发默认值核对。结论逐条写进登记册的 <code>measured_now</code>。</p>
+# 登记册引用的离线校验器（只读，可重放）
+uv run python go_hive/scripts/check_api_proto.py                 # wire-proto：42 消息 / errors=0 / warnings=120（60 端点未映射）
+uv run python go_hive/scripts/api_response_values.py --check     # api-routes：77 端点值级账本（47 已声明 / 0 未声明）
+uv run python go_hive/scripts/sse_frames_canonical.py --check    # sse：帧级 golden（113/148 帧，11 条例外）
+uv run python go_hive/scripts/freeze_env_config_contract.py --check  # env-vars / config-json：89/118/83 与 125/134
+uv run python go_hive/scripts/surface_audit.py                   # 路由可达性（--write-report 才落盘）</pre>
+<p class="sub">其余维度的复跑命令写在各证据文件内（双跑/真模型类为 opt-in，不纳入 make ci）：frontend_surface_diff.py --all、cli_surface_contract.py、prompt_catalog_parity.py / prompt_system_parity.py、sse_payload_parity.py、tool_output_golden.py + capture_tool_output.py、mcp_real_crosscheck_run.sh、storage_compat_run.sh、g2_home_fixture.py + g2_rollback_drill.sh、playbook_verbatim_compare.py、memory_soul_real_e2e.py、concept_flows_real_compare.py、e2e_browser_transport.sh、gen_browser_tool_defs.py --check。结论逐条写进登记册的 <code>status_basis</code> / <code>measured_now</code>。</p>
 </section>
 
 <footer>生成：{esc(generated)} · 工作树 {esc(reg["branch"])} @ {esc(reg["base_commit"])} · 基线 Go {esc(reg["baseline"]["go"])} / Python {esc(reg["baseline"]["python"])} · 登记册 <a href="appearance-scope-registry.json">appearance-scope-registry.json</a> · 本页只做范围与状态登记，不重复逐点清单；逐点状态以 <a href="surface-tracking-matrix.html">surface-tracking-matrix.html</a> / <a href="tool-parity-matrix.html">tool-parity-matrix.html</a> 为准。</footer>

@@ -104,7 +104,7 @@ func (t *Toolbox) searchFiles(ctx context.Context, input map[string]any) (Result
 		target = "files"
 	}
 	if target != "content" && target != "files" {
-		return fail("Error: invalid target '%s'. Use 'content' or 'files'.", target), nil
+		return plain("Error: invalid target '%s'. Use 'content' or 'files'.", target), nil
 	}
 
 	outputMode, _ := stringArg(input, "output_mode")
@@ -112,7 +112,7 @@ func (t *Toolbox) searchFiles(ctx context.Context, input map[string]any) (Result
 		outputMode = "content"
 	}
 	if outputMode != "content" && outputMode != "files_only" && outputMode != "count" {
-		return fail("Error: invalid output_mode '%s'. Use 'content', 'files_only', or 'count'.", outputMode), nil
+		return plain("Error: invalid output_mode '%s'. Use 'content', 'files_only', or 'count'.", outputMode), nil
 	}
 
 	pathArg, _ := stringArg(input, "path")
@@ -168,7 +168,7 @@ func (t *Toolbox) searchFiles(ctx context.Context, input map[string]any) (Result
 	}
 	resolved, err := resolvePath(root, pathArg)
 	if err != nil {
-		return fail("Error: %v", err), nil
+		return plain("Error: %v", err), nil
 	}
 	if err := ctx.Err(); err != nil {
 		return Result{}, err
@@ -183,7 +183,7 @@ func (t *Toolbox) searchFiles(ctx context.Context, input map[string]any) (Result
 	} else {
 		info, statErr := os.Stat(resolved)
 		if statErr != nil || (!info.IsDir() && !info.Mode().IsRegular()) {
-			return fail("Error: Path not found: %s", pathArg), nil
+			return plain("Error: Path not found: %s", pathArg), nil
 		}
 		out = t.searchContentTarget(resolved, displayRoot, pattern, fileGlob, limit, offset, outputMode, contextLines, hashline)
 	}

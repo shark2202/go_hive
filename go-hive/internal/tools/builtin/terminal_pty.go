@@ -485,13 +485,13 @@ func (t *Toolbox) terminalPTYOpen(ctx context.Context, input map[string]any) (Re
 	}
 	env, ok := terminalEnvMap(input, "env")
 	if !ok {
-		return terminalErr("terminal_pty_open: env must map names to strings"), nil
+		return terminalArgErr("terminal_pty_open: env must map names to strings"), nil
 	}
 	cols := 120
 	if v, present := input["cols"]; present && v != nil {
 		parsed, ok := intArg(input, "cols")
 		if !ok {
-			return terminalErr("terminal_pty_open: cols must be an integer"), nil
+			return terminalArgErr("terminal_pty_open: cols must be an integer"), nil
 		}
 		cols = parsed
 	}
@@ -499,7 +499,7 @@ func (t *Toolbox) terminalPTYOpen(ctx context.Context, input map[string]any) (Re
 	if v, present := input["rows"]; present && v != nil {
 		parsed, ok := intArg(input, "rows")
 		if !ok {
-			return terminalErr("terminal_pty_open: rows must be an integer"), nil
+			return terminalArgErr("terminal_pty_open: rows must be an integer"), nil
 		}
 		rows = parsed
 	}
@@ -507,7 +507,7 @@ func (t *Toolbox) terminalPTYOpen(ctx context.Context, input map[string]any) (Re
 	if v, present := input["idle_timeout_sec"]; present && v != nil {
 		parsed, ok := intArg(input, "idle_timeout_sec")
 		if !ok {
-			return terminalErr("terminal_pty_open: idle_timeout_sec must be an integer"), nil
+			return terminalArgErr("terminal_pty_open: idle_timeout_sec must be an integer"), nil
 		}
 		idleSeconds = parsed
 	}
@@ -534,7 +534,7 @@ func (t *Toolbox) terminalPTYOpen(ctx context.Context, input map[string]any) (Re
 func (t *Toolbox) terminalPTYRun(ctx context.Context, input map[string]any) (Result, error) {
 	sessionID, ok := stringArg(input, "session_id")
 	if !ok || sessionID == "" {
-		return terminalErr("terminal_pty_run: session_id is required"), nil
+		return terminalArgErr("terminal_pty_run: session_id is required"), nil
 	}
 	session := terminalPTYs.get(sessionID)
 	if session == nil {
@@ -548,7 +548,7 @@ func (t *Toolbox) terminalPTYRun(ctx context.Context, input map[string]any) (Res
 	if v, present := input["timeout_sec"]; present && v != nil {
 		seconds, ok := finiteNumberArg(input, "timeout_sec")
 		if !ok {
-			return terminalErr("terminal_pty_run: timeout_sec must be a finite number"), nil
+			return terminalArgErr("terminal_pty_run: timeout_sec must be a finite number"), nil
 		}
 		timeout = time.Duration(seconds * float64(time.Second))
 	}
@@ -579,7 +579,7 @@ func (t *Toolbox) terminalPTYRun(ctx context.Context, input map[string]any) (Res
 	expect, _ := stringArg(input, "expect")
 	if expect != "" {
 		if _, err := regexp.Compile(expect); err != nil {
-			return terminalErr("invalid expect regex: %v", err), nil
+			return terminalArgErr("invalid expect regex: %v", err), nil
 		}
 	}
 	result, err := session.run(command, expect, timeout)
@@ -597,7 +597,7 @@ func (t *Toolbox) terminalPTYRun(ctx context.Context, input map[string]any) (Res
 func (t *Toolbox) terminalPTYClose(ctx context.Context, input map[string]any) (Result, error) {
 	sessionID, ok := stringArg(input, "session_id")
 	if !ok || sessionID == "" {
-		return terminalErr("terminal_pty_close: session_id is required"), nil
+		return terminalArgErr("terminal_pty_close: session_id is required"), nil
 	}
 	session := terminalPTYs.get(sessionID)
 	if session == nil {

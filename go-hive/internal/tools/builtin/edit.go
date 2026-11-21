@@ -56,7 +56,7 @@ func (t *Toolbox) editFile(ctx context.Context, input map[string]any) (Result, e
 		mode = "replace"
 	case "replace", "patch":
 	default:
-		return fail("Error: unknown mode '%s'. Use mode='replace' or mode='patch'.", mode), nil
+		return plain("Error: unknown mode '%s'. Use mode='replace' or mode='patch'.", mode), nil
 	}
 	if mode == "patch" {
 		return t.editPatch(ctx, input)
@@ -68,15 +68,15 @@ func (t *Toolbox) editFile(ctx context.Context, input map[string]any) (Result, e
 func (t *Toolbox) editReplace(ctx context.Context, input map[string]any) (Result, error) {
 	raw, _ := stringArg(input, "path")
 	if strings.TrimSpace(raw) == "" {
-		return fail("Error: replace mode requires a non-empty 'path'"), nil
+		return plain("Error: replace mode requires a non-empty 'path'"), nil
 	}
 	oldText, _ := stringArg(input, "old_string")
 	if oldText == "" {
-		return fail("Error: 'old_string' must not be empty"), nil
+		return plain("Error: 'old_string' must not be empty"), nil
 	}
 	newText, _ := stringArg(input, "new_string")
 	if oldText == newText {
-		return fail("Error: 'old_string' and 'new_string' are identical — nothing to do"), nil
+		return plain("Error: 'old_string' and 'new_string' are identical — nothing to do"), nil
 	}
 	replaceAll := boolArgOr(input, "replace_all", false)
 
@@ -86,7 +86,7 @@ func (t *Toolbox) editReplace(ctx context.Context, input map[string]any) (Result
 	}
 	path, err := resolveWritePath(root, raw, t.writeSafeRoots())
 	if err != nil {
-		return fail("Error: %v", err), nil
+		return plain("Error: %v", err), nil
 	}
 	if err := ctx.Err(); err != nil {
 		return Result{}, err
@@ -94,19 +94,22 @@ func (t *Toolbox) editReplace(ctx context.Context, input map[string]any) (Result
 
 	content, info, err := readEditableFile(path, t.maxReadSize)
 	if errors.Is(err, os.ErrNotExist) || errors.Is(err, errEditDirectory) || errors.Is(err, errEditNotFile) {
-		return fail("Error: File not found: %s", raw), nil
+		// Parity: tools/src/aden_tools/file_ops.py::_patch_replace returns this
+		// as plain text, not a tool error — the model sees a non-error result.
+		return plain("Error: File not found: %s", raw), nil
 	}
 	// Parity: tools/src/aden_tools/file_ops.py::_patch_replace refuses to edit a file that was never
-	// read, or that changed on disk since the recorded read.
+	// read, or that changed on disk since the recorded read. Both refusals are
+	// plain-text results upstream (no is_error marker).
 	switch status, detail := t.readState().checkFresh(path); status {
 	case freshnessUnread:
-		return fail("Refusing to edit '%s': call read_file('%s') first so the harness can "+
+		return plain("Refusing to edit '%s': call read_file('%s') first so the harness can "+
 			"track its state before you edit it.", raw, raw), nil
 	case freshnessStale:
-		return fail("Refusing to edit '%s': %s. Re-read the file with read_file before editing.", raw, detail), nil
+		return plain("Refusing to edit '%s': %s. Re-read the file with read_file before editing.", raw, detail), nil
 	}
 	if err != nil {
-		return fail("Error editing file: %v", err), nil
+		return plain("Error editing file: %v", err), nil
 	}
 
 	// CRLF files: match in LF space but keep the file's line endings.
@@ -115,7 +118,7 @@ func (t *Toolbox) editReplace(ctx context.Context, input map[string]any) (Result
 		oldText = toCRLF(oldText)
 	}
 	if !replaceAll && strings.Count(content, oldText) > 1 {
-		return fail("Error: Could not find a unique match for old_string in %s. Include more context or explicitly use replace_all.", raw), nil
+		return plain("Error: Could not find a unique match for old_string in %s. Include more context or explicitly use replace_all.", raw), nil
 	}
 
 	matched, strategy, ok := firstFuzzyCandidate(content, oldText, replaceAll)
@@ -127,7 +130,7 @@ func (t *Toolbox) editReplace(ctx context.Context, input map[string]any) (Result
 		if suggestions := closeLineMatches(oldText, content); len(suggestions) > 0 {
 			msg += "\n\nDid you mean one of these lines?\n" + strings.Join(suggestions, "\n")
 		}
-		return fail("%s", msg), nil
+		return plain("%s", msg), nil
 	}
 
 	if crlf {
@@ -145,7 +148,7 @@ func (t *Toolbox) editReplace(ctx context.Context, input map[string]any) (Result
 		perm = 0o644
 	}
 	if err := atomicfs.WriteFile(path, []byte(newContent), perm); err != nil {
-		return fail("Error editing file: %v", err), nil
+		return plain("Error editing file: %v", err), nil
 	}
 	// Record the post-write state so chained edits in the same turn do not
 	// self-invalidate (file_ops.py::_patch_replace records after writing).

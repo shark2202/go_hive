@@ -33,7 +33,14 @@ const titleTrailing = ".。!！?？:：,，;；"
 
 var titleHiddenBlocks = regexp.MustCompile(`(?s)<think>.*?</think>|<system-reminder>.*?</system-reminder>`)
 
-var TitleTokenBudget = func() int { return 8192 }
+// TitleTokenBudget is the namer's output budget: upstream's
+// session_titles.generate_title sends get_aux_max_tokens(), the same knob the
+// judge/recall/sentinel utility calls share. llm.AuxMaxTokens() carries the
+// configured llm.aux_max_tokens (installed process-wide at serve startup) and
+// falls back to the 8192 default when unset.
+//
+// Parity: framework/server/session_titles.py::generate_title (max_tokens=get_aux_max_tokens())
+var TitleTokenBudget = func() int { return llm.AuxMaxTokens() }
 
 // Parity: framework/server/session_titles.py::clean_title
 func CleanTitle(raw string) string {

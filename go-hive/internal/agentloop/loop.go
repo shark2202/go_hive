@@ -340,6 +340,9 @@ func (l *AgentLoop) injectQueuedInput(agentCtx *ReminderAgentContext, conv *Node
 //
 // Parity: framework/agent_loop/agent_loop.py::_compact
 func (l *AgentLoop) compactConversationIfNeeded(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, reminderCtx *ReminderAgentContext) {
+	// The conversation's window/buffers always follow the live loop config,
+	// including for a conversation restored with an older window in its meta.
+	l.applyConversationLimits(conv)
 	if conv == nil || agentCtx == nil || agentCtx.LLM == nil || !conv.NeedsCompaction() {
 		return
 	}
@@ -863,6 +866,12 @@ type pendingToolCall struct {
 	call  ToolCallRequest
 }
 
+// parallelReadOnlyCap bounds how many concurrency-safe tool calls run at
+// once. Upstream puts an asyncio.Semaphore(_PARALLEL_CAP = 10) around its
+// concurrent read-only batch; the port keeps the same ceiling so a large
+// fan-out cannot hit MCP servers with unbounded parallelism.
+const parallelReadOnlyCap = 10
+
 // executeToolBatch runs the admitted calls. A batch goes concurrent only when
 // the config opts in AND every call is explicitly marked ConcurrencySafe;
 // otherwise it stays sequential. results is written by index, never appended,
@@ -870,7 +879,8 @@ type pendingToolCall struct {
 //
 // Parity-exempt: upstream splits tool calls into a concurrent safe batch and
 // a serial batch; this Go port keeps the batch together and only goes
-// concurrent when every call is explicitly marked safe.
+// concurrent when every call is explicitly marked safe. The in-flight ceiling
+// matches upstream's 10.
 func (l *AgentLoop) executeToolBatch(ctx context.Context, agentCtx *AgentContext, pending []pendingToolCall, results []ToolResult, tools []llm.ToolDef) {
 	if len(pending) == 0 {
 		return
@@ -881,11 +891,14 @@ func (l *AgentLoop) executeToolBatch(ctx context.Context, agentCtx *AgentContext
 		}
 		return
 	}
+	sem := make(chan struct{}, parallelReadOnlyCap)
 	var wg sync.WaitGroup
 	for _, item := range pending {
 		wg.Add(1)
 		go func(item pendingToolCall) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			results[item.index] = l.executeTool(ctx, agentCtx, item.call)
 		}(item)
 	}
@@ -1429,17 +1442,19 @@ func (l *AgentLoop) storeToolBatch(ctx context.Context, agentCtx *AgentContext, 
 	captionImages := l.captionToolImagesEnabled(agentCtx)
 	for i, tc := range toolCalls {
 		stored := results[i].Content
-		if tail != "" && tc.ID == targetID {
-			stored = stored + "\n\n" + tail
-		}
 		opts := ToolResultOptions{
 			IsError:        results[i].IsError,
 			IsSkillContent: results[i].IsSkillContent,
 			ImageContent:   results[i].ImageContent,
 		}
+		// The caption is spliced before the reminder tail, matching upstream's
+		// order: prefix, caption, tail.
 		if captionImages && len(results[i].ImageContent) > 0 {
 			stored = stored + "\n\n" + l.captionToolImages(ctx, conv, tc, results[i])
 			opts.ImageContent = nil
+		}
+		if tail != "" && tc.ID == targetID {
+			stored = stored + "\n\n" + tail
 		}
 		if results[i].SpilloverPath != "" {
 			spillover := results[i].SpilloverPath

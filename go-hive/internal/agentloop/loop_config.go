@@ -7,6 +7,23 @@ type LoopConfig struct {
 	MaxIterations        int
 	MaxContextTokens     int
 	ToolWaitLimitSeconds float64
+	// CompactionBufferTokens and CompactionBufferRatio are the hybrid
+	// compaction headroom: a compaction fires once the conversation estimate
+	// reaches MaxContextTokens - (CompactionBufferTokens +
+	// CompactionBufferRatio*MaxContextTokens). The defaults mirror upstream's
+	// LoopConfig (8k absolute + 40% of the window, i.e. a ~100k trigger on the
+	// 180k default). Setting both to zero keeps the legacy multiplicative
+	// CompactionThreshold rule.
+	//
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.compaction_buffer_tokens,
+	// ::LoopConfig.compaction_buffer_ratio
+	CompactionBufferTokens int
+	CompactionBufferRatio  float64
+	// CompactionWarningBufferTokens emits the "context getting tight" warning
+	// one buffer before the hard trigger; zero disables the warning.
+	//
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.compaction_warning_buffer_tokens
+	CompactionWarningBufferTokens int
 	// Parity: framework/agent_loop/internals/types.py::LoopConfig.grace_iterations.
 	GraceIterations int
 	// WorkerEscalationGraceTurns is the number of consecutive text-only turns
@@ -93,10 +110,13 @@ type LoopConfig struct {
 // Parity: framework/agent_loop/internals/types.py LoopConfig defaults.
 func DefaultLoopConfig() LoopConfig {
 	return LoopConfig{
-		MaxIterations:        50,
-		MaxContextTokens:     180_000,
-		ToolWaitLimitSeconds: 600,
-		GraceIterations:      0,
+		MaxIterations:                 50,
+		MaxContextTokens:              180_000,
+		CompactionBufferTokens:        8_000,
+		CompactionBufferRatio:         0.4,
+		CompactionWarningBufferTokens: 12_000,
+		ToolWaitLimitSeconds:          600,
+		GraceIterations:               0,
 		// Worker stall grace (upstream default): two text-only turns are
 		// tolerated, the third consecutive one auto-fails the worker.
 		WorkerEscalationGraceTurns: DefaultWorkerEscalationGraceTurns,

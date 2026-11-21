@@ -123,7 +123,9 @@ func TestStaleGuardEditRefusesWithoutPriorRead(t *testing.T) {
 		"old_string": "hello",
 		"new_string": "world",
 	})
-	if !res.IsError || !strings.Contains(res.Content, "Refusing to edit") || !strings.Contains(res.Content, "read_file") {
+	// Upstream returns this refusal as plain text (no is_error); the message is
+	// the contract, not the loop error marker.
+	if res.IsError || !strings.Contains(res.Content, "Refusing to edit") || !strings.Contains(res.Content, "read_file") {
 		t.Fatalf("guard = %+v", res)
 	}
 	if got := mustRead(t, target); got != "print('hello')\n" {
@@ -174,7 +176,7 @@ func TestStaleGuardEditRefusesWhenFileChanged(t *testing.T) {
 		"old_string": "hello",
 		"new_string": "world",
 	})
-	if !res.IsError || !strings.Contains(res.Content, "Refusing to edit") || !strings.Contains(res.Content, "Re-read") {
+	if res.IsError || !strings.Contains(res.Content, "Refusing to edit") || !strings.Contains(res.Content, "Re-read") {
 		t.Fatalf("stale guard = %+v", res)
 	}
 	if got := mustRead(t, target); got != "print('bye')\n" {
@@ -204,7 +206,7 @@ func TestStaleGuardWriteRefusesOverwriteWithoutRead(t *testing.T) {
 	tb := New(dir)
 
 	res := execTool(t, tb, ToolWriteFile, map[string]any{"path": "existing.txt", "content": "clobbered\n"})
-	if !res.IsError || !strings.Contains(res.Content, "Refusing to overwrite") || !strings.Contains(res.Content, "read_file") {
+	if res.IsError || !strings.Contains(res.Content, "Refusing to overwrite") || !strings.Contains(res.Content, "read_file") {
 		t.Fatalf("write guard = %+v", res)
 	}
 	if got := mustRead(t, target); got != "do not clobber\n" {
@@ -260,7 +262,7 @@ func TestStaleGuardSessionsAreIsolated(t *testing.T) {
 		"old_string": "mine",
 		"new_string": "yours",
 	})
-	if !res.IsError || !strings.Contains(res.Content, "Refusing to edit") {
+	if res.IsError || !strings.Contains(res.Content, "Refusing to edit") {
 		t.Fatalf("second session reused the first session's read state: %+v", res)
 	}
 
@@ -445,7 +447,7 @@ func TestWriteSafeRootDeniesOutsideCeiling(t *testing.T) {
 
 	outside := filepath.Join(base, "blocked.txt")
 	res := execTool(t, tb, ToolWriteFile, map[string]any{"path": outside, "content": "x"})
-	if !res.IsError || !strings.Contains(res.Content, "write denied") || !strings.Contains(res.Content, "write_safe_root") {
+	if res.IsError || !strings.Contains(res.Content, "write denied") || !strings.Contains(res.Content, "write_safe_root") {
 		t.Fatalf("ceiling = %+v", res)
 	}
 	if _, err := os.Stat(outside); !os.IsNotExist(err) {
@@ -474,7 +476,7 @@ func TestWriteSafeRootListAllowsAnyConfiguredRoot(t *testing.T) {
 	}
 	// Absolute outside both roots.
 	res := execTool(t, tb, ToolWriteFile, map[string]any{"path": filepath.Join(base, "outside.txt"), "content": "3"})
-	if !res.IsError || !strings.Contains(res.Content, "write denied") {
+	if res.IsError || !strings.Contains(res.Content, "write denied") {
 		t.Fatalf("outside both = %+v", res)
 	}
 
@@ -548,7 +550,7 @@ func TestWriteSafeRootAppliesToEditReplace(t *testing.T) {
 		"old_string": "value = 1",
 		"new_string": "value = 2",
 	})
-	if !res.IsError || !strings.Contains(res.Content, "write denied") {
+	if res.IsError || !strings.Contains(res.Content, "write denied") {
 		t.Fatalf("edit outside ceiling = %+v", res)
 	}
 	if got := mustRead(t, target); got != "value = 1\n" {
@@ -572,10 +574,35 @@ func TestWriteSafeRootAppliesToPatchMode(t *testing.T) {
 
 	body := "*** Begin Patch\n*** Update File: " + target + "\n-value = 1\n+value = 2\n*** End Patch\n"
 	res := execTool(t, tb, ToolEditFile, map[string]any{"mode": "patch", "patch_text": body})
-	if !res.IsError || !strings.Contains(res.Content, "write denied") || !strings.Contains(res.Content, "no files were modified") {
+	if res.IsError || !strings.Contains(res.Content, "write denied") || !strings.Contains(res.Content, "no files were modified") {
 		t.Fatalf("patch outside ceiling = %+v", res)
 	}
 	if got := mustRead(t, target); got != "value = 1\n" {
 		t.Fatalf("blocked patch changed the file: %q", got)
+	}
+}
+
+// Parity: tools/src/aden_tools/file_ops.py::write_file — the post-write
+// record_read keeps a chained overwrite fresh.
+//
+// This also pins the path-spelling invariant: on macOS an absolute /var/...
+// path resolves through the /private/var symlink once the file exists, so the
+// read-state cache must key on one canonical spelling before and after the
+// create (paths.go::resolveUnder).
+func TestWriteFileChainedWritesStayFresh(t *testing.T) {
+	dir := t.TempDir()
+	tb := New(dir)
+	target := filepath.Join(dir, "chained.txt")
+
+	first := execTool(t, tb, ToolWriteFile, map[string]any{"path": target, "content": "one\n"})
+	if first.IsError || !strings.Contains(first.Content, "Created") {
+		t.Fatalf("first write = %+v, want Created", first)
+	}
+	second := execTool(t, tb, ToolWriteFile, map[string]any{"path": target, "content": "two\n"})
+	if second.IsError {
+		t.Fatalf("second write refused: %+v", second)
+	}
+	if !strings.Contains(second.Content, "Updated") || !strings.Contains(second.Content, "(4 bytes, 1 lines)") {
+		t.Fatalf("second write = %+v, want Updated with the upstream size/line text", second)
 	}
 }

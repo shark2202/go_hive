@@ -359,3 +359,11 @@ func rawDefs() []llm.ToolDef {
 func fail(format string, args ...any) Result {
 	return Result{Content: fmt.Sprintf(format, args...), IsError: true}
 }
+
+// plain renders a non-error (plain-text) tool result. The Python file tools
+// return their policy messages and refusals as ordinary text, so the model
+// sees them without the loop's "ERROR: " marker; use this for the branches
+// that mirror file_ops.py.
+func plain(format string, args ...any) Result {
+	return Result{Content: fmt.Sprintf(format, args...)}
+}

@@ -666,7 +666,7 @@
         "dev_reads": [],
         "test_reads": 2,
         "writes": [],
-        "mentions": 20,
+        "mentions": 22,
         "comments": 1
       }
     },
@@ -721,7 +721,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 1,
+        "mentions": 2,
         "comments": 0
       }
     },
@@ -898,7 +898,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 4,
+        "mentions": 5,
         "comments": 0
       }
     },
@@ -918,9 +918,9 @@
       "go": {
         "prod_reads": [],
         "dev_reads": [],
-        "test_reads": 4,
+        "test_reads": 6,
         "writes": [],
-        "mentions": 8,
+        "mentions": 9,
         "comments": 0
       }
     },
@@ -942,7 +942,7 @@
         "dev_reads": [],
         "test_reads": 4,
         "writes": [],
-        "mentions": 3,
+        "mentions": 4,
         "comments": 0
       }
     },
@@ -979,10 +979,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 9,
+        "test_reads": 13,
         "writes": [],
-        "mentions": 9,
-        "comments": 7
+        "mentions": 14,
+        "comments": 8
       }
     },
     {
@@ -1046,7 +1046,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/browser_cli.go",
-            "line": 243,
+            "line": 254,
             "symbol": "profile",
             "parse": "helper",
             "helper": "env",
@@ -1054,10 +1054,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 2,
+        "test_reads": 4,
         "writes": [],
-        "mentions": 5,
-        "comments": 1
+        "mentions": 8,
+        "comments": 2
       }
     },
     {
@@ -1616,7 +1616,7 @@
         "dev_reads": [],
         "test_reads": 15,
         "writes": [],
-        "mentions": 26,
+        "mentions": 29,
         "comments": 5
       }
     },
@@ -1656,7 +1656,7 @@
         "test_reads": 0,
         "writes": [],
         "mentions": 1,
-        "comments": 0
+        "comments": 1
       }
     },
     {
@@ -1915,7 +1915,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1067,
+            "line": 1075,
             "symbol": "runtimeOwnerPID",
             "parse": "string",
             "snippet": "owner := os.Getenv(\"HIVE_DESKTOP_PARENT_PID\")",
@@ -1927,11 +1927,11 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1070,
+            "line": 1078,
             "scope": "runtime"
           }
         ],
-        "mentions": 9,
+        "mentions": 11,
         "comments": 1
       },
       "notes": "presence/empty gate; no numeric parsing."
@@ -2018,7 +2018,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 10,
+        "mentions": 13,
         "comments": 0
       }
     },
@@ -2496,7 +2496,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/browser_cli.go",
-            "line": 287,
+            "line": 338,
             "symbol": "statePath",
             "parse": "helper",
             "helper": "env",
@@ -2536,10 +2536,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 41,
+        "test_reads": 44,
         "writes": [],
-        "mentions": 145,
-        "comments": 85
+        "mentions": 183,
+        "comments": 91
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -2710,7 +2710,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 7,
+        "mentions": 9,
         "comments": 4
       }
     },
@@ -3386,7 +3386,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 2,
+        "mentions": 3,
         "comments": 0
       }
     },
@@ -3558,7 +3558,7 @@
         "dev_reads": [],
         "test_reads": 13,
         "writes": [],
-        "mentions": 9,
+        "mentions": 10,
         "comments": 0
       },
       "notes": "env > configuration.json > false."
@@ -3630,7 +3630,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/logging/logging.go",
-            "line": 40,
+            "line": 50,
             "symbol": "fileLogDisabled",
             "parse": "helper",
             "helper": "envNonEmpty",
@@ -3704,7 +3704,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 2,
+        "mentions": 3,
         "comments": 0
       }
     },
@@ -3743,9 +3743,9 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 5,
+        "test_reads": 8,
         "writes": [],
-        "mentions": 4,
+        "mentions": 6,
         "comments": 4
       },
       "notes": "py: max(0.0, float(env or 1.5)) with ValueError→1.5; go: pyenv.Float + clamp, same 1.5 default. The grace window now bounds the Python-playbook tool call; a run past it returns status=started plus a [PLAYBOOK_COMPLETE] bus notice."
@@ -4483,7 +4483,7 @@
             "scope": "runtime"
           }
         ],
-        "mentions": 4,
+        "mentions": 5,
         "comments": 0
       }
     },
@@ -4576,7 +4576,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 586,
+            "line": 589,
             "symbol": "splitWorkerEventsEnabled",
             "parse": "string",
             "snippet": "switch strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_SPLIT_WORKER_EVENTS\"))) {",
@@ -4626,7 +4626,7 @@
         "dev_reads": [],
         "test_reads": 5,
         "writes": [],
-        "mentions": 10,
+        "mentions": 11,
         "comments": 0
       },
       "notes": "env > configuration.json > false."
@@ -5204,7 +5204,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 5,
+        "mentions": 7,
         "comments": 0
       }
     },
@@ -5245,7 +5245,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 3,
+        "mentions": 4,
         "comments": 0
       }
     },

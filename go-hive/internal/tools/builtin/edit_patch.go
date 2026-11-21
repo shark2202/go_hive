@@ -63,14 +63,14 @@ type patchOp struct {
 func (t *Toolbox) editPatch(ctx context.Context, input map[string]any) (Result, error) {
 	patchText, _ := stringArg(input, "patch_text")
 	if patchText == "" {
-		return fail("Error: patch mode requires a non-empty 'patch_text'"), nil
+		return plain("Error: patch mode requires a non-empty 'patch_text'"), nil
 	}
 	ops, parseErr := parseV4A(patchText)
 	if parseErr != "" {
-		return fail("Error: %s", parseErr), nil
+		return plain("Error: %s", parseErr), nil
 	}
 	if len(ops) == 0 {
-		return fail("Error: patch text contained no operations"), nil
+		return plain("Error: patch text contained no operations"), nil
 	}
 	root, err := t.rootPath()
 	if err != nil {
@@ -81,7 +81,7 @@ func (t *Toolbox) editPatch(ctx context.Context, input map[string]any) (Result, 
 	}
 	summary, applyErr := t.applyV4A(ops, root)
 	if applyErr != "" {
-		return fail("Error: %s", applyErr), nil
+		return plain("Error: %s", applyErr), nil
 	}
 	if summary == "" {
 		summary = "Patch applied"

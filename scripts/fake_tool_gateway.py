@@ -18,15 +18,56 @@ from __future__ import annotations
 
 import argparse
 import json
+import secrets
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 LOG_PATH = ""
+# Unique per gateway process: batches share one queen session (and its
+# conversation), so bare call_1/call_2 ids would collide across batches and
+# make result-by-position extraction ambiguous.
+CALL_PREFIX = "call_" + secrets.token_hex(4)
 LOG_LOCK = threading.Lock()
 SCRIPT: list[dict] = []
 SCRIPT_LOCK = threading.Lock()
 CALL_INDEX = 0
+
+
+def _resolve_arguments(arguments, messages: list) -> dict:
+    """Resolve {"$from": "<field>"} placeholders against earlier tool results.
+
+    A scenario that needs a value minted by an earlier call (job_id from
+    terminal_job_start, session_id from terminal_pty_open) writes the
+    placeholder instead of hard-coding an id it cannot know. The field is read
+    from the newest `role: tool` message whose JSON body carries it, so both
+    runtimes resolve it the same way.
+    """
+
+    def resolve(value):
+        if isinstance(value, dict):
+            if set(value) == {"$from"}:
+                field = value["$from"]
+                for message in reversed(messages):
+                    if not isinstance(message, dict) or message.get("role") != "tool":
+                        continue
+                    content = message.get("content")
+                    if not isinstance(content, str):
+                        continue
+                    try:
+                        payload = json.loads(content)
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+                    if isinstance(payload, dict) and payload.get(field):
+                        return payload[field]
+                return None
+            return {key: resolve(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [resolve(item) for item in value]
+        return value
+
+    return resolve(arguments or {})
 
 
 def _log(entry: dict) -> None:
@@ -95,7 +136,7 @@ class Handler(BaseHTTPRequestHandler):
         model = body.get("model") or "fake-tool-golden"
         tool = step.get("tool")
         if tool:
-            arguments = json.dumps(step.get("arguments") or {})
+            arguments = json.dumps(_resolve_arguments(step.get("arguments"), body.get("messages") or []))
             chunks = [
                 {
                     "id": "chatcmpl-fake",
@@ -110,7 +151,7 @@ class Handler(BaseHTTPRequestHandler):
                                 "tool_calls": [
                                     {
                                         "index": 0,
-                                        "id": f"call_{index}",
+                                        "id": f"{CALL_PREFIX}_{index}",
                                         "type": "function",
                                         "function": {"name": tool, "arguments": arguments},
                                     }
@@ -148,9 +189,9 @@ class Handler(BaseHTTPRequestHandler):
         if tool:
             message["tool_calls"] = [
                 {
-                    "id": f"call_{index}",
+                    "id": f"{CALL_PREFIX}_{index}",
                     "type": "function",
-                    "function": {"name": tool, "arguments": json.dumps(step.get("arguments") or {})},
+                    "function": {"name": tool, "arguments": arguments},
                 }
             ]
         self._json(
@@ -182,7 +223,14 @@ def main() -> None:
     open(LOG_PATH, "a", encoding="utf-8").close()
     with open(args.script, encoding="utf-8") as handle:
         SCRIPT.extend(json.load(handle))
-    ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()
+    class Server(ThreadingHTTPServer):
+        def handle_error(self, request, client_address):
+            exc = sys.exc_info()[1]
+            if isinstance(exc, (ConnectionResetError, BrokenPipeError, ConnectionAbortedError)):
+                return  # the runtime closes keep-alive sessions between chats
+            super().handle_error(request, client_address)
+
+    Server(("127.0.0.1", args.port), Handler).serve_forever()
 
 
 if __name__ == "__main__":

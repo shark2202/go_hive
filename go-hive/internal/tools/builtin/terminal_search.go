@@ -388,7 +388,7 @@ func terminalFallbackLimitations() []string {
 func (t *Toolbox) terminalRG(ctx context.Context, input map[string]any) (Result, error) {
 	pattern, ok := stringArg(input, "pattern")
 	if !ok || pattern == "" {
-		return terminalErr("terminal_rg: pattern is required"), nil
+		return terminalArgErr("terminal_rg: pattern is required"), nil
 	}
 	target, err := t.terminalTargetPath(input)
 	if err != nil {
@@ -402,13 +402,13 @@ func (t *Toolbox) terminalRG(ctx context.Context, input map[string]any) (Result,
 	allowFallback := terminalBool(input, "allow_fallback")
 	extraArgs, ok := terminalStringSlice(input, "extra_args")
 	if !ok {
-		return terminalErr("terminal_rg: extra_args must be a list of strings"), nil
+		return terminalArgErr("terminal_rg: extra_args must be a list of strings"), nil
 	}
 	contextLines := 0
 	if v, present := input["context"]; present && v != nil {
 		parsed, ok := intArg(input, "context")
 		if !ok {
-			return terminalErr("terminal_rg: context must be an integer"), nil
+			return terminalArgErr("terminal_rg: context must be an integer"), nil
 		}
 		contextLines = parsed
 	}
@@ -416,14 +416,14 @@ func (t *Toolbox) terminalRG(ctx context.Context, input map[string]any) (Result,
 	if v, present := input["max_count"]; present && v != nil {
 		parsed, ok := intArg(input, "max_count")
 		if !ok {
-			return terminalErr("terminal_rg: max_count must be an integer"), nil
+			return terminalArgErr("terminal_rg: max_count must be an integer"), nil
 		}
 		maxCount = &parsed
 	}
 	if v, present := input["max_depth"]; present && v != nil {
 		parsed, ok := intArg(input, "max_depth")
 		if !ok {
-			return terminalErr("terminal_rg: max_depth must be an integer"), nil
+			return terminalArgErr("terminal_rg: max_depth must be an integer"), nil
 		}
 		maxDepth = &parsed
 	}
@@ -711,7 +711,7 @@ type terminalGlobResult struct {
 func (t *Toolbox) terminalGlob(ctx context.Context, input map[string]any) (Result, error) {
 	pattern, ok := stringArg(input, "pattern")
 	if !ok || pattern == "" {
-		return terminalErr("terminal_glob: pattern is required"), nil
+		return terminalArgErr("terminal_glob: pattern is required"), nil
 	}
 	target, err := t.terminalTargetPath(input)
 	if err != nil {
@@ -721,7 +721,7 @@ func (t *Toolbox) terminalGlob(ctx context.Context, input map[string]any) (Resul
 	if v, present := input["max_results"]; present && v != nil {
 		parsed, ok := intArg(input, "max_results")
 		if !ok {
-			return terminalErr("terminal_glob: max_results must be an integer"), nil
+			return terminalArgErr("terminal_glob: max_results must be an integer"), nil
 		}
 		maxResults = parsed
 	}

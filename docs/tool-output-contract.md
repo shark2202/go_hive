@@ -1,10 +1,12 @@
 # Tool output contract — canonical golden (Python reference vs go_hive)
 
-Status: first output golden. Tools were compared by **name / description /
-input schema** before this lane; their **results** (success and failure
-envelopes) were not. This lane adds the missing half: the same inputs are run
-on both runtimes and the model-visible tool-result text is compared after
-canonicalisation. It also fixed the shape differences that comparison exposed.
+Status: 输出 golden 第二轮（2026-11-21 扩场景）。Tools were compared by
+**name / description / input schema** before this lane; their **results**
+(success and failure envelopes) were not. This lane adds the missing half: the
+same inputs are run on both runtimes and the model-visible tool-result text is
+compared after canonicalisation — now **69 场景**（首批 38 + 扩场景 31），
+**50 aligned / 1 shape-aligned / 18 recorded / 0 未归因**，`terminal_exec_ok`
+例外已在第二轮消除（Go 改为 Python 同形 JSON 信封）。
 
 Evidence: `docs/e2e-assets/tool-output/` (`scenarios.json`, `results.json`,
 `diff.json`, `summary.txt`, `raw/`).
@@ -58,7 +60,7 @@ Guarded by: `internal/toolgolden` (canonical rules),
 | `shape` | 只比信封形状（form / is_error / 键集 / 类型），值由各自工具库决定 | 1 |
 | `none` | 记录两侧信封但不比对（已复核的例外，§4） | 12 |
 
-## 3. 覆盖（38 场景）
+## 3. 覆盖（首批 38 场景；扩场景后总计 69，见 §5 与 §9）
 
 场景选择：默认工具面里能在临时 `HIVE_HOME` 离线执行的工具（`search_tools`、`task_*`、
 `get_current_time`、`read_file`、`attach_file`、`pdf_read`、`search_messages`、
@@ -97,27 +99,39 @@ Guarded by: `internal/toolgolden` (canonical rules),
 | 5 | `task_update` 接受任意 status（`bogus` 直接写进任务） | 按 Python 的 StrEnum 校验，文案逐字复用：`'bogus' is not a valid TaskStatus`，并以 is_error 信封返回 | `internal/cli/task_tools.go`、`internal/tasks/models.go` |
 | 6 | `task_get` / `task_update` 把非整数 id 静默强制成 0（回一句 “Task #0 not found.”） | 改为参数错误信封 `{"error": "invalid task id: 'no-such-task' (expected an integer)"}` + is_error（文案差异见 §5） | `internal/cli/task_tools.go` |
 
-## 5. 例外清单（13 条，全部已归因）
+### 4.1 2026-11-21 扩场景波次新增修复
+
+| # | 差异 | 处理 |
+| --- | --- | --- |
+| 7 | `terminal_exec` 输出信封：Go 纯文本报告 vs Python JSON | Go 改为 Python `build_exec_envelope` 同形 JSON（16 键；失败路径 17 键含 `error`），`terminal_exec_golden_test.go` 回放 8 场景 |
+| 8 | 非零退出/timeout 曾带 `"ERROR: "` 前缀 | 去除，与 Python 一致（语义看 `exit_code`/`semantic_status`） |
+| 9 | `terminal_job_*`/`terminal_pty_*` body 错误曾标 `is_error` | 改为上游语义：job/pty 结果体的错误走普通 Result |
+| 10 | `write_file` 连续写入新鲜度（macOS `/var` 规范化致误判 stale） | `TestWriteFileChainedWritesStayFresh` 钉住；`read_file` 目录列表测试改为夹具驱动 |
+
+## 5. 例外清单（18 条，全部已归因）
 
 记录在 `scenarios.json` 的 `exception` 字段与 `diff.json` 的 `exceptions`。
 
 | 场景 | 类别 | 原因 |
 | --- | --- | --- |
-| `search_tools_inventory` | 工具库 | 清单列出各自运行时的工具库：Python 的 allowlist 关掉了文件类并带 senders，Go 有 51 个延迟名。只比对信封形状（form/is_error/键集/类型），值不比对 |
-| `search_tools_load_read_file` | 工具库分支 | Python 走「Nothing to load」（`read_file`/`skill_view` 不在其 allowlist），Go 走「Loaded」分支。分支不同，记录不比对 |
-| `task_get_bad_id` | 文案 | Python 用 `int()` 转换并让 CPython ValueError 泄漏（`invalid literal for int() …`）；Go 给类型化参数错误。两侧都是 is_error JSON 信封 |
-| `read_file_escape` | 文案 | Python 把路径解析到会话目录后报 `File not found`（具误导性）；Go 明确拒绝 `path escapes the sandbox root`。结果语义一致（无字节返回、纯文本、is_error=false） |
-| `search_messages_spill` | 信封 | 超大结果两侧都溢出到磁盘，但 Python 给结构摘要 + grep 提示，Go 给带抽样警告的截断预览。设计不同、各自自洽 |
-| `terminal_exec_ok` | 信封 | Python 返回 JSON 结果信封（exit_code/stdout/pid/runtime_ms/semantic_status…），Go 返回文本报告（exit_code/shell_kind/stdout/stderr）。终端输出形状是 terminal 车道冻结的契约，属该车道改动 |
-| `skill_view_missing` | 工具集 | `skill_view` 只有 Go 有（Python 回 `Unknown tool`）。两侧都是 is_error JSON 信封 |
-| `credentials_list` / `credentials_usage` | 未移植 | `credentials` 是 Python 专有模型工具；Go 返回显式 `not_implemented` 信封 |
-| `sentinel_setup` | 未移植 | 依赖桌面连接器；Go 返回显式 `not_implemented` 信封 |
-| `collect_result` | 未移植 | Go 没有后台工具句柄；信封指向 `terminal_job_logs` |
-| `suggest_colony` | 未移植 | 驱动 colony 弹窗；Go 返回显式 `not_implemented` 信封 |
-| `unloaded_tool_call` | 工具集 | `excel_read` 在 Python 不存在（`Unknown tool … Did you mean 'csv_read'?`），Go 侧是延迟名并被 loop 以 `select:` 提示拒绝。两者都是可操作的 is_error 信封 |
-
-另有两类**不构成例外**但值得记住的遮罩：`pdf_read` 的 `next_step`/`terminal_hint`
-（运行时各自的恢复建议）与所有路径/时间/会话值，见 §2。
+| `search_tools_inventory` | 工具集 | the inventory lists each runtime's own tool library (Python's allowlist disables the file ops and ships senders; Go defers 51 flat names), so only the envelope keys/types are contract. |
+| `search_tools_load_read_file` | 工具集 | Python reports "Nothing to load" (read_file/skill_view are outside its allowlist), Go promotes both. Recorded, not compared — the branches differ by tool library. |
+| `task_get_bad_id` | 例外 | Python converts the id with int() and lets the CPython ValueError escape ("invalid literal for int()"), Go answers with a typed argument error. Both are is_error JSON envelopes with an error key. |
+| `read_file_escape` | 例外 | Python resolves the path against its session dir and reports a misleading "File not found"; Go refuses the escape explicitly. Same outcome (no bytes, plain-text refusal, is_error=false). |
+| `search_messages_spill` | 例外 | an oversized result spills on both sides, but Python emits a structural digest + grep hint and Go emits a bounded preview with a sampling warning. Reviewed and kept: different spillover designs, each self-consistent. |
+| `skill_view_missing` | 工具集 | skill_view exists only on Go (Python answers "Unknown tool"). Both are is_error JSON envelopes. |
+| `credentials_list` | 未移植 | credentials is a Python-only model tool; Go answers with the explicit not_implemented envelope. |
+| `credentials_usage` | 未移植 | see credentials_list. |
+| `sentinel_setup` | 未移植 | sentinel_setup needs the desktop connector; Go answers with the explicit not_implemented envelope. |
+| `collect_result` | 未移植 | Go has no background tool handles; the envelope points at terminal_job_logs instead. |
+| `suggest_colony` | 未移植 | suggest_colony drives the colony popup; Go answers with the explicit not_implemented envelope. |
+| `unloaded_tool_call` | 工具集 | excel_read does not exist in Python ("Unknown tool ... Did you mean 'csv_read'?"); on Go it is a deferred name and the loop refuses it with the select: prompt. Both are actionable is_error envelopes. |
+| `write_file_escape` | 例外 | the Python file tools resolve any path the process can reach (their only ceiling is a credential deny list), while the Go builtin toolbox is rooted at the session workspace and refuses escapes. Both answer plain text (is_error=false); the semantics differ by design. |
+| `pty_run_ok` | Python harness 注入口径 | the live loop injects its execution-context session_id over any tool argument named session_id (framework/loader/tool_registry.py::_inject_context), so terminal_pty_run always sees the hive session id and answers 'unknown session_id'. The Go port has no session_id context param, so it runs the command ({"output":"pty-hello\r\n",...}). |
+| `pty_close` | Python harness 注入口径 | same session_id injection as pty_run_ok — terminal_pty_close cannot address the opened session and answers 'unknown session_id'; Go closes it and returns exit_code/final_output. |
+| `pty_run_unknown` | Python harness 注入口径 | the injected hive session_id replaces the bogus literal, so the error cites session_<ID> instead of pty_doesnotexist. Go echoes the argument it received. |
+| `http_headers_ok` | Python harness 注入口径 | http_headers_scan is not registered in the queen chat surface (the capture session answers 'Unknown tool: http_headers_scan'); the tool module itself is compared against this Go result by raw/network-direct.json (direct invocation over the same fixture server). |
+| `http_headers_bare` | Python harness 注入口径 | http_headers_scan is not registered in the queen chat surface (the capture session answers 'Unknown tool: http_headers_scan'); the tool module itself is compared against this Go result by raw/network-direct.json (direct invocation over the same fixture server). |
 
 ## 6. 复现
 
@@ -157,6 +171,9 @@ uv run --no-project python go_hive/scripts/tool_output_golden.py report --check
   browser/vision/image 工具未覆盖。
 - Python 侧首个请求之后的 `search_tools` 装载差异使「未装载工具」这条路不可比
   （§5：两侧工具库不同）。
-- `terminal_exec` 的输出形状未对齐（terminal 车道契约），溢出信封未对齐
-  （设计不同）——两条都记录在案，留给后续车道。
-- 未验证 Anthropic 传输路径下的工具结果序列化（本次只走 OpenAI 兼容网关）。
+- **auto-shell 检测**：Go 把「贴附在词上的」元字符（如 `echo x >&2`）也路由到
+  bash，Python 只识别独立 token 元字符；场景改用两侧同为 direct exec 的输入。
+- **pty / http_headers**：Python harness 会把 execution-context `session_id`
+  注入覆盖同名工具参数、且 `http_headers_scan` 不在 queen 会话工具面，导致
+  这几条只能单侧记录（Go 侧另有 network_probe.py 直调对照）。
+- **`web_search`**：需 provider key，未验证。

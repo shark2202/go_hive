@@ -152,13 +152,13 @@ func (s *terminalOutputStore) evictLRULocked() {
 func (t *Toolbox) terminalOutputGet(ctx context.Context, input map[string]any) (Result, error) {
 	handle, ok := stringArg(input, "output_handle")
 	if !ok || handle == "" {
-		return terminalErr("terminal_output_get: output_handle is required"), nil
+		return terminalArgErr("terminal_output_get: output_handle is required"), nil
 	}
 	sinceOffset := 0
 	if v, present := input["since_offset"]; present && v != nil {
 		parsed, ok := intArg(input, "since_offset")
 		if !ok {
-			return terminalErr("terminal_output_get: since_offset must be an integer"), nil
+			return terminalArgErr("terminal_output_get: since_offset must be an integer"), nil
 		}
 		sinceOffset = parsed
 	}
@@ -169,7 +169,7 @@ func (t *Toolbox) terminalOutputGet(ctx context.Context, input map[string]any) (
 	if v, present := input["max_kb"]; present && v != nil {
 		parsed, ok := intArg(input, "max_kb")
 		if !ok {
-			return terminalErr("terminal_output_get: max_kb must be an integer"), nil
+			return terminalArgErr("terminal_output_get: max_kb must be an integer"), nil
 		}
 		maxKB = parsed
 	}

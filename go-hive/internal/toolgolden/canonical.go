@@ -77,6 +77,8 @@ var (
 	timeRe        = regexp.MustCompile(`\b\d{2}:\d{2}:\d{2}\b`)
 	unixRe        = regexp.MustCompile(`\b1[0-9]{9}\b`)
 	charCountRe   = regexp.MustCompile(`returned [\d,]+ characters`)
+	localURLRe    = regexp.MustCompile(`http://127\.0\.0\.1:\d+`)
+	ptySentinelRe = regexp.MustCompile(`__TERMINALTOOLS_PROMPT_[0-9a-f]+__`)
 	reminderRe    = regexp.MustCompile(`\n*<system-reminder>[\s\S]*?</system-reminder>\s*$`)
 	scratchHomeRe = regexp.MustCompile(`/tmp/[^\s"']*?/(?:python|go)-home`)
 	scratchWSRe   = regexp.MustCompile(`/tmp/[^\s"']*?/ws`)
@@ -166,7 +168,9 @@ func splitLeadingJSON(body string) (any, string, bool) {
 }
 
 func maskTree(key string, value any, opts Options) any {
-	if placeholder, masked := keyMasks[key]; masked {
+	// Null stays null: "no handle" / "no job_id" is part of the contract, and
+	// masking it would hide a type/shape difference.
+	if placeholder, masked := keyMasks[key]; masked && value != nil {
 		return placeholder
 	}
 	switch typed := value.(type) {
@@ -204,6 +208,8 @@ func maskText(text string, opts Options) string {
 	text = timeRe.ReplaceAllString(text, "<TIME>")
 	text = unixRe.ReplaceAllString(text, "<UNIX_TS>")
 	text = charCountRe.ReplaceAllString(text, "returned <CHARS> characters")
+	text = localURLRe.ReplaceAllString(text, "<LOCAL_URL>")
+	text = ptySentinelRe.ReplaceAllString(text, "<PTY_SENTINEL>")
 	text = scratchHomeRe.ReplaceAllString(text, "<HOME>")
 	text = scratchWSRe.ReplaceAllString(text, "<WS>")
 	return text

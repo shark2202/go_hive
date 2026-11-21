@@ -1,0 +1,1022 @@
+{
+ "schema_version": 1,
+ "note": "Real two-side failure-path + tool-error probes (Python reference vs go_hive target).",
+ "generated_at": "2026-11-21T18:03:25+08:00",
+ "reference": {
+  "name": "python",
+  "binary": "/Users/mac/hive/.venv/bin/hive",
+  "head": "4af5b3755f9f97c1305fe574055f09533675eb7e"
+ },
+ "target": {
+  "name": "go_hive",
+  "binary": "/Users/mac/hive/.wt/appearance-errors-formats/go_hive/go-hive/dist/hive-errfmt",
+  "head": "b79af538dc20b482ad477bef4066548dfb71a708"
+ },
+ "fixture": "同一夹具 HIVE_HOME 的逐字节副本（configuration.json + secrets/credential_key + agents/probe-agent + 一个 import upload）",
+ "counts": {
+  "http": {
+   "probes": 27,
+   "aligned": 27,
+   "value_diff": 0,
+   "shape_diff": 0,
+   "declared_notes": 26
+  },
+  "tools": {
+   "scenarios": 6,
+   "aligned": 6,
+   "different": 0,
+   "declared_notes": 3
+  },
+  "shape_diffs": 0,
+  "value_diffs": 0
+ },
+ "static_checks": {
+  "integration_unauthorized_strings": {
+   "python_unique": 23,
+   "go_unique": 23,
+   "common": 23,
+   "only_python": [],
+   "only_go": [],
+   "note": "静态对照（生产文件）；运行时只有凭据门控的 harness 工具可离线实测"
+  }
+ },
+ "probes": [
+  {
+   "id": "sessions_post_nonobject",
+   "label": "创建会话-非对象体",
+   "expect_status": 400,
+   "method": "POST",
+   "path": "/api/sessions",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "config_llm_invalid_json",
+   "label": "写回配置-非法 JSON",
+   "expect_status": 400,
+   "method": "PUT",
+   "path": "/api/config/llm",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "credentials_missing_fields",
+   "label": "保存凭据-缺字段",
+   "expect_status": 400,
+   "method": "POST",
+   "path": "/api/credentials",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "sentinel_telegram_empty",
+   "label": "Telegram 校验-空参",
+   "expect_status": 400,
+   "method": "POST",
+   "path": "/api/sentinel/telegram/validate",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error",
+     "ok"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error",
+     "ok"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "skills_patch_enabled_not_bool",
+   "label": "技能开关-类型错误",
+   "expect_status": 400,
+   "method": "PATCH",
+   "path": "/api/queen/queen_growth/skills/administrative-behavior-skill",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "agents_delete_missing_path",
+   "label": "删除 Agent-缺参数",
+   "expect_status": 400,
+   "method": "DELETE",
+   "path": "/api/agents",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "import_init_missing_total",
+   "label": "导入初始化-缺 total_bytes",
+   "expect_status": 400,
+   "method": "POST",
+   "path": "/api/colonies/import/init",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "import_chunk_bad_offset_value",
+   "label": "分块上传-offset 非整数",
+   "expect_status": 400,
+   "method": "PUT",
+   "path": "/api/colonies/import/chunk/0123456789abcdef?offset=abc",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "import_chunk_negative_offset",
+   "label": "分块上传-offset 为负",
+   "expect_status": 400,
+   "method": "PUT",
+   "path": "/api/colonies/import/chunk/0123456789abcdef?offset=-1",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "import_chunk_bad_upload_id",
+   "label": "分块上传-非法 upload_id",
+   "expect_status": 400,
+   "method": "PUT",
+   "path": "/api/colonies/import/chunk/NOPE?offset=0",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "colony_scaffold_bad_name",
+   "label": "Colony 名-非法字符",
+   "expect_status": 400,
+   "method": "POST",
+   "path": "/api/colonies/Bad-Name/scaffold",
+   "reference_status": 400,
+   "target_status": 400,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "agents_delete_framework",
+   "label": "删除框架 Agent",
+   "expect_status": 403,
+   "method": "DELETE",
+   "path": "/api/agents",
+   "reference_status": 403,
+   "target_status": 403,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "skill_put_body_framework",
+   "label": "改写框架技能正文",
+   "expect_status": 403,
+   "method": "PUT",
+   "path": "/api/queen/queen_growth/skills/administrative-behavior-skill/body",
+   "reference_status": 403,
+   "target_status": 403,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "session_missing",
+   "label": "会话不存在",
+   "expect_status": 404,
+   "method": "GET",
+   "path": "/api/sessions/session_20990101_000000_deadbeef",
+   "reference_status": 404,
+   "target_status": 404,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "session_tasks_missing",
+   "label": "会话不存在-任务",
+   "expect_status": 404,
+   "method": "GET",
+   "path": "/api/sessions/session_20990101_000000_deadbeef/tasks",
+   "reference_status": 404,
+   "target_status": 404,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error",
+     "session_id",
+     "tasks"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error",
+     "session_id",
+     "tasks"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "session_triggers_missing",
+   "label": "会话不存在-触发器",
+   "expect_status": 404,
+   "method": "GET",
+   "path": "/api/sessions/session_20990101_000000_deadbeef/triggers",
+   "reference_status": 404,
+   "target_status": 404,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "skill_missing",
+   "label": "技能不存在",
+   "expect_status": 404,
+   "method": "GET",
+   "path": "/api/skills/does-not-exist-probe",
+   "reference_status": 404,
+   "target_status": 404,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "credentials_missing",
+   "label": "凭据不存在",
+   "expect_status": 404,
+   "method": "GET",
+   "path": "/api/credentials/nope_probe",
+   "reference_status": 404,
+   "target_status": 404,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "queen_missing",
+   "label": "Queen 不存在",
+   "expect_status": 404,
+   "method": "GET",
+   "path": "/api/queen/queen_nope/overview",
+   "reference_status": 404,
+   "target_status": 404,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "mcp_health_missing",
+   "label": "MCP 服务器不存在",
+   "expect_status": 404,
+   "method": "POST",
+   "path": "/api/mcp/servers/nope/health",
+   "reference_status": 404,
+   "target_status": 404,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "code",
+     "error",
+     "fix",
+     "what",
+     "why"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "code",
+     "error",
+     "fix",
+     "what",
+     "why"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "attachment_missing",
+   "label": "附件不存在",
+   "expect_status": 404,
+   "method": "GET",
+   "path": "/api/sessions/session_20261121_175207_de82fcfd/attachment/nope.txt",
+   "reference_status": 404,
+   "target_status": 404,
+   "reference_ctype": "text/plain; charset=utf-8",
+   "target_ctype": "text/plain; charset=utf-8",
+   "reference_body": {
+    "form": "text",
+    "keys": null
+   },
+   "target_body": {
+    "form": "text",
+    "keys": null
+   },
+   "declared": [],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "import_chunk_unknown_upload",
+   "label": "分块上传-未知 upload_id",
+   "expect_status": 404,
+   "method": "PUT",
+   "path": "/api/colonies/import/chunk/0123456789abcdef?offset=0",
+   "reference_status": 404,
+   "target_status": 404,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "resolve_missed_no_colony",
+   "label": "未加载 Colony 的丢失决定",
+   "expect_status": 409,
+   "method": "POST",
+   "path": "/api/sessions/session_20261121_175207_de82fcfd/colony/resolve_missed",
+   "reference_status": 409,
+   "target_status": 409,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "import_chunk_offset_mismatch",
+   "label": "分块上传-offset 不匹配",
+   "expect_status": 409,
+   "method": "PUT",
+   "path": "/api/colonies/import/chunk/9b21716da5db4e61?offset=5",
+   "reference_status": 409,
+   "target_status": 409,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "declared",
+     "error",
+     "received"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "declared",
+     "error",
+     "received"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "import_finalize_incomplete",
+   "label": "导入完成-字节不齐",
+   "expect_status": 409,
+   "method": "POST",
+   "path": "/api/colonies/import/finalize/9b21716da5db4e61",
+   "reference_status": 409,
+   "target_status": 409,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error",
+     "received",
+     "total"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error",
+     "received",
+     "total"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "config_llm_list_body",
+   "label": "写回配置-非对象体",
+   "expect_status": 500,
+   "method": "PUT",
+   "path": "/api/config/llm",
+   "reference_status": 500,
+   "target_status": 500,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "id": "agents_delete_nonstring_path",
+   "label": "删除 Agent-路径类型错误",
+   "expect_status": 500,
+   "method": "DELETE",
+   "path": "/api/agents",
+   "reference_status": 500,
+   "target_status": 500,
+   "reference_ctype": "application/json; charset=utf-8",
+   "target_ctype": "application/json",
+   "reference_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "target_body": {
+    "form": "json",
+    "keys": [
+     "error"
+    ]
+   },
+   "declared": [
+    {
+     "kind": "content-type-parameter",
+     "note": "reference 'application/json; charset=utf-8' vs target 'application/json': charset parameter only"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  }
+ ],
+ "tools": [
+  {
+   "id": "read_file_missing",
+   "category": "read_file 不存在",
+   "tool": "read_file",
+   "compare": "text+is_error",
+   "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/missing.txt\"}",
+   "declared": [],
+   "diffs": [],
+   "reference": {
+    "is_error": false,
+    "text": "Error: File not found: /private/tmp/hive-errfmt-probe/ws/missing.txt"
+   },
+   "target": {
+    "is_error": false,
+    "text": "Error: File not found: /private/tmp/hive-errfmt-probe/ws/missing.txt"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "id": "edit_file_mismatch",
+   "category": "edit_file 不匹配（未读守卫）",
+   "tool": "edit_file",
+   "compare": "text+is_error",
+   "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/probe.txt\", \"old_string\": \"no-such-content-xyz\", \"new_string\": \"replacement\"}",
+   "declared": [],
+   "diffs": [],
+   "reference": {
+    "is_error": false,
+    "text": "Refusing to edit '/private/tmp/hive-errfmt-probe/ws/probe.txt': call read_file('/private/tmp/hive-errfmt-probe/ws/probe.txt') first so the harness can track its state before you edit it."
+   },
+   "target": {
+    "is_error": false,
+    "text": "Refusing to edit '/private/tmp/hive-errfmt-probe/ws/probe.txt': call read_file('/private/tmp/hive-errfmt-probe/ws/probe.txt') first so the harness can track its state before you edit it."
+   },
+   "verdict": "aligned"
+  },
+  {
+   "id": "edit_file_missing",
+   "category": "edit_file 不匹配（文件不存在）",
+   "tool": "edit_file",
+   "compare": "text+is_error",
+   "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/missing.txt\", \"old_string\": \"a\", \"new_string\": \"b\"}",
+   "declared": [],
+   "diffs": [],
+   "reference": {
+    "is_error": false,
+    "text": "Error: File not found: /private/tmp/hive-errfmt-probe/ws/missing.txt"
+   },
+   "target": {
+    "is_error": false,
+    "text": "Error: File not found: /private/tmp/hive-errfmt-probe/ws/missing.txt"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "id": "write_file_refusal",
+   "category": "write_file 覆盖守卫（同类失败路径）",
+   "tool": "write_file",
+   "compare": "text+is_error",
+   "arguments": "{\"path\": \"/private/tmp/hive-errfmt-probe/ws/probe.txt\", \"content\": \"clobbered\\n\"}",
+   "declared": [],
+   "diffs": [],
+   "reference": {
+    "is_error": false,
+    "text": "Refusing to overwrite '/private/tmp/hive-errfmt-probe/ws/probe.txt': call read_file('/private/tmp/hive-errfmt-probe/ws/probe.txt') first so the harness can track its state before you replace it. If you intend to discard the current contents, read it first to acknowledge what you are overwriting."
+   },
+   "target": {
+    "is_error": false,
+    "text": "Refusing to overwrite '/private/tmp/hive-errfmt-probe/ws/probe.txt': call read_file('/private/tmp/hive-errfmt-probe/ws/probe.txt') first so the harness can track its state before you replace it. If you intend to discard the current contents, read it first to acknowledge what you are overwriting."
+   },
+   "verdict": "aligned"
+  },
+  {
+   "id": "terminal_exec_nonzero",
+   "category": "terminal 非零退出",
+   "tool": "terminal_exec",
+   "compare": "exit_code+stderr",
+   "arguments": "{\"command\": \"sh -c 'echo out; echo err 1>&2; exit 7'\"}",
+   "declared": [
+    {
+     "kind": "envelope-form",
+     "note": "Python returns the terminal JSON envelope, Go returns the text report; terminal shape is a separate frozen contract (tool-output golden records it)."
+    },
+    {
+     "kind": "is_error",
+     "note": "reference carries failure in semantic_status=error (no ERROR: marker), target marks the result is_error=True."
+    }
+   ],
+   "diffs": [],
+   "reference_exit_code": 7,
+   "target_exit_code": 7,
+   "reference_semantic_status": "error",
+   "reference": {
+    "is_error": false,
+    "text": "{\"exit_code\": 7, \"stdout\": \"out\\n\", \"stderr\": \"err\\n\", \"stdout_truncated_bytes\": 0, \"stderr_truncated_bytes\": 0, \"runtime_ms\": 7, \"pid\": 89493, \"output_handle\": null, \"timed_out\": false, \"semantic_status\": \"error\", \"semantic_message\": \"Command failed with exit code 7\", \"warning\": null, \"auto_backgrounded\": false, \"job_id\": null, \"auto_shell\": false, \"shell_kind\": \"direct\"}"
+   },
+   "target": {
+    "is_error": true,
+    "text": "exit_code: 7\nauto_shell: true\nshell_kind: bash\nstdout:\nout\nstderr:\nerr"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "id": "image_generate_unauthorized",
+   "category": "connect 未授权（凭据未连接）",
+   "tool": "image_generate",
+   "compare": "error_message+keys",
+   "arguments": "{\"prompt\": \"probe\"}",
+   "declared": [
+    {
+     "kind": "extra-key",
+     "note": "target extra keys ['status'] (Go additive status field)"
+    }
+   ],
+   "diffs": [],
+   "reference": {
+    "is_error": false,
+    "text": "{\"error\": \"Image generation unavailable: missing Hive proxy token. Sign in to refresh credentials, then retry.\"}"
+   },
+   "target": {
+    "is_error": false,
+    "text": "{\"error\": \"Image generation unavailable: missing Hive proxy token. Sign in to refresh credentials, then retry.\", \"status\": 503}"
+   },
+   "verdict": "aligned"
+  }
+ ]
+}

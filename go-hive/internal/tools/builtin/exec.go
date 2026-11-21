@@ -27,23 +27,10 @@ const (
 	// terminalExecDrainGrace bounds the post-exit wait for the pipe pumps.
 	terminalExecDrainGrace = 2 * time.Second
 	// terminalExecTimeoutMessage is upstream's validation error verbatim.
-	terminalExecTimeoutMessage = "terminal_exec: timeout_sec and auto_background_after_sec must be finite and non-negative"
+	terminalExecTimeoutMessage = "timeout_sec and auto_background_after_sec must be finite and non-negative"
 	// terminalExecForegroundMessage is upstream's inline-budget error verbatim.
-	terminalExecForegroundMessage = "terminal_exec: Foreground wait must be at most 220 seconds; use auto_background_after_sec=30 or terminal_job_start for longer commands"
+	terminalExecForegroundMessage = "Foreground wait must be at most 220 seconds; use auto_background_after_sec=30 or terminal_job_start for longer commands"
 )
-
-// terminalExecEnvelope is the data one terminal_exec reply renders from.
-type terminalExecEnvelope struct {
-	exitCode  *int
-	timedOut  bool
-	stdout    []byte
-	stderr    []byte
-	maxBytes  int
-	autoShell bool
-	shellKind string
-	promoted  bool
-	jobID     string
-}
 
 // terminalExecArgs is one validated terminal_exec call.
 type terminalExecArgs struct {
@@ -90,6 +77,9 @@ func (t *Toolbox) terminalExec(ctx context.Context, input map[string]any) (Resul
 	if failed != nil {
 		return *failed, nil
 	}
+	if blocked := terminalCheckCommand(args.command); blocked != "" {
+		return terminalExecBlockedEnvelope(blocked), nil
+	}
 	proc, failed, err := t.terminalExecStart(args)
 	if err != nil {
 		return Result{}, err
@@ -107,15 +97,25 @@ func (t *Toolbox) terminalExec(ctx context.Context, input map[string]any) (Resul
 	case waitErr = <-proc.waited:
 	case <-timer.C:
 		if record, promoted := t.terminalExecPromote(proc, args); promoted {
-			return Result{Content: terminalRenderExecEnvelope(terminalExecEnvelope{
-				promoted:  true,
-				jobID:     record.JobID,
-				stdout:    proc.stdout.Tail(terminalExecPromotedTailBytes).Data,
-				stderr:    proc.stderr.Tail(terminalExecPromotedTailBytes).Data,
-				maxBytes:  args.maxOutputBytes,
-				autoShell: proc.autoShell,
-				shellKind: proc.spec.kind,
-			})}, nil
+			runtimeMS := int(time.Since(proc.started).Milliseconds())
+			jobID := record.JobID
+			pid := proc.cmd.Process.Pid
+			shellKind := proc.spec.kind
+			return terminalEncode(terminalExecEnvelopeResult(
+				args.command,
+				nil,
+				proc.stdout.Tail(terminalExecPromotedTailBytes).Data,
+				proc.stderr.Tail(terminalExecPromotedTailBytes).Data,
+				runtimeMS,
+				&pid,
+				false,
+				false,
+				args.maxOutputBytes,
+				true,
+				&jobID,
+				proc.autoShell,
+				&shellKind,
+			)), nil
 		}
 		terminalTerminateTree(proc.cmd, 2*time.Second)
 		timedOut = true
@@ -144,7 +144,7 @@ func (t *Toolbox) terminalExec(ctx context.Context, input map[string]any) (Resul
 func (t *Toolbox) terminalExecArgs(input map[string]any) (terminalExecArgs, *Result, error) {
 	command, ok := stringArg(input, "command")
 	if !ok || strings.TrimSpace(command) == "" {
-		failed := fail("terminal_exec: command is required")
+		failed := terminalExecErrorEnvelope("terminal_exec: command is required")
 		return terminalExecArgs{}, &failed, nil
 	}
 	args := terminalExecArgs{command: command}
@@ -153,7 +153,7 @@ func (t *Toolbox) terminalExecArgs(input map[string]any) (terminalExecArgs, *Res
 	// the first port advertised. Both accept fractional seconds.
 	timeoutSec, present, valid := terminalExecNumber(input, "timeout_sec", "timeout_seconds")
 	if present && !valid {
-		failed := fail(terminalExecTimeoutMessage)
+		failed := terminalExecErrorEnvelope(terminalExecTimeoutMessage)
 		return terminalExecArgs{}, &failed, nil
 	}
 	if !present {
@@ -161,14 +161,14 @@ func (t *Toolbox) terminalExecArgs(input map[string]any) (terminalExecArgs, *Res
 	}
 	autoBackgroundSec, present, valid := terminalExecNumber(input, "auto_background_after_sec")
 	if present && !valid {
-		failed := fail(terminalExecTimeoutMessage)
+		failed := terminalExecErrorEnvelope(terminalExecTimeoutMessage)
 		return terminalExecArgs{}, &failed, nil
 	}
 	if !present {
 		autoBackgroundSec = terminalExecAutoBackgroundDefault
 	}
 	if timeoutSec < 0 || autoBackgroundSec < 0 {
-		failed := fail(terminalExecTimeoutMessage)
+		failed := terminalExecErrorEnvelope(terminalExecTimeoutMessage)
 		return terminalExecArgs{}, &failed, nil
 	}
 	waits := make([]float64, 0, 2)
@@ -179,7 +179,7 @@ func (t *Toolbox) terminalExecArgs(input map[string]any) (terminalExecArgs, *Res
 		waits = append(waits, autoBackgroundSec)
 	}
 	if len(waits) == 0 || terminalMinWait(waits) > terminalExecInlineMaxSeconds {
-		failed := fail(terminalExecForegroundMessage)
+		failed := terminalExecErrorEnvelope(terminalExecForegroundMessage)
 		return terminalExecArgs{}, &failed, nil
 	}
 	args.timeoutSec = timeoutSec
@@ -189,7 +189,7 @@ func (t *Toolbox) terminalExecArgs(input map[string]any) (terminalExecArgs, *Res
 	args.shell = boolArgOr(input, "shell", false)
 	env, envOK := terminalEnvMap(input, "env")
 	if !envOK {
-		failed := fail("terminal_exec: env must map names to strings")
+		failed := terminalExecErrorEnvelope("terminal_exec: env must map names to strings")
 		return terminalExecArgs{}, &failed, nil
 	}
 	if principal, ok := stringArg(input, "crm_principal"); ok && strings.TrimSpace(principal) != "" {
@@ -205,7 +205,7 @@ func (t *Toolbox) terminalExecArgs(input map[string]any) (terminalExecArgs, *Res
 	if raw, present := input["stdin"]; present && raw != nil {
 		payload, ok := raw.(string)
 		if !ok {
-			failed := fail("terminal_exec: stdin must be a string")
+			failed := terminalExecErrorEnvelope("terminal_exec: stdin must be a string")
 			return terminalExecArgs{}, &failed, nil
 		}
 		args.stdinPayload, args.hasStdin = payload, true
@@ -218,7 +218,7 @@ func (t *Toolbox) terminalExecArgs(input map[string]any) (terminalExecArgs, *Res
 	if raw, present := input["max_output_kb"]; present && raw != nil {
 		kb, ok := intArg(input, "max_output_kb")
 		if !ok {
-			failed := fail("terminal_exec: max_output_kb must be an integer")
+			failed := terminalExecErrorEnvelope("terminal_exec: max_output_kb must be an integer")
 			return terminalExecArgs{}, &failed, nil
 		}
 		args.maxOutputBytes = max(1024, kb*1024)
@@ -248,7 +248,7 @@ func (t *Toolbox) terminalExecStart(args terminalExecArgs) (*terminalExecProcess
 			// Unbalanced quotes — almost certainly meant for the shell.
 			autoShell = true
 		case len(split) == 0:
-			failed := fail("terminal_exec: command was empty")
+			failed := terminalExecErrorEnvelope("command was empty")
 			return nil, &failed, nil
 		case terminalCommandNeedsShell(split):
 			autoShell = true
@@ -260,7 +260,7 @@ func (t *Toolbox) terminalExecStart(args terminalExecArgs) (*terminalExecProcess
 	if args.shell || autoShell {
 		resolved, err := terminalResolveShellSpec(true, "")
 		if err != nil {
-			failed := fail("terminal_exec: %v", err)
+			failed := terminalExecErrorEnvelope(err.Error())
 			return nil, &failed, nil
 		}
 		spec = resolved
@@ -315,10 +315,10 @@ func (t *Toolbox) terminalExecStart(args terminalExecArgs) (*terminalExecProcess
 			stdinWrite.Close()
 		}
 		if errors.Is(err, exec.ErrNotFound) || errors.Is(err, os.ErrNotExist) {
-			failed := fail("terminal_exec: command not found: %v", spawnArgv[0])
+			failed := terminalExecErrorEnvelope("command not found: " + spawnArgv[0])
 			return nil, &failed, nil
 		}
-		failed := fail("terminal_exec: spawn failed: %v", err)
+		failed := terminalExecErrorEnvelope("spawn failed: " + err.Error())
 		return nil, &failed, nil
 	}
 	if stdinRead != nil {
@@ -387,19 +387,24 @@ func terminalExecInlineResult(proc *terminalExecProcess, args terminalExecArgs, 
 	proc.stderr.Close()
 
 	exitCode := terminalExitCode(proc.cmd.ProcessState)
-	content := terminalRenderExecEnvelope(terminalExecEnvelope{
-		exitCode:  &exitCode,
-		timedOut:  timedOut,
-		stdout:    proc.stdout.Read(0, proc.stdout.TotalWritten()).Data,
-		stderr:    proc.stderr.Read(0, proc.stderr.TotalWritten()).Data,
-		maxBytes:  args.maxOutputBytes,
-		autoShell: proc.autoShell,
-		shellKind: proc.spec.kind,
-	})
-	if waitErr != nil && !timedOut && exitCode == 0 {
-		content += fmt.Sprintf("\nwait_error: %v", waitErr)
-	}
-	return Result{Content: content, IsError: timedOut || exitCode != 0}
+	pid := proc.cmd.Process.Pid
+	shellKind := proc.spec.kind
+	runtimeMS := int(time.Since(proc.started).Milliseconds())
+	return terminalEncode(terminalExecEnvelopeResult(
+		args.command,
+		&exitCode,
+		proc.stdout.Read(0, proc.stdout.TotalWritten()).Data,
+		proc.stderr.Read(0, proc.stderr.TotalWritten()).Data,
+		runtimeMS,
+		&pid,
+		timedOut,
+		exitCode < 0,
+		args.maxOutputBytes,
+		false,
+		nil,
+		proc.autoShell,
+		&shellKind,
+	))
 }
 
 // terminalExecNumber reads the first present numeric key. It reports
@@ -427,46 +432,6 @@ func terminalMinWait(waits []float64) float64 {
 		}
 	}
 	return smallest
-}
-
-// terminalRenderExecEnvelope renders the command envelope: exit status,
-// timeout/truncation flags and the output handle, then the captured streams.
-func terminalRenderExecEnvelope(env terminalExecEnvelope) string {
-	var b strings.Builder
-	if env.promoted {
-		b.WriteString("exit_code: none (running in background)\n")
-	} else if env.exitCode != nil {
-		fmt.Fprintf(&b, "exit_code: %d\n", *env.exitCode)
-	}
-	if env.timedOut {
-		b.WriteString("timed_out: true\n")
-	}
-	stdout, stdoutDropped := terminalTruncateStream(env.stdout, env.maxBytes)
-	stderr, stderrDropped := terminalTruncateStream(env.stderr, env.maxBytes)
-	if stdoutDropped > 0 || stderrDropped > 0 {
-		fmt.Fprintf(&b, "output_truncated: true (limit %d bytes per stream)\n", env.maxBytes)
-		if handle := terminalOutputs.Put(terminalCombinedOutput(env.stdout, env.stderr)); handle != "" {
-			fmt.Fprintf(&b, "output_handle: %s\n", handle)
-		}
-	}
-	if env.autoShell {
-		b.WriteString("auto_shell: true\n")
-	}
-	if env.shellKind != "" {
-		fmt.Fprintf(&b, "shell_kind: %s\n", env.shellKind)
-	}
-	if env.promoted {
-		b.WriteString("auto_backgrounded: true\n")
-		fmt.Fprintf(&b, "job_id: %s\n", env.jobID)
-	}
-	b.WriteString("stdout:\n")
-	b.Write(stdout)
-	if len(stdout) > 0 && !strings.HasSuffix(string(stdout), "\n") {
-		b.WriteByte('\n')
-	}
-	b.WriteString("stderr:\n")
-	b.Write(stderr)
-	return b.String()
 }
 
 // terminalTruncateStream caps one stream at maxBytes and reports how many

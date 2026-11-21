@@ -2,9 +2,9 @@ package builtin
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -209,7 +209,7 @@ func TestTerminalExecSessionCwdAndCwdOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if res.IsError || !strings.Contains(section(res.Content, "stdout:"), realRoot) {
+	if res.IsError || !strings.Contains(payloadString(t, decodeExecPayload(t, res.Content), "stdout"), realRoot) {
 		t.Fatalf("session_cwd result = %+v, want stdout in %s", res, realRoot)
 	}
 
@@ -221,7 +221,7 @@ func TestTerminalExecSessionCwdAndCwdOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute with cwd: %v", err)
 	}
-	if res.IsError || !strings.Contains(section(res.Content, "stdout:"), realSub) {
+	if res.IsError || !strings.Contains(payloadString(t, decodeExecPayload(t, res.Content), "stdout"), realSub) {
 		t.Fatalf("explicit cwd result = %+v, want stdout in %s", res, realSub)
 	}
 }
@@ -237,11 +237,12 @@ func TestTerminalExecAutoShellDetection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if res.IsError || !strings.Contains(res.Content, "auto_shell: true") || !strings.Contains(res.Content, "shell_kind: bash") {
+	pipeline := decodeExecPayload(t, res.Content)
+	if res.IsError || pipeline["auto_shell"] != true || pipeline["shell_kind"] != "bash" {
 		t.Fatalf("pipeline result = %+v, want auto_shell + bash", res)
 	}
-	if strings.TrimSpace(section(res.Content, "stdout:")) != "b" {
-		t.Fatalf("pipeline stdout = %q, want b", section(res.Content, "stdout:"))
+	if strings.TrimSpace(payloadString(t, pipeline, "stdout")) != "b" {
+		t.Fatalf("pipeline stdout = %q, want b", pipeline["stdout"])
 	}
 
 	// Semicolons attached to the preceding word are shell syntax too; the
@@ -250,7 +251,7 @@ func TestTerminalExecAutoShellDetection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute semicolons: %v", err)
 	}
-	if res.IsError || !strings.Contains(res.Content, "auto_shell: true") || !strings.Contains(res.Content, "hello") {
+	if res.IsError || decodeExecPayload(t, res.Content)["auto_shell"] != true || !strings.Contains(res.Content, "hello") {
 		t.Fatalf("semicolon result = %+v, want auto_shell and hello", res)
 	}
 
@@ -258,7 +259,8 @@ func TestTerminalExecAutoShellDetection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute plain argv: %v", err)
 	}
-	if strings.Contains(res.Content, "auto_shell:") || !strings.Contains(res.Content, "shell_kind: direct") {
+	plain := decodeExecPayload(t, res.Content)
+	if _, present := plain["auto_shell"].(bool); !present || plain["auto_shell"] != false || plain["shell_kind"] != "direct" {
 		t.Fatalf("plain argv result = %+v, want direct exec without auto_shell", res)
 	}
 
@@ -266,7 +268,8 @@ func TestTerminalExecAutoShellDetection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute shell=true: %v", err)
 	}
-	if strings.Contains(res.Content, "auto_shell:") || !strings.Contains(res.Content, "shell_kind: bash") {
+	explicit := decodeExecPayload(t, res.Content)
+	if explicit["auto_shell"] != false || explicit["shell_kind"] != "bash" {
 		t.Fatalf("shell=true result = %+v, want bash without auto_shell", res)
 	}
 }
@@ -286,7 +289,7 @@ func TestTerminalExecEnvStdinAndCrmPrincipal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute env: %v", err)
 	}
-	if res.IsError || strings.TrimSpace(section(res.Content, "stdout:")) != "from-env" {
+	if res.IsError || strings.TrimSpace(payloadString(t, decodeExecPayload(t, res.Content), "stdout")) != "from-env" {
 		t.Fatalf("env result = %+v, want stdout from-env", res)
 	}
 
@@ -297,7 +300,7 @@ func TestTerminalExecEnvStdinAndCrmPrincipal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute stdin: %v", err)
 	}
-	if res.IsError || strings.TrimSpace(section(res.Content, "stdout:")) != "stdin-payload" {
+	if res.IsError || strings.TrimSpace(payloadString(t, decodeExecPayload(t, res.Content), "stdout")) != "stdin-payload" {
 		t.Fatalf("stdin result = %+v, want stdout stdin-payload", res)
 	}
 
@@ -309,7 +312,7 @@ func TestTerminalExecEnvStdinAndCrmPrincipal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute crm_principal: %v", err)
 	}
-	if res.IsError || strings.TrimSpace(section(res.Content, "stdout:")) != "agent:test" {
+	if res.IsError || strings.TrimSpace(payloadString(t, decodeExecPayload(t, res.Content), "stdout")) != "agent:test" {
 		t.Fatalf("crm_principal result = %+v, want stdout agent:test", res)
 	}
 }
@@ -331,7 +334,7 @@ func TestTerminalExecLimitsReachChild(t *testing.T) {
 	if res.IsError {
 		t.Fatalf("limits result = %+v", res)
 	}
-	stdout := section(res.Content, "stdout:")
+	stdout := payloadString(t, decodeExecPayload(t, res.Content), "stdout")
 	if !strings.Contains(stdout, "5") || !strings.Contains(stdout, "128") {
 		t.Fatalf("limits stdout = %q, want cpu_sec=5 and nofile=128", stdout)
 	}
@@ -345,7 +348,7 @@ func TestTerminalExecLimitsReachChild(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute direct limits: %v", err)
 	}
-	if res.IsError || strings.TrimSpace(section(res.Content, "stdout:")) != "7" {
+	if res.IsError || strings.TrimSpace(payloadString(t, decodeExecPayload(t, res.Content), "stdout")) != "7" {
 		t.Fatalf("direct limits result = %+v, want stdout 7", res)
 	}
 }
@@ -369,16 +372,17 @@ func TestTerminalExecAutoPromotion(t *testing.T) {
 	if elapsed > time.Second {
 		t.Fatalf("auto-promotion took %s, want a prompt return past the budget", elapsed)
 	}
-	if !strings.Contains(res.Content, "auto_backgrounded: true") {
+	promoted := decodeExecPayload(t, res.Content)
+	if promoted["auto_backgrounded"] != true {
 		t.Fatalf("result = %+v, want auto_backgrounded", res)
 	}
-	match := regexp.MustCompile(`job_id: (job_[0-9a-f]+)`).FindStringSubmatch(res.Content)
-	if match == nil {
+	jobID, _ := promoted["job_id"].(string)
+	if !strings.HasPrefix(jobID, "job_") {
 		t.Fatalf("result = %+v, want a job_id", res)
 	}
 
 	logs, err := tb.Execute(context.Background(), ToolTerminalJobLogs, map[string]any{
-		"job_id":           match[1],
+		"job_id":           jobID,
 		"wait_until_exit":  true,
 		"wait_timeout_sec": 2,
 	})
@@ -404,15 +408,16 @@ func TestTerminalExecOutputHandleRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if res.IsError || !strings.Contains(res.Content, "output_truncated: true (limit 65536 bytes per stream)") {
-		t.Fatalf("result = %+v, want truncation at 64 KiB", res)
+	overflow := decodeExecPayload(t, res.Content)
+	if res.IsError || overflow["stdout_truncated_bytes"] != json.Number("234464") {
+		t.Fatalf("result = %+v, want truncation at 64 KiB (300000 produced, 64 KiB inline)", res)
 	}
-	match := regexp.MustCompile(`output_handle: (out_[0-9a-f]+)`).FindStringSubmatch(res.Content)
-	if match == nil {
+	handle, _ := overflow["output_handle"].(string)
+	if !strings.HasPrefix(handle, "out_") {
 		t.Fatalf("result = %+v, want an output_handle", res)
 	}
 	page, err := tb.Execute(context.Background(), ToolTerminalOutputGet, map[string]any{
-		"output_handle": match[1],
+		"output_handle": handle,
 		"max_kb":        64,
 	})
 	if err != nil {
@@ -446,7 +451,7 @@ func TestTerminalExecFractionalTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if !res.IsError || !strings.Contains(res.Content, "timed_out: true") {
+	if decodeExecPayload(t, res.Content)["timed_out"] != true {
 		t.Fatalf("result = %+v, want timed_out", res)
 	}
 }

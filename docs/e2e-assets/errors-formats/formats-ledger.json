@@ -1,0 +1,924 @@
+{
+ "schema_version": 1,
+ "note": "Time / ID / pagination / sort-format inventory, real two-side run.",
+ "generated_at": "2026-11-21T18:00:27+08:00",
+ "reference": {
+  "name": "python",
+  "head": "4af5b3755f9f97c1305fe574055f09533675eb7e",
+  "binary": "/Users/mac/hive/.venv/bin/hive"
+ },
+ "target": {
+  "name": "go_hive",
+  "head": "4af5b3755f9f97c1305fe574055f09533675eb7e",
+  "binary": "/Users/mac/hive/.wt/appearance-errors-formats/go_hive/go-hive/dist/hive-errfmt"
+ },
+ "settled_event_totals": {
+  "python": 20,
+  "go": 24
+ },
+ "counts": {
+  "time_fields": 11,
+  "time_class_diffs": 0,
+  "id_checks": 6,
+  "id_diffs": 1,
+  "pagination_checks": 9,
+  "pagination_diffs": 0,
+  "sort_checks": 6,
+  "sort_stability_diffs": 0,
+  "cross_side_order_diffs": 1
+ },
+ "time_fields": [
+  {
+   "endpoint": "sessions_list",
+   "field": "sessions[].loaded_at",
+   "python": {
+    "class": "epoch-seconds",
+    "sample": "1795255097.307787"
+   },
+   "go": {
+    "class": "epoch-seconds",
+    "sample": "1795255099.4788249"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "endpoint": "sessions_history",
+   "field": "sessions[].created_at",
+   "python": {
+    "class": "epoch-seconds",
+    "sample": "1795255098.9029582"
+   },
+   "go": {
+    "class": "epoch-seconds",
+    "sample": "1795255100.394494"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "endpoint": "sessions_history",
+   "field": "sessions[].last_active_at",
+   "python": {
+    "class": "epoch-seconds",
+    "sample": "1795255099.0734172"
+   },
+   "go": {
+    "class": "epoch-seconds",
+    "sample": "1795255100.4770286"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "endpoint": "session_detail",
+   "field": "entry_points[].next_fire_at",
+   "python": {
+    "class": "epoch-millis",
+    "sample": "1795258702899"
+   },
+   "go": {
+    "class": "epoch-millis",
+    "sample": "1795258705144"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "endpoint": "session_detail",
+   "field": "loaded_at",
+   "python": {
+    "class": "epoch-seconds",
+    "sample": "1795255097.307787"
+   },
+   "go": {
+    "class": "epoch-seconds",
+    "sample": "1795255099.4788249"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "endpoint": "session_snapshot",
+   "field": "last_event_at",
+   "python": {
+    "class": "iso8601-naive micros=6",
+    "sample": "2026-11-21T17:58:22.899479"
+   },
+   "go": {
+    "class": "iso8601-naive micros=6",
+    "sample": "2026-11-21T17:58:25.144902"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "endpoint": "session_snapshot",
+   "field": "last_queen_event_at",
+   "python": {
+    "class": "iso8601-naive micros=6",
+    "sample": "2026-11-21T17:58:22.899479"
+   },
+   "go": {
+    "class": "iso8601-naive micros=6",
+    "sample": "2026-11-21T17:58:25.144902"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "endpoint": "session_triggers",
+   "field": "triggers[].trigger_config.next_fire_at",
+   "python": {
+    "class": "epoch-millis",
+    "sample": "1795258702899"
+   },
+   "go": {
+    "class": "epoch-millis",
+    "sample": "1795258705144"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "endpoint": "session_events_history",
+   "field": "events[].timestamp",
+   "python": {
+    "class": "iso8601-naive micros=6",
+    "sample": "2026-11-21T17:58:17.814027"
+   },
+   "go": {
+    "class": "iso8601-naive micros=6",
+    "sample": "2026-11-21T17:58:19.507052"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "endpoint": "queen_overview",
+   "field": "sessions.first",
+   "python": {
+    "class": "date-only",
+    "sample": "2026-11-21"
+   },
+   "go": {
+    "class": "date-only",
+    "sample": "2026-11-21"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "endpoint": "colonies_tools_index",
+   "field": "colonies[].created_at",
+   "python": {
+    "class": "epoch-seconds",
+    "sample": "1795255102.895762"
+   },
+   "go": {
+    "class": "epoch-seconds",
+    "sample": "1795255105.128215"
+   },
+   "verdict": "aligned"
+  }
+ ],
+ "ids": [
+  {
+   "kind": "session_id",
+   "python": {
+    "sample": "session_20261121_175817_3bda34fd",
+    "pattern": "session_YYYYMMDD_HHMMSS_<8hex>"
+   },
+   "go": {
+    "sample": "session_20261121_175819_a610d5f8",
+    "pattern": "session_YYYYMMDD_HHMMSS_<8hex>"
+   },
+   "verdict": "aligned"
+  },
+  {
+   "kind": "colony_id",
+   "python": {
+    "status": 200,
+    "payload": {
+     "colony_id": "probe_colony",
+     "scaffolded": true
+    }
+   },
+   "go": {
+    "status": 200,
+    "payload": {
+     "colony_id": "probe_colony",
+     "scaffolded": true
+    }
+   },
+   "verdict": "aligned",
+   "note": "colony id 由客户端/目录名提供（[a-z0-9_]{1,64}），不是服务端生成"
+  },
+  {
+   "kind": "trigger",
+   "python": {
+    "status": 200,
+    "sample": {
+     "trigger_id": "user-probe-trigger"
+    }
+   },
+   "go": {
+    "status": 200,
+    "sample": {
+     "trigger_id": "user-probe-trigger"
+    }
+   },
+   "verdict": "aligned"
+  },
+  {
+   "kind": "event execution_id 形状（按事件类型）",
+   "python": {
+    "client_input_committed": {
+     "session-shaped": 1
+    },
+    "client_input_received": {
+     "session-shaped": 1
+    },
+    "client_input_requested": {
+     "session-shaped": 2
+    },
+    "client_output_delta": {
+     "session-shaped": 2
+    },
+    "context_usage_updated": {
+     "none": 2
+    },
+    "judge_verdict": {
+     "session-shaped": 1
+    },
+    "llm_turn_complete": {
+     "session-shaped": 2
+    },
+    "loop_state_changed": {
+     "session-shaped": 3
+    },
+    "node_loop_iteration": {
+     "session-shaped": 2
+    },
+    "node_loop_started": {
+     "session-shaped": 1
+    },
+    "queen_identity_selected": {
+     "none": 1
+    },
+    "reminder_injected": {
+     "session-shaped": 1
+    },
+    "session_title_updated": {
+     "none": 1
+    },
+    "trigger_activated": {
+     "none": 1
+    }
+   },
+   "go": {
+    "client_input_committed": {
+     "hex32": 1
+    },
+    "client_input_received": {
+     "session-shaped": 1
+    },
+    "client_input_requested": {
+     "session-shaped": 1,
+     "hex32": 1
+    },
+    "client_output_delta": {
+     "session-shaped": 1,
+     "hex32": 1
+    },
+    "context_usage_updated": {
+     "none": 2
+    },
+    "judge_verdict": {
+     "session-shaped": 1
+    },
+    "llm_turn_complete": {
+     "session-shaped": 1,
+     "hex32": 1
+    },
+    "loop_state_changed": {
+     "session-shaped": 1,
+     "hex32": 2
+    },
+    "node_loop_iteration": {
+     "session-shaped": 1,
+     "hex32": 1
+    },
+    "node_loop_started": {
+     "session-shaped": 1,
+     "hex32": 1
+    },
+    "queen_identity_selected": {
+     "none": 1
+    },
+    "reminder_injected": {
+     "session-shaped": 1
+    },
+    "session_title_updated": {
+     "none": 1
+    },
+    "trigger_activated": {
+     "none": 1
+    }
+   },
+   "verdict": "diff",
+   "reference_only_event_types": [],
+   "target_only_event_types": [
+    "execution_completed",
+    "execution_started",
+    "node_loop_completed"
+   ],
+   "diffs": [
+    {
+     "event_type": "client_input_committed",
+     "reference": {
+      "session-shaped": 1
+     },
+     "target": {
+      "hex32": 1
+     }
+    },
+    {
+     "event_type": "client_input_requested",
+     "reference": {
+      "session-shaped": 2
+     },
+     "target": {
+      "session-shaped": 1,
+      "hex32": 1
+     }
+    },
+    {
+     "event_type": "client_output_delta",
+     "reference": {
+      "session-shaped": 2
+     },
+     "target": {
+      "session-shaped": 1,
+      "hex32": 1
+     }
+    },
+    {
+     "event_type": "llm_turn_complete",
+     "reference": {
+      "session-shaped": 2
+     },
+     "target": {
+      "session-shaped": 1,
+      "hex32": 1
+     }
+    },
+    {
+     "event_type": "loop_state_changed",
+     "reference": {
+      "session-shaped": 3
+     },
+     "target": {
+      "session-shaped": 1,
+      "hex32": 2
+     }
+    },
+    {
+     "event_type": "node_loop_iteration",
+     "reference": {
+      "session-shaped": 2
+     },
+     "target": {
+      "session-shaped": 1,
+      "hex32": 1
+     }
+    },
+    {
+     "event_type": "node_loop_started",
+     "reference": {
+      "session-shaped": 1
+     },
+     "target": {
+      "session-shaped": 1,
+      "hex32": 1
+     }
+    }
+   ],
+   "note": "公共事件类型上 execution_id 的形状（session 形态 / 32hex / 无）逐类型比较；两侧独有的帧类型单列，不计入形状差异"
+  },
+  {
+   "kind": "event correlation_id",
+   "python": {
+    "hex32": 2
+   },
+   "go": {
+    "hex32": 2
+   },
+   "verdict": "aligned"
+  },
+  {
+   "kind": "event seq",
+   "python": {
+    "count": 21,
+    "contiguous_from_1": true,
+    "type": "int"
+   },
+   "go": {
+    "count": 25,
+    "contiguous_from_1": true,
+    "type": "int"
+   },
+   "verdict": "aligned"
+  }
+ ],
+ "pagination": [
+  {
+   "check": "page1",
+   "reference": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 2,
+    "total": 21,
+    "returned": 2,
+    "events_len": 2,
+    "start_index": 20,
+    "start_offset": 6383,
+    "has_more_older": true,
+    "problems": []
+   },
+   "target": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 2,
+    "total": 25,
+    "returned": 2,
+    "events_len": 2,
+    "start_index": 24,
+    "start_offset": 6895,
+    "has_more_older": true,
+    "problems": []
+   },
+   "declared": [
+    {
+     "kind": "event-count",
+     "note": "event totals differ (reference 21 vs target 25); page metadata values follow the on-disk event count, not the paging contract"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "check": "page2",
+   "reference": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 2,
+    "total": -1,
+    "returned": 2,
+    "events_len": 2,
+    "start_index": 18,
+    "start_offset": 5846,
+    "has_more_older": true,
+    "problems": []
+   },
+   "target": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 2,
+    "total": -1,
+    "returned": 2,
+    "events_len": 2,
+    "start_index": 22,
+    "start_offset": 6340,
+    "has_more_older": true,
+    "problems": []
+   },
+   "declared": [],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "check": "limit_absent",
+   "reference": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 500,
+    "total": 21,
+    "returned": 21,
+    "events_len": 21,
+    "start_index": 1,
+    "start_offset": 0,
+    "has_more_older": false,
+    "problems": []
+   },
+   "target": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 500,
+    "total": 25,
+    "returned": 25,
+    "events_len": 25,
+    "start_index": 1,
+    "start_offset": 0,
+    "has_more_older": false,
+    "problems": []
+   },
+   "declared": [
+    {
+     "kind": "event-count",
+     "note": "event totals differ (reference 21 vs target 25); page metadata values follow the on-disk event count, not the paging contract"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "check": "limit_bad",
+   "reference": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 500,
+    "total": 21,
+    "returned": 21,
+    "events_len": 21,
+    "start_index": 1,
+    "start_offset": 0,
+    "has_more_older": false,
+    "problems": []
+   },
+   "target": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 500,
+    "total": 25,
+    "returned": 25,
+    "events_len": 25,
+    "start_index": 1,
+    "start_offset": 0,
+    "has_more_older": false,
+    "problems": []
+   },
+   "declared": [
+    {
+     "kind": "event-count",
+     "note": "event totals differ (reference 21 vs target 25); page metadata values follow the on-disk event count, not the paging contract"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "check": "limit_zero",
+   "reference": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 500,
+    "total": 21,
+    "returned": 21,
+    "events_len": 21,
+    "start_index": 1,
+    "start_offset": 0,
+    "has_more_older": false,
+    "problems": []
+   },
+   "target": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 500,
+    "total": 25,
+    "returned": 25,
+    "events_len": 25,
+    "start_index": 1,
+    "start_offset": 0,
+    "has_more_older": false,
+    "problems": []
+   },
+   "declared": [
+    {
+     "kind": "event-count",
+     "note": "event totals differ (reference 21 vs target 25); page metadata values follow the on-disk event count, not the paging contract"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "check": "limit_negative",
+   "reference": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 1,
+    "total": 21,
+    "returned": 1,
+    "events_len": 1,
+    "start_index": 21,
+    "start_offset": 6716,
+    "has_more_older": true,
+    "problems": []
+   },
+   "target": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 1,
+    "total": 25,
+    "returned": 1,
+    "events_len": 1,
+    "start_index": 25,
+    "start_offset": 7148,
+    "has_more_older": true,
+    "problems": []
+   },
+   "declared": [
+    {
+     "kind": "event-count",
+     "note": "event totals differ (reference 21 vs target 25); page metadata values follow the on-disk event count, not the paging contract"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "check": "limit_huge",
+   "reference": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 10000,
+    "total": 21,
+    "returned": 21,
+    "events_len": 21,
+    "start_index": 1,
+    "start_offset": 0,
+    "has_more_older": false,
+    "problems": []
+   },
+   "target": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 10000,
+    "total": 25,
+    "returned": 25,
+    "events_len": 25,
+    "start_index": 1,
+    "start_offset": 0,
+    "has_more_older": false,
+    "problems": []
+   },
+   "declared": [
+    {
+     "kind": "event-count",
+     "note": "event totals differ (reference 21 vs target 25); page metadata values follow the on-disk event count, not the paging contract"
+    }
+   ],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "check": "before_offset_zero",
+   "reference": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 5,
+    "total": -1,
+    "returned": 0,
+    "events_len": 0,
+    "start_index": 1,
+    "start_offset": 0,
+    "has_more_older": false,
+    "problems": []
+   },
+   "target": {
+    "keys": [
+     "events",
+     "has_more_older",
+     "limit",
+     "returned",
+     "session_id",
+     "start_index",
+     "start_offset",
+     "total",
+     "truncated"
+    ],
+    "limit": 5,
+    "total": -1,
+    "returned": 0,
+    "events_len": 0,
+    "start_index": 1,
+    "start_offset": 0,
+    "has_more_older": false,
+    "problems": []
+   },
+   "declared": [],
+   "diffs": [],
+   "verdict": "aligned"
+  },
+  {
+   "check": "page_stitching",
+   "reference": {
+    "page2_total_is_minus_one": true,
+    "page2_start_index_steps_back": true,
+    "page2_has_more_older_matches_offset": true
+   },
+   "target": {
+    "page2_total_is_minus_one": true,
+    "page2_start_index_steps_back": true,
+    "page2_has_more_older_matches_offset": true
+   },
+   "declared": [],
+   "diffs": [],
+   "verdict": "aligned"
+  }
+ ],
+ "sorting": [
+  {
+   "endpoint": "sessions_list",
+   "identity_key": "session_id",
+   "python_stable": true,
+   "go_stable": true,
+   "python_count": 3,
+   "go_count": 3,
+   "python_order": "loaded_at asc",
+   "go_order": "loaded_at asc",
+   "order_same": true,
+   "set_same": null,
+   "note": "会话 id 逐侧生成，只核对排序方向"
+  },
+  {
+   "endpoint": "sessions_history",
+   "identity_key": "session_id",
+   "python_stable": true,
+   "go_stable": true,
+   "python_count": 3,
+   "go_count": 3,
+   "python_order": "session_id desc",
+   "go_order": "session_id desc",
+   "order_same": true,
+   "set_same": null,
+   "note": "会话 id 逐侧生成，只核对排序方向"
+  },
+  {
+   "endpoint": "skills",
+   "identity_key": "name",
+   "python_stable": true,
+   "go_stable": true,
+   "python_count": 195,
+   "go_count": 195,
+   "order_same": true,
+   "set_same": true
+  },
+  {
+   "endpoint": "queen_profiles",
+   "identity_key": "id",
+   "python_stable": true,
+   "go_stable": true,
+   "python_count": 13,
+   "go_count": 13,
+   "order_same": true,
+   "set_same": true
+  },
+  {
+   "endpoint": "credentials_specs",
+   "identity_key": "credential_id",
+   "python_stable": true,
+   "go_stable": true,
+   "python_count": 115,
+   "go_count": 115,
+   "order_same": false,
+   "set_same": true
+  },
+  {
+   "endpoint": "colonies_tools_index",
+   "identity_key": "name",
+   "python_stable": true,
+   "go_stable": true,
+   "python_count": 1,
+   "go_count": 1,
+   "order_same": true,
+   "set_same": true
+  }
+ ]
+}

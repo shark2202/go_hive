@@ -220,3 +220,48 @@ func TestIntentForTool(t *testing.T) {
 		t.Fatalf("empty-reasoning intent = %q", got)
 	}
 }
+
+// TestIntentJSONMatchesPythonDumps pins the args rendering inside the intent:
+// Python's json.dumps defaults (", " / ": " separators, ensure_ascii) so the
+// vision model receives the same prompt text from either implementation.
+//
+// Parity: framework/agent_loop/internals/vision_fallback.py::extract_intent_for_tool
+func TestIntentJSONMatchesPythonDumps(t *testing.T) {
+	cases := []struct {
+		name string
+		args map[string]any
+		want string
+	}{
+		{
+			name: "single key keeps python spacing",
+			args: map[string]any{"paths": []any{"/tmp/a.png"}},
+			want: "Called: attach_file({\"paths\": [\"/tmp/a.png\"]})\n\nReasoning before call:\n<no preceding reasoning>",
+		},
+		{
+			name: "non-ascii is escaped, angle brackets are not",
+			args: map[string]any{"note": "中文 <&>", "paths": []any{"/tmp/截图.png"}},
+			want: "Called: attach_file({\"note\": \"\\u4e2d\\u6587 <&>\", \"paths\": [\"/tmp/\\u622a\\u56fe.png\"]})\n\nReasoning before call:\n<no preceding reasoning>",
+		},
+		{
+			// Go maps lose insertion order, so the encoder sorts keys; upstream
+			// preserves the model's order (see docs/vision-caption-parity.md).
+			name: "sorted keys, python scalars",
+			args: map[string]any{"z": nil, "b": true, "n": float64(10), "f": 1.5},
+			want: "Called: tool({\"b\": true, \"f\": 1.5, \"n\": 10, \"z\": null})\n\nReasoning before call:\n<no preceding reasoning>",
+		},
+		{
+			name: "control characters use json shortcuts",
+			args: map[string]any{"text": "a\tb\nc\"d\\e"},
+			want: "Called: tool({\"text\": \"a\\tb\\nc\\\"d\\\\e\"})\n\nReasoning before call:\n<no preceding reasoning>",
+		},
+	}
+	for _, tc := range cases {
+		name := "attach_file"
+		if tc.name != "single key keeps python spacing" && tc.name != "non-ascii is escaped, angle brackets are not" {
+			name = "tool"
+		}
+		if got := IntentForTool(name, tc.args, nil); got != tc.want {
+			t.Fatalf("%s: intent =\n%q\nwant\n%q", tc.name, got, tc.want)
+		}
+	}
+}

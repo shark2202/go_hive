@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hive-cred：按需取用凭据的 CLI（Python ⇄ go_hive）</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1000px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g4,.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g4,.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:820px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Credentials CLI</div><h1>hive-cred：<span>按需取用凭据</span></h1>
+<p class="lede">hive-cred 是给脚本（以及经 <code>terminal_exec</code> 调它的 agent）用的 CLI：<b>在用到的那一刻现取一张新鲜凭据</b>，值只在 stdout，不进对话、不落长期文件；OAuth 过期会先刷新。本页记录它的设计语义、命令、Python 源码位置、Go 移植差异，以及一个必须知道的安全边界。</p>
+<div class="meta"><span>生成：<b>2026-11-21 00:49 CST</b></span><span>HEAD：<b>32092445</b></span><span>Go 版本：<b>1.0.26-go.1</b></span><span>证据：<b>CLI help + 源码 + 实测 browse</b></span></div>
+<div class="toc"><a href="#what">是什么</a><a href="#why">为什么</a><a href="#usage">命令</a><a href="#semantics">语义</a><a href="#python">Python 源码</a><a href="#go">Go 移植</a><a href="#security">安全边界</a><a href="#evidence">复现</a><a href="#refs">相关页</a></div></header>
+
+<section id="what"><h2><span class="num">00</span>是什么（一句话）</h2>
+<div class="grid g4">
+<div class="card"><div class="k">取用时机</div><div class="v">调用时</div><div class="d">不是脚本开头取一次；官方建议每次请求前调用</div></div>
+<div class="card"><div class="k">值是否缓存</div><div class="v">不缓存</div><div class="d">每次走 runtime 的凭据库；OAuth 先刷新</div></div>
+<div class="card"><div class="k">输出面</div><div class="v">stdout 只有值</div><div class="d"><code>--json</code> 才给信封（带 expires_at）</div></div>
+<div class="card"><div class="k">落盘</div><div class="v">无长期文件</div><div class="d">脚本持有到进程结束；store 本身仍是加密落盘</div></div>
+</div>
+<div class="callout info"><b>“瞬时”要精确：</b>它<b>不生成</b>一次性 token；它返回<b>当前有效的凭据值</b>（OAuth access token 过期会先刷新）。值的生命周期由 provider 决定（如 Google access token 约 1 小时），所以必须“用前现取”，而不是“取一次用一天”。</div>
+</section>
+
+<section id="why"><h2><span class="num">01</span>为什么存在</h2>
+<p>旧路径只有一个：<code>credentials reveal</code> —— 把明文 OAuth token 放进对话，agent 再粘进 <code>/tmp/send_*.py</code>。后果是：值进了日志/转录，token 一过期脚本就 401，一个长会话里反复 reveal。hive-cred 把方向反过来：</p>
+<pre># 旧：值进对话（已移除）
+TOK=&lt;agent 从 reveal 结果里复制&gt;
+
+# 新：脚本在用到时自己取
+TOK=$(hive-cred token google --account email3)
+curl -H "Authorization: Bearer ***" https://gmail.googleapis.com/...</pre>
+<p>配套改动（v1.0.6 release notes）：<code>credentials</code> 工具只保留 <code>collect</code>/<code>attach</code>/<code>detach</code>；<code>browse</code>/<code>inspect</code>/<code>reveal</code> 动作改成“回复你要跑的命令”；queen 的 <code>list_credentials</code> 删除，由 <code>hive-cred browse</code> 取代。</p>
+</section>
+
+<section id="usage"><h2><span class="num">02</span>命令</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">命令</th><th>作用</th><th style="width:26%">输出</th></tr></thead><tbody>
+<tr><td><code>hive-cred token &lt;id&gt; [--account ALIAS] [--key NAME] [--json]</code></td><td>打印新鲜值；OAuth token 过期会先刷新</td><td>默认 stdout <b>只有值</b>；<code>--json</code> 给 <code>value/expires_at/expires_in_seconds</code></td></tr>
+<tr><td><code>hive-cred browse [query] [--json]</code></td><td>已连接账号 + 可连接 provider</td><td><b>只有元数据</b>（别名/身份），无值</td></tr>
+<tr><td><code>hive-cred inspect &lt;id&gt; [--account ALIAS] [--json]</code></td><td>某凭据的账号、键名、类型</td><td>无值</td></tr>
+</tbody></table></div>
+<pre># 典型用法（每次请求前取）
+TOK=$(hive-cred token google --account email3)
+curl -H "Authorization: Bearer $TOK" ...
+
+# 看能连什么（安全，可给 agent 看）
+hive-cred browse --json
+hive-cred inspect google --account email3 --json</pre>
+<p class="sub">退出码：校验错误/找不到/需重连/不可用分别有稳定码（Python <code>EXIT_UNAVAILABLE</code>、<code>EXIT_REAUTH</code>；Go 走 tracker 的 <code>validation</code>/<code>not_found</code>/<code>reauth_required</code>/<code>unavailable</code>）。</p>
+</section>
+
+<section id="semantics"><h2><span class="num">03</span>语义细节</h2>
+<ul>
+<li><b>解析顺序</b>（Python <code>resolve.py::resolve_secret</code>）：本地已收集账号（LocalCredentialRegistry）→ 加密 store；命中 store 时用 <code>get_credential(..., raise_on_refresh_failure=True)</code>，即 <b>refresh-on-access</b>。</li>
+<li><b>刷新失败</b>：返回 <code>reauth_required</code>（“expired and could not be refreshed. The user must reconnect it; do not retry.”），不会给空值。</li>
+<li><b>超出/过期信息</b>：<code>--json</code> 带 <code>expires_at</code> 与 <code>expires_in_seconds</code>，调用者可据此决定何时再取。</li>
+<li><b>stdout 纯净</b>：Python <code>_render</code> 只打印值；日志走 <code>HIVE_CRED_LOG</code> 文件（否则 NullHandler），避免污染 <code>$(...)</code>。</li>
+<li><b>多账号</b>：同一 provider 多账号时必须 <code>--account</code>；<code>browse</code> 给出别名。</li>
+<li><b>谁能用</b>：人类脚本；agent 经 <code>terminal_exec</code>（queen/worker 提示词明确要求这样做）。</li>
+</ul>
+</section>
+
+<section id="python"><h2><span class="num">04</span>Python 源码地图</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">文件</th><th>职责</th></tr></thead><tbody>
+<tr><td><code>core/framework/credentials/cli.py</code></td><td>CLI 本体：参数、<code>token/browse/inspect</code>、<code>_render</code>（stdout 只有值）、日志重定向、退出码；文件头 docstring 就是设计说明</td></tr>
+<tr><td><code>core/pyproject.toml:44</code></td><td>console script：<code>hive-cred = "framework.credentials.cli:main"</code></td></tr>
+<tr><td><code>core/framework/credentials/resolve.py</code></td><td><code>resolve_secret</code>：本地账号 → store；refresh-on-access；<code>SecretNotFound</code>/<code>CredentialExpiredError</code></td></tr>
+<tr><td><code>core/framework/credentials/store.py</code></td><td>凭据库：provider 生命周期（refresh/validate），<code>auto_refresh=True</code> 默认</td></tr>
+<tr><td><code>core/framework/credentials/storage.py</code>、<code>key_storage.py</code></td><td>加密落盘；<code>HIVE_CREDENTIAL_KEY</code> 解析（env → secrets 文件 → shell 配置）并写回 <code>os.environ</code></td></tr>
+<tr><td><code>core/framework/credentials/catalog.py</code></td><td><code>browse</code>/<code>inspect</code> 的元数据渲染（永远不含值）</td></tr>
+<tr><td><code>tools/src/aden_tools/credentials/store_adapter.py:120</code></td><td><code>CredentialStoreAdapter</code>：CLI 与工具共用的适配器</td></tr>
+<tr><td><code>core/framework/agents/queen/worker_definition.py:174</code>、<code>agents/queen/nodes/__init__.py:308-315</code></td><td>提示词层：教 queen/worker 用 <code>TOK=$(hive-cred token ...)</code>，并说明“过期会 401，必须用前取”</td></tr>
+<tr><td><code>docs/releases/v1.0.6.md</code></td><td>发布说明：值不过对话；<code>reveal</code> 退役；<code>list_credentials</code> 删除</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="go"><h2><span class="num">05</span>Go 移植与差异</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">层</th><th style="width:36%">Python</th><th>go_hive</th></tr></thead><tbody>
+<tr><td>入口</td><td><code>hive-cred</code> console script</td><td><code>cmd/hive-cred/main.go</code>（12 行）→ <code>internal/cli/cred.go</code>（<code>// Parity: framework/credentials/cli.py</code>）</td></tr>
+<tr><td>命令</td><td><code>token</code>/<code>browse</code>/<code>inspect</code></td><td>同名三命令；<code>--json</code>/<code>--account</code>/<code>--key</code> 同名</td></tr>
+<tr><td>解析</td><td><code>resolve_secret</code> + store 适配器</td><td><code>credentials.ResolveSecret</code>；<code>SecretNotFound</code>/<code>CredentialExpiredError</code> 同语义，错误码走 tracker</td></tr>
+<tr><td>密钥</td><td><code>HIVE_CREDENTIAL_KEY</code>（env → secrets 文件 → shell）</td><td><code>internal/credentials/keys.go:28-45</code> 同顺序，并持久化到 <code>$HIVE_HOME/secrets/credential_key</code></td></tr>
+<tr><td>额外机制</td><td><b>无</b>（工具在调用时用 adapter 解析）</td><td><b>envsync（Go-only，Parity-exempt）</b>：serve 启动时（<code>cli/loader.go:280</code>）和每次凭据写入后，把 store 值按 spec 的 <code>env_var</code> 用 <code>os.Setenv</code> 镜像进进程环境，供读 <code>os.Getenv</code> 的移植工具使用</td></tr>
+<tr><td>envsync 规则</td><td>—</td><td>已有非空 env 不覆盖；只刷新自己上次写入且未被改动的值；空值视为未设置；无密钥时整段跳过；日志只记数量/变量名，不记值</td></tr>
+</tbody></table></div>
+<div class="callout"><b>一句话：</b>hive-cred 是“<b>拉</b>”（脚本按需取）；Go 的 envsync 是“<b>推</b>”（启动/写入时把 store 灌进进程 env）。两者互补，但 Python 只有“拉”，没有“推”。</div>
+</section>
+
+<section id="security"><h2><span class="num">06</span>安全边界（必须知道）</h2>
+<ul>
+<li><b>它保护什么</b>：值不进入模型上下文/对话转录；不落长期文件；<code>browse</code>/<code>inspect</code> 永远只给元数据；刷新失败不会产出空值或旧值。</li>
+<li><b>它不保护什么</b>：调用它的脚本/进程能看到值；如果脚本把值写进文件或日志，hive-cred 管不了。</li>
+<li><b>Go 的额外暴露面</b>：envsync 注入的是<b>服务进程环境</b>，而 <code>terminal_exec</code> 子进程继承整个环境（只剥 <code>ZDOTDIR</code>/<code>ZSH_*</code>，见 Go <code>internal/tools/builtin/terminal_guard.go:126-148</code>、Python <code>tools/src/terminal_tools/common/limits.py:204-214</code>）。因此在 Go 上，store 里已被注入的凭据对 agent 的 shell 子进程可见（跑 <code>env</code> 即可）。Python 不把 vendor 凭据放进 env，这个暴露面不存在。</li>
+<li><b>加固方向</b>：terminal 子进程 env 过滤凭据变量（仅保留 <code>hive-cred</code> 解密所需的密钥），或让 Go 工具也改走按需解析，撤掉 envsync。</li>
+</ul>
+</section>
+
+<section id="evidence"><h2><span class="num">07</span>复现与证据</h2>
+<pre># Python 侧
+uv run hive-cred --help
+uv run hive-cred token &lt;id&gt; --account &lt;alias&gt; --json
+
+# Go 侧（本机实测）
+cd go_hive/go-hive && go build -o hive-cred ./cmd/hive-cred
+./hive-cred --help        # token / browse / inspect 三命令
+HIVE_HOME=~/.hive-go ./hive-cred browse --json
+# =&gt; {"ok":true,"connected":[],"connectable":[],"connectable_truncated":0}
+
+# 源码
+sed -n '1,40p' core/framework/credentials/cli.py      # 设计说明
+sed -n '60,110p' core/framework/credentials/resolve.py # refresh-on-access</pre>
+</section>
+
+<section id="refs"><h2><span class="num">08</span>相关页</h2>
+<div class="callout info"><a href="environment-variables.html">环境变量依赖</a>（凭据 env 与 envsync 的变量面）· <a href="module-interfaces.html">接口不变量</a> · <a href="tool-parity-matrix.html">工具矩阵</a> · <a href="surface-tracking-matrix.html">外观矩阵</a> · <a href="terminal-tools.html">终端工具</a>（terminal_exec 的 env 继承）· <a href="browser-bridge.html">Browser Bridge</a>。</div>
+</section>
+
+<footer>生成：2026-11-21 00:49 CST · HEAD <code>32092445</code> · 依据：<code>core/framework/credentials/cli.py</code> docstring + resolve/store/catalog 源码 + Go <code>internal/cli/cred.go</code>/<code>internal/credentials</code> + 本机 CLI 实测 · 口径：只描述已核对的代码行为，不把 envsync 的“推”混同为 hive-cred 的“拉”。</footer>
+</div></body></html>

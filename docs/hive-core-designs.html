@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive 核心设计与实现调研 — Queen / Worker / Colony / Reminder / Memory / Judge</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:32px;line-height:1.22;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1020px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:24px 0 8px;color:#cfdae6} h4{font-size:13.5px;margin:18px 0 6px;color:#b9c7d6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g4,.g3,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:20px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+figure.diagram{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:16px 0}
+figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){.tablewrap table{min-width:760px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Core Design Research</div><h1>Hive 核心设计与实现调研：<span>Queen · Worker · Colony · Reminder · Memory · Judge</span></h1>
+<p class="lede">对 <b>Hive 上游（Python，1.0.14）</b> 自身的核心机制做一次源码级调研（六个主干机制 + 一条停车/唤醒链路）：它们<b>是什么设计</b>（对照仓库内 <code>docs/key_concepts/</code> 的原始设计文档）、<b>怎么实现</b>（代码文件 + 行号 + 关键常量），以及设计文档与代码之间已发现的偏差。全页证据来自本机 checkout 的 <code>core/framework</code> 与 <code>docs/</code>，不引用二手描述。</p>
+<div class="meta"><span>调研时间：<b>2026-11-21 15:59 CST</b></span><span>更新：<b>17:34 CST</b>（增补 §07 停车与唤醒）</span><span>上游：<b>hive 1.0.14（core 树）</b></span><span>键据：<b>源码 + key_concepts + 测试文件</b></span><span>范围：<b>Queen / Worker / Colony / Reminder / Memory / Judge / Park / Sentinel</b></span></div>
+<div class="toc"><a href="#overview">总览</a><a href="#queen">Queen</a><a href="#worker">Worker</a><a href="#colony">Colony</a><a href="#reminder">Reminder</a><a href="#memory">Memory</a><a href="#judge">Judge</a><a href="#park">停车与唤醒</a><a href="#coupling">机制咬合</a><a href="#drift">文档↔代码偏差</a><a href="#evidence">证据与复现</a><a href="#gohive">go_hive 对位</a></div></header>
+
+<section id="overview"><h2><span class="num">00</span>总览：六个机制，一根脊椎</h2>
+<p>Hive 的设计文档把它概括为"<b>一个原语，多个设置</b>"：全系统只有一个执行原语 <b>AgentLoop</b>；Queen 是它，Worker 是它的克隆。其余五个机制都是围绕这根脊椎的支撑：<b>Colony</b> 是部署单位（也是组织容器），<b>Reminder</b> 管注意力，<b>Memory</b> 管跨会话积累，<b>Judge</b> 管质量闸门。</p>
+<figure class="diagram"><pre>                     ┌─────────────────────────── Colony（一个目录 = 一个部署单位）──────────────────────────┐
+                     │  ~/.hive/colonies/&lt;name&gt;/                                                              │
+                     │                                                                                        │
+                     │   Queen（1 个持久 loop）                    worker clones（N 个短命 loop）             │
+                     │   ├─ 对话/计划/tracker 读 SQL               ├─ 一个任务、无记忆、无 escalation          │
+                     │   ├─ run_worker(fire-and-forget) ─────────► ├─ tracker_upsert（写行）                    │
+                     │   └─ [WORKER_REPORT] 回合 ◄─── event bus ───┴─ report_to_parent(success/partial/failed)   │
+                     │                                                                                        │
+                     │  共享基底： tracker.db（账本）· task plan（意图）· event bus（神经）· reminder hub（注意力）│
+                     └────────────────────────────────────────────────────────────────────────────────────────┘
+        Reminder 注入点：SESSION_START · USER_PROMPT_SUBMIT · POST_TOOL_USE · TOOL_BUDGET_CHECKPOINT · PRE/POST_COMPACT · STOP · IDLE_TICK · STREAM_STALLED
+        Memory 作用域：  global（你/业务） · colony（这个 colony） · queen（她自己的经验）  ＋ Soul（她的自我叙事，逐日修订）
+        Judge 使用点：   worker/agent 成功标准（ACCEPT/RETRY/ESCALATE） · stall check（说了没做 → 提醒一次） · channels（决策问句）</pre>
+<figcaption>图：六个机制的关系（来源：docs/key_concepts/*.md 的设计陈述 + 代码 docstring 复核）。</figcaption></figure>
+
+<h3>代码地图（本页涉及的上游文件）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">文件</th><th>职责（引自文件自身 docstring / 函数）</th></tr></thead><tbody>
+<tr><td><code>core/framework/agent_loop/agent_loop.py</code></td><td>唯一执行原语 AgentLoop（7,497 行）；reminder 的 fire 点、judge 管线、压缩、park 都在这里</td></tr>
+<tr><td><code>core/framework/agent_loop/reminders.py</code></td><td>ReminderHub / ReminderSource / ReminderPoint / Placement / LoopActivity / ParkReason</td></tr>
+<tr><td><code>core/framework/agent_loop/*_reminder.py</code>、<code>idle_nudge.py</code>、<code>stream_stall.py</code>、<code>tool_skill_reminders.py</code></td><td>13 个 reminder source 的具体实现</td></tr>
+<tr><td><code>core/framework/agents/queen/queen_profiles.py</code></td><td>Queen 身份画像（YAML）+ 轻量分类器选择（select_queen）</td></tr>
+<tr><td><code>core/framework/agents/queen/queen_defaults/*.yaml</code></td><td>随包发行的 13 个 Queen 人设（Growth/Technology/Legal/…）</td></tr>
+<tr><td><code>core/framework/agents/queen/worker_definition.py</code></td><td>Worker 运行时身份 + <code>worker.json</code> 磁盘契约（"disk format IS the runtime identity"）</td></tr>
+<tr><td><code>core/framework/host/worker.py</code></td><td>Worker 两种模式：ephemeral（默认，SUBAGENT_REPORT）/ persistent（colony 常驻 overseer）</td></tr>
+<tr><td><code>core/framework/host/colony_runtime.py</code></td><td>ColonyRuntime："spawn N independent clones … no graphs, no edges, no nodes, no data buffers"</td></tr>
+<tr><td><code>core/framework/host/{colony_binding,colony_db,colony_metadata,tracker_db,triggers}.py</code></td><td>绑定（不可变）、colony 库、metadata、tracker.db、triggers.json</td></tr>
+<tr><td><code>core/framework/agents/queen/queen_memory_v2.py</code></td><td>三层文件记忆：MAX_FILES=200 / MAX_FILE_SIZE_BYTES=4096 / 类别 profile|preference|environment|feedback</td></tr>
+<tr><td><code>core/framework/agents/queen/recall_selector.py</code></td><td>召回选择器：LLM 结构化输出，仅看用户 query，按 scope 选 ≤5 条，出错返回 []</td></tr>
+<tr><td><code>core/framework/agents/queen/timeline.py</code></td><td>时间线抽取：event/fact/plan，BATCH_CHARS=12,000，<code>timeline.jsonl</code> + <code>timeline_meta.json</code>，schema v1</td></tr>
+<tr><td><code>core/framework/agents/queen/soul.py</code> / <code>soul_reflection.py</code></td><td>Soul 存储（soul.json/history/proposals/log/state）与每日读聊天反思（review/auto 两种模式）</td></tr>
+<tr><td><code>core/framework/server/judge.py</code></td><td>judge 槽：protocol=typesafe → <code>POST {api_base}/systemone</code>，20s 超时，返回 p(yes)</td></tr>
+<tr><td><code>core/framework/server/stall_check.py</code></td><td>stall check：对"说了没做"的 queen 回合，每用户消息最多提醒一次</td></tr>
+<tr><td><code>core/framework/agent_loop/internals/judge_pipeline.py</code></td><td>agent 级 judge 管线（输出键检查 → 自定义 judge → LLM 质量检查，产出 ACCEPT/RETRY/ESCALATE）</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="queen"><h2><span class="num">01</span>Queen：有身份的主管</h2>
+<h3>设计（docs/key_concepts/queen.md）</h3>
+<ul>
+<li><b>不是通用编排器，是身份</b>：随包发行 <b>13 个 Queen</b>（各一部门主管），开箱默认启用 6 个；每个人都设是一份 YAML 画像（traits/background/behavior triggers），注入她的 system prompt。</li>
+<li><b>两阶段</b>：Independent（她先自己做）→ Colony（当工作被证明是并行/周期/长时，她提议建 colony，用户在 Create Colony 对话框确认）。核心动作是 <b>execute first, then systematize</b>：先打样（pilot），再把路径固化成 skill + playbook。</li>
+<li><b>她拥有</b>：对话（colony 唯一对外面）、计划（持久化任务表）、tracker（建 schema、用 SQL 验收）、以及"需要你拍板的问题"（park 等你回答；Sentinel 可在你离开时代为催办/升级）。</li>
+</ul>
+<h3>实现</h3>
+<ul>
+<li><code>queen_profiles.py</code> 文件头：画像存 <code>~/.hive/agents/queens/{queen_id}/profile.yaml</code>；本机 <code>agents/queen/queen_defaults/</code> 实测 <b>13 份 YAML</b>（growth/technology/legal/finance_fundraising/talent/operations/product_strategy/sales/lead_gen/outbound/market_research/brand_design/content_creation）。</li>
+<li>Queen 会话装载 <b>12 个生命周期工具</b>（<code>core/framework/tools/queen_lifecycle_tools.py</code>）：<code>run_worker</code>、<code>stop_worker</code>、<code>write_skill</code>、<code>update_worker_profile</code>、<code>list_browser_profiles</code>、<code>get_worker_status</code>、<code>inject_message</code>、<code>list_worker_questions</code>、<code>reply_to_worker</code>、<code>set_trigger</code>、<code>remove_trigger</code>、<code>list_triggers</code>；另有 queen mail 工具（<code>queen_mail_tools.py</code>）。</li>
+<li>Queen 的记忆是 scoped 文件记忆 + 召回 + soul（见 §05）；worker 无记忆（每个 worker 都是新的）。</li>
+</ul>
+<div class="callout info"><b>一个已发现的偏差</b>：<code>key_concepts/queen.md</code> 写"自动 LLM 路由分类器已退役（猜错对象是错误设计），由用户自己选 Queen"；但代码里 <code>select_queen</code>（<code>queen_profiles.py:779</code>）仍被两条路径使用——<code>session_manager.py:645</code>（会话未带 queen 时兜底选择）和 <code>routes_messages.py:21-37</code>（<code>POST /api/messages/classify</code>，首页把提示词路由到某个 queen）。结论：<b>文档说的是方向，代码里分类器仍在服役</b>，两者需要对齐口径（见 §08）。</div>
+</section>
+
+<section id="worker"><h2><span class="num">02</span>Worker：专注、短命、失败要快</h2>
+<h3>设计（docs/key_concepts/worker_agent.md）</h3>
+<ul>
+<li><b>Worker 不是另一种程序</b>：是 Queen 那个 loop 的克隆 —— 同样的模型（除非配置独立 worker 模型）、一个 worker prompt、Queen 工具的子集、更紧的预算、注入一个任务。</li>
+<li><b>它"故意缺少"什么</b>：无记忆、无人设、<b>无 escalation</b>（没有活人听众，绝不阻塞等答案）、<b>不能派发自己的 worker</b>（fan-out 属于 Queen）、失败要快（工具失败分类：瞬时→重试一次；结构性→修一次再试；不可修→停）。</li>
+<li><b>汇报</b>：终止动作是 <code>report_to_parent(status, summary, data)</code>，三态 success / partial / failed；报告以 <code>[WORKER_REPORT]</code> 回合进入 Queen 的对话。为保证"总能汇报"，loop 有 <b>grace iteration</b>：即使预算耗尽，最后还有一个只放开 <code>report_to_parent</code>/<code>task_update</code>/<code>tracker_upsert</code> 的收尾回合。</li>
+<li><b>Worker 之间不通信</b>：协调完全靠共享基底 —— tracker.db（一行一个工作单元，Queen 直接用 SQL 读）、自己的 task list、colony 的 skills。</li>
+<li>loop 配置对照（the_loop.md）：迭代 3 工作 + 1 grace；工具预算 30/回合（硬停 90）、生命周期 200。</li>
+</ul>
+<h3>实现</h3>
+<ul>
+<li><code>worker_definition.py</code> 文件头把两件事钉在一起：运行时身份 + <code>worker.json</code> 序列化 ——"adding a field in one without the other is a silent contract break"；<code>worker.json</code> 由 <code>routes_execution.fork_session_into_colony</code> 写入，<code>colony_runtime.spawn</code> 读回。</li>
+<li><code>host/worker.py</code> 定义两种模式：<b>ephemeral（默认）</b>——跑一次、发 <code>SUBAGENT_REPORT</code>、终止；<b>persistent</b>——常驻，<code>inject(message)</code> 把用户聊天泵进已运行的 loop，用于 colony 的常驻 overseer。</li>
+<li>预算白名单/范围在 <code>colony_runtime.py:64-121</code>：可覆盖 <code>max_iterations / grace_iterations / tool_call_budget / tool_call_lifetime_budget / max_context_tokens</code>，其中 <code>tool_call_budget ∈ (0,200]</code>、<code>tool_call_lifetime_budget ∈ (0,2000]</code>，<code>0</code> 表示"不限制"。</li>
+<li>worker 启动时会探测浏览器桥（<code>_connected_browser_labels()</code>，<code>host/worker.py:29-45</code>）：探不到就是"未知"，<b>不能</b>当成"没有连接"（避免瞬态误杀 worker）。</li>
+</ul>
+</section>
+
+<section id="colony"><h2><span class="num">03</span>Colony：一个目录，一台"多 loop 组织"</h2>
+<h3>设计（docs/key_concepts/colony.md / coordination.md）</h3>
+<ul>
+<li><b>为什么是 colony</b>：真实业务流程是并行的、周期性的、长时的，且形状在开工前未知。Hive 的答案是"不预先定型"：Queen 先做，发现需要多少 worker 就在运行时开多少，<b>没有图、没有边、没有节点要维护</b>。</li>
+<li><b>磁盘形态</b>：<code>~/.hive/colonies/&lt;name&gt;/</code> 一个目录装下一切：Queen、worker 克隆、<code>tracker/tracker.db</code>（共享账本）、任务计划、<code>skills/</code>（打样后写下的方法，所有 worker 可加载）、<code>triggers.json</code>（定时唤醒）。</li>
+<li><b>四块轻基底</b>（coordination.md）：tracker（结果，"什么做了、什么没做"的唯一真相，SQL 查询）、task plan（意图，持久任务表）、event bus（worker 报告与实时转录的"神经系统"）、reminder hub（注意力，§04）。</li>
+<li><b>绑定不可变</b>：每个 worker 的 tracker 访问都带着 colony 的 binding（名字/目录/DB 路径）；没有 binding 的工具<b>拒绝执行</b>而不是猜路径 —— 防止两个 colony 写错账本。</li>
+<li><b>成长方式</b>：execute-first-then-systematize；打样 → skill + playbook；playbook 自己不持状态，tracker 是真相，所以<b>"重跑 = 断点续跑"</b>（by construction）。</li>
+<li><b>人机回路</b>：Queen 提问、loop park（落盘，可等几天）；Sentinel（按 colony 选择开关）在你离开时判定"催办 / 判定完成 / 升级到你"（Hive inbox / Telegram / Slack），你回复后 loop 恢复。</li>
+</ul>
+<h3>实现</h3>
+<ul>
+<li><code>colony_runtime.py</code> 文件头（原文）："Each worker is an exact copy of the queen's AgentLoop — same tools, same prompt, same LLM … The ColonyRuntime replaces both AgentHost and ExecutionManager. <b>There are no graphs, no edges, no nodes, no data buffers. Just: spawn N independent clones, let them run, collect results.</b>"</li>
+<li>配套实现：<code>colony_binding.py</code>（不可变绑定）、<code>colony_db.py</code>（colony 级库）、<code>colony_metadata.py</code>、<code>tracker_db.py</code>（ledger）、<code>triggers.py</code> + <code>webhook_server.py</code>（唤醒）、<code>host/playbook/</code>（playbook runner）。</li>
+</ul>
+</section>
+
+<section id="reminder"><h2><span class="num">04</span>Reminder：系统的"注意力工程"</h2>
+<h3>设计（reminders.py 文件头 + coordination.md）</h3>
+<p>一条 fan-out 几十个 worker 的长循环很容易忘事：忘了还有 worker 在跑、忘了压缩前落盘、忘了有哪些工具。ReminderHub 在<b>已知时点</b>注入"建议性上下文"（与配置式 hooks、错误纠正区分开）：</p>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">注入点</th><th>类型 / 触发者</th><th>含义</th></tr></thead><tbody>
+<tr><td><code>SESSION_START</code></td><td>lifecycle（loop 内联触发）</td><td>会话启动一次</td></tr>
+<tr><td><code>USER_PROMPT_SUBMIT</code></td><td>lifecycle</td><td>每次用户/外部消息到达</td></tr>
+<tr><td><code>POST_TOOL_USE</code></td><td>lifecycle</td><td>工具批次执行完（搭车在结果尾部）</td></tr>
+<tr><td><code>TOOL_BUDGET_CHECKPOINT</code></td><td>lifecycle</td><td>每回合工具预算跨过新的软倍数（硬上限时合并进下一回合的 deferred advisory）</td></tr>
+<tr><td><code>PRE_COMPACT</code> / <code>POST_COMPACT</code></td><td>lifecycle</td><td>压缩前 / 压缩后（把摘要丢掉的、模型看不见的东西重新播报：deferred 工具清单、skills catalog）</td></tr>
+<tr><td><code>STOP</code></td><td>lifecycle</td><td>纯文本回合结束、agent 让出控制权时</td></tr>
+<tr><td><code>IDLE_TICK</code></td><td>temporal（hub 自带的 ticker）</td><td>周期轮询，park 中的 loop 也能被提醒</td></tr>
+<tr><td><code>STREAM_STALLED</code></td><td>reactive（流一停滞就同步咨询）</td><td>TTFT / 事件间静默看门狗触发时</td></tr>
+</tbody></table></div>
+<ul>
+<li><b>渲染与摆放</b>：所有 body 统一包进 <code>&lt;system-reminder&gt;…&lt;/system-reminder&gt;</code>，尾部固定一句（原文）："Only act on this if relevant to the current work. NEVER mention this reminder to the user."；安置点 <code>Placement.USER_MESSAGE</code> / <code>TOOL_RESULT_TAIL</code>。</li>
+<li><b>energize（唤醒）</b>：默认不唤醒 —— 大多数提醒是"下一回合读到的上下文"；只有"用户没法供给、不叫醒就会烂在那里"的提醒才 opt-in（例：<code>CrmRevealReminderSource</code>）。被 drain 的提醒会 energize 一个回合，保证被处理而不是躺在 park 的对话里。</li>
+<li><b>时序安全</b>：temporal 点的提醒由 ticker <code>collect()</code> 暂存，loop 在迭代边界 <code>take_pending()</code> 取走 —— 对话写入永不与 loop 竞争。ticker 按所有 source 的<b>最小间隔</b>轮询。</li>
+<li><b>失败即跳过</b>：任一 source 的 <code>applies_to/render/observe_turn</code> 抛异常 → 记 debug 日志并跳过，绝不传播（best-effort fan-out；过滤器坏了也 fail-open 保留 source）。</li>
+<li><code>applies_to</code> 是一次会话一次的"自我声明"：同一个 loop 服务多种角色（queen/worker/overseer），由 source 声明自己属于谁，而不是给 loop 按角色配置。</li>
+</ul>
+<h3>实现：13 个 source（agent_loop.py:918-960 注册处实测）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">source</th><th style="width:22%">注入点</th><th>applies_to（设计文档/代码）</th></tr></thead><tbody>
+<tr><td><code>tasks</code></td><td>SESSION_START, USER_PROMPT_SUBMIT, POST_TOOL_USE, POST_COMPACT, STOP</td><td>工具表含 task 写工具</td></tr>
+<tr><td><code>colony_parallel</code>（nudge）</td><td>POST_TOOL_USE</td><td>queen</td></tr>
+<tr><td><code>active_workers</code></td><td>USER_PROMPT_SUBMIT</td><td>queen</td></tr>
+<tr><td><code>past_conversations</code></td><td>SESSION_START, USER_PROMPT_SUBMIT</td><td>queen + recall provider</td></tr>
+<tr><td><code>turn_context</code></td><td>SESSION_START, USER_PROMPT_SUBMIT</td><td>queen + turn-context provider</td></tr>
+<tr><td><code>searchable_tools</code></td><td>SESSION_START, USER_PROMPT_SUBMIT, POST_TOOL_USE, POST_COMPACT</td><td>queen（或自带 provider 的分层 worker）</td></tr>
+<tr><td><code>skills_catalog</code></td><td>同上</td><td>queen</td></tr>
+<tr><td><code>tracker_snapshot</code></td><td>POST_TOOL_USE</td><td>queen + colony binding provider</td></tr>
+<tr><td><code>worker_tracker_snapshot</code></td><td>POST_TOOL_USE</td><td><b>worker</b> + colony binding provider</td></tr>
+<tr><td><code>colony_worker_snapshot</code></td><td>TOOL_BUDGET_CHECKPOINT</td><td>queen + colony binding provider</td></tr>
+<tr><td><code>idle_nudge</code></td><td>IDLE_TICK</td><td>所有 agent</td></tr>
+<tr><td><code>sentinel_escalation</code></td><td>IDLE_TICK</td><td>queen + 已绑定 colony</td></tr>
+<tr><td><code>stream_stall</code></td><td>STREAM_STALLED</td><td>所有 agent</td></tr>
+</tbody></table></div>
+<p class="sub">说明：worker 的 <code>[WORKER_REPORT]</code> <b>不是</b> reminder source（由 queen orchestrator 注入 user turn）；loop 侧的 fire 点：<code>agent_loop.py:1211</code>（drain pending）、<code>1551</code>（SESSION_START）、<code>1854/6140</code>（USER_PROMPT_SUBMIT）、<code>2154</code>（STOP）、<code>4612</code>（STREAM_STALLED）、<code>4712</code>（observe_turn）、<code>5722</code>（POST_TOOL_USE）、<code>5747/5998</code>（TOOL_BUDGET_CHECKPOINT）、<code>6955/6969</code>（PRE/POST_COMPACT）、<code>7166</code>（fire_energized）。</p>
+</section>
+
+<section id="memory"><h2><span class="num">05</span>Memory：纯文件的记忆与"自我叙事"</h2>
+<h3>三层文件记忆（agents/queen/queen_memory_v2.py + key_concepts/queen.md）</h3>
+<ul>
+<li>目录（<code>~/.hive/memories/</code>）：<code>global/</code>（所有 Queen/Colony 共享）、<code>colonies/{name}/</code>、<code>agents/queens/{name}/</code> 与 <code>agents/{worker}/</code>。</li>
+<li>硬约束（代码常量）：<code>MAX_FILES = 200</code> 个文件/目录、<code>MAX_FILE_SIZE_BYTES = 4096</code>（4KB/文件）；全局记忆类别：<code>profile / preference / environment / feedback</code>。每个记忆是带 YAML frontmatter（name/type/description）的 <code>.md</code>。</li>
+<li>召回（<code>recall_selector.py</code>）：每回合前扫描目录 → 读 header（frontmatter + 前 30 行）→ <b>一次 LLM 结构化输出</b>按 scope 选"明确有用"的 ≤5 条 → 注入 system prompt。只喂用户 query 字符串（省、快）；<b>出错返回 []，绝不阻塞主对话</b>。</li>
+<li>past conversations：每条用户消息前，把最多 <b>6 条</b>相关历史会话的带日期摘录放到她眼前；所有历史可用 <code>search_messages</code> 搜；她被告知"先查记忆再问你"。</li>
+<li>时间线（<code>timeline.py</code>，需 <code>memory_timeline</code> 开关）：用 Queen 自己的 LLM 把用户消息抽取成 <b>event / fact / plan</b> 的带日期条目（相对日期按会话日期解析），写 <code>&lt;session&gt;/timeline.jsonl</code> + <code>timeline_meta.json</code>（抽取游标），单次抽取 ≤12,000 字符；由 <code>search_timeline</code> 工具提供。</li>
+</ul>
+<h3>Soul：Queen 的自我叙事（soul.py / soul_reflection.py）</h3>
+<ul>
+<li>设计（soul.py 文件头）：profile 说"她该是谁"，memory 存"她知道的"，<b>soul 是"她成为了什么"</b>——她在想什么、与周围人状态如何、承诺过什么、为何如此、如何改变。第一人称、小（每节有字符上限）、永远在上下文里（紧随身份注入 system prompt），最多每天变一次。</li>
+<li>磁盘：<code>queens/&lt;id&gt;/soul/</code> 下 <code>soul.json</code>（当前版本：version/updated_at/sections）、<code>history/v&lt;n&gt;.json</code>（每个曾生效的版本）、<code>proposals/&lt;id&gt;.json</code>（一次反思提出的修改及结局）、<code>log.jsonl</code>（每个新版本一行）、<code>state.json</code>（反思记账）。</li>
+<li>每日反思（soul_reflection.py 文件头）：每天在配置小时之后，她读自己聊天里"上次反思之后"的新消息（各会话 <code>events.jsonl</code>，标题按配置白/黑名单过滤），以工具形式用<b>她自己的口吻</b>提几条修改；代码按住提示词的规则：<b>每条引用证据必须逐字出现在她读过的文本里</b>、需要两条证据的节必须来自不同人或不同聊天、每次 ≤<code>max_edits</code> 条且不得超过节上限；超期条目自动掉落。</li>
+<li>模式：<code>review</code> 等用户逐条批准（<code>soul.decide</code>）；<code>auto</code> 立即生效。首版 <code>bootstrap=True</code> 还会读配置里的记忆文件、允许 <code>bootstrap_edits</code> 条修改。</li>
+<li>实现参数：<code>_MAX_TURNS=8</code>（bootstrap 16）、失败重试 <code>1h</code> 且每天 ≤3 次、<code>state.json</code> 按会话记录"已读到的时间"保证每段聊天只读一次。</li>
+</ul>
+<ul class="sub"><li>Skills：Queen 打样后 <code>write_skill</code> 写下方法，落 colony <code>skills/</code>，进入之后每个 worker 的 skill catalog，按需加载（improvement.md 的"学到的技能"）。</li><li>LongMemEval：记忆质量的度量基准（<code>docs/memory-benchmark.md</code>、<code>core/tests/e2e/longmemeval.py</code>）。</li></ul>
+</section>
+
+<section id="judge"><h2><span class="num">06</span>Judge：质量闸门（成功标准 + 说了没做）</h2>
+<h3>设计（judge.py 文件头 + the_loop.md）</h3>
+<ul>
+<li><b>judge 是一个"槽"</b>：<code>configuration.json</code> 的 <code>judge</code> 段声明 protocol / api_base / model / api_key / threshold，没有厂商被写死。当前唯一协议 <code>typesafe</code>：向 <code>{api_base}/systemone</code> 提一个 <b>noul（概率）问题</b>，返回 p(yes)。<b>每次提问都重新读槽</b>，改配置立即生效。</li>
+<li>语义：未配置 / 协议不支持 / 调用失败 → 返回 <code>None</code>（原因记日志）；超时 <b>20s</b>（"judge 卡住不能拖住问它的人"）。</li>
+<li><b>agent 级 judge（reflexion）</b>：声明了 success criteria 的 agent，每个完成的回合由 judge 管线检查——先便宜的"输出键检查"，再可选自定义 judge / LLM 质量检查；产出三态：<b>ACCEPT</b>（通过）/ <b>RETRY</b>（差一点，反馈作为消息注回对话，下一回合连批评一起看见）/ <b>ESCALATE</b>（根本卡住，停下上交）。Queen 跳过 judge——"你是她的 judge"；worker 以 report 结束。</li>
+</ul>
+<h3>Stall check（stall_check.py）："说了没做"的兜底</h3>
+<ul>
+<li>问题：有些模型写"马上画"就结束回合、或只描述该改什么却不动手。开启 <code>stall_check</code> + judge 槽后，<b>每个"结束时在等用户"的 queen 回合</b>都会被送上 judge：用户消息、她最后的 reasoning 与回复、本回合调用的工具、以及她上一轮回复与工具（让 judge 能区分"对刚交付作品提出修正"与"空谈"）。</li>
+<li>判据是逐字提示词（<code>_QUESTION</code> + <code>_CRITERIA</code> true/false 长文），关键 false 口径：对话/回答问题/先问清需求/拒绝或反驳（即使承认错误、给了替代方案）/对用户质疑的回应/或本回合工具已做（即使结果不完美、回复里列了遗留缺陷）。</li>
+<li>判定 <code>p ≥ threshold</code>（默认 0.5）→ 注入一次提醒（原文见下方），此提醒是 <code>&lt;system-reminder&gt;</code>：告诉她要做的就现在调工具，不做就继续，<b>不要提这条提醒</b>。约束：<b>每条用户消息至多一次判定/提醒</b>（误判不会成环）；可见错误（gateway 把失败当回复）跳过；开关与槽都是回合结束时才读 → 运行中的会话立即生效。</li>
+<li>事件订阅：<code>CLIENT_INPUT_RECEIVED / CLIENT_REASONING / CLIENT_OUTPUT_DELTA / TOOL_CALL_STARTED / CLIENT_INPUT_REQUESTED</code>；只在 <code>park_reason == "turn_done"</code> 时判定；<code>stream_id</code> 必须是 <code>queen</code>。</li>
+<li>另一个使用点：channels（<code>channels.py:123-125</code>）——渠道层通过 <code>ChannelHost.judge</code> 向同一个槽提问（如"这条消息要不要升级"）。</li>
+</ul>
+<pre>REMINDER（stall_check.py 原文）：
+&lt;system-reminder&gt;
+Your last reply talked about work to do now (announced or promised it, or agreed to a change the user asked
+for), but you ended the turn without calling any tool to do it, so nothing was done. If it should be done,
+call the tools now. If not, carry on. Don't mention this reminder.
+&lt;/system-reminder&gt;</pre>
+</section>
+
+<section id="park"><h2><span class="num">07</span>停车与唤醒：park / idle nudge / Sentinel</h2>
+<p>长任务里真正难的不是"跑"，而是"等"：等人回答、等凭据、等外部事件、等定时器。Hive 用三条链路把"等待"变成<b>可恢复、可提醒、可升级</b>的状态机——三条都有代码与盘上证据。</p>
+
+<h3>① Park：停车即落盘（可等数天）</h3>
+<ul>
+<li><b>停车有原因</b>：每个 <code>_await_user_input</code> 调用点声明 <code>ParkReason</code>（TURN_DONE / ASK_USER / LLM_ERROR / USER_STOPPED / AWAITING_QUEEN / COLONY_SUGGESTION / UNKNOWN…），等待期间保留在 <code>self._park_reason</code>，供 idle nudge / Sentinel 区分"该等的"与"坏掉的"（<code>agent_loop.py:3740-3790</code>）。</li>
+<li><b>盘上结构</b>（<code>storage/session_store.py</code>）：<code>sessions/session_YYYYMMDD_HHMMSS_{uuid}/</code> 下——<code>state.json</code>（<b>single source of truth</b>，atomic write；含 status / checkpoint / active_triggers / pid / timestamps，schema v1.1）+ <code>conversations/</code>（EventLoop 状态，parts 带 phase_id）+ <code>artifacts/</code>（spillover）+ <code>logs/</code>（summary/details/tool_logs）。</li>
+<li><b>恢复路径</b>：冷启动识别 <code>_is_cold_resume</code>（<code>agent_loop.py:1437</code>），cursor_persistence 的 checkpoint/resume 周期恢复对话与游标；session_manager 用 <code>state.json</code> 的 <code>pid</code> 做跨进程 stale 检测；worker 可用 <code>resume_worker_ids</code> 恢复。</li>
+<li><b>设计承诺</b>（<code>worker_agent.md</code>）："a loop saves its position to disk whenever it waits, so a crash or restart resumes the session rather than starting over"。</li>
+</ul>
+
+<h3>② idle nudge：把"静默"变成一次提醒（in-memory）</h3>
+<p><code>IdleNudgeSource</code>（temporal，IDLE_TICK）补 stream watchdog 的盲区——turn 之间、以及慢 TTFT 之下的静默。它按 park 子状态动作：</p>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">子状态</th><th>行为</th></tr></thead><tbody>
+<tr><td><code>between_turns</code></td><td>没有活跃 stream（judge/装配/真空闲）→ 按 cap 提醒</td></tr>
+<tr><td><code>slow_ttft</code></td><td>流已开但还没有首事件 → 提醒</td></tr>
+<tr><td><code>parked_no_question</code></td><td>无问题、无待办、原因 UNKNOWN → 只提醒一次找下一步；TURN_DONE 且无待办则完全不提醒</td></tr>
+<tr><td><code>parked_open_tasks</code></td><td>停车但 task list 还有未完成 → 点名任务；UNKNOWN 用满 cap，TURN_DONE 只一次</td></tr>
+<tr><td><code>parked_broken</code></td><td>失败后停车（LLM error / doom loop / 连续空回合）→ 短预算快速重启，防止 loop 搁浅</td></tr>
+</tbody></table></div>
+<ul>
+<li>外部等待（ask_user / colony suggestion / worker 等 queen）不打扰；正在出事件的流归 stream watchdog 管。</li>
+<li>计数按"用户回复周期"reset（loop 在用户消息时调用）→ <b>in-memory，不落盘</b>（advisory 状态；落盘的是 park 本身）。配置：<code>session_idle_nudge_seconds=120</code>、<code>session_idle_nudge_max_per_session=3</code>。</li>
+</ul>
+
+<h3>③ Sentinel：colony 无人值守时的"继续还是找人"</h3>
+<ul>
+<li><b>决策</b>：park 后 <code>classify_after_seconds=300</code> 开始评估；硬阻塞（broken park、auth/crash 错误）先判，模糊中间交一次廉价 LLM classifier（goal / open tasks / 最后回复 / 待答问题 / 最近工具错误）→ <code>continue</code> / <code>needs_human</code> / <code>done</code>。</li>
+<li><b>两种输出</b>：返回 <code>Reminder</code> = 唤醒 loop 继续干（nudge）；发消息 + 返回 <code>None</code> = 保持 park 等人（escalate）。四种报告：<code>blocker</code> / <code>heartbeat</code> / <code>done</code> / <code>progress</code>（progress 只进 inbox feed，不发 telegram/slack）。</li>
+<li><b>落盘</b>：<code>~/.hive/colonies/&lt;id&gt;/escalations/&lt;escalation_id&gt;.json</code>，字段含 escalation_id / colony_id / session_id / correlation_token / park_reason / question_text / channel / thread_ref / status / created_at / resolved_*；<b>manager 启动时从 open records 重建 token 索引</b>——"Disk is the source of truth"，重启后用户回复仍能路由回 parked queen。</li>
+<li><b>配置</b>：全局 <code>configuration.json</code> 的 <code>sentinel</code> 块 + 每 colony <code>notifications.json</code>；默认 <code>max_nudges_before_escalate=5</code>、<code>escalate_when_ui_attached=false</code>、channel 默认 <code>hive</code>（内置 Inbox，无需 token；telegram/slack 需 token）。</li>
+<li><b>互斥</b>：colony autopilot 时 Sentinel 独占 park 决策，<code>IdleNudgeSource</code> 自我跳过，避免双重 nudge；回复经 listeners（Telegram long-poll / Slack Socket Mode）→ <code>inject_event</code> 回 parked queen。</li>
+</ul>
+
+<div class="callout info"><b>为什么重要</b>：三条链路把"等待"从失控态变成状态机——<b>park</b> 保证等待不丢（盘上可恢复），<b>idle nudge</b> 保证静默不烂（回合间提醒），<b>Sentinel</b> 保证无人值守也能判断"继续/找人"（升级并落盘）。分工：stream stall 管<b>流内</b>静默，idle nudge 管<b>回合间/停车</b>，Sentinel 管<b>停车后的决策与升级</b>。</div>
+<p class="sub">go_hive 对位：<code>docs/reminders-coverage.md</code>（13 source 注册矩阵，含 sentinel_escalation / idle_nudge / stream_stall）、<code>docs/hive-inbox.html</code>（Inbox 协议）、<code>internal/sentinel</code>；上游 Sentinel 的 escalation 记录是"盘上真相"，Go 侧实现与 E2E 需按此口径核对。</p>
+</section>
+
+<section id="coupling"><h2><span class="num">08</span>六个机制怎么咬合</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">耦合点</th><th>机制</th><th>作用</th></tr></thead><tbody>
+<tr><td>run_worker → clone</td><td>Colony × Worker</td><td>Queen 的 loop 里一次 fire-and-forget 调用，就 spawn 一个"她的克隆 + worker prompt + 任务"</td></tr>
+<tr><td>tracker.db</td><td>Colony × Worker × Queen</td><td>worker 只写行、Queen 只读 SQL；playbook 断点续跑由它保证</td></tr>
+<tr><td>event bus</td><td>Colony × Reminder × Judge</td><td>worker 报告回流 Queen；stall check 订阅 queen 的回合事件；SSE 转给 UI</td></tr>
+<tr><td>reminder hub</td><td>Reminder × Memory × Colony</td><td>把召回（past_conversations）、tracker/worker 快照、调色板（tools/skills catalog）在正确时点重新播报</td></tr>
+<tr><td>judge 槽</td><td>Judge × Worker/Agent × Channels</td><td>成功标准判定（ACCEPT/RETRY/ESCALATE）、stall check、渠道升级决策共用一个槽</td></tr>
+<tr><td>soul + memory</td><td>Memory × Queen</td><td>跨会话积累：反思写文件、召回读文件、每日修订 soul；worker 完全不参与</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="drift"><h2><span class="num">09</span>设计文档 ↔ 代码：已发现的偏差</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">条目</th><th style="width:34%">文档说</th><th>代码实测</th></tr></thead><tbody>
+<tr><td>Queen 路由分类器</td><td><code>queen.md</code>："自动 LLM router 已退役……分类器猜对象是错误设计"</td><td><code>select_queen</code>（queen_profiles.py:779）仍被 session_manager.py:645（无 queen 时兜底）与 <code>POST /api/messages/classify</code> 使用</td></tr>
+<tr><td>worker 的 escalation</td><td><code>worker_agent.md</code>："worker 无 escalation、不能问问题"</td><td>与实现一致（worker prompt/工具集无提问通道）；注意 agent 级 judge 的 ESCALATE 是"判定结论"，不是 worker 的对外通道</td></tr>
+<tr><td>improvement 的旧叙事</td><td><code>improvement.md</code> 显式纠正："早期版本把改进描述为'进化'（重写 graph）；今天没有 graph，也没有跨代代码重写"</td><td>与 <code>colony_runtime.py</code> 的 "no graphs/no edges" 一致</td></tr>
+</tbody></table></div>
+<p class="sub">口径提醒：本页把"文档说"和"代码实测"分开列；上表第 1 条属于真实偏差（需要产品或文档侧定夺），第 2/3 条是已对齐项。</p>
+</section>
+
+<section id="evidence"><h2><span class="num">10</span>证据与复现</h2>
+<pre># 设计文档（上游）
+ls core/framework/../docs/key_concepts/        # queen.md worker_agent.md colony.md coordination.md the_loop.md improvement.md runtime_spine.md goals_outcome.md
+sed -n '1,60p' docs/key_concepts/queen.md
+
+# 实现锚点
+sed -n '1,120p' core/framework/agent_loop/reminders.py          # ReminderPoint / Reminder / ReminderSource / wrap_reminder
+grep -n 'hub.register' core/framework/agent_loop/agent_loop.py   # 13 个 source 注册处 918-960
+sed -n '1,83p' core/framework/server/judge.py                    # 槽 + typesafe + 20s
+sed -n '1,60p' core/framework/server/stall_check.py              # 判据与提醒原文
+sed -n '1,30p' core/framework/agents/queen/worker_definition.py  # worker.json 契约
+sed -n '1,20p' core/framework/host/colony_runtime.py             # no graphs 声明
+sed -n '1,35p' core/framework/agents/queen/soul.py               # soul 设计
+sed -n '1,25p' core/framework/agents/queen/soul_reflection.py    # 每日反思规则
+grep -n 'MAX_FILES\|MAX_FILE_SIZE_BYTES' core/framework/agents/queen/queen_memory_v2.py
+
+# 测试（节选）
+core/framework/agent_loop/tests/test_reminder_energize.py
+core/framework/server/tests/test_stall_check.py
+core/framework/server/tests/test_judge.py
+core/tests/test_soul_reflection.py    # soul 反思 14 例（见 go_hive 移植侧逐例对照）
+</pre>
+</section>
+
+<section id="gohive"><h2><span class="num">11</span>go_hive 对位（本页只给指路）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">机制</th><th>go_hive 文档</th><th>状态一句话</th></tr></thead><tbody>
+<tr><td>Reminder</td><td><code>docs/reminders-coverage.md</code></td><td>13 个 source 的注册矩阵（queen/worker/overseer 三张）；STREAM_STALLED 已真实触发；3 条实现形态差异登记</td></tr>
+<tr><td>Memory / Soul</td><td><code>docs/soul-daily-reflection.md</code>、<code>docs/memory-e2e.md</code></td><td>反思链路有 14 例 parity 测试 + 本地网关 E2E；真实模型联调未做；4 条未对齐项</td></tr>
+<tr><td>Judge / Stall</td><td><code>docs/stall-check.html</code></td><td>已实现+测试、默认关；本机 judge 指向 StartLux 本地服务已真实判定</td></tr>
+<tr><td>Queen</td><td><code>docs/queen-lifecycle-tools.md</code>、<code>docs/queen-mail.md</code></td><td>12 生命周期工具全在 queen 会话可达；queen mail 有真实双 queen E2E</td></tr>
+<tr><td>Worker / Colony</td><td><code>CONCEPT_WIRING_AUDIT.md</code>、<code>docs/queen-worker-colony-parity-audit.html</code></td><td>概念接线 80/0/0；escalation 生产链有真实 E2E</td></tr>
+</tbody></table></div>
+</section>
+
+<footer>调研：2026-11-21 15:59 CST · 上游 hive 1.0.14（core 树，本机 checkout）· 证据：源码文件头/常量/注册处 + <code>docs/key_concepts/*.md</code> + 测试文件 · 口径：本页只报告"文档怎么说、代码怎么做"，两者不一致处单列（§08），不替任何一侧圆场。</footer>
+</div></body></html>

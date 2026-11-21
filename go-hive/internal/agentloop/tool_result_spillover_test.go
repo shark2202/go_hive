@@ -99,6 +99,10 @@ func TestToolResultOverThresholdSpillsAndCitesPath(t *testing.T) {
 	if !strings.Contains(result.Content, "Full result at: "+result.SpilloverPath) {
 		t.Fatalf("content does not cite the spill file: %q", result.Content)
 	}
+	hint := "For targeted lookup, run `grep -nE \"<pattern>\" \"" + result.SpilloverPath + "\"` via terminal_exec."
+	if !strings.Contains(result.Content, hint) {
+		t.Fatalf("content is missing the upstream grep recovery hint %q: %q", hint, result.Content)
+	}
 	extracted := ExtractSpilloverFilename(result.Content)
 	if extracted == nil || *extracted != result.SpilloverPath {
 		t.Fatalf("ExtractSpilloverFilename = %v, want %q", extracted, result.SpilloverPath)

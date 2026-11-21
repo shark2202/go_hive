@@ -145,6 +145,42 @@ func TestCaptionFailureMarksTheImageStripped(t *testing.T) {
 	}
 }
 
+// TestCaptionSplicedBeforeReminderTail pins the splice position: upstream
+// appends the caption before the batch's reminder tail (prefix, caption,
+// tail), and the port must store the same bytes in the same order.
+//
+// Parity: framework/agent_loop/agent_loop.py (vision_fallback_marker splice,
+// then the _combined_tail append)
+func TestCaptionSplicedBeforeReminderTail(t *testing.T) {
+	completer := &fixedModelCompleter{model: "groq/llama-3.1-8b-instant"}
+	cfg := DefaultLoopConfig()
+	cfg.SpilloverDir = t.TempDir()
+	loop := NewAgentLoop(cfg, func(ToolCallRequest) (ToolResult, error) { return ToolResult{}, nil })
+	loop.VisionCaptioner = &fakeCaptioner{caption: `"Submit" button (0.5, 0.5)`, ok: true}
+
+	conv := NewNodeConversation("You are an agent.")
+	agentCtx := &AgentContext{
+		AgentID:   "tail_agent",
+		AgentSpec: NewAgentSpec("tail_agent", "Tail", "caption order"),
+		LLM:       completer,
+		StreamID:  "tail",
+	}
+	toolCalls := []llm.ToolCall{{ID: "t1", Name: "attach_file", Arguments: `{"paths": ["/tmp/a.png"]}`}}
+	results := []ToolResult{{
+		Content:      `{"attached": [], "errors": []}`,
+		ImageContent: []map[string]any{{"type": "image_url", "image_url": map[string]any{"url": "data:image/png;base64,AAAA"}}},
+	}}
+	tail := "<system-reminder>\nreminder body\n</system-reminder>"
+	if _, err := loop.storeToolBatch(context.Background(), agentCtx, conv, toolCalls, results, tail, []bool{true}); err != nil {
+		t.Fatalf("storeToolBatch: %v", err)
+	}
+
+	want := `{"attached": [], "errors": []}` + "\n\n[vision-fallback caption]\n\"Submit\" button (0.5, 0.5)" + "\n\n" + tail
+	if got := toolMessage(t, conv).Content; got != want {
+		t.Fatalf("stored tool result =\n%q\nwant\n%q", got, want)
+	}
+}
+
 // TestNoCaptionerKeepsToolImages is the default path: a session without a
 // configured vision_fallback keeps the previous behaviour — images ride the
 // tool result to the model (or to the media gate).

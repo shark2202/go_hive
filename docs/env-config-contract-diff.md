@@ -82,10 +82,10 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `judge.protocol` | string | null | — | `core/framework/server/judge.py:75` | `go_hive/go-hive/internal/server/judge.go:45` | aligned |
-| `judge.api_base` | string | null | — | `core/framework/server/judge.py:33` | `go_hive/go-hive/internal/server/judge.go:29` | aligned |
-| `judge.model` | string | null | — | `core/framework/server/judge.py:45` | `go_hive/go-hive/internal/server/judge.go:71` | aligned |
-| `judge.api_key` | string | null | — | `core/framework/server/judge.py:50` | `go_hive/go-hive/internal/server/judge.go:29` | aligned |
+| `judge.protocol` | string | null | — | `core/framework/server/judge.py:75` | `go_hive/go-hive/internal/server/judge.go:46` | aligned |
+| `judge.api_base` | string | null | — | `core/framework/server/judge.py:33` | `go_hive/go-hive/internal/server/judge.go:30` | aligned |
+| `judge.model` | string | null | — | `core/framework/server/judge.py:45` | `go_hive/go-hive/internal/server/judge.go:76` | aligned |
+| `judge.api_key` | string | null | — | `core/framework/server/judge.py:50` | `go_hive/go-hive/internal/server/judge.go:30` | aligned |
 | `judge.threshold` | number | 0.5 | — | `core/framework/server/stall_check.py:90` | `go_hive/go-hive/internal/server/stall_check.go:105` | aligned |
 
 - `judge.protocol`：only typesafe exists; an unknown protocol logs and returns no answer on both sides.
@@ -125,7 +125,7 @@
 - `llm.api_key_env_var`：the env var named here is a fallback AFTER the credential store for Python's get_api_key; Go's MainSlotKey (session build) and llm_config (status/hot swap) follow the same order.
 - `llm.max_tokens`：missing -> model catalog -> DEFAULT_MAX_TOKENS=8192. Go consumes it for the queen turn budget (chatTurnMaxTokens → agentCtx.MaxTokens) with the same fallback chain, not only in the REST readback; the fallback chain and the built session's MaxTokens are pinned by TestChatTurnMaxTokensFollowsTheMainSlot / TestChatRuntimeBudgetsTheQueenTurnFromTheMainSlot.
 - `llm.max_context_tokens`：missing -> catalog -> 32000 (DEFAULT_MAX_CONTEXT_TOKENS). A queen without her own section budgets her loop by this value first (QueenMaxContextTokens falls through the main slot), matching get_queen_max_context_tokens.
-- `llm.aux_max_tokens`：both read the JSON int, else min(8192, llm.max_tokens). Wired: serve installs it process-wide with llm.SetAuxMaxTokens, and the recall/judge/sentinel/skill-test call sites read llm.AuxMaxTokens(). Pinned by TestConfiguredAuxMaxTokensReachesTheJudge.
+- `llm.aux_max_tokens`：both read the JSON int, else min(8192, llm.max_tokens). Wired: serve installs it process-wide with llm.SetAuxMaxTokens, and the recall/judge/sentinel/skill-test/title-namer call sites read llm.AuxMaxTokens() (the namer used to keep an 8192 placeholder; the limits lane wired it to the same knob and pinned it with TestTitleBudgetFollowsConfiguredAuxMaxTokens). Pinned by TestConfiguredAuxMaxTokensReachesTheJudge.
 - `llm.endpoint`：named endpoint must exist in model_endpoints; its stored credential (or its never-ambient placeholder) wins over ambient keys on both sides. Go's MainSlotKey checks it first, exactly like _endpoint_key.
 - `llm.extra_body`：non-object/empty -> not sent; copied verbatim into every request body. Go's MainSlotProvider installs it as the provider's extra kwargs at session build (upstream get_llm_extra_kwargs does the same), and a section PUT carries it to the rebuilt transport.
 - `llm.num_ctx`：only sent for provider=ollama on both sides. Go reads a JSON integer (json.Number included) and defaults to 16384; a non-integer/absent value keeps the default.
@@ -162,9 +162,9 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `memory_reflection.every_turns` | int >= 1 | 6 | — | `core/framework/config.py:1023` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:287` | aligned |
-| `memory_reflection.long_every` | int >= 1 | 4 | — | `core/framework/config.py:1025` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:288` | aligned |
-| `memory_reflection.model` | "main" \| "worker" | main | — | `core/framework/config.py:1041` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:289` | aligned |
+| `memory_reflection.every_turns` | int >= 1 | 6 | — | `core/framework/config.py:1023` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:293` | aligned |
+| `memory_reflection.long_every` | int >= 1 | 4 | — | `core/framework/config.py:1025` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:294` | aligned |
+| `memory_reflection.model` | "main" \| "worker" | main | — | `core/framework/config.py:1041` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:295` | aligned |
 
 - `memory_reflection.every_turns`：int (bool rejected), >=1; invalid keeps 6.
 - `memory_reflection.long_every`：same validation as every_turns.

@@ -116,26 +116,6 @@
         {
           "class": "value-level",
           "exception_id": "tool-description-text",
-          "path": "lifecycle[run_playbook].description",
-          "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
-          "reference": [
-            {
-              "chars": 639,
-              "preview": "\"Run a colony playbook — a deterministic Python script that drives a tracker table to convergence: query the undone work, dispatch workers on it, re-query, repe",
-              "sha256": "6dcc1aa3161da5eb"
-            }
-          ],
-          "target": [
-            {
-              "chars": 638,
-              "preview": "\"Run a colony playbook — a deterministic converge loop over a tracker table: query the undone rows, dispatch workers, re-query, repeat. Use it when the goal has",
-              "sha256": "3f7a6e69175d1240"
-            }
-          ]
-        },
-        {
-          "class": "value-level",
-          "exception_id": "tool-description-text",
           "path": "lifecycle[run_worker].description",
           "reason": "Tool description text is still being aligned with the reference corpus (tool-description / prompt parity lane). Tool names, counts, parameters and lifecycle structure are compared strictly.",
           "reference": [
@@ -660,7 +640,7 @@
           "path": "events[4].data.breakdown.conversation_chars",
           "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden.",
           "reference": [
-            "27990"
+            "28014"
           ],
           "target": [
             "0"
@@ -687,7 +667,7 @@
             "45171"
           ],
           "target": [
-            "52587"
+            "53992"
           ]
         },
         {
@@ -696,10 +676,10 @@
           "path": "events[4].data.estimated_tokens",
           "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden.",
           "reference": [
-            "31581"
+            "31589"
           ],
           "target": [
-            "24759"
+            "25228"
           ]
         },
         {
@@ -732,10 +712,10 @@
           "path": "events[4].data.usage_ratio",
           "reason": "Context readout numbers derive from the system prompt/tool-definition char counts, which still differ (prompt-parity lane); emission points and trigger values are pinned by the SSE frame golden.",
           "reference": [
-            "0.1754"
+            "0.1755"
           ],
           "target": [
-            "0.1376"
+            "0.1402"
           ]
         },
         {
@@ -2266,7 +2246,7 @@
       "reason": "Go's harness catalog records 33 MCP-origin names against the reference's 28: the Go hive_tools group implements the excel_* tools and keeps a browser group the Python probe's installed extras do not register, while Python lists csv_sql which this build leaves unimplemented. The universe size, the registry MCP total and the independent total derived from them differ by exactly that surplus (33/40 vs 28/35); the gate snapshot (817 credentialed tools, 80 providers) and every allowlist-filtered count the model surface gates on match exactly."
     }
   ],
-  "generated_at": "2026-11-21T14:04:18+08:00",
+  "generated_at": "2026-11-21T17:26:16+08:00",
   "ignored": [
     {
       "class": "runtime-internal",
@@ -2277,7 +2257,7 @@
     }
   ],
   "reference": {
-    "commit": "59d89b8667cfcee580c9477d099dc964a66b0cdd",
+    "commit": "f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d",
     "implementation": "python",
     "last_core_commit": "856854659269aa4c9fcfc8ae89ff956eaff75b66",
     "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd",
@@ -2285,12 +2265,12 @@
   },
   "schema": "hive-api-values/1",
   "target": {
-    "commit": "59d89b8667cfcee580c9477d099dc964a66b0cdd",
+    "commit": "f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d",
     "implementation": "go_hive",
     "version": "hive 1.0.26-go.1"
   },
   "totals": {
-    "declared_differences": 48,
+    "declared_differences": 47,
     "endpoint_exception_differences": 0,
     "endpoint_exceptions": 0,
     "endpoints": 77,
