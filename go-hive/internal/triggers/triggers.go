@@ -81,35 +81,51 @@ func isoPtr(t time.Time) *string {
 	return &s
 }
 
+// Parity: core/framework/host/triggers.py::_missed_for_cron
 func missedForCron(cronExpr string, since, now time.Time) (int, []string, *string) {
 	sched, ok := parseCron(cronExpr)
 	if !ok {
 		return 0, []string{}, nil
 	}
 
-	ticks := []string{}
-	count := 0
-	candidate := since.Truncate(time.Minute).Add(time.Minute)
-	horizon := since.AddDate(5, 0, 0)
-	for !candidate.After(now) && !candidate.After(horizon) {
-		if sched.matches(candidate) {
-			count++
-			if len(ticks) < MaxReportedTicks {
-				ticks = append(ticks, formatISO(candidate))
-			}
-		}
-		candidate = candidate.Add(time.Minute)
+	// Mirror croniter: ticks are strictly after `since` and at-or-before
+	// `now`, at second resolution. A 6-field schedule can fire several times
+	// within one matching minute, so each matching minute contributes every
+	// matching second instead of a single tick.
+	start := since.Truncate(time.Second).Add(time.Second)
+	lastMinute := now.Truncate(time.Minute)
+	horizonMinute := since.AddDate(cronHorizonYears, 0, 0).Truncate(time.Minute)
+	if horizonMinute.Before(lastMinute) {
+		lastMinute = horizonMinute
 	}
 
-	next := now.Truncate(time.Minute).Add(time.Minute)
-	futureHorizon := now.AddDate(5, 0, 0)
-	var nextDue *string
-	for !next.After(futureHorizon) {
-		if sched.matches(next) {
-			nextDue = isoPtr(next)
-			break
+	ticks := []string{}
+	count := 0
+	minute := start.Truncate(time.Minute)
+	firstSecond := start.Second()
+	for !minute.After(lastMinute) {
+		if sched.matchesMinute(minute) {
+			lastSecond := 59
+			if minute.Equal(now.Truncate(time.Minute)) {
+				lastSecond = now.Second()
+			}
+			for sec := firstSecond; sec <= lastSecond; sec++ {
+				if sched.seconds&(uint64(1)<<uint(sec)) == 0 {
+					continue
+				}
+				count++
+				if len(ticks) < MaxReportedTicks {
+					ticks = append(ticks, formatISO(minute.Add(time.Duration(sec)*time.Second)))
+				}
+			}
 		}
-		next = next.Add(time.Minute)
+		minute = minute.Add(time.Minute)
+		firstSecond = 0
+	}
+
+	var nextDue *string
+	if next, ok := sched.next(now); ok {
+		nextDue = isoPtr(next)
 	}
 	return count, ticks, nextDue
 }

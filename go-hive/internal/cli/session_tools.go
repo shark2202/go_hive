@@ -202,12 +202,20 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 	if _, taken := catalogue.builtinNames[CredentialStatusToolName]; !taken {
 		catalogue.defs = append(catalogue.defs, credentialStatusToolDef())
 	}
-	// run_playbook is the colony-bound queen's fan-out tool. Like run_worker it
-	// dispatches through the live runtime bound per turn; unlike run_worker it
-	// is filtered at execution time (not from defs) because the same catalogue
-	// also feeds the colony's declared-tool pool.
-	if _, taken := catalogue.builtinNames[colony.RunPlaybookToolName]; !taken {
-		catalogue.defs = append(catalogue.defs, colony.RunPlaybookToolDef())
+	// The playbook tools: run_playbook is the colony-bound queen's fan-out
+	// tool; Python's three standalone control tools (get_playbook_status /
+	// list_playbook_runs / stop_playbook) are registered next to it and route
+	// onto the same runner. Like run_worker they dispatch through the live
+	// runtime bound per turn; likewise they are filtered at execution time
+	// (not from defs) because the same catalogue also feeds the colony's
+	// declared-tool pool.
+	playbookDefs := []llm.ToolDef{colony.RunPlaybookToolDef()}
+	playbookDefs = append(playbookDefs, colony.PlaybookControlToolDefs()...)
+	for _, def := range applyToolContractParity(playbookDefs) {
+		if _, taken := catalogue.builtinNames[def.Name]; taken {
+			continue
+		}
+		catalogue.defs = append(catalogue.defs, def)
 	}
 	// run_worker is a queen lifecycle tool, not an integration: it dispatches
 	// through the live colony runtime the session binds (see
@@ -447,6 +455,22 @@ func (c *sessionToolCatalogue) execute(ctx context.Context, name string, input m
 	// before a session's colony host exists.
 	if name == skills.WriteSkillToolName || name == skills.SkillViewToolName || name == skills.ListSkillsToolName {
 		content, isError, _ := skills.ExecuteAgentTool(name, input, c.skillToolDirs(ctx))
+		return content, isError, nil, nil
+	}
+	// Python's standalone playbook-control tools (get_playbook_status /
+	// list_playbook_runs / stop_playbook) are real definitions of this
+	// catalogue; they route onto the run_playbook status/stop actions. Not
+	// gated on the flat surface mode: the definitions exist on both surfaces.
+	if action, ok := flatSurfacePlaybookActions[name]; ok {
+		mapped := make(map[string]any, len(input)+1)
+		for key, value := range input {
+			if key == "action" {
+				continue
+			}
+			mapped[key] = value
+		}
+		mapped["action"] = action
+		content, isError := colony.RunPlaybook(ctx, colony.RunWorkerSpawnerFromContext(ctx), mapped)
 		return content, isError, nil, nil
 	}
 	if name == colony.RunPlaybookToolName {

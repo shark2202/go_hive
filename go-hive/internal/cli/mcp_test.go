@@ -20,7 +20,14 @@ func newMCPRunner(t *testing.T) (*Runner, *bytes.Buffer, *bytes.Buffer) {
 		t.Fatalf("Initialize: %v", err)
 	}
 	runner.MCPMain = func(argv []string) int {
-		mcpCLI := &mcpregistry.CLI{Out: &stdout, Err: &stderr, In: strings.NewReader("")}
+		// Mirror the production wiring: the mcp engine gets the hive root
+		// page so a deferred "unrecognized arguments" prints the root usage.
+		root := runner.rootCommand()
+		mcpCLI := &mcpregistry.CLI{
+			Out: &stdout, Err: &stderr, In: strings.NewReader(""),
+			RootProg:  "hive",
+			RootUsage: func() string { return root.helpSpec().UsageText() },
+		}
 		mcpCLI.RegistryFunc = func() (*mcpregistry.Registry, error) { return registry, nil }
 		return mcpCLI.Main(argv)
 	}

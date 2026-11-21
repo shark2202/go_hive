@@ -98,8 +98,11 @@ func (r *CredRunner) reportUsageError(root *commandSpec, usage *usageError, asJS
 		tracker.WriteIndentedJSON(r.Stdout, cliErr.Envelope())
 		return cliErr.ExitCode
 	}
-	if line := usageLine(findSpecByProg(root, prog)); line != "" {
-		fmt.Fprintln(r.Stderr, line)
+	// Upstream's _Parser.error prints the responsible page's usage block, then
+	// "error: <prog>: <message>" — the leaf's page for a leaf-level failure,
+	// the root's for argparse's deferred "unrecognized arguments".
+	if block := usageErrorBlock(root, usage); block != "" {
+		fmt.Fprintln(r.Stderr, block)
 	}
 	fmt.Fprintf(r.Stderr, "error: %s\n", cliErr.Message)
 	return cliErr.ExitCode
@@ -115,17 +118,6 @@ func findSpecByProg(spec *commandSpec, prog string) *commandSpec {
 		}
 	}
 	return nil
-}
-
-func usageLine(spec *commandSpec) string {
-	if spec == nil {
-		return ""
-	}
-	text := spec.helpText()
-	if newline := strings.IndexByte(text, '\n'); newline >= 0 {
-		return text[:newline]
-	}
-	return text
 }
 
 func (r *CredRunner) execute(args *parsedArgs) (any, error) {

@@ -70,16 +70,20 @@ TERMINAL_TOOLS = {
     "terminal_rg",
 }
 
-# The five same-name tools whose reference is a queen-session Tool object
-# (queen_lifecycle_tools.py registers four of them and playbook_tools.py the
-# other). The captured Tool Library renders these rows with a name and
-# description but no input schema, so this generator dumps the registered
-# definitions instead: that is the contract the model is called with.
+# The eight same-name tools whose reference is a queen-session Tool object
+# (queen_lifecycle_tools.py registers five of them and playbook_tools.py the
+# other four: run_playbook plus the three control tools). The captured Tool
+# Library renders these rows with a name and description but no input schema,
+# so this generator dumps the registered definitions instead: that is the
+# contract the model is called with.
 QUEEN_LIFECYCLE_TOOLS = [
+    "get_playbook_status",
+    "list_playbook_runs",
     "remove_trigger",
     "reply_to_worker",
     "run_playbook",
     "set_trigger",
+    "stop_playbook",
     "update_worker_profile",
 ]
 
@@ -231,22 +235,12 @@ def main() -> None:
         }
 
     # Queen lifecycle tools: the reference is the registered Tool object (the
-    # Tool Library layer has no schema for these names). Four are byte-aligned
-    # with the Go definitions; run_playbook keeps the port's folded
-    # playbook-control parameters (action / run_id), so only its description is
-    # applied.
+    # Tool Library layer has no schema for these names). All eight are
+    # byte-aligned with the Go definitions: run_playbook's former folded
+    # control parameters were removed when Python's standalone playbook-control
+    # tools became real definitions of the Go catalogue (§14).
     for name, py in queen_lifecycle.items():
-        if name == "run_playbook":
-            status, reason = "partial", (
-                "The description is already the Python text (pinned by "
-                "TestRunPlaybookDescriptionMatchesFrozenContract). The schema keeps "
-                "this port's folded playbook-control parameters: Go folds Python's "
-                "standalone get_playbook_status / stop_playbook tools onto "
-                "run_playbook(action=...) and adds the native-JSON form, so the "
-                "model-visible schema carries action/run_id on top of the four "
-                "Python parameters, which are byte-equal.")
-        else:
-            status, reason = "aligned", ""
+        status, reason = "aligned", ""
         tools[name] = {
             "status": status,
             "source": "queen_lifecycle:queen_lifecycle_tools.py",
@@ -260,8 +254,8 @@ def main() -> None:
     manifest = {
         "provenance": {
             "purpose": (
-                "Python ⇄ Go model-visible tool contract for the 47 same-name tools "
-                "(42 core + 5 queen lifecycle)"
+                "Python ⇄ Go model-visible tool contract for the 50 same-name tools "
+                "(42 core + 8 queen lifecycle)"
             ),
             "python_default_tools": len(py_default),
             "python_all_tools": len(py_all),
@@ -269,7 +263,8 @@ def main() -> None:
             "queen_lifecycle_tools": list(QUEEN_LIFECYCLE_TOOLS),
             "queen_lifecycle_source": (
                 "core/framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools "
-                "(recording registry + mock session; playbook_tools.py registers run_playbook)"
+                "(recording registry + mock session; playbook_tools.py registers run_playbook "
+                "and the three standalone control tools)"
             ),
             "context_params_stripped": sorted(CONTEXT_PARAMS),
             "excluded_schema_keys": ["title"],

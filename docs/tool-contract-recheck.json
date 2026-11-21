@@ -1,7 +1,7 @@
 {
  "kind": "hive-tool-contract-recheck",
  "schema_version": 1,
- "generated_at_utc": "2026-11-20T16:12:43Z",
+ "generated_at_utc": "2026-11-21T14:08:34Z",
  "scope": "model-visible tools[] of a default queen_growth session, re-captured after terminal-schema-p0 (b9a85d51) and tool-desc-schema-p1 (85988b03) merged",
  "baseline": {
   "frozen_at_commit": "1b9c458a19244379ac65dabd4827addb891045ef",
@@ -940,7 +940,7 @@
   ]
  },
  "divergence_note": "capture ran on branch tool-contract-recheck @ c8cca067; the python reference checkout (/Users/mac/hive, main) was at 889bbfde during the capture and advanced to 98b3a0ab afterwards (env/config contract + qc commits). None of those touch the tool surface: core/ is still a756b1e5, tools/src still 68b6c230f20e, and the captured Python tools[] is byte-identical to the frozen baseline.",
- "current_round": 4,
+ "current_round": 5,
  "rounds": [
   {
    "round": 1,
@@ -2168,6 +2168,127 @@
      ]
     },
     "divergence_note": "The only schema divergence left among the 41 is run_playbook's two folded control parameters. The lifecycle description residual is closed at the source: the old Go run_playbook text claimed Python scripts were not executable and no [PLAYBOOK_COMPLETE] notification existed, both false since the external-interpreter and background-notify lanes landed."
+   }
+  },
+  {
+   "round": 5,
+   "label": "round 5 @ tool-schema-residual (run_playbook 折叠参数下沉为三个 control 工具；41 同名 schema 归一 41/41)",
+   "generated_at_utc": "2026-11-21T14:08:34Z",
+   "scope": "Close the last same-name schema residual: run_playbook's folded action/run_id control parameters are removed from the model-visible definition and Python's three standalone playbook-control tools (get_playbook_status / stop_playbook / list_playbook_runs) become real catalogue definitions with their Python source schemas. Both sides re-captured fresh: Python via .venv serve + scripted fake gateway, Go via dist/hive built at the lane head, all 51 deferred names loaded through search_tools.",
+   "baseline": {
+    "round": 4,
+    "statistics": {
+     "shared": 41,
+     "description_identical": 41,
+     "input_schema_raw_identical": 32,
+     "input_schema_ctx_stripped_identical": 40,
+     "input_schema_normalized_identical": 40,
+     "python_only_params": 4,
+     "go_only_params": 2,
+     "type_mismatches": 0,
+     "optionality_mismatches": 0,
+     "required_mismatches": 0
+    },
+    "note": "Round 4 measured the source-reference wording: 40/41 normalized with run_playbook as the recorded exception (folded action/run_id) plus 4 Python-only session_cwd params (Tool Library layer)."
+   },
+   "recheck": {
+    "python": {
+     "role": "reference",
+     "version": "1.0.14",
+     "checkout": "/Users/mac/hive",
+     "interpreter": "/Users/mac/hive/.venv/bin/python",
+     "source_commits": {
+      "core": "a756b1e51765bc75b0a40e362859452a0a54081b",
+      "tools": "68b6c23095aef8bc9a0dcbc05aeb16e61b1ba8db"
+     },
+     "capture": "three sources, all re-run fresh: (1) first request tools[] of a default queen_growth session (24 eager) via a scripted fake OpenAI gateway; (2) GET /api/queen/queen_growth/tools (mcp_catalog 26 + lifecycle 16 + synthetic 1); (3) the registered Python Tool objects for the lifecycle tools (queen_lifecycle_tools.py + playbook_tools.py via recording registry + mock session), because the Tool Library rows carry no schema.",
+     "capture_sha256": {
+      "py-first-tools.json": "ebf7a42c58fce8b3d1cff0ddeaedd28ab1174390823b8ce1fc54429aad32d2e7",
+      "py-queen-tools.json": "c92d0320dfbeea0838970d462fff6701b74c4589a19c904953d27fda5db8ede1",
+      "py-playbook-tools.json": "9df7675de828b6139f5dae11d7521ab072c171e65d6dbb24dc9dcce4d24e3c93",
+      "py-lifecycle-source.json": "a7f17ee0bb8101ed87788fc72cf43e1236f19844e99dd16dd494a4d5a8e81efa"
+     }
+    },
+    "go": {
+     "role": "target",
+     "branch": "tool-schema-residual",
+     "build": "CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go build -o dist/hive ./cmd/hive",
+     "capture": "same scripted gateway: first request 24 tools (names and order identical to the Python reference), then two search_tools(select:...) calls load every deferred name; the final request carries 75 tools (24 eager + 51 deferred).",
+     "capture_sha256": {
+      "go-first-tools.json": "0658b3081e61328717d543fa4539d6201b50b5828ec22b004959218c62040f41",
+      "go-all-tools.json": "4f7c612fc9ca89f1300a166aead94fc3513c8f92dba7734c5d387190f233163f",
+      "go-queen-tools.json": "424248538fba40cc44f63b6c603d8d032e18ccc8221c4fe379c448e57e06c293"
+     },
+     "first_request_names_identical": true,
+     "first_request_count": 24,
+     "loaded_request_count": 75
+    },
+    "statistics": {
+     "python_surface": 54,
+     "python_llm_request": 24,
+     "python_mcp_catalog": 26,
+     "python_lifecycle": 16,
+     "python_synthetic": 1,
+     "go_loaded_request": 75,
+     "same_name_frozen_41": {
+      "description_identical": 41,
+      "input_schema_raw_identical": 37,
+      "input_schema_ctx_stripped_identical": 41,
+      "input_schema_normalized_identical": 41,
+      "python_only_params_raw": {
+       "edit_file": [
+        "session_cwd"
+       ],
+       "read_file": [
+        "session_cwd"
+       ],
+       "terminal_job_start": [
+        "session_cwd"
+       ],
+       "terminal_pty_open": [
+        "session_cwd"
+       ]
+      },
+      "go_only_params_raw": {},
+      "type_mismatches": 0,
+      "optionality_mismatches": 0,
+      "required_mismatches": 0
+     },
+     "playbook_control_trio": {
+      "description_identical": 3,
+      "input_schema_normalized_identical": 3
+     },
+     "same_name_with_controls": 44,
+     "controlled_surface_parity_44": 44
+    },
+    "changes": [
+     "RunPlaybookToolDef: parameters are now exactly Python's four (playbook / playbook_name / playbook_path / args) with no required list; the folded action/run_id parameters are gone from the model-visible definition (they remain accepted internally for routing).",
+     "colony.PlaybookControlToolDefs: get_playbook_status / stop_playbook / list_playbook_runs registered as real definitions with the registered Python Tool descriptions, schemas and required lists.",
+     "cli dispatch routes the three control names onto the runner's status/stop actions in every surface mode (previously flat-mode only); workers strip them like run_playbook.",
+     "Tool Library lifecycle rows for the three names now carry the registered Python description instead of the 'Unavailable' folding notice.",
+     "tool_contract_parity.json regenerated from the live Python registries with the generator: 50 entries, aligned 39 / partial 1 (exa_search) / dependency 10; run_playbook's partial entry closed."
+    ],
+    "exceptions": {
+     "session_cwd": "4 Python-only raw params (edit_file / read_file / terminal_job_start / terminal_pty_open): all session_cwd, type string nullable (anyOf [string, null], default null), optional (not in required) — the mcp_catalog reference layer keeps it while both runtimes strip CONTEXT_PARAMS from the model-visible schema (core/framework/loader/tool_registry.py CONTEXT_PARAMS). After the strip the four are byte-identical.",
+     "exa_search": "unchanged recorded partial: Go registers Exa as a 7-action module (required action) while Python exposes a flat tool (required query); flattening is a separate lane.",
+     "colony_phase_descriptions": "get_worker_status / inject_message / run_worker descriptions differ from the Python Tool Library rows by design (Go carries the port's colony-phase semantics); they are not part of the 41 same-name set. stop_worker stays verbatim."
+    },
+    "evidence": {
+     "captures": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/captures",
+     "capture_driver": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/capture.py",
+     "python_source_dump": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/dump_py.py",
+     "comparator": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/compare.py",
+     "reports": [
+      "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/compare/compare-report.json",
+      "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/compare/compare-report.md"
+     ],
+     "raw_dumps": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/compare/raw-dumps",
+     "pre_fix_captures": {
+      "go-all-tools.json": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/captures/go-all-tools.prefix.json",
+      "go-first-tools.json": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/captures/go-first-tools.prefix.json",
+      "reproduced_residual": "normalized 40/41, failed=[run_playbook], go_only_params={run_playbook: [action, run_id]} (identical to round 4)"
+     }
+    }
    }
   }
  ]

@@ -72,17 +72,19 @@ type playbookRuntime interface {
 	TrackerBinding() *tracker.Binding
 }
 
-// RunPlaybookToolDef is the upstream tool schema (playbook / playbook_path /
-// playbook_name / args) plus this port's folded playbook-control parameters
-// (`action` / `run_id` — Python exposes get_playbook_status / stop_playbook as
-// separate tools, the flat surface routes those names onto these actions).
+// RunPlaybookToolDef is the upstream tool schema, byte-equal to Python's
+// registered Tool object: playbook / playbook_name / playbook_path / args and
+// no `required` list. The description is the Python reference text verbatim
+// (RunPlaybookDescription, byte-exact from the frozen contract).
 //
-// The description is the Python reference text verbatim (RunPlaybookDescription,
-// byte-exact from the frozen contract): this port now executes Python `.play.py`
-// scripts on an external interpreter and notifies completion in the background,
-// so the old hand-written "PYTHON IS NOT EXECUTABLE / no [PLAYBOOK_COMPLETE]"
-// text was stale. The schema stays a documented exception to byte equality
-// because of the two folded control parameters; see docs/tool-contract-diff.md §13.
+// This definition used to carry the port's folded playbook-control parameters
+// (`action` / `run_id`) because Python's standalone control tools had no Go
+// definitions to route. They do now (PlaybookControlToolDefs), so the folded
+// parameters were removed from the model-visible schema: the 41-tool same-name
+// schema set is byte-equal on both runtimes (docs/tool-contract-diff.md §14).
+// RunPlaybook still accepts action/run_id internally for the control tools'
+// routing and for stored callers; that is an implementation detail, not the
+// advertised contract.
 //
 // Parity: core/framework/tools/playbook_tools.py::register_playbook_tools
 func RunPlaybookToolDef() llm.ToolDef {
@@ -108,15 +110,73 @@ func RunPlaybookToolDef() llm.ToolDef {
 					"type":        "object",
 					"description": "Optional JSON object passed to the script's run(args) entrypoint.",
 				},
-				"action": map[string]any{
-					"type": "string",
-					"enum": []string{"run", "status", "stop"},
-					"description": "'run' (default) executes a playbook. 'status' lists in-flight runs of this colony " +
-						"and the recent history from colony.db. 'stop' cancels the run named by `run_id`.",
+			},
+		},
+	}
+}
+
+// Standalone playbook-control tool names (Python registers all four playbook
+// tools; only run_playbook is a colony fan-out, the other three act on runs).
+const (
+	GetPlaybookStatusToolName = "get_playbook_status"
+	StopPlaybookToolName      = "stop_playbook"
+	ListPlaybookRunsToolName  = "list_playbook_runs"
+)
+
+// PlaybookControlToolDefs are Python's three standalone playbook-control tools
+// (playbook_tools.py::register_playbook_tools), byte-equal to the registered
+// Tool objects: description, schema and `required` list. They execute through
+// RunPlaybook's status/stop actions (see the cli dispatch), which is a runner
+// detail — the model-visible contract is Python's.
+//
+// Parity: core/framework/tools/playbook_tools.py::register_playbook_tools
+func PlaybookControlToolDefs() []llm.ToolDef {
+	return []llm.ToolDef{
+		{
+			Name: GetPlaybookStatusToolName,
+			Description: "Check a playbook run by its run_id (the handle run_playbook returned). " +
+				"If still running, returns live progress (dispatched count, dead-lettered, " +
+				"phase, recent log lines). If finished, returns its run-log row. You " +
+				"usually DON'T need this — completion fires a [PLAYBOOK_COMPLETE] " +
+				"notification — use it only for an interim peek. (Use get_worker_status " +
+				"for an individual run_worker worker, not a playbook.)",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"run_id": map[string]any{"type": "string", "description": "The playbook run_id."},
 				},
-				"run_id": map[string]any{
-					"type":        "string",
-					"description": "The run to stop (only with action='stop'), as returned by an earlier run_playbook or listed by action='status'.",
+				"required": []string{"run_id"},
+			},
+		},
+		{
+			Name: StopPlaybookToolName,
+			Description: "Kill a RUNNING playbook by its run_id: stops the convergence loop (no " +
+				"more rows dispatched) and stops its in-flight workers. Use it to halt a " +
+				"run that's going wrong (bad protocol, burning an account). Rows already " +
+				"marked done are kept — re-run with run_playbook(playbook_name=...) to " +
+				"resume from where the tracker stands (no run-id needed; the tracker is " +
+				"the resume point). (Use stop_worker for an individual run_worker worker.)",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"run_id": map[string]any{"type": "string", "description": "The playbook run_id to stop."},
+				},
+				"required": []string{"run_id"},
+			},
+		},
+		{
+			Name: ListPlaybookRunsToolName,
+			Description: "Read the playbook run-log for this colony (from colony.db, the " +
+				"colony bookkeeping store — separate from the domain tracker). " +
+				"Returns recent runs most-recent-first: run_id, name, status, " +
+				"dispatched, dead_lettered, result, and the log narration. Pass " +
+				"`run_id` to fetch one run (e.g. the id run_playbook returned), or " +
+				"`limit` for the most recent N.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"run_id": map[string]any{"type": "string", "description": "Fetch only this run."},
+					"limit":  map[string]any{"type": "integer", "description": "Most recent N runs (default 20)."},
 				},
 			},
 		},

@@ -971,6 +971,31 @@ func (c *CLI) updateServer(name string, registry *Registry) int {
 	return 0
 }
 
+// UsageError is an `hive mcp` parse failure in argparse's shape: the caller
+// prints the responsible page's usage block, then "<prog>: error: <message>",
+// and exits 2.
+//
+// Root marks argparse's deferred "unrecognized arguments" check: the extras
+// are reported by the top-level parse_args after the whole command tree
+// parsed, so the page is the ROOT's (`hive`), never the verb's — the caller
+// supplies that page through CLI.RootUsage.
+type UsageError struct {
+	Prog string
+	Msg  string
+	Root bool
+}
+
+func (e *UsageError) Error() string { return e.Msg }
+
+func usageAt(prog, format string, args ...any) *UsageError {
+	return &UsageError{Prog: prog, Msg: fmt.Sprintf(format, args...)}
+}
+
+// unrecognizedArgs is argparse's extras failure for one command line.
+func unrecognizedArgs(extras []string) *UsageError {
+	return &UsageError{Msg: "unrecognized arguments: " + strings.Join(extras, " "), Root: true}
+}
+
 type MCPCommand struct {
 	Kind string
 	// HelpTopic is the verb whose help page was requested (`run`, `install`,
@@ -1001,9 +1026,15 @@ var mcpSubcommands = map[string]bool{
 	"search": true, "health": true, "init": true, "update": true,
 }
 
-func parseMCPError(format string, args ...any) error {
-	return fmt.Errorf(format, args...)
-}
+// mcpParse collects argparse's deferred extras for one `hive mcp` command
+// line. An unknown option string, or a positional the verb has no slot for,
+// is not an error where it appears: the verb finishes parsing, and only then
+// the top-level parse_args reports the leftovers as "unrecognized arguments"
+// against the root page. A missing required argument fires inside the verb
+// first (argparse checks its required actions before returning), so it wins.
+type mcpParse struct{ extras []string }
+
+func (s *mcpParse) extra(token string) { s.extras = append(s.extras, token) }
 
 func splitFlag(token string) (string, string, bool) {
 	if idx := strings.Index(token, "="); idx >= 0 && strings.HasPrefix(token, "--") {
@@ -1012,12 +1043,19 @@ func splitFlag(token string) (string, string, bool) {
 	return token, "", false
 }
 
+// looksLikeOption reports whether a token occupies argparse's 'O' pattern
+// slot, so a value-taking flag refuses it ("expected one argument") instead
+// of swallowing it as a value.
+func looksLikeOption(token string) bool {
+	return len(token) > 1 && strings.HasPrefix(token, "-")
+}
+
 func takeValue(rest []string, index int, inline string, hasInline bool, flag string) (string, int, error) {
 	if hasInline {
 		return inline, index + 1, nil
 	}
-	if index+1 >= len(rest) {
-		return "", index, parseMCPError("argument %s: expected one argument", flag)
+	if index+1 >= len(rest) || looksLikeOption(rest[index+1]) {
+		return "", index, fmt.Errorf("argument %s: expected one argument", flag)
 	}
 	return rest[index+1], index + 2, nil
 }
@@ -1035,71 +1073,115 @@ func takeMany(rest []string, index int, inline string, hasInline bool) ([]string
 	return values, index
 }
 
+// ParseMCPArgs parses one `hive mcp ...` command line. Deferred extras become
+// the root's "unrecognized arguments" failure, as argparse's parse_args does.
 func ParseMCPArgs(argv []string) (*MCPCommand, error) {
+	state := &mcpParse{}
+	command, err := parseMCPInto(state, argv)
+	if err != nil {
+		return nil, err
+	}
+	if len(state.extras) > 0 && command.Kind != "missing-command" {
+		// A deferred extra is reported by the top-level parse_args only after
+		// the group's required-subcommand check passed; with no verb the
+		// required error wins (argparse checks required actions first).
+		return nil, unrecognizedArgs(state.extras)
+	}
+	return command, nil
+}
+
+func parseMCPInto(state *mcpParse, argv []string) (*MCPCommand, error) {
 	if len(argv) > 0 && argv[0] == "hive" {
 		argv = argv[1:]
 	}
 	if len(argv) > 0 && argv[0] == "mcp" {
 		argv = argv[1:]
 	}
-	if len(argv) == 0 {
+	// Option strings before the verb are extras, and the group's required
+	// subcommand check still fires first when no verb follows.
+	index := 0
+	for index < len(argv) {
+		token := argv[index]
+		if token == "--" {
+			if index+1 < len(argv) {
+				// argparse hands the separator to the subcommand choice: the
+				// first positional value becomes "--", so the choice fails.
+				return nil, usageAt("hive mcp",
+					"argument mcp_command: invalid choice: '--' (choose from %s)",
+					mcpChoiceList())
+			}
+			index++
+			break
+		}
+		if !strings.HasPrefix(token, "-") {
+			break
+		}
+		if isHelp(token) {
+			return &MCPCommand{Kind: "help"}, nil
+		}
+		state.extra(token)
+		index++
+	}
+	if index >= len(argv) {
 		// Upstream runs on argparse with a required subcommand, so a bare
 		// `hive mcp` is a usage error (exit 2) with the usage on stderr — it
 		// prints no group help. `hive mcp --help` / `hive mcp help` stay 0.
 		return &MCPCommand{Kind: "missing-command"}, nil
 	}
-	if argv[0] == "-h" || argv[0] == "--help" || argv[0] == "help" {
+
+	command := argv[index]
+	rest := argv[index+1:]
+	if command == "help" {
 		return &MCPCommand{Kind: "help"}, nil
 	}
-
-	command := argv[0]
 	if !mcpSubcommands[command] {
-		return nil, parseMCPError("invalid choice: '%s' (choose from 'install', 'add', 'mode', 'run', 'remove', 'enable', 'disable', 'list', 'info', 'config', 'search', 'health', 'init', 'update')", command)
+		return nil, usageAt("hive mcp",
+			"argument mcp_command: invalid choice: '%s' (choose from %s)",
+			command, mcpChoiceList())
 	}
-	rest := argv[1:]
 
 	var cmd *MCPCommand
-	var err error
 	switch command {
 	case "install":
-		return withHelpTopic(parseInstall, rest, command)
+		return withHelpTopic(parseInstall, rest, command, state)
 	case "add":
-		return withHelpTopic(parseAdd, rest, command)
+		return withHelpTopic(parseAdd, rest, command, state)
 	case "mode":
-		return withHelpTopic(parseMode, rest, command)
+		return withHelpTopic(parseMode, rest, command, state)
 	case "run":
-		return withHelpTopic(parseRun, rest, command)
+		return withHelpTopic(parseRun, rest, command, state)
 	case "remove", "enable", "disable":
-		return withHelpTopic(func(values []string) (*MCPCommand, error) {
-			return parseNameOnly(command, values)
-		}, rest, command)
+		return withHelpTopic(func(values []string, st *mcpParse) (*MCPCommand, error) {
+			return parseNameOnly(command, values, st)
+		}, rest, command, state)
 	case "list":
-		return withHelpTopic(parseList, rest, command)
+		return withHelpTopic(parseList, rest, command, state)
 	case "info":
-		return withHelpTopic(parseInfo, rest, command)
+		return withHelpTopic(parseInfo, rest, command, state)
 	case "config":
-		return withHelpTopic(parseConfig, rest, command)
+		return withHelpTopic(parseConfig, rest, command, state)
 	case "search":
-		return withHelpTopic(parseSearch, rest, command)
+		return withHelpTopic(parseSearch, rest, command, state)
 	case "health":
-		return withHelpTopic(parseHealth, rest, command)
+		return withHelpTopic(parseHealth, rest, command, state)
 	case "init":
 		if len(rest) > 0 && isHelp(rest[0]) {
 			return &MCPCommand{Kind: "help", HelpTopic: "init"}, nil
 		}
-		if len(rest) > 0 {
-			err = parseMCPError("unrecognized arguments: %s", strings.Join(rest, " "))
-			break
+		for index, token := range rest {
+			if token == "--" {
+				// No positional slot to fill: the separator itself is an extra.
+				state.extras = append(state.extras, rest[index:]...)
+				break
+			}
+			state.extra(token)
 		}
 		cmd = &MCPCommand{Kind: "init"}
 	case "update":
-		return withHelpTopic(parseUpdate, rest, command)
-	}
-	if err != nil {
-		return nil, err
+		return withHelpTopic(parseUpdate, rest, command, state)
 	}
 	if cmd == nil {
-		return nil, parseMCPError("invalid choice: '%s'", command)
+		return nil, usageAt("hive mcp", "invalid choice: '%s'", command)
 	}
 	if cmd.Kind == "help" && cmd.HelpVerb == "" {
 		// Every verb-level -h/--help renders that verb's argparse page.
@@ -1108,10 +1190,20 @@ func ParseMCPArgs(argv []string) (*MCPCommand, error) {
 	return cmd, nil
 }
 
+// mcpChoiceList renders the group's subcommand choice set the way argparse's
+// invalid-choice message lists it.
+func mcpChoiceList() string {
+	names := make([]string, 0, len(mcpVerbOrder))
+	for _, name := range mcpVerbOrder {
+		names = append(names, "'"+name+"'")
+	}
+	return strings.Join(names, ", ")
+}
+
 // withHelpTopic tags a verb's help request so Main can render that verb's own
 // page instead of folding it into the group help.
-func withHelpTopic(parse func([]string) (*MCPCommand, error), rest []string, topic string) (*MCPCommand, error) {
-	cmd, err := parse(rest)
+func withHelpTopic(parse func([]string, *mcpParse) (*MCPCommand, error), rest []string, topic string, state *mcpParse) (*MCPCommand, error) {
+	cmd, err := parse(rest, state)
 	if err == nil && cmd != nil && cmd.Kind == "help" {
 		cmd.HelpTopic = topic
 	}
@@ -1120,10 +1212,15 @@ func withHelpTopic(parse func([]string) (*MCPCommand, error), rest []string, top
 
 func isHelp(token string) bool { return token == "-h" || token == "--help" }
 
-func parseInstall(rest []string) (*MCPCommand, error) {
+func parseInstall(rest []string, state *mcpParse) (*MCPCommand, error) {
+	const prog = "hive mcp install"
 	cmd := &MCPCommand{Kind: "install"}
 	for index := 0; index < len(rest); {
 		token := rest[index]
+		if token == "--" {
+			index++
+			continue
+		}
 		if isHelp(token) {
 			return &MCPCommand{Kind: "help"}, nil
 		}
@@ -1132,34 +1229,38 @@ func parseInstall(rest []string) (*MCPCommand, error) {
 		case flag == "--version":
 			value, next, err := takeValue(rest, index, inline, hasInline, "--version")
 			if err != nil {
-				return nil, err
+				return nil, usageAt(prog, "%s", err)
 			}
 			cmd.Install.Version = value
 			index = next
 		case flag == "--transport":
 			value, next, err := takeValue(rest, index, inline, hasInline, "--transport")
 			if err != nil {
-				return nil, err
+				return nil, usageAt(prog, "%s", err)
 			}
 			cmd.Install.Transport = value
 			index = next
 		case strings.HasPrefix(token, "-"):
-			return nil, parseMCPError("unrecognized arguments: %s", token)
+			state.extra(token)
+			index++
 		default:
 			if cmd.Install.Name != "" {
-				return nil, parseMCPError("unrecognized arguments: %s", token)
+				state.extra(token)
+				index++
+				continue
 			}
 			cmd.Install.Name = token
 			index++
 		}
 	}
 	if cmd.Install.Name == "" {
-		return nil, parseMCPError("the following arguments are required: name")
+		return nil, usageAt(prog, "the following arguments are required: name")
 	}
 	return cmd, nil
 }
 
-func parseAdd(rest []string) (*MCPCommand, error) {
+func parseAdd(rest []string, state *mcpParse) (*MCPCommand, error) {
+	const prog = "hive mcp add"
 	cmd := &MCPCommand{Kind: "add"}
 	positional := []string{}
 	endOfOptions := false
@@ -1190,31 +1291,31 @@ func parseAdd(rest []string) (*MCPCommand, error) {
 		case "--name":
 			value, next, err := takeValue(rest, index, inline, hasInline, "--name")
 			if err != nil {
-				return nil, err
+				return nil, usageAt(prog, "%s", err)
 			}
 			cmd.Add.Name = value
 			index = next
 		case "--transport":
 			value, next, err := takeValue(rest, index, inline, hasInline, "--transport")
 			if err != nil {
-				return nil, err
+				return nil, usageAt(prog, "%s", err)
 			}
 			if value != "stdio" && value != "http" && value != "unix" && value != "sse" {
-				return nil, parseMCPError("argument --transport: invalid choice: '%s' (choose from 'stdio', 'http', 'unix', 'sse')", value)
+				return nil, usageAt(prog, "argument --transport: invalid choice: '%s' (choose from 'stdio', 'http', 'unix', 'sse')", value)
 			}
 			cmd.Add.Transport = value
 			index = next
 		case "--url":
 			value, next, err := takeValue(rest, index, inline, hasInline, "--url")
 			if err != nil {
-				return nil, err
+				return nil, usageAt(prog, "%s", err)
 			}
 			cmd.Add.URL = value
 			index = next
 		case "--command":
 			value, next, err := takeValue(rest, index, inline, hasInline, "--command")
 			if err != nil {
-				return nil, err
+				return nil, usageAt(prog, "%s", err)
 			}
 			cmd.Add.Command = value
 			index = next
@@ -1225,28 +1326,28 @@ func parseAdd(rest []string) (*MCPCommand, error) {
 		case "--socket-path":
 			value, next, err := takeValue(rest, index, inline, hasInline, "--socket-path")
 			if err != nil {
-				return nil, err
+				return nil, usageAt(prog, "%s", err)
 			}
 			cmd.Add.SocketPath = value
 			index = next
 		case "--description":
 			value, next, err := takeValue(rest, index, inline, hasInline, "--description")
 			if err != nil {
-				return nil, err
+				return nil, usageAt(prog, "%s", err)
 			}
 			cmd.Add.Description = value
 			index = next
 		case "--env":
 			values, next := takeMany(rest, index, inline, hasInline)
 			if len(values) == 0 {
-				return nil, parseMCPError("argument --env: expected at least one argument")
+				return nil, usageAt(prog, "argument --env: expected at least one argument")
 			}
 			cmd.Add.Env = values
 			index = next
 		case "--cwd":
 			value, next, err := takeValue(rest, index, inline, hasInline, "--cwd")
 			if err != nil {
-				return nil, err
+				return nil, usageAt(prog, "%s", err)
 			}
 			cmd.Add.Cwd = value
 			index = next
@@ -1256,12 +1357,13 @@ func parseAdd(rest []string) (*MCPCommand, error) {
 		case "--from":
 			value, next, err := takeValue(rest, index, inline, hasInline, "--from")
 			if err != nil {
-				return nil, err
+				return nil, usageAt(prog, "%s", err)
 			}
 			cmd.Add.FromManifest = value
 			index = next
 		default:
-			return nil, parseMCPError("unrecognized arguments: %s", token)
+			state.extra(token)
+			index++
 		}
 	}
 
@@ -1269,30 +1371,41 @@ func parseAdd(rest []string) (*MCPCommand, error) {
 	return cmd, nil
 }
 
-func parseMode(rest []string) (*MCPCommand, error) {
+func parseMode(rest []string, state *mcpParse) (*MCPCommand, error) {
+	const prog = "hive mcp mode"
 	positional := []string{}
 	for _, token := range rest {
+		if token == "--" {
+			continue
+		}
 		if isHelp(token) {
 			return &MCPCommand{Kind: "help"}, nil
 		}
 		if strings.HasPrefix(token, "-") {
-			return nil, parseMCPError("unrecognized arguments: %s", token)
+			state.extra(token)
+			continue
 		}
-		positional = append(positional, token)
+		if len(positional) < 2 {
+			positional = append(positional, token)
+			continue
+		}
+		state.extra(token)
 	}
 	if len(positional) < 2 {
-		return nil, parseMCPError("the following arguments are required: name, mode")
+		missing := "name, mode"
+		if len(positional) == 1 {
+			missing = "mode"
+		}
+		return nil, usageAt(prog, "the following arguments are required: %s", missing)
 	}
 	if positional[1] != "cli" && positional[1] != "tools" {
-		return nil, parseMCPError("argument mode: invalid choice: '%s' (choose from 'cli', 'tools')", positional[1])
-	}
-	if len(positional) > 2 {
-		return nil, parseMCPError("unrecognized arguments: %s", strings.Join(positional[2:], " "))
+		return nil, usageAt(prog, "argument mode: invalid choice: '%s' (choose from 'cli', 'tools')", positional[1])
 	}
 	return &MCPCommand{Kind: "mode", Mode: ModeArgs{Name: positional[0], Mode: positional[1]}}, nil
 }
 
-func parseRun(rest []string) (*MCPCommand, error) {
+func parseRun(rest []string, _ *mcpParse) (*MCPCommand, error) {
+	const prog = "hive mcp run"
 	// argparse sees `run` as `name` plus a REMAINDER. Only a help flag
 	// *before* the name reaches argparse's --help action; anything after the
 	// name is forwarded to mcp2cli (`run NAME --help` runs the tool's help).
@@ -1303,39 +1416,52 @@ func parseRun(rest []string) (*MCPCommand, error) {
 		rest = rest[1:]
 	}
 	if len(rest) == 0 {
-		return nil, parseMCPError("the following arguments are required: name, mcp2cli_args")
+		return nil, usageAt(prog, "the following arguments are required: name, mcp2cli_args")
 	}
 	if strings.HasPrefix(rest[0], "-") {
 		// An unknown flag before the required positionals: argparse reports
 		// the missing arguments and exits 2 instead of forwarding the flag.
-		return nil, parseMCPError("the following arguments are required: name, mcp2cli_args")
+		return nil, usageAt(prog, "the following arguments are required: name, mcp2cli_args")
 	}
 	return &MCPCommand{Kind: "run", Run: RunArgs{Name: rest[0], Args: append([]string{}, rest[1:]...)}}, nil
 }
 
-func parseNameOnly(kind string, rest []string) (*MCPCommand, error) {
+func parseNameOnly(kind string, rest []string, state *mcpParse) (*MCPCommand, error) {
+	const prog = "hive mcp"
 	positional := []string{}
 	for _, token := range rest {
+		if token == "--" {
+			continue
+		}
 		if isHelp(token) {
 			return &MCPCommand{Kind: "help"}, nil
 		}
 		if strings.HasPrefix(token, "-") {
-			return nil, parseMCPError("unrecognized arguments: %s", token)
+			state.extra(token)
+			continue
 		}
-		positional = append(positional, token)
+		if len(positional) < 1 {
+			positional = append(positional, token)
+			continue
+		}
+		state.extra(token)
 	}
 	if len(positional) == 0 {
-		return nil, parseMCPError("the following arguments are required: name")
-	}
-	if len(positional) > 1 {
-		return nil, parseMCPError("unrecognized arguments: %s", strings.Join(positional[1:], " "))
+		return nil, usageAt(prog+" "+kind, "the following arguments are required: name")
 	}
 	return &MCPCommand{Kind: kind, Name: positional[0]}, nil
 }
 
-func parseList(rest []string) (*MCPCommand, error) {
+func parseList(rest []string, state *mcpParse) (*MCPCommand, error) {
 	cmd := &MCPCommand{Kind: "list"}
-	for _, token := range rest {
+	for index := 0; index < len(rest); index++ {
+		token := rest[index]
+		if token == "--" {
+			// `list` declares no positional slot, so argparse leaves the
+			// separator (and everything after it) unmatched: extras.
+			state.extras = append(state.extras, rest[index:]...)
+			break
+		}
 		switch token {
 		case "-h", "--help":
 			return &MCPCommand{Kind: "help"}, nil
@@ -1344,15 +1470,19 @@ func parseList(rest []string) (*MCPCommand, error) {
 		case "--json":
 			cmd.List.OutputJSON = true
 		default:
-			return nil, parseMCPError("unrecognized arguments: %s", token)
+			state.extra(token)
 		}
 	}
 	return cmd, nil
 }
 
-func parseInfo(rest []string) (*MCPCommand, error) {
+func parseInfo(rest []string, state *mcpParse) (*MCPCommand, error) {
+	const prog = "hive mcp info"
 	cmd := &MCPCommand{Kind: "info"}
 	for _, token := range rest {
+		if token == "--" {
+			continue
+		}
 		switch token {
 		case "-h", "--help":
 			return &MCPCommand{Kind: "help"}, nil
@@ -1360,21 +1490,27 @@ func parseInfo(rest []string) (*MCPCommand, error) {
 			cmd.Info.OutputJSON = true
 		default:
 			if strings.HasPrefix(token, "-") || cmd.Info.Name != "" {
-				return nil, parseMCPError("unrecognized arguments: %s", token)
+				state.extra(token)
+				continue
 			}
 			cmd.Info.Name = token
 		}
 	}
 	if cmd.Info.Name == "" {
-		return nil, parseMCPError("the following arguments are required: name")
+		return nil, usageAt(prog, "the following arguments are required: name")
 	}
 	return cmd, nil
 }
 
-func parseConfig(rest []string) (*MCPCommand, error) {
+func parseConfig(rest []string, state *mcpParse) (*MCPCommand, error) {
+	const prog = "hive mcp config"
 	cmd := &MCPCommand{Kind: "config"}
 	for index := 0; index < len(rest); {
 		token := rest[index]
+		if token == "--" {
+			index++
+			continue
+		}
 		if isHelp(token) {
 			return &MCPCommand{Kind: "help"}, nil
 		}
@@ -1383,34 +1519,40 @@ func parseConfig(rest []string) (*MCPCommand, error) {
 		case "--set":
 			values, next := takeMany(rest, index, inline, hasInline)
 			if len(values) == 0 {
-				return nil, parseMCPError("argument --set: expected at least one argument")
+				return nil, usageAt(prog, "argument --set: expected at least one argument")
 			}
 			cmd.Config.SetEnv = values
 			index = next
 		case "--set-header":
 			values, next := takeMany(rest, index, inline, hasInline)
 			if len(values) == 0 {
-				return nil, parseMCPError("argument --set-header: expected at least one argument")
+				return nil, usageAt(prog, "argument --set-header: expected at least one argument")
 			}
 			cmd.Config.SetHeader = values
 			index = next
 		default:
 			if strings.HasPrefix(token, "-") || cmd.Config.Name != "" {
-				return nil, parseMCPError("unrecognized arguments: %s", token)
+				state.extra(token)
+				index++
+				continue
 			}
 			cmd.Config.Name = token
 			index++
 		}
 	}
 	if cmd.Config.Name == "" {
-		return nil, parseMCPError("the following arguments are required: name")
+		return nil, usageAt(prog, "the following arguments are required: name")
 	}
 	return cmd, nil
 }
 
-func parseSearch(rest []string) (*MCPCommand, error) {
+func parseSearch(rest []string, state *mcpParse) (*MCPCommand, error) {
+	const prog = "hive mcp search"
 	cmd := &MCPCommand{Kind: "search"}
 	for _, token := range rest {
+		if token == "--" {
+			continue
+		}
 		switch token {
 		case "-h", "--help":
 			return &MCPCommand{Kind: "help"}, nil
@@ -1418,20 +1560,24 @@ func parseSearch(rest []string) (*MCPCommand, error) {
 			cmd.Search.OutputJSON = true
 		default:
 			if strings.HasPrefix(token, "-") || cmd.Search.Query != "" {
-				return nil, parseMCPError("unrecognized arguments: %s", token)
+				state.extra(token)
+				continue
 			}
 			cmd.Search.Query = token
 		}
 	}
 	if cmd.Search.Query == "" {
-		return nil, parseMCPError("the following arguments are required: query")
+		return nil, usageAt(prog, "the following arguments are required: query")
 	}
 	return cmd, nil
 }
 
-func parseHealth(rest []string) (*MCPCommand, error) {
+func parseHealth(rest []string, state *mcpParse) (*MCPCommand, error) {
 	cmd := &MCPCommand{Kind: "health"}
 	for _, token := range rest {
+		if token == "--" {
+			continue
+		}
 		switch token {
 		case "-h", "--help":
 			return &MCPCommand{Kind: "help"}, nil
@@ -1439,7 +1585,8 @@ func parseHealth(rest []string) (*MCPCommand, error) {
 			cmd.Health.OutputJSON = true
 		default:
 			if strings.HasPrefix(token, "-") || cmd.Health.Name != "" {
-				return nil, parseMCPError("unrecognized arguments: %s", token)
+				state.extra(token)
+				continue
 			}
 			cmd.Health.Name = token
 		}
@@ -1447,14 +1594,18 @@ func parseHealth(rest []string) (*MCPCommand, error) {
 	return cmd, nil
 }
 
-func parseUpdate(rest []string) (*MCPCommand, error) {
+func parseUpdate(rest []string, state *mcpParse) (*MCPCommand, error) {
 	cmd := &MCPCommand{Kind: "update"}
 	for _, token := range rest {
+		if token == "--" {
+			continue
+		}
 		if isHelp(token) {
 			return &MCPCommand{Kind: "help"}, nil
 		}
 		if strings.HasPrefix(token, "-") || cmd.Update.Name != "" {
-			return nil, parseMCPError("unrecognized arguments: %s", token)
+			state.extra(token)
+			continue
 		}
 		cmd.Update.Name = token
 	}
@@ -1464,8 +1615,7 @@ func parseUpdate(rest []string) (*MCPCommand, error) {
 func (c *CLI) Main(argv []string) int {
 	command, err := ParseMCPArgs(argv)
 	if err != nil {
-		fmt.Fprintf(c.errOut(), "%v\n", err)
-		return 2
+		return c.reportUsageError(err)
 	}
 
 	switch command.Kind {
@@ -1477,9 +1627,10 @@ func (c *CLI) Main(argv []string) int {
 		fmt.Fprint(c.out(), MCPHelpText())
 		return 0
 	case "missing-command":
-		fmt.Fprintln(c.errOut(), MCPGroupUsageText())
-		fmt.Fprintln(c.errOut(), "hive mcp: error: the following arguments are required: mcp_command")
-		return 2
+		return c.reportUsageError(&UsageError{
+			Prog: "hive mcp",
+			Msg:  "the following arguments are required: mcp_command",
+		})
 	case "install":
 		return c.Install(command.Install)
 	case "add":
@@ -1512,10 +1663,54 @@ func (c *CLI) Main(argv []string) int {
 	return 2
 }
 
+// reportUsageError prints an argparse-shaped parse failure: the responsible
+// page's usage block, then "<prog>: error: <message>", and exits 2.
+//
+// A deferred "unrecognized arguments" failure (Root) prints the ROOT page:
+// the `hive` page when this CLI is reached through the hive binary — the
+// caller supplies it through RootUsage/RootProg — or the `hive mcp` group
+// page when the module is driven directly.
+func (c *CLI) reportUsageError(err error) int {
+	var usage *UsageError
+	if !errors.As(err, &usage) {
+		fmt.Fprintf(c.errOut(), "%v\n", err)
+		return 2
+	}
+	prog := usage.Prog
+	block := ""
+	if usage.Root {
+		if c.RootUsage != nil {
+			block = c.RootUsage()
+		} else {
+			block = MCPGroupUsageText()
+		}
+		prog = c.RootProg
+		if prog == "" {
+			prog = "hive"
+		}
+	} else {
+		if prog == "" {
+			prog = "hive mcp"
+		}
+		block = MCPUsageTextFor(prog)
+	}
+	if block != "" {
+		fmt.Fprintln(c.errOut(), block)
+	}
+	fmt.Fprintf(c.errOut(), "%s: error: %s\n", prog, usage.Msg)
+	return 2
+}
+
 type CLI struct {
 	Out io.Writer
 	Err io.Writer
 	In  io.Reader
+
+	// RootUsage renders the `hive` root usage block and RootProg names its
+	// prog; together they shape a deferred "unrecognized arguments" failure,
+	// which argparse raises at the top level rather than at the verb.
+	RootUsage func() string
+	RootProg  string
 
 	Input            func(prompt string) (string, error)
 	RegistryFunc     func() (*Registry, error)

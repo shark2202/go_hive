@@ -104,9 +104,11 @@ terminal_output_get terminal_rg update_worker_profile write_skill
 - **schema 例外（保留现状，不改写）**：
   1. P1 对齐表（`tool_contract_parity.json`）覆盖的默认工具——P1/terminal 车道冻结的
      12 个（`attach_file`、`get_account_info`、`get_current_time`、`image_generate`、
-     `pdf_read`、`search_messages`、terminal 6 个），加上 lifecycle 源码口径新冻结的
-     5 个（`remove_trigger`、`reply_to_worker`、`run_playbook`、`set_trigger`、
-     `update_worker_profile`，见 `docs/tool-contract-diff.md` §13）——逐字 schema 以现场定义为准；
+     `pdf_read`、`search_messages`、terminal 6 个），加上 lifecycle 源码口径冻结的
+     8 个（`remove_trigger`、`reply_to_worker`、`run_playbook`、`set_trigger`、
+     `update_worker_profile`，以及 round-5 落为真实定义的 `get_playbook_status`、
+     `stop_playbook`、`list_playbook_runs`；见 `docs/tool-contract-diff.md` §13/§14）——
+     逐字 schema 以现场定义为准；
   2. 其余 lifecycle-only 条目（`get_worker_status`、`inject_message`、`run_worker`、
      `stop_worker`）在 Python Tool Library 里只渲染 name+description（无 input_schema，
      manifest 里是空对象），Go 侧的真实 schema 是执行契约。这是层间不可比
@@ -119,8 +121,8 @@ terminal_output_get terminal_rg update_worker_profile write_skill
 
 | 扁平工具 | 落点 |
 | --- | --- |
-| `get_playbook_status` / `list_playbook_runs` | `colony.RunPlaybook`（既有 `run_playbook(action="status")`） |
-| `stop_playbook` | `colony.RunPlaybook(action="stop")` |
+| `get_playbook_status` / `list_playbook_runs` | 真实定义（`colony.PlaybookControlToolDefs`），路由到 `colony.RunPlaybook` 的 `status` action |
+| `stop_playbook` | 真实定义（`colony.PlaybookControlToolDefs`），路由到 `colony.RunPlaybook` 的 `stop` action |
 | `run_playbook` / `run_worker` | 既有实现（colony） |
 | 10 个 lifecycle（`get_worker_status`…`update_worker_profile`） | 既有 `QueenLifecycleBinding`（queen 会话启用；4 个 colony 相位工具按上游语义门控） |
 | `search_tools` | agent loop 的 tier 拦截（有 tier 时）；无 tier 时返回 inventory 信封 |
@@ -190,6 +192,9 @@ terminal_output_get terminal_rg update_worker_profile write_skill
   `run_playbook`（lifecycle）落到既有 colony 实现的可操作错误，非 unknown tool；
 - `TestFlatSurfaceSchemasMatchFrozenContract`：逐工具 name/description/
   input_schema 与冻结契约逐字一致（例外见 §3，逐条列出并计数）；
+- `TestFlatSurfacePlaybookToolsMatchPythonSource`（round 5）：扁平面四个 playbook 定义
+  （`run_playbook` + 三个 control）与 Python 源码契约逐字；`run_playbook` 不得再出现
+  `action`/`run_id`；
 - `TestFlatSurfaceGroupedSwitch`：`HIVE_TOOL_SURFACE=grouped` 回退为完整池；
 - `TestFlatSurfaceExecutionRoutes`：映射工具调用落到既有 action（无 colony →
   可操作的 colony 报错，而非 unknown tool）、未实现工具返回显式信封；

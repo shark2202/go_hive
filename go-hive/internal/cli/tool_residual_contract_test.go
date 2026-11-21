@@ -1,19 +1,20 @@
 package cli
 
-// Residual same-name tool contract (docs/tool-contract-diff.md §13).
+// Residual same-name tool contract (docs/tool-contract-diff.md §13/§14).
 //
-// The five queen-lifecycle tools were the last same-name definitions without
-// a schema-bearing Python reference: the captured Tool Library renders those
-// rows as name + description only. The parity manifest now freezes them from
-// the registered Python Tool objects (tool_contract_parity.json, source
+// The queen-lifecycle tools were the last same-name definitions without a
+// schema-bearing Python reference: the captured Tool Library renders those
+// rows as name + description only. The parity manifest freezes them from the
+// registered Python Tool objects (tool_contract_parity.json, source
 // queen_lifecycle), and these tests pin the live Go definitions to that
 // reference:
 //
-//   - four tools (remove_trigger / reply_to_worker / set_trigger /
-//     update_worker_profile) are byte-identical to the Python source;
-//   - run_playbook carries the Python description verbatim and the same four
-//     parameters, plus this port's two folded playbook-control parameters
-//     (action / run_id) — the one recorded schema exception;
+//   - all eight lifecycle tools (the five session-bound ones plus Python's
+//     three standalone playbook-control tools) are byte-identical to the
+//     Python source;
+//   - run_playbook carries the Python description and exactly the four Python
+//     parameters — the folded action/run_id controls now live on the control
+//     tool definitions instead of the fan-out tool (§14);
 //   - all 41 same-name descriptions equal the frozen Python contract (the
 //     desc 41/41 target of the residual lane).
 //
@@ -24,22 +25,24 @@ package cli
 import (
 	"encoding/json"
 	"os"
-	"reflect"
-	"sort"
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/colony"
+	"github.com/aden-hive/hive-go/internal/llm"
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
 )
 
-// queenLifecycleContractNames are the five same-name lifecycle tools frozen in
+// queenLifecycleContractNames are the eight same-name lifecycle tools frozen in
 // the parity manifest from the registered Python Tool objects.
 var queenLifecycleContractNames = []string{
+	"get_playbook_status",
+	"list_playbook_runs",
 	"remove_trigger",
 	"reply_to_worker",
 	"run_playbook",
 	"set_trigger",
+	"stop_playbook",
 	"update_worker_profile",
 }
 
@@ -66,20 +69,16 @@ func liveQueenLifecycleDefs(t *testing.T) map[string]struct {
 		Description string
 		Parameters  map[string]any
 	}{Description: playbook.Description, Parameters: playbook.Parameters}
+	for _, def := range colony.PlaybookControlToolDefs() {
+		defs[def.Name] = struct {
+			Description string
+			Parameters  map[string]any
+		}{Description: def.Description, Parameters: def.Parameters}
+	}
 	return defs
 }
 
-// schemaProperties indexes a schema's properties map.
-func schemaProperties(t *testing.T, name string, schema map[string]any) map[string]any {
-	t.Helper()
-	props, ok := schema["properties"].(map[string]any)
-	if !ok {
-		t.Fatalf("%s: schema has no properties map", name)
-	}
-	return props
-}
-
-// TestQueenLifecycleDefinitionsMatchPythonSource pins the five lifecycle
+// TestQueenLifecycleDefinitionsMatchPythonSource pins the eight lifecycle
 // definitions to the Python source contract frozen in the parity manifest.
 //
 // Parity-exempt: the reference is a generated Python artifact.
@@ -100,48 +99,58 @@ func TestQueenLifecycleDefinitionsMatchPythonSource(t *testing.T) {
 			t.Errorf("%s: description is not the Python source text (got %d bytes, want %d)",
 				name, len(def.Description), len(entry.Description))
 		}
-		if entry.Status == "aligned" {
-			if !flatJSONEqual(def.Parameters, entry.Parameters) {
-				t.Errorf("%s: schema is not the Python source schema\ngot:  %#v\nwant: %#v",
-					name, def.Parameters, entry.Parameters)
-			}
+		if entry.Status != "aligned" {
+			t.Errorf("%s: manifest status = %q, want aligned", name, entry.Status)
 			continue
 		}
+		if !flatJSONEqual(def.Parameters, entry.Parameters) {
+			t.Errorf("%s: schema is not the Python source schema\ngot:  %#v\nwant: %#v",
+				name, def.Parameters, entry.Parameters)
+		}
+	}
+}
 
-		// The recorded partial: every Python parameter must be present,
-		// byte-equal, and the only extras are the folded playbook-control
-		// parameters this port adds on purpose.
-		if name != "run_playbook" {
-			t.Errorf("%s: unexpected partial manifest entry", name)
-			continue
+// TestFlatSurfacePlaybookToolsMatchPythonSource pins the four model-visible
+// playbook definitions of the default flat surface (run_playbook plus the
+// three control tools) to the Python source contract. This is the gate that
+// keeps the folded action/run_id parameters off the run_playbook fan-out tool:
+// they exist on the control tools instead.
+//
+// Parity: core/framework/tools/playbook_tools.py::register_playbook_tools
+func TestFlatSurfacePlaybookToolsMatchPythonSource(t *testing.T) {
+	catalogue := queenFlatCatalogue(t)
+	manifest := toolContractParityManifestData()
+	live := map[string]llm.ToolDef{}
+	for _, def := range catalogue.ModelDefs() {
+		live[def.Name] = def
+	}
+	for _, name := range []string{
+		"run_playbook", "get_playbook_status", "stop_playbook", "list_playbook_runs",
+	} {
+		def, ok := live[name]
+		if !ok {
+			t.Fatalf("%s: missing from the flat model-visible surface", name)
 		}
-		refProps := schemaProperties(t, "manifest."+name, entry.Parameters)
-		gotProps := schemaProperties(t, "live."+name, def.Parameters)
-		for param, want := range refProps {
-			got, ok := gotProps[param]
-			if !ok {
-				t.Errorf("%s.%s: missing from the live schema", name, param)
-				continue
-			}
-			if !flatJSONEqual(got, want) {
-				t.Errorf("%s.%s: not the Python source schema\ngot:  %#v\nwant: %#v", name, param, got, want)
-			}
+		entry, ok := manifest.Tools[name]
+		if !ok {
+			t.Fatalf("%s: missing from the parity manifest", name)
 		}
-		extra := make([]string, 0, 2)
-		for param := range gotProps {
-			if _, ok := refProps[param]; !ok {
-				extra = append(extra, param)
-			}
+		if def.Description != entry.Description {
+			t.Errorf("%s: flat description is not the Python text (got %d bytes, want %d)",
+				name, len(def.Description), len(entry.Description))
 		}
-		sort.Strings(extra)
-		if want := []string{"action", "run_id"}; !reflect.DeepEqual(extra, want) {
-			t.Errorf("%s: extra parameters = %v, want the recorded folded controls %v", name, extra, want)
+		if !flatJSONEqual(def.Parameters, entry.Parameters) {
+			t.Errorf("%s: flat schema is not the Python schema\ngot:  %#v\nwant: %#v",
+				name, def.Parameters, entry.Parameters)
 		}
-		refRequired, refHas := entry.Parameters["required"]
-		gotRequired, gotHas := def.Parameters["required"]
-		if refHas != gotHas || (refHas && !flatJSONEqual(gotRequired, refRequired)) {
-			t.Errorf("%s: required = %#v (present %v), want %#v (present %v)",
-				name, gotRequired, gotHas, refRequired, refHas)
+	}
+	props, ok := live["run_playbook"].Parameters["properties"].(map[string]any)
+	if !ok {
+		t.Fatal("run_playbook: schema has no properties map")
+	}
+	for _, folded := range []string{"action", "run_id"} {
+		if _, present := props[folded]; present {
+			t.Fatalf("run_playbook still advertises the folded control parameter %q to the model", folded)
 		}
 	}
 }

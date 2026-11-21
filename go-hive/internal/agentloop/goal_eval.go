@@ -199,7 +199,7 @@ func evaluateGoalCriterion(ctx context.Context, criterion *schemas.SuccessCriter
 		ID:          criterion.ID,
 		Description: criterion.Description,
 		Metric:      normalizedGoalMetric(criterion.Metric, criterion.Type),
-		Weight:      criterion.Weight,
+		Weight:      criterion.EffectiveWeight(),
 		Supported:   true,
 	}
 	target, targetOK := goalTargetText(criterion.Target)

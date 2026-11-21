@@ -46,14 +46,20 @@ func TestWorkerSkillDirsAndCatalogComeFromColonySkillsFolder(t *testing.T) {
 // guard that keeps a worker from recursing into run_playbook is Go-specific.
 func TestWorkerSurfaceExposesSkillReadsButNotRunPlaybook(t *testing.T) {
 	colonyDir := t.TempDir()
+	playbookTools := append([]llm.ToolDef{RunPlaybookToolDef()}, PlaybookControlToolDefs()...)
+	declared := make([]string, 0, len(playbookTools)+1)
+	declared = append(declared, skills.SkillViewToolName)
+	for _, def := range playbookTools {
+		declared = append(declared, def.Name)
+	}
 	runtime := NewColonyRuntime(RuntimeOptions{
 		StoragePath: colonyDir,
 		AgentSpec: agentloop.AgentSpec{
 			ID:    "worker",
-			Tools: []string{RunPlaybookToolName, skills.SkillViewToolName},
+			Tools: declared,
 		},
-		Tools:         []llm.ToolDef{RunPlaybookToolDef(), skills.SkillViewToolDef()},
-		DeclaredTools: []llm.ToolDef{RunPlaybookToolDef(), skills.SkillViewToolDef()},
+		Tools:         append(append([]llm.ToolDef(nil), playbookTools...), skills.SkillViewToolDef()),
+		DeclaredTools: append(append([]llm.ToolDef(nil), playbookTools...), skills.SkillViewToolDef()),
 	})
 	worker := runtime.BuildWorker(WorkerBuildOptions{WorkerID: "w2", Task: "read a skill"})
 	names := map[string]bool{}
@@ -62,6 +68,11 @@ func TestWorkerSurfaceExposesSkillReadsButNotRunPlaybook(t *testing.T) {
 	}
 	if names[RunPlaybookToolName] {
 		t.Fatal("worker surface exposed run_playbook")
+	}
+	for _, def := range PlaybookControlToolDefs() {
+		if names[def.Name] {
+			t.Fatalf("worker surface exposed queen-only playbook control %s", def.Name)
+		}
 	}
 	if !names[skills.SkillViewToolName] || !names[skills.ListSkillsToolName] {
 		t.Fatalf("worker surface missing skill reads: %#v", names)

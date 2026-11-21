@@ -1,6 +1,12 @@
 {
  "schema_version": "1.0",
  "kind": "hive-tool-definition-contract",
+ "recheck": {
+  "current_round": 5,
+  "registry": "go_hive/docs/tool-contract-recheck.json",
+  "report": "go_hive/docs/tool-contract-diff.md §13-§14",
+  "note": "This manifest is the round-1 frozen reference capture (single commit); the `go` blocks below are the round-1 target snapshot and are intentionally not rewritten. Per-round re-captures append to the registry. Round 5 (tool-schema-residual) is the current state: all 41 same-name schemas normalized-identical, run_playbook's folded action/run_id controls moved onto real control tool definitions."
+ },
  "generated_at_utc": "2026-11-20T15:35:11Z",
  "reference": {
   "name": "python",

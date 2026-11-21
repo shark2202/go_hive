@@ -168,15 +168,11 @@ func (c *browserCLI) navigateCommand() *commandSpec {
 		},
 		[]positionalSpec{{Dest: "url", Required: true}},
 		"browser_navigate", func(args *parsedArgs) (map[string]any, int) {
-			waitUntil := strings.TrimSpace(args.str("wait_until"))
-			if !containsStringValue(browserWaitUntil, waitUntil) {
-				fmt.Fprintf(c.stderr, "hive-browser: unknown --wait-until %q (choose from %s)\n",
-					waitUntil, strings.Join(browserWaitUntil, ", "))
-				return nil, browserExitUsage
-			}
+			// --wait-until is validated by the parser: upstream declares it
+			// with choices=, so argparse rejects an unknown value itself.
 			params := map[string]any{
 				"url":        args.str("url"),
-				"wait_until": waitUntil,
+				"wait_until": args.str("wait_until"),
 				"timeout_ms": args.intValue("timeout_ms"),
 			}
 			if label := strings.TrimSpace(args.str("browser_profile")); label != "" {
@@ -248,32 +244,16 @@ func (c *browserCLI) interactCommand() *commandSpec {
 	}
 	return c.leaf("hive-browser interact", "click / type / key / scroll / drag / screenshot / zoom / wait",
 		flags, nil, "browser_interact", func(args *parsedArgs) (map[string]any, int) {
-			action := strings.TrimSpace(args.str("action"))
-			if action == "" {
-				fmt.Fprintln(c.stderr, "hive-browser: --action is required")
-				return nil, browserExitUsage
-			}
-			if !containsStringValue(browserInteractActions, action) {
-				fmt.Fprintf(c.stderr, "hive-browser: unknown action %q (choose from %s)\n",
-					action, strings.Join(browserInteractActions, ", "))
-				return nil, browserExitUsage
-			}
+			// --action (required), --scroll-direction and --auto-snapshot-mode
+			// (choices) are validated by the parser, exactly as upstream's
+			// argparse declares them.
+			//
 			// --intent is not validated here: upstream's CLI passes it through
 			// and the tool layer answers `screenshot requires intent` with
 			// ok:false, which the taxonomy maps to exit 1 — same path, same
 			// code. (zoom does not take an intent upstream at all.)
-			if direction := strings.TrimSpace(args.str("scroll_direction")); !containsStringValue(browserScrollDirections, direction) {
-				fmt.Fprintf(c.stderr, "hive-browser: unknown --scroll-direction %q (choose from %s)\n",
-					direction, strings.Join(browserScrollDirections, ", "))
-				return nil, browserExitUsage
-			}
-			if mode := strings.TrimSpace(args.str("auto_snapshot_mode")); !containsStringValue(browserAutoSnapshotModes, mode) {
-				fmt.Fprintf(c.stderr, "hive-browser: unknown --auto-snapshot-mode %q (choose from %s)\n",
-					mode, strings.Join(browserAutoSnapshotModes, ", "))
-				return nil, browserExitUsage
-			}
 			params := map[string]any{
-				"action":             action,
+				"action":             args.str("action"),
 				"repeat":             args.intValue("repeat"),
 				"scroll_direction":   args.str("scroll_direction"),
 				"scroll_amount":      args.intValue("scroll_amount"),
@@ -335,7 +315,7 @@ func (c *browserCLI) interactCommand() *commandSpec {
 			// The interact screenshot action spills the same 800px JPEG the
 			// standalone verb does (upstream _blocks_to_cli_dict); ask the
 			// bridge for that payload when this action captures an image.
-			if action == "screenshot" {
+			if args.str("action") == "screenshot" {
 				params["format"] = "jpeg"
 				params["quality"] = 75
 				params["max_width"] = 800
@@ -370,12 +350,8 @@ func (c *browserCLI) selectCommand() *commandSpec {
 		},
 		[]positionalSpec{{Dest: "selector", Required: true}},
 		"browser_select", func(args *parsedArgs) (map[string]any, int) {
-			values := args.list("value")
-			if len(values) == 0 {
-				fmt.Fprintln(c.stderr, "hive-browser: --value is required (repeatable)")
-				return nil, browserExitUsage
-			}
-			params := map[string]any{"selector": args.str("selector"), "values": values}
+			// --value is required=True upstream: the parser reports it.
+			params := map[string]any{"selector": args.str("selector"), "values": args.list("value")}
 			if code := c.requireTab(args, params); code != browserExitOK {
 				return nil, code
 			}
@@ -394,11 +370,8 @@ func (c *browserCLI) uploadCommand() *commandSpec {
 		},
 		[]positionalSpec{{Dest: "selector", Required: true}},
 		"browser_upload", func(args *parsedArgs) (map[string]any, int) {
+			// --file is required=True upstream: the parser reports it.
 			files := args.list("file")
-			if len(files) == 0 {
-				fmt.Fprintln(c.stderr, "hive-browser: --file is required (repeatable)")
-				return nil, browserExitUsage
-			}
 			// No local existence check: upstream reads the files in the tool
 			// handler AFTER the bridge/context/tab checks and answers
 			// ok:false "File not found: <p>", which classify_result maps to 4
@@ -477,6 +450,12 @@ func (c *browserCLI) evaluateCommand() *commandSpec {
 			if !args.wasProvided("js") {
 				source = args.str("script")
 			}
+			if strings.TrimSpace(source) == "" {
+				// Upstream raises this as a command-level validation error
+				// (exit 6), printed as "error: <message>".
+				fmt.Fprintln(c.stderr, "error: evaluate requires JavaScript via --js (inline, @file, or -)")
+				return nil, browserExitBadArgs
+			}
 			js, err := c.readScriptSource(source)
 			if err != nil {
 				fmt.Fprintf(c.stderr, "hive-browser: %v\n", err)
@@ -517,9 +496,15 @@ func (c *browserCLI) scriptCommand() *commandSpec {
 		}, nil, "browser_script", func(args *parsedArgs) (map[string]any, int) {
 			skill := strings.TrimSpace(args.str("skill"))
 			script := strings.TrimSpace(args.str("script"))
-			if skill == "" || script == "" {
-				fmt.Fprintln(c.stderr, "hive-browser: --skill and --script are required "+
-					"(ad-hoc JS is `hive-browser evaluate --js`)")
+			// Upstream validates these in cmd_script (not argparse), with its
+			// own wording and exit 6 — reproduced verbatim.
+			if skill == "" {
+				fmt.Fprintln(c.stderr, "error: --skill is required (scripts are scoped to a skill dir). "+
+					"For ad-hoc JavaScript, use: hive-browser evaluate --js '<code>'")
+				return nil, browserExitBadArgs
+			}
+			if script == "" {
+				fmt.Fprintln(c.stderr, "error: --script is required (a script file under <skill>/scripts/)")
 				return nil, browserExitBadArgs
 			}
 			timeout, err := parseFloatValue(args.str("timeout_s"))
@@ -688,9 +673,10 @@ func hiddenTabFlag() argSpec {
 
 func (c *browserCLI) tabCommand() *commandSpec {
 	return &commandSpec{
-		Prog:  "hive-browser tab",
-		Help:  "tab-group management: list / close / activate",
-		Dest:  "tab",
+		Prog: "hive-browser tab",
+		Help: "tab-group management: list / close / activate",
+		// Upstream registers the tab verbs with dest="verb".
+		Dest:  "verb",
 		Flags: browserGroupFlags(),
 		Subcommands: []*commandSpec{
 			c.leaf("hive-browser tab list", "list tabs in this session's group",
@@ -774,13 +760,9 @@ func (c *browserCLI) pageCommand() *commandSpec {
 					{Dest: "head", Long: "head", Kind: kindInt, Metavar: "N",
 						Help: "also return the first N chars of the tree inline"}, tab,
 				}, nil, "browser_snapshot", func(args *parsedArgs) (map[string]any, int) {
-					mode := strings.TrimSpace(args.str("mode"))
-					if !containsStringValue(browserSnapshotModes, mode) {
-						fmt.Fprintf(c.stderr, "hive-browser: unknown --mode %q (choose from %s)\n",
-							mode, strings.Join(browserSnapshotModes, ", "))
-						return nil, browserExitUsage
-					}
-					params := map[string]any{"mode": mode}
+					// --mode carries choices= upstream: the parser rejects an
+					// unknown value before the command runs.
+					params := map[string]any{"mode": args.str("mode")}
 					if code := c.requireTab(args, params); code != browserExitOK {
 						return nil, code
 					}
@@ -826,11 +808,9 @@ func (c *browserCLI) pageCommand() *commandSpec {
 					{Dest: "height", Long: "height", Kind: kindInt, Required: true},
 					tab,
 				}, nil, "browser_resize", func(args *parsedArgs) (map[string]any, int) {
+					// --width/--height are required=True upstream; the parser
+					// reports a missing or non-integer value itself.
 					width, height := args.intValue("width"), args.intValue("height")
-					if !args.wasProvided("width") || !args.wasProvided("height") || width <= 0 || height <= 0 {
-						fmt.Fprintln(c.stderr, "hive-browser: --width and --height are required (positive integers)")
-						return nil, browserExitUsage
-					}
 					params := map[string]any{"width": width, "height": height}
 					if code := c.requireTab(args, params); code != browserExitOK {
 						return nil, code
@@ -884,12 +864,9 @@ func (c *browserCLI) dialogCommand() *commandSpec {
 				},
 				[]positionalSpec{{Dest: "action", Required: true, Choices: []string{"accept", "dismiss"}}},
 				"browser_dialog_respond", func(args *parsedArgs) (map[string]any, int) {
-					action := strings.ToLower(strings.TrimSpace(args.str("action")))
-					if action != "accept" && action != "dismiss" {
-						fmt.Fprintf(c.stderr, "hive-browser: action must be accept or dismiss, got %q\n", action)
-						return nil, browserExitUsage
-					}
-					params := map[string]any{"action": action}
+					// The {accept,dismiss} positional is a parser-level choice
+					// upstream; the parser has already rejected anything else.
+					params := map[string]any{"action": args.str("action")}
 					if args.wasProvided("prompt_text") {
 						params["prompt_text"] = args.str("prompt_text")
 					}

@@ -114,8 +114,8 @@ func parityEnum(t *testing.T, prop map[string]any) []string {
 // frozen fixture itself.
 func TestToolContractParityManifestShape(t *testing.T) {
 	manifest := toolContractParityManifestData()
-	if len(manifest.Tools) != 47 {
-		t.Fatalf("manifest holds %d tools, want the 47 audited same-name tools (42 core + 5 queen lifecycle)", len(manifest.Tools))
+	if len(manifest.Tools) != 50 {
+		t.Fatalf("manifest holds %d tools, want the 50 audited same-name tools (42 core + 8 queen lifecycle)", len(manifest.Tools))
 	}
 	counts := map[string]int{}
 	for name, entry := range manifest.Tools {
@@ -139,8 +139,8 @@ func TestToolContractParityManifestShape(t *testing.T) {
 			t.Fatalf("%s: %s entry has no recorded reason", name, entry.Status)
 		}
 	}
-	if counts["aligned"] != 35 || counts["partial"] != 2 || counts["dependency"] != 10 {
-		t.Fatalf("manifest status counts = %v, want aligned 35 / partial 2 / dependency 10", counts)
+	if counts["aligned"] != 39 || counts["partial"] != 1 || counts["dependency"] != 10 {
+		t.Fatalf("manifest status counts = %v, want aligned 39 / partial 1 / dependency 10", counts)
 	}
 }
 
@@ -381,15 +381,12 @@ func TestToolContractParityRemainingGaps(t *testing.T) {
 		gaps = append(gaps, name)
 	}
 	sort.Strings(gaps)
-	// Two recorded partials:
-	//   exa_search    — Go registers Exa as a 7-action module tool (required
-	//                   `action`) while Python exposes a flat tool (required
-	//                   `query`). Flattening is its own lane.
-	//   run_playbook  — Go folds Python's standalone playbook-control tools
-	//                   onto run_playbook(action=...) and adds the native-JSON
-	//                   form, so the schema carries action/run_id on top of the
-	//                   Python contract's four parameters.
-	want := []string{"exa_search", "run_playbook"}
+	// One recorded partial: exa_search — Go registers Exa as a 7-action module
+	// tool (required `action`) while Python exposes a flat tool (required
+	// `query`). Flattening is its own lane. The former run_playbook partial was
+	// closed when its folded control parameters moved onto real control tool
+	// definitions (docs/tool-contract-diff.md §14).
+	want := []string{"exa_search"}
 	if !reflect.DeepEqual(gaps, want) {
 		t.Fatalf("remaining gaps = %v\nwant (recorded) = %v", gaps, want)
 	}

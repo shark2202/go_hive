@@ -170,6 +170,65 @@ WIRING: tuple[WiringPoint, ...] = (
             Requirement("卸载调用", r"\.Unsubscribe\(subID\)"),
         ),
     ),
+    WiringPoint(
+        path="internal/agentloop/judge.go",
+        description="Judge 面：criteria/skip_judge 门控、默认 LLM judge 适配器、判定事件",
+        requirements=(
+            Requirement("ConfigureJudge 定义", r"func \(l \*AgentLoop\) ConfigureJudge\("),
+            Requirement("criteria/skip_judge 门控", r"spec\.SkipJudge \|\| !hasSuccessCriteria\(spec\)"),
+            Requirement("默认 LLM judge 适配器接线", r"NewLLMJudgeAdapterFromCompleter\(completer\)"),
+            Requirement("判定事件 judge_type", r"\"custom\","),
+            Requirement("RETRY 无反馈兜底", r"Judge returned RETRY without feedback\."),
+        ),
+    ),
+    WiringPoint(
+        path="internal/agentloop/loop.go",
+        description="Judge 面：回合内判定调用点与判定应用（判定必须仍在主循环里）",
+        requirements=(
+            Requirement("自然停/工具失败判定调用", r"l\.shouldJudge\(agentCtx, inner, false, toolFailure\)"),
+            Requirement("判定评估调用", r"l\.evaluateJudge\("),
+            Requirement("判定应用", r"applyJudgeVerdict\(conv, verdict, completion, inner, &result\)"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/agentloop/worker_stall.go",
+        description="Judge 面：worker 停机路径上的判定调用",
+        requirements=(
+            Requirement("停机判定调用", r"l\.shouldJudge\(agentCtx, inner, true, false\)"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/colony/runtime.go",
+        description="Judge 面：worker/overseer 的 judge 接线与 goal criteria 回落",
+        requirements=(
+            Requirement("judge 接线调用", r"loop\.ConfigureJudge\(judgeSpec, r\.workerCompleter\(\), r\.judgeEventWriter\(\)\)", minimum=2),
+            Requirement("goal criteria 回落", r"agentloop\.GoalCriteriaText\(r\.goal\)", minimum=2),
+        ),
+    ),
+    WiringPoint(
+        path="internal/server/chat_runtime.go",
+        description="Judge 面：chat 会话的 criteria judge 接线与 colony criteria 继承",
+        requirements=(
+            Requirement("criteria judge 接线", r"r\.loop\.ConfigureJudge\(r\.agentCtx\.AgentSpec, r\.deps\.LLM, r\.bus\)"),
+            Requirement("colony criteria 继承入口", r"func \(r \*ChatRuntime\) inheritColonyCriteria\("),
+        ),
+    ),
+    WiringPoint(
+        path="internal/server/chat_implicit_judge.go",
+        description="Judge 面：skip_judge 会话的隐式 judge_verdict 生产",
+        requirements=(
+            Requirement("隐式判定发出", r"EmitJudgeVerdict\(chatStreamID, chatNodeID,"),
+            Requirement('judge_type="implicit"', r"\"implicit\", iteration, execution"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/llmjudge/judge.go",
+        description="Judge 面：与 Python LLMJudge 逐字一致的判定 prompt",
+        requirements=(
+            Requirement("判定 prompt 模板", r"You are evaluating whether a summary meets a specific constraint\."),
+            Requirement("JSON 契约行", r'Respond with JSON: \{"passes": true/false, "explanation": "\.\.\."\}'),
+        ),
+    ),
 )
 
 

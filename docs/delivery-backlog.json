@@ -1,6 +1,68 @@
 {
   "note": "剩余工作项（lane-hours 估算）。done 项不计入；external 项不计入速度换算，只保留基线日期。",
   "gates": {
+    "G2": [
+      {
+        "id": "old-home-e2e",
+        "label": "真实旧 HIVE_HOME 全量双跑",
+        "hours": 8,
+        "done": true
+      },
+      {
+        "id": "rollback-drill",
+        "label": "Go→Python 回滚演练",
+        "hours": 4,
+        "done": true
+      },
+      {
+        "id": "install-upgrade",
+        "label": "安装/升级演练与脚本",
+        "hours": 4,
+        "done": true
+      },
+      {
+        "id": "sidecar-parity",
+        "label": "session meta/tasks/colony sidecar",
+        "hours": 4,
+        "done": true
+      },
+      {
+        "id": "g2-docs",
+        "label": "无损替换文档与支持矩阵",
+        "hours": 2,
+        "done": true
+      },
+      {
+        "id": "g2-support-matrix",
+        "label": "G2 支持矩阵与无损替换声明",
+        "hours": 2,
+        "done": true
+      }
+    ],
+    "G3": [
+      {
+        "id": "windows-real",
+        "label": "Windows 实机验证",
+        "hours": 8,
+        "external": true
+      },
+      {
+        "id": "actions-release",
+        "label": "GitHub Actions release 执行",
+        "hours": 4,
+        "external": true
+      },
+      {
+        "id": "govulncheck",
+        "label": "govulncheck + 安全审查",
+        "hours": 2
+      },
+      {
+        "id": "installer-verify",
+        "label": "六平台安装器复验",
+        "hours": 2
+      }
+    ],
     "G1": [
       {
         "id": "api-probe-matrix",
@@ -90,69 +152,37 @@
         "id": "goal-marshal-parity",
         "label": "goal 序列化差异：id 字段 / weight=0 归一 / context 键序",
         "hours": 3,
+        "done": true
+      },
+      {
+        "id": "worker-health-summary",
+        "label": "移植 get_worker_health_summary（worker_monitoring_tools.py；Go 缺失）",
+        "hours": 3,
         "done": false
-      }
-    ],
-    "G2": [
-      {
-        "id": "old-home-e2e",
-        "label": "真实旧 HIVE_HOME 全量双跑",
-        "hours": 8,
-        "done": true
       },
       {
-        "id": "rollback-drill",
-        "label": "Go→Python 回滚演练",
-        "hours": 4,
-        "done": true
+        "id": "inventory-triage-fixes",
+        "label": "清单误判/注解修正：tracker_tools/harness_tools/tracker_db/worker_profiles + skills/discovery + pipeline/registry 错配（应指 stage registry 而非 tools/registry）",
+        "hours": 3,
+        "done": false
       },
       {
-        "id": "install-upgrade",
-        "label": "安装/升级演练与脚本",
-        "hours": 4,
-        "done": true
-      },
-      {
-        "id": "sidecar-parity",
-        "label": "session meta/tasks/colony sidecar",
-        "hours": 4,
-        "done": true
-      },
-      {
-        "id": "g2-docs",
-        "label": "无损替换文档与支持矩阵",
+        "id": "server-readme-delta",
+        "label": "上游 server/README 文档债清单（graph 时代路由 vs 现役代码 vs Go 覆盖）",
         "hours": 2,
-        "done": true
+        "done": false
       },
       {
-        "id": "g2-support-matrix",
-        "label": "G2 支持矩阵与无损替换声明",
-        "hours": 2,
-        "done": true
-      }
-    ],
-    "G3": [
-      {
-        "id": "windows-real",
-        "label": "Windows 实机验证",
-        "hours": 8,
-        "external": true
+        "id": "pipeline-stages",
+        "label": "pipeline 配置面：读 configuration.json pipeline.stages 并实现 7 个内置 stage 等价（默认空管线语义）",
+        "hours": 6,
+        "done": false
       },
       {
-        "id": "actions-release",
-        "label": "GitHub Actions release 执行",
-        "hours": 4,
-        "external": true
-      },
-      {
-        "id": "govulncheck",
-        "label": "govulncheck + 安全审查",
-        "hours": 2
-      },
-      {
-        "id": "installer-verify",
-        "label": "六平台安装器复验",
-        "hours": 2
+        "id": "config-key-pipeline",
+        "label": "config 契约补 pipeline 键（当前 134 键未含）",
+        "hours": 1,
+        "done": false
       }
     ]
   }

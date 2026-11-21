@@ -1,6 +1,6 @@
 {
  "provenance": {
-  "purpose": "Python ⇄ Go model-visible tool contract for the 47 same-name tools (42 core + 5 queen lifecycle)",
+  "purpose": "Python ⇄ Go model-visible tool contract for the 50 same-name tools (42 core + 8 queen lifecycle)",
   "python_default_tools": 270,
   "python_all_tools": 857,
   "harness_groups": {
@@ -11,13 +11,16 @@
    "hive_tools": 13
   },
   "queen_lifecycle_tools": [
+   "get_playbook_status",
+   "list_playbook_runs",
    "remove_trigger",
    "reply_to_worker",
    "run_playbook",
    "set_trigger",
+   "stop_playbook",
    "update_worker_profile"
   ],
-  "queen_lifecycle_source": "core/framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools (recording registry + mock session; playbook_tools.py registers run_playbook)",
+  "queen_lifecycle_source": "core/framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools (recording registry + mock session; playbook_tools.py registers run_playbook and the three standalone control tools)",
   "context_params_stripped": [
    "agent_id",
    "colony_id",
@@ -1792,6 +1795,47 @@
     "type": "object"
    }
   },
+  "get_playbook_status": {
+   "status": "aligned",
+   "source": "queen_lifecycle:queen_lifecycle_tools.py",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Check a playbook run by its run_id (the handle run_playbook returned). If still running, returns live progress (dispatched count, dead-lettered, phase, recent log lines). If finished, returns its run-log row. You usually DON'T need this — completion fires a [PLAYBOOK_COMPLETE] notification — use it only for an interim peek. (Use get_worker_status for an individual run_worker worker, not a playbook.)",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "The playbook run_id."
+     }
+    },
+    "required": [
+     "run_id"
+    ]
+   }
+  },
+  "list_playbook_runs": {
+   "status": "aligned",
+   "source": "queen_lifecycle:queen_lifecycle_tools.py",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Read the playbook run-log for this colony (from colony.db, the colony bookkeeping store — separate from the domain tracker). Returns recent runs most-recent-first: run_id, name, status, dispatched, dead_lettered, result, and the log narration. Pass `run_id` to fetch one run (e.g. the id run_playbook returned), or `limit` for the most recent N.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "Fetch only this run."
+     },
+     "limit": {
+      "type": "integer",
+      "description": "Most recent N runs (default 20)."
+     }
+    }
+   }
+  },
   "remove_trigger": {
    "status": "aligned",
    "source": "queen_lifecycle:queen_lifecycle_tools.py",
@@ -1838,11 +1882,11 @@
    }
   },
   "run_playbook": {
-   "status": "partial",
+   "status": "aligned",
    "source": "queen_lifecycle:queen_lifecycle_tools.py",
-   "reason": "The description is already the Python text (pinned by TestRunPlaybookDescriptionMatchesFrozenContract). The schema keeps this port's folded playbook-control parameters: Go folds Python's standalone get_playbook_status / stop_playbook tools onto run_playbook(action=...) and adds the native-JSON form, so the model-visible schema carries action/run_id on top of the four Python parameters, which are byte-equal.",
-   "apply_description": false,
-   "apply_parameters": false,
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
    "description": "Run a colony playbook — a deterministic Python script that drives a tracker table to convergence: query the undone work, dispatch workers on it, re-query, repeat. Use it whenever the goal has row shape; reach for run_worker only for one-off heterogeneous tasks. ASYNC: returns a run_id immediately and notifies you via [PLAYBOOK_COMPLETE]; the convergence loop absorbs routine worker outcomes. Re-running is resume — done rows drop out of the pending query, so a second run only does the gap.\n\nSUPPLY THE SCRIPT (exactly one):\n• `playbook` — inline; saved to the colony library at playbooks/<meta-name>.play.py (returned as name+path).\n• `playbook_name` — run a saved playbook by meta name (the normal way to resume or re-run).\n• `playbook_path` — a script file on disk.\nIterate by editing the saved file (or re-sending inline with the same meta name, which overwrites) and re-running by name.\n\nSCRIPT SHAPE: define `meta` (name, description, optional `concurrency` = workers running at once; default 8, max 32; lanes throttle per-account within it) and `async def run(args)`. Injected in-script functions (NOT tools): converge / worker / tracker_query / tracker_count / lane / deadletter / log / phase. There is no mid-run escalation — a worker unsure about a row records that on the row (e.g. status='needs_review') for you to review after the run.\n\nGive every worker() a `goal` — one sentence in plain end-user language saying what that worker is doing; the UI shows it as the worker's title (it is not shown to the worker).\n\nTHE WORK-LIST: `pending()` returns one dict per worker dispatch. For cheap-per-row work (most campaigns), each dict should be a CHUNK of 5-10 rows grouped in plain Python — every worker pays a ~2-3k-token orientation tax before its first useful action, so one-row-per-worker multiplies that tax by N. Reserve one-row dispatches for rows that are individually large jobs. Chunking and convergence compose: done rows drop out of the next round's query and stragglers re-group. Give a chunked worker a `timeout` covering the whole slice, and a task string telling it to process rows as consecutive tool calls, upserting each row right after acting on it — rate pacing happens inside the tool layer, so a worker never needs a turn per row and a partial slice re-queues cleanly.\n\nCONTRACT — get these right or the playbook silently dispatches 0 workers:\n• tracker_query(sql) / tracker_count(sql) are SYNCHRONOUS — no await. tracker_query returns a LIST OF ROW DICTS; index a row's column (row['url']). A SELECT COUNT(*) is for counting — never the pending list.\n• converge(...) and worker(...) are ASYNC: `await converge(pending=..., dispatch=lambda unit, i: worker(...))` — converge awaits the worker coroutines and owns parallelism. worker() in a bare loop without await dispatches NOTHING; `for u in units: await worker(...)` runs serially and defeats meta['concurrency']. Parallel dispatch happens ONLY through converge.\n\nEXAMPLE (chunked — the default for cheap-per-row work):\n  meta = {\"name\": \"enrich\", \"description\": \"...\", \"concurrency\": 4}\n  RECEIPT = {\"type\":\"object\",\"required\":[\"processed\"],\"properties\":{\"processed\":{\"type\":\"array\"}}}\n  CHUNK = 8\n  async def run(args):\n      def pending():\n          rows = tracker_query(\"SELECT id, url FROM leads WHERE done_at IS NULL\")\n          return [{\"ids\": [r['id'] for r in rows[i:i+CHUNK]],\n                   \"urls\": [r['url'] for r in rows[i:i+CHUNK]]}\n                  for i in range(0, len(rows), CHUNK)]\n      await converge(\n          pending=pending,\n          dispatch=lambda chunk, i: worker(\n              task=f\"Enrich EACH of these, upserting its row + done_at as you go: {chunk['urls']}\",\n              goal=f\"Researching {len(chunk['ids'])} leads' websites\",\n              profile=\"acct-1\", skill=\"enrich\", schema=RECEIPT,\n              timeout=120 * len(chunk['ids'])),\n          max_rounds=3)\n      return {\"remaining\": tracker_count(\"SELECT 1 FROM leads WHERE done_at IS NULL\")}",
    "parameters": {
     "type": "object",
@@ -1895,6 +1939,26 @@
     },
     "required": [
      "trigger_id"
+    ]
+   }
+  },
+  "stop_playbook": {
+   "status": "aligned",
+   "source": "queen_lifecycle:queen_lifecycle_tools.py",
+   "reason": "",
+   "apply_description": true,
+   "apply_parameters": true,
+   "description": "Kill a RUNNING playbook by its run_id: stops the convergence loop (no more rows dispatched) and stops its in-flight workers. Use it to halt a run that's going wrong (bad protocol, burning an account). Rows already marked done are kept — re-run with run_playbook(playbook_name=...) to resume from where the tracker stands (no run-id needed; the tracker is the resume point). (Use stop_worker for an individual run_worker worker.)",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "The playbook run_id to stop."
+     }
+    },
+    "required": [
+     "run_id"
     ]
    }
   },

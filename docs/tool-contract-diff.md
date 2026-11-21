@@ -682,3 +682,104 @@ Go 注册 7-action 聚合模块（`required: ["action"]`，parameter 是各 acti
 - 证据：`/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolresid3/`
   （`capture_residual.py`、`captures/`、`out/go-gateway-residual.jsonl`、`out/summary.json`；sha256 见 recheck JSON）。
 
+## 14. round 5 @ tool-schema-residual（2026-11-21，run_playbook 折叠参数下沉；同名 schema 41/41）
+
+> 本节由 `tool-schema-residual` 车道追加（base `main 00eeecc8`）。**§1–§12 与
+> `contracts/tool-definitions.json`、`contracts/tool-types.proto` 是既有轮次的冻结记录**：
+> manifest 只新增了一个 `recheck` 指针（`go` 块仍为 round-1 冻结快照，原因见 §14.6），
+> 机器可读版见 `docs/tool-contract-recheck.json` 的 `rounds[4]`（`current_round=5`）。
+
+### 14.1 口径与抓取（全部现场重采）
+
+- **reference**：Python `hive` 1.0.14（`core` 最后改动 `a756b1e5`、`tools` 最后改动 `68b6c230`，自冻结未变），
+  解释器 `/Users/mac/hive/.venv/bin/python`。三份现场抓取：
+  1. 默认 queen_growth 会话**首轮请求** `tools[]`（脚本化假 OpenAI 网关截获）——24 个 eager 名；
+  2. `GET /api/queen/queen_growth/tools`——mcp_catalog 26 + lifecycle 16 + synthetic 1；
+  3. lifecycle 的**注册 Python `Tool` 对象**（`queen_lifecycle_tools.py` + `playbook_tools.py`，
+     记录注册器 + mock session）——Tool Library 行只有 name+description、无 schema，源码对象才是模型契约。
+- **target** = 本车道（`dist/hive`，`CGO_ENABLED=0 GOPROXY=off` 构建）。同一脚本化网关、临时 `HIVE_HOME`：
+  POST queen_growth session → POST chat；模型脚本两次 `search_tools(select:…)` 加载全部 51 个延迟名。
+- **不变量**：首轮 `tools[]` = **24**，名称与顺序与 Python 首轮**逐字相同**；加载后 = **75** = 24 + 51。
+- 差异口径与 freeze lane 一致：`name`/`description`/`input_schema`；剥离 7 个 `CONTEXT_PARAMS`；
+  归一化再剥 pydantic `title`、空 `required` ≡ 缺省、数值等价（`25.0`≡`25`）。
+
+### 14.2 同名 41 矩阵（修前 → 修后，同一抓取口径）
+
+| 维度 | 修前（抓包复现 round 4 结论） | 修后（本车道） |
+| --- | --- | --- |
+| description 逐字一致 | 41/41 | **41/41** |
+| input_schema 逐字（raw） | 36/41 | **37/41**（余 4 = `session_cwd` 参考层差异） |
+| 剥 CONTEXT_PARAMS | 40/41 | **41/41** |
+| 归一化（再剥 title、空 `required`≡缺省、数值等价） | 40/41 | **41/41** |
+| 归一化失败清单 | `run_playbook` | **无** |
+| 参数类型 / 可选性 / `required` 不一致 | 0 / 0 / 0 | **0 / 0 / 0** |
+| 仅 Python 参数（raw） | 4（`session_cwd`，见 §14.4） | 4（同，参考层差异） |
+| 仅 Go 参数（raw） | 2（`run_playbook.action/.run_id`） | **0** |
+
+把 Python 的三个独立 playbook 控制工具纳入同名面后，可控面 = **44/44**：
+description 44/44、剥 CONTEXT_PARAMS 44/44、归一化 44/44；raw 40/44（差的 4 条同上）。
+
+### 14.3 `run_playbook` 折叠控制参数：能对齐，已对齐
+
+- **成因**：Python 把 `run_playbook`（派发）与 `get_playbook_status` / `stop_playbook` /
+  `list_playbook_runs`（控制）注册为**四个独立 Tool**；Go 曾把后三个折叠成 `run_playbook` 的
+  `action`/`run_id` 两个参数，平铺面按名字把控制名路由到这两个 action。折叠是运行器实现方式差异，
+  但把实现参数写进了模型可见 schema，因此 `run_playbook` 永远无法与 Python 逐字。
+- **对齐方式**（本轮落地）：
+  1. `RunPlaybookToolDef` 改为 Python 注册 Tool 的**四个参数**（`playbook` / `playbook_name` /
+     `playbook_path` / `args`），无 `required`；
+  2. 新增 `colony.PlaybookControlToolDefs()`：三个控制工具成为**真实目录定义**，description / schema /
+     `required` 与 Python 注册对象逐字（`get_playbook_status`、`stop_playbook` = `required:["run_id"]`；
+     `list_playbook_runs` = `run_id`+`limit`、无 required）；
+  3. 三个控制名在 cli dispatch 中路由到 runner 的 `status`/`stop` action（不再限定扁平模式）；
+     worker 面与 `run_playbook` 一样剥离这四个名字；Tool Library 的 lifecycle 3 行改为注册文案。
+- **运行器内部**仍接受 `action`/`run_id`（路由与既有调用兼容），但**不再进入模型可见契约**；
+  native-JSON playbook 形态不改变参数集（`playbook` 参数说明即 Python 文本，逐字）。
+- **残余（非 schema，未在本 lane 改动）**：`action="status"` 的返回仍是聚合视图（running + history），
+  Python `get_playbook_status(run_id)` 返回单 run 视图；这是既有别名行为，属输出/行为对齐，不在 schema 车道范围。
+
+### 14.4 `session_cwd` 4 条逐条定性
+
+四条都在 **mcp_catalog 参考层**，且都是框架注入的上下文参数（`core/framework/loader/tool_registry.py:159`
+`CONTEXT_PARAMS`，请求层 1417–1418 从 `properties`/`required` 剥离）；Go 请求层不携带，属**层差异而非缺陷**。
+
+| 工具 | 参考层 | 参数 | Python schema | required | 类型 | 定性 | 剥 `CONTEXT_PARAMS` 后 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `edit_file` | mcp_catalog | `session_cwd` | `anyOf [string, null]`，`default: null` | 否 | `string`（nullable，可选） | 参考层上下文参数，Go 缺失 = 设计 | 逐字一致 |
+| `read_file` | mcp_catalog | `session_cwd` | 同上 | 否 | 同上 | 同上 | 逐字一致 |
+| `terminal_job_start` | mcp_catalog | `session_cwd` | 同上 | 否 | 同上 | 同上 | 逐字一致 |
+| `terminal_pty_open` | mcp_catalog | `session_cwd` | 同上 | 否 | 同上 | 同上 | 逐字一致 |
+
+即：**缺失（Python-only）**，不是类型差异、不是可选性差异；四条均为 `string | null` + `default:null` + 非必填。
+
+### 14.5 例外清单（最终）
+
+| 类别 | 项 | 理由 |
+| --- | --- | --- |
+| schema 层差异（参考层，非缺陷） | `edit_file` `read_file` `terminal_job_start` `terminal_pty_open` | `session_cwd` 只存在于 Python Tool Library 参考层；两侧请求层都剥离，剥后逐字一致（§14.4） |
+| 结构不适用（未变） | `exa_search` | Go 是 7-action 聚合模块（required `action`），Python 是扁平工具（required `query`）；扁平化另立车道 |
+| 不在 41 同名集（记录） | `get_worker_status` `inject_message` `run_worker` | Python 侧只有 Tool Library 渲染文本；Go 文案按本移植的 colony 相位语义改写（round 4 已记录）。`stop_worker` 逐字一致 |
+
+### 14.6 登记与冻结 manifest 的处理
+
+`contracts/tool-definitions.json` 是 **round-1 的一次性冻结抓取**（该文件历史上只有
+`223131cd contract(tools): 冻结 LLM 可见工具契约` 一个提交；后续轮次按惯例只在
+`docs/tool-contract-recheck.json` 登记、在本文件追加章节）。本轮**不重写** §1–§12 的表与 `go` 快照：
+重跑 freeze build 会把 target 快照换成当前抓取并改写 §1–§12 的历史数字，使 round 3/4 的证据不可追溯。
+本轮只给 manifest 增补一个机器可读的 `recheck` 指针（`current_round: 5` → 本节 / recheck JSON），
+当前事实以 recheck JSON `rounds[4]` 与本节为准。
+
+### 14.7 钉住测试与证据
+
+- `TestFlatSurfacePlaybookToolsMatchPythonSource`（新增）：扁平面四个 playbook 定义 vs parity manifest
+  逐字；`run_playbook` 不得再出现 `action`/`run_id`。
+- `TestQueenLifecycleDefinitionsMatchPythonSource`：8 个 lifecycle 定义全部 aligned，schema 逐字。
+- `TestRunPlaybookToolDefParametersMatchUpstream`（改写）：4 参数、无 `required`；控制三件套
+  `required:["run_id"]` / `list_playbook_runs` 两参数无 required。
+- `TestWorkerSurfaceExposesSkillReadsButNotRunPlaybook`（扩展）：worker 面不见四个 playbook 名字。
+- `TestQueenToolLibraryLifecycleHasSixteenEntries`：3 行不再是 `Unavailable`，文案含 `run_id`。
+- `TestToolContractParityManifestShape` / `TestToolContractParityRemainingGaps`：manifest 50 条
+  （aligned 39 / partial 1 / dependency 10），剩余 gap = `exa_search`。
+- 证据：`/Users/mac/.hermes/profiles/omh-tui/cache/scratch/toolschema5/`
+  （`capture.py`、`dump_py.py`、`compare.py`、`captures/`、`compare/compare-report.{json,md}`、
+  `compare/raw-dumps/`、修前抓包 `*.prefix.json`）；文件 sha256 见 recheck JSON `rounds[4].recheck`。

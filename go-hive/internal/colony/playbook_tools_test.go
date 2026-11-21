@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/playbook"
 	"github.com/aden-hive/hive-go/internal/tracker"
 )
@@ -139,15 +140,14 @@ func nativeSpecJSON() string {
 	}`
 }
 
-// Parity-exempt: the tool schema is declared inline upstream; this asserts the
-// four upstream parameter names survived the Go declaration.
+// Parity: core/framework/tools/playbook_tools.py::register_playbook_tools
 func TestRunPlaybookToolDefParametersMatchUpstream(t *testing.T) {
 	def := RunPlaybookToolDef()
 	if def.Name != RunPlaybookToolName {
 		t.Fatalf("name = %q", def.Name)
 	}
 	properties, _ := def.Parameters["properties"].(map[string]any)
-	want := []string{"playbook", "playbook_name", "playbook_path", "args", "action", "run_id"}
+	want := []string{"playbook", "playbook_name", "playbook_path", "args"}
 	if len(properties) != len(want) {
 		t.Fatalf("parameters = %v, want %v", properties, want)
 	}
@@ -155,6 +155,37 @@ func TestRunPlaybookToolDefParametersMatchUpstream(t *testing.T) {
 		if _, ok := properties[name]; !ok {
 			t.Fatalf("parameter %q missing from %v", name, properties)
 		}
+	}
+	if required, present := def.Parameters["required"]; present {
+		t.Fatalf("run_playbook declares required = %#v; the Python Tool has no required list", required)
+	}
+
+	// The three standalone control tools carry the run_id contract the folded
+	// parameters used to document on run_playbook.
+	control := map[string]llm.ToolDef{}
+	for _, controlDef := range PlaybookControlToolDefs() {
+		control[controlDef.Name] = controlDef
+	}
+	for _, name := range []string{GetPlaybookStatusToolName, StopPlaybookToolName} {
+		controlDef, ok := control[name]
+		if !ok {
+			t.Fatalf("%s missing from the control tool defs", name)
+		}
+		required, _ := controlDef.Parameters["required"].([]string)
+		if len(required) != 1 || required[0] != "run_id" {
+			t.Fatalf("%s required = %#v, want [run_id]", name, required)
+		}
+	}
+	listDef, ok := control[ListPlaybookRunsToolName]
+	if !ok {
+		t.Fatalf("%s missing from the control tool defs", ListPlaybookRunsToolName)
+	}
+	listProps, _ := listDef.Parameters["properties"].(map[string]any)
+	if len(listProps) != 2 {
+		t.Fatalf("%s properties = %v, want run_id + limit", ListPlaybookRunsToolName, listProps)
+	}
+	if _, present := listDef.Parameters["required"]; present {
+		t.Fatalf("%s declares required; the Python Tool has none", ListPlaybookRunsToolName)
 	}
 }
 

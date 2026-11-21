@@ -1,7 +1,7 @@
 {
   "schema": "hive-appearance-scope-registry/1",
-  "generated_at": "2026-11-21T18:20:00+08:00",
-  "generated_by": "appearance-registry-refresh 车道 + errors/formats + limits lane（合并：全维重写 + 本波三维实测回填）",
+  "generated_at": "2026-11-21T22:20:00+08:00",
+  "generated_by": "appearance-registry-refresh 车道 + errors/formats + limits lane（合并：全维重写 + 本波三维实测回填）+ judge-graph-scope 车道（新维度 judge：6 机制归属、范围外登记、prompt golden 与范围探针）",
   "worktree": "(multi)",
   "branch": "(multi)",
   "base_commit": "4af5b375",
@@ -1352,6 +1352,186 @@
       "priority": "P1"
     },
     {
+      "id": "judge",
+      "name": "Judge 面（判定机制 / 判定事件）",
+      "scope": "两侧「判定」的对外可观察面：judge_verdict 事件（judge_type / action / feedback / iteration）、判定触发与门控（skip_judge、success criteria）、判定失败时的回落语义、以及各判定机制的归属（会话质量判官 / criteria judge / 停滞检查概率判官 / 迭代余量反馈）。判定 prompt 的措辞不在本维度逐字登记——已对齐的那份用 golden 冻结（见 go_hive/go-hive/internal/llmjudge/testdata/prompt-parity/judge.prompt.txt）。",
+      "reference": [
+        "core/framework/agent_loop/internals/judge_pipeline.py",
+        "core/framework/orchestrator/conversation_judge.py",
+        "core/framework/agent_loop/agent_loop.py",
+        "core/framework/orchestrator/node.py",
+        "core/framework/testing/llm_judge.py",
+        "core/framework/server/judge.py",
+        "core/framework/server/stall_check.py"
+      ],
+      "go": [
+        "go_hive/go-hive/internal/agentloop/judge.go",
+        "go_hive/go-hive/internal/agentloop/llm_judge.go",
+        "go_hive/go-hive/internal/agentloop/loop_judge.go",
+        "go_hive/go-hive/internal/llmjudge/",
+        "go_hive/go-hive/internal/colony/goal_outcome.go",
+        "go_hive/go-hive/internal/server/chat_implicit_judge.go",
+        "go_hive/go-hive/internal/server/judge.go"
+      ],
+      "evidence": [
+        {
+          "path": "go_hive/docs/judge-parity.md",
+          "kind": "measured",
+          "note": "归属表（6 机制 × Python 调用链/输入字段/路径 × Go 状态 × 依据）+ 范围外与不移植的理由 + 复现命令；每条 file:line 在本车道提交上核对"
+        },
+        {
+          "path": "go_hive/scripts/judge_scope_probe.py",
+          "kind": "checker",
+          "note": "16 条静态断言：SubagentJudge 0 生产构造、accumulator 0 写入点、set_output 被拒、2b 单调用点、Go 无 graph 运行时/无 accumulator/set_output 未接线、judge 生产接线与双门控、迭代反馈是 grace；canary 验证会失败"
+        },
+        {
+          "path": "go_hive/scripts/judge_python_probe.py",
+          "kind": "measured",
+          "note": "动态 3 用例（真实 AgentLoop + 脚本化 LLM）：Level 2b judge_calls=2 且 RETRY 反馈进对话后 ACCEPT；无 criteria 时 judge_calls=0；声明 output_keys 时每轮回 'Task incomplete … not yet produced' 直到 max_iterations"
+        },
+        {
+          "path": "go_hive/go-hive/internal/llmjudge/testdata/prompt-parity/judge.prompt.txt",
+          "kind": "contract",
+          "note": "judge prompt 模板 golden（205 字符，%s 占位）：Python 侧由 scripts/judge_prompt_golden.py 提取、Go 侧 buildPrompt(\"%s\"×4) 比对；删一个空格即红"
+        },
+        {
+          "path": "go_hive/go-hive/internal/llmjudge/prompt_parity_golden_test.go",
+          "kind": "test",
+          "note": "TestJudgePromptMatchesPythonGolden / TestJudgePromptKeepsTheContractSections"
+        },
+        {
+          "path": "go_hive/scripts/wiring_check.py",
+          "kind": "checker",
+          "note": "新增 6 个接线点 / 17 项要求（judge.go、loop.go、worker_stall.go、colony/runtime.go、chat_runtime.go、chat_implicit_judge.go、llmjudge/judge.go）；门禁 19 文件 64 要求全命中，self-test 通过"
+        },
+        {
+          "path": "go_hive/go-hive/internal/agentloop/judge_test.go",
+          "kind": "test",
+          "note": "既有覆盖：ACCEPT/RETRY/ESCALATE 分支、无 criteria 不调用、默认关闭、每 N 轮、工具失败触发、ConfigureJudge 只在有 criteria 时接线、事件字段"
+        },
+        {
+          "path": "go_hive/go-hive/internal/colony/judge_wiring_test.go",
+          "kind": "test",
+          "note": "worker 回合跑 judge 并发 verdict；无 criteria 时从不调用 judge"
+        },
+        {
+          "path": "go_hive/go-hive/internal/server/chat_runtime_judge_test.go",
+          "kind": "test",
+          "note": "无 criteria 的 chat 会话从不跑 judge（不花额外模型调用）"
+        }
+      ],
+      "status": "partial",
+      "status_basis": "6 个机制逐条定归属（2026-11-21 judge-graph-scope 车道，基线 00eeecc8）：3 已对齐（J1 skip_judge 隐式 verdict、J2 判定缝 + LLM criteria judge、J6 停滞检查概率判官）、1 未对齐（J3 Level 2 output-key 门：Go 无 accumulator/set_output 接线，且参考侧该门输入恒空——accumulator.set 0 调用点、set_output 被活循环拒绝、outputs_set 0 写入点）、2 范围外（J4 conversation_judge 会话质量判官：唯一调用点 judge_pipeline.py:130，触发条件是 graph 节点 success_criteria，而 Go 无 graph 运行时——internal/orchestrator 只有 buffer/safe_eval/validator 且全仓 0 引用；J5 SubagentJudge + 迭代余量 urgency：参考侧仅测试构造、无生产调用方，Go 的迭代预算位置由已对齐的 grace 收尾占用）。本车道未新增 Go 生产代码（三条待移植机制都没有『有触发语义的活位置』），补的是可核对性：静态/动态探针、prompt golden、接线门禁 judge 组。详见 go_hive/docs/judge-parity.md。",
+      "contract_state": "test_annotated",
+      "measured_now": "2026-11-21：静态探针 16/16 PASS（canary 注入后 2 条 FAIL，删除后恢复）；动态探针 3/3（Level 2b judge_calls=2/model_turns=2/accept=True；无 criteria judge_calls=0；output-key 门 accept=False）；golden 检查 OK（205 字符），1 字符漂移被 TestJudgePromptMatchesPythonGolden 拦住；wiring_check 19 文件/64 要求 OK + self-test OK；go test ./internal/{llmjudge,agentloop,colony,server} 通过（另有 4 个与 judge 无关的既有 flake，复现率与根因见 judge-parity.md §6）。",
+      "lane": "judge-graph-scope",
+      "lane_state": "measured",
+      "lane_base_commit": "00eeecc8",
+      "next": [
+        "J4 重启条件：Go 出现 graph 运行时或 phase/accumulator 宿主时，重开 conversation_judge 的归属审计",
+        "J5 重启条件：上游把 SubagentJudge 接进任一活循环（或 Go 出现 output-key accumulator）时，按『judge 反馈 + 迭代余量』一起移植",
+        "J3 上游若给 output key 接上写入点（set_output 复活或新通道），judge-python-probe 用例 3 会失败并提醒重开",
+        "J2 的失败回落语义差异（Python 重试后 ACCEPT vs Go 归一为 RETRY + 'Judge evaluation failed'）需专门 lane 决策，不在本车道改",
+        "judge prompt golden 纳入常规门禁（judge_prompt_golden.py --check）；若上游改 prompt，先重生成 golden 再改 Go"
+      ],
+      "priority": "P2",
+      "mechanisms": [
+        {
+          "id": "J1-skip-judge-implicit-verdict",
+          "name": "Level 0 短路：skip_judge 跳过判定，仍发 judge_verdict(implicit)",
+          "python_chain": "agent_loop.py:3325 _judge_turn → 6223 judge_turn → judge_pipeline.py:76-77（skip_judge → RETRY, feedback=None）；事件：agent_loop.py:3343-3352 judge_type='implicit' → 7459 _publish_judge_verdict",
+          "inputs": "agent_spec.skip_judge（queen：agents/queen/nodes/__init__.py:772、server/queen_orchestrator.py:1636）",
+          "host_path": "graph 节点 + colony worker（同一 agent_spec 鸭子类型）",
+          "go_status": "measured_aligned",
+          "go_ref": "internal/server/chat_implicit_judge.go:35-74（下一回合开头补发 judge_type='implicit'；有 criteria judge 时不重复发，:64）",
+          "verdict": "已对齐（发出时机为移植口径差异，文件头已注明）",
+          "evidence": [
+            "probe:go-implicit-verdict-event",
+            "wiring_check:chat_implicit_judge.go"
+          ]
+        },
+        {
+          "id": "J2-judge-seam-llm-criteria-judge",
+          "name": "Level 1 判定缝（JudgeProtocol）+ LLM criteria judge",
+          "python_chain": "agent_loop.py:6223 judge_turn(judge=self._judge) → judge_pipeline.py:81-96 JudgeProtocol.evaluate；生产构造全部 judge=None（orchestrator.py:766、node_worker.py:594、colony_runtime.py:1477/2322、queen_orchestrator.py:1611）",
+          "inputs": "assistant_text / tool_calls / output_accumulator / accumulator / iteration / conversation_summary / output_keys / missing_keys",
+          "host_path": "缝在两条路径上都存在；Python 侧无生产注入方（仅测试注入）",
+          "go_status": "measured_aligned",
+          "go_ref": "agentloop/judge.go:52 Judge 接口、:92-103 ConfigureJudge、llm_judge.go:57 默认适配器、loop.go:776-779 与 worker_stall.go:151-152 调用、loop_judge.go:17 应用；criteria 来源补 colony goal 回落（colony/runtime.go:1195-1200、:1290-1296）与 chat 继承（chat_runtime.go:1316-1328，Parity-exempt）",
+          "verdict": "已对齐；Go 侧是同一缝的生产实现（Python 侧缝无注入方）。失败回落语义存在差异，见 docs/judge-parity.md §3.2 末条",
+          "evidence": [
+            "probe:go-judge-wired",
+            "probe:go-judge-gated",
+            "probe:py-no-custom-judge-injection",
+            "golden:judge.prompt.txt",
+            "test:agentloop/judge_test.go",
+            "test:colony/judge_wiring_test.go"
+          ]
+        },
+        {
+          "id": "J3-level2-output-key-gate",
+          "name": "Level 2 隐式 output-key 门（缺 key 即 RETRY）",
+          "python_chain": "judge_pipeline.py:104-124（missing → RETRY 'Task incomplete…'）+ agent_loop.py:3356（ACCEPT 后再查）；_get_missing_output_keys 6323",
+          "inputs": "OutputAccumulator（internals/types.py:368/377）——当前 runtime 0 个写入点：set_output 被拒（agent_loop.py:4856-4860）、outputs_set_this_turn 0 append",
+          "host_path": "graph 节点（声明 output_keys 的 NodeSpec）",
+          "go_status": "not_aligned",
+          "go_ref": "无 OutputAccumulator 类型、无 missing_keys 门；synthetic_tools.go:344 BuildSetOutputTool / :491 HandleSetOutput / :534 SyntheticPhaseToolBuilders 仅定义无调用方",
+          "verdict": "未对齐（登记，不移植）：Go 无宿主，参考侧输入也已退化；动态用例 3 钉住现状",
+          "evidence": [
+            "probe:py-accumulator-never-written",
+            "probe:py-set-output-refused",
+            "probe:go-no-output-accumulator",
+            "probe:go-set-output-unwired",
+            "probe-dynamic:case 3"
+          ]
+        },
+        {
+          "id": "J4-conversation-phase-judge",
+          "name": "Level 2b 会话质量判官 conversation_judge.evaluate_phase_completion",
+          "python_chain": "judge_pipeline.py:126-138（success_criteria and ctx.llm）→ conversation_judge.py:33 → :59 _extract_recent_context(10 条) + :143 _format_outputs；失败即 ACCEPT（:98-101）",
+          "inputs": "最近消息（含 set_output 参数摘要）、phase name/description、success_criteria、accumulator 值；judge 预算 max(1024, max_context_tokens//5)",
+          "host_path": "graph 节点；触发字段可由 agent 配置抵达 NodeSpec（node.py:168 ← agent_loader.py:968），仓库内无随附配置启用",
+          "go_status": "out_of_scope",
+          "go_ref": "无 graph 运行时（internal/orchestrator 仅 buffer/safe_eval/validator，全仓 0 import；无 GraphSpec/EntryNode/EdgeSpec），无 phase/accumulator 概念",
+          "verdict": "范围外（声明）：Go 无 graph 宿主；Go 的 criteria judge（J2）承担『判定 criteria』意图，但输入面不同",
+          "evidence": [
+            "probe:go-no-graph-host",
+            "probe:py-2b-single-call-site",
+            "probe:py-criteria-config-reachable",
+            "probe-dynamic:case 1"
+          ]
+        },
+        {
+          "id": "J5-subagent-judge-iteration-urgency",
+          "name": "SubagentJudge（含迭代余量 urgency 反馈）",
+          "python_chain": "judge_pipeline.py:15-39（缺 key 时按 remaining ≤3 / ≤max/2 升级文案）；别名 agent_loop.py:715；无生产构造调用（仅 core/tests/test_subagent.py:28,45,64,75）",
+          "inputs": "missing_keys（来自 J3 那个恒空的 accumulator）+ iteration + max_iterations",
+          "host_path": "需要调用方把 SubagentJudge 注入 AgentLoop(judge=…)：不存在（测试文件自述 legacy 遗留面）",
+          "go_status": "out_of_scope",
+          "go_ref": "无对应 judge 实现与 urgency 文案；迭代预算位置是 grace 收尾（loop.go:56/58 文案与 Python agent_loop.py:217/224 逐字一致，:551 announceGrace）",
+          "verdict": "范围外（登记，不倒代码）：参考侧无生产调用方；Go 的迭代预算位置已被已对齐的 grace 占用，且 urgency 的触发语义无处落地",
+          "evidence": [
+            "probe:py-subagent-no-production-caller",
+            "probe:go-iteration-feedback-is-grace"
+          ]
+        },
+        {
+          "id": "J6-stall-check-judge",
+          "name": "停滞检查概率判官（noul/typesafe）",
+          "python_chain": "server/stall_check.py:87 judge.ask → server/judge.py:39 typesafe（槽位 judge.{protocol,api_base,model,api_key}）",
+          "inputs": "槽位配置、队列状态、固定问题与 false/true 判据",
+          "host_path": "chat 会话（queen）旁路守卫",
+          "go_status": "measured_aligned",
+          "go_ref": "internal/server/judge.go:22 JudgeProtocols、:37 AskJudge、:65 TypesafeJudge；stall_check.go:101 调用",
+          "verdict": "已对齐（本车道只做归属登记，未改动）",
+          "evidence": [
+            "test:server/judge_test.go",
+            "test:server（StallCheck 相关）"
+          ]
+        }
+      ]
+    },
+    {
       "id": "memory-soul",
       "name": "Memory / Soul",
       "scope": "记忆与人格面：timeline 写入与召回注入、past conversations、reflection、soul.json 编辑与每日读聊天反思、跨 queen/colony 作用域。",
@@ -1406,17 +1586,17 @@
     }
   ],
   "summary": {
-    "total": 23,
+    "total": 24,
     "by_status": {
       "measured_aligned": 6,
-      "partial": 16,
+      "partial": 17,
       "out_of_scope": 1
     },
     "by_contract_state": {
       "frozen_contract": 17,
       "doc_only": 3,
       "none": 1,
-      "test_annotated": 2
+      "test_annotated": 3
     },
     "measured_aligned_ids": [
       "api-routes",
@@ -1444,20 +1624,21 @@
       "disk-contract",
       "prompt-turn-context",
       "mcp",
+      "errors",
       "frontend",
+      "formats",
       "release",
       "scheduling",
       "migration"
     ],
     "doc_only_ids": [
-      "errors",
-      "formats",
       "observability",
-      "limits",
       "browser-bridge",
       "orchestration"
     ],
     "test_annotated_ids": [
+      "limits",
+      "judge",
       "memory-soul"
     ],
     "none_contract_ids": [
@@ -1479,6 +1660,7 @@
       "migration",
       "browser-bridge",
       "orchestration",
+      "judge",
       "memory-soul"
     ]
   },

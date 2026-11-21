@@ -906,6 +906,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td><code>list_queens</code> / <code>message_queen</code></td><td>queen_mail_tools</td><td><span class="pill warn">已实现，默认关闭</span></td><td>仅 queen 聊天会话；真实双 queen 端到端已跑通（depth 1→4）</td></tr>
 <tr><td>Claude Code queen</td><td>claude_code_queens.py</td><td><span class="pill ok">已实现运行器</span></td><td>真实 <code>claude -p</code> 回合/会话/超时/并发/回复闭环/MCP 注入已跑通；只读 dashboard 列表/transcript 路由已实现（<code>routes_queens_claude_code.go</code> + 测试），真实模型主动调 <code>message_queen</code> 未联调</td></tr>
 <tr><td><code>get_worker_status</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>summary/activity/memory/tools/issues/progress/full；memory focus 无 shared buffer</td></tr>
+<tr><td><code>get_worker_health_summary</code></td><td>worker_monitoring_tools</td><td><span class="pill fail">未实现</span></td><td>Python queen 会话注册（<code>queen_orchestrator.py:937</code>）；Go 侧缺失，C12 清单已登记，backlog <code>worker-health-summary</code></td></tr>
 <tr><td><code>inject_message</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>注入全部活动 worker；colony 无单一 graph</td></tr>
 <tr><td><code>reply_to_worker</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>Session escalation 收件箱，按到达顺序回复出队</td></tr>
 <tr><td><code>list_worker_questions</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>worker 提问闭环已通</td></tr>
@@ -920,6 +921,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 
 <section id="gaps"><h2><span class="num">05</span>缺口与验收边界</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:28%">缺口</th><th>事实</th></tr></thead><tbody>
+<tr><td>colony_template_*（4）</td><td>Python 与 Go 都定义了 <code>colony_template_add/update/remove/list</code>，但两侧均无调用方、不在冻结工具契约中——属上游预留未接线，不是 Go 缺口，验收时按「同形未接线」登记</td></tr>
 <tr><td><code>csv_sql</code> / <code>excel_sql</code></td><td>上游用 DuckDB（native）；纯 Go 无 cgo 不引入，明确返回 unknown action，不伪造</td></tr>
 <tr><td>file_ops 残差</td><td><code>hashline</code>、stale-edit guard、<code>write_safe_root</code> 已补齐；读路径仍严格限 root、上游系统 deny list 未逐条复刻</td></tr>
 <tr><td>chart_render</td><td>已实现（Chrome 无头渲染 ECharts/Mermaid → PNG）；与上游差异见 docs/chart-render.md</td></tr>

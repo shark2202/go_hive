@@ -1174,6 +1174,81 @@ func TestNextDueFrom(t *testing.T) {
 	}
 }
 
+// Parity: core/tests/test_cron_seconds_parity.py::test_croniter_seconds_reference_locks_assumptions
+func TestNextDueFromCronSecondsField(t *testing.T) {
+	anchor := time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+
+	secDef := timerDefinition("s", "t", "0 9 * * * 30", nil)
+	if next := NextDueFrom(&secDef, anchor); next == nil || *next != "2026-05-18T09:00:30+00:00" {
+		t.Fatalf("seconds cron next = %#v, want 2026-05-18T09:00:30+00:00", next)
+	}
+
+	stepDef := timerDefinition("s5", "t", "* * * * * */5", nil)
+	if next := NextDueFrom(&stepDef, anchor); next == nil || *next != "2026-05-18T09:00:05+00:00" {
+		t.Fatalf("stepped seconds next = %#v, want 2026-05-18T09:00:05+00:00", next)
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_croniter_seconds_reference_locks_assumptions
+func TestStartTriggerTimerUsesCronSeconds(t *testing.T) {
+	session := newTriggerTestSession(t, "test_agent", nil)
+	def := timerDefinition("s5", "tick", "* * * * * */5", nil)
+	session.PutTrigger(def)
+	t.Cleanup(func() { stopTriggerTimer(session, "s5") })
+
+	if err := StartTriggerTimer(session, "s5", &def); err != nil {
+		t.Fatalf("start timer: %v", err)
+	}
+	next, ok := session.TriggerNextFire()["s5"]
+	if !ok {
+		t.Fatalf("no next-fire seeded for the seconds trigger")
+	}
+	// A 5-second cron must seed a delay inside the current minute; the old
+	// minute-granularity path could only produce delays up to 60s.
+	if remaining := next - session.NowMonotonic(); remaining <= 0 || remaining > 6 {
+		t.Fatalf("next fire in %.3fs, want (0, 6s] for a */5 seconds cron", remaining)
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_invalid_cron_corpus_rejected_by_croniter
+func TestCreateTriggerCronSecondsValidation(t *testing.T) {
+	t.Run("accepts six-field seconds", func(t *testing.T) {
+		session := newTriggerTestSession(t, "test_agent", nil)
+		app := newAppWithSession(t, session)
+		t.Cleanup(func() { stopTriggerTimer(session, "user-tick-every-five-seconds") })
+
+		status, body, _ := doJSON(t, app, http.MethodPost, "/api/sessions/test_agent/triggers", map[string]any{
+			"name":           "Tick Every Five Seconds",
+			"task":           "tick",
+			"trigger_config": map[string]any{"cron": "* * * * * */5"},
+		})
+		if status != 200 {
+			t.Fatalf("status = %d, want 200 (body %#v)", status, body)
+		}
+		config, ok := body["trigger_config"].(map[string]any)
+		if !ok || config["cron"] != "* * * * * */5" {
+			t.Fatalf("trigger_config = %#v, want the six-field cron", body["trigger_config"])
+		}
+	})
+
+	t.Run("rejects seconds out of range", func(t *testing.T) {
+		session := newTriggerTestSession(t, "test_agent", nil)
+		app := newAppWithSession(t, session)
+
+		status, body, _ := doJSON(t, app, http.MethodPost, "/api/sessions/test_agent/triggers", map[string]any{
+			"name":           "Bad Seconds",
+			"task":           "tick",
+			"trigger_config": map[string]any{"cron": "* * * * * 60"},
+		})
+		if status != 400 || body["error"] != "Invalid cron expression: * * * * * 60" {
+			t.Fatalf("status = %d body = %#v, want invalid-cron rejection", status, body)
+		}
+		if len(session.AvailableTriggers()) != 0 {
+			t.Fatalf("a rejected create stored a trigger")
+		}
+	})
+}
+
 // Parity-exempt: _slugify_trigger_id's normalization, truncation, and collision
 func TestSlugifyTriggerID(t *testing.T) {
 	cases := []struct {

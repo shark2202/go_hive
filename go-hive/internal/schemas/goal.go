@@ -3,7 +3,6 @@ package schemas
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 )
 
@@ -27,7 +26,7 @@ func (s GoalStatus) valid() bool {
 }
 
 type SuccessCriterion struct {
-	ID          string  `json:"id"`
+	ID          string  `json:"id,omitempty"`
 	Description string  `json:"description"`
 	Metric      string  `json:"metric"`
 	Type        string  `json:"type"`
@@ -35,7 +34,33 @@ type SuccessCriterion struct {
 	Weight      float64 `json:"weight"`
 	Met         bool    `json:"met"`
 
+	// weightSet records that the input carried an explicit "weight" key. A
+	// missing key means the Python default (1.0); an explicit 0 stays 0.
+	weightSet bool
+
 	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// EffectiveWeight is the weight the criterion carries. schemas/goal.py declares
+// weight with default=1.0, so a criterion whose weight was never supplied is
+// weighted 1.0; only an explicit 0 (JSON key present or SetWeight(0)) weighs
+// nothing. The Go zero value cannot tell those apart on its own, which is what
+// weightSet is for.
+//
+// Parity: framework/schemas/goal.py::SuccessCriterion (weight field default).
+func (c SuccessCriterion) EffectiveWeight() float64 {
+	if !c.weightSet && c.Weight == 0 {
+		return 1.0
+	}
+	return c.Weight
+}
+
+// SetWeight records an explicit weight, including 0. Constructing a criterion
+// in Go with SetWeight(0) is how a caller states "this criterion weighs
+// nothing"; leaving Weight unset means the schema default.
+func (c *SuccessCriterion) SetWeight(weight float64) {
+	c.Weight = weight
+	c.weightSet = true
 }
 
 func (c *SuccessCriterion) Validate() error {
@@ -51,9 +76,9 @@ func (c SuccessCriterion) MarshalJSON() ([]byte, error) {
 	if p.Type == "" {
 		p.Type = "success_rate"
 	}
-	if p.Weight == 0 {
-		p.Weight = 1.0
-	}
+	// An absent weight carries the schema default (1.0); an explicit 0 must
+	// survive verbatim (schemas/goal.py keeps weight=0.0).
+	p.Weight = c.EffectiveWeight()
 	b, err := json.Marshal(p)
 	if err != nil {
 		return nil, err
@@ -75,16 +100,18 @@ func (c *SuccessCriterion) UnmarshalJSON(b []byte) error {
 	if _, ok := raw["type"]; !ok {
 		p.Type = "success_rate"
 	}
-	if _, ok := raw["weight"]; !ok {
+	_, weightPresent := raw["weight"]
+	if !weightPresent {
 		p.Weight = 1.0
 	}
+	p.weightSet = weightPresent
 	*c = SuccessCriterion(p)
 	c.Extra = extras
 	return c.Validate()
 }
 
 type Constraint struct {
-	ID             string `json:"id"`
+	ID             string `json:"id,omitempty"`
 	Description    string `json:"description"`
 	ConstraintType string `json:"constraint_type"`
 	Category       string `json:"category"`
@@ -122,13 +149,13 @@ func (c *Constraint) UnmarshalJSON(b []byte) error {
 }
 
 type Goal struct {
-	ID                   string             `json:"id"`
+	ID                   string             `json:"id,omitempty"`
 	Name                 string             `json:"name"`
 	Description          string             `json:"description"`
 	Status               GoalStatus         `json:"status"`
 	SuccessCriteria      []SuccessCriterion `json:"success_criteria"`
 	Constraints          []Constraint       `json:"constraints"`
-	Context              map[string]any     `json:"context"`
+	Context              OrderedMap         `json:"context"`
 	RequiredCapabilities []string           `json:"required_capabilities"`
 	Version              string             `json:"version"`
 	ParentVersion        *string            `json:"parent_version"`
@@ -146,16 +173,17 @@ func (g *Goal) IsSuccess() bool {
 	total := 0.0
 	met := 0.0
 	for _, c := range g.SuccessCriteria {
-		total += c.Weight
+		weight := c.EffectiveWeight()
+		total += weight
 		if c.Met {
-			met += c.Weight
+			met += weight
 		}
 	}
 	return met >= total*0.9
 }
 
 func (g *Goal) ToPromptContext() string {
-	if len(g.SuccessCriteria) == 0 && len(g.Constraints) == 0 && len(g.Context) == 0 {
+	if len(g.SuccessCriteria) == 0 && len(g.Constraints) == 0 && g.Context.Len() == 0 {
 		return ""
 	}
 	lines := []string{
@@ -177,15 +205,14 @@ func (g *Goal) ToPromptContext() string {
 			lines = append(lines, fmt.Sprintf("- [%s] %s", severity, c.Description))
 		}
 	}
-	if len(g.Context) > 0 {
+	if g.Context.Len() > 0 {
 		lines = append(lines, "", "## Context:")
-		keys := make([]string, 0, len(g.Context))
-		for key := range g.Context {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-		for _, key := range keys {
-			lines = append(lines, fmt.Sprintf("- %s: %v", key, g.Context[key]))
+		// Context renders in the order the JSON author wrote it: Python
+		// iterates dict insertion order (schemas/goal.py::Goal.
+		// to_prompt_context), so sorting here would reorder the block.
+		for _, key := range g.Context.Keys() {
+			value, _ := g.Context.Get(key)
+			lines = append(lines, fmt.Sprintf("- %s: %v", key, value))
 		}
 	}
 	return strings.Join(lines, "\n")
@@ -217,9 +244,6 @@ func (g Goal) MarshalJSON() ([]byte, error) {
 	}
 	if p.Constraints == nil {
 		p.Constraints = []Constraint{}
-	}
-	if p.Context == nil {
-		p.Context = map[string]any{}
 	}
 	if p.RequiredCapabilities == nil {
 		p.RequiredCapabilities = []string{}
@@ -258,9 +282,6 @@ func (g *Goal) UnmarshalJSON(b []byte) error {
 	}
 	if g.Constraints == nil {
 		g.Constraints = []Constraint{}
-	}
-	if g.Context == nil {
-		g.Context = map[string]any{}
 	}
 	if g.RequiredCapabilities == nil {
 		g.RequiredCapabilities = []string{}

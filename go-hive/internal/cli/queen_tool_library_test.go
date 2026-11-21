@@ -167,9 +167,15 @@ func TestQueenToolLibraryLifecycleHasSixteenEntries(t *testing.T) {
 		if entry == nil {
 			t.Fatalf("%s missing", name)
 		}
+		// The three standalone playbook-control tools are real definitions now
+		// (§14); the Tool Library row carries the registered Python
+		// description, not an \"unavailable\" placeholder.
 		description, _ := entry["description"].(string)
-		if !contains(description, "Unavailable") {
-			t.Fatalf("%s is not marked unavailable: %q", name, description)
+		if contains(description, "Unavailable") {
+			t.Fatalf("%s is still marked unavailable: %q", name, description)
+		}
+		if !contains(description, "run_id") {
+			t.Fatalf("%s description does not document its run_id argument: %q", name, description)
 		}
 	}
 	for _, entry := range lifecycle {

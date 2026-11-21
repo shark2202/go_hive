@@ -33,9 +33,9 @@ package cli
 //     default flat surface, so grouping is never exposed by accident.
 //
 // Execution routing is unchanged: a flat name runs through the same builtin,
-// task, skills, colony or registry executor it always did. The only new
-// routes are the three playbook-control names Python exposes separately but
-// Go carries as run_playbook actions (see executeFlatSurfaceTool). Names the
+// task, skills, colony or registry executor it always did. Python's three
+// standalone playbook-control names are real catalogue definitions routed onto
+// the playbook runner's status/stop actions (see session_tools.go). Names the
 // port has no implementation for still get advertised (name parity) and
 // answer with an explicit not_implemented envelope instead of an unknown-tool
 // error.
@@ -71,7 +71,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aden-hive/hive-go/internal/colony"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/tools"
 	"github.com/aden-hive/hive-go/internal/tools/integrations"
@@ -157,21 +156,22 @@ func flatSurfaceDefaultNames() []string {
 }
 
 // flatSurfaceStandaloneTools are default-set names this build advertises
-// without a live catalogue definition. ask_user is synthetic (the chat runtime
-// appends it; the loop executes it), the playbook-control names map onto the
-// existing run_playbook actions, and the remaining four are Python-only tools
-// whose Go port has no executor yet — they stay advertised for name parity and
-// answer with an explicit not_implemented envelope.
+// without a live catalogue definition: ask_user is synthetic (the chat runtime
+// appends it; the loop executes it), search_tools answers with the inventory
+// fallback, and the remaining four are Python-only tools whose Go port has no
+// executor yet — they stay advertised for name parity and answer with an
+// explicit not_implemented envelope.
+//
+// The playbook-control names used to live here as run_playbook aliases; they
+// are real catalogue definitions now (colony.PlaybookControlToolDefs), so they
+// project through the live-definition path like every other lifecycle tool.
 var flatSurfaceStandaloneTools = map[string]string{
-	"ask_user":            "synthetic: injected by the chat runtime, executed by the agent loop",
-	"collect_result":      "not implemented in this build (no background tool handles)",
-	"credentials":         "not implemented as a model tool in this build (use the hive-cred CLI)",
-	"get_playbook_status": "mapped to run_playbook(action=\"status\")",
-	"list_playbook_runs":  "mapped to run_playbook(action=\"status\")",
-	"search_tools":        "agent-loop tool tier when present; inventory fallback otherwise",
-	"sentinel_setup":      "not implemented as a model tool in this build (desktop connector)",
-	"suggest_colony":      "not implemented as a model tool in this build (colony UI)",
-	"stop_playbook":       "mapped to run_playbook(action=\"stop\")",
+	"ask_user":       "synthetic: injected by the chat runtime, executed by the agent loop",
+	"collect_result": "not implemented in this build (no background tool handles)",
+	"credentials":    "not implemented as a model tool in this build (use the hive-cred CLI)",
+	"search_tools":   "agent-loop tool tier when present; inventory fallback otherwise",
+	"sentinel_setup": "not implemented as a model tool in this build (desktop connector)",
+	"suggest_colony": "not implemented as a model tool in this build (colony UI)",
 }
 
 // flatSurfaceColonyPhaseGated mirrors the server's colony-phase gate
@@ -442,9 +442,10 @@ func (c *sessionToolCatalogue) flatModelDefs() []llm.ToolDef {
 }
 
 // flatSurfacePlaybookActions maps the flat playbook-control names onto the
-// actions the existing run_playbook implementation already serves. Python
-// exposes these as separate tools; Go carries them as run_playbook actions, so
-// the flat name is a routing alias, not a second implementation.
+// actions the playbook runner serves. Python exposes these as separate tools;
+// they are separate Go definitions too now (colony.PlaybookControlToolDefs),
+// and the cli dispatch routes them here. Kept in the flat-surface file because
+// the names come from the frozen flat contract.
 var flatSurfacePlaybookActions = map[string]string{
 	"get_playbook_status": "status",
 	"list_playbook_runs":  "status",
@@ -457,18 +458,6 @@ var flatSurfacePlaybookActions = map[string]string{
 func (c *sessionToolCatalogue) executeFlatSurfaceTool(ctx context.Context, name string, input map[string]any) (string, bool, bool) {
 	if !flatToolSurfaceEnabled() {
 		return "", false, false
-	}
-	if action, ok := flatSurfacePlaybookActions[name]; ok {
-		mapped := make(map[string]any, len(input)+1)
-		for key, value := range input {
-			if key == "action" {
-				continue
-			}
-			mapped[key] = value
-		}
-		mapped["action"] = action
-		content, isError := colony.RunPlaybook(ctx, colony.RunWorkerSpawnerFromContext(ctx), mapped)
-		return content, isError, true
 	}
 	switch name {
 	case "search_tools":

@@ -276,7 +276,10 @@ func TestDebuggerDefaultsLogsDirToHiveHome(t *testing.T) {
 }
 
 // Parity-exempt: framework/debugger/cli.py::cmd_debugger has no upstream test;
+// the shape is measured against it (COLUMNS=100): argparse prints the page's
+// usage block, then "<prog>: error: <message>", and exits 2.
 func TestDebuggerInvalidPortIsUsageError(t *testing.T) {
+	t.Setenv("COLUMNS", "100")
 	home := t.TempDir()
 	runner, stdout, stderr := newDebuggerRunner(t, home)
 
@@ -287,7 +290,9 @@ func TestDebuggerInvalidPortIsUsageError(t *testing.T) {
 	if stdout.Len() != 0 {
 		t.Fatalf("stdout = %q, want empty", stdout.String())
 	}
-	want := "argument --port: invalid int value: 'abc'\n"
+	want := "usage: hive debugger [-h] [--session SESSION] [--port PORT] [--logs-dir LOGS_DIR]\n" +
+		"                     [--limit-files LIMIT_FILES] [--output OUTPUT] [--no-open] [--include-tests]\n" +
+		"hive debugger: error: argument --port: invalid int value: 'abc'\n"
 	if stderr.String() != want {
 		t.Fatalf("stderr = %q, want %q", stderr.String(), want)
 	}

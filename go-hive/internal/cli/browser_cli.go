@@ -73,16 +73,23 @@ func RunBrowserCLI(argv []string, stdout, stderr io.Writer) int {
 			fmt.Fprint(app.stdout, help.spec.helpText())
 			return browserExitOK
 		}
+		var usage *usageError
+		if errors.As(err, &usage) {
+			// argparse's shape: the responsible page's usage block, then
+			// "<prog>: error: <message>" (exit 2, upstream's usage code).
+			if block := usageErrorBlock(root, usage); block != "" {
+				fmt.Fprintln(app.stderr, block)
+			}
+			fmt.Fprintf(app.stderr, "%s: error: %s\n", usage.prog, usage.msg)
+			return browserExitUsage
+		}
 		fmt.Fprintf(app.stderr, "hive-browser: %v\n", err)
-		fmt.Fprintln(app.stderr, "run `hive-browser help` for usage")
-		// A CLI-level usage error exits 2: that is argparse's code, which the
-		// upstream `hive-browser` runs on (measured: no args, unknown command,
-		// unknown flag, missing required flag, bad choice, bad float list).
 		return browserExitUsage
 	}
 	if args.cmd == nil || args.cmd.Run == nil {
-		fmt.Fprintln(app.stderr, "hive-browser: the following arguments are required: command")
-		fmt.Fprintln(app.stderr, "run `hive-browser help` for usage")
+		fmt.Fprintln(app.stderr, usageBlockFor(root, root.Prog))
+		fmt.Fprintf(app.stderr, "%s: error: the following arguments are required: %s\n",
+			root.Prog, root.Dest)
 		return browserExitUsage
 	}
 	return args.cmd.Run(args)
@@ -99,8 +106,10 @@ func (c *browserCLI) rootCommand() *commandSpec {
 		// parses but does not override the leaf's. The Go parser mirrors that:
 		// group flags are accepted, leaf defaults stay in charge. --bridge is
 		// Go-only and stays leaf-level (no upstream counterpart to align).
-		Flags:       browserGroupFlags(),
-		Dest:        "command",
+		Flags: browserGroupFlags(),
+		// Upstream registers the subcommands with dest="cmd"; the dest names
+		// the slot in argparse's "invalid choice" / "required" messages.
+		Dest:        "cmd",
 		Subcommands: c.subcommands(),
 	}
 	return root

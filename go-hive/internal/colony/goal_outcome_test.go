@@ -142,6 +142,8 @@ func TestWorkerRunExecutesGoalCriteriaIntoResultAndReport(t *testing.T) {
 // Parity: framework/agent_loop/agent_loop.py::_build_initial_message (the
 // goal context is model-visible; see also ColonyRuntime._build_worker).
 func TestWorkerSystemPromptCarriesGoalConstraintsAndContext(t *testing.T) {
+	goalContext := schemas.NewOrderedMap()
+	goalContext.Set("audience", "CFO")
 	goal := &schemas.Goal{
 		ID:   "prompt-goal",
 		Name: "Prompt goal",
@@ -149,7 +151,7 @@ func TestWorkerSystemPromptCarriesGoalConstraintsAndContext(t *testing.T) {
 			{ID: "cite", Description: "Cite every source", ConstraintType: "hard", Category: "quality"},
 			{ID: "tone", Description: "Keep it under 500 words", ConstraintType: "soft", Category: "quality"},
 		},
-		Context: map[string]any{"audience": "CFO"},
+		Context: goalContext,
 	}
 	provider := newScriptedLLM(textResponse("done"))
 	runtime := newGoalRuntime(t, testAgentSpec(), goal, provider, nil, "")

@@ -1,0 +1,12 @@
+You are evaluating whether a summary meets a specific constraint.
+
+CONSTRAINT: %s
+CRITERIA: %s
+
+SOURCE DOCUMENT:
+%s
+
+SUMMARY TO EVALUATE:
+%s
+
+Respond with JSON: {"passes": true/false, "explanation": "..."}

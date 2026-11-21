@@ -66,19 +66,6 @@ var toolLibrarySessionCwdTools = map[string]struct{}{
 	"terminal_rg":        {},
 }
 
-// toolLibraryMissingPlaybookTools are standalone upstream lifecycle tools this
-// build folds into run_playbook. They stay in the lifecycle list — the Tool
-// Library contract has 16 entries — with a description that states they are not
-// callable here and names the replacement.
-var toolLibraryMissingPlaybookTools = map[string]string{
-	"get_playbook_status": "Unavailable as a standalone tool in this build. Use run_playbook(action='status', run_id=...) — " +
-		"it reports the run's live progress (dispatched, dead-lettered, phase, recent log lines) and its run-log row.",
-	"stop_playbook": "Unavailable as a standalone tool in this build. Use run_playbook(action='stop', run_id=...) — " +
-		"it cancels one run; rows already marked done stay done and re-running resumes the gap.",
-	"list_playbook_runs": "Unavailable as a standalone tool in this build. run_playbook(action='status') lists the " +
-		"colony's runs (live and recent history from colony.db).",
-}
-
 // newServeAppDeps wires the Tool Library projection into the HTTP app. Called
 // once from the serve path; the loader file keeps its frozen line budget.
 func newServeAppDeps(home hivehome.Home, deps hiveserver.AppDeps) hiveserver.AppDeps {
@@ -241,8 +228,8 @@ func toolLibraryCSVSQL() map[string]any {
 
 // toolLibraryLifecycle returns the 16 lifecycle entries the Tool Library
 // contract carries: the real defs this build registers (ten session-bound
-// controls, run_playbook / run_worker, write_skill) plus the three
-// run_playbook-folded playbook tools, each marked unavailable.
+// controls, run_playbook / run_worker, the three standalone playbook-control
+// tools) plus write_skill.
 func toolLibraryLifecycle() []map[string]any {
 	defs := map[string]string{}
 	for _, def := range hiveserver.QueenLifecycleToolDefs() {
@@ -251,8 +238,8 @@ func toolLibraryLifecycle() []map[string]any {
 	defs[colony.RunPlaybookToolName] = colony.RunPlaybookToolDef().Description
 	defs[colony.RunWorkerToolName] = colony.RunWorkerToolDef().Description
 	defs[skills.WriteSkillToolName] = skills.WriteSkillToolDef().Description
-	for name, description := range toolLibraryMissingPlaybookTools {
-		defs[name] = description
+	for _, def := range colony.PlaybookControlToolDefs() {
+		defs[def.Name] = def.Description
 	}
 	names := make([]string, 0, len(defs))
 	for name := range defs {

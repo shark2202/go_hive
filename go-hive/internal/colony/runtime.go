@@ -1010,9 +1010,14 @@ func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 func (r *ColonyRuntime) baseWorkerTools() []llm.ToolDef {
 	base := selectWorkerDeclaredTools(r.applyToolAllowlist(r.tools), r.applyToolAllowlist(r.declaredTools), r.agentSpec.Tools)
 	// run_playbook is the queen's batch driver; a worker must not recurse into
-	// a converge loop of its own. The session catalogue also feeds the colony's
-	// declared-tool pool, so filter the name even when worker.json asks for it.
-	return withoutTool(base, RunPlaybookToolName)
+	// a converge loop of its own. Its three control tools are queen-only too.
+	// The session catalogue also feeds the colony's declared-tool pool, so
+	// filter the names even when worker.json asks for them.
+	base = withoutTool(base, RunPlaybookToolName)
+	for _, def := range PlaybookControlToolDefs() {
+		base = withoutTool(base, def.Name)
+	}
+	return base
 }
 
 func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallRequest) (agentloop.ToolResult, error) {

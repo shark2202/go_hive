@@ -159,7 +159,16 @@ func NewRunner() *Runner {
 	}
 	r.OpenBrowser = r.openBrowser
 	r.MCPMain = func(argv []string) int {
-		mcpCLI := &mcpregistry.CLI{Out: r.Stdout, Err: r.Stderr, In: r.Stdin}
+		// The mcp verbs are parsed by their own argparse-shaped engine; it
+		// needs the hive root page so a deferred "unrecognized arguments"
+		// failure prints the root usage, exactly as upstream's top-level
+		// parse_args does.
+		root := r.rootCommand()
+		mcpCLI := &mcpregistry.CLI{
+			Out: r.Stdout, Err: r.Stderr, In: r.Stdin,
+			RootProg:  "hive",
+			RootUsage: func() string { return root.helpSpec().UsageText() },
+		}
 		return mcpCLI.Main(argv)
 	}
 	r.DebuggerScript = defaultDebuggerScript
@@ -275,6 +284,10 @@ func (r *Runner) Run(argv []string) int {
 			fmt.Fprintf(r.Stdout, "hive %s\n", r.versionString())
 			return 0
 		}
+		var usage *usageError
+		if errors.As(err, &usage) {
+			return r.reportUsageError(spec, usage)
+		}
 		fmt.Fprintf(r.Stderr, "%s\n", err.Error())
 		return 2
 	}
@@ -282,6 +295,17 @@ func (r *Runner) Run(argv []string) int {
 		return 0
 	}
 	return args.cmd.Run(args)
+}
+
+// reportUsageError prints the page argparse would print for a parse failure:
+// the responsible parser's usage block, then "<prog>: error: <message>" on
+// stderr. argparse's usage errors exit 2.
+func (r *Runner) reportUsageError(root *commandSpec, err *usageError) int {
+	if block := usageErrorBlock(root, err); block != "" {
+		fmt.Fprintln(r.Stderr, block)
+	}
+	fmt.Fprintf(r.Stderr, "%s: error: %s\n", err.prog, err.msg)
+	return 2
 }
 
 func (r *Runner) versionString() string {

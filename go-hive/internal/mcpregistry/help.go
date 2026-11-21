@@ -9,7 +9,11 @@ package mcpregistry
 // of the CLI uses, so the layout (wrapping, label column, section names) matches
 // argparse at any COLUMNS.
 
-import "github.com/aden-hive/hive-go/internal/arghelp"
+import (
+	"strings"
+
+	"github.com/aden-hive/hive-go/internal/arghelp"
+)
 
 // MCPHelpText renders the `hive mcp` group page: usage + the choice set +
 // options. Upstream's group parser declares no description or flags of its own.
@@ -18,6 +22,21 @@ func MCPHelpText() string { return mcpGroupSpec().Text() }
 // MCPGroupUsageText is the usage block alone: a bare `hive mcp` prints it on
 // stderr before argparse's missing-argument error (exit 2).
 func MCPGroupUsageText() string { return mcpGroupSpec().UsageText() }
+
+// MCPUsageTextFor returns the usage block of the page a prog owns — the block
+// argparse prints before its "<prog>: error: <message>" line: the group page
+// for `hive mcp`, the verb page for `hive mcp <verb>`.
+func MCPUsageTextFor(prog string) string {
+	if strings.HasPrefix(prog, "hive mcp ") {
+		if spec, ok := mcpVerbSpecs()[strings.TrimPrefix(prog, "hive mcp ")]; ok {
+			return spec.UsageText()
+		}
+	}
+	if prog == "hive mcp" {
+		return MCPGroupUsageText()
+	}
+	return ""
+}
 
 // MCPVerbHelpText renders the page for one verb; unknown topics fall back to
 // the group page (`hive mcp help` with no topic).
