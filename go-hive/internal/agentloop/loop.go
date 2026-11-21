@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/hiveclock"
+	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 )
 
@@ -348,6 +349,13 @@ func (l *AgentLoop) compactConversationIfNeeded(ctx context.Context, agentCtx *A
 		maxContext = DefaultMaxContextTokens
 	}
 	spec := agentCtx.AgentSpec
+	// The debug report needs the pre-compaction state even when compaction
+	// later fails; the inventory is cheap and the gate is opt-in.
+	ratioBefore := conv.UsageRatio()
+	preInventory := []map[string]any(nil)
+	if compactionDebugEnabled() {
+		preInventory = BuildMessageInventory(conv)
+	}
 	summary, err := LlmCompact(ctx, agentCtx.LLM, conv.Messages(), LlmCompactOptions{
 		Spec:             &spec,
 		MaxContextTokens: maxContext,
@@ -359,6 +367,21 @@ func (l *AgentLoop) compactConversationIfNeeded(ctx context.Context, agentCtx *A
 		return
 	}
 	l.fireReminder(POST_COMPACT, reminderCtx, conv, "")
+	if compactionDebugEnabled() {
+		writeCompactionReport(agentCtx, ratioBefore, conv.UsageRatio(), preInventory)
+	}
+}
+
+// writeCompactionReport is the HIVE_COMPACTION_DEBUG sink: best-effort, and a
+// missing HIVE_HOME is the only silent skip.
+func writeCompactionReport(agentCtx *AgentContext, ratioBefore, ratioAfter float64, inventory []map[string]any) {
+	home, err := hivehome.Resolve()
+	if err != nil {
+		return
+	}
+	level := CompactionLevel(ratioBefore, ratioAfter)
+	WriteCompactionDebugLog(home.Root, agentCtx.AgentID, agentCtx.AgentSpec.Name, agentCtx.StreamID,
+		ratioBefore, ratioAfter, level, inventory)
 }
 
 // Parity: AgentLoop._fire_reminder (best-effort: failures never break the turn).
@@ -532,7 +555,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 		tools = l.RefreshDynamicTools(agentCtx, tools)
 		l.compactConversationIfNeeded(ctx, agentCtx, conv, reminderCtx)
-		completion, err := l.requestCompletion(ctx, agentCtx, conv, model, tools)
+		completion, requestMessages, err := l.requestCompletion(ctx, agentCtx, conv, model, tools)
 		if err != nil {
 			// A stalled stream is recoverable: nudge, then re-stream this same
 			// inner turn (upstream's continue-nudge recovery path).
@@ -572,7 +595,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		}
 
 		if len(toolCalls) == 0 {
-			done, err := l.settleTextOnlyTurn(ctx, agentCtx, conv, reminderCtx, completion, inner, &result)
+			done, err := l.settleTextOnlyTurn(ctx, agentCtx, conv, reminderCtx, requestMessages, completion, inner, tools, &result)
 			if err != nil {
 				result.Success = false
 				result.InnerTurns = inner + 1
@@ -694,6 +717,7 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
 		}
 		result.ToolResults = append(result.ToolResults, records...)
+		l.logLLMTurn(agentCtx, conv, inner+1, requestMessages, completion, callDicts, records, tools)
 
 		// A deterministic doom loop stops the turn here: the model has re-issued
 		// the same call past the park threshold, so the park replaces another
@@ -772,10 +796,10 @@ func (l *AgentLoop) llmMessages(conv *NodeConversation, model string) ([]map[str
 //
 // Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (request build)
 // Parity: framework/agent_loop/agent_loop.py::execute (_compute_turn_diagnostics(request_messages=...))
-func (l *AgentLoop) requestCompletion(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, model string, tools []llm.ToolDef) (llm.Completion, error) {
+func (l *AgentLoop) requestCompletion(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, model string, tools []llm.ToolDef) (llm.Completion, []map[string]any, error) {
 	messages, err := l.llmMessages(conv, model)
 	if err != nil {
-		return llm.Completion{}, err
+		return llm.Completion{}, nil, err
 	}
 	if recorder, ok := agentCtx.Observer.(RequestMessageRecorder); ok {
 		recorder.NoteRequestMessages(len(messages))
@@ -786,7 +810,8 @@ func (l *AgentLoop) requestCompletion(ctx context.Context, agentCtx *AgentContex
 		Tools:     tools,
 		MaxTokens: agentCtx.MaxTokens,
 	}
-	return agentCtx.LLM.AComplete(ctx, request)
+	completion, err := agentCtx.LLM.AComplete(ctx, request)
+	return completion, messages, err
 }
 
 // Parity: AgentLoop._run_turn_loop hard-stop advisory (tool_budget reminder).

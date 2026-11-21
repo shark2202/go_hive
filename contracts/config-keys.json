@@ -18,10 +18,9 @@
     "keys": 134,
     "sections": 20,
     "status_counts": {
-      "aligned": 99,
+      "aligned": 125,
       "go_only": 4,
-      "go_partial": 29,
-      "python_only": 1,
+      "go_partial": 4,
       "unread": 1
     },
     "env_overrides": 27,
@@ -43,9 +42,20 @@
               "snippet": "settings = get_hive_config().get(\"channels\") or {}"
             }
           ],
-          "go": [],
-          "status": "python_only",
-          "notes": "unsupported: upstream starts optional channel packages installed through the hive.channels entry-point group; the Go port has no plugin host or channel lifecycle, so an enabled flag has nothing to gate. Recorded in contracts/config-support-ledger.json rather than silently ignored."
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/server/channels_config.go",
+              "line": 38,
+              "snippet": "func ChannelSections(config map[string]any) []ChannelSection {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader.go",
+              "line": 296,
+              "snippet": "for _, name := range hiveserver.UnhostedChannels(home) {"
+            }
+          ],
+          "status": "go_partial",
+          "notes": "partial: no plugin host, so the flag cannot start a channel — the Go port has no entry-point discovery or channel lifecycle. Field-level parity instead: Go reads the section with upstream's shape (object, per-channel object, truthy enabled), preserves it on every configuration write, keeps GET /api/channels' upstream response shape (empty with no installed channels), and names enabled channels in a serve-time no-effect warning. Recorded in contracts/config-support-ledger.json."
         }
       ]
     },
@@ -184,10 +194,15 @@
               "file": "go_hive/go-hive/internal/server/llm_config.go",
               "line": 340,
               "snippet": "provider, hasProvider := llmSection[\"provider\"]"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 199,
+              "snippet": "func MainSlotModel(home hivehome.Home, requested string) string {"
             }
           ],
           "status": "aligned",
-          "notes": "both require provider+model before the slot counts as configured; otherwise the main model falls back to the hardcoded default pair."
+          "notes": "both require provider+model before the slot counts as configured; the session builder joins them as provider/model (get_preferred_model shape), and without a usable pair both fall back to the same hardcoded default pair (anthropic/claude-sonnet-5-5)."
         },
         {
           "path": "llm.model",
@@ -206,10 +221,15 @@
               "file": "go_hive/go-hive/internal/server/llm_config.go",
               "line": 344,
               "snippet": "model, hasModel := llmSection[\"model\"]"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 199,
+              "snippet": "func MainSlotModel(home hivehome.Home, requested string) string {"
             }
           ],
           "status": "aligned",
-          "notes": "openrouter/<id> prefix is stripped on both sides before the provider/model join."
+          "notes": "openrouter/<id> prefix is stripped on both sides before the provider/model join. The Go session builder (MainSlotProvider → MainSlotModel) joins the pair the same way; a model request override is used as given, as RuntimeConfig(model=...) does."
         },
         {
           "path": "llm.api_key",
@@ -228,10 +248,15 @@
               "file": "go_hive/go-hive/internal/server/llm_config.go",
               "line": 431,
               "snippet": "if pyTruthy(llmSection[\"api_key\"]) {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 99,
+              "snippet": "if literal, ok := section[\"api_key\"].(string); ok && literal != \"\" {"
             }
           ],
           "status": "aligned",
-          "notes": "a literal key beats ambient sources on both sides; Go's hot-swap path mirrors Python's credential-store-before-env order."
+          "notes": "a literal key beats ambient sources on both sides. Go resolves the runtime key with the same order in MainSlotKey (endpoint → pool → literal → subscriptions → credential store → api_key_env_var → provider env); the status and hot-swap routes mirror it. Pinned by TestMainSlotKeyFollowsTheUpstreamOrder."
         },
         {
           "path": "llm.api_keys",
@@ -260,10 +285,25 @@
               "file": "go_hive/go-hive/internal/llm/keypool.go",
               "line": 16,
               "snippet": "type KeyPool struct {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 50,
+              "snippet": "func MainSlotAPIKeys(home hivehome.Home) []string {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/llm/transport.go",
+              "line": 100,
+              "snippet": "if p.KeyPool != nil {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 268,
+              "snippet": "func MainSlotKeyPool(home hivehome.Home) *llm.KeyPool {"
             }
           ],
           "status": "aligned",
-          "notes": "empty strings are filtered; non-list is ignored on both sides."
+          "notes": "empty strings are filtered; non-list is ignored on both sides. Go installs the pool as llm.KeyPool on the session provider (first key for single-key callers, rotation on 2+) and parks a 429ed key for 60s, like Python's KeyPool. Boundary: a PUT-rebuilt transport takes the route-resolved key until the next session build installs the pool again."
         },
         {
           "path": "llm.api_base",
@@ -282,10 +322,15 @@
               "file": "go_hive/go-hive/internal/server/llm_config.go",
               "line": 405,
               "snippet": "\"api_base\":               llmSection[\"api_base\"],"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 157,
+              "snippet": "func MainSlotAPIBase(home hivehome.Home) string {"
             }
           ],
           "status": "aligned",
-          "notes": "openrouter with no api_base resolves to https://openrouter.ai/api/v1 on both sides."
+          "notes": "subscription endpoints win first (codex/kimi/antigravity), then the configured api_base, then openrouter's https://openrouter.ai/api/v1, on both sides. Pinned by TestMainSlotAPIBasePrefersSubscriptionEndpointsThenTheSection."
         },
         {
           "path": "llm.api_key_env_var",
@@ -304,10 +349,15 @@
               "file": "go_hive/go-hive/internal/server/llm_config.go",
               "line": 458,
               "snippet": "if envValue := llmSection[\"api_key_env_var\"]; pyTruthy(envValue) {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 129,
+              "snippet": "if envName, ok := section[\"api_key_env_var\"].(string); ok && strings.TrimSpace(envName) != \"\" {"
             }
           ],
           "status": "aligned",
-          "notes": "the env var named here is a fallback AFTER the credential store for Python's get_api_key; Go's llm_config hot-swap follows the same order."
+          "notes": "the env var named here is a fallback AFTER the credential store for Python's get_api_key; Go's MainSlotKey (session build) and llm_config (status/hot swap) follow the same order."
         },
         {
           "path": "llm.max_tokens",
@@ -326,10 +376,20 @@
               "file": "go_hive/go-hive/internal/server/llm_config.go",
               "line": 399,
               "snippet": "\"max_tokens\":             llmSection[\"max_tokens\"],"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
+              "line": 29,
+              "snippet": "func chatTurnMaxTokens(homeRoot string) int {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 375,
+              "snippet": "func LLMMaxTokens(home hivehome.Home) int {"
             }
           ],
           "status": "aligned",
-          "notes": "missing -> model catalog -> DEFAULT_MAX_TOKENS=8192. Go's chat runtime seeds 8192 and the model catalog the same way."
+          "notes": "missing -> model catalog -> DEFAULT_MAX_TOKENS=8192. Go consumes it for the queen turn budget (chatTurnMaxTokens → agentCtx.MaxTokens) with the same fallback chain, not only in the REST readback; the fallback chain and the built session's MaxTokens are pinned by TestChatTurnMaxTokensFollowsTheMainSlot / TestChatRuntimeBudgetsTheQueenTurnFromTheMainSlot."
         },
         {
           "path": "llm.max_context_tokens",
@@ -348,10 +408,15 @@
               "file": "go_hive/go-hive/internal/server/llm_config.go",
               "line": 400,
               "snippet": "\"max_context_tokens\":     llmSection[\"max_context_tokens\"],"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 427,
+              "snippet": "mainSection := configSection(home, \"llm\")"
             }
           ],
           "status": "aligned",
-          "notes": "missing -> catalog -> 32000 (DEFAULT_MAX_CONTEXT_TOKENS)."
+          "notes": "missing -> catalog -> 32000 (DEFAULT_MAX_CONTEXT_TOKENS). A queen without her own section budgets her loop by this value first (QueenMaxContextTokens falls through the main slot), matching get_queen_max_context_tokens."
         },
         {
           "path": "llm.aux_max_tokens",
@@ -368,7 +433,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 458,
+              "line": 461,
               "snippet": "func AuxMaxTokens(home hivehome.Home) int {"
             }
           ],
@@ -392,10 +457,15 @@
               "file": "go_hive/go-hive/internal/server/llm_config.go",
               "line": 417,
               "snippet": "if name, ok := llmSection[\"endpoint\"].(string); ok && name != \"\" {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 87,
+              "snippet": "if name, ok := section[\"endpoint\"].(string); ok && strings.TrimSpace(name) != \"\" {"
             }
           ],
           "status": "aligned",
-          "notes": "named endpoint must exist in model_endpoints; its stored credential wins over ambient keys on both sides."
+          "notes": "named endpoint must exist in model_endpoints; its stored credential (or its never-ambient placeholder) wins over ambient keys on both sides. Go's MainSlotKey checks it first, exactly like _endpoint_key."
         },
         {
           "path": "llm.extra_body",
@@ -414,10 +484,15 @@
               "file": "go_hive/go-hive/internal/llm/request_shape.go",
               "line": 180,
               "snippet": "if extraBody, ok := llmSection[\"extra_body\"].(map[string]any); ok && len(extraBody) > 0 {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 183,
+              "snippet": "func MainSlotExtraKwargs(home hivehome.Home, apiKey string) map[string]any {"
             }
           ],
           "status": "aligned",
-          "notes": "non-object/empty -> not sent; copied verbatim into every request body."
+          "notes": "non-object/empty -> not sent; copied verbatim into every request body. Go's MainSlotProvider installs it as the provider's extra kwargs at session build (upstream get_llm_extra_kwargs does the same), and a section PUT carries it to the rebuilt transport."
         },
         {
           "path": "llm.num_ctx",
@@ -436,10 +511,15 @@
               "file": "go_hive/go-hive/internal/llm/request_shape.go",
               "line": 178,
               "snippet": "return map[string]any{\"num_ctx\": numCtxOr(llmSection[\"num_ctx\"], 16384)}"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 183,
+              "snippet": "func MainSlotExtraKwargs(home hivehome.Home, apiKey string) map[string]any {"
             }
           ],
           "status": "aligned",
-          "notes": "only sent for provider=ollama on both sides."
+          "notes": "only sent for provider=ollama on both sides. Go reads a JSON integer (json.Number included) and defaults to 16384; a non-integer/absent value keeps the default."
         },
         {
           "path": "llm.use_claude_code_subscription",
@@ -458,10 +538,15 @@
               "file": "go_hive/go-hive/internal/llm/request_shape.go",
               "line": 158,
               "snippet": "if truthy(llmSection[\"use_claude_code_subscription\"]) && apiKey != \"\" {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 103,
+              "snippet": "if pyTruthy(section[\"use_claude_code_subscription\"]) {"
             }
           ],
           "status": "aligned",
-          "notes": "adds Bearer auth headers; token source differs by platform but the config gate matches."
+          "notes": "adds Bearer auth headers; Go resolves the token from ~/.claude/.credentials.json at session build (upstream also checks the macOS Keychain and refreshes expiry; the port reads the CLI-refreshed file and does not refresh). The config gate and header shape match."
         },
         {
           "path": "llm.use_codex_subscription",
@@ -480,10 +565,15 @@
               "file": "go_hive/go-hive/internal/llm/request_shape.go",
               "line": 163,
               "snippet": "if truthy(llmSection[\"use_codex_subscription\"]) && apiKey != \"\" {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 108,
+              "snippet": "if pyTruthy(section[\"use_codex_subscription\"]) {"
             }
           ],
           "status": "aligned",
-          "notes": "adds ChatGPT backend headers (Authorization/User-Agent/ChatGPT-Account-Id) on both sides."
+          "notes": "adds ChatGPT backend headers (Authorization/User-Agent/ChatGPT-Account-Id) on both sides; Go resolves the token from ~/.codex/auth.json and the account id from tokens.account_id (else the JWT claim) at session build."
         },
         {
           "path": "llm.use_kimi_code_subscription",
@@ -502,10 +592,20 @@
               "file": "go_hive/go-hive/internal/server/llm_config.go",
               "line": 80,
               "snippet": "{\"kimi_code\", \"Kimi Code Subscription\", \"Use your Kimi Code plan\", \"use_kimi_code_subscription\"},"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 113,
+              "snippet": "if pyTruthy(section[\"use_kimi_code_subscription\"]) {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 163,
+              "snippet": "return llm.KimiAPIBase"
             }
           ],
-          "status": "go_partial",
-          "notes": "P1: Go lists/detects the Kimi subscription in the REST surface; the runtime token path is not wired like Python's get_api_key branch."
+          "status": "aligned",
+          "notes": "runtime wired end-to-end: MainSlotKey resolves the token from ~/.kimi/config.toml and MainSlotAPIBase returns https://api.kimi.com/coding, so a session on this flag authenticates and routes like Python's get_api_key/get_api_base branches (the kimi/ model prefix routes through the Anthropic Messages transport). Pinned by TestMainSlotProviderReadsTheSubscriptionTokens."
         },
         {
           "path": "llm.use_antigravity_subscription",
@@ -524,10 +624,15 @@
               "file": "go_hive/go-hive/internal/server/llm_config.go",
               "line": 210,
               "snippet": "case \"antigravity\":"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 118,
+              "snippet": "if pyTruthy(section[\"use_antigravity_subscription\"]) {"
             }
           ],
           "status": "go_partial",
-          "notes": "P1: Go has an antigravity token resolver in llm_config; no equivalent of Python's full provider branch (api_base=None, token refresh)."
+          "notes": "partial: Python's flag swaps the whole session to AntigravityProvider (Gemini-style cloudcode API, OAuth refresh) in session_manager.build_llm; that provider is not ported. Go consumes the flag as far as it can — MainSlotKey reads the account file's access token for get_api_key's branch and MainSlotProvider refuses the session with an explicit error instead of silently sending an OpenAI request with no key. Structural reason and alternative verification are recorded in contracts/config-support-ledger.json (TestMainSlotProviderRefusesAntigravitySubscription)."
         },
         {
           "path": "llm.antigravity_client_id",
@@ -544,12 +649,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 533,
+              "line": 536,
               "snippet": "func AntigravityClientID(home hivehome.Home) string {"
             }
           ],
           "status": "go_partial",
-          "notes": "reader only: ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id (no public-source fetch), tested by TestAntigravityClientCredentials. No request path consumes it: the port reads the pre-issued access token from antigravity-accounts.json and has no OAuth refresh to hand a client id to."
+          "notes": "reader only: ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id (no public-source fetch), tested by TestAntigravityClientCredentials. The only upstream consumers are the OAuth refresh flows inside the unported AntigravityProvider (framework/llm/antigravity.py, framework/loader/agent_loader.py::_refresh_antigravity_token); the port reads the pre-issued access token from antigravity-accounts.json and has no refresh to hand a client id to. Alternative verification: the reader's env-then-file precedence is pinned; no REST/CRUD path is claimed as consumption."
         },
         {
           "path": "llm.antigravity_client_secret",
@@ -566,12 +671,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 540,
+              "line": 543,
               "snippet": "func AntigravityClientSecret(home hivehome.Home) string {"
             }
           ],
           "status": "go_partial",
-          "notes": "reader only: ANTIGRAVITY_CLIENT_SECRET, then llm.antigravity_client_secret (no public-source fetch), tested by TestAntigravityClientCredentials. No request path consumes it: no OAuth refresh to hand a client secret to."
+          "notes": "reader only: ANTIGRAVITY_CLIENT_SECRET, then llm.antigravity_client_secret (no public-source fetch), tested by TestAntigravityClientCredentials. Same structural reason as the client id: the only consumers are the unported AntigravityProvider's OAuth refresh flows, so there is no request path to hand a client secret to."
         }
       ]
     },
@@ -593,7 +698,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/agentloop/loop_config.go",
-              "line": 119,
+              "line": 132,
               "snippet": "MaxToolResultChars:    30_000,"
             },
             {
@@ -624,7 +729,7 @@
             }
           ],
           "status": "go_only",
-          "notes": "Go reads an `mcp` block from configuration.json; Python's MCP servers come from .mcp.json / the registry. A Go extension, not an upstream key."
+          "notes": "go_only: confirmed no upstream counterpart — Python configures MCP servers through the registry (`hive mcp add`) and .mcp.json, and never reads an `mcp` block from configuration.json. Go reads it as the operator pin: enabled gates the whole subsystem (default true)."
         },
         {
           "path": "mcp.namespace",
@@ -640,7 +745,7 @@
             }
           ],
           "status": "go_only",
-          "notes": "tool-name namespace; blank keeps the default."
+          "notes": "go_only: confirmed no upstream counterpart. Tool-name namespace; blank keeps the default \"mcp__\"."
         },
         {
           "path": "mcp.timeout_seconds",
@@ -677,7 +782,7 @@
             }
           ],
           "status": "go_only",
-          "notes": "accepts both the list and map shapes; a same-named registry entry is replaced by the file entry."
+          "notes": "go_only: confirmed no upstream counterpart. Accepts both the list and map shapes; a same-named registry entry is replaced by the file entry and `enabled: false` removes it from the load set."
         }
       ]
     },
@@ -698,8 +803,8 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/server/chat_runtime.go",
-              "line": 1485,
+              "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
+              "line": 287,
               "snippet": "cfg.EveryTurns = positive(\"every_turns\", cfg.EveryTurns)"
             }
           ],
@@ -720,8 +825,8 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/server/chat_runtime.go",
-              "line": 1486,
+              "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
+              "line": 288,
               "snippet": "cfg.LongEvery = positive(\"long_every\", cfg.LongEvery)"
             }
           ],
@@ -742,8 +847,8 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/server/chat_runtime.go",
-              "line": 1487,
+              "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
+              "line": 289,
               "snippet": "if model, ok := section[\"model\"].(string); ok && (model == \"main\" || model == \"worker\") {"
             }
           ],
@@ -834,12 +939,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 337,
+              "line": 311,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 45,
+              "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance."
+          "status": "aligned",
+          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, the constructor the session started on). Hot-swap matrix vs upstream: Python mutates the shared provider and her next model call uses it; Go pins the provider for the turn in flight and the next turn resolves the replacement — a deliberate no-tearing variant, recorded in go_hive/docs/configuration.md §3.8. max_context_tokens budgets her loop; endpoint/api_key_env_var/extra_body resolve through the shared Section* readers."
         },
         {
           "path": "queen_llm.<queen_id>.model",
@@ -861,12 +971,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 337,
+              "line": 311,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 45,
+              "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance."
+          "status": "aligned",
+          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, the constructor the session started on). Hot-swap matrix vs upstream: Python mutates the shared provider and her next model call uses it; Go pins the provider for the turn in flight and the next turn resolves the replacement — a deliberate no-tearing variant, recorded in go_hive/docs/configuration.md §3.8. max_context_tokens budgets her loop; endpoint/api_key_env_var/extra_body resolve through the shared Section* readers."
         },
         {
           "path": "queen_llm.<queen_id>.api_key",
@@ -888,12 +1003,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 337,
+              "line": 311,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 45,
+              "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance."
+          "status": "aligned",
+          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, the constructor the session started on). Hot-swap matrix vs upstream: Python mutates the shared provider and her next model call uses it; Go pins the provider for the turn in flight and the next turn resolves the replacement — a deliberate no-tearing variant, recorded in go_hive/docs/configuration.md §3.8. max_context_tokens budgets her loop; endpoint/api_key_env_var/extra_body resolve through the shared Section* readers."
         },
         {
           "path": "queen_llm.<queen_id>.api_base",
@@ -915,12 +1035,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 337,
+              "line": 311,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 45,
+              "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance."
+          "status": "aligned",
+          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, the constructor the session started on). Hot-swap matrix vs upstream: Python mutates the shared provider and her next model call uses it; Go pins the provider for the turn in flight and the next turn resolves the replacement — a deliberate no-tearing variant, recorded in go_hive/docs/configuration.md §3.8. max_context_tokens budgets her loop; endpoint/api_key_env_var/extra_body resolve through the shared Section* readers."
         },
         {
           "path": "queen_llm.<queen_id>.api_key_env_var",
@@ -942,12 +1067,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 337,
+              "line": 311,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 45,
+              "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance."
+          "status": "aligned",
+          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, the constructor the session started on). Hot-swap matrix vs upstream: Python mutates the shared provider and her next model call uses it; Go pins the provider for the turn in flight and the next turn resolves the replacement — a deliberate no-tearing variant, recorded in go_hive/docs/configuration.md §3.8. max_context_tokens budgets her loop; endpoint/api_key_env_var/extra_body resolve through the shared Section* readers."
         },
         {
           "path": "queen_llm.<queen_id>.max_context_tokens",
@@ -969,12 +1099,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 337,
+              "line": 311,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 45,
+              "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance."
+          "status": "aligned",
+          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, the constructor the session started on). Hot-swap matrix vs upstream: Python mutates the shared provider and her next model call uses it; Go pins the provider for the turn in flight and the next turn resolves the replacement — a deliberate no-tearing variant, recorded in go_hive/docs/configuration.md §3.8. max_context_tokens budgets her loop; endpoint/api_key_env_var/extra_body resolve through the shared Section* readers."
         },
         {
           "path": "queen_llm.<queen_id>.endpoint",
@@ -996,12 +1131,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 337,
+              "line": 311,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 45,
+              "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance."
+          "status": "aligned",
+          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, the constructor the session started on). Hot-swap matrix vs upstream: Python mutates the shared provider and her next model call uses it; Go pins the provider for the turn in flight and the next turn resolves the replacement — a deliberate no-tearing variant, recorded in go_hive/docs/configuration.md §3.8. max_context_tokens budgets her loop; endpoint/api_key_env_var/extra_body resolve through the shared Section* readers."
         },
         {
           "path": "queen_llm.<queen_id>.extra_body",
@@ -1023,12 +1163,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 337,
+              "line": 311,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 45,
+              "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, same constructor); the next turn runs on the new model while the in-flight turn finishes on the old one (turn-level pin, a deliberate no-tearing variant of upstream's mid-turn reconfigure). max_context_tokens budgets her loop. status stays go_partial only for that pin nuance."
+          "status": "aligned",
+          "notes": "wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, the constructor the session started on). Hot-swap matrix vs upstream: Python mutates the shared provider and her next model call uses it; Go pins the provider for the turn in flight and the next turn resolves the replacement — a deliberate no-tearing variant, recorded in go_hive/docs/configuration.md §3.8. max_context_tokens budgets her loop; endpoint/api_key_env_var/extra_body resolve through the shared Section* readers."
         }
       ]
     },
@@ -1879,7 +2024,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/sentinel/store.go",
-              "line": 124,
+              "line": 123,
               "snippet": "raw, ok := block[\"classify_after_seconds\"]"
             }
           ],
@@ -1901,7 +2046,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/sentinel/store.go",
-              "line": 141,
+              "line": 140,
               "snippet": "raw, ok := block[\"max_nudges_before_escalate\"]"
             }
           ],
@@ -1923,7 +2068,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/sentinel/store.go",
-              "line": 159,
+              "line": 158,
               "snippet": "raw, ok := block[\"escalate_when_ui_attached\"]"
             }
           ],
@@ -2544,7 +2689,7 @@
           ],
           "go": [],
           "status": "unread",
-          "notes": "written by the installers, read by neither runtime. Documented example only."
+          "notes": "unread: written by the installers (quickstart.sh/quickstart.ps1), read by neither runtime — a write-once install timestamp, not a runtime knob. Go preserves it on every configuration write; TestConfigWritesPreserveChannelsAndCreatedAt pins that."
         },
         {
           "path": "external_skills",
@@ -2757,12 +2902,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 366,
+              "line": 340,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 81,
+              "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
+          "status": "aligned",
+          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); key/base/endpoint resolve through SectionAPIKey/SectionAPIBase and max_tokens falls back to the aux budget. For a text-only main model the agent loop splices the caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.model",
@@ -2784,12 +2934,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 366,
+              "line": 340,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 81,
+              "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
+          "status": "aligned",
+          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); key/base/endpoint resolve through SectionAPIKey/SectionAPIBase and max_tokens falls back to the aux budget. For a text-only main model the agent loop splices the caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.api_key",
@@ -2811,12 +2966,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 366,
+              "line": 340,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 81,
+              "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
+          "status": "aligned",
+          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); key/base/endpoint resolve through SectionAPIKey/SectionAPIBase and max_tokens falls back to the aux budget. For a text-only main model the agent loop splices the caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.api_base",
@@ -2838,12 +2998,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 366,
+              "line": 340,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 81,
+              "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
+          "status": "aligned",
+          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); key/base/endpoint resolve through SectionAPIKey/SectionAPIBase and max_tokens falls back to the aux budget. For a text-only main model the agent loop splices the caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.api_key_env_var",
@@ -2865,12 +3030,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 366,
+              "line": 340,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 81,
+              "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
+          "status": "aligned",
+          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); key/base/endpoint resolve through SectionAPIKey/SectionAPIBase and max_tokens falls back to the aux budget. For a text-only main model the agent loop splices the caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.max_tokens",
@@ -2892,12 +3062,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 366,
+              "line": 340,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 81,
+              "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
+          "status": "aligned",
+          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); key/base/endpoint resolve through SectionAPIKey/SectionAPIBase and max_tokens falls back to the aux budget. For a text-only main model the agent loop splices the caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         },
         {
           "path": "vision_fallback.endpoint",
@@ -2919,12 +3094,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 366,
+              "line": 340,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 81,
+              "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); for a text-only main model the agent loop splices its caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
+          "status": "aligned",
+          "notes": "wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); key/base/endpoint resolve through SectionAPIKey/SectionAPIBase and max_tokens falls back to the aux budget. For a text-only main model the agent loop splices the caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks."
         }
       ]
     },
@@ -2961,12 +3141,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 355,
+              "line": 329,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 60,
+              "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side."
+          "status": "aligned",
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions)."
         },
         {
           "path": "worker_llm.model",
@@ -2988,12 +3173,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 355,
+              "line": 329,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 60,
+              "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side."
+          "status": "aligned",
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions)."
         },
         {
           "path": "worker_llm.api_key",
@@ -3015,12 +3205,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 355,
+              "line": 329,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 60,
+              "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side."
+          "status": "aligned",
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions)."
         },
         {
           "path": "worker_llm.api_base",
@@ -3042,12 +3237,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 355,
+              "line": 329,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 60,
+              "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side."
+          "status": "aligned",
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions)."
         },
         {
           "path": "worker_llm.api_key_env_var",
@@ -3069,12 +3269,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 355,
+              "line": 329,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 60,
+              "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side."
+          "status": "aligned",
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions)."
         },
         {
           "path": "worker_llm.max_tokens",
@@ -3096,12 +3301,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 355,
+              "line": 329,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/config_slots.go",
+              "line": 444,
+              "snippet": "func WorkerMaxTokens(home hivehome.Home) int {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side."
+          "status": "aligned",
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions)."
         },
         {
           "path": "worker_llm.max_context_tokens",
@@ -3123,12 +3333,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 355,
+              "line": 329,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 60,
+              "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side."
+          "status": "aligned",
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions)."
         },
         {
           "path": "worker_llm.endpoint",
@@ -3150,12 +3365,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 355,
+              "line": 329,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 60,
+              "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side."
+          "status": "aligned",
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions)."
         },
         {
           "path": "worker_llm.extra_body",
@@ -3177,12 +3397,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 355,
+              "line": 329,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 60,
+              "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side."
+          "status": "aligned",
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions)."
         },
         {
           "path": "worker_llm.num_ctx",
@@ -3204,12 +3429,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 355,
+              "line": 329,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+              "line": 60,
+              "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
-          "status": "go_partial",
-          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts now run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs and max_context_tokens budgets the worker loop. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions). max_tokens has no consumer on either side."
+          "status": "aligned",
+          "notes": "wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions)."
         }
       ]
     },
@@ -3231,7 +3461,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 513,
+              "line": 516,
               "snippet": "func WorkerKeepSetFromConfig(home hivehome.Home) func() map[string]struct{} {"
             }
           ],
@@ -3376,7 +3606,7 @@
         },
         {
           "file": "go_hive/go-hive/internal/sentinel/store.go",
-          "line": 132,
+          "line": 131,
           "snippet": "if value < 1.0 {"
         }
       ],

@@ -47,8 +47,69 @@ type sessionToolCatalogue struct {
 	// stays nil for colony workers and for non-queen catalogues, so a worker's
 	// tool inventory keeps the upstream worker surface.
 	queenLifecycle *hiveserver.QueenLifecycleBinding
-	defs           []llm.ToolDef
-	installed      int
+	// agentName is the agent package this catalogue belongs to (upstream's
+	// agent_path.name). Empty for a plain session catalogue; colony workers set
+	// it so their spawned subprocesses carry HIVE_AGENT_NAME.
+	agentName string
+	defs      []llm.ToolDef
+	installed int
+}
+
+// SetAgentName records the agent package this catalogue belongs to and mirrors
+// upstream's per-agent registry env (agent_loader.set_mcp_extra_env): every MCP
+// server config built from this registry carries HIVE_AGENT_NAME, and the
+// terminal tools that spawn subprocesses receive it in their env input.
+func (c *sessionToolCatalogue) SetAgentName(name string) {
+	c.agentName = strings.TrimSpace(name)
+	if c.agentName == "" {
+		return
+	}
+	// Parity: framework/loader/agent_loader.py::AgentLoader.__init__
+	// (set_mcp_extra_env with HIVE_AGENT_NAME + HIVE_STORAGE_PATH; the storage
+	// half is injected per call from the session context below).
+	c.registry.SetMCPExtraEnv(map[string]string{"HIVE_AGENT_NAME": c.agentName})
+}
+
+// injectAgentEnv merges the agent identity into a subprocess-spawning tool's
+// env input. Upstream gates this on the tool declaring `env`
+// (ToolRegistry._prepare_call_inputs), which is what keeps it off every other
+// tool's arguments.
+//
+// Parity: framework/loader/tool_registry.py::_prepare_call_inputs
+func (c *sessionToolCatalogue) injectAgentEnv(name string, merged map[string]any) {
+	if c.agentName == "" || !c.toolDeclaresEnvParam(name) {
+		return
+	}
+	env := map[string]any{}
+	switch existing := merged["env"].(type) {
+	case map[string]any:
+		for key, value := range existing {
+			env[key] = value
+		}
+	case map[string]string:
+		for key, value := range existing {
+			env[key] = value
+		}
+	}
+	if _, set := env["HIVE_AGENT_NAME"]; !set {
+		env["HIVE_AGENT_NAME"] = c.agentName
+	}
+	merged["env"] = env
+}
+
+// toolDeclaresEnvParam reports whether the tool's schema declares an `env`
+// object (the terminal and browser CLIs do).
+func (c *sessionToolCatalogue) toolDeclaresEnvParam(name string) bool {
+	for _, def := range c.defs {
+		if def.Name != name {
+			continue
+		}
+		properties, _ := def.Parameters["properties"].(map[string]any)
+		if _, ok := properties["env"]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // newSessionToolCatalogue installs the integration tools for one session root
@@ -438,17 +499,28 @@ var contextParamInjection = map[string][]string{
 // ToolRegistry._prepare_call_inputs; the caller's map is never mutated.
 func (c *sessionToolCatalogue) injectContextParams(name string, input map[string]any) map[string]any {
 	names := contextParamInjection[name]
-	if len(names) == 0 || c.root == "" {
-		return input
+	merged := input
+	if len(names) > 0 && c.root != "" {
+		merged = make(map[string]any, len(input)+len(names))
+		for key, value := range input {
+			merged[key] = value
+		}
+		for _, key := range names {
+			merged[key] = c.root
+		}
 	}
-	merged := make(map[string]any, len(input)+len(names))
-	for key, value := range input {
-		merged[key] = value
+	if c.agentName == "" {
+		return merged
 	}
-	for _, key := range names {
-		merged[key] = c.root
+	// The agent identity is added without mutating the caller's map, even
+	// when no context param applied (an env-carrying tool with no session
+	// root still gets its agent name).
+	withEnv := make(map[string]any, len(merged)+1)
+	for key, value := range merged {
+		withEnv[key] = value
 	}
-	return merged
+	c.injectAgentEnv(name, withEnv)
+	return withEnv
 }
 
 // skillToolDirs resolves the on-disk scope for a skill tool call: the bound

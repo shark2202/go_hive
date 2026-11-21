@@ -193,35 +193,9 @@ func SectionAPIBase(section map[string]any) string {
 	return ""
 }
 
-// MainSlotAPIKey resolves the main llm slot's key lazily: the literal api_key,
-// the api_key_env_var (or the provider's environment variable), then
-// HIVE_API_KEY. Slot sections without a key of their own fall back here, as
-// upstream's get_api_key tail does.
-//
-// Parity: framework/config.py::get_api_key
-func MainSlotAPIKey(home hivehome.Home) func() string {
-	llmSection := configSection(home, "llm")
-	literal := strings.TrimSpace(pyStrOrEmpty(llmSection["api_key"]))
-	provider := strings.ToLower(strings.TrimSpace(pyStrOrEmpty(llmSection["provider"])))
-	if provider == "" || provider == "custom" {
-		provider = providerFromModelName(strings.TrimSpace(pyStrOrEmpty(llmSection["model"])))
-	}
-	envVar := strings.TrimSpace(pyStrOrEmpty(llmSection["api_key_env_var"]))
-	if envVar == "" {
-		envVar = slotProviderEnvVars[provider]
-	}
-	return func() string {
-		if literal != "" {
-			return literal
-		}
-		if envVar != "" {
-			if value := strings.TrimSpace(os.Getenv(envVar)); value != "" {
-				return value
-			}
-		}
-		return strings.TrimSpace(os.Getenv("HIVE_API_KEY"))
-	}
-}
+// MainSlotAPIKey (main_slot.go) is the lazy key resolver the section lookups
+// below fall back to: a worker/queen/vision slot without a key of its own
+// inherits exactly the main slot's order.
 
 // slotProviderEnvVars is the slot-resolution provider table. It is separate
 // from providerEnvVars (which drives GET /api/config/llm's connected_providers
@@ -433,22 +407,51 @@ func catalogLimits(section map[string]any) ([2]int, bool) {
 
 // QueenMaxContextTokens is the context window a queen's own loop budgets by:
 // her section's max_context_tokens, else her model's catalog window, else the
-// caller's fallback (the queen loop's 180k). Without a section of her own the
-// main llm slot governs, which the caller already applied.
+// main slot's max_context_tokens, else the main model's catalog window, else
+// the caller's fallback (the queen loop's 180k). Without a section of her own
+// the main llm slot governs, exactly as get_queen_max_context_tokens delegates
+// to get_max_context_tokens.
 //
 // Parity: framework/config.py::get_queen_max_context_tokens
 func QueenMaxContextTokens(home hivehome.Home, queenID string, fallback int) int {
 	section := QueenLLMSection(home, queenID)
-	if section == nil {
+	if section != nil {
+		if value, ok := jsonIntValue(section["max_context_tokens"]); ok {
+			return value
+		}
+		if limits, ok := catalogLimits(section); ok {
+			return limits[1]
+		}
 		return fallback
 	}
-	if value, ok := jsonIntValue(section["max_context_tokens"]); ok {
+	mainSection := configSection(home, "llm")
+	if value, ok := jsonIntValue(mainSection["max_context_tokens"]); ok {
 		return value
 	}
-	if limits, ok := catalogLimits(section); ok {
+	if limits, ok := catalogLimits(mainSection); ok {
 		return limits[1]
 	}
 	return fallback
+}
+
+// WorkerMaxTokens ports get_worker_max_tokens: worker_llm.max_tokens, else the
+// worker model's catalog output cap, else the main slot's max_tokens. Neither
+// runtime calls it (upstream's reader has no call site either — the worker's
+// output budget comes from provider request defaults); it exists so the key is
+// read with the same rules, and the support ledger can prove that parity.
+//
+// Parity: framework/config.py::get_worker_max_tokens
+func WorkerMaxTokens(home hivehome.Home) int {
+	section := configSection(home, "worker_llm")
+	if section != nil {
+		if value, ok := jsonIntValue(section["max_tokens"]); ok {
+			return value
+		}
+		if limits, ok := catalogLimits(section); ok {
+			return limits[0]
+		}
+	}
+	return LLMMaxTokens(home)
 }
 
 // AuxMaxTokens is the output budget for small utility LLM calls:

@@ -29,18 +29,18 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </style></head><body><div class="wrap">
 <header><div class="eyebrow">Hive · Env Surface</div><h1>环境变量依赖 <span>Python ⇄ go_hive</span></h1>
 <p class="lede">环境变量是独立于 <code>configuration.json</code> 的一层外观面。本页登记两侧生产代码实际引用的 <code>HIVE_*</code> 变量、凭据类 env、测试专用变量，以及"设了不生效 / 只有一侧认"的差异。口径：字符串字面量扫描（排除 tests / testdata / <code>_test.go</code>）。</p>
-<div class="meta"><span>生成：<b>2026-11-21 01:40 CST</b></span><span>Python：<b>89</b></span><span>Go：<b>100</b></span><span>共有：<b>69</b></span><span>凭据 spec：<b>114 / 115</b></span></div>
+<div class="meta"><span>生成：<b>2026-11-21 10:18 CST</b></span><span>Python：<b>89</b></span><span>Go：<b>118</b></span><span>共有：<b>83</b></span><span>Python 独有：<b>6</b>（平台差异）</span><span>Go 独有：<b>35</b></span><span>凭据 spec：<b>114 / 115</b></span></div>
 <div class="toc"><a href="#summary">结论</a><a href="#method">口径</a><a href="#common">共有</a><a href="#pyonly">Python 独有</a><a href="#goonly">Go 独有</a><a href="#cred">凭据 env</a><a href="#nonhive">非 HIVE_</a><a href="#test">测试变量</a><a href="#impact">影响</a><a href="#repro">复现</a><a href="#refs">相关页</a></div></header>
 
 <section id="summary"><h2><span class="num">00</span>结论</h2>
 <div class="grid g4">
-<div class="card"><div class="k">运行时/部署 HIVE_*</div><div class="v">89 / 100</div><div class="d">Python / Go 字面量引用</div></div>
-<div class="card"><div class="k">共有</div><div class="v">69</div><div class="d">名字与读取点都存在</div></div>
-<div class="card"><div class="k">Python 独有</div><div class="v">20</div><div class="d">Go 侧设了不生效</div></div>
-<div class="card"><div class="k">Go 独有</div><div class="v">31</div><div class="d">生产 10 + 测试/工具 harness 21</div></div>
+<div class="card"><div class="k">运行时/部署 HIVE_*</div><div class="v">89 / 118</div><div class="d">Python / Go 字面量引用</div></div>
+<div class="card"><div class="k">共有</div><div class="v">83</div><div class="d">名字与读取点都存在</div></div>
+<div class="card"><div class="k">Python 独有</div><div class="v">6</div><div class="d">全部为 GCU 平台差异（不是待补缺口）</div></div>
+<div class="card"><div class="k">Go 独有</div><div class="v">35</div><div class="d">生产 14 + 测试/工具 harness 21</div></div>
 </div>
 <p class="small">另有<b>非 HIVE_ 前缀</b>的直接读取：Python 51 / Go 17（共有 7；Python 独有 44；Go 独有 10）——见 §06。</p>
-<div class="callout bad"><b>结论：</b>env 面<b>未完全对齐</b>。Python 独有的 20 个调优/诊断开关（资源采样、GCU memtrace、日志等）在 Go 不存在；<code>HIVE_MAX_ITER</code>、<code>HIVE_SPLIT_WORKER_EVENTS</code> 已补 Go 读取点，network-scanners 车道移除了 Go 独有的 <code>HIVE_NETWORK_SCANNERS</code>；Go 独有的是 BrowserBridge 部署面 + <code>HIVE_PYTHON</code>/<code>HIVE_TOOL_SURFACE</code>。<b>凭据 env</b>两侧都支持，但 Go 通过 credentials spec + <code>integrationkit.Getenv</code> 间接读取，命名有 1 处拆分、9 个别名。</div>
+<div class="callout"><b>结论：</b><code>HIVE_*</code> 面<b>已基本对齐</b>。env-verbatim-port 车道把 14 个 Python 独有名字接进 Go 运行时（tracker 节奏、历史读取线程池、server / sentinel / LLM / 压缩日志、playbook 宽限、agent 名注入、6 个资源采样开关），Python 独有只剩 6 个 GCU 名字——它们是<b>平台差异</b>而不是缺口（Go 用 Go browser bridge 取代 Python GCU 进程，没有该机制可调；逐项理由与替代 anchor 见 §03）。<code>HIVE_MAX_ITER</code>、<code>HIVE_SPLIT_WORKER_EVENTS</code>、<code>HIVE_PYTHON</code> 由 config-env-align 车道接入，network-scanners 车道移除了 Go 独有的 <code>HIVE_NETWORK_SCANNERS</code>；Go 独有的是 BrowserBridge 部署面与 continue-nudge / LLM 流超时等 Go 扩展。<b>凭据 env</b>两侧都支持，但 Go 通过 credentials spec + <code>integrationkit.Getenv</code> 间接读取，命名有 1 处拆分、9 个别名。</div>
 </section>
 
 <section id="method"><h2><span class="num">01</span>口径与方法</h2>
@@ -52,46 +52,52 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </ul>
 </section>
 
-<section id="common"><h2><span class="num">02</span>共有变量（69）</h2>
+<section id="common"><h2><span class="num">02</span>共有变量（83）</h2>
 <p class="sub">两侧都存在同名引用；按用途分组，完整名单如下。</p>
 <div class="tablewrap"><table><thead><tr><th style="width:22%">分组</th><th>变量</th></tr></thead><tbody>
+<tr><td>日志 / 诊断</td><td><code>HIVE_COMPACTION_DEBUG</code> <code>HIVE_ENABLE_LLM_LOGS</code> <code>HIVE_NO_FILE_LOG</code> <code>HIVE_SENTINEL_LOG</code> </td></tr>
+<tr><td>资源采样</td><td><code>HIVE_RESOURCE_INTERVAL_S</code> <code>HIVE_RESOURCE_HISTORY</code> <code>HIVE_RESOURCE_WARN_AVAIL_FRAC</code> <code>HIVE_RESOURCE_CRIT_AVAIL_FRAC</code> <code>HIVE_RESOURCE_WARN_RENDERERS</code> <code>HIVE_RESOURCE_CRIT_RENDERERS</code> </td></tr>
 <tr><td>路径 / 部署</td><td><code>HIVE_APP_VERSION</code> <code>HIVE_BASH_PATH</code> <code>HIVE_DEBUG_EVENTS</code> <code>HIVE_DESKTOP_MODE</code> <code>HIVE_DESKTOP_PARENT_PID</code> <code>HIVE_DESKTOP_THEME</code> <code>HIVE_DESKTOP_TOKEN</code> <code>HIVE_HOME</code> <code>HIVE_RIPGREP_PATH</code> <code>HIVE_STORAGE_PATH</code> </td></tr>
-<tr><td>云端 / 凭据 / 身份</td><td><code>HIVE_API_KEY</code> <code>HIVE_CLOUD_BASE</code> <code>HIVE_CLOUD_JWT</code> <code>HIVE_COLONY_NAME</code> <code>HIVE_CREDENTIAL_KEY</code> <code>HIVE_CRED_LOG</code> <code>HIVE_CRM_PRINCIPAL</code> <code>HIVE_LLM_BASE_URL</code> <code>HIVE_PRINCIPAL</code> <code>HIVE_QUEEN_ID</code> <code>HIVE_REGISTRY_URL</code> <code>HIVE_RUNTIME_ID</code> <code>HIVE_RUNTIME_KIND</code> <code>HIVE_RUNTIME_PORT</code> </td></tr>
+<tr><td>云端 / 凭据 / 身份</td><td><code>HIVE_AGENT_NAME</code> <code>HIVE_API_KEY</code> <code>HIVE_CLOUD_BASE</code> <code>HIVE_CLOUD_JWT</code> <code>HIVE_COLONY_NAME</code> <code>HIVE_CREDENTIAL_KEY</code> <code>HIVE_CRED_LOG</code> <code>HIVE_CRM_PRINCIPAL</code> <code>HIVE_LLM_BASE_URL</code> <code>HIVE_PRINCIPAL</code> <code>HIVE_QUEEN_ID</code> <code>HIVE_REGISTRY_URL</code> <code>HIVE_RUNTIME_ID</code> <code>HIVE_RUNTIME_KIND</code> <code>HIVE_RUNTIME_PORT</code> </td></tr>
 <tr><td>桥 / 浏览器</td><td><code>HIVE_BRIDGE_PORT</code> <code>HIVE_BROWSER_PROFILE_DISPLAY_NAME</code> <code>HIVE_BROWSER_SESSION</code> </td></tr>
-<tr><td>任务 / 记忆 / 追踪</td><td><code>HIVE_MAX_VERBATIM_CLIENT_MSGS</code> <code>HIVE_MEMORY_TIMELINE</code> <code>HIVE_MICROCOMPACT_KEEP_RECENT</code> <code>HIVE_PAST_RECALL_TIMEOUT</code> <code>HIVE_TASK_COMPLETED_CLEANUP</code> <code>HIVE_TASK_LIST_ID</code> <code>HIVE_TASK_REMINDER_BACKOFF</code> <code>HIVE_TASK_REMINDER_COOLDOWN</code> <code>HIVE_TASK_REMINDER_SOFT_CAP</code> <code>HIVE_TASK_REMINDER_TURNS</code> <code>HIVE_TASK_REMINDER_WARMUP</code> <code>HIVE_TASK_SNAPSHOT_HEARTBEAT</code> <code>HIVE_TASK_SNAPSHOT_ITEMS</code> <code>HIVE_TASK_SNAPSHOT_MAX</code> <code>HIVE_TASK_UNTRACKED_TURNS</code> <code>HIVE_TIMELINE_BATCH</code> <code>HIVE_TIMELINE_COOLDOWN</code> <code>HIVE_TRACKER_QUEEN_COOLDOWN_NO_TABLE</code> <code>HIVE_TRACKER_QUEEN_COOLDOWN_WITH_TABLE</code> <code>HIVE_TRACKER_QUEEN_FIRST_FIRE</code> </td></tr>
-<tr><td>预算 / 并发 / 刷新节奏</td><td><code>HIVE_ACTIVE_WORKERS_SNAPSHOT_MAX</code> <code>HIVE_ACTIVE_WORKERS_TASK_MAX</code> <code>HIVE_ADAPTIVE_BUDGET_FLOOR</code> <code>HIVE_ADAPTIVE_BUDGET_MIN_SAMPLES</code> <code>HIVE_ADAPTIVE_TOOL_BUDGET</code> <code>HIVE_COLONY_PARALLEL_COOLDOWN</code> <code>HIVE_COLONY_PARALLEL_MAX</code> <code>HIVE_DEFAULT_PLAYBOOK_CONCURRENCY</code> <code>HIVE_MAX_CONCURRENT_WORKERS</code> <code>HIVE_MAX_ITER</code> <code>HIVE_MAX_PLAYBOOK_CONCURRENCY</code> <code>HIVE_MCP_CALL_RESULT_TIMEOUT</code> <code>HIVE_SPLIT_WORKER_EVENTS</code> <code>HIVE_REQUEST_EXECUTOR_MAX</code> <code>HIVE_TOOL_EXECUTOR_WORKERS</code> </td></tr>
+<tr><td>任务 / 记忆 / 追踪</td><td><code>HIVE_MAX_VERBATIM_CLIENT_MSGS</code> <code>HIVE_MEMORY_TIMELINE</code> <code>HIVE_MICROCOMPACT_KEEP_RECENT</code> <code>HIVE_PAST_RECALL_TIMEOUT</code> <code>HIVE_TASK_COMPLETED_CLEANUP</code> <code>HIVE_TASK_LIST_ID</code> <code>HIVE_TASK_REMINDER_BACKOFF</code> <code>HIVE_TASK_REMINDER_COOLDOWN</code> <code>HIVE_TASK_REMINDER_SOFT_CAP</code> <code>HIVE_TASK_REMINDER_TURNS</code> <code>HIVE_TASK_REMINDER_WARMUP</code> <code>HIVE_TASK_SNAPSHOT_HEARTBEAT</code> <code>HIVE_TASK_SNAPSHOT_ITEMS</code> <code>HIVE_TASK_SNAPSHOT_MAX</code> <code>HIVE_TASK_UNTRACKED_TURNS</code> <code>HIVE_TIMELINE_BATCH</code> <code>HIVE_TIMELINE_COOLDOWN</code> <code>HIVE_TRACKER_WORKER_TOOL_CALLS</code> <code>HIVE_TRACKER_QUEEN_COOLDOWN_NO_TABLE</code> <code>HIVE_TRACKER_QUEEN_COOLDOWN_WITH_TABLE</code> <code>HIVE_TRACKER_QUEEN_FIRST_FIRE</code> </td></tr>
+<tr><td>预算 / 并发 / 刷新节奏</td><td><code>HIVE_ACTIVE_WORKERS_SNAPSHOT_MAX</code> <code>HIVE_ACTIVE_WORKERS_TASK_MAX</code> <code>HIVE_ADAPTIVE_BUDGET_FLOOR</code> <code>HIVE_ADAPTIVE_BUDGET_MIN_SAMPLES</code> <code>HIVE_ADAPTIVE_TOOL_BUDGET</code> <code>HIVE_COLONY_PARALLEL_COOLDOWN</code> <code>HIVE_COLONY_PARALLEL_MAX</code> <code>HIVE_DEFAULT_PLAYBOOK_CONCURRENCY</code> <code>HIVE_HISTORY_READ_WORKERS</code> <code>HIVE_MAX_CONCURRENT_WORKERS</code> <code>HIVE_MAX_ITER</code> <code>HIVE_PLAYBOOK_FAST_GRACE</code> <code>HIVE_MAX_PLAYBOOK_CONCURRENCY</code> <code>HIVE_MCP_CALL_RESULT_TIMEOUT</code> <code>HIVE_SPLIT_WORKER_EVENTS</code> <code>HIVE_REQUEST_EXECUTOR_MAX</code> <code>HIVE_TOOL_EXECUTOR_WORKERS</code> </td></tr>
 <tr><td>开关 / 策略</td><td><code>HIVE_EMAIL_SENDERS</code> <code>HIVE_OWN_REMOTES</code> <code>HIVE_QUEEN_MAIL_FROM</code> <code>HIVE_QUEEN_MAIL_TOKEN</code> <code>HIVE_QUEEN_MAIL_URL</code> <code>HIVE_STALL_CHECK</code> <code>HIVE_TRUST_PROJECT_SKILLS</code> </td></tr>
 </tbody></table></div>
 </section>
 
-<section id="pyonly"><h2><span class="num">03</span>Python 独有（20）</h2>
-<p class="sub">Go 侧没有这些名字的读取点；在 Go 里设置不会改变行为（除非将来补读）。</p>
-<div class="tablewrap"><table><thead><tr><th style="width:30%">变量</th><th style="width:44%">用途 / 语义</th><th>读取点</th></tr></thead><tbody>
-<tr><td><code>HIVE_AGENT_NAME</code></td><td>agent 加载器把目录名注入子进程 env</td><td><code>core/framework/loader/agent_loader.py</code></td></tr>
-<tr><td><code>HIVE_COMPACTION_DEBUG</code></td><td>上下文压缩调试日志</td><td><code>core/framework/agent_loop/internals/compaction.py</code></td></tr>
-<tr><td><code>HIVE_ENABLE_LLM_LOGS</code></td><td>LLM 调试日志开关</td><td><code>core/framework/tracker/llm_debug_logger.py</code></td></tr>
-<tr><td><code>HIVE_GCU_MEMTRACE</code></td><td>GCU 内存追踪开关</td><td><code>tools/src/gcu/memtrace.py</code></td></tr>
-<tr><td><code>HIVE_GCU_MEMTRACE_FILE</code></td><td>GCU 内存追踪输出文件</td><td><code>tools/src/gcu/bridge_host.py</code> 等 2 处</td></tr>
-<tr><td><code>HIVE_GCU_MEMTRACE_FRAMES</code></td><td>GCU 追踪保留帧数</td><td><code>tools/src/gcu/memtrace.py</code></td></tr>
-<tr><td><code>HIVE_GCU_MEMTRACE_INTERVAL_S</code></td><td>GCU 追踪采样间隔（秒）</td><td><code>tools/src/gcu/memtrace.py</code></td></tr>
-<tr><td><code>HIVE_GCU_MEMTRACE_TOP</code></td><td>GCU 追踪 TopN</td><td><code>tools/src/gcu/memtrace.py</code></td></tr>
-<tr><td><code>HIVE_GCU_SCREENSHOT_CONCURRENCY</code></td><td>GCU 截图并发（默认 2）</td><td><code>tools/src/gcu/browser/tools/inspection.py</code></td></tr>
-<tr><td><code>HIVE_HISTORY_READ_WORKERS</code></td><td>会话历史读取线程数（默认 8）</td><td><code>core/framework/server/routes_sessions.py</code></td></tr>
-<tr><td><code>HIVE_NO_FILE_LOG</code></td><td>关闭文件日志</td><td><code>core/framework/observability/logging.py</code></td></tr>
-<tr><td><code>HIVE_PLAYBOOK_FAST_GRACE</code></td><td>playbook 快速宽限秒数（默认 1.5）</td><td><code>core/framework/tools/playbook_tools.py</code></td></tr>
-<tr><td><code>HIVE_RESOURCE_CRIT_AVAIL_FRAC</code></td><td>资源严重告警阈值</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
-<tr><td><code>HIVE_RESOURCE_CRIT_RENDERERS</code></td><td>严重告警的渲染器数量</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
-<tr><td><code>HIVE_RESOURCE_HISTORY</code></td><td>资源采样保留点数</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
-<tr><td><code>HIVE_RESOURCE_INTERVAL_S</code></td><td>资源采样间隔（默认 15s）</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
-<tr><td><code>HIVE_RESOURCE_WARN_AVAIL_FRAC</code></td><td>资源告警阈值</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
-<tr><td><code>HIVE_RESOURCE_WARN_RENDERERS</code></td><td>告警的渲染器数量</td><td><code>core/framework/host/runtime_resources.py</code></td></tr>
-<tr><td><code>HIVE_SENTINEL_LOG</code></td><td>sentinel 日志开关</td><td><code>core/framework/sentinel/manager.py</code></td></tr>
-<tr><td><code>HIVE_TRACKER_WORKER_TOOL_CALLS</code></td><td>tracker worker 提醒节奏（默认 20 次工具调用）</td><td><code>core/framework/agent_loop/tracker_snapshot_reminder.py</code></td></tr>
+<section id="pyonly"><h2><span class="num">03</span>Python 独有（6，全部为 GCU 平台差异）</h2>
+<p class="sub">Go 侧没有这些名字的读取点；它们只对 Python GCU（browser tools）进程生效，而 Go 端口用 Go browser bridge 取代了该进程，因此登记为<b>平台差异</b>（有替代机制），不是"待补的读取点"。逐项理由与替代 anchor 见 <a href="env-verbatim-port.md">env-verbatim-port.md</a> §2；机器可读见 <code>contracts/config-support-ledger.json</code>（<code>status=platform_diff</code>，门禁强制要求 reason + anchor 齐全）。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">变量</th><th style="width:36%">用途 / 语义（Python）</th><th>Go 侧替代</th></tr></thead><tbody>
+<tr><td><code>HIVE_GCU_MEMTRACE</code></td><td>GCU 内存追踪开关（truthy 才启动采样）</td><td rowspan="5">无对应机制：Go 用 browser bridge + <code>hive-browser</code> CLI 取代 Python GCU 进程（<code>go_hive/go-hive/internal/cli/browser_supervisor.go</code> <code>startBrowserBridge</code>、<code>go_hive/go-hive/internal/cli/browser_cli.go</code>），不采样 GCU 堆</td></tr>
+<tr><td><code>HIVE_GCU_MEMTRACE_FILE</code></td><td>追踪输出文件（未设时 bridge_host 自写 <code>${GCU_LOG_FILE}.bridge_host</code>）</td></tr>
+<tr><td><code>HIVE_GCU_MEMTRACE_FRAMES</code></td><td>追踪保留帧数（默认 12，下限 1）</td></tr>
+<tr><td><code>HIVE_GCU_MEMTRACE_INTERVAL_S</code></td><td>采样间隔秒（默认 60，下限 10）</td></tr>
+<tr><td><code>HIVE_GCU_MEMTRACE_TOP</code></td><td>TopN（默认 8，下限 1）</td></tr>
+<tr><td><code>HIVE_GCU_SCREENSHOT_CONCURRENCY</code></td><td>截图批处理并发（默认 2，下限 1）</td><td>Go 桥按窗口串行：<code>go_hive/browserbridge/bridge.go</code>（<code>windowLocks</code>）、<code>go_hive/browserbridge/commands_page.go</code>（<code>cmdScreenshot</code>）</td></tr>
 </tbody></table></div>
+<div class="callout info"><b>口径：</b>平台差异也要"有据"——支持矩阵里这两条（<code>HIVE_GCU_MEMTRACE*</code> 通配 + <code>HIVE_GCU_SCREENSHOT_CONCURRENCY</code>）各自带 <code>reason</code> 与替代 anchor；<code>internal/envcontract</code> 的支持矩阵测试对 <code>platform_diff</code> 强制要求 reason + anchor，缺失即门禁失败。</div>
+<h3>本车道新接入的 14 个名字（原 Python 独有 → 共有）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:25%">变量</th><th style="width:25%">Python 读取点 / 默认</th><th style="width:25%">Go 读取点 / 默认</th><th>证据（支持矩阵 tests）</th></tr></thead><tbody>
+<tr><td><code>HIVE_TRACKER_WORKER_TOOL_CALLS</code></td><td><code>core/framework/agent_loop/tracker_snapshot_reminder.py:81</code> · 默认 20（<code>int()</code>，垃圾回 20）</td><td><code>go_hive/go-hive/internal/agentloop/tracker_snapshot_reminder.go:42</code> · 默认 20（<code>pyenv.Int</code>）</td><td>`TestTrackerWorkerToolCallsDefaultAndParse`、`TestWorkerTrackerSnapshotReachesARealWorkerTurn`</td></tr>
+<tr><td><code>HIVE_HISTORY_READ_WORKERS</code></td><td><code>core/framework/server/routes_sessions.py:1845</code> · 默认 8，下限 4（垃圾值直接抛）</td><td><code>go_hive/go-hive/internal/server/history_read_pool.go:46</code> · 默认 8，下限 4（垃圾值→500，同上游抛）</td><td>`TestHistoryReadWorkersResolvesLikeUpstream`、`TestHistoryReadWorkersGarbageIsAnError`、`TestHistoryReadPoolBoundsConcurrentDiskReads`、`TestSessionHistoryRouteReadsColdSessionsThroughThePool`</td></tr>
+<tr><td><code>HIVE_NO_FILE_LOG</code></td><td><code>core/framework/observability/logging.py:289</code> · 非空即关（<code>"0"</code> 也关）</td><td><code>go_hive/go-hive/internal/logging/logging.go:40</code> · <code>envNonEmpty</code>，同规则</td><td>`TestNoFileLogDisablesTheFileForAnyNonEmptyValue`、`TestServerLogWritesUnderHiveHomeLogs`、`TestInstallRuntimeLogBufferWritesHiveServerLog`、`TestInstallRuntimeLogBufferHonoursNoFileLog`</td></tr>
+<tr><td><code>HIVE_COMPACTION_DEBUG</code></td><td><code>core/framework/agent_loop/internals/compaction.py:1007</code> · 非空即写</td><td><code>go_hive/go-hive/internal/agentloop/compaction_debug.go:32</code> · <code>envNonEmpty</code></td><td>`TestCompactionDebugLogWritesInventoryOnlyWhenEnabled`、`TestCompactionDebugLogRunsOnTheLiveCompactionPath`、`TestCompactionLevelLabelsMatchUpstream`</td></tr>
+<tr><td><code>HIVE_ENABLE_LLM_LOGS</code></td><td><code>core/framework/tracker/llm_debug_logger.py:118</code> · 仅 <code>1</code>/<code>true</code> 开</td><td><code>go_hive/go-hive/internal/agentloop/llm_debug_log.go:48</code> · <code>envOptIn</code>，同规则</td><td>`TestLLMTurnLogJSONLThroughARealTurn`、`TestLLMTurnLogIsSilentWithoutTheOptIn`</td></tr>
+<tr><td><code>HIVE_SENTINEL_LOG</code></td><td><code>core/framework/sentinel/manager.py:62</code> · 非空即装 sentinel.log handler</td><td><code>go_hive/go-hive/internal/sentinel/logging.go:46</code> · <code>envNonEmpty</code></td><td>`TestSentinelLogDivertsToItsFile`、`TestSentinelLogOffByDefault`、`TestSentinelLogPresenceGateAcceptsZero`</td></tr>
+<tr><td><code>HIVE_PLAYBOOK_FAST_GRACE</code></td><td><code>core/framework/tools/playbook_tools.py:184</code> · 默认 1.5，<code>max(0, float())</code></td><td><code>go_hive/go-hive/internal/playbook/grace.go:34</code> · 默认 1.5，同规则</td><td>`TestFastGraceSecondsMatchesUpstream`、`TestPlaybookFastGraceZeroReturnsStartedAndRecordsInBackground`、`TestPlaybookDefaultGraceWaitsOutShortRuns`、`TestNotifyPlaybookCompletePublishesOnTheColonyBus`</td></tr>
+<tr><td><code>HIVE_AGENT_NAME</code></td><td><code>core/framework/loader/agent_loader.py:1247</code> · 注入 MCP/工具子进程 env（不读）</td><td><code>go_hive/go-hive/internal/cli/session_tools.go:62,70</code> · 同注入；<code>cli/colony_worker_definition.go:101</code></td><td>`TestColonyWorkerCatalogueInjectsTheAgentName`、`TestColonyWorkerToolSurfaceRunsTerminalWithTheAgentName`</td></tr>
+<tr><td><code>HIVE_RESOURCE_INTERVAL_S</code></td><td><code>core/framework/host/runtime_resources.py:55</code> · 默认 15.0（<code>_env_num</code>）</td><td><code>go_hive/go-hive/internal/resources/resources.go:65</code> · 默认 15.0（≤0 回默认）</td><td>`TestResourceTunableDefaults`、`TestResourceTunableOverrides`、`TestResourceTunableGarbageFallsBackLikeEnvNum`、`TestClassifyUsesEnvThresholds`、`TestMonitorSnapshotResolvesThresholdsAndCapsHistory`、`TestMonitorHistoryIsBoundedByTheEnvAtFirstUse`</td></tr>
+<tr><td><code>HIVE_RESOURCE_HISTORY</code></td><td><code>core/framework/host/runtime_resources.py:57</code> · 默认 480</td><td><code>go_hive/go-hive/internal/resources/resources.go:76</code> · 默认 480（&lt;1 取 1）</td><td>`TestResourceTunableDefaults`、`TestResourceTunableOverrides`、`TestResourceTunableGarbageFallsBackLikeEnvNum`、`TestClassifyUsesEnvThresholds`、`TestMonitorSnapshotResolvesThresholdsAndCapsHistory`、`TestMonitorHistoryIsBoundedByTheEnvAtFirstUse`</td></tr>
+<tr><td><code>HIVE_RESOURCE_WARN_AVAIL_FRAC</code></td><td><code>core/framework/host/runtime_resources.py:71</code> · 默认 0.25</td><td><code>go_hive/go-hive/internal/resources/resources.go:94</code> · 默认 0.25</td><td>`TestResourceTunableDefaults`、`TestResourceTunableOverrides`、`TestResourceTunableGarbageFallsBackLikeEnvNum`、`TestClassifyUsesEnvThresholds`、`TestMonitorSnapshotResolvesThresholdsAndCapsHistory`、`TestMonitorHistoryIsBoundedByTheEnvAtFirstUse`</td></tr>
+<tr><td><code>HIVE_RESOURCE_CRIT_AVAIL_FRAC</code></td><td><code>core/framework/host/runtime_resources.py:72</code> · 默认 0.15</td><td><code>go_hive/go-hive/internal/resources/resources.go:95</code> · 默认 0.15</td><td>`TestResourceTunableDefaults`、`TestResourceTunableOverrides`、`TestResourceTunableGarbageFallsBackLikeEnvNum`、`TestClassifyUsesEnvThresholds`、`TestMonitorSnapshotResolvesThresholdsAndCapsHistory`、`TestMonitorHistoryIsBoundedByTheEnvAtFirstUse`</td></tr>
+<tr><td><code>HIVE_RESOURCE_WARN_RENDERERS</code></td><td><code>core/framework/host/runtime_resources.py:74</code> · 默认 45</td><td><code>go_hive/go-hive/internal/resources/resources.go:96</code> · 默认 45</td><td>`TestResourceTunableDefaults`、`TestResourceTunableOverrides`、`TestResourceTunableGarbageFallsBackLikeEnvNum`、`TestClassifyUsesEnvThresholds`、`TestMonitorSnapshotResolvesThresholdsAndCapsHistory`、`TestMonitorHistoryIsBoundedByTheEnvAtFirstUse`</td></tr>
+<tr><td><code>HIVE_RESOURCE_CRIT_RENDERERS</code></td><td><code>core/framework/host/runtime_resources.py:75</code> · 默认 60</td><td><code>go_hive/go-hive/internal/resources/resources.go:97</code> · 默认 60</td><td>`TestResourceTunableDefaults`、`TestResourceTunableOverrides`、`TestResourceTunableGarbageFallsBackLikeEnvNum`、`TestClassifyUsesEnvThresholds`、`TestMonitorSnapshotResolvesThresholdsAndCapsHistory`、`TestMonitorHistoryIsBoundedByTheEnvAtFirstUse`</td></tr>
+</tbody></table></div>
+<p class="small">完整事实表（Python 读取点 / 解析 / 默认 → Go 读取点 / 解析 / 默认 → 状态与证据）见 <a href="env-verbatim-port.md"><code>env-verbatim-port.md</code></a>。</p>
 </section>
-
-<section id="goonly"><h2><span class="num">04</span>Go 独有（31）</h2>
-<h3>生产（10）</h3>
+<section id="goonly"><h2><span class="num">04</span>Go 独有（35）</h2>
+<h3>生产（14）</h3>
 <div class="tablewrap"><table><thead><tr><th style="width:30%">变量</th><th style="width:44%">用途 / 语义</th><th>读取点</th></tr></thead><tbody>
 <tr><td><code>HIVE_BROWSERBRIDGE_ARGS</code></td><td>browserbridge 额外启动参数</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code></td></tr>
 <tr><td><code>HIVE_BROWSERBRIDGE_BIN</code></td><td>browserbridge 可执行文件路径</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code></td></tr>
@@ -103,6 +109,10 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td><code>HIVE_SESSION_COST_LIMIT_USD</code></td><td>会话成本上限（美元）</td><td><code>go_hive/go-hive/internal/agentloop/session_cost.go</code></td></tr>
 <tr><td><code>HIVE_PYTHON</code></td><td>Python playbook 解释器路径（覆盖 python3/python 查找）</td><td><code>go_hive/go-hive/internal/playbook/python.go</code></td></tr>
 <tr><td><code>HIVE_TOOL_SURFACE</code></td><td>工具面形态（flat / grouped）</td><td><code>go_hive/go-hive/internal/cli/tool_surface_flat.go</code></td></tr>
+<tr><td><code>HIVE_CONTINUE_NUDGE_ENABLED</code></td><td>continue-nudge 开关（Go 扩展）</td><td><code>go_hive/go-hive/internal/server/chat_memory_wiring.go</code></td></tr>
+<tr><td><code>HIVE_CONTINUE_NUDGE_MAX_PER_TURN</code></td><td>每回合 continue-nudge 次数上限（Go 扩展）</td><td><code>go_hive/go-hive/internal/server/chat_memory_wiring.go</code></td></tr>
+<tr><td><code>HIVE_LLM_STREAM_TTFT_TIMEOUT_SECONDS</code></td><td>LLM 流首包（TTFT）超时秒数（Go 扩展）</td><td><code>go_hive/go-hive/internal/server/chat_memory_wiring.go</code></td></tr>
+<tr><td><code>HIVE_LLM_STREAM_INTER_EVENT_IDLE_SECONDS</code></td><td>LLM 流事件间空闲超时秒数（Go 扩展）</td><td><code>go_hive/go-hive/internal/server/chat_memory_wiring.go</code></td></tr>
 </tbody></table></div>
 <h3>测试 / 工具 harness（21，不计入对齐口径）</h3>
 <div class="tablewrap"><table><thead><tr><th style="width:34%">变量</th><th>用途</th><th>读取点</th></tr></thead><tbody>
@@ -126,7 +136,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td><code>HIVE_LME_READER_MODEL</code></td><td>LongMemEval reader</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
 <tr><td><code>HIVE_LME_RESUME</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
 <tr><td><code>HIVE_LME_RUN_DIR</code></td><td>LongMemEval harness</td><td><code>go_hive/go-hive/cmd/hive-longmemeval/main.go</code></td></tr>
-<tr><td><code>HIVE_RETENTION_</code></td><td>测试前缀残留（HIVE_RETENTION_）</td><td><code>go_hive/go-hive/internal/maintenance/config.go</code></td></tr>
+<tr><td><code>HIVE_RETENTION_*</code></td><td>测试前缀残留（发布审计里的 <code>HIVE_RETENTION_</code> 前缀拼接口径）</td><td><code>go_hive/go-hive/internal/maintenance/config.go</code></td></tr>
 </tbody></table></div>
 </section>
 
@@ -241,9 +251,9 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 
 <section id="impact"><h2><span class="num">08</span>影响与缺口</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:10%">级别</th><th style="width:28%">项</th><th>影响</th></tr></thead><tbody>
-<tr><td><span class="pill warn">P1</span></td><td>Python 独有 20 个开关</td><td>资源守卫（<code>HIVE_RESOURCE_*</code>）、GCU memtrace（5）、日志/调试（4）、历史读取线程数等在 Go 设置无效；同一份 env 文件不能等价迁移。</td></tr>
+<tr><td><span class="pill info">P3</span></td><td>Python 独有 6 个（GCU 平台差异）</td><td><code>HIVE_GCU_MEMTRACE*</code>（5）与 <code>HIVE_GCU_SCREENSHOT_CONCURRENCY</code> 只对 Python GCU 进程生效；Go 用 browser bridge 取代该进程，没有该机制可调。已在支持矩阵登记 reason + 替代 anchor（<code>platform_diff</code>）。资源采样 / 日志 / 历史读取等 14 项本车道已接入 Go，不再是缺口。</td></tr>
 <tr><td><span class="pill warn">P1</span></td><td>凭据 env 命名</td><td><code>cloudflare</code> vs <code>cloudflare_api_token</code>；按 Python env 名配置的自动化在 Go 上可能不命中（Go 还会检查 credential store）。</td></tr>
-<tr><td><span class="pill info">P2</span></td><td>默认值口径</td><td>两侧都常用代码 fallback（如 <code>HIVE_HISTORY_READ_WORKERS=8</code>、<code>HIVE_GCU_SCREENSHOT_CONCURRENCY=2</code>、<code>HIVE_PLAYBOOK_FAST_GRACE=1.5</code>、<code>HIVE_TRACKER_WORKER_TOOL_CALLS=20</code>）；没有统一 schema，无法机器校验默认值一致性。</td></tr>
+<tr><td><span class="pill info">P2</span></td><td>默认值口径</td><td>两侧都常用代码 fallback（如 <code>HIVE_HISTORY_READ_WORKERS=8</code>、<code>HIVE_PLAYBOOK_FAST_GRACE=1.5</code>、<code>HIVE_TRACKER_WORKER_TOOL_CALLS=20</code>、<code>HIVE_RESOURCE_INTERVAL_S=15</code>）；没有统一 schema，默认值一致性靠在 <code>contracts/env-vars.json</code> 人工核对列 + <a href="env-verbatim-port.md">逐项事实表</a> 里固定。</td></tr>
 <tr><td><span class="pill warn">P1</span></td><td>非 HIVE_ 控制变量</td><td>Python 的 <code>GCU_*</code>/端口类/日志格式在 Go 不存在；Go 的 <code>CHROME_PATH</code>、<code>ANTHROPIC_BASE_URL</code>、<code>PG*</code> 在 Python 不存在——env 文件跨端迁移仍需逐项核对。</td></tr>
 <tr><td><span class="pill info">P2</span></td><td>测试变量混入</td><td>两侧都存在测试专用 env；统计时必须过滤，否则会把 harness 变量误判为生产面。</td></tr>
 </tbody></table></div>
@@ -257,13 +267,16 @@ uv run --no-project python ~/.hermes/profiles/omh-tui/cache/scratch/tool-audit/e
 # 凭据 spec 对照（Go 需 8788 在运行）
 curl -s http://127.0.0.1:8788/api/credentials/specs
 
+# env 契约自洽（20 个名字的落点 / 计数 / 支持矩阵条目，含 platform_diff 的 reason+anchor）
+cd go_hive && uv run --no-project python scripts/check_env_config_contract.py --strict
+
 # 机器可读
-go_hive/docs/env-surface-audit.json</pre>
+go_hive/docs/env-surface-audit.json（基线）· go_hive/contracts/env-vars.json · go_hive/contracts/config-support-ledger.json</pre>
 </section>
 
 <section id="refs"><h2><span class="num">10</span>相关页</h2>
-<div class="callout info"><a href="surface-tracking-matrix.html#env">外观矩阵 §05 环境变量</a> · <a href="module-interfaces.html">接口不变量</a> · <a href="platform-support.html">平台支持</a> · <a href="browser-bridge.html">Browser Bridge</a> · <a href="terminal-tools.html">终端工具</a> · <a href="tool-parity-matrix.html">工具矩阵</a></div>
+<div class="callout info"><a href="env-verbatim-port.md">env-verbatim-port（20 个名字逐项落点）</a> · <a href="env-config-contract-diff.md">env 契约差异</a> · <a href="surface-tracking-matrix.html#env">外观矩阵 §05 环境变量</a> · <a href="module-interfaces.html">接口不变量</a> · <a href="platform-support.html">平台支持</a> · <a href="browser-bridge.html">Browser Bridge</a> · <a href="terminal-tools.html">终端工具</a> · <a href="tool-parity-matrix.html">工具矩阵</a></div>
 </section>
 
-<footer>生成：2026-11-21 00:43 CST · 数据：两侧源码字面量扫描（生产文件）+ credentials spec 实测 · 口径：只登记"引用与读取点"，默认值以调用点为准；测试变量不计入对齐。机器可读：<code>env-surface-audit.json</code>。</footer>
+<footer>生成：2026-11-21 10:18 CST · 数据：两侧源码字面量扫描（生产文件）+ credentials spec 实测 · 口径：只登记"引用与读取点"，默认值以调用点为准；测试变量不计入对齐。机器可读：<code>env-surface-audit.json</code>。</footer>
 </div></body></html>

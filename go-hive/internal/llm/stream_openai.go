@@ -60,18 +60,27 @@ func (p *Provider) ACompleteStream(ctx context.Context, req CompletionRequest, e
 	if apiKey == "" {
 		apiKey = p.APIKey
 	}
+	if p.KeyPool != nil {
+		if pooled := p.KeyPool.GetKey(); pooled != "" {
+			apiKey = pooled
+		}
+	}
 	// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream — Anthropic
 	// (and the Anthropic-compatible kimi/hive proxies) speaks the Messages SSE
 	// protocol, which has its own parser. MiniMax chunks are known to break
 	// the upstream stream parser, so it stays on the non-streaming path there.
 	if usesAnthropicMessagesAPI(model) {
-		return p.anthropicMessagesStream(ctx, req, kwargs, model, apiBase, apiKey, emit)
+		completion, err := p.anthropicMessagesStream(ctx, req, kwargs, model, apiBase, apiKey, emit)
+		p.noteKeyOutcome(apiKey, err)
+		return completion, err
 	}
 	if IsMinimaxModel(model) {
 		return Completion{}, fmt.Errorf("%w: minimax uses the non-streaming transport (%s)", ErrStreamingUnsupported, model)
 	}
 
-	return p.openAIChatCompletionStream(ctx, req, kwargs, model, apiBase, apiKey, emit)
+	completion, err := p.openAIChatCompletionStream(ctx, req, kwargs, model, apiBase, apiKey, emit)
+	p.noteKeyOutcome(apiKey, err)
+	return completion, err
 }
 
 func (p *Provider) openAIChatCompletionStream(

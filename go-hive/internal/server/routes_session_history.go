@@ -84,7 +84,13 @@ func applyLiveOverlay(entries []map[string]any, index map[string]*Session) {
 }
 
 func handleSessionHistory(w http.ResponseWriter, r *http.Request, deps SessionRouteDeps) {
-	entries := session.ListColdSessions(deps.Home.QueensDir())
+	var entries []map[string]any
+	if err := withHistoryReadSlot(func() {
+		entries = session.ListColdSessions(deps.Home.QueensDir())
+	}); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
 	applyLiveOverlay(entries, liveSessionIndex(deps))
 	writeJSON(w, http.StatusOK, map[string]any{"sessions": entries})
 }
@@ -95,7 +101,13 @@ func handleListColonySessions(w http.ResponseWriter, r *http.Request, deps Sessi
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid colony_id"})
 		return
 	}
-	entries := session.ListColonySessions(deps.Home.ColonyQueensDir(colonyID))
+	var entries []map[string]any
+	if err := withHistoryReadSlot(func() {
+		entries = session.ListColonySessions(deps.Home.ColonyQueensDir(colonyID))
+	}); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
 	applyLiveOverlay(entries, liveSessionIndex(deps))
 	writeJSON(w, http.StatusOK, map[string]any{"sessions": entries})
 }

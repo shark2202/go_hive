@@ -27,8 +27,8 @@ const MaxStatementsPerCall = 20
 const bootstrapSchema = `
 CREATE TABLE IF NOT EXISTS _tracker_registry (
     table_name      TEXT PRIMARY KEY,
-    write_columns   TEXT NOT NULL,
-    key_columns     TEXT NOT NULL,
+    write_columns   TEXT NOT NULL,    -- JSON array of column names
+    key_columns     TEXT NOT NULL,    -- JSON array; empty = append mode
     mode            TEXT NOT NULL CHECK (mode IN ('upsert', 'append')),
     registered_at   TEXT NOT NULL
 );
@@ -40,9 +40,9 @@ CREATE TABLE IF NOT EXISTS _tracker_meta (
 );
 
 CREATE TABLE IF NOT EXISTS _tracker_changes (
-    id              INTEGER PRIMARY KEY,
+    id              INTEGER PRIMARY KEY,  -- monotonic cursor for "since" reads
     table_name      TEXT NOT NULL,
-    pk              TEXT NOT NULL,
+    pk              TEXT NOT NULL,        -- JSON object of key column -> value
     op              TEXT NOT NULL CHECK (op IN ('insert', 'update')),
     changed_at      TEXT NOT NULL
 );
@@ -105,7 +105,9 @@ var ErrNoBinding = errors.New(
 		"the binding via input_data automatically.",
 )
 
-func nowISO() string { return time.Now().UTC().Format(time.RFC3339) }
+// nowISO mirrors Python's `datetime.now(UTC).isoformat(timespec="seconds")`:
+// second precision with an explicit +00:00 offset (not RFC3339's "Z").
+func nowISO() string { return time.Now().UTC().Format("2006-01-02T15:04:05+00:00") }
 
 func openDB(path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", path)

@@ -529,7 +529,14 @@ func handleSessionEventsHistory(w http.ResponseWriter, r *http.Request, deps Ses
 		err         error
 	}
 	results := make(chan pageResult, 1)
+	pool, poolErr := historyReadExecutor()
+	if poolErr != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": poolErr.Error()})
+		return
+	}
 	go func() {
+		release := pool.acquire()
+		defer release()
 		events, startOffset, total, err := readPage(eventsPath, limit, beforeOffset)
 		results <- pageResult{events: events, startOffset: startOffset, total: total, err: err}
 	}()

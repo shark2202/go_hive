@@ -93,6 +93,13 @@ func colonyToolsFor(queenName string) []string {
 // _apply_tool_allowlist resolution for a colony worker)
 func colonyWorkerToolSurface(colonyPath string, toolbox *builtin.Toolbox, home hivehome.Home) ([]llm.ToolDef, []llm.ToolDef, func(agentloop.ToolCallRequest) (agentloop.ToolResult, error)) {
 	catalogue := newSessionToolCatalogue(colonyPath, toolbox, home)
+	// The agent package this worker runs is the colony directory, so its base
+	// name is the agent name upstream gives every MCP subprocess of the agent
+	// (agent_loader uses agent_path.name). Injected into the worker catalogue's
+	// MCP env and the subprocess-spawning tools' env input.
+	if name := filepath.Base(filepath.Clean(colonyPath)); name != "" && name != "." && name != string(filepath.Separator) {
+		catalogue.SetAgentName(name)
+	}
 	execute := func(request agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
 		content, isError, imageContent, execErr := catalogue.ExecuteBlocks(context.Background(), request.Name, request.Input)
 		if execErr != nil {

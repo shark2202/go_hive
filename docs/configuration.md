@@ -1,5 +1,7 @@
 # 配置参考
 
+> HTML 版（逐键 134 键、状态与读取点，自动生成防漂移）：[`configuration.html`](configuration.html)（`python3 scripts/gen_configuration_html.py --check`）
+
 > 适用版本：`hive 1.0.26-go.1`
 > 本文只写当前 Go 代码实际读取的配置项。标「代码路径」的条目由实现直接确认、但文档验证时没有单独实跑；标「实测」的条目跑过真实二进制。
 
@@ -82,8 +84,20 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 | `model` | string | 默认模型；见 3.1 的优先级 |
 | `provider` | string | 选择凭据环境变量；空或 `custom` 时按模型名推断（3.2） |
 | `api_base` | string | 上游基址；空时按 provider/模型取默认值（3.3） |
+| `api_key` | string | 字面 key，优先于环境/凭据库；命中即用（3.4） |
+| `api_keys` | list[string] | 多 key 池：取第一个非空项建 provider；2 个及以上时按 `llm.KeyPool` 轮转并在 429 时停键 60s（3.4） |
 | `api_key_env_var` | string | 覆盖读取 key 的环境变量名（3.4） |
+| `endpoint` | string | 命名端点（`model_endpoints`）；其凭据库 key 优先，没有则用端点占位符（3.4） |
+| `max_tokens` | int | 输出预算；queen 回合用它（缺省 → 模型目录 → 8192，3.1） |
+| `max_context_tokens` | int | queen 循环上下文窗口的主槽回退（缺省 → 模型目录 → 32000） |
 | `aux_max_tokens` | int | 小工具调用（记忆召回筛选、judge/sentinel、技能自测等）的输出上限；缺省 `min(8192, max_tokens)` |
+| `extra_body` | object | 每个请求体原样携带的字段（如 `reasoning_effort`）；非对象/空不发送 |
+| `num_ctx` | int | 仅 `provider=ollama` 时发送，缺省 16384 |
+| `use_claude_code_subscription` | bool | 用 `~/.claude/.credentials.json` 的 OAuth token，并加 Bearer 头 |
+| `use_codex_subscription` | bool | 用 `~/.codex/auth.json` 的 token，走 ChatGPT backend 并加对应头 |
+| `use_kimi_code_subscription` | bool | 用 `~/.kimi/config.toml` 的 token，base 固定 `https://api.kimi.com/coding` |
+| `use_antigravity_subscription` | bool | **不支持**：上游会整会话切到 AntigravityProvider（未移植）；Go 读取该标志后对会话构建显式报错 |
+| `antigravity_client_id` / `antigravity_client_secret` | string | 只读项（env 优先）；唯一消费者是未移植的 OAuth 刷新 |
 
 ### 2.3 其他顶层键
 
@@ -105,24 +119,24 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 | `worker_llm` / `vision_fallback` / `queen_llm` | `cli.queenAwareChatProvider`、`cli.workerChatProvider`、`cli.visionCaptionerFor`、`server.ReconfigureSection` | 模型槽位，字段同 `llm`（`provider`/`model`/`api_key`/`api_base`/`api_key_env_var`/`extra_body`/`num_ctx`/`max_context_tokens`）。热切换矩阵见 §3.8：`queen_llm.<queen_id>` 写入即重建该 queen 运行中会话的 provider（她的 colony 沿用）；`vision_fallback` 每次 caption 重新解析，写入即对下一张工具图片生效；`worker_llm` 按上游语义在下一个 colony/会话构建时生效。缺省或没有 `provider`+`model` 时回落到 `llm`（代码路径 + 测试） |
 | `worker_tools` | `cli.loader_colony_host` → `server.WorkerKeepSetFromConfig` | `worker_tools.always_enabled_categories`：worker eager 工具类别覆盖（`list[string]`）；空列表关闭 worker tiering，缺省用内置 keep-set；混合类型列表不视为覆盖（与上游一致） |
 | `mcp` | `cli.mcp_loader`、`internal/tools.MCPCallResultTimeout` | Go 扩展（Python 无此块）：`mcp.timeout_seconds` 是 MCP 调用超时的文件兜底；`HIVE_MCP_CALL_RESULT_TIMEOUT` 优先于它（env > file > 240s，`TestMCPCallResultTimeoutPrecedence`） |
-| `channels` | 无 | **不支持**：上游用 `hive.channels` entry-point 插件宿主；Go 端口没有插件宿主与渠道生命周期，`channels.<name>.enabled` 没有可门控的消费点（登记在 `contracts/config-support-ledger.json`） |
+| `channels` | `server.ChannelSections` → serve 启动告警 | **字段级对齐、不生效**：上游用 `hive.channels` entry-point 插件宿主按 `channels.<name>.enabled` 启动渠道；Go 端口没有插件宿主与渠道生命周期。Go 按上游形状读取该段（对象 → 每渠道对象 → truthy `enabled`，默认 false），任何配置写入都原样保留，`GET /api/channels` 保持上游回体形状（无已安装渠道时为空列表），启用项在 serve 启动时打印「无渠道宿主、不会运行」的告警。登记在 `contracts/config-support-ledger.json` |
 
 `llm`、`worker_llm`、`vision_fallback`、`judge` 与 `queen_llm.<queen_id>` 是模型「槽位」，由设置接口写入。本版本运行时消费：`llm`（默认会话模型）、`judge`（judge 槽）、`queen_llm.<queen_id>`（会话启动按 queen 选模型，写后原地切换）、`worker_llm`（colony worker 专用模型）、`vision_fallback`（文本主模型的图片描述，逐次 caption 解析）。热切换矩阵见 §3.8：主槽 `llm` 与 `queen_llm.<id>` 写入即重建运行中会话的 transport，`vision_fallback` 写入即对下一张工具图片生效，`worker_llm` 与上游一致只对下一个 colony/会话生效；进行中的回合始终用旧 provider 跑完（回合级 pin）。
 
-`llm.antigravity_client_id` / `llm.antigravity_client_secret` 是**只读**项：Go 侧有读取点（`ANTIGRAVITY_CLIENT_ID` / `ANTIGRAVITY_CLIENT_SECRET` 环境变量优先，其次配置文件），但端口的 Antigravity 登录读预发的 access token（`antigravity-accounts.json`），没有 OAuth 刷新流程去消费 client id/secret。`llm.use_antigravity_subscription` / `llm.use_kimi_code_subscription` 也只有 REST 面，运行时订阅 token 分支未移植。
+`llm.antigravity_client_id` / `llm.antigravity_client_secret` 是**只读**项：Go 侧有读取点（`ANTIGRAVITY_CLIENT_ID` / `ANTIGRAVITY_CLIENT_SECRET` 环境变量优先，其次配置文件），但端口的 Antigravity 登录读预发的 access token（`antigravity-accounts.json`），没有 OAuth 刷新流程去消费 client id/secret。`llm.use_kimi_code_subscription` 的运行时分支已接通（token 读 `~/.kimi/config.toml`，base 固定 `https://api.kimi.com/coding`，`kimi/` 前缀走 Anthropic Messages 协议）；`llm.use_antigravity_subscription` 仍只有 REST 面——Python 会整会话切到 `AntigravityProvider`（Gemini cloudcode API + OAuth 刷新），Go 未移植该 provider，会话构建对标志显式报错而不是静默发无键请求。
 
 ## 3. 模型与 provider 解析优先级
 
-解析入口是 `internal/cli/loader.go` 的 `resolveChatProvider`，在**每次创建会话时**执行。改环境变量或配置后需要重启 `hive serve` 才会被新会话读到。
+解析入口是 `internal/server/main_slot.go` 的 `MainSlotProvider`（`internal/cli/loader.go::resolveChatProvider` 直接调用它），在**每次创建会话时**执行。改环境变量或配置后需要重启 `hive serve`（或新建会话）才会被读到；运行中的 provider 只由热切换路径替换（§3.8）。
 
 ### 3.1 模型
 
 | 优先级 | 来源 | 实测 |
 | --- | --- | --- |
-| 1 | `POST /api/sessions` 请求体的 `model` | 是（`{"model":"claude-haiku-4-5-20251001"}` 生效） |
+| 1 | `POST /api/sessions` 请求体的 `model`（按原样） | 是（`{"model":"claude-haiku-4-5-20251001"}` 生效） |
 | 2 | `hive serve --model` | 是（`--model claude-haiku-4-5-20251001` + 空请求体生效） |
-| 3 | `configuration.json` 的 `llm.model` | 是（不传 model 时用了配置里的 `gpt-4o-mini`） |
-| 4 | 内置默认 `gpt-4o-mini` | 代码路径 |
+| 3 | `configuration.json` 的 `llm.provider` + `llm.model`，按 Python `get_preferred_model` 拼成 `provider/model`（`openrouter/<id>` 的模型 id 先去前缀） | 代码路径（`TestMainSlotModelJoinsProviderAndModelLikePython`） |
+| 4 | 内置默认 `anthropic/claude-sonnet-5-5`（与上游 `get_preferred_model` 一致） | 代码路径 |
 
 ### 3.2 provider
 
@@ -144,21 +158,25 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 
 | 优先级 | 来源 |
 | --- | --- |
-| 1 | `configuration.json` 的 `llm.api_base` |
-| 2 | `ANTHROPIC_API_BASE`，再 `ANTHROPIC_BASE_URL`（provider 为 anthropic 时） |
-| 2 | `OPENAI_BASE_URL`，再 `OPENAI_API_BASE`（provider 为 openai 时） |
-| 3 | 模型内置：`minimax/*` → `https://api.minimax.io/v1`；`openrouter/*` → `https://openrouter.ai/api/v1`；`kimi/*` → `https://api.kimi.com/coding`；`hive/*` → Hive 网关；本地模型 → `OLLAMA_HOST` 或 `http://127.0.0.1:11434` |
-| 4 | `https://api.anthropic.com`（Anthropic 系）或 `https://api.openai.com/v1`（其他） |
+| 1 | 订阅端点（与上游 `get_api_base` 同序）：`use_codex_subscription` → `https://chatgpt.com/backend-api/codex`；`use_kimi_code_subscription` → `https://api.kimi.com/coding`；`use_antigravity_subscription` → 空（上游由 AntigravityProvider 直连） |
+| 2 | `configuration.json` 的 `llm.api_base` |
+| 3 | provider 为 `openrouter` → `https://openrouter.ai/api/v1` |
+| 4 | 模型内置：`minimax/*` → `https://api.minimax.io/v1`；`kimi/*` → `https://api.kimi.com/coding`；`hive/*` → Hive 网关；本地模型 → `OLLAMA_HOST` 或 `http://127.0.0.1:11434` |
+| 5 | `https://api.anthropic.com`（Anthropic 系）或 `https://api.openai.com/v1`（其他） |
 
 ### 3.4 API key
 
 | 优先级 | 来源 |
 | --- | --- |
-| 1 | 环境变量名由 `llm.api_key_env_var` 指定 |
-| 2 | 该 provider 的默认变量（3.5 表） |
-| 3 | 再一次查 provider 默认变量（用于 `api_key_env_var` 指错时的兜底） |
-| 4 | `HIVE_API_KEY` |
-| 5 | 都没有 → 会话可创建，但 `POST /api/sessions/<id>/chat` 返回 503 `{"error":"No LLM configured for this session"}` |
+| 1 | `llm.endpoint` 指向的命名端点：其凭据库密钥，否则端点占位符（永不落到环境里的共享 key） |
+| 2 | `llm.api_keys` 池的第一个非空项；2 个及以上时在 provider 上启用 `llm.KeyPool` 轮转（429 停键 60s） |
+| 3 | `llm.api_key`（字面 key） |
+| 4 | 订阅 token（按 `use_claude_code_subscription` → `use_codex_subscription` → `use_kimi_code_subscription` → `use_antigravity_subscription` 顺序，逐个尝试，取到即用）：Claude Code 读 `~/.claude/.credentials.json`（macOS 上游还查 Keychain；Go 只读文件、不刷新）、Codex 读 `~/.codex/auth.json`、Kimi 读 `~/.kimi/config.toml`、Antigravity 读 `antigravity-accounts.json` 的预发 access token |
+| 5 | 凭据库（`HIVE_CREDENTIAL_KEY` 存在时按 provider 映射） |
+| 6 | `llm.api_key_env_var` 指定的环境变量 |
+| 7 | 该 provider 的默认变量（3.5 表） |
+| 8 | `HIVE_API_KEY` |
+| 9 | 都没有 → 会话构建返回错误 `no API key configured for model ...`（服务端打印 `Warning: chat runtime unavailable ...`）；`POST /api/sessions` 仍返回 201，该会话的 `chat` 返回 503（§3.7） |
 
 ### 3.5 provider 与默认环境变量
 
@@ -199,6 +217,10 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 
 - 进行中的回合：继续用旧 provider 跑完（不撕裂，回合内迭代不会换模型）；
 - 下一回合：解析到重建后的 provider（新 model / api_base / api_key / extra_body）。
+
+与上游的差异要写清：Python 的 `LiteLLMProvider.reconfigure` 原地改共享对象，所以**同一回合的下一次模型调用**就用新值；Go 为了不与会话中正在读 provider 字段的请求竞态，保留 `*Provider` 不可变 + slot 替换，pin 粒度是**回合**而不是单次调用。二者在「PUT 后第一个新回合」达成一致，差别只在跨回合边界内的长工具循环。
+
+另一个边界：PUT 重建的 transport 使用**路由解析出的** key（section 的 literal / endpoint / env），不会重新挂 `llm.api_keys` 池；配置键池的轮转由会话构建路径（`MainSlotProvider`）安装，重建后的 transport 在下一次会话构建时恢复池。上游的 `api_key_resolver` 是逐调用解析，这一点 Go 以「重建时传 key」记录差异。
 
 | 槽位 | 写入接口 | 生效时机 |
 | --- | --- | --- |

@@ -237,9 +237,9 @@ CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -tags e2e -count=
 
 | 项 | 结果 |
 | --- | --- |
-| `make ci` | 退出码 0：gofmt OK；`go vet` 无输出；44 个包 `ok`、14 个包无测试文件、0 FAIL；六目标交叉编译通过；parity `5012/5012` 注解、0 missing；parity refs 5,328（4,007 test + 1,321 prod）、0 missing；wiring_check 7 个接线文件 / 30 项要求全部命中 |
-| 契约冻结自洽 | `freeze_env_config_contract.py --check` OK；`check_env_config_contract.py --strict` OK —— env：Python 89 / Go 100 / 共有 69 / Python 独有 20 / Go 独有 31；config：134 键（aligned 99 / go_partial 29 / python_only 1 / go_only 4 / unread 1） |
-| 文件规模门禁 | `internal/quality` 通过：`loader.go` 1849 行（≤1936）、`loop.go` 1486 行（拆分 vision caption 与 parseToolInput 后 ≤1500）、`conversation.go` 1535 行（≤1549 allowlist） |
+| `make ci` | 退出码 0：gofmt OK；`go vet` 无输出；45 个包 `ok`、14 个包无测试文件、0 FAIL；六目标交叉编译通过；parity `5186/5186` 注解、0 missing；parity refs 5,532（4,122 test + 1,410 prod）、0 missing；wiring_check 12 个接线文件 / 47 项要求全部命中 |
+| 契约冻结自洽 | `freeze_env_config_contract.py --check` OK；`check_env_config_contract.py --strict` OK —— env：Python 89 / Go 105 / 共有 70 / Python 独有 19 / Go 独有 35；config：134 键（aligned 125 / go_partial 4 / python_only 0 / go_only 4 / unread 1） |
+| 文件规模门禁 | `internal/quality` 通过：`loader.go` 1754 行（≤1936）、`loop.go` 1486 行（拆分 vision caption 与 parseToolInput 后 ≤1500）、`conversation.go` 1535 行（≤1549 allowlist）、`chat_runtime.go` 1498 行（≤1500） |
 
 发布包本身另有一轮验证（`hive --version`、`shasum -a 256 -c SHA256SUMS`、解压 darwin-arm64 后 `/` 200）记录在 `release-notes-v1.0.26-go.1.md`。
 

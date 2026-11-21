@@ -1,22 +1,14 @@
 package agentloop
 
 import (
-	"os"
-	"strconv"
 	"strings"
+
+	"github.com/aden-hive/hive-go/internal/pyenv"
 )
 
-func envInt(name string, def int) int {
-	raw, ok := os.LookupEnv(name)
-	if !ok {
-		return def
-	}
-	n, err := strconv.Atoi(raw)
-	if err != nil {
-		return def
-	}
-	return n
-}
+// envInt resolves an integer env override with the upstream helper's exact
+// accept/settle rule (Python int() semantics, ValueError -> default).
+func envInt(name string, def int) int { return pyenv.Int(name, def) }
 
 var (
 	ColonyParallelCooldownTurns = envInt("HIVE_COLONY_PARALLEL_COOLDOWN", 4)

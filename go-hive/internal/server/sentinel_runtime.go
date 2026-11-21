@@ -39,6 +39,9 @@ var ErrSentinelColdRestoreUnsupported = errors.New("server: sentinel cannot cold
 // chat runtimes register the escalation source and what the inbound listeners
 // deliver replies through.
 func NewSentinelManager(homeRoot string, sessions *SessionManager) *sentinel.Manager {
+	// Opt-in debug sink: HIVE_SENTINEL_LOG diverts the sentinel namespace to
+	// $HIVE_HOME/logs/sentinel.log before the manager logs its first line.
+	sentinel.ConfigureLogging(homeRoot)
 	manager := sentinel.NewManager(sentinel.ManagerOptions{
 		Store:    sentinel.NewStore(homeRoot),
 		Sessions: sentinelSessionManager{manager: sessions},

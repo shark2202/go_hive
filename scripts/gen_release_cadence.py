@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""生成 go_hive/docs/release-cadence.html（2 小时 slot 版倒排排期）。
+
+Usage:
+  python3 scripts/gen_release_cadence.py [--check]
+"""
+from __future__ import annotations
+
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / "docs" / "release-cadence.html"
+
+START = datetime(2026, 11, 21, 12, 0)
+GATES = [
+    ("G1", datetime(2026, 11, 24, 23, 59), "字段级逐字一致（契约 --check + 双跑 golden）"),
+    ("G2", datetime(2026, 12, 4, 23, 59), "老用户无损替换 RC（SC-01 接线 + 旧 home 全量双跑 + 回滚验证）"),
+    ("G3", datetime(2026, 12, 18, 23, 59), "商业外发布（Windows 实机 + Actions release + govulncheck）"),
+]
+SLOT_HOURS = [8, 10, 12, 14, 16, 18, 20, 22]
+
+CSS = """
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
+a{color:var(--accent2);text-decoration:none} .wrap{max-width:1240px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:26px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:32px;margin:10px 0} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1000px}
+.meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:34px 0} h2{font-size:21px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:22px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr))} @media(max-width:1000px){.grid{grid-template-columns:1fr 1fr}} @media(max-width:560px){.grid{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px} .card .d{color:var(--muted);font-size:12px;margin-top:5px;overflow-wrap:anywhere}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;overflow-wrap:anywhere} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;background:#0d141d}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0}
+.pill{display:inline-flex;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted)} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:40px;border-top:1px solid var(--line);padding-top:15px;color:var(--muted);font-size:12px}
+@media(min-width:901px){table{min-width:900px}}
+"""
+
+
+def slots_between(start: datetime, end: datetime) -> list[datetime]:
+    out = []
+    day = start.replace(hour=0, minute=0, second=0, microsecond=0)
+    while day <= end:
+        for h in SLOT_HOURS:
+            t = day.replace(hour=h)
+            if t >= start and t <= end:
+                out.append(t)
+        day += timedelta(days=1)
+    return out
+
+
+def build() -> str:
+    all_slots = slots_between(START, GATES[-1][1])
+    gate_slots = {name: slots_between(START, when) for name, when, _ in GATES}
+
+    total = len(all_slots)
+    rows = []
+    cum = 0
+    day = START.replace(hour=0, minute=0, second=0, microsecond=0)
+    last_day = GATES[-1][1].replace(hour=23, minute=59)
+    while day <= last_day:
+        todays = [t for t in all_slots if t.date() == day.date()]
+        if todays:
+            cum += len(todays)
+            marks = []
+            for name, when, desc in GATES:
+                if when.date() == day.date():
+                    marks.append(f'<span class="pill warn">{name} 门槛</span>')
+            rows.append(
+                "<tr>"
+                f'<td><code>{day:%Y-%m-%d}</code> {["周一","周二","周三","周四","周五","周六","周日"][day.weekday()]}</td>'
+                f'<td>{len(todays)} 个：{", ".join(f"{t.hour:02d}:00" for t in todays)}</td>'
+                f'<td class="num">{cum}</td>'
+                f'<td>{" ".join(marks) if marks else "—"}</td>'
+                "</tr>"
+            )
+        day += timedelta(days=1)
+
+    gate_cards = "".join(
+        f'<div class="card"><div class="k">{name} 门槛</div><div class="v">{len(gate_slots[name])} slots</div>'
+        f'<div class="d">{when:%Y-%m-%d} · {desc}</div></div>'
+        for name, when, desc in GATES
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 小时 slot 版倒排排期 · go_hive</title>
+<style>{CSS}</style>
+</head><body><div class="wrap">
+<header>
+  <div class="eyebrow">GO_HIVE · RELEASE CADENCE</div>
+  <h1>每 2 小时一个版：<span>倒排排期</span></h1>
+  <p class="lede">从 {START:%Y-%m-%d %H:%M} 起，每天 08/10/12/14/16/18/20/22 共 8 个 slot，每个 slot 产出一个可运行的主机版（四二进制 + manifest + sha256），产物保留最近 6 个；六个平台完整归档与镜像发布仍由门槛控制。节奏由 <code>release_cadence_loop.sh</code> 自动触发，<code>watchdog_report.sh</code> 在最近 slot 超过 2h20m 未更新时主动告警。</p>
+  <div class="meta">
+    <span>下一 slot：<b>{(all_slots[0] if all_slots else START):%Y-%m-%d %H:%M}</b></span>
+    <span>到 G3 总 slots：<b>{total}</b></span>
+    <span>已产出：<b>20261121-10</b>（<code>1.0.26-go.1+build.2026112110</code>，48.5MB）</span>
+    <span>台账：<code>go_hive/dist/slots/cadence.json</code></span>
+  </div>
+</header>
+
+<section><h2><span class="num">01</span>规则</h2>
+<div class="callout info"><b>slot 版定义：</b>四二进制（hive/hive-cred/hive-browser/browserbridge）darwin-arm64 打包 + manifest（HEAD/version/sha256/bytes）；主线 <code>go_hive/go-hive</code> 有未提交改动时该 slot 标记 <code>blocked_dirty</code> 并告警，不构建脏版本。</div>
+<ul>
+  <li>自动触发：整点后 2 分钟由 <code>release_cadence_loop.sh</code> 发起；已完成的 slot 不重复。</li>
+  <li>版本串：<code>1.0.26-go.1+build.&lt;yyyymmddhh&gt;</code>；不开 tag、不发 GitHub release，门槛日才做六平台发布。</li>
+  <li>保留策略：<code>dist/slots/</code> 只留最近 6 个 slot（约 300MB），更旧的自动清理。</li>
+  <li>看门狗：<code>WATCHDOG_REPORT</code> 行内带 <code>release="slot=… status=… age=…s"</code>；超过 2h20m 报警并弹 macOS 通知。</li>
+  <li>slot 构建失败或漏拍：写入 <code>cadence.json</code> 的 <code>last_status</code>，并记 <code>dist/slots/cadence.log</code>。</li>
+</ul>
+</section>
+
+<section><h2><span class="num">02</span>门槛与倒排 slot 数</h2>
+<div class="grid">{gate_cards}</div>
+<div class="callout"><b>倒排口径：</b>以每天 8 个 slot 计，从 {START:%m-%d %H:%M} 到各门槛日 24:00 累计；门槛当天最后 slot 22:00 作为该门槛的收口版。</div>
+</section>
+
+<section><h2><span class="num">03</span>逐日排期（倒排）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">日期</th><th style="width:46%">slot</th><th style="width:12%">累计</th><th>门槛</th></tr></thead><tbody>
+{''.join(rows)}
+</tbody></table></div>
+</section>
+
+<section><h2><span class="num">04</span>门槛完成判定</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">门槛</th><th>完成条件（全部满足才算）</th></tr></thead><tbody>
+<tr><td><b>G1</b> 11-24</td><td>env/config lane 合并；工具输出/失败 golden；5 个 schema 残差；skill catalog 文本双跑；MCP 双跑；API/WS canonical golden；<code>make ci</code> 七门禁 + QC 8/8；例外清单落盘</td></tr>
+<tr><td><b>G2</b> 12-04</td><td>SC-01 接线实测；真实旧 HIVE_HOME 全量迁移双跑（sessions/colonies/tracker/credentials/memories/senders/skills）；回滚测试；安装/升级脚本；无损替换声明有证据</td></tr>
+<tr><td><b>G3</b> 12-18</td><td>G2 + Windows 实机；GitHub Actions release 实际执行；govulncheck/安全审查；六平台归档与安装脚本复验；支持矩阵未验证项如实标注</td></tr>
+</tbody></table></div>
+</section>
+
+<footer>生成：<code>scripts/gen_release_cadence.py</code> · 目标日期为条件日期，外部依赖未满足时顺延并更新本页</footer>
+</div></body></html>
+"""
+
+
+def main() -> int:
+    html = build()
+    if "--check" in sys.argv:
+        if OUT.exists() and OUT.read_text() == html:
+            print(f"ok: {OUT}")
+            return 0
+        print(f"stale: {OUT}; run gen_release_cadence.py")
+        return 1
+    OUT.write_text(html)
+    print(f"wrote {OUT} ({len(html)} bytes)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

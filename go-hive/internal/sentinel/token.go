@@ -21,7 +21,6 @@ import (
 	"encoding/base32"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -102,10 +101,10 @@ func (m *TokenManager) loadOrCreateSecret() []byte {
 				m.cached = decoded
 				return decoded
 			}
-			log.Printf("sentinel: could not decode secret at %s, regenerating", path)
+			sentinelLogf("sentinel: could not decode secret at %s, regenerating", path)
 		}
 	} else if !os.IsNotExist(err) {
-		log.Printf("sentinel: could not read secret at %s, regenerating: %v", path, err)
+		sentinelLogf("sentinel: could not read secret at %s, regenerating: %v", path, err)
 	}
 
 	secret := make([]byte, 32)
@@ -113,23 +112,23 @@ func (m *TokenManager) loadOrCreateSecret() []byte {
 		panic("sentinel: crypto/rand unavailable: " + err.Error())
 	}
 	if info, statErr := os.Lstat(path); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
-		log.Printf("sentinel: refusing to write through symlink at %s; using ephemeral secret", path)
+		sentinelLogf("sentinel: refusing to write through symlink at %s; using ephemeral secret", path)
 		m.cached = secret
 		return secret
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		log.Printf("sentinel: could not persist secret; using ephemeral: %v", err)
+		sentinelLogf("sentinel: could not persist secret; using ephemeral: %v", err)
 	} else {
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 		if err != nil {
-			log.Printf("sentinel: could not persist secret; using ephemeral: %v", err)
+			sentinelLogf("sentinel: could not persist secret; using ephemeral: %v", err)
 		} else {
 			encoded := base64.StdEncoding.EncodeToString(secret)
 			if _, err := f.WriteString(encoded); err != nil {
-				log.Printf("sentinel: could not persist secret; using ephemeral: %v", err)
+				sentinelLogf("sentinel: could not persist secret; using ephemeral: %v", err)
 			}
 			if err := f.Close(); err != nil {
-				log.Printf("sentinel: could not close secret file: %v", err)
+				sentinelLogf("sentinel: could not close secret file: %v", err)
 			}
 			_ = os.Chmod(path, 0o600)
 		}

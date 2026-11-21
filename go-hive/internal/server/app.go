@@ -45,11 +45,15 @@ type AppDeps struct {
 	LiveSessions func() []*Session
 	Manager      *SessionManager
 	Resources    func() any
-	Executor     func() ExecutorState
-	Home         hivehome.Home
-	Reveal       func(string) error
-	Colony       ColonyLifecycle
-	Config       ConfigRouteDeps
+	// ResourceSnapshot is the /api/health/resources body source. Nil keeps the
+	// route's pre-sampler snapshot (thresholds/cadence from the env, empty
+	// history, verdict unknown), exactly like upstream before the first sample.
+	ResourceSnapshot func(historyN *int) map[string]any
+	Executor         func() ExecutorState
+	Home             hivehome.Home
+	Reveal           func(string) error
+	Colony           ColonyLifecycle
+	Config           ConfigRouteDeps
 	// Reminders is the process-wide reminder hub runtime shared by the HTTP
 	// routes and chat sessions. Nil builds a fresh one for this app.
 	Reminders    *ReminderRuntime
@@ -221,7 +225,7 @@ func NewApp(deps AppDeps) *App {
 		ProcessStartTS: app.processStartTS,
 	})
 	RegisterEventRoutes(mux, EventRouteDeps{})
-	RegisterAppExtraRoutes(mux, AppExtraRouteDeps{})
+	RegisterAppExtraRoutes(mux, AppExtraRouteDeps{Resources: deps.ResourceSnapshot})
 	RegisterBrowserPanelRoutes(mux, BrowserPanelDeps{})
 	RegisterModelRoutes(mux, ModelRouteDeps{Home: deps.Home, Manager: deps.Manager})
 	RegisterTaskRoutes(mux, TaskRouteDeps{Store: tasks.NewTaskStore(deps.Home.Root)})

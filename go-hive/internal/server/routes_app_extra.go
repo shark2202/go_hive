@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aden-hive/hive-go/internal/resources"
 )
 
 const (
@@ -43,12 +45,7 @@ const (
 	browserContextsTime    = 1 * time.Second
 	browserRevealTime      = 2 * time.Second
 
-	resourceDefaultHistory = 120
-	resourceIntervalS      = 15.0
-	resourceWarnAvailFrac  = 0.25
-	resourceCritAvailFrac  = 0.15
-	resourceWarnRenderers  = 45
-	resourceCritRenderers  = 60
+	resourceDefaultHistory = resources.DefaultSnapshotLength
 )
 
 // AppExtraRouteDeps carries the seams the four app.py extras need. Every
@@ -196,16 +193,17 @@ func emptyResourceSnapshot(historyN *int) map[string]any {
 	if historyN != nil && *historyN > 0 {
 		history = []any{}
 	}
+	thresholds := resources.ThresholdsFromEnv()
 	return map[string]any{
 		"available":  false,
-		"interval_s": resourceIntervalS,
+		"interval_s": resources.IntervalSeconds(),
 		"thresholds": map[string]any{
-			"warn_avail_mb":   resourceWarnAvailFrac,
-			"crit_avail_mb":   resourceCritAvailFrac,
-			"warn_avail_frac": resourceWarnAvailFrac,
-			"crit_avail_frac": resourceCritAvailFrac,
-			"warn_renderers":  resourceWarnRenderers,
-			"crit_renderers":  resourceCritRenderers,
+			"warn_avail_mb":   thresholds.WarnAvailFrac,
+			"crit_avail_mb":   thresholds.CritAvailFrac,
+			"warn_avail_frac": thresholds.WarnAvailFrac,
+			"crit_avail_frac": thresholds.CritAvailFrac,
+			"warn_renderers":  thresholds.WarnRenderers,
+			"crit_renderers":  thresholds.CritRenderers,
 		},
 		"history": history,
 		"verdict": "unknown",

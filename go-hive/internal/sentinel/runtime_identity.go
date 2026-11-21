@@ -16,7 +16,6 @@ package sentinel
 // Parity: core/framework/sentinel/runtime_identity.py
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -116,14 +115,14 @@ func (r *RuntimeIdentity) ID() string {
 			return value
 		}
 	} else if !os.IsNotExist(err) {
-		log.Printf("sentinel: could not read runtime_id, regenerating: %v", err)
+		sentinelLogf("sentinel: could not read runtime_id, regenerating: %v", err)
 	}
 
 	rid := "local-" + NewUUID4Hex()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		log.Printf("sentinel: could not persist runtime_id; using ephemeral: %v", err)
+		sentinelLogf("sentinel: could not persist runtime_id; using ephemeral: %v", err)
 	} else if err := os.WriteFile(path, []byte(rid), 0o644); err != nil {
-		log.Printf("sentinel: could not persist runtime_id; using ephemeral: %v", err)
+		sentinelLogf("sentinel: could not persist runtime_id; using ephemeral: %v", err)
 	}
 	r.cached = rid
 	return rid

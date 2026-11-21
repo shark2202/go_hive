@@ -20,6 +20,21 @@ import (
 // before teardown returns, hence the explicit bound.
 const memoryTimelineStopFlushTimeout = 30 * time.Second
 
+// chatTurnMaxTokens is the session's output budget: the main llm slot's
+// max_tokens (config, then model catalog, then 8192). Without a home the
+// 8192 default stands, so a bare test runtime keeps its old behaviour.
+//
+// Parity: framework/config.py::get_max_tokens,
+// framework/server/queen_orchestrator.py (AgentContext max_tokens)
+func chatTurnMaxTokens(homeRoot string) int {
+	if root := strings.TrimSpace(homeRoot); root != "" {
+		if home, err := hivehome.ResolveAt(root); err == nil {
+			return LLMMaxTokens(home)
+		}
+	}
+	return 8192
+}
+
 // chatLoopConfig is the queen loop's configuration: the defaults, the
 // session-scoped spillover directory large tool results are written to, the
 // global loop.max_tool_result_chars override, and — for a queen with a model of

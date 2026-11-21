@@ -16,7 +16,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/aden-hive/hive-go/internal/llm"
@@ -220,7 +219,7 @@ func goalOrPlaceholder(ctx ParkContext) string {
 func logClassifyDecision(ctx ParkContext, verdict ClassifierVerdict) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			log.Printf("sentinel: classify_decision log failed: %v", recovered)
+			sentinelLogf("sentinel: classify_decision log failed: %v", recovered)
 		}
 	}()
 	payload := map[string]any{
@@ -238,10 +237,10 @@ func logClassifyDecision(ctx ParkContext, verdict ClassifierVerdict) {
 	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("sentinel: classify_decision marshal failed: %v", err)
+		sentinelLogf("sentinel: classify_decision marshal failed: %v", err)
 		return
 	}
-	log.Printf("[sentinel] classify_decision %s", encoded)
+	sentinelLogf("[sentinel] classify_decision %s", encoded)
 }
 
 func firstStrings(values []string, limit int) []string {
@@ -267,14 +266,14 @@ func ClassifyPark(ctx context.Context, park ParkContext, completer llm.Completer
 		JSONMode:  true,
 	})
 	if err != nil {
-		log.Printf("sentinel: classifier failed; defaulting to continue: %v", err)
+		sentinelLogf("sentinel: classifier failed; defaulting to continue: %v", err)
 		verdict := ClassifierVerdict{Verdict: VerdictContinue, Reason: "classifier error", Errored: true}
 		logClassifyDecision(park, verdict)
 		return verdict
 	}
 	var decoded map[string]any
 	if err := json.Unmarshal([]byte(strings.TrimSpace(response.Content)), &decoded); err != nil {
-		log.Printf("sentinel: classifier returned invalid JSON; defaulting to continue: %v", err)
+		sentinelLogf("sentinel: classifier returned invalid JSON; defaulting to continue: %v", err)
 		verdict := ClassifierVerdict{Verdict: VerdictContinue, Reason: "classifier error", Errored: true}
 		logClassifyDecision(park, verdict)
 		return verdict

@@ -349,12 +349,12 @@ func runPythonPlaybook(ctx context.Context, runtime playbookRuntime, binding *tr
 			"traceback": full,
 		}, true)
 	}
-	defer handle.Close()
 
 	meta := handle.Meta
 	name := strings.TrimSpace(stringValue(meta["name"]))
 	concurrency, concurrencyErr := playbook.ResolveConcurrency(meta)
 	if concurrencyErr != nil {
+		handle.Close()
 		return jsonPayload(map[string]any{
 			"status": "failed",
 			"run_id": runID,
@@ -374,7 +374,6 @@ func runPythonPlaybook(ctx context.Context, runtime playbookRuntime, binding *tr
 	}
 
 	runCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
 	registerPlaybookRun(&playbookRunHandle{
 		runID:     runID,
 		name:      name,
@@ -382,54 +381,119 @@ func runPythonPlaybook(ctx context.Context, runtime playbookRuntime, binding *tr
 		started:   time.Now(),
 		cancel:    cancel,
 	})
-	defer unregisterPlaybookRun(runID)
 
-	out, runErr := handle.Execute(runCtx, input["args"], concurrency)
-	stopped := playbookRunWasStopped(runID)
-	if stopped {
-		// Upstream records a stopped run as "stopped by stop_playbook"; the
-		// underlying context.Canceled is the mechanism, not the outcome.
-		runErr = errPlaybookStopped
+	// ---- run, with the fast-result grace window ---------------------------
+	// Upstream awaits the run for HIVE_PLAYBOOK_FAST_GRACE seconds: a failure
+	// or completion inside the window returns the real outcome to the queen
+	// now; only a genuinely long run (workers dispatched, reports pending)
+	// falls through to "started" plus a [PLAYBOOK_COMPLETE] notification.
+	type executeOutcome struct {
+		out map[string]any
+		err error
 	}
-	logDB := recordPlaybookRun(binding, runID, name, out, runErr)
-	if stopped {
-		// A stop is an outcome, not a failure: the queen asked for it.
-		payload := playbookRunInfo(runID, name, savedPath, dispatchedCount(out))
-		payload["log_db"] = logDB
-		payload["playbook_path"] = savedPath
-		return jsonPayload(payload, false)
+	done := make(chan executeOutcome, 1)
+	go func() {
+		out, runErr := handle.Execute(runCtx, input["args"], concurrency)
+		done <- executeOutcome{out: out, err: runErr}
+	}()
+
+	grace := playbook.FastGraceSeconds()
+	outcome := executeOutcome{}
+	finishedInGrace := false
+	if grace > 0 {
+		timer := time.NewTimer(time.Duration(grace * float64(time.Second)))
+		select {
+		case outcome = <-done:
+			finishedInGrace = true
+			timer.Stop()
+		case <-timer.C:
+		}
 	}
-	if runErr != nil {
-		concise, full := playbook.ErrorDetail(runErr)
-		return jsonPayload(map[string]any{
-			"status":        "failed",
+
+	// finish records the run and builds the terminal payload. It is shared by
+	// the in-window path and the background finisher so both report identically.
+	finish := func(out map[string]any, runErr error) (string, bool) {
+		stopped := playbookRunWasStopped(runID)
+		if stopped {
+			// Upstream records a stopped run as "stopped by stop_playbook"; the
+			// underlying context.Canceled is the mechanism, not the outcome.
+			runErr = errPlaybookStopped
+		}
+		logDB := recordPlaybookRun(binding, runID, name, out, runErr)
+		if stopped {
+			// A stop is an outcome, not a failure: the queen asked for it.
+			payload := playbookRunInfo(runID, name, savedPath, dispatchedCount(out))
+			payload["log_db"] = logDB
+			payload["playbook_path"] = savedPath
+			return jsonPayload(payload, false)
+		}
+		if runErr != nil {
+			concise, full := playbook.ErrorDetail(runErr)
+			return jsonPayload(map[string]any{
+				"status":        "failed",
+				"run_id":        runID,
+				"error":         "playbook failed — " + concise,
+				"traceback":     full,
+				"log_db":        logDB,
+				"playbook_name": name,
+				"playbook_path": savedPath,
+				"dispatched":    dispatchedCount(out),
+			}, true)
+		}
+		dead := deadLetterCount(out)
+		payload := map[string]any{
+			"status":        "completed",
 			"run_id":        runID,
-			"error":         "playbook failed — " + concise,
-			"traceback":     full,
+			"concurrency":   concurrency,
+			"dispatched":    dispatchedCount(out),
+			"dead_lettered": dead,
+			"result":        out["result"],
 			"log_db":        logDB,
 			"playbook_name": name,
 			"playbook_path": savedPath,
-			"dispatched":    dispatchedCount(out),
-		}, true)
+		}
+		if dispatchedCount(out) == 0 {
+			payload["hint"] = "dispatched 0 workers. If the table is already converged this is correct; to " +
+				"continue later, re-run with run_playbook(playbook_name=…) — done rows are skipped."
+		}
+		return jsonPayload(payload, false)
 	}
 
-	dead := deadLetterCount(out)
-	payload := map[string]any{
-		"status":        "completed",
+	if finishedInGrace {
+		defer cancel()
+		defer unregisterPlaybookRun(runID)
+		defer handle.Close()
+		return finish(outcome.out, outcome.err)
+	}
+
+	// Still running: finish in the background, record the outcome, and notify
+	// the queen through the colony bus (the same report channel worker
+	// completion uses). A runtime without a bus still records the run.
+	go func() {
+		defer cancel()
+		defer unregisterPlaybookRun(runID)
+		defer handle.Close()
+		outcome := <-done
+		payload, _ := finish(outcome.out, outcome.err)
+		if notifier, ok := runtime.(playbookRunNotifier); ok {
+			notifier.NotifyPlaybookComplete(runID, name, payload)
+		}
+	}()
+
+	return jsonPayload(map[string]any{
+		"status":        "started",
 		"run_id":        runID,
 		"concurrency":   concurrency,
-		"dispatched":    dispatchedCount(out),
-		"dead_lettered": dead,
-		"result":        out["result"],
-		"log_db":        logDB,
+		"log_db":        filepath.Join(binding.Dir, "colony.db"),
 		"playbook_name": name,
 		"playbook_path": savedPath,
-	}
-	if dispatchedCount(out) == 0 {
-		payload["hint"] = "dispatched 0 workers. If the table is already converged this is correct; to " +
-			"continue later, re-run with run_playbook(playbook_name=…) — done rows are skipped."
-	}
-	return jsonPayload(payload, false)
+		"message": "Playbook is dispatching workers in the background, " + strconv.Itoa(concurrency) +
+			" at a time (your meta['concurrency']). Routine outcomes (retry, dead-letter) are handled " +
+			"by the convergence loop; you'll receive a [PLAYBOOK_COMPLETE] notification when it finishes. " +
+			"Check progress anytime with run_playbook(action=\"status\") or kill it with " +
+			"run_playbook(action=\"stop\", run_id=…). Saved to the colony library as '" + name +
+			"' — to resume, call run_playbook(playbook_name=…); done rows are skipped.",
+	}, false)
 }
 
 // unsupportedPythonInterpreterPayload is the honest terminal answer when the

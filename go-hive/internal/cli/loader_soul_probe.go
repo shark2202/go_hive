@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -9,14 +10,25 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
+	hivelogging "github.com/aden-hive/hive-go/internal/logging"
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
 	soulstore "github.com/aden-hive/hive-go/internal/soul"
 )
 
-// installRuntimeLogBuffer tees the process logger into the ring behind
-// GET /api/runtime-logs while keeping stderr output.
-func installRuntimeLogBuffer() {
-	log.SetOutput(io.MultiWriter(os.Stderr, hiveserver.DefaultRuntimeLogBuffer()))
+// installRuntimeLogBuffer routes the standard logger to stderr, the in-process
+// ring the /api/runtime-logs route reads, and — unless HIVE_NO_FILE_LOG is set
+// — the rotating $HIVE_HOME/logs/hive-server.log sink, mirroring upstream's
+// root-logger file handler.
+func installRuntimeLogBuffer(home hivehome.Home) {
+	writers := []io.Writer{os.Stderr, hiveserver.DefaultRuntimeLogBuffer()}
+	if file, enabled, err := hivelogging.OpenServerLog(home.Root); err != nil {
+		// A broken log path must never take the server down (upstream's
+		// `except Exception: pass`).
+		fmt.Fprintf(os.Stderr, "Warning: file log unavailable: %v\n", err)
+	} else if enabled {
+		writers = append(writers, file)
+	}
+	log.SetOutput(io.MultiWriter(writers...))
 }
 
 // newSoulProbeAnswerFor resolves the configured model and adapts it to the

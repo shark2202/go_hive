@@ -71,7 +71,29 @@ while true; do
     fi
   fi
 
-  summary="[watchdog $ts] health=$health HEAD=$head dirty_hive=${dirty} total=${dirty_total} worktrees=$worktrees serve=$servers ledger_age=${ledger_age}s gate=\"$gate_line\""
+  # 2 小时 slot 版节奏：cadence.json 由 release_cadence_loop.sh / release_slot.sh 维护。
+  # 08:00–24:00 内，最近一次成功 slot 超过 2h20m 未更新 → 告警。
+  release_line="none"
+  release_stale=0
+  cadence="$REPO/go_hive/dist/slots/cadence.json"
+  if [ -f "$cadence" ]; then
+    release_line=$(python3 - "$cadence" <<'PY'
+import json,sys,time
+try:
+    d=json.load(open(sys.argv[1])); age=int(time.time())-int(d.get("last_epoch",0))
+    print(f"slot={d.get('last_slot','?')} status={d.get('last_status','?')} age={age}s")
+except Exception:
+    print("none")
+PY
+)
+    age=$(printf '%s' "$release_line" | sed -n 's/.*age=\([0-9]*\)s.*/\1/p')
+    [ -n "$age" ] && [ "$age" -gt 8400 ] && release_stale=1
+  else
+    hour_now=$((10#$(date +%H)))
+    [ "$hour_now" -ge 10 ] && release_stale=1
+  fi
+
+  summary="[watchdog $ts] health=$health HEAD=$head dirty_hive=${dirty} total=${dirty_total} worktrees=$worktrees serve=$servers ledger_age=${ledger_age}s release=\"$release_line\" gate=\"$gate_line\""
   echo "$summary"
 
   {
@@ -102,6 +124,7 @@ while true; do
   [ "$health" != "200" ] && alert health "health=${health}（期望 200，端口 8788）"
   [ "$servers" -eq 0 ] 2>/dev/null && alert serve "hive-embed serve 进程为 0"
   case "$gate_line" in *FAIL*|*MISSING*) alert gate "最近门禁异常：$gate_line" ;; esac
+  [ "$release_stale" = "1" ] && alert release "2 小时 slot 版未按时更新（$release_line）；检查 release_cadence_loop.sh / dist/slots/cadence.log"
   [ "$dirty" -ge 3 ] 2>/dev/null && alert dirty "go_hive 区有 ${dirty} 个未提交改动（total=${dirty_total}），检查是否有 lane 写进主线"
   if [ "$sleep_gap" != 1 ] && [ "$ledger_age" != "?" ] && [ "$ledger_age" -gt 900 ] 2>/dev/null; then
     alert ledger "时间台账超过 $((ledger_age / 60)) 分钟未更新（timegov 可能挂了）"

@@ -140,6 +140,8 @@ sessions/session_YYYYMMDD_HHMMSS_{uuid}/
 
 迁移在启动时自动执行，这是「升级不破坏用户数据」的关键。
 
+> **Go 侧现状（2026-11-21 实测）**：`storage.RunMigrationV2/V3/RunMigrationColonySessions` 已移植且与 Python 逐项等价（`.wt/storage-verbatim` 双跑，见 `docs/storage-contract-diff.md`），但**没有生产调用点**——真实 `hive serve` 指向 v2 旧 home 时布局原样保留。接线点应在 serve 的 home 初始化处，顺序与 Python 一致（v2 → v3 → colony_sessions → tracker ensure）。支持矩阵见 `go_hive/docs/storage-compat.html`（缺口 SC-01）。
+
 ## 7. 保留与清理
 
 `maintenance/retention.py` + `maintenance/cli.py`：

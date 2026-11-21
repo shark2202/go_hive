@@ -63,14 +63,28 @@ func readLedger(t *testing.T) (supportLedger, string) {
 }
 
 // ledgerStatuses are the statuses an entry may carry. "wired" claims the
-// runtime reads the value and a test proves it; everything else must carry a
-// reason, so an unimplemented item is never silent.
+// runtime reads the value and a test proves it; "platform_diff" claims the
+// mechanism the name tunes does not exist in the Go port, so the entry owes a
+// reason plus the anchor of the substitute mechanism; everything short of a Go
+// reader must carry a reason, so an unimplemented item is never silent.
 var ledgerStatuses = map[string]bool{
-	"wired":        true,
-	"partial":      true,
-	"unsupported":  true,
-	"go_extension": true,
-	"unread":       true,
+	"wired":         true,
+	"partial":       true,
+	"unsupported":   true,
+	"platform_diff": true,
+	"go_extension":  true,
+	"unread":        true,
+}
+
+// requiresReason reports whether a status must explain itself. Everything that
+// stops short of a proven Go reader does, and a platform difference is nothing
+// but an explanation: it is the claim that no reader is coming.
+func requiresReason(status string) bool {
+	switch status {
+	case "partial", "unsupported", "platform_diff":
+		return true
+	}
+	return false
 }
 
 // TestSupportLedgerCoversEveryGap is the anti-silence check: every key the
@@ -89,7 +103,7 @@ func TestSupportLedgerCoversEveryGap(t *testing.T) {
 		if key.Status == "" || !ledgerStatuses[key.Status] {
 			t.Errorf("key %s has an unknown status %q", key.Path, key.Status)
 		}
-		if (key.Status == "partial" || key.Status == "unsupported") && strings.TrimSpace(key.Reason) == "" {
+		if requiresReason(key.Status) && strings.TrimSpace(key.Reason) == "" {
 			t.Errorf("key %s is %s without a reason", key.Path, key.Status)
 		}
 		if key.SameAs != "" && !entries[key.SameAs] {
@@ -145,7 +159,7 @@ func TestSupportLedgerCoversEveryGap(t *testing.T) {
 		if entry.Status == "" || !ledgerStatuses[entry.Status] {
 			t.Errorf("env entry %v has an unknown status %q", entry.Names, entry.Status)
 		}
-		if (entry.Status == "partial" || entry.Status == "unsupported") && strings.TrimSpace(entry.Reason) == "" {
+		if requiresReason(entry.Status) && strings.TrimSpace(entry.Reason) == "" {
 			t.Errorf("env entry %v is %s without a reason", entry.Names, entry.Status)
 		}
 		for _, name := range entry.Names {
@@ -208,8 +222,13 @@ func TestSupportLedgerWiredEntriesResolve(t *testing.T) {
 				t.Errorf("%s is wired without a proving test", label)
 			}
 		}
-		if status == "unsupported" && strings.TrimSpace(reason) == "" {
-			t.Errorf("%s is unsupported without a reason", label)
+		if requiresReason(status) && strings.TrimSpace(reason) == "" {
+			t.Errorf("%s is %s without a reason", label, status)
+		}
+		if status == "platform_diff" && len(anchors) == 0 {
+			// A platform difference is not a gap left open by accident: it
+			// must point at the mechanism that replaces the missing one.
+			t.Errorf("%s is platform_diff without a substitute anchor", label)
 		}
 		for _, anchor := range anchors {
 			path := filepath.Join(root, filepath.FromSlash(anchor.File))

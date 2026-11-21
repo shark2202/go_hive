@@ -189,6 +189,10 @@ func ExtraLLMKWargs(llmSection map[string]any, apiKey, codexAccountID string) ma
 
 func numCtxOr(value any, fallback int) int {
 	switch typed := value.(type) {
+	case json.Number:
+		if parsed, err := typed.Int64(); err == nil && parsed > 0 {
+			return int(parsed)
+		}
 	case int:
 		if typed > 0 {
 			return typed

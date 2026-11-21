@@ -599,7 +599,7 @@ CURATED: dict[str, dict] = {
     },
     "HIVE_GCU_MEMTRACE": {
         "status": "python_only",
-        "note": "python gcu memtrace capture is a python-tools-only debug facility; go has no equivalent reader.",
+        "note": "platform difference: python gcu memtrace capture is a python-tools-only debug facility; the Go port's browser integration is the Go browser bridge (go_hive/browserbridge + internal/cli/browser_supervisor.go), which samples no GCU heap. Recorded in contracts/config-support-ledger.json.",
     },
     "HIVE_GCU_MEMTRACE_FILE": {
         "status": "python_only",
@@ -726,15 +726,50 @@ def _read_versions(root: Path) -> tuple[str, str, str]:
 # The published audit (go_hive/docs/env-surface-audit.json @ 622cc236) is the
 # inventory baseline. AUDIT_BASELINE freezes its counts so the delta against the
 # current tree stays visible, and AUDIT_EXPECTED pins the expected post-lane
-# state: HIVE_MAX_ITER, HIVE_SPLIT_WORKER_EVENTS and HIVE_PYTHON gained Go
-# readers, HIVE_CRM_PRINCIPAL entered the Go tree between the audit commit and
-# this lane, and the network-scanners lane removed the Go-only
-# HIVE_NETWORK_SCANNERS switch — so Go 96→100, common 66→69,
-# python_only 23→20, go_only 30→31.
+# state. History:
+#   * config-env-align lane: HIVE_MAX_ITER, HIVE_SPLIT_WORKER_EVENTS and
+#     HIVE_PYTHON gained Go readers; HIVE_CRM_PRINCIPAL entered the Go tree
+#     between the audit commit and that lane; the network-scanners lane removed
+#     the Go-only HIVE_NETWORK_SCANNERS switch (Go 96→100, common 66→69,
+#     python_only 23→20, go_only 30→31).
+#   * env-verbatim-port lane: thirteen Python-only names gained Go readers
+#     (tracker worker cadence, history read pool, server log file, compaction
+#     debug, LLM turn log, playbook fast grace, sentinel log, agent-name
+#     injection and the six resource-sampling knobs), so Go 100→118,
+#     common 69→83 and python_only 20→6; the six remaining Python-only names
+#     are the GCU platform difference (no Go reader by design).
 AUDIT_BASELINE = {"python": 89, "go": 96, "common": 66, "python_only": 23, "go_only": 30}
-AUDIT_EXPECTED = {"python": 89, "go": 100, "common": 69, "python_only": 20, "go_only": 31}
+AUDIT_EXPECTED = {"python": 89, "go": 118, "common": 83, "python_only": 6, "go_only": 35}
 # Names the config-env-align lane gave Go readers to (relative to the baseline).
 LANE_ENV_PORTED = ("HIVE_MAX_ITER", "HIVE_SPLIT_WORKER_EVENTS", "HIVE_PYTHON")
+# Names the env-verbatim-port lane gave Go readers to (relative to the baseline).
+VERBATIM_LANE_ENV_PORTED = (
+    "HIVE_TRACKER_WORKER_TOOL_CALLS",
+    "HIVE_HISTORY_READ_WORKERS",
+    "HIVE_NO_FILE_LOG",
+    "HIVE_COMPACTION_DEBUG",
+    "HIVE_ENABLE_LLM_LOGS",
+    "HIVE_SENTINEL_LOG",
+    "HIVE_PLAYBOOK_FAST_GRACE",
+    "HIVE_AGENT_NAME",
+    "HIVE_RESOURCE_INTERVAL_S",
+    "HIVE_RESOURCE_HISTORY",
+    "HIVE_RESOURCE_WARN_AVAIL_FRAC",
+    "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
+    "HIVE_RESOURCE_WARN_RENDERERS",
+    "HIVE_RESOURCE_CRIT_RENDERERS",
+)
+# Python-only names that stay without a Go reader because the mechanism they
+# tune does not exist in the Go port (recorded as a platform difference in
+# contracts/config-support-ledger.json).
+PLATFORM_DIFF_ENV = (
+    "HIVE_GCU_MEMTRACE",
+    "HIVE_GCU_MEMTRACE_FILE",
+    "HIVE_GCU_MEMTRACE_FRAMES",
+    "HIVE_GCU_MEMTRACE_INTERVAL_S",
+    "HIVE_GCU_MEMTRACE_TOP",
+    "HIVE_GCU_SCREENSHOT_CONCURRENCY",
+)
 
 QUOTED_LITERAL = re.compile(r"[\"'](HIVE_[A-Z0-9_]+)[\"']")
 
@@ -821,6 +856,18 @@ ENV_STATUS_NOTES = {
     "HIVE_BRIDGE_PORT": "per-site defaults mirror upstream (14829 main bridge, 9229 legacy status). py int() raises on garbage; go ignores the bad value per site.",
     "HIVE_DESKTOP_PARENT_PID": "presence used to detect a desktop-spawned runtime.",
     "HIVE_TASK_LIST_ID": "non-empty override wins over the session-derived task list id.",
+    # ---- env-verbatim-port lane: read points and parse semantics both sides ----
+    "HIVE_TRACKER_WORKER_TOOL_CALLS": "py: _env_int(…, 20) — int() semantics with ValueError→default; go: agentloop.envInt → pyenv.Int (same rule). Worker tracker cadence; pinned by TestTrackerWorkerToolCallsDefaultAndParse and the live worker reminder test.",
+    "HIVE_HISTORY_READ_WORKERS": "py: max(4, int(os.environ.get(name, \"8\"))) sizing a dedicated UI-read thread pool (no except: garbage raises); go: bounded semaphore in internal/server sized by the same expression, floor 4, garbage → 500 (envIntOrError).",
+    "HIVE_NO_FILE_LOG": "py: `if not os.getenv(...)` — any non-empty value (incl. \"0\") turns the $HIVE_HOME/logs/hive-server.log handler off (20MB×3); go: same gate in internal/logging, wired into the serve logger by installRuntimeLogBuffer.",
+    "HIVE_COMPACTION_DEBUG": "py: `if os.environ.get(...)` before write_compaction_debug_log; go: same presence gate before the $HIVE_HOME/compaction_log/<ts>_<node>.md report.",
+    "HIVE_ENABLE_LLM_LOGS": "py: .strip().lower() in (\"1\",\"true\"); go: pyenv.Is1OrTrue — identical opt-in table for the $HIVE_HOME/llm_logs JSONL writer.",
+    "HIVE_SENTINEL_LOG": "py: `if not os.environ.get(...)` diverts framework.sentinel.∗ to $HIVE_HOME/logs/sentinel.log (propagate=False); go: same presence gate diverts the sentinel package logger to the same file.",
+    "HIVE_PLAYBOOK_FAST_GRACE": "py: max(0.0, float(env or 1.5)) with ValueError→1.5; go: pyenv.Float + clamp, same 1.5 default. The grace window now bounds the Python-playbook tool call; a run past it returns status=started plus a [PLAYBOOK_COMPLETE] bus notice.",
+    "HIVE_AGENT_NAME": "injection, not a read: py sets it into each agent's MCP subprocess env (agent_loader.set_mcp_extra_env); go sets it into the colony worker catalogue's MCP env and the env-declaring tools' subprocess env input. Both sides write-only, so the contract status is literal_only.",
+    "HIVE_RESOURCE_*": "py: _env_num(name, default, cast) — empty/garbage falls back to the documented default; go: pyenv.Int/Float with the same fallback. Six knobs drive internal/resources (sampler cadence, history depth, avail/renderer warn+crit).",
+    "HIVE_GCU_MEMTRACE*": "platform difference: the GCU memory tracer is a Python tools facility (tools/src/gcu/memtrace.py); the Go port replaces the Python GCU with the Go browser bridge, which samples no GCU heap. No Go reader by design — recorded in contracts/config-support-ledger.json with the substitute mechanism.",
+    "HIVE_GCU_SCREENSHOT_CONCURRENCY": "platform difference: python gcu screenshot batching; the Go bridge owns its own CDP concurrency. No Go reader by design.",
 }
 
 # Names whose auto status needed a hand check (the Go fallback sits a few lines
@@ -1101,7 +1148,7 @@ def build_doc(env: dict, cfg: dict) -> str:
             f"Python 独有 {base['python_only']} / Go 独有 {base['go_only']}）相比，"
             f"差额来自 {len(gained)} 个名字由 Python 独有转为共有：{_names(lane)} 由本车道新增 Go 读取点"
             + (f"，{_names(other)} 在审计提交之后、本车道之前已进入 Go 树" if other else "")
-            + f"；Go 独有清单 {AUDIT_BASELINE['go_only']}→{AUDIT_EXPECTED['go_only']}（新增 `HIVE_PYTHON`，移除 `HIVE_NETWORK_SCANNERS`）。"
+            + f"；Go 独有清单 {AUDIT_BASELINE['go_only']}→{AUDIT_EXPECTED['go_only']}（`HIVE_PYTHON` 新增、`HIVE_NETWORK_SCANNERS` 移除，另有审计后进入 Go 树的开发/评估变量）。"
         )
 
     lines = [
@@ -1123,21 +1170,23 @@ def build_doc(env: dict, cfg: dict) -> str:
         f"`python_only` {cfg['summary']['status_counts'].get('python_only', 0)}，"
         f"`go_only` {cfg['summary']['status_counts'].get('go_only', 0)}，"
         f"`unread` {cfg['summary']['status_counts'].get('unread', 0)}。",
-        "- 本车道把其余三个模型槽位接进了运行时：`queen_llm.<id>.*`（会话启动时按 queen 选模型，她的 colony 沿用同一 provider）、"
-        "`worker_llm.*`（colony 专用 worker 模型）、`vision_fallback.*`（文本主模型下的工具图片描述）；并接入 "
-        "`llm.aux_max_tokens`、`loop.max_tool_result_chars`、`worker_tools.always_enabled_categories`，"
-        "修复 `mcp.timeout_seconds` 的优先级（env > file）。",
-        "- 本车道的后续（config-put-hotswitch）把模型槽位 PUT 做成了会话级热切换：`llm` 与 `queen_llm.<id>` 用 `ProviderSlot` 原地重建运行中会话的 transport（"
-        "回合级 pin：进行中回合用旧 provider 跑完，下一回合用新模型）；`vision_fallback` 逐次 caption 重读槽位，写入即对下一张工具图片生效；"
-        "`worker_llm` 与上游 `_write_role_section` 一致只对新会话/新 colony 生效。",
-        "- 仍未对齐的项各有明确残余（`go_partial` / `python_only`）：`worker_llm.max_tokens`（两侧都没有消费点）；"
-        "`llm.antigravity_client_*` 是只读（读取点已有，端口没有 OAuth 刷新来消费它）；"
-        "`channels.<name>.enabled` 不支持（无渠道插件宿主）；`llm.use_*_subscription` 两个订阅分支未移植。"
-        "逐项理由见 `contracts/config-support-ledger.json`。",
-        "- 环境变量侧，Python 独有的生产开关（仍未接入）主要是 `HIVE_TRACKER_WORKER_TOOL_CALLS`、"
-        "`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_COMPACTION_DEBUG`、`HIVE_PLAYBOOK_FAST_GRACE`；"
-        "其余 Python 独有项是 `HIVE_SENTINEL_LOG` / `HIVE_ENABLE_LLM_LOGS`、资源采样 / GCU memtrace 等运维与调试面；"
-        "未支持项与理由整表见 `contracts/config-support-ledger.json`。",
+        "- 本车道（config-verbatim）把主槽位 `llm.*` 的消费键接进运行时：会话构建统一走 `MainSlotProvider`（键序 = endpoint → api_keys 池 → literal → claude/codex/kimi/antigravity 订阅 → 凭据库 → `api_key_env_var` → provider env；"
+        "`MainSlotAPIBase` 复刻订阅端点与 openrouter 默认；`extra_body`/`num_ctx`/订阅请求头随 provider 构建下发），`llm.max_tokens` 预算 queen 回合、`llm.max_context_tokens` 参与 queen 窗口的主槽位回退，"
+        "`llm.api_keys` 以 `llm.KeyPool` 轮转并在 429 时停键；kimi 订阅运行时接通（`~/.kimi/config.toml` token + `https://api.kimi.com/coding`）。",
+        "- 模型槽位状态收敛：`queen_llm.*`（8）、`worker_llm.*`（10）、`vision_fallback.*`（7）全部转 `aligned`（逐键读取点与热切换矩阵见 §2 与 `docs/configuration.md` §3.8）；"
+        "`worker_llm.max_tokens` 增加读取点 `WorkerMaxTokens`（与上游 `get_worker_max_tokens` 同为无调用点）；"
+        "`channels.<name>.enabled` 由 `python_only` 变为 `go_partial`：字段按上游形状读取、写入时保留、GET /api/channels 形状不变，启用时 serve 启动打印「无渠道宿主、不会运行」的告警。",
+        "- 仍未对齐的 4 个残余（结构性理由 + 替代验证见 `contracts/config-support-ledger.json`）："
+        "`llm.antigravity_client_id` / `llm.antigravity_client_secret`（只读；唯一上游消费者是未移植的 AntigravityProvider 内的 OAuth 刷新）、"
+        "`llm.use_antigravity_subscription`（同上：会话构建对该标志显式报错而非静默发无键请求）、"
+        "`channels.<name>.enabled`（无渠道插件宿主，读到但不生效）。"
+        "`mcp.*` 4 键为逐项确认过的 Go 扩展（上游 MCP 来自 registry/`.mcp.json`，从不读 configuration.json 的 `mcp` 块）；"
+        "`created_at` 为安装器写入、两侧运行时都不读（Go 在配置写入时保留，见测试）。",
+        "- 环境变量侧，env-verbatim-port 车道已把 `HIVE_TRACKER_WORKER_TOOL_CALLS`、`HIVE_HISTORY_READ_WORKERS`、"
+        "`HIVE_NO_FILE_LOG`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_SENTINEL_LOG`、"
+        "`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_AGENT_NAME`（注入）与 6 个 `HIVE_RESOURCE_*` 接进 Go 运行时；"
+        "剩余 Python 独有仅 GCU memtrace / GCU 截图并发（6 个名字），是显式平台差异，"
+        "逐项理由与替代证据见 `contracts/config-support-ledger.json`。",
         "",
         "## 1. 环境变量核对（采用既有审计清单，独立复算）",
         "",
@@ -1173,7 +1222,8 @@ def build_doc(env: dict, cfg: dict) -> str:
     lines += [
         "### 1.1 Python 独有：对齐建议清单",
         "",
-        f"- 本车道已接入并移出本清单：{_names(list(LANE_ENV_PORTED))}（Go 读取点与测试见 `contracts/config-support-ledger.json`）。",
+        f"- config-env-align 车道已接入：{_names(list(LANE_ENV_PORTED))}；env-verbatim-port 车道已接入：{_names(list(VERBATIM_LANE_ENV_PORTED))}（Go 读取点与测试见 `contracts/config-support-ledger.json`）。",
+        f"- 剩余 Python 独有：{_names(list(PLATFORM_DIFF_ENV))} — 均为 GCU 平台差异（Go 侧以 browserbridge 替代 Python GCU 进程），已在支持矩阵逐项登记理由与替代证据；20 个名字的逐项事实表（Python 读取点/默认/解析 → Go 读取点/默认/解析 → 状态与证据）见 `docs/env-verbatim-port.md`。",
         "",
         _table(
             [[r["name"], r["priority"], r["why"]] for r in env["recommendations"] if r["direction"] == "port to go"],
@@ -1192,6 +1242,19 @@ def build_doc(env: dict, cfg: dict) -> str:
         f"共 {cfg['summary']['keys']} 个键。状态定义见生成器数据文件头："
         "`aligned` 两侧读取且类型/默认/语义一致；`go_partial` Go 有该键（REST/CRUD 或部分路径）但运行时读取点缺失或未接线；"
         "`python_only` Go 无读取；`go_only` Python 无对应键；`unread` 两侧都不读。",
+        "",
+        "### 2.0 读取 / 写入 / 生效速查（逐键明细在各小节）",
+        "",
+        "| 段 | Go 运行时读取点 | 写入接口 | 生效时机（热切换矩阵） |",
+        "|---|---|---|---|",
+        "| `llm` | `MainSlotProvider`（会话构建时整体解析） | `PUT /api/config/llm`、`PUT /api/config/llm-sections`(role=llm)、`PUT /api/models/slots/llm` | 写入即重建运行中会话 transport（跳过有自己模型的 queen），**下一回合**生效；进行中回合保持旧 provider（回合级 pin，见 `docs/configuration.md` §3.8） |",
+        "| `queen_llm.<id>` | `queenAwareChatProvider` → `QueenLLMSection` | `PUT /api/queen/{id}/llm`、`PUT /api/models/slots/queen:<id>` | 同上（`sessions_switched` 计数）；清空 section 回主模型 |",
+        "| `worker_llm` | `workerChatProvider` → `WorkerLLMSection` | `PUT /api/config/llm-sections`(role=worker_llm)、`PUT /api/models/slots/worker_llm` | **下一个 colony/会话**构建时（与上游 `_write_role_section` 一致，运行中会话不换） |",
+        "| `vision_fallback` | `visionCaptionerFor`（每次 caption 重新解析） | `PUT /api/config/llm-sections`(role=vision_fallback)、`PUT /api/models/slots/vision_fallback` | **下一张工具图片**即用新值，无需重建会话 |",
+        "| `judge` | `server/judge.go`（每次判定新建 client） | `PUT /api/config/llm-sections`(role=judge) | 立即 |",
+        "| `channels.<name>.enabled` | `ChannelSections`（serve 启动告警） | 无接口（配置文件/安装器写入） | **不生效**（无渠道宿主）；字段按上游形状读取并在任何配置写入时保留 |",
+        "| `mcp.*` | `readMCPFileSettings`（serve 启动装载） | 无接口（配置文件） | serve 启动；`mcp.timeout_seconds` 还受 `HIVE_MCP_CALL_RESULT_TIMEOUT` 覆盖（env > file） |",
+        "| 顶层开关 / `retention` / `sentinel` / `soul` / `queen_mail` / `turn_context` / `user_profile` / `rate_limits` 等 | 各自模块的读取点（见各小节表格） | `PUT /api/config/features`、按模块接口或配置文件 | 各自模块在“每次读取/启动/判定”时重新解析，详见各小节 notes 与 `docs/configuration.md` §7 |",
         "",
     ]
 
@@ -1286,7 +1349,7 @@ def build_doc(env: dict, cfg: dict) -> str:
         "- 本报告冻结的是**配置契约**，不是行为实现；`aligned` 表示两侧读取同一键且默认/类型/语义一致，不表示端到端行为已验证。",
         "- `go_partial` 的判定基于生产代码里是否存在读取点；REST/CRUD 端点存在不等于运行时消费。",
         "- 未覆盖：per-colony `notifications.json`、agent/worker 子配置文件、`.mcp.json`、前端 localStorage；这些不是全局 `configuration.json`。",
-        "- 环境变量采用既有审计（622cc236）的清单为基线；本车道新增的 Go 读取点（`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_PYTHON`）已计入，network-scanners 车道移除的 Go 独有 `HIVE_NETWORK_SCANNERS` 也已反映。"
+        "- 环境变量采用既有审计（622cc236）的清单为基线；config-env-align 车道（`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_PYTHON`）与 env-verbatim-port 车道（14 个名字，含 `HIVE_AGENT_NAME` 注入）新增的 Go 读取点已计入，network-scanners 车道移除的 Go 独有 `HIVE_NETWORK_SCANNERS` 也已反映。"
         "`env-vars.json` 里的读取点由扫描器补充，默认值/解析差异对运行时相关变量做了人工核对。",
         "",
     ]

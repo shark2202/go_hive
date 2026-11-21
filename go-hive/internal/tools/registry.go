@@ -266,6 +266,18 @@ func (r *ToolRegistry) SetMCPExtraEnv(env map[string]string) {
 	r.mcpExtraEnv = out
 }
 
+// MCPExtraEnv returns a copy of the per-registry MCP env (diagnostics and
+// tests; the live merge happens at server registration).
+func (r *ToolRegistry) MCPExtraEnv() map[string]string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make(map[string]string, len(r.mcpExtraEnv))
+	for k, v := range r.mcpExtraEnv {
+		out[k] = v
+	}
+	return out
+}
+
 func (r *ToolRegistry) SetIdentityEnvProvider(provider func() map[string]string) {
 	r.identityEnvFn = provider
 }

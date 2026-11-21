@@ -245,7 +245,7 @@
         {
           "path": "go_hive/docs/env-config-contract-diff.md",
           "kind": "measured",
-          "note": "Python 89 / Go 100 / 共有 69；Python 独有 20、Go 独有 31（合并后复算；基线 622cc236 为 89/96/66/23/30）"
+          "note": "Python 89 / Go 118 / 共有 83 / Python 独有 6 / Go 独有 35（env-verbatim-port 合并后复算）"
         },
         {
           "path": "go_hive/contracts/env-vars.json",
@@ -269,9 +269,9 @@
         }
       ],
       "status": "partial",
-      "status_basis": "共有 69 个变量名字面一致；本车道把 HIVE_MAX_ITER / HIVE_SPLIT_WORKER_EVENTS / HIVE_PYTHON 接进 Go，network-scanners 车道移除了 HIVE_NETWORK_SCANNERS；Python 独有 20 个生产开关仍待逐项决策，「设了不生效」未逐项实测。",
+      "status_basis": "共有 83 个名字逐字一致；14 个新接入变量均有生产读取点与测试（含 pyenv int 语义、history read pool、server log、compaction/LLM/sentinel 日志、playbook grace、agent name、资源采样）；6 个 GCU 为显式平台差异（Go 无 GCU 进程），理由与替代 anchor 在 config-support-ledger.json。",
       "contract_state": "frozen_contract",
-      "measured_now": "2026-11-21 合并后复算：Python 89 / Go 100 / 共有 69 / Python 独有 20 / Go 独有 31；freeze --check 与 check_env_config_contract.py --strict 均 OK。",
+      "measured_now": "2026-11-21 env/config lane 合并：Python 89 / Go 118 / 共有 83 / Python 独有 6 / Go 独有 35；20 个 Python 独有名字中 14 个已接入、6 个 GCU 记平台差异；freeze --check 与 strict 均 OK。",
       "lane": "env-config-align",
       "lane_state": "existing",
       "next": [
@@ -296,12 +296,12 @@
         {
           "path": "go_hive/docs/env-config-contract-diff.md",
           "kind": "measured",
-          "note": "134 键 / 20 section：aligned 99、go_partial 29、python_only 1、go_only 4、unread 1"
+          "note": "134 键 / 20 section：aligned 125、go_partial 4、python_only 0、go_only 4、unread 1（config-verbatim 合并后）"
         },
         {
           "path": "go_hive/contracts/config-keys.json",
           "kind": "contract",
-          "note": "134 键契约冻结，逐键标注两侧读取点"
+          "note": "134 键 / 20 section：aligned 125、go_partial 4、python_only 0、go_only 4、unread 1（config-verbatim 合并后）"
         },
         {
           "path": "go_hive/docs/configuration.md",
@@ -315,9 +315,9 @@
         }
       ],
       "status": "partial",
-      "status_basis": "99/134 键对齐；模型槽位（queen_llm/worker_llm/vision_fallback）与 loop/worker_tools 限额已进生产路径；29 键 go_partial（含只读/无消费项），1 键 python_only（channels 插件宿主 Go 无）；PUT 原地热切换仍 partial。",
+      "status_basis": "125/134 键对齐；4 个 go_partial 为结构性残余（antigravity 只读/未移植 OAuth、channels 无插件宿主）；4 个 go_only 为 mcp.* 扩展；1 个 unread=created_at（两侧运行时不读）；PUT 热切换已有模型槽位实测。",
       "contract_state": "frozen_contract",
-      "measured_now": "2026-11-21：queenAwareChatProvider/workerChatProvider/visionfallback 接线完成；mcp.timeout_seconds 修为 env > file；config-keys.json 134 键，strict OK。",
+      "measured_now": "2026-11-21 config-verbatim 合并：134 键 aligned 125 / go_partial 4 / python_only 0 / go_only 4 / unread 1；主槽 llm.* 统一走 MainSlotProvider，模型槽位全部 aligned。",
       "lane": "config-env-align",
       "lane_state": "existing",
       "next": [

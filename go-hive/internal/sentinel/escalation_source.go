@@ -22,7 +22,6 @@ package sentinel
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -141,7 +140,7 @@ func (s *EscalationSource) AppliesTo(agentCtx *agentloop.ReminderAgentContext) b
 		if isQueen && colonyID != "" {
 			action = "OWNS"
 		}
-		log.Printf("[sentinel] applies_to: is_queen_stream=%t colony_id=%q opted_in=%t (stream_id=%q) — sentinel %s this stream",
+		sentinelLogf("[sentinel] applies_to: is_queen_stream=%t colony_id=%q opted_in=%t (stream_id=%q) — sentinel %s this stream",
 			isQueen, colonyID, optedIn, agentCtx.SessionID, action)
 	}
 	if !isQueen {
@@ -238,7 +237,7 @@ func (s *EscalationSource) RenderReminder(rctx agentloop.ReminderContext) (*agen
 
 	cfg := s.store().LoadNotificationsConfig(colonyID)
 	if !cfg.SentinelEnabled {
-		log.Printf("[sentinel] no-escalate (colony=%s): not opted in (sentinel_enabled=false, channel=%s)", colonyID, cfg.Channel)
+		sentinelLogf("[sentinel] no-escalate (colony=%s): not opted in (sentinel_enabled=false, channel=%s)", colonyID, cfg.Channel)
 		return nil, false
 	}
 
@@ -247,7 +246,7 @@ func (s *EscalationSource) RenderReminder(rctx agentloop.ReminderContext) (*agen
 		budget = *cfg.ClassifyAfterSeconds
 	}
 	if signals.IdleSeconds < budget {
-		log.Printf("[sentinel] waiting (colony=%s): idle %.0fs < budget %.0fs", colonyID, signals.IdleSeconds, budget)
+		sentinelLogf("[sentinel] waiting (colony=%s): idle %.0fs < budget %.0fs", colonyID, signals.IdleSeconds, budget)
 		return nil, false
 	}
 
@@ -255,33 +254,33 @@ func (s *EscalationSource) RenderReminder(rctx agentloop.ReminderContext) (*agen
 	// loop drains what we parked — evaluate at most once per window.
 	now := s.now()
 	if !s.lastEvalAt.IsZero() && now.Sub(s.lastEvalAt).Seconds() < budget {
-		log.Printf("[sentinel] rate-limited (colony=%s): last evaluated %.0fs ago (< %.0fs)",
+		sentinelLogf("[sentinel] rate-limited (colony=%s): last evaluated %.0fs ago (< %.0fs)",
 			colonyID, now.Sub(s.lastEvalAt).Seconds(), budget)
 		return nil, false
 	}
 	s.lastEvalAt = now
-	log.Printf("[sentinel] evaluating (colony=%s idle=%.0fs reason=%s)", colonyID, signals.IdleSeconds, string(reason))
+	sentinelLogf("[sentinel] evaluating (colony=%s idle=%.0fs reason=%s)", colonyID, signals.IdleSeconds, string(reason))
 
 	if s.held {
-		log.Printf("[sentinel] holding (colony=%s): report already out", colonyID)
+		sentinelLogf("[sentinel] holding (colony=%s): report already out", colonyID)
 		return nil, false
 	}
 
 	park, err := s.provideParkContext()
 	if err != nil {
-		log.Printf("sentinel: park-context provider failed: %v", err)
+		sentinelLogf("sentinel: park-context provider failed: %v", err)
 		return nil, false
 	}
 
 	// No goal AND no open tasks is the one "nothing to act on" case.
 	if park.GoalText() == "" && len(park.OpenTasks) == 0 {
-		log.Printf("[sentinel] nothing to report (colony=%s): no goal and no open tasks", colonyID)
+		sentinelLogf("[sentinel] nothing to report (colony=%s): no goal and no open tasks", colonyID)
 		return nil, false
 	}
 
 	kind, decided := s.decide(reason, park, s.llmFor(agentCtx))
 	if !decided {
-		log.Printf("[sentinel] no-op (colony=%s): classifier unavailable/errored, not nudging a parked queen", colonyID)
+		sentinelLogf("[sentinel] no-op (colony=%s): classifier unavailable/errored, not nudging a parked queen", colonyID)
 		return nil, false
 	}
 	s.reportLocked(colonyID, sessionID, reason, park, cfg, kind)
@@ -289,7 +288,7 @@ func (s *EscalationSource) RenderReminder(rctx agentloop.ReminderContext) (*agen
 	// Only progress keeps the colony moving — wake the queen.
 	if kind == ReportProgress {
 		s.nudgeCount++
-		log.Printf("[sentinel] nudge (colony=%s count=%d idle=%.0fs)", colonyID, s.nudgeCount, signals.IdleSeconds)
+		sentinelLogf("[sentinel] nudge (colony=%s count=%d idle=%.0fs)", colonyID, s.nudgeCount, signals.IdleSeconds)
 		return &agentloop.Reminder{
 			Body:   s.nudgeBody(park),
 			Source: s.Name(),
@@ -360,7 +359,7 @@ func (s *EscalationSource) uiAttached(sessionID string) (attached bool) {
 	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			log.Printf("sentinel: has_attached_ui failed: %v", recovered)
+			sentinelLogf("sentinel: has_attached_ui failed: %v", recovered)
 			attached = false
 		}
 	}()
@@ -376,7 +375,7 @@ func (s *EscalationSource) reportLocked(colonyID, sessionID string, reason agent
 		return
 	}
 	if cfg.Channel != ChannelHive && !s.store().EscalateWhenUIAttached() && s.uiAttached(sessionID) {
-		log.Printf("[sentinel] report suppressed — UI attached (colony=%s)", colonyID)
+		sentinelLogf("[sentinel] report suppressed — UI attached (colony=%s)", colonyID)
 		return
 	}
 	summary := questionText(park)
@@ -405,14 +404,14 @@ func (s *EscalationSource) reportLocked(colonyID, sessionID string, reason agent
 	}
 	accepted := enqueueSafely(enqueue, payload)
 	if !accepted {
-		log.Printf("[sentinel] report not delivered (colony=%s kind=%s)", colonyID, kind)
+		sentinelLogf("[sentinel] report not delivered (colony=%s kind=%s)", colonyID, kind)
 		return
 	}
 	// Progress re-evaluates next cycle; every other kind holds until resume.
 	if kind != ReportProgress {
 		s.held = true
 	}
-	log.Printf("[sentinel] report %s (colony=%s esc=%s)", kind, colonyID, escalationID)
+	sentinelLogf("[sentinel] report %s (colony=%s esc=%s)", kind, colonyID, escalationID)
 }
 
 // enqueueSafely isolates a panicking callback (the Go analog of Python's
@@ -420,7 +419,7 @@ func (s *EscalationSource) reportLocked(colonyID, sessionID string, reason agent
 func enqueueSafely(enqueue func(map[string]any) bool, payload map[string]any) (accepted bool) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			log.Printf("sentinel: report enqueue raised: %v", recovered)
+			sentinelLogf("sentinel: report enqueue raised: %v", recovered)
 			accepted = false
 		}
 	}()

@@ -372,6 +372,10 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	if runtime.streamLLM != nil {
 		loopLLM = runtime.streamLLM
 	}
+	// The queen's output budget follows the main model's configuration:
+	// llm.max_tokens, else the model catalog's entry, else 8192 — upstream's
+	// AgentContext(max_tokens=lc.get("max_tokens", get_max_tokens())).
+	maxTokens := chatTurnMaxTokens(deps.HomeRoot)
 	agentCtx := &agentloop.AgentContext{
 		AgentID: "queen",
 		AgentSpec: agentloop.AgentSpec{
@@ -387,7 +391,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		IdentityPrompt: chatQueenIdentityPrompt(deps.HomeRoot, runtime.queenName),
 		InputData:      map[string]any{},
 		StreamID:       "queen",
-		MaxTokens:      8192,
+		MaxTokens:      maxTokens,
 	}
 	systemPrompt := agentloop.BuildSystemPromptForContext(agentCtx, agentloop.PromptOverrides{})
 

@@ -29,6 +29,7 @@ import (
 	colonyhost "github.com/aden-hive/hive-go/internal/host"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/queen"
+	"github.com/aden-hive/hive-go/internal/resources"
 	hiveserver "github.com/aden-hive/hive-go/internal/server"
 	"github.com/aden-hive/hive-go/internal/tools/builtin"
 )
@@ -289,6 +290,13 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	stopMCP := r.startMCPRuntime(home)
 	defer stopMCP()
 
+	// channels.<name>.enabled is a real configuration field upstream gates a
+	// channel plugin on. This runtime has no plugin host, so the flag cannot
+	// start anything: say so once at boot instead of ignoring it silently.
+	for _, name := range hiveserver.UnhostedChannels(home) {
+		fmt.Fprintf(r.Stdout, "Warning: channels.%s.enabled is set, but this runtime has no channel host; the channel will not run\n", name)
+	}
+
 	// Sentinel is process-wide: it owns the parked-queen ladder for every
 	// colony-queen chat session built below (nudge / done / escalate) and the
 	// outbound delivery drain. Without it the escalation source's gate never
@@ -313,11 +321,19 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 		r.loadPreloadedColonySession(colonyArg, manager, &liveMu, &live, home, args.str("model"))
 	}
 
-	// Runtime logs: the route reads the process-wide ring; stderr still sees all.
-	installRuntimeLogBuffer()
+	// Runtime logs: the route reads the process-wide ring; stderr still sees all,
+	// and the rotating server log file joins unless HIVE_NO_FILE_LOG is set.
+	installRuntimeLogBuffer(home)
+	// Host-resource monitor: the sampler loop behind /api/health/resources and
+	// the `resources` rollup on /api/health. It starts sampling immediately so
+	// the first request has a real snapshot (upstream's monitor does the same).
+	resourceMonitor := resources.NewMonitor()
+	resourceMonitor.Start(context.Background(), 0)
 	soulProbeAnswerFor := newSoulProbeAnswerFor(home, args.str("model"))
 
 	app := hiveserver.NewApp(newServeAppDeps(home, hiveserver.AppDeps{
+		Resources:        func() any { return resourceMonitor.Rollup() },
+		ResourceSnapshot: resourceMonitor.Snapshot,
 		Sessions: func() []hiveserver.FeatureSession {
 			liveMu.Lock()
 			defer liveMu.Unlock()
@@ -978,27 +994,6 @@ func isSessionDir(path string) bool {
 	return err == nil && info.IsDir()
 }
 
-// chatProviderEnvVars mirrors the provider/env mapping the HTTP routes use for
-// /api/llm config, so a session created from the CLI authenticates the same way
-// as one created from the dashboard.
-var chatProviderEnvVars = map[string]string{
-	"anthropic":  "ANTHROPIC_API_KEY",
-	"openai":     "OPENAI_API_KEY",
-	"gemini":     "GEMINI_API_KEY",
-	"google":     "GOOGLE_API_KEY",
-	"minimax":    "MINIMAX_API_KEY",
-	"groq":       "GROQ_API_KEY",
-	"cerebras":   "CEREBRAS_API_KEY",
-	"openrouter": "OPENROUTER_API_KEY",
-	"mistral":    "MISTRAL_API_KEY",
-	"together":   "TOGETHER_API_KEY",
-	"deepseek":   "DEEPSEEK_API_KEY",
-	"kimi":       "KIMI_API_KEY",
-	"hive":       "HIVE_API_KEY",
-	"zai":        "ZAI_API_KEY",
-	"xai":        "XAI_API_KEY",
-}
-
 // chatProviderFactory builds the completion transport for a live session. It
 // is a package variable so a test can substitute a scripted completer without
 // standing up an HTTP endpoint; production always resolves the configured
@@ -1007,99 +1002,13 @@ var chatProviderFactory = func(home hivehome.Home, model string) (llm.Completer,
 	return resolveChatProvider(home, model)
 }
 
-// resolveChatProvider builds the HTTP transport for a new session, resolving
-// model, API base and credentials the same way the settings routes persist
-// them: explicit request > configured llm section > environment.
+// resolveChatProvider builds the HTTP transport for a new session from the
+// main llm slot. Model, key, base, key pool and extra request fields are the
+// server package's MainSlotProvider, so a session started here authenticates
+// exactly like the one the dashboard builds (literal key, endpoint key, pool,
+// subscriptions, credential store, env var — in Python's order).
 func resolveChatProvider(home hivehome.Home, requestedModel string) (*llm.Provider, error) {
-	llmSection, _ := hiveserver.HiveConfig(home)["llm"].(map[string]any)
-
-	model := strings.TrimSpace(requestedModel)
-	if model == "" {
-		model = configString(llmSection, "model")
-	}
-	if model == "" {
-		model = llm.DefaultModel
-	}
-	apiBase := configString(llmSection, "api_base")
-
-	if llm.IsLocalModel(model) {
-		// Local servers (ollama, vllm, lm studio, llama.cpp) take no key.
-		return llm.NewHTTPProvider(llm.ProviderOptions{Model: model, APIBase: apiBase}), nil
-	}
-
-	provider := strings.ToLower(configString(llmSection, "provider"))
-	if provider == "" || provider == "custom" {
-		provider = providerForModel(model)
-	}
-	envVar := configString(llmSection, "api_key_env_var")
-	if envVar == "" {
-		envVar = chatProviderEnvVars[provider]
-	}
-	if apiBase == "" {
-		switch provider {
-		case "anthropic":
-			apiBase = firstNonEmptySetting("ANTHROPIC_API_BASE", "ANTHROPIC_BASE_URL")
-		case "openai":
-			apiBase = firstNonEmptySetting("OPENAI_BASE_URL", "OPENAI_API_BASE")
-		}
-	}
-
-	apiKey := strings.TrimSpace(os.Getenv(envVar))
-	if apiKey == "" {
-		fallback := chatProviderEnvVars[provider]
-		apiKey = strings.TrimSpace(os.Getenv(fallback))
-	}
-	if apiKey == "" {
-		apiKey = strings.TrimSpace(os.Getenv("HIVE_API_KEY"))
-	}
-	if apiKey == "" {
-		keyVar := envVar
-		if keyVar == "" {
-			keyVar = chatProviderEnvVars[provider]
-		}
-		if keyVar == "" {
-			keyVar = "OPENAI_API_KEY"
-		}
-		return nil, fmt.Errorf("no API key configured for model %q (set %s or configure the LLM in hive settings)", model, keyVar)
-	}
-
-	return llm.NewHTTPProvider(llm.ProviderOptions{Model: model, APIKey: apiKey, APIBase: apiBase}), nil
-}
-
-func providerForModel(model string) string {
-	lower := strings.ToLower(model)
-	if index := strings.Index(lower, "/"); index > 0 {
-		if _, known := chatProviderEnvVars[lower[:index]]; known {
-			return lower[:index]
-		}
-	}
-	switch {
-	case llm.IsAnthropicModel(lower):
-		return "anthropic"
-	case strings.HasPrefix(lower, "gemini-"):
-		return "gemini"
-	}
-	return "openai"
-}
-
-func configString(section map[string]any, key string) string {
-	if section == nil {
-		return ""
-	}
-	value, ok := section[key].(string)
-	if !ok {
-		return ""
-	}
-	return strings.TrimSpace(value)
-}
-
-func firstNonEmptySetting(keys ...string) string {
-	for _, key := range keys {
-		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
-			return value
-		}
-	}
-	return ""
+	return hiveserver.MainSlotProvider(home, requestedModel)
 }
 
 func signalName(sig os.Signal) string {

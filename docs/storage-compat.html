@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HIVE_HOME 存储兼容矩阵（storage-verbatim）</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}.g4{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3,.g4{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:860px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Storage Compatibility</div><h1>HIVE_HOME <span>逐字存储兼容矩阵</span></h1>
+<p class="lede">两个实现对同一个旧版 home 做迁移/写入后，磁盘上的目录树、文件名、JSON 字段集合与类型、SQLite schema 是否一致；凭据加密格式是否可互读。判定分四级：<b>双跑实测</b>（两侧各自执行后 diff）＞ <b>真实二进制实测</b>（serve 启停观察）＞ <b>代码确认</b>（读实现）＞ <b>未验证</b>。「字段一致」不等于「值逐字节一致」——值格式残余单列在 §08。</p>
+<div class="meta"><span>生成：<b>2026-11-21 09:42 CST</b></span><span>基线：<b>main 93193450</b>（.wt/storage-verbatim）</span><span>Python hive：<b>1.0.14</b></span><span>Go hive：<b>1.0.26-go.1</b></span></div>
+<div class="toc"><a href="#verdict">结论</a><a href="#method">方法</a><a href="#migrations">迁移等价</a><a href="#startup">启动流程</a><a href="#fields">字段契约</a><a href="#credentials">凭据</a><a href="#inventory">文件清点</a><a href="#residuals">残余/缺口</a><a href="#repro">复现</a></div></header>
+
+<section id="verdict"><h2><span class="num">01</span>结论</h2>
+<div class="grid g4">
+<div class="card"><div class="k">迁移等价</div><div class="v">等价</div><div class="d">v1/v2/colony-fork 三组双跑：目录树、文件名、JSON 字段、SQLite schema/行全部一致。见 §03。</div></div>
+<div class="card"><div class="k">字段级差异</div><div class="v">0（修后）</div><div class="d">10 个已实测文件类共 159 个字段路径，presence 全为 both；修复 1 个真实缺字段、1 处 DDL 文本、1 处时间戳格式。</div></div>
+<div class="card"><div class="k">凭据互读</div><div class="v">兼容</div><div class="d">同一 Fernet key 下双向互读成功，键值/元数据逐字段保留；索引 index.json 结构一致。</div></div>
+<div class="card"><div class="k">启动迁移</div><div class="v">Go 未接</div><div class="d">Go <code>serve</code> 不执行 v2/v3/colony_sessions 迁移（零调用点，实测旧布局原样保留）。</div></div>
+</div>
+<div class="callout info">一句话：<b>迁移函数与磁盘格式已经对齐、凭据格式可互读；Go 还差「启动时真的调用迁移」这一步。</b></div>
+</section>
+
+<section id="method"><h2><span class="num">02</span>方法</h2>
+<p>夹具由 <code>go_hive/scripts/storage_compat_gen_fixture.py</code>（纯标准库）生成，字段形状取自 Python 参考实现；绝对路径用 <code>__HIVE_HOME__</code> 占位，复制后重写，保证两侧同一起点。每份夹具复制两份：一份跑 Python 迁移序列，一份跑 Go 迁移序列，然后逐文件 diff。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">夹具</th><th style="width:46%">覆盖</th><th style="width:10%">种子文件</th><th style="width:10%">迁移后</th><th>驱动的真实函数</th></tr></thead><tbody>
+<tr><td><code>v1</code></td><td><code>exports/</code>、<code>queen/session/</code>、<code>queen/global_memory/</code>（pre-v2）</td><td class="num">13</td><td class="num">20</td><td><code>migrate_v2.run_migration</code> → <code>migrate_v3.run_migration</code> → <code>migrate_colony_sessions</code> → <code>ensure_all_colony_tracker_dbs</code></td></tr>
+<tr><td><code>v2</code></td><td><code>agents/queens</code>、<code>agents/&lt;colony&gt;</code>、<code>colonies/&lt;c&gt;/data/tracker.db</code>、post-v3 colony_fork 会话（move + archive）、legacy <code>colonies/&lt;c&gt;/queen/&lt;sid&gt;</code></td><td class="num">56</td><td class="num">59</td><td>同上（v2 段为 no-op）</td></tr>
+<tr><td><code>colony-fork</code></td><td>仅 <code>migrate_colony_sessions</code>：move / overwrite-empty / archive / skip 四类 + legacy 目录归位</td><td class="num">30</td><td class="num">32</td><td><code>RunMigrationColonySessions</code></td></tr>
+<tr><td><code>probes</code></td><td>写入方双跑：state.json、conversations、checkpoints、新 colony tracker.db、凭据库</td><td class="num">—</td><td class="num">14</td><td>各自真实写入 API（Python / Go）</td></tr>
+</tbody></table></div>
+<p class="sub">diff 工具：<code>go_hive/scripts/storage_compat_diff.py</code>。内容哈希前把各自 home 绝对路径归一为 <code>{{HOME}}</code>；SQLite 行比较把 ISO 时间戳归一（墙钟值不参与判定）。</p>
+</section>
+
+<section id="migrations"><h2><span class="num">03</span>迁移等价矩阵（修后）</h2>
+<div class="tablewrap"><table><thead><tr><th>run</th><th>文件数 py/go</th><th>逐字节相同</th><th>非 DB 差异</th><th>唯一文件 py/go</th><th>JSON 字段差异</th><th>SQLite schema/行</th><th>判定</th></tr></thead><tbody>
+<tr><td><code>v1</code></td><td class="num">20 / 20</td><td class="num">18</td><td class="num">0</td><td class="num">0 / 0</td><td class="num">0</td><td class="num">0</td><td><span class="pill ok">等价</span></td></tr>
+<tr><td><code>v2</code></td><td class="num">59 / 59</td><td class="num">56</td><td class="num">0</td><td class="num">0 / 0</td><td class="num">0</td><td class="num">0</td><td><span class="pill ok">等价</span></td></tr>
+<tr><td><code>colony-fork</code></td><td class="num">32 / 32</td><td class="num">30</td><td class="num">0</td><td class="num">0 / 0</td><td class="num">0</td><td class="num">0</td><td><span class="pill ok">等价</span></td></tr>
+<tr><td><code>probes</code></td><td class="num">14 / 14</td><td class="num">1</td><td class="num">10（值/排版级）</td><td class="num">0 / 0</td><td class="num">0</td><td class="num">0</td><td><span class="pill ok">字段等价</span> <span class="pill warn">值格式残余</span></td></tr>
+</tbody></table></div>
+<p>「逐字节相同」不含 <code>*.db</code> / <code>*.enc</code>：SQLite 不同引擎的页布局与 Fernet 随机 IV 天生不同，这两类改按 schema+行 / 双向互读验证。迁移只搬目录、不重写 JSON，所以迁移组里两侧 JSON 逐字节相同（含 <code>.migrated-*</code> 标记内容 <code>1\n</code>）。</p>
+</section>
+
+<section id="startup"><h2><span class="num">04</span>启动流程：Python 迁移，Go 不迁移（实测）</h2>
+<p>同一份 v2 夹具副本，分别用真实 <code>hive serve</code>（Python 1.0.14 / Go 1.0.26-go.1）启动到 <code>/api/health</code> 200，停止后比对磁盘：</p>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">项</th><th style="width:41%">Python serve</th><th>Go serve</th></tr></thead><tbody>
+<tr><td>标记</td><td>新增 <code>.migrated-v3</code>、<code>colonies/.migrations/colony_sessions_v1</code></td><td>仍只有 <code>.migrated-v2</code></td></tr>
+<tr><td>布局</td><td><code>agents/</code> 整体迁走（40 个文件移动/删除），新增 47 个文件（tracker/、seed_conversation/、workers/scout/、legacy_fork_snapshots/）</td><td><code>agents/queens/</code> 原样保留；tracker 仍在 <code>colonies/alpha/data/tracker.db</code></td></tr>
+<tr><td>迁移日志</td><td><code>moved=2 overwrote_empty=0 archived_dup=1 skipped=1</code>；<code>ensured 3 colony tracker DB(s)</code></td><td>无</td></tr>
+<tr><td>新增文件</td><td>见 <code>docs/storage-compat/startup-flow.json</code></td><td>仅 <code>mcp_registry/config.json</code>（与本主题无关）</td></tr>
+<tr><td>判定</td><td><span class="pill ok">按设计迁移</span></td><td><span class="pill bad">启动不迁移</span></td></tr>
+</tbody></table></div>
+<p class="sub">代码证据：<code>grep -rn "RunMigrationV2|RunMigrationV3|RunMigrationColonySessions" go_hive/go-hive --include=*.go</code> 只命中 <code>internal/storage/migrate_*.go</code> 定义；Python 调用点在 <code>core/framework/server/session_manager.py:403-430</code>。</p>
+<div class="callout bad"><b>SC-01（P0）</b>：Go 指向未 v3 化的旧 home 时不会迁移，旧路径（<code>agents/</code>、<code>colonies/&lt;c&gt;/data/</code>）下的数据对 Go 运行时不可见。迁移函数本身已验证等价，缺的只是 <b>serve 启动处按 v2 → v3 → colony_sessions → tracker ensure 的顺序接线</b>。</div>
+</section>
+
+<section id="fields"><h2><span class="num">05</span>字段契约</h2>
+<p>契约产物：<a href="../../contracts/storage-fields.json"><code>contracts/storage-fields.json</code></a>（逐文件类 → 字段路径 → 两侧类型 → presence，含文件清点）。已实测 10 个文件类、156 个字段路径，全部 <code>both</code> 且类型一致：</p>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">文件类</th><th style="width:34%">路径模板</th><th style="width:10%">字段路径</th><th style="width:15%">证据</th><th>状态</th></tr></thead><tbody>
+<tr><td>session state</td><td><code>queens/&lt;q&gt;/sessions/&lt;sid&gt;/state.json</code></td><td class="num">57</td><td>probe 双跑</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>conversation meta</td><td><code>.../conversations/meta.json</code></td><td class="num">9</td><td>probe 双跑</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>conversation cursor</td><td><code>.../conversations/cursor.json</code></td><td class="num">2</td><td>probe 双跑</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>message parts ×3</td><td><code>.../conversations/parts/&lt;seq&gt;.json</code></td><td class="num">5 / 12 / 7</td><td>probe 双跑</td><td><span class="pill ok">一致</span>（修复 1 字段）</td></tr>
+<tr><td>checkpoint index</td><td><code>.../checkpoints/index.json</code></td><td class="num">13</td><td>probe 双跑</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>checkpoint file</td><td><code>.../checkpoints/cp_*.json</code></td><td class="num">18</td><td>probe 双跑</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>colony metadata</td><td><code>colonies/&lt;c&gt;/metadata.json</code></td><td class="num">3</td><td>probe 双跑</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>credentials index</td><td><code>credentials/metadata/index.json</code></td><td class="num">33</td><td>probe 双跑</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>tracker.db</td><td><code>colonies/&lt;c&gt;/tracker/tracker.db</code></td><td class="num">4 表 + 1 索引 + 1 触发器</td><td>SQLite 双跑</td><td><span class="pill ok">schema+行一致</span></td></tr>
+<tr><td>colony.db</td><td><code>colonies/&lt;c&gt;/colony.db</code></td><td class="num">1 表</td><td>SQLite 双跑</td><td><span class="pill ok">一致</span></td></tr>
+</tbody></table></div>
+<h3>已修字段级差异</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">差异</th><th style="width:12%">侧</th><th style="width:30%">修法</th><th>验证</th></tr></thead><tbody>
+<tr><td><code>parts</code> 缺 <code>is_skill_content</code>（AS-10 防裁剪标记重载后丢失）</td><td>Python</td><td><code>Message.to_storage_dict/from_storage_dict</code> 补字段（仅 True 写入）</td><td>新增 <code>core/tests/test_skill_context_protection.py</code> 回归；probe 字段 diff 2→0</td></tr>
+<tr><td>tracker bootstrap DDL 缺 3 处行内注释 → <code>sqlite_master.sql</code> 文本不同</td><td>Go</td><td><code>bootstrapSchema</code> 与 Python 逐字一致</td><td>新库 schema 比对逐字节相同</td></tr>
+<tr><td><code>_tracker_meta.updated_at</code>：<code>Z</code> vs <code>+00:00</code></td><td>Go</td><td><code>nowISO()</code> 改为秒精度 <code>+00:00</code></td><td>行比对通过；<code>internal/tracker</code> 测试绿</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="credentials"><h2><span class="num">06</span>凭据：格式与互读</h2>
+<p>两侧目录结构与加密格式一致：<code>credentials/credentials/&lt;id&gt;.enc</code>（Fernet token，明文是 <code>CredentialObject</code> JSON）+ <code>credentials/metadata/index.json</code>（<code>INDEX_VERSION=2.0</code>，无密钥）。Python 用 <code>cryptography.fernet</code>；Go 用标准库手写 Fernet（AES-128-CBC + HMAC-SHA256，同样的 key 切分与 token 布局）。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:24%">项</th><th style="width:26%">Python</th><th style="width:26%">Go</th><th>判定</th></tr></thead><tbody>
+<tr><td>加密</td><td><code>cryptography.Fernet</code>（标准 token）</td><td><code>internal/credentials/fernet.go</code>（标准 token）</td><td><span class="pill ok">同格式</span></td></tr>
+<tr><td>key 来源</td><td><code>HIVE_CREDENTIAL_KEY</code> / <code>&lt;home&gt;/secrets/credential_key</code></td><td>同</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>.enc 文件名</td><td><code>&lt;id&gt;.enc</code>（id 清洗 <code>/ \ ..</code>）</td><td>同</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>index.json</td><td>version/store_path/generated_at + credentials{...}，13 字段/条</td><td>同键集（键顺序不同、时间戳格式不同）</td><td><span class="pill ok">结构一致</span></td></tr>
+<tr><td>双向互读</td><td colspan="2">Go 读 Python 写的 <code>demo_api_key</code>/<code>demo_oauth</code>；Python 读 Go 写的同两条 —— 值、<code>expires_at</code>、metadata、<code>_alias</code>/<code>_integration_type</code>/<code>_identity_email</code> 全部保留</td><td><span class="pill ok">实测通过</span></td></tr>
+<tr><td>文件权限</td><td>目录 0755 / 文件 0644（默认 umask）</td><td>目录 0700 / 文件 0600</td><td><span class="pill warn">安全姿态差异（Go 更严）</span></td></tr>
+</tbody></table></div>
+<p class="sub">证据：<code>docs/storage-compat/credentials-crossread.json</code>。残余语义点：<code>provider_id</code> Python 写 <code>null</code>，Go 是普通 string（读 null → <code>""</code>），Go 回写后 Python 读到空串而非 None（仅显示层影响）。</p>
+</section>
+
+<section id="inventory"><h2><span class="num">07</span>文件清点（可复现口径）</h2>
+<p>扫描：列出的模块目录内非测试文件的带引号文件名字面量（<code>*.json|jsonl|db|enc|lock</code>），剔除工程文件与临时目录构造行。</p>
+<div class="grid g4">
+<div class="card"><div class="k">共同</div><div class="v">27</div><div class="d">state.json / meta.json / cursor.json / parts / tracker.db / colony.db / triggers.json / tools.json / worker.json / SKILL.md …</div></div>
+<div class="card"><div class="k">Python 独有</div><div class="v">12</div><div class="d">agent.json、conversations.json、mcp_servers.json、model_catalog.json、notifications.json、runs.jsonl …</div></div>
+<div class="card"><div class="k">Go 独有</div><div class="v">12</div><div class="d">installed.json、config.json、catalog.json、auth.json、skill_index.json、skill_installs.json、signals.jsonl …</div></div>
+<div class="card"><div class="k">口径说明</div><div class="v">线索</div><div class="d">单侧出现的名字需逐名核实：有的是临时回退名、有的是 legacy 读取名，不等于不兼容。完整清单在契约 JSON。</div></div>
+</div>
+<p class="sub">派工单基线「共有 52 / Python 独有 9 / Go 独有 15」来自更宽范围的扫描；本页数字的扫描根与正则固定写在 <code>gen_storage_contract.py</code>，可复现。</p>
+</section>
+
+<section id="residuals"><h2><span class="num">08</span>残余与缺口（SC-01 … SC-08）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:8%">编号</th><th style="width:28%">项</th><th style="width:12%">级别</th><th style="width:26%">影响</th><th>判定/建议</th></tr></thead><tbody>
+<tr><td><code>SC-01</code></td><td>Go 启动不调用迁移</td><td><span class="pill bad">P0</span></td><td>旧 home 在 Go 下保持旧布局，旧数据不可见</td><td>已实测；建议单独派工接线（顺序同 Python）</td></tr>
+<tr><td><code>SC-02</code></td><td>JSON 排版：缩进/分隔符/键序</td><td><span class="pill warn">P2</span></td><td>两侧解析器互认</td><td>不修（非字段/类型）；若要逐字节可另立目标</td></tr>
+<tr><td><code>SC-03</code></td><td>时间戳渲染 <code>+00:00</code>/微秒 vs <code>Z</code>/Nano</td><td><span class="pill warn">P2</span></td><td>仅文本形式，双方解析都接受</td><td>tracker 已修；state/checkpoint/credentials 时间戳保持现状</td></tr>
+<tr><td><code>SC-04</code></td><td>凭据目录/文件权限宽严不同</td><td><span class="pill warn">P1</span></td><td>本地多用户场景下 Python 侧可读面更大</td><td>建议 Python 侧收紧（本 lane 不动上游权限模型）</td></tr>
+<tr><td><code>SC-05</code></td><td><code>provider_id</code> null vs ""</td><td><span class="pill info">P3</span></td><td>显示层空值语义</td><td>已记录，未修</td></tr>
+<tr><td><code>SC-06</code></td><td>会话 meta / tasks / colony sidecar 未端到端双跑</td><td><span class="pill warn">P2</span></td><td>契约仅来自代码/夹具层</td><td>建议下轮补 API 级双跑</td></tr>
+<tr><td><code>SC-07</code></td><td>Go scaffold 多建 <code>skills/</code>、<code>runs/</code>、空 <code>triggers.json</code></td><td><span class="pill info">P3</span></td><td>目录级差异（同一语义）</td><td>记录；不影响字段契约</td></tr>
+<tr><td><code>SC-08</code></td><td>文件名单侧清单</td><td><span class="pill info">P3</span></td><td>线索</td><td>逐名核实，不作不兼容结论</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="repro"><h2><span class="num">09</span>复现</h2>
+<pre>bash go_hive/scripts/storage_compat_run.sh --work /tmp/storage-compat
+
+# 分步
+python3 go_hive/scripts/storage_compat_gen_fixture.py --dest /tmp/fx --version v2
+cd core &amp;&amp; PYTHONPATH="$PWD" uv run python ../go_hive/scripts/storage_compat_probes.py migrate --home /tmp/fx
+cd go_hive/go-hive &amp;&amp; go run ./e2e/cmd/storagecompat migrate --home /tmp/fx2
+python3 go_hive/scripts/storage_compat_diff.py run --py &lt;py-home&gt; --go &lt;go-home&gt; --label v2 --out docs/storage-compat
+python3 go_hive/scripts/gen_storage_contract.py --work &lt;scratch&gt; --out contracts/storage-fields.json</pre>
+<p class="sub">要求：仓库自带 <code>uv</code> 与 Go 工具链。夹具生成器零第三方依赖；Python 探针复用项目 venv（pydantic / cryptography 已在锁文件内）。</p>
+</section>
+
+<footer>
+相关：<a href="../../docs/storage-contract-diff.md">docs/storage-contract-diff.md</a> ·
+<a href="../../docs/storage-compat/">docs/storage-compat/</a> ·
+<a href="../../contracts/storage-fields.json">contracts/storage-fields.json</a> ·
+<a href="module-interfaces.html">module-interfaces.html</a> ·
+<a href="../../go_hive/08-storage-and-data.md">08-storage-and-data.md</a><br>
+本页是 2026-11-21 基线（main <code>93193450</code>）的快照；迁移/存储实现变更后请重跑复现命令并更新本页。
+</footer>
+</div></body></html>

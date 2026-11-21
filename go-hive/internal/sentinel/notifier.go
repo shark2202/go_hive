@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -229,7 +228,7 @@ func (n *HTTPNotifier) sendTelegram(ctx context.Context, target map[string]any, 
 	response, err := n.postJSON(ctx, fmt.Sprintf("%s/bot%s/sendMessage", n.telegramBase(), token), payload, nil)
 	if err != nil {
 		message := redactSecret(err.Error(), token)
-		log.Printf("sentinel: telegram send failed: %s", message)
+		sentinelLogf("sentinel: telegram send failed: %s", message)
 		return NotifierResult{Error: message}
 	}
 	if ok, _ := response.Data["ok"].(bool); !ok {
@@ -268,7 +267,7 @@ func (n *HTTPNotifier) sendSlack(ctx context.Context, target map[string]any, tex
 	})
 	if err != nil {
 		message := redactSecret(err.Error(), token)
-		log.Printf("sentinel: slack send failed: %s", message)
+		sentinelLogf("sentinel: slack send failed: %s", message)
 		return NotifierResult{Error: message}
 	}
 	if ok, _ := response.Data["ok"].(bool); !ok {
@@ -317,7 +316,7 @@ func (n *HTTPNotifier) sendHive(ctx context.Context, body string, meta map[strin
 	})
 	if err != nil {
 		message := redactSecret(err.Error(), jwt)
-		log.Printf("sentinel: hive send failed: %s", message)
+		sentinelLogf("sentinel: hive send failed: %s", message)
 		return NotifierResult{Error: message}
 	}
 	if response.Status >= 300 {
@@ -344,7 +343,7 @@ func (n *HTTPNotifier) ResolveHiveSession(ctx context.Context, sessionID, resolv
 		"resolved_by": resolvedBy,
 	}, map[string]string{"Authorization": "Bearer " + jwt})
 	if err != nil {
-		log.Printf("sentinel: hive resolve failed: %v", err)
+		sentinelLogf("sentinel: hive resolve failed: %v", err)
 		return false
 	}
 	return response.Status < 300

@@ -122,10 +122,12 @@ func (l *AgentLoop) workerStallKindFor(agentCtx *AgentContext) workerStallKind {
 //
 // Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (6h then 6i)
 // Parity: framework/agent_loop/agent_loop.py::execute (llm_turn_complete after _run_turn_loop)
-func (l *AgentLoop) settleTextOnlyTurn(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, reminderCtx *ReminderAgentContext, completion llm.Completion, inner int, result *TurnResult) (done bool, err error) {
+func (l *AgentLoop) settleTextOnlyTurn(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, reminderCtx *ReminderAgentContext, messages []map[string]any, completion llm.Completion, inner int, tools []llm.ToolDef, result *TurnResult) (done bool, err error) {
 	if agentCtx.Observer != nil {
 		agentCtx.Observer.LLMTurnComplete(completion, inner+1)
 	}
+	// A text-only model call is still a model call: log it (no tool results).
+	l.logLLMTurn(agentCtx, conv, inner+1, messages, completion, nil, nil, tools)
 	if kind := l.workerStallKindFor(agentCtx); kind != workerStallNone {
 		stop, stallErr := l.handleWorkerTextOnlyTurn(ctx, agentCtx, conv, reminderCtx, kind, completion.Content)
 		if stallErr != nil {

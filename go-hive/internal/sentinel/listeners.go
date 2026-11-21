@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -97,7 +96,7 @@ func (l *TelegramListener) Run(ctx context.Context) error {
 		return nil
 	}
 	var offset *int64
-	log.Printf("[sentinel] telegram listener started")
+	sentinelLogf("[sentinel] telegram listener started")
 	for {
 		query := url.Values{}
 		query.Set("timeout", strconv.Itoa(defaultTelegramPollTimeoutSeconds))
@@ -113,12 +112,12 @@ func (l *TelegramListener) Run(ctx context.Context) error {
 		response, err := l.client().Do(request)
 		if err != nil {
 			if ctx.Err() != nil {
-				log.Printf("[sentinel] telegram listener stopped")
+				sentinelLogf("[sentinel] telegram listener stopped")
 				return nil
 			}
-			log.Printf("[sentinel] telegram poll error: %v", err)
+			sentinelLogf("[sentinel] telegram poll error: %v", err)
 			if !sleepOrDone(ctx, l.Clock, defaultTelegramBackoff) {
-				log.Printf("[sentinel] telegram listener stopped")
+				sentinelLogf("[sentinel] telegram listener stopped")
 				return nil
 			}
 			continue
@@ -129,7 +128,7 @@ func (l *TelegramListener) Run(ctx context.Context) error {
 			if ctx.Err() != nil {
 				return nil
 			}
-			log.Printf("[sentinel] telegram poll read error: %v", readErr)
+			sentinelLogf("[sentinel] telegram poll read error: %v", readErr)
 			if !sleepOrDone(ctx, l.Clock, defaultTelegramBackoff) {
 				return nil
 			}
@@ -139,7 +138,7 @@ func (l *TelegramListener) Run(ctx context.Context) error {
 			Result []map[string]any `json:"result"`
 		}
 		if err := json.Unmarshal(body, &decoded); err != nil {
-			log.Printf("[sentinel] telegram poll decode error: %v", err)
+			sentinelLogf("[sentinel] telegram poll decode error: %v", err)
 			if !sleepOrDone(ctx, l.Clock, defaultTelegramBackoff) {
 				return nil
 			}
@@ -267,14 +266,14 @@ func (l *SlackSocketListener) Run(ctx context.Context) error {
 	if appToken == "" {
 		return nil
 	}
-	log.Printf("[sentinel] slack socket-mode listener started")
+	sentinelLogf("[sentinel] slack socket-mode listener started")
 	for {
 		url, err := l.OpenSocket(ctx, appToken)
 		if err != nil {
 			if ctx.Err() != nil {
 				return nil
 			}
-			log.Printf("[sentinel] slack apps.connections.open error: %v", err)
+			sentinelLogf("[sentinel] slack apps.connections.open error: %v", err)
 			if !sleepOrDone(ctx, l.Clock, defaultSlackBackoff) {
 				return nil
 			}
@@ -287,7 +286,7 @@ func (l *SlackSocketListener) Run(ctx context.Context) error {
 			continue
 		}
 		if l.Dialer == nil {
-			log.Printf("[sentinel] slack socket dialer not configured")
+			sentinelLogf("[sentinel] slack socket dialer not configured")
 			if !sleepOrDone(ctx, l.Clock, defaultSlackBackoff) {
 				return nil
 			}
@@ -298,7 +297,7 @@ func (l *SlackSocketListener) Run(ctx context.Context) error {
 			if ctx.Err() != nil {
 				return nil
 			}
-			log.Printf("[sentinel] slack socket error: %v", err)
+			sentinelLogf("[sentinel] slack socket error: %v", err)
 			if !sleepOrDone(ctx, l.Clock, defaultSlackBackoff) {
 				return nil
 			}
@@ -309,10 +308,10 @@ func (l *SlackSocketListener) Run(ctx context.Context) error {
 			if err != nil {
 				connection.Close()
 				if ctx.Err() != nil {
-					log.Printf("[sentinel] slack listener stopped")
+					sentinelLogf("[sentinel] slack listener stopped")
 					return nil
 				}
-				log.Printf("[sentinel] slack socket error: %v", err)
+				sentinelLogf("[sentinel] slack socket error: %v", err)
 				if !sleepOrDone(ctx, l.Clock, defaultSlackBackoff) {
 					return nil
 				}
@@ -345,7 +344,7 @@ func (l *SlackSocketListener) OpenSocket(ctx context.Context, appToken string) (
 		return "", err
 	}
 	if ok, _ := decoded["ok"].(bool); !ok {
-		log.Printf("[sentinel] slack apps.connections.open failed: %v", decoded["error"])
+		sentinelLogf("[sentinel] slack apps.connections.open failed: %v", decoded["error"])
 		return "", nil
 	}
 	value, _ := decoded["url"].(string)
@@ -447,7 +446,7 @@ func (l *HiveInboxListener) Run(ctx context.Context) error {
 	query.Set("runtime_id", cfg.RuntimeID)
 	query.Set("kind", cfg.RuntimeKind)
 	endpoint += "?" + query.Encode()
-	log.Printf("[sentinel] hive inbox listener started (runtime_id=%s kind=%s)", cfg.RuntimeID, cfg.RuntimeKind)
+	sentinelLogf("[sentinel] hive inbox listener started (runtime_id=%s kind=%s)", cfg.RuntimeID, cfg.RuntimeKind)
 	for {
 		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 		if err != nil {
@@ -458,17 +457,17 @@ func (l *HiveInboxListener) Run(ctx context.Context) error {
 		response, err := l.client().Do(request)
 		if err != nil {
 			if ctx.Err() != nil {
-				log.Printf("[sentinel] hive inbox listener stopped")
+				sentinelLogf("[sentinel] hive inbox listener stopped")
 				return nil
 			}
-			log.Printf("[sentinel] hive stream error: %v", err)
+			sentinelLogf("[sentinel] hive stream error: %v", err)
 			if !sleepOrDone(ctx, l.Clock, defaultTelegramBackoff) {
 				return nil
 			}
 			continue
 		}
 		if response.StatusCode != http.StatusOK {
-			log.Printf("[sentinel] hive stream HTTP %d", response.StatusCode)
+			sentinelLogf("[sentinel] hive stream HTTP %d", response.StatusCode)
 			response.Body.Close()
 			if !sleepOrDone(ctx, l.Clock, defaultSlackBackoff) {
 				return nil
@@ -478,11 +477,11 @@ func (l *HiveInboxListener) Run(ctx context.Context) error {
 		err = l.ConsumeSSE(ctx, response.Body)
 		response.Body.Close()
 		if ctx.Err() != nil {
-			log.Printf("[sentinel] hive inbox listener stopped")
+			sentinelLogf("[sentinel] hive inbox listener stopped")
 			return nil
 		}
 		if err != nil {
-			log.Printf("[sentinel] hive stream error: %v", err)
+			sentinelLogf("[sentinel] hive stream error: %v", err)
 		}
 		if !sleepOrDone(ctx, l.Clock, defaultTelegramBackoff) {
 			return nil

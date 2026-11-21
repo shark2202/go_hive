@@ -16,7 +16,6 @@ package sentinel
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -190,7 +189,7 @@ func (m *Manager) Start(ctx context.Context) error {
 		}
 	}
 	m.mu.Unlock()
-	log.Printf("[sentinel] manager starting (%d open escalations)", len(open))
+	sentinelLogf("[sentinel] manager starting (%d open escalations)", len(open))
 
 	m.wg.Add(1)
 	go func() {
@@ -290,10 +289,10 @@ func (m *Manager) ensureListener(name string, hasToken bool, factory func(string
 			m.mu.Unlock()
 		}()
 		if err := listener.Run(ctx); err != nil && ctx.Err() == nil {
-			log.Printf("[sentinel] %s listener stopped: %v", name, err)
+			sentinelLogf("[sentinel] %s listener stopped: %v", name, err)
 		}
 	}()
-	log.Printf("[sentinel] %s listener started", name)
+	sentinelLogf("[sentinel] %s listener started", name)
 }
 
 // IsListening reports whether an inbound listener for channel is running. When
@@ -421,7 +420,7 @@ func (m *Manager) drainEscalations(ctx context.Context) {
 func (m *Manager) handleEscalationSafely(ctx context.Context, payload map[string]any) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			log.Printf("[sentinel] escalation delivery failed: %v", recovered)
+			sentinelLogf("[sentinel] escalation delivery failed: %v", recovered)
 		}
 	}()
 	m.HandleEscalation(ctx, payload)
@@ -435,13 +434,13 @@ func (m *Manager) HandleEscalation(ctx context.Context, payload map[string]any) 
 	channel, _ := payload["channel"].(string)
 	target, _ := payload["target"].(map[string]any)
 	if channel == "" || len(target) == 0 {
-		log.Printf("[sentinel] escalation has no channel/target; dropping (colony=%v)", payload["colony_id"])
+		sentinelLogf("[sentinel] escalation has no channel/target; dropping (colony=%v)", payload["colony_id"])
 		return
 	}
 	colonyID := PyStrOr(payload["colony_id"], "")
 	sessionID := PyStrOr(payload["session_id"], "")
 	if colonyID == "" || sessionID == "" {
-		log.Printf("[sentinel] escalation missing colony/session id; dropping")
+		sentinelLogf("[sentinel] escalation missing colony/session id; dropping")
 		return
 	}
 	thread, _ := payload["thread"].(map[string]any)
@@ -502,14 +501,14 @@ func (m *Manager) HandleEscalation(ctx context.Context, payload map[string]any) 
 		}
 	}
 	if err := m.Store.WriteEscalation(record); err != nil {
-		log.Printf("[sentinel] could not persist escalation %s: %v", record.EscalationID, err)
+		sentinelLogf("[sentinel] could not persist escalation %s: %v", record.EscalationID, err)
 	}
 	m.mu.Lock()
 	m.byToken[record.CorrelationToken] = tokenRef{colonyID: record.ColonyID, escalationID: record.EscalationID}
 	m.mu.Unlock()
 
 	if !result.OK {
-		log.Printf("[sentinel] message not delivered (colony=%s): %s", colonyID, result.Error)
+		sentinelLogf("[sentinel] message not delivered (colony=%s): %s", colonyID, result.Error)
 		return
 	}
 	// First escalation for this colony becomes the thread root for grouping.
@@ -616,7 +615,7 @@ func (m *Manager) OnInbound(ctx context.Context, channel, senderID, text string,
 			}
 		}
 		if !authorized {
-			log.Printf("[sentinel] reply from unauthorized sender %s (colony=%s)", senderID, record.ColonyID)
+			sentinelLogf("[sentinel] reply from unauthorized sender %s (colony=%s)", senderID, record.ColonyID)
 			return
 		}
 	}
@@ -626,7 +625,7 @@ func (m *Manager) OnInbound(ctx context.Context, channel, senderID, text string,
 		m.mu.Lock()
 		delete(m.byToken, record.CorrelationToken)
 		m.mu.Unlock()
-		log.Printf("[sentinel] resumed colony=%s from reply", record.ColonyID)
+		sentinelLogf("[sentinel] resumed colony=%s from reply", record.ColonyID)
 	}
 }
 
@@ -690,7 +689,7 @@ func ThreadMatches(record *EscalationRecord, threadRef map[string]any) bool {
 // Resume injects the reply into the live queen, cold-restoring if needed.
 func (m *Manager) Resume(ctx context.Context, record *EscalationRecord, reply string) bool {
 	if m.Sessions == nil {
-		log.Printf("[sentinel] could not reach session %s to resume (no session manager)", record.SessionID)
+		sentinelLogf("[sentinel] could not reach session %s to resume (no session manager)", record.SessionID)
 		return false
 	}
 	session := m.getLiveSession(record.SessionID)
@@ -698,16 +697,16 @@ func (m *Manager) Resume(ctx context.Context, record *EscalationRecord, reply st
 		session = m.ColdRestore(ctx, record)
 	}
 	if session == nil {
-		log.Printf("[sentinel] could not reach session %s to resume", record.SessionID)
+		sentinelLogf("[sentinel] could not reach session %s to resume", record.SessionID)
 		return false
 	}
 	node := session.QueenNode()
 	if node == nil {
-		log.Printf("[sentinel] no queen node for session %s", record.SessionID)
+		sentinelLogf("[sentinel] no queen node for session %s", record.SessionID)
 		return false
 	}
 	if err := node.InjectEvent(ctx, reply, true); err != nil {
-		log.Printf("[sentinel] inject_event failed for session %s: %v", record.SessionID, err)
+		sentinelLogf("[sentinel] inject_event failed for session %s: %v", record.SessionID, err)
 		return false
 	}
 	return true
@@ -720,7 +719,7 @@ func (m *Manager) ColdRestore(ctx context.Context, record *EscalationRecord) Liv
 	}
 	session, err := m.Sessions.CreateSession(ctx, record.ColonyID, record.SessionID)
 	if err != nil {
-		log.Printf("[sentinel] cold-restore failed for %s: %v", record.SessionID, err)
+		sentinelLogf("[sentinel] cold-restore failed for %s: %v", record.SessionID, err)
 		return nil
 	}
 	return session

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_by": "hand-maintained in the config-env-align lane; verified by internal/envcontract",
+  "generated_by": "hand-maintained lane ledgers (config-env-align, then config-verbatim); verified by internal/envcontract",
   "doc": "go_hive/docs/env-config-contract-diff.md",
-  "note": "Every configuration.json key the frozen contract marks go_partial or python_only — plus the environment variables the alignment lane touched — appears here with a status. wired = the runtime reads it and a Go test proves the value takes effect; partial = some paths are wired, the reason names what is not; unsupported = no runtime consumer, the reason states why; go_extension/unread = the key is Go-only or read by nobody, so no action is owed. internal/envcontract::TestSupportLedgerCoversEveryGap checks that no non-aligned key is missing here, that wired anchors resolve in the tree, and that every wired entry names a test that exists.",
+  "note": "Every configuration.json key the frozen contract marks go_partial or python_only — plus the environment variables the alignment lanes touched — appears here with a status. wired = the runtime reads it and a Go test proves the value takes effect; partial = some paths are wired, the reason names what is not; unsupported = no runtime consumer, the reason states why; platform_diff = the Python mechanism has no Go counterpart by design, the reason names the Go-side substitute and the evidence anchors point at it; go_extension/unread = the key is Go-only or read by nobody, so no action is owed. internal/envcontract::TestSupportLedgerCoversEveryGap checks that no non-aligned key is missing here, that wired anchors resolve in the tree, and that every wired entry names a test that exists.",
   "keys": [
     {
       "path": "queen_llm.<queen_id>.provider",
@@ -278,8 +278,17 @@
     },
     {
       "path": "worker_llm.max_tokens",
-      "status": "unsupported",
-      "reason": "Reader implemented (SectionModel/LLMMaxTokens family) but there is no runtime consumer to give it to: upstream's get_worker_max_tokens has no call site either, so the worker's output budget comes from the provider request defaults on both sides."
+      "status": "wired",
+      "reason": "Reader parity only: WorkerMaxTokens ports get_worker_max_tokens (file int, else the worker model's catalog cap, else the main slot's max_tokens) and is tested; neither runtime calls it — upstream's get_worker_max_tokens has no call site either, so the worker's output budget comes from provider request defaults on both sides.",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/config_slots.go",
+          "contains": "func WorkerMaxTokens("
+        }
+      ],
+      "tests": [
+        "TestWorkerMaxTokensMirrorsTheUncalledPythonReader"
+      ]
     },
     {
       "path": "llm.aux_max_tokens",
@@ -349,7 +358,7 @@
     {
       "path": "llm.antigravity_client_id",
       "status": "partial",
-      "reason": "Reader wired and tested (ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id, no public-source fetch) but no request path consumes it: the port's Antigravity login reads the pre-issued access token from antigravity-accounts.json and has no OAuth refresh call to hand a client id to.",
+      "reason": "Reader wired and tested (ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id, no public-source fetch) but no request path consumes it: the only upstream consumers are the OAuth refresh flows inside the unported AntigravityProvider (framework/llm/antigravity.py, agent_loader.py::_refresh_antigravity_token), and the port reads the pre-issued access token from antigravity-accounts.json. Alternative verification: the reader's env-then-file precedence is pinned; no REST/CRUD path is claimed as consumption.",
       "anchors": [
         {
           "file": "go_hive/go-hive/internal/server/config_slots.go",
@@ -364,22 +373,64 @@
       "path": "llm.antigravity_client_secret",
       "status": "partial",
       "same_as": "llm.antigravity_client_id",
-      "reason": "Same as llm.antigravity_client_id: reader only, no OAuth refresh to consume it."
+      "reason": "Same structural reason as llm.antigravity_client_id: the only consumers are the unported AntigravityProvider's OAuth refresh flows."
     },
     {
       "path": "channels.<name>.enabled",
-      "status": "unsupported",
-      "reason": "Upstream starts optional channel packages installed through the hive.channels entry-point group; the Go port has no plugin host, no channel lifecycle (start/stop/state) and no entry-point discovery, so there is nothing for an enabled flag to gate. GET /api/channels keeps the upstream response shape from the states the process knows."
+      "status": "partial",
+      "reason": "No plugin host, so the flag cannot start a channel: the Go port has no entry-point discovery or channel lifecycle. Field-level parity instead — Go reads the section with upstream's shape (object, per-channel object, truthy enabled), preserves it on every configuration write, keeps GET /api/channels' upstream response shape, and names enabled channels in a serve-time no-effect warning.",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/channels_config.go",
+          "contains": "func ChannelSections("
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader.go",
+          "contains": "hiveserver.UnhostedChannels(home)"
+        }
+      ],
+      "tests": [
+        "TestChannelSectionsReadsTheConfiguredShape",
+        "TestTheChannelsRouteKeepsTheUpstreamEmptyShape",
+        "TestConfigWritesPreserveChannelsAndCreatedAt"
+      ]
     },
     {
       "path": "llm.use_kimi_code_subscription",
-      "status": "partial",
-      "reason": "Pre-existing go_partial: the REST surface lists and detects the subscription, but the runtime token path (Python's get_api_key subscription branch) is not ported. Unchanged by this lane; recorded so the gap is not silent."
+      "status": "wired",
+      "reason": "Runtime wired by this lane: MainSlotKey reads the token from ~/.kimi/config.toml and MainSlotAPIBase returns https://api.kimi.com/coding, so a session on this flag authenticates and routes (the kimi/ model prefix uses the Anthropic Messages transport) like Python's get_api_key/get_api_base subscription branches.",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/main_slot.go",
+          "contains": "if pyTruthy(section[\"use_kimi_code_subscription\"]) {"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/main_slot.go",
+          "contains": "return llm.KimiAPIBase"
+        }
+      ],
+      "tests": [
+        "TestMainSlotProviderReadsTheSubscriptionTokens",
+        "TestMainSlotAPIBasePrefersSubscriptionEndpointsThenTheSection"
+      ]
     },
     {
       "path": "llm.use_antigravity_subscription",
       "status": "partial",
-      "reason": "Pre-existing go_partial: llm_config resolves an antigravity token for the REST surface, but Python's full provider branch (api_base=None plus token refresh) has no Go equivalent. Unchanged by this lane."
+      "reason": "Structural: Python's flag swaps the whole session to AntigravityProvider (Gemini-style cloudcode API plus OAuth refresh) in session_manager.build_llm; that provider is not ported. Go consumes the flag as far as it can — MainSlotKey reads the account file's access token for get_api_key's branch, and MainSlotProvider refuses the session with an explicit error instead of silently sending an OpenAI request with no key. Alternative verification: the refusal and the token read are pinned by tests.",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/main_slot.go",
+          "contains": "ErrAntigravityUnsupported"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/main_slot.go",
+          "contains": "if pyTruthy(section[\"use_antigravity_subscription\"]) {"
+        }
+      ],
+      "tests": [
+        "TestMainSlotProviderRefusesAntigravitySubscription"
+      ]
     },
     {
       "path": "mcp.enabled",
@@ -393,8 +444,8 @@
     },
     {
       "path": "mcp.timeout_seconds",
-      "status": "partial",
-      "reason": "Go-only key, and its documented file > env reversal was fixed by this lane: internal/tools.MCPCallResultTimeout now resolves env > file > 240s, pinned by TestMCPCallResultTimeoutPrecedence. Python has no mcp block, so there is no upstream side to compare against.",
+      "status": "go_extension",
+      "reason": "Go-only key: env > file > 240s default, pinned by TestMCPCallResultTimeoutPrecedence. Python has no mcp block in configuration.json, so there is no upstream side to compare against.",
       "anchors": [
         {
           "file": "go_hive/go-hive/internal/tools/mcp_client.go",
@@ -461,52 +512,286 @@
       "names": [
         "HIVE_TRACKER_WORKER_TOOL_CALLS"
       ],
-      "status": "unsupported",
-      "reason": "The cadence belongs to upstream's WorkerTrackerSnapshotReminderSource, which is not ported (Go has the queen-only TrackerSnapshotReminderSource). Nothing reads the variable, so it is a no-op rather than a silent half-implementation."
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/agentloop/tracker_snapshot_reminder.go",
+          "contains": "var TrackerWorkerCadenceToolCalls = envInt(\"HIVE_TRACKER_WORKER_TOOL_CALLS\", 20)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/agentloop/tracker_snapshot_reminder.go",
+          "contains": "func NewWorkerTrackerSnapshotReminderSourceWithCadence"
+        }
+      ],
+      "tests": [
+        "TestTrackerWorkerToolCallsDefaultAndParse",
+        "TestWorkerTrackerSnapshotReachesARealWorkerTurn"
+      ],
+      "reason": "Default 20, Python int() semantics via pyenv.Int; the worker reminder source fires every cadence of tool calls on the real spawn path."
     },
     {
       "names": [
         "HIVE_HISTORY_READ_WORKERS"
       ],
-      "status": "unsupported",
-      "reason": "Upstream sizes a shared thread pool that fans out many sessions' event-log tail reads for the UI. The port's /events/history reads one session's tail file synchronously, so there is no pool to size; a parallelism knob would be a configuration with no reader."
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/server/history_read_pool.go",
+          "contains": "envIntOrError(\"HIVE_HISTORY_READ_WORKERS\", 8)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/history_read_pool.go",
+          "contains": "func withHistoryReadSlot(fn func()) error"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/routes_session_history.go",
+          "contains": "withHistoryReadSlot(func() {"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/routes_events_history.go",
+          "contains": "pool, poolErr := historyReadExecutor()"
+        }
+      ],
+      "tests": [
+        "TestHistoryReadWorkersResolvesLikeUpstream",
+        "TestHistoryReadWorkersGarbageIsAnError",
+        "TestHistoryReadPoolBoundsConcurrentDiskReads",
+        "TestSessionHistoryRouteReadsColdSessionsThroughThePool"
+      ],
+      "reason": "max(4, int(env or 8)) bounds the shared UI disk-read pool used by events/history and the two session listings; garbage mirrors upstream's unguarded int() as a 500."
     },
     {
       "names": [
         "HIVE_NO_FILE_LOG"
       ],
-      "status": "unsupported",
-      "reason": "The port writes no hive-server.log (process logs go to stderr), so there is no file handler to disable. Nothing reads the variable."
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/logging/logging.go",
+          "contains": "envNonEmpty(\"HIVE_NO_FILE_LOG\")"
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader_soul_probe.go",
+          "contains": "hivelogging.OpenServerLog(home.Root)"
+        }
+      ],
+      "tests": [
+        "TestNoFileLogDisablesTheFileForAnyNonEmptyValue",
+        "TestServerLogWritesUnderHiveHomeLogs",
+        "TestInstallRuntimeLogBufferWritesHiveServerLog",
+        "TestInstallRuntimeLogBufferHonoursNoFileLog"
+      ],
+      "reason": "Serves HIVE_HOME/logs/hive-server.log (20MB x 3 unless disabled); any non-empty value incl. \"0\" turns it off, like upstream's os.getenv truthiness gate."
     },
     {
       "names": [
         "HIVE_COMPACTION_DEBUG"
       ],
-      "status": "unsupported",
-      "reason": "No compaction debug-log writer: the port keeps the compaction summary in the conversation store and does not emit the upstream debug inventory. Reading the switch would only write an empty file."
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/agentloop/compaction_debug.go",
+          "contains": "envNonEmpty(\"HIVE_COMPACTION_DEBUG\")"
+        },
+        {
+          "file": "go_hive/go-hive/internal/agentloop/loop.go",
+          "contains": "writeCompactionReport(agentCtx, ratioBefore, conv.UsageRatio(), preInventory)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/agentloop/compaction_debug.go",
+          "contains": "func WriteCompactionDebugLog("
+        }
+      ],
+      "tests": [
+        "TestCompactionDebugLogWritesInventoryOnlyWhenEnabled",
+        "TestCompactionDebugLogRunsOnTheLiveCompactionPath",
+        "TestCompactionLevelLabelsMatchUpstream"
+      ],
+      "reason": "Presence gate writes the per-compaction markdown report under HIVE_HOME/compaction_log; the live compactConversationIfNeeded path calls it."
+    },
+    {
+      "names": [
+        "HIVE_ENABLE_LLM_LOGS"
+      ],
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/agentloop/llm_debug_log.go",
+          "contains": "envOptIn(\"HIVE_ENABLE_LLM_LOGS\")"
+        },
+        {
+          "file": "go_hive/go-hive/internal/agentloop/loop.go",
+          "contains": "l.logLLMTurn(agentCtx, conv, inner+1, requestMessages, completion, callDicts, records, tools)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/agentloop/llm_debug_log.go",
+          "contains": "func LogLLMTurn("
+        }
+      ],
+      "tests": [
+        "TestLLMTurnLogJSONLThroughARealTurn",
+        "TestLLMTurnLogIsSilentWithoutTheOptIn"
+      ],
+      "reason": "Only \"1\"/\"true\" (strip+lower) enable the JSONL turn log in HIVE_HOME/llm_logs; the live loop writes one record per model call with the content-addressed delta."
+    },
+    {
+      "names": [
+        "HIVE_SENTINEL_LOG"
+      ],
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/sentinel/logging.go",
+          "contains": "envNonEmpty(\"HIVE_SENTINEL_LOG\")"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/sentinel_runtime.go",
+          "contains": "sentinel.ConfigureLogging(homeRoot)"
+        }
+      ],
+      "tests": [
+        "TestSentinelLogDivertsToItsFile",
+        "TestSentinelLogOffByDefault",
+        "TestSentinelLogPresenceGateAcceptsZero"
+      ],
+      "reason": "Presence gate diverts the sentinel logger to HIVE_HOME/logs/sentinel.log (off the main console), matching upstream's propagate=False handler."
     },
     {
       "names": [
         "HIVE_PLAYBOOK_FAST_GRACE"
       ],
-      "status": "unsupported",
-      "reason": "The port's playbook runner is asynchronous end to end (runner + rows helpers); there is no synchronous fast path whose grace period this variable would tune."
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/playbook/grace.go",
+          "contains": "envFloat(\"HIVE_PLAYBOOK_FAST_GRACE\", 1.5)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/colony/playbook_tools.go",
+          "contains": "grace := playbook.FastGraceSeconds()"
+        },
+        {
+          "file": "go_hive/go-hive/internal/colony/playbook_notify.go",
+          "contains": "func (r *ColonyRuntime) NotifyPlaybookComplete(runID, name, resultJSON string)"
+        }
+      ],
+      "tests": [
+        "TestFastGraceSecondsMatchesUpstream",
+        "TestPlaybookFastGraceZeroReturnsStartedAndRecordsInBackground",
+        "TestPlaybookDefaultGraceWaitsOutShortRuns",
+        "TestNotifyPlaybookCompletePublishesOnTheColonyBus"
+      ],
+      "reason": "Default 1.5s, max(0, float(env)), garbage -> 1.5. A run past the window returns status=started and the background finisher records the run and publishes the [PLAYBOOK_COMPLETE] bus notice."
     },
     {
       "names": [
-        "HIVE_SENTINEL_LOG",
-        "HIVE_ENABLE_LLM_LOGS"
+        "HIVE_AGENT_NAME"
       ],
-      "status": "unsupported",
-      "reason": "Debug logging switches for Python's logger configuration. The port has no file-based sentinel/LLM debug logger to switch (it publishes the same information as events/llm_logs under the session directory). Not silently accepted: the variables are recorded here as having no Go reader."
+      "status": "wired",
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/cli/session_tools.go",
+          "contains": "func (c *sessionToolCatalogue) SetAgentName(name string)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/session_tools.go",
+          "contains": "c.registry.SetMCPExtraEnv(map[string]string{\"HIVE_AGENT_NAME\": c.agentName})"
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/colony_worker_definition.go",
+          "contains": "catalogue.SetAgentName(name)"
+        }
+      ],
+      "tests": [
+        "TestColonyWorkerCatalogueInjectsTheAgentName",
+        "TestColonyWorkerToolSurfaceRunsTerminalWithTheAgentName"
+      ],
+      "reason": "Injection, not a read (both sides write-only): the colony worker catalogue carries the agent package name into its MCP env and into env-declaring tools' subprocess env; the end-to-end test reads it back from a real terminal child."
     },
     {
       "names": [
         "HIVE_RESOURCE_*"
       ],
-      "status": "unsupported",
-      "reason": "Host-resource sampling and GCU memory-tracing knobs of the Python process (P3 diagnostics). The Go port samples neither host resources nor GCU memory in-process, so these names have no reader; the list above is the P3 remainder of the published audit, recorded so the absence is explicit rather than silent.",
-      "matches_wildcard": true
+      "status": "wired",
+      "matches_wildcard": true,
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/resources/resources.go",
+          "contains": "envFloat(\"HIVE_RESOURCE_INTERVAL_S\", 15.0)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/resources/resources.go",
+          "contains": "envInt(\"HIVE_RESOURCE_HISTORY\", 480)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/resources/resources.go",
+          "contains": "envFloat(\"HIVE_RESOURCE_WARN_AVAIL_FRAC\", 0.25)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/resources/resources.go",
+          "contains": "envFloat(\"HIVE_RESOURCE_CRIT_AVAIL_FRAC\", 0.15)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/resources/resources.go",
+          "contains": "envInt(\"HIVE_RESOURCE_WARN_RENDERERS\", 45)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/resources/resources.go",
+          "contains": "envInt(\"HIVE_RESOURCE_CRIT_RENDERERS\", 60)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/loader.go",
+          "contains": "resourceMonitor.Start(context.Background(), 0)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/app.go",
+          "contains": "RegisterAppExtraRoutes(mux, AppExtraRouteDeps{Resources: deps.ResourceSnapshot})"
+        }
+      ],
+      "tests": [
+        "TestResourceTunableDefaults",
+        "TestResourceTunableOverrides",
+        "TestResourceTunableGarbageFallsBackLikeEnvNum",
+        "TestClassifyUsesEnvThresholds",
+        "TestMonitorSnapshotResolvesThresholdsAndCapsHistory",
+        "TestMonitorHistoryIsBoundedByTheEnvAtFirstUse"
+      ],
+      "reason": "All six knobs read with the upstream _env_num fallback rule and drive the real sampler: cadence, history depth and the avail/renderer warn+crit thresholds behind /api/health/resources, started by the serve path."
+    },
+    {
+      "names": [
+        "HIVE_GCU_MEMTRACE*"
+      ],
+      "status": "platform_diff",
+      "matches_wildcard": true,
+      "anchors": [
+        {
+          "file": "go_hive/go-hive/internal/cli/browser_cli.go",
+          "contains": "the CLI that replaces"
+        },
+        {
+          "file": "go_hive/go-hive/internal/cli/browser_supervisor.go",
+          "contains": "func startBrowserBridge(cfg browserSupervisorConfig) func()"
+        }
+      ],
+      "reason": "Platform difference: the GCU memory tracer (tools/src/gcu/memtrace.py, 5 vars) belongs to the Python GCU process. The Go port replaces that process with the Go browser bridge + hive-browser CLI (browserbridge module, supervised by startBrowserBridge) and samples no GCU heap, so there is no code path a reader could tune. The substitute mechanism is the Go bridge's process supervision and its own runtime health surface; nothing is silently ignored — the names are registered here and in docs/environment-variables.html."
+    },
+    {
+      "names": [
+        "HIVE_GCU_SCREENSHOT_CONCURRENCY"
+      ],
+      "status": "platform_diff",
+      "anchors": [
+        {
+          "file": "go_hive/browserbridge/commands_page.go",
+          "contains": "func cmdScreenshot(ctx context.Context"
+        },
+        {
+          "file": "go_hive/browserbridge/bridge.go",
+          "contains": "windowLocks      map[string]*sync.Mutex"
+        }
+      ],
+      "reason": "Platform difference: the Python GCU batches screenshots with a tunable worker count; the Go browser bridge serializes per-window operations with its own locks (windowLocks) and has no batch concurrency knob to size. Registering it as a difference keeps the absence explicit."
     },
     {
       "names": [
@@ -523,20 +808,10 @@
     {
       "names": [
         "HIVE_MCP2CLI",
-        "HIVE_NETWORK_SCANNERS",
         "HIVE_SESSION_COST_LIMIT_USD"
       ],
       "status": "go_extension",
-      "reason": "Go-only operator switches (mcp2cli mode selection, network-scanner opt-in, per-session cost ceiling); each is read by the port and has no upstream equivalent."
-    },
-    {
-      "names": [
-        "HIVE_GCU_MEMTRACE*",
-        "HIVE_GCU_SCREENSHOT_CONCURRENCY"
-      ],
-      "status": "unsupported",
-      "reason": "GCU memory-tracing and screenshot-concurrency knobs of the Python GCU process. The port's browser bridge runs as a separate Go process with its own concurrency control and does not sample GCU memory, so these names have no reader.",
-      "matches_wildcard": true
+      "reason": "Go-only operator switches (mcp2cli mode selection, per-session cost ceiling); each is read by the port and has no upstream equivalent."
     }
   ]
 }

@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -223,7 +222,7 @@ func (s *Store) LoadNotificationsConfig(colonyID string) NotificationsConfig {
 	if data, err := readJSONMap(s.NotificationsConfigPath(colonyID)); err == nil && data != nil {
 		raw = data
 	} else if err != nil && !os.IsNotExist(err) {
-		log.Printf("sentinel: invalid notifications.json for %s; treating as unconfigured", colonyID)
+		sentinelLogf("sentinel: invalid notifications.json for %s; treating as unconfigured", colonyID)
 	}
 
 	allowlist := []string{}
@@ -495,13 +494,13 @@ func (s *Store) LoadEscalation(colonyID, escalationID string) (*EscalationRecord
 	data, err := readJSONMap(path)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			log.Printf("sentinel: invalid escalation record %s: %v", path, err)
+			sentinelLogf("sentinel: invalid escalation record %s: %v", path, err)
 		}
 		return nil, false
 	}
 	record, err := EscalationRecordFromDict(data)
 	if err != nil {
-		log.Printf("sentinel: invalid escalation record %s: %v", path, err)
+		sentinelLogf("sentinel: invalid escalation record %s: %v", path, err)
 		return nil, false
 	}
 	return record, true
@@ -568,7 +567,7 @@ func (s *Store) ResolveEscalation(colonyID, escalationID, resolvedBy string) boo
 		record.ResolvedBy = nil
 	}
 	if err := s.WriteEscalation(record); err != nil {
-		log.Printf("sentinel: could not resolve escalation %s: %v", escalationID, err)
+		sentinelLogf("sentinel: could not resolve escalation %s: %v", escalationID, err)
 		return false
 	}
 	return true

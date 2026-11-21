@@ -97,11 +97,37 @@ func (p *Provider) httpCompletion(ctx context.Context, kwargs map[string]any) (C
 	if apiKey == "" {
 		apiKey = p.APIKey
 	}
+	if p.KeyPool != nil {
+		if pooled := p.KeyPool.GetKey(); pooled != "" {
+			apiKey = pooled
+		}
+	}
 
 	if usesAnthropicMessagesAPI(model) {
-		return p.anthropicMessagesCompletion(ctx, kwargs, model, apiBase, apiKey)
+		response, err := p.anthropicMessagesCompletion(ctx, kwargs, model, apiBase, apiKey)
+		p.noteKeyOutcome(apiKey, err)
+		return response, err
 	}
-	return p.openAIChatCompletion(ctx, kwargs, model, apiBase, apiKey)
+	response, err := p.openAIChatCompletion(ctx, kwargs, model, apiBase, apiKey)
+	p.noteKeyOutcome(apiKey, err)
+	return response, err
+}
+
+// noteKeyOutcome keeps llm.api_keys' rotation state honest: a 2xx marks the
+// key healthy, a 429 parks it for 60s (upstream's retry_after=60 on
+// mark_rate_limited).
+func (p *Provider) noteKeyOutcome(apiKey string, err error) {
+	if p == nil || p.KeyPool == nil || apiKey == "" {
+		return
+	}
+	if err == nil {
+		p.KeyPool.MarkSuccess(apiKey)
+		return
+	}
+	var providerErr *ProviderError
+	if errors.As(err, &providerErr) && providerErr.StatusCode == 429 {
+		p.KeyPool.MarkRateLimited(apiKey, 60)
+	}
 }
 
 // usesAnthropicMessagesAPI reports whether the model is served by the Anthropic

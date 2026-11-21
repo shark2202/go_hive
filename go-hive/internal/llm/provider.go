@@ -53,6 +53,10 @@ type Provider struct {
 
 	ExtraKwargs map[string]any
 
+	// KeyPool rotates through llm.api_keys when the configured pool has two
+	// or more keys (upstream's KeyPool). Nil keeps APIKey as the single key.
+	KeyPool *KeyPool
+
 	HiveProxyAuth bool
 
 	SleepFunc func(time.Duration)

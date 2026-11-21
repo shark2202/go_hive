@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/aden-hive/hive-go/internal/resources"
 )
 
 func appExtraMux(deps AppExtraRouteDeps) *http.ServeMux {
@@ -40,7 +42,7 @@ func TestHealthResourcesDefaultSnapshot(t *testing.T) {
 	if body["available"] != false || body["verdict"] != "unknown" {
 		t.Fatalf("body = %#v", body)
 	}
-	if body["interval_s"] != float64(resourceIntervalS) {
+	if body["interval_s"] != resources.IntervalSeconds() {
 		t.Fatalf("interval_s = %#v", body["interval_s"])
 	}
 	history, ok := body["history"].([]any)
@@ -51,11 +53,12 @@ func TestHealthResourcesDefaultSnapshot(t *testing.T) {
 	if !ok {
 		t.Fatalf("thresholds = %#v", body["thresholds"])
 	}
-	if thresholds["warn_avail_frac"] != resourceWarnAvailFrac || thresholds["crit_avail_frac"] != resourceCritAvailFrac {
-		t.Fatalf("threshold fractions = %#v", thresholds)
+	envThresholds := resources.ThresholdsFromEnv()
+	if thresholds["warn_avail_frac"] != envThresholds.WarnAvailFrac || thresholds["crit_avail_frac"] != envThresholds.CritAvailFrac {
+		t.Fatalf("threshold fractions = %#v, want %v", thresholds, envThresholds)
 	}
-	if thresholds["warn_renderers"] != float64(resourceWarnRenderers) || thresholds["crit_renderers"] != float64(resourceCritRenderers) {
-		t.Fatalf("threshold renderers = %#v", thresholds)
+	if thresholds["warn_renderers"] != float64(envThresholds.WarnRenderers) || thresholds["crit_renderers"] != float64(envThresholds.CritRenderers) {
+		t.Fatalf("threshold renderers = %#v, want %v", thresholds, envThresholds)
 	}
 }
 

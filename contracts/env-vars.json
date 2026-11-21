@@ -18,19 +18,19 @@
     },
     "expected": {
       "python": 89,
-      "go": 100,
-      "common": 69,
-      "python_only": 20,
-      "go_only": 31
+      "go": 118,
+      "common": 83,
+      "python_only": 6,
+      "go_only": 35
     },
     "reproduced": {
       "python": 89,
-      "go": 105,
-      "common": 70,
-      "python_only": 19,
+      "go": 118,
+      "common": 83,
+      "python_only": 6,
       "go_only": 35
     },
-    "counts_match": false,
+    "counts_match": true,
     "published_lists_compared": {
       "file": "go_hive/docs/env-surface-audit.json",
       "commit": "622cc236",
@@ -49,13 +49,39 @@
       "python_only_equal": false,
       "go_only_equal": false,
       "common_gained": [
+        "HIVE_AGENT_NAME",
+        "HIVE_COMPACTION_DEBUG",
+        "HIVE_ENABLE_LLM_LOGS",
+        "HIVE_HISTORY_READ_WORKERS",
         "HIVE_MAX_ITER",
+        "HIVE_NO_FILE_LOG",
+        "HIVE_PLAYBOOK_FAST_GRACE",
+        "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
+        "HIVE_RESOURCE_CRIT_RENDERERS",
+        "HIVE_RESOURCE_HISTORY",
+        "HIVE_RESOURCE_INTERVAL_S",
+        "HIVE_RESOURCE_WARN_AVAIL_FRAC",
+        "HIVE_RESOURCE_WARN_RENDERERS",
+        "HIVE_SENTINEL_LOG",
         "HIVE_SPLIT_WORKER_EVENTS",
         "HIVE_TRACKER_WORKER_TOOL_CALLS"
       ],
       "common_lost": [],
       "python_only_dropped": [
+        "HIVE_AGENT_NAME",
+        "HIVE_COMPACTION_DEBUG",
+        "HIVE_ENABLE_LLM_LOGS",
+        "HIVE_HISTORY_READ_WORKERS",
         "HIVE_MAX_ITER",
+        "HIVE_NO_FILE_LOG",
+        "HIVE_PLAYBOOK_FAST_GRACE",
+        "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
+        "HIVE_RESOURCE_CRIT_RENDERERS",
+        "HIVE_RESOURCE_HISTORY",
+        "HIVE_RESOURCE_INTERVAL_S",
+        "HIVE_RESOURCE_WARN_AVAIL_FRAC",
+        "HIVE_RESOURCE_WARN_RENDERERS",
+        "HIVE_SENTINEL_LOG",
         "HIVE_SPLIT_WORKER_EVENTS",
         "HIVE_TRACKER_WORKER_TOOL_CALLS"
       ],
@@ -65,19 +91,19 @@
   },
   "summary": {
     "python": 89,
-    "go": 105,
-    "common": 70,
-    "python_only": 19,
+    "go": 118,
+    "common": 83,
+    "python_only": 6,
     "go_only": 35,
     "status_counts": {
-      "aligned": 56,
+      "aligned": 68,
       "go_only": 8,
       "literal_only": 37,
       "parse_differs": 5,
-      "python_only": 18
+      "python_only": 6
     },
     "python_read_sites": 138,
-    "go_read_sites": 92
+    "go_read_sites": 103
   },
   "inventory": {
     "common": [
@@ -86,6 +112,7 @@
       "HIVE_ADAPTIVE_BUDGET_FLOOR",
       "HIVE_ADAPTIVE_BUDGET_MIN_SAMPLES",
       "HIVE_ADAPTIVE_TOOL_BUDGET",
+      "HIVE_AGENT_NAME",
       "HIVE_API_KEY",
       "HIVE_APP_VERSION",
       "HIVE_BASH_PATH",
@@ -97,6 +124,7 @@
       "HIVE_COLONY_NAME",
       "HIVE_COLONY_PARALLEL_COOLDOWN",
       "HIVE_COLONY_PARALLEL_MAX",
+      "HIVE_COMPACTION_DEBUG",
       "HIVE_CREDENTIAL_KEY",
       "HIVE_CRED_LOG",
       "HIVE_CRM_PRINCIPAL",
@@ -107,6 +135,8 @@
       "HIVE_DESKTOP_THEME",
       "HIVE_DESKTOP_TOKEN",
       "HIVE_EMAIL_SENDERS",
+      "HIVE_ENABLE_LLM_LOGS",
+      "HIVE_HISTORY_READ_WORKERS",
       "HIVE_HOME",
       "HIVE_LLM_BASE_URL",
       "HIVE_MAX_CONCURRENT_WORKERS",
@@ -116,8 +146,10 @@
       "HIVE_MCP_CALL_RESULT_TIMEOUT",
       "HIVE_MEMORY_TIMELINE",
       "HIVE_MICROCOMPACT_KEEP_RECENT",
+      "HIVE_NO_FILE_LOG",
       "HIVE_OWN_REMOTES",
       "HIVE_PAST_RECALL_TIMEOUT",
+      "HIVE_PLAYBOOK_FAST_GRACE",
       "HIVE_PRINCIPAL",
       "HIVE_QUEEN_ID",
       "HIVE_QUEEN_MAIL_FROM",
@@ -125,10 +157,17 @@
       "HIVE_QUEEN_MAIL_URL",
       "HIVE_REGISTRY_URL",
       "HIVE_REQUEST_EXECUTOR_MAX",
+      "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
+      "HIVE_RESOURCE_CRIT_RENDERERS",
+      "HIVE_RESOURCE_HISTORY",
+      "HIVE_RESOURCE_INTERVAL_S",
+      "HIVE_RESOURCE_WARN_AVAIL_FRAC",
+      "HIVE_RESOURCE_WARN_RENDERERS",
       "HIVE_RIPGREP_PATH",
       "HIVE_RUNTIME_ID",
       "HIVE_RUNTIME_KIND",
       "HIVE_RUNTIME_PORT",
+      "HIVE_SENTINEL_LOG",
       "HIVE_SPLIT_WORKER_EVENTS",
       "HIVE_STALL_CHECK",
       "HIVE_STORAGE_PATH",
@@ -153,25 +192,12 @@
       "HIVE_TRUST_PROJECT_SKILLS"
     ],
     "python_only": [
-      "HIVE_AGENT_NAME",
-      "HIVE_COMPACTION_DEBUG",
-      "HIVE_ENABLE_LLM_LOGS",
       "HIVE_GCU_MEMTRACE",
       "HIVE_GCU_MEMTRACE_FILE",
       "HIVE_GCU_MEMTRACE_FRAMES",
       "HIVE_GCU_MEMTRACE_INTERVAL_S",
       "HIVE_GCU_MEMTRACE_TOP",
-      "HIVE_GCU_SCREENSHOT_CONCURRENCY",
-      "HIVE_HISTORY_READ_WORKERS",
-      "HIVE_NO_FILE_LOG",
-      "HIVE_PLAYBOOK_FAST_GRACE",
-      "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
-      "HIVE_RESOURCE_CRIT_RENDERERS",
-      "HIVE_RESOURCE_HISTORY",
-      "HIVE_RESOURCE_INTERVAL_S",
-      "HIVE_RESOURCE_WARN_AVAIL_FRAC",
-      "HIVE_RESOURCE_WARN_RENDERERS",
-      "HIVE_SENTINEL_LOG"
+      "HIVE_GCU_SCREENSHOT_CONCURRENCY"
     ],
     "go_only": [
       "HIVE_BROWSERBRIDGE_ARGS",
@@ -213,63 +239,15 @@
   },
   "recommendations": [
     {
-      "name": "HIVE_TRACKER_WORKER_TOOL_CALLS",
-      "priority": "P2",
-      "why": "tracker reminder cadence for worker tool calls",
-      "direction": "port to go"
-    },
-    {
-      "name": "HIVE_HISTORY_READ_WORKERS",
-      "priority": "P2",
-      "why": "parallelism for session history reads (default 8)",
-      "direction": "port to go"
-    },
-    {
-      "name": "HIVE_NO_FILE_LOG",
-      "priority": "P2",
-      "why": "turns off file logging; operators rely on it in containers",
-      "direction": "port to go"
-    },
-    {
-      "name": "HIVE_COMPACTION_DEBUG",
-      "priority": "P2",
-      "why": "compaction debug log switch",
-      "direction": "port to go"
-    },
-    {
-      "name": "HIVE_PLAYBOOK_FAST_GRACE",
-      "priority": "P2",
-      "why": "playbook fast-path grace seconds (default 1.5)",
-      "direction": "port to go"
-    },
-    {
-      "name": "HIVE_SENTINEL_LOG",
-      "priority": "P3",
-      "why": "sentinel log switch",
-      "direction": "port to go"
-    },
-    {
-      "name": "HIVE_ENABLE_LLM_LOGS",
-      "priority": "P3",
-      "why": "LLM debug log switch",
-      "direction": "port to go"
-    },
-    {
-      "name": "HIVE_RESOURCE_*",
-      "priority": "P3",
-      "why": "host resource sampling knobs (6 vars)",
-      "direction": "port to go"
-    },
-    {
       "name": "HIVE_GCU_MEMTRACE*",
       "priority": "P3",
-      "why": "GCU memory tracing (5 vars)",
+      "why": "GCU memory tracing (5 vars); platform difference — see contracts/config-support-ledger.json",
       "direction": "port to go"
     },
     {
       "name": "HIVE_GCU_SCREENSHOT_CONCURRENCY",
       "priority": "P3",
-      "why": "GCU screenshot concurrency",
+      "why": "GCU screenshot concurrency; platform difference — the Go bridge has its own concurrency control",
       "direction": "port to go"
     },
     {
@@ -544,14 +522,14 @@
         "dev_reads": [],
         "test_reads": 3,
         "writes": [],
-        "mentions": 10,
+        "mentions": 11,
         "comments": 0
       },
       "notes": "helper defaults true on both sides (colonyEnvBool/envFeatureFlag mirror _env_flag)."
     },
     {
       "name": "HIVE_AGENT_NAME",
-      "audit_membership": "python_only",
+      "audit_membership": "common",
       "status": "literal_only",
       "status_basis": "name appears in production literals but no read site was found on either side",
       "python": {
@@ -567,9 +545,10 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 0,
-        "comments": 0
-      }
+        "mentions": 15,
+        "comments": 4
+      },
+      "notes": "injection, not a read: py sets it into each agent's MCP subprocess env (agent_loader.set_mcp_extra_env); go sets it into the colony worker catalogue's MCP env and the env-declaring tools' subprocess env input. Both sides write-only, so the contract status is literal_only."
     },
     {
       "name": "HIVE_API_KEY",
@@ -660,22 +639,6 @@
       "go": {
         "prod_reads": [
           {
-            "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1037,
-            "symbol": "resolveChatProvider",
-            "parse": "string",
-            "snippet": "apiKey = strings.TrimSpace(os.Getenv(\"HIVE_API_KEY\"))",
-            "default": ""
-          },
-          {
-            "file": "go_hive/go-hive/internal/server/config_slots.go",
-            "line": 222,
-            "symbol": "MainSlotAPIKey",
-            "parse": "string",
-            "snippet": "return strings.TrimSpace(os.Getenv(\"HIVE_API_KEY\"))",
-            "default": ""
-          },
-          {
             "file": "go_hive/go-hive/internal/server/llm_config.go",
             "line": 209,
             "symbol": "defaultSubscriptionToken",
@@ -690,13 +653,21 @@
             "parse": "string",
             "snippet": "if os.Getenv(\"HIVE_API_KEY\") != \"\" {",
             "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/main_slot.go",
+            "line": 142,
+            "symbol": "MainSlotKey",
+            "parse": "string",
+            "snippet": "return strings.TrimSpace(os.Getenv(\"HIVE_API_KEY\"))",
+            "default": ""
           }
         ],
         "dev_reads": [],
         "test_reads": 2,
         "writes": [],
         "mentions": 20,
-        "comments": 2
+        "comments": 1
       }
     },
     {
@@ -886,7 +857,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/server/routes_app_extra.go",
-            "line": 505,
+            "line": 503,
             "symbol": "defaultBridgeStatusAddrs",
             "parse": "string",
             "snippet": "if raw := strings.TrimSpace(os.Getenv(\"HIVE_BRIDGE_PORT\")); raw != \"\" {",
@@ -992,7 +963,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/routes_app_extra.go",
-            "line": 500,
+            "line": 498,
             "symbol": "defaultBridgeStatusAddrs",
             "parse": "string",
             "snippet": "if raw := strings.TrimSpace(os.Getenv(\"HIVE_BROWSERBRIDGE_HTTP\")); raw != \"\" {",
@@ -1177,7 +1148,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/sentinel/notifier.go",
-            "line": 126,
+            "line": 125,
             "symbol": "HiveBackendBase",
             "parse": "helper",
             "helper": "getenv",
@@ -1226,7 +1197,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/sentinel/notifier.go",
-            "line": 130,
+            "line": 129,
             "symbol": "HiveJWT",
             "parse": "helper",
             "helper": "getenv",
@@ -1289,7 +1260,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/agentloop/colony_parallel_nudge.go",
-            "line": 22,
+            "line": 14,
             "symbol": "envInt",
             "parse": "int",
             "helper": "envInt",
@@ -1331,7 +1302,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/agentloop/colony_parallel_nudge.go",
-            "line": 23,
+            "line": 15,
             "symbol": "envInt",
             "parse": "int",
             "helper": "envInt",
@@ -1348,9 +1319,9 @@
     },
     {
       "name": "HIVE_COMPACTION_DEBUG",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
       "python": {
         "prod_reads": [
           {
@@ -1368,13 +1339,23 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/compaction_debug.go",
+            "line": 32,
+            "symbol": "compactionDebugEnabled",
+            "parse": "helper",
+            "helper": "envNonEmpty",
+            "snippet": "func compactionDebugEnabled() bool { return envNonEmpty(\"HIVE_COMPACTION_DEBUG\") }"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 2,
         "writes": [],
-        "mentions": 3,
-        "comments": 0
-      }
+        "mentions": 5,
+        "comments": 3
+      },
+      "notes": "py: `if os.environ.get(...)` before write_compaction_debug_log; go: same presence gate before the $HIVE_HOME/compaction_log/<ts>_<node>.md report."
     },
     {
       "name": "HIVE_CONTINUE_NUDGE_ENABLED",
@@ -1393,7 +1374,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-            "line": 65,
+            "line": 82,
             "symbol": "chatLoopConfig",
             "parse": "bool",
             "helper": "envBool",
@@ -1424,7 +1405,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-            "line": 62,
+            "line": 79,
             "symbol": "chatLoopConfig",
             "parse": "int",
             "helper": "envIntValue",
@@ -1635,7 +1616,7 @@
         "dev_reads": [],
         "test_reads": 15,
         "writes": [],
-        "mentions": 17,
+        "mentions": 22,
         "comments": 5
       }
     },
@@ -1934,7 +1915,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1101,
+            "line": 1026,
             "symbol": "runtimeOwnerPID",
             "parse": "string",
             "snippet": "owner := os.Getenv(\"HIVE_DESKTOP_PARENT_PID\")",
@@ -1946,7 +1927,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1104,
+            "line": 1029,
             "scope": "runtime"
           }
         ],
@@ -2019,7 +2000,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 261,
+            "line": 262,
             "symbol": "defaultServe",
             "parse": "string",
             "snippet": "if !isLoopbackListenHost(host) && strings.TrimSpace(os.Getenv(\"HIVE_DESKTOP_TOKEN\")) == \"\" {",
@@ -2037,7 +2018,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 8,
+        "mentions": 9,
         "comments": 0
       }
     },
@@ -2103,9 +2084,9 @@
     },
     {
       "name": "HIVE_ENABLE_LLM_LOGS",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=[''] parse=['bool_deny_list']",
       "python": {
         "prod_reads": [
           {
@@ -2125,13 +2106,23 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/agentloop/llm_debug_log.go",
+            "line": 48,
+            "symbol": "llmLogsEnabled",
+            "parse": "helper",
+            "helper": "envOptIn",
+            "snippet": "func llmLogsEnabled() bool { return envOptIn(\"HIVE_ENABLE_LLM_LOGS\") }"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 3,
         "writes": [],
-        "mentions": 4,
-        "comments": 0
-      }
+        "mentions": 7,
+        "comments": 1
+      },
+      "notes": "py: .strip().lower() in (\"1\",\"true\"); go: pyenv.Is1OrTrue — identical opt-in table for the $HIVE_HOME/llm_logs JSONL writer."
     },
     {
       "name": "HIVE_FAKE_NOW",
@@ -2182,7 +2173,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 2,
+        "mentions": 4,
         "comments": 0
       }
     },
@@ -2226,7 +2217,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 1,
+        "mentions": 2,
         "comments": 0
       }
     },
@@ -2258,7 +2249,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 1,
+        "mentions": 2,
         "comments": 0
       }
     },
@@ -2290,7 +2281,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 1,
+        "mentions": 2,
         "comments": 0
       }
     },
@@ -2322,7 +2313,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 1,
+        "mentions": 2,
         "comments": 0
       }
     },
@@ -2353,15 +2344,16 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 2,
+        "mentions": 4,
         "comments": 0
-      }
+      },
+      "notes": "platform difference: python gcu screenshot batching; the Go bridge owns its own CDP concurrency. No Go reader by design."
     },
     {
       "name": "HIVE_HISTORY_READ_WORKERS",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['8'] parse=['int']",
       "python": {
         "prod_reads": [
           {
@@ -2380,13 +2372,24 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/server/history_read_pool.go",
+            "line": 46,
+            "symbol": "historyReadWorkers",
+            "parse": "int",
+            "helper": "envIntOrError",
+            "default": "8",
+            "snippet": "parsed, _, err := envIntOrError(\"HIVE_HISTORY_READ_WORKERS\", 8)"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 4,
         "writes": [],
-        "mentions": 3,
-        "comments": 0
-      }
+        "mentions": 6,
+        "comments": 2
+      },
+      "notes": "py: max(4, int(os.environ.get(name, \"8\"))) sizing a dedicated UI-read thread pool (no except: garbage raises); go: bounded semaphore in internal/server sized by the same expression, floor 4, garbage → 500 (envIntOrError)."
     },
     {
       "name": "HIVE_HOME",
@@ -2533,10 +2536,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 37,
+        "test_reads": 41,
         "writes": [],
-        "mentions": 75,
-        "comments": 66
+        "mentions": 96,
+        "comments": 80
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -2697,7 +2700,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/llm/transport.go",
-            "line": 232,
+            "line": 258,
             "symbol": "apiBaseNeedsBearerAuth",
             "parse": "string",
             "snippet": "override := strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_LLM_BASE_URL\")))",
@@ -2728,7 +2731,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-            "line": 56,
+            "line": 73,
             "symbol": "chatLoopConfig",
             "parse": "float",
             "helper": "envFloat",
@@ -2759,7 +2762,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-            "line": 53,
+            "line": 70,
             "symbol": "chatLoopConfig",
             "parse": "float",
             "helper": "envFloat",
@@ -3330,7 +3333,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-            "line": 46,
+            "line": 63,
             "symbol": "chatLoopConfig",
             "parse": "int",
             "helper": "envPositiveInt",
@@ -3340,7 +3343,7 @@
         "dev_reads": [],
         "test_reads": 2,
         "writes": [],
-        "mentions": 8,
+        "mentions": 9,
         "comments": 4
       },
       "notes": "py: int(raw) only when raw.isdigit(), else 999_999; go: envPositiveInt trims and requires > 0, else the configured loop default. Zero/negative/padded values differ."
@@ -3496,7 +3499,7 @@
         "dev_reads": [],
         "test_reads": 1,
         "writes": [],
-        "mentions": 9,
+        "mentions": 10,
         "comments": 4
       },
       "notes": "both default 240s; garbage/<=0 -> 240s."
@@ -3544,7 +3547,7 @@
         "dev_reads": [],
         "test_reads": 13,
         "writes": [],
-        "mentions": 8,
+        "mentions": 9,
         "comments": 0
       },
       "notes": "env > configuration.json > false."
@@ -3593,9 +3596,9 @@
     },
     {
       "name": "HIVE_NO_FILE_LOG",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
       "python": {
         "prod_reads": [
           {
@@ -3613,13 +3616,23 @@
         "comments": 1
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/logging/logging.go",
+            "line": 40,
+            "symbol": "fileLogDisabled",
+            "parse": "helper",
+            "helper": "envNonEmpty",
+            "snippet": "func fileLogDisabled() bool { return envNonEmpty(\"HIVE_NO_FILE_LOG\") }"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 2,
         "writes": [],
-        "mentions": 4,
-        "comments": 0
-      }
+        "mentions": 10,
+        "comments": 8
+      },
+      "notes": "py: `if not os.getenv(...)` — any non-empty value (incl. \"0\") turns the $HIVE_HOME/logs/hive-server.log handler off (20MB×3); go: same gate in internal/logging, wired into the serve logger by installRuntimeLogBuffer."
     },
     {
       "name": "HIVE_OWN_REMOTES",
@@ -3686,9 +3699,9 @@
     },
     {
       "name": "HIVE_PLAYBOOK_FAST_GRACE",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['1.5'] parse=['float']",
       "python": {
         "prod_reads": [
           {
@@ -3707,13 +3720,24 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/playbook/grace.go",
+            "line": 34,
+            "symbol": "FastGraceSeconds",
+            "parse": "float",
+            "helper": "envFloat",
+            "default": "1.5",
+            "snippet": "value := envFloat(\"HIVE_PLAYBOOK_FAST_GRACE\", 1.5)"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 5,
         "writes": [],
-        "mentions": 3,
-        "comments": 0
-      }
+        "mentions": 4,
+        "comments": 4
+      },
+      "notes": "py: max(0.0, float(env or 1.5)) with ValueError→1.5; go: pyenv.Float + clamp, same 1.5 default. The grace window now bounds the Python-playbook tool call; a run past it returns status=started plus a [PLAYBOOK_COMPLETE] bus notice."
     },
     {
       "name": "HIVE_PRINCIPAL",
@@ -3985,7 +4009,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/app.go",
-            "line": 474,
+            "line": 488,
             "symbol": "requestExecutorMax",
             "parse": "string",
             "snippet": "if value := os.Getenv(\"HIVE_REQUEST_EXECUTOR_MAX\"); value != \"\" {",
@@ -4002,9 +4026,9 @@
     },
     {
       "name": "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['0.15'] parse=['helper']",
       "python": {
         "prod_reads": [
           {
@@ -4024,19 +4048,29 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/resources/resources.go",
+            "line": 95,
+            "symbol": "ThresholdsFromEnv",
+            "parse": "float",
+            "helper": "envFloat",
+            "default": "0.15",
+            "snippet": "CritAvailFrac: envFloat(\"HIVE_RESOURCE_CRIT_AVAIL_FRAC\", 0.15),"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 2,
         "writes": [],
-        "mentions": 0,
-        "comments": 0
+        "mentions": 2,
+        "comments": 1
       }
     },
     {
       "name": "HIVE_RESOURCE_CRIT_RENDERERS",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['60'] parse=['helper']",
       "python": {
         "prod_reads": [
           {
@@ -4056,19 +4090,29 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/resources/resources.go",
+            "line": 97,
+            "symbol": "ThresholdsFromEnv",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "60",
+            "snippet": "CritRenderers: envInt(\"HIVE_RESOURCE_CRIT_RENDERERS\", 60),"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 2,
         "writes": [],
-        "mentions": 0,
-        "comments": 0
+        "mentions": 2,
+        "comments": 1
       }
     },
     {
       "name": "HIVE_RESOURCE_HISTORY",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['480'] parse=['helper']",
       "python": {
         "prod_reads": [
           {
@@ -4088,19 +4132,29 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/resources/resources.go",
+            "line": 76,
+            "symbol": "HistoryMax",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "480",
+            "snippet": "value := envInt(\"HIVE_RESOURCE_HISTORY\", 480)"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 4,
         "writes": [],
-        "mentions": 0,
-        "comments": 0
+        "mentions": 3,
+        "comments": 2
       }
     },
     {
       "name": "HIVE_RESOURCE_INTERVAL_S",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['15.0'] parse=['helper']",
       "python": {
         "prod_reads": [
           {
@@ -4120,19 +4174,29 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/resources/resources.go",
+            "line": 65,
+            "symbol": "IntervalSeconds",
+            "parse": "float",
+            "helper": "envFloat",
+            "default": "15.0",
+            "snippet": "value := envFloat(\"HIVE_RESOURCE_INTERVAL_S\", 15.0)"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 3,
         "writes": [],
-        "mentions": 0,
-        "comments": 0
+        "mentions": 2,
+        "comments": 2
       }
     },
     {
       "name": "HIVE_RESOURCE_WARN_AVAIL_FRAC",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['0.25'] parse=['helper']",
       "python": {
         "prod_reads": [
           {
@@ -4152,19 +4216,29 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/resources/resources.go",
+            "line": 94,
+            "symbol": "ThresholdsFromEnv",
+            "parse": "float",
+            "helper": "envFloat",
+            "default": "0.25",
+            "snippet": "WarnAvailFrac: envFloat(\"HIVE_RESOURCE_WARN_AVAIL_FRAC\", 0.25),"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 3,
         "writes": [],
-        "mentions": 0,
-        "comments": 0
+        "mentions": 2,
+        "comments": 1
       }
     },
     {
       "name": "HIVE_RESOURCE_WARN_RENDERERS",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=['45'] parse=['helper']",
       "python": {
         "prod_reads": [
           {
@@ -4184,12 +4258,22 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/resources/resources.go",
+            "line": 96,
+            "symbol": "ThresholdsFromEnv",
+            "parse": "int",
+            "helper": "envInt",
+            "default": "45",
+            "snippet": "WarnRenderers: envInt(\"HIVE_RESOURCE_WARN_RENDERERS\", 45),"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 2,
         "writes": [],
-        "mentions": 0,
-        "comments": 0
+        "mentions": 2,
+        "comments": 1
       }
     },
     {
@@ -4296,7 +4380,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/sentinel/runtime_identity.go",
-            "line": 84,
+            "line": 83,
             "symbol": "Kind",
             "parse": "helper",
             "helper": "getenv",
@@ -4304,7 +4388,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/sentinel/runtime_identity.go",
-            "line": 100,
+            "line": 99,
             "symbol": "ID",
             "parse": "helper",
             "helper": "getenv",
@@ -4344,7 +4428,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/sentinel/runtime_identity.go",
-            "line": 80,
+            "line": 79,
             "symbol": "Kind",
             "parse": "helper",
             "helper": "getenv",
@@ -4384,19 +4468,19 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 266,
+            "line": 267,
             "scope": "runtime"
           }
         ],
-        "mentions": 2,
+        "mentions": 3,
         "comments": 0
       }
     },
     {
       "name": "HIVE_SENTINEL_LOG",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=(none) parse=['string']",
       "python": {
         "prod_reads": [
           {
@@ -4414,13 +4498,23 @@
         "comments": 0
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/sentinel/logging.go",
+            "line": 46,
+            "symbol": "ConfigureLogging",
+            "parse": "helper",
+            "helper": "envNonEmpty",
+            "snippet": "if !envNonEmpty(\"HIVE_SENTINEL_LOG\") {"
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 4,
         "writes": [],
-        "mentions": 3,
-        "comments": 0
-      }
+        "mentions": 6,
+        "comments": 5
+      },
+      "notes": "py: `if not os.environ.get(...)` diverts framework.sentinel.∗ to $HIVE_HOME/logs/sentinel.log (propagate=False); go: same presence gate diverts the sentinel package logger to the same file."
     },
     {
       "name": "HIVE_SESSION_COST_LIMIT_USD",
@@ -4481,7 +4575,7 @@
         "dev_reads": [],
         "test_reads": 4,
         "writes": [],
-        "mentions": 8,
+        "mentions": 9,
         "comments": 7
       },
       "notes": "both default off; only 1/true/yes (case-insensitive) enable the split; go trims surrounding whitespace, py does not."
@@ -4521,7 +4615,7 @@
         "dev_reads": [],
         "test_reads": 5,
         "writes": [],
-        "mentions": 8,
+        "mentions": 10,
         "comments": 0
       },
       "notes": "env > configuration.json > false."
@@ -4599,7 +4693,7 @@
         "test_reads": 4,
         "writes": [],
         "mentions": 16,
-        "comments": 4
+        "comments": 5
       }
     },
     {
@@ -5204,7 +5298,7 @@
         "test_reads": 0,
         "writes": [],
         "mentions": 3,
-        "comments": 2
+        "comments": 3
       }
     },
     {
@@ -5369,11 +5463,12 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 2,
         "writes": [],
-        "mentions": 2,
+        "mentions": 3,
         "comments": 1
-      }
+      },
+      "notes": "py: _env_int(…, 20) — int() semantics with ValueError→default; go: agentloop.envInt → pyenv.Int (same rule). Worker tracker cadence; pinned by TestTrackerWorkerToolCallsDefaultAndParse and the live worker reminder test."
     },
     {
       "name": "HIVE_TRUST_PROJECT_SKILLS",
