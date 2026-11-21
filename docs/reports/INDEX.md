@@ -6,3 +6,4 @@
 - governance-20261122-0106.md
 - slot-20261122-00.md
 - slot-20261122-02.md — 2026-11-22 02:10  · 1.0.26-go.1 · HEAD 52672d1c · compat=ok
+- slot-20261122-04.md — 2026-11-22 04:05  · 1.0.26-go.1 · HEAD 075d1c1b · compat=ok

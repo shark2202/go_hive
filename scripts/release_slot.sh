@@ -82,7 +82,19 @@ PY
 head=$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo "?")
 dirty=$(git -C "$REPO" status --porcelain --untracked-files=no -- go_hive/go-hive 2>/dev/null | wc -l | tr -d ' ')
 if [ "${dirty:-0}" != "0" ]; then
-  write_cadence blocked_dirty "$head" "" "go_hive/go-hive 有 ${dirty} 个未提交改动，slot 版不构建"
+  # 集成窗口可能恰好压在偶数小时：有界等待树清（最多 20 分钟、60s 轮询），
+  # 树一干净就继续构建，避免一次 merge 窗口吃掉整个 slot；仍脏才判 blocked_dirty。
+  waited=0
+  while [ "$waited" -lt 1200 ]; do
+    sleep 60
+    waited=$((waited + 60))
+    dirty=$(git -C "$REPO" status --porcelain --untracked-files=no -- go_hive/go-hive 2>/dev/null | wc -l | tr -d ' ')
+    [ "${dirty:-0}" = "0" ] && break
+  done
+  head=$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo "?")
+fi
+if [ "${dirty:-0}" != "0" ]; then
+  write_cadence blocked_dirty "$head" "" "go_hive/go-hive 有 ${dirty} 个未提交改动（等待 20 分钟后仍脏），slot 版不构建"
   notify "Hive slot 版被跳过" "${slot_id}：主线 go_hive/go-hive 有未提交改动"
   echo "release-slot: blocked_dirty ($dirty)"; exit 1
 fi

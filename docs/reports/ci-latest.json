@@ -1,9 +1,9 @@
 {
- "wave": 32,
- "at": "2026-11-22 03:35",
- "head": "b423373c",
- "ci": 0,
+ "wave": 33,
+ "at": "2026-11-22 04:03",
+ "head": "45c7d973",
+ "ci": 2,
  "qc": 0,
  "publish": 0,
- "note": "charts chrome 退出语义修复后"
+ "note": "P2 ai/social/enrichment 三 lane 合并后"
 }
