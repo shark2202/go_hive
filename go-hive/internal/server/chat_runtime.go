@@ -108,6 +108,19 @@ type ChatRuntimeDeps struct {
 	// accept image blocks (vision_fallback). Nil leaves images to the media
 	// gate, which tells the model an attachment was not delivered.
 	VisionCaptioner agentloop.VisionCaptioner
+	// AlwaysOnToolNames is the ordered always-on model surface of the flat
+	// lazy layer (Python's first-request tools[] order). Empty keeps the
+	// pre-lazy behavior: the whole catalogue is advertised, with only MCP
+	// tools deferred.
+	//
+	// Parity: framework/agents/queen/queen_tools_defaults.py::always_enabled_tool_names
+	AlwaysOnToolNames []string
+	// DeferredTools are the flat definitions search_tools can load for this
+	// session. They are announced by name only (searchable-tools reminder)
+	// until loaded; grouped integration modules are not part of this layer.
+	//
+	// Parity: framework/tools/tool_tiers.py::ToolTierState.get_searchable_tools
+	DeferredTools []llm.ToolDef
 	// Phase reports the queen's current phase ("independent" / "colony") for
 	// the node_loop_iteration payload, mirroring the upstream loop's
 	// iteration_metadata_provider. Nil leaves the iteration phase-less.
@@ -1198,20 +1211,6 @@ func (r *ChatRuntime) turnContextUsage() map[string]any {
 		maxContextTokens = r.loop.Config.MaxContextTokens
 	}
 	return composeContextUsage(r.conv, maxContextTokens, r.toolsForTurn())
-}
-
-// toolExecuteContext carries the bound colony down to the catalogue's
-// run_worker executor. The catalogue is built before the binding exists, so
-// the runtime is resolved per call rather than captured at construction.
-func (r *ChatRuntime) toolExecuteContext() context.Context {
-	// Workers belong to the colony, not to this chat turn: drop the runtime's
-	// cancellation so a session teardown does not kill in-flight work the
-	// colony still owns. The colony's own Stop() remains the lifecycle owner.
-	ctx := context.WithoutCancel(r.ctx)
-	if runtime := r.boundColonyRuntime(); runtime != nil {
-		return colony.WithRunWorkerSpawner(ctx, runtime)
-	}
-	return ctx
 }
 
 // BindColony attaches (or clears) this session's colony runtime. Attaching

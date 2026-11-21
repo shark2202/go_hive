@@ -390,3 +390,169 @@ func TestFlatSurfaceManifestMatchesContractFile(t *testing.T) {
 		t.Fatalf("layer counts %v do not sum to 41 entries (39 unique names)", manifest.LayerCounts)
 	}
 }
+
+// TestFlatSurfaceEagerOrderMatchesUpstreamCapture pins the flat lazy layer's
+// always-on set to the captured Python first request: 24 names, the exact wire
+// order of toolresidual/out/py-gateway.jsonl row 0 (2026-11-21), and the same
+// name set as the frozen manifest's llm_request layer.
+//
+// Parity: core/framework/agents/queen/queen_tools_defaults.py::always_enabled_tool_names
+// + QueenPhaseState.rebuild_independent_filter (eager list order).
+// Parity-exempt at the unit level: the assertion is against the captured
+// reference request recorded in go_hive/docs/tool-flat-surface.md §5.2.
+func TestFlatSurfaceEagerOrderMatchesUpstreamCapture(t *testing.T) {
+	catalogue := queenFlatCatalogue(t)
+	got := catalogue.EagerModelDefNames()
+	want := []string{
+		"search_tools", "write_skill", "task_create", "task_update", "task_list", "task_get",
+		"suggest_colony", "pdf_read", "attach_file", "get_current_time", "image_generate",
+		"get_account_info", "terminal_exec", "terminal_job_logs", "terminal_job_manage",
+		"terminal_rg", "terminal_glob", "terminal_output_get", "search_messages",
+		"browser_setup", "collect_result", "ask_user", "credentials", "sentinel_setup",
+	}
+	if len(got) != 24 {
+		t.Fatalf("eager surface has %d tools, want 24 (Python first request): %v", len(got), got)
+	}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("eager surface order mismatch:\n got %v\nwant %v", got, want)
+	}
+
+	// Same set as the frozen llm_request layer, so the order pin cannot drift
+	// away from the captured request it reproduces.
+	manifest := flatSurfaceManifest()
+	layer := append([]string(nil), manifest.Layers["llm_request"]...)
+	sortedGot := append([]string(nil), got...)
+	sort.Strings(layer)
+	sort.Strings(sortedGot)
+	if strings.Join(sortedGot, ",") != strings.Join(layer, ",") {
+		t.Fatalf("eager set %v != manifest llm_request layer %v", sortedGot, layer)
+	}
+
+	// Every eager name is already part of the default flat surface; the lazy
+	// layer must not invent names.
+	advertised := defNames(catalogue.ModelDefs())
+	for _, name := range got {
+		if !flatContainsName(advertised, name) {
+			t.Fatalf("eager tool %q is not in the flat default surface", name)
+		}
+	}
+}
+
+// TestFlatSurfaceLazyLayerPartition checks the deferred layer: disjoint from
+// the eager set, exactly the 15 remaining default-surface names plus the flat
+// directory tools, no grouped module, and every entry has an execution route.
+//
+// Parity: core/framework/tools/tool_tiers.py::ToolTierState.get_searchable_tools
+func TestFlatSurfaceLazyLayerPartition(t *testing.T) {
+	catalogue := queenFlatCatalogue(t)
+	eager, deferred := catalogue.LazySurfaceDeps()
+	eagerSet := map[string]struct{}{}
+	for _, name := range eager {
+		eagerSet[name] = struct{}{}
+	}
+	if len(eager) != 24 {
+		t.Fatalf("eager surface = %d, want 24", len(eager))
+	}
+	if len(deferred) == 0 {
+		t.Fatal("deferred layer is empty")
+	}
+
+	seen := map[string]struct{}{}
+	var leftovers, directory []string
+	defaultNames := map[string]struct{}{}
+	for _, name := range flatSurfaceDefaultNames() {
+		defaultNames[name] = struct{}{}
+	}
+	for _, def := range deferred {
+		if def.Name == "" {
+			t.Fatal("deferred layer has an empty name")
+		}
+		if _, dup := seen[def.Name]; dup {
+			t.Fatalf("deferred layer has duplicate %q", def.Name)
+		}
+		seen[def.Name] = struct{}{}
+		if _, isEager := eagerSet[def.Name]; isEager {
+			t.Fatalf("deferred tool %q is also eager", def.Name)
+		}
+		if _, isDefault := defaultNames[def.Name]; isDefault {
+			leftovers = append(leftovers, def.Name)
+		} else {
+			directory = append(directory, def.Name)
+		}
+	}
+	if len(leftovers) != 15 {
+		t.Fatalf("default-surface leftovers = %d, want 15 (39 default names - 24 eager): %v", len(leftovers), leftovers)
+	}
+	if len(directory) == 0 {
+		t.Fatal("directory layer is empty")
+	}
+	for _, want := range []string{
+		"chart_render", "web_scrape", "web_search", "read_file", "write_file",
+		"edit_file", "search_files", "tracker_sql", "skill_view", "list_skills",
+		"credential_status", "terminal_pty_open", "run_playbook", "stop_worker",
+	} {
+		if _, ok := seen[want]; !ok {
+			t.Fatalf("deferred layer is missing %q", want)
+		}
+	}
+	// Grouped integration modules are module+action tools, not flat names:
+	// they stay out of the lazy layer (registered + grouped surface only).
+	for _, grouped := range []string{"airtable", "slack", "stripe", "notion", "csv", "excel", "telegram"} {
+		if _, leak := seen[grouped]; leak {
+			t.Fatalf("grouped module %q leaked into the flat lazy layer", grouped)
+		}
+		if !catalogue.registry.HasTool(grouped) {
+			t.Fatalf("grouped module %q must stay in the internal registry", grouped)
+		}
+	}
+	// Every deferred name must land on a real route: a live catalogue def, a
+	// standalone flat name, or a run_playbook action mapping. A deferred name
+	// with no route would be advertised-but-unknown (capability loss).
+	live := map[string]struct{}{}
+	for _, def := range catalogue.defs {
+		live[def.Name] = struct{}{}
+	}
+	for _, def := range deferred {
+		_, hasDef := live[def.Name]
+		_, standalone := flatSurfaceStandaloneTools[def.Name]
+		_, playbook := flatSurfacePlaybookActions[def.Name]
+		if !hasDef && !standalone && !playbook {
+			t.Fatalf("deferred tool %q has no execution route", def.Name)
+		}
+	}
+}
+
+// TestFlatSurfaceDeferredToolsExecute proves the deferred layer keeps real
+// execution: a loadable file tool really reads the file and a lifecycle name
+// routes to its existing colony implementation (actionable no-colony error),
+// never to an unknown-tool error.
+//
+// Parity-exempt: routing check over the frozen contract, same spirit as
+// TestFlatSurfaceExecutionRoutes.
+func TestFlatSurfaceDeferredToolsExecute(t *testing.T) {
+	catalogue := queenFlatCatalogue(t)
+	ctx := context.Background()
+
+	root := catalogue.root
+	if err := os.WriteFile(filepath.Join(root, "lazy.txt"), []byte("deferred tool ran"), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	content, isError, err := catalogue.Execute(ctx, "read_file", map[string]any{"path": "lazy.txt"})
+	if err != nil || isError {
+		t.Fatalf("read_file (deferred) failed: err=%v isError=%v content=%s", err, isError, content)
+	}
+	if !strings.Contains(content, "deferred tool ran") {
+		t.Fatalf("read_file (deferred) did not return the file contents: %s", content)
+	}
+
+	content, isError, err = catalogue.Execute(ctx, "run_playbook", map[string]any{})
+	if err != nil {
+		t.Fatalf("run_playbook (deferred): unexpected error %v", err)
+	}
+	if !isError || !strings.Contains(content, "colony") {
+		t.Fatalf("run_playbook (deferred): want the actionable no-colony error, got isError=%v content=%s", isError, content)
+	}
+	if strings.Contains(content, "unknown tool") {
+		t.Fatalf("run_playbook (deferred) routed to the registry: %s", content)
+	}
+}

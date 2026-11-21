@@ -519,18 +519,25 @@ func (r *Runner) createSessionWithRuntime(
 		toolbox := builtin.New("")
 		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 		onTurnStart := r.enableQueenTools(tools, manager, sessionID, record, home, liveMu, live, defaultModel)
+		// Flat lazy layer: first request advertises the Python reference's 24
+		// always-on names; the rest of the default surface and the flat
+		// directory tools load on demand via search_tools. Grouped mode
+		// returns nils and keeps the full catalogue.
+		alwaysOnTools, deferredTools := tools.LazySurfaceDeps()
 		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
-			LLM:           provider,
-			Tools:         tools.ModelDefs(),
-			Execute:       tools.Execute,
-			ExecuteBlocks: tools.ExecuteBlocks,
-			Root:          sessionDir,
-			Bus:           record.EventBus,
-			SessionID:     sessionID,
-			QueenName:     record.QueenName,
-			HomeRoot:      home.Root,
-			SkillsCatalog: skillsCatalog.Catalog,
-			OnTurnStart:   onTurnStart,
+			LLM:               provider,
+			Tools:             tools.ModelDefs(),
+			AlwaysOnToolNames: alwaysOnTools,
+			DeferredTools:     deferredTools,
+			Execute:           tools.Execute,
+			ExecuteBlocks:     tools.ExecuteBlocks,
+			Root:              sessionDir,
+			Bus:               record.EventBus,
+			SessionID:         sessionID,
+			QueenName:         record.QueenName,
+			HomeRoot:          home.Root,
+			SkillsCatalog:     skillsCatalog.Catalog,
+			OnTurnStart:       onTurnStart,
 			// A text-only main model gets its tool images captioned by the
 			// vision_fallback slot; nil when there is none to use.
 			VisionCaptioner: visionCaptionerFor(home),

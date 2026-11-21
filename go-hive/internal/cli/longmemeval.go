@@ -110,18 +110,21 @@ func (r *LMERunner) Ask(ctx context.Context, req longmemeval.AskRequest) (longme
 	tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 	manager := hiveserver.NewSessionManager()
 	onTurnStart := enableQueenSessionTools(tools, manager, sessionID, record, home)
+	alwaysOnTools, deferredTools := tools.LazySurfaceDeps()
 	runtime, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
-		LLM:           provider,
-		Tools:         tools.ModelDefs(),
-		Execute:       tools.Execute,
-		ExecuteBlocks: tools.ExecuteBlocks,
-		Root:          sessionDir,
-		Bus:           record.EventBus,
-		SessionID:     sessionID,
-		QueenName:     queenScope,
-		HomeRoot:      home.Root,
-		SkillsCatalog: queenSkillsCatalogProvider(home, queenScope),
-		OnTurnStart:   onTurnStart,
+		LLM:               provider,
+		Tools:             tools.ModelDefs(),
+		AlwaysOnToolNames: alwaysOnTools,
+		DeferredTools:     deferredTools,
+		Execute:           tools.Execute,
+		ExecuteBlocks:     tools.ExecuteBlocks,
+		Root:              sessionDir,
+		Bus:               record.EventBus,
+		SessionID:         sessionID,
+		QueenName:         queenScope,
+		HomeRoot:          home.Root,
+		SkillsCatalog:     queenSkillsCatalogProvider(home, queenScope),
+		OnTurnStart:       onTurnStart,
 	})
 	if err != nil {
 		return longmemeval.Answer{}, fmt.Errorf("queen runtime for %s: %w", sessionID, err)

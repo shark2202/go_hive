@@ -47,7 +47,14 @@ func (r *ChatRuntime) configureReminderProviders() {
 	// The colony-phase gate reads the tools the current turn advertises:
 	// run_worker is filtered out while no colony is bound, so the parallel
 	// nudge cannot fire for a plain chat session.
-	if tier := newChatToolTier(r.deps.Root, r.toolsForTurn); tier != nil {
+	//
+	// The tier always carries the flat lazy split when the catalogue supplies
+	// one (independent phase: 24 always-on + searchable remainder); a colony
+	// binding makes the colony-phase surface eager again, matching upstream's
+	// phase lists. Without those deps it keeps the legacy MCP-only split.
+	if tier := newChatToolTier(r.deps.Root, r.toolsForTurn, r.deps.AlwaysOnToolNames, r.deps.DeferredTools, func() bool {
+		return r.boundColonyRuntime() != nil
+	}); tier != nil {
 		r.toolTier = tier
 		// MCP tools are advertised by name only until search_tools loads
 		// them; this is what gives the searchable-tools reminder content.

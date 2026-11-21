@@ -940,7 +940,7 @@
   ]
  },
  "divergence_note": "capture ran on branch tool-contract-recheck @ c8cca067; the python reference checkout (/Users/mac/hive, main) was at 889bbfde during the capture and advanced to 98b3a0ab afterwards (env/config contract + qc commits). None of those touch the tool surface: core/ is still a756b1e5, tools/src still 68b6c230f20e, and the captured Python tools[] is byte-identical to the frozen baseline.",
- "current_round": 2,
+ "current_round": 3,
  "rounds": [
   {
    "round": 1,
@@ -1889,6 +1889,132 @@
     ]
    },
    "divergence_note": "Python reference captured at main dab983d4; core/ and tools/src/ are unchanged since the frozen contract (a756b1e5 / 68b6c230f20e), and the captured tools[] is content-identical to round 1. The Go branch is tool-residual-align at c18abcea plus this lane's uncommitted diff; the commit hash is stamped by the commit itself."
+  },
+  {
+   "round": 3,
+   "label": "round 3 @ tool-library-lazy-surface (Python Tool Library 同形延迟层: 首轮 tools[] = 24)",
+   "generated_at_utc": "2026-11-21T01:36:37Z",
+   "scope": "model-visible tools[] of a default queen_growth session after the flat lazy surface: the first request now carries the Python reference's 24 always-on names in the captured upstream order; the 51 deferred flat tools (15 lifecycle/colony + 36 directory) are announced by name only and loaded with search_tools; the capture also exercises search->load->execute.",
+   "baseline": {
+    "round": 2,
+    "statistics": {
+     "python_surface": 54,
+     "python_llm_request": 24,
+     "python_mcp_catalog": 26,
+     "python_lifecycle": 16,
+     "python_synthetic": 1,
+     "go_llm_request": 144,
+     "shared": 41,
+     "python_only": 13,
+     "go_only": 103,
+     "description_identical": 40,
+     "input_schema_raw_identical": 32,
+     "input_schema_ctx_stripped_identical": 36,
+     "input_schema_normalized_identical": 36,
+     "python_params": 156,
+     "go_params": 174,
+     "python_only_params": 4,
+     "go_only_params": 22,
+     "type_mismatches": 0,
+     "optionality_mismatches": 0,
+     "required_mismatches": 4
+    },
+    "note": "round 2 measured the pre-lazy surface (Go 144, Python 24); this round reproduces the Python reference capture unchanged and matches the Go first request to it."
+   },
+   "recheck": {
+    "python": {
+     "role": "reference",
+     "version": "1.0.14",
+     "checkout": "/Users/mac/hive",
+     "capture": "unchanged from round 2: fake gateway first-request tools[] of a default queen_growth session (toolresidual/out/py-gateway.jsonl row 0); 24 names, the same set as contracts/tool-definitions.json layers.llm_request",
+     "first_request_names": [
+      "search_tools",
+      "write_skill",
+      "task_create",
+      "task_update",
+      "task_list",
+      "task_get",
+      "suggest_colony",
+      "pdf_read",
+      "attach_file",
+      "get_current_time",
+      "image_generate",
+      "get_account_info",
+      "terminal_exec",
+      "terminal_job_logs",
+      "terminal_job_manage",
+      "terminal_rg",
+      "terminal_glob",
+      "terminal_output_get",
+      "search_messages",
+      "browser_setup",
+      "collect_result",
+      "ask_user",
+      "credentials",
+      "sentinel_setup"
+     ]
+    },
+    "go": {
+     "role": "target",
+     "version": "1.0.26-go.1",
+     "branch": "tool-library-lazy-surface (from main 93193450)",
+     "commit": "3aa11deee3a59a986d1aa7a7f38d83be2a270af0",
+     "build": "CGO_ENABLED=0 GOPROXY=off GOSUMDB=off go build -o dist/hive ./cmd/hive",
+     "capture": "scripted fake gateway (toolflat-lazy/capture_lazy.py + fake_gateway_scripted.py): temporary HIVE_HOME; POST /api/queen/queen_growth/session; POST /api/sessions/<id>/chat; gateway step 1 returns search_tools(select:list_triggers,read_file), step 2 returns read_file(<probe file>); every request body recorded verbatim"
+    },
+    "capture_files": {
+     "go-lazy-first-tools.json": "0658b3081e61328717d543fa4539d6201b50b5828ec22b004959218c62040f41",
+     "go-lazy-after-search-tools.json": "8ef7aebf6226bc60ec09507156b7fa6fa10e239f14770de288e651cdcf67e019",
+     "go-lazy-requests.jsonl": "334d809719ef9e97fbc091df474e95c9079261af2fa6114b7f9888ced94f6f58",
+     "summary.json": "dec5353ab31ca1fe2cfd7858f062210ce8374c6c61539153de7e4478d159aeb7",
+     "go-grouped-first-tools.json": "e6823462b1c2a1958ed04847651e53149305a8fa4b9aafa8d7df37151a1e25c7"
+    },
+    "capture_notes": {
+     "python_llm_tools_byte_identical_to_round_2": true,
+     "go_first_request_order_matches_python_capture": true,
+     "go_first_request_set_equals_manifest_llm_request": true,
+     "searchable_manifest_announced_in_first_request": true,
+     "grouped_surface_unchanged": true
+    },
+    "statistics": {
+     "python_llm_request": 24,
+     "go_first_request": 24,
+     "first_request_order_identical": true,
+     "deferred_searchable_names": 51,
+     "deferred_default_surface_leftovers": 15,
+     "deferred_flat_directory": 36,
+     "after_search_request": 26,
+     "loaded_execution_verified": true,
+     "searchable_reminder_lines": 51,
+     "grouped_first_request": 150
+    },
+    "regressions": {
+     "names_removed_from_first_request_vs_round_2": [
+      "get_playbook_status",
+      "list_browser_profiles",
+      "list_playbook_runs",
+      "list_triggers",
+      "list_worker_questions",
+      "remove_trigger",
+      "reply_to_worker",
+      "run_playbook",
+      "set_trigger",
+      "stop_playbook",
+      "update_worker_profile"
+     ],
+     "names_added_to_first_request_vs_round_2": [],
+     "note": "Every name removed from the first request is in the searchable layer (loadable by name) and keeps its executor; no capability was dropped, only deferred."
+    },
+    "evidence": [
+     "toolflat-lazy/out/summary.json: first_tool_count=24, first_matches_python_order=true, second_added=[list_triggers, read_file], read_file_result_seen=true, searchable_refusal_seen=true",
+     "toolflat-lazy/captures/go-lazy-first-tools.json: 24 tool definitions, names byte-identical to the Python capture order (README: python == go, identical order true)",
+     "toolflat-lazy/captures/go-lazy-after-search-tools.json: 26 definitions after search_tools(query=\"select:list_triggers,read_file\")",
+     "toolflat-lazy/captures/go-lazy-requests.jsonl: request bodies incl. the tool result message '1  lazy probe file content' from the loaded read_file call",
+     "go tests: internal/cli TestFlatSurfaceEagerOrderMatchesUpstreamCapture / TestFlatSurfaceLazyLayerPartition / TestFlatSurfaceDeferredToolsExecute; internal/server TestLazyChatFirstRequestAdvertisesPythonEagerOrder / TestLazyChatSearchLoadsDeferredToolForNextStep / TestChatToolTierColonyBindingRestoresEagerSurface",
+     "toolflat-lazy/captures/go-grouped-first-tools.json: HIVE_TOOL_SURFACE=grouped keeps the full pool (150 names on this base, airtable/slack/stripe present)"
+    ],
+    "divergence_note": "The lazy layer reproduces the Python split for the independent phase (24 eager). Grouped integration modules (module+action shape) are not part of the deferred flat manifest - they are not flat names and remain reachable via HIVE_TOOL_SURFACE=grouped. After a colony binds, Go restores the colony-phase eager surface (39) matching the pre-lazy behavior, while deferred directory tools stay searchable."
+   }
   }
  ]
 }

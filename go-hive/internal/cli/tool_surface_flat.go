@@ -40,12 +40,26 @@ package cli
 // answer with an explicit not_implemented envelope instead of an unknown-tool
 // error.
 //
+// Lazy layer (Python Tool Library parity): the first request advertises only
+// the 24 always-on names of the reference's `llm_request` layer, in the
+// captured upstream order (flatSurfaceEagerOrder). Everything else the build
+// can execute is deferred: the 15 remaining default-surface names (the
+// lifecycle/colony layer) plus the flat "directory" tools outside the default
+// surface (chart_render, web_scrape, web_search, file ops, tracker_*,
+// skill_view/list_skills, credential_status, terminal advanced, csv/excel
+// aliases, ...). Deferred tools are announced by name in the searchable-tools
+// reminder and loaded on demand with search_tools, exactly like Python's
+// eager/searchable split. Grouped integration modules stay out of the lazy
+// layer (they are module+action tools, not flat names) and keep their grouped
+// surface and explicit-call routes.
+//
 // Numbers after this change: catalogue pool 137 (+10 queen lifecycle) =
-// internal registry; default flat surface 39; default first request 35
-// (39 minus the four colony-phase-gated tools, matching upstream); grouped
-// switch back to the full pool.
+// internal registry; default flat surface 39; first request 24 (Python
+// reference parity); deferred flat layer = 15 lifecycle/colony + flat
+// directory tools; grouped switch back to the full pool.
 //
 // Parity: framework/tools/tool_tiers.py (eager vs searchable split)
+// Parity: framework/agents/queen/queen_tools_defaults.py::always_enabled_tool_names
 // Parity: framework/agent_loop/agent_loop.py (tools[] assembled per turn)
 
 import (
@@ -208,6 +222,141 @@ func flatSurfaceKeepCurrentNames() map[string]struct{} {
 		}
 	}
 	return out
+}
+
+// flatSurfaceEagerOrder is the Python reference's first-request tools[]
+// order, captured verbatim from a default queen_growth session
+// (toolresidual/out/py-gateway.jsonl row 0, 2026-11-21: fake gateway, POST
+// /api/queen/queen_growth/session then POST /api/sessions/<id>/chat): the
+// always-enabled categories (file_ops · terminal_basic · context_awareness ·
+// browser_core) plus the phase registry tools, the image_generate seeding,
+// and the loop's synthetic tools. The ref manifest's `layers.llm_request`
+// list holds the same 24 names in bytewise order; this is the wire order.
+var flatSurfaceEagerOrder = []string{
+	"search_tools",
+	"write_skill",
+	"task_create",
+	"task_update",
+	"task_list",
+	"task_get",
+	"suggest_colony",
+	"pdf_read",
+	"attach_file",
+	"get_current_time",
+	"image_generate",
+	"get_account_info",
+	"terminal_exec",
+	"terminal_job_logs",
+	"terminal_job_manage",
+	"terminal_rg",
+	"terminal_glob",
+	"terminal_output_get",
+	"search_messages",
+	"browser_setup",
+	"collect_result",
+	"ask_user",
+	"credentials",
+	"sentinel_setup",
+}
+
+// flatSurfaceEagerNameSet is the eager membership set (24 names).
+func flatSurfaceEagerNameSet() map[string]struct{} {
+	out := make(map[string]struct{}, len(flatSurfaceEagerOrder))
+	for _, name := range flatSurfaceEagerOrder {
+		out[name] = struct{}{}
+	}
+	return out
+}
+
+// flatSurfaceGroupedModule reports whether a live definition is a grouped
+// integration module (one tool per module with an `action` enum) rather than
+// a flat one-action tool. The lazy layer carries flat names only, matching
+// the Python one-tool-per-action shape; grouped modules keep their grouped
+// surface and stay out of the deferred manifest.
+func flatSurfaceGroupedModule(def llm.ToolDef) bool {
+	properties, ok := def.Parameters["properties"].(map[string]any)
+	if !ok {
+		return false
+	}
+	_, grouped := properties["action"]
+	return grouped
+}
+
+// EagerModelDefNames returns the always-on flat names this catalogue actually
+// advertises, in the captured upstream order. The server's chat tool tier
+// uses it as the first-request surface.
+func (c *sessionToolCatalogue) EagerModelDefNames() []string {
+	if c == nil || !flatToolSurfaceEnabled() {
+		return nil
+	}
+	live := map[string]struct{}{}
+	for _, def := range c.flatModelDefs() {
+		live[def.Name] = struct{}{}
+	}
+	out := make([]string, 0, len(flatSurfaceEagerOrder))
+	for _, name := range flatSurfaceEagerOrder {
+		if _, ok := live[name]; ok {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// LazyModelDefs returns the definitions the lazy layer can load on demand
+// (Python's searchable tier): the default-surface names not in the eager
+// order — the lifecycle/colony layer — followed by the flat directory tools
+// outside the default surface that this build can execute. Grouped
+// integration modules are excluded; they remain registered and reachable by
+// name and through HIVE_TOOL_SURFACE=grouped.
+func (c *sessionToolCatalogue) LazyModelDefs() []llm.ToolDef {
+	if c == nil || !flatToolSurfaceEnabled() {
+		return nil
+	}
+	eager := flatSurfaceEagerNameSet()
+	defaultNames := map[string]struct{}{}
+	for _, name := range flatSurfaceDefaultNames() {
+		defaultNames[name] = struct{}{}
+	}
+	out := make([]llm.ToolDef, 0, len(c.defs))
+	seen := map[string]struct{}{}
+	// Deferred default-surface leftovers keep their flat projection (same
+	// schema policy as ModelDefs).
+	for _, def := range c.flatModelDefs() {
+		if _, isEager := eager[def.Name]; isEager {
+			continue
+		}
+		seen[def.Name] = struct{}{}
+		out = append(out, def)
+	}
+	// Flat directory tools: live catalogue definitions outside the default
+	// surface with a flat name shape (no `action` module switch).
+	for _, def := range c.defs {
+		if def.Name == "" {
+			continue
+		}
+		if _, isDefault := defaultNames[def.Name]; isDefault {
+			continue
+		}
+		if _, dup := seen[def.Name]; dup {
+			continue
+		}
+		if flatSurfaceGroupedModule(def) {
+			continue
+		}
+		seen[def.Name] = struct{}{}
+		out = append(out, def)
+	}
+	return out
+}
+
+// LazySurfaceDeps is the loader-facing view of the flat lazy layer: the
+// ordered always-on names and the deferred definitions, or nils when the
+// grouped surface is selected (grouped mode keeps the pre-change surface).
+func (c *sessionToolCatalogue) LazySurfaceDeps() (eager []string, deferred []llm.ToolDef) {
+	if c == nil || !flatToolSurfaceEnabled() {
+		return nil, nil
+	}
+	return c.EagerModelDefNames(), c.LazyModelDefs()
 }
 
 // flatSurfaceToolDef converts one frozen entry into the advertised definition.

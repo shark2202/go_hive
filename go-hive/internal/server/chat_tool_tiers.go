@@ -18,6 +18,7 @@ package server
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -33,6 +34,13 @@ type chatToolTier struct {
 	source func() []llm.ToolDef
 	state  *tools.ToolTierState
 
+	// Flat lazy layer (Python Tool Library parity). alwaysOn is the ordered
+	// eager surface of an independent session; deferred are the loadable flat
+	// definitions outside it. Empty both = the legacy MCP-only split.
+	alwaysOn    []string
+	deferred    []llm.ToolDef
+	colonyBound func() bool
+
 	signature string
 	loaded    bool
 	// allowlist is the per-queen MCP allowlist (nil = allow every MCP tool;
@@ -44,25 +52,33 @@ type chatToolTier struct {
 	dirty bool
 }
 
-// newChatToolTier returns nil when the process has no MCP loader: without
-// searchable tools there is no split to carry, and the chat surface keeps its
-// existing flat shape.
-func newChatToolTier(root string, source func() []llm.ToolDef) *chatToolTier {
+// newChatToolTier returns nil when the process has neither a flat lazy layer
+// nor any MCP tools: without searchable tools there is no split to carry, and
+// the chat surface keeps its pre-tier shape.
+//
+// alwaysOn/deferred come from the catalogue's LazySurfaceDeps (Python's
+// first-request order + the loadable remainder). colonyBound flips the eager
+// set to the colony-phase surface, matching upstream's phase lists: a bound
+// colony advertises the whole default surface again.
+func newChatToolTier(root string, source func() []llm.ToolDef, alwaysOn []string, deferred []llm.ToolDef, colonyBound func() bool) *chatToolTier {
 	if source == nil {
 		return nil
 	}
-	mcpNames := mcpToolNames()
-	hasMCP := len(mcpNames) > 0
-	if !hasMCP {
-		for _, def := range source() {
-			if isNamespacedMCPTool(def.Name) {
-				hasMCP = true
-				break
+	lazy := len(alwaysOn) > 0 || len(deferred) > 0
+	if !lazy {
+		mcpNames := mcpToolNames()
+		hasMCP := len(mcpNames) > 0
+		if !hasMCP {
+			for _, def := range source() {
+				if isNamespacedMCPTool(def.Name) {
+					hasMCP = true
+					break
+				}
 			}
 		}
-	}
-	if !hasMCP {
-		return nil
+		if !hasMCP {
+			return nil
+		}
 	}
 	state := &tools.ToolTierState{
 		AlwaysEnabledNames: map[string]struct{}{},
@@ -71,7 +87,13 @@ func newChatToolTier(root string, source func() []llm.ToolDef) *chatToolTier {
 	if strings.TrimSpace(root) != "" {
 		state.PersistPath = filepath.Join(root, "tool_tiers.json")
 	}
-	return &chatToolTier{source: source, state: state}
+	return &chatToolTier{
+		source:      source,
+		state:       state,
+		alwaysOn:    append([]string(nil), alwaysOn...),
+		deferred:    append([]llm.ToolDef(nil), deferred...),
+		colonyBound: colonyBound,
+	}
 }
 
 // state returns the live tier, rebuilding it when the catalogue changed.
@@ -131,10 +153,17 @@ func (c *chatToolTier) refreshLocked() {
 	}
 	defs := c.source()
 	mcpNames := mcpToolNames()
-	pool := make([]tools.Tool, 0, len(defs))
+	lazy := len(c.alwaysOn) > 0 || len(c.deferred) > 0
+	bound := lazy && c.colonyBound != nil && c.colonyBound()
+	alwaysOn := make(map[string]struct{}, len(c.alwaysOn))
+	for _, name := range c.alwaysOn {
+		alwaysOn[name] = struct{}{}
+	}
+	pool := make([]tools.Tool, 0, len(defs)+len(c.deferred))
 	eager := make(map[string]struct{}, len(defs))
 	gateable := make(map[string]struct{})
-	names := make([]string, 0, len(defs))
+	names := make([]string, 0, len(defs)+len(c.deferred))
+	registered := make(map[string]struct{}, len(defs)+len(c.deferred))
 	for _, def := range defs {
 		if def.Name == "" {
 			continue
@@ -150,13 +179,52 @@ func (c *chatToolTier) refreshLocked() {
 			Parameters:  def.Parameters,
 		})
 		names = append(names, def.Name)
+		registered[def.Name] = struct{}{}
 		if isMCPTool(def.Name, mcpNames) {
 			gateable[def.Name] = struct{}{}
 			continue
 		}
-		eager[def.Name] = struct{}{}
+		if !lazy || bound {
+			// Pre-lazy behavior (and the colony phase, where upstream's phase
+			// list advertises the whole default surface): every non-MCP tool is
+			// eager.
+			eager[def.Name] = struct{}{}
+			continue
+		}
+		if _, on := alwaysOn[def.Name]; on {
+			eager[def.Name] = struct{}{}
+			continue
+		}
+		gateable[def.Name] = struct{}{}
+	}
+	if lazy {
+		// Deferred flat layer: loadable by search_tools, never in the first
+		// request unless the catalogue marked it always-on.
+		for _, def := range c.deferred {
+			if def.Name == "" {
+				continue
+			}
+			if _, dup := registered[def.Name]; dup {
+				continue
+			}
+			pool = append(pool, tools.Tool{
+				Name:        def.Name,
+				Description: def.Description,
+				Parameters:  def.Parameters,
+			})
+			names = append(names, def.Name)
+			registered[def.Name] = struct{}{}
+			if _, on := alwaysOn[def.Name]; on {
+				eager[def.Name] = struct{}{}
+				continue
+			}
+			gateable[def.Name] = struct{}{}
+		}
 	}
 	signature := strings.Join(names, "\n")
+	if bound {
+		signature = "colony\n" + signature
+	}
 	if c.loaded && signature == c.signature && !c.dirty {
 		return
 	}
@@ -167,14 +235,10 @@ func (c *chatToolTier) refreshLocked() {
 	c.state.GateableNames = gateable
 	c.state.LoadedToolNames = nil
 	if !c.loaded {
-		registered := make(map[string]struct{}, len(pool))
-		for _, tool := range pool {
-			registered[tool.Name] = struct{}{}
-		}
 		c.state.RestoreLoadedTools(c.state.LoadPersistedTools(), registered)
 	} else {
 		for _, name := range previous {
-			if _, ok := gateable[name]; ok {
+			if _, ok := registered[name]; ok {
 				c.state.LoadedToolNames = append(c.state.LoadedToolNames, name)
 			}
 		}
@@ -185,12 +249,31 @@ func (c *chatToolTier) refreshLocked() {
 }
 
 // toolDefs is the eager surface the loop advertises for the next model call.
+// The always-on names keep the captured Python first-request order; tools
+// loaded later (or made eager by the colony phase) follow in pool order, so
+// the first request is order-identical to the reference and promotions append
+// behind the stable prefix.
 func (c *chatToolTier) toolDefs() []llm.ToolDef {
 	state := c.statePtr()
 	if state == nil {
 		return nil
 	}
 	current := state.GetCurrentTools()
+	if len(c.alwaysOn) > 0 {
+		rank := make(map[string]int, len(c.alwaysOn))
+		for index, name := range c.alwaysOn {
+			rank[name] = index
+		}
+		current = append([]tools.Tool(nil), current...)
+		sort.SliceStable(current, func(i, j int) bool {
+			left, leftOn := rank[current[i].Name]
+			right, rightOn := rank[current[j].Name]
+			if leftOn && rightOn {
+				return left < right
+			}
+			return leftOn && !rightOn
+		})
+	}
 	out := make([]llm.ToolDef, 0, len(current))
 	for _, tool := range current {
 		out = append(out, llm.ToolDef{

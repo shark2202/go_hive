@@ -41,6 +41,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td>output</td><td><span class="pill warn">无法校验</span></td><td>双方都<b>没有声明输出 schema</b>：Python <code>outputSchema</code> 0/857；Go <code>llm.ToolDef</code> 无输出字段。输出契约只能靠运行样例（golden output），当前没有覆盖 857 个工具。</td></tr>
 </tbody></table></div>
 <div class="callout bad"><b>结论：</b>「Skill 逐字一致」已达标；「工具的 name/desc/input 完全一致」<b>未达标</b>，且存在明确缺陷（见 §07），其中 <code>terminal_exec</code> 的输入 schema 少了 8 个参数、Go 把隐藏参数 <code>session_cwd</code> 暴露给模型，属于功能性不一致，不是文字差异。</div>
+<div class="callout info"><b>2026-11-21 更新（默认可见面 / 延迟层）：</b>默认 queen 会话的首轮 <code>tools[]</code> 已从 Go 的 144（<code>tool-flat-surface</code> 后 35）收敛为与 Python 相同的 <b>24</b>，name 与顺序逐字一致（假网关抓包，见 <code>docs/tool-flat-surface.md</code> §5.2、<code>docs/tool-contract-recheck.json</code> round 3）。其余 51 个可执行扁平工具（15 lifecycle/colony + 36 目录层）进入 <code>search_tools</code> 延迟层，按名加载后下一轮出现在 <code>tools[]</code> 并真实执行；87 个分组模块仍保持 module+action 形态（<code>HIVE_TOOL_SURFACE=grouped</code> 可整体回退）。下方 §03–§05 的 857 / 137 / 36 统计是全量注册表口径，未随默认面变化重算。</div>
 </section>
 
 <section id="method"><h2><span class="num">01</span>口径与方法</h2>
@@ -67,6 +68,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <section id="name"><h2><span class="num">03</span>名称（name）</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:26%">集合</th><th style="width:14%">数量</th><th>说明</th></tr></thead><tbody>
 <tr><td>两侧同名工具</td><td class="num">36</td><td>核心/会话/独立工具：<code>read_file</code>、<code>terminal_*</code>、<code>csv_*</code>、<code>excel_*</code>、<code>web_search</code>、<code>attach_file</code>、<code>chart_render</code> 等</td></tr>
+<tr><td>默认会话首轮 <code>tools[]</code>（2026-11-21）</td><td class="num">24 = 24</td><td>Python 与 Go name 集合与顺序逐字一致（Python <code>llm_request</code> 层；Go 由 <code>search_tools</code> 延迟层承载其余 51 个可执行扁平工具）</td></tr>
 <tr><td>Go 集成分组工具</td><td class="num">87</td><td>一个模块一个工具（<code>airtable</code>、<code>slack</code>、<code>stripe</code>…），另有 <code>action</code> 枚举 839 项</td></tr>
 <tr><td>Python 扁平工具</td><td class="num">857</td><td>每个 action 一个独立工具名（<code>airtable_create_records</code>…）</td></tr>
 <tr><td>Go 有、Python 无</td><td class="num">2</td><td><code>weather_get_current</code>、<code>weather_get_forecast</code>（openmeteo；Python 侧模块存在但未注册）</td></tr>

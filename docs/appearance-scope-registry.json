@@ -130,6 +130,11 @@
       ],
       "evidence": [
         {
+          "path": "go_hive/docs/tool-flat-surface.md",
+          "kind": "measured",
+          "note": "首轮 tools[] = 24，name 集合与顺序与 Python 两次独立抓包逐字一致；search_tools 延迟层 51 个（15 lifecycle/colony + 36 目录层），加载后下一轮追加；grouped 模式 150。"
+        },
+        {
           "path": "go_hive/docs/tool-contract-diff.md",
           "kind": "measured",
           "note": "round 2 @ tool-residual-align：41 同名；description 逐字 40/41；schema raw 32/41、剥 CONTEXT 36/41、归一 36/41；类型/可选性不一致 0；required 不一致 4；仅 Python 参数 4"
@@ -171,9 +176,9 @@
         }
       ],
       "status": "partial",
-      "status_basis": "默认会话已改扁平工具面：首轮请求 144→35，Python 24/24 name 命中；41 个同名工具 description 40/41、schema raw 32/41（剥 CONTEXT 36/41、归一 36/41），类型/可选性不一致 0，剩余差异为 lifecycle 层不可比、run_playbook 文案与 exa_search 形态。集成侧 102 模块 / 863 action、A12/B90/C1/D1/E0、1230 测试，但 0 个真实第三方 API 调用。工具输出/失败文案仍无跨实现对照。",
+      "status_basis": "模块/action 覆盖 103/103、863/865；首轮 24 名称逐字一致；同名 desc 40/41、schema 归一 36/41（余 lifecycle 层、session_cwd、exa_search）；工具输出/失败文案仍无 golden 对照，集成 91 个 B 类未真实调用。",
       "contract_state": "frozen_contract",
-      "measured_now": "本次复核：gen_tool_surface_flat.py --check OK（llm_request 24 + lifecycle 16 + synthetic 1 → 39 唯一名；默认请求 35 = 39 − 4 colony 相位门控）；tool-contract-diff §12 与 integrations evidence audit 数字与登记册一致。",
+      "measured_now": "2026-11-21：默认会话首轮 tools[] 35→24（与 Python 逐字）；search_tools(select:…) 可加载并真实执行；colony 绑定恢复 39；HIVE_TOOL_SURFACE=grouped=150。",
       "lane": "tool-schema",
       "lane_state": "suggested",
       "next": [

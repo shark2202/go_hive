@@ -194,16 +194,20 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	// A session whose queen was not picked yet registers them and is refused
 	// when it writes.
 	onTurnStart := enableQueenSessionTools(tools, manager, record.ID, record, home)
+	// Same flat lazy split a created session gets (24 always-on + deferred).
+	alwaysOnTools, deferredTools := tools.LazySurfaceDeps()
 	built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
-		LLM:           provider,
-		Tools:         tools.ModelDefs(),
-		Execute:       tools.Execute,
-		ExecuteBlocks: tools.ExecuteBlocks,
-		Root:          sessionDir,
-		Bus:           record.EventBus,
-		SessionID:     record.ID,
-		QueenName:     record.QueenName,
-		HomeRoot:      home.Root,
+		LLM:               provider,
+		Tools:             tools.ModelDefs(),
+		AlwaysOnToolNames: alwaysOnTools,
+		DeferredTools:     deferredTools,
+		Execute:           tools.Execute,
+		ExecuteBlocks:     tools.ExecuteBlocks,
+		Root:              sessionDir,
+		Bus:               record.EventBus,
+		SessionID:         record.ID,
+		QueenName:         record.QueenName,
+		HomeRoot:          home.Root,
 		// The preloaded path must announce the same queen skills catalog a
 		// created session does: without it the skills_catalog reminder source
 		// stays silent for the whole `serve --colony` session.
