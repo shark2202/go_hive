@@ -17,6 +17,11 @@ import (
 // MCPServerStatus is one configured server's connection snapshot: whether the
 // loader reached it, how many tools it advertised, and why it failed when it
 // did not.
+//
+// ToolNames carries the names the SERVER advertises (tools/list). The session
+// catalogue registers them under NamespacedMCPToolName(Namespace, Name, tool),
+// so consumers that compare against catalogue defs must namespace them first;
+// Namespace is the namespace the loader used (empty means the default "mcp").
 type MCPServerStatus struct {
 	Name      string   `json:"name"`
 	Transport string   `json:"transport"`
@@ -24,6 +29,7 @@ type MCPServerStatus struct {
 	Connected bool     `json:"connected"`
 	Tools     int      `json:"tool_count"`
 	ToolNames []string `json:"tool_names,omitempty"`
+	Namespace string   `json:"namespace,omitempty"`
 	Error     string   `json:"error,omitempty"`
 }
 

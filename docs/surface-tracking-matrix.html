@@ -211,7 +211,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td>磁盘契约</td><td>未追踪：<code>meta.json</code>、<code>events.jsonl</code>、<code>conversations/parts</code>、<code>credentials/metadata/index.json</code>、<code>tracker.db</code> schema</td><td><span class="pill bad">P0</span></td><td>CLI/工具/迁移直接读盘；两侧文件形状不一致会导致跨版本读不了。</td></tr>
 <tr><td>CLI 面</td><td>未追踪：子命令集合、flags、退出码、stdout/JSON 形状（仅 dimensions 记过错误码 2→6）</td><td><span class="pill bad">P0</span></td><td>脚本与自动化直接依赖；错误码差异会破坏 CI 判定。</td></tr>
 <tr><td>系统 Prompt / turn-context / 工具 guidance</td><td>未追踪（<code>turn_context</code> 键已接通，但注入文本无对比）</td><td><span class="pill warn">P1</span></td><td>同一输入的模型行为差异主要来自 prompt 文本。</td></tr>
-<tr><td>MCP 面</td><td>仅 module-interfaces 登记 schema；命名空间 <code>mcp__server__tool</code>、transport 枚举、reload 语义未纳入矩阵</td><td><span class="pill warn">P1</span></td><td>依赖 MCP 的扩展与工具链按注册表/命名空间工作。</td></tr>
+<tr><td>MCP 面</td><td><b>已实测</b>（2026-11-21 双跑）：同一 stdio 夹具 server 两侧真实装载，description/schema 逐字、inputSchema 原样透传、启停语义一致均有证据；命名空间（Python 裸名 vs Go <code>mcp__server__tool</code>）、reload（Go 路由 vs 下个会话生效）、超时为明确例外，见 <a href="mcp-crosscheck.md">mcp-crosscheck.md</a></td><td><span class="pill warn">P1</span></td><td>依赖 MCP 的扩展与工具链按注册表/命名空间工作；跨实现迁移时工具名不可直接复用。</td></tr>
 <tr><td>错误分类（HTTP 状态码 / 错误体 / 工具错误文案）</td><td>18 条端点探针间接覆盖；无逐错误码表</td><td><span class="pill warn">P1</span></td><td>客户端的重试/降级逻辑按状态码分支。</td></tr>
 <tr><td>前端路由与文案</td><td>UI 只统计文件差异；hash 路由表、页面 title、i18n key、空态/错误态未对比</td><td><span class="pill warn">P1</span></td><td>深链、书签、自动化截图路径依赖路由。</td></tr>
 <tr><td>静态资源与上传下载</td><td>未追踪：附件 chip、<code>Content-Disposition</code>、range、asset 404、SPA fallback 之外的静态路径</td><td><span class="pill warn">P1</span></td><td>附件下载与多模态回路。</td></tr>

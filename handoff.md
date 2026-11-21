@@ -45,7 +45,7 @@ wave10（browser R15 / colony doom-loop / 分页+alias / SSE 时机+judge）与 
 - 七门禁 0（parity 5,170）；双跑结果：v1 20/20、v2 59/59、colony-fork 32/32 文件；JSON 字段差异 0、SQLite schema/行差异 0；写入探针 14/14 文件、10 项值/排版级差异
 - **凭据结论：格式兼容，双向互读实测通过**——两侧同为标准 Fernet + `credentials/credentials/<id>.enc` + `index.json`(2.0)；Go 读 Python 写的、Python 读 Go 写的，键值/`expires_at`/metadata/`_alias`/`_identity_email` 全保留（`docs/storage-compat/credentials-crossread.json`）
 - 已修字段级差异 3 处：`parts.is_skill_content` 往返丢失、tracker bootstrap DDL 注释、`_tracker_meta.updated_at` `Z`→`+00:00`；修后字段级差异 0
-- **新发现 P0（SC-01）：`hive serve` 启动时 Go 不执行迁移**——`RunMigrationV2/V3/ColonySessions` 在生产零调用点，v2 旧 home 在 Go 下原样保留；建议单独派 lane 接线（两实现函数级已等价）
+- **SC-01 已修（原 P0 条目移除）**：`.wt/migrate-on-serve`（派生自 main `85595e30`）把 v2/v3/colony_sessions + tracker ensure 接到 `hive serve` 启动链（`internal/cli/loader.go` → `internal/server/storage_startup.go`，失败非致命）；真实 serve 前后 diff、二次启动幂等与 v1/v2 夹具断言见 `docs/storage-compat/serve-startup-go.json` + `internal/server/storage_startup_test.go`
 - 产物：`go_hive/scripts/storage_compat_run.sh`（6 件 harness）、`go_hive/docs/storage-contract-diff.md`、`go_hive/contracts/storage-fields.json`（10 类 159 字段全 both）、`go_hive/docs/storage-compat/*.json`、`go_hive/docs/storage-compat.html`（SC-01…08）
 - 恢复：`cd /Users/mac/hive && git merge --no-ff storage-verbatim` → 全量 CI → QC
 
@@ -119,7 +119,7 @@ bash go_hive/scripts/morning_report.sh
 
 1. env：剩余 GCU 类键实现或平台差异登记；每键默认值/类型/解析对照测试
 2. config：134 键逐键消费证据；`channels.*`（python_only）与 `mcp.*`（go_only）定性；unread 1 键
-3. 存储：合并 storage lane 后接线 **SC-01**（`hive serve` 启动执行 migrate_v2/v3/colony_sessions；两侧迁移函数已等价但 Go 生产零调用），并把凭据 Fernet 双向互读结论写入支持矩阵
+3. 存储：SC-01 已接线（`.wt/migrate-on-serve`，serve 启动执行 v2 → v3 → colony_sessions → tracker ensure，失败非致命；真实 serve 实测见 `docs/storage-compat/serve-startup-go.json`）；凭据 Fernet 双向互读结论仍待写入支持矩阵
 4. LLM 侧：工具输出/失败文案 golden；lifecycle 层 5、`session_cwd` 4、`exa_search` 1 的 schema 残差；skill catalog 渲染文本双跑；MCP 同注册表双跑（命名空间/transport/reload）
 5. API/WS：值级 canonical golden（`system_prefix_sha`、`max_iterations` 999999 vs 50、普通回合 execution 信封、context_usage 粒度）
 6. 集成：91 个 B 类仅假服务；OAuth 7 模块、分页 2 模块；senders ESP 不真实投递；LongMemEval 零分不得引用

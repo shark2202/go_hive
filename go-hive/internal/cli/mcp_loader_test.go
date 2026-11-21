@@ -156,6 +156,9 @@ func TestMCPRuntimeLoadsToolsIntoSessionCatalogue(t *testing.T) {
 	if len(statuses) != 1 || statuses[0].Name != "demo" || !statuses[0].Connected || statuses[0].Tools != 2 {
 		t.Fatalf("statuses = %+v", statuses)
 	}
+	if statuses[0].Namespace != tools.MCPToolNamespace {
+		t.Fatalf("status namespace = %q, want %q", statuses[0].Namespace, tools.MCPToolNamespace)
+	}
 
 	root := filepath.Join(home.Root, "session")
 	if err := os.MkdirAll(root, 0o755); err != nil {
@@ -198,9 +201,18 @@ func TestMCPRuntimeReachesColonyWorkerPool(t *testing.T) {
 	if err := os.MkdirAll(colonyPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	_, declared, execute := colonyWorkerToolSurface(colonyPath, builtin.New(colonyPath), home)
+	base, declared, execute := colonyWorkerToolSurface(colonyPath, builtin.New(colonyPath), home)
 	if !hasToolDef(declared, "mcp__demo__echo") {
 		t.Fatalf("worker tool pool has no MCP tool")
+	}
+	// The real loader reports remote names in Status().ToolNames; promotion
+	// must still land the namespaced def in the worker base surface.
+	merged := withMCPWorkerTools(base, declared)
+	if !hasToolDef(merged, "mcp__demo__echo") {
+		t.Fatalf("MCP tool did not reach the worker base surface: %+v", merged)
+	}
+	if hasToolDef(base, "mcp__demo__echo") {
+		t.Fatal("worker base surface already had the MCP tool before promotion")
 	}
 	result, err := execute(agentloop.ToolCallRequest{Name: "mcp__demo__echo", Input: map[string]any{}})
 	if err != nil || result.Content != "pong:echo" {
@@ -394,10 +406,16 @@ func (f *fakeStatusAttacher) Generation() int64 { return 1 }
 
 // Parity-exempt: promoting loaded MCP tools into the colony worker base surface
 // is Go-side (upstream's spawn_tools already list them).
+//
+// Status.ToolNames carries the names the SERVER advertises (the real loader
+// fills it from tools/list), while session/worker defs are namespaced — so this
+// fixture uses remote names exactly like production, and the comparison must
+// namespace them with the server's own namespace.
 func TestWithMCPWorkerToolsPromotesLoadedTools(t *testing.T) {
 	tools.SetProcessMCP(&fakeStatusAttacher{statuses: []tools.MCPServerStatus{
-		{Name: "demo", Connected: true, ToolNames: []string{"mcp__demo__echo"}},
-		{Name: "broken", Connected: false, ToolNames: []string{"mcp__broken__nope"}},
+		{Name: "demo", Connected: true, ToolNames: []string{"echo"}},
+		{Name: "broken", Connected: false, ToolNames: []string{"nope"}},
+		{Name: "custom", Connected: true, Namespace: "remote", ToolNames: []string{"ping"}},
 	}})
 	t.Cleanup(func() { tools.SetProcessMCP(nil) })
 
@@ -406,17 +424,18 @@ func TestWithMCPWorkerToolsPromotesLoadedTools(t *testing.T) {
 		{Name: "read_file"},
 		{Name: "mcp__demo__echo"},
 		{Name: "mcp__broken__nope"},
+		{Name: "remote__custom__ping"},
 		{Name: "integration_tool"},
 	}
 	merged := withMCPWorkerTools(base, declared)
-	if len(merged) != 2 {
-		t.Fatalf("merged = %v", merged)
-	}
 	names := map[string]bool{}
 	for _, def := range merged {
 		names[def.Name] = true
 	}
-	if !names["read_file"] || !names["mcp__demo__echo"] {
+	if !names["read_file"] || !names["mcp__demo__echo"] || !names["remote__custom__ping"] {
+		t.Fatalf("loaded MCP tool missing from the worker base surface: %v", merged)
+	}
+	if len(merged) != 3 {
 		t.Fatalf("merged = %v", merged)
 	}
 	if names["mcp__broken__nope"] || names["integration_tool"] {

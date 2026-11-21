@@ -1,10 +1,10 @@
 {
   "schema": "hive-appearance-scope-registry/1",
-  "generated_at": "2026-11-21T01:52:00+08:00",
-  "generated_by": "appearance-matrix-refresh lane（只读复核证据 + 文档回填，未改产品代码/测试/依赖）",
-  "worktree": "/Users/mac/hive/.wt/appearance-matrix-refresh",
-  "branch": "appearance-matrix-refresh",
-  "base_commit": "2e46d956",
+  "generated_at": "2026-11-21T10:47:00+08:00",
+  "generated_by": "mcp-crosscheck lane（同注册表双跑：Python/Go 真实装载路径 + 低风险修复）",
+  "worktree": "/Users/mac/hive/.wt/mcp-crosscheck",
+  "branch": "mcp-crosscheck",
+  "base_commit": "85595e30",
   "baseline": {
     "python": "hive 1.0.14（core 树当前 checkout）",
     "go": "1.0.26-go.1",
@@ -562,6 +562,41 @@
       ],
       "evidence": [
         {
+          "path": "go_hive/docs/mcp-crosscheck.md",
+          "kind": "measured",
+          "note": "双跑报告：方法、逐工具对照、5 条明确例外、修复与残余风险"
+        },
+        {
+          "path": "go_hive/docs/e2e-assets/mcp-crosscheck/evidence.json",
+          "kind": "measured",
+          "note": "机器可读证据：两侧工具定义 + sha256 + 逐维判定 + 例外清单（unexpected=0）"
+        },
+        {
+          "path": "go_hive/docs/e2e-assets/mcp-crosscheck/python-side.json",
+          "kind": "measured",
+          "note": "Python 原始 dump（注册名/description/parameters/calls/lifecycle/timeout）"
+        },
+        {
+          "path": "go_hive/docs/e2e-assets/mcp-crosscheck/go-side.json",
+          "kind": "measured",
+          "note": "Go 原始 dump（命名空间注册名/status/calls/lifecycle/timeout）"
+        },
+        {
+          "path": "go_hive/scripts/mcp_crosscheck.py",
+          "kind": "checker",
+          "note": "双跑编排 + diff + 证据生成器；退出码 0 表示只剩明确例外"
+        },
+        {
+          "path": "go_hive/go-hive/internal/cli/mcp_crosscheck_dump_test.go",
+          "kind": "test",
+          "note": "Go 侧探针（gated）：真实 serve 装载路径 + 会话目录 + 启停/reload/超时"
+        },
+        {
+          "path": "go_hive/docs/mcp-registry/README.md",
+          "kind": "doc",
+          "note": "registry 契约的运行时语义（命名/enabled/mode/reload/超时/transport）"
+        },
+        {
           "path": "go_hive/docs/mcp-registry/config.schema.json",
           "kind": "contract",
           "note": "registry 文件 JSON Schema（index/installed 同）"
@@ -572,31 +607,26 @@
           "note": "按 schema 校验 registry 文件；exit 0 才通过"
         },
         {
-          "path": "go_hive/docs/module-interfaces.html",
-          "kind": "doc",
-          "note": "只登记 schema；命名空间/transport/reload 未纳入矩阵"
-        },
-        {
           "path": "go_hive/go-hive/internal/tools/mcp_registry.go",
           "kind": "source",
-          "note": "命名空间形如 nsrv__tool（server 名 + 双下划线 + 工具名）"
+          "note": "命名空间拼接 NamespacedMCPToolName：mcp__<namespace>__<server>__<tool>，非法字符折叠为 _"
         },
         {
-          "path": "go_hive/go-hive/internal/host/mcp_allowlist_test.go",
+          "path": "go_hive/go-hive/internal/server/mcp_tool_names_test.go",
           "kind": "test",
-          "note": "Go 侧白名单/启用面有单测（enabled_mcp_tools）"
+          "note": "锁定自定义 mcp.namespace 下 tier 映射使用 loader 的命名空间"
         }
       ],
-      "status": "contract_unverified",
-      "status_basis": "registry 文件有 JSON Schema + 校验脚本（契约存在），但没有对两侧实际注册表/命名空间/transport 枚举跑过跨实现核对；Python 侧的命名空间生成规则与 Go 的 nsrv__tool 拼接是否同形未验证。",
+      "status": "partial",
+      "status_basis": "2026-11-21 双跑实测（同一 stdio 夹具 server、同一 server 条目，两侧真实装载路径）：工具 description 逐字一致（echo_text 同 sha）；inputSchema 两侧都原样透传 properties/required/default/enum/min-max，未改写类型或必填；server 禁用后两侧装载 0 个 server；Python 由 MCPRegistry.enable/disable 控制，Go 由 installed.json enabled + configuration.json enabled 控制（语义一致）。明确例外（非未知差异）：① 工具命名 Python 裸名 vs Go mcp__<namespace>__<server>__<tool>（server 名 [^A-Za-z0-9_]+ 折叠为 _，被测 server 折叠为 mcp_crosscheck_echo）；② 同名冲突 Python 先到先得（内置 read_file 压掉 server 的 read_file），Go 命名空间让两者共存；③ reload Python 无路由、下个 queen 会话生效，Go 有 POST /api/mcp/reload + generation 重挂（改名后旧工具消失/新工具出现实测通过）；④ 超时 Python 仅 env（import 时读一次，无 configuration.json 读取点），Go 为 env > mcp.timeout_seconds > 240s；⑤ transport Python 多一个 harness 字面量（Go 以 HarnessGroupNames 按名分派）。本轮同时修复了双跑暴露的缺陷：status.ToolNames 为 server 侧原名但 withMCPWorkerTools 拿它比对命名空间名，导致 MCP 工具从未提升进 colony worker base surface；已加 MCPServerStatus.Namespace 并在 mcpLoadedToolNames / chat_tool_tiers.mcpToolNames 统一命名空间化，回归测试锁定。",
       "contract_state": "frozen_contract",
-      "measured_now": null,
+      "measured_now": "双跑复跑：python 注册 [echo_text,edit_file,read_file,search_files,write_file]；go 注册 [mcp__mcp_crosscheck_echo__echo_text, mcp__mcp_crosscheck_echo__read_file]；echo_text schema sha 两侧与夹具一致（0786d219…）；read_file 夹具工具 Go 注册 sha c35bd42a…、Python 被 files-tools 压掉；enable/disable：python resolve 1/0/1、go config+registry 各 0/1；reload：go renamed_stale=false/new=true；timeout：python file 被忽略（240s）env=37s，go file=12s env=37s；unexpected_differences 为空、5 条明确例外。",
       "lane": "mcp-surface",
-      "lane_state": "suggested",
+      "lane_state": "measured",
       "next": [
-        "两侧同注册表双跑：dump 工具全名集合 + transport 枚举，逐项 diff",
-        "reload 语义（mcp reload 路由）行为对照",
-        "把命名空间形态写进冻结契约，避免 agent 侧按错名字调用"
+        "把命名空间折叠的残余风险写成调用方口径：a-b/a_b 前缀撞车按 first-wins，长 server+tool 名可能超出 provider 64 字符限制",
+        "工具结果金标（成功/失败路径、多 content 块聚合的 Python/Go 差异）未对照",
+        "在干净解释器/CI 机器上重跑 go_hive/scripts/mcp_crosscheck.py，纳入可选 sweep"
       ],
       "priority": "P1"
     },
@@ -1152,8 +1182,8 @@
     "total": 23,
     "by_status": {
       "measured_aligned": 3,
-      "partial": 17,
-      "contract_unverified": 1,
+      "partial": 18,
+      "contract_unverified": 0,
       "not_aligned": 0,
       "unaudited": 2
     },
@@ -1168,9 +1198,7 @@
       "wire-proto",
       "builtin-skills"
     ],
-    "contract_unverified_ids": [
-      "mcp"
-    ],
+    "contract_unverified_ids": [],
     "unaudited_ids": [
       "desktop",
       "migration"

@@ -30,7 +30,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </style></head><body><div class="wrap">
 <header><div class="eyebrow">Hive · Storage Compatibility</div><h1>HIVE_HOME <span>逐字存储兼容矩阵</span></h1>
 <p class="lede">两个实现对同一个旧版 home 做迁移/写入后，磁盘上的目录树、文件名、JSON 字段集合与类型、SQLite schema 是否一致；凭据加密格式是否可互读。判定分四级：<b>双跑实测</b>（两侧各自执行后 diff）＞ <b>真实二进制实测</b>（serve 启停观察）＞ <b>代码确认</b>（读实现）＞ <b>未验证</b>。「字段一致」不等于「值逐字节一致」——值格式残余单列在 §08。</p>
-<div class="meta"><span>生成：<b>2026-11-21 09:42 CST</b></span><span>基线：<b>main 93193450</b>（.wt/storage-verbatim）</span><span>Python hive：<b>1.0.14</b></span><span>Go hive：<b>1.0.26-go.1</b></span></div>
+<div class="meta"><span>生成：<b>2026-11-21 10:45 CST</b></span><span>基线：<b>main 93193450</b>（.wt/storage-verbatim）＋ SC-01 接线（<b>85595e30</b> 起，.wt/migrate-on-serve）</span><span>Python hive：<b>1.0.14</b></span><span>Go hive：<b>1.0.26-go.1</b></span></div>
 <div class="toc"><a href="#verdict">结论</a><a href="#method">方法</a><a href="#migrations">迁移等价</a><a href="#startup">启动流程</a><a href="#fields">字段契约</a><a href="#credentials">凭据</a><a href="#inventory">文件清点</a><a href="#residuals">残余/缺口</a><a href="#repro">复现</a></div></header>
 
 <section id="verdict"><h2><span class="num">01</span>结论</h2>
@@ -38,9 +38,9 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <div class="card"><div class="k">迁移等价</div><div class="v">等价</div><div class="d">v1/v2/colony-fork 三组双跑：目录树、文件名、JSON 字段、SQLite schema/行全部一致。见 §03。</div></div>
 <div class="card"><div class="k">字段级差异</div><div class="v">0（修后）</div><div class="d">10 个已实测文件类共 159 个字段路径，presence 全为 both；修复 1 个真实缺字段、1 处 DDL 文本、1 处时间戳格式。</div></div>
 <div class="card"><div class="k">凭据互读</div><div class="v">兼容</div><div class="d">同一 Fernet key 下双向互读成功，键值/元数据逐字段保留；索引 index.json 结构一致。</div></div>
-<div class="card"><div class="k">启动迁移</div><div class="v">Go 未接</div><div class="d">Go <code>serve</code> 不执行 v2/v3/colony_sessions 迁移（零调用点，实测旧布局原样保留）。</div></div>
+<div class="card"><div class="k">启动迁移</div><div class="v">两侧都迁移</div><div class="d">Go <code>serve</code> 启动时按 v2 → v3 → colony_sessions → tracker ensure 执行（失败只告警、不阻断）；真实二进制实测旧 home 迁移、二次启动不变。见 §04。</div></div>
 </div>
-<div class="callout info">一句话：<b>迁移函数与磁盘格式已经对齐、凭据格式可互读；Go 还差「启动时真的调用迁移」这一步。</b></div>
+<div class="callout info">一句话：<b>迁移函数与磁盘格式已经对齐、凭据格式可互读，Go 启动迁移已接线（SC-01 已修，真实 serve 实测）。</b></div>
 </section>
 
 <section id="method"><h2><span class="num">02</span>方法</h2>
@@ -64,17 +64,20 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <p>「逐字节相同」不含 <code>*.db</code> / <code>*.enc</code>：SQLite 不同引擎的页布局与 Fernet 随机 IV 天生不同，这两类改按 schema+行 / 双向互读验证。迁移只搬目录、不重写 JSON，所以迁移组里两侧 JSON 逐字节相同（含 <code>.migrated-*</code> 标记内容 <code>1\n</code>）。</p>
 </section>
 
-<section id="startup"><h2><span class="num">04</span>启动流程：Python 迁移，Go 不迁移（实测）</h2>
-<p>同一份 v2 夹具副本，分别用真实 <code>hive serve</code>（Python 1.0.14 / Go 1.0.26-go.1）启动到 <code>/api/health</code> 200，停止后比对磁盘：</p>
-<div class="tablewrap"><table><thead><tr><th style="width:18%">项</th><th style="width:41%">Python serve</th><th>Go serve</th></tr></thead><tbody>
-<tr><td>标记</td><td>新增 <code>.migrated-v3</code>、<code>colonies/.migrations/colony_sessions_v1</code></td><td>仍只有 <code>.migrated-v2</code></td></tr>
-<tr><td>布局</td><td><code>agents/</code> 整体迁走（40 个文件移动/删除），新增 47 个文件（tracker/、seed_conversation/、workers/scout/、legacy_fork_snapshots/）</td><td><code>agents/queens/</code> 原样保留；tracker 仍在 <code>colonies/alpha/data/tracker.db</code></td></tr>
-<tr><td>迁移日志</td><td><code>moved=2 overwrote_empty=0 archived_dup=1 skipped=1</code>；<code>ensured 3 colony tracker DB(s)</code></td><td>无</td></tr>
-<tr><td>新增文件</td><td>见 <code>docs/storage-compat/startup-flow.json</code></td><td>仅 <code>mcp_registry/config.json</code>（与本主题无关）</td></tr>
-<tr><td>判定</td><td><span class="pill ok">按设计迁移</span></td><td><span class="pill bad">启动不迁移</span></td></tr>
+<section id="startup"><h2><span class="num">04</span>启动流程：两侧 serve 启动都执行迁移（实测）</h2>
+<p>同一份 v2 夹具副本，分别用真实 <code>hive serve</code>（Python 1.0.14 / Go 1.0.26-go.1）启动到 <code>/api/health</code> 200，停止后比对磁盘（SC-01 接线后重测）：</p>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">项</th><th style="width:41%">Python serve</th><th>Go serve（接线后）</th></tr></thead><tbody>
+<tr><td>标记</td><td>新增 <code>.migrated-v3</code>、<code>colonies/.migrations/colony_sessions_v1</code></td><td>相同（<code>.migrated-v2</code> 为夹具原有）</td></tr>
+<tr><td>布局</td><td><code>agents/</code> 整体迁走（40 个文件移动/删除），新增 47 个文件（tracker/、seed_conversation/、workers/scout/、legacy_fork_snapshots/）</td><td><code>agents/</code> 同样整体迁走（同一组 40 个移除）；迁移产生的文件集合与 Python 完全一致；tracker 落到 <code>colonies/&lt;c&gt;/tracker/</code></td></tr>
+<tr><td>迁移日志</td><td><code>moved=2 overwrote_empty=0 archived_dup=1 skipped=1</code>；<code>ensured 3 colony tracker DB(s)</code></td><td><code>tracker_db: ensured 3 colony tracker DB(s) at startup</code>（v1 夹具为 2）</td></tr>
+<tr><td>非迁移新增</td><td><code>logs/hive-server.log</code>、<code>secrets/credential_key</code>、<code>credentials/metadata/index.json</code>、<code>maintenance/server.lock</code>（serve 运行期文件，见 <code>startup-flow.json</code>）</td><td>仅 <code>mcp_registry/config.json</code>（serve 运行期文件）</td></tr>
+<tr><td>二次启动</td><td>—</td><td>文件清单不变（幂等）</td></tr>
+<tr><td>失败注入</td><td>—</td><td>只读 home 启动：<code>Warning: v2 migration failed (non-fatal)</code>，仍到 <code>/api/health</code> 200，marker 未写</td></tr>
+<tr><td>判定</td><td><span class="pill ok">按设计迁移</span></td><td><span class="pill ok">与 Python 一致</span></td></tr>
 </tbody></table></div>
-<p class="sub">代码证据：<code>grep -rn "RunMigrationV2|RunMigrationV3|RunMigrationColonySessions" go_hive/go-hive --include=*.go</code> 只命中 <code>internal/storage/migrate_*.go</code> 定义；Python 调用点在 <code>core/framework/server/session_manager.py:403-430</code>。</p>
-<div class="callout bad"><b>SC-01（P0）</b>：Go 指向未 v3 化的旧 home 时不会迁移，旧路径（<code>agents/</code>、<code>colonies/&lt;c&gt;/data/</code>）下的数据对 Go 运行时不可见。迁移函数本身已验证等价，缺的只是 <b>serve 启动处按 v2 → v3 → colony_sessions → tracker ensure 的顺序接线</b>。</div>
+<p class="sub">接线：<code>internal/cli/loader.go</code> 的 <code>defaultServe</code>（home 解析后、任何会话/运行时创建前）→ <code>internal/cli/storage_startup.go</code>（告警进 serve stdout）→ <code>internal/server/storage_startup.go::RunStorageStartupMigrations</code>（<code>RunMigrationV2</code> → <code>RunMigrationV3</code> → <code>RunMigrationColonySessions</code> → <code>EnsureAllColonyTrackerDBs</code>，每步失败只 warning、不阻断）。<code>exportsDir</code> = <code>$HIVE_HOME/exports</code>：上游默认 CWD 相对 <code>Path("exports")</code>（v1 时代 serve 从仓库根运行，见 <code>core/framework/server/app.py</code> 的 <code>_REPO_ROOT/exports</code> 兼容回退），Go 把同一查找锚定到 home 根（与夹具/双跑一致），行为不依赖启动目录。</p>
+<p class="sub">产物：<code>docs/storage-compat/serve-startup-go.json</code>（v1/v2 真实二进制启动 × 二次启动 × 与双跑参考清单比对，<code>storage_compat_run.sh</code> 第 4 节生成）；接线前对照见 <code>docs/storage-compat/startup-flow.json</code>。</p>
+<div class="callout"><b>SC-01（已修）</b>：旧 home 在 Go 下不再原样保留——serve 启动执行与 Python 相同的迁移序列，旧路径（<code>agents/</code>、<code>colonies/&lt;c&gt;/data/</code>）的数据对运行时可见；失败非致命（只告警）。单测：<code>internal/server/storage_startup_test.go</code>（空 home、v1/v2 夹具、二次启动、失败注入）。</div>
 </section>
 
 <section id="fields"><h2><span class="num">05</span>字段契约</h2>
@@ -125,7 +128,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 
 <section id="residuals"><h2><span class="num">08</span>残余与缺口（SC-01 … SC-08）</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:8%">编号</th><th style="width:28%">项</th><th style="width:12%">级别</th><th style="width:26%">影响</th><th>判定/建议</th></tr></thead><tbody>
-<tr><td><code>SC-01</code></td><td>Go 启动不调用迁移</td><td><span class="pill bad">P0</span></td><td>旧 home 在 Go 下保持旧布局，旧数据不可见</td><td>已实测；建议单独派工接线（顺序同 Python）</td></tr>
+<tr><td><code>SC-01</code></td><td>Go 启动不调用迁移（已修）</td><td><span class="pill ok">已修</span></td><td>旧 home 曾保持旧布局、旧数据不可见</td><td>已接线：serve 启动执行 v2 → v3 → colony_sessions → tracker ensure（失败非致命、幂等）；证据 <code>docs/storage-compat/serve-startup-go.json</code>、单测 <code>internal/server/storage_startup_test.go</code></td></tr>
 <tr><td><code>SC-02</code></td><td>JSON 排版：缩进/分隔符/键序</td><td><span class="pill warn">P2</span></td><td>两侧解析器互认</td><td>不修（非字段/类型）；若要逐字节可另立目标</td></tr>
 <tr><td><code>SC-03</code></td><td>时间戳渲染 <code>+00:00</code>/微秒 vs <code>Z</code>/Nano</td><td><span class="pill warn">P2</span></td><td>仅文本形式，双方解析都接受</td><td>tracker 已修；state/checkpoint/credentials 时间戳保持现状</td></tr>
 <tr><td><code>SC-04</code></td><td>凭据目录/文件权限宽严不同</td><td><span class="pill warn">P1</span></td><td>本地多用户场景下 Python 侧可读面更大</td><td>建议 Python 侧收紧（本 lane 不动上游权限模型）</td></tr>
@@ -144,7 +147,9 @@ python3 go_hive/scripts/storage_compat_gen_fixture.py --dest /tmp/fx --version v
 cd core &amp;&amp; PYTHONPATH="$PWD" uv run python ../go_hive/scripts/storage_compat_probes.py migrate --home /tmp/fx
 cd go_hive/go-hive &amp;&amp; go run ./e2e/cmd/storagecompat migrate --home /tmp/fx2
 python3 go_hive/scripts/storage_compat_diff.py run --py &lt;py-home&gt; --go &lt;go-home&gt; --label v2 --out docs/storage-compat
-python3 go_hive/scripts/gen_storage_contract.py --work &lt;scratch&gt; --out contracts/storage-fields.json</pre>
+python3 go_hive/scripts/gen_storage_contract.py --work &lt;scratch&gt; --out contracts/storage-fields.json
+
+# 第 4 节（真实二进制启动迁移检查）也可整跑覆盖：构建 dist 二进制 → v1/v2 夹具各起两次 serve → 与双跑参考比对 → docs/storage-compat/serve-startup-go.json</pre>
 <p class="sub">要求：仓库自带 <code>uv</code> 与 Go 工具链。夹具生成器零第三方依赖；Python 探针复用项目 venv（pydantic / cryptography 已在锁文件内）。</p>
 </section>
 
@@ -154,6 +159,6 @@ python3 go_hive/scripts/gen_storage_contract.py --work &lt;scratch&gt; --out con
 <a href="../../contracts/storage-fields.json">contracts/storage-fields.json</a> ·
 <a href="module-interfaces.html">module-interfaces.html</a> ·
 <a href="../../go_hive/08-storage-and-data.md">08-storage-and-data.md</a><br>
-本页是 2026-11-21 基线（main <code>93193450</code>）的快照；迁移/存储实现变更后请重跑复现命令并更新本页。
+本页是 2026-11-21 基线（main <code>93193450</code>）＋ SC-01 接线（<code>85595e30</code> 起）的快照；迁移/存储实现变更后请重跑复现命令并更新本页。
 </footer>
 </div></body></html>

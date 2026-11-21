@@ -1,0 +1,559 @@
+{
+  "baseline": {
+    "go_ref": "a8500360",
+    "note": "both runtimes in one repository commit (go_hive uses the same git tree)",
+    "python_ref": "a8500360"
+  },
+  "branch": "mcp-crosscheck",
+  "dimensions": {
+    "collision": {
+      "go": {
+        "builtin_present": true,
+        "fixture_tool": "read_file",
+        "namespaced_present": true,
+        "outcome": "both registered: built-in read_file and the namespaced fixture tool"
+      },
+      "python": {
+        "fixture_registered_tools": [
+          "echo_text"
+        ],
+        "fixture_tool": "read_file",
+        "origin_server": "files-tools",
+        "outcome": "shadowed by the built-in files-tools read_file (first-wins)"
+      },
+      "verdict": "deliberate-divergence"
+    },
+    "descriptions": {
+      "compared_tools": [
+        "echo_text"
+      ],
+      "equal": true,
+      "verdict": "identical"
+    },
+    "enable_disable": {
+      "go": {
+        "config_disabled_status_count": 0,
+        "config_enabled_status_count": 1,
+        "registry_disabled_status_count": 0,
+        "registry_enabled_status_count": 1,
+        "registry_reenabled_status_count": 1,
+        "surface": "installed.json enabled + configuration.json enabled; POST /api/mcp/servers/{name}/disable"
+      },
+      "python": {
+        "disabled": [],
+        "enabled": [
+          "mcp-crosscheck-echo"
+        ],
+        "reenabled": [
+          "mcp-crosscheck-echo"
+        ],
+        "surface": "MCPRegistry.enable/disable + resolve_for_agent(enabled)"
+      },
+      "verdict": "equivalent",
+      "why": "Both surfaces honour the stored enable flag and serve zero servers when disabled; Go additionally accepts enabled:false inside configuration.json (operator override)."
+    },
+    "namespace": {
+      "go": {
+        "prefix": "mcp__mcp_crosscheck_echo__",
+        "registered": [
+          "mcp__mcp_crosscheck_echo__echo_text",
+          "mcp__mcp_crosscheck_echo__read_file"
+        ],
+        "server_name_folding": {
+          "configured": "mcp-crosscheck-echo",
+          "folded": "mcp_crosscheck_echo",
+          "rule": "[^A-Za-z0-9_]+ -> _"
+        },
+        "strategy": "mcp__<namespace-server-tool> with [^A-Za-z0-9_]+ folded to _"
+      },
+      "python": {
+        "prefix": null,
+        "registered": [
+          "echo_text"
+        ],
+        "strategy": "bare MCP tool name (server name not part of the registry key)"
+      },
+      "verdict": "deliberate-divergence",
+      "why": "Python registers MCP tools by their server-side name; Go prefixes them so a remote tool can never shadow a built-in (documented Go contract: docs/architecture/contracts.md)."
+    },
+    "reload": {
+      "go": {
+        "apply_point": "POST /api/mcp/reload reconnects the pool and bumps a generation; new catalogues attach it, live ones re-attach on their next tool call",
+        "reload_route_present": true,
+        "renamed_new_tools_present": true,
+        "renamed_stale_tools_present": false
+      },
+      "python": {
+        "apply_point": "next queen session start (routes_mcp.py module docstring; queen_orchestrator comment)",
+        "fresh_session_tools": [
+          "echo_text",
+          "read_file"
+        ],
+        "has_reload_method": false,
+        "reload_route_present": false
+      },
+      "verdict": "go-extension"
+    },
+    "routes": {
+      "go": [
+        "DELETE /api/mcp/servers/{name}",
+        "GET /api/mcp/servers",
+        "POST /api/mcp/reload",
+        "POST /api/mcp/servers",
+        "POST /api/mcp/servers/{name}/disable",
+        "POST /api/mcp/servers/{name}/enable",
+        "POST /api/mcp/servers/{name}/health",
+        "POST /api/mcp/servers/{name}/mode"
+      ],
+      "go_only": [
+        "POST /api/mcp/reload"
+      ],
+      "python": [
+        "DELETE /api/mcp/servers/{name}",
+        "GET /api/mcp/servers",
+        "POST /api/mcp/servers",
+        "POST /api/mcp/servers/{name}/disable",
+        "POST /api/mcp/servers/{name}/enable",
+        "POST /api/mcp/servers/{name}/health",
+        "POST /api/mcp/servers/{name}/mode"
+      ],
+      "python_only": [],
+      "verdict": "go-extension"
+    },
+    "schema_passthrough": {
+      "go": {
+        "checked": 2,
+        "matched": 2
+      },
+      "properties_preserved": {
+        "go": true,
+        "python": true
+      },
+      "python": {
+        "checked": 1,
+        "matched": 1
+      },
+      "required_preserved": {
+        "go": true,
+        "python": true
+      },
+      "verdict": "identical"
+    },
+    "timeout": {
+      "go": {
+        "configuration_file_seconds": 12,
+        "default_seconds": 240,
+        "env_seconds": 37,
+        "file_reader": true,
+        "precedence": "env > configuration.json mcp.timeout_seconds > 240s"
+      },
+      "python": {
+        "configuration_json_seconds": 12,
+        "default_seconds": 240,
+        "effective_seconds_with_file_present": 240,
+        "env_seconds": 37,
+        "file_reader": false
+      },
+      "verdict": "go-extension",
+      "why": "Python reads HIVE_MCP_CALL_RESULT_TIMEOUT once at import and has no configuration.json reader; Go reads the env per call and supports mcp.timeout_seconds as the file fallback (the documented env > file > default rule)."
+    },
+    "transports": {
+      "go": [
+        "http",
+        "sse",
+        "stdio",
+        "unix"
+      ],
+      "go_only": [],
+      "python": [
+        "harness",
+        "http",
+        "sse",
+        "stdio",
+        "unix"
+      ],
+      "python_only": [
+        "harness"
+      ],
+      "shared": [
+        "http",
+        "sse",
+        "stdio",
+        "unix"
+      ],
+      "verdict": "same-effective",
+      "why": "`harness` is Python's in-process transport literal; Go dispatches the same groups by server name (HarnessGroupNames) before any client is built, so it is not a transport case there."
+    }
+  },
+  "fixture": {
+    "config_sha256": "73bbb9661bcbf8ce615e71ec97f759ce2680dfddd01d41ae671d245665927338",
+    "echo_server_sha256": "731c29ac56854fa22f779f1a330612f45ca7ab73339fd121e31dcfcdb61b3800",
+    "entry": {
+      "args": [
+        "/Users/mac/hive/.wt/mcp-crosscheck/go_hive/docs/e2e-assets/mcp-crosscheck/echo_server.py"
+      ],
+      "command": "python3",
+      "name": "mcp-crosscheck-echo",
+      "transport": "stdio"
+    },
+    "entry_sha256": "53dc89d50484efe8eeeadcaf8d43f5ba65ef29e44e12abd852af4378fd45d5b7",
+    "go_config_surface": "configuration.json mcp.servers [entry]",
+    "python_config_surface": "mcp_servers.json {\"servers\": [entry]}",
+    "server_name": "mcp-crosscheck-echo",
+    "tools_advertised": [
+      {
+        "input_schema_sha256": "0786d219a0f6252d2794cddc64b2d7771e21adb982284b35c8af636ea2948d83",
+        "name": "echo_text"
+      },
+      {
+        "input_schema_sha256": "c35bd42ab9e7316c7e801ee5cd5fb632da43eecfda7013029727717ed9798884",
+        "name": "read_file"
+      }
+    ]
+  },
+  "generated_at": "2026-11-21T10:51:09+08:00",
+  "schema": "mcp-crosscheck/v1",
+  "sides": {
+    "go": {
+      "calls": {
+        "echo_text": {
+          "content": "HELLO MCP\nHELLO MCP",
+          "is_error": false
+        },
+        "read_file": {
+          "content": "fixture-read_file:/tmp/fixture.txt",
+          "is_error": false
+        }
+      },
+      "registered_mcp_names": [
+        "mcp__mcp_crosscheck_echo__echo_text",
+        "mcp__mcp_crosscheck_echo__read_file"
+      ],
+      "statuses": [
+        {
+          "connected": true,
+          "error": "",
+          "name": "mcp-crosscheck-echo",
+          "namespace": "mcp",
+          "tool_count": 2,
+          "tool_names": [
+            "echo_text",
+            "read_file"
+          ],
+          "transport": "stdio"
+        }
+      ],
+      "tools": [
+        {
+          "description": "Read file contents with line numbers. Use this instead of `cat`. Binary files are detected and rejected. Large files are auto-truncated at 2000 lines or 50KB \u2014 use offset/limit to paginate. Reading a directory returns its entries (use search_files for proper find/ls).",
+          "name": "read_file",
+          "parameters": {
+            "properties": {
+              "hashline": {
+                "default": false,
+                "description": "If True, return lines in N:hhhh|content format with content-hash anchors. Line truncation is disabled in this mode to preserve hash integrity. Default False.",
+                "type": "boolean"
+              },
+              "limit": {
+                "default": 0,
+                "description": "Max lines to return. 0 means up to 2000. Default 0.",
+                "type": "integer"
+              },
+              "offset": {
+                "default": 1,
+                "description": "Starting line number, 1-indexed. Default 1.",
+                "type": "integer"
+              },
+              "path": {
+                "description": "File path to read. Relative paths anchor to the agent's home; absolute paths used verbatim. Credential paths (~/.ssh, ~/.aws, etc.) are denied.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
+          "parameters_sha256": "a0461db82d7c0cc6eb7018f34aacd086f45bbaeabf7d32034ac7c600a8daa4ec"
+        },
+        {
+          "description": "Echo the supplied text back, optionally repeated and upper-cased.",
+          "name": "mcp__mcp_crosscheck_echo__echo_text",
+          "parameters": {
+            "properties": {
+              "count": {
+                "default": 1,
+                "description": "How many times to repeat the text.",
+                "maximum": 5,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "mode": {
+                "default": "plain",
+                "description": "Output casing.",
+                "enum": [
+                  "plain",
+                  "upper"
+                ],
+                "type": "string"
+              },
+              "text": {
+                "description": "Text to echo.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "type": "object"
+          },
+          "parameters_sha256": "0786d219a0f6252d2794cddc64b2d7771e21adb982284b35c8af636ea2948d83"
+        },
+        {
+          "description": "Fixture tool that collides with the built-in read_file.",
+          "name": "mcp__mcp_crosscheck_echo__read_file",
+          "parameters": {
+            "properties": {
+              "limit": {
+                "description": "Maximum characters to return.",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "path": {
+                "description": "Path to read (fixture returns a stub).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
+          "parameters_sha256": "c35bd42ab9e7316c7e801ee5cd5fb632da43eecfda7013029727717ed9798884"
+        }
+      ],
+      "version": "go1.26.5"
+    },
+    "python": {
+      "calls": {
+        "echo_text": {
+          "content": "HELLO MCP\nHELLO MCP",
+          "is_error": false
+        }
+      },
+      "registered_names": [
+        "echo_text",
+        "edit_file",
+        "read_file",
+        "search_files",
+        "write_file"
+      ],
+      "server_tool_names": [
+        "echo_text"
+      ],
+      "tools": [
+        {
+          "description": "Echo the supplied text back, optionally repeated and upper-cased.",
+          "name": "echo_text",
+          "parameters": {
+            "properties": {
+              "count": {
+                "default": 1,
+                "description": "How many times to repeat the text.",
+                "maximum": 5,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "mode": {
+                "default": "plain",
+                "description": "Output casing.",
+                "enum": [
+                  "plain",
+                  "upper"
+                ],
+                "type": "string"
+              },
+              "text": {
+                "description": "Text to echo.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "type": "object"
+          },
+          "parameters_sha256": "0786d219a0f6252d2794cddc64b2d7771e21adb982284b35c8af636ea2948d83"
+        },
+        {
+          "description": "Read file contents with line numbers. Use this instead of `cat`. Binary files are detected and rejected. Large files are auto-truncated at 2000 lines or 50KB \u2014 use offset/limit to paginate. Reading a directory returns its entries (use search_files for proper find/ls).",
+          "name": "read_file",
+          "parameters": {
+            "properties": {
+              "hashline": {
+                "default": false,
+                "description": "If True, return lines in N:hhhh|content format with content-hash anchors. Line truncation is disabled in this mode to preserve hash integrity. Default False.",
+                "type": "boolean"
+              },
+              "limit": {
+                "default": 0,
+                "description": "Max lines to return. 0 means up to 2000. Default 0.",
+                "type": "integer"
+              },
+              "offset": {
+                "default": 1,
+                "description": "Starting line number, 1-indexed. Default 1.",
+                "type": "integer"
+              },
+              "path": {
+                "description": "File path to read. Relative paths anchor to the agent's home; absolute paths used verbatim. Credential paths (~/.ssh, ~/.aws, etc.) are denied.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
+          "parameters_sha256": "a0461db82d7c0cc6eb7018f34aacd086f45bbaeabf7d32034ac7c600a8daa4ec"
+        }
+      ],
+      "version": "3.11.16"
+    }
+  },
+  "tools": [
+    {
+      "description_equal": true,
+      "expected_schema_sha256": "0786d219a0f6252d2794cddc64b2d7771e21adb982284b35c8af636ea2948d83",
+      "go": {
+        "record": {
+          "description": "Echo the supplied text back, optionally repeated and upper-cased.",
+          "name": "mcp__mcp_crosscheck_echo__echo_text",
+          "parameters": {
+            "properties": {
+              "count": {
+                "default": 1,
+                "description": "How many times to repeat the text.",
+                "maximum": 5,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "mode": {
+                "default": "plain",
+                "description": "Output casing.",
+                "enum": [
+                  "plain",
+                  "upper"
+                ],
+                "type": "string"
+              },
+              "text": {
+                "description": "Text to echo.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "type": "object"
+          },
+          "parameters_sha256": "0786d219a0f6252d2794cddc64b2d7771e21adb982284b35c8af636ea2948d83"
+        },
+        "registered_name": "mcp__mcp_crosscheck_echo__echo_text"
+      },
+      "parameters_equal": true,
+      "python": {
+        "record": {
+          "description": "Echo the supplied text back, optionally repeated and upper-cased.",
+          "name": "echo_text",
+          "parameters": {
+            "properties": {
+              "count": {
+                "default": 1,
+                "description": "How many times to repeat the text.",
+                "maximum": 5,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "mode": {
+                "default": "plain",
+                "description": "Output casing.",
+                "enum": [
+                  "plain",
+                  "upper"
+                ],
+                "type": "string"
+              },
+              "text": {
+                "description": "Text to echo.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "type": "object"
+          },
+          "parameters_sha256": "0786d219a0f6252d2794cddc64b2d7771e21adb982284b35c8af636ea2948d83"
+        },
+        "registered_name": "echo_text",
+        "shadowed_by": null
+      },
+      "remote_name": "echo_text",
+      "schema_matches_expected": {
+        "go": true,
+        "python": true
+      }
+    },
+    {
+      "expected_schema_sha256": "c35bd42ab9e7316c7e801ee5cd5fb632da43eecfda7013029727717ed9798884",
+      "go": {
+        "record": {
+          "description": "Fixture tool that collides with the built-in read_file.",
+          "name": "mcp__mcp_crosscheck_echo__read_file",
+          "parameters": {
+            "properties": {
+              "limit": {
+                "description": "Maximum characters to return.",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "path": {
+                "description": "Path to read (fixture returns a stub).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
+          "parameters_sha256": "c35bd42ab9e7316c7e801ee5cd5fb632da43eecfda7013029727717ed9798884"
+        },
+        "registered_name": "mcp__mcp_crosscheck_echo__read_file"
+      },
+      "python": {
+        "record": null,
+        "registered_name": null,
+        "shadowed_by": "files-tools"
+      },
+      "remote_name": "read_file",
+      "schema_matches_expected": {
+        "go": true,
+        "python": false
+      }
+    }
+  ],
+  "verdict": {
+    "documented_exceptions": [
+      "tool naming: Python bare vs Go mcp__<namespace>__<server>__<tool> with name folding",
+      "same-name collision: Python first-wins (built-in beats the server tool) vs Go namespace (both survive)",
+      "reload: Python applies on the next session, no reload route; Go adds POST /api/mcp/reload and a generation-based re-attach",
+      "timeout: Python env-only (read at import); Go env > configuration.json mcp.timeout_seconds > 240s",
+      "transports: Python's `harness` literal is Go's HarnessGroupNames dispatch"
+    ],
+    "status": "partial",
+    "unexpected_differences": []
+  },
+  "worktree": "/Users/mac/hive/.wt/mcp-crosscheck"
+}

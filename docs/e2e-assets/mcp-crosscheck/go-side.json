@@ -1,0 +1,166 @@
+{
+  "bare_registered_names": {
+    "echo_text": false,
+    "read_file": true
+  },
+  "calls": {
+    "echo_text": {
+      "content": "HELLO MCP\nHELLO MCP",
+      "is_error": false
+    },
+    "read_file": {
+      "content": "fixture-read_file:/tmp/fixture.txt",
+      "is_error": false
+    }
+  },
+  "config_file": "mcp_servers.json",
+  "config_sha256": "73bbb9661bcbf8ce615e71ec97f759ce2680dfddd01d41ae671d245665927338",
+  "go_version": "go1.26.5",
+  "lifecycle": {
+    "config_disabled_status_count": 0,
+    "config_reenabled_status_count": 1,
+    "registry_disabled_status_count": 0,
+    "registry_reenabled_status_count": 1,
+    "renamed_new_tools_present": true,
+    "renamed_stale_tools_present": false
+  },
+  "namespace": "mcp",
+  "namespace_prefix": "mcp__mcp_crosscheck_echo__",
+  "registered_mcp_names": [
+    "mcp__mcp_crosscheck_echo__echo_text",
+    "mcp__mcp_crosscheck_echo__read_file"
+  ],
+  "registry_enabled_status": [
+    {
+      "connected": true,
+      "error": "",
+      "name": "mcp-crosscheck-echo",
+      "namespace": "mcp",
+      "tool_count": 2,
+      "tool_names": [
+        "echo_text",
+        "read_file"
+      ],
+      "transport": "stdio"
+    }
+  ],
+  "server_entry": {
+    "args": [
+      "/Users/mac/hive/.wt/mcp-crosscheck/go_hive/docs/e2e-assets/mcp-crosscheck/echo_server.py"
+    ],
+    "command": "python3",
+    "name": "mcp-crosscheck-echo",
+    "transport": "stdio"
+  },
+  "server_entry_sha256": "53dc89d50484efe8eeeadcaf8d43f5ba65ef29e44e12abd852af4378fd45d5b7",
+  "server_name": "mcp-crosscheck-echo",
+  "side": "go",
+  "statuses_on_load": [
+    {
+      "connected": true,
+      "error": "",
+      "name": "mcp-crosscheck-echo",
+      "namespace": "mcp",
+      "tool_count": 2,
+      "tool_names": [
+        "echo_text",
+        "read_file"
+      ],
+      "transport": "stdio"
+    }
+  ],
+  "timeout": {
+    "configuration_file_seconds": 12,
+    "default_seconds": 240,
+    "env_seconds": 37
+  },
+  "tools": [
+    {
+      "description": "Read file contents with line numbers. Use this instead of `cat`. Binary files are detected and rejected. Large files are auto-truncated at 2000 lines or 50KB \u2014 use offset/limit to paginate. Reading a directory returns its entries (use search_files for proper find/ls).",
+      "name": "read_file",
+      "parameters": {
+        "properties": {
+          "hashline": {
+            "default": false,
+            "description": "If True, return lines in N:hhhh|content format with content-hash anchors. Line truncation is disabled in this mode to preserve hash integrity. Default False.",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 0,
+            "description": "Max lines to return. 0 means up to 2000. Default 0.",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 1,
+            "description": "Starting line number, 1-indexed. Default 1.",
+            "type": "integer"
+          },
+          "path": {
+            "description": "File path to read. Relative paths anchor to the agent's home; absolute paths used verbatim. Credential paths (~/.ssh, ~/.aws, etc.) are denied.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "parameters_sha256": "a0461db82d7c0cc6eb7018f34aacd086f45bbaeabf7d32034ac7c600a8daa4ec"
+    },
+    {
+      "description": "Echo the supplied text back, optionally repeated and upper-cased.",
+      "name": "mcp__mcp_crosscheck_echo__echo_text",
+      "parameters": {
+        "properties": {
+          "count": {
+            "default": 1,
+            "description": "How many times to repeat the text.",
+            "maximum": 5,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "mode": {
+            "default": "plain",
+            "description": "Output casing.",
+            "enum": [
+              "plain",
+              "upper"
+            ],
+            "type": "string"
+          },
+          "text": {
+            "description": "Text to echo.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "parameters_sha256": "0786d219a0f6252d2794cddc64b2d7771e21adb982284b35c8af636ea2948d83"
+    },
+    {
+      "description": "Fixture tool that collides with the built-in read_file.",
+      "name": "mcp__mcp_crosscheck_echo__read_file",
+      "parameters": {
+        "properties": {
+          "limit": {
+            "description": "Maximum characters to return.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "path": {
+            "description": "Path to read (fixture returns a stub).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "parameters_sha256": "c35bd42ab9e7316c7e801ee5cd5fb632da43eecfda7013029727717ed9798884"
+    }
+  ]
+}

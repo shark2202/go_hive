@@ -322,8 +322,12 @@ func mcpToolNames() map[string]struct{} {
 		if !status.Connected {
 			continue
 		}
+		namespace := status.Namespace
+		if namespace == "" {
+			namespace = tools.MCPToolNamespace
+		}
 		for _, name := range status.ToolNames {
-			out[tools.NamespacedMCPToolName(tools.MCPToolNamespace, status.Name, name)] = struct{}{}
+			out[tools.NamespacedMCPToolName(namespace, status.Name, name)] = struct{}{}
 		}
 	}
 	if len(out) == 0 {

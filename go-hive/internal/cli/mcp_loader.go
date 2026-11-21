@@ -180,7 +180,7 @@ func (m *mcpRuntime) connectAll(specs []tools.MCPServerSpec) ([]tools.MCPServerS
 	results := make(chan outcome, len(specs))
 	for _, spec := range specs {
 		go func(spec tools.MCPServerSpec) {
-			status := tools.MCPServerStatus{Name: spec.Name, Transport: spec.Transport, Enabled: true}
+			status := tools.MCPServerStatus{Name: spec.Name, Transport: spec.Transport, Enabled: true, Namespace: m.namespace}
 			client, err := m.pool.Acquire(mcpServerConfig(spec))
 			if err != nil {
 				status.Error = err.Error()
@@ -221,6 +221,7 @@ func (m *mcpRuntime) connectAll(specs []tools.MCPServerSpec) ([]tools.MCPServerS
 					Name:      spec.Name,
 					Transport: spec.Transport,
 					Enabled:   true,
+					Namespace: m.namespace,
 					Error:     fmt.Sprintf("connect timed out after %s", m.budget),
 				})
 			}
@@ -296,8 +297,11 @@ func withMCPWorkerTools(base, declared []llm.ToolDef) []llm.ToolDef {
 	return base
 }
 
-// mcpLoadedToolNames is the set of tool names the process loader connected and
-// fetched on its last reload.
+// mcpLoadedToolNames is the set of catalogue tool names the process loader
+// connected and fetched on its last reload. Status.ToolNames holds the names
+// the server advertised (tools/list); the catalogue registers them under the
+// loader's namespace, so they are namespaced here before any comparison with
+// session/worker tool defs.
 func mcpLoadedToolNames() map[string]struct{} {
 	attacher := tools.ProcessMCP()
 	if attacher == nil {
@@ -308,8 +312,12 @@ func mcpLoadedToolNames() map[string]struct{} {
 		if !status.Connected {
 			continue
 		}
+		namespace := status.Namespace
+		if namespace == "" {
+			namespace = tools.MCPToolNamespace
+		}
 		for _, name := range status.ToolNames {
-			names[name] = struct{}{}
+			names[tools.NamespacedMCPToolName(namespace, status.Name, name)] = struct{}{}
 		}
 	}
 	return names

@@ -1,0 +1,17 @@
+MCP cross-check (same stdio fixture server through both runtimes)
+python registered: ['echo_text', 'edit_file', 'read_file', 'search_files', 'write_file']
+go registered:     ['mcp__mcp_crosscheck_echo__echo_text', 'mcp__mcp_crosscheck_echo__read_file']
+
+remote tool  python name                  go name                                      desc  schema
+echo_text    echo_text                    mcp__mcp_crosscheck_echo__echo_text          same  py=ok/go=ok
+read_file    <shadowed>                   mcp__mcp_crosscheck_echo__read_file          n/a   py=no/go=ok
+
+namespace:   python=bare, go=mcp__mcp_crosscheck_echo__ (server folding mcp-crosscheck-echo -> mcp_crosscheck_echo)
+collision:   python drops the fixture read_file (origin=files-tools); go keeps built-in + namespaced fixture tool
+enable:      python resolve enabled=['mcp-crosscheck-echo'] disabled=[]; go config=0/1 registry=0/1 (disabled/enabled count)
+reload:      python route=False next-session tools=['echo_text', 'read_file']; go route=True stale=False new=True
+timeout:     python default=240s env=37s file-ignored (file=12s); go file=12s env=37s
+transports:  python=['harness', 'http', 'sse', 'stdio', 'unix'] go=['http', 'sse', 'stdio', 'unix']
+routes:      python=7 go=8 go-only=['POST /api/mcp/reload']
+
+unexpected differences: none

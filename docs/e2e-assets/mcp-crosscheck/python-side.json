@@ -1,0 +1,150 @@
+{
+  "calls": {
+    "echo_text": {
+      "content": "HELLO MCP\nHELLO MCP",
+      "is_error": false
+    }
+  },
+  "collision": {
+    "fixture_read_file_has_executor": false,
+    "fixture_server_registered_tools": [
+      "echo_text"
+    ],
+    "read_file_in_tools": true,
+    "read_file_origin_server": "files-tools"
+  },
+  "config_file": "mcp_servers.json",
+  "config_sha256": "73bbb9661bcbf8ce615e71ec97f759ce2680dfddd01d41ae671d245665927338",
+  "configuration_json_mcp_block": {
+    "timeout_seconds": 12
+  },
+  "framework_file": "/Users/mac/hive/.wt/mcp-crosscheck/core/framework/__init__.py",
+  "harness_group_results": [
+    {
+      "server": "files-tools",
+      "skipped_reason": null,
+      "status": "loaded",
+      "tools_loaded": 4
+    }
+  ],
+  "hive_home": "python-home",
+  "lifecycle": {
+    "fresh_session_fixture_tools": [
+      "echo_text",
+      "read_file"
+    ],
+    "registry_disabled_resolves": [],
+    "registry_enabled_resolves": [
+      "mcp-crosscheck-echo"
+    ],
+    "registry_has_reload_method": false,
+    "registry_reenabled_resolves": [
+      "mcp-crosscheck-echo"
+    ]
+  },
+  "name_mapping": {
+    "echo_text": {
+      "owned_by": "mcp-crosscheck-echo",
+      "registered_name": "echo_text"
+    },
+    "read_file": {
+      "registered_name": null,
+      "shadowed_by": "files-tools"
+    }
+  },
+  "namespace_prefix": null,
+  "python_version": "3.11.16",
+  "registered_names": [
+    "echo_text",
+    "edit_file",
+    "read_file",
+    "search_files",
+    "write_file"
+  ],
+  "server_entry": {
+    "args": [
+      "/Users/mac/hive/.wt/mcp-crosscheck/go_hive/docs/e2e-assets/mcp-crosscheck/echo_server.py"
+    ],
+    "command": "python3",
+    "name": "mcp-crosscheck-echo",
+    "transport": "stdio"
+  },
+  "server_entry_sha256": "53dc89d50484efe8eeeadcaf8d43f5ba65ef29e44e12abd852af4378fd45d5b7",
+  "server_name": "mcp-crosscheck-echo",
+  "server_tool_names": [
+    "echo_text"
+  ],
+  "side": "python",
+  "timeout": {
+    "call_result_timeout_seconds": 240,
+    "env_HIVE_MCP_CALL_RESULT_TIMEOUT": null,
+    "source": "framework.loader.mcp_client module constant (read once at import)"
+  },
+  "tools": [
+    {
+      "description": "Echo the supplied text back, optionally repeated and upper-cased.",
+      "name": "echo_text",
+      "parameters": {
+        "properties": {
+          "count": {
+            "default": 1,
+            "description": "How many times to repeat the text.",
+            "maximum": 5,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "mode": {
+            "default": "plain",
+            "description": "Output casing.",
+            "enum": [
+              "plain",
+              "upper"
+            ],
+            "type": "string"
+          },
+          "text": {
+            "description": "Text to echo.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "parameters_sha256": "0786d219a0f6252d2794cddc64b2d7771e21adb982284b35c8af636ea2948d83"
+    },
+    {
+      "description": "Read file contents with line numbers. Use this instead of `cat`. Binary files are detected and rejected. Large files are auto-truncated at 2000 lines or 50KB \u2014 use offset/limit to paginate. Reading a directory returns its entries (use search_files for proper find/ls).",
+      "name": "read_file",
+      "parameters": {
+        "properties": {
+          "hashline": {
+            "default": false,
+            "description": "If True, return lines in N:hhhh|content format with content-hash anchors. Line truncation is disabled in this mode to preserve hash integrity. Default False.",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 0,
+            "description": "Max lines to return. 0 means up to 2000. Default 0.",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 1,
+            "description": "Starting line number, 1-indexed. Default 1.",
+            "type": "integer"
+          },
+          "path": {
+            "description": "File path to read. Relative paths anchor to the agent's home; absolute paths used verbatim. Credential paths (~/.ssh, ~/.aws, etc.) are denied.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "parameters_sha256": "a0461db82d7c0cc6eb7018f34aacd086f45bbaeabf7d32034ac7c600a8daa4ec"
+    }
+  ]
+}
