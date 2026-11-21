@@ -27,7 +27,7 @@ func unsetEnvVar(t *testing.T, name string) {
 
 // Parity: framework/observability/logging.py::configure_logging
 func TestInstallRuntimeLogBufferWritesHiveServerLog(t *testing.T) {
-	home, err := hivehome.ResolveAt(t.TempDir())
+	home, err := hivehome.ResolveAt(testTempDir(t))
 	if err != nil {
 		t.Fatalf("home: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestInstallRuntimeLogBufferWritesHiveServerLog(t *testing.T) {
 
 // Parity: framework/observability/logging.py::configure_logging
 func TestInstallRuntimeLogBufferHonoursNoFileLog(t *testing.T) {
-	home, err := hivehome.ResolveAt(t.TempDir())
+	home, err := hivehome.ResolveAt(testTempDir(t))
 	if err != nil {
 		t.Fatalf("home: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestInstallRuntimeLogBufferHonoursNoFileLog(t *testing.T) {
 
 // Parity: framework/loader/agent_loader.py::AgentLoader
 func TestColonyWorkerCatalogueInjectsTheAgentName(t *testing.T) {
-	home, err := hivehome.ResolveAt(t.TempDir())
+	home, err := hivehome.ResolveAt(testTempDir(t))
 	if err != nil {
 		t.Fatalf("home: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestColonyWorkerCatalogueInjectsTheAgentName(t *testing.T) {
 
 // Parity: core/tests/test_harness_tools.py::test_context_params_hidden_from_schema_and_injected
 func TestColonyWorkerToolSurfaceRunsTerminalWithTheAgentName(t *testing.T) {
-	home, err := hivehome.ResolveAt(t.TempDir())
+	home, err := hivehome.ResolveAt(testTempDir(t))
 	if err != nil {
 		t.Fatalf("home: %v", err)
 	}

@@ -56,7 +56,7 @@ func writeQueenMailTestFile(t *testing.T, path, body string) {
 // configuration.json the caller can tailor.
 func queenMailTestHome(t *testing.T, config string) hivehome.Home {
 	t.Helper()
-	home, err := hivehome.ResolveAt(t.TempDir())
+	home, err := hivehome.ResolveAt(testTempDir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func queenMailCatalogue(t *testing.T, home hivehome.Home, queenName, sessionID s
 	t.Helper()
 	deliverer := &queenMailDeliverer{toRef: "session_thread_" + queenName}
 	mail := queenmail.New(home, queenmail.ConfigFromHive(hiveserver.HiveConfig(home)), deliverer)
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 	catalogue.enableQueenMail(mail, sessionID, queenName)
 	return catalogue, mail
@@ -111,7 +111,7 @@ func callQueenMailTool(t *testing.T, catalogue *sessionToolCatalogue, name strin
 func TestQueenMailToolsAreOffUntilQueenMailIsOn(t *testing.T) {
 	home := queenMailTestHome(t, `{}`)
 	mail := queenmail.New(home, queenmail.ConfigFromHive(hiveserver.HiveConfig(home)), &queenMailDeliverer{})
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 	catalogue.enableQueenMail(mail, "session_ava", queenMailAva)
 
@@ -195,7 +195,7 @@ func TestQueenMailToolsListTheQueensAndSendALetter(t *testing.T) {
 // Parity: framework/server/tests/test_queen_mail.py::test_the_tools_say_so_when_queen_mail_isnt_running
 func TestQueenMailToolsSaySoWhenQueenMailIsntRunning(t *testing.T) {
 	home := queenMailTestHome(t, queenMailConfig(t, `{"enabled": true, "queens": ["queen_ava", "queen_ivy"]}`))
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 	catalogue.enableQueenMail(nil, "session_ava", queenMailAva)
 
@@ -262,7 +262,7 @@ func TestQueenMailToolsRespectTheDailyLimit(t *testing.T) {
 // Parity: framework/server/tests/test_queen_mail.py::test_a_chain_of_letters_stops_at_max_depth_until_someone_else_writes
 func TestQueenMailToolsRespectMaxDepth(t *testing.T) {
 	home := queenMailTestHome(t, queenMailConfig(t, `{"enabled": true, "queens": ["queen_ava", "queen_ivy"], "max_depth": 1}`))
-	root := t.TempDir()
+	root := testTempDir(t)
 	deliverer := &queenMailDeliverer{toRef: "session_ava"}
 	mail := queenmail.New(home, queenmail.ConfigFromHive(hiveserver.HiveConfig(home)), deliverer)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)

@@ -18,7 +18,8 @@ import (
 
 func newPhaseTestRunner(t *testing.T) (*Runner, hivehome.Home, *hiveserver.SessionManager, *sync.Mutex, *[]*hiveserver.Session) {
 	t.Helper()
-	home, err := hivehome.ResolveAt(filepath.Join(t.TempDir(), "hive"))
+	// 用带重试清理的临时目录：会话运行时可能在测试体返回后仍落盘一次。
+	home, err := hivehome.ResolveAt(filepath.Join(testTempDir(t), "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
 	}

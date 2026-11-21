@@ -71,7 +71,7 @@ func trackerExecute(t *testing.T, catalogue *sessionToolCatalogue, ctx context.C
 
 // Parity: core/tests/test_tracker_tools.py::test_register_tracker_tools_full_set
 func TestSessionCatalogueAdvertisesQueenTrackerTools(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	defined := map[string]map[string]any{}
@@ -102,7 +102,7 @@ func TestSessionCatalogueAdvertisesQueenTrackerTools(t *testing.T) {
 
 // Parity: core/tests/test_tracker_tools.py::test_no_colony_context_returns_clear_error, core/tests/test_tracker_tools.py::test_tracker_query_no_colony_context
 func TestSessionCatalogueTrackerRejectsWithoutColony(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	for name, input := range map[string]map[string]any{
@@ -124,7 +124,7 @@ func TestSessionCatalogueTrackerRejectsWithoutColony(t *testing.T) {
 
 // Parity: core/tests/test_tracker_tools.py::test_register_happy_path_upsert, core/tests/test_tracker_tools.py::test_upsert_inserts_then_updates, core/tests/test_tracker_tools.py::test_tracker_query_select_works
 func TestQueenDeclarationClosesWorkerUpsertLoop(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	binding := trackerColonyBinding(t, "colonyA")
 	ctx := colony.WithRunWorkerSpawner(context.Background(), &fakeTrackerSpawner{binding: binding})
@@ -194,7 +194,7 @@ func TestQueenDeclarationClosesWorkerUpsertLoop(t *testing.T) {
 // built before the colony attaches). This guards that per-call resolution
 // targets only the bound colony.
 func TestQueenTrackerToolsUseTheBoundColonyPerCall(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	bindingA := trackerColonyBinding(t, "colonyA")
 	bindingB := trackerColonyBinding(t, "colonyB")

@@ -15,7 +15,7 @@ import (
 // document.
 func slotTestHome(t *testing.T, document map[string]any) hivehome.Home {
 	t.Helper()
-	home, err := hivehome.ResolveAt(filepath.Join(t.TempDir(), "hive"))
+	home, err := hivehome.ResolveAt(filepath.Join(testTempDir(t), "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
 	}

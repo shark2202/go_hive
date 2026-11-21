@@ -104,7 +104,7 @@ func TestToolContractFreeze(t *testing.T) {
 
 	// The live session surface: the builtin/integration catalogue plus the
 	// queen lifecycle table the chat runtime installs for a queen session.
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	live := map[string]liveTool{}
 	for _, def := range catalogue.Defs() {

@@ -285,6 +285,13 @@
     "label": "统一 tool 一致度口径：冻结快照 diff（§3: desc 15/41）vs 实时 recheck（34/41）两套数字并存，需单一权威指标并写入治理页",
     "hours": 1,
     "done": true
+   },
+   {
+    "id": "cli-log-global-count2",
+    "label": "cli 包 -count=2 压力模式下 cred log 与 serve log 全局状态互染（CI -count=1 不受影响）：setupCredLogging 的 log.SetOutput(file) 与 installRuntimeLogBuffer 的 TimestampWriter 全局重定向在二次迭代时串味",
+    "hours": 2,
+    "done": false,
+    "note": "2026-11-22 观察：go test -count=2 ./internal/cli/ 时 TestCredLogFileMatchesPythonLineFormat 偶发读到其它用例的 serve-log 探针行；-count=1 全包 5 轮全绿，CI 用 -count=1，不阻塞；修法方向=日志输出按 test 作用域隔离（或该测试改用独立 sink 断言）。"
    }
   ]
  }

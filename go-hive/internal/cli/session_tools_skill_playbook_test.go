@@ -37,7 +37,7 @@ func (f *fakePlaybookSpawner) TrackerBinding() *tracker.Binding { return f.bindi
 // tools and run_playbook; the execution gate (not the def) enforces the colony
 // binding because the catalogue is built before a colony attaches.
 func TestSessionToolCatalogueAdvertisesSkillAndPlaybookTools(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	defined := map[string]struct{}{}
 	for _, def := range catalogue.Defs() {
@@ -92,7 +92,7 @@ func TestSessionToolCatalogueWriteSkillQueenScope(t *testing.T) {
 
 // Parity: tests/test_playbook_tools.py::test_playbook_tools_are_colony_queen_only
 func TestSessionToolCatalogueRunPlaybookRejectsWithoutColony(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	content, isError, err := catalogue.Execute(context.Background(), colony.RunPlaybookToolName, map[string]any{
 		"playbook_name": "anything",

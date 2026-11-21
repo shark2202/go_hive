@@ -39,7 +39,7 @@ func writeColonySpecFixture(t *testing.T, home hivehome.Home, colonyID, config s
 // through SessionManager); pins that the live host carries the on-disk worker
 // spec and goal instead of a synthetic colony placeholder.
 func TestBuildColonyHostUsesWorkerSpecOnDisk(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
@@ -73,7 +73,7 @@ func TestBuildColonyHostUsesWorkerSpecOnDisk(t *testing.T) {
 // Parity-exempt: a colony with no worker config has nothing to run; pins the
 // fall-back-to-disk path instead of a synthetic worker.
 func TestBuildColonyHostSkipsColonyWithoutWorkerSpec(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)

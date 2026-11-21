@@ -66,7 +66,7 @@ func (m *preloadedChatLLM) AComplete(_ context.Context, req llm.CompletionReques
 // chat Queen — Chat + queen executor set, and a queued user message can
 // dispatch a worker through the bound colony.
 func TestPreloadedColonySessionChatsAndDispatches(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)

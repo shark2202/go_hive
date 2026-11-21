@@ -25,7 +25,7 @@ import (
 // them decrypt the same store.
 func sessionCredentialHome(t *testing.T) hivehome.Home {
 	t.Helper()
-	root := t.TempDir()
+	root := testTempDir(t)
 	t.Setenv("HIVE_HOME", root)
 	key, err := credentials.GenerateFernetKey()
 	if err != nil {
@@ -92,7 +92,7 @@ func accountInfoAccounts(t *testing.T, payload map[string]any) []any {
 // session always wires a view, so "no credentials" must be an empty list.
 func TestSessionAccountInfoWithoutCredentials(t *testing.T) {
 	home := sessionCredentialHome(t)
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 
 	payload := runAccountInfo(t, catalogue, nil)
@@ -112,7 +112,7 @@ func TestSessionAccountInfoWithoutCredentials(t *testing.T) {
 func TestSessionAccountInfoListsConnectedAccounts(t *testing.T) {
 	home := sessionCredentialHome(t)
 	saveLocalAccounts(t, home, [3]string{"hubspot", "default", "hubspot-default-token"})
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 
 	payload := runAccountInfo(t, catalogue, nil)
@@ -140,7 +140,7 @@ func TestSessionAccountInfoFiltersMultipleAccounts(t *testing.T) {
 		[3]string{"hubspot", "sandbox", "hubspot-sandbox-token"},
 		[3]string{"google", "work", "google-work-token"},
 	)
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 
 	all := runAccountInfo(t, catalogue, nil)

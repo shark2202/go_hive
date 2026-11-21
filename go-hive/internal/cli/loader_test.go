@@ -13,7 +13,7 @@ import (
 
 func writeFrontendTree(t *testing.T, withDist bool) string {
 	t.Helper()
-	root := t.TempDir()
+	root := testTempDir(t)
 	frontendDir := filepath.Join(root, "core", "frontend")
 	if err := os.MkdirAll(filepath.Join(frontendDir, "src"), 0o755); err != nil {
 		t.Fatal(err)
@@ -157,7 +157,7 @@ func writeColonyTree(t *testing.T, root, name string, metadata map[string]any, w
 
 // Parity-exempt: no pytest drives cmd_colony_list; this pins the Go handler to
 func TestColonyListReadsMetadataJSON(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	writeColonyTree(t, root,
 		"alpha",
 		map[string]any{
@@ -199,7 +199,7 @@ func TestColonyListReadsMetadataJSON(t *testing.T) {
 
 // Parity-exempt: no pytest drives cmd_colony_info; this pins the JSON shape to
 func TestColonyInfoKeysWorkersByStem(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	colonyPath := writeColonyTree(t, root,
 		"alpha",
 		map[string]any{"queen_name": "queen_test", "queen_session_id": "s1"},

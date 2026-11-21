@@ -32,7 +32,7 @@ func readPreloadedColonyMetadata(t *testing.T, home hivehome.Home, colonyID stri
 
 // Parity: framework/server/session_manager.py::_create_session_for_existing_colony
 func TestPreloadedColonySessionReusesRecordedSessionID(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
@@ -64,7 +64,7 @@ func TestPreloadedColonySessionReusesRecordedSessionID(t *testing.T) {
 
 // Parity: framework/server/session_manager.py::_create_session_for_existing_colony
 func TestPreloadedColonySessionMintsNewIDWhenRecordedSessionIsGone(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
@@ -125,7 +125,7 @@ func waitForTranscriptContaining(t *testing.T, runtime *hiveserver.ChatRuntime, 
 // session through SessionManager); pins that a restarted preload adopts the
 // persisted session id via queen_resume_from instead of minting a new one.
 func TestPreloadedColonySessionRestartReusesID(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)

@@ -27,7 +27,7 @@ import (
 // ambiguous, so they fail here.
 func parityCatalogueDefs(t *testing.T) map[string]llm.ToolDef {
 	t.Helper()
-	root := t.TempDir()
+	root := testTempDir(t)
 	t.Setenv("HIVE_MEMORY_TIMELINE", "")
 	home := hivehome.Home{Root: root}
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)

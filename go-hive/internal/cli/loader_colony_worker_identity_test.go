@@ -21,7 +21,7 @@ import (
 
 // Parity: tests/test_worker_definition.py::TestSystemPrompt::test_is_identity_free
 func TestForkedWorkerJSONCarriesWorkerIdentityNotQueenPersona(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
@@ -70,7 +70,7 @@ func TestForkedWorkerJSONCarriesWorkerIdentityNotQueenPersona(t *testing.T) {
 
 // Parity: tests/test_run_worker_tool.py::test_run_worker_workers_inherit_only_queens_tools
 func TestColonyWorkerToolSurfaceCarriesDeclaredIntegrationTools(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
@@ -133,7 +133,7 @@ func TestColonyWorkerToolSurfaceCarriesDeclaredIntegrationTools(t *testing.T) {
 
 // Parity: tests/test_worker_definition.py::TestSystemPrompt::test_is_identity_free
 func TestForkedColonyWorkerRunsWorkerIdentity(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
@@ -200,7 +200,7 @@ func (p *promptCaptureLLM) firstSystem() string {
 
 // Parity: tests/test_run_worker_tool.py::test_run_worker_workers_inherit_only_queens_tools
 func TestForkedWorkerDeclaredCategoriesResolveToPoolTools(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
@@ -282,7 +282,7 @@ func toolDefNames(defs []llm.ToolDef) []string {
 // Parity-exempt: worker tool-surface block propagation is Go-only; upstream
 // returns MCP content blocks and LiteLLM carries them.
 func TestColonyWorkerToolSurfaceCarriesAttachFileBlocks(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)

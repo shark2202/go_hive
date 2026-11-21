@@ -50,7 +50,7 @@ type lifecycleFixture struct {
 // the production paths.
 func newLifecycleFixture(t *testing.T) *lifecycleFixture {
 	t.Helper()
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
@@ -284,7 +284,7 @@ func TestWorkerRoutesStayUnavailableWithoutAColony(t *testing.T) {
 // Parity-exempt: Go-only guard for the port's create_session branching — a
 // session bound to a colony must not come back without its runtime.
 func TestCreateSessionWithColonyFailsWhenRuntimeCannotBeBuilt(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
@@ -323,7 +323,7 @@ func TestCreateSessionWithColonyFailsWhenRuntimeCannotBeBuilt(t *testing.T) {
 
 // Parity: tests/test_session_unified_colony_runtime.py::test_unified_colony_workers_land_under_queen_dir
 func TestCreateSessionWithoutColonyKeepsFallingBackToDisk(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)

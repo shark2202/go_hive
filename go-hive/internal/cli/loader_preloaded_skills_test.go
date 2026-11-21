@@ -31,7 +31,7 @@ func (m *preloadedCatalogLLM) AComplete(_ context.Context, _ llm.CompletionReque
 
 // Parity: core/tests/test_skill_integration.py::test_skills_catalog_in_prompt
 func TestPreloadedColonySessionInjectsSkillsCatalog(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)

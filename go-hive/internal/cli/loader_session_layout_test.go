@@ -26,7 +26,7 @@ const (
 // createChatSession builds a real ChatRuntime without network credentials.
 func writeSessionLayoutHome(t *testing.T) hivehome.Home {
 	t.Helper()
-	home, err := hivehome.ResolveAt(filepath.Join(t.TempDir(), "hive"))
+	home, err := hivehome.ResolveAt(filepath.Join(testTempDir(t), "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
 	}

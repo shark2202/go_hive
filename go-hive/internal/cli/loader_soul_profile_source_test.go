@@ -38,7 +38,7 @@ func (m *soulProfileTestLLM) AComplete(_ context.Context, request llm.Completion
 // internal/soul stays below internal/queen. This pins the injected
 // implementation end to end.
 func TestSoulProfileSourceFeedsTheReflectionIdentity(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(root)
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)

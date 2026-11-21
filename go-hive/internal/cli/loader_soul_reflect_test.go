@@ -22,7 +22,7 @@ const soulReflectTestQueen = "queen_x"
 // sessions until a test adds them.
 func soulReflectTestHome(t *testing.T, gatewayURL, mode string) hivehome.Home {
 	t.Helper()
-	root := t.TempDir()
+	root := testTempDir(t)
 	configuration := map[string]any{
 		"llm": map[string]any{
 			"provider": "custom",

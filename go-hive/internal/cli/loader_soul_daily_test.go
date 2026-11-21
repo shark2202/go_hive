@@ -12,7 +12,7 @@ import (
 
 func soulDailyTestHome(t *testing.T, configuration map[string]any) hivehome.Home {
 	t.Helper()
-	root := t.TempDir()
+	root := testTempDir(t)
 	if configuration != nil {
 		data, err := json.Marshal(configuration)
 		if err != nil {

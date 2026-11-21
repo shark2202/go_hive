@@ -23,7 +23,7 @@ import (
 
 func manifestCatalogue(t *testing.T) (*sessionToolCatalogue, hivehome.Home) {
 	t.Helper()
-	root := t.TempDir()
+	root := testTempDir(t)
 	home := hivehome.Home{Root: root}
 	return newSessionToolCatalogue(root, builtin.New(root), home), home
 }

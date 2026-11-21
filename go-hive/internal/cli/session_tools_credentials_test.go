@@ -14,7 +14,7 @@ import (
 // Parity-exempt: no upstream agent tool exists; the catalogue must advertise
 // the read-only credential status tool with no write parameters.
 func TestCredentialStatusToolIsAdvertisedReadOnly(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	var found bool
 	for _, def := range catalogue.Defs() {
@@ -98,7 +98,7 @@ func TestCredentialStatusOmitsSecretValues(t *testing.T) {
 // arguments and returns a JSON payload rather than a transport error.
 func TestCredentialStatusCatalogueExecutionReturnsJSON(t *testing.T) {
 	t.Setenv("HIVE_HOME", t.TempDir())
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	output, isError, err := catalogue.Execute(context.Background(), CredentialStatusToolName, map[string]any{})

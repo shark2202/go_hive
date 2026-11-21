@@ -118,7 +118,7 @@ func loadContractDefaultTools(t *testing.T) map[string]contractDefaultEntry {
 // (enableQueenSessionTools is called after construction on the real path).
 func queenFlatCatalogue(t *testing.T) *sessionToolCatalogue {
 	t.Helper()
-	root := t.TempDir()
+	root := testTempDir(t)
 	home := hivehome.Home{Root: root}
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 	enableQueenLifecycleTools(catalogue, &hiveserver.Session{}, home)

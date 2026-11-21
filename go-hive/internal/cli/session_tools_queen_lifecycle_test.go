@@ -28,7 +28,7 @@ func lifecycleCatalogueNames(t *testing.T, catalogue *sessionToolCatalogue) map[
 
 // Parity: tests/test_trigger_fires_into_queen.py::test_colony_tools_include_monitoring_and_review
 func TestSessionCatalogueRegistersQueenLifecycleTools(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home := hivehome.Home{Root: t.TempDir()}
 	catalogue := newSessionToolCatalogue(root, builtin.New(""), home)
 	names := lifecycleCatalogueNames(t, catalogue)
@@ -69,7 +69,7 @@ func TestSessionCatalogueRegistersQueenLifecycleTools(t *testing.T) {
 
 // Parity: tests/test_trigger_fires_into_queen.py::test_colony_tools_include_monitoring_and_review
 func TestWorkerCatalogueExcludesQueenLifecycleTools(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home := hivehome.Home{Root: t.TempDir()}
 	_, _, _ = colonyWorkerToolSurface(root, builtin.New(root), home)
 	workerCatalogue := newSessionToolCatalogue(root, builtin.New(root), home)
@@ -89,7 +89,7 @@ func TestWorkerCatalogueExcludesQueenLifecycleTools(t *testing.T) {
 //
 // Parity: core/framework/tools/worker_monitoring_tools.py::register_worker_monitoring_tools
 func TestQueenSessionCatalogueAdvertisesWorkerHealthSummary(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home := hivehome.Home{Root: t.TempDir()}
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 	if lifecycleCatalogueNames(t, catalogue)[hiveserver.QueenWorkerHealthSummaryToolName] {

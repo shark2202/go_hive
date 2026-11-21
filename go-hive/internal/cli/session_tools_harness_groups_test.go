@@ -53,7 +53,7 @@ func equalNames(got, want []string) bool {
 // Parity: core/tests/test_harness_tools.py::test_every_group_builds
 func TestSessionCatalogueRegistersEveryHarnessGroup(t *testing.T) {
 	t.Setenv("HIVE_MEMORY_TIMELINE", "")
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	catalog := catalogue.registry.GetFullMCPCatalog()
@@ -117,7 +117,7 @@ func TestSessionCatalogueRegistersEveryHarnessGroup(t *testing.T) {
 
 // Parity: core/tests/test_harness_tools.py::test_every_group_builds
 func TestSessionCatalogueMemoryTimelineGateControlsCatalogAndDefs(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	defined := func(catalogue *sessionToolCatalogue) map[string]struct{} {
 		names := map[string]struct{}{}
 		for _, def := range catalogue.Defs() {
@@ -151,7 +151,7 @@ func TestSessionCatalogueMemoryTimelineGateControlsCatalogAndDefs(t *testing.T) 
 // is linked the catalog entry exists but execution must say so explicitly.
 func TestSessionCatalogueChartRenderFallsBackToExplicitNotImplemented(t *testing.T) {
 	t.Setenv("HIVE_MEMORY_TIMELINE", "")
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	implemented := false
@@ -191,7 +191,7 @@ func TestSessionCatalogueChartRenderFallsBackToExplicitNotImplemented(t *testing
 // spreadsheet_advanced category resolve.
 func TestSessionCatalogueRegistersSpreadsheetToolNames(t *testing.T) {
 	t.Setenv("HIVE_MEMORY_TIMELINE", "")
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	defined := map[string]struct{}{}
@@ -224,7 +224,7 @@ func TestSessionCatalogueRegistersSpreadsheetToolNames(t *testing.T) {
 // aliases ride the declared-tool pool, so colony workers get them too; the base
 // surface stays builtin-only.
 func TestColonyWorkerToolSurfaceCarriesBrowserAndSpreadsheetTools(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
@@ -249,7 +249,7 @@ func TestColonyWorkerToolSurfaceCarriesBrowserAndSpreadsheetTools(t *testing.T) 
 // network calls; both queens and workers build the same catalogue.
 func TestSessionCatalogueBrowserSetupDispatch(t *testing.T) {
 	t.Setenv("HIVE_MEMORY_TIMELINE", "")
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	content, isError, err := catalogue.Execute(context.Background(), integrations.BrowserSetupToolName, map[string]any{})

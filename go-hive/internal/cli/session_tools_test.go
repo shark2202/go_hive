@@ -22,7 +22,7 @@ import (
 // ported integration tools next to the builtins, and both dispatch paths must
 // stay intact (builtins through the sandbox, integrations through the registry).
 func TestSessionToolCatalogueInstallsIntegrations(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	if catalogue.installed == 0 {
 		t.Fatal("no integration tools installed")
@@ -92,7 +92,7 @@ func TestSessionToolCatalogueInstallsIntegrations(t *testing.T) {
 // the same catalogue as the catalog-backed integrations, and the senders tool
 // follows its feature gate instead of being always-on.
 func TestSessionToolCatalogueInstallsWaveFourModules(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home := hivehome.Home{Root: root}
 	names := func() map[string]struct{} {
 		defined := map[string]struct{}{}
@@ -122,7 +122,7 @@ func TestSessionToolCatalogueInstallsWaveFourModules(t *testing.T) {
 // process by the builtin toolbox; its catalog must carry all four tools, and
 // every code_editing category name must resolve to a registered tool.
 func TestSessionCatalogueExposesFileToolsGroup(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	group := catalogue.registry.GetFullMCPCatalog()["files-tools"]
@@ -195,7 +195,7 @@ func readSessionFile(t *testing.T, path string) string {
 // its whole tool set into one session catalogue, and the installed counter must
 // match the registry so a silent overwrite cannot hide a collision.
 func TestSessionToolCatalogueInstallsEveryBatch(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	for _, entry := range sessionIntegrationInstallers {
@@ -221,7 +221,7 @@ func TestSessionToolCatalogueInstallsEveryBatch(t *testing.T) {
 // even the old "off" value of HIVE_NETWORK_SCANNERS must not change the
 // default surface.
 func TestSessionToolCatalogueRegistersSecurityScannersByDefault(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	home := hivehome.Home{Root: root}
 	t.Setenv("HIVE_NETWORK_SCANNERS", "0")
 
@@ -266,7 +266,7 @@ func TestSessionToolCatalogueRegistersSecurityScannersByDefault(t *testing.T) {
 // The default catalogue must be able to run a real scan. The target is a
 // listener bound to 127.0.0.1 — no public host is contacted.
 func TestSessionToolCataloguePortScanLocalhost(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -313,7 +313,7 @@ func TestSessionToolCatalogueHTTPHeadersScanLocalhost(t *testing.T) {
 	}))
 	defer server.Close()
 
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	content, isError, err := catalogue.Execute(context.Background(), "http_headers_scan", map[string]any{
 		"url": server.URL,
@@ -383,7 +383,7 @@ func (f *fakeRunWorkerSpawner) MaxConcurrentWorkers() int { return 4 }
 // next to the builtins and integrations; the chat runtime decides per turn
 // whether a bound colony makes it callable.
 func TestSessionToolCatalogueAdvertisesRunWorker(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	found := false
 	for _, def := range catalogue.Defs() {
@@ -404,7 +404,7 @@ func TestSessionToolCatalogueAdvertisesRunWorker(t *testing.T) {
 
 // Parity: tests/test_run_worker_tool.py::test_run_worker_returns_error_when_no_colony
 func TestSessionToolCatalogueRunWorkerRejectsWithoutColony(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	content, isError, err := catalogue.Execute(context.Background(), colony.RunWorkerToolName, map[string]any{
 		"tasks": []any{map[string]any{"task": "do a thing"}},
@@ -422,7 +422,7 @@ func TestSessionToolCatalogueRunWorkerRejectsWithoutColony(t *testing.T) {
 
 // Parity: tests/test_run_worker_tool.py::test_run_worker_tool_returns_immediately_and_emits_reports
 func TestSessionToolCatalogueRunWorkerDispatchesBoundColony(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 	spawner := &fakeRunWorkerSpawner{}
 	ctx := colony.WithRunWorkerSpawner(context.Background(), spawner)

@@ -16,7 +16,7 @@ import (
 
 // Parity: core/tests/test_tool_registry.py::test_session_cwd_is_context_param_and_stripped_from_schema
 func TestSessionToolDefsHideContextParams(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(""), hivehome.Home{Root: root})
 
 	// Model-visible builtin schemas: the four file tools plus the terminal
@@ -75,7 +75,7 @@ func TestSessionToolDefsHideContextParams(t *testing.T) {
 
 // Parity: tools/tests/test_terminal_tools_exec.py::test_session_cwd_used_when_cwd_omitted
 func TestSessionTerminalExecUsesInjectedSessionCwd(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	realRoot, err := filepath.EvalSymlinks(root)
 	if err != nil {
 		t.Fatal(err)
@@ -112,7 +112,7 @@ func TestSessionTerminalExecUsesInjectedSessionCwd(t *testing.T) {
 
 // Parity: tools/tests/test_terminal_tools_search.py::test_glob_by_name
 func TestSessionTerminalGlobUsesInjectedSessionCwd(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	if err := os.WriteFile(filepath.Join(root, "injected.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}

@@ -18,7 +18,7 @@ import (
 
 // Parity-exempt: assembly guard (see file comment).
 func TestSessionCatalogueExposesChartToolGroup(t *testing.T) {
-	root := t.TempDir()
+	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	defined := map[string]bool{}
