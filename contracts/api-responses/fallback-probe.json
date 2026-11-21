@@ -1,16 +1,16 @@
 {
   "schema": "hive-api-fallback-probe/1",
-  "generated_at": "2026-11-21T14:04:18+08:00",
-  "note": "未知路径 fallback（待定口径，不改）：Python 的 SPA fallback 对未注册的 /api/* GET 返回 200 text/html + index.html；Go 路由返回 404 JSON。",
+  "generated_at": "2026-11-21T15:57:24+08:00",
+  "note": "未知路径 fallback 两侧同形：本环境 reference/target 都是 404 text/plain; charset=utf-8。两侧都只在存在前端 dist 时注册 SPA catch-all，未注册 GET 一律返回 index.html（含未注册的 /api/*）。",
   "probes": [
     {
       "path": "/api/__contract_probe_unknown__",
       "sides": {
         "reference": {
-          "status": 200,
-          "content_type": "text/html",
+          "status": 404,
+          "content_type": "text/plain; charset=utf-8",
           "json": false,
-          "body_prefix": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-w"
+          "body_prefix": "404: Not Found"
         },
         "target": {
           "status": 404,
@@ -24,10 +24,10 @@
       "path": "/api/models",
       "sides": {
         "reference": {
-          "status": 200,
-          "content_type": "text/html",
+          "status": 404,
+          "content_type": "text/plain; charset=utf-8",
           "json": false,
-          "body_prefix": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-w"
+          "body_prefix": "404: Not Found"
         },
         "target": {
           "status": 404,
@@ -41,10 +41,10 @@
       "path": "/api/org-chart",
       "sides": {
         "reference": {
-          "status": 200,
-          "content_type": "text/html",
+          "status": 404,
+          "content_type": "text/plain; charset=utf-8",
           "json": false,
-          "body_prefix": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-w"
+          "body_prefix": "404: Not Found"
         },
         "target": {
           "status": 404,

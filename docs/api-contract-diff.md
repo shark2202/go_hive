@@ -1,11 +1,11 @@
 # API 契约差异（reference=python → target=go_hive）
 
-- 生成时间：2026-11-21T14:04:18+08:00
-- 基准标识：`reference=python@59d89b8667cfcee580c9477d099dc964a66b0cdd`，`target=go_hive@59d89b8667cfcee580c9477d099dc964a66b0cdd`
+- 生成时间：2026-11-21T15:57:24+08:00
+- 基准标识：`reference=python@f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d`，`target=go_hive@f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d`
 - reference（契约基准）：`python` hive 1.0.14，
-  HEAD `59d89b8667cfcee580c9477d099dc964a66b0cdd`，`core` 最后改动 `856854659269aa4c9fcfc8ae89ff956eaff75b66`，`tools` 最后改动 `68b6c230f20e237953dea7a3af7bb583b9fbe0fd`
-- target（待对齐）：`go_hive` hive 1.0.26-go.1，HEAD `59d89b8667cfcee580c9477d099dc964a66b0cdd`
-- 探针输入：queen=`queen_growth`；LLM 槽位指向本地 OpenAI 兼容 stub（`http://127.0.0.1:54246/v1`，确定性开场回合，不访问外网），SSE 窗口 3.0s
+  HEAD `f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d`，`core` 最后改动 `856854659269aa4c9fcfc8ae89ff956eaff75b66`，`tools` 最后改动 `68b6c230f20e237953dea7a3af7bb583b9fbe0fd`
+- target（待对齐）：`go_hive` hive 1.0.26-go.1，HEAD `f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d`
+- 探针输入：queen=`queen_growth`；LLM 槽位指向本地 OpenAI 兼容 stub（`http://127.0.0.1:61763/v1`，确定性开场回合，不访问外网），SSE 窗口 3.0s
 - 产物：`go_hive/contracts/api-responses/`（canonical JSON + shape + diff.json）
 
 > 口径：契约基准是 Python 当前 checkout 的抓取结果，所有字段名/类型/数量以 reference 为准；
@@ -21,15 +21,15 @@
 - reference=217 条，target=220 条；missing_in_target=2（effective=0），extra_in_target=5（api=5），method_mismatch=1。
 - 明细：`go_hive/contracts/api-routes.json`（每条 Go 多余路由带 `annotation` 标注是否为扩展/别名）。
 
-## 未知路径 fallback（待定口径，不改）
+## 未知路径 fallback（同形核对）
 
-未知路径 fallback（待定口径，不改）：Python 的 SPA fallback 对未注册的 /api/* GET 返回 200 text/html + index.html；Go 路由返回 404 JSON。
+未知路径 fallback 两侧同形：本环境 reference/target 都是 404 text/plain; charset=utf-8。两侧都只在存在前端 dist 时注册 SPA catch-all，未注册 GET 一律返回 index.html（含未注册的 /api/*）。
 
 | 路径 | reference 状态 | reference Content-Type | target 状态 | target Content-Type |
 |------|----------------|------------------------|-------------|---------------------|
-| `/api/__contract_probe_unknown__` | 200 | `text/html` | 404 | `text/plain; charset=utf-8` |
-| `/api/models` | 200 | `text/html` | 404 | `text/plain; charset=utf-8` |
-| `/api/org-chart` | 200 | `text/html` | 404 | `text/plain; charset=utf-8` |
+| `/api/__contract_probe_unknown__` | 404 | `text/plain; charset=utf-8` | 404 | `text/plain; charset=utf-8` |
+| `/api/models` | 404 | `text/plain; charset=utf-8` | 404 | `text/plain; charset=utf-8` |
+| `/api/org-chart` | 404 | `text/plain; charset=utf-8` | 404 | `text/plain; charset=utf-8` |
 
 原始证据：`go_hive/contracts/api-responses/fallback-probe.json`；口径讨论见 `docs/api-ws-golden.md`。
 

@@ -153,19 +153,50 @@ func TestCreateChatSessionKeepsQueensSeparate(t *testing.T) {
 	}
 }
 
-// Parity: core/tests/test_session_unified_colony_runtime.py::test_start_unified_colony_runtime_creates_real_colony
-func TestCreateChatSessionWithoutQueenUsesDefaultTree(t *testing.T) {
+// Parity: framework/server/session_manager.py::_ensure_session_queen_identity
+//
+// A create with no queen_name binds the static default queen (the empty
+// initial message routes to queen_growth), exactly as upstream's create_session
+// does before it writes the session tree: the transcript, the meta.json queen
+// stamp and the phase identity all carry that queen instead of the shared
+// default scope.
+func TestCreateChatSessionWithoutQueenBindsDefaultQueen(t *testing.T) {
 	home := writeSessionLayoutHome(t)
 	record := createLayoutSession(t, home, layoutSession, "")
 
-	if record.QueenName != "" {
-		t.Fatalf("queen name = %q, want empty for an unbound session", record.QueenName)
+	if record.QueenName != layoutQueen {
+		t.Fatalf("queen name = %q, want the default queen %q", record.QueenName, layoutQueen)
 	}
-	if _, err := os.Stat(filepath.Join(home.QueenSessionDir("default", layoutSession), "events.jsonl")); err != nil {
-		t.Fatalf("default transcript tree missing: %v", err)
+	phase, ok := record.PhaseState.(interface {
+		QueenID() string
+		QueenProfile() map[string]any
+	})
+	if !ok || phase == nil || phase.QueenID() != layoutQueen {
+		t.Fatalf("phase queen identity = %#v, want %q", record.PhaseState, layoutQueen)
 	}
-	if _, err := os.Stat(home.QueenSessionDir(layoutQueen, layoutSession)); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("queen tree created for an unbound session: %v", err)
+	if name, _ := phase.QueenProfile()["name"].(string); name != "Steve Jobs" {
+		t.Fatalf("phase queen profile name = %q, want the default profile", name)
+	}
+	if _, err := os.Stat(filepath.Join(home.QueenSessionDir(layoutQueen, layoutSession), "events.jsonl")); err != nil {
+		t.Fatalf("queen transcript tree missing: %v", err)
+	}
+	if _, err := os.Stat(home.QueenSessionDir("default", layoutSession)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("default session tree created for a bound session: %v", err)
+	}
+	// meta.json records the queen and the create time, the fields resume
+	// resolution and queen mail read back.
+	meta, ok := readJSONObject(filepath.Join(home.QueenSessionDir(layoutQueen, layoutSession), "meta.json"))
+	if !ok {
+		t.Fatal("session meta.json missing")
+	}
+	if meta["queen_id"] != layoutQueen {
+		t.Fatalf("meta queen_id = %#v, want %q", meta["queen_id"], layoutQueen)
+	}
+	if _, present := meta["created_at"]; !present {
+		t.Fatalf("meta created_at missing: %#v", meta)
+	}
+	if meta["phase"] != hiveserver.QueenPhaseIndependent {
+		t.Fatalf("meta phase = %#v, want independent", meta["phase"])
 	}
 }
 

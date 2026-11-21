@@ -18,7 +18,9 @@ import (
 // installRuntimeLogBuffer routes the standard logger to stderr, the in-process
 // ring the /api/runtime-logs route reads, and — unless HIVE_NO_FILE_LOG is set
 // — the rotating $HIVE_HOME/logs/hive-server.log sink, mirroring upstream's
-// root-logger file handler.
+// root-logger file handler. Every record is stamped once here with upstream's
+// "2006-01-02 15:04:05" prefix; the std log flags are cleared so its own
+// "2006/01/02" prefix does not double-stamp the line.
 func installRuntimeLogBuffer(home hivehome.Home) {
 	writers := []io.Writer{os.Stderr, hiveserver.DefaultRuntimeLogBuffer()}
 	if file, enabled, err := hivelogging.OpenServerLog(home.Root); err != nil {
@@ -28,7 +30,8 @@ func installRuntimeLogBuffer(home hivehome.Home) {
 	} else if enabled {
 		writers = append(writers, file)
 	}
-	log.SetOutput(io.MultiWriter(writers...))
+	log.SetFlags(0)
+	log.SetOutput(hivelogging.NewTimestampWriter(io.MultiWriter(writers...)))
 }
 
 // newSoulProbeAnswerFor resolves the configured model and adapts it to the

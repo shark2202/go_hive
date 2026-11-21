@@ -110,10 +110,12 @@ func TestHealthCountsLiveColonies(t *testing.T) {
 	}
 }
 
-// Parity-exempt: deliberately diverges from
-// framework/server/tests/test_api.py::TestErrorMiddleware::test_unknown_api_route_falls_back_to_frontend,
-// which pins the old 200 + index.html fallback that hid unregistered endpoints.
-func TestUnknownAPIRouteReturnsJSON404(t *testing.T) {
+// Parity: framework/server/tests/test_api.py::TestErrorMiddleware::test_unknown_api_route_falls_back_to_frontend
+//
+// Upstream's contract: with a built frontend the SPA catch-all is registered
+// last, so an unregistered /api/* GET falls through to index.html (200), with
+// the no-cache middleware still stamping Cache-Control: no-store.
+func TestUnknownAPIRouteFallsBackToFrontend(t *testing.T) {
 	dist := t.TempDir()
 	index := "<!doctype html><title>Hive</title>"
 	if err := os.WriteFile(filepath.Join(dist, "index.html"), []byte(index), 0o644); err != nil {
@@ -124,21 +126,17 @@ func TestUnknownAPIRouteReturnsJSON404(t *testing.T) {
 	for _, target := range []string{"/api/nonexistent", "/api/colonies/ghost"} {
 		recorder := httptest.NewRecorder()
 		app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, target, nil))
-		if recorder.Code != http.StatusNotFound {
-			t.Fatalf("%s status = %d, want 404", target, recorder.Code)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("%s status = %d, want 200 (index fallback)", target, recorder.Code)
 		}
-		if got := recorder.Header().Get("Content-Type"); !strings.Contains(got, "application/json") {
-			t.Fatalf("%s content-type = %q, want application/json", target, got)
+		if got := recorder.Header().Get("Content-Type"); !strings.Contains(got, "text/html") {
+			t.Fatalf("%s content-type = %q, want text/html", target, got)
 		}
 		if got := recorder.Header().Get("Cache-Control"); got != "no-store" {
 			t.Fatalf("%s Cache-Control = %q, want no-store", target, got)
 		}
-		var body map[string]any
-		if err := json.NewDecoder(recorder.Body).Decode(&body); err != nil {
-			t.Fatalf("%s decode body: %v", target, err)
-		}
-		if body["error"] != "not found" {
-			t.Fatalf("%s body = %#v, want error=not found", target, body)
+		if recorder.Body.String() != index {
+			t.Fatalf("%s body = %q, want the index page", target, recorder.Body.String())
 		}
 	}
 }
@@ -182,13 +180,18 @@ func TestStaticServingAndIndexFallback(t *testing.T) {
 		}
 	}
 
-	recorder = httptest.NewRecorder()
-	app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/assets/missing.js", nil))
-	if recorder.Code != http.StatusNotFound {
-		t.Fatalf("missing asset status = %d, want 404", recorder.Code)
-	}
-	if recorder.Body.String() == index {
-		t.Fatal("missing asset fell back to the index page")
+	// Upstream serves index.html for any path that is not a file under dist,
+	// including asset-shaped ones (app.py::handle_spa has no extension guard),
+	// so the two servers expose the same fallback shape.
+	for _, target := range []string{"/assets/missing.js", "/assets/missing.css"} {
+		recorder = httptest.NewRecorder()
+		app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, target, nil))
+		if recorder.Code != 200 {
+			t.Fatalf("%s status = %d, want 200 (index fallback)", target, recorder.Code)
+		}
+		if recorder.Body.String() != index {
+			t.Fatalf("%s body = %q, want the index page", target, recorder.Body.String())
+		}
 	}
 }
 

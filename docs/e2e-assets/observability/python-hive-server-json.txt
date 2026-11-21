@@ -1,0 +1,4 @@
+# Python hive-server.log — LOG_FORMAT=json (ENV=production produces the same shape)
+{"timestamp": "2026-11-21T07:28:10.731122+00:00", "level": "info", "logger": "framework.server.app", "message": "Generated and persisted HIVE_CREDENTIAL_KEY to ~/.hive/secrets/credential_key", "asctime": "2026-11-21 15:28:10"}
+{"timestamp": "2026-11-21T07:28:10.731237+00:00", "level": "info", "logger": "framework.credentials.store", "message": "ADEN_API_KEY not set, using local-only credential storage", "asctime": "2026-11-21 15:28:10"}
+{"timestamp": "2026-11-21T07:28:10.731742+00:00", "level": "info", "logger": "framework.credentials.storage", "message": "Rebuilt credential index with 0 entries", "asctime": "2026-11-21 15:28:10"}

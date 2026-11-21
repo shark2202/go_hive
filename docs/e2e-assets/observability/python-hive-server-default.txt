@@ -1,0 +1,5 @@
+# Python hive-server.log — default human format (run: HIVE_HOME=<tmp> uv run --offline hive serve --port 18787)
+# ANSI colours are part of the written file (^[ = ESC); level is padded to 8 chars.
+2026-11-21 15:28:04 ^[[32m[INFO    ]^[[0m Generated and persisted HIVE_CREDENTIAL_KEY to ~/.hive/secrets/credential_key
+2026-11-21 15:28:04 ^[[32m[INFO    ]^[[0m ADEN_API_KEY not set, using local-only credential storage
+2026-11-21 15:28:04 ^[[32m[INFO    ]^[[0m Rebuilt credential index with 0 entries

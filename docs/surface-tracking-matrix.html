@@ -30,28 +30,28 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 </style></head><body><div class="wrap">
 <header><div class="eyebrow">Hive · Surface Parity</div><h1>Hive ↔ go_hive <span>外观对齐追踪矩阵</span></h1>
 <p class="lede">把「对外可观测面」逐项对齐：<b>API 路由、工具 schema、技能接口、配置接口、环境变量、前端 UI</b>。数字来自本机现场实测；<b>外观对齐不等于行为对齐</b>，未验证或未接生产链的能力不写成可用。</p>
-<div class="meta"><span>生成：<b>2026-11-21 09:00 CST</b></span><span>Python hive：<b>1.0.14</b></span><span>Go hive：<b>1.0.26-go.1</b></span><span>Go HEAD：<b>8c691881</b></span><span>证据：<b>surface_audit.py + api_parity.py + 临时 Go 目录探针</b></span></div>
+<div class="meta"><span>生成：<b>2026-11-21 15:49 CST</b></span><span>Python hive：<b>1.0.14</b></span><span>Go hive：<b>1.0.26-go.1</b></span><span>Go HEAD：<b>f8aa5fe9</b></span><span>证据：<b>surface_audit.py + api_parity.py + 临时 Go 目录探针</b></span></div>
 <div class="toc"><a href="#summary">总览</a><a href="#api">API</a><a href="#tools">Tools</a><a href="#skills">Skills</a><a href="#config">Config</a><a href="#env">环境变量</a><a href="#ui">UI</a><a href="#gaps">缺口</a><a href="#repro">复现</a></div></header>
 
 <section id="summary"><h2><span class="num">00</span>总览</h2>
 <div class="grid g3">
-<div class="card"><div class="k">API 路由</div><div class="v">缺失 0</div><div class="d">前端 160 个调用 → Go 缺失 0；Python → Go 缺失 0（浏览器面板已补齐）；剩余为 SPA fallback 等表观差异。</div></div>
-<div class="card"><div class="k">端点契约（严格）</div><div class="v">11 / 18 PASS</div><div class="d">7 条 FAIL：2 条表观（SPA fallback 200 HTML vs 404）、1 条 Go 字段领先（credentials specs 115→123 + tool_modules）、4 条真实差异（冷启动 Go 会话 queen_id/queen_name=null；/api/skills 195 vs 194）。</div></div>
+<div class="card"><div class="k">API 路由</div><div class="v">缺失 0</div><div class="d">前端 160 个调用 → Go 缺失 0；Python → Go 缺失 0（浏览器面板已补齐）；未注册 GET 的 SPA fallback 已与上游同形。</div></div>
+<div class="card"><div class="k">端点契约（严格）</div><div class="v">18 / 18 PASS</div><div class="d">0 条 FAIL：冷启动会话绑定 <code>queen_growth</code>（与 Python 同源）、skills 目录 195/195 名称集合一致、credentials specs 字段集合 115/115 一致、未注册 GET 的 SPA fallback 与 Python 同为 200 index.html。</div></div>
 <div class="card"><div class="k">集成工具</div><div class="v">103 / 103 模块</div><div class="d">863 / 865 action；仅 csv_sql、excel_sql 因 DuckDB 有意排除。默认会话合计 143（实测：14 builtin + 113 集成 + 16 独立/任务/技能/追踪），见 tool-parity-matrix.html。</div></div>
-<div class="card"><div class="k">Skills 目录</div><div class="v">195 / 194</div><div class="d">17/17 路由、14 个端点、6 个 scope 优先级一致；冷启动目录 195 vs 194（差 1，见 §01 #9）；live reload 扇出已实现。</div></div>
+<div class="card"><div class="k">Skills 目录</div><div class="v">195 / 195</div><div class="d">17/17 路由、14 个端点、6 个 scope 优先级一致；冷启动目录两边各 195 条且名称集合相同（逐条 0 差异）；live reload 扇出已实现。</div></div>
 <div class="card"><div class="k">Config 路由</div><div class="v">20 / 20</div><div class="d">11 个路径；现场 9 个 GET 键集合完全一致；configuration.json 49 段中 44 段有 Go 读取。</div></div>
 <div class="card"><div class="k">UI 源码</div><div class="v">1106 / 63</div><div class="d">1106 个同路径文件，63 个内容不同；Go 多 10 个中文 i18n 文件；package.json 相同。</div></div>
 </div>
-<div class="callout info"><b>判定口径：</b><code>已对齐</code> = 名称/方法/键集合一致（动态值除外）；<code>部分</code> = 有实现但有明确差异；<code>未对齐</code> = 缺失或行为不成立；<code>非缺口</code> = 统计口径、SPA fallback、额外字段导致的表观差异。严格对比会把“额外字段”也记为 FAIL，所以 11/18 不等于“只有 11 个接口可用”；失败项见下表逐条判定。</div>
+<div class="callout info"><b>判定口径：</b><code>已对齐</code> = 名称/方法/键集合一致（动态值除外）；<code>部分</code> = 有实现但有明确差异；<code>未对齐</code> = 缺失或行为不成立；<code>非缺口</code> = 统计口径或额外字段导致的表观差异。严格对比会把“额外字段”也记为 FAIL；当前 18/18 PASS，逐条判定见下表。</div>
 <!-- SNAPSHOT:START -->
 <h3>最近一次自动刷新</h3>
 <div class="tablewrap"><table><thead><tr><th style="width:26%">指标</th><th>最近一次自动刷新的实测值</th></tr></thead><tbody>
-<tr><td>刷新时间</td><td>2026-11-21 09:00 CST（脚本 refresh_surface_matrix.py）</td></tr>
+<tr><td>刷新时间</td><td>2026-11-21 15:49 CST（脚本 refresh_surface_matrix.py）</td></tr>
 <tr><td>路由注册 / 完全一致</td><td>Go 220 · Python 216 · 完全一致 213</td></tr>
 <tr><td>skills / config 路由</td><td>skills 17/17 · config 20/20（method+path 完全一致）</td></tr>
 <tr><td>surface_audit</td><td>前端→Go 缺失 0；Python→Go 缺失 0（待修 0，全部豁免）</td></tr>
-<tr><td>端点契约（严格，18 条）</td><td>13 / 18 PASS</td></tr>
-<tr><td>失败端点</td><td><div class="small">✗ GET /api/models — Py 200 / Go 404（差异 2）</div><div class="small">✗ GET /api/org-chart — Py 200 / Go 404（差异 2）</div><div class="small">✗ POST /api/sessions — Py 201 / Go 201（差异 3）</div><div class="small">✗ GET /api/sessions — Py 200 / Go 200（差异 2）</div><div class="small">✗ GET /api/sessions/{id} — Py 200 / Go 200（差异 3）</div></td></tr>
+<tr><td>端点契约（严格，18 条）</td><td>18 / 18 PASS</td></tr>
+<tr><td>失败端点</td><td><div class="small">无</div></td></tr>
 <tr><td>前端源码</td><td>同路径 1106 · Go 独有 10 · 内容不同 63（Python 独有 0）</td></tr>
 <tr><td>工具面</td><td>模块 103 / 103 · action 863 / 865 · 默认会话工具 143（矩阵生成值，未重算）</td></tr>
 </tbody></table></div>
@@ -88,23 +88,23 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td class="num">1</td><td><code>GET /api/health</code></td><td><span class="pill ok">PASS</span></td><td>status=ok；键集合一致。</td></tr>
 <tr><td class="num">2</td><td><code>GET /api/config/llm</code></td><td><span class="pill ok">PASS</span></td><td>provider/model/has_api_key 一致。</td></tr>
 <tr><td class="num">3</td><td><code>GET /api/credentials</code></td><td><span class="pill ok">PASS</span></td><td>两边都是空数组（临时 HOME）。</td></tr>
-<tr><td class="num">4</td><td><code>GET /api/credentials/specs</code></td><td><span class="pill bad">FAIL</span></td><td><b>非缺失</b>：Go 123 vs Python 115，且 Go 多 <code>tool_modules</code> 字段。Go 领先，不是缺口。</td></tr>
+<tr><td class="num">4</td><td><code>GET /api/credentials/specs</code></td><td><span class="pill ok">PASS</span></td><td>115 / 115，<code>credential_id</code> 集合与字段集合一致；synthetic <code>aden_api_key</code> 行不再带 Go 独有的 <code>accounts</code> 字段。</td></tr>
 <tr><td class="num">5</td><td><code>GET /api/queen/profiles</code></td><td><span class="pill ok">PASS</span></td><td>13 个 queen；id 集合相同。</td></tr>
-<tr><td class="num">6</td><td><code>GET /api/models</code></td><td><span class="pill warn">FAIL（非缺口）</span></td><td>Python 的 SPA fallback 返回 200 HTML；Go 返回 404 JSON。Python 没有这个 API。</td></tr>
+<tr><td class="num">6</td><td><code>GET /api/models</code></td><td><span class="pill ok">PASS</span></td><td>两边都 404（未建前端 dist 时未注册 catch-all）；建了 dist 时两边同为 200 index.html —— fallback 已同形。</td></tr>
 <tr><td class="num">7</td><td><code>GET /api/models/overview</code></td><td><span class="pill ok">PASS</span></td><td>llm 槽位的 provider/model/api_base 一致。</td></tr>
-<tr><td class="num">8</td><td><code>GET /api/org-chart</code></td><td><span class="pill warn">FAIL（非缺口）</span></td><td>同 <code>/api/models</code>：Python SPA 200 HTML vs Go 404。</td></tr>
-<tr><td class="num">9</td><td><code>GET /api/skills</code></td><td><span class="pill bad">FAIL</span></td><td>2026-11-21 冷启动实测 <b>195 vs 194</b>（live 8788 曾 195/195）；差 1 条，需定位缺失的 skill。</td></tr>
+<tr><td class="num">8</td><td><code>GET /api/org-chart</code></td><td><span class="pill ok">PASS</span></td><td>同 <code>/api/models</code>：两边的未注册 GET 走同一条 SPA fallback 规则。</td></tr>
+<tr><td class="num">9</td><td><code>GET /api/skills</code></td><td><span class="pill ok">PASS</span></td><td>2026-11-21 15:45 冷启动实测 <b>195 vs 195</b>；<code>name</code> 集合逐条相同（探针新增名称集合检查）。</td></tr>
 <tr><td class="num">10</td><td><code>GET /api/mcp/servers</code></td><td><span class="pill ok">PASS</span></td><td>两边 5 个 server，名称集合相同。</td></tr>
-<tr><td class="num">11</td><td><code>POST /api/sessions</code></td><td><span class="pill bad">FAIL</span></td><td>2026-11-21 冷启动实测 Go <code>queen_id=null</code>/<code>queen_name=null</code>（Python <code>queen_growth</code>/Steve Jobs）；live 8788 曾绑定。</td></tr>
-<tr><td class="num">12</td><td><code>GET /api/sessions</code></td><td><span class="pill bad">FAIL</span></td><td>列表里 <code>sessions[].queen_id/queen_name</code>：Python string，Go null（冷启动同源缺口）。</td></tr>
-<tr><td class="num">13</td><td><code>GET /api/sessions/{id}</code></td><td><span class="pill bad">FAIL</span></td><td><code>queen_id</code> 不同：python=<code>queen_growth</code> go=None（<code>queen_phase</code> 一致）。</td></tr>
+<tr><td class="num">11</td><td><code>POST /api/sessions</code></td><td><span class="pill ok">PASS</span></td><td>冷启动绑定默认 queen：两边都是 <code>queen_id=queen_growth</code>、<code>queen_name</code>=profile 名（Steve Jobs）、<code>queen_phase=independent</code>。</td></tr>
+<tr><td class="num">12</td><td><code>GET /api/sessions</code></td><td><span class="pill ok">PASS</span></td><td><code>sessions[].queen_id/queen_name</code> 两边都是 string（同一默认 queen）。</td></tr>
+<tr><td class="num">13</td><td><code>GET /api/sessions/{id}</code></td><td><span class="pill ok">PASS</span></td><td><code>queen_id</code> 相同：两边 <code>queen_growth</code>；<code>queen_phase</code> 一致。</td></tr>
 <tr><td class="num">14</td><td><code>GET /api/sessions/{id}/events</code></td><td><span class="pill ok">PASS</span></td><td>都 200，Content-Type 都是 <code>text/event-stream</code>。</td></tr>
 <tr><td class="num">15</td><td><code>GET /api/sessions/{id}/events/history</code></td><td><span class="pill ok">PASS</span></td><td>实测新建会话 total=5，events.jsonl 5 行；首轮后继续追加不重复。</td></tr>
 <tr><td class="num">16</td><td><code>GET /api/sessions/{id}/snapshot</code></td><td><span class="pill ok">PASS</span></td><td>实测 <code>snapshot_seq=5</code>，<code>last_event_at</code> 非空。</td></tr>
 <tr><td class="num">17</td><td><code>GET /api/sessions/{id}/stats</code></td><td><span class="pill ok">PASS</span></td><td>实测 <code>events_by_type</code> 5 类；顶层键一致。</td></tr>
 <tr><td class="num">18</td><td><code>GET /api/sessions/{id}/tasks</code></td><td><span class="pill ok">PASS</span></td><td>两边都 404（该会话尚无任务列表），属预期一致。</td></tr>
 </tbody></table></div>
-<div class="callout info"><b>2026-11-21 00:17 复测（冷启动 parity）：</b>11/18 PASS。7 条 FAIL = 2 条表观（SPA 200 HTML vs 404）+ 1 条 Go 字段领先（credentials specs 115→123 + <code>tool_modules</code>）+ <b>4 条真实差异</b>：冷启动 Go 会话 <code>queen_id/queen_name=null</code>（Python 绑定 <code>queen_growth</code>）、<code>/api/skills</code> 195 vs 194。事件三件套（events/history/snapshot/stats）冷启动均 PASS。</div>
+<div class="callout info"><b>2026-11-21 15:45 复测（冷启动 parity）：</b>18/18 PASS。此前 7 条 FAIL 全部收口：冷启动 Go 会话绑定默认 queen（<code>queen_id=queen_growth</code>、<code>queen_name</code>=Steve Jobs，与 Python 同源，三条会话端点同源修复）；<code>/api/skills</code> 195 vs 195 且名称集合逐条一致；<code>/api/credentials/specs</code> 115 vs 115 且字段集合一致（synthetic <code>aden_api_key</code> 行不再带 <code>accounts</code>）；未注册 GET（含 <code>/api/*</code>）的 SPA fallback 与 Python 同为 200 index.html。事件三件套（events/history/snapshot/stats）冷启动均 PASS。复现：<code>uv run python go_hive/scripts/api_parity.py --skip-flow --skip-restart</code>。</div>
 </section>
 
 <section id="tools"><h2><span class="num">02</span>Tools</h2>
@@ -183,15 +183,15 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td>内容不同文件</td><td class="num">63</td><td>大量为文案包 <code>t()</code>；少量功能适配。</td></tr>
 <tr><td><code>package.json</code></td><td>相同</td><td>版本号都是 <code>0.1.0</code>；依赖清单一致。</td></tr>
 <tr><td><code>vite.config.ts</code></td><td>已改</td><td>版本号改为读 <code>internal/version/version.go</code>，支持 <code>HIVE_APP_VERSION</code> 覆盖。</td></tr>
-<tr><td><code>api/credentials.ts</code></td><td>已改</td><td>删除了上游的 <code>tool_modules</code> 字段类型（Go 的响应反而多这个字段，UI 暂不消费）。</td></tr>
+<tr><td><code>api/credentials.ts</code></td><td>已改</td><td>删除了上游的 <code>tool_modules</code> 字段类型；Go 的 <code>/api/credentials/specs</code> 响应也不再返回该字段（2026-11-21 与 Python 字段集合 115/115 一致）。</td></tr>
 <tr><td>页面可观测效果</td><td><span class="pill ok">已实测</span></td><td>2026-11-20 实测：dashboard 打开显示 6 后/2 群；queen_growth 页会话列表显示新建会话并可打开；创建会话返回 queen 身份；会话 events 5 行、history/snapshot/stats 有数据。冷会话聊天区“No assistant reply yet”属预期；memory_timeline 关闭时时间线为空是配置行为。</td></tr>
 </tbody></table></div>
 </section>
 
 <section id="gaps"><h2><span class="num">07</span>缺口与优先级</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:7%">优先级</th><th style="width:30%">缺口</th><th style="width:30%">可观测影响</th><th>现状</th></tr></thead><tbody>
-<tr><td><span class="pill warn">P1</span></td><td>会话 queen 绑定（冷启动）</td><td>冷启动 parity（临时 HOME）下 Go 返回 <code>queen_id=null</code>/<code>queen_name=null</code>，Python 返回 <code>queen_growth</code>/Steve Jobs</td><td>live 8788（已有 <code>~/.hive-go</code> 数据）曾绑定成功；2026-11-21 00:17 冷启动探针暴露新缺口，三条会话端点同源 FAIL。</td></tr>
-<tr><td><span class="pill warn">P1</span></td><td>/api/skills 目录计数（冷启动）</td><td>技能库少 1 条（195 vs 194）</td><td>live 环境曾 195/195；差 1 条待定位（可能是某内置 skill 的落盘/扫描路径）。</td></tr>
+<tr><td><span class="pill ok">已对齐</span></td><td>会话 queen 绑定（冷启动）</td><td>冷启动 parity（临时 HOME）下三条会话端点的 <code>queen_id/queen_name</code></td><td>2026-11-21 修复：Go create 按上游 <code>_ensure_session_queen_identity</code> 解析身份（显式 queen_name → 恢复会话的 queen → 空消息默认 <code>queen_growth</code> / 带消息走分类器），会话树、meta.json、phase 身份同步落盘；POST/GET/GET-detail 三条端点与 Python 一致。</td></tr>
+<tr><td><span class="pill ok">已对齐</span></td><td>/api/skills 目录计数（冷启动）</td><td>技能库条数</td><td>2026-11-21 15:45 冷启动实测 195 vs 195，<code>name</code> 集合逐条相同（探针已加名称集合检查；此前 195 vs 194 的差 1 不再复现）。</td></tr>
 <tr><td><span class="pill ok">已对齐</span></td><td>创建期事件</td><td>首轮对话前 history/snapshot/stats</td><td>2026-11-20 实测冷会话 <code>events.jsonl</code> 5 行：identity/reminder/node_loop_started/iteration/context_usage；首轮后续写不重复。</td></tr>
 <tr><td><span class="pill ok">已对齐</span></td><td>Browser 面板 3 条路由</td><td>contexts/tabs/close 面板</td><td>已实现代理并实测（contexts 200、无扩展时 tabs 503、close 透传）；surface 豁免已移除。</td></tr>
 <tr><td><span class="pill ok">P2</span></td><td>Claude Code queen dashboard</td><td>列表/transcript 已可用</td><td>已接真实配置、conversations 与 transcript；列表按 id 排序（上游按配置顺序），无缓存。</td></tr>
@@ -200,7 +200,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td><span class="pill ok">已对齐</span></td><td>默认工具面：7 个安全扫描工具</td><td>同一提示词在两边可用工具集一致</td><td>2026-11-21 对齐：6 个扫描器 + <code>risk_score</code> 默认注册（与上游 <code>_register_verified</code> 一致）；<code>HIVE_NETWORK_SCANNERS</code> 已删除；名称/描述/schema 见 <code>tool_contract_parity.json</code>。</td></tr>
 <tr><td><span class="pill ok">已对齐</span></td><td>配置键 <code>turn_context</code> / <code>gcu_viewport_scale</code></td><td>turn context 注入 queen 提示；视口缩放到桥</td><td>2026-11-20 接通：<code>turn_context.&lt;name&gt;.enabled</code> 决定已安装包是否启动并注入（queen-only、每包 5s 超时、异常跳过）；<code>gcu_viewport_scale</code> 经 <code>server.GcuViewportScale</code>（0.1–1.0，默认 0.8）注入 <code>HIVE_BROWSER_VIEWPORT_SCALE</code>，桥 <code>/status.viewport_scale</code> 实测 0.65/0.55/0.8。上游 getter 无消费点，Go 只读+上报。</td></tr>
 <tr><td><span class="pill warn">P1</span></td><td>工具 schema 扁平 vs 分组</td><td>依赖 Python 工具名的 prompt 不能直接复用</td><td>能力覆盖对齐，形状不同。</td></tr>
-<tr><td><span class="pill info">P2</span></td><td>未知路径行为：SPA 200 HTML vs Go 404 JSON</td><td><code>/api/models</code>、<code>/api/org-chart</code> 等表观差异</td><td>非缺口；按需对齐 fallback。</td></tr>
+<tr><td><span class="pill ok">已对齐</span></td><td>未注册 GET 的 SPA fallback</td><td><code>/api/models</code>、<code>/api/org-chart</code>、客户端深链</td><td>2026-11-21 对齐上游 <code>_setup_static_serving</code>：dist 存在时「文件存在即返回文件，否则返回 index.html（200）」；未注册 <code>/api/*</code> 不再返回 Go 独有 JSON 404。dist 不存在时两边都不注册 catch-all（同 404）。回归：<code>TestUnknownAPIRouteFallsBackToFrontend</code>。</td></tr>
 <tr><td><span class="pill info">P2</span></td><td>UI 源码 63 个文件差异</td><td>中文 i18n、版本号、字段类型</td><td>同源分支，不是逐字节相同。</td></tr>
 <tr><td><span class="pill info">P2</span></td><td>Config PUT 字段级语义</td><td>模型槽位热切换已实测；其余键仍只证明路由与 GET 形状</td><td>槽位：<code>scripts/e2e_config_hotswap.py</code> + 单测；按键校验/越界行为未逐项验证。</td></tr>
 </tbody></table></div>
@@ -217,7 +217,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td>静态资源与上传下载</td><td>未追踪：附件 chip、<code>Content-Disposition</code>、range、asset 404、SPA fallback 之外的静态路径</td><td><span class="pill warn">P1</span></td><td>附件下载与多模态回路。</td></tr>
 <tr><td>时间 / ID / 分页格式</td><td>未追踪：时间戳格式、事件 seq、session id 格式、分页 meta</td><td><span class="pill info">P2</span></td><td>客户端解析与排序。</td></tr>
 <tr><td>发布产物</td><td>P0 已知（release 归档缺 browserbridge/hive-browser）但未进矩阵行</td><td><span class="pill info">P2</span></td><td>安装/升级路径。</td></tr>
-<tr><td>日志 / 可观测</td><td>未追踪：日志级别、格式、文件位置、LLM 调试日志</td><td><span class="pill info">P2</span></td><td>运维诊断与反馈闭环。</td></tr>
+<tr><td>日志 / 可观测</td><td><b>已对照</b>（2026-11-21 双跑）：同名文件 3/3（hive-server.log / sentinel.log / llm_logs）、轮转参数 2/2 一致、Go 行首时间戳已对齐；开关 HIVE_NO_FILE_LOG / HIVE_SENTINEL_LOG / HIVE_ENABLE_LLM_LOGS 实测同行为；看门狗 7/8 告警类故障注入触发。残差：行内级别/logger 元数据、LOG_FORMAT=json、--debug、Python 三级运行日志（tool_logs.jsonl 等）——见 <a href="observability-surface-diff.md">observability-surface-diff.md</a></td><td><span class="pill info">P2</span></td><td>运维诊断与反馈闭环。</td></tr>
 <tr><td>调度 / 触发器 / playbook 运行时</td><td><b>playbook 运行时已实测</b>（2026-11-21 双侧夹具 + 真 LLM）：`.play.py` 工具 payload / `started` 文案 / `[PLAYBOOK_COMPLETE]` 全文 / `playbook_runs` 行 / 解析报错与上游逐字；run 期间 colony 并发上限临时抬高与恢复、`worker(schema=…)` 落 spawn spec 均已对齐；旧 `.play.json` 与上游 `.play.py` 无损加载（5 场景 120/120 + 真模型重放 19/19 字段一致，见 <code>docs/playbook-python.md</code> 与 <code>docs/e2e-assets/playbook-verbatim/</code>）。触发器调度面仍未追踪</td><td><span class="pill ok">已实测（playbook）</span></td><td>自动化流程的可移植性；playbook 字段级对齐后有机器证据，触发器调度部分仍是残差。</td></tr>
 <tr><td>桌面壳 / 数据迁移 / 限额</td><td>未追踪：Electron IPC 与 <code>HIVE_DESKTOP_*</code>、schema version 升级路径、输出/并发上限</td><td><span class="pill info">P2</span></td><td>桌面模式、升级兼容与稳定性边界。</td></tr>
 </tbody></table></div>
@@ -234,5 +234,5 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <div class="callout info"><b>版本说明：</b>Python 侧是当前 checkout 的 <code>hive 1.0.14</code>，Go 侧是 <code>1.0.26-go.1</code>（HEAD 见页头）。路由数按原始注册条目统计；<code>surface_audit.py</code> 会解析常量注册，口径略窄（Python 207 条），但结论相同：前端调用 0 缺失、Python→Go 0 缺失。</div>
 </section>
 
-<footer>生成：2026-11-21 09:00 CST · 快照：Go HEAD <code>8c691881</code> · 证据：现场 <code>surface_audit</code>、<code>api_parity --skip-flow</code>、临时 Go 工具目录探针 · 下次更新：路由 / 工具 / 技能 / 配置变更后重跑 §07 并回填本页 · 维度视角：<a href="alignment-dimensions.html">alignment-dimensions.html</a> · 接口不变量：<a href="module-interfaces.html">module-interfaces.html</a> · 平台支持：<a href="platform-support.html">platform-support.html</a>。</footer>
+<footer>生成：2026-11-21 15:49 CST · 快照：Go HEAD <code>f8aa5fe9</code> · 证据：现场 <code>surface_audit</code>、<code>api_parity --skip-flow</code>、临时 Go 工具目录探针 · 下次更新：路由 / 工具 / 技能 / 配置变更后重跑 §07 并回填本页 · 维度视角：<a href="alignment-dimensions.html">alignment-dimensions.html</a> · 接口不变量：<a href="module-interfaces.html">module-interfaces.html</a> · 平台支持：<a href="platform-support.html">platform-support.html</a>。</footer>
 </div></body></html>

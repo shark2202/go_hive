@@ -275,6 +275,12 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Warning: cannot resolve HIVE_HOME: %v\n", err)
 	}
+	// Runtime logs: install before the first storage step so early migration
+	// lines land in the same sinks upstream's configure_logging covers (it runs
+	// before create_app). The /api/runtime-logs route reads the process-wide
+	// ring; stderr still sees all, and the rotating server log file joins unless
+	// HIVE_NO_FILE_LOG is set.
+	installRuntimeLogBuffer(home)
 	// Storage prep first — upstream's SessionManager.__init__ migrates the
 	// home (v2 → v3 → colony sessions → tracker backfill) before any session
 	// or runtime exists. Each step is idempotent and non-fatal.
@@ -328,9 +334,8 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 		r.loadPreloadedColonySession(colonyArg, manager, &liveMu, &live, home, args.str("model"))
 	}
 
-	// Runtime logs: the route reads the process-wide ring; stderr still sees all,
-	// and the rotating server log file joins unless HIVE_NO_FILE_LOG is set.
-	installRuntimeLogBuffer(home)
+	// Runtime logs: the ring and rotating server log were installed before
+	// storage prep, so the route and file sink already cover this point.
 	// Host-resource monitor: the sampler loop behind /api/health/resources and
 	// the `resources` rollup on /api/health. It starts sampling immediately so
 	// the first request has a real snapshot (upstream's monitor does the same).
@@ -492,7 +497,7 @@ func (r *Runner) createSessionWithRuntime(
 		return nil, err
 	}
 	sessionID := identity.SessionID
-	queenScope := identity.QueenScope
+	queenScope, requestedModel := r.resolveCreateIdentity(params, identity, home, defaultModel)
 	hiveserver.ReportBootStage("Preparing queen session", sessionID)
 
 	record := hiveserver.NewSession(sessionID, eventbus.NewEventBus())
@@ -500,8 +505,8 @@ func (r *Runner) createSessionWithRuntime(
 	if params.ColonyID != nil {
 		record.ColonyID = *params.ColonyID
 	}
-	if params.QueenName != nil {
-		record.QueenName = *params.QueenName
+	if queenScope != "default" {
+		record.QueenName = queenScope
 	}
 	// The persisted session a resume reopened; empty for a fresh create.
 	record.QueenResumeFrom = identity.ResumeFrom
@@ -526,19 +531,13 @@ func (r *Runner) createSessionWithRuntime(
 			}
 		}
 	}
+	// _start_queen also records the bound queen (and the create time on a new
+	// root) in meta.json, which resume resolution and queen mail read back.
+	r.stampSessionQueenMeta(sessionDir, queenScope)
 	// A resume retry must reuse the runtime already holding the session
 	// instead of building a second one on the same transcript.
 	if existing, resumeErr := resumeLiveSession(manager, identity, params.InitialPrompt, params.InitialPhase); resumeErr != nil || existing != nil {
 		return existing, resumeErr
-	}
-
-	requestedModel := ""
-	if params.Model != nil {
-		requestedModel = *params.Model
-	}
-	if strings.TrimSpace(requestedModel) == "" {
-		// Fall back to the serve --model flag before the configured default.
-		requestedModel = defaultModel
 	}
 
 	skillsCatalog := liveSkillsCatalog(record, home, queenScope)

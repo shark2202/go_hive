@@ -28,6 +28,22 @@ func TestModuleHelp(t *testing.T) {
 	}
 }
 
+// Parity-exempt: pins the help-rendering separator (padRight) rather than an
+// upstream behaviour — a label at/over the 22-column pad must not run into its
+// help text (`--limit-files LIMIT_FILESMaximum ...`).
+func TestHelpKeepsLabelSeparator(t *testing.T) {
+	code, stdout, _ := runCLI(t, "debugger", "--help")
+	if code != 0 {
+		t.Fatalf("Run(debugger --help) = %d, want 0", code)
+	}
+	if strings.Contains(stdout, "LIMIT_FILESMaximum") {
+		t.Fatalf("label and help are glued together:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "--limit-files LIMIT_FILES") {
+		t.Fatalf("stdout missing the --limit-files label:\n%s", stdout)
+	}
+}
+
 // Parity: tests/test_cli_entry_point.py::TestFrameworkModule::test_module_serve_subcommand
 func TestModuleServeSubcommand(t *testing.T) {
 	code, stdout, _ := runCLI(t, "serve", "--help")

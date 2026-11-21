@@ -11,13 +11,23 @@
 //
 // Go's serve process logs through the standard library's `log` package (the
 // same stream the /api/runtime-logs ring taps), so the sink is attached there.
+//
+// Line shape: upstream's HumanReadableFormatter writes
+// "<%Y-%m-%d %H:%M:%S> [<LEVEL>] <message>". Go's process log carries no
+// severity, so the aligned part is the timestamp: NewTimestampWriter stamps
+// every record with the same "2006-01-02 15:04:05" prefix and callers clear
+// the std log flags (log.SetFlags(0)) so the default "2006/01/02" prefix does
+// not appear. The "[LEVEL]" tag and the LOG_FORMAT=json mode stay
+// Python-only; see docs/observability-surface-diff.md.
 package logging
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/aden-hive/hive-go/internal/pyenv"
 )
@@ -38,6 +48,37 @@ func envNonEmpty(name string) bool { return pyenv.NonEmpty(name) }
 // fileLogDisabled mirrors upstream's `if not os.getenv("HIVE_NO_FILE_LOG")`
 // gate: any non-empty value (including "0") switches the file log off.
 func fileLogDisabled() bool { return envNonEmpty("HIVE_NO_FILE_LOG") }
+
+// timestampLayout is upstream's console/file timestamp shape
+// (HumanReadableFormatter: "%Y-%m-%d %H:%M:%S"; RecentLogs uses the same).
+const timestampLayout = "2006-01-02 15:04:05"
+
+// NewTimestampWriter prefixes every record written through it with the
+// upstream timestamp. The std log package invokes Write once per record after
+// formatting, so one prefix per call matches Python's one-prefix-per-record
+// formatter. Callers must also clear the std log flags (log.SetFlags(0)) or
+// the default "2006/01/02 15:04:05" prefix would precede this one.
+func NewTimestampWriter(w io.Writer) io.Writer {
+	return &timestampWriter{w: w}
+}
+
+type timestampWriter struct{ w io.Writer }
+
+func (t *timestampWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	stamp := time.Now().Format(timestampLayout) + " "
+	buf := make([]byte, 0, len(stamp)+len(p))
+	buf = append(buf, stamp...)
+	buf = append(buf, p...)
+	written, err := t.w.Write(buf)
+	// Report bytes consumed from p, not from the stamped record.
+	if written > len(stamp) {
+		return written - len(stamp), err
+	}
+	return 0, err
+}
 
 // RotatingFile is an append-only writer that rotates a log file the way
 // RotatingFileHandler does: when a write would exceed maxBytes, the base file

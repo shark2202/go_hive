@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -31,7 +32,11 @@ func TestInstallRuntimeLogBufferWritesHiveServerLog(t *testing.T) {
 		t.Fatalf("home: %v", err)
 	}
 	previous := log.Writer()
-	t.Cleanup(func() { log.SetOutput(previous) })
+	previousFlags := log.Flags()
+	t.Cleanup(func() {
+		log.SetOutput(previous)
+		log.SetFlags(previousFlags)
+	})
 	unsetEnvVar(t, "HIVE_NO_FILE_LOG")
 
 	installRuntimeLogBuffer(home)
@@ -44,6 +49,11 @@ func TestInstallRuntimeLogBufferWritesHiveServerLog(t *testing.T) {
 	if !strings.Contains(string(raw), "serve-log-verbatim-probe") {
 		t.Fatalf("hive-server.log did not receive the log line: %q", raw)
 	}
+	// The record is stamped with upstream's human-log timestamp shape
+	// ("2006-01-02 15:04:05"), not the std log "/" date.
+	if !regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} serve-log-verbatim-probe$`).Match(raw) {
+		t.Fatalf("hive-server.log line is not in the upstream timestamp shape: %q", raw)
+	}
 }
 
 // Parity: framework/observability/logging.py::configure_logging
@@ -53,7 +63,11 @@ func TestInstallRuntimeLogBufferHonoursNoFileLog(t *testing.T) {
 		t.Fatalf("home: %v", err)
 	}
 	previous := log.Writer()
-	t.Cleanup(func() { log.SetOutput(previous) })
+	previousFlags := log.Flags()
+	t.Cleanup(func() {
+		log.SetOutput(previous)
+		log.SetFlags(previousFlags)
+	})
 	t.Setenv("HIVE_NO_FILE_LOG", "1")
 
 	installRuntimeLogBuffer(home)

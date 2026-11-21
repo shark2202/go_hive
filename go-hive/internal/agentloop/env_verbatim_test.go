@@ -171,6 +171,11 @@ func TestLLMTurnLogJSONLThroughARealTurn(t *testing.T) {
 	if header["_kind"] != "session_header" || header["execution_id"] != "exec-1" || header["system_prompt"] != "You are a test assistant." {
 		t.Fatalf("header = %#v", header)
 	}
+	// Upstream stamps with datetime.now(UTC).isoformat(); the Go record must
+	// stay on the same UTC timeline (RFC3339 ends with "Z").
+	if stamp, _ := header["timestamp"].(string); !strings.HasSuffix(stamp, "Z") {
+		t.Fatalf("header timestamp = %q, want a UTC RFC3339 stamp", stamp)
+	}
 	var turn map[string]any
 	if err := json.Unmarshal([]byte(lines[1]), &turn); err != nil {
 		t.Fatalf("turn not JSON: %v", err)

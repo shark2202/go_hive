@@ -3,6 +3,7 @@ package sentinel
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -47,6 +48,18 @@ func TestSentinelLogDivertsToItsFile(t *testing.T) {
 	}
 	if !strings.Contains(string(raw), "sentinel divergence 7") {
 		t.Fatalf("sentinel.log content = %q", raw)
+	}
+	// Lines carry upstream's human-log timestamp shape ("2006-01-02 15:04:05").
+	if !regexp.MustCompile(`(?m)^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} sentinel divergence 7$`).Match(raw) {
+		t.Fatalf("sentinel.log line is not in the upstream timestamp shape: %q", raw)
+	}
+}
+
+// Parity: framework/sentinel/manager.py::_install_sentinel_log_file
+func TestSentinelLogSizesMatchUpstreamRotation(t *testing.T) {
+	if sentinelLogMaxBytes != 5_000_000 || sentinelLogBackups != 3 {
+		t.Fatalf("sentinel log rotation = %d x %d, want 5MB x 3 (RotatingFileHandler maxBytes=5_000_000, backupCount=3)",
+			sentinelLogMaxBytes, sentinelLogBackups)
 	}
 }
 

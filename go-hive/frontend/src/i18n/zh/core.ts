@@ -57,6 +57,7 @@ export const coreZh: Record<string, string> = {
 
   // Queen / colony live status
   "Interrupted": "已中断",
+  "Interrupted: {cause}": "已中断：{cause}",
   "interrupted": "已中断",
   "interrupted ({cause})": "已中断（{cause}）",
   "Running: {tool}": "正在运行：{tool}",

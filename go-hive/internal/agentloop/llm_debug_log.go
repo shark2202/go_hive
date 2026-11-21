@@ -62,7 +62,11 @@ func LogLLMTurn(nodeID, streamID, executionID string, iteration int, systemPromp
 	if file == nil {
 		return
 	}
-	timestamp := time.Now().Format(time.RFC3339)
+	// Upstream stamps records with `datetime.now(UTC).isoformat()`; keep the
+	// clock in UTC so both runtimes' JSONL can be read on one timeline. The
+	// Go record uses RFC3339 (second precision, "Z") where Python uses
+	// microsecond precision + "+00:00" — a documented representation delta.
+	timestamp := time.Now().UTC().Format(time.RFC3339)
 
 	llmDebugState.mu.Lock()
 	defer llmDebugState.mu.Unlock()

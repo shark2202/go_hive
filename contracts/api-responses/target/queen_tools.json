@@ -8,7 +8,7 @@
   "version": "hive 1.0.26-go.1",
   "status": 200,
   "content_type": "application/json",
-  "captured_at": "2026-11-21T14:04:18+08:00",
+  "captured_at": "2026-11-21T15:57:24+08:00",
   "canonical": {
     "categories": [
       {
@@ -265,7 +265,7 @@
         "name": "reply_to_worker"
       },
       {
-        "description": "Run a colony playbook — a deterministic converge loop over a tracker table: query the undone rows, dispatch workers, re-query, repeat. Use it when the goal has row shape; use run_worker for one-off heterogeneous tasks. Re-running is resume: rows already marked done drop out of the pending query, so a second run only does the gap.\n\nPYTHON PLAYBOOKS: a `.play.py` script (inline, by path, or saved in the colony library) runs on an external Python 3.8+ interpreter found on the host PATH (`python3`, then `python`, or HIVE_PYTHON). The script sees the upstream hooks — converge / worker / tracker_que…[+1904 chars sha256:8d686c7cfc1b]",
+        "description": "Run a colony playbook — a deterministic Python script that drives a tracker table to convergence: query the undone work, dispatch workers on it, re-query, repeat. Use it whenever the goal has row shape; reach for run_worker only for one-off heterogeneous tasks. ASYNC: returns a run_id immediately and notifies you via [PLAYBOOK_COMPLETE]; the convergence loop absorbs routine worker outcomes. Re-running is resume — done rows drop out of the pending query, so a second run only does the gap.\n\nSUPPLY THE SCRIPT (exactly one):\n• `playbook` — inline; saved to the colony library at playbooks/<meta-nam…[+3378 chars sha256:479f6dddb732]",
         "editable": false,
         "name": "run_playbook"
       },

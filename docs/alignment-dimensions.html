@@ -61,7 +61,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td class="num">14</td><td><b>集成真实性</b></td><td>863 action 的 schema 与安装器 pin 住</td><td>真实第三方 API 调用未做（无凭据；按用户决定不阻塞，但保持“未验证”）</td><td>有凭据时逐模块 smoke</td></tr>
 <tr><td class="num">15</td><td><b>安全</b></td><td>loopback 绑定、桌面 token、credential 加密（Fernet 兼容）</td><td>独立 <code>hive serve</code> 无鉴权；文件工具沙箱范围（Python 无沙箱 vs Go 有根）；提示注入边界；密钥脱敏口径</td><td>威胁建模 + 越权/路径穿越用例</td></tr>
 <tr><td class="num">16</td><td><b>平台/发布</b></td><td>六平台交叉编译；离线无 cgo；发布包 + SHA256 + 安装脚本</td><td>Windows 运行/PTY/路径/信号；升级迁移；在线 CVE 扫描缺失</td><td>各平台运行测试 + 升级演练</td></tr>
-<tr><td class="num">17</td><td><b>可观测/运维</b></td><td>runtime-logs、health、watchdog 脚本</td><td>主动告警（用户要求不能只写日志）；成本/延迟/队列指标口径</td><td>故障注入 → 是否真的告警</td></tr>
+<tr><td class="num">17</td><td><b>可观测/运维</b></td><td>runtime-logs、health、watchdog 脚本；<b>告警已故障注入</b>（2026-11-21：7/8 类实测触发 + osascript 调用记录，见 <a href="observability-surface-diff.md">observability-surface-diff.md</a> §6）</td><td>成本/延迟/队列指标口径；<code>gate</code> 告警类未注入；Go 日志级别/JSON 模式（需结构化 logger 层）</td><td>故障注入 → 是否真的告警</td></tr>
 <tr><td class="num">18</td><td><b>验证方法（元）</b></td><td>4,566 测试带 parity 注解；概念审计 80/0/0、70/0/0</td><td>注解≠语义等价；缺“同场景 golden trace”；wiring 绿掩盖行为差</td><td>双跑 diff：事件/转录/文件/API/成本（见 §03）</td></tr>
 </tbody></table></div>
 </section>

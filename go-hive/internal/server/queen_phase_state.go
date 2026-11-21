@@ -252,6 +252,14 @@ func (p *QueenPhaseState) PersistPhase() error {
 	return mergeSessionMeta(p.metaPath, map[string]any{sessionPhaseMetaKey: p.Phase()})
 }
 
+// MergeSessionMeta merges updates into a session's meta.json, keeping every
+// other key (upstream QueenPhaseState._persist_meta / _start_queen's meta
+// write). Exported for the session loader, which stamps the resolved queen
+// identity next to the phase.
+func MergeSessionMeta(metaPath string, updates map[string]any) error {
+	return mergeSessionMeta(metaPath, updates)
+}
+
 // mergeSessionMeta merges updates into a session's meta.json, keeping every
 // other key. The write is skipped when the file already carries the values,
 // matching QueenPhaseState._persist_meta.

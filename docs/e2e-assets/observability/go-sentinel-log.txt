@@ -1,0 +1,2 @@
+# Go sentinel.log — HIVE_SENTINEL_LOG=1 (RotatingFileHandler equivalent 5MB x 3)
+2026-11-21 15:34:18 [sentinel] manager starting (0 open escalations)

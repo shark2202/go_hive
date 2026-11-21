@@ -90,6 +90,24 @@ func TestRegisterMCPCommandsCreatesAllSubcommands(t *testing.T) {
 	}
 }
 
+// Parity-exempt: pins the argparse-compatible exit code of a bare `hive mcp`
+// (upstream: required subcommand → 2); no upstream test exists for this path.
+func TestMCPBareInvocationIsUsageError(t *testing.T) {
+	cli, out, errOut := newCLI(newDefaultRegistry(t))
+	if rc := cli.Main(nil); rc != 2 {
+		t.Fatalf("bare `hive mcp` exit = %d, want 2", rc)
+	}
+	if !strings.Contains(errOut.String(), "required: command") {
+		t.Fatalf("stderr = %q, want the argparse-style required-command error", errOut.String())
+	}
+	if strings.Contains(out.String(), "Manage MCP servers") {
+		t.Fatalf("bare invocation printed group help to stdout: %q", out.String())
+	}
+	if rc := cli.Main([]string{"--help"}); rc != 0 {
+		t.Fatalf("`hive mcp --help` exit = %d, want 0", rc)
+	}
+}
+
 // Parity: core/tests/test_mcp_registry_cli.py::test_argparse_round_trip_install
 func TestArgparseRoundTripInstall(t *testing.T) {
 	parsed, err := ParseMCPArgs([]string{"mcp", "install", "jira", "--version", "1.0"})

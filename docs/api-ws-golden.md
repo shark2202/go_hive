@@ -243,21 +243,25 @@ queens、sentinel、maintenance。
 
 其它既有例外见 §5（工具描述文本、SSE model/sha、`event_bus.subscriptions` 等）。
 
-### 6.4 未知路径 fallback（实测，待定口径，**不改行为**）
+### 6.4 未知路径 fallback（实测，已对齐）
 
 两侧同输入探测未注册的 `/api/*` GET（证据：`contracts/api-responses/fallback-probe.json`）：
 
 | 路径 | reference（Python） | target（Go） |
 | --- | --- | --- |
-| `/api/__contract_probe_unknown__` | 200 `text/html`（index.html） | 404 `text/plain`（`404 page not found`） |
-| `/api/models` | 200 `text/html`（index.html） | 404 `text/plain` |
-| `/api/org-chart` | 200 `text/html`（index.html） | 404 `text/plain` |
+| `/api/__contract_probe_unknown__` | 404 `text/plain` | 404 `text/plain`（同形） |
+| `/api/models` | 404 `text/plain` | 404 `text/plain`（同形） |
+| `/api/org-chart` | 404 `text/plain` | 404 `text/plain`（同形） |
 
 - Python 的 SPA catch-all（`app.router.add_get("/{path:.*}", handle_spa)`）只在 `core/frontend/dist/index.html`
-  存在时注册；存在时未注册的 `/api/*` 会拿到 200 HTML（前端因此把「缺路由」当页面加载）。
-  没有 dist 时的实测同样是 404 文本（body 前缀 `404: Not Found`），与 Go 的 `404 page not found` 仅文案差异。
-- **口径未定**：是否要 Go 也回 200 HTML（与 SPA 行为一致），还是 Python 收窄 catch-all 对 `/api/*` 回 404 JSON，
-  属产品决策；本批只记录两侧现状，**未改任何行为**。前端 `api/*.ts` 已核对的路径不受影响（路由面 217/220）。
+  存在时注册；没有 dist 时未注册的 `/api/*` 就是 404 文本（body 前缀 `404: Not Found`）。
+- **口径已定（2026-11-21）**：Go 与上游同形——`internal/server/app.go::handleSPA` 去掉 Go 独有的
+  `/api/*` JSON 404 与 asset 扩展名守卫：dist 存在时「文件在 dist 内即返回，否则返回 index.html（200）」，
+  未注册 `/api/*` 也走同一条 fallback；dist 不存在时两侧都不注册 catch-all（同 404）。
+  该口径由上游测试 `framework/server/tests/test_api.py::TestErrorMiddleware::test_unknown_api_route_falls_back_to_frontend`
+  钉住，Go 侧回归：`TestUnknownAPIRouteFallsBackToFrontend`、`TestStaticServingAndIndexFallback`。
+  本仓库无 dist 的检出里两侧同为 404；建好 `core/frontend/dist` 后两侧同为 200 index.html。
+  前端 `api/*.ts` 已核对的路径不受影响（路由面 217/220）。
 
 ### 6.5 结果
 

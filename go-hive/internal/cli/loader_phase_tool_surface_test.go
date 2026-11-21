@@ -69,13 +69,17 @@ func TestCreateSessionWiresPhaseToolSurface(t *testing.T) {
 		}
 	}
 
-	// The default queen has no allowlist: enabled_mcp_tools is None and every
-	// registered MCP name is allowed.
-	if _, none := state.EnabledMCPTools(); !none {
-		t.Fatal("default queen should report allow-all (enabled_mcp_tools=None)")
+	// A REST create with no queen_name binds the default queen upstream
+	// (SessionManager._ensure_session_queen_identity → select_queen("")), so
+	// the phase reports that queen's role-default allowlist. The allow-all
+	// shape (enabled_mcp_tools = None) belongs to a queen profile without
+	// default_tool_categories, which no create path produces any more.
+	if session.QueenName != hiveserver.DefaultQueenID() {
+		t.Fatalf("queen name = %q, want the default queen %q", session.QueenName, hiveserver.DefaultQueenID())
 	}
-	if len(state.UnregisteredAllowlistedNames()) != 0 {
-		t.Fatalf("allow-all must report no unregistered names: %v", state.UnregisteredAllowlistedNames())
+	allowlist, none := state.EnabledMCPTools()
+	if none || len(allowlist) == 0 {
+		t.Fatalf("default queen allowlist = %v (none=%v), want the role-default list", allowlist, none)
 	}
 	mcpNames := state.MCPToolNamesAll()
 	if _, present := mcpNames["terminal_exec"]; !present {

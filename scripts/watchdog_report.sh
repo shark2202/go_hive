@@ -3,13 +3,21 @@
 #   - 采样健康、HEAD、脏工作树、并行 lane 数、最近门禁结论
 #   - 异常时打印 ⚠️ ALERT 并触发 macOS 通知（同一告警 15 分钟内只响一次）
 #   - 单行摘要打到 stdout（Hermes heartbeat 会送进会话），详细块追加到 WATCHDOG_REPORT.md
+#
+# 可注入开关（默认值 = 生产口径，故障注入/测试用）：
+#   WATCHDOG_REPO / WATCHDOG_REPORT / WATCHDOG_STATE   换成夹具仓库与隔离状态文件
+#   WATCHDOG_PORT（默认 8788） / WATCHDOG_SERVE_PATTERN（默认 hive-embed serve）
+#   WATCHDOG_ONCE=1   跑完一轮就退出（测试用）
 set -u
 
-REPO=/Users/mac/hive
-REPORT="$REPO/go_hive/WATCHDOG_REPORT.md"
-STATE="$REPO/go_hive/.watchdog_report_state"
+REPO="${WATCHDOG_REPO:-/Users/mac/hive}"
+REPORT="${WATCHDOG_REPORT:-$REPO/go_hive/WATCHDOG_REPORT.md}"
+STATE="${WATCHDOG_STATE:-$REPO/go_hive/.watchdog_report_state}"
 INTERVAL="${1:-300}"
 ALERT_COOLDOWN="${ALERT_COOLDOWN:-900}"
+PORT="${WATCHDOG_PORT:-8788}"
+SERVE_PATTERN="${WATCHDOG_SERVE_PATTERN:-hive-embed serve}"
+ONCE="${WATCHDOG_ONCE:-0}"
 
 [ -f "$REPORT" ] || printf '# Watchdog 汇报（每 5 分钟）\n\n' > "$REPORT"
 [ -f "$STATE" ] || : > "$STATE"
@@ -47,7 +55,10 @@ alert() {
 while true; do
   cycle_start=$(date +%s)
   ts=$(date '+%Y-%m-%d %H:%M:%S')
-  health=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:8788/api/health 2>/dev/null || echo "000")
+  # curl 在连接失败时仍会打印 %{http_code}=000 且退出非 0；不能再用 `|| echo 000`
+  # （会产生 "000000"）。只保留一个兜底。
+  health=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$PORT/api/health" 2>/dev/null || true)
+  [ -n "$health" ] || health="000"
   head=$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo "?")
   dirty_total=$(git -C "$REPO" status --short --untracked-files=no 2>/dev/null | wc -l | tr -d ' ')
   # 只统计我们改动区（go_hive/），并排除遥测文件，避免台账/报告自身触发告警
@@ -56,7 +67,7 @@ while true; do
     | grep -vE 'go_hive/(TIME_EVENTS\.csv|WATCHDOG_REPORT\.md|QC_REPORT\.md|\.watchdog_state)' \
     | wc -l | tr -d ' ')
   worktrees=$(git -C "$REPO" worktree list 2>/dev/null | wc -l | tr -d ' ')
-  servers=$(pgrep -f "hive-embed serve" | wc -l | tr -d ' ')
+  servers=$(pgrep -f "$SERVE_PATTERN" | wc -l | tr -d ' ')
   last_gate=$(ls -t /tmp/[knmprwstx]*_targets.log 2>/dev/null | head -1)
   gate_line="no-gate-log"
   if [ -n "$last_gate" ]; then
@@ -128,10 +139,10 @@ PY
   state_set last_cycle_at "$cycle_now"
 
   # ---- 异常检测（每条告警 15 分钟内只响一次）----
-  [ "$health" != "200" ] && alert health "health=${health}（期望 200，端口 8788）"
-  [ "$servers" -eq 0 ] 2>/dev/null && alert serve "hive-embed serve 进程为 0"
+  [ "$health" != "200" ] && alert health "health=${health}（期望 200，端口 ${PORT}）"
+  [ "$servers" -eq 0 ] 2>/dev/null && alert serve "serve 进程（${SERVE_PATTERN}）为 0"
   case "$gate_line" in *FAIL*|*MISSING*) alert gate "最近门禁异常：$gate_line" ;; esac
-  [ "$release_stale" = "1" ] && alert release "2 小时 slot 版未按时更新（$release_line）；检查 release_cadence_loop.sh / dist/slots/cadence.log"
+  [ "$release_stale" = "1" ] && alert release "2 小时 slot 版未按时更新（${release_line}）；检查 release_cadence_loop.sh / dist/slots/cadence.log"
   if [ "$gov_age" != "?" ] && [ "$gov_age" -gt 24000 ] 2>/dev/null; then
     alert governance "治理重算超过 6h40m 未更新（${gov_age}s）；检查 governance_recheck_loop.sh / dist/slots/governance.log"
   fi
@@ -149,6 +160,9 @@ PY
   elif [ -n "$last_head_at" ] && [ $((now - last_head_at)) -gt 2700 ] && [ "$worktrees" -gt 0 ]; then
     alert stall "HEAD 已 $(( (now - last_head_at) / 60 )) 分钟未变（worktrees=${worktrees}），可能停滞"
   fi
+
+  # 故障注入/测试：跑完一轮即退出（生产实例不设该变量，保持常驻）。
+  [ "$ONCE" = "1" ] && break
 
   # 固定节拍：本轮工作耗时从睡眠里扣掉，避免每轮漂移。
   # 15 秒粒度累加：系统休眠会冻结一次 300s 的 sleep，唤醒后要等整周期；

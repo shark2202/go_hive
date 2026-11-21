@@ -1,0 +1,6 @@
+# Go hive-server.log — default (run: HIVE_HOME=<tmp> <built hive> serve --port 18788)
+# after the 2026-11-21 line-format alignment; level tag is Python-only (documented).
+2026-11-21 15:34:18 [sentinel] manager starting (0 open escalations)
+2026-11-21 15:34:18 turn context "probe" is installed but off: set turn_context.probe.enabled in configuration.json
+2026-11-21 15:34:18 runtime-resources verdict init->ok | avail=NoneMB renderers=9 chrome_rss=801MB hive_rss=29MB workers=<nil> | 
+2026-11-21 15:34:18 [access] GET /api/health -> 200 (0ms)

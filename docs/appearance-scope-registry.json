@@ -1,10 +1,10 @@
 {
   "schema": "hive-appearance-scope-registry/1",
-  "generated_at": "2026-11-21T13:46:05+08:00",
-  "generated_by": "tool-schema-residuals lane（同名工具 schema/desc 残差收口：desc 41/41、lifecycle 源码口径 schema 归一 40/41）",
-  "worktree": "/Users/mac/hive/.wt/tool-schema-residuals",
-  "branch": "tool-schema-residuals",
-  "base_commit": "59d89b86",
+  "generated_at": "2026-11-21T16:36:00+08:00",
+  "generated_by": "frontend-surface + observability lanes（合并：路由/title/i18n/静态面 + 日志/可观测面双跑）",
+  "worktree": "(multi)",
+  "branch": "(multi)",
+  "base_commit": "f8aa5fe9",
   "baseline": {
     "python": "hive 1.0.14（core 树当前 checkout）",
     "go": "1.0.26-go.1",
@@ -362,41 +362,62 @@
       ],
       "evidence": [
         {
-          "path": "go_hive/docs/alignment-dimensions.html",
+          "path": "go_hive/contracts/cli-surface.json",
+          "kind": "contract",
+          "note": "两侧递归 `--help` 冻结面 + 退出码探针：`hive` 47(Python)/48(Go) 命令路径、`hive-browser` 27/32；flag 名 `hive` 32 共有/12 Python 独有/0 Go 独有，`hive-browser` 42 共有/0/7；命令行为探针漂移 0，逐命令探针 20 条漂移（19 条为 Go `hive mcp <verb>` help 折叠导致的单侧可探测，1 条为 `mcp run --unknown-flag` 1 vs 2）。"
+        },
+        {
+          "path": "go_hive/scripts/cli_surface_contract.py",
+          "kind": "checker",
+          "note": "生成/校验器：并行递归 `--help`（子命令树、flags、取值占位符、choices、help 文案、help 声明默认值、位置参数必填性）+ 无副作用退出码探针 + 源码字面量默认值对拍；`--check` 对拍冻结契约。"
+        },
+        {
+          "path": "go_hive/docs/cli-surface-diff.md",
+          "kind": "report",
+          "note": "逐命令 diff 报告（命令树/flags/位置参数/退出码矩阵/help 行差异/默认值核对/已修·保留·待办）。"
+        },
+        {
+          "path": "go_hive/docs/cli-surface-alignment.json",
           "kind": "doc",
-          "note": "登记「10 个顶级命令完全一致；flags、默认值、输出格式、交互提示未逐项 diff」"
+          "note": "已修 3 项（requireTab 连通性优先退出码、`hive mcp` 裸调用 2、padRight 分隔符）、已核对 3 组默认值、保留 6 项 Go 扩展、待办 5 项（含估算）。"
         },
         {
           "path": "go_hive/docs/browser-bridge-surface-audit.html",
           "kind": "measured",
-          "note": "§2.6/§04.3：browser CLI 退出码 R05/R06/R08 已对齐（help nosuchcmd=1、screenshot 缺 --intent 走桥、公共 flag 位置），R07 upload 仍 6 vs 4/3"
-        },
-        {
-          "path": "go_hive/go-hive/internal/tracker/errors.go",
-          "kind": "source",
-          "note": "退出码分类 0/1/2/3/4/5/6/7/9/10，文件头标注 Parity: framework/trackerdb/errors.py"
-        },
-        {
-          "path": "core/framework/trackerdb/errors.py",
-          "kind": "source",
-          "note": "两侧退出码常量逐值同名同义"
+          "note": "§2.6/§04.3：browser CLI R05/R06/R07/R08 已对齐；本轮把 R07 家族的「无桥可连」状态从 3 收到 2（battery 0 漂移）。"
         },
         {
           "path": "go_hive/go-hive/internal/cli/browser_cli_test.go",
           "kind": "measured",
-          "note": "TestBrowserCLIExitCodes / Help / ScreenshotWithoutIntent / LeadingCommonFlags 钉住 browser CLI 分类"
+          "note": "TestBrowserCLINotConnectedBeforeNotStarted / TestBrowserCLIUploadMissingFileMatchesUpstream 钉住 upload 等命令的 2/3/4 分类。"
+        },
+        {
+          "path": "go_hive/go-hive/internal/cli/cli_test.go",
+          "kind": "measured",
+          "note": "TestHelpKeepsLabelSeparator 钉住 help 分隔符；mcpregistry TestMCPBareInvocationIsUsageError 钉住 `hive mcp` 裸调用 → 2。"
+        },
+        {
+          "path": "go_hive/go-hive/internal/tracker/errors.go",
+          "kind": "source",
+          "note": "tracker 退出码分类 0/1/2/3/4/5/6/7/9/10，与 core/framework/trackerdb/errors.py 同名同义（本轮未改动，沿用既有测量）。"
+        },
+        {
+          "path": "core/framework/trackerdb/errors.py",
+          "kind": "source",
+          "note": "两侧 tracker 退出码常量逐值一致；CLI 探针覆盖 argparse 口径（0/2）与 browser 分类（0–8）。"
         }
       ],
       "status": "partial",
-      "status_basis": "顶级命令 10/10 同名；tracker 退出码 0,1,2,3,4,5,6,7,9,10 两侧逐值一致且有测试；browser CLI 退出码 R05/R06/R08 已对齐并有回归用例，R07 upload 文件不存在仍 6 vs 4/3。flags 名集合共有 32 / Python 独有 11 / Go 独有 48（多为 hive-browser），输出格式/交互提示/帮助文案未逐项对照。",
-      "contract_state": "doc_only",
-      "measured_now": "本次静态提取：顶级命令 10/10 同名；flag 名集合共有 32 / Python 独有 11 / Go 独有 48；tracker 退出码 0,1,2,3,4,5,6,7,9,10 两侧逐值一致。browser 审计页 §04.3 给出修复后退出码对照：R05/R06/R08 已修，R07 留。",
+      "status_basis": "顶级命令：`hive` 47 条路径全共有（Go 多 1 个 `queen-mail-mcp` 扩展）、`hive-browser` 27 条全共有（Go 多 5 个 legacy 动词）；flag 名集合：`hive` 32 共有 / 12 Python 独有（全部来自 Go `hive mcp <verb>` help 折叠）/ 0 Go 独有，`hive-browser` 42 共有 / 0 / 7（--bridge、--profile 与 legacy 动词的 5 个）。退出码：逐命令探针仅 1 条两侧都可探测且不同（`hive mcp run --unknown-flag` Go 1 vs Python 2）；命令行为探针 0 漂移（upload/screenshot 等无桥场景 2/2、有桥无 tab 3/3、文件不存在 4/4）。仍为 partial 的唯一结构缺口：Go 的 14 个 `hive mcp` 动词没有 per-command help，上游的 usage/flags 在 Go help 面不可见。",
+      "contract_state": "frozen_contract",
+      "measured_now": "本次实测（2026-11-21，工作树 appearance-cli-help，基线 f8aa5fe9）：contracts/cli-surface.json 覆盖 `hive` 47/48 路径、`hive-browser` 27/32 路径；命令行为探针漂移 0，逐命令探针 20 条（两侧可探测 1 条），help 文案差异 2 条命令级 + 71 条 flag 级（以 Go 补文档为主，非阻断）；默认值：4 个 flag 字面量两侧逐值相同、0 不一致，--timeout-ms 逐命令人工核对一致。",
       "lane": "cli-surface",
-      "lane_state": "suggested",
+      "lane_state": "measured",
       "next": [
-        "逐命令 `--help` 递归 diff（flags/默认值/位置参数）并落一份 CLI 契约 json",
-        "每命令退出码矩阵实测（含失败路径），把 tracker 的看守扩到 loader/skill/mcp/janitor 子命令",
-        "stdout/JSON 输出形状抽若干命令做 golden 对照"
+        "Go `hive mcp` 14 个动词补 per-command help（对齐上游 usage/flags；估算 0.5–1 人日，中风险）",
+        "`hive mcp <verb>` 必填 name 以 `-` 开头时统一返回 usage error 2（上游 argparse 口径；估算 2–3 小时）",
+        "help 文案 71 条 flag 级差异按命令分批收敛（多为上游留空、Go 已补说明，收益低，单独车道）",
+        "把 `cli-surface-check` 接进需要的车道门禁（全量重采约 2–3 分钟，不进 `make ci`）"
       ],
       "priority": "P0"
     },
@@ -717,31 +738,41 @@
       ],
       "evidence": [
         {
+          "path": "docs/frontend-surface-diff.md",
+          "kind": "measured",
+          "note": "路由表 14/14、title、i18n 1209 键、静态资源、SPA fallback、上传/附件下载面逐项对照；51 项探针 39 对齐 / 12 声明口径 / 0 未解释"
+        },
+        {
+          "path": "docs/frontend-surface/frontend-surface-diff.json",
+          "kind": "contract",
+          "note": "机器可读：资源集合 1106/10/0/62 与逐文件归因、路由表与重定向、i18n key 集合与白名单、51 项探针 verdict/decision"
+        },
+        {
+          "path": "docs/frontend-surface/probes.json",
+          "kind": "measured",
+          "note": "双跑原始证据：Python hive 1.0.14 :18771 / Go 1.0.26-go.1 :18772，各自 dist + 临时 HIVE_HOME，逐请求状态/头/body sha256"
+        },
+        {
+          "path": "go_hive/scripts/frontend_surface_diff.py",
+          "kind": "checker",
+          "note": "可重放：--static 静态清单 + --probe 双跑探针；--all 一次生成上述两份 JSON"
+        },
+        {
           "path": "go_hive/docs/surface-matrix-snapshot.json",
           "kind": "snapshot",
-          "note": "前端资源：共有 1106 路径 / Go 独有 10 / Python 独有 0 / 内容差异 63"
-        },
-        {
-          "path": "go_hive/docs/surface-audit.md",
-          "kind": "measured",
-          "note": "前端调用 → Go 路由缺失 0，说明路由级联通完整"
-        },
-        {
-          "path": "go_hive/docs/alignment-dimensions.html",
-          "kind": "doc",
-          "note": "明确「中文 i18n 是 Go 侧增量，不要求回灌上游」；UI 源码 63 文件差异（中文 i18n、版本号、字段类型）"
+          "note": "旧口径快照：前端资源共有 1106 路径 / Go 独有 10 / Python 独有 0 / 内容差异 63；本次复核内容差异 63→62（参考侧删除过期必填字段）"
         }
       ],
       "status": "partial",
-      "status_basis": "资源路径集合基本重合（Python 独有 0）、前端调用无缺失路由；但 63 个文件内容不同，hash 路由表/title/i18n key/空态错误态没有逐项对照，静态资源与上传下载面（Content-Disposition、range、asset 404）未追踪。",
-      "contract_state": "doc_only",
-      "measured_now": null,
+      "status_basis": "资源路径 1106 共有 / Go 独有 10（全部为 i18n 增量与测试）/ Python 独有 0；内容差异 62 全部归因（i18n 包裹 13 + i18n 改造 47 + i18n 管道 1 + 版本解析 1），其中 63→62 是本车道修掉的一处类型面差异。hash 路由表 14/14 与重定向逐字一致，页面 title 两侧均为 Hive；i18n 1209 键（Go 增量白名单），t() 引用 1118 键、缺失翻译 0、静态未引用 91 键。双跑 51 项探针：39 对齐 / 12 声明口径 / 0 未解释；附件下载 Content-Disposition 两侧均无、Range 206 与缺失 404 逐字节一致。",
+      "contract_state": "frozen_contract",
+      "measured_now": "2026-11-21 双跑：Python 1.0.14 + core/frontend/dist，Go 1.0.26-go.1 + go-hive/frontend/dist，固定端口 18771/18772。hash 深链 14 条 + path 深链 7 条两侧均 200 且返回本侧 index.html（title=Hive）；favicon+3 个 logo 字节一致，Range 206、If-Modified-Since 304 一致；上传/下载 10 项中 9 项一致（含 range 206、缺失 404 文案、穿越 400 文案）；12 条声明口径含 Go missing-asset/api 404、Python 坏 multipart 500、ETag/mime 拼写差异。门禁：Go 前端 vitest 39 文件 277 passed、go test ./internal/server 静态用例 PASS、两侧 npm run build PASS、parity 注解 5308/5308 + refs 5713/0 missing。",
       "lane": "frontend-surface",
-      "lane_state": "suggested",
+      "lane_state": "measured",
       "next": [
-        "冻结前端路由表（hash 路径 × 页面 × title），两侧 diff",
-        "i18n key 集合 diff（明确 Go 增量 key 白名单）",
-        "静态资源/附件下载面探针（Content-Disposition、range、404）"
+        "把 12 条声明口径（asset/api 404、/index.html 301、ETag、JS mime、坏 multipart 500）写进支持矩阵，避免读者把 Go 的 404/400 当回归",
+        "把 frontend_surface_diff.py --all 接进可选 sweep（需先固定 dist 构建前置与 NODE_ENV=test 口径）",
+        "真实浏览器（Chrome/Playwright）跑 zh-CN 下各路由渲染与语言切换：本车道只核到服务端文档/源码层，未做像素或渲染树对照"
       ],
       "priority": "P1"
     },
@@ -854,14 +885,24 @@
       ],
       "evidence": [
         {
+          "path": "go_hive/docs/observability-surface-diff.md",
+          "kind": "measured",
+          "note": "2026-11-21 双跑对照（15 次 serve 冷启动）：同名文件 3/3、轮转 2/2 一致、Go 行首时间戳已对齐；开关 4 个实测、7/8 看门狗告警类故障注入触发；残余差异与理由逐条在 §9"
+        },
+        {
+          "path": "go_hive/docs/e2e-assets/observability/",
+          "kind": "measured",
+          "note": "原始样例：两侧 hive-server.log / sentinel.log 行、JSON 模式、轮转探针、runtime-logs ring、看门狗故障注入记录（7 条告警 + osascript 调用）"
+        },
+        {
           "path": "go_hive/docs/surface-tracking-matrix.html",
           "kind": "doc",
-          "note": "登记日志级别/格式/文件位置/LLM 调试日志未追踪（P2）"
+          "note": "“日志 / 可观测”行已从「未追踪」改为对照记录并回链本页"
         },
         {
           "path": "go_hive/RELEASE_CHECKLIST.md",
           "kind": "measured",
-          "note": "R7 可观测：--version、health 200、结构化访问日志本次实测；report-bundle 路由存在但未实调"
+          "note": "R7 可观测：--version、health 200、结构化访问日志实测；report-bundle 路由存在但未实调"
         },
         {
           "path": "go_hive/docs/support-matrix.md",
@@ -870,15 +911,15 @@
         }
       ],
       "status": "partial",
-      "status_basis": "/api/runtime-logs 两侧同路径，health 与访问日志实测通过；但日志落盘位置/级别开关/格式没有对照（Python 有 hive-server.log、sentinel.log，Go 侧未见同路径），主动告警只有脚本、没有失败注入验证。",
+      "status_basis": "落盘文件名/轮转/开关（HIVE_NO_FILE_LOG、HIVE_SENTINEL_LOG、HIVE_ENABLE_LLM_LOGS）与行首时间戳已两侧实测对齐（见 observability-surface-diff.md）；/api/runtime-logs 同路径同语义；watchdog 7/8 告警类已故障注入验证（gate 未注入）。仍未对齐：Go 行内级别/logger 元数据与 LOG_FORMAT=json（需结构化 logger 层）、--debug、ring 的 level/stream、Python 三级运行日志（tool_logs.jsonl 等）未移植。",
       "contract_state": "doc_only",
-      "measured_now": "本次核对：/api/runtime-logs 两侧同路径同语义（Python 经 register_routes 注册，surface_audit 记为 Go 多余属提取口径假差）；日志文件名集合 Python 独有 hive-server.log / sentinel.log / tool_logs.jsonl 等，Go 独有 browserbridge.log。",
+      "measured_now": "本次复算（f8aa5fe9 基线）：同名文件 3/3（hive-server.log / sentinel.log / llm_logs/<ts>.jsonl）；轮转 20MiB×3 与 5MB×3 两侧一致（Python 21MB 探针实测 .1=20,970,945B；Go 常量测试）；Go 行首时间戳已改为 YYYY-MM-DD HH:MM:SS；HIVE_NO_FILE_LOG 非空即关（「0」也关）两侧实测；看门狗注入 7 类告警全部打印并调用 osascript，15 分钟去抖成立，修掉 release 告警变量紧贴全角括号的 unbound variable 崩溃与 health=000000 两个缺陷。",
       "lane": "observability",
-      "lane_state": "suggested",
+      "lane_state": "measured",
       "next": [
-        "冻结日志面：文件路径、级别开关（HIVE_NO_FILE_LOG 等）、格式样例",
-        "故障注入 → 是否真的告警（watchdog 主动告警验证）",
-        "成本/延迟/队列指标口径（与 omh-ops-observability-card 类需求对齐）"
+        "结构化 logger 层：级别/logger 元数据、LOG_FORMAT=json（或明确标 Python-only）、--debug、ring 级别列与 stderr 分流",
+        "移植 Python 三级运行日志（sessions/<sid>/logs/{summary.json,details.jsonl,tool_logs.jsonl}）",
+        "gate 告警类注入点（WATCHDOG_GATE_GLOB）与成本/延迟/队列指标口径"
       ],
       "priority": "P2"
     },
@@ -1213,8 +1254,8 @@
       "unaudited": 2
     },
     "by_contract_state": {
-      "frozen_contract": 9,
-      "doc_only": 11,
+      "frozen_contract": 10,
+      "doc_only": 10,
       "test_annotated": 0,
       "none": 3
     },
@@ -1236,6 +1277,7 @@
       "builtin-skills",
       "env-vars",
       "config-json",
+      "frontend",
       "mcp",
       "release",
       "sse"
@@ -1245,7 +1287,6 @@
       "disk-contract",
       "prompt-turn-context",
       "errors",
-      "frontend",
       "formats",
       "observability",
       "scheduling",

@@ -1,25 +1,25 @@
 {
   "schema": "hive-api-responses/1",
-  "generated_at": "2026-11-21T14:04:18+08:00",
+  "generated_at": "2026-11-21T15:57:24+08:00",
   "direction": "reference(python) -> target(go_hive)",
   "reference": {
     "implementation": "python",
     "version": "hive 1.0.14",
-    "commit": "59d89b8667cfcee580c9477d099dc964a66b0cdd",
+    "commit": "f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d",
     "last_core_commit": "856854659269aa4c9fcfc8ae89ff956eaff75b66",
     "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd"
   },
   "target": {
     "implementation": "go_hive",
     "version": "hive 1.0.26-go.1",
-    "commit": "59d89b8667cfcee580c9477d099dc964a66b0cdd"
+    "commit": "f8aa5fe905cbb79acab7d2f52869c11fc6b5da1d"
   },
   "probe": {
     "queen_id": "queen_growth",
     "llm": {
       "provider": "openai",
       "model": "contract-probe-model",
-      "api_base": "http://127.0.0.1:54246/v1",
+      "api_base": "http://127.0.0.1:61763/v1",
       "key_env": "HIVE_CONTRACT_PROBE_KEY",
       "note": "local OpenAI-compatible stub; deterministic kickoff turn, no vendor call, no network"
     },

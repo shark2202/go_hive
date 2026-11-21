@@ -485,8 +485,12 @@ func flagLabel(flag argSpec) string {
 
 func padRight(text string, width int) string {
 	padding := width - len([]rune(text))
-	if padding <= 0 {
-		return text
+	if padding < 1 {
+		// Always keep at least one separator space. A label at or over the pad
+		// width used to run straight into its help text
+		// (`--limit-files LIMIT_FILESMaximum number ...`), which the contract
+		// capture parser reads as a mangled flag name.
+		padding = 1
 	}
 	return text + strings.Repeat(" ", padding)
 }

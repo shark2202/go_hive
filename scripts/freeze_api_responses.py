@@ -796,6 +796,34 @@ def git_capture(argv: list[str]) -> str:
 # ---------------------------------------------------------------------------
 
 
+def fallback_note(probes: list[dict[str, Any]]) -> str:
+    """One-line verdict for the unknown-path fallback probe.
+
+    The probe records each side's unknown-path answer, so the note states what
+    was measured instead of a fixed assumption. Both servers register the SPA
+    catch-all only when a built frontend exists, so a checkout without one
+    answers 404 on both sides; with a dist, an unregistered GET answers
+    index.html on both.
+    """
+    mismatches = []
+    for row in probes:
+        ref = row.get("sides", {}).get("reference", {})
+        tgt = row.get("sides", {}).get("target", {})
+        if (ref.get("status"), ref.get("content_type")) != (tgt.get("status"), tgt.get("content_type")):
+            mismatches.append(
+                f"`{row.get('path')}` reference={ref.get('status')} {ref.get('content_type')} "
+                f"vs target={tgt.get('status')} {tgt.get('content_type')}"
+            )
+    if not mismatches:
+        sample = probes[0]["sides"]["reference"] if probes else {}
+        return (
+            "未知路径 fallback 两侧同形：本环境 reference/target 都是 "
+            f"{sample.get('status')} {sample.get('content_type')}。两侧都只在存在前端 dist 时注册 SPA "
+            "catch-all，未注册 GET 一律返回 index.html（含未注册的 /api/*）。"
+        )
+    return "未知路径 fallback 两侧不一致：" + "；".join(mismatches) + "。"
+
+
 class Freezer:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
@@ -1229,10 +1257,7 @@ class Freezer:
         document = {
             "schema": "hive-api-fallback-probe/1",
             "generated_at": now_iso(),
-            "note": (
-                "未知路径 fallback（待定口径，不改）：Python 的 SPA fallback 对未注册的 "
-                "/api/* GET 返回 200 text/html + index.html；Go 路由返回 404 JSON。"
-            ),
+            "note": fallback_note(probes),
             "probes": probes,
         }
         (RESPONSES_DIR / FALLBACK_PATH).write_text(
@@ -1761,7 +1786,7 @@ def render_markdown(
         lines.append("")
 
     if fallback:
-        lines.append("## 未知路径 fallback（待定口径，不改）")
+        lines.append("## 未知路径 fallback（同形核对）")
         lines.append("")
         lines.append(fallback.get("note", ""))
         lines.append("")

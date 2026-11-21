@@ -4,3 +4,6 @@ watchdog.log
 ALERTS.md
 WATCHDOG_REPORT.md
 .watchdog_report_state
+
+# cli-surface 契约采集的临时目录（二进制 + 隔离 HIVE_HOME）
+.cli-surface-scratch/

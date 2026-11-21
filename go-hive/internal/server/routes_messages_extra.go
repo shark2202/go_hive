@@ -189,6 +189,12 @@ func (deps MessageRouteDeps) auxMaxTokens() int {
 	return llm.AuxMaxTokens()
 }
 
+// DefaultQueenID is the static fallback queen (_DEFAULT_QUEEN_ID upstream): the
+// identity an empty initial message routes to, and the answer whenever the
+// queen classifier fails. The create path binds it so a cold session carries
+// the same queen as its Python counterpart.
+func DefaultQueenID() string { return defaultQueenID }
+
 func defaultQueenIDs() []string {
 	catalog := queen.DefaultQueens()
 	ids := make([]string, 0, len(catalog))

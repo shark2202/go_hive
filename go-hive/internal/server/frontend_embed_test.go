@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -49,25 +48,17 @@ func TestEmbeddedStaticServingAndIndexFallback(t *testing.T) {
 		}
 	}
 
+	// Upstream's fallback has no /api or asset-extension exception: any path
+	// that is not a file in the embedded dist answers with index.html.
 	for _, target := range []string{"/assets/missing.js", "/api/nonexistent"} {
 		recorder = httptest.NewRecorder()
 		app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, target, nil))
-		if recorder.Code != http.StatusNotFound {
-			t.Fatalf("%s status = %d, want 404", target, recorder.Code)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("%s status = %d, want 200 (index fallback)", target, recorder.Code)
 		}
-		if recorder.Body.String() == index {
-			t.Fatalf("%s fell back to the index page", target)
+		if recorder.Body.String() != index {
+			t.Fatalf("%s body = %q, want the index page", target, recorder.Body.String())
 		}
-	}
-
-	recorder = httptest.NewRecorder()
-	app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/nonexistent", nil))
-	var body map[string]any
-	if err := json.NewDecoder(recorder.Body).Decode(&body); err != nil {
-		t.Fatalf("decode API 404 body: %v", err)
-	}
-	if body["error"] != "not found" {
-		t.Fatalf("API 404 body = %#v, want error=not found", body)
 	}
 }
 

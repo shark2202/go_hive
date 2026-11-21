@@ -3,6 +3,7 @@ package logging
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -56,6 +57,44 @@ func TestNoFileLogDisablesTheFileForAnyNonEmptyValue(t *testing.T) {
 				t.Fatalf("server log created despite HIVE_NO_FILE_LOG=%q (%v)", value, err)
 			}
 		})
+	}
+}
+
+// Parity: framework/observability/logging.py::configure_logging
+func TestServerLogSizesMatchUpstreamRotation(t *testing.T) {
+	if serverLogMaxBytes != 20*1024*1024 || serverLogBackups != 3 {
+		t.Fatalf("server log rotation = %d x %d, want 20MiB x 3 (RotatingFileHandler maxBytes=20*1024*1024, backupCount=3)",
+			serverLogMaxBytes, serverLogBackups)
+	}
+}
+
+// Parity: framework/observability/logging.py::HumanReadableFormatter
+func TestTimestampWriterUsesUpstreamDateShape(t *testing.T) {
+	var sink strings.Builder
+	writer := NewTimestampWriter(&sink)
+	if _, err := writer.Write([]byte("hello server\n")); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if _, err := writer.Write([]byte("second record\n")); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	lines := strings.Split(strings.TrimRight(sink.String(), "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("got %d lines, want 2: %q", len(lines), sink.String())
+	}
+	pattern := regexp.MustCompile(`^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} `)
+	for i, line := range lines {
+		if !pattern.MatchString(line) {
+			t.Fatalf("line %d not stamped in upstream date shape: %q", i, line)
+		}
+	}
+	if !strings.HasSuffix(lines[0], "hello server") {
+		t.Fatalf("record content mutated: %q", lines[0])
+	}
+	// The byte count reported to log.Output is the payload's, not the stamp's.
+	n, err := writer.Write([]byte("counted\n"))
+	if err != nil || n != len("counted\n") {
+		t.Fatalf("Write returned (%d, %v), want (%d, nil)", n, err, len("counted\n"))
 	}
 }
 

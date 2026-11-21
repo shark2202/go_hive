@@ -1,0 +1,48 @@
+# Watchdog fault injection — go_hive/scripts/watchdog_report.sh (2026-11-21 15:35–15:37 CST)
+#
+# Injected faults (fixture repo: no serve on the probe port, 3 tracked dirty files under
+# go_hive/, TIME_EVENTS.csv last row >26 min old):
+#   WATCHDOG_REPO=<fixture> WATCHDOG_PORT=<free> WATCHDOG_STATE=<tmp> WATCHDOG_REPORT=<tmp>
+#   WATCHDOG_SERVE_PATTERN=hive-nonexistent-wd-probe WATCHDOG_ONCE=1 \
+#   bash go_hive/scripts/watchdog_report.sh 2
+#
+# Run 1 (fresh cadence.json so release stays quiet; stub osascript in PATH records calls):
+[watchdog 2026-11-21 15:35:33] health=000 HEAD=b03c41e dirty_hive=3 total=3 worktrees=1 serve=0 ledger_age=1586s release="slot=probe status=ok age=26s" gov_age=?s gate="no-gate-log"
+⚠️ ALERT [health] health=000（期望 200，端口 18999）
+⚠️ ALERT [serve] serve 进程（hive-nonexistent-wd-probe）为 0
+⚠️ ALERT [dirty] go_hive 区有 3 个未提交改动（total=3），检查是否有 lane 写进主线
+⚠️ ALERT [ledger] 时间台账超过 26 分钟未更新（timegov 可能挂了）
+osascript -e display notification "health=000（期望 200，端口 18999）" with title "Hive 看门狗"
+osascript -e display notification "serve 进程（hive-nonexistent-wd-probe）为 0" with title "Hive 看门狗"
+osascript -e display notification "go_hive 区有 3 个未提交改动（total=3），检查是否有 lane 写进主线" with title "Hive 看门狗"
+osascript -e display notification "时间台账超过 26 分钟未更新（timegov 可能挂了）" with title "Hive 看门狗"
+#
+# Run 1b — the release-stale path was injected next (fixture without cadence.json) and
+# crashed the script: `$release_line（` — the full-width "（" joined the variable name and
+# `set -u` aborted the loop (line ~145: "release_line�: unbound variable"). That crashed
+# the watchdog before release/dirty/ledger/stall could fire. Fixed to ${release_line};
+# the run below is after the fix.
+#
+# Run 2 (release/governance/stall also injected: no cadence.json, governance.json mtime
+# backdated 7h, state seeded with an old last_head_at; stub osascript):
+[watchdog 2026-11-21 15:37:47] health=000 HEAD=b03c41e dirty_hive=3 total=3 worktrees=1 serve=0 ledger_age=1720s release="none" gov_age=34667s gate="no-gate-log"
+⚠️ ALERT [health] health=000（期望 200，端口 18998）
+⚠️ ALERT [serve] serve 进程（hive-nonexistent-wd-probe）为 0
+⚠️ ALERT [release] 2 小时 slot 版未按时更新（none）；检查 release_cadence_loop.sh / dist/slots/cadence.log
+⚠️ ALERT [governance] 治理重算超过 6h40m 未更新（34667s）；检查 governance_recheck_loop.sh / dist/slots/governance.log
+⚠️ ALERT [dirty] go_hive 区有 3 个未提交改动（total=3），检查是否有 lane 写进主线
+⚠️ ALERT [ledger] 时间台账超过 28 分钟未更新（timegov 可能挂了）
+⚠️ ALERT [stall] HEAD 已 50 分钟未变（worktrees=1），可能停滞
+# 7 osascript invocations recorded by the stub.
+#
+# Debounce: re-running with the same state file immediately after each run produced
+# 0 ALERT lines (15-minute per-key cooldown holds).
+#
+# Real notification: one run with fresh state and the real /usr/bin/osascript emitted
+# 4 ALERT lines and exited 0 — notifications are posted to macOS Notification Center
+# (visibility depends on the terminal's notification permission).
+#
+# Alert classes covered live: health / serve / dirty / ledger / release / governance / stall (7).
+# Not injected: gate — its probe reads the shared /tmp/[knmprwstx]*_targets.log glob, which
+# the production watchdog instance also consumes; planting a FAIL file there would fire a
+# false alert in the live monitoring. Left as the one unverified alert class.

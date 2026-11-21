@@ -543,6 +543,9 @@ func (rt *CredentialRoutes) handleListSpecs(w http.ResponseWriter, r *http.Reque
 		})
 	}
 	if anyAden {
+		// The synthetic row mirrors upstream's dict exactly
+		// (routes_credentials.py::handle_list_specs inserts it with no
+		// "accounts" key), so the two spec lists stay shape-identical.
 		synthetic := map[string]any{
 			"credential_name":          "Aden Platform",
 			"credential_id":            credentials.AdenCredentialID,
@@ -556,7 +559,6 @@ func (rt *CredentialRoutes) handleListSpecs(w http.ResponseWriter, r *http.Reque
 			"credential_key":           "api_key",
 			"credential_group":         "",
 			"available":                hasAdenKey,
-			"accounts":                 []map[string]any{},
 		}
 		rows = append([]any{synthetic}, rows...)
 	}

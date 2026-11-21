@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -45,6 +46,13 @@ func fakeBridge(t *testing.T, response map[string]any) (*httptest.Server, func()
 	var mu sync.Mutex
 	last := capturedCommand{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health" && r.Method == http.MethodGet {
+			// The CLI's connectivity probe (requireTab, R07 family) reads this
+			// before choosing between "not connected" (2) and "not started" (3).
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "status": "ok", "connected": true, "connections": 1})
+			return
+		}
 		if r.URL.Path != "/command" || r.Method != http.MethodPost {
 			http.NotFound(w, r)
 			return
@@ -313,6 +321,46 @@ func TestBrowserCLIBadArgs(t *testing.T) {
 			t.Fatalf("%v: must not reach the bridge, but sent %q", argv, got.Type)
 		}
 	}
+}
+
+// TestBrowserCLINotConnectedBeforeNotStarted pins the connectivity-first exit
+// code of the R07 family: with no local tab AND no reachable bridge at all,
+// upstream answers "not connected" (2), not "not started" (3). The tab
+// pre-check must not mask a dead bridge.
+//
+// Parity-exempt: upstream has no test for tools/src/gcu/cli.py; this case pins
+// the ported exit-code contract (gcu/errors.py) instead.
+func TestBrowserCLINotConnectedBeforeNotStarted(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	dead := closedBridgeURL(t)
+	missing := filepath.Join(home, "missing.txt")
+	for _, argv := range [][]string{
+		{"upload", "#f", "--file", missing},
+		{"reload"},
+		{"navigate", "https://example.com"},
+		{"select", "#f", "--value", "v"},
+		{"page", "text", "h1"},
+	} {
+		_, stderr, code := runBrowser(t, home, append(argv, "--json", "--bridge", dead)...)
+		if code != browserExitNotConnected {
+			t.Fatalf("%v exit = %d, want %d (stderr: %s)", argv, code, browserExitNotConnected, stderr)
+		}
+	}
+}
+
+// closedBridgeURL returns a bridge URL whose port has nothing listening.
+func closedBridgeURL(t *testing.T) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	address := listener.Addr().String()
+	if err := listener.Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	return "http://" + address
 }
 
 // TestBrowserCLIUploadMissingFileMatchesUpstream pins R07: a missing upload

@@ -81,13 +81,24 @@ func TestCredentialSpecsRouteServesFullUpstreamRegistry(t *testing.T) {
 		"credential_key",
 		"credential_group",
 		"available",
-		"accounts",
 	}
 	for credentialID, row := range byID {
 		for _, key := range required {
 			if _, present := row[key]; !present {
 				t.Fatalf("credential %q row missing %q: %#v", credentialID, key, row)
 			}
+		}
+		// Registry rows carry the per-provider account list. The synthetic
+		// Aden Platform row does not: upstream inserts it as a literal dict
+		// with no "accounts" key (handle_list_specs), so a key here would be
+		// a Go-only field the strict shape comparison sees.
+		_, hasAccounts := row["accounts"]
+		if credentialID == credentials.AdenCredentialID {
+			if hasAccounts {
+				t.Fatalf("synthetic Aden row carries an accounts key: %#v", row)
+			}
+		} else if !hasAccounts {
+			t.Fatalf("credential %q row missing %q: %#v", credentialID, "accounts", row)
 		}
 		if _, present := row["tool_modules"]; present {
 			t.Fatalf("credential %q row carries the Go-only tool_modules field", credentialID)

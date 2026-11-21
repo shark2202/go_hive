@@ -91,44 +91,6 @@ DYNAMIC_VALUE_KEYS = {
 
 CHAT_PROMPT = "Reply with exactly: PARITY_OK"
 
-# Code anchors behind the behavioural differences, verified against the commit
-# the report names.  Measurements come from the run; these paths explain them.
-CODE_ANCHORS: list[tuple[str, str]] = [
-    (
-        "GET /api/skills → 404",
-        "Go 没有注册 `/api/skills` 路由（`internal/server` 全目录 grep 无命中）；"
-        "Python `routes_skills.py` 返回 195 条。",
-    ),
-    (
-        "创建会话 `queen_id=null`、`queen_phase=planning`",
-        "`internal/server/routes_sessions.go::sessionToLiveDict` 的 queen 字段来自 "
-        "`SessionPhaseState`；chat 会话没有绑定 profile，Python 则落到 `queens/queen_growth`。",
-    ),
-    (
-        "`events/history` total=0、SSE 只有 1 帧、`snapshot` 全空",
-        "`internal/server/chat_runtime.go` 的 `ChatRuntime` 完全不引用 `EventBus`；"
-        "`eventbus.SetSessionLog` 在 `internal/` 与 `cmd/` 均无调用点，所以磁盘上不会出现 "
-        "`events.jsonl`，history 路由只读该文件。",
-    ),
-    (
-        "`stats` 恒为 `{}`",
-        "`internal/server/routes_session_detail.go::handleSessionStats` 只在 "
-        "`session.Colony != nil` 时返回统计，queen-only 会话直接写空对象。",
-    ),
-    (
-        "`credentials/specs` 4 vs 115",
-        "`internal/server/app.go::credentialSpecsFromCatalog` 由模型目录派生，只覆盖 4 个"
-        "带 API-key 环境变量的 provider；Python 的 spec 目录有 115 项（含 aden/tools/instructions）。",
-    ),
-    (
-        "`queen_resume_from` 不能恢复旧 id",
-        "Python：`core/framework/server/session_manager.py:745` "
-        "`resolved_session_id = queen_resume_from or session_id`；"
-        "Go：`internal/cli/loader.go:461-467` 只认 `params.SessionID`，"
-        "其余情况新铸 id，`QueenResumeFrom` 只决定存储目录。",
-    ),
-]
-
 MAX_HEALTH_WAIT_S = 180.0
 CHAT_REPLY_TIMEOUT_S = 180.0
 
@@ -909,6 +871,25 @@ class Harness:
     def get(self, side: Side, path: str, timeout: float = 60.0) -> HttpResult:
         return http_request("GET", side.base_url + path, timeout=timeout)
 
+    def wait_for_opening_block(self, side: Side, session_id: str, want: int = 5, timeout: float = 30.0) -> None:
+        """Wait (bounded) until the session's history carries its opening block.
+
+        A freshly created session writes five opening events (queen identity,
+        session-start reminder, loop start, first iteration, context usage).
+        The Python queen loop writes them just after the create response, so a
+        history read that races it sees a one-event prefix and reports a false
+        shape diff against the Go side, which writes the block synchronously.
+        Waiting for the settled block removes the race without weakening the
+        comparison: a side that never reaches it still diffs below.
+        """
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            result = self.get(side, f"/api/sessions/{session_id}/events/history")
+            total = values_at(result.payload, "total")
+            if isinstance(total, int) and total >= want:
+                return
+            time.sleep(0.25)
+
     def probe_static(self) -> None:
         assert self.py and self.go
         py, go = self.py, self.go
@@ -1031,6 +1012,14 @@ class Harness:
                 "技能目录", "GET", "/api/skills", p, g,
                 [
                     SemanticCheck("skill 数量相同", len(p_skills) == len(g_skills), f"python={len(p_skills)} go={len(g_skills)}"),
+                    # Same count is not enough: a missing skill replaced by a
+                    # different one must fail here, not hide behind the total.
+                    SemanticCheck(
+                        "skill 名称集合相同",
+                        set(p_skills) == set(g_skills),
+                        "python 独有 " + ", ".join(sorted(set(p_skills) - set(g_skills))[:6])
+                        + "｜go 独有 " + ", ".join(sorted(set(g_skills) - set(p_skills))[:6]),
+                    ),
                 ],
             )
         )
@@ -1215,7 +1204,11 @@ class Harness:
             )
         )
 
-        # events/history — what the UI replays after a page reload
+        # events/history — what the UI replays after a page reload. Wait for
+        # each side's opening block first: Python's is written asynchronously
+        # by the queen loop, so an immediate read can catch a prefix.
+        self.wait_for_opening_block(py, py_sid)
+        self.wait_for_opening_block(go, go_sid)
         p, g, _ = pair("/api/sessions/{session}/events/history")
         py_total = values_at(p.payload, "total")
         go_total = values_at(g.payload, "total")
@@ -1604,40 +1597,15 @@ class Harness:
         lines.append("")
         lines.append("## 结论")
         lines.append("")
-        lines.append(
-            f"- 端点契约 {passed}/{total} 通过：静态/配置类端点基本对齐（health、config、credentials、"
-            "queen profiles、models、mcp 全部 PASS）；FAIL 集中在会话运行时与两个目录端点。"
-        )
-        lines.append(
-            "- 会话运行时的 4 个 FAIL（创建/列表/详情、history、snapshot、stats）落在同一簇缺口："
-            "Go 的 chat 会话没有绑定 queen（`queen_id=null`），`ChatRuntime` 不发布事件、"
-            "也不写 `events.jsonl`，所以历史、快照、统计只能为空。"
-        )
-        lines.append(
-            "- 两个目录缺口：`/api/skills` 在 Go 里根本未注册（404），"
-            "`/api/credentials/specs` 只有 4 项 vs Python 115 项。"
-        )
-        sse_flow = self.flow.get("sse")
-        if sse_flow:
-            py_types = len(set(sse_flow["py"].payload_types))
-            go_types = len(set(sse_flow["go"].payload_types))
+        failed = [r for r in self.results if not r.ok]
+        if failed:
             lines.append(
-                "- 对话本身可用：两边 `/chat` 都 200、都落盘 `PARITY_OK`；但 Go 的 SSE 只发 "
-                f"{len(sse_flow['go'].frames)} 帧（{go_types} 种 type），Python 发 "
-                f"{len(sse_flow['py'].frames)} 帧（{py_types} 种 type）。"
+                f"- 端点契约 {passed}/{total} 通过；{len(failed)} 条 FAIL，逐条见下方端点明细。"
             )
-        if self.flow.get("restart"):
-            py_r = self.flow["restart"]["sides"]["python"]
-            go_r = self.flow["restart"]["sides"]["go"]
+        else:
             lines.append(
-                "- 重试风暴：重启后旧 id 的 `/events` 两边都 404（上游同构触发）；"
-                f"但 `queen_resume_from` 恢复只有 Python 生效（Python {py_r['resume']['post_count']} 次 POST 后恢复，"
-                f"Go {go_r['resume']['post_count']} 次仍 {go_r['resume']['events_after']}），"
-                "且 Go 创建会话快约 "
-                + (
-                    f"{(py_r['blank']['post_median_ms'] or 0) / (go_r['blank']['post_median_ms'] or 1):.0f}×，"
-                    "所以同一页面只在 Go 上持续高频重试。"
-                )
+                f"- 端点契约 {passed}/{total} 全部通过：状态码相同，JSON 键集合与类型一致，"
+                "端点级语义检查全部成立。"
             )
         lines.append("")
 
@@ -1856,7 +1824,7 @@ class Harness:
         if self.evidence:
             py_e = self.evidence.get("python", {})
             go_e = self.evidence.get("go", {})
-            lines.append("## 磁盘证据（空响应的根因）")
+            lines.append("## 磁盘证据")
             lines.append("")
             lines.append("| 证据 | Python | Go |")
             lines.append("|------|--------|----|")
@@ -1873,16 +1841,21 @@ class Harness:
                 f"| 会话目录数 | {py_e.get('session_dirs')} | {go_e.get('session_dirs')} |"
             )
             lines.append("")
-            lines.append(
-                "Go 的 HIVE_HOME 里没有任何 `events.jsonl`，`queens/` 只有一个 `default`，"
-                "因此 `events/history` 只能返回空、`snapshot` 只能给出 null、`stats` 只能给出 `{}` —— "
-                "不是序列化差异，是这些数据从未被写入。"
-            )
-            lines.append("")
-            lines.append("### 代码定位")
-            lines.append("")
-            for title, detail in CODE_ANCHORS:
-                lines.append(f"- **{title}** — {detail}")
+            empty_sides = [
+                side
+                for side, stats in (("Python", py_e), ("Go", go_e))
+                if not stats.get("events_jsonl")
+            ]
+            if empty_sides:
+                lines.append(
+                    "".join(empty_sides)
+                    + " 的 HIVE_HOME 里没有 `events.jsonl`：该侧的 history / snapshot / stats 只能为空，"
+                    "不是序列化差异，是这些数据从未被写入。"
+                )
+            else:
+                lines.append(
+                    "两侧的 `events.jsonl` 与会话树都随会话创建落盘；上表用于核对同一组文件的规模。"
+                )
             lines.append("")
 
         lines.append("## 最重要的 5 个差异")

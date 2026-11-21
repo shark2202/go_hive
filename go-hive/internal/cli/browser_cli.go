@@ -16,14 +16,17 @@ package cli
 // Exit codes are the stable agent contract ported from gcu/errors.py.
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Exit codes — parity with tools/src/gcu/errors.py.
@@ -53,6 +56,9 @@ type browserCLI struct {
 	stdin  io.Reader
 	root   *commandSpec
 }
+
+// browserHealthTimeout bounds the /health connectivity probe.
+const browserHealthTimeout = 3 * time.Second
 
 // RunBrowserCLI is the `hive-browser` entry point; it returns the process exit
 // code (see tools/src/gcu/errors.py for the taxonomy).
@@ -268,14 +274,54 @@ func (c *browserCLI) tabOrState(args *parsedArgs) (int, bool) {
 // requireTab injects the resolved tab id; commands that cannot work without one
 // fail with exit 3 (not started) before any round-trip, matching the upstream
 // CLI's "Browser not started. Run `hive-browser open <url>` first." message.
+//
+// The connectivity check still comes first, as it does upstream: with no
+// bridge/extension reachable at all, upstream answers "not connected" (2), not
+// "not started", so the local pre-check must not short-circuit that state
+// (R07 family: `upload`/`reload`/`navigate`/`select` with nothing running).
 func (c *browserCLI) requireTab(args *parsedArgs, params map[string]any) int {
 	tab, ok := c.tabOrState(args)
 	if !ok {
+		if !c.bridgeConnected(args) {
+			fmt.Fprintln(c.stderr, "hive-browser: the Hive browser extension isn't connected")
+			fmt.Fprintln(c.stderr, "start the bridge with `hive serve` (or `browserbridge`) and retry")
+			return browserExitNotConnected
+		}
 		fmt.Fprintln(c.stderr, "hive-browser: Browser not started. Run `hive-browser open <url>` first.")
 		return browserExitNotStarted
 	}
 	params["tab_id"] = tab
 	return browserExitOK
+}
+
+// bridgeConnected reports whether the bridge answers /health with at least one
+// extension connection — the HTTP-proxy equivalent of upstream's in-process
+// `bridge.is_connected`. The probe only runs on an already-failing path, and
+// uses a short timeout so a dead bridge is reported promptly.
+func (c *browserCLI) bridgeConnected(args *parsedArgs) bool {
+	base := c.bridgeBase(args)
+	ctx, cancel := context.WithTimeout(context.Background(), browserHealthTimeout)
+	defer cancel()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/health", nil)
+	if err != nil {
+		return false
+	}
+	client := &http.Client{Timeout: browserHealthTimeout}
+	response, err := client.Do(request)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = response.Body.Close() }()
+	if response.StatusCode != http.StatusOK {
+		return false
+	}
+	var payload struct {
+		Connected bool `json:"connected"`
+	}
+	if err := json.NewDecoder(io.LimitReader(response.Body, 1<<16)).Decode(&payload); err != nil {
+		return false
+	}
+	return payload.Connected
 }
 
 // optTab injects the resolved tab id when there is one; the bridge then falls

@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-11-21 09:00 CST",
-  "commit": "8c691881",
+  "generated_at": "2026-11-21 15:49 CST",
+  "commit": "f8aa5fe9",
   "versions": {
     "python": "1.0.14",
     "go": "1.0.26-go.1"
   },
-  "repo": "/Users/mac/hive",
+  "repo": "/Users/mac/hive/.wt/appearance-api-strict",
   "routes": {
     "go_total": 220,
     "python_total": 216,
@@ -45,7 +45,7 @@
     "actions": 865
   },
   "audit": {
-    "generated_at": "2026-11-21T09:00:00+08:00",
+    "generated_at": "2026-11-21T15:49:46+08:00",
     "frontend_missing": 0,
     "python_missing": 0,
     "python_pending": 0,
@@ -54,44 +54,8 @@
   },
   "probe": {
     "total": 18,
-    "passed": 13,
-    "failed": [
-      {
-        "name": "模型列表（占位）",
-        "path": "GET /api/models",
-        "py": 200,
-        "go": 404,
-        "diff": 2
-      },
-      {
-        "name": "组织架构图（占位）",
-        "path": "GET /api/org-chart",
-        "py": 200,
-        "go": 404,
-        "diff": 2
-      },
-      {
-        "name": "创建会话",
-        "path": "POST /api/sessions",
-        "py": 201,
-        "go": 201,
-        "diff": 3
-      },
-      {
-        "name": "会话列表",
-        "path": "GET /api/sessions",
-        "py": 200,
-        "go": 200,
-        "diff": 2
-      },
-      {
-        "name": "会话详情",
-        "path": "GET /api/sessions/{id}",
-        "py": 200,
-        "go": 200,
-        "diff": 3
-      }
-    ],
+    "passed": 18,
+    "failed": [],
     "rows": [
       {
         "name": "健康检查",
@@ -142,10 +106,10 @@
         "name": "模型列表（占位）",
         "method": "GET",
         "path": "/api/models",
-        "py": 200,
+        "py": 404,
         "go": 404,
-        "ok": false,
-        "diff": 2
+        "ok": true,
+        "diff": 0
       },
       {
         "name": "模型总览",
@@ -160,10 +124,10 @@
         "name": "组织架构图（占位）",
         "method": "GET",
         "path": "/api/org-chart",
-        "py": 200,
+        "py": 404,
         "go": 404,
-        "ok": false,
-        "diff": 2
+        "ok": true,
+        "diff": 0
       },
       {
         "name": "技能目录",
@@ -189,8 +153,8 @@
         "path": "/api/sessions",
         "py": 201,
         "go": 201,
-        "ok": false,
-        "diff": 3
+        "ok": true,
+        "diff": 0
       },
       {
         "name": "会话列表",
@@ -198,8 +162,8 @@
         "path": "/api/sessions",
         "py": 200,
         "go": 200,
-        "ok": false,
-        "diff": 2
+        "ok": true,
+        "diff": 0
       },
       {
         "name": "会话详情",
@@ -207,8 +171,8 @@
         "path": "/api/sessions/{id}",
         "py": 200,
         "go": 200,
-        "ok": false,
-        "diff": 3
+        "ok": true,
+        "diff": 0
       },
       {
         "name": "事件流订阅",
@@ -256,7 +220,7 @@
         "diff": 0
       }
     ],
-    "python_start_s": 2.6,
+    "python_start_s": 2.55,
     "go_start_s": 0.26
   }
 }

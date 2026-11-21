@@ -1,0 +1,10 @@
+# GET /api/runtime-logs — in-memory ring text, same page on both sides
+# Python (capacity 500; text is the RecentLogs formatter: "%Y-%m-%d %H:%M:%S [LEVEL] msg")
+{"boot": "...", "entries": [{"seq": 1, "stream": "stdout", "text": "2026-11-21 15:36:31 [INFO] Generated and persisted HIVE_CREDENTIAL_KEY to ~/.hive/secrets/credential_key"}, ...]}
+# Go (capacity 500; text is the raw process-log line, now with the same date shape)
+{"boot":"...","entries":[{"seq":1,"stream":"stdout","text":"2026-11-21 15:36:48 [sentinel] manager starting (0 open escalations)"}, ...]}
+#
+# Differences: Python tags the level and routes WARNING+ to stream=stderr; Go's ring has no
+# level and labels every record stream=stdout. Go additionally caps one line at 4000 runes
+# and the response at 512 KiB; Python has no such caps. Recorded in
+# docs/observability-surface-diff.md §4.

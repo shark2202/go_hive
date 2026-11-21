@@ -58,7 +58,11 @@ func ConfigureLogging(homeRoot string) {
 		return
 	}
 	sentinelLogState.file = file
-	sentinelLogState.logger = log.New(file, "", log.LstdFlags)
+	// Upstream writes "%(asctime)s %(levelname)-7s %(name)s | %(message)s".
+	// Go's sentinel sink has no per-line severity or module name, so the
+	// aligned part is the timestamp: the same "2006-01-02 15:04:05" prefix
+	// upstream's asctime produces.
+	sentinelLogState.logger = log.New(hivelogging.NewTimestampWriter(file), "", 0)
 	log.Printf("sentinel: diverting sentinel logs to %s", path)
 }
 

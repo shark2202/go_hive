@@ -1,0 +1,4 @@
+# Python sentinel.log — HIVE_SENTINEL_LOG=1 (RotatingFileHandler 5MB x 3)
+# format: %(asctime)s %(levelname)-7s %(name)s | %(message)s
+2026-11-21 15:28:23,096 INFO    framework.sentinel.manager | [sentinel] logging to /Users/mac/.hermes/profiles/omh-tui/cache/scratch/obs/py_sentinel/logs/sentinel.log
+2026-11-21 15:28:23,097 INFO    framework.sentinel.manager | [sentinel] manager starting (0 open escalations)

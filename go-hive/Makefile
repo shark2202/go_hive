@@ -33,7 +33,7 @@ PY_ROOT   ?= ../../core
 OFFLINE    = CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod
 PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check ci clean help
 
 all: ci
 
@@ -51,6 +51,7 @@ help:
 	@echo "  make tool-contract-check  校验 contracts/tool-definitions.json 自洽"
 	@echo "  make tool-contract-report 对拍冻结契约与当前工具面（只报告，不阻断）"
 	@echo "  make tool-output-check    工具输出 golden 产物自洽检查（docs/e2e-assets/tool-output）"
+	@echo "  make cli-surface-check    CLI 对外面契约重采 + 对拍（递归 --help + 退出码探针）"
 	@echo "  make ci          fmt-check + vet + test + cross + parity + parity-targets"
 
 test:
@@ -151,6 +152,17 @@ tool-output-check:
 		cd .. && uv run --no-project python scripts/tool_output_golden.py report --check; \
 	else \
 		echo "tool-output-check: SKIP — uv 不可用"; \
+	fi
+
+# CLI 对外面契约（contracts/cli-surface.json）：递归采集两侧 `--help`
+# （子命令树 / flags / 取值 / help 文案 / 默认值）并跑一组无副作用退出码
+# 探针，再与冻结契约对拍。Python 参考侧需要能导入 framework/gcu 的解释器；
+# 找不到时脚本只核对 Go 侧并打印 SKIP 原因。全量重采约 2–3 分钟，不进 ci。
+cli-surface-check:
+	@if command -v uv >/dev/null 2>&1; then \
+		cd .. && uv run --no-project python scripts/cli_surface_contract.py --check; \
+	else \
+		echo "cli-surface-check: SKIP — uv 不可用"; \
 	fi
 
 # 接线守护：关键运行时调用点（内存注入、事件日志、会话工具安装）缺失即失败。

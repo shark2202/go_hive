@@ -8,6 +8,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -46,7 +47,7 @@ func planChatSession(params hiveserver.CreateSessionParams, home hivehome.Home) 
 
 	queenName := ""
 	if params.QueenName != nil {
-		queenName = *params.QueenName
+		queenName = strings.TrimSpace(*params.QueenName)
 	}
 	// The transcript tree and the memory scope share one queen identifier: a
 	// queen_growth session keeps its conversation under
@@ -71,10 +72,24 @@ func planChatSession(params hiveserver.CreateSessionParams, home hivehome.Home) 
 	// model. Adopting a queen-DM copy there would surface the wrong history,
 	// so only the standard queen-only create resumes by id.
 	if resumeFrom != "" && !chatSessionColonyBound(params) {
-		if dir := resumableSessionDir(home, queenScope, resumeFrom); dir != "" {
+		if queenScope != "default" {
+			if dir := resumableSessionDir(home, queenScope, resumeFrom); dir != "" {
+				return chatSessionPlan{
+					SessionID:  resumeFrom,
+					QueenScope: queenScope,
+					ResumedDir: dir,
+					ResumeFrom: resumeFrom,
+				}, nil
+			}
+		} else if dir, queen := persistedSessionQueen(home, resumeFrom); dir != "" {
+			// A resume that carries no queen_name (the dashboard's
+			// session-gone auto-resume) reopens the session under the queen
+			// it was persisted with, so the id /events already subscribes to
+			// comes back routable even after the create moved cold sessions
+			// out of queens/default.
 			return chatSessionPlan{
 				SessionID:  resumeFrom,
-				QueenScope: queenScope,
+				QueenScope: queen,
 				ResumedDir: dir,
 				ResumeFrom: resumeFrom,
 			}, nil
@@ -115,6 +130,37 @@ func resumableSessionDir(home hivehome.Home, queenName, sessionID string) string
 		return ""
 	}
 	return legacy
+}
+
+// persistedSessionQueen finds a persisted session across the queen DM trees and
+// returns the tree holding it plus the queen it was written under. The queen is
+// meta.json["queen_id"] when recorded, otherwise the queen directory holding
+// the session (upstream's _resume_queen_name). A session with no explicit
+// queen_name is resumed under that identity instead of the shared default tree.
+//
+// Parity: framework/server/session_manager.py::_resume_queen_name
+func persistedSessionQueen(home hivehome.Home, sessionID string) (string, string) {
+	entries, err := os.ReadDir(home.QueensDir())
+	if err != nil {
+		return "", ""
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		candidate := home.QueenSessionDir(entry.Name(), sessionID)
+		if !isSessionDir(candidate) {
+			continue
+		}
+		queen := entry.Name()
+		if meta, ok := readJSONObject(filepath.Join(candidate, "meta.json")); ok {
+			if recorded, isString := meta["queen_id"].(string); isString && strings.TrimSpace(recorded) != "" {
+				queen = strings.TrimSpace(recorded)
+			}
+		}
+		return candidate, queen
+	}
+	return "", ""
 }
 
 // sessionDirQueenMatches is the cross-queen guard for the legacy tree: when

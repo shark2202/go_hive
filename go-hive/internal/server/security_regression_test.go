@@ -249,9 +249,9 @@ func TestSPAStaticServingCannotEscapeDistDir(t *testing.T) {
 			t.Fatalf("SPA path %q served a file outside the dist directory", path)
 		}
 		// ServeFile refuses a URL path containing ".." with 400; that is a
-		// safe rejection. Extension-bearing traversal paths are rejected with
-		// a JSON/plain 404 by the SPA handler (no index fallback for files);
-		// directory-like paths still fall back to index.html.
+		// safe rejection. Every other non-file path (traversal attempts and
+		// symlink escapes included) falls back to index.html, as upstream's
+		// handle_spa does — the fallback must never be the outside file.
 		if recorder.Code == http.StatusBadRequest && strings.Contains(body, "invalid URL path") {
 			continue
 		}

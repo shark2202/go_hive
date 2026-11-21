@@ -1,0 +1,6 @@
+# Rotation live probe — Python configure_logging(), 21050 x 1KB records
+# (RotatingFileHandler maxBytes=20*1024*1024, backupCount=3)
+942262 hive-server.log
+20970945 hive-server.log.1
+# Go: TestRotatingFileShiftsBackups exercises the shifting/backup cap (maxBytes=8 x 3);
+# TestServerLogSizesMatchUpstreamRotation pins the production constants at 20MiB x 3.
